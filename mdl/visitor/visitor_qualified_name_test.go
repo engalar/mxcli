@@ -88,6 +88,23 @@ END;`
 	}
 }
 
+func TestQuotedIdentifierInWidgetAttribute(t *testing.T) {
+	// Bug: quoted identifiers like "TaskTitle" should be accepted in widget Attribute: bindings
+	input := `CREATE PAGE Test.TestPage (Title: 'Test', Layout: Test.Layout) {
+  DATAVIEW dv1 {
+    TEXTBOX txt1 (Label: 'Title', Attribute: "TaskTitle")
+  }
+}`
+
+	_, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.Fatal("Quoted identifiers should be accepted in widget Attribute: bindings")
+	}
+}
+
 // findQualifiedNameExpr recursively searches an expression tree for a QualifiedNameExpr.
 func findQualifiedNameExpr(expr ast.Expression) *ast.QualifiedNameExpr {
 	switch e := expr.(type) {

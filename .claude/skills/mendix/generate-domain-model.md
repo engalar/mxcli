@@ -385,7 +385,10 @@ Email: String(200) NOT NULL ERROR 'Email is required' UNIQUE ERROR 'Email must b
 IsActive: Boolean NOT NULL ERROR 'IsActive flag is required' DEFAULT true,
 
 -- Enum with required error
-Status: Enumeration(Module.Status) NOT NULL ERROR 'Status is required'
+Status: Enumeration(Module.Status) NOT NULL ERROR 'Status is required',
+
+-- Enum with default value (use fully qualified Module.Enum.Value)
+Priority: Enumeration(Module.Priority) DEFAULT Module.Priority.Normal
 ```
 
 ## Reserved Keywords

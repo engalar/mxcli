@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0
-
 // Code generated from MDLLexer.g4 by ANTLR 4.13.1. DO NOT EDIT.
 
 package parser

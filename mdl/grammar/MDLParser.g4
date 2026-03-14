@@ -492,7 +492,7 @@ attributeDefinitionList
  * ```mdl
  * Code: String(50) NOT NULL,
  * Email: String(200) UNIQUE,
- * Status: Enum MyModule.Status DEFAULT 'Active'
+ * Status: Enum MyModule.Status DEFAULT MyModule.Status.Active
  * ```
  *
  * @example Attribute with custom error messages
@@ -1720,9 +1720,9 @@ microflowArgV3
     : IDENTIFIER COLON expression
     ;
 
-// V3 Attribute path: Name, Product/Category
+// V3 Attribute path: Name, Product/Category, "Order" (quoted to escape reserved words)
 attributePathV3
-    : (IDENTIFIER | keyword) (SLASH (IDENTIFIER | keyword))*
+    : (IDENTIFIER | QUOTED_IDENTIFIER | keyword) (SLASH (IDENTIFIER | QUOTED_IDENTIFIER | keyword))*
     ;
 
 // V3 String expression (may include template placeholders or attribute binding)

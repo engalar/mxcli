@@ -1154,7 +1154,7 @@ CREATE OR MODIFY PERSISTENT ENTITY DmTest.Task (
   TaskPriority: Enumeration(DmTest.Priority) NOT NULL ERROR 'Priority is required',
 
   /** Task status */
-  TaskStatus: Enumeration(DmTest.OrderStatus) DEFAULT 'PENDING',
+  TaskStatus: Enumeration(DmTest.OrderStatus) DEFAULT DmTest.OrderStatus.PENDING,
 
   /** Due date */
   DueDate: DateTime,

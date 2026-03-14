@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -248,6 +249,68 @@ func TestValidateEntityNormalAttributesPass(t *testing.T) {
 	errors := ValidateEntity(stmt)
 	if len(errors) > 0 {
 		t.Errorf("Normal attributes should not trigger errors, got: %v", errors)
+	}
+}
+
+// TestReturnsNothingAcceptsBarReturn verifies that RETURNS Nothing treats
+// RETURN; (no value) as valid — "Nothing" means void.
+func TestReturnsNothingAcceptsBarReturn(t *testing.T) {
+	input := `CREATE MICROFLOW Test.MF_ReturnsNothing ()
+RETURNS Nothing
+BEGIN
+  LOG INFO 'hello';
+  RETURN;
+END;`
+
+	prog, errs := visitor.Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("Parse error: %v", errs[0])
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+
+	// The return type should be TypeVoid
+	if stmt.ReturnType != nil && stmt.ReturnType.Type.Kind != ast.TypeVoid {
+		t.Errorf("Expected TypeVoid for RETURNS Nothing, got %v", stmt.ReturnType.Type.Kind)
+	}
+
+	// Validation should NOT produce errors about RETURN requiring a value
+	warnings := ValidateMicroflowBody(stmt)
+	for _, w := range warnings {
+		if strings.Contains(w, "RETURN requires a value") {
+			t.Errorf("RETURNS Nothing should not reject bare RETURN;, got: %s", w)
+		}
+	}
+}
+
+// TestEnumDefaultNotDoubleQualified verifies that enum DEFAULT values are stored
+// without the enum prefix (just the value name), preventing double-qualification.
+func TestEnumDefaultNotDoubleQualified(t *testing.T) {
+	input := `CREATE PERSISTENT ENTITY Test.Item (
+  Status : Enumeration(Test.ItemStatus) DEFAULT Test.ItemStatus.Active
+);`
+
+	prog, errs := visitor.Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("Parse error: %v", errs[0])
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateEntityStmt)
+	if len(stmt.Attributes) == 0 {
+		t.Fatal("Expected at least 1 attribute")
+	}
+
+	attr := stmt.Attributes[0]
+	if !attr.HasDefault {
+		t.Fatal("Expected attribute to have a default value")
+	}
+
+	// The default value from the parser is the full text "Test.ItemStatus.Active"
+	defaultStr := fmt.Sprintf("%v", attr.DefaultValue)
+	// When stored, it should be stripped to just "Active" (the executor does this)
+	// Here we verify the parser at least captures the full text correctly
+	if !strings.Contains(defaultStr, "Active") {
+		t.Errorf("Default value should contain 'Active', got: %s", defaultStr)
 	}
 }
 

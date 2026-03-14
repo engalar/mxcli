@@ -91,8 +91,18 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 
 		// Default value
 		if a.HasDefault {
+			defaultStr := fmt.Sprintf("%v", a.DefaultValue)
+			// For enum attributes, Mendix stores just the value name (e.g., "Open"),
+			// not the fully qualified name. The EnumerationRef already provides context.
+			// Strip the enum prefix if the default is fully qualified.
+			if a.Type.Kind == ast.TypeEnumeration && a.Type.EnumRef != nil {
+				enumPrefix := a.Type.EnumRef.String() + "."
+				if strings.HasPrefix(defaultStr, enumPrefix) {
+					defaultStr = strings.TrimPrefix(defaultStr, enumPrefix)
+				}
+			}
 			attr.Value = &domainmodel.AttributeValue{
-				DefaultValue: fmt.Sprintf("%v", a.DefaultValue),
+				DefaultValue: defaultStr,
 			}
 		}
 
@@ -403,8 +413,15 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 		}
 		attr.ID = attrID
 		if a.HasDefault {
+			defaultStr := fmt.Sprintf("%v", a.DefaultValue)
+			if a.Type.Kind == ast.TypeEnumeration && a.Type.EnumRef != nil {
+				enumPrefix := a.Type.EnumRef.String() + "."
+				if strings.HasPrefix(defaultStr, enumPrefix) {
+					defaultStr = strings.TrimPrefix(defaultStr, enumPrefix)
+				}
+			}
 			attr.Value = &domainmodel.AttributeValue{
-				DefaultValue: fmt.Sprintf("%v", a.DefaultValue),
+				DefaultValue: defaultStr,
 			}
 		}
 		entity.Attributes = append(entity.Attributes, attr)
@@ -977,6 +994,12 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 					// Quote string defaults
 					if _, ok := attr.Type.(*domainmodel.StringAttributeType); ok {
 						defaultVal = fmt.Sprintf("'%s'", defaultVal)
+					}
+					// Re-qualify enum defaults for MDL syntax (BSON stores just the value name)
+					if enumType, ok := attr.Type.(*domainmodel.EnumerationAttributeType); ok {
+						if enumType.EnumerationRef != "" && !strings.Contains(defaultVal, ".") {
+							defaultVal = enumType.EnumerationRef + "." + defaultVal
+						}
 					}
 					constraints.WriteString(fmt.Sprintf(" DEFAULT %s", defaultVal))
 				}

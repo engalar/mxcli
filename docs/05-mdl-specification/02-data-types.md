@@ -224,16 +224,18 @@ Enumeration(<qualified-name>)
 **Examples:**
 ```sql
 Status: Enumeration(Sales.OrderStatus)
-Priority: Enumeration(Core.Priority) DEFAULT 'Normal'
+Priority: Enumeration(Core.Priority) DEFAULT Core.Priority.Normal
 Type: Enumeration(MyModule.ItemType) NOT NULL
 ```
 
 **Default value format:**
 ```sql
-DEFAULT 'EnumValueName'
+DEFAULT Module.EnumName.ValueName
+-- or legacy string literal form:
+DEFAULT 'ValueName'
 ```
 
-The default value is the **name** of the enumeration value (not the caption).
+The default value is the **name** of the enumeration value (not the caption). The fully qualified form `Module.EnumName.ValueName` is preferred as it is explicit and unambiguous.
 
 ---
 
@@ -311,7 +313,7 @@ Description: String(unlimited)
 | Decimal | `DEFAULT n.n` | `DEFAULT 0`, `DEFAULT 0.00`, `DEFAULT 99.99` |
 | Boolean | `DEFAULT TRUE/FALSE` | `DEFAULT TRUE`, `DEFAULT FALSE` |
 | AutoNumber | `DEFAULT n` | `DEFAULT 1` (starting value) |
-| Enumeration | `DEFAULT 'ValueName'` | `DEFAULT 'Active'`, `DEFAULT 'Pending'` |
+| Enumeration | `DEFAULT Module.Enum.Value` | `DEFAULT Shop.Status.Active`, `DEFAULT 'Pending'` |
 
 ### No Default
 

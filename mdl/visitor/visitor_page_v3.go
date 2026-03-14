@@ -746,11 +746,21 @@ func buildAttributeListV3(ctx parser.IAttributeListV3Context) []string {
 }
 
 // buildAttributePathV3 builds an attribute path string.
+// Handles quoted identifiers (e.g., "Order") by stripping quotes.
 func buildAttributePathV3(ctx parser.IAttributePathV3Context) string {
 	if ctx == nil {
 		return ""
 	}
-	return ctx.GetText()
+	text := ctx.GetText()
+	// Strip double quotes or backticks from each path segment
+	if strings.ContainsAny(text, "\"`") {
+		parts := strings.Split(text, "/")
+		for i, p := range parts {
+			parts[i] = unquoteIdentifier(p)
+		}
+		return strings.Join(parts, "/")
+	}
+	return text
 }
 
 // buildStringExprV3 extracts string from stringExprV3.

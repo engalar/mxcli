@@ -212,7 +212,7 @@ CREATE PERSISTENT ENTITY Manufacturing.WorkOrder (
   /** Current status */
   WorkOrderStatus: Enumeration(Manufacturing.WorkOrderStatus) NOT NULL ERROR 'Work order status is required',
   /** Priority level */
-  Priority: Enumeration(Manufacturing.ProductionPriority) NOT NULL ERROR 'Priority is required' DEFAULT 'Normal',
+  Priority: Enumeration(Manufacturing.ProductionPriority) NOT NULL ERROR 'Priority is required' DEFAULT Manufacturing.ProductionPriority.Normal,
   /** Planned start date */
   PlannedStartDate: DateTime,
   /** Planned completion date */

@@ -73,8 +73,8 @@ INDEX (Name);
 CREATE PERSISTENT ENTITY TaskMgmt.Task (
   TaskTitle: String(500) NOT NULL ERROR 'Task title is required',
   Description: String(4000),
-  Status: Enumeration(TaskMgmt.TaskStatus) DEFAULT 'Open',
-  Priority: Enumeration(TaskMgmt.TaskPriority) DEFAULT 'Medium',
+  Status: Enumeration(TaskMgmt.TaskStatus) DEFAULT TaskMgmt.TaskStatus.Open,
+  Priority: Enumeration(TaskMgmt.TaskPriority) DEFAULT TaskMgmt.TaskPriority.Medium,
   DueDate: DateTime,
   CompletedDate: DateTime,
   EstimatedHours: Decimal DEFAULT 0
