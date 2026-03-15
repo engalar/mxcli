@@ -4,6 +4,31 @@ All notable changes to mxcli will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **CI/CD** — GitHub Actions workflow for build, test, and lint on push; release workflow for tagged versions
+- **Makefile Lint Targets** — `make lint`, `make lint-go` (fmt + vet), `make lint-ts` (tsc --noEmit)
+- **Playwright Testing** — Browser name config support, port-offset fixes, project directory CWD for session discovery
+- **VS Code Extension** — Project tree auto-refresh via file watchers, association cardinality label fix
+
+### Fixed
+
+- Enum truncation, DROP+CREATE cache invalidation, duplicate variable detection, subfolder enum resolution
+- IMPORT FK column NULL fallback and entity attribute validation
+- Docker exec using host port instead of container-internal port
+- AGGREGATE syntax in skills docs
+- Association cardinality labels in domain model diagrams
+- 3 MDL bugs and standardized enum DEFAULT syntax
+
+### Changed
+
+- Default to always-quoted identifiers in MDL to prevent reserved keyword conflicts
+- Communication Style section in generated CLAUDE.md for human-readable change descriptions
+- Shortened mxcli startup warning to single line
+- Chromium system dependencies added to devcontainer Dockerfile
+
 ## [0.1.0] - 2026-03-13
 
 First public release.
