@@ -134,7 +134,7 @@ test:
 
 # Run integration tests (requires mx binary / mxbuild)
 test-integration:
-	CGO_ENABLED=0 go test -tags integration -timeout 30m ./...
+	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m ./...
 
 # Run MDL integration tests (requires Docker and a Mendix project)
 # Usage: make test-mdl MPR=path/to/app.mpr
