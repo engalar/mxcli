@@ -220,11 +220,9 @@ func (r *REPL) execute(input string) error {
 		return nil // Don't return error, just print and continue
 	}
 
-	// Execute all statements
-	for _, stmt := range prog.Statements {
-		if err := r.executor.Execute(stmt); err != nil {
-			return err
-		}
+	// Execute all statements and run finalization (e.g. ReconcileMemberAccesses)
+	if err := r.executor.ExecuteProgram(prog); err != nil {
+		return err
 	}
 
 	return nil

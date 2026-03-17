@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,31 +11,52 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/visitor"
 )
 
 // --- MX Check Integration Tests ---
 // These tests verify that created documents pass Mendix's validation.
 
-// mxCheckPath is the path to the mx check command.
-const mxCheckPath = "../../reference/mxbuild/modeler/mx"
+// findMxBinary searches for the mx command in known locations.
+// Search order: reference/mxbuild/modeler/mx (repo-local), ~/.mxcli/mxbuild/*/modeler/mx
+// (cached downloads), PATH lookup.
+func findMxBinary() string {
+	// 1. Repo-local reference path
+	repoPath, err := filepath.Abs("../../reference/mxbuild/modeler/mx")
+	if err == nil {
+		if _, err := os.Stat(repoPath); err == nil {
+			return repoPath
+		}
+	}
+
+	// 2. Cached downloads (~/.mxcli/mxbuild/*/modeler/mx)
+	if home, err := os.UserHomeDir(); err == nil {
+		pattern := filepath.Join(home, ".mxcli", "mxbuild", "*", "modeler", "mx")
+		if matches, _ := filepath.Glob(pattern); len(matches) > 0 {
+			return matches[len(matches)-1]
+		}
+	}
+
+	// 3. PATH lookup
+	if p, err := exec.LookPath("mx"); err == nil {
+		return p
+	}
+
+	return ""
+}
 
 // mxCheckAvailable checks if the mx command is available.
 func mxCheckAvailable() bool {
-	absPath, err := filepath.Abs(mxCheckPath)
-	if err != nil {
-		return false
-	}
-	_, err = os.Stat(absPath)
-	return err == nil
+	return findMxBinary() != ""
 }
 
 // runMxCheck runs mx check on the given project and returns any errors.
 func runMxCheck(t *testing.T, projectPath string) (string, error) {
 	t.Helper()
 
-	mxPath, err := filepath.Abs(mxCheckPath)
-	if err != nil {
-		return "", err
+	mxPath := findMxBinary()
+	if mxPath == "" {
+		return "", fmt.Errorf("mx binary not found")
 	}
 
 	cmd := exec.Command(mxPath, "check", projectPath)
@@ -340,8 +362,8 @@ func TestMxCheck_CE0066_Scenarios(t *testing.T) {
 				`CREATE MODULE ROLE ` + mod + `.S2Admin;`,
 				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S2Entity (Name: String(100));`,
 				`GRANT ` + mod + `.S2Admin ON ` + mod + `.S2Entity (CREATE, DELETE, READ *, WRITE *);`,
-				`ALTER ENTITY ` + mod + `.S2Entity ADD ATTRIBUTE Email String(200);`,
-				`ALTER ENTITY ` + mod + `.S2Entity ADD ATTRIBUTE Active Boolean DEFAULT false;`,
+				`ALTER ENTITY ` + mod + `.S2Entity ADD ATTRIBUTE Email: String(200);`,
+				`ALTER ENTITY ` + mod + `.S2Entity ADD ATTRIBUTE Active: Boolean DEFAULT false;`,
 			},
 		},
 		{
@@ -351,7 +373,7 @@ func TestMxCheck_CE0066_Scenarios(t *testing.T) {
 				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S3Parent (Name: String(100));`,
 				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S3Child (Label: String(100));`,
 				`GRANT ` + mod + `.S3Admin ON ` + mod + `.S3Parent (CREATE, DELETE, READ *, WRITE *);`,
-				`CREATE ASSOCIATION ` + mod + `.S3Child_S3Parent (` + mod + `.S3Child -> ` + mod + `.S3Parent);`,
+				`CREATE ASSOCIATION ` + mod + `.S3Child_S3Parent FROM ` + mod + `.S3Child TO ` + mod + `.S3Parent;`,
 			},
 		},
 		{
@@ -368,7 +390,7 @@ func TestMxCheck_CE0066_Scenarios(t *testing.T) {
 			steps: []string{
 				`CREATE MODULE ROLE ` + mod + `.S5Admin;`,
 				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S5Entity (Name: String(100));`,
-				`ALTER ENTITY ` + mod + `.S5Entity ADD ATTRIBUTE Email String(200);`,
+				`ALTER ENTITY ` + mod + `.S5Entity ADD ATTRIBUTE Email: String(200);`,
 				`GRANT ` + mod + `.S5Admin ON ` + mod + `.S5Entity (CREATE, DELETE, READ *, WRITE *);`,
 			},
 		},
@@ -378,7 +400,7 @@ func TestMxCheck_CE0066_Scenarios(t *testing.T) {
 				`CREATE MODULE ROLE ` + mod + `.S6Admin;`,
 				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S6Entity (Name: String(100));`,
 				`GRANT ` + mod + `.S6Admin ON ` + mod + `.S6Entity (READ *);`,
-				`ALTER ENTITY ` + mod + `.S6Entity ADD ATTRIBUTE Code String(50);`,
+				`ALTER ENTITY ` + mod + `.S6Entity ADD ATTRIBUTE Code: String(50);`,
 				`GRANT ` + mod + `.S6Admin ON ` + mod + `.S6Entity (CREATE, DELETE, READ *, WRITE *);`,
 			},
 		},
@@ -402,7 +424,7 @@ func TestMxCheck_CE0066_Scenarios(t *testing.T) {
 				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S8Entity (Name: String(100));`,
 				`GRANT ` + mod + `.S8Admin ON ` + mod + `.S8Entity (CREATE, DELETE, READ *, WRITE *);`,
 				`GRANT ` + mod + `.S8Viewer ON ` + mod + `.S8Entity (READ *);`,
-				`ALTER ENTITY ` + mod + `.S8Entity ADD ATTRIBUTE Status String(50);`,
+				`ALTER ENTITY ` + mod + `.S8Entity ADD ATTRIBUTE Status: String(50);`,
 			},
 		},
 		{
@@ -412,8 +434,8 @@ func TestMxCheck_CE0066_Scenarios(t *testing.T) {
 				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S9Main (Name: String(100));`,
 				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S9Related (Value: Integer);`,
 				`GRANT ` + mod + `.S9Admin ON ` + mod + `.S9Main (CREATE, DELETE, READ *, WRITE *);`,
-				`ALTER ENTITY ` + mod + `.S9Main ADD ATTRIBUTE Extra String(200);`,
-				`CREATE ASSOCIATION ` + mod + `.S9Related_S9Main (` + mod + `.S9Related -> ` + mod + `.S9Main);`,
+				`ALTER ENTITY ` + mod + `.S9Main ADD ATTRIBUTE Extra: String(200);`,
+				`CREATE ASSOCIATION ` + mod + `.S9Related_S9Main FROM ` + mod + `.S9Related TO ` + mod + `.S9Main;`,
 			},
 		},
 	}
@@ -423,11 +445,16 @@ func TestMxCheck_CE0066_Scenarios(t *testing.T) {
 			env := setupTestEnv(t)
 			defer env.teardown()
 
-			for i, step := range sc.steps {
-				if err := env.executeMDL(step); err != nil {
-					if !strings.Contains(err.Error(), "already exists") {
-						t.Fatalf("Step %d failed: %v\nMDL: %s", i+1, err, step)
-					}
+			// Combine all steps into a single script so ExecuteProgram
+			// runs finalizeProgramExecution (ReconcileMemberAccesses).
+			allMDL := strings.Join(sc.steps, "\n")
+			prog, errs := visitor.Build(allMDL)
+			if len(errs) > 0 {
+				t.Fatalf("Parse failed: %v\nMDL:\n%s", errs[0], allMDL)
+			}
+			if err := env.executor.ExecuteProgram(prog); err != nil {
+				if !strings.Contains(err.Error(), "already exists") {
+					t.Fatalf("ExecuteProgram failed: %v\nMDL:\n%s", err, allMDL)
 				}
 			}
 

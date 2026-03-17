@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -40,6 +41,8 @@ type testEnv struct {
 }
 
 // copyTestProject copies the source project to a temp directory and returns the MPR path.
+// If the source project doesn't exist, it falls back to creating a fresh project
+// using `mx create-project` (requires the mx binary to be available).
 // The temp directory is automatically cleaned up when the test finishes.
 func copyTestProject(t *testing.T) string {
 	t.Helper()
@@ -48,8 +51,10 @@ func copyTestProject(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("Failed to resolve source project path: %v", err)
 	}
+
 	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
-		t.Skipf("Source project not found: %s", srcDir)
+		// Source project not found — try mx create-project as fallback
+		return createTestProject(t)
 	}
 
 	// Create temp directory (auto-cleaned by t.TempDir())
@@ -73,6 +78,33 @@ func copyTestProject(t *testing.T) string {
 	}
 
 	return destMPR
+}
+
+// createTestProject creates a fresh Mendix project using `mx create-project`.
+// Returns the path to the App.mpr file in a temp directory.
+func createTestProject(t *testing.T) string {
+	t.Helper()
+
+	mxPath := findMxBinary()
+	if mxPath == "" {
+		t.Skip("mx binary not available and source project not found")
+	}
+
+	destDir := t.TempDir()
+
+	cmd := exec.Command(mxPath, "create-project")
+	cmd.Dir = destDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Skipf("mx create-project failed: %v\n%s", err, output)
+	}
+
+	mprPath := filepath.Join(destDir, "App.mpr")
+	if _, err := os.Stat(mprPath); os.IsNotExist(err) {
+		t.Skipf("mx create-project did not produce App.mpr in %s", destDir)
+	}
+
+	return mprPath
 }
 
 // copyFile copies a single file from src to dst.

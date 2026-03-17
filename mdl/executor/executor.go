@@ -551,6 +551,11 @@ func (e *Executor) execDisconnect() error {
 		return nil
 	}
 
+	// Reconcile any pending security changes before closing
+	if err := e.finalizeProgramExecution(); err != nil {
+		fmt.Fprintf(e.output, "Warning: finalization error: %v\n", err)
+	}
+
 	e.writer.Close()
 	fmt.Fprintf(e.output, "Disconnected from: %s\n", e.mprPath)
 	e.writer = nil
