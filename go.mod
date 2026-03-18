@@ -3,7 +3,6 @@ module github.com/mendixlabs/mxcli
 go 1.26.0
 
 require (
-	github.com/antlr/antlr4 v0.0.0-20210105192202-5c2b686f95e1
 	github.com/antlr4-go/antlr/v4 v4.13.1
 	github.com/chzyer/readline v1.5.1
 	github.com/jackc/pgx/v5 v5.8.0
