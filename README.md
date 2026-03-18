@@ -22,35 +22,53 @@ Mxcli is a tool that enables some of the following use cases.
 
 ## A textual DSL for mendix models
 
+MDL, Mendix Definition Language, is a DSL that provides textual models at the same abstraction level as the visual models in Studio Pro. 
+
 ![Mxcli MDL](docs/images/mxcli-mdl-dsl.png)
 
 ### Command line tool to work with Mendix projects
+
+Mxcli command line tool allows you to run commands against your project to investigate your project and make changes.
 
 ![Mxcli](docs/images/mxcli-cli.png)
 
 ### A REPL to work with Mendix projects
 
+In repl mode mxcli allows you to interactively work with a Mendix project. This is similar to psql or sqlplus when working with databases. You can list the available Mendix documents, view the MDL source, and make changes.
+
 ![Mxcli repl](docs/images/mxcli-repl.png)
 
 ### Skills and configuration to enable Agentic Coding on Mendix projects
 
+Running *mxcli init* will install configuration files for agentic coding tools like AGENTS.md, CLAUDE.md, and Mendix specific skills. It will also configure a devcontainer that you can use when opening the project in Vscode, so you limit what your agentic coder can impact and see. 
+
 ![Mxcli skills](docs/images/mxcli-init-claud.png)
+
+This screenshot shows how Claude uses mxcli command to do agentic search on your Mendix project to understand what is available. It gets a list of pages that are in the specified module, it uses structure to get an overview of all the documents in the module, and then it describes the soure of a specifc page. Based on this info it can make a plan how to modify your project.
 
 ![Mxcli claude](docs/images/mxcli-claude-add-page.png)
 
 ### A set of extensible skills
 
+The skills documents teach agentic coding tools how to build Mendix projects. You can add your own skills with design patterns and best practices. Using MDL you can be very specific how the agent should generate the required Mendix documents.
+
 ![Mxcli skills](docs/images/mxcli-skills.png)
 
 ### Metadata Catalog 
+
+Mxcli builds up a set of database tables with information about your project. This allows for flexible agentic search on your project documents.
 
 ![Mxcli catalog](docs/images/mxcli-catalog.png)
 
 ### A Mendix project linter
 
+The catalog tables are exposed as Starlark APIs so you can use the available data in custom Mendix linter rules.
+
 ![Mxcli lint](docs/images/mxcli-lint.png)
 
 ### VSCode for Mendix projects
+
+The easiest way to use mxcli is in vscode. You can run Claude Code inside vscode, mxcli installs a Mendix vscode extension that helps you review and understand your Mendix project. The project structure shows you all modules with document, similar to the app explorer in Mendix Studio Pro.
 
 ![mxcli vscode claude code](docs/images/mxcli-vscode-claude.png)
 
@@ -58,11 +76,17 @@ Mxcli is a tool that enables some of the following use cases.
 
 ### Run and test your Mendix projects
 
+Claude code can start your Mendix project using PAD (portable application distribution). This will run the Mendix runtime in a docker container, and postgres in another docker container. This allows you to test your Mendix project without leaving vscode.
+
 ![mxcli docker portable application distribution](docs/images/mxcli-docker-run.png)
 
 ### Automated Playwright-cli testing for Mendix projects
 
+The devcontainer is configured for use with playwright-cli so Claude Code can test your running application.
+
 ### Data migration for Mendix projects
+
+Claude code can migrate existing data, or generate demo data in the postgres container when you run your application.
 
 ## Quick Start
 
