@@ -458,6 +458,68 @@ func TestMxCheck_CE0066_Scenarios(t *testing.T) {
 	}
 }
 
+// TestMxCheck_DropAddEnumAttribute validates that dropping and re-adding an attribute
+// with an enumeration default value does not corrupt the MPR (GitHub issue #4).
+// Before the fix, the StoredValue $ID was lost during parsing and a new GUID was
+// generated on write, leaving dangling references that caused KeyNotFoundException.
+func TestMxCheck_DropAddEnumAttribute(t *testing.T) {
+	if !mxCheckAvailable() {
+		t.Skip("mx command not available")
+	}
+
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	mod := testModule
+
+	// Step 1: Create an enumeration and an entity with an enumeration attribute
+	setupMDL := strings.Join([]string{
+		`CREATE ENUMERATION ` + mod + `.SubmissionStatus (StatusNew 'New', StatusInProgress 'In Progress', StatusDone 'Done');`,
+		`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.Issue4Entity (
+			Name: String(100),
+			Status: Enumeration(` + mod + `.SubmissionStatus) DEFAULT ` + mod + `.SubmissionStatus.StatusNew
+		);`,
+	}, "\n")
+
+	prog, errs := visitor.Build(setupMDL)
+	if len(errs) > 0 {
+		t.Fatalf("Parse failed: %v\nMDL:\n%s", errs[0], setupMDL)
+	}
+	if err := env.executor.ExecuteProgram(prog); err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Step 2: Drop the attribute and re-add it with a different default
+	alterMDL := strings.Join([]string{
+		`ALTER ENTITY ` + mod + `.Issue4Entity DROP ATTRIBUTE Status;`,
+		`ALTER ENTITY ` + mod + `.Issue4Entity ADD ATTRIBUTE Status: Enumeration(` + mod + `.SubmissionStatus) DEFAULT ` + mod + `.SubmissionStatus.StatusInProgress;`,
+	}, "\n")
+
+	prog, errs = visitor.Build(alterMDL)
+	if len(errs) > 0 {
+		t.Fatalf("Parse failed: %v\nMDL:\n%s", errs[0], alterMDL)
+	}
+	if err := env.executor.ExecuteProgram(prog); err != nil {
+		t.Fatalf("Alter failed: %v", err)
+	}
+
+	// Step 3: Flush to disk and validate with mx check
+	env.executor.Execute(&ast.DisconnectStmt{})
+
+	output, err := runMxCheck(t, env.projectPath)
+	if err != nil {
+		if strings.Contains(output, "KeyNotFoundException") || strings.Contains(output, "not present in the dictionary") {
+			t.Errorf("Issue #4 regression: dangling GUID reference after drop/add enum attribute:\n%s", output)
+		} else if strings.Contains(output, "error") || strings.Contains(output, "Error") {
+			t.Errorf("mx check found errors:\n%s", output)
+		} else {
+			t.Logf("mx check output (non-zero exit but no errors):\n%s", output)
+		}
+	} else {
+		t.Logf("mx check passed")
+	}
+}
+
 // TestMxCheck_RetrieveWithDateTimeToken validates that RETRIEVE with [%CurrentDateTime%]
 // in a WHERE clause produces correctly quoted XPath (GitHub issue #1).
 // The token must be quoted as '[%CurrentDateTime%]' in XPath constraints.

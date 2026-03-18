@@ -785,8 +785,14 @@ func serializeAttribute(a *domainmodel.Attribute) bson.D {
 		typeName = "DomainModels$" + a.Type.GetTypeName() + "AttributeType"
 	}
 
+	attrTypeID := generateUUID()
+	if a.Type != nil {
+		if elem, ok := a.Type.(model.Element); ok && elem.GetID() != "" {
+			attrTypeID = string(elem.GetID())
+		}
+	}
 	attrType := bson.D{
-		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$ID", Value: idToBsonBinary(attrTypeID)},
 		{Key: "$Type", Value: typeName},
 	}
 	// Add type-specific properties
@@ -807,10 +813,17 @@ func serializeAttribute(a *domainmodel.Attribute) bson.D {
 
 	// Determine value type: OqlViewValue for view entities, StoredValue for regular entities
 	var valueDoc bson.D
+	valueID := ""
+	if a.Value != nil && a.Value.ID != "" {
+		valueID = string(a.Value.ID)
+	}
+	if valueID == "" {
+		valueID = generateUUID()
+	}
 	if a.Value != nil && a.Value.ViewReference != "" {
 		// View entity attribute - use OqlViewValue
 		valueDoc = bson.D{
-			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$ID", Value: idToBsonBinary(valueID)},
 			{Key: "$Type", Value: "DomainModels$OqlViewValue"},
 			{Key: "Reference", Value: a.Value.ViewReference},
 		}
@@ -821,7 +834,7 @@ func serializeAttribute(a *domainmodel.Attribute) bson.D {
 			defaultValue = a.Value.DefaultValue
 		}
 		valueDoc = bson.D{
-			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$ID", Value: idToBsonBinary(valueID)},
 			{Key: "$Type", Value: "DomainModels$StoredValue"},
 			{Key: "DefaultValue", Value: defaultValue},
 		}

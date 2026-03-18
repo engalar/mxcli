@@ -224,56 +224,77 @@ func parseAttribute(raw map[string]any) *domainmodel.Attribute {
 func parseAttributeValue(raw map[string]any) *domainmodel.AttributeValue {
 	typeName := extractString(raw["$Type"])
 	defaultValue := extractString(raw["DefaultValue"])
+	valueID := model.ID(extractBsonID(raw["$ID"]))
 
 	switch typeName {
 	case "DomainModels$StoredValue":
-		return &domainmodel.AttributeValue{
+		val := &domainmodel.AttributeValue{
 			Type:         "StoredValue",
 			DefaultValue: defaultValue,
 		}
+		val.ID = valueID
+		return val
 	case "DomainModels$CalculatedValue":
-		return &domainmodel.AttributeValue{
+		val := &domainmodel.AttributeValue{
 			Type:        "CalculatedValue",
 			MicroflowID: model.ID(extractBsonID(raw["Microflow"])),
 		}
+		val.ID = valueID
+		return val
 	case "DomainModels$OqlViewValue":
-		return &domainmodel.AttributeValue{
+		val := &domainmodel.AttributeValue{
 			Type:          "OqlViewValue",
 			ViewReference: extractString(raw["Reference"]),
 		}
+		val.ID = valueID
+		return val
 	default:
-		return &domainmodel.AttributeValue{
+		val := &domainmodel.AttributeValue{
 			DefaultValue: defaultValue,
 		}
+		val.ID = valueID
+		return val
 	}
 }
 
 func parseAttributeType(raw map[string]any) domainmodel.AttributeType {
 	typeName, _ := raw["$Type"].(string)
+	typeID := model.ID(extractBsonID(raw["$ID"]))
 
 	switch typeName {
 	case "DomainModels$StringAttributeType":
 		t := &domainmodel.StringAttributeType{}
+		t.ID = typeID
 		if length, ok := raw["Length"].(int32); ok {
 			t.Length = int(length)
 		}
 		return t
 	case "DomainModels$IntegerAttributeType":
-		return &domainmodel.IntegerAttributeType{}
+		t := &domainmodel.IntegerAttributeType{}
+		t.ID = typeID
+		return t
 	case "DomainModels$LongAttributeType":
-		return &domainmodel.LongAttributeType{}
+		t := &domainmodel.LongAttributeType{}
+		t.ID = typeID
+		return t
 	case "DomainModels$DecimalAttributeType":
-		return &domainmodel.DecimalAttributeType{}
+		t := &domainmodel.DecimalAttributeType{}
+		t.ID = typeID
+		return t
 	case "DomainModels$BooleanAttributeType":
-		return &domainmodel.BooleanAttributeType{}
+		t := &domainmodel.BooleanAttributeType{}
+		t.ID = typeID
+		return t
 	case "DomainModels$DateTimeAttributeType":
 		t := &domainmodel.DateTimeAttributeType{}
+		t.ID = typeID
 		if localize, ok := raw["LocalizeDate"].(bool); ok {
 			t.LocalizeDate = localize
 		}
 		return t
 	case "DomainModels$EnumerationAttributeType":
 		t := &domainmodel.EnumerationAttributeType{}
+		t.ID = typeID
 		// Enumeration is stored as qualified name string (BY_NAME_REFERENCE)
 		if enumRef, ok := raw["Enumeration"].(string); ok {
 			t.EnumerationRef = enumRef
@@ -282,13 +303,21 @@ func parseAttributeType(raw map[string]any) domainmodel.AttributeType {
 		}
 		return t
 	case "DomainModels$AutoNumberAttributeType":
-		return &domainmodel.AutoNumberAttributeType{}
+		t := &domainmodel.AutoNumberAttributeType{}
+		t.ID = typeID
+		return t
 	case "DomainModels$BinaryAttributeType":
-		return &domainmodel.BinaryAttributeType{}
+		t := &domainmodel.BinaryAttributeType{}
+		t.ID = typeID
+		return t
 	case "DomainModels$HashedStringAttributeType":
-		return &domainmodel.HashedStringAttributeType{}
+		t := &domainmodel.HashedStringAttributeType{}
+		t.ID = typeID
+		return t
 	default:
-		return &domainmodel.StringAttributeType{} // Default fallback
+		t := &domainmodel.StringAttributeType{} // Default fallback
+		t.ID = typeID
+		return t
 	}
 }
 
