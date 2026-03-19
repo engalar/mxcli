@@ -171,12 +171,17 @@ ALTER PROJECT SECURITY DEMO USERS OFF;
 ### Demo Users
 
 ```sql
--- Create demo user with roles
+-- Create demo user (auto-detects entity that generalizes System.User)
 CREATE DEMO USER 'demo_admin' PASSWORD 'Admin123!' (Administrator, SuperAdmin);
+
+-- Create demo user with explicit entity
+CREATE DEMO USER 'demo_admin' PASSWORD 'Admin123!' ENTITY Administration.Account (Administrator, SuperAdmin);
 
 -- Remove demo user
 DROP DEMO USER 'demo_admin';
 ```
+
+The ENTITY clause specifies which entity (generalizing `System.User`) to use. If omitted, it auto-detects the unique System.User subtype in the project. If multiple subtypes exist, you must specify ENTITY explicitly.
 
 ## Starlark Lint Rule APIs
 

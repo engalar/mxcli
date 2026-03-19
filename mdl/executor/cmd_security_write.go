@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/security"
 )
@@ -731,7 +732,7 @@ func (e *Executor) execAlterProjectSecurity(s *ast.AlterProjectSecurityStmt) err
 	return nil
 }
 
-// execCreateDemoUser handles CREATE DEMO USER 'name' PASSWORD 'pw' (Roles).
+// execCreateDemoUser handles CREATE DEMO USER 'name' PASSWORD 'pw' [ENTITY Module.Entity] (Roles).
 func (e *Executor) execCreateDemoUser(s *ast.CreateDemoUserStmt) error {
 	if e.writer == nil {
 		return fmt.Errorf("not connected to a project in write mode")
@@ -749,12 +750,66 @@ func (e *Executor) execCreateDemoUser(s *ast.CreateDemoUserStmt) error {
 		}
 	}
 
-	if err := e.writer.AddDemoUser(ps.ID, s.UserName, s.Password, s.UserRoles); err != nil {
+	// Resolve entity: use explicit value or auto-detect from domain models
+	entity := s.Entity
+	if entity == "" {
+		detected, err := e.detectUserEntity()
+		if err != nil {
+			return err
+		}
+		entity = detected
+	}
+
+	if err := e.writer.AddDemoUser(ps.ID, s.UserName, s.Password, entity, s.UserRoles); err != nil {
 		return fmt.Errorf("failed to create demo user: %w", err)
 	}
 
-	fmt.Fprintf(e.output, "Created demo user: %s\n", s.UserName)
+	fmt.Fprintf(e.output, "Created demo user: %s (entity: %s)\n", s.UserName, entity)
 	return nil
+}
+
+// detectUserEntity finds the entity that generalizes System.User.
+func (e *Executor) detectUserEntity() (string, error) {
+	modules, err := e.reader.ListModules()
+	if err != nil {
+		return "", fmt.Errorf("failed to list modules: %w", err)
+	}
+	moduleNameByID := make(map[model.ID]string, len(modules))
+	for _, m := range modules {
+		moduleNameByID[m.ID] = m.Name
+	}
+
+	dms, err := e.reader.ListDomainModels()
+	if err != nil {
+		return "", fmt.Errorf("failed to list domain models: %w", err)
+	}
+
+	var candidates []string
+	for _, dm := range dms {
+		moduleName := moduleNameByID[dm.ContainerID]
+		for _, ent := range dm.Entities {
+			if ent.GeneralizationRef == "System.User" {
+				candidates = append(candidates, moduleName+"."+ent.Name)
+			}
+		}
+	}
+
+	switch len(candidates) {
+	case 0:
+		return "", fmt.Errorf("no entity found that generalizes System.User; use ENTITY clause to specify one")
+	case 1:
+		return candidates[0], nil
+	default:
+		return "", fmt.Errorf("multiple entities generalize System.User: %s; use ENTITY clause to specify one", joinCandidates(candidates))
+	}
+}
+
+func joinCandidates(candidates []string) string {
+	result := candidates[0]
+	for i := 1; i < len(candidates); i++ {
+		result += ", " + candidates[i]
+	}
+	return result
 }
 
 // execDropDemoUser handles DROP DEMO USER 'name'.

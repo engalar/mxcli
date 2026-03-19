@@ -279,7 +279,7 @@ func (b *Builder) ExitAlterProjectSecurityStatement(ctx *parser.AlterProjectSecu
 	b.statements = append(b.statements, stmt)
 }
 
-// ExitCreateDemoUserStatement handles CREATE DEMO USER 'name' PASSWORD 'pw' (Role1, Role2)
+// ExitCreateDemoUserStatement handles CREATE DEMO USER 'name' PASSWORD 'pw' [ENTITY Module.Entity] (Role1, Role2)
 func (b *Builder) ExitCreateDemoUserStatement(ctx *parser.CreateDemoUserStatementContext) {
 	sls := ctx.AllSTRING_LITERAL()
 	if len(sls) < 2 {
@@ -289,6 +289,11 @@ func (b *Builder) ExitCreateDemoUserStatement(ctx *parser.CreateDemoUserStatemen
 	stmt := &ast.CreateDemoUserStmt{
 		UserName: unquoteString(sls[0].GetText()),
 		Password: unquoteString(sls[1].GetText()),
+	}
+
+	// Parse optional ENTITY clause
+	if qn := ctx.QualifiedName(); qn != nil {
+		stmt.Entity = buildQualifiedName(qn).String()
 	}
 
 	// Parse user role names from identifierOrKeyword list
