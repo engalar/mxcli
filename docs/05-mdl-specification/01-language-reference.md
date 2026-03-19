@@ -405,7 +405,7 @@ CREATE [OR MODIFY] <entity-type> ENTITY <qualified-name> (
 **Attribute Definition:**
 ```sql
 [/** <documentation> */]
-<name>: <type> [NOT NULL [ERROR '<message>']] [UNIQUE [ERROR '<message>']] [DEFAULT <value>]
+<name>: <type> [NOT NULL [ERROR '<message>']] [UNIQUE [ERROR '<message>']] [DEFAULT <value>] [CALCULATED]
 ```
 
 **Examples:**
@@ -1084,12 +1084,15 @@ Creates a demo user for development/testing.
 
 **Syntax:**
 ```sql
-CREATE DEMO USER '<username>' PASSWORD '<password>' (<userrole> [, ...])
+CREATE DEMO USER '<username>' PASSWORD '<password>' [ENTITY <Module.Entity>] (<userrole> [, ...])
 ```
+
+The optional `ENTITY` clause specifies the entity that generalizes `System.User` (e.g., `Administration.Account`). If omitted, the system auto-detects the unique `System.User` subtype.
 
 **Example:**
 ```sql
 CREATE DEMO USER 'demo_admin' PASSWORD 'Admin123!' (AppAdmin);
+CREATE DEMO USER 'demo_admin' PASSWORD 'Admin123!' ENTITY Administration.Account (AppAdmin);
 ```
 
 ### DROP DEMO USER

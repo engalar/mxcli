@@ -1196,3 +1196,111 @@ func TestSQLGenerateConnector(t *testing.T) {
 		})
 	}
 }
+
+func TestCreateDemoUserWithEntity(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          string
+		expectedEntity string
+		expectedUser   string
+		expectedRoles  []string
+	}{
+		{
+			name:           "with explicit entity",
+			input:          `CREATE DEMO USER 'admin' PASSWORD '1' ENTITY Administration.Account (Administrator);`,
+			expectedEntity: "Administration.Account",
+			expectedUser:   "admin",
+			expectedRoles:  []string{"Administrator"},
+		},
+		{
+			name:           "without entity clause",
+			input:          `CREATE DEMO USER 'admin' PASSWORD '1' (Administrator);`,
+			expectedEntity: "",
+			expectedUser:   "admin",
+			expectedRoles:  []string{"Administrator"},
+		},
+		{
+			name:           "with entity and multiple roles",
+			input:          `CREATE DEMO USER 'test' PASSWORD 'pwd' ENTITY MyModule.AppUser (User, Admin);`,
+			expectedEntity: "MyModule.AppUser",
+			expectedUser:   "test",
+			expectedRoles:  []string{"User", "Admin"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prog, errs := Build(tt.input)
+			if len(errs) > 0 {
+				for _, err := range errs {
+					t.Errorf("Parse error: %v", err)
+				}
+				return
+			}
+
+			if len(prog.Statements) != 1 {
+				t.Fatalf("Expected 1 statement, got %d", len(prog.Statements))
+			}
+
+			stmt, ok := prog.Statements[0].(*ast.CreateDemoUserStmt)
+			if !ok {
+				t.Fatalf("Expected CreateDemoUserStmt, got %T", prog.Statements[0])
+			}
+
+			if stmt.UserName != tt.expectedUser {
+				t.Errorf("UserName = %q, want %q", stmt.UserName, tt.expectedUser)
+			}
+			if stmt.Entity != tt.expectedEntity {
+				t.Errorf("Entity = %q, want %q", stmt.Entity, tt.expectedEntity)
+			}
+			if len(stmt.UserRoles) != len(tt.expectedRoles) {
+				t.Fatalf("UserRoles count = %d, want %d", len(stmt.UserRoles), len(tt.expectedRoles))
+			}
+			for i, role := range stmt.UserRoles {
+				if role != tt.expectedRoles[i] {
+					t.Errorf("UserRoles[%d] = %q, want %q", i, role, tt.expectedRoles[i])
+				}
+			}
+		})
+	}
+}
+
+func TestCalculatedAttributeParsing(t *testing.T) {
+	input := `CREATE PERSISTENT ENTITY DmTest.Product (
+		Name: String(200) NOT NULL,
+		Price: Decimal,
+		FullPrice: Decimal CALCULATED
+	);`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	if len(prog.Statements) != 1 {
+		t.Fatalf("Expected 1 statement, got %d", len(prog.Statements))
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateEntityStmt)
+	if len(stmt.Attributes) != 3 {
+		t.Fatalf("Expected 3 attributes, got %d", len(stmt.Attributes))
+	}
+
+	// Name should NOT be calculated
+	if stmt.Attributes[0].Calculated {
+		t.Error("Name attribute should not be calculated")
+	}
+
+	// Price should NOT be calculated
+	if stmt.Attributes[1].Calculated {
+		t.Error("Price attribute should not be calculated")
+	}
+
+	// FullPrice should be calculated
+	if !stmt.Attributes[2].Calculated {
+		t.Error("FullPrice attribute should be calculated")
+	}
+}

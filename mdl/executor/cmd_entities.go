@@ -89,8 +89,12 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 		}
 		attr.ID = attrID
 
-		// Default value
-		if a.HasDefault {
+		// Value type: CALCULATED or DEFAULT
+		if a.Calculated {
+			attr.Value = &domainmodel.AttributeValue{
+				Type: "CalculatedValue",
+			}
+		} else if a.HasDefault {
 			defaultStr := fmt.Sprintf("%v", a.DefaultValue)
 			// For enum attributes, Mendix stores just the value name (e.g., "Open"),
 			// not the fully qualified name. The EnumerationRef already provides context.
@@ -1050,8 +1054,10 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 					}
 				}
 
-				// Default value
-				if attr.Value != nil && attr.Value.DefaultValue != "" {
+				// Value type: CALCULATED or DEFAULT
+				if attr.Value != nil && attr.Value.Type == "CalculatedValue" {
+					constraints.WriteString(" CALCULATED")
+				} else if attr.Value != nil && attr.Value.DefaultValue != "" {
 					defaultVal := attr.Value.DefaultValue
 					// Quote string defaults
 					if _, ok := attr.Type.(*domainmodel.StringAttributeType); ok {

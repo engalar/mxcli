@@ -415,6 +415,7 @@ PATTERN: P A T T E R N;
 EXPRESSION: E X P R E S S I O N;
 XPATH: X P A T H;
 CONSTRAINT: C O N S T R A I N T;
+CALCULATED: C A L C U L A T E D;
 
 // =============================================================================
 // REST CLIENT KEYWORDS

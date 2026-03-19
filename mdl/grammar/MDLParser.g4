@@ -362,7 +362,7 @@ alterProjectSecurityStatement
     ;
 
 createDemoUserStatement
-    : CREATE DEMO USER STRING_LITERAL PASSWORD STRING_LITERAL
+    : CREATE DEMO USER STRING_LITERAL PASSWORD STRING_LITERAL (ENTITY qualifiedName)?
       LPAREN identifierOrKeyword (COMMA identifierOrKeyword)* RPAREN
     ;
 
@@ -527,6 +527,7 @@ attributeConstraint
     | UNIQUE (ERROR STRING_LITERAL)?
     | DEFAULT (literal | expression)
     | REQUIRED (ERROR STRING_LITERAL)?
+    | CALCULATED
     ;
 
 /**
