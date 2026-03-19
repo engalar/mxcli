@@ -1303,4 +1303,47 @@ func TestCalculatedAttributeParsing(t *testing.T) {
 	if !stmt.Attributes[2].Calculated {
 		t.Error("FullPrice attribute should be calculated")
 	}
+	// FullPrice should NOT have a microflow reference (bare CALCULATED)
+	if stmt.Attributes[2].CalculatedMicroflow != nil {
+		t.Error("FullPrice attribute should not have a microflow reference with bare CALCULATED")
+	}
+}
+
+func TestCalculatedAttributeWithMicroflow(t *testing.T) {
+	input := `CREATE PERSISTENT ENTITY DmTest.Product (
+		Name: String(200) NOT NULL,
+		FullPrice: Decimal CALCULATED DmTest.CalcFullPrice
+	);`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	if len(prog.Statements) != 1 {
+		t.Fatalf("Expected 1 statement, got %d", len(prog.Statements))
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateEntityStmt)
+	if len(stmt.Attributes) != 2 {
+		t.Fatalf("Expected 2 attributes, got %d", len(stmt.Attributes))
+	}
+
+	// FullPrice should be calculated with microflow reference
+	fullPrice := stmt.Attributes[1]
+	if !fullPrice.Calculated {
+		t.Error("FullPrice attribute should be calculated")
+	}
+	if fullPrice.CalculatedMicroflow == nil {
+		t.Fatal("FullPrice attribute should have a microflow reference")
+	}
+	if fullPrice.CalculatedMicroflow.Module != "DmTest" {
+		t.Errorf("Expected microflow module 'DmTest', got '%s'", fullPrice.CalculatedMicroflow.Module)
+	}
+	if fullPrice.CalculatedMicroflow.Name != "CalcFullPrice" {
+		t.Errorf("Expected microflow name 'CalcFullPrice', got '%s'", fullPrice.CalculatedMicroflow.Name)
+	}
 }

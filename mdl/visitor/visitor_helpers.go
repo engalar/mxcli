@@ -208,6 +208,10 @@ func buildAttributes(ctx parser.IAttributeDefinitionListContext, b *Builder) []a
 			}
 			if c.CALCULATED() != nil {
 				attr.Calculated = true
+				if qn := c.QualifiedName(); qn != nil {
+					name := buildQualifiedName(qn)
+					attr.CalculatedMicroflow = &name
+				}
 			}
 		}
 
@@ -262,6 +266,10 @@ func buildSingleAttribute(a *parser.AttributeDefinitionContext) *ast.Attribute {
 		}
 		if c.CALCULATED() != nil {
 			attr.Calculated = true
+			if qn := c.QualifiedName(); qn != nil {
+				name := buildQualifiedName(qn)
+				attr.CalculatedMicroflow = &name
+			}
 		}
 	}
 

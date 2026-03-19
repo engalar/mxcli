@@ -527,7 +527,7 @@ attributeConstraint
     | UNIQUE (ERROR STRING_LITERAL)?
     | DEFAULT (literal | expression)
     | REQUIRED (ERROR STRING_LITERAL)?
-    | CALCULATED
+    | CALCULATED qualifiedName?
     ;
 
 /**
