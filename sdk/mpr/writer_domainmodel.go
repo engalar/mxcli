@@ -815,11 +815,13 @@ func serializeAttribute(a *domainmodel.Attribute) bson.D {
 			{Key: "Reference", Value: a.Value.ViewReference},
 		}
 	} else if a.Value != nil && a.Value.Type == "CalculatedValue" {
-		// Calculated attribute - use CalculatedValue
+		// Calculated attribute - use CalculatedValue (Microflow is ByNameReference → string)
+		microflowRef := a.Value.MicroflowName
 		valueDoc = bson.D{
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 			{Key: "$Type", Value: "DomainModels$CalculatedValue"},
-			{Key: "Microflow", Value: idToBsonBinary(string(a.Value.MicroflowID))},
+			{Key: "Microflow", Value: microflowRef},
+			{Key: "PassEntity", Value: microflowRef != ""},
 		}
 	} else {
 		// Regular entity attribute - use StoredValue

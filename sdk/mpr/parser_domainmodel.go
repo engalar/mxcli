@@ -233,8 +233,8 @@ func parseAttributeValue(raw map[string]any) *domainmodel.AttributeValue {
 		}
 	case "DomainModels$CalculatedValue":
 		return &domainmodel.AttributeValue{
-			Type:        "CalculatedValue",
-			MicroflowID: model.ID(extractBsonID(raw["Microflow"])),
+			Type:          "CalculatedValue",
+			MicroflowName: extractString(raw["Microflow"]),
 		}
 	case "DomainModels$OqlViewValue":
 		return &domainmodel.AttributeValue{

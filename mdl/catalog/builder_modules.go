@@ -198,7 +198,7 @@ func (b *Builder) buildEntities() error {
 				isCalculated := 0
 				if attr.Value != nil {
 					defaultValue = attr.Value.DefaultValue
-					if attr.Value.MicroflowID != "" {
+					if attr.Value.MicroflowName != "" || attr.Value.MicroflowID != "" {
 						isCalculated = 1
 					}
 				}
