@@ -478,6 +478,8 @@ func setRawWidgetProperty(widget bson.D, propName string, value interface{}) err
 			dSet(widget, "Name", s)
 		}
 		return nil
+	case "Attribute":
+		return setWidgetAttributeRef(widget, value)
 	default:
 		// Try as pluggable widget property (quoted string property name)
 		return setPluggableWidgetProperty(widget, propName, value)
@@ -494,6 +496,41 @@ func setWidgetCaption(widget bson.D, value interface{}) error {
 	}
 	setTranslatableText(caption, "", value)
 	return nil
+}
+
+// setWidgetAttributeRef sets or updates the AttributeRef on an input widget.
+// The value must be a fully qualified path (Module.Entity.Attribute, 2+ dots).
+// If not fully qualified, AttributeRef is set to nil to avoid Studio Pro crash.
+func setWidgetAttributeRef(widget bson.D, value interface{}) error {
+	attrPath, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("Attribute value must be a string")
+	}
+
+	// Build the new AttributeRef value
+	var attrRefValue interface{}
+	if strings.Count(attrPath, ".") >= 2 {
+		attrRefValue = bson.D{
+			{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
+			{Key: "$Type", Value: "DomainModels$AttributeRef"},
+			{Key: "Attribute", Value: attrPath},
+			{Key: "EntityRef", Value: nil},
+		}
+	} else {
+		// Not fully qualified — clear the ref to avoid Mendix crash
+		attrRefValue = nil
+	}
+
+	// Try to update existing AttributeRef field
+	for i, elem := range widget {
+		if elem.Key == "AttributeRef" {
+			widget[i].Value = attrRefValue
+			return nil
+		}
+	}
+
+	// No existing AttributeRef field — this widget may not support it
+	return fmt.Errorf("widget does not have an AttributeRef property; Attribute can only be SET on input widgets (TextBox, TextArea, DatePicker, etc.)")
 }
 
 // setWidgetLabel sets the Label.Caption text on input widgets.
