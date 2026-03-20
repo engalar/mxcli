@@ -72,6 +72,11 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 	var attrs []*domainmodel.Attribute
 	attrNameToID := make(map[string]model.ID)
 	for _, a := range s.Attributes {
+		// CALCULATED attributes are only supported on persistent entities
+		if a.Calculated && !persistable {
+			return fmt.Errorf("attribute '%s': CALCULATED attributes are only supported on persistent entities", a.Name)
+		}
+
 		// Use Documentation if available, fall back to Comment
 		doc := a.Documentation
 		if doc == "" {
@@ -406,6 +411,10 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 		if a == nil {
 			return fmt.Errorf("no attribute definition provided")
 		}
+		// CALCULATED attributes are only supported on persistent entities
+		if a.Calculated && !entity.Persistable {
+			return fmt.Errorf("attribute '%s': CALCULATED attributes are only supported on persistent entities", a.Name)
+		}
 		// Auto-default Boolean attributes to false if no DEFAULT specified
 		if a.Type.Kind == ast.TypeBoolean && !a.HasDefault {
 			a.HasDefault = true
@@ -509,6 +518,10 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 		fmt.Fprintf(e.output, "Renamed attribute '%s' to '%s' on entity %s\n", s.AttributeName, s.NewName, s.Name)
 
 	case ast.AlterEntityModifyAttribute:
+		// CALCULATED attributes are only supported on persistent entities
+		if s.Calculated && !entity.Persistable {
+			return fmt.Errorf("attribute '%s': CALCULATED attributes are only supported on persistent entities", s.AttributeName)
+		}
 		found := false
 		for _, attr := range entity.Attributes {
 			if attr.Name == s.AttributeName {
@@ -1094,10 +1107,10 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 				if attr.Value != nil && attr.Value.Type == "CalculatedValue" {
 					constraints.WriteString(" CALCULATED")
 					if attr.Value.MicroflowName != "" {
-						constraints.WriteString(" " + attr.Value.MicroflowName)
+						constraints.WriteString(" BY " + attr.Value.MicroflowName)
 					} else if attr.Value.MicroflowID != "" {
 						if mfName := e.lookupMicroflowName(attr.Value.MicroflowID); mfName != "" {
-							constraints.WriteString(" " + mfName)
+							constraints.WriteString(" BY " + mfName)
 						}
 					}
 				} else if attr.Value != nil && attr.Value.DefaultValue != "" {

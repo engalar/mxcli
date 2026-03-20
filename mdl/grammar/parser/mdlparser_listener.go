@@ -751,6 +751,48 @@ type MDLParserListener interface {
 	// EnterBusinessEventAttrDef is called when entering the businessEventAttrDef production.
 	EnterBusinessEventAttrDef(c *BusinessEventAttrDefContext)
 
+	// EnterCreateWorkflowStatement is called when entering the createWorkflowStatement production.
+	EnterCreateWorkflowStatement(c *CreateWorkflowStatementContext)
+
+	// EnterWorkflowBody is called when entering the workflowBody production.
+	EnterWorkflowBody(c *WorkflowBodyContext)
+
+	// EnterWorkflowActivityStmt is called when entering the workflowActivityStmt production.
+	EnterWorkflowActivityStmt(c *WorkflowActivityStmtContext)
+
+	// EnterWorkflowUserTaskStmt is called when entering the workflowUserTaskStmt production.
+	EnterWorkflowUserTaskStmt(c *WorkflowUserTaskStmtContext)
+
+	// EnterWorkflowUserTaskOutcome is called when entering the workflowUserTaskOutcome production.
+	EnterWorkflowUserTaskOutcome(c *WorkflowUserTaskOutcomeContext)
+
+	// EnterWorkflowCallMicroflowStmt is called when entering the workflowCallMicroflowStmt production.
+	EnterWorkflowCallMicroflowStmt(c *WorkflowCallMicroflowStmtContext)
+
+	// EnterWorkflowCallWorkflowStmt is called when entering the workflowCallWorkflowStmt production.
+	EnterWorkflowCallWorkflowStmt(c *WorkflowCallWorkflowStmtContext)
+
+	// EnterWorkflowDecisionStmt is called when entering the workflowDecisionStmt production.
+	EnterWorkflowDecisionStmt(c *WorkflowDecisionStmtContext)
+
+	// EnterWorkflowConditionOutcome is called when entering the workflowConditionOutcome production.
+	EnterWorkflowConditionOutcome(c *WorkflowConditionOutcomeContext)
+
+	// EnterWorkflowParallelSplitStmt is called when entering the workflowParallelSplitStmt production.
+	EnterWorkflowParallelSplitStmt(c *WorkflowParallelSplitStmtContext)
+
+	// EnterWorkflowParallelPath is called when entering the workflowParallelPath production.
+	EnterWorkflowParallelPath(c *WorkflowParallelPathContext)
+
+	// EnterWorkflowJumpToStmt is called when entering the workflowJumpToStmt production.
+	EnterWorkflowJumpToStmt(c *WorkflowJumpToStmtContext)
+
+	// EnterWorkflowWaitForTimerStmt is called when entering the workflowWaitForTimerStmt production.
+	EnterWorkflowWaitForTimerStmt(c *WorkflowWaitForTimerStmtContext)
+
+	// EnterWorkflowWaitForNotificationStmt is called when entering the workflowWaitForNotificationStmt production.
+	EnterWorkflowWaitForNotificationStmt(c *WorkflowWaitForNotificationStmtContext)
+
 	// EnterAlterSettingsClause is called when entering the alterSettingsClause production.
 	EnterAlterSettingsClause(c *AlterSettingsClauseContext)
 
@@ -1785,6 +1827,48 @@ type MDLParserListener interface {
 
 	// ExitBusinessEventAttrDef is called when exiting the businessEventAttrDef production.
 	ExitBusinessEventAttrDef(c *BusinessEventAttrDefContext)
+
+	// ExitCreateWorkflowStatement is called when exiting the createWorkflowStatement production.
+	ExitCreateWorkflowStatement(c *CreateWorkflowStatementContext)
+
+	// ExitWorkflowBody is called when exiting the workflowBody production.
+	ExitWorkflowBody(c *WorkflowBodyContext)
+
+	// ExitWorkflowActivityStmt is called when exiting the workflowActivityStmt production.
+	ExitWorkflowActivityStmt(c *WorkflowActivityStmtContext)
+
+	// ExitWorkflowUserTaskStmt is called when exiting the workflowUserTaskStmt production.
+	ExitWorkflowUserTaskStmt(c *WorkflowUserTaskStmtContext)
+
+	// ExitWorkflowUserTaskOutcome is called when exiting the workflowUserTaskOutcome production.
+	ExitWorkflowUserTaskOutcome(c *WorkflowUserTaskOutcomeContext)
+
+	// ExitWorkflowCallMicroflowStmt is called when exiting the workflowCallMicroflowStmt production.
+	ExitWorkflowCallMicroflowStmt(c *WorkflowCallMicroflowStmtContext)
+
+	// ExitWorkflowCallWorkflowStmt is called when exiting the workflowCallWorkflowStmt production.
+	ExitWorkflowCallWorkflowStmt(c *WorkflowCallWorkflowStmtContext)
+
+	// ExitWorkflowDecisionStmt is called when exiting the workflowDecisionStmt production.
+	ExitWorkflowDecisionStmt(c *WorkflowDecisionStmtContext)
+
+	// ExitWorkflowConditionOutcome is called when exiting the workflowConditionOutcome production.
+	ExitWorkflowConditionOutcome(c *WorkflowConditionOutcomeContext)
+
+	// ExitWorkflowParallelSplitStmt is called when exiting the workflowParallelSplitStmt production.
+	ExitWorkflowParallelSplitStmt(c *WorkflowParallelSplitStmtContext)
+
+	// ExitWorkflowParallelPath is called when exiting the workflowParallelPath production.
+	ExitWorkflowParallelPath(c *WorkflowParallelPathContext)
+
+	// ExitWorkflowJumpToStmt is called when exiting the workflowJumpToStmt production.
+	ExitWorkflowJumpToStmt(c *WorkflowJumpToStmtContext)
+
+	// ExitWorkflowWaitForTimerStmt is called when exiting the workflowWaitForTimerStmt production.
+	ExitWorkflowWaitForTimerStmt(c *WorkflowWaitForTimerStmtContext)
+
+	// ExitWorkflowWaitForNotificationStmt is called when exiting the workflowWaitForNotificationStmt production.
+	ExitWorkflowWaitForNotificationStmt(c *WorkflowWaitForNotificationStmtContext)
 
 	// ExitAlterSettingsClause is called when exiting the alterSettingsClause production.
 	ExitAlterSettingsClause(c *AlterSettingsClauseContext)

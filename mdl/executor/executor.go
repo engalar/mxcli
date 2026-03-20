@@ -218,6 +218,12 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 	case *ast.AlterNavigationStmt:
 		return e.execAlterNavigation(s)
 
+	// Workflow statements
+	case *ast.CreateWorkflowStmt:
+		return e.execCreateWorkflow(s)
+	case *ast.DropWorkflowStmt:
+		return e.execDropWorkflow(s)
+
 	// Business Event statements
 	case *ast.CreateBusinessEventServiceStmt:
 		return e.createBusinessEventService(s)

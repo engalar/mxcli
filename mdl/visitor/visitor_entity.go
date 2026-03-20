@@ -644,6 +644,10 @@ func (b *Builder) ExitDropStatement(ctx *parser.DropStatementContext) {
 		b.statements = append(b.statements, &ast.DropBusinessEventServiceStmt{
 			Name: buildQualifiedName(names[0]),
 		})
+	} else if ctx.WORKFLOW() != nil {
+		b.statements = append(b.statements, &ast.DropWorkflowStmt{
+			Name: buildQualifiedName(names[0]),
+		})
 	}
 }
 

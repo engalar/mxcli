@@ -1560,6 +1560,96 @@ func (s *BaseMDLParserListener) EnterBusinessEventAttrDef(ctx *BusinessEventAttr
 // ExitBusinessEventAttrDef is called when production businessEventAttrDef is exited.
 func (s *BaseMDLParserListener) ExitBusinessEventAttrDef(ctx *BusinessEventAttrDefContext) {}
 
+// EnterCreateWorkflowStatement is called when production createWorkflowStatement is entered.
+func (s *BaseMDLParserListener) EnterCreateWorkflowStatement(ctx *CreateWorkflowStatementContext) {}
+
+// ExitCreateWorkflowStatement is called when production createWorkflowStatement is exited.
+func (s *BaseMDLParserListener) ExitCreateWorkflowStatement(ctx *CreateWorkflowStatementContext) {}
+
+// EnterWorkflowBody is called when production workflowBody is entered.
+func (s *BaseMDLParserListener) EnterWorkflowBody(ctx *WorkflowBodyContext) {}
+
+// ExitWorkflowBody is called when production workflowBody is exited.
+func (s *BaseMDLParserListener) ExitWorkflowBody(ctx *WorkflowBodyContext) {}
+
+// EnterWorkflowActivityStmt is called when production workflowActivityStmt is entered.
+func (s *BaseMDLParserListener) EnterWorkflowActivityStmt(ctx *WorkflowActivityStmtContext) {}
+
+// ExitWorkflowActivityStmt is called when production workflowActivityStmt is exited.
+func (s *BaseMDLParserListener) ExitWorkflowActivityStmt(ctx *WorkflowActivityStmtContext) {}
+
+// EnterWorkflowUserTaskStmt is called when production workflowUserTaskStmt is entered.
+func (s *BaseMDLParserListener) EnterWorkflowUserTaskStmt(ctx *WorkflowUserTaskStmtContext) {}
+
+// ExitWorkflowUserTaskStmt is called when production workflowUserTaskStmt is exited.
+func (s *BaseMDLParserListener) ExitWorkflowUserTaskStmt(ctx *WorkflowUserTaskStmtContext) {}
+
+// EnterWorkflowUserTaskOutcome is called when production workflowUserTaskOutcome is entered.
+func (s *BaseMDLParserListener) EnterWorkflowUserTaskOutcome(ctx *WorkflowUserTaskOutcomeContext) {}
+
+// ExitWorkflowUserTaskOutcome is called when production workflowUserTaskOutcome is exited.
+func (s *BaseMDLParserListener) ExitWorkflowUserTaskOutcome(ctx *WorkflowUserTaskOutcomeContext) {}
+
+// EnterWorkflowCallMicroflowStmt is called when production workflowCallMicroflowStmt is entered.
+func (s *BaseMDLParserListener) EnterWorkflowCallMicroflowStmt(ctx *WorkflowCallMicroflowStmtContext) {
+}
+
+// ExitWorkflowCallMicroflowStmt is called when production workflowCallMicroflowStmt is exited.
+func (s *BaseMDLParserListener) ExitWorkflowCallMicroflowStmt(ctx *WorkflowCallMicroflowStmtContext) {
+}
+
+// EnterWorkflowCallWorkflowStmt is called when production workflowCallWorkflowStmt is entered.
+func (s *BaseMDLParserListener) EnterWorkflowCallWorkflowStmt(ctx *WorkflowCallWorkflowStmtContext) {}
+
+// ExitWorkflowCallWorkflowStmt is called when production workflowCallWorkflowStmt is exited.
+func (s *BaseMDLParserListener) ExitWorkflowCallWorkflowStmt(ctx *WorkflowCallWorkflowStmtContext) {}
+
+// EnterWorkflowDecisionStmt is called when production workflowDecisionStmt is entered.
+func (s *BaseMDLParserListener) EnterWorkflowDecisionStmt(ctx *WorkflowDecisionStmtContext) {}
+
+// ExitWorkflowDecisionStmt is called when production workflowDecisionStmt is exited.
+func (s *BaseMDLParserListener) ExitWorkflowDecisionStmt(ctx *WorkflowDecisionStmtContext) {}
+
+// EnterWorkflowConditionOutcome is called when production workflowConditionOutcome is entered.
+func (s *BaseMDLParserListener) EnterWorkflowConditionOutcome(ctx *WorkflowConditionOutcomeContext) {}
+
+// ExitWorkflowConditionOutcome is called when production workflowConditionOutcome is exited.
+func (s *BaseMDLParserListener) ExitWorkflowConditionOutcome(ctx *WorkflowConditionOutcomeContext) {}
+
+// EnterWorkflowParallelSplitStmt is called when production workflowParallelSplitStmt is entered.
+func (s *BaseMDLParserListener) EnterWorkflowParallelSplitStmt(ctx *WorkflowParallelSplitStmtContext) {
+}
+
+// ExitWorkflowParallelSplitStmt is called when production workflowParallelSplitStmt is exited.
+func (s *BaseMDLParserListener) ExitWorkflowParallelSplitStmt(ctx *WorkflowParallelSplitStmtContext) {
+}
+
+// EnterWorkflowParallelPath is called when production workflowParallelPath is entered.
+func (s *BaseMDLParserListener) EnterWorkflowParallelPath(ctx *WorkflowParallelPathContext) {}
+
+// ExitWorkflowParallelPath is called when production workflowParallelPath is exited.
+func (s *BaseMDLParserListener) ExitWorkflowParallelPath(ctx *WorkflowParallelPathContext) {}
+
+// EnterWorkflowJumpToStmt is called when production workflowJumpToStmt is entered.
+func (s *BaseMDLParserListener) EnterWorkflowJumpToStmt(ctx *WorkflowJumpToStmtContext) {}
+
+// ExitWorkflowJumpToStmt is called when production workflowJumpToStmt is exited.
+func (s *BaseMDLParserListener) ExitWorkflowJumpToStmt(ctx *WorkflowJumpToStmtContext) {}
+
+// EnterWorkflowWaitForTimerStmt is called when production workflowWaitForTimerStmt is entered.
+func (s *BaseMDLParserListener) EnterWorkflowWaitForTimerStmt(ctx *WorkflowWaitForTimerStmtContext) {}
+
+// ExitWorkflowWaitForTimerStmt is called when production workflowWaitForTimerStmt is exited.
+func (s *BaseMDLParserListener) ExitWorkflowWaitForTimerStmt(ctx *WorkflowWaitForTimerStmtContext) {}
+
+// EnterWorkflowWaitForNotificationStmt is called when production workflowWaitForNotificationStmt is entered.
+func (s *BaseMDLParserListener) EnterWorkflowWaitForNotificationStmt(ctx *WorkflowWaitForNotificationStmtContext) {
+}
+
+// ExitWorkflowWaitForNotificationStmt is called when production workflowWaitForNotificationStmt is exited.
+func (s *BaseMDLParserListener) ExitWorkflowWaitForNotificationStmt(ctx *WorkflowWaitForNotificationStmtContext) {
+}
+
 // EnterAlterSettingsClause is called when production alterSettingsClause is entered.
 func (s *BaseMDLParserListener) EnterAlterSettingsClause(ctx *AlterSettingsClauseContext) {}
 

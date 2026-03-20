@@ -193,8 +193,7 @@ func parseWorkflowActivity(raw map[string]any) workflows.WorkflowActivity {
 	case "Workflows$WaitForNotificationActivity":
 		return parseWaitForNotificationActivity(raw)
 	case "Workflows$StartWorkflowActivity":
-		// Start node — treat as a simple activity
-		return parseEndWorkflowActivity(raw)
+		return parseStartWorkflowActivity(raw)
 	// Older/alternate type names
 	case "Workflows$SystemTask":
 		return parseSystemTask(raw)
@@ -208,6 +207,12 @@ func parseWorkflowActivity(raw map[string]any) workflows.WorkflowActivity {
 }
 
 // parseEndWorkflowActivity parses an EndWorkflowActivity.
+func parseStartWorkflowActivity(raw map[string]any) *workflows.StartWorkflowActivity {
+	a := &workflows.StartWorkflowActivity{}
+	parseBaseActivity(&a.BaseWorkflowActivity, raw)
+	return a
+}
+
 func parseEndWorkflowActivity(raw map[string]any) *workflows.EndWorkflowActivity {
 	a := &workflows.EndWorkflowActivity{}
 	parseBaseActivity(&a.BaseWorkflowActivity, raw)

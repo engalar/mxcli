@@ -94,6 +94,7 @@ createStatement
       | createExternalEntityStatement
       | createNavigationStatement
       | createBusinessEventServiceStatement
+      | createWorkflowStatement
       )
     ;
 
@@ -234,6 +235,7 @@ dropStatement
     | DROP ODATA CLIENT qualifiedName
     | DROP ODATA SERVICE qualifiedName
     | DROP BUSINESS EVENT SERVICE qualifiedName
+    | DROP WORKFLOW qualifiedName
     ;
 
 renameStatement
@@ -537,7 +539,7 @@ attributeConstraint
     | UNIQUE (ERROR STRING_LITERAL)?
     | DEFAULT (literal | expression)
     | REQUIRED (ERROR STRING_LITERAL)?
-    | CALCULATED qualifiedName?
+    | CALCULATED (BY? qualifiedName)?
     ;
 
 /**
@@ -2185,6 +2187,105 @@ businessEventAttrDef
     ;
 
 // =============================================================================
+// CREATE WORKFLOW
+// =============================================================================
+
+/**
+ * Create a workflow with activities.
+ *
+ * @example Simple workflow with user task
+ * ```mdl
+ * CREATE WORKFLOW MyModule.ApprovalWorkflow
+ *   PARAMETER $WorkflowContext: MyModule.Request
+ * BEGIN
+ *   USER TASK ReviewRequest 'Review the request'
+ *     PAGE MyModule.ReviewPage
+ *     OUTCOMES
+ *       'Approve'
+ *       'Reject'
+ *
+ *   END
+ * END WORKFLOW;
+ * ```
+ */
+createWorkflowStatement
+    : WORKFLOW qualifiedName
+      (PARAMETER VARIABLE COLON qualifiedName)?
+      (OVERVIEW PAGE qualifiedName)?
+      (DUE DATE STRING_LITERAL)?
+      BEGIN workflowBody END WORKFLOW SEMICOLON? SLASH?
+    ;
+
+workflowBody
+    : workflowActivityStmt*
+    ;
+
+workflowActivityStmt
+    : workflowUserTaskStmt SEMICOLON
+    | workflowCallMicroflowStmt SEMICOLON
+    | workflowCallWorkflowStmt SEMICOLON
+    | workflowDecisionStmt SEMICOLON
+    | workflowParallelSplitStmt SEMICOLON
+    | workflowJumpToStmt SEMICOLON
+    | workflowWaitForTimerStmt SEMICOLON
+    | workflowWaitForNotificationStmt SEMICOLON
+    ;
+
+workflowUserTaskStmt
+    : USER TASK IDENTIFIER STRING_LITERAL
+      (PAGE qualifiedName)?
+      (TARGETING MICROFLOW qualifiedName)?
+      (TARGETING XPATH STRING_LITERAL)?
+      (ENTITY qualifiedName)?
+      (OUTCOMES workflowUserTaskOutcome+)?
+    ;
+
+workflowUserTaskOutcome
+    : STRING_LITERAL LBRACE workflowBody RBRACE
+    ;
+
+workflowCallMicroflowStmt
+    : CALL MICROFLOW qualifiedName (COMMENT STRING_LITERAL)?
+      (OUTCOMES workflowConditionOutcome+)?
+    ;
+
+workflowCallWorkflowStmt
+    : CALL WORKFLOW qualifiedName (COMMENT STRING_LITERAL)?
+    ;
+
+workflowDecisionStmt
+    : DECISION STRING_LITERAL? (COMMENT STRING_LITERAL)?
+      (OUTCOMES workflowConditionOutcome+)?
+    ;
+
+workflowConditionOutcome
+    : (TRUE | FALSE | STRING_LITERAL | DEFAULT) ARROW LBRACE workflowBody RBRACE
+    ;
+
+workflowParallelSplitStmt
+    : PARALLEL SPLIT (COMMENT STRING_LITERAL)?
+      workflowParallelPath+
+    ;
+
+workflowParallelPath
+    : PATH NUMBER_LITERAL LBRACE workflowBody RBRACE
+    ;
+
+workflowJumpToStmt
+    : JUMP TO IDENTIFIER (COMMENT STRING_LITERAL)?
+    ;
+
+workflowWaitForTimerStmt
+    : WAIT FOR TIMER STRING_LITERAL? (COMMENT STRING_LITERAL)?
+    ;
+
+workflowWaitForNotificationStmt
+    : WAIT FOR NOTIFICATION (COMMENT STRING_LITERAL)?
+    ;
+
+// workflowEndStmt removed - END activities are implicit and conflict with END WORKFLOW
+
+// =============================================================================
 // ALTER SETTINGS
 // =============================================================================
 
@@ -2968,6 +3069,7 @@ keyword
     | READ | WRITE | CATALOG | FORCE | DEPTH                 // Query/access keywords
     | JAVA | EVENTS | OVER | MEMBERS                         // Miscellaneous keywords
     | WORKFLOW | WORKFLOWS | REFERENCES | CALLERS | CALLEES   // Code search keywords
+    | TASK | DECISION | SPLIT | OUTCOMES | TARGETING | NOTIFICATION | TIMER | JUMP | DUE | OVERVIEW | DATE | PARALLEL | WAIT | BY // Workflow keywords
     | TRANSITIVE | IMPACT | SEARCH                           // Additional search keywords
     | BUSINESS | EVENT | SUBSCRIBE | SETTINGS | CONFIGURATION  // Business events / settings keywords
     | DEFINE | FRAGMENT | FRAGMENTS                            // Fragment keywords

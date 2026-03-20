@@ -34,6 +34,11 @@ Attribute Constraints:
   UNIQUE                - Value must be unique
   UNIQUE ERROR 'msg'    - Unique with custom error message
   DEFAULT value         - Default value (true, false, 0, 'text')
+  CALCULATED BY Module.Microflow - Calculated attribute (persistent entities only)
+  CALCULATED Module.Microflow    - Same as above (BY is optional)
+  CALCULATED            - Marks as calculated (bind microflow in Studio Pro)
+
+  Note: CALCULATED attributes are only supported on persistent entities.
 
 Complete Example:
   CREATE PERSISTENT ENTITY MyModule.Customer (
@@ -48,7 +53,10 @@ Complete Example:
     CreatedAt: DateTime,
 
     -- Enumeration reference
-    CustomerType: Enumeration(MyModule.CustomerType)
+    CustomerType: Enumeration(MyModule.CustomerType),
+
+    -- Calculated attribute (value computed by microflow)
+    FullName: String(200) CALCULATED BY MyModule.CalcFullName
   )
   INDEX (Email)
   COMMENT 'Stores customer information';

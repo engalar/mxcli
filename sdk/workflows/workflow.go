@@ -83,6 +83,14 @@ func (a *BaseWorkflowActivity) GetCaption() string {
 	return a.Caption
 }
 
+// StartWorkflowActivity represents the start of a workflow.
+type StartWorkflowActivity struct {
+	BaseWorkflowActivity
+}
+
+// ActivityType returns the type name.
+func (a *StartWorkflowActivity) ActivityType() string { return "StartWorkflow" }
+
 // EndWorkflowActivity represents the end of a workflow.
 type EndWorkflowActivity struct {
 	BaseWorkflowActivity

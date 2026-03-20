@@ -1417,3 +1417,68 @@ func TestCalculatedAttributeWithMicroflow(t *testing.T) {
 		t.Errorf("Expected microflow name 'CalcFullPrice', got '%s'", fullPrice.CalculatedMicroflow.Name)
 	}
 }
+
+func TestCalculatedAttributeWithByKeyword(t *testing.T) {
+	input := `CREATE PERSISTENT ENTITY DmTest.Product (
+		Name: String(200) NOT NULL,
+		FullPrice: Decimal CALCULATED BY DmTest.CalcFullPrice
+	);`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	if len(prog.Statements) != 1 {
+		t.Fatalf("Expected 1 statement, got %d", len(prog.Statements))
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateEntityStmt)
+	if len(stmt.Attributes) != 2 {
+		t.Fatalf("Expected 2 attributes, got %d", len(stmt.Attributes))
+	}
+
+	fullPrice := stmt.Attributes[1]
+	if !fullPrice.Calculated {
+		t.Error("FullPrice attribute should be calculated")
+	}
+	if fullPrice.CalculatedMicroflow == nil {
+		t.Fatal("FullPrice attribute should have a microflow reference")
+	}
+	if fullPrice.CalculatedMicroflow.Module != "DmTest" {
+		t.Errorf("Expected microflow module 'DmTest', got '%s'", fullPrice.CalculatedMicroflow.Module)
+	}
+	if fullPrice.CalculatedMicroflow.Name != "CalcFullPrice" {
+		t.Errorf("Expected microflow name 'CalcFullPrice', got '%s'", fullPrice.CalculatedMicroflow.Name)
+	}
+}
+
+func TestCalculatedAttributeOnNonPersistentEntity(t *testing.T) {
+	// This should parse successfully - validation happens at executor level
+	input := `CREATE NON-PERSISTENT ENTITY DmTest.TempCalc (
+		Value: Decimal CALCULATED BY DmTest.CalcValue
+	);`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	if len(prog.Statements) != 1 {
+		t.Fatalf("Expected 1 statement, got %d", len(prog.Statements))
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateEntityStmt)
+	if stmt.Kind != ast.EntityNonPersistent {
+		t.Error("Expected non-persistent entity")
+	}
+	if !stmt.Attributes[0].Calculated {
+		t.Error("Value attribute should be calculated")
+	}
+}

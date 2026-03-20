@@ -47,6 +47,55 @@ CROSS-REFERENCES
   - user_targeting: user task targeting microflow
   - admin_page: workflow overview page
 
+CREATE WORKFLOW
+--------------
+
+  CREATE [OR MODIFY] WORKFLOW Module.WorkflowName
+    PARAMETER $Context: Module.Entity
+    [OVERVIEW PAGE Module.OverviewPage]
+    [DUE DATE '<expression>']
+  BEGIN
+    <activities>
+  END WORKFLOW;
+
+  Activity types:
+    USER TASK <name> '<caption>'
+      [PAGE Module.Page]
+      [TARGETING MICROFLOW Module.MF | TARGETING XPATH '<xpath>']
+      [ENTITY Module.Entity]
+      [OUTCOMES '<outcome1>' { <activities> } '<outcome2>' { <activities> }];
+
+    CALL MICROFLOW Module.MF [COMMENT '<text>']
+      [OUTCOMES '<outcome>' { <activities> } ...];
+
+    CALL WORKFLOW Module.WF [COMMENT '<text>'];
+
+    DECISION ['<caption>'] [COMMENT '<text>']
+      OUTCOMES '<outcome>' { <activities> } ...;
+
+    PARALLEL SPLIT [COMMENT '<text>']
+      PATH 1 { <activities> }
+      PATH 2 { <activities> };
+
+    JUMP TO <activity-name> [COMMENT '<text>'];
+    WAIT FOR TIMER ['<expression>'] [COMMENT '<text>'];
+    WAIT FOR NOTIFICATION [COMMENT '<text>'];
+    END;
+
+  Example:
+    CREATE WORKFLOW Module.ApprovalFlow
+      PARAMETER $Context: Module.Request
+    BEGIN
+      USER TASK ReviewTask 'Review the request'
+        PAGE Module.ReviewPage
+        OUTCOMES 'Approve' { } 'Reject' { };
+    END WORKFLOW;
+
+DROP WORKFLOW
+-------------
+
+  DROP WORKFLOW Module.WorkflowName;
+
 CODE NAVIGATION
 ---------------
 

@@ -698,6 +698,9 @@ func (e *Executor) describeDemoUser(userName string) error {
 	for _, du := range ps.DemoUsers {
 		if du.UserName == userName {
 			fmt.Fprintf(e.output, "CREATE DEMO USER '%s' PASSWORD '***'", du.UserName)
+			if du.Entity != "" {
+				fmt.Fprintf(e.output, " ENTITY %s", du.Entity)
+			}
 			if len(du.UserRoles) > 0 {
 				fmt.Fprintf(e.output, " (%s)", strings.Join(du.UserRoles, ", "))
 			}

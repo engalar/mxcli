@@ -236,6 +236,7 @@ func (e *Executor) describeWorkflowToString(name ast.QualifiedName) (string, map
 
 	lines = append(lines, "")
 
+	lines = append(lines, "BEGIN")
 	// Activities
 	if targetWf.Flow != nil {
 		actLines := formatWorkflowActivities(targetWf.Flow, "  ")
@@ -256,19 +257,21 @@ func formatWorkflowActivities(flow *workflows.Flow, indent string) []string {
 
 	var lines []string
 	for _, act := range flow.Activities {
+		var actLines []string
+		isComment := false
 		switch a := act.(type) {
 		case *workflows.UserTask:
-			lines = append(lines, formatUserTask(a, indent)...)
+			actLines = formatUserTask(a, indent)
 		case *workflows.CallMicroflowTask:
-			lines = append(lines, formatCallMicroflowTask(a, indent)...)
+			actLines = formatCallMicroflowTask(a, indent)
 		case *workflows.SystemTask:
-			lines = append(lines, formatSystemTask(a, indent)...)
+			actLines = formatSystemTask(a, indent)
 		case *workflows.CallWorkflowActivity:
-			lines = append(lines, formatCallWorkflowActivity(a, indent)...)
+			actLines = formatCallWorkflowActivity(a, indent)
 		case *workflows.ExclusiveSplitActivity:
-			lines = append(lines, formatExclusiveSplit(a, indent)...)
+			actLines = formatExclusiveSplit(a, indent)
 		case *workflows.ParallelSplitActivity:
-			lines = append(lines, formatParallelSplit(a, indent)...)
+			actLines = formatParallelSplit(a, indent)
 		case *workflows.JumpToActivity:
 			target := a.TargetActivity
 			if target == "" {
@@ -278,42 +281,52 @@ func formatWorkflowActivities(flow *workflows.Flow, indent string) []string {
 			if caption == "" {
 				caption = a.Name
 			}
-			lines = append(lines, fmt.Sprintf("%sJUMP TO %s -- %s", indent, target, caption))
+			actLines = []string{fmt.Sprintf("%sJUMP TO %s -- %s", indent, target, caption)}
 		case *workflows.WaitForTimerActivity:
 			caption := a.Caption
 			if caption == "" {
 				caption = a.Name
 			}
 			if a.DelayExpression != "" {
-				lines = append(lines, fmt.Sprintf("%sWAIT FOR TIMER '%s' -- %s", indent, a.DelayExpression, caption))
+				escapedDelay := strings.ReplaceAll(a.DelayExpression, "'", "''")
+				actLines = []string{fmt.Sprintf("%sWAIT FOR TIMER '%s' -- %s", indent, escapedDelay, caption)}
 			} else {
-				lines = append(lines, fmt.Sprintf("%sWAIT FOR TIMER -- %s", indent, caption))
+				actLines = []string{fmt.Sprintf("%sWAIT FOR TIMER -- %s", indent, caption)}
 			}
 		case *workflows.WaitForNotificationActivity:
 			caption := a.Caption
 			if caption == "" {
 				caption = a.Name
 			}
-			lines = append(lines, fmt.Sprintf("%sWAIT FOR NOTIFICATION -- %s", indent, caption))
+			actLines = []string{fmt.Sprintf("%sWAIT FOR NOTIFICATION -- %s", indent, caption)}
+		case *workflows.StartWorkflowActivity:
+			// Skip start activities - they are implicit
+			continue
 		case *workflows.EndWorkflowActivity:
-			caption := a.Caption
-			if caption == "" {
-				caption = a.Name
-			}
-			if caption != "" {
-				lines = append(lines, fmt.Sprintf("%sEND -- %s", indent, caption))
-			} else {
-				lines = append(lines, fmt.Sprintf("%sEND", indent))
-			}
+			// Skip end activities - they are implicit
+			continue
 		case *workflows.GenericWorkflowActivity:
+			isComment = true
 			caption := a.Caption
 			if caption == "" {
 				caption = a.Name
 			}
-			lines = append(lines, fmt.Sprintf("%s-- [%s] %s", indent, a.TypeString, caption))
+			actLines = []string{fmt.Sprintf("%s-- [%s] %s", indent, a.TypeString, caption)}
 		default:
-			lines = append(lines, fmt.Sprintf("%s-- [unknown activity]", indent))
+			isComment = true
+			actLines = []string{fmt.Sprintf("%s-- [unknown activity]", indent)}
 		}
+		// Append semicolon to last line of activity (not for comments)
+		// Insert before any -- comment to avoid the comment swallowing the semicolon
+		if !isComment && len(actLines) > 0 {
+			lastLine := actLines[len(actLines)-1]
+			if idx := strings.Index(lastLine, " -- "); idx >= 0 {
+				actLines[len(actLines)-1] = lastLine[:idx] + ";" + lastLine[idx:]
+			} else {
+				actLines[len(actLines)-1] = lastLine + ";"
+			}
+		}
+		lines = append(lines, actLines...)
 		lines = append(lines, "")
 	}
 
@@ -364,10 +377,13 @@ func formatUserTask(a *workflows.UserTask, indent string) []string {
 			if outCaption == "" {
 				outCaption = outcome.Name
 			}
-			lines = append(lines, fmt.Sprintf("%s    '%s'", indent, outCaption))
 			if outcome.Flow != nil && len(outcome.Flow.Activities) > 0 {
+				lines = append(lines, fmt.Sprintf("%s    '%s' {", indent, outCaption))
 				subLines := formatWorkflowActivities(outcome.Flow, indent+"      ")
 				lines = append(lines, subLines...)
+				lines = append(lines, fmt.Sprintf("%s    }", indent))
+			} else {
+				lines = append(lines, fmt.Sprintf("%s    '%s' { }", indent, outCaption))
 			}
 		}
 	}
@@ -443,7 +459,8 @@ func formatExclusiveSplit(a *workflows.ExclusiveSplitActivity, indent string) []
 	}
 
 	if a.Expression != "" {
-		lines = append(lines, fmt.Sprintf("%sDECISION '%s' -- %s", indent, a.Expression, caption))
+		escapedExpr := strings.ReplaceAll(a.Expression, "'", "''")
+		lines = append(lines, fmt.Sprintf("%sDECISION '%s' -- %s", indent, escapedExpr, caption))
 	} else {
 		lines = append(lines, fmt.Sprintf("%sDECISION -- %s", indent, caption))
 	}
@@ -463,11 +480,12 @@ func formatParallelSplit(a *workflows.ParallelSplitActivity, indent string) []st
 
 	lines = append(lines, fmt.Sprintf("%sPARALLEL SPLIT -- %s", indent, caption))
 	for i, outcome := range a.Outcomes {
-		lines = append(lines, fmt.Sprintf("%s  PATH %d", indent, i+1))
+		lines = append(lines, fmt.Sprintf("%s  PATH %d {", indent, i+1))
 		if outcome.Flow != nil && len(outcome.Flow.Activities) > 0 {
 			subLines := formatWorkflowActivities(outcome.Flow, indent+"    ")
 			lines = append(lines, subLines...)
 		}
+		lines = append(lines, fmt.Sprintf("%s  }", indent))
 	}
 
 	return lines
@@ -484,10 +502,13 @@ func formatConditionOutcomes(outcomes []workflows.ConditionOutcome, indent strin
 	for _, outcome := range outcomes {
 		name := outcome.GetName()
 		flow := outcome.GetFlow()
-		lines = append(lines, fmt.Sprintf("%s    %s ->", indent, name))
 		if flow != nil && len(flow.Activities) > 0 {
+			lines = append(lines, fmt.Sprintf("%s    %s -> {", indent, name))
 			subLines := formatWorkflowActivities(flow, indent+"      ")
 			lines = append(lines, subLines...)
+			lines = append(lines, fmt.Sprintf("%s    }", indent))
+		} else {
+			lines = append(lines, fmt.Sprintf("%s    %s -> { }", indent, name))
 		}
 	}
 
