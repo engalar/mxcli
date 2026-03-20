@@ -2870,7 +2870,7 @@ keyword
     | COLUMN | COLUMNS | LOCAL | PROJECT                     // Structure keywords
     | READ | WRITE | CATALOG | FORCE | DEPTH                 // Query/access keywords
     | JAVA | EVENTS | OVER | MEMBERS                         // Miscellaneous keywords
-    | WORKFLOWS | REFERENCES | CALLERS | CALLEES             // Code search keywords
+    | WORKFLOW | WORKFLOWS | REFERENCES | CALLERS | CALLEES   // Code search keywords
     | TRANSITIVE | IMPACT | SEARCH                           // Additional search keywords
     | BUSINESS | EVENT | SUBSCRIBE | SETTINGS | CONFIGURATION  // Business events / settings keywords
     | DEFINE | FRAGMENT | FRAGMENTS                            // Fragment keywords
