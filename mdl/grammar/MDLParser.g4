@@ -291,6 +291,8 @@ securityStatement
     | revokeMicroflowAccessStatement
     | grantPageAccessStatement
     | revokePageAccessStatement
+    | grantWorkflowAccessStatement
+    | revokeWorkflowAccessStatement
     | grantODataServiceAccessStatement
     | revokeODataServiceAccessStatement
     | alterProjectSecurityStatement
@@ -346,6 +348,14 @@ grantPageAccessStatement
 
 revokePageAccessStatement
     : REVOKE VIEW ON PAGE qualifiedName FROM moduleRoleList
+    ;
+
+grantWorkflowAccessStatement
+    : GRANT EXECUTE ON WORKFLOW qualifiedName TO moduleRoleList
+    ;
+
+revokeWorkflowAccessStatement
+    : REVOKE EXECUTE ON WORKFLOW qualifiedName FROM moduleRoleList
     ;
 
 grantODataServiceAccessStatement
@@ -2253,6 +2263,7 @@ showStatement
     | SHOW ACCESS ON qualifiedName              // SHOW ACCESS ON Module.Entity
     | SHOW ACCESS ON MICROFLOW qualifiedName    // SHOW ACCESS ON MICROFLOW Module.MF
     | SHOW ACCESS ON PAGE qualifiedName         // SHOW ACCESS ON PAGE Module.Page
+    | SHOW ACCESS ON WORKFLOW qualifiedName     // SHOW ACCESS ON WORKFLOW Module.WF
     | SHOW SECURITY MATRIX (IN (qualifiedName | IDENTIFIER))?  // SHOW SECURITY MATRIX [IN module]
     | SHOW ODATA CLIENTS (IN (qualifiedName | IDENTIFIER))?    // SHOW ODATA CLIENTS [IN module]
     | SHOW ODATA SERVICES (IN (qualifiedName | IDENTIFIER))?   // SHOW ODATA SERVICES [IN module]
@@ -2956,7 +2967,7 @@ keyword
     | COLUMN | COLUMNS | LOCAL | PROJECT                     // Structure keywords
     | READ | WRITE | CATALOG | FORCE | DEPTH                 // Query/access keywords
     | JAVA | EVENTS | OVER | MEMBERS                         // Miscellaneous keywords
-    | WORKFLOWS | REFERENCES | CALLERS | CALLEES             // Code search keywords
+    | WORKFLOW | WORKFLOWS | REFERENCES | CALLERS | CALLEES   // Code search keywords
     | TRANSITIVE | IMPACT | SEARCH                           // Additional search keywords
     | BUSINESS | EVENT | SUBSCRIBE | SETTINGS | CONFIGURATION  // Business events / settings keywords
     | DEFINE | FRAGMENT | FRAGMENTS                            // Fragment keywords

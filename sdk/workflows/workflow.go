@@ -26,6 +26,9 @@ type Workflow struct {
 
 	// Flow contains the workflow activities
 	Flow *Flow `json:"flow,omitempty"`
+
+	// Allowed module roles for execution
+	AllowedModuleRoles []model.ID `json:"allowedModuleRoles,omitempty"`
 }
 
 // GetName returns the workflow's name.

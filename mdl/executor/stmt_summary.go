@@ -101,6 +101,10 @@ func stmtSummary(stmt ast.Statement) string {
 		return fmt.Sprintf("GRANT VIEW ON PAGE %s", s.Page)
 	case *ast.RevokePageAccessStmt:
 		return fmt.Sprintf("REVOKE VIEW ON PAGE %s", s.Page)
+	case *ast.GrantWorkflowAccessStmt:
+		return fmt.Sprintf("GRANT EXECUTE ON WORKFLOW %s", s.Workflow)
+	case *ast.RevokeWorkflowAccessStmt:
+		return fmt.Sprintf("REVOKE EXECUTE ON WORKFLOW %s", s.Workflow)
 	case *ast.GrantEntityAccessStmt:
 		return fmt.Sprintf("GRANT ON ENTITY %s", s.Entity)
 	case *ast.RevokeEntityAccessStmt:
