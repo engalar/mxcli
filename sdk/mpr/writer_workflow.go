@@ -152,7 +152,7 @@ func appendActivityBaseFields(doc bson.D, annotation string) bson.D {
 
 // serializeBoundaryEvents serializes boundary events for workflow activities.
 func serializeBoundaryEvents(events []*workflows.BoundaryEvent) bson.A {
-	arr := bson.A{int32(3)} // array type marker
+	arr := bson.A{int32(2)} // array type marker (BoundaryEvents use marker 2)
 	for _, event := range events {
 		eventID := string(event.ID)
 		if eventID == "" {
@@ -176,7 +176,7 @@ func serializeBoundaryEvents(events []*workflows.BoundaryEvent) bson.A {
 		}
 
 		if event.TimerDelay != "" {
-			doc = append(doc, bson.E{Key: "DelayExpression", Value: event.TimerDelay})
+			doc = append(doc, bson.E{Key: "FirstExecutionTime", Value: event.TimerDelay})
 		}
 
 		if event.Flow != nil {
@@ -619,7 +619,7 @@ func serializeWaitForTimer(a *workflows.WaitForTimerActivity) bson.D {
 
 	doc = append(doc,
 		bson.E{Key: "Caption", Value: a.Caption},
-		bson.E{Key: "DelayExpression", Value: a.DelayExpression},
+		bson.E{Key: "Delay", Value: a.DelayExpression},
 		bson.E{Key: "Name", Value: a.Name},
 	)
 

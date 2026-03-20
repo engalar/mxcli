@@ -239,9 +239,15 @@ func parseUserTask(raw map[string]any) *workflows.UserTask {
 	if page, ok := raw["Page"].(string); ok {
 		a.Page = page
 	}
-	// Also try TaskPage
-	if page, ok := raw["TaskPage"].(string); ok && a.Page == "" {
-		a.Page = page
+	// Also try TaskPage — may be a nested Workflows$PageReference object
+	if a.Page == "" {
+		if page, ok := raw["TaskPage"].(string); ok {
+			a.Page = page
+		} else if taskPageMap := toMap(raw["TaskPage"]); taskPageMap != nil {
+			if page, ok := taskPageMap["Page"].(string); ok {
+				a.Page = page
+			}
+		}
 	}
 
 	// TaskName (StringTemplate)
@@ -420,7 +426,10 @@ func parseWaitForTimerActivity(raw map[string]any) *workflows.WaitForTimerActivi
 	a := &workflows.WaitForTimerActivity{}
 	parseBaseActivity(&a.BaseWorkflowActivity, raw)
 
-	if expr, ok := raw["DelayExpression"].(string); ok {
+	if expr, ok := raw["Delay"].(string); ok {
+		a.DelayExpression = expr
+	} else if expr, ok := raw["DelayExpression"].(string); ok {
+		// Legacy fallback
 		a.DelayExpression = expr
 	}
 
@@ -478,6 +487,9 @@ func parseUserTaskOutcome(raw map[string]any) *workflows.UserTaskOutcome {
 	}
 	if caption, ok := raw["Caption"].(string); ok {
 		outcome.Caption = caption
+	}
+	if value, ok := raw["Value"].(string); ok {
+		outcome.Value = value
 	}
 
 	if flowRaw := raw["Flow"]; flowRaw != nil {
@@ -587,13 +599,20 @@ func parseBoundaryEvents(v any) []*workflows.BoundaryEvent {
 			event.Caption = caption
 		}
 
-		// Timer delay
-		if delay, ok := eventMap["DelayExpression"].(string); ok {
+		// Timer delay — BSON field is "FirstExecutionTime" for both boundary event types
+		if delay, ok := eventMap["FirstExecutionTime"].(string); ok {
 			event.TimerDelay = delay
 		}
-		// Also try "Delay"
-		if delay, ok := eventMap["Delay"].(string); ok && event.TimerDelay == "" {
-			event.TimerDelay = delay
+		// Legacy fallbacks
+		if event.TimerDelay == "" {
+			if delay, ok := eventMap["DelayExpression"].(string); ok {
+				event.TimerDelay = delay
+			}
+		}
+		if event.TimerDelay == "" {
+			if delay, ok := eventMap["Delay"].(string); ok {
+				event.TimerDelay = delay
+			}
 		}
 
 		// Event type from $Type

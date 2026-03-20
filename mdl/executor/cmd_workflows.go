@@ -426,21 +426,30 @@ func formatUserTask(a *workflows.UserTask, indent string) []string {
 		lines = append(lines, fmt.Sprintf("%s  ENTITY %s", indent, a.UserTaskEntity))
 	}
 
+	// Due date (task-level)
+	if a.DueDate != "" {
+		escapedDueDate := strings.ReplaceAll(a.DueDate, "'", "''")
+		lines = append(lines, fmt.Sprintf("%s  DUE DATE '%s'", indent, escapedDueDate))
+	}
+
 	// Outcomes
 	if len(a.Outcomes) > 0 {
 		lines = append(lines, fmt.Sprintf("%s  OUTCOMES", indent))
 		for _, outcome := range a.Outcomes {
-			outCaption := outcome.Caption
-			if outCaption == "" {
-				outCaption = outcome.Name
+			outValue := outcome.Value
+			if outValue == "" {
+				outValue = outcome.Caption
+			}
+			if outValue == "" {
+				outValue = outcome.Name
 			}
 			if outcome.Flow != nil && len(outcome.Flow.Activities) > 0 {
-				lines = append(lines, fmt.Sprintf("%s    '%s' {", indent, outCaption))
+				lines = append(lines, fmt.Sprintf("%s    '%s' {", indent, outValue))
 				subLines := formatWorkflowActivities(outcome.Flow, indent+"      ")
 				lines = append(lines, subLines...)
 				lines = append(lines, fmt.Sprintf("%s    }", indent))
 			} else {
-				lines = append(lines, fmt.Sprintf("%s    '%s' { }", indent, outCaption))
+				lines = append(lines, fmt.Sprintf("%s    '%s' { }", indent, outValue))
 			}
 		}
 	}
