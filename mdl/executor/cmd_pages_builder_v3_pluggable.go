@@ -63,7 +63,7 @@ func (pb *pageBuilder) buildComboBoxV3(w *ast.WidgetV3) (*pages.CustomWidget, er
 		// resolved to a 3-part member path: Module.Entity.AssociationName
 		// (same format as attributes, since associations are entity members)
 		if attr := w.GetAttribute(); attr != "" {
-			assocPath := pb.resolveAttributePath(attr)
+			assocPath := pb.resolveAssociationPath(attr)
 			updatedObject = updateWidgetPropertyValue(updatedObject, propertyTypeIDs, "attributeAssociation", func(val bson.D) bson.D {
 				return setAssociationRef(val, assocPath)
 			})

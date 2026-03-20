@@ -160,7 +160,7 @@ func inferTypeStatic(expr string) ast.DataType {
 		}
 	}
 
-	// count(...) → Integer
+	// count(...) → Integer (Mendix OQL COUNT returns Integer)
 	if strings.HasPrefix(upper, "COUNT(") {
 		return ast.DataType{Kind: ast.TypeInteger}
 	}
@@ -529,7 +529,7 @@ func (e *Executor) inferAttributeTypeFromEntity(entityQualifiedName, attrName st
 func (e *Executor) inferAggregateType(expr string, col *OQLColumnInfo, aliasMap map[string]string) ast.DataType {
 	upperExpr := strings.ToUpper(strings.TrimSpace(expr))
 
-	// COUNT(*) or COUNT(expression)
+	// COUNT(*) or COUNT(expression) → Integer (Mendix OQL COUNT returns Integer)
 	if strings.HasPrefix(upperExpr, "COUNT(") {
 		col.IsAggregate = true
 		col.AggregateFunc = "COUNT"
@@ -695,25 +695,16 @@ func convertDomainModelTypeToAST(attrType domainmodel.AttributeType) ast.DataTyp
 }
 
 // typesStrictlyCompatible checks if declared and inferred types match exactly.
-// Integer and Long are interchangeable, but Decimal does not accept Integer.
 // This is used for static OQL type checking where the inferred type is definitive
 // (e.g., count() always returns Integer, sum() always returns Decimal).
+// MxBuild treats Integer and Long as distinct types for VIEW entity sync validation,
+// so we must not treat them as interchangeable here.
 func typesStrictlyCompatible(declared, inferred ast.DataType) bool {
 	if inferred.Kind == ast.TypeUnknown {
 		return true
 	}
 
-	if declared.Kind == inferred.Kind {
-		return true
-	}
-
-	// Integer and Long are interchangeable
-	if (declared.Kind == ast.TypeInteger && inferred.Kind == ast.TypeLong) ||
-		(declared.Kind == ast.TypeLong && inferred.Kind == ast.TypeInteger) {
-		return true
-	}
-
-	return false
+	return declared.Kind == inferred.Kind
 }
 
 // typesCompatible checks if declared and inferred types are compatible.
