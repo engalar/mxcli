@@ -862,20 +862,37 @@ func (w *Writer) ReconcileMemberAccesses(unitID model.ID, moduleName string) (in
 				continue
 			}
 
-			// Collect current attribute names
+			// Collect current attribute names and track calculated attributes
 			attrNames := map[string]bool{}
+			calculatedAttrs := map[string]bool{}
 			attrsArr := getBsonArray(entityDoc, "Attributes")
 			for _, attrItem := range attrsArr {
 				attrDoc, ok := attrItem.(bson.D)
 				if !ok {
 					continue
 				}
+				attrName := ""
+				isCalculated := false
 				for _, f := range attrDoc {
 					if f.Key == "Name" {
-						if name, ok := f.Value.(string); ok {
-							attrNames[name] = true
+						attrName, _ = f.Value.(string)
+					}
+					if f.Key == "Value" {
+						if valueDoc, ok := f.Value.(bson.D); ok {
+							for _, vf := range valueDoc {
+								if vf.Key == "$Type" {
+									if vt, ok := vf.Value.(string); ok && vt == "DomainModels$CalculatedValue" {
+										isCalculated = true
+									}
+								}
+							}
 						}
-						break
+					}
+				}
+				if attrName != "" {
+					attrNames[attrName] = true
+					if isCalculated {
+						calculatedAttrs[attrName] = true
 					}
 				}
 			}
@@ -1010,7 +1027,11 @@ func (w *Writer) ReconcileMemberAccesses(unitID model.ID, moduleName string) (in
 								parts := splitQualifiedRef(attrRef)
 								if parts != "" && attrNames[parts] {
 									coveredAttrs[parts] = true
-									filtered = append(filtered, maItem)
+									// Downgrade write rights on calculated attributes (CE6592)
+									if calculatedAttrs[parts] {
+										maDoc = downgradeCalculatedAttrRights(maDoc)
+									}
+									filtered = append(filtered, maDoc)
 								} else {
 									changed = true // stale attribute entry removed
 								}
@@ -1031,10 +1052,15 @@ func (w *Writer) ReconcileMemberAccesses(unitID model.ID, moduleName string) (in
 						// Add missing attributes
 						for attrName := range attrNames {
 							if !coveredAttrs[attrName] {
+								rights := defaultRights
+								// Calculated attributes cannot have write rights (CE6592)
+								if calculatedAttrs[attrName] && (rights == "ReadWrite" || rights == "WriteOnly") {
+									rights = "ReadOnly"
+								}
 								newMA := bson.D{
 									{Key: "$Type", Value: "DomainModels$MemberAccess"},
 									{Key: "$ID", Value: idToBsonBinary(generateUUID())},
-									{Key: "AccessRights", Value: defaultRights},
+									{Key: "AccessRights", Value: rights},
 									{Key: "Attribute", Value: moduleName + "." + entityName + "." + attrName},
 								}
 								filtered = append(filtered, newMA)
@@ -1077,6 +1103,18 @@ func (w *Writer) ReconcileMemberAccesses(unitID model.ID, moduleName string) (in
 	})
 
 	return modified, err
+}
+
+// downgradeCalculatedAttrRights changes ReadWrite/WriteOnly to ReadOnly on a MemberAccess doc.
+func downgradeCalculatedAttrRights(doc bson.D) bson.D {
+	for i, f := range doc {
+		if f.Key == "AccessRights" {
+			if rights, ok := f.Value.(string); ok && (rights == "ReadWrite" || rights == "WriteOnly") {
+				doc[i].Value = "ReadOnly"
+			}
+		}
+	}
+	return doc
 }
 
 // extractBsonIDValue extracts a string ID from various BSON ID representations.

@@ -334,6 +334,11 @@ func (e *Executor) execGrantEntityAccess(s *ast.GrantEntityAccessStmt) error {
 		} else if readMemberSet[attr.Name] {
 			rights = "ReadOnly"
 		}
+		// Calculated attributes cannot have write rights (CE6592)
+		isCalculated := attr.Value != nil && attr.Value.Type == "CalculatedValue"
+		if isCalculated && (rights == "ReadWrite" || rights == "WriteOnly") {
+			rights = "ReadOnly"
+		}
 		memberAccesses = append(memberAccesses, mpr.EntityMemberAccess{
 			AttributeRef: module.Name + "." + s.Entity.Name + "." + attr.Name,
 			AccessRights: rights,
