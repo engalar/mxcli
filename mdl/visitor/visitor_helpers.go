@@ -216,6 +216,13 @@ func buildAttributes(ctx parser.IAttributeDefinitionListContext, b *Builder) []a
 					attr.NotNullError = unquoteString(c.STRING_LITERAL().GetText())
 				}
 			}
+			if c.CALCULATED() != nil {
+				attr.Calculated = true
+				if qn := c.QualifiedName(); qn != nil {
+					name := buildQualifiedName(qn)
+					attr.CalculatedMicroflow = &name
+				}
+			}
 		}
 
 		attrs = append(attrs, attr)
@@ -265,6 +272,13 @@ func buildSingleAttribute(a *parser.AttributeDefinitionContext) *ast.Attribute {
 			attr.NotNull = true
 			if c.ERROR() != nil && c.STRING_LITERAL() != nil {
 				attr.NotNullError = unquoteString(c.STRING_LITERAL().GetText())
+			}
+		}
+		if c.CALCULATED() != nil {
+			attr.Calculated = true
+			if qn := c.QualifiedName(); qn != nil {
+				name := buildQualifiedName(qn)
+				attr.CalculatedMicroflow = &name
 			}
 		}
 	}

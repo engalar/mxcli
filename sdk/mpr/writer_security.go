@@ -379,14 +379,14 @@ func (w *Writer) RemoveUserRole(unitID model.ID, name string) error {
 }
 
 // AddDemoUser adds a new demo user to Security$ProjectSecurity.
-func (w *Writer) AddDemoUser(unitID model.ID, userName, password string, userRoles []string) error {
+func (w *Writer) AddDemoUser(unitID model.ID, userName, password, entity string, userRoles []string) error {
 	return w.readPatchWrite(unitID, func(doc bson.D) (bson.D, error) {
 		newUser := bson.D{
 			{Key: "$Type", Value: "Security$DemoUserImpl"},
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 			{Key: "UserName", Value: userName},
 			{Key: "Password", Value: password},
-			{Key: "Entity", Value: ""},
+			{Key: "Entity", Value: entity},
 			{Key: "UserRoles", Value: makeMendixStringArray(userRoles)},
 		}
 

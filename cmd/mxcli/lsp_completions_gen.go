@@ -325,6 +325,7 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "EXPRESSION", Kind: protocol.CompletionItemKindKeyword, Detail: "Validation keyword"},
 	{Label: "XPATH", Kind: protocol.CompletionItemKindKeyword, Detail: "Validation keyword"},
 	{Label: "CONSTRAINT", Kind: protocol.CompletionItemKindKeyword, Detail: "Validation keyword"},
+	{Label: "CALCULATED", Kind: protocol.CompletionItemKindKeyword, Detail: "Validation keyword"},
 
 	// REST keyword
 	{Label: "REST", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},

@@ -499,7 +499,7 @@ func getAttributeTypeName(at domainmodel.AttributeType) string {
 		if t.Length > 0 {
 			return fmt.Sprintf("String(%d)", t.Length)
 		}
-		return "String"
+		return "String(unlimited)"
 	case *domainmodel.IntegerAttributeType:
 		return "Integer"
 	case *domainmodel.LongAttributeType:

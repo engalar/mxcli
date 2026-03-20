@@ -811,7 +811,7 @@ func serializeAttribute(a *domainmodel.Attribute) bson.D {
 		}
 	}
 
-	// Determine value type: OqlViewValue for view entities, StoredValue for regular entities
+	// Determine value type: OqlViewValue, CalculatedValue, or StoredValue
 	var valueDoc bson.D
 	valueID := ""
 	if a.Value != nil && a.Value.ID != "" {
@@ -826,6 +826,15 @@ func serializeAttribute(a *domainmodel.Attribute) bson.D {
 			{Key: "$ID", Value: idToBsonBinary(valueID)},
 			{Key: "$Type", Value: "DomainModels$OqlViewValue"},
 			{Key: "Reference", Value: a.Value.ViewReference},
+		}
+	} else if a.Value != nil && a.Value.Type == "CalculatedValue" {
+		// Calculated attribute - use CalculatedValue (Microflow is ByNameReference → string)
+		microflowRef := a.Value.MicroflowName
+		valueDoc = bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "DomainModels$CalculatedValue"},
+			{Key: "Microflow", Value: microflowRef},
+			{Key: "PassEntity", Value: microflowRef != ""},
 		}
 	} else {
 		// Regular entity attribute - use StoredValue

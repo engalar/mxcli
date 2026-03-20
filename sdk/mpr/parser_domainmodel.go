@@ -236,8 +236,9 @@ func parseAttributeValue(raw map[string]any) *domainmodel.AttributeValue {
 		return val
 	case "DomainModels$CalculatedValue":
 		val := &domainmodel.AttributeValue{
-			Type:        "CalculatedValue",
-			MicroflowID: model.ID(extractBsonID(raw["Microflow"])),
+			Type:          "CalculatedValue",
+			MicroflowID:   model.ID(extractBsonID(raw["Microflow"])),
+			MicroflowName: extractString(raw["Microflow"]),
 		}
 		val.ID = valueID
 		return val

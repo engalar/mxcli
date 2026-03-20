@@ -140,10 +140,11 @@ type AlterProjectSecurityStmt struct {
 
 func (s *AlterProjectSecurityStmt) isStatement() {}
 
-// CreateDemoUserStmt represents: CREATE DEMO USER 'name' PASSWORD 'pw' (Role1, Role2)
+// CreateDemoUserStmt represents: CREATE DEMO USER 'name' PASSWORD 'pw' [ENTITY Module.Entity] (Role1, Role2)
 type CreateDemoUserStmt struct {
 	UserName  string
 	Password  string
+	Entity    string // qualified name of user entity, e.g. "Administration.Account"
 	UserRoles []string
 }
 

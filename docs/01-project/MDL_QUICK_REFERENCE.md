@@ -209,7 +209,7 @@ Nested folders use `/` separator: `'Parent/Child/Grandchild'`. Missing folders a
 | Revoke entity access | `REVOKE Mod.Role ON Mod.Entity;` | |
 | Set security level | `ALTER PROJECT SECURITY LEVEL OFF\|PROTOTYPE\|PRODUCTION;` | |
 | Toggle demo users | `ALTER PROJECT SECURITY DEMO USERS ON\|OFF;` | |
-| Create demo user | `CREATE DEMO USER 'name' PASSWORD 'pass' (UserRole, ...);` | |
+| Create demo user | `CREATE DEMO USER 'name' PASSWORD 'pass' [ENTITY Module.Entity] (UserRole, ...);` | |
 | Drop demo user | `DROP DEMO USER 'name';` | |
 
 ## Project Structure
@@ -417,6 +417,8 @@ CREATE PERSISTENT ENTITY Module.VATRate ("Create": DateTime, Rate: Decimal);
 Both double-quote (ANSI SQL) and backtick (MySQL) styles are supported. You can mix quoted and unquoted parts: `"ComboBox".CategoryTreeVE`.
 
 **Boolean attributes** auto-default to `false` when no `DEFAULT` is specified.
+
+**CALCULATED** marks an attribute as calculated (not stored). Calculated attributes derive their value from a microflow at runtime.
 
 **ButtonStyle** supports all values: `Primary`, `Default`, `Success`, `Danger`, `Warning`, `Info`.
 
