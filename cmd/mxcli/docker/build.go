@@ -700,7 +700,7 @@ func ensureDemoUsers(projectPath string, w io.Writer) error {
 		}
 	}
 
-	if err := writer.AddDemoUser(ps.ID, "admin", "Admin123!", []string{roleName}); err != nil {
+	if err := writer.AddDemoUser(ps.ID, "admin", "Admin123!", "", []string{roleName}); err != nil {
 		return fmt.Errorf("creating demo user: %w", err)
 	}
 
