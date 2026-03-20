@@ -205,6 +205,21 @@ func parseWorkflowActivity(raw map[string]any) workflows.WorkflowActivity {
 		return parseWaitForNotificationActivity(raw)
 	case "Workflows$StartWorkflowActivity":
 		return parseStartWorkflowActivity(raw)
+	case "Workflows$EndOfParallelSplitPathActivity":
+		a := &workflows.EndOfParallelSplitPathActivity{}
+		parseBaseActivity(&a.BaseWorkflowActivity, raw)
+		return a
+	case "Workflows$EndOfBoundaryEventPathActivity":
+		a := &workflows.EndOfBoundaryEventPathActivity{}
+		parseBaseActivity(&a.BaseWorkflowActivity, raw)
+		return a
+	case "Workflows$Annotation":
+		a := &workflows.WorkflowAnnotationActivity{}
+		parseBaseActivity(&a.BaseWorkflowActivity, raw)
+		if desc, ok := raw["Description"].(string); ok {
+			a.Description = desc
+		}
+		return a
 	// Older/alternate type names
 	case "Workflows$SystemTask":
 		return parseSystemTask(raw)
