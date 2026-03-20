@@ -32,49 +32,70 @@ func (w *Writer) DeleteWorkflow(id model.ID) error {
 }
 
 func (w *Writer) serializeWorkflow(wf *workflows.Workflow) ([]byte, error) {
+	// AdminPage is a PartProperty (object or null), not a string.
+	// When empty, it must be null, not "".
+	var adminPageValue any
+	if wf.AdminPage != "" {
+		adminPageValue = bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Workflows$PageReference"},
+			{Key: "Page", Value: wf.AdminPage},
+		}
+	}
+
+	// Annotation is a PartProperty (object or null).
+	var annotationValue any
+	if wf.Annotation != "" {
+		annotationValue = serializeAnnotation(wf.Annotation)
+	}
+
+	// Flow
+	var flowValue bson.D
+	if wf.Flow != nil {
+		flowValue = serializeWorkflowFlow(wf.Flow)
+	} else {
+		emptyFlow := &workflows.Flow{}
+		emptyFlow.ID = model.ID(generateUUID())
+		flowValue = serializeWorkflowFlow(emptyFlow)
+	}
+
+	// Title defaults to workflow display name or Name
+	title := wf.WorkflowName
+	if title == "" {
+		title = wf.Name
+	}
+
+	// Build doc in alphabetical key order matching Studio Pro BSON layout
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(string(wf.ID))},
 		{Key: "$Type", Value: "Workflows$Workflow"},
-		{Key: "AllowedModuleRoles", Value: allowedModuleRolesArray(wf.AllowedModuleRoles)},
+		{Key: "AdminPage", Value: adminPageValue},
+		{Key: "Annotation", Value: annotationValue},
 		{Key: "Documentation", Value: wf.Documentation},
 		{Key: "DueDate", Value: wf.DueDate},
 		{Key: "Excluded", Value: wf.Excluded},
 		{Key: "ExportLevel", Value: "Hidden"},
+		{Key: "Flow", Value: flowValue},
+		{Key: "Name", Value: wf.Name},
+		{Key: "OnWorkflowEvent", Value: bson.A{int32(2)}},
 	}
-
-	// AdminPage
-	doc = append(doc, bson.E{Key: "AdminPage", Value: wf.AdminPage})
-
-	// Annotation
-	if wf.Annotation != "" {
-		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(wf.Annotation)})
-	}
-
-	// Flow
-	if wf.Flow != nil {
-		doc = append(doc, bson.E{Key: "Flow", Value: serializeWorkflowFlow(wf.Flow)})
-	} else {
-		// Empty flow
-		emptyFlow := &workflows.Flow{}
-		emptyFlow.ID = model.ID(generateUUID())
-		doc = append(doc, bson.E{Key: "Flow", Value: serializeWorkflowFlow(emptyFlow)})
-	}
-
-	doc = append(doc, bson.E{Key: "Name", Value: wf.Name})
-
-	// OverviewPage (BY_NAME reference)
-	doc = append(doc, bson.E{Key: "OverviewPage", Value: wf.OverviewPage})
 
 	// Parameter
 	if wf.Parameter != nil {
 		doc = append(doc, bson.E{Key: "Parameter", Value: serializeWorkflowParameter(wf.Parameter)})
 	}
 
-	// WorkflowDescription (StringTemplate)
-	doc = append(doc, bson.E{Key: "WorkflowDescription", Value: serializeWorkflowStringTemplate(wf.WorkflowDescription)})
+	doc = append(doc,
+		bson.E{Key: "PersistentId", Value: idToBsonBinary(generateUUID())},
+		bson.E{Key: "Title", Value: title},
+		bson.E{Key: "WorkflowDescription", Value: serializeWorkflowStringTemplate(wf.WorkflowDescription)},
+		bson.E{Key: "WorkflowMetaData", Value: nil},
+		bson.E{Key: "WorkflowName", Value: serializeWorkflowStringTemplate(wf.WorkflowName)},
+		bson.E{Key: "WorkflowV2", Value: false},
+	)
 
-	// WorkflowName (StringTemplate)
-	doc = append(doc, bson.E{Key: "WorkflowName", Value: serializeWorkflowStringTemplate(wf.WorkflowName)})
+	// NOTE: OverviewPage was deleted in Mendix 9.11.0 — do not serialize it.
+	// NOTE: AllowedModuleRoles is not present in Studio Pro BSON — omitted.
 
 	return bson.Marshal(doc)
 }
@@ -84,12 +105,13 @@ func serializeWorkflowStringTemplate(text string) bson.D {
 	return bson.D{
 		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 		{Key: "$Type", Value: "Microflows$StringTemplate"},
-		{Key: "Parameters", Value: bson.A{int32(3)}},
+		{Key: "Parameters", Value: bson.A{int32(2)}},
 		{Key: "Text", Value: text},
 	}
 }
 
 // serializeWorkflowParameter serializes a workflow parameter.
+// Since Mendix 9.10.0, EntityRef (PartProperty) was replaced by Entity (ByNameReferenceProperty).
 func serializeWorkflowParameter(param *workflows.WorkflowParameter) bson.D {
 	paramID := string(param.ID)
 	if paramID == "" {
@@ -98,11 +120,8 @@ func serializeWorkflowParameter(param *workflows.WorkflowParameter) bson.D {
 	return bson.D{
 		{Key: "$ID", Value: idToBsonBinary(paramID)},
 		{Key: "$Type", Value: "Workflows$Parameter"},
-		{Key: "EntityRef", Value: bson.D{
-			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
-			{Key: "$Type", Value: "DomainModels$IndirectEntityRef"},
-			{Key: "EntityQualifiedName", Value: param.EntityRef},
-		}},
+		{Key: "Entity", Value: param.EntityRef},
+		{Key: "Name", Value: "WorkflowContext"},
 	}
 }
 
@@ -113,6 +132,22 @@ func serializeAnnotation(annotation string) bson.D {
 		{Key: "$Type", Value: "Workflows$Annotation"},
 		{Key: "Description", Value: annotation},
 	}
+}
+
+
+// appendActivityBaseFields appends common activity fields to a BSON doc.
+// If annotation is non-empty, it serializes as an object; otherwise null.
+func appendActivityBaseFields(doc bson.D, annotation string) bson.D {
+	var annotationValue any
+	if annotation != "" {
+		annotationValue = serializeAnnotation(annotation)
+	}
+	return append(doc,
+		bson.E{Key: "Annotation", Value: annotationValue},
+		bson.E{Key: "PersistentId", Value: idToBsonBinary(generateUUID())},
+		bson.E{Key: "RelativeMiddlePoint", Value: ""},
+		bson.E{Key: "Size", Value: ""},
+	)
 }
 
 // serializeBoundaryEvents serializes boundary events for workflow activities.
@@ -148,9 +183,16 @@ func serializeBoundaryEvents(events []*workflows.BoundaryEvent) bson.A {
 			doc = append(doc, bson.E{Key: "Flow", Value: serializeWorkflowFlow(event.Flow)})
 		}
 
+		doc = append(doc, bson.E{Key: "PersistentId", Value: idToBsonBinary(generateUUID())})
+
 		arr = append(arr, doc)
 	}
 	return arr
+}
+
+// emptyBoundaryEvents returns an empty boundary events array marker.
+func emptyBoundaryEvents() bson.A {
+	return bson.A{int32(2)}
 }
 
 // serializeWorkflowFlow serializes a workflow flow with its activities.
@@ -211,12 +253,40 @@ func activityID(a *workflows.BaseWorkflowActivity) string {
 }
 
 func serializeUserTask(a *workflows.UserTask) bson.D {
+	// UserTask was deleted in Mendix 10.12.0, replaced by SingleUserTaskActivity.
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
-		{Key: "$Type", Value: "Workflows$UserTask"},
-		{Key: "Caption", Value: a.Caption},
-		{Key: "Name", Value: a.Name},
+		{Key: "$Type", Value: "Workflows$SingleUserTaskActivity"},
 	}
+
+	// Annotation (null or object)
+	var annotationValue any
+	if a.Annotation != "" {
+		annotationValue = serializeAnnotation(a.Annotation)
+	}
+	doc = append(doc, bson.E{Key: "Annotation", Value: annotationValue})
+
+	// AutoAssignSingleTargetUser
+	doc = append(doc, bson.E{Key: "AutoAssignSingleTargetUser", Value: true})
+
+	// BoundaryEvents (always present, even if empty)
+	if len(a.BoundaryEvents) > 0 {
+		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: serializeBoundaryEvents(a.BoundaryEvents)})
+	} else {
+		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: emptyBoundaryEvents()})
+	}
+
+	doc = append(doc,
+		bson.E{Key: "Caption", Value: a.Caption},
+		bson.E{Key: "DueDate", Value: ""},
+		bson.E{Key: "Name", Value: a.Name},
+	)
+
+	// OnCreatedEvent (NoEvent)
+	doc = append(doc, bson.E{Key: "OnCreatedEvent", Value: bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Workflows$NoEvent"},
+	}})
 
 	// Outcomes
 	outcomes := bson.A{int32(3)}
@@ -225,36 +295,62 @@ func serializeUserTask(a *workflows.UserTask) bson.D {
 	}
 	doc = append(doc, bson.E{Key: "Outcomes", Value: outcomes})
 
-	// Page
-	doc = append(doc, bson.E{Key: "Page", Value: a.Page})
+	doc = append(doc,
+		bson.E{Key: "PersistentId", Value: idToBsonBinary(generateUUID())},
+		bson.E{Key: "RelativeMiddlePoint", Value: ""},
+		bson.E{Key: "Size", Value: ""},
+	)
 
 	// TaskDescription
 	doc = append(doc, bson.E{Key: "TaskDescription", Value: serializeWorkflowStringTemplate(a.TaskDescription)})
 
 	// TaskName
-	doc = append(doc, bson.E{Key: "TaskName", Value: serializeWorkflowStringTemplate(a.TaskName)})
+	taskName := a.TaskName
+	if taskName == "" {
+		taskName = a.Caption
+	}
+	doc = append(doc, bson.E{Key: "TaskName", Value: serializeWorkflowStringTemplate(taskName)})
 
-	// UserSource
+	// TaskPage (PageReference - required, never null)
+	doc = append(doc, bson.E{Key: "TaskPage", Value: bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Workflows$PageReference"},
+		{Key: "Page", Value: a.Page},
+	}})
+
+	// UserTargeting (NoUserTargeting when not specified)
 	if a.UserSource != nil {
-		doc = append(doc, bson.E{Key: "UserSource", Value: serializeUserSource(a.UserSource)})
-	}
-
-	// UserTaskEntity
-	if a.UserTaskEntity != "" {
-		doc = append(doc, bson.E{Key: "UserTaskEntity", Value: a.UserTaskEntity})
-	}
-
-	// Annotation
-	if a.Annotation != "" {
-		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
-	}
-
-	// BoundaryEvents
-	if len(a.BoundaryEvents) > 0 {
-		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: serializeBoundaryEvents(a.BoundaryEvents)})
+		doc = append(doc, bson.E{Key: "UserTargeting", Value: serializeUserTargeting(a.UserSource)})
+	} else {
+		doc = append(doc, bson.E{Key: "UserTargeting", Value: bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Workflows$NoUserTargeting"},
+		}})
 	}
 
 	return doc
+}
+
+func serializeUserTargeting(source workflows.UserSource) bson.D {
+	switch s := source.(type) {
+	case *workflows.MicroflowBasedUserSource:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Workflows$MicroflowUserTargeting"},
+			{Key: "Microflow", Value: s.Microflow},
+		}
+	case *workflows.XPathBasedUserSource:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Workflows$XPathUserTargeting"},
+			{Key: "XPathConstraint", Value: s.XPath},
+		}
+	default:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Workflows$NoUserTargeting"},
+		}
+	}
 }
 
 func serializeUserTaskOutcome(outcome *workflows.UserTaskOutcome) bson.D {
@@ -266,81 +362,74 @@ func serializeUserTaskOutcome(outcome *workflows.UserTaskOutcome) bson.D {
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(outcomeID)},
 		{Key: "$Type", Value: "Workflows$UserTaskOutcome"},
-		{Key: "Caption", Value: outcome.Caption},
-		{Key: "Name", Value: outcome.Name},
 	}
 
 	if outcome.Flow != nil {
 		doc = append(doc, bson.E{Key: "Flow", Value: serializeWorkflowFlow(outcome.Flow)})
 	}
 
-	return doc
-}
+	doc = append(doc,
+		bson.E{Key: "PersistentId", Value: idToBsonBinary(generateUUID())},
+		bson.E{Key: "Value", Value: outcome.Value},
+	)
 
-func serializeUserSource(source workflows.UserSource) bson.D {
-	switch s := source.(type) {
-	case *workflows.MicroflowBasedUserSource:
-		return bson.D{
-			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
-			{Key: "$Type", Value: "Workflows$MicroflowBasedUserSource"},
-			{Key: "Microflow", Value: s.Microflow},
-		}
-	case *workflows.XPathBasedUserSource:
-		return bson.D{
-			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
-			{Key: "$Type", Value: "Workflows$XPathBasedUserSource"},
-			{Key: "XPath", Value: s.XPath},
-		}
-	default:
-		return bson.D{
-			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
-			{Key: "$Type", Value: "Workflows$EmptyUserSource"},
-		}
-	}
+	return doc
 }
 
 func serializeCallMicroflowTask(a *workflows.CallMicroflowTask) bson.D {
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$CallMicroflowTask"},
-		{Key: "Caption", Value: a.Caption},
-		{Key: "Microflow", Value: a.Microflow},
-		{Key: "Name", Value: a.Name},
 	}
 
+	// Annotation
+	var annotationValue any
+	if a.Annotation != "" {
+		annotationValue = serializeAnnotation(a.Annotation)
+	}
+	doc = append(doc, bson.E{Key: "Annotation", Value: annotationValue})
+
+	// BoundaryEvents (always present)
+	if len(a.BoundaryEvents) > 0 {
+		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: serializeBoundaryEvents(a.BoundaryEvents)})
+	} else {
+		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: emptyBoundaryEvents()})
+	}
+
+	doc = append(doc,
+		bson.E{Key: "Caption", Value: a.Caption},
+		bson.E{Key: "Microflow", Value: a.Microflow},
+		bson.E{Key: "Name", Value: a.Name},
+	)
+
+	// Outcomes
 	outcomes := bson.A{int32(3)}
 	for _, outcome := range a.Outcomes {
 		outcomes = append(outcomes, serializeConditionOutcome(outcome))
 	}
 	doc = append(doc, bson.E{Key: "Outcomes", Value: outcomes})
 
-	// ParameterMappings
-	if len(a.ParameterMappings) > 0 {
-		mappings := bson.A{int32(3)}
-		for _, pm := range a.ParameterMappings {
-			pmID := string(pm.ID)
-			if pmID == "" {
-				pmID = generateUUID()
-			}
-			mappings = append(mappings, bson.D{
-				{Key: "$ID", Value: idToBsonBinary(pmID)},
-				{Key: "$Type", Value: "Workflows$MicroflowCallParameterMapping"},
-				{Key: "Expression", Value: pm.Expression},
-				{Key: "Parameter", Value: pm.Parameter},
-			})
+	// ParameterMappings (always present)
+	mappings := bson.A{int32(2)}
+	for _, pm := range a.ParameterMappings {
+		pmID := string(pm.ID)
+		if pmID == "" {
+			pmID = generateUUID()
 		}
-		doc = append(doc, bson.E{Key: "ParameterMappings", Value: mappings})
+		mappings = append(mappings, bson.D{
+			{Key: "$ID", Value: idToBsonBinary(pmID)},
+			{Key: "$Type", Value: "Workflows$MicroflowCallParameterMapping"},
+			{Key: "Expression", Value: pm.Expression},
+			{Key: "Parameter", Value: pm.Parameter},
+		})
 	}
+	doc = append(doc, bson.E{Key: "ParameterMappings", Value: mappings})
 
-	// Annotation
-	if a.Annotation != "" {
-		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
-	}
-
-	// BoundaryEvents
-	if len(a.BoundaryEvents) > 0 {
-		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: serializeBoundaryEvents(a.BoundaryEvents)})
-	}
+	doc = append(doc,
+		bson.E{Key: "PersistentId", Value: idToBsonBinary(generateUUID())},
+		bson.E{Key: "RelativeMiddlePoint", Value: ""},
+		bson.E{Key: "Size", Value: ""},
+	)
 
 	return doc
 }
@@ -349,21 +438,51 @@ func serializeCallWorkflowActivity(a *workflows.CallWorkflowActivity) bson.D {
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$CallWorkflowActivity"},
-		{Key: "Caption", Value: a.Caption},
-		{Key: "Name", Value: a.Name},
-		{Key: "ParameterExpression", Value: a.ParameterExpression},
-		{Key: "Workflow", Value: a.Workflow},
 	}
 
 	// Annotation
+	var annotationValue any
 	if a.Annotation != "" {
-		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
+		annotationValue = serializeAnnotation(a.Annotation)
 	}
+	doc = append(doc, bson.E{Key: "Annotation", Value: annotationValue})
 
-	// BoundaryEvents
+	// BoundaryEvents (always present)
 	if len(a.BoundaryEvents) > 0 {
 		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: serializeBoundaryEvents(a.BoundaryEvents)})
+	} else {
+		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: emptyBoundaryEvents()})
 	}
+
+	doc = append(doc,
+		bson.E{Key: "Caption", Value: a.Caption},
+		bson.E{Key: "ExecuteAsync", Value: false},
+		bson.E{Key: "Name", Value: a.Name},
+		bson.E{Key: "ParameterExpression", Value: a.ParameterExpression},
+	)
+
+	// ParameterMappings (always present, marker int32(2))
+	paramMappings := bson.A{int32(2)}
+	for _, pm := range a.ParameterMappings {
+		pmID := string(pm.ID)
+		if pmID == "" {
+			pmID = generateUUID()
+		}
+		paramMappings = append(paramMappings, bson.D{
+			{Key: "$ID", Value: idToBsonBinary(pmID)},
+			{Key: "$Type", Value: "Workflows$WorkflowCallParameterMapping"},
+			{Key: "Expression", Value: pm.Expression},
+			{Key: "Parameter", Value: pm.Parameter},
+		})
+	}
+	doc = append(doc, bson.E{Key: "ParameterMappings", Value: paramMappings})
+
+	doc = append(doc,
+		bson.E{Key: "PersistentId", Value: idToBsonBinary(generateUUID())},
+		bson.E{Key: "RelativeMiddlePoint", Value: ""},
+		bson.E{Key: "Size", Value: ""},
+		bson.E{Key: "Workflow", Value: a.Workflow},
+	)
 
 	return doc
 }
@@ -372,21 +491,21 @@ func serializeExclusiveSplit(a *workflows.ExclusiveSplitActivity) bson.D {
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$ExclusiveSplitActivity"},
-		{Key: "Caption", Value: a.Caption},
-		{Key: "Expression", Value: a.Expression},
-		{Key: "Name", Value: a.Name},
 	}
+
+	doc = appendActivityBaseFields(doc, a.Annotation)
+
+	doc = append(doc,
+		bson.E{Key: "Caption", Value: a.Caption},
+		bson.E{Key: "Expression", Value: a.Expression},
+		bson.E{Key: "Name", Value: a.Name},
+	)
 
 	outcomes := bson.A{int32(3)}
 	for _, outcome := range a.Outcomes {
 		outcomes = append(outcomes, serializeConditionOutcome(outcome))
 	}
 	doc = append(doc, bson.E{Key: "Outcomes", Value: outcomes})
-
-	// Annotation
-	if a.Annotation != "" {
-		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
-	}
 
 	return doc
 }
@@ -443,9 +562,14 @@ func serializeParallelSplit(a *workflows.ParallelSplitActivity) bson.D {
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$ParallelSplitActivity"},
-		{Key: "Caption", Value: a.Caption},
-		{Key: "Name", Value: a.Name},
 	}
+
+	doc = appendActivityBaseFields(doc, a.Annotation)
+
+	doc = append(doc,
+		bson.E{Key: "Caption", Value: a.Caption},
+		bson.E{Key: "Name", Value: a.Name},
+	)
 
 	outcomes := bson.A{int32(3)}
 	for _, outcome := range a.Outcomes {
@@ -460,14 +584,10 @@ func serializeParallelSplit(a *workflows.ParallelSplitActivity) bson.D {
 		if outcome.Flow != nil {
 			outDoc = append(outDoc, bson.E{Key: "Flow", Value: serializeWorkflowFlow(outcome.Flow)})
 		}
+		outDoc = append(outDoc, bson.E{Key: "PersistentId", Value: idToBsonBinary(generateUUID())})
 		outcomes = append(outcomes, outDoc)
 	}
 	doc = append(doc, bson.E{Key: "Outcomes", Value: outcomes})
-
-	// Annotation
-	if a.Annotation != "" {
-		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
-	}
 
 	return doc
 }
@@ -476,15 +596,15 @@ func serializeJumpTo(a *workflows.JumpToActivity) bson.D {
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$JumpToActivity"},
-		{Key: "Caption", Value: a.Caption},
-		{Key: "Name", Value: a.Name},
-		{Key: "TargetActivity", Value: a.TargetActivity},
 	}
 
-	// Annotation
-	if a.Annotation != "" {
-		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
-	}
+	doc = appendActivityBaseFields(doc, a.Annotation)
+
+	doc = append(doc,
+		bson.E{Key: "Caption", Value: a.Caption},
+		bson.E{Key: "Name", Value: a.Name},
+		bson.E{Key: "TargetActivity", Value: a.TargetActivity},
+	)
 
 	return doc
 }
@@ -493,15 +613,15 @@ func serializeWaitForTimer(a *workflows.WaitForTimerActivity) bson.D {
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$WaitForTimerActivity"},
-		{Key: "Caption", Value: a.Caption},
-		{Key: "DelayExpression", Value: a.DelayExpression},
-		{Key: "Name", Value: a.Name},
 	}
 
-	// Annotation
-	if a.Annotation != "" {
-		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
-	}
+	doc = appendActivityBaseFields(doc, a.Annotation)
+
+	doc = append(doc,
+		bson.E{Key: "Caption", Value: a.Caption},
+		bson.E{Key: "DelayExpression", Value: a.DelayExpression},
+		bson.E{Key: "Name", Value: a.Name},
+	)
 
 	return doc
 }
@@ -510,19 +630,29 @@ func serializeWaitForNotification(a *workflows.WaitForNotificationActivity) bson
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$WaitForNotificationActivity"},
-		{Key: "Caption", Value: a.Caption},
-		{Key: "Name", Value: a.Name},
 	}
 
 	// Annotation
+	var annotationValue any
 	if a.Annotation != "" {
-		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
+		annotationValue = serializeAnnotation(a.Annotation)
 	}
+	doc = append(doc, bson.E{Key: "Annotation", Value: annotationValue})
 
-	// BoundaryEvents
+	// BoundaryEvents (always present)
 	if len(a.BoundaryEvents) > 0 {
 		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: serializeBoundaryEvents(a.BoundaryEvents)})
+	} else {
+		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: emptyBoundaryEvents()})
 	}
+
+	doc = append(doc,
+		bson.E{Key: "Caption", Value: a.Caption},
+		bson.E{Key: "Name", Value: a.Name},
+		bson.E{Key: "PersistentId", Value: idToBsonBinary(generateUUID())},
+		bson.E{Key: "RelativeMiddlePoint", Value: ""},
+		bson.E{Key: "Size", Value: ""},
+	)
 
 	return doc
 }
@@ -531,14 +661,14 @@ func serializeStartWorkflow(a *workflows.StartWorkflowActivity) bson.D {
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$StartWorkflowActivity"},
-		{Key: "Caption", Value: a.Caption},
-		{Key: "Name", Value: a.Name},
 	}
 
-	// Annotation
-	if a.Annotation != "" {
-		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
-	}
+	doc = appendActivityBaseFields(doc, a.Annotation)
+
+	doc = append(doc,
+		bson.E{Key: "Caption", Value: a.Caption},
+		bson.E{Key: "Name", Value: a.Name},
+	)
 
 	return doc
 }
@@ -547,14 +677,14 @@ func serializeEndWorkflow(a *workflows.EndWorkflowActivity) bson.D {
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$EndWorkflowActivity"},
-		{Key: "Caption", Value: a.Caption},
-		{Key: "Name", Value: a.Name},
 	}
 
-	// Annotation
-	if a.Annotation != "" {
-		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
-	}
+	doc = appendActivityBaseFields(doc, a.Annotation)
+
+	doc = append(doc,
+		bson.E{Key: "Caption", Value: a.Caption},
+		bson.E{Key: "Name", Value: a.Name},
+	)
 
 	return doc
 }

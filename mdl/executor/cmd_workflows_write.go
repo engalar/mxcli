@@ -5,6 +5,8 @@ package executor
 
 import (
 	"fmt"
+	"strings"
+	"unicode"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
@@ -86,6 +88,9 @@ func (e *Executor) execCreateWorkflow(s *ast.CreateWorkflowStmt) error {
 
 	// Build user-defined activities
 	userActivities := buildWorkflowActivities(s.Activities)
+
+	// Auto-bind microflow/workflow parameters and sanitize names
+	e.autoBindWorkflowParameters(userActivities)
 
 	// Deduplicate activity names to avoid CE0495
 	deduplicateActivityNames(userActivities)
@@ -220,6 +225,7 @@ func buildUserTask(n *ast.WorkflowUserTaskNode) *workflows.UserTask {
 		outcome := &workflows.UserTaskOutcome{
 			Name:    outcomeNode.Caption,
 			Caption: outcomeNode.Caption,
+			Value:   outcomeNode.Caption,
 		}
 		outcome.ID = model.ID(generateWorkflowUUID())
 
@@ -486,4 +492,183 @@ func uniqueName(name string, nameCount map[string]int) string {
 		return name
 	}
 	return fmt.Sprintf("%s%d", name, count)
+}
+
+// sanitizeActivityName converts a display caption to a valid Mendix identifier.
+// Mendix names must start with a letter/underscore and contain only letters, digits, underscores.
+func sanitizeActivityName(name string) string {
+	var b strings.Builder
+	for i, r := range name {
+		if unicode.IsLetter(r) || r == '_' {
+			b.WriteRune(r)
+		} else if unicode.IsDigit(r) && i > 0 {
+			b.WriteRune(r)
+		} else if r == ' ' || r == '-' {
+			b.WriteRune('_')
+		}
+	}
+	result := b.String()
+	if result == "" {
+		return "activity"
+	}
+	return result
+}
+
+// autoBindWorkflowParameters resolves microflow/workflow parameters and generates
+// ParameterMappings, default outcomes, and sanitized names for workflow activities.
+func (e *Executor) autoBindWorkflowParameters(activities []workflows.WorkflowActivity) {
+	e.autoBindActivitiesInFlow(activities)
+}
+
+func (e *Executor) autoBindActivitiesInFlow(activities []workflows.WorkflowActivity) {
+	for _, act := range activities {
+		switch a := act.(type) {
+		case *workflows.CallMicroflowTask:
+			e.autoBindCallMicroflow(a)
+			// Recurse into outcomes
+			for _, outcome := range a.Outcomes {
+				switch o := outcome.(type) {
+				case *workflows.BooleanConditionOutcome:
+					if o.Flow != nil {
+						e.autoBindActivitiesInFlow(o.Flow.Activities)
+					}
+				case *workflows.VoidConditionOutcome:
+					if o.Flow != nil {
+						e.autoBindActivitiesInFlow(o.Flow.Activities)
+					}
+				}
+			}
+		case *workflows.CallWorkflowActivity:
+			e.autoBindCallWorkflow(a)
+		case *workflows.UserTask:
+			// Sanitize name
+			a.Name = sanitizeActivityName(a.Name)
+			for _, outcome := range a.Outcomes {
+				if outcome.Flow != nil {
+					e.autoBindActivitiesInFlow(outcome.Flow.Activities)
+				}
+			}
+		case *workflows.ParallelSplitActivity:
+			// Sanitize name (spaces not allowed)
+			a.Name = sanitizeActivityName(a.Name)
+			for _, outcome := range a.Outcomes {
+				if outcome.Flow != nil {
+					e.autoBindActivitiesInFlow(outcome.Flow.Activities)
+				}
+			}
+		case *workflows.ExclusiveSplitActivity:
+			a.Name = sanitizeActivityName(a.Name)
+			for _, outcome := range a.Outcomes {
+				switch o := outcome.(type) {
+				case *workflows.BooleanConditionOutcome:
+					if o.Flow != nil {
+						e.autoBindActivitiesInFlow(o.Flow.Activities)
+					}
+				case *workflows.VoidConditionOutcome:
+					if o.Flow != nil {
+						e.autoBindActivitiesInFlow(o.Flow.Activities)
+					}
+				}
+			}
+		case *workflows.WaitForNotificationActivity:
+			a.Name = sanitizeActivityName(a.Name)
+		case *workflows.WaitForTimerActivity:
+			a.Name = sanitizeActivityName(a.Name)
+		case *workflows.JumpToActivity:
+			a.Name = sanitizeActivityName(a.Name)
+		}
+	}
+}
+
+// autoBindCallMicroflow resolves microflow parameters and auto-generates ParameterMappings.
+func (e *Executor) autoBindCallMicroflow(task *workflows.CallMicroflowTask) {
+	// Sanitize name
+	task.Name = sanitizeActivityName(task.Name)
+
+	// Skip if already has parameter mappings
+	if len(task.ParameterMappings) > 0 {
+		return
+	}
+
+	// Look up the microflow to get its parameters
+	mfs, err := e.reader.ListMicroflows()
+	if err != nil {
+		return
+	}
+
+	h, err := e.getHierarchy()
+	if err != nil {
+		return
+	}
+
+	for _, mf := range mfs {
+		modID := h.FindModuleID(mf.ContainerID)
+		modName := h.GetModuleName(modID)
+		qualifiedName := modName + "." + mf.Name
+		if qualifiedName != task.Microflow {
+			continue
+		}
+
+		// Found the microflow — bind parameters
+		for _, param := range mf.Parameters {
+			paramQualifiedName := qualifiedName + "." + param.Name
+			mapping := &workflows.ParameterMapping{
+				Parameter:  paramQualifiedName,
+				Expression: "$WorkflowContext",
+			}
+			mapping.BaseElement.ID = model.ID(mpr.GenerateID())
+			task.ParameterMappings = append(task.ParameterMappings, mapping)
+		}
+
+		// Auto-generate Default outcome if no outcomes specified
+		if len(task.Outcomes) == 0 {
+			outcome := &workflows.VoidConditionOutcome{
+				Flow: &workflows.Flow{},
+			}
+			outcome.BaseElement.ID = model.ID(mpr.GenerateID())
+			outcome.Flow.BaseElement.ID = model.ID(mpr.GenerateID())
+			task.Outcomes = append(task.Outcomes, outcome)
+		}
+		break
+	}
+}
+
+// autoBindCallWorkflow resolves workflow parameters and generates ParameterMappings.
+func (e *Executor) autoBindCallWorkflow(act *workflows.CallWorkflowActivity) {
+	// Sanitize name
+	act.Name = sanitizeActivityName(act.Name)
+
+	// Look up the target workflow to check its parameter
+	wfs, err := e.reader.ListWorkflows()
+	if err != nil {
+		return
+	}
+
+	h, err := e.getHierarchy()
+	if err != nil {
+		return
+	}
+
+	for _, wf := range wfs {
+		modID := h.FindModuleID(wf.ContainerID)
+		modName := h.GetModuleName(modID)
+		qualifiedName := modName + "." + wf.Name
+		if qualifiedName != act.Workflow {
+			continue
+		}
+
+		// If the target workflow has a parameter, generate ParameterMappings
+		if wf.Parameter != nil && wf.Parameter.EntityRef != "" {
+			act.ParameterExpression = "$WorkflowContext"
+			// Generate WorkflowCallParameterMapping: Parameter = Workflow.ParamName
+			paramName := qualifiedName + ".WorkflowContext"
+			mapping := &workflows.ParameterMapping{
+				Parameter:  paramName,
+				Expression: "$WorkflowContext",
+			}
+			mapping.BaseElement.ID = model.ID(mpr.GenerateID())
+			act.ParameterMappings = append(act.ParameterMappings, mapping)
+		}
+		break
+	}
 }

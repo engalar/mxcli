@@ -146,9 +146,10 @@ func (a *CallMicroflowTask) ActivityType() string { return "CallMicroflow" }
 // CallWorkflowActivity represents calling a sub-workflow.
 type CallWorkflowActivity struct {
 	BaseWorkflowActivity
-	Workflow            string           `json:"workflow,omitempty"`            // Qualified name of the workflow to call
-	ParameterExpression string           `json:"parameterExpression,omitempty"` // Expression for context parameter
-	BoundaryEvents     []*BoundaryEvent  `json:"boundaryEvents,omitempty"`     // Boundary events (e.g., timers)
+	Workflow            string              `json:"workflow,omitempty"`            // Qualified name of the workflow to call
+	ParameterExpression string              `json:"parameterExpression,omitempty"` // Expression for context parameter
+	ParameterMappings   []*ParameterMapping `json:"parameterMappings,omitempty"`   // Parameter mappings for the workflow call
+	BoundaryEvents      []*BoundaryEvent    `json:"boundaryEvents,omitempty"`      // Boundary events (e.g., timers)
 }
 
 // ActivityType returns the type name.
@@ -218,7 +219,8 @@ type UserTaskOutcome struct {
 	model.BaseElement
 	Name    string `json:"name,omitempty"`
 	Caption string `json:"caption,omitempty"`
-	Flow    *Flow  `json:"flow,omitempty"` // Activities that follow this outcome
+	Value   string `json:"value,omitempty"` // The outcome value (required, must be unique)
+	Flow    *Flow  `json:"flow,omitempty"`  // Activities that follow this outcome
 }
 
 // ConditionOutcome is the interface for condition-based outcomes.
