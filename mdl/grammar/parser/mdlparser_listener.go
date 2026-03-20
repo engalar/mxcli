@@ -100,6 +100,12 @@ type MDLParserListener interface {
 	// EnterRevokePageAccessStatement is called when entering the revokePageAccessStatement production.
 	EnterRevokePageAccessStatement(c *RevokePageAccessStatementContext)
 
+	// EnterGrantWorkflowAccessStatement is called when entering the grantWorkflowAccessStatement production.
+	EnterGrantWorkflowAccessStatement(c *GrantWorkflowAccessStatementContext)
+
+	// EnterRevokeWorkflowAccessStatement is called when entering the revokeWorkflowAccessStatement production.
+	EnterRevokeWorkflowAccessStatement(c *RevokeWorkflowAccessStatementContext)
+
 	// EnterGrantODataServiceAccessStatement is called when entering the grantODataServiceAccessStatement production.
 	EnterGrantODataServiceAccessStatement(c *GrantODataServiceAccessStatementContext)
 
@@ -1092,6 +1098,12 @@ type MDLParserListener interface {
 
 	// ExitRevokePageAccessStatement is called when exiting the revokePageAccessStatement production.
 	ExitRevokePageAccessStatement(c *RevokePageAccessStatementContext)
+
+	// ExitGrantWorkflowAccessStatement is called when exiting the grantWorkflowAccessStatement production.
+	ExitGrantWorkflowAccessStatement(c *GrantWorkflowAccessStatementContext)
+
+	// ExitRevokeWorkflowAccessStatement is called when exiting the revokeWorkflowAccessStatement production.
+	ExitRevokeWorkflowAccessStatement(c *RevokeWorkflowAccessStatementContext)
 
 	// ExitGrantODataServiceAccessStatement is called when exiting the grantODataServiceAccessStatement production.
 	ExitGrantODataServiceAccessStatement(c *GrantODataServiceAccessStatementContext)

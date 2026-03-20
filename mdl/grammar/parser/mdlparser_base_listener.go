@@ -218,6 +218,22 @@ func (s *BaseMDLParserListener) EnterRevokePageAccessStatement(ctx *RevokePageAc
 func (s *BaseMDLParserListener) ExitRevokePageAccessStatement(ctx *RevokePageAccessStatementContext) {
 }
 
+// EnterGrantWorkflowAccessStatement is called when production grantWorkflowAccessStatement is entered.
+func (s *BaseMDLParserListener) EnterGrantWorkflowAccessStatement(ctx *GrantWorkflowAccessStatementContext) {
+}
+
+// ExitGrantWorkflowAccessStatement is called when production grantWorkflowAccessStatement is exited.
+func (s *BaseMDLParserListener) ExitGrantWorkflowAccessStatement(ctx *GrantWorkflowAccessStatementContext) {
+}
+
+// EnterRevokeWorkflowAccessStatement is called when production revokeWorkflowAccessStatement is entered.
+func (s *BaseMDLParserListener) EnterRevokeWorkflowAccessStatement(ctx *RevokeWorkflowAccessStatementContext) {
+}
+
+// ExitRevokeWorkflowAccessStatement is called when production revokeWorkflowAccessStatement is exited.
+func (s *BaseMDLParserListener) ExitRevokeWorkflowAccessStatement(ctx *RevokeWorkflowAccessStatementContext) {
+}
+
 // EnterGrantODataServiceAccessStatement is called when production grantODataServiceAccessStatement is entered.
 func (s *BaseMDLParserListener) EnterGrantODataServiceAccessStatement(ctx *GrantODataServiceAccessStatementContext) {
 }

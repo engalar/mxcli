@@ -665,6 +665,124 @@ func (e *Executor) execRevokePageAccess(s *ast.RevokePageAccessStmt) error {
 	return fmt.Errorf("page not found: %s.%s", s.Page.Module, s.Page.Name)
 }
 
+// execGrantWorkflowAccess handles GRANT EXECUTE ON WORKFLOW Module.WF TO roles.
+func (e *Executor) execGrantWorkflowAccess(s *ast.GrantWorkflowAccessStmt) error {
+	if e.writer == nil {
+		return fmt.Errorf("not connected to a project in write mode")
+	}
+
+	h, err := e.getHierarchy()
+	if err != nil {
+		return fmt.Errorf("failed to build hierarchy: %w", err)
+	}
+
+	// Find the workflow
+	wfs, err := e.reader.ListWorkflows()
+	if err != nil {
+		return fmt.Errorf("failed to list workflows: %w", err)
+	}
+
+	for _, wf := range wfs {
+		modID := h.FindModuleID(wf.ContainerID)
+		modName := h.GetModuleName(modID)
+		if modName != s.Workflow.Module || wf.Name != s.Workflow.Name {
+			continue
+		}
+
+		// Validate all roles exist
+		for _, role := range s.Roles {
+			if err := e.validateModuleRole(role); err != nil {
+				return err
+			}
+		}
+
+		// Merge new roles with existing (skip duplicates)
+		existing := make(map[string]bool)
+		var merged []string
+		for _, r := range wf.AllowedModuleRoles {
+			existing[string(r)] = true
+			merged = append(merged, string(r))
+		}
+		var added []string
+		for _, role := range s.Roles {
+			qn := role.Module + "." + role.Name
+			if !existing[qn] {
+				merged = append(merged, qn)
+				added = append(added, qn)
+			}
+		}
+
+		if err := e.writer.UpdateAllowedRoles(wf.ID, merged); err != nil {
+			return fmt.Errorf("failed to update workflow access: %w", err)
+		}
+
+		if len(added) == 0 {
+			fmt.Fprintf(e.output, "All specified roles already have execute access on %s.%s\n", modName, wf.Name)
+		} else {
+			fmt.Fprintf(e.output, "Granted execute access on %s.%s to %s\n", modName, wf.Name, strings.Join(added, ", "))
+		}
+		return nil
+	}
+
+	return fmt.Errorf("workflow not found: %s.%s", s.Workflow.Module, s.Workflow.Name)
+}
+
+// execRevokeWorkflowAccess handles REVOKE EXECUTE ON WORKFLOW Module.WF FROM roles.
+func (e *Executor) execRevokeWorkflowAccess(s *ast.RevokeWorkflowAccessStmt) error {
+	if e.writer == nil {
+		return fmt.Errorf("not connected to a project in write mode")
+	}
+
+	h, err := e.getHierarchy()
+	if err != nil {
+		return fmt.Errorf("failed to build hierarchy: %w", err)
+	}
+
+	// Find the workflow
+	wfs, err := e.reader.ListWorkflows()
+	if err != nil {
+		return fmt.Errorf("failed to list workflows: %w", err)
+	}
+
+	for _, wf := range wfs {
+		modID := h.FindModuleID(wf.ContainerID)
+		modName := h.GetModuleName(modID)
+		if modName != s.Workflow.Module || wf.Name != s.Workflow.Name {
+			continue
+		}
+
+		// Build set of roles to remove
+		toRemove := make(map[string]bool)
+		for _, role := range s.Roles {
+			toRemove[role.Module+"."+role.Name] = true
+		}
+
+		// Filter out removed roles
+		var remaining []string
+		var removed []string
+		for _, r := range wf.AllowedModuleRoles {
+			if toRemove[string(r)] {
+				removed = append(removed, string(r))
+			} else {
+				remaining = append(remaining, string(r))
+			}
+		}
+
+		if err := e.writer.UpdateAllowedRoles(wf.ID, remaining); err != nil {
+			return fmt.Errorf("failed to update workflow access: %w", err)
+		}
+
+		if len(removed) == 0 {
+			fmt.Fprintf(e.output, "None of the specified roles had execute access on %s.%s\n", modName, wf.Name)
+		} else {
+			fmt.Fprintf(e.output, "Revoked execute access on %s.%s from %s\n", modName, wf.Name, strings.Join(removed, ", "))
+		}
+		return nil
+	}
+
+	return fmt.Errorf("workflow not found: %s.%s", s.Workflow.Module, s.Workflow.Name)
+}
+
 // validateModuleRole checks that a module role exists in the project.
 func (e *Executor) validateModuleRole(role ast.QualifiedName) error {
 	module, err := e.findModule(role.Module)

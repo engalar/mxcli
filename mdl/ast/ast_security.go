@@ -114,6 +114,22 @@ type RevokePageAccessStmt struct {
 
 func (s *RevokePageAccessStmt) isStatement() {}
 
+// GrantWorkflowAccessStmt represents: GRANT EXECUTE ON WORKFLOW Module.WF TO role1, role2
+type GrantWorkflowAccessStmt struct {
+	Workflow QualifiedName
+	Roles    []QualifiedName
+}
+
+func (s *GrantWorkflowAccessStmt) isStatement() {}
+
+// RevokeWorkflowAccessStmt represents: REVOKE EXECUTE ON WORKFLOW Module.WF FROM role1, role2
+type RevokeWorkflowAccessStmt struct {
+	Workflow QualifiedName
+	Roles    []QualifiedName
+}
+
+func (s *RevokeWorkflowAccessStmt) isStatement() {}
+
 // GrantODataServiceAccessStmt represents: GRANT ACCESS ON ODATA SERVICE Module.Svc TO role1, role2
 type GrantODataServiceAccessStmt struct {
 	Service QualifiedName

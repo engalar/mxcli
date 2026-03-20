@@ -66,6 +66,14 @@ func (r *Reader) parseWorkflow(unitID, containerID string, contents []byte) (*wo
 		w.DueDate = dueDate
 	}
 
+	// Parse allowed module roles (BY_NAME references)
+	allowedRoles := extractBsonArray(raw["AllowedModuleRoles"])
+	for _, r := range allowedRoles {
+		if name, ok := r.(string); ok {
+			w.AllowedModuleRoles = append(w.AllowedModuleRoles, model.ID(name))
+		}
+	}
+
 	// Parse Flow (PART — Workflows$Flow)
 	if flowRaw := raw["Flow"]; flowRaw != nil {
 		w.Flow = parseWorkflowFlow(toMap(flowRaw))

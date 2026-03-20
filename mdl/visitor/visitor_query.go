@@ -262,6 +262,11 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 					ObjectType: ast.ShowAccessOnPage,
 					Name:       &name,
 				})
+			} else if ctx.WORKFLOW() != nil {
+				b.statements = append(b.statements, &ast.ShowStmt{
+					ObjectType: ast.ShowAccessOnWorkflow,
+					Name:       &name,
+				})
 			} else {
 				b.statements = append(b.statements, &ast.ShowStmt{
 					ObjectType: ast.ShowAccessOn,
