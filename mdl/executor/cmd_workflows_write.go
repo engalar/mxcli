@@ -87,6 +87,9 @@ func (e *Executor) execCreateWorkflow(s *ast.CreateWorkflowStmt) error {
 	// Build user-defined activities
 	userActivities := buildWorkflowActivities(s.Activities)
 
+	// Deduplicate activity names to avoid CE0495
+	deduplicateActivityNames(userActivities)
+
 	// Compose: start + user activities + end
 	flow.Activities = make([]workflows.WorkflowActivity, 0, len(userActivities)+2)
 	flow.Activities = append(flow.Activities, startAct)
@@ -265,6 +268,9 @@ func buildCallWorkflowActivity(n *ast.WorkflowCallWorkflowNode) *workflows.CallW
 		act.Caption = act.Name
 	}
 
+	// Auto-bind $WorkflowContext parameter expression
+	act.ParameterExpression = "$WorkflowContext"
+
 	return act
 }
 
@@ -395,4 +401,89 @@ func buildEndWorkflow(n *ast.WorkflowEndNode) *workflows.EndWorkflowActivity {
 	act.Name = act.Caption
 
 	return act
+}
+
+// deduplicateActivityNames ensures all activity names within a workflow are unique.
+// Mendix Studio Pro requires unique activity names (CE0495).
+func deduplicateActivityNames(activities []workflows.WorkflowActivity) {
+	nameCount := make(map[string]int)
+	deduplicateActivityNamesInFlow(activities, nameCount)
+}
+
+// deduplicateActivityNamesInFlow recursively deduplicates activity names.
+func deduplicateActivityNamesInFlow(activities []workflows.WorkflowActivity, nameCount map[string]int) {
+	for _, act := range activities {
+		switch a := act.(type) {
+		case *workflows.UserTask:
+			a.Name = uniqueName(a.Name, nameCount)
+			for _, outcome := range a.Outcomes {
+				if outcome.Flow != nil {
+					deduplicateActivityNamesInFlow(outcome.Flow.Activities, nameCount)
+				}
+			}
+		case *workflows.CallMicroflowTask:
+			a.Name = uniqueName(a.Name, nameCount)
+			for _, outcome := range a.Outcomes {
+				switch o := outcome.(type) {
+				case *workflows.BooleanConditionOutcome:
+					if o.Flow != nil {
+						deduplicateActivityNamesInFlow(o.Flow.Activities, nameCount)
+					}
+				case *workflows.EnumerationValueConditionOutcome:
+					if o.Flow != nil {
+						deduplicateActivityNamesInFlow(o.Flow.Activities, nameCount)
+					}
+				case *workflows.VoidConditionOutcome:
+					if o.Flow != nil {
+						deduplicateActivityNamesInFlow(o.Flow.Activities, nameCount)
+					}
+				}
+			}
+		case *workflows.CallWorkflowActivity:
+			a.Name = uniqueName(a.Name, nameCount)
+		case *workflows.ExclusiveSplitActivity:
+			a.Name = uniqueName(a.Name, nameCount)
+			for _, outcome := range a.Outcomes {
+				switch o := outcome.(type) {
+				case *workflows.BooleanConditionOutcome:
+					if o.Flow != nil {
+						deduplicateActivityNamesInFlow(o.Flow.Activities, nameCount)
+					}
+				case *workflows.EnumerationValueConditionOutcome:
+					if o.Flow != nil {
+						deduplicateActivityNamesInFlow(o.Flow.Activities, nameCount)
+					}
+				case *workflows.VoidConditionOutcome:
+					if o.Flow != nil {
+						deduplicateActivityNamesInFlow(o.Flow.Activities, nameCount)
+					}
+				}
+			}
+		case *workflows.ParallelSplitActivity:
+			a.Name = uniqueName(a.Name, nameCount)
+			for _, outcome := range a.Outcomes {
+				if outcome.Flow != nil {
+					deduplicateActivityNamesInFlow(outcome.Flow.Activities, nameCount)
+				}
+			}
+		case *workflows.JumpToActivity:
+			a.Name = uniqueName(a.Name, nameCount)
+		case *workflows.WaitForTimerActivity:
+			a.Name = uniqueName(a.Name, nameCount)
+		case *workflows.WaitForNotificationActivity:
+			a.Name = uniqueName(a.Name, nameCount)
+		case *workflows.EndWorkflowActivity:
+			a.Name = uniqueName(a.Name, nameCount)
+		}
+	}
+}
+
+// uniqueName returns a unique name by appending a number if the name was seen before.
+func uniqueName(name string, nameCount map[string]int) string {
+	nameCount[name]++
+	count := nameCount[name]
+	if count == 1 {
+		return name
+	}
+	return fmt.Sprintf("%s%d", name, count)
 }

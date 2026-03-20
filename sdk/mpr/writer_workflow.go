@@ -42,6 +42,14 @@ func (w *Writer) serializeWorkflow(wf *workflows.Workflow) ([]byte, error) {
 		{Key: "ExportLevel", Value: "Hidden"},
 	}
 
+	// AdminPage
+	doc = append(doc, bson.E{Key: "AdminPage", Value: wf.AdminPage})
+
+	// Annotation
+	if wf.Annotation != "" {
+		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(wf.Annotation)})
+	}
+
 	// Flow
 	if wf.Flow != nil {
 		doc = append(doc, bson.E{Key: "Flow", Value: serializeWorkflowFlow(wf.Flow)})
@@ -75,7 +83,7 @@ func (w *Writer) serializeWorkflow(wf *workflows.Workflow) ([]byte, error) {
 func serializeWorkflowStringTemplate(text string) bson.D {
 	return bson.D{
 		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
-		{Key: "$Type", Value: "Texts$StringTemplate"},
+		{Key: "$Type", Value: "Microflows$StringTemplate"},
 		{Key: "Parameters", Value: bson.A{int32(3)}},
 		{Key: "Text", Value: text},
 	}
@@ -96,6 +104,53 @@ func serializeWorkflowParameter(param *workflows.WorkflowParameter) bson.D {
 			{Key: "EntityQualifiedName", Value: param.EntityRef},
 		}},
 	}
+}
+
+// serializeAnnotation serializes a workflow annotation if non-empty.
+func serializeAnnotation(annotation string) bson.D {
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Workflows$Annotation"},
+		{Key: "Description", Value: annotation},
+	}
+}
+
+// serializeBoundaryEvents serializes boundary events for workflow activities.
+func serializeBoundaryEvents(events []*workflows.BoundaryEvent) bson.A {
+	arr := bson.A{int32(3)} // array type marker
+	for _, event := range events {
+		eventID := string(event.ID)
+		if eventID == "" {
+			eventID = generateUUID()
+		}
+
+		typeName := "Workflows$InterruptingTimerBoundaryEvent"
+		switch event.EventType {
+		case "NonInterruptingTimer":
+			typeName = "Workflows$NonInterruptingTimerBoundaryEvent"
+		case "Timer":
+			typeName = "Workflows$TimerBoundaryEvent"
+		case "InterruptingTimer":
+			typeName = "Workflows$InterruptingTimerBoundaryEvent"
+		}
+
+		doc := bson.D{
+			{Key: "$ID", Value: idToBsonBinary(eventID)},
+			{Key: "$Type", Value: typeName},
+			{Key: "Caption", Value: event.Caption},
+		}
+
+		if event.TimerDelay != "" {
+			doc = append(doc, bson.E{Key: "DelayExpression", Value: event.TimerDelay})
+		}
+
+		if event.Flow != nil {
+			doc = append(doc, bson.E{Key: "Flow", Value: serializeWorkflowFlow(event.Flow)})
+		}
+
+		arr = append(arr, doc)
+	}
+	return arr
 }
 
 // serializeWorkflowFlow serializes a workflow flow with its activities.
@@ -189,6 +244,16 @@ func serializeUserTask(a *workflows.UserTask) bson.D {
 		doc = append(doc, bson.E{Key: "UserTaskEntity", Value: a.UserTaskEntity})
 	}
 
+	// Annotation
+	if a.Annotation != "" {
+		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
+	}
+
+	// BoundaryEvents
+	if len(a.BoundaryEvents) > 0 {
+		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: serializeBoundaryEvents(a.BoundaryEvents)})
+	}
+
 	return doc
 }
 
@@ -249,17 +314,58 @@ func serializeCallMicroflowTask(a *workflows.CallMicroflowTask) bson.D {
 	}
 	doc = append(doc, bson.E{Key: "Outcomes", Value: outcomes})
 
+	// ParameterMappings
+	if len(a.ParameterMappings) > 0 {
+		mappings := bson.A{int32(3)}
+		for _, pm := range a.ParameterMappings {
+			pmID := string(pm.ID)
+			if pmID == "" {
+				pmID = generateUUID()
+			}
+			mappings = append(mappings, bson.D{
+				{Key: "$ID", Value: idToBsonBinary(pmID)},
+				{Key: "$Type", Value: "Workflows$MicroflowCallParameterMapping"},
+				{Key: "Expression", Value: pm.Expression},
+				{Key: "Parameter", Value: pm.Parameter},
+			})
+		}
+		doc = append(doc, bson.E{Key: "ParameterMappings", Value: mappings})
+	}
+
+	// Annotation
+	if a.Annotation != "" {
+		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
+	}
+
+	// BoundaryEvents
+	if len(a.BoundaryEvents) > 0 {
+		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: serializeBoundaryEvents(a.BoundaryEvents)})
+	}
+
 	return doc
 }
 
 func serializeCallWorkflowActivity(a *workflows.CallWorkflowActivity) bson.D {
-	return bson.D{
+	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$CallWorkflowActivity"},
 		{Key: "Caption", Value: a.Caption},
 		{Key: "Name", Value: a.Name},
+		{Key: "ParameterExpression", Value: a.ParameterExpression},
 		{Key: "Workflow", Value: a.Workflow},
 	}
+
+	// Annotation
+	if a.Annotation != "" {
+		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
+	}
+
+	// BoundaryEvents
+	if len(a.BoundaryEvents) > 0 {
+		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: serializeBoundaryEvents(a.BoundaryEvents)})
+	}
+
+	return doc
 }
 
 func serializeExclusiveSplit(a *workflows.ExclusiveSplitActivity) bson.D {
@@ -276,6 +382,11 @@ func serializeExclusiveSplit(a *workflows.ExclusiveSplitActivity) bson.D {
 		outcomes = append(outcomes, serializeConditionOutcome(outcome))
 	}
 	doc = append(doc, bson.E{Key: "Outcomes", Value: outcomes})
+
+	// Annotation
+	if a.Annotation != "" {
+		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
+	}
 
 	return doc
 }
@@ -353,52 +464,97 @@ func serializeParallelSplit(a *workflows.ParallelSplitActivity) bson.D {
 	}
 	doc = append(doc, bson.E{Key: "Outcomes", Value: outcomes})
 
+	// Annotation
+	if a.Annotation != "" {
+		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
+	}
+
 	return doc
 }
 
 func serializeJumpTo(a *workflows.JumpToActivity) bson.D {
-	return bson.D{
+	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$JumpToActivity"},
 		{Key: "Caption", Value: a.Caption},
 		{Key: "Name", Value: a.Name},
 		{Key: "TargetActivity", Value: a.TargetActivity},
 	}
+
+	// Annotation
+	if a.Annotation != "" {
+		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
+	}
+
+	return doc
 }
 
 func serializeWaitForTimer(a *workflows.WaitForTimerActivity) bson.D {
-	return bson.D{
+	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$WaitForTimerActivity"},
 		{Key: "Caption", Value: a.Caption},
 		{Key: "DelayExpression", Value: a.DelayExpression},
 		{Key: "Name", Value: a.Name},
 	}
+
+	// Annotation
+	if a.Annotation != "" {
+		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
+	}
+
+	return doc
 }
 
 func serializeWaitForNotification(a *workflows.WaitForNotificationActivity) bson.D {
-	return bson.D{
+	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$WaitForNotificationActivity"},
 		{Key: "Caption", Value: a.Caption},
 		{Key: "Name", Value: a.Name},
 	}
+
+	// Annotation
+	if a.Annotation != "" {
+		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
+	}
+
+	// BoundaryEvents
+	if len(a.BoundaryEvents) > 0 {
+		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: serializeBoundaryEvents(a.BoundaryEvents)})
+	}
+
+	return doc
 }
 
 func serializeStartWorkflow(a *workflows.StartWorkflowActivity) bson.D {
-	return bson.D{
+	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$StartWorkflowActivity"},
 		{Key: "Caption", Value: a.Caption},
 		{Key: "Name", Value: a.Name},
 	}
+
+	// Annotation
+	if a.Annotation != "" {
+		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
+	}
+
+	return doc
 }
 
 func serializeEndWorkflow(a *workflows.EndWorkflowActivity) bson.D {
-	return bson.D{
+	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
 		{Key: "$Type", Value: "Workflows$EndWorkflowActivity"},
 		{Key: "Caption", Value: a.Caption},
 		{Key: "Name", Value: a.Name},
 	}
+
+	// Annotation
+	if a.Annotation != "" {
+		doc = append(doc, bson.E{Key: "Annotation", Value: serializeAnnotation(a.Annotation)})
+	}
+
+	return doc
 }

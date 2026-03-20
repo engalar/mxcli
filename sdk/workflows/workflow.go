@@ -21,6 +21,9 @@ type Workflow struct {
 	DueDate             string   `json:"dueDate,omitempty"`             // Due date expression
 	AdminPage           string   `json:"adminPage,omitempty"`           // Qualified name of admin page
 
+	// Annotation
+	Annotation string `json:"annotation,omitempty"` // Annotation description text
+
 	// Context parameter
 	Parameter *WorkflowParameter `json:"parameter,omitempty"`
 
@@ -64,8 +67,9 @@ type WorkflowActivity interface {
 // BaseWorkflowActivity provides common fields for all workflow activities.
 type BaseWorkflowActivity struct {
 	model.BaseElement
-	Name    string `json:"name,omitempty"`
-	Caption string `json:"caption,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Caption    string `json:"caption,omitempty"`
+	Annotation string `json:"annotation,omitempty"` // Annotation description text
 }
 
 // GetID returns the activity's ID.
@@ -110,6 +114,7 @@ type UserTask struct {
 	DueDate         string             `json:"dueDate,omitempty"`         // Due date expression
 	UserTaskEntity  string             `json:"userTaskEntity,omitempty"`  // Qualified name of user task entity
 	OnCreated       string             `json:"onCreated,omitempty"`       // Microflow called on task creation
+	BoundaryEvents  []*BoundaryEvent   `json:"boundaryEvents,omitempty"` // Boundary events (e.g., timers)
 }
 
 // ActivityType returns the type name.
@@ -132,6 +137,7 @@ type CallMicroflowTask struct {
 	Microflow         string              `json:"microflow,omitempty"` // Qualified name of the microflow to call
 	Outcomes          []ConditionOutcome  `json:"outcomes,omitempty"`  // Condition-based outcomes
 	ParameterMappings []*ParameterMapping `json:"parameterMappings,omitempty"`
+	BoundaryEvents    []*BoundaryEvent    `json:"boundaryEvents,omitempty"` // Boundary events (e.g., timers)
 }
 
 // ActivityType returns the type name.
@@ -140,8 +146,9 @@ func (a *CallMicroflowTask) ActivityType() string { return "CallMicroflow" }
 // CallWorkflowActivity represents calling a sub-workflow.
 type CallWorkflowActivity struct {
 	BaseWorkflowActivity
-	Workflow            string `json:"workflow,omitempty"`            // Qualified name of the workflow to call
-	ParameterExpression string `json:"parameterExpression,omitempty"` // Expression for context parameter
+	Workflow            string           `json:"workflow,omitempty"`            // Qualified name of the workflow to call
+	ParameterExpression string           `json:"parameterExpression,omitempty"` // Expression for context parameter
+	BoundaryEvents     []*BoundaryEvent  `json:"boundaryEvents,omitempty"`     // Boundary events (e.g., timers)
 }
 
 // ActivityType returns the type name.
@@ -187,6 +194,7 @@ func (a *WaitForTimerActivity) ActivityType() string { return "WaitForTimer" }
 // WaitForNotificationActivity represents waiting for a notification.
 type WaitForNotificationActivity struct {
 	BaseWorkflowActivity
+	BoundaryEvents []*BoundaryEvent `json:"boundaryEvents,omitempty"` // Boundary events (e.g., timers)
 }
 
 // ActivityType returns the type name.
@@ -266,6 +274,19 @@ func (o *VoidConditionOutcome) GetFlow() *Flow { return o.Flow }
 type ParallelSplitOutcome struct {
 	model.BaseElement
 	Flow *Flow `json:"flow,omitempty"`
+}
+
+// ============================================================================
+// Boundary Events
+// ============================================================================
+
+// BoundaryEvent represents a boundary event attached to a workflow activity.
+type BoundaryEvent struct {
+	model.BaseElement
+	Caption    string `json:"caption,omitempty"`
+	Flow       *Flow  `json:"flow,omitempty"`       // Activities triggered by the boundary event
+	TimerDelay string `json:"timerDelay,omitempty"`  // Timer delay expression (for timer boundary events)
+	EventType  string `json:"eventType,omitempty"`   // e.g. "InterruptingTimer", "NonInterruptingTimer"
 }
 
 // ============================================================================

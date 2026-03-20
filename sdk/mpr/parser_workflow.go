@@ -4,6 +4,7 @@ package mpr
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -38,6 +39,16 @@ func (r *Reader) parseWorkflow(unitID, containerID string, contents []byte) (*wo
 	}
 	if exportLevel, ok := raw["ExportLevel"].(string); ok {
 		w.ExportLevel = exportLevel
+	}
+
+	// Parse Annotation
+	if annotRaw := raw["Annotation"]; annotRaw != nil {
+		annotMap := toMap(annotRaw)
+		if annotMap != nil {
+			if desc, ok := annotMap["Description"].(string); ok {
+				w.Annotation = desc
+			}
+		}
 	}
 
 	// Parse Parameter (PART — DomainModels$IndirectEntityRef or similar)
@@ -272,6 +283,9 @@ func parseUserTask(raw map[string]any) *workflows.UserTask {
 		}
 	}
 
+	// BoundaryEvents
+	a.BoundaryEvents = parseBoundaryEvents(raw["BoundaryEvents"])
+
 	return a
 }
 
@@ -316,6 +330,9 @@ func parseCallMicroflowTask(raw map[string]any) *workflows.CallMicroflowTask {
 	// ParameterMappings
 	a.ParameterMappings = parseParameterMappings(raw["ParameterMappings"])
 
+	// BoundaryEvents
+	a.BoundaryEvents = parseBoundaryEvents(raw["BoundaryEvents"])
+
 	return a
 }
 
@@ -336,6 +353,9 @@ func parseCallWorkflowActivity(raw map[string]any) *workflows.CallWorkflowActivi
 	if expr, ok := raw["ParameterExpression"].(string); ok {
 		a.ParameterExpression = expr
 	}
+
+	// BoundaryEvents
+	a.BoundaryEvents = parseBoundaryEvents(raw["BoundaryEvents"])
 
 	return a
 }
@@ -411,6 +431,10 @@ func parseWaitForTimerActivity(raw map[string]any) *workflows.WaitForTimerActivi
 func parseWaitForNotificationActivity(raw map[string]any) *workflows.WaitForNotificationActivity {
 	a := &workflows.WaitForNotificationActivity{}
 	parseBaseActivity(&a.BaseWorkflowActivity, raw)
+
+	// BoundaryEvents
+	a.BoundaryEvents = parseBoundaryEvents(raw["BoundaryEvents"])
+
 	return a
 }
 
@@ -431,6 +455,16 @@ func parseBaseActivity(a *workflows.BaseWorkflowActivity, raw map[string]any) {
 	}
 	if caption, ok := raw["Caption"].(string); ok {
 		a.Caption = caption
+	}
+
+	// Annotation (PART — Workflows$Annotation)
+	if annotRaw := raw["Annotation"]; annotRaw != nil {
+		annotMap := toMap(annotRaw)
+		if annotMap != nil {
+			if desc, ok := annotMap["Description"].(string); ok {
+				a.Annotation = desc
+			}
+		}
 	}
 }
 
@@ -533,6 +567,60 @@ func parseUserSource(raw map[string]any) workflows.UserSource {
 	default:
 		return &workflows.NoUserSource{}
 	}
+}
+
+// parseBoundaryEvents parses boundary events from a BSON array.
+func parseBoundaryEvents(v any) []*workflows.BoundaryEvent {
+	eventsRaw := extractBsonArray(v)
+	var events []*workflows.BoundaryEvent
+
+	for _, eventRaw := range eventsRaw {
+		eventMap := toMap(eventRaw)
+		if eventMap == nil {
+			continue
+		}
+		event := &workflows.BoundaryEvent{}
+		event.ID = model.ID(extractBsonID(eventMap["$ID"]))
+		event.TypeName = extractString(eventMap["$Type"])
+
+		if caption, ok := eventMap["Caption"].(string); ok {
+			event.Caption = caption
+		}
+
+		// Timer delay
+		if delay, ok := eventMap["DelayExpression"].(string); ok {
+			event.TimerDelay = delay
+		}
+		// Also try "Delay"
+		if delay, ok := eventMap["Delay"].(string); ok && event.TimerDelay == "" {
+			event.TimerDelay = delay
+		}
+
+		// Event type from $Type
+		typeName := extractString(eventMap["$Type"])
+		switch typeName {
+		case "Workflows$InterruptingTimerBoundaryEvent":
+			event.EventType = "InterruptingTimer"
+		case "Workflows$NonInterruptingTimerBoundaryEvent":
+			event.EventType = "NonInterruptingTimer"
+		case "Workflows$TimerBoundaryEvent":
+			event.EventType = "Timer"
+		default:
+			if typeName != "" {
+				// Extract the event type from the type name
+				event.EventType = strings.TrimPrefix(typeName, "Workflows$")
+			}
+		}
+
+		// Flow
+		if flowRaw := eventMap["Flow"]; flowRaw != nil {
+			event.Flow = parseWorkflowFlow(toMap(flowRaw))
+		}
+
+		events = append(events, event)
+	}
+
+	return events
 }
 
 // parseParameterMappings parses parameter mappings from an array.
