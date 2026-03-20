@@ -4,6 +4,7 @@ package catalog
 
 import (
 	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // buildStrings extracts string literals from documents into the FTS5 strings table.
@@ -89,8 +90,83 @@ func (b *Builder) buildStrings() error {
 		}
 	}
 
+	// Extract from workflows — using cached list
+	wfList, err := b.cachedWorkflows()
+	if err == nil {
+		for _, wf := range wfList {
+			moduleID := b.hierarchy.findModuleID(wf.ContainerID)
+			moduleName := b.hierarchy.getModuleName(moduleID)
+			qn := moduleName + "." + wf.Name
+
+			if wf.WorkflowName != "" {
+				insert(qn, "WORKFLOW", wf.WorkflowName, "workflow_name", moduleName)
+			}
+			if wf.WorkflowDescription != "" {
+				insert(qn, "WORKFLOW", wf.WorkflowDescription, "workflow_description", moduleName)
+			}
+			if wf.Documentation != "" {
+				insert(qn, "WORKFLOW", wf.Documentation, "documentation", moduleName)
+			}
+
+			if wf.Flow != nil {
+				extractWorkflowFlowStrings(wf.Flow, qn, moduleName, insert)
+			}
+		}
+	}
+
 	b.report("strings", count)
 	return nil
+}
+
+// extractWorkflowFlowStrings extracts strings from workflow activities recursively.
+func extractWorkflowFlowStrings(flow *workflows.Flow, qn, moduleName string, insert func(string, string, string, string, string)) {
+	for _, act := range flow.Activities {
+		if act.GetCaption() != "" {
+			insert(qn, "WORKFLOW", act.GetCaption(), "activity_caption", moduleName)
+		}
+
+		switch a := act.(type) {
+		case *workflows.UserTask:
+			if a.TaskName != "" {
+				insert(qn, "WORKFLOW", a.TaskName, "task_name", moduleName)
+			}
+			if a.TaskDescription != "" {
+				insert(qn, "WORKFLOW", a.TaskDescription, "task_description", moduleName)
+			}
+			for _, outcome := range a.Outcomes {
+				if outcome.Caption != "" {
+					insert(qn, "WORKFLOW", outcome.Caption, "outcome_caption", moduleName)
+				}
+				if outcome.Flow != nil {
+					extractWorkflowFlowStrings(outcome.Flow, qn, moduleName, insert)
+				}
+			}
+		case *workflows.SystemTask:
+			for _, outcome := range a.Outcomes {
+				if f := outcome.GetFlow(); f != nil {
+					extractWorkflowFlowStrings(f, qn, moduleName, insert)
+				}
+			}
+		case *workflows.CallMicroflowTask:
+			for _, outcome := range a.Outcomes {
+				if f := outcome.GetFlow(); f != nil {
+					extractWorkflowFlowStrings(f, qn, moduleName, insert)
+				}
+			}
+		case *workflows.ExclusiveSplitActivity:
+			for _, outcome := range a.Outcomes {
+				if f := outcome.GetFlow(); f != nil {
+					extractWorkflowFlowStrings(f, qn, moduleName, insert)
+				}
+			}
+		case *workflows.ParallelSplitActivity:
+			for _, outcome := range a.Outcomes {
+				if outcome.Flow != nil {
+					extractWorkflowFlowStrings(outcome.Flow, qn, moduleName, insert)
+				}
+			}
+		}
+	}
 }
 
 // extractActivityStrings extracts string literals from microflow/nanoflow activities.
