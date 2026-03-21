@@ -174,19 +174,29 @@ func extractBsonArrayWithMarker(v any) BsonArrayInfo {
 	}
 
 	if len(slice) > 0 {
-		if marker, ok := slice[0].(int32); ok && (marker == 2 || marker == 3) {
+		if marker, ok := slice[0].(int32); ok && (marker == 1 || marker == 2 || marker == 3) {
 			return BsonArrayInfo{Marker: marker, Items: slice[1:]}
 		}
 	}
 	return BsonArrayInfo{Items: slice}
 }
 
-// inferPropertyKind determines whether a BSON field value represents a primitive,
-// a by-name reference, or a part (embedded object). This is used by the generic
-// unknown-element parser to preserve raw fields with semantic context.
+// inferPropertyKind determines the Mendix property kind of a BSON field from its key
+// and value shape. Returns one of: "id", "type-discriminator", "by-name-reference",
+// "primitive", "part", "collection:by-name" (marker=1), "collection:part-secondary"
+// (marker=2), "collection:part-primary" (marker=3), "collection".
+// Used by UnknownElement to surface diagnostic info when an unimplemented $Type is encountered.
 func inferPropertyKind(key string, v any) string {
 	if v == nil {
 		return "primitive"
+	}
+
+	// Key-based shortcuts take priority over value shape.
+	switch key {
+	case "$ID", "$ContainerID":
+		return "id"
+	case "$Type":
+		return "type-discriminator"
 	}
 
 	switch val := v.(type) {
@@ -219,10 +229,19 @@ func inferPropertyKind(key string, v any) string {
 		return "primitive"
 
 	case primitive.A, []any:
+		info := extractBsonArrayWithMarker(v)
+		switch info.Marker {
+		case 1:
+			return "collection:by-name"
+		case 2:
+			return "collection:part-secondary"
+		case 3:
+			return "collection:part-primary"
+		}
 		return "collection"
 
 	case string:
-		// Heuristic: qualified names like "Module.Entity" are likely by-name references
+		// Heuristic: qualified names like "Module.Entity" are likely by-name references.
 		if strings.Contains(val, ".") && !strings.Contains(val, " ") && !strings.Contains(val, "/") {
 			return "by-name-reference"
 		}

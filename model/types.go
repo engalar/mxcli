@@ -718,12 +718,18 @@ type DistributionSettings struct {
 // UnknownElement is a generic fallback for BSON elements with unrecognized $Type values.
 // It preserves all raw BSON fields so developers can diagnose unimplemented types
 // without silent data loss.
+//
+// FieldKinds maps each raw field name to its inferred Mendix property kind
+// (e.g. "primitive", "part", "by-name-reference", "collection:part-primary").
+// This guides implementors in writing a proper parser without inspecting the
+// mendixmodelsdk JS source manually.
 type UnknownElement struct {
 	BaseElement
-	Position  Point          `json:"position,omitempty"`
-	Name      string         `json:"name,omitempty"`
-	Caption   string         `json:"caption,omitempty"`
-	RawFields map[string]any `json:"-"`
+	Position   Point             `json:"position,omitempty"`
+	Name       string            `json:"name,omitempty"`
+	Caption    string            `json:"caption,omitempty"`
+	RawFields  map[string]any    `json:"-"`
+	FieldKinds map[string]string `json:"-"`
 }
 
 // GetPosition returns the element's position (satisfies microflows.MicroflowObject).

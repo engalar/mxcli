@@ -247,7 +247,9 @@ func parseMicroflowObjectCollection(raw map[string]any) *microflows.MicroflowObj
 
 // microflowObjectParsers maps Mendix $Type strings to their parser functions.
 // Adding support for a new type requires only one new entry here.
-// Initialized in init() to avoid initialization cycle (parseLoopedActivity → parseMicroflowObjectCollection → parseMicroflowObject).
+// Declared as a nil var and populated in init() so that the map literal can
+// reference parseLoopedActivity, which itself calls parseMicroflowObjectCollection,
+// keeping the package-level initialization order unambiguous.
 var microflowObjectParsers map[string]func(map[string]any) microflows.MicroflowObject
 
 func init() {
@@ -267,8 +269,12 @@ func init() {
 }
 
 // parseMicroflowObject parses a single microflow object based on its $Type.
+// Returns nil for elements with an empty $Type (corrupt or placeholder records).
 func parseMicroflowObject(raw map[string]any) microflows.MicroflowObject {
 	typeName, _ := raw["$Type"].(string)
+	if typeName == "" {
+		return nil
+	}
 	if fn, ok := microflowObjectParsers[typeName]; ok {
 		return fn(raw)
 	}
