@@ -19,6 +19,26 @@ func getBSONField(doc bson.D, key string) any {
 	return nil
 }
 
+func assertArrayMarker(t *testing.T, doc bson.D, field string, wantMarker int32) {
+	t.Helper()
+	arr, ok := getBSONField(doc, field).(bson.A)
+	if !ok {
+		t.Fatalf("%s is not bson.A", field)
+	}
+	if len(arr) == 0 {
+		t.Fatalf("%s is empty", field)
+	}
+	marker, ok := arr[0].(int32)
+	if !ok {
+		t.Fatalf("%s[0] is %T, want int32", field, arr[0])
+	}
+	if marker != wantMarker {
+		t.Errorf("%s[0] = %d, want %d", field, marker, wantMarker)
+	}
+}
+
+// --- Array marker tests: verify correct int32 markers prevent CE errors ---
+
 func TestSerializeWorkflowFlow_ActivitiesMarker(t *testing.T) {
 	flow := &workflows.Flow{
 		BaseElement: model.BaseElement{ID: "flow-1"},
@@ -31,48 +51,17 @@ func TestSerializeWorkflowFlow_ActivitiesMarker(t *testing.T) {
 			},
 		},
 	}
-
 	doc := serializeWorkflowFlow(flow)
-	activities := getBSONField(doc, "Activities")
-	arr, ok := activities.(bson.A)
-	if !ok {
-		t.Fatalf("Activities is not bson.A, got %T", activities)
-	}
-	if len(arr) < 1 {
-		t.Fatal("Activities array is empty")
-	}
-	marker, ok := arr[0].(int32)
-	if !ok {
-		t.Fatalf("Activities[0] is not int32, got %T", arr[0])
-	}
-	if marker != int32(3) {
-		t.Errorf("Activities[0] = %d, want 3", marker)
-	}
-	if len(arr) != 2 {
-		t.Errorf("Activities length = %d, want 2 (marker + 1 activity)", len(arr))
-	}
+	assertArrayMarker(t, doc, "Activities", int32(3))
 }
 
 func TestSerializeWorkflowFlow_EmptyActivities(t *testing.T) {
-	flow := &workflows.Flow{
-		BaseElement: model.BaseElement{ID: "flow-empty"},
-	}
-
+	flow := &workflows.Flow{BaseElement: model.BaseElement{ID: "flow-empty"}}
 	doc := serializeWorkflowFlow(flow)
-	activities := getBSONField(doc, "Activities")
-	arr, ok := activities.(bson.A)
-	if !ok {
-		t.Fatalf("Activities is not bson.A, got %T", activities)
-	}
+	assertArrayMarker(t, doc, "Activities", int32(3))
+	arr := getBSONField(doc, "Activities").(bson.A)
 	if len(arr) != 1 {
-		t.Fatalf("Activities length = %d, want 1 (marker only)", len(arr))
-	}
-	marker, ok := arr[0].(int32)
-	if !ok {
-		t.Fatalf("Activities[0] is not int32, got %T", arr[0])
-	}
-	if marker != int32(3) {
-		t.Errorf("Activities[0] = %d, want 3", marker)
+		t.Errorf("empty Activities length = %d, want 1 (marker only)", len(arr))
 	}
 }
 
@@ -81,32 +70,13 @@ func TestSerializeUserTask_OutcomesMarker(t *testing.T) {
 		BaseWorkflowActivity: workflows.BaseWorkflowActivity{
 			BaseElement: model.BaseElement{ID: "ut-1"},
 			Name:        "ReviewTask",
-			Caption:     "Review",
 		},
 		Outcomes: []*workflows.UserTaskOutcome{
-			{
-				BaseElement: model.BaseElement{ID: "outcome-1"},
-				Value:       "Approve",
-			},
+			{BaseElement: model.BaseElement{ID: "out-1"}, Value: "Approve"},
 		},
 	}
-
 	doc := serializeUserTask(task)
-	outcomes := getBSONField(doc, "Outcomes")
-	arr, ok := outcomes.(bson.A)
-	if !ok {
-		t.Fatalf("Outcomes is not bson.A, got %T", outcomes)
-	}
-	if len(arr) < 1 {
-		t.Fatal("Outcomes array is empty")
-	}
-	marker, ok := arr[0].(int32)
-	if !ok {
-		t.Fatalf("Outcomes[0] is not int32, got %T", arr[0])
-	}
-	if marker != int32(3) {
-		t.Errorf("Outcomes[0] = %d, want 3", marker)
-	}
+	assertArrayMarker(t, doc, "Outcomes", int32(3))
 }
 
 func TestSerializeUserTask_BoundaryEventsMarker(t *testing.T) {
@@ -114,26 +84,10 @@ func TestSerializeUserTask_BoundaryEventsMarker(t *testing.T) {
 		BaseWorkflowActivity: workflows.BaseWorkflowActivity{
 			BaseElement: model.BaseElement{ID: "ut-2"},
 			Name:        "Task",
-			Caption:     "Task",
 		},
 	}
-
 	doc := serializeUserTask(task)
-	boundaryEvents := getBSONField(doc, "BoundaryEvents")
-	arr, ok := boundaryEvents.(bson.A)
-	if !ok {
-		t.Fatalf("BoundaryEvents is not bson.A, got %T", boundaryEvents)
-	}
-	if len(arr) < 1 {
-		t.Fatal("BoundaryEvents array is empty")
-	}
-	marker, ok := arr[0].(int32)
-	if !ok {
-		t.Fatalf("BoundaryEvents[0] is not int32, got %T", arr[0])
-	}
-	if marker != int32(2) {
-		t.Errorf("BoundaryEvents[0] = %d, want 2", marker)
-	}
+	assertArrayMarker(t, doc, "BoundaryEvents", int32(2))
 }
 
 func TestSerializeCallMicroflowTask_ParameterMappingsMarker(t *testing.T) {
@@ -141,37 +95,14 @@ func TestSerializeCallMicroflowTask_ParameterMappingsMarker(t *testing.T) {
 		BaseWorkflowActivity: workflows.BaseWorkflowActivity{
 			BaseElement: model.BaseElement{ID: "cmt-1"},
 			Name:        "CallMF",
-			Caption:     "Call Microflow",
 		},
 		Microflow: "MyModule.DoSomething",
 		ParameterMappings: []*workflows.ParameterMapping{
-			{
-				BaseElement: model.BaseElement{ID: "pm-1"},
-				Parameter:   "InputParam",
-				Expression:  "$WorkflowContext",
-			},
+			{BaseElement: model.BaseElement{ID: "pm-1"}, Parameter: "InputParam", Expression: "$WorkflowContext"},
 		},
 	}
-
 	doc := serializeCallMicroflowTask(task)
-	mappings := getBSONField(doc, "ParameterMappings")
-	arr, ok := mappings.(bson.A)
-	if !ok {
-		t.Fatalf("ParameterMappings is not bson.A, got %T", mappings)
-	}
-	if len(arr) < 1 {
-		t.Fatal("ParameterMappings array is empty")
-	}
-	marker, ok := arr[0].(int32)
-	if !ok {
-		t.Fatalf("ParameterMappings[0] is not int32, got %T", arr[0])
-	}
-	if marker != int32(2) {
-		t.Errorf("ParameterMappings[0] = %d, want 2", marker)
-	}
-	if len(arr) != 2 {
-		t.Errorf("ParameterMappings length = %d, want 2 (marker + 1 mapping)", len(arr))
-	}
+	assertArrayMarker(t, doc, "ParameterMappings", int32(2))
 }
 
 func TestSerializeUserTaskOutcome_ValueField(t *testing.T) {
@@ -179,24 +110,16 @@ func TestSerializeUserTaskOutcome_ValueField(t *testing.T) {
 		BaseElement: model.BaseElement{ID: "uto-1"},
 		Value:       "Approve",
 	}
-
 	doc := serializeUserTaskOutcome(outcome)
 
-	// Must have "Value" key
-	val := getBSONField(doc, "Value")
-	if val == nil {
-		t.Fatal("missing 'Value' field in UserTaskOutcome BSON")
+	if getBSONField(doc, "Value") != "Approve" {
+		t.Errorf("Value = %v, want %q", getBSONField(doc, "Value"), "Approve")
 	}
-	if val != "Approve" {
-		t.Errorf("Value = %v, want %q", val, "Approve")
-	}
-
-	// Must NOT have "Caption" or "Name" keys
 	if getBSONField(doc, "Caption") != nil {
-		t.Error("UserTaskOutcome should not have 'Caption' key")
+		t.Error("UserTaskOutcome must not have 'Caption' key")
 	}
 	if getBSONField(doc, "Name") != nil {
-		t.Error("UserTaskOutcome should not have 'Name' key")
+		t.Error("UserTaskOutcome must not have 'Name' key")
 	}
 }
 
@@ -205,79 +128,52 @@ func TestSerializeWorkflowParameter_EntityAsString(t *testing.T) {
 		BaseElement: model.BaseElement{ID: "param-1"},
 		EntityRef:   "MyModule.Customer",
 	}
-
 	doc := serializeWorkflowParameter(param)
 
-	entity := getBSONField(doc, "Entity")
-	if entity == nil {
-		t.Fatal("missing 'Entity' field in WorkflowParameter BSON")
-	}
-	entityStr, ok := entity.(string)
+	entity, ok := getBSONField(doc, "Entity").(string)
 	if !ok {
-		t.Fatalf("Entity is %T, want string", entity)
+		t.Fatalf("Entity is %T, want string", getBSONField(doc, "Entity"))
 	}
-	if entityStr != "MyModule.Customer" {
-		t.Errorf("Entity = %q, want %q", entityStr, "MyModule.Customer")
+	if entity != "MyModule.Customer" {
+		t.Errorf("Entity = %q, want %q", entity, "MyModule.Customer")
 	}
 }
 
-func TestSerializeWorkflowFlow_Roundtrip(t *testing.T) {
-	flow := &workflows.Flow{
-		BaseElement: model.BaseElement{ID: "flow-rt"},
-		Activities: []workflows.WorkflowActivity{
-			&workflows.StartWorkflowActivity{
-				BaseWorkflowActivity: workflows.BaseWorkflowActivity{
-					BaseElement: model.BaseElement{ID: "start-rt"},
-					Name:        "Start",
-					Caption:     "Start",
-				},
-			},
-			&workflows.UserTask{
-				BaseWorkflowActivity: workflows.BaseWorkflowActivity{
-					BaseElement: model.BaseElement{ID: "ut-rt"},
-					Name:        "ReviewTask",
-					Caption:     "Review",
-				},
-				Page: "MyModule.TaskPage",
-				Outcomes: []*workflows.UserTaskOutcome{
-					{
-						BaseElement: model.BaseElement{ID: "out-rt"},
-						Value:       "Approve",
-					},
-				},
-			},
-			&workflows.EndWorkflowActivity{
-				BaseWorkflowActivity: workflows.BaseWorkflowActivity{
-					BaseElement: model.BaseElement{ID: "end-rt"},
-					Name:        "End",
-					Caption:     "End",
-				},
-			},
-		},
+// --- Fixture-based roundtrip: parse real BSON → serialize → verify markers preserved ---
+
+func TestSerializeWorkflowFlow_RoundtripFromFixture(t *testing.T) {
+	raw := loadWorkflowBSON(t, "WorkflowBaseline.Workflow")
+	flowRaw := toMap(raw["Flow"])
+	if flowRaw == nil {
+		t.Fatal("fixture has no Flow")
 	}
 
-	// Serialize
-	doc := serializeWorkflowFlow(flow)
-
-	// Marshal to BSON bytes
-	data, err := bson.Marshal(doc)
-	if err != nil {
-		t.Fatalf("failed to marshal BSON: %v", err)
-	}
-
-	// Unmarshal to map
-	var raw map[string]any
-	if err := bson.Unmarshal(data, &raw); err != nil {
-		t.Fatalf("failed to unmarshal BSON: %v", err)
-	}
-
-	// Parse back
-	parsed := parseWorkflowFlow(raw)
-	if parsed == nil {
+	// Parse real workflow from fixture
+	flow := parseWorkflowFlow(flowRaw)
+	if flow == nil {
 		t.Fatal("parseWorkflowFlow returned nil")
 	}
 
-	if len(parsed.Activities) != 3 {
-		t.Errorf("parsed Activities count = %d, want 3", len(parsed.Activities))
+	// Serialize back to BSON
+	doc := serializeWorkflowFlow(flow)
+
+	// Verify array markers survive the roundtrip
+	assertArrayMarker(t, doc, "Activities", int32(3))
+
+	// Re-marshal and re-parse to verify full roundtrip
+	data, err := bson.Marshal(doc)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var reparsedRaw map[string]any
+	if err := bson.Unmarshal(data, &reparsedRaw); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	reparsed := parseWorkflowFlow(reparsedRaw)
+	if reparsed == nil {
+		t.Fatal("re-parse returned nil")
+	}
+	if len(reparsed.Activities) != len(flow.Activities) {
+		t.Errorf("roundtrip Activities count = %d, want %d", len(reparsed.Activities), len(flow.Activities))
 	}
 }

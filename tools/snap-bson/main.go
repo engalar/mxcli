@@ -30,8 +30,9 @@ import (
 func main() {
 	mprPath := flag.String("mpr", "", "Path to .mpr file (required)")
 	unitType := flag.String("type", "workflow", "Unit type: workflow, microflow, page, snippet, enumeration, nanoflow, layout")
-	outDir := flag.String("out", "", "Output directory for JSON fixtures (default: print to stdout)")
+	outDir := flag.String("out", "", "Output directory for fixtures (default: print to stdout)")
 	unitName := flag.String("name", "", "Filter by qualified name (e.g. MyModule.MyWorkflow)")
+	format := flag.String("format", "json", "Output format: json (human-readable) or bson (raw bytes for test fixtures)")
 	flag.Parse()
 
 	if *mprPath == "" {
@@ -79,45 +80,45 @@ func main() {
 		for _, u := range units {
 			fmt.Printf("  %-50s  id=%s\n", u.QualifiedName, u.ID)
 		}
-		fmt.Printf("\nTo extract fixtures:\n")
-		fmt.Printf("  go run ./tools/snap-bson -mpr %s -type %s -out sdk/mpr/testdata/%ss/\n",
+		fmt.Printf("\nTo extract BSON fixtures (for tests):\n")
+		fmt.Printf("  go run ./tools/snap-bson -mpr %s -type %s -format bson -out sdk/mpr/testdata/%ss/\n",
+			*mprPath, *unitType, *unitType)
+		fmt.Printf("\nTo extract JSON (human-readable debug):\n")
+		fmt.Printf("  go run ./tools/snap-bson -mpr %s -type %s -format json -out /tmp/%ss/\n",
 			*mprPath, *unitType, *unitType)
 		return
 	}
 
-	// Dump mode: write JSON files
 	if err := os.MkdirAll(*outDir, 0755); err != nil {
 		fmt.Fprintf(os.Stderr, "error creating output dir: %v\n", err)
 		os.Exit(1)
 	}
 
 	for _, u := range units {
-		jsonBytes, err := bsonToJSON(u.Contents)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "warning: could not convert %s to JSON: %v\n", u.QualifiedName, err)
-			continue
-		}
-
-		// Filename: ModuleName.UnitName.json (safe for filesystems)
 		safeName := strings.ReplaceAll(u.QualifiedName, "/", "_")
-		outPath := filepath.Join(*outDir, safeName+".json")
 
-		// Add metadata header as top-level fields
-		var doc map[string]any
-		if err := json.Unmarshal(jsonBytes, &doc); err == nil {
-			doc["_snap_id"] = u.ID
-			doc["_snap_type"] = u.Type
-			doc["_snap_qualified_name"] = u.QualifiedName
-			if enriched, err := json.MarshalIndent(doc, "", "  "); err == nil {
-				jsonBytes = enriched
+		if *format == "bson" {
+			// Raw BSON bytes — for use as test fixtures via os.ReadFile + bson.Unmarshal
+			outPath := filepath.Join(*outDir, safeName+".bson")
+			if err := os.WriteFile(outPath, u.Contents, 0644); err != nil {
+				fmt.Fprintf(os.Stderr, "error writing %s: %v\n", outPath, err)
+				continue
 			}
+			fmt.Printf("wrote: %s\n", outPath)
+		} else {
+			// Human-readable JSON — for debugging and inspection
+			jsonBytes, err := bsonToJSON(u.Contents)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "warning: could not convert %s to JSON: %v\n", u.QualifiedName, err)
+				continue
+			}
+			outPath := filepath.Join(*outDir, safeName+".json")
+			if err := os.WriteFile(outPath, jsonBytes, 0644); err != nil {
+				fmt.Fprintf(os.Stderr, "error writing %s: %v\n", outPath, err)
+				continue
+			}
+			fmt.Printf("wrote: %s\n", outPath)
 		}
-
-		if err := os.WriteFile(outPath, jsonBytes, 0644); err != nil {
-			fmt.Fprintf(os.Stderr, "error writing %s: %v\n", outPath, err)
-			continue
-		}
-		fmt.Printf("wrote: %s\n", outPath)
 	}
 }
 

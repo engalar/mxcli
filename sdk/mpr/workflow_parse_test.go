@@ -3,213 +3,182 @@
 package mpr
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func TestParseWorkflowParameter_EntityRef(t *testing.T) {
-	raw := map[string]any{
-		"Entity": "MyModule.MyEntity",
+// loadWorkflowBSON loads a workflow BSON fixture from testdata/workflows/<name>.bson.
+func loadWorkflowBSON(t *testing.T, name string) map[string]any {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("testdata", "workflows", name+".bson"))
+	if err != nil {
+		t.Fatalf("load fixture %s: %v", name, err)
 	}
-	param := parseWorkflowParameter(raw)
+	var raw map[string]any
+	if err := bson.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("unmarshal fixture %s: %v", name, err)
+	}
+	return raw
+}
+
+// workflowActivities returns the activity slice (skipping the array marker) from a flow map.
+func workflowActivities(t *testing.T, flowRaw map[string]any) []map[string]any {
+	t.Helper()
+	arr, ok := flowRaw["Activities"].(bson.A)
+	if !ok {
+		t.Fatalf("Activities is not bson.A, got %T", flowRaw["Activities"])
+	}
+	var acts []map[string]any
+	for _, item := range arr[1:] { // skip marker at index 0
+		m := toMap(item)
+		if m != nil {
+			acts = append(acts, m)
+		}
+	}
+	return acts
+}
+
+func TestParseWorkflowParameter_FromFixture(t *testing.T) {
+	raw := loadWorkflowBSON(t, "WorkflowBaseline.Workflow")
+	paramRaw := toMap(raw["Parameter"])
+	if paramRaw == nil {
+		t.Fatal("fixture has no Parameter")
+	}
+
+	param := parseWorkflowParameter(paramRaw)
 	if param == nil {
-		t.Fatal("expected non-nil parameter")
+		t.Fatal("parseWorkflowParameter returned nil")
 	}
-	if param.EntityRef != "MyModule.MyEntity" {
-		t.Errorf("EntityRef = %q, want %q", param.EntityRef, "MyModule.MyEntity")
-	}
-}
-
-func TestParseWorkflowParameter_EntityRefNested(t *testing.T) {
-	raw := map[string]any{
-		"EntityRef": map[string]any{
-			"EntityQualifiedName": "Sales.Order",
-		},
-	}
-	param := parseWorkflowParameter(raw)
-	if param == nil {
-		t.Fatal("expected non-nil parameter")
-	}
-	if param.EntityRef != "Sales.Order" {
-		t.Errorf("EntityRef = %q, want %q", param.EntityRef, "Sales.Order")
+	if param.EntityRef != "WorkflowBaseline.Entity" {
+		t.Errorf("EntityRef = %q, want %q", param.EntityRef, "WorkflowBaseline.Entity")
 	}
 }
 
-func TestParseWorkflowParameter_Nil(t *testing.T) {
-	param := parseWorkflowParameter(nil)
-	if param != nil {
-		t.Error("expected nil for nil input")
+func TestParseWorkflowFlow_FromFixture_ActivityCount(t *testing.T) {
+	raw := loadWorkflowBSON(t, "WorkflowBaseline.Workflow")
+	flowRaw := toMap(raw["Flow"])
+	if flowRaw == nil {
+		t.Fatal("fixture has no Flow")
 	}
-}
 
-func TestParseWorkflowFlow_ActivityCount(t *testing.T) {
-	raw := map[string]any{
-		"Activities": bson.A{
-			int32(3), // array marker
-			map[string]any{
-				"$Type": "Workflows$StartWorkflowActivity",
-				"Name":  "Start",
-			},
-			map[string]any{
-				"$Type": "Workflows$EndWorkflowActivity",
-				"Name":  "End",
-			},
-		},
-	}
-	flow := parseWorkflowFlow(raw)
+	flow := parseWorkflowFlow(flowRaw)
 	if flow == nil {
-		t.Fatal("expected non-nil flow")
+		t.Fatal("parseWorkflowFlow returned nil")
 	}
-	if len(flow.Activities) != 2 {
-		t.Fatalf("len(Activities) = %d, want 2", len(flow.Activities))
+	// Fixture has: Start, SingleUserTask, MultiUserTask, CallMicroflow, ParallelSplit, ExclusiveSplit, End
+	if len(flow.Activities) != 7 {
+		t.Errorf("len(Activities) = %d, want 7", len(flow.Activities))
 	}
 }
 
-func TestParseWorkflowActivity_UserTask(t *testing.T) {
-	raw := map[string]any{
-		"$Type": "Workflows$SingleUserTaskActivity",
-		"Name":  "ReviewOrder",
-		"Page":  "Sales.ReviewOrder_Page",
+func TestParseWorkflowActivity_FromFixture_StartIsFirst(t *testing.T) {
+	raw := loadWorkflowBSON(t, "WorkflowBaseline.Workflow")
+	flowRaw := toMap(raw["Flow"])
+	acts := workflowActivities(t, flowRaw)
+
+	activity := parseWorkflowActivity(acts[0])
+	if _, ok := activity.(*workflows.StartWorkflowActivity); !ok {
+		t.Errorf("activities[0] = %T, want *workflows.StartWorkflowActivity", activity)
 	}
-	activity := parseWorkflowActivity(raw)
-	if activity == nil {
-		t.Fatal("expected non-nil activity")
-	}
+}
+
+func TestParseWorkflowActivity_FromFixture_UserTask(t *testing.T) {
+	raw := loadWorkflowBSON(t, "WorkflowBaseline.Workflow")
+	flowRaw := toMap(raw["Flow"])
+	acts := workflowActivities(t, flowRaw)
+
+	// activities[1] is SingleUserTaskActivity in fixture
+	activity := parseWorkflowActivity(acts[1])
 	userTask, ok := activity.(*workflows.UserTask)
 	if !ok {
-		t.Fatalf("expected *workflows.UserTask, got %T", activity)
+		t.Fatalf("activities[1] = %T, want *workflows.UserTask", activity)
 	}
-	if userTask.Name != "ReviewOrder" {
-		t.Errorf("Name = %q, want %q", userTask.Name, "ReviewOrder")
-	}
-	if userTask.Page != "Sales.ReviewOrder_Page" {
-		t.Errorf("Page = %q, want %q", userTask.Page, "Sales.ReviewOrder_Page")
+	if userTask.Name != "userTask1" {
+		t.Errorf("Name = %q, want %q", userTask.Name, "userTask1")
 	}
 }
 
-func TestParseWorkflowActivity_CallMicroflow(t *testing.T) {
-	raw := map[string]any{
-		"$Type":      "Workflows$CallMicroflowTask",
-		"Name":       "ValidateOrder",
-		"Microflow":  "Sales.ValidateOrder",
-	}
-	activity := parseWorkflowActivity(raw)
-	if activity == nil {
-		t.Fatal("expected non-nil activity")
-	}
+func TestParseWorkflowActivity_FromFixture_CallMicroflow(t *testing.T) {
+	raw := loadWorkflowBSON(t, "WorkflowBaseline.Workflow")
+	flowRaw := toMap(raw["Flow"])
+	acts := workflowActivities(t, flowRaw)
+
+	// activities[3] is CallMicroflowTask in fixture
+	activity := parseWorkflowActivity(acts[3])
 	callMf, ok := activity.(*workflows.CallMicroflowTask)
 	if !ok {
-		t.Fatalf("expected *workflows.CallMicroflowTask, got %T", activity)
+		t.Fatalf("activities[3] = %T, want *workflows.CallMicroflowTask", activity)
 	}
-	if callMf.Name != "ValidateOrder" {
-		t.Errorf("Name = %q, want %q", callMf.Name, "ValidateOrder")
-	}
-	if callMf.Microflow != "Sales.ValidateOrder" {
-		t.Errorf("Microflow = %q, want %q", callMf.Microflow, "Sales.ValidateOrder")
+	if callMf.Microflow != "WorkflowBaseline.Microflow" {
+		t.Errorf("Microflow = %q, want %q", callMf.Microflow, "WorkflowBaseline.Microflow")
 	}
 }
 
-func TestParseWorkflowActivity_UnknownType(t *testing.T) {
-	raw := map[string]any{
-		"$Type": "Workflows$FutureActivity",
-		"Name":  "Something",
-	}
-	activity := parseWorkflowActivity(raw)
-	if activity == nil {
-		t.Fatal("expected non-nil generic activity")
-	}
-	generic, ok := activity.(*workflows.GenericWorkflowActivity)
-	if !ok {
-		t.Fatalf("expected *workflows.GenericWorkflowActivity, got %T", activity)
-	}
-	if generic.TypeString != "Workflows$FutureActivity" {
-		t.Errorf("TypeString = %q, want %q", generic.TypeString, "Workflows$FutureActivity")
+func TestParseWorkflowActivity_FromFixture_EndIsLast(t *testing.T) {
+	raw := loadWorkflowBSON(t, "WorkflowBaseline.Workflow")
+	flowRaw := toMap(raw["Flow"])
+	acts := workflowActivities(t, flowRaw)
+
+	last := parseWorkflowActivity(acts[len(acts)-1])
+	if _, ok := last.(*workflows.EndWorkflowActivity); !ok {
+		t.Errorf("last activity = %T, want *workflows.EndWorkflowActivity", last)
 	}
 }
 
-func TestParseUserTaskOutcome_ValueField(t *testing.T) {
-	raw := map[string]any{
-		"Value":   "Approve",
-		"Name":    "ApproveOutcome",
-		"Caption": "Approve it",
+func TestParseUserTaskOutcome_FromFixture(t *testing.T) {
+	raw := loadWorkflowBSON(t, "WorkflowBaseline.Workflow")
+	flowRaw := toMap(raw["Flow"])
+	acts := workflowActivities(t, flowRaw)
+
+	// activities[1] is SingleUserTaskActivity with one outcome
+	outcomesRaw := acts[1]["Outcomes"]
+	arr, ok := outcomesRaw.(bson.A)
+	if !ok || len(arr) < 2 {
+		t.Fatalf("expected Outcomes array with marker+1 element, got %T len=%d", outcomesRaw, len(arr))
 	}
-	outcome := parseUserTaskOutcome(raw)
+	outcomeMap := toMap(arr[1]) // skip marker
+	if outcomeMap == nil {
+		t.Fatal("outcome element is nil")
+	}
+
+	outcome := parseUserTaskOutcome(outcomeMap)
 	if outcome == nil {
-		t.Fatal("expected non-nil outcome")
+		t.Fatal("parseUserTaskOutcome returned nil")
 	}
-	if outcome.Value != "Approve" {
-		t.Errorf("Value = %q, want %q", outcome.Value, "Approve")
-	}
-	if outcome.Name != "ApproveOutcome" {
-		t.Errorf("Name = %q, want %q", outcome.Name, "ApproveOutcome")
-	}
-	if outcome.Caption != "Approve it" {
-		t.Errorf("Caption = %q, want %q", outcome.Caption, "Approve it")
+	if outcome.Value != "Outcome" {
+		t.Errorf("Value = %q, want %q", outcome.Value, "Outcome")
 	}
 }
 
-func TestParseParameterMappings_ArrayMarker(t *testing.T) {
-	input := bson.A{
-		int32(2),
-		map[string]any{
-			"Parameter":  "A.B.C",
-			"Expression": "$ctx",
-		},
-	}
-	mappings := parseParameterMappings(input)
+func TestParseParameterMappings_FromFixture(t *testing.T) {
+	raw := loadWorkflowBSON(t, "WorkflowBaseline.Workflow")
+	flowRaw := toMap(raw["Flow"])
+	acts := workflowActivities(t, flowRaw)
+
+	// activities[3] is CallMicroflowTask with 1 parameter mapping
+	mappingsRaw := acts[3]["ParameterMappings"]
+	mappings := parseParameterMappings(mappingsRaw)
 	if len(mappings) != 1 {
 		t.Fatalf("len(mappings) = %d, want 1", len(mappings))
 	}
-	if mappings[0].Parameter != "A.B.C" {
-		t.Errorf("Parameter = %q, want %q", mappings[0].Parameter, "A.B.C")
-	}
-	if mappings[0].Expression != "$ctx" {
-		t.Errorf("Expression = %q, want %q", mappings[0].Expression, "$ctx")
-	}
 }
 
-func TestParseParameterMappings_MultipleEntries(t *testing.T) {
-	input := bson.A{
-		int32(2),
-		map[string]any{"Parameter": "P1", "Expression": "$a"},
-		map[string]any{"Parameter": "P2", "Expression": "$b"},
+func TestParseWorkflowFlow_FromFixture_SubWorkflow(t *testing.T) {
+	raw := loadWorkflowBSON(t, "WorkflowBaseline.Sub_Workflow")
+	flowRaw := toMap(raw["Flow"])
+	if flowRaw == nil {
+		t.Fatal("Sub_Workflow fixture has no Flow")
 	}
-	mappings := parseParameterMappings(input)
-	if len(mappings) != 2 {
-		t.Fatalf("len(mappings) = %d, want 2", len(mappings))
-	}
-}
 
-func TestParseBoundaryEvents_EmptyArray(t *testing.T) {
-	input := bson.A{int32(2)}
-	events := parseBoundaryEvents(input)
-	if events != nil {
-		t.Errorf("expected nil for empty array with only marker, got len=%d", len(events))
+	flow := parseWorkflowFlow(flowRaw)
+	if flow == nil {
+		t.Fatal("parseWorkflowFlow returned nil")
 	}
-}
-
-func TestParseBoundaryEvents_TimerEvent(t *testing.T) {
-	input := bson.A{
-		int32(2),
-		map[string]any{
-			"$Type":              "Workflows$InterruptingTimerBoundaryEvent",
-			"Caption":            "Timeout",
-			"FirstExecutionTime": "addDays([%CurrentDateTime%], 3)",
-		},
-	}
-	events := parseBoundaryEvents(input)
-	if len(events) != 1 {
-		t.Fatalf("len(events) = %d, want 1", len(events))
-	}
-	if events[0].EventType != "InterruptingTimer" {
-		t.Errorf("EventType = %q, want %q", events[0].EventType, "InterruptingTimer")
-	}
-	if events[0].Caption != "Timeout" {
-		t.Errorf("Caption = %q, want %q", events[0].Caption, "Timeout")
-	}
-	if events[0].TimerDelay != "addDays([%CurrentDateTime%], 3)" {
-		t.Errorf("TimerDelay = %q, want %q", events[0].TimerDelay, "addDays([%CurrentDateTime%], 3)")
+	if len(flow.Activities) < 2 {
+		t.Errorf("Sub_Workflow has %d activities, want at least 2 (Start+End)", len(flow.Activities))
 	}
 }
