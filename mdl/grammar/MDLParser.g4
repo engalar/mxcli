@@ -2212,7 +2212,7 @@ createWorkflowStatement
     : WORKFLOW qualifiedName
       (PARAMETER VARIABLE COLON qualifiedName)?
       (OVERVIEW PAGE qualifiedName)?
-      (DUE DATE STRING_LITERAL)?
+      (DUE DATE_TYPE STRING_LITERAL)?
       BEGIN workflowBody END WORKFLOW SEMICOLON? SLASH?
     ;
 
@@ -2238,6 +2238,7 @@ workflowUserTaskStmt
       (TARGETING MICROFLOW qualifiedName)?
       (TARGETING XPATH STRING_LITERAL)?
       (ENTITY qualifiedName)?
+      (DUE DATE_TYPE STRING_LITERAL)?
       (OUTCOMES workflowUserTaskOutcome+)?
       (BOUNDARY EVENT workflowBoundaryEventClause+)?
     | MULTI USER TASK IDENTIFIER STRING_LITERAL
@@ -2245,6 +2246,7 @@ workflowUserTaskStmt
       (TARGETING MICROFLOW qualifiedName)?
       (TARGETING XPATH STRING_LITERAL)?
       (ENTITY qualifiedName)?
+      (DUE DATE_TYPE STRING_LITERAL)?
       (OUTCOMES workflowUserTaskOutcome+)?
       (BOUNDARY EVENT workflowBoundaryEventClause+)?
     ;
@@ -2263,6 +2265,7 @@ workflowCallMicroflowStmt
     : CALL MICROFLOW qualifiedName (COMMENT STRING_LITERAL)?
       (WITH LPAREN workflowParameterMapping (COMMA workflowParameterMapping)* RPAREN)?
       (OUTCOMES workflowConditionOutcome+)?
+      (BOUNDARY EVENT workflowBoundaryEventClause+)?
     ;
 
 workflowParameterMapping
@@ -2301,6 +2304,7 @@ workflowWaitForTimerStmt
 
 workflowWaitForNotificationStmt
     : WAIT FOR NOTIFICATION (COMMENT STRING_LITERAL)?
+      (BOUNDARY EVENT workflowBoundaryEventClause+)?
     ;
 
 workflowAnnotationStmt

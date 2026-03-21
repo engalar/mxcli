@@ -150,13 +150,20 @@ func buildWorkflowUserTask(ctx parser.IWorkflowUserTaskStmtContext) *ast.Workflo
 		nameIdx++
 	}
 
-	if utCtx.XPATH() != nil && len(allStrings) > 1 {
+	stringIdx := 1 // allStrings[0] is the caption
+	if utCtx.XPATH() != nil && stringIdx < len(allStrings) {
 		node.Targeting.Kind = "xpath"
-		node.Targeting.XPath = unquoteString(allStrings[1].GetText())
+		node.Targeting.XPath = unquoteString(allStrings[stringIdx].GetText())
+		stringIdx++
 	}
 
 	if utCtx.ENTITY() != nil && nameIdx < len(names) {
 		node.Entity = buildQualifiedName(names[nameIdx])
+	}
+
+	if utCtx.DUE() != nil && utCtx.DATE_TYPE() != nil && stringIdx < len(allStrings) {
+		node.DueDate = unquoteString(allStrings[stringIdx].GetText())
+		stringIdx++
 	}
 
 	// Outcomes
@@ -221,6 +228,23 @@ func buildWorkflowCallMicroflow(ctx parser.IWorkflowCallMicroflowStmtContext) *a
 			Expression: unquoteString(pmCtx2.STRING_LITERAL().GetText()),
 		}
 		node.ParameterMappings = append(node.ParameterMappings, mapping)
+	}
+
+	// BoundaryEvents (Issue #7)
+	for _, beCtx := range cmCtx.AllWorkflowBoundaryEventClause() {
+		beCtx2 := beCtx.(*parser.WorkflowBoundaryEventClauseContext)
+		be := ast.WorkflowBoundaryEventNode{}
+		if beCtx2.NON() != nil {
+			be.EventType = "NonInterruptingTimer"
+		} else if beCtx2.INTERRUPTING() != nil {
+			be.EventType = "InterruptingTimer"
+		} else {
+			be.EventType = "Timer"
+		}
+		if beCtx2.STRING_LITERAL() != nil {
+			be.Delay = unquoteString(beCtx2.STRING_LITERAL().GetText())
+		}
+		node.BoundaryEvents = append(node.BoundaryEvents, be)
 	}
 
 	return node
@@ -368,6 +392,23 @@ func buildWorkflowWaitForNotification(ctx parser.IWorkflowWaitForNotificationStm
 
 	if wnCtx.COMMENT() != nil && wnCtx.STRING_LITERAL() != nil {
 		node.Caption = unquoteString(wnCtx.STRING_LITERAL().GetText())
+	}
+
+	// BoundaryEvents (Issue #7)
+	for _, beCtx := range wnCtx.AllWorkflowBoundaryEventClause() {
+		beCtx2 := beCtx.(*parser.WorkflowBoundaryEventClauseContext)
+		be := ast.WorkflowBoundaryEventNode{}
+		if beCtx2.NON() != nil {
+			be.EventType = "NonInterruptingTimer"
+		} else if beCtx2.INTERRUPTING() != nil {
+			be.EventType = "InterruptingTimer"
+		} else {
+			be.EventType = "Timer"
+		}
+		if beCtx2.STRING_LITERAL() != nil {
+			be.Delay = unquoteString(beCtx2.STRING_LITERAL().GetText())
+		}
+		node.BoundaryEvents = append(node.BoundaryEvents, be)
 	}
 
 	return node

@@ -41,6 +41,7 @@ type WorkflowUserTaskNode struct {
 	Page           QualifiedName
 	Targeting      WorkflowTargetingNode
 	Entity         QualifiedName // user task entity
+	DueDate        string        // DUE DATE expression
 	Outcomes       []WorkflowUserTaskOutcomeNode
 	IsMultiUser    bool                        // Issue #8: true if MULTI USER TASK
 	BoundaryEvents []WorkflowBoundaryEventNode // Issue #7
@@ -67,6 +68,7 @@ type WorkflowCallMicroflowNode struct {
 	Caption           string
 	Outcomes          []WorkflowConditionOutcomeNode
 	ParameterMappings []WorkflowParameterMappingNode // Issue #10
+	BoundaryEvents    []WorkflowBoundaryEventNode    // Issue #7
 }
 
 func (n *WorkflowCallMicroflowNode) workflowActivityNode() {}
@@ -126,7 +128,8 @@ func (n *WorkflowWaitForTimerNode) workflowActivityNode() {}
 
 // WorkflowWaitForNotificationNode represents a WAIT FOR NOTIFICATION activity.
 type WorkflowWaitForNotificationNode struct {
-	Caption string
+	Caption        string
+	BoundaryEvents []WorkflowBoundaryEventNode // Issue #7
 }
 
 func (n *WorkflowWaitForNotificationNode) workflowActivityNode() {}

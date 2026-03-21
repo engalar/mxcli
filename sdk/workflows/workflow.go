@@ -4,6 +4,8 @@
 package workflows
 
 import (
+	"strings"
+
 	"github.com/mendixlabs/mxcli/model"
 )
 
@@ -265,9 +267,9 @@ type BooleanConditionOutcome struct {
 // GetName returns a display name for the outcome.
 func (o *BooleanConditionOutcome) GetName() string {
 	if o.Value {
-		return "True"
+		return "TRUE"
 	}
-	return "False"
+	return "FALSE"
 }
 
 // GetFlow returns the flow for this outcome.
@@ -280,8 +282,11 @@ type EnumerationValueConditionOutcome struct {
 	Flow  *Flow  `json:"flow,omitempty"`
 }
 
-// GetName returns the enumeration value name.
-func (o *EnumerationValueConditionOutcome) GetName() string { return o.Value }
+// GetName returns the enumeration value name as a single-quoted MDL string literal.
+func (o *EnumerationValueConditionOutcome) GetName() string {
+	escaped := strings.ReplaceAll(o.Value, "'", "''")
+	return "'" + escaped + "'"
+}
 
 // GetFlow returns the flow for this outcome.
 func (o *EnumerationValueConditionOutcome) GetFlow() *Flow { return o.Flow }
@@ -293,7 +298,7 @@ type VoidConditionOutcome struct {
 }
 
 // GetName returns a display name for the default outcome.
-func (o *VoidConditionOutcome) GetName() string { return "Default" }
+func (o *VoidConditionOutcome) GetName() string { return "DEFAULT" }
 
 // GetFlow returns the flow for this outcome.
 func (o *VoidConditionOutcome) GetFlow() *Flow { return o.Flow }

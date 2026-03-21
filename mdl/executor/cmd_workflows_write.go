@@ -201,6 +201,7 @@ func buildUserTask(n *ast.WorkflowUserTaskNode) *workflows.UserTask {
 	task.ID = model.ID(generateWorkflowUUID())
 	task.Name = n.Name
 	task.Caption = n.Caption
+	task.DueDate = n.DueDate
 	task.IsMulti = n.IsMultiUser
 
 	if n.Page.Module != "" {
@@ -279,6 +280,16 @@ func buildCallMicroflowTask(n *ast.WorkflowCallMicroflowNode) *workflows.CallMic
 			Parameter:  pm.Parameter,
 			Expression: pm.Expression,
 		})
+	}
+
+	// BoundaryEvents (Issue #7)
+	for _, be := range n.BoundaryEvents {
+		event := &workflows.BoundaryEvent{
+			EventType:  be.EventType,
+			TimerDelay: be.Delay,
+		}
+		event.ID = model.ID(generateWorkflowUUID())
+		task.BoundaryEvents = append(task.BoundaryEvents, event)
 	}
 
 	return task
@@ -413,6 +424,16 @@ func buildWaitForNotification(n *ast.WorkflowWaitForNotificationNode) *workflows
 		act.Caption = "Wait for notification"
 	}
 	act.Name = act.Caption
+
+	// BoundaryEvents (Issue #7)
+	for _, be := range n.BoundaryEvents {
+		event := &workflows.BoundaryEvent{
+			EventType:  be.EventType,
+			TimerDelay: be.Delay,
+		}
+		event.ID = model.ID(generateWorkflowUUID())
+		act.BoundaryEvents = append(act.BoundaryEvents, event)
+	}
 
 	return act
 }

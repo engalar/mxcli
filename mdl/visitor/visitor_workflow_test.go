@@ -196,6 +196,66 @@ END WORKFLOW;`
 	}
 }
 
+func TestWorkflowVisitor_UserTaskDueDate(t *testing.T) {
+	input := `CREATE WORKFLOW M.TestWF
+BEGIN
+  USER TASK task1 'My Task'
+    ENTITY M.TaskContext
+    DUE DATE 'PT24H'
+    OUTCOMES 'Done' { };
+END WORKFLOW;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateWorkflowStmt)
+	userTask, ok := stmt.Activities[0].(*ast.WorkflowUserTaskNode)
+	if !ok {
+		t.Fatalf("Expected WorkflowUserTaskNode, got %T", stmt.Activities[0])
+	}
+
+	if userTask.DueDate != "PT24H" {
+		t.Errorf("Expected DueDate 'PT24H', got %q", userTask.DueDate)
+	}
+}
+
+func TestWorkflowVisitor_UserTaskDueDateWithXPath(t *testing.T) {
+	input := `CREATE WORKFLOW M.TestWF
+BEGIN
+  USER TASK task1 'My Task'
+    TARGETING XPATH '[Assignee = $currentUser]'
+    ENTITY M.TaskContext
+    DUE DATE 'PT48H'
+    OUTCOMES 'Done' { };
+END WORKFLOW;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateWorkflowStmt)
+	userTask, ok := stmt.Activities[0].(*ast.WorkflowUserTaskNode)
+	if !ok {
+		t.Fatalf("Expected WorkflowUserTaskNode, got %T", stmt.Activities[0])
+	}
+
+	if userTask.Targeting.Kind != "xpath" {
+		t.Errorf("Expected Targeting.Kind 'xpath', got %q", userTask.Targeting.Kind)
+	}
+	if userTask.DueDate != "PT48H" {
+		t.Errorf("Expected DueDate 'PT48H', got %q", userTask.DueDate)
+	}
+}
+
 func TestWorkflowVisitor_Annotation(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
 BEGIN
