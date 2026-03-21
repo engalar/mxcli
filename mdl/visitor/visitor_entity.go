@@ -507,12 +507,24 @@ func (b *Builder) ExitAlterEntityAction(ctx *parser.AlterEntityActionContext) {
 			// MODIFY ATTRIBUTE / MODIFY COLUMN
 			if ctx.MODIFY() != nil && (ctx.ATTRIBUTE() != nil || ctx.COLUMN() != nil) && len(attrNames) >= 1 {
 				dt := buildDataType(ctx.DataType())
-				b.statements = append(b.statements, &ast.AlterEntityStmt{
+				stmt := &ast.AlterEntityStmt{
 					Name:          name,
 					Operation:     ast.AlterEntityModifyAttribute,
 					AttributeName: attributeNameText(attrNames[0]),
 					DataType:      dt,
-				})
+				}
+				// Capture CALCULATED constraint if present
+				for _, constraintCtx := range ctx.AllAttributeConstraint() {
+					c := constraintCtx.(*parser.AttributeConstraintContext)
+					if c.CALCULATED() != nil {
+						stmt.Calculated = true
+						if qn := c.QualifiedName(); qn != nil {
+							calcName := buildQualifiedName(qn)
+							stmt.CalculatedMicroflow = &calcName
+						}
+					}
+				}
+				b.statements = append(b.statements, stmt)
 				return
 			}
 
@@ -630,6 +642,10 @@ func (b *Builder) ExitDropStatement(ctx *parser.DropStatementContext) {
 		})
 	} else if ctx.BUSINESS() != nil && ctx.EVENT() != nil && ctx.SERVICE() != nil {
 		b.statements = append(b.statements, &ast.DropBusinessEventServiceStmt{
+			Name: buildQualifiedName(names[0]),
+		})
+	} else if ctx.WORKFLOW() != nil {
+		b.statements = append(b.statements, &ast.DropWorkflowStmt{
 			Name: buildQualifiedName(names[0]),
 		})
 	}

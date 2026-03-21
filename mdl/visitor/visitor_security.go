@@ -219,6 +219,46 @@ func (b *Builder) ExitRevokePageAccessStatement(ctx *parser.RevokePageAccessStat
 	b.statements = append(b.statements, stmt)
 }
 
+// ExitGrantWorkflowAccessStatement handles GRANT EXECUTE ON WORKFLOW Module.WF TO role1, role2
+func (b *Builder) ExitGrantWorkflowAccessStatement(ctx *parser.GrantWorkflowAccessStatementContext) {
+	qn := ctx.QualifiedName()
+	if qn == nil {
+		return
+	}
+
+	stmt := &ast.GrantWorkflowAccessStmt{
+		Workflow: buildQualifiedName(qn),
+	}
+
+	if mrl := ctx.ModuleRoleList(); mrl != nil {
+		for _, rqn := range mrl.AllQualifiedName() {
+			stmt.Roles = append(stmt.Roles, buildQualifiedName(rqn))
+		}
+	}
+
+	b.statements = append(b.statements, stmt)
+}
+
+// ExitRevokeWorkflowAccessStatement handles REVOKE EXECUTE ON WORKFLOW Module.WF FROM role1, role2
+func (b *Builder) ExitRevokeWorkflowAccessStatement(ctx *parser.RevokeWorkflowAccessStatementContext) {
+	qn := ctx.QualifiedName()
+	if qn == nil {
+		return
+	}
+
+	stmt := &ast.RevokeWorkflowAccessStmt{
+		Workflow: buildQualifiedName(qn),
+	}
+
+	if mrl := ctx.ModuleRoleList(); mrl != nil {
+		for _, rqn := range mrl.AllQualifiedName() {
+			stmt.Roles = append(stmt.Roles, buildQualifiedName(rqn))
+		}
+	}
+
+	b.statements = append(b.statements, stmt)
+}
+
 // ExitGrantODataServiceAccessStatement handles GRANT ACCESS ON ODATA SERVICE Module.Svc TO role1, role2
 func (b *Builder) ExitGrantODataServiceAccessStatement(ctx *parser.GrantODataServiceAccessStatementContext) {
 	qn := ctx.QualifiedName()
@@ -279,7 +319,7 @@ func (b *Builder) ExitAlterProjectSecurityStatement(ctx *parser.AlterProjectSecu
 	b.statements = append(b.statements, stmt)
 }
 
-// ExitCreateDemoUserStatement handles CREATE DEMO USER 'name' PASSWORD 'pw' (Role1, Role2)
+// ExitCreateDemoUserStatement handles CREATE DEMO USER 'name' PASSWORD 'pw' [ENTITY Module.Entity] (Role1, Role2)
 func (b *Builder) ExitCreateDemoUserStatement(ctx *parser.CreateDemoUserStatementContext) {
 	sls := ctx.AllSTRING_LITERAL()
 	if len(sls) < 2 {
@@ -289,6 +329,11 @@ func (b *Builder) ExitCreateDemoUserStatement(ctx *parser.CreateDemoUserStatemen
 	stmt := &ast.CreateDemoUserStmt{
 		UserName: unquoteString(sls[0].GetText()),
 		Password: unquoteString(sls[1].GetText()),
+	}
+
+	// Parse optional ENTITY clause
+	if qn := ctx.QualifiedName(); qn != nil {
+		stmt.Entity = buildQualifiedName(qn).String()
 	}
 
 	// Parse user role names from identifierOrKeyword list

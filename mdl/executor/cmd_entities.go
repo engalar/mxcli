@@ -72,6 +72,11 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 	var attrs []*domainmodel.Attribute
 	attrNameToID := make(map[string]model.ID)
 	for _, a := range s.Attributes {
+		// CALCULATED attributes are only supported on persistent entities
+		if a.Calculated && !persistable {
+			return fmt.Errorf("attribute '%s': CALCULATED attributes are only supported on persistent entities", a.Name)
+		}
+
 		// Use Documentation if available, fall back to Comment
 		doc := a.Documentation
 		if doc == "" {
@@ -89,8 +94,21 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 		}
 		attr.ID = attrID
 
-		// Default value
-		if a.HasDefault {
+		// Value type: CALCULATED or DEFAULT
+		if a.Calculated {
+			attrValue := &domainmodel.AttributeValue{
+				Type: "CalculatedValue",
+			}
+			if a.CalculatedMicroflow != nil {
+				mfID, err := e.resolveMicroflowByName(a.CalculatedMicroflow.String())
+				if err != nil {
+					return fmt.Errorf("attribute '%s': %w", a.Name, err)
+				}
+				attrValue.MicroflowID = mfID
+				attrValue.MicroflowName = a.CalculatedMicroflow.String()
+			}
+			attr.Value = attrValue
+		} else if a.HasDefault {
 			defaultStr := fmt.Sprintf("%v", a.DefaultValue)
 			// For enum attributes, Mendix stores just the value name (e.g., "Open"),
 			// not the fully qualified name. The EnumerationRef already provides context.
@@ -397,6 +415,10 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 		if a == nil {
 			return fmt.Errorf("no attribute definition provided")
 		}
+		// CALCULATED attributes are only supported on persistent entities
+		if a.Calculated && !entity.Persistable {
+			return fmt.Errorf("attribute '%s': CALCULATED attributes are only supported on persistent entities", a.Name)
+		}
 		// Auto-default Boolean attributes to false if no DEFAULT specified
 		if a.Type.Kind == ast.TypeBoolean && !a.HasDefault {
 			a.HasDefault = true
@@ -416,7 +438,20 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 			Type:          convertDataType(a.Type),
 		}
 		attr.ID = attrID
-		if a.HasDefault {
+		if a.Calculated {
+			attrValue := &domainmodel.AttributeValue{
+				Type: "CalculatedValue",
+			}
+			if a.CalculatedMicroflow != nil {
+				mfID, err := e.resolveMicroflowByName(a.CalculatedMicroflow.String())
+				if err != nil {
+					return fmt.Errorf("attribute '%s': %w", a.Name, err)
+				}
+				attrValue.MicroflowID = mfID
+				attrValue.MicroflowName = a.CalculatedMicroflow.String()
+			}
+			attr.Value = attrValue
+		} else if a.HasDefault {
 			defaultStr := fmt.Sprintf("%v", a.DefaultValue)
 			if a.Type.Kind == ast.TypeEnumeration && a.Type.EnumRef != nil {
 				enumPrefix := a.Type.EnumRef.String() + "."
@@ -487,10 +522,28 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 		fmt.Fprintf(e.output, "Renamed attribute '%s' to '%s' on entity %s\n", s.AttributeName, s.NewName, s.Name)
 
 	case ast.AlterEntityModifyAttribute:
+		// CALCULATED attributes are only supported on persistent entities
+		if s.Calculated && !entity.Persistable {
+			return fmt.Errorf("attribute '%s': CALCULATED attributes are only supported on persistent entities", s.AttributeName)
+		}
 		found := false
 		for _, attr := range entity.Attributes {
 			if attr.Name == s.AttributeName {
 				attr.Type = convertDataType(s.DataType)
+				if s.Calculated {
+					attrValue := &domainmodel.AttributeValue{
+						Type: "CalculatedValue",
+					}
+					if s.CalculatedMicroflow != nil {
+						mfID, err := e.resolveMicroflowByName(s.CalculatedMicroflow.String())
+						if err != nil {
+							return fmt.Errorf("attribute '%s': %w", s.AttributeName, err)
+						}
+						attrValue.MicroflowID = mfID
+						attrValue.MicroflowName = s.CalculatedMicroflow.String()
+					}
+					attr.Value = attrValue
+				}
 				found = true
 				break
 			}
@@ -1054,8 +1107,17 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 					}
 				}
 
-				// Default value
-				if attr.Value != nil && attr.Value.DefaultValue != "" {
+				// Value type: CALCULATED or DEFAULT
+				if attr.Value != nil && attr.Value.Type == "CalculatedValue" {
+					constraints.WriteString(" CALCULATED")
+					if attr.Value.MicroflowName != "" {
+						constraints.WriteString(" BY " + attr.Value.MicroflowName)
+					} else if attr.Value.MicroflowID != "" {
+						if mfName := e.lookupMicroflowName(attr.Value.MicroflowID); mfName != "" {
+							constraints.WriteString(" BY " + mfName)
+						}
+					}
+				} else if attr.Value != nil && attr.Value.DefaultValue != "" {
 					defaultVal := attr.Value.DefaultValue
 					// Quote string defaults
 					if _, ok := attr.Type.(*domainmodel.StringAttributeType); ok {
@@ -1291,6 +1353,70 @@ func extractAttrNameFromQualified(qualifiedName string) string {
 	parts := strings.Split(qualifiedName, ".")
 	if len(parts) >= 3 {
 		return parts[len(parts)-1]
+	}
+	return ""
+}
+
+// resolveMicroflowByName resolves a qualified microflow name to its ID.
+// It checks both microflows created during this session and existing microflows in the project.
+func (e *Executor) resolveMicroflowByName(qualifiedName string) (model.ID, error) {
+	parts := strings.Split(qualifiedName, ".")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("invalid microflow name: %s (expected Module.Name)", qualifiedName)
+	}
+	moduleName := parts[0]
+	mfName := strings.Join(parts[1:], ".")
+
+	// Check microflows created during this session
+	if e.cache != nil && e.cache.createdMicroflows != nil {
+		if info, ok := e.cache.createdMicroflows[qualifiedName]; ok {
+			return info.ID, nil
+		}
+	}
+
+	// Search existing microflows
+	allMicroflows, err := e.reader.ListMicroflows()
+	if err != nil {
+		return "", fmt.Errorf("failed to list microflows: %w", err)
+	}
+
+	h, err := e.getHierarchy()
+	if err != nil {
+		return "", fmt.Errorf("failed to build hierarchy: %w", err)
+	}
+
+	for _, mf := range allMicroflows {
+		modID := h.FindModuleID(mf.ContainerID)
+		modName := h.GetModuleName(modID)
+		if modName == moduleName && mf.Name == mfName {
+			return mf.ID, nil
+		}
+	}
+
+	return "", fmt.Errorf("microflow not found: %s", qualifiedName)
+}
+
+// lookupMicroflowName reverse-looks up a microflow ID to its qualified name.
+func (e *Executor) lookupMicroflowName(mfID model.ID) string {
+	allMicroflows, err := e.reader.ListMicroflows()
+	if err != nil {
+		return ""
+	}
+
+	h, err := e.getHierarchy()
+	if err != nil {
+		return ""
+	}
+
+	for _, mf := range allMicroflows {
+		if mf.ID == mfID {
+			modID := h.FindModuleID(mf.ContainerID)
+			modName := h.GetModuleName(modID)
+			if modName != "" {
+				return modName + "." + mf.Name
+			}
+			return mf.Name
+		}
 	}
 	return ""
 }

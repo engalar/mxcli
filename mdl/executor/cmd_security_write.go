@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/security"
 )
@@ -331,6 +332,11 @@ func (e *Executor) execGrantEntityAccess(s *ast.GrantEntityAccessStmt) error {
 		if writeMemberSet[attr.Name] {
 			rights = "ReadWrite"
 		} else if readMemberSet[attr.Name] {
+			rights = "ReadOnly"
+		}
+		// Calculated attributes cannot have write rights (CE6592)
+		isCalculated := attr.Value != nil && attr.Value.Type == "CalculatedValue"
+		if isCalculated && (rights == "ReadWrite" || rights == "WriteOnly") {
 			rights = "ReadOnly"
 		}
 		memberAccesses = append(memberAccesses, mpr.EntityMemberAccess{
@@ -665,6 +671,124 @@ func (e *Executor) execRevokePageAccess(s *ast.RevokePageAccessStmt) error {
 	return fmt.Errorf("page not found: %s.%s", s.Page.Module, s.Page.Name)
 }
 
+// execGrantWorkflowAccess handles GRANT EXECUTE ON WORKFLOW Module.WF TO roles.
+func (e *Executor) execGrantWorkflowAccess(s *ast.GrantWorkflowAccessStmt) error {
+	if e.writer == nil {
+		return fmt.Errorf("not connected to a project in write mode")
+	}
+
+	h, err := e.getHierarchy()
+	if err != nil {
+		return fmt.Errorf("failed to build hierarchy: %w", err)
+	}
+
+	// Find the workflow
+	wfs, err := e.reader.ListWorkflows()
+	if err != nil {
+		return fmt.Errorf("failed to list workflows: %w", err)
+	}
+
+	for _, wf := range wfs {
+		modID := h.FindModuleID(wf.ContainerID)
+		modName := h.GetModuleName(modID)
+		if modName != s.Workflow.Module || wf.Name != s.Workflow.Name {
+			continue
+		}
+
+		// Validate all roles exist
+		for _, role := range s.Roles {
+			if err := e.validateModuleRole(role); err != nil {
+				return err
+			}
+		}
+
+		// Merge new roles with existing (skip duplicates)
+		existing := make(map[string]bool)
+		var merged []string
+		for _, r := range wf.AllowedModuleRoles {
+			existing[string(r)] = true
+			merged = append(merged, string(r))
+		}
+		var added []string
+		for _, role := range s.Roles {
+			qn := role.Module + "." + role.Name
+			if !existing[qn] {
+				merged = append(merged, qn)
+				added = append(added, qn)
+			}
+		}
+
+		if err := e.writer.UpdateAllowedRoles(wf.ID, merged); err != nil {
+			return fmt.Errorf("failed to update workflow access: %w", err)
+		}
+
+		if len(added) == 0 {
+			fmt.Fprintf(e.output, "All specified roles already have execute access on %s.%s\n", modName, wf.Name)
+		} else {
+			fmt.Fprintf(e.output, "Granted execute access on %s.%s to %s\n", modName, wf.Name, strings.Join(added, ", "))
+		}
+		return nil
+	}
+
+	return fmt.Errorf("workflow not found: %s.%s", s.Workflow.Module, s.Workflow.Name)
+}
+
+// execRevokeWorkflowAccess handles REVOKE EXECUTE ON WORKFLOW Module.WF FROM roles.
+func (e *Executor) execRevokeWorkflowAccess(s *ast.RevokeWorkflowAccessStmt) error {
+	if e.writer == nil {
+		return fmt.Errorf("not connected to a project in write mode")
+	}
+
+	h, err := e.getHierarchy()
+	if err != nil {
+		return fmt.Errorf("failed to build hierarchy: %w", err)
+	}
+
+	// Find the workflow
+	wfs, err := e.reader.ListWorkflows()
+	if err != nil {
+		return fmt.Errorf("failed to list workflows: %w", err)
+	}
+
+	for _, wf := range wfs {
+		modID := h.FindModuleID(wf.ContainerID)
+		modName := h.GetModuleName(modID)
+		if modName != s.Workflow.Module || wf.Name != s.Workflow.Name {
+			continue
+		}
+
+		// Build set of roles to remove
+		toRemove := make(map[string]bool)
+		for _, role := range s.Roles {
+			toRemove[role.Module+"."+role.Name] = true
+		}
+
+		// Filter out removed roles
+		var remaining []string
+		var removed []string
+		for _, r := range wf.AllowedModuleRoles {
+			if toRemove[string(r)] {
+				removed = append(removed, string(r))
+			} else {
+				remaining = append(remaining, string(r))
+			}
+		}
+
+		if err := e.writer.UpdateAllowedRoles(wf.ID, remaining); err != nil {
+			return fmt.Errorf("failed to update workflow access: %w", err)
+		}
+
+		if len(removed) == 0 {
+			fmt.Fprintf(e.output, "None of the specified roles had execute access on %s.%s\n", modName, wf.Name)
+		} else {
+			fmt.Fprintf(e.output, "Revoked execute access on %s.%s from %s\n", modName, wf.Name, strings.Join(removed, ", "))
+		}
+		return nil
+	}
+
+	return fmt.Errorf("workflow not found: %s.%s", s.Workflow.Module, s.Workflow.Name)
+}
+
 // validateModuleRole checks that a module role exists in the project.
 func (e *Executor) validateModuleRole(role ast.QualifiedName) error {
 	module, err := e.findModule(role.Module)
@@ -731,7 +855,7 @@ func (e *Executor) execAlterProjectSecurity(s *ast.AlterProjectSecurityStmt) err
 	return nil
 }
 
-// execCreateDemoUser handles CREATE DEMO USER 'name' PASSWORD 'pw' (Roles).
+// execCreateDemoUser handles CREATE DEMO USER 'name' PASSWORD 'pw' [ENTITY Module.Entity] (Roles).
 func (e *Executor) execCreateDemoUser(s *ast.CreateDemoUserStmt) error {
 	if e.writer == nil {
 		return fmt.Errorf("not connected to a project in write mode")
@@ -749,12 +873,66 @@ func (e *Executor) execCreateDemoUser(s *ast.CreateDemoUserStmt) error {
 		}
 	}
 
-	if err := e.writer.AddDemoUser(ps.ID, s.UserName, s.Password, s.UserRoles); err != nil {
+	// Resolve entity: use explicit value or auto-detect from domain models
+	entity := s.Entity
+	if entity == "" {
+		detected, err := e.detectUserEntity()
+		if err != nil {
+			return err
+		}
+		entity = detected
+	}
+
+	if err := e.writer.AddDemoUser(ps.ID, s.UserName, s.Password, entity, s.UserRoles); err != nil {
 		return fmt.Errorf("failed to create demo user: %w", err)
 	}
 
-	fmt.Fprintf(e.output, "Created demo user: %s\n", s.UserName)
+	fmt.Fprintf(e.output, "Created demo user: %s (entity: %s)\n", s.UserName, entity)
 	return nil
+}
+
+// detectUserEntity finds the entity that generalizes System.User.
+func (e *Executor) detectUserEntity() (string, error) {
+	modules, err := e.reader.ListModules()
+	if err != nil {
+		return "", fmt.Errorf("failed to list modules: %w", err)
+	}
+	moduleNameByID := make(map[model.ID]string, len(modules))
+	for _, m := range modules {
+		moduleNameByID[m.ID] = m.Name
+	}
+
+	dms, err := e.reader.ListDomainModels()
+	if err != nil {
+		return "", fmt.Errorf("failed to list domain models: %w", err)
+	}
+
+	var candidates []string
+	for _, dm := range dms {
+		moduleName := moduleNameByID[dm.ContainerID]
+		for _, ent := range dm.Entities {
+			if ent.GeneralizationRef == "System.User" {
+				candidates = append(candidates, moduleName+"."+ent.Name)
+			}
+		}
+	}
+
+	switch len(candidates) {
+	case 0:
+		return "", fmt.Errorf("no entity found that generalizes System.User; use ENTITY clause to specify one")
+	case 1:
+		return candidates[0], nil
+	default:
+		return "", fmt.Errorf("multiple entities generalize System.User: %s; use ENTITY clause to specify one", joinCandidates(candidates))
+	}
+}
+
+func joinCandidates(candidates []string) string {
+	result := candidates[0]
+	for i := 1; i < len(candidates); i++ {
+		result += ", " + candidates[i]
+	}
+	return result
 }
 
 // execDropDemoUser handles DROP DEMO USER 'name'.
