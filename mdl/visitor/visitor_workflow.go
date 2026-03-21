@@ -159,11 +159,6 @@ func buildWorkflowUserTask(ctx parser.IWorkflowUserTaskStmtContext) *ast.Workflo
 		node.Entity = buildQualifiedName(names[nameIdx])
 	}
 
-	// IsMultiUser (MULTI USER TASK vs USER TASK)
-	if utCtx.MULTI() != nil {
-		node.IsMultiUser = true
-	}
-
 	// Outcomes
 	for _, outcomeCtx := range utCtx.AllWorkflowUserTaskOutcome() {
 		outcome := buildWorkflowUserTaskOutcome(outcomeCtx)
