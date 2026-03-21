@@ -201,6 +201,10 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 		return e.execGrantPageAccess(s)
 	case *ast.RevokePageAccessStmt:
 		return e.execRevokePageAccess(s)
+	case *ast.GrantWorkflowAccessStmt:
+		return e.execGrantWorkflowAccess(s)
+	case *ast.RevokeWorkflowAccessStmt:
+		return e.execRevokeWorkflowAccess(s)
 	case *ast.AlterProjectSecurityStmt:
 		return e.execAlterProjectSecurity(s)
 	case *ast.CreateDemoUserStmt:
@@ -213,6 +217,12 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 	// Navigation statements
 	case *ast.AlterNavigationStmt:
 		return e.execAlterNavigation(s)
+
+	// Workflow statements
+	case *ast.CreateWorkflowStmt:
+		return e.execCreateWorkflow(s)
+	case *ast.DropWorkflowStmt:
+		return e.execDropWorkflow(s)
 
 	// Business Event statements
 	case *ast.CreateBusinessEventServiceStmt:
@@ -652,6 +662,8 @@ func (e *Executor) execShow(s *ast.ShowStmt) error {
 		return e.showAccessOnMicroflow(s.Name)
 	case ast.ShowAccessOnPage:
 		return e.showAccessOnPage(s.Name)
+	case ast.ShowAccessOnWorkflow:
+		return e.showAccessOnWorkflow(s.Name)
 	case ast.ShowSecurityMatrix:
 		return e.showSecurityMatrix(s.InModule)
 	case ast.ShowODataClients:

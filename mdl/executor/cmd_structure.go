@@ -1015,7 +1015,7 @@ func formatAttributeWithType(attr *domainmodel.Attribute) string {
 		if t.Length > 0 {
 			return fmt.Sprintf("%s: String(%d)", attr.Name, t.Length)
 		}
-		return attr.Name + ": String"
+		return attr.Name + ": String(unlimited)"
 	case *domainmodel.EnumerationAttributeType:
 		return attr.Name + ": " + shortName(t.EnumerationRef)
 	default:

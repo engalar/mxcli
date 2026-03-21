@@ -43,7 +43,7 @@ PROJECT SECURITY:
   ALTER PROJECT SECURITY DEMO USERS ON|OFF;
 
 DEMO USERS:
-  CREATE DEMO USER '<name>' PASSWORD '<pass>' (<userrole> [, ...]);
+  CREATE DEMO USER '<name>' PASSWORD '<pass>' [ENTITY Module.Entity] (<userrole> [, ...]);
   DROP DEMO USER '<name>';
 
 Examples:
