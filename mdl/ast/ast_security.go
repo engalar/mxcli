@@ -114,6 +114,22 @@ type RevokePageAccessStmt struct {
 
 func (s *RevokePageAccessStmt) isStatement() {}
 
+// GrantWorkflowAccessStmt represents: GRANT EXECUTE ON WORKFLOW Module.WF TO role1, role2
+type GrantWorkflowAccessStmt struct {
+	Workflow QualifiedName
+	Roles    []QualifiedName
+}
+
+func (s *GrantWorkflowAccessStmt) isStatement() {}
+
+// RevokeWorkflowAccessStmt represents: REVOKE EXECUTE ON WORKFLOW Module.WF FROM role1, role2
+type RevokeWorkflowAccessStmt struct {
+	Workflow QualifiedName
+	Roles    []QualifiedName
+}
+
+func (s *RevokeWorkflowAccessStmt) isStatement() {}
+
 // GrantODataServiceAccessStmt represents: GRANT ACCESS ON ODATA SERVICE Module.Svc TO role1, role2
 type GrantODataServiceAccessStmt struct {
 	Service QualifiedName
@@ -140,10 +156,11 @@ type AlterProjectSecurityStmt struct {
 
 func (s *AlterProjectSecurityStmt) isStatement() {}
 
-// CreateDemoUserStmt represents: CREATE DEMO USER 'name' PASSWORD 'pw' (Role1, Role2)
+// CreateDemoUserStmt represents: CREATE DEMO USER 'name' PASSWORD 'pw' [ENTITY Module.Entity] (Role1, Role2)
 type CreateDemoUserStmt struct {
 	UserName  string
 	Password  string
+	Entity    string // qualified name of user entity, e.g. "Administration.Account"
 	UserRoles []string
 }
 

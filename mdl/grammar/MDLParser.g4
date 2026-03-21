@@ -94,6 +94,7 @@ createStatement
       | createExternalEntityStatement
       | createNavigationStatement
       | createBusinessEventServiceStatement
+      | createWorkflowStatement
       )
     ;
 
@@ -234,6 +235,7 @@ dropStatement
     | DROP ODATA CLIENT qualifiedName
     | DROP ODATA SERVICE qualifiedName
     | DROP BUSINESS EVENT SERVICE qualifiedName
+    | DROP WORKFLOW qualifiedName
     ;
 
 renameStatement
@@ -291,6 +293,8 @@ securityStatement
     | revokeMicroflowAccessStatement
     | grantPageAccessStatement
     | revokePageAccessStatement
+    | grantWorkflowAccessStatement
+    | revokeWorkflowAccessStatement
     | grantODataServiceAccessStatement
     | revokeODataServiceAccessStatement
     | alterProjectSecurityStatement
@@ -348,6 +352,14 @@ revokePageAccessStatement
     : REVOKE VIEW ON PAGE qualifiedName FROM moduleRoleList
     ;
 
+grantWorkflowAccessStatement
+    : GRANT EXECUTE ON WORKFLOW qualifiedName TO moduleRoleList
+    ;
+
+revokeWorkflowAccessStatement
+    : REVOKE EXECUTE ON WORKFLOW qualifiedName FROM moduleRoleList
+    ;
+
 grantODataServiceAccessStatement
     : GRANT ACCESS ON ODATA SERVICE qualifiedName TO moduleRoleList
     ;
@@ -362,7 +374,7 @@ alterProjectSecurityStatement
     ;
 
 createDemoUserStatement
-    : CREATE DEMO USER STRING_LITERAL PASSWORD STRING_LITERAL
+    : CREATE DEMO USER STRING_LITERAL PASSWORD STRING_LITERAL (ENTITY qualifiedName)?
       LPAREN identifierOrKeyword (COMMA identifierOrKeyword)* RPAREN
     ;
 
@@ -527,6 +539,7 @@ attributeConstraint
     | UNIQUE (ERROR STRING_LITERAL)?
     | DEFAULT (literal | expression)
     | REQUIRED (ERROR STRING_LITERAL)?
+    | CALCULATED (BY? qualifiedName)?
     ;
 
 /**
@@ -2174,6 +2187,133 @@ businessEventAttrDef
     ;
 
 // =============================================================================
+// CREATE WORKFLOW
+// =============================================================================
+
+/**
+ * Create a workflow with activities.
+ *
+ * @example Simple workflow with user task
+ * ```mdl
+ * CREATE WORKFLOW MyModule.ApprovalWorkflow
+ *   PARAMETER $WorkflowContext: MyModule.Request
+ * BEGIN
+ *   USER TASK ReviewRequest 'Review the request'
+ *     PAGE MyModule.ReviewPage
+ *     OUTCOMES
+ *       'Approve'
+ *       'Reject'
+ *
+ *   END
+ * END WORKFLOW;
+ * ```
+ */
+createWorkflowStatement
+    : WORKFLOW qualifiedName
+      (PARAMETER VARIABLE COLON qualifiedName)?
+      (OVERVIEW PAGE qualifiedName)?
+      (DUE DATE_TYPE STRING_LITERAL)?
+      BEGIN workflowBody END WORKFLOW SEMICOLON? SLASH?
+    ;
+
+workflowBody
+    : workflowActivityStmt*
+    ;
+
+workflowActivityStmt
+    : workflowUserTaskStmt SEMICOLON
+    | workflowCallMicroflowStmt SEMICOLON
+    | workflowCallWorkflowStmt SEMICOLON
+    | workflowDecisionStmt SEMICOLON
+    | workflowParallelSplitStmt SEMICOLON
+    | workflowJumpToStmt SEMICOLON
+    | workflowWaitForTimerStmt SEMICOLON
+    | workflowWaitForNotificationStmt SEMICOLON
+    | workflowAnnotationStmt SEMICOLON
+    ;
+
+workflowUserTaskStmt
+    : USER TASK IDENTIFIER STRING_LITERAL
+      (PAGE qualifiedName)?
+      (TARGETING MICROFLOW qualifiedName)?
+      (TARGETING XPATH STRING_LITERAL)?
+      (ENTITY qualifiedName)?
+      (DUE DATE_TYPE STRING_LITERAL)?
+      (OUTCOMES workflowUserTaskOutcome+)?
+      (BOUNDARY EVENT workflowBoundaryEventClause+)?
+    | MULTI USER TASK IDENTIFIER STRING_LITERAL
+      (PAGE qualifiedName)?
+      (TARGETING MICROFLOW qualifiedName)?
+      (TARGETING XPATH STRING_LITERAL)?
+      (ENTITY qualifiedName)?
+      (DUE DATE_TYPE STRING_LITERAL)?
+      (OUTCOMES workflowUserTaskOutcome+)?
+      (BOUNDARY EVENT workflowBoundaryEventClause+)?
+    ;
+
+workflowBoundaryEventClause
+    : INTERRUPTING TIMER STRING_LITERAL?
+    | NON INTERRUPTING TIMER STRING_LITERAL?
+    | TIMER STRING_LITERAL?
+    ;
+
+workflowUserTaskOutcome
+    : STRING_LITERAL LBRACE workflowBody RBRACE
+    ;
+
+workflowCallMicroflowStmt
+    : CALL MICROFLOW qualifiedName (COMMENT STRING_LITERAL)?
+      (WITH LPAREN workflowParameterMapping (COMMA workflowParameterMapping)* RPAREN)?
+      (OUTCOMES workflowConditionOutcome+)?
+      (BOUNDARY EVENT workflowBoundaryEventClause+)?
+    ;
+
+workflowParameterMapping
+    : IDENTIFIER EQUALS STRING_LITERAL
+    ;
+
+workflowCallWorkflowStmt
+    : CALL WORKFLOW qualifiedName (COMMENT STRING_LITERAL)?
+    ;
+
+workflowDecisionStmt
+    : DECISION STRING_LITERAL? (COMMENT STRING_LITERAL)?
+      (OUTCOMES workflowConditionOutcome+)?
+    ;
+
+workflowConditionOutcome
+    : (TRUE | FALSE | STRING_LITERAL | DEFAULT) ARROW LBRACE workflowBody RBRACE
+    ;
+
+workflowParallelSplitStmt
+    : PARALLEL SPLIT (COMMENT STRING_LITERAL)?
+      workflowParallelPath+
+    ;
+
+workflowParallelPath
+    : PATH NUMBER_LITERAL LBRACE workflowBody RBRACE
+    ;
+
+workflowJumpToStmt
+    : JUMP TO IDENTIFIER (COMMENT STRING_LITERAL)?
+    ;
+
+workflowWaitForTimerStmt
+    : WAIT FOR TIMER STRING_LITERAL? (COMMENT STRING_LITERAL)?
+    ;
+
+workflowWaitForNotificationStmt
+    : WAIT FOR NOTIFICATION (COMMENT STRING_LITERAL)?
+      (BOUNDARY EVENT workflowBoundaryEventClause+)?
+    ;
+
+workflowAnnotationStmt
+    : ANNOTATION STRING_LITERAL
+    ;
+
+// workflowEndStmt removed - END activities are implicit and conflict with END WORKFLOW
+
+// =============================================================================
 // ALTER SETTINGS
 // =============================================================================
 
@@ -2252,6 +2392,7 @@ showStatement
     | SHOW ACCESS ON qualifiedName              // SHOW ACCESS ON Module.Entity
     | SHOW ACCESS ON MICROFLOW qualifiedName    // SHOW ACCESS ON MICROFLOW Module.MF
     | SHOW ACCESS ON PAGE qualifiedName         // SHOW ACCESS ON PAGE Module.Page
+    | SHOW ACCESS ON WORKFLOW qualifiedName     // SHOW ACCESS ON WORKFLOW Module.WF
     | SHOW SECURITY MATRIX (IN (qualifiedName | IDENTIFIER))?  // SHOW SECURITY MATRIX [IN module]
     | SHOW ODATA CLIENTS (IN (qualifiedName | IDENTIFIER))?    // SHOW ODATA CLIENTS [IN module]
     | SHOW ODATA SERVICES (IN (qualifiedName | IDENTIFIER))?   // SHOW ODATA SERVICES [IN module]
@@ -2955,7 +3096,8 @@ keyword
     | COLUMN | COLUMNS | LOCAL | PROJECT                     // Structure keywords
     | READ | WRITE | CATALOG | FORCE | DEPTH                 // Query/access keywords
     | JAVA | EVENTS | OVER | MEMBERS                         // Miscellaneous keywords
-    | WORKFLOWS | REFERENCES | CALLERS | CALLEES             // Code search keywords
+    | WORKFLOW | WORKFLOWS | REFERENCES | CALLERS | CALLEES   // Code search keywords
+    | TASK | DECISION | SPLIT | OUTCOMES | TARGETING | NOTIFICATION | TIMER | JUMP | DUE | OVERVIEW | DATE | PARALLEL | WAIT | BY // Workflow keywords
     | TRANSITIVE | IMPACT | SEARCH                           // Additional search keywords
     | BUSINESS | EVENT | SUBSCRIBE | SETTINGS | CONFIGURATION  // Business events / settings keywords
     | DEFINE | FRAGMENT | FRAGMENTS                            // Fragment keywords
