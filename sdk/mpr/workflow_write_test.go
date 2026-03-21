@@ -176,4 +176,13 @@ func TestSerializeWorkflowFlow_RoundtripFromFixture(t *testing.T) {
 	if len(reparsed.Activities) != len(flow.Activities) {
 		t.Errorf("roundtrip Activities count = %d, want %d", len(reparsed.Activities), len(flow.Activities))
 	}
+	// Verify first activity type is preserved
+	if _, ok := reparsed.Activities[0].(*workflows.StartWorkflowActivity); !ok {
+		t.Errorf("roundtrip Activities[0] = %T, want *workflows.StartWorkflowActivity", reparsed.Activities[0])
+	}
+	// Verify last activity type is preserved
+	last := reparsed.Activities[len(reparsed.Activities)-1]
+	if _, ok := last.(*workflows.EndWorkflowActivity); !ok {
+		t.Errorf("roundtrip last activity = %T, want *workflows.EndWorkflowActivity", last)
+	}
 }

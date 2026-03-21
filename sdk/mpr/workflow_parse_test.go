@@ -178,7 +178,66 @@ func TestParseWorkflowFlow_FromFixture_SubWorkflow(t *testing.T) {
 	if flow == nil {
 		t.Fatal("parseWorkflowFlow returned nil")
 	}
-	if len(flow.Activities) < 2 {
-		t.Errorf("Sub_Workflow has %d activities, want at least 2 (Start+End)", len(flow.Activities))
+	if len(flow.Activities) != 2 {
+		t.Errorf("Sub_Workflow has %d activities, want exactly 2 (Start+End)", len(flow.Activities))
+	}
+}
+
+func TestParseWorkflowParameter_Nil(t *testing.T) {
+	param := parseWorkflowParameter(nil)
+	if param != nil {
+		t.Errorf("parseWorkflowParameter(nil) = %v, want nil", param)
+	}
+}
+
+func TestParseWorkflowActivity_UnknownType(t *testing.T) {
+	raw := map[string]any{
+		"$Type": "Workflows$SomeUnknownFutureActivity",
+		"$ID":   "abc123",
+		"Name":  "mystery",
+	}
+	activity := parseWorkflowActivity(raw)
+	generic, ok := activity.(*workflows.GenericWorkflowActivity)
+	if !ok {
+		t.Fatalf("unknown type = %T, want *workflows.GenericWorkflowActivity", activity)
+	}
+	if generic.Name != "mystery" {
+		t.Errorf("Name = %q, want %q", generic.Name, "mystery")
+	}
+}
+
+func TestParseBoundaryEvents_EmptyArray(t *testing.T) {
+	// nil input
+	events := parseBoundaryEvents(nil)
+	if len(events) != 0 {
+		t.Errorf("parseBoundaryEvents(nil) len = %d, want 0", len(events))
+	}
+	// marker-only array (bson.A with just the int32 marker)
+	events = parseBoundaryEvents(bson.A{int32(2)})
+	if len(events) != 0 {
+		t.Errorf("parseBoundaryEvents(marker-only) len = %d, want 0", len(events))
+	}
+}
+
+func TestParseBoundaryEvents_TimerEvent(t *testing.T) {
+	eventMap := map[string]any{
+		"$Type":              "Workflows$InterruptingTimerBoundaryEvent",
+		"$ID":                "be-001",
+		"Caption":            "Timeout",
+		"FirstExecutionTime": "PT1H",
+	}
+	events := parseBoundaryEvents(bson.A{int32(2), eventMap})
+	if len(events) != 1 {
+		t.Fatalf("len(events) = %d, want 1", len(events))
+	}
+	ev := events[0]
+	if ev.EventType != "InterruptingTimer" {
+		t.Errorf("EventType = %q, want %q", ev.EventType, "InterruptingTimer")
+	}
+	if ev.TimerDelay != "PT1H" {
+		t.Errorf("TimerDelay = %q, want %q", ev.TimerDelay, "PT1H")
+	}
+	if ev.Caption != "Timeout" {
+		t.Errorf("Caption = %q, want %q", ev.Caption, "Timeout")
 	}
 }
