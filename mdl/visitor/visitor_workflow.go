@@ -114,6 +114,9 @@ func buildWorkflowActivityStmt(ctx parser.IWorkflowActivityStmtContext) ast.Work
 	if wn := actCtx.WorkflowWaitForNotificationStmt(); wn != nil {
 		return buildWorkflowWaitForNotification(wn)
 	}
+	if ann := actCtx.WorkflowAnnotationStmt(); ann != nil {
+		return buildWorkflowAnnotation(ann)
+	}
 	return nil
 }
 
@@ -122,7 +125,8 @@ func buildWorkflowUserTask(ctx parser.IWorkflowUserTaskStmtContext) *ast.Workflo
 	utCtx := ctx.(*parser.WorkflowUserTaskStmtContext)
 
 	node := &ast.WorkflowUserTaskNode{
-		Name: utCtx.IDENTIFIER().GetText(),
+		Name:        utCtx.IDENTIFIER().GetText(),
+		IsMultiUser: utCtx.MULTI() != nil,
 	}
 
 	// Caption is the first STRING_LITERAL
@@ -155,10 +159,32 @@ func buildWorkflowUserTask(ctx parser.IWorkflowUserTaskStmtContext) *ast.Workflo
 		node.Entity = buildQualifiedName(names[nameIdx])
 	}
 
+	// IsMultiUser (MULTI USER TASK vs USER TASK)
+	if utCtx.MULTI() != nil {
+		node.IsMultiUser = true
+	}
+
 	// Outcomes
 	for _, outcomeCtx := range utCtx.AllWorkflowUserTaskOutcome() {
 		outcome := buildWorkflowUserTaskOutcome(outcomeCtx)
 		node.Outcomes = append(node.Outcomes, outcome)
+	}
+
+	// BoundaryEvents (Issue #7)
+	for _, beCtx := range utCtx.AllWorkflowBoundaryEventClause() {
+		beCtx2 := beCtx.(*parser.WorkflowBoundaryEventClauseContext)
+		be := ast.WorkflowBoundaryEventNode{}
+		if beCtx2.NON() != nil {
+			be.EventType = "NonInterruptingTimer"
+		} else if beCtx2.INTERRUPTING() != nil {
+			be.EventType = "InterruptingTimer"
+		} else {
+			be.EventType = "Timer"
+		}
+		if beCtx2.STRING_LITERAL() != nil {
+			be.Delay = unquoteString(beCtx2.STRING_LITERAL().GetText())
+		}
+		node.BoundaryEvents = append(node.BoundaryEvents, be)
 	}
 
 	return node
@@ -190,6 +216,16 @@ func buildWorkflowCallMicroflow(ctx parser.IWorkflowCallMicroflowStmtContext) *a
 	for _, outcomeCtx := range cmCtx.AllWorkflowConditionOutcome() {
 		outcome := buildWorkflowConditionOutcome(outcomeCtx)
 		node.Outcomes = append(node.Outcomes, outcome)
+	}
+
+	// Parameter mappings (Issue #10)
+	for _, pmCtx := range cmCtx.AllWorkflowParameterMapping() {
+		pmCtx2 := pmCtx.(*parser.WorkflowParameterMappingContext)
+		mapping := ast.WorkflowParameterMappingNode{
+			Parameter:  pmCtx2.IDENTIFIER().GetText(),
+			Expression: unquoteString(pmCtx2.STRING_LITERAL().GetText()),
+		}
+		node.ParameterMappings = append(node.ParameterMappings, mapping)
 	}
 
 	return node
@@ -339,6 +375,16 @@ func buildWorkflowWaitForNotification(ctx parser.IWorkflowWaitForNotificationStm
 		node.Caption = unquoteString(wnCtx.STRING_LITERAL().GetText())
 	}
 
+	return node
+}
+
+// buildWorkflowAnnotation builds a WorkflowAnnotationActivityNode from the grammar context.
+func buildWorkflowAnnotation(ctx parser.IWorkflowAnnotationStmtContext) *ast.WorkflowAnnotationActivityNode {
+	annCtx := ctx.(*parser.WorkflowAnnotationStmtContext)
+	node := &ast.WorkflowAnnotationActivityNode{}
+	if annCtx.STRING_LITERAL() != nil {
+		node.Text = unquoteString(annCtx.STRING_LITERAL().GetText())
+	}
 	return node
 }
 

@@ -201,6 +201,7 @@ func buildUserTask(n *ast.WorkflowUserTaskNode) *workflows.UserTask {
 	task.ID = model.ID(generateWorkflowUUID())
 	task.Name = n.Name
 	task.Caption = n.Caption
+	task.IsMulti = n.IsMultiUser
 
 	if n.Page.Module != "" {
 		task.Page = n.Page.Module + "." + n.Page.Name
@@ -241,6 +242,16 @@ func buildUserTask(n *ast.WorkflowUserTaskNode) *workflows.UserTask {
 		task.Outcomes = append(task.Outcomes, outcome)
 	}
 
+	// BoundaryEvents (Issue #7)
+	for _, be := range n.BoundaryEvents {
+		event := &workflows.BoundaryEvent{
+			EventType:  be.EventType,
+			TimerDelay: be.Delay,
+		}
+		event.ID = model.ID(generateWorkflowUUID())
+		task.BoundaryEvents = append(task.BoundaryEvents, event)
+	}
+
 	return task
 }
 
@@ -260,6 +271,14 @@ func buildCallMicroflowTask(n *ast.WorkflowCallMicroflowNode) *workflows.CallMic
 		if outcome != nil {
 			task.Outcomes = append(task.Outcomes, outcome)
 		}
+	}
+
+	// Parameter mappings (Issue #10)
+	for _, pm := range n.ParameterMappings {
+		task.ParameterMappings = append(task.ParameterMappings, &workflows.ParameterMapping{
+			Parameter:  pm.Parameter,
+			Expression: pm.Expression,
+		})
 	}
 
 	return task
