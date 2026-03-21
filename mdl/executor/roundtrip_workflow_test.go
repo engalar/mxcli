@@ -9,6 +9,169 @@ import (
 	"testing"
 )
 
+// TestRoundtripWorkflow_Comprehensive tests all workflow MDL syntax in a single roundtrip.
+//
+// Activity types covered:
+//   - ANNOTATION
+//   - USER TASK (PAGE, TARGETING MICROFLOW, DUE DATE, OUTCOMES with nested, BOUNDARY EVENT x2)
+//   - MULTI USER TASK (PAGE, TARGETING MICROFLOW, OUTCOMES)
+//   - CALL MICROFLOW (WITH params, OUTCOMES TRUE/FALSE)
+//   - DECISION (expression, OUTCOMES TRUE/FALSE with nested JUMP TO and WAIT FOR TIMER)
+//   - PARALLEL SPLIT (PATH 1 with USER TASK, PATH 2 with CALL WORKFLOW)
+//   - WAIT FOR TIMER (with ISO 8601 delay)
+//   - WAIT FOR NOTIFICATION (with BOUNDARY EVENT NON INTERRUPTING TIMER)
+//   - JUMP TO (inside DECISION outcome)
+//   - CALL WORKFLOW (sub-workflow with parameter expression)
+func TestRoundtripWorkflow_Comprehensive(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	mod := testModule
+
+	// --- Prerequisites ---
+
+	// Context entity for both workflows
+	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.WfCtxEntity (
+		Score: Integer,
+		IsApproved: Boolean DEFAULT false
+	);`); err != nil {
+		t.Fatalf("create WfCtxEntity: %v", err)
+	}
+
+	// Microflow: single-user targeting (returns User)
+	if err := env.executeMDL(`CREATE MICROFLOW ` + mod + `.GetSingleReviewer () RETURN String BEGIN END;`); err != nil {
+		t.Fatalf("create GetSingleReviewer: %v", err)
+	}
+
+	// Microflow: multi-user targeting (returns list of User)
+	if err := env.executeMDL(`CREATE MICROFLOW ` + mod + `.GetMultiReviewers () RETURN String BEGIN END;`); err != nil {
+		t.Fatalf("create GetMultiReviewers: %v", err)
+	}
+
+	// Microflow: called by CALL MICROFLOW (returns Boolean)
+	if err := env.executeMDL(`CREATE MICROFLOW ` + mod + `.ScoreCalc (Score: Integer) RETURN Boolean BEGIN RETURN true END;`); err != nil {
+		t.Fatalf("create ScoreCalc: %v", err)
+	}
+
+	// Sub-workflow for CALL WORKFLOW
+	if err := env.executeMDL(`CREATE WORKFLOW ` + mod + `.SubApprovalFlow
+  PARAMETER $WorkflowContext: ` + mod + `.WfCtxEntity
+BEGIN
+  USER TASK SubTask 'Sub-Approval'
+    PAGE ` + mod + `.SubPage
+    OUTCOMES 'Done' { };
+END WORKFLOW;`); err != nil {
+		t.Fatalf("create SubApprovalFlow: %v", err)
+	}
+
+	// --- Main comprehensive workflow ---
+	createMDL := `CREATE WORKFLOW ` + mod + `.ComprehensiveFlow
+  PARAMETER $WorkflowContext: ` + mod + `.WfCtxEntity
+  DUE DATE '${P30D}'
+BEGIN
+
+  ANNOTATION 'Comprehensive workflow covering all MDL syntax';
+
+  USER TASK ReviewTask 'Review Request'
+    PAGE ` + mod + `.ReviewPage
+    TARGETING MICROFLOW ` + mod + `.GetSingleReviewer
+    DUE DATE '${P7D}'
+    OUTCOMES
+      'Approve' { }
+      'Reject' { }
+    BOUNDARY EVENT INTERRUPTING TIMER '${PT24H}'
+    BOUNDARY EVENT NON INTERRUPTING TIMER '${PT1H}';
+
+  MULTI USER TASK MultiReviewTask 'Multi-Person Review'
+    PAGE ` + mod + `.MultiReviewPage
+    TARGETING MICROFLOW ` + mod + `.GetMultiReviewers
+    OUTCOMES 'Complete' { };
+
+  CALL MICROFLOW ` + mod + `.ScoreCalc
+    WITH (Score = '$WorkflowContext/Score')
+    OUTCOMES
+      TRUE -> { }
+      FALSE -> { };
+
+  DECISION '$WorkflowContext/IsApproved'
+    OUTCOMES
+      TRUE -> {
+        WAIT FOR TIMER '${PT2H}';
+      }
+      FALSE -> {
+        JUMP TO ReviewTask;
+      };
+
+  PARALLEL SPLIT
+    PATH 1 {
+      USER TASK FinalApprove 'Final Approval'
+        PAGE ` + mod + `.ApprovePage
+        OUTCOMES 'Approved' { };
+    }
+    PATH 2 {
+      CALL WORKFLOW ` + mod + `.SubApprovalFlow ($WorkflowContext = '$WorkflowContext');
+    };
+
+  WAIT FOR NOTIFICATION
+    BOUNDARY EVENT NON INTERRUPTING TIMER '${PT48H}';
+
+  ANNOTATION 'End of flow';
+
+END WORKFLOW;`
+
+	if err := env.executeMDL(createMDL); err != nil {
+		t.Fatalf("create ComprehensiveFlow: %v", err)
+	}
+
+	output, err := env.describeMDL(`DESCRIBE WORKFLOW ` + mod + `.ComprehensiveFlow;`)
+	if err != nil {
+		t.Fatalf("describe ComprehensiveFlow: %v", err)
+	}
+
+	t.Logf("DESCRIBE output:\n%s", output)
+
+	checks := []struct {
+		label   string
+		keyword string
+	}{
+		{"annotation activity", "ANNOTATION 'Comprehensive workflow"},
+		{"user task", "USER TASK ReviewTask"},
+		{"targeting microflow", "TARGETING MICROFLOW"},
+		{"due date on task", "DUE DATE '${P7D}'"},
+		{"outcome approve", "'Approve'"},
+		{"outcome reject", "'Reject'"},
+		{"boundary interrupting", "BOUNDARY EVENT INTERRUPTING TIMER '${PT24H}'"},
+		{"boundary non interrupting", "BOUNDARY EVENT NON INTERRUPTING TIMER '${PT1H}'"},
+		{"multi user task", "MULTI USER TASK MultiReviewTask"},
+		{"call microflow with", "CALL MICROFLOW " + mod + ".ScoreCalc WITH (Score ="},
+		{"outcomes true", "TRUE ->"},
+		{"outcomes false", "FALSE ->"},
+		{"decision", "DECISION '$WorkflowContext/IsApproved'"},
+		{"wait for timer", "WAIT FOR TIMER '${PT2H}'"},
+		{"jump to", "JUMP TO ReviewTask"},
+		{"parallel split", "PARALLEL SPLIT"},
+		{"path 1", "PATH 1"},
+		{"path 2", "PATH 2"},
+		{"call workflow", "CALL WORKFLOW " + mod + ".SubApprovalFlow"},
+		{"wait for notification", "WAIT FOR NOTIFICATION"},
+		{"boundary on notification", "BOUNDARY EVENT NON INTERRUPTING TIMER '${PT48H}'"},
+		{"trailing annotation", "ANNOTATION 'End of flow'"},
+		{"workflow due date", "DUE DATE '${P30D}'"},
+		{"parameter", "PARAMETER $WorkflowContext: " + mod + ".WfCtxEntity"},
+	}
+
+	var failed []string
+	for _, c := range checks {
+		if !strings.Contains(output, c.keyword) {
+			failed = append(failed, c.label+": "+c.keyword)
+		}
+	}
+	if len(failed) > 0 {
+		t.Errorf("DESCRIBE output missing %d expected keywords:\n  %s\n\nFull output:\n%s",
+			len(failed), strings.Join(failed, "\n  "), output)
+	}
+}
+
 func TestRoundtripWorkflow_BoundaryEventInterrupting(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
