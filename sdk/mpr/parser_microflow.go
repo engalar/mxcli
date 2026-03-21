@@ -245,37 +245,34 @@ func parseMicroflowObjectCollection(raw map[string]any) *microflows.MicroflowObj
 	return collection
 }
 
+// microflowObjectParsers maps Mendix $Type strings to their parser functions.
+// Adding support for a new type requires only one new entry here.
+// Initialized in init() to avoid initialization cycle (parseLoopedActivity → parseMicroflowObjectCollection → parseMicroflowObject).
+var microflowObjectParsers map[string]func(map[string]any) microflows.MicroflowObject
+
+func init() {
+	microflowObjectParsers = map[string]func(map[string]any) microflows.MicroflowObject{
+		"Microflows$StartEvent":       func(r map[string]any) microflows.MicroflowObject { return parseStartEvent(r) },
+		"Microflows$EndEvent":         func(r map[string]any) microflows.MicroflowObject { return parseEndEvent(r) },
+		"Microflows$ErrorEvent":       func(r map[string]any) microflows.MicroflowObject { return parseErrorEvent(r) },
+		"Microflows$ActionActivity":   func(r map[string]any) microflows.MicroflowObject { return parseActionActivity(r) },
+		"Microflows$ExclusiveSplit":   func(r map[string]any) microflows.MicroflowObject { return parseExclusiveSplit(r) },
+		"Microflows$ExclusiveMerge":   func(r map[string]any) microflows.MicroflowObject { return parseExclusiveMerge(r) },
+		"Microflows$InheritanceSplit": func(r map[string]any) microflows.MicroflowObject { return parseInheritanceSplit(r) },
+		"Microflows$LoopedActivity":   func(r map[string]any) microflows.MicroflowObject { return parseLoopedActivity(r) },
+		"Microflows$BreakEvent":       func(r map[string]any) microflows.MicroflowObject { return parseBreakEvent(r) },
+		"Microflows$ContinueEvent":    func(r map[string]any) microflows.MicroflowObject { return parseContinueEvent(r) },
+		"Microflows$Annotation":       func(r map[string]any) microflows.MicroflowObject { return parseMicroflowAnnotation(r) },
+	}
+}
+
 // parseMicroflowObject parses a single microflow object based on its $Type.
 func parseMicroflowObject(raw map[string]any) microflows.MicroflowObject {
 	typeName, _ := raw["$Type"].(string)
-
-	switch typeName {
-	case "Microflows$StartEvent":
-		return parseStartEvent(raw)
-	case "Microflows$EndEvent":
-		return parseEndEvent(raw)
-	case "Microflows$ErrorEvent":
-		return parseErrorEvent(raw)
-	case "Microflows$ActionActivity":
-		return parseActionActivity(raw)
-	case "Microflows$ExclusiveSplit":
-		return parseExclusiveSplit(raw)
-	case "Microflows$ExclusiveMerge":
-		return parseExclusiveMerge(raw)
-	case "Microflows$InheritanceSplit":
-		return parseInheritanceSplit(raw)
-	case "Microflows$LoopedActivity":
-		return parseLoopedActivity(raw)
-	case "Microflows$BreakEvent":
-		return parseBreakEvent(raw)
-	case "Microflows$ContinueEvent":
-		return parseContinueEvent(raw)
-	case "Microflows$Annotation":
-		return parseMicroflowAnnotation(raw)
-	default:
-		// Unknown type - return nil or a generic object
-		return nil
+	if fn, ok := microflowObjectParsers[typeName]; ok {
+		return fn(raw)
 	}
+	return newUnknownObject(typeName, raw)
 }
 
 func parseStartEvent(raw map[string]any) *microflows.StartEvent {
@@ -438,85 +435,68 @@ func parseActionActivity(raw map[string]any) *microflows.ActionActivity {
 	return activity
 }
 
+// microflowActionParsers maps Mendix $Type strings to their action parser functions.
+// Storage names (e.g. CreateChangeAction) and qualified names (e.g. CreateObjectAction)
+// both map to the same parser to handle BSON format variations.
+var microflowActionParsers = map[string]func(map[string]any) microflows.MicroflowAction{
+	// Variable actions
+	"Microflows$CreateVariableAction": func(r map[string]any) microflows.MicroflowAction { return parseCreateVariableAction(r) },
+	"Microflows$ChangeVariableAction": func(r map[string]any) microflows.MicroflowAction { return parseChangeVariableAction(r) },
+
+	// Object actions (storageName may differ from qualifiedName)
+	"Microflows$CreateObjectAction": func(r map[string]any) microflows.MicroflowAction { return parseCreateObjectAction(r) },
+	"Microflows$CreateChangeAction": func(r map[string]any) microflows.MicroflowAction { return parseCreateObjectAction(r) },
+	"Microflows$ChangeObjectAction": func(r map[string]any) microflows.MicroflowAction { return parseChangeObjectAction(r) },
+	"Microflows$ChangeAction":       func(r map[string]any) microflows.MicroflowAction { return parseChangeObjectAction(r) },
+	"Microflows$DeleteAction":       func(r map[string]any) microflows.MicroflowAction { return parseDeleteAction(r) },
+	"Microflows$CommitAction":       func(r map[string]any) microflows.MicroflowAction { return parseCommitAction(r) },
+	"Microflows$RollbackAction":     func(r map[string]any) microflows.MicroflowAction { return parseRollbackAction(r) },
+
+	// Retrieve actions
+	"Microflows$RetrieveAction":      func(r map[string]any) microflows.MicroflowAction { return parseRetrieveAction(r) },
+	"Microflows$AggregateListAction": func(r map[string]any) microflows.MicroflowAction { return parseAggregateListAction(r) },
+	"Microflows$AggregateAction":     func(r map[string]any) microflows.MicroflowAction { return parseAggregateListAction(r) },
+
+	// List actions
+	"Microflows$CreateListAction":     func(r map[string]any) microflows.MicroflowAction { return parseCreateListAction(r) },
+	"Microflows$ChangeListAction":     func(r map[string]any) microflows.MicroflowAction { return parseChangeListAction(r) },
+	"Microflows$ListOperationAction":  func(r map[string]any) microflows.MicroflowAction { return parseListOperationAction(r) },
+	"Microflows$ListOperationsAction": func(r map[string]any) microflows.MicroflowAction { return parseListOperationAction(r) },
+
+	// Integration actions
+	"Microflows$MicroflowCallAction":  func(r map[string]any) microflows.MicroflowAction { return parseMicroflowCallAction(r) },
+	"Microflows$JavaActionCallAction": func(r map[string]any) microflows.MicroflowAction { return parseJavaActionCallAction(r) },
+	"Microflows$CallExternalAction":   func(r map[string]any) microflows.MicroflowAction { return parseCallExternalAction(r) },
+
+	// Client actions (ShowFormAction is storageName for ShowPageAction)
+	"Microflows$ShowFormAction":           func(r map[string]any) microflows.MicroflowAction { return parseShowPageAction(r) },
+	"Microflows$ShowPageAction":           func(r map[string]any) microflows.MicroflowAction { return parseShowPageAction(r) },
+	"Microflows$ShowHomePageAction":       func(r map[string]any) microflows.MicroflowAction { return parseShowHomePageAction(r) },
+	"Microflows$CloseFormAction":          func(r map[string]any) microflows.MicroflowAction { return parseClosePageAction(r) },
+	"Microflows$ShowMessageAction":        func(r map[string]any) microflows.MicroflowAction { return parseShowMessageAction(r) },
+	"Microflows$ValidationFeedbackAction": func(r map[string]any) microflows.MicroflowAction { return parseValidationFeedbackAction(r) },
+	"Microflows$DownloadFileAction":       func(r map[string]any) microflows.MicroflowAction { return parseDownloadFileAction(r) },
+
+	// Log action
+	"Microflows$LogMessageAction": func(r map[string]any) microflows.MicroflowAction { return parseLogMessageAction(r) },
+
+	// Cast action
+	"Microflows$CastAction": func(r map[string]any) microflows.MicroflowAction { return parseCastAction(r) },
+
+	// REST call action
+	"Microflows$RestCallAction": func(r map[string]any) microflows.MicroflowAction { return parseRestCallAction(r) },
+
+	// Database Connector action
+	"DatabaseConnector$ExecuteDatabaseQueryAction": func(r map[string]any) microflows.MicroflowAction { return parseExecuteDatabaseQueryAction(r) },
+}
+
 // parseMicroflowAction parses a microflow action based on its $Type.
 func parseMicroflowAction(raw map[string]any) microflows.MicroflowAction {
 	typeName, _ := raw["$Type"].(string)
-
-	switch typeName {
-	// Variable actions
-	case "Microflows$CreateVariableAction":
-		return parseCreateVariableAction(raw)
-	case "Microflows$ChangeVariableAction":
-		return parseChangeVariableAction(raw)
-
-	// Object actions (storageName may differ from qualifiedName)
-	case "Microflows$CreateObjectAction", "Microflows$CreateChangeAction":
-		return parseCreateObjectAction(raw)
-	case "Microflows$ChangeObjectAction", "Microflows$ChangeAction":
-		return parseChangeObjectAction(raw)
-	case "Microflows$DeleteAction":
-		return parseDeleteAction(raw)
-	case "Microflows$CommitAction":
-		return parseCommitAction(raw)
-	case "Microflows$RollbackAction":
-		return parseRollbackAction(raw)
-
-	// Retrieve actions
-	case "Microflows$RetrieveAction":
-		return parseRetrieveAction(raw)
-	case "Microflows$AggregateListAction", "Microflows$AggregateAction": // AggregateAction is storageName
-		return parseAggregateListAction(raw)
-
-	// List actions
-	case "Microflows$CreateListAction":
-		return parseCreateListAction(raw)
-	case "Microflows$ChangeListAction":
-		return parseChangeListAction(raw)
-	case "Microflows$ListOperationAction", "Microflows$ListOperationsAction": // ListOperationsAction is storageName
-		return parseListOperationAction(raw)
-
-	// Integration actions
-	case "Microflows$MicroflowCallAction":
-		return parseMicroflowCallAction(raw)
-	case "Microflows$JavaActionCallAction":
-		return parseJavaActionCallAction(raw)
-	case "Microflows$CallExternalAction":
-		return parseCallExternalAction(raw)
-
-	// Client actions
-	case "Microflows$ShowFormAction", "Microflows$ShowPageAction": // ShowFormAction is storageName
-		return parseShowPageAction(raw)
-	case "Microflows$ShowHomePageAction":
-		return parseShowHomePageAction(raw)
-	case "Microflows$CloseFormAction":
-		return parseClosePageAction(raw)
-	case "Microflows$ShowMessageAction":
-		return parseShowMessageAction(raw)
-	case "Microflows$ValidationFeedbackAction":
-		return parseValidationFeedbackAction(raw)
-	case "Microflows$DownloadFileAction":
-		return parseDownloadFileAction(raw)
-
-	// Log action
-	case "Microflows$LogMessageAction":
-		return parseLogMessageAction(raw)
-
-	// Cast action
-	case "Microflows$CastAction":
-		return parseCastAction(raw)
-
-	// REST call action
-	case "Microflows$RestCallAction":
-		return parseRestCallAction(raw)
-
-	// Database Connector action
-	case "DatabaseConnector$ExecuteDatabaseQueryAction":
-		return parseExecuteDatabaseQueryAction(raw)
-
-	default:
-		// Return an unknown action placeholder with the type name
-		return &microflows.UnknownAction{TypeName: typeName}
+	if fn, ok := microflowActionParsers[typeName]; ok {
+		return fn(raw)
 	}
+	return &microflows.UnknownAction{TypeName: typeName}
 }
 
 func parseCreateVariableAction(raw map[string]any) *microflows.CreateVariableAction {

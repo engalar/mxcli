@@ -4,6 +4,7 @@ package mpr
 
 import (
 	"encoding/base64"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -147,4 +148,87 @@ func extractBsonSlice(v any) []any {
 		return []any(val)
 	}
 	return nil
+}
+
+// BsonArrayInfo holds the extracted items and the marker from a Mendix BSON array.
+type BsonArrayInfo struct {
+	Marker int32
+	Items  []any
+}
+
+// extractBsonArrayWithMarker extracts items from a Mendix BSON array, preserving the marker.
+// Returns the marker (2 or 3) and the items after the marker.
+func extractBsonArrayWithMarker(v any) BsonArrayInfo {
+	if v == nil {
+		return BsonArrayInfo{}
+	}
+
+	var slice []any
+	switch val := v.(type) {
+	case primitive.A:
+		slice = []any(val)
+	case []any:
+		slice = val
+	default:
+		return BsonArrayInfo{}
+	}
+
+	if len(slice) > 0 {
+		if marker, ok := slice[0].(int32); ok && (marker == 2 || marker == 3) {
+			return BsonArrayInfo{Marker: marker, Items: slice[1:]}
+		}
+	}
+	return BsonArrayInfo{Items: slice}
+}
+
+// inferPropertyKind determines whether a BSON field value represents a primitive,
+// a by-name reference, or a part (embedded object). This is used by the generic
+// unknown-element parser to preserve raw fields with semantic context.
+func inferPropertyKind(key string, v any) string {
+	if v == nil {
+		return "primitive"
+	}
+
+	switch val := v.(type) {
+	case map[string]any:
+		if _, hasType := val["$Type"]; hasType {
+			return "part"
+		}
+		if _, hasID := val["$ID"]; hasID {
+			return "part"
+		}
+		return "primitive"
+
+	case primitive.D:
+		m := val.Map()
+		if _, hasType := m["$Type"]; hasType {
+			return "part"
+		}
+		if _, hasID := m["$ID"]; hasID {
+			return "part"
+		}
+		return "primitive"
+
+	case primitive.M:
+		if _, hasType := val["$Type"]; hasType {
+			return "part"
+		}
+		if _, hasID := val["$ID"]; hasID {
+			return "part"
+		}
+		return "primitive"
+
+	case primitive.A, []any:
+		return "collection"
+
+	case string:
+		// Heuristic: qualified names like "Module.Entity" are likely by-name references
+		if strings.Contains(val, ".") && !strings.Contains(val, " ") && !strings.Contains(val, "/") {
+			return "by-name-reference"
+		}
+		return "primitive"
+
+	default:
+		return "primitive"
+	}
 }

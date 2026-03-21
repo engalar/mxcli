@@ -714,3 +714,30 @@ type DistributionSettings struct {
 	IsDistributable bool   `json:"isDistributable"`
 	Version         string `json:"version,omitempty"`
 }
+
+// UnknownElement is a generic fallback for BSON elements with unrecognized $Type values.
+// It preserves all raw BSON fields so developers can diagnose unimplemented types
+// without silent data loss.
+type UnknownElement struct {
+	BaseElement
+	Position  Point          `json:"position,omitempty"`
+	Name      string         `json:"name,omitempty"`
+	Caption   string         `json:"caption,omitempty"`
+	RawFields map[string]any `json:"-"`
+}
+
+// GetPosition returns the element's position (satisfies microflows.MicroflowObject).
+func (u *UnknownElement) GetPosition() Point { return u.Position }
+
+// SetPosition sets the element's position (satisfies microflows.MicroflowObject).
+func (u *UnknownElement) SetPosition(p Point) { u.Position = p }
+
+// GetName returns the element's name (satisfies workflows.WorkflowActivity).
+func (u *UnknownElement) GetName() string { return u.Name }
+
+// GetCaption returns the element's caption (satisfies workflows.WorkflowActivity).
+func (u *UnknownElement) GetCaption() string { return u.Caption }
+
+// ActivityType returns the type name (satisfies workflows.WorkflowActivity).
+func (u *UnknownElement) ActivityType() string { return u.TypeName }
+
