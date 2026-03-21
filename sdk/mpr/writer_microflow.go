@@ -457,15 +457,21 @@ func serializeMicroflowObject(obj microflows.MicroflowObject) bson.D {
 			{Key: "$Type", Value: "Microflows$LoopedActivity"},
 			{Key: "ErrorHandlingType", Value: string(o.ErrorHandlingType)},
 		}
-		// Serialize LoopSource (IterableList)
-		if o.LoopSource != nil {
-			loopSource := bson.D{
-				{Key: "$ID", Value: idToBsonBinary(string(o.LoopSource.ID))},
+		// Serialize LoopSource (IterableList or WhileLoopCondition)
+		switch ls := o.LoopSource.(type) {
+		case *microflows.IterableList:
+			doc = append(doc, bson.E{Key: "LoopSource", Value: bson.D{
+				{Key: "$ID", Value: idToBsonBinary(string(ls.ID))},
 				{Key: "$Type", Value: "Microflows$IterableList"},
-				{Key: "ListVariableName", Value: o.LoopSource.ListVariableName},
-				{Key: "VariableName", Value: o.LoopSource.VariableName},
-			}
-			doc = append(doc, bson.E{Key: "LoopSource", Value: loopSource})
+				{Key: "ListVariableName", Value: ls.ListVariableName},
+				{Key: "VariableName", Value: ls.VariableName},
+			}})
+		case *microflows.WhileLoopCondition:
+			doc = append(doc, bson.E{Key: "LoopSource", Value: bson.D{
+				{Key: "$ID", Value: idToBsonBinary(string(ls.ID))},
+				{Key: "$Type", Value: "Microflows$WhileLoopCondition"},
+				{Key: "WhileExpression", Value: ls.WhileExpression},
+			}})
 		}
 		// Serialize nested ObjectCollection
 		if o.ObjectCollection != nil {

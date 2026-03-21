@@ -202,6 +202,15 @@ type LoopStmt struct {
 
 func (s *LoopStmt) isMicroflowStatement() {}
 
+// WhileStmt represents: WHILE expr BEGIN body END WHILE
+type WhileStmt struct {
+	Condition   Expression           // WHILE condition expression
+	Body        []MicroflowStatement // Loop body
+	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *WhileStmt) isMicroflowStatement() {}
+
 // LogLevel represents the severity level for LOG statements.
 type LogLevel int
 

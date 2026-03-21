@@ -303,3 +303,69 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 
 	return loop.ID
 }
+
+// addWhileStatement creates a WHILE loop using LoopedActivity with WhileLoopCondition.
+// Layout matches addLoopStatement but without iterator icon space.
+func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
+	bodyBounds := fb.measurer.measureStatements(s.Body)
+
+	loopWidth := max(bodyBounds.Width+2*LoopPadding, MinLoopWidth)
+	loopHeight := max(bodyBounds.Height+2*LoopPadding, MinLoopHeight)
+
+	innerStartX := LoopPadding
+	innerStartY := LoopPadding + ActivityHeight/2
+
+	loopBuilder := &flowBuilder{
+		posX:         innerStartX,
+		posY:         innerStartY,
+		baseY:        innerStartY,
+		spacing:      HorizontalSpacing,
+		varTypes:     fb.varTypes,
+		declaredVars: fb.declaredVars,
+		measurer:     fb.measurer,
+		reader:       fb.reader,
+		hierarchy:    fb.hierarchy,
+	}
+
+	var lastBodyID model.ID
+	for _, stmt := range s.Body {
+		actID := loopBuilder.addStatement(stmt)
+		if actID != "" {
+			if lastBodyID != "" {
+				loopBuilder.flows = append(loopBuilder.flows, newHorizontalFlow(lastBodyID, actID))
+			}
+			if loopBuilder.nextConnectionPoint != "" {
+				lastBodyID = loopBuilder.nextConnectionPoint
+				loopBuilder.nextConnectionPoint = ""
+			} else {
+				lastBodyID = actID
+			}
+		}
+	}
+
+	whileExpr := expressionToString(s.Condition)
+
+	loop := &microflows.LoopedActivity{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			Position:    model.Point{X: fb.posX + loopWidth/2, Y: fb.posY},
+			Size:        model.Size{Width: loopWidth, Height: loopHeight},
+		},
+		LoopSource: &microflows.WhileLoopCondition{
+			BaseElement:     model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			WhileExpression: whileExpr,
+		},
+		ObjectCollection: &microflows.MicroflowObjectCollection{
+			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			Objects:     loopBuilder.objects,
+			Flows:       nil,
+		},
+		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+	}
+
+	fb.objects = append(fb.objects, loop)
+	fb.flows = append(fb.flows, loopBuilder.flows...)
+	fb.posX += loopWidth + HorizontalSpacing
+
+	return loop.ID
+}

@@ -303,22 +303,37 @@ type RuleCallParameterMapping struct {
 	Argument    string   `json:"argument"`
 }
 
-// LoopedActivity represents a loop construct.
+// LoopSource is the source for a LoopedActivity. Either IterableList (FOR EACH) or WhileLoopCondition (WHILE).
+type LoopSource interface {
+	isLoopSource()
+}
+
+// LoopedActivity represents a loop construct (FOR EACH or WHILE).
 type LoopedActivity struct {
 	BaseMicroflowObject
 	Caption           string                     `json:"caption,omitempty"`
 	Documentation     string                     `json:"documentation,omitempty"`
-	LoopSource        *IterableList              `json:"loopSource,omitempty"`
+	LoopSource        LoopSource                 `json:"loopSource,omitempty"`
 	ObjectCollection  *MicroflowObjectCollection `json:"objectCollection,omitempty"`
 	ErrorHandlingType ErrorHandlingType          `json:"errorHandlingType,omitempty"`
 }
 
-// IterableList represents the source for a loop iteration.
+// IterableList represents the source for a FOR EACH loop iteration.
 type IterableList struct {
 	model.BaseElement
 	ListVariableName string `json:"listVariableName"` // The list to iterate over
 	VariableName     string `json:"variableName"`     // The iterator variable name
 }
+
+func (*IterableList) isLoopSource() {}
+
+// WhileLoopCondition represents the source for a WHILE loop.
+type WhileLoopCondition struct {
+	model.BaseElement
+	WhileExpression string `json:"whileExpression"` // The condition expression
+}
+
+func (*WhileLoopCondition) isLoopSource() {}
 
 // ErrorHandlingType represents how errors are handled.
 type ErrorHandlingType string

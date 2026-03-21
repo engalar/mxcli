@@ -353,12 +353,21 @@ func parseLoopedActivity(raw map[string]any) *microflows.LoopedActivity {
 	loop.Caption = extractString(raw["Caption"])
 	loop.Documentation = extractString(raw["Documentation"])
 
-	// Parse LoopSource (IterableList)
+	// Parse LoopSource (IterableList or WhileLoopCondition)
 	if loopSourceMap := extractBsonMap(raw["LoopSource"]); loopSourceMap != nil {
-		loop.LoopSource = &microflows.IterableList{
-			BaseElement:      model.BaseElement{ID: model.ID(extractBsonID(loopSourceMap["$ID"]))},
-			ListVariableName: extractString(loopSourceMap["ListVariableName"]),
-			VariableName:     extractString(loopSourceMap["VariableName"]),
+		typeName := extractString(loopSourceMap["$Type"])
+		switch typeName {
+		case "Microflows$WhileLoopCondition":
+			loop.LoopSource = &microflows.WhileLoopCondition{
+				BaseElement:     model.BaseElement{ID: model.ID(extractBsonID(loopSourceMap["$ID"]))},
+				WhileExpression: extractString(loopSourceMap["WhileExpression"]),
+			}
+		default: // Microflows$IterableList
+			loop.LoopSource = &microflows.IterableList{
+				BaseElement:      model.BaseElement{ID: model.ID(extractBsonID(loopSourceMap["$ID"]))},
+				ListVariableName: extractString(loopSourceMap["ListVariableName"]),
+				VariableName:     extractString(loopSourceMap["VariableName"]),
+			}
 		}
 	}
 

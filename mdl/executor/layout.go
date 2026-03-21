@@ -75,6 +75,8 @@ func (m *layoutMeasurer) measureStatement(stmt ast.MicroflowStatement) Bounds {
 		return m.measureIfStatement(s)
 	case *ast.LoopStmt:
 		return m.measureLoopStatement(s)
+	case *ast.WhileStmt:
+		return m.measureWhileStatement(s)
 	case *ast.ReturnStmt:
 		// Return doesn't add visual element (handled by EndEvent)
 		return Bounds{Width: 0, Height: 0}
@@ -130,6 +132,14 @@ func (m *layoutMeasurer) measureLoopStatement(s *ast.LoopStmt) Bounds {
 	width := max(bodyBounds.Width+2*LoopPadding, MinLoopWidth)
 	height := max(bodyBounds.Height+2*LoopPadding, MinLoopHeight)
 
+	return Bounds{Width: width, Height: height}
+}
+
+// measureWhileStatement calculates bounds for WHILE
+func (m *layoutMeasurer) measureWhileStatement(s *ast.WhileStmt) Bounds {
+	bodyBounds := m.measureStatements(s.Body)
+	width := max(bodyBounds.Width+2*LoopPadding, MinLoopWidth)
+	height := max(bodyBounds.Height+2*LoopPadding, MinLoopHeight)
 	return Bounds{Width: width, Height: height}
 }
 

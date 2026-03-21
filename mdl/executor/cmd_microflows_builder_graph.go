@@ -135,6 +135,8 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		return fb.addIfStatement(s)
 	case *ast.LoopStmt:
 		return fb.addLoopStatement(s)
+	case *ast.WhileStmt:
+		return fb.addWhileStatement(s)
 	case *ast.ListOperationStmt:
 		return fb.addListOperationAction(s)
 	case *ast.AggregateListStmt:

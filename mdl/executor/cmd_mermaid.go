@@ -576,13 +576,16 @@ func mermaidActivityDetails(obj microflows.MicroflowObject, entityNames map[mode
 		return lines
 	case *microflows.LoopedActivity:
 		var lines []string
-		if a.LoopSource != nil {
-			if a.LoopSource.ListVariableName != "" {
-				lines = append(lines, "List: $"+a.LoopSource.ListVariableName)
+		switch ls := a.LoopSource.(type) {
+		case *microflows.IterableList:
+			if ls.ListVariableName != "" {
+				lines = append(lines, "List: $"+ls.ListVariableName)
 			}
-			if a.LoopSource.VariableName != "" {
-				lines = append(lines, "Iterator: $"+a.LoopSource.VariableName)
+			if ls.VariableName != "" {
+				lines = append(lines, "Iterator: $"+ls.VariableName)
 			}
+		case *microflows.WhileLoopCondition:
+			lines = append(lines, "While: "+ls.WhileExpression)
 		}
 		return lines
 	case *microflows.EndEvent:

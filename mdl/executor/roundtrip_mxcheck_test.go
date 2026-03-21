@@ -843,3 +843,48 @@ END;`
 		t.Logf("mx check passed:\n%s", output)
 	}
 }
+
+// TestMxCheck_WhileLoop creates a microflow with a WHILE loop and verifies
+// mx check passes. Regression test for WHILE loop support.
+func TestMxCheck_WhileLoop(t *testing.T) {
+	if !mxCheckAvailable() {
+		t.Skip("mx command not available")
+	}
+
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	mod := testModule
+
+	mfName := mod + ".MxCheck_WhileLoop"
+	env.registerCleanup("microflow", mfName)
+
+	createMDL := `CREATE MICROFLOW ` + mfName + ` ($N: Integer) RETURNS Integer
+BEGIN
+  DECLARE $Counter Integer = 0;
+  DECLARE $Sum Integer = 0;
+  WHILE $Counter < $N
+  BEGIN
+    SET $Counter = $Counter + 1;
+    SET $Sum = $Sum + $Counter;
+  END WHILE;
+  RETURN $Sum;
+END;`
+
+	if err := env.executeMDL(createMDL); err != nil {
+		t.Fatalf("Failed to create microflow with WHILE loop: %v", err)
+	}
+
+	env.executor.Execute(&ast.DisconnectStmt{})
+
+	output, err := runMxCheck(t, env.projectPath)
+	if err != nil {
+		if strings.Contains(output, "error") || strings.Contains(output, "Error") {
+			t.Errorf("mx check found errors:\n%s", output)
+		} else {
+			t.Logf("mx check output:\n%s", output)
+		}
+	} else {
+		t.Logf("mx check passed:\n%s", output)
+	}
+}

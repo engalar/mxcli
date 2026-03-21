@@ -63,6 +63,8 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 		stmt = buildIfStatement(ifStmt)
 	} else if loop := mfCtx.LoopStatement(); loop != nil {
 		stmt = buildLoopStatement(loop)
+	} else if ws := mfCtx.WhileStatement(); ws != nil {
+		stmt = buildWhileStatement(ws)
 	} else if ret := mfCtx.ReturnStatement(); ret != nil {
 		stmt = buildReturnStatement(ret)
 	} else if mfCtx.RaiseErrorStatement() != nil {
@@ -240,6 +242,8 @@ func setStatementAnnotations(stmt ast.MicroflowStatement, ann *ast.ActivityAnnot
 	case *ast.IfStmt:
 		s.Annotations = ann
 	case *ast.LoopStmt:
+		s.Annotations = ann
+	case *ast.WhileStmt:
 		s.Annotations = ann
 	case *ast.LogStmt:
 		s.Annotations = ann
@@ -841,6 +845,28 @@ func buildLoopStatement(ctx parser.ILoopStatementContext) *ast.LoopStmt {
 
 	// Get body
 	if body := loopCtx.MicroflowBody(); body != nil {
+		stmt.Body = buildMicroflowBody(body)
+	}
+
+	return stmt
+}
+
+// buildWhileStatement converts WHILE statement context to WhileStmt.
+func buildWhileStatement(ctx parser.IWhileStatementContext) *ast.WhileStmt {
+	if ctx == nil {
+		return nil
+	}
+	wsCtx := ctx.(*parser.WhileStatementContext)
+
+	stmt := &ast.WhileStmt{}
+
+	// Get condition expression
+	if expr := wsCtx.Expression(); expr != nil {
+		stmt.Condition = buildExpression(expr)
+	}
+
+	// Get body
+	if body := wsCtx.MicroflowBody(); body != nil {
 		stmt.Body = buildMicroflowBody(body)
 	}
 

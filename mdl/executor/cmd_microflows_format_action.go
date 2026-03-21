@@ -47,17 +47,22 @@ func (e *Executor) formatActivity(
 		return "END IF;"
 
 	case *microflows.LoopedActivity:
-		iterVar := "Item"
-		listVar := "List"
-		if activity.LoopSource != nil {
-			if activity.LoopSource.VariableName != "" {
-				iterVar = activity.LoopSource.VariableName
+		switch ls := activity.LoopSource.(type) {
+		case *microflows.WhileLoopCondition:
+			return fmt.Sprintf("WHILE %s", ls.WhileExpression)
+		case *microflows.IterableList:
+			iterVar := "Item"
+			listVar := "List"
+			if ls.VariableName != "" {
+				iterVar = ls.VariableName
 			}
-			if activity.LoopSource.ListVariableName != "" {
-				listVar = activity.LoopSource.ListVariableName
+			if ls.ListVariableName != "" {
+				listVar = ls.ListVariableName
 			}
+			return fmt.Sprintf("LOOP $%s IN $%s", iterVar, listVar)
+		default:
+			return "LOOP $Item IN $List"
 		}
-		return fmt.Sprintf("LOOP $%s IN $%s", iterVar, listVar)
 
 	case *microflows.BreakEvent:
 		return "BREAK;"
