@@ -2229,6 +2229,7 @@ workflowActivityStmt
     | workflowJumpToStmt SEMICOLON
     | workflowWaitForTimerStmt SEMICOLON
     | workflowWaitForNotificationStmt SEMICOLON
+    | workflowAnnotationStmt SEMICOLON
     ;
 
 workflowUserTaskStmt
@@ -2238,6 +2239,20 @@ workflowUserTaskStmt
       (TARGETING XPATH STRING_LITERAL)?
       (ENTITY qualifiedName)?
       (OUTCOMES workflowUserTaskOutcome+)?
+      (BOUNDARY EVENT workflowBoundaryEventClause+)?
+    | MULTI USER TASK IDENTIFIER STRING_LITERAL
+      (PAGE qualifiedName)?
+      (TARGETING MICROFLOW qualifiedName)?
+      (TARGETING XPATH STRING_LITERAL)?
+      (ENTITY qualifiedName)?
+      (OUTCOMES workflowUserTaskOutcome+)?
+      (BOUNDARY EVENT workflowBoundaryEventClause+)?
+    ;
+
+workflowBoundaryEventClause
+    : INTERRUPTING TIMER STRING_LITERAL?
+    | NON INTERRUPTING TIMER STRING_LITERAL?
+    | TIMER STRING_LITERAL?
     ;
 
 workflowUserTaskOutcome
@@ -2246,7 +2261,12 @@ workflowUserTaskOutcome
 
 workflowCallMicroflowStmt
     : CALL MICROFLOW qualifiedName (COMMENT STRING_LITERAL)?
+      (WITH LPAREN workflowParameterMapping (COMMA workflowParameterMapping)* RPAREN)?
       (OUTCOMES workflowConditionOutcome+)?
+    ;
+
+workflowParameterMapping
+    : IDENTIFIER EQUALS STRING_LITERAL
     ;
 
 workflowCallWorkflowStmt
@@ -2281,6 +2301,10 @@ workflowWaitForTimerStmt
 
 workflowWaitForNotificationStmt
     : WAIT FOR NOTIFICATION (COMMENT STRING_LITERAL)?
+    ;
+
+workflowAnnotationStmt
+    : ANNOTATION STRING_LITERAL
     ;
 
 // workflowEndStmt removed - END activities are implicit and conflict with END WORKFLOW

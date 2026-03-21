@@ -189,6 +189,8 @@ func buildWorkflowActivity(node ast.WorkflowActivityNode) workflows.WorkflowActi
 		return buildWaitForNotification(n)
 	case *ast.WorkflowEndNode:
 		return buildEndWorkflow(n)
+	case *ast.WorkflowAnnotationActivityNode:
+		return buildAnnotationActivity(n)
 	default:
 		return nil
 	}
@@ -492,6 +494,13 @@ func uniqueName(name string, nameCount map[string]int) string {
 		return name
 	}
 	return fmt.Sprintf("%s%d", name, count)
+}
+
+func buildAnnotationActivity(n *ast.WorkflowAnnotationActivityNode) *workflows.WorkflowAnnotationActivity {
+	a := &workflows.WorkflowAnnotationActivity{}
+	a.ID = model.ID(mpr.GenerateID())
+	a.Description = n.Text
+	return a
 }
 
 // sanitizeActivityName converts a display caption to a valid Mendix identifier.

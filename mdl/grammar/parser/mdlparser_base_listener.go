@@ -1584,6 +1584,14 @@ func (s *BaseMDLParserListener) EnterWorkflowUserTaskStmt(ctx *WorkflowUserTaskS
 // ExitWorkflowUserTaskStmt is called when production workflowUserTaskStmt is exited.
 func (s *BaseMDLParserListener) ExitWorkflowUserTaskStmt(ctx *WorkflowUserTaskStmtContext) {}
 
+// EnterWorkflowBoundaryEventClause is called when production workflowBoundaryEventClause is entered.
+func (s *BaseMDLParserListener) EnterWorkflowBoundaryEventClause(ctx *WorkflowBoundaryEventClauseContext) {
+}
+
+// ExitWorkflowBoundaryEventClause is called when production workflowBoundaryEventClause is exited.
+func (s *BaseMDLParserListener) ExitWorkflowBoundaryEventClause(ctx *WorkflowBoundaryEventClauseContext) {
+}
+
 // EnterWorkflowUserTaskOutcome is called when production workflowUserTaskOutcome is entered.
 func (s *BaseMDLParserListener) EnterWorkflowUserTaskOutcome(ctx *WorkflowUserTaskOutcomeContext) {}
 
@@ -1597,6 +1605,12 @@ func (s *BaseMDLParserListener) EnterWorkflowCallMicroflowStmt(ctx *WorkflowCall
 // ExitWorkflowCallMicroflowStmt is called when production workflowCallMicroflowStmt is exited.
 func (s *BaseMDLParserListener) ExitWorkflowCallMicroflowStmt(ctx *WorkflowCallMicroflowStmtContext) {
 }
+
+// EnterWorkflowParameterMapping is called when production workflowParameterMapping is entered.
+func (s *BaseMDLParserListener) EnterWorkflowParameterMapping(ctx *WorkflowParameterMappingContext) {}
+
+// ExitWorkflowParameterMapping is called when production workflowParameterMapping is exited.
+func (s *BaseMDLParserListener) ExitWorkflowParameterMapping(ctx *WorkflowParameterMappingContext) {}
 
 // EnterWorkflowCallWorkflowStmt is called when production workflowCallWorkflowStmt is entered.
 func (s *BaseMDLParserListener) EnterWorkflowCallWorkflowStmt(ctx *WorkflowCallWorkflowStmtContext) {}
@@ -1649,6 +1663,12 @@ func (s *BaseMDLParserListener) EnterWorkflowWaitForNotificationStmt(ctx *Workfl
 // ExitWorkflowWaitForNotificationStmt is called when production workflowWaitForNotificationStmt is exited.
 func (s *BaseMDLParserListener) ExitWorkflowWaitForNotificationStmt(ctx *WorkflowWaitForNotificationStmtContext) {
 }
+
+// EnterWorkflowAnnotationStmt is called when production workflowAnnotationStmt is entered.
+func (s *BaseMDLParserListener) EnterWorkflowAnnotationStmt(ctx *WorkflowAnnotationStmtContext) {}
+
+// ExitWorkflowAnnotationStmt is called when production workflowAnnotationStmt is exited.
+func (s *BaseMDLParserListener) ExitWorkflowAnnotationStmt(ctx *WorkflowAnnotationStmtContext) {}
 
 // EnterAlterSettingsClause is called when production alterSettingsClause is entered.
 func (s *BaseMDLParserListener) EnterAlterSettingsClause(ctx *AlterSettingsClauseContext) {}

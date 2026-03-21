@@ -36,12 +36,14 @@ type WorkflowActivityNode interface {
 
 // WorkflowUserTaskNode represents a USER TASK activity.
 type WorkflowUserTaskNode struct {
-	Name       string // identifier name
-	Caption    string // display caption
-	Page       QualifiedName
-	Targeting  WorkflowTargetingNode
-	Entity     QualifiedName // user task entity
-	Outcomes   []WorkflowUserTaskOutcomeNode
+	Name           string // identifier name
+	Caption        string // display caption
+	Page           QualifiedName
+	Targeting      WorkflowTargetingNode
+	Entity         QualifiedName // user task entity
+	Outcomes       []WorkflowUserTaskOutcomeNode
+	IsMultiUser    bool                        // Issue #8: true if MULTI USER TASK
+	BoundaryEvents []WorkflowBoundaryEventNode // Issue #7
 }
 
 func (n *WorkflowUserTaskNode) workflowActivityNode() {}
@@ -61,9 +63,10 @@ type WorkflowUserTaskOutcomeNode struct {
 
 // WorkflowCallMicroflowNode represents a CALL MICROFLOW activity.
 type WorkflowCallMicroflowNode struct {
-	Microflow QualifiedName
-	Caption   string
-	Outcomes  []WorkflowConditionOutcomeNode
+	Microflow         QualifiedName
+	Caption           string
+	Outcomes          []WorkflowConditionOutcomeNode
+	ParameterMappings []WorkflowParameterMappingNode // Issue #10
 }
 
 func (n *WorkflowCallMicroflowNode) workflowActivityNode() {}
@@ -134,3 +137,25 @@ type WorkflowEndNode struct {
 }
 
 func (n *WorkflowEndNode) workflowActivityNode() {}
+
+// WorkflowBoundaryEventNode represents a BOUNDARY EVENT clause on a user task.
+// Issue #7
+type WorkflowBoundaryEventNode struct {
+	EventType string // "InterruptingTimer", "NonInterruptingTimer", "Timer"
+	Delay     string // ISO duration expression e.g. "${PT1H}"
+}
+
+// WorkflowAnnotationActivityNode represents an ANNOTATION activity in a workflow.
+// Issue #9
+type WorkflowAnnotationActivityNode struct {
+	Text string
+}
+
+func (n *WorkflowAnnotationActivityNode) workflowActivityNode() {}
+
+// WorkflowParameterMappingNode represents a parameter mapping in a CALL MICROFLOW WITH clause.
+// Issue #10
+type WorkflowParameterMappingNode struct {
+	Parameter  string // parameter name (by-name reference)
+	Expression string // Mendix expression string
+}

@@ -763,11 +763,17 @@ type MDLParserListener interface {
 	// EnterWorkflowUserTaskStmt is called when entering the workflowUserTaskStmt production.
 	EnterWorkflowUserTaskStmt(c *WorkflowUserTaskStmtContext)
 
+	// EnterWorkflowBoundaryEventClause is called when entering the workflowBoundaryEventClause production.
+	EnterWorkflowBoundaryEventClause(c *WorkflowBoundaryEventClauseContext)
+
 	// EnterWorkflowUserTaskOutcome is called when entering the workflowUserTaskOutcome production.
 	EnterWorkflowUserTaskOutcome(c *WorkflowUserTaskOutcomeContext)
 
 	// EnterWorkflowCallMicroflowStmt is called when entering the workflowCallMicroflowStmt production.
 	EnterWorkflowCallMicroflowStmt(c *WorkflowCallMicroflowStmtContext)
+
+	// EnterWorkflowParameterMapping is called when entering the workflowParameterMapping production.
+	EnterWorkflowParameterMapping(c *WorkflowParameterMappingContext)
 
 	// EnterWorkflowCallWorkflowStmt is called when entering the workflowCallWorkflowStmt production.
 	EnterWorkflowCallWorkflowStmt(c *WorkflowCallWorkflowStmtContext)
@@ -792,6 +798,9 @@ type MDLParserListener interface {
 
 	// EnterWorkflowWaitForNotificationStmt is called when entering the workflowWaitForNotificationStmt production.
 	EnterWorkflowWaitForNotificationStmt(c *WorkflowWaitForNotificationStmtContext)
+
+	// EnterWorkflowAnnotationStmt is called when entering the workflowAnnotationStmt production.
+	EnterWorkflowAnnotationStmt(c *WorkflowAnnotationStmtContext)
 
 	// EnterAlterSettingsClause is called when entering the alterSettingsClause production.
 	EnterAlterSettingsClause(c *AlterSettingsClauseContext)
@@ -1840,11 +1849,17 @@ type MDLParserListener interface {
 	// ExitWorkflowUserTaskStmt is called when exiting the workflowUserTaskStmt production.
 	ExitWorkflowUserTaskStmt(c *WorkflowUserTaskStmtContext)
 
+	// ExitWorkflowBoundaryEventClause is called when exiting the workflowBoundaryEventClause production.
+	ExitWorkflowBoundaryEventClause(c *WorkflowBoundaryEventClauseContext)
+
 	// ExitWorkflowUserTaskOutcome is called when exiting the workflowUserTaskOutcome production.
 	ExitWorkflowUserTaskOutcome(c *WorkflowUserTaskOutcomeContext)
 
 	// ExitWorkflowCallMicroflowStmt is called when exiting the workflowCallMicroflowStmt production.
 	ExitWorkflowCallMicroflowStmt(c *WorkflowCallMicroflowStmtContext)
+
+	// ExitWorkflowParameterMapping is called when exiting the workflowParameterMapping production.
+	ExitWorkflowParameterMapping(c *WorkflowParameterMappingContext)
 
 	// ExitWorkflowCallWorkflowStmt is called when exiting the workflowCallWorkflowStmt production.
 	ExitWorkflowCallWorkflowStmt(c *WorkflowCallWorkflowStmtContext)
@@ -1869,6 +1884,9 @@ type MDLParserListener interface {
 
 	// ExitWorkflowWaitForNotificationStmt is called when exiting the workflowWaitForNotificationStmt production.
 	ExitWorkflowWaitForNotificationStmt(c *WorkflowWaitForNotificationStmtContext)
+
+	// ExitWorkflowAnnotationStmt is called when exiting the workflowAnnotationStmt production.
+	ExitWorkflowAnnotationStmt(c *WorkflowAnnotationStmtContext)
 
 	// ExitAlterSettingsClause is called when exiting the alterSettingsClause production.
 	ExitAlterSettingsClause(c *AlterSettingsClauseContext)
