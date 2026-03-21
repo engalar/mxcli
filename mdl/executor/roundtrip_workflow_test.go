@@ -138,8 +138,8 @@ END WORKFLOW;`
 		{"boundary non interrupting", "BOUNDARY EVENT NON INTERRUPTING TIMER '${PT1H}'"},
 		{"multi user task", "MULTI USER TASK MultiReviewTask"},
 		{"call microflow with", "CALL MICROFLOW " + mod + ".ScoreCalc WITH (Score ="},
-		{"outcomes true", "True ->"},
-		{"outcomes false", "False ->"},
+		{"outcomes true", "TRUE ->"},
+		{"outcomes false", "FALSE ->"},
 		{"decision", "DECISION '$WorkflowContext/IsApproved'"},
 		{"wait for timer", "WAIT FOR TIMER '${PT2H}'"},
 		{"jump to", "JUMP TO ReviewTask"},
@@ -302,7 +302,7 @@ END WORKFLOW;`
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
-	if err := env.executeMDL(`CREATE MICROFLOW ` + testModule + `.SomeMicroflow (Amount: Decimal) RETURN Boolean BEGIN END;`); err != nil {
+	if err := env.executeMDL(`CREATE MICROFLOW ` + testModule + `.SomeMicroflow (Amount: Decimal) RETURNS Boolean BEGIN END;`); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
 	}
 
