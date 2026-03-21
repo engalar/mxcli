@@ -169,9 +169,6 @@ SHOW SECURITY MATRIX IN SecTest;
 -- Level 1.7: Describe Security Elements
 -- ============================================================================
 
--- Describe a specific module role (shows DDL + which user roles include it)
-DESCRIBE MODULE ROLE SecTest.User;
-
 -- Describe a specific user role (shows DDL + module roles)
 DESCRIBE USER ROLE 'Administrator';
 
@@ -196,6 +193,9 @@ DESCRIBE DEMO USER 'sectest_user';
  */
 CREATE MODULE ROLE SecTest.User;
 /
+
+-- Describe a specific module role (shows DDL + which user roles include it)
+DESCRIBE MODULE ROLE SecTest.User;
 
 -- ============================================================================
 -- Level 2.2: Module Role with Description

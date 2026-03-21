@@ -856,6 +856,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 // =============================================================================
 
 func (pb *pageBuilder) extractModule(qualifiedName string) string {
+	qualifiedName = unquoteQualifiedName(qualifiedName)
 	parts := strings.Split(qualifiedName, ".")
 	if len(parts) >= 2 {
 		return parts[0]
@@ -864,6 +865,7 @@ func (pb *pageBuilder) extractModule(qualifiedName string) string {
 }
 
 func (pb *pageBuilder) extractName(qualifiedName string) string {
+	qualifiedName = unquoteQualifiedName(qualifiedName)
 	parts := strings.Split(qualifiedName, ".")
 	if len(parts) >= 2 {
 		return parts[1]

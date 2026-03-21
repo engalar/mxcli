@@ -2177,8 +2177,6 @@ CREATE PAGE PgTest.P036_ComboBox_Association
 }
 
 -- ============================================================================================ --
-exit;
-
 
 -- MARK: Move Examples
 

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build integration
+
 // Package executor provides roundtrip tests for MDL commands.
 // These tests verify that creating a document and describing it back
 // produces semantically equivalent results.
@@ -11,6 +13,7 @@ package executor
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -23,7 +26,7 @@ import (
 	"github.com/pmezard/go-difflib/difflib"
 )
 
-// sourceProject is the pristine source project that gets copied for each test.
+// sourceProject is the committed source project path (fast path).
 const sourceProject = "../../mx-test-projects/test-source-app"
 
 // sourceProjectMPR is the MPR filename inside the source project.
@@ -31,6 +34,61 @@ const sourceProjectMPR = "test-source.mpr"
 
 // testModule is the module name used for test entities.
 const testModule = "RoundtripTest"
+
+// sharedSourceProject is set once by TestMain to the directory containing the
+// pristine source project. All tests copy from this directory.
+var sharedSourceProject string
+
+// sharedSourceMPR is the MPR filename inside sharedSourceProject.
+var sharedSourceMPR string
+
+// TestMain creates or locates the source project once, then runs all tests.
+// This avoids running `mx create-project` per test (~29s each).
+func TestMain(m *testing.M) {
+	// 1. Try the committed source project
+	srcDir, err := filepath.Abs(sourceProject)
+	if err == nil {
+		if _, err := os.Stat(filepath.Join(srcDir, sourceProjectMPR)); err == nil {
+			sharedSourceProject = srcDir
+			sharedSourceMPR = sourceProjectMPR
+			os.Exit(m.Run())
+		}
+	}
+
+	// 2. Create a project once using mx create-project
+	mxPath := findMxBinary()
+	if mxPath == "" {
+		fmt.Fprintln(os.Stderr, "SKIP: mx binary not available and source project not found at", sourceProject)
+		os.Exit(0)
+	}
+
+	tmpDir, err := os.MkdirTemp("", "roundtrip-source-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "FAIL: could not create temp dir: %v\n", err)
+		os.Exit(1)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	fmt.Fprintf(os.Stderr, "TestMain: creating shared source project with %s ...\n", mxPath)
+	cmd := exec.Command(mxPath, "create-project")
+	cmd.Dir = tmpDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "SKIP: mx create-project failed: %v\n%s\n", err, output)
+		os.Exit(0)
+	}
+
+	mprPath := filepath.Join(tmpDir, "App.mpr")
+	if _, err := os.Stat(mprPath); os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "SKIP: mx create-project did not produce App.mpr in %s\n", tmpDir)
+		os.Exit(0)
+	}
+
+	sharedSourceProject = tmpDir
+	sharedSourceMPR = "App.mpr"
+	fmt.Fprintf(os.Stderr, "TestMain: shared source project ready at %s\n", tmpDir)
+	os.Exit(m.Run())
+}
 
 // testEnv holds the test environment for roundtrip tests.
 type testEnv struct {
@@ -40,36 +98,27 @@ type testEnv struct {
 	projectPath string // path to the copied MPR file
 }
 
-// copyTestProject copies the source project to a temp directory and returns the MPR path.
-// If the source project doesn't exist, it falls back to creating a fresh project
-// using `mx create-project` (requires the mx binary to be available).
+// copyTestProject copies the shared source project to a temp directory and returns the MPR path.
 // The temp directory is automatically cleaned up when the test finishes.
 func copyTestProject(t *testing.T) string {
 	t.Helper()
 
-	srcDir, err := filepath.Abs(sourceProject)
-	if err != nil {
-		t.Fatalf("Failed to resolve source project path: %v", err)
+	if sharedSourceProject == "" {
+		t.Fatal("sharedSourceProject not set — TestMain did not run")
 	}
 
-	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
-		// Source project not found — try mx create-project as fallback
-		return createTestProject(t)
-	}
-
-	// Create temp directory (auto-cleaned by t.TempDir())
 	destDir := t.TempDir()
 
 	// Copy the MPR file
-	srcMPR := filepath.Join(srcDir, sourceProjectMPR)
-	destMPR := filepath.Join(destDir, sourceProjectMPR)
+	srcMPR := filepath.Join(sharedSourceProject, sharedSourceMPR)
+	destMPR := filepath.Join(destDir, sharedSourceMPR)
 	if err := copyFile(srcMPR, destMPR); err != nil {
 		t.Fatalf("Failed to copy MPR file: %v", err)
 	}
 
 	// Copy required directories
 	for _, dir := range []string{"mprcontents", "widgets", "themesource", "theme", "javascriptsource"} {
-		srcSub := filepath.Join(srcDir, dir)
+		srcSub := filepath.Join(sharedSourceProject, dir)
 		if _, err := os.Stat(srcSub); err == nil {
 			if err := copyDir(srcSub, filepath.Join(destDir, dir)); err != nil {
 				t.Fatalf("Failed to copy %s: %v", dir, err)
@@ -81,9 +130,16 @@ func copyTestProject(t *testing.T) string {
 }
 
 // findMxBinary searches for the mx command in known locations.
-// Search order: reference/mxbuild/modeler/mx (repo-local), ~/.mxcli/mxbuild/*/modeler/mx
-// (cached downloads), PATH lookup.
+// Search order: MX_BINARY env var, reference/mxbuild/modeler/mx (repo-local),
+// ~/.mxcli/mxbuild/*/modeler/mx (cached downloads), PATH lookup.
 func findMxBinary() string {
+	// 0. Explicit override via environment variable
+	if p := os.Getenv("MX_BINARY"); p != "" {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+
 	// 1. Repo-local reference path
 	repoPath, err := filepath.Abs("../../reference/mxbuild/modeler/mx")
 	if err == nil {
@@ -106,33 +162,6 @@ func findMxBinary() string {
 	}
 
 	return ""
-}
-
-// createTestProject creates a fresh Mendix project using `mx create-project`.
-// Returns the path to the App.mpr file in a temp directory.
-func createTestProject(t *testing.T) string {
-	t.Helper()
-
-	mxPath := findMxBinary()
-	if mxPath == "" {
-		t.Skip("mx binary not available and source project not found")
-	}
-
-	destDir := t.TempDir()
-
-	cmd := exec.Command(mxPath, "create-project")
-	cmd.Dir = destDir
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Skipf("mx create-project failed: %v\n%s", err, output)
-	}
-
-	mprPath := filepath.Join(destDir, "App.mpr")
-	if _, err := os.Stat(mprPath); os.IsNotExist(err) {
-		t.Skipf("mx create-project did not produce App.mpr in %s", destDir)
-	}
-
-	return mprPath
 }
 
 // copyFile copies a single file from src to dst.

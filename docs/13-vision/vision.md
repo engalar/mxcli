@@ -1,88 +1,110 @@
 ---
 title: Project Vision
-status: complete
-updated: 2024-11-09
+status: updated
+updated: 2026-03-20
 category: project
 tags: [vision, goals, strategy]
 ---
 
-# Project Vision: Mendix Model Context Protocol (MCP-MX)
+# Project Vision: ModelSDK Go & MDL
 
 ## Executive Summary
 
-The Mendix Model Context Protocol (MCP-MX) project provides a bridge between Large Language Models (LLMs) and the Mendix platform through a standardised, text-based interface. The project enables AI-assisted development, migration, and maintenance of Mendix applications using the Mendix Model Definition Language (MDL).
+ModelSDK Go provides a Go-native library and CLI (`mxcli`) for reading and modifying Mendix application projects (`.mpr` files) stored locally on disk. Combined with MDL (Mendix Definition Language) — a SQL-like DSL for Mendix model operations — it enables AI-assisted development, migration, and maintenance of Mendix applications through agentic IDEs such as Claude Code, Cursor, and Windsurf.
 
-## Current State
+> **See also**: [Mendix for Agentic IDEs: Vision & Architecture](../01-project/mendix-agentic-ide-vision.md) for the broader strategic vision.
 
-### Architecture Overview
+## Architecture Overview
 
-The MCP-MX architecture separates concerns between protocol translation (MCP server) and model manipulation (REPL). The REPL serves as the central hub for all Mendix model operations, whilst the LLM uses specialised MCP services for external integrations.
+The architecture centres on `mxcli` as the CLI tool that agentic IDEs invoke directly. The REPL/executor parses MDL commands and manipulates Mendix projects through a pure-Go Model SDK that reads and writes `.mpr` files on disk. An LSP server and VS Code extension provide real-time language support.
 
 ```mermaid
 graph TB
-    subgraph LLMLayer ["LLM Integration Layer"]
-        LLM["Large Language Model<br/>Claude/GPT/Copilot"]
+    subgraph AgenticIDEs ["Agentic IDE Layer"]
+        CLAUDE["Claude Code"]
+        CURSOR["Cursor / Windsurf"]
+        COPILOT["GitHub Copilot"]
     end
-    
-    subgraph MCPServices ["MCP Service Ecosystem"]
-        MCPMX["MCP-MX<br/>Protocol Translation"]
-        MCPOQL["MCP-OQL<br/>Runtime Queries"]
-        MCPSQL["MCP-SQL<br/>Database Access"]
-        MCPSPARQL["MCP-SPARQL<br/>Graph Databases"]
-        MCPCAT["MCP Catalog<br/>API Discovery"]
+
+    subgraph ToolLayer ["Tool Integration"]
+        CLI["mxcli CLI<br/>MDL Commands & Scripts"]
+        LSP["LSP Server<br/>Diagnostics & Completion"]
+        VSCODE["VS Code Extension<br/>MDL Language Support"]
+        SKILLS["Claude Skills<br/>Guided Workflows"]
     end
-    
-    subgraph REPLCore ["REPL - Central Hub"]
-        REPL["Mendix REPL<br/>MDL Parser & Executor"]
-        
-        subgraph Backends ["REPL Backends"]
-            SDK["Model SDK<br/>Service Mode"]
-            FS["Direct Filesystem<br/>Fast Mode"]
-            SP["Studio Pro Extension<br/>Live Mode"]
-        end
-        
-        subgraph Validation ["Validation Layer"]
-            MXBUILD["mxbuild<br/>Server Mode"]
-        end
+
+    subgraph REPLCore ["REPL Engine"]
+        PARSER["ANTLR4 Parser<br/>MDL Syntax"]
+        EXEC["Executor<br/>Statement Processing"]
+        CATALOG["Catalog<br/>SQLite Metadata Index"]
+        LINTER["Linter<br/>14 Go + 27 Starlark Rules"]
     end
-    
+
+    subgraph ModelSDK ["Model SDK (Pure Go)"]
+        READER["MPR Reader<br/>BSON Parsing"]
+        WRITER["MPR Writer<br/>BSON Serialization"]
+        API["Fluent API<br/>DomainModels, Microflows, Pages"]
+        WIDGETS["Widget Templates<br/>Pluggable Widget Definitions"]
+    end
+
+    subgraph External ["External Integrations"]
+        SQLCONN["SQL Connections<br/>PostgreSQL, Oracle, SQL Server"]
+        OQL["OQL Queries<br/>Running Mendix Runtime"]
+        DOCKER["Docker Integration<br/>mx check, mxbuild"]
+    end
+
     subgraph MendixEco ["Mendix Ecosystem"]
-        PROJ["Mendix Project<br/>Filesystem"]
-        STUDIO["Studio Pro<br/>IDE"]
+        PROJ["Mendix Project<br/>.mpr (v1/v2)"]
+        STUDIO["Studio Pro<br/>Visual Review"]
         RUNTIME["Mendix Runtime<br/>Running App"]
     end
-    
-    LLM -->|MCP Protocol| MCPMX
-    LLM -.->|OQL Validation| MCPOQL
-    LLM -.->|Database Queries| MCPSQL
-    LLM -.->|Graph Queries| MCPSPARQL
-    LLM -.->|API Discovery| MCPCAT
-    
-    MCPMX -->|MDL Commands| REPL
-    MCPOQL -->|OQL Queries| RUNTIME
-    
-    REPL -->|SDK API| SDK
-    REPL -->|File I/O| FS
-    REPL -->|Extension API| SP
-    REPL -->|Compile & Validate| MXBUILD
-    
-    SDK -->|Read/Write| PROJ
-    FS -->|Direct Access| PROJ
-    SP <-->|Live Editing| STUDIO
-    STUDIO -->|Project Files| PROJ
-    MXBUILD -->|Build Errors| REPL
-    
-    style LLM fill:#e1f5fe
-    style MCPMX fill:#f3e5f5
-    style MCPOQL fill:#e8eaf6
-    style MCPSQL fill:#e8eaf6
-    style MCPSPARQL fill:#e8eaf6
-    style MCPCAT fill:#e8eaf6
-    style REPL fill:#e8f5e8
-    style SDK fill:#fff3e0
-    style FS fill:#fff8e1
-    style SP fill:#f1f8e9
-    style MXBUILD fill:#fce4ec
+
+    CLAUDE -->|Shell Commands| CLI
+    CURSOR -->|Shell Commands| CLI
+    COPILOT -->|Shell Commands| CLI
+    CLAUDE -.->|Skills & Commands| SKILLS
+    VSCODE -->|stdio| LSP
+
+    CLI --> PARSER
+    LSP --> PARSER
+    PARSER --> EXEC
+    EXEC --> CATALOG
+    EXEC --> LINTER
+
+    EXEC --> READER
+    EXEC --> WRITER
+    EXEC --> API
+    WRITER --> WIDGETS
+
+    EXEC --> SQLCONN
+    EXEC --> OQL
+    EXEC --> DOCKER
+
+    READER -->|Read| PROJ
+    WRITER -->|Write| PROJ
+    DOCKER -->|Validate & Build| PROJ
+    OQL -->|M2EE API| RUNTIME
+    SQLCONN -->|Query| PROJ
+    PROJ -.->|Open in| STUDIO
+
+    style CLAUDE fill:#e1f5fe
+    style CURSOR fill:#e1f5fe
+    style COPILOT fill:#e1f5fe
+    style CLI fill:#f3e5f5
+    style LSP fill:#f3e5f5
+    style VSCODE fill:#f3e5f5
+    style SKILLS fill:#f3e5f5
+    style PARSER fill:#e8f5e8
+    style EXEC fill:#e8f5e8
+    style CATALOG fill:#e8f5e8
+    style LINTER fill:#e8f5e8
+    style READER fill:#fff3e0
+    style WRITER fill:#fff3e0
+    style API fill:#fff3e0
+    style WIDGETS fill:#fff3e0
+    style SQLCONN fill:#e8eaf6
+    style OQL fill:#e8eaf6
+    style DOCKER fill:#e8eaf6
     style PROJ fill:#ffebee
     style STUDIO fill:#f3e5f5
     style RUNTIME fill:#e0f2f1
@@ -90,385 +112,257 @@ graph TB
 
 ### Key Components
 
-1. **MCP-MX Server**: Protocol translation layer - converts MCP protocol to MDL commands
-2. **Mendix REPL**: Central hub for model manipulation with pluggable backends
-3. **REPL Backends**: 
-   - **Model SDK Service**: Remote SDK for production use
-   - **Direct Filesystem**: Fast local file manipulation
-   - **Studio Pro Extension**: Live editing in open IDE
-4. **Validation Layer**: mxbuild in server mode for compile-time validation
-5. **External MCP Services**: Specialized services for runtime queries and 3rd party integrations
+1. **mxcli CLI**: Entry point for all MDL operations — interactive REPL, script execution, linting, testing, reporting, and project initialisation
+2. **ANTLR4 Parser**: Full MDL grammar with syntax and semantic validation
+3. **Executor**: Processes parsed MDL statements against the Model SDK
+4. **Model SDK**: Pure-Go library for reading and writing `.mpr` files (v1 and v2 formats) via BSON parsing/serialisation
+5. **Fluent API**: High-level builders for domain models, microflows, pages, enumerations, and modules
+6. **Catalog**: SQLite-based metadata index enabling SQL queries over project structure
+7. **LSP Server**: Language Server Protocol implementation with diagnostics, completion, hover, go-to-definition, symbols, and folding
+8. **VS Code Extension**: MDL syntax highlighting, parse/semantic diagnostics, and context menu commands
+9. **Linter**: Extensible framework with 14 built-in Go rules and 27 Starlark rules across MDL, SEC, QUAL, ARCH, DESIGN, and CONV categories
+10. **Docker Integration**: `mx check` validation and `mxbuild` compilation via Docker
 
 ### Current Capabilities
 
-- **Model Inspection**: LLMs can query domain models, microflows, and pages
-- **Model Modification**: Create and modify entities, attributes, and associations
-- **SQL-like Syntax**: Familiar query interface for model operations
-- **Safe Operations**: Sandboxed environment for AI-generated changes
+| Category | Features |
+|----------|----------|
+| **Domain Model** | CREATE, ALTER, DROP, DESCRIBE, SHOW for entities, attributes, associations, enumerations, constants |
+| **Microflows** | CREATE, ALTER, DROP, DESCRIBE, SHOW with 60+ activity types |
+| **Pages** | CREATE, ALTER PAGE/SNIPPET (SET, INSERT, DROP, REPLACE) with 50+ widget types |
+| **Security** | Module roles, user roles, demo users, GRANT/REVOKE, entity/microflow/page access rules |
+| **Navigation** | Profiles, home pages, menus, login pages |
+| **Business Events** | SHOW, DESCRIBE, CREATE, DROP |
+| **Settings** | SHOW, DESCRIBE, ALTER project settings |
+| **Code Navigation** | SHOW CALLERS, CALLEES, REFERENCES, IMPACT, CONTEXT OF |
+| **Full-text Search** | SEARCH across all strings and source |
+| **Catalog Queries** | SQL queries over project metadata via CATALOG tables |
+| **External SQL** | Connect and query PostgreSQL, Oracle, SQL Server |
+| **Data Import** | IMPORT from external databases with batch insert and ID generation |
+| **Connector Gen** | Auto-generate Database Connector MDL from external schema |
+| **OQL** | Execute OQL queries against running Mendix runtime |
+| **Testing** | `.test.mdl` / `.test.md` test files with Docker-based execution |
+| **Linting** | 41 rules with JSON/SARIF output |
+| **Reporting** | Scored best practices report with category breakdown |
+| **Diff** | Compare MDL scripts against project state; git diff for MPR v2 |
+
+### How Agentic IDEs Use mxcli
+
+The primary integration pattern is direct CLI invocation. Agentic IDEs call `mxcli` commands and read the output:
+
+```mermaid
+sequenceDiagram
+    participant IDE as Agentic IDE<br/>(Claude Code)
+    participant CLI as mxcli
+    participant SDK as Model SDK
+    participant MPR as .mpr Project
+
+    IDE->>CLI: mxcli -p app.mpr -c "SHOW ENTITIES IN MyModule"
+    CLI->>SDK: Parse & execute MDL
+    SDK->>MPR: Read project
+    MPR-->>SDK: Entity data
+    SDK-->>CLI: Formatted output
+    CLI-->>IDE: Entity listing
+
+    IDE->>IDE: Analyse & decide next action
+
+    IDE->>CLI: mxcli exec create_customer.mdl -p app.mpr
+    CLI->>SDK: Parse & execute script
+    SDK->>MPR: Write changes
+    SDK-->>CLI: Success
+    CLI-->>IDE: "Entity created"
+
+    IDE->>CLI: mxcli docker check -p app.mpr
+    CLI-->>IDE: Validation results
+```
+
+Skills (`.claude/skills/`) guide the AI through complex workflows like creating CRUD pages, writing microflows, or managing security — providing syntax references and validation checklists that prevent common mistakes.
 
 ## Future Vision
 
-### Enhanced Architecture with Validation and External Services
+### 1. MCP Server Integration
 
-The enhanced architecture emphasizes the REPL as the central orchestrator with pluggable backends, integrated validation, and specialized MCP services for external integrations.
-
-```mermaid
-graph TB
-    subgraph LLMWorkflow ["LLM-Driven Development Workflow"]
-        LLM["Large Language Model<br/>AI Assistant"]
-        
-        subgraph MCPEcosystem ["MCP Service Ecosystem"]
-            MCPMX["MCP-MX<br/>Model Operations"]
-            MCPOQL["MCP-OQL<br/>Runtime Validation"]
-            MCPSQL["MCP-SQL<br/>Database Integration"]
-            MCPSPARQL["MCP-SPARQL<br/>Knowledge Graphs"]
-            MCPCAT["MCP Catalog<br/>API Discovery"]
-        end
-    end
-    
-    subgraph REPLEngine ["REPL Engine - Central Orchestrator"]
-        REPL["Mendix REPL<br/>MDL Parser & Executor"]
-        
-        subgraph BackendPlugins ["Backend Plugins"]
-            SDK["Model SDK Service<br/>Production Mode"]
-            FS["Direct Filesystem<br/>Fast Development"]
-            SPEXT["Studio Pro Extension<br/>Live Collaboration"]
-        end
-        
-        subgraph ValidationEngine ["Validation Engine"]
-            MXBUILD["mxbuild Server<br/>Compile Validation"]
-            PARSER["MDL Parser<br/>Syntax Validation"]
-        end
-    end
-    
-    subgraph MendixPlatform ["Mendix Platform"]
-        PROJ["Project Files<br/>.mpr + Resources"]
-        STUDIO["Studio Pro IDE<br/>Visual Development"]
-        RUNTIME["Mendix Runtime<br/>Running Application"]
-        CLI["CLI Tools<br/>mx, mxbuild"]
-    end
-    
-    subgraph ExternalSystems ["External Systems"]
-        DB[("Databases<br/>SQL/NoSQL")]
-        GRAPH[("Knowledge Graphs<br/>RDF/SPARQL")]
-        APIS["API Catalogs<br/>REST/GraphQL"]
-        VCS["Version Control<br/>Git"]
-    end
-    
-    %% LLM to MCP Services
-    LLM -->|Model Changes| MCPMX
-    LLM -.->|Query Validation| MCPOQL
-    LLM -.->|Data Analysis| MCPSQL
-    LLM -.->|Semantic Queries| MCPSPARQL
-    LLM -.->|API Discovery| MCPCAT
-    
-    %% MCP-MX to REPL
-    MCPMX -->|MDL Commands| REPL
-    
-    %% REPL to Backends
-    REPL -->|SDK Calls| SDK
-    REPL -->|File Operations| FS
-    REPL -->|Extension API| SPEXT
-    
-    %% REPL Validation
-    REPL -->|Compile Project| MXBUILD
-    REPL -->|Parse MDL| PARSER
-    MXBUILD -->|Build Errors| REPL
-    PARSER -->|Syntax Errors| REPL
-    
-    %% Backends to Mendix
-    SDK -->|Read/Write Model| PROJ
-    FS -->|Direct File Access| PROJ
-    SPEXT <-->|Live Sync| STUDIO
-    STUDIO -->|Save Project| PROJ
-    
-    %% External MCP Services
-    MCPOQL -->|OQL Queries| RUNTIME
-    MCPSQL -->|SQL Queries| DB
-    MCPSPARQL -->|SPARQL Queries| GRAPH
-    MCPCAT -->|API Metadata| APIS
-    
-    %% Additional Integrations
-    PROJ -.->|Version Control| VCS
-    MXBUILD -.->|CLI Tools| CLI
-    
-    style LLM fill:#e1f5fe
-    style MCPMX fill:#f3e5f5
-    style MCPOQL fill:#e8eaf6
-    style MCPSQL fill:#e8eaf6
-    style MCPSPARQL fill:#e8eaf6
-    style MCPCAT fill:#e8eaf6
-    style REPL fill:#e8f5e8
-    style SDK fill:#fff3e0
-    style FS fill:#fff8e1
-    style SPEXT fill:#f1f8e9
-    style MXBUILD fill:#fce4ec
-    style PARSER fill:#fce4ec
-    style PROJ fill:#ffebee
-    style STUDIO fill:#f3e5f5
-    style RUNTIME fill:#e0f2f1
-```
-
-### Enhanced Capabilities Roadmap
-
-#### 1. REPL Backend Plugins
-
-The REPL supports multiple backend implementations, each optimized for different use cases:
-
-**Model SDK Service Backend**
-- Remote SDK service for production environments
-- Full model API coverage
-- Safe, transactional operations
-- Currently implemented
-
-**Direct Filesystem Backend**
-- Significantly faster than SDK for bulk operations
-- Direct XML manipulation for .mpr files
-- Access to all project resources (images, stylesheets, etc.)
-- Planned implementation
-
-**Studio Pro Extension Backend**
-- Live collaboration with developers in IDE
-- Real-time visual feedback
-- Seamless integration with existing workflows
-- Future implementation
-
-```mermaid
-sequenceDiagram
-    participant LLM
-    participant MCP as MCP-MX
-    participant REPL as Mendix REPL
-    participant Backend as Backend Plugin
-    participant Val as mxbuild Server
-    
-    LLM->>MCP: "Create entity Customer"
-    MCP->>REPL: CREATE ENTITY Customer...
-    REPL->>REPL: Parse MDL
-    REPL->>Backend: Execute via plugin
-    Backend->>Backend: Write to project
-    Backend-->>REPL: Success
-    REPL->>Val: Compile project
-    Val-->>REPL: Build errors (if any)
-    REPL-->>MCP: Result + validation
-    MCP-->>LLM: "Entity created successfully"
-```
-
-#### 2. Integrated Validation with mxbuild
-
-**Benefits**:
-- Compile-time validation of all model changes
-- Immediate feedback on errors and warnings
-- Ensures model consistency and correctness
-
-The REPL integrates with mxbuild running in server mode to provide continuous validation:
-
-```mermaid
-sequenceDiagram
-    participant REPL as Mendix REPL
-    participant MXB as mxbuild Server
-    participant PROJ as Project Files
-    
-    Note over MXB: mxbuild starts in server mode
-    
-    loop For each MDL command
-        REPL->>PROJ: Apply changes
-        REPL->>MXB: Compile project
-        MXB->>PROJ: Read model
-        MXB->>MXB: Validate & compile
-        alt Compilation successful
-            MXB-->>REPL: Success
-        else Compilation failed
-            MXB-->>REPL: Build errors & warnings
-            REPL->>REPL: Report errors to user
-        end
-    end
-```
-
-#### 3. External MCP Services Integration
-
-**Benefits**:
-- Specialized services for different integration needs
-- LLM can orchestrate multiple services
-- Separation of concerns for better maintainability
-
-**MCP-OQL** (Runtime Query Validation)
-- Execute OQL queries against running Mendix runtime
-- Validate OQL syntax and semantics
-- Test view entity definitions with real data
-- Performance analysis and optimization
-
-**MCP-SQL** (Database Integration)
-- Query external databases for migration scenarios
-- Analyze existing database schemas
-- Generate Mendix domain models from database structures
-
-**MCP-SPARQL** (Knowledge Graph Integration)
-- Query semantic data sources
-- Integrate with ontologies and taxonomies
-- Support for cultural heritage and scientific applications
-
-**MCP Catalog** (API Discovery)
-- Discover available REST/GraphQL APIs
-- Generate Mendix integration modules
-- Automatic service consumption setup
+Wrap `mxcli` capabilities as an MCP (Model Context Protocol) server, enabling structured tool-use integration with LLMs beyond simple CLI invocation:
 
 ```mermaid
 graph LR
-    subgraph MCPOrchestration ["LLM Orchestrates Multiple Services"]
-        LLM["Large Language Model"]
-        
-        LLM -->|1. Analyze DB| MCPSQL["MCP-SQL<br/>Schema Analysis"]
-        LLM -->|2. Generate Model| MCPMX["MCP-MX<br/>Create Entities"]
-        LLM -->|3. Validate OQL| MCPOQL["MCP-OQL<br/>Test Queries"]
-        LLM -->|4. Discover APIs| MCPCAT["MCP Catalog<br/>Find Services"]
-        
-        MCPSQL -->|Schema Info| LLM
-        MCPMX -->|Model Created| LLM
-        MCPOQL -->|Query Results| LLM
-        MCPCAT -->|API Specs| LLM
+    LLM["LLM"] -->|MCP Protocol| MCPMX["MCP-MX Server"]
+    MCPMX -->|MDL Commands| CLI["mxcli"]
+    CLI -->|Model SDK| MPR[".mpr Project"]
+
+    style LLM fill:#e1f5fe
+    style MCPMX fill:#f3e5f5
+    style CLI fill:#e8f5e8
+    style MPR fill:#ffebee
+```
+
+**Benefits**:
+- Structured tool definitions with typed parameters
+- Better error handling and result formatting
+- Protocol-level integration with any MCP-compatible client
+
+### 2. Studio Pro Live Integration
+
+Enable real-time collaboration between agentic IDEs and Studio Pro through a Studio Pro extension:
+
+- Live model synchronisation — changes made via MDL appear instantly in Studio Pro
+- Visual feedback loop — developers see AI-generated changes in the visual editor
+- Conflict resolution when both human and AI edit simultaneously
+
+### 3. Continuous Validation Pipeline
+
+Integrate `mxbuild` in server mode for real-time validation after every model change:
+
+```mermaid
+sequenceDiagram
+    participant REPL as mxcli REPL
+    participant MXB as mxbuild Server
+    participant PROJ as .mpr Project
+
+    Note over MXB: mxbuild running in server mode
+
+    loop For each MDL command
+        REPL->>PROJ: Apply changes
+        REPL->>MXB: Validate project
+        MXB->>PROJ: Read model
+        alt Valid
+            MXB-->>REPL: Success
+        else Errors
+            MXB-->>REPL: Consistency errors
+            REPL->>REPL: Report to user/LLM
+        end
     end
+```
+
+**Current state**: `mx check` available via Docker for batch validation. Server mode would enable sub-second incremental validation.
+
+### 4. Extended Metamodel Coverage
+
+Currently 4 of 52 metamodel domains are fully implemented. Priority domains for expansion:
+
+| Domain | Use Case |
+|--------|----------|
+| Workflows | Business process automation |
+| REST Publishing | API-first development |
+| Scheduled Events | Background processing |
+| Web Services | Enterprise integration |
+| Document Templates | Report generation |
+
+### 5. Cross-Platform Migration
+
+Use MDL as an intermediate representation for migrating between platforms:
+
+```mermaid
+graph TB
+    subgraph Sources ["Source Platforms"]
+        MX["Mendix .mpr"]
+        OS["OutSystems"]
+        PA["Power Apps"]
+    end
+
+    MDL["MDL<br/>Intermediate Representation"]
+
+    subgraph Targets ["Target Platforms"]
+        SPRING["Spring Boot + React"]
+        NET[".NET + Angular"]
+        DJANGO["Django + Vue.js"]
+    end
+
+    MX -->|Extract| MDL
+    OS -.->|Future| MDL
+    PA -.->|Future| MDL
+    MDL -->|Generate| SPRING
+    MDL -->|Generate| NET
+    MDL -->|Generate| DJANGO
+
+    style MDL fill:#e8f5e8
+    style MX fill:#fff3e0
+    style OS fill:#e8eaf6
+    style PA fill:#e8eaf6
+    style SPRING fill:#ffebee
+    style NET fill:#ffebee
+    style DJANGO fill:#ffebee
 ```
 
 ## Strategic Applications
 
 ### 1. Database-First Application Generation
 
-The LLM orchestrates multiple MCP services to generate Mendix applications from existing databases:
+Already partially implemented via external SQL connectivity and IMPORT pipeline:
 
 ```mermaid
 sequenceDiagram
-    participant LLM as Large Language Model
-    participant SQL as MCP-SQL
-    participant MX as MCP-MX
-    participant REPL as Mendix REPL
-    participant OQL as MCP-OQL
-    participant DB as Legacy Database
-    participant RT as Mendix Runtime
-    
-    LLM->>SQL: Analyze database schema
-    SQL->>DB: Query metadata
-    DB-->>SQL: Tables, columns, relationships
-    SQL-->>LLM: Schema structure
-    
-    LLM->>LLM: Design domain model
-    
-    LLM->>MX: CREATE ENTITY commands
-    MX->>REPL: Execute MDL
-    REPL->>REPL: Create entities & associations
-    REPL-->>MX: Model created
-    MX-->>LLM: Success
-    
-    LLM->>MX: CREATE VIEW ENTITY for queries
-    MX->>REPL: Execute MDL
-    REPL-->>MX: Views created
-    
-    LLM->>OQL: Test view queries
-    OQL->>RT: Execute OQL
-    RT-->>OQL: Query results
-    OQL-->>LLM: Validation successful
-    
-    LLM-->>LLM: Application ready
+    participant IDE as Agentic IDE
+    participant CLI as mxcli
+    participant DB as External Database
+
+    IDE->>CLI: SQL CONNECT postgresql '...' AS legacy
+    IDE->>CLI: SQL legacy SHOW TABLES
+    CLI-->>IDE: Table listing
+
+    IDE->>CLI: SQL legacy DESCRIBE TABLE customers
+    CLI-->>IDE: Column metadata
+
+    IDE->>IDE: Design domain model from schema
+
+    IDE->>CLI: CREATE ENTITY Customer (Name STRING(100), ...)
+    IDE->>CLI: IMPORT FROM legacy QUERY 'SELECT ...' INTO App.Customer MAP (...)
+    CLI->>DB: Execute query
+    CLI-->>IDE: Imported 1,234 rows
+
+    IDE->>CLI: SQL legacy GENERATE CONNECTOR INTO App TABLES (orders, products)
+    CLI-->>IDE: Database Connector entities created
 ```
 
-### 2. Version Migration Assistant
+### 2. AI-Assisted Code Review
 
-Leverage MDL versioning to create an intelligent migration tool for Mendix platform upgrades.
+The linting and reporting framework enables automated quality assessment:
 
-```mermaid
-flowchart TD
-    OLD[Mendix 9.x Project] -->|MDL Analysis| SCAN[Migration Scanner]
-    SCAN -->|Compatibility Check| ISSUES[Issue Detection<br/>- Deprecated APIs<br/>- Breaking Changes<br/>- Performance Issues]
-    ISSUES -->|AI-Powered Fixes| FIX[Automated Fixes<br/>- API Updates<br/>- Pattern Modernization<br/>- Performance Optimization]
-    FIX -->|Validation| TEST[Automated Testing<br/>- Model Validation<br/>- Runtime Testing<br/>- Performance Benchmarks]
-    TEST -->|Success| NEW[Mendix 10.x Project]
-    TEST -->|Issues Found| ISSUES
+```bash
+# Lint with SARIF output for IDE integration
+mxcli lint -p app.mpr --format sarif
+
+# Generate scored best practices report
+mxcli report -p app.mpr --format markdown
+
+# Analyse impact of changes
+mxcli -p app.mpr -c "SHOW IMPACT OF MyModule.CustomerMicroflow"
 ```
 
-### 3. Cross-Platform Migration Engine
+### 3. Version Migration Assistant
 
-Enable migration from Mendix to other platforms through MDL standardization.
-
-```mermaid
-graph TB
-    subgraph PlatMig ["Platform Migration"]
-        MX["Mendix Project<br/>.mpr Format"]
-        MDL["MDL Representation<br/>Platform-Agnostic"]
-        
-        subgraph TargetPlatforms ["Target Platforms"]
-            SPRING["Spring Boot<br/>+ React"]
-            NET[".NET Core<br/>+ Angular"]
-            DJANGO["Django<br/>+ Vue.js"]
-            CUSTOM["Custom Platform<br/>Configurable Output"]
-        end
-        
-        MX -->|Extract & Analyze| MDL
-        MDL -->|Java Generator| SPRING
-        MDL -->|C# Generator| NET
-        MDL -->|Python Generator| DJANGO
-        MDL -->|Template Engine| CUSTOM
-    end
-```
-
-## Technology Evolution
-
-### MDL 2.0 Specification
-
-The next generation of Mendix Model Definition Language will include:
-
-1. **Version Awareness**: Built-in support for Mendix platform versions
-2. **Extended Coverage**: Support for all Mendix constructs (styling, workflows, etc.)
-3. **Semantic Annotations**: AI-friendly metadata for better understanding
-4. **Validation Rules**: Built-in constraints and business rules
-5. **Dependency Tracking**: Automatic impact analysis for changes
-
-### Performance Considerations
-
-Different backend implementations offer varying performance characteristics:
-
-| Operation Type | SDK Backend | Filesystem Backend |
-|----------------|-------------|-------------------|
-| Entity Creation | 2-5 seconds | Sub-second |
-| Domain Model Query | 1-3 seconds | Sub-second |
-| Bulk Operations | 30-120 seconds | 1-5 seconds |
-| Project Analysis | 5-30 minutes | 30-180 seconds |
+Use MDL analysis and the linter framework to detect and fix compatibility issues during Mendix platform upgrades.
 
 ## Risk Analysis and Mitigation
 
 ### Technical Risks
 
-1. **Platform Migration Risk**: 
-   - **Risk**: MDL makes Mendix projects more portable to competitors
-   - **Mitigation**: Focus on Mendix-specific optimizations and ecosystem integration
-   - **Opportunity**: Position as industry standard for low-code AI integration
+1. **MPR Format Changes**:
+   - **Risk**: Mendix may change the `.mpr` file format in future versions
+   - **Mitigation**: Support both v1 (single file) and v2 (folder-based) formats; format detection is automatic
+   - **Strategy**: Maintain compatibility tests against multiple Mendix versions
 
-2. **Performance Complexity**:
-   - **Risk**: Multiple execution modes increase maintenance overhead
-   - **Mitigation**: Shared core with mode-specific adapters
-   - **Strategy**: Gradual rollout with fallback to proven SDK mode
+2. **Metamodel Coverage Gaps**:
+   - **Risk**: 48 of 52 domains not yet implemented limits scope
+   - **Mitigation**: Prioritise domains by user demand; code generator accelerates new domain support
+   - **Strategy**: Focus on the 4 core domains (domain model, microflows, pages, security) that cover 80%+ of use cases
 
-3. **IDE Integration Challenges**:
-   - **Risk**: Studio Pro API limitations or breaking changes
-   - **Mitigation**: Abstract interface layer with version compatibility
-   - **Backup**: Continue with external project file manipulation
+3. **Widget Template Maintenance**:
+   - **Risk**: Pluggable widget templates must match Studio Pro expectations exactly
+   - **Mitigation**: Extract templates from Studio Pro-created widgets; CE0463 debugging workflow documented
+   - **Strategy**: Community contribution of templates for popular marketplace widgets
 
 ### Business Opportunities
 
-1. **AI Development Platform**: Integration of AI capabilities into low-code development
-2. **Enterprise Migration Services**: Automated legacy system modernisation
-3. **Developer Productivity**: Significant improvements in development speed for common tasks
-4. **Quality Assurance**: AI-assisted code review and optimisation
+1. **Agentic IDE Platform**: Position Mendix as the safest target for AI-generated enterprise applications
+2. **Enterprise Migration Services**: Automated legacy system modernisation via database-first generation
+3. **Developer Productivity**: MDL scripts as reusable, version-controlled development accelerators
+4. **Quality Assurance**: Automated linting and reporting as part of CI/CD pipelines
 
 ## Conclusion
 
-MCP-MX provides a practical approach to integrating AI capabilities with low-code platforms. By bridging natural language AI and visual development tools, the project enables:
-
-- **Developer Productivity**: AI-assisted development workflows
-- **Platform Migration**: Automated legacy system modernisation  
-- **Quality Assurance**: AI-assisted validation and optimisation
-- **Rapid Development**: Faster prototyping and iteration
-
-The modular architecture provides flexibility whilst maintaining the safety and reliability required for enterprise development. The project aims to establish practical patterns for AI integration in low-code development platforms.
+ModelSDK Go and MDL provide a practical, working toolchain for AI-assisted Mendix development. The CLI-first architecture integrates naturally with agentic IDEs — no protocol translation layer required. The combination of a pure-Go Model SDK, comprehensive MDL syntax, and rich tooling (LSP, linting, testing, reporting) delivers immediate value whilst providing a foundation for future enhancements like MCP server integration, Studio Pro live sync, and cross-platform migration.
 
 ---
 
-*This document represents the strategic vision for MCP-MX. Technical specifications and detailed implementation plans are available in the accompanying architecture documents.*
+*This document represents the project vision for ModelSDK Go. For the broader strategic vision on Mendix and agentic IDEs, see [mendix-agentic-ide-vision.md](../01-project/mendix-agentic-ide-vision.md). Technical details are in CLAUDE.md and the docs/ directory.*

@@ -3073,7 +3073,7 @@ keyword
     | TRANSITIVE | IMPACT | SEARCH                           // Additional search keywords
     | BUSINESS | EVENT | SUBSCRIBE | SETTINGS | CONFIGURATION  // Business events / settings keywords
     | DEFINE | FRAGMENT | FRAGMENTS                            // Fragment keywords
-    | INSERT | BEFORE | AFTER                                  // ALTER PAGE keywords
+    | INSERT | BEFORE | AFTER | ATTRIBUTE                      // ALTER PAGE keywords
     | WIDGETTYPE                                                 // Catalog column keyword
     | URL | POSITION | SORT                                      // Common attribute names
     | GENERATE | CONNECTOR | EXEC | TABLES | VIEWS              // SQL generate keywords

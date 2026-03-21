@@ -14,6 +14,25 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// unquoteIdentifier strips surrounding double-quotes or backticks from a quoted identifier.
+func unquoteIdentifier(s string) string {
+	if len(s) >= 2 {
+		if (s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '`' && s[len(s)-1] == '`') {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
+}
+
+// unquoteQualifiedName strips quotes from each segment of a dotted qualified name.
+func unquoteQualifiedName(s string) string {
+	parts := strings.Split(s, ".")
+	for i, p := range parts {
+		parts[i] = unquoteIdentifier(p)
+	}
+	return strings.Join(parts, ".")
+}
+
 // resolveAttributePath resolves a short attribute name to a fully qualified name
 // using the current entity context. If the attribute already has dots or no entity
 // context is available, the attribute is returned as-is.
@@ -153,14 +172,32 @@ func setDataSource(val bson.D, ds pages.DataSource) bson.D {
 	return result
 }
 
-// setAssociationRef sets the AttributeRef field in a WidgetValue for an association binding.
-// Uses DomainModels$AttributeRef with Attribute field — the WidgetValue.AttributeRef property
-// in C# is statically typed as AttributeRef (not polymorphic MemberRef), so we cannot use
-// DomainModels$AssociationRef. The association is stored as a 3-part member path
-// Module.Entity.AssociationName (same format as attributes), and Mendix resolves it as a
-// member of the entity.
-func setAssociationRef(val bson.D, assocPath string) bson.D {
-	return setAttributeRef(val, assocPath)
+// setAssociationRef sets the EntityRef field in a WidgetValue for an association binding
+// on a pluggable widget. Uses DomainModels$IndirectEntityRef with a Steps array containing
+// a DomainModels$EntityRefStep that specifies the association and destination entity.
+// MxBuild requires the EntityRef to resolve the association target (CE0642, CE8812).
+func setAssociationRef(val bson.D, assocPath string, entityName string) bson.D {
+	result := make(bson.D, 0, len(val))
+	for _, elem := range val {
+		if elem.Key == "EntityRef" && entityName != "" {
+			result = append(result, bson.E{Key: "EntityRef", Value: bson.D{
+				{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
+				{Key: "$Type", Value: "DomainModels$IndirectEntityRef"},
+				{Key: "Steps", Value: bson.A{
+					int32(2), // version marker
+					bson.D{
+						{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
+						{Key: "$Type", Value: "DomainModels$EntityRefStep"},
+						{Key: "Association", Value: assocPath},
+						{Key: "DestinationEntity", Value: entityName},
+					},
+				}},
+			}})
+		} else {
+			result = append(result, elem)
+		}
+	}
+	return result
 }
 
 // setAttributeRef sets the AttributeRef field in a WidgetValue.
@@ -213,6 +250,7 @@ func (pb *pageBuilder) resolveSnippetRef(snippetRef string) (model.ID, error) {
 		return "", fmt.Errorf("empty snippet reference")
 	}
 
+	snippetRef = unquoteQualifiedName(snippetRef)
 	parts := strings.Split(snippetRef, ".")
 	var moduleName, snippetName string
 	if len(parts) >= 2 {
@@ -244,6 +282,7 @@ func (pb *pageBuilder) resolveSnippetRef(snippetRef string) (model.ID, error) {
 }
 
 func (pb *pageBuilder) resolveMicroflow(qualifiedName string) (model.ID, error) {
+	qualifiedName = unquoteQualifiedName(qualifiedName)
 	// Parse qualified name
 	parts := strings.Split(qualifiedName, ".")
 	if len(parts) < 2 {
@@ -289,6 +328,7 @@ func (pb *pageBuilder) resolvePageRef(pageRef string) (model.ID, error) {
 		return "", fmt.Errorf("empty page reference")
 	}
 
+	pageRef = unquoteQualifiedName(pageRef)
 	parts := strings.Split(pageRef, ".")
 	var moduleName, pageName string
 	if len(parts) >= 2 {

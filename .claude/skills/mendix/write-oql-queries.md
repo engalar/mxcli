@@ -502,7 +502,13 @@ LEFT JOIN Shop.Product_Category/Shop.Category AS cat
 - Ensure ALL SELECT columns have explicit AS aliases
 - Aliases must match entity attribute names exactly
 
-### Step 8: Final Check
+### Step 8: Validate Before Executing
+```bash
+mxcli check view.mdl -p app.mpr --references
+```
+This catches type mismatches (e.g., declaring `Long` for a `count()` column that returns `Integer`), missing module references, and OQL syntax errors — before they become MxBuild errors like CE6770 ("View Entity is out of sync with the OQL Query").
+
+### Step 9: Final Check
 - Remove any ORDER BY, LIMIT, or OFFSET clauses
 - These should be handled by the UI component or microflow
 
@@ -665,7 +671,8 @@ The app must be running first: `mxcli docker run -p app.mpr --wait`
 1. **Write and test interactively**: `mxcli oql -p app.mpr "SELECT ..."`
 2. **Iterate** until the query returns expected results
 3. **Embed** in a VIEW ENTITY with matching column aliases and attribute types
-4. **Apply and rebuild**: `mxcli exec view.mdl -p app.mpr && mxcli docker run -p app.mpr --fresh --wait`
+4. **Validate before executing**: `mxcli check view.mdl -p app.mpr --references` to catch type mismatches (e.g., `Long` vs `Integer` for `count()`)
+5. **Apply and rebuild**: `mxcli exec view.mdl -p app.mpr && mxcli docker run -p app.mpr --fresh --wait`
 
 ## Integration with MDL Linter
 
@@ -714,5 +721,6 @@ When writing OQL queries for VIEW entities, always verify:
 - [ ] Association navigation uses correct syntax: `Entity_Assoc/Target AS alias`
 - [ ] JOIN ON clauses use comparison operators: `ON a.Field = b.Field`
 - [ ] Subqueries are enclosed in parentheses and return appropriate values
+- [ ] **Validate before executing**: Run `mxcli check script.mdl -p app.mpr --references` to catch type mismatches
 
 Following these rules ensures your OQL queries will parse and execute correctly in Mendix runtime.

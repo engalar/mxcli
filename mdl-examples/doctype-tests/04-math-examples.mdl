@@ -11,6 +11,8 @@
 --
 -- ============================================================================
 
+create module Math;
+
 /**
  * Determine if the input number is a prime number.
  *

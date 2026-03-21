@@ -190,6 +190,13 @@ func clonePropertyPair(propTypes []any, objProps []any, exemplarIdx int, p mpk.P
 	// Update the ValueType ID and set defaults
 	var newVTID string
 	if vt, ok := getMapField(newPT, "ValueType"); ok {
+		// Regenerate nested $ID fields FIRST (EnumerationValues, ObjectType, etc.)
+		// so they get unique placeholders without overwriting the IDs we set below.
+		regenerateNestedIDs(vt)
+
+		// Now set the top-level VT $ID — this must happen AFTER regenerateNestedIDs
+		// because regenerateNestedIDs replaces ALL $ID fields including this one.
+		// The Property's Value.TypePointer will reference this ID, so it must match.
 		newVTID = placeholderID()
 		vt["$ID"] = newVTID
 
@@ -226,9 +233,6 @@ func clonePropertyPair(propTypes []any, objProps []any, exemplarIdx int, p mpk.P
 		if vtType != "Expression" {
 			vt["ReturnType"] = nil
 		}
-
-		// Regenerate any nested $ID fields
-		regenerateNestedIDs(vt)
 	}
 
 	// Find the corresponding Property in objProps that uses the exemplar's TypePointer

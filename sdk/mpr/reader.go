@@ -91,6 +91,16 @@ func OpenWithOptions(path string, opts OpenOptions) (*Reader, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
+	// Limit to single connection to avoid lock contention with SQLite
+	db.SetMaxOpenConns(1)
+
+	// Set busy timeout to prevent SQLITE_BUSY errors during multi-statement
+	// script execution (e.g., 12+ CREATE PAGE commands in sequence)
+	if _, err := db.Exec("PRAGMA busy_timeout = 5000"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to set busy_timeout: %w", err)
+	}
+
 	r.db = db
 
 	// Detect project version from metadata

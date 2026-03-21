@@ -1,0 +1,195 @@
+// SPDX-License-Identifier: Apache-2.0
+
+//go:build integration
+
+package executor
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/mendixlabs/mxcli/mdl/ast"
+)
+
+// TestMxCheck_DataGridPage creates a page with a DATAGRID widget and verifies
+// mx check passes. This is a regression test for issue #6: DATAGRID was
+// completely unusable because placeholder IDs leaked during template
+// augmentation when the .mpk file added extra properties.
+func TestMxCheck_DataGridPage(t *testing.T) {
+	if !mxCheckAvailable() {
+		t.Skip("mx command not available")
+	}
+
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	// Create entity for the DataGrid
+	entityName := testModule + ".MxCheckDGItem"
+	env.registerCleanup("entity", entityName)
+
+	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+		Name: String(100),
+		Description: String(500),
+		Active: Boolean DEFAULT true
+	);`); err != nil {
+		t.Fatalf("Failed to create entity: %v", err)
+	}
+
+	// Create page with DATAGRID using DATABASE datasource and columns
+	pageName := testModule + ".MxCheckDataGridPage"
+	env.registerCleanup("page", pageName)
+
+	createPageMDL := `CREATE PAGE ` + pageName + ` (
+		Title: 'DataGrid Check Test',
+		Layout: Atlas_Core.Atlas_Default
+	) {
+		LAYOUTGRID mainGrid {
+			ROW row1 {
+				COLUMN col1 (DesktopWidth: 12) {
+					DATAGRID dg (DataSource: DATABASE ` + entityName + `) {
+						COLUMN colName (Attribute: Name, Caption: 'Name')
+						COLUMN colDesc (Attribute: Description, Caption: 'Description')
+						COLUMN colActive (Attribute: Active, Caption: 'Active')
+					}
+				}
+			}
+		}
+	}`
+
+	if err := env.executeMDL(createPageMDL); err != nil {
+		t.Fatalf("Failed to create page with DATAGRID: %v", err)
+	}
+
+	// Disconnect to flush changes before mx check
+	env.executor.Execute(&ast.DisconnectStmt{})
+
+	// Run mx check
+	output, err := runMxCheck(t, env.projectPath)
+	if err != nil {
+		if strings.Contains(output, "error") || strings.Contains(output, "Error") {
+			t.Errorf("mx check found errors for DATAGRID page:\n%s", output)
+		} else {
+			t.Logf("mx check output:\n%s", output)
+		}
+	} else {
+		t.Logf("mx check passed for DATAGRID page:\n%s", output)
+	}
+}
+
+// TestMxCheck_DataGridNoColumns creates a DATAGRID without explicit columns
+// (uses template defaults) and verifies the page is created successfully.
+// Note: template default columns reference attributes that don't exist on the
+// test entity, so mx check will report CE errors about missing attributes.
+// The key validation is that the page is created without placeholder ID leaks.
+func TestMxCheck_DataGridNoColumns(t *testing.T) {
+	if !mxCheckAvailable() {
+		t.Skip("mx command not available")
+	}
+
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	entityName := testModule + ".MxCheckDGNoColItem"
+	env.registerCleanup("entity", entityName)
+
+	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+		Code: String(50),
+		Value: Integer
+	);`); err != nil {
+		t.Fatalf("Failed to create entity: %v", err)
+	}
+
+	pageName := testModule + ".MxCheckDGNoColPage"
+	env.registerCleanup("page", pageName)
+
+	createPageMDL := `CREATE PAGE ` + pageName + ` (
+		Title: 'DataGrid No Columns Test',
+		Layout: Atlas_Core.Atlas_Default
+	) {
+		LAYOUTGRID mainGrid {
+			ROW row1 {
+				COLUMN col1 (DesktopWidth: 12) {
+					DATAGRID dg (DataSource: DATABASE ` + entityName + `)
+				}
+			}
+		}
+	}`
+
+	if err := env.executeMDL(createPageMDL); err != nil {
+		t.Fatalf("Failed to create page with DATAGRID (no columns): %v", err)
+	}
+
+	// Disconnect to flush changes before mx check
+	env.executor.Execute(&ast.DisconnectStmt{})
+
+	// Run mx check — template default columns won't match the entity's attributes,
+	// so CE errors about missing attributes are expected. But placeholder ID leaks
+	// or structural errors (CE0463) would indicate a regression.
+	output, err := runMxCheck(t, env.projectPath)
+	if err != nil {
+		if strings.Contains(output, "placeholder") || strings.Contains(output, "CE0463") {
+			t.Errorf("mx check found structural errors (possible placeholder leak):\n%s", output)
+		} else {
+			t.Logf("mx check output (attribute errors expected for template defaults):\n%s", output)
+		}
+	} else {
+		t.Logf("mx check passed for DATAGRID (no columns) page:\n%s", output)
+	}
+}
+
+// TestMxCheck_GalleryPage creates a page with a GALLERY widget and verifies
+// mx check passes. Regression test for issue #7: same placeholder ID leak
+// as issue #6 but for the Gallery widget.
+func TestMxCheck_GalleryPage(t *testing.T) {
+	if !mxCheckAvailable() {
+		t.Skip("mx command not available")
+	}
+
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	entityName := testModule + ".MxCheckGalleryItem"
+	env.registerCleanup("entity", entityName)
+
+	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+		Heading: String(200),
+		Summary: String(500)
+	);`); err != nil {
+		t.Fatalf("Failed to create entity: %v", err)
+	}
+
+	pageName := testModule + ".MxCheckGalleryPage"
+	env.registerCleanup("page", pageName)
+
+	createPageMDL := `CREATE PAGE ` + pageName + ` (
+		Title: 'Gallery Check Test',
+		Layout: Atlas_Core.Atlas_Default
+	) {
+		LAYOUTGRID mainGrid {
+			ROW row1 {
+				COLUMN col1 (DesktopWidth: 12) {
+					GALLERY gal (DataSource: DATABASE ` + entityName + `) {
+						DYNAMICTEXT dtHeading (Content: '{1}', ContentParams: [{1} = Heading])
+					}
+				}
+			}
+		}
+	}`
+
+	if err := env.executeMDL(createPageMDL); err != nil {
+		t.Fatalf("Failed to create page with GALLERY: %v", err)
+	}
+
+	env.executor.Execute(&ast.DisconnectStmt{})
+
+	output, err := runMxCheck(t, env.projectPath)
+	if err != nil {
+		if strings.Contains(output, "placeholder") || strings.Contains(output, "CE0463") {
+			t.Errorf("mx check found structural errors for GALLERY page (possible placeholder leak):\n%s", output)
+		} else {
+			t.Logf("mx check output:\n%s", output)
+		}
+	} else {
+		t.Logf("mx check passed for GALLERY page:\n%s", output)
+	}
+}

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build integration
+
 // Tests for catalog reference extraction and SHOW CALLERS/CALLEES/REFERENCES/IMPACT commands.
 // These verify that cross-references between microflows, entities, pages, and associations
 // are correctly registered in the catalog refs table.

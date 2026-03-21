@@ -97,7 +97,7 @@ func (b *Builder) parsePageHeaderV3(ctx parser.IPageHeaderV3Context, stmt *ast.C
 		} else if prop.LAYOUT() != nil {
 			// Layout: Atlas_Core.Atlas_Default or 'Layout Name'
 			if qn := prop.QualifiedName(); qn != nil {
-				stmt.Layout = qn.GetText()
+				stmt.Layout = getQualifiedNameText(qn)
 			} else if str := prop.STRING_LITERAL(); str != nil {
 				stmt.Layout = unquoteString(str.GetText())
 			}
@@ -489,7 +489,7 @@ func parseWidgetPropertyV3(ctx parser.IWidgetPropertyV3Context, widget *ast.Widg
 	// Snippet: ...
 	if propCtx.SNIPPET() != nil {
 		if qn := propCtx.QualifiedName(); qn != nil {
-			widget.Properties["Snippet"] = qn.GetText()
+			widget.Properties["Snippet"] = getQualifiedNameText(qn)
 		}
 		return
 	}
@@ -579,7 +579,7 @@ func buildDataSourceV3(ctx parser.IDataSourceExprV3Context) *ast.DataSourceV3 {
 		// DATABASE [FROM] Entity [WHERE ...] [SORT BY ...]
 		ds.Type = "database"
 		if qn := dsCtx.QualifiedName(); qn != nil {
-			ds.Reference = qn.GetText()
+			ds.Reference = getQualifiedNameText(qn)
 		}
 
 		// Inline WHERE clause
@@ -602,7 +602,7 @@ func buildDataSourceV3(ctx parser.IDataSourceExprV3Context) *ast.DataSourceV3 {
 		// MICROFLOW Module.Flow
 		ds.Type = "microflow"
 		if qn := dsCtx.QualifiedName(); qn != nil {
-			ds.Reference = qn.GetText()
+			ds.Reference = getQualifiedNameText(qn)
 		}
 		if argsCtx := dsCtx.MicroflowArgsV3(); argsCtx != nil {
 			ds.Args = buildMicroflowArgsV3(argsCtx)
@@ -611,7 +611,7 @@ func buildDataSourceV3(ctx parser.IDataSourceExprV3Context) *ast.DataSourceV3 {
 		// NANOFLOW Module.Flow
 		ds.Type = "nanoflow"
 		if qn := dsCtx.QualifiedName(); qn != nil {
-			ds.Reference = qn.GetText()
+			ds.Reference = getQualifiedNameText(qn)
 		}
 		if argsCtx := dsCtx.MicroflowArgsV3(); argsCtx != nil {
 			ds.Args = buildMicroflowArgsV3(argsCtx)
@@ -657,7 +657,7 @@ func buildActionV3(ctx parser.IActionExprV3Context) *ast.ActionV3 {
 	} else if actCtx.CREATE_OBJECT() != nil {
 		action.Type = "create"
 		if qn := actCtx.QualifiedName(); qn != nil {
-			action.Target = qn.GetText()
+			action.Target = getQualifiedNameText(qn)
 		}
 		// Check for THEN action
 		if thenCtx := actCtx.ActionExprV3(); thenCtx != nil {
@@ -666,7 +666,7 @@ func buildActionV3(ctx parser.IActionExprV3Context) *ast.ActionV3 {
 	} else if actCtx.SHOW_PAGE() != nil {
 		action.Type = "showPage"
 		if qn := actCtx.QualifiedName(); qn != nil {
-			action.Target = qn.GetText()
+			action.Target = getQualifiedNameText(qn)
 		}
 		if argsCtx := actCtx.MicroflowArgsV3(); argsCtx != nil {
 			action.Args = buildMicroflowArgsV3(argsCtx)
@@ -674,7 +674,7 @@ func buildActionV3(ctx parser.IActionExprV3Context) *ast.ActionV3 {
 	} else if actCtx.MICROFLOW() != nil {
 		action.Type = "microflow"
 		if qn := actCtx.QualifiedName(); qn != nil {
-			action.Target = qn.GetText()
+			action.Target = getQualifiedNameText(qn)
 		}
 		if argsCtx := actCtx.MicroflowArgsV3(); argsCtx != nil {
 			action.Args = buildMicroflowArgsV3(argsCtx)
@@ -682,7 +682,7 @@ func buildActionV3(ctx parser.IActionExprV3Context) *ast.ActionV3 {
 	} else if actCtx.NANOFLOW() != nil {
 		action.Type = "nanoflow"
 		if qn := actCtx.QualifiedName(); qn != nil {
-			action.Target = qn.GetText()
+			action.Target = getQualifiedNameText(qn)
 		}
 		if argsCtx := actCtx.MicroflowArgsV3(); argsCtx != nil {
 			action.Args = buildMicroflowArgsV3(argsCtx)
@@ -936,7 +936,7 @@ func buildPropertyValueV3(ctx parser.IPropertyValueV3Context) any {
 		return strings.EqualFold(bl.GetText(), "true")
 	}
 	if qn := pvCtx.QualifiedName(); qn != nil {
-		return qn.GetText()
+		return getQualifiedNameText(qn)
 	}
 	if id := pvCtx.IDENTIFIER(); id != nil {
 		return id.GetText()

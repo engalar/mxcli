@@ -59,13 +59,13 @@ func (pb *pageBuilder) buildComboBoxV3(w *ast.WidgetV3) (*pages.CustomWidget, er
 			return nil, fmt.Errorf("failed to build ComboBox datasource: %w", err)
 		}
 
-		// 3. Set attributeAssociation — this is the association name (e.g., Order_Customer)
-		// resolved to a 3-part member path: Module.Entity.AssociationName
-		// (same format as attributes, since associations are entity members)
+		// 3. Set attributeAssociation — association path + target entity
+		// MxBuild requires both: association path in AttributeRef (CE8812) and
+		// target entity in EntityRef (CE0642)
 		if attr := w.GetAttribute(); attr != "" {
-			assocPath := pb.resolveAttributePath(attr)
+			assocPath := pb.resolveAssociationPath(attr)
 			updatedObject = updateWidgetPropertyValue(updatedObject, propertyTypeIDs, "attributeAssociation", func(val bson.D) bson.D {
-				return setAssociationRef(val, assocPath)
+				return setAssociationRef(val, assocPath, entityName)
 			})
 		}
 

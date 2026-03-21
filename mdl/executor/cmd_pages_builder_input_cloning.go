@@ -97,30 +97,10 @@ func (pb *pageBuilder) clonePropertyWithNewIDs(prop bson.D) bson.D {
 }
 
 // cloneValueWithNewIDs clones a WidgetValue with new IDs.
+// Recursively regenerates $ID fields in all nested bson.D documents
+// (AttributeRef, EntityRef, SortItems, DesignProperties, etc.).
 func (pb *pageBuilder) cloneValueWithNewIDs(val bson.D) bson.D {
-	result := make(bson.D, 0, len(val))
-	for _, elem := range val {
-		if elem.Key == "$ID" {
-			result = append(result, bson.E{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())})
-		} else if elem.Key == "Action" {
-			// Clone nested action with new ID
-			if actionMap, ok := elem.Value.(bson.D); ok {
-				result = append(result, bson.E{Key: "Action", Value: pb.cloneWithNewID(actionMap)})
-			} else {
-				result = append(result, elem)
-			}
-		} else if elem.Key == "TextTemplate" {
-			// Clone nested TextTemplate with new IDs
-			if ttMap, ok := elem.Value.(bson.D); ok {
-				result = append(result, bson.E{Key: "TextTemplate", Value: pb.cloneTextTemplateWithNewIDs(ttMap)})
-			} else {
-				result = append(result, elem)
-			}
-		} else {
-			result = append(result, elem)
-		}
-	}
-	return result
+	return deepCloneWithNewIDs(val)
 }
 
 // clonePropertyWithPrimitiveValue clones a WidgetProperty with new IDs and an updated PrimitiveValue.
@@ -151,20 +131,8 @@ func (pb *pageBuilder) cloneValueWithUpdatedPrimitive(val bson.D, newValue strin
 			result = append(result, bson.E{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())})
 		} else if elem.Key == "PrimitiveValue" {
 			result = append(result, bson.E{Key: "PrimitiveValue", Value: newValue})
-		} else if elem.Key == "Action" {
-			if actionMap, ok := elem.Value.(bson.D); ok {
-				result = append(result, bson.E{Key: "Action", Value: pb.cloneWithNewID(actionMap)})
-			} else {
-				result = append(result, elem)
-			}
-		} else if elem.Key == "TextTemplate" {
-			if ttMap, ok := elem.Value.(bson.D); ok {
-				result = append(result, bson.E{Key: "TextTemplate", Value: pb.cloneTextTemplateWithNewIDs(ttMap)})
-			} else {
-				result = append(result, elem)
-			}
 		} else {
-			result = append(result, elem)
+			result = append(result, bson.E{Key: elem.Key, Value: deepCloneValue(elem.Value)})
 		}
 	}
 	return result
@@ -198,49 +166,21 @@ func (pb *pageBuilder) cloneValueClearingTextTemplate(val bson.D) bson.D {
 			result = append(result, bson.E{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())})
 		} else if elem.Key == "TextTemplate" {
 			result = append(result, bson.E{Key: "TextTemplate", Value: nil})
-		} else if elem.Key == "Action" {
-			if actionMap, ok := elem.Value.(bson.D); ok {
-				result = append(result, bson.E{Key: "Action", Value: pb.cloneWithNewID(actionMap)})
-			} else {
-				result = append(result, elem)
-			}
 		} else {
-			result = append(result, elem)
+			result = append(result, bson.E{Key: elem.Key, Value: deepCloneValue(elem.Value)})
 		}
 	}
 	return result
 }
 
-// cloneWithNewID clones a BSON document replacing only the $ID field.
+// cloneWithNewID clones a BSON document, recursively regenerating all $ID fields.
 func (pb *pageBuilder) cloneWithNewID(doc bson.D) bson.D {
-	result := make(bson.D, 0, len(doc))
-	for _, elem := range doc {
-		if elem.Key == "$ID" {
-			result = append(result, bson.E{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())})
-		} else {
-			result = append(result, elem)
-		}
-	}
-	return result
+	return deepCloneWithNewIDs(doc)
 }
 
 // cloneTextTemplateWithNewIDs clones a Forms$ClientTemplate with new IDs.
 func (pb *pageBuilder) cloneTextTemplateWithNewIDs(tt bson.D) bson.D {
-	result := make(bson.D, 0, len(tt))
-	for _, elem := range tt {
-		if elem.Key == "$ID" {
-			result = append(result, bson.E{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())})
-		} else if elem.Key == "Fallback" || elem.Key == "Template" {
-			if textMap, ok := elem.Value.(bson.D); ok {
-				result = append(result, bson.E{Key: elem.Key, Value: pb.cloneWithNewID(textMap)})
-			} else {
-				result = append(result, elem)
-			}
-		} else {
-			result = append(result, elem)
-		}
-	}
-	return result
+	return deepCloneWithNewIDs(tt)
 }
 
 // clonePropertyWithExpression clones a WidgetProperty with new IDs and an updated Expression.
@@ -271,21 +211,61 @@ func (pb *pageBuilder) cloneValueWithUpdatedExpression(val bson.D, newExpr strin
 			result = append(result, bson.E{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())})
 		} else if elem.Key == "Expression" {
 			result = append(result, bson.E{Key: "Expression", Value: newExpr})
-		} else if elem.Key == "Action" {
-			if actionMap, ok := elem.Value.(bson.D); ok {
-				result = append(result, bson.E{Key: "Action", Value: pb.cloneWithNewID(actionMap)})
-			} else {
-				result = append(result, elem)
-			}
-		} else if elem.Key == "TextTemplate" {
-			if ttMap, ok := elem.Value.(bson.D); ok {
-				result = append(result, bson.E{Key: "TextTemplate", Value: pb.cloneTextTemplateWithNewIDs(ttMap)})
-			} else {
-				result = append(result, elem)
-			}
 		} else {
-			result = append(result, elem)
+			result = append(result, bson.E{Key: elem.Key, Value: deepCloneValue(elem.Value)})
 		}
+	}
+	return result
+}
+
+// ============================================================================
+// Deep recursive ID regeneration
+// ============================================================================
+
+// deepCloneWithNewIDs deep-clones a bson.D, regenerating every $ID field
+// throughout the entire nested structure. This ensures no stale GUIDs
+// from templates or old widgets persist in the output.
+func deepCloneWithNewIDs(doc bson.D) bson.D {
+	result := make(bson.D, 0, len(doc))
+	for _, elem := range doc {
+		if elem.Key == "$ID" {
+			result = append(result, bson.E{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())})
+		} else {
+			result = append(result, bson.E{Key: elem.Key, Value: deepCloneValue(elem.Value)})
+		}
+	}
+	return result
+}
+
+// deepCloneValue recursively clones a BSON value, regenerating $ID fields
+// in any nested bson.D documents. Non-document values are returned as-is.
+func deepCloneValue(v any) any {
+	switch val := v.(type) {
+	case bson.D:
+		return deepCloneWithNewIDs(val)
+	case bson.A:
+		return deepCloneArray(val)
+	case []any:
+		return deepCloneSlice(val)
+	default:
+		return v
+	}
+}
+
+// deepCloneArray clones a bson.A, recursing into nested documents.
+func deepCloneArray(arr bson.A) bson.A {
+	result := make(bson.A, len(arr))
+	for i, elem := range arr {
+		result[i] = deepCloneValue(elem)
+	}
+	return result
+}
+
+// deepCloneSlice clones a []any, recursing into nested documents.
+func deepCloneSlice(arr []any) []any {
+	result := make([]any, len(arr))
+	for i, elem := range arr {
+		result[i] = deepCloneValue(elem)
 	}
 	return result
 }

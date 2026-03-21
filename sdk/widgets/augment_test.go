@@ -3,6 +3,7 @@
 package widgets
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/sdk/widgets/mpk"
@@ -570,6 +571,85 @@ func TestAugmentTemplate_WithRealTemplate(t *testing.T) {
 	}
 	if propCount != origPropCount+1 {
 		t.Errorf("expected %d Properties, got %d", origPropCount+1, propCount)
+	}
+}
+
+// TestAugmentTemplate_NoPlaceholderLeakAfterBSONConversion verifies that after
+// augmentation and BSON conversion, no placeholder IDs remain. This is the bug
+// from issue #6: regenerateNestedIDs overwrote ValueType.$ID after newVTID was
+// captured, causing Value.TypePointer to reference an unmapped placeholder.
+func TestAugmentTemplate_NoPlaceholderLeakAfterBSONConversion(t *testing.T) {
+	ResetPlaceholderCounter()
+
+	tmpl, err := GetTemplate("com.mendix.widget.web.combobox.Combobox")
+	if err != nil {
+		t.Fatalf("GetTemplate failed: %v", err)
+	}
+	if tmpl == nil {
+		t.Skip("ComboBox template not available")
+	}
+
+	clone := deepCloneTemplate(tmpl)
+
+	// Build a definition with existing properties + one new one
+	objType := clone.Type["ObjectType"].(map[string]any)
+	propTypes := objType["PropertyTypes"].([]any)
+	def := &mpk.WidgetDefinition{
+		ID:      "com.mendix.widget.web.combobox.Combobox",
+		Version: "3.0.0",
+	}
+	for _, pt := range propTypes {
+		ptMap, ok := pt.(map[string]any)
+		if !ok {
+			continue
+		}
+		key, _ := ptMap["PropertyKey"].(string)
+		vt, _ := ptMap["ValueType"].(map[string]any)
+		vtType := ""
+		if vt != nil {
+			vtType, _ = vt["Type"].(string)
+		}
+		if vtType == "System" {
+			def.SystemProps = append(def.SystemProps, mpk.PropertyDef{Key: key, IsSystem: true})
+		} else {
+			xmlType := bsonTypeToXmlType(vtType)
+			def.Properties = append(def.Properties, mpk.PropertyDef{Key: key, Type: xmlType})
+		}
+	}
+	def.Properties = append(def.Properties, mpk.PropertyDef{
+		Key:          "extraBoolProp",
+		Type:         "boolean",
+		Caption:      "Extra Bool",
+		DefaultValue: "false",
+	})
+
+	if err := AugmentTemplate(clone, def); err != nil {
+		t.Fatalf("AugmentTemplate failed: %v", err)
+	}
+
+	// Now run the full BSON conversion pipeline (same as GetTemplateFullBSON)
+	counter := 0
+	idGen := func() string {
+		counter++
+		return fmt.Sprintf("bbbbbbbb0000000000000000%08x", counter)
+	}
+
+	idMapping := make(map[string]string)
+	collectIDs(clone.Type, idGen, idMapping)
+	if clone.Object != nil {
+		collectIDs(clone.Object, idGen, idMapping)
+	}
+
+	var objectTypeID string
+	propertyTypeIDs := make(map[string]PropertyTypeIDEntry)
+	bsonType := jsonToBSONWithMappingAndObjectType(clone.Type, idMapping, propertyTypeIDs, &objectTypeID)
+	bsonObject := jsonToBSONObjectWithMapping(clone.Object, idMapping)
+
+	if containsPlaceholderID(bsonType) {
+		t.Error("placeholder ID leak in Type BSON after augmentation")
+	}
+	if containsPlaceholderID(bsonObject) {
+		t.Error("placeholder ID leak in Object BSON after augmentation — issue #6 regression")
 	}
 }
 

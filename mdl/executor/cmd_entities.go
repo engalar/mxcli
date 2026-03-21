@@ -751,7 +751,7 @@ func (e *Executor) execDropEntity(s *ast.DropEntityStmt) error {
 			e.warnEntityReferences(s.Name.String())
 
 			// If this is a view entity, also delete the associated ViewEntitySourceDocument
-			if entity.Source == "OqlViewEntitySource" {
+			if entity.Source == "DomainModels$OqlViewEntitySource" {
 				if err := e.writer.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
 					return fmt.Errorf("failed to delete view entity source document: %w", err)
 				}
