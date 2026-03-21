@@ -4,6 +4,7 @@ package mpr
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -40,6 +41,16 @@ func (r *Reader) parseWorkflow(unitID, containerID string, contents []byte) (*wo
 		w.ExportLevel = exportLevel
 	}
 
+	// Parse Annotation
+	if annotRaw := raw["Annotation"]; annotRaw != nil {
+		annotMap := toMap(annotRaw)
+		if annotMap != nil {
+			if desc, ok := annotMap["Description"].(string); ok {
+				w.Annotation = desc
+			}
+		}
+	}
+
 	// Parse Parameter (PART — DomainModels$IndirectEntityRef or similar)
 	if paramRaw := raw["Parameter"]; paramRaw != nil {
 		w.Parameter = parseWorkflowParameter(toMap(paramRaw))
@@ -64,6 +75,14 @@ func (r *Reader) parseWorkflow(unitID, containerID string, contents []byte) (*wo
 	// Parse DueDate expression
 	if dueDate, ok := raw["DueDate"].(string); ok {
 		w.DueDate = dueDate
+	}
+
+	// Parse allowed module roles (BY_NAME references)
+	allowedRoles := extractBsonArray(raw["AllowedModuleRoles"])
+	for _, r := range allowedRoles {
+		if name, ok := r.(string); ok {
+			w.AllowedModuleRoles = append(w.AllowedModuleRoles, model.ID(name))
+		}
 	}
 
 	// Parse Flow (PART — Workflows$Flow)
@@ -162,25 +181,41 @@ func parseWorkflowFlow(raw map[string]any) *workflows.Flow {
 }
 
 // workflowActivityParsers maps Mendix $Type strings to their workflow activity parser functions.
-// Declared as a nil var and populated in init() so that the map literal can
-// reference parseParallelSplitActivity, which itself calls parseWorkflowFlow,
-// keeping the package-level initialization order unambiguous.
+// Initialized in init() to avoid initialization cycle (parseParallelSplitActivity → parseWorkflowFlow → parseWorkflowActivity).
 var workflowActivityParsers map[string]func(map[string]any) workflows.WorkflowActivity
 
 func init() {
 	workflowActivityParsers = map[string]func(map[string]any) workflows.WorkflowActivity{
-		"Workflows$EndWorkflowActivity":  func(r map[string]any) workflows.WorkflowActivity { return parseEndWorkflowActivity(r) },
-		"Workflows$UserTask":             func(r map[string]any) workflows.WorkflowActivity { return parseUserTask(r) },
-		"Workflows$SingleUserTaskActivity": func(r map[string]any) workflows.WorkflowActivity { return parseUserTask(r) },
-		"Workflows$MultiUserTaskActivity": func(r map[string]any) workflows.WorkflowActivity { return parseUserTask(r) },
-		"Workflows$CallMicroflowTask":    func(r map[string]any) workflows.WorkflowActivity { return parseCallMicroflowTask(r) },
-		"Workflows$CallWorkflowActivity": func(r map[string]any) workflows.WorkflowActivity { return parseCallWorkflowActivity(r) },
-		"Workflows$ExclusiveSplitActivity": func(r map[string]any) workflows.WorkflowActivity { return parseExclusiveSplitActivity(r) },
-		"Workflows$ParallelSplitActivity": func(r map[string]any) workflows.WorkflowActivity { return parseParallelSplitActivity(r) },
-		"Workflows$JumpToActivity":       func(r map[string]any) workflows.WorkflowActivity { return parseJumpToActivity(r) },
-		"Workflows$WaitForTimerActivity": func(r map[string]any) workflows.WorkflowActivity { return parseWaitForTimerActivity(r) },
-		"Workflows$WaitForNotificationActivity": func(r map[string]any) workflows.WorkflowActivity { return parseWaitForNotificationActivity(r) },
-		"Workflows$StartWorkflowActivity": func(r map[string]any) workflows.WorkflowActivity { return parseEndWorkflowActivity(r) },
+		"Workflows$EndWorkflowActivity":            func(r map[string]any) workflows.WorkflowActivity { return parseEndWorkflowActivity(r) },
+		"Workflows$UserTask":                       func(r map[string]any) workflows.WorkflowActivity { return parseUserTask(r) },
+		"Workflows$SingleUserTaskActivity":         func(r map[string]any) workflows.WorkflowActivity { return parseUserTask(r) },
+		"Workflows$MultiUserTaskActivity":          func(r map[string]any) workflows.WorkflowActivity { return parseMultiUserTask(r) },
+		"Workflows$CallMicroflowTask":              func(r map[string]any) workflows.WorkflowActivity { return parseCallMicroflowTask(r) },
+		"Workflows$CallWorkflowActivity":           func(r map[string]any) workflows.WorkflowActivity { return parseCallWorkflowActivity(r) },
+		"Workflows$ExclusiveSplitActivity":         func(r map[string]any) workflows.WorkflowActivity { return parseExclusiveSplitActivity(r) },
+		"Workflows$ParallelSplitActivity":          func(r map[string]any) workflows.WorkflowActivity { return parseParallelSplitActivity(r) },
+		"Workflows$JumpToActivity":                 func(r map[string]any) workflows.WorkflowActivity { return parseJumpToActivity(r) },
+		"Workflows$WaitForTimerActivity":           func(r map[string]any) workflows.WorkflowActivity { return parseWaitForTimerActivity(r) },
+		"Workflows$WaitForNotificationActivity":    func(r map[string]any) workflows.WorkflowActivity { return parseWaitForNotificationActivity(r) },
+		"Workflows$StartWorkflowActivity":          func(r map[string]any) workflows.WorkflowActivity { return parseStartWorkflowActivity(r) },
+		"Workflows$EndOfParallelSplitPathActivity": func(r map[string]any) workflows.WorkflowActivity {
+			a := &workflows.EndOfParallelSplitPathActivity{}
+			parseBaseActivity(&a.BaseWorkflowActivity, r)
+			return a
+		},
+		"Workflows$EndOfBoundaryEventPathActivity": func(r map[string]any) workflows.WorkflowActivity {
+			a := &workflows.EndOfBoundaryEventPathActivity{}
+			parseBaseActivity(&a.BaseWorkflowActivity, r)
+			return a
+		},
+		"Workflows$Annotation": func(r map[string]any) workflows.WorkflowActivity {
+			a := &workflows.WorkflowAnnotationActivity{}
+			parseBaseActivity(&a.BaseWorkflowActivity, r)
+			if desc, ok := r["Description"].(string); ok {
+				a.Description = desc
+			}
+			return a
+		},
 		"Workflows$SystemTask": func(r map[string]any) workflows.WorkflowActivity { return parseSystemTask(r) },
 	}
 }
@@ -198,6 +233,12 @@ func parseWorkflowActivity(raw map[string]any) workflows.WorkflowActivity {
 }
 
 // parseEndWorkflowActivity parses an EndWorkflowActivity.
+func parseStartWorkflowActivity(raw map[string]any) *workflows.StartWorkflowActivity {
+	a := &workflows.StartWorkflowActivity{}
+	parseBaseActivity(&a.BaseWorkflowActivity, raw)
+	return a
+}
+
 func parseEndWorkflowActivity(raw map[string]any) *workflows.EndWorkflowActivity {
 	a := &workflows.EndWorkflowActivity{}
 	parseBaseActivity(&a.BaseWorkflowActivity, raw)
@@ -213,9 +254,15 @@ func parseUserTask(raw map[string]any) *workflows.UserTask {
 	if page, ok := raw["Page"].(string); ok {
 		a.Page = page
 	}
-	// Also try TaskPage
-	if page, ok := raw["TaskPage"].(string); ok && a.Page == "" {
-		a.Page = page
+	// Also try TaskPage — may be a nested Workflows$PageReference object
+	if a.Page == "" {
+		if page, ok := raw["TaskPage"].(string); ok {
+			a.Page = page
+		} else if taskPageMap := toMap(raw["TaskPage"]); taskPageMap != nil {
+			if page, ok := taskPageMap["Page"].(string); ok {
+				a.Page = page
+			}
+		}
 	}
 
 	// TaskName (StringTemplate)
@@ -256,6 +303,9 @@ func parseUserTask(raw map[string]any) *workflows.UserTask {
 			a.Outcomes = append(a.Outcomes, outcome)
 		}
 	}
+
+	// BoundaryEvents
+	a.BoundaryEvents = parseBoundaryEvents(raw["BoundaryEvents"])
 
 	return a
 }
@@ -301,6 +351,9 @@ func parseCallMicroflowTask(raw map[string]any) *workflows.CallMicroflowTask {
 	// ParameterMappings
 	a.ParameterMappings = parseParameterMappings(raw["ParameterMappings"])
 
+	// BoundaryEvents
+	a.BoundaryEvents = parseBoundaryEvents(raw["BoundaryEvents"])
+
 	return a
 }
 
@@ -321,6 +374,9 @@ func parseCallWorkflowActivity(raw map[string]any) *workflows.CallWorkflowActivi
 	if expr, ok := raw["ParameterExpression"].(string); ok {
 		a.ParameterExpression = expr
 	}
+
+	// BoundaryEvents
+	a.BoundaryEvents = parseBoundaryEvents(raw["BoundaryEvents"])
 
 	return a
 }
@@ -385,7 +441,10 @@ func parseWaitForTimerActivity(raw map[string]any) *workflows.WaitForTimerActivi
 	a := &workflows.WaitForTimerActivity{}
 	parseBaseActivity(&a.BaseWorkflowActivity, raw)
 
-	if expr, ok := raw["DelayExpression"].(string); ok {
+	if expr, ok := raw["Delay"].(string); ok {
+		a.DelayExpression = expr
+	} else if expr, ok := raw["DelayExpression"].(string); ok {
+		// Legacy fallback
 		a.DelayExpression = expr
 	}
 
@@ -396,6 +455,10 @@ func parseWaitForTimerActivity(raw map[string]any) *workflows.WaitForTimerActivi
 func parseWaitForNotificationActivity(raw map[string]any) *workflows.WaitForNotificationActivity {
 	a := &workflows.WaitForNotificationActivity{}
 	parseBaseActivity(&a.BaseWorkflowActivity, raw)
+
+	// BoundaryEvents
+	a.BoundaryEvents = parseBoundaryEvents(raw["BoundaryEvents"])
+
 	return a
 }
 
@@ -417,6 +480,25 @@ func parseBaseActivity(a *workflows.BaseWorkflowActivity, raw map[string]any) {
 	if caption, ok := raw["Caption"].(string); ok {
 		a.Caption = caption
 	}
+
+	// Annotation (PART — Workflows$Annotation)
+	if annotRaw := raw["Annotation"]; annotRaw != nil {
+		annotMap := toMap(annotRaw)
+		if annotMap != nil {
+			if desc, ok := annotMap["Description"].(string); ok {
+				a.Annotation = desc
+			}
+		}
+	}
+}
+
+// parseMultiUserTask parses a MultiUserTaskActivity, reusing parseUserTask with IsMulti flag.
+func parseMultiUserTask(raw map[string]any) *workflows.UserTask {
+	task := parseUserTask(raw)
+	if task != nil {
+		task.IsMulti = true
+	}
+	return task
 }
 
 // parseUserTaskOutcome parses a UserTaskOutcome.
@@ -429,6 +511,9 @@ func parseUserTaskOutcome(raw map[string]any) *workflows.UserTaskOutcome {
 	}
 	if caption, ok := raw["Caption"].(string); ok {
 		outcome.Caption = caption
+	}
+	if value, ok := raw["Value"].(string); ok {
+		outcome.Value = value
 	}
 
 	if flowRaw := raw["Flow"]; flowRaw != nil {
@@ -518,6 +603,67 @@ func parseUserSource(raw map[string]any) workflows.UserSource {
 	default:
 		return &workflows.NoUserSource{}
 	}
+}
+
+// parseBoundaryEvents parses boundary events from a BSON array.
+func parseBoundaryEvents(v any) []*workflows.BoundaryEvent {
+	eventsRaw := extractBsonArray(v)
+	var events []*workflows.BoundaryEvent
+
+	for _, eventRaw := range eventsRaw {
+		eventMap := toMap(eventRaw)
+		if eventMap == nil {
+			continue
+		}
+		event := &workflows.BoundaryEvent{}
+		event.ID = model.ID(extractBsonID(eventMap["$ID"]))
+		event.TypeName = extractString(eventMap["$Type"])
+
+		if caption, ok := eventMap["Caption"].(string); ok {
+			event.Caption = caption
+		}
+
+		// Timer delay — BSON field is "FirstExecutionTime" for both boundary event types
+		if delay, ok := eventMap["FirstExecutionTime"].(string); ok {
+			event.TimerDelay = delay
+		}
+		// Legacy fallbacks
+		if event.TimerDelay == "" {
+			if delay, ok := eventMap["DelayExpression"].(string); ok {
+				event.TimerDelay = delay
+			}
+		}
+		if event.TimerDelay == "" {
+			if delay, ok := eventMap["Delay"].(string); ok {
+				event.TimerDelay = delay
+			}
+		}
+
+		// Event type from $Type
+		typeName := extractString(eventMap["$Type"])
+		switch typeName {
+		case "Workflows$InterruptingTimerBoundaryEvent":
+			event.EventType = "InterruptingTimer"
+		case "Workflows$NonInterruptingTimerBoundaryEvent":
+			event.EventType = "NonInterruptingTimer"
+		case "Workflows$TimerBoundaryEvent":
+			event.EventType = "Timer"
+		default:
+			if typeName != "" {
+				// Extract the event type from the type name
+				event.EventType = strings.TrimPrefix(typeName, "Workflows$")
+			}
+		}
+
+		// Flow
+		if flowRaw := eventMap["Flow"]; flowRaw != nil {
+			event.Flow = parseWorkflowFlow(toMap(flowRaw))
+		}
+
+		events = append(events, event)
+	}
+
+	return events
 }
 
 // parseParameterMappings parses parameter mappings from an array.

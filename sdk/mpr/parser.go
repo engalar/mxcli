@@ -157,7 +157,7 @@ type BsonArrayInfo struct {
 }
 
 // extractBsonArrayWithMarker extracts items from a Mendix BSON array, preserving the marker.
-// Returns the marker (1, 2, or 3) and the items after the marker.
+// Returns the marker (2 or 3) and the items after the marker.
 func extractBsonArrayWithMarker(v any) BsonArrayInfo {
 	if v == nil {
 		return BsonArrayInfo{}

@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (r *Reader) parseMicroflow(unitID, containerID string, contents []byte) (*microflows.Microflow, error) {
@@ -235,6 +236,22 @@ func parseMicroflowObjectCollection(raw map[string]any) *microflows.MicroflowObj
 
 	// Parse objects array (int32/int64 version markers are skipped by extractBsonMap returning nil)
 	for _, obj := range extractBsonSlice(raw["Objects"]) {
+		// Prefer primitive.D path to preserve field ordering for unknown types
+		if rawD, ok := obj.(primitive.D); ok {
+			typeName, _ := rawD.Map()["$Type"].(string)
+			if typeName == "" {
+				continue
+			}
+			if fn, ok := microflowObjectParsers[typeName]; ok {
+				if mfObj := fn(rawD.Map()); mfObj != nil {
+					collection.Objects = append(collection.Objects, mfObj)
+				}
+			} else {
+				collection.Objects = append(collection.Objects, newUnknownObjectFromD(typeName, bson.D(rawD)))
+			}
+			continue
+		}
+		// Fallback for map[string]any
 		if objMap := extractBsonMap(obj); objMap != nil {
 			if mfObj := parseMicroflowObject(objMap); mfObj != nil {
 				collection.Objects = append(collection.Objects, mfObj)

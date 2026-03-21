@@ -458,20 +458,24 @@ func serializeMicroflowObject(obj microflows.MicroflowObject) bson.D {
 			{Key: "ErrorHandlingType", Value: string(o.ErrorHandlingType)},
 		}
 		// Serialize LoopSource (IterableList or WhileLoopCondition)
-		switch ls := o.LoopSource.(type) {
-		case *microflows.IterableList:
-			doc = append(doc, bson.E{Key: "LoopSource", Value: bson.D{
-				{Key: "$ID", Value: idToBsonBinary(string(ls.ID))},
-				{Key: "$Type", Value: "Microflows$IterableList"},
-				{Key: "ListVariableName", Value: ls.ListVariableName},
-				{Key: "VariableName", Value: ls.VariableName},
-			}})
-		case *microflows.WhileLoopCondition:
-			doc = append(doc, bson.E{Key: "LoopSource", Value: bson.D{
-				{Key: "$ID", Value: idToBsonBinary(string(ls.ID))},
-				{Key: "$Type", Value: "Microflows$WhileLoopCondition"},
-				{Key: "WhileExpression", Value: ls.WhileExpression},
-			}})
+		if o.LoopSource != nil {
+			switch ls := o.LoopSource.(type) {
+			case *microflows.IterableList:
+				loopSource := bson.D{
+					{Key: "$ID", Value: idToBsonBinary(string(ls.ID))},
+					{Key: "$Type", Value: "Microflows$IterableList"},
+					{Key: "ListVariableName", Value: ls.ListVariableName},
+					{Key: "VariableName", Value: ls.VariableName},
+				}
+				doc = append(doc, bson.E{Key: "LoopSource", Value: loopSource})
+			case *microflows.WhileLoopCondition:
+				loopSource := bson.D{
+					{Key: "$ID", Value: idToBsonBinary(string(ls.ID))},
+					{Key: "$Type", Value: "Microflows$WhileLoopCondition"},
+					{Key: "WhileExpression", Value: ls.WhileExpression},
+				}
+				doc = append(doc, bson.E{Key: "LoopSource", Value: loopSource})
+			}
 		}
 		// Serialize nested ObjectCollection
 		if o.ObjectCollection != nil {
@@ -509,16 +513,12 @@ func serializeMicroflowObject(obj microflows.MicroflowObject) bson.D {
 		}
 
 	case *model.UnknownElement:
-		// Write-through: serialize RawFields back as-is so unknown activities
+		// Write-through: serialize RawDoc back as-is so unknown activities
 		// are not silently dropped when the MPR is saved.
-		if o.RawFields == nil {
+		if o.RawDoc == nil {
 			return nil
 		}
-		doc := make(bson.D, 0, len(o.RawFields))
-		for k, v := range o.RawFields {
-			doc = append(doc, bson.E{Key: k, Value: v})
-		}
-		return doc
+		return o.RawDoc
 
 	default:
 		return nil

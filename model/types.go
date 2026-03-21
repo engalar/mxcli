@@ -6,6 +6,8 @@ package model
 import (
 	"encoding/json"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // ID represents a unique identifier for model elements.
@@ -728,7 +730,7 @@ type UnknownElement struct {
 	Position   Point             `json:"position,omitempty"`
 	Name       string            `json:"name,omitempty"`
 	Caption    string            `json:"caption,omitempty"`
-	RawFields  map[string]any    `json:"-"`
+	RawDoc     bson.D            `json:"-"`
 	FieldKinds map[string]string `json:"-"`
 }
 
@@ -746,3 +748,4 @@ func (u *UnknownElement) GetCaption() string { return u.Caption }
 
 // ActivityType returns the type name (satisfies workflows.WorkflowActivity).
 func (u *UnknownElement) ActivityType() string { return u.TypeName }
+
