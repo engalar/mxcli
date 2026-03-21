@@ -240,6 +240,8 @@ func serializeWorkflowActivity(act workflows.WorkflowActivity) bson.D {
 		return serializeStartWorkflow(a)
 	case *workflows.EndWorkflowActivity:
 		return serializeEndWorkflow(a)
+	case *workflows.WorkflowAnnotationActivity:
+		return serializeWorkflowAnnotationActivity(a)
 	default:
 		return nil
 	}
@@ -254,9 +256,13 @@ func activityID(a *workflows.BaseWorkflowActivity) string {
 
 func serializeUserTask(a *workflows.UserTask) bson.D {
 	// UserTask was deleted in Mendix 10.12.0, replaced by SingleUserTaskActivity.
+	typeName := "Workflows$SingleUserTaskActivity"
+	if a.IsMulti {
+		typeName = "Workflows$MultiUserTaskActivity"
+	}
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
-		{Key: "$Type", Value: "Workflows$SingleUserTaskActivity"},
+		{Key: "$Type", Value: typeName},
 	}
 
 	// Annotation (null or object)
@@ -686,5 +692,17 @@ func serializeEndWorkflow(a *workflows.EndWorkflowActivity) bson.D {
 		bson.E{Key: "Name", Value: a.Name},
 	)
 
+	return doc
+}
+
+func serializeWorkflowAnnotationActivity(a *workflows.WorkflowAnnotationActivity) bson.D {
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(activityID(&a.BaseWorkflowActivity))},
+		{Key: "$Type", Value: "Workflows$Annotation"},
+		{Key: "Description", Value: a.Description},
+	}
+	doc = append(doc, bson.E{Key: "PersistentId", Value: idToBsonBinary(generateUUID())})
+	doc = append(doc, bson.E{Key: "RelativeMiddlePoint", Value: ""})
+	doc = append(doc, bson.E{Key: "Size", Value: ""})
 	return doc
 }
