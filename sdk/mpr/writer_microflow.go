@@ -503,16 +503,12 @@ func serializeMicroflowObject(obj microflows.MicroflowObject) bson.D {
 		}
 
 	case *model.UnknownElement:
-		// Write-through: serialize RawFields back as-is so unknown activities
+		// Write-through: serialize RawDoc back as-is so unknown activities
 		// are not silently dropped when the MPR is saved.
-		if o.RawFields == nil {
+		if o.RawDoc == nil {
 			return nil
 		}
-		doc := make(bson.D, 0, len(o.RawFields))
-		for k, v := range o.RawFields {
-			doc = append(doc, bson.E{Key: k, Value: v})
-		}
-		return doc
+		return o.RawDoc
 
 	default:
 		return nil
