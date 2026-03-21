@@ -325,9 +325,11 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - Data import from external databases into Mendix app DB (`IMPORT FROM ... INTO ... MAP ...`)
 - Database Connector generation from external schema (`SQL <alias> GENERATE CONNECTOR INTO <module>`)
 - EXECUTE DATABASE QUERY microflow action (static, dynamic SQL, parameterized, runtime connection override)
+- CREATE/DROP WORKFLOW with user tasks, decisions, parallel splits, and other activity types
+- CALCULATED BY microflow syntax for calculated attributes
 
 **Not Yet Implemented:**
-- 48 of 52 metamodel domains (workflows, REST, etc.)
+- 47 of 52 metamodel domains (REST, etc.)
 - Delta/change tracking system
 - Runtime type reflection
 

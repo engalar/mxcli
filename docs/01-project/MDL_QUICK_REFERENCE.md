@@ -208,8 +208,42 @@ Nested folders use `/` separator: `'Parent/Child/Grandchild'`. Missing folders a
 | Revoke entity access | `REVOKE Mod.Role ON Mod.Entity;` | |
 | Set security level | `ALTER PROJECT SECURITY LEVEL OFF\|PROTOTYPE\|PRODUCTION;` | |
 | Toggle demo users | `ALTER PROJECT SECURITY DEMO USERS ON\|OFF;` | |
-| Create demo user | `CREATE DEMO USER 'name' PASSWORD 'pass' (UserRole, ...);` | |
+| Create demo user | `CREATE DEMO USER 'name' PASSWORD 'pass' [ENTITY Module.Entity] (UserRole, ...);` | |
 | Drop demo user | `DROP DEMO USER 'name';` | |
+
+## Workflows
+
+| Statement | Syntax | Notes |
+|-----------|--------|-------|
+| Show workflows | `SHOW WORKFLOWS [IN Module];` | List all or filter by module |
+| Describe workflow | `DESCRIBE WORKFLOW Module.Name;` | Full MDL output |
+| Create workflow | `CREATE [OR MODIFY] WORKFLOW Module.Name PARAMETER $Ctx: Module.Entity BEGIN ... END WORKFLOW;` | See activity types below |
+| Drop workflow | `DROP WORKFLOW Module.Name;` | |
+| Grant workflow access | `GRANT EXECUTE ON WORKFLOW Module.Name TO Mod.Role, ...;` | |
+| Revoke workflow access | `REVOKE EXECUTE ON WORKFLOW Module.Name FROM Mod.Role, ...;` | |
+
+**Workflow Activity Types:**
+- `USER TASK <name> '<caption>' [PAGE Mod.Page] [TARGETING MICROFLOW Mod.MF] [OUTCOMES '<out>' { } ...];`
+- `CALL MICROFLOW Mod.MF [COMMENT '<text>'] [OUTCOMES '<out>' { } ...];`
+- `CALL WORKFLOW Mod.WF [COMMENT '<text>'];`
+- `DECISION ['<caption>'] OUTCOMES '<out>' { } ...;`
+- `PARALLEL SPLIT PATH 1 { } PATH 2 { };`
+- `JUMP TO <activity-name>;`
+- `WAIT FOR TIMER ['<expr>'];`
+- `WAIT FOR NOTIFICATION;`
+- `END;`
+
+**Example:**
+```sql
+CREATE WORKFLOW Module.ApprovalFlow
+  PARAMETER $Context: Module.Request
+  OVERVIEW PAGE Module.WorkflowOverview
+BEGIN
+  USER TASK ReviewTask 'Review the request'
+    PAGE Module.ReviewPage
+    OUTCOMES 'Approve' { } 'Reject' { };
+END WORKFLOW;
+```
 
 ## Project Structure
 
@@ -416,6 +450,8 @@ CREATE PERSISTENT ENTITY Module.VATRate ("Create": DateTime, Rate: Decimal);
 Both double-quote (ANSI SQL) and backtick (MySQL) styles are supported. You can mix quoted and unquoted parts: `"ComboBox".CategoryTreeVE`.
 
 **Boolean attributes** auto-default to `false` when no `DEFAULT` is specified.
+
+**CALCULATED** marks an attribute as calculated (not stored). Use `CALCULATED BY Module.Microflow` to specify the calculation microflow. Calculated attributes derive their value from a microflow at runtime.
 
 **ButtonStyle** supports all values: `Primary`, `Default`, `Success`, `Danger`, `Warning`, `Info`.
 

@@ -326,6 +326,29 @@ COMMENT 'Additional documentation';
 
 **Naming Convention**: `{FromEntity}_{ToEntity}` (e.g., `Order_Customer`, `Transaction_Account`)
 
+#### Calculated Attributes
+
+Calculated attributes derive their value from a microflow at runtime. Use `CALCULATED BY Module.Microflow` to specify the calculation microflow.
+
+**IMPORTANT: CALCULATED attributes are only supported on PERSISTENT entities.** Using CALCULATED on non-persistent entities will produce a validation error.
+
+```sql
+@Position(100, 100)
+CREATE PERSISTENT ENTITY Module.OrderLine (
+  /** Unit price */
+  UnitPrice: Decimal NOT NULL,
+  /** Quantity ordered */
+  Quantity: Integer NOT NULL,
+  /** Total price, calculated by microflow */
+  TotalPrice: Decimal CALCULATED BY Module.CalcTotalPrice
+);
+```
+
+**Syntax variants:**
+- `CALCULATED BY Module.Microflow` — recommended, binds the calculation microflow directly
+- `CALCULATED Module.Microflow` — also valid (`BY` keyword is optional)
+- `CALCULATED` — bare form, marks as calculated but requires manual microflow binding in Studio Pro
+
 ### Data Types
 
 | Type | Example | Description |

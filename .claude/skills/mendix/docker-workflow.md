@@ -50,6 +50,21 @@ mxcli docker run -p app.mpr --fresh --wait
 
 `docker run` handles everything: downloads MxBuild and runtime (if not cached), initializes the Docker stack (if needed), builds the PAD package, starts the containers, and optionally waits for the runtime to report successful startup.
 
+## Creating an Empty Mendix App
+
+To create a new blank Mendix project for testing (requires mxbuild to be downloaded first):
+
+```bash
+# Download mxbuild if not already cached
+mxcli setup mxbuild --version 11.6.4
+
+# Create a blank project
+mkdir -p /path/to/my-app
+~/.mxcli/mxbuild/{version}/modeler/mx create-project --app-name MyApp --output-dir /path/to/my-app
+```
+
+The `mx create-project` command creates an MPR v2 project with the standard Mendix module structure. You can then use the Docker workflow to build and run it.
+
 ## Step-by-Step Workflow
 
 If you prefer more control, use the individual commands:
@@ -65,12 +80,37 @@ mxcli setup mxbuild -p app.mpr
 # Download Mendix runtime matching the project version
 mxcli setup mxruntime -p app.mpr
 
+# Or specify version explicitly (without a project)
+mxcli setup mxbuild --version 11.6.4
+mxcli setup mxruntime --version 11.6.4
+
 # Or preview what would be downloaded
 mxcli setup mxbuild -p app.mpr --dry-run
 mxcli setup mxruntime -p app.mpr --dry-run
 ```
 
 MxBuild is cached at `~/.mxcli/mxbuild/{version}/` and the runtime at `~/.mxcli/runtime/{version}/`. Both are reused across builds.
+
+#### Runtime-to-MxBuild Copying (PAD Build Prerequisite)
+
+MxBuild 11.6.3+ expects runtime files (`pad/`, `lib/`, `launcher/`, `agents/`) inside its own `runtime/` directory, but `mxcli setup mxbuild` only downloads the build tools (not the full runtime). If the PAD build fails with `StudioPro.conf.hbs does not exist` or `ClassNotFoundException`, copy the runtime directories into mxbuild:
+
+```bash
+VERSION=11.6.4  # replace with your version
+
+# After downloading both mxbuild and mxruntime:
+cp -r ~/.mxcli/runtime/$VERSION/runtime/pad ~/.mxcli/mxbuild/$VERSION/runtime/pad
+cp -r ~/.mxcli/runtime/$VERSION/runtime/lib ~/.mxcli/mxbuild/$VERSION/runtime/lib
+cp -r ~/.mxcli/runtime/$VERSION/runtime/launcher ~/.mxcli/mxbuild/$VERSION/runtime/launcher
+cp -r ~/.mxcli/runtime/$VERSION/runtime/agents ~/.mxcli/mxbuild/$VERSION/runtime/agents
+```
+
+**Important:** The PAD build output may only include partial runtime bundles (5 jars instead of 354). If the runtime fails to start with `ClassNotFoundException: com.mendix.container.support.EventProcessor`, copy the full runtime into the PAD build output:
+
+```bash
+rm -rf /path/to/project/.docker/build/lib/runtime
+cp -r ~/.mxcli/runtime/$VERSION/runtime /path/to/project/.docker/build/lib/runtime
+```
 
 ### 2. Initialize Docker stack (first time only)
 
@@ -80,6 +120,16 @@ mxcli docker init -p app.mpr
 ```
 
 This creates a `.docker/` directory with Docker Compose configuration for the Mendix app + PostgreSQL.
+
+**Port conflicts:** If default ports (8080/8090/5432) are already in use, check with `ss -tlnp | grep -E '808|809|543'` and use `--port-offset N` to shift all ports:
+
+```bash
+# Check which ports are occupied
+ss -tlnp | grep -E '808[0-9]|809[0-9]|543[0-9]'
+
+# Use offset to avoid conflicts (e.g., offset 5 → 8085/8095/5437)
+mxcli docker init -p app.mpr --port-offset 5
+```
 
 ### 3. Check project for errors
 
@@ -346,6 +396,9 @@ All defaults can be overridden in `.docker/.env`.
 | Build fails with version error | Requires Mendix >= 11.6.1 for PAD support |
 | No Dockerfile in PAD output | Normal for MxBuild 11.6.3+ — `mxcli docker build` auto-generates one |
 | Runtime not found / runtimelauncher.jar missing | Run `mxcli setup mxruntime -p app.mpr` or let `docker build` auto-download |
+| `StudioPro.conf.hbs does not exist` | Runtime not linked into mxbuild — see "Runtime-to-MxBuild Copying" above |
+| `ClassNotFoundException: EventProcessor` | PAD has partial runtime bundles — copy full runtime into `.docker/build/lib/runtime/` (see above) |
+| Port already allocated | Check ports with `ss -tlnp \| grep 808` and use `docker init --port-offset N --force` |
 | `' etc/Default' is not a file` | Dockerfile CMD passes config arg — `docker build` patches this automatically |
 | `DatabasePassword has no value` | Ensure `RUNTIME_PARAMS_DATABASE*` env vars are in docker-compose.yml — re-run `mxcli docker init --force` |
 | `Password should not be empty (debugger)` | Add `RUNTIME_DEBUGGER_PASSWORD` — re-run `mxcli docker init --force` |

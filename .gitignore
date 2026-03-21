@@ -54,3 +54,6 @@ grammardoc
 *.pptx
 # Excluded skills
 .claude/skills/mendix/migrate-outsystems.md
+
+# Snap tool binary (used for BSON fixture generation)
+snap-bson
