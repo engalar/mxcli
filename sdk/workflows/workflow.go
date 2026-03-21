@@ -106,6 +106,7 @@ func (a *EndWorkflowActivity) ActivityType() string { return "EndWorkflow" }
 // UserTask represents a user task in a workflow.
 type UserTask struct {
 	BaseWorkflowActivity
+	IsMulti         bool               `json:"isMulti,omitempty"`         // true if Workflows$MultiUserTaskActivity
 	Page            string             `json:"page,omitempty"`            // Qualified name of the task page
 	UserSource      UserSource         `json:"userSource,omitempty"`      // Who should handle the task
 	Outcomes        []*UserTaskOutcome `json:"outcomes,omitempty"`        // Task outcomes

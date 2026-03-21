@@ -189,7 +189,7 @@ func init() {
 		"Workflows$EndWorkflowActivity":            func(r map[string]any) workflows.WorkflowActivity { return parseEndWorkflowActivity(r) },
 		"Workflows$UserTask":                       func(r map[string]any) workflows.WorkflowActivity { return parseUserTask(r) },
 		"Workflows$SingleUserTaskActivity":         func(r map[string]any) workflows.WorkflowActivity { return parseUserTask(r) },
-		"Workflows$MultiUserTaskActivity":          func(r map[string]any) workflows.WorkflowActivity { return parseUserTask(r) },
+		"Workflows$MultiUserTaskActivity":          func(r map[string]any) workflows.WorkflowActivity { return parseMultiUserTask(r) },
 		"Workflows$CallMicroflowTask":              func(r map[string]any) workflows.WorkflowActivity { return parseCallMicroflowTask(r) },
 		"Workflows$CallWorkflowActivity":           func(r map[string]any) workflows.WorkflowActivity { return parseCallWorkflowActivity(r) },
 		"Workflows$ExclusiveSplitActivity":         func(r map[string]any) workflows.WorkflowActivity { return parseExclusiveSplitActivity(r) },
@@ -490,6 +490,15 @@ func parseBaseActivity(a *workflows.BaseWorkflowActivity, raw map[string]any) {
 			}
 		}
 	}
+}
+
+// parseMultiUserTask parses a MultiUserTaskActivity, reusing parseUserTask with IsMulti flag.
+func parseMultiUserTask(raw map[string]any) *workflows.UserTask {
+	task := parseUserTask(raw)
+	if task != nil {
+		task.IsMulti = true
+	}
+	return task
 }
 
 // parseUserTaskOutcome parses a UserTaskOutcome.
