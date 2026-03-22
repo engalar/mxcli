@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	"github.com/mendixlabs/mxcli/mdl/executor"
@@ -53,6 +54,25 @@ func shouldSuppressWarning() bool {
 	return false
 }
 
+// discoverProjectPath looks for a single .mpr file in the current directory.
+// Returns the filename if exactly one is found, otherwise returns "".
+func discoverProjectPath() string {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		return ""
+	}
+	var mprFiles []string
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".mpr") {
+			mprFiles = append(mprFiles, e.Name())
+		}
+	}
+	if len(mprFiles) == 1 {
+		return mprFiles[0]
+	}
+	return ""
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "mxcli",
 	Short: "Mendix CLI - Work with Mendix projects using MDL syntax",
@@ -78,6 +98,15 @@ Examples:
   mxcli -p app.mpr -c "SHOW ENTITIES"
 `,
 	Version: version,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		projectPath, _ := cmd.Flags().GetString("project")
+		if projectPath == "" {
+			if discovered := discoverProjectPath(); discovered != "" {
+				_ = cmd.Flags().Set("project", discovered)
+				fmt.Fprintf(os.Stderr, "Using project: %s\n", discovered)
+			}
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get flags
 		commands, _ := cmd.Flags().GetString("command")
