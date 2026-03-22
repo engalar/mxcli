@@ -206,19 +206,7 @@ func buildWorkflowUserTask(ctx parser.IWorkflowUserTaskStmtContext) *ast.Workflo
 
 	// BoundaryEvents (Issue #7)
 	for _, beCtx := range utCtx.AllWorkflowBoundaryEventClause() {
-		beCtx2 := beCtx.(*parser.WorkflowBoundaryEventClauseContext)
-		be := ast.WorkflowBoundaryEventNode{}
-		if beCtx2.NON() != nil {
-			be.EventType = "NonInterruptingTimer"
-		} else if beCtx2.INTERRUPTING() != nil {
-			be.EventType = "InterruptingTimer"
-		} else {
-			be.EventType = "Timer"
-		}
-		if beCtx2.STRING_LITERAL() != nil {
-			be.Delay = unquoteString(beCtx2.STRING_LITERAL().GetText())
-		}
-		node.BoundaryEvents = append(node.BoundaryEvents, be)
+		node.BoundaryEvents = append(node.BoundaryEvents, buildBoundaryEventNode(beCtx))
 	}
 
 	return node
@@ -264,19 +252,7 @@ func buildWorkflowCallMicroflow(ctx parser.IWorkflowCallMicroflowStmtContext) *a
 
 	// BoundaryEvents (Issue #7)
 	for _, beCtx := range cmCtx.AllWorkflowBoundaryEventClause() {
-		beCtx2 := beCtx.(*parser.WorkflowBoundaryEventClauseContext)
-		be := ast.WorkflowBoundaryEventNode{}
-		if beCtx2.NON() != nil {
-			be.EventType = "NonInterruptingTimer"
-		} else if beCtx2.INTERRUPTING() != nil {
-			be.EventType = "InterruptingTimer"
-		} else {
-			be.EventType = "Timer"
-		}
-		if beCtx2.STRING_LITERAL() != nil {
-			be.Delay = unquoteString(beCtx2.STRING_LITERAL().GetText())
-		}
-		node.BoundaryEvents = append(node.BoundaryEvents, be)
+		node.BoundaryEvents = append(node.BoundaryEvents, buildBoundaryEventNode(beCtx))
 	}
 
 	return node
@@ -428,22 +404,30 @@ func buildWorkflowWaitForNotification(ctx parser.IWorkflowWaitForNotificationStm
 
 	// BoundaryEvents (Issue #7)
 	for _, beCtx := range wnCtx.AllWorkflowBoundaryEventClause() {
-		beCtx2 := beCtx.(*parser.WorkflowBoundaryEventClauseContext)
-		be := ast.WorkflowBoundaryEventNode{}
-		if beCtx2.NON() != nil {
-			be.EventType = "NonInterruptingTimer"
-		} else if beCtx2.INTERRUPTING() != nil {
-			be.EventType = "InterruptingTimer"
-		} else {
-			be.EventType = "Timer"
-		}
-		if beCtx2.STRING_LITERAL() != nil {
-			be.Delay = unquoteString(beCtx2.STRING_LITERAL().GetText())
-		}
-		node.BoundaryEvents = append(node.BoundaryEvents, be)
+		node.BoundaryEvents = append(node.BoundaryEvents, buildBoundaryEventNode(beCtx))
 	}
 
 	return node
+}
+
+// buildBoundaryEventNode builds a WorkflowBoundaryEventNode from a grammar context.
+func buildBoundaryEventNode(beCtx parser.IWorkflowBoundaryEventClauseContext) ast.WorkflowBoundaryEventNode {
+	beCtx2 := beCtx.(*parser.WorkflowBoundaryEventClauseContext)
+	be := ast.WorkflowBoundaryEventNode{}
+	if beCtx2.NON() != nil {
+		be.EventType = "NonInterruptingTimer"
+	} else if beCtx2.INTERRUPTING() != nil {
+		be.EventType = "InterruptingTimer"
+	} else {
+		be.EventType = "Timer"
+	}
+	if beCtx2.STRING_LITERAL() != nil {
+		be.Delay = unquoteString(beCtx2.STRING_LITERAL().GetText())
+	}
+	if body := beCtx2.WorkflowBody(); body != nil {
+		be.Activities = buildWorkflowBody(body)
+	}
+	return be
 }
 
 // buildWorkflowAnnotation builds a WorkflowAnnotationActivityNode from the grammar context.

@@ -150,8 +150,9 @@ func (n *WorkflowEndNode) workflowActivityNode() {}
 // WorkflowBoundaryEventNode represents a BOUNDARY EVENT clause on a user task.
 // Issue #7
 type WorkflowBoundaryEventNode struct {
-	EventType string // "InterruptingTimer", "NonInterruptingTimer", "Timer"
-	Delay     string // ISO duration expression e.g. "${PT1H}"
+	EventType  string                 // "InterruptingTimer", "NonInterruptingTimer", "Timer"
+	Delay      string                 // ISO duration expression e.g. "${PT1H}"
+	Activities []WorkflowActivityNode // Sub-flow activities inside the boundary event
 }
 
 // WorkflowAnnotationActivityNode represents an ANNOTATION activity in a workflow.
