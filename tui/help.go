@@ -6,33 +6,36 @@ const helpText = `
   mxcli tui — Keyboard Reference
 
   NAVIGATION
-    h / ←       move focus left
-    l / → / Enter  open / move focus right
-    j / ↓       move down
-    k / ↑       move up
-    Tab         cycle panel focus
-    /           search/filter in current column
-    Esc         back / close
+    j / ↓         move down / scroll
+    k / ↑         move up / scroll
+    l / → / Enter  drill in / expand
+    h / ←         go back
+    Tab           cycle panel focus
+    /             filter in list
+    Esc           back / close
 
-  COMMANDS (press : to activate)
-    :run             run MDL file
-    :check           check MDL syntax
-    :callers         show callers of selected element
-    :callees         show callees
-    :context         show context
-    :impact          show impact
-    :refs            show references
-    :diagram         open diagram in browser
-    :search <kw>     full-text search
+  ACTIONS
+    b    BSON dump (overlay)
+    c    compare view (side-by-side)
+    d    diagram in browser
+    r    refresh project tree
+    z    zen mode (zoom panel)
+    Enter  full detail (in preview)
+
+  COMPARE VIEW
+    Tab   switch left/right pane
+    /     fuzzy pick object
+    1/2/3 NDSL|NDSL / NDSL|MDL / MDL|MDL
+    s     toggle sync scroll
+    j/k   scroll content
+    Esc   close
 
   OTHER
-    d    open diagram in browser
-    r    refresh project tree
     ?    show/hide this help
     q    quit
 `
 
-func renderHelp(width, height int) string {
+func renderHelp(width, _ int) string {
 	helpWidth := width / 2
 	if helpWidth < 60 {
 		helpWidth = 60

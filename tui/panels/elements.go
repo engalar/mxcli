@@ -1,72 +1,76 @@
 package panels
 
 import (
-	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
+// elementItem wraps TreeNode with a display label for the elements panel.
+type elementItem struct {
+	node         *TreeNode
+	displayLabel string
+}
+
+func (e elementItem) Label() string       { return e.displayLabel }
+func (e elementItem) Icon() string        { return iconFor(e.node.Type) }
+func (e elementItem) Description() string { return e.node.Type }
+func (e elementItem) FilterValue() string { return e.node.Label }
+
 // ElementsPanel is the middle column: children of the selected module node.
 type ElementsPanel struct {
-	list    list.Model
-	nodes   []*TreeNode
-	focused bool
-	width   int
-	height  int
+	scrollList ScrollList
+	nodes      []*TreeNode
+	focused    bool
+	width      int
+	height     int
 }
 
 func NewElementsPanel(width, height int) ElementsPanel {
-	delegate := newCustomDelegate(false)
-	delegate.ShowDescription = true
-	l := list.New(nil, delegate, width, height)
-	l.Title = "Elements"
-	l.SetShowStatusBar(false)
-	l.SetFilteringEnabled(true)
-	return ElementsPanel{list: l, width: width, height: height}
+	sl := NewScrollList("Elements")
+	sl.SetSize(width-2, height-2)
+	return ElementsPanel{scrollList: sl, width: width, height: height}
 }
 
 func (p *ElementsPanel) SetNodes(nodes []*TreeNode) {
 	p.nodes = nodes
-	items := make([]list.Item, len(nodes))
+	items := make([]ScrollListItem, len(nodes))
 	for i, n := range nodes {
 		label := n.Label
 		if len(n.Children) > 0 {
 			label += " ▶"
 		}
-		items[i] = nodeItem{node: &TreeNode{
-			Label:         label,
-			Type:          n.Type,
-			QualifiedName: n.QualifiedName,
-			Children:      n.Children,
-		}}
+		items[i] = elementItem{
+			node:         n,
+			displayLabel: label,
+		}
 	}
-	p.list.SetItems(items)
-	p.list.ResetSelected()
+	p.scrollList.SetItems(items)
 }
 
 func (p ElementsPanel) SelectedNode() *TreeNode {
-	selectedItem, ok := p.list.SelectedItem().(nodeItem)
-	if !ok {
+	selected := p.scrollList.SelectedItem()
+	if selected == nil {
 		return nil
 	}
-	return selectedItem.node
+	return selected.(elementItem).node
 }
 
 func (p *ElementsPanel) SetSize(w, h int) {
 	p.width = w
 	p.height = h
-	p.list.SetWidth(w)
-	p.list.SetHeight(h)
+	p.scrollList.SetSize(w-2, h-2)
 }
+
+func (p ElementsPanel) IsFilterActive() bool { return p.scrollList.IsFilterActive() }
 
 func (p *ElementsPanel) SetFocused(f bool) {
 	p.focused = f
-	p.list.SetDelegate(newCustomDelegate(f))
+	p.scrollList.SetFocused(f)
 }
 
 func (p ElementsPanel) Update(msg tea.Msg) (ElementsPanel, tea.Cmd) {
 	var cmd tea.Cmd
-	p.list, cmd = p.list.Update(msg)
+	p.scrollList, cmd = p.scrollList.Update(msg)
 	return p, cmd
 }
 
@@ -74,5 +78,5 @@ func (p ElementsPanel) View() string {
 	border := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor(p.focused))
-	return border.Render(p.list.View())
+	return border.Render(p.scrollList.View())
 }
