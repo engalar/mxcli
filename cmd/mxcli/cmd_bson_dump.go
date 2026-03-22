@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build debug
+
 package main
 
 import (
@@ -13,8 +15,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-var dumpBsonCmd = &cobra.Command{
-	Use:   "dump-bson",
+var bsonDumpCmd = &cobra.Command{
+	Use:   "dump",
 	Short: "Dump raw BSON data for debugging",
 	Long: `Dump raw BSON data from Mendix project objects for debugging serialization issues.
 
@@ -33,16 +35,16 @@ Object Types:
 
 Examples:
   # List all pages
-  mxcli dump-bson -p app.mpr --type page --list
+  mxcli bson dump -p app.mpr --type page --list
 
   # Dump a specific page
-  mxcli dump-bson -p app.mpr --type page --object "PgTest.MyPage"
+  mxcli bson dump -p app.mpr --type page --object "PgTest.MyPage"
 
   # Compare two objects (outputs both as JSON for diff)
-  mxcli dump-bson -p app.mpr --type page --compare "PgTest.Broken" "PgTest.Fixed"
+  mxcli bson dump -p app.mpr --type page --compare "PgTest.Broken" "PgTest.Fixed"
 
   # Save dump to file
-  mxcli dump-bson -p app.mpr --type page --object "PgTest.MyPage" > mypage.json
+  mxcli bson dump -p app.mpr --type page --object "PgTest.MyPage" > mypage.json
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath, _ := cmd.Flags().GetString("project")
@@ -315,4 +317,11 @@ func formatValue(val any) string {
 		}
 		return s
 	}
+}
+
+func init() {
+	bsonDumpCmd.Flags().StringP("type", "t", "page", "Object type: page, microflow, nanoflow, enumeration, snippet, layout")
+	bsonDumpCmd.Flags().StringP("object", "o", "", "Object qualified name to dump (e.g., Module.PageName)")
+	bsonDumpCmd.Flags().BoolP("list", "l", false, "List all objects of the specified type")
+	bsonDumpCmd.Flags().StringSliceP("compare", "c", nil, "Compare two objects: --compare Obj1,Obj2")
 }
