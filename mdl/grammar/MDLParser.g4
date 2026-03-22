@@ -2211,6 +2211,9 @@ businessEventAttrDef
 createWorkflowStatement
     : WORKFLOW qualifiedName
       (PARAMETER VARIABLE COLON qualifiedName)?
+      (DISPLAY STRING_LITERAL)?
+      (DESCRIPTION STRING_LITERAL)?
+      (EXPORT LEVEL (IDENTIFIER | API))?
       (OVERVIEW PAGE qualifiedName)?
       (DUE DATE_TYPE STRING_LITERAL)?
       BEGIN workflowBody END WORKFLOW SEMICOLON? SLASH?

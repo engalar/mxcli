@@ -285,3 +285,146 @@ END WORKFLOW;`
 		t.Errorf("Expected Text 'This is a workflow note', got %q", ann.Text)
 	}
 }
+
+func TestWorkflowVisitor_DisplayDescriptionExportLevel(t *testing.T) {
+	input := `CREATE WORKFLOW Module.Test
+  PARAMETER $ctx: Module.Entity
+  DISPLAY 'My Display Name'
+  DESCRIPTION 'My description'
+  EXPORT LEVEL Hidden
+BEGIN
+END WORKFLOW`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+
+	if len(prog.Statements) != 1 {
+		t.Fatalf("Expected 1 statement, got %d", len(prog.Statements))
+	}
+
+	stmt, ok := prog.Statements[0].(*ast.CreateWorkflowStmt)
+	if !ok {
+		t.Fatalf("Expected CreateWorkflowStmt, got %T", prog.Statements[0])
+	}
+
+	if stmt.DisplayName != "My Display Name" {
+		t.Errorf("Expected DisplayName 'My Display Name', got %q", stmt.DisplayName)
+	}
+	if stmt.Description != "My description" {
+		t.Errorf("Expected Description 'My description', got %q", stmt.Description)
+	}
+	if stmt.ExportLevel != "Hidden" {
+		t.Errorf("Expected ExportLevel 'Hidden', got %q", stmt.ExportLevel)
+	}
+}
+
+func TestWorkflowVisitor_DisplayOnly(t *testing.T) {
+	input := `CREATE WORKFLOW Module.Test
+  DISPLAY 'Just a display name'
+BEGIN
+END WORKFLOW`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateWorkflowStmt)
+
+	if stmt.DisplayName != "Just a display name" {
+		t.Errorf("Expected DisplayName 'Just a display name', got %q", stmt.DisplayName)
+	}
+	if stmt.Description != "" {
+		t.Errorf("Expected empty Description, got %q", stmt.Description)
+	}
+	if stmt.ExportLevel != "" {
+		t.Errorf("Expected empty ExportLevel, got %q", stmt.ExportLevel)
+	}
+}
+
+func TestWorkflowVisitor_DescriptionWithoutDisplay(t *testing.T) {
+	input := `CREATE WORKFLOW Module.Test
+  DESCRIPTION 'Only description'
+BEGIN
+END WORKFLOW`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateWorkflowStmt)
+
+	if stmt.DisplayName != "" {
+		t.Errorf("Expected empty DisplayName, got %q", stmt.DisplayName)
+	}
+	if stmt.Description != "Only description" {
+		t.Errorf("Expected Description 'Only description', got %q", stmt.Description)
+	}
+}
+
+func TestWorkflowVisitor_ExportLevelAPI(t *testing.T) {
+	input := `CREATE WORKFLOW Module.Test
+  EXPORT LEVEL API
+BEGIN
+END WORKFLOW`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateWorkflowStmt)
+
+	if stmt.ExportLevel != "API" {
+		t.Errorf("Expected ExportLevel 'API', got %q", stmt.ExportLevel)
+	}
+}
+
+func TestWorkflowVisitor_AllMetadataWithDueDate(t *testing.T) {
+	input := `CREATE WORKFLOW Module.Test
+  PARAMETER $ctx: Module.Entity
+  DISPLAY 'Approval Workflow'
+  DESCRIPTION 'Handles the approval process'
+  EXPORT LEVEL Hidden
+  DUE DATE 'addDays([%%CurrentDateTime%%], 7)'
+BEGIN
+END WORKFLOW`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateWorkflowStmt)
+
+	if stmt.DisplayName != "Approval Workflow" {
+		t.Errorf("Expected DisplayName 'Approval Workflow', got %q", stmt.DisplayName)
+	}
+	if stmt.Description != "Handles the approval process" {
+		t.Errorf("Expected Description 'Handles the approval process', got %q", stmt.Description)
+	}
+	if stmt.ExportLevel != "Hidden" {
+		t.Errorf("Expected ExportLevel 'Hidden', got %q", stmt.ExportLevel)
+	}
+	if stmt.DueDate != "addDays([%%CurrentDateTime%%], 7)" {
+		t.Errorf("Expected DueDate 'addDays([%%%%CurrentDateTime%%%%], 7)', got %q", stmt.DueDate)
+	}
+}

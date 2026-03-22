@@ -209,12 +209,6 @@ func (e *Executor) describeWorkflowToString(name ast.QualifiedName) (string, map
 
 	// Header
 	lines = append(lines, fmt.Sprintf("-- Workflow: %s", qualifiedName))
-	if targetWf.WorkflowName != "" {
-		lines = append(lines, fmt.Sprintf("-- Display Name: %s", targetWf.WorkflowName))
-	}
-	if targetWf.WorkflowDescription != "" {
-		lines = append(lines, fmt.Sprintf("-- Description: %s", targetWf.WorkflowDescription))
-	}
 	if targetWf.Annotation != "" {
 		lines = append(lines, fmt.Sprintf("-- %s", targetWf.Annotation))
 	}
@@ -225,6 +219,23 @@ func (e *Executor) describeWorkflowToString(name ast.QualifiedName) (string, map
 	// Context parameter
 	if targetWf.Parameter != nil && targetWf.Parameter.EntityRef != "" {
 		lines = append(lines, fmt.Sprintf("  PARAMETER $WorkflowContext: %s", targetWf.Parameter.EntityRef))
+	}
+
+	// Display name
+	if targetWf.WorkflowName != "" {
+		escaped := strings.ReplaceAll(targetWf.WorkflowName, "'", "''")
+		lines = append(lines, fmt.Sprintf("  DISPLAY '%s'", escaped))
+	}
+
+	// Description
+	if targetWf.WorkflowDescription != "" {
+		escaped := strings.ReplaceAll(targetWf.WorkflowDescription, "'", "''")
+		lines = append(lines, fmt.Sprintf("  DESCRIPTION '%s'", escaped))
+	}
+
+	// Export level (only emit when non-empty)
+	if targetWf.ExportLevel != "" {
+		lines = append(lines, fmt.Sprintf("  EXPORT LEVEL %s", targetWf.ExportLevel))
 	}
 
 	// Overview page

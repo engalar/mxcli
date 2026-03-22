@@ -12,6 +12,11 @@ type CreateWorkflowStmt struct {
 	ParameterVar    string        // e.g. "$WorkflowContext"
 	ParameterEntity QualifiedName // e.g. Module.Entity
 
+	// Display metadata
+	DisplayName string // from DISPLAY 'text'
+	Description string // from DESCRIPTION 'text'
+	ExportLevel string // "Hidden" or "API", from EXPORT LEVEL identifier
+
 	// Optional metadata
 	OverviewPage QualifiedName // qualified name of overview page
 	DueDate      string        // due date expression

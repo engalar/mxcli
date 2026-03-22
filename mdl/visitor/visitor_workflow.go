@@ -27,6 +27,31 @@ func (b *Builder) ExitCreateWorkflowStatement(ctx *parser.CreateWorkflowStatemen
 		}
 	}
 
+	// Parse DISPLAY, DESCRIPTION, EXPORT LEVEL, DUE DATE using positional STRING_LITERAL indexing
+	allStrings := ctx.AllSTRING_LITERAL()
+	stringIdx := 0
+
+	// DISPLAY 'text'
+	if ctx.DISPLAY() != nil && stringIdx < len(allStrings) {
+		stmt.DisplayName = unquoteString(allStrings[stringIdx].GetText())
+		stringIdx++
+	}
+
+	// DESCRIPTION 'text'
+	if ctx.DESCRIPTION() != nil && stringIdx < len(allStrings) {
+		stmt.Description = unquoteString(allStrings[stringIdx].GetText())
+		stringIdx++
+	}
+
+	// EXPORT LEVEL (Identifier | API)
+	if ctx.EXPORT() != nil && ctx.LEVEL() != nil {
+		if ctx.IDENTIFIER() != nil {
+			stmt.ExportLevel = ctx.IDENTIFIER().GetText()
+		} else if ctx.API() != nil {
+			stmt.ExportLevel = "API"
+		}
+	}
+
 	// Parse OVERVIEW PAGE QualifiedName
 	overviewPageIdx := -1
 	if ctx.OVERVIEW() != nil && ctx.PAGE() != nil {
@@ -44,9 +69,11 @@ func (b *Builder) ExitCreateWorkflowStatement(ctx *parser.CreateWorkflowStatemen
 	_ = overviewPageIdx
 
 	// Parse DUE DATE 'expression'
-	if ctx.DUE() != nil && ctx.STRING_LITERAL() != nil {
-		stmt.DueDate = unquoteString(ctx.STRING_LITERAL().GetText())
+	if ctx.DUE() != nil && stringIdx < len(allStrings) {
+		stmt.DueDate = unquoteString(allStrings[stringIdx].GetText())
+		stringIdx++
 	}
+	_ = stringIdx
 
 	// Parse CREATE OR MODIFY
 	createStmt := findParentCreateStatement(ctx)

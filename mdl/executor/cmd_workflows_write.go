@@ -67,6 +67,13 @@ func (e *Executor) execCreateWorkflow(s *ast.CreateWorkflowStmt) error {
 		wf.OverviewPage = s.OverviewPage.Module + "." + s.OverviewPage.Name
 	}
 
+	// Display metadata
+	wf.WorkflowName = s.DisplayName
+	wf.WorkflowDescription = s.Description
+	if s.ExportLevel != "" {
+		wf.ExportLevel = s.ExportLevel
+	}
+
 	// Due date
 	wf.DueDate = s.DueDate
 
