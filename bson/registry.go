@@ -1,7 +1,5 @@
-//go:build debug
-
-// Package bson provides debug-only BSON field coverage analysis utilities.
-// All files use the "debug" build tag and are excluded from release builds.
+// Package bson provides BSON inspection and field coverage analysis utilities
+// for Mendix project files.
 package bson
 
 import (

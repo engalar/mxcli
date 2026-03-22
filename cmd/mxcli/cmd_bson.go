@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build debug
-
 package main
 
 import "github.com/spf13/cobra"
 
 var bsonCmd = &cobra.Command{
 	Use:   "bson",
-	Short: "BSON discovery and debugging tools (debug build only)",
+	Short: "BSON inspection and analysis tools",
 	Long: `Tools for analyzing, comparing, and discovering BSON field coverage
-in Mendix project files. Only available in debug builds.
+in Mendix project files.
 
 Subcommands:
-  dump      Dump raw BSON data as JSON
+  dump      Dump raw BSON data as JSON or NDSL
   discover  Analyze field coverage per $Type
   compare   Diff two BSON objects`,
 }

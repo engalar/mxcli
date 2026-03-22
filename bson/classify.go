@@ -1,5 +1,3 @@
-//go:build debug
-
 package bson
 
 // FieldCategory classifies BSON fields by their role in serialization.

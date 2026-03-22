@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build debug
-
 package main
 
 import (
@@ -18,13 +16,12 @@ import (
 
 var bsonDumpCmd = &cobra.Command{
 	Use:   "dump",
-	Short: "Dump raw BSON data for debugging",
-	Long: `Dump raw BSON data from Mendix project objects for debugging serialization issues.
+	Short: "Dump raw BSON data from Mendix project objects",
+	Long: `Dump raw BSON data from Mendix project objects as JSON or NDSL.
 
-This tool helps debug BSON serialization issues by dumping the raw BSON
-structure as JSON. You can compare SDK-generated objects with Studio Pro-generated
-objects to identify field name mismatches, structural differences, or array
-version marker issues.
+Use this to inspect the internal BSON structure of pages, microflows, workflows,
+and other model elements. You can compare two objects side-by-side to identify
+field differences, structural mismatches, or array marker issues.
 
 Object Types:
   page         Dump a page
