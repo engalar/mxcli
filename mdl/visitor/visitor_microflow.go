@@ -86,8 +86,8 @@ func buildMicroflowDataType(ctx parser.IDataTypeContext) ast.DataType {
 	// Handle bare qualified name - in microflow context, this is an ENTITY reference
 	if qn := dtCtx.QualifiedName(); qn != nil {
 		name := buildQualifiedName(qn)
-		// "Nothing" means void return type (no return value)
-		if name.Module == "" && strings.EqualFold(name.Name, "Nothing") {
+		// "Nothing" / "Void" means void return type (no return value)
+		if name.Module == "" && (strings.EqualFold(name.Name, "Nothing") || strings.EqualFold(name.Name, "Void")) {
 			return ast.DataType{Kind: ast.TypeVoid}
 		}
 		return ast.DataType{Kind: ast.TypeEntity, EntityRef: &name}
