@@ -96,7 +96,8 @@ func TestMxCheck_DoctypeScripts(t *testing.T) {
 
 		output, err := runMxCheck(t, env.projectPath)
 		if err != nil {
-			if strings.Contains(output, "error") || strings.Contains(output, "Error") {
+			lowerOutput := strings.ToLower(output)
+			if strings.Contains(lowerOutput, "error") {
 				t.Errorf("mx check found errors after executing all doctype scripts:\n%s", output)
 			} else {
 				t.Logf("mx check output:\n%s", output)

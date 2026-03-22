@@ -148,12 +148,7 @@ func serializeConstantValue(cv *model.ConstantValue) bson.M {
 	cvDoc := bson.M{
 		"$Type":      "Settings$ConstantValue",
 		"ConstantId": cv.ConstantId,
-		// Value is nested under SharedOrPrivateValue
-		"SharedOrPrivateValue": bson.M{
-			"$Type": "Settings$SharedConstantValue",
-			"Value": cv.Value,
-			"$ID":   idToBsonBinary(generateUUID()),
-		},
+		"Value":      cv.Value,
 	}
 	if cv.ID != "" {
 		cvDoc["$ID"] = idToBsonBinary(string(cv.ID))
