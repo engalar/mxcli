@@ -39,6 +39,7 @@ func init() {
 	bsonCompareCmd.Flags().String("p2", "", "Path to second MPR project (for cross-MPR comparison)")
 	bsonCompareCmd.Flags().String("type", "workflow", "Object type: workflow, page, microflow, nanoflow, enumeration, snippet, layout")
 	bsonCompareCmd.Flags().Bool("all", false, "Include structural/layout fields ($ID, PersistentId, etc.)")
+	bsonCompareCmd.Flags().String("format", "diff", "Output format: diff, ndsl")
 }
 
 func runBsonCompare(cmd *cobra.Command, args []string) {
@@ -108,6 +109,24 @@ func runBsonCompare(cmd *cobra.Command, args []string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting %s: %v\n", rightName, err)
 		os.Exit(1)
+	}
+
+	// NDSL format: render both sides as normalized DSL for LLM-friendly comparison
+	format, _ := cmd.Flags().GetString("format")
+	if format == "ndsl" {
+		var leftDocD, rightDocD bson.D
+		if err := bson.Unmarshal(leftUnit.Contents, &leftDocD); err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing BSON for %s: %v\n", leftName, err)
+			os.Exit(1)
+		}
+		if err := bson.Unmarshal(rightUnit.Contents, &rightDocD); err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing BSON for %s: %v\n", rightName, err)
+			os.Exit(1)
+		}
+		fmt.Printf("=== LEFT: %s ===\n%s\n\n=== RIGHT: %s ===\n%s\n",
+			leftName, bsondebug.Render(leftDocD, 0),
+			rightName, bsondebug.Render(rightDocD, 0))
+		return
 	}
 
 	// Unmarshal to map[string]any
