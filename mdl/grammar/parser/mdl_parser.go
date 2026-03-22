@@ -2548,8 +2548,8 @@ func mdlparserParserInit() {
 		0, 4260, 4262, 5, 426, 0, 0, 4261, 4263, 3, 504, 252, 0, 4262, 4261, 1,
 		0, 0, 0, 4263, 4264, 1, 0, 0, 0, 4264, 4262, 1, 0, 0, 0, 4264, 4265, 1,
 		0, 0, 0, 4265, 4267, 1, 0, 0, 0, 4266, 4259, 1, 0, 0, 0, 4266, 4267, 1,
-		0, 0, 0, 4267, 509, 1, 0, 0, 0, 4268, 4269, 5, 503, 0, 0, 4269, 4270, 5,
-		472, 0, 0, 4270, 4271, 5, 499, 0, 0, 4271, 511, 1, 0, 0, 0, 4272, 4273,
+		0, 0, 0, 4267, 509, 1, 0, 0, 0, 4268, 4269, 3, 684, 342, 0, 4269, 4270,
+		5, 472, 0, 0, 4270, 4271, 5, 499, 0, 0, 4271, 511, 1, 0, 0, 0, 4272, 4273,
 		5, 112, 0, 0, 4273, 4274, 5, 32, 0, 0, 4274, 4277, 3, 684, 342, 0, 4275,
 		4276, 5, 394, 0, 0, 4276, 4278, 5, 499, 0, 0, 4277, 4275, 1, 0, 0, 0, 4277,
 		4278, 1, 0, 0, 0, 4278, 513, 1, 0, 0, 0, 4279, 4281, 5, 445, 0, 0, 4280,
@@ -64253,7 +64253,7 @@ type IWorkflowParameterMappingContext interface {
 	GetParser() antlr.Parser
 
 	// Getter signatures
-	IDENTIFIER() antlr.TerminalNode
+	QualifiedName() IQualifiedNameContext
 	EQUALS() antlr.TerminalNode
 	STRING_LITERAL() antlr.TerminalNode
 
@@ -64293,8 +64293,20 @@ func NewWorkflowParameterMappingContext(parser antlr.Parser, parent antlr.Parser
 
 func (s *WorkflowParameterMappingContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *WorkflowParameterMappingContext) IDENTIFIER() antlr.TerminalNode {
-	return s.GetToken(MDLParserIDENTIFIER, 0)
+func (s *WorkflowParameterMappingContext) QualifiedName() IQualifiedNameContext {
+	var t antlr.RuleContext
+	for _, ctx := range s.GetChildren() {
+		if _, ok := ctx.(IQualifiedNameContext); ok {
+			t = ctx.(antlr.RuleContext)
+			break
+		}
+	}
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(IQualifiedNameContext)
 }
 
 func (s *WorkflowParameterMappingContext) EQUALS() antlr.TerminalNode {
@@ -64331,11 +64343,7 @@ func (p *MDLParser) WorkflowParameterMapping() (localctx IWorkflowParameterMappi
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(4268)
-		p.Match(MDLParserIDENTIFIER)
-		if p.HasError() {
-			// Recognition error - abort rule
-			goto errorExit
-		}
+		p.QualifiedName()
 	}
 	{
 		p.SetState(4269)
