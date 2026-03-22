@@ -20,6 +20,7 @@ Detailed syntax for each MDL document type:
 | [mdl-entities.md](mdl-entities.md) | Entity, attribute, association syntax | Creating domain models |
 | [write-microflows.md](write-microflows.md) | Microflow syntax reference | Writing microflow logic |
 | [write-oql-queries.md](write-oql-queries.md) | OQL query syntax | Creating VIEW entities |
+| [write-workflows.md](write-workflows.md) | Workflow syntax reference | Creating and exploring workflows |
 | [create-page.md](create-page.md) | Page and widget syntax | Creating pages |
 | [fragments.md](fragments.md) | Fragment (reusable widget group) syntax | Reusing widget patterns across pages |
 
@@ -86,6 +87,9 @@ Load skills based on the task:
 | "Change widgets in bulk" | `bulk-widget-updates.md` |
 | "Reuse widgets across pages" | `fragments.md` |
 | "Define a fragment" | `fragments.md` |
+| "Create workflow" | `write-workflows.md` |
+| "Show/describe workflows" | `write-workflows.md` |
+| "Approval process" | `write-workflows.md` |
 
 ### For Error Recovery
 
