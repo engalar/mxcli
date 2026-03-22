@@ -27,41 +27,4 @@ var (
 	dimStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("240"))
 
-	typeIconMap = map[string]string{
-		"module":               "⬡",
-		"domainmodel":          "⊞",
-		"entity":               "▣",
-		"externalentity":       "⊡",
-		"association":          "↔",
-		"enumeration":          "≡",
-		"microflow":            "⚙",
-		"nanoflow":             "⚡",
-		"page":                 "▤",
-		"snippet":              "⬔",
-		"layout":               "⬕",
-		"constant":             "π",
-		"javaaction":           "☕",
-		"javascriptaction":     "JS",
-		"scheduledevent":       "⏰",
-		"folder":               "📁",
-		"security":             "🔒",
-		"modulerole":           "👤",
-		"userrole":             "👥",
-		"projectsecurity":      "🛡",
-		"navigation":           "🧭",
-		"systemoverview":       "🗺",
-		"businesseventservice": "📡",
-		"databaseconnection":   "🗄",
-		"odataservice":         "🌐",
-		"odataclient":          "🔗",
-		"publishedrestservice": "REST",
-		"workflow":             "🔀",
-	}
 )
-
-func iconFor(nodeType string) string {
-	if icon, ok := typeIconMap[nodeType]; ok {
-		return icon
-	}
-	return "·"
-}
