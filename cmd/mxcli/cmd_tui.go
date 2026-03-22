@@ -38,12 +38,25 @@ Example:
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath, _ := cmd.Flags().GetString("project")
+		mxcliPath, _ := os.Executable()
+
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			picker := tui.NewPickerModel()
+			p := tea.NewProgram(picker, tea.WithAltScreen())
+			result, err := p.Run()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			m := result.(tui.PickerModel)
+			if m.Chosen() == "" {
+				return
+			}
+			projectPath = m.Chosen()
 		}
 
-		mxcliPath, _ := os.Executable()
+		tui.SaveHistory(projectPath)
+
 		m := tui.New(mxcliPath, projectPath)
 		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 		if _, err := p.Run(); err != nil {
