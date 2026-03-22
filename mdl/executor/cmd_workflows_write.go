@@ -209,6 +209,7 @@ func buildUserTask(n *ast.WorkflowUserTaskNode) *workflows.UserTask {
 	task.Name = n.Name
 	task.Caption = n.Caption
 	task.DueDate = n.DueDate
+	task.TaskDescription = n.TaskDescription
 	task.IsMulti = n.IsMultiUser
 
 	if n.Page.Module != "" {

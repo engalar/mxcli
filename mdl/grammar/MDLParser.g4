@@ -2242,6 +2242,7 @@ workflowUserTaskStmt
       (TARGETING XPATH STRING_LITERAL)?
       (ENTITY qualifiedName)?
       (DUE DATE_TYPE STRING_LITERAL)?
+      (DESCRIPTION STRING_LITERAL)?
       (OUTCOMES workflowUserTaskOutcome+)?
       (BOUNDARY EVENT workflowBoundaryEventClause+)?
     | MULTI USER TASK IDENTIFIER STRING_LITERAL
@@ -2250,6 +2251,7 @@ workflowUserTaskStmt
       (TARGETING XPATH STRING_LITERAL)?
       (ENTITY qualifiedName)?
       (DUE DATE_TYPE STRING_LITERAL)?
+      (DESCRIPTION STRING_LITERAL)?
       (OUTCOMES workflowUserTaskOutcome+)?
       (BOUNDARY EVENT workflowBoundaryEventClause+)?
     ;

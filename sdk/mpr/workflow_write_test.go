@@ -299,6 +299,26 @@ func TestSerializeSingleUserTask_NoMultiFields(t *testing.T) {
 	}
 }
 
+// --- P2: CallWorkflowActivity must not emit ParameterExpression ---
+
+func TestSerializeCallWorkflowActivity_NoParameterExpressionField(t *testing.T) {
+	act := &workflows.CallWorkflowActivity{
+		BaseWorkflowActivity: workflows.BaseWorkflowActivity{
+			BaseElement: model.BaseElement{ID: "cwa-1"},
+			Name:        "callWorkflow1",
+		},
+		Workflow:            "MyModule.SubFlow",
+		ParameterExpression: "$WorkflowContext",
+	}
+	doc := serializeCallWorkflowActivity(act)
+	for _, e := range doc {
+		if e.Key == "ParameterExpression" {
+			t.Error("CallWorkflowActivity must not emit ParameterExpression field (not in Studio Pro BSON)")
+			return
+		}
+	}
+}
+
 // --- Fixture-based roundtrip: parse real BSON → serialize → verify markers preserved ---
 
 func TestSerializeWorkflowFlow_RoundtripFromFixture(t *testing.T) {

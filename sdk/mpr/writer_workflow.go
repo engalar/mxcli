@@ -503,7 +503,6 @@ func serializeCallWorkflowActivity(a *workflows.CallWorkflowActivity) bson.D {
 		bson.E{Key: "Caption", Value: a.Caption},
 		bson.E{Key: "ExecuteAsync", Value: false},
 		bson.E{Key: "Name", Value: a.Name},
-		bson.E{Key: "ParameterExpression", Value: a.ParameterExpression},
 	)
 
 	// ParameterMappings (always present, marker int32(2))

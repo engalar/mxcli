@@ -469,6 +469,12 @@ func formatUserTask(a *workflows.UserTask, indent string) []string {
 		lines = append(lines, fmt.Sprintf("%s  DUE DATE '%s'", indent, escapedDueDate))
 	}
 
+	// Task description
+	if a.TaskDescription != "" {
+		escaped := strings.ReplaceAll(a.TaskDescription, "'", "''")
+		lines = append(lines, fmt.Sprintf("%s  DESCRIPTION '%s'", indent, escaped))
+	}
+
 	// Outcomes
 	if len(a.Outcomes) > 0 {
 		lines = append(lines, fmt.Sprintf("%s  OUTCOMES", indent))

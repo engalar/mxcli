@@ -428,3 +428,28 @@ END WORKFLOW`
 		t.Errorf("Expected DueDate 'addDays([%%%%CurrentDateTime%%%%], 7)', got %q", stmt.DueDate)
 	}
 }
+
+func TestWorkflowVisitor_UserTaskDescription(t *testing.T) {
+	input := `CREATE WORKFLOW M.TestWF
+BEGIN
+  USER TASK review 'Review'
+    PAGE M.ReviewPage
+    DESCRIPTION 'Please review carefully'
+    OUTCOMES 'Done' { };
+END WORKFLOW;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, e := range errs {
+			t.Errorf("Parse error: %v", e)
+		}
+		t.FailNow()
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateWorkflowStmt)
+	userTask := stmt.Activities[0].(*ast.WorkflowUserTaskNode)
+
+	if userTask.TaskDescription != "Please review carefully" {
+		t.Errorf("TaskDescription = %q, want %q", userTask.TaskDescription, "Please review carefully")
+	}
+}

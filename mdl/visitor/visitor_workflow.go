@@ -193,6 +193,11 @@ func buildWorkflowUserTask(ctx parser.IWorkflowUserTaskStmtContext) *ast.Workflo
 		stringIdx++
 	}
 
+	if utCtx.DESCRIPTION() != nil && stringIdx < len(allStrings) {
+		node.TaskDescription = unquoteString(allStrings[stringIdx].GetText())
+		stringIdx++
+	}
+
 	// Outcomes
 	for _, outcomeCtx := range utCtx.AllWorkflowUserTaskOutcome() {
 		outcome := buildWorkflowUserTaskOutcome(outcomeCtx)

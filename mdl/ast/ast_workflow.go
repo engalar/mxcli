@@ -48,8 +48,9 @@ type WorkflowUserTaskNode struct {
 	Entity         QualifiedName // user task entity
 	DueDate        string        // DUE DATE expression
 	Outcomes       []WorkflowUserTaskOutcomeNode
-	IsMultiUser    bool                        // Issue #8: true if MULTI USER TASK
-	BoundaryEvents []WorkflowBoundaryEventNode // Issue #7
+	IsMultiUser     bool                        // Issue #8: true if MULTI USER TASK
+	BoundaryEvents  []WorkflowBoundaryEventNode // Issue #7
+	TaskDescription string                      // from DESCRIPTION 'text'
 }
 
 func (n *WorkflowUserTaskNode) workflowActivityNode() {}
