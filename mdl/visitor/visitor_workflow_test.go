@@ -119,6 +119,56 @@ END WORKFLOW;`
 	}
 }
 
+func TestWorkflowVisitor_BoundaryEventWithSubFlow(t *testing.T) {
+	input := `CREATE WORKFLOW M.TestWF
+BEGIN
+  WAIT FOR NOTIFICATION
+    BOUNDARY EVENT INTERRUPTING TIMER '${PT1H}' {
+      CALL MICROFLOW M.HandleTimeout;
+    };
+END WORKFLOW;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateWorkflowStmt)
+	if len(stmt.Activities) == 0 {
+		t.Fatal("Expected at least 1 activity")
+	}
+
+	waitNode, ok := stmt.Activities[0].(*ast.WorkflowWaitForNotificationNode)
+	if !ok {
+		t.Fatalf("Expected WorkflowWaitForNotificationNode, got %T", stmt.Activities[0])
+	}
+
+	if len(waitNode.BoundaryEvents) == 0 {
+		t.Fatal("Expected at least 1 boundary event")
+	}
+
+	be := waitNode.BoundaryEvents[0]
+	if be.EventType != "InterruptingTimer" {
+		t.Errorf("Expected EventType 'InterruptingTimer', got %q", be.EventType)
+	}
+	if be.Delay != "${PT1H}" {
+		t.Errorf("Expected Delay '${PT1H}', got %q", be.Delay)
+	}
+	if len(be.Activities) == 0 {
+		t.Fatal("Expected sub-flow activities in boundary event")
+	}
+	callMf, ok := be.Activities[0].(*ast.WorkflowCallMicroflowNode)
+	if !ok {
+		t.Fatalf("Expected WorkflowCallMicroflowNode in sub-flow, got %T", be.Activities[0])
+	}
+	if callMf.Microflow.Name != "HandleTimeout" {
+		t.Errorf("Expected microflow name 'HandleTimeout', got %q", callMf.Microflow.Name)
+	}
+}
+
 func TestWorkflowVisitor_MultiUserTask(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
 BEGIN

@@ -175,6 +175,26 @@ func buildWorkflowActivities(nodes []ast.WorkflowActivityNode) []workflows.Workf
 	return activities
 }
 
+// buildBoundaryEvents converts AST boundary event nodes to SDK boundary events.
+func buildBoundaryEvents(nodes []ast.WorkflowBoundaryEventNode) []*workflows.BoundaryEvent {
+	var events []*workflows.BoundaryEvent
+	for _, be := range nodes {
+		event := &workflows.BoundaryEvent{
+			EventType:  be.EventType,
+			TimerDelay: be.Delay,
+		}
+		event.ID = model.ID(generateWorkflowUUID())
+		if len(be.Activities) > 0 {
+			event.Flow = &workflows.Flow{
+				Activities: buildWorkflowActivities(be.Activities),
+			}
+			event.Flow.ID = model.ID(generateWorkflowUUID())
+		}
+		events = append(events, event)
+	}
+	return events
+}
+
 // buildWorkflowActivity converts a single AST activity node to an SDK workflow activity.
 func buildWorkflowActivity(node ast.WorkflowActivityNode) workflows.WorkflowActivity {
 	switch n := node.(type) {
@@ -252,14 +272,7 @@ func buildUserTask(n *ast.WorkflowUserTaskNode) *workflows.UserTask {
 	}
 
 	// BoundaryEvents (Issue #7)
-	for _, be := range n.BoundaryEvents {
-		event := &workflows.BoundaryEvent{
-			EventType:  be.EventType,
-			TimerDelay: be.Delay,
-		}
-		event.ID = model.ID(generateWorkflowUUID())
-		task.BoundaryEvents = append(task.BoundaryEvents, event)
-	}
+	task.BoundaryEvents = buildBoundaryEvents(n.BoundaryEvents)
 
 	return task
 }
@@ -291,14 +304,7 @@ func buildCallMicroflowTask(n *ast.WorkflowCallMicroflowNode) *workflows.CallMic
 	}
 
 	// BoundaryEvents (Issue #7)
-	for _, be := range n.BoundaryEvents {
-		event := &workflows.BoundaryEvent{
-			EventType:  be.EventType,
-			TimerDelay: be.Delay,
-		}
-		event.ID = model.ID(generateWorkflowUUID())
-		task.BoundaryEvents = append(task.BoundaryEvents, event)
-	}
+	task.BoundaryEvents = buildBoundaryEvents(n.BoundaryEvents)
 
 	return task
 }
@@ -434,14 +440,7 @@ func buildWaitForNotification(n *ast.WorkflowWaitForNotificationNode) *workflows
 	act.Name = act.Caption
 
 	// BoundaryEvents (Issue #7)
-	for _, be := range n.BoundaryEvents {
-		event := &workflows.BoundaryEvent{
-			EventType:  be.EventType,
-			TimerDelay: be.Delay,
-		}
-		event.ID = model.ID(generateWorkflowUUID())
-		act.BoundaryEvents = append(act.BoundaryEvents, event)
-	}
+	act.BoundaryEvents = buildBoundaryEvents(n.BoundaryEvents)
 
 	return act
 }
