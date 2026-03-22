@@ -119,6 +119,36 @@ END WORKFLOW;`
 	}
 }
 
+func TestWorkflowVisitor_AnnotationRoundTrip(t *testing.T) {
+	input := `CREATE WORKFLOW M.TestWF
+BEGIN
+  ANNOTATION 'This is a test note';
+  USER TASK act1 'Do something'
+    OUTCOMES 'Done' { };
+END WORKFLOW;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateWorkflowStmt)
+	if len(stmt.Activities) < 2 {
+		t.Fatalf("Expected at least 2 activities, got %d", len(stmt.Activities))
+	}
+
+	ann, ok := stmt.Activities[0].(*ast.WorkflowAnnotationActivityNode)
+	if !ok {
+		t.Fatalf("Expected WorkflowAnnotationActivityNode, got %T", stmt.Activities[0])
+	}
+	if ann.Text != "This is a test note" {
+		t.Errorf("Expected annotation text 'This is a test note', got %q", ann.Text)
+	}
+}
+
 func TestWorkflowVisitor_BoundaryEventWithSubFlow(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
 BEGIN
