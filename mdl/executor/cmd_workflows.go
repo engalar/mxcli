@@ -344,7 +344,8 @@ func formatWorkflowActivities(flow *workflows.Flow, indent string) []string {
 			if a.Annotation != "" {
 				actLines = append(actLines, formatAnnotation(a.Annotation, indent))
 			}
-			actLines = append(actLines, fmt.Sprintf("%sJUMP TO %s -- %s", indent, target, caption))
+			escapedCaption := strings.ReplaceAll(caption, "'", "''")
+			actLines = append(actLines, fmt.Sprintf("%sJUMP TO %s COMMENT '%s'", indent, target, escapedCaption))
 		case *workflows.WaitForTimerActivity:
 			caption := a.Caption
 			if caption == "" {
@@ -355,9 +356,11 @@ func formatWorkflowActivities(flow *workflows.Flow, indent string) []string {
 			}
 			if a.DelayExpression != "" {
 				escapedDelay := strings.ReplaceAll(a.DelayExpression, "'", "''")
-				actLines = append(actLines, fmt.Sprintf("%sWAIT FOR TIMER '%s' -- %s", indent, escapedDelay, caption))
+				escapedCaption := strings.ReplaceAll(caption, "'", "''")
+				actLines = append(actLines, fmt.Sprintf("%sWAIT FOR TIMER '%s' COMMENT '%s'", indent, escapedDelay, escapedCaption))
 			} else {
-				actLines = append(actLines, fmt.Sprintf("%sWAIT FOR TIMER -- %s", indent, caption))
+				escapedCaption := strings.ReplaceAll(caption, "'", "''")
+				actLines = append(actLines, fmt.Sprintf("%sWAIT FOR TIMER COMMENT '%s'", indent, escapedCaption))
 			}
 		case *workflows.WaitForNotificationActivity:
 			caption := a.Caption
@@ -588,11 +591,12 @@ func formatCallWorkflowActivity(a *workflows.CallWorkflowActivity, indent string
 		wf = "?"
 	}
 
+	escapedCaption := strings.ReplaceAll(caption, "'", "''")
 	if a.ParameterExpression != "" {
 		escapedExpr := strings.ReplaceAll(a.ParameterExpression, "'", "''")
-		lines = append(lines, fmt.Sprintf("%sCALL WORKFLOW %s ($WorkflowContext = '%s') -- %s", indent, wf, escapedExpr, caption))
+		lines = append(lines, fmt.Sprintf("%sCALL WORKFLOW %s ($WorkflowContext = '%s') COMMENT '%s'", indent, wf, escapedExpr, escapedCaption))
 	} else {
-		lines = append(lines, fmt.Sprintf("%sCALL WORKFLOW %s -- %s", indent, wf, caption))
+		lines = append(lines, fmt.Sprintf("%sCALL WORKFLOW %s COMMENT '%s'", indent, wf, escapedCaption))
 	}
 
 	// BoundaryEvents
