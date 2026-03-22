@@ -251,7 +251,7 @@ func buildWorkflowCallMicroflow(ctx parser.IWorkflowCallMicroflowStmtContext) *a
 	for _, pmCtx := range cmCtx.AllWorkflowParameterMapping() {
 		pmCtx2 := pmCtx.(*parser.WorkflowParameterMappingContext)
 		mapping := ast.WorkflowParameterMappingNode{
-			Parameter:  pmCtx2.IDENTIFIER().GetText(),
+			Parameter:  pmCtx2.QualifiedName().GetText(),
 			Expression: unquoteString(pmCtx2.STRING_LITERAL().GetText()),
 		}
 		node.ParameterMappings = append(node.ParameterMappings, mapping)

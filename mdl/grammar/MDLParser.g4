@@ -2272,7 +2272,7 @@ workflowCallMicroflowStmt
     ;
 
 workflowParameterMapping
-    : IDENTIFIER EQUALS STRING_LITERAL
+    : qualifiedName EQUALS STRING_LITERAL
     ;
 
 workflowCallWorkflowStmt
