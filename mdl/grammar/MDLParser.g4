@@ -1018,9 +1018,10 @@ retrieveStatement
     ;
 
 retrieveSource
-    : qualifiedName
-    | LPAREN oqlQuery RPAREN
-    | DATABASE STRING_LITERAL
+    : qualifiedName                          // Database retrieve: Module.Entity
+    | VARIABLE SLASH qualifiedName           // Association retrieve: $Parent/Module.Assoc
+    | LPAREN oqlQuery RPAREN                 // OQL retrieve
+    | DATABASE STRING_LITERAL                // External DB
     ;
 
 // ON ERROR clause for microflow error handling

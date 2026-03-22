@@ -346,7 +346,7 @@ func (e *Executor) formatAction(
 			if assocName == "" {
 				assocName = "..."
 			}
-			return fmt.Sprintf("RETRIEVE $%s FROM ASSOCIATION $%s/%s;", outputVar, startVar, assocName)
+			return fmt.Sprintf("RETRIEVE $%s FROM $%s/%s;", outputVar, startVar, assocName)
 		}
 
 		return fmt.Sprintf("RETRIEVE $%s FROM ...;", outputVar)

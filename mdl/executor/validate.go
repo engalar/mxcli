@@ -357,7 +357,9 @@ func (c *microflowRefCollector) collectFromStatements(stmts []ast.MicroflowState
 				c.entities = append(c.entities, entityRef{name: s.EntityType.String(), source: "CREATE"})
 			}
 		case *ast.RetrieveStmt:
-			if s.Source.Module != "" {
+			if s.StartVariable != "" {
+				// Association retrieve — Source is an association name, not an entity; skip entity validation
+			} else if s.Source.Module != "" {
 				c.entities = append(c.entities, entityRef{name: s.Source.String(), source: "RETRIEVE"})
 			}
 		case *ast.CreateListStmt:

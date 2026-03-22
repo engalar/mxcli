@@ -287,65 +287,95 @@ func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
 
 // addRetrieveAction creates a RETRIEVE statement.
 func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
-	// Create database retrieve source
-	entityQN := s.Source.Module + "." + s.Source.Name
-	source := &microflows.DatabaseRetrieveSource{
-		BaseElement:         model.BaseElement{ID: model.ID(mpr.GenerateID())},
-		EntityQualifiedName: entityQN,
-	}
+	var source microflows.RetrieveSource
 
-	// Set range if LIMIT is specified
-	if s.Limit != "" {
-		rangeType := microflows.RangeTypeCustom
-		// LIMIT 1 with no offset uses RangeTypeFirst for single object retrieval
-		if s.Limit == "1" && s.Offset == "" {
-			rangeType = microflows.RangeTypeFirst
+	if s.StartVariable != "" {
+		// Association retrieve: RETRIEVE $List FROM $Parent/Module.AssocName
+		assocQN := s.Source.Module + "." + s.Source.Name
+		source = &microflows.AssociationRetrieveSource{
+			BaseElement:              model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			StartVariable:            s.StartVariable,
+			AssociationQualifiedName: assocQN,
 		}
-		source.Range = &microflows.Range{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
-			RangeType:   rangeType,
-			Limit:       s.Limit,
-			Offset:      s.Offset,
+		// Association retrieve always returns a list
+		if fb.varTypes != nil {
+			fb.varTypes[s.Variable] = "List of " + assocQN
 		}
-	}
+	} else {
+		// Database retrieve: RETRIEVE $List FROM Module.Entity WHERE ...
+		entityQN := s.Source.Module + "." + s.Source.Name
+		dbSource := &microflows.DatabaseRetrieveSource{
+			BaseElement:         model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			EntityQualifiedName: entityQN,
+		}
 
-	// Convert WHERE expression if present
-	// XPath constraints are stored with square brackets in BSON: [expression]
-	if s.Where != nil {
-		source.XPathConstraint = "[" + expressionToXPath(s.Where) + "]"
-	}
+		// Set range if LIMIT is specified
+		if s.Limit != "" {
+			rangeType := microflows.RangeTypeCustom
+			// LIMIT 1 with no offset uses RangeTypeFirst for single object retrieval
+			if s.Limit == "1" && s.Offset == "" {
+				rangeType = microflows.RangeTypeFirst
+			}
+			dbSource.Range = &microflows.Range{
+				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				RangeType:   rangeType,
+				Limit:       s.Limit,
+				Offset:      s.Offset,
+			}
+		}
 
-	// Convert SORT BY columns if present
-	if len(s.SortColumns) > 0 {
-		for _, col := range s.SortColumns {
-			// Resolve attribute path - if just a simple name, prefix with entity
-			attrPath := col.Attribute
-			if !strings.Contains(attrPath, ".") {
-				attrPath = entityQN + "." + attrPath
-			} else {
-				// Validate that qualified attribute path belongs to the retrieved entity
-				// Expected format: Module.Entity.Attribute
-				parts := strings.Split(attrPath, ".")
-				if len(parts) >= 3 {
-					// Extract entity from attribute path (first two parts)
-					attrEntityQN := parts[0] + "." + parts[1]
-					if attrEntityQN != entityQN {
-						fb.addError("SORT BY attribute '%s' does not belong to entity '%s'", col.Attribute, entityQN)
-						continue // Skip this sort column but continue processing others
+		// Convert WHERE expression if present
+		// XPath constraints are stored with square brackets in BSON: [expression]
+		if s.Where != nil {
+			dbSource.XPathConstraint = "[" + expressionToXPath(s.Where) + "]"
+		}
+
+		// Convert SORT BY columns if present
+		if len(s.SortColumns) > 0 {
+			for _, col := range s.SortColumns {
+				// Resolve attribute path - if just a simple name, prefix with entity
+				attrPath := col.Attribute
+				if !strings.Contains(attrPath, ".") {
+					attrPath = entityQN + "." + attrPath
+				} else {
+					// Validate that qualified attribute path belongs to the retrieved entity
+					// Expected format: Module.Entity.Attribute
+					parts := strings.Split(attrPath, ".")
+					if len(parts) >= 3 {
+						// Extract entity from attribute path (first two parts)
+						attrEntityQN := parts[0] + "." + parts[1]
+						if attrEntityQN != entityQN {
+							fb.addError("SORT BY attribute '%s' does not belong to entity '%s'", col.Attribute, entityQN)
+							continue // Skip this sort column but continue processing others
+						}
 					}
 				}
-			}
 
-			direction := microflows.SortDirectionAscending
-			if col.Order == "DESC" {
-				direction = microflows.SortDirectionDescending
-			}
+				direction := microflows.SortDirectionAscending
+				if col.Order == "DESC" {
+					direction = microflows.SortDirectionDescending
+				}
 
-			source.Sorting = append(source.Sorting, &microflows.SortItem{
-				BaseElement:            model.BaseElement{ID: model.ID(mpr.GenerateID())},
-				AttributeQualifiedName: attrPath,
-				Direction:              direction,
-			})
+				dbSource.Sorting = append(dbSource.Sorting, &microflows.SortItem{
+					BaseElement:            model.BaseElement{ID: model.ID(mpr.GenerateID())},
+					AttributeQualifiedName: attrPath,
+					Direction:              direction,
+				})
+			}
+		}
+
+		source = dbSource
+
+		// Register variable type for CHANGE statements
+		// RETRIEVE with LIMIT 1 returns a single entity, otherwise returns a List
+		if fb.varTypes != nil {
+			if s.Limit == "1" {
+				// LIMIT 1 returns a single entity
+				fb.varTypes[s.Variable] = entityQN
+			} else {
+				// No LIMIT or LIMIT > 1 returns a list
+				fb.varTypes[s.Variable] = "List of " + entityQN
+			}
 		}
 	}
 
@@ -353,18 +383,6 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 		BaseElement:    model.BaseElement{ID: model.ID(mpr.GenerateID())},
 		OutputVariable: s.Variable,
 		Source:         source,
-	}
-
-	// Register variable type for CHANGE statements
-	// RETRIEVE with LIMIT 1 returns a single entity, otherwise returns a List
-	if fb.varTypes != nil {
-		if s.Limit == "1" {
-			// LIMIT 1 returns a single entity
-			fb.varTypes[s.Variable] = entityQN
-		} else {
-			// No LIMIT or LIMIT > 1 returns a list
-			fb.varTypes[s.Variable] = "List of " + entityQN
-		}
 	}
 
 	activityX := fb.posX

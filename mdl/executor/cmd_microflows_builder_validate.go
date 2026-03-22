@@ -196,7 +196,10 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 		}
 		// Register retrieved variable
 		if s.Variable != "" && s.Source.Module != "" {
-			if s.Limit == "1" {
+			if s.StartVariable != "" {
+				// Association retrieve always returns a list
+				fb.varTypes[s.Variable] = "List of " + s.Source.Module + "." + s.Source.Name
+			} else if s.Limit == "1" {
 				fb.varTypes[s.Variable] = s.Source.Module + "." + s.Source.Name
 			} else {
 				fb.varTypes[s.Variable] = "List of " + s.Source.Module + "." + s.Source.Name

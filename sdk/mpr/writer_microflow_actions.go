@@ -274,8 +274,11 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			{Key: "ResultVariableName", Value: a.OutputVariable}, // storageName differs from qualifiedName
 		}
 		if a.Source != nil {
-			if dbSource, ok := a.Source.(*microflows.DatabaseRetrieveSource); ok {
-				doc = append(doc, bson.E{Key: "RetrieveSource", Value: serializeDatabaseRetrieveSource(dbSource)})
+			switch src := a.Source.(type) {
+			case *microflows.DatabaseRetrieveSource:
+				doc = append(doc, bson.E{Key: "RetrieveSource", Value: serializeDatabaseRetrieveSource(src)})
+			case *microflows.AssociationRetrieveSource:
+				doc = append(doc, bson.E{Key: "RetrieveSource", Value: serializeAssociationRetrieveSource(src)})
 			}
 		}
 		return doc
@@ -854,6 +857,22 @@ func serializeDatabaseRetrieveSource(source *microflows.DatabaseRetrieveSource) 
 		doc = append(doc, bson.E{Key: "XpathConstraint", Value: source.XPathConstraint})
 	}
 
+	return doc
+}
+
+// serializeAssociationRetrieveSource serializes an AssociationRetrieveSource to BSON.
+func serializeAssociationRetrieveSource(source *microflows.AssociationRetrieveSource) bson.D {
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(source.ID))},
+		{Key: "$Type", Value: "Microflows$AssociationRetrieveSource"},
+	}
+	if source.StartVariable != "" {
+		doc = append(doc, bson.E{Key: "StartVariableName", Value: source.StartVariable})
+	}
+	// AssociationId is BY_NAME_REFERENCE - use qualified name string
+	if source.AssociationQualifiedName != "" {
+		doc = append(doc, bson.E{Key: "AssociationId", Value: source.AssociationQualifiedName})
+	}
 	return doc
 }
 

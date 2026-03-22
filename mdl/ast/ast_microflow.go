@@ -169,9 +169,11 @@ type RollbackStmt struct {
 func (s *RollbackStmt) isMicroflowStatement() {}
 
 // RetrieveStmt represents: RETRIEVE $Var FROM Entity [WHERE condition] [SORT BY ...] [LIMIT n] [OFFSET n] [ON ERROR ...]
+// or: RETRIEVE $Var FROM $Parent/Module.Association (association retrieve)
 type RetrieveStmt struct {
 	Variable      string               // Output variable
-	Source        QualifiedName        // Entity to retrieve from
+	Source        QualifiedName        // Entity (database) or Association (association retrieve)
+	StartVariable string               // Non-empty for association retrieve: the starting variable name
 	Where         Expression           // Optional WHERE condition
 	SortColumns   []SortColumnDef      // Optional SORT BY columns
 	Limit         string               // Optional LIMIT expression (empty = no limit)

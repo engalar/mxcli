@@ -82,6 +82,72 @@ END;
 /
 ```
 
+## Retrieve by Association
+
+Use `RETRIEVE $List FROM $Parent/Module.AssociationName` to retrieve related objects
+via association instead of a database XPath query. This is **required** for:
+
+- **Non-persistent entities (NPEs)** — database XPath queries always return empty for NPEs
+- **Uncommitted objects** — objects not yet committed to the database
+- **JSON mapping results** — imported data structures held in memory
+
+### Persistent Entity Example
+
+```mdl
+/**
+ * Get all orders for a customer via association
+ */
+CREATE MICROFLOW Module.GetCustomerOrders (
+  $Customer : Module.Customer
+)
+RETURNS List of Module.Order
+BEGIN
+  RETRIEVE $Orders FROM $Customer/Module.Order_Customer;
+  RETURN $Orders;
+END;
+/
+```
+
+### Non-Persistent Entity Example (NPE)
+
+```mdl
+/**
+ * Process imported rows from an in-memory result object.
+ * Database RETRIEVE would return empty for NPEs — use association retrieve.
+ */
+CREATE MICROFLOW Module.ProcessImportRows (
+  $ImportResult : Module.ImportResult
+)
+RETURNS Integer
+BEGIN
+  -- Association retrieve is the ONLY way to get related NPEs
+  RETRIEVE $Rows FROM $ImportResult/Module.ImportResult_ImportRow;
+
+  DECLARE $ValidCount Integer = 0;
+
+  LOOP $Row IN $Rows
+  BEGIN
+    IF $Row/IsValid THEN
+      SET $ValidCount = $ValidCount + 1;
+    END IF;
+  END LOOP;
+
+  RETURN $ValidCount;
+END;
+/
+```
+
+### When to Use Which Retrieve
+
+| Scenario | Syntax | Why |
+|----------|--------|-----|
+| Query persistent entities by attribute | `RETRIEVE $List FROM Module.Entity WHERE ...` | Database XPath query |
+| Get related persistent objects | `RETRIEVE $List FROM $Parent/Module.Association` | Simpler, no XPath needed |
+| Get related NPEs / uncommitted objects | `RETRIEVE $List FROM $Parent/Module.Association` | **Only option** — database has no data |
+| JSON mapping results (import) | `RETRIEVE $List FROM $Parent/Module.Association` | Mapping creates in-memory NPEs |
+
+**Important:** Association retrieve always returns a list. It does not support WHERE, SORT BY, LIMIT, or OFFSET clauses.
+
 ## Aggregate Patterns
 
 Aggregates use **function-call syntax** — there is no `AGGREGATE` keyword.

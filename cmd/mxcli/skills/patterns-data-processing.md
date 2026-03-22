@@ -82,6 +82,72 @@ END;
 /
 ```
 
+## Retrieve by Association
+
+Use `RETRIEVE $List FROM $Parent/Module.AssociationName` to retrieve related objects
+via association instead of a database XPath query. This is **required** for:
+
+- **Non-persistent entities (NPEs)** — database XPath queries always return empty for NPEs
+- **Uncommitted objects** — objects not yet committed to the database
+- **JSON mapping results** — imported data structures held in memory
+
+### Persistent Entity Example
+
+```mdl
+/**
+ * Get all orders for a customer via association
+ */
+CREATE MICROFLOW Module.GetCustomerOrders (
+  $Customer : Module.Customer
+)
+RETURNS List of Module.Order
+BEGIN
+  RETRIEVE $Orders FROM $Customer/Module.Order_Customer;
+  RETURN $Orders;
+END;
+/
+```
+
+### Non-Persistent Entity Example (NPE)
+
+```mdl
+/**
+ * Process imported rows from an in-memory result object.
+ * Database RETRIEVE would return empty for NPEs — use association retrieve.
+ */
+CREATE MICROFLOW Module.ProcessImportRows (
+  $ImportResult : Module.ImportResult
+)
+RETURNS Integer
+BEGIN
+  -- Association retrieve is the ONLY way to get related NPEs
+  RETRIEVE $Rows FROM $ImportResult/Module.ImportResult_ImportRow;
+
+  DECLARE $ValidCount Integer = 0;
+
+  LOOP $Row IN $Rows
+  BEGIN
+    IF $Row/IsValid THEN
+      SET $ValidCount = $ValidCount + 1;
+    END IF;
+  END LOOP;
+
+  RETURN $ValidCount;
+END;
+/
+```
+
+### When to Use Which Retrieve
+
+| Scenario | Syntax | Why |
+|----------|--------|-----|
+| Query persistent entities by attribute | `RETRIEVE $List FROM Module.Entity WHERE ...` | Database XPath query |
+| Get related persistent objects | `RETRIEVE $List FROM $Parent/Module.Association` | Simpler, no XPath needed |
+| Get related NPEs / uncommitted objects | `RETRIEVE $List FROM $Parent/Module.Association` | **Only option** — database has no data |
+| JSON mapping results (import) | `RETRIEVE $List FROM $Parent/Module.Association` | Mapping creates in-memory NPEs |
+
+**Important:** Association retrieve always returns a list. It does not support WHERE, SORT BY, LIMIT, or OFFSET clauses.
+
 ## Aggregate Patterns
 
 Aggregates use **function-call syntax** — there is no `AGGREGATE` keyword.
@@ -357,118 +423,6 @@ END;
 /
 ```
 
-## Delta Merge / List Matching
-
-The correct Mendix pattern for merging imported data into existing records.
-
-### ✅ CORRECT: Single Loop + RETRIEVE
-
-```mdl
-/**
- * Merge flagged items into quotation details by line number.
- * Uses RETRIEVE for O(N) lookup instead of nested loops.
- */
-CREATE MICROFLOW Module.SUB_ApplyDelta (
-  $FlaggedItems: List of Module.FlaggedItem,
-  $Details: List of Module.QuotationDetail
-)
-RETURNS Integer
-BEGIN
-  DECLARE $Updated Integer = 0;
-
-  LOOP $FlaggedItem IN $FlaggedItems
-  BEGIN
-    -- Find matching detail by key (acts as List Operation: Find)
-    RETRIEVE $Match FROM Module.QuotationDetail
-      WHERE LineNumber = $FlaggedItem/LineNumber
-      LIMIT 1;
-
-    IF $Match != empty THEN
-      -- Append logic: don't overwrite, concatenate
-      IF $FlaggedItem/ReviewReason != empty THEN
-        CHANGE $Match (
-          ReviewReason = $Match/ReviewReason + '\n' + $FlaggedItem/ReviewReason);
-      END IF;
-      COMMIT $Match;
-      SET $Updated = $Updated + 1;
-    END IF;
-  END LOOP;
-
-  RETURN $Updated;
-END;
-/
-```
-
-### ❌ WRONG: Nested Loops (O(N^2))
-
-```mdl
--- ANTI-PATTERN: Creates empty list, then uses nested loops for matching
-DECLARE $FlaggedItems List of Module.FlaggedItem = empty;  -- Ghost list!
-LOOP $FlaggedItem IN $FlaggedItems  -- Loops over nothing!
-BEGIN
-  LOOP $Detail IN $Details  -- O(N^2) matching
-  BEGIN
-    IF $Detail/LineNumber = $FlaggedItem/LineNumber THEN
-      CHANGE $Detail (ReviewReason = $FlaggedItem/ReviewReason);
-    END IF;
-  END LOOP;
-END LOOP;
-```
-
-**Why this is wrong:**
-1. `DECLARE ... = empty` creates an empty list — the loop never executes
-2. Nested loops are O(N^2) — use `RETRIEVE ... LIMIT 1` for O(N) matching
-3. `mxcli check` will flag both issues automatically
-
-## Anti-Patterns
-
-### NEVER create empty lists as loop sources
-
-If you need to process imported data, pass it as a **microflow parameter**:
-
-```mdl
--- WRONG: Empty list variable
-DECLARE $Items List of Module.Item = empty;
-LOOP $Item IN $Items BEGIN ... END LOOP;  -- Never executes!
-
--- CORRECT: Accept as parameter
-CREATE MICROFLOW Module.ProcessItems ($Items: List of Module.Item) ...
-```
-
-### NEVER use nested LOOPs for list matching
-
-Use `RETRIEVE ... FROM $List WHERE ... LIMIT 1` inside a single loop:
-
-```mdl
--- WRONG: Nested loops
-LOOP $Source IN $SourceList BEGIN
-  LOOP $Target IN $TargetList BEGIN
-    IF $Source/Key = $Target/Key THEN ...
-  END LOOP;
-END LOOP;
-
--- CORRECT: Single loop with RETRIEVE
-LOOP $Source IN $SourceList BEGIN
-  RETRIEVE $Match FROM Module.Target WHERE Key = $Source/Key LIMIT 1;
-  IF $Match != empty THEN ...
-END LOOP;
-```
-
-### NEVER overwrite when merging — use append logic
-
-When merging notes, comments, or reasons from multiple sources:
-
-```mdl
--- WRONG: Overwrites existing value
-CHANGE $Detail (ReviewReason = $FlaggedItem/ReviewReason);
-
--- CORRECT: Append with separator
-IF $FlaggedItem/ReviewReason != empty THEN
-  CHANGE $Detail (
-    ReviewReason = $Detail/ReviewReason + '\n' + $FlaggedItem/ReviewReason);
-END IF;
-```
-
 ## Best Practices
 
 1. **Commit inside loops carefully**: Can cause performance issues on large sets
@@ -477,6 +431,3 @@ END IF;
 4. **Handle errors gracefully**: Don't let one bad record stop the whole process
 5. **Return counts**: Help callers know what was processed
 6. **Use meaningful variable names**: `$ProcessedCount` not `$c`
-7. **Pass data as parameters**: Never create empty list variables to iterate over
-8. **Use RETRIEVE for matching**: Single loop + RETRIEVE, never nested loops
-9. **Validate with `mxcli check`**: Run `mxcli check script.mdl` to catch anti-patterns before execution

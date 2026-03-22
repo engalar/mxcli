@@ -80,6 +80,20 @@ CREATE PERSISTENT ENTITY MfTest.Order (
   CreateDate: DateTime
 );
 
+-- Non-persistent entities for in-memory / import use cases
+CREATE NON-PERSISTENT ENTITY MfTest.ImportResult (
+  TotalCount: Integer,
+  ErrorCount: Integer,
+  Status: String(200)
+);
+
+CREATE NON-PERSISTENT ENTITY MfTest.ImportRow (
+  RowNumber: Integer,
+  RawData: String(2000),
+  IsValid: Boolean DEFAULT true,
+  ErrorMessage: String(500)
+);
+
 -- Create associations
 CREATE ASSOCIATION MfTest.Order_Customer
 FROM MfTest.Order TO MfTest.Customer
@@ -90,6 +104,11 @@ CREATE ASSOCIATION MfTest.Order_Product
 FROM MfTest.Order TO MfTest.Product
 TYPE Reference
 OWNER Both;
+
+CREATE ASSOCIATION MfTest.ImportResult_ImportRow
+FROM MfTest.ImportResult TO MfTest.ImportRow
+TYPE ReferenceSet
+OWNER Default;
 
 -- MARK: BASIC MF
 -- ============================================================================
@@ -948,6 +967,63 @@ BEGIN
   RETRIEVE $OverdueOrders FROM MfTest.Order
     WHERE OrderDate < [%CurrentDateTime%];
   RETURN $OverdueOrders;
+END;
+/
+
+-- ============================================================================
+-- LEVEL 7b: RETRIEVE by Association
+-- ============================================================================
+
+/**
+ * Example 7.6: RETRIEVE by association (persistent entities)
+ *
+ * Retrieve related objects via association instead of database XPath.
+ * Syntax: RETRIEVE $List FROM $Parent/Module.AssociationName
+ */
+CREATE MICROFLOW MfTest.M029_RetrieveByAssociation (
+  $Customer : MfTest.Customer
+)
+RETURNS Void
+BEGIN
+  -- Retrieve all orders for this customer via association
+  RETRIEVE $Orders FROM $Customer/MfTest.Order_Customer;
+
+  LOOP $Order IN $Orders
+  BEGIN
+    LOG INFO NODE 'Assoc' 'Order: ' + $Order/OrderNumber;
+  END LOOP;
+
+  RETURN;
+END;
+/
+
+/**
+ * Example 7.7: RETRIEVE by association (non-persistent entities / NPEs)
+ *
+ * Association retrieve is the ONLY way to get related NPEs.
+ * Database XPath queries return empty for non-persistent objects.
+ * This is the primary use case from GitHub issue #22.
+ */
+CREATE MICROFLOW MfTest.M030_RetrieveNPEByAssociation (
+  $ImportResult : MfTest.ImportResult
+)
+RETURNS Integer
+BEGIN
+  -- Retrieve NPE list via association (database retrieve would return empty!)
+  RETRIEVE $Rows FROM $ImportResult/MfTest.ImportResult_ImportRow;
+
+  DECLARE $ValidCount Integer = 0;
+
+  LOOP $Row IN $Rows
+  BEGIN
+    IF $Row/IsValid THEN
+      SET $ValidCount = $ValidCount + 1;
+    ELSE
+      LOG WARNING NODE 'Import' 'Row ' + $Row/RowNumber + ' invalid: ' + $Row/ErrorMessage;
+    END IF;
+  END LOOP;
+
+  RETURN $ValidCount;
 END;
 /
 

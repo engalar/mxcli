@@ -310,7 +310,12 @@ func (e *Executor) microflowStatementToMDL(stmt ast.MicroflowStatement, indent i
 		lines = append(lines, fmt.Sprintf("%sDELETE $%s;", indentStr, s.Variable))
 
 	case *ast.RetrieveStmt:
-		stmt := fmt.Sprintf("%sRETRIEVE $%s FROM %s", indentStr, s.Variable, s.Source)
+		var stmt string
+		if s.StartVariable != "" {
+			stmt = fmt.Sprintf("%sRETRIEVE $%s FROM $%s/%s", indentStr, s.Variable, s.StartVariable, s.Source)
+		} else {
+			stmt = fmt.Sprintf("%sRETRIEVE $%s FROM %s", indentStr, s.Variable, s.Source)
+		}
 		if s.Where != nil {
 			stmt += fmt.Sprintf("\n%s    WHERE %s", indentStr, e.expressionToString(s.Where))
 		}

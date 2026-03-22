@@ -142,7 +142,8 @@ AUTHENTICATION Basic, Session
 | Commit | `COMMIT $Entity [WITH EVENTS] [REFRESH];` | |
 | Delete | `DELETE $Entity;` | |
 | Rollback | `ROLLBACK $Entity [REFRESH];` | Reverts uncommitted changes |
-| Retrieve | `RETRIEVE $Var FROM Module.Entity [WHERE condition];` | |
+| Retrieve (DB) | `RETRIEVE $Var FROM Module.Entity [WHERE condition];` | Database XPath retrieve |
+| Retrieve (Assoc) | `RETRIEVE $List FROM $Parent/Module.AssocName;` | Retrieve by association |
 | Call microflow | `$Result = CALL MICROFLOW Module.Name (Param = $value);` | |
 | Call nanoflow | `$Result = CALL NANOFLOW Module.Name (Param = $value);` | |
 | Show page | `SHOW PAGE Module.PageName ($Param = $value);` | Also accepts `(Param: $value)` |

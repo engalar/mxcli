@@ -607,7 +607,7 @@ func TestFormatAction_Retrieve_Association(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "RETRIEVE $Address FROM ASSOCIATION $Customer/MyModule.Customer_Address;"
+	want := "RETRIEVE $Address FROM $Customer/MyModule.Customer_Address;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}

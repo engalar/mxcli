@@ -722,10 +722,17 @@ func buildRetrieveStatement(ctx parser.IRetrieveStatementContext) *ast.RetrieveS
 		stmt.Variable = strings.TrimPrefix(v.GetText(), "$")
 	}
 
-	// Get source
+	// Get source (database entity or association path)
 	if src := retrCtx.RetrieveSource(); src != nil {
 		srcCtx := src.(*parser.RetrieveSourceContext)
-		if qn := srcCtx.QualifiedName(); qn != nil {
+		if v := srcCtx.VARIABLE(); v != nil {
+			// Association retrieve: $Parent/Module.AssociationName
+			stmt.StartVariable = strings.TrimPrefix(v.GetText(), "$")
+			if qn := srcCtx.QualifiedName(); qn != nil {
+				stmt.Source = buildQualifiedName(qn)
+			}
+		} else if qn := srcCtx.QualifiedName(); qn != nil {
+			// Database retrieve: Module.Entity
 			stmt.Source = buildQualifiedName(qn)
 		}
 	}
