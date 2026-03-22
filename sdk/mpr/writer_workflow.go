@@ -185,6 +185,10 @@ func serializeBoundaryEvents(events []*workflows.BoundaryEvent) bson.A {
 
 		doc = append(doc, bson.E{Key: "PersistentId", Value: idToBsonBinary(generateUUID())})
 
+		if typeName == "Workflows$NonInterruptingTimerBoundaryEvent" {
+			doc = append(doc, bson.E{Key: "Recurrence", Value: nil})
+		}
+
 		arr = append(arr, doc)
 	}
 	return arr
@@ -273,7 +277,7 @@ func serializeUserTask(a *workflows.UserTask) bson.D {
 	doc = append(doc, bson.E{Key: "Annotation", Value: annotationValue})
 
 	// AutoAssignSingleTargetUser
-	doc = append(doc, bson.E{Key: "AutoAssignSingleTargetUser", Value: true})
+	doc = append(doc, bson.E{Key: "AutoAssignSingleTargetUser", Value: false})
 
 	// BoundaryEvents (always present, even if empty)
 	if len(a.BoundaryEvents) > 0 {
@@ -284,7 +288,7 @@ func serializeUserTask(a *workflows.UserTask) bson.D {
 
 	doc = append(doc,
 		bson.E{Key: "Caption", Value: a.Caption},
-		bson.E{Key: "DueDate", Value: ""},
+		bson.E{Key: "DueDate", Value: a.DueDate},
 		bson.E{Key: "Name", Value: a.Name},
 	)
 

@@ -139,6 +139,69 @@ func TestSerializeWorkflowParameter_EntityAsString(t *testing.T) {
 	}
 }
 
+// --- P0 bug regression tests ---
+
+func TestSerializeUserTask_AutoAssignSingleTargetUserDefaultsFalse(t *testing.T) {
+	task := &workflows.UserTask{
+		BaseWorkflowActivity: workflows.BaseWorkflowActivity{
+			BaseElement: model.BaseElement{ID: "ut-auto"},
+			Name:        "Task",
+		},
+	}
+	doc := serializeUserTask(task)
+	val := getBSONField(doc, "AutoAssignSingleTargetUser")
+	if val != false {
+		t.Errorf("AutoAssignSingleTargetUser = %v, want false", val)
+	}
+}
+
+func TestSerializeUserTask_DueDateUsedFromStruct(t *testing.T) {
+	task := &workflows.UserTask{
+		BaseWorkflowActivity: workflows.BaseWorkflowActivity{
+			BaseElement: model.BaseElement{ID: "ut-due"},
+			Name:        "Task",
+		},
+		DueDate: "addDays([%CurrentDateTime%], 7)",
+	}
+	doc := serializeUserTask(task)
+	val, _ := getBSONField(doc, "DueDate").(string)
+	if val != "addDays([%CurrentDateTime%], 7)" {
+		t.Errorf("DueDate = %q, want %q", val, "addDays([%CurrentDateTime%], 7)")
+	}
+}
+
+func TestSerializeBoundaryEvents_NonInterruptingTimerHasRecurrenceNull(t *testing.T) {
+	events := []*workflows.BoundaryEvent{
+		{
+			BaseElement: model.BaseElement{ID: "be-1"},
+			EventType:   "NonInterruptingTimer",
+			TimerDelay:  "addDays([%CurrentDateTime%], 1)",
+		},
+	}
+	arr := serializeBoundaryEvents(events)
+	// arr[0] is int32(2) marker, arr[1] is the event doc
+	if len(arr) < 2 {
+		t.Fatal("expected 2 elements in boundary events array")
+	}
+	doc, ok := arr[1].(bson.D)
+	if !ok {
+		t.Fatalf("arr[1] is %T, want bson.D", arr[1])
+	}
+	// Recurrence must exist with nil value
+	found := false
+	for _, e := range doc {
+		if e.Key == "Recurrence" {
+			found = true
+			if e.Value != nil {
+				t.Errorf("Recurrence = %v, want nil", e.Value)
+			}
+		}
+	}
+	if !found {
+		t.Error("Recurrence field missing from NonInterruptingTimerBoundaryEvent")
+	}
+}
+
 // --- Fixture-based roundtrip: parse real BSON → serialize → verify markers preserved ---
 
 func TestSerializeWorkflowFlow_RoundtripFromFixture(t *testing.T) {
