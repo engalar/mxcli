@@ -23,7 +23,7 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev
 BUILD_TIME = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 
-.PHONY: build release clean test test-mdl grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation vscode-ext vscode-install source-tree sbom sbom-report lint lint-go lint-ts fmt vet
+.PHONY: build build-debug release clean test test-mdl grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation vscode-ext vscode-install source-tree sbom sbom-report lint lint-go lint-ts fmt vet
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
 # Usage: $(call copy-if-changed,src,dst)
@@ -100,6 +100,12 @@ build: sync-all completions
 	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_PATH)
 	CGO_ENABLED=0 go build -o $(BUILD_DIR)/source_tree ./cmd/source_tree
 	@echo "Built $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/source_tree"
+
+# Build with debug tools (includes bson discover/compare/dump)
+build-debug: sync-all completions
+	@mkdir -p $(BUILD_DIR)
+	CGO_ENABLED=0 go build -tags debug $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-debug $(CMD_PATH)
+	@echo "Built $(BUILD_DIR)/$(BINARY_NAME)-debug (debug build with bson tools)"
 
 # Build for all platforms (CGO_ENABLED=0 for cross-compilation)
 release: clean sync-all

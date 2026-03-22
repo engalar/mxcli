@@ -203,12 +203,6 @@ func init() {
 	diffLocalCmd.Flags().BoolP("color", "", false, "Use colored output")
 	diffLocalCmd.Flags().IntP("width", "w", 120, "Terminal width for side-by-side format")
 
-	// Dump-bson command flags
-	dumpBsonCmd.Flags().StringP("type", "t", "page", "Object type: page, microflow, nanoflow, enumeration, snippet, layout")
-	dumpBsonCmd.Flags().StringP("object", "o", "", "Object qualified name to dump (e.g., Module.PageName)")
-	dumpBsonCmd.Flags().BoolP("list", "l", false, "List all objects of the specified type")
-	dumpBsonCmd.Flags().StringSliceP("compare", "c", nil, "Compare two objects: --compare Obj1,Obj2")
-
 	// Describe command flags
 	describeCmd.Flags().StringP("format", "f", "mdl", "Output format: mdl, mermaid, elk")
 
@@ -263,7 +257,6 @@ func init() {
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(diffCmd)
 	rootCmd.AddCommand(diffLocalCmd)
-	rootCmd.AddCommand(dumpBsonCmd)
 	rootCmd.AddCommand(callersCmd)
 	rootCmd.AddCommand(calleesCmd)
 	rootCmd.AddCommand(refsCmd)

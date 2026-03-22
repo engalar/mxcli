@@ -224,15 +224,22 @@ func analyzeTypeCoverage(bsonType string, units []RawUnit, mdlText string) TypeC
 		return tc
 	}
 
-	// Build a lookup from storage name to meta.
-	metaByStorage := make(map[string]PropertyMeta, len(meta))
+	// Build a case-insensitive lookup from storage name to meta.
+	// BSON uses PascalCase ("AdminPage") while Go json tags use camelCase ("adminPage").
+	metaByStorageLower := make(map[string]PropertyMeta, len(meta))
 	for _, m := range meta {
-		metaByStorage[m.StorageName] = m
+		metaByStorageLower[strings.ToLower(m.StorageName)] = m
+	}
+
+	// Build case-insensitive lookup from BSON field names to sample values.
+	bsonFieldLower := make(map[string]any, len(fieldSamples))
+	for k, v := range fieldSamples {
+		bsonFieldLower[strings.ToLower(k)] = v
 	}
 
 	// Process fields from metadata (preserves struct field order).
 	for _, m := range meta {
-		sample, inBson := fieldSamples[m.StorageName]
+		sample, inBson := bsonFieldLower[strings.ToLower(m.StorageName)]
 		status := DefaultValue
 		if inBson {
 			status = checkFieldCoverage(m.StorageName, sample, mdlText)
@@ -249,7 +256,7 @@ func analyzeTypeCoverage(bsonType string, units []RawUnit, mdlText string) TypeC
 
 	// Find fields in BSON but not in metadata.
 	for fieldName := range fieldSamples {
-		if _, inMeta := metaByStorage[fieldName]; !inMeta {
+		if _, inMeta := metaByStorageLower[strings.ToLower(fieldName)]; !inMeta {
 			tc.UnknownFields = append(tc.UnknownFields, fieldName)
 		}
 	}
