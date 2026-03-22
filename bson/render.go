@@ -34,7 +34,12 @@ func renderDoc(sb *strings.Builder, doc bson.D, indent int) {
 		sb.WriteString(pad + typeName + "\n")
 	}
 
-	// Collect non-structural fields, sort alphabetically
+	renderFields(sb, doc, indent+1)
+}
+
+// renderFields renders only the non-structural fields of a doc, sorted alphabetically.
+// Unlike renderDoc, it does not print the $Type header line.
+func renderFields(sb *strings.Builder, doc bson.D, indent int) {
 	type field struct {
 		key string
 		val any
@@ -51,7 +56,7 @@ func renderDoc(sb *strings.Builder, doc bson.D, indent int) {
 	})
 
 	for _, f := range fields {
-		renderField(sb, f.key, f.val, indent+1)
+		renderField(sb, f.key, f.val, indent)
 	}
 }
 
@@ -75,11 +80,10 @@ func renderField(sb *strings.Builder, key string, val any, indent int) {
 		}
 		if typeName != "" {
 			fmt.Fprintf(sb, "%s%s: %s\n", pad, key, typeName)
-			renderDoc(sb, v, indent+1)
 		} else {
 			fmt.Fprintf(sb, "%s%s:\n", pad, key)
-			renderDoc(sb, v, indent+1)
 		}
+		renderFields(sb, v, indent+1)
 
 	case bson.A:
 		renderArray(sb, key, v, indent)
@@ -134,27 +138,10 @@ func renderArrayElement(sb *strings.Builder, elem any, indent int) {
 		}
 		if typeName != "" {
 			fmt.Fprintf(sb, "%s- %s\n", pad, typeName)
-			type field struct {
-				key string
-				val any
-			}
-			var fields []field
-			for _, e := range v {
-				if e.Key == "$ID" || e.Key == "$Type" {
-					continue
-				}
-				fields = append(fields, field{e.Key, e.Value})
-			}
-			sort.Slice(fields, func(i, j int) bool {
-				return fields[i].key < fields[j].key
-			})
-			for _, f := range fields {
-				renderField(sb, f.key, f.val, indent+2)
-			}
 		} else {
 			fmt.Fprintf(sb, "%s-\n", pad)
-			renderDoc(sb, v, indent+2)
 		}
+		renderFields(sb, v, indent+2)
 
 	case string:
 		fmt.Fprintf(sb, "%s- %q\n", pad, v)
