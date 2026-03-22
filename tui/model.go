@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mendixlabs/mxcli/tui/panels"
@@ -25,6 +25,7 @@ type Model struct {
 	focus         Focus
 	modulesPanel  panels.ModulesPanel
 	elementsPanel panels.ElementsPanel
+	previewPanel  panels.PreviewPanel
 }
 
 func New(mxcliPath, projectPath string) Model {
@@ -34,6 +35,7 @@ func New(mxcliPath, projectPath string) Model {
 		focus:         FocusModules,
 		modulesPanel:  panels.NewModulesPanel(30, 20),
 		elementsPanel: panels.NewElementsPanel(40, 20),
+		previewPanel:  panels.NewPreviewPanel(50, 20),
 	}
 }
 
@@ -48,6 +50,15 @@ func (m Model) Init() tea.Cmd {
 	}
 }
 
+// describeNode returns a tea.Cmd that runs DESCRIBE for a given node.
+func (m Model) describeNode(node *panels.TreeNode) tea.Cmd {
+	return func() tea.Msg {
+		out, err := runMxcli(m.mxcliPath, "-p", m.projectPath, "-c",
+			fmt.Sprintf("DESCRIBE %s %s", node.Type, node.QualifiedName))
+		return panels.DescribeResultMsg{Content: out, Err: err}
+	}
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -59,7 +70,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case FocusModules:
 			switch msg.String() {
 			case "l", "right", "enter":
-				// Open selected module → show children in elements panel
 				if node := m.modulesPanel.SelectedNode(); node != nil && len(node.Children) > 0 {
 					m.elementsPanel.SetNodes(node.Children)
 					m.focus = FocusElements
@@ -77,14 +87,42 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.focus = FocusModules
 				return m, nil
 			case "l", "right", "enter":
-				// Drill down into node with children
-				if node := m.elementsPanel.SelectedNode(); node != nil && len(node.Children) > 0 {
-					m.elementsPanel.SetNodes(node.Children)
-					return m, nil
+				if node := m.elementsPanel.SelectedNode(); node != nil {
+					if len(node.Children) > 0 {
+						// Drill down into node with children
+						m.elementsPanel.SetNodes(node.Children)
+						return m, nil
+					}
+					// Leaf node → show DESCRIBE in preview
+					if node.QualifiedName != "" {
+						m.focus = FocusPreview
+						m.previewPanel.SetLoading()
+						return m, m.describeNode(node)
+					}
 				}
+			case "j", "down", "k", "up":
+				// Forward navigation, then auto-preview
+				var cmd tea.Cmd
+				m.elementsPanel, cmd = m.elementsPanel.Update(msg)
+				if node := m.elementsPanel.SelectedNode(); node != nil && node.QualifiedName != "" {
+					m.previewPanel.SetLoading()
+					return m, tea.Batch(cmd, m.describeNode(node))
+				}
+				return m, cmd
 			default:
 				var cmd tea.Cmd
 				m.elementsPanel, cmd = m.elementsPanel.Update(msg)
+				return m, cmd
+			}
+
+		case FocusPreview:
+			switch msg.String() {
+			case "h", "left", "esc":
+				m.focus = FocusElements
+				return m, nil
+			default:
+				var cmd tea.Cmd
+				m.previewPanel, cmd = m.previewPanel.Update(msg)
 				return m, cmd
 			}
 		}
@@ -92,13 +130,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		mW, eW, pW := columnWidths(m.width)
 		contentH := m.height - 2
-		m.modulesPanel.SetSize(m.width/3, contentH)
-		m.elementsPanel.SetSize(m.width/3, contentH)
+		m.modulesPanel.SetSize(mW, contentH)
+		m.elementsPanel.SetSize(eW, contentH)
+		m.previewPanel.SetSize(pW, contentH)
 
 	case panels.LoadTreeMsg:
 		if msg.Err == nil && msg.Nodes != nil {
 			m.modulesPanel.SetNodes(msg.Nodes)
+		}
+
+	case panels.DescribeResultMsg:
+		if msg.Err != nil {
+			m.previewPanel.SetContent("-- Error:\n" + msg.Content)
+		} else {
+			m.previewPanel.SetContent(msg.Content)
 		}
 	}
 	return m, nil
@@ -110,9 +157,22 @@ func (m Model) View() string {
 	}
 	m.modulesPanel.SetFocused(m.focus == FocusModules)
 	m.elementsPanel.SetFocused(m.focus == FocusElements)
+	m.previewPanel.SetFocused(m.focus == FocusPreview)
 
-	return lipgloss.JoinHorizontal(lipgloss.Top,
+	mW, eW, pW := columnWidths(m.width)
+	contentH := m.height - 2
+	m.modulesPanel.SetSize(mW, contentH)
+	m.elementsPanel.SetSize(eW, contentH)
+	m.previewPanel.SetSize(pW, contentH)
+
+	statusLine := fmt.Sprintf(" mxcli tui  %s  [Tab: cycle focus | :: command | q: quit]",
+		m.projectPath)
+
+	return renderLayout(
+		m.width,
 		m.modulesPanel.View(),
 		m.elementsPanel.View(),
+		m.previewPanel.View(),
+		statusLine,
 	)
 }
