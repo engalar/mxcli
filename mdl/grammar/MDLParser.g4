@@ -2279,6 +2279,7 @@ workflowParameterMapping
 
 workflowCallWorkflowStmt
     : CALL WORKFLOW qualifiedName (COMMENT STRING_LITERAL)?
+      (WITH LPAREN workflowParameterMapping (COMMA workflowParameterMapping)* RPAREN)?
     ;
 
 workflowDecisionStmt

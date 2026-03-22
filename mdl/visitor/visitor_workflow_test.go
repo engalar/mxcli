@@ -276,6 +276,48 @@ END WORKFLOW;`
 	}
 }
 
+func TestWorkflowVisitor_CallWorkflowWithParams(t *testing.T) {
+	input := `CREATE WORKFLOW M.TestWF
+BEGIN
+  CALL WORKFLOW M.SubWorkflow COMMENT 'Call sub' WITH (WorkflowContext = '$WorkflowContext');
+END WORKFLOW;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateWorkflowStmt)
+
+	if len(stmt.Activities) == 0 {
+		t.Fatal("Expected at least 1 activity")
+	}
+
+	callWf, ok := stmt.Activities[0].(*ast.WorkflowCallWorkflowNode)
+	if !ok {
+		t.Fatalf("Expected WorkflowCallWorkflowNode, got %T", stmt.Activities[0])
+	}
+
+	if callWf.Caption != "Call sub" {
+		t.Errorf("Expected Caption 'Call sub', got %q", callWf.Caption)
+	}
+
+	if len(callWf.ParameterMappings) != 1 {
+		t.Fatalf("Expected 1 parameter mapping, got %d", len(callWf.ParameterMappings))
+	}
+
+	pm := callWf.ParameterMappings[0]
+	if pm.Parameter != "WorkflowContext" {
+		t.Errorf("Expected Parameter 'WorkflowContext', got %q", pm.Parameter)
+	}
+	if pm.Expression != "$WorkflowContext" {
+		t.Errorf("Expected Expression '$WorkflowContext', got %q", pm.Expression)
+	}
+}
+
 func TestWorkflowVisitor_UserTaskDueDate(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
 BEGIN

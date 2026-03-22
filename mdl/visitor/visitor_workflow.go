@@ -269,6 +269,16 @@ func buildWorkflowCallWorkflow(ctx parser.IWorkflowCallWorkflowStmtContext) *ast
 		node.Caption = unquoteString(cwCtx.STRING_LITERAL().GetText())
 	}
 
+	// Parameter mappings
+	for _, pmCtx := range cwCtx.AllWorkflowParameterMapping() {
+		pmCtx2 := pmCtx.(*parser.WorkflowParameterMappingContext)
+		mapping := ast.WorkflowParameterMappingNode{
+			Parameter:  pmCtx2.QualifiedName().GetText(),
+			Expression: unquoteString(pmCtx2.STRING_LITERAL().GetText()),
+		}
+		node.ParameterMappings = append(node.ParameterMappings, mapping)
+	}
+
 	return node
 }
 

@@ -81,8 +81,9 @@ func (n *WorkflowCallMicroflowNode) workflowActivityNode() {}
 
 // WorkflowCallWorkflowNode represents a CALL WORKFLOW activity.
 type WorkflowCallWorkflowNode struct {
-	Workflow QualifiedName
-	Caption  string
+	Workflow          QualifiedName
+	Caption           string
+	ParameterMappings []WorkflowParameterMappingNode
 }
 
 func (n *WorkflowCallWorkflowNode) workflowActivityNode() {}

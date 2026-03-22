@@ -592,9 +592,16 @@ func formatCallWorkflowActivity(a *workflows.CallWorkflowActivity, indent string
 	}
 
 	escapedCaption := strings.ReplaceAll(caption, "'", "''")
-	if a.ParameterExpression != "" {
-		escapedExpr := strings.ReplaceAll(a.ParameterExpression, "'", "''")
-		lines = append(lines, fmt.Sprintf("%sCALL WORKFLOW %s ($WorkflowContext = '%s') COMMENT '%s'", indent, wf, escapedExpr, escapedCaption))
+	if len(a.ParameterMappings) > 0 {
+		var params []string
+		for _, pm := range a.ParameterMappings {
+			paramName := pm.Parameter
+			if idx := strings.LastIndex(paramName, "."); idx >= 0 {
+				paramName = paramName[idx+1:]
+			}
+			params = append(params, fmt.Sprintf("%s = '%s'", paramName, strings.ReplaceAll(pm.Expression, "'", "''")))
+		}
+		lines = append(lines, fmt.Sprintf("%sCALL WORKFLOW %s COMMENT '%s' WITH (%s)", indent, wf, escapedCaption, strings.Join(params, ", ")))
 	} else {
 		lines = append(lines, fmt.Sprintf("%sCALL WORKFLOW %s COMMENT '%s'", indent, wf, escapedCaption))
 	}

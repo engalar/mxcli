@@ -323,6 +323,16 @@ func buildCallWorkflowActivity(n *ast.WorkflowCallWorkflowNode) *workflows.CallW
 	// Auto-bind $WorkflowContext parameter expression
 	act.ParameterExpression = "$WorkflowContext"
 
+	// Explicit parameter mappings from MDL WITH clause
+	for _, pm := range n.ParameterMappings {
+		mapping := &workflows.ParameterMapping{
+			Parameter:  pm.Parameter,
+			Expression: pm.Expression,
+		}
+		mapping.BaseElement.ID = model.ID(mpr.GenerateID())
+		act.ParameterMappings = append(act.ParameterMappings, mapping)
+	}
+
 	return act
 }
 
@@ -693,6 +703,11 @@ func (e *Executor) autoBindCallMicroflow(task *workflows.CallMicroflowTask) {
 func (e *Executor) autoBindCallWorkflow(act *workflows.CallWorkflowActivity) {
 	// Sanitize name
 	act.Name = sanitizeActivityName(act.Name)
+
+	// Skip if already has parameter mappings (explicit from MDL WITH clause)
+	if len(act.ParameterMappings) > 0 {
+		return
+	}
 
 	// Look up the target workflow to check its parameter
 	wfs, err := e.reader.ListWorkflows()
