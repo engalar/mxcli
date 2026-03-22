@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	bsondebug "github.com/mendixlabs/mxcli/bson"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/spf13/cobra"
 	"go.mongodb.org/mongo-driver/bson"
@@ -81,6 +82,8 @@ Examples:
 			return
 		}
 
+		format, _ := cmd.Flags().GetString("format")
+
 		// Compare two objects
 		if len(compareFlag) == 2 {
 			obj1, err := reader.GetRawUnitByName(objectType, compareFlag[0])
@@ -106,6 +109,13 @@ Examples:
 				os.Exit(1)
 			}
 
+			if format == "ndsl" {
+				fmt.Printf("=== LEFT: %s ===\n%s\n\n=== RIGHT: %s ===\n%s\n",
+					compareFlag[0], bsondebug.Render(raw1, 0),
+					compareFlag[1], bsondebug.Render(raw2, 0))
+				return
+			}
+
 			// Print diff report
 			fmt.Printf("=== BSON DIFF: %s vs %s ===\n\n", compareFlag[0], compareFlag[1])
 			diffs := compareBsonDocs(raw1, raw2, "")
@@ -126,6 +136,16 @@ Examples:
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
+			}
+
+			if format == "ndsl" {
+				var doc bson.D
+				if err := bson.Unmarshal(obj.Contents, &doc); err != nil {
+					fmt.Fprintf(os.Stderr, "Error parsing BSON: %v\n", err)
+					os.Exit(1)
+				}
+				fmt.Println(bsondebug.Render(doc, 0))
+				return
 			}
 
 			// Parse BSON and output as JSON
@@ -324,4 +344,5 @@ func init() {
 	bsonDumpCmd.Flags().StringP("object", "o", "", "Object qualified name to dump (e.g., Module.PageName)")
 	bsonDumpCmd.Flags().BoolP("list", "l", false, "List all objects of the specified type")
 	bsonDumpCmd.Flags().StringSliceP("compare", "c", nil, "Compare two objects: --compare Obj1,Obj2")
+	bsonDumpCmd.Flags().String("format", "json", "Output format: json, ndsl")
 }
