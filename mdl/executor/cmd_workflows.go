@@ -524,7 +524,11 @@ func formatCallMicroflowTask(a *workflows.CallMicroflowTask, indent string) []st
 	if len(a.ParameterMappings) > 0 {
 		var params []string
 		for _, pm := range a.ParameterMappings {
-			params = append(params, fmt.Sprintf("%s = '%s'", pm.Parameter, strings.ReplaceAll(pm.Expression, "'", "''")))
+			paramName := pm.Parameter
+			if idx := strings.LastIndex(paramName, "."); idx >= 0 {
+				paramName = paramName[idx+1:]
+			}
+			params = append(params, fmt.Sprintf("%s = '%s'", paramName, strings.ReplaceAll(pm.Expression, "'", "''")))
 		}
 		lines = append(lines, fmt.Sprintf("%sCALL MICROFLOW %s WITH (%s) -- %s", indent, mf, strings.Join(params, ", "), caption))
 	} else {
