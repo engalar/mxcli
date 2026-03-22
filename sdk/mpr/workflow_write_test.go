@@ -202,6 +202,103 @@ func TestSerializeBoundaryEvents_NonInterruptingTimerHasRecurrenceNull(t *testin
 	}
 }
 
+// --- P1: Multi-User Task missing fields ---
+
+func TestSerializeMultiUserTask_AwaitAllUsersPresentAndFalse(t *testing.T) {
+	task := &workflows.UserTask{
+		BaseWorkflowActivity: workflows.BaseWorkflowActivity{
+			BaseElement: model.BaseElement{ID: "mut-1"},
+			Name:        "MultiTask",
+		},
+		IsMulti: true,
+	}
+	doc := serializeUserTask(task)
+	val := getBSONField(doc, "AwaitAllUsers")
+	if val == nil {
+		t.Error("AwaitAllUsers field missing from MultiUserTaskActivity")
+		return
+	}
+	if val != false {
+		t.Errorf("AwaitAllUsers = %v, want false", val)
+	}
+}
+
+func TestSerializeMultiUserTask_TargetUserInputPresent(t *testing.T) {
+	task := &workflows.UserTask{
+		BaseWorkflowActivity: workflows.BaseWorkflowActivity{
+			BaseElement: model.BaseElement{ID: "mut-2"},
+			Name:        "MultiTask",
+		},
+		IsMulti: true,
+	}
+	doc := serializeUserTask(task)
+	val := getBSONField(doc, "TargetUserInput")
+	if val == nil {
+		t.Error("TargetUserInput field missing from MultiUserTaskActivity")
+		return
+	}
+	tui, ok := val.(bson.D)
+	if !ok {
+		t.Fatalf("TargetUserInput is %T, want bson.D", val)
+	}
+	typeVal, _ := getBSONField(tui, "$Type").(string)
+	if typeVal != "Workflows$AllUserInput" {
+		t.Errorf("TargetUserInput.$Type = %q, want %q", typeVal, "Workflows$AllUserInput")
+	}
+}
+
+func TestSerializeMultiUserTask_CompletionCriteriaPresent(t *testing.T) {
+	task := &workflows.UserTask{
+		BaseWorkflowActivity: workflows.BaseWorkflowActivity{
+			BaseElement: model.BaseElement{ID: "mut-3"},
+			Name:        "MultiTask",
+		},
+		IsMulti: true,
+		Outcomes: []*workflows.UserTaskOutcome{
+			{BaseElement: model.BaseElement{ID: "out-a"}, Value: "Approve"},
+		},
+	}
+	doc := serializeUserTask(task)
+	val := getBSONField(doc, "CompletionCriteria")
+	if val == nil {
+		t.Error("CompletionCriteria field missing from MultiUserTaskActivity")
+		return
+	}
+	cc, ok := val.(bson.D)
+	if !ok {
+		t.Fatalf("CompletionCriteria is %T, want bson.D", val)
+	}
+	typeVal, _ := getBSONField(cc, "$Type").(string)
+	if typeVal != "Workflows$ConsensusCompletionCriteria" {
+		t.Errorf("CompletionCriteria.$Type = %q, want %q", typeVal, "Workflows$ConsensusCompletionCriteria")
+	}
+	// FallbackOutcomePointer must be a UUID binary
+	ptr := getBSONField(cc, "FallbackOutcomePointer")
+	if ptr == nil {
+		t.Error("CompletionCriteria.FallbackOutcomePointer missing")
+	}
+}
+
+func TestSerializeSingleUserTask_NoMultiFields(t *testing.T) {
+	task := &workflows.UserTask{
+		BaseWorkflowActivity: workflows.BaseWorkflowActivity{
+			BaseElement: model.BaseElement{ID: "sut-1"},
+			Name:        "SingleTask",
+		},
+		IsMulti: false,
+	}
+	doc := serializeUserTask(task)
+	if getBSONField(doc, "AwaitAllUsers") != nil {
+		t.Error("SingleUserTask must not have AwaitAllUsers field")
+	}
+	if getBSONField(doc, "CompletionCriteria") != nil {
+		t.Error("SingleUserTask must not have CompletionCriteria field")
+	}
+	if getBSONField(doc, "TargetUserInput") != nil {
+		t.Error("SingleUserTask must not have TargetUserInput field")
+	}
+}
+
 // --- Fixture-based roundtrip: parse real BSON → serialize → verify markers preserved ---
 
 func TestSerializeWorkflowFlow_RoundtripFromFixture(t *testing.T) {

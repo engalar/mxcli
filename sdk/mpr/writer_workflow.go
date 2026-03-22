@@ -279,6 +279,11 @@ func serializeUserTask(a *workflows.UserTask) bson.D {
 	// AutoAssignSingleTargetUser
 	doc = append(doc, bson.E{Key: "AutoAssignSingleTargetUser", Value: false})
 
+	// AwaitAllUsers (MultiUserTaskActivity only)
+	if a.IsMulti {
+		doc = append(doc, bson.E{Key: "AwaitAllUsers", Value: false})
+	}
+
 	// BoundaryEvents (always present, even if empty)
 	if len(a.BoundaryEvents) > 0 {
 		doc = append(doc, bson.E{Key: "BoundaryEvents", Value: serializeBoundaryEvents(a.BoundaryEvents)})
@@ -288,6 +293,28 @@ func serializeUserTask(a *workflows.UserTask) bson.D {
 
 	doc = append(doc,
 		bson.E{Key: "Caption", Value: a.Caption},
+	)
+
+	// CompletionCriteria (MultiUserTaskActivity only) — must reference first outcome ID
+	if a.IsMulti {
+		// Pre-assign ID to first outcome so FallbackOutcomePointer can reference it
+		if len(a.Outcomes) > 0 && a.Outcomes[0].ID == "" {
+			a.Outcomes[0].ID = model.ID(generateUUID())
+		}
+		fallbackID := ""
+		if len(a.Outcomes) > 0 {
+			fallbackID = string(a.Outcomes[0].ID)
+		} else {
+			fallbackID = generateUUID()
+		}
+		doc = append(doc, bson.E{Key: "CompletionCriteria", Value: bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Workflows$ConsensusCompletionCriteria"},
+			{Key: "FallbackOutcomePointer", Value: idToBsonBinary(fallbackID)},
+		}})
+	}
+
+	doc = append(doc,
 		bson.E{Key: "DueDate", Value: a.DueDate},
 		bson.E{Key: "Name", Value: a.Name},
 	)
@@ -327,6 +354,14 @@ func serializeUserTask(a *workflows.UserTask) bson.D {
 		{Key: "$Type", Value: "Workflows$PageReference"},
 		{Key: "Page", Value: a.Page},
 	}})
+
+	// TargetUserInput (MultiUserTaskActivity only) — always AllUserInput
+	if a.IsMulti {
+		doc = append(doc, bson.E{Key: "TargetUserInput", Value: bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Workflows$AllUserInput"},
+		}})
+	}
 
 	// UserTargeting (NoUserTargeting when not specified)
 	if a.UserSource != nil {
