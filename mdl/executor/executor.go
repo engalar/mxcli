@@ -60,11 +60,20 @@ type createdSnippetInfo struct {
 	ContainerID model.ID
 }
 
+const (
+	// maxOutputLines is the per-statement line limit. Statements that produce more
+	// lines than this are aborted to prevent runaway output from infinite loops.
+	maxOutputLines = 10_000
+	// executeTimeout is the maximum wall-clock time allowed for a single statement.
+	executeTimeout = 5 * time.Minute
+)
+
 // Executor executes MDL statements against a Mendix project.
 type Executor struct {
 	writer    *mpr.Writer
 	reader    *mpr.Reader
 	output    io.Writer
+	guard     *outputGuard                       // line-limit wrapper around output
 	mprPath   string
 	settings  map[string]any
 	cache     *executorCache
@@ -77,8 +86,10 @@ type Executor struct {
 
 // New creates a new executor with the given output writer.
 func New(output io.Writer) *Executor {
+	guard := newOutputGuard(output, maxOutputLines)
 	return &Executor{
-		output:   output,
+		output:   guard,
+		guard:    guard,
 		settings: make(map[string]any),
 	}
 }
@@ -93,10 +104,33 @@ func (e *Executor) SetLogger(l *diaglog.Logger) {
 	e.logger = l
 }
 
-// Execute runs a single MDL statement, logging execution time and errors.
+// Execute runs a single MDL statement with output-line and wall-clock guards.
+// Each statement gets a fresh line budget. If the statement exceeds maxOutputLines
+// lines of output or runs longer than executeTimeout, it is aborted with an error.
 func (e *Executor) Execute(stmt ast.Statement) error {
 	start := time.Now()
-	err := e.executeInner(stmt)
+
+	// Reset per-statement line counter.
+	if e.guard != nil {
+		e.guard.reset()
+	}
+
+	// Run statement in a goroutine so we can enforce a wall-clock timeout.
+	// The outputGuard handles race-safe writes if the goroutine outlives the timeout.
+	type result struct{ err error }
+	ch := make(chan result, 1)
+	go func() {
+		ch <- result{e.executeInner(stmt)}
+	}()
+
+	var err error
+	select {
+	case r := <-ch:
+		err = r.err
+	case <-time.After(executeTimeout):
+		err = fmt.Errorf("statement timed out after %v", executeTimeout)
+	}
+
 	if e.logger != nil {
 		e.logger.Command(stmtTypeName(stmt), stmtSummary(stmt), time.Since(start), err)
 	}
