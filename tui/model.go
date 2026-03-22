@@ -193,6 +193,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cmdbar.Hide()
 				return m, nil
 			case "enter":
+				if m.cmdbar.ApplyCompletion() {
+					return m, nil
+				}
 				verb, rest := m.cmdbar.Command()
 				m.cmdbar.Hide()
 				return m, m.dispatchCommand(verb, rest)
