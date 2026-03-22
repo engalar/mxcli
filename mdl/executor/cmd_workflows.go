@@ -263,12 +263,14 @@ func (e *Executor) describeWorkflowToString(name ast.QualifiedName) (string, map
 	return strings.Join(lines, "\n"), nil, nil
 }
 
-// formatAnnotation returns a comment line for an annotation, or empty string if none.
+// formatAnnotation returns an ANNOTATION statement for a workflow activity annotation.
+// The annotation is emitted as a parseable MDL statement so it survives round-trips.
 func formatAnnotation(annotation string, indent string) string {
 	if annotation == "" {
 		return ""
 	}
-	return fmt.Sprintf("%s-- %s", indent, annotation)
+	escaped := strings.ReplaceAll(annotation, "'", "''")
+	return fmt.Sprintf("%sANNOTATION '%s';", indent, escaped)
 }
 
 // boundaryEventKeyword maps an EventType string to the MDL BOUNDARY EVENT keyword sequence.

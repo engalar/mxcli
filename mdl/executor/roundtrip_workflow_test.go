@@ -285,6 +285,67 @@ END WORKFLOW;`
 	if !strings.Contains(output, "ANNOTATION 'This is a workflow note'") {
 		t.Errorf("Expected DESCRIBE output to contain \"ANNOTATION 'This is a workflow note'\", got:\n%s", output)
 	}
+
+	// Full round-trip: DESCRIBE output must be re-executable (annotation must survive re-create)
+	describeOutput := output
+	// Replace WORKFLOW with CREATE OR REPLACE WORKFLOW for round-trip execution
+	createFromDescribe := strings.Replace(describeOutput, "\nWORKFLOW ", "\nCREATE OR REPLACE WORKFLOW ", 1)
+	// Strip comment header lines (-- ...) before the CREATE OR REPLACE WORKFLOW
+	var mdlLines []string
+	inBody := false
+	for _, line := range strings.Split(createFromDescribe, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "CREATE OR REPLACE WORKFLOW") {
+			inBody = true
+		}
+		if inBody {
+			mdlLines = append(mdlLines, line)
+		}
+	}
+	roundTripMDL := strings.Join(mdlLines, "\n")
+	if err := env.executeMDL(roundTripMDL); err != nil {
+		t.Errorf("Round-trip execution failed (DESCRIBE output is not re-executable): %v\nMDL:\n%s", err, roundTripMDL)
+	}
+}
+
+// TestRoundtripWorkflow_AnnotationBeforeActivity tests that a workflow activity's
+// embedded annotation (BaseWorkflowActivity.Annotation) is preserved in DESCRIBE output
+// as a parseable ANNOTATION statement rather than a SQL comment.
+func TestRoundtripWorkflow_AnnotationBeforeActivity(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	// Create a workflow with an ANNOTATION before a WAIT FOR TIMER.
+	// This mimics the pattern from Studio Pro where an annotation is attached to an activity.
+	createMDL := `CREATE WORKFLOW ` + testModule + `.WfAnnotBeforeTimer
+  PARAMETER $WorkflowContext: ` + testModule + `.TestEntityAnnotTimer
+BEGIN
+  ANNOTATION 'I am a note';
+  WAIT FOR TIMER 'addDays([%CurrentDateTime%], 1)' COMMENT 'Timer';
+END WORKFLOW;`
+
+	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + testModule + `.TestEntityAnnotTimer (Name: String(100));`); err != nil {
+		t.Fatalf("Failed to create entity: %v", err)
+	}
+
+	if err := env.executeMDL(createMDL); err != nil {
+		t.Fatalf("Failed to create workflow: %v", err)
+	}
+
+	output, err := env.describeMDL(`DESCRIBE WORKFLOW ` + testModule + `.WfAnnotBeforeTimer;`)
+	if err != nil {
+		t.Fatalf("Failed to describe workflow: %v", err)
+	}
+
+	// The annotation must appear as a parseable ANNOTATION statement, not as a SQL comment.
+	if !strings.Contains(output, "ANNOTATION 'I am a note'") {
+		t.Errorf("Expected DESCRIBE to emit ANNOTATION statement, got:\n%s", output)
+	}
+	if strings.Contains(output, "-- I am a note") {
+		t.Errorf("DESCRIBE must not emit annotation as SQL comment (not round-trippable), got:\n%s", output)
+	}
+	if !strings.Contains(output, "WAIT FOR TIMER") {
+		t.Errorf("Expected DESCRIBE to contain WAIT FOR TIMER, got:\n%s", output)
+	}
 }
 
 func TestRoundtripWorkflow_CallMicroflowWithParams(t *testing.T) {
