@@ -33,11 +33,11 @@ type ModulesPanel struct {
 }
 
 func NewModulesPanel(width, height int) ModulesPanel {
-	delegate := list.NewDefaultDelegate()
+	delegate := newCustomDelegate(false)
 	delegate.ShowDescription = false
 	l := list.New(nil, delegate, width, height)
 	l.SetShowTitle(true)
-	l.Title = "Modules"
+	l.Title = "Project"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(true)
 	return ModulesPanel{list: l, width: width, height: height}
@@ -82,7 +82,10 @@ func (p *ModulesPanel) SetSize(w, h int) {
 	p.list.SetHeight(h)
 }
 
-func (p *ModulesPanel) SetFocused(f bool) { p.focused = f }
+func (p *ModulesPanel) SetFocused(f bool) {
+	p.focused = f
+	p.list.SetDelegate(newCustomDelegate(f))
+}
 
 func (p ModulesPanel) Update(msg tea.Msg) (ModulesPanel, tea.Cmd) {
 	var cmd tea.Cmd
@@ -95,6 +98,29 @@ func (p ModulesPanel) View() string {
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor(p.focused))
 	return border.Render(p.list.View())
+}
+
+func newCustomDelegate(focused bool) list.DefaultDelegate {
+	d := list.NewDefaultDelegate()
+	if focused {
+		d.Styles.SelectedTitle = lipgloss.NewStyle().
+			Border(lipgloss.NormalBorder(), false, false, false, true).
+			BorderForeground(lipgloss.Color("63")).
+			Foreground(lipgloss.Color("255")).
+			Bold(true).
+			Padding(0, 0, 0, 1)
+		d.Styles.SelectedDesc = d.Styles.SelectedTitle.
+			Foreground(lipgloss.Color("63"))
+	} else {
+		d.Styles.SelectedTitle = lipgloss.NewStyle().
+			Border(lipgloss.NormalBorder(), false, false, false, true).
+			BorderForeground(lipgloss.Color("240")).
+			Foreground(lipgloss.Color("245")).
+			Padding(0, 0, 0, 1)
+		d.Styles.SelectedDesc = d.Styles.SelectedTitle.
+			Foreground(lipgloss.Color("240"))
+	}
+	return d
 }
 
 func borderColor(focused bool) lipgloss.Color {

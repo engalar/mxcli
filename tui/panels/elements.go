@@ -16,7 +16,7 @@ type ElementsPanel struct {
 }
 
 func NewElementsPanel(width, height int) ElementsPanel {
-	delegate := list.NewDefaultDelegate()
+	delegate := newCustomDelegate(false)
 	delegate.ShowDescription = true
 	l := list.New(nil, delegate, width, height)
 	l.Title = "Elements"
@@ -59,7 +59,10 @@ func (p *ElementsPanel) SetSize(w, h int) {
 	p.list.SetHeight(h)
 }
 
-func (p *ElementsPanel) SetFocused(f bool) { p.focused = f }
+func (p *ElementsPanel) SetFocused(f bool) {
+	p.focused = f
+	p.list.SetDelegate(newCustomDelegate(f))
+}
 
 func (p ElementsPanel) Update(msg tea.Msg) (ElementsPanel, tea.Cmd) {
 	var cmd tea.Cmd
