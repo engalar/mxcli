@@ -64,10 +64,12 @@ func cacheKey(nodeType, qualifiedName string, mode PreviewMode) string {
 // request and spawns a new goroutine.
 func (e *PreviewEngine) RequestPreview(nodeType, qualifiedName string, mode PreviewMode) tea.Cmd {
 	key := cacheKey(nodeType, qualifiedName, mode)
+	Trace("preview: request type=%q name=%q mode=%d key=%q", nodeType, qualifiedName, mode, key)
 
 	e.mu.Lock()
 	if cached, ok := e.cache[key]; ok {
 		e.mu.Unlock()
+		Trace("preview: cache hit key=%q", key)
 		return func() tea.Msg {
 			return PreviewReadyMsg{
 				Content:       cached.Content,

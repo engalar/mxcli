@@ -131,6 +131,7 @@ func (a App) Init() tea.Cmd {
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case PickerDoneMsg:
+		Trace("app: PickerDoneMsg path=%q", msg.Path)
 		a.picker = nil
 		if msg.Path != "" {
 			SaveHistory(msg.Path)
@@ -192,6 +193,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.KeyMsg:
+		Trace("app: key=%q picker=%v overlay=%v compare=%v help=%v", msg.String(), a.picker != nil, a.overlay.IsVisible(), a.compare.IsVisible(), a.showHelp)
 		if msg.String() == "ctrl+c" {
 			return a, tea.Quit
 		}
@@ -237,6 +239,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.updateNormalMode(msg)
 
 	case tea.MouseMsg:
+		Trace("app: mouse x=%d y=%d btn=%v action=%v", msg.X, msg.Y, msg.Button, msg.Action)
 		if a.picker != nil || a.compare.IsVisible() || a.overlay.IsVisible() {
 			return a, nil
 		}
@@ -263,12 +266,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.WindowSizeMsg:
+		Trace("app: resize %dx%d", msg.Width, msg.Height)
 		a.width = msg.Width
 		a.height = msg.Height
 		a.resizeAll()
 		return a, nil
 
 	case LoadTreeMsg:
+		Trace("app: LoadTreeMsg err=%v nodes=%d", msg.Err, len(msg.Nodes))
 		if msg.Err == nil && msg.Nodes != nil {
 			tab := a.activeTabPtr()
 			if tab != nil {
@@ -316,6 +321,7 @@ func (a App) updateNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch msg.String() {
 	case "q":
+		CloseTrace()
 		return a, tea.Quit
 	case "?":
 		a.showHelp = !a.showHelp
