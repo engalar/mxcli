@@ -120,9 +120,11 @@ func (m MillerView) Update(msg tea.Msg) (MillerView, tea.Cmd) {
 		return m.handleKey(msg)
 
 	case CursorChangedMsg:
+		Trace("miller: CursorChanged node=%q type=%q children=%d", msg.Node.Label, msg.Node.Type, len(msg.Node.Children))
 		return m.handleCursorChanged(msg)
 
 	case PreviewReadyMsg:
+		Trace("miller: PreviewReady key=%q highlight=%q len=%d", msg.NodeKey, msg.HighlightType, len(msg.Content))
 		m.preview.loading = false
 		m.preview.content = msg.Content
 		m.preview.contentLines = strings.Split(msg.Content, "\n")
@@ -223,8 +225,10 @@ func (m MillerView) handleCursorChanged(msg CursorChangedMsg) (MillerView, tea.C
 func (m MillerView) drillIn() (MillerView, tea.Cmd) {
 	selected := m.current.SelectedNode()
 	if selected == nil || len(selected.Children) == 0 {
+		Trace("miller: drillIn no-op (nil or no children)")
 		return m, nil
 	}
+	Trace("miller: drillIn into %q (%d children)", selected.Label, len(selected.Children))
 
 	// Save current state
 	entry := navEntry{
@@ -275,6 +279,7 @@ func (m MillerView) drillIn() (MillerView, tea.Cmd) {
 
 func (m MillerView) goBack() (MillerView, tea.Cmd) {
 	depth := len(m.navStack)
+	Trace("miller: goBack depth=%d", depth)
 	if depth == 0 {
 		return m, nil
 	}
@@ -564,6 +569,8 @@ func (m MillerView) columnWidths() (int, int, int) {
 		}
 	}
 
+	Trace("miller: columnWidths usable=%d ideal(p=%d,c=%d) result(p=%d,c=%d,pv=%d) anim=%d/%v",
+		usable, idealParent, idealCurrent, parentW, currentW, previewW, m.animRemaining, m.animDir)
 	return parentW, currentW, previewW
 }
 
@@ -626,6 +633,7 @@ func (m MillerView) handleMouse(msg tea.MouseMsg) (MillerView, tea.Cmd) { //noli
 
 	// Left click: clicked column becomes center, others shift
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
+		Trace("miller: click zone=%d x=%d y=%d", zone, msg.X, msg.Y)
 		switch zone {
 		case zoneParent:
 			// Click parent item → go back, then select the clicked item
