@@ -24,6 +24,9 @@ type CmdResultMsg struct {
 	Err    error
 }
 
+// compareFlashClearMsg is sent 1 s after a clipboard copy in compare view.
+type compareFlashClearMsg struct{}
+
 // Model is the root Bubble Tea model for the TUI.
 type Model struct {
 	mxcliPath     string
@@ -36,6 +39,11 @@ type Model struct {
 	showHelp      bool
 	overlay       Overlay
 	compare       CompareView
+
+	// Overlay switch state: remembers the node so Tab can toggle NDSL ↔ MDL.
+	overlayQName    string
+	overlayNodeType string
+	overlayIsNDSL   bool
 
 	visibility        PanelVisibility
 	zenMode           bool
@@ -230,6 +238,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(cmds...)
 
+	case overlayFlashClearMsg:
+		m.overlay.copiedFlash = false
+		return m, nil
+
+	case compareFlashClearMsg:
+		m.compare.copiedFlash = false
+		return m, nil
+
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
@@ -242,6 +258,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 		if m.overlay.IsVisible() {
+			// Tab switches between NDSL and MDL when the overlay was opened via b/m.
+			if msg.String() == "tab" && m.overlayQName != "" && !m.overlay.content.IsSearching() {
+				m.overlayIsNDSL = !m.overlayIsNDSL
+				if m.overlayIsNDSL {
+					bsonType := inferBsonType(m.overlayNodeType)
+					return m, m.runBsonOverlay(bsonType, m.overlayQName)
+				}
+				return m, m.runMDLOverlay(m.overlayNodeType, m.overlayQName)
+			}
 			var cmd tea.Cmd
 			m.overlay, cmd = m.overlay.Update(msg)
 			return m, cmd
@@ -281,6 +306,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Err != nil {
 			content = "-- Error:\n" + msg.Output
 		}
+		m.overlayQName = ""
+		m.overlay.switchable = false
 		m.overlay.Show("Result", DetectAndHighlight(content), m.width, m.height)
 	}
 	return m, nil
@@ -335,11 +362,19 @@ func (m Model) updateNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "b":
 		if node := m.selectedNode(); node != nil && node.QualifiedName != "" {
 			if bsonType := inferBsonType(node.Type); bsonType != "" {
+				m.overlayQName = node.QualifiedName
+				m.overlayNodeType = node.Type
+				m.overlayIsNDSL = true
+				m.overlay.switchable = true
 				return m, m.runBsonOverlay(bsonType, node.QualifiedName)
 			}
 		}
 	case "m":
 		if node := m.selectedNode(); node != nil && node.QualifiedName != "" {
+			m.overlayQName = node.QualifiedName
+			m.overlayNodeType = node.Type
+			m.overlayIsNDSL = false
+			m.overlay.switchable = true
 			return m, m.runMDLOverlay(node.Type, node.QualifiedName)
 		}
 	case "c":

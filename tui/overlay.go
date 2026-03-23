@@ -3,19 +3,25 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
+// overlayFlashClearMsg clears the "Copied!" flash after a delay.
+type overlayFlashClearMsg struct{}
+
 // Overlay is a fullscreen modal with scrollable content, line numbers,
 // scrollbar, vim navigation, and mouse support.
 type Overlay struct {
-	content ContentView
-	title   string
-	visible bool
-	width   int
-	height  int
+	content     ContentView
+	title       string
+	visible     bool
+	copiedFlash bool
+	switchable  bool // Tab key switches between NDSL and MDL
+	width       int
+	height      int
 }
 
 func NewOverlay() Overlay {
@@ -61,6 +67,15 @@ func (o Overlay) Update(msg tea.Msg) (Overlay, tea.Cmd) {
 		case "esc", "q":
 			o.visible = false
 			return o, nil
+		case "y":
+			_ = writeClipboard(o.content.PlainText())
+			o.copiedFlash = true
+			return o, func() tea.Msg {
+				time.Sleep(time.Second)
+				return overlayFlashClearMsg{}
+			}
+		default:
+			o.copiedFlash = false
 		}
 	}
 
@@ -86,14 +101,24 @@ func (o Overlay) View() string {
 	scrollInfo := dimSt.Render(lineInfo + " " + pct)
 
 	// Hints
+	activeSt := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+	successSt := lipgloss.NewStyle().Foreground(lipgloss.Color("76")).Bold(true)
+
 	var hints []string
 	hints = append(hints, keySt.Render("j/k")+" "+dimSt.Render("scroll"))
 	hints = append(hints, keySt.Render("/")+" "+dimSt.Render("search"))
 	if si := o.content.SearchInfo(); si != "" {
-		activeSt := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
 		hints = append(hints, keySt.Render("n/N")+" "+activeSt.Render(si))
 	}
 	hints = append(hints, keySt.Render("g/G")+" "+dimSt.Render("top/end"))
+	if o.switchable {
+		hints = append(hints, keySt.Render("Tab")+" "+dimSt.Render("switch"))
+	}
+	if o.copiedFlash {
+		hints = append(hints, successSt.Render("✓ Copied!"))
+	} else {
+		hints = append(hints, keySt.Render("y")+" "+dimSt.Render("copy"))
+	}
 	hints = append(hints, keySt.Render("Esc")+" "+dimSt.Render("close"))
 	hintBar := strings.Join(hints, "  ") + "  " + scrollInfo
 
