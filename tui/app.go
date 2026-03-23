@@ -40,6 +40,9 @@ type App struct {
 
 // NewApp creates the root App model.
 func NewApp(mxcliPath, projectPath string) App {
+	initTrace()
+	Trace("app: NewApp mxcli=%q project=%q", mxcliPath, projectPath)
+
 	engine := NewPreviewEngine(mxcliPath, projectPath)
 	tab := NewTab(1, projectPath, engine, nil)
 
@@ -285,7 +288,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-	case PreviewReadyMsg, PreviewLoadingMsg, CursorChangedMsg:
+	case PreviewReadyMsg, PreviewLoadingMsg, CursorChangedMsg, animTickMsg:
 		tab := a.activeTabPtr()
 		if tab != nil {
 			var cmd tea.Cmd
