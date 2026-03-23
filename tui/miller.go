@@ -47,7 +47,7 @@ const (
 	animRight               // go back: columns slide right
 )
 
-const animFrames = 5 // number of animation frames
+const animFrames = 8 // number of animation frames
 
 // animTickMsg triggers the next animation frame.
 type animTickMsg struct{}
@@ -139,7 +139,7 @@ func (m MillerView) Update(msg tea.Msg) (MillerView, tea.Cmd) {
 		if m.animRemaining > 0 {
 			m.animRemaining--
 			if m.animRemaining > 0 {
-				return m, tea.Tick(time.Millisecond*40, func(time.Time) tea.Msg { return animTickMsg{} })
+				return m, tea.Tick(time.Millisecond*50, func(time.Time) tea.Msg { return animTickMsg{} })
 			}
 			m.animDir = animNone
 		}
@@ -250,10 +250,27 @@ func (m MillerView) drillIn() (MillerView, tea.Cmd) {
 	m.updateFocusStyles()
 	m.relayout()
 
+	// Trigger preview for first item in new current column
+	var previewCmd tea.Cmd
+	if node := m.current.SelectedNode(); node != nil {
+		if len(node.Children) > 0 {
+			col := NewColumn(node.Label)
+			col.SetItems(treeNodesToItems(node.Children))
+			m.preview.childColumn = &col
+			m.relayout()
+		} else if node.QualifiedName != "" && node.Type != "" {
+			previewCmd = m.previewEngine.RequestPreview(node.Type, node.QualifiedName, m.preview.mode)
+		}
+	}
+
 	// Start slide-left animation
 	m.animDir = animLeft
 	m.animRemaining = animFrames
-	return m, tea.Tick(time.Millisecond*40, func(time.Time) tea.Msg { return animTickMsg{} })
+	animCmd := tea.Tick(time.Millisecond*50, func(time.Time) tea.Msg { return animTickMsg{} })
+	if previewCmd != nil {
+		return m, tea.Batch(animCmd, previewCmd)
+	}
+	return m, animCmd
 }
 
 func (m MillerView) goBack() (MillerView, tea.Cmd) {
@@ -277,10 +294,27 @@ func (m MillerView) goBack() (MillerView, tea.Cmd) {
 	m.updateFocusStyles()
 	m.relayout()
 
+	// Trigger preview for selected item in restored current column
+	var previewCmd tea.Cmd
+	if node := m.current.SelectedNode(); node != nil {
+		if len(node.Children) > 0 {
+			col := NewColumn(node.Label)
+			col.SetItems(treeNodesToItems(node.Children))
+			m.preview.childColumn = &col
+			m.relayout()
+		} else if node.QualifiedName != "" && node.Type != "" {
+			previewCmd = m.previewEngine.RequestPreview(node.Type, node.QualifiedName, m.preview.mode)
+		}
+	}
+
 	// Start slide-right animation
 	m.animDir = animRight
 	m.animRemaining = animFrames
-	return m, tea.Tick(time.Millisecond*40, func(time.Time) tea.Msg { return animTickMsg{} })
+	animCmd := tea.Tick(time.Millisecond*50, func(time.Time) tea.Msg { return animTickMsg{} })
+	if previewCmd != nil {
+		return m, tea.Batch(animCmd, previewCmd)
+	}
+	return m, animCmd
 }
 
 func (m MillerView) togglePreviewMode() (MillerView, tea.Cmd) {
@@ -459,45 +493,77 @@ func (m MillerView) columnWidths() (int, int, int) {
 	if available < 80 {
 		sepWidth := 1
 		usable := available - sepWidth
-		currentW := usable * 40 / 100
+		// Content-aware split: current gets what it needs, rest to preview
+		idealCur := m.current.IdealWidth()
+		currentW := min(idealCur, usable*50/100) // cap at 50%
+		if currentW < 15 {
+			currentW = 15
+		}
 		previewW := usable - currentW
 		return 0, currentW, previewW
 	}
 
-	// 3-column mode: parent 20% : current 30% : preview 50%
+	// 3-column mode: content-aware widths
 	sepWidth := 2
 	usable := available - sepWidth
-	parentPct := 20
-	previewPct := 50
 
-	// Animation: shift the split point over frames
+	// Calculate ideal widths
+	idealParent := m.parent.IdealWidth()
+	idealCurrent := m.current.IdealWidth()
+
+	// Parent: fit content, cap at 30% of usable
+	maxParent := usable * 30 / 100
+	parentW := min(idealParent, maxParent)
+	if parentW < 8 {
+		parentW = 8
+	}
+
+	// Current: fit content, cap at 35% of usable
+	maxCurrent := usable * 35 / 100
+	currentW := min(idealCurrent, maxCurrent)
+	if currentW < 15 {
+		currentW = 15
+	}
+
+	// Preview: everything else (at least 25%)
+	previewW := usable - parentW - currentW
+	minPreview := usable * 25 / 100
+	if previewW < minPreview {
+		// Shrink parent and current proportionally to give preview enough space
+		excess := minPreview - previewW
+		parentShrink := excess * parentW / (parentW + currentW)
+		currentShrink := excess - parentShrink
+		parentW -= parentShrink
+		currentW -= currentShrink
+		previewW = minPreview
+	}
+
+	// Animation: shift parent/preview widths over frames
 	if m.animRemaining > 0 {
-		// Each frame shifts 3% toward the target (5 frames × 3% = 15% total travel)
-		shift := 3 * m.animRemaining
+		// Shift proportional to parent width, not total width
+		shift := max(1, parentW*m.animRemaining/(animFrames*2))
 		switch m.animDir {
 		case animLeft:
-			// Drill in: parent shrinks from left, preview grows from right
-			parentPct -= shift
-			previewPct += shift
+			parentW -= shift
+			previewW += shift
 		case animRight:
-			// Go back: parent grows from left, preview shrinks from right
-			parentPct += shift
-			previewPct -= shift
+			parentW += shift
+			previewW -= shift
 		}
-		if parentPct < 5 {
-			parentPct = 5
+		if parentW < 4 {
+			parentW = 4
 		}
-		if previewPct < 20 {
-			previewPct = 20
+		if previewW < 20 {
+			previewW = 20
+		}
+		// Rebalance current
+		currentW = usable - parentW - previewW
+		if currentW < 10 {
+			currentW = 10
+			previewW = usable - parentW - currentW
 		}
 	}
 
-	parentW := usable * parentPct / 100
-	currentW := usable * (100 - parentPct - previewPct) / 100
-	if currentW < 10 {
-		currentW = 10
-	}
-	previewW := usable - parentW - currentW
 	return parentW, currentW, previewW
 }
 
