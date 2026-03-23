@@ -1,10 +1,11 @@
-package panels
+package tui
 
+// typeIconMap maps Mendix node types to display icons.
 var typeIconMap = map[string]string{
 	// Project-level nodes
-	"systemoverview":       "🗺",
-	"navigation":           "🧭",
-	"projectsecurity":      "🛡",
+	"systemoverview":  "🗺",
+	"navigation":      "🧭",
+	"projectsecurity": "🛡",
 
 	// Modules & structure
 	"module":   "⬡",
@@ -56,8 +57,8 @@ var typeIconMap = map[string]string{
 	"navmenuitem": "→",
 }
 
-// iconFor returns the icon for a Mendix node type, or "·" if unknown.
-func iconFor(nodeType string) string {
+// IconFor returns the icon for a Mendix node type, or "·" if unknown.
+func IconFor(nodeType string) string {
 	if icon, ok := typeIconMap[nodeType]; ok {
 		return icon
 	}

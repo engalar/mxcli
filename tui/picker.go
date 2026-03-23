@@ -101,6 +101,11 @@ func listPathCandidates(input string) []pathCandidate {
 	return candidates
 }
 
+// PickerDoneMsg is sent when the picker is embedded in App and user selects a project.
+type PickerDoneMsg struct {
+	Path string // empty if cancelled
+}
+
 // PickerModel lets the user select from recent projects or type a new path.
 type PickerModel struct {
 	history            []string
@@ -113,10 +118,11 @@ type PickerModel struct {
 	pathCursor     int
 	pathScrollOffset int
 
-	chosen string
-	done   bool
-	width  int
-	height int
+	chosen   string
+	done     bool
+	embedded bool // when true, send PickerDoneMsg instead of tea.Quit
+	width    int
+	height   int
 }
 
 // NewPickerModel creates the picker model with loaded history.
@@ -132,9 +138,25 @@ func NewPickerModel() PickerModel {
 	}
 }
 
+// NewEmbeddedPicker creates a picker for use within App (sends PickerDoneMsg, not tea.Quit).
+func NewEmbeddedPicker() PickerModel {
+	p := NewPickerModel()
+	p.embedded = true
+	return p
+}
+
 // Chosen returns the selected project path (empty if cancelled).
 func (m PickerModel) Chosen() string {
 	return m.chosen
+}
+
+// doneCmd returns the appropriate tea.Cmd for picker completion.
+func (m PickerModel) doneCmd() tea.Cmd {
+	if m.embedded {
+		path := m.chosen
+		return func() tea.Msg { return PickerDoneMsg{Path: path} }
+	}
+	return tea.Quit
 }
 
 func (m PickerModel) Init() tea.Cmd {
@@ -243,7 +265,7 @@ func (m PickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "tab":
 				if len(m.pathCandidates) > 0 {
 					if done := m.applyCandidate(); done {
-						return m, tea.Quit
+						return m, m.doneCmd()
 					}
 				}
 				return m, nil
@@ -259,7 +281,7 @@ func (m PickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				if len(m.pathCandidates) > 0 {
 					if done := m.applyCandidate(); done {
-						return m, tea.Quit
+						return m, m.doneCmd()
 					}
 					// If it was a dir without unique mpr, stay in input mode
 					if len(m.pathCandidates) > 0 {
@@ -270,7 +292,7 @@ func (m PickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if val != "" {
 					m.chosen = val
 					m.done = true
-					return m, tea.Quit
+					return m, m.doneCmd()
 				}
 
 			default:
@@ -285,7 +307,7 @@ func (m PickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "ctrl+c", "q":
 				m.done = true
-				return m, tea.Quit
+				return m, m.doneCmd()
 
 			case "j", "down":
 				if m.cursor < len(m.history)-1 {
@@ -307,7 +329,7 @@ func (m PickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if len(m.history) > 0 {
 					m.chosen = m.history[m.cursor]
 					m.done = true
-					return m, tea.Quit
+					return m, m.doneCmd()
 				}
 
 			case "n":
