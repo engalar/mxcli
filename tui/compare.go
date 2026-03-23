@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -74,12 +75,13 @@ func (p comparePane) lineInfo() string {
 
 // CompareView is a side-by-side comparison overlay (lazygit-style).
 type CompareView struct {
-	visible bool
-	kind    CompareKind
-	focus   CompareFocus
-	left    comparePane
-	right   comparePane
-	sync    bool // synchronized scrolling
+	visible      bool
+	kind         CompareKind
+	focus        CompareFocus
+	left         comparePane
+	right        comparePane
+	sync         bool // synchronized scrolling
+	copiedFlash  bool
 
 	// Fuzzy picker
 	picker        bool
@@ -346,8 +348,18 @@ func (c CompareView) updateNormal(msg tea.KeyMsg) (CompareView, tea.Cmd) {
 		c.sync = !c.sync
 		return c, nil
 
+	// Copy focused pane content to clipboard
+	case "y":
+		_ = writeClipboard(c.focusedPane().content.PlainText())
+		c.copiedFlash = true
+		return c, func() tea.Msg {
+			time.Sleep(time.Second)
+			return compareFlashClearMsg{}
+		}
+
 	// Scroll — forward j/k/arrows/pgup/pgdn/g/G to focused viewport
 	default:
+		c.copiedFlash = false
 		p := c.focusedPane()
 		var cmd tea.Cmd
 		p.content, cmd = p.content.Update(msg)
@@ -458,6 +470,7 @@ func (c CompareView) renderStatusBar() string {
 	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	key := lipgloss.NewStyle().Foreground(lipgloss.Color("63")).Bold(true)
 	active := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+	success := lipgloss.NewStyle().Foreground(lipgloss.Color("76")).Bold(true)
 
 	kindNames := []string{"NDSL|NDSL", "NDSL|MDL", "MDL|MDL"}
 
@@ -489,6 +502,11 @@ func (c CompareView) renderStatusBar() string {
 	}
 	parts = append(parts, key.Render("r")+" "+dim.Render("reload"))
 	parts = append(parts, key.Render("j/k")+" "+dim.Render("scroll"))
+	if c.copiedFlash {
+		parts = append(parts, success.Render("✓ Copied!"))
+	} else {
+		parts = append(parts, key.Render("y")+" "+dim.Render("copy"))
+	}
 	parts = append(parts, key.Render("Esc")+" "+dim.Render("close"))
 
 	return lipgloss.NewStyle().Width(c.width).

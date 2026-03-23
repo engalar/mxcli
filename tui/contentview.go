@@ -44,7 +44,19 @@ func (v *ContentView) SetSize(w, h int) { v.width = w; v.height = h }
 func (v *ContentView) GotoTop()         { v.yOffset = 0 }
 func (v ContentView) TotalLines() int   { return len(v.lines) }
 func (v ContentView) YOffset() int      { return v.yOffset }
-func (v ContentView) IsSearching() bool  { return v.searching }
+func (v ContentView) IsSearching() bool { return v.searching }
+
+// PlainText returns the content as plain text with ANSI codes stripped.
+func (v ContentView) PlainText() string {
+	var sb strings.Builder
+	for i, line := range v.lines {
+		if i > 0 {
+			sb.WriteByte('\n')
+		}
+		sb.WriteString(stripANSI(line))
+	}
+	return sb.String()
+}
 
 func (v ContentView) ScrollPercent() float64 {
 	m := v.maxOffset()
