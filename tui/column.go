@@ -350,6 +350,27 @@ func (c *Column) SetCursor(idx int) {
 	}
 }
 
+// IdealWidth returns the minimum width needed to show all items without truncation.
+// Uses visual width (lipgloss.Width) to handle multibyte icons correctly.
+func (c Column) IdealWidth() int {
+	maxW := lipgloss.Width(c.title)
+	for _, item := range c.items {
+		icon := item.Icon
+		if icon == "" {
+			icon = IconFor(item.Type)
+		}
+		label := icon + "  " + item.Label
+		if item.HasChildren {
+			label += " ▶"
+		}
+		w := lipgloss.Width(label)
+		if w > maxW {
+			maxW = w
+		}
+	}
+	return maxW + 2 // +2 for padding
+}
+
 // HitTestIndex returns the item index at the given Y coordinate, or -1.
 func (c Column) HitTestIndex(y int) int {
 	topOffset := c.headerLines()
