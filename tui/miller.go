@@ -3,7 +3,6 @@ package tui
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -38,18 +37,7 @@ type navEntry struct {
 	parentNode   *TreeNode // the node whose children are shown in current
 }
 
-// animDirection indicates the slide direction for column transitions.
-type animDirection int
-
-const (
-	animNone  animDirection = iota
-	animLeft                // drill in: columns slide left
-	animRight               // go back: columns slide right
-)
-
-const animFrames = 8 // number of animation frames
-
-// animTickMsg triggers the next animation frame.
+// animTickMsg is kept for backward compatibility (forwarded in app.go).
 type animTickMsg struct{}
 
 // MillerView coordinates three columns: parent, current, and preview.
@@ -68,10 +56,6 @@ type MillerView struct {
 	width   int
 	height  int
 	zenMode bool
-
-	// Slide animation state
-	animDir       animDirection
-	animRemaining int // frames remaining (0 = no animation)
 }
 
 // NewMillerView creates a MillerView wired to the given preview engine.
@@ -138,14 +122,7 @@ func (m MillerView) Update(msg tea.Msg) (MillerView, tea.Cmd) {
 		return m, nil
 
 	case animTickMsg:
-		if m.animRemaining > 0 {
-			m.animRemaining--
-			if m.animRemaining > 0 {
-				return m, tea.Tick(time.Millisecond*50, func(time.Time) tea.Msg { return animTickMsg{} })
-			}
-			m.animDir = animNone
-		}
-		return m, nil
+		return m, nil // no-op, animation removed
 
 	case tea.MouseMsg:
 		return m.handleMouse(msg)
@@ -255,7 +232,6 @@ func (m MillerView) drillIn() (MillerView, tea.Cmd) {
 	m.relayout()
 
 	// Trigger preview for first item in new current column
-	var previewCmd tea.Cmd
 	if node := m.current.SelectedNode(); node != nil {
 		if len(node.Children) > 0 {
 			col := NewColumn(node.Label)
@@ -263,18 +239,11 @@ func (m MillerView) drillIn() (MillerView, tea.Cmd) {
 			m.preview.childColumn = &col
 			m.relayout()
 		} else if node.QualifiedName != "" && node.Type != "" {
-			previewCmd = m.previewEngine.RequestPreview(node.Type, node.QualifiedName, m.preview.mode)
+			return m, m.previewEngine.RequestPreview(node.Type, node.QualifiedName, m.preview.mode)
 		}
 	}
 
-	// Start slide-left animation
-	m.animDir = animLeft
-	m.animRemaining = animFrames
-	animCmd := tea.Tick(time.Millisecond*50, func(time.Time) tea.Msg { return animTickMsg{} })
-	if previewCmd != nil {
-		return m, tea.Batch(animCmd, previewCmd)
-	}
-	return m, animCmd
+	return m, nil
 }
 
 func (m MillerView) goBack() (MillerView, tea.Cmd) {
@@ -300,7 +269,6 @@ func (m MillerView) goBack() (MillerView, tea.Cmd) {
 	m.relayout()
 
 	// Trigger preview for selected item in restored current column
-	var previewCmd tea.Cmd
 	if node := m.current.SelectedNode(); node != nil {
 		if len(node.Children) > 0 {
 			col := NewColumn(node.Label)
@@ -308,18 +276,11 @@ func (m MillerView) goBack() (MillerView, tea.Cmd) {
 			m.preview.childColumn = &col
 			m.relayout()
 		} else if node.QualifiedName != "" && node.Type != "" {
-			previewCmd = m.previewEngine.RequestPreview(node.Type, node.QualifiedName, m.preview.mode)
+			return m, m.previewEngine.RequestPreview(node.Type, node.QualifiedName, m.preview.mode)
 		}
 	}
 
-	// Start slide-right animation
-	m.animDir = animRight
-	m.animRemaining = animFrames
-	animCmd := tea.Tick(time.Millisecond*50, func(time.Time) tea.Msg { return animTickMsg{} })
-	if previewCmd != nil {
-		return m, tea.Batch(animCmd, previewCmd)
-	}
-	return m, animCmd
+	return m, nil
 }
 
 func (m MillerView) togglePreviewMode() (MillerView, tea.Cmd) {
@@ -543,34 +504,8 @@ func (m MillerView) columnWidths() (int, int, int) {
 		previewW = minPreview
 	}
 
-	// Animation: shift parent/preview widths over frames
-	if m.animRemaining > 0 {
-		// Shift proportional to parent width, not total width
-		shift := max(1, parentW*m.animRemaining/(animFrames*2))
-		switch m.animDir {
-		case animLeft:
-			parentW -= shift
-			previewW += shift
-		case animRight:
-			parentW += shift
-			previewW -= shift
-		}
-		if parentW < 4 {
-			parentW = 4
-		}
-		if previewW < 20 {
-			previewW = 20
-		}
-		// Rebalance current
-		currentW = usable - parentW - previewW
-		if currentW < 10 {
-			currentW = 10
-			previewW = usable - parentW - currentW
-		}
-	}
-
-	Trace("miller: columnWidths usable=%d ideal(p=%d,c=%d) result(p=%d,c=%d,pv=%d) anim=%d/%v",
-		usable, idealParent, idealCurrent, parentW, currentW, previewW, m.animRemaining, m.animDir)
+	Trace("miller: columnWidths usable=%d ideal(p=%d,c=%d) result(p=%d,c=%d,pv=%d)",
+		usable, idealParent, idealCurrent, parentW, currentW, previewW)
 	return parentW, currentW, previewW
 }
 
