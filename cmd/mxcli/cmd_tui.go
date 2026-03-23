@@ -57,7 +57,7 @@ Example:
 
 		tui.SaveHistory(projectPath)
 
-		m := tui.New(mxcliPath, projectPath)
+		m := tui.NewApp(mxcliPath, projectPath)
 		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 		if _, err := p.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
