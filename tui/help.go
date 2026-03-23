@@ -22,9 +22,10 @@ const helpText = `
     z    zen mode (zoom panel)
     Enter  full detail (in preview)
 
-  COMPARE VIEW
-    Tab   switch left/right pane
-    /     fuzzy pick object
+  OVERLAY / COMPARE VIEW
+    y     copy content to clipboard
+    Tab   switch left/right pane (compare)
+    /     fuzzy pick object (compare)
     1/2/3 NDSL|NDSL / NDSL|MDL / MDL|MDL
     s     toggle sync scroll
     j/k   scroll content
