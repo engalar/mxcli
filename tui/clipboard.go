@@ -5,9 +5,17 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strings"
 )
+
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+
+// stripAnsi removes ANSI escape sequences from text.
+func stripAnsi(s string) string {
+	return ansiRe.ReplaceAllString(s, "")
+}
 
 // writeClipboard writes text to the system clipboard.
 // Tries OSC 52 terminal escape first (works over SSH/tmux), then falls back

@@ -2,29 +2,44 @@ package tui
 
 import "github.com/charmbracelet/lipgloss"
 
+// Yazi-style borderless, terminal-adaptive styles.
+// No hardcoded colors — relies on Bold, Dim, Reverse, Italic, Underline.
+
 var (
-	colFocusedBorder = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("63"))
+	// Column separator: dim vertical bar between panels.
+	SeparatorChar  = "│"
+	SeparatorStyle = lipgloss.NewStyle().Faint(true)
 
-	colNormalBorder = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("240"))
+	// Tabs
+	ActiveTabStyle   = lipgloss.NewStyle().Bold(true).Underline(true)
+	InactiveTabStyle = lipgloss.NewStyle().Faint(true)
 
-	statusBarStyle = lipgloss.NewStyle().
-		Background(lipgloss.Color("236")).
-		Foreground(lipgloss.Color("252")).
-		Padding(0, 1)
+	// Column title (e.g. "Entities", "Attributes")
+	ColumnTitleStyle = lipgloss.NewStyle().Bold(true)
 
-	cmdBarStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("214")).
-		Bold(true)
+	// List items
+	SelectedItemStyle = lipgloss.NewStyle().Reverse(true)
+	DirectoryStyle    = lipgloss.NewStyle().Bold(true)
+	LeafStyle         = lipgloss.NewStyle()
 
-	titleStyle = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("39"))
+	// Breadcrumb
+	BreadcrumbDimStyle     = lipgloss.NewStyle().Faint(true)
+	BreadcrumbCurrentStyle = lipgloss.NewStyle()
 
-	dimStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240"))
+	// Loading / status
+	LoadingStyle  = lipgloss.NewStyle().Italic(true).Faint(true)
+	PositionStyle = lipgloss.NewStyle().Faint(true)
 
+	// Preview mode label (MDL / NDSL toggle)
+	PreviewModeStyle = lipgloss.NewStyle().Bold(true)
+
+	// Hint bar: key name bold, description dim
+	HintKeyStyle   = lipgloss.NewStyle().Bold(true)
+	HintLabelStyle = lipgloss.NewStyle().Faint(true)
+
+	// Status bar (bottom line)
+	StatusBarStyle = lipgloss.NewStyle().Faint(true)
+
+	// Command bar
+	CmdBarStyle = lipgloss.NewStyle().Bold(true)
 )

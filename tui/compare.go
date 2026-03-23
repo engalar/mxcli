@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mendixlabs/mxcli/tui/panels"
 )
 
 // CompareKind determines the comparison layout.
@@ -614,19 +613,3 @@ func fuzzyScore(target, query string) (bool, int) {
 	return true, score
 }
 
-func flattenQualifiedNames(nodes []*panels.TreeNode) []PickerItem {
-	var items []PickerItem
-	var walk func([]*panels.TreeNode)
-	walk = func(ns []*panels.TreeNode) {
-		for _, n := range ns {
-			if n.QualifiedName != "" {
-				items = append(items, PickerItem{QName: n.QualifiedName, NodeType: n.Type})
-			}
-			if len(n.Children) > 0 {
-				walk(n.Children)
-			}
-		}
-	}
-	walk(nodes)
-	return items
-}

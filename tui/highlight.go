@@ -80,13 +80,25 @@ func HighlightNDSL(content string) string {
 	return highlight(content, ndslLexer)
 }
 
-// StripBanner removes the "Connected to: ..." banner line from mxcli output.
+// StripBanner removes leading banner lines (WARNING:, Connected to:, blank lines)
+// from mxcli output so only the actual content remains.
 func StripBanner(content string) string {
-	lines := strings.SplitN(content, "\n", 2)
-	if len(lines) > 1 && strings.HasPrefix(lines[0], "Connected to:") {
-		return strings.TrimLeft(lines[1], "\n")
+	lines := strings.Split(content, "\n")
+	start := 0
+	for start < len(lines) {
+		trimmed := strings.TrimSpace(lines[start])
+		if trimmed == "" ||
+			strings.HasPrefix(trimmed, "WARNING:") ||
+			strings.HasPrefix(trimmed, "Connected to:") {
+			start++
+			continue
+		}
+		break
 	}
-	return content
+	if start == 0 {
+		return content
+	}
+	return strings.Join(lines[start:], "\n")
 }
 
 // DetectAndHighlight strips mxcli banner, auto-detects content type, and applies highlighting.
