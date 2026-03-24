@@ -483,9 +483,9 @@ func (r *Reader) parseImageCollection(unitID, containerID string, contents []byt
 				if format, ok := imgMap["ImageFormat"].(string); ok {
 					image.Format = format
 				}
-				if data, ok := imgMap["Data"].(primitive.Binary); ok {
+				if data, ok := imgMap["Image"].(primitive.Binary); ok {
 					image.Data = data.Data
-				} else if data, ok := imgMap["Data"].([]byte); ok {
+				} else if data, ok := imgMap["Image"].([]byte); ok {
 					image.Data = data
 				}
 				ic.Images = append(ic.Images, image)
