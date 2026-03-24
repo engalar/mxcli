@@ -270,6 +270,12 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 	case *ast.AlterNavigationStmt:
 		return e.execAlterNavigation(s)
 
+	// Image collection statements
+	case *ast.CreateImageCollectionStmt:
+		return e.execCreateImageCollection(s)
+	case *ast.DropImageCollectionStmt:
+		return e.execDropImageCollection(s)
+
 	// Workflow statements
 	case *ast.CreateWorkflowStmt:
 		return e.execCreateWorkflow(s)

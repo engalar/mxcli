@@ -137,6 +137,18 @@ func (e *Executor) validateWithContext(stmt ast.Statement, sc *scriptContext) er
 				return fmt.Errorf("child entity module not found: %s", s.Child.Module)
 			}
 		}
+	case *ast.CreateImageCollectionStmt:
+		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
+			if _, err := e.findModule(s.Name.Module); err != nil {
+				return fmt.Errorf("module not found: %s", s.Name.Module)
+			}
+		}
+	case *ast.DropImageCollectionStmt:
+		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
+			if _, err := e.findModule(s.Name.Module); err != nil {
+				return fmt.Errorf("module not found: %s", s.Name.Module)
+			}
+		}
 	case *ast.CreateEnumerationStmt:
 		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
 			if _, err := e.findModule(s.Name.Module); err != nil {
