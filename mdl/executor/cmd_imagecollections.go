@@ -5,6 +5,8 @@ package executor
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
@@ -89,13 +91,67 @@ func (e *Executor) describeImageCollection(name ast.QualifiedName) error {
 		exportLevel = "Hidden"
 	}
 
-	fmt.Fprintf(e.output, "CREATE IMAGE COLLECTION %s.%s", modName, ic.Name)
+	qualifiedName := fmt.Sprintf("%s.%s", modName, ic.Name)
+
+	if len(ic.Images) == 0 {
+		fmt.Fprintf(e.output, "CREATE IMAGE COLLECTION %s", qualifiedName)
+		if exportLevel != "Hidden" {
+			fmt.Fprintf(e.output, " EXPORT LEVEL '%s'", exportLevel)
+		}
+		fmt.Fprintln(e.output, ";")
+		fmt.Fprintln(e.output, "/")
+		return nil
+	}
+
+	// Write image data to temp files and output CREATE statement with IMAGE lines
+	previewDir := filepath.Join("/tmp/mxcli-preview", qualifiedName)
+	if err := os.MkdirAll(previewDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create preview directory: %w", err)
+	}
+
+	fmt.Fprintf(e.output, "CREATE IMAGE COLLECTION %s", qualifiedName)
 	if exportLevel != "Hidden" {
 		fmt.Fprintf(e.output, " EXPORT LEVEL '%s'", exportLevel)
 	}
-	fmt.Fprintln(e.output, ";")
+	fmt.Fprintln(e.output, " (")
+
+	for i, img := range ic.Images {
+		ext := imageFormatToExt(img.Format)
+		filePath := filepath.Join(previewDir, img.Name+ext)
+		if len(img.Data) > 0 {
+			if err := os.WriteFile(filePath, img.Data, 0o644); err != nil {
+				return fmt.Errorf("failed to write image %s: %w", img.Name, err)
+			}
+		}
+
+		comma := ","
+		if i == len(ic.Images)-1 {
+			comma = ""
+		}
+		fmt.Fprintf(e.output, "    IMAGE \"%s\" FROM FILE '%s'%s\n", img.Name, filePath, comma)
+	}
+
+	fmt.Fprintln(e.output, ");")
 	fmt.Fprintln(e.output, "/")
 	return nil
+}
+
+// imageFormatToExt converts a Mendix ImageFormat value to a file extension.
+func imageFormatToExt(format string) string {
+	switch format {
+	case "Svg":
+		return ".svg"
+	case "Gif":
+		return ".gif"
+	case "Jpg":
+		return ".jpg"
+	case "Bmp":
+		return ".bmp"
+	case "Webp":
+		return ".webp"
+	default:
+		return ".png"
+	}
 }
 
 // findImageCollection finds an image collection by module and name.
