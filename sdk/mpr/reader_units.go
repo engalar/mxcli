@@ -288,6 +288,8 @@ func (r *Reader) GetRawUnitByName(objectType, qualifiedName string) (*RawUnitInf
 		typePrefix = "Workflows$Workflow"
 	case "imagecollection":
 		typePrefix = "Images$ImageCollection"
+	case "javaaction":
+		typePrefix = "JavaActions$JavaAction"
 	default:
 		return nil, fmt.Errorf("unsupported object type: %s", objectType)
 	}

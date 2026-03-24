@@ -682,7 +682,7 @@ func inferBsonType(nodeType string) string {
 	switch strings.ToLower(nodeType) {
 	case "page", "microflow", "nanoflow", "workflow",
 		"enumeration", "snippet", "layout", "entity", "association",
-		"imagecollection":
+		"imagecollection", "javaaction":
 		return strings.ToLower(nodeType)
 	default:
 		return ""
