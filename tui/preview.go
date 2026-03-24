@@ -202,6 +202,15 @@ func (e *PreviewEngine) fetch(ctx context.Context, nodeType, qualifiedName strin
 		content = stripJavaCodeBlock(content)
 	}
 
+	// For imagecollection MDL preview, append inline images if terminal supports it.
+	if strings.ToLower(nodeType) == "imagecollection" && mode == PreviewMDL {
+		imagePaths := extractImagePaths(content)
+		rendered := renderImages(imagePaths)
+		if rendered != "" {
+			content = content + "\n" + rendered
+		}
+	}
+
 	return content, highlightType
 }
 
