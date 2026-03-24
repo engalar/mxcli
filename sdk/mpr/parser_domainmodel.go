@@ -140,10 +140,22 @@ func parseEntity(raw map[string]any) *domainmodel.Entity {
 			if genRef, ok := genMap["Generalization"].(string); ok {
 				entity.GeneralizationRef = genRef
 			}
-			// For NoGeneralization, Persistable is stored inside the generalization object
+			// For NoGeneralization, system flags are stored inside the generalization object
 			if genType, ok := genMap["$Type"].(string); ok && genType == "DomainModels$NoGeneralization" {
 				if persistable, ok := genMap["Persistable"].(bool); ok {
 					entity.Persistable = persistable
+				}
+				if v, ok := genMap["HasOwner"].(bool); ok {
+					entity.HasOwner = v
+				}
+				if v, ok := genMap["HasChangedBy"].(bool); ok {
+					entity.HasChangedBy = v
+				}
+				if v, ok := genMap["HasChangedDate"].(bool); ok {
+					entity.HasChangedDate = v
+				}
+				if v, ok := genMap["HasCreatedDate"].(bool); ok {
+					entity.HasCreatedDate = v
 				}
 			}
 		}

@@ -12,6 +12,37 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+// resolveModuleName walks the container hierarchy upward until it finds a module.
+// This is necessary because in MPR v2 projects, documents live inside folders,
+// so a document's direct ContainerID is a folder, not the module.
+func resolveModuleName(containerID string, moduleMap map[string]string, containerParent map[string]string) string {
+	current := containerID
+	for range 20 {
+		if name, ok := moduleMap[current]; ok {
+			return name
+		}
+		parent, ok := containerParent[current]
+		if !ok || parent == current {
+			break
+		}
+		current = parent
+	}
+	return ""
+}
+
+// buildContainerParent builds a map of unit ID → parent container ID for hierarchy walking.
+func (r *Reader) buildContainerParent() (map[string]string, error) {
+	units, err := r.ListUnits()
+	if err != nil {
+		return nil, err
+	}
+	containerParent := make(map[string]string, len(units))
+	for _, u := range units {
+		containerParent[string(u.ID)] = string(u.ContainerID)
+	}
+	return containerParent, nil
+}
+
 // rawUnit holds raw unit data from the database.
 type rawUnit struct {
 	ID              string
@@ -241,6 +272,8 @@ func (r *Reader) GetRawUnitByName(objectType, qualifiedName string) (*RawUnitInf
 		typePrefix = "Forms$Page"
 	case "entity":
 		typePrefix = "DomainModels$Entity"
+	case "association":
+		typePrefix = "DomainModels$Association"
 	case "microflow":
 		typePrefix = "Microflows$Microflow"
 	case "nanoflow":
@@ -257,9 +290,12 @@ func (r *Reader) GetRawUnitByName(objectType, qualifiedName string) (*RawUnitInf
 		return nil, fmt.Errorf("unsupported object type: %s", objectType)
 	}
 
-	// For entities, we need to search in domain models
-	if strings.ToLower(objectType) == "entity" {
+	// For entities and associations, we need to search within domain models
+	switch strings.ToLower(objectType) {
+	case "entity":
 		return r.getRawEntityByName(qualifiedName)
+	case "association":
+		return r.getRawAssociationByName(qualifiedName)
 	}
 
 	units, err := r.listUnitsByType(typePrefix)
@@ -267,7 +303,7 @@ func (r *Reader) GetRawUnitByName(objectType, qualifiedName string) (*RawUnitInf
 		return nil, err
 	}
 
-	// Build module name map
+	// Build module name map and container hierarchy for MPR v2 folder support.
 	modules, err := r.ListModules()
 	if err != nil {
 		return nil, err
@@ -275,6 +311,10 @@ func (r *Reader) GetRawUnitByName(objectType, qualifiedName string) (*RawUnitInf
 	moduleMap := make(map[string]string)
 	for _, m := range modules {
 		moduleMap[string(m.ID)] = m.Name
+	}
+	containerParent, err := r.buildContainerParent()
+	if err != nil {
+		return nil, err
 	}
 
 	for _, u := range units {
@@ -284,7 +324,7 @@ func (r *Reader) GetRawUnitByName(objectType, qualifiedName string) (*RawUnitInf
 		}
 
 		name, _ := raw["Name"].(string)
-		moduleName := moduleMap[u.ContainerID]
+		moduleName := resolveModuleName(u.ContainerID, moduleMap, containerParent)
 
 		// Build full name, handling missing module
 		var fullName string
@@ -340,18 +380,27 @@ func (r *Reader) getRawEntityByName(qualifiedName string) (*RawUnitInfo, error) 
 			continue
 		}
 
-		// Parse domain model to find entity
-		var raw map[string]any
-		if err := bson.Unmarshal(u.Contents, &raw); err != nil {
+		// Parse domain model to find entity.
+		// Unmarshal into bson.D so nested documents remain bson.D (not map[string]interface{}).
+		var rawD bson.D
+		if err := bson.Unmarshal(u.Contents, &rawD); err != nil {
 			continue
 		}
 
-		entities, ok := raw["Entities"].(bson.A)
+		var entitiesVal any
+		for _, field := range rawD {
+			if field.Key == "Entities" {
+				entitiesVal = field.Value
+				break
+			}
+		}
+
+		entities, ok := entitiesVal.(bson.A)
 		if !ok {
 			continue
 		}
 
-		// Skip version marker (first element)
+		// Skip version marker (first element is int32 array type indicator)
 		for i := 1; i < len(entities); i++ {
 			entity, ok := entities[i].(bson.D)
 			if !ok {
@@ -380,6 +429,84 @@ func (r *Reader) getRawEntityByName(qualifiedName string) (*RawUnitInfo, error) 
 	}
 
 	return nil, fmt.Errorf("entity not found: %s", qualifiedName)
+}
+
+// getRawAssociationByName finds an association within domain models.
+func (r *Reader) getRawAssociationByName(qualifiedName string) (*RawUnitInfo, error) {
+	parts := strings.Split(qualifiedName, ".")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid association name: %s (expected Module.AssociationName)", qualifiedName)
+	}
+	targetModule := parts[0]
+	targetAssoc := parts[1]
+
+	units, err := r.listUnitsByType("DomainModels$DomainModel")
+	if err != nil {
+		return nil, err
+	}
+
+	modules, err := r.ListModules()
+	if err != nil {
+		return nil, err
+	}
+	moduleMap := make(map[string]string)
+	for _, m := range modules {
+		moduleMap[string(m.ID)] = m.Name
+	}
+
+	for _, u := range units {
+		moduleName := moduleMap[u.ContainerID]
+		if moduleName != targetModule {
+			continue
+		}
+
+		// Unmarshal into bson.D so nested documents remain bson.D (not map[string]interface{}).
+		var rawD bson.D
+		if err := bson.Unmarshal(u.Contents, &rawD); err != nil {
+			continue
+		}
+
+		var assocsVal any
+		for _, field := range rawD {
+			if field.Key == "Associations" {
+				assocsVal = field.Value
+				break
+			}
+		}
+
+		assocs, ok := assocsVal.(bson.A)
+		if !ok {
+			continue
+		}
+
+		// Skip version marker (first element is int32 array type indicator)
+		for i := 1; i < len(assocs); i++ {
+			assoc, ok := assocs[i].(bson.D)
+			if !ok {
+				continue
+			}
+
+			for _, field := range assoc {
+				if field.Key == "Name" {
+					if name, ok := field.Value.(string); ok && name == targetAssoc {
+						assocBytes, err := bson.Marshal(assoc)
+						if err != nil {
+							return nil, err
+						}
+						return &RawUnitInfo{
+							ID:            u.ID,
+							QualifiedName: qualifiedName,
+							Type:          "DomainModels$Association",
+							ModuleName:    moduleName,
+							Contents:      assocBytes,
+						}, nil
+					}
+				}
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("association not found: %s", qualifiedName)
 }
 
 // ListRawUnits returns all units of a given type for BSON debugging.
@@ -411,7 +538,7 @@ func (r *Reader) ListRawUnits(objectType string) ([]*RawUnitInfo, error) {
 		return nil, err
 	}
 
-	// Build module name map
+	// Build module name map and container hierarchy for MPR v2 folder support.
 	modules, err := r.ListModules()
 	if err != nil {
 		return nil, err
@@ -419,6 +546,10 @@ func (r *Reader) ListRawUnits(objectType string) ([]*RawUnitInfo, error) {
 	moduleMap := make(map[string]string)
 	for _, m := range modules {
 		moduleMap[string(m.ID)] = m.Name
+	}
+	containerParent, err := r.buildContainerParent()
+	if err != nil {
+		return nil, err
 	}
 
 	var result []*RawUnitInfo
@@ -429,7 +560,7 @@ func (r *Reader) ListRawUnits(objectType string) ([]*RawUnitInfo, error) {
 		}
 
 		name, _ := raw["Name"].(string)
-		moduleName := moduleMap[u.ContainerID]
+		moduleName := resolveModuleName(u.ContainerID, moduleMap, containerParent)
 		fullName := name
 		if moduleName != "" {
 			fullName = moduleName + "." + name

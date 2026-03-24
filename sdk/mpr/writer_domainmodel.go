@@ -632,7 +632,7 @@ func serializeEntity(e *domainmodel.Entity, moduleName string) bson.D {
 	if e.GeneralizationRef != "" {
 		maybeGeneralization = serializeGeneralization(e.GeneralizationRef)
 	} else {
-		maybeGeneralization = serializeNoGeneralization(e.Persistable)
+		maybeGeneralization = serializeNoGeneralization(e)
 	}
 
 	// AccessRules array with version prefix 3
@@ -737,13 +737,25 @@ func serializeMemberAccess(ma *domainmodel.MemberAccess) bson.D {
 	return doc
 }
 
-func serializeNoGeneralization(persistable bool) bson.D {
-	// Use bson.D with Studio Pro field order: $ID, $Type, Persistable
-	return bson.D{
+func serializeNoGeneralization(e *domainmodel.Entity) bson.D {
+	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 		{Key: "$Type", Value: "DomainModels$NoGeneralization"},
-		{Key: "Persistable", Value: persistable},
+		{Key: "Persistable", Value: e.Persistable},
 	}
+	if e.HasOwner {
+		doc = append(doc, bson.E{Key: "HasOwner", Value: true})
+	}
+	if e.HasChangedBy {
+		doc = append(doc, bson.E{Key: "HasChangedBy", Value: true})
+	}
+	if e.HasChangedDate {
+		doc = append(doc, bson.E{Key: "HasChangedDate", Value: true})
+	}
+	if e.HasCreatedDate {
+		doc = append(doc, bson.E{Key: "HasCreatedDate", Value: true})
+	}
+	return doc
 }
 
 func serializeGeneralization(parentRef string) bson.D {

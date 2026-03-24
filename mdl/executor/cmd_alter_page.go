@@ -954,6 +954,7 @@ func (e *Executor) buildWidgetsBson(widgets []*ast.WidgetV3, moduleName string, 
 		paramEntityNames: make(map[string]string),
 		execCache:        e.cache,
 		fragments:        e.fragments,
+		themeRegistry:    e.getThemeRegistry(),
 	}
 
 	var result []any

@@ -6,6 +6,7 @@ package executor
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 	"time"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -80,8 +81,9 @@ type Executor struct {
 	catalog   *catalog.Catalog
 	quiet     bool                               // suppress connection and status messages
 	logger    *diaglog.Logger                    // session diagnostics logger (nil = no logging)
-	fragments map[string]*ast.DefineFragmentStmt // script-scoped fragment definitions
-	sqlMgr    *sqllib.Manager                    // external SQL connection manager (lazy init)
+	fragments     map[string]*ast.DefineFragmentStmt // script-scoped fragment definitions
+	sqlMgr        *sqllib.Manager                    // external SQL connection manager (lazy init)
+	themeRegistry *ThemeRegistry                     // cached theme design property definitions (lazy init)
 }
 
 // New creates a new executor with the given output writer.
@@ -92,6 +94,22 @@ func New(output io.Writer) *Executor {
 		guard:    guard,
 		settings: make(map[string]any),
 	}
+}
+
+// getThemeRegistry returns the cached theme registry, loading it lazily from the project's theme sources.
+func (e *Executor) getThemeRegistry() *ThemeRegistry {
+	if e.themeRegistry != nil {
+		return e.themeRegistry
+	}
+	if e.mprPath == "" {
+		return nil
+	}
+	projectDir := filepath.Dir(e.mprPath)
+	registry, err := loadThemeRegistry(projectDir)
+	if err == nil {
+		e.themeRegistry = registry
+	}
+	return e.themeRegistry
 }
 
 // SetQuiet enables or disables quiet mode (suppresses connection/status messages).

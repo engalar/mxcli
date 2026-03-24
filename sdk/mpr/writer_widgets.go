@@ -315,6 +315,13 @@ func serializeDesignProperties(props []pages.DesignPropertyValue) bson.A {
 				{Key: "$Type", Value: "Forms$OptionDesignPropertyValue"},
 				{Key: "Option", Value: p.Option},
 			}
+		case "custom":
+			// ToggleButtonGroup and ColorPicker properties use CustomDesignPropertyValue
+			valueBson = bson.D{
+				{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+				{Key: "$Type", Value: "Forms$CustomDesignPropertyValue"},
+				{Key: "Value", Value: p.Option},
+			}
 		default:
 			continue
 		}

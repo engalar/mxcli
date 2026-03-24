@@ -658,6 +658,13 @@ func extractDesignProperties(appearance map[string]any) []rawDesignProp {
 					ValueType: "option",
 					Option:    option,
 				})
+			case "Forms$CustomDesignPropertyValue":
+				value, _ := valueMap["Value"].(string)
+				result = append(result, rawDesignProp{
+					Key:       key,
+					ValueType: "option", // Treat custom (ToggleButtonGroup) as option for display
+					Option:    value,
+				})
 			}
 		case "Forms$ToggleDesignPropertyValue":
 			// Flat format (backward compat with mxcli-written pages)

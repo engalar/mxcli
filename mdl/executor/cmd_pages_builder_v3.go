@@ -336,13 +336,14 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
 	}
 
 	// Apply Class/Style appearance properties to the widget
-	applyWidgetAppearance(widget, w)
+	applyWidgetAppearance(widget, w, pb.themeRegistry)
 
 	return widget, nil
 }
 
 // applyWidgetAppearance sets Class, Style, and DesignProperties on a widget if specified in the AST.
-func applyWidgetAppearance(widget pages.Widget, w *ast.WidgetV3) {
+// The theme registry (if non-nil) is used to determine the correct BSON type for each design property.
+func applyWidgetAppearance(widget pages.Widget, w *ast.WidgetV3, theme *ThemeRegistry) {
 	class, style := w.GetClass(), w.GetStyle()
 	if class != "" || style != "" {
 		type appearanceSetter interface {
@@ -383,6 +384,24 @@ func applyWidgetAppearance(widget pages.Widget, w *ast.WidgetV3) {
 			}
 		}
 	}
+}
+
+// resolveDesignPropertyValueType determines the correct ValueType for a design property
+// based on the theme definition. ToggleButtonGroup and ColorPicker use "custom" type;
+// Dropdown uses "option" type. Falls back to "option" if theme info is unavailable.
+func resolveDesignPropertyValueType(key string, themeProps []ThemeProperty) string {
+	for _, tp := range themeProps {
+		if tp.Name == key {
+			switch tp.Type {
+			case "ToggleButtonGroup", "ColorPicker":
+				return "custom"
+			default:
+				return "option"
+			}
+		}
+	}
+	// No theme info available — default to "option" (Dropdown)
+	return "option"
 }
 
 // =============================================================================

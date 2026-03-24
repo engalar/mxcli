@@ -14,6 +14,19 @@
 
 CREATE MODULE BeTest;
 
+-- MARK: Prerequisites
+-- Create stub BusinessEvents module with the parent entity required for EXTENDS.
+-- In production, this comes from the Business Events marketplace module.
+CREATE MODULE BusinessEvents;
+@Position(100,100)
+CREATE PERSISTENT ENTITY BusinessEvents.PublishedBusinessEvent (
+  EventId: Long
+);
+CREATE CONSTANT BusinessEvents.ServerUrl
+TYPE String
+DEFAULT 'localhost:9092';
+/
+
 -- MARK: Supporting Entities
 
 @Position(100,100)
@@ -116,6 +129,6 @@ DROP BUSINESS EVENT SERVICE BeTest.SimpleEvents;
 -- EventNamePrefix property
 -- CREATE OR REPLACE
 -- DROP BUSINESS EVENT SERVICE
--- Entity EXTENDS BusinessEvents.PublishedBusinessEvent (required for published events)
+-- Entity  (required for published events)
 --
 -- ============================================================================

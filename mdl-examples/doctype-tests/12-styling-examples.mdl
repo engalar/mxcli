@@ -61,9 +61,10 @@ OWNER Both;
  */
 CREATE PAGE StyleTest.P001_CSS_Classes
 (
-  Params: { $Employee: StyleTest.Employee },
   Title: 'CSS Classes',
-  Layout: Atlas_Core.Atlas_Default
+  Layout: Atlas_Core.Atlas_Default,
+  Url: 'style_001_css_classes/{Employee}',
+  Params: { $Employee: StyleTest.Employee }
 )
 {
   -- Single CSS class
@@ -149,28 +150,29 @@ CREATE PAGE StyleTest.P002_Inline_Styles
  */
 CREATE PAGE StyleTest.P003_Design_Properties
 (
-  Params: { $Task: StyleTest.Task },
   Title: 'Design Properties',
-  Layout: Atlas_Core.Atlas_Default
+  Layout: Atlas_Core.Atlas_Default,
+  Url: 'style_003_design_properties/{Task}',
+  Params: { $Task: StyleTest.Task }
 )
 {
-  -- Toggle property (ON)
-  CONTAINER ctnFullWidth (DesignProperties: ['Spacing top': 'Large']) {
-    DYNAMICTEXT txtFull (Content: 'Full width container', RenderMode: H3)
+  -- Toggle property (ON) — 'Card style' is a genuine Toggle on Container
+  CONTAINER ctnFullWidth (DesignProperties: ['Card style': ON]) {
+    DYNAMICTEXT txtFull (Content: 'Container with card style', RenderMode: H3)
   }
 
-  -- Option property (dropdown value)
-  CONTAINER ctnSpacingTop (DesignProperties: ['Spacing top': 'Large']) {
-    DYNAMICTEXT txtSpacing (Content: 'Container with large top spacing')
+  -- Another Toggle property on Container
+  CONTAINER ctnBordered (DesignProperties: ['Disable row wrap': ON]) {
+    DYNAMICTEXT txtSpacing (Content: 'Container with flex nowrap')
   }
 
-  -- Multiple design properties
-  CONTAINER ctnMultiProps (DesignProperties: ['Spacing top': 'Large', 'Spacing bottom': 'Medium']) {
-    DYNAMICTEXT txtMulti (Content: 'Multiple design properties applied')
+  -- Multiple Toggle design properties
+  CONTAINER ctnMultiProps (DesignProperties: ['Card style': ON, 'Disable row wrap': ON]) {
+    DYNAMICTEXT txtMulti (Content: 'Multiple toggle properties applied')
   }
 
-  -- Design properties on a layout grid
-  LAYOUTGRID lgDesign (DesignProperties: ['Spacing top': 'Small']) {
+  -- Design properties on a layout grid (LayoutGrid has no theme-defined design properties)
+  LAYOUTGRID lgDesign {
     ROW row1 {
       COLUMN col1 (DesktopWidth: 6) {
         DYNAMICTEXT txtCol1 (Content: 'Column 1')
@@ -181,15 +183,15 @@ CREATE PAGE StyleTest.P003_Design_Properties
     }
   }
 
-  -- Design properties on input widgets
+  -- Design properties on input widgets (DataView requires PARAMETER, not DATABASE)
   DATAVIEW dvTask (DataSource: $Task) {
-    TEXTBOX txtTitle (Label: 'Title', Attribute: Title, DesignProperties: ['Spacing top': 'Medium'])
-    TEXTAREA txtDesc (Label: 'Description', Attribute: Description, DesignProperties: ['Spacing top': 'Small'])
-    DATEPICKER dpDue (Label: 'Due Date', Attribute: DueDate, DesignProperties: ['Spacing top': 'Small'])
-    CHECKBOX chkDone (Label: 'Completed', Attribute: IsCompleted, DesignProperties: ['Spacing top': 'Small'])
+    TEXTBOX txtTitle (Label: 'Title', Attribute: Title)
+    TEXTAREA txtDesc (Label: 'Description', Attribute: Description)
+    DATEPICKER dpDue (Label: 'Due Date', Attribute: DueDate)
+    CHECKBOX chkDone (Label: 'Completed', Attribute: IsCompleted)
 
     FOOTER footer1 {
-      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary, DesignProperties: ['Size': 'Large'])
+      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary, DesignProperties: ['Full width': ON])
       ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
     }
   }
@@ -207,29 +209,30 @@ CREATE PAGE StyleTest.P003_Design_Properties
  */
 CREATE PAGE StyleTest.P004_Combined_Styling
 (
-  Params: { $Employee: StyleTest.Employee },
   Title: 'Combined Styling',
-  Layout: Atlas_Core.Atlas_Default
+  Layout: Atlas_Core.Atlas_Default,
+  Url: 'style_004_combined_styling/{Employee}',
+  Params: { $Employee: StyleTest.Employee }
 )
 {
-  -- All three on a single container
+  -- All three on a single container — Card style is a Toggle property
   CONTAINER ctnHero (
     Class: 'card',
     Style: 'background: linear-gradient(135deg, #264AE5 0%, #1a237e 100%); color: white;',
-    DesignProperties: ['Spacing top': 'Large', 'Spacing bottom': 'Large']
+    DesignProperties: ['Card style': ON]
   ) {
     DYNAMICTEXT txtHero (Content: 'Hero Section', RenderMode: H1)
     DYNAMICTEXT txtSubtitle (Content: 'Combining Class, Style, and DesignProperties')
   }
 
   -- Dashboard-style card grid
-  LAYOUTGRID lgDashboard (Class: 'mx-spacing-top-lg', DesignProperties: ['Spacing top': 'Small']) {
+  LAYOUTGRID lgDashboard (Class: 'mx-spacing-top-lg') {
     ROW row1 {
       COLUMN col1 (DesktopWidth: 4) {
         CONTAINER ctnStat1 (
           Class: 'card card-bordered',
           Style: 'border-top: 3px solid #4caf50;',
-          DesignProperties: ['Spacing top': 'Medium']
+          DesignProperties: ['Card style': ON]
         ) {
           DYNAMICTEXT txtStat1Title (Content: 'Active Employees', RenderMode: H5)
           DYNAMICTEXT txtStat1Value (Content: '42', Class: 'text-primary')
@@ -239,7 +242,7 @@ CREATE PAGE StyleTest.P004_Combined_Styling
         CONTAINER ctnStat2 (
           Class: 'card card-bordered',
           Style: 'border-top: 3px solid #ff9800;',
-          DesignProperties: ['Spacing top': 'Medium']
+          DesignProperties: ['Card style': ON]
         ) {
           DYNAMICTEXT txtStat2Title (Content: 'Open Tasks', RenderMode: H5)
           DYNAMICTEXT txtStat2Value (Content: '17', Class: 'text-warning')
@@ -249,7 +252,7 @@ CREATE PAGE StyleTest.P004_Combined_Styling
         CONTAINER ctnStat3 (
           Class: 'card card-bordered',
           Style: 'border-top: 3px solid #f44336;',
-          DesignProperties: ['Spacing top': 'Medium']
+          DesignProperties: ['Card style': ON]
         ) {
           DYNAMICTEXT txtStat3Title (Content: 'Overdue', RenderMode: H5)
           DYNAMICTEXT txtStat3Value (Content: '3', Class: 'text-danger')
@@ -260,30 +263,30 @@ CREATE PAGE StyleTest.P004_Combined_Styling
 
   -- Form with mixed styling
   DATAVIEW dvEmployee (DataSource: $Employee) {
-    CONTAINER ctnFormHeader (Class: 'card-header', DesignProperties: ['Spacing bottom': 'Medium']) {
+    CONTAINER ctnFormHeader (Class: 'card-header', DesignProperties: ['Card style': ON]) {
       DYNAMICTEXT txtFormTitle (Content: 'Employee Details', RenderMode: H4)
     }
 
     LAYOUTGRID lgForm {
       ROW row1 {
         COLUMN col1 (DesktopWidth: 6) {
-          TEXTBOX txtName (Label: 'Full Name', Attribute: Name, DesignProperties: ['Spacing top': 'Small'])
+          TEXTBOX txtName (Label: 'Full Name', Attribute: Name)
         }
         COLUMN col2 (DesktopWidth: 6) {
-          TEXTBOX txtEmail (Label: 'Email', Attribute: Email, DesignProperties: ['Spacing top': 'Small'])
+          TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
         }
       }
       ROW row2 {
         COLUMN col3 (DesktopWidth: 6) {
-          TEXTBOX txtDept (Label: 'Department', Attribute: Department, DesignProperties: ['Spacing top': 'Small'])
+          TEXTBOX txtDept (Label: 'Department', Attribute: Department)
         }
         COLUMN col4 (DesktopWidth: 6) {
-          DATEPICKER dpStart (Label: 'Start Date', Attribute: StartDate, DesignProperties: ['Spacing top': 'Small'])
+          DATEPICKER dpStart (Label: 'Start Date', Attribute: StartDate)
         }
       }
       ROW row3 {
         COLUMN col5 (DesktopWidth: 12) {
-          TEXTAREA txtNotes (Label: 'Notes', Attribute: Notes, Class: 'form-control-lg', DesignProperties: ['Spacing top': 'Small'])
+          TEXTAREA txtNotes (Label: 'Notes', Attribute: Notes, Class: 'form-control-lg')
         }
       }
     }
@@ -294,7 +297,7 @@ CREATE PAGE StyleTest.P004_Combined_Styling
         Action: SAVE_CHANGES,
         ButtonStyle: Primary,
         Class: 'btn-lg',
-        DesignProperties: ['Size': 'Large']
+        DesignProperties: ['Full width': ON, 'Border': ON]
       )
       ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
     }
@@ -318,19 +321,19 @@ CREATE PAGE StyleTest.P005_Toggle_OFF
   Url: 'style_005_toggle_off'
 )
 {
-  -- ON enables the toggle
-  CONTAINER ctnOn (DesignProperties: ['Spacing top': 'Small']) {
-    DYNAMICTEXT txtOn (Content: 'Full width is ON')
+  -- ON enables a Toggle property — 'Card style' is a genuine Toggle on Container
+  CONTAINER ctnOn (DesignProperties: ['Card style': ON]) {
+    DYNAMICTEXT txtOn (Content: 'Card style is ON')
   }
 
   -- OFF disables/omits the toggle (equivalent to not setting it)
-  CONTAINER ctnOff (DesignProperties: ['Spacing top': 'Medium']) {
-    DYNAMICTEXT txtOff (Content: 'Full width is OFF (omitted)')
+  CONTAINER ctnOff (DesignProperties: ['Card style': OFF]) {
+    DYNAMICTEXT txtOff (Content: 'Card style is OFF (omitted)')
   }
 
-  -- Mix ON and OFF in the same list
-  CONTAINER ctnMixed (DesignProperties: ['Spacing top': 'Large']) {
-    DYNAMICTEXT txtMixed (Content: 'Mixed ON/OFF with option value')
+  -- Mix Toggle ON/OFF with option values (Shadow is a ToggleButtonGroup)
+  CONTAINER ctnMixed (DesignProperties: ['Card style': ON, 'Disable row wrap': ON]) {
+    DYNAMICTEXT txtMixed (Content: 'Mixed Toggle with option values')
   }
 }
 
@@ -455,23 +458,24 @@ UPDATE WIDGETS
  */
 CREATE PAGE StyleTest.P006_Roundtrip
 (
-  Params: { $Employee: StyleTest.Employee },
   Title: 'Roundtrip Example',
-  Layout: Atlas_Core.Atlas_Default
+  Layout: Atlas_Core.Atlas_Default,
+  Url: 'style_006_roundtrip/{Employee}',
+  Params: { $Employee: StyleTest.Employee }
 )
 {
   CONTAINER ctnHeader (
     Class: 'card',
     Style: 'padding: 16px;',
-    DesignProperties: ['Spacing bottom': 'Medium']
+    DesignProperties: ['Card style': ON]
   ) {
     DYNAMICTEXT txtHeader (Content: 'Employee Form', RenderMode: H3)
   }
 
   DATAVIEW dvEmployee (DataSource: $Employee) {
-    TEXTBOX txtName (Label: 'Name', Attribute: Name, DesignProperties: ['Spacing top': 'Small'])
-    TEXTBOX txtEmail (Label: 'Email', Attribute: Email, DesignProperties: ['Spacing top': 'Small'])
-    CHECKBOX chkActive (Label: 'Active', Attribute: IsActive, DesignProperties: ['Spacing top': 'Small'])
+    TEXTBOX txtName (Label: 'Name', Attribute: Name)
+    TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
+    CHECKBOX chkActive (Label: 'Active', Attribute: IsActive)
 
     FOOTER footer1 {
       ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
@@ -493,23 +497,24 @@ UPDATE WIDGETS
 -- Step 4: Or CREATE OR REPLACE to rewrite the entire page with new styling
 CREATE OR REPLACE PAGE StyleTest.P006_Roundtrip
 (
-  Params: { $Employee: StyleTest.Employee },
   Title: 'Roundtrip Example',
-  Layout: Atlas_Core.Atlas_Default
+  Layout: Atlas_Core.Atlas_Default,
+  Url: 'style_006_roundtrip/{Employee}',
+  Params: { $Employee: StyleTest.Employee }
 )
 {
   CONTAINER ctnHeader (
     Class: 'card card-bordered',
     Style: 'padding: 16px;',
-    DesignProperties: ['Spacing bottom': 'Medium']
+    DesignProperties: ['Card style': ON, 'Disable row wrap': ON]
   ) {
     DYNAMICTEXT txtHeader (Content: 'Employee Form', RenderMode: H3)
   }
 
   DATAVIEW dvEmployee (DataSource: $Employee) {
-    TEXTBOX txtName (Label: 'Name', Attribute: Name, DesignProperties: ['Spacing top': 'Small'])
-    TEXTBOX txtEmail (Label: 'Email', Attribute: Email, DesignProperties: ['Spacing top': 'Small'])
-    CHECKBOX chkActive (Label: 'Active', Attribute: IsActive, DesignProperties: ['Spacing top': 'Small'])
+    TEXTBOX txtName (Label: 'Name', Attribute: Name)
+    TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
+    CHECKBOX chkActive (Label: 'Active', Attribute: IsActive)
 
     FOOTER footer1 {
       ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
