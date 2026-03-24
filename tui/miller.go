@@ -30,11 +30,13 @@ type PreviewPane struct {
 
 // navEntry stores one level of the navigation stack for drill-in / go-back.
 type navEntry struct {
-	parentItems  []ColumnItem
-	currentItems []ColumnItem
-	parentTitle  string
-	currentTitle string
-	parentNode   *TreeNode // the node whose children are shown in current
+	parentItems   []ColumnItem
+	currentItems  []ColumnItem
+	parentTitle   string
+	currentTitle  string
+	parentNode    *TreeNode // the node whose children are shown in current
+	parentCursor  int
+	currentCursor int
 }
 
 // animTickMsg is kept for backward compatibility (forwarded in app.go).
@@ -207,19 +209,25 @@ func (m MillerView) drillIn() (MillerView, tea.Cmd) {
 	}
 	Trace("miller: drillIn into %q (%d children)", selected.Label, len(selected.Children))
 
-	// Save current state
+	// Save current state including cursor positions for goBack restore
 	entry := navEntry{
-		parentItems:  cloneItems(m.parent.items),
-		currentItems: cloneItems(m.current.items),
-		parentTitle:  m.parent.Title(),
-		currentTitle: m.current.Title(),
-		parentNode:   m.currentParent,
+		parentItems:   cloneItems(m.parent.items),
+		currentItems:  cloneItems(m.current.items),
+		parentTitle:   m.parent.Title(),
+		currentTitle:  m.current.Title(),
+		parentNode:    m.currentParent,
+		parentCursor:  m.parent.cursor,
+		currentCursor: m.current.cursor,
 	}
 	m.navStack = append(m.navStack, entry)
 
 	// Shift: current → parent, children → current
+	// SetItems resets cursor to 0, so we restore it after to keep the
+	// selected item highlighted in the parent column.
+	currentCursor := m.current.cursor
 	m.parent.SetItems(cloneItems(m.current.items))
 	m.parent.SetTitle(m.current.Title())
+	m.parent.SetCursor(currentCursor)
 	m.currentParent = selected
 
 	items := treeNodesToItems(selected.Children)
@@ -256,11 +264,14 @@ func (m MillerView) goBack() (MillerView, tea.Cmd) {
 	entry := m.navStack[depth-1]
 	m.navStack = m.navStack[:depth-1]
 
-	// Restore: parent items → parent, saved current → current
+	// Restore: parent items → parent, saved current → current.
+	// SetItems resets cursor to 0, so restore saved positions after.
 	m.parent.SetItems(entry.parentItems)
 	m.parent.SetTitle(entry.parentTitle)
+	m.parent.SetCursor(entry.parentCursor)
 	m.current.SetItems(entry.currentItems)
 	m.current.SetTitle(entry.currentTitle)
+	m.current.SetCursor(entry.currentCursor)
 	m.currentParent = entry.parentNode
 
 	m.clearPreview()
