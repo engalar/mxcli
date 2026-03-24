@@ -29,6 +29,9 @@ var typeIconMap = map[string]string{
 	"snippet": "⬔",
 	"layout":  "⬕",
 
+	// Images
+	"imagecollection": "🖼️",
+
 	// Constants & events
 	"constant":       "π",
 	"scheduledevent": "⏰",
