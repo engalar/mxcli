@@ -96,10 +96,12 @@ func (e *Executor) describeJavaAction(name ast.QualifiedName) error {
 	// Generate MDL-style output for CREATE JAVA ACTION format
 	var sb strings.Builder
 
-	// Documentation comment (JavaDoc style)
-	if ja.Documentation != "" {
+	// Documentation comment (JavaDoc style) — normalize \r\n to \n
+	doc := strings.ReplaceAll(ja.Documentation, "\r\n", "\n")
+	doc = strings.ReplaceAll(doc, "\r", "\n")
+	if doc != "" {
 		sb.WriteString("/**\n")
-		for line := range strings.SplitSeq(ja.Documentation, "\n") {
+		for line := range strings.SplitSeq(doc, "\n") {
 			sb.WriteString(" * ")
 			sb.WriteString(line)
 			sb.WriteString("\n")
@@ -112,10 +114,21 @@ func (e *Executor) describeJavaAction(name ast.QualifiedName) error {
 	sb.WriteString(qualifiedName)
 	sb.WriteString("(")
 
-	// Parameters
+	// Parameters — one per line when descriptions are present
+	hasParamDescriptions := false
+	for _, p := range ja.Parameters {
+		if p.Description != "" {
+			hasParamDescriptions = true
+			break
+		}
+	}
+
 	for i, param := range ja.Parameters {
 		if i > 0 {
 			sb.WriteString(", ")
+		}
+		if hasParamDescriptions {
+			sb.WriteString("\n    ")
 		}
 		sb.WriteString(param.Name)
 		sb.WriteString(": ")
@@ -127,6 +140,16 @@ func (e *Executor) describeJavaAction(name ast.QualifiedName) error {
 		if param.IsRequired {
 			sb.WriteString(" NOT NULL")
 		}
+		if param.Description != "" {
+			paramDoc := strings.ReplaceAll(param.Description, "\r\n", "\n")
+			paramDoc = strings.ReplaceAll(paramDoc, "\r", "\n")
+			firstLine, _, _ := strings.Cut(paramDoc, "\n")
+			sb.WriteString("  -- ")
+			sb.WriteString(firstLine)
+		}
+	}
+	if hasParamDescriptions {
+		sb.WriteString("\n")
 	}
 	sb.WriteString(")")
 
@@ -136,6 +159,13 @@ func (e *Executor) describeJavaAction(name ast.QualifiedName) error {
 		sb.WriteString(formatJavaActionReturnType(ja.ReturnType))
 	}
 
+	// RETURN NAME metadata
+	if ja.ActionDefaultReturnName != "" {
+		sb.WriteString("\n-- RETURN NAME: '")
+		sb.WriteString(ja.ActionDefaultReturnName)
+		sb.WriteString("'")
+	}
+
 	// EXPOSED AS clause
 	if ja.MicroflowActionInfo != nil && ja.MicroflowActionInfo.Caption != "" {
 		sb.WriteString("\nEXPOSED AS '")
@@ -143,6 +173,10 @@ func (e *Executor) describeJavaAction(name ast.QualifiedName) error {
 		sb.WriteString("' IN '")
 		sb.WriteString(ja.MicroflowActionInfo.Category)
 		sb.WriteString("'")
+		if ja.MicroflowActionInfo.Icon != "" {
+			sb.WriteString("\n-- ICON: ")
+			sb.WriteString(ja.MicroflowActionInfo.Icon)
+		}
 	}
 
 	// Try to read and include Java source code
