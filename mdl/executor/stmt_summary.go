@@ -122,6 +122,12 @@ func stmtSummary(stmt ast.Statement) string {
 	case *ast.RevokeODataServiceAccessStmt:
 		return fmt.Sprintf("REVOKE ACCESS ON ODATA SERVICE %s", s.Service)
 
+	// Image Collection
+	case *ast.CreateImageCollectionStmt:
+		return fmt.Sprintf("CREATE IMAGE COLLECTION %s", s.Name)
+	case *ast.DropImageCollectionStmt:
+		return fmt.Sprintf("DROP IMAGE COLLECTION %s", s.Name)
+
 	// Database Connection
 	case *ast.CreateDatabaseConnectionStmt:
 		return fmt.Sprintf("CREATE DATABASE CONNECTION %s", s.Name)
