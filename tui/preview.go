@@ -17,9 +17,10 @@ func buildDescribeCmd(nodeType, qualifiedName string) string {
 	switch strings.ToLower(nodeType) {
 	case "systemoverview":
 		return "SHOW STRUCTURE DEPTH 2"
-	case "security", "category", "domainmodel", "navigation", "projectsecurity", "navprofile",
-		"imagecollection":
+	case "security", "category", "domainmodel", "navigation", "projectsecurity", "navprofile":
 		return ""
+	case "imagecollection":
+		return "DESCRIBE IMAGE COLLECTION " + qualifiedName
 	case "modulerole":
 		return "DESCRIBE MODULE ROLE " + qualifiedName
 	case "userrole":

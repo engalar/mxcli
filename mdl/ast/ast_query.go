@@ -216,6 +216,7 @@ const (
 	DescribeDatabaseConnection   // DESCRIBE DATABASE CONNECTION Module.Name
 	DescribeSettings             // DESCRIBE SETTINGS
 	DescribeFragment             // DESCRIBE FRAGMENT Name
+	DescribeImageCollection      // DESCRIBE IMAGE COLLECTION Module.Name
 )
 
 // String returns the human-readable name of the describe object type.
@@ -265,6 +266,8 @@ func (t DescribeObjectType) String() string {
 		return "SETTINGS"
 	case DescribeFragment:
 		return "FRAGMENT"
+	case DescribeImageCollection:
+		return "IMAGE COLLECTION"
 	default:
 		return "UNKNOWN"
 	}

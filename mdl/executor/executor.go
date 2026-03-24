@@ -807,6 +807,8 @@ func (e *Executor) execDescribe(s *ast.DescribeStmt) error {
 		return e.describeSettings()
 	case ast.DescribeFragment:
 		return e.describeFragment(s.Name)
+	case ast.DescribeImageCollection:
+		return e.describeImageCollection(s.Name)
 	default:
 		return fmt.Errorf("unknown describe object type")
 	}

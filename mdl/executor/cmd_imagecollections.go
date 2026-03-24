@@ -66,6 +66,38 @@ func (e *Executor) execDropImageCollection(s *ast.DropImageCollectionStmt) error
 	return nil
 }
 
+// describeImageCollection handles DESCRIBE IMAGE COLLECTION Module.Name.
+func (e *Executor) describeImageCollection(name ast.QualifiedName) error {
+	ic := e.findImageCollection(name.Module, name.Name)
+	if ic == nil {
+		return fmt.Errorf("image collection not found: %s", name)
+	}
+
+	h, err := e.getHierarchy()
+	if err != nil {
+		return err
+	}
+	modID := h.FindModuleID(ic.ContainerID)
+	modName := h.GetModuleName(modID)
+
+	if ic.Documentation != "" {
+		fmt.Fprintf(e.output, "/**\n * %s\n */\n", ic.Documentation)
+	}
+
+	exportLevel := ic.ExportLevel
+	if exportLevel == "" {
+		exportLevel = "Hidden"
+	}
+
+	fmt.Fprintf(e.output, "CREATE IMAGE COLLECTION %s.%s", modName, ic.Name)
+	if exportLevel != "Hidden" {
+		fmt.Fprintf(e.output, " EXPORT LEVEL '%s'", exportLevel)
+	}
+	fmt.Fprintln(e.output, ";")
+	fmt.Fprintln(e.output, "/")
+	return nil
+}
+
 // findImageCollection finds an image collection by module and name.
 func (e *Executor) findImageCollection(moduleName, collectionName string) *mpr.ImageCollection {
 	collections, err := e.reader.ListImageCollections()
