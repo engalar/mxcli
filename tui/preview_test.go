@@ -33,6 +33,10 @@ func TestBuildDescribeCmd(t *testing.T) {
 		{"projectsecurity", "", ""},
 		{"navprofile", "", ""},
 
+		// Types with no MDL DESCRIBE command return empty (NDSL-only)
+		{"imagecollection", "Atlas_Core.Web", ""},
+		{"ImageCollection", "MyModule.Images", ""},
+
 		// Generic types fall through to default
 		{"entity", "MyModule.Customer", "DESCRIBE ENTITY MyModule.Customer"},
 		{"microflow", "MyModule.DoSomething", "DESCRIBE MICROFLOW MyModule.DoSomething"},

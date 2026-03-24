@@ -681,7 +681,8 @@ type CmdResultMsg struct {
 func inferBsonType(nodeType string) string {
 	switch strings.ToLower(nodeType) {
 	case "page", "microflow", "nanoflow", "workflow",
-		"enumeration", "snippet", "layout", "entity", "association":
+		"enumeration", "snippet", "layout", "entity", "association",
+		"imagecollection":
 		return strings.ToLower(nodeType)
 	default:
 		return ""
