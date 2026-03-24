@@ -145,6 +145,23 @@ func (e *PreviewEngine) RequestPreview(nodeType, qualifiedName string, mode Prev
 	)
 }
 
+// stripJavaCodeBlock removes the "AS $$...$$" section from a javaaction DESCRIBE
+// output so the TUI preview shows only the MDL signature, not the Java implementation.
+func stripJavaCodeBlock(s string) string {
+	const open = "\nAS $$"
+	start := strings.Index(s, open)
+	if start == -1 {
+		return s
+	}
+	const close = "\n$$"
+	end := strings.Index(s[start+len(open):], close)
+	if end == -1 {
+		return s[:start] + ";"
+	}
+	after := s[start+len(open)+end+len(close):]
+	return s[:start] + after
+}
+
 // fetch runs the mxcli subprocess and returns raw content + highlight type.
 func (e *PreviewEngine) fetch(ctx context.Context, nodeType, qualifiedName string, mode PreviewMode) (string, string) {
 	var args []string
@@ -177,6 +194,12 @@ func (e *PreviewEngine) fetch(ctx context.Context, nodeType, qualifiedName strin
 			return "", "plain" // cancelled — caller checks ctx.Err()
 		}
 		return "Error: " + strings.TrimSpace(content), "plain"
+	}
+
+	// For javaaction MDL preview, strip the AS $$...$$ Java code block so the
+	// preview shows only the signature, not the full implementation.
+	if strings.ToLower(nodeType) == "javaaction" && mode == PreviewMDL {
+		content = stripJavaCodeBlock(content)
 	}
 
 	return content, highlightType
