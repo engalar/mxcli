@@ -220,15 +220,19 @@ func (r *Reader) GetNavigation() (*NavigationDocument, error) {
 // ImageCollection represents an image collection.
 type ImageCollection struct {
 	model.BaseElement
-	ContainerID model.ID `json:"containerId"`
-	Name        string   `json:"name"`
-	Images      []Image  `json:"images,omitempty"`
+	ContainerID   model.ID `json:"containerId"`
+	Name          string   `json:"name"`
+	ExportLevel   string   `json:"exportLevel,omitempty"`
+	Documentation string   `json:"documentation,omitempty"`
+	Images        []Image  `json:"images,omitempty"`
 }
 
 // Image represents an image in a collection.
 type Image struct {
-	ID   model.ID `json:"id"`
-	Name string   `json:"name"`
+	ID     model.ID `json:"id"`
+	Name   string   `json:"name"`
+	Data   []byte   `json:"data,omitempty"`   // raw image bytes
+	Format string   `json:"format,omitempty"` // "Png", "Svg", "Gif", "Jpeg", "Bmp"
 }
 
 // GetName returns the image collection's name.
