@@ -961,9 +961,9 @@ func (w *Writer) ReconcileMemberAccesses(unitID model.ID, moduleName string) (in
 				}
 			}
 
-			// Collect associations where this entity is parent OR child.
-			// Mendix requires MemberAccess on both sides of an association;
-			// omitting the child side triggers CE0066 "Entity access is out of date".
+			// Collect associations where this entity is the FROM entity (ParentPointer).
+			// In Mendix BSON, ParentPointer = FROM entity (FK owner), ChildPointer = TO entity.
+			// MemberAccess for associations is only required on the FROM (owner) side.
 			entityID := ""
 			for _, f := range entityDoc {
 				if f.Key == "$ID" {
@@ -1007,20 +1007,17 @@ func (w *Writer) ReconcileMemberAccesses(unitID model.ID, moduleName string) (in
 				if !ok {
 					continue
 				}
-				parentID := ""
-				childID := ""
+				aParentID := ""
 				aName := ""
 				for _, f := range aDoc {
 					switch f.Key {
 					case "ParentPointer":
-						parentID = extractBsonIDValue(f.Value)
-					case "ChildPointer":
-						childID = extractBsonIDValue(f.Value)
+						aParentID = extractBsonIDValue(f.Value)
 					case "Name":
 						aName, _ = f.Value.(string)
 					}
 				}
-				if (parentID == entityID || childID == entityID) && aName != "" {
+				if aParentID == entityID && aName != "" {
 					entityAssocNames[aName] = true
 				}
 			}

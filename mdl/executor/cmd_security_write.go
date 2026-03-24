@@ -360,11 +360,11 @@ func (e *Executor) execGrantEntityAccess(s *ast.GrantEntityAccessStmt) error {
 		})
 	}
 
-	// Create entries for associations where this entity is parent OR child.
-	// Mendix requires MemberAccess on both sides; omitting the child side
-	// triggers CE0066 "Entity access is out of date".
+	// Create entries for associations where this entity is the FROM entity.
+	// In Mendix, ParentID = FROM entity (FK owner). MemberAccess for associations
+	// is only required on the FROM side; adding it to the TO side triggers CE0066.
 	for _, assoc := range dm.Associations {
-		if assoc.ParentID == entity.ID || assoc.ChildID == entity.ID {
+		if assoc.ParentID == entity.ID {
 			rights := defaultMemberAccess
 			if writeMemberSet[assoc.Name] {
 				rights = "ReadWrite"

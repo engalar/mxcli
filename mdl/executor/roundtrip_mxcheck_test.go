@@ -338,14 +338,17 @@ func TestMxCheck_CE0066_Scenarios(t *testing.T) {
 				`ALTER ENTITY ` + mod + `.S2Entity ADD ATTRIBUTE Active: Boolean DEFAULT false;`,
 			},
 		},
-		// S3 skipped: GRANT then CREATE ASSOCIATION triggers CE0066 even after
-		// ReconcileMemberAccesses adds the association MemberAccess. MxBuild's
-		// "update security" check requires additional metadata synchronization
-		// that we don't yet support. See GitHub issue for tracking.
-		// {
-		// 	name: "S3_Grant_ThenAddAssociation",
-		// 	...
-		// },
+		{
+			name: "S3_Grant_ThenAddAssociation",
+			steps: []string{
+				`CREATE MODULE ROLE ` + mod + `.S3Admin;`,
+				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S3Parent (Name: String(100));`,
+				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S3Child (Label: String(100));`,
+				`GRANT ` + mod + `.S3Admin ON ` + mod + `.S3Parent (CREATE, DELETE, READ *, WRITE *);`,
+				`GRANT ` + mod + `.S3Admin ON ` + mod + `.S3Child (CREATE, DELETE, READ *, WRITE *);`,
+				`CREATE ASSOCIATION ` + mod + `.S3Child_S3Parent FROM ` + mod + `.S3Child TO ` + mod + `.S3Parent;`,
+			},
+		},
 		{
 			name: "S4_Grant_ThenDropAttribute",
 			steps: []string{
@@ -397,13 +400,18 @@ func TestMxCheck_CE0066_Scenarios(t *testing.T) {
 				`ALTER ENTITY ` + mod + `.S8Entity ADD ATTRIBUTE Status: String(50);`,
 			},
 		},
-		// S9 skipped: same issue as S3 — GRANT then CREATE ASSOCIATION triggers
-		// CE0066. ReconcileMemberAccesses adds the entries but MxBuild still
-		// reports "out of date".
-		// {
-		// 	name: "S9_Grant_ThenAlterAndAssoc",
-		// 	...
-		// },
+		{
+			name: "S9_Grant_ThenAlterAndAssoc",
+			steps: []string{
+				`CREATE MODULE ROLE ` + mod + `.S9Admin;`,
+				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S9Main (Name: String(100));`,
+				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S9Related (Value: Integer);`,
+				`GRANT ` + mod + `.S9Admin ON ` + mod + `.S9Main (CREATE, DELETE, READ *, WRITE *);`,
+				`GRANT ` + mod + `.S9Admin ON ` + mod + `.S9Related (CREATE, DELETE, READ *, WRITE *);`,
+				`ALTER ENTITY ` + mod + `.S9Main ADD ATTRIBUTE Extra: String(200);`,
+				`CREATE ASSOCIATION ` + mod + `.S9Related_S9Main FROM ` + mod + `.S9Related TO ` + mod + `.S9Main;`,
+			},
+		},
 		{
 			name: "S10_DropIndexedAttribute",
 			steps: []string{
