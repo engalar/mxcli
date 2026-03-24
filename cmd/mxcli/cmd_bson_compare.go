@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	bsondebug "github.com/mendixlabs/mxcli/bson"
+	bsondebug "github.com/mendixlabs/mxcli/cmd/mxcli/bson"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/spf13/cobra"
 	"go.mongodb.org/mongo-driver/bson"

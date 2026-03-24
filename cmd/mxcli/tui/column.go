@@ -6,7 +6,10 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 )
+
+const mouseScrollStep = 3
 
 // TreeNode mirrors cmd/mxcli.TreeNode for JSON parsing.
 type TreeNode struct {
@@ -199,9 +202,9 @@ func (c *Column) handleMouse(msg tea.MouseMsg) {
 	}
 	switch msg.Button {
 	case tea.MouseButtonWheelUp:
-		c.scrollUp(3)
+		c.scrollUp(mouseScrollStep)
 	case tea.MouseButtonWheelDown:
-		c.scrollDown(3)
+		c.scrollDown(mouseScrollStep)
 	case tea.MouseButtonLeft:
 		topOffset := c.headerLines()
 		clicked := c.scrollOffset + (msg.Y - topOffset)
@@ -280,9 +283,9 @@ func (c Column) View() string {
 				label += " ▶"
 			}
 
-			// Truncate to fit
+			// Truncate to fit (rune-aware to avoid breaking multi-byte characters)
 			if lipgloss.Width(label) > contentWidth-2 {
-				label = label[:contentWidth-2]
+				label = runewidth.Truncate(label, contentWidth-2, "")
 			}
 
 			if idx == c.cursor {

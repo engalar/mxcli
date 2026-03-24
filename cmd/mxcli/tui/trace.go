@@ -60,5 +60,6 @@ func Trace(format string, args ...any) {
 func CloseTrace() {
 	if traceFile != nil {
 		traceFile.Close()
+		traceActive = false
 	}
 }
