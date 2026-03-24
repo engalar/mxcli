@@ -1,0 +1,122 @@
+name: AI PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  models: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr diff ${{ github.event.pull_request.number }} > /tmp/pr.diff
+          # Truncate to ~100k chars to fit model context
+          head -c 100000 /tmp/pr.diff > /tmp/pr-truncated.diff
+          echo "diff_size=$(wc -c < /tmp/pr.diff)" >> "$GITHUB_OUTPUT"
+          echo "truncated=$([ $(wc -c < /tmp/pr.diff) -gt 100000 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Get PR info
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr view ${{ github.event.pull_request.number }} --json title,body > /tmp/pr-info.json
+
+      - name: Check for relevant proposals
+        id: proposals
+        run: |
+          # Extract key terms from PR title for proposal matching
+          PROPOSALS=""
+          if [ -d "docs/03-development/proposals" ]; then
+            PROPOSALS=$(ls docs/03-development/proposals/ 2>/dev/null | head -20)
+          fi
+          echo "list<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$PROPOSALS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Read project context
+        id: context
+        run: |
+          # Read CLAUDE.md summary (first 100 lines for context)
+          if [ -f "CLAUDE.md" ]; then
+            head -100 CLAUDE.md > /tmp/project-context.txt
+          else
+            echo "No CLAUDE.md found" > /tmp/project-context.txt
+          fi
+
+      - name: AI Review
+        id: review
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # Build the review prompt
+          DIFF=$(cat /tmp/pr-truncated.diff)
+          PR_INFO=$(cat /tmp/pr-info.json)
+          PROJECT_CONTEXT=$(cat /tmp/project-context.txt)
+          PROPOSALS="${{ steps.proposals.outputs.list }}"
+          TRUNCATED="${{ steps.diff.outputs.truncated }}"
+
+          TRUNCATION_NOTE=""
+          if [ "$TRUNCATED" = "true" ]; then
+            TRUNCATION_NOTE="NOTE: The diff was truncated to 100k characters. Total size: ${{ steps.diff.outputs.diff_size }} bytes. Focus on what's visible."
+          fi
+
+          # Call GitHub Models API
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            https://models.github.ai/inference/chat/completions \
+            -d "$(jq -n \
+              --arg diff "$DIFF" \
+              --arg pr_info "$PR_INFO" \
+              --arg context "$PROJECT_CONTEXT" \
+              --arg proposals "$PROPOSALS" \
+              --arg truncation "$TRUNCATION_NOTE" \
+              '{
+                model: "openai/gpt-4.1",
+                messages: [
+                  {
+                    role: "system",
+                    content: "You are a code reviewer for a Go CLI project (mxcli) that reads/modifies Mendix application projects. Key patterns: ANTLR4 grammar → AST → visitor → executor → BSON writer. Generated ANTLR parser files (mdl/grammar/parser/) are noise — note but skip. Review thoroughly but concisely."
+                  },
+                  {
+                    role: "user",
+                    content: ("Review this PR.\n\nPR Info:\n" + $pr_info + "\n\nProject context:\n" + $context + "\n\nProposals in repo:\n" + $proposals + "\n\n" + $truncation + "\n\nFocus on:\n1. Bugs, logic errors, race conditions, resource leaks\n2. Error handling gaps\n3. Security concerns (command injection, temp files, predictable paths)\n4. Scope — flag if PR bundles unrelated changes\n5. If proposals exist that match the PR topic, check alignment\n6. Check if PR claims to fix already-fixed issues\n\nStructure: Critical Issues, Moderate Issues, Minor Issues, What Looks Good, Recommendation (approve/request changes).\n\nDiff:\n```\n" + $diff + "\n```")
+                  }
+                ],
+                max_tokens: 4000
+              }'
+            )")
+
+          # Extract the review text
+          REVIEW=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+
+          if [ -z "$REVIEW" ]; then
+            echo "::warning::AI review failed. Response: $(echo "$RESPONSE" | head -c 500)"
+            exit 0
+          fi
+
+          # Post as PR comment
+          gh pr comment ${{ github.event.pull_request.number }} --body "$(cat <<EOF
+          ## AI Code Review
+
+          $REVIEW
+
+          ---
+          *Automated review by GitHub Models API (GPT-4.1) — [workflow source](${{ github.server_url }}/${{ github.repository }}/blob/main/.github/workflows/ai-review.yml)*
+          EOF
+          )"
+
