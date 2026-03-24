@@ -2,6 +2,7 @@ package tui
 
 import (
 	"encoding/base64"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -62,10 +63,10 @@ func renderImageIterm2(path string) string {
 	return "\x1b]1337;File=inline=1;width=auto:" + encoded + "\a"
 }
 
-// renderImageChafa renders an image file using chafa, which auto-detects the
-// best protocol for the current terminal (including Sixel via DA1 query).
-func renderImageChafa(path string) string {
-	out, err := exec.Command("chafa", "--format=symbols", path).Output()
+// renderImageChafa renders an image file using chafa sized to width x height cells.
+func renderImageChafa(path string, width, height int) string {
+	size := fmt.Sprintf("%dx%d", width, height)
+	out, err := exec.Command("chafa", "--format=symbols", "--size="+size, path).Output()
 	if err != nil {
 		return ""
 	}
@@ -74,23 +75,25 @@ func renderImageChafa(path string) string {
 
 // renderImageSixel renders an image file using the Sixel protocol via img2sixel.
 // Falls back to chafa --format=sixel if img2sixel is not available.
-func renderImageSixel(path string) string {
+func renderImageSixel(path string, width, height int) string {
+	size := fmt.Sprintf("%dx%d", width, height)
 	if p, err := exec.LookPath("img2sixel"); err == nil {
-		out, err := exec.Command(p, path).Output()
+		out, err := exec.Command(p, "--width="+fmt.Sprintf("%d", width), path).Output()
 		if err == nil {
 			return string(out)
 		}
 	}
-	out, err := exec.Command("chafa", "--format=sixel", path).Output()
+	out, err := exec.Command("chafa", "--format=sixel", "--size="+size, path).Output()
 	if err != nil {
 		return ""
 	}
 	return string(out)
 }
 
-// renderImages renders a list of image file paths using the detected terminal protocol.
-// Returns empty string if the terminal does not support inline images.
-func renderImages(paths []string) string {
+// renderImagesWithSize renders a list of image paths using the detected terminal protocol,
+// constraining each image to width × perImgHeight cells.
+// Multiple images are stacked vertically.
+func renderImagesWithSize(paths []string, width, perImgHeight int) string {
 	protocol := detectImageProtocol()
 	if protocol == "" || len(paths) == 0 {
 		return ""
@@ -103,9 +106,9 @@ func renderImages(paths []string) string {
 		case "iterm2":
 			sb.WriteString(renderImageIterm2(p))
 		case "sixel":
-			sb.WriteString(renderImageSixel(p))
+			sb.WriteString(renderImageSixel(p, width, perImgHeight))
 		case "chafa":
-			sb.WriteString(renderImageChafa(p))
+			sb.WriteString(renderImageChafa(p, width, perImgHeight))
 		}
 		sb.WriteString("\n")
 	}

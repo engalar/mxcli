@@ -21,12 +21,13 @@ const (
 type PreviewPane struct {
 	childColumn  *Column
 	content      string
-	imageContent string // inline image sequences — excluded from yank
+	imagePaths   []string // source image file paths for lazy rendering
 	contentLines []string // split content for scrolling
 	highlighted  string
 	mode         PreviewMode
 	loading      bool
 	scrollOffset int
+
 }
 
 // navEntry stores one level of the navigation stack for drill-in / go-back.
@@ -114,7 +115,7 @@ func (m MillerView) Update(msg tea.Msg) (MillerView, tea.Cmd) {
 		Trace("miller: PreviewReady key=%q highlight=%q len=%d", msg.NodeKey, msg.HighlightType, len(msg.Content))
 		m.preview.loading = false
 		m.preview.content = msg.Content
-		m.preview.imageContent = msg.ImageContent
+		m.preview.imagePaths = msg.ImagePaths
 		m.preview.contentLines = strings.Split(msg.Content, "\n")
 		m.preview.highlighted = msg.HighlightType
 		m.preview.childColumn = nil
@@ -183,7 +184,7 @@ func (m MillerView) handleCursorChanged(msg CursorChangedMsg) (MillerView, tea.C
 		col.SetItems(treeNodesToItems(node.Children))
 		m.preview.childColumn = &col
 		m.preview.content = ""
-		m.preview.imageContent = ""
+		m.preview.imagePaths = nil
 		m.preview.contentLines = nil
 		m.preview.loading = false
 		m.preview.scrollOffset = 0
@@ -199,7 +200,7 @@ func (m MillerView) handleCursorChanged(msg CursorChangedMsg) (MillerView, tea.C
 		return m, cmd
 	}
 	m.preview.content = ""
-	m.preview.imageContent = ""
+	m.preview.imagePaths = nil
 	m.preview.contentLines = nil
 	m.preview.loading = false
 	return m, nil
@@ -393,8 +394,14 @@ func (m MillerView) renderPreview(previewWidth int) string {
 		if m.preview.mode == PreviewNDSL {
 			modeLabel = "NDSL"
 		}
+		if len(m.preview.imagePaths) > 0 {
+			modeLabel += "  🖼 click path to view"
+		}
 
 		contentHeight := m.height - 1 // reserve 1 line for header
+		if contentHeight < 1 {
+			contentHeight = 1
+		}
 		srcLines := m.preview.contentLines
 		totalSrc := len(srcLines)
 
@@ -461,14 +468,10 @@ func (m MillerView) renderPreview(previewWidth int) string {
 			out.WriteByte('\n')
 		}
 
-		rendered := lipgloss.NewStyle().
+		return lipgloss.NewStyle().
 			Width(previewWidth).
 			MaxHeight(m.height).
 			Render(out.String())
-		if m.preview.imageContent != "" {
-			rendered += "\n" + m.preview.imageContent
-		}
-		return rendered
 	}
 
 	return lipgloss.NewStyle().
@@ -628,6 +631,19 @@ func (m MillerView) handleMouse(msg tea.MouseMsg) (MillerView, tea.Cmd) { //noli
 			return m, nil
 
 		case zonePreview:
+			// If imagecollection, click a FROM FILE line → open that image in overlay
+			if m.preview.childColumn == nil && len(m.preview.imagePaths) > 0 {
+				// Y=0 tabbar, Y=1 MDL header, Y=2+ content (0-indexed visual lines)
+				clickedVLine := msg.Y - 2
+				path := findImagePathAtClick(m.preview.contentLines, m.preview.imagePaths,
+					clickedVLine, m.preview.scrollOffset)
+				if path != "" {
+					return m, func() tea.Msg {
+						return OpenImageOverlayMsg{Title: "Image Preview", Paths: []string{path}}
+					}
+				}
+				return m, nil
+			}
 			// Click preview child item → drill in, then select the clicked item
 			if m.preview.childColumn != nil {
 				clickedIdx := m.preview.childColumn.HitTestIndex(msg.Y)
@@ -748,7 +764,7 @@ func (m *MillerView) updateFocusStyles() {
 func (m *MillerView) clearPreview() {
 	m.preview.childColumn = nil
 	m.preview.content = ""
-	m.preview.imageContent = ""
+	m.preview.imagePaths = nil
 	m.preview.contentLines = nil
 	m.preview.loading = false
 	m.preview.scrollOffset = 0
@@ -810,4 +826,38 @@ func cloneItems(items []ColumnItem) []ColumnItem {
 	cloned := make([]ColumnItem, len(items))
 	copy(cloned, items)
 	return cloned
+}
+
+// findImagePathAtClick maps a clicked visual line (0-indexed relative to content area)
+// plus the current scroll offset to an image file path in imagePaths.
+// Returns "" if no FROM FILE line is found near the click.
+func findImagePathAtClick(contentLines, imagePaths []string, clickedVLine, scrollOffset int) string {
+	// Approximate source line: each long FROM FILE line typically wraps to ~2 visual lines.
+	// Search a window of ±3 source lines around the estimate to handle wrapping.
+	approx := clickedVLine + scrollOffset
+	for delta := 0; delta <= 3; delta++ {
+		for _, sign := range []int{0, 1, -1} {
+			srcIdx := approx + sign*delta
+			if srcIdx < 0 || srcIdx >= len(contentLines) {
+				continue
+			}
+			plain := stripANSI(contentLines[srcIdx])
+			i := strings.Index(plain, "FROM FILE '")
+			if i == -1 {
+				continue
+			}
+			rest := plain[i+len("FROM FILE '"):]
+			end := strings.Index(rest, "'")
+			if end == -1 {
+				continue
+			}
+			foundPath := rest[:end]
+			for _, p := range imagePaths {
+				if p == foundPath {
+					return p
+				}
+			}
+		}
+	}
+	return ""
 }
