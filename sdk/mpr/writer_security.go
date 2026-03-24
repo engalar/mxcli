@@ -978,7 +978,7 @@ func (w *Writer) ReconcileMemberAccesses(unitID model.ID, moduleName string) (in
 			// require MemberAccess entries. Stored as full refs (e.g., "System.owner").
 			systemAssocRefs := map[string]bool{}
 			for _, f := range entityDoc {
-				if f.Key == "Generalization" {
+				if f.Key == "Generalization" || f.Key == "MaybeGeneralization" {
 					if genDoc, ok := f.Value.(bson.D); ok {
 						for _, gf := range genDoc {
 							if gf.Key == "$Type" {
