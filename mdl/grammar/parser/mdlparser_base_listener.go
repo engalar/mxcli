@@ -496,6 +496,26 @@ func (s *BaseMDLParserListener) EnterEnumerationOption(ctx *EnumerationOptionCon
 // ExitEnumerationOption is called when production enumerationOption is exited.
 func (s *BaseMDLParserListener) ExitEnumerationOption(ctx *EnumerationOptionContext) {}
 
+// EnterCreateImageCollectionStatement is called when production createImageCollectionStatement is entered.
+func (s *BaseMDLParserListener) EnterCreateImageCollectionStatement(ctx *CreateImageCollectionStatementContext) {
+}
+
+// ExitCreateImageCollectionStatement is called when production createImageCollectionStatement is exited.
+func (s *BaseMDLParserListener) ExitCreateImageCollectionStatement(ctx *CreateImageCollectionStatementContext) {
+}
+
+// EnterImageCollectionOptions is called when production imageCollectionOptions is entered.
+func (s *BaseMDLParserListener) EnterImageCollectionOptions(ctx *ImageCollectionOptionsContext) {}
+
+// ExitImageCollectionOptions is called when production imageCollectionOptions is exited.
+func (s *BaseMDLParserListener) ExitImageCollectionOptions(ctx *ImageCollectionOptionsContext) {}
+
+// EnterImageCollectionOption is called when production imageCollectionOption is entered.
+func (s *BaseMDLParserListener) EnterImageCollectionOption(ctx *ImageCollectionOptionContext) {}
+
+// ExitImageCollectionOption is called when production imageCollectionOption is exited.
+func (s *BaseMDLParserListener) ExitImageCollectionOption(ctx *ImageCollectionOptionContext) {}
+
 // EnterCreateValidationRuleStatement is called when production createValidationRuleStatement is entered.
 func (s *BaseMDLParserListener) EnterCreateValidationRuleStatement(ctx *CreateValidationRuleStatementContext) {
 }
