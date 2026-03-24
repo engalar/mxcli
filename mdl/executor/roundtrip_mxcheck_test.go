@@ -888,3 +888,52 @@ END;`
 		t.Logf("mx check passed:\n%s", output)
 	}
 }
+
+// TestMxCheck_DropModuleCleansUserRoles verifies that dropping a module removes
+// its module roles from user roles in ProjectSecurity (prevents CE1613).
+func TestMxCheck_DropModuleCleansUserRoles(t *testing.T) {
+	if !mxCheckAvailable() {
+		t.Skip("mx command not available")
+	}
+
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	mod := testModule
+
+	// Create module role and user role referencing it
+	setupMDL := strings.Join([]string{
+		`CREATE MODULE ROLE ` + mod + `.TestAdmin;`,
+		`CREATE USER ROLE DropTestUser (System.User, ` + mod + `.TestAdmin);`,
+	}, "\n")
+
+	prog, errs := visitor.Build(setupMDL)
+	if len(errs) > 0 {
+		t.Fatalf("Parse failed: %v", errs[0])
+	}
+	if err := env.executor.ExecuteProgram(prog); err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Drop the module — should cascade-remove module roles from user roles
+	dropMDL := `DROP MODULE ` + mod + `;`
+	if err := env.executeMDL(dropMDL); err != nil {
+		t.Fatalf("Drop module failed: %v", err)
+	}
+
+	// Flush and validate
+	env.executor.Execute(&ast.DisconnectStmt{})
+
+	output, err := runMxCheck(t, env.projectPath)
+	if err != nil {
+		if strings.Contains(output, "CE1613") {
+			t.Errorf("CE1613: dangling module role reference after DROP MODULE:\n%s", output)
+		} else if strings.Contains(output, "[error]") {
+			t.Errorf("mx check found errors:\n%s", output)
+		} else {
+			t.Logf("mx check output:\n%s", output)
+		}
+	} else {
+		t.Logf("mx check passed:\n%s", output)
+	}
+}

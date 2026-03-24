@@ -142,6 +142,13 @@ func (e *Executor) execDropModuleRole(s *ast.DropModuleRoleStmt) error {
 		}
 	}
 
+	// Cascade: remove role from user roles in ProjectSecurity
+	if ps, err := e.reader.GetProjectSecurity(); err == nil {
+		if n, err := e.writer.RemoveModuleRoleFromAllUserRoles(ps.ID, qualifiedRole); err == nil && n > 0 {
+			fmt.Fprintf(e.output, "Removed %s from %d user role(s)\n", qualifiedRole, n)
+		}
+	}
+
 	// Finally, remove the role itself
 	if err := e.writer.RemoveModuleRole(ms.ID, s.Name.Name); err != nil {
 		return fmt.Errorf("failed to drop module role: %w", err)

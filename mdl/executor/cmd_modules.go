@@ -266,6 +266,18 @@ func (e *Executor) execDropModule(s *ast.DropModuleStmt) error {
 		}
 	}
 
+	// Remove module roles from user roles in ProjectSecurity
+	if ms, err := e.reader.GetModuleSecurity(targetModule.ID); err == nil {
+		if ps, err := e.reader.GetProjectSecurity(); err == nil {
+			for _, mr := range ms.ModuleRoles {
+				qualifiedRole := s.Name + "." + mr.Name
+				if n, err := e.writer.RemoveModuleRoleFromAllUserRoles(ps.ID, qualifiedRole); err == nil && n > 0 {
+					fmt.Fprintf(e.output, "Removed %s from %d user role(s)\n", qualifiedRole, n)
+				}
+			}
+		}
+	}
+
 	// Delete the module itself (and clean up themesource directory)
 	if err := e.writer.DeleteModuleWithCleanup(targetModule.ID, s.Name); err != nil {
 		return fmt.Errorf("failed to delete module: %w", err)

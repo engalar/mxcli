@@ -345,6 +345,70 @@ func (w *Writer) AlterUserRoleModuleRoles(unitID model.ID, userRoleName string, 
 	})
 }
 
+// RemoveModuleRoleFromAllUserRoles removes a qualified module role (e.g., "Module.RoleName")
+// from every user role's ModuleRoles list in Security$ProjectSecurity.
+// Returns the number of user roles that were modified.
+func (w *Writer) RemoveModuleRoleFromAllUserRoles(unitID model.ID, qualifiedRole string) (int, error) {
+	modified := 0
+	err := w.readPatchWrite(unitID, func(doc bson.D) (bson.D, error) {
+		existing := getBsonArray(doc, "UserRoles")
+		if existing == nil {
+			return doc, nil
+		}
+
+		for i, item := range existing {
+			roleDoc, ok := item.(bson.D)
+			if !ok {
+				continue
+			}
+
+			// Find and filter ModuleRoles
+			for j, f := range roleDoc {
+				if f.Key != "ModuleRoles" {
+					continue
+				}
+				arr, ok := f.Value.(bson.A)
+				if !ok {
+					break
+				}
+				var filtered bson.A
+				found := false
+				for _, r := range arr {
+					if s, ok := r.(string); ok && s == qualifiedRole {
+						found = true
+						continue // Remove this role
+					}
+					filtered = append(filtered, r)
+				}
+				if found {
+					if len(filtered) == 0 {
+						roleDoc[j].Value = bson.A{int32(1)} // Empty Mendix array
+					} else {
+						roleDoc[j].Value = makeMendixStringArray(bsonAToStrings(filtered))
+					}
+					existing[i] = roleDoc
+					modified++
+				}
+				break
+			}
+		}
+
+		return setBsonField(doc, "UserRoles", existing), nil
+	})
+	return modified, err
+}
+
+// bsonAToStrings converts a bson.A of strings to []string.
+func bsonAToStrings(a bson.A) []string {
+	var result []string
+	for _, v := range a {
+		if s, ok := v.(string); ok {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
 // RemoveUserRole removes a user role by name from Security$ProjectSecurity.
 func (w *Writer) RemoveUserRole(unitID model.ID, name string) error {
 	return w.readPatchWrite(unitID, func(doc bson.D) (bson.D, error) {
