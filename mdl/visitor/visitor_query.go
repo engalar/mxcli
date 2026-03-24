@@ -678,6 +678,11 @@ func (b *Builder) ExitDescribeStatement(ctx *parser.DescribeStatementContext) {
 			ObjectType: ast.DescribeJavaAction,
 			Name:       name,
 		})
+	} else if ctx.IMAGE() != nil && ctx.COLLECTION() != nil {
+		b.statements = append(b.statements, &ast.DescribeStmt{
+			ObjectType: ast.DescribeImageCollection,
+			Name:       name,
+		})
 	}
 }
 
