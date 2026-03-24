@@ -13,6 +13,7 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/pages"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (r *Reader) resolveContents(unitID string, contents []byte) ([]byte, error) {
@@ -461,14 +462,31 @@ func (r *Reader) parseImageCollection(unitID, containerID string, contents []byt
 	if name, ok := raw["Name"].(string); ok {
 		ic.Name = name
 	}
+	if doc, ok := raw["Documentation"].(string); ok {
+		ic.Documentation = doc
+	}
+	if exp, ok := raw["ExportLevel"].(string); ok {
+		ic.ExportLevel = exp
+	}
 
 	// Parse images in the collection
 	if images, ok := raw["Images"].(bson.A); ok {
 		for _, img := range images {
 			if imgMap, ok := img.(map[string]any); ok {
 				image := Image{}
+				if id := extractID(imgMap["$ID"]); id != "" {
+					image.ID = model.ID(id)
+				}
 				if name, ok := imgMap["Name"].(string); ok {
 					image.Name = name
+				}
+				if format, ok := imgMap["ImageFormat"].(string); ok {
+					image.Format = format
+				}
+				if data, ok := imgMap["Data"].(primitive.Binary); ok {
+					image.Data = data.Data
+				} else if data, ok := imgMap["Data"].([]byte); ok {
+					image.Data = data
 				}
 				ic.Images = append(ic.Images, image)
 			}
