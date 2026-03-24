@@ -30,6 +30,7 @@ type pageBuilder struct {
 	execCache        *executorCache                     // Shared cache from executor
 	isSnippet        bool                               // True if building a snippet (affects parameter datasource)
 	fragments        map[string]*ast.DefineFragmentStmt // Fragment registry from executor
+	themeRegistry    *ThemeRegistry                     // Theme design property definitions (may be nil)
 
 	// Per-operation caches (may change during execution)
 	layoutsCache    []*pages.Layout

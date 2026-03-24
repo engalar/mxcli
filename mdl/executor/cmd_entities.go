@@ -666,6 +666,14 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 		e.invalidateDomainModelsCache()
 		fmt.Fprintf(e.output, "Set comment on entity %s\n", s.Name)
 
+	case ast.AlterEntitySetStoreOwner:
+		entity.HasOwner = true
+		if err := e.writer.UpdateEntity(dm.ID, entity); err != nil {
+			return fmt.Errorf("failed to set store owner: %w", err)
+		}
+		e.invalidateDomainModelsCache()
+		fmt.Fprintf(e.output, "Enabled store owner on entity %s\n", s.Name)
+
 	case ast.AlterEntityAddIndex:
 		if s.Index == nil {
 			return fmt.Errorf("no index definition provided")

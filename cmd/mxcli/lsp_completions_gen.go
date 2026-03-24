@@ -47,6 +47,7 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "COLUMNS", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
 	{Label: "INDEX", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
 	{Label: "OWNER", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
+	{Label: "STORE", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
 	{Label: "REFERENCE", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
 	{Label: "GENERALIZATION", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
 	{Label: "EXTENDS", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},

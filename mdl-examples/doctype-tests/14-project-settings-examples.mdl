@@ -21,6 +21,14 @@
 -- PART 1: Model Settings
 -- ============================================================================
 
+-- Create prerequisites used in settings examples below.
+CREATE MODULE MyModule;
+CREATE MICROFLOW MyModule.ASU_Startup() RETURNS Boolean
+BEGIN
+  RETURN true;
+END;
+/
+
 /**
  * Example 1.1: Set after-startup microflow
  */

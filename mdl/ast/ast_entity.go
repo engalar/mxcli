@@ -65,6 +65,7 @@ const (
 	AlterEntitySetComment                            // SET COMMENT
 	AlterEntityAddIndex                              // ADD INDEX
 	AlterEntityDropIndex                             // DROP INDEX
+	AlterEntitySetStoreOwner                         // SET STORE OWNER
 )
 
 // AlterEntityStmt represents: ALTER ENTITY Module.Name ADD/DROP/RENAME/MODIFY ATTRIBUTE ...

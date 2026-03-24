@@ -897,7 +897,9 @@ func (w *Writer) ReconcileMemberAccesses(unitID model.ID, moduleName string) (in
 				}
 			}
 
-			// Collect associations that belong to this entity (parent pointer matches)
+			// Collect associations where this entity is parent OR child.
+			// Mendix requires MemberAccess on both sides of an association;
+			// omitting the child side triggers CE0066 "Entity access is out of date".
 			entityID := ""
 			for _, f := range entityDoc {
 				if f.Key == "$ID" {
@@ -906,22 +908,55 @@ func (w *Writer) ReconcileMemberAccesses(unitID model.ID, moduleName string) (in
 				}
 			}
 			entityAssocNames := map[string]bool{}
+
+			// Check for system associations (HasOwner, HasChangedBy) in NoGeneralization.
+			// These add implicit System.owner / System.changedBy associations that
+			// require MemberAccess entries. Stored as full refs (e.g., "System.owner").
+			systemAssocRefs := map[string]bool{}
+			for _, f := range entityDoc {
+				if f.Key == "Generalization" {
+					if genDoc, ok := f.Value.(bson.D); ok {
+						for _, gf := range genDoc {
+							if gf.Key == "$Type" {
+								if gt, ok := gf.Value.(string); ok && gt == "DomainModels$NoGeneralization" {
+									for _, ngf := range genDoc {
+										switch ngf.Key {
+										case "HasOwner":
+											if v, ok := ngf.Value.(bool); ok && v {
+												systemAssocRefs["System.owner"] = true
+											}
+										case "HasChangedBy":
+											if v, ok := ngf.Value.(bool); ok && v {
+												systemAssocRefs["System.changedBy"] = true
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					break
+				}
+			}
 			for _, aItem := range assocArr {
 				aDoc, ok := aItem.(bson.D)
 				if !ok {
 					continue
 				}
 				parentID := ""
+				childID := ""
 				aName := ""
 				for _, f := range aDoc {
-					if f.Key == "ParentPointer" {
+					switch f.Key {
+					case "ParentPointer":
 						parentID = extractBsonIDValue(f.Value)
-					}
-					if f.Key == "Name" {
+					case "ChildPointer":
+						childID = extractBsonIDValue(f.Value)
+					case "Name":
 						aName, _ = f.Value.(string)
 					}
 				}
-				if parentID == entityID && aName != "" {
+				if (parentID == entityID || childID == entityID) && aName != "" {
 					entityAssocNames[aName] = true
 				}
 			}
@@ -1006,6 +1041,7 @@ func (w *Writer) ReconcileMemberAccesses(unitID model.ID, moduleName string) (in
 							filtered = bson.A{maArr[0]}
 						}
 
+						coveredSystemAssocs := map[string]bool{}
 						for _, maItem := range maArr[1:] {
 							maDoc, ok := maItem.(bson.D)
 							if !ok {
@@ -1036,13 +1072,19 @@ func (w *Writer) ReconcileMemberAccesses(unitID model.ID, moduleName string) (in
 									changed = true // stale attribute entry removed
 								}
 							} else if assocRef != "" {
-								// Extract association name from Module.AssocName
-								parts := splitAssocRef(assocRef)
-								if parts != "" && entityAssocNames[parts] {
-									coveredAssocs[parts] = true
+								// Check if it's a system association (e.g., "System.owner")
+								if systemAssocRefs[assocRef] {
+									coveredSystemAssocs[assocRef] = true
 									filtered = append(filtered, maItem)
 								} else {
-									changed = true // stale association entry removed
+									// Extract association name from Module.AssocName
+									parts := splitAssocRef(assocRef)
+									if parts != "" && entityAssocNames[parts] {
+										coveredAssocs[parts] = true
+										filtered = append(filtered, maItem)
+									} else {
+										changed = true // stale association entry removed
+									}
 								}
 							} else {
 								filtered = append(filtered, maItem)
@@ -1068,7 +1110,7 @@ func (w *Writer) ReconcileMemberAccesses(unitID model.ID, moduleName string) (in
 							}
 						}
 
-						// Add missing associations
+						// Add missing module associations
 						for aName := range entityAssocNames {
 							if !coveredAssocs[aName] {
 								newMA := bson.D{
@@ -1076,6 +1118,20 @@ func (w *Writer) ReconcileMemberAccesses(unitID model.ID, moduleName string) (in
 									{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 									{Key: "AccessRights", Value: defaultRights},
 									{Key: "Association", Value: moduleName + "." + aName},
+								}
+								filtered = append(filtered, newMA)
+								changed = true
+							}
+						}
+
+						// Add missing system associations (e.g., System.owner)
+						for sysRef := range systemAssocRefs {
+							if !coveredSystemAssocs[sysRef] {
+								newMA := bson.D{
+									{Key: "$Type", Value: "DomainModels$MemberAccess"},
+									{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+									{Key: "AccessRights", Value: defaultRights},
+									{Key: "Association", Value: sysRef},
 								}
 								filtered = append(filtered, newMA)
 								changed = true

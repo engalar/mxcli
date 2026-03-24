@@ -55,6 +55,12 @@ type Entity struct {
 	// Persistability
 	Persistable bool `json:"persistable"`
 
+	// System attribute flags (stored in NoGeneralization)
+	HasOwner       bool `json:"hasOwner,omitempty"`
+	HasChangedBy   bool `json:"hasChangedBy,omitempty"`
+	HasChangedDate bool `json:"hasChangedDate,omitempty"`
+	HasCreatedDate bool `json:"hasCreatedDate,omitempty"`
+
 	// Attributes and other members
 	Attributes      []*Attribute      `json:"attributes,omitempty"`
 	Indexes         []*Index          `json:"indexes,omitempty"`

@@ -345,9 +345,11 @@ func (e *Executor) execGrantEntityAccess(s *ast.GrantEntityAccessStmt) error {
 		})
 	}
 
-	// Create entries for associations owned by this entity
+	// Create entries for associations where this entity is parent OR child.
+	// Mendix requires MemberAccess on both sides; omitting the child side
+	// triggers CE0066 "Entity access is out of date".
 	for _, assoc := range dm.Associations {
-		if assoc.ParentID == entity.ID {
+		if assoc.ParentID == entity.ID || assoc.ChildID == entity.ID {
 			rights := defaultMemberAccess
 			if writeMemberSet[assoc.Name] {
 				rights = "ReadWrite"
@@ -373,6 +375,22 @@ func (e *Executor) execGrantEntityAccess(s *ast.GrantEntityAccessStmt) error {
 				AccessRights:   rights,
 			})
 		}
+	}
+
+	// Add MemberAccess entries for system associations (owner, changedBy).
+	// When an entity has HasOwner/HasChangedBy, Mendix implicitly adds
+	// System.owner/System.changedBy associations that require MemberAccess.
+	if entity.HasOwner {
+		memberAccesses = append(memberAccesses, mpr.EntityMemberAccess{
+			AssociationRef: "System.owner",
+			AccessRights:   defaultMemberAccess,
+		})
+	}
+	if entity.HasChangedBy {
+		memberAccesses = append(memberAccesses, mpr.EntityMemberAccess{
+			AssociationRef: "System.changedBy",
+			AccessRights:   defaultMemberAccess,
+		})
 	}
 
 	if err := e.writer.AddEntityAccessRule(dm.ID, s.Entity.Name, roleNames,

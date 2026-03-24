@@ -51,6 +51,7 @@ func (e *Executor) execCreatePageV3(s *ast.CreatePageStmtV3) error {
 		paramEntityNames: make(map[string]string),
 		execCache:        e.cache,
 		fragments:        e.fragments,
+		themeRegistry:    e.getThemeRegistry(),
 	}
 
 	page, err := pb.buildPageV3(s)
@@ -118,6 +119,7 @@ func (e *Executor) execCreateSnippetV3(s *ast.CreateSnippetStmtV3) error {
 		paramEntityNames: make(map[string]string),
 		execCache:        e.cache,
 		fragments:        e.fragments,
+		themeRegistry:    e.getThemeRegistry(),
 	}
 
 	snippet, err := pb.buildSnippetV3(s)

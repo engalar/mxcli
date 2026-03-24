@@ -609,8 +609,7 @@ func (a App) loadMDL(qname, nodeType string, side CompareFocus) tea.Cmd {
 	mxcliPath := a.mxcliPath
 	projectPath := tab.ProjectPath
 	return func() tea.Msg {
-		out, err := runMxcli(mxcliPath, "-p", projectPath, "-c",
-			fmt.Sprintf("DESCRIBE %s %s", strings.ToUpper(nodeType), qname))
+		out, err := runMxcli(mxcliPath, "-p", projectPath, "-c", buildDescribeCmd(nodeType, qname))
 		out = StripBanner(out)
 		if err != nil {
 			return CompareLoadMsg{Side: side, Title: qname, NodeType: nodeType, Content: "Error: " + out, Err: err}
@@ -662,8 +661,7 @@ func (a App) runMDLOverlay(nodeType, qname string) tea.Cmd {
 	mxcliPath := a.mxcliPath
 	projectPath := tab.ProjectPath
 	return func() tea.Msg {
-		out, err := runMxcli(mxcliPath, "-p", projectPath, "-c",
-			fmt.Sprintf("DESCRIBE %s %s", strings.ToUpper(nodeType), qname))
+		out, err := runMxcli(mxcliPath, "-p", projectPath, "-c", buildDescribeCmd(nodeType, qname))
 		out = StripBanner(out)
 		title := fmt.Sprintf("MDL: %s", qname)
 		if err != nil {
@@ -683,7 +681,7 @@ type CmdResultMsg struct {
 func inferBsonType(nodeType string) string {
 	switch strings.ToLower(nodeType) {
 	case "page", "microflow", "nanoflow", "workflow",
-		"enumeration", "snippet", "layout", "entity":
+		"enumeration", "snippet", "layout", "entity", "association":
 		return strings.ToLower(nodeType)
 	default:
 		return ""

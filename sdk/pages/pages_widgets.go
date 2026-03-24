@@ -14,10 +14,14 @@ type Widget interface {
 }
 
 // DesignPropertyValue represents a design property (from Atlas UI theme).
+// ValueType determines the BSON serialization type:
+//   - "toggle" → Forms$ToggleDesignPropertyValue (Toggle type, no value)
+//   - "option" → Forms$OptionDesignPropertyValue (Dropdown type, uses Option field)
+//   - "custom" → Forms$CustomDesignPropertyValue (ToggleButtonGroup/ColorPicker, uses Option as Value)
 type DesignPropertyValue struct {
-	Key       string // Design property key, e.g., "Spacing top"
-	ValueType string // "toggle" or "option"
-	Option    string // For "option" type: the selected option value
+	Key       string // Design property key, e.g., "Shadow"
+	ValueType string // "toggle", "option", or "custom"
+	Option    string // Selected value (for "option"/"custom" types)
 }
 
 // BaseWidget provides common fields for all widgets.

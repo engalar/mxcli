@@ -209,7 +209,27 @@ AUTHENTICATION Basic, Session
 /**
  * Level 8.2a: Create a consumed OData service with full HTTP configuration
  * Includes authentication, custom service URL, microflow references, and headers.
+ * Prerequisites: microflows and constants must exist before referencing them.
  */
+CREATE MICROFLOW OdTest.ConfigureRequest() RETURNS Boolean
+BEGIN
+  RETURN true;
+END;
+
+CREATE MICROFLOW OdTest.HandleError() RETURNS Boolean
+BEGIN
+  RETURN true;
+END;
+
+CREATE CONSTANT OdTest.ProxyHostConst
+TYPE String
+DEFAULT 'proxy.example.com';
+
+CREATE CONSTANT OdTest.ProxyPortConst
+TYPE String
+DEFAULT '8080';
+/
+
 CREATE ODATA CLIENT OdTest.FullConfigAPI (
   Version: '3.0',
   ODataVersion: OData4,
@@ -323,22 +343,6 @@ REVOKE ACCESS ON ODATA SERVICE OdTest.CustomerAPI FROM OdTest.User;
 /
 
 -- ############################################################################
--- LEVEL 8.8: DROP (cleanup)
--- ############################################################################
-
-/**
- * Level 8.8a: Drop an OData client
- */
-DROP ODATA CLIENT OdTest.SalesforceAPI;
-/
-
-/**
- * Level 8.8b: Drop an OData service
- */
-DROP ODATA SERVICE OdTest.CustomerAPI;
-/
-
--- ############################################################################
 -- LEVEL 9: EXTERNAL ACTION CALLS IN MICROFLOWS
 -- ############################################################################
 
@@ -351,6 +355,34 @@ BEGIN
     CALL EXTERNAL ACTION OdTest.SalesforceAPI.NotifyUpdate(AccountId = $AccountId) ON ERROR CONTINUE;
     RETURN true;
 END;
+/
+
+-- ############################################################################
+-- LEVEL 8.8: DROP (cleanup)
+-- ############################################################################
+
+/**
+ * Level 8.8a: Drop objects that reference SalesforceAPI before dropping the client.
+ * OdTest.ACT_CallExternalAction calls SalesforceAPI actions; OdTest.RemoteAccount
+ * is an external entity backed by SalesforceAPI — both must be removed first.
+ */
+DROP MICROFLOW OdTest.ACT_CallExternalAction;
+/
+
+DROP ENTITY OdTest.RemoteAccount;
+/
+
+/**
+ * Level 8.8b: Drop OData clients (FullConfigAPI references must be cleaned up too)
+ */
+DROP ODATA CLIENT OdTest.FullConfigAPI;
+DROP ODATA CLIENT OdTest.SalesforceAPI;
+/
+
+/**
+ * Level 8.8c: Drop an OData service
+ */
+DROP ODATA SERVICE OdTest.CustomerAPI;
 /
 
 -- ############################################################################

@@ -904,6 +904,7 @@ func (e *Executor) createODataClient(stmt *ast.CreateODataClientStmt) error {
 	newSvc := &model.ConsumedODataService{
 		ContainerID:            containerID,
 		Name:                   stmt.Name.Name,
+		ServiceName:            stmt.Name.Name, // Default ServiceName to document name (CE0339)
 		Documentation:          stmt.Documentation,
 		Version:                stmt.Version,
 		ODataVersion:           stmt.ODataVersion,

@@ -37,6 +37,9 @@ CREATE PERSISTENT ENTITY XpathTest.Order (
   Notes: String(2000)
 );
 
+-- Enable System.owner so XPath can reference it
+ALTER ENTITY XpathTest.Order SET STORE OWNER;
+
 CREATE PERSISTENT ENTITY XpathTest.OrderLine (
   Quantity: Integer,
   UnitPrice: Decimal,
@@ -483,6 +486,15 @@ CREATE PAGE XpathTest.ActiveCustomerPage (
 /**
  * Entity access with XPath constraint (row-level security)
  */
+CREATE MODULE ROLE XpathTest.User;
+
+-- Grant access on ALL entities to avoid CE0066 "entity access out of date".
+-- When a module has roles, every entity needs access rules for each role.
+GRANT XpathTest.User ON XpathTest.Customer (READ *, WRITE *);
+GRANT XpathTest.User ON XpathTest.OrderLine (READ *, WRITE *);
+GRANT XpathTest.User ON XpathTest.Category (READ *, WRITE *);
+
+-- Order entity with XPath constraint (row-level security)
 GRANT XpathTest.User ON XpathTest.Order (
   READ *,
   WRITE *

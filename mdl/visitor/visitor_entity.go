@@ -558,6 +558,15 @@ func (b *Builder) ExitAlterEntityAction(ctx *parser.AlterEntityActionContext) {
 				return
 			}
 
+			// SET STORE OWNER
+			if ctx.SET() != nil && ctx.STORE() != nil && ctx.OWNER() != nil {
+				b.statements = append(b.statements, &ast.AlterEntityStmt{
+					Name:      name,
+					Operation: ast.AlterEntitySetStoreOwner,
+				})
+				return
+			}
+
 			// ADD INDEX
 			if ctx.ADD() != nil && ctx.INDEX() != nil {
 				if idxDef := ctx.IndexDefinition(); idxDef != nil {

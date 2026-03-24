@@ -620,3 +620,13 @@ SHOW ACCESS ON MICROFLOW SecTest.ACT_Order_Process;
 SHOW ACCESS ON PAGE SecTest.Customer_Overview;
 SHOW ACCESS ON PAGE SecTest.Order_Overview;
 /
+
+-- ============================================================================
+-- PART 10: RESET SECURITY LEVEL
+-- ============================================================================
+-- Security examples demonstrated PRODUCTION-level features. Reset to OFF so
+-- subsequent doctype scripts (pages, microflows) don't require allowed roles.
+-- This is test cleanup, not avoidance — each script should restore global state.
+
+ALTER PROJECT SECURITY LEVEL OFF;
+/

@@ -10,6 +10,26 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// buildDescribeCmd constructs the correct DESCRIBE command for a node type and qualified name.
+// Returns "" for virtual container nodes that have no valid DESCRIBE syntax.
+// Multi-word security types require special syntax that differs from the generic pattern.
+func buildDescribeCmd(nodeType, qualifiedName string) string {
+	switch strings.ToLower(nodeType) {
+	case "systemoverview":
+		return "SHOW STRUCTURE DEPTH 2"
+	case "security", "category", "domainmodel", "navigation", "projectsecurity", "navprofile":
+		return ""
+	case "modulerole":
+		return "DESCRIBE MODULE ROLE " + qualifiedName
+	case "userrole":
+		return fmt.Sprintf("DESCRIBE USER ROLE '%s'", qualifiedName)
+	case "demouser":
+		return fmt.Sprintf("DESCRIBE DEMO USER '%s'", qualifiedName)
+	default:
+		return fmt.Sprintf("DESCRIBE %s %s", strings.ToUpper(nodeType), qualifiedName)
+	}
+}
+
 // PreviewMode selects what format to request from mxcli.
 type PreviewMode int
 
@@ -135,8 +155,11 @@ func (e *PreviewEngine) fetch(ctx context.Context, nodeType, qualifiedName strin
 			"--type", bsonType, "--object", qualifiedName}
 		highlightType = "ndsl"
 	default: // PreviewMDL
-		args = []string{"-p", e.projectPath, "-c",
-			fmt.Sprintf("DESCRIBE %s %s", strings.ToUpper(nodeType), qualifiedName)}
+		mdlCmd := buildDescribeCmd(nodeType, qualifiedName)
+		if mdlCmd == "" {
+			return "Select a document to preview", "plain"
+		}
+		args = []string{"-p", e.projectPath, "-c", mdlCmd}
 		highlightType = "mdl"
 	}
 
