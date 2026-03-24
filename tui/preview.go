@@ -46,14 +46,14 @@ const (
 // PreviewResult holds cached preview content.
 type PreviewResult struct {
 	Content       string
-	ImageContent  string // rendered inline images (excluded from yank)
-	HighlightType string // "mdl" / "ndsl" / "plain"
+	ImagePaths    []string // image file paths for lazy rendering (excluded from yank)
+	HighlightType string   // "mdl" / "ndsl" / "plain"
 }
 
 // PreviewReadyMsg is sent when async preview content is available.
 type PreviewReadyMsg struct {
 	Content       string
-	ImageContent  string // rendered inline images (excluded from yank)
+	ImagePaths    []string // image file paths for lazy rendering (excluded from yank)
 	HighlightType string
 	NodeKey       string
 }
@@ -133,21 +133,20 @@ func (e *PreviewEngine) RequestPreview(nodeType, qualifiedName string, mode Prev
 				highlighted = DetectAndHighlight(content)
 			}
 
-			// Render inline images separately so yank only copies MDL text.
-			var imageContent string
+			// Extract image paths for lazy rendering (size-aware, excluded from yank).
+			var imagePaths []string
 			if strings.ToLower(nodeType) == "imagecollection" && mode == PreviewMDL {
-				imagePaths := extractImagePaths(content)
-				imageContent = renderImages(imagePaths)
+				imagePaths = extractImagePaths(content)
 			}
 
-			result := PreviewResult{Content: highlighted, ImageContent: imageContent, HighlightType: highlightType}
+			result := PreviewResult{Content: highlighted, ImagePaths: imagePaths, HighlightType: highlightType}
 			e.mu.Lock()
 			e.cache[key] = result
 			e.mu.Unlock()
 
 			return PreviewReadyMsg{
 				Content:       highlighted,
-				ImageContent:  imageContent,
+				ImagePaths:    imagePaths,
 				HighlightType: highlightType,
 				NodeKey:       key,
 			}

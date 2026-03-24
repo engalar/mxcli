@@ -14,6 +14,12 @@ type OpenOverlayMsg struct {
 	Content string
 }
 
+// OpenImageOverlayMsg requests a full-size image overlay for a list of image paths.
+type OpenImageOverlayMsg struct {
+	Title string
+	Paths []string
+}
+
 // ParseTree parses JSON from mxcli project-tree output.
 func ParseTree(jsonStr string) ([]*TreeNode, error) {
 	var nodes []*TreeNode

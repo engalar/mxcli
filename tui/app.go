@@ -167,6 +167,30 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.syncHintBar()
 		return a, nil
 
+	case OpenImageOverlayMsg:
+		w, h := a.width, a.height
+		paths := msg.Paths
+		title := msg.Title
+		return a, func() tea.Msg {
+			innerW := w - 4
+			innerH := h - 4
+			if innerW < 20 {
+				innerW = 20
+			}
+			if innerH < 5 {
+				innerH = 5
+			}
+			perImg := innerH / len(paths)
+			if perImg < 1 {
+				perImg = 1
+			}
+			content := renderImagesWithSize(paths, innerW, perImg)
+			if content == "" {
+				content = "(no image rendered — set MXCLI_IMAGE_PROTOCOL or install chafa)"
+			}
+			return OpenOverlayMsg{Title: title, Content: content}
+		}
+
 	case CompareLoadMsg:
 		a.compare.SetContent(msg.Side, msg.Title, msg.NodeType, msg.Content)
 		return a, nil
