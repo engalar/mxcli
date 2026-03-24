@@ -286,6 +286,8 @@ func (r *Reader) GetRawUnitByName(objectType, qualifiedName string) (*RawUnitInf
 		typePrefix = "Forms$Layout"
 	case "workflow":
 		typePrefix = "Workflows$Workflow"
+	case "imagecollection":
+		typePrefix = "Images$ImageCollection"
 	default:
 		return nil, fmt.Errorf("unsupported object type: %s", objectType)
 	}
@@ -527,6 +529,8 @@ func (r *Reader) ListRawUnits(objectType string) ([]*RawUnitInfo, error) {
 		typePrefix = "Forms$Layout"
 	case "workflow":
 		typePrefix = "Workflows$Workflow"
+	case "imagecollection":
+		typePrefix = "Images$ImageCollection"
 	case "":
 		typePrefix = ""
 	default:
