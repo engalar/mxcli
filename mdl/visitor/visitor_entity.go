@@ -657,6 +657,10 @@ func (b *Builder) ExitDropStatement(ctx *parser.DropStatementContext) {
 		b.statements = append(b.statements, &ast.DropWorkflowStmt{
 			Name: buildQualifiedName(names[0]),
 		})
+	} else if ctx.IMAGE() != nil && ctx.COLLECTION() != nil {
+		b.statements = append(b.statements, &ast.DropImageCollectionStmt{
+			Name: buildQualifiedName(names[0]),
+		})
 	}
 }
 
