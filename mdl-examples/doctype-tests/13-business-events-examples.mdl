@@ -15,11 +15,12 @@
 CREATE MODULE BeTest;
 
 -- MARK: Prerequisites
--- Create stub BusinessEvents module with the parent entity required for EXTENDS.
--- In production, this comes from the Business Events marketplace module.
+-- Ensure BusinessEvents module exists with the parent entity required for EXTENDS.
+-- When the marketplace module is imported, this is a no-op (CREATE OR MODIFY).
+-- When running without the module, this creates the minimum stub.
 CREATE MODULE BusinessEvents;
 @Position(100,100)
-CREATE PERSISTENT ENTITY BusinessEvents.PublishedBusinessEvent (
+CREATE OR MODIFY PERSISTENT ENTITY BusinessEvents.PublishedBusinessEvent (
   EventId: Long
 );
 CREATE CONSTANT BusinessEvents.ServerUrl

@@ -15,12 +15,6 @@
 --
 -- ============================================================================
 
--- MARK: Prerequisites
-
--- Create referenced microflow and constant so settings don't produce CE1613
-CREATE MODULE MyModule;
-CREATE MICROFLOW MyModule.ASU_Startup () RETURNS Boolean BEGIN RETURN true; END;
-
 -- MARK: Model Settings
 
 -- ============================================================================
