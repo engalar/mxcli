@@ -238,7 +238,17 @@ func inferTypeStatic(expr string) ast.DataType {
 }
 
 // inferCaseType infers the type of a CASE expression by looking at THEN clause values.
+// Only reports a type when it can be confidently inferred from a non-literal THEN branch.
+// Falls back to ELSE only if all THEN branches are unknown AND the ELSE is non-trivial.
+// A bare "0" in ELSE is ambiguous (could be Integer or Decimal depending on context).
 func inferCaseType(expr string) ast.DataType {
+	// Nested CASE expressions are too complex for static regex-based inference.
+	// The regex would match inner THEN clauses, producing wrong types.
+	upperExpr := strings.ToUpper(expr)
+	if strings.Count(upperExpr, "CASE") > 1 {
+		return ast.DataType{Kind: ast.TypeUnknown}
+	}
+
 	// Find THEN ... WHEN/ELSE/END patterns to extract result expressions
 	thenPattern := regexp.MustCompile(`(?i)\bTHEN\s+(.+?)(?:\s+WHEN\b|\s+ELSE\b|\s+END\b)`)
 	matches := thenPattern.FindAllStringSubmatch(expr, -1)
@@ -250,12 +260,19 @@ func inferCaseType(expr string) ast.DataType {
 			}
 		}
 	}
-	// Try ELSE clause
+	// Try ELSE clause — but only if the value is not a bare integer literal.
+	// Bare "0" or "1" in ELSE are type-ambiguous fallback values that should
+	// not override the actual branch type (which may involve division or
+	// expressions the static inferrer can't parse).
 	elsePattern := regexp.MustCompile(`(?i)\bELSE\s+(.+?)\s+END\b`)
 	if match := elsePattern.FindStringSubmatch(expr); len(match) >= 2 {
-		t := inferTypeStatic(strings.TrimSpace(match[1]))
-		if t.Kind != ast.TypeUnknown {
-			return t
+		elseExpr := strings.TrimSpace(match[1])
+		// Skip bare integer literals — they're ambiguous in CASE context
+		if !regexp.MustCompile(`^-?\d+$`).MatchString(elseExpr) {
+			t := inferTypeStatic(elseExpr)
+			if t.Kind != ast.TypeUnknown {
+				return t
+			}
 		}
 	}
 	return ast.DataType{Kind: ast.TypeUnknown}
