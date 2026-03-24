@@ -209,6 +209,17 @@ func (m MillerView) drillIn() (MillerView, tea.Cmd) {
 	}
 	Trace("miller: drillIn into %q (%d children)", selected.Label, len(selected.Children))
 
+	// Use actual item indices (not filtered-list cursor positions) so that
+	// SetItems (which clears the filter) restores the cursor to the right item.
+	actualCurrentIdx := m.current.selectedIndex()
+	if actualCurrentIdx < 0 {
+		actualCurrentIdx = m.current.cursor
+	}
+	actualParentIdx := m.parent.selectedIndex()
+	if actualParentIdx < 0 {
+		actualParentIdx = m.parent.cursor
+	}
+
 	// Save current state including cursor positions for goBack restore
 	entry := navEntry{
 		parentItems:   cloneItems(m.parent.items),
@@ -216,18 +227,17 @@ func (m MillerView) drillIn() (MillerView, tea.Cmd) {
 		parentTitle:   m.parent.Title(),
 		currentTitle:  m.current.Title(),
 		parentNode:    m.currentParent,
-		parentCursor:  m.parent.cursor,
-		currentCursor: m.current.cursor,
+		parentCursor:  actualParentIdx,
+		currentCursor: actualCurrentIdx,
 	}
 	m.navStack = append(m.navStack, entry)
 
-	// Shift: current → parent, children → current
-	// SetItems resets cursor to 0, so we restore it after to keep the
-	// selected item highlighted in the parent column.
-	currentCursor := m.current.cursor
+	// Shift: current → parent, children → current.
+	// Use actual item index (not filtered cursor) so parent highlights the
+	// correct item after SetItems clears the filter.
 	m.parent.SetItems(cloneItems(m.current.items))
 	m.parent.SetTitle(m.current.Title())
-	m.parent.SetCursor(currentCursor)
+	m.parent.SetCursor(actualCurrentIdx)
 	m.currentParent = selected
 
 	items := treeNodesToItems(selected.Children)
