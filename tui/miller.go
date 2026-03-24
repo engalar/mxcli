@@ -21,6 +21,7 @@ const (
 type PreviewPane struct {
 	childColumn  *Column
 	content      string
+	imageContent string // inline image sequences — excluded from yank
 	contentLines []string // split content for scrolling
 	highlighted  string
 	mode         PreviewMode
@@ -113,6 +114,7 @@ func (m MillerView) Update(msg tea.Msg) (MillerView, tea.Cmd) {
 		Trace("miller: PreviewReady key=%q highlight=%q len=%d", msg.NodeKey, msg.HighlightType, len(msg.Content))
 		m.preview.loading = false
 		m.preview.content = msg.Content
+		m.preview.imageContent = msg.ImageContent
 		m.preview.contentLines = strings.Split(msg.Content, "\n")
 		m.preview.highlighted = msg.HighlightType
 		m.preview.childColumn = nil
@@ -181,6 +183,7 @@ func (m MillerView) handleCursorChanged(msg CursorChangedMsg) (MillerView, tea.C
 		col.SetItems(treeNodesToItems(node.Children))
 		m.preview.childColumn = &col
 		m.preview.content = ""
+		m.preview.imageContent = ""
 		m.preview.contentLines = nil
 		m.preview.loading = false
 		m.preview.scrollOffset = 0
@@ -196,6 +199,7 @@ func (m MillerView) handleCursorChanged(msg CursorChangedMsg) (MillerView, tea.C
 		return m, cmd
 	}
 	m.preview.content = ""
+	m.preview.imageContent = ""
 	m.preview.contentLines = nil
 	m.preview.loading = false
 	return m, nil
@@ -457,10 +461,14 @@ func (m MillerView) renderPreview(previewWidth int) string {
 			out.WriteByte('\n')
 		}
 
-		return lipgloss.NewStyle().
+		rendered := lipgloss.NewStyle().
 			Width(previewWidth).
 			MaxHeight(m.height).
 			Render(out.String())
+		if m.preview.imageContent != "" {
+			rendered += "\n" + m.preview.imageContent
+		}
+		return rendered
 	}
 
 	return lipgloss.NewStyle().
@@ -740,6 +748,7 @@ func (m *MillerView) updateFocusStyles() {
 func (m *MillerView) clearPreview() {
 	m.preview.childColumn = nil
 	m.preview.content = ""
+	m.preview.imageContent = ""
 	m.preview.contentLines = nil
 	m.preview.loading = false
 	m.preview.scrollOffset = 0

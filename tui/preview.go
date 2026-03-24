@@ -46,12 +46,14 @@ const (
 // PreviewResult holds cached preview content.
 type PreviewResult struct {
 	Content       string
+	ImageContent  string // rendered inline images (excluded from yank)
 	HighlightType string // "mdl" / "ndsl" / "plain"
 }
 
 // PreviewReadyMsg is sent when async preview content is available.
 type PreviewReadyMsg struct {
 	Content       string
+	ImageContent  string // rendered inline images (excluded from yank)
 	HighlightType string
 	NodeKey       string
 }
@@ -131,13 +133,21 @@ func (e *PreviewEngine) RequestPreview(nodeType, qualifiedName string, mode Prev
 				highlighted = DetectAndHighlight(content)
 			}
 
-			result := PreviewResult{Content: highlighted, HighlightType: highlightType}
+			// Render inline images separately so yank only copies MDL text.
+			var imageContent string
+			if strings.ToLower(nodeType) == "imagecollection" && mode == PreviewMDL {
+				imagePaths := extractImagePaths(content)
+				imageContent = renderImages(imagePaths)
+			}
+
+			result := PreviewResult{Content: highlighted, ImageContent: imageContent, HighlightType: highlightType}
 			e.mu.Lock()
 			e.cache[key] = result
 			e.mu.Unlock()
 
 			return PreviewReadyMsg{
 				Content:       highlighted,
+				ImageContent:  imageContent,
 				HighlightType: highlightType,
 				NodeKey:       key,
 			}
@@ -200,15 +210,6 @@ func (e *PreviewEngine) fetch(ctx context.Context, nodeType, qualifiedName strin
 	// preview shows only the signature, not the full implementation.
 	if strings.ToLower(nodeType) == "javaaction" && mode == PreviewMDL {
 		content = stripJavaCodeBlock(content)
-	}
-
-	// For imagecollection MDL preview, append inline images if terminal supports it.
-	if strings.ToLower(nodeType) == "imagecollection" && mode == PreviewMDL {
-		imagePaths := extractImagePaths(content)
-		rendered := renderImages(imagePaths)
-		if rendered != "" {
-			content = content + "\n" + rendered
-		}
 	}
 
 	return content, highlightType
