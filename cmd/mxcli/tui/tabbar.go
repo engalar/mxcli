@@ -41,21 +41,6 @@ func NewTabBar(tabs []TabInfo) TabBar {
 // SetTabs replaces the tab list and recalculates click zones.
 func (t *TabBar) SetTabs(tabs []TabInfo) {
 	t.tabs = tabs
-	t.rebuildZones()
-}
-
-func (t *TabBar) rebuildZones() {
-	t.zones = t.zones[:0]
-	col := 1 // 1 char left padding
-	for i, tab := range t.tabs {
-		if i > 0 {
-			col += 2 // "  " separator
-		}
-		label := fmt.Sprintf("[%d] %s", tab.ID, tab.Label)
-		labelWidth := lipgloss.Width(label)
-		t.zones = append(t.zones, tabZone{start: col, end: col + labelWidth, id: tab.ID})
-		col += labelWidth
-	}
 }
 
 // SetWidth sets the available rendering width.

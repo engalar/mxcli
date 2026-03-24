@@ -179,12 +179,14 @@ func (e *PreviewEngine) fetch(ctx context.Context, nodeType, qualifiedName strin
 	switch mode {
 	case PreviewNDSL:
 		bsonType := inferBsonType(nodeType)
-		if bsonType == "" {
-			return fmt.Sprintf("Type %q not supported for BSON dump", nodeType), "plain"
+		if bsonType != "" {
+			args = []string{"bson", "dump", "-p", e.projectPath, "--format", "ndsl",
+				"--type", bsonType, "--object", qualifiedName}
+			highlightType = "ndsl"
+			break
 		}
-		args = []string{"bson", "dump", "-p", e.projectPath, "--format", "ndsl",
-			"--type", bsonType, "--object", qualifiedName}
-		highlightType = "ndsl"
+		// Fall through to MDL DESCRIBE for types without BSON dump support.
+		fallthrough
 	default: // PreviewMDL
 		mdlCmd := buildDescribeCmd(nodeType, qualifiedName)
 		if mdlCmd == "" {

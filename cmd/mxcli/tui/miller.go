@@ -8,13 +8,23 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// Layout constants for column width calculations.
+const (
+	minTwoColumnWidth = 80
+	parentMaxPct      = 30
+	currentMaxPct     = 35
+	previewMinPct     = 25
+	twoColCurrentPct  = 50
+	minParentWidth    = 8
+	minCurrentWidth   = 15
+)
+
 // MillerFocus indicates which pane has keyboard focus.
 type MillerFocus int
 
 const (
 	MillerFocusParent MillerFocus = iota
 	MillerFocusCurrent
-	MillerFocusPreview
 )
 
 // PreviewPane holds the right-column state: either child items or leaf content.
@@ -328,7 +338,7 @@ func (m MillerView) togglePreviewMode() (MillerView, tea.Cmd) {
 // --- View ---
 
 // View renders the three columns side by side with dim separators.
-func (m MillerView) View() string {
+func (m *MillerView) View() string {
 	if m.zenMode {
 		return m.viewZen()
 	}
@@ -369,7 +379,7 @@ func (m MillerView) View() string {
 	return strings.Join(outLines, "\n")
 }
 
-func (m MillerView) viewZen() string {
+func (m *MillerView) viewZen() string {
 	col := m.focusedColumn()
 	col.SetSize(m.width, m.height)
 	return col.View()
@@ -487,15 +497,15 @@ func (m MillerView) renderPreview(previewWidth int) string {
 func (m MillerView) columnWidths() (int, int, int) {
 	available := m.width
 
-	// Below 80 cols: hide parent column (2-column mode)
-	if available < 80 {
+	// Below minTwoColumnWidth: hide parent column (2-column mode)
+	if available < minTwoColumnWidth {
 		sepWidth := 1
 		usable := available - sepWidth
 		// Content-aware split: current gets what it needs, rest to preview
 		idealCur := m.current.IdealWidth()
-		currentW := min(idealCur, usable*50/100) // cap at 50%
-		if currentW < 15 {
-			currentW = 15
+		currentW := min(idealCur, usable*twoColCurrentPct/100) // cap at 50%
+		if currentW < minCurrentWidth {
+			currentW = minCurrentWidth
 		}
 		previewW := usable - currentW
 		return 0, currentW, previewW
@@ -509,23 +519,23 @@ func (m MillerView) columnWidths() (int, int, int) {
 	idealParent := m.parent.IdealWidth()
 	idealCurrent := m.current.IdealWidth()
 
-	// Parent: fit content, cap at 30% of usable
-	maxParent := usable * 30 / 100
+	// Parent: fit content, cap at parentMaxPct% of usable
+	maxParent := usable * parentMaxPct / 100
 	parentW := min(idealParent, maxParent)
-	if parentW < 8 {
-		parentW = 8
+	if parentW < minParentWidth {
+		parentW = minParentWidth
 	}
 
-	// Current: fit content, cap at 35% of usable
-	maxCurrent := usable * 35 / 100
+	// Current: fit content, cap at currentMaxPct% of usable
+	maxCurrent := usable * currentMaxPct / 100
 	currentW := min(idealCurrent, maxCurrent)
-	if currentW < 15 {
-		currentW = 15
+	if currentW < minCurrentWidth {
+		currentW = minCurrentWidth
 	}
 
-	// Preview: everything else (at least 25%)
+	// Preview: everything else (at least previewMinPct%)
 	previewW := usable - parentW - currentW
-	minPreview := usable * 25 / 100
+	minPreview := usable * previewMinPct / 100
 	if previewW < minPreview {
 		// Shrink parent and current proportionally to give preview enough space
 		excess := minPreview - previewW
@@ -550,7 +560,7 @@ const (
 	zonePreview
 )
 
-func (m MillerView) handleMouse(msg tea.MouseMsg) (MillerView, tea.Cmd) { //nolint:govet
+func (m MillerView) handleMouse(msg tea.MouseMsg) (MillerView, tea.Cmd) {
 	parentW, currentW, _ := m.columnWidths()
 
 	x := msg.X
@@ -689,12 +699,12 @@ func (m MillerView) scrollPreviewContent(msg tea.MouseMsg) (MillerView, tea.Cmd)
 
 	switch msg.Button {
 	case tea.MouseButtonWheelUp:
-		m.preview.scrollOffset -= 3
+		m.preview.scrollOffset -= mouseScrollStep
 		if m.preview.scrollOffset < 0 {
 			m.preview.scrollOffset = 0
 		}
 	case tea.MouseButtonWheelDown:
-		m.preview.scrollOffset += 3
+		m.preview.scrollOffset += mouseScrollStep
 		if m.preview.scrollOffset > maxScroll {
 			m.preview.scrollOffset = maxScroll
 		}
@@ -792,17 +802,6 @@ func (m MillerView) Breadcrumb() []string {
 // SelectedNode returns the TreeNode under the cursor in the current column.
 func (m MillerView) SelectedNode() *TreeNode {
 	return m.current.SelectedNode()
-}
-
-// ToggleZen toggles zen mode (current column only at full width).
-func (m *MillerView) ToggleZen() {
-	m.zenMode = !m.zenMode
-	m.relayout()
-}
-
-// GoBack navigates up one level. Returns a tea.Cmd if a preview needs updating.
-func (m *MillerView) GoBack() (MillerView, tea.Cmd) {
-	return m.goBack()
 }
 
 // --- Utility ---

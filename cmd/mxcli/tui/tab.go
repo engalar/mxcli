@@ -1,9 +1,13 @@
 package tui
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"strconv"
+)
 
 // LoadTreeMsg carries parsed tree nodes from project-tree output.
 type LoadTreeMsg struct {
+	TabID int
 	Nodes []*TreeNode
 	Err   error
 }
@@ -27,13 +31,6 @@ func ParseTree(jsonStr string) ([]*TreeNode, error) {
 		return nil, err
 	}
 	return nodes, nil
-}
-
-// NavState stores one level of navigation for back/forward in a tab.
-type NavState struct {
-	Path       []string
-	ParentNode *TreeNode
-	CursorIdx  int
 }
 
 // Tab represents a single workspace tab with its own Miller view and navigation.
@@ -86,7 +83,7 @@ func (t *Tab) UpdateLabel() {
 }
 
 func itoa(n int) string {
-	return string(rune('0'+n%10)) + ""
+	return strconv.Itoa(n)
 }
 
 // flattenQualifiedNames collects all qualified names from the tree for fuzzy picking.

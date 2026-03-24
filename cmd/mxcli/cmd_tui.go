@@ -7,7 +7,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mendixlabs/mxcli/tui"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui"
 	"github.com/spf13/cobra"
 )
 

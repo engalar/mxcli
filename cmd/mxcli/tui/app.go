@@ -4,10 +4,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+// chromeHeight is the vertical space consumed by tab bar (1) + hint bar (1) + status bar (1).
+const chromeHeight = 3
 
 // compareFlashClearMsg is sent 1 s after a clipboard copy in compare view.
 type compareFlashClearMsg struct{}
@@ -117,15 +121,16 @@ func (a App) Init() tea.Cmd {
 	if tab == nil {
 		return nil
 	}
+	tabID := tab.ID
 	mxcliPath := a.mxcliPath
 	projectPath := tab.ProjectPath
 	return func() tea.Msg {
 		out, err := runMxcli(mxcliPath, "project-tree", "-p", projectPath)
 		if err != nil {
-			return LoadTreeMsg{Err: err}
+			return LoadTreeMsg{TabID: tabID, Err: err}
 		}
 		nodes, parseErr := ParseTree(out)
-		return LoadTreeMsg{Nodes: nodes, Err: parseErr}
+		return LoadTreeMsg{TabID: tabID, Nodes: nodes, Err: parseErr}
 	}
 }
 
@@ -148,15 +153,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.syncStatusBar()
 			a.syncHintBar()
 			// Load project tree for new tab
+			tabID := newTab.ID
 			mxcliPath := a.mxcliPath
 			projectPath := msg.Path
 			return a, func() tea.Msg {
 				out, err := runMxcli(mxcliPath, "project-tree", "-p", projectPath)
 				if err != nil {
-					return LoadTreeMsg{Err: err}
+					return LoadTreeMsg{TabID: tabID, Err: err}
 				}
 				nodes, parseErr := ParseTree(out)
-				return LoadTreeMsg{Nodes: nodes, Err: parseErr}
+				return LoadTreeMsg{TabID: tabID, Nodes: nodes, Err: parseErr}
 			}
 		}
 		a.syncHintBar()
@@ -300,9 +306,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case LoadTreeMsg:
-		Trace("app: LoadTreeMsg err=%v nodes=%d", msg.Err, len(msg.Nodes))
+		Trace("app: LoadTreeMsg tabID=%d err=%v nodes=%d", msg.TabID, msg.Err, len(msg.Nodes))
 		if msg.Err == nil && msg.Nodes != nil {
-			tab := a.activeTabPtr()
+			tab := a.findTabByID(msg.TabID)
 			if tab != nil {
 				tab.AllNodes = msg.Nodes
 				tab.Miller.SetRootNodes(msg.Nodes)
@@ -348,6 +354,9 @@ func (a App) updateNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch msg.String() {
 	case "q":
+		for i := range a.tabs {
+			a.tabs[i].Miller.previewEngine.Cancel()
+		}
 		CloseTrace()
 		return a, tea.Quit
 	case "?":
@@ -373,6 +382,7 @@ func (a App) updateNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case "W":
 		if len(a.tabs) > 1 {
+			a.tabs[a.activeTab].Miller.previewEngine.Cancel()
 			a.tabs = append(a.tabs[:a.activeTab], a.tabs[a.activeTab+1:]...)
 			if a.activeTab >= len(a.tabs) {
 				a.activeTab = len(a.tabs) - 1
@@ -473,6 +483,15 @@ func (a App) updateNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
+func (a *App) findTabByID(id int) *Tab {
+	for i := range a.tabs {
+		if a.tabs[i].ID == id {
+			return &a.tabs[i]
+		}
+	}
+	return nil
+}
+
 func (a *App) switchToTabByID(id int) {
 	for i, t := range a.tabs {
 		if t.ID == id {
@@ -489,7 +508,7 @@ func (a *App) resizeAll() {
 	if a.width == 0 || a.height == 0 {
 		return
 	}
-	millerH := a.height - 3 // tab bar (1) + hint bar (1) + status bar (1)
+	millerH := a.height - chromeHeight
 	if millerH < 5 {
 		millerH = 5
 	}
@@ -522,7 +541,7 @@ func (a App) View() string {
 	tabLine := a.tabBar.View(a.width)
 
 	// Miller columns (main area)
-	millerH := a.height - 3
+	millerH := a.height - chromeHeight
 	if millerH < 5 {
 		millerH = 5
 	}
@@ -552,14 +571,6 @@ func (a App) View() string {
 
 // --- Load helpers (ported from old model.go) ---
 
-func (a App) selectedNode() *TreeNode {
-	tab := a.activeTabPtr()
-	if tab == nil {
-		return nil
-	}
-	return tab.Miller.SelectedNode()
-}
-
 func (a App) openDiagram(nodeType, qualifiedName string) tea.Cmd {
 	tab := a.activeTabPtr()
 	if tab == nil {
@@ -578,10 +589,15 @@ func (a App) openDiagram(nodeType, qualifiedName string) tea.Cmd {
 		if err != nil {
 			return CmdResultMsg{Err: err}
 		}
-		defer tmpFile.Close()
-		tmpFile.WriteString(htmlContent)
-		openBrowser(tmpFile.Name())
-		return CmdResultMsg{Output: fmt.Sprintf("Opened diagram: %s", tmpFile.Name())}
+		if _, err := tmpFile.WriteString(htmlContent); err != nil {
+			tmpFile.Close()
+			return CmdResultMsg{Err: fmt.Errorf("writing diagram HTML: %w", err)}
+		}
+		tmpFile.Close()
+		tmpPath := tmpFile.Name()
+		openBrowser(tmpPath)
+		time.AfterFunc(30*time.Second, func() { os.Remove(tmpPath) })
+		return CmdResultMsg{Output: fmt.Sprintf("Opened diagram: %s", tmpPath)}
 	}
 }
 
