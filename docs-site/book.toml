@@ -1,0 +1,26 @@
+[book]
+title = "mxcli Documentation"
+description = "Documentation for mxcli and the MDL (Mendix Definition Language)"
+authors = ["Mendix Labs"]
+language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/mendixlabs/mxcli"
+edit-url-template = "https://github.com/mendixlabs/mxcli/edit/main/docs-site/src/{path}"
+site-url = "/mxcli/"
+additional-css = ["theme/custom.css"]
+
+[output.html.search]
+enable = true
+limit-results = 30
+boost-hierarchy = 2
+
+[output.html.fold]
+enable = true
+level = 1

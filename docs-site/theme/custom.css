@@ -1,0 +1,24 @@
+/* Synopsis blocks in statement reference pages */
+.synopsis pre {
+    background-color: #f0f4f8;
+    border-left: 4px solid #3574d4;
+    padding: 1em;
+    font-size: 0.95em;
+}
+
+/* Parameter definition lists */
+dt {
+    font-weight: bold;
+    margin-top: 0.8em;
+}
+
+dd {
+    margin-left: 1.5em;
+    margin-bottom: 0.5em;
+}
+
+/* Part separators */
+.part-title {
+    font-size: 1.4em;
+    color: #555;
+}
