@@ -5,7 +5,7 @@
 **Document type:** `Rest$ConsumedRestService`
 **Prevalence:** 2 in Evora project (not found in Enquiries or Lato)
 **Priority:** Medium — newer Mendix feature (10.1.0+), growing in adoption
-**Reference:** `mdl-examples/doctype-tests/06-rest-client-examples.test.mdl` (21 examples)
+**Reference:** `mdl-examples/doctype-tests/06-rest-client-examples.mdl` (21 examples)
 
 Consumed REST Services define external REST API connections. Each service has a base URL, authentication scheme, and one or more operations with HTTP methods, paths, headers, parameters, and response handling.
 
@@ -92,7 +92,7 @@ Rest$RestOperation
 
 1. **Roundtrip**: DESCRIBE output must be valid CREATE input
 2. **Consistency**: Follow existing CREATE REST CLIENT grammar structure (BEGIN...END blocks)
-3. **Alignment**: Match the syntax in `06-rest-client-examples.test.mdl`
+3. **Alignment**: Match the syntax in `06-rest-client-examples.mdl`
 4. **Simplicity**: Use MDL-native types ($variables, data types) rather than exposing BSON internals
 
 ### SHOW REST CLIENTS
@@ -537,7 +537,7 @@ func (e *Executor) dropRestClient(s *ast.DropRestClientStmt) error
 
 ### Phase 3: Test Enablement
 
-Remove the `exit;` guard from `06-rest-client-examples.test.mdl` (line 34) and verify all 21 examples parse and execute correctly.
+Remove the `exit;` guard from `06-rest-client-examples.mdl` (line 34) and verify all 21 examples parse and execute correctly.
 
 ## Complexity
 
@@ -545,7 +545,7 @@ Remove the `exit;` guard from `06-rest-client-examples.test.mdl` (line 34) and v
 
 ## Testing
 
-- Parse all 21 examples in `06-rest-client-examples.test.mdl` with `mxcli check`
+- Parse all 21 examples in `06-rest-client-examples.mdl` with `mxcli check`
 - Roundtrip test: CREATE → DESCRIBE → re-parse must produce identical AST
 - Verify BSON output against Evora project's existing consumed REST services
 - **Important**: Before writing BSON, create a reference REST client in Studio Pro and compare the generated BSON structure field-by-field
