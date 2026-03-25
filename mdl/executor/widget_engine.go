@@ -21,19 +21,22 @@ import (
 // WidgetDefinition describes how to construct a pluggable widget from MDL syntax.
 // Loaded from embedded JSON definition files (*.def.json).
 type WidgetDefinition struct {
-	WidgetID         string                `json:"widgetId"`
-	MDLName          string                `json:"mdlName"`
-	TemplateFile     string                `json:"templateFile"`
-	DefaultEditable  string                `json:"defaultEditable"`
-	DefaultSelection string                `json:"defaultSelection,omitempty"`
-	PropertyMappings []PropertyMapping     `json:"propertyMappings,omitempty"`
-	ChildSlots       []ChildSlotMapping    `json:"childSlots,omitempty"`
-	Modes            map[string]WidgetMode `json:"modes,omitempty"`
+	WidgetID         string             `json:"widgetId"`
+	MDLName          string             `json:"mdlName"`
+	TemplateFile     string             `json:"templateFile"`
+	DefaultEditable  string             `json:"defaultEditable"`
+	DefaultSelection string             `json:"defaultSelection,omitempty"`
+	PropertyMappings []PropertyMapping  `json:"propertyMappings,omitempty"`
+	ChildSlots       []ChildSlotMapping `json:"childSlots,omitempty"`
+	Modes            []WidgetMode       `json:"modes,omitempty"`
 }
 
 // WidgetMode defines a conditional configuration variant for a widget.
 // For example, ComboBox has "enumeration" and "association" modes.
+// Modes are evaluated in order; the first matching condition wins.
+// A mode with no condition acts as the default fallback.
 type WidgetMode struct {
+	Name             string             `json:"name,omitempty"`
 	Condition        string             `json:"condition,omitempty"`
 	Description      string             `json:"description,omitempty"`
 	PropertyMappings []PropertyMapping  `json:"propertyMappings"`
@@ -282,25 +285,31 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 }
 
 // selectMappings selects the active PropertyMappings and ChildSlotMappings based on mode.
+// Modes are evaluated in definition order; the first matching condition wins.
+// A mode with no condition acts as the default fallback.
 func (e *PluggableWidgetEngine) selectMappings(def *WidgetDefinition, w *ast.WidgetV3) ([]PropertyMapping, []ChildSlotMapping, error) {
 	// No modes defined — use top-level mappings directly
 	if len(def.Modes) == 0 {
 		return def.PropertyMappings, def.ChildSlots, nil
 	}
 
-	// Evaluate each mode's condition, pick first match
-	for name, mode := range def.Modes {
-		if name == "default" {
-			continue // evaluated as fallback
+	// Evaluate modes in order; first match wins
+	var fallback *WidgetMode
+	for i := range def.Modes {
+		mode := &def.Modes[i]
+		if mode.Condition == "" {
+			// No condition = default fallback (use last one if multiple)
+			fallback = mode
+			continue
 		}
 		if e.evaluateCondition(mode.Condition, w) {
 			return mode.PropertyMappings, mode.ChildSlots, nil
 		}
 	}
 
-	// Fallback to "default" mode
-	if defaultMode, ok := def.Modes["default"]; ok {
-		return defaultMode.PropertyMappings, defaultMode.ChildSlots, nil
+	// Use fallback mode
+	if fallback != nil {
+		return fallback.PropertyMappings, fallback.ChildSlots, nil
 	}
 
 	return nil, nil, fmt.Errorf("no matching mode for widget %s", def.MDLName)

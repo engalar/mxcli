@@ -85,25 +85,29 @@ func (r *WidgetRegistry) LoadUserDefinitions(projectPath string) error {
 	homeDir, err := os.UserHomeDir()
 	if err == nil {
 		globalDir := filepath.Join(homeDir, ".mxcli", "widgets")
-		r.loadDefinitionsFromDir(globalDir)
+		if err := r.loadDefinitionsFromDir(globalDir); err != nil {
+			return fmt.Errorf("global widgets: %w", err)
+		}
 	}
 
 	// 2. Project: <projectDir>/.mxcli/widgets/*.def.json (overrides global)
 	if projectPath != "" {
 		projectDir := filepath.Dir(projectPath)
 		localDir := filepath.Join(projectDir, ".mxcli", "widgets")
-		r.loadDefinitionsFromDir(localDir)
+		if err := r.loadDefinitionsFromDir(localDir); err != nil {
+			return fmt.Errorf("project widgets: %w", err)
+		}
 	}
 
 	return nil
 }
 
 // loadDefinitionsFromDir loads all .def.json files from a directory.
-// Errors are silently ignored (directory may not exist).
-func (r *WidgetRegistry) loadDefinitionsFromDir(dir string) {
+// Returns nil if the directory doesn't exist; returns errors for malformed files.
+func (r *WidgetRegistry) loadDefinitionsFromDir(dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return // directory doesn't exist or not readable
+		return nil // directory doesn't exist or not readable — not an error
 	}
 
 	for _, entry := range entries {
@@ -111,17 +115,23 @@ func (r *WidgetRegistry) loadDefinitionsFromDir(dir string) {
 			continue
 		}
 
-		data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+		filePath := filepath.Join(dir, entry.Name())
+		data, err := os.ReadFile(filePath)
 		if err != nil {
-			continue
+			return fmt.Errorf("read %s: %w", filePath, err)
 		}
 
 		var def WidgetDefinition
 		if err := json.Unmarshal(data, &def); err != nil {
-			continue
+			return fmt.Errorf("parse %s: %w", filePath, err)
+		}
+
+		if def.WidgetID == "" || def.MDLName == "" {
+			return fmt.Errorf("invalid definition %s: widgetId and mdlName are required", entry.Name())
 		}
 
 		r.byMDLName[strings.ToUpper(def.MDLName)] = &def
 		r.byWidgetID[def.WidgetID] = &def
 	}
+	return nil
 }

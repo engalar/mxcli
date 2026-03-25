@@ -3,14 +3,9 @@
   "mdlName": "COMBOBOX",
   "templateFile": "combobox.json",
   "defaultEditable": "Always",
-  "modes": {
-    "default": {
-      "description": "Enumeration mode",
-      "propertyMappings": [
-        {"propertyKey": "attributeEnumeration", "source": "Attribute", "operation": "attribute"}
-      ]
-    },
-    "association": {
+  "modes": [
+    {
+      "name": "association",
       "condition": "hasDataSource",
       "description": "Association mode",
       "propertyMappings": [
@@ -19,6 +14,13 @@
         {"propertyKey": "optionsSourceAssociationDataSource", "source": "DataSource", "operation": "datasource"},
         {"propertyKey": "optionsSourceAssociationCaptionAttribute", "source": "CaptionAttribute", "operation": "attribute"}
       ]
+    },
+    {
+      "name": "default",
+      "description": "Enumeration mode",
+      "propertyMappings": [
+        {"propertyKey": "attributeEnumeration", "source": "Attribute", "operation": "attribute"}
+      ]
     }
-  }
+  ]
 }

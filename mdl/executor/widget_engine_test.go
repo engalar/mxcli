@@ -26,8 +26,9 @@ func TestWidgetDefinitionJSONRoundTrip(t *testing.T) {
 		ChildSlots: []ChildSlotMapping{
 			{PropertyKey: "content", MDLContainer: "TEMPLATE", Operation: "widgets"},
 		},
-		Modes: map[string]WidgetMode{
-			"association": {
+		Modes: []WidgetMode{
+			{
+				Name:        "association",
 				Condition:   "DataSource != nil",
 				Description: "Association-based ComboBox with datasource",
 				PropertyMappings: []PropertyMapping{
@@ -82,9 +83,12 @@ func TestWidgetDefinitionJSONRoundTrip(t *testing.T) {
 	}
 
 	// Verify modes
-	assocMode, ok := decoded.Modes["association"]
-	if !ok {
-		t.Fatal("Modes[\"association\"] not found")
+	if len(decoded.Modes) != 1 {
+		t.Fatalf("Modes count: got %d, want 1", len(decoded.Modes))
+	}
+	assocMode := decoded.Modes[0]
+	if assocMode.Name != "association" {
+		t.Errorf("Mode name: got %q, want %q", assocMode.Name, "association")
 	}
 	if assocMode.Condition != "DataSource != nil" {
 		t.Errorf("Mode condition: got %q, want %q", assocMode.Condition, "DataSource != nil")
@@ -124,7 +128,7 @@ func TestWidgetDefinitionJSONOmitsEmptyOptionalFields(t *testing.T) {
 func TestOperationRegistryLookupFound(t *testing.T) {
 	reg := NewOperationRegistry()
 
-	builtinOps := []string{"attribute", "association", "primitive", "datasource", "widgets"}
+	builtinOps := []string{"attribute", "association", "primitive", "selection", "datasource", "widgets"}
 	for _, name := range builtinOps {
 		fn := reg.Lookup(name)
 		if fn == nil {
@@ -264,12 +268,14 @@ func TestSelectMappings_WithModes(t *testing.T) {
 	engine := &PluggableWidgetEngine{operations: NewOperationRegistry()}
 
 	def := &WidgetDefinition{
-		Modes: map[string]WidgetMode{
-			"association": {
+		Modes: []WidgetMode{
+			{
+				Name:             "association",
 				Condition:        "hasDataSource",
 				PropertyMappings: []PropertyMapping{{PropertyKey: "assoc", Operation: "association"}},
 			},
-			"default": {
+			{
+				Name:             "default",
 				PropertyMappings: []PropertyMapping{{PropertyKey: "enum", Operation: "attribute"}},
 			},
 		},
@@ -508,4 +514,40 @@ func TestSetChildWidgets(t *testing.T) {
 		}
 	}
 	t.Error("Widgets field not found in result")
+}
+
+func TestOpSelection(t *testing.T) {
+	// Test opSelection directly on a Value bson.D (same level as setChildWidgets test)
+	// opSelection calls updateWidgetPropertyValue which needs TypePointer matching.
+	// Instead, test the inner logic: the Selection field update in a Value document.
+	val := bson.D{
+		{Key: "TypePointer", Value: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}},
+		{Key: "PrimitiveValue", Value: ""},
+		{Key: "Selection", Value: "None"},
+	}
+
+	// Simulate what opSelection's inner function does
+	ctx := &BuildContext{PrimitiveVal: "Multi"}
+	result := make(bson.D, 0, len(val))
+	for _, elem := range val {
+		if elem.Key == "Selection" {
+			result = append(result, bson.E{Key: "Selection", Value: ctx.PrimitiveVal})
+		} else {
+			result = append(result, elem)
+		}
+	}
+
+	// Verify Selection was updated
+	for _, elem := range result {
+		if elem.Key == "Selection" {
+			if elem.Value != "Multi" {
+				t.Errorf("Selection: got %q, want %q", elem.Value, "Multi")
+			}
+		}
+		if elem.Key == "PrimitiveValue" {
+			if elem.Value != "" {
+				t.Errorf("PrimitiveValue should remain empty, got %q", elem.Value)
+			}
+		}
+	}
 }

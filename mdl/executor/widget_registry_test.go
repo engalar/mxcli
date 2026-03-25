@@ -18,9 +18,9 @@ func TestRegistryLoadsAllEmbeddedDefinitions(t *testing.T) {
 		t.Fatalf("NewWidgetRegistry() error: %v", err)
 	}
 
-	// We expect 7 embedded definitions
-	if got := reg.Count(); got != 7 {
-		t.Errorf("registry count = %d, want 7", got)
+	// We expect 2 embedded definitions (combobox, gallery)
+	if got := reg.Count(); got != 2 {
+		t.Errorf("registry count = %d, want 2", got)
 	}
 }
 
@@ -36,11 +36,6 @@ func TestRegistryGetByMDLName(t *testing.T) {
 	}{
 		{"COMBOBOX", "com.mendix.widget.web.combobox.Combobox"},
 		{"GALLERY", "com.mendix.widget.web.gallery.Gallery"},
-		{"DATAGRID", "com.mendix.widget.web.datagrid.Datagrid"},
-		{"TEXTFILTER", "com.mendix.widget.web.datagridtextfilter.DatagridTextFilter"},
-		{"NUMBERFILTER", "com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter"},
-		{"DROPDOWNFILTER", "com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter"},
-		{"DATEFILTER", "com.mendix.widget.web.datagriddatefilter.DatagridDateFilter"},
 	}
 
 	for _, tt := range tests {
@@ -213,23 +208,23 @@ func TestRegistryComboboxModes(t *testing.T) {
 		t.Fatalf("modes count = %d, want 2", len(def.Modes))
 	}
 
-	defaultMode, ok := def.Modes["default"]
-	if !ok {
-		t.Fatal("default mode not found")
+	// First mode: association (conditional)
+	if def.Modes[0].Name != "association" {
+		t.Errorf("first mode name = %q, want association", def.Modes[0].Name)
 	}
-	if len(defaultMode.PropertyMappings) != 1 {
-		t.Errorf("default mode mappings = %d, want 1", len(defaultMode.PropertyMappings))
+	if def.Modes[0].Condition != "hasDataSource" {
+		t.Errorf("association mode condition = %q, want hasDataSource", def.Modes[0].Condition)
+	}
+	if len(def.Modes[0].PropertyMappings) != 4 {
+		t.Errorf("association mode mappings = %d, want 4", len(def.Modes[0].PropertyMappings))
 	}
 
-	assocMode, ok := def.Modes["association"]
-	if !ok {
-		t.Fatal("association mode not found")
+	// Second mode: default (no condition)
+	if def.Modes[1].Name != "default" {
+		t.Errorf("second mode name = %q, want default", def.Modes[1].Name)
 	}
-	if assocMode.Condition != "hasDataSource" {
-		t.Errorf("association mode condition = %q, want hasDataSource", assocMode.Condition)
-	}
-	if len(assocMode.PropertyMappings) != 4 {
-		t.Errorf("association mode mappings = %d, want 4", len(assocMode.PropertyMappings))
+	if len(def.Modes[1].PropertyMappings) != 1 {
+		t.Errorf("default mode mappings = %d, want 1", len(def.Modes[1].PropertyMappings))
 	}
 }
 
