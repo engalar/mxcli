@@ -8,11 +8,11 @@
 --   1. GALLERY basic       — DATABASE datasource + TEMPLATE (PASS)
 --   2. GALLERY with FILTER — TEXTFILTER in FILTER block    (KNOWN BUG: CE0463)
 --   3. COMBOBOX enum       — Enum attribute                (KNOWN BUG: CE1613)
---   4. COMBOBOX association — DataSource + CaptionAttribute (KNOWN BUG: CE1613)
+--   4. COMBOBOX association — DataSource + CaptionAttribute (FIXED: Issue #21)
 --
 -- Known engine bugs (do not affect MDL syntax correctness):
 --   - CE0463 on TEXTFILTER: embedded template property count mismatch
---   - CE1613 on COMBOBOX: enum/association attribute written as association pointer
+--   - CE1613 on COMBOBOX enum: enum attribute written as association pointer (pending)
 --
 -- ============================================================================
 
@@ -166,12 +166,12 @@ CREATE PAGE MyFirstModule.P_ComboBox_Enum
 
 -- ============================================================================
 -- Test 4: COMBOBOX association mode — DataSource + CaptionAttribute
--- Result: CE1613 (association attribute lookup fails)
+-- Result: FIXED (Issue #21) — Attribute now correctly reads back as association name
 -- ============================================================================
 
 /**
  * Task edit form with a COMBOBOX for selecting Category via association.
- * KNOWN BUG: CE1613 — association attribute incorrectly resolved.
+ * FIXED (Issue #21): Attribute now correctly roundtrips as association name.
  *
  * @param $Task The task to edit
  */

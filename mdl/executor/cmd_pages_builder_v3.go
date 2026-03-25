@@ -328,8 +328,7 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
 		pb.initPluggableEngine()
 		if pb.widgetRegistry != nil {
 			if def, ok := pb.widgetRegistry.Get(strings.ToUpper(w.Type)); ok {
-				widget, err = pb.pluggableEngine.Build(def, w)
-				break
+				return pb.pluggableEngine.Build(def, w)
 			}
 		}
 		return nil, fmt.Errorf("unsupported V3 widget type: %s", w.Type)

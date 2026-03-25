@@ -88,6 +88,8 @@ func (r *WidgetRegistry) LoadUserDefinitions(projectPath string) error {
 		if err := r.loadDefinitionsFromDir(globalDir); err != nil {
 			return fmt.Errorf("global widgets: %w", err)
 		}
+	} else {
+		fmt.Fprintf(os.Stderr, "warning: cannot determine home directory for user widget definitions: %v\n", err)
 	}
 
 	// 2. Project: <projectDir>/.mxcli/widgets/*.def.json (overrides global)

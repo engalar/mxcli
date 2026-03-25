@@ -902,6 +902,76 @@ func (e *Executor) extractCustomWidgetPropertyAttributeRef(w map[string]any, pro
 	return ""
 }
 
+// extractCustomWidgetPropertyAssociation extracts an association name from a named
+// CustomWidget property that was written by opAssociation (setAssociationRef).
+// The association is stored as EntityRef.Steps[1].Association (qualified path);
+// this function returns only the short name (last segment after the final dot).
+//
+// This is the symmetric counterpart of extractCustomWidgetPropertyAttributeRef,
+// handling the EntityRef storage format instead of AttributeRef.
+func (e *Executor) extractCustomWidgetPropertyAssociation(w map[string]any, propertyKey string) string {
+	obj, ok := w["Object"].(map[string]any)
+	if !ok {
+		return ""
+	}
+
+	// Build property key map from Type.ObjectType.PropertyTypes
+	propTypeKeyMap := make(map[string]string)
+	if widgetType, ok := w["Type"].(map[string]any); ok {
+		var propTypes []any
+		if objType, ok := widgetType["ObjectType"].(map[string]any); ok {
+			propTypes = getBsonArrayElements(objType["PropertyTypes"])
+		}
+		for _, pt := range propTypes {
+			ptMap, ok := pt.(map[string]any)
+			if !ok {
+				continue
+			}
+			key := extractString(ptMap["PropertyKey"])
+			if key == "" {
+				continue
+			}
+			id := extractBinaryID(ptMap["$ID"])
+			if id != "" {
+				propTypeKeyMap[id] = key
+			}
+		}
+	}
+
+	// Find the named property and extract EntityRef.Steps[1].Association
+	props := getBsonArrayElements(obj["Properties"])
+	for _, prop := range props {
+		propMap, ok := prop.(map[string]any)
+		if !ok {
+			continue
+		}
+		typePointerID := extractBinaryID(propMap["TypePointer"])
+		if propTypeKeyMap[typePointerID] != propertyKey {
+			continue
+		}
+		value, ok := propMap["Value"].(map[string]any)
+		if !ok {
+			continue
+		}
+		entityRef, ok := value["EntityRef"].(map[string]any)
+		if !ok || entityRef == nil {
+			return ""
+		}
+		steps := getBsonArrayElements(entityRef["Steps"])
+		// Steps layout: [int32(2), step0, step1, ...] — first element is version marker
+		for _, step := range steps {
+			stepMap, ok := step.(map[string]any)
+			if !ok {
+				continue
+			}
+			if assoc := extractString(stepMap["Association"]); assoc != "" {
+				return shortAttributeName(assoc)
+			}
+		}
+	}
+	return ""
+}
+
 // extractCustomWidgetPropertyString extracts a string property value from a CustomWidget.
 func (e *Executor) extractCustomWidgetPropertyString(w map[string]any, propertyKey string) string {
 	obj, ok := w["Object"].(map[string]any)

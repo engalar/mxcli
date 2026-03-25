@@ -4,6 +4,7 @@ package executor
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -53,7 +54,7 @@ func (pb *pageBuilder) initPluggableEngine() {
 	}
 	registry, err := NewWidgetRegistry()
 	if err != nil {
-		// Non-fatal: engine won't be available, fall through to error
+		fmt.Fprintf(os.Stderr, "warning: pluggable widget registry init failed: %v\n", err)
 		return
 	}
 	if pb.reader != nil {

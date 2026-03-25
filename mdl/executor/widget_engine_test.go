@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -17,8 +18,7 @@ func TestWidgetDefinitionJSONRoundTrip(t *testing.T) {
 		WidgetID:         "com.mendix.widget.web.combobox.Combobox",
 		MDLName:          "COMBOBOX",
 		TemplateFile:     "combobox.json",
-		DefaultEditable:  "Always",
-		DefaultSelection: "Single",
+		DefaultEditable: "Always",
 		PropertyMappings: []PropertyMapping{
 			{PropertyKey: "attributeEnumeration", Source: "Attribute", Operation: "attribute"},
 			{PropertyKey: "optionsSourceType", Value: "enumeration", Operation: "primitive"},
@@ -61,9 +61,6 @@ func TestWidgetDefinitionJSONRoundTrip(t *testing.T) {
 	}
 	if decoded.DefaultEditable != original.DefaultEditable {
 		t.Errorf("DefaultEditable: got %q, want %q", decoded.DefaultEditable, original.DefaultEditable)
-	}
-	if decoded.DefaultSelection != original.DefaultSelection {
-		t.Errorf("DefaultSelection: got %q, want %q", decoded.DefaultSelection, original.DefaultSelection)
 	}
 
 	// Verify property mappings
@@ -119,10 +116,6 @@ func TestWidgetDefinitionJSONOmitsEmptyOptionalFields(t *testing.T) {
 		t.Fatalf("failed to unmarshal to map: %v", err)
 	}
 
-	// defaultSelection should be omitted when empty
-	if _, exists := raw["defaultSelection"]; exists {
-		t.Error("defaultSelection should be omitted when empty")
-	}
 }
 
 func TestOperationRegistryLookupFound(t *testing.T) {
@@ -517,29 +510,49 @@ func TestSetChildWidgets(t *testing.T) {
 }
 
 func TestOpSelection(t *testing.T) {
-	// Test opSelection directly on a Value bson.D (same level as setChildWidgets test)
-	// opSelection calls updateWidgetPropertyValue which needs TypePointer matching.
-	// Instead, test the inner logic: the Selection field update in a Value document.
-	val := bson.D{
-		{Key: "TypePointer", Value: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}},
-		{Key: "PrimitiveValue", Value: ""},
-		{Key: "Selection", Value: "None"},
+	// Call the real opSelection function with a properly structured widget BSON.
+	typePointerBytes := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	typePointerUUID := mpr.BlobToUUID(typePointerBytes)
+
+	widgetObj := bson.D{
+		{Key: "Properties", Value: bson.A{
+			int32(2), // version marker
+			bson.D{
+				{Key: "TypePointer", Value: typePointerBytes},
+				{Key: "Value", Value: bson.D{
+					{Key: "PrimitiveValue", Value: ""},
+					{Key: "Selection", Value: "None"},
+				}},
+			},
+		}},
 	}
 
-	// Simulate what opSelection's inner function does
+	propTypeIDs := map[string]pages.PropertyTypeIDEntry{
+		"selectionType": {PropertyTypeID: typePointerUUID},
+	}
+
 	ctx := &BuildContext{PrimitiveVal: "Multi"}
-	result := make(bson.D, 0, len(val))
-	for _, elem := range val {
-		if elem.Key == "Selection" {
-			result = append(result, bson.E{Key: "Selection", Value: ctx.PrimitiveVal})
-		} else {
-			result = append(result, elem)
+	result := opSelection(widgetObj, propTypeIDs, "selectionType", ctx)
+
+	// Extract the updated Value from Properties
+	var props bson.A
+	for _, elem := range result {
+		if elem.Key == "Properties" {
+			props = elem.Value.(bson.A)
+		}
+	}
+	prop := props[1].(bson.D) // skip version marker at index 0
+	var val bson.D
+	for _, elem := range prop {
+		if elem.Key == "Value" {
+			val = elem.Value.(bson.D)
 		}
 	}
 
-	// Verify Selection was updated
-	for _, elem := range result {
+	selectionFound := false
+	for _, elem := range val {
 		if elem.Key == "Selection" {
+			selectionFound = true
 			if elem.Value != "Multi" {
 				t.Errorf("Selection: got %q, want %q", elem.Value, "Multi")
 			}
@@ -549,5 +562,21 @@ func TestOpSelection(t *testing.T) {
 				t.Errorf("PrimitiveValue should remain empty, got %q", elem.Value)
 			}
 		}
+	}
+	if !selectionFound {
+		t.Error("Selection field not found in result")
+	}
+}
+
+func TestOpSelectionEmptyValue(t *testing.T) {
+	widgetObj := bson.D{
+		{Key: "Properties", Value: bson.A{int32(2)}},
+	}
+	ctx := &BuildContext{PrimitiveVal: ""}
+	result := opSelection(widgetObj, nil, "any", ctx)
+
+	// With empty PrimitiveVal, opSelection returns obj unchanged
+	if len(result) != len(widgetObj) {
+		t.Errorf("expected unchanged obj, got different length: %d vs %d", len(result), len(widgetObj))
 	}
 }

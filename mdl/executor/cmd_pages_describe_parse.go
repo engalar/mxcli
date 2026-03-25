@@ -142,10 +142,13 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 		widget.Caption = e.extractLabelText(w)
 		widget.Content = e.extractCustomWidgetAttribute(w)
 		widget.RenderMode = e.extractCustomWidgetType(w) // Store widget type in RenderMode
-		// For ComboBox, extract datasource and caption attribute for association mode
+		// For ComboBox, extract datasource and association attribute for association mode.
+		// In association mode the Attribute binding is stored as EntityRef (not AttributeRef),
+		// so we must use extractCustomWidgetPropertyAssociation instead of the generic scan.
 		if widget.RenderMode == "COMBOBOX" {
 			widget.DataSource = e.extractComboBoxDataSource(w)
 			if widget.DataSource != nil {
+				widget.Content = e.extractCustomWidgetPropertyAssociation(w, "attributeAssociation")
 				widget.CaptionAttribute = e.extractCustomWidgetPropertyAttributeRef(w, "optionsSourceAssociationCaptionAttribute")
 			}
 		}

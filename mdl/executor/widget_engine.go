@@ -25,7 +25,6 @@ type WidgetDefinition struct {
 	MDLName          string             `json:"mdlName"`
 	TemplateFile     string             `json:"templateFile"`
 	DefaultEditable  string             `json:"defaultEditable"`
-	DefaultSelection string             `json:"defaultSelection,omitempty"`
 	PropertyMappings []PropertyMapping  `json:"propertyMappings,omitempty"`
 	ChildSlots       []ChildSlotMapping `json:"childSlots,omitempty"`
 	Modes            []WidgetMode       `json:"modes,omitempty"`

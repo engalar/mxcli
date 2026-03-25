@@ -3,7 +3,6 @@
   "mdlName": "GALLERY",
   "templateFile": "gallery.json",
   "defaultEditable": "Always",
-  "defaultSelection": "Single",
   "propertyMappings": [
     {"propertyKey": "datasource", "source": "DataSource", "operation": "datasource"},
     {"propertyKey": "itemSelection", "source": "Selection", "operation": "selection", "default": "Single"}
