@@ -90,7 +90,7 @@ func Build(opts BuildOptions) error {
 	// Step 4: Pre-build check
 	if !opts.SkipCheck {
 		fmt.Fprintln(w, "Checking project for errors...")
-		mxPath, err := resolveMx(opts.MxBuildPath)
+		mxPath, err := ResolveMx(opts.MxBuildPath)
 		if err != nil {
 			fmt.Fprintf(w, "  Skipping check: %v\n", err)
 		} else {

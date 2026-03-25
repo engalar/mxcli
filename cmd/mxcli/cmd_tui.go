@@ -59,6 +59,7 @@ Example:
 
 		m := tui.NewApp(mxcliPath, projectPath)
 		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
+		m.StartWatcher(p)
 		if _, err := p.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)

@@ -70,4 +70,12 @@ var (
 	FocusedEdgeChar   = "▎"
 	FocusedEdgeStyle  = lipgloss.NewStyle().Foreground(FocusColor)
 	AccentStyle       = lipgloss.NewStyle().Foreground(AccentColor)
+
+	// mx check result styles
+	CheckErrorStyle   = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "160", Dark: "196"})
+	CheckWarnStyle    = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "172", Dark: "214"})
+	CheckPassStyle    = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "28", Dark: "114"})
+	CheckLocStyle     = lipgloss.NewStyle().Foreground(MutedColor)
+	CheckHeaderStyle  = lipgloss.NewStyle().Bold(true)
+	CheckRunningStyle = lipgloss.NewStyle().Foreground(MutedColor).Italic(true)
 )

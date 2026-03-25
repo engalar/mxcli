@@ -43,6 +43,7 @@ var (
 		{Key: "T", Label: "new project"},
 		{Key: "1-9", Label: "switch tab"},
 		{Key: "x", Label: "exec"},
+		{Key: "!", Label: "check"},
 		{Key: "?", Label: "help"},
 	}
 	FilterActiveHints = []Hint{

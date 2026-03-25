@@ -39,7 +39,7 @@ func Check(opts CheckOptions) error {
 	}
 
 	// Resolve mx binary
-	mxPath, err := resolveMx(opts.MxBuildPath)
+	mxPath, err := ResolveMx(opts.MxBuildPath)
 	if err != nil {
 		return err
 	}
@@ -67,9 +67,9 @@ func mxBinaryName() string {
 	return "mx"
 }
 
-// resolveMx finds the mx executable.
+// ResolveMx finds the mx executable.
 // Priority: derive from mxbuild path > PATH lookup.
-func resolveMx(mxbuildPath string) (string, error) {
+func ResolveMx(mxbuildPath string) (string, error) {
 	if mxbuildPath != "" {
 		// Resolve mxbuild first to handle directory paths
 		resolvedMxBuild, err := resolveMxBuild(mxbuildPath)
@@ -100,6 +100,15 @@ func resolveMx(mxbuildPath string) (string, error) {
 	// Try PATH
 	if p, err := exec.LookPath("mx"); err == nil {
 		return p, nil
+	}
+
+	// Try cached mxbuild installations (~/.mxcli/mxbuild/*/modeler/mx)
+	if home, err := os.UserHomeDir(); err == nil {
+		matches, _ := filepath.Glob(filepath.Join(home, ".mxcli", "mxbuild", "*", "modeler", mxBinaryName()))
+		if len(matches) > 0 {
+			// Use the last match (highest version when sorted lexicographically)
+			return matches[len(matches)-1], nil
+		}
 	}
 
 	return "", fmt.Errorf("mx not found; specify --mxbuild-path pointing to Mendix installation directory")

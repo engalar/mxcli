@@ -18,6 +18,7 @@ type StatusBar struct {
 	breadcrumb []string
 	position   string // e.g. "3/4"
 	mode       string // e.g. "MDL" or "NDSL"
+	checkBadge string // e.g. "✗ 3E 2W" or "✓" (pre-styled)
 	viewDepth  int
 	viewModes  []string
 	zones      []breadcrumbZone // clickable breadcrumb zones
@@ -41,6 +42,11 @@ func (s *StatusBar) SetPosition(pos string) {
 // SetMode sets the preview mode label.
 func (s *StatusBar) SetMode(mode string) {
 	s.mode = mode
+}
+
+// SetCheckBadge sets the mx check status badge (pre-styled string).
+func (s *StatusBar) SetCheckBadge(badge string) {
+	s.checkBadge = badge
 }
 
 // SetViewDepth sets the view stack depth and mode names for breadcrumb display.
@@ -101,8 +107,11 @@ func (s *StatusBar) View(width int) string {
 	}
 	left := " " + strings.Join(crumbParts, sep)
 
-	// Build right side: position + mode
+	// Build right side: check badge + position + mode
 	var rightParts []string
+	if s.checkBadge != "" {
+		rightParts = append(rightParts, s.checkBadge)
+	}
 	if s.position != "" {
 		rightParts = append(rightParts, PositionStyle.Render(s.position))
 	}

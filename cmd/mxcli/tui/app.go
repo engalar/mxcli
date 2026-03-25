@@ -2,7 +2,10 @@ package tui
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -32,6 +35,10 @@ type App struct {
 	hintBar       HintBar
 	statusBar     StatusBar
 	previewEngine *PreviewEngine
+
+	watcher       *Watcher
+	checkErrors   []CheckError // nil = no check run yet, empty = pass
+	checkRunning  bool
 }
 
 // NewApp creates the root App model.
@@ -56,6 +63,29 @@ func NewApp(mxcliPath, projectPath string) App {
 	app.tabs = []Tab{tab}
 	app.syncTabBar()
 	return app
+}
+
+// StartWatcher begins watching MPR files for external changes.
+// Call after tea.NewProgram is created but before p.Run().
+func (a *App) StartWatcher(prog *tea.Program) {
+	tab := a.activeTabPtr()
+	if tab == nil {
+		return
+	}
+	mprPath := tab.ProjectPath
+	contentsDir := ""
+	dir := filepath.Dir(mprPath)
+	candidate := filepath.Join(dir, "mprcontents")
+	if stat, err := os.Stat(candidate); err == nil && stat.IsDir() {
+		contentsDir = candidate
+	}
+	w, err := NewWatcher(mprPath, contentsDir, prog)
+	if err != nil {
+		Trace("app: failed to start watcher: %v", err)
+		return
+	}
+	a.watcher = w
+	Trace("app: watcher started for %s (contentsDir=%q)", mprPath, contentsDir)
 }
 
 func (a *App) activeTabPtr() *Tab {
@@ -272,8 +302,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		content := DetectAndHighlight(msg.Content)
 		ov := NewOverlayView("Exec Result", content, a.width, a.height, OverlayViewOpts{})
 		a.views.Push(ov)
-		// If execution succeeded, refresh tree
+		// If execution succeeded, suppress watcher (self-modification) and refresh tree
 		if msg.Success {
+			if a.watcher != nil {
+				a.watcher.Suppress(2 * time.Second)
+			}
 			return a, a.Init()
 		}
 		return a, nil
@@ -281,6 +314,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		Trace("app: key=%q picker=%v mode=%v help=%v", msg.String(), a.picker != nil, a.views.Active().Mode(), a.showHelp)
 		if msg.String() == "ctrl+c" {
+			if a.watcher != nil {
+				a.watcher.Close()
+			}
 			return a, tea.Quit
 		}
 
@@ -418,6 +454,27 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, nil
 
+	case MprChangedMsg:
+		Trace("app: MprChangedMsg — refreshing tree and running mx check")
+		a.previewEngine.ClearCache()
+		projectPath := a.activeTabProjectPath()
+		return a, tea.Batch(a.Init(), runMxCheck(projectPath))
+
+	case MxCheckStartMsg:
+		a.checkRunning = true
+		return a, nil
+
+	case MxCheckResultMsg:
+		a.checkRunning = false
+		if msg.Err != nil {
+			Trace("app: mx check error: %v", msg.Err)
+			a.checkErrors = nil
+		} else {
+			a.checkErrors = msg.Errors
+			Trace("app: mx check done: %d diagnostics", len(msg.Errors))
+		}
+		return a, nil
+
 	case PreviewReadyMsg, PreviewLoadingMsg, CursorChangedMsg, animTickMsg, previewDebounceMsg:
 		if a.views.Active().Mode() == ModeBrowser {
 			updated, cmd := a.views.Active().Update(msg)
@@ -449,6 +506,9 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 
 	switch msg.String() {
 	case "q":
+		if a.watcher != nil {
+			a.watcher.Close()
+		}
 		for i := range a.tabs {
 			a.tabs[i].Miller.previewEngine.Cancel()
 		}
@@ -524,6 +584,12 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 	case "x":
 		ev := NewExecView(a.mxcliPath, a.activeTabProjectPath(), a.width, a.height)
 		a.views.Push(ev)
+		return func() tea.Msg { return nil }
+
+	case "!", "\\!":
+		content := renderCheckResults(a.checkErrors)
+		ov := NewOverlayView("mx check", content, a.width, a.height, OverlayViewOpts{HideLineNumbers: true})
+		a.views.Push(ov)
 		return func() tea.Msg { return nil }
 
 	case "c":
@@ -635,6 +701,7 @@ func (a App) View() string {
 	a.statusBar.SetBreadcrumb(info.Breadcrumb)
 	a.statusBar.SetPosition(info.Position)
 	a.statusBar.SetMode(info.Mode)
+	a.statusBar.SetCheckBadge(formatCheckBadge(a.checkErrors, a.checkRunning))
 	viewModeNames := a.collectViewModeNames()
 	a.statusBar.SetViewDepth(a.views.Depth(), viewModeNames)
 	statusLine := StatusBarStyle.Width(a.width).Render(a.statusBar.View(a.width))

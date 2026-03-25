@@ -16,7 +16,8 @@ type ContentView struct {
 	yOffset int
 	width   int
 	height  int
-	gutterW int
+	gutterW        int
+	hideLineNumbers bool
 
 	// Search state
 	searching   bool
@@ -248,7 +249,11 @@ func (v ContentView) View() string {
 
 	total := len(v.lines)
 	showScrollbar := total > v.height
-	contentW := v.width - v.gutterW - 1
+	effectiveGutterW := v.gutterW
+	if v.hideLineNumbers {
+		effectiveGutterW = 0
+	}
+	contentW := v.width - effectiveGutterW - 1
 	if showScrollbar {
 		contentW--
 	}
@@ -287,16 +292,20 @@ func (v ContentView) View() string {
 		lineIdx := v.yOffset + vi
 		var line string
 		if lineIdx < total {
-			num := fmt.Sprintf("%*d", v.gutterW-1, lineIdx+1)
-
-			// Style line number based on match status
 			var gutter string
-			if lineIdx == currentMatchLine {
-				gutter = currentMatchNumSt.Render(num) + " "
-			} else if matchSet[lineIdx] {
-				gutter = matchLineNumSt.Render(num) + " "
+			if v.hideLineNumbers {
+				gutter = ""
 			} else {
-				gutter = lineNumSt.Render(num) + " "
+				num := fmt.Sprintf("%*d", v.gutterW-1, lineIdx+1)
+
+				// Style line number based on match status
+				if lineIdx == currentMatchLine {
+					gutter = currentMatchNumSt.Render(num) + " "
+				} else if matchSet[lineIdx] {
+					gutter = matchLineNumSt.Render(num) + " "
+				} else {
+					gutter = lineNumSt.Render(num) + " "
+				}
 			}
 
 			content := v.lines[lineIdx]
@@ -325,7 +334,7 @@ func (v ContentView) View() string {
 
 			line = gutter + content
 		} else {
-			line = strings.Repeat(" ", v.gutterW+contentW)
+			line = strings.Repeat(" ", effectiveGutterW+contentW)
 		}
 
 		// Scrollbar

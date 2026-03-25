@@ -16,12 +16,13 @@ type overlayContentMsg struct {
 
 // OverlayViewOpts holds optional configuration for an OverlayView.
 type OverlayViewOpts struct {
-	QName       string
-	NodeType    string
-	IsNDSL      bool
-	Switchable  bool
-	MxcliPath   string
-	ProjectPath string
+	QName           string
+	NodeType        string
+	IsNDSL          bool
+	Switchable      bool
+	MxcliPath       string
+	ProjectPath     string
+	HideLineNumbers bool
 }
 
 // OverlayView wraps an Overlay to satisfy the View interface,
@@ -49,6 +50,9 @@ func NewOverlayView(title, content string, width, height int, opts OverlayViewOp
 	ov.overlay = NewOverlay()
 	ov.overlay.switchable = opts.Switchable
 	ov.overlay.Show(title, content, width, height)
+	if opts.HideLineNumbers {
+		ov.overlay.content.hideLineNumbers = true
+	}
 	return ov
 }
 
