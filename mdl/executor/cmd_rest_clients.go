@@ -213,24 +213,161 @@ func outputRestOperation(w io.Writer, op *model.RestClientOperation) {
 // createRestClient handles CREATE REST CLIENT statement.
 func (e *Executor) createRestClient(stmt *ast.CreateRestClientStmt) error {
 	if e.writer == nil {
-		return fmt.Errorf("project not open for writing")
+		return fmt.Errorf("not connected to a project (read-only mode)")
 	}
 
-	// For now, just validate the statement was parsed correctly
-	fmt.Fprintf(e.output, "Parsed REST client: %s.%s with %d operations\n",
-		stmt.Name.Module, stmt.Name.Name, len(stmt.Operations))
-	fmt.Fprintln(e.output, "Note: BSON writing not yet implemented for consumed REST services")
+	moduleName := stmt.Name.Module
+	module, err := e.findModule(moduleName)
+	if err != nil {
+		return fmt.Errorf("module not found: %s", moduleName)
+	}
 
+	// Check for existing service with same name
+	existingServices, _ := e.reader.ListConsumedRestServices()
+	h, err := e.getHierarchy()
+	if err != nil {
+		return fmt.Errorf("failed to build hierarchy: %w", err)
+	}
+
+	for _, existing := range existingServices {
+		existModID := h.FindModuleID(existing.ContainerID)
+		existModName := h.GetModuleName(existModID)
+		if strings.EqualFold(existModName, moduleName) && strings.EqualFold(existing.Name, stmt.Name.Name) {
+			if stmt.CreateOrModify {
+				// Delete existing and recreate
+				if err := e.writer.DeleteConsumedRestService(existing.ID); err != nil {
+					return fmt.Errorf("failed to delete existing REST client: %w", err)
+				}
+			} else {
+				return fmt.Errorf("REST client already exists: %s.%s (use CREATE OR MODIFY to overwrite)", moduleName, stmt.Name.Name)
+			}
+		}
+	}
+
+	// Resolve folder if specified
+	containerID := module.ID
+	if stmt.Folder != "" {
+		folderID, err := e.resolveFolder(module.ID, stmt.Folder)
+		if err != nil {
+			return fmt.Errorf("failed to resolve folder '%s': %w", stmt.Folder, err)
+		}
+		containerID = folderID
+	}
+
+	// Build the model from AST
+	svc := &model.ConsumedRestService{
+		ContainerID:   containerID,
+		Name:          stmt.Name.Name,
+		Documentation: stmt.Documentation,
+		BaseUrl:       stmt.BaseUrl,
+	}
+
+	// Authentication
+	if stmt.Authentication != nil {
+		svc.Authentication = &model.RestAuthentication{
+			Scheme:   stmt.Authentication.Scheme,
+			Username: stmt.Authentication.Username,
+			Password: stmt.Authentication.Password,
+		}
+	}
+
+	// Operations
+	for _, opDef := range stmt.Operations {
+		op := buildRestClientOperation(opDef)
+		svc.Operations = append(svc.Operations, op)
+	}
+
+	// Write to project
+	if err := e.writer.CreateConsumedRestService(svc); err != nil {
+		return fmt.Errorf("failed to create REST client: %w", err)
+	}
+
+	fmt.Fprintf(e.output, "Created REST client: %s.%s (%d operations)\n", moduleName, stmt.Name.Name, len(svc.Operations))
 	return nil
+}
+
+// buildRestClientOperation converts an AST RestOperationDef to a model RestClientOperation.
+func buildRestClientOperation(opDef *ast.RestOperationDef) *model.RestClientOperation {
+	op := &model.RestClientOperation{
+		Name:             opDef.Name,
+		Documentation:    opDef.Documentation,
+		HttpMethod:       opDef.Method,
+		Path:             opDef.Path,
+		BodyType:         opDef.BodyType,
+		BodyVariable:     opDef.BodyVariable,
+		ResponseType:     opDef.ResponseType,
+		ResponseVariable: opDef.ResponseVariable,
+		Timeout:          opDef.Timeout,
+	}
+
+	// Path parameters
+	for _, p := range opDef.Parameters {
+		name := strings.TrimPrefix(p.Name, "$")
+		op.Parameters = append(op.Parameters, &model.RestClientParameter{
+			Name:     name,
+			DataType: p.DataType,
+		})
+	}
+
+	// Query parameters
+	for _, q := range opDef.QueryParameters {
+		name := strings.TrimPrefix(q.Name, "$")
+		op.QueryParameters = append(op.QueryParameters, &model.RestClientParameter{
+			Name:     name,
+			DataType: q.DataType,
+		})
+	}
+
+	// Headers
+	for _, h := range opDef.Headers {
+		header := &model.RestClientHeader{
+			Name: h.Name,
+		}
+		if h.Variable != "" {
+			// Dynamic header: 'prefix' + $Var or just $Var
+			if h.Prefix != "" {
+				header.Value = h.Prefix + "{1}"
+			} else {
+				header.Value = "{1}"
+			}
+		} else {
+			header.Value = h.Value
+		}
+		op.Headers = append(op.Headers, header)
+	}
+
+	return op
 }
 
 // dropRestClient handles DROP REST CLIENT statement.
 func (e *Executor) dropRestClient(stmt *ast.DropRestClientStmt) error {
 	if e.writer == nil {
-		return fmt.Errorf("project not open for writing")
+		return fmt.Errorf("not connected to a project (read-only mode)")
 	}
 
-	return fmt.Errorf("DROP REST CLIENT not yet implemented")
+	services, err := e.reader.ListConsumedRestServices()
+	if err != nil {
+		return fmt.Errorf("failed to list consumed REST services: %w", err)
+	}
+
+	h, err := e.getHierarchy()
+	if err != nil {
+		return fmt.Errorf("failed to build hierarchy: %w", err)
+	}
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		moduleName := h.GetModuleName(modID)
+		if strings.EqualFold(moduleName, stmt.Name.Module) && strings.EqualFold(svc.Name, stmt.Name.Name) {
+			if err := e.writer.DeleteConsumedRestService(svc.ID); err != nil {
+				return fmt.Errorf("failed to delete REST client: %w", err)
+			}
+			fmt.Fprintf(e.output, "Dropped REST client: %s.%s\n", moduleName, svc.Name)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("REST client not found: %s", stmt.Name)
 }
 
 // formatRestAuthValue formats an authentication value for MDL output.

@@ -427,6 +427,9 @@ func (e *testEnv) assertRoundtrip(createMDL string, opts ...RoundtripOption) Rou
 	case *ast.CreateDatabaseConnectionStmt:
 		qualifiedName = s.Name.String()
 		describeCmd = "DESCRIBE DATABASE CONNECTION " + qualifiedName + ";"
+	case *ast.CreateRestClientStmt:
+		qualifiedName = s.Name.String()
+		describeCmd = "DESCRIBE REST CLIENT " + qualifiedName + ";"
 	default:
 		e.t.Fatalf("Unsupported statement type for roundtrip: %T", prog.Statements[0])
 		return result

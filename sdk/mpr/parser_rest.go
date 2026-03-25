@@ -230,6 +230,7 @@ func extractRestValue(v any) string {
 }
 
 // extractRestDataType extracts a data type name from a DataTypes$DataType BSON object.
+// Handles both DataTypes$IntegerType (consumed REST) and DataTypes$IntegerAttributeType formats.
 func extractRestDataType(v any) string {
 	dtMap := extractBsonMap(v)
 	if dtMap == nil {
@@ -237,15 +238,15 @@ func extractRestDataType(v any) string {
 	}
 	dtType := extractString(dtMap["$Type"])
 	switch dtType {
-	case "DataTypes$IntegerAttributeType":
+	case "DataTypes$IntegerType", "DataTypes$IntegerAttributeType":
 		return "Integer"
 	case "DataTypes$LongAttributeType":
 		return "Long"
-	case "DataTypes$DecimalAttributeType":
+	case "DataTypes$DecimalType", "DataTypes$DecimalAttributeType":
 		return "Decimal"
-	case "DataTypes$BooleanAttributeType":
+	case "DataTypes$BooleanType", "DataTypes$BooleanAttributeType":
 		return "Boolean"
-	case "DataTypes$StringAttributeType":
+	case "DataTypes$StringType", "DataTypes$StringAttributeType":
 		return "String"
 	default:
 		return "String"
