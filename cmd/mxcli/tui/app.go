@@ -56,8 +56,9 @@ type App struct {
 
 	pendingSession *TUISession // session to restore after tree loads
 
-	agentListener *AgentListener
-	agentPending  *agentPendingOp // non-nil when waiting for user confirmation
+	agentListener   *AgentListener
+	agentAutoProceed bool           // skip human confirmation for agent ops (set before tea.NewProgram)
+	agentPending    *agentPendingOp // non-nil when waiting for user confirmation
 }
 
 // agentPendingOp tracks an in-flight agent operation awaiting user confirmation.
@@ -113,6 +114,12 @@ func (a *App) StartWatcher(prog *tea.Program) {
 	}
 	a.watcher = w
 	Trace("app: watcher started for %s (contentsDir=%q)", mprPath, contentsDir)
+}
+
+// SetAgentAutoProceed configures whether agent operations skip human confirmation.
+// Must be called BEFORE tea.NewProgram so the value is captured in the model copy.
+func (a *App) SetAgentAutoProceed(autoProceed bool) {
+	a.agentAutoProceed = autoProceed
 }
 
 // StartAgentListener begins listening on a Unix socket for agent commands.
@@ -431,7 +438,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		// Auto-proceed: respond immediately without waiting for user confirmation
-		if a.agentListener != nil && a.agentListener.AutoProceed() {
+		if a.agentAutoProceed {
 			msg.ResponseCh <- AgentResponse{
 				ID: msg.RequestID, OK: msg.Success,
 				Result: msg.Output, Mode: "overlay:exec-result",

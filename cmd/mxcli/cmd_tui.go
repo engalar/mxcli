@@ -87,11 +87,17 @@ Example:
 		if session != nil {
 			m.SetPendingSession(session)
 		}
+
+		// Set agent auto-proceed BEFORE tea.NewProgram so the model copy has the value
+		agentSocket, _ := cmd.Flags().GetString("agent-socket")
+		agentAutoProceed, _ := cmd.Flags().GetBool("agent-auto-proceed")
+		if agentSocket != "" {
+			m.SetAgentAutoProceed(agentAutoProceed)
+		}
+
 		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 		m.StartWatcher(p)
 
-		agentSocket, _ := cmd.Flags().GetString("agent-socket")
-		agentAutoProceed, _ := cmd.Flags().GetBool("agent-auto-proceed")
 		if agentSocket != "" {
 			if err := m.StartAgentListener(p, agentSocket, agentAutoProceed); err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: agent listener failed: %v\n", err)
