@@ -5,7 +5,6 @@ package main
 import (
 	"context"
 	"strings"
-	"sync"
 
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"go.lsp.dev/protocol"
@@ -40,7 +39,7 @@ func (s *mdlServer) Completion(ctx context.Context, params *protocol.CompletionP
 		}, nil
 	}
 
-	items := mdlCompletionItems(linePrefixUpper)
+	items := s.mdlCompletionItems(linePrefixUpper)
 	return &protocol.CompletionList{
 		IsIncomplete: false,
 		Items:        items,
@@ -53,7 +52,7 @@ func (s *mdlServer) CompletionResolve(ctx context.Context, params *protocol.Comp
 }
 
 // mdlCompletionItems returns completion items filtered by context.
-func mdlCompletionItems(linePrefixUpper string) []protocol.CompletionItem {
+func (s *mdlServer) mdlCompletionItems(linePrefixUpper string) []protocol.CompletionItem {
 	var items []protocol.CompletionItem
 
 	// After CREATE, suggest object types and CREATE snippets only
@@ -73,34 +72,35 @@ func mdlCompletionItems(linePrefixUpper string) []protocol.CompletionItem {
 	items = append(items, mdlGeneratedKeywords...)
 	items = append(items, mdlStatementSnippets...)
 	items = append(items, mdlCreateSnippets...)
-	items = append(items, widgetRegistryCompletions()...)
+	items = append(items, s.widgetRegistryCompletions()...)
 
 	return items
 }
 
-// widgetRegistryCompletions returns completion items for registered widget types.
+// widgetRegistryCompletions returns completion items for registered widget types,
+// including user-defined widgets from global (~/.mxcli/widgets/) and project-level
+// (.mxcli/widgets/) directories.
 // NOTE: Cached via sync.Once — new .def.json files added while the LSP server is
 // running will not appear until the server is restarted.
-var (
-	widgetCompletionsOnce sync.Once
-	widgetCompletionItems []protocol.CompletionItem
-)
-
-func widgetRegistryCompletions() []protocol.CompletionItem {
-	widgetCompletionsOnce.Do(func() {
+func (s *mdlServer) widgetRegistryCompletions() []protocol.CompletionItem {
+	s.widgetCompletionsOnce.Do(func() {
 		registry, err := executor.NewWidgetRegistry()
 		if err != nil {
 			return
 		}
+		if err := registry.LoadUserDefinitions(s.mprPath); err != nil {
+			// Non-fatal: user definitions are optional
+			_ = err
+		}
 		for _, def := range registry.All() {
-			widgetCompletionItems = append(widgetCompletionItems, protocol.CompletionItem{
+			s.widgetCompletionItems = append(s.widgetCompletionItems, protocol.CompletionItem{
 				Label:  def.MDLName,
 				Kind:   protocol.CompletionItemKindClass,
 				Detail: "Pluggable widget: " + def.WidgetID,
 			})
 		}
 	})
-	return widgetCompletionItems
+	return s.widgetCompletionItems
 }
 
 // mdlCreateContextKeywords are object types suggested after CREATE.

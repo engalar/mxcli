@@ -107,6 +107,12 @@ func (r *OperationRegistry) Lookup(name string) OperationFunc {
 	return r.operations[name]
 }
 
+// Has returns true if the named operation is registered.
+func (r *OperationRegistry) Has(name string) bool {
+	_, ok := r.operations[name]
+	return ok
+}
+
 // =============================================================================
 // Built-in Operations
 // =============================================================================

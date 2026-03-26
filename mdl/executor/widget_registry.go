@@ -5,6 +5,7 @@ package executor
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,13 +17,23 @@ import (
 type WidgetRegistry struct {
 	byMDLName  map[string]*WidgetDefinition // keyed by uppercase MDLName
 	byWidgetID map[string]*WidgetDefinition // keyed by widgetId
+	opReg      *OperationRegistry           // used for validating definition operations
 }
 
 // NewWidgetRegistry creates a registry pre-loaded with embedded definitions.
+// Uses a default OperationRegistry for validation. Use NewWidgetRegistryWithOps
+// to provide a custom registry with additional operations.
 func NewWidgetRegistry() (*WidgetRegistry, error) {
+	return NewWidgetRegistryWithOps(NewOperationRegistry())
+}
+
+// NewWidgetRegistryWithOps creates a registry pre-loaded with embedded definitions,
+// validating operations against the provided OperationRegistry.
+func NewWidgetRegistryWithOps(opReg *OperationRegistry) (*WidgetRegistry, error) {
 	reg := &WidgetRegistry{
 		byMDLName:  make(map[string]*WidgetDefinition),
 		byWidgetID: make(map[string]*WidgetDefinition),
+		opReg:      opReg,
 	}
 
 	entries, err := definitions.EmbeddedFS.ReadDir(".")
@@ -45,7 +56,7 @@ func NewWidgetRegistry() (*WidgetRegistry, error) {
 			return nil, fmt.Errorf("parse definition %s: %w", entry.Name(), err)
 		}
 
-		if err := validateDefinitionOperations(&def, entry.Name()); err != nil {
+		if err := validateDefinitionOperations(&def, entry.Name(), opReg); err != nil {
 			return nil, err
 		}
 
@@ -93,7 +104,7 @@ func (r *WidgetRegistry) LoadUserDefinitions(projectPath string) error {
 			return fmt.Errorf("global widgets: %w", err)
 		}
 	} else {
-		fmt.Fprintf(os.Stderr, "warning: cannot determine home directory for user widget definitions: %v\n", err)
+		log.Printf("warning: cannot determine home directory for user widget definitions: %v", err)
 	}
 
 	// 2. Project: <projectDir>/.mxcli/widgets/*.def.json (overrides global)
@@ -116,7 +127,7 @@ func (r *WidgetRegistry) loadDefinitionsFromDir(dir string) error {
 		if os.IsNotExist(err) {
 			return nil
 		}
-		fmt.Fprintf(os.Stderr, "warning: cannot read widget definitions from %s: %v\n", dir, err)
+		log.Printf("warning: cannot read widget definitions from %s: %v", dir, err)
 		return nil
 	}
 
@@ -140,7 +151,7 @@ func (r *WidgetRegistry) loadDefinitionsFromDir(dir string) error {
 			return fmt.Errorf("invalid definition %s: widgetId and mdlName are required", entry.Name())
 		}
 
-		if err := validateDefinitionOperations(&def, entry.Name()); err != nil {
+		if err := validateDefinitionOperations(&def, entry.Name(), r.opReg); err != nil {
 			return err
 		}
 
@@ -150,36 +161,27 @@ func (r *WidgetRegistry) loadDefinitionsFromDir(dir string) error {
 	return nil
 }
 
-// validOperations is the set of recognized operation names for property and child-slot mappings.
-var validOperations = map[string]bool{
-	"attribute":   true,
-	"association": true,
-	"primitive":   true,
-	"selection":   true,
-	"datasource":  true,
-	"widgets":     true,
-}
-
-// validateDefinitionOperations checks that all operation names in a definition are recognized.
-func validateDefinitionOperations(def *WidgetDefinition, source string) error {
+// validateDefinitionOperations checks that all operation names in a definition
+// are recognized by the given OperationRegistry.
+func validateDefinitionOperations(def *WidgetDefinition, source string, opReg *OperationRegistry) error {
 	for _, m := range def.PropertyMappings {
-		if !validOperations[m.Operation] {
+		if !opReg.Has(m.Operation) {
 			return fmt.Errorf("%s: unknown operation %q in propertyMappings for key %q", source, m.Operation, m.PropertyKey)
 		}
 	}
 	for _, s := range def.ChildSlots {
-		if !validOperations[s.Operation] {
+		if !opReg.Has(s.Operation) {
 			return fmt.Errorf("%s: unknown operation %q in childSlots for key %q", source, s.Operation, s.PropertyKey)
 		}
 	}
 	for _, mode := range def.Modes {
 		for _, m := range mode.PropertyMappings {
-			if !validOperations[m.Operation] {
+			if !opReg.Has(m.Operation) {
 				return fmt.Errorf("%s: unknown operation %q in mode %q propertyMappings for key %q", source, m.Operation, mode.Name, m.PropertyKey)
 			}
 		}
 		for _, s := range mode.ChildSlots {
-			if !validOperations[s.Operation] {
+			if !opReg.Has(s.Operation) {
 				return fmt.Errorf("%s: unknown operation %q in mode %q childSlots for key %q", source, s.Operation, mode.Name, s.PropertyKey)
 			}
 		}

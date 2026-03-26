@@ -6,6 +6,40 @@ import (
 	"strings"
 )
 
+// buildPropertyTypeKeyMap builds a map from PropertyType $ID to PropertyKey for a CustomWidget.
+// This resolves TypePointer references in Object.Properties back to their property names.
+// If withFallback is true, also checks widgetType["PropertyTypes"] directly (for widgets like
+// Gallery/DataGrid2 that may store PropertyTypes at different nesting levels).
+func buildPropertyTypeKeyMap(w map[string]any, withFallback bool) map[string]string {
+	propTypeKeyMap := make(map[string]string)
+	widgetType, ok := w["Type"].(map[string]any)
+	if !ok {
+		return propTypeKeyMap
+	}
+	var propTypes []any
+	if objType, ok := widgetType["ObjectType"].(map[string]any); ok {
+		propTypes = getBsonArrayElements(objType["PropertyTypes"])
+	}
+	if withFallback && len(propTypes) == 0 {
+		propTypes = getBsonArrayElements(widgetType["PropertyTypes"])
+	}
+	for _, pt := range propTypes {
+		ptMap, ok := pt.(map[string]any)
+		if !ok {
+			continue
+		}
+		key := extractString(ptMap["PropertyKey"])
+		if key == "" {
+			continue
+		}
+		id := extractBinaryID(ptMap["$ID"])
+		if id != "" {
+			propTypeKeyMap[id] = key
+		}
+	}
+	return propTypeKeyMap
+}
+
 // extractCustomWidgetAttribute extracts the attribute from a CustomWidget (e.g., ComboBox).
 func (e *Executor) extractCustomWidgetAttribute(w map[string]any) string {
 	obj, ok := w["Object"].(map[string]any)
@@ -86,28 +120,7 @@ func (e *Executor) extractComboBoxDataSource(w map[string]any) *rawDataSource {
 		return nil
 	}
 
-	// Build property key map from Type.ObjectType.PropertyTypes
-	propTypeKeyMap := make(map[string]string)
-	if widgetType, ok := w["Type"].(map[string]any); ok {
-		var propTypes []any
-		if objType, ok := widgetType["ObjectType"].(map[string]any); ok {
-			propTypes = getBsonArrayElements(objType["PropertyTypes"])
-		}
-		for _, pt := range propTypes {
-			ptMap, ok := pt.(map[string]any)
-			if !ok {
-				continue
-			}
-			key := extractString(ptMap["PropertyKey"])
-			if key == "" {
-				continue
-			}
-			id := extractBinaryID(ptMap["$ID"])
-			if id != "" {
-				propTypeKeyMap[id] = key
-			}
-		}
-	}
+	propTypeKeyMap := buildPropertyTypeKeyMap(w, false)
 
 	// Search through properties for optionsSourceAssociationDataSource
 	props := getBsonArrayElements(obj["Properties"])
@@ -701,35 +714,8 @@ func (e *Executor) extractGalleryWidgetsByPropertyKey(w map[string]any, targetKe
 		return nil
 	}
 
-	// Build a map from PropertyType ID to PropertyKey
-	propTypeKeyMap := make(map[string]string)
-	if widgetType, ok := w["Type"].(map[string]any); ok {
-		// PropertyTypes are in ObjectType.PropertyTypes for Gallery/DataGrid2
-		var propTypes []any
-		if objType, ok := widgetType["ObjectType"].(map[string]any); ok {
-			propTypes = getBsonArrayElements(objType["PropertyTypes"])
-		}
-		// Fallback to direct PropertyTypes if not found in ObjectType
-		if len(propTypes) == 0 {
-			propTypes = getBsonArrayElements(widgetType["PropertyTypes"])
-		}
-		for _, pt := range propTypes {
-			ptMap, ok := pt.(map[string]any)
-			if !ok {
-				continue
-			}
-			// Gallery uses "PropertyKey" field for the key name
-			key := extractString(ptMap["PropertyKey"])
-			if key == "" {
-				continue
-			}
-			// Get the ID - can be string, binary, or map with $Subtype
-			id := extractBinaryID(ptMap["$ID"])
-			if id != "" {
-				propTypeKeyMap[id] = key
-			}
-		}
-	}
+	// Build a map from PropertyType ID to PropertyKey (with fallback for Gallery/DataGrid2)
+	propTypeKeyMap := buildPropertyTypeKeyMap(w, true)
 
 	// Search through properties for the named property
 	props := getBsonArrayElements(obj["Properties"])
@@ -854,28 +840,7 @@ func (e *Executor) extractCustomWidgetPropertyAttributeRef(w map[string]any, pro
 		return ""
 	}
 
-	// Build property key map from Type.ObjectType.PropertyTypes
-	propTypeKeyMap := make(map[string]string)
-	if widgetType, ok := w["Type"].(map[string]any); ok {
-		var propTypes []any
-		if objType, ok := widgetType["ObjectType"].(map[string]any); ok {
-			propTypes = getBsonArrayElements(objType["PropertyTypes"])
-		}
-		for _, pt := range propTypes {
-			ptMap, ok := pt.(map[string]any)
-			if !ok {
-				continue
-			}
-			key := extractString(ptMap["PropertyKey"])
-			if key == "" {
-				continue
-			}
-			id := extractBinaryID(ptMap["$ID"])
-			if id != "" {
-				propTypeKeyMap[id] = key
-			}
-		}
-	}
+	propTypeKeyMap := buildPropertyTypeKeyMap(w, false)
 
 	// Search through properties for the named property
 	props := getBsonArrayElements(obj["Properties"])
@@ -915,28 +880,7 @@ func (e *Executor) extractCustomWidgetPropertyAssociation(w map[string]any, prop
 		return ""
 	}
 
-	// Build property key map from Type.ObjectType.PropertyTypes
-	propTypeKeyMap := make(map[string]string)
-	if widgetType, ok := w["Type"].(map[string]any); ok {
-		var propTypes []any
-		if objType, ok := widgetType["ObjectType"].(map[string]any); ok {
-			propTypes = getBsonArrayElements(objType["PropertyTypes"])
-		}
-		for _, pt := range propTypes {
-			ptMap, ok := pt.(map[string]any)
-			if !ok {
-				continue
-			}
-			key := extractString(ptMap["PropertyKey"])
-			if key == "" {
-				continue
-			}
-			id := extractBinaryID(ptMap["$ID"])
-			if id != "" {
-				propTypeKeyMap[id] = key
-			}
-		}
-	}
+	propTypeKeyMap := buildPropertyTypeKeyMap(w, false)
 
 	// Find the named property and extract EntityRef.Steps[1].Association
 	props := getBsonArrayElements(obj["Properties"])
@@ -979,28 +923,7 @@ func (e *Executor) extractCustomWidgetPropertyString(w map[string]any, propertyK
 		return ""
 	}
 
-	// Build property key map from Type.ObjectType.PropertyTypes
-	propTypeKeyMap := make(map[string]string)
-	if widgetType, ok := w["Type"].(map[string]any); ok {
-		var propTypes []any
-		if objType, ok := widgetType["ObjectType"].(map[string]any); ok {
-			propTypes = getBsonArrayElements(objType["PropertyTypes"])
-		}
-		for _, pt := range propTypes {
-			ptMap, ok := pt.(map[string]any)
-			if !ok {
-				continue
-			}
-			key := extractString(ptMap["PropertyKey"])
-			if key == "" {
-				continue
-			}
-			id := extractBinaryID(ptMap["$ID"])
-			if id != "" {
-				propTypeKeyMap[id] = key
-			}
-		}
-	}
+	propTypeKeyMap := buildPropertyTypeKeyMap(w, false)
 
 	// Search through properties for the named property
 	props := getBsonArrayElements(obj["Properties"])
@@ -1037,28 +960,7 @@ func (e *Executor) extractCustomWidgetPropertyAttributes(w map[string]any, prope
 		return nil
 	}
 
-	// Build property key map from Type.ObjectType.PropertyTypes
-	propTypeKeyMap := make(map[string]string)
-	if widgetType, ok := w["Type"].(map[string]any); ok {
-		var propTypes []any
-		if objType, ok := widgetType["ObjectType"].(map[string]any); ok {
-			propTypes = getBsonArrayElements(objType["PropertyTypes"])
-		}
-		for _, pt := range propTypes {
-			ptMap, ok := pt.(map[string]any)
-			if !ok {
-				continue
-			}
-			key := extractString(ptMap["PropertyKey"])
-			if key == "" {
-				continue
-			}
-			id := extractBinaryID(ptMap["$ID"])
-			if id != "" {
-				propTypeKeyMap[id] = key
-			}
-		}
-	}
+	propTypeKeyMap := buildPropertyTypeKeyMap(w, false)
 
 	// Search through properties for the named property
 	props := getBsonArrayElements(obj["Properties"])

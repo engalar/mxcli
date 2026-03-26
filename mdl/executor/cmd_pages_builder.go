@@ -4,7 +4,7 @@ package executor
 
 import (
 	"fmt"
-	"os"
+	"log"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -56,12 +56,12 @@ func (pb *pageBuilder) initPluggableEngine() {
 	registry, err := NewWidgetRegistry()
 	if err != nil {
 		pb.pluggableEngineErr = fmt.Errorf("widget registry init failed: %w", err)
-		fmt.Fprintf(os.Stderr, "warning: %v\n", pb.pluggableEngineErr)
+		log.Printf("warning: %v", pb.pluggableEngineErr)
 		return
 	}
 	if pb.reader != nil {
 		if loadErr := registry.LoadUserDefinitions(pb.reader.Path()); loadErr != nil {
-			fmt.Fprintf(os.Stderr, "warning: loading user widget definitions: %v\n", loadErr)
+			log.Printf("warning: loading user widget definitions: %v", loadErr)
 		}
 	}
 	pb.widgetRegistry = registry

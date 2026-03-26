@@ -56,6 +56,10 @@ type mdlServer struct {
 	mxcliPath     string    // Path to mxcli binary (default: os.Executable())
 	workspaceRoot string    // Workspace folder path (filesystem path, not URI)
 	cache         *lspCache // Subprocess result cache
+
+	// Widget completion cache (lazily populated)
+	widgetCompletionsOnce sync.Once
+	widgetCompletionItems []protocol.CompletionItem
 }
 
 func newMDLServer(client protocol.Client) *mdlServer {
