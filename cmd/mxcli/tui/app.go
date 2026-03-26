@@ -36,6 +36,12 @@ type App struct {
 	showHelp bool
 	picker   *PickerModel // non-nil when cross-project picker is open
 
+	// Check error navigation state (]e / [e)
+	checkNavActive    bool
+	checkNavIndex     int
+	checkNavLocations []CheckNavLocation
+	pendingKey        rune // ']' or '[' waiting for 'e', 0 if none
+
 	tabBar        TabBar
 	hintBar       HintBar
 	statusBar     StatusBar
@@ -206,6 +212,26 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				tab.UpdateLabel()
 				a.syncTabBar()
 			}
+			return a, cmd
+		}
+		return a, nil
+
+	case NavigateToDocMsg:
+		// Close overlay, navigate tree to document, enter check nav mode
+		a.views.Pop()
+		qname := docNameToQualifiedName(msg.ModuleName, msg.DocumentName)
+		if bv, ok := a.views.Base().(BrowserView); ok {
+			cmd := bv.navigateToNode(qname)
+			a.views.SetBase(bv)
+			if tab := a.activeTabPtr(); tab != nil {
+				tab.Miller = bv.miller
+				tab.UpdateLabel()
+				a.syncTabBar()
+			}
+			// Enter check nav mode
+			a.checkNavActive = true
+			a.checkNavIndex = msg.NavIndex
+			a.checkNavLocations = extractCheckNavLocations(filterCheckErrors(a.checkErrors, "all"))
 			return a, cmd
 		}
 		return a, nil
@@ -488,8 +514,18 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Update check overlay content if it's currently visible
 		if ov, ok := a.views.Active().(OverlayView); ok && ov.refreshable {
-			content := renderCheckResults(a.checkErrors)
-			ov.overlay.Show("mx check", content, ov.overlay.width, ov.overlay.height)
+			ov.checkErrors = a.checkErrors
+			filtered := filterCheckErrors(a.checkErrors, ov.checkFilter)
+			ov.checkNavLocs = extractCheckNavLocations(filtered)
+			if ov.selectedIdx >= len(ov.checkNavLocs) {
+				ov.selectedIdx = max(0, len(ov.checkNavLocs)-1)
+			}
+			if len(ov.checkNavLocs) == 0 {
+				ov.selectedIdx = -1
+			}
+			title := renderCheckFilterTitle(a.checkErrors, ov.checkFilter)
+			content := renderCheckResults(a.checkErrors, ov.checkFilter)
+			ov.overlay.Show(title, content, ov.overlay.width, ov.overlay.height)
 			a.views.SetActive(ov)
 		}
 		return a, nil
@@ -522,6 +558,68 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // be forwarded to the active view.
 func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 	tab := a.activeTabPtr()
+
+	// Handle two-key sequence: ]e / [e (check error navigation)
+	if a.pendingKey != 0 {
+		pending := a.pendingKey
+		a.pendingKey = 0
+		if msg.String() == "e" && len(a.checkErrors) > 0 {
+			// Lazily initialize check nav state if not already active
+			if !a.checkNavActive {
+				a.checkNavActive = true
+				a.checkNavLocations = extractCheckNavLocations(filterCheckErrors(a.checkErrors, "all"))
+				a.checkNavIndex = -1 // will be incremented to 0 for ], or wrapped to last for [
+			}
+			if pending == ']' {
+				a.checkNavIndex++
+				if a.checkNavIndex >= len(a.checkNavLocations) {
+					a.checkNavIndex = 0 // wrap around
+				}
+			} else {
+				a.checkNavIndex--
+				if a.checkNavIndex < 0 {
+					a.checkNavIndex = len(a.checkNavLocations) - 1 // wrap around
+				}
+			}
+			loc := a.checkNavLocations[a.checkNavIndex]
+			qname := docNameToQualifiedName(loc.ModuleName, loc.DocumentName)
+			if bv, ok := a.views.Base().(BrowserView); ok {
+				cmd := bv.navigateToNode(qname)
+				a.views.SetBase(bv)
+				if tab := a.activeTabPtr(); tab != nil {
+					tab.Miller = bv.miller
+					tab.UpdateLabel()
+					a.syncTabBar()
+				}
+				return cmd
+			}
+			return handledCmd
+		}
+		// Not 'e' — fall through to normal handling for the pending key
+		// Re-process the pending key's original action
+		if pending == ']' {
+			if a.activeTab < len(a.tabs)-1 {
+				a.activeTab++
+				a.syncBrowserView()
+				a.syncTabBar()
+			}
+		} else if pending == '[' {
+			if a.activeTab > 0 {
+				a.activeTab--
+				a.syncBrowserView()
+				a.syncTabBar()
+			}
+		}
+		// Now process the current key normally (fall through)
+	}
+
+	// Non-nav keys exit check nav mode (preserve for ]/[/! which are nav-related)
+	if a.checkNavActive {
+		key := msg.String()
+		if key != "]" && key != "[" && key != "!" && key != "\\!" {
+			a.checkNavActive = false
+		}
+	}
 
 	switch msg.String() {
 	case "q":
@@ -574,6 +672,10 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 		return handledCmd
 
 	case "[":
+		if len(a.checkErrors) > 0 {
+			a.pendingKey = '['
+			return handledCmd
+		}
 		if a.activeTab > 0 {
 			a.activeTab--
 			a.syncBrowserView()
@@ -582,6 +684,10 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 		return handledCmd
 
 	case "]":
+		if len(a.checkErrors) > 0 {
+			a.pendingKey = ']'
+			return handledCmd
+		}
 		if a.activeTab < len(a.tabs)-1 {
 			a.activeTab++
 			a.syncBrowserView()
@@ -606,11 +712,17 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 		return handledCmd
 
 	case "!", "\\!": // some terminals send "\\!" for shifted-1; accept both forms
-		content := renderCheckResults(a.checkErrors)
-		ov := NewOverlayView("mx check", content, a.width, a.height, OverlayViewOpts{
+		filter := "all"
+		title := renderCheckFilterTitle(a.checkErrors, filter)
+		content := renderCheckResults(a.checkErrors, filter)
+		navLocs := extractCheckNavLocations(a.checkErrors)
+		ov := NewOverlayView(title, content, a.width, a.height, OverlayViewOpts{
 			HideLineNumbers: true,
 			Refreshable:     true,
 			RefreshMsg:      MxCheckRerunMsg{},
+			CheckFilter:     filter,
+			CheckErrors:     a.checkErrors,
+			CheckNavLocs:    navLocs,
 		})
 		a.views.Push(ov)
 		return handledCmd
@@ -724,7 +836,15 @@ func (a App) View() string {
 	a.statusBar.SetBreadcrumb(info.Breadcrumb)
 	a.statusBar.SetPosition(info.Position)
 	a.statusBar.SetMode(info.Mode)
-	a.statusBar.SetCheckBadge(formatCheckBadge(a.checkErrors, a.checkRunning))
+	if a.checkNavActive && len(a.checkNavLocations) > 0 {
+		loc := a.checkNavLocations[a.checkNavIndex]
+		navInfo := fmt.Sprintf("[%d/%d] %s: %s  ]e next  [e prev",
+			a.checkNavIndex+1, len(a.checkNavLocations),
+			loc.Code, docNameToQualifiedName(loc.ModuleName, loc.DocumentName))
+		a.statusBar.SetCheckBadge(CheckWarnStyle.Render(navInfo))
+	} else {
+		a.statusBar.SetCheckBadge(formatCheckBadge(a.checkErrors, a.checkRunning))
+	}
 	viewModeNames := a.collectViewModeNames()
 	a.statusBar.SetViewDepth(a.views.Depth(), viewModeNames)
 	statusLine := StatusBarStyle.Width(a.width).Render(a.statusBar.View(a.width))

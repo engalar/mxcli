@@ -23,35 +23,58 @@ type OverlayViewOpts struct {
 	MxcliPath       string
 	ProjectPath     string
 	HideLineNumbers bool
-	Refreshable     bool // show "r" hint and allow re-triggering via RefreshMsg
-	RefreshMsg      tea.Msg // message to send when "r" is pressed
+	Refreshable     bool          // show "r" hint and allow re-triggering via RefreshMsg
+	RefreshMsg      tea.Msg       // message to send when "r" is pressed
+	CheckAnchors    string        // pre-rendered LLM anchor text for check overlays
+	CheckFilter     string        // severity filter: "all", "error", "warning", "deprecation"
+	CheckErrors     []CheckError  // stored errors for re-rendering with different filter
+	CheckNavLocs    []CheckNavLocation // navigable document locations for selection
 }
 
 // OverlayView wraps an Overlay to satisfy the View interface,
 // adding BSON/MDL switching and self-contained content reload.
 type OverlayView struct {
-	overlay     Overlay
-	qname       string
-	nodeType    string
-	isNDSL      bool
-	switchable  bool
-	mxcliPath   string
-	projectPath string
-	refreshable bool
-	refreshMsg  tea.Msg
+	overlay      Overlay
+	qname        string
+	nodeType     string
+	isNDSL       bool
+	switchable   bool
+	mxcliPath    string
+	projectPath  string
+	refreshable  bool
+	refreshMsg   tea.Msg
+	checkAnchors string       // LLM-structured anchor text, replaces generic anchor when set
+	checkFilter  string       // severity filter for check overlays: "all", "error", "warning", "deprecation"
+	checkErrors  []CheckError // stored check errors for re-rendering with different filter
+	checkNavLocs []CheckNavLocation // navigable document locations
+	selectedIdx  int               // cursor index into checkNavLocs (-1 = none)
+	pendingKey   rune              // ']' or '[' waiting for 'e', 0 if none
 }
 
 // NewOverlayView creates an OverlayView with the given title, content, dimensions, and options.
 func NewOverlayView(title, content string, width, height int, opts OverlayViewOpts) OverlayView {
+	checkFilter := opts.CheckFilter
+	if checkFilter == "" {
+		checkFilter = "all"
+	}
+	selectedIdx := -1
+	if len(opts.CheckNavLocs) > 0 {
+		selectedIdx = 0
+	}
 	ov := OverlayView{
-		qname:       opts.QName,
-		nodeType:    opts.NodeType,
-		isNDSL:      opts.IsNDSL,
-		switchable:  opts.Switchable,
-		mxcliPath:   opts.MxcliPath,
-		projectPath: opts.ProjectPath,
-		refreshable: opts.Refreshable,
-		refreshMsg:  opts.RefreshMsg,
+		qname:        opts.QName,
+		nodeType:     opts.NodeType,
+		isNDSL:       opts.IsNDSL,
+		switchable:   opts.Switchable,
+		mxcliPath:    opts.MxcliPath,
+		projectPath:  opts.ProjectPath,
+		refreshable:  opts.Refreshable,
+		refreshMsg:   opts.RefreshMsg,
+		checkAnchors: opts.CheckAnchors,
+		checkFilter:  checkFilter,
+		checkErrors:  opts.CheckErrors,
+		checkNavLocs: opts.CheckNavLocs,
+		selectedIdx:  selectedIdx,
 	}
 	ov.overlay = NewOverlay()
 	ov.overlay.switchable = opts.Switchable
@@ -79,6 +102,19 @@ func (ov OverlayView) Update(msg tea.Msg) (View, tea.Cmd) {
 		switch msg.String() {
 		case "esc", "q":
 			return ov, func() tea.Msg { return PopViewMsg{} }
+		case "enter":
+			// Navigate to selected document in check overlay
+			if ov.selectedIdx >= 0 && ov.selectedIdx < len(ov.checkNavLocs) {
+				loc := ov.checkNavLocs[ov.selectedIdx]
+				idx := ov.selectedIdx
+				return ov, func() tea.Msg {
+					return NavigateToDocMsg{
+						ModuleName:   loc.ModuleName,
+						DocumentName: loc.DocumentName,
+						NavIndex:     idx,
+					}
+				}
+			}
 		case "r":
 			if ov.refreshable && ov.refreshMsg != nil {
 				refreshMsg := ov.refreshMsg
@@ -88,6 +124,63 @@ func (ov OverlayView) Update(msg tea.Msg) (View, tea.Cmd) {
 			if ov.switchable && ov.qname != "" {
 				ov.isNDSL = !ov.isNDSL
 				return ov, ov.reloadContent()
+			}
+			// When refreshable (check overlay) and not switchable, Tab cycles severity filter
+			if ov.refreshable && !ov.switchable && ov.checkErrors != nil {
+				ov.checkFilter = nextCheckFilter(ov.checkFilter)
+				// Recompute nav locations for new filter
+				filtered := filterCheckErrors(ov.checkErrors, ov.checkFilter)
+				ov.checkNavLocs = extractCheckNavLocations(filtered)
+				if ov.selectedIdx >= len(ov.checkNavLocs) {
+					ov.selectedIdx = max(0, len(ov.checkNavLocs)-1)
+				}
+				if len(ov.checkNavLocs) == 0 {
+					ov.selectedIdx = -1
+				}
+				title := renderCheckFilterTitle(ov.checkErrors, ov.checkFilter)
+				content := renderCheckResults(ov.checkErrors, ov.checkFilter)
+				ov.overlay.Show(title, content, ov.overlay.width, ov.overlay.height)
+				return ov, nil
+			}
+		}
+
+		// j/k move cursor, ]e/[e jump between errors in check overlay
+		if len(ov.checkNavLocs) > 0 {
+			switch msg.String() {
+			case "j", "down":
+				if ov.selectedIdx < len(ov.checkNavLocs)-1 {
+					ov.selectedIdx++
+				}
+			case "k", "up":
+				if ov.selectedIdx > 0 {
+					ov.selectedIdx--
+				}
+			case "]":
+				ov.pendingKey = ']'
+				return ov, nil
+			case "[":
+				ov.pendingKey = '['
+				return ov, nil
+			case "e":
+				if ov.pendingKey != 0 {
+					if ov.pendingKey == ']' {
+						ov.selectedIdx++
+						if ov.selectedIdx >= len(ov.checkNavLocs) {
+							ov.selectedIdx = 0
+						}
+					} else {
+						ov.selectedIdx--
+						if ov.selectedIdx < 0 {
+							ov.selectedIdx = len(ov.checkNavLocs) - 1
+						}
+					}
+					ov.pendingKey = 0
+					return ov, nil
+				}
+			}
+			// Clear pending if a non-e key was pressed after ]/[
+			if msg.String() != "]" && msg.String() != "[" && msg.String() != "e" {
+				ov.pendingKey = 0
 			}
 		}
 	}
@@ -105,10 +198,20 @@ func (ov OverlayView) Render(width, height int) string {
 	ov.overlay.height = height
 	rendered := ov.overlay.View()
 
-	// Embed LLM anchor as muted prefix on the first line
-	info := ov.StatusInfo()
-	anchor := fmt.Sprintf("[mxcli:overlay] %s  %s", ov.overlay.title, info.Mode)
-	anchorStr := lipgloss.NewStyle().Foreground(MutedColor).Faint(true).Render(anchor)
+	// Build LLM anchor: compute check-specific structured anchors when check errors
+	// are available, otherwise fall back to generic overlay anchor.
+	var anchor string
+	if len(ov.checkErrors) > 0 {
+		groups := groupCheckErrors(ov.checkErrors)
+		anchor = renderCheckAnchors(groups, ov.checkErrors)
+	} else if ov.checkAnchors != "" {
+		anchor = ov.checkAnchors
+	} else {
+		info := ov.StatusInfo()
+		anchor = fmt.Sprintf("[mxcli:overlay] %s  %s", ov.overlay.title, info.Mode)
+	}
+	anchorStyle := lipgloss.NewStyle().Foreground(MutedColor).Faint(true)
+	anchorStr := anchorStyle.Render(anchor)
 
 	if idx := strings.IndexByte(rendered, '\n'); idx >= 0 {
 		rendered = anchorStr + rendered[idx:]
@@ -125,8 +228,13 @@ func (ov OverlayView) Hints() []Hint {
 		{Key: "/", Label: "search"},
 		{Key: "y", Label: "copy"},
 	}
+	if len(ov.checkNavLocs) > 0 {
+		hints = append(hints, Hint{Key: "Enter", Label: "go to"})
+	}
 	if ov.switchable {
 		hints = append(hints, Hint{Key: "Tab", Label: "mdl/ndsl"})
+	} else if ov.refreshable && ov.checkErrors != nil {
+		hints = append(hints, Hint{Key: "Tab", Label: "filter"})
 	}
 	if ov.refreshable {
 		hints = append(hints, Hint{Key: "r", Label: "rerun"})

@@ -27,6 +27,21 @@ const helpText = `
     T     new tab (pick project)
     1-9   switch tab
 
+  CHECK OVERLAY
+    j/k     scroll + select error
+    Enter   go to document in tree
+    Tab     cycle filter (all/error/warn/depr)
+    r       rerun mx check
+    /       search in content
+    y       copy to clipboard
+    q       close
+
+  CHECK NAVIGATION (after Enter from check overlay)
+    ]e      next error document
+    [e      previous error document
+    !       reopen check overlay
+    Esc     exit nav mode
+
   OVERLAY
     j/k   scroll content
     /     search in content
