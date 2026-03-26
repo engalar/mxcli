@@ -14,10 +14,13 @@ import (
 // chromeHeight is the vertical space consumed by tab bar (1) + hint bar (1) + status bar (1).
 const chromeHeight = 3
 
+// handledNoop is a pre-allocated no-op Msg to avoid per-call goroutine allocation.
+var handledNoop tea.Msg = struct{}{}
+
 // handledCmd is returned by handleBrowserAppKeys to signal that a key was
 // consumed without producing a follow-up message.  Using a shared variable
 // avoids allocating a new closure on every handled keystroke.
-var handledCmd tea.Cmd = func() tea.Msg { return nil }
+var handledCmd tea.Cmd = func() tea.Msg { return handledNoop }
 
 // compareFlashClearMsg is sent 1 s after a clipboard copy in compare view.
 type compareFlashClearMsg struct{}
