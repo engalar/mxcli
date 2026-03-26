@@ -3,11 +3,15 @@ package tui
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"net"
 	"os"
 	"sync"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/mendixlabs/mxcli/mdl/formatter"
 )
 
 // AgentListener accepts agent connections on a Unix socket and converts
@@ -102,6 +106,13 @@ func (al *AgentListener) handleConnection(conn net.Conn) {
 			continue
 		}
 
+		// Synchronous actions: handled directly in the listener goroutine
+		// without bubbletea round-trip (pure computation or read-only).
+		if resp, ok := al.handleSyncAction(req); ok {
+			encoder.Encode(resp)
+			continue
+		}
+
 		responseCh := make(chan AgentResponse, 1)
 
 		switch req.Action {
@@ -113,9 +124,47 @@ func (al *AgentListener) handleConnection(conn net.Conn) {
 			al.sendMsg(AgentStateMsg{RequestID: req.ID, ResponseCh: responseCh})
 		case "navigate":
 			al.sendMsg(AgentNavigateMsg{RequestID: req.ID, Target: req.Target, ResponseCh: responseCh})
+		case "delete":
+			al.sendMsg(AgentDeleteMsg{RequestID: req.ID, Target: req.Target, ResponseCh: responseCh})
+		case "create_module":
+			al.sendMsg(AgentCreateModuleMsg{RequestID: req.ID, Name: req.Name, ResponseCh: responseCh})
+		case "list":
+			mdl, err := buildListCmd(req.Target)
+			if err != nil {
+				encoder.Encode(AgentResponse{ID: req.ID, OK: false, Error: err.Error()})
+				continue
+			}
+			al.sendMsg(AgentExecMsg{RequestID: req.ID, MDL: mdl, ResponseCh: responseCh})
+		case "describe":
+			mdl, err := buildAgentDescribeCmd(req.Target)
+			if err != nil {
+				encoder.Encode(AgentResponse{ID: req.ID, OK: false, Error: err.Error()})
+				continue
+			}
+			al.sendMsg(AgentExecMsg{RequestID: req.ID, MDL: mdl, ResponseCh: responseCh})
+		default:
+			encoder.Encode(AgentResponse{ID: req.ID, OK: false, Error: fmt.Sprintf("unknown action: %q", req.Action)})
+			continue
 		}
 
-		resp := <-responseCh
-		encoder.Encode(resp)
+		select {
+		case resp := <-responseCh:
+			encoder.Encode(resp)
+		case <-time.After(60 * time.Second):
+			encoder.Encode(AgentResponse{ID: req.ID, OK: false, Error: "timeout waiting for TUI response"})
+		}
 	}
 }
+
+// handleSyncAction handles actions that can be resolved synchronously
+// without going through the bubbletea event loop.
+// Returns (response, true) if handled, (zero, false) if not.
+func (al *AgentListener) handleSyncAction(req AgentRequest) (AgentResponse, bool) {
+	switch req.Action {
+	case "format":
+		formatted := formatter.Format(req.MDL)
+		return AgentResponse{ID: req.ID, OK: true, Result: formatted}, true
+	}
+	return AgentResponse{}, false
+}
+
