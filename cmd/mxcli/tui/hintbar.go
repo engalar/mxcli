@@ -32,18 +32,9 @@ var (
 	ListBrowsingHints = []Hint{
 		{Key: "h", Label: "back"},
 		{Key: "l", Label: "open"},
-		{Key: "Space", Label: "jump"},
 		{Key: "/", Label: "filter"},
-		{Key: "Tab", Label: "mdl/ndsl"},
-		{Key: "y", Label: "copy"},
-		{Key: "c", Label: "compare"},
-		{Key: "z", Label: "zen"},
-		{Key: "r", Label: "refresh"},
-		{Key: "t", Label: "tab"},
-		{Key: "T", Label: "new project"},
-		{Key: "1-9", Label: "switch tab"},
-		{Key: "x", Label: "exec"},
 		{Key: "!", Label: "check"},
+		{Key: ":", Label: "commands"},
 		{Key: "?", Label: "help"},
 	}
 	FilterActiveHints = []Hint{

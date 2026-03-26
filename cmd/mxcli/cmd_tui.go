@@ -33,12 +33,32 @@ Commands (via : bar):
   :diagram         open diagram in browser
   :search <kw>     full-text search
 
+Flags:
+  -c, --continue   Restore previous session (tab, navigation, preview mode)
+
 Example:
   mxcli tui -p app.mpr
+  mxcli tui -c
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath, _ := cmd.Flags().GetString("project")
+		continueSession, _ := cmd.Flags().GetBool("continue")
 		mxcliPath, _ := os.Executable()
+
+		// Try to restore session when -c flag is set
+		var session *tui.TUISession
+		if continueSession {
+			loaded, err := tui.LoadSession()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: could not load session: %v\n", err)
+			} else if loaded != nil {
+				session = loaded
+				// Use project path from session if not explicitly provided
+				if projectPath == "" && len(session.Tabs) > 0 {
+					projectPath = session.Tabs[0].ProjectPath
+				}
+			}
+		}
 
 		if projectPath == "" {
 			picker := tui.NewPickerModel()
@@ -55,9 +75,18 @@ Example:
 			projectPath = m.Chosen()
 		}
 
+		// Verify project file exists
+		if _, err := os.Stat(projectPath); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: project file not found: %s\n", projectPath)
+			os.Exit(1)
+		}
+
 		tui.SaveHistory(projectPath)
 
 		m := tui.NewApp(mxcliPath, projectPath)
+		if session != nil {
+			m.SetPendingSession(session)
+		}
 		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 		m.StartWatcher(p)
 		if _, err := p.Run(); err != nil {
@@ -65,4 +94,8 @@ Example:
 			os.Exit(1)
 		}
 	},
+}
+
+func init() {
+	tuiCmd.Flags().BoolP("continue", "c", false, "Restore previous TUI session")
 }

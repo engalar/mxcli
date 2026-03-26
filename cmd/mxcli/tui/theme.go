@@ -74,6 +74,7 @@ var (
 	// mx check result styles
 	CheckErrorStyle   = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "160", Dark: "196"})
 	CheckWarnStyle    = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "172", Dark: "214"})
+	CheckDeprecStyle  = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "67", Dark: "103"})
 	CheckPassStyle    = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "28", Dark: "114"})
 	CheckLocStyle     = lipgloss.NewStyle().Foreground(MutedColor)
 	CheckHeaderStyle  = lipgloss.NewStyle().Bold(true)

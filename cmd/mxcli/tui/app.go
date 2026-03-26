@@ -14,10 +14,13 @@ import (
 // chromeHeight is the vertical space consumed by tab bar (1) + hint bar (1) + status bar (1).
 const chromeHeight = 3
 
+// handledNoop is a pre-allocated no-op Msg to avoid per-call goroutine allocation.
+var handledNoop tea.Msg = struct{}{}
+
 // handledCmd is returned by handleBrowserAppKeys to signal that a key was
 // consumed without producing a follow-up message.  Using a shared variable
 // avoids allocating a new closure on every handled keystroke.
-var handledCmd tea.Cmd = func() tea.Msg { return nil }
+var handledCmd tea.Cmd = func() tea.Msg { return handledNoop }
 
 // compareFlashClearMsg is sent 1 s after a clipboard copy in compare view.
 type compareFlashClearMsg struct{}
@@ -36,6 +39,12 @@ type App struct {
 	showHelp bool
 	picker   *PickerModel // non-nil when cross-project picker is open
 
+	// Check error navigation state (]e / [e)
+	checkNavActive    bool
+	checkNavIndex     int
+	checkNavLocations []CheckNavLocation
+	pendingKey        rune // ']' or '[' waiting for 'e', 0 if none
+
 	tabBar        TabBar
 	hintBar       HintBar
 	statusBar     StatusBar
@@ -44,6 +53,8 @@ type App struct {
 	watcher       *Watcher
 	checkErrors   []CheckError // nil = no check run yet, empty = pass
 	checkRunning  bool
+
+	pendingSession *TUISession // session to restore after tree loads
 }
 
 // NewApp creates the root App model.
@@ -126,7 +137,7 @@ func (a *App) syncBrowserView() {
 	// Ensure miller has current dimensions so scroll calculations in
 	// Update() work correctly (Render operates on a value copy).
 	if a.height > 0 {
-		contentH := max(5, a.height-chromeHeight)
+		contentH := max(5, a.height-chromeHeight-1) // -1 for LLM anchor line
 		bv.miller.SetSize(a.width, contentH)
 	}
 	a.views.SetBase(bv)
@@ -162,6 +173,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case PopViewMsg:
 		a.views.Pop()
+		return a, nil
+
+	case PaletteExecMsg:
+		a.views.Pop()
+		if msg.Key != "" {
+			return a, a.dispatchPaletteKey(msg.Key)
+		}
 		return a, nil
 
 	// --- View creation messages ---
@@ -206,6 +224,26 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				tab.UpdateLabel()
 				a.syncTabBar()
 			}
+			return a, cmd
+		}
+		return a, nil
+
+	case NavigateToDocMsg:
+		// Close overlay, navigate tree to document, enter check nav mode
+		a.views.Pop()
+		qname := docNameToQualifiedName(msg.ModuleName, msg.DocumentName)
+		if bv, ok := a.views.Base().(BrowserView); ok {
+			cmd := bv.navigateToNode(qname)
+			a.views.SetBase(bv)
+			if tab := a.activeTabPtr(); tab != nil {
+				tab.Miller = bv.miller
+				tab.UpdateLabel()
+				a.syncTabBar()
+			}
+			// Enter check nav mode
+			a.checkNavActive = true
+			a.checkNavIndex = msg.NavIndex
+			a.checkNavLocations = extractCheckNavLocations(filterCheckErrors(a.checkErrors, "all"))
 			return a, cmd
 		}
 		return a, nil
@@ -372,8 +410,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 
-		// Tab bar clicks (row 0) — only when in browser mode
-		if msg.Y == 0 && a.views.Active().Mode() == ModeBrowser &&
+		// Tab bar clicks (row 1, after LLM anchor line) — only when in browser mode
+		if msg.Y == 1 && a.views.Active().Mode() == ModeBrowser &&
 			msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 			if clickMsg := a.tabBar.HandleClick(msg.X); clickMsg != nil {
 				if tc, ok := clickMsg.(TabClickMsg); ok {
@@ -401,10 +439,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// Offset Y by -1 for tab bar when in browser mode
+		// Offset Y by -2 (LLM anchor line + tab bar) when in browser mode
 		if a.views.Active().Mode() == ModeBrowser {
 			offsetMsg := tea.MouseMsg{
-				X: msg.X, Y: msg.Y - 1,
+				X: msg.X, Y: msg.Y - 2,
 				Button: msg.Button, Action: msg.Action,
 			}
 			updated, cmd := a.views.Active().Update(offsetMsg)
@@ -426,7 +464,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// scroll calculations (Render operates on a copy and cannot
 		// persist dimensions back).
 		if bv, ok := a.views.Active().(BrowserView); ok {
-			contentH := a.height - chromeHeight
+			contentH := a.height - chromeHeight - 1 // -1 for LLM anchor line
 			if contentH < 5 {
 				contentH = 5
 			}
@@ -448,11 +486,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					bv.allNodes = msg.Nodes
 					bv.miller = tab.Miller
 					if a.height > 0 {
-						contentH := max(5, a.height-chromeHeight)
+						contentH := max(5, a.height-chromeHeight-1) // -1 for LLM anchor line
 						bv.miller.SetSize(a.width, contentH)
 					}
 					a.views.SetBase(bv)
 				}
+			}
+
+			// Apply pending session restore after tree is loaded
+			if a.pendingSession != nil {
+				applySessionRestore(&a)
 			}
 		}
 		return a, nil
@@ -488,8 +531,18 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Update check overlay content if it's currently visible
 		if ov, ok := a.views.Active().(OverlayView); ok && ov.refreshable {
-			content := renderCheckResults(a.checkErrors)
-			ov.overlay.Show("mx check", content, ov.overlay.width, ov.overlay.height)
+			ov.checkErrors = a.checkErrors
+			filtered := filterCheckErrors(a.checkErrors, ov.checkFilter)
+			ov.checkNavLocs = extractCheckNavLocations(filtered)
+			if ov.selectedIdx >= len(ov.checkNavLocs) {
+				ov.selectedIdx = max(0, len(ov.checkNavLocs)-1)
+			}
+			if len(ov.checkNavLocs) == 0 {
+				ov.selectedIdx = -1
+			}
+			title := renderCheckFilterTitle(a.checkErrors, ov.checkFilter)
+			content := renderCheckResults(a.checkErrors, ov.checkFilter)
+			ov.overlay.Show(title, content, ov.overlay.width, ov.overlay.height)
 			a.views.SetActive(ov)
 		}
 		return a, nil
@@ -523,8 +576,74 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 	tab := a.activeTabPtr()
 
+	// Handle two-key sequence: ]e / [e (check error navigation)
+	if a.pendingKey != 0 {
+		pending := a.pendingKey
+		a.pendingKey = 0
+		if msg.String() == "e" && len(a.checkErrors) > 0 {
+			// Lazily initialize check nav state if not already active
+			if !a.checkNavActive {
+				a.checkNavActive = true
+				a.checkNavLocations = extractCheckNavLocations(filterCheckErrors(a.checkErrors, "all"))
+				a.checkNavIndex = -1 // will be incremented to 0 for ], or wrapped to last for [
+			}
+			if pending == ']' {
+				a.checkNavIndex++
+				if a.checkNavIndex >= len(a.checkNavLocations) {
+					a.checkNavIndex = 0 // wrap around
+				}
+			} else {
+				a.checkNavIndex--
+				if a.checkNavIndex < 0 {
+					a.checkNavIndex = len(a.checkNavLocations) - 1 // wrap around
+				}
+			}
+			loc := a.checkNavLocations[a.checkNavIndex]
+			qname := docNameToQualifiedName(loc.ModuleName, loc.DocumentName)
+			if bv, ok := a.views.Base().(BrowserView); ok {
+				cmd := bv.navigateToNode(qname)
+				a.views.SetBase(bv)
+				if tab := a.activeTabPtr(); tab != nil {
+					tab.Miller = bv.miller
+					tab.UpdateLabel()
+					a.syncTabBar()
+				}
+				return cmd
+			}
+			return handledCmd
+		}
+		// Not 'e' — fall through to normal handling for the pending key
+		// Re-process the pending key's original action
+		if pending == ']' {
+			if a.activeTab < len(a.tabs)-1 {
+				a.activeTab++
+				a.syncBrowserView()
+				a.syncTabBar()
+			}
+		} else if pending == '[' {
+			if a.activeTab > 0 {
+				a.activeTab--
+				a.syncBrowserView()
+				a.syncTabBar()
+			}
+		}
+		// Now process the current key normally (fall through)
+	}
+
+	// Non-nav keys exit check nav mode (preserve for ]/[/! which are nav-related)
+	if a.checkNavActive {
+		key := msg.String()
+		if key != "]" && key != "[" && key != "!" && key != "\\!" {
+			a.checkNavActive = false
+		}
+	}
+
 	switch msg.String() {
 	case "q":
+		// Save session state before quitting
+		if session := ExtractSession(a); session != nil {
+			_ = SaveSession(session)
+		}
 		if a.watcher != nil {
 			a.watcher.Close()
 		}
@@ -574,6 +693,10 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 		return handledCmd
 
 	case "[":
+		if len(a.checkErrors) > 0 {
+			a.pendingKey = '['
+			return handledCmd
+		}
 		if a.activeTab > 0 {
 			a.activeTab--
 			a.syncBrowserView()
@@ -582,6 +705,10 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 		return handledCmd
 
 	case "]":
+		if len(a.checkErrors) > 0 {
+			a.pendingKey = ']'
+			return handledCmd
+		}
 		if a.activeTab < len(a.tabs)-1 {
 			a.activeTab++
 			a.syncBrowserView()
@@ -606,26 +733,41 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 		return handledCmd
 
 	case "!", "\\!": // some terminals send "\\!" for shifted-1; accept both forms
-		content := renderCheckResults(a.checkErrors)
-		ov := NewOverlayView("mx check", content, a.width, a.height, OverlayViewOpts{
+		filter := "all"
+		title := renderCheckFilterTitle(a.checkErrors, filter)
+		content := renderCheckResults(a.checkErrors, filter)
+		navLocs := extractCheckNavLocations(a.checkErrors)
+		ov := NewOverlayView(title, content, a.width, a.height, OverlayViewOpts{
 			HideLineNumbers: true,
 			Refreshable:     true,
 			RefreshMsg:      MxCheckRerunMsg{},
+			CheckFilter:     filter,
+			CheckErrors:     a.checkErrors,
+			CheckNavLocs:    navLocs,
 		})
 		a.views.Push(ov)
+		return handledCmd
+
+	case ":":
+		cp := NewCommandPaletteView(a.width, a.height)
+		a.views.Push(cp)
 		return handledCmd
 
 	case "c":
 		cv := NewCompareView()
 		cv.mxcliPath = a.mxcliPath
 		cv.projectPath = a.activeTabProjectPath()
-		cv.Show(CompareNDSL, a.width, a.height)
+		cv.Show(CompareNDSLMDL, a.width, a.height)
 		if tab != nil {
 			cv.SetItems(flattenQualifiedNames(tab.AllNodes))
 			if node := tab.Miller.SelectedNode(); node != nil && node.QualifiedName != "" {
 				cv.SetLoading(CompareFocusLeft)
+				cv.SetLoading(CompareFocusRight)
 				a.views.Push(cv)
-				return cv.loadBsonNDSL(node.QualifiedName, node.Type, CompareFocusLeft)
+				return tea.Batch(
+					cv.loadBsonNDSL(node.QualifiedName, node.Type, CompareFocusLeft),
+					cv.loadMDL(node.QualifiedName, node.Type, CompareFocusRight),
+				)
 			}
 		}
 		a.views.Push(cv)
@@ -653,6 +795,102 @@ func (a *App) switchToTabByID(id int) {
 			return
 		}
 	}
+}
+
+// SetPendingSession stores a session to be restored after the project tree loads.
+func (a *App) SetPendingSession(session *TUISession) {
+	a.pendingSession = session
+}
+
+// applySessionRestore applies the pending session state to the loaded app.
+// Called after LoadTreeMsg delivers nodes so navigation paths can be resolved.
+// Takes *App because it's called from Update (value receiver) via &a.
+func applySessionRestore(a *App) {
+	session := a.pendingSession
+	if session == nil {
+		return
+	}
+	a.pendingSession = nil
+
+	if len(session.Tabs) == 0 {
+		return
+	}
+
+	// Restore the first tab's navigation (multi-tab restore: only the
+	// primary tab is restored since additional tabs need separate
+	// project-tree loads which are not wired yet).
+	ts := session.Tabs[0]
+	tab := a.activeTabPtr()
+	if tab == nil || len(tab.AllNodes) == 0 {
+		return
+	}
+
+	// Navigate to the selected node if available
+	if ts.SelectedNode != "" {
+		if bv, ok := a.views.Base().(BrowserView); ok {
+			bv.allNodes = tab.AllNodes
+			bv.navigateToNode(ts.SelectedNode)
+			// Set preview mode after navigation (navigateToNode resets miller)
+			setPreviewMode(&bv.miller, ts.PreviewMode)
+			tab.Miller = bv.miller
+			tab.UpdateLabel()
+			a.views.SetBase(bv)
+			a.syncTabBar()
+			Trace("app: session restored — navigated to %q", ts.SelectedNode)
+			return
+		}
+	}
+
+	// Fallback: navigate the miller path breadcrumb
+	if len(ts.MillerPath) > 0 {
+		restoreMillerPath(a, tab, ts.MillerPath)
+	}
+
+	// Set preview mode (for path-based or no-navigation restore)
+	setPreviewMode(&tab.Miller, ts.PreviewMode)
+}
+
+// setPreviewMode sets the miller preview mode from a string value.
+func setPreviewMode(miller *MillerView, mode string) {
+	if mode == "NDSL" {
+		miller.preview.mode = PreviewNDSL
+	} else {
+		miller.preview.mode = PreviewMDL
+	}
+}
+
+// restoreMillerPath drills the miller view through a breadcrumb path.
+func restoreMillerPath(a *App, tab *Tab, millerPath []string) {
+	bv, ok := a.views.Base().(BrowserView)
+	if !ok {
+		return
+	}
+	bv.allNodes = tab.AllNodes
+	bv.miller.SetRootNodes(tab.AllNodes)
+
+	for _, segment := range millerPath {
+		found := false
+		for j, item := range bv.miller.current.items {
+			if item.Label == segment {
+				bv.miller.current.SetCursor(j)
+				if item.Node != nil && len(item.Node.Children) > 0 {
+					bv.miller, _ = bv.miller.drillIn()
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			Trace("app: session restore — path segment %q not found, stopping", segment)
+			break
+		}
+	}
+
+	tab.Miller = bv.miller
+	tab.UpdateLabel()
+	a.views.SetBase(bv)
+	a.syncTabBar()
+	Trace("app: session restored via miller path %v", millerPath)
 }
 
 // --- View ---
@@ -708,8 +946,8 @@ func (a App) View() string {
 		}
 	}
 
-	// Content area
-	contentH := a.height - chromeHeight
+	// Content area (chromeHeight + 1 for the LLM anchor line)
+	contentH := a.height - chromeHeight - 1
 	if contentH < 5 {
 		contentH = 5
 	}
@@ -724,12 +962,24 @@ func (a App) View() string {
 	a.statusBar.SetBreadcrumb(info.Breadcrumb)
 	a.statusBar.SetPosition(info.Position)
 	a.statusBar.SetMode(info.Mode)
-	a.statusBar.SetCheckBadge(formatCheckBadge(a.checkErrors, a.checkRunning))
+	if a.checkNavActive && len(a.checkNavLocations) > 0 {
+		loc := a.checkNavLocations[a.checkNavIndex]
+		navInfo := fmt.Sprintf("[%d/%d] %s: %s  ]e next  [e prev",
+			a.checkNavIndex+1, len(a.checkNavLocations),
+			loc.Code, docNameToQualifiedName(loc.ModuleName, loc.DocumentName))
+		a.statusBar.SetCheckBadge(CheckWarnStyle.Render(navInfo))
+	} else {
+		a.statusBar.SetCheckBadge(formatCheckBadge(a.checkErrors, a.checkRunning))
+	}
 	viewModeNames := a.collectViewModeNames()
 	a.statusBar.SetViewDepth(a.views.Depth(), viewModeNames)
 	statusLine := StatusBarStyle.Width(a.width).Render(a.statusBar.View(a.width))
 
-	rendered := tabLine + "\n" + content + "\n" + hintLine + "\n" + statusLine
+	// LLM anchor: machine-readable command list (Faint, not visible to users in practice)
+	anchorStyle := lipgloss.NewStyle().Foreground(MutedColor).Faint(true)
+	anchorLine := anchorStyle.Render("[mxcli:commands] h:back l:open Space:jump /:filter b:bson c:compare d:diagram z:zen Tab:toggle x:exec r:refresh y:copy !:check ]e:next-error [e:prev-error t:tab T:new-tab W:close-tab 1-9:switch ?:help ::palette")
+
+	rendered := anchorLine + "\n" + tabLine + "\n" + content + "\n" + hintLine + "\n" + statusLine
 
 	if a.showHelp {
 		helpView := renderHelp(a.width, a.height)
@@ -817,6 +1067,21 @@ func renderContextSummary(nodes []*TreeNode) string {
 // collectViewModeNames returns the mode names for all views in the stack.
 func (a App) collectViewModeNames() []string {
 	return a.views.ModeNames()
+}
+
+// dispatchPaletteKey converts a palette command key string into a synthetic
+// tea.KeyMsg and re-dispatches it through Update.
+func (a App) dispatchPaletteKey(key string) tea.Cmd {
+	var keyMsg tea.KeyMsg
+	switch key {
+	case " ":
+		keyMsg = tea.KeyMsg{Type: tea.KeySpace}
+	case "Tab":
+		keyMsg = tea.KeyMsg{Type: tea.KeyTab}
+	default:
+		keyMsg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)}
+	}
+	return func() tea.Msg { return keyMsg }
 }
 
 // inferBsonType maps tree node types to valid bson object types.

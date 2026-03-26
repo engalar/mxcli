@@ -172,9 +172,9 @@ func (v ContentView) Update(msg tea.Msg) (ContentView, tea.Cmd) {
 		if msg.Action == tea.MouseActionPress {
 			switch msg.Button {
 			case tea.MouseButtonWheelUp:
-				v.yOffset = clamp(v.yOffset-3, 0, v.maxOffset())
+				v.yOffset = clamp(v.yOffset-mouseScrollStep, 0, v.maxOffset())
 			case tea.MouseButtonWheelDown:
-				v.yOffset = clamp(v.yOffset+3, 0, v.maxOffset())
+				v.yOffset = clamp(v.yOffset+mouseScrollStep, 0, v.maxOffset())
 			}
 		}
 	}
