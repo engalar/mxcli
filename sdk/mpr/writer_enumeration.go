@@ -161,11 +161,9 @@ func serializeConstantDataType(dt model.ConstantDataType) bson.D {
 			{Key: "$Type", Value: "DataTypes$IntegerType"},
 		}
 	case "Long":
-		// Mendix uses IntegerType for both Integer and Long in BSON storage.
-		// DataTypes$LongType does not exist in the metamodel type cache.
 		return bson.D{
 			{Key: "$ID", Value: typeID},
-			{Key: "$Type", Value: "DataTypes$IntegerType"},
+			{Key: "$Type", Value: "DataTypes$LongType"},
 		}
 	case "Decimal":
 		return bson.D{

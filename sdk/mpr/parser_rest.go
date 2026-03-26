@@ -240,7 +240,7 @@ func extractRestDataType(v any) string {
 	switch dtType {
 	case "DataTypes$IntegerType", "DataTypes$IntegerAttributeType":
 		return "Integer"
-	case "DataTypes$LongAttributeType":
+	case "DataTypes$LongType", "DataTypes$LongAttributeType":
 		return "Long"
 	case "DataTypes$DecimalType", "DataTypes$DecimalAttributeType":
 		return "Decimal"
