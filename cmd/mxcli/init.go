@@ -52,6 +52,7 @@ Supported Tools:
   - continue    Continue.dev with custom commands
   - windsurf    Windsurf (Codeium) with MDL rules
   - aider       Aider with project configuration
+  - opencode    OpenCode AI agent with MDL commands and skills
 
 All tools receive universal documentation in AGENTS.md and .ai-context/
 `,
@@ -140,6 +141,35 @@ All tools receive universal documentation in AGENTS.md and .ai-context/
 			if err := os.MkdirAll(lintRulesDir, 0755); err != nil {
 				fmt.Fprintf(os.Stderr, "Error creating .claude/lint-rules directory: %v\n", err)
 				os.Exit(1)
+			}
+		}
+
+		// Create .opencode directory for OpenCode-specific content (if OpenCode is selected)
+		var opencodeCommandsDir, opencodeSkillsDir string
+		if slices.Contains(tools, "opencode") {
+			opencodeDir := filepath.Join(absDir, ".opencode")
+			opencodeCommandsDir = filepath.Join(opencodeDir, "commands")
+			opencodeSkillsDir = filepath.Join(opencodeDir, "skills")
+
+			if err := os.MkdirAll(opencodeCommandsDir, 0755); err != nil {
+				fmt.Fprintf(os.Stderr, "Error creating .opencode/commands directory: %v\n", err)
+				os.Exit(1)
+			}
+			if err := os.MkdirAll(opencodeSkillsDir, 0755); err != nil {
+				fmt.Fprintf(os.Stderr, "Error creating .opencode/skills directory: %v\n", err)
+				os.Exit(1)
+			}
+
+			// Lint rules stay in .claude/lint-rules/ (read by mxcli lint).
+			// Ensure that directory exists even when claude tool is not selected.
+			if !slices.Contains(tools, "claude") {
+				if lintRulesDir == "" {
+					lintRulesDir = filepath.Join(absDir, ".claude", "lint-rules")
+				}
+				if err := os.MkdirAll(lintRulesDir, 0755); err != nil {
+					fmt.Fprintf(os.Stderr, "Error creating .claude/lint-rules directory: %v\n", err)
+					os.Exit(1)
+				}
 			}
 		}
 
@@ -254,6 +284,102 @@ All tools receive universal documentation in AGENTS.md and .ai-context/
 					fmt.Printf("  Created %d lint rule files in .claude/lint-rules/\n", lintRuleCount)
 				}
 			}
+
+			// OpenCode-specific: write commands, lint rules, and skills
+			if toolName == "opencode" && opencodeCommandsDir != "" {
+				cmdCount := 0
+				err = fs.WalkDir(commandsFS, "commands", func(path string, d fs.DirEntry, err error) error {
+					if err != nil {
+						return err
+					}
+					if d.IsDir() {
+						return nil
+					}
+					content, err := commandsFS.ReadFile(path)
+					if err != nil {
+						return err
+					}
+					targetPath := filepath.Join(opencodeCommandsDir, d.Name())
+					if err := os.WriteFile(targetPath, content, 0644); err != nil {
+						return err
+					}
+					cmdCount++
+					return nil
+				})
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "  Error writing OpenCode commands: %v\n", err)
+				} else {
+					fmt.Printf("  Created %d command files in .opencode/commands/\n", cmdCount)
+				}
+
+				lintRuleCount := 0
+				// Only write lint rules from the OpenCode path when Claude is not also
+				// being initialised — the Claude path already writes the same files to
+				// .claude/lint-rules/ and we don't want duplicate log output or writes.
+				if !slices.Contains(tools, "claude") {
+					err = fs.WalkDir(lintRulesFS, "lint-rules", func(path string, d fs.DirEntry, err error) error {
+						if err != nil {
+							return err
+						}
+						if d.IsDir() {
+							return nil
+						}
+						content, err := lintRulesFS.ReadFile(path)
+						if err != nil {
+							return err
+						}
+						targetPath := filepath.Join(lintRulesDir, d.Name())
+						if err := os.WriteFile(targetPath, content, 0644); err != nil {
+							return err
+						}
+						lintRuleCount++
+						return nil
+					})
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "  Error writing lint rules: %v\n", err)
+					} else {
+						fmt.Printf("  Created %d lint rule files in .claude/lint-rules/\n", lintRuleCount)
+					}
+				}
+
+				skillCount2 := 0
+				err = fs.WalkDir(skillsFS, "skills", func(path string, d fs.DirEntry, err error) error {
+					if err != nil {
+						return err
+					}
+					if d.IsDir() {
+						return nil
+					}
+					// Skip README
+					if d.Name() == "README.md" {
+						return nil
+					}
+					content, err := skillsFS.ReadFile(path)
+					if err != nil {
+						return err
+					}
+					// Derive skill name from filename (strip .md)
+					skillName := strings.TrimSuffix(d.Name(), ".md")
+					// Create per-skill subdirectory
+					skillDir := filepath.Join(opencodeSkillsDir, skillName)
+					if err := os.MkdirAll(skillDir, 0755); err != nil {
+						return err
+					}
+					// Wrap content with OpenCode frontmatter
+					wrapped := wrapSkillContent(skillName, content)
+					targetPath := filepath.Join(skillDir, "SKILL.md")
+					if err := os.WriteFile(targetPath, wrapped, 0644); err != nil {
+						return err
+					}
+					skillCount2++
+					return nil
+				})
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "  Error writing OpenCode skills: %v\n", err)
+				} else {
+					fmt.Printf("  Created %d skill directories in .opencode/skills/\n", skillCount2)
+				}
+			}
 		}
 
 		// Write universal AGENTS.md
@@ -312,8 +438,8 @@ All tools receive universal documentation in AGENTS.md and .ai-context/
 			}
 		}
 
-		// Install VS Code extension if Claude is selected
-		if slices.Contains(tools, "claude") {
+		// Install VS Code extension if Claude or OpenCode is selected
+		if slices.Contains(tools, "claude") || slices.Contains(tools, "opencode") {
 			installVSCodeExtension(absDir)
 		}
 
@@ -338,6 +464,41 @@ All tools receive universal documentation in AGENTS.md and .ai-context/
 		fmt.Println("  ./mxcli search \"pattern\"       - Search project")
 		fmt.Println("  ./mxcli lint                   - Check for issues")
 	},
+}
+
+// yamlSingleQuote wraps s in YAML single quotes and escapes any internal
+// single quotes by doubling them, so the result is safe to embed in a YAML
+// value without further quoting.
+func yamlSingleQuote(s string) string {
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "'", "''")
+	return "'" + s + "'"
+}
+
+// wrapSkillContent prepends OpenCode-compatible YAML frontmatter to a skill file.
+// OpenCode requires each skill to live in its own subdirectory as SKILL.md and
+// the file must start with YAML frontmatter containing name, description, and
+// compatibility fields.
+func wrapSkillContent(skillName string, content []byte) []byte {
+	description := extractSkillDescription(content)
+	frontmatter := fmt.Sprintf("---\nname: %s\ndescription: %s\ncompatibility: opencode\n---\n\n", yamlSingleQuote(skillName), yamlSingleQuote(description))
+	return append([]byte(frontmatter), content...)
+}
+
+// extractSkillDescription returns a one-line description for the skill by
+// finding the first top-level markdown heading (# ...) and stripping a leading
+// "Skill: " prefix if present.  Falls back to "MDL skill" if no heading is
+// found.
+func extractSkillDescription(content []byte) string {
+	for _, line := range strings.Split(string(content), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "# ") {
+			desc := strings.TrimPrefix(line, "# ")
+			desc = strings.TrimPrefix(desc, "Skill: ")
+			return strings.TrimSpace(desc)
+		}
+	}
+	return "MDL skill"
 }
 
 func findMprFile(dir string) string {
@@ -1000,7 +1161,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 
 	// Add flags for tool selection
-	initCmd.Flags().StringSliceVar(&initTools, "tool", []string{}, "AI tool(s) to configure (claude, cursor, continue, windsurf, aider)")
+	initCmd.Flags().StringSliceVar(&initTools, "tool", []string{}, "AI tool(s) to configure (claude, opencode, cursor, continue, windsurf, aider)")
 	initCmd.Flags().BoolVar(&initAllTools, "all-tools", false, "Initialize for all supported AI tools")
 	initCmd.Flags().BoolVar(&initListTools, "list-tools", false, "List supported AI tools and exit")
 }

@@ -4,7 +4,7 @@
 >
 > **Do not edit a project with mxcli while it is open in Studio Pro.** Studio Pro maintains in-memory caches that cannot be updated externally. Close the project in Studio Pro first, run mxcli, then re-open the project.
 
-A command-line tool that enables AI coding assistants ([Claude Code](https://claude.ai/claude-code), Cursor, Continue.dev, Windsurf, Aider, and others) to read, understand, and modify Mendix application projects.
+A command-line tool that enables AI coding assistants ([Claude Code](https://claude.ai/claude-code), OpenCode, Cursor, Continue.dev, Windsurf, Aider, and others) to read, understand, and modify Mendix application projects.
 
 **[Read the documentation](https://mendixlabs.github.io/mxcli/)** | **[Try it in the Playground](https://codespaces.new/mendixlabs/mxcli-playground)** -- no install needed, runs in your browser
 
@@ -125,6 +125,7 @@ claude  # or use Cursor, Continue.dev, etc.
 | Tool | Config File | Description |
 |------|------------|-------------|
 | **Claude Code** | `.claude/`, `CLAUDE.md` | Full integration with skills and commands |
+| **OpenCode** | `.opencode/`, `opencode.json` | Skills, commands, and lint rules |
 | **Cursor** | `.cursorrules` | Compact MDL reference and command guide |
 | **Continue.dev** | `.continue/config.json` | Custom commands and slash commands |
 | **Windsurf** | `.windsurfrules` | Codeium's AI with MDL rules |

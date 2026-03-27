@@ -5,8 +5,10 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -34,6 +36,7 @@ Supported Tools:
   - continue    Continue.dev with custom commands
   - windsurf    Windsurf (Codeium) with MDL rules
   - aider       Aider with project configuration
+  - opencode    OpenCode AI agent with MDL commands and skills
 `,
 	Args: cobra.RangeArgs(0, 2),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -129,6 +132,101 @@ Supported Tools:
 		if _, err := os.Stat(aiContextDir); os.IsNotExist(err) {
 			fmt.Println("\n  Note: .ai-context/ directory not found.")
 			fmt.Println("  Run 'mxcli init' first to create universal documentation.")
+		}
+
+		// OpenCode sidecar: commands, skills, lint-rules (same as mxcli init)
+		if toolName == "opencode" {
+			opencodeDir := filepath.Join(absDir, ".opencode")
+			opencodeCommandsDir := filepath.Join(opencodeDir, "commands")
+			opencodeSkillsDir := filepath.Join(opencodeDir, "skills")
+			lintRulesDir := filepath.Join(absDir, ".claude", "lint-rules")
+
+			for _, dir := range []string{opencodeCommandsDir, opencodeSkillsDir, lintRulesDir} {
+				if err := os.MkdirAll(dir, 0755); err != nil {
+					fmt.Fprintf(os.Stderr, "  Error creating directory %s: %v\n", dir, err)
+				}
+			}
+
+			cmdCount := 0
+			if err := fs.WalkDir(commandsFS, "commands", func(path string, d fs.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
+				content, err := commandsFS.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				targetPath := filepath.Join(opencodeCommandsDir, d.Name())
+				if _, statErr := os.Stat(targetPath); statErr == nil {
+					return nil // skip existing
+				}
+				if err := os.WriteFile(targetPath, content, 0644); err != nil {
+					return err
+				}
+				cmdCount++
+				return nil
+			}); err != nil {
+				fmt.Fprintf(os.Stderr, "  Error writing OpenCode commands: %v\n", err)
+			} else if cmdCount > 0 {
+				fmt.Printf("  Created %d command files in .opencode/commands/\n", cmdCount)
+			}
+
+			lintCount := 0
+			if err := fs.WalkDir(lintRulesFS, "lint-rules", func(path string, d fs.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
+				content, err := lintRulesFS.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				targetPath := filepath.Join(lintRulesDir, d.Name())
+				if _, statErr := os.Stat(targetPath); statErr == nil {
+					return nil // skip existing
+				}
+				if err := os.WriteFile(targetPath, content, 0644); err != nil {
+					return err
+				}
+				lintCount++
+				return nil
+			}); err != nil {
+				fmt.Fprintf(os.Stderr, "  Error writing lint rules: %v\n", err)
+			} else if lintCount > 0 {
+				fmt.Printf("  Created %d lint rule files in .claude/lint-rules/\n", lintCount)
+			}
+
+			skillCount := 0
+			if err := fs.WalkDir(skillsFS, "skills", func(path string, d fs.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
+				if d.Name() == "README.md" {
+					return nil
+				}
+				content, err := skillsFS.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				skillName := strings.TrimSuffix(d.Name(), ".md")
+				skillDir := filepath.Join(opencodeSkillsDir, skillName)
+				if err := os.MkdirAll(skillDir, 0755); err != nil {
+					return err
+				}
+				targetPath := filepath.Join(skillDir, "SKILL.md")
+				if _, statErr := os.Stat(targetPath); statErr == nil {
+					return nil // skip existing
+				}
+				wrapped := wrapSkillContent(skillName, content)
+				if err := os.WriteFile(targetPath, wrapped, 0644); err != nil {
+					return err
+				}
+				skillCount++
+				return nil
+			}); err != nil {
+				fmt.Fprintf(os.Stderr, "  Error writing OpenCode skills: %v\n", err)
+			} else if skillCount > 0 {
+				fmt.Printf("  Created %d skill directories in .opencode/skills/\n", skillCount)
+			}
 		}
 
 		fmt.Println("\n✓ Tool support added!")

@@ -1,12 +1,15 @@
-# Cursor / Continue.dev / Windsurf
+# Other AI tools
 
-Claude Code is the default integration, but mxcli also supports Cursor, Continue.dev, Windsurf, and Aider. Each tool gets its own configuration file that teaches the AI about MDL syntax and mxcli commands.
+Claude Code is the default integration, but mxcli also supports OpenCode, Cursor, Continue.dev, Windsurf, and Aider. Each tool gets its own configuration file that teaches the AI about MDL syntax and mxcli commands.
 
 ## Initializing for a specific tool
 
 Use the `--tool` flag to specify which AI tool you use:
 
 ```bash
+# OpenCode
+mxcli init --tool opencode /path/to/my-mendix-project
+
 # Cursor
 mxcli init --tool cursor /path/to/my-mendix-project
 
@@ -60,12 +63,21 @@ On top of the universal files, each tool gets its own configuration:
 | Tool | Config File | Contents |
 |------|-------------|----------|
 | **Claude Code** | `.claude/`, `CLAUDE.md` | Settings, skills, commands, lint rules, project context |
+| **OpenCode** | `.opencode/`, `opencode.json` | Skills, commands, lint rules, project context |
 | **Cursor** | `.cursorrules` | Compact MDL reference and mxcli command guide |
 | **Continue.dev** | `.continue/config.json` | Custom commands and slash commands |
 | **Windsurf** | `.windsurfrules` | MDL rules for Codeium's AI |
 | **Aider** | `.aider.conf.yml` | YAML configuration for Aider |
 
 ## Tool details
+
+### OpenCode
+
+OpenCode receives full integration on par with Claude Code: dedicated skills in `.opencode/skills/`, slash commands in `.opencode/commands/`, and Starlark lint rules in `.claude/lint-rules/`. See the dedicated [OpenCode Integration](opencode.md) page for the complete walkthrough.
+
+```bash
+mxcli init --tool opencode /path/to/project
+```
 
 ### Cursor
 
