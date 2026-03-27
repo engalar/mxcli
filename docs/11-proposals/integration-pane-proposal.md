@@ -14,6 +14,8 @@ Mendix Studio Pro has an **Integration Pane** that shows all connected services 
 | **Published REST** | Self-defined | Resources, operations |
 | **Business Events** | AsyncAPI | Channels, messages, attributes |
 | **Database Connection** | DB schema | Queries, table mappings, parameters |
+| **SOAP Client** (consumed) | WSDL | Imported operations, parameters |
+| **SOAP Service** (published) | WSDL | Published operations, parameters, microflow handlers |
 
 ### Two Levels of Discovery
 
@@ -32,6 +34,8 @@ Mendix Studio Pro has an **Integration Pane** that shows all connected services 
 | OData Service (published) | `SHOW ODATA SERVICES` | `DESCRIBE ODATA SERVICE` | `odata_services` |
 | External Entity | `SHOW EXTERNAL ENTITIES` | `DESCRIBE EXTERNAL ENTITY` | — (in `entities` table) |
 | External Action | — | — | — |
+| SOAP Client (consumed) | — | — | — |
+| SOAP Service (published) | — | — | — |
 | REST Client | `SHOW REST CLIENTS` | `DESCRIBE REST CLIENT` | — |
 | Published REST | — | — | — |
 | Business Event Service | `SHOW BUSINESS EVENT SERVICES` | `DESCRIBE BUSINESS EVENT SERVICE` | `business_event_services` |
@@ -52,6 +56,8 @@ Mendix Studio Pro has an **Integration Pane** that shows all connected services 
 | No `business_events` table | Individual messages not queryable |
 | `CallExternalAction` not in activity type switch | Catalog builder doesn't recognize this activity type |
 | `activities` table missing service/action columns | No OData service or action name stored per activity |
+| No SOAP parsing at all | `WebServices$ImportedWebService` and `WebServices$PublishedWebService` BSON types exist in metamodel but no parser, reader, model types, or commands |
+| No `soap_clients` / `soap_services` tables | SOAP services not queryable |
 
 ---
 
@@ -330,6 +336,48 @@ Phase 2 is out of scope for this PR.
 
 ---
 
+## Phase 3: SOAP Web Services (Future)
+
+Mendix supports both consuming and publishing SOAP web services. The BSON types are fully defined in the metamodel (`WebServices$ImportedWebService`, `WebServices$PublishedWebService`) but **no parser, reader, model types, or commands exist yet**. This requires building the full stack from scratch.
+
+### BSON Types Available
+
+| Type | Description |
+|---|---|
+| `WebServices$ImportedWebService` | Consumed SOAP service — holds WSDL, operations, port/binding info |
+| `WebServices$PublishedWebService` | Published SOAP service — versioned services with published operations |
+| `WebServices$WsdlDescription` | WSDL metadata (schema entries, target namespace) |
+| `WebServices$ServiceInfo` | SOAP service definition (location, port, SOAP version, operations) |
+| `WebServices$OperationInfo` | Individual SOAP operation (request/response body, SOAP action) |
+| `WebServices$PublishedOperation` | Published operation (microflow handler, parameters, return type) |
+| `WebServices$VersionedService` | Versioned published service (caption, authentication, validation) |
+| `Microflows$WebServiceCallAction` | Microflow activity that calls a consumed SOAP operation |
+
+### Implementation Steps
+
+1. **Model types** — Add `ImportedWebService`, `PublishedWebService` to `model/types.go`
+2. **Parser** — Create `sdk/mpr/parser_webservices.go` for BSON deserialization
+3. **Reader** — Add `ListImportedWebServices()`, `ListPublishedWebServices()` to reader
+4. **SHOW/DESCRIBE** — `SHOW SOAP CLIENTS`, `SHOW SOAP SERVICES`, `DESCRIBE SOAP CLIENT`, `DESCRIBE SOAP SERVICE`
+5. **Catalog tables** — `soap_clients` (with operation count, WSDL URL, SOAP version), `soap_services` (with versioned service info), `soap_operations` (detail table)
+6. **Microflow integration** — Add `WebServiceCallAction` to `getMicroflowActionType()` and populate `ServiceRef`/`ActionRef`
+
+### Target MDL Commands
+```sql
+SHOW SOAP CLIENTS;                           -- List consumed SOAP services
+SHOW SOAP CLIENTS IN MyModule;
+SHOW SOAP SERVICES;                          -- List published SOAP services
+DESCRIBE SOAP CLIENT MyModule.WeatherService;
+DESCRIBE SOAP SERVICE MyModule.OrderService;
+
+-- Catalog queries
+SELECT * FROM CATALOG.SOAP_CLIENTS;
+SELECT * FROM CATALOG.SOAP_SERVICES;
+SELECT * FROM CATALOG.SOAP_OPERATIONS;
+```
+
+---
+
 ## Example Queries After Phase 1
 
 ```sql
@@ -337,7 +385,8 @@ Phase 2 is out of scope for this PR.
 SELECT ObjectType, QualifiedName, ModuleName
 FROM CATALOG.OBJECTS
 WHERE ObjectType IN ('ODataClient', 'RestClient', 'PublishedODataService',
-                     'PublishedRestService', 'BusinessEventService', 'DatabaseConnection');
+                     'PublishedRestService', 'BusinessEventService', 'DatabaseConnection',
+                     'SoapClient', 'SoapService');  -- Phase 3
 
 -- All external entities and their source services
 SELECT QualifiedName, ServiceName, EntitySet, RemoteName
