@@ -22,11 +22,12 @@ Fewer tokens means lower API costs, more of your application fits in a single pr
 
 ## Supported AI tools
 
-mxcli supports five AI coding assistants out of the box, plus a universal format that works with any tool:
+mxcli supports six AI coding assistants out of the box, plus a universal format that works with any tool:
 
 | Tool | Init Flag | Config File | Description |
 |------|-----------|-------------|-------------|
 | **Claude Code** | `--tool claude` (default) | `.claude/`, `CLAUDE.md` | Full integration with skills, commands, and lint rules |
+| **OpenCode** | `--tool opencode` | `.opencode/`, `opencode.json` | Deep integration with skills, commands, and lint rules |
 | **Cursor** | `--tool cursor` | `.cursorrules` | Compact MDL reference and command guide |
 | **Continue.dev** | `--tool continue` | `.continue/config.json` | Custom commands and slash commands |
 | **Windsurf** | `--tool windsurf` | `.windsurfrules` | Codeium's AI with MDL rules |

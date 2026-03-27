@@ -26,6 +26,7 @@
   - [Validating with mxcli check](tutorial/validation.md)
 - [Working with AI Assistants](tutorial/ai-assistants.md)
   - [Claude Code Integration](tutorial/claude-code.md)
+  - [OpenCode Integration](tutorial/opencode.md)
   - [Cursor / Continue.dev / Windsurf](tutorial/other-ai-tools.md)
   - [Skills and CLAUDE.md](tutorial/skills.md)
   - [The MDL + AI Workflow](tutorial/mdl-ai-workflow.md)

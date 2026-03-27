@@ -26,6 +26,7 @@ mxcli init --list-tools
 | Tool | Flag | Config Files Created |
 |------|------|---------------------|
 | **Claude Code** (default) | `--tool claude` | `.claude/settings.json`, `CLAUDE.md`, commands, lint rules |
+| **OpenCode** | `--tool opencode` | `.opencode/`, `opencode.json`, commands, skills, lint rules |
 | **Cursor** | `--tool cursor` | `.cursorrules` |
 | **Continue.dev** | `--tool continue` | `.continue/config.json` |
 | **Windsurf** | `--tool windsurf` | `.windsurfrules` |
