@@ -46,12 +46,16 @@ my-mendix-project/
 
 ### opencode.json
 
-The `opencode.json` file is OpenCode's primary configuration. It points to `AGENTS.md` for instructions and to the skill files in `.opencode/skills/`:
+The `opencode.json` file is OpenCode's primary configuration. It points to `AGENTS.md` for instructions and to both the OpenCode-format skills in `.opencode/skills/` and the universal skill files in `.ai-context/skills/`:
 
 ```json
 {
-  "instructions": ["AGENTS.md", ".ai-context/skills/*.md"],
-  "model": "anthropic/claude-sonnet-4-5"
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.md",
+    ".opencode/skills/**/SKILL.md",
+    ".ai-context/skills/*.md"
+  ]
 }
 ```
 
@@ -188,4 +192,4 @@ This creates `.opencode/`, `opencode.json`, and the lint rules without touching 
 
 ## Next steps
 
-To understand what the skill files contain and how they guide AI behavior, see [Skills and CLAUDE.md](skills.md). For other supported tools, see [Cursor / Continue.dev / Windsurf](other-ai-tools.md).
+To understand what the skill files contain and how they guide AI behavior, see [Skills and CLAUDE.md](skills.md). For other supported tools, see [Other AI tools (Cursor, Continue.dev, Windsurf, OpenCode)](other-ai-tools.md).

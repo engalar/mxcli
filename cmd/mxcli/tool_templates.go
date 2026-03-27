@@ -347,6 +347,7 @@ func generateOpenCodeConfig(projectName, mprPath string) string {
   "$schema": "https://opencode.ai/config.json",
   "instructions": [
     "AGENTS.md",
+    ".opencode/skills/**/SKILL.md",
     ".ai-context/skills/*.md"
   ]
 }

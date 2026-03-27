@@ -1,4 +1,4 @@
-# Cursor / Continue.dev / Windsurf
+# Other AI tools
 
 Claude Code is the default integration, but mxcli also supports OpenCode, Cursor, Continue.dev, Windsurf, and Aider. Each tool gets its own configuration file that teaches the AI about MDL syntax and mxcli commands.
 

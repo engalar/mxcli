@@ -313,28 +313,33 @@ All tools receive universal documentation in AGENTS.md and .ai-context/
 				}
 
 				lintRuleCount := 0
-				err = fs.WalkDir(lintRulesFS, "lint-rules", func(path string, d fs.DirEntry, err error) error {
-					if err != nil {
-						return err
-					}
-					if d.IsDir() {
+				// Only write lint rules from the OpenCode path when Claude is not also
+				// being initialised — the Claude path already writes the same files to
+				// .claude/lint-rules/ and we don't want duplicate log output or writes.
+				if !slices.Contains(tools, "claude") {
+					err = fs.WalkDir(lintRulesFS, "lint-rules", func(path string, d fs.DirEntry, err error) error {
+						if err != nil {
+							return err
+						}
+						if d.IsDir() {
+							return nil
+						}
+						content, err := lintRulesFS.ReadFile(path)
+						if err != nil {
+							return err
+						}
+						targetPath := filepath.Join(lintRulesDir, d.Name())
+						if err := os.WriteFile(targetPath, content, 0644); err != nil {
+							return err
+						}
+						lintRuleCount++
 						return nil
-					}
-					content, err := lintRulesFS.ReadFile(path)
+					})
 					if err != nil {
-						return err
+						fmt.Fprintf(os.Stderr, "  Error writing lint rules: %v\n", err)
+					} else {
+						fmt.Printf("  Created %d lint rule files in .claude/lint-rules/\n", lintRuleCount)
 					}
-					targetPath := filepath.Join(lintRulesDir, d.Name())
-					if err := os.WriteFile(targetPath, content, 0644); err != nil {
-						return err
-					}
-					lintRuleCount++
-					return nil
-				})
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "  Error writing lint rules: %v\n", err)
-				} else {
-					fmt.Printf("  Created %d lint rule files in .claude/lint-rules/\n", lintRuleCount)
 				}
 
 				skillCount2 := 0
@@ -461,19 +466,28 @@ All tools receive universal documentation in AGENTS.md and .ai-context/
 	},
 }
 
+// yamlSingleQuote wraps s in YAML single quotes and escapes any internal
+// single quotes by doubling them, so the result is safe to embed in a YAML
+// value without further quoting.
+func yamlSingleQuote(s string) string {
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "'", "''")
+	return "'" + s + "'"
+}
+
 // wrapSkillContent prepends OpenCode-compatible YAML frontmatter to a skill file.
 // OpenCode requires each skill to live in its own subdirectory as SKILL.md and
 // the file must start with YAML frontmatter containing name, description, and
 // compatibility fields.
 func wrapSkillContent(skillName string, content []byte) []byte {
 	description := extractSkillDescription(content)
-	frontmatter := fmt.Sprintf("---\nname: %s\ndescription: %s\ncompatibility: opencode\n---\n\n", skillName, description)
+	frontmatter := fmt.Sprintf("---\nname: %s\ndescription: %s\ncompatibility: opencode\n---\n\n", yamlSingleQuote(skillName), yamlSingleQuote(description))
 	return append([]byte(frontmatter), content...)
 }
 
 // extractSkillDescription returns a one-line description for the skill by
 // finding the first top-level markdown heading (# ...) and stripping a leading
-// "Skill: " prefix if present.  Falls back to the skill name if no heading is
+// "Skill: " prefix if present.  Falls back to "MDL skill" if no heading is
 // found.
 func extractSkillDescription(content []byte) string {
 	for _, line := range strings.Split(string(content), "\n") {
@@ -1147,7 +1161,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 
 	// Add flags for tool selection
-	initCmd.Flags().StringSliceVar(&initTools, "tool", []string{}, "AI tool(s) to configure (claude, cursor, continue, windsurf, aider)")
+	initCmd.Flags().StringSliceVar(&initTools, "tool", []string{}, "AI tool(s) to configure (claude, opencode, cursor, continue, windsurf, aider)")
 	initCmd.Flags().BoolVar(&initAllTools, "all-tools", false, "Initialize for all supported AI tools")
 	initCmd.Flags().BoolVar(&initListTools, "list-tools", false, "List supported AI tools and exit")
 }

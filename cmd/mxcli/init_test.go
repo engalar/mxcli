@@ -3,6 +3,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,14 +11,19 @@ import (
 )
 
 // runInit is a test helper that sets initTools to the given list, invokes the
-// cobra Run closure against dir, then restores the original value.  The
-// function panics if initListTools or initAllTools are left non-default from a
-// previous test.
+// cobra Run closure against dir, then restores the original values.
+// vsixData is set to nil during the call to prevent installVSCodeExtension from
+// invoking the external 'code' CLI or writing .vsix files on CI / dev machines.
 func runInit(t *testing.T, tools []string, dir string) {
 	t.Helper()
-	prev := initTools
-	t.Cleanup(func() { initTools = prev })
+	prevTools := initTools
+	prevVsix := vsixData
+	t.Cleanup(func() {
+		initTools = prevTools
+		vsixData = prevVsix
+	})
 	initTools = tools
+	vsixData = nil // disable VS Code extension installation during tests
 	initCmd.Run(initCmd, []string{dir})
 }
 
@@ -72,11 +78,11 @@ func TestWrapSkillContent_FrontmatterPresent(t *testing.T) {
 	if !strings.HasPrefix(text, "---\n") {
 		t.Errorf("wrapped content should start with '---\\n', got: %q", text[:min(40, len(text))])
 	}
-	if !strings.Contains(text, "name: my-skill\n") {
-		t.Error("frontmatter should contain 'name: my-skill'")
+	if !strings.Contains(text, "name: 'my-skill'\n") {
+		t.Error("frontmatter should contain 'name: 'my-skill''")
 	}
-	if !strings.Contains(text, "description: My Skill\n") {
-		t.Error("frontmatter should contain 'description: My Skill'")
+	if !strings.Contains(text, "description: 'My Skill'\n") {
+		t.Error("frontmatter should contain 'description: 'My Skill''")
 	}
 	if !strings.Contains(text, "compatibility: opencode\n") {
 		t.Error("frontmatter should contain 'compatibility: opencode'")
@@ -217,8 +223,8 @@ func TestInitOpenCode_EachSkillHasValidFrontmatter(t *testing.T) {
 		if !strings.HasPrefix(text, "---\n") {
 			t.Errorf("skill %q: SKILL.md should start with YAML frontmatter '---'", e.Name())
 		}
-		if !strings.Contains(text, "name: "+e.Name()) {
-			t.Errorf("skill %q: SKILL.md frontmatter should contain 'name: %s'", e.Name(), e.Name())
+		if !strings.Contains(text, "name: '"+e.Name()+"'") {
+			t.Errorf("skill %q: SKILL.md frontmatter should contain 'name: '%s''", e.Name(), e.Name())
 		}
 		if !strings.Contains(text, "compatibility: opencode") {
 			t.Errorf("skill %q: SKILL.md should contain 'compatibility: opencode'", e.Name())
@@ -332,5 +338,65 @@ func TestInitBothTools_CreatesAllFiles(t *testing.T) {
 	// Lint rules should be present exactly once
 	if n := countFilesInDir(filepath.Join(dir, ".claude", "lint-rules")); n == 0 {
 		t.Error(".claude/lint-rules/ should contain lint rule files")
+	}
+}
+
+// runInitAllTools is like runInit but exercises the --all-tools path.
+func runInitAllTools(t *testing.T, dir string) {
+	t.Helper()
+	prevTools := initTools
+	prevAll := initAllTools
+	prevVsix := vsixData
+	t.Cleanup(func() {
+		initTools = prevTools
+		initAllTools = prevAll
+		vsixData = prevVsix
+	})
+	initTools = []string{}
+	initAllTools = true
+	vsixData = nil
+	initCmd.Run(initCmd, []string{dir})
+}
+
+func TestInitAllTools_CreatesAllFilesWithoutDuplicateLintRules(t *testing.T) {
+	dir := t.TempDir()
+	// Capture stdout to count lint-rule log lines.
+	origStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	runInitAllTools(t, dir)
+
+	w.Close()
+	os.Stdout = origStdout
+	outBytes, _ := io.ReadAll(r)
+	output := string(outBytes)
+
+	// Claude artifacts
+	if !fileExists(filepath.Join(dir, "CLAUDE.md")) {
+		t.Error("CLAUDE.md should exist with --all-tools")
+	}
+	if !fileExists(filepath.Join(dir, ".claude", "settings.json")) {
+		t.Error(".claude/settings.json should exist with --all-tools")
+	}
+	if n := countFilesInDir(filepath.Join(dir, ".claude", "commands")); n == 0 {
+		t.Error(".claude/commands/ should contain command files with --all-tools")
+	}
+
+	// OpenCode artifacts
+	if !fileExists(filepath.Join(dir, "opencode.json")) {
+		t.Error("opencode.json should exist with --all-tools")
+	}
+	if n := countSubDirs(filepath.Join(dir, ".opencode", "skills")); n == 0 {
+		t.Error(".opencode/skills/ should contain skill dirs with --all-tools")
+	}
+
+	// Lint rules must exist and the creation message must appear exactly once.
+	if n := countFilesInDir(filepath.Join(dir, ".claude", "lint-rules")); n == 0 {
+		t.Error(".claude/lint-rules/ should contain lint rule files with --all-tools")
+	}
+	lintMsgCount := strings.Count(output, "lint rule files in .claude/lint-rules/")
+	if lintMsgCount != 1 {
+		t.Errorf("lint rule creation message should appear exactly once, got %d:\n%s", lintMsgCount, output)
 	}
 }
