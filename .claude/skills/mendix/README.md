@@ -59,6 +59,7 @@ Page-specific patterns:
 | Skill | Purpose | Use When |
 |-------|---------|----------|
 | [generate-domain-model.md](generate-domain-model.md) | Complete domain model generation | Generating full domain models |
+| [create-custom-widget.md](create-custom-widget.md) | Custom pluggable widget AIGC | Creating custom React widgets from scratch |
 | [debug-bson.md](debug-bson.md) | BSON debugging | Troubleshooting SDK issues |
 
 ---
@@ -83,6 +84,8 @@ Load skills based on the task:
 | "Change widgets in bulk" | `bulk-widget-updates.md` |
 | "Reuse widgets across pages" | `fragments.md` |
 | "Define a fragment" | `fragments.md` |
+| "Create custom widget" | `create-custom-widget.md` |
+| "Build a pluggable widget" | `create-custom-widget.md` |
 
 ### For Error Recovery
 
