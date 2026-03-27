@@ -220,6 +220,45 @@ Available namespaces: `DomainModels`, `Enumerations`, `Microflows`, `Pages`, `Mo
 - Export types that should be part of the public API
 - Use interfaces for polymorphic types (e.g., `Element`, `MicroflowObject`)
 
+## PR / Commit Review Checklist
+
+When reviewing pull requests or validating work before commit, verify these items:
+
+### Overlap & duplication
+- [ ] Check `docs/11-proposals/` for existing proposals covering the same functionality
+- [ ] Search the codebase for existing implementations (grep for key function names, command names, types)
+- [ ] Check `mdl-examples/doctype-tests/` for existing test coverage of the feature area
+- [ ] Verify the PR doesn't re-document already-shipped features as new
+
+### Full-stack consistency for MDL features
+New MDL commands or language features must be wired through the full pipeline:
+- [ ] **Grammar** — rule added to `MDLParser.g4` (and `MDLLexer.g4` if new tokens)
+- [ ] **Parser regenerated** — `make grammar` run, generated files committed
+- [ ] **AST** — node type added in `mdl/ast/`
+- [ ] **Visitor** — ANTLR listener bridges parse tree to AST in `mdl/visitor/`
+- [ ] **Executor** — handler in `mdl/executor/` executes the AST node
+- [ ] **LSP** — if the feature adds formatting, diagnostics, or navigation targets, wire it into `cmd/mxcli/lsp.go` and register the capability
+- [ ] **DESCRIBE roundtrip** — if the feature creates artifacts, `DESCRIBE` should output re-executable MDL
+- [ ] **VS Code extension** — if new LSP capabilities are added, update `vscode-mdl/package.json`
+
+### Test coverage
+- [ ] New packages have test files
+- [ ] New executor commands have MDL examples in `mdl-examples/doctype-tests/`
+- [ ] Integration paths (not just helpers) are tested
+- [ ] Tests don't rely on `time.Sleep` for synchronization — use channels or polling with timeout
+
+### Security & robustness
+- [ ] Unix sockets use restrictive permissions (`os.Chmod(path, 0600)`)
+- [ ] File I/O is not in hot paths (event loops, per-keystroke handlers) — cache in memory
+- [ ] No silent side effects on typos (e.g., auto-creating resources on misspelled names should be flagged)
+- [ ] Method receivers are correct (pointer vs value) for mutations
+
+### Code quality
+- [ ] Refactors are applied consistently across all relevant files (grep for the old pattern)
+- [ ] Manually maintained lists (keyword lists, type mappings) are flagged as maintenance risks
+- [ ] Design docs match the actual implementation — remove or update stale plans
+- [ ] Large PRs are evaluated for splitting into focused, independently reviewable pieces
+
 ## Dependencies
 
 - `modernc.org/sqlite` - Pure Go SQLite driver (no CGO required)
