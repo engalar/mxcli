@@ -1,6 +1,6 @@
 # Preface
 
-This documentation covers **mxcli**, a command-line tool for reading, querying, and modifying Mendix application projects, and **MDL (Mendix Definition Language)**, the SQL-like language it uses. The material is organized into eight parts:
+This documentation covers **mxcli**, a command-line tool for reading, querying, and modifying Mendix application projects, and **MDL (Mendix Definition Language)**, the SQL-like language it uses. Start with the [Vision](vision.md) to understand where this project is headed. The material is organized into eight parts:
 
 - **Part I: Tutorial** walks you through installation, exploring a project, making your first changes, and integrating with AI assistants.
 - **Part II: The MDL Language** is a comprehensive guide to MDL syntax -- domain models, microflows, pages, security, navigation, workflows, and business events.

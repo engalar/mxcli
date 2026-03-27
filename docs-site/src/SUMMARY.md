@@ -1,6 +1,7 @@
 # Summary
 
 [Preface](preface/README.md)
+- [Vision](preface/vision.md)
 - [What is mxcli?](preface/what-is-mxcli.md)
 - [What is MDL?](preface/what-is-mdl.md)
 - [Mendix Concepts for Newcomers](preface/mendix-concepts.md)
