@@ -34,6 +34,7 @@ Supported Tools:
   - continue    Continue.dev with custom commands
   - windsurf    Windsurf (Codeium) with MDL rules
   - aider       Aider with project configuration
+  - opencode    OpenCode AI agent with MDL commands and skills
 `,
 	Args: cobra.RangeArgs(0, 2),
 	Run: func(cmd *cobra.Command, args []string) {

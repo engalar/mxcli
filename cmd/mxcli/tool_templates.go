@@ -78,6 +78,16 @@ var SupportedTools = map[string]ToolConfig{
 			},
 		},
 	},
+	"opencode": {
+		Name:        "OpenCode",
+		Description: "OpenCode AI agent with MDL commands and skills",
+		Files: []ToolFile{
+			{
+				Path:    "opencode.json",
+				Content: generateOpenCodeConfig,
+			},
+		},
+	},
 }
 
 // Universal files created for all tools
@@ -330,4 +340,15 @@ func generatePlaywrightConfig() string {
 
 func generateProjectAIMD(projectName, mprPath string) string {
 	return generateClaudeMD(projectName, mprPath)
+}
+
+func generateOpenCodeConfig(projectName, mprPath string) string {
+	return `{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.md",
+    ".ai-context/skills/*.md"
+  ]
+}
+`
 }
