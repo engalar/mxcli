@@ -7,7 +7,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  models: read
 
 jobs:
   review:
@@ -101,7 +100,7 @@ jobs:
 
           # Build JSON payload using jq with file input (no shell variable limits)
           jq -n --rawfile prompt /tmp/user-prompt.txt '{
-            model: "openai/gpt-4.1",
+            model: "nvidia/nemotron-3-super-120b-a12b:free",
             messages: [
               {
                 role: "system",
@@ -117,20 +116,25 @@ jobs:
 
           echo "Request payload size: $(wc -c < /tmp/request.json) bytes"
 
-      - name: Call GitHub Models API
+      - name: Call OpenRouter API
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
+          if [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "::warning::OPENROUTER_API_KEY secret is not set"
+            exit 0
+          fi
+
           HTTP_CODE=$(curl -s -w "%{http_code}" -o /tmp/response.json -X POST \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
             -H "Content-Type: application/json" \
             -d @/tmp/request.json \
-            https://models.github.ai/inference/chat/completions)
+            https://openrouter.ai/api/v1/chat/completions)
 
           echo "HTTP status: $HTTP_CODE"
 
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "::warning::GitHub Models API returned HTTP $HTTP_CODE"
+            echo "::warning::OpenRouter API returned HTTP $HTTP_CODE"
             cat /tmp/response.json | head -c 1000
             exit 0
           fi
@@ -163,7 +167,7 @@ jobs:
             cat /tmp/review.txt
             echo ""
             echo "---"
-            echo "*Automated review by GitHub Models API (GPT-4.1) — [workflow source](${{ github.server_url }}/${{ github.repository }}/blob/main/.github/workflows/ai-review.yml)*"
+            echo "*Automated review via OpenRouter (Nemotron Super 120B) — [workflow source](${{ github.server_url }}/${{ github.repository }}/blob/main/.github/workflows/ai-review.yml)*"
           } > /tmp/comment.md
 
           gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/comment.md
