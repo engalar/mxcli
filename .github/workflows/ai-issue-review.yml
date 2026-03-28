@@ -1,0 +1,127 @@
+name: AI Issue Review
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get issue details
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue view ${{ github.event.issue.number }} \
+            --repo ${{ github.repository }} \
+            --json title,body,labels > /tmp/issue.json
+
+      - name: Build API request
+        run: |
+          cat > /tmp/user-prompt.txt <<PROMPT
+          Review this GitHub issue for completeness.
+
+          Issue:
+          $(cat /tmp/issue.json)
+
+          Check whether the issue includes the following required information.
+          Not all fields apply to every issue type — use judgement.
+
+          For **bug reports**, require:
+          1. mxcli version (output of mxcli --version or commit/build info)
+          2. Mendix version (e.g. 10.x, 9.x) of the project being processed
+          3. Scenario — what the user was trying to do (MDL script, CLI command, etc.)
+          4. Expected output — what should have happened
+          5. Experienced output — what actually happened (error message, wrong result, crash)
+          6. AI bug report — output of mxcli diag --bundle or at minimum the session log
+
+          For **feature requests**, require:
+          1. Use case — why the feature is needed, what problem it solves
+          2. Proposed syntax or behavior (if applicable)
+          3. Mendix version relevance (if version-specific)
+
+          Respond with:
+          - A short summary of what the issue is about (1 sentence)
+          - A checklist showing which required fields are present or missing
+          - If anything is missing, a polite comment asking the reporter to add it
+          - If the issue looks complete, say so and thank the reporter
+
+          Keep the tone friendly and constructive. Do not repeat the issue body back.
+          PROMPT
+
+          jq -n --rawfile prompt /tmp/user-prompt.txt '{
+            model: "nvidia/nemotron-3-super-120b-a12b:free",
+            messages: [
+              {
+                role: "system",
+                content: "You are a triage assistant for mxcli, a Go CLI tool that reads and modifies Mendix application projects (.mpr files). Your job is to review new bug reports and feature requests for completeness. Be helpful and welcoming. If information is missing, ask for it politely. Keep your response concise."
+              },
+              {
+                role: "user",
+                content: $prompt
+              }
+            ],
+            max_tokens: 2000,
+            temperature: 0.3
+          }' > /tmp/request.json
+
+          echo "Request payload size: $(wc -c < /tmp/request.json) bytes"
+
+      - name: Call OpenRouter API
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          if [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "::warning::OPENROUTER_API_KEY secret is not set"
+            exit 0
+          fi
+
+          HTTP_CODE=$(curl -s -w "%{http_code}" -o /tmp/response.json -X POST \
+            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/request.json \
+            https://openrouter.ai/api/v1/chat/completions)
+
+          echo "HTTP status: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::warning::OpenRouter API returned HTTP $HTTP_CODE"
+            cat /tmp/response.json | head -c 1000
+            exit 0
+          fi
+
+          REVIEW=$(jq -r '.choices[0].message.content // empty' /tmp/response.json)
+
+          if [ -z "$REVIEW" ]; then
+            echo "::warning::AI review returned empty content. Response:"
+            cat /tmp/response.json | head -c 1000
+            exit 0
+          fi
+
+          echo "$REVIEW" > /tmp/review.txt
+          echo "Review generated ($(wc -c < /tmp/review.txt) bytes)"
+
+      - name: Post review comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f /tmp/review.txt ]; then
+            echo "No review to post."
+            exit 0
+          fi
+
+          {
+            echo "## Issue Triage"
+            echo ""
+            cat /tmp/review.txt
+            echo ""
+            echo "---"
+            echo "*Automated triage via OpenRouter — [workflow source](${{ github.server_url }}/${{ github.repository }}/blob/main/.github/workflows/ai-issue-review.yml)*"
+          } > /tmp/comment.md
+
+          gh issue comment ${{ github.event.issue.number }} \
+            --repo ${{ github.repository }} \
+            --body-file /tmp/comment.md
