@@ -5,6 +5,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -195,7 +196,9 @@ func runWidgetList(cmd *cobra.Command, args []string) error {
 	// Load user definitions if project path available
 	projectPath, _ := cmd.Flags().GetString("project")
 	if projectPath != "" {
-		_ = registry.LoadUserDefinitions(projectPath)
+		if err := registry.LoadUserDefinitions(projectPath); err != nil {
+			log.Printf("warning: loading user widget definitions: %v", err)
+		}
 	}
 
 	defs := registry.All()

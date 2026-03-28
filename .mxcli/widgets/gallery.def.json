@@ -17,7 +17,8 @@
     {
       "propertyKey": "itemSelection",
       "source": "Selection",
-      "operation": "selection"
+      "operation": "selection",
+      "default": "Single"
     },
     {
       "propertyKey": "itemSelectionMode",
@@ -78,7 +79,7 @@
     },
     {
       "propertyKey": "filtersPlaceholder",
-      "mdlContainer": "FILTERSPLACEHOLDER",
+      "mdlContainer": "FILTER",
       "operation": "widgets"
     }
   ]

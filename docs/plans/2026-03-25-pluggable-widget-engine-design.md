@@ -1,23 +1,23 @@
-# Pluggable Widget Engine: 声明式 Widget 构建系统
+# Pluggable Widget Engine: Declarative Widget Build System
 
 **Date**: 2026-03-25
 **Status**: Implemented
 
 ## Problem
 
-当前每个 pluggable widget 都需要硬编码一个 Go builder 函数（`buildComboBoxV3`, `buildGalleryV3` 等），加上 switch case 注册。新增一个 widget 需要改 4 个地方：
+Each pluggable widget currently requires a hardcoded Go builder function (`buildComboBoxV3`, `buildGalleryV3`, etc.) plus a switch-case registration. Adding a new widget requires changes in 4 places:
 
-1. `sdk/pages/pages_widgets_advanced.go` — 添加 WidgetID 常量
-2. `sdk/widgets/templates/` — 添加 JSON 模板
-3. `mdl/executor/cmd_pages_builder_v3_pluggable.go` — 写专属 build 函数（50-200 行）
-4. `mdl/executor/cmd_pages_builder_v3.go` — 在 `buildWidgetV3()` switch 中添加 case
+1. `sdk/pages/pages_widgets_advanced.go` — Add WidgetID constant
+2. `sdk/widgets/templates/` — Add JSON template
+3. `mdl/executor/cmd_pages_builder_v3_pluggable.go` — Write a dedicated build function (50-200 lines)
+4. `mdl/executor/cmd_pages_builder_v3.go` — Add case in `buildWidgetV3()` switch
 
-这导致：
-- 用户无法自行添加 pluggable widget 支持
-- 大量重复代码（30+ builder 函数共享 ~80% 骨架）
-- 维护成本随 widget 数量线性增长
+This causes:
+- Users cannot add pluggable widget support on their own
+- Significant code duplication (30+ builder functions sharing ~80% boilerplate)
+- Maintenance cost grows linearly with widget count
 
-## Solution: 声明式 Widget 定义 + 通用构建引擎
+## Solution: Declarative Widget Definitions + Generic Build Engine
 
 ### Architecture
 
@@ -126,7 +126,7 @@ Gallery (with child slots):
   "childSlots": [
     {"propertyKey": "content", "mdlContainer": "TEMPLATE", "operation": "widgets"},
     {"propertyKey": "emptyPlaceholder", "mdlContainer": "EMPTYPLACEHOLDER", "operation": "widgets"},
-    {"propertyKey": "filtersPlaceholder", "mdlContainer": "FILTERSPLACEHOLDER", "operation": "widgets"}
+    {"propertyKey": "filtersPlaceholder", "mdlContainer": "FILTER", "operation": "widgets"}
   ]
 }
 ```

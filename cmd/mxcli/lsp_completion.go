@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/executor"
@@ -89,8 +90,7 @@ func (s *mdlServer) widgetRegistryCompletions() []protocol.CompletionItem {
 			return
 		}
 		if err := registry.LoadUserDefinitions(s.mprPath); err != nil {
-			// Non-fatal: user definitions are optional
-			_ = err
+			log.Printf("warning: loading user widget definitions for LSP: %v", err)
 		}
 		for _, def := range registry.All() {
 			s.widgetCompletionItems = append(s.widgetCompletionItems, protocol.CompletionItem{
