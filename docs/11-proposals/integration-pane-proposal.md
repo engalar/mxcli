@@ -362,25 +362,73 @@ Catalog tables:
 - `contract_entities` — entity types from cached `$metadata` (name, properties, key, service ref)
 - `contract_actions` — function imports / actions from cached `$metadata` (name, parameters, return type)
 
-### Auto-Import from Contract ([mendixlabs/mxcli#44](https://github.com/mendixlabs/mxcli/issues/44))
+### Generating CREATE EXTERNAL ENTITY from Contracts ([mendixlabs/mxcli#44](https://github.com/mendixlabs/mxcli/issues/44))
 
-Once contracts are parsed, support importing assets into the project:
+For **entities**, there's no new command needed — `CREATE EXTERNAL ENTITY` already exists. The contract parsing enables a workflow where the user browses available entities and the tool generates the correct `CREATE EXTERNAL ENTITY` with attributes mapped from Edm types:
 
 ```sql
--- Import a specific entity from the OData contract as an external entity
-IMPORT EXTERNAL ENTITY MyModule.SalesforceAPI.PurchaseOrder;
+-- 1. Browse what's available in the contract
+SHOW CONTRACT ENTITIES FROM MyModule.SalesforceAPI;
 
--- Import an action and its request/response NPEs (non-persistent entities)
-IMPORT EXTERNAL ACTION MyModule.SalesforceAPI.CreateOrder;
+-- 2. Inspect a specific entity's properties
+DESCRIBE CONTRACT ENTITY MyModule.SalesforceAPI.PurchaseOrder;
+-- Output:
+--   PurchaseOrder (Key: ID)
+--     ID           Edm.Int64        NOT NULL
+--     Number       Edm.Int64
+--     Status       Edm.String
+--     SupplierName Edm.String(200)
+--     GrossAmount  Edm.Decimal
+--     DeliveryDate Edm.DateTimeOffset
+--     → PurchaseOrderItems  (Navigation: PurchaseOrderItem *)
+--     → Customer            (Navigation: Customer 0..1)
+
+-- 3. Generate a CREATE EXTERNAL ENTITY from the contract (all attributes)
+DESCRIBE CONTRACT ENTITY MyModule.SalesforceAPI.PurchaseOrder FORMAT mdl;
+-- Output: ready-to-execute CREATE EXTERNAL ENTITY statement
+
+-- 4. Or create with a subset of attributes
+CREATE EXTERNAL ENTITY MyModule.PurchaseOrder
+FROM ODATA CLIENT MyModule.SalesforceAPI (
+    EntitySet: 'PurchaseOrders',
+    RemoteName: 'PurchaseOrder',
+    Countable: Yes
+)
+(
+    Number: Long,
+    Status: String(200),
+    SupplierName: String(200),
+    GrossAmount: Decimal
+);
 ```
 
-`IMPORT EXTERNAL ACTION` should:
-1. Parse the action's parameter and return types from the `$metadata`
-2. Create NPEs (non-persistent entities) for complex type parameters and return types
-3. Create the external action reference so `CALL EXTERNAL ACTION` can use it
-4. Map Edm types to Mendix attribute types (Edm.String → String, Edm.Int64 → Long, etc.)
+For **actions**, there IS new functionality needed — action definitions and their request/response NPEs (non-persistent entities) don't have a `CREATE` equivalent today:
 
-This addresses the core request in issue #44: users want to browse available actions and auto-import them with their payload entities, rather than manually creating the domain model.
+```sql
+-- Browse available actions
+SHOW CONTRACT ACTIONS FROM MyModule.SalesforceAPI;
+
+-- Inspect an action's signature (parameters, return type)
+DESCRIBE CONTRACT ACTION MyModule.SalesforceAPI.CreateOrder;
+-- Output:
+--   CreateOrder
+--     Parameters:
+--       OrderData  ComplexType:OrderInput (OrderId: Edm.Int64, Items: Collection(OrderItem))
+--     Returns:
+--       OrderResult  ComplexType:OrderConfirmation (ConfirmationId: Edm.String, Status: Edm.String)
+
+-- Generate MDL to create the NPEs and wire the action
+DESCRIBE CONTRACT ACTION MyModule.SalesforceAPI.CreateOrder FORMAT mdl;
+-- Output: CREATE ENTITY statements for NPEs + documentation for CALL EXTERNAL ACTION usage
+```
+
+`DESCRIBE CONTRACT ACTION ... FORMAT mdl` should generate:
+1. `CREATE ENTITY` (non-persistent) for complex type parameters
+2. `CREATE ENTITY` (non-persistent) for complex type return values
+3. Edm → Mendix type mapping (Edm.String → String, Edm.Int64 → Long, Edm.Decimal → Decimal, etc.)
+4. A comment showing the `CALL EXTERNAL ACTION` syntax with the correct parameter names
+
+This addresses the core request in issue #44: users want to browse available actions and generate the domain model entities needed to call them.
 
 ### AsyncAPI Document Parsing
 
