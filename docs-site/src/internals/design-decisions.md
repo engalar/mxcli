@@ -57,11 +57,17 @@ Key architectural decisions made during the development of ModelSDK Go, with rat
 
 ## Embedded Widget Templates
 
-**Decision:** Embed widget templates as JSON files compiled into the binary via `go:embed`.
+**Decision:** Embed a single conservative baseline template per widget (from the oldest supported Mendix version) and use runtime augmentation from the project's `.mpk` files to adapt to version differences.
 
-**Rationale:** Pluggable widgets require exact property schemas that change between Mendix versions. Embedding templates ensures the binary is self-contained and version-matched. Extracting templates from Studio Pro guarantees correctness.
+**Rationale:** Pluggable widgets require exact property schemas that change between Mendix versions. The Gallery widget, for example, has 23 properties in Mendix 10.24 but 33 in 11.6.3. Rather than shipping multiple templates per version, a single baseline works because:
 
-**Trade-off:** New Mendix versions or widgets require extracting and adding new template files.
+1. **Augmentation adds missing properties:** If the project's `.mpk` declares properties not in the template, they are cloned from type-matching exemplars or created from scratch.
+2. **Augmentation removes stale properties:** Properties in the template but absent from the `.mpk` are stripped, preventing CE0463.
+3. **The baseline must be the oldest supported version:** A newer baseline may have structural changes that augmentation cannot reverse (different property types, different nesting). An older baseline is safe because augmentation only needs to add/remove properties, not restructure them.
+
+**Trade-off:** The augmentation system handles property-level drift (added/removed properties) but cannot fix structural changes (renamed types, changed nesting depth). If a widget undergoes a major schema overhaul between versions, a version-specific template may be needed.
+
+See [Widget Template System](widget-templates.md) and [Pluggable Widget Engine](widget-engine.md) for implementation details.
 
 ## Catalog as SQLite
 

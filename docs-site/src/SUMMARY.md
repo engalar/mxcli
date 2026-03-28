@@ -294,6 +294,7 @@
   - [BSON Document Structure](internals/bson-structure.md)
   - [Storage Names vs Qualified Names](internals/storage-names.md)
   - [Widget Template System](internals/widget-templates.md)
+  - [Pluggable Widget Engine](internals/widget-engine.md)
 - [MDL Parser](internals/parser.md)
   - [ANTLR4 Grammar Design](internals/antlr4-grammar.md)
   - [Lexer - Parser - AST - Executor Pipeline](internals/parser-pipeline.md)
