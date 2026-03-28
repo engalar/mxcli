@@ -33,7 +33,21 @@
 
 ---
 
-# Part II: Migration
+# Part II: MDL by Example
+
+- [MDL by Example](examples/README.md)
+  - [CRM Module](examples/crm-module.md)
+  - [REST Integration](examples/rest-integration.md)
+  - [Data Import Pipeline](examples/data-import.md)
+  - [Master-Detail Page](examples/master-detail.md)
+  - [Modifying Existing Pages](examples/alter-page.md)
+  - [Validation Pattern](examples/validation.md)
+  - [Role-Based Security](examples/security.md)
+  - [View Entities](examples/view-entities.md)
+
+---
+
+# Part III: Migration
 
 - [Migration Guide](migration/README.md)
   - [Assessment](migration/assessment.md)
@@ -44,7 +58,7 @@
 
 ---
 
-# Part III: The MDL Language
+# Part IV: The MDL Language
 
 - [MDL Basics](language/basics.md)
   - [Lexical Structure](language/lexical-structure.md)
@@ -98,7 +112,7 @@
 
 ---
 
-# Part IV: Project Tools
+# Part V: Project Tools
 
 - [Code Navigation](tools/code-navigation.md)
   - [SHOW CALLERS / CALLEES](tools/callers-callees.md)
@@ -143,7 +157,7 @@
 
 ---
 
-# Part V: IDE Integration
+# Part VI: IDE Integration
 
 - [VS Code Extension](ide/vscode.md)
   - [Installation](ide/vscode-installation.md)
@@ -162,7 +176,7 @@
 
 ---
 
-# Part VI: Go Library
+# Part VII: Go Library
 
 - [Quick Start](library/quickstart.md)
   - [Installation](library/installation.md)
@@ -179,7 +193,7 @@
 
 ---
 
-# Part VII: MDL Statement Reference
+# Part VIII: MDL Statement Reference
 
 - [Connection Statements](reference/connection/README.md)
   - [OPEN PROJECT](reference/connection/open-project.md)
@@ -269,7 +283,7 @@
 
 ---
 
-# Part VIII: Architecture & Internals
+# Part IX: Architecture & Internals
 
 - [System Architecture](internals/architecture.md)
   - [Layer Diagram](internals/layers.md)
@@ -291,7 +305,7 @@
 
 ---
 
-# Part IX: Appendixes
+# Part X: Appendixes
 
 - [MDL Quick Reference](appendixes/quick-reference.md)
 - [Data Type Mapping Table](appendixes/data-type-mapping.md)

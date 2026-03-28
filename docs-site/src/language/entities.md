@@ -28,15 +28,22 @@ CREATE [OR MODIFY] <entity-type> ENTITY <Module>.<Name> (
 The most common type. Data is stored in the application database:
 
 ```sql
-/** Customer entity */
+/** Customer master data */
 @Position(100, 200)
 CREATE PERSISTENT ENTITY Sales.Customer (
+  /** Auto-incrementing unique identifier */
   CustomerId: AutoNumber NOT NULL UNIQUE DEFAULT 1,
+  /** Full legal name of the customer */
   Name: String(200) NOT NULL ERROR 'Name is required',
+  /** Primary contact email address */
   Email: String(200) UNIQUE ERROR 'Email must be unique',
+  /** Current account balance */
   Balance: Decimal DEFAULT 0,
+  /** Whether the account is active */
   IsActive: Boolean DEFAULT TRUE,
+  /** Timestamp of account creation */
   CreatedDate: DateTime,
+  /** Current lifecycle status */
   Status: Enumeration(Sales.CustomerStatus) DEFAULT 'Active'
 )
 INDEX (Name)
@@ -100,14 +107,40 @@ CREATE PERSISTENT ENTITY Sales.Customer ( ... );
 
 ### Documentation
 
-A `/** ... */` comment before the entity becomes its documentation in Studio Pro:
+A `/** ... */` comment before the entity or before an individual attribute becomes its documentation in Studio Pro:
 
 ```sql
 /** Customer master data.
  *  Stores both active and inactive customers.
  */
-CREATE PERSISTENT ENTITY Sales.Customer ( ... );
+@Position(100, 200)
+CREATE PERSISTENT ENTITY Sales.Customer (
+  /** Auto-incrementing unique identifier */
+  CustomerId: AutoNumber NOT NULL UNIQUE DEFAULT 1,
+
+  /** Full legal name of the customer */
+  Name: String(200) NOT NULL ERROR 'Name is required',
+
+  /** Primary contact email address */
+  Email: String(200) UNIQUE ERROR 'Email must be unique',
+
+  /** Current account balance in the base currency */
+  Balance: Decimal DEFAULT 0,
+
+  /** Whether the customer account is active */
+  IsActive: Boolean DEFAULT TRUE,
+
+  /** Timestamp of account creation */
+  CreatedDate: DateTime,
+
+  /** Current lifecycle status */
+  Status: Enumeration(Sales.CustomerStatus) DEFAULT 'Active'
+)
+INDEX (Name)
+INDEX (Email);
 ```
+
+Attribute-level documentation appears in Studio Pro when hovering over the attribute in the domain model.
 
 ## DROP ENTITY
 
