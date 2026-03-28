@@ -1163,6 +1163,14 @@ SHOW SETTINGS              -- Overview of all settings
 DESCRIBE SETTINGS           -- Full MDL output (round-trippable)
 ```
 
+### SHOW CONSTANT VALUES
+
+```sql
+SHOW CONSTANT VALUES [IN Module]   -- Compare constant values across configurations
+```
+
+Displays one row per constant per configuration. Shows the default value followed by any per-configuration overrides.
+
 ### ALTER SETTINGS
 
 ```sql
@@ -1178,6 +1186,9 @@ ALTER SETTINGS WORKFLOWS Key = Value;
 ALTER SETTINGS MODEL AfterStartupMicroflow = 'MyModule.ACT_Startup';
 ALTER SETTINGS CONFIGURATION 'default' DatabaseType = 'POSTGRESQL';
 ALTER SETTINGS LANGUAGE DefaultLanguageCode = 'en_US';
+
+-- View constant values across all configurations
+SHOW CONSTANT VALUES;
 ```
 
 ---

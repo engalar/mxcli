@@ -57,6 +57,10 @@ ALTER SETTINGS CONFIGURATION 'Default'
 ### Constant Overrides
 
 ```sql
+-- View constant values across all configurations
+SHOW CONSTANT VALUES;
+SHOW CONSTANT VALUES IN MyModule;    -- Filter by module
+
 -- Override a constant value in a configuration
 ALTER SETTINGS CONSTANT 'BusinessEvents.ServerUrl' VALUE 'kafka:9092'
   IN CONFIGURATION 'Default';

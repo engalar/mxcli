@@ -67,6 +67,7 @@ ALTER ENTITY Sales.Customer
 | Statement | Syntax | Notes |
 |-----------|--------|-------|
 | Show constants | `SHOW CONSTANTS [IN Module];` | List all or filter by module |
+| Show constant values | `SHOW CONSTANT VALUES [IN Module];` | Compare values across configurations |
 | Describe constant | `DESCRIBE CONSTANT Module.Name;` | Full MDL output |
 | Create constant | `CREATE [OR MODIFY] CONSTANT Module.Name TYPE DataType DEFAULT 'value';` | String, Integer, Boolean, etc. |
 | Drop constant | `DROP CONSTANT Module.Name;` | |

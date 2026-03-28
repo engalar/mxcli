@@ -61,4 +61,4 @@ DESCRIBE SETTINGS WORKFLOWS;
 
 ## See Also
 
-[ALTER SETTINGS](alter-settings.md)
+[ALTER SETTINGS](alter-settings.md), [SHOW CONSTANT VALUES](../query/show-constants.md)

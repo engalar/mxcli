@@ -88,6 +88,35 @@ CREATE TABLE ENUMERATIONS (
 );
 ```
 
+### CONSTANTS
+
+```sql
+CREATE TABLE CONSTANTS (
+    Id              TEXT PRIMARY KEY,
+    Name            TEXT,
+    QualifiedName   TEXT,
+    ModuleName      TEXT,
+    Folder          TEXT,
+    Description     TEXT,
+    DataType        TEXT,               -- String, Integer, Boolean, etc.
+    DefaultValue    TEXT,
+    ExposedToClient INTEGER DEFAULT 0
+);
+```
+
+### CONSTANT_VALUES
+
+Per-configuration constant overrides. Join with `CONSTANTS` on `ConstantName = QualifiedName`.
+
+```sql
+CREATE TABLE CONSTANT_VALUES (
+    Id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    ConstantName      TEXT NOT NULL,     -- Qualified: Module.Constant
+    ConfigurationName TEXT NOT NULL,     -- e.g., "Default", "Production"
+    Value             TEXT
+);
+```
+
 ### WORKFLOWS
 
 ```sql
@@ -189,4 +218,14 @@ WHERE TargetName = 'Sales.Customer';
 -- Full-text search
 SELECT name, kind, snippet(STRINGS, 2, '<b>', '</b>', '...', 20)
 FROM CATALOG.STRINGS WHERE strings MATCH 'validation error';
+
+-- Find constants exposed to client
+SELECT QualifiedName, DataType, DefaultValue FROM CATALOG.CONSTANTS
+WHERE ExposedToClient = 1;
+
+-- Compare constant values across configurations
+SELECT c.QualifiedName, cv.ConfigurationName, cv.Value
+FROM CATALOG.CONSTANTS c
+JOIN CATALOG.CONSTANT_VALUES cv ON c.QualifiedName = cv.ConstantName
+ORDER BY c.QualifiedName, cv.ConfigurationName;
 ```
