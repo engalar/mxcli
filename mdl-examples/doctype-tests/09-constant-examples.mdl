@@ -96,6 +96,19 @@ SHOW CONSTANTS;
 SHOW CONSTANTS IN CoTest;
 /
 
+/**
+ * Level 2.3: Show constant values across all configurations
+ * Displays one row per constant per configuration for easy comparison.
+ */
+SHOW CONSTANT VALUES;
+/
+
+/**
+ * Level 2.4: Show constant values for a specific module
+ */
+SHOW CONSTANT VALUES IN CoTest;
+/
+
 -- MARK: - Describe Constant
 
 /**

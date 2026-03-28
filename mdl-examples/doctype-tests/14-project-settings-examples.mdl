@@ -77,6 +77,41 @@ CREATE CONSTANT MyModule.ServerUrl TYPE String DEFAULT 'localhost:9092';
 ALTER SETTINGS CONSTANT 'MyModule.ServerUrl' VALUE 'kafka:9092'
   IN CONFIGURATION 'Default';
 
+/**
+ * Example 3.2: Remove a constant override (reset to default)
+ */
+ALTER SETTINGS DROP CONSTANT 'MyModule.ServerUrl' IN CONFIGURATION 'Default';
+
+/**
+ * Example 3.3: Alternative syntax for removing a constant override
+ */
+ALTER SETTINGS CONSTANT 'MyModule.ServerUrl' DROP IN CONFIGURATION 'Default';
+
+-- MARK: Create / Drop Configuration
+
+-- ============================================================================
+-- PART 3B: Create and Drop Configurations
+-- ============================================================================
+
+/**
+ * Example 3B.1: Create a new configuration with defaults
+ */
+CREATE CONFIGURATION 'Staging';
+
+/**
+ * Example 3B.2: Create a configuration with properties
+ */
+CREATE CONFIGURATION 'Production'
+  DatabaseType = 'POSTGRESQL',
+  DatabaseUrl = 'prod-db:5432',
+  DatabaseName = 'myapp_prod',
+  HttpPortNumber = 8080;
+
+/**
+ * Example 3B.3: Drop a configuration
+ */
+DROP CONFIGURATION 'Staging';
+
 -- MARK: Language Settings
 
 -- ============================================================================
@@ -101,6 +136,9 @@ ALTER SETTINGS WORKFLOWS UserEntity = 'System.User';
 -- ALTER SETTINGS MODEL (microflows, hash algorithm, Java version)
 -- ALTER SETTINGS CONFIGURATION (database connection, HTTP port)
 -- ALTER SETTINGS CONSTANT with IN CONFIGURATION
+-- ALTER SETTINGS DROP CONSTANT (remove override, both syntax forms)
+-- CREATE CONFIGURATION (with and without properties)
+-- DROP CONFIGURATION
 -- ALTER SETTINGS LANGUAGE
 -- ALTER SETTINGS WORKFLOWS
 -- SHOW SETTINGS / DESCRIBE SETTINGS (read-only)
