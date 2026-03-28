@@ -84,7 +84,10 @@ ALTER SETTINGS DROP CONSTANT 'MyModule.ServerUrl' IN CONFIGURATION 'Default';
 
 /**
  * Example 3.3: Alternative syntax for removing a constant override
+ * (Re-set the value first so there is something to drop)
  */
+ALTER SETTINGS CONSTANT 'MyModule.ServerUrl' VALUE 'kafka:9092'
+  IN CONFIGURATION 'Default';
 ALTER SETTINGS CONSTANT 'MyModule.ServerUrl' DROP IN CONFIGURATION 'Default';
 
 -- MARK: Create / Drop Configuration
