@@ -59,7 +59,7 @@ CREATE PERSISTENT ENTITY CRM.ContactLog (
 
 -- Associations
 CREATE ASSOCIATION CRM.ContactLog_Customer
-  FROM CRM.Customer TO CRM.ContactLog
+  FROM CRM.ContactLog TO CRM.Customer
   TYPE Reference OWNER Default;
 /
 ```
