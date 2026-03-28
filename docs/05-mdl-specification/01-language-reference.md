@@ -1177,8 +1177,16 @@ Displays one row per constant per configuration. Shows the default value followe
 ALTER SETTINGS MODEL Key = Value;
 ALTER SETTINGS CONFIGURATION 'Name' Key = Value;
 ALTER SETTINGS CONSTANT 'Name' VALUE 'val' IN CONFIGURATION 'cfg';
+ALTER SETTINGS DROP CONSTANT 'Name' IN CONFIGURATION 'cfg';
 ALTER SETTINGS LANGUAGE Key = Value;
 ALTER SETTINGS WORKFLOWS Key = Value;
+```
+
+### CREATE / DROP CONFIGURATION
+
+```sql
+CREATE CONFIGURATION 'Name' [Key = Value, ...];
+DROP CONFIGURATION 'Name';
 ```
 
 **Example:**
@@ -1189,6 +1197,15 @@ ALTER SETTINGS LANGUAGE DefaultLanguageCode = 'en_US';
 
 -- View constant values across all configurations
 SHOW CONSTANT VALUES;
+
+-- Create a new configuration
+CREATE CONFIGURATION 'Staging' DatabaseType = 'POSTGRESQL', DatabaseUrl = 'staging-db:5432';
+
+-- Remove a constant override
+ALTER SETTINGS DROP CONSTANT 'MyModule.ApiKey' IN CONFIGURATION 'Default';
+
+-- Drop a configuration
+DROP CONFIGURATION 'Staging';
 ```
 
 ---

@@ -34,6 +34,21 @@ ALTER SETTINGS (Constant Overrides)
   ALTER SETTINGS CONSTANT 'BusinessEvents.ServerUrl' VALUE 'kafka:9092'
     IN CONFIGURATION 'Default';
 
+  ALTER SETTINGS DROP CONSTANT 'BusinessEvents.ServerUrl'
+    IN CONFIGURATION 'Default';              -- Remove override (reset to default)
+
+CREATE / DROP CONFIGURATION
+----------------------------
+
+  CREATE CONFIGURATION 'Staging';            -- Create with defaults
+
+  CREATE CONFIGURATION 'Production'
+    DatabaseType = 'POSTGRESQL',
+    DatabaseUrl = 'prod-db:5432',
+    HttpPortNumber = 8080;                   -- Create with properties
+
+  DROP CONFIGURATION 'Staging';              -- Remove a configuration
+
 ALTER SETTINGS (Language / Workflows)
 -------------------------------------
 

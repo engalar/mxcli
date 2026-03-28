@@ -24,6 +24,9 @@ Show constant values across configurations:
   SHOW CONSTANT VALUES;              -- All constants with per-config overrides
   SHOW CONSTANT VALUES IN MyModule;  -- Filter by module
 
+Remove a constant override from a configuration:
+  ALTER SETTINGS DROP CONSTANT 'Module.Name' IN CONFIGURATION 'cfg';
+
 Describe a constant:
   DESCRIBE CONSTANT Module.Name;
 

@@ -295,6 +295,10 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 	// Settings statements
 	case *ast.AlterSettingsStmt:
 		return e.alterSettings(s)
+	case *ast.CreateConfigurationStmt:
+		return e.createConfiguration(s)
+	case *ast.DropConfigurationStmt:
+		return e.dropConfiguration(s)
 
 	// OData statements
 	case *ast.CreateODataClientStmt:

@@ -67,6 +67,25 @@ ALTER SETTINGS CONSTANT 'BusinessEvents.ServerUrl' VALUE 'kafka:9092'
 
 -- Without IN CONFIGURATION (uses first configuration)
 ALTER SETTINGS CONSTANT 'MyModule.ApiKey' VALUE 'abc123';
+
+-- Remove a constant override (reset to default)
+ALTER SETTINGS DROP CONSTANT 'MyModule.ApiKey' IN CONFIGURATION 'Default';
+```
+
+### Create / Drop Configurations
+
+```sql
+-- Create a new server configuration
+CREATE CONFIGURATION 'Staging';
+
+-- Create with properties
+CREATE CONFIGURATION 'Production'
+  DatabaseType = 'POSTGRESQL',
+  DatabaseUrl = 'prod-db:5432',
+  HttpPortNumber = 8080;
+
+-- Drop a configuration
+DROP CONFIGURATION 'Staging';
 ```
 
 ### Language and Workflow Settings

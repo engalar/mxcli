@@ -8,6 +8,12 @@
 
     ALTER SETTINGS CONSTANT 'name' VALUE 'value' IN CONFIGURATION 'config'
 
+    ALTER SETTINGS DROP CONSTANT 'name' IN CONFIGURATION 'config'
+
+    CREATE CONFIGURATION 'name' [key = value, ...]
+
+    DROP CONFIGURATION 'name'
+
     ALTER SETTINGS LANGUAGE key = value
 
     ALTER SETTINGS WORKFLOWS key = value
@@ -82,6 +88,27 @@ ALTER SETTINGS WORKFLOWS UserEntity = 'Administration.Account';
 
 ```sql
 ALTER SETTINGS MODEL JavaVersion = '17';
+```
+
+### Remove a constant override from a configuration
+
+```sql
+ALTER SETTINGS DROP CONSTANT 'MyModule.ApiBaseUrl' IN CONFIGURATION 'staging';
+```
+
+### Create a new configuration
+
+```sql
+CREATE CONFIGURATION 'Staging'
+  DatabaseType = 'POSTGRESQL',
+  DatabaseUrl = 'staging-db:5432',
+  HttpPortNumber = 8080;
+```
+
+### Drop a configuration
+
+```sql
+DROP CONFIGURATION 'Staging';
 ```
 
 ## See Also

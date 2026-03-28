@@ -598,7 +598,17 @@ func (b *Builder) ExitAlterEntityAction(ctx *parser.AlterEntityActionContext) {
 
 // ExitDropStatement handles DROP ENTITY/ASSOCIATION/ENUMERATION/MODULE/MICROFLOW/PAGE/SNIPPET
 func (b *Builder) ExitDropStatement(ctx *parser.DropStatementContext) {
-	// Get the first qualified name (all DROP statements have at least one)
+	// DROP CONFIGURATION uses STRING_LITERAL, not qualifiedName — handle first
+	if ctx.CONFIGURATION() != nil {
+		if sl := ctx.STRING_LITERAL(); sl != nil {
+			b.statements = append(b.statements, &ast.DropConfigurationStmt{
+				Name: unquoteString(sl.GetText()),
+			})
+		}
+		return
+	}
+
+	// Get the first qualified name (most DROP statements have at least one)
 	names := ctx.AllQualifiedName()
 	if len(names) == 0 {
 		return

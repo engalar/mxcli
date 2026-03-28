@@ -348,6 +348,22 @@ func (e *Executor) alterSettingsConstant(ps *model.ProjectSettings, stmt *ast.Al
 		return fmt.Errorf("configuration not found: %s", targetConfig)
 	}
 
+	if stmt.DropConstant {
+		// Remove the constant override
+		for i, cv := range cfg.ConstantValues {
+			if cv.ConstantId == stmt.ConstantId {
+				cfg.ConstantValues = append(cfg.ConstantValues[:i], cfg.ConstantValues[i+1:]...)
+				if err := e.writer.UpdateProjectSettings(ps); err != nil {
+					return fmt.Errorf("failed to update project settings: %w", err)
+				}
+				fmt.Fprintf(e.output, "Dropped constant '%s' from configuration '%s'\n",
+					stmt.ConstantId, targetConfig)
+				return nil
+			}
+		}
+		return fmt.Errorf("constant '%s' not found in configuration '%s'", stmt.ConstantId, targetConfig)
+	}
+
 	// Find or create the constant value
 	found := false
 	for _, cv := range cfg.ConstantValues {
@@ -373,6 +389,107 @@ func (e *Executor) alterSettingsConstant(ps *model.ProjectSettings, stmt *ast.Al
 	fmt.Fprintf(e.output, "Updated constant '%s' = '%s' in configuration '%s'\n",
 		stmt.ConstantId, stmt.Value, targetConfig)
 	return nil
+}
+
+// createConfiguration handles CREATE CONFIGURATION 'name' [properties...].
+func (e *Executor) createConfiguration(stmt *ast.CreateConfigurationStmt) error {
+	if e.writer == nil {
+		return fmt.Errorf("not connected in write mode")
+	}
+
+	ps, err := e.reader.GetProjectSettings()
+	if err != nil {
+		return fmt.Errorf("failed to read project settings: %w", err)
+	}
+
+	if ps.Configuration == nil {
+		return fmt.Errorf("configuration settings not found in project")
+	}
+
+	// Check if configuration already exists
+	for _, cfg := range ps.Configuration.Configurations {
+		if strings.EqualFold(cfg.Name, stmt.Name) {
+			return fmt.Errorf("configuration already exists: %s", stmt.Name)
+		}
+	}
+
+	newCfg := &model.ServerConfiguration{
+		Name:           stmt.Name,
+		DatabaseType:   "HSQLDB",
+		HttpPortNumber: 8080,
+		ConstantValues: []*model.ConstantValue{},
+	}
+	newCfg.TypeName = "Settings$ServerConfiguration"
+
+	// Apply optional properties
+	for key, val := range stmt.Properties {
+		valStr := settingsValueToString(val)
+		switch key {
+		case "DatabaseType":
+			newCfg.DatabaseType = valStr
+		case "DatabaseUrl":
+			newCfg.DatabaseUrl = valStr
+		case "DatabaseName":
+			newCfg.DatabaseName = valStr
+		case "DatabaseUserName":
+			newCfg.DatabaseUserName = valStr
+		case "DatabasePassword":
+			newCfg.DatabasePassword = valStr
+		case "HttpPortNumber":
+			if v, err := strconv.Atoi(valStr); err == nil {
+				newCfg.HttpPortNumber = v
+			}
+		case "ServerPortNumber":
+			if v, err := strconv.Atoi(valStr); err == nil {
+				newCfg.ServerPortNumber = v
+			}
+		case "ApplicationRootUrl":
+			newCfg.ApplicationRootUrl = valStr
+		default:
+			return fmt.Errorf("unknown configuration property: %s", key)
+		}
+	}
+
+	ps.Configuration.Configurations = append(ps.Configuration.Configurations, newCfg)
+
+	if err := e.writer.UpdateProjectSettings(ps); err != nil {
+		return fmt.Errorf("failed to update project settings: %w", err)
+	}
+
+	fmt.Fprintf(e.output, "Created configuration: %s\n", stmt.Name)
+	return nil
+}
+
+// dropConfiguration handles DROP CONFIGURATION 'name'.
+func (e *Executor) dropConfiguration(stmt *ast.DropConfigurationStmt) error {
+	if e.writer == nil {
+		return fmt.Errorf("not connected in write mode")
+	}
+
+	ps, err := e.reader.GetProjectSettings()
+	if err != nil {
+		return fmt.Errorf("failed to read project settings: %w", err)
+	}
+
+	if ps.Configuration == nil {
+		return fmt.Errorf("configuration settings not found in project")
+	}
+
+	for i, cfg := range ps.Configuration.Configurations {
+		if strings.EqualFold(cfg.Name, stmt.Name) {
+			ps.Configuration.Configurations = append(
+				ps.Configuration.Configurations[:i],
+				ps.Configuration.Configurations[i+1:]...,
+			)
+			if err := e.writer.UpdateProjectSettings(ps); err != nil {
+				return fmt.Errorf("failed to update project settings: %w", err)
+			}
+			fmt.Fprintf(e.output, "Dropped configuration: %s\n", stmt.Name)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("configuration not found: %s", stmt.Name)
 }
 
 // settingsValueToString converts an AST settings value to string.

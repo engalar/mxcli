@@ -15,14 +15,27 @@ func (b *Builder) ExitAlterSettingsClause(ctx *parser.AlterSettingsClauseContext
 		Properties: make(map[string]any),
 	}
 
-	if ctx.CONSTANT() != nil {
-		// ALTER SETTINGS CONSTANT 'name' VALUE 'value' [IN CONFIGURATION 'cfg']
+	if ctx.DROP() != nil && ctx.CONSTANT() != nil {
+		// ALTER SETTINGS DROP CONSTANT 'name' [IN CONFIGURATION 'cfg']
+		stmt.Section = "CONSTANT"
+		stmt.DropConstant = true
+		allStrings := ctx.AllSTRING_LITERAL()
+		if len(allStrings) > 0 {
+			stmt.ConstantId = unquoteString(allStrings[0].GetText())
+		}
+		if ctx.IN() != nil && ctx.CONFIGURATION() != nil && len(allStrings) > 1 {
+			stmt.ConfigName = unquoteString(allStrings[1].GetText())
+		}
+	} else if ctx.CONSTANT() != nil {
+		// ALTER SETTINGS CONSTANT 'name' (VALUE 'value' | DROP) [IN CONFIGURATION 'cfg']
 		stmt.Section = "CONSTANT"
 		allStrings := ctx.AllSTRING_LITERAL()
 		if len(allStrings) > 0 {
 			stmt.ConstantId = unquoteString(allStrings[0].GetText())
 		}
-		if ctx.SettingsValue() != nil {
+		if ctx.DROP() != nil {
+			stmt.DropConstant = true
+		} else if ctx.SettingsValue() != nil {
 			stmt.Value = settingsValueText(ctx.SettingsValue().(*parser.SettingsValueContext))
 		}
 		// Check for IN CONFIGURATION 'name'
@@ -71,6 +84,35 @@ func (b *Builder) ExitAlterSettingsClause(ctx *parser.AlterSettingsClauseContext
 			val := settingsValueToInterface(svCtx)
 			stmt.Properties[key] = val
 		}
+	}
+
+	b.statements = append(b.statements, stmt)
+}
+
+// ExitCreateConfigurationStatement handles CREATE CONFIGURATION 'name' [Key = Value, ...].
+func (b *Builder) ExitCreateConfigurationStatement(ctx *parser.CreateConfigurationStatementContext) {
+	stmt := &ast.CreateConfigurationStmt{
+		Properties: make(map[string]any),
+	}
+
+	if sl := ctx.STRING_LITERAL(); sl != nil {
+		stmt.Name = unquoteString(sl.GetText())
+	}
+
+	for _, assignCtx := range ctx.AllSettingsAssignment() {
+		assign, ok := assignCtx.(*parser.SettingsAssignmentContext)
+		if !ok || assign == nil {
+			continue
+		}
+		if assign.IDENTIFIER() == nil || assign.SettingsValue() == nil {
+			continue
+		}
+		key := assign.IDENTIFIER().GetText()
+		svCtx, ok := assign.SettingsValue().(*parser.SettingsValueContext)
+		if !ok || svCtx == nil {
+			continue
+		}
+		stmt.Properties[key] = settingsValueText(svCtx)
 	}
 
 	b.statements = append(b.statements, stmt)

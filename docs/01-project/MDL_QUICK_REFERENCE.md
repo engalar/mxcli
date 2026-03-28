@@ -293,6 +293,9 @@ CREATE OR REPLACE NAVIGATION Responsive
 | Alter model settings | `ALTER SETTINGS MODEL Key = Value;` | AfterStartupMicroflow, HashAlgorithm, JavaVersion, etc. |
 | Alter configuration | `ALTER SETTINGS CONFIGURATION 'Name' Key = Value;` | DatabaseType, DatabaseUrl, HttpPortNumber, etc. |
 | Alter constant | `ALTER SETTINGS CONSTANT 'Name' VALUE 'val' IN CONFIGURATION 'cfg';` | Override constant per configuration |
+| Drop constant override | `ALTER SETTINGS DROP CONSTANT 'Name' IN CONFIGURATION 'cfg';` | Reset to default value |
+| Create configuration | `CREATE CONFIGURATION 'Name' [Key = Value, ...];` | New server configuration |
+| Drop configuration | `DROP CONFIGURATION 'Name';` | Remove a configuration |
 | Alter language | `ALTER SETTINGS LANGUAGE Key = Value;` | DefaultLanguageCode |
 | Alter workflows | `ALTER SETTINGS WORKFLOWS Key = Value;` | UserEntity, DefaultTaskParallelism |
 

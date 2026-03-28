@@ -98,6 +98,7 @@ createStatement
       | createUserRoleStatement
       | createDemoUserStatement
       | createImageCollectionStatement
+      | createConfigurationStatement
       )
     ;
 
@@ -251,6 +252,7 @@ dropStatement
     | DROP WORKFLOW qualifiedName
     | DROP IMAGE COLLECTION qualifiedName
     | DROP REST CLIENT qualifiedName
+    | DROP CONFIGURATION STRING_LITERAL
     | DROP FOLDER STRING_LITERAL IN (qualifiedName | IDENTIFIER)
     ;
 
@@ -2014,6 +2016,11 @@ constantOption
     | EXPOSED TO CLIENT
     ;
 
+createConfigurationStatement
+    : CONFIGURATION STRING_LITERAL
+      (settingsAssignment (COMMA settingsAssignment)*)?
+    ;
+
 /**
  * CREATE REST CLIENT Module.Name
  * BASE URL 'https://api.example.com/v1'
@@ -2397,7 +2404,8 @@ workflowAnnotationStmt
  */
 alterSettingsClause
     : settingsSection settingsAssignment (COMMA settingsAssignment)*
-    | CONSTANT STRING_LITERAL VALUE settingsValue (IN CONFIGURATION STRING_LITERAL)?
+    | CONSTANT STRING_LITERAL (VALUE settingsValue | DROP) (IN CONFIGURATION STRING_LITERAL)?
+    | DROP CONSTANT STRING_LITERAL (IN CONFIGURATION STRING_LITERAL)?
     | CONFIGURATION STRING_LITERAL settingsAssignment (COMMA settingsAssignment)*
     ;
 

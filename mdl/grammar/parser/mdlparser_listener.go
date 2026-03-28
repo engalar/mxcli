@@ -688,6 +688,9 @@ type MDLParserListener interface {
 	// EnterConstantOption is called when entering the constantOption production.
 	EnterConstantOption(c *ConstantOptionContext)
 
+	// EnterCreateConfigurationStatement is called when entering the createConfigurationStatement production.
+	EnterCreateConfigurationStatement(c *CreateConfigurationStatementContext)
+
 	// EnterCreateRestClientStatement is called when entering the createRestClientStatement production.
 	EnterCreateRestClientStatement(c *CreateRestClientStatementContext)
 
@@ -1797,6 +1800,9 @@ type MDLParserListener interface {
 
 	// ExitConstantOption is called when exiting the constantOption production.
 	ExitConstantOption(c *ConstantOptionContext)
+
+	// ExitCreateConfigurationStatement is called when exiting the createConfigurationStatement production.
+	ExitCreateConfigurationStatement(c *CreateConfigurationStatementContext)
 
 	// ExitCreateRestClientStatement is called when exiting the createRestClientStatement production.
 	ExitCreateRestClientStatement(c *CreateRestClientStatementContext)

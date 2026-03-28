@@ -1422,6 +1422,14 @@ func (s *BaseMDLParserListener) EnterConstantOption(ctx *ConstantOptionContext) 
 // ExitConstantOption is called when production constantOption is exited.
 func (s *BaseMDLParserListener) ExitConstantOption(ctx *ConstantOptionContext) {}
 
+// EnterCreateConfigurationStatement is called when production createConfigurationStatement is entered.
+func (s *BaseMDLParserListener) EnterCreateConfigurationStatement(ctx *CreateConfigurationStatementContext) {
+}
+
+// ExitCreateConfigurationStatement is called when production createConfigurationStatement is exited.
+func (s *BaseMDLParserListener) ExitCreateConfigurationStatement(ctx *CreateConfigurationStatementContext) {
+}
+
 // EnterCreateRestClientStatement is called when production createRestClientStatement is entered.
 func (s *BaseMDLParserListener) EnterCreateRestClientStatement(ctx *CreateRestClientStatementContext) {
 }
