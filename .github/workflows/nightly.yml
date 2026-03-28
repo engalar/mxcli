@@ -12,6 +12,11 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mendix-version: ['11.6.4', '11.8.0']
+      fail-fast: false
+    name: test (Mendix ${{ matrix.mendix-version }})
     steps:
       - uses: actions/checkout@v5
 
@@ -25,10 +30,10 @@ jobs:
       - name: Unit tests
         run: make test
 
-      - name: Setup mxbuild
-        run: ./bin/mxcli setup mxbuild --version 11.6.3
+      - name: Setup mxbuild ${{ matrix.mendix-version }}
+        run: ./bin/mxcli setup mxbuild --version ${{ matrix.mendix-version }}
 
-      - name: Integration tests
+      - name: Integration tests (Mendix ${{ matrix.mendix-version }})
         run: make test-integration
         timeout-minutes: 30
 

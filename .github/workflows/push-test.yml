@@ -18,7 +18,7 @@ jobs:
       - name: Test
         run: make test
       - name: Setup mxbuild
-        run: ./bin/mxcli setup mxbuild --version 11.6.3
+        run: ./bin/mxcli setup mxbuild --version 11.8.0
       - name: Integration tests
         run: make test-integration
         timeout-minutes: 30
