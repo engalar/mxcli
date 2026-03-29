@@ -13,15 +13,20 @@ SHOW COMMANDS
   SHOW EXTERNAL ACTIONS;              -- List external actions used in microflows
   SHOW EXTERNAL ACTIONS IN MyModule;  -- Filter by module
 
-CONTRACT COMMANDS (browse cached $metadata)
---------------------------------------------
+CONTRACT COMMANDS (browse cached contracts)
+-------------------------------------------
 
+  OData ($metadata):
   SHOW CONTRACT ENTITIES FROM MyModule.MyClient;   -- List entity types from $metadata
   SHOW CONTRACT ACTIONS FROM MyModule.MyClient;    -- List actions/functions from $metadata
-
   DESCRIBE CONTRACT ENTITY MyModule.MyClient.Product;             -- Properties and nav props
   DESCRIBE CONTRACT ENTITY MyModule.MyClient.Product FORMAT mdl;  -- Generate CREATE EXTERNAL ENTITY
   DESCRIBE CONTRACT ACTION MyModule.MyClient.CreateOrder;         -- Parameters and return type
+
+  AsyncAPI (business events):
+  SHOW CONTRACT CHANNELS FROM MyModule.MyEventClient;  -- List channels
+  SHOW CONTRACT MESSAGES FROM MyModule.MyEventClient;  -- List messages with schemas
+  DESCRIBE CONTRACT MESSAGE MyModule.MyEventClient.OrderChanged;  -- Message properties
 
 DESCRIBE COMMANDS
 -----------------

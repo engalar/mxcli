@@ -406,6 +406,7 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - CALCULATED BY microflow syntax for calculated attributes
 - Image collections (SHOW/DESCRIBE/CREATE/DROP)
 - OData contract browsing (SHOW/DESCRIBE CONTRACT ENTITIES/ACTIONS FROM cached $metadata)
+- AsyncAPI contract browsing (SHOW/DESCRIBE CONTRACT CHANNELS/MESSAGES FROM cached AsyncAPI)
 - SHOW EXTERNAL ACTIONS, SHOW PUBLISHED REST SERVICES
 - Integration catalog tables (rest_clients, rest_operations, published_rest_services, external_entities, external_actions, business_events)
 

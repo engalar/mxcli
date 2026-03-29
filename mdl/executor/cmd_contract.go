@@ -467,3 +467,224 @@ func edmToMendixType(p *mpr.EdmProperty) string {
 		return "String(200)"
 	}
 }
+
+// ============================================================================
+// AsyncAPI Contract Commands
+// ============================================================================
+
+// showContractChannels handles SHOW CONTRACT CHANNELS FROM Module.Service.
+func (e *Executor) showContractChannels(name *ast.QualifiedName) error {
+	if name == nil {
+		return fmt.Errorf("service name required: SHOW CONTRACT CHANNELS FROM Module.Service")
+	}
+
+	doc, svcQN, err := e.parseAsyncAPIContract(*name)
+	if err != nil {
+		return err
+	}
+
+	if len(doc.Channels) == 0 {
+		fmt.Fprintf(e.output, "No channels found in contract for %s.\n", svcQN)
+		return nil
+	}
+
+	type row struct {
+		channel   string
+		operation string
+		opID      string
+		message   string
+	}
+
+	var rows []row
+	chWidth := len("Channel")
+	opWidth := len("Operation")
+	opIDWidth := len("OperationID")
+	msgWidth := len("Message")
+
+	for _, ch := range doc.Channels {
+		rows = append(rows, row{ch.Name, ch.OperationType, ch.OperationID, ch.MessageRef})
+		if len(ch.Name) > chWidth {
+			chWidth = len(ch.Name)
+		}
+		if len(ch.OperationType) > opWidth {
+			opWidth = len(ch.OperationType)
+		}
+		if len(ch.OperationID) > opIDWidth {
+			opIDWidth = len(ch.OperationID)
+		}
+		if len(ch.MessageRef) > msgWidth {
+			msgWidth = len(ch.MessageRef)
+		}
+	}
+
+	fmt.Fprintf(e.output, "| %-*s | %-*s | %-*s | %-*s |\n",
+		chWidth, "Channel", opWidth, "Operation", opIDWidth, "OperationID", msgWidth, "Message")
+	fmt.Fprintf(e.output, "|-%s-|-%s-|-%s-|-%s-|\n",
+		strings.Repeat("-", chWidth), strings.Repeat("-", opWidth),
+		strings.Repeat("-", opIDWidth), strings.Repeat("-", msgWidth))
+	for _, r := range rows {
+		fmt.Fprintf(e.output, "| %-*s | %-*s | %-*s | %-*s |\n",
+			chWidth, r.channel, opWidth, r.operation, opIDWidth, r.opID, msgWidth, r.message)
+	}
+	fmt.Fprintf(e.output, "\n(%d channels in %s contract)\n", len(rows), svcQN)
+
+	return nil
+}
+
+// showContractMessages handles SHOW CONTRACT MESSAGES FROM Module.Service.
+func (e *Executor) showContractMessages(name *ast.QualifiedName) error {
+	if name == nil {
+		return fmt.Errorf("service name required: SHOW CONTRACT MESSAGES FROM Module.Service")
+	}
+
+	doc, svcQN, err := e.parseAsyncAPIContract(*name)
+	if err != nil {
+		return err
+	}
+
+	if len(doc.Messages) == 0 {
+		fmt.Fprintf(e.output, "No messages found in contract for %s.\n", svcQN)
+		return nil
+	}
+
+	type row struct {
+		name        string
+		title       string
+		contentType string
+		props       int
+	}
+
+	var rows []row
+	nameWidth := len("Message")
+	titleWidth := len("Title")
+	ctWidth := len("ContentType")
+
+	for _, msg := range doc.Messages {
+		rows = append(rows, row{msg.Name, msg.Title, msg.ContentType, len(msg.Properties)})
+		if len(msg.Name) > nameWidth {
+			nameWidth = len(msg.Name)
+		}
+		if len(msg.Title) > titleWidth {
+			titleWidth = len(msg.Title)
+		}
+		if len(msg.ContentType) > ctWidth {
+			ctWidth = len(msg.ContentType)
+		}
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].name) < strings.ToLower(rows[j].name)
+	})
+
+	propsWidth := len("Props")
+
+	fmt.Fprintf(e.output, "| %-*s | %-*s | %-*s | %-*s |\n",
+		nameWidth, "Message", titleWidth, "Title", ctWidth, "ContentType", propsWidth, "Props")
+	fmt.Fprintf(e.output, "|-%s-|-%s-|-%s-|-%s-|\n",
+		strings.Repeat("-", nameWidth), strings.Repeat("-", titleWidth),
+		strings.Repeat("-", ctWidth), strings.Repeat("-", propsWidth))
+	for _, r := range rows {
+		fmt.Fprintf(e.output, "| %-*s | %-*s | %-*s | %-*d |\n",
+			nameWidth, r.name, titleWidth, r.title, ctWidth, r.contentType, propsWidth, r.props)
+	}
+	fmt.Fprintf(e.output, "\n(%d messages in %s contract)\n", len(rows), svcQN)
+
+	return nil
+}
+
+// describeContractMessage handles DESCRIBE CONTRACT MESSAGE Module.Service.MessageName.
+func (e *Executor) describeContractMessage(name ast.QualifiedName) error {
+	svcName, msgName, err := splitContractRef(name)
+	if err != nil {
+		return err
+	}
+
+	doc, svcQN, err := e.parseAsyncAPIContract(svcName)
+	if err != nil {
+		return err
+	}
+
+	msg := doc.FindMessage(msgName)
+	if msg == nil {
+		return fmt.Errorf("message %q not found in contract for %s", msgName, svcQN)
+	}
+
+	fmt.Fprintf(e.output, "%s\n", msg.Name)
+	if msg.Title != "" {
+		fmt.Fprintf(e.output, "  Title: %s\n", msg.Title)
+	}
+	if msg.Description != "" {
+		fmt.Fprintf(e.output, "  Description: %s\n", msg.Description)
+	}
+	if msg.ContentType != "" {
+		fmt.Fprintf(e.output, "  ContentType: %s\n", msg.ContentType)
+	}
+
+	if len(msg.Properties) > 0 {
+		fmt.Fprintln(e.output)
+		nameWidth := len("Property")
+		typeWidth := len("Type")
+		for _, p := range msg.Properties {
+			if len(p.Name) > nameWidth {
+				nameWidth = len(p.Name)
+			}
+			t := asyncTypeString(p)
+			if len(t) > typeWidth {
+				typeWidth = len(t)
+			}
+		}
+
+		fmt.Fprintf(e.output, "  %-*s  %-*s\n", nameWidth, "Property", typeWidth, "Type")
+		fmt.Fprintf(e.output, "  %s  %s\n", strings.Repeat("-", nameWidth), strings.Repeat("-", typeWidth))
+		for _, p := range msg.Properties {
+			fmt.Fprintf(e.output, "  %-*s  %-*s\n", nameWidth, p.Name, typeWidth, asyncTypeString(p))
+		}
+	}
+
+	return nil
+}
+
+// parseAsyncAPIContract finds a business event service by name and parses its cached AsyncAPI document.
+func (e *Executor) parseAsyncAPIContract(name ast.QualifiedName) (*mpr.AsyncAPIDocument, string, error) {
+	services, err := e.reader.ListBusinessEventServices()
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to list business event services: %w", err)
+	}
+
+	h, err := e.getHierarchy()
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to build hierarchy: %w", err)
+	}
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+
+		if !strings.EqualFold(modName, name.Module) || !strings.EqualFold(svc.Name, name.Name) {
+			continue
+		}
+
+		svcQN := modName + "." + svc.Name
+
+		if svc.Document == "" {
+			return nil, svcQN, fmt.Errorf("no cached AsyncAPI contract for %s. This service has no Document field (it may be a publisher, not a consumer)", svcQN)
+		}
+
+		doc, err := mpr.ParseAsyncAPI(svc.Document)
+		if err != nil {
+			return nil, svcQN, fmt.Errorf("failed to parse AsyncAPI contract for %s: %w", svcQN, err)
+		}
+
+		return doc, svcQN, nil
+	}
+
+	return nil, "", fmt.Errorf("business event service not found: %s.%s", name.Module, name.Name)
+}
+
+// asyncTypeString formats an AsyncAPI property type for display.
+func asyncTypeString(p *mpr.AsyncAPIProperty) string {
+	if p.Format != "" {
+		return p.Type + " (" + p.Format + ")"
+	}
+	return p.Type
+}

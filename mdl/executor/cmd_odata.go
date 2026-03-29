@@ -3,10 +3,13 @@
 package executor
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
+	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
@@ -1096,11 +1099,35 @@ func (e *Executor) createODataClient(stmt *ast.CreateODataClientStmt) error {
 		newSvc.HttpConfiguration = cfg
 	}
 
+	// Fetch and cache $metadata from the service URL
+	if newSvc.MetadataUrl != "" {
+		metadata, hash, err := fetchODataMetadata(newSvc.MetadataUrl)
+		if err != nil {
+			fmt.Fprintf(e.output, "Warning: could not fetch $metadata: %v\n", err)
+		} else if metadata != "" {
+			newSvc.Metadata = metadata
+			newSvc.MetadataHash = hash
+			newSvc.Validated = true
+		}
+	}
+
 	if err := e.writer.CreateConsumedODataService(newSvc); err != nil {
 		return fmt.Errorf("failed to create OData client: %w", err)
 	}
 	e.invalidateHierarchy()
 	fmt.Fprintf(e.output, "Created OData client: %s.%s\n", stmt.Name.Module, stmt.Name.Name)
+	if newSvc.Metadata != "" {
+		// Parse to show summary
+		if doc, err := mpr.ParseEdmx(newSvc.Metadata); err == nil {
+			entityCount := 0
+			actionCount := 0
+			for _, s := range doc.Schemas {
+				entityCount += len(s.EntityTypes)
+			}
+			actionCount = len(doc.Actions)
+			fmt.Fprintf(e.output, "  Cached $metadata: %d entity types, %d actions\n", entityCount, actionCount)
+		}
+	}
 	return nil
 }
 
@@ -1474,4 +1501,33 @@ func astEntityDefToModel(def *ast.PublishedEntityDef) (*model.PublishedEntityTyp
 	}
 
 	return entityType, entitySet
+}
+
+// fetchODataMetadata downloads the $metadata document from the service URL.
+// Returns the metadata XML and its SHA-256 hash, or empty strings if the fetch fails.
+func fetchODataMetadata(metadataUrl string) (metadata string, hash string, err error) {
+	if metadataUrl == "" {
+		return "", "", nil
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(metadataUrl)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to fetch $metadata from %s: %w", metadataUrl, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("$metadata fetch returned HTTP %d from %s", resp.StatusCode, metadataUrl)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to read $metadata response: %w", err)
+	}
+
+	metadata = string(body)
+	h := sha256.Sum256(body)
+	hash = fmt.Sprintf("%x", h)
+	return metadata, hash, nil
 }

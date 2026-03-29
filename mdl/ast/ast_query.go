@@ -82,6 +82,8 @@ const (
 	ShowConstantValues       // SHOW CONSTANT VALUES [IN module]
 	ShowContractEntities     // SHOW CONTRACT ENTITIES FROM Module.Service
 	ShowContractActions      // SHOW CONTRACT ACTIONS FROM Module.Service
+	ShowContractChannels     // SHOW CONTRACT CHANNELS FROM Module.Service (AsyncAPI)
+	ShowContractMessages     // SHOW CONTRACT MESSAGES FROM Module.Service (AsyncAPI)
 )
 
 // String returns the human-readable name of the show object type.
@@ -193,6 +195,10 @@ func (t ShowObjectType) String() string {
 		return "CONTRACT ENTITIES"
 	case ShowContractActions:
 		return "CONTRACT ACTIONS"
+	case ShowContractChannels:
+		return "CONTRACT CHANNELS"
+	case ShowContractMessages:
+		return "CONTRACT MESSAGES"
 	default:
 		return "UNKNOWN"
 	}
@@ -247,6 +253,7 @@ const (
 	DescribePublishedRestService // DESCRIBE PUBLISHED REST SERVICE Module.Name
 	DescribeContractEntity       // DESCRIBE CONTRACT ENTITY Service.EntityName [FORMAT mdl]
 	DescribeContractAction       // DESCRIBE CONTRACT ACTION Service.ActionName [FORMAT mdl]
+	DescribeContractMessage      // DESCRIBE CONTRACT MESSAGE Service.MessageName
 )
 
 // String returns the human-readable name of the describe object type.
@@ -308,6 +315,8 @@ func (t DescribeObjectType) String() string {
 		return "CONTRACT ENTITY"
 	case DescribeContractAction:
 		return "CONTRACT ACTION"
+	case DescribeContractMessage:
+		return "CONTRACT MESSAGE"
 	default:
 		return "UNKNOWN"
 	}

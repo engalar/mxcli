@@ -782,6 +782,10 @@ func (e *Executor) execShow(s *ast.ShowStmt) error {
 		return e.showContractEntities(s.Name)
 	case ast.ShowContractActions:
 		return e.showContractActions(s.Name)
+	case ast.ShowContractChannels:
+		return e.showContractChannels(s.Name)
+	case ast.ShowContractMessages:
+		return e.showContractMessages(s.Name)
 	default:
 		return fmt.Errorf("unknown show object type")
 	}
@@ -849,6 +853,8 @@ func (e *Executor) execDescribe(s *ast.DescribeStmt) error {
 		return e.describeContractEntity(s.Name, s.Format)
 	case ast.DescribeContractAction:
 		return e.describeContractAction(s.Name, s.Format)
+	case ast.DescribeContractMessage:
+		return e.describeContractMessage(s.Name)
 	default:
 		return fmt.Errorf("unknown describe object type")
 	}

@@ -102,6 +102,9 @@ CREATE CONSTANT MyModule.EnableLogging TYPE Boolean DEFAULT true;
 | Show contract actions | `SHOW CONTRACT ACTIONS FROM Module.Client;` | Browse cached $metadata |
 | Describe contract entity | `DESCRIBE CONTRACT ENTITY Module.Client.Entity [FORMAT mdl];` | Properties, types, keys |
 | Describe contract action | `DESCRIBE CONTRACT ACTION Module.Client.Action [FORMAT mdl];` | Parameters, return type |
+| Show contract channels | `SHOW CONTRACT CHANNELS FROM Module.Service;` | Browse cached AsyncAPI |
+| Show contract messages | `SHOW CONTRACT MESSAGES FROM Module.Service;` | Browse cached AsyncAPI |
+| Describe contract message | `DESCRIBE CONTRACT MESSAGE Module.Service.Message;` | Message payload properties |
 
 **OData Client Example:**
 ```sql

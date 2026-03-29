@@ -31,6 +31,7 @@ func (r *Reader) parseBusinessEventService(unitID, containerID string, contents 
 	svc.Documentation = extractString(raw["Documentation"])
 	svc.Excluded = extractBool(raw["Excluded"], false)
 	svc.ExportLevel = extractString(raw["ExportLevel"])
+	svc.Document = extractString(raw["Document"])
 
 	// Parse Definition (non-nil for service definitions)
 	if defRaw, ok := raw["Definition"]; ok && defRaw != nil {

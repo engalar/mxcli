@@ -503,6 +503,9 @@ type BusinessEventService struct {
 	ExportLevel              string                   `json:"exportLevel,omitempty"`
 	Definition               *BusinessEventDefinition `json:"definition,omitempty"`
 	OperationImplementations []*ServiceOperation      `json:"operationImplementations,omitempty"`
+
+	// Cached AsyncAPI contract (for consumed/client services)
+	Document string `json:"document,omitempty"` // AsyncAPI YAML document
 }
 
 // GetName returns the service's name.

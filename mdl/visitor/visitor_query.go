@@ -40,6 +40,22 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 			stmt.Name = &name
 		}
 		b.statements = append(b.statements, stmt)
+	} else if ctx.CONTRACT() != nil && ctx.CHANNELS() != nil {
+		// SHOW CONTRACT CHANNELS FROM Module.Service
+		stmt := &ast.ShowStmt{ObjectType: ast.ShowContractChannels}
+		if qn := ctx.QualifiedName(); qn != nil {
+			name := buildQualifiedName(qn)
+			stmt.Name = &name
+		}
+		b.statements = append(b.statements, stmt)
+	} else if ctx.CONTRACT() != nil && ctx.MESSAGES() != nil {
+		// SHOW CONTRACT MESSAGES FROM Module.Service
+		stmt := &ast.ShowStmt{ObjectType: ast.ShowContractMessages}
+		if qn := ctx.QualifiedName(); qn != nil {
+			name := buildQualifiedName(qn)
+			stmt.Name = &name
+		}
+		b.statements = append(b.statements, stmt)
 	} else if ctx.EXTERNAL() != nil && ctx.ENTITIES() != nil {
 		// SHOW EXTERNAL ENTITIES [IN module] - must come before ENTITIES check
 		stmt := &ast.ShowStmt{ObjectType: ast.ShowExternalEntities}
@@ -726,6 +742,11 @@ func (b *Builder) ExitDescribeStatement(ctx *parser.DescribeStatementContext) {
 			stmt.Format = ctx.IDENTIFIER().GetText()
 		}
 		b.statements = append(b.statements, stmt)
+	} else if ctx.CONTRACT() != nil && ctx.MESSAGE() != nil {
+		b.statements = append(b.statements, &ast.DescribeStmt{
+			ObjectType: ast.DescribeContractMessage,
+			Name:       name,
+		})
 	} else if ctx.ENTITY() != nil {
 		b.statements = append(b.statements, &ast.DescribeStmt{
 			ObjectType: ast.DescribeEntity,

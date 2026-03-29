@@ -48,19 +48,28 @@ func (w *Writer) DeleteConsumedODataService(id model.ID) error {
 // serializeConsumedODataService converts a ConsumedODataService to BSON bytes.
 func (w *Writer) serializeConsumedODataService(svc *model.ConsumedODataService) ([]byte, error) {
 	doc := bson.M{
-		"$ID":               idToBsonBinary(string(svc.ID)),
-		"$Type":             "Rest$ConsumedODataService",
-		"Name":              svc.Name,
-		"Documentation":     svc.Documentation,
-		"Version":           svc.Version,
-		"ServiceName":       svc.ServiceName,
-		"ODataVersion":      svc.ODataVersion,
-		"MetadataUrl":       svc.MetadataUrl,
-		"TimeoutExpression": svc.TimeoutExpression,
-		"ProxyType":         svc.ProxyType,
-		"Description":       svc.Description,
-		"Validated":         svc.Validated,
-		"Excluded":          svc.Excluded,
+		"$ID":                  idToBsonBinary(string(svc.ID)),
+		"$Type":                "Rest$ConsumedODataService",
+		"Name":                 svc.Name,
+		"Documentation":        svc.Documentation,
+		"Version":              svc.Version,
+		"ServiceName":          svc.ServiceName,
+		"ODataVersion":         svc.ODataVersion,
+		"MetadataUrl":          svc.MetadataUrl,
+		"TimeoutExpression":    svc.TimeoutExpression,
+		"ProxyType":            svc.ProxyType,
+		"Description":          svc.Description,
+		"Validated":            svc.Validated,
+		"Excluded":             svc.Excluded,
+		"ExportLevel":          "Hidden",
+		"Metadata":             svc.Metadata,
+		"MetadataHash":         svc.MetadataHash,
+		"MetadataReferences":   bson.A{int32(0)}, // empty BSON array marker
+		"ValidatedEntities":    bson.A{int32(0)}, // empty BSON array marker
+		"LastUpdated":          "",
+		"UseQuerySegment":      false,
+		"MinimumMxVersion":     "",
+		"RecommendedMxVersion": "",
 	}
 
 	// Microflow references (BY_NAME)
@@ -83,6 +92,20 @@ func (w *Writer) serializeConsumedODataService(svc *model.ConsumedODataService) 
 	}
 	if svc.ProxyPassword != "" {
 		doc["ProxyPassword"] = svc.ProxyPassword
+	}
+
+	// Mendix Catalog integration (optional)
+	if svc.ApplicationId != "" {
+		doc["ApplicationId"] = svc.ApplicationId
+	}
+	if svc.EndpointId != "" {
+		doc["EndpointId"] = svc.EndpointId
+	}
+	if svc.CatalogUrl != "" {
+		doc["CatalogUrl"] = svc.CatalogUrl
+	}
+	if svc.EnvironmentType != "" {
+		doc["EnvironmentType"] = svc.EnvironmentType
 	}
 
 	// HTTP configuration (required nested part)

@@ -366,38 +366,12 @@ SHOW EXTERNAL ACTIONS IN OdTest;
 /
 
 -- ############################################################################
--- LEVEL 10: CONTRACT BROWSING (cached $metadata)
+-- NOTE: CREATE ODATA CLIENT now auto-fetches and caches $metadata from the
+-- MetadataUrl. CONTRACT BROWSING commands (SHOW CONTRACT ENTITIES/ACTIONS)
+-- work on services with cached metadata. The test URLs above are not reachable
+-- from CI, so contract browsing examples are not included here.
+-- See cmd/mxcli/help_topics/odata.txt for syntax reference.
 -- ############################################################################
-
-/**
- * Level 10.1: Browse entity types from a consumed OData service's cached $metadata
- */
-SHOW CONTRACT ENTITIES FROM OdTest.SalesforceAPI;
-/
-
-/**
- * Level 10.2: Browse actions/functions from the contract
- */
-SHOW CONTRACT ACTIONS FROM OdTest.SalesforceAPI;
-/
-
-/**
- * Level 10.3: Describe a specific entity type from the contract
- */
-DESCRIBE CONTRACT ENTITY OdTest.SalesforceAPI.Account;
-/
-
-/**
- * Level 10.4: Generate CREATE EXTERNAL ENTITY from the contract
- */
-DESCRIBE CONTRACT ENTITY OdTest.SalesforceAPI.Account FORMAT mdl;
-/
-
-/**
- * Level 10.5: Describe a specific action from the contract
- */
-DESCRIBE CONTRACT ACTION OdTest.SalesforceAPI.CreateOrder;
-/
 
 -- ############################################################################
 -- LEVEL 8.8: DROP (cleanup)
