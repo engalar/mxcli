@@ -89,16 +89,16 @@ func (e *Executor) describePage(name ast.QualifiedName) error {
 	header := fmt.Sprintf("CREATE OR REPLACE PAGE %s.%s", modName, foundPage.Name)
 	props := []string{}
 	if title != "" {
-		props = append(props, fmt.Sprintf("Title: '%s'", title))
+		props = append(props, fmt.Sprintf("Title: %s", mdlQuote(title)))
 	}
 	if layoutName != "" {
 		props = append(props, fmt.Sprintf("Layout: %s", layoutName))
 	}
 	if foundPage.URL != "" {
-		props = append(props, fmt.Sprintf("Url: '%s'", foundPage.URL))
+		props = append(props, fmt.Sprintf("Url: %s", mdlQuote(foundPage.URL)))
 	}
 	if folderPath := h.BuildFolderPath(foundPage.ContainerID); folderPath != "" {
-		props = append(props, fmt.Sprintf("Folder: '%s'", folderPath))
+		props = append(props, fmt.Sprintf("Folder: %s", mdlQuote(folderPath)))
 	}
 	if len(foundPage.Parameters) > 0 {
 		params := []string{}
@@ -125,7 +125,7 @@ func (e *Executor) describePage(name ast.QualifiedName) error {
 						varTypeName = bsonTypeToMDLType(vtType)
 					}
 				}
-				varParts = append(varParts, fmt.Sprintf("$%s: %s = '%s'", varName, varTypeName, defaultVal))
+				varParts = append(varParts, fmt.Sprintf("$%s: %s = %s", varName, varTypeName, mdlQuote(defaultVal)))
 			}
 			props = append(props, fmt.Sprintf("Variables: { %s }", strings.Join(varParts, ", ")))
 		}
@@ -235,7 +235,7 @@ func (e *Executor) describeSnippet(name ast.QualifiedName) error {
 			snippetProps = append(snippetProps, fmt.Sprintf("Params: { %s }", strings.Join(paramParts, ", ")))
 		}
 		if folderPath != "" {
-			snippetProps = append(snippetProps, fmt.Sprintf("Folder: '%s'", folderPath))
+			snippetProps = append(snippetProps, fmt.Sprintf("Folder: %s", mdlQuote(folderPath)))
 		}
 		fmt.Fprintf(e.output, " (%s)", strings.Join(snippetProps, ", "))
 	}
