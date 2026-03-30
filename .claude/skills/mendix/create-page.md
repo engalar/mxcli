@@ -41,6 +41,20 @@ CREATE [OR REPLACE] PAGE Module.PageName
 | Inline style | `Style: 'css'` | `CONTAINER c (Style: 'padding: 16px;')` |
 | Design properties | `DesignProperties: [...]` | `CONTAINER c (DesignProperties: ['Spacing top': 'Large', 'Full width': ON])` |
 
+### Reserved Words as Attribute Names
+
+When an attribute name matches an MDL reserved keyword (like `Status`, `Date`, `Value`, `Type`), use double quotes to escape it:
+
+| Syntax | Purpose | Example |
+|--------|---------|---------|
+| `"Status"` | Escape reserved keyword | `COMBOBOX cb (Label: 'Status', Attribute: "Status")` |
+| `"Date"` | Escape reserved keyword | `DATEPICKER dp (Label: 'Date', Attribute: "Date")` |
+| `"Type"` | Escape reserved keyword | `TEXTBOX tb (Label: 'Type', Attribute: "Type")` |
+
+This also works in DATAGRID columns, DataSource WHERE clauses, and anywhere an attribute name is expected.
+
+Common reserved keywords that need quoting: `Status`, `Date`, `Value`, `Type`, `Name`, `Order`, `User`, `Role`, `Action`, `Event`, `Module`, `Entity`, `All`, `None`, `Default`, `Error`, `Range`, `Level`, `Description`, `Version`.
+
 ### FOLDER Option
 
 Place pages in folders for better organization:
@@ -806,6 +820,53 @@ UPDATE WIDGETS SET 'showLabel' = false WHERE WidgetType LIKE '%combobox%';
 -- Multiple properties
 UPDATE WIDGETS SET 'Class' = 'btn-lg', 'Style' = 'margin-top: 8px;' WHERE WidgetType LIKE '%ActionButton%';
 ```
+
+### PLUGGABLEWIDGET — Any Pluggable Widget with Explicit Properties
+
+Create any pluggable widget and set its properties explicitly by propertyKey:
+
+```sql
+PLUGGABLEWIDGET 'com.mendix.widget.custom.switch.Switch' switch1 (booleanAttribute: IsActive)
+```
+
+The widget is created from its embedded template. Properties are set by their widget XML property key names. Attribute names are resolved using the current entity context (DataView parent).
+
+**Syntax:**
+```sql
+PLUGGABLEWIDGET 'widgetID' widgetName [(key1: value1, key2: value2, ...)]
+```
+
+**Property value types:**
+| Value | Interpreted as | Example |
+|-------|---------------|---------|
+| Short name (no dots) | Attribute ref (resolved via entity context) | `booleanAttribute: IsActive` |
+| Qualified path (2+ dots) | Attribute ref (fully qualified) | `booleanAttribute: Module.Entity.IsActive` |
+| Other string | Primitive value | `animationType: bar` |
+
+**Finding property keys:**
+- Run `mxcli widget docs -p app.mpr` to generate widget documentation
+- Check `.claude/skills/widgets/` for per-widget property reference
+- Property keys match the `key` attribute in the widget's XML definition
+
+**Examples:**
+```sql
+-- Boolean toggle (inside DATAVIEW with entity context)
+PLUGGABLEWIDGET 'com.mendix.widget.custom.switch.Switch' sw1 (booleanAttribute: IsActive)
+
+-- Star rating bound to attribute
+PLUGGABLEWIDGET 'com.mendix.widget.custom.starrating.StarRating' rating1 (rateAttribute: Score)
+
+-- Widget with default properties only
+PLUGGABLEWIDGET 'com.mendix.widget.custom.badge.Badge' badge1
+
+-- Display widgets (no entity context needed)
+PLUGGABLEWIDGET 'com.mendix.widget.custom.progressbar.ProgressBar' progBar1
+PLUGGABLEWIDGET 'com.mendix.widget.web.accordion.Accordion' accordion1
+```
+
+**DESCRIBE round-trip:** `DESCRIBE PAGE` outputs generic pluggable widgets as `PLUGGABLEWIDGET 'widgetID' name (key: value, ...)`, which can be re-executed as valid MDL.
+
+**Legacy syntax:** `CUSTOMWIDGET name (WidgetType: 'widgetID')` is still supported but does not support explicit properties.
 
 ## See Also
 

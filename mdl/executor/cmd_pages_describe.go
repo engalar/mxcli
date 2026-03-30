@@ -528,6 +528,17 @@ type rawWidget struct {
 	HeaderMode  string // "Div", "H1"-"H6"
 	// Design properties from Appearance
 	DesignProperties []rawDesignProp
+	// Explicit widget properties (for generic PLUGGABLEWIDGET output)
+	ExplicitProperties []rawExplicitProp
+	// Full widget ID (e.g. "com.mendix.widget.custom.switch.Switch")
+	WidgetID string
+}
+
+// rawExplicitProp represents a non-default property extracted from a CustomWidget.
+type rawExplicitProp struct {
+	Key   string
+	Value string // attribute short name or primitive value
+	IsRef bool   // true if this is an attribute reference, false for primitive
 }
 
 // rawDesignProp represents a parsed design property from BSON.

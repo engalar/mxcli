@@ -324,17 +324,26 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
 	case "DYNAMICIMAGE":
 		widget, err = pb.buildDynamicImageV3(w)
 	default:
-		// Try pluggable widget engine for registered widget types
 		pb.initPluggableEngine()
 		if pb.widgetRegistry != nil {
+			// Try by MDL name first
 			if def, ok := pb.widgetRegistry.Get(strings.ToUpper(w.Type)); ok {
 				return pb.pluggableEngine.Build(def, w)
 			}
+			// PLUGGABLEWIDGET/CUSTOMWIDGET 'widget.id' name — lookup by widget ID
+			if w.Type == "PLUGGABLEWIDGET" || w.Type == "CUSTOMWIDGET" {
+				if widgetType, ok := w.Properties["WidgetType"].(string); ok {
+					if def, ok := pb.widgetRegistry.GetByWidgetID(widgetType); ok {
+						return pb.pluggableEngine.Build(def, w)
+					}
+					return nil, fmt.Errorf("no definition for widget %s (run 'mxcli widget init -p app.mpr')", widgetType)
+				}
+			}
 		}
 		if pb.pluggableEngineErr != nil {
-			return nil, fmt.Errorf("unsupported V3 widget type: %s (%v)", w.Type, pb.pluggableEngineErr)
+			return nil, fmt.Errorf("unsupported widget type: %s (%v)", w.Type, pb.pluggableEngineErr)
 		}
-		return nil, fmt.Errorf("unsupported V3 widget type: %s", w.Type)
+		return nil, fmt.Errorf("unsupported widget type: %s", w.Type)
 	}
 
 	if err != nil {

@@ -58,28 +58,13 @@
           "DataSource": {
             "$ID": "1e4694c2700d4a5da47f590dc70517e9",
             "$Type": "CustomWidgets$CustomWidgetXPathSource",
-            "EntityRef": {
-              "$ID": "3056e3d4a12b48ac8c58e43144a8b80b",
-              "$Type": "DomainModels$DirectEntityRef",
-              "Entity": "PgTest.Customer"
-            },
+            "EntityRef": null,
             "ForceFullObjects": false,
             "SortBar": {
               "$ID": "19fd730b1ce74ebd89e6535328b94913",
               "$Type": "Forms$GridSortBar",
               "SortItems": [
-                2,
-                {
-                  "$ID": "b05e121b081c453191d5ede425af0c61",
-                  "$Type": "Forms$GridSortItem",
-                  "AttributeRef": {
-                    "$ID": "3a7b8c4b0eb14c5c8ae7980083eb86f6",
-                    "$Type": "DomainModels$AttributeRef",
-                    "Attribute": "PgTest.Customer.Name",
-                    "EntityRef": null
-                  },
-                  "SortOrder": "Ascending"
-                }
+                2
               ]
             },
             "SourceVariable": null,

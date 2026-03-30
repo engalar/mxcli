@@ -1,0 +1,44 @@
+-- WidgetDemo: self-contained domain model (no external dependencies)
+-- Provides entities and enumerations for the widget showcase page.
+
+CREATE ENUMERATION WidgetDemo.ENUM_Priority (
+  LOW 'Low',
+  MEDIUM 'Medium',
+  HIGH 'High',
+  CRITICAL 'Critical'
+);
+
+CREATE ENUMERATION WidgetDemo.ENUM_Status (
+  "DRAFT" 'Draft',
+  "ACTIVE" 'Active',
+  "COMPLETED" 'Completed',
+  "ARCHIVED" 'Archived'
+);
+
+CREATE ENUMERATION WidgetDemo.ENUM_Category (
+  "GENERAL" 'General',
+  "INPUT" 'Input',
+  "DISPLAY" 'Display',
+  "STRUCTURE" 'Structure',
+  "DATA_DISPLAY" 'Data Display'
+);
+
+CREATE PERSISTENT ENTITY WidgetDemo.DemoItem (
+  Title: String(200) NOT NULL,
+  Description: String(2000),
+  Code: String(50),
+  Category: Enumeration(WidgetDemo.ENUM_Category) DEFAULT WidgetDemo.ENUM_Category.GENERAL,
+  Priority: Enumeration(WidgetDemo.ENUM_Priority) DEFAULT WidgetDemo.ENUM_Priority.MEDIUM,
+  ItemStatus: Enumeration(WidgetDemo.ENUM_Status) DEFAULT WidgetDemo.ENUM_Status.DRAFT,
+  IsActive: Boolean DEFAULT true,
+  Score: Integer DEFAULT 0,
+  Amount: Decimal DEFAULT 0,
+  DateCreated: DateTime,
+  DueDate: DateTime,
+  Progress: Decimal DEFAULT 0,
+  Rating: Integer DEFAULT 3,
+  Notes: String(2000),
+  ImageUrl: String(500)
+);
+
+GRANT WidgetDemo.User ON WidgetDemo.DemoItem (CREATE, DELETE, READ *, WRITE *);

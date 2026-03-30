@@ -312,7 +312,13 @@ func buildWidgetV3(ctx parser.IWidgetV3Context, b *Builder) *ast.WidgetV3 {
 	}
 
 	// Get widget type
-	if typeCtx := wCtx.WidgetTypeV3(); typeCtx != nil {
+	if wCtx.PLUGGABLEWIDGET() != nil {
+		widget.Type = "PLUGGABLEWIDGET"
+		widget.Properties["WidgetType"] = unquoteString(wCtx.STRING_LITERAL().GetText())
+	} else if wCtx.CUSTOMWIDGET() != nil {
+		widget.Type = "CUSTOMWIDGET"
+		widget.Properties["WidgetType"] = unquoteString(wCtx.STRING_LITERAL().GetText())
+	} else if typeCtx := wCtx.WidgetTypeV3(); typeCtx != nil {
 		widget.Type = strings.ToUpper(typeCtx.GetText())
 	}
 

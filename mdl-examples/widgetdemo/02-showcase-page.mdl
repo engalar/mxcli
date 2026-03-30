@@ -1,0 +1,342 @@
+-- WidgetDemo Showcase: all MDL-supported widget types
+-- Uses only WidgetDemo.DemoItem (no external dependencies)
+
+CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
+  Title: 'Widget Showcase',
+  Layout: Atlas_Core.Atlas_Default,
+  Url: 'widget-demo'
+) {
+  LAYOUTGRID gridMain {
+
+    -- ======== Section 1: Text ========
+    ROW rowS1H {
+      COLUMN cS1H (DesktopWidth: 12) {
+        CONTAINER hdrS1 (Class: 'card', Style: 'padding: 16px; background-color: #f0f4ff;') {
+          DYNAMICTEXT tS1 (Content: '1. Text Widgets (built-in)', RenderMode: H2)
+        }
+      }
+    }
+    ROW rowS1 {
+      COLUMN cS1a (DesktopWidth: 4) {
+        DYNAMICTEXT txtH1 (Content: 'Heading H1', RenderMode: H1)
+        DYNAMICTEXT txtH2 (Content: 'Heading H2', RenderMode: H2)
+        DYNAMICTEXT txtH3 (Content: 'Heading H3', RenderMode: H3)
+      }
+      COLUMN cS1b (DesktopWidth: 4) {
+        DYNAMICTEXT txtH4 (Content: 'Heading H4', RenderMode: H4)
+        DYNAMICTEXT txtH5 (Content: 'Heading H5', RenderMode: H5)
+        DYNAMICTEXT txtH6 (Content: 'Heading H6', RenderMode: H6)
+      }
+      COLUMN cS1c (DesktopWidth: 4) {
+        DYNAMICTEXT txtPar (Content: 'Paragraph text using RenderMode: Paragraph.', RenderMode: Paragraph)
+      }
+    }
+
+    -- ======== Section 2: Layout ========
+    ROW rowS2H {
+      COLUMN cS2H (DesktopWidth: 12) {
+        CONTAINER hdrS2 (Class: 'card', Style: 'padding: 16px; background-color: #e8f5e9;') {
+          DYNAMICTEXT tS2 (Content: '2. Layout Widgets (built-in)', RenderMode: H2)
+        }
+      }
+    }
+    ROW rowS2 {
+      COLUMN cS2a (DesktopWidth: 4) {
+        CONTAINER ctnDemo (Class: 'card', Style: 'padding: 12px;') {
+          DYNAMICTEXT ctnL (Content: 'CONTAINER', RenderMode: H4)
+        }
+      }
+      COLUMN cS2b (DesktopWidth: 4) {
+        GROUPBOX gbDemo (Caption: 'GROUPBOX') {
+          DYNAMICTEXT gbL (Content: 'Labeled container', RenderMode: Paragraph)
+        }
+      }
+      COLUMN cS2c (DesktopWidth: 4) {
+        CONTAINER gridNote (Class: 'card', Style: 'padding: 12px; text-align: center;') {
+          DYNAMICTEXT gnL (Content: 'LAYOUTGRID / ROW / COLUMN', RenderMode: H4)
+        }
+      }
+    }
+
+    -- ======== Section 3: Buttons ========
+    ROW rowS3H {
+      COLUMN cS3H (DesktopWidth: 12) {
+        CONTAINER hdrS3 (Class: 'card', Style: 'padding: 16px; background-color: #fff3e0;') {
+          DYNAMICTEXT tS3 (Content: '3. Buttons (built-in)', RenderMode: H2)
+        }
+      }
+    }
+    ROW rowS3 {
+      COLUMN cS3a (DesktopWidth: 12) {
+        ACTIONBUTTON btnDef (Caption: 'Default', Action: CLOSE_PAGE)
+        ACTIONBUTTON btnPri (Caption: 'Primary', Action: CLOSE_PAGE, ButtonStyle: Primary)
+        ACTIONBUTTON btnSuc (Caption: 'Success', Action: CLOSE_PAGE, ButtonStyle: Success)
+        ACTIONBUTTON btnWar (Caption: 'Warning', Action: CLOSE_PAGE, ButtonStyle: Warning)
+        ACTIONBUTTON btnDng (Caption: 'Danger', Action: CLOSE_PAGE, ButtonStyle: Danger)
+      }
+    }
+
+    -- ======== Section 4: Gallery + Filters + DataView ========
+    ROW rowS4H {
+      COLUMN cS4H (DesktopWidth: 12) {
+        CONTAINER hdrS4 (Class: 'card', Style: 'padding: 16px; background-color: #e3f2fd;') {
+          DYNAMICTEXT tS4 (Content: '4. Gallery + Filters + DataView + Inputs', RenderMode: H2)
+        }
+      }
+    }
+    ROW rowS4 {
+      COLUMN cS4a (DesktopWidth: 5) {
+        GALLERY galItems (
+          DataSource: DATABASE FROM WidgetDemo.DemoItem SORT BY DateCreated DESC,
+          Selection: Single,
+          DesktopColumns: 1
+        ) {
+          FILTER flt1 {
+            TEXTFILTER tfTitle (Attributes: [Title, Code])
+            DROPDOWNFILTER dfCat
+            NUMBERFILTER nfAmt (Attributes: [Amount])
+            DATEFILTER dtfDate (Attributes: [DateCreated])
+          }
+          TEMPLATE tmpl1 {
+            DYNAMICTEXT tTitle (Content: '{1}', RenderMode: H4, ContentParams: [{1} = Title])
+            DYNAMICTEXT tCode (Content: 'Code: {1}', ContentParams: [{1} = Code])
+          }
+        }
+      }
+      COLUMN cS4b (DesktopWidth: 7) {
+        DATAVIEW dvDetail (DataSource: SELECTION galItems) {
+          LAYOUTGRID gForm {
+            ROW rF1 {
+              COLUMN cF1 (DesktopWidth: 6) {
+                TEXTBOX txtTitle (Label: 'Title (TEXTBOX)', Attribute: Title)
+              }
+              COLUMN cF2 (DesktopWidth: 6) {
+                TEXTBOX txtCode (Label: 'Code', Attribute: Code)
+              }
+            }
+            ROW rF2 {
+              COLUMN cF3 (DesktopWidth: 6) {
+                DATEPICKER dpCreated (Label: 'Created (DATEPICKER)', Attribute: DateCreated)
+              }
+              COLUMN cF4 (DesktopWidth: 6) {
+                DATEPICKER dpDue (Label: 'Due Date', Attribute: DueDate)
+              }
+            }
+            ROW rF3 {
+              COLUMN cF5 (DesktopWidth: 6) {
+                DROPDOWN cbPri (Label: 'Priority (DROPDOWN)', Attribute: Priority)
+              }
+              COLUMN cF6 (DesktopWidth: 6) {
+                RADIOBUTTONS rbStatus (Label: 'Status (RADIOBUTTONS)', Attribute: ItemStatus)
+              }
+            }
+            ROW rF3b {
+              COLUMN cF5b (DesktopWidth: 12) {
+                COMBOBOX cbCat (Label: 'Category (COMBOBOX)', Attribute: Category)
+              }
+            }
+            ROW rF4 {
+              COLUMN cF7 (DesktopWidth: 6) {
+                CHECKBOX cbActive (Label: 'Active (CHECKBOX)', Attribute: IsActive)
+              }
+              COLUMN cF8 (DesktopWidth: 6) {
+                TEXTAREA taNotes (Label: 'Notes (TEXTAREA)', Attribute: Notes)
+              }
+            }
+          }
+          FOOTER ftr1 {
+            ACTIONBUTTON btnSv (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
+            ACTIONBUTTON btnCn (Caption: 'Cancel', Action: CANCEL_CHANGES)
+          }
+        }
+      }
+    }
+
+    -- ======== Section 5: DataGrid ========
+    ROW rowS5H {
+      COLUMN cS5H (DesktopWidth: 12) {
+        CONTAINER hdrS5 (Class: 'card', Style: 'padding: 16px; background-color: #fce4ec;') {
+          DYNAMICTEXT tS5 (Content: '5. DataGrid + ControlBar (built-in)', RenderMode: H2)
+        }
+      }
+    }
+    ROW rowS5 {
+      COLUMN cS5a (DesktopWidth: 12) {
+        DATAGRID dgItems (
+          DataSource: DATABASE FROM WidgetDemo.DemoItem SORT BY DateCreated DESC,
+          PageSize: 5
+        ) {
+          CONTROLBAR cbDG {
+            ACTIONBUTTON btnNewDG (Caption: 'New Item', Action: CLOSE_PAGE, ButtonStyle: Primary)
+          }
+          COLUMN cTitle (Attribute: Title, Caption: 'Title')
+          COLUMN cCode (Attribute: Code, Caption: 'Code')
+          COLUMN cPri (Attribute: Priority, Caption: 'Priority', Alignment: center)
+          COLUMN cAmt (Attribute: Amount, Caption: 'Amount', Alignment: right)
+          COLUMN cScore (Attribute: Score, Caption: 'Score', Alignment: right)
+        }
+      }
+    }
+
+    -- ======== Section 6: ListView ========
+    ROW rowS6H {
+      COLUMN cS6H (DesktopWidth: 12) {
+        CONTAINER hdrS6 (Class: 'card', Style: 'padding: 16px; background-color: #f3e5f5;') {
+          DYNAMICTEXT tS6 (Content: '6. ListView (built-in)', RenderMode: H2)
+        }
+      }
+    }
+    ROW rowS6 {
+      COLUMN cS6a (DesktopWidth: 12) {
+        LISTVIEW lvItems (DataSource: DATABASE FROM WidgetDemo.DemoItem SORT BY Title ASC) {
+          DYNAMICTEXT lvT (Content: '{1}', RenderMode: H4, ContentParams: [{1} = Title])
+          DYNAMICTEXT lvD (Content: '{1}', ContentParams: [{1} = Description])
+        }
+      }
+    }
+
+    -- ======== Section 7: Navigation ========
+    ROW rowS7H {
+      COLUMN cS7H (DesktopWidth: 12) {
+        CONTAINER hdrS7 (Class: 'card', Style: 'padding: 16px; background-color: #e0f2f1;') {
+          DYNAMICTEXT tS7 (Content: '7. Navigation + Snippet (built-in)', RenderMode: H2)
+        }
+      }
+    }
+    ROW rowS7 {
+      COLUMN cS7a (DesktopWidth: 4) {
+        NAVIGATIONLIST navQ {
+          ITEM nHome (Action: CLOSE_PAGE) {
+            DYNAMICTEXT nHt (Content: 'Home')
+          }
+          ITEM nList (Action: CLOSE_PAGE) {
+            DYNAMICTEXT nLt (Content: 'Item List')
+          }
+          ITEM nSettings (Action: CLOSE_PAGE) {
+            DYNAMICTEXT nSt (Content: 'Settings')
+          }
+        }
+      }
+      COLUMN cS7b (DesktopWidth: 8) {
+        SNIPPETCALL scBtns (Snippet: WidgetDemo.SNIPPET_ButtonShowcase)
+      }
+    }
+
+    -- ======== Section 8: Pluggable Widgets ========
+    ROW rowS8H {
+      COLUMN cS8H (DesktopWidth: 12) {
+        CONTAINER hdrS8 (Class: 'card', Style: 'padding: 16px; background-color: #ede7f6;') {
+          DYNAMICTEXT tS8 (Content: '8. Pluggable Widgets (PLUGGABLEWIDGET)', RenderMode: H2)
+          DYNAMICTEXT tS8d (Content: 'React-based widgets with explicit property bindings', RenderMode: Paragraph)
+        }
+      }
+    }
+
+    -- 8a: Input pluggable widgets (need entity context for attribute binding)
+    ROW rowS8a {
+      COLUMN cS8a1 (DesktopWidth: 12) {
+        DATAVIEW dvPluggable (DataSource: DATABASE FROM WidgetDemo.DemoItem) {
+          LAYOUTGRID gPlug {
+            ROW rPlug1 {
+              COLUMN cPlug1 (DesktopWidth: 3) {
+                PLUGGABLEWIDGET 'com.mendix.widget.custom.switch.Switch' switch1 (booleanAttribute: IsActive)
+              }
+              COLUMN cPlug2 (DesktopWidth: 3) {
+                PLUGGABLEWIDGET 'com.mendix.widget.custom.starrating.StarRating' rating1 (rateAttribute: Rating)
+              }
+              COLUMN cPlug3 (DesktopWidth: 3) {
+                PLUGGABLEWIDGET 'com.mendix.widget.custom.slider.Slider' slider1 (valueAttribute: Score)
+              }
+              COLUMN cPlug4 (DesktopWidth: 3) {
+                PLUGGABLEWIDGET 'com.mendix.widget.custom.RangeSlider.RangeSlider' rangeSlider1 (lowerBoundAttribute: Score, upperBoundAttribute: Rating)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    -- 8b: Display pluggable widgets (no entity context needed)
+    ROW rowS8b {
+      COLUMN cS8b1 (DesktopWidth: 3) {
+        PLUGGABLEWIDGET 'com.mendix.widget.custom.badge.Badge' badge1
+      }
+      COLUMN cS8b2 (DesktopWidth: 3) {
+        PLUGGABLEWIDGET 'com.mendix.widget.custom.badgebutton.BadgeButton' badgeBtn1
+      }
+      COLUMN cS8b3 (DesktopWidth: 3) {
+        PLUGGABLEWIDGET 'com.mendix.widget.custom.progressbar.ProgressBar' progBar1
+      }
+      COLUMN cS8b4 (DesktopWidth: 3) {
+        PLUGGABLEWIDGET 'com.mendix.widget.custom.progresscircle.ProgressCircle' progCirc1
+      }
+    }
+
+    -- 8c: Layout pluggable widgets
+    ROW rowS8c {
+      COLUMN cS8c1 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.accordion.Accordion' accordion1
+      }
+      COLUMN cS8c2 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.fieldset.Fieldset' fieldset1
+      }
+      COLUMN cS8c3 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.tooltip.Tooltip' tooltip1
+      }
+    }
+    ROW rowS8d {
+      COLUMN cS8d1 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.timeline.Timeline' timeline1
+      }
+      COLUMN cS8d2 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.videoplayer.VideoPlayer' videoPlayer1
+      }
+      COLUMN cS8d3 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.image.Image' plugImage1
+      }
+    }
+    ROW rowS8e {
+      COLUMN cS8e1 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.popupmenu.PopupMenu' popupMenu1
+      }
+      COLUMN cS8e2 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.htmlelement.HTMLElement' htmlElem1
+      }
+      COLUMN cS8e3 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.treenode.TreeNode' treeNode1
+      }
+    }
+    ROW rowS8f {
+      COLUMN cS8f1 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.barcodescanner.BarcodeScanner' scanner1
+      }
+      COLUMN cS8f2 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.dropdownsort.DropdownSort' ddSort1
+      }
+      COLUMN cS8f3 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.languageselector.LanguageSelector' langSel1
+      }
+    }
+    ROW rowS8g {
+      COLUMN cS8g1 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.selectionhelper.SelectionHelper' selHelper1
+      }
+      COLUMN cS8g2 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.accessibilityhelper.AccessibilityHelper' accHelper1
+      }
+      COLUMN cS8g3 (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.custom.Maps.Maps' maps1
+      }
+    }
+    ROW rowS8h {
+      COLUMN cS8h1 (DesktopWidth: 6) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.areachart.AreaChart' areaChart1
+      }
+      COLUMN cS8h2 (DesktopWidth: 6) {
+        STATICIMAGE imgDemo (Width: 200, Height: 60)
+      }
+    }
+  }
+}
+
+GRANT VIEW ON PAGE WidgetDemo.WidgetDemo_Showcase TO WidgetDemo.User;

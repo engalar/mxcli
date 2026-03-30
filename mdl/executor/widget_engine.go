@@ -27,6 +27,7 @@ const defaultSlotContainer = "TEMPLATE"
 type WidgetDefinition struct {
 	WidgetID         string             `json:"widgetId"`
 	MDLName          string             `json:"mdlName"`
+	WidgetKind       string             `json:"widgetKind,omitempty"` // "pluggable" (React) or "custom" (legacy Dojo)
 	TemplateFile     string             `json:"templateFile"`
 	DefaultEditable  string             `json:"defaultEditable"`
 	PropertyMappings []PropertyMapping  `json:"propertyMappings,omitempty"`
@@ -268,6 +269,43 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 		return nil, err
 	}
 
+	// 4.5 Apply explicit properties (not covered by .def.json mappings)
+	mappedKeys := make(map[string]bool)
+	for _, m := range mappings {
+		if m.Source != "" {
+			mappedKeys[m.Source] = true
+		}
+	}
+	for _, s := range slots {
+		mappedKeys[s.MDLContainer] = true
+	}
+	for propName, propVal := range w.Properties {
+		if mappedKeys[propName] || isBuiltinPropName(propName) {
+			continue
+		}
+		if _, ok := propertyTypeIDs[propName]; !ok {
+			continue // not a known widget property key
+		}
+		strVal, isStr := propVal.(string)
+		if !isStr {
+			continue
+		}
+		ctx := &BuildContext{}
+		if strings.Count(strVal, ".") >= 2 {
+			// Fully qualified attribute path (Module.Entity.Attr)
+			ctx.AttributePath = strVal
+			updatedObject = opAttribute(updatedObject, propertyTypeIDs, propName, ctx)
+		} else if e.pageBuilder.entityContext != "" && !strings.ContainsAny(strVal, " '\"") {
+			// Short name in entity context — resolve as attribute
+			ctx.AttributePath = e.pageBuilder.resolveAttributePath(strVal)
+			updatedObject = opAttribute(updatedObject, propertyTypeIDs, propName, ctx)
+		} else {
+			// Treat as primitive value
+			ctx.PrimitiveVal = strVal
+			updatedObject = opPrimitive(updatedObject, propertyTypeIDs, propName, ctx)
+		}
+	}
+
 	// 5. Build CustomWidget
 	widgetID := model.ID(mpr.GenerateID())
 	cw := &pages.CustomWidget{
@@ -478,4 +516,22 @@ func (e *PluggableWidgetEngine) applyChildSlots(slots []ChildSlotMapping, w *ast
 	}
 
 	return nil
+}
+
+// isBuiltinPropName returns true for property names that are handled by
+// dedicated MDL keywords (DataSource, Attribute, etc.) rather than by
+// the explicit property pass.
+func isBuiltinPropName(name string) bool {
+	switch name {
+	case "DataSource", "Attribute", "Label", "Caption", "Action",
+		"Selection", "Class", "Style", "Editable", "Visible",
+		"WidgetType", "DesignProperties", "Association", "CaptionAttribute",
+		"Content", "RenderMode", "ContentParams", "CaptionParams",
+		"ButtonStyle", "DesktopWidth", "DesktopColumns", "TabletColumns",
+		"PhoneColumns", "PageSize", "Pagination", "PagingPosition",
+		"ShowPagingButtons", "Attributes", "FilterType", "Width", "Height",
+		"Tooltip", "Name":
+		return true
+	}
+	return false
 }

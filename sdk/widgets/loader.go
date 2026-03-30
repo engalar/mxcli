@@ -115,15 +115,52 @@ var (
 	templateCacheLock sync.RWMutex
 )
 
-// Known widget IDs and their template files.
-var widgetTemplateFiles = map[string]string{
-	"com.mendix.widget.web.combobox.Combobox":                             "combobox.json",
-	"com.mendix.widget.web.datagrid.Datagrid":                             "datagrid.json",
-	"com.mendix.widget.web.datagridtextfilter.DatagridTextFilter":         "datagrid-text-filter.json",
-	"com.mendix.widget.web.datagriddatefilter.DatagridDateFilter":         "datagrid-date-filter.json",
-	"com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter": "datagrid-dropdown-filter.json",
-	"com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter":     "datagrid-number-filter.json",
-	"com.mendix.widget.web.gallery.Gallery":                               "gallery.json",
+// widgetTemplateIndex maps widget IDs to template filenames.
+// Built lazily by scanning embedded template JSON files.
+var (
+	widgetTemplateIndex     map[string]string
+	widgetTemplateIndexOnce sync.Once
+)
+
+// getWidgetTemplateIndex returns the widget ID → filename mapping,
+// built by scanning all embedded JSON templates for their "widgetId" field.
+func getWidgetTemplateIndex() map[string]string {
+	widgetTemplateIndexOnce.Do(func() {
+		widgetTemplateIndex = make(map[string]string)
+		entries, err := templateFS.ReadDir("templates/mendix-11.6")
+		if err != nil {
+			return
+		}
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+				continue
+			}
+			// Read just enough to extract widgetId
+			data, err := templateFS.ReadFile("templates/mendix-11.6/" + entry.Name())
+			if err != nil {
+				continue
+			}
+			var header struct {
+				WidgetID string         `json:"widgetId"`
+				Type     map[string]any `json:"type"`
+			}
+			if err := json.Unmarshal(data, &header); err != nil {
+				continue
+			}
+			wid := header.WidgetID
+			// Fallback: extract WidgetId from type.WidgetId for older templates
+			if wid == "" && header.Type != nil {
+				if v, ok := header.Type["WidgetId"].(string); ok {
+					wid = v
+				}
+			}
+			if wid == "" {
+				continue
+			}
+			widgetTemplateIndex[wid] = entry.Name()
+		}
+	})
+	return widgetTemplateIndex
 }
 
 // GetTemplate loads a widget template by widget ID.
@@ -137,8 +174,9 @@ func GetTemplate(widgetID string) (*WidgetTemplate, error) {
 	}
 	templateCacheLock.RUnlock()
 
-	// Find template file
-	filename, ok := widgetTemplateFiles[widgetID]
+	// Find template file from auto-scanned index
+	index := getWidgetTemplateIndex()
+	filename, ok := index[widgetID]
 	if !ok {
 		return nil, nil // Not found, not an error
 	}
@@ -648,8 +686,10 @@ type PropertyTypeIDEntry struct {
 func collectIDs(data map[string]any, idGenerator func() string, idMapping map[string]string) {
 	for key, val := range data {
 		if key == "$ID" {
-			if oldID, ok := val.(string); ok && len(oldID) == 32 && isHexString(oldID) {
-				// Generate new ID for this $ID field
+			if oldID, ok := val.(string); ok && len(oldID) == 32 {
+				// Generate new ID for this $ID field.
+				// Accept any 32-char string (not just valid hex) to handle
+				// manually crafted placeholder IDs in templates.
 				newID := idGenerator()
 				idMapping[oldID] = newID
 			}
@@ -853,8 +893,9 @@ func augmentFromMPK(tmpl *WidgetTemplate, widgetID string, projectPath string) *
 
 // ListAvailableTemplates returns a list of available widget template IDs.
 func ListAvailableTemplates() []string {
-	result := make([]string, 0, len(widgetTemplateFiles))
-	for widgetID := range widgetTemplateFiles {
+	index := getWidgetTemplateIndex()
+	result := make([]string, 0, len(index))
+	for widgetID := range index {
 		result = append(result, widgetID)
 	}
 	return result

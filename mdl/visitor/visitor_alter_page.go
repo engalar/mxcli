@@ -106,6 +106,11 @@ func (b *Builder) buildAlterPageSetLayout(ctx *parser.AlterPageSetContext) *ast.
 
 // buildAlterPageAssignment extracts property name and value from an assignment context.
 func (b *Builder) buildAlterPageAssignment(ctx *parser.AlterPageAssignmentContext) (string, interface{}) {
+	// DataSource = dataSourceExprV3
+	if dsCtx := ctx.DataSourceExprV3(); dsCtx != nil {
+		return "DataSource", buildDataSourceV3(dsCtx)
+	}
+
 	var name string
 
 	if id := ctx.IdentifierOrKeyword(); id != nil {

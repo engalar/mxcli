@@ -201,7 +201,8 @@ alterLayoutMapping
     ;
 
 alterPageAssignment
-    : identifierOrKeyword EQUALS propertyValueV3       // Caption = 'Save'
+    : DATASOURCE EQUALS dataSourceExprV3               // DataSource = SELECTION widgetName
+    | identifierOrKeyword EQUALS propertyValueV3       // Caption = 'Save'
     | STRING_LITERAL EQUALS propertyValueV3             // 'showLabel' = false
     ;
 
@@ -1748,6 +1749,8 @@ useFragmentRef
 // V3 Widget: WIDGET name (Props) { children }
 widgetV3
     : widgetTypeV3 IDENTIFIER widgetPropertiesV3? widgetBodyV3?
+    | PLUGGABLEWIDGET STRING_LITERAL IDENTIFIER widgetPropertiesV3? widgetBodyV3?  // PLUGGABLEWIDGET 'widget.id' name
+    | CUSTOMWIDGET STRING_LITERAL IDENTIFIER widgetPropertiesV3? widgetBodyV3?     // CUSTOMWIDGET 'widget.id' name (legacy)
     ;
 
 // V3 Widget types (same as V2)

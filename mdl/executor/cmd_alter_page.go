@@ -628,6 +628,8 @@ func setRawWidgetProperty(widget bson.D, propName string, value interface{}) err
 		return nil
 	case "Attribute":
 		return setWidgetAttributeRef(widget, value)
+	case "DataSource":
+		return setWidgetDataSource(widget, value)
 	default:
 		// Try as pluggable widget property (quoted string property name)
 		return setPluggableWidgetProperty(widget, propName, value)
@@ -679,6 +681,75 @@ func setWidgetAttributeRef(widget bson.D, value interface{}) error {
 
 	// No existing AttributeRef field — this widget may not support it
 	return fmt.Errorf("widget does not have an AttributeRef property; Attribute can only be SET on input widgets (TextBox, TextArea, DatePicker, etc.)")
+}
+
+// setWidgetDataSource sets the DataSource on a DataView or list widget.
+func setWidgetDataSource(widget bson.D, value interface{}) error {
+	ds, ok := value.(*ast.DataSourceV3)
+	if !ok {
+		return fmt.Errorf("DataSource value must be a datasource expression")
+	}
+
+	var serialized interface{}
+
+	switch ds.Type {
+	case "selection":
+		// SELECTION widgetName → Forms$ListenTargetSource
+		serialized = bson.D{
+			{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
+			{Key: "$Type", Value: "Forms$ListenTargetSource"},
+			{Key: "ListenTarget", Value: ds.Reference},
+		}
+	case "database":
+		// DATABASE Entity → Forms$DataViewSource with entity ref
+		var entityRef interface{}
+		if ds.Reference != "" {
+			entityRef = bson.D{
+				{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
+				{Key: "$Type", Value: "DomainModels$DirectEntityRef"},
+				{Key: "Entity", Value: ds.Reference},
+			}
+		}
+		serialized = bson.D{
+			{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
+			{Key: "$Type", Value: "Forms$DataViewSource"},
+			{Key: "EntityRef", Value: entityRef},
+			{Key: "ForceFullObjects", Value: false},
+			{Key: "SourceVariable", Value: nil},
+		}
+	case "microflow":
+		serialized = bson.D{
+			{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
+			{Key: "$Type", Value: "Forms$MicroflowSource"},
+			{Key: "MicroflowSettings", Value: bson.D{
+				{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
+				{Key: "$Type", Value: "Forms$MicroflowSettings"},
+				{Key: "Asynchronous", Value: false},
+				{Key: "ConfirmationInfo", Value: nil},
+				{Key: "FormValidations", Value: "All"},
+				{Key: "Microflow", Value: ds.Reference},
+				{Key: "ParameterMappings", Value: bson.A{int32(3)}},
+				{Key: "ProgressBar", Value: "None"},
+				{Key: "ProgressMessage", Value: nil},
+			}},
+		}
+	case "nanoflow":
+		serialized = bson.D{
+			{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
+			{Key: "$Type", Value: "Forms$NanoflowSource"},
+			{Key: "NanoflowSettings", Value: bson.D{
+				{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
+				{Key: "$Type", Value: "Forms$NanoflowSettings"},
+				{Key: "Nanoflow", Value: ds.Reference},
+				{Key: "ParameterMappings", Value: bson.A{int32(3)}},
+			}},
+		}
+	default:
+		return fmt.Errorf("unsupported DataSource type for ALTER PAGE SET: %s", ds.Type)
+	}
+
+	dSet(widget, "DataSource", serialized)
+	return nil
 }
 
 // setWidgetLabel sets the Label.Caption text on input widgets.

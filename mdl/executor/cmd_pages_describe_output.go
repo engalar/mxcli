@@ -436,6 +436,18 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			} else {
 				formatWidgetProps(e.output, prefix, header, props, "\n")
 			}
+		} else if len(w.ExplicitProperties) > 0 && w.WidgetID != "" {
+			// Generic pluggable widget with explicit properties
+			header := fmt.Sprintf("PLUGGABLEWIDGET '%s' %s", w.WidgetID, w.Name)
+			props := []string{}
+			if w.Caption != "" {
+				props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
+			}
+			for _, ep := range w.ExplicitProperties {
+				props = append(props, fmt.Sprintf("%s: %s", ep.Key, ep.Value))
+			}
+			props = appendAppearanceProps(props, w)
+			formatWidgetProps(e.output, prefix, header, props, "\n")
 		} else {
 			header := fmt.Sprintf("%s %s", widgetType, w.Name)
 			props := []string{}

@@ -142,6 +142,7 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 		widget.Caption = e.extractLabelText(w)
 		widget.Content = e.extractCustomWidgetAttribute(w)
 		widget.RenderMode = e.extractCustomWidgetType(w) // Store widget type in RenderMode
+		widget.WidgetID = e.extractCustomWidgetID(w)
 		// For ComboBox, extract datasource and association attribute for association mode.
 		// In association mode the Attribute binding is stored as EntityRef (not AttributeRef),
 		// so we must use extractCustomWidgetPropertyAssociation instead of the generic scan.
@@ -178,6 +179,11 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 		if widget.RenderMode == "TEXTFILTER" || widget.RenderMode == "NUMBERFILTER" || widget.RenderMode == "DROPDOWNFILTER" || widget.RenderMode == "DATEFILTER" {
 			widget.FilterAttributes = e.extractFilterAttributes(w)
 			widget.FilterExpression = e.extractFilterExpression(w)
+		}
+		// For generic pluggable widgets (not handled by dedicated extractors above),
+		// extract all non-default properties as explicit key-value pairs.
+		if !isKnownCustomWidgetType(widget.RenderMode) {
+			widget.ExplicitProperties = e.extractExplicitProperties(w)
 		}
 		return []rawWidget{widget}
 
