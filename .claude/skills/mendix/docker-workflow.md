@@ -65,6 +65,8 @@ mkdir -p /path/to/my-app
 
 The `mx create-project` command creates an MPR v2 project with the standard Mendix module structure. You can then use the Docker workflow to build and run it.
 
+**Caveat:** Blank projects have no demo users — login will fail until you configure security via MDL or Studio Pro. See `manage-security.md` for setting up demo users.
+
 ## Step-by-Step Workflow
 
 If you prefer more control, use the individual commands:
