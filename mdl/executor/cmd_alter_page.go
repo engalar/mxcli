@@ -97,6 +97,13 @@ func (e *Executor) execAlterPage(s *ast.AlterPageStmt) error {
 			if err := applyDropVariable(rawData, o); err != nil {
 				return fmt.Errorf("DROP VARIABLE failed: %w", err)
 			}
+		case *ast.SetLayoutOp:
+			if containerType == "SNIPPET" {
+				return fmt.Errorf("SET Layout is not supported for snippets")
+			}
+			if err := applySetLayout(rawData, o); err != nil {
+				return fmt.Errorf("SET Layout failed: %w", err)
+			}
 		default:
 			return fmt.Errorf("unknown ALTER %s operation type: %T", containerType, op)
 		}
@@ -114,6 +121,139 @@ func (e *Executor) execAlterPage(s *ast.AlterPageStmt) error {
 	}
 
 	fmt.Fprintf(e.output, "Altered %s %s\n", strings.ToLower(containerType), s.PageName.String())
+	return nil
+}
+
+// applySetLayout rewrites the FormCall to reference a new layout.
+// It updates the Form field and remaps Parameter strings in each FormCallArgument.
+func applySetLayout(rawData bson.D, op *ast.SetLayoutOp) error {
+	newLayoutQN := op.NewLayout.Module + "." + op.NewLayout.Name
+
+	// Find FormCall in the page BSON
+	var formCall bson.D
+	for _, elem := range rawData {
+		if elem.Key == "FormCall" {
+			if doc, ok := elem.Value.(bson.D); ok {
+				formCall = doc
+			}
+			break
+		}
+	}
+	if formCall == nil {
+		return fmt.Errorf("page has no FormCall (layout reference)")
+	}
+
+	// Detect the old layout name from existing Parameter values
+	oldLayoutQN := ""
+	for _, elem := range formCall {
+		if elem.Key == "Form" {
+			if s, ok := elem.Value.(string); ok && s != "" {
+				oldLayoutQN = s
+			}
+		}
+		if elem.Key == "Arguments" {
+			if arr, ok := elem.Value.(bson.A); ok {
+				for _, item := range arr {
+					if doc, ok := item.(bson.D); ok {
+						for _, field := range doc {
+							if field.Key == "Parameter" {
+								if s, ok := field.Value.(string); ok && oldLayoutQN == "" {
+									// Extract layout QN from "Atlas_Core.Atlas_TopBar.Main"
+									if lastDot := strings.LastIndex(s, "."); lastDot > 0 {
+										oldLayoutQN = s[:lastDot]
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if oldLayoutQN == "" {
+		return fmt.Errorf("cannot determine current layout from FormCall")
+	}
+
+	if oldLayoutQN == newLayoutQN {
+		return nil // Already using the target layout
+	}
+
+	// Update Form field
+	for i, elem := range formCall {
+		if elem.Key == "Form" {
+			formCall[i].Value = newLayoutQN
+		}
+	}
+
+	// If Form field doesn't exist, add it
+	hasForm := false
+	for _, elem := range formCall {
+		if elem.Key == "Form" {
+			hasForm = true
+			break
+		}
+	}
+	if !hasForm {
+		// Insert before Arguments
+		for i, elem := range formCall {
+			if elem.Key == "Arguments" {
+				formCall = append(formCall[:i+1], formCall[i:]...)
+				formCall[i] = bson.E{Key: "Form", Value: newLayoutQN}
+				break
+			}
+		}
+	}
+
+	// Remap Parameter strings in each FormCallArgument
+	for _, elem := range formCall {
+		if elem.Key != "Arguments" {
+			continue
+		}
+		arr, ok := elem.Value.(bson.A)
+		if !ok {
+			continue
+		}
+		for _, item := range arr {
+			doc, ok := item.(bson.D)
+			if !ok {
+				continue
+			}
+			for j, field := range doc {
+				if field.Key != "Parameter" {
+					continue
+				}
+				paramStr, ok := field.Value.(string)
+				if !ok {
+					continue
+				}
+				// Extract placeholder name: "Atlas_Core.Atlas_Default.Main" -> "Main"
+				placeholder := paramStr
+				if strings.HasPrefix(paramStr, oldLayoutQN+".") {
+					placeholder = paramStr[len(oldLayoutQN)+1:]
+				}
+
+				// Apply explicit mapping if provided
+				if op.Mappings != nil {
+					if mapped, ok := op.Mappings[placeholder]; ok {
+						placeholder = mapped
+					}
+				}
+
+				// Write new parameter value
+				doc[j].Value = newLayoutQN + "." + placeholder
+			}
+		}
+	}
+
+	// Write FormCall back into rawData
+	for i, elem := range rawData {
+		if elem.Key == "FormCall" {
+			rawData[i].Value = formCall
+			break
+		}
+	}
+
 	return nil
 }
 

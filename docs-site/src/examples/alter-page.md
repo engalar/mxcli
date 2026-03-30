@@ -63,6 +63,25 @@ ALTER PAGE CRM.ProductOverview {
 };
 ```
 
+## Switch Page Layout
+
+Change a page's layout without losing any widgets:
+
+```sql
+-- Switch from TopBar to Default layout (auto-maps by placeholder name)
+ALTER PAGE CRM.Customer_Edit {
+  SET Layout = Atlas_Core.Atlas_Default
+};
+```
+
+When the new layout has different placeholder names, use `MAP`:
+
+```sql
+ALTER PAGE CRM.Customer_Edit {
+  SET Layout = Atlas_Core.Atlas_SideBar MAP (Main AS Content, Extra AS Sidebar)
+};
+```
+
 ## Works on Snippets Too
 
 ```sql

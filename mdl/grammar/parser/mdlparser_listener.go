@@ -37,6 +37,9 @@ type MDLParserListener interface {
 	// EnterAlterPageSet is called when entering the alterPageSet production.
 	EnterAlterPageSet(c *AlterPageSetContext)
 
+	// EnterAlterLayoutMapping is called when entering the alterLayoutMapping production.
+	EnterAlterLayoutMapping(c *AlterLayoutMappingContext)
+
 	// EnterAlterPageAssignment is called when entering the alterPageAssignment production.
 	EnterAlterPageAssignment(c *AlterPageAssignmentContext)
 
@@ -1149,6 +1152,9 @@ type MDLParserListener interface {
 
 	// ExitAlterPageSet is called when exiting the alterPageSet production.
 	ExitAlterPageSet(c *AlterPageSetContext)
+
+	// ExitAlterLayoutMapping is called when exiting the alterLayoutMapping production.
+	ExitAlterLayoutMapping(c *AlterLayoutMappingContext)
 
 	// ExitAlterPageAssignment is called when exiting the alterPageAssignment production.
 	ExitAlterPageAssignment(c *AlterPageAssignmentContext)

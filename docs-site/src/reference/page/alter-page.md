@@ -40,6 +40,12 @@ ADD Variables $name : type = 'expression';
 
 -- Drop a page variable
 DROP Variables $name;
+
+-- Change page layout (auto-map placeholders by name)
+SET Layout = module.LayoutName;
+
+-- Change layout with explicit placeholder mapping
+SET Layout = module.LayoutName MAP (OldPlaceholder AS NewPlaceholder);
 ```
 
 ## Description
@@ -69,6 +75,12 @@ Removes one or more widgets by name. The widget and all its children are removed
 ### REPLACE
 
 Replaces a widget (and its entire subtree) with one or more new widgets.
+
+### SET Layout
+
+Changes the page's layout without rebuilding the widget tree. Placeholder names are auto-mapped by default. If the new layout has different placeholder names, use `MAP` to specify the mapping.
+
+Not supported for snippets (snippets don't have layouts).
 
 ### ADD Variables / DROP Variables
 
@@ -145,6 +157,22 @@ ALTER PAGE Sales.Order_Edit {
 
 ALTER PAGE Sales.Order_Edit {
     DROP Variables $showAdvanced;
+};
+```
+
+Change page layout (preserves all widgets):
+
+```sql
+ALTER PAGE Sales.Order_Edit {
+    SET Layout = Atlas_Core.Atlas_Default;
+};
+```
+
+Change layout with explicit placeholder mapping:
+
+```sql
+ALTER PAGE Sales.Order_Edit {
+    SET Layout = Atlas_Core.Atlas_SideBar MAP (Main AS Content, Extra AS Sidebar);
 };
 ```
 

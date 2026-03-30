@@ -345,7 +345,7 @@ Regenerate after modifying `MDLLexer.g4` or `MDLParser.g4`: `make grammar`. See 
 **Read the relevant skill files FIRST before writing any MDL, seeding data, or doing database/import work:**
 - `.claude/skills/write-microflows.md` - Microflow syntax, common mistakes, validation checklist
 - `.claude/skills/create-page.md` - Page/widget syntax reference
-- `.claude/skills/alter-page.md` - ALTER PAGE/SNIPPET in-place modifications (SET, INSERT, DROP, REPLACE)
+- `.claude/skills/alter-page.md` - ALTER PAGE/SNIPPET in-place modifications (SET, INSERT, DROP, REPLACE, SET Layout)
 - `.claude/skills/overview-pages.md` - CRUD page patterns
 - `.claude/skills/master-detail-pages.md` - Master-detail page patterns
 - `.claude/skills/generate-domain-model.md` - Entity/Association syntax

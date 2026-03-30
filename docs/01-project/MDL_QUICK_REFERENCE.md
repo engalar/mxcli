@@ -445,8 +445,10 @@ Modify an existing page or snippet's widget tree in-place without full `CREATE O
 | Pluggable prop | `SET 'showLabel' = false ON cbStatus` | Quoted name for pluggable widgets |
 | Add variable | `ADD Variables $name: Type = 'expr'` | Add a page variable |
 | Drop variable | `DROP Variables $name` | Remove a page variable |
+| Set layout | `SET Layout = Module.LayoutName` | Change page layout, auto-maps placeholders |
+| Set layout + map | `SET Layout = Module.Layout MAP (Old AS New)` | Explicit placeholder mapping |
 
-**Supported SET properties:** Caption, Label, ButtonStyle, Class, Style, Editable, Visible, Name, Title (page-level), and quoted pluggable widget properties.
+**Supported SET properties:** Caption, Label, ButtonStyle, Class, Style, Editable, Visible, Name, Title (page-level), Layout (page-level), and quoted pluggable widget properties.
 
 **Example:**
 ```sql

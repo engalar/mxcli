@@ -2238,6 +2238,26 @@ ALTER PAGE PgTest.P033b_DataGrid_ColumnProperties {
   DROP Variables $showPriceColumn;
 };
 
+-- MARK: ALTER PAGE SET Layout
+
+-- =============================================================================
+-- ALTER PAGE - SET Layout (change page layout without rebuilding widgets)
+-- =============================================================================
+
+/**
+ * Level 8.1: Change page layout (auto-map placeholders)
+ */
+ALTER PAGE PgTest.P033b_DataGrid_ColumnProperties {
+  SET Layout = Atlas_Core.Atlas_Default;
+};
+
+/**
+ * Level 8.2: Change layout back (auto-map)
+ */
+ALTER PAGE PgTest.P033b_DataGrid_ColumnProperties {
+  SET Layout = Atlas_Core.Atlas_TopBar;
+};
+
 -- MARK: Move Examples
 
 -- =============================================================================

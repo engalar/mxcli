@@ -64,6 +64,7 @@ SET Title = 'New Page Title'
 | `Visible` | Any widget | String or Boolean | `SET Visible = false ON txtHidden` |
 | `Name` | Any widget | String | `SET Name = 'newName' ON oldName` |
 | `Title` | Page-level only | String | `SET Title = 'Edit Customer'` |
+| `Layout` | Page-level only | Qualified name | `SET Layout = Atlas_Core.Atlas_Default` |
 | `'quotedProp'` | Pluggable widgets | String, Boolean, Number | `SET 'showLabel' = false ON cbStatus` |
 
 **Pluggable widget properties** use quoted names to set values in the widget's `Object.Properties[]`. Boolean values are stored as `"yes"`/`"no"` in BSON.
@@ -138,6 +139,20 @@ DROP Variables $showStockColumn
 ```
 
 Removes a page variable by name.
+
+### SET Layout - Change Page Layout
+
+```sql
+-- Auto-map placeholders by name (most common case)
+SET Layout = Atlas_Core.Atlas_Default
+
+-- Explicit mapping when placeholder names differ
+SET Layout = Atlas_Core.Atlas_SideBar MAP (Main AS Content, Extra AS Sidebar)
+```
+
+Changes the page's layout without rebuilding the widget tree. Only rewrites the `FormCall.Form` and `FormCall.Arguments[].Parameter` BSON fields — all widget content is preserved. Not supported for snippets.
+
+When placeholders have the same names in both layouts (e.g., both have `Main`), auto-mapping works. Use `MAP` when placeholder names differ between the old and new layout.
 
 ## Examples
 

@@ -47,8 +47,13 @@ func (b *Builder) exitAlterPageStatement(ctx *parser.AlterStatementContext) {
 	b.statements = append(b.statements, stmt)
 }
 
-// buildAlterPageSet builds a SetPropertyOp from the parse tree.
-func (b *Builder) buildAlterPageSet(ctx *parser.AlterPageSetContext) *ast.SetPropertyOp {
+// buildAlterPageSet builds a SetPropertyOp or SetLayoutOp from the parse tree.
+func (b *Builder) buildAlterPageSet(ctx *parser.AlterPageSetContext) ast.AlterPageOperation {
+	// SET Layout = Module.LayoutName [MAP (...)]
+	if ctx.LAYOUT() != nil {
+		return b.buildAlterPageSetLayout(ctx)
+	}
+
 	op := &ast.SetPropertyOp{
 		Properties: make(map[string]interface{}),
 	}
@@ -66,6 +71,33 @@ func (b *Builder) buildAlterPageSet(ctx *parser.AlterPageSetContext) *ast.SetPro
 		name, value := b.buildAlterPageAssignment(assign)
 		if name != "" {
 			op.Properties[name] = value
+		}
+	}
+
+	return op
+}
+
+// buildAlterPageSetLayout builds a SetLayoutOp from: SET Layout = QN [MAP (old -> new, ...)]
+func (b *Builder) buildAlterPageSetLayout(ctx *parser.AlterPageSetContext) *ast.SetLayoutOp {
+	op := &ast.SetLayoutOp{}
+
+	// Layout qualified name
+	if qn := ctx.QualifiedName(); qn != nil {
+		op.NewLayout = buildQualifiedName(qn)
+	}
+
+	// Optional MAP (old -> new, ...)
+	mappings := ctx.AllAlterLayoutMapping()
+	if len(mappings) > 0 {
+		op.Mappings = make(map[string]string, len(mappings))
+		for _, m := range mappings {
+			mc := m.(*parser.AlterLayoutMappingContext)
+			ids := mc.AllIdentifierOrKeyword()
+			if len(ids) == 2 {
+				from := identifierOrKeywordText(ids[0])
+				to := identifierOrKeywordText(ids[1])
+				op.Mappings[from] = to
+			}
 		}
 	}
 

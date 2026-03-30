@@ -190,9 +190,14 @@ alterPageOperation
     ;
 
 alterPageSet
-    : SET alterPageAssignment ON identifierOrKeyword                             // SET Caption = 'Save' ON btnSave
+    : SET LAYOUT EQUALS qualifiedName (MAP LPAREN alterLayoutMapping (COMMA alterLayoutMapping)* RPAREN)?  // SET Layout = Atlas_Core.TopBar MAP (Main -> Main)
+    | SET alterPageAssignment ON identifierOrKeyword                             // SET Caption = 'Save' ON btnSave
     | SET LPAREN alterPageAssignment (COMMA alterPageAssignment)* RPAREN ON identifierOrKeyword  // SET (Caption = 'Save', ButtonStyle = Success) ON btnSave
     | SET alterPageAssignment                                                    // SET Title = 'Edit' (page-level)
+    ;
+
+alterLayoutMapping
+    : identifierOrKeyword AS identifierOrKeyword                                // OldPlaceholder AS NewPlaceholder
     ;
 
 alterPageAssignment

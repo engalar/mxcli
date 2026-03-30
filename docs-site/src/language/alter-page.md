@@ -67,6 +67,26 @@ ALTER PAGE Module.EditPage {
 };
 ```
 
+### SET Layout -- Change Page Layout
+
+Switch a page's layout without rebuilding the widget tree. All widget content is preserved -- only the layout reference and placeholder mappings are updated.
+
+```sql
+-- Auto-map placeholders by name (common case)
+ALTER PAGE Module.EditPage {
+  SET Layout = Atlas_Core.Atlas_Default
+};
+
+-- Explicit mapping when placeholder names differ
+ALTER PAGE Module.EditPage {
+  SET Layout = Atlas_Core.Atlas_SideBar MAP (Main AS Content, Extra AS Sidebar)
+};
+```
+
+When both the old and new layouts share the same placeholder names (e.g., both have `Main`), no `MAP` clause is needed -- placeholders are matched automatically. Use `MAP` when the new layout has different placeholder names.
+
+Not supported for snippets (snippets don't have layouts).
+
 ### INSERT -- Add Widgets
 
 Insert new widgets before or after an existing widget:

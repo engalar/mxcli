@@ -80,6 +80,12 @@ func (s *BaseMDLParserListener) EnterAlterPageSet(ctx *AlterPageSetContext) {}
 // ExitAlterPageSet is called when production alterPageSet is exited.
 func (s *BaseMDLParserListener) ExitAlterPageSet(ctx *AlterPageSetContext) {}
 
+// EnterAlterLayoutMapping is called when production alterLayoutMapping is entered.
+func (s *BaseMDLParserListener) EnterAlterLayoutMapping(ctx *AlterLayoutMappingContext) {}
+
+// ExitAlterLayoutMapping is called when production alterLayoutMapping is exited.
+func (s *BaseMDLParserListener) ExitAlterLayoutMapping(ctx *AlterLayoutMappingContext) {}
+
 // EnterAlterPageAssignment is called when production alterPageAssignment is entered.
 func (s *BaseMDLParserListener) EnterAlterPageAssignment(ctx *AlterPageAssignmentContext) {}
 
