@@ -90,19 +90,23 @@ Values are 1-12 (grid units) or `AutoFill`. TabletWidth and PhoneWidth default t
 
 ### Conditional Visibility
 
-Any widget can be conditionally visible using a Mendix expression:
+Any widget can be conditionally visible using an XPath expression in brackets:
 
 ```sql
-TEXTBOX txtName (Label: 'Name', Attribute: Name, VISIBLE IF '$currentObject/IsActive')
+TEXTBOX txtName (Label: 'Name', Attribute: Name, Visible: [IsActive])
 ```
+
+Static values also work: `Visible: false` hides the widget unconditionally.
 
 ### Conditional Editability
 
 Input widgets can be conditionally editable:
 
 ```sql
-TEXTBOX txtStatus (Label: 'Status', Attribute: Status, EDITABLE IF '$currentObject/Status != ''Closed''')
+TEXTBOX txtStatus (Label: 'Status', Attribute: Status, Editable: [Status != 'Closed'])
 ```
+
+Static values: `Editable: Never`, `Editable: Always`.
 
 ## Layouts
 

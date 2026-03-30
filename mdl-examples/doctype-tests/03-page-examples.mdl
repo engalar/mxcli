@@ -2277,8 +2277,8 @@ CREATE PAGE PgTest.P040_ConditionalProps
     ROW row1 {
       COLUMN col1 (DesktopWidth: 8, TabletWidth: 6, PhoneWidth: 12) {
         DATAVIEW dv1 (DataSource: MICROFLOW PgTest.DS_GetFirst) {
-          TEXTBOX txtName (Label: 'Name', Attribute: Name, VISIBLE IF '$currentObject/Name != empty')
-          TEXTBOX txtCountry (Label: 'Country', Attribute: Country, EDITABLE IF 'true')
+          TEXTBOX txtName (Label: 'Name', Attribute: Name, Visible: [Name != empty])
+          TEXTBOX txtCountry (Label: 'Country', Attribute: Country, Editable: [true])
         }
       }
       COLUMN col2 (DesktopWidth: 4, TabletWidth: 6, PhoneWidth: 12) {

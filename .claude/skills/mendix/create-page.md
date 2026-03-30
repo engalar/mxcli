@@ -747,22 +747,24 @@ See the dedicated skill file: [ALTER PAGE/SNIPPET](./alter-page.md)
 
 ## Conditional Visibility and Editability
 
-Any widget can have conditional visibility. Input widgets can also have conditional editability.
+Any widget can have conditional visibility. Input widgets can also have conditional editability. Use XPath bracket syntax `[expression]`:
 
 ```sql
 -- Conditionally visible widget
-TEXTBOX txtName (Label: 'Name', Attribute: Name, VISIBLE IF '$currentObject/IsActive')
+TEXTBOX txtName (Label: 'Name', Attribute: Name, Visible: [IsActive])
 
 -- Conditionally editable input
-TEXTBOX txtStatus (Label: 'Status', Attribute: Status, EDITABLE IF '$currentObject/Status != ''Closed''')
+TEXTBOX txtStatus (Label: 'Status', Attribute: Status, Editable: [Status != 'Closed'])
 
 -- Combined
 TEXTBOX txtEmail (Label: 'Email', Attribute: Email,
-  VISIBLE IF '$currentObject/ShowEmail',
-  EDITABLE IF '$currentObject/CanEdit')
-```
+  Visible: [ShowEmail],
+  Editable: [CanEdit])
 
-The expression is a Mendix expression string using `$currentObject/AttributeName` syntax. Single quotes within the expression must be doubled (`''`).
+-- Static values still work
+TEXTBOX txtReadOnly (Label: 'Read Only', Attribute: Name, Editable: Never)
+TEXTBOX txtHidden (Label: 'Hidden', Attribute: Name, Visible: false)
+```
 
 ## Known Limitations
 

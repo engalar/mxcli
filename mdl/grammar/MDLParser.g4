@@ -1825,9 +1825,10 @@ widgetPropertyV3
     | DESIGNPROPERTIES COLON designPropertyListV3       // DesignProperties: [...]
     | WIDTH COLON NUMBER_LITERAL                        // Width: 200
     | HEIGHT COLON NUMBER_LITERAL                      // Height: 100
-    | VISIBLE IF STRING_LITERAL                        // VISIBLE IF '$currentObject/IsActive = true'
-    | VISIBLE COLON propertyValueV3                   // Visible: expression
-    | EDITABLE IF STRING_LITERAL                      // EDITABLE IF '$currentObject/Status = Draft'
+    | VISIBLE COLON xpathConstraint                    // Visible: [IsActive = true]
+    | VISIBLE COLON propertyValueV3                   // Visible: false
+    | EDITABLE COLON xpathConstraint                  // Editable: [Status != 'Closed']
+    | EDITABLE COLON propertyValueV3                  // Editable: Never | Always
     | TOOLTIP COLON propertyValueV3                   // Tooltip: 'text'
     | IDENTIFIER COLON propertyValueV3                // Generic: any other property
     ;

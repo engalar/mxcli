@@ -430,8 +430,8 @@ CREATE PAGE MyModule.Customer_Edit
 | DesktopWidth | `COLUMN col (DesktopWidth: 8)` | 1-12 or AutoFill |
 | TabletWidth | `COLUMN col (TabletWidth: 6)` | 1-12 or AutoFill (default: auto) |
 | PhoneWidth | `COLUMN col (PhoneWidth: 12)` | 1-12 or AutoFill (default: auto) |
-| VISIBLE IF | `TEXTBOX txt (VISIBLE IF '$obj/IsActive')` | Conditional visibility expression |
-| EDITABLE IF | `TEXTBOX txt (EDITABLE IF '$obj/Status != ''Closed''')` | Conditional editability expression |
+| Visible | `TEXTBOX txt (Visible: [IsActive])` | Conditional visibility (XPath expression) |
+| Editable | `TEXTBOX txt (Editable: [Status != 'Closed'])` | Conditional editability (XPath expression) |
 
 **Supported Widgets:**
 - Layout: `LAYOUTGRID`, `ROW`, `COLUMN`, `CONTAINER`, `CUSTOMCONTAINER`

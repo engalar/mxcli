@@ -549,26 +549,22 @@ func parseWidgetPropertyV3(ctx parser.IWidgetPropertyV3Context, widget *ast.Widg
 		return
 	}
 
-	// VISIBLE IF 'expression' (conditional visibility)
-	if propCtx.VISIBLE() != nil && propCtx.IF() != nil {
-		if str := propCtx.STRING_LITERAL(); str != nil {
-			widget.Properties["VisibleIf"] = unquoteString(str.GetText())
-		}
-		return
-	}
-
-	// Visible: expression (keyword-based property)
+	// Visible: [xpath] (conditional visibility) or Visible: false (static)
 	if propCtx.VISIBLE() != nil {
-		if valCtx := propCtx.PropertyValueV3(); valCtx != nil {
+		if xc := propCtx.XpathConstraint(); xc != nil {
+			widget.Properties["VisibleIf"] = extractXpathText(xc)
+		} else if valCtx := propCtx.PropertyValueV3(); valCtx != nil {
 			widget.Properties["Visible"] = buildPropertyValueV3(valCtx)
 		}
 		return
 	}
 
-	// EDITABLE IF 'expression' (conditional editability)
-	if propCtx.EDITABLE() != nil && propCtx.IF() != nil {
-		if str := propCtx.STRING_LITERAL(); str != nil {
-			widget.Properties["EditableIf"] = unquoteString(str.GetText())
+	// Editable: [xpath] (conditional editability) or Editable: Never (static)
+	if propCtx.EDITABLE() != nil {
+		if xc := propCtx.XpathConstraint(); xc != nil {
+			widget.Properties["EditableIf"] = extractXpathText(xc)
+		} else if valCtx := propCtx.PropertyValueV3(); valCtx != nil {
+			widget.Properties["Editable"] = buildPropertyValueV3(valCtx)
 		}
 		return
 	}
@@ -938,6 +934,19 @@ func buildSortColumnAsOrderBy(ctx parser.ISortColumnContext) ast.OrderByItemV3 {
 }
 
 // buildPropertyValueV3 builds a generic property value.
+// extractXpathText extracts the expression text from inside [brackets].
+func extractXpathText(xc parser.IXpathConstraintContext) string {
+	if xc == nil {
+		return ""
+	}
+	// Get the full text including brackets, then strip them
+	text := xc.GetText()
+	if len(text) >= 2 && text[0] == '[' && text[len(text)-1] == ']' {
+		return text[1 : len(text)-1]
+	}
+	return text
+}
+
 // parseWidthValue parses a column width value: numeric (1-12) or "AutoFill".
 func parseWidthValue(text string) any {
 	if strings.EqualFold(text, "AutoFill") {

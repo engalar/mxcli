@@ -39,10 +39,10 @@ func appendDataGridPagingProps(props []string, w rawWidget) []string {
 // appendConditionalProps appends VISIBLE IF and EDITABLE IF if present.
 func appendConditionalProps(props []string, w rawWidget) []string {
 	if w.VisibleIf != "" {
-		props = append(props, fmt.Sprintf("VISIBLE IF %s", mdlQuote(w.VisibleIf)))
+		props = append(props, fmt.Sprintf("Visible: [%s]", w.VisibleIf))
 	}
 	if w.EditableIf != "" {
-		props = append(props, fmt.Sprintf("EDITABLE IF %s", mdlQuote(w.EditableIf)))
+		props = append(props, fmt.Sprintf("Editable: [%s]", w.EditableIf))
 	}
 	return props
 }
@@ -59,10 +59,10 @@ func appendAppearanceProps(props []string, w rawWidget) []string {
 		props = append(props, formatDesignPropertiesMDL(w.DesignProperties))
 	}
 	if w.VisibleIf != "" {
-		props = append(props, fmt.Sprintf("VISIBLE IF %s", mdlQuote(w.VisibleIf)))
+		props = append(props, fmt.Sprintf("Visible: [%s]", w.VisibleIf))
 	}
 	if w.EditableIf != "" {
-		props = append(props, fmt.Sprintf("EDITABLE IF %s", mdlQuote(w.EditableIf)))
+		props = append(props, fmt.Sprintf("Editable: [%s]", w.EditableIf))
 	}
 	return props
 }
