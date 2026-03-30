@@ -390,3 +390,36 @@ func TestDeriveColumnName_CaptionSpecialChars(t *testing.T) {
 		t.Errorf("deriveColumnName(special chars) = %q, want %q", got, "Order__ID__main")
 	}
 }
+
+// =============================================================================
+// Issue #50: Association misidentified as Attribute (fallback without reader)
+// =============================================================================
+
+// TestResolveMemberChange_FallbackWithoutReader verifies that resolveMemberChange
+// falls back to dot-contains heuristic when no reader is available.
+// Regression: https://github.com/mendixlabs/mxcli/issues/50
+func TestResolveMemberChange_FallbackWithoutReader(t *testing.T) {
+	fb := &flowBuilder{
+		// reader is nil — simulates no project context
+	}
+
+	// Without reader: a name without dot should default to attribute
+	mc := &microflows.MemberChange{}
+	fb.resolveMemberChange(mc, "Label", "Demo.Child")
+	if mc.AttributeQualifiedName != "Demo.Child.Label" {
+		t.Errorf("expected attribute 'Demo.Child.Label', got %q", mc.AttributeQualifiedName)
+	}
+	if mc.AssociationQualifiedName != "" {
+		t.Errorf("expected empty association, got %q", mc.AssociationQualifiedName)
+	}
+
+	// With a dot in the name: should be treated as fully-qualified association (fallback)
+	mc2 := &microflows.MemberChange{}
+	fb.resolveMemberChange(mc2, "Demo.Child_Parent", "Demo.Child")
+	if mc2.AssociationQualifiedName != "Demo.Child_Parent" {
+		t.Errorf("expected association 'Demo.Child_Parent', got %q", mc2.AssociationQualifiedName)
+	}
+	if mc2.AttributeQualifiedName != "" {
+		t.Errorf("expected empty attribute, got %q", mc2.AttributeQualifiedName)
+	}
+}

@@ -914,22 +914,23 @@ func serializeCrossAssociation(ca *domainmodel.CrossModuleAssociation) bson.M {
 	if storageFormat == "" {
 		storageFormat = "Column"
 	}
+	// CrossAssociation does NOT have ParentConnection/ChildConnection properties
+	// (unlike Association). Writing them causes Studio Pro to crash with
+	// InvalidOperationException in MprProperty..ctor.
 	return bson.M{
-		"$ID":              idToBsonBinary(string(ca.ID)),
-		"$Type":            "DomainModels$CrossAssociation",
-		"Name":             ca.Name,
-		"Documentation":    ca.Documentation,
-		"ExportLevel":      "Hidden",
-		"GUID":             idToBsonBinary(string(ca.ID)),
-		"ParentPointer":    idToBsonBinary(string(ca.ParentID)),
-		"Child":            ca.ChildRef,
-		"Type":             string(ca.Type),
-		"Owner":            string(ca.Owner),
-		"ParentConnection": "0;50",
-		"ChildConnection":  "100;50",
-		"StorageFormat":    storageFormat,
-		"Source":           nil,
-		"DeleteBehavior":   serializeDeleteBehavior(ca.ParentDeleteBehavior, ca.ChildDeleteBehavior),
+		"$ID":            idToBsonBinary(string(ca.ID)),
+		"$Type":          "DomainModels$CrossAssociation",
+		"Name":           ca.Name,
+		"Documentation":  ca.Documentation,
+		"ExportLevel":    "Hidden",
+		"GUID":           idToBsonBinary(string(ca.ID)),
+		"ParentPointer":  idToBsonBinary(string(ca.ParentID)),
+		"Child":          ca.ChildRef,
+		"Type":           string(ca.Type),
+		"Owner":          string(ca.Owner),
+		"StorageFormat":  storageFormat,
+		"Source":         nil,
+		"DeleteBehavior": serializeDeleteBehavior(ca.ParentDeleteBehavior, ca.ChildDeleteBehavior),
 	}
 }
 

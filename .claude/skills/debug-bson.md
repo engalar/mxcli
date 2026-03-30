@@ -5,6 +5,8 @@ This skill provides a systematic workflow for debugging BSON serialization error
 ## When to Use This Skill
 
 Use when encountering:
+- **Studio Pro crash** `System.InvalidOperationException: Sequence contains no matching element` at `MprProperty..ctor`
+- **CE1613** "The selected attribute/enumeration no longer exists"
 - **CE0463** "The definition of this widget has changed"
 - **CE0642** "Property X is required"
 - **CE0091** validation errors on widget properties
@@ -134,6 +136,67 @@ reference/mxbuild/modeler/mx update-widgets /path/to/app.mpr
 Templates must include both `type` (PropertyTypes schema) AND `object` (default WidgetObject).
 
 ## Common Error Patterns
+
+### Studio Pro Crash: InvalidOperationException in MprProperty..ctor
+
+**Symptom**: Studio Pro crashes when opening a project with `System.InvalidOperationException: Sequence contains no matching element` at `Mendix.Modeler.Storage.Mpr.MprProperty..ctor`.
+
+**Root cause**: A BSON document contains a property (field name) that does not exist in the Mendix type definition for its `$Type`. Studio Pro's `MprProperty` constructor uses `First()` to look up each BSON field in the type cache, and crashes on unrecognized fields.
+
+**Diagnosis workflow**:
+
+1. **Collect all (type, property) pairs from the crash project** (requires `pip install pymongo`):
+```python
+import bson, os
+from collections import defaultdict
+
+type_props = defaultdict(set)
+
+def walk_bson(obj, tp):
+    if isinstance(obj, dict):
+        t = obj.get("$Type", "")
+        if t:
+            for k in obj.keys():
+                if k not in ("$Type", "$ID"):
+                    tp[t].add(k)
+        for v in obj.values():
+            walk_bson(v, tp)
+    elif isinstance(obj, list):
+        for item in obj:
+            walk_bson(item, tp)
+
+for root, dirs, files in os.walk("mprcontents"):
+    for f in files:
+        if f.endswith(".mxunit"):
+            with open(os.path.join(root, f), "rb") as fh:
+                walk_bson(bson.decode(fh.read()), type_props)
+```
+
+2. **Compare against a known-good baseline project** (e.g., GenAIDemo):
+```python
+# Collect baseline_props the same way, then:
+for t, props in crash_props.items():
+    if t in baseline_props:
+        extra = props - baseline_props[t]
+        if extra:
+            print(f"{t}: EXTRA props = {sorted(extra)}")
+```
+
+3. **Extra properties = the crash cause**. The fix is to remove those fields from the writer function.
+
+**Example**: `DomainModels$CrossAssociation` had `ParentConnection` and `ChildConnection` copied from `DomainModels$Association`, but these fields don't exist on `CrossAssociation`. Removing them fixed the crash.
+
+**Key principle**: When copying serialization code between similar types (e.g., Association → CrossAssociation), always verify which fields belong to each type by checking a baseline project's BSON.
+
+### CE1613: Selected Attribute/Enumeration No Longer Exists
+
+**Symptom**: `mx check` reports `[CE1613] "The selected attribute 'Module.Entity.AssocName' no longer exists."` or `"The selected enumeration 'Module.Entity' no longer exists."`
+
+**Root cause**: Two variants:
+
+1. **Association stored as Attribute**: In `ChangeActionItem` BSON, an association name was written to the `Attribute` field instead of the `Association` field. Check the executor code that builds `MemberChange` — it must query the domain model to distinguish associations from attributes.
+
+2. **Entity treated as Enumeration**: In `CreateVariableAction` BSON, an entity qualified name was used as `DataTypes$EnumerationType` instead of `DataTypes$ObjectType`. Check `buildDataType()` in the visitor — bare qualified names default to `TypeEnumeration` and need catalog-based disambiguation.
 
 ### CE0463: Widget Definition Changed
 
