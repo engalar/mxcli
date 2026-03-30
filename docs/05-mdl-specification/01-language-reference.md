@@ -524,6 +524,9 @@ ALTER ENTITY <qualified-name>
 
 ALTER ENTITY <qualified-name>
   SET DOCUMENTATION '<text>'
+
+ALTER ENTITY <qualified-name>
+  SET POSITION (<x>, <y>)
 ```
 
 **Examples:**
@@ -547,6 +550,10 @@ ALTER ENTITY Sales.Customer
 -- Set documentation
 ALTER ENTITY Sales.Customer
   SET DOCUMENTATION 'Customer master data';
+
+-- Reposition entity on domain model canvas
+ALTER ENTITY Sales.Customer
+  SET POSITION (100, 200);
 ```
 
 ---

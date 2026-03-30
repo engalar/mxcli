@@ -112,6 +112,9 @@ ALTER ENTITY <Module>.<Entity>
 
 ALTER ENTITY <Module>.<Entity>
   SET DOCUMENTATION '<text>'
+
+ALTER ENTITY <Module>.<Entity>
+  SET POSITION (<x>, <y>)
 ```
 
 ## See Also

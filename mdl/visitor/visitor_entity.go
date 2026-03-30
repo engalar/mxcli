@@ -567,6 +567,21 @@ func (b *Builder) ExitAlterEntityAction(ctx *parser.AlterEntityActionContext) {
 				return
 			}
 
+			// SET POSITION (x, y)
+			if ctx.SET() != nil && ctx.POSITION() != nil {
+				nums := ctx.AllNUMBER_LITERAL()
+				if len(nums) >= 2 {
+					x, _ := strconv.Atoi(nums[0].GetText())
+					y, _ := strconv.Atoi(nums[1].GetText())
+					b.statements = append(b.statements, &ast.AlterEntityStmt{
+						Name:      name,
+						Operation: ast.AlterEntitySetPosition,
+						Position:  &ast.Position{X: x, Y: y},
+					})
+				}
+				return
+			}
+
 			// ADD INDEX
 			if ctx.ADD() != nil && ctx.INDEX() != nil {
 				if idxDef := ctx.IndexDefinition(); idxDef != nil {
