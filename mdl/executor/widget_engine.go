@@ -203,9 +203,19 @@ func opWidgets(obj bson.D, propTypeIDs map[string]pages.PropertyTypeIDEntry, pro
 	if len(ctx.ChildWidgets) == 0 {
 		return obj
 	}
-	return updateWidgetPropertyValue(obj, propTypeIDs, propertyKey, func(val bson.D) bson.D {
-		return setChildWidgets(val, ctx.ChildWidgets)
+	result := updateWidgetPropertyValue(obj, propTypeIDs, propertyKey, func(val bson.D) bson.D {
+		updated := setChildWidgets(val, ctx.ChildWidgets)
+		// Verify Widgets was actually set
+		for _, e := range updated {
+			if e.Key == "Widgets" {
+				if arr, ok := e.Value.(bson.A); ok {
+					log.Printf("opWidgets %s: Widgets array has %d items", propertyKey, len(arr))
+				}
+			}
+		}
+		return updated
 	})
+	return result
 }
 
 // setChildWidgets replaces the Widgets field in a WidgetValue with the given child widgets.
@@ -284,9 +294,37 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 		updatedObject = op(updatedObject, propertyTypeIDs, mapping.PropertyKey, ctx)
 	}
 
-	// 4. Apply child slots
+	// 4. Apply child slots (.def.json)
 	if err := e.applyChildSlots(slots, w, propertyTypeIDs, &updatedObject); err != nil {
 		return nil, err
+	}
+
+	// 4.1 Auto datasource: map AST DataSource to first DataSource-type property.
+	// Must run BEFORE child slots and explicit properties so entityContext is set.
+	dsHandledByMapping := false
+	for _, m := range mappings {
+		if m.Source == "DataSource" {
+			dsHandledByMapping = true
+			break
+		}
+	}
+	if !dsHandledByMapping {
+		if ds := w.GetDataSource(); ds != nil {
+			for propKey, entry := range propertyTypeIDs {
+				if entry.ValueType == "DataSource" {
+					dataSource, entityName, err := e.pageBuilder.buildDataSourceV3(ds)
+					if err != nil {
+						return nil, fmt.Errorf("auto datasource for %s: %w", propKey, err)
+					}
+					ctx := &BuildContext{DataSource: dataSource, EntityName: entityName}
+					updatedObject = opDatasource(updatedObject, propertyTypeIDs, propKey, ctx)
+					if entityName != "" {
+						e.pageBuilder.entityContext = entityName
+					}
+					break
+				}
+			}
+		}
 	}
 
 	// 4.3 Auto child slots: match AST children to Widgets-type template properties.
@@ -305,6 +343,14 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 			widgetsPropKeys = append(widgetsPropKeys, propKey)
 		}
 	}
+	// Debug: log Widgets-type properties and children for matching
+	if len(w.Children) > 0 && len(widgetsPropKeys) > 0 {
+		var childNames []string
+		for _, c := range w.Children {
+			childNames = append(childNames, c.Name+"("+c.Type+")")
+		}
+		log.Printf("auto-slot %s: widgetProps=%v children=%v", w.Name, widgetsPropKeys, childNames)
+	}
 	// Phase 1: Named matching — match children by name against property keys
 	matchedChildren := make(map[int]bool) // indices of matched children
 	for _, propKey := range widgetsPropKeys {
@@ -315,6 +361,7 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 			}
 			if strings.ToUpper(child.Name) == upperKey {
 				var childBSONs []bson.D
+				log.Printf("auto-slot match: %s.%s has %d AST children", w.Name, propKey, len(child.Children))
 				for _, slotChild := range child.Children {
 					widgetBSON, err := e.pageBuilder.buildWidgetV3ToBSON(slotChild)
 					if err != nil {
@@ -324,6 +371,7 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 						childBSONs = append(childBSONs, widgetBSON)
 					}
 				}
+				log.Printf("auto-slot match: %s.%s built %d BSON widgets", w.Name, propKey, len(childBSONs))
 				if len(childBSONs) > 0 {
 					updatedObject = opWidgets(updatedObject, propertyTypeIDs, propKey, &BuildContext{ChildWidgets: childBSONs})
 					handledSlotKeys[propKey] = true
@@ -360,34 +408,6 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 			if !handledSlotKeys[propKey] {
 				updatedObject = opWidgets(updatedObject, propertyTypeIDs, propKey, &BuildContext{ChildWidgets: defaultWidgetBSONs})
 				break
-			}
-		}
-	}
-
-	// 4.5 Auto datasource: map AST DataSource to first DataSource-type property.
-	// Must run BEFORE explicit properties so entityContext is set for TextTemplate/Attribute resolution.
-	dsHandledByMapping := false
-	for _, m := range mappings {
-		if m.Source == "DataSource" {
-			dsHandledByMapping = true
-			break
-		}
-	}
-	if !dsHandledByMapping {
-		if ds := w.GetDataSource(); ds != nil {
-			for propKey, entry := range propertyTypeIDs {
-				if entry.ValueType == "DataSource" {
-					dataSource, entityName, err := e.pageBuilder.buildDataSourceV3(ds)
-					if err != nil {
-						return nil, fmt.Errorf("auto datasource for %s: %w", propKey, err)
-					}
-					ctx := &BuildContext{DataSource: dataSource, EntityName: entityName}
-					updatedObject = opDatasource(updatedObject, propertyTypeIDs, propKey, ctx)
-					if entityName != "" {
-						e.pageBuilder.entityContext = entityName
-					}
-					break
-				}
 			}
 		}
 	}
@@ -481,6 +501,33 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 
 	// 4.9 Auto-populate required empty object lists (e.g., Accordion groups, AreaChart series)
 	updatedObject = ensureRequiredObjectLists(updatedObject, propertyTypeIDs)
+
+	// Debug: verify updatedObject has Widgets content before building
+	if w.Name == "timelineCustom" {
+		for _, elem := range updatedObject {
+			if elem.Key == "Properties" {
+				if arr, ok := elem.Value.(bson.A); ok {
+					for _, item := range arr {
+						if prop, ok := item.(bson.D); ok {
+							for _, pe := range prop {
+								if pe.Key == "Value" {
+									if val, ok := pe.Value.(bson.D); ok {
+										for _, ve := range val {
+											if ve.Key == "Widgets" {
+												if wa, ok := ve.Value.(bson.A); ok && len(wa) > 1 {
+													log.Printf("BUILD CHECK: timelineCustom has non-empty Widgets: %d items", len(wa))
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 
 	// 5. Build CustomWidget
 	widgetID := model.ID(mpr.GenerateID())

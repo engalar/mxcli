@@ -338,7 +338,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
         )
       }
       COLUMN cS8d2 (DesktopWidth: 6) {
-        -- Timeline mode 2: custom visualization (Widgets slots)
+        -- Timeline mode 2: custom visualization (Widgets child containers)
         PLUGGABLEWIDGET 'com.mendix.widget.web.timeline.Timeline' timelineCustom (
           DataSource: DATABASE FROM WidgetDemo.DemoItem SORT BY DateCreated DESC,
           groupEvents: false,
@@ -348,7 +348,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
             DYNAMICTEXT tlTitle (Content: '{1}', RenderMode: H4, ContentParams: [{1} = Title])
           }
           CONTAINER customDescription {
-            DYNAMICTEXT tlDesc (Content: 'Code: {1} | Amount: {2}', ContentParams: [{1} = Code, {2} = Amount])
+            DYNAMICTEXT tlDesc (Content: '{1}', ContentParams: [{1} = Description])
           }
         }
       }

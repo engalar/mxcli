@@ -4,6 +4,7 @@ package executor
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
@@ -97,16 +98,21 @@ func updateWidgetPropertyValue(obj bson.D, propTypeIDs map[string]pages.Property
 // updatePropertyInArray finds a property by TypePointer and updates its value.
 func updatePropertyInArray(arr bson.A, propertyTypeID string, updateFn func(bson.D) bson.D) bson.A {
 	result := make(bson.A, len(arr))
+	matched := false
 	for i, item := range arr {
 		if prop, ok := item.(bson.D); ok {
 			if matchesTypePointer(prop, propertyTypeID) {
 				result[i] = updatePropertyValue(prop, updateFn)
+				matched = true
 			} else {
 				result[i] = item
 			}
 		} else {
 			result[i] = item
 		}
+	}
+	if !matched {
+		log.Printf("WARNING: updatePropertyInArray: no match for TypePointer %s in %d properties", propertyTypeID, len(arr)-1)
 	}
 	return result
 }
