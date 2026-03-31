@@ -1,5 +1,6 @@
--- WidgetDemo Showcase: all MDL-supported widget types
--- Uses only WidgetDemo.DemoItem (no external dependencies)
+-- WidgetDemo Showcase: comprehensive baseline for all MDL-supported widget types
+-- Uses WidgetDemo.DemoItem + WidgetDemo.Helper (no external dependencies)
+-- Every widget is fully configured with realistic properties
 
 CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
   Title: 'Widget Showcase',
@@ -13,7 +14,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
     ROW rowS1H {
       COLUMN cS1H (DesktopWidth: 12) {
         CONTAINER hdrS1 (Class: 'card', Style: 'padding: 16px; background-color: #f0f4ff;') {
-          DYNAMICTEXT tS1 (Content: '1. Text Widgets (built-in)', RenderMode: H2)
+          DYNAMICTEXT tS1 (Content: '1. Text Widgets', RenderMode: H2)
         }
       }
     }
@@ -33,11 +34,11 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
       }
     }
 
-    -- ======== Section 2: Layout ========
+    -- ======== Section 2: Layout (Container, GroupBox, TabContainer, LayoutGrid) ========
     ROW rowS2H {
       COLUMN cS2H (DesktopWidth: 12) {
         CONTAINER hdrS2 (Class: 'card', Style: 'padding: 16px; background-color: #e8f5e9;') {
-          DYNAMICTEXT tS2 (Content: '2. Layout Widgets (built-in)', RenderMode: H2)
+          DYNAMICTEXT tS2 (Content: '2. Layout Widgets', RenderMode: H2)
         }
       }
     }
@@ -45,16 +46,25 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
       COLUMN cS2a (DesktopWidth: 4) {
         CONTAINER ctnDemo (Class: 'card', Style: 'padding: 12px;') {
           DYNAMICTEXT ctnL (Content: 'CONTAINER', RenderMode: H4)
+          DYNAMICTEXT ctnD (Content: 'Generic div container with class/style', RenderMode: Paragraph)
         }
       }
       COLUMN cS2b (DesktopWidth: 4) {
         GROUPBOX gbDemo (Caption: 'GROUPBOX') {
-          DYNAMICTEXT gbL (Content: 'Labeled container', RenderMode: Paragraph)
+          DYNAMICTEXT gbL (Content: 'Collapsible labeled container', RenderMode: Paragraph)
         }
       }
       COLUMN cS2c (DesktopWidth: 4) {
-        CONTAINER gridNote (Class: 'card', Style: 'padding: 12px; text-align: center;') {
-          DYNAMICTEXT gnL (Content: 'LAYOUTGRID / ROW / COLUMN', RenderMode: H4)
+        TABCONTAINER tabDemo {
+          TABPAGE tabPage1 (Caption: 'Tab 1') {
+            DYNAMICTEXT tab1L (Content: 'First tab content', RenderMode: Paragraph)
+          }
+          TABPAGE tabPage2 (Caption: 'Tab 2') {
+            DYNAMICTEXT tab2L (Content: 'Second tab content', RenderMode: Paragraph)
+          }
+          TABPAGE tabPage3 (Caption: 'Tab 3') {
+            DYNAMICTEXT tab3L (Content: 'Third tab content', RenderMode: Paragraph)
+          }
         }
       }
     }
@@ -63,7 +73,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
     ROW rowS3H {
       COLUMN cS3H (DesktopWidth: 12) {
         CONTAINER hdrS3 (Class: 'card', Style: 'padding: 16px; background-color: #fff3e0;') {
-          DYNAMICTEXT tS3 (Content: '3. Buttons (built-in)', RenderMode: H2)
+          DYNAMICTEXT tS3 (Content: '3. Buttons', RenderMode: H2)
         }
       }
     }
@@ -77,7 +87,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
       }
     }
 
-    -- ======== Section 4: Gallery + Filters + DataView ========
+    -- ======== Section 4: Gallery + Filters + DataView + Inputs ========
     ROW rowS4H {
       COLUMN cS4H (DesktopWidth: 12) {
         CONTAINER hdrS4 (Class: 'card', Style: 'padding: 16px; background-color: #e3f2fd;') {
@@ -97,19 +107,19 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
             DROPDOWNFILTER dfCat
             NUMBERFILTER nfAmt (Attributes: [Amount])
             DATEFILTER dtfDate (Attributes: [DateCreated])
-            -- DropdownSort inside Gallery FILTER for linked datasource
             PLUGGABLEWIDGET 'com.mendix.widget.web.dropdownsort.DropdownSort' ddSort1
           }
           TEMPLATE tmpl1 {
             DYNAMICTEXT tTitle (Content: '{1}', RenderMode: H4, ContentParams: [{1} = Title])
-            DYNAMICTEXT tCode (Content: 'Code: {1}', ContentParams: [{1} = Code])
+            DYNAMICTEXT tCode (Content: 'Code: {1} | Priority: {2}', ContentParams: [{1} = Code, {2} = Priority])
+            DYNAMICTEXT tAmount (Content: 'Amount: {1} | Score: {2}', ContentParams: [{1} = Amount, {2} = Score])
           }
         }
         DATAVIEW dvDetail (DataSource: $DemoItem) {
           LAYOUTGRID gForm {
             ROW rF1 {
               COLUMN cF1 (DesktopWidth: 6) {
-                TEXTBOX txtTitle (Label: 'Title (TEXTBOX)', Attribute: Title)
+                TEXTBOX txtTitle (Label: 'Title', Attribute: Title)
               }
               COLUMN cF2 (DesktopWidth: 6) {
                 TEXTBOX txtCode (Label: 'Code', Attribute: Code)
@@ -117,7 +127,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
             }
             ROW rF2 {
               COLUMN cF3 (DesktopWidth: 6) {
-                DATEPICKER dpCreated (Label: 'Created (DATEPICKER)', Attribute: DateCreated)
+                DATEPICKER dpCreated (Label: 'Date Created', Attribute: DateCreated)
               }
               COLUMN cF4 (DesktopWidth: 6) {
                 DATEPICKER dpDue (Label: 'Due Date', Attribute: DueDate)
@@ -125,23 +135,23 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
             }
             ROW rF3 {
               COLUMN cF5 (DesktopWidth: 6) {
-                PLUGGABLEWIDGET 'com.mendix.widget.web.combobox.Combobox' cbPri (Label: 'Priority (COMBOBOX)', attributeEnumeration: Priority)
+                PLUGGABLEWIDGET 'com.mendix.widget.web.combobox.Combobox' cbPri (Label: 'Priority', attributeEnumeration: Priority)
               }
               COLUMN cF6 (DesktopWidth: 6) {
-                RADIOBUTTONS rbStatus (Label: 'Status (RADIOBUTTONS)', Attribute: ItemStatus)
+                RADIOBUTTONS rbStatus (Label: 'Status', Attribute: ItemStatus)
               }
             }
             ROW rF3b {
               COLUMN cF5b (DesktopWidth: 12) {
-                PLUGGABLEWIDGET 'com.mendix.widget.web.combobox.Combobox' cbCat (Label: 'Category (COMBOBOX)', attributeEnumeration: Category)
+                PLUGGABLEWIDGET 'com.mendix.widget.web.combobox.Combobox' cbCat (Label: 'Category', attributeEnumeration: Category)
               }
             }
             ROW rF4 {
               COLUMN cF7 (DesktopWidth: 6) {
-                CHECKBOX cbActive (Label: 'Active (CHECKBOX)', Attribute: IsActive)
+                CHECKBOX cbActive (Label: 'Active', Attribute: IsActive)
               }
               COLUMN cF8 (DesktopWidth: 6) {
-                TEXTAREA taNotes (Label: 'Notes (TEXTAREA)', Attribute: Notes)
+                TEXTAREA taNotes (Label: 'Notes', Attribute: Notes)
               }
             }
           }
@@ -153,11 +163,11 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
       }
     }
 
-    -- ======== Section 5: DataGrid DataGrid ========
+    -- ======== Section 5: DataGrid ========
     ROW rowS5H {
       COLUMN cS5H (DesktopWidth: 12) {
         CONTAINER hdrS5 (Class: 'card', Style: 'padding: 16px; background-color: #fce4ec;') {
-          DYNAMICTEXT tS5 (Content: '5. DataGrid + ControlBar (built-in)', RenderMode: H2)
+          DYNAMICTEXT tS5 (Content: '5. DataGrid + ControlBar', RenderMode: H2)
         }
       }
     }
@@ -183,7 +193,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
     ROW rowS6H {
       COLUMN cS6H (DesktopWidth: 12) {
         CONTAINER hdrS6 (Class: 'card', Style: 'padding: 16px; background-color: #f3e5f5;') {
-          DYNAMICTEXT tS6 (Content: '6. ListView (built-in)', RenderMode: H2)
+          DYNAMICTEXT tS6 (Content: '6. ListView', RenderMode: H2)
         }
       }
     }
@@ -196,11 +206,11 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
       }
     }
 
-    -- ======== Section 7: Navigation ========
+    -- ======== Section 7: Navigation + SnippetCall ========
     ROW rowS7H {
       COLUMN cS7H (DesktopWidth: 12) {
         CONTAINER hdrS7 (Class: 'card', Style: 'padding: 16px; background-color: #e0f2f1;') {
-          DYNAMICTEXT tS7 (Content: '7. Navigation + Snippet (built-in)', RenderMode: H2)
+          DYNAMICTEXT tS7 (Content: '7. Navigation + SnippetCall', RenderMode: H2)
         }
       }
     }
@@ -219,9 +229,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
         }
       }
       COLUMN cS7b (DesktopWidth: 8) {
-        CONTAINER ctnSnippetNote (Class: 'card', Style: 'padding: 12px;') {
-          DYNAMICTEXT snNote (Content: 'SNIPPETCALL placeholder (snippet removed to avoid name conflicts)', RenderMode: Paragraph)
-        }
+        SNIPPETCALL snCall (Snippet: WidgetDemo.SNIPPET_ButtonShowcase)
       }
     }
 
@@ -229,13 +237,13 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
     ROW rowS8H {
       COLUMN cS8H (DesktopWidth: 12) {
         CONTAINER hdrS8 (Class: 'card', Style: 'padding: 16px; background-color: #ede7f6;') {
-          DYNAMICTEXT tS8 (Content: '8. Pluggable Widgets (PLUGGABLEWIDGET)', RenderMode: H2)
+          DYNAMICTEXT tS8 (Content: '8. Pluggable Widgets', RenderMode: H2)
           DYNAMICTEXT tS8d (Content: 'React-based widgets with explicit property bindings', RenderMode: Paragraph)
         }
       }
     }
 
-    -- 8a: Input pluggable widgets (need entity context for attribute binding)
+    -- 8a: Input pluggable widgets (entity context from DataView)
     ROW rowS8a {
       COLUMN cS8a1 (DesktopWidth: 12) {
         DATAVIEW dvPluggable (DataSource: $DemoItem) {
@@ -256,8 +264,15 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
             }
             ROW rPlug2 {
               COLUMN cPlug5 (DesktopWidth: 6) {
-                -- BarcodeScanner: uses .def.json mapping (Attribute: → datasource property)
                 PLUGGABLEWIDGET 'com.mendix.widget.web.barcodescanner.BarcodeScanner' scanner1 (Attribute: Code)
+              }
+              COLUMN cPlug6 (DesktopWidth: 6) {
+                -- HTMLElement: tagContentMode='container' with child widgets
+                PLUGGABLEWIDGET 'com.mendix.widget.web.htmlelement.HTMLElement' htmlElem1 (tagContentMode: 'container') {
+                  CONTAINER tagContentContainer {
+                    DYNAMICTEXT htmlContent (Content: 'Content inside HTML element', RenderMode: Paragraph)
+                  }
+                }
               }
             }
           }
@@ -265,7 +280,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
       }
     }
 
-    -- 8b: Display pluggable widgets (no entity context needed)
+    -- 8b: Display pluggable widgets
     ROW rowS8b {
       COLUMN cS8b1 (DesktopWidth: 3) {
         PLUGGABLEWIDGET 'com.mendix.widget.custom.badge.Badge' badge1
@@ -281,99 +296,125 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
       }
     }
 
-    -- 8c: Layout pluggable widgets (auto child slots matched by container name)
+    -- 8c: Layout pluggable widgets with child content
     ROW rowS8c {
       COLUMN cS8c1 (DesktopWidth: 4) {
-        -- Accordion: groups auto-populated by ensureRequiredObjectLists
-        PLUGGABLEWIDGET 'com.mendix.widget.web.accordion.Accordion' accordion1
+        PLUGGABLEWIDGET 'com.mendix.widget.web.accordion.Accordion' accordion1 (
+          expandBehavior: 'singleExpanded',
+          showIcon: 'right'
+        )
       }
       COLUMN cS8c2 (DesktopWidth: 4) {
-        -- Fieldset: direct children go to default Widgets slot ('content')
         PLUGGABLEWIDGET 'com.mendix.widget.web.fieldset.Fieldset' fieldset1 {
-          DYNAMICTEXT fsBody (Content: 'Fieldset content area')
+          DYNAMICTEXT fsBody (Content: 'Fieldset wraps content with an optional legend', RenderMode: Paragraph)
         }
       }
       COLUMN cS8c3 (DesktopWidth: 4) {
-        -- Tooltip: trigger child slot + textMessage TextTemplate
-        PLUGGABLEWIDGET 'com.mendix.widget.web.tooltip.Tooltip' myTooltip1 (textMessage: 'This is a tooltip') {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.tooltip.Tooltip' myTooltip1 (
+          renderMethod: 'text',
+          textMessage: 'Additional info shown on hover',
+          tooltipPosition: 'top',
+          arrowPosition: 'none',
+          openOn: 'hover'
+        ) {
           CONTAINER trigger {
-            DYNAMICTEXT ttTrig (Content: 'Hover for tooltip')
+            ACTIONBUTTON btnTooltip (Caption: 'Hover me for tooltip', Action: CLOSE_PAGE, ButtonStyle: Info)
           }
         }
       }
     }
 
-    -- 8d: Data-driven pluggable widgets (auto DataSource mapping)
+    -- 8d: Data-driven pluggable widgets
     ROW rowS8d {
-      COLUMN cS8d1 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.timeline.Timeline' myTimeline1 (
+      COLUMN cS8d1 (DesktopWidth: 6) {
+        -- Timeline mode 1: default visualization (TextTemplate properties)
+        PLUGGABLEWIDGET 'com.mendix.widget.web.timeline.Timeline' timelineText (
           DataSource: DATABASE FROM WidgetDemo.DemoItem SORT BY DateCreated DESC,
+          title: '{Title}',
+          description: '{Description}',
+          timeIndication: '{DateCreated}',
           groupEvents: false,
-          title: '{1}',
-          customVisualization: true
+          customVisualization: false
         )
       }
-      COLUMN cS8d2 (DesktopWidth: 4) {
-        -- VideoPlayer: type='expression' enables urlExpression
-        PLUGGABLEWIDGET 'com.mendix.widget.web.videoplayer.VideoPlayer' videoPlayer1 (type: 'expression', urlExpression: '''https://example.com/sample.mp4''')
+      COLUMN cS8d2 (DesktopWidth: 6) {
+        -- Timeline mode 2: custom visualization (Widgets slots)
+        PLUGGABLEWIDGET 'com.mendix.widget.web.timeline.Timeline' timelineCustom (
+          DataSource: DATABASE FROM WidgetDemo.DemoItem SORT BY DateCreated DESC,
+          groupEvents: false,
+          customVisualization: true
+        ) {
+          CONTAINER customTitle {
+            DYNAMICTEXT tlTitle (Content: '{1}', RenderMode: H4, ContentParams: [{1} = Title])
+          }
+          CONTAINER customDescription {
+            DYNAMICTEXT tlDesc (Content: 'Code: {1} | Amount: {2}', ContentParams: [{1} = Code, {2} = Amount])
+          }
+        }
+      }
+    }
+    ROW rowS8d2 {
+      COLUMN cS8d2a (DesktopWidth: 4) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.videoplayer.VideoPlayer' videoPlayer1 (
+          type: 'expression',
+          urlExpression: '''https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'''
+        )
       }
       COLUMN cS8d3 (DesktopWidth: 4) {
-        -- Image: datasource='imageUrl' mode with URL
-        PLUGGABLEWIDGET 'com.mendix.widget.web.image.Image' myImage1 (datasource: 'imageUrl', imageUrl: 'https://placehold.co/200x100')
+        PLUGGABLEWIDGET 'com.mendix.widget.web.image.Image' myImage1 (
+          datasource: 'imageUrl',
+          imageUrl: 'https://placehold.co/300x200?text=MDL+Image+Widget'
+        )
       }
     }
 
-    -- 8e: More layout pluggable widgets
+    -- 8e: Menu + Tree + Selection
     ROW rowS8e {
       COLUMN cS8e1 (DesktopWidth: 4) {
-        -- PopupMenu: CONTAINER named 'menuTrigger' matches Widgets property 'menuTrigger'
         PLUGGABLEWIDGET 'com.mendix.widget.web.popupmenu.PopupMenu' myPopupMenu1 {
           CONTAINER menuTrigger {
-            ACTIONBUTTON btnPopup (Caption: 'Open Menu', Action: CLOSE_PAGE)
+            ACTIONBUTTON btnPopup (Caption: 'Open Menu', Action: CLOSE_PAGE, ButtonStyle: Primary)
           }
         }
       }
       COLUMN cS8e2 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.htmlelement.HTMLElement' htmlElem1
+        PLUGGABLEWIDGET 'com.mendix.widget.web.treenode.TreeNode' treeNode1 (
+          DataSource: DATABASE FROM WidgetDemo.DemoItem,
+          headerType: 'text',
+          openNodeOn: 'headerClick',
+          showIcon: 'left'
+        )
       }
       COLUMN cS8e3 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.treenode.TreeNode' treeNode1 (
-          DataSource: DATABASE FROM WidgetDemo.DemoItem
-        )
+        PLUGGABLEWIDGET 'com.mendix.widget.web.selectionhelper.SelectionHelper' selHelper1
       }
     }
 
-    -- 8f: Sort, language, selection, accessibility
+    -- 8f: Language + Accessibility
     ROW rowS8f {
-      COLUMN cS8f1 (DesktopWidth: 4) {
-        CONTAINER cS8f1Note (Class: 'card', Style: 'padding: 12px;') {
-          DYNAMICTEXT ddSortNote (Content: 'DropdownSort is in Gallery FILTER above', RenderMode: Paragraph)
-        }
-      }
-      COLUMN cS8f2 (DesktopWidth: 4) {
+      COLUMN cS8f1 (DesktopWidth: 6) {
         PLUGGABLEWIDGET 'com.mendix.widget.web.languageselector.LanguageSelector' langSel1 (
           DataSource: DATABASE FROM WidgetDemo.DemoItem,
           languageCaption: '''en_US'''
         )
       }
-      COLUMN cS8f3 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.selectionhelper.SelectionHelper' selHelper1
+      COLUMN cS8f2 (DesktopWidth: 6) {
+        PLUGGABLEWIDGET 'com.mendix.widget.web.accessibilityhelper.AccessibilityHelper' accHelper1 (targetSelector: '.mx-name-accHelper1') {
+          DYNAMICTEXT accBody (Content: 'Accessible content area with ARIA attributes')
+        }
       }
     }
 
-    -- 8g: Accessibility, Maps, Charts
+    -- 8g: Maps + Charts
     ROW rowS8g {
-      COLUMN cS8g1 (DesktopWidth: 4) {
-        -- AccessibilityHelper: direct children go to default Widgets slot ('content')
-        PLUGGABLEWIDGET 'com.mendix.widget.web.accessibilityhelper.AccessibilityHelper' accHelper1 (targetSelector: '.mx-name-accHelper1') {
-          DYNAMICTEXT accBody (Content: 'Accessible content area')
-        }
+      COLUMN cS8g1 (DesktopWidth: 6) {
+        PLUGGABLEWIDGET 'com.mendix.widget.custom.Maps.Maps' maps1 (
+          apiKey: 'demo-key',
+          geodecodeApiKey: 'demo-key',
+          googleMapId: 'default'
+        )
       }
-      COLUMN cS8g2 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.custom.Maps.Maps' maps1 (apiKey: 'demo-key', geodecodeApiKey: 'demo-key', googleMapId: 'default')
-      }
-      COLUMN cS8g3 (DesktopWidth: 4) {
-        -- AreaChart: series auto-populated by ensureRequiredObjectLists
+      COLUMN cS8g2 (DesktopWidth: 6) {
         PLUGGABLEWIDGET 'com.mendix.widget.web.areachart.AreaChart' areaChart1
       }
     }

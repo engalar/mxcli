@@ -46,6 +46,8 @@ func serializeWidget(w pages.Widget) bson.D {
 		return serializeContainer(widget)
 	case *pages.GroupBox:
 		return serializeGroupBox(widget)
+	case *pages.TabContainer:
+		return serializeTabContainer(widget)
 	case *pages.LayoutGrid:
 		return serializeLayoutGrid(widget)
 	case *pages.DynamicText:

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -363,7 +364,35 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 		}
 	}
 
-	// 4.5 Apply explicit properties (not covered by .def.json mappings)
+	// 4.5 Auto datasource: map AST DataSource to first DataSource-type property.
+	// Must run BEFORE explicit properties so entityContext is set for TextTemplate/Attribute resolution.
+	dsHandledByMapping := false
+	for _, m := range mappings {
+		if m.Source == "DataSource" {
+			dsHandledByMapping = true
+			break
+		}
+	}
+	if !dsHandledByMapping {
+		if ds := w.GetDataSource(); ds != nil {
+			for propKey, entry := range propertyTypeIDs {
+				if entry.ValueType == "DataSource" {
+					dataSource, entityName, err := e.pageBuilder.buildDataSourceV3(ds)
+					if err != nil {
+						return nil, fmt.Errorf("auto datasource for %s: %w", propKey, err)
+					}
+					ctx := &BuildContext{DataSource: dataSource, EntityName: entityName}
+					updatedObject = opDatasource(updatedObject, propertyTypeIDs, propKey, ctx)
+					if entityName != "" {
+						e.pageBuilder.entityContext = entityName
+					}
+					break
+				}
+			}
+		}
+	}
+
+	// 4.6 Apply explicit properties (not covered by .def.json mappings)
 	mappedKeys := make(map[string]bool)
 	for _, m := range mappings {
 		if m.Source != "" {
@@ -404,12 +433,15 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 			ctx.PrimitiveVal = strVal
 			updatedObject = opExpression(updatedObject, propertyTypeIDs, propName, ctx)
 		case "TextTemplate":
-			// TextTemplate properties: create ClientTemplate with translation
+			// TextTemplate properties: create ClientTemplate with attribute parameter binding.
+			// Syntax: '{AttributeName} - {OtherAttr}' → text '{1} - {2}' with TemplateParameters.
+			entityCtx := e.pageBuilder.entityContext
+			tmplBSON := createClientTemplateBSONWithParams(strVal, entityCtx)
 			updatedObject = updateWidgetPropertyValue(updatedObject, propertyTypeIDs, propName, func(val bson.D) bson.D {
 				result := make(bson.D, 0, len(val))
 				for _, elem := range val {
 					if elem.Key == "TextTemplate" {
-						result = append(result, bson.E{Key: "TextTemplate", Value: createDefaultClientTemplateBSON(strVal)})
+						result = append(result, bson.E{Key: "TextTemplate", Value: tmplBSON})
 					} else {
 						result = append(result, elem)
 					}
@@ -427,6 +459,12 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 				updatedObject = opAttribute(updatedObject, propertyTypeIDs, propName, ctx)
 			}
 		default:
+			// Known non-attribute types: always use primitive
+			if entry.ValueType != "" && entry.ValueType != "Attribute" {
+				ctx.PrimitiveVal = strVal
+				updatedObject = opPrimitive(updatedObject, propertyTypeIDs, propName, ctx)
+				continue
+			}
 			// Legacy routing for properties without ValueType info
 			if strings.Count(strVal, ".") >= 2 {
 				ctx.AttributePath = strVal
@@ -437,34 +475,6 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 			} else {
 				ctx.PrimitiveVal = strVal
 				updatedObject = opPrimitive(updatedObject, propertyTypeIDs, propName, ctx)
-			}
-		}
-	}
-
-	// 4.7 Auto datasource: map AST DataSource to first DataSource-type property
-	// When no .def.json mapping handled DataSource, auto-detect and apply it.
-	dsHandledByMapping := false
-	for _, m := range mappings {
-		if m.Source == "DataSource" {
-			dsHandledByMapping = true
-			break
-		}
-	}
-	if !dsHandledByMapping {
-		if ds := w.GetDataSource(); ds != nil {
-			for propKey, entry := range propertyTypeIDs {
-				if entry.ValueType == "DataSource" {
-					dataSource, entityName, err := e.pageBuilder.buildDataSourceV3(ds)
-					if err != nil {
-						return nil, fmt.Errorf("auto datasource for %s: %w", propKey, err)
-					}
-					ctx := &BuildContext{DataSource: dataSource, EntityName: entityName}
-					updatedObject = opDatasource(updatedObject, propertyTypeIDs, propKey, ctx)
-					if entityName != "" {
-						e.pageBuilder.entityContext = entityName
-					}
-					break
-				}
 			}
 		}
 	}
@@ -842,6 +852,113 @@ func createDefaultWidgetValue(entry pages.PropertyTypeIDEntry) bson.D {
 		{Key: "TypePointer", Value: hexIDToBlob(entry.ValueTypeID)},
 		{Key: "Widgets", Value: bson.A{int32(2)}},
 		{Key: "XPathConstraint", Value: ""},
+	}
+}
+
+// createClientTemplateBSONWithParams creates a Forms$ClientTemplate that supports
+// attribute parameter binding. Syntax: '{AttrName} - {OtherAttr}' extracts attribute
+// names from curly braces, replaces them with {1}, {2}, etc., and generates
+// TemplateParameter entries with AttributeRef bindings.
+// If no {AttrName} patterns are found, creates a static text template.
+func createClientTemplateBSONWithParams(text string, entityContext string) bson.D {
+	// Extract {AttributeName} patterns and build parameter list
+	re := regexp.MustCompile(`\{([A-Za-z][A-Za-z0-9_]*)\}`)
+	matches := re.FindAllStringSubmatchIndex(text, -1)
+
+	if len(matches) == 0 {
+		// No attribute references — static text
+		return createDefaultClientTemplateBSON(text)
+	}
+
+	// Replace {AttrName} with {1}, {2}, etc. and collect attribute names
+	var attrNames []string
+	paramText := text
+	// Process in reverse to preserve indices
+	for i := len(matches) - 1; i >= 0; i-- {
+		match := matches[i]
+		attrName := text[match[2]:match[3]]
+		// Check if it's a pure number (like {1}) — keep as-is
+		if _, err := fmt.Sscanf(attrName, "%d", new(int)); err == nil {
+			continue
+		}
+		attrNames = append([]string{attrName}, attrNames...) // prepend
+		paramText = paramText[:match[0]] + fmt.Sprintf("{%d}", len(attrNames)) + paramText[match[1]:]
+	}
+
+	// Rebuild paramText with sequential numbering
+	paramText = text
+	attrNames = nil
+	for i := 0; i < len(matches); i++ {
+		match := matches[i]
+		attrName := text[match[2]:match[3]]
+		if _, err := fmt.Sscanf(attrName, "%d", new(int)); err == nil {
+			continue
+		}
+		attrNames = append(attrNames, attrName)
+	}
+	paramText = re.ReplaceAllStringFunc(text, func(s string) string {
+		name := s[1 : len(s)-1]
+		if _, err := fmt.Sscanf(name, "%d", new(int)); err == nil {
+			return s // keep numeric {1} as-is
+		}
+		for i, an := range attrNames {
+			if an == name {
+				return fmt.Sprintf("{%d}", i+1)
+			}
+		}
+		return s
+	})
+
+	// Build parameters BSON
+	params := bson.A{int32(2)} // version marker for non-empty array
+	for _, attrName := range attrNames {
+		attrPath := attrName
+		if entityContext != "" && !strings.Contains(attrName, ".") {
+			attrPath = entityContext + "." + attrName
+		}
+		params = append(params, bson.D{
+			{Key: "$ID", Value: generateBinaryID()},
+			{Key: "$Type", Value: "Forms$ClientTemplateParameter"},
+			{Key: "AttributeRef", Value: bson.D{
+				{Key: "$ID", Value: generateBinaryID()},
+				{Key: "$Type", Value: "DomainModels$AttributeRef"},
+				{Key: "Attribute", Value: attrPath},
+				{Key: "EntityRef", Value: nil},
+			}},
+			{Key: "Expression", Value: ""},
+			{Key: "FormattingInfo", Value: bson.D{
+				{Key: "$ID", Value: generateBinaryID()},
+				{Key: "$Type", Value: "Forms$FormattingInfo"},
+				{Key: "CustomDateFormat", Value: ""},
+				{Key: "DateFormat", Value: "Date"},
+				{Key: "DecimalPrecision", Value: int32(2)},
+				{Key: "EnumFormat", Value: "Text"},
+				{Key: "GroupDigits", Value: false},
+				{Key: "TimeFormat", Value: "HoursMinutes"},
+			}},
+			{Key: "SourceVariable", Value: nil},
+		})
+	}
+
+	makeText := func(t string) bson.D {
+		return bson.D{
+			{Key: "$ID", Value: generateBinaryID()},
+			{Key: "$Type", Value: "Texts$Text"},
+			{Key: "Items", Value: bson.A{int32(3), bson.D{
+				{Key: "$ID", Value: generateBinaryID()},
+				{Key: "$Type", Value: "Texts$Translation"},
+				{Key: "LanguageCode", Value: "en_US"},
+				{Key: "Text", Value: t},
+			}}},
+		}
+	}
+
+	return bson.D{
+		{Key: "$ID", Value: generateBinaryID()},
+		{Key: "$Type", Value: "Forms$ClientTemplate"},
+		{Key: "Fallback", Value: makeText(paramText)},
+		{Key: "Parameters", Value: params},
+		{Key: "Template", Value: makeText(paramText)},
 	}
 }
 
