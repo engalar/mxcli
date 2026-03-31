@@ -85,11 +85,11 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
       }
     }
     ROW rowS4 {
-      COLUMN cS4a (DesktopWidth: 5) {
+      COLUMN cS4a (DesktopWidth: 12) {
         GALLERY galItems (
           DataSource: DATABASE FROM WidgetDemo.DemoItem SORT BY DateCreated DESC,
           Selection: Single,
-          DesktopColumns: 1
+          DesktopColumns: 2
         ) {
           FILTER flt1 {
             TEXTFILTER tfTitle (Attributes: [Title, Code])
@@ -102,9 +102,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
             DYNAMICTEXT tCode (Content: 'Code: {1}', ContentParams: [{1} = Code])
           }
         }
-      }
-      COLUMN cS4b (DesktopWidth: 7) {
-        DATAVIEW dvDetail (DataSource: SELECTION galItems) {
+        DATAVIEW dvDetail (DataSource: DATABASE FROM WidgetDemo.DemoItem) {
           LAYOUTGRID gForm {
             ROW rF1 {
               COLUMN cF1 (DesktopWidth: 6) {
@@ -124,7 +122,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
             }
             ROW rF3 {
               COLUMN cF5 (DesktopWidth: 6) {
-                DROPDOWN cbPri (Label: 'Priority (DROPDOWN)', Attribute: Priority)
+                PLUGGABLEWIDGET 'com.mendix.widget.web.combobox.Combobox' cbPri (Label: 'Priority (COMBOBOX)', attributeEnumeration: Priority)
               }
               COLUMN cF6 (DesktopWidth: 6) {
                 RADIOBUTTONS rbStatus (Label: 'Status (RADIOBUTTONS)', Attribute: ItemStatus)
@@ -132,7 +130,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
             }
             ROW rF3b {
               COLUMN cF5b (DesktopWidth: 12) {
-                COMBOBOX cbCat (Label: 'Category (COMBOBOX)', Attribute: Category)
+                PLUGGABLEWIDGET 'com.mendix.widget.web.combobox.Combobox' cbCat (Label: 'Category (COMBOBOX)', attributeEnumeration: Category)
               }
             }
             ROW rF4 {
@@ -152,7 +150,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
       }
     }
 
-    -- ======== Section 5: DataGrid ========
+    -- ======== Section 5: DataGrid DataGrid ========
     ROW rowS5H {
       COLUMN cS5H (DesktopWidth: 12) {
         CONTAINER hdrS5 (Class: 'card', Style: 'padding: 16px; background-color: #fce4ec;') {
@@ -218,7 +216,9 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
         }
       }
       COLUMN cS7b (DesktopWidth: 8) {
-        SNIPPETCALL scBtns (Snippet: WidgetDemo.SNIPPET_ButtonShowcase)
+        CONTAINER ctnSnippetNote (Class: 'card', Style: 'padding: 12px;') {
+          DYNAMICTEXT snNote (Content: 'SNIPPETCALL placeholder (snippet removed to avoid name conflicts)', RenderMode: Paragraph)
+        }
       }
     }
 
@@ -281,23 +281,23 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
         PLUGGABLEWIDGET 'com.mendix.widget.web.fieldset.Fieldset' fieldset1
       }
       COLUMN cS8c3 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.tooltip.Tooltip' tooltip1
+        PLUGGABLEWIDGET 'com.mendix.widget.web.tooltip.Tooltip' myTooltip1
       }
     }
     ROW rowS8d {
       COLUMN cS8d1 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.timeline.Timeline' timeline1
+        PLUGGABLEWIDGET 'com.mendix.widget.web.timeline.Timeline' myTimeline1
       }
       COLUMN cS8d2 (DesktopWidth: 4) {
         PLUGGABLEWIDGET 'com.mendix.widget.web.videoplayer.VideoPlayer' videoPlayer1
       }
       COLUMN cS8d3 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.image.Image' plugImage1
+        PLUGGABLEWIDGET 'com.mendix.widget.web.image.Image' myImage1
       }
     }
     ROW rowS8e {
       COLUMN cS8e1 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.popupmenu.PopupMenu' popupMenu1
+        PLUGGABLEWIDGET 'com.mendix.widget.web.popupmenu.PopupMenu' myPopupMenu1
       }
       COLUMN cS8e2 (DesktopWidth: 4) {
         PLUGGABLEWIDGET 'com.mendix.widget.web.htmlelement.HTMLElement' htmlElem1
@@ -329,11 +329,8 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
       }
     }
     ROW rowS8h {
-      COLUMN cS8h1 (DesktopWidth: 6) {
+      COLUMN cS8h1 (DesktopWidth: 12) {
         PLUGGABLEWIDGET 'com.mendix.widget.web.areachart.AreaChart' areaChart1
-      }
-      COLUMN cS8h2 (DesktopWidth: 6) {
-        STATICIMAGE imgDemo (Width: 200, Height: 60)
       }
     }
   }
