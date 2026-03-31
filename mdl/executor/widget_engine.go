@@ -714,15 +714,31 @@ func ensureRequiredObjectLists(obj bson.D, propertyTypeIDs map[string]pages.Prop
 		if entry.ObjectTypeID == "" || len(entry.NestedPropertyIDs) == 0 {
 			continue
 		}
-		// Skip if any Required nested property needs external context (DataSource/Attribute)
-		hasUnsatisfiable := false
+		// Skip non-required object lists that have nested DataSource properties —
+		// auto-populating these creates entries that trigger widget-level validation errors.
+		// Required object lists (like AreaChart series) are populated even with nested DataSource
+		// because the DataSource is conditional (e.g., depends on dataSet enum).
+		if !entry.Required {
+			hasNestedDS := false
+			for _, nested := range entry.NestedPropertyIDs {
+				if nested.ValueType == "DataSource" {
+					hasNestedDS = true
+					break
+				}
+			}
+			if hasNestedDS {
+				continue
+			}
+		}
+		// Skip if any Required nested property is Attribute (needs entity context)
+		hasRequiredAttr := false
 		for _, nested := range entry.NestedPropertyIDs {
-			if nested.Required && (nested.ValueType == "DataSource" || nested.ValueType == "Attribute") {
-				hasUnsatisfiable = true
+			if nested.Required && nested.ValueType == "Attribute" {
+				hasRequiredAttr = true
 				break
 			}
 		}
-		if hasUnsatisfiable {
+		if hasRequiredAttr {
 			continue
 		}
 		obj = updateWidgetPropertyValue(obj, propertyTypeIDs, propKey, func(val bson.D) bson.D {
