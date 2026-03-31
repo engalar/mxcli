@@ -141,27 +141,7 @@
           "PrimitiveValue": "",
           "Selection": "None",
           "SourceVariable": null,
-          "TextTemplate": {
-            "$ID": "a6ba8c07490d43a19de7890607d2f224",
-            "$Type": "Forms$ClientTemplate",
-            "Fallback": {
-              "$ID": "bf7e47819cfb43e89ef1d4ff753de335",
-              "$Type": "Texts$Text",
-              "Items": [
-                3
-              ]
-            },
-            "Parameters": [
-              2
-            ],
-            "Template": {
-              "$ID": "18b26b3b0dc04a7a949f4c63b2d878a9",
-              "$Type": "Texts$Text",
-              "Items": [
-                3
-              ]
-            }
-          },
+          "TextTemplate": null,
           "TranslatableValue": null,
           "TypePointer": "202df245462c814c8372526b9f1fc855",
           "Widgets": [
