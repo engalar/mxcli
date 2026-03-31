@@ -461,6 +461,45 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			} else {
 				formatWidgetProps(e.output, prefix, header, props, "\n")
 			}
+		} else if widgetType == "IMAGE" {
+			header := fmt.Sprintf("IMAGE %s", w.Name)
+			props := []string{}
+			if w.ImageType != "" && w.ImageType != "image" {
+				props = append(props, fmt.Sprintf("ImageType: %s", w.ImageType))
+			}
+			if w.ImageUrl != "" {
+				props = append(props, fmt.Sprintf("ImageUrl: %s", mdlQuote(w.ImageUrl)))
+			}
+			if w.AlternativeText != "" {
+				props = append(props, fmt.Sprintf("AlternativeText: %s", mdlQuote(w.AlternativeText)))
+			}
+			if w.WidthUnit != "" && w.WidthUnit != "auto" {
+				props = append(props, fmt.Sprintf("WidthUnit: %s", w.WidthUnit))
+			}
+			if w.ImageWidth != "" && w.ImageWidth != "100" {
+				props = append(props, fmt.Sprintf("Width: %s", w.ImageWidth))
+			}
+			if w.HeightUnit != "" && w.HeightUnit != "auto" {
+				props = append(props, fmt.Sprintf("HeightUnit: %s", w.HeightUnit))
+			}
+			if w.ImageHeight != "" && w.ImageHeight != "100" {
+				props = append(props, fmt.Sprintf("Height: %s", w.ImageHeight))
+			}
+			if w.DisplayAs != "" && w.DisplayAs != "fullImage" {
+				props = append(props, fmt.Sprintf("DisplayAs: %s", w.DisplayAs))
+			}
+			if w.Responsive != "" && w.Responsive != "true" {
+				props = append(props, fmt.Sprintf("Responsive: %s", w.Responsive))
+			}
+			if w.OnClickType == "enlarge" {
+				props = append(props, "OnClickType: enlarge")
+			}
+			if w.Action != "" {
+				props = append(props, fmt.Sprintf("OnClick: %s", w.Action))
+			}
+			props = appendConditionalProps(props, w)
+			props = appendAppearanceProps(props, w)
+			formatWidgetProps(e.output, prefix, header, props, "\n")
 		} else {
 			header := fmt.Sprintf("%s %s", widgetType, w.Name)
 			props := []string{}

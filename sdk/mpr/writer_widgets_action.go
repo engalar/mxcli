@@ -12,6 +12,12 @@ import (
 // Client Action Serialization
 // ============================================================================
 
+// SerializeClientAction serializes a ClientAction to BSON.
+// This is the exported version for use by the pluggable widget engine.
+func SerializeClientAction(action pages.ClientAction) bson.D {
+	return serializeClientAction(action)
+}
+
 // serializeClientAction serializes a ClientAction.
 func serializeClientAction(action pages.ClientAction) bson.D {
 	if action == nil {

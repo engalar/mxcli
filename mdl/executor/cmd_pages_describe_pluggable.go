@@ -76,6 +76,8 @@ func (e *Executor) extractCustomWidgetType(w map[string]any) string {
 			return "DROPDOWNFILTER"
 		case "com.mendix.widget.web.datagriddatefilter.DatagridDateFilter":
 			return "DATEFILTER"
+		case "com.mendix.widget.web.image.Image":
+			return "IMAGE"
 		default:
 			// Extract last part of widget ID and uppercase it
 			parts := strings.Split(widgetID, ".")
@@ -995,4 +997,118 @@ func (e *Executor) extractCustomWidgetPropertyAttributes(w map[string]any, prope
 		return result
 	}
 	return nil
+}
+
+// extractImageProperties extracts properties from a pluggable Image CustomWidget.
+func (e *Executor) extractImageProperties(w map[string]any, widget *rawWidget) {
+	widget.ImageType = e.extractCustomWidgetPropertyString(w, "datasource")
+	widget.ImageUrl = e.extractCustomWidgetPropertyTextTemplate(w, "imageUrl")
+	widget.AlternativeText = e.extractCustomWidgetPropertyTextTemplate(w, "alternativeText")
+	widget.ImageWidth = e.extractCustomWidgetPropertyString(w, "width")
+	widget.ImageHeight = e.extractCustomWidgetPropertyString(w, "height")
+	widget.WidthUnit = e.extractCustomWidgetPropertyString(w, "widthUnit")
+	widget.HeightUnit = e.extractCustomWidgetPropertyString(w, "heightUnit")
+	widget.DisplayAs = e.extractCustomWidgetPropertyString(w, "displayAs")
+	widget.Responsive = e.extractCustomWidgetPropertyString(w, "responsive")
+	widget.OnClickType = e.extractCustomWidgetPropertyString(w, "onClickType")
+	widget.Action = e.extractCustomWidgetPropertyAction(w, "onClick")
+}
+
+// extractCustomWidgetPropertyTextTemplate extracts text from a TextTemplate property of a CustomWidget.
+func (e *Executor) extractCustomWidgetPropertyTextTemplate(w map[string]any, propertyKey string) string {
+	obj, ok := w["Object"].(map[string]any)
+	if !ok {
+		return ""
+	}
+
+	propTypeKeyMap := buildPropertyTypeKeyMap(w, false)
+
+	props := getBsonArrayElements(obj["Properties"])
+	for _, prop := range props {
+		propMap, ok := prop.(map[string]any)
+		if !ok {
+			continue
+		}
+		typePointerID := extractBinaryID(propMap["TypePointer"])
+		propKey := propTypeKeyMap[typePointerID]
+		if propKey != propertyKey {
+			continue
+		}
+		value, ok := propMap["Value"].(map[string]any)
+		if !ok {
+			continue
+		}
+		// Extract text from TextTemplate
+		if textTemplate, ok := value["TextTemplate"].(map[string]any); ok && textTemplate != nil {
+			if template, ok := textTemplate["Template"].(map[string]any); ok && template != nil {
+				items := getBsonArrayElements(template["Items"])
+				for _, item := range items {
+					itemMap, ok := item.(map[string]any)
+					if !ok {
+						continue
+					}
+					if text := extractString(itemMap["Text"]); text != "" {
+						return text
+					}
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// extractCustomWidgetPropertyAction extracts an action description from a CustomWidget property.
+// Returns a formatted string like "CALL_MICROFLOW Module.Flow" or "SHOW_PAGE Module.Page".
+func (e *Executor) extractCustomWidgetPropertyAction(w map[string]any, propertyKey string) string {
+	obj, ok := w["Object"].(map[string]any)
+	if !ok {
+		return ""
+	}
+
+	propTypeKeyMap := buildPropertyTypeKeyMap(w, false)
+
+	props := getBsonArrayElements(obj["Properties"])
+	for _, prop := range props {
+		propMap, ok := prop.(map[string]any)
+		if !ok {
+			continue
+		}
+		typePointerID := extractBinaryID(propMap["TypePointer"])
+		propKey := propTypeKeyMap[typePointerID]
+		if propKey != propertyKey {
+			continue
+		}
+		value, ok := propMap["Value"].(map[string]any)
+		if !ok {
+			continue
+		}
+		action, ok := value["Action"].(map[string]any)
+		if !ok || action == nil {
+			continue
+		}
+		actionType := extractString(action["$Type"])
+		switch actionType {
+		case "Forms$MicroflowAction", "Pages$MicroflowClientAction":
+			if settings, ok := action["MicroflowSettings"].(map[string]any); ok {
+				if mf := extractString(settings["Microflow"]); mf != "" {
+					return "CALL_MICROFLOW " + mf
+				}
+			}
+		case "Forms$CallNanoflowClientAction", "Pages$CallNanoflowClientAction":
+			if settings, ok := action["NanoflowSettings"].(map[string]any); ok {
+				if nf := extractString(settings["Nanoflow"]); nf != "" {
+					return "CALL_NANOFLOW " + nf
+				}
+			}
+		case "Forms$FormAction", "Pages$FormAction":
+			if settings, ok := action["PageSettings"].(map[string]any); ok {
+				if page := extractString(settings["Page"]); page != "" {
+					return "SHOW_PAGE " + page
+				}
+			}
+		case "Forms$NoAction", "Pages$NoAction":
+			return ""
+		}
+	}
+	return ""
 }

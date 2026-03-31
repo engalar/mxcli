@@ -124,6 +124,7 @@ var widgetTemplateFiles = map[string]string{
 	"com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter": "datagrid-dropdown-filter.json",
 	"com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter":     "datagrid-number-filter.json",
 	"com.mendix.widget.web.gallery.Gallery":                               "gallery.json",
+	"com.mendix.widget.web.image.Image":                                   "image.json",
 }
 
 // GetTemplate loads a widget template by widget ID.

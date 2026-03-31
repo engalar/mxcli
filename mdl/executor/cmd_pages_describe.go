@@ -531,6 +531,17 @@ type rawWidget struct {
 	EditableIf string // Expression from ConditionalEditabilitySettings
 	// Design properties from Appearance
 	DesignProperties []rawDesignProp
+	// Pluggable Image widget properties
+	ImageUrl        string // Image URL (from textTemplate)
+	AlternativeText string // Alt text (from textTemplate)
+	ImageWidth      string // Width in pixels/percentage
+	ImageHeight     string // Height in pixels/percentage
+	WidthUnit       string // "auto", "pixels", "percentage"
+	HeightUnit      string // "auto", "pixels", "percentage", "viewport"
+	DisplayAs       string // "fullImage", "thumbnail"
+	Responsive      string // "true", "false"
+	ImageType       string // "image", "imageUrl", "icon"
+	OnClickType     string // "action", "enlarge"
 }
 
 // rawDesignProp represents a parsed design property from BSON.

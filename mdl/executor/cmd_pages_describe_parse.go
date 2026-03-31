@@ -195,6 +195,10 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 			widget.FilterAttributes = e.extractFilterAttributes(w)
 			widget.FilterExpression = e.extractFilterExpression(w)
 		}
+		// For pluggable Image widget, extract image-specific properties
+		if widget.RenderMode == "IMAGE" {
+			e.extractImageProperties(w, &widget)
+		}
 		return []rawWidget{widget}
 
 	case "Forms$Label", "Pages$Label":
