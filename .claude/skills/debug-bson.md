@@ -44,23 +44,21 @@ Then extract the widget's BSON to compare against your generated output.
 
 ### Step 3: Extract and Compare BSON
 
-Use the debug dump tool or Python to compare working vs broken widgets:
+Use `mxcli bson dump` to compare working vs broken objects:
 
-```python
-import bson
-import sqlite3
-import json
+```bash
+# Dump as JSON (default)
+mxcli bson dump -p app.mpr --type page --object "Mod.BrokenPage" > broken.json
 
-conn = sqlite3.connect('/path/to/app.mpr')
-cursor = conn.cursor()
+# Dump as NDSL (human-readable, $ID-normalized, sorted fields)
+mxcli bson dump -p app.mpr --type page --object "Mod.Page" --format ndsl
 
-# Find the document containing the widget
-cursor.execute("SELECT UnitData FROM Unit$ WHERE ContainmentName = 'Document' AND Name = ?", ('PageName',))
-row = cursor.fetchone()
-doc = bson.decode(row[0])
+# Dump raw BSON bytes (for baseline extraction)
+mxcli bson dump -p app.mpr --type page --object "Mod.Page" --format bson > baseline.mxunit
 
-# Pretty-print to find the widget
-print(json.dumps(doc, indent=2, default=str))
+# Compare two objects side-by-side
+mxcli bson dump -p app.mpr --type page --compare "Mod.Broken,Mod.Fixed"
+mxcli bson dump -p app.mpr --type page --compare "Mod.Broken,Mod.Fixed" --format ndsl
 ```
 
 ### Step 4: Check the Widget Package (.mpk)
@@ -164,6 +162,36 @@ Templates must include both `type` (PropertyTypes schema) AND `object` (default 
 3. **`mx update-widgets` is the safety net**: Running this post-processing step normalizes all widget Objects to match mpk definitions. Use it as a fallback.
 
 4. **The mpk is the source of truth**: The XML schema defines property types/defaults, the editorConfig.js defines visibility rules. Together they specify the complete expected Object structure.
+
+## Automated Roundtrip Testing
+
+Instead of manual Studio Pro verification, use the golden file roundtrip test framework to catch parse↔serialize regressions automatically.
+
+### Extracting Baselines
+
+Extract known-good BSON from a Studio Pro-verified project:
+
+```bash
+# Extract baselines by type
+mxcli bson dump -p app.mpr --type page --object "Mod.Page" --format bson > sdk/mpr/testdata/pages/Page.mxunit
+mxcli bson dump -p app.mpr --type microflow --object "Mod.Flow" --format bson > sdk/mpr/testdata/microflows/Flow.mxunit
+mxcli bson dump -p app.mpr --type enumeration --object "Mod.Enum" --format bson > sdk/mpr/testdata/enumerations/Enum.mxunit
+mxcli bson dump -p app.mpr --type snippet --object "Mod.Snip" --format bson > sdk/mpr/testdata/snippets/Snip.mxunit
+```
+
+### Running Roundtrip Tests
+
+Tests in `sdk/mpr/roundtrip_test.go` automatically load all `.mxunit` files from testdata subdirectories, parse to Go structs, serialize back to BSON, and compare via NDSL rendering (skips `$ID`, sorts fields deterministically).
+
+```bash
+# Run all roundtrip tests
+go test -run TestRoundtrip ./sdk/mpr/ -v
+
+# Run specific type
+go test -run TestRoundtrip_Pages ./sdk/mpr/ -v
+```
+
+Failures show a line-by-line NDSL diff identifying exactly which fields are lost or changed during roundtrip.
 
 ## Related Documentation
 

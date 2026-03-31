@@ -378,15 +378,47 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
         }
       }
       COLUMN cS8e2 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.treenode.TreeNode' treeNode1 (
+        -- TreeNode mode 1: text header, flat list (no children)
+        PLUGGABLEWIDGET 'com.mendix.widget.web.treenode.TreeNode' treeText (
           DataSource: DATABASE FROM WidgetDemo.DemoItem,
           headerType: 'text',
-          openNodeOn: 'headerClick',
-          showIcon: 'left'
+          headerCaption: '{Title}',
+          hasChildren: false,
+          showIcon: 'no'
         )
       }
       COLUMN cS8e3 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.selectionhelper.SelectionHelper' selHelper1
+        PLUGGABLEWIDGET 'com.mendix.widget.web.selectionhelper.SelectionHelper' selHelper1 (renderStyle: 'checkbox')
+      }
+    }
+    ROW rowS8e2 {
+      COLUMN cS8e2a (DesktopWidth: 6) {
+        -- TreeNode mode 2: text header, expandable with children content
+        PLUGGABLEWIDGET 'com.mendix.widget.web.treenode.TreeNode' treeNested (
+          DataSource: DATABASE FROM WidgetDemo.DemoItem,
+          headerType: 'text',
+          headerCaption: '{Title} ({Code})',
+          hasChildren: true,
+          startExpanded: true,
+          showIcon: 'left'
+        ) {
+          CONTAINER children {
+            DYNAMICTEXT treeChildText (Content: 'Score: {1} | Amount: {2}', ContentParams: [{1} = Score, {2} = Amount])
+          }
+        }
+      }
+      COLUMN cS8e2b (DesktopWidth: 6) {
+        -- TreeNode mode 3: custom header with widgets
+        PLUGGABLEWIDGET 'com.mendix.widget.web.treenode.TreeNode' treeCustom (
+          DataSource: DATABASE FROM WidgetDemo.DemoItem,
+          headerType: 'custom',
+          hasChildren: false
+        ) {
+          CONTAINER headerContent {
+            DYNAMICTEXT treeHdrTitle (Content: '{1}', RenderMode: H5, ContentParams: [{1} = Title])
+            DYNAMICTEXT treeHdrMeta (Content: 'Priority: {1}', ContentParams: [{1} = Priority])
+          }
+        }
       }
     }
 

@@ -40,22 +40,23 @@ Symptoms that indicate BSON serialization issues:
 
 ### Step 3: Dump Both BSON Structures
 
-Use the `mxcli dump-bson` command to extract and compare:
+Use `mxcli bson dump` to extract and compare:
 
 ```bash
-# Dump the SDK-generated object (the broken one)
-mxcli dump-bson -p app.mpr -o "PgTest.BrokenPage" > broken.json
-
-# Dump the Studio Pro-generated object (the fixed one)
-mxcli dump-bson -p app.mpr -o "PgTest.FixedPage" > fixed.json
-
-# Compare the two
+# Dump as JSON (default)
+mxcli bson dump -p app.mpr --type page --object "PgTest.BrokenPage" > broken.json
+mxcli bson dump -p app.mpr --type page --object "PgTest.FixedPage" > fixed.json
 diff broken.json fixed.json
-```
 
-Or use the `--compare` flag:
-```bash
-mxcli dump-bson -p app.mpr --compare "PgTest.BrokenPage" "PgTest.FixedPage"
+# Dump as NDSL (human-readable, $ID-normalized, sorted fields)
+mxcli bson dump -p app.mpr --type page --object "PgTest.Page" --format ndsl
+
+# Dump raw BSON bytes (for baseline extraction / roundtrip testing)
+mxcli bson dump -p app.mpr --type page --object "PgTest.Page" --format bson > baseline.mxunit
+
+# Compare two objects side-by-side
+mxcli bson dump -p app.mpr --type page --compare "PgTest.Broken,PgTest.Fixed"
+mxcli bson dump -p app.mpr --type page --compare "PgTest.Broken,PgTest.Fixed" --format ndsl
 ```
 
 ### Step 4: Identify Differences
@@ -539,6 +540,28 @@ After fixing templates:
 1. Create a test page with the widget
 2. Run `mx check app.mpr` - should return 0 errors
 3. Open in Studio Pro - widget should load without "Update widget" prompt
+
+## Automated Roundtrip Testing
+
+Use golden file tests to catch parse↔serialize regressions without Studio Pro.
+
+### Extracting Baselines
+
+```bash
+# Extract known-good BSON from a Studio Pro-verified project
+mxcli bson dump -p app.mpr --type page --object "Mod.Page" --format bson > sdk/mpr/testdata/pages/Page.mxunit
+mxcli bson dump -p app.mpr --type microflow --object "Mod.Flow" --format bson > sdk/mpr/testdata/microflows/Flow.mxunit
+mxcli bson dump -p app.mpr --type enumeration --object "Mod.Enum" --format bson > sdk/mpr/testdata/enumerations/Enum.mxunit
+mxcli bson dump -p app.mpr --type snippet --object "Mod.Snip" --format bson > sdk/mpr/testdata/snippets/Snip.mxunit
+```
+
+### Running Tests
+
+```bash
+go test -run TestRoundtrip ./sdk/mpr/ -v
+```
+
+Tests load `.mxunit` baselines → parse to Go structs → serialize back → compare via NDSL (skips `$ID`, deterministic field order). Failures show line-by-line diff.
 
 ## Related Documentation
 
