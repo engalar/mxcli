@@ -1,0 +1,98 @@
+-- WidgetDemo: seed data microflow + navigation
+-- This script is part of the WidgetDemo module bootstrap (run after 01 and 02)
+
+/**
+ * Seeds DemoItem data and opens the showcase page.
+ * Skips creation if data already exists.
+ */
+CREATE OR REPLACE MICROFLOW WidgetDemo.SeedAndShowShowcase ()
+BEGIN
+  @position(200, 200)
+  RETRIEVE $Existing FROM WidgetDemo.DemoItem LIMIT 1;
+
+  @position(400, 200)
+  IF $Existing != empty THEN
+    @position(600, 100)
+    SHOW PAGE WidgetDemo.WidgetDemo_Showcase(DemoItem: $Existing);
+    @position(800, 100)
+    RETURN;
+  END IF;
+
+  @position(400, 400)
+  $Item1 = CREATE WidgetDemo.DemoItem (
+    Title = 'Wireless Headphones',
+    Description = 'Noise-cancelling over-ear headphones with 30h battery',
+    Code = 'WH-001',
+    IsActive = true,
+    Score = 85,
+    Amount = 299.99,
+    DateCreated = [%CurrentDateTime%],
+    Progress = 0.75,
+    Rating = 4,
+    Notes = 'Best seller in electronics category',
+    ImageUrl = 'https://placehold.co/200x200?text=Headphones');
+
+  @position(400, 500)
+  $Item2 = CREATE WidgetDemo.DemoItem (
+    Title = 'Smart Watch Pro',
+    Description = 'Health tracking with ECG and blood oxygen monitoring',
+    Code = 'SW-002',
+    IsActive = true,
+    Score = 92,
+    Amount = 499.00,
+    DateCreated = [%CurrentDateTime%],
+    Progress = 0.30,
+    Rating = 5,
+    Notes = 'Pending supplier confirmation',
+    ImageUrl = 'https://placehold.co/200x200?text=Watch');
+
+  @position(400, 600)
+  $Item3 = CREATE WidgetDemo.DemoItem (
+    Title = 'USB-C Hub',
+    Description = '7-in-1 hub with HDMI and SD card reader',
+    Code = 'UH-003',
+    IsActive = false,
+    Score = 45,
+    Amount = 49.95,
+    DateCreated = [%CurrentDateTime%],
+    Progress = 1.0,
+    Rating = 3,
+    Notes = 'Shipped to warehouse',
+    ImageUrl = 'https://placehold.co/200x200?text=Hub');
+
+  @position(400, 700)
+  $Item4 = CREATE WidgetDemo.DemoItem (
+    Title = 'Mechanical Keyboard',
+    Description = 'Cherry MX Blue switches, RGB backlight',
+    Code = 'MK-004',
+    IsActive = true,
+    Score = 78,
+    Amount = 159.00,
+    DateCreated = [%CurrentDateTime%],
+    Progress = 0.50,
+    Rating = 4,
+    Notes = 'Restocking in progress',
+    ImageUrl = 'https://placehold.co/200x200?text=Keyboard');
+
+  @position(400, 800)
+  $Item5 = CREATE WidgetDemo.DemoItem (
+    Title = 'Portable Charger',
+    Description = '20000mAh power bank with fast charging',
+    Code = 'PC-005',
+    IsActive = false,
+    Score = 30,
+    Amount = 35.50,
+    DateCreated = [%CurrentDateTime%],
+    Progress = 1.0,
+    Rating = 2,
+    Notes = 'Discontinued model',
+    ImageUrl = 'https://placehold.co/200x200?text=Charger');
+
+  @position(600, 400)
+  SHOW PAGE WidgetDemo.WidgetDemo_Showcase(DemoItem: $Item1);
+  @position(800, 400)
+  RETURN;
+END;
+/
+
+GRANT EXECUTE ON MICROFLOW WidgetDemo.SeedAndShowShowcase TO WidgetDemo.User;
