@@ -290,6 +290,7 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 	var valueTypeID string
 	var defaultValue string
 	var valueType string
+	var required bool
 	var nestedObjectTypeID string
 	var nestedPropertyIDs map[string]PropertyTypeIDEntry
 
@@ -331,9 +332,9 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 				}
 			}
 		} else if key == "ValueType" && isPropertyType {
-			// For PropertyTypes, extract ValueType info including nested ObjectType, DefaultValue, and Type
+			// For PropertyTypes, extract ValueType info including nested ObjectType, DefaultValue, Type, Required
 			nestedPropertyIDs = make(map[string]PropertyTypeIDEntry)
-			elem.Value = jsonValueToBSONWithNestedObjectType(val, idMapping, &valueTypeID, &nestedObjectTypeID, nestedPropertyIDs, &defaultValue, &valueType)
+			elem.Value = jsonValueToBSONWithNestedObjectType(val, idMapping, &valueTypeID, &nestedObjectTypeID, nestedPropertyIDs, &defaultValue, &valueType, &required)
 		} else {
 			elem.Value = jsonValueToBSONWithMappingAndObjectType(val, idMapping, propertyTypeIDs, &valueTypeID, key == "ValueType", objectTypeID)
 		}
@@ -348,6 +349,7 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 			ValueTypeID:    valueTypeID,
 			DefaultValue:   defaultValue,
 			ValueType:      valueType,
+			Required:       required,
 		}
 		if nestedObjectTypeID != "" {
 			entry.ObjectTypeID = nestedObjectTypeID
@@ -360,7 +362,7 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 }
 
 // jsonValueToBSONWithNestedObjectType extracts ValueType info including nested ObjectType, DefaultValue, and Type.
-func jsonValueToBSONWithNestedObjectType(val any, idMapping map[string]string, valueTypeID *string, nestedObjectTypeID *string, nestedPropertyIDs map[string]PropertyTypeIDEntry, defaultValue *string, valueType *string) any {
+func jsonValueToBSONWithNestedObjectType(val any, idMapping map[string]string, valueTypeID *string, nestedObjectTypeID *string, nestedPropertyIDs map[string]PropertyTypeIDEntry, defaultValue *string, valueType *string, required *bool) any {
 	switch v := val.(type) {
 	case map[string]any:
 		result := make(bson.D, 0, len(v))
@@ -392,6 +394,12 @@ func jsonValueToBSONWithNestedObjectType(val any, idMapping map[string]string, v
 				// Extract value type
 				if vt, ok := fieldVal.(string); ok {
 					*valueType = vt
+				}
+				elem.Value = jsonValueToBSONSimple(fieldVal, idMapping)
+			} else if key == "Required" {
+				// Extract required flag
+				if r, ok := fieldVal.(bool); ok {
+					*required = r
 				}
 				elem.Value = jsonValueToBSONSimple(fieldVal, idMapping)
 			} else {
@@ -490,8 +498,9 @@ func extractNestedPropertyTypes(val any, idMapping map[string]string, nestedProp
 						}
 					}
 
-					// Extract DefaultValue and Type from nested ValueType
+					// Extract DefaultValue, Type, and Required from nested ValueType
 					var nestedDefaultValue, nestedValueType string
+					var nestedRequired bool
 					if vtVal, ok := propType["ValueType"]; ok {
 						if vt, ok := vtVal.(map[string]any); ok {
 							if dv, ok := vt["DefaultValue"].(string); ok {
@@ -499,6 +508,9 @@ func extractNestedPropertyTypes(val any, idMapping map[string]string, nestedProp
 							}
 							if t, ok := vt["Type"].(string); ok {
 								nestedValueType = t
+							}
+							if r, ok := vt["Required"].(bool); ok {
+								nestedRequired = r
 							}
 						}
 					}
@@ -510,6 +522,7 @@ func extractNestedPropertyTypes(val any, idMapping map[string]string, nestedProp
 							ValueTypeID:    valueTypeID,
 							DefaultValue:   nestedDefaultValue,
 							ValueType:      nestedValueType,
+							Required:       nestedRequired,
 						}
 					}
 				}
@@ -692,6 +705,7 @@ type PropertyTypeIDEntry struct {
 	ValueTypeID    string
 	DefaultValue   string // Default value from the template's ValueType
 	ValueType      string // Type of value (Boolean, Integer, String, DataSource, etc.)
+	Required       bool   // Whether this property is required
 	// For object list properties (IsList=true with ObjectType), these hold nested IDs
 	ObjectTypeID      string                         // ID of the nested ObjectType (for object lists)
 	NestedPropertyIDs map[string]PropertyTypeIDEntry // Property IDs within the nested ObjectType

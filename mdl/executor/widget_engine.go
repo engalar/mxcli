@@ -711,10 +711,18 @@ func isBuiltinPropName(name string) bool {
 // like Accordion groups, AreaChart series, etc.
 func ensureRequiredObjectLists(obj bson.D, propertyTypeIDs map[string]pages.PropertyTypeIDEntry) bson.D {
 	for propKey, entry := range propertyTypeIDs {
-		if entry.ObjectTypeID == "" {
+		if entry.ObjectTypeID == "" || len(entry.NestedPropertyIDs) == 0 {
 			continue
 		}
-		if len(entry.NestedPropertyIDs) == 0 {
+		// Skip if any Required nested property needs external context (DataSource/Attribute)
+		hasUnsatisfiable := false
+		for _, nested := range entry.NestedPropertyIDs {
+			if nested.Required && (nested.ValueType == "DataSource" || nested.ValueType == "Attribute") {
+				hasUnsatisfiable = true
+				break
+			}
+		}
+		if hasUnsatisfiable {
 			continue
 		}
 		obj = updateWidgetPropertyValue(obj, propertyTypeIDs, propKey, func(val bson.D) bson.D {

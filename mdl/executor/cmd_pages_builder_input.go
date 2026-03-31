@@ -241,6 +241,7 @@ func convertPropertyTypeIDs(src map[string]widgets.PropertyTypeIDEntry) map[stri
 			ValueTypeID:    v.ValueTypeID,
 			DefaultValue:   v.DefaultValue,
 			ValueType:      v.ValueType,
+			Required:       v.Required,
 			ObjectTypeID:   v.ObjectTypeID,
 		}
 		// Convert nested property IDs if present
