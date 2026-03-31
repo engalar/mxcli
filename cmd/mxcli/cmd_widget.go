@@ -163,6 +163,9 @@ func runWidgetInit(cmd *cobra.Command, args []string) error {
 	widgetsDir := filepath.Join(projectDir, "widgets")
 	outputDir := filepath.Join(projectDir, ".mxcli", "widgets")
 
+	// Load built-in registry to skip widgets that already have hand-crafted definitions
+	builtinRegistry, _ := executor.NewWidgetRegistry()
+
 	// Scan widgets/ for .mpk files
 	matches, err := filepath.Glob(filepath.Join(widgetsDir, "*.mpk"))
 	if err != nil {
@@ -190,7 +193,15 @@ func runWidgetInit(cmd *cobra.Command, args []string) error {
 		filename := strings.ToLower(mdlName) + ".def.json"
 		outPath := filepath.Join(outputDir, filename)
 
-		// Skip if already exists
+		// Skip widgets that have hand-crafted built-in definitions (e.g., COMBOBOX, GALLERY)
+		if builtinRegistry != nil {
+			if _, ok := builtinRegistry.GetByWidgetID(mpkDef.ID); ok {
+				skipped++
+				continue
+			}
+		}
+
+		// Skip if already exists on disk
 		if _, err := os.Stat(outPath); err == nil {
 			skipped++
 			continue

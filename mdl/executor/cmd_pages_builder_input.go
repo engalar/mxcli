@@ -113,16 +113,24 @@ func updatePropertyInArray(arr bson.A, propertyTypeID string, updateFn func(bson
 
 // matchesTypePointer checks if a WidgetProperty has the given TypePointer.
 func matchesTypePointer(prop bson.D, propertyTypeID string) bool {
+	// Normalize: strip dashes for comparison (BlobToUUID returns dashed format,
+	// but propertyTypeIDs from template loader use undashed 32-char hex).
+	normalizedTarget := strings.ReplaceAll(propertyTypeID, "-", "")
 	for _, elem := range prop {
 		if elem.Key == "TypePointer" {
 			// Handle both primitive.Binary (from MPR) and []byte (from JSON templates)
 			switch v := elem.Value.(type) {
 			case primitive.Binary:
-				propID := mpr.BlobToUUID(v.Data)
-				return propID == propertyTypeID
+				propID := strings.ReplaceAll(mpr.BlobToUUID(v.Data), "-", "")
+				return propID == normalizedTarget
 			case []byte:
-				propID := mpr.BlobToUUID(v)
-				return propID == propertyTypeID
+				propID := strings.ReplaceAll(mpr.BlobToUUID(v), "-", "")
+				if propID == normalizedTarget {
+					return true
+				}
+				// Also try raw hex encoding (no GUID swap) for templates
+				rawHex := fmt.Sprintf("%x", v)
+				return rawHex == normalizedTarget
 			}
 		}
 	}

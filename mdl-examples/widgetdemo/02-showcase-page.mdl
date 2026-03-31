@@ -102,7 +102,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
             DYNAMICTEXT tCode (Content: 'Code: {1}', ContentParams: [{1} = Code])
           }
         }
-        DATAVIEW dvDetail (DataSource: DATABASE FROM WidgetDemo.DemoItem) {
+        DATAVIEW dvDetail {
           LAYOUTGRID gForm {
             ROW rF1 {
               COLUMN cF1 (DesktopWidth: 6) {
@@ -235,7 +235,7 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
     -- 8a: Input pluggable widgets (need entity context for attribute binding)
     ROW rowS8a {
       COLUMN cS8a1 (DesktopWidth: 12) {
-        DATAVIEW dvPluggable (DataSource: DATABASE FROM WidgetDemo.DemoItem) {
+        DATAVIEW dvPluggable {
           LAYOUTGRID gPlug {
             ROW rPlug1 {
               COLUMN cPlug1 (DesktopWidth: 3) {
