@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"strings"
@@ -168,6 +169,24 @@ func opSelection(obj bson.D, propTypeIDs map[string]pages.PropertyTypeIDEntry, p
 	})
 }
 
+// opExpression sets an expression string on a widget property.
+func opExpression(obj bson.D, propTypeIDs map[string]pages.PropertyTypeIDEntry, propertyKey string, ctx *BuildContext) bson.D {
+	if ctx.PrimitiveVal == "" {
+		return obj
+	}
+	return updateWidgetPropertyValue(obj, propTypeIDs, propertyKey, func(val bson.D) bson.D {
+		result := make(bson.D, 0, len(val))
+		for _, elem := range val {
+			if elem.Key == "Expression" {
+				result = append(result, bson.E{Key: "Expression", Value: ctx.PrimitiveVal})
+			} else {
+				result = append(result, elem)
+			}
+		}
+		return result
+	})
+}
+
 // opDatasource sets a data source on a widget property.
 func opDatasource(obj bson.D, propTypeIDs map[string]pages.PropertyTypeIDEntry, propertyKey string, ctx *BuildContext) bson.D {
 	if ctx.DataSource == nil {
@@ -269,6 +288,81 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 		return nil, err
 	}
 
+	// 4.3 Auto child slots: match AST children to Widgets-type template properties.
+	// Two matching strategies:
+	//   1. Named match: CONTAINER trigger { ... } → property "trigger" (by child name)
+	//   2. Default slot: direct children not matching any named slot → first Widgets property
+	// This allows pluggable widget child containers without requiring .def.json ChildSlot entries.
+	handledSlotKeys := make(map[string]bool)
+	for _, s := range slots {
+		handledSlotKeys[s.PropertyKey] = true
+	}
+	// Collect Widgets-type property keys
+	var widgetsPropKeys []string
+	for propKey, entry := range propertyTypeIDs {
+		if entry.ValueType == "Widgets" && !handledSlotKeys[propKey] {
+			widgetsPropKeys = append(widgetsPropKeys, propKey)
+		}
+	}
+	// Phase 1: Named matching — match children by name against property keys
+	matchedChildren := make(map[int]bool) // indices of matched children
+	for _, propKey := range widgetsPropKeys {
+		upperKey := strings.ToUpper(propKey)
+		for i, child := range w.Children {
+			if matchedChildren[i] {
+				continue
+			}
+			if strings.ToUpper(child.Name) == upperKey {
+				var childBSONs []bson.D
+				for _, slotChild := range child.Children {
+					widgetBSON, err := e.pageBuilder.buildWidgetV3ToBSON(slotChild)
+					if err != nil {
+						return nil, err
+					}
+					if widgetBSON != nil {
+						childBSONs = append(childBSONs, widgetBSON)
+					}
+				}
+				if len(childBSONs) > 0 {
+					updatedObject = opWidgets(updatedObject, propertyTypeIDs, propKey, &BuildContext{ChildWidgets: childBSONs})
+					handledSlotKeys[propKey] = true
+				}
+				matchedChildren[i] = true
+				break
+			}
+		}
+	}
+	// Phase 2: Default slot — unmatched direct children go to first unmatched Widgets property.
+	// Skip children already consumed by .def.json child slots (matched by type).
+	defSlotContainers := make(map[string]bool)
+	for _, s := range slots {
+		defSlotContainers[strings.ToUpper(s.MDLContainer)] = true
+	}
+	var defaultWidgetBSONs []bson.D
+	for i, child := range w.Children {
+		if matchedChildren[i] {
+			continue
+		}
+		if defSlotContainers[strings.ToUpper(child.Type)] {
+			continue // already consumed by applyChildSlots
+		}
+		widgetBSON, err := e.pageBuilder.buildWidgetV3ToBSON(child)
+		if err != nil {
+			return nil, err
+		}
+		if widgetBSON != nil {
+			defaultWidgetBSONs = append(defaultWidgetBSONs, widgetBSON)
+		}
+	}
+	if len(defaultWidgetBSONs) > 0 {
+		for _, propKey := range widgetsPropKeys {
+			if !handledSlotKeys[propKey] {
+				updatedObject = opWidgets(updatedObject, propertyTypeIDs, propKey, &BuildContext{ChildWidgets: defaultWidgetBSONs})
+				break
+			}
+		}
+	}
+
 	// 4.5 Apply explicit properties (not covered by .def.json mappings)
 	mappedKeys := make(map[string]bool)
 	for _, m := range mappings {
@@ -283,28 +377,100 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 		if mappedKeys[propName] || isBuiltinPropName(propName) {
 			continue
 		}
-		if _, ok := propertyTypeIDs[propName]; !ok {
+		entry, ok := propertyTypeIDs[propName]
+		if !ok {
 			continue // not a known widget property key
 		}
-		strVal, isStr := propVal.(string)
-		if !isStr {
+		// Convert non-string values (bool, int, float) to string for property setting
+		var strVal string
+		switch v := propVal.(type) {
+		case string:
+			strVal = v
+		case bool:
+			strVal = fmt.Sprintf("%t", v)
+		case int:
+			strVal = fmt.Sprintf("%d", v)
+		case float64:
+			strVal = fmt.Sprintf("%g", v)
+		default:
 			continue
 		}
 		ctx := &BuildContext{}
-		if strings.Count(strVal, ".") >= 2 {
-			// Fully qualified attribute path (Module.Entity.Attr)
-			ctx.AttributePath = strVal
-			updatedObject = opAttribute(updatedObject, propertyTypeIDs, propName, ctx)
-		} else if e.pageBuilder.entityContext != "" && !strings.ContainsAny(strVal, " '\"") {
-			// Short name in entity context — resolve as attribute
-			ctx.AttributePath = e.pageBuilder.resolveAttributePath(strVal)
-			updatedObject = opAttribute(updatedObject, propertyTypeIDs, propName, ctx)
-		} else {
-			// Treat as primitive value
+
+		// Route by ValueType when available
+		switch entry.ValueType {
+		case "Expression":
+			// Expression properties: set Expression field (not PrimitiveValue)
 			ctx.PrimitiveVal = strVal
-			updatedObject = opPrimitive(updatedObject, propertyTypeIDs, propName, ctx)
+			updatedObject = opExpression(updatedObject, propertyTypeIDs, propName, ctx)
+		case "TextTemplate":
+			// TextTemplate properties: create ClientTemplate with translation
+			updatedObject = updateWidgetPropertyValue(updatedObject, propertyTypeIDs, propName, func(val bson.D) bson.D {
+				result := make(bson.D, 0, len(val))
+				for _, elem := range val {
+					if elem.Key == "TextTemplate" {
+						result = append(result, bson.E{Key: "TextTemplate", Value: createDefaultClientTemplateBSON(strVal)})
+					} else {
+						result = append(result, elem)
+					}
+				}
+				return result
+			})
+		case "Attribute":
+			// Attribute properties: resolve path
+			if strings.Count(strVal, ".") >= 2 {
+				ctx.AttributePath = strVal
+			} else if e.pageBuilder.entityContext != "" {
+				ctx.AttributePath = e.pageBuilder.resolveAttributePath(strVal)
+			}
+			if ctx.AttributePath != "" {
+				updatedObject = opAttribute(updatedObject, propertyTypeIDs, propName, ctx)
+			}
+		default:
+			// Legacy routing for properties without ValueType info
+			if strings.Count(strVal, ".") >= 2 {
+				ctx.AttributePath = strVal
+				updatedObject = opAttribute(updatedObject, propertyTypeIDs, propName, ctx)
+			} else if e.pageBuilder.entityContext != "" && !strings.ContainsAny(strVal, " '\"") {
+				ctx.AttributePath = e.pageBuilder.resolveAttributePath(strVal)
+				updatedObject = opAttribute(updatedObject, propertyTypeIDs, propName, ctx)
+			} else {
+				ctx.PrimitiveVal = strVal
+				updatedObject = opPrimitive(updatedObject, propertyTypeIDs, propName, ctx)
+			}
 		}
 	}
+
+	// 4.7 Auto datasource: map AST DataSource to first DataSource-type property
+	// When no .def.json mapping handled DataSource, auto-detect and apply it.
+	dsHandledByMapping := false
+	for _, m := range mappings {
+		if m.Source == "DataSource" {
+			dsHandledByMapping = true
+			break
+		}
+	}
+	if !dsHandledByMapping {
+		if ds := w.GetDataSource(); ds != nil {
+			for propKey, entry := range propertyTypeIDs {
+				if entry.ValueType == "DataSource" {
+					dataSource, entityName, err := e.pageBuilder.buildDataSourceV3(ds)
+					if err != nil {
+						return nil, fmt.Errorf("auto datasource for %s: %w", propKey, err)
+					}
+					ctx := &BuildContext{DataSource: dataSource, EntityName: entityName}
+					updatedObject = opDatasource(updatedObject, propertyTypeIDs, propKey, ctx)
+					if entityName != "" {
+						e.pageBuilder.entityContext = entityName
+					}
+					break
+				}
+			}
+		}
+	}
+
+	// 4.9 Auto-populate required empty object lists (e.g., Accordion groups, AreaChart series)
+	updatedObject = ensureRequiredObjectLists(updatedObject, propertyTypeIDs)
 
 	// 5. Build CustomWidget
 	widgetID := model.ID(mpr.GenerateID())
@@ -534,4 +700,165 @@ func isBuiltinPropName(name string) bool {
 		return true
 	}
 	return false
+}
+
+// =============================================================================
+// Default Object List Population
+// =============================================================================
+
+// ensureRequiredObjectLists populates empty Object list properties with one default
+// entry. This prevents CE0642 "Property 'X' is required" errors for widget properties
+// like Accordion groups, AreaChart series, etc.
+func ensureRequiredObjectLists(obj bson.D, propertyTypeIDs map[string]pages.PropertyTypeIDEntry) bson.D {
+	for propKey, entry := range propertyTypeIDs {
+		if entry.ObjectTypeID == "" {
+			continue
+		}
+		if len(entry.NestedPropertyIDs) == 0 {
+			continue
+		}
+		obj = updateWidgetPropertyValue(obj, propertyTypeIDs, propKey, func(val bson.D) bson.D {
+			for _, elem := range val {
+				if elem.Key == "Objects" {
+					if arr, ok := elem.Value.(bson.A); ok && len(arr) <= 1 {
+						// Empty Objects array — create one default entry
+						defaultObj := createDefaultWidgetObject(entry.ObjectTypeID, entry.NestedPropertyIDs)
+						newArr := bson.A{int32(2), defaultObj}
+						result := make(bson.D, 0, len(val))
+						for _, e := range val {
+							if e.Key == "Objects" {
+								result = append(result, bson.E{Key: "Objects", Value: newArr})
+							} else {
+								result = append(result, e)
+							}
+						}
+						return result
+					}
+				}
+			}
+			return val
+		})
+	}
+	return obj
+}
+
+// createDefaultWidgetObject creates a minimal WidgetObject BSON entry for an object list.
+func createDefaultWidgetObject(objectTypeID string, nestedProps map[string]pages.PropertyTypeIDEntry) bson.D {
+	propsArr := bson.A{int32(2)} // version marker
+	for _, entry := range nestedProps {
+		prop := createDefaultWidgetProperty(entry)
+		propsArr = append(propsArr, prop)
+	}
+	return bson.D{
+		{Key: "$ID", Value: generateBinaryID()},
+		{Key: "$Type", Value: "CustomWidgets$WidgetObject"},
+		{Key: "TypePointer", Value: hexIDToBlob(objectTypeID)},
+		{Key: "Properties", Value: propsArr},
+	}
+}
+
+// createDefaultWidgetProperty creates a WidgetProperty with default WidgetValue.
+func createDefaultWidgetProperty(entry pages.PropertyTypeIDEntry) bson.D {
+	return bson.D{
+		{Key: "$ID", Value: generateBinaryID()},
+		{Key: "$Type", Value: "CustomWidgets$WidgetProperty"},
+		{Key: "TypePointer", Value: hexIDToBlob(entry.PropertyTypeID)},
+		{Key: "Value", Value: createDefaultWidgetValue(entry)},
+	}
+}
+
+// createDefaultWidgetValue creates a WidgetValue with standard default fields.
+// Sets type-specific defaults: Expression→Expression field, TextTemplate→template, etc.
+func createDefaultWidgetValue(entry pages.PropertyTypeIDEntry) bson.D {
+	primitiveVal := entry.DefaultValue
+	expressionVal := ""
+	var textTemplate interface{} // nil by default
+
+	// Route default value to the correct field based on ValueType
+	switch entry.ValueType {
+	case "Expression":
+		expressionVal = primitiveVal
+		primitiveVal = ""
+	case "TextTemplate":
+		// Create a ClientTemplate with a placeholder translation to satisfy CE4899
+		text := primitiveVal
+		if text == "" {
+			text = " " // non-empty to satisfy "required" translation check
+		}
+		textTemplate = createDefaultClientTemplateBSON(text)
+	case "String":
+		if primitiveVal == "" {
+			primitiveVal = " " // non-empty to satisfy required String properties
+		}
+	}
+
+	return bson.D{
+		{Key: "$ID", Value: generateBinaryID()},
+		{Key: "$Type", Value: "CustomWidgets$WidgetValue"},
+		{Key: "Action", Value: bson.D{
+			{Key: "$ID", Value: generateBinaryID()},
+			{Key: "$Type", Value: "Forms$NoAction"},
+			{Key: "DisabledDuringExecution", Value: true},
+		}},
+		{Key: "AttributeRef", Value: nil},
+		{Key: "DataSource", Value: nil},
+		{Key: "EntityRef", Value: nil},
+		{Key: "Expression", Value: expressionVal},
+		{Key: "Form", Value: ""},
+		{Key: "Icon", Value: nil},
+		{Key: "Image", Value: ""},
+		{Key: "Microflow", Value: ""},
+		{Key: "Nanoflow", Value: ""},
+		{Key: "Objects", Value: bson.A{int32(2)}},
+		{Key: "PrimitiveValue", Value: primitiveVal},
+		{Key: "Selection", Value: "None"},
+		{Key: "SourceVariable", Value: nil},
+		{Key: "TextTemplate", Value: textTemplate},
+		{Key: "TranslatableValue", Value: nil},
+		{Key: "TypePointer", Value: hexIDToBlob(entry.ValueTypeID)},
+		{Key: "Widgets", Value: bson.A{int32(2)}},
+		{Key: "XPathConstraint", Value: ""},
+	}
+}
+
+// createDefaultClientTemplateBSON creates a Forms$ClientTemplate with an en_US translation.
+func createDefaultClientTemplateBSON(text string) bson.D {
+	makeText := func(t string) bson.D {
+		return bson.D{
+			{Key: "$ID", Value: generateBinaryID()},
+			{Key: "$Type", Value: "Texts$Text"},
+			{Key: "Items", Value: bson.A{int32(3), bson.D{
+				{Key: "$ID", Value: generateBinaryID()},
+				{Key: "$Type", Value: "Texts$Translation"},
+				{Key: "LanguageCode", Value: "en_US"},
+				{Key: "Text", Value: t},
+			}}},
+		}
+	}
+	return bson.D{
+		{Key: "$ID", Value: generateBinaryID()},
+		{Key: "$Type", Value: "Forms$ClientTemplate"},
+		{Key: "Fallback", Value: makeText(text)},
+		{Key: "Parameters", Value: bson.A{int32(2)}},
+		{Key: "Template", Value: makeText(text)},
+	}
+}
+
+// generateBinaryID creates a new random 16-byte UUID in Microsoft GUID binary format.
+func generateBinaryID() []byte {
+	return hexIDToBlob(mpr.GenerateID())
+}
+
+// hexIDToBlob converts a hex UUID string to a 16-byte binary blob in Microsoft GUID format.
+func hexIDToBlob(hexStr string) []byte {
+	hexStr = strings.ReplaceAll(hexStr, "-", "")
+	data, err := hex.DecodeString(hexStr)
+	if err != nil || len(data) != 16 {
+		return data
+	}
+	// Swap bytes to match Microsoft GUID format (little-endian for first 3 segments)
+	data[0], data[1], data[2], data[3] = data[3], data[2], data[1], data[0]
+	data[4], data[5] = data[5], data[4]
+	data[6], data[7] = data[7], data[6]
+	return data
 }

@@ -1828,6 +1828,7 @@ widgetPropertyV3
     | VISIBLE COLON propertyValueV3                   // Visible: expression
     | TOOLTIP COLON propertyValueV3                   // Tooltip: 'text'
     | IDENTIFIER COLON propertyValueV3                // Generic: any other property
+    | keyword COLON propertyValueV3                  // Generic: keyword as property name (for pluggable widgets)
     ;
 
 // Filter type values - handle keywords like CONTAINS that are also filter types

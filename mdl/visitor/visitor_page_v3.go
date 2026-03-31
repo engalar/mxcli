@@ -571,6 +571,15 @@ func parseWidgetPropertyV3(ctx parser.IWidgetPropertyV3Context, widget *ast.Widg
 		}
 		return
 	}
+
+	// Generic property with keyword name: keyword: value (for pluggable widget property keys
+	// that happen to be MDL keywords, e.g., type, datasource, content)
+	if kw := propCtx.Keyword(); kw != nil {
+		if valCtx := propCtx.PropertyValueV3(); valCtx != nil {
+			widget.Properties[kw.GetText()] = buildPropertyValueV3(valCtx)
+		}
+		return
+	}
 }
 
 // buildDataSourceV3 builds a DataSource from the parse context.

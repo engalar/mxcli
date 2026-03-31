@@ -490,11 +490,26 @@ func extractNestedPropertyTypes(val any, idMapping map[string]string, nestedProp
 						}
 					}
 
+					// Extract DefaultValue and Type from nested ValueType
+					var nestedDefaultValue, nestedValueType string
+					if vtVal, ok := propType["ValueType"]; ok {
+						if vt, ok := vtVal.(map[string]any); ok {
+							if dv, ok := vt["DefaultValue"].(string); ok {
+								nestedDefaultValue = dv
+							}
+							if t, ok := vt["Type"].(string); ok {
+								nestedValueType = t
+							}
+						}
+					}
+
 					// Record the nested property type
 					if propKey != "" {
 						nestedPropertyIDs[propKey] = PropertyTypeIDEntry{
 							PropertyTypeID: propTypeID,
 							ValueTypeID:    valueTypeID,
+							DefaultValue:   nestedDefaultValue,
+							ValueType:      nestedValueType,
 						}
 					}
 				}

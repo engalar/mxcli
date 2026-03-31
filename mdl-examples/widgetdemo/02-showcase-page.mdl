@@ -4,7 +4,7 @@
 CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
   Title: 'Widget Showcase',
   Layout: Atlas_Core.Atlas_Default,
-  Url: 'widget-demo',
+  Url: 'widget-demo/{DemoItem}',
   Params: { $DemoItem: WidgetDemo.DemoItem }
 ) {
   LAYOUTGRID gridMain {
@@ -97,6 +97,8 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
             DROPDOWNFILTER dfCat
             NUMBERFILTER nfAmt (Attributes: [Amount])
             DATEFILTER dtfDate (Attributes: [DateCreated])
+            -- DropdownSort inside Gallery FILTER for linked datasource
+            PLUGGABLEWIDGET 'com.mendix.widget.web.dropdownsort.DropdownSort' ddSort1
           }
           TEMPLATE tmpl1 {
             DYNAMICTEXT tTitle (Content: '{1}', RenderMode: H4, ContentParams: [{1} = Title])
@@ -252,6 +254,12 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
                 PLUGGABLEWIDGET 'com.mendix.widget.custom.RangeSlider.RangeSlider' rangeSlider1 (lowerBoundAttribute: Score, upperBoundAttribute: Rating)
               }
             }
+            ROW rPlug2 {
+              COLUMN cPlug5 (DesktopWidth: 6) {
+                -- BarcodeScanner: uses .def.json mapping (Attribute: → datasource property)
+                PLUGGABLEWIDGET 'com.mendix.widget.web.barcodescanner.BarcodeScanner' scanner1 (Attribute: Code)
+              }
+            }
           }
         }
       }
@@ -273,64 +281,99 @@ CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
       }
     }
 
-    -- 8c: Layout pluggable widgets
+    -- 8c: Layout pluggable widgets (auto child slots matched by container name)
     ROW rowS8c {
       COLUMN cS8c1 (DesktopWidth: 4) {
+        -- Accordion: groups auto-populated by ensureRequiredObjectLists
         PLUGGABLEWIDGET 'com.mendix.widget.web.accordion.Accordion' accordion1
       }
       COLUMN cS8c2 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.fieldset.Fieldset' fieldset1
+        -- Fieldset: direct children go to default Widgets slot ('content')
+        PLUGGABLEWIDGET 'com.mendix.widget.web.fieldset.Fieldset' fieldset1 {
+          DYNAMICTEXT fsBody (Content: 'Fieldset content area')
+        }
       }
       COLUMN cS8c3 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.tooltip.Tooltip' myTooltip1
+        -- Tooltip: trigger child slot + textMessage TextTemplate
+        PLUGGABLEWIDGET 'com.mendix.widget.web.tooltip.Tooltip' myTooltip1 (textMessage: 'This is a tooltip') {
+          CONTAINER trigger {
+            DYNAMICTEXT ttTrig (Content: 'Hover for tooltip')
+          }
+        }
       }
     }
+
+    -- 8d: Data-driven pluggable widgets (auto DataSource mapping)
     ROW rowS8d {
       COLUMN cS8d1 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.timeline.Timeline' myTimeline1
+        PLUGGABLEWIDGET 'com.mendix.widget.web.timeline.Timeline' myTimeline1 (
+          DataSource: DATABASE FROM WidgetDemo.DemoItem SORT BY DateCreated DESC,
+          groupEvents: false,
+          title: '{1}',
+          customVisualization: true
+        )
       }
       COLUMN cS8d2 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.videoplayer.VideoPlayer' videoPlayer1
+        -- VideoPlayer: type='expression' enables urlExpression
+        PLUGGABLEWIDGET 'com.mendix.widget.web.videoplayer.VideoPlayer' videoPlayer1 (type: 'expression', urlExpression: '''https://example.com/sample.mp4''')
       }
       COLUMN cS8d3 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.image.Image' myImage1
+        -- Image: datasource='imageUrl' mode with URL
+        PLUGGABLEWIDGET 'com.mendix.widget.web.image.Image' myImage1 (datasource: 'imageUrl', imageUrl: 'https://placehold.co/200x100')
       }
     }
+
+    -- 8e: More layout pluggable widgets
     ROW rowS8e {
       COLUMN cS8e1 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.popupmenu.PopupMenu' myPopupMenu1
+        -- PopupMenu: CONTAINER named 'menuTrigger' matches Widgets property 'menuTrigger'
+        PLUGGABLEWIDGET 'com.mendix.widget.web.popupmenu.PopupMenu' myPopupMenu1 {
+          CONTAINER menuTrigger {
+            ACTIONBUTTON btnPopup (Caption: 'Open Menu', Action: CLOSE_PAGE)
+          }
+        }
       }
       COLUMN cS8e2 (DesktopWidth: 4) {
         PLUGGABLEWIDGET 'com.mendix.widget.web.htmlelement.HTMLElement' htmlElem1
       }
       COLUMN cS8e3 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.treenode.TreeNode' treeNode1
+        PLUGGABLEWIDGET 'com.mendix.widget.web.treenode.TreeNode' treeNode1 (
+          DataSource: DATABASE FROM WidgetDemo.DemoItem
+        )
       }
     }
+
+    -- 8f: Sort, language, selection, accessibility
     ROW rowS8f {
       COLUMN cS8f1 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.barcodescanner.BarcodeScanner' scanner1
+        CONTAINER cS8f1Note (Class: 'card', Style: 'padding: 12px;') {
+          DYNAMICTEXT ddSortNote (Content: 'DropdownSort is in Gallery FILTER above', RenderMode: Paragraph)
+        }
       }
       COLUMN cS8f2 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.dropdownsort.DropdownSort' ddSort1
+        PLUGGABLEWIDGET 'com.mendix.widget.web.languageselector.LanguageSelector' langSel1 (
+          DataSource: DATABASE FROM WidgetDemo.DemoItem,
+          languageCaption: '''en_US'''
+        )
       }
       COLUMN cS8f3 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.languageselector.LanguageSelector' langSel1
-      }
-    }
-    ROW rowS8g {
-      COLUMN cS8g1 (DesktopWidth: 4) {
         PLUGGABLEWIDGET 'com.mendix.widget.web.selectionhelper.SelectionHelper' selHelper1
       }
+    }
+
+    -- 8g: Accessibility, Maps, Charts
+    ROW rowS8g {
+      COLUMN cS8g1 (DesktopWidth: 4) {
+        -- AccessibilityHelper: direct children go to default Widgets slot ('content')
+        PLUGGABLEWIDGET 'com.mendix.widget.web.accessibilityhelper.AccessibilityHelper' accHelper1 (targetSelector: '.mx-name-accHelper1') {
+          DYNAMICTEXT accBody (Content: 'Accessible content area')
+        }
+      }
       COLUMN cS8g2 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.accessibilityhelper.AccessibilityHelper' accHelper1
+        PLUGGABLEWIDGET 'com.mendix.widget.custom.Maps.Maps' maps1 (apiKey: 'demo-key', geodecodeApiKey: 'demo-key', googleMapId: 'default')
       }
       COLUMN cS8g3 (DesktopWidth: 4) {
-        PLUGGABLEWIDGET 'com.mendix.widget.custom.Maps.Maps' maps1
-      }
-    }
-    ROW rowS8h {
-      COLUMN cS8h1 (DesktopWidth: 12) {
+        -- AreaChart: series auto-populated by ensureRequiredObjectLists
         PLUGGABLEWIDGET 'com.mendix.widget.web.areachart.AreaChart' areaChart1
       }
     }
