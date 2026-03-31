@@ -285,7 +285,7 @@ func buildCaptionBson(text string) bson.D {
 		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 		{Key: "$Type", Value: "Texts$Text"},
 		{Key: "Items", Value: bson.A{
-			int32(1),
+			int64(1),
 			bson.D{
 				{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 				{Key: "$Type", Value: "Texts$Translation"},

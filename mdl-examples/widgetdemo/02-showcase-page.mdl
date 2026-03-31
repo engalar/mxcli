@@ -2,7 +2,7 @@
 -- Uses WidgetDemo.DemoItem + WidgetDemo.Helper (no external dependencies)
 -- Every widget is fully configured with realistic properties
 
-CREATE PAGE WidgetDemo.WidgetDemo_Showcase (
+CREATE OR REPLACE PAGE WidgetDemo.WidgetDemo_Showcase (
   Title: 'Widget Showcase',
   Layout: Atlas_Core.Atlas_Default,
   Url: 'widget-demo/{DemoItem}',

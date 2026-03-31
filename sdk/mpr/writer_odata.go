@@ -64,8 +64,8 @@ func (w *Writer) serializeConsumedODataService(svc *model.ConsumedODataService) 
 		"ExportLevel":          "Hidden",
 		"Metadata":             svc.Metadata,
 		"MetadataHash":         svc.MetadataHash,
-		"MetadataReferences":   bson.A{int32(0)}, // empty BSON array marker
-		"ValidatedEntities":    bson.A{int32(0)}, // empty BSON array marker
+		"MetadataReferences":   bson.A{int64(0)}, // empty BSON array marker
+		"ValidatedEntities":    bson.A{int64(0)}, // empty BSON array marker
 		"LastUpdated":          "",
 		"UseQuerySegment":      false,
 		"MinimumMxVersion":     "",
@@ -203,7 +203,7 @@ func (w *Writer) DeletePublishedODataService(id model.ID) error {
 
 // serializePublishedODataService converts a PublishedODataService to BSON bytes.
 func (w *Writer) serializePublishedODataService(svc *model.PublishedODataService) ([]byte, error) {
-	// Authentication types array (versioned: starts with int32(3))
+	// Authentication types array (versioned: starts with int64(3))
 	authTypes := bson.A{int32(3)}
 	for _, at := range svc.AuthenticationTypes {
 		authTypes = append(authTypes, at)
@@ -284,7 +284,7 @@ func serializePublishedEntitySet(es *model.PublishedEntitySet, entityTypeID stri
 		"$Type":       "ODataPublish$EntitySet",
 		"ExposedName": es.ExposedName,
 		"UsePaging":   es.UsePaging,
-		"PageSize":    int32(es.PageSize),
+		"PageSize":    int64(es.PageSize),
 	}
 
 	// EntityTypePointer is a BY_ID reference

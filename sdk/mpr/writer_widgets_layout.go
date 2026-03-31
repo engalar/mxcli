@@ -21,7 +21,7 @@ func serializeContainer(c *pages.Container) bson.D {
 		{Key: "OnClickAction", Value: serializeClientAction(nil)},
 		{Key: "RenderMode", Value: "Div"},
 		{Key: "ScreenReaderHidden", Value: false},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Widgets", Value: serializeWidgetArray(c.Widgets)},
 	}
 	return doc
@@ -55,7 +55,7 @@ func serializeGroupBox(gb *pages.GroupBox) bson.D {
 		{Key: "ConditionalVisibilitySettings", Value: nil},
 		{Key: "HeaderMode", Value: headerMode},
 		{Key: "Name", Value: gb.Name},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Widgets", Value: serializeWidgetArray(gb.Widgets)},
 	}
 	return doc
@@ -91,7 +91,7 @@ func serializeTabContainer(tc *pages.TabContainer) bson.D {
 		{Key: "ConditionalVisibilitySettings", Value: nil},
 		{Key: "DefaultPagePointer", Value: defaultPageID},
 		{Key: "Name", Value: tc.Name},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "TabPages", Value: tabPages},
 	}
 	return doc
@@ -147,7 +147,7 @@ func serializeLayoutGrid(lg *pages.LayoutGrid) bson.D {
 		{Key: "ConditionalVisibilitySettings", Value: nil},
 		{Key: "Name", Value: lg.Name},
 		{Key: "Rows", Value: rows},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Width", Value: "FullWidth"},
 	}
 	return doc
@@ -191,11 +191,11 @@ func serializeLayoutGridColumn(col *pages.LayoutGridColumn) bson.D {
 		{Key: "$ID", Value: idToBsonBinary(string(col.ID))},
 		{Key: "$Type", Value: "Forms$LayoutGridColumn"},
 		{Key: "Appearance", Value: serializeAppearance("", "", nil)},
-		{Key: "PhoneWeight", Value: int32(-1)},  // Auto for phone
-		{Key: "PreviewWidth", Value: int32(-1)}, // Default preview width
-		{Key: "TabletWeight", Value: int32(-1)}, // Auto for tablet
+		{Key: "PhoneWeight", Value: int64(-1)},  // Auto for phone
+		{Key: "PreviewWidth", Value: int64(-1)}, // Default preview width
+		{Key: "TabletWeight", Value: int64(-1)}, // Auto for tablet
 		{Key: "VerticalAlignment", Value: "None"},
-		{Key: "Weight", Value: int32(weight)}, // Desktop weight
+		{Key: "Weight", Value: int64(weight)}, // Desktop weight
 		{Key: "Widgets", Value: serializeWidgetArray(col.Widgets)},
 	}
 }

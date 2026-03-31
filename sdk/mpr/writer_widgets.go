@@ -296,7 +296,7 @@ func serializeAppearance(class, style string, designProps []pages.DesignProperty
 }
 
 // serializeDesignProperties serializes design property values to a BSON array.
-// Both empty and non-empty use version marker int32(3).
+// Both empty and non-empty use version marker int64(3).
 func serializeDesignProperties(props []pages.DesignPropertyValue) bson.A {
 	if len(props) == 0 {
 		return bson.A{int32(3)}
@@ -362,7 +362,7 @@ func serializeFormattingInfo() bson.D {
 		{Key: "$Type", Value: "Forms$FormattingInfo"},
 		{Key: "CustomDateFormat", Value: ""},
 		{Key: "DateFormat", Value: "Date"},
-		{Key: "DecimalPrecision", Value: int32(2)},
+		{Key: "DecimalPrecision", Value: int64(2)},
 		{Key: "EnumFormat", Value: "Text"},
 		{Key: "GroupDigits", Value: false},
 	}
@@ -501,7 +501,7 @@ func serializeClientTemplateParameter(param *pages.ClientTemplateParameter) bson
 		{Key: "$Type", Value: "Forms$FormattingInfo"},
 		{Key: "CustomDateFormat", Value: ""},
 		{Key: "DateFormat", Value: "Date"},
-		{Key: "DecimalPrecision", Value: int32(2)},
+		{Key: "DecimalPrecision", Value: int64(2)},
 		{Key: "EnumFormat", Value: "Text"},
 		{Key: "GroupDigits", Value: false},
 		{Key: "TimeFormat", Value: "HoursMinutes"},

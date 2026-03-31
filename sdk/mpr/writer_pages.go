@@ -128,8 +128,8 @@ func (w *Writer) serializePage(page *pages.Page) ([]byte, error) {
 			{Key: "Style", Value: ""},
 		}},
 		{Key: "Autofocus", Value: "DesktopOnly"},
-		{Key: "CanvasHeight", Value: int32(600)},
-		{Key: "CanvasWidth", Value: int32(1200)},
+		{Key: "CanvasHeight", Value: int64(600)},
+		{Key: "CanvasWidth", Value: int64(1200)},
 		{Key: "Documentation", Value: page.Documentation},
 		{Key: "Excluded", Value: page.Excluded},
 		{Key: "ExportLevel", Value: "Hidden"},
@@ -209,9 +209,9 @@ func (w *Writer) serializePage(page *pages.Page) ([]byte, error) {
 	doc = append(doc, bson.E{Key: "Parameters", Value: params})
 
 	doc = append(doc, bson.E{Key: "PopupCloseAction", Value: ""})
-	doc = append(doc, bson.E{Key: "PopupHeight", Value: int32(600)})
+	doc = append(doc, bson.E{Key: "PopupHeight", Value: int64(600)})
 	doc = append(doc, bson.E{Key: "PopupResizable", Value: false})
-	doc = append(doc, bson.E{Key: "PopupWidth", Value: int32(600)})
+	doc = append(doc, bson.E{Key: "PopupWidth", Value: int64(600)})
 
 	// Add Title
 	// Mendix uses [3] for empty arrays, [2, item1, item2, ...] for non-empty arrays
@@ -267,8 +267,8 @@ func (w *Writer) serializeSnippet(snippet *pages.Snippet) ([]byte, error) {
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(string(snippet.ID))},
 		{Key: "$Type", Value: "Forms$Snippet"},
-		{Key: "CanvasHeight", Value: int32(600)},
-		{Key: "CanvasWidth", Value: int32(800)},
+		{Key: "CanvasHeight", Value: int64(600)},
+		{Key: "CanvasWidth", Value: int64(800)},
 		{Key: "Documentation", Value: snippet.Documentation},
 		{Key: "ExportLevel", Value: "Hidden"},
 		{Key: "Name", Value: snippet.Name},

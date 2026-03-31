@@ -88,7 +88,7 @@ func serializeDBQuery(q *model.DatabaseQuery) bson.M {
 		"$Type":     "DatabaseConnector$DatabaseQuery",
 		"Name":      q.Name,
 		"Query":     q.SQL,
-		"QueryType": int32(q.QueryType),
+		"QueryType": int64(q.QueryType),
 	}
 	if q.ID != "" {
 		qDoc["$ID"] = idToBsonBinary(string(q.ID))

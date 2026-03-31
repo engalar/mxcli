@@ -505,7 +505,7 @@ func serializeCallWorkflowActivity(a *workflows.CallWorkflowActivity) bson.D {
 		bson.E{Key: "Name", Value: a.Name},
 	)
 
-	// ParameterMappings (always present, marker int32(2))
+	// ParameterMappings (always present, marker int64(2))
 	paramMappings := bson.A{int32(2)}
 	for _, pm := range a.ParameterMappings {
 		pmID := string(pm.ID)

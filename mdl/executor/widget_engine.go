@@ -978,7 +978,7 @@ func createClientTemplateBSONWithParams(text string, entityContext string) bson.
 				{Key: "$Type", Value: "Forms$FormattingInfo"},
 				{Key: "CustomDateFormat", Value: ""},
 				{Key: "DateFormat", Value: "Date"},
-				{Key: "DecimalPrecision", Value: int32(2)},
+				{Key: "DecimalPrecision", Value: int64(2)},
 				{Key: "EnumFormat", Value: "Text"},
 				{Key: "GroupDigits", Value: false},
 				{Key: "TimeFormat", Value: "HoursMinutes"},
