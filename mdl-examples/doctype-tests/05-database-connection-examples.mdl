@@ -1,5 +1,6 @@
+-- @version: 11.0+
 -- ============================================================================
--- Database Connection Examples - Formula 1 Database
+-- Database Connection Examples - Formula 1 Database (requires Mendix 11.0+)
 -- ============================================================================
 --
 -- This file demonstrates CREATE DATABASE CONNECTION features using

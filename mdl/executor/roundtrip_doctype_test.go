@@ -5,15 +5,18 @@
 package executor
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
+	"github.com/mendixlabs/mxcli/sdk/mpr/version"
 )
 
 // scriptModuleDeps maps script filenames to marketplace module MPKs they require.
@@ -129,8 +132,15 @@ func TestMxCheck_DoctypeScripts(t *testing.T) {
 				}
 			}
 
+			// Filter out version-gated sections that don't match this project's Mendix version
+			pv := env.executor.reader.ProjectVersion()
+			filtered, skippedLines := filterByVersion(string(content), pv)
+			if skippedLines > 0 {
+				t.Logf("Mendix %s: skipped %d version-gated lines", pv.ProductVersion, skippedLines)
+			}
+
 			// Execute the script
-			prog, errs := visitor.Build(string(content))
+			prog, errs := visitor.Build(filtered)
 			if len(errs) > 0 {
 				t.Fatalf("Parse error: %v", errs[0])
 			}
@@ -191,4 +201,132 @@ func allErrorsKnown(output string, knownCodes []string) bool {
 		}
 	}
 	return true
+}
+
+// versionConstraint represents a min/max Mendix version range for -- @version: directives.
+type versionConstraint struct {
+	minMajor, minMinor int // -1 means no minimum
+	maxMajor, maxMinor int // -1 means no maximum
+}
+
+// matches returns true if the project version satisfies this constraint.
+func (vc *versionConstraint) matches(pv *version.ProjectVersion) bool {
+	if vc.minMajor >= 0 {
+		if !pv.IsAtLeast(vc.minMajor, vc.minMinor) {
+			return false
+		}
+	}
+	if vc.maxMajor >= 0 {
+		// Check that version is at most maxMajor.maxMinor
+		if pv.MajorVersion > vc.maxMajor || (pv.MajorVersion == vc.maxMajor && pv.MinorVersion > vc.maxMinor) {
+			return false
+		}
+	}
+	return true
+}
+
+func (vc *versionConstraint) String() string {
+	if vc.minMajor >= 0 && vc.maxMajor >= 0 {
+		return fmt.Sprintf("%d.%d..%d.%d", vc.minMajor, vc.minMinor, vc.maxMajor, vc.maxMinor)
+	}
+	if vc.minMajor >= 0 {
+		return fmt.Sprintf("%d.%d+", vc.minMajor, vc.minMinor)
+	}
+	if vc.maxMajor >= 0 {
+		return fmt.Sprintf("..%d.%d", vc.maxMajor, vc.maxMinor)
+	}
+	return "any"
+}
+
+// parseVersionDirective parses a "-- @version: <constraint>" line.
+// Returns nil for "any" or unparseable directives.
+// Formats: "11.0+", "10.6..10.24", "..10.24", "any"
+func parseVersionDirective(line string) *versionConstraint {
+	s := strings.TrimPrefix(line, "-- @version:")
+	s = strings.TrimSpace(s)
+
+	if s == "" || s == "any" {
+		return nil
+	}
+
+	// Range: "10.6..10.24"
+	if parts := strings.SplitN(s, "..", 2); len(parts) == 2 {
+		vc := &versionConstraint{minMajor: -1, minMinor: -1, maxMajor: -1, maxMinor: -1}
+		if parts[0] != "" {
+			major, minor, ok := parseMajorMinor(parts[0])
+			if !ok {
+				return nil
+			}
+			vc.minMajor, vc.minMinor = major, minor
+		}
+		if parts[1] != "" {
+			major, minor, ok := parseMajorMinor(parts[1])
+			if !ok {
+				return nil
+			}
+			vc.maxMajor, vc.maxMinor = major, minor
+		}
+		return vc
+	}
+
+	// Minimum: "11.0+"
+	if strings.HasSuffix(s, "+") {
+		s = strings.TrimSuffix(s, "+")
+		major, minor, ok := parseMajorMinor(s)
+		if !ok {
+			return nil
+		}
+		return &versionConstraint{minMajor: major, minMinor: minor, maxMajor: -1, maxMinor: -1}
+	}
+
+	return nil
+}
+
+// parseMajorMinor parses "10.24" into (10, 24, true).
+func parseMajorMinor(s string) (int, int, bool) {
+	parts := strings.SplitN(s, ".", 2)
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+	major, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0, false
+	}
+	minor, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, false
+	}
+	return major, minor, true
+}
+
+// filterByVersion removes MDL content sections that don't match the project's Mendix version.
+// Sections are delimited by "-- @version: <constraint>" directives.
+// A directive applies to all following lines until the next directive or end of file.
+// "-- @version: any" resets to unconditional inclusion.
+func filterByVersion(content string, pv *version.ProjectVersion) (string, int) {
+	var result strings.Builder
+	var currentConstraint *versionConstraint // nil = no constraint (always include)
+	skippedLines := 0
+
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "-- @version:") {
+			currentConstraint = parseVersionDirective(trimmed)
+			// Keep the directive line as a comment (so line numbers stay close)
+			result.WriteString(line)
+			result.WriteString("\n")
+			continue
+		}
+		if currentConstraint == nil || currentConstraint.matches(pv) {
+			result.WriteString(line)
+			result.WriteString("\n")
+		} else {
+			// Replace with empty line to preserve line numbering for error messages
+			result.WriteString("\n")
+			if strings.TrimSpace(line) != "" && !strings.HasPrefix(trimmed, "--") {
+				skippedLines++
+			}
+		}
+	}
+	return result.String(), skippedLines
 }

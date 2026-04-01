@@ -699,8 +699,9 @@ TYPE ReferenceSet
 OWNER Both;
 /
 
+-- @version: 11.0+
 -- ############################################################################
--- PART 7: VIEW ENTITIES (OQL)
+-- PART 7: VIEW ENTITIES (OQL) — requires Mendix 11.0+
 -- ############################################################################
 
 -- MARK: View Entities
@@ -895,6 +896,7 @@ BEGIN
 END;
 /
 
+-- @version: any
 -- ############################################################################
 -- PART 8: NON-PERSISTENT ENTITIES
 -- ############################################################################
@@ -1233,8 +1235,9 @@ CREATE OR MODIFY NON-PERSISTENT ENTITY DmTest.FilterParameters (
 );
 /
 
+-- @version: 11.0+
 -- ============================================================================
--- Level 9.5: CREATE OR MODIFY for View Entity
+-- Level 9.5: CREATE OR MODIFY for View Entity — requires Mendix 11.0+
 -- ============================================================================
 --
 -- View entities can also use CREATE OR MODIFY to update their definition.
@@ -1307,6 +1310,7 @@ CREATE OR MODIFY VIEW ENTITY DmTest.ActiveConfigs (
   WHERE c.IsActive = true;
 /
 
+-- @version: any
 -- ############################################################################
 -- PART 10: ALTER ENTITY (Incremental Schema Changes)
 -- ############################################################################
@@ -1449,8 +1453,9 @@ ALTER ENTITY DmTest.VATRate
 ALTER ENTITY DmTest.VATRate
   SET POSITION (300, 400);
 
+-- @version: 11.0+
 -- ============================================================================
--- PART 11: COMPLEX VIEW ENTITIES WITH SUBQUERIES
+-- PART 11: COMPLEX VIEW ENTITIES WITH SUBQUERIES — requires Mendix 11.0+
 -- ============================================================================
 -- Demonstrates advanced OQL features including:
 --   - Inline subqueries (derived tables)
@@ -1603,6 +1608,7 @@ move entity DmTest.ActiveConfigs to DmTest3;
 show entities in DmTest2;
 show enumerations in DmTest3;
 
+-- @version: any
 -- ############################################################################
 -- PART 12: ENTITY GENERALIZATION (INHERITANCE)
 -- ############################################################################

@@ -134,7 +134,8 @@ CREATE PAGE StyleTest.P002_Inline_Styles
   }
 }
 
--- MARK: DesignProperties
+-- @version: 11.0+
+-- MARK: DesignProperties — requires Mendix 11.0+ (Atlas v3 design properties)
 
 -- ============================================================================
 -- LEVEL 3: Design Properties (Atlas UI structured properties)

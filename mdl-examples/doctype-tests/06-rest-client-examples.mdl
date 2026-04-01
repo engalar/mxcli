@@ -1,5 +1,6 @@
+-- @version: 11.0+
 -- ============================================================================
--- REST Client Examples - Consumed REST Service Showcase
+-- REST Client Examples - Consumed REST Service Showcase (requires Mendix 11.0+)
 -- ============================================================================
 --
 -- This file demonstrates REST client features supported by the Mendix REPL,

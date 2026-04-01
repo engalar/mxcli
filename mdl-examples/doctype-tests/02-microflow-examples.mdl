@@ -2575,8 +2575,9 @@ BEGIN
 END;
 /
 
+-- @version: 11.0+
 /**
- * Helper page for M090.
+ * Helper page for M090 — requires Mendix 11.0+ (page parameters).
  */
 CREATE PAGE MfTest.ProductDetail
 (
@@ -2619,6 +2620,7 @@ BEGIN
 END;
 /
 
+-- @version: any
 /**
  * M091: Annotations on VALIDATION FEEDBACK activity.
  */

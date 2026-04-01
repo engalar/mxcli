@@ -251,7 +251,8 @@ CREATE PAGE PgTest.P005_OrderEdit
   }
 }
 
--- MARK: DATA FORM
+-- @version: 11.0+
+-- MARK: DATA FORM — requires Mendix 11.0+ (page parameters)
 
 /**
  * Edit customer form
