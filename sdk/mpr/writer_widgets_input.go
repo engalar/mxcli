@@ -27,7 +27,7 @@ func serializeTextBox(tb *pages.TextBox) bson.D {
 		{Key: "IsPasswordBox", Value: tb.IsPassword},
 		{Key: "KeyboardType", Value: "Default"},
 		{Key: "LabelTemplate", Value: serializeLabelTemplate(tb.Label)},
-		{Key: "MaxLengthCode", Value: int32(-1)},
+		{Key: "MaxLengthCode", Value: int64(-1)},
 		{Key: "Name", Value: tb.Name},
 		{Key: "NativeAccessibilitySettings", Value: nil},
 		{Key: "OnChangeAction", Value: serializeClientAction(nil)},
@@ -39,8 +39,8 @@ func serializeTextBox(tb *pages.TextBox) bson.D {
 		{Key: "ScreenReaderLabel", Value: nil},
 		{Key: "SourceVariable", Value: nil},
 		{Key: "SubmitBehaviour", Value: "OnEndEditing"},
-		{Key: "SubmitOnInputDelay", Value: int32(300)},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "SubmitOnInputDelay", Value: int64(300)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Validation", Value: serializeWidgetValidation()},
 	}
 }
@@ -59,10 +59,10 @@ func serializeTextArea(ta *pages.TextArea) bson.D {
 		{Key: "CounterMessage", Value: serializeEmptyText()},
 		{Key: "Editable", Value: "Always"},
 		{Key: "LabelTemplate", Value: serializeLabelTemplate(ta.Label)},
-		{Key: "MaxLengthCode", Value: int32(-1)},
+		{Key: "MaxLengthCode", Value: int64(-1)},
 		{Key: "Name", Value: ta.Name},
 		{Key: "NativeAccessibilitySettings", Value: nil},
-		{Key: "NumberOfLines", Value: int32(5)},
+		{Key: "NumberOfLines", Value: int64(5)},
 		{Key: "OnChangeAction", Value: serializeClientAction(nil)},
 		{Key: "OnEnterAction", Value: serializeClientAction(nil)},
 		{Key: "OnLeaveAction", Value: serializeClientAction(nil)},
@@ -71,8 +71,8 @@ func serializeTextArea(ta *pages.TextArea) bson.D {
 		{Key: "ScreenReaderLabel", Value: nil},
 		{Key: "SourceVariable", Value: nil},
 		{Key: "SubmitBehaviour", Value: "OnEndEditing"},
-		{Key: "SubmitOnInputDelay", Value: int32(300)},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "SubmitOnInputDelay", Value: int64(300)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Validation", Value: serializeWidgetValidation()},
 	}
 }
@@ -99,7 +99,7 @@ func serializeDatePicker(dp *pages.DatePicker) bson.D {
 		{Key: "ReadOnlyStyle", Value: "Inherit"},
 		{Key: "ScreenReaderLabel", Value: nil},
 		{Key: "SourceVariable", Value: nil},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Validation", Value: serializeWidgetValidation()},
 	}
 }
@@ -122,7 +122,7 @@ func serializeCheckBox(cb *pages.CheckBox) bson.D {
 		{Key: "ReadOnlyStyle", Value: "Inherit"},
 		{Key: "ScreenReaderLabel", Value: nil},
 		{Key: "SourceVariable", Value: nil},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Validation", Value: serializeWidgetValidation()},
 	}
 }
@@ -147,7 +147,7 @@ func serializeRadioButtons(rb *pages.RadioButtons) bson.D {
 		{Key: "ReadOnlyStyle", Value: "Inherit"},
 		{Key: "ScreenReaderLabel", Value: nil},
 		{Key: "SourceVariable", Value: nil},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Validation", Value: serializeWidgetValidation()},
 	}
 }
@@ -177,7 +177,7 @@ func serializeDropDown(dd *pages.DropDown) bson.D {
 		{Key: "ReadOnlyStyle", Value: "Inherit"},
 		{Key: "ScreenReaderLabel", Value: nil},
 		{Key: "SourceVariable", Value: nil},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Validation", Value: serializeWidgetValidation()},
 	}
 }

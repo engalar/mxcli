@@ -373,7 +373,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 			{Key: "$Type", Value: "Microflows$CloseFormAction"},
 			{Key: "ErrorHandlingType", Value: "Rollback"},
-			{Key: "NumberOfPagesToClose", Value: int32(a.NumberOfPages)},
+			{Key: "NumberOfPagesToClose", Value: int64(a.NumberOfPages)},
 		}
 		return doc
 

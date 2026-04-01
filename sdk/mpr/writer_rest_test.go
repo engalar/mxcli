@@ -159,7 +159,7 @@ func TestSerializeRestOperationGetWithParams(t *testing.T) {
 	assertField(t, result, "Name", "GetPet")
 
 	// Timeout
-	if v, ok := result["Timeout"].(int32); !ok || v != 30 {
+	if v, ok := result["Timeout"].(int64); !ok || v != 30 {
 		t.Errorf("Timeout: expected 30, got %v", result["Timeout"])
 	}
 
