@@ -46,7 +46,9 @@ func serializeWidget(w pages.Widget) bson.D {
 	case *pages.Container:
 		doc = serializeContainer(widget)
 	case *pages.GroupBox:
-		doc = serializeGroupBox(widget)
+		return serializeGroupBox(widget)
+	case *pages.TabContainer:
+		return serializeTabContainer(widget)
 	case *pages.LayoutGrid:
 		doc = serializeLayoutGrid(widget)
 	case *pages.DynamicText:
@@ -352,7 +354,7 @@ func serializeAppearance(class, style string, designProps []pages.DesignProperty
 }
 
 // serializeDesignProperties serializes design property values to a BSON array.
-// Both empty and non-empty use version marker int32(3).
+// Both empty and non-empty use version marker int64(3).
 func serializeDesignProperties(props []pages.DesignPropertyValue) bson.A {
 	if len(props) == 0 {
 		return bson.A{int32(3)}

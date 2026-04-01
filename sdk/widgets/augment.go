@@ -87,7 +87,7 @@ func AugmentTemplate(tmpl *WidgetTemplate, def *mpk.WidgetDefinition) error {
 		}
 	}
 
-	// Nothing to do
+	// Nothing to add/remove
 	if len(missing) == 0 && len(stale) == 0 {
 		return nil
 	}
@@ -113,7 +113,9 @@ func AugmentTemplate(tmpl *WidgetTemplate, def *mpk.WidgetDefinition) error {
 		var newPropType, newProp map[string]any
 		if hasExemplar {
 			newPropType, newProp = clonePropertyPair(propTypes, objProps, exemplarIdx, p)
-		} else {
+		}
+		// Fall back to createPropertyPair if cloning failed (no exemplar or no matching property)
+		if newPropType == nil || newProp == nil {
 			newPropType, newProp = createPropertyPair(p, bsonType)
 		}
 
@@ -652,4 +654,103 @@ func deepCloneTemplate(tmpl *WidgetTemplate) *WidgetTemplate {
 	}
 
 	return clone
+}
+
+// collectNestedPropertyTypeIDs extracts PropertyKey→$ID mappings from a ValueType's ObjectType.
+func collectNestedPropertyTypeIDs(vt map[string]any) map[string]string {
+	result := make(map[string]string)
+	objType, ok := getMapField(vt, "ObjectType")
+	if !ok {
+		return result
+	}
+	propTypes, ok := getArrayField(objType, "PropertyTypes")
+	if !ok {
+		return result
+	}
+	for _, pt := range propTypes {
+		ptMap, ok := pt.(map[string]any)
+		if !ok {
+			continue
+		}
+		key, _ := ptMap["PropertyKey"].(string)
+		id, _ := ptMap["$ID"].(string)
+		if key != "" && id != "" {
+			result[key] = id
+		}
+	}
+	return result
+}
+
+// collectNestedPropertyTypeIDsByKey extracts PropertyKey→$ID from a rebuilt ObjectType map.
+func collectNestedPropertyTypeIDsByKey(objType map[string]any) map[string]string {
+	result := make(map[string]string)
+	propTypes, ok := getArrayField(objType, "PropertyTypes")
+	if !ok {
+		return result
+	}
+	for _, pt := range propTypes {
+		ptMap, ok := pt.(map[string]any)
+		if !ok {
+			continue
+		}
+		key, _ := ptMap["PropertyKey"].(string)
+		id, _ := ptMap["$ID"].(string)
+		if key != "" && id != "" {
+			result[key] = id
+		}
+	}
+	return result
+}
+
+// remapObjectTypePointers walks the Object Properties array and updates TypePointers
+// that reference old PropertyType IDs from a rebuilt ObjectType.
+func remapObjectTypePointers(objProps []any, idRemap map[string]string) {
+	if len(idRemap) == 0 {
+		return
+	}
+	for _, prop := range objProps {
+		propMap, ok := prop.(map[string]any)
+		if !ok {
+			continue
+		}
+		// Check Value.Objects for nested WidgetObjects with TypePointers
+		val, ok := getMapField(propMap, "Value")
+		if !ok {
+			continue
+		}
+		objects, ok := getArrayField(val, "Objects")
+		if !ok {
+			continue
+		}
+		for _, obj := range objects {
+			objMap, ok := obj.(map[string]any)
+			if !ok {
+				continue
+			}
+			// Remap the object's nested properties' TypePointers
+			nestedProps, ok := getArrayField(objMap, "Properties")
+			if !ok {
+				continue
+			}
+			for _, nestedProp := range nestedProps {
+				npMap, ok := nestedProp.(map[string]any)
+				if !ok {
+					continue
+				}
+				if tp, ok := npMap["TypePointer"].(string); ok {
+					if newTP, exists := idRemap[tp]; exists {
+						npMap["TypePointer"] = newTP
+					}
+				}
+				// Also remap Value.TypePointer (references ValueType $ID)
+				if nestedVal, ok := getMapField(npMap, "Value"); ok {
+					if tp, ok := nestedVal["TypePointer"].(string); ok {
+						if newTP, exists := idRemap[tp]; exists {
+							nestedVal["TypePointer"] = newTP
+						}
+					}
+				}
+			}
+		}
+	}
 }

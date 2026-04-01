@@ -3,6 +3,7 @@
 package mpr
 
 import (
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -56,6 +57,71 @@ func serializeGroupBox(gb *pages.GroupBox) bson.D {
 		{Key: "Name", Value: gb.Name},
 		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Widgets", Value: serializeWidgetArray(gb.Widgets)},
+	}
+	return doc
+}
+
+// serializeTabContainer serializes a TabContainer widget.
+func serializeTabContainer(tc *pages.TabContainer) bson.D {
+	tabPages := bson.A{int32(3)} // marker=3 for TabPages array
+	var defaultPageID []byte
+	for i, tp := range tc.TabPages {
+		tpDoc := serializeTabPage(tp)
+		tabPages = append(tabPages, tpDoc)
+		if i == 0 {
+			// Default to first tab
+			defaultPageID = idToBsonBinary(string(tp.ID)).Data
+		}
+	}
+	if tc.DefaultPageID != "" {
+		defaultPageID = idToBsonBinary(string(tc.DefaultPageID)).Data
+	}
+
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(tc.ID))},
+		{Key: "$Type", Value: "Forms$TabControl"},
+		{Key: "ActivePageAttributeRef", Value: nil},
+		{Key: "ActivePageOnChangeAction", Value: bson.D{
+			{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+			{Key: "$Type", Value: "Forms$NoAction"},
+			{Key: "DisabledDuringExecution", Value: true},
+		}},
+		{Key: "ActivePageSourceVariable", Value: nil},
+		{Key: "Appearance", Value: serializeAppearance(tc.Class, tc.Style, tc.DesignProperties)},
+		{Key: "ConditionalVisibilitySettings", Value: nil},
+		{Key: "DefaultPagePointer", Value: defaultPageID},
+		{Key: "Name", Value: tc.Name},
+		{Key: "TabIndex", Value: int64(0)},
+		{Key: "TabPages", Value: tabPages},
+	}
+	return doc
+}
+
+// serializeTabPage serializes a TabPage within a TabContainer.
+func serializeTabPage(tp *pages.TabPage) bson.D {
+	// Caption
+	var caption bson.D
+	if tp.Caption != nil {
+		caption = serializeText(tp.Caption)
+	} else {
+		caption = serializeText(&model.Text{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(GenerateID()),
+				TypeName: "Texts$Text",
+			},
+			Translations: map[string]string{"en_US": tp.Name},
+		})
+	}
+
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(tp.ID))},
+		{Key: "$Type", Value: "Forms$TabPage"},
+		{Key: "Badge", Value: nil},
+		{Key: "Caption", Value: caption},
+		{Key: "ConditionalVisibilitySettings", Value: nil},
+		{Key: "Name", Value: tp.Name},
+		{Key: "RefreshOnShow", Value: tp.RefreshOnShow},
+		{Key: "Widgets", Value: serializeWidgetArray(tp.Widgets)},
 	}
 	return doc
 }

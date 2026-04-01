@@ -1,0 +1,308 @@
+{
+  "widgetId": "com.mendix.widget.custom.switch.Switch",
+  "name": "Switch",
+  "version": "11.6.4",
+  "extractedFrom": "892d009e-9c56-4629-b179-b292824910a3",
+  "type": {
+    "$ID": "1ad0e353920b44328e14773dc2ba2902",
+    "$Type": "CustomWidgets$CustomWidgetType",
+    "HelpUrl": "https://docs.mendix.com/appstore/widgets/switch",
+    "ObjectType": {
+      "$ID": "b43c23fec9844c698d1cceb8ce3514a1",
+      "$Type": "CustomWidgets$WidgetObjectType",
+      "PropertyTypes": [
+        2,
+        {
+          "$ID": "cc448ca6125449d5b7b41227ec84a834",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "Boolean attribute",
+          "Category": "General::Data source",
+          "Description": "Attribute to toggle",
+          "IsDefault": false,
+          "PropertyKey": "booleanAttribute",
+          "ValueType": {
+            "$ID": "97b5a9fe1d6f433aa58abf7959144ecf",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1,
+              "Boolean"
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2
+            ],
+            "IsLinked": false,
+            "IsList": false,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": null,
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": true,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "Attribute"
+          }
+        },
+        {
+          "$ID": "bc997a0a629d419f83f0ddedac356560",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "On change",
+          "Category": "General::Actions",
+          "Description": "Action to be performed when the switch is toggled",
+          "IsDefault": false,
+          "PropertyKey": "action",
+          "ValueType": {
+            "$ID": "56f7e892e0f24491a818b0a2518bba57",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2
+            ],
+            "IsLinked": false,
+            "IsList": false,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": null,
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": false,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "Action"
+          }
+        },
+        {
+          "$ID": "49908883689b45afbcb365500ca581b1",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "<system:Label>",
+          "Category": "Common",
+          "Description": "",
+          "IsDefault": false,
+          "PropertyKey": "Label",
+          "ValueType": {
+            "$ID": "d4d7da4cbe234755b0aeb94e4fdb2598",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2
+            ],
+            "IsLinked": false,
+            "IsList": false,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": null,
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": false,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "System"
+          }
+        },
+        {
+          "$ID": "f5af59bc6654412490540436834ee5a7",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "<system:Editability>",
+          "Category": "Common",
+          "Description": "",
+          "IsDefault": false,
+          "PropertyKey": "Editability",
+          "ValueType": {
+            "$ID": "174b6a1359d74191bf18283b8bbbdd3b",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2
+            ],
+            "IsLinked": false,
+            "IsList": false,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": null,
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": false,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "System"
+          }
+        }
+      ]
+    },
+    "OfflineCapable": true,
+    "StudioCategory": "Input Elements",
+    "StudioProCategory": "Input elements",
+    "SupportedPlatform": "Web",
+    "WidgetDescription": "Toggle a boolean attribute",
+    "WidgetId": "com.mendix.widget.custom.switch.Switch",
+    "WidgetName": "Switch",
+    "WidgetNeedsEntityContext": true,
+    "WidgetPluginWidget": true
+  },
+  "object": {
+    "$ID": "7c8f3e942f524df3b92c9c5106ff4947",
+    "$Type": "CustomWidgets$WidgetObject",
+    "Properties": [
+      2,
+      {
+        "$ID": "a37265a280ac45539444e119435b7ee6",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "cc448ca6125449d5b7b41227ec84a834",
+        "Value": {
+          "$ID": "ea8893e5418547e7b808ced978aeab43",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "ea87264a78f94cb4978ca8362b5a3ba6",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "97b5a9fe1d6f433aa58abf7959144ecf",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      },
+      {
+        "$ID": "c4b6129b5bd34338829eb1b42ddccedd",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "bc997a0a629d419f83f0ddedac356560",
+        "Value": {
+          "$ID": "c139ce93489b420186af33fa82404f61",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "ab19832e6cb249eebb62ebc36e4aa338",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "56f7e892e0f24491a818b0a2518bba57",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      }
+    ],
+    "TypePointer": "b43c23fec9844c698d1cceb8ce3514a1"
+  }
+}

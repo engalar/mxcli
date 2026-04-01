@@ -168,6 +168,7 @@ type PropertyTypeIDEntry struct {
 	ValueTypeID    string
 	DefaultValue   string // Default value from the template's ValueType
 	ValueType      string // Type of value (Boolean, Integer, String, DataSource, etc.)
+	Required       bool   // Whether this property is required
 	// For object list properties (IsList=true with ObjectType), these hold nested IDs
 	ObjectTypeID      string                         // ID of the nested ObjectType (for object lists like columns)
 	NestedPropertyIDs map[string]PropertyTypeIDEntry // Property IDs within the nested ObjectType

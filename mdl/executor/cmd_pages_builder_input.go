@@ -4,6 +4,7 @@ package executor
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
@@ -97,10 +98,12 @@ func updateWidgetPropertyValue(obj bson.D, propTypeIDs map[string]pages.Property
 // updatePropertyInArray finds a property by TypePointer and updates its value.
 func updatePropertyInArray(arr bson.A, propertyTypeID string, updateFn func(bson.D) bson.D) bson.A {
 	result := make(bson.A, len(arr))
+	matched := false
 	for i, item := range arr {
 		if prop, ok := item.(bson.D); ok {
 			if matchesTypePointer(prop, propertyTypeID) {
 				result[i] = updatePropertyValue(prop, updateFn)
+				matched = true
 			} else {
 				result[i] = item
 			}
@@ -108,21 +111,32 @@ func updatePropertyInArray(arr bson.A, propertyTypeID string, updateFn func(bson
 			result[i] = item
 		}
 	}
+	if !matched {
+		log.Printf("WARNING: updatePropertyInArray: no match for TypePointer %s in %d properties", propertyTypeID, len(arr)-1)
+	}
 	return result
 }
 
 // matchesTypePointer checks if a WidgetProperty has the given TypePointer.
 func matchesTypePointer(prop bson.D, propertyTypeID string) bool {
+	// Normalize: strip dashes for comparison (BlobToUUID returns dashed format,
+	// but propertyTypeIDs from template loader use undashed 32-char hex).
+	normalizedTarget := strings.ReplaceAll(propertyTypeID, "-", "")
 	for _, elem := range prop {
 		if elem.Key == "TypePointer" {
 			// Handle both primitive.Binary (from MPR) and []byte (from JSON templates)
 			switch v := elem.Value.(type) {
 			case primitive.Binary:
-				propID := mpr.BlobToUUID(v.Data)
-				return propID == propertyTypeID
+				propID := strings.ReplaceAll(mpr.BlobToUUID(v.Data), "-", "")
+				return propID == normalizedTarget
 			case []byte:
-				propID := mpr.BlobToUUID(v)
-				return propID == propertyTypeID
+				propID := strings.ReplaceAll(mpr.BlobToUUID(v), "-", "")
+				if propID == normalizedTarget {
+					return true
+				}
+				// Also try raw hex encoding (no GUID swap) for templates
+				rawHex := fmt.Sprintf("%x", v)
+				return rawHex == normalizedTarget
 			}
 		}
 	}
@@ -233,6 +247,7 @@ func convertPropertyTypeIDs(src map[string]widgets.PropertyTypeIDEntry) map[stri
 			ValueTypeID:    v.ValueTypeID,
 			DefaultValue:   v.DefaultValue,
 			ValueType:      v.ValueType,
+			Required:       v.Required,
 			ObjectTypeID:   v.ObjectTypeID,
 		}
 		// Convert nested property IDs if present

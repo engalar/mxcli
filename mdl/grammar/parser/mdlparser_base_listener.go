@@ -1,4 +1,4 @@
-// Code generated from MDLParser.g4 by ANTLR 4.13.2. DO NOT EDIT.
+// Code generated from mdl/grammar/MDLParser.g4 by ANTLR 4.13.2. DO NOT EDIT.
 
 package parser // MDLParser
 import "github.com/antlr4-go/antlr/v4"
@@ -2067,12 +2067,6 @@ func (s *BaseMDLParserListener) EnterSqlConnect(ctx *SqlConnectContext) {}
 
 // ExitSqlConnect is called when production sqlConnect is exited.
 func (s *BaseMDLParserListener) ExitSqlConnect(ctx *SqlConnectContext) {}
-
-// EnterSqlConnectAlias is called when production sqlConnectAlias is entered.
-func (s *BaseMDLParserListener) EnterSqlConnectAlias(ctx *SqlConnectAliasContext) {}
-
-// ExitSqlConnectAlias is called when production sqlConnectAlias is exited.
-func (s *BaseMDLParserListener) ExitSqlConnectAlias(ctx *SqlConnectAliasContext) {}
 
 // EnterSqlDisconnect is called when production sqlDisconnect is entered.
 func (s *BaseMDLParserListener) EnterSqlDisconnect(ctx *SqlDisconnectContext) {}
