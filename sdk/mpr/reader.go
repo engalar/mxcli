@@ -178,6 +178,24 @@ func (r *Reader) ContentsDir() string {
 	return r.contentsDir
 }
 
+// ListAllUnitIDs returns all unit UUIDs from the Unit table.
+func (r *Reader) ListAllUnitIDs() ([]string, error) {
+	rows, err := r.db.Query("SELECT UnitID FROM Unit")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var unitID []byte
+		if err := rows.Scan(&unitID); err != nil {
+			continue
+		}
+		ids = append(ids, BlobToUUID(unitID))
+	}
+	return ids, nil
+}
+
 // ProjectVersion returns the Mendix project version information.
 func (r *Reader) ProjectVersion() *version.ProjectVersion {
 	return r.projectVersion

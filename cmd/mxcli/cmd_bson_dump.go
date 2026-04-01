@@ -44,6 +44,9 @@ Examples:
 
   # Save dump to file
   mxcli bson dump -p app.mpr --type page --object "PgTest.MyPage" > mypage.json
+
+  # Extract raw BSON baseline for roundtrip testing
+  mxcli bson dump -p app.mpr --type page --object "PgTest.MyPage" --format bson > mypage.mxunit
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath, _ := cmd.Flags().GetString("project")
@@ -134,6 +137,12 @@ Examples:
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
+			}
+
+			if format == "bson" {
+				// Write raw BSON bytes to stdout (for baseline extraction)
+				os.Stdout.Write(obj.Contents)
+				return
 			}
 
 			if format == "ndsl" {
@@ -342,5 +351,5 @@ func init() {
 	bsonDumpCmd.Flags().StringP("object", "o", "", "Object qualified name to dump (e.g., Module.PageName)")
 	bsonDumpCmd.Flags().BoolP("list", "l", false, "List all objects of the specified type")
 	bsonDumpCmd.Flags().StringSliceP("compare", "c", nil, "Compare two objects: --compare Obj1,Obj2")
-	bsonDumpCmd.Flags().String("format", "json", "Output format: json, ndsl")
+	bsonDumpCmd.Flags().String("format", "json", "Output format: json, ndsl, bson (raw bytes)")
 }

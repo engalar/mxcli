@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
+	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/spf13/cobra"
 )
 
@@ -47,6 +48,18 @@ Examples:
 			return
 		}
 
+		checkUnits, _ := cmd.Flags().GetBool("check-units")
+		fix, _ := cmd.Flags().GetBool("fix")
+		if checkUnits {
+			projectPath, _ := cmd.Flags().GetString("project")
+			if projectPath == "" {
+				fmt.Fprintln(os.Stderr, "Error: --check-units requires -p <project.mpr>")
+				os.Exit(1)
+			}
+			runCheckUnits(projectPath, fix)
+			return
+		}
+
 		if tail > 0 {
 			runDiagTail(logDir, tail)
 			return
@@ -60,6 +73,8 @@ func init() {
 	diagCmd.Flags().Bool("log-path", false, "Print log directory path")
 	diagCmd.Flags().Bool("bundle", false, "Create tar.gz with logs for bug reports")
 	diagCmd.Flags().Int("tail", 0, "Show last N log entries")
+	diagCmd.Flags().Bool("check-units", false, "Check for orphan units and stale mxunit files (MPR v2)")
+	diagCmd.Flags().Bool("fix", false, "Auto-fix issues found by --check-units")
 }
 
 // runDiagInfo shows diagnostic summary.
@@ -251,4 +266,80 @@ func formatBytes(b int64) string {
 		return fmt.Sprintf("%d B", b)
 	}
 	return fmt.Sprintf("%d KB", b/1024)
+}
+
+// runCheckUnits checks for orphan units (Unit table entry without mxunit file)
+// and stale mxunit files (file exists but no Unit table entry). MPR v2 only.
+func runCheckUnits(mprPath string, fix bool) {
+	reader, err := mpr.Open(mprPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+	defer reader.Close()
+
+	contentsDir := reader.ContentsDir()
+	if contentsDir == "" {
+		fmt.Println("Not an MPR v2 project (no mprcontents directory)")
+		return
+	}
+
+	// Build set of unit UUIDs from database
+	unitIDs, err := reader.ListAllUnitIDs()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error listing units: %v\n", err)
+		os.Exit(1)
+	}
+	unitSet := make(map[string]bool, len(unitIDs))
+	for _, id := range unitIDs {
+		unitSet[id] = true
+	}
+
+	// Scan mxunit files
+	files, err := filepath.Glob(filepath.Join(contentsDir, "*", "*", "*.mxunit"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error scanning mxunit files: %v\n", err)
+		os.Exit(1)
+	}
+	fileSet := make(map[string]string, len(files)) // uuid → filepath
+	for _, f := range files {
+		uuid := strings.TrimSuffix(filepath.Base(f), ".mxunit")
+		fileSet[uuid] = f
+	}
+
+	// Check for orphan units (in DB but no file)
+	orphans := 0
+	for _, id := range unitIDs {
+		if _, ok := fileSet[id]; !ok {
+			fmt.Printf("ORPHAN UNIT: %s (in Unit table but no mxunit file)\n", id)
+			orphans++
+		}
+	}
+
+	// Check for stale files (file exists but not in DB)
+	stale := 0
+	for uuid, fpath := range fileSet {
+		if !unitSet[uuid] {
+			fmt.Printf("STALE FILE:  %s\n", uuid)
+			stale++
+			if fix {
+				if err := os.Remove(fpath); err != nil {
+					fmt.Fprintf(os.Stderr, "  ERROR removing: %v\n", err)
+				} else {
+					fmt.Printf("  REMOVED:   %s\n", fpath)
+					// Clean empty parent dirs
+					dir2 := filepath.Dir(fpath)
+					os.Remove(dir2)
+					dir1 := filepath.Dir(dir2)
+					os.Remove(dir1)
+				}
+			}
+		}
+	}
+
+	fmt.Printf("\nSummary: %d units in DB, %d mxunit files, %d orphans, %d stale\n",
+		len(unitIDs), len(files), orphans, stale)
+	if stale > 0 && !fix {
+		fmt.Println("Run with --fix to auto-remove stale files")
+	}
 }

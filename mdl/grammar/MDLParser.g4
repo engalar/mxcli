@@ -201,7 +201,8 @@ alterLayoutMapping
     ;
 
 alterPageAssignment
-    : identifierOrKeyword EQUALS propertyValueV3       // Caption = 'Save'
+    : DATASOURCE EQUALS dataSourceExprV3               // DataSource = SELECTION widgetName
+    | identifierOrKeyword EQUALS propertyValueV3       // Caption = 'Save'
     | STRING_LITERAL EQUALS propertyValueV3             // 'showLabel' = false
     ;
 
@@ -554,6 +555,7 @@ attributeName
     : IDENTIFIER
     | QUOTED_IDENTIFIER                     // Escape any reserved word ("Range", `Order`)
     | commonNameKeyword
+    | ATTRIBUTE                             // Allow 'Attribute' as attribute name
     ;
 
 attributeConstraint
@@ -596,7 +598,7 @@ attributeConstraint
  * ```
  */
 dataType
-    : STRING_TYPE (LPAREN NUMBER_LITERAL RPAREN)?
+    : STRING_TYPE (LPAREN (NUMBER_LITERAL | IDENTIFIER) RPAREN)?
     | INTEGER_TYPE
     | LONG_TYPE
     | DECIMAL_TYPE
@@ -624,7 +626,7 @@ templateContext
 
 // Non-list data type - used for createObjectStatement to avoid matching "CREATE LIST OF"
 nonListDataType
-    : STRING_TYPE (LPAREN NUMBER_LITERAL RPAREN)?
+    : STRING_TYPE (LPAREN (NUMBER_LITERAL | IDENTIFIER) RPAREN)?
     | INTEGER_TYPE
     | LONG_TYPE
     | DECIMAL_TYPE
@@ -665,6 +667,10 @@ createAssociationStatement
       FROM qualifiedName
       TO qualifiedName
       associationOptions?
+    | ASSOCIATION qualifiedName LPAREN
+      FROM qualifiedName TO qualifiedName
+      (COMMA associationOption)*
+      RPAREN
     ;
 
 associationOptions
@@ -672,9 +678,9 @@ associationOptions
     ;
 
 associationOption
-    : TYPE (REFERENCE | REFERENCE_SET)
-    | OWNER (DEFAULT | BOTH)
-    | STORAGE (COLUMN | TABLE)
+    : TYPE COLON? (REFERENCE | REFERENCE_SET)
+    | OWNER COLON? (DEFAULT | BOTH)
+    | STORAGE COLON? (COLUMN | TABLE)
     | DELETE_BEHAVIOR deleteBehavior
     | COMMENT STRING_LITERAL
     ;
@@ -771,6 +777,7 @@ enumValueName
     | SERVICE | SERVICES                                     // OData/auth keywords used as enum values
     | GUEST | SESSION | BASIC | CLIENT | CLIENTS
     | PUBLISH | EXPOSE | EXTERNAL | PAGING | HEADERS
+    | DISPLAY | STRUCTURE                                    // Layout/structure keywords used as enum values
     ;
 
 enumerationOptions
@@ -1780,6 +1787,8 @@ useFragmentRef
 // V3 Widget: WIDGET name (Props) { children }
 widgetV3
     : widgetTypeV3 IDENTIFIER widgetPropertiesV3? widgetBodyV3?
+    | PLUGGABLEWIDGET STRING_LITERAL IDENTIFIER widgetPropertiesV3? widgetBodyV3?  // PLUGGABLEWIDGET 'widget.id' name
+    | CUSTOMWIDGET STRING_LITERAL IDENTIFIER widgetPropertiesV3? widgetBodyV3?     // CUSTOMWIDGET 'widget.id' name (legacy)
     ;
 
 // V3 Widget types (same as V2)
@@ -1822,6 +1831,8 @@ widgetTypeV3
     | STATICIMAGE
     | DYNAMICIMAGE
     | CUSTOMCONTAINER
+    | TABCONTAINER
+    | TABPAGE
     | GROUPBOX
     ;
 
@@ -1862,6 +1873,7 @@ widgetPropertyV3
     | EDITABLE COLON propertyValueV3                  // Editable: Never | Always
     | TOOLTIP COLON propertyValueV3                   // Tooltip: 'text'
     | IDENTIFIER COLON propertyValueV3                // Generic: any other property
+    | keyword COLON propertyValueV3                  // Generic: keyword as property name (for pluggable widgets)
     ;
 
 // Filter type values - handle keywords like CONTAINS that are also filter types
@@ -2573,7 +2585,7 @@ widgetTypeKeyword
     | COMBOBOX | DYNAMICTEXT | ACTIONBUTTON | LINKBUTTON | DATAVIEW
     | LISTVIEW | DATAGRID | GALLERY | LAYOUTGRID | IMAGE | STATICIMAGE
     | DYNAMICIMAGE | HEADER | FOOTER | SNIPPETCALL | NAVIGATIONLIST
-    | CUSTOMCONTAINER | DROPDOWN | REFERENCESELECTOR | GROUPBOX
+    | CUSTOMCONTAINER | TABCONTAINER | TABPAGE | DROPDOWN | REFERENCESELECTOR | GROUPBOX
     | IDENTIFIER
     ;
 
@@ -3228,7 +3240,7 @@ keyword
     | ACTIONBUTTON | CHECKBOX | COMBOBOX | CONTROLBAR | DATAGRID | DATAVIEW  // Widget keywords
     | DATEPICKER | DYNAMICTEXT | GALLERY | LAYOUTGRID | LINKBUTTON | LISTVIEW
     | NAVIGATIONLIST | RADIOBUTTONS | SEARCHBAR | SNIPPETCALL | TEXTAREA | TEXTBOX
-    | IMAGE | STATICIMAGE | DYNAMICIMAGE | CUSTOMCONTAINER | GROUPBOX
+    | IMAGE | STATICIMAGE | DYNAMICIMAGE | CUSTOMCONTAINER | TABCONTAINER | TABPAGE | GROUPBOX
     | HEADER | FOOTER | IMAGEINPUT
     | VERSION | TIMEOUT | PATH | PUBLISH | PUBLISHED | EXPOSE | NAMESPACE_KW | SOURCE_KW | CONTRACT | CHANNELS | MESSAGES  // OData/AsyncAPI keywords
     | SESSION | GUEST | BASIC | AUTHENTICATION | ODATA | SERVICE | CLIENT | CLIENTS | SERVICES
