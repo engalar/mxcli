@@ -68,7 +68,7 @@ func serializeLayoutGrid(lg *pages.LayoutGrid) bson.D {
 	hasRows := false
 	for _, row := range lg.Rows {
 		if !hasRows {
-			rows = bson.A{int64(2)} // First item: change to version 2
+			rows = bson.A{int32(2)} // First item: change to version 2
 			hasRows = true
 		}
 		rows = append(rows, serializeLayoutGridRow(row))
@@ -95,7 +95,7 @@ func serializeLayoutGridRow(row *pages.LayoutGridRow) bson.D {
 	hasCols := false
 	for _, col := range row.Columns {
 		if !hasCols {
-			cols = bson.A{int64(2)} // First item: change to version 2
+			cols = bson.A{int32(2)} // First item: change to version 2
 			hasCols = true
 		}
 		cols = append(cols, serializeLayoutGridColumn(col))

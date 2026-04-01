@@ -32,7 +32,7 @@ func (w *Writer) DeleteImageCollection(id string) error {
 }
 
 func serializeImageCollection(ic *ImageCollection) ([]byte, error) {
-	// Images array always starts with the array marker int64(3)
+	// Images array always starts with the array marker int32(3)
 	images := bson.A{int32(3)}
 	for i := range ic.Images {
 		img := &ic.Images[i]

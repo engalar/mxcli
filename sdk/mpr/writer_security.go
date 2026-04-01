@@ -87,7 +87,7 @@ func getBsonArray(doc bson.D, key string) bson.A {
 	return nil
 }
 
-// makeMendixArray builds a Mendix-style array: int64(1) marker followed by items.
+// makeMendixArray builds a Mendix-style array: int32(1) marker followed by items.
 func makeMendixArray(items ...any) bson.A {
 	arr := bson.A{int32(1)}
 	arr = append(arr, items...)

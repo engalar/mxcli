@@ -155,7 +155,7 @@ func serializeSequenceFlow(flow *microflows.SequenceFlow) bson.D {
 		switch cv := flow.CaseValue.(type) {
 		case microflows.EnumerationCase:
 			caseValues = bson.A{
-				int64(2),
+				int32(2),
 				bson.D{
 					{Key: "$ID", Value: idToBsonBinary(string(cv.ID))},
 					{Key: "$Type", Value: "Microflows$EnumerationCase"},
@@ -164,7 +164,7 @@ func serializeSequenceFlow(flow *microflows.SequenceFlow) bson.D {
 			}
 		case *microflows.EnumerationCase:
 			caseValues = bson.A{
-				int64(2),
+				int32(2),
 				bson.D{
 					{Key: "$ID", Value: idToBsonBinary(string(cv.ID))},
 					{Key: "$Type", Value: "Microflows$EnumerationCase"},
@@ -611,7 +611,7 @@ func serializeTextTemplate(text *model.Text, params []string) bson.D {
 	}
 	if len(text.Translations) > 0 {
 		var transArray bson.A
-		transArray = append(transArray, int64(3)) // items marker (3 = has items)
+		transArray = append(transArray, int32(3)) // items marker (3 = has items)
 		for lang, value := range text.Translations {
 			transArray = append(transArray, bson.D{
 				{Key: "$ID", Value: idToBsonBinary(generateUUID())},

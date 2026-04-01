@@ -24,7 +24,7 @@ func serializeWidgetArray(widgets []pages.Widget) bson.A {
 	for _, w := range widgets {
 		if w != nil {
 			if !hasItems {
-				arr = bson.A{int64(2)} // First item: change to version 2
+				arr = bson.A{int32(2)} // First item: change to version 2
 				hasItems = true
 			}
 			arr = append(arr, serializeWidget(w))
@@ -237,7 +237,7 @@ func SerializeCustomWidgetDataSource(ds pages.DataSource) bson.D {
 		}
 
 		// Build SortItems array from Sorting field
-		sortItems := bson.A{int64(2)} // Version marker for non-empty array
+		sortItems := bson.A{int32(2)} // Version marker for non-empty array
 		for _, sort := range d.Sorting {
 			sortItem := bson.D{
 				{Key: "$ID", Value: idToBsonBinary(generateUUID())},
@@ -526,7 +526,7 @@ func serializeClientTemplate(ct *pages.ClientTemplate, fallbackText *model.Text,
 	// Build parameters array - use [3] for empty, [2, items...] for non-empty
 	params := bson.A{int32(3)} // Empty array with version marker 3
 	if ct != nil && len(ct.Parameters) > 0 {
-		params = bson.A{int64(2)} // Non-empty array uses version marker 2
+		params = bson.A{int32(2)} // Non-empty array uses version marker 2
 		for _, param := range ct.Parameters {
 			params = append(params, serializeClientTemplateParameter(param))
 		}
