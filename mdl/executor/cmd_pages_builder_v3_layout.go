@@ -221,7 +221,7 @@ func (pb *pageBuilder) buildTabContainerV3(w *ast.WidgetV3) (*pages.TabContainer
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(mpr.GenerateID()),
-				TypeName: "Forms$TabContainer",
+				TypeName: "Forms$TabControl",
 			},
 			Name: w.Name,
 		},

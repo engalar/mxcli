@@ -531,6 +531,10 @@ type rawWidget struct {
 	EditableIf string // Expression from ConditionalEditabilitySettings
 	// Design properties from Appearance
 	DesignProperties []rawDesignProp
+	// Explicit widget properties (for generic PLUGGABLEWIDGET output)
+	ExplicitProperties []rawExplicitProp
+	// Full widget ID (e.g. "com.mendix.widget.custom.switch.Switch")
+	WidgetID string
 	// Pluggable Image widget properties
 	ImageUrl        string // Image URL (from textTemplate)
 	AlternativeText string // Alt text (from textTemplate)
@@ -542,6 +546,13 @@ type rawWidget struct {
 	Responsive      string // "true", "false"
 	ImageType       string // "image", "imageUrl", "icon"
 	OnClickType     string // "action", "enlarge"
+}
+
+// rawExplicitProp represents a non-default property extracted from a CustomWidget.
+type rawExplicitProp struct {
+	Key   string
+	Value string // attribute short name or primitive value
+	IsRef bool   // true if this is an attribute reference, false for primitive
 }
 
 // rawDesignProp represents a parsed design property from BSON.

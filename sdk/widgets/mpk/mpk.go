@@ -35,6 +35,7 @@ type WidgetDefinition struct {
 	ID          string        // e.g. "com.mendix.widget.web.combobox.Combobox"
 	Name        string        // e.g. "Combo box"
 	Version     string        // from package.xml clientModule version
+	IsPluggable bool          // true if pluginWidget="true" (React), false for legacy Dojo
 	Properties  []PropertyDef // regular <property> elements
 	SystemProps []PropertyDef // <systemProperty> elements
 }
@@ -190,9 +191,10 @@ func ParseMPK(mpkPath string) (*WidgetDefinition, error) {
 			}
 
 			def := &WidgetDefinition{
-				ID:      widget.ID,
-				Name:    widget.Name,
-				Version: version,
+				ID:          widget.ID,
+				Name:        widget.Name,
+				Version:     version,
+				IsPluggable: widget.PluginWidget == "true",
 			}
 
 			// Walk property groups to collect properties

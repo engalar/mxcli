@@ -1,0 +1,1349 @@
+{
+  "widgetId": "com.mendix.widget.web.popupmenu.PopupMenu",
+  "name": "Pop-up menu",
+  "version": "11.6.4",
+  "extractedFrom": "27da14a9-0df5-498a-9f15-b4624717e35c",
+  "type": {
+    "$ID": "0cac2abf934d48fa8eb4ae0f94c9b7cb",
+    "$Type": "CustomWidgets$CustomWidgetType",
+    "HelpUrl": "https://docs.mendix.com/appstore/widgets/popup-menu",
+    "ObjectType": {
+      "$ID": "cf31d21ff453452cb5631effe3a9c05f",
+      "$Type": "CustomWidgets$WidgetObjectType",
+      "PropertyTypes": [
+        2,
+        {
+          "$ID": "41a6ba65dae14ca092478d58a89b1158",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "Enable advanced options",
+          "Category": "General::General",
+          "Description": "",
+          "IsDefault": false,
+          "PropertyKey": "advancedMode",
+          "ValueType": {
+            "$ID": "9b72a47cf16e4506b534639c3a51f41a",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "false",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2
+            ],
+            "IsLinked": false,
+            "IsList": false,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": null,
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": true,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "Boolean"
+          }
+        },
+        {
+          "$ID": "5126887f54bb4b6685de3c7330cae40f",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "The area to open or close the menu.",
+          "Category": "General::General",
+          "Description": "Responsible for toggling the Pop-up menu.",
+          "IsDefault": false,
+          "PropertyKey": "menuTrigger",
+          "ValueType": {
+            "$ID": "876dc39bc17448bb871802c41d8659e0",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2
+            ],
+            "IsLinked": false,
+            "IsList": false,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": null,
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": true,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "Widgets"
+          }
+        },
+        {
+          "$ID": "a6bc7768d1884abdb25dbd24949c8240",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "Menu items",
+          "Category": "General::General",
+          "Description": "The popup menu items.",
+          "IsDefault": false,
+          "PropertyKey": "basicItems",
+          "ValueType": {
+            "$ID": "27728cd05caf48ad9d799686c6d57caf",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2
+            ],
+            "IsLinked": false,
+            "IsList": true,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": {
+              "$ID": "767fbdbf9841452fa3e8826b885d6707",
+              "$Type": "CustomWidgets$WidgetObjectType",
+              "PropertyTypes": [
+                2,
+                {
+                  "$ID": "7d3bf7cf5e3a4a3ca1211e9bd9394e68",
+                  "$Type": "CustomWidgets$WidgetPropertyType",
+                  "Caption": "Item type",
+                  "Category": "General",
+                  "Description": "",
+                  "IsDefault": false,
+                  "PropertyKey": "itemType",
+                  "ValueType": {
+                    "$ID": "33faa1b3567c4bf98b9bb6b86fa2ecd8",
+                    "$Type": "CustomWidgets$WidgetValueType",
+                    "ActionVariables": [
+                      2
+                    ],
+                    "AllowedTypes": [
+                      1
+                    ],
+                    "AllowNonPersistableEntities": false,
+                    "AssociationTypes": [
+                      1
+                    ],
+                    "DataSourceProperty": "",
+                    "DefaultType": "None",
+                    "DefaultValue": "item",
+                    "EntityProperty": "",
+                    "EnumerationValues": [
+                      2,
+                      {
+                        "$ID": "103561643aee4cfc8362100c06bdda09",
+                        "$Type": "CustomWidgets$WidgetEnumerationValue",
+                        "_Key": "item",
+                        "Caption": "Button"
+                      },
+                      {
+                        "$ID": "ffcefd8d46b04374859321f9e1060d61",
+                        "$Type": "CustomWidgets$WidgetEnumerationValue",
+                        "_Key": "divider",
+                        "Caption": "Divider"
+                      }
+                    ],
+                    "IsLinked": false,
+                    "IsList": false,
+                    "IsMetaData": false,
+                    "IsPath": "No",
+                    "Multiline": false,
+                    "ObjectType": null,
+                    "OnChangeProperty": "",
+                    "ParameterIsList": false,
+                    "PathType": "None",
+                    "Required": true,
+                    "ReturnType": null,
+                    "SelectableObjectsProperty": "",
+                    "SelectionTypes": [
+                      1
+                    ],
+                    "SetLabel": false,
+                    "Translations": [
+                      2
+                    ],
+                    "Type": "Enumeration"
+                  }
+                },
+                {
+                  "$ID": "4be4169aed47488d894950ecbf1859a7",
+                  "$Type": "CustomWidgets$WidgetPropertyType",
+                  "Caption": "Caption",
+                  "Category": "General",
+                  "Description": "",
+                  "IsDefault": false,
+                  "PropertyKey": "caption",
+                  "ValueType": {
+                    "$ID": "d669f115aa364c5cb56200d238e3fc3d",
+                    "$Type": "CustomWidgets$WidgetValueType",
+                    "ActionVariables": [
+                      2
+                    ],
+                    "AllowedTypes": [
+                      1
+                    ],
+                    "AllowNonPersistableEntities": false,
+                    "AssociationTypes": [
+                      1
+                    ],
+                    "DataSourceProperty": "",
+                    "DefaultType": "None",
+                    "DefaultValue": "",
+                    "EntityProperty": "",
+                    "EnumerationValues": [
+                      2
+                    ],
+                    "IsLinked": false,
+                    "IsList": false,
+                    "IsMetaData": false,
+                    "IsPath": "No",
+                    "Multiline": false,
+                    "ObjectType": null,
+                    "OnChangeProperty": "",
+                    "ParameterIsList": false,
+                    "PathType": "None",
+                    "Required": false,
+                    "ReturnType": null,
+                    "SelectableObjectsProperty": "",
+                    "SelectionTypes": [
+                      1
+                    ],
+                    "SetLabel": false,
+                    "Translations": [
+                      2
+                    ],
+                    "Type": "TextTemplate"
+                  }
+                },
+                {
+                  "$ID": "26530ca70c4d45bfba0636d969cda398",
+                  "$Type": "CustomWidgets$WidgetPropertyType",
+                  "Caption": "Visible",
+                  "Category": "General",
+                  "Description": "",
+                  "IsDefault": false,
+                  "PropertyKey": "visible",
+                  "ValueType": {
+                    "$ID": "f79ac389d124439490f06bed685e635f",
+                    "$Type": "CustomWidgets$WidgetValueType",
+                    "ActionVariables": [
+                      2
+                    ],
+                    "AllowedTypes": [
+                      1
+                    ],
+                    "AllowNonPersistableEntities": false,
+                    "AssociationTypes": [
+                      1
+                    ],
+                    "DataSourceProperty": "",
+                    "DefaultType": "None",
+                    "DefaultValue": "true",
+                    "EntityProperty": "",
+                    "EnumerationValues": [
+                      2
+                    ],
+                    "IsLinked": false,
+                    "IsList": false,
+                    "IsMetaData": false,
+                    "IsPath": "No",
+                    "Multiline": false,
+                    "ObjectType": null,
+                    "OnChangeProperty": "",
+                    "ParameterIsList": false,
+                    "PathType": "None",
+                    "Required": false,
+                    "ReturnType": {
+                      "$ID": "5ffc1f747eef43ecb931acdd7a3641df",
+                      "$Type": "CustomWidgets$WidgetReturnType",
+                      "AssignableTo": "",
+                      "EntityProperty": "",
+                      "IsList": false,
+                      "Type": "Boolean"
+                    },
+                    "SelectableObjectsProperty": "",
+                    "SelectionTypes": [
+                      1
+                    ],
+                    "SetLabel": false,
+                    "Translations": [
+                      2
+                    ],
+                    "Type": "Expression"
+                  }
+                },
+                {
+                  "$ID": "6ecb53922a8444c1ba9286cf5c893cf0",
+                  "$Type": "CustomWidgets$WidgetPropertyType",
+                  "Caption": "On click action",
+                  "Category": "General",
+                  "Description": "",
+                  "IsDefault": false,
+                  "PropertyKey": "action",
+                  "ValueType": {
+                    "$ID": "2ce7a9d2b8c24b39a846abbe16422ea8",
+                    "$Type": "CustomWidgets$WidgetValueType",
+                    "ActionVariables": [
+                      2
+                    ],
+                    "AllowedTypes": [
+                      1
+                    ],
+                    "AllowNonPersistableEntities": false,
+                    "AssociationTypes": [
+                      1
+                    ],
+                    "DataSourceProperty": "",
+                    "DefaultType": "None",
+                    "DefaultValue": "",
+                    "EntityProperty": "",
+                    "EnumerationValues": [
+                      2
+                    ],
+                    "IsLinked": false,
+                    "IsList": false,
+                    "IsMetaData": false,
+                    "IsPath": "No",
+                    "Multiline": false,
+                    "ObjectType": null,
+                    "OnChangeProperty": "",
+                    "ParameterIsList": false,
+                    "PathType": "None",
+                    "Required": false,
+                    "ReturnType": null,
+                    "SelectableObjectsProperty": "",
+                    "SelectionTypes": [
+                      1
+                    ],
+                    "SetLabel": false,
+                    "Translations": [
+                      2
+                    ],
+                    "Type": "Action"
+                  }
+                },
+                {
+                  "$ID": "db099962d64048adb51645b24b5261d6",
+                  "$Type": "CustomWidgets$WidgetPropertyType",
+                  "Caption": "Style",
+                  "Category": "General",
+                  "Description": "An extra class will be added: \"popupmenu-basic-item-[style]\"",
+                  "IsDefault": false,
+                  "PropertyKey": "styleClass",
+                  "ValueType": {
+                    "$ID": "451760b33c844c2ab664aaba250f4383",
+                    "$Type": "CustomWidgets$WidgetValueType",
+                    "ActionVariables": [
+                      2
+                    ],
+                    "AllowedTypes": [
+                      1
+                    ],
+                    "AllowNonPersistableEntities": false,
+                    "AssociationTypes": [
+                      1
+                    ],
+                    "DataSourceProperty": "",
+                    "DefaultType": "None",
+                    "DefaultValue": "defaultStyle",
+                    "EntityProperty": "",
+                    "EnumerationValues": [
+                      2,
+                      {
+                        "$ID": "2da850865f0646289798d89dc8f4e968",
+                        "$Type": "CustomWidgets$WidgetEnumerationValue",
+                        "_Key": "defaultStyle",
+                        "Caption": "Default"
+                      },
+                      {
+                        "$ID": "2b67e562d7a84ff188b329728add016a",
+                        "$Type": "CustomWidgets$WidgetEnumerationValue",
+                        "_Key": "inverseStyle",
+                        "Caption": "Inverse"
+                      },
+                      {
+                        "$ID": "1049be2f7df84d4b89ff1c616b762bec",
+                        "$Type": "CustomWidgets$WidgetEnumerationValue",
+                        "_Key": "primaryStyle",
+                        "Caption": "Primary"
+                      },
+                      {
+                        "$ID": "2bbb2408614545bbbadde1ac95e7d362",
+                        "$Type": "CustomWidgets$WidgetEnumerationValue",
+                        "_Key": "infoStyle",
+                        "Caption": "Info"
+                      },
+                      {
+                        "$ID": "156f3ca569664233b31999cd844819c8",
+                        "$Type": "CustomWidgets$WidgetEnumerationValue",
+                        "_Key": "successStyle",
+                        "Caption": "Success"
+                      },
+                      {
+                        "$ID": "bca7d72f6f3446c3b38ffeb4dda3a125",
+                        "$Type": "CustomWidgets$WidgetEnumerationValue",
+                        "_Key": "warningStyle",
+                        "Caption": "Warning"
+                      },
+                      {
+                        "$ID": "39775715b7844f1a90e8c4e0d27bd13b",
+                        "$Type": "CustomWidgets$WidgetEnumerationValue",
+                        "_Key": "dangerStyle",
+                        "Caption": "Danger"
+                      }
+                    ],
+                    "IsLinked": false,
+                    "IsList": false,
+                    "IsMetaData": false,
+                    "IsPath": "No",
+                    "Multiline": false,
+                    "ObjectType": null,
+                    "OnChangeProperty": "",
+                    "ParameterIsList": false,
+                    "PathType": "None",
+                    "Required": true,
+                    "ReturnType": null,
+                    "SelectableObjectsProperty": "",
+                    "SelectionTypes": [
+                      1
+                    ],
+                    "SetLabel": false,
+                    "Translations": [
+                      2
+                    ],
+                    "Type": "Enumeration"
+                  }
+                }
+              ]
+            },
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": false,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "Object"
+          }
+        },
+        {
+          "$ID": "5f8a0de7b3c44063b9e1a4457ca43258",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "Menu items",
+          "Category": "General::General",
+          "Description": "The popup menu custom items. To make sure the popup closes correctly after a click, do not configure clickable widgets inside the placeholders. Use the action property of this widget.",
+          "IsDefault": false,
+          "PropertyKey": "customItems",
+          "ValueType": {
+            "$ID": "25be1209611741068dcf285cf25ac33e",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2
+            ],
+            "IsLinked": false,
+            "IsList": true,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": {
+              "$ID": "5d4b37a5f76f44248e2a18cab79c303a",
+              "$Type": "CustomWidgets$WidgetObjectType",
+              "PropertyTypes": [
+                2,
+                {
+                  "$ID": "a26aeba2a68043fbb1bb1164e00aba03",
+                  "$Type": "CustomWidgets$WidgetPropertyType",
+                  "Caption": "Content",
+                  "Category": "General",
+                  "Description": "",
+                  "IsDefault": false,
+                  "PropertyKey": "content",
+                  "ValueType": {
+                    "$ID": "f0a881c2ba894e41b20ab4897ef52200",
+                    "$Type": "CustomWidgets$WidgetValueType",
+                    "ActionVariables": [
+                      2
+                    ],
+                    "AllowedTypes": [
+                      1
+                    ],
+                    "AllowNonPersistableEntities": false,
+                    "AssociationTypes": [
+                      1
+                    ],
+                    "DataSourceProperty": "",
+                    "DefaultType": "None",
+                    "DefaultValue": "",
+                    "EntityProperty": "",
+                    "EnumerationValues": [
+                      2
+                    ],
+                    "IsLinked": false,
+                    "IsList": false,
+                    "IsMetaData": false,
+                    "IsPath": "No",
+                    "Multiline": false,
+                    "ObjectType": null,
+                    "OnChangeProperty": "",
+                    "ParameterIsList": false,
+                    "PathType": "None",
+                    "Required": true,
+                    "ReturnType": null,
+                    "SelectableObjectsProperty": "",
+                    "SelectionTypes": [
+                      1
+                    ],
+                    "SetLabel": false,
+                    "Translations": [
+                      2
+                    ],
+                    "Type": "Widgets"
+                  }
+                },
+                {
+                  "$ID": "ad0dee6461c7444499a06432bb26971d",
+                  "$Type": "CustomWidgets$WidgetPropertyType",
+                  "Caption": "Visible",
+                  "Category": "General",
+                  "Description": "",
+                  "IsDefault": false,
+                  "PropertyKey": "visible",
+                  "ValueType": {
+                    "$ID": "0840323a40bd4d6a876e9b9652793ee7",
+                    "$Type": "CustomWidgets$WidgetValueType",
+                    "ActionVariables": [
+                      2
+                    ],
+                    "AllowedTypes": [
+                      1
+                    ],
+                    "AllowNonPersistableEntities": false,
+                    "AssociationTypes": [
+                      1
+                    ],
+                    "DataSourceProperty": "",
+                    "DefaultType": "None",
+                    "DefaultValue": "true",
+                    "EntityProperty": "",
+                    "EnumerationValues": [
+                      2
+                    ],
+                    "IsLinked": false,
+                    "IsList": false,
+                    "IsMetaData": false,
+                    "IsPath": "No",
+                    "Multiline": false,
+                    "ObjectType": null,
+                    "OnChangeProperty": "",
+                    "ParameterIsList": false,
+                    "PathType": "None",
+                    "Required": false,
+                    "ReturnType": {
+                      "$ID": "4be7b6650a134f2f8240026bdb871971",
+                      "$Type": "CustomWidgets$WidgetReturnType",
+                      "AssignableTo": "",
+                      "EntityProperty": "",
+                      "IsList": false,
+                      "Type": "Boolean"
+                    },
+                    "SelectableObjectsProperty": "",
+                    "SelectionTypes": [
+                      1
+                    ],
+                    "SetLabel": false,
+                    "Translations": [
+                      2
+                    ],
+                    "Type": "Expression"
+                  }
+                },
+                {
+                  "$ID": "8afd7d5ea9f14c1d9262775517eec6be",
+                  "$Type": "CustomWidgets$WidgetPropertyType",
+                  "Caption": "On click action",
+                  "Category": "General",
+                  "Description": "",
+                  "IsDefault": false,
+                  "PropertyKey": "action",
+                  "ValueType": {
+                    "$ID": "6849b6340cd54a1a84d1757c8259d0fb",
+                    "$Type": "CustomWidgets$WidgetValueType",
+                    "ActionVariables": [
+                      2
+                    ],
+                    "AllowedTypes": [
+                      1
+                    ],
+                    "AllowNonPersistableEntities": false,
+                    "AssociationTypes": [
+                      1
+                    ],
+                    "DataSourceProperty": "",
+                    "DefaultType": "None",
+                    "DefaultValue": "",
+                    "EntityProperty": "",
+                    "EnumerationValues": [
+                      2
+                    ],
+                    "IsLinked": false,
+                    "IsList": false,
+                    "IsMetaData": false,
+                    "IsPath": "No",
+                    "Multiline": false,
+                    "ObjectType": null,
+                    "OnChangeProperty": "",
+                    "ParameterIsList": false,
+                    "PathType": "None",
+                    "Required": false,
+                    "ReturnType": null,
+                    "SelectableObjectsProperty": "",
+                    "SelectionTypes": [
+                      1
+                    ],
+                    "SetLabel": false,
+                    "Translations": [
+                      2
+                    ],
+                    "Type": "Action"
+                  }
+                }
+              ]
+            },
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": false,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "Object"
+          }
+        },
+        {
+          "$ID": "0e2e3ab3467841f29358151494ac141f",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "Open on",
+          "Category": "General::General",
+          "Description": "",
+          "IsDefault": false,
+          "PropertyKey": "trigger",
+          "ValueType": {
+            "$ID": "d66cf0302d7c48bd8ef0fe7349242d24",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "onclick",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2,
+              {
+                "$ID": "45fc31e7e6474595b355e618760da77c",
+                "$Type": "CustomWidgets$WidgetEnumerationValue",
+                "_Key": "onclick",
+                "Caption": "Click"
+              },
+              {
+                "$ID": "99eb0ce34a0a43a3a13a2339dddee94a",
+                "$Type": "CustomWidgets$WidgetEnumerationValue",
+                "_Key": "onhover",
+                "Caption": "Hover"
+              }
+            ],
+            "IsLinked": false,
+            "IsList": false,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": null,
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": true,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "Enumeration"
+          }
+        },
+        {
+          "$ID": "1128b00a0be3410e9e720591fa650a25",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "Close on",
+          "Category": "General::General",
+          "Description": "",
+          "IsDefault": false,
+          "PropertyKey": "hoverCloseOn",
+          "ValueType": {
+            "$ID": "cb1235ad2c6645c6ab58b9cdb331a08b",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "onHoverLeave",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2,
+              {
+                "$ID": "af13f570ed444ca587a07c19fdcfdbd6",
+                "$Type": "CustomWidgets$WidgetEnumerationValue",
+                "_Key": "onClickOutside",
+                "Caption": "Click outside"
+              },
+              {
+                "$ID": "c2e57b6639e74f309753d3aed70b93f7",
+                "$Type": "CustomWidgets$WidgetEnumerationValue",
+                "_Key": "onHoverLeave",
+                "Caption": "Hover leave"
+              }
+            ],
+            "IsLinked": false,
+            "IsList": false,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": null,
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": true,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "Enumeration"
+          }
+        },
+        {
+          "$ID": "2e0ec8383923421786ecdfe348b6c037",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "Menu position",
+          "Category": "General::General",
+          "Description": "The location of the menu relative to the click area.",
+          "IsDefault": false,
+          "PropertyKey": "position",
+          "ValueType": {
+            "$ID": "f0ba32b0b7564d718b5feb2de7d17cf6",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "bottom",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2,
+              {
+                "$ID": "6b3280dac8714d98b892c177702a9b74",
+                "$Type": "CustomWidgets$WidgetEnumerationValue",
+                "_Key": "left",
+                "Caption": "Left"
+              },
+              {
+                "$ID": "5f32d28ee17542c4ab8b80ddd2e69b70",
+                "$Type": "CustomWidgets$WidgetEnumerationValue",
+                "_Key": "right",
+                "Caption": "Right"
+              },
+              {
+                "$ID": "d0ccb3df28264cd6b4f28e9828d4275b",
+                "$Type": "CustomWidgets$WidgetEnumerationValue",
+                "_Key": "top",
+                "Caption": "Top"
+              },
+              {
+                "$ID": "cd83fe3c0e954092b1abd6063e8a7f98",
+                "$Type": "CustomWidgets$WidgetEnumerationValue",
+                "_Key": "bottom",
+                "Caption": "Bottom"
+              }
+            ],
+            "IsLinked": false,
+            "IsList": false,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": null,
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": true,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "Enumeration"
+          }
+        },
+        {
+          "$ID": "0947f24837dc4955b353f50e1fed2fb9",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "Clipping strategy",
+          "Category": "General::General",
+          "Description": "'Absolute' positions the floating element relative to its nearest positioned ancestor, while 'Fixed' breaks it out of any clipping ancestor.",
+          "IsDefault": false,
+          "PropertyKey": "clippingStrategy",
+          "ValueType": {
+            "$ID": "fa7fb44f25cc4eb6be1d01314ca26d0d",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "absolute",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2,
+              {
+                "$ID": "9ae8b8b2f3dd4f48a01abf5c8bebd3e4",
+                "$Type": "CustomWidgets$WidgetEnumerationValue",
+                "_Key": "absolute",
+                "Caption": "Absolute"
+              },
+              {
+                "$ID": "9f9f071ac8ab4f199fe6cc7ccec57b84",
+                "$Type": "CustomWidgets$WidgetEnumerationValue",
+                "_Key": "fixed",
+                "Caption": "Fixed"
+              }
+            ],
+            "IsLinked": false,
+            "IsList": false,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": null,
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": true,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "Enumeration"
+          }
+        },
+        {
+          "$ID": "6ad862c454614a41abf53d83a0ff9717",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "Show preview",
+          "Category": "General::Development",
+          "Description": "Use this to see a preview of the menu items while developing.",
+          "IsDefault": false,
+          "PropertyKey": "menuToggle",
+          "ValueType": {
+            "$ID": "71b85f07db4043fe857276118603b90f",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "false",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2
+            ],
+            "IsLinked": false,
+            "IsList": false,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": null,
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": true,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "Boolean"
+          }
+        }
+      ]
+    },
+    "OfflineCapable": true,
+    "StudioCategory": "Menus",
+    "StudioProCategory": "Menus & navigation",
+    "SupportedPlatform": "Web",
+    "WidgetDescription": "Displays a set of pre-defined items within the Pop-up menu",
+    "WidgetId": "com.mendix.widget.web.popupmenu.PopupMenu",
+    "WidgetName": "Pop-up menu",
+    "WidgetNeedsEntityContext": false,
+    "WidgetPluginWidget": true
+  },
+  "object": {
+    "$ID": "d13f245d7e3d432682e885da39ae2ee3",
+    "$Type": "CustomWidgets$WidgetObject",
+    "Properties": [
+      2,
+      {
+        "$ID": "c9093e7dd8274bf1a0aa3979c81f6a0d",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "41a6ba65dae14ca092478d58a89b1158",
+        "Value": {
+          "$ID": "a284fc347e5940749843e4a349b8a699",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "7fd12fa5efa644aea9442d66ce3f84c6",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "false",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "9b72a47cf16e4506b534639c3a51f41a",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      },
+      {
+        "$ID": "712232f4d86141ddba65ab0aaa76371d",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "5126887f54bb4b6685de3c7330cae40f",
+        "Value": {
+          "$ID": "1e62712e4b004d97be70966381be6cb6",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "7b9f6afd8bbb4f37a8a7ae23e2ec84d7",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "876dc39bc17448bb871802c41d8659e0",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      },
+      {
+        "$ID": "b1aba17d3aa646a683bb29760b954641",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "a6bc7768d1884abdb25dbd24949c8240",
+        "Value": {
+          "$ID": "351ce20dead048bcacb1043a6538dff0",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "87699400e8194302bc7f39ec304a3b15",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "27728cd05caf48ad9d799686c6d57caf",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      },
+      {
+        "$ID": "824e54b164004f4b9679a3a9f2627efa",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "5f8a0de7b3c44063b9e1a4457ca43258",
+        "Value": {
+          "$ID": "7528ed2d77244e6d8a5f55ab45e637d6",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "a75653f7014e49c695f57454f050ff9a",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "25be1209611741068dcf285cf25ac33e",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      },
+      {
+        "$ID": "27b276c493874c1694ededc49f24c90b",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "0e2e3ab3467841f29358151494ac141f",
+        "Value": {
+          "$ID": "6d3a25d0244645d097460466ab89aed0",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "8005024a7b614ac5a35713c13c4ebcf7",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "onclick",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "d66cf0302d7c48bd8ef0fe7349242d24",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      },
+      {
+        "$ID": "9dce354af2a44c389e07b79f7a996fd0",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "1128b00a0be3410e9e720591fa650a25",
+        "Value": {
+          "$ID": "ace1ab7ae5aa4a23bd0d8d6085335575",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "da035eb3d8234cb49e03b734827b8fe8",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "onHoverLeave",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "cb1235ad2c6645c6ab58b9cdb331a08b",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      },
+      {
+        "$ID": "9fe4b2b0ff474988bdbdb4e3e56f95f3",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "2e0ec8383923421786ecdfe348b6c037",
+        "Value": {
+          "$ID": "b25532ae028946beb70f19df3f7dcf3e",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "d09ce8b62c7b40d99769a7ba70120c46",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "bottom",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "f0ba32b0b7564d718b5feb2de7d17cf6",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      },
+      {
+        "$ID": "008de3a462ef47ff969be21f45e032c6",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "0947f24837dc4955b353f50e1fed2fb9",
+        "Value": {
+          "$ID": "7e6576a1ad5c409aa4911ece1c75a5a4",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "0d825db5820444df8fddbda6c6d50281",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "absolute",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "fa7fb44f25cc4eb6be1d01314ca26d0d",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      },
+      {
+        "$ID": "9798754de1044ca0b3597489179aabc5",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "6ad862c454614a41abf53d83a0ff9717",
+        "Value": {
+          "$ID": "d866d0accb3548f4b46adec8432d1150",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "c62db20c11ca4d4bb4377a0384307f98",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "false",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "71b85f07db4043fe857276118603b90f",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      }
+    ],
+    "TypePointer": "cf31d21ff453452cb5631effe3a9c05f"
+  }
+}

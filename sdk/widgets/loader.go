@@ -115,16 +115,52 @@ var (
 	templateCacheLock sync.RWMutex
 )
 
-// Known widget IDs and their template files.
-var widgetTemplateFiles = map[string]string{
-	"com.mendix.widget.web.combobox.Combobox":                             "combobox.json",
-	"com.mendix.widget.web.datagrid.Datagrid":                             "datagrid.json",
-	"com.mendix.widget.web.datagridtextfilter.DatagridTextFilter":         "datagrid-text-filter.json",
-	"com.mendix.widget.web.datagriddatefilter.DatagridDateFilter":         "datagrid-date-filter.json",
-	"com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter": "datagrid-dropdown-filter.json",
-	"com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter":     "datagrid-number-filter.json",
-	"com.mendix.widget.web.gallery.Gallery":                               "gallery.json",
-	"com.mendix.widget.web.image.Image":                                   "image.json",
+// widgetTemplateIndex maps widget IDs to template filenames.
+// Built lazily by scanning embedded template JSON files.
+var (
+	widgetTemplateIndex     map[string]string
+	widgetTemplateIndexOnce sync.Once
+)
+
+// getWidgetTemplateIndex returns the widget ID → filename mapping,
+// built by scanning all embedded JSON templates for their "widgetId" field.
+func getWidgetTemplateIndex() map[string]string {
+	widgetTemplateIndexOnce.Do(func() {
+		widgetTemplateIndex = make(map[string]string)
+		entries, err := templateFS.ReadDir("templates/mendix-11.6")
+		if err != nil {
+			return
+		}
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+				continue
+			}
+			// Read just enough to extract widgetId
+			data, err := templateFS.ReadFile("templates/mendix-11.6/" + entry.Name())
+			if err != nil {
+				continue
+			}
+			var header struct {
+				WidgetID string         `json:"widgetId"`
+				Type     map[string]any `json:"type"`
+			}
+			if err := json.Unmarshal(data, &header); err != nil {
+				continue
+			}
+			wid := header.WidgetID
+			// Fallback: extract WidgetId from type.WidgetId for older templates
+			if wid == "" && header.Type != nil {
+				if v, ok := header.Type["WidgetId"].(string); ok {
+					wid = v
+				}
+			}
+			if wid == "" {
+				continue
+			}
+			widgetTemplateIndex[wid] = entry.Name()
+		}
+	})
+	return widgetTemplateIndex
 }
 
 // GetTemplate loads a widget template by widget ID.
@@ -138,8 +174,9 @@ func GetTemplate(widgetID string) (*WidgetTemplate, error) {
 	}
 	templateCacheLock.RUnlock()
 
-	// Find template file
-	filename, ok := widgetTemplateFiles[widgetID]
+	// Find template file from auto-scanned index
+	index := getWidgetTemplateIndex()
+	filename, ok := index[widgetID]
 	if !ok {
 		return nil, nil // Not found, not an error
 	}
@@ -253,6 +290,7 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 	var valueTypeID string
 	var defaultValue string
 	var valueType string
+	var required bool
 	var nestedObjectTypeID string
 	var nestedPropertyIDs map[string]PropertyTypeIDEntry
 
@@ -294,9 +332,9 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 				}
 			}
 		} else if key == "ValueType" && isPropertyType {
-			// For PropertyTypes, extract ValueType info including nested ObjectType, DefaultValue, and Type
+			// For PropertyTypes, extract ValueType info including nested ObjectType, DefaultValue, Type, Required
 			nestedPropertyIDs = make(map[string]PropertyTypeIDEntry)
-			elem.Value = jsonValueToBSONWithNestedObjectType(val, idMapping, &valueTypeID, &nestedObjectTypeID, nestedPropertyIDs, &defaultValue, &valueType)
+			elem.Value = jsonValueToBSONWithNestedObjectType(val, idMapping, &valueTypeID, &nestedObjectTypeID, nestedPropertyIDs, &defaultValue, &valueType, &required)
 		} else {
 			elem.Value = jsonValueToBSONWithMappingAndObjectType(val, idMapping, propertyTypeIDs, &valueTypeID, key == "ValueType", objectTypeID)
 		}
@@ -311,6 +349,7 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 			ValueTypeID:    valueTypeID,
 			DefaultValue:   defaultValue,
 			ValueType:      valueType,
+			Required:       required,
 		}
 		if nestedObjectTypeID != "" {
 			entry.ObjectTypeID = nestedObjectTypeID
@@ -323,7 +362,7 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 }
 
 // jsonValueToBSONWithNestedObjectType extracts ValueType info including nested ObjectType, DefaultValue, and Type.
-func jsonValueToBSONWithNestedObjectType(val any, idMapping map[string]string, valueTypeID *string, nestedObjectTypeID *string, nestedPropertyIDs map[string]PropertyTypeIDEntry, defaultValue *string, valueType *string) any {
+func jsonValueToBSONWithNestedObjectType(val any, idMapping map[string]string, valueTypeID *string, nestedObjectTypeID *string, nestedPropertyIDs map[string]PropertyTypeIDEntry, defaultValue *string, valueType *string, required *bool) any {
 	switch v := val.(type) {
 	case map[string]any:
 		result := make(bson.D, 0, len(v))
@@ -355,6 +394,12 @@ func jsonValueToBSONWithNestedObjectType(val any, idMapping map[string]string, v
 				// Extract value type
 				if vt, ok := fieldVal.(string); ok {
 					*valueType = vt
+				}
+				elem.Value = jsonValueToBSONSimple(fieldVal, idMapping)
+			} else if key == "Required" {
+				// Extract required flag
+				if r, ok := fieldVal.(bool); ok {
+					*required = r
 				}
 				elem.Value = jsonValueToBSONSimple(fieldVal, idMapping)
 			} else {
@@ -453,11 +498,31 @@ func extractNestedPropertyTypes(val any, idMapping map[string]string, nestedProp
 						}
 					}
 
+					// Extract DefaultValue, Type, and Required from nested ValueType
+					var nestedDefaultValue, nestedValueType string
+					var nestedRequired bool
+					if vtVal, ok := propType["ValueType"]; ok {
+						if vt, ok := vtVal.(map[string]any); ok {
+							if dv, ok := vt["DefaultValue"].(string); ok {
+								nestedDefaultValue = dv
+							}
+							if t, ok := vt["Type"].(string); ok {
+								nestedValueType = t
+							}
+							if r, ok := vt["Required"].(bool); ok {
+								nestedRequired = r
+							}
+						}
+					}
+
 					// Record the nested property type
 					if propKey != "" {
 						nestedPropertyIDs[propKey] = PropertyTypeIDEntry{
 							PropertyTypeID: propTypeID,
 							ValueTypeID:    valueTypeID,
+							DefaultValue:   nestedDefaultValue,
+							ValueType:      nestedValueType,
+							Required:       nestedRequired,
 						}
 					}
 				}
@@ -640,6 +705,7 @@ type PropertyTypeIDEntry struct {
 	ValueTypeID    string
 	DefaultValue   string // Default value from the template's ValueType
 	ValueType      string // Type of value (Boolean, Integer, String, DataSource, etc.)
+	Required       bool   // Whether this property is required
 	// For object list properties (IsList=true with ObjectType), these hold nested IDs
 	ObjectTypeID      string                         // ID of the nested ObjectType (for object lists)
 	NestedPropertyIDs map[string]PropertyTypeIDEntry // Property IDs within the nested ObjectType
@@ -649,8 +715,10 @@ type PropertyTypeIDEntry struct {
 func collectIDs(data map[string]any, idGenerator func() string, idMapping map[string]string) {
 	for key, val := range data {
 		if key == "$ID" {
-			if oldID, ok := val.(string); ok && len(oldID) == 32 && isHexString(oldID) {
-				// Generate new ID for this $ID field
+			if oldID, ok := val.(string); ok && len(oldID) == 32 {
+				// Generate new ID for this $ID field.
+				// Accept any 32-char string (not just valid hex) to handle
+				// manually crafted placeholder IDs in templates.
 				newID := idGenerator()
 				idMapping[oldID] = newID
 			}
@@ -854,8 +922,9 @@ func augmentFromMPK(tmpl *WidgetTemplate, widgetID string, projectPath string) *
 
 // ListAvailableTemplates returns a list of available widget template IDs.
 func ListAvailableTemplates() []string {
-	result := make([]string, 0, len(widgetTemplateFiles))
-	for widgetID := range widgetTemplateFiles {
+	index := getWidgetTemplateIndex()
+	result := make([]string, 0, len(index))
+	for widgetID := range index {
 		result = append(result, widgetID)
 	}
 	return result

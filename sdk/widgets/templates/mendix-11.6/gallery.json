@@ -58,28 +58,13 @@
           "DataSource": {
             "$ID": "1e4694c2700d4a5da47f590dc70517e9",
             "$Type": "CustomWidgets$CustomWidgetXPathSource",
-            "EntityRef": {
-              "$ID": "3056e3d4a12b48ac8c58e43144a8b80b",
-              "$Type": "DomainModels$DirectEntityRef",
-              "Entity": "PgTest.Customer"
-            },
+            "EntityRef": null,
             "ForceFullObjects": false,
             "SortBar": {
               "$ID": "19fd730b1ce74ebd89e6535328b94913",
               "$Type": "Forms$GridSortBar",
               "SortItems": [
-                2,
-                {
-                  "$ID": "b05e121b081c453191d5ede425af0c61",
-                  "$Type": "Forms$GridSortItem",
-                  "AttributeRef": {
-                    "$ID": "3a7b8c4b0eb14c5c8ae7980083eb86f6",
-                    "$Type": "DomainModels$AttributeRef",
-                    "Attribute": "PgTest.Customer.Name",
-                    "EntityRef": null
-                  },
-                  "SortOrder": "Ascending"
-                }
+                2
               ]
             },
             "SourceVariable": null,
@@ -246,148 +231,7 @@
           "TranslatableValue": null,
           "TypePointer": "5cadb97bf49546a5afaee593b6d2f398",
           "Widgets": [
-            2,
-            {
-              "$ID": "6b55ceb70c324de0b6fb45b4c8b607e6",
-              "$Type": "Forms$DynamicText",
-              "Appearance": {
-                "$ID": "29b23d288c944097a8c4cfa52f1a835f",
-                "$Type": "Forms$Appearance",
-                "Class": "",
-                "DesignProperties": [
-                  3
-                ],
-                "DynamicClasses": "",
-                "Style": ""
-              },
-              "ConditionalVisibilitySettings": null,
-              "Content": {
-                "$ID": "a5347beef24a402d9c18485d1382b0f8",
-                "$Type": "Forms$ClientTemplate",
-                "Fallback": {
-                  "$ID": "6550515be4a74d1c8925eaa9402dad13",
-                  "$Type": "Texts$Text",
-                  "Items": [
-                    3
-                  ]
-                },
-                "Parameters": [
-                  2
-                ],
-                "Template": {
-                  "$ID": "bdcc89f4c6a149fbb3692a831ee79169",
-                  "$Type": "Texts$Text",
-                  "Items": [
-                    3,
-                    {
-                      "$ID": "38704f9f3d244012a04ef123530ec4c6",
-                      "$Type": "Texts$Translation",
-                      "LanguageCode": "en_US",
-                      "Text": "{Name}"
-                    }
-                  ]
-                }
-              },
-              "Name": "custName",
-              "NativeAccessibilitySettings": null,
-              "NativeTextStyle": "Text",
-              "RenderMode": "Text",
-              "TabIndex": 0
-            },
-            {
-              "$ID": "e77bb30cf56b4e2c84e5701eda0dd6b9",
-              "$Type": "Forms$DynamicText",
-              "Appearance": {
-                "$ID": "6483460c2b0f4162b0f19fcbb95843a8",
-                "$Type": "Forms$Appearance",
-                "Class": "",
-                "DesignProperties": [
-                  3
-                ],
-                "DynamicClasses": "",
-                "Style": ""
-              },
-              "ConditionalVisibilitySettings": null,
-              "Content": {
-                "$ID": "bfb041bf438f4f30b00169d597bdced9",
-                "$Type": "Forms$ClientTemplate",
-                "Fallback": {
-                  "$ID": "0d65fe67ebdf45e2b12b2986844b32d2",
-                  "$Type": "Texts$Text",
-                  "Items": [
-                    3
-                  ]
-                },
-                "Parameters": [
-                  2
-                ],
-                "Template": {
-                  "$ID": "e233d87f63d7499f86010ebbacc33484",
-                  "$Type": "Texts$Text",
-                  "Items": [
-                    3,
-                    {
-                      "$ID": "f2f9b086e2c3437081bc8f0fab7a15c3",
-                      "$Type": "Texts$Translation",
-                      "LanguageCode": "en_US",
-                      "Text": "{Email}"
-                    }
-                  ]
-                }
-              },
-              "Name": "custEmail",
-              "NativeAccessibilitySettings": null,
-              "NativeTextStyle": "Text",
-              "RenderMode": "Text",
-              "TabIndex": 0
-            },
-            {
-              "$ID": "ea0d34709e764cbf8bfc0fef444d0a29",
-              "$Type": "Forms$DynamicText",
-              "Appearance": {
-                "$ID": "87b73ea2217a449fb3140280329142cc",
-                "$Type": "Forms$Appearance",
-                "Class": "",
-                "DesignProperties": [
-                  3
-                ],
-                "DynamicClasses": "",
-                "Style": ""
-              },
-              "ConditionalVisibilitySettings": null,
-              "Content": {
-                "$ID": "1c7c58e85d4c4a0080a6fa119815e43a",
-                "$Type": "Forms$ClientTemplate",
-                "Fallback": {
-                  "$ID": "c69c01faf4274af38df74a319233089a",
-                  "$Type": "Texts$Text",
-                  "Items": [
-                    3
-                  ]
-                },
-                "Parameters": [
-                  2
-                ],
-                "Template": {
-                  "$ID": "7b0c1431871045088a12244653901dfc",
-                  "$Type": "Texts$Text",
-                  "Items": [
-                    3,
-                    {
-                      "$ID": "a6ff0b28f0fe439ba2c4be400fd7efac",
-                      "$Type": "Texts$Translation",
-                      "LanguageCode": "en_US",
-                      "Text": "{City}"
-                    }
-                  ]
-                }
-              },
-              "Name": "custCity",
-              "NativeAccessibilitySettings": null,
-              "NativeTextStyle": "Text",
-              "RenderMode": "Text",
-              "TabIndex": 0
-            }
+            2
           ],
           "XPathConstraint": ""
         }

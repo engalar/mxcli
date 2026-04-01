@@ -20,9 +20,9 @@ func TestRegistryLoadsAllEmbeddedDefinitions(t *testing.T) {
 		t.Fatalf("NewWidgetRegistry() error: %v", err)
 	}
 
-	// We expect 3 embedded definitions (combobox, gallery, image)
-	if got := reg.Count(); got != 3 {
-		t.Errorf("registry count = %d, want 3", got)
+	// We expect 4 embedded definitions (combobox, gallery, image)
+	if got := reg.Count(); got != 4 {
+		t.Errorf("registry count = %d, want 4", got)
 	}
 }
 

@@ -312,7 +312,13 @@ func buildWidgetV3(ctx parser.IWidgetV3Context, b *Builder) *ast.WidgetV3 {
 	}
 
 	// Get widget type
-	if typeCtx := wCtx.WidgetTypeV3(); typeCtx != nil {
+	if wCtx.PLUGGABLEWIDGET() != nil {
+		widget.Type = "PLUGGABLEWIDGET"
+		widget.Properties["WidgetType"] = unquoteString(wCtx.STRING_LITERAL().GetText())
+	} else if wCtx.CUSTOMWIDGET() != nil {
+		widget.Type = "CUSTOMWIDGET"
+		widget.Properties["WidgetType"] = unquoteString(wCtx.STRING_LITERAL().GetText())
+	} else if typeCtx := wCtx.WidgetTypeV3(); typeCtx != nil {
 		widget.Type = strings.ToUpper(typeCtx.GetText())
 	}
 
@@ -581,6 +587,15 @@ func parseWidgetPropertyV3(ctx parser.IWidgetPropertyV3Context, widget *ast.Widg
 	if id := propCtx.IDENTIFIER(); id != nil {
 		if valCtx := propCtx.PropertyValueV3(); valCtx != nil {
 			widget.Properties[id.GetText()] = buildPropertyValueV3(valCtx)
+		}
+		return
+	}
+
+	// Generic property with keyword name: keyword: value (for pluggable widget property keys
+	// that happen to be MDL keywords, e.g., type, datasource, content)
+	if kw := propCtx.Keyword(); kw != nil {
+		if valCtx := propCtx.PropertyValueV3(); valCtx != nil {
+			widget.Properties[kw.GetText()] = buildPropertyValueV3(valCtx)
 		}
 		return
 	}
