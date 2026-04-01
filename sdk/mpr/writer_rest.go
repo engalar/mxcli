@@ -120,7 +120,7 @@ func serializeRestOperation(op *model.RestClientOperation) bson.M {
 	}
 
 	if op.Timeout > 0 {
-		doc["Timeout"] = int32(op.Timeout)
+		doc["Timeout"] = int64(op.Timeout)
 	}
 
 	// Method: polymorphic (WithBody or WithoutBody)

@@ -33,7 +33,7 @@ func serializeSnippetCall(s *pages.SnippetCallWidget) bson.D {
 		{Key: "ConditionalVisibilitySettings", Value: nil},
 		{Key: "FormCall", Value: snippetCall},
 		{Key: "Name", Value: s.Name},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 	}
 
 	return doc
@@ -96,11 +96,11 @@ func serializeGallery(g *pages.Gallery) bson.D {
 		{Key: "DataSource", Value: dataSource},
 		{Key: "Editable", Value: false},
 		{Key: "Name", Value: g.Name},
-		{Key: "NumberOfColumns", Value: int32(numberOfColumns)},
-		{Key: "PageSize", Value: int32(pageSize)},
+		{Key: "NumberOfColumns", Value: int64(numberOfColumns)},
+		{Key: "PageSize", Value: int64(pageSize)},
 		{Key: "PullDownAction", Value: serializeClientAction(nil)},
 		{Key: "ScrollDirection", Value: "Vertical"},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Templates", Value: templates},
 		{Key: "Widgets", Value: contentWidgets},
 	}
@@ -174,11 +174,11 @@ func serializeListView(lv *pages.ListView) bson.D {
 		{Key: "DataSource", Value: dataSource},
 		{Key: "Editable", Value: lv.Editable},
 		{Key: "Name", Value: lv.Name},
-		{Key: "NumberOfColumns", Value: int32(1)},
-		{Key: "PageSize", Value: int32(pageSize)},
+		{Key: "NumberOfColumns", Value: int64(1)},
+		{Key: "PageSize", Value: int64(pageSize)},
 		{Key: "PullDownAction", Value: serializeClientAction(nil)},
 		{Key: "ScrollDirection", Value: "Vertical"},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Templates", Value: templates},
 		{Key: "Widgets", Value: contentWidgets},
 	}
@@ -286,7 +286,7 @@ func serializeDynamicText(dt *pages.DynamicText) bson.D {
 		{Key: "NativeAccessibilitySettings", Value: nil},
 		{Key: "NativeTextStyle", Value: "Text"},
 		{Key: "RenderMode", Value: renderMode},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 	}
 	return doc
 }
@@ -314,7 +314,7 @@ func serializeActionButton(ab *pages.ActionButton) bson.D {
 		{Key: "Name", Value: ab.Name},
 		{Key: "NativeAccessibilitySettings", Value: nil},
 		{Key: "RenderType", Value: "Button"},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Tooltip", Value: bson.D{
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 			{Key: "$Type", Value: "Texts$Text"},
@@ -359,7 +359,7 @@ func serializeStaticText(t *pages.Text) bson.D {
 		{Key: "NativeAccessibilitySettings", Value: nil},
 		{Key: "NativeTextStyle", Value: "Text"},
 		{Key: "RenderMode", Value: renderMode},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 	}
 	return doc
 }
@@ -392,7 +392,7 @@ func serializeTitle(t *pages.Title) bson.D {
 		{Key: "ConditionalVisibilitySettings", Value: nil},
 		{Key: "Name", Value: t.Name},
 		{Key: "NativeAccessibilitySettings", Value: nil},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 	}
 	return doc
 }
@@ -443,12 +443,12 @@ func serializeDataView(dv *pages.DataView) bson.D {
 		{Key: "DataSource", Value: dataSource},
 		{Key: "Editability", Value: editability},
 		{Key: "FooterWidgets", Value: footerWidgets},
-		{Key: "LabelWidth", Value: int32(3)},
+		{Key: "LabelWidth", Value: int64(3)},
 		{Key: "Name", Value: dv.Name},
 		{Key: "NoEntityMessage", Value: noEntityMessage},
 		{Key: "ReadOnlyStyle", Value: "Control"},
 		{Key: "ShowFooter", Value: dv.ShowFooter},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Widgets", Value: widgets},
 	}
 
@@ -588,13 +588,13 @@ func serializeDataGrid(dg *pages.DataGrid) bson.D {
 		{Key: "DataSource", Value: dataSource},
 		{Key: "IsControlBarVisible", Value: len(dg.ControlBarWidgets) > 0},
 		{Key: "Name", Value: dg.Name},
-		{Key: "NumberOfRows", Value: int32(20)},
-		{Key: "RefreshTime", Value: int32(0)},
+		{Key: "NumberOfRows", Value: int64(20)},
+		{Key: "RefreshTime", Value: int64(0)},
 		{Key: "SelectFirst", Value: dg.SelectFirst},
 		{Key: "SelectionMode", Value: selectionMode},
 		{Key: "ShowEmptyRows", Value: dg.ShowEmptyRows},
 		{Key: "ShowPagingBar", Value: "YesWithTotalCount"},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "TooltipForm", Value: nil},
 		{Key: "WidthUnit", Value: "Percentage"},
 	}
@@ -631,7 +631,7 @@ func serializeDataGridColumn(col *pages.DataGridColumn) bson.D {
 		{Key: "FormatType", Value: "Attribute"},
 		{Key: "Name", Value: col.Name},
 		{Key: "ShowTooltip", Value: true},
-		{Key: "Width", Value: int32(100)},
+		{Key: "Width", Value: int64(100)},
 	}
 
 	return doc
@@ -717,7 +717,7 @@ func serializeNavigationList(nl *pages.NavigationList) bson.D {
 		{Key: "ConditionalVisibilitySettings", Value: nil},
 		{Key: "Items", Value: items},
 		{Key: "Name", Value: nl.Name},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 	}
 	return doc
 }
@@ -793,14 +793,14 @@ func serializeStaticImage(img *pages.StaticImage) bson.D {
 		{Key: "Appearance", Value: serializeAppearance(img.Class, img.Style, img.DesignProperties)},
 		{Key: "ClickAction", Value: serializeClientAction(img.OnClickAction)},
 		{Key: "ConditionalVisibilitySettings", Value: nil},
-		{Key: "Height", Value: int32(img.Height)},
+		{Key: "Height", Value: int64(img.Height)},
 		{Key: "HeightUnit", Value: "Auto"},
 		{Key: "Image", Value: nil},
 		{Key: "Name", Value: img.Name},
 		{Key: "NativeAccessibilitySettings", Value: nil},
 		{Key: "Responsive", Value: img.Responsive},
-		{Key: "TabIndex", Value: int32(0)},
-		{Key: "Width", Value: int32(img.Width)},
+		{Key: "TabIndex", Value: int64(0)},
+		{Key: "Width", Value: int64(img.Width)},
 		{Key: "WidthUnit", Value: "Auto"},
 	}
 	return doc
@@ -830,15 +830,15 @@ func serializeDynamicImage(img *pages.DynamicImage) bson.D {
 			{Key: "EntityRef", Value: nil},
 		}},
 		{Key: "DefaultImage", Value: nil},
-		{Key: "Height", Value: int32(img.Height)},
+		{Key: "Height", Value: int64(img.Height)},
 		{Key: "HeightUnit", Value: "Auto"},
 		{Key: "Name", Value: img.Name},
 		{Key: "NativeAccessibilitySettings", Value: nil},
 		{Key: "OnClickEnlarge", Value: false},
 		{Key: "Responsive", Value: img.Responsive},
 		{Key: "ShowAsThumbnail", Value: false},
-		{Key: "TabIndex", Value: int32(0)},
-		{Key: "Width", Value: int32(img.Width)},
+		{Key: "TabIndex", Value: int64(0)},
+		{Key: "Width", Value: int64(img.Width)},
 		{Key: "WidthUnit", Value: "Auto"},
 	}
 	return doc

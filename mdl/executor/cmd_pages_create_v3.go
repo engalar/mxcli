@@ -59,16 +59,23 @@ func (e *Executor) execCreatePageV3(s *ast.CreatePageStmtV3) error {
 		return fmt.Errorf("failed to build page: %w", err)
 	}
 
-	// Delete old pages only after successful build
-	for _, id := range pagesToDelete {
-		if err := e.writer.DeletePage(id); err != nil {
-			return fmt.Errorf("failed to delete existing page: %w", err)
+	// Replace or create the page in the MPR
+	if len(pagesToDelete) > 0 {
+		// Reuse first existing page's UUID to avoid git delete+add (which crashes Studio Pro RevStatusCache)
+		page.ID = pagesToDelete[0]
+		if err := e.writer.UpdatePage(page); err != nil {
+			return fmt.Errorf("failed to update page: %w", err)
 		}
-	}
-
-	// Create the page in the MPR
-	if err := e.writer.CreatePage(page); err != nil {
-		return fmt.Errorf("failed to create page: %w", err)
+		// Delete any additional duplicates
+		for _, id := range pagesToDelete[1:] {
+			if err := e.writer.DeletePage(id); err != nil {
+				return fmt.Errorf("failed to delete duplicate page: %w", err)
+			}
+		}
+	} else {
+		if err := e.writer.CreatePage(page); err != nil {
+			return fmt.Errorf("failed to create page: %w", err)
+		}
 	}
 
 	// Track the created page so it can be resolved by subsequent page references

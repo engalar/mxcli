@@ -41,7 +41,7 @@ func serializeCustomWidget(cw *pages.CustomWidget) bson.D {
 		{Key: "LabelTemplate", Value: serializeLabelTemplate(cw.Label)},
 		{Key: "Name", Value: cw.Name},
 		{Key: "Object", Value: widgetObject},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Type", Value: widgetType},
 	}
 
@@ -76,7 +76,7 @@ func serializeCustomWidgetWithRawType(cw *pages.CustomWidget) bson.D {
 		{Key: "LabelTemplate", Value: serializeLabelTemplate(cw.Label)},
 		{Key: "Name", Value: cw.Name},
 		{Key: "Object", Value: widgetObject},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Type", Value: cw.RawType},
 	}
 

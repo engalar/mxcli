@@ -284,7 +284,7 @@ func serializePublishedEntitySet(es *model.PublishedEntitySet, entityTypeID stri
 		"$Type":       "ODataPublish$EntitySet",
 		"ExposedName": es.ExposedName,
 		"UsePaging":   es.UsePaging,
-		"PageSize":    int32(es.PageSize),
+		"PageSize":    int64(es.PageSize),
 	}
 
 	// EntityTypePointer is a BY_ID reference

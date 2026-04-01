@@ -4,22 +4,15 @@ package mpr
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/mendixlabs/mxcli/model"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-// safeInt32 converts an int to int32 with clamping to prevent silent overflow.
-func safeInt32(v int) int32 {
-	if v > math.MaxInt32 {
-		return math.MaxInt32
-	}
-	if v < math.MinInt32 {
-		return math.MinInt32
-	}
-	return int32(v)
+// safeInt64 converts an int to int64.
+func safeInt64(v int) int64 {
+	return int64(v)
 }
 
 // UpdateProjectSettings updates the project settings document.
@@ -89,12 +82,12 @@ func serializeModelSettings(ms *model.ModelSettings, raw map[string]any) map[str
 	raw["HealthCheckMicroflow"] = ms.HealthCheckMicroflow
 	raw["AllowUserMultipleSessions"] = ms.AllowUserMultipleSessions
 	raw["HashAlgorithm"] = ms.HashAlgorithm
-	raw["BcryptCost"] = safeInt32(ms.BcryptCost)
+	raw["BcryptCost"] = safeInt64(ms.BcryptCost)
 	raw["JavaVersion"] = ms.JavaVersion
 	raw["RoundingMode"] = ms.RoundingMode
 	raw["ScheduledEventTimeZoneCode"] = ms.ScheduledEventTimeZoneCode
 	raw["FirstDayOfWeek"] = ms.FirstDayOfWeek
-	raw["DecimalScale"] = safeInt32(ms.DecimalScale)
+	raw["DecimalScale"] = safeInt64(ms.DecimalScale)
 	raw["EnableDataStorageOptimisticLocking"] = ms.EnableDataStorageOptimisticLocking
 	raw["UseDatabaseForeignKeyConstraints"] = ms.UseDatabaseForeignKeyConstraints
 	return raw
@@ -120,10 +113,10 @@ func serializeServerConfiguration(cfg *model.ServerConfiguration) bson.M {
 		"DatabaseUserName":              cfg.DatabaseUserName,
 		"DatabasePassword":              cfg.DatabasePassword,
 		"DatabaseUseIntegratedSecurity": cfg.DatabaseUseIntegratedSecurity,
-		"HttpPortNumber":                safeInt32(cfg.HttpPortNumber),
-		"ServerPortNumber":              safeInt32(cfg.ServerPortNumber),
+		"HttpPortNumber":                safeInt64(cfg.HttpPortNumber),
+		"ServerPortNumber":              safeInt64(cfg.ServerPortNumber),
 		"ApplicationRootUrl":            cfg.ApplicationRootUrl,
-		"MaxJavaHeapSize":               safeInt32(cfg.MaxJavaHeapSize),
+		"MaxJavaHeapSize":               safeInt64(cfg.MaxJavaHeapSize),
 		"ExtraJvmParameters":            cfg.ExtraJvmParameters,
 		"OpenAdminPort":                 cfg.OpenAdminPort,
 		"OpenHttpPort":                  cfg.OpenHttpPort,
@@ -167,7 +160,7 @@ func serializeLanguageSettings(ls *model.LanguageSettings, raw map[string]any) m
 // serializeWorkflowsSettings updates the raw BSON map with modified workflow settings.
 func serializeWorkflowsSettings(ws *model.WorkflowsSettings, raw map[string]any) map[string]any {
 	raw["UserEntity"] = ws.UserEntity
-	raw["DefaultTaskParallelism"] = safeInt32(ws.DefaultTaskParallelism)
-	raw["WorkflowEngineParallelism"] = safeInt32(ws.WorkflowEngineParallelism)
+	raw["DefaultTaskParallelism"] = safeInt64(ws.DefaultTaskParallelism)
+	raw["WorkflowEngineParallelism"] = safeInt64(ws.WorkflowEngineParallelism)
 	return raw
 }
