@@ -3,6 +3,8 @@
 package mpr
 
 import (
+	"log"
+
 	"github.com/mendixlabs/mxcli/sdk/pages"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -41,7 +43,7 @@ func serializeCustomWidget(cw *pages.CustomWidget) bson.D {
 		{Key: "LabelTemplate", Value: serializeLabelTemplate(cw.Label)},
 		{Key: "Name", Value: cw.Name},
 		{Key: "Object", Value: widgetObject},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Type", Value: widgetType},
 	}
 
@@ -55,6 +57,32 @@ func serializeCustomWidgetWithRawType(cw *pages.CustomWidget) bson.D {
 	var widgetObject any
 	if cw.RawObject != nil {
 		widgetObject = cw.RawObject
+		// Debug: check for non-empty Widgets in RawObject at serialization time
+		if cw.Name == "timelineCustom" {
+			for _, elem := range cw.RawObject {
+				if elem.Key == "Properties" {
+					if arr, ok := elem.Value.(bson.A); ok {
+						for _, item := range arr {
+							if prop, ok := item.(bson.D); ok {
+								for _, pe := range prop {
+									if pe.Key == "Value" {
+										if val, ok := pe.Value.(bson.D); ok {
+											for _, ve := range val {
+												if ve.Key == "Widgets" {
+													if wa, ok := ve.Value.(bson.A); ok && len(wa) > 1 {
+														log.Printf("SERIALIZE CHECK: timelineCustom Widgets: %d items (type: %T)", len(wa), wa[1])
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 	} else {
 		// Build widget object (properties) - this still needs to match the raw type's PropertyType IDs
 		// The ObjectTypeID is used to set the TypePointer on the WidgetObject
@@ -76,7 +104,7 @@ func serializeCustomWidgetWithRawType(cw *pages.CustomWidget) bson.D {
 		{Key: "LabelTemplate", Value: serializeLabelTemplate(cw.Label)},
 		{Key: "Name", Value: cw.Name},
 		{Key: "Object", Value: widgetObject},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Type", Value: cw.RawType},
 	}
 

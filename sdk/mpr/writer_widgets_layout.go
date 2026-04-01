@@ -20,7 +20,7 @@ func serializeContainer(c *pages.Container) bson.D {
 		{Key: "OnClickAction", Value: serializeClientAction(nil)},
 		{Key: "RenderMode", Value: "Div"},
 		{Key: "ScreenReaderHidden", Value: false},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Widgets", Value: serializeWidgetArray(c.Widgets)},
 	}
 	return doc
@@ -54,7 +54,7 @@ func serializeGroupBox(gb *pages.GroupBox) bson.D {
 		{Key: "ConditionalVisibilitySettings", Value: nil},
 		{Key: "HeaderMode", Value: headerMode},
 		{Key: "Name", Value: gb.Name},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Widgets", Value: serializeWidgetArray(gb.Widgets)},
 	}
 	return doc
@@ -68,7 +68,7 @@ func serializeLayoutGrid(lg *pages.LayoutGrid) bson.D {
 	hasRows := false
 	for _, row := range lg.Rows {
 		if !hasRows {
-			rows = bson.A{int32(2)} // First item: change to version 2
+			rows = bson.A{int64(2)} // First item: change to version 2
 			hasRows = true
 		}
 		rows = append(rows, serializeLayoutGridRow(row))
@@ -81,7 +81,7 @@ func serializeLayoutGrid(lg *pages.LayoutGrid) bson.D {
 		{Key: "ConditionalVisibilitySettings", Value: nil},
 		{Key: "Name", Value: lg.Name},
 		{Key: "Rows", Value: rows},
-		{Key: "TabIndex", Value: int32(0)},
+		{Key: "TabIndex", Value: int64(0)},
 		{Key: "Width", Value: "FullWidth"},
 	}
 	return doc
@@ -95,7 +95,7 @@ func serializeLayoutGridRow(row *pages.LayoutGridRow) bson.D {
 	hasCols := false
 	for _, col := range row.Columns {
 		if !hasCols {
-			cols = bson.A{int32(2)} // First item: change to version 2
+			cols = bson.A{int64(2)} // First item: change to version 2
 			hasCols = true
 		}
 		cols = append(cols, serializeLayoutGridColumn(col))
@@ -133,11 +133,11 @@ func serializeLayoutGridColumn(col *pages.LayoutGridColumn) bson.D {
 		{Key: "$ID", Value: idToBsonBinary(string(col.ID))},
 		{Key: "$Type", Value: "Forms$LayoutGridColumn"},
 		{Key: "Appearance", Value: serializeAppearance("", "", nil)},
-		{Key: "PhoneWeight", Value: int32(columnWeight(col.PhoneWeight))},
-		{Key: "PreviewWidth", Value: int32(-1)}, // Default preview width
-		{Key: "TabletWeight", Value: int32(columnWeight(col.TabletWeight))},
+		{Key: "PhoneWeight", Value: int64(columnWeight(col.PhoneWeight))},
+		{Key: "PreviewWidth", Value: int64(-1)}, // Default preview width
+		{Key: "TabletWeight", Value: int64(columnWeight(col.TabletWeight))},
 		{Key: "VerticalAlignment", Value: "None"},
-		{Key: "Weight", Value: int32(weight)}, // Desktop weight
+		{Key: "Weight", Value: int64(weight)}, // Desktop weight
 		{Key: "Widgets", Value: serializeWidgetArray(col.Widgets)},
 	}
 }

@@ -180,7 +180,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		// Serialize parameter mappings
 		if len(a.ParameterMappings) > 0 {
 			var mappings bson.A
-			mappings = append(mappings, int32(3)) // Array marker (storageListType 3)
+			mappings = append(mappings, int64(3)) // Array marker (storageListType 3)
 			for _, pm := range a.ParameterMappings {
 				mapping := bson.D{
 					{Key: "$ID", Value: idToBsonBinary(string(pm.ID))},
@@ -216,7 +216,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			// Serialize parameter mappings within MicroflowCall
 			if len(a.MicroflowCall.ParameterMappings) > 0 {
 				var mappings bson.A
-				mappings = append(mappings, int32(2)) // Array marker
+				mappings = append(mappings, int64(2)) // Array marker
 				for _, pm := range a.MicroflowCall.ParameterMappings {
 					mapping := bson.D{
 						{Key: "$ID", Value: idToBsonBinary(string(pm.ID))},
@@ -247,7 +247,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		// Serialize parameter mappings
 		if len(a.ParameterMappings) > 0 {
 			var mappings bson.A
-			mappings = append(mappings, int32(2)) // Array marker
+			mappings = append(mappings, int64(2)) // Array marker
 			for _, pm := range a.ParameterMappings {
 				mapping := bson.D{
 					{Key: "$ID", Value: idToBsonBinary(string(pm.ID))},
@@ -373,7 +373,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 			{Key: "$Type", Value: "Microflows$CloseFormAction"},
 			{Key: "ErrorHandlingType", Value: "Rollback"},
-			{Key: "NumberOfPagesToClose", Value: int32(a.NumberOfPages)},
+			{Key: "NumberOfPagesToClose", Value: int64(a.NumberOfPages)},
 		}
 		return doc
 
@@ -461,7 +461,7 @@ func serializeRestCallAction(a *microflows.RestCallAction) bson.D {
 			// Add parameters if present - each must be wrapped in TemplateParameter object
 			if len(a.HttpConfiguration.LocationParams) > 0 {
 				var params bson.A
-				params = append(params, int32(2)) // Array marker
+				params = append(params, int64(2)) // Array marker
 				for _, p := range a.HttpConfiguration.LocationParams {
 					templateParam := bson.D{
 						{Key: "$ID", Value: idToBsonBinary(GenerateID())},
@@ -483,7 +483,7 @@ func serializeRestCallAction(a *microflows.RestCallAction) bson.D {
 		// Serialize HttpHeaderEntries
 		if len(a.HttpConfiguration.CustomHeaders) > 0 {
 			var headers bson.A
-			headers = append(headers, int32(2)) // Array marker
+			headers = append(headers, int64(2)) // Array marker
 			for _, h := range a.HttpConfiguration.CustomHeaders {
 				header := bson.D{
 					{Key: "$ID", Value: idToBsonBinary(string(h.ID))},
@@ -608,7 +608,7 @@ func serializeRestRequestHandling(rh microflows.RequestHandling) bson.D {
 		// Add parameters - each must be wrapped in TemplateParameter object
 		if len(h.TemplateParams) > 0 {
 			var params bson.A
-			params = append(params, int32(2)) // Array marker
+			params = append(params, int64(2)) // Array marker
 			for _, p := range h.TemplateParams {
 				templateParam := bson.D{
 					{Key: "$ID", Value: idToBsonBinary(GenerateID())},

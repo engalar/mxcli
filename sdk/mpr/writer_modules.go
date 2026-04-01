@@ -250,7 +250,7 @@ func (w *Writer) serializeModule(module *model.Module) ([]byte, error) {
 		"AppStoreVersionGuid":     "",
 		"IsThemeModule":           false,
 		"IsReusableComponent":     module.IsReusableComponent,
-		"NewSortIndex":            int32(0),
+		"NewSortIndex":            int64(0),
 	}
 	return bson.Marshal(doc)
 }
