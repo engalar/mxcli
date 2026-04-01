@@ -1,0 +1,6 @@
+-- WidgetDemo: Button showcase snippet (referenced by 02-showcase-page)
+
+CREATE SNIPPET WidgetDemo.SNIPPET_ButtonShowcase {
+  ACTIONBUTTON btnInfo (Caption: 'Info Button', Action: CLOSE_PAGE, ButtonStyle: Info)
+  ACTIONBUTTON btnLink (Caption: 'Link Button', Action: CLOSE_PAGE, ButtonStyle: Link)
+}

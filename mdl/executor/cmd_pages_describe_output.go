@@ -498,6 +498,8 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 				props = append(props, fmt.Sprintf("OnClick: %s", w.Action))
 			}
 			props = appendConditionalProps(props, w)
+			props = appendAppearanceProps(props, w)
+			formatWidgetProps(e.output, prefix, header, props, "\n")
 		} else if len(w.ExplicitProperties) > 0 && w.WidgetID != "" {
 			// Generic pluggable widget with explicit properties
 			header := fmt.Sprintf("PLUGGABLEWIDGET '%s' %s", w.WidgetID, w.Name)

@@ -555,6 +555,7 @@ attributeName
     : IDENTIFIER
     | QUOTED_IDENTIFIER                     // Escape any reserved word ("Range", `Order`)
     | commonNameKeyword
+    | ATTRIBUTE                             // Allow 'Attribute' as attribute name
     ;
 
 attributeConstraint
@@ -597,7 +598,7 @@ attributeConstraint
  * ```
  */
 dataType
-    : STRING_TYPE (LPAREN NUMBER_LITERAL RPAREN)?
+    : STRING_TYPE (LPAREN (NUMBER_LITERAL | IDENTIFIER) RPAREN)?
     | INTEGER_TYPE
     | LONG_TYPE
     | DECIMAL_TYPE
@@ -625,7 +626,7 @@ templateContext
 
 // Non-list data type - used for createObjectStatement to avoid matching "CREATE LIST OF"
 nonListDataType
-    : STRING_TYPE (LPAREN NUMBER_LITERAL RPAREN)?
+    : STRING_TYPE (LPAREN (NUMBER_LITERAL | IDENTIFIER) RPAREN)?
     | INTEGER_TYPE
     | LONG_TYPE
     | DECIMAL_TYPE
@@ -666,6 +667,10 @@ createAssociationStatement
       FROM qualifiedName
       TO qualifiedName
       associationOptions?
+    | ASSOCIATION qualifiedName LPAREN
+      FROM qualifiedName TO qualifiedName
+      (COMMA associationOption)*
+      RPAREN
     ;
 
 associationOptions
@@ -673,9 +678,9 @@ associationOptions
     ;
 
 associationOption
-    : TYPE (REFERENCE | REFERENCE_SET)
-    | OWNER (DEFAULT | BOTH)
-    | STORAGE (COLUMN | TABLE)
+    : TYPE COLON? (REFERENCE | REFERENCE_SET)
+    | OWNER COLON? (DEFAULT | BOTH)
+    | STORAGE COLON? (COLUMN | TABLE)
     | DELETE_BEHAVIOR deleteBehavior
     | COMMENT STRING_LITERAL
     ;
@@ -772,6 +777,7 @@ enumValueName
     | SERVICE | SERVICES                                     // OData/auth keywords used as enum values
     | GUEST | SESSION | BASIC | CLIENT | CLIENTS
     | PUBLISH | EXPOSE | EXTERNAL | PAGING | HEADERS
+    | DISPLAY | STRUCTURE                                    // Layout/structure keywords used as enum values
     ;
 
 enumerationOptions
