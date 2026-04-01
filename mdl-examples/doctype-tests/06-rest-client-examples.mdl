@@ -253,8 +253,9 @@ BEGIN
   OPERATION GetSecureData
     METHOD GET
     PATH '/headers'
-    HEADER 'Authorization' = 'Bearer ' + $Token
-    HEADER 'X-Request-ID' = $RequestId
+    HEADER 'Accept' = 'application/json'
+    HEADER 'Authorization' = 'Bearer my-api-token'
+    HEADER 'X-Request-ID' = 'request-001'
     RESPONSE JSON AS $Data;
 END;
 
@@ -317,11 +318,12 @@ END;
 
 CREATE REST CLIENT RestTest.RC013_SecureAuthAPI
 BASE URL 'https://httpbin.org'
-AUTHENTICATION BASIC (USERNAME = $ApiUsername, PASSWORD = $ApiPassword)
+AUTHENTICATION BASIC (USERNAME = 'testuser', PASSWORD = 'testpass')
 BEGIN
   OPERATION GetSecureData
     METHOD GET
     PATH '/hidden-basic-auth/testuser/testpass'
+    HEADER 'Accept' = 'application/json'
     RESPONSE JSON AS $Data;
 END;
 
@@ -518,7 +520,7 @@ BEGIN
     METHOD DELETE
     PATH '/pet/{petId}'
     PARAMETER $petId: Integer
-    HEADER 'api_key' = $ApiKey
+    HEADER 'api_key' = 'special-key'
     RESPONSE NONE;
 
   /**
@@ -577,7 +579,7 @@ BEGIN
     PARAMETER $repo: String
     HEADER 'Accept' = 'application/vnd.github.v3+json'
     HEADER 'User-Agent' = 'Mendix-REPL'
-    HEADER 'Authorization' = 'token ' + $GitHubToken
+    HEADER 'Authorization' = 'token ghp_exampletoken123'
     BODY JSON FROM $IssueData
     RESPONSE JSON AS $CreatedIssue;
 
@@ -587,7 +589,7 @@ BEGIN
     PATH '/user'
     HEADER 'Accept' = 'application/vnd.github.v3+json'
     HEADER 'User-Agent' = 'Mendix-REPL'
-    HEADER 'Authorization' = 'token ' + $GitHubToken
+    HEADER 'Authorization' = 'token ghp_exampletoken123'
     RESPONSE JSON AS $User;
 END;
 
@@ -646,14 +648,15 @@ END;
  */
 CREATE REST CLIENT RestTest.RC021_PaymentAPI
 BASE URL 'https://api.payments.example.com/v1'
-AUTHENTICATION BASIC (USERNAME = $StripeSecretKey, PASSWORD = '')
+AUTHENTICATION BASIC (USERNAME = 'sk_test_placeholder', PASSWORD = '')
 BEGIN
   /** Create a payment intent */
   OPERATION InitiatePayment
     METHOD POST
     PATH '/payment_intents'
     HEADER 'Content-Type' = 'application/json'
-    HEADER 'Idempotency-Key' = $IdempotencyKey
+    HEADER 'Accept' = 'application/json'
+    HEADER 'Idempotency-Key' = 'idem-key-001'
     BODY JSON FROM $PaymentData
     TIMEOUT 30
     RESPONSE JSON AS $PaymentIntent;
@@ -692,7 +695,474 @@ BEGIN
 END;
 
 -- ############################################################################
--- PART 10: VERIFICATION COMMANDS
+-- PART 10: MICROFLOWS THAT CALL REST SERVICES
+-- ############################################################################
+
+-- MARK: Test Microflows
+
+-- ============================================================================
+-- Two approaches for calling REST from microflows:
+--
+-- 1. SEND REST REQUEST — calls a consumed REST service operation (defined
+--    above via CREATE REST CLIENT). URL, headers, auth, and response mapping
+--    are configured in the REST client document.
+--
+-- 2. REST CALL — inline HTTP call with URL, headers, auth, body, and
+--    response handling specified directly in the microflow. Useful for
+--    one-off calls or when no REST client document exists.
+--
+-- Both are first-class citizens; use whichever fits the situation.
+-- ============================================================================
+
+-- ############################################################################
+-- PART 10A: SEND REST REQUEST (Consumed REST Service Operations)
+-- ############################################################################
+
+-- MARK: SEND REST REQUEST
+
+-- ----------------------------------------------------------------------------
+-- 10A.1: Simple GET via REST client (RC001_SimpleAPI.GetStatus)
+-- ----------------------------------------------------------------------------
+
+/**
+ * Test simple GET via consumed REST service
+ *
+ * Calls the GetStatus operation defined in RC001_SimpleAPI.
+ * No response variable — fire and forget.
+ */
+CREATE MICROFLOW RestTest.ACT_TestSimpleGet ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Success Boolean = false;
+
+  SEND REST REQUEST RestTest.RC001_SimpleAPI.GetStatus;
+
+  SET $Success = true;
+  LOG INFO NODE 'RestTest' 'ACT_TestSimpleGet: passed';
+  RETURN $Success;
+END;
+/
+
+-- ----------------------------------------------------------------------------
+-- 10A.2: GET with JSON response via REST client (RC008_HeaderAPI.GetData)
+-- ----------------------------------------------------------------------------
+
+/**
+ * Test GET with response mapping via consumed REST service
+ *
+ * Calls the GetData operation defined in RC008_HeaderAPI.
+ * The response is mapped to the $RootResult entity variable.
+ * Use $latestHttpResponse (System.HttpResponse) to check call success.
+ */
+CREATE MICROFLOW RestTest.ACT_TestHeaders ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Success Boolean = false;
+
+  $RootResult = SEND REST REQUEST RestTest.RC008_HeaderAPI.GetData;
+
+  -- $latestHttpResponse is a system variable (System.HttpResponse) that is
+  -- automatically populated after SEND REST REQUEST. Check its Content
+  -- attribute to determine if the call returned data.
+  IF $latestHttpResponse/Content != empty THEN
+    SET $Success = true;
+    LOG INFO NODE 'RestTest' 'ACT_TestHeaders: headers echoed';
+  ELSE
+    LOG WARNING NODE 'RestTest' 'ACT_TestHeaders: empty response';
+  END IF;
+
+  RETURN $Success;
+END;
+/
+
+-- ############################################################################
+-- PART 10B: REST CALL (Inline HTTP Calls)
+-- ############################################################################
+
+-- MARK: REST CALL
+
+-- ----------------------------------------------------------------------------
+-- 10B.1: GET returning JSON string
+-- ----------------------------------------------------------------------------
+
+/**
+ * Test inline GET returning JSON
+ *
+ * Fetches posts from jsonplaceholder via direct REST CALL.
+ */
+CREATE MICROFLOW RestTest.ACT_TestJsonGet ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Success Boolean = false;
+
+  $Response = REST CALL GET 'https://jsonplaceholder.typicode.com/posts'
+    HEADER Accept = 'application/json'
+    TIMEOUT 15
+    RETURNS String
+    ON ERROR CONTINUE;
+
+  IF $Response != '' THEN
+    SET $Success = true;
+    LOG INFO NODE 'RestTest' 'ACT_TestJsonGet: received ' + toString(length($Response)) + ' chars';
+  ELSE
+    LOG WARNING NODE 'RestTest' 'ACT_TestJsonGet: empty response';
+  END IF;
+
+  RETURN $Success;
+END;
+/
+
+-- ----------------------------------------------------------------------------
+-- 10B.2: GET with path parameter
+-- ----------------------------------------------------------------------------
+
+/**
+ * Test GET with URL template parameters
+ *
+ * Fetches user #1 from jsonplaceholder using {1} placeholder.
+ */
+CREATE MICROFLOW RestTest.ACT_TestPathParams ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Success Boolean = false;
+
+  $Response = REST CALL GET 'https://jsonplaceholder.typicode.com/users/{1}' WITH (
+    {1} = '1'
+  )
+    HEADER Accept = 'application/json'
+    TIMEOUT 15
+    RETURNS String
+    ON ERROR CONTINUE;
+
+  IF $Response != '' THEN
+    SET $Success = true;
+    LOG INFO NODE 'RestTest' 'ACT_TestPathParams: received user data';
+  ELSE
+    LOG WARNING NODE 'RestTest' 'ACT_TestPathParams: empty response';
+  END IF;
+
+  RETURN $Success;
+END;
+/
+
+-- ----------------------------------------------------------------------------
+-- 10B.3: POST with JSON body
+-- ----------------------------------------------------------------------------
+
+/**
+ * Test POST with inline JSON body
+ */
+CREATE MICROFLOW RestTest.ACT_TestPost ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Success Boolean = false;
+
+  $Response = REST CALL POST 'https://httpbin.org/post'
+    HEADER 'Content-Type' = 'application/json'
+    HEADER Accept = 'application/json'
+    BODY '{{"title": "test", "body": "hello from MDL", "userId": 1}'
+    TIMEOUT 15
+    RETURNS String
+    ON ERROR CONTINUE;
+
+  IF $Response != '' THEN
+    SET $Success = true;
+    LOG INFO NODE 'RestTest' 'ACT_TestPost: POST succeeded';
+  ELSE
+    LOG WARNING NODE 'RestTest' 'ACT_TestPost: empty response';
+  END IF;
+
+  RETURN $Success;
+END;
+/
+
+-- ----------------------------------------------------------------------------
+-- 10B.4: GET with query parameters
+-- ----------------------------------------------------------------------------
+
+/**
+ * Test GET with query string parameters via URL template
+ */
+CREATE MICROFLOW RestTest.ACT_TestQueryParams ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Success Boolean = false;
+
+  $Response = REST CALL GET 'https://httpbin.org/anything/search?q={1}&page={2}' WITH (
+    {1} = 'mendix',
+    {2} = '1'
+  )
+    HEADER Accept = 'application/json'
+    TIMEOUT 15
+    RETURNS String
+    ON ERROR CONTINUE;
+
+  IF $Response != '' THEN
+    SET $Success = true;
+    LOG INFO NODE 'RestTest' 'ACT_TestQueryParams: query echoed';
+  ELSE
+    LOG WARNING NODE 'RestTest' 'ACT_TestQueryParams: empty response';
+  END IF;
+
+  RETURN $Success;
+END;
+/
+
+-- ----------------------------------------------------------------------------
+-- 10B.5: PUT request
+-- ----------------------------------------------------------------------------
+
+/**
+ * Test inline PUT request
+ */
+CREATE MICROFLOW RestTest.ACT_TestPut ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Success Boolean = false;
+
+  $Response = REST CALL PUT 'https://httpbin.org/put'
+    HEADER 'Content-Type' = 'application/json'
+    HEADER Accept = 'application/json'
+    BODY '{{"name": "updated", "value": 42}'
+    TIMEOUT 15
+    RETURNS String
+    ON ERROR CONTINUE;
+
+  IF $Response != '' THEN
+    SET $Success = true;
+    LOG INFO NODE 'RestTest' 'ACT_TestPut: PUT succeeded';
+  ELSE
+    LOG WARNING NODE 'RestTest' 'ACT_TestPut: empty response';
+  END IF;
+
+  RETURN $Success;
+END;
+/
+
+-- ----------------------------------------------------------------------------
+-- 10B.6: DELETE request
+-- ----------------------------------------------------------------------------
+
+/**
+ * Test inline DELETE request
+ */
+CREATE MICROFLOW RestTest.ACT_TestDelete ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Success Boolean = false;
+
+  REST CALL DELETE 'https://httpbin.org/delete'
+    HEADER Accept = '*/*'
+    TIMEOUT 15
+    RETURNS Nothing
+    ON ERROR CONTINUE;
+
+  SET $Success = true;
+  LOG INFO NODE 'RestTest' 'ACT_TestDelete: DELETE succeeded';
+  RETURN $Success;
+END;
+/
+
+-- ----------------------------------------------------------------------------
+-- 10B.7: Basic authentication
+-- ----------------------------------------------------------------------------
+
+/**
+ * Test inline GET with basic auth
+ */
+CREATE MICROFLOW RestTest.ACT_TestBasicAuth ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Success Boolean = false;
+
+  $Response = REST CALL GET 'https://httpbin.org/basic-auth/api_user/api_secret'
+    HEADER Accept = 'application/json'
+    AUTH BASIC 'api_user' PASSWORD 'api_secret'
+    TIMEOUT 15
+    RETURNS String
+    ON ERROR CONTINUE;
+
+  IF $Response != '' THEN
+    SET $Success = true;
+    LOG INFO NODE 'RestTest' 'ACT_TestBasicAuth: authenticated OK';
+  ELSE
+    LOG WARNING NODE 'RestTest' 'ACT_TestBasicAuth: auth failed';
+  END IF;
+
+  RETURN $Success;
+END;
+/
+
+-- ----------------------------------------------------------------------------
+-- 10B.8: Short timeout
+-- ----------------------------------------------------------------------------
+
+/**
+ * Test timeout configuration
+ */
+CREATE MICROFLOW RestTest.ACT_TestTimeout ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Success Boolean = false;
+
+  REST CALL GET 'https://httpbin.org/status/200'
+    HEADER Accept = '*/*'
+    TIMEOUT 5
+    RETURNS Nothing
+    ON ERROR CONTINUE;
+
+  SET $Success = true;
+  LOG INFO NODE 'RestTest' 'ACT_TestTimeout: completed within timeout';
+  RETURN $Success;
+END;
+/
+
+-- ############################################################################
+-- PART 10C: Run All Tests
+-- ############################################################################
+
+-- MARK: Run All
+
+/**
+ * Run all REST client test microflows
+ *
+ * Calls each test microflow in sequence and logs a summary.
+ * Includes both SEND REST REQUEST and REST CALL tests.
+ */
+CREATE MICROFLOW RestTest.ACT_RunAllRestTests ()
+RETURNS Boolean AS $AllPassed
+BEGIN
+  DECLARE $AllPassed Boolean = true;
+  DECLARE $Passed Integer = 0;
+  DECLARE $Failed Integer = 0;
+
+  LOG INFO NODE 'RestTest' '=== Running all REST client tests ===';
+
+  $R1 = CALL MICROFLOW RestTest.ACT_TestSimpleGet();
+  IF $R1 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+
+  $R2 = CALL MICROFLOW RestTest.ACT_TestJsonGet();
+  IF $R2 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+
+  $R3 = CALL MICROFLOW RestTest.ACT_TestPathParams();
+  IF $R3 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+
+  $R4 = CALL MICROFLOW RestTest.ACT_TestPost();
+  IF $R4 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+
+  $R5 = CALL MICROFLOW RestTest.ACT_TestQueryParams();
+  IF $R5 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+
+  $R6 = CALL MICROFLOW RestTest.ACT_TestPut();
+  IF $R6 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+
+  $R7 = CALL MICROFLOW RestTest.ACT_TestDelete();
+  IF $R7 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+
+  $R8 = CALL MICROFLOW RestTest.ACT_TestBasicAuth();
+  IF $R8 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+
+  $R9 = CALL MICROFLOW RestTest.ACT_TestHeaders();
+  IF $R9 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+
+  $R10 = CALL MICROFLOW RestTest.ACT_TestTimeout();
+  IF $R10 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+
+  LOG INFO NODE 'RestTest' '=== REST tests complete: ' + toString($Passed) + ' passed, ' + toString($Failed) + ' failed ===';
+
+  RETURN $AllPassed;
+END;
+/
+
+-- ############################################################################
+-- PART 11: TEST PAGE
+-- ############################################################################
+
+-- MARK: Test Page
+
+-- ============================================================================
+-- REST Client Test Page
+-- ============================================================================
+--
+-- A page with buttons to invoke each test microflow.
+-- Navigate to this page after executing the script.
+
+CREATE PAGE RestTest.RESTClientTestPage
+(
+  Title: 'REST Client Tests',
+  Layout: Atlas_Core.Atlas_Default,
+  Url: 'rest-client-tests'
+)
+{
+  LAYOUTGRID mainGrid {
+    ROW rowTitle {
+      COLUMN colTitle (DesktopWidth: 12) {
+        DYNAMICTEXT txtTitle (Content: 'REST Client Test Runner', RenderMode: H2)
+        DYNAMICTEXT txtDesc (Content: 'Click a button to run the corresponding REST test microflow. Results are logged to the console.', RenderMode: Paragraph)
+      }
+    }
+    ROW rowRunAll {
+      COLUMN colRunAll (DesktopWidth: 4) {
+        ACTIONBUTTON btnRunAll (Caption: 'Run All Tests', Action: MICROFLOW RestTest.ACT_RunAllRestTests, ButtonStyle: Primary)
+      }
+    }
+    ROW rowBasicHeader {
+      COLUMN colBasicHeader (DesktopWidth: 12) {
+        DYNAMICTEXT txtBasic (Content: 'Basic Operations', RenderMode: H4)
+      }
+    }
+    ROW rowBasicTests {
+      COLUMN colGet (DesktopWidth: 3) {
+        ACTIONBUTTON btnSimpleGet (Caption: 'Simple GET', Action: MICROFLOW RestTest.ACT_TestSimpleGet, ButtonStyle: Default)
+      }
+      COLUMN colJson (DesktopWidth: 3) {
+        ACTIONBUTTON btnJsonGet (Caption: 'JSON GET', Action: MICROFLOW RestTest.ACT_TestJsonGet, ButtonStyle: Default)
+      }
+      COLUMN colPath (DesktopWidth: 3) {
+        ACTIONBUTTON btnPathParams (Caption: 'Path Params', Action: MICROFLOW RestTest.ACT_TestPathParams, ButtonStyle: Default)
+      }
+      COLUMN colQuery (DesktopWidth: 3) {
+        ACTIONBUTTON btnQueryParams (Caption: 'Query Params', Action: MICROFLOW RestTest.ACT_TestQueryParams, ButtonStyle: Default)
+      }
+    }
+    ROW rowMethodHeader {
+      COLUMN colMethodHeader (DesktopWidth: 12) {
+        DYNAMICTEXT txtMethods (Content: 'HTTP Methods', RenderMode: H4)
+      }
+    }
+    ROW rowMethodTests {
+      COLUMN colPost (DesktopWidth: 4) {
+        ACTIONBUTTON btnPost (Caption: 'POST', Action: MICROFLOW RestTest.ACT_TestPost, ButtonStyle: Success)
+      }
+      COLUMN colPut (DesktopWidth: 4) {
+        ACTIONBUTTON btnPut (Caption: 'PUT', Action: MICROFLOW RestTest.ACT_TestPut, ButtonStyle: Info)
+      }
+      COLUMN colDelete (DesktopWidth: 4) {
+        ACTIONBUTTON btnDelete (Caption: 'DELETE', Action: MICROFLOW RestTest.ACT_TestDelete, ButtonStyle: Danger)
+      }
+    }
+    ROW rowAdvHeader {
+      COLUMN colAdvHeader (DesktopWidth: 12) {
+        DYNAMICTEXT txtAdv (Content: 'Advanced Features', RenderMode: H4)
+      }
+    }
+    ROW rowAdvTests {
+      COLUMN colAuth (DesktopWidth: 4) {
+        ACTIONBUTTON btnAuth (Caption: 'Basic Auth', Action: MICROFLOW RestTest.ACT_TestBasicAuth, ButtonStyle: Warning)
+      }
+      COLUMN colHeaders (DesktopWidth: 4) {
+        ACTIONBUTTON btnHeaders (Caption: 'Custom Headers', Action: MICROFLOW RestTest.ACT_TestHeaders, ButtonStyle: Default)
+      }
+      COLUMN colTimeout (DesktopWidth: 4) {
+        ACTIONBUTTON btnTimeout (Caption: 'Timeout', Action: MICROFLOW RestTest.ACT_TestTimeout, ButtonStyle: Default)
+      }
+    }
+  }
+};
+/
+
+-- ############################################################################
+-- PART 12: VERIFICATION COMMANDS
 -- ############################################################################
 
 -- MARK: Verification

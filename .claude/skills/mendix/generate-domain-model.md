@@ -810,9 +810,42 @@ ALTER ENTITY Module.Customer
 -- Add an index
 ALTER ENTITY Module.Customer
   ADD INDEX idx_email (Email ASC);
+
+-- Reposition entity on domain model canvas
+ALTER ENTITY Module.Customer
+  SET POSITION (100, 200);
 ```
 
-**Supported operations:** ADD ATTRIBUTE, RENAME ATTRIBUTE, MODIFY ATTRIBUTE, DROP ATTRIBUTE, SET DOCUMENTATION, SET COMMENT, ADD INDEX, DROP INDEX.
+**Supported operations:** ADD ATTRIBUTE, RENAME ATTRIBUTE, MODIFY ATTRIBUTE, DROP ATTRIBUTE, SET DOCUMENTATION, SET COMMENT, ADD INDEX, DROP INDEX, SET POSITION.
+
+### Entity Positioning Guidelines
+
+When creating or repositioning entities, follow these layout rules for readable domain models:
+
+- **Horizontal spacing:** 350px between columns (x = 50, 400, 750, 1100, ...)
+- **Vertical spacing:** calculate per-column based on the entity above: `y = previous_y + 50 + (previous_entity_attribute_count * 20)`
+- Entity header is ~40px, each attribute adds ~20px of height, plus ~50px padding
+- **Position column-by-column**, not in rigid rows — avoids wasting space when entities have different attribute counts
+- **Place related entities** in the same column or adjacent columns so associations are short
+
+Example layout for entities with varying attribute counts:
+
+```
+Column 1 (x=50):          Column 2 (x=400):
+  Entity A (4 attrs)        Entity C (14 attrs)
+  y=50                      y=50
+
+  Entity B (10 attrs)       Entity D (3 attrs)
+  y=180 (50+50+4*20)        y=380 (50+50+14*20)
+```
+
+```sql
+-- Position entities after creation
+ALTER ENTITY Module.EntityA SET POSITION (50, 50);
+ALTER ENTITY Module.EntityB SET POSITION (50, 180);
+ALTER ENTITY Module.EntityC SET POSITION (400, 50);
+ALTER ENTITY Module.EntityD SET POSITION (400, 380);
+```
 
 ### Entity Migration with CREATE OR MODIFY
 

@@ -41,60 +41,118 @@ func SerializeWidget(w pages.Widget) bson.D {
 
 // serializeWidget serializes a single widget to BSON.
 func serializeWidget(w pages.Widget) bson.D {
+	var doc bson.D
 	switch widget := w.(type) {
 	case *pages.Container:
-		return serializeContainer(widget)
+		doc = serializeContainer(widget)
 	case *pages.GroupBox:
 		return serializeGroupBox(widget)
 	case *pages.TabContainer:
 		return serializeTabContainer(widget)
 	case *pages.LayoutGrid:
-		return serializeLayoutGrid(widget)
+		doc = serializeLayoutGrid(widget)
 	case *pages.DynamicText:
-		return serializeDynamicText(widget)
+		doc = serializeDynamicText(widget)
 	case *pages.ActionButton:
-		return serializeActionButton(widget)
+		doc = serializeActionButton(widget)
 	case *pages.Text:
-		return serializeStaticText(widget)
+		doc = serializeStaticText(widget)
 	case *pages.Title:
-		return serializeTitle(widget)
+		doc = serializeTitle(widget)
 	case *pages.SnippetCallWidget:
-		return serializeSnippetCall(widget)
+		doc = serializeSnippetCall(widget)
 	case *pages.Gallery:
-		return serializeGallery(widget)
+		doc = serializeGallery(widget)
 	case *pages.CustomWidget:
-		return serializeCustomWidget(widget)
+		doc = serializeCustomWidget(widget)
 	case *pages.DataView:
-		return serializeDataView(widget)
+		doc = serializeDataView(widget)
 	case *pages.DataGrid:
-		return serializeDataGrid(widget)
+		doc = serializeDataGrid(widget)
 	case *pages.TextBox:
-		return serializeTextBox(widget)
+		doc = serializeTextBox(widget)
 	case *pages.TextArea:
-		return serializeTextArea(widget)
+		doc = serializeTextArea(widget)
 	case *pages.DatePicker:
-		return serializeDatePicker(widget)
+		doc = serializeDatePicker(widget)
 	case *pages.CheckBox:
-		return serializeCheckBox(widget)
+		doc = serializeCheckBox(widget)
 	case *pages.RadioButtons:
-		return serializeRadioButtons(widget)
+		doc = serializeRadioButtons(widget)
 	case *pages.DropDown:
-		return serializeDropDown(widget)
+		doc = serializeDropDown(widget)
 	case *pages.NavigationList:
-		return serializeNavigationList(widget)
+		doc = serializeNavigationList(widget)
 	case *pages.ListView:
-		return serializeListView(widget)
+		doc = serializeListView(widget)
 	case *pages.StaticImage:
-		return serializeStaticImage(widget)
+		doc = serializeStaticImage(widget)
 	case *pages.DynamicImage:
-		return serializeDynamicImage(widget)
+		doc = serializeDynamicImage(widget)
 	default:
 		// Fallback for unknown widget types
-		return bson.D{
+		doc = bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(w.GetID()))},
 			{Key: "$Type", Value: w.GetTypeName()},
 			{Key: "Name", Value: w.GetName()},
 		}
+	}
+
+	// Patch conditional settings from BaseWidget if set
+	doc = patchConditionalSettings(doc, w)
+	return doc
+}
+
+// patchConditionalSettings replaces nil ConditionalVisibilitySettings/ConditionalEditabilitySettings
+// in the serialized BSON with actual values from the widget's BaseWidget fields.
+func patchConditionalSettings(doc bson.D, w pages.Widget) bson.D {
+	type baseWidgetGetter interface {
+		GetBaseWidget() *pages.BaseWidget
+	}
+	bwg, ok := w.(baseWidgetGetter)
+	if !ok {
+		return doc
+	}
+	bw := bwg.GetBaseWidget()
+	if bw.ConditionalVisibility == nil && bw.ConditionalEditability == nil {
+		return doc
+	}
+
+	for i, elem := range doc {
+		if elem.Key == "ConditionalVisibilitySettings" && bw.ConditionalVisibility != nil {
+			doc[i].Value = serializeConditionalVisibility(bw.ConditionalVisibility)
+		}
+		if elem.Key == "ConditionalEditabilitySettings" && bw.ConditionalEditability != nil {
+			doc[i].Value = serializeConditionalEditability(bw.ConditionalEditability)
+		}
+		if elem.Key == "Editable" && bw.ConditionalEditability != nil {
+			doc[i].Value = "Conditional"
+		}
+	}
+	return doc
+}
+
+func serializeConditionalVisibility(cvs *pages.ConditionalVisibilitySettings) bson.D {
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(cvs.ID))},
+		{Key: "$Type", Value: "Forms$ConditionalVisibilitySettings"},
+		{Key: "Attribute", Value: nil},
+		{Key: "Conditions", Value: bson.A{int32(3)}},
+		{Key: "Expression", Value: cvs.Expression},
+		{Key: "IgnoreSecurity", Value: false},
+		{Key: "ModuleRoles", Value: bson.A{int32(3)}},
+		{Key: "SourceVariable", Value: nil},
+	}
+}
+
+func serializeConditionalEditability(ces *pages.ConditionalEditabilitySettings) bson.D {
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(ces.ID))},
+		{Key: "$Type", Value: "Forms$ConditionalEditabilitySettings"},
+		{Key: "Attribute", Value: nil},
+		{Key: "Conditions", Value: bson.A{int32(3)}},
+		{Key: "Expression", Value: ces.Expression},
+		{Key: "SourceVariable", Value: nil},
 	}
 }
 

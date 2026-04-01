@@ -591,6 +591,30 @@ type RestCallAction struct {
 
 func (RestCallAction) isMicroflowAction() {}
 
+// RestOperationCallAction calls a consumed REST service operation.
+// BSON type: Microflows$RestOperationCallAction
+type RestOperationCallAction struct {
+	model.BaseElement
+	ErrorHandlingType ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	Operation         string            `json:"operation,omitempty"`      // BY_NAME: Module.Service.Operation
+	OutputVariable    *RestOutputVar    `json:"outputVariable,omitempty"` // null or Microflows$OutputVariable
+	BodyVariable      *RestBodyVar      `json:"bodyVariable,omitempty"`   // null or nested object
+}
+
+func (RestOperationCallAction) isMicroflowAction() {}
+
+// RestOutputVar represents Microflows$OutputVariable in a REST operation call.
+type RestOutputVar struct {
+	model.BaseElement
+	VariableName string `json:"variableName,omitempty"`
+}
+
+// RestBodyVar represents the body variable in a REST operation call.
+type RestBodyVar struct {
+	model.BaseElement
+	VariableName string `json:"variableName,omitempty"`
+}
+
 // HttpConfiguration represents HTTP configuration for a REST call.
 type HttpConfiguration struct {
 	model.BaseElement

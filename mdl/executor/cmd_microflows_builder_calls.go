@@ -745,6 +745,57 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	return activity.ID
 }
 
+// addSendRestRequestAction creates a SEND REST REQUEST activity that calls
+// a consumed REST service operation.
+func (fb *flowBuilder) addSendRestRequestAction(s *ast.SendRestRequestStmt) model.ID {
+	// Build operation reference: Module.Service.Operation
+	operationQN := s.Operation.String()
+
+	// Build OutputVariable
+	var outputVar *microflows.RestOutputVar
+	if s.OutputVariable != "" {
+		outputVar = &microflows.RestOutputVar{
+			BaseElement:  model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			VariableName: s.OutputVariable,
+		}
+	}
+
+	// Build BodyVariable
+	var bodyVar *microflows.RestBodyVar
+	if s.BodyVariable != "" {
+		bodyVar = &microflows.RestBodyVar{
+			BaseElement:  model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			VariableName: s.BodyVariable,
+		}
+	}
+
+	// RestOperationCallAction does not support custom error handling (CE6035).
+	// ON ERROR clauses in the MDL are silently ignored for this action type.
+	action := &microflows.RestOperationCallAction{
+		BaseElement:    model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		Operation:      operationQN,
+		OutputVariable: outputVar,
+		BodyVariable:   bodyVar,
+	}
+
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			AutoGenerateCaption: true,
+		},
+		Action: action,
+	}
+
+	fb.objects = append(fb.objects, activity)
+	fb.posX += fb.spacing
+
+	return activity.ID
+}
+
 // addExecuteDatabaseQueryAction creates an EXECUTE DATABASE QUERY statement.
 func (fb *flowBuilder) addExecuteDatabaseQueryAction(s *ast.ExecuteDatabaseQueryStmt) model.ID {
 	// DynamicQuery is a Mendix expression — string literals need single quotes

@@ -249,6 +249,7 @@ const (
 	WidgetIDDataGridDropdownFilter = "com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter"
 	WidgetIDDataGridNumberFilter   = "com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter"
 	WidgetIDComboBox               = "com.mendix.widget.web.combobox.Combobox"
+	WidgetIDImage                  = "com.mendix.widget.web.image.Image"
 )
 
 // Report Widgets

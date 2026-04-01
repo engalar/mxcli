@@ -457,6 +457,12 @@ type MDLParserListener interface {
 	// EnterRestCallReturnsClause is called when entering the restCallReturnsClause production.
 	EnterRestCallReturnsClause(c *RestCallReturnsClauseContext)
 
+	// EnterSendRestRequestStatement is called when entering the sendRestRequestStatement production.
+	EnterSendRestRequestStatement(c *SendRestRequestStatementContext)
+
+	// EnterSendRestRequestBodyClause is called when entering the sendRestRequestBodyClause production.
+	EnterSendRestRequestBodyClause(c *SendRestRequestBodyClauseContext)
+
 	// EnterListOperationStatement is called when entering the listOperationStatement production.
 	EnterListOperationStatement(c *ListOperationStatementContext)
 
@@ -1572,6 +1578,12 @@ type MDLParserListener interface {
 
 	// ExitRestCallReturnsClause is called when exiting the restCallReturnsClause production.
 	ExitRestCallReturnsClause(c *RestCallReturnsClauseContext)
+
+	// ExitSendRestRequestStatement is called when exiting the sendRestRequestStatement production.
+	ExitSendRestRequestStatement(c *SendRestRequestStatementContext)
+
+	// ExitSendRestRequestBodyClause is called when exiting the sendRestRequestBodyClause production.
+	ExitSendRestRequestBodyClause(c *SendRestRequestBodyClauseContext)
 
 	// ExitListOperationStatement is called when exiting the listOperationStatement production.
 	ExitListOperationStatement(c *ListOperationStatementContext)

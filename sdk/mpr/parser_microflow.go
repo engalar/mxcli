@@ -515,8 +515,13 @@ var microflowActionParsers = map[string]func(map[string]any) microflows.Microflo
 	// Cast action
 	"Microflows$CastAction": func(r map[string]any) microflows.MicroflowAction { return parseCastAction(r) },
 
-	// REST call action
+	// REST call action (inline HTTP)
 	"Microflows$RestCallAction": func(r map[string]any) microflows.MicroflowAction { return parseRestCallAction(r) },
+
+	// REST operation call action (consumed REST service)
+	"Microflows$RestOperationCallAction": func(r map[string]any) microflows.MicroflowAction {
+		return parseRestOperationCallAction(r)
+	},
 
 	// Database Connector action
 	"DatabaseConnector$ExecuteDatabaseQueryAction": func(r map[string]any) microflows.MicroflowAction { return parseExecuteDatabaseQueryAction(r) },

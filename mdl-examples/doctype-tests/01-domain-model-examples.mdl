@@ -1445,6 +1445,10 @@ ALTER ENTITY DmTest.VATRate
 ALTER ENTITY DmTest.VATRate
   ADD INDEX (TaxRange ASC);
 
+-- Reposition entity on domain model canvas
+ALTER ENTITY DmTest.VATRate
+  SET POSITION (300, 400);
+
 -- ============================================================================
 -- PART 11: COMPLEX VIEW ENTITIES WITH SUBQUERIES
 -- ============================================================================

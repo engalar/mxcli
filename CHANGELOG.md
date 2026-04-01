@@ -4,6 +4,64 @@ All notable changes to mxcli will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - 2026-03-31
+
+### Added
+
+- **SEND REST REQUEST** — Microflow action for consumed REST services with full BSON serialization roundtrip
+- **Pluggable Image Widget** — Full roundtrip support for `com.mendix.widget.web.image.Image` with Studio Pro-extracted templates
+- **ALTER PAGE SET Url** — Change page URLs via MDL
+- **ALTER PAGE SET Layout** — Switch page layout via MDL
+- **ALTER ENTITY SET POSITION** — Set entity position in domain model diagrams
+- **VISIBLE IF / EDITABLE IF** — Conditional visibility and editability with XPath expressions, plus TabletWidth/PhoneWidth properties
+- **EXECUTE DATABASE QUERY** — Microflow action for static, dynamic, and parameterized SQL with runtime connection override
+- **Contract Browsing** — SHOW/DESCRIBE CONTRACT ENTITIES/ACTIONS from cached OData $metadata, CONTRACT CHANNELS/MESSAGES from AsyncAPI
+- **Integration Catalog** — 7 new catalog tables (rest_clients, rest_operations, published_rest_services, external_entities, external_actions, business_events, contract tables)
+- **SHOW EXTERNAL ACTIONS / PUBLISHED REST SERVICES** — Integration pane commands
+- **SHOW CONSTANT VALUES** — Display constant values and catalog tables
+- **CREATE/DROP CONFIGURATION** — Configuration management with constant overrides
+- **JavaScript Actions** — NDSL/MDL support for JavaScript action definitions
+- **DROP/MOVE FOLDER** — Remove empty folders and reorganize project structure
+- **GALLERY Columns** — DesktopColumns/TabletColumns/PhoneColumns properties
+- **Forward-Reference Hints** — Helpful error messages when exec fails on later-defined objects
+- **IMAGE FROM FILE** — Image collection syntax for file-based images
+- **OpenSSF Baseline Level 1** — Security foundations and CodeQL fixes
+- **Multi-Agent Merge Proposal** — Design proposal for parallel agent work on Mendix projects
+- **Documentation Site** — mdBook-based site with tutorials, language reference, migration guide, and internals
+- **Tool Integrations** — Added support for OpenCode, Mistral Vibe, and GitHub Copilot in `mxcli init`
+- **TUI Enhancements** — Agent channel (Unix socket), UX improvements, auto-create module support
+- **Custom Widget AIGC Skill** — Skill for AI-generated custom pluggable widgets
+- **AI Issue Triage** — GitHub Actions workflow for automated issue classification
+- **Daily Project Digest** — Scheduled workflow for project activity summaries
+
+### Fixed
+
+- Skip null TextTemplate in opTextTemplate to avoid CE0463 widget definition errors
+- Set Editable to Conditional and fix Visible XPath expression serialization
+- REST client BSON serialization field ordering and roundtrip correctness
+- Image widget template extraction (imageObject defaults, Parameters version marker, Texts$Translation)
+- Escape single quotes in page DESCRIBE output via `mdlQuote()`
+- Resolve association/attribute and entity/enumeration ambiguity in MDL parser
+- LSP diagnostics for editable `mendix-mdl://` documents
+- Gallery CE0463 by re-extracting template and fixing augmentation
+- DataGrid2 column name derivation from attribute or caption
+- ComboBox association EntityRef via IndirectEntityRef with association path
+- XPath tokens written unquoted to prevent CE0161
+- Long type written as `DataTypes$LongType` instead of IntegerType
+- Date as distinct type from DateTime throughout the pipeline
+- MPR version detection using DB schema and `_FormatVersion` field
+- Recurse into loop bodies when extracting catalog references
+- CodeQL symlink path traversal alerts in tar extraction
+- Multiple TUI data races and agent channel stability fixes
+
+### Changed
+
+- Bumped dependencies: pgx v5.9.1, zap v1.27.1, go-runewidth v0.0.21, cobra v1.10.2, mongo-driver v1.17.9, sqlite v1.48.0
+- Refactored Visible/Editable syntax to `Visible: [xpath]` and `Editable: [xpath]`
+- Used dedicated CWTest module in custom widget examples
+- Always-quoted identifiers in MDL to prevent reserved keyword conflicts
+- Added scope & atomicity and documentation sections to PR review checklist
+
 ## [0.3.0] - 2026-03-26
 
 ### Added

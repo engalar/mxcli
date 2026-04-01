@@ -131,8 +131,16 @@ func serializeRestOperation(op *model.RestClientOperation) bson.M {
 
 	// Headers: versioned array of Rest$HeaderWithValueTemplate
 	headers := bson.A{int32(2)}
+	hasAccept := false
 	for _, h := range op.Headers {
 		headers = append(headers, serializeRestHeader(h))
+		if strings.EqualFold(h.Name, "Accept") {
+			hasAccept = true
+		}
+	}
+	// Mendix requires an Accept header on every consumed REST operation (CE7062)
+	if !hasAccept {
+		headers = append(headers, serializeRestHeader(&model.RestClientHeader{Name: "Accept", Value: "*/*"}))
 	}
 	doc["Headers"] = headers
 
@@ -163,13 +171,25 @@ func serializeRestMethod(op *model.RestClientOperation) bson.M {
 	httpMethod := httpMethodToMendix(op.HttpMethod)
 
 	if op.BodyType != "" {
-		// Method with body
+		// Method with explicit body
 		doc := bson.M{
 			"$ID":        idToBsonBinary(generateUUID()),
 			"$Type":      "Rest$RestOperationMethodWithBody",
 			"HttpMethod": httpMethod,
 		}
 		doc["Body"] = serializeRestBody(op.BodyType)
+		return doc
+	}
+
+	// POST, PUT, PATCH must include a body even if not explicitly specified (CE7064)
+	methodUpper := strings.ToUpper(op.HttpMethod)
+	if methodUpper == "POST" || methodUpper == "PUT" || methodUpper == "PATCH" {
+		doc := bson.M{
+			"$ID":        idToBsonBinary(generateUUID()),
+			"$Type":      "Rest$RestOperationMethodWithBody",
+			"HttpMethod": httpMethod,
+		}
+		doc["Body"] = serializeRestBody("JSON")
 		return doc
 	}
 
@@ -182,12 +202,15 @@ func serializeRestMethod(op *model.RestClientOperation) bson.M {
 }
 
 // serializeRestBody creates a polymorphic Body field.
+// Uses Rest$JsonBody instead of Rest$ImplicitMappingBody to avoid CE7247/CE0061
+// (ImplicitMappingBody requires entity mapping which isn't supported yet).
 func serializeRestBody(bodyType string) bson.M {
 	switch strings.ToUpper(bodyType) {
 	case "JSON":
 		return bson.M{
 			"$ID":   idToBsonBinary(generateUUID()),
-			"$Type": "Rest$ImplicitMappingBody",
+			"$Type": "Rest$JsonBody",
+			"Value": "",
 		}
 	case "FILE":
 		return bson.M{
@@ -198,7 +221,8 @@ func serializeRestBody(bodyType string) bson.M {
 	default:
 		return bson.M{
 			"$ID":   idToBsonBinary(generateUUID()),
-			"$Type": "Rest$ImplicitMappingBody",
+			"$Type": "Rest$JsonBody",
+			"Value": "",
 		}
 	}
 }
@@ -239,25 +263,22 @@ func serializeRestQueryParameter(p *model.RestClientParameter) bson.M {
 }
 
 // serializeRestResponseHandling creates a polymorphic ResponseHandling BSON object.
+// Uses Rest$NoResponseHandling for all types to avoid CE0061 (ImplicitMappingResponseHandling
+// requires entity mapping which isn't supported yet). ContentType is set to enable roundtripping.
 func serializeRestResponseHandling(responseType string) bson.M {
+	doc := bson.M{
+		"$ID":   idToBsonBinary(generateUUID()),
+		"$Type": "Rest$NoResponseHandling",
+	}
 	switch strings.ToUpper(responseType) {
 	case "JSON":
-		return bson.M{
-			"$ID":         idToBsonBinary(generateUUID()),
-			"$Type":       "Rest$ImplicitMappingResponseHandling",
-			"ContentType": "application/json",
-		}
-	case "NONE", "STRING", "FILE", "STATUS":
-		return bson.M{
-			"$ID":   idToBsonBinary(generateUUID()),
-			"$Type": "Rest$NoResponseHandling",
-		}
-	default:
-		return bson.M{
-			"$ID":   idToBsonBinary(generateUUID()),
-			"$Type": "Rest$NoResponseHandling",
-		}
+		doc["ContentType"] = "application/json"
+	case "STRING":
+		doc["ContentType"] = "text/plain"
+	case "FILE":
+		doc["ContentType"] = "application/octet-stream"
 	}
+	return doc
 }
 
 // serializeRestDataType converts a simple type name to a BSON DataType object.

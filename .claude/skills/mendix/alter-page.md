@@ -65,6 +65,8 @@ SET Title = 'New Page Title'
 | `Name` | Any widget | String | `SET Name = 'newName' ON oldName` |
 | `Title` | Page-level only | String | `SET Title = 'Edit Customer'` |
 | `Layout` | Page-level only | Qualified name | `SET Layout = Atlas_Core.Atlas_Default` |
+| `Visible` | Any widget | Boolean or `[xpath]` | `SET Visible = false ON txtHidden` |
+| `Editable` | Input widgets | Never/Always or `[xpath]` | `SET Editable = Never ON txtReadOnly` |
 | `'quotedProp'` | Pluggable widgets | String, Boolean, Number | `SET 'showLabel' = false ON cbStatus` |
 
 **Pluggable widget properties** use quoted names to set values in the widget's `Object.Properties[]`. Boolean values are stored as `"yes"`/`"no"` in BSON.

@@ -958,6 +958,20 @@ func (s *BaseMDLParserListener) EnterRestCallReturnsClause(ctx *RestCallReturnsC
 // ExitRestCallReturnsClause is called when production restCallReturnsClause is exited.
 func (s *BaseMDLParserListener) ExitRestCallReturnsClause(ctx *RestCallReturnsClauseContext) {}
 
+// EnterSendRestRequestStatement is called when production sendRestRequestStatement is entered.
+func (s *BaseMDLParserListener) EnterSendRestRequestStatement(ctx *SendRestRequestStatementContext) {}
+
+// ExitSendRestRequestStatement is called when production sendRestRequestStatement is exited.
+func (s *BaseMDLParserListener) ExitSendRestRequestStatement(ctx *SendRestRequestStatementContext) {}
+
+// EnterSendRestRequestBodyClause is called when production sendRestRequestBodyClause is entered.
+func (s *BaseMDLParserListener) EnterSendRestRequestBodyClause(ctx *SendRestRequestBodyClauseContext) {
+}
+
+// ExitSendRestRequestBodyClause is called when production sendRestRequestBodyClause is exited.
+func (s *BaseMDLParserListener) ExitSendRestRequestBodyClause(ctx *SendRestRequestBodyClauseContext) {
+}
+
 // EnterListOperationStatement is called when production listOperationStatement is entered.
 func (s *BaseMDLParserListener) EnterListOperationStatement(ctx *ListOperationStatementContext) {}
 

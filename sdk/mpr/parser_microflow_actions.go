@@ -366,6 +366,32 @@ func parseRestCallAction(raw map[string]any) *microflows.RestCallAction {
 	return action
 }
 
+// parseRestOperationCallAction parses a Microflows$RestOperationCallAction from BSON.
+func parseRestOperationCallAction(raw map[string]any) *microflows.RestOperationCallAction {
+	action := &microflows.RestOperationCallAction{}
+	action.ID = model.ID(extractBsonID(raw["$ID"]))
+	action.ErrorHandlingType = microflows.ErrorHandlingType(extractString(raw["ErrorHandlingType"]))
+	action.Operation = extractString(raw["Operation"])
+
+	// Parse OutputVariable (nested Microflows$OutputVariable)
+	if ov := extractBsonMap(raw["OutputVariable"]); ov != nil {
+		action.OutputVariable = &microflows.RestOutputVar{
+			BaseElement:  model.BaseElement{ID: model.ID(extractBsonID(ov["$ID"]))},
+			VariableName: extractString(ov["VariableName"]),
+		}
+	}
+
+	// Parse BodyVariable (nested object)
+	if bv := extractBsonMap(raw["BodyVariable"]); bv != nil {
+		action.BodyVariable = &microflows.RestBodyVar{
+			BaseElement:  model.BaseElement{ID: model.ID(extractBsonID(bv["$ID"]))},
+			VariableName: extractString(bv["VariableName"]),
+		}
+	}
+
+	return action
+}
+
 func parseHttpConfiguration(raw map[string]any) *microflows.HttpConfiguration {
 	config := &microflows.HttpConfiguration{}
 	config.ID = model.ID(extractBsonID(raw["$ID"]))

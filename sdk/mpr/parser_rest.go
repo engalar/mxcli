@@ -181,7 +181,18 @@ func parseRestOperation(opMap map[string]any) *model.RestClientOperation {
 		respType := extractString(respMap["$Type"])
 		switch respType {
 		case "Rest$NoResponseHandling":
-			op.ResponseType = "NONE"
+			// Detect response type from ContentType for roundtrip support
+			contentType := extractString(respMap["ContentType"])
+			switch contentType {
+			case "application/json":
+				op.ResponseType = "JSON"
+			case "text/plain":
+				op.ResponseType = "STRING"
+			case "application/octet-stream":
+				op.ResponseType = "FILE"
+			default:
+				op.ResponseType = "NONE"
+			}
 		case "Rest$ImplicitMappingResponseHandling":
 			contentType := extractString(respMap["ContentType"])
 			switch contentType {

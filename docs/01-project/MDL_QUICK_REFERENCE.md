@@ -49,6 +49,7 @@ Modifies an existing entity without full replacement.
 | Add index | `ALTER ENTITY Module.Name ADD INDEX (Col1 [ASC\|DESC], ...);` | |
 | Drop index | `ALTER ENTITY Module.Name DROP INDEX (Col1, ...);` | |
 | Set documentation | `ALTER ENTITY Module.Name SET DOCUMENTATION 'text';` | |
+| Set position | `ALTER ENTITY Module.Name SET POSITION (100, 200);` | Canvas position |
 
 **Example:**
 ```sql
@@ -421,6 +422,16 @@ CREATE PAGE MyModule.Customer_Edit
   }
 }
 ```
+
+**Widget Properties:**
+
+| Property | Syntax | Notes |
+|----------|--------|-------|
+| DesktopWidth | `COLUMN col (DesktopWidth: 8)` | 1-12 or AutoFill |
+| TabletWidth | `COLUMN col (TabletWidth: 6)` | 1-12 or AutoFill (default: auto) |
+| PhoneWidth | `COLUMN col (PhoneWidth: 12)` | 1-12 or AutoFill (default: auto) |
+| Visible | `TEXTBOX txt (Visible: [IsActive])` | Conditional visibility (XPath expression) |
+| Editable | `TEXTBOX txt (Editable: [Status != 'Closed'])` | Conditional editability (XPath expression) |
 
 **Supported Widgets:**
 - Layout: `LAYOUTGRID`, `ROW`, `COLUMN`, `CONTAINER`, `CUSTOMCONTAINER`

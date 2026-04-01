@@ -728,6 +728,102 @@ RETRIEVE $Items FROM Module.Entity WHERE Active = true;
 
 **Note**: `RETURNS Type AS $Var` in the microflow signature does NOT create an activity variable — it only names the return value. So `$Var = CALL JAVA ACTION ...` after `RETURNS AS $Var` is fine (one creation).
 
+## REST Service Calls
+
+MDL supports two patterns for calling REST APIs from microflows:
+
+### SEND REST REQUEST — Consumed REST Service Operations
+
+Calls an operation defined in a consumed REST service (created via `CREATE REST CLIENT`). The URL, headers, authentication, and response mapping are configured in the REST client document — the microflow only references the operation.
+
+```mdl
+-- Fire and forget (RESPONSE NONE operation)
+SEND REST REQUEST Module.ServiceName.OperationName;
+
+-- With output variable (RESPONSE JSON operation — maps to entity)
+$Result = SEND REST REQUEST Module.ServiceName.OperationName;
+
+-- With request body (POST/PUT operations)
+$Result = SEND REST REQUEST Module.ServiceName.CreateItem
+    BODY $NewItem;
+```
+
+**CRITICAL: `$latestHttpResponse` system variable**
+
+After every `SEND REST REQUEST`, Mendix automatically populates `$latestHttpResponse` (type `System.HttpResponse`). Use this to check call success — do **NOT** check the output variable directly:
+
+```mdl
+-- ✅ CORRECT: check $latestHttpResponse
+$RootResult = SEND REST REQUEST Module.Service.GetData;
+IF $latestHttpResponse/Content != empty THEN
+  -- Process $RootResult (the mapped entity)
+END IF;
+
+-- ❌ WRONG: checking the output variable directly causes CE0117
+IF $RootResult != empty THEN  -- ERROR!
+```
+
+**Key attributes on `$latestHttpResponse`:**
+- `Content` (String) — response body as string
+- `StatusCode` (Integer) — HTTP status code (200, 404, etc.)
+
+**Restrictions:**
+- `SEND REST REQUEST` does **NOT** support custom error handling (`ON ERROR CONTINUE/ROLLBACK` causes CE6035). Errors are always handled by aborting.
+- The operation must be defined via `CREATE REST CLIENT` with a three-part qualified name: `Module.ServiceDocument.OperationName`.
+
+### REST CALL — Inline HTTP Calls
+
+Direct HTTP call with URL, headers, auth, body, and response handling specified inline. Useful for one-off calls or when no REST client document exists.
+
+```mdl
+-- Simple GET returning string
+$Response = REST CALL GET 'https://api.example.com/data'
+    HEADER Accept = 'application/json'
+    TIMEOUT 30
+    RETURNS String;
+
+-- POST with JSON body
+$Response = REST CALL POST 'https://api.example.com/items'
+    HEADER 'Content-Type' = 'application/json'
+    HEADER Accept = 'application/json'
+    BODY '{{"name": "{1}", "value": {2}}' WITH (
+        {1} = $ItemName,
+        {2} = toString($ItemValue)
+    )
+    TIMEOUT 30
+    RETURNS String
+    ON ERROR CONTINUE;
+
+-- GET with URL template parameters
+$Response = REST CALL GET 'https://api.example.com/users/{1}' WITH (
+    {1} = toString($UserId)
+)
+    HEADER Accept = 'application/json'
+    RETURNS String;
+
+-- With basic authentication
+$Response = REST CALL GET 'https://api.example.com/secure'
+    HEADER Accept = 'application/json'
+    AUTH BASIC $Username PASSWORD $Password
+    TIMEOUT 30
+    RETURNS String;
+
+-- DELETE (no response)
+REST CALL DELETE 'https://api.example.com/items/{1}' WITH (
+    {1} = $ItemId
+)
+    RETURNS Nothing
+    ON ERROR CONTINUE;
+```
+
+**REST CALL response types:**
+- `RETURNS String` — response body as string variable
+- `RETURNS Nothing` / `RETURNS None` — ignore response
+- `RETURNS Response` — returns `System.HttpResponse` object
+- `RETURNS MAPPING Module.ImportMapping AS Module.Entity` — import mapping
+
+**REST CALL supports full error handling** (`ON ERROR CONTINUE`, `ON ERROR ROLLBACK`, custom error handlers).
+
 ## Error Handling
 
 MDL supports error handling for activities that may fail (microflow calls, commits, external service calls, etc.).

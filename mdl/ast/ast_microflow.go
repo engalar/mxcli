@@ -611,3 +611,15 @@ type RestCallStmt struct {
 }
 
 func (s *RestCallStmt) isMicroflowStatement() {}
+
+// SendRestRequestStmt represents: [$Var =] SEND REST REQUEST Module.Service.Operation [BODY $var] [ON ERROR ...]
+// Calls a consumed REST service operation defined via CREATE REST CLIENT.
+type SendRestRequestStmt struct {
+	OutputVariable string               // Optional output variable (without $)
+	Operation      QualifiedName        // Consumed REST service operation (Module.Service.Operation)
+	BodyVariable   string               // Optional body variable name (without $)
+	ErrorHandling  *ErrorHandlingClause // Optional ON ERROR clause
+	Annotations    *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *SendRestRequestStmt) isMicroflowStatement() {}

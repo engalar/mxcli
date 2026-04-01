@@ -103,6 +103,8 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 		stmt = buildValidationFeedbackStatement(valFeedback)
 	} else if restCall := mfCtx.RestCallStatement(); restCall != nil {
 		stmt = buildRestCallStatement(restCall)
+	} else if sendRest := mfCtx.SendRestRequestStatement(); sendRest != nil {
+		stmt = buildSendRestRequestStatement(sendRest)
 	}
 
 	// Attach annotations to the statement
@@ -280,6 +282,8 @@ func setStatementAnnotations(stmt ast.MicroflowStatement, ann *ast.ActivityAnnot
 	case *ast.ValidationFeedbackStmt:
 		s.Annotations = ann
 	case *ast.RestCallStmt:
+		s.Annotations = ann
+	case *ast.SendRestRequestStmt:
 		s.Annotations = ann
 	}
 }

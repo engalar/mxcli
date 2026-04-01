@@ -422,6 +422,9 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 	case *microflows.RestCallAction:
 		return serializeRestCallAction(a)
 
+	case *microflows.RestOperationCallAction:
+		return serializeRestOperationCallAction(a)
+
 	case *microflows.ExecuteDatabaseQueryAction:
 		return serializeExecuteDatabaseQueryAction(a)
 
@@ -544,6 +547,46 @@ func serializeRestCallAction(a *microflows.RestCallAction) bson.D {
 			bson.E{Key: "UseRequestTimeOut", Value: true},
 		)
 	}
+
+	return doc
+}
+
+// serializeRestOperationCallAction serializes a Microflows$RestOperationCallAction to BSON.
+// Note: RestOperationCallAction does not support custom ErrorHandlingType (CE6035).
+func serializeRestOperationCallAction(a *microflows.RestOperationCallAction) bson.D {
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
+		{Key: "$Type", Value: "Microflows$RestOperationCallAction"},
+		{Key: "Operation", Value: a.Operation},
+	}
+
+	// OutputVariable
+	if a.OutputVariable != nil {
+		ov := bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(a.OutputVariable.ID))},
+			{Key: "$Type", Value: "Microflows$OutputVariable"},
+			{Key: "VariableName", Value: a.OutputVariable.VariableName},
+		}
+		doc = append(doc, bson.E{Key: "OutputVariable", Value: ov})
+	} else {
+		doc = append(doc, bson.E{Key: "OutputVariable", Value: nil})
+	}
+
+	// BodyVariable
+	if a.BodyVariable != nil {
+		bv := bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(a.BodyVariable.ID))},
+			{Key: "$Type", Value: "Microflows$BodyVariable"},
+			{Key: "VariableName", Value: a.BodyVariable.VariableName},
+		}
+		doc = append(doc, bson.E{Key: "BodyVariable", Value: bv})
+	} else {
+		doc = append(doc, bson.E{Key: "BodyVariable", Value: nil})
+	}
+
+	doc = append(doc, bson.E{Key: "BaseUrlParameterMapping", Value: nil})
+	doc = append(doc, bson.E{Key: "ParameterMappings", Value: bson.A{int32(3)}})
+	doc = append(doc, bson.E{Key: "QueryParameterMappings", Value: bson.A{int32(3)}})
 
 	return doc
 }

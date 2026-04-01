@@ -159,7 +159,7 @@ func TestSerializeRestOperationGetWithParams(t *testing.T) {
 	assertField(t, result, "Name", "GetPet")
 
 	// Timeout
-	if v, ok := result["Timeout"].(int32); !ok || v != 30 {
+	if v, ok := result["Timeout"].(int64); !ok || v != 30 {
 		t.Errorf("Timeout: expected 30, got %v", result["Timeout"])
 	}
 
@@ -210,13 +210,16 @@ func TestSerializeRestOperationGetWithParams(t *testing.T) {
 		t.Fatalf("Headers: expected 1, got %d", len(headers))
 	}
 
-	// ResponseHandling
+	// ResponseHandling (JSON uses NoResponseHandling with ContentType for compatibility)
 	respHandling, ok := result["ResponseHandling"].(bson.M)
 	if !ok {
 		t.Fatalf("ResponseHandling: expected bson.M, got %T", result["ResponseHandling"])
 	}
-	if respHandling["$Type"] != "Rest$ImplicitMappingResponseHandling" {
-		t.Errorf("ResponseHandling.$Type: expected ImplicitMappingResponseHandling, got %v", respHandling["$Type"])
+	if respHandling["$Type"] != "Rest$NoResponseHandling" {
+		t.Errorf("ResponseHandling.$Type: expected NoResponseHandling, got %v", respHandling["$Type"])
+	}
+	if respHandling["ContentType"] != "application/json" {
+		t.Errorf("ResponseHandling.ContentType: expected application/json, got %v", respHandling["ContentType"])
 	}
 }
 
@@ -243,13 +246,13 @@ func TestSerializeRestOperationPostWithBody(t *testing.T) {
 		t.Errorf("Method.HttpMethod: expected Post, got %v", method["HttpMethod"])
 	}
 
-	// Body should be ImplicitMappingBody
+	// Body should be JsonBody (used instead of ImplicitMappingBody to avoid CE7247/CE0061)
 	body, ok := method["Body"].(bson.M)
 	if !ok {
 		t.Fatalf("Body: expected bson.M, got %T", method["Body"])
 	}
-	if body["$Type"] != "Rest$ImplicitMappingBody" {
-		t.Errorf("Body.$Type: expected ImplicitMappingBody, got %v", body["$Type"])
+	if body["$Type"] != "Rest$JsonBody" {
+		t.Errorf("Body.$Type: expected JsonBody, got %v", body["$Type"])
 	}
 }
 
@@ -423,6 +426,13 @@ func TestSerializeConsumedRestServiceFullRoundtrip(t *testing.T) {
 		t.Fatalf("Operations[2].Method: expected map, got %T", op2["Method"])
 	}
 	assertField(t, method2, "$Type", "Rest$RestOperationMethodWithBody")
+
+	// Verify Body is JsonBody
+	body2, ok := method2["Body"].(map[string]any)
+	if !ok {
+		t.Fatalf("Operations[2].Method.Body: expected map, got %T", method2["Body"])
+	}
+	assertField(t, body2, "$Type", "Rest$JsonBody")
 
 	// Verify DELETE operation has WithoutBody method
 	op3, ok := ops[3].(map[string]any)

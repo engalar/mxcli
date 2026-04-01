@@ -47,6 +47,7 @@ Modifies an existing entity without full replacement.
 | Add index | `ALTER ENTITY Module.Name ADD INDEX (Col1 [ASC\|DESC], ...);` | |
 | Drop index | `ALTER ENTITY Module.Name DROP INDEX (Col1, ...);` | |
 | Set documentation | `ALTER ENTITY Module.Name SET DOCUMENTATION 'text';` | |
+| Set position | `ALTER ENTITY Module.Name SET POSITION (100, 200);` | Canvas position |
 
 **Example:**
 ```sql

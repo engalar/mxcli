@@ -472,16 +472,23 @@ func parseWidgetPropertyV3(ctx parser.IWidgetPropertyV3Context, widget *ast.Widg
 	// DesktopWidth: ...
 	if propCtx.DESKTOPWIDTH() != nil {
 		if dwCtx := propCtx.DesktopWidthV3(); dwCtx != nil {
-			text := dwCtx.GetText()
-			if strings.EqualFold(text, "AutoFill") {
-				widget.Properties["DesktopWidth"] = "AutoFill"
-			} else {
-				if n, err := strconv.Atoi(text); err == nil {
-					widget.Properties["DesktopWidth"] = n
-				} else {
-					widget.Properties["DesktopWidth"] = text
-				}
-			}
+			widget.Properties["DesktopWidth"] = parseWidthValue(dwCtx.GetText())
+		}
+		return
+	}
+
+	// TabletWidth: ...
+	if propCtx.TABLETWIDTH() != nil {
+		if dwCtx := propCtx.DesktopWidthV3(); dwCtx != nil {
+			widget.Properties["TabletWidth"] = parseWidthValue(dwCtx.GetText())
+		}
+		return
+	}
+
+	// PhoneWidth: ...
+	if propCtx.PHONEWIDTH() != nil {
+		if dwCtx := propCtx.DesktopWidthV3(); dwCtx != nil {
+			widget.Properties["PhoneWidth"] = parseWidthValue(dwCtx.GetText())
 		}
 		return
 	}
@@ -548,10 +555,22 @@ func parseWidgetPropertyV3(ctx parser.IWidgetPropertyV3Context, widget *ast.Widg
 		return
 	}
 
-	// Visible: expression (keyword-based property)
+	// Visible: [xpath] (conditional visibility) or Visible: false (static)
 	if propCtx.VISIBLE() != nil {
-		if valCtx := propCtx.PropertyValueV3(); valCtx != nil {
+		if xc := propCtx.XpathConstraint(); xc != nil {
+			widget.Properties["VisibleIf"] = extractXpathText(xc)
+		} else if valCtx := propCtx.PropertyValueV3(); valCtx != nil {
 			widget.Properties["Visible"] = buildPropertyValueV3(valCtx)
+		}
+		return
+	}
+
+	// Editable: [xpath] (conditional editability) or Editable: Never (static)
+	if propCtx.EDITABLE() != nil {
+		if xc := propCtx.XpathConstraint(); xc != nil {
+			widget.Properties["EditableIf"] = extractXpathText(xc)
+		} else if valCtx := propCtx.PropertyValueV3(); valCtx != nil {
+			widget.Properties["Editable"] = buildPropertyValueV3(valCtx)
 		}
 		return
 	}
@@ -930,6 +949,30 @@ func buildSortColumnAsOrderBy(ctx parser.ISortColumnContext) ast.OrderByItemV3 {
 }
 
 // buildPropertyValueV3 builds a generic property value.
+// extractXpathText extracts the expression text from inside [brackets].
+func extractXpathText(xc parser.IXpathConstraintContext) string {
+	if xc == nil {
+		return ""
+	}
+	// Get the full text including brackets, then strip them
+	text := xc.GetText()
+	if len(text) >= 2 && text[0] == '[' && text[len(text)-1] == ']' {
+		return text[1 : len(text)-1]
+	}
+	return text
+}
+
+// parseWidthValue parses a column width value: numeric (1-12) or "AutoFill".
+func parseWidthValue(text string) any {
+	if strings.EqualFold(text, "AutoFill") {
+		return "AutoFill"
+	}
+	if n, err := strconv.Atoi(text); err == nil {
+		return n
+	}
+	return text
+}
+
 func buildPropertyValueV3(ctx parser.IPropertyValueV3Context) any {
 	if ctx == nil {
 		return nil

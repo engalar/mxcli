@@ -23,8 +23,10 @@ type LayoutGridRow struct {
 // LayoutGridColumn represents a column in a layout grid.
 type LayoutGridColumn struct {
 	model.BaseElement
-	Weight  int      `json:"weight"`
-	Widgets []Widget `json:"widgets,omitempty"`
+	Weight       int      `json:"weight"`
+	TabletWeight int      `json:"tabletWeight"`
+	PhoneWeight  int      `json:"phoneWeight"`
+	Widgets      []Widget `json:"widgets,omitempty"`
 }
 
 // Container represents a generic container widget.

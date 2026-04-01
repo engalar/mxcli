@@ -174,6 +174,16 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 			fb.validateStatements(s.ErrorHandling.Body)
 		}
 
+	case *ast.SendRestRequestStmt:
+		// Register output variable if assigned
+		if s.OutputVariable != "" {
+			fb.declaredVars[s.OutputVariable] = "Unknown" // Type depends on operation response mapping
+		}
+		// Validate error handler body if present
+		if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+			fb.validateStatements(s.ErrorHandling.Body)
+		}
+
 	case *ast.MfCommitStmt:
 		// Validate error handler body if present
 		if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {

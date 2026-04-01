@@ -674,6 +674,17 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 		e.invalidateDomainModelsCache()
 		fmt.Fprintf(e.output, "Enabled store owner on entity %s\n", s.Name)
 
+	case ast.AlterEntitySetPosition:
+		if s.Position == nil {
+			return fmt.Errorf("no position provided")
+		}
+		entity.Location = model.Point{X: s.Position.X, Y: s.Position.Y}
+		if err := e.writer.UpdateEntity(dm.ID, entity); err != nil {
+			return fmt.Errorf("failed to set position: %w", err)
+		}
+		e.invalidateDomainModelsCache()
+		fmt.Fprintf(e.output, "Set position of entity %s to (%d, %d)\n", s.Name, s.Position.X, s.Position.Y)
+
 	case ast.AlterEntityAddIndex:
 		if s.Index == nil {
 			return fmt.Errorf("no index definition provided")

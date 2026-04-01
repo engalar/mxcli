@@ -526,12 +526,26 @@ type rawWidget struct {
 	// GroupBox properties
 	Collapsible string // "No", "YesInitiallyExpanded", "YesInitiallyCollapsed"
 	HeaderMode  string // "Div", "H1"-"H6"
+	// Conditional visibility/editability
+	VisibleIf  string // Expression from ConditionalVisibilitySettings
+	EditableIf string // Expression from ConditionalEditabilitySettings
 	// Design properties from Appearance
 	DesignProperties []rawDesignProp
 	// Explicit widget properties (for generic PLUGGABLEWIDGET output)
 	ExplicitProperties []rawExplicitProp
 	// Full widget ID (e.g. "com.mendix.widget.custom.switch.Switch")
 	WidgetID string
+	// Pluggable Image widget properties
+	ImageUrl        string // Image URL (from textTemplate)
+	AlternativeText string // Alt text (from textTemplate)
+	ImageWidth      string // Width in pixels/percentage
+	ImageHeight     string // Height in pixels/percentage
+	WidthUnit       string // "auto", "pixels", "percentage"
+	HeightUnit      string // "auto", "pixels", "percentage", "viewport"
+	DisplayAs       string // "fullImage", "thumbnail"
+	Responsive      string // "true", "false"
+	ImageType       string // "image", "imageUrl", "icon"
+	OnClickType     string // "action", "enlarge"
 }
 
 // rawExplicitProp represents a non-default property extracted from a CustomWidget.
@@ -553,8 +567,10 @@ type rawWidgetRow struct {
 }
 
 type rawWidgetColumn struct {
-	Width   int
-	Widgets []rawWidget
+	Width       int
+	TabletWidth int
+	PhoneWidth  int
+	Widgets     []rawWidget
 }
 
 // toBsonArray converts various BSON array types to []interface{}.

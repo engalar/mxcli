@@ -1006,3 +1006,39 @@ func buildRestCallStatement(ctx parser.IRestCallStatementContext) *ast.RestCallS
 
 	return stmt
 }
+
+// buildSendRestRequestStatement builds a SendRestRequestStmt from the parser context.
+// Syntax: [$Var =] SEND REST REQUEST Module.Service.Operation [BODY $var] [ON ERROR ...]
+func buildSendRestRequestStatement(ctx parser.ISendRestRequestStatementContext) *ast.SendRestRequestStmt {
+	if ctx == nil {
+		return nil
+	}
+	sendCtx := ctx.(*parser.SendRestRequestStatementContext)
+
+	stmt := &ast.SendRestRequestStmt{}
+
+	// Output variable
+	if v := sendCtx.VARIABLE(); v != nil {
+		stmt.OutputVariable = strings.TrimPrefix(v.GetText(), "$")
+	}
+
+	// Operation qualified name (Module.Service.Operation)
+	if qn := sendCtx.QualifiedName(); qn != nil {
+		stmt.Operation = buildQualifiedName(qn)
+	}
+
+	// Body clause
+	if bodyClause := sendCtx.SendRestRequestBodyClause(); bodyClause != nil {
+		bc := bodyClause.(*parser.SendRestRequestBodyClauseContext)
+		if v := bc.VARIABLE(); v != nil {
+			stmt.BodyVariable = strings.TrimPrefix(v.GetText(), "$")
+		}
+	}
+
+	// Error handling
+	if errClause := sendCtx.OnErrorClause(); errClause != nil {
+		stmt.ErrorHandling = buildOnErrorClause(errClause)
+	}
+
+	return stmt
+}

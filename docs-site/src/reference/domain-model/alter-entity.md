@@ -115,6 +115,15 @@ ALTER ENTITY Sales.Customer
     SET DOCUMENTATION 'Customer master data for the sales module.';
 ```
 
+### Set position
+
+Reposition an entity on the domain model canvas:
+
+```sql
+ALTER ENTITY Sales.Customer
+    SET POSITION (100, 200);
+```
+
 ## Notes
 
 - Each `ALTER ENTITY` statement performs a single operation. Chain multiple statements for multiple changes.

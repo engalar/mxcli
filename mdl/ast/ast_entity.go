@@ -66,6 +66,7 @@ const (
 	AlterEntityAddIndex                              // ADD INDEX
 	AlterEntityDropIndex                             // DROP INDEX
 	AlterEntitySetStoreOwner                         // SET STORE OWNER
+	AlterEntitySetPosition                           // SET POSITION (x, y)
 )
 
 // AlterEntityStmt represents: ALTER ENTITY Module.Name ADD/DROP/RENAME/MODIFY ATTRIBUTE ...
@@ -82,6 +83,7 @@ type AlterEntityStmt struct {
 	Comment       string     // For SET COMMENT
 	Index         *Index     // For ADD INDEX
 	IndexName     string     // For DROP INDEX
+	Position      *Position  // For SET POSITION
 }
 
 func (s *AlterEntityStmt) isStatement() {}

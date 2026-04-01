@@ -213,21 +213,6 @@ func DownloadRuntime(version string, w io.Writer) (string, error) {
 	return cacheDir, nil
 }
 
-// isSymlinkWithinDir checks that a symlink's effective destination resolves
-// within the allowed directory. Prevents path traversal via absolute symlinks
-// or relative paths that escape the extraction root.
-func isSymlinkWithinDir(linkTarget, symlinkPath, allowedDir string) bool {
-	var resolved string
-	if filepath.IsAbs(linkTarget) {
-		resolved = linkTarget
-	} else {
-		resolved = filepath.Join(filepath.Dir(symlinkPath), linkTarget)
-	}
-	resolved = filepath.Clean(resolved)
-	cleanDir := filepath.Clean(allowedDir) + string(os.PathSeparator)
-	return strings.HasPrefix(resolved, cleanDir) || resolved == filepath.Clean(allowedDir)
-}
-
 // extractTarGzStrip1 extracts a tar.gz stream to the target directory,
 // stripping the first path component (equivalent to tar --strip-components=1).
 func extractTarGzStrip1(r io.Reader, targetDir string) error {
@@ -291,11 +276,15 @@ func extractTarGzStrip1(r io.Reader, targetDir string) error {
 			f.Close()
 		case tar.TypeSymlink:
 			linkTarget := header.Linkname
-			if strings.Contains(linkTarget, "..") {
-				continue
+			// Resolve effective symlink destination and verify it stays within targetDir
+			var resolved string
+			if filepath.IsAbs(linkTarget) {
+				resolved = filepath.Clean(linkTarget)
+			} else {
+				resolved = filepath.Clean(filepath.Join(filepath.Dir(target), linkTarget))
 			}
-			// Resolve effective destination and verify it stays within targetDir
-			if !isSymlinkWithinDir(linkTarget, target, targetDir) {
+			allowedPrefix := filepath.Clean(targetDir) + string(os.PathSeparator)
+			if !strings.HasPrefix(resolved, allowedPrefix) && resolved != filepath.Clean(targetDir) {
 				continue
 			}
 			os.Remove(target)
@@ -361,13 +350,16 @@ func extractTarGz(r io.Reader, targetDir string) error {
 			}
 			f.Close()
 		case tar.TypeSymlink:
-			// Validate symlink target
 			linkTarget := header.Linkname
-			if strings.Contains(linkTarget, "..") {
-				continue
+			// Resolve effective symlink destination and verify it stays within targetDir
+			var resolved string
+			if filepath.IsAbs(linkTarget) {
+				resolved = filepath.Clean(linkTarget)
+			} else {
+				resolved = filepath.Clean(filepath.Join(filepath.Dir(target), linkTarget))
 			}
-			// Resolve effective destination and verify it stays within targetDir
-			if !isSymlinkWithinDir(linkTarget, target, targetDir) {
+			allowedPrefix := filepath.Clean(targetDir) + string(os.PathSeparator)
+			if !strings.HasPrefix(resolved, allowedPrefix) && resolved != filepath.Clean(targetDir) {
 				continue
 			}
 			os.Remove(target) // Remove existing if any

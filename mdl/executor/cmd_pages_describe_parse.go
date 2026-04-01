@@ -9,6 +9,20 @@ import (
 )
 
 // parseRawWidget parses a raw widget map into rawWidget structs.
+// extractConditionalSettings extracts ConditionalVisibility/Editability from raw BSON.
+func extractConditionalSettings(widget *rawWidget, w map[string]any) {
+	if cvs, ok := w["ConditionalVisibilitySettings"].(map[string]any); ok && cvs != nil {
+		if expr, ok := cvs["Expression"].(string); ok && expr != "" {
+			widget.VisibleIf = expr
+		}
+	}
+	if ces, ok := w["ConditionalEditabilitySettings"].(map[string]any); ok && ces != nil {
+		if expr, ok := ces["Expression"].(string); ok && expr != "" {
+			widget.EditableIf = expr
+		}
+	}
+}
+
 func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 	typeName, _ := w["$Type"].(string)
 	name, _ := w["Name"].(string)
@@ -46,6 +60,7 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 				widget.HeaderMode = headerMode
 			}
 		}
+		extractConditionalSettings(&widget, w)
 		children := getBsonArrayElements(w["Widgets"])
 		if children != nil {
 			for _, c := range children {
@@ -61,6 +76,7 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 		Type: typeName,
 		Name: name,
 	}
+	extractConditionalSettings(&widget, w)
 
 	// Extract CSS class, style, and design properties from Appearance
 	if appearance, ok := w["Appearance"].(map[string]any); ok {
@@ -180,6 +196,10 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 			widget.FilterAttributes = e.extractFilterAttributes(w)
 			widget.FilterExpression = e.extractFilterExpression(w)
 		}
+		// For pluggable Image widget, extract image-specific properties
+		if widget.RenderMode == "IMAGE" {
+			e.extractImageProperties(w, &widget)
+		}
 		// For generic pluggable widgets (not handled by dedicated extractors above),
 		// extract all non-default properties as explicit key-value pairs.
 		if !isKnownCustomWidgetType(widget.RenderMode) {
@@ -240,6 +260,12 @@ func (e *Executor) parseLayoutGridRows(w map[string]any) []rawWidgetRow {
 				col.Width = int(weight)
 			} else if weight, ok := cMap["DesktopWeight"].(int32); ok {
 				col.Width = int(weight)
+			}
+			if tw, ok := cMap["TabletWeight"].(int32); ok {
+				col.TabletWidth = int(tw)
+			}
+			if pw, ok := cMap["PhoneWeight"].(int32); ok {
+				col.PhoneWidth = int(pw)
 			}
 			// Get widgets
 			colWidgets := getBsonArrayElements(cMap["Widgets"])

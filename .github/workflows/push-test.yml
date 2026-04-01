@@ -24,6 +24,10 @@ jobs:
         timeout-minutes: 30
       - name: Lint Go
         run: make lint-go
+      - name: Vulnerability scan
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
       - name: Check MDL example scripts
         run: |
           FAILED=0

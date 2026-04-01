@@ -1,0 +1,90 @@
+{
+  "widgetId": "com.mendix.widget.web.image.Image",
+  "mdlName": "IMAGE",
+  "templateFile": "image.json",
+  "defaultEditable": "Always",
+  "propertyMappings": [
+    {
+      "propertyKey": "datasource",
+      "source": "ImageType",
+      "default": "image",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "imageUrl",
+      "source": "ImageUrl",
+      "operation": "texttemplate"
+    },
+    {
+      "propertyKey": "alternativeText",
+      "source": "AlternativeText",
+      "operation": "texttemplate"
+    },
+    {
+      "propertyKey": "onClick",
+      "source": "OnClick",
+      "operation": "action"
+    },
+    {
+      "propertyKey": "onClickType",
+      "source": "OnClickType",
+      "default": "action",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "widthUnit",
+      "source": "WidthUnit",
+      "default": "auto",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "width",
+      "source": "Width",
+      "default": "100",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "heightUnit",
+      "source": "HeightUnit",
+      "default": "auto",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "height",
+      "source": "Height",
+      "default": "100",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "iconSize",
+      "source": "IconSize",
+      "default": "14",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "displayAs",
+      "source": "DisplayAs",
+      "default": "fullImage",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "responsive",
+      "source": "Responsive",
+      "default": "true",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "isBackgroundImage",
+      "source": "IsBackgroundImage",
+      "default": "false",
+      "operation": "primitive"
+    }
+  ],
+  "childSlots": [
+    {
+      "propertyKey": "children",
+      "mdlContainer": "CONTENT",
+      "operation": "widgets"
+    }
+  ]
+}

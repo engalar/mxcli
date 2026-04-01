@@ -594,6 +594,8 @@ func getActionErrorHandlingType(activity *microflows.ActionActivity) microflows.
 		return action.ErrorHandlingType
 	case *microflows.RestCallAction:
 		return action.ErrorHandlingType
+	case *microflows.RestOperationCallAction:
+		return "" // RestOperationCallAction does not support custom error handling (CE6035)
 	case *microflows.ExecuteDatabaseQueryAction:
 		return action.ErrorHandlingType
 	case *microflows.CommitObjectsAction:

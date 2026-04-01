@@ -265,9 +265,17 @@ LAYOUTGRID gridName {
 }
 ```
 
-**Width Values:**
-- Numeric: `1` through `12`
-- Auto: `AutoFill`, `AutoFit`
+**Column Width Properties:**
+
+| Property | Values | Default | Description |
+|----------|--------|---------|-------------|
+| `DesktopWidth` | 1-12 or `AutoFill` | `AutoFill` | Desktop column width |
+| `TabletWidth` | 1-12 or `AutoFill` | auto | Tablet column width |
+| `PhoneWidth` | 1-12 or `AutoFill` | auto | Phone column width |
+
+```sql
+COLUMN col1 (DesktopWidth: 8, TabletWidth: 6, PhoneWidth: 12) { ... }
+```
 
 Example:
 ```sql
@@ -750,6 +758,27 @@ ALTER PAGE Module.Customer_Edit {
 ```
 
 See the dedicated skill file: [ALTER PAGE/SNIPPET](./alter-page.md)
+
+## Conditional Visibility and Editability
+
+Any widget can have conditional visibility. Input widgets can also have conditional editability. Use XPath bracket syntax `[expression]`:
+
+```sql
+-- Conditionally visible widget
+TEXTBOX txtName (Label: 'Name', Attribute: Name, Visible: [IsActive])
+
+-- Conditionally editable input
+TEXTBOX txtStatus (Label: 'Status', Attribute: Status, Editable: [Status != 'Closed'])
+
+-- Combined
+TEXTBOX txtEmail (Label: 'Email', Attribute: Email,
+  Visible: [ShowEmail],
+  Editable: [CanEdit])
+
+-- Static values still work
+TEXTBOX txtReadOnly (Label: 'Read Only', Attribute: Name, Editable: Never)
+TEXTBOX txtHidden (Label: 'Hidden', Attribute: Name, Visible: false)
+```
 
 ## Known Limitations
 

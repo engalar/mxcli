@@ -221,6 +221,8 @@ Modes are evaluated in definition order -- first match wins. A mode with no `con
 | `datasource` | Sets `Value.DataSource` (serialized BSON) | `DataSource` |
 | `selection` | Sets `Value.Selection` (mode string) | `Selection` |
 | `widgets` | Replaces `Value.Widgets` array with child widget BSON | child slot |
+| `texttemplate` | Sets text in `Value.TextTemplate` (Forms$ClientTemplate) | property name (resolved as string) |
+| `action` | Sets `Value.Action` with serialized client action BSON | `OnClick` (resolved from AST Action) |
 
 ### Mapping Order Constraints
 

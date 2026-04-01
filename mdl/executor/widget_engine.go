@@ -75,6 +75,7 @@ type BuildContext struct {
 	PrimitiveVal  string
 	DataSource    pages.DataSource
 	ChildWidgets  []bson.D
+	ActionBSON    bson.D // Serialized client action BSON for opAction
 }
 
 // OperationFunc updates a template object's property identified by propertyKey.
@@ -87,7 +88,7 @@ type OperationRegistry struct {
 	operations map[string]OperationFunc
 }
 
-// NewOperationRegistry creates a registry pre-loaded with the 6 built-in operations.
+// NewOperationRegistry creates a registry pre-loaded with the built-in operations.
 func NewOperationRegistry() *OperationRegistry {
 	reg := &OperationRegistry{
 		operations: make(map[string]OperationFunc),
@@ -98,6 +99,8 @@ func NewOperationRegistry() *OperationRegistry {
 	reg.Register("selection", opSelection)
 	reg.Register("datasource", opDatasource)
 	reg.Register("widgets", opWidgets)
+	reg.Register("texttemplate", opTextTemplate)
+	reg.Register("action", opAction)
 	return reg
 }
 
@@ -234,6 +237,90 @@ func setChildWidgets(val bson.D, childWidgets []bson.D) bson.D {
 		}
 	}
 	return result
+}
+
+// opTextTemplate sets a text template value on a widget property.
+// It replaces the Template.Items in the TextTemplate with a single text item.
+func opTextTemplate(obj bson.D, propTypeIDs map[string]pages.PropertyTypeIDEntry, propertyKey string, ctx *BuildContext) bson.D {
+	if ctx.PrimitiveVal == "" {
+		return obj
+	}
+	return updateWidgetPropertyValue(obj, propTypeIDs, propertyKey, func(val bson.D) bson.D {
+		return setTextTemplateValue(val, ctx.PrimitiveVal)
+	})
+}
+
+// setTextTemplateValue sets the text content in a TextTemplate WidgetValue field.
+func setTextTemplateValue(val bson.D, text string) bson.D {
+	result := make(bson.D, 0, len(val))
+	for _, elem := range val {
+		if elem.Key == "TextTemplate" {
+			if tmpl, ok := elem.Value.(bson.D); ok && tmpl != nil {
+				result = append(result, bson.E{Key: "TextTemplate", Value: updateTemplateText(tmpl, text)})
+			} else {
+				// TextTemplate was null in the template — skip.
+				// Creating a TextTemplate from null triggers CE0463 because Studio Pro
+				// detects the structural change. The template must be extracted from a
+				// widget that already has this property configured in Studio Pro.
+				log.Printf("warning: opTextTemplate: skipping null TextTemplate (cannot create from scratch without CE0463)")
+				result = append(result, elem)
+			}
+		} else {
+			result = append(result, elem)
+		}
+	}
+	return result
+}
+
+// updateTemplateText updates the Template.Items in a Forms$ClientTemplate with a text value.
+func updateTemplateText(tmpl bson.D, text string) bson.D {
+	result := make(bson.D, 0, len(tmpl))
+	for _, elem := range tmpl {
+		if elem.Key == "Template" {
+			if template, ok := elem.Value.(bson.D); ok {
+				updated := make(bson.D, 0, len(template))
+				for _, tElem := range template {
+					if tElem.Key == "Items" {
+						updated = append(updated, bson.E{Key: "Items", Value: bson.A{
+							int32(3),
+							bson.D{
+								{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
+								{Key: "$Type", Value: "Texts$Translation"},
+								{Key: "LanguageCode", Value: "en_US"},
+								{Key: "Text", Value: text},
+							},
+						}})
+					} else {
+						updated = append(updated, tElem)
+					}
+				}
+				result = append(result, bson.E{Key: "Template", Value: updated})
+			} else {
+				result = append(result, elem)
+			}
+		} else {
+			result = append(result, elem)
+		}
+	}
+	return result
+}
+
+// opAction sets a client action on a widget property.
+func opAction(obj bson.D, propTypeIDs map[string]pages.PropertyTypeIDEntry, propertyKey string, ctx *BuildContext) bson.D {
+	if ctx.ActionBSON == nil {
+		return obj
+	}
+	return updateWidgetPropertyValue(obj, propTypeIDs, propertyKey, func(val bson.D) bson.D {
+		result := make(bson.D, 0, len(val))
+		for _, elem := range val {
+			if elem.Key == "Action" {
+				result = append(result, bson.E{Key: "Action", Value: ctx.ActionBSON})
+			} else {
+				result = append(result, elem)
+			}
+		}
+		return result
+	})
 }
 
 // =============================================================================
@@ -663,6 +750,16 @@ func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.W
 		}
 		// Entity name comes from DataSource context (must be resolved first by a DataSource mapping)
 		ctx.EntityName = e.pageBuilder.entityContext
+
+	case "OnClick":
+		// Resolve AST action (stored as Properties["Action"]) into serialized BSON
+		if action := w.GetAction(); action != nil {
+			act, err := e.pageBuilder.buildClientActionV3(action)
+			if err != nil {
+				return nil, fmt.Errorf("failed to build action: %w", err)
+			}
+			ctx.ActionBSON = mpr.SerializeClientAction(act)
+		}
 
 	default:
 		// Generic fallback: treat source as a property name on the AST widget

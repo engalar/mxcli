@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mendix-version: ['10.24.16', '11.6.4', '11.8.0']
+        mendix-version: ['10.24.16.96987', '11.6.4', '11.8.0']
       fail-fast: false
     name: test (Mendix ${{ matrix.mendix-version }})
     steps:

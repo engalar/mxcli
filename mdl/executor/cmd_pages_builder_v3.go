@@ -319,10 +319,20 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
 		widget, err = pb.buildDropdownFilterV3(w)
 	case "DATEFILTER":
 		widget, err = pb.buildDateFilterV3(w)
-	case "IMAGE", "STATICIMAGE":
+	case "STATICIMAGE":
 		widget, err = pb.buildStaticImageV3(w)
 	case "DYNAMICIMAGE":
 		widget, err = pb.buildDynamicImageV3(w)
+	case "IMAGE":
+		// IMAGE routes to the pluggable React widget (com.mendix.widget.web.image.Image)
+		pb.initPluggableEngine()
+		if pb.widgetRegistry != nil {
+			if def, ok := pb.widgetRegistry.Get("IMAGE"); ok {
+				return pb.pluggableEngine.Build(def, w)
+			}
+		}
+		// Fallback to static image if pluggable engine unavailable
+		widget, err = pb.buildStaticImageV3(w)
 	default:
 		pb.initPluggableEngine()
 		if pb.widgetRegistry != nil {
@@ -353,7 +363,43 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
 	// Apply Class/Style appearance properties to the widget
 	applyWidgetAppearance(widget, w, pb.themeRegistry)
 
+	// Apply conditional visibility/editability
+	applyConditionalSettings(widget, w)
+
 	return widget, nil
+}
+
+// applyConditionalSettings sets ConditionalVisibility and ConditionalEditability
+// on a widget if VISIBLE IF or EDITABLE IF properties are specified in the AST.
+func applyConditionalSettings(widget pages.Widget, w *ast.WidgetV3) {
+	type baseWidgetGetter interface {
+		GetBaseWidget() *pages.BaseWidget
+	}
+	bwg, ok := widget.(baseWidgetGetter)
+	if !ok {
+		return
+	}
+	bw := bwg.GetBaseWidget()
+
+	if visibleIf := w.GetStringProp("VisibleIf"); visibleIf != "" {
+		bw.ConditionalVisibility = &pages.ConditionalVisibilitySettings{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(mpr.GenerateID()),
+				TypeName: "Forms$ConditionalVisibilitySettings",
+			},
+			Expression: visibleIf,
+		}
+	}
+
+	if editableIf := w.GetStringProp("EditableIf"); editableIf != "" {
+		bw.ConditionalEditability = &pages.ConditionalEditabilitySettings{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(mpr.GenerateID()),
+				TypeName: "Forms$ConditionalEditabilitySettings",
+			},
+			Expression: editableIf,
+		}
+	}
 }
 
 // applyWidgetAppearance sets Class, Style, and DesignProperties on a widget if specified in the AST.

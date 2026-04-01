@@ -29,11 +29,16 @@ var scriptModuleDeps = map[string][]string{
 var scriptKnownCEErrors = map[string][]string{
 	"06-rest-client-examples.mdl": {
 		"CE0061", // No entity selected (JSON response/body mapping without entity)
+		"CE6035", // RestOperationCallAction error handling not supported
 		"CE7056", // Undefined parameter (dynamic header {1} placeholder)
 		"CE7062", // Missing Accept header
 		"CE7064", // POST/PUT must include body
 		"CE7073", // Constant needs to be defined (auth with $ConstantName)
 		"CE7247", // Name cannot be empty (body mapping without entity)
+	},
+	"17-custom-widget-examples.mdl": {
+		"CE0463", // Widget definition changed (TEXTFILTER template property count mismatch)
+		"CE1613", // ComboBox enum attribute written as association pointer
 	},
 }
 

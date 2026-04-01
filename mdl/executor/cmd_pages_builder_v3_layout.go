@@ -80,6 +80,30 @@ func (pb *pageBuilder) buildLayoutGridColumnV3(w *ast.WidgetV3) (*pages.LayoutGr
 		}
 	}
 
+	// Handle TabletWidth
+	if tw := w.Properties["TabletWidth"]; tw != nil {
+		switch v := tw.(type) {
+		case int:
+			col.TabletWeight = v
+		case string:
+			if strings.ToUpper(v) == "AUTOFILL" {
+				col.TabletWeight = -1
+			}
+		}
+	}
+
+	// Handle PhoneWidth
+	if pw := w.Properties["PhoneWidth"]; pw != nil {
+		switch v := pw.(type) {
+		case int:
+			col.PhoneWeight = v
+		case string:
+			if strings.ToUpper(v) == "AUTOFILL" {
+				col.PhoneWeight = -1
+			}
+		}
+	}
+
 	// Build child widgets
 	for _, child := range w.Children {
 		widget, err := pb.buildWidgetV3(child)

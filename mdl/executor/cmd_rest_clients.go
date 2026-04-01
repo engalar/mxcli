@@ -324,12 +324,11 @@ func buildRestClientOperation(opDef *ast.RestOperationDef) *model.RestClientOper
 			Name: h.Name,
 		}
 		if h.Variable != "" {
-			// Dynamic header: 'prefix' + $Var or just $Var
-			if h.Prefix != "" {
-				header.Value = h.Prefix + "{1}"
-			} else {
-				header.Value = "{1}"
-			}
+			// Dynamic headers: store static prefix only.
+			// Mendix consumed REST services don't support dynamic header values
+			// in the service definition; dynamic values must be set through the
+			// calling microflow.
+			header.Value = h.Prefix
 		} else {
 			header.Value = h.Value
 		}

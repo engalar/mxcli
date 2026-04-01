@@ -704,6 +704,7 @@ alterEntityAction
     | SET DOCUMENTATION STRING_LITERAL
     | SET COMMENT STRING_LITERAL
     | SET STORE OWNER
+    | SET POSITION LPAREN NUMBER_LITERAL COMMA NUMBER_LITERAL RPAREN
     | ADD INDEX indexDefinition
     | DROP INDEX IDENTIFIER
     ;
@@ -1022,6 +1023,7 @@ microflowStatement
     | annotation* removeFromListStatement SEMICOLON?
     | annotation* validationFeedbackStatement SEMICOLON?
     | annotation* restCallStatement SEMICOLON?
+    | annotation* sendRestRequestStatement SEMICOLON?
     ;
 
 declareStatement
@@ -1320,6 +1322,36 @@ restCallReturnsClause
     | RETURNS MAPPING qualifiedName AS qualifiedName         // Import mapping with result entity
     | RETURNS NONE                                           // Ignore response
     | RETURNS NOTHING                                        // Ignore response (alias)
+    ;
+
+/**
+ * SEND REST REQUEST — calls a consumed REST service operation defined via CREATE REST CLIENT.
+ *
+ * @example Simple call (no response)
+ * ```mdl
+ * SEND REST REQUEST RestTest.RC001_SimpleAPI.GetStatus;
+ * ```
+ *
+ * @example Call with output variable
+ * ```mdl
+ * $RootResult = SEND REST REQUEST RestTest.RC008_HeaderAPI.GetData;
+ * ```
+ *
+ * @example Call with body and error handling
+ * ```mdl
+ * $Result = SEND REST REQUEST Module.Service.CreateItem
+ *     BODY $NewItem
+ *     ON ERROR CONTINUE;
+ * ```
+ */
+sendRestRequestStatement
+    : (VARIABLE EQUALS)? SEND REST REQUEST qualifiedName
+      sendRestRequestBodyClause?
+      onErrorClause?
+    ;
+
+sendRestRequestBodyClause
+    : BODY VARIABLE
     ;
 
 // =============================================================================
@@ -1819,6 +1851,8 @@ widgetPropertyV3
     | CLASS COLON STRING_LITERAL                       // Class: 'my-class'
     | STYLE COLON STRING_LITERAL                       // Style: 'color: red'
     | DESKTOPWIDTH COLON desktopWidthV3               // DesktopWidth: 6 | AutoFill
+    | TABLETWIDTH COLON desktopWidthV3                // TabletWidth: 6 | AutoFill
+    | PHONEWIDTH COLON desktopWidthV3                 // PhoneWidth: 12 | AutoFill
     // Where: and OrderBy: removed — use inline WHERE/SORT BY in DataSource: expression
     | SELECTION COLON selectionModeV3                 // Selection: Single | Multiple
     | SNIPPET COLON qualifiedName                     // Snippet: Module.SnippetName
@@ -1827,7 +1861,10 @@ widgetPropertyV3
     | DESIGNPROPERTIES COLON designPropertyListV3       // DesignProperties: [...]
     | WIDTH COLON NUMBER_LITERAL                        // Width: 200
     | HEIGHT COLON NUMBER_LITERAL                      // Height: 100
-    | VISIBLE COLON propertyValueV3                   // Visible: expression
+    | VISIBLE COLON xpathConstraint                    // Visible: [IsActive = true]
+    | VISIBLE COLON propertyValueV3                   // Visible: false
+    | EDITABLE COLON xpathConstraint                  // Editable: [Status != 'Closed']
+    | EDITABLE COLON propertyValueV3                  // Editable: Never | Always
     | TOOLTIP COLON propertyValueV3                   // Tooltip: 'text'
     | IDENTIFIER COLON propertyValueV3                // Generic: any other property
     | keyword COLON propertyValueV3                  // Generic: keyword as property name (for pluggable widgets)
@@ -3161,6 +3198,7 @@ commonNameKeyword
     | FORMAT | RANGE | SOURCE_KW | CHECK                     // Validation/data keywords
     | FOLDER | NAVIGATION | HOME | VERSION | PRODUCTION      // Structure/config keywords
     | SELECTION | EDITABLE | VISIBLE | DATASOURCE            // Widget property keywords
+    | TABLETWIDTH | PHONEWIDTH                               // Responsive width keywords
     | WIDTH | HEIGHT | STYLE | CLASS                         // Styling keywords
     | BOTH | SINGLE | MULTIPLE | NONE                        // Cardinality keywords
     | PROTOTYPE | OFF                                        // Security level keywords
@@ -3227,4 +3265,5 @@ keyword
     | GENERATE | CONNECTOR | EXEC | TABLES | VIEWS              // SQL generate keywords
     | COLLECTION                                               // Image collection keyword
     | FILE_KW                                                    // REST client file keyword
+    | SEND | REQUEST                                               // REST operation call keywords
     ;

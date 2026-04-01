@@ -120,7 +120,7 @@ var mdlKeywordToDesignPropsKey = map[string]string{
 	"LAYOUTGRID":        "LayoutGrid",
 	"DYNAMICTEXT":       "DynamicText",
 	"STATICTEXT":        "Label",
-	"IMAGE":             "StaticImageViewer",
+	"IMAGE":             "Image",
 	"STATICIMAGE":       "StaticImageViewer",
 	"DYNAMICIMAGE":      "DynamicImageViewer",
 	"NAVIGATIONLIST":    "NavigationList",

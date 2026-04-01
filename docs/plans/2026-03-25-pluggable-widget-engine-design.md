@@ -143,6 +143,8 @@ All existing pluggable widget builders use combinations of these 6 operations:
 | `datasource` | `setDataSource()` | `source` → MDL DataSource prop | Builds and sets `DataSource` object |
 | `selection` | `setSelectionMode()` | `value` or `source` | Set widget selection mode (Single/Multi) |
 | `widgets` | inline child BSON | `childSlots` config | Embeds serialized child widgets into `Widgets` array |
+| `texttemplate` | `setTextTemplateValue()` | `source` → string prop | Sets text in `TextTemplate` (Forms$ClientTemplate) |
+| `action` | `SerializeClientAction()` | `OnClick` → AST Action | Sets `Action` with serialized client action BSON |
 
 Operations are registered in an `OperationRegistry` and new types can be added without modifying the engine.
 
@@ -198,7 +200,7 @@ Therefore, in any mode that uses both, **`datasource` must come before `associat
 
 ### Operation Validation
 
-Operation names in `.def.json` files are validated at load time against the 6 known operations: `attribute`, `association`, `primitive`, `selection`, `datasource`, `widgets`. Invalid operation names produce an error when `NewWidgetRegistry()` or `LoadUserDefinitions()` runs, rather than failing silently at build time.
+Operation names in `.def.json` files are validated at load time against the 8 known operations: `attribute`, `association`, `primitive`, `selection`, `datasource`, `widgets`, `texttemplate`, `action`. Invalid operation names produce an error when `NewWidgetRegistry()` or `LoadUserDefinitions()` runs, rather than failing silently at build time.
 
 ### Mode Selection Conditions
 

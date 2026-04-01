@@ -27,16 +27,23 @@ type DesignPropertyValue struct {
 // BaseWidget provides common fields for all widgets.
 type BaseWidget struct {
 	model.BaseElement
-	Name             string                `json:"name"`
-	Class            string                `json:"class,omitempty"`
-	Style            string                `json:"style,omitempty"`
-	TabIndex         int                   `json:"tabIndex,omitempty"`
-	DesignProperties []DesignPropertyValue `json:"designProperties,omitempty"`
+	Name                   string                          `json:"name"`
+	Class                  string                          `json:"class,omitempty"`
+	Style                  string                          `json:"style,omitempty"`
+	TabIndex               int                             `json:"tabIndex,omitempty"`
+	DesignProperties       []DesignPropertyValue           `json:"designProperties,omitempty"`
+	ConditionalVisibility  *ConditionalVisibilitySettings  `json:"-"` // Set via VISIBLE IF
+	ConditionalEditability *ConditionalEditabilitySettings `json:"-"` // Set via EDITABLE IF
 }
 
 // GetName returns the widget's name.
 func (w *BaseWidget) GetName() string {
 	return w.Name
+}
+
+// GetBaseWidget returns a pointer to the BaseWidget for accessing conditional settings.
+func (w *BaseWidget) GetBaseWidget() *BaseWidget {
+	return w
 }
 
 // SetAppearance sets the CSS class and inline style on the widget.
@@ -64,6 +71,12 @@ type ConditionalVisibilitySettings struct {
 	ModuleRoles    []model.ID    `json:"moduleRoles,omitempty"`
 	SourceVariable *PageVariable `json:"sourceVariable,omitempty"`
 	Attribute      model.ID      `json:"attribute,omitempty"`
+}
+
+// ConditionalEditabilitySettings represents editability conditions.
+type ConditionalEditabilitySettings struct {
+	model.BaseElement
+	Expression string `json:"expression,omitempty"`
 }
 
 // PageVariable represents a page variable reference.

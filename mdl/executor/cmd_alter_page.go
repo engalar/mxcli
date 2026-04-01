@@ -569,6 +569,10 @@ func applyPageLevelSet(rawData bson.D, properties map[string]interface{}) error 
 			} else {
 				setTranslatableText(rawData, "Title", value)
 			}
+		case "Url":
+			// URL is stored as a plain string at the top level
+			strVal, _ := value.(string)
+			dSet(rawData, "Url", strVal)
 		default:
 			return fmt.Errorf("unsupported page-level property: %s", propName)
 		}

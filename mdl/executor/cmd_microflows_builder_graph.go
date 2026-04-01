@@ -167,6 +167,8 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		return fb.addValidationFeedbackAction(s)
 	case *ast.RestCallStmt:
 		return fb.addRestCallAction(s)
+	case *ast.SendRestRequestStmt:
+		return fb.addSendRestRequestAction(s)
 	default:
 		// For now, skip unknown statement types
 		return ""

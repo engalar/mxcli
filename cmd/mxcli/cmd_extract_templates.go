@@ -81,6 +81,7 @@ func runExtractTemplates(cmd *cobra.Command, args []string) error {
 		{"com.mendix.widget.web.datagriddatefilter.DatagridDateFilter", "datagrid-date-filter.json", "Date filter"},
 		{"com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter", "datagrid-dropdown-filter.json", "Dropdown filter"},
 		{"com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter", "datagrid-number-filter.json", "Number filter"},
+		{"com.mendix.widget.web.image.Image", "image.json", "Image"},
 	}
 
 	extracted := 0

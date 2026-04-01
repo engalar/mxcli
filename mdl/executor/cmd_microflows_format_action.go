@@ -592,6 +592,9 @@ func (e *Executor) formatAction(
 	case *microflows.RestCallAction:
 		return e.formatRestCallAction(a)
 
+	case *microflows.RestOperationCallAction:
+		return e.formatRestOperationCallAction(a)
+
 	case *microflows.ExecuteDatabaseQueryAction:
 		return e.formatExecuteDatabaseQueryAction(a)
 
@@ -799,6 +802,31 @@ func (e *Executor) formatRestCallAction(a *microflows.RestCallAction) string {
 	}
 
 	// Note: Error handling suffix is added at the activity level, not here
+	sb.WriteString(";")
+	return sb.String()
+}
+
+// formatRestOperationCallAction formats a RestOperationCallAction as MDL.
+func (e *Executor) formatRestOperationCallAction(a *microflows.RestOperationCallAction) string {
+	var sb strings.Builder
+
+	if a.OutputVariable != nil && a.OutputVariable.VariableName != "" {
+		sb.WriteString("$")
+		sb.WriteString(a.OutputVariable.VariableName)
+		sb.WriteString(" = ")
+	}
+
+	sb.WriteString("SEND REST REQUEST ")
+	sb.WriteString(a.Operation)
+
+	if a.BodyVariable != nil && a.BodyVariable.VariableName != "" {
+		sb.WriteString("\n    BODY $")
+		sb.WriteString(a.BodyVariable.VariableName)
+	}
+
+	// RestOperationCallAction does not support custom error handling (CE6035)
+	// so we don't emit ON ERROR clauses.
+
 	sb.WriteString(";")
 	return sb.String()
 }

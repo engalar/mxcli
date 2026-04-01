@@ -1,14 +1,17 @@
 -- ============================================================================
--- Custom Widget Examples - GALLERY & COMBOBOX
+-- Custom Widget Examples - GALLERY, COMBOBOX & IMAGE
 -- ============================================================================
 --
--- Tests for pluggable widget MDL syntax (GALLERY, COMBOBOX).
+-- Tests for pluggable widget MDL syntax (GALLERY, COMBOBOX, IMAGE).
 --
 -- Test matrix:
 --   1. GALLERY basic       — DATABASE datasource + TEMPLATE (PASS)
 --   2. GALLERY with FILTER — TEXTFILTER in FILTER block    (KNOWN BUG: CE0463)
 --   3. COMBOBOX enum       — Enum attribute                (KNOWN BUG: CE1613)
 --   4. COMBOBOX association — DataSource + CaptionAttribute (FIXED: Issue #21)
+--   5. IMAGE basic         — Default pluggable Image widget
+--   6. IMAGE dimensions    — Custom pixel dimensions + alt text
+--   7. IMAGE with OnClick  — Action binding on click
 --
 -- Known engine bugs (do not affect MDL syntax correctness):
 --   - CE0463 on TEXTFILTER: embedded template property count mismatch
@@ -19,10 +22,12 @@
 -- MARK: Setup
 
 -- ============================================================================
--- Entities & Enumerations
+-- Module & Domain Model
 -- ============================================================================
 
-CREATE ENUMERATION MyFirstModule.Priority (
+CREATE MODULE CWTest;
+
+CREATE ENUMERATION CWTest.Priority (
   LOW 'Low',
   MEDIUM 'Medium',
   HIGH 'High',
@@ -31,22 +36,22 @@ CREATE ENUMERATION MyFirstModule.Priority (
 /
 
 @Position(100,300)
-CREATE PERSISTENT ENTITY MyFirstModule.Category (
+CREATE PERSISTENT ENTITY CWTest.Category (
   Name: String(200) NOT NULL,
   Description: String(500)
 );
 
 @Position(300,300)
-CREATE PERSISTENT ENTITY MyFirstModule.Task (
+CREATE PERSISTENT ENTITY CWTest.Task (
   Title: String(200) NOT NULL,
   Description: String(1000),
-  Priority: Enumeration(MyFirstModule.Priority),
+  Priority: Enumeration(CWTest.Priority),
   DueDate: DateTime,
   IsCompleted: Boolean DEFAULT false
 );
 
-CREATE ASSOCIATION MyFirstModule.Task_Category
-FROM MyFirstModule.Task TO MyFirstModule.Category
+CREATE ASSOCIATION CWTest.Task_Category
+FROM CWTest.Task TO CWTest.Category
 TYPE Reference
 OWNER Both;
 
@@ -61,7 +66,7 @@ OWNER Both;
  * Basic Gallery showing Task cards with title and description.
  * Validates: GALLERY widget, DATABASE datasource, TEMPLATE with DYNAMICTEXT.
  */
-CREATE PAGE MyFirstModule.P_Gallery_Basic
+CREATE PAGE CWTest.P_Gallery_Basic
 (
   Title: 'Gallery Basic',
   Layout: Atlas_Core.Atlas_Default,
@@ -72,7 +77,7 @@ CREATE PAGE MyFirstModule.P_Gallery_Basic
     ROW row1 {
       COLUMN col1 (DesktopWidth: 12) {
         GALLERY galTasks (
-          DataSource: DATABASE MyFirstModule.Task SORT BY Title ASC
+          DataSource: DATABASE CWTest.Task SORT BY Title ASC
         ) {
           TEMPLATE tpl1 {
             DYNAMICTEXT dtTitle (Content: '{1}', ContentParams: [{1} = Title], RenderMode: H4)
@@ -96,7 +101,7 @@ CREATE PAGE MyFirstModule.P_Gallery_Basic
  * KNOWN BUG: CE0463 on TEXTFILTER due to embedded template mismatch.
  * The MDL syntax is correct; the engine template needs re-extraction.
  */
-CREATE PAGE MyFirstModule.P_Gallery_Filtered
+CREATE PAGE CWTest.P_Gallery_Filtered
 (
   Title: 'Gallery with Filter',
   Layout: Atlas_Core.Atlas_Default,
@@ -107,7 +112,7 @@ CREATE PAGE MyFirstModule.P_Gallery_Filtered
     ROW row1 {
       COLUMN col1 (DesktopWidth: 12) {
         GALLERY galFiltered (
-          DataSource: DATABASE MyFirstModule.Task SORT BY DueDate DESC
+          DataSource: DATABASE CWTest.Task SORT BY DueDate DESC
         ) {
           TEMPLATE tpl1 {
             DYNAMICTEXT dtTitle (Content: '{1}', ContentParams: [{1} = Title], RenderMode: H4)
@@ -135,10 +140,10 @@ CREATE PAGE MyFirstModule.P_Gallery_Filtered
  *
  * @param $Task The task to edit
  */
-CREATE PAGE MyFirstModule.P_ComboBox_Enum
+CREATE PAGE CWTest.P_ComboBox_Enum
 (
   Params: {
-    $Task: MyFirstModule.Task
+    $Task: CWTest.Task
   },
   Title: 'ComboBox Enum',
   Layout: Atlas_Core.PopupLayout,
@@ -175,10 +180,10 @@ CREATE PAGE MyFirstModule.P_ComboBox_Enum
  *
  * @param $Task The task to edit
  */
-CREATE PAGE MyFirstModule.P_ComboBox_Assoc
+CREATE PAGE CWTest.P_ComboBox_Assoc
 (
   Params: {
-    $Task: MyFirstModule.Task
+    $Task: CWTest.Task
   },
   Title: 'ComboBox Association',
   Layout: Atlas_Core.PopupLayout,
@@ -193,7 +198,7 @@ CREATE PAGE MyFirstModule.P_ComboBox_Assoc
           COMBOBOX cmbCategory (
             Label: 'Category',
             Attribute: Task_Category,
-            DataSource: DATABASE MyFirstModule.Category,
+            DataSource: DATABASE CWTest.Category,
             CaptionAttribute: Name
           )
         }
@@ -202,6 +207,112 @@ CREATE PAGE MyFirstModule.P_ComboBox_Assoc
     FOOTER footer1 {
       ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES CLOSE_PAGE, ButtonStyle: Success)
       ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES CLOSE_PAGE, ButtonStyle: Default)
+    }
+  }
+}
+
+-- MARK: IMAGE basic
+
+-- ============================================================================
+-- Test 5: IMAGE basic — Default pluggable Image widget
+-- Result: Pending validation
+-- ============================================================================
+
+/**
+ * Page with a basic pluggable Image widget using default settings.
+ * The IMAGE keyword creates a com.mendix.widget.web.image.Image widget.
+ */
+CREATE PAGE CWTest.P_Image_Basic
+(
+  Title: 'Image Basic',
+  Layout: Atlas_Core.Atlas_Default,
+  Folder: 'CustomWidgets'
+)
+{
+  LAYOUTGRID lgMain {
+    ROW row1 {
+      COLUMN col1 (DesktopWidth: 12) {
+        IMAGE imgLogo
+      }
+    }
+  }
+}
+
+-- MARK: IMAGE with dimensions
+
+-- ============================================================================
+-- Test 6: IMAGE with custom dimensions
+-- Result: Pending validation
+-- ============================================================================
+
+/**
+ * Page with an Image widget with custom pixel dimensions.
+ * Note: ImageUrl mode (imageUrl TextTemplate) is not yet supported —
+ * the template's imageUrl property is null and cannot be created from
+ * scratch without triggering CE0463.
+ */
+CREATE PAGE CWTest.P_Image_Dimensions
+(
+  Title: 'Image Dimensions',
+  Layout: Atlas_Core.Atlas_Default,
+  Folder: 'CustomWidgets'
+)
+{
+  LAYOUTGRID lgMain {
+    ROW row1 {
+      COLUMN col1 (DesktopWidth: 12) {
+        IMAGE imgBanner (
+          AlternativeText: 'Company banner',
+          WidthUnit: pixels,
+          Width: 800,
+          HeightUnit: pixels,
+          Height: 200,
+          Responsive: false
+        )
+      }
+    }
+  }
+}
+
+-- MARK: IMAGE with OnClick
+
+-- ============================================================================
+-- Test 7: IMAGE with OnClick — Action binding on click
+-- Result: Pending validation
+-- ============================================================================
+
+/**
+ * Page with an Image widget that navigates to a detail page on click.
+ * Tests the action operation in the pluggable engine.
+ *
+ * @param $Task The task whose image to display
+ */
+CREATE PAGE CWTest.P_Image_OnClick
+(
+  Params: {
+    $Task: CWTest.Task
+  },
+  Title: 'Image with OnClick',
+  Layout: Atlas_Core.Atlas_Default,
+  Folder: 'CustomWidgets'
+)
+{
+  DATAVIEW dvTask (DataSource: $Task) {
+    LAYOUTGRID lgMain {
+      ROW row1 {
+        COLUMN col1 (DesktopWidth: 6) {
+          IMAGE imgTask (
+            AlternativeText: 'Task image',
+            DisplayAs: thumbnail,
+            WidthUnit: pixels,
+            Width: 300
+          )
+        }
+        COLUMN col2 (DesktopWidth: 6) {
+          DYNAMICTEXT dtTitle (Content: '{1}', ContentParams: [{1} = Title], RenderMode: H3)
+          DYNAMICTEXT dtDesc (Content: '{1}', ContentParams: [{1} = Description])
+        }
+      }
     }
   }
 }
