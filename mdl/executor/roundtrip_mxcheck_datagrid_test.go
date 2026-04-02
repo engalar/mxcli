@@ -147,6 +147,7 @@ func TestMxCheck_GalleryPage(t *testing.T) {
 
 	env := setupTestEnv(t)
 	defer env.teardown()
+	env.requireMinVersion(t, 11, 0) // Gallery widget template is 11.6, CE0463 on 10.x
 
 	entityName := testModule + ".MxCheckGalleryItem"
 	env.registerCleanup("entity", entityName)

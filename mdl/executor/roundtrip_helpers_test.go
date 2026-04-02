@@ -575,6 +575,15 @@ func (e *testEnv) assertContains(createMDL string, expectedProps []string, opts 
 	}
 }
 
+// requireMinVersion skips the test if the project's Mendix version is below the given minimum.
+func (e *testEnv) requireMinVersion(t *testing.T, major, minor int) {
+	t.Helper()
+	pv := e.executor.reader.ProjectVersion()
+	if !pv.IsAtLeast(major, minor) {
+		t.Skipf("Requires Mendix %d.%d+ (project is %s)", major, minor, pv.ProductVersion)
+	}
+}
+
 // --- Legacy Semantic Comparison Helpers (kept for backward compatibility) ---
 
 // containsProperty checks if the MDL output contains a property.

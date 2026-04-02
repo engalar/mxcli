@@ -629,6 +629,7 @@ func TestMxCheck_ViewEntitySimple(t *testing.T) {
 
 	env := setupTestEnv(t)
 	defer env.teardown()
+	env.requireMinVersion(t, 11, 0) // VIEW ENTITY BSON format requires 11.0+
 
 	mod := testModule
 
@@ -683,6 +684,7 @@ func TestMxCheck_ViewEntityWithAggregates(t *testing.T) {
 
 	env := setupTestEnv(t)
 	defer env.teardown()
+	env.requireMinVersion(t, 11, 0) // VIEW ENTITY BSON format requires 11.0+
 
 	mod := testModule
 
@@ -750,6 +752,7 @@ func TestMxCheck_ComboBoxWithAssociation(t *testing.T) {
 
 	env := setupTestEnv(t)
 	defer env.teardown()
+	env.requireMinVersion(t, 11, 0) // Widget template is 11.6, CE0463 on 10.x
 
 	mod := testModule
 
