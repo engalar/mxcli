@@ -11,6 +11,7 @@
 
 # Part I: Tutorial
 
+- [5-Minute Quickstart](tutorial/quickstart.md)
 - [Setting Up](tutorial/setup.md)
   - [Installation](tutorial/installation.md)
   - [Opening Your First Project](tutorial/opening-project.md)
@@ -304,6 +305,13 @@
   - [SQLite Schema](internals/catalog-schema.md)
   - [FTS5 Full-Text Search](internals/fts5.md)
   - [Reference Tracking](internals/reference-tracking.md)
+
+---
+
+# Guides
+
+- [Capabilities Overview](reference/capabilities.md)
+- [Customizing AI Generation](guides/customizing-ai.md)
 
 ---
 
