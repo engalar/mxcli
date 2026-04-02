@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/mendixlabs/mxcli/sdk/versions"
 )
 
 // ProjectVersion contains version information for a Mendix project.
@@ -151,7 +153,19 @@ func (v *ProjectVersion) IsSupported() bool {
 }
 
 // SupportsFeature checks if a specific feature is available in this version.
+// It first checks the YAML-based version registry, falling back to the
+// hardcoded featureVersions map for features not yet in the registry.
 func (v *ProjectVersion) SupportsFeature(feature Feature) bool {
+	// Try the YAML registry first via the feature-to-registry mapping.
+	if mapping, ok := featureRegistry[feature]; ok {
+		reg, err := versions.Load()
+		if err == nil {
+			pv := versions.SemVer{Major: v.MajorVersion, Minor: v.MinorVersion, Patch: v.PatchVersion}
+			return reg.IsAvailable(mapping.Area, mapping.Name, pv)
+		}
+	}
+
+	// Fallback to hardcoded map.
 	minVersion, ok := featureVersions[feature]
 	if !ok {
 		return false
@@ -172,6 +186,22 @@ const (
 	FeaturePortableApp        Feature = "PortableApp"
 )
 
+// registryMapping maps a Feature constant to its area.name in the YAML registry.
+type registryMapping struct {
+	Area string
+	Name string
+}
+
+// featureRegistry maps Feature constants to their YAML registry keys.
+var featureRegistry = map[Feature]registryMapping{
+	FeatureViewEntities:       {Area: "domain_model", Name: "view_entities"},
+	FeatureAssociationStorage: {Area: "mpr_format", Name: "association_storage"},
+	FeatureMPRv2:              {Area: "mpr_format", Name: "mpr_v2"},
+	FeatureBusinessEvents:     {Area: "integration", Name: "business_events"},
+	FeatureWorkflows:          {Area: "workflows", Name: "basic"},
+	FeaturePortableApp:        {Area: "mpr_format", Name: "portable_app"},
+}
+
 // MinVersion represents a minimum version requirement.
 type MinVersion struct {
 	Major int
@@ -179,6 +209,7 @@ type MinVersion struct {
 }
 
 // featureVersions maps features to their minimum required versions.
+// This is the fallback when the YAML registry is unavailable.
 var featureVersions = map[Feature]MinVersion{
 	FeatureViewEntities:       {Major: 10, Minor: 18},
 	FeatureAssociationStorage: {Major: 11, Minor: 0},

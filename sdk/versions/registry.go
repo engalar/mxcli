@@ -1,0 +1,403 @@
+// SPDX-License-Identifier: Apache-2.0
+
+// Package versions provides a version feature registry for Mendix projects.
+// Feature definitions are loaded from embedded YAML files, providing a single
+// source of truth for what MDL capabilities are available in each Mendix version.
+//
+// Version bounds use min_version / max_version semver notation, aligned with
+// the Mendix Content API (Marketplace) conventions.
+package versions
+
+import (
+	"embed"
+	"fmt"
+	"sort"
+	"strconv"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+)
+
+//go:embed mendix-9.yaml mendix-10.yaml mendix-11.yaml
+var yamlFS embed.FS
+
+// Registry holds the loaded version feature data for all supported Mendix versions.
+type Registry struct {
+	specs []VersionSpec
+	// index maps "area.feature" to all FeatureEntry records across specs.
+	index map[string][]FeatureEntry
+}
+
+// VersionSpec represents one YAML file (one major version).
+type VersionSpec struct {
+	Major          int                            `yaml:"major"`
+	SupportedRange string                         `yaml:"supported_range"`
+	LTSVersions    []string                       `yaml:"lts_versions"`
+	MTSVersions    []string                       `yaml:"mts_versions"`
+	Features       map[string]map[string]Feature  `yaml:"features"`
+	Deprecated     []DeprecatedEntry              `yaml:"deprecated"`
+	Upgrade        map[string][]UpgradeEntry      `yaml:"upgrade_opportunities"`
+}
+
+// Feature represents a single capability in the registry.
+type Feature struct {
+	MinVersion string     `yaml:"min_version"`
+	MaxVersion string     `yaml:"max_version,omitempty"`
+	MDL        string     `yaml:"mdl,omitempty"`
+	Notes      string     `yaml:"notes,omitempty"`
+	Workaround *Workaround `yaml:"workaround,omitempty"`
+}
+
+// Workaround describes an alternative when a feature is not available.
+type Workaround struct {
+	Description string `yaml:"description"`
+	MaxVersion  string `yaml:"max_version"`
+}
+
+// DeprecatedEntry describes a deprecated pattern.
+type DeprecatedEntry struct {
+	ID         string `yaml:"id"`
+	Pattern    string `yaml:"pattern"`
+	ReplacedBy string `yaml:"replaced_by"`
+	Since      string `yaml:"since"`
+	Severity   string `yaml:"severity"`
+}
+
+// UpgradeEntry describes an upgrade opportunity.
+type UpgradeEntry struct {
+	Feature     string `yaml:"feature"`
+	Description string `yaml:"description"`
+	Effort      string `yaml:"effort"`
+}
+
+// FeatureEntry is a flattened, queryable representation of a feature.
+type FeatureEntry struct {
+	Area       string // e.g. "domain_model", "microflows"
+	Name       string // e.g. "view_entities", "page_parameters"
+	MinVersion SemVer
+	MaxVersion *SemVer // nil means unbounded
+	MDL        string
+	Notes      string
+	Workaround *Workaround
+}
+
+// SemVer is a parsed major.minor.patch version.
+type SemVer struct {
+	Major int
+	Minor int
+	Patch int
+}
+
+// ParseSemVer parses a "major.minor.patch" string. Missing components default to 0.
+func ParseSemVer(s string) (SemVer, error) {
+	var v SemVer
+	parts := strings.Split(s, ".")
+	if len(parts) < 2 {
+		return v, fmt.Errorf("invalid version %q: need at least major.minor", s)
+	}
+	var err error
+	v.Major, err = strconv.Atoi(parts[0])
+	if err != nil {
+		return v, fmt.Errorf("invalid major in %q: %w", s, err)
+	}
+	v.Minor, err = strconv.Atoi(parts[1])
+	if err != nil {
+		return v, fmt.Errorf("invalid minor in %q: %w", s, err)
+	}
+	if len(parts) >= 3 {
+		v.Patch, err = strconv.Atoi(parts[2])
+		if err != nil {
+			return v, fmt.Errorf("invalid patch in %q: %w", s, err)
+		}
+	}
+	return v, nil
+}
+
+func (v SemVer) String() string {
+	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
+}
+
+// AtLeast returns true if v >= other.
+func (v SemVer) AtLeast(other SemVer) bool {
+	if v.Major != other.Major {
+		return v.Major > other.Major
+	}
+	if v.Minor != other.Minor {
+		return v.Minor > other.Minor
+	}
+	return v.Patch >= other.Patch
+}
+
+// Load reads all embedded YAML files and returns a populated Registry.
+func Load() (*Registry, error) {
+	files := []string{"mendix-9.yaml", "mendix-10.yaml", "mendix-11.yaml"}
+	r := &Registry{
+		index: make(map[string][]FeatureEntry),
+	}
+
+	for _, name := range files {
+		data, err := yamlFS.ReadFile(name)
+		if err != nil {
+			return nil, fmt.Errorf("reading %s: %w", name, err)
+		}
+		var spec VersionSpec
+		if err := yaml.Unmarshal(data, &spec); err != nil {
+			return nil, fmt.Errorf("parsing %s: %w", name, err)
+		}
+		r.specs = append(r.specs, spec)
+
+		// Build index from this spec.
+		for area, features := range spec.Features {
+			for name, f := range features {
+				entry, err := toEntry(area, name, f)
+				if err != nil {
+					return nil, fmt.Errorf("feature %s.%s in %d: %w", area, name, spec.Major, err)
+				}
+				key := area + "." + name
+				r.index[key] = append(r.index[key], entry)
+			}
+		}
+	}
+
+	// Deduplicate index entries (same feature may appear in multiple YAML files).
+	for key, entries := range r.index {
+		r.index[key] = dedup(entries)
+	}
+
+	return r, nil
+}
+
+func toEntry(area, name string, f Feature) (FeatureEntry, error) {
+	minV, err := ParseSemVer(f.MinVersion)
+	if err != nil {
+		return FeatureEntry{}, fmt.Errorf("min_version: %w", err)
+	}
+	entry := FeatureEntry{
+		Area:       area,
+		Name:       name,
+		MinVersion: minV,
+		MDL:        f.MDL,
+		Notes:      f.Notes,
+		Workaround: f.Workaround,
+	}
+	if f.MaxVersion != "" {
+		maxV, err := ParseSemVer(f.MaxVersion)
+		if err != nil {
+			return FeatureEntry{}, fmt.Errorf("max_version: %w", err)
+		}
+		entry.MaxVersion = &maxV
+	}
+	return entry, nil
+}
+
+// dedup removes duplicate entries (same area+name+min_version), keeping the
+// entry with the most information (longest MDL or notes).
+func dedup(entries []FeatureEntry) []FeatureEntry {
+	seen := make(map[string]int) // min_version string -> index in result
+	var result []FeatureEntry
+	for _, e := range entries {
+		key := e.MinVersion.String()
+		if idx, ok := seen[key]; ok {
+			// Keep the entry with more detail.
+			existing := result[idx]
+			if len(e.MDL) > len(existing.MDL) || len(e.Notes) > len(existing.Notes) {
+				result[idx] = e
+			}
+			continue
+		}
+		seen[key] = len(result)
+		result = append(result, e)
+	}
+	return result
+}
+
+// IsAvailable returns true if the feature identified by "area.name" is
+// available in the given project version.
+func (r *Registry) IsAvailable(area, name string, projectVersion SemVer) bool {
+	key := area + "." + name
+	entries, ok := r.index[key]
+	if !ok {
+		return false
+	}
+	for _, e := range entries {
+		if projectVersion.AtLeast(e.MinVersion) {
+			if e.MaxVersion != nil && !e.MaxVersion.AtLeast(projectVersion) {
+				continue
+			}
+			return true
+		}
+	}
+	return false
+}
+
+// FeaturesForVersion returns all features and their availability status for a
+// given project version. Results are sorted by area, then name.
+func (r *Registry) FeaturesForVersion(projectVersion SemVer) []FeatureStatus {
+	var result []FeatureStatus
+	seen := make(map[string]bool)
+
+	for key, entries := range r.index {
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+
+		// Use the entry with the lowest min_version as the canonical one.
+		best := entries[0]
+		for _, e := range entries[1:] {
+			if best.MinVersion.AtLeast(e.MinVersion) && e.MinVersion.String() != best.MinVersion.String() {
+				best = e
+			}
+		}
+
+		available := projectVersion.AtLeast(best.MinVersion)
+		if best.MaxVersion != nil && !best.MaxVersion.AtLeast(projectVersion) {
+			available = false
+		}
+
+		result = append(result, FeatureStatus{
+			FeatureEntry: best,
+			Available:    available,
+		})
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Area != result[j].Area {
+			return result[i].Area < result[j].Area
+		}
+		return result[i].Name < result[j].Name
+	})
+
+	return result
+}
+
+// FeaturesAddedSince returns features that become available when upgrading
+// from sinceVersion. Only features whose min_version > sinceVersion are included.
+func (r *Registry) FeaturesAddedSince(sinceVersion SemVer) []FeatureEntry {
+	var result []FeatureEntry
+	seen := make(map[string]bool)
+
+	for key, entries := range r.index {
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+
+		best := entries[0]
+		for _, e := range entries[1:] {
+			if best.MinVersion.AtLeast(e.MinVersion) && e.MinVersion.String() != best.MinVersion.String() {
+				best = e
+			}
+		}
+
+		if !sinceVersion.AtLeast(best.MinVersion) {
+			result = append(result, best)
+		}
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].MinVersion.String() != result[j].MinVersion.String() {
+			return result[j].MinVersion.AtLeast(result[i].MinVersion)
+		}
+		if result[i].Area != result[j].Area {
+			return result[i].Area < result[j].Area
+		}
+		return result[i].Name < result[j].Name
+	})
+
+	return result
+}
+
+// FeaturesInArea returns all features in a given area for the specified version.
+func (r *Registry) FeaturesInArea(area string, projectVersion SemVer) []FeatureStatus {
+	var result []FeatureStatus
+	seen := make(map[string]bool)
+
+	for key, entries := range r.index {
+		if seen[key] {
+			continue
+		}
+		best := entries[0]
+		for _, e := range entries[1:] {
+			if best.MinVersion.AtLeast(e.MinVersion) && e.MinVersion.String() != best.MinVersion.String() {
+				best = e
+			}
+		}
+
+		if best.Area != area {
+			continue
+		}
+		seen[key] = true
+
+		available := projectVersion.AtLeast(best.MinVersion)
+		if best.MaxVersion != nil && !best.MaxVersion.AtLeast(projectVersion) {
+			available = false
+		}
+
+		result = append(result, FeatureStatus{
+			FeatureEntry: best,
+			Available:    available,
+		})
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+
+	return result
+}
+
+// Areas returns the sorted list of distinct feature areas.
+func (r *Registry) Areas() []string {
+	set := make(map[string]bool)
+	for _, entries := range r.index {
+		for _, e := range entries {
+			set[e.Area] = true
+		}
+	}
+	var areas []string
+	for a := range set {
+		areas = append(areas, a)
+	}
+	sort.Strings(areas)
+	return areas
+}
+
+// DeprecatedPatterns returns all deprecated entries applicable to the given version.
+func (r *Registry) DeprecatedPatterns(projectVersion SemVer) []DeprecatedEntry {
+	var result []DeprecatedEntry
+	for _, spec := range r.specs {
+		for _, d := range spec.Deprecated {
+			since, err := ParseSemVer(d.Since)
+			if err != nil {
+				continue
+			}
+			if projectVersion.AtLeast(since) {
+				result = append(result, d)
+			}
+		}
+	}
+	return result
+}
+
+// UpgradeOpportunities returns upgrade suggestions from the current major to a target.
+func (r *Registry) UpgradeOpportunities(fromMajor, toMajor int) []UpgradeEntry {
+	key := fmt.Sprintf("from_%d_to_%d", fromMajor, toMajor)
+	for _, spec := range r.specs {
+		if entries, ok := spec.Upgrade[key]; ok {
+			return entries
+		}
+	}
+	return nil
+}
+
+// FeatureStatus pairs a feature entry with its availability for a specific version.
+type FeatureStatus struct {
+	FeatureEntry
+	Available bool
+}
+
+// DisplayName returns a human-readable name for the feature (e.g., "View entities").
+func (e *FeatureEntry) DisplayName() string {
+	return strings.ReplaceAll(strings.ReplaceAll(e.Name, "_", " "), "  ", " ")
+}

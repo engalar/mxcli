@@ -1,0 +1,53 @@
+major: 9
+supported_range: "9.0.0..9.24.99"
+lts_versions: ["9.24"]
+
+features:
+  domain_model:
+    entities:
+      min_version: "9.0.0"
+      mdl: "CREATE PERSISTENT ENTITY Module.Name (...)"
+    non_persistent_entities:
+      min_version: "9.0.0"
+      mdl: "CREATE NON-PERSISTENT ENTITY Module.Name (...)"
+    calculated_attributes:
+      min_version: "9.0.0"
+      mdl: "CALCULATED BY Module.Microflow"
+    entity_generalization:
+      min_version: "9.0.0"
+      mdl: "EXTENDS Module.ParentEntity"
+
+  microflows:
+    basic:
+      min_version: "9.0.0"
+      mdl: "CREATE MICROFLOW Module.Name (...) BEGIN ... END"
+
+  pages:
+    basic:
+      min_version: "9.0.0"
+      mdl: "CREATE PAGE Module.Name (...) { ... }"
+
+  security:
+    module_roles:
+      min_version: "9.0.0"
+    user_roles:
+      min_version: "9.0.0"
+    entity_access:
+      min_version: "9.0.0"
+
+  workflows:
+    basic:
+      min_version: "9.0.0"
+      mdl: "CREATE WORKFLOW Module.Name ..."
+    parallel_split:
+      min_version: "9.0.0"
+    user_task:
+      min_version: "9.0.0"
+
+  navigation:
+    profiles:
+      min_version: "9.0.0"
+    menu_items:
+      min_version: "9.0.0"
+    home_pages:
+      min_version: "9.0.0"

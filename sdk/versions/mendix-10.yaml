@@ -1,0 +1,167 @@
+major: 10
+supported_range: "10.0.0..10.24.99"
+lts_versions: ["10.24"]
+mts_versions: ["10.6", "10.12", "10.18"]
+
+features:
+  domain_model:
+    entities:
+      min_version: "10.0.0"
+      mdl: "CREATE PERSISTENT ENTITY Module.Name (...)"
+    non_persistent_entities:
+      min_version: "10.0.0"
+      mdl: "CREATE NON-PERSISTENT ENTITY Module.Name (...)"
+    view_entities:
+      min_version: "10.18.0"
+      mdl: "CREATE VIEW ENTITY Module.Name (...) AS SELECT ..."
+      notes: "OQL stored inline on OqlViewEntitySource in 10.x"
+    calculated_attributes:
+      min_version: "10.0.0"
+      mdl: "CALCULATED BY Module.Microflow"
+    entity_generalization:
+      min_version: "10.0.0"
+      mdl: "EXTENDS Module.ParentEntity"
+    alter_entity:
+      min_version: "10.0.0"
+      mdl: "ALTER ENTITY Module.Name ADD ATTRIBUTE ..."
+
+  oql_functions:
+    basic_select:
+      min_version: "10.18.0"
+      mdl: "SELECT, FROM, WHERE, AS, AND, OR, NOT"
+    aggregate_functions:
+      min_version: "10.18.0"
+      mdl: "COUNT, SUM, AVG, MIN, MAX, GROUP BY"
+    subqueries:
+      min_version: "10.18.0"
+      mdl: "Inline subqueries in SELECT and WHERE"
+    join_types:
+      min_version: "10.18.0"
+      mdl: "INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN"
+
+  microflows:
+    basic:
+      min_version: "10.0.0"
+      mdl: "CREATE MICROFLOW Module.Name (...) BEGIN ... END"
+    show_page_with_params:
+      min_version: "11.0.0"
+      workaround:
+        description: "Pass data via a non-persistent entity or microflow parameter"
+        max_version: "10.99.99"
+    send_rest_request:
+      min_version: "10.1.0"
+      mdl: "SEND REST REQUEST ..."
+    send_rest_query_params:
+      min_version: "11.0.0"
+      notes: "Query parameters in REST requests"
+    execute_database_query:
+      min_version: "10.6.0"
+      mdl: "EXECUTE DATABASE QUERY ..."
+    execute_database_query_runtime_connection:
+      min_version: "11.0.0"
+      notes: "Runtime connection override for database queries"
+    loop_in_branch:
+      min_version: "10.0.0"
+      notes: "LOOP inside IF/ELSE branches"
+
+  pages:
+    basic:
+      min_version: "10.0.0"
+      mdl: "CREATE PAGE Module.Name (...) { ... }"
+    page_parameters:
+      min_version: "11.0.0"
+      workaround:
+        description: "Use non-persistent entity or microflow parameter"
+        max_version: "10.99.99"
+    page_variables:
+      min_version: "11.0.0"
+    pluggable_widgets:
+      min_version: "10.0.0"
+      notes: "Widget templates are version-specific; MPK augmentation handles drift"
+    design_properties_v3:
+      min_version: "11.0.0"
+      notes: "Atlas v3 design properties (Card style, Disable row wrap)"
+    alter_page:
+      min_version: "10.0.0"
+      mdl: "ALTER PAGE Module.Name SET/INSERT/DROP/REPLACE ..."
+
+  security:
+    module_roles:
+      min_version: "10.0.0"
+    user_roles:
+      min_version: "10.0.0"
+    entity_access:
+      min_version: "10.0.0"
+    demo_users:
+      min_version: "10.0.0"
+
+  integration:
+    rest_client_basic:
+      min_version: "10.1.0"
+      mdl: "CREATE REST CLIENT Module.Name ..."
+    rest_client_query_params:
+      min_version: "11.0.0"
+    rest_client_headers:
+      min_version: "10.4.0"
+    database_connector_basic:
+      min_version: "10.6.0"
+      mdl: "CREATE DATABASE CONNECTION Module.Name ..."
+    database_connector_execute:
+      min_version: "10.6.0"
+      mdl: "EXECUTE DATABASE QUERY in microflows"
+      notes: "Full BSON format requires 11.0+"
+    business_events:
+      min_version: "10.0.0"
+      mdl: "CREATE BUSINESS EVENT SERVICE Module.Name ..."
+    odata_client:
+      min_version: "10.0.0"
+
+  workflows:
+    basic:
+      min_version: "9.0.0"
+      mdl: "CREATE WORKFLOW Module.Name ..."
+    parallel_split:
+      min_version: "9.0.0"
+    user_task:
+      min_version: "9.0.0"
+
+  navigation:
+    profiles:
+      min_version: "10.0.0"
+    menu_items:
+      min_version: "10.0.0"
+    home_pages:
+      min_version: "10.0.0"
+
+  mpr_format:
+    mpr_v2:
+      min_version: "10.18.0"
+      notes: "MPR metadata + mprcontents/ folder with individual documents"
+    portable_app:
+      min_version: "11.6.0"
+      notes: "New portable app deployment format"
+
+deprecated:
+  - id: "DEP001"
+    pattern: "Persistable: false on view entities"
+    replaced_by: "Persistable: true (auto-set)"
+    since: "10.18.0"
+    severity: "info"
+
+upgrade_opportunities:
+  from_10_to_11:
+    - feature: "page_parameters"
+      description: "Replace non-persistent entity parameter passing with direct page parameters"
+      effort: "low"
+    - feature: "design_properties_v3"
+      description: "Atlas v3 design properties available for richer styling"
+      effort: "low"
+    - feature: "rest_client_query_params"
+      description: "REST clients can now define query parameters directly"
+      effort: "low"
+    - feature: "database_connector_runtime_connection"
+      description: "Database queries can override connection at runtime"
+      effort: "low"
+    - feature: "association_storage"
+      description: "New association storage format (automatic on project upgrade)"
+      effort: "none"
