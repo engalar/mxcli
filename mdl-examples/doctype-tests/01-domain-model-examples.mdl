@@ -1363,11 +1363,11 @@ ALTER ENTITY DmTest.Settings
 
 -- Widen a string attribute.
 ALTER ENTITY DmTest.Document
-  MODIFY ATTRIBUTE Summary String(1000);
+  MODIFY ATTRIBUTE Summary: String(1000);
 
 -- Change multiple attribute types in one statement.
 ALTER ENTITY DmTest.SimpleTag
-  MODIFY ATTRIBUTE Name String(200);
+  MODIFY ATTRIBUTE Name: String(200);
 
 -- ============================================================================
 -- Level 10.4: DROP ATTRIBUTE
