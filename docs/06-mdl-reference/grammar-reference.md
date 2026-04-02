@@ -2877,8 +2877,8 @@ alterEntityAction
     | | ADD COLUMN attributeDefinition
     | | RENAME ATTRIBUTE IDENTIFIER TO IDENTIFIER
     | | RENAME COLUMN IDENTIFIER TO IDENTIFIER
-    | | MODIFY ATTRIBUTE IDENTIFIER dataType attributeConstraint*
-    | | MODIFY COLUMN IDENTIFIER dataType attributeConstraint*
+    | | MODIFY ATTRIBUTE IDENTIFIER ':'? dataType attributeConstraint*
+    | | MODIFY COLUMN IDENTIFIER ':'? dataType attributeConstraint*
     | | DROP ATTRIBUTE IDENTIFIER
     | | DROP COLUMN IDENTIFIER
     | | SET DOCUMENTATION STRING_LITERAL
