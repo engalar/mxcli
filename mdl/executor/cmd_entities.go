@@ -353,6 +353,7 @@ func (e *Executor) execCreateViewEntity(s *ast.CreateViewEntityStmt) error {
 		Attributes:        attrs,
 		Source:            "DomainModels$OqlViewEntitySource",
 		SourceDocumentRef: sourceDocRef,
+		OqlQuery:          s.Query.RawQuery,
 	}
 
 	if s.CreateOrModify && existingEntity != nil {
