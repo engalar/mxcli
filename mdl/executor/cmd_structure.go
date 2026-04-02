@@ -59,7 +59,7 @@ type structureModule struct {
 
 // getStructureModules returns filtered and sorted modules for structure output.
 func (e *Executor) getStructureModules(filterModule string, includeAll bool) ([]structureModule, error) {
-	result, err := e.catalog.Query("SELECT Id, Name, IsSystemModule, AppStoreGuid FROM modules ORDER BY Name")
+	result, err := e.catalog.Query("SELECT Id, Name, Source, AppStoreGuid FROM modules ORDER BY Name")
 	if err != nil {
 		return nil, fmt.Errorf("failed to query modules: %w", err)
 	}
@@ -68,7 +68,7 @@ func (e *Executor) getStructureModules(filterModule string, includeAll bool) ([]
 	for _, row := range result.Rows {
 		id := asString(row[0])
 		name := asString(row[1])
-		isSystem := asString(row[2])
+		source := asString(row[2])
 		appStoreGuid := asString(row[3])
 
 		// Filter by module name if specified
@@ -77,7 +77,7 @@ func (e *Executor) getStructureModules(filterModule string, includeAll bool) ([]
 		}
 
 		// Skip system/marketplace modules unless --all
-		if !includeAll && !isUserModule(name, isSystem, appStoreGuid) {
+		if !includeAll && !isUserModule(name, source, appStoreGuid) {
 			continue
 		}
 
@@ -92,8 +92,8 @@ func (e *Executor) getStructureModules(filterModule string, includeAll bool) ([]
 }
 
 // isUserModule returns true if the module is a user-created module (not system or marketplace).
-func isUserModule(name, isSystem, appStoreGuid string) bool {
-	if isSystem == "1" {
+func isUserModule(name, source, appStoreGuid string) bool {
+	if source != "" {
 		return false
 	}
 	if appStoreGuid != "" {

@@ -98,7 +98,7 @@ func (ctx *LintContext) Entities() iter.Seq[Entity] {
 			       e.HasEventHandlers, e.IsExternal
 			FROM entities e
 			LEFT JOIN modules m ON e.ModuleName = m.Name
-			WHERE COALESCE(m.IsSystemModule, 0) = 0
+			WHERE COALESCE(m.Source, '') = ''
 			ORDER BY e.ModuleName, e.Name
 		`)
 		if err != nil {
@@ -402,7 +402,7 @@ func (ctx *LintContext) Microflows() iter.Seq[Microflow] {
 			       mf.ParameterCount, mf.ActivityCount, mf.Complexity
 			FROM microflows mf
 			LEFT JOIN modules m ON mf.ModuleName = m.Name
-			WHERE COALESCE(m.IsSystemModule, 0) = 0
+			WHERE COALESCE(m.Source, '') = ''
 			ORDER BY mf.ModuleName, mf.Name
 		`)
 		if err != nil {
@@ -454,7 +454,7 @@ func (ctx *LintContext) Pages() iter.Seq[Page] {
 			       p.Title, p.URL, p.Description, p.WidgetCount
 			FROM pages p
 			LEFT JOIN modules m ON p.ModuleName = m.Name
-			WHERE COALESCE(m.IsSystemModule, 0) = 0
+			WHERE COALESCE(m.Source, '') = ''
 			ORDER BY p.ModuleName, p.Name
 		`)
 		if err != nil {
@@ -507,7 +507,7 @@ func (ctx *LintContext) Enumerations() iter.Seq[Enumeration] {
 			       en.Description, en.ValueCount
 			FROM enumerations en
 			LEFT JOIN modules m ON en.ModuleName = m.Name
-			WHERE COALESCE(m.IsSystemModule, 0) = 0
+			WHERE COALESCE(m.Source, '') = ''
 			ORDER BY en.ModuleName, en.Name
 		`)
 		if err != nil {
@@ -558,7 +558,7 @@ func (ctx *LintContext) Widgets() iter.Seq[Widget] {
 			       w.ContainerType, w.ModuleName, w.EntityRef, w.AttributeRef
 			FROM widgets w
 			LEFT JOIN modules m ON w.ModuleName = m.Name
-			WHERE COALESCE(m.IsSystemModule, 0) = 0
+			WHERE COALESCE(m.Source, '') = ''
 			ORDER BY w.ModuleName, w.ContainerQualifiedName, w.Name
 		`)
 		if err != nil {
@@ -608,7 +608,7 @@ func (ctx *LintContext) Snippets() iter.Seq[Snippet] {
 			SELECT s.Id, s.Name, s.QualifiedName, s.ModuleName, s.Folder, s.WidgetCount
 			FROM snippets s
 			LEFT JOIN modules m ON s.ModuleName = m.Name
-			WHERE COALESCE(m.IsSystemModule, 0) = 0
+			WHERE COALESCE(m.Source, '') = ''
 			ORDER BY s.ModuleName, s.Name
 		`)
 		if err != nil {
@@ -657,7 +657,7 @@ func (ctx *LintContext) DatabaseConnections() iter.Seq[DatabaseConnection] {
 			       dc.DatabaseType, dc.QueryCount
 			FROM database_connections dc
 			LEFT JOIN modules m ON dc.ModuleName = m.Name
-			WHERE COALESCE(m.IsSystemModule, 0) = 0
+			WHERE COALESCE(m.Source, '') = ''
 			ORDER BY dc.ModuleName, dc.Name
 		`)
 		if err != nil {
@@ -792,7 +792,7 @@ func (ctx *LintContext) FindUnused(kind string) []string {
 			SELECT e.QualifiedName
 			FROM entities e
 			LEFT JOIN modules m ON e.ModuleName = m.Name
-			WHERE COALESCE(m.IsSystemModule, 0) = 0
+			WHERE COALESCE(m.Source, '') = ''
 			AND e.QualifiedName NOT IN (
 				SELECT DISTINCT TargetName FROM refs WHERE TargetType = 'ENTITY'
 			)
@@ -802,7 +802,7 @@ func (ctx *LintContext) FindUnused(kind string) []string {
 			SELECT mf.QualifiedName
 			FROM microflows mf
 			LEFT JOIN modules m ON mf.ModuleName = m.Name
-			WHERE COALESCE(m.IsSystemModule, 0) = 0
+			WHERE COALESCE(m.Source, '') = ''
 			AND mf.QualifiedName NOT IN (
 				SELECT DISTINCT TargetName FROM refs WHERE TargetType IN ('MICROFLOW', 'NANOFLOW')
 			)
@@ -812,7 +812,7 @@ func (ctx *LintContext) FindUnused(kind string) []string {
 			SELECT p.QualifiedName
 			FROM pages p
 			LEFT JOIN modules m ON p.ModuleName = m.Name
-			WHERE COALESCE(m.IsSystemModule, 0) = 0
+			WHERE COALESCE(m.Source, '') = ''
 			AND p.QualifiedName NOT IN (
 				SELECT DISTINCT TargetName FROM refs WHERE TargetType = 'PAGE'
 			)

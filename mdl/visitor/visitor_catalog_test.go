@@ -58,7 +58,7 @@ func TestSelectFromCatalog(t *testing.T) {
 		input string
 	}{
 		{"simple select", "SELECT * FROM CATALOG.ENTITIES;"},
-		{"with where", "SELECT Name, ModuleName FROM CATALOG.MODULES WHERE IsSystemModule = 0;"},
+		{"with where", "SELECT Name, ModuleName FROM CATALOG.MODULES WHERE Source = '';"},
 		{"lowercase", "select * from catalog.microflows;"},
 		{"with alias", "SELECT e.Name FROM CATALOG.ENTITIES e;"},
 		{"with join", "SELECT e.Name, a.Name FROM CATALOG.ENTITIES e JOIN CATALOG.ATTRIBUTES a ON e.Id = a.EntityId;"},

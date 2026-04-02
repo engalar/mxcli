@@ -44,7 +44,7 @@ func (c *Catalog) createTables() error {
 			ModuleName TEXT,
 			Folder TEXT,
 			Description TEXT,
-			IsSystemModule INTEGER DEFAULT 0,
+			Source TEXT DEFAULT '',
 			AppStoreVersion TEXT,
 			AppStoreGuid TEXT,
 			ProjectId TEXT,

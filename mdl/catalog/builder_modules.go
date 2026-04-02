@@ -17,7 +17,7 @@ func (b *Builder) buildModules() error {
 
 	stmt, err := b.tx.Prepare(`
 		INSERT INTO modules (Id, Name, QualifiedName, ModuleName, Folder, Description,
-			IsSystemModule, AppStoreVersion, AppStoreGuid,
+			Source, AppStoreVersion, AppStoreGuid,
 			ProjectId, ProjectName, SnapshotId, SnapshotDate, SnapshotSource,
 			SourceId, SourceBranch, SourceRevision)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -30,9 +30,13 @@ func (b *Builder) buildModules() error {
 	projectID, projectName, snapshotID, snapshotDate, snapshotSource, sourceID, sourceBranch, sourceRevision := b.snapshotMeta()
 
 	for _, m := range modules {
-		isSystem := 0
+		source := ""
 		if m.FromAppStore {
-			isSystem = 1
+			if m.AppStoreVersion != "" {
+				source = "Marketplace v" + m.AppStoreVersion
+			} else {
+				source = "Marketplace"
+			}
 		}
 		_, err := stmt.Exec(
 			string(m.ID),
@@ -41,7 +45,7 @@ func (b *Builder) buildModules() error {
 			"",     // ModuleName empty for modules
 			"",     // Folder
 			m.Documentation,
-			isSystem,
+			source,
 			m.AppStoreVersion,
 			m.AppStoreGuid,
 			projectID, projectName, snapshotID, snapshotDate, snapshotSource,
