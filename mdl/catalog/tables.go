@@ -828,6 +828,7 @@ func (c *Catalog) createTables() error {
 			StringValue,
 			StringContext,
 			Language,
+			ElementId,
 			ModuleName
 		)`,
 

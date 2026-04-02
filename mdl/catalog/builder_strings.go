@@ -15,8 +15,8 @@ func (b *Builder) buildStrings() error {
 	}
 
 	stmt, err := b.tx.Prepare(`
-		INSERT INTO strings (QualifiedName, ObjectType, StringValue, StringContext, Language, ModuleName)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO strings (QualifiedName, ObjectType, StringValue, StringContext, Language, ElementId, ModuleName)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return err
@@ -24,11 +24,11 @@ func (b *Builder) buildStrings() error {
 	defer stmt.Close()
 
 	count := 0
-	insert := func(qn, objType, value, ctx, lang, module string) {
+	insert := func(qn, objType, value, ctx, lang, elementID, module string) {
 		if value == "" {
 			return
 		}
-		stmt.Exec(qn, objType, value, ctx, lang, module)
+		stmt.Exec(qn, objType, value, ctx, lang, elementID, module)
 		count++
 	}
 
@@ -40,16 +40,18 @@ func (b *Builder) buildStrings() error {
 			moduleName := b.hierarchy.getModuleName(moduleID)
 			qn := moduleName + "." + pg.Name
 
+			pageID := string(pg.ID)
+
 			// Page title translations (with language code)
 			if pg.Title != nil && pg.Title.Translations != nil {
 				for lang, t := range pg.Title.Translations {
-					insert(qn, "PAGE", t, "page_title", lang, moduleName)
+					insert(qn, "PAGE", t, "page_title", lang, pageID, moduleName)
 				}
 			}
 
 			// Page URL (no language)
 			if pg.URL != "" {
-				insert(qn, "PAGE", pg.URL, "page_url", "", moduleName)
+				insert(qn, "PAGE", pg.URL, "page_url", "", pageID, moduleName)
 			}
 		}
 	}
@@ -62,9 +64,11 @@ func (b *Builder) buildStrings() error {
 			moduleName := b.hierarchy.getModuleName(moduleID)
 			qn := moduleName + "." + mf.Name
 
+			mfID := string(mf.ID)
+
 			// Documentation (no language)
 			if mf.Documentation != "" {
-				insert(qn, "MICROFLOW", mf.Documentation, "documentation", "", moduleName)
+				insert(qn, "MICROFLOW", mf.Documentation, "documentation", "", mfID, moduleName)
 			}
 
 			// Extract strings from activities
@@ -80,10 +84,15 @@ func (b *Builder) buildStrings() error {
 			moduleName := b.hierarchy.getModuleName(moduleID)
 			qn := moduleName + "." + enum.Name
 
+			enumID := string(enum.ID)
 			for _, val := range enum.Values {
 				if val.Caption != nil && val.Caption.Translations != nil {
+					valID := string(val.ID)
+					if valID == "" {
+						valID = enumID
+					}
 					for lang, t := range val.Caption.Translations {
-						insert(qn, "ENUMERATION", t, "enum_caption", lang, moduleName)
+						insert(qn, "ENUMERATION", t, "enum_caption", lang, valID, moduleName)
 					}
 				}
 			}
@@ -98,14 +107,15 @@ func (b *Builder) buildStrings() error {
 			moduleName := b.hierarchy.getModuleName(moduleID)
 			qn := moduleName + "." + wf.Name
 
+			wfID := string(wf.ID)
 			if wf.WorkflowName != "" {
-				insert(qn, "WORKFLOW", wf.WorkflowName, "workflow_name", "", moduleName)
+				insert(qn, "WORKFLOW", wf.WorkflowName, "workflow_name", "", wfID, moduleName)
 			}
 			if wf.WorkflowDescription != "" {
-				insert(qn, "WORKFLOW", wf.WorkflowDescription, "workflow_description", "", moduleName)
+				insert(qn, "WORKFLOW", wf.WorkflowDescription, "workflow_description", "", wfID, moduleName)
 			}
 			if wf.Documentation != "" {
-				insert(qn, "WORKFLOW", wf.Documentation, "documentation", "", moduleName)
+				insert(qn, "WORKFLOW", wf.Documentation, "documentation", "", wfID, moduleName)
 			}
 
 			if wf.Flow != nil {
@@ -119,23 +129,24 @@ func (b *Builder) buildStrings() error {
 }
 
 // extractWorkflowFlowStrings extracts strings from workflow activities recursively.
-func extractWorkflowFlowStrings(flow *workflows.Flow, qn, moduleName string, insert func(string, string, string, string, string, string)) {
+func extractWorkflowFlowStrings(flow *workflows.Flow, qn, moduleName string, insert func(string, string, string, string, string, string, string)) {
 	for _, act := range flow.Activities {
+		actID := string(act.GetID())
 		if act.GetCaption() != "" {
-			insert(qn, "WORKFLOW", act.GetCaption(), "activity_caption", "", moduleName)
+			insert(qn, "WORKFLOW", act.GetCaption(), "activity_caption", "", actID, moduleName)
 		}
 
 		switch a := act.(type) {
 		case *workflows.UserTask:
 			if a.TaskName != "" {
-				insert(qn, "WORKFLOW", a.TaskName, "task_name", "", moduleName)
+				insert(qn, "WORKFLOW", a.TaskName, "task_name", "", actID, moduleName)
 			}
 			if a.TaskDescription != "" {
-				insert(qn, "WORKFLOW", a.TaskDescription, "task_description", "", moduleName)
+				insert(qn, "WORKFLOW", a.TaskDescription, "task_description", "", actID, moduleName)
 			}
 			for _, outcome := range a.Outcomes {
 				if outcome.Caption != "" {
-					insert(qn, "WORKFLOW", outcome.Caption, "outcome_caption", "", moduleName)
+					insert(qn, "WORKFLOW", outcome.Caption, "outcome_caption", "", actID, moduleName)
 				}
 				if outcome.Flow != nil {
 					extractWorkflowFlowStrings(outcome.Flow, qn, moduleName, insert)
@@ -170,7 +181,7 @@ func extractWorkflowFlowStrings(flow *workflows.Flow, qn, moduleName string, ins
 }
 
 // extractActivityStrings extracts string literals from microflow/nanoflow activities.
-func extractActivityStrings(oc *microflows.MicroflowObjectCollection, qn, objType, moduleName string, insert func(string, string, string, string, string, string)) {
+func extractActivityStrings(oc *microflows.MicroflowObjectCollection, qn, objType, moduleName string, insert func(string, string, string, string, string, string, string)) {
 	if oc == nil {
 		return
 	}
@@ -181,26 +192,28 @@ func extractActivityStrings(oc *microflows.MicroflowObjectCollection, qn, objTyp
 			continue
 		}
 
+		actID := string(act.ID)
+
 		switch a := act.Action.(type) {
 		case *microflows.LogMessageAction:
 			if a.MessageTemplate != nil && a.MessageTemplate.Translations != nil {
 				for lang, t := range a.MessageTemplate.Translations {
-					insert(qn, objType, t, "log_message", lang, moduleName)
+					insert(qn, objType, t, "log_message", lang, actID, moduleName)
 				}
 			}
 			if a.LogNodeName != "" {
-				insert(qn, objType, a.LogNodeName, "log_node", "", moduleName)
+				insert(qn, objType, a.LogNodeName, "log_node", "", actID, moduleName)
 			}
 		case *microflows.ShowMessageAction:
 			if a.Template != nil && a.Template.Translations != nil {
 				for lang, t := range a.Template.Translations {
-					insert(qn, objType, t, "show_message", lang, moduleName)
+					insert(qn, objType, t, "show_message", lang, actID, moduleName)
 				}
 			}
 		case *microflows.ValidationFeedbackAction:
 			if a.Template != nil && a.Template.Translations != nil {
 				for lang, t := range a.Template.Translations {
-					insert(qn, objType, t, "validation_message", lang, moduleName)
+					insert(qn, objType, t, "validation_message", lang, actID, moduleName)
 				}
 			}
 		}

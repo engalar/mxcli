@@ -12,7 +12,8 @@ import (
 )
 
 // setupTranslationsDB creates an in-memory SQLite database with the strings FTS5 table
-// and inserts test data.
+// and inserts test data. Rows are [QualifiedName, ObjectType, StringValue, StringContext, Language, ModuleName].
+// ElementId is auto-generated from QualifiedName+StringContext for simplicity.
 func setupTranslationsDB(t *testing.T, rows [][]string) *sql.DB {
 	t.Helper()
 	db, err := sql.Open("sqlite", ":memory:")
@@ -21,14 +22,14 @@ func setupTranslationsDB(t *testing.T, rows [][]string) *sql.DB {
 	}
 
 	_, err = db.Exec(`CREATE VIRTUAL TABLE strings USING fts5(
-		QualifiedName, ObjectType, StringValue, StringContext, Language, ModuleName
+		QualifiedName, ObjectType, StringValue, StringContext, Language, ElementId, ModuleName
 	)`)
 	if err != nil {
 		t.Fatalf("failed to create strings table: %v", err)
 	}
 
-	stmt, err := db.Prepare(`INSERT INTO strings (QualifiedName, ObjectType, StringValue, StringContext, Language, ModuleName)
-		VALUES (?, ?, ?, ?, ?, ?)`)
+	stmt, err := db.Prepare(`INSERT INTO strings (QualifiedName, ObjectType, StringValue, StringContext, Language, ElementId, ModuleName)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		t.Fatalf("failed to prepare insert: %v", err)
 	}
@@ -38,7 +39,8 @@ func setupTranslationsDB(t *testing.T, rows [][]string) *sql.DB {
 		if len(row) != 6 {
 			t.Fatalf("expected 6 columns, got %d", len(row))
 		}
-		_, err := stmt.Exec(row[0], row[1], row[2], row[3], row[4], row[5])
+		elementID := row[0] + ":" + row[3] // synthetic ID for tests
+		_, err := stmt.Exec(row[0], row[1], row[2], row[3], row[4], elementID, row[5])
 		if err != nil {
 			t.Fatalf("failed to insert row: %v", err)
 		}
