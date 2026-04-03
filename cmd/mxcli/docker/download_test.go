@@ -9,6 +9,15 @@ import (
 	"testing"
 )
 
+func setTestHomeDir(t *testing.T, dir string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", dir)
+	} else {
+		t.Setenv("HOME", dir)
+	}
+}
+
 func TestMxBuildCDNURL_ARM64(t *testing.T) {
 	url := MxBuildCDNURL("11.6.3", "arm64")
 	expected := "https://cdn.mendix.com/runtime/arm64-mxbuild-11.6.3.tar.gz"
@@ -48,9 +57,7 @@ func TestCachedMxBuildPath_NotCached(t *testing.T) {
 func TestCachedMxBuildPath_Cached(t *testing.T) {
 	// Create a fake cached mxbuild
 	dir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	t.Setenv("HOME", dir)
-	defer os.Setenv("HOME", origHome)
+	setTestHomeDir(t, dir)
 
 	version := "99.99.99"
 	modelerDir := filepath.Join(dir, ".mxcli", "mxbuild", version, "modeler")
@@ -67,9 +74,7 @@ func TestCachedMxBuildPath_Cached(t *testing.T) {
 
 func TestAnyCachedMxBuildPath_Empty(t *testing.T) {
 	dir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	t.Setenv("HOME", dir)
-	defer os.Setenv("HOME", origHome)
+	setTestHomeDir(t, dir)
 
 	path := AnyCachedMxBuildPath()
 	if path != "" {
@@ -79,9 +84,7 @@ func TestAnyCachedMxBuildPath_Empty(t *testing.T) {
 
 func TestAnyCachedMxBuildPath_Found(t *testing.T) {
 	dir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	t.Setenv("HOME", dir)
-	defer os.Setenv("HOME", origHome)
+	setTestHomeDir(t, dir)
 
 	modelerDir := filepath.Join(dir, ".mxcli", "mxbuild", "11.6.3", "modeler")
 	os.MkdirAll(modelerDir, 0755)
@@ -123,9 +126,7 @@ func TestCachedRuntimePath_NotCached(t *testing.T) {
 
 func TestCachedRuntimePath_Cached(t *testing.T) {
 	dir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	t.Setenv("HOME", dir)
-	defer os.Setenv("HOME", origHome)
+	setTestHomeDir(t, dir)
 
 	version := "99.99.99"
 	launcherDir := filepath.Join(dir, ".mxcli", "runtime", version, "runtime", "launcher")
@@ -141,9 +142,7 @@ func TestCachedRuntimePath_Cached(t *testing.T) {
 
 func TestResolveMxBuild_FindsCachedVersion(t *testing.T) {
 	dir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	t.Setenv("HOME", dir)
-	defer os.Setenv("HOME", origHome)
+	setTestHomeDir(t, dir)
 
 	// Set up a fake cached mxbuild
 	modelerDir := filepath.Join(dir, ".mxcli", "mxbuild", "11.6.3", "modeler")

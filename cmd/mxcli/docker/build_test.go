@@ -6,6 +6,7 @@ import (
 	"archive/zip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -18,6 +19,9 @@ func newTestZipWriter(f *os.File) *zip.Writer {
 }
 
 func TestPatchStartPermissions_Applied(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("chmod not supported on Windows")
+	}
 	dir := t.TempDir()
 	binDir := filepath.Join(dir, "bin")
 	os.MkdirAll(binDir, 0755)
@@ -35,6 +39,9 @@ func TestPatchStartPermissions_Applied(t *testing.T) {
 }
 
 func TestPatchStartPermissions_Skipped_AlreadyExecutable(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("chmod not supported on Windows")
+	}
 	dir := t.TempDir()
 	binDir := filepath.Join(dir, "bin")
 	os.MkdirAll(binDir, 0755)

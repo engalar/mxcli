@@ -5,6 +5,7 @@ package diaglog
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -22,12 +23,20 @@ func TestNilLoggerIsSafe(t *testing.T) {
 	l.Close()
 }
 
+func setHomeDir(t *testing.T, dir string) {
+	t.Helper()
+	// Windows uses USERPROFILE, Unix uses HOME. os.UserHomeDir() checks both.
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", dir)
+	} else {
+		t.Setenv("HOME", dir)
+	}
+}
+
 func TestInitAndClose(t *testing.T) {
 	// Use a temp dir for logs
 	tmpDir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	t.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", origHome)
+	setHomeDir(t, tmpDir)
 
 	l := Init("test-version", "test")
 	if l == nil {
@@ -53,7 +62,7 @@ func TestInitAndClose(t *testing.T) {
 
 func TestCommandLogging(t *testing.T) {
 	tmpDir := t.TempDir()
-	t.Setenv("HOME", tmpDir)
+	setHomeDir(t, tmpDir)
 
 	l := Init("test", "batch")
 	if l == nil {
@@ -89,7 +98,7 @@ func TestCommandLogging(t *testing.T) {
 
 func TestDisabledViaEnv(t *testing.T) {
 	tmpDir := t.TempDir()
-	t.Setenv("HOME", tmpDir)
+	setHomeDir(t, tmpDir)
 	t.Setenv("MXCLI_LOG", "0")
 
 	l := Init("test", "batch")
