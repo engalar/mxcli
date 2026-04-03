@@ -82,9 +82,9 @@ RUN echo '\n# Force UTF-8 mode for tmux\nalias tmux="tmux -u"' >> /home/vscode/.
 
 # Install mdbook (static site generator for documentation)
 USER root
-RUN MDBOOK_VERSION=v0.4.44 \
+RUN MDBOOK_VERSION=v0.5.2 \
     && ARCH="$(uname -m)" \
-    && if [ "$ARCH" = "aarch64" ]; then ARCH="aarch64-unknown-linux-gnu"; \
+    && if [ "$ARCH" = "aarch64" ]; then ARCH="aarch64-unknown-linux-musl"; \
        else ARCH="x86_64-unknown-linux-gnu"; fi \
     && wget -qO- "https://github.com/rust-lang/mdBook/releases/download/${MDBOOK_VERSION}/mdbook-${MDBOOK_VERSION}-${ARCH}.tar.gz" \
     | tar -xz -C /usr/local/bin
