@@ -156,7 +156,9 @@ func generateDefJSON(mpkDef *mpk.WidgetDefinition, mdlName string) *executor.Wid
 		DefaultEditable: "Always",
 	}
 
-	// Generate property mappings and child slots from MPK property definitions
+	// Generate property mappings and child slots from MPK property definitions.
+	// Two passes: datasource first (association depends on entityContext set by datasource).
+	var assocMappings []executor.PropertyMapping
 	for _, p := range mpkDef.Properties {
 		switch p.Type {
 		case "widgets":
@@ -182,7 +184,7 @@ func generateDefJSON(mpkDef *mpk.WidgetDefinition, mdlName string) *executor.Wid
 				Operation:   "attribute",
 			})
 		case "association":
-			def.PropertyMappings = append(def.PropertyMappings, executor.PropertyMapping{
+			assocMappings = append(assocMappings, executor.PropertyMapping{
 				PropertyKey: p.Key,
 				Source:      "Association",
 				Operation:   "association",
@@ -205,6 +207,8 @@ func generateDefJSON(mpkDef *mpk.WidgetDefinition, mdlName string) *executor.Wid
 			def.PropertyMappings = append(def.PropertyMappings, m)
 		}
 	}
+	// Append association mappings after datasource (association requires prior entityContext)
+	def.PropertyMappings = append(def.PropertyMappings, assocMappings...)
 
 	return def
 }

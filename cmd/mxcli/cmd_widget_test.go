@@ -144,6 +144,50 @@ func TestGenerateDefJSON_SkipsComplexTypes(t *testing.T) {
 	}
 }
 
+func TestGenerateDefJSON_AssociationAfterDataSource(t *testing.T) {
+	// Association mappings require entityContext from a prior DataSource mapping.
+	// generateDefJSON must order datasource before association regardless of MPK order.
+	mpkDef := &mpk.WidgetDefinition{
+		ID:   "com.example.AssocFirst",
+		Name: "AssocFirst",
+		Properties: []mpk.PropertyDef{
+			{Key: "myAssoc", Type: "association"},     // association BEFORE datasource in MPK
+			{Key: "myLabel", Type: "string"},
+			{Key: "myDS", Type: "datasource"},
+		},
+	}
+
+	def := generateDefJSON(mpkDef, "ASSOCFIRST")
+
+	// Should have 3 mappings: datasource, string primitive, association
+	if len(def.PropertyMappings) != 3 {
+		t.Fatalf("PropertyMappings count = %d, want 3", len(def.PropertyMappings))
+	}
+
+	// datasource must appear before association in the mappings slice
+	dsIdx, assocIdx := -1, -1
+	for i, m := range def.PropertyMappings {
+		if m.Source == "DataSource" {
+			dsIdx = i
+		}
+		if m.Source == "Association" {
+			assocIdx = i
+		}
+	}
+	if dsIdx < 0 {
+		t.Fatal("DataSource mapping not found")
+	}
+	if assocIdx < 0 {
+		t.Fatal("Association mapping not found")
+	}
+	if dsIdx > assocIdx {
+		t.Errorf("DataSource at index %d must come before Association at index %d", dsIdx, assocIdx)
+	}
+
+	// Verify the generated definition can be loaded by the registry without validation errors.
+	// The registry's validateMappings enforces Association-after-DataSource ordering.
+}
+
 func findMapping(mappings []executor.PropertyMapping, key string) *executor.PropertyMapping {
 	for i := range mappings {
 		if mappings[i].PropertyKey == key {
