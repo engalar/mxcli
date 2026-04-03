@@ -704,8 +704,8 @@ alterEntityAction
     | ADD COLUMN attributeDefinition
     | RENAME ATTRIBUTE attributeName TO attributeName
     | RENAME COLUMN attributeName TO attributeName
-    | MODIFY ATTRIBUTE attributeName dataType attributeConstraint*
-    | MODIFY COLUMN attributeName dataType attributeConstraint*
+    | MODIFY ATTRIBUTE attributeName COLON? dataType attributeConstraint*
+    | MODIFY COLUMN attributeName COLON? dataType attributeConstraint*
     | DROP ATTRIBUTE attributeName
     | DROP COLUMN attributeName
     | SET DOCUMENTATION STRING_LITERAL

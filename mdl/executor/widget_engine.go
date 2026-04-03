@@ -492,7 +492,7 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 		}
 	}
 	// Phase 2: Default slot — unmatched direct children go to first unmatched Widgets property.
-	// Skip children already consumed by .def.json child slots (matched by type).
+	// Skip if .def.json has childSlots defined — applyChildSlots already handles direct children.
 	defSlotContainers := make(map[string]bool)
 	for _, s := range slots {
 		defSlotContainers[strings.ToUpper(s.MDLContainer)] = true
@@ -502,8 +502,11 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 		if matchedChildren[i] {
 			continue
 		}
+		if len(slots) > 0 {
+			continue // applyChildSlots handles both container and direct children
+		}
 		if defSlotContainers[strings.ToUpper(child.Type)] {
-			continue // already consumed by applyChildSlots
+			continue
 		}
 		widgetBSON, err := e.pageBuilder.buildWidgetV3ToBSON(child)
 		if err != nil {
