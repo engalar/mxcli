@@ -148,13 +148,65 @@ func generateDefJSON(mpkDef *mpk.WidgetDefinition, mdlName string) *executor.Wid
 	if mpkDef.IsPluggable {
 		widgetKind = "pluggable"
 	}
-	return &executor.WidgetDefinition{
+	def := &executor.WidgetDefinition{
 		WidgetID:        mpkDef.ID,
 		MDLName:         mdlName,
 		WidgetKind:      widgetKind,
 		TemplateFile:    strings.ToLower(mdlName) + ".json",
 		DefaultEditable: "Always",
 	}
+
+	// Generate property mappings and child slots from MPK property definitions
+	for _, p := range mpkDef.Properties {
+		switch p.Type {
+		case "widgets":
+			container := strings.ToUpper(p.Key)
+			if p.Key == "content" {
+				container = "TEMPLATE"
+			}
+			def.ChildSlots = append(def.ChildSlots, executor.ChildSlotMapping{
+				PropertyKey:  p.Key,
+				MDLContainer: container,
+				Operation:    "widgets",
+			})
+		case "datasource":
+			def.PropertyMappings = append(def.PropertyMappings, executor.PropertyMapping{
+				PropertyKey: p.Key,
+				Source:      "DataSource",
+				Operation:   "datasource",
+			})
+		case "attribute":
+			def.PropertyMappings = append(def.PropertyMappings, executor.PropertyMapping{
+				PropertyKey: p.Key,
+				Source:      "Attribute",
+				Operation:   "attribute",
+			})
+		case "association":
+			def.PropertyMappings = append(def.PropertyMappings, executor.PropertyMapping{
+				PropertyKey: p.Key,
+				Source:      "Association",
+				Operation:   "association",
+			})
+		case "selection":
+			def.PropertyMappings = append(def.PropertyMappings, executor.PropertyMapping{
+				PropertyKey: p.Key,
+				Source:      "Selection",
+				Operation:   "selection",
+				Default:     p.DefaultValue,
+			})
+		case "boolean", "integer", "decimal", "string", "enumeration":
+			m := executor.PropertyMapping{
+				PropertyKey: p.Key,
+				Operation:   "primitive",
+			}
+			if p.DefaultValue != "" {
+				m.Value = p.DefaultValue
+			}
+			def.PropertyMappings = append(def.PropertyMappings, m)
+		}
+	}
+
+	return def
 }
 
 func runWidgetInit(cmd *cobra.Command, args []string) error {
