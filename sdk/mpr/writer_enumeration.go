@@ -4,6 +4,7 @@ package mpr
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/mendixlabs/mxcli/model"
 
@@ -89,15 +90,20 @@ func (w *Writer) serializeEnumeration(enum *model.Enumeration) ([]byte, error) {
 		}
 		captionID := generateUUID()
 
-		// Build translation items
+		// Build translation items (sorted for deterministic output)
 		translationItems := bson.A{int32(3)}
 		if v.Caption != nil {
-			for langCode, text := range v.Caption.Translations {
+			langs := make([]string, 0, len(v.Caption.Translations))
+			for lang := range v.Caption.Translations {
+				langs = append(langs, lang)
+			}
+			sort.Strings(langs)
+			for _, langCode := range langs {
 				translationItems = append(translationItems, bson.M{
 					"$ID":          idToBsonBinary(generateUUID()),
 					"$Type":        "Texts$Translation",
 					"LanguageCode": langCode,
-					"Text":         text,
+					"Text":         v.Caption.Translations[langCode],
 				})
 			}
 		}

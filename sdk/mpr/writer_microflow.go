@@ -4,6 +4,7 @@ package mpr
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
@@ -637,12 +638,18 @@ func serializeTextTemplate(text *model.Text, params []string) bson.D {
 	if len(text.Translations) > 0 {
 		var transArray bson.A
 		transArray = append(transArray, int32(3)) // items marker (3 = has items)
-		for lang, value := range text.Translations {
+		// Sort language keys for deterministic output
+		langs := make([]string, 0, len(text.Translations))
+		for lang := range text.Translations {
+			langs = append(langs, lang)
+		}
+		sort.Strings(langs)
+		for _, lang := range langs {
 			transArray = append(transArray, bson.D{
 				{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 				{Key: "$Type", Value: "Texts$Translation"},
 				{Key: "LanguageCode", Value: lang},
-				{Key: "Text", Value: value},
+				{Key: "Text", Value: text.Translations[lang]},
 			})
 		}
 		textDoc = append(textDoc, bson.E{Key: "Items", Value: transArray})

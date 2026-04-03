@@ -4,6 +4,7 @@ package mpr
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/pages"
@@ -218,18 +219,21 @@ func (w *Writer) serializePage(page *pages.Page) ([]byte, error) {
 	// Items go directly after the version marker, NOT nested in another array
 	if page.Title != nil {
 		titleItems := bson.A{int32(3)} // Start with empty marker
-		hasTranslations := false
-		for langCode, text := range page.Title.Translations {
-			if !hasTranslations {
-				titleItems = bson.A{int32(2)} // First item: change to version 2
-				hasTranslations = true
+		if len(page.Title.Translations) > 0 {
+			titleItems = bson.A{int32(2)} // version 2 for non-empty
+			langs := make([]string, 0, len(page.Title.Translations))
+			for lang := range page.Title.Translations {
+				langs = append(langs, lang)
 			}
-			titleItems = append(titleItems, bson.D{
-				{Key: "$ID", Value: idToBsonBinary(generateUUID())},
-				{Key: "$Type", Value: "Texts$Translation"},
-				{Key: "LanguageCode", Value: langCode},
-				{Key: "Text", Value: text},
-			})
+			sort.Strings(langs)
+			for _, langCode := range langs {
+				titleItems = append(titleItems, bson.D{
+					{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+					{Key: "$Type", Value: "Texts$Translation"},
+					{Key: "LanguageCode", Value: langCode},
+					{Key: "Text", Value: page.Title.Translations[langCode]},
+				})
+			}
 		}
 		titleDoc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(page.Title.ID))},
