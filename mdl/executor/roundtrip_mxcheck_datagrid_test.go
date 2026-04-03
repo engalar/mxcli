@@ -183,6 +183,8 @@ func TestMxCheck_GalleryPage(t *testing.T) {
 
 	env.executor.Execute(&ast.DisconnectStmt{})
 
+	runMxUpdateWidgets(t, env.projectPath)
+
 	output, err := runMxCheck(t, env.projectPath)
 	if err != nil {
 		if strings.Contains(output, "placeholder") || strings.Contains(output, "CE0463") {

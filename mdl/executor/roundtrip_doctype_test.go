@@ -155,6 +155,12 @@ func TestMxCheck_DoctypeScripts(t *testing.T) {
 			// Flush to disk
 			env.executor.Execute(&ast.DisconnectStmt{})
 
+			// Update widgets for scripts that create pluggable widgets (prevents CE0463).
+			// Skip for other scripts — update-widgets can corrupt non-widget projects.
+			if strings.Contains(name, "page") || strings.Contains(name, "widget") {
+				runMxUpdateWidgets(t, env.projectPath)
+			}
+
 			// Run mx check
 			output, mxErr := runMxCheck(t, env.projectPath)
 			if mxErr != nil {
