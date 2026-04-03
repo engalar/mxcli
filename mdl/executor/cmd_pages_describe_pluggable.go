@@ -76,6 +76,8 @@ func (e *Executor) extractCustomWidgetType(w map[string]any) string {
 			return "DROPDOWNFILTER"
 		case "com.mendix.widget.web.datagriddatefilter.DatagridDateFilter":
 			return "DATEFILTER"
+		case "com.mendix.widget.web.dropdownsort.DropdownSort":
+			return "DROPDOWNSORT"
 		case "com.mendix.widget.web.image.Image":
 			return "IMAGE"
 		default:
@@ -1015,7 +1017,8 @@ func (e *Executor) extractCustomWidgetID(w map[string]any) string {
 func isKnownCustomWidgetType(widgetType string) bool {
 	switch widgetType {
 	case "COMBOBOX", "DATAGRID2", "GALLERY", "IMAGE",
-		"TEXTFILTER", "NUMBERFILTER", "DROPDOWNFILTER", "DATEFILTER":
+		"TEXTFILTER", "NUMBERFILTER", "DROPDOWNFILTER", "DATEFILTER",
+		"DROPDOWNSORT":
 		return true
 	}
 	return false

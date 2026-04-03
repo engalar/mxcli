@@ -3,10 +3,7 @@
 package executor
 
 import (
-	"bytes"
 	"encoding/json"
-	"log"
-	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -250,23 +247,16 @@ func TestEvaluateCondition(t *testing.T) {
 	}
 }
 
-func TestEvaluateConditionUnknownLogsWarning(t *testing.T) {
+func TestEvaluateConditionUnknownReturnsFalse(t *testing.T) {
 	engine := &PluggableWidgetEngine{
 		operations: NewOperationRegistry(),
 	}
-
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer log.SetOutput(nil)
 
 	w := &ast.WidgetV3{Properties: map[string]any{}}
 	result := engine.evaluateCondition("typoCondition", w)
 
 	if result != false {
 		t.Errorf("expected false for unknown condition, got %v", result)
-	}
-	if !strings.Contains(buf.String(), "typoCondition") {
-		t.Errorf("expected warning log mentioning 'typoCondition', got: %q", buf.String())
 	}
 }
 

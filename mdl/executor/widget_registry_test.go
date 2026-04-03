@@ -20,9 +20,9 @@ func TestRegistryLoadsAllEmbeddedDefinitions(t *testing.T) {
 		t.Fatalf("NewWidgetRegistry() error: %v", err)
 	}
 
-	// We expect 4 embedded definitions (combobox, gallery, image)
-	if got := reg.Count(); got != 4 {
-		t.Errorf("registry count = %d, want 4", got)
+	// We expect 9 embedded definitions (combobox, gallery, image, barcodescanner, 4 filters, dropdownsort)
+	if got := reg.Count(); got != 9 {
+		t.Errorf("registry count = %d, want 9", got)
 	}
 }
 
@@ -132,13 +132,7 @@ func TestAllEmbeddedDefinitionsAreValidJSON(t *testing.T) {
 				t.Error("templateFile is empty")
 			}
 
-			// Must have either propertyMappings, modes, or childSlots
-			hasMappings := len(def.PropertyMappings) > 0
-			hasModes := len(def.Modes) > 0
-			hasSlots := len(def.ChildSlots) > 0
-			if !hasMappings && !hasModes && !hasSlots {
-				t.Error("definition has no propertyMappings, modes, or childSlots")
-			}
+			// Template-only widgets (e.g., DROPDOWNSORT) may have no mappings — that's valid
 		})
 	}
 }

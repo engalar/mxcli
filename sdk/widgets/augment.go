@@ -112,7 +112,11 @@ func AugmentTemplate(tmpl *WidgetTemplate, def *mpk.WidgetDefinition) error {
 		exemplarIdx, hasExemplar := typeExemplars[bsonType]
 		var newPropType, newProp map[string]any
 		if hasExemplar {
-			newPropType, newProp = clonePropertyPair(propTypes, objProps, exemplarIdx, p)
+			var err error
+			newPropType, newProp, err = clonePropertyPair(propTypes, objProps, exemplarIdx, p)
+			if err != nil {
+				return fmt.Errorf("augment %s: %w", tmpl.WidgetID, err)
+			}
 		}
 		// Fall back to createPropertyPair if cloning failed (no exemplar or no matching property)
 		if newPropType == nil || newProp == nil {
@@ -175,14 +179,17 @@ func removeProperties(propTypes []any, objProps []any, staleKeys map[string]bool
 }
 
 // clonePropertyPair deep-clones an existing PropertyType/Property pair and updates keys/IDs.
-func clonePropertyPair(propTypes []any, objProps []any, exemplarIdx int, p mpk.PropertyDef) (map[string]any, map[string]any) {
+func clonePropertyPair(propTypes []any, objProps []any, exemplarIdx int, p mpk.PropertyDef) (map[string]any, map[string]any, error) {
 	exemplar, ok := propTypes[exemplarIdx].(map[string]any)
 	if !ok {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// Deep-clone the PropertyType
-	newPT := deepCloneMap(exemplar)
+	newPT, err := deepCloneMap(exemplar)
+	if err != nil {
+		return nil, nil, fmt.Errorf("clone property type %q: %w", p.Key, err)
+	}
 	newPTID := placeholderID()
 	newPT["$ID"] = newPTID
 	newPT["PropertyKey"] = p.Key
@@ -256,11 +263,14 @@ func clonePropertyPair(propTypes []any, objProps []any, exemplarIdx int, p mpk.P
 	}
 
 	if exemplarProp == nil {
-		return newPT, nil
+		return newPT, nil, nil
 	}
 
 	// Deep-clone the Property
-	newProp := deepCloneMap(exemplarProp)
+	newProp, err := deepCloneMap(exemplarProp)
+	if err != nil {
+		return nil, nil, fmt.Errorf("clone property %q: %w", p.Key, err)
+	}
 	newProp["$ID"] = placeholderID()
 	newProp["TypePointer"] = newPTID
 
@@ -285,7 +295,7 @@ func clonePropertyPair(propTypes []any, objProps []any, exemplarIdx int, p mpk.P
 		}
 	}
 
-	return newPT, newProp
+	return newPT, newProp, nil
 }
 
 // createPropertyPair creates a new PropertyType/Property pair from scratch.
@@ -605,16 +615,16 @@ func setArrayField(m map[string]any, key string, arr []any) {
 }
 
 // deepCloneMap deep-clones a map[string]interface{} via JSON round-trip.
-func deepCloneMap(m map[string]any) map[string]any {
+func deepCloneMap(m map[string]any) (map[string]any, error) {
 	data, err := json.Marshal(m)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("deep clone marshal: %w", err)
 	}
 	var result map[string]any
 	if err := json.Unmarshal(data, &result); err != nil {
-		return nil
+		return nil, fmt.Errorf("deep clone unmarshal: %w", err)
 	}
-	return result
+	return result, nil
 }
 
 // regenerateNestedIDs walks a structure and replaces all $ID fields with new placeholders.
@@ -638,7 +648,7 @@ func regenerateNestedIDs(m map[string]any) {
 }
 
 // deepCloneTemplate deep-clones a WidgetTemplate so augmentation doesn't mutate the cache.
-func deepCloneTemplate(tmpl *WidgetTemplate) *WidgetTemplate {
+func deepCloneTemplate(tmpl *WidgetTemplate) (*WidgetTemplate, error) {
 	clone := &WidgetTemplate{
 		WidgetID:      tmpl.WidgetID,
 		Name:          tmpl.Name,
@@ -647,13 +657,21 @@ func deepCloneTemplate(tmpl *WidgetTemplate) *WidgetTemplate {
 	}
 
 	if tmpl.Type != nil {
-		clone.Type = deepCloneMap(tmpl.Type)
+		var err error
+		clone.Type, err = deepCloneMap(tmpl.Type)
+		if err != nil {
+			return nil, fmt.Errorf("clone template type %s: %w", tmpl.WidgetID, err)
+		}
 	}
 	if tmpl.Object != nil {
-		clone.Object = deepCloneMap(tmpl.Object)
+		var err error
+		clone.Object, err = deepCloneMap(tmpl.Object)
+		if err != nil {
+			return nil, fmt.Errorf("clone template object %s: %w", tmpl.WidgetID, err)
+		}
 	}
 
-	return clone
+	return clone, nil
 }
 
 // collectNestedPropertyTypeIDs extracts PropertyKey→$ID mappings from a ValueType's ObjectType.

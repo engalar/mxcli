@@ -201,6 +201,7 @@ func validateDefinitionOperations(def *WidgetDefinition, source string, opReg *O
 // sourceOperationCompatible checks that a mapping's Source and Operation are compatible.
 var incompatibleSourceOps = map[string]map[string]bool{
 	"Attribute":   {"association": true, "datasource": true},
+	"Attributes":  {"association": true, "datasource": true, "attribute": true},
 	"Association": {"attribute": true, "datasource": true},
 	"DataSource":  {"attribute": true, "association": true},
 }

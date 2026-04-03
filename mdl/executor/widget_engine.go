@@ -5,7 +5,6 @@ package executor
 import (
 	"encoding/hex"
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 
@@ -69,13 +68,15 @@ type ChildSlotMapping struct {
 
 // BuildContext carries resolved values from MDL parsing for use by operations.
 type BuildContext struct {
-	AttributePath string
-	AssocPath     string
-	EntityName    string
-	PrimitiveVal  string
-	DataSource    pages.DataSource
-	ChildWidgets  []bson.D
-	ActionBSON    bson.D // Serialized client action BSON for opAction
+	AttributePath  string
+	AttributePaths []string // For operations that process multiple attributes
+	AssocPath      string
+	EntityName     string
+	PrimitiveVal   string
+	DataSource     pages.DataSource
+	ChildWidgets   []bson.D
+	ActionBSON     bson.D // Serialized client action BSON for opAction
+	pageBuilder    *pageBuilder
 }
 
 // OperationFunc updates a template object's property identified by propertyKey.
@@ -101,6 +102,7 @@ func NewOperationRegistry() *OperationRegistry {
 	reg.Register("widgets", opWidgets)
 	reg.Register("texttemplate", opTextTemplate)
 	reg.Register("action", opAction)
+	reg.Register("attributeObjects", opAttributeObjects)
 	return reg
 }
 
@@ -207,16 +209,7 @@ func opWidgets(obj bson.D, propTypeIDs map[string]pages.PropertyTypeIDEntry, pro
 		return obj
 	}
 	result := updateWidgetPropertyValue(obj, propTypeIDs, propertyKey, func(val bson.D) bson.D {
-		updated := setChildWidgets(val, ctx.ChildWidgets)
-		// Verify Widgets was actually set
-		for _, e := range updated {
-			if e.Key == "Widgets" {
-				if arr, ok := e.Value.(bson.A); ok {
-					log.Printf("opWidgets %s: Widgets array has %d items", propertyKey, len(arr))
-				}
-			}
-		}
-		return updated
+		return setChildWidgets(val, ctx.ChildWidgets)
 	})
 	return result
 }
@@ -262,7 +255,6 @@ func setTextTemplateValue(val bson.D, text string) bson.D {
 				// Creating a TextTemplate from null triggers CE0463 because Studio Pro
 				// detects the structural change. The template must be extracted from a
 				// widget that already has this property configured in Studio Pro.
-				log.Printf("warning: opTextTemplate: skipping null TextTemplate (cannot create from scratch without CE0463)")
 				result = append(result, elem)
 			}
 		} else {
@@ -315,6 +307,47 @@ func opAction(obj bson.D, propTypeIDs map[string]pages.PropertyTypeIDEntry, prop
 		for _, elem := range val {
 			if elem.Key == "Action" {
 				result = append(result, bson.E{Key: "Action", Value: ctx.ActionBSON})
+			} else {
+				result = append(result, elem)
+			}
+		}
+		return result
+	})
+}
+
+// opAttributeObjects populates the Objects array in an "attributes" property
+// with attribute reference objects. Used by filter widgets (TEXTFILTER, etc.).
+func opAttributeObjects(obj bson.D, propTypeIDs map[string]pages.PropertyTypeIDEntry, propertyKey string, ctx *BuildContext) bson.D {
+	if len(ctx.AttributePaths) == 0 {
+		return obj
+	}
+
+	entry, ok := propTypeIDs[propertyKey]
+	if !ok || entry.ObjectTypeID == "" {
+		return obj
+	}
+
+	// Get nested "attribute" property IDs from the PropertyTypeIDEntry
+	nestedEntry, ok := entry.NestedPropertyIDs["attribute"]
+	if !ok {
+		return obj
+	}
+
+	return updateWidgetPropertyValue(obj, propTypeIDs, propertyKey, func(val bson.D) bson.D {
+		objects := make([]any, 0, len(ctx.AttributePaths)+1)
+		objects = append(objects, int32(2)) // BSON array version marker
+
+		for _, attrPath := range ctx.AttributePaths {
+			attrObj, _ := ctx.pageBuilder.createAttributeObject(attrPath, entry.ObjectTypeID, nestedEntry.PropertyTypeID, nestedEntry.ValueTypeID)
+			if attrObj != nil {
+				objects = append(objects, attrObj)
+			}
+		}
+
+		result := make(bson.D, 0, len(val))
+		for _, elem := range val {
+			if elem.Key == "Objects" {
+				result = append(result, bson.E{Key: "Objects", Value: bson.A(objects)})
 			} else {
 				result = append(result, elem)
 			}
@@ -430,14 +463,6 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 			widgetsPropKeys = append(widgetsPropKeys, propKey)
 		}
 	}
-	// Debug: log Widgets-type properties and children for matching
-	if len(w.Children) > 0 && len(widgetsPropKeys) > 0 {
-		var childNames []string
-		for _, c := range w.Children {
-			childNames = append(childNames, c.Name+"("+c.Type+")")
-		}
-		log.Printf("auto-slot %s: widgetProps=%v children=%v", w.Name, widgetsPropKeys, childNames)
-	}
 	// Phase 1: Named matching — match children by name against property keys
 	matchedChildren := make(map[int]bool) // indices of matched children
 	for _, propKey := range widgetsPropKeys {
@@ -448,7 +473,6 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 			}
 			if strings.ToUpper(child.Name) == upperKey {
 				var childBSONs []bson.D
-				log.Printf("auto-slot match: %s.%s has %d AST children", w.Name, propKey, len(child.Children))
 				for _, slotChild := range child.Children {
 					widgetBSON, err := e.pageBuilder.buildWidgetV3ToBSON(slotChild)
 					if err != nil {
@@ -458,7 +482,6 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 						childBSONs = append(childBSONs, widgetBSON)
 					}
 				}
-				log.Printf("auto-slot match: %s.%s built %d BSON widgets", w.Name, propKey, len(childBSONs))
 				if len(childBSONs) > 0 {
 					updatedObject = opWidgets(updatedObject, propertyTypeIDs, propKey, &BuildContext{ChildWidgets: childBSONs})
 					handledSlotKeys[propKey] = true
@@ -589,33 +612,6 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 	// 4.9 Auto-populate required empty object lists (e.g., Accordion groups, AreaChart series)
 	updatedObject = ensureRequiredObjectLists(updatedObject, propertyTypeIDs)
 
-	// Debug: verify updatedObject has Widgets content before building
-	if w.Name == "timelineCustom" {
-		for _, elem := range updatedObject {
-			if elem.Key == "Properties" {
-				if arr, ok := elem.Value.(bson.A); ok {
-					for _, item := range arr {
-						if prop, ok := item.(bson.D); ok {
-							for _, pe := range prop {
-								if pe.Key == "Value" {
-									if val, ok := pe.Value.(bson.D); ok {
-										for _, ve := range val {
-											if ve.Key == "Widgets" {
-												if wa, ok := ve.Value.(bson.A); ok && len(wa) > 1 {
-													log.Printf("BUILD CHECK: timelineCustom has non-empty Widgets: %d items", len(wa))
-												}
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
 	// 5. Build CustomWidget
 	widgetID := model.ID(mpr.GenerateID())
 	cw := &pages.CustomWidget{
@@ -652,10 +648,11 @@ func (e *PluggableWidgetEngine) selectMappings(def *WidgetDefinition, w *ast.Wid
 
 	// Evaluate modes in order; first match wins
 	var fallback *WidgetMode
+	var fallbackCount int
 	for i := range def.Modes {
 		mode := &def.Modes[i]
 		if mode.Condition == "" {
-			// No condition = default fallback (use first one if multiple)
+			fallbackCount++
 			if fallback == nil {
 				fallback = mode
 			}
@@ -668,6 +665,9 @@ func (e *PluggableWidgetEngine) selectMappings(def *WidgetDefinition, w *ast.Wid
 
 	// Use fallback mode
 	if fallback != nil {
+		if fallbackCount > 1 {
+			return nil, nil, fmt.Errorf("widget %s has %d modes without conditions; only one default mode is allowed", def.MDLName, fallbackCount)
+		}
 		return fallback.PropertyMappings, fallback.ChildSlots, nil
 	}
 
@@ -685,14 +685,13 @@ func (e *PluggableWidgetEngine) evaluateCondition(condition string, w *ast.Widge
 		propName := strings.TrimPrefix(condition, "hasProp:")
 		return w.GetStringProp(propName) != ""
 	default:
-		log.Printf("warning: unknown widget condition %q — returning false", condition)
 		return false
 	}
 }
 
 // resolveMapping resolves a PropertyMapping's source into a BuildContext.
 func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.WidgetV3) (*BuildContext, error) {
-	ctx := &BuildContext{}
+	ctx := &BuildContext{pageBuilder: e.pageBuilder}
 
 	// Static value takes priority
 	if mapping.Value != "" {
@@ -709,6 +708,14 @@ func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.W
 	case "Attribute":
 		if attr := w.GetAttribute(); attr != "" {
 			ctx.AttributePath = e.pageBuilder.resolveAttributePath(attr)
+		}
+
+	case "Attributes":
+		if attrs := w.GetAttributes(); len(attrs) > 0 {
+			ctx.AttributePaths = make([]string, 0, len(attrs))
+			for _, attr := range attrs {
+				ctx.AttributePaths = append(ctx.AttributePaths, e.pageBuilder.resolveAttributePath(attr))
+			}
 		}
 
 	case "DataSource":
@@ -750,6 +757,9 @@ func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.W
 		}
 		// Entity name comes from DataSource context (must be resolved first by a DataSource mapping)
 		ctx.EntityName = e.pageBuilder.entityContext
+		if ctx.AssocPath != "" && ctx.EntityName == "" {
+			return nil, fmt.Errorf("association %q requires an entity context (add a DataSource mapping before Association)", ctx.AssocPath)
+		}
 
 	case "OnClick":
 		// Resolve AST action (stored as Properties["Action"]) into serialized BSON

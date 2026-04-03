@@ -912,7 +912,10 @@ func augmentFromMPK(tmpl *WidgetTemplate, widgetID string, projectPath string) *
 	}
 
 	// Deep-clone so we don't mutate the cached template
-	clone := deepCloneTemplate(tmpl)
+	clone, err := deepCloneTemplate(tmpl)
+	if err != nil {
+		return tmpl
+	}
 	if err := AugmentTemplate(clone, def); err != nil {
 		return tmpl
 	}

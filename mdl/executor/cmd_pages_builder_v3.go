@@ -311,14 +311,6 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
 		widget, err = pb.buildTemplateV3(w)
 	case "FILTER":
 		widget, err = pb.buildFilterV3(w)
-	case "TEXTFILTER":
-		widget, err = pb.buildTextFilterV3(w)
-	case "NUMBERFILTER":
-		widget, err = pb.buildNumberFilterV3(w)
-	case "DROPDOWNFILTER":
-		widget, err = pb.buildDropdownFilterV3(w)
-	case "DATEFILTER":
-		widget, err = pb.buildDateFilterV3(w)
 	case "STATICIMAGE":
 		widget, err = pb.buildStaticImageV3(w)
 	case "DYNAMICIMAGE":

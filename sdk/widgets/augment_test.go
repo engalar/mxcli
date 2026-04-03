@@ -433,7 +433,7 @@ func TestDeepCloneTemplate(t *testing.T) {
 		},
 	}
 
-	clone := deepCloneTemplate(original)
+	clone, _ := deepCloneTemplate(original)
 
 	// Modify clone
 	clone.Type["key"] = "modified"
@@ -489,7 +489,7 @@ func TestAugmentTemplate_WithRealTemplate(t *testing.T) {
 	}
 
 	ResetPlaceholderCounter()
-	clone := deepCloneTemplate(tmpl)
+	clone, _ := deepCloneTemplate(tmpl)
 
 	// Count original properties
 	objType := clone.Type["ObjectType"].(map[string]any)
@@ -589,7 +589,7 @@ func TestAugmentTemplate_NoPlaceholderLeakAfterBSONConversion(t *testing.T) {
 		t.Skip("ComboBox template not available")
 	}
 
-	clone := deepCloneTemplate(tmpl)
+	clone, _ := deepCloneTemplate(tmpl)
 
 	// Build a definition with existing properties + one new one
 	objType := clone.Type["ObjectType"].(map[string]any)

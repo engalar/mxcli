@@ -1,0 +1,11 @@
+{
+  "widgetId": "com.mendix.widget.web.datagridtextfilter.DatagridTextFilter",
+  "mdlName": "TEXTFILTER",
+  "templateFile": "datagrid-text-filter.json",
+  "defaultEditable": "Always",
+  "propertyMappings": [
+    {"propertyKey": "attrChoice", "value": "linked", "operation": "primitive"},
+    {"propertyKey": "attributes", "source": "Attributes", "operation": "attributeObjects"},
+    {"propertyKey": "defaultFilter", "source": "FilterType", "operation": "primitive"}
+  ]
+}
