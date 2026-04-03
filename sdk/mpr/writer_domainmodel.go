@@ -4,6 +4,7 @@ package mpr
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
@@ -1061,7 +1062,14 @@ func serializeText(text *model.Text) bson.D {
 	// Translations as Items array with version prefix 3
 	// Use bson.D for ordered documents to match Studio Pro format
 	items := bson.A{int32(3)}
-	for lang, value := range text.Translations {
+	// Sort language keys for deterministic output
+	langs := make([]string, 0, len(text.Translations))
+	for lang := range text.Translations {
+		langs = append(langs, lang)
+	}
+	sort.Strings(langs)
+	for _, lang := range langs {
+		value := text.Translations[lang]
 		items = append(items, bson.D{
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 			{Key: "$Type", Value: "Texts$Translation"},

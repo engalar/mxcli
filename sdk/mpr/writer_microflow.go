@@ -171,7 +171,32 @@ func serializeSequenceFlow(flow *microflows.SequenceFlow) bson.D {
 					{Key: "Value", Value: cv.Value},
 				},
 			}
+		case microflows.NoCase:
+			caseValues = bson.A{
+				int32(2),
+				bson.D{
+					{Key: "$ID", Value: idToBsonBinary(string(cv.ID))},
+					{Key: "$Type", Value: "Microflows$NoCase"},
+				},
+			}
+		case *microflows.NoCase:
+			caseValues = bson.A{
+				int32(2),
+				bson.D{
+					{Key: "$ID", Value: idToBsonBinary(string(cv.ID))},
+					{Key: "$Type", Value: "Microflows$NoCase"},
+				},
+			}
 		}
+	}
+
+	originCV := flow.OriginControlVector
+	if originCV == "" {
+		originCV = "0;0"
+	}
+	destCV := flow.DestinationControlVector
+	if destCV == "" {
+		destCV = "0;0"
 	}
 
 	return bson.D{
@@ -184,8 +209,8 @@ func serializeSequenceFlow(flow *microflows.SequenceFlow) bson.D {
 		{Key: "Line", Value: bson.D{
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 			{Key: "$Type", Value: "Microflows$BezierCurve"},
-			{Key: "DestinationControlVector", Value: "0;0"},
-			{Key: "OriginControlVector", Value: "0;0"},
+			{Key: "DestinationControlVector", Value: destCV},
+			{Key: "OriginControlVector", Value: originCV},
 		}},
 		{Key: "OriginConnectionIndex", Value: int64(flow.OriginConnectionIndex)},
 		{Key: "OriginPointer", Value: idToBsonBinary(string(flow.OriginID))},

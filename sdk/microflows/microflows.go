@@ -162,6 +162,8 @@ type SequenceFlow struct {
 	DestinationConnectionIndex int       `json:"destinationConnectionIndex"`
 	CaseValue                  CaseValue `json:"caseValue,omitempty"`
 	IsErrorHandler             bool      `json:"isErrorHandler,omitempty"`
+	OriginControlVector        string    `json:"originControlVector,omitempty"`
+	DestinationControlVector   string    `json:"destinationControlVector,omitempty"`
 }
 
 // CaseValue represents a case value for a decision flow.

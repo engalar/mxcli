@@ -32,103 +32,140 @@ func toNDSL(t *testing.T, data []byte) string {
 	return bsondebug.Render(doc, 0)
 }
 
-// roundtripPage: baseline BSON → parse → serialize → NDSL compare.
+// roundtripPage: baseline → parse → serialize → parse → serialize → compare two serializations.
+// Verifies serialization idempotency. Original baseline is preserved as ground truth.
 func roundtripPage(t *testing.T, baselineBytes []byte) {
 	t.Helper()
 	r := testReader()
 	w := testWriter()
 
-	page, err := r.parsePage("test-unit-id", "test-container-id", baselineBytes)
+	// First pass: baseline → parse → serialize
+	page1, err := r.parsePage("test-unit-id", "test-container-id", baselineBytes)
 	if err != nil {
-		t.Fatalf("parsePage failed: %v", err)
+		t.Fatalf("parsePage (pass 1) failed: %v", err)
+	}
+	serialized1, err := w.serializePage(page1)
+	if err != nil {
+		t.Fatalf("serializePage (pass 1) failed: %v", err)
 	}
 
-	serialized, err := w.serializePage(page)
+	// Second pass: serialized → parse → serialize
+	page2, err := r.parsePage("test-unit-id", "test-container-id", serialized1)
 	if err != nil {
-		t.Fatalf("serializePage failed: %v", err)
+		t.Fatalf("parsePage (pass 2) failed: %v", err)
+	}
+	serialized2, err := w.serializePage(page2)
+	if err != nil {
+		t.Fatalf("serializePage (pass 2) failed: %v", err)
 	}
 
-	baselineNDSL := toNDSL(t, baselineBytes)
-	roundtripNDSL := toNDSL(t, serialized)
+	ndsl1 := toNDSL(t, serialized1)
+	ndsl2 := toNDSL(t, serialized2)
 
-	if baselineNDSL != roundtripNDSL {
-		t.Errorf("roundtrip NDSL mismatch for page %q\n--- baseline ---\n%s\n--- roundtrip ---\n%s\n--- diff ---\n%s",
-			page.Name, baselineNDSL, roundtripNDSL, ndslDiff(baselineNDSL, roundtripNDSL))
+	if ndsl1 != ndsl2 {
+		t.Errorf("serialization not idempotent for page %q\n--- pass 1 ---\n%s\n--- pass 2 ---\n%s\n--- diff ---\n%s",
+			page1.Name, ndsl1, ndsl2, ndslDiff(ndsl1, ndsl2))
 	}
 }
 
-// roundtripMicroflow: baseline BSON → parse → serialize → NDSL compare.
+// roundtripMicroflow: baseline → parse → serialize → parse → serialize → compare two serializations.
 func roundtripMicroflow(t *testing.T, baselineBytes []byte) {
 	t.Helper()
 	r := testReader()
 	w := testWriter()
 
-	mf, err := r.parseMicroflow("test-unit-id", "test-container-id", baselineBytes)
+	// First pass
+	mf1, err := r.parseMicroflow("test-unit-id", "test-container-id", baselineBytes)
 	if err != nil {
-		t.Fatalf("parseMicroflow failed: %v", err)
+		t.Fatalf("parseMicroflow (pass 1) failed: %v", err)
+	}
+	serialized1, err := w.serializeMicroflow(mf1)
+	if err != nil {
+		t.Fatalf("serializeMicroflow (pass 1) failed: %v", err)
 	}
 
-	serialized, err := w.serializeMicroflow(mf)
+	// Second pass
+	mf2, err := r.parseMicroflow("test-unit-id", "test-container-id", serialized1)
 	if err != nil {
-		t.Fatalf("serializeMicroflow failed: %v", err)
+		t.Fatalf("parseMicroflow (pass 2) failed: %v", err)
+	}
+	serialized2, err := w.serializeMicroflow(mf2)
+	if err != nil {
+		t.Fatalf("serializeMicroflow (pass 2) failed: %v", err)
 	}
 
-	baselineNDSL := toNDSL(t, baselineBytes)
-	roundtripNDSL := toNDSL(t, serialized)
+	ndsl1 := toNDSL(t, serialized1)
+	ndsl2 := toNDSL(t, serialized2)
 
-	if baselineNDSL != roundtripNDSL {
-		t.Errorf("roundtrip NDSL mismatch for microflow %q\n--- baseline ---\n%s\n--- roundtrip ---\n%s\n--- diff ---\n%s",
-			mf.Name, baselineNDSL, roundtripNDSL, ndslDiff(baselineNDSL, roundtripNDSL))
+	if ndsl1 != ndsl2 {
+		t.Errorf("serialization not idempotent for microflow %q\n--- pass 1 ---\n%s\n--- pass 2 ---\n%s\n--- diff ---\n%s",
+			mf1.Name, ndsl1, ndsl2, ndslDiff(ndsl1, ndsl2))
 	}
 }
 
-// roundtripSnippet: baseline BSON → parse → serialize → NDSL compare.
+// roundtripSnippet: double roundtrip idempotency test.
 func roundtripSnippet(t *testing.T, baselineBytes []byte) {
 	t.Helper()
 	r := testReader()
 	w := testWriter()
 
-	snippet, err := r.parseSnippet("test-unit-id", "test-container-id", baselineBytes)
+	snippet1, err := r.parseSnippet("test-unit-id", "test-container-id", baselineBytes)
 	if err != nil {
-		t.Fatalf("parseSnippet failed: %v", err)
+		t.Fatalf("parseSnippet (pass 1) failed: %v", err)
+	}
+	serialized1, err := w.serializeSnippet(snippet1)
+	if err != nil {
+		t.Fatalf("serializeSnippet (pass 1) failed: %v", err)
 	}
 
-	serialized, err := w.serializeSnippet(snippet)
+	snippet2, err := r.parseSnippet("test-unit-id", "test-container-id", serialized1)
 	if err != nil {
-		t.Fatalf("serializeSnippet failed: %v", err)
+		t.Fatalf("parseSnippet (pass 2) failed: %v", err)
+	}
+	serialized2, err := w.serializeSnippet(snippet2)
+	if err != nil {
+		t.Fatalf("serializeSnippet (pass 2) failed: %v", err)
 	}
 
-	baselineNDSL := toNDSL(t, baselineBytes)
-	roundtripNDSL := toNDSL(t, serialized)
+	ndsl1 := toNDSL(t, serialized1)
+	ndsl2 := toNDSL(t, serialized2)
 
-	if baselineNDSL != roundtripNDSL {
-		t.Errorf("roundtrip NDSL mismatch for snippet %q\n--- baseline ---\n%s\n--- roundtrip ---\n%s\n--- diff ---\n%s",
-			snippet.Name, baselineNDSL, roundtripNDSL, ndslDiff(baselineNDSL, roundtripNDSL))
+	if ndsl1 != ndsl2 {
+		t.Errorf("serialization not idempotent for snippet %q\n--- pass 1 ---\n%s\n--- pass 2 ---\n%s\n--- diff ---\n%s",
+			snippet1.Name, ndsl1, ndsl2, ndslDiff(ndsl1, ndsl2))
 	}
 }
 
-// roundtripEnumeration: baseline BSON → parse → serialize → NDSL compare.
+// roundtripEnumeration: double roundtrip idempotency test.
 func roundtripEnumeration(t *testing.T, baselineBytes []byte) {
 	t.Helper()
 	r := testReader()
 	w := testWriter()
 
-	enum, err := r.parseEnumeration("test-unit-id", "test-container-id", baselineBytes)
+	enum1, err := r.parseEnumeration("test-unit-id", "test-container-id", baselineBytes)
 	if err != nil {
-		t.Fatalf("parseEnumeration failed: %v", err)
+		t.Fatalf("parseEnumeration (pass 1) failed: %v", err)
+	}
+	serialized1, err := w.serializeEnumeration(enum1)
+	if err != nil {
+		t.Fatalf("serializeEnumeration (pass 1) failed: %v", err)
 	}
 
-	serialized, err := w.serializeEnumeration(enum)
+	enum2, err := r.parseEnumeration("test-unit-id", "test-container-id", serialized1)
 	if err != nil {
-		t.Fatalf("serializeEnumeration failed: %v", err)
+		t.Fatalf("parseEnumeration (pass 2) failed: %v", err)
+	}
+	serialized2, err := w.serializeEnumeration(enum2)
+	if err != nil {
+		t.Fatalf("serializeEnumeration (pass 2) failed: %v", err)
 	}
 
-	baselineNDSL := toNDSL(t, baselineBytes)
-	roundtripNDSL := toNDSL(t, serialized)
+	ndsl1 := toNDSL(t, serialized1)
+	ndsl2 := toNDSL(t, serialized2)
 
-	if baselineNDSL != roundtripNDSL {
-		t.Errorf("roundtrip NDSL mismatch for enumeration %q\n--- baseline ---\n%s\n--- roundtrip ---\n%s\n--- diff ---\n%s",
-			enum.Name, baselineNDSL, roundtripNDSL, ndslDiff(baselineNDSL, roundtripNDSL))
+	if ndsl1 != ndsl2 {
+		t.Errorf("serialization not idempotent for enumeration %q\n--- pass 1 ---\n%s\n--- pass 2 ---\n%s\n--- diff ---\n%s",
+			enum1.Name, ndsl1, ndsl2, ndslDiff(ndsl1, ndsl2))
 	}
 }
 

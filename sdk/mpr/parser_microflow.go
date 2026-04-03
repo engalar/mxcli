@@ -155,6 +155,16 @@ func parseSequenceFlow(raw map[string]any) *microflows.SequenceFlow {
 		flow.CaseValue = parseCaseValues(caseVals)
 	}
 
+	// Parse BezierCurve control vectors from Line
+	if lineMap := extractBsonMap(raw["Line"]); lineMap != nil {
+		if v, ok := lineMap["OriginControlVector"].(string); ok {
+			flow.OriginControlVector = v
+		}
+		if v, ok := lineMap["DestinationControlVector"].(string); ok {
+			flow.DestinationControlVector = v
+		}
+	}
+
 	return flow
 }
 
@@ -239,7 +249,8 @@ func parseMicroflowObjectCollection(raw map[string]any) *microflows.MicroflowObj
 		// Prefer primitive.D path to preserve field ordering for unknown types
 		if rawD, ok := obj.(primitive.D); ok {
 			typeName, _ := rawD.Map()["$Type"].(string)
-			if typeName == "" {
+			if typeName == "" || typeName == "Microflows$MicroflowParameter" {
+				// Parameters are handled separately via mf.Parameters
 				continue
 			}
 			if fn, ok := microflowObjectParsers[typeName]; ok {
@@ -253,6 +264,9 @@ func parseMicroflowObjectCollection(raw map[string]any) *microflows.MicroflowObj
 		}
 		// Fallback for map[string]any
 		if objMap := extractBsonMap(obj); objMap != nil {
+			if typeName, _ := objMap["$Type"].(string); typeName == "Microflows$MicroflowParameter" {
+				continue // Parameters are handled separately
+			}
 			if mfObj := parseMicroflowObject(objMap); mfObj != nil {
 				collection.Objects = append(collection.Objects, mfObj)
 			}
@@ -302,6 +316,7 @@ func parseStartEvent(raw map[string]any) *microflows.StartEvent {
 	event := &microflows.StartEvent{}
 	event.ID = model.ID(extractBsonID(raw["$ID"]))
 	event.Position = parsePoint(raw["RelativeMiddlePoint"])
+	event.Size = parseSize(raw["Size"])
 	return event
 }
 
@@ -309,6 +324,7 @@ func parseEndEvent(raw map[string]any) *microflows.EndEvent {
 	event := &microflows.EndEvent{}
 	event.ID = model.ID(extractBsonID(raw["$ID"]))
 	event.Position = parsePoint(raw["RelativeMiddlePoint"])
+	event.Size = parseSize(raw["Size"])
 	event.ReturnValue = extractString(raw["ReturnValue"])
 	return event
 }
@@ -317,6 +333,7 @@ func parseErrorEvent(raw map[string]any) *microflows.ErrorEvent {
 	event := &microflows.ErrorEvent{}
 	event.ID = model.ID(extractBsonID(raw["$ID"]))
 	event.Position = parsePoint(raw["RelativeMiddlePoint"])
+	event.Size = parseSize(raw["Size"])
 	return event
 }
 
@@ -324,6 +341,7 @@ func parseBreakEvent(raw map[string]any) *microflows.BreakEvent {
 	event := &microflows.BreakEvent{}
 	event.ID = model.ID(extractBsonID(raw["$ID"]))
 	event.Position = parsePoint(raw["RelativeMiddlePoint"])
+	event.Size = parseSize(raw["Size"])
 	return event
 }
 
@@ -331,6 +349,7 @@ func parseContinueEvent(raw map[string]any) *microflows.ContinueEvent {
 	event := &microflows.ContinueEvent{}
 	event.ID = model.ID(extractBsonID(raw["$ID"]))
 	event.Position = parsePoint(raw["RelativeMiddlePoint"])
+	event.Size = parseSize(raw["Size"])
 	return event
 }
 
@@ -338,6 +357,7 @@ func parseExclusiveSplit(raw map[string]any) *microflows.ExclusiveSplit {
 	split := &microflows.ExclusiveSplit{}
 	split.ID = model.ID(extractBsonID(raw["$ID"]))
 	split.Position = parsePoint(raw["RelativeMiddlePoint"])
+	split.Size = parseSize(raw["Size"])
 	split.Caption = extractString(raw["Caption"])
 	split.Documentation = extractString(raw["Documentation"])
 
@@ -353,6 +373,7 @@ func parseExclusiveMerge(raw map[string]any) *microflows.ExclusiveMerge {
 	merge := &microflows.ExclusiveMerge{}
 	merge.ID = model.ID(extractBsonID(raw["$ID"]))
 	merge.Position = parsePoint(raw["RelativeMiddlePoint"])
+	merge.Size = parseSize(raw["Size"])
 	return merge
 }
 
@@ -360,6 +381,7 @@ func parseInheritanceSplit(raw map[string]any) *microflows.InheritanceSplit {
 	split := &microflows.InheritanceSplit{}
 	split.ID = model.ID(extractBsonID(raw["$ID"]))
 	split.Position = parsePoint(raw["RelativeMiddlePoint"])
+	split.Size = parseSize(raw["Size"])
 	split.Caption = extractString(raw["Caption"])
 	split.Documentation = extractString(raw["Documentation"])
 	split.VariableName = extractString(raw["SplitVariableName"])
@@ -370,6 +392,7 @@ func parseLoopedActivity(raw map[string]any) *microflows.LoopedActivity {
 	loop := &microflows.LoopedActivity{}
 	loop.ID = model.ID(extractBsonID(raw["$ID"]))
 	loop.Position = parsePoint(raw["RelativeMiddlePoint"])
+	loop.Size = parseSize(raw["Size"])
 	loop.Caption = extractString(raw["Caption"])
 	loop.Documentation = extractString(raw["Documentation"])
 
@@ -403,6 +426,7 @@ func parseMicroflowAnnotation(raw map[string]any) *microflows.Annotation {
 	annot := &microflows.Annotation{}
 	annot.ID = model.ID(extractBsonID(raw["$ID"]))
 	annot.Position = parsePoint(raw["RelativeMiddlePoint"])
+	annot.Size = parseSize(raw["Size"])
 	annot.Caption = extractString(raw["Caption"])
 	return annot
 }
@@ -450,6 +474,7 @@ func parseActionActivity(raw map[string]any) *microflows.ActionActivity {
 	activity := &microflows.ActionActivity{}
 	activity.ID = model.ID(extractBsonID(raw["$ID"]))
 	activity.Position = parsePoint(raw["RelativeMiddlePoint"])
+	activity.Size = parseSize(raw["Size"])
 	activity.Caption = extractString(raw["Caption"])
 	activity.Documentation = extractString(raw["Documentation"])
 	activity.AutoGenerateCaption = extractBool(raw["AutoGenerateCaption"], false)
@@ -1014,6 +1039,19 @@ func parsePoint(raw any) model.Point {
 		}
 	}
 	return model.Point{}
+}
+
+// parseSize parses a Size from raw BSON data (stored as "W;H" string).
+func parseSize(raw any) model.Size {
+	if s, ok := raw.(string); ok {
+		parts := strings.SplitN(s, ";", 2)
+		if len(parts) == 2 {
+			w, _ := strconv.Atoi(strings.TrimSpace(parts[0]))
+			h, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
+			return model.Size{Width: w, Height: h}
+		}
+	}
+	return model.Size{}
 }
 
 // parseNanoflow parses nanoflow contents from BSON.
