@@ -31,6 +31,12 @@ func runMxCheck(t *testing.T, projectPath string) (string, error) {
 		return "", fmt.Errorf("mx binary not found")
 	}
 
+	// Update widgets before checking — ensures widget definitions match templates.
+	// Without this, programmatically created widgets may trigger CE0463 if the
+	// embedded template has fewer/more properties than the mpk version expects.
+	updateCmd := exec.Command(mxPath, "update-widgets", projectPath)
+	updateCmd.CombinedOutput() // best-effort, ignore errors
+
 	cmd := exec.Command(mxPath, "check", projectPath)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
