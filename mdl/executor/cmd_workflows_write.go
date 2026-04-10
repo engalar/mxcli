@@ -250,6 +250,14 @@ func buildUserTask(n *ast.WorkflowUserTaskNode) *workflows.UserTask {
 		task.UserSource = &workflows.XPathBasedUserSource{
 			XPath: n.Targeting.XPath,
 		}
+	case "group_microflow":
+		task.UserSource = &workflows.MicroflowGroupSource{
+			Microflow: n.Targeting.Microflow.Module + "." + n.Targeting.Microflow.Name,
+		}
+	case "group_xpath":
+		task.UserSource = &workflows.XPathGroupSource{
+			XPath: n.Targeting.XPath,
+		}
 	}
 
 	// Outcomes
