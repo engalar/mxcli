@@ -123,6 +123,9 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 	case "Forms$DataView", "Pages$DataView":
 		widget.Children = e.parseDataViewChildren(w)
 		widget.DataSource = e.extractDataViewDataSource(w)
+		if widget.DataSource != nil && widget.DataSource.Reference != "" {
+			widget.EntityContext = widget.DataSource.Reference
+		}
 		return []rawWidget{widget}
 
 	case "Forms$TextBox", "Pages$TextBox":
@@ -180,6 +183,9 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 			widget.ShowPagingButtons = e.extractCustomWidgetPropertyString(w, "showPagingButtons")
 			// showNumberOfRows: not yet fully supported in DataGrid2, skip to avoid CE0463
 			widget.Selection = e.extractGallerySelection(w)
+			if widget.DataSource != nil && widget.DataSource.Reference != "" {
+				widget.EntityContext = widget.DataSource.Reference
+			}
 		}
 		// For Gallery, extract datasource, content widgets, filter widgets, and selection mode
 		if widget.RenderMode == "GALLERY" {
@@ -190,6 +196,9 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 			widget.DesktopColumns = e.extractCustomWidgetPropertyString(w, "desktopItems")
 			widget.TabletColumns = e.extractCustomWidgetPropertyString(w, "tabletItems")
 			widget.PhoneColumns = e.extractCustomWidgetPropertyString(w, "phoneItems")
+			if widget.DataSource != nil && widget.DataSource.Reference != "" {
+				widget.EntityContext = widget.DataSource.Reference
+			}
 		}
 		// For filter widgets, extract filter attributes and expression
 		if widget.RenderMode == "TEXTFILTER" || widget.RenderMode == "NUMBERFILTER" || widget.RenderMode == "DROPDOWNFILTER" || widget.RenderMode == "DATEFILTER" {
@@ -218,6 +227,9 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 	case "Forms$Gallery", "Pages$Gallery":
 		widget.Children = e.parseGalleryContent(w)
 		widget.DataSource = e.extractGalleryDataSource(w)
+		if widget.DataSource != nil && widget.DataSource.Reference != "" {
+			widget.EntityContext = widget.DataSource.Reference
+		}
 		return []rawWidget{widget}
 
 	case "Forms$SnippetCallWidget", "Pages$SnippetCallWidget":
@@ -227,6 +239,9 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 	case "Forms$ListView", "Pages$ListView":
 		widget.Children = e.parseListViewContent(w)
 		widget.DataSource = e.extractListViewDataSource(w)
+		if widget.DataSource != nil && widget.DataSource.Reference != "" {
+			widget.EntityContext = widget.DataSource.Reference
+		}
 		return []rawWidget{widget}
 
 	default:

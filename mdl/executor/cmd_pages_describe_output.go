@@ -109,6 +109,19 @@ func formatWidgetProps(w io.Writer, prefix string, header string, props []string
 	fmt.Fprintf(w, "%s)%s", prefix, suffix)
 }
 
+// outputDataContainerContext writes a comment showing available variables inside a data container.
+// isList indicates list containers (DataGrid2, ListView, Gallery) where a selection variable is available.
+func outputDataContainerContext(w io.Writer, prefix string, widgetName string, entityRef string, isList bool) {
+	if entityRef == "" {
+		return
+	}
+	parts := []string{fmt.Sprintf("$currentObject (%s)", entityRef)}
+	if isList && widgetName != "" {
+		parts = append(parts, fmt.Sprintf("$%s (selection)", widgetName))
+	}
+	fmt.Fprintf(w, "%s-- Context: %s\n", prefix, strings.Join(parts, ", "))
+}
+
 // outputWidgetMDLV3 outputs a widget in MDL V3 syntax.
 // V3 syntax uses WIDGET Name (Props) { children } format.
 func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
@@ -255,6 +268,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 		}
 		props = appendAppearanceProps(props, w)
 		formatWidgetProps(e.output, prefix, header, props, " {\n")
+		outputDataContainerContext(e.output, prefix+"  ", w.Name, w.EntityContext, false)
 		for _, child := range w.Children {
 			e.outputWidgetMDLV3(child, indent+1)
 		}
@@ -377,6 +391,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			hasContent := len(w.ControlBar) > 0 || len(w.DataGridColumns) > 0
 			if hasContent {
 				formatWidgetProps(e.output, prefix, header, props, " {\n")
+				outputDataContainerContext(e.output, prefix+"  ", w.Name, w.EntityContext, true)
 				// Output CONTROLBAR section if control bar widgets present
 				if len(w.ControlBar) > 0 {
 					fmt.Fprintf(e.output, "%s  CONTROLBAR controlBar1 {\n", prefix)
@@ -441,6 +456,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			hasContent := len(w.Children) > 0 || len(w.FilterWidgets) > 0
 			if hasContent {
 				formatWidgetProps(e.output, prefix, header, props, " {\n")
+				outputDataContainerContext(e.output, prefix+"  ", w.Name, w.EntityContext, true)
 				// Output FILTER section if filter widgets present
 				if len(w.FilterWidgets) > 0 {
 					fmt.Fprintf(e.output, "%s  FILTER filter1 {\n", prefix)
@@ -598,6 +614,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 		props = appendAppearanceProps(props, w)
 		if len(w.Children) > 0 {
 			formatWidgetProps(e.output, prefix, header, props, " {\n")
+			outputDataContainerContext(e.output, prefix+"  ", w.Name, w.EntityContext, true)
 			for _, child := range w.Children {
 				e.outputWidgetMDLV3(child, indent+1)
 			}
@@ -649,6 +666,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 		props = appendAppearanceProps(props, w)
 		if len(w.Children) > 0 {
 			formatWidgetProps(e.output, prefix, header, props, " {\n")
+			outputDataContainerContext(e.output, prefix+"  ", w.Name, w.EntityContext, true)
 			for _, child := range w.Children {
 				e.outputWidgetMDLV3(child, indent+1)
 			}

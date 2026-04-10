@@ -31,6 +31,17 @@ func (s *mdlServer) Completion(ctx context.Context, params *protocol.CompletionP
 	}
 	linePrefixUpper := strings.ToUpper(linePrefix)
 
+	// Check if typing a $ variable reference inside page/snippet context
+	if strings.Contains(linePrefix, "$") {
+		varItems := s.variableCompletionItems(text, linePrefix)
+		if len(varItems) > 0 {
+			return &protocol.CompletionList{
+				IsIncomplete: false,
+				Items:        varItems,
+			}, nil
+		}
+	}
+
 	// Check if context calls for catalog-based element completion
 	if types := inferCompletionTypes(linePrefixUpper); types != nil {
 		items := s.catalogCompletionItems(ctx, linePrefix, types)
@@ -359,4 +370,87 @@ func objectTypeToCompletionKind(objectType string) (protocol.CompletionItemKind,
 	default:
 		return protocol.CompletionItemKindValue, objectType
 	}
+}
+
+// variableCompletionItems returns completion items for $ variable references.
+// It suggests $currentObject (common in data containers) and any page parameters
+// found in the document's CREATE PAGE Params declaration.
+func (s *mdlServer) variableCompletionItems(docText string, linePrefix string) []protocol.CompletionItem {
+	// Extract the partial after the last $ to filter suggestions
+	lastDollar := strings.LastIndex(linePrefix, "$")
+	partial := ""
+	if lastDollar >= 0 && lastDollar < len(linePrefix)-1 {
+		partial = strings.ToUpper(linePrefix[lastDollar+1:])
+	}
+
+	var items []protocol.CompletionItem
+
+	// Always suggest $currentObject — it's the most common data container variable
+	if partial == "" || strings.HasPrefix("CURRENTOBJECT", partial) {
+		items = append(items, protocol.CompletionItem{
+			Label:  "$currentObject",
+			Kind:   protocol.CompletionItemKindVariable,
+			Detail: "Current object from enclosing data container",
+		})
+	}
+
+	// Extract page parameter names from CREATE PAGE ... Params: { $Name: Type, ... }
+	paramNames := extractPageParamNames(docText)
+	for _, name := range paramNames {
+		if partial == "" || strings.HasPrefix(strings.ToUpper(name), partial) {
+			items = append(items, protocol.CompletionItem{
+				Label:  "$" + name,
+				Kind:   protocol.CompletionItemKindVariable,
+				Detail: "Page parameter",
+			})
+		}
+	}
+
+	return items
+}
+
+// extractPageParamNames extracts parameter names from CREATE PAGE ... Params: { $Name: Type } declarations.
+func extractPageParamNames(text string) []string {
+	var names []string
+	for _, line := range strings.Split(text, "\n") {
+		trimmed := strings.TrimSpace(line)
+		// Look for $ParamName patterns in Params declarations
+		// Format: Params: { $Name: Type } or $Name: Type on separate lines
+		idx := 0
+		for idx < len(trimmed) {
+			dollar := strings.Index(trimmed[idx:], "$")
+			if dollar < 0 {
+				break
+			}
+			dollar += idx
+			// Extract the name after $
+			end := dollar + 1
+			for end < len(trimmed) {
+				c := trimmed[end]
+				if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' {
+					end++
+				} else {
+					break
+				}
+			}
+			if end > dollar+1 {
+				name := trimmed[dollar+1 : end]
+				// Skip if this looks like a variable declaration (DECLARE) rather than a param
+				if !strings.HasPrefix(strings.ToUpper(trimmed), "DECLARE") {
+					names = append(names, name)
+				}
+			}
+			idx = end
+		}
+	}
+	// Deduplicate
+	seen := make(map[string]bool)
+	var unique []string
+	for _, n := range names {
+		if !seen[n] {
+			seen[n] = true
+			unique = append(unique, n)
+		}
+	}
+	return unique
 }
