@@ -34,6 +34,9 @@ type BuildOptions struct {
 	// SkipCheck skips the 'mx check' pre-build validation.
 	SkipCheck bool
 
+	// SkipUpdateWidgets skips the 'mx update-widgets' step before checking.
+	SkipUpdateWidgets bool
+
 	// Stdout for output messages.
 	Stdout io.Writer
 }
@@ -94,6 +97,17 @@ func Build(opts BuildOptions) error {
 		if err != nil {
 			fmt.Fprintf(w, "  Skipping check: %v\n", err)
 		} else {
+			// Run update-widgets before check to prevent false CE0463 errors
+			if !opts.SkipUpdateWidgets {
+				fmt.Fprintln(w, "  Updating widget definitions...")
+				uwCmd := exec.Command(mxPath, "update-widgets", opts.ProjectPath)
+				uwCmd.Stdout = w
+				uwCmd.Stderr = os.Stderr
+				if err := uwCmd.Run(); err != nil {
+					fmt.Fprintf(w, "  Warning: update-widgets failed (continuing): %v\n", err)
+				}
+			}
+
 			cmd := exec.Command(mxPath, "check", opts.ProjectPath)
 			cmd.Stdout = w
 			cmd.Stderr = os.Stderr

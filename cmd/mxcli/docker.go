@@ -139,14 +139,16 @@ Examples:
 		outputDir, _ := cmd.Flags().GetString("output")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		skipCheck, _ := cmd.Flags().GetBool("skip-check")
+		noUpdateWidgets, _ := cmd.Flags().GetBool("no-update-widgets")
 
 		opts := docker.BuildOptions{
-			ProjectPath: projectPath,
-			MxBuildPath: mxbuildPath,
-			OutputDir:   outputDir,
-			DryRun:      dryRun,
-			SkipCheck:   skipCheck,
-			Stdout:      os.Stdout,
+			ProjectPath:       projectPath,
+			MxBuildPath:       mxbuildPath,
+			OutputDir:         outputDir,
+			DryRun:            dryRun,
+			SkipCheck:         skipCheck,
+			SkipUpdateWidgets: noUpdateWidgets,
+			Stdout:            os.Stdout,
 		}
 
 		if err := docker.Build(opts); err != nil {
@@ -165,11 +167,16 @@ This catches project errors (broken references, missing attributes, etc.)
 early, before the slower MxBuild step. The 'docker build' command runs
 this automatically unless --skip-check is used.
 
+By default, 'mx update-widgets' runs before 'mx check' to normalize
+pluggable widget definitions and prevent false CE0463 errors. Use
+--no-update-widgets to skip this step.
+
 The mx binary is located from the same directory as mxbuild.
 
 Examples:
   mxcli docker check -p app.mpr
   mxcli docker check -p app.mpr --mxbuild-path /path/to/mendix
+  mxcli docker check -p app.mpr --no-update-widgets
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath, _ := cmd.Flags().GetString("project")
@@ -179,12 +186,14 @@ Examples:
 		}
 
 		mxbuildPath, _ := cmd.Flags().GetString("mxbuild-path")
+		noUpdateWidgets, _ := cmd.Flags().GetBool("no-update-widgets")
 
 		opts := docker.CheckOptions{
-			ProjectPath: projectPath,
-			MxBuildPath: mxbuildPath,
-			Stdout:      os.Stdout,
-			Stderr:      os.Stderr,
+			ProjectPath:       projectPath,
+			MxBuildPath:       mxbuildPath,
+			SkipUpdateWidgets: noUpdateWidgets,
+			Stdout:            os.Stdout,
+			Stderr:            os.Stderr,
 		}
 
 		if err := docker.Check(opts); err != nil {
@@ -487,9 +496,11 @@ func init() {
 	dockerBuildCmd.Flags().StringP("output", "o", "", "Output directory for PAD package")
 	dockerBuildCmd.Flags().Bool("dry-run", false, "Detect tools and show patch plan without building")
 	dockerBuildCmd.Flags().Bool("skip-check", false, "Skip 'mx check' pre-build validation")
+	dockerBuildCmd.Flags().Bool("no-update-widgets", false, "Skip 'mx update-widgets' before check")
 
 	// Check command flags
 	dockerCheckCmd.Flags().String("mxbuild-path", "", "Path to MxBuild/Mendix installation (used to find mx)")
+	dockerCheckCmd.Flags().Bool("no-update-widgets", false, "Skip 'mx update-widgets' before check")
 
 	// Init command flags
 	dockerInitCmd.Flags().StringP("output", "o", "", "Output directory (default: .docker/ next to MPR)")

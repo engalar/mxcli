@@ -20,6 +20,11 @@ type CheckOptions struct {
 	// MxBuildPath is an explicit path to the mxbuild executable (used to find mx).
 	MxBuildPath string
 
+	// SkipUpdateWidgets skips the 'mx update-widgets' step before checking.
+	// By default, update-widgets runs first to normalize pluggable widget
+	// definitions and prevent false CE0463 errors.
+	SkipUpdateWidgets bool
+
 	// Stdout for output messages.
 	Stdout io.Writer
 
@@ -44,6 +49,22 @@ func Check(opts CheckOptions) error {
 		return err
 	}
 	fmt.Fprintf(w, "Using mx: %s\n", mxPath)
+
+	// Run mx update-widgets to normalize pluggable widget definitions.
+	// This prevents false CE0463 ("widget definition changed") errors caused
+	// by mismatch between widget Object properties and Type PropertyTypes.
+	if !opts.SkipUpdateWidgets {
+		fmt.Fprintf(w, "Updating widget definitions in %s...\n", opts.ProjectPath)
+		uwCmd := exec.Command(mxPath, "update-widgets", opts.ProjectPath)
+		uwCmd.Stdout = w
+		uwCmd.Stderr = stderr
+		if err := uwCmd.Run(); err != nil {
+			// Non-fatal: warn and continue with check
+			fmt.Fprintf(w, "Warning: update-widgets failed (continuing with check): %v\n", err)
+		} else {
+			fmt.Fprintln(w, "Widget definitions updated.")
+		}
+	}
 
 	// Run mx check
 	fmt.Fprintf(w, "Checking project %s...\n", opts.ProjectPath)
