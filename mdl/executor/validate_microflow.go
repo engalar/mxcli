@@ -17,6 +17,16 @@ func ValidateMicroflow(stmt *ast.CreateMicroflowStmt) []linter.Violation {
 		mfName:     stmt.Name.String(),
 		returnType: stmt.ReturnType,
 	}
+	// Validate parameter entity references — reject bare names without module prefix
+	for _, p := range stmt.Parameters {
+		if p.Type.EntityRef != nil && p.Type.EntityRef.Module == "" {
+			v.addViolation("MDL008", linter.SeverityError,
+				fmt.Sprintf("parameter '$%s': entity type '%s' is missing module prefix",
+					p.Name, p.Type.EntityRef.Name),
+				fmt.Sprintf("Use a qualified name like 'Module.%s' or 'System.%s'",
+					p.Type.EntityRef.Name, p.Type.EntityRef.Name))
+		}
+	}
 	v.validate(stmt.Body)
 	return v.violations
 }
