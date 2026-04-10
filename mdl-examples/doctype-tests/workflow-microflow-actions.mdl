@@ -21,6 +21,7 @@ CREATE WORKFLOW TestModule.WF_DeliveryDelay
   DISPLAY 'Delivery Delay'
 BEGIN
   CALL MICROFLOW TestModule.ACT_Stub;
+  WAIT FOR NOTIFICATION COMMENT 'WaitForApproval';
 END WORKFLOW;
 /
 
@@ -61,8 +62,8 @@ BEGIN
   WORKFLOW OPERATION RETRY $Workflow;
   WORKFLOW OPERATION UNPAUSE $Workflow;
 
-  -- Notify workflow
-  NOTIFY WORKFLOW $Workflow;
+  -- Notify workflow with activity reference
+  $IsNotified = NOTIFY WORKFLOW $Workflow ACTIVITY TestModule.WF_DeliveryDelay.WaitForApproval;
 
   -- Open workflow admin page
   OPEN WORKFLOW $Workflow;
@@ -70,8 +71,4 @@ BEGIN
   -- Lock/Unlock with named workflow definition
   LOCK WORKFLOW TestModule.WF_DeliveryDelay;
   UNLOCK WORKFLOW TestModule.WF_DeliveryDelay;
-
-  -- Lock/Unlock all
-  LOCK WORKFLOW ALL;
-  UNLOCK WORKFLOW ALL;
 END;

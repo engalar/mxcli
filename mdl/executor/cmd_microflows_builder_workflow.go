@@ -158,6 +158,7 @@ func (fb *flowBuilder) addNotifyWorkflowAction(s *ast.NotifyWorkflowStmt) model.
 	action := &microflows.NotifyWorkflowAction{
 		BaseElement:        model.BaseElement{ID: model.ID(mpr.GenerateID())},
 		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
+		Activity:           s.Activity.String(),
 		OutputVariableName: s.OutputVariable,
 		WorkflowVariable:   s.WorkflowVariable,
 	}
@@ -177,8 +178,7 @@ func (fb *flowBuilder) addLockWorkflowAction(s *ast.LockWorkflowStmt) model.ID {
 	action := &microflows.LockWorkflowAction{
 		BaseElement:       model.BaseElement{ID: model.ID(mpr.GenerateID())},
 		ErrorHandlingType: convertErrorHandlingType(s.ErrorHandling),
-		PauseAllWorkflows: s.PauseAllWorkflows,
-		WorkflowVariable:  s.WorkflowVariable,
+		PauseAllWorkflows: true,
 		Workflow:          s.Workflow.String(),
 	}
 	return fb.wrapAction(action, s.ErrorHandling)
@@ -188,8 +188,7 @@ func (fb *flowBuilder) addUnlockWorkflowAction(s *ast.UnlockWorkflowStmt) model.
 	action := &microflows.UnlockWorkflowAction{
 		BaseElement:              model.BaseElement{ID: model.ID(mpr.GenerateID())},
 		ErrorHandlingType:        convertErrorHandlingType(s.ErrorHandling),
-		ResumeAllPausedWorkflows: s.ResumeAllPausedWorkflows,
-		WorkflowVariable:         s.WorkflowVariable,
+		ResumeAllPausedWorkflows: true,
 		Workflow:                 s.Workflow.String(),
 	}
 	return fb.wrapAction(action, s.ErrorHandling)

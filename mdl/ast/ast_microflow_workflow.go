@@ -74,10 +74,11 @@ type OpenUserTaskStmt struct {
 
 func (*OpenUserTaskStmt) isMicroflowStatement() {}
 
-// NotifyWorkflowStmt represents: [$Result =] NOTIFY WORKFLOW $WorkflowVar
+// NotifyWorkflowStmt represents: [$Result =] NOTIFY WORKFLOW $WorkflowVar [ACTIVITY Module.Wf.Activity]
 type NotifyWorkflowStmt struct {
 	OutputVariable   string
 	WorkflowVariable string
+	Activity         QualifiedName // qualified ref: Module.Workflow.ActivityName
 	ErrorHandling    *ErrorHandlingClause
 	Annotations      *ActivityAnnotations
 }
@@ -93,24 +94,20 @@ type OpenWorkflowStmt struct {
 
 func (*OpenWorkflowStmt) isMicroflowStatement() {}
 
-// LockWorkflowStmt represents: LOCK WORKFLOW ($WorkflowVar | ALL | Module.WorkflowName)
+// LockWorkflowStmt represents: LOCK WORKFLOW Module.WorkflowName
 type LockWorkflowStmt struct {
-	WorkflowVariable  string
-	Workflow          QualifiedName // named workflow definition reference
-	PauseAllWorkflows bool
-	ErrorHandling     *ErrorHandlingClause
-	Annotations       *ActivityAnnotations
+	Workflow      QualifiedName // named workflow definition reference (required)
+	ErrorHandling *ErrorHandlingClause
+	Annotations   *ActivityAnnotations
 }
 
 func (*LockWorkflowStmt) isMicroflowStatement() {}
 
-// UnlockWorkflowStmt represents: UNLOCK WORKFLOW ($WorkflowVar | ALL | Module.WorkflowName)
+// UnlockWorkflowStmt represents: UNLOCK WORKFLOW Module.WorkflowName
 type UnlockWorkflowStmt struct {
-	WorkflowVariable         string
-	Workflow                 QualifiedName // named workflow definition reference
-	ResumeAllPausedWorkflows bool
-	ErrorHandling            *ErrorHandlingClause
-	Annotations              *ActivityAnnotations
+	Workflow      QualifiedName // named workflow definition reference (required)
+	ErrorHandling *ErrorHandlingClause
+	Annotations   *ActivityAnnotations
 }
 
 func (*UnlockWorkflowStmt) isMicroflowStatement() {}

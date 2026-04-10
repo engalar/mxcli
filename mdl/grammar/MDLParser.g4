@@ -1367,9 +1367,9 @@ openUserTaskStatement
     : OPEN USER TASK VARIABLE onErrorClause?
     ;
 
-// NOTIFY WORKFLOW $Wf;
+// NOTIFY WORKFLOW $Wf [ACTIVITY Module.Workflow.ActivityName];
 notifyWorkflowStatement
-    : (VARIABLE EQUALS)? NOTIFY WORKFLOW VARIABLE onErrorClause?
+    : (VARIABLE EQUALS)? NOTIFY WORKFLOW VARIABLE (ACTIVITY qualifiedName)? onErrorClause?
     ;
 
 // OPEN WORKFLOW $Wf;
@@ -1377,14 +1377,14 @@ openWorkflowStatement
     : OPEN WORKFLOW VARIABLE onErrorClause?
     ;
 
-// LOCK WORKFLOW $Wf; or LOCK WORKFLOW ALL; or LOCK WORKFLOW Module.WorkflowName;
+// LOCK WORKFLOW Module.WorkflowName;
 lockWorkflowStatement
-    : LOCK WORKFLOW (VARIABLE | ALL | qualifiedName) onErrorClause?
+    : LOCK WORKFLOW qualifiedName onErrorClause?
     ;
 
-// UNLOCK WORKFLOW $Wf; or UNLOCK WORKFLOW ALL; or UNLOCK WORKFLOW Module.WorkflowName;
+// UNLOCK WORKFLOW Module.WorkflowName;
 unlockWorkflowStatement
-    : UNLOCK WORKFLOW (VARIABLE | ALL | qualifiedName) onErrorClause?
+    : UNLOCK WORKFLOW qualifiedName onErrorClause?
     ;
 
 callArgumentList
