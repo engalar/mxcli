@@ -108,7 +108,7 @@ func (fb *flowBuilder) addCreateObjectAction(s *ast.CreateObjectStmt) model.ID {
 		memberChange := &microflows.MemberChange{
 			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
 			Type:        microflows.MemberChangeTypeSet,
-			Value:       fb.exprToString(change.Value),
+			Value:       fb.memberExpressionToString(change.Value, entityQN, change.Attribute),
 		}
 		fb.resolveMemberChange(memberChange, change.Attribute, entityQN)
 		action.InitialMembers = append(action.InitialMembers, memberChange)
@@ -257,7 +257,7 @@ func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
 		memberChange := &microflows.MemberChange{
 			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
 			Type:        microflows.MemberChangeTypeSet,
-			Value:       fb.exprToString(change.Value),
+			Value:       fb.memberExpressionToString(change.Value, entityQN, change.Attribute),
 		}
 		fb.resolveMemberChange(memberChange, change.Attribute, entityQN)
 		action.Changes = append(action.Changes, memberChange)

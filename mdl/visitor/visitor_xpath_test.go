@@ -343,6 +343,39 @@ func TestXPath_ComplexExpressions(t *testing.T) {
 	}
 }
 
+func TestXPath_EnumValueReference(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			"3-part enum value becomes quoted value",
+			"[Status = BST.ComplianceStatus.Rectified]",
+			"[Status = 'Rectified']",
+		},
+		{
+			"2-part qualified name preserved",
+			"[Module.Association = $object]",
+			"[Module.Association = $object]",
+		},
+		{
+			"string literal enum preserved",
+			"[Status = 'Active']",
+			"[Status = 'Active']",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := roundTripXPath(tt.input)
+			if got != tt.want {
+				t.Errorf("roundTripXPath(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestXPath_ASTTypes(t *testing.T) {
 	t.Run("bare path creates XPathPathExpr", func(t *testing.T) {
 		expr := parseXPathConstraint("[Module.Assoc/Module.Entity/Attr = $val]")

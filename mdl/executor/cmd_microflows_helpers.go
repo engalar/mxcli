@@ -10,6 +10,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -184,10 +185,75 @@ func expressionToXPath(expr ast.Expression) string {
 			return "empty"
 		}
 		return expressionToString(expr)
+	case *ast.QualifiedNameExpr:
+		return qualifiedNameToXPath(e)
 	default:
 		// For all other expression types, the standard serialization is correct
 		return expressionToString(expr)
 	}
+}
+
+// qualifiedNameToXPath converts a QualifiedNameExpr to XPath format.
+// For enum value references (3-part: Module.EnumName.Value), XPath requires
+// just the value name in quotes: 'Value'. For 2-part names (associations,
+// entity references), returns the qualified name as-is.
+func qualifiedNameToXPath(e *ast.QualifiedNameExpr) string {
+	// 3-part names (Name contains a dot) are enum references: Module.EnumName.Value
+	if dotIdx := strings.LastIndex(e.QualifiedName.Name, "."); dotIdx >= 0 {
+		valueName := e.QualifiedName.Name[dotIdx+1:]
+		return "'" + valueName + "'"
+	}
+	return e.QualifiedName.String()
+}
+
+// memberExpressionToString converts an AST Expression to a Mendix expression string,
+// resolving enum string literals to qualified enum names when the attribute type is known.
+// For example, 'Processing' becomes MyModule.ENUM_Status.Processing when the attribute
+// is of type Enumeration(MyModule.ENUM_Status).
+func (fb *flowBuilder) memberExpressionToString(expr ast.Expression, entityQN, attrName string) string {
+	// Only transform string literals for enum attributes
+	if lit, ok := expr.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
+		if enumRef := fb.lookupEnumRef(entityQN, attrName); enumRef != "" {
+			// Convert 'Value' to Module.EnumName.Value
+			return enumRef + "." + fmt.Sprintf("%v", lit.Value)
+		}
+	}
+	return expressionToString(expr)
+}
+
+// lookupEnumRef returns the enumeration qualified name (e.g., "MyModule.ENUM_Status")
+// for an attribute if it is an enumeration type. Returns "" if the attribute is not
+// an enumeration or if the domain model is not available.
+func (fb *flowBuilder) lookupEnumRef(entityQN, attrName string) string {
+	if fb.reader == nil || entityQN == "" || attrName == "" {
+		return ""
+	}
+	parts := strings.SplitN(entityQN, ".", 2)
+	if len(parts) != 2 {
+		return ""
+	}
+	mod, err := fb.reader.GetModuleByName(parts[0])
+	if err != nil || mod == nil {
+		return ""
+	}
+	dm, err := fb.reader.GetDomainModel(mod.ID)
+	if err != nil || dm == nil {
+		return ""
+	}
+	for _, entity := range dm.Entities {
+		if entity.Name == parts[1] {
+			for _, attr := range entity.Attributes {
+				if attr.Name == attrName {
+					if enumType, ok := attr.Type.(*domainmodel.EnumerationAttributeType); ok {
+						return enumType.EnumerationRef
+					}
+					return ""
+				}
+			}
+			return ""
+		}
+	}
+	return ""
 }
 
 // xpathPathExprToString serializes an XPathPathExpr to an XPath path string.
