@@ -395,6 +395,18 @@ func serializeUserTargeting(source workflows.UserSource) bson.D {
 			{Key: "$Type", Value: "Workflows$XPathUserTargeting"},
 			{Key: "XPathConstraint", Value: s.XPath},
 		}
+	case *workflows.MicroflowGroupSource:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Workflows$MicroflowGroupTargeting"},
+			{Key: "Microflow", Value: s.Microflow},
+		}
+	case *workflows.XPathGroupSource:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Workflows$XPathGroupTargeting"},
+			{Key: "XPathConstraint", Value: s.XPath},
+		}
 	default:
 		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
