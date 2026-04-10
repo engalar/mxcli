@@ -2718,8 +2718,8 @@ workflowActivityStmt
 workflowUserTaskStmt
     : USER TASK IDENTIFIER STRING_LITERAL
       (PAGE qualifiedName)?
-      (TARGETING MICROFLOW qualifiedName)?
-      (TARGETING XPATH STRING_LITERAL)?
+      (TARGETING (USERS | GROUPS)? MICROFLOW qualifiedName)?
+      (TARGETING (USERS | GROUPS)? XPATH STRING_LITERAL)?
       (ENTITY qualifiedName)?
       (DUE DATE_TYPE STRING_LITERAL)?
       (DESCRIPTION STRING_LITERAL)?
@@ -2727,8 +2727,8 @@ workflowUserTaskStmt
       (BOUNDARY EVENT workflowBoundaryEventClause+)?
     | MULTI USER TASK IDENTIFIER STRING_LITERAL
       (PAGE qualifiedName)?
-      (TARGETING MICROFLOW qualifiedName)?
-      (TARGETING XPATH STRING_LITERAL)?
+      (TARGETING (USERS | GROUPS)? MICROFLOW qualifiedName)?
+      (TARGETING (USERS | GROUPS)? XPATH STRING_LITERAL)?
       (ENTITY qualifiedName)?
       (DUE DATE_TYPE STRING_LITERAL)?
       (DESCRIPTION STRING_LITERAL)?

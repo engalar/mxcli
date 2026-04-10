@@ -652,6 +652,7 @@ ACTIVITY: A C T I V I T Y;
 CONDITION: C O N D I T I O N;
 OFF: O F F;
 USERS: U S E R S;
+GROUPS: G R O U P S;
 
 // Data transformer tokens
 DATA: D A T A;

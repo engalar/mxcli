@@ -536,6 +536,7 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "CONDITION", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},
 	{Label: "OFF", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},
 	{Label: "USERS", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},
+	{Label: "GROUPS", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},
 	{Label: "DATA", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},
 	{Label: "TRANSFORM", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},
 	{Label: "TRANSFORMER", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},

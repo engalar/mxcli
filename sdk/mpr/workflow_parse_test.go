@@ -206,6 +206,151 @@ func TestParseWorkflowActivity_UnknownType(t *testing.T) {
 	}
 }
 
+func TestParseUserTask_UserTargeting_XPath(t *testing.T) {
+	raw := map[string]any{
+		"$Type":   "Workflows$SingleUserTaskActivity",
+		"$ID":     "ut-001",
+		"Name":    "reviewTask",
+		"Caption": "Review Request",
+		"UserTargeting": map[string]any{
+			"$Type":           "Workflows$XPathUserTargeting",
+			"$ID":             "tgt-001",
+			"XPathConstraint": "[System.UserRoles = '[%UserRole_Manager%]']",
+		},
+	}
+	task := parseUserTask(raw)
+	if task == nil {
+		t.Fatal("parseUserTask returned nil")
+	}
+	xpathSource, ok := task.UserSource.(*workflows.XPathBasedUserSource)
+	if !ok {
+		t.Fatalf("UserSource = %T, want *workflows.XPathBasedUserSource", task.UserSource)
+	}
+	if xpathSource.XPath != "[System.UserRoles = '[%UserRole_Manager%]']" {
+		t.Errorf("XPath = %q, want %q", xpathSource.XPath, "[System.UserRoles = '[%UserRole_Manager%]']")
+	}
+}
+
+func TestParseUserTask_UserTargeting_Microflow(t *testing.T) {
+	raw := map[string]any{
+		"$Type":   "Workflows$SingleUserTaskActivity",
+		"$ID":     "ut-002",
+		"Name":    "approvalTask",
+		"Caption": "Approval",
+		"UserTargeting": map[string]any{
+			"$Type":     "Workflows$MicroflowUserTargeting",
+			"$ID":       "tgt-002",
+			"Microflow": "MyModule.GetTargetUsers",
+		},
+	}
+	task := parseUserTask(raw)
+	if task == nil {
+		t.Fatal("parseUserTask returned nil")
+	}
+	mfSource, ok := task.UserSource.(*workflows.MicroflowBasedUserSource)
+	if !ok {
+		t.Fatalf("UserSource = %T, want *workflows.MicroflowBasedUserSource", task.UserSource)
+	}
+	if mfSource.Microflow != "MyModule.GetTargetUsers" {
+		t.Errorf("Microflow = %q, want %q", mfSource.Microflow, "MyModule.GetTargetUsers")
+	}
+}
+
+func TestParseUserTask_UserTargeting_NoTargeting(t *testing.T) {
+	raw := map[string]any{
+		"$Type":   "Workflows$SingleUserTaskActivity",
+		"$ID":     "ut-003",
+		"Name":    "simpleTask",
+		"Caption": "Simple",
+		"UserTargeting": map[string]any{
+			"$Type": "Workflows$NoUserTargeting",
+			"$ID":   "tgt-003",
+		},
+	}
+	task := parseUserTask(raw)
+	if task == nil {
+		t.Fatal("parseUserTask returned nil")
+	}
+	if _, ok := task.UserSource.(*workflows.NoUserSource); !ok {
+		t.Errorf("UserSource = %T, want *workflows.NoUserSource", task.UserSource)
+	}
+}
+
+func TestParseUserTask_UserTargeting_GroupMicroflow(t *testing.T) {
+	raw := map[string]any{
+		"$Type":   "Workflows$SingleUserTaskActivity",
+		"$ID":     "ut-005",
+		"Name":    "groupTask",
+		"Caption": "Group Review",
+		"UserTargeting": map[string]any{
+			"$Type":     "Workflows$MicroflowGroupTargeting",
+			"$ID":       "tgt-005",
+			"Microflow": "MyModule.GetTargetGroups",
+		},
+	}
+	task := parseUserTask(raw)
+	if task == nil {
+		t.Fatal("parseUserTask returned nil")
+	}
+	groupSource, ok := task.UserSource.(*workflows.MicroflowGroupSource)
+	if !ok {
+		t.Fatalf("UserSource = %T, want *workflows.MicroflowGroupSource", task.UserSource)
+	}
+	if groupSource.Microflow != "MyModule.GetTargetGroups" {
+		t.Errorf("Microflow = %q, want %q", groupSource.Microflow, "MyModule.GetTargetGroups")
+	}
+}
+
+func TestParseUserTask_UserTargeting_GroupXPath(t *testing.T) {
+	raw := map[string]any{
+		"$Type":   "Workflows$SingleUserTaskActivity",
+		"$ID":     "ut-006",
+		"Name":    "groupXPathTask",
+		"Caption": "Group XPath Review",
+		"UserTargeting": map[string]any{
+			"$Type":           "Workflows$XPathGroupTargeting",
+			"$ID":             "tgt-006",
+			"XPathConstraint": "[GroupType = 'Reviewers']",
+		},
+	}
+	task := parseUserTask(raw)
+	if task == nil {
+		t.Fatal("parseUserTask returned nil")
+	}
+	groupSource, ok := task.UserSource.(*workflows.XPathGroupSource)
+	if !ok {
+		t.Fatalf("UserSource = %T, want *workflows.XPathGroupSource", task.UserSource)
+	}
+	if groupSource.XPath != "[GroupType = 'Reviewers']" {
+		t.Errorf("XPath = %q, want %q", groupSource.XPath, "[GroupType = 'Reviewers']")
+	}
+}
+
+func TestParseUserTask_LegacyUserSource_StillWorks(t *testing.T) {
+	raw := map[string]any{
+		"$Type":   "Workflows$SingleUserTaskActivity",
+		"$ID":     "ut-004",
+		"Name":    "legacyTask",
+		"Caption": "Legacy",
+		"UserSource": map[string]any{
+			"$Type":     "Workflows$MicroflowBasedUserSource",
+			"$ID":       "src-001",
+			"Microflow": "OldModule.OldMicroflow",
+		},
+	}
+	task := parseUserTask(raw)
+	if task == nil {
+		t.Fatal("parseUserTask returned nil")
+	}
+	mfSource, ok := task.UserSource.(*workflows.MicroflowBasedUserSource)
+	if !ok {
+		t.Fatalf("UserSource = %T, want *workflows.MicroflowBasedUserSource", task.UserSource)
+	}
+	if mfSource.Microflow != "OldModule.OldMicroflow" {
+		t.Errorf("Microflow = %q, want %q", mfSource.Microflow, "OldModule.OldMicroflow")
+	}
+}
+
 func TestParseBoundaryEvents_EmptyArray(t *testing.T) {
 	// nil input
 	events := parseBoundaryEvents(nil)

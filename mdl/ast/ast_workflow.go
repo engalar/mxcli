@@ -56,10 +56,11 @@ type WorkflowUserTaskNode struct {
 func (n *WorkflowUserTaskNode) workflowActivityNode() {}
 
 // WorkflowTargetingNode represents user targeting strategy.
+// Kind: "microflow", "xpath", "group_microflow", "group_xpath", or ""
 type WorkflowTargetingNode struct {
-	Kind      string        // "microflow", "xpath", or ""
-	Microflow QualifiedName // for microflow targeting
-	XPath     string        // for xpath targeting
+	Kind      string        // "microflow", "xpath", "group_microflow", "group_xpath", or ""
+	Microflow QualifiedName // for microflow targeting (user or group)
+	XPath     string        // for xpath targeting (user or group)
 }
 
 // WorkflowUserTaskOutcomeNode represents an outcome of a user task.

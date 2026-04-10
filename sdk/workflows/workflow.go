@@ -356,6 +356,22 @@ type XPathBasedUserSource struct {
 // UserSourceType returns the type name.
 func (s *XPathBasedUserSource) UserSourceType() string { return "XPath" }
 
+// MicroflowGroupSource targets workflow groups via a microflow.
+type MicroflowGroupSource struct {
+	Microflow string `json:"microflow,omitempty"` // Qualified name of the targeting microflow
+}
+
+// UserSourceType returns the type name.
+func (s *MicroflowGroupSource) UserSourceType() string { return "GroupMicroflow" }
+
+// XPathGroupSource targets workflow groups via an XPath expression.
+type XPathGroupSource struct {
+	XPath string `json:"xpath,omitempty"`
+}
+
+// UserSourceType returns the type name.
+func (s *XPathGroupSource) UserSourceType() string { return "GroupXPath" }
+
 // ============================================================================
 // Parameter Mapping
 // ============================================================================

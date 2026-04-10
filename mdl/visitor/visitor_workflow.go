@@ -436,15 +436,26 @@ func buildWorkflowUserTask(ctx parser.IWorkflowUserTaskStmtContext) *ast.Workflo
 		nameIdx++
 	}
 
+	// Determine if group targeting (TARGETING GROUPS vs TARGETING [USERS])
+	isGroupTargeting := len(utCtx.AllGROUPS()) > 0
+
 	if utCtx.MICROFLOW() != nil && nameIdx < len(names) {
-		node.Targeting.Kind = "microflow"
+		if isGroupTargeting {
+			node.Targeting.Kind = "group_microflow"
+		} else {
+			node.Targeting.Kind = "microflow"
+		}
 		node.Targeting.Microflow = buildQualifiedName(names[nameIdx])
 		nameIdx++
 	}
 
 	stringIdx := 1 // allStrings[0] is the caption
 	if utCtx.XPATH() != nil && stringIdx < len(allStrings) {
-		node.Targeting.Kind = "xpath"
+		if isGroupTargeting {
+			node.Targeting.Kind = "group_xpath"
+		} else {
+			node.Targeting.Kind = "xpath"
+		}
 		node.Targeting.XPath = unquoteString(allStrings[stringIdx].GetText())
 		stringIdx++
 	}
