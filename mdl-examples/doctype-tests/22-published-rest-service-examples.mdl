@@ -23,7 +23,7 @@ BEGIN
 END;
 /
 
-CREATE MICROFLOW PrsTest.PRS_GetOrderById ($httpResponse: System.HttpResponse, $Id: String)
+CREATE MICROFLOW PrsTest.PRS_GetOrderById ($httpResponse: System.HttpResponse, $id: String)
 RETURNS String AS $Result
 BEGIN
   DECLARE $Result String = '{}';
@@ -39,7 +39,7 @@ BEGIN
 END;
 /
 
-CREATE MICROFLOW PrsTest.PRS_DeleteOrder ($httpResponse: System.HttpResponse, $Id: String)
+CREATE MICROFLOW PrsTest.PRS_DeleteOrder ($httpResponse: System.HttpResponse, $id: String)
 RETURNS String AS $Result
 BEGIN
   DECLARE $Result String = '{"status": "deleted"}';

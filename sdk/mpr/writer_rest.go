@@ -342,7 +342,7 @@ func (w *Writer) serializePublishedRestService(svc *model.PublishedRestService) 
 				"ExportMapping": "",
 				"ImportMapping": "",
 				"ObjectHandlingBackup": "Create",
-				"Parameters":  bson.A{int32(2)},
+				"Parameters":  serializePublishedRestParams(op.Path, op.Parameters),
 			}
 			ops = append(ops, opDoc)
 		}
@@ -375,6 +375,43 @@ func (w *Writer) serializePublishedRestService(svc *model.PublishedRestService) 
 	}
 
 	return bson.Marshal(doc)
+}
+
+// serializePublishedRestParams builds the Parameters array for a published REST operation.
+// It auto-extracts path parameters from {paramName} placeholders in the path string,
+// then appends any explicitly declared parameters.
+func serializePublishedRestParams(path string, _ []string) bson.A {
+	params := bson.A{int32(2)}
+	// Extract {paramName} from path
+	for _, name := range extractPathParams(path) {
+		params = append(params, bson.M{
+			"$ID":      idToBsonBinary(generateUUID()),
+			"$Type":    "Rest$RestOperationParameter",
+			"Name":     name,
+			"DataType": "String",
+			"Description": "",
+			"MicroflowParameter": name,
+		})
+	}
+	return params
+}
+
+// extractPathParams returns parameter names from {param} placeholders in a path.
+func extractPathParams(path string) []string {
+	var names []string
+	for {
+		start := strings.Index(path, "{")
+		if start < 0 {
+			break
+		}
+		end := strings.Index(path[start:], "}")
+		if end < 0 {
+			break
+		}
+		names = append(names, path[start+1:start+end])
+		path = path[start+end+1:]
+	}
+	return names
 }
 
 // httpMethodToMendix converts uppercase HTTP method names to Mendix casing.

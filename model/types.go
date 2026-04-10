@@ -602,11 +602,12 @@ type PublishedRestResource struct {
 // PublishedRestOperation represents a Rest$PublishedRestServiceOperation.
 type PublishedRestOperation struct {
 	BaseElement
-	Path       string `json:"path,omitempty"`
-	HTTPMethod string `json:"httpMethod,omitempty"`
-	Summary    string `json:"summary,omitempty"`
-	Microflow  string `json:"microflow,omitempty"`
-	Deprecated bool   `json:"deprecated,omitempty"`
+	Path       string   `json:"path,omitempty"`
+	HTTPMethod string   `json:"httpMethod,omitempty"`
+	Summary    string   `json:"summary,omitempty"`
+	Microflow  string   `json:"microflow,omitempty"`
+	Deprecated bool     `json:"deprecated,omitempty"`
+	Parameters []string `json:"parameters,omitempty"` // path parameter names extracted from {param} in Path
 }
 
 // ============================================================================
