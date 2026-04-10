@@ -342,7 +342,7 @@ func (w *Writer) serializePublishedRestService(svc *model.PublishedRestService) 
 				"ExportMapping": "",
 				"ImportMapping": "",
 				"ObjectHandlingBackup": "Create",
-				"Parameters":  serializePublishedRestParams(op.Path, op.Parameters),
+				"Parameters":  serializePublishedRestParams(op.Path, op.Microflow),
 			}
 			ops = append(ops, opDoc)
 		}
@@ -380,16 +380,28 @@ func (w *Writer) serializePublishedRestService(svc *model.PublishedRestService) 
 // serializePublishedRestParams builds the Parameters array for a published REST operation.
 // It auto-extracts path parameters from {paramName} placeholders in the path string,
 // then appends any explicitly declared parameters.
-func serializePublishedRestParams(path string, _ []string) bson.A {
-	params := bson.A{int32(2)}
-	// Extract {paramName} from path
-	for _, name := range extractPathParams(path) {
+// serializePublishedRestParams builds the Parameters array for a published REST operation.
+// Auto-extracts path parameters from {paramName} placeholders in the path string.
+// microflowQN is the qualified name of the backing microflow (e.g., "Module.MF_Name").
+func serializePublishedRestParams(path string, microflowQN string) bson.A {
+	names := extractPathParams(path)
+	if len(names) == 0 {
+		return bson.A{int32(2)}
+	}
+	// Version marker: 3 for non-empty arrays (Mendix 11.x convention)
+	params := bson.A{int32(3)}
+	for _, name := range names {
 		params = append(params, bson.M{
-			"$ID":         idToBsonBinary(generateUUID()),
-			"$Type":       "Rest$RestOperationParameter",
-			"Name":        name,
-			"DataType":    "String",
-			"Description": "",
+			"$ID":                idToBsonBinary(generateUUID()),
+			"$Type":              "Rest$RestOperationParameter",
+			"Name":               name,
+			"Description":        "",
+			"MicroflowParameter": microflowQN + "." + name,
+			"ParameterType":      "Path",
+			"Type": bson.M{
+				"$ID":   idToBsonBinary(generateUUID()),
+				"$Type": "DataTypes$StringType",
+			},
 		})
 	}
 	return params

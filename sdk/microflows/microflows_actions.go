@@ -977,6 +977,7 @@ func (OpenUserTaskAction) isMicroflowAction() {}
 // NotifyWorkflowAction notifies/wakes a waiting workflow.
 type NotifyWorkflowAction struct {
 	model.BaseElement
+	Activity           string            `json:"activity,omitempty"` // qualified ref: Module.Workflow.Activity
 	ErrorHandlingType  ErrorHandlingType `json:"errorHandlingType,omitempty"`
 	OutputVariableName string            `json:"outputVariableName,omitempty"`
 	WorkflowVariable   string            `json:"workflowVariable,omitempty"`

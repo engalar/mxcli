@@ -47,6 +47,10 @@ var scriptKnownCEErrors = map[string][]string{
 		"CE0463", // Widget definition changed (TEXTFILTER template property count mismatch)
 		"CE1613", // ComboBox enum attribute written as association pointer
 	},
+	"workflow-microflow-actions.mdl": {
+		"CE0166", // NotifyWorkflowAction: Activity property required (needs workflow activity reference in MDL)
+		"CE1825", // Lock/Unlock ALL: WorkflowSelection not supported without named workflow in Mendix 11.x
+	},
 }
 
 // TestMxCheck_DoctypeScripts executes each doctype-tests/*.mdl example script

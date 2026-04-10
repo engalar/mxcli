@@ -606,8 +606,7 @@ type PublishedRestOperation struct {
 	HTTPMethod string   `json:"httpMethod,omitempty"`
 	Summary    string   `json:"summary,omitempty"`
 	Microflow  string   `json:"microflow,omitempty"`
-	Deprecated bool     `json:"deprecated,omitempty"`
-	Parameters []string `json:"parameters,omitempty"` // path parameter names extracted from {param} in Path
+	Deprecated bool `json:"deprecated,omitempty"`
 }
 
 // ============================================================================

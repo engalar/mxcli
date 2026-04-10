@@ -131,6 +131,7 @@ func serializeNotifyWorkflowAction(a *microflows.NotifyWorkflowAction) bson.D {
 	return bson.D{
 		{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 		{Key: "$Type", Value: "Microflows$NotifyWorkflowAction"},
+		{Key: "Activity", Value: a.Activity},
 		{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
 		{Key: "OutputVariableName", Value: a.OutputVariableName},
 		{Key: "WorkflowVariable", Value: a.WorkflowVariable},
@@ -154,8 +155,7 @@ func serializeLockWorkflowAction(a *microflows.LockWorkflowAction) bson.D {
 		{Key: "PauseAllWorkflows", Value: a.PauseAllWorkflows},
 	}
 	if !a.PauseAllWorkflows {
-		selDoc := serializeWorkflowSelection(a.Workflow, a.WorkflowVariable)
-		doc = append(doc, bson.E{Key: "WorkflowSelection", Value: selDoc})
+		doc = append(doc, bson.E{Key: "WorkflowSelection", Value: serializeWorkflowSelection(a.Workflow, a.WorkflowVariable)})
 	}
 	return doc
 }
@@ -168,8 +168,7 @@ func serializeUnlockWorkflowAction(a *microflows.UnlockWorkflowAction) bson.D {
 		{Key: "ResumeAllPausedWorkflows", Value: a.ResumeAllPausedWorkflows},
 	}
 	if !a.ResumeAllPausedWorkflows {
-		selDoc := serializeWorkflowSelection(a.Workflow, a.WorkflowVariable)
-		doc = append(doc, bson.E{Key: "WorkflowSelection", Value: selDoc})
+		doc = append(doc, bson.E{Key: "WorkflowSelection", Value: serializeWorkflowSelection(a.Workflow, a.WorkflowVariable)})
 	}
 	return doc
 }

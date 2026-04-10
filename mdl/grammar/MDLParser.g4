@@ -1377,14 +1377,14 @@ openWorkflowStatement
     : OPEN WORKFLOW VARIABLE onErrorClause?
     ;
 
-// LOCK WORKFLOW $Wf; or LOCK WORKFLOW ALL;
+// LOCK WORKFLOW $Wf; or LOCK WORKFLOW ALL; or LOCK WORKFLOW Module.WorkflowName;
 lockWorkflowStatement
-    : LOCK WORKFLOW (VARIABLE | ALL) onErrorClause?
+    : LOCK WORKFLOW (VARIABLE | ALL | qualifiedName) onErrorClause?
     ;
 
-// UNLOCK WORKFLOW $Wf; or UNLOCK WORKFLOW ALL;
+// UNLOCK WORKFLOW $Wf; or UNLOCK WORKFLOW ALL; or UNLOCK WORKFLOW Module.WorkflowName;
 unlockWorkflowStatement
-    : UNLOCK WORKFLOW (VARIABLE | ALL) onErrorClause?
+    : UNLOCK WORKFLOW (VARIABLE | ALL | qualifiedName) onErrorClause?
     ;
 
 callArgumentList

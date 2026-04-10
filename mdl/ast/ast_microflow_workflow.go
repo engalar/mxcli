@@ -93,9 +93,10 @@ type OpenWorkflowStmt struct {
 
 func (*OpenWorkflowStmt) isMicroflowStatement() {}
 
-// LockWorkflowStmt represents: LOCK WORKFLOW ($WorkflowVar | ALL)
+// LockWorkflowStmt represents: LOCK WORKFLOW ($WorkflowVar | ALL | Module.WorkflowName)
 type LockWorkflowStmt struct {
 	WorkflowVariable  string
+	Workflow          QualifiedName // named workflow definition reference
 	PauseAllWorkflows bool
 	ErrorHandling     *ErrorHandlingClause
 	Annotations       *ActivityAnnotations
@@ -103,9 +104,10 @@ type LockWorkflowStmt struct {
 
 func (*LockWorkflowStmt) isMicroflowStatement() {}
 
-// UnlockWorkflowStmt represents: UNLOCK WORKFLOW ($WorkflowVar | ALL)
+// UnlockWorkflowStmt represents: UNLOCK WORKFLOW ($WorkflowVar | ALL | Module.WorkflowName)
 type UnlockWorkflowStmt struct {
 	WorkflowVariable         string
+	Workflow                 QualifiedName // named workflow definition reference
 	ResumeAllPausedWorkflows bool
 	ErrorHandling            *ErrorHandlingClause
 	Annotations              *ActivityAnnotations
