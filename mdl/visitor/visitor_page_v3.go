@@ -1163,6 +1163,12 @@ func xpathExprToString(expr ast.Expression) string {
 	case *ast.IdentifierExpr:
 		return e.Name
 	case *ast.QualifiedNameExpr:
+		// For enum value references (3-part: Module.EnumName.Value), XPath requires
+		// just the value name in quotes: 'Value'.
+		if dotIdx := strings.LastIndex(e.QualifiedName.Name, "."); dotIdx >= 0 {
+			valueName := e.QualifiedName.Name[dotIdx+1:]
+			return "'" + valueName + "'"
+		}
 		return e.QualifiedName.String()
 	default:
 		return ""
