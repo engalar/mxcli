@@ -3589,7 +3589,7 @@ keyword
     | READ | WRITE | CATALOG | FORCE | DEPTH                 // Query/access keywords
     | JAVA | EVENTS | OVER | MEMBERS                         // Miscellaneous keywords
     | WORKFLOW | WORKFLOWS | REFERENCES | CALLERS | CALLEES   // Code search keywords
-    | TASK | DECISION | SPLIT | OUTCOMES | TARGETING | NOTIFICATION | TIMER | JUMP | DUE | OVERVIEW | DATE | PARALLEL | WAIT | BY // Workflow keywords
+    | TASK | DECISION | SPLIT | OUTCOMES | TARGETING | NOTIFICATION | TIMER | JUMP | DUE | OVERVIEW | DATE | PARALLEL | WAIT | BY | OPEN // Workflow keywords
     | TRANSITIVE | IMPACT | SEARCH                           // Additional search keywords
     | BUSINESS | EVENT | SUBSCRIBE | SETTINGS | CONFIGURATION  // Business events / settings keywords
     | DEFINE | FRAGMENT | FRAGMENTS                            // Fragment keywords
