@@ -87,8 +87,17 @@ func AugmentTemplate(tmpl *WidgetTemplate, def *mpk.WidgetDefinition) error {
 		}
 	}
 
-	// Nothing to add/remove
-	if len(missing) == 0 && len(stale) == 0 {
+	// Check if nested augmentation is needed (skip early return if so)
+	hasNestedChildren := false
+	for _, p := range def.Properties {
+		if len(p.Children) > 0 {
+			hasNestedChildren = true
+			break
+		}
+	}
+
+	// Nothing to add/remove at top level, and no nested children to process
+	if len(missing) == 0 && len(stale) == 0 && !hasNestedChildren {
 		return nil
 	}
 
@@ -131,9 +140,236 @@ func AugmentTemplate(tmpl *WidgetTemplate, def *mpk.WidgetDefinition) error {
 		}
 	}
 
-	// Write back
+	// Write back top-level
 	setArrayField(objType, "PropertyTypes", propTypes)
 	setArrayField(tmpl.Object, "Properties", objProps)
+
+	// Augment nested ObjectType properties (e.g., DataGrid2 column properties).
+	// Top-level augmentation syncs the property list, but nested ObjectTypes inside
+	// IsList Object properties also need syncing when the .mpk version differs
+	// from the template version.
+	for _, mpkProp := range def.Properties {
+		if len(mpkProp.Children) == 0 {
+			continue
+		}
+		if err := augmentNestedObjectType(propTypes, objProps, mpkProp); err != nil {
+			return fmt.Errorf("augment nested %s: %w", mpkProp.Key, err)
+		}
+	}
+
+	return nil
+}
+
+// augmentNestedObjectType syncs nested ObjectType PropertyTypes for an Object-type property.
+// When a .mpk defines children for a property (e.g., DataGrid2 "columns" has showContentAs,
+// attribute, content, header, etc.), this function ensures the template's nested ObjectType
+// has the same PropertyTypes as the .mpk, adding missing ones and removing stale ones.
+func augmentNestedObjectType(propTypes []any, objProps []any, mpkProp mpk.PropertyDef) error {
+	// Find the PropertyType matching this .mpk property
+	var matchedPT map[string]any
+	var matchedPTID string
+	for _, pt := range propTypes {
+		ptMap, ok := pt.(map[string]any)
+		if !ok {
+			continue
+		}
+		key, _ := ptMap["PropertyKey"].(string)
+		if key == mpkProp.Key {
+			matchedPT = ptMap
+			matchedPTID, _ = ptMap["$ID"].(string)
+			break
+		}
+	}
+	if matchedPT == nil {
+		return nil // PropertyType not found; top-level augmentation should have added it
+	}
+
+	// Navigate to ValueType.ObjectType.PropertyTypes
+	vt, ok := getMapField(matchedPT, "ValueType")
+	if !ok {
+		return nil
+	}
+	nestedObjType, ok := getMapField(vt, "ObjectType")
+	if !ok || nestedObjType == nil {
+		return nil
+	}
+	nestedPropTypes, ok := getArrayField(nestedObjType, "PropertyTypes")
+	if !ok {
+		return nil
+	}
+
+	// Build set of existing nested property keys
+	existingKeys := make(map[string]bool)
+	nestedExemplars := make(map[string]int)
+	for i, npt := range nestedPropTypes {
+		nptMap, ok := npt.(map[string]any)
+		if !ok {
+			continue
+		}
+		key, _ := nptMap["PropertyKey"].(string)
+		if key == "" {
+			continue
+		}
+		existingKeys[key] = true
+
+		// Record exemplar by value type
+		nvt, ok := getMapField(nptMap, "ValueType")
+		if ok {
+			vtType, _ := nvt["Type"].(string)
+			if vtType != "" {
+				if _, exists := nestedExemplars[vtType]; !exists {
+					nestedExemplars[vtType] = i
+				}
+			}
+		}
+	}
+
+	// Build set of .mpk child keys
+	mpkChildKeys := make(map[string]bool)
+	for _, child := range mpkProp.Children {
+		mpkChildKeys[child.Key] = true
+	}
+
+	// Find missing (in .mpk but not in template nested ObjectType)
+	var missing []mpk.PropertyDef
+	for _, child := range mpkProp.Children {
+		if !existingKeys[child.Key] {
+			missing = append(missing, child)
+		}
+	}
+
+	// Find stale (in template but not in .mpk)
+	var staleKeys []string
+	for key := range existingKeys {
+		if !mpkChildKeys[key] {
+			staleKeys = append(staleKeys, key)
+		}
+	}
+
+	if len(missing) == 0 && len(staleKeys) == 0 {
+		return nil
+	}
+
+	// Also find the corresponding Object WidgetProperty and its nested WidgetObjects
+	var nestedObjProps [][]any // one per WidgetObject in the Objects array
+	var objPropContainers []map[string]any
+	for _, prop := range objProps {
+		propMap, ok := prop.(map[string]any)
+		if !ok {
+			continue
+		}
+		tp, _ := propMap["TypePointer"].(string)
+		if tp != matchedPTID {
+			continue
+		}
+		// Navigate to Value.Objects
+		val, ok := getMapField(propMap, "Value")
+		if !ok {
+			continue
+		}
+		objects, ok := getArrayField(val, "Objects")
+		if !ok {
+			continue
+		}
+		for _, obj := range objects {
+			objMap, ok := obj.(map[string]any)
+			if !ok {
+				continue
+			}
+			props, ok := getArrayField(objMap, "Properties")
+			if ok {
+				nestedObjProps = append(nestedObjProps, props)
+				objPropContainers = append(objPropContainers, objMap)
+			}
+		}
+		break
+	}
+
+	// Remove stale nested PropertyTypes and Properties
+	if len(staleKeys) > 0 {
+		staleSet := make(map[string]bool, len(staleKeys))
+		for _, key := range staleKeys {
+			staleSet[key] = true
+		}
+		// Collect IDs of stale PropertyTypes
+		staleIDs := make(map[string]bool)
+		var filteredPropTypes []any
+		for _, npt := range nestedPropTypes {
+			nptMap, ok := npt.(map[string]any)
+			if !ok {
+				filteredPropTypes = append(filteredPropTypes, npt)
+				continue
+			}
+			key, _ := nptMap["PropertyKey"].(string)
+			if staleSet[key] {
+				id, _ := nptMap["$ID"].(string)
+				if id != "" {
+					staleIDs[id] = true
+				}
+				continue
+			}
+			filteredPropTypes = append(filteredPropTypes, npt)
+		}
+		nestedPropTypes = filteredPropTypes
+
+		// Remove matching Properties from each WidgetObject
+		for i, nop := range nestedObjProps {
+			var filtered []any
+			for _, prop := range nop {
+				propMap, ok := prop.(map[string]any)
+				if !ok {
+					filtered = append(filtered, prop)
+					continue
+				}
+				tp, _ := propMap["TypePointer"].(string)
+				if staleIDs[tp] {
+					continue
+				}
+				filtered = append(filtered, prop)
+			}
+			nestedObjProps[i] = filtered
+		}
+	}
+
+	// Add missing nested PropertyTypes and Properties
+	for _, child := range missing {
+		bsonType := xmlTypeToBSONType(child.Type)
+		if bsonType == "" {
+			continue
+		}
+
+		exemplarIdx, hasExemplar := nestedExemplars[bsonType]
+		var newPropType, newProp map[string]any
+		if hasExemplar && len(nestedObjProps) > 0 {
+			var err error
+			newPropType, newProp, err = clonePropertyPair(nestedPropTypes, nestedObjProps[0], exemplarIdx, child)
+			if err != nil {
+				return fmt.Errorf("clone nested property %q: %w", child.Key, err)
+			}
+		}
+		if newPropType == nil || newProp == nil {
+			newPropType, newProp = createPropertyPair(child, bsonType)
+		}
+
+		if newPropType != nil {
+			nestedPropTypes = append(nestedPropTypes, newPropType)
+		}
+		if newProp != nil {
+			for i := range nestedObjProps {
+				nestedObjProps[i] = append(nestedObjProps[i], newProp)
+			}
+		}
+	}
+
+	// Write back nested PropertyTypes
+	setArrayField(nestedObjType, "PropertyTypes", nestedPropTypes)
+
+	// Write back nested Object Properties
+	for i, container := range objPropContainers {
+		if i < len(nestedObjProps) {
+			setArrayField(container, "Properties", nestedObjProps[i])
+		}
+	}
 
 	return nil
 }

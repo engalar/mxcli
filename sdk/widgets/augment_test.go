@@ -697,3 +697,199 @@ func bsonTypeToXmlType(bsonType string) string {
 		return "string"
 	}
 }
+
+func TestAugmentTemplate_NestedObjectType_AddMissing(t *testing.T) {
+	ResetPlaceholderCounter()
+
+	// Template has an Object-type property "columns" with one nested property "header"
+	tmpl := &WidgetTemplate{
+		WidgetID: "test.DataGrid",
+		Type: map[string]any{
+			"$ID":   "type0001",
+			"$Type": "CustomWidgets$CustomWidgetType",
+			"ObjectType": map[string]any{
+				"$ID":   "objtype0001",
+				"$Type": "CustomWidgets$WidgetObjectType",
+				"PropertyTypes": []any{
+					float64(2),
+					map[string]any{
+						"$ID":         "pt-columns",
+						"$Type":       "CustomWidgets$WidgetPropertyType",
+						"Caption":     "Columns",
+						"Category":    "General",
+						"Description": "",
+						"IsDefault":   false,
+						"PropertyKey": "columns",
+						"ValueType": map[string]any{
+							"$ID":      "vt-columns",
+							"$Type":    "CustomWidgets$WidgetValueType",
+							"Type":     "Object",
+							"IsList":   true,
+							"Required": false,
+							"ObjectType": map[string]any{
+								"$ID":   "nested-objtype",
+								"$Type": "CustomWidgets$WidgetObjectType",
+								"PropertyTypes": []any{
+									float64(2),
+									map[string]any{
+										"$ID":         "npt-header",
+										"$Type":       "CustomWidgets$WidgetPropertyType",
+										"Caption":     "Header",
+										"Category":    "General",
+										"Description": "",
+										"IsDefault":   false,
+										"PropertyKey": "header",
+										"ValueType": map[string]any{
+											"$ID":          "nvt-header",
+											"$Type":        "CustomWidgets$WidgetValueType",
+											"Type":         "TextTemplate",
+											"DefaultValue": "",
+											"Required":     false,
+											"IsList":       false,
+										},
+									},
+								},
+							},
+							"DefaultValue":                "",
+							"DataSourceProperty":          "",
+							"EnumerationValues":           []any{float64(2)},
+							"ReturnType":                  nil,
+							"AllowNonPersistableEntities": false,
+							"AllowedTypes":                []any{float64(1)},
+							"AssociationTypes":            []any{float64(1)},
+							"DefaultType":                 "None",
+							"EntityProperty":              "",
+							"IsLinked":                    false,
+						},
+					},
+				},
+			},
+		},
+		Object: map[string]any{
+			"$ID":   "obj0001",
+			"$Type": "CustomWidgets$WidgetObject",
+			"Properties": []any{
+				float64(2),
+				map[string]any{
+					"$ID":         "prop-columns",
+					"$Type":       "CustomWidgets$WidgetProperty",
+					"TypePointer": "pt-columns",
+					"Value": map[string]any{
+						"$ID":         "val-columns",
+						"$Type":       "CustomWidgets$WidgetValue",
+						"TypePointer": "vt-columns",
+						"Objects": []any{
+							float64(2),
+							map[string]any{
+								"$ID":         "col-obj-1",
+								"$Type":       "CustomWidgets$WidgetObject",
+								"TypePointer": "nested-objtype",
+								"Properties": []any{
+									float64(2),
+									map[string]any{
+										"$ID":         "col-prop-header",
+										"$Type":       "CustomWidgets$WidgetProperty",
+										"TypePointer": "npt-header",
+										"Value": map[string]any{
+											"$ID":         "col-val-header",
+											"$Type":       "CustomWidgets$WidgetValue",
+											"TypePointer": "nvt-header",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// .mpk defines "columns" with two children: "header" (existing) and "tooltip" (new)
+	def := &mpk.WidgetDefinition{
+		ID:   "test.DataGrid",
+		Name: "DataGrid",
+		Properties: []mpk.PropertyDef{
+			{
+				Key:  "columns",
+				Type: "object",
+				Children: []mpk.PropertyDef{
+					{Key: "header", Type: "textTemplate", Caption: "Header"},
+					{Key: "tooltip", Type: "textTemplate", Caption: "Tooltip"},
+				},
+			},
+		},
+	}
+
+	err := AugmentTemplate(tmpl, def)
+	if err != nil {
+		t.Fatalf("AugmentTemplate failed: %v", err)
+	}
+
+	// Verify nested ObjectType now has 2 PropertyTypes
+	objType, _ := getMapField(tmpl.Type, "ObjectType")
+	propTypes, _ := getArrayField(objType, "PropertyTypes")
+	// Find the columns PropertyType
+	for _, pt := range propTypes {
+		ptMap, ok := pt.(map[string]any)
+		if !ok {
+			continue
+		}
+		if ptMap["PropertyKey"] != "columns" {
+			continue
+		}
+		vt, _ := getMapField(ptMap, "ValueType")
+		nestedOT, _ := getMapField(vt, "ObjectType")
+		nestedPTs, _ := getArrayField(nestedOT, "PropertyTypes")
+
+		// Count non-marker entries
+		count := 0
+		hasTooltip := false
+		for _, npt := range nestedPTs {
+			nptMap, ok := npt.(map[string]any)
+			if !ok {
+				continue
+			}
+			count++
+			if nptMap["PropertyKey"] == "tooltip" {
+				hasTooltip = true
+			}
+		}
+		if count != 2 {
+			t.Errorf("expected 2 nested PropertyTypes, got %d", count)
+		}
+		if !hasTooltip {
+			t.Error("expected nested PropertyType 'tooltip' to be added")
+		}
+	}
+
+	// Verify nested Object Properties also has the new property
+	objProps, _ := getArrayField(tmpl.Object, "Properties")
+	for _, prop := range objProps {
+		propMap, ok := prop.(map[string]any)
+		if !ok {
+			continue
+		}
+		if propMap["TypePointer"] != "pt-columns" {
+			continue
+		}
+		val, _ := getMapField(propMap, "Value")
+		objects, _ := getArrayField(val, "Objects")
+		for _, obj := range objects {
+			objMap, ok := obj.(map[string]any)
+			if !ok {
+				continue
+			}
+			nestedProps, _ := getArrayField(objMap, "Properties")
+			count := 0
+			for _, np := range nestedProps {
+				if _, ok := np.(map[string]any); ok {
+					count++
+				}
+			}
+			if count != 2 {
+				t.Errorf("expected 2 nested Object Properties, got %d", count)
+			}
+		}
+	}
+}
