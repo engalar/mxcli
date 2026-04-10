@@ -22,6 +22,39 @@ var (
 	initContainerRuntime string
 )
 
+const mendixGitignore = `# Mendix project
+/**/node_modules/
+!/javascriptsource/**/node_modules/
+/*.launch
+/.classpath
+/.mendix-cache/
+/.project
+/deployment/
+/javasource/*/proxies/
+/javasource/system/
+/modeler-merge-marker
+/nativemobile/builds/
+/packages/
+/project-settings.user.json
+/releases/
+*.mpr.lock
+*.mpr.bak
+/vendorlib/temp/
+/.svn/
+
+# MPR v2 journal files
+/mprcontents/mprjournal*
+
+# OS
+.DS_Store
+
+# mxcli
+.claude/settings.local.json
+mxcli
+mxcli.exe
+.mxcli/
+`
+
 var initCmd = &cobra.Command{
 	Use:   "init [project-directory]",
 	Short: "Initialize a Mendix project for AI-assisted development",
@@ -471,6 +504,16 @@ Container Runtime:
 			}
 		}
 
+		// Create .gitignore if it doesn't exist
+		gitignorePath := filepath.Join(absDir, ".gitignore")
+		if _, err := os.Stat(gitignorePath); os.IsNotExist(err) {
+			if err := os.WriteFile(gitignorePath, []byte(mendixGitignore), 0644); err != nil {
+				fmt.Fprintf(os.Stderr, "  Error writing .gitignore: %v\n", err)
+			} else {
+				fmt.Println("\nCreated .gitignore")
+			}
+		}
+
 		// Create .playwright/cli.config.json for playwright-cli
 		playwrightDir := filepath.Join(absDir, ".playwright")
 		playwrightConfig := filepath.Join(playwrightDir, "cli.config.json")
@@ -494,6 +537,7 @@ Container Runtime:
 
 		fmt.Println("\n✓ Initialization complete!")
 		fmt.Println("\nWhat was created:")
+		fmt.Println("  • .gitignore - Mendix project ignore patterns")
 		fmt.Println("  • AGENTS.md - Universal AI assistant guide")
 		fmt.Println("  • .ai-context/skills/ - MDL pattern guides")
 		fmt.Println("  • .devcontainer/ - Dev container configuration")
