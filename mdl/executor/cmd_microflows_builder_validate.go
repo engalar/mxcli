@@ -16,8 +16,16 @@ func ValidateMicroflowBody(s *ast.CreateMicroflowStmt) []string {
 	varTypes := make(map[string]string)
 	declaredVars := make(map[string]string)
 
+	var paramErrors []string
 	for _, p := range s.Parameters {
 		if p.Type.EntityRef != nil {
+			// Reject bare entity names (empty module) — e.g., "Object" instead of "System.Workflow"
+			if p.Type.EntityRef.Module == "" {
+				paramErrors = append(paramErrors, fmt.Sprintf(
+					"parameter '$%s': entity type '%s' is missing module prefix (use 'Module.%s')",
+					p.Name, p.Type.EntityRef.Name, p.Type.EntityRef.Name))
+				continue
+			}
 			entityQN := p.Type.EntityRef.Module + "." + p.Type.EntityRef.Name
 			if p.Type.Kind == ast.TypeListOf {
 				varTypes[p.Name] = "List of " + entityQN
@@ -28,6 +36,9 @@ func ValidateMicroflowBody(s *ast.CreateMicroflowStmt) []string {
 			// Primitive type parameters
 			declaredVars[p.Name] = p.Type.Kind.String()
 		}
+	}
+	if len(paramErrors) > 0 {
+		return paramErrors
 	}
 
 	// Create a validation-only flow builder

@@ -2,9 +2,9 @@
 -- Verifies parsing of all 11 workflow action types in microflows
 
 CREATE MICROFLOW TestModule.MF_WorkflowActions (
-  $Workflow: Object,
-  $ContextObj: Object,
-  $UserTask: Object
+  $Workflow: System.Workflow,
+  $ContextObj: System.Workflow,
+  $UserTask: System.WorkflowUserTask
 )
 RETURNS Nothing
 BEGIN

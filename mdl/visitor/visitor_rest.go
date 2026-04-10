@@ -298,16 +298,12 @@ func (b *Builder) ExitCreatePublishedRestServiceStatement(ctx *parser.CreatePubl
 				opDef.HTTPMethod = strings.ToUpper(mCtx.GetText())
 			}
 
-			// Operation path
+			// Operation path — strip leading/trailing slashes (CE6550/CE6551)
 			if pCtx := oc.PublishedRestOpPath(); pCtx != nil {
 				pc := pCtx.(*parser.PublishedRestOpPathContext)
 				if pc.STRING_LITERAL() != nil {
-					opDef.Path = unquoteString(pc.STRING_LITERAL().GetText())
-				} else {
-					opDef.Path = "/"
+					opDef.Path = strings.Trim(unquoteString(pc.STRING_LITERAL().GetText()), "/")
 				}
-			} else {
-				opDef.Path = "/"
 			}
 
 			// Microflow reference
