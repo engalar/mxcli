@@ -207,6 +207,30 @@ Example:
 		// Build registry path from args: "workflow user-task" → "workflow.user-task"
 		path := strings.ToLower(strings.Join(args, "."))
 
+		// Map legacy topic aliases to registry paths
+		topicAliases := map[string]string{
+			"keywords":        "domain-model.keywords",
+			"reserved":        "domain-model.keywords",
+			"types":           "domain-model.types",
+			"datatypes":       "domain-model.types",
+			"data-types":      "domain-model.types",
+			"delete":          "domain-model.association.delete-behavior",
+			"delete_behavior": "domain-model.association.delete-behavior",
+			"delete-behavior": "domain-model.association.delete-behavior",
+			"entity":          "domain-model.entity",
+			"entities":        "domain-model.entity",
+			"enumeration":     "domain-model.enumeration",
+			"enum":            "domain-model.enumeration",
+			"enumerations":    "domain-model.enumeration",
+			"constant":        "domain-model.constant",
+			"constants":       "domain-model.constant",
+			"association":     "domain-model.association",
+			"associations":    "domain-model.association",
+		}
+		if alias, ok := topicAliases[path]; ok {
+			path = alias
+		}
+
 		// Check registry first
 		if syntax.HasPrefix(path) {
 			features := syntax.ByPrefix(path)
@@ -221,58 +245,14 @@ Example:
 		// Fall back to legacy topics (first arg only)
 		topic := strings.ToLower(args[0])
 		switch topic {
-		case "keywords", "reserved":
-			showKeywords()
-		case "types", "datatypes", "data-types":
-			showTypes()
-		case "delete", "delete_behavior", "delete-behavior":
-			showDeleteBehaviors()
-		case "entity", "entities":
-			showTopicHelp("entity")
-		case "enumeration", "enum", "enumerations":
-			showTopicHelp("enumeration")
-		case "constant", "constants":
-			showTopicHelp("constant")
-		case "association", "associations":
-			showTopicHelp("association")
 		case "microflow", "microflows":
 			showTopicHelp("microflow")
 		case "page", "pages":
 			showTopicHelp("page")
 		case "snippet", "snippets":
 			showTopicHelp("snippet")
-		case "move":
-			showTopicHelp("move")
-		case "structure":
-			showTopicHelp("structure")
-		case "search":
-			showTopicHelp("search")
-		case "odata":
-			showTopicHelp("odata")
-		case "rest", "rest-client", "rest-clients":
-			showTopicHelp("rest")
-		case "integration", "integrations", "services":
-			showTopicHelp("integration")
-		case "contract", "contracts":
-			showTopicHelp("integration")
-		case "navigation", "nav":
-			showTopicHelp("navigation")
-		case "settings", "project-settings":
-			showTopicHelp("settings")
 		case "fragment", "fragments":
 			showTopicHelp("fragment")
-		case "java-action", "javaaction", "java_action", "java-actions", "javaactions":
-			showTopicHelp("java-action")
-		case "business-events", "businessevents", "business_events", "be":
-			showTopicHelp("business-events")
-		case "xpath", "xpath-constraints":
-			showTopicHelp("xpath")
-		case "oql":
-			showTopicHelp("oql")
-		case "sql", "external-sql":
-			showTopicHelp("sql")
-		case "errors", "validation":
-			showTopicHelp("errors")
 		default:
 			fmt.Printf("Unknown topic: %s\n\n", topic)
 			cmd.Help()
