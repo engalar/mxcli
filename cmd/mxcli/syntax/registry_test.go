@@ -158,6 +158,48 @@ func TestWriteText_MultipleFeatures(t *testing.T) {
 	}
 }
 
+func TestResolveAlias(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"entity", "domain-model.entity"},
+		{"entities", "domain-model.entity"},
+		{"enum", "domain-model.enumeration"},
+		{"association", "domain-model.association"},
+		{"nav", "navigation"},
+		{"be", "business-events"},
+		{"validation", "errors"},
+		{"testing", "test"},
+		{"tests", "test"},
+		// Non-alias passes through unchanged
+		{"workflow", "workflow"},
+		{"security", "security"},
+		{"nonexistent", "nonexistent"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := ResolveAlias(tt.input)
+			if got != tt.want {
+				t.Errorf("ResolveAlias(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAliasTargetsExist(t *testing.T) {
+	all := All()
+	pathSet := make(map[string]bool, len(all))
+	for _, f := range all {
+		pathSet[f.Path] = true
+	}
+	for alias, target := range topicAliases {
+		if !HasPrefix(target) {
+			t.Errorf("alias %q -> %q: target path has no matching features", alias, target)
+		}
+	}
+}
+
 func TestSeeAlsoRefsExist(t *testing.T) {
 	all := All()
 	pathSet := make(map[string]bool, len(all))

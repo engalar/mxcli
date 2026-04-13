@@ -1,0 +1,19 @@
+-- Help command examples (syntax-only, no project needed)
+
+-- Bare HELP shows overview
+HELP;
+
+-- HELP with single topic
+HELP workflow;
+
+-- HELP with multi-word topic
+HELP user task;
+
+-- HELP with nested path
+HELP workflow user task targeting;
+
+-- HELP with alias (entity -> domain-model.entity)
+HELP entity;
+
+-- HELP with unknown topic (should print "No syntax help found")
+HELP nonexistenttopic;

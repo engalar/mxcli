@@ -83,7 +83,8 @@ func capitalize(s string) string {
 	if s == "" {
 		return s
 	}
-	return strings.ToUpper(s[:1]) + s[1:]
+	r := []rune(s)
+	return strings.ToUpper(string(r[:1])) + string(r[1:])
 }
 
 type featureGroup struct {

@@ -11,53 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// topicAliases maps legacy topic names and plurals to registry paths.
-var topicAliases = map[string]string{
-	// Domain model aliases
-	"keywords":        "domain-model.keywords",
-	"reserved":        "domain-model.keywords",
-	"types":           "domain-model.types",
-	"datatypes":       "domain-model.types",
-	"data-types":      "domain-model.types",
-	"delete":          "domain-model.association.delete-behavior",
-	"delete_behavior": "domain-model.association.delete-behavior",
-	"delete-behavior": "domain-model.association.delete-behavior",
-	"entity":          "domain-model.entity",
-	"entities":        "domain-model.entity",
-	"enumeration":     "domain-model.enumeration",
-	"enum":            "domain-model.enumeration",
-	"enumerations":    "domain-model.enumeration",
-	"constant":        "domain-model.constant",
-	"constants":       "domain-model.constant",
-	"association":     "domain-model.association",
-	"associations":    "domain-model.association",
-	// Plural aliases
-	"microflows":      "microflow",
-	"pages":           "page",
-	"snippets":        "snippet",
-	"fragments":       "fragment",
-	"workflows":       "workflow",
-	// Variant aliases
-	"nav":             "navigation",
-	"project-settings": "settings",
-	"rest-client":     "rest",
-	"rest-clients":    "rest",
-	"integrations":    "integration",
-	"services":        "integration",
-	"contract":        "integration",
-	"contracts":       "integration",
-	"javaaction":      "java-action",
-	"java_action":     "java-action",
-	"java-actions":    "java-action",
-	"javaactions":     "java-action",
-	"businessevents":  "business-events",
-	"business_events": "business-events",
-	"be":              "business-events",
-	"xpath-constraints": "xpath",
-	"external-sql":    "sql",
-	"validation":      "errors",
-}
-
 var syntaxCmd = &cobra.Command{
 	Use:   "syntax [topic [subtopic...]]",
 	Short: "Show MDL syntax reference",
@@ -104,9 +57,7 @@ Examples:
 		path := strings.ToLower(strings.Join(args, "."))
 
 		// Apply aliases
-		if alias, ok := topicAliases[path]; ok {
-			path = alias
-		}
+		path = syntax.ResolveAlias(path)
 
 		// Query registry
 		if syntax.HasPrefix(path) {

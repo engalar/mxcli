@@ -46,7 +46,7 @@ func (e *Executor) execSet(s *ast.SetStmt) error {
 // execHelp handles HELP statements. With topic words, queries the syntax registry.
 func (e *Executor) execHelp(s *ast.HelpStmt) error {
 	if len(s.Topic) > 0 {
-		path := resolveHelpPath(s.Topic)
+		path := syntax.ResolveAlias(resolveHelpPath(s.Topic))
 		features := syntax.ByPrefix(path)
 		if len(features) == 0 {
 			fmt.Fprintf(e.output, "No syntax help found for: %s\n", path)

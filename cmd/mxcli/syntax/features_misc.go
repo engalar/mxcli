@@ -211,6 +211,46 @@ SEARCH '"exact phrase"';
 SEARCH 'word*';`,
 	})
 
+	// ── Testing ────────────────────────────────────────────────────────
+
+	Register(SyntaxFeature{
+		Path:    "test",
+		Summary: "Microflow testing — run .test.mdl or .test.md files against a Mendix project in Docker",
+		Keywords: []string{
+			"test", "testing", "microflow test", "nanoflow test",
+			"test.mdl", "test.md", "junit", "docker",
+			"@test", "@expect", "@throws", "@cleanup",
+		},
+		Syntax: `mxcli test <file|dir> -p app.mpr [flags]
+
+Flags:
+  -l, --list          List tests without executing
+  -j, --junit FILE    Write JUnit XML results
+  -s, --skip-build    Skip Docker build (reuse existing)
+  -v, --verbose       Show runtime log lines
+  -t, --timeout DUR   Runtime startup timeout (default: 5m)
+
+Annotations:
+  @test <name>              Test name (required)
+  @expect $var = value      Assert variable equals value
+  @expect $obj/Attr = val   Assert entity attribute
+  @throws 'message'         Expect error
+  @cleanup rollback|none    Cleanup strategy (default: rollback)`,
+		Example: `-- .test.mdl file format
+/**
+ * @test String concatenation
+ * @expect $result = 'John Doe'
+ */
+$result = CALL MICROFLOW MyModule.ConcatNames(
+  FirstName = 'John', LastName = 'Doe'
+);
+/
+
+-- Run tests
+mxcli test tests/ -p app.mpr
+mxcli test tests/ -p app.mpr --junit results.xml`,
+	})
+
 	// ── Errors ──────────────────────────────────────────────────────────
 
 	Register(SyntaxFeature{
