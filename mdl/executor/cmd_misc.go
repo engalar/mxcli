@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/cmd/mxcli/syntax"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 )
@@ -42,8 +43,22 @@ func (e *Executor) execSet(s *ast.SetStmt) error {
 	return nil
 }
 
-// execHelp handles HELP statements.
-func (e *Executor) execHelp() error {
+// execHelp handles HELP statements. With topic words, queries the syntax registry.
+func (e *Executor) execHelp(s *ast.HelpStmt) error {
+	if len(s.Topic) > 0 {
+		path := resolveHelpPath(s.Topic)
+		features := syntax.ByPrefix(path)
+		if len(features) == 0 {
+			fmt.Fprintf(e.output, "No syntax help found for: %s\n", path)
+			fmt.Fprintln(e.output, "Use HELP; for a command overview.")
+			return nil
+		}
+		if e.format == FormatJSON {
+			return syntax.WriteJSON(e.output, features)
+		}
+		syntax.WriteText(e.output, features)
+		return nil
+	}
 	help := `MDL Commands:
 
 Connection:
@@ -318,6 +333,32 @@ Statement Terminator:
 `
 	fmt.Fprint(e.output, help)
 	return nil
+}
+
+// resolveHelpPath converts space-separated words like ["workflow", "user", "task"]
+// into a registry path like "workflow.user-task" by greedily merging adjacent words
+// with hyphens to find the longest matching prefix at each level.
+func resolveHelpPath(words []string) string {
+	var segments []string
+	i := 0
+	for i < len(words) {
+		matched := false
+		for j := len(words); j > i; j-- {
+			candidate := strings.Join(words[i:j], "-")
+			testPath := strings.Join(append(segments, candidate), ".")
+			if syntax.HasPrefix(testPath) {
+				segments = append(segments, candidate)
+				i = j
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			segments = append(segments, words[i])
+			i++
+		}
+	}
+	return strings.Join(segments, ".")
 }
 
 // showVersion displays Mendix project version information.

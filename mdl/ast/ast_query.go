@@ -406,8 +406,10 @@ type SetStmt struct {
 
 func (s *SetStmt) isStatement() {}
 
-// HelpStmt represents: HELP or ?
-type HelpStmt struct{}
+// HelpStmt represents: HELP [topic words...]
+type HelpStmt struct {
+	Topic []string // e.g., ["workflow", "user-task"] for HELP WORKFLOW USER-TASK
+}
 
 func (s *HelpStmt) isStatement() {}
 

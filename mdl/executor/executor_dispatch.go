@@ -251,7 +251,7 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 	case *ast.SetStmt:
 		return e.execSet(s)
 	case *ast.HelpStmt:
-		return e.execHelp()
+		return e.execHelp(s)
 	case *ast.ExitStmt:
 		return e.execExit()
 	case *ast.ExecuteScriptStmt:

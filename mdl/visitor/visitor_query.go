@@ -916,13 +916,17 @@ func (b *Builder) ExitExecuteScriptStatement(ctx *parser.ExecuteScriptStatementC
 }
 
 // ExitHelpStatement handles help/exit/quit commands
-// Grammar: helpStatement: IDENTIFIER
+// Grammar: helpStatement: IDENTIFIER (identifierOrKeyword)*
 func (b *Builder) ExitHelpStatement(ctx *parser.HelpStatementContext) {
 	if id := ctx.IDENTIFIER(); id != nil {
 		cmd := strings.ToLower(id.GetText())
 		switch cmd {
 		case "help", "?":
-			b.statements = append(b.statements, &ast.HelpStmt{})
+			stmt := &ast.HelpStmt{}
+			for _, tok := range ctx.AllIdentifierOrKeyword() {
+				stmt.Topic = append(stmt.Topic, strings.ToLower(tok.GetText()))
+			}
+			b.statements = append(b.statements, stmt)
 		case "exit", "quit":
 			b.statements = append(b.statements, &ast.ExitStmt{})
 		case "status":
