@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/cmd/mxcli/syntax"
 	"github.com/spf13/cobra"
 )
 
@@ -191,10 +192,33 @@ Example:
   mxcli syntax security
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		jsonFlag, _ := cmd.Flags().GetBool("json")
+
+		// No args: show full index (JSON) or help (text)
 		if len(args) == 0 {
+			if jsonFlag {
+				syntax.WriteJSON(os.Stdout, syntax.All())
+				return
+			}
 			cmd.Help()
 			return
 		}
+
+		// Build registry path from args: "workflow user-task" → "workflow.user-task"
+		path := strings.ToLower(strings.Join(args, "."))
+
+		// Check registry first
+		if syntax.HasPrefix(path) {
+			features := syntax.ByPrefix(path)
+			if jsonFlag {
+				syntax.WriteJSON(os.Stdout, features)
+			} else {
+				syntax.WriteText(os.Stdout, features)
+			}
+			return
+		}
+
+		// Fall back to legacy topics (first arg only)
 		topic := strings.ToLower(args[0])
 		switch topic {
 		case "keywords", "reserved":
@@ -223,8 +247,6 @@ Example:
 			showTopicHelp("structure")
 		case "search":
 			showTopicHelp("search")
-		case "security":
-			showTopicHelp("security")
 		case "odata":
 			showTopicHelp("odata")
 		case "rest", "rest-client", "rest-clients":
@@ -233,8 +255,6 @@ Example:
 			showTopicHelp("integration")
 		case "contract", "contracts":
 			showTopicHelp("integration")
-		case "workflow", "workflows":
-			showTopicHelp("workflow")
 		case "navigation", "nav":
 			showTopicHelp("navigation")
 		case "settings", "project-settings":

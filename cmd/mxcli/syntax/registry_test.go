@@ -1,0 +1,174 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package syntax
+
+import (
+	"bytes"
+	"encoding/json"
+	"strings"
+	"testing"
+)
+
+func TestAll_ReturnsSortedFeatures(t *testing.T) {
+	all := All()
+	if len(all) == 0 {
+		t.Fatal("expected registered features, got none")
+	}
+	for i := 1; i < len(all); i++ {
+		if all[i].Path < all[i-1].Path {
+			t.Errorf("features not sorted: %q before %q", all[i-1].Path, all[i].Path)
+		}
+	}
+}
+
+func TestByPrefix_ReturnsMatchingFeatures(t *testing.T) {
+	tests := []struct {
+		prefix    string
+		wantMin   int
+		wantPaths []string // paths that must be present
+	}{
+		{"workflow", 5, []string{"workflow", "workflow.user-task", "workflow.user-task.targeting"}},
+		{"workflow.user-task", 2, []string{"workflow.user-task", "workflow.user-task.targeting"}},
+		{"security", 5, []string{"security", "security.module-role", "security.entity-access"}},
+		{"nonexistent", 0, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.prefix, func(t *testing.T) {
+			got := ByPrefix(tt.prefix)
+			if len(got) < tt.wantMin {
+				t.Errorf("ByPrefix(%q): got %d features, want >= %d", tt.prefix, len(got), tt.wantMin)
+			}
+			for _, wantPath := range tt.wantPaths {
+				found := false
+				for _, f := range got {
+					if f.Path == wantPath {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("ByPrefix(%q): missing expected path %q", tt.prefix, wantPath)
+				}
+			}
+		})
+	}
+}
+
+func TestByPath_ExactMatch(t *testing.T) {
+	f := ByPath("workflow.user-task.targeting")
+	if f == nil {
+		t.Fatal("expected feature for workflow.user-task.targeting, got nil")
+	}
+	if f.Summary == "" {
+		t.Error("feature summary is empty")
+	}
+	if f.MinVersion == "" {
+		t.Error("expected MinVersion to be set for targeting")
+	}
+}
+
+func TestByPath_NotFound(t *testing.T) {
+	f := ByPath("does.not.exist")
+	if f != nil {
+		t.Errorf("expected nil for nonexistent path, got %v", f)
+	}
+}
+
+func TestHasPrefix(t *testing.T) {
+	if !HasPrefix("workflow") {
+		t.Error("expected HasPrefix(workflow) = true")
+	}
+	if !HasPrefix("security") {
+		t.Error("expected HasPrefix(security) = true")
+	}
+	if HasPrefix("nonexistent") {
+		t.Error("expected HasPrefix(nonexistent) = false")
+	}
+}
+
+func TestFeatureFieldsPopulated(t *testing.T) {
+	for _, f := range All() {
+		t.Run(f.Path, func(t *testing.T) {
+			if f.Path == "" {
+				t.Error("empty path")
+			}
+			if f.Summary == "" {
+				t.Error("empty summary")
+			}
+			if len(f.Keywords) == 0 {
+				t.Error("no keywords")
+			}
+			if f.Syntax == "" {
+				t.Error("empty syntax")
+			}
+			if f.Example == "" {
+				t.Error("empty example")
+			}
+		})
+	}
+}
+
+func TestWriteJSON_ValidOutput(t *testing.T) {
+	features := ByPrefix("workflow.user-task")
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, features); err != nil {
+		t.Fatal(err)
+	}
+	var parsed []SyntaxFeature
+	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if len(parsed) != len(features) {
+		t.Errorf("got %d features in JSON, want %d", len(parsed), len(features))
+	}
+}
+
+func TestWriteText_SingleFeature(t *testing.T) {
+	f := ByPath("workflow.user-task.targeting")
+	if f == nil {
+		t.Fatal("feature not found")
+	}
+	var buf bytes.Buffer
+	WriteText(&buf, []SyntaxFeature{*f})
+	out := buf.String()
+	if !strings.Contains(out, "workflow.user-task.targeting") {
+		t.Error("output missing feature path")
+	}
+	if !strings.Contains(out, "Syntax:") {
+		t.Error("output missing Syntax section")
+	}
+	if !strings.Contains(out, "Example:") {
+		t.Error("output missing Example section")
+	}
+	if !strings.Contains(out, "Mendix 9.0.0+") {
+		t.Error("output missing MinVersion")
+	}
+}
+
+func TestWriteText_MultipleFeatures(t *testing.T) {
+	features := ByPrefix("security")
+	var buf bytes.Buffer
+	WriteText(&buf, features)
+	out := buf.String()
+	if !strings.Contains(out, "Security") {
+		t.Error("output missing group header")
+	}
+	if !strings.Contains(out, "security.entity-access") {
+		t.Error("output missing security.entity-access")
+	}
+}
+
+func TestSeeAlsoRefsExist(t *testing.T) {
+	all := All()
+	pathSet := make(map[string]bool, len(all))
+	for _, f := range all {
+		pathSet[f.Path] = true
+	}
+	for _, f := range all {
+		for _, ref := range f.SeeAlso {
+			if !pathSet[ref] {
+				t.Errorf("%s: see_also references %q which is not registered", f.Path, ref)
+			}
+		}
+	}
+}
