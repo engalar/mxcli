@@ -23,7 +23,7 @@ CREATE ENUMERATION KeywordTest.IssueStatus (
   Data,
   Filter,
   Match,
-  Empty,
+  Visible,
   Container,
   Node
 );
@@ -62,12 +62,9 @@ CREATE ENUMERATION KeywordTest.MiscKeywords (
   Action,
   Source,
   Target,
-  Owner,
-  Type,
   Name,
   Value,
   Result,
-  Object,
   Index,
   Input,
   Output,
