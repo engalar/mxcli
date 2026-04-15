@@ -276,7 +276,7 @@ Nested folders use `/` separator: `'Parent/Child/Grandchild'`. Missing folders a
 | Drop workflow | `DROP WORKFLOW Module.Name;` | |
 
 **Workflow Activity Types:**
-- `USER TASK <name> '<caption>' [PAGE Mod.Page] [TARGETING MICROFLOW Mod.MF] [OUTCOMES '<out>' { } ...];`
+- `USER TASK <name> '<caption>' [PAGE Mod.Page] [TARGETING [USERS|GROUPS] MICROFLOW Mod.MF] [TARGETING [USERS|GROUPS] XPATH '<expr>'] [OUTCOMES '<out>' { } ...];`
 - `CALL MICROFLOW Mod.MF [COMMENT '<text>'] [OUTCOMES '<out>' { } ...];`
 - `CALL WORKFLOW Mod.WF [COMMENT '<text>'];`
 - `DECISION ['<caption>'] OUTCOMES '<out>' { } ...;`
@@ -312,8 +312,8 @@ Modify an existing workflow's properties, activities, outcomes, paths, condition
 | Set parameter | `SET PARAMETER $Var: Module.Entity` | Workflow context parameter |
 | Set activity page | `SET ACTIVITY name PAGE Module.Page` | Change user task page |
 | Set activity description | `SET ACTIVITY name DESCRIPTION 'text'` | Activity description |
-| Set activity targeting | `SET ACTIVITY name TARGETING MICROFLOW Module.MF` | Target user assignment |
-| Set activity XPath | `SET ACTIVITY name TARGETING XPATH '[expr]'` | XPath targeting |
+| Set activity targeting | `SET ACTIVITY name TARGETING [USERS\|GROUPS] MICROFLOW Module.MF` | Target user/group assignment |
+| Set activity XPath | `SET ACTIVITY name TARGETING [USERS\|GROUPS] XPATH '[expr]'` | XPath targeting |
 | Set activity due date | `SET ACTIVITY name DUE DATE 'expr'` | Activity-level due date |
 | Insert activity | `INSERT AFTER name CALL MICROFLOW Module.MF` | Insert after named activity |
 | Drop activity | `DROP ACTIVITY name` | Remove activity by name |

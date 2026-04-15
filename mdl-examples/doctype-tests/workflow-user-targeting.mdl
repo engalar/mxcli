@@ -1,0 +1,108 @@
+-- ============================================================================
+-- Workflow User Targeting — all targeting variants
+-- ============================================================================
+--
+-- Covers USER TASK and MULTI USER TASK with:
+--   TARGETING USERS MICROFLOW   (user targeting via microflow)
+--   TARGETING USERS XPATH       (user targeting via XPath)
+--   TARGETING GROUPS MICROFLOW  (group targeting via microflow)
+--   TARGETING GROUPS XPATH      (group targeting via XPath)
+--   TARGETING MICROFLOW         (legacy short form, still valid)
+--   TARGETING XPATH             (legacy short form, still valid)
+--
+-- ============================================================================
+
+-- Prerequisites
+
+CREATE PERSISTENT ENTITY WFTarget.Request (
+  Status: String(200)
+);
+
+-- Targeting microflows: (System.Workflow, context) -> List of System.User
+CREATE MICROFLOW WFTarget.ACT_GetUsers (
+  $Workflow: System.Workflow,
+  $Context: WFTarget.Request
+)
+RETURNS List of System.User AS $Users
+BEGIN
+  @position(200,200)
+  RETRIEVE $Users FROM System.User;
+  @position(400,200) RETURN $Users;
+END;
+/
+
+CREATE MICROFLOW WFTarget.ACT_GetGroups (
+  $Workflow: System.Workflow,
+  $Context: WFTarget.Request
+)
+RETURNS List of System.UserGroup AS $Groups
+BEGIN
+  @position(200,200)
+  RETRIEVE $Groups FROM System.UserGroup;
+  @position(400,200) RETURN $Groups;
+END;
+/
+
+CREATE PAGE WFTarget.TaskPage (
+  Title: 'Task Page',
+  Layout: Atlas_Core.Atlas_Default,
+  Params: { $WorkflowUserTask: System.WorkflowUserTask }
+) {
+  LAYOUTGRID g1 {
+    ROW r1 {
+      COLUMN c1 (DesktopWidth: 12) {
+        DYNAMICTEXT txt1 (Content: 'Task', RenderMode: H2)
+      }
+    }
+  }
+}
+
+-- Workflow with all targeting variants
+
+CREATE WORKFLOW WFTarget.TargetingDemo
+  PARAMETER $WorkflowContext: WFTarget.Request
+BEGIN
+  -- TARGETING USERS MICROFLOW (explicit user targeting)
+  USER TASK ByUserMF 'User microflow targeting'
+    PAGE WFTarget.TaskPage
+    TARGETING USERS MICROFLOW WFTarget.ACT_GetUsers
+    OUTCOMES 'Done' { };
+
+  -- TARGETING USERS XPATH (explicit user xpath targeting)
+  USER TASK ByUserXP 'User xpath targeting'
+    PAGE WFTarget.TaskPage
+    TARGETING USERS XPATH '[Name = ''admin'']'
+    OUTCOMES 'Done' { };
+
+  -- TARGETING GROUPS MICROFLOW (group microflow targeting)
+  USER TASK ByGroupMF 'Group microflow targeting'
+    PAGE WFTarget.TaskPage
+    TARGETING GROUPS MICROFLOW WFTarget.ACT_GetGroups
+    OUTCOMES 'Done' { };
+
+  -- TARGETING GROUPS XPATH (group xpath targeting)
+  USER TASK ByGroupXP 'Group xpath targeting'
+    PAGE WFTarget.TaskPage
+    TARGETING GROUPS XPATH '[Name = ''Administrators'']'
+    OUTCOMES 'Done' { };
+
+  -- TARGETING MICROFLOW (legacy short form)
+  USER TASK LegacyMF 'Legacy microflow targeting'
+    PAGE WFTarget.TaskPage
+    TARGETING MICROFLOW WFTarget.ACT_GetUsers
+    OUTCOMES 'Done' { };
+
+  -- TARGETING XPATH (legacy short form)
+  USER TASK LegacyXP 'Legacy xpath targeting'
+    PAGE WFTarget.TaskPage
+    TARGETING XPATH '[Name = ''admin'']'
+    OUTCOMES 'Done' { };
+
+  -- MULTI USER TASK with group targeting
+  MULTI USER TASK MultiByGroup 'Multi group targeting'
+    PAGE WFTarget.TaskPage
+    TARGETING GROUPS MICROFLOW WFTarget.ACT_GetGroups
+    OUTCOMES 'Done' { };
+
+END WORKFLOW;
+/
