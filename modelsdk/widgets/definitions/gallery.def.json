@@ -1,0 +1,89 @@
+{
+  "widgetId": "com.mendix.widget.web.gallery.Gallery",
+  "mdlName": "GALLERY",
+  "templateFile": "gallery.json",
+  "defaultEditable": "Always",
+  "propertyMappings": [
+    {
+      "propertyKey": "advanced",
+      "value": "false",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "datasource",
+      "source": "DataSource",
+      "operation": "datasource"
+    },
+    {
+      "propertyKey": "itemSelection",
+      "source": "Selection",
+      "operation": "selection",
+      "default": "Single"
+    },
+    {
+      "propertyKey": "itemSelectionMode",
+      "value": "clear",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "desktopItems",
+      "source": "DesktopColumns",
+      "default": "1",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "tabletItems",
+      "source": "TabletColumns",
+      "default": "1",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "phoneItems",
+      "source": "PhoneColumns",
+      "default": "1",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "pageSize",
+      "value": "20",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "pagination",
+      "value": "buttons",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "pagingPosition",
+      "value": "below",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "showEmptyPlaceholder",
+      "value": "none",
+      "operation": "primitive"
+    },
+    {
+      "propertyKey": "onClickTrigger",
+      "value": "single",
+      "operation": "primitive"
+    }
+  ],
+  "childSlots": [
+    {
+      "propertyKey": "content",
+      "mdlContainer": "TEMPLATE",
+      "operation": "widgets"
+    },
+    {
+      "propertyKey": "emptyPlaceholder",
+      "mdlContainer": "EMPTYPLACEHOLDER",
+      "operation": "widgets"
+    },
+    {
+      "propertyKey": "filtersPlaceholder",
+      "mdlContainer": "FILTER",
+      "operation": "widgets"
+    }
+  ]
+}

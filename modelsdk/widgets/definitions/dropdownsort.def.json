@@ -1,0 +1,6 @@
+{
+  "widgetId": "com.mendix.widget.web.dropdownsort.DropdownSort",
+  "mdlName": "DROPDOWNSORT",
+  "templateFile": "dropdownsort.json",
+  "defaultEditable": "Always"
+}

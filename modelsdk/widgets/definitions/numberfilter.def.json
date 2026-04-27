@@ -1,0 +1,11 @@
+{
+  "widgetId": "com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter",
+  "mdlName": "NUMBERFILTER",
+  "templateFile": "datagrid-number-filter.json",
+  "defaultEditable": "Always",
+  "propertyMappings": [
+    {"propertyKey": "attrChoice", "value": "linked", "operation": "primitive"},
+    {"propertyKey": "attributes", "source": "Attributes", "operation": "attributeObjects"},
+    {"propertyKey": "defaultFilter", "source": "FilterType", "operation": "primitive"}
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "widgetId": "com.mendix.widget.web.barcodescanner.BarcodeScanner",
+  "mdlName": "BARCODESCANNER",
+  "templateFile": "barcodescanner.json",
+  "defaultEditable": "Always",
+  "propertyMappings": [
+    {"propertyKey": "datasource", "source": "Attribute", "operation": "attribute"}
+  ]
+}

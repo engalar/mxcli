@@ -1,0 +1,96 @@
+package property
+
+import "github.com/mendixlabs/mxcli/modelsdk/element"
+
+// ByNameRef is a property that references another element by qualified name.
+type ByNameRef[T element.Element] struct {
+	propertyBase
+	targetType string
+	qname      string
+}
+
+func NewByNameRef[T element.Element](name, targetType string) *ByNameRef[T] {
+	return &ByNameRef[T]{propertyBase: propertyBase{name: name}, targetType: targetType}
+}
+
+func (r *ByNameRef[T]) TargetType() string    { return r.targetType }
+func (r *ByNameRef[T]) QualifiedName() string { return r.qname }
+func (r *ByNameRef[T]) BSONValue() any        { return r.qname }
+
+// SetQualifiedName sets the reference and marks the property dirty.
+func (r *ByNameRef[T]) SetQualifiedName(qn string) {
+	r.qname = qn
+	r.markDirty()
+}
+
+// SetFromDecode populates the value during BSON decode without marking dirty.
+func (r *ByNameRef[T]) SetFromDecode(qn string) {
+	r.qname = qn
+}
+
+// ByNameRefList is a property that holds a list of qualified-name references.
+type ByNameRefList[T element.Element] struct {
+	propertyBase
+	targetType string
+	qnames     []string
+}
+
+func NewByNameRefList[T element.Element](name, targetType string) *ByNameRefList[T] {
+	return &ByNameRefList[T]{propertyBase: propertyBase{name: name}, targetType: targetType}
+}
+
+func (r *ByNameRefList[T]) TargetType() string       { return r.targetType }
+func (r *ByNameRefList[T]) QualifiedNames() []string { return r.qnames }
+func (r *ByNameRefList[T]) BSONValue() any           { return r.qnames }
+
+// Append adds a qualified name to the list and marks the property dirty.
+func (r *ByNameRefList[T]) Append(qn string) {
+	r.qnames = append(r.qnames, qn)
+	r.markDirty()
+}
+
+// Remove removes the first occurrence of qn from the list and marks dirty.
+func (r *ByNameRefList[T]) Remove(qn string) {
+	for i, q := range r.qnames {
+		if q == qn {
+			r.qnames = append(r.qnames[:i], r.qnames[i+1:]...)
+			r.markDirty()
+			return
+		}
+	}
+}
+
+// SetQualifiedNames replaces the entire list and marks the property dirty.
+func (r *ByNameRefList[T]) SetQualifiedNames(qns []string) {
+	r.qnames = qns
+	r.markDirty()
+}
+
+// SetFromDecode replaces the list during BSON decode without marking dirty.
+func (r *ByNameRefList[T]) SetFromDecode(qnames []string) {
+	r.qnames = qnames
+}
+
+// ByIdRef is a property that references another element by ID.
+type ByIdRef[T element.Element] struct {
+	propertyBase
+	id element.ID
+}
+
+func NewByIdRef[T element.Element](name string) *ByIdRef[T] {
+	return &ByIdRef[T]{propertyBase: propertyBase{name: name}}
+}
+
+func (r *ByIdRef[T]) RefID() element.ID { return r.id }
+func (r *ByIdRef[T]) BSONValue() any    { return r.id }
+
+// SetID stores the referenced element's ID and marks the property dirty.
+func (r *ByIdRef[T]) SetID(id element.ID) {
+	r.id = id
+	r.markDirty()
+}
+
+// SetFromDecode populates the ID during BSON decode without marking dirty.
+func (r *ByIdRef[T]) SetFromDecode(id element.ID) {
+	r.id = id
+}
