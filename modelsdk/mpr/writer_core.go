@@ -157,6 +157,8 @@ func (wt *WriteTransaction) WriteUnit(unitID string, contents []byte) error {
 
 // Commit commits the transaction.
 // For v2, this first commits the database, then finalizes file writes.
+// TODO: adopt two-phase approach (rename files first, then commit DB) to
+// eliminate the partial-failure window where DB is committed but files are stale.
 func (wt *WriteTransaction) Commit() error {
 	if wt.committed {
 		return fmt.Errorf("transaction already committed")

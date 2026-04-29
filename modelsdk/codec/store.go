@@ -2,7 +2,6 @@ package codec
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
@@ -87,7 +86,7 @@ func (s *Store) ListUnits() []UnitInfo {
 			Name:        name,
 		})
 	}
-	log.Printf("[perf] Store.ListUnits: %s (units=%d)", time.Since(listStart), len(units))
+	_ = listStart // reserved for future debug logging
 	return units
 }
 

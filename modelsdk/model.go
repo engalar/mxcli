@@ -83,7 +83,7 @@ func (m *Model) Units() []codec.UnitInfo {
 }
 
 // LoadUnit loads and decodes a single unit by ID. Results are cached.
-// Safe for concurrent use.
+// Not safe for concurrent mutation — use from a single goroutine.
 func (m *Model) LoadUnit(id element.ID) (element.Element, error) {
 	if elem, ok := m.uc.Get(id); ok {
 		return elem, nil
@@ -104,7 +104,7 @@ func (m *Model) LoadUnit(id element.ID) (element.Element, error) {
 
 // AllOfType loads and returns all units whose $Type matches the given type name.
 // Uses UnitInfo.Type metadata to pre-filter, avoiding BSON I/O for non-matching units.
-// Safe for concurrent use.
+// Not safe for concurrent mutation — use from a single goroutine.
 func (m *Model) AllOfType(typeName string) []element.Element {
 	var result []element.Element
 	currentTypeGen := m.uc.TypeGen(typeName)
@@ -154,12 +154,13 @@ func (m *Model) AllOfType(typeName string) []element.Element {
 	return result
 }
 
-// FindByQualifiedName searches for a unit of the given type whose
-// "Name" property matches qualifiedName. Uses the name index for O(1)
-// lookup, falling back to a linear scan if the index misses.
-func (m *Model) FindByQualifiedName(typeName, qualifiedName string) (element.Element, error) {
+// FindByQualifiedName searches for a unit of the given type whose BSON
+// "Name" field matches name. Note: Mendix stores the module-local simple
+// name (e.g. "ACT_GetUser"), not the dot-qualified name ("MyModule.ACT_GetUser").
+// Uses the name index for O(1) lookup, falling back to a linear scan if the index misses.
+func (m *Model) FindByQualifiedName(typeName, name string) (element.Element, error) {
 	// Fast path: index lookup.
-	if id, ok := m.uc.FindByName(typeName + ":" + qualifiedName); ok {
+	if id, ok := m.uc.FindByName(typeName + ":" + name); ok {
 		return m.LoadUnit(id)
 	}
 
@@ -175,8 +176,8 @@ func (m *Model) FindByQualifiedName(typeName, qualifiedName string) (element.Ele
 		if u.Type == "" && decodeTypeField(raw) != typeName {
 			continue
 		}
-		name, _ := raw.LookupErr("Name")
-		if s, ok := name.StringValueOK(); ok && s == qualifiedName {
+		bsonName, _ := raw.LookupErr("Name")
+		if s, ok := bsonName.StringValueOK(); ok && s == name {
 			elem, err := m.decoder.Decode(raw)
 			if err != nil {
 				return nil, fmt.Errorf("decode unit %s: %w", u.ID, err)
@@ -185,7 +186,7 @@ func (m *Model) FindByQualifiedName(typeName, qualifiedName string) (element.Ele
 			return elem, nil
 		}
 	}
-	return nil, fmt.Errorf("element %s with name %q not found", typeName, qualifiedName)
+	return nil, fmt.Errorf("element %s with name %q not found", typeName, name)
 }
 
 // Encode serializes an element to BSON bytes.
@@ -238,7 +239,8 @@ func (m *Model) Store() *codec.Store { return m.store }
 // PatchEncodedField sets a top-level field on already-encoded BSON bytes.
 // Use this only when the SDK type's setter has a different type than the
 // BSON storage format (e.g., SDK uses Part[element.Element] but BSON stores
-// a plain string). This is a last-resort escape hatch.
+// a plain string).
+// TODO: remove when generated setters cover all BSON storage type mismatches.
 func (m *Model) PatchEncodedField(data []byte, key string, value any) ([]byte, error) {
 	return codec.PatchBSONField(data, key, value)
 }
@@ -342,9 +344,13 @@ func (m *Model) DeleteModuleWithCleanup(moduleID element.ID, moduleName string) 
 
 	// Clean up themesource directory.
 	projectDir := filepath.Dir(m.store.Path())
-	themesourceDir := filepath.Join(projectDir, "themesource", strings.ToLower(moduleName))
-	if stat, err := os.Stat(themesourceDir); err == nil && stat.IsDir() {
-		os.RemoveAll(themesourceDir)
+	themesourceBase := filepath.Join(projectDir, "themesource")
+	themesourceDir := filepath.Clean(filepath.Join(themesourceBase, strings.ToLower(moduleName)))
+	// Guard against path traversal: the resolved path must be under themesource/.
+	if strings.HasPrefix(themesourceDir, themesourceBase+string(filepath.Separator)) {
+		if stat, err := os.Stat(themesourceDir); err == nil && stat.IsDir() {
+			os.RemoveAll(themesourceDir)
+		}
 	}
 
 	return nil
