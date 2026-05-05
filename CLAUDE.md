@@ -81,7 +81,7 @@ ModelSDKGo/
 │   ├── pages.go             # PageBuilder, widget builders
 │   └── modules.go           # ModulesAPI
 │
-├── sdk/                     # SDK implementation packages
+├── sdk/                     # SDK implementation packages (hand-written, ~480 types, 5-10 domains)
 │   ├── domainmodel/         # entity, attribute, association, DomainModel
 │   ├── microflows/          # microflow, nanoflow, activities (60+ types)
 │   ├── pages/               # page, layout, widget types (50+ widgets)
@@ -93,6 +93,16 @@ ModelSDKGo/
 │       ├── writer.go        # read-write MPR modification
 │       ├── parser.go        # BSON parsing and deserialization
 │       └── utils.go         # UUID generation utilities
+│
+├── modelsdk/                # Next-gen SDK: auto-generated types with dirty tracking + BSON roundtrip
+│   ├── codec/               # BSON encoder/decoder with type registry
+│   ├── element/             # Element interface with dirty bitmap
+│   ├── property/            # Generic property types (Primitive, Part, PartList, Enum, ByNameRef)
+│   ├── gen/                 # Auto-generated domain types (53 domains, 1500+ types)
+│   ├── mpr/                 # MPR v1/v2 reader/writer
+│   ├── widgets/             # Widget template handling (fork of sdk/widgets/)
+│   ├── meta/                # System module metadata
+│   └── version/             # Version compatibility info
 │
 ├── mdl/                     # MDL (Mendix Definition Language) parser & CLI
 │   ├── grammar/             # ANTLR4 grammar definition
