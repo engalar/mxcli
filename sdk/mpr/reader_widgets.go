@@ -64,6 +64,89 @@ func (r *Reader) FindCustomWidgetType(widgetID string) (*RawCustomWidgetType, er
 	return nil, nil // Not found
 }
 
+// ListAllCustomWidgetTypes scans every page and snippet in the project and returns
+// one RawCustomWidgetType per unique widget ID. This is used by extract-templates to
+// discover all pluggable widgets without a hardcoded list.
+func (r *Reader) ListAllCustomWidgetTypes() ([]*RawCustomWidgetType, error) {
+	units, err := r.listUnitsByType("Forms$Page")
+	if err != nil {
+		return nil, err
+	}
+	if snippets, err := r.listUnitsByType("Forms$Snippet"); err == nil {
+		units = append(units, snippets...)
+	}
+
+	seen := make(map[string]bool)
+	var results []*RawCustomWidgetType
+
+	for _, u := range units {
+		contents, err := r.resolveContents(u.ID, u.Contents)
+		if err != nil {
+			continue
+		}
+		if !strings.Contains(string(contents), "CustomWidgets$CustomWidget\"") {
+			continue
+		}
+		var doc bson.D
+		if err := bson.Unmarshal(contents, &doc); err != nil {
+			continue
+		}
+		for _, wid := range collectCustomWidgetIDs(doc) {
+			if seen[wid] {
+				continue
+			}
+			rawType, rawObject := extractWidgetTypeAndObject(contents, wid)
+			if rawType == nil {
+				continue
+			}
+			seen[wid] = true
+			results = append(results, &RawCustomWidgetType{
+				WidgetID:  wid,
+				RawType:   rawType,
+				RawObject: rawObject,
+				UnitID:    u.ID,
+			})
+		}
+	}
+	return results, nil
+}
+
+// collectCustomWidgetIDs walks a BSON document and collects all unique widgetId values
+// found inside CustomWidgets$CustomWidgetType elements.
+func collectCustomWidgetIDs(doc bson.D) []string {
+	var ids []string
+	var walk func(v any)
+	walk = func(v any) {
+		switch val := v.(type) {
+		case bson.D:
+			var isType bool
+			var widgetID string
+			for _, e := range val {
+				if e.Key == "$Type" && e.Value == "CustomWidgets$CustomWidgetType" {
+					isType = true
+				}
+				if e.Key == "WidgetId" {
+					if s, ok := e.Value.(string); ok {
+						widgetID = s
+					}
+				}
+			}
+			if isType && widgetID != "" {
+				ids = append(ids, widgetID)
+			}
+			for _, e := range val {
+				walk(e.Value)
+			}
+		case bson.A:
+			for _, item := range val {
+				walk(item)
+			}
+		}
+	}
+	walk(doc)
+	return ids
+}
+
 // FindAllCustomWidgetTypes searches for ALL CustomWidgets with the given
 // widgetID and returns their full Type/Object definitions as raw BSON.
 // This allows identification of different configurations of the same widget type.
