@@ -272,6 +272,20 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 		if !ok {
 			continue // not a known widget property key
 		}
+
+		// Handle action-type properties (e.g., onChange: nanoflow Module.NF)
+		if actionAST, isAction := propVal.(*ast.ActionV3); isAction {
+			if entry.ValueType == "Action" {
+				act, err := e.pageBuilder.buildClientActionV3(actionAST)
+				if err != nil {
+					log.Printf("warning: widget %s property %s: %v", w.Name, propName, err)
+				} else {
+					builder.SetAction(propName, act)
+				}
+			}
+			continue
+		}
+
 		// Convert non-string values (bool, int, float) to string for property setting
 		var strVal string
 		switch v := propVal.(type) {

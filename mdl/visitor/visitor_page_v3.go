@@ -597,17 +597,24 @@ func parseWidgetPropertyV3(ctx parser.IWidgetPropertyV3Context, widget *ast.Widg
 		return
 	}
 
-	// Generic property: Identifier: value
+	// Named action property: onChange: nanoflow Module.NF
 	if id := propCtx.IDENTIFIER(); id != nil {
+		if actCtx := propCtx.ActionExprV3(); actCtx != nil {
+			widget.Properties[id.GetText()] = buildActionV3(actCtx)
+			return
+		}
 		if valCtx := propCtx.PropertyValueV3(); valCtx != nil {
 			widget.Properties[id.GetText()] = buildPropertyValueV3(valCtx)
 		}
 		return
 	}
 
-	// Generic property with keyword name: keyword: value (for pluggable widget property keys
-	// that happen to be MDL keywords, e.g., type, datasource, content)
+	// Generic property with keyword name: keyword: value (or named action)
 	if kw := propCtx.Keyword(); kw != nil {
+		if actCtx := propCtx.ActionExprV3(); actCtx != nil {
+			widget.Properties[kw.GetText()] = buildActionV3(actCtx)
+			return
+		}
 		if valCtx := propCtx.PropertyValueV3(); valCtx != nil {
 			widget.Properties[kw.GetText()] = buildPropertyValueV3(valCtx)
 		}
