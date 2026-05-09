@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -65,6 +66,10 @@ func (pb *pageBuilder) initPluggableEngine() {
 	if pb.backend != nil {
 		if loadErr := registry.LoadUserDefinitions(pb.backend.Path()); loadErr != nil {
 			log.Printf("warning: loading user widget definitions: %v", loadErr)
+		}
+		projectDir := filepath.Dir(pb.backend.Path())
+		if scanErr := registry.SetProjectDir(projectDir); scanErr != nil {
+			log.Printf("warning: widget pre-scan: %v", scanErr)
 		}
 	}
 	pb.widgetRegistry = registry
