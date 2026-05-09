@@ -1,6 +1,6 @@
 ---
 name: mendix-custom-widgets
-description: Use when writing MDL for GALLERY, COMBOBOX, or third-party pluggable widgets in CREATE PAGE / ALTER PAGE statements. Covers built-in widget syntax, child slots (TEMPLATE/FILTER), adding new custom widgets via .def.json, and engine internals.
+description: Use when writing MDL for GALLERY, COMBOBOX, or third-party pluggable widgets in CREATE PAGE / ALTER PAGE statements. Covers built-in widget syntax, child slots (TEMPLATE/FILTER), real-time MPK discovery for project widgets, and adding custom widgets via .def.json.
 ---
 
 # Custom & Pluggable Widgets in MDL
@@ -59,7 +59,46 @@ combobox cmbCustomer (
 - `CaptionAttribute` is the display attribute on the **target** entity
 - In association mode, mapping order matters: DataSource must resolve before Association (sets entityContext)
 
-## Adding a Third-Party Widget
+## Project Widgets (Real-Time Discovery)
+
+**No extraction step required.** When `mxcli` runs a `CREATE PAGE` command against a project, it automatically scans `<project>/widgets/*.mpk` and makes every widget available by its derived MDL name — the last dot-segment of the widget ID, lowercased.
+
+```
+com.vendor.widget.web.MySlider.MySlider  →  MDL keyword: MYSLIDER
+com.example.QRScanner                   →  MDL keyword: QRSCANNER
+```
+
+### Using a project widget in MDL
+
+```sql
+-- No widget init needed. Just use the widget by its derived name.
+create page Module.MyPage (layout: Atlas_Default) {
+  dataview dv (entity: Module.Product) {
+    MYSLIDER slider1 (datasource: database Module.Product, attribute: Price)
+  }
+}
+```
+
+If the widget has a `datasource`, `attribute`, `association`, or `widgets` property in its XML, those are auto-mapped. For properties that need custom mapping (actions, expressions, textTemplates), see the extraction workflow below.
+
+### Checking what's available
+
+```bash
+# Lists all widgets: built-in + auto-discovered from project MPKs
+mxcli widget list -p App.mpr
+```
+
+### When auto-discovery isn't enough
+
+Extract a `.def.json` only if you need to:
+- Override the auto-inferred property mappings
+- Add support for `action`, `expression`, or `textTemplate` properties
+- Control the MDL keyword (the derived name doesn't match what you want)
+- Share a definition globally across projects (`~/.mxcli/widgets/`)
+
+---
+
+## Customizing a Widget (.def.json Workflow)
 
 ### Step 1 -- Extract .def.json from .mpk
 
@@ -291,15 +330,16 @@ project/widgets/*.mpk -> FindMPK(projectDir, widgetID) -> ParseMPK()
 
 This reduces CE0463 errors from widget version drift without requiring manual template re-extraction.
 
-### 3-Tier Registry
+### 4-Tier Registry
 
 | Priority | Location | Scope |
 |----------|----------|-------|
-| 1 (highest) | `<project>/.mxcli/widgets/*.def.json` | Project |
+| 1 (highest) | `<project>/.mxcli/widgets/*.def.json` | Project (hand-crafted) |
 | 2 | `~/.mxcli/widgets/*.def.json` | Global (user) |
-| 3 (lowest) | `sdk/widgets/definitions/*.def.json` (embedded) | Built-in |
+| 3 | `sdk/widgets/definitions/*.def.json` (embedded) | Built-in |
+| 4 (lowest) | `<project>/widgets/*.mpk` (real-time) | Project (auto-derived) |
 
-Higher priority definitions override lower ones with the same MDL name (case-insensitive).
+Higher priority definitions override lower ones. Real-time MPK derivation only activates when no definition exists at tiers 1–3. The MDL name derived from an MPK (lowercase last ID segment) is used as the key; if a built-in or hand-crafted definition uses the same name, the MPK entry is silently skipped.
 
 ## Verify & Debug
 
@@ -322,7 +362,7 @@ mxcli bson dump -p App.mpr --type page --object "Module.PageName" --format ndsl
 | Mistake | Fix |
 |---------|-----|
 | CE0463 after page creation | Template version mismatch -- extract fresh template from Studio Pro MPR, or ensure .mpk augmentation picks up new properties |
-| Widget not recognized | Check `mxcli widget list`; .def.json must be in `.mxcli/widgets/` with `.def.json` extension |
+| Widget not recognized | Run `mxcli widget list -p App.mpr` — project widgets are auto-discovered from `widgets/*.mpk`; if still missing, the .mpk may not exist or the widget ID differs from expected |
 | TEMPLATE content missing | Widget needs `childSlots` entry with `"mdlContainer": "template"` |
 | Association COMBOBOX shows enum behavior | Add `datasource` to trigger association mode (`hasDataSource` condition) |
 | Association mapping fails | Ensure DataSource mapping appears **before** Association mapping in the array |
@@ -334,10 +374,10 @@ mxcli bson dump -p App.mpr --type page --object "Module.PageName" --format ndsl
 | File | Purpose |
 |------|---------|
 | `mdl/executor/widget_engine.go` | PluggableWidgetEngine, 6 operations, Build() pipeline |
-| `mdl/executor/widget_registry.go` | 3-tier WidgetRegistry, definition validation |
+| `mdl/executor/widget_registry.go` | 4-tier WidgetRegistry: `SetProjectDir` triggers real-time MPK scan; `Get`/`GetByWidgetID` fall back to MPK derivation on miss |
 | `sdk/widgets/loader.go` | Template loading, ID remapping, MPK augmentation |
 | `sdk/widgets/mpk/mpk.go` | .mpk ZIP parsing, XML property extraction |
-| `cmd/mxcli/cmd_widget.go` | `mxcli widget extract/list` CLI commands |
+| `cmd/mxcli/cmd_widget.go` | `mxcli widget extract/list/init` CLI commands (`init` is now optional; use `--force` to overwrite) |
 | `sdk/widgets/definitions/*.def.json` | Built-in widget definitions (ComboBox, Gallery) |
 | `sdk/widgets/templates/mendix-11.6/*.json` | Embedded BSON templates |
 | `mdl/executor/cmd_pages_builder_input.go` | `updateWidgetPropertyValue()` -- TypePointer matching |
