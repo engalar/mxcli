@@ -48,7 +48,8 @@ var widgetInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Dump widget definitions for inspection or customization",
 	Long: `Scan the project's widgets/ directory and write .def.json files to
-.mxcli/widgets/ for each .mpk.
+.mxcli/widgets/ for each .mpk. Also writes markdown reference docs to
+.claude/skills/widgets/.
 
 Note: mxcli widget init is no longer required for CREATE PAGE to work.
 Widget definitions are derived automatically at runtime from the project's
@@ -56,6 +57,10 @@ widgets/*.mpk files. Run this command only when you need to inspect or
 hand-edit a widget's property mappings.
 
 Existing .def.json files are skipped unless --force is given.
+Built-in widget definitions (e.g. GALLERY, COMBOBOX) are always skipped;
+they are not derived from project .mpk files.
+
+Note: --force will overwrite any hand-edits you have made to .def.json files.
 
 Requires --project (-p) to locate the project's widgets/ directory.`,
 	Example: `  mxcli widget init -p /path/to/app.mpr
