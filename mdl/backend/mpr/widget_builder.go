@@ -666,12 +666,13 @@ func convertPropertyTypeIDs(src map[string]widgets.PropertyTypeIDEntry) map[stri
 	result := make(map[string]pages.PropertyTypeIDEntry)
 	for k, v := range src {
 		entry := pages.PropertyTypeIDEntry{
-			PropertyTypeID: v.PropertyTypeID,
-			ValueTypeID:    v.ValueTypeID,
-			DefaultValue:   v.DefaultValue,
-			ValueType:      v.ValueType,
-			Required:       v.Required,
-			ObjectTypeID:   v.ObjectTypeID,
+			PropertyTypeID:     v.PropertyTypeID,
+			ValueTypeID:        v.ValueTypeID,
+			DefaultValue:       v.DefaultValue,
+			ValueType:          v.ValueType,
+			Required:           v.Required,
+			DataSourceProperty: v.DataSourceProperty,
+			ObjectTypeID:       v.ObjectTypeID,
 		}
 		if len(v.NestedPropertyIDs) > 0 {
 			entry.NestedPropertyIDs = convertPropertyTypeIDs(v.NestedPropertyIDs)
