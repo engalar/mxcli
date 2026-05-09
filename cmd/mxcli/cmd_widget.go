@@ -46,15 +46,20 @@ var widgetListCmd = &cobra.Command{
 
 var widgetInitCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Extract definitions for all project widgets",
-	Long: `Scan the project's widgets/ directory, extract .def.json for each .mpk,
-and generate skill documentation in .claude/skills/widgets/.
+	Short: "Dump widget definitions for inspection or customization",
+	Long: `Scan the project's widgets/ directory and write .def.json files to
+.mxcli/widgets/ for each .mpk.
 
-This enables CREATE PAGE to use any project widget via the pluggable engine.
+Note: mxcli widget init is no longer required for CREATE PAGE to work.
+Widget definitions are derived automatically at runtime from the project's
+widgets/*.mpk files. Run this command only when you need to inspect or
+hand-edit a widget's property mappings.
+
+Existing .def.json files are skipped unless --force is given.
 
 Requires --project (-p) to locate the project's widgets/ directory.`,
 	Example: `  mxcli widget init -p /path/to/app.mpr
-  mxcli widget init -p app.mpr`,
+  mxcli widget init -p app.mpr --force`,
 	RunE: runWidgetInit,
 }
 
@@ -73,6 +78,7 @@ func init() {
 
 	widgetInitCmd.Flags().StringP("project", "p", "", "Path to .mpr project file")
 	widgetInitCmd.MarkFlagRequired("project")
+	widgetInitCmd.Flags().Bool("force", false, "Overwrite existing .def.json files")
 
 	widgetDocsCmd.Flags().StringP("project", "p", "", "Path to .mpr project file")
 	widgetDocsCmd.MarkFlagRequired("project")
@@ -219,6 +225,7 @@ func generateDefJSON(mpkDef *mpk.WidgetDefinition, mdlName string) *executor.Wid
 
 func runWidgetInit(cmd *cobra.Command, args []string) error {
 	projectPath, _ := cmd.Flags().GetString("project")
+	force, _ := cmd.Flags().GetBool("force")
 	projectDir := filepath.Dir(projectPath)
 	widgetsDir := filepath.Join(projectDir, "widgets")
 	outputDir := filepath.Join(projectDir, ".mxcli", "widgets")
@@ -262,10 +269,12 @@ func runWidgetInit(cmd *cobra.Command, args []string) error {
 				}
 			}
 
-			// Skip if already exists on disk
-			if _, err := os.Stat(outPath); err == nil {
-				skipped++
-				continue
+			// Skip if already exists on disk (unless --force)
+			if !force {
+				if _, err := os.Stat(outPath); err == nil {
+					skipped++
+					continue
+				}
 			}
 
 			defJSON := generateDefJSON(mpkDef, mdlName)
