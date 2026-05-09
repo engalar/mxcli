@@ -540,6 +540,26 @@ func ClearCache() {
 	dirCacheLock.Unlock()
 }
 
+// ParseAll parses every widget definition bundled in an MPK file and returns them all.
+// For single-widget MPKs this returns a one-element slice. For multi-widget MPKs (where
+// package.xml lists multiple <widgetFile> entries) every widget is returned. Errors for
+// individual widgets are skipped; only fatal archive errors are returned.
+func ParseAll(mpkPath string) ([]*WidgetDefinition, error) {
+	ids, err := getWidgetIDsFromMPK(mpkPath)
+	if err != nil {
+		return nil, err
+	}
+	var result []*WidgetDefinition
+	for _, id := range ids {
+		def, err := ParseMPKForWidget(mpkPath, id)
+		if err != nil || def == nil {
+			continue
+		}
+		result = append(result, def)
+	}
+	return result, nil
+}
+
 // xmlPropertyTypeMapping maps lowercased XML property type names to their canonical camelCase forms.
 var xmlPropertyTypeMapping = map[string]string{
 	"attribute":    "attribute",

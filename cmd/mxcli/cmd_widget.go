@@ -242,49 +242,51 @@ func runWidgetInit(cmd *cobra.Command, args []string) error {
 
 	var extracted, skipped int
 	for _, mpkPath := range matches {
-		mpkDef, err := mpk.ParseMPK(mpkPath)
+		defs, err := mpk.ParseAll(mpkPath)
 		if err != nil {
 			log.Printf("warning: skipping %s: %v", filepath.Base(mpkPath), err)
 			skipped++
 			continue
 		}
 
-		mdlName := deriveMDLName(mpkDef.ID)
-		filename := strings.ToLower(mdlName) + ".def.json"
-		outPath := filepath.Join(outputDir, filename)
+		for _, mpkDef := range defs {
+			mdlName := deriveMDLName(mpkDef.ID)
+			filename := strings.ToLower(mdlName) + ".def.json"
+			outPath := filepath.Join(outputDir, filename)
 
-		// Skip widgets that have hand-crafted built-in definitions (e.g., COMBOBOX, GALLERY)
-		if builtinRegistry != nil {
-			if _, ok := builtinRegistry.GetByWidgetID(mpkDef.ID); ok {
+			// Skip widgets that have hand-crafted built-in definitions (e.g., COMBOBOX, GALLERY)
+			if builtinRegistry != nil {
+				if _, ok := builtinRegistry.GetByWidgetID(mpkDef.ID); ok {
+					skipped++
+					continue
+				}
+			}
+
+			// Skip if already exists on disk
+			if _, err := os.Stat(outPath); err == nil {
 				skipped++
 				continue
 			}
-		}
 
-		// Skip if already exists on disk
-		if _, err := os.Stat(outPath); err == nil {
-			skipped++
-			continue
-		}
+			defJSON := generateDefJSON(mpkDef, mdlName)
+			data, err := json.MarshalIndent(defJSON, "", "  ")
+			if err != nil {
+				log.Printf("warning: skipping %s: %v", mpkDef.ID, err)
+				skipped++
+				continue
+			}
+			data = append(data, '\n')
 
-		defJSON := generateDefJSON(mpkDef, mdlName)
-		data, err := json.MarshalIndent(defJSON, "", "  ")
-		if err != nil {
-			log.Printf("warning: skipping %s: %v", mpkDef.ID, err)
-			skipped++
-			continue
+			if err := os.WriteFile(outPath, data, 0644); err != nil {
+				return fmt.Errorf("failed to write %s: %w", outPath, err)
+			}
+			kind := "custom"
+			if mpkDef.IsPluggable {
+				kind = "pluggable"
+			}
+			fmt.Printf("  %-12s %-20s %s\n", kind, mdlName, mpkDef.ID)
+			extracted++
 		}
-		data = append(data, '\n')
-
-		if err := os.WriteFile(outPath, data, 0644); err != nil {
-			return fmt.Errorf("failed to write %s: %w", outPath, err)
-		}
-		kind := "custom"
-		if mpkDef.IsPluggable {
-			kind = "pluggable"
-		}
-		fmt.Printf("  %-12s %-20s %s\n", kind, mdlName, mpkDef.ID)
-		extracted++
 	}
 
 	fmt.Printf("\nExtracted: %d, Skipped: %d (existing or unparseable)\n", extracted, skipped)
@@ -321,29 +323,31 @@ func generateWidgetDocs(projectDir string) error {
 	var indexEntries []string
 
 	for _, mpkPath := range matches {
-		mpkDef, err := mpk.ParseMPK(mpkPath)
+		defs, err := mpk.ParseAll(mpkPath)
 		if err != nil {
 			continue
 		}
 
-		mdlName := deriveMDLName(mpkDef.ID)
-		filename := strings.ToLower(mdlName) + ".md"
-		outPath := filepath.Join(docsDir, filename)
+		for _, mpkDef := range defs {
+			mdlName := deriveMDLName(mpkDef.ID)
+			filename := strings.ToLower(mdlName) + ".md"
+			outPath := filepath.Join(docsDir, filename)
 
-		doc := generateWidgetDoc(mpkDef, mdlName)
+			doc := generateWidgetDoc(mpkDef, mdlName)
 
-		if err := os.WriteFile(outPath, []byte(doc), 0644); err != nil {
-			log.Printf("warning: failed to write %s: %v", filename, err)
-			continue
+			if err := os.WriteFile(outPath, []byte(doc), 0644); err != nil {
+				log.Printf("warning: failed to write %s: %v", filename, err)
+				continue
+			}
+
+			kind := "CUSTOMWIDGET"
+			if mpkDef.IsPluggable {
+				kind = "PLUGGABLEWIDGET"
+			}
+			indexEntries = append(indexEntries, fmt.Sprintf("| `%s` | %s | `%s` | %s | %d |",
+				kind, mdlName, mpkDef.ID, mpkDef.Name, len(mpkDef.Properties)))
+			generated++
 		}
-
-		kind := "CUSTOMWIDGET"
-		if mpkDef.IsPluggable {
-			kind = "PLUGGABLEWIDGET"
-		}
-		indexEntries = append(indexEntries, fmt.Sprintf("| `%s` | %s | `%s` | %s | %d |",
-			kind, mdlName, mpkDef.ID, mpkDef.Name, len(mpkDef.Properties)))
-		generated++
 	}
 
 	// Write index
