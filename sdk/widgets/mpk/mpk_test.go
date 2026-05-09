@@ -184,6 +184,54 @@ func TestNormalizeType(t *testing.T) {
 	}
 }
 
+func TestFindMPK_MultiWidget(t *testing.T) {
+	ClearCache()
+	projectDir := filepath.Join("..", "testdata", "crushertestproject")
+	if _, err := os.Stat(projectDir); err != nil {
+		t.Skip("crusher test fixture not available")
+	}
+
+	widgets := []string{
+		"com.mendix.widget.custom.CavitySelector.CavitySelector",
+		"com.mendix.widget.custom.CrusherSlider.CrusherSlider",
+		"com.mendix.widget.custom.PredictionBadge.PredictionBadge",
+		"com.mendix.widget.custom.CrusherSimCanvas.CrusherSimCanvas",
+		"com.mendix.widget.custom.HeatmapViz.HeatmapViz",
+	}
+	for _, wid := range widgets {
+		found, err := FindMPK(projectDir, wid)
+		if err != nil {
+			t.Fatalf("FindMPK(%q): %v", wid, err)
+		}
+		if found == "" {
+			t.Errorf("FindMPK(%q): expected MPK path, got empty string", wid)
+		}
+	}
+}
+
+func TestParseMPKForWidget_MultiWidget(t *testing.T) {
+	ClearCache()
+	mpkPath := filepath.Join("..", "testdata", "crushertestproject", "widgets", "CrusherWidgets.mpk")
+	if _, err := os.Stat(mpkPath); err != nil {
+		t.Skip("crusher test fixture not available")
+	}
+
+	widgetID := "com.mendix.widget.custom.CavitySelector.CavitySelector"
+	def, err := ParseMPKForWidget(mpkPath, widgetID)
+	if err != nil {
+		t.Fatalf("ParseMPKForWidget: %v", err)
+	}
+	if def == nil {
+		t.Fatal("ParseMPKForWidget: got nil definition")
+	}
+	if def.ID != widgetID {
+		t.Errorf("ID = %q, want %q", def.ID, widgetID)
+	}
+	if len(def.Properties) == 0 {
+		t.Error("expected at least one property")
+	}
+}
+
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil

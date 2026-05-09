@@ -190,17 +190,7 @@ func ParseMPK(mpkPath string) (*WidgetDefinition, error) {
 				return nil, fmt.Errorf("failed to parse %s: %w", widgetFilePath, err)
 			}
 
-			def := &WidgetDefinition{
-				ID:          widget.ID,
-				Name:        widget.Name,
-				Version:     version,
-				IsPluggable: widget.PluginWidget == "true",
-			}
-
-			// Walk property groups to collect properties
-			for _, pg := range widget.PropertyGroups {
-				walkPropertyGroup(pg, "", def)
-			}
+			def := buildDefinition(&widget, version)
 
 			// Cache
 			defCacheLock.Lock()
@@ -307,15 +297,18 @@ func FindMPK(projectDir string, widgetID string) (string, error) {
 		return "", fmt.Errorf("failed to scan widgets directory: %w", err)
 	}
 
-	// Build mapping by parsing each .mpk's package.xml and widget XML
+	// Build mapping by parsing each .mpk's package.xml and widget XML.
+	// Multi-widget MPKs list multiple widget IDs; map each one to this file.
 	dirMap := make(map[string]string)
 	for _, mpkPath := range matches {
-		wid, err := getWidgetIDFromMPK(mpkPath)
+		wids, err := getWidgetIDsFromMPK(mpkPath)
 		if err != nil {
 			continue // Skip unparseable files
 		}
-		if wid != "" {
-			dirMap[wid] = mpkPath
+		for _, wid := range wids {
+			if wid != "" {
+				dirMap[wid] = mpkPath
+			}
 		}
 	}
 
@@ -327,82 +320,184 @@ func FindMPK(projectDir string, widgetID string) (string, error) {
 	return dirMap[widgetID], nil
 }
 
-// getWidgetIDFromMPK extracts the widget ID from an .mpk file without fully parsing it.
-func getWidgetIDFromMPK(mpkPath string) (string, error) {
+// getWidgetIDsFromMPK returns ALL widget IDs declared in an .mpk package.xml.
+// Multi-widget MPKs (e.g. CrusherWidgets.mpk) list multiple <widgetFile> entries.
+func getWidgetIDsFromMPK(mpkPath string) ([]string, error) {
 	r, err := zip.OpenReader(mpkPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer r.Close()
 
-	// Find package.xml to get widget file path
-	var widgetFilePath string
+	var widgetFilePaths []string
 	var totalExtracted uint64
 	for _, f := range r.File {
 		if f.Name == "package.xml" {
 			if f.UncompressedSize64 > maxFileSize {
-				return "", fmt.Errorf("package.xml exceeds max file size (%d > %d)", f.UncompressedSize64, maxFileSize)
+				return nil, fmt.Errorf("package.xml exceeds max file size (%d > %d)", f.UncompressedSize64, maxFileSize)
 			}
 			rc, err := f.Open()
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			data, err := io.ReadAll(rc)
 			rc.Close()
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			totalExtracted += uint64(len(data))
 			if totalExtracted > maxTotalSize {
-				return "", fmt.Errorf("total extracted size exceeds limit (%d > %d)", totalExtracted, maxTotalSize)
+				return nil, fmt.Errorf("total extracted size exceeds limit")
 			}
 			var pkg xmlPackage
 			if err := xml.Unmarshal(data, &pkg); err != nil {
-				return "", err
+				return nil, err
 			}
-			if len(pkg.ClientModule.WidgetFiles) > 0 {
-				widgetFilePath = pkg.ClientModule.WidgetFiles[0].Path
+			for _, wf := range pkg.ClientModule.WidgetFiles {
+				widgetFilePaths = append(widgetFilePaths, wf.Path)
 			}
 			break
 		}
 	}
 
-	if widgetFilePath == "" {
-		return "", nil
-	}
-
-	// Read widget XML to get the id attribute
-	for _, f := range r.File {
-		if f.Name == widgetFilePath {
+	var ids []string
+	for _, wfPath := range widgetFilePaths {
+		for _, f := range r.File {
+			if f.Name != wfPath {
+				continue
+			}
 			if f.UncompressedSize64 > maxFileSize {
-				return "", fmt.Errorf("%s exceeds max file size (%d > %d)", widgetFilePath, f.UncompressedSize64, maxFileSize)
+				continue
 			}
 			rc, err := f.Open()
 			if err != nil {
-				return "", err
+				continue
 			}
 			data, err := io.ReadAll(rc)
 			rc.Close()
 			if err != nil {
-				return "", err
+				continue
 			}
 			totalExtracted += uint64(len(data))
 			if totalExtracted > maxTotalSize {
-				return "", fmt.Errorf("total extracted size exceeds limit (%d > %d)", totalExtracted, maxTotalSize)
+				return ids, fmt.Errorf("total extracted size exceeds limit")
 			}
-
-			// Quick XML parse to just get the id attribute
 			var widget struct {
 				ID string `xml:"id,attr"`
 			}
 			if err := xml.Unmarshal(data, &widget); err != nil {
-				return "", err
+				continue
 			}
-			return widget.ID, nil
+			if widget.ID != "" {
+				ids = append(ids, widget.ID)
+			}
+		}
+	}
+	return ids, nil
+}
+
+// buildDefinition constructs a WidgetDefinition from a parsed xmlWidget and version string.
+func buildDefinition(widget *xmlWidget, version string) *WidgetDefinition {
+	def := &WidgetDefinition{
+		ID:          widget.ID,
+		Name:        widget.Name,
+		Version:     version,
+		IsPluggable: widget.PluginWidget == "true",
+	}
+	for _, pg := range widget.PropertyGroups {
+		walkPropertyGroup(pg, "", def)
+	}
+	return def
+}
+
+// ParseMPKForWidget parses the widget XML for a specific widgetID from an .mpk file.
+// Unlike ParseMPK (which reads only the first widget), this scans all widget files
+// declared in package.xml to find the one whose ID matches widgetID.
+// Needed for multi-widget .mpk packages (e.g. CrusherWidgets.mpk).
+// Returns nil, nil when widgetID is not found in the MPK.
+func ParseMPKForWidget(mpkPath string, widgetID string) (*WidgetDefinition, error) {
+	cacheKey := mpkPath + "\x00" + widgetID
+	defCacheLock.RLock()
+	if def, ok := defCache[cacheKey]; ok {
+		defCacheLock.RUnlock()
+		return def, nil
+	}
+	defCacheLock.RUnlock()
+
+	r, err := zip.OpenReader(mpkPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open mpk: %w", err)
+	}
+	defer r.Close()
+
+	var pkg xmlPackage
+	var version string
+	var totalExtracted uint64
+	for _, f := range r.File {
+		if f.Name == "package.xml" {
+			if f.UncompressedSize64 > maxFileSize {
+				return nil, fmt.Errorf("package.xml exceeds max size")
+			}
+			rc, err := f.Open()
+			if err != nil {
+				return nil, fmt.Errorf("open package.xml: %w", err)
+			}
+			data, err := io.ReadAll(rc)
+			rc.Close()
+			if err != nil {
+				return nil, fmt.Errorf("read package.xml: %w", err)
+			}
+			totalExtracted += uint64(len(data))
+			if totalExtracted > maxTotalSize {
+				return nil, fmt.Errorf("total extracted size exceeds limit (%d > %d)", totalExtracted, maxTotalSize)
+			}
+			if err := xml.Unmarshal(data, &pkg); err != nil {
+				return nil, fmt.Errorf("parse package.xml: %w", err)
+			}
+			version = pkg.ClientModule.Version
+			break
 		}
 	}
 
-	return "", nil
+	for _, wf := range pkg.ClientModule.WidgetFiles {
+		for _, f := range r.File {
+			if f.Name != wf.Path {
+				continue
+			}
+			if f.UncompressedSize64 > maxFileSize {
+				continue
+			}
+			rc, err := f.Open()
+			if err != nil {
+				continue
+			}
+			data, err := io.ReadAll(rc)
+			rc.Close()
+			if err != nil {
+				continue
+			}
+			totalExtracted += uint64(len(data))
+			if totalExtracted > maxTotalSize {
+				return nil, fmt.Errorf("total extracted size exceeds limit (%d > %d)", totalExtracted, maxTotalSize)
+			}
+
+			var widget xmlWidget
+			if err := xml.Unmarshal(data, &widget); err != nil {
+				continue
+			}
+			if widget.ID != widgetID {
+				continue
+			}
+
+			def := buildDefinition(&widget, version)
+			defCacheLock.Lock()
+			defCache[cacheKey] = def
+			defCacheLock.Unlock()
+			return def, nil
+		}
+	}
+
+	return nil, nil
 }
 
 // PropertyKeys returns a set of regular (non-system) property keys from the definition.
