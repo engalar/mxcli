@@ -64,7 +64,7 @@ func (pb *pageBuilder) buildLayoutGridColumnV3(w *ast.WidgetV3) (*pages.LayoutGr
 			ID:       model.ID(types.GenerateID()),
 			TypeName: "Forms$LayoutGridColumn",
 		},
-		Weight: 1,
+		Weight: 0, // 0 → columnWeight() maps to -1 (auto-fill) in the serializer
 	}
 
 	// Handle DesktopWidth
