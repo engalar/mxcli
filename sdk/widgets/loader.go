@@ -106,6 +106,7 @@ type WidgetTemplate struct {
 	Name          string         `json:"name"`
 	Version       string         `json:"version"`
 	ExtractedFrom string         `json:"extractedFrom"`
+	Generated     bool           `json:"-"` // true if derived from MPK, not from embedded template
 	Type          map[string]any `json:"type"`
 	Object        map[string]any `json:"object"` // WidgetObject with all property values
 }
@@ -115,6 +116,10 @@ var (
 	templateCache     = make(map[string]*WidgetTemplate)
 	templateCacheLock sync.RWMutex
 )
+
+// generatedCache stores MPK-derived templates for the session lifetime.
+// Key: widgetID string. Value: *WidgetTemplate (placeholder IDs, not yet remapped).
+var generatedCache sync.Map
 
 // widgetTemplateIndex maps widget IDs to template filenames.
 // Built lazily by scanning embedded template JSON files.
@@ -201,12 +206,50 @@ func GetTemplate(widgetID string) (*WidgetTemplate, error) {
 	return &tmpl, nil
 }
 
+// getOrGenerateTemplate returns a WidgetTemplate for widgetID. It checks the embedded
+// template cache first, then falls back to deriving a template from the project's .mpk
+// widget file. Returns nil, nil when the widget is unknown and no MPK is available.
+func getOrGenerateTemplate(widgetID, projectPath string) (*WidgetTemplate, error) {
+	// 1. Embedded templates (existing path)
+	if tmpl, err := GetTemplate(widgetID); err != nil || tmpl != nil {
+		return tmpl, err
+	}
+
+	// 2. Session cache of previously generated templates
+	if cached, ok := generatedCache.Load(widgetID); ok {
+		return cached.(*WidgetTemplate), nil
+	}
+
+	// 3. Derive from MPK in project/widgets/
+	if projectPath == "" {
+		return nil, nil
+	}
+	projectDir := filepath.Dir(projectPath)
+	mpkPath, err := mpk.FindMPK(projectDir, widgetID)
+	if err != nil {
+		return nil, fmt.Errorf("widget %q: scan MPK directory: %w", widgetID, err)
+	}
+	if mpkPath == "" {
+		return nil, nil // no MPK found — caller treats nil as "widget unknown"
+	}
+	def, err := mpk.ParseMPKForWidget(mpkPath, widgetID)
+	if err != nil {
+		return nil, fmt.Errorf("widget %q: parse MPK: %w", widgetID, err)
+	}
+	if def == nil {
+		return nil, nil
+	}
+	tmpl := GenerateFromMPK(def)
+	generatedCache.Store(widgetID, tmpl)
+	return tmpl, nil
+}
+
 // GetTemplateBSON loads a widget template and converts its type definition to BSON.
 // The returned bson.D can be used directly in widget creation.
 // IDs in the template are regenerated with new UUIDs while preserving internal references.
 // If projectPath is non-empty, the template is augmented from the project's .mpk widget file.
 func GetTemplateBSON(widgetID string, idGenerator func() string, projectPath string) (bson.D, map[string]PropertyTypeIDEntry, error) {
-	tmpl, err := GetTemplate(widgetID)
+	tmpl, err := getOrGenerateTemplate(widgetID, projectPath)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -214,8 +257,10 @@ func GetTemplateBSON(widgetID string, idGenerator func() string, projectPath str
 		return nil, nil, nil
 	}
 
-	// Deep-clone and augment from .mpk
-	tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
+	// Deep-clone and augment from .mpk (skip for generated templates — already complete)
+	if !tmpl.Generated {
+		tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
+	}
 
 	// Phase 1: Collect all $ID values and create old->new ID mappings
 	idMapping := make(map[string]string)
@@ -238,7 +283,7 @@ func GetTemplateBSON(widgetID string, idGenerator func() string, projectPath str
 // If projectPath is non-empty, the template is augmented from the project's .mpk widget file.
 // Returns: (clonedType, clonedObject, propertyTypeIDs, objectTypeID, error)
 func GetTemplateFullBSON(widgetID string, idGenerator func() string, projectPath string) (bson.D, bson.D, map[string]PropertyTypeIDEntry, string, error) {
-	tmpl, err := GetTemplate(widgetID)
+	tmpl, err := getOrGenerateTemplate(widgetID, projectPath)
 	if err != nil {
 		return nil, nil, nil, "", err
 	}
@@ -246,8 +291,10 @@ func GetTemplateFullBSON(widgetID string, idGenerator func() string, projectPath
 		return nil, nil, nil, "", nil
 	}
 
-	// Deep-clone and augment from .mpk
-	tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
+	// Deep-clone and augment from .mpk (skip for generated templates — already complete)
+	if !tmpl.Generated {
+		tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
+	}
 
 	// Phase 1: Collect all $ID values from Type and create old->new ID mappings
 	idMapping := make(map[string]string)
@@ -907,8 +954,11 @@ func augmentFromMPK(tmpl *WidgetTemplate, widgetID string, projectPath string) *
 		return tmpl
 	}
 
-	def, err := mpk.ParseMPK(mpkPath)
+	def, err := mpk.ParseMPKForWidget(mpkPath, widgetID)
 	if err != nil {
+		return tmpl
+	}
+	if def == nil {
 		return tmpl
 	}
 
@@ -924,6 +974,14 @@ func augmentFromMPK(tmpl *WidgetTemplate, widgetID string, projectPath string) *
 	}
 
 	return clone
+}
+
+// ResetGeneratedCache clears the MPK-derived template cache (for testing).
+func ResetGeneratedCache() {
+	generatedCache.Range(func(k, _ any) bool {
+		generatedCache.Delete(k)
+		return true
+	})
 }
 
 // ListAvailableTemplates returns a list of available widget template IDs.

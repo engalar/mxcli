@@ -4,6 +4,8 @@ package widgets
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/sdk/widgets/mpk"
@@ -659,6 +661,40 @@ func TestAugmentTemplate_NoPlaceholderLeakAfterBSONConversion(t *testing.T) {
 	}
 	if containsPlaceholderID(bsonObject) {
 		t.Error("placeholder ID leak in Object BSON after augmentation — issue #6 regression")
+	}
+}
+
+func TestGetTemplateFullBSON_FallsBackToMPK(t *testing.T) {
+	crusherMprPath := filepath.Join("testdata", "crushertestproject", "testproject.mpr")
+	if _, err := os.Stat(crusherMprPath); err != nil {
+		t.Skip("crusher test fixture not available")
+	}
+
+	ResetGeneratedCache()
+
+	widgetID := "com.mendix.widget.custom.CavitySelector.CavitySelector"
+
+	callCount := 0
+	idGen := func() string {
+		callCount++
+		return fmt.Sprintf("%032x", callCount)
+	}
+
+	bsonType, bsonObj, propTypeIDs, _, err := GetTemplateFullBSON(widgetID, idGen, crusherMprPath)
+	if err != nil {
+		t.Fatalf("GetTemplateFullBSON: %v", err)
+	}
+	if bsonType == nil {
+		t.Fatal("expected non-nil bsonType")
+	}
+	if bsonObj == nil {
+		t.Fatal("expected non-nil bsonObj")
+	}
+	if len(propTypeIDs) == 0 {
+		t.Error("expected non-empty propTypeIDs")
+	}
+	if callCount == 0 {
+		t.Error("idGen was never called — IDs were not remapped")
 	}
 }
 
