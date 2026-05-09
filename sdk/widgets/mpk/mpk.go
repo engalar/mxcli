@@ -27,17 +27,25 @@ type PropertyDef struct {
 	IsList       bool
 	IsSystem     bool          // true for <systemProperty> elements
 	DataSource   string        // dataSource attribute reference
+	AllowedTypes []string      // for attribute properties: Mendix type names ("String", "Decimal", etc.)
 	Children     []PropertyDef // nested properties for object-type properties
 }
 
 // WidgetDefinition holds the parsed definition of a pluggable widget from an .mpk file.
 type WidgetDefinition struct {
-	ID          string        // e.g. "com.mendix.widget.web.combobox.Combobox"
-	Name        string        // e.g. "Combo box"
-	Version     string        // from package.xml clientModule version
-	IsPluggable bool          // true if pluginWidget="true" (React), false for legacy Dojo
-	Properties  []PropertyDef // regular <property> elements
-	SystemProps []PropertyDef // <systemProperty> elements
+	ID                 string        // e.g. "com.mendix.widget.web.combobox.Combobox"
+	Name               string        // e.g. "Combo box"
+	Description        string        // widget description from <description> element
+	Version            string        // from package.xml clientModule version
+	IsPluggable        bool          // true if pluginWidget="true" (React), false for legacy Dojo
+	OfflineCapable     bool          // true if offlineCapable="true"
+	NeedsEntityContext bool          // true if needsEntityContext="true"
+	SupportedPlatform  string        // "Web", "Native", "All" (empty = Web)
+	HelpURL            string        // helpUrl attribute
+	StudioCategory     string        // studioCategory attribute
+	StudioProCategory  string        // studioProCategory attribute
+	Properties         []PropertyDef // regular <property> elements
+	SystemProps        []PropertyDef // <systemProperty> elements
 }
 
 // --- XML structures for parsing ---
@@ -61,10 +69,17 @@ type xmlWidgetFile struct {
 
 // xmlWidget represents <widget> root element in widget XML.
 type xmlWidget struct {
-	ID             string         `xml:"id,attr"`
-	PluginWidget   string         `xml:"pluginWidget,attr"`
-	Name           string         `xml:"name"`
-	PropertyGroups []xmlPropGroup `xml:"properties>propertyGroup"`
+	ID                  string         `xml:"id,attr"`
+	PluginWidget        string         `xml:"pluginWidget,attr"`
+	OfflineCapable      string         `xml:"offlineCapable,attr"`
+	NeedsEntityContext  string         `xml:"needsEntityContext,attr"`
+	SupportedPlatform   string         `xml:"supportedPlatform,attr"`
+	HelpURL             string         `xml:"helpUrl,attr"`
+	StudioCategory      string         `xml:"studioCategory,attr"`
+	StudioProCategory   string         `xml:"studioProCategory,attr"`
+	Name                string         `xml:"name"`
+	Description         string         `xml:"description"`
+	PropertyGroups      []xmlPropGroup `xml:"properties>propertyGroup"`
 }
 
 // xmlPropGroup represents <propertyGroup caption="..."> element.
@@ -75,16 +90,22 @@ type xmlPropGroup struct {
 	SubGroups   []xmlPropGroup  `xml:"propertyGroup"`
 }
 
+// xmlAttributeType represents <attributeType name="..."/> element.
+type xmlAttributeType struct {
+	Name string `xml:"name,attr"`
+}
+
 // xmlProperty represents <property key="..." type="..." ...> element.
 type xmlProperty struct {
-	Key          string `xml:"key,attr"`
-	Type         string `xml:"type,attr"`
-	DefaultValue string `xml:"defaultValue,attr"`
-	Required     string `xml:"required,attr"`
-	IsList       string `xml:"isList,attr"`
-	DataSource   string `xml:"dataSource,attr"`
-	Caption      string `xml:"caption"`
-	Description  string `xml:"description"`
+	Key            string             `xml:"key,attr"`
+	Type           string             `xml:"type,attr"`
+	DefaultValue   string             `xml:"defaultValue,attr"`
+	Required       string             `xml:"required,attr"`
+	IsList         string             `xml:"isList,attr"`
+	DataSource     string             `xml:"dataSource,attr"`
+	Caption        string             `xml:"caption"`
+	Description    string             `xml:"description"`
+	AttributeTypes []xmlAttributeType `xml:"attributeTypes>attributeType"`
 	// Nested properties for object type
 	NestedProps []xmlPropGroup `xml:"properties>propertyGroup"`
 }
@@ -215,6 +236,12 @@ func walkPropertyGroup(pg xmlPropGroup, parentCategory string, def *WidgetDefini
 
 	// Collect regular properties
 	for _, p := range pg.Properties {
+		var allowedTypes []string
+		for _, at := range p.AttributeTypes {
+			if at.Name != "" {
+				allowedTypes = append(allowedTypes, at.Name)
+			}
+		}
 		prop := PropertyDef{
 			Key:          p.Key,
 			Type:         p.Type,
@@ -225,6 +252,7 @@ func walkPropertyGroup(pg xmlPropGroup, parentCategory string, def *WidgetDefini
 			DefaultValue: p.DefaultValue,
 			IsList:       p.IsList == "true",
 			DataSource:   p.DataSource,
+			AllowedTypes: allowedTypes,
 		}
 
 		// Parse nested properties for object-type properties
@@ -256,6 +284,12 @@ func walkPropertyGroup(pg xmlPropGroup, parentCategory string, def *WidgetDefini
 // within an object-type property and appends them to the parent PropertyDef.
 func collectNestedProperties(pg xmlPropGroup, parent *PropertyDef) {
 	for _, p := range pg.Properties {
+		var allowedTypes []string
+		for _, at := range p.AttributeTypes {
+			if at.Name != "" {
+				allowedTypes = append(allowedTypes, at.Name)
+			}
+		}
 		child := PropertyDef{
 			Key:          p.Key,
 			Type:         p.Type,
@@ -265,6 +299,7 @@ func collectNestedProperties(pg xmlPropGroup, parent *PropertyDef) {
 			DefaultValue: p.DefaultValue,
 			IsList:       p.IsList == "true",
 			DataSource:   p.DataSource,
+			AllowedTypes: allowedTypes,
 		}
 		parent.Children = append(parent.Children, child)
 	}
@@ -398,11 +433,22 @@ func getWidgetIDsFromMPK(mpkPath string) ([]string, error) {
 
 // buildDefinition constructs a WidgetDefinition from a parsed xmlWidget and version string.
 func buildDefinition(widget *xmlWidget, version string) *WidgetDefinition {
+	platform := widget.SupportedPlatform
+	if platform == "" {
+		platform = "Web"
+	}
 	def := &WidgetDefinition{
-		ID:          widget.ID,
-		Name:        widget.Name,
-		Version:     version,
-		IsPluggable: widget.PluginWidget == "true",
+		ID:                 widget.ID,
+		Name:               widget.Name,
+		Description:        widget.Description,
+		Version:            version,
+		IsPluggable:        widget.PluginWidget == "true",
+		OfflineCapable:     widget.OfflineCapable == "true",
+		NeedsEntityContext: widget.NeedsEntityContext == "true",
+		SupportedPlatform:  platform,
+		HelpURL:            widget.HelpURL,
+		StudioCategory:     widget.StudioCategory,
+		StudioProCategory:  widget.StudioProCategory,
 	}
 	for _, pg := range widget.PropertyGroups {
 		walkPropertyGroup(pg, "", def)

@@ -29,10 +29,24 @@ func GenerateFromMPK(def *mpk.WidgetDefinition) *WidgetTemplate {
 		}
 	}
 
+	platform := def.SupportedPlatform
+	if platform == "" {
+		platform = "Web"
+	}
+
 	typeMap := map[string]any{
-		"$ID":      typeID,
-		"$Type":    "CustomWidgets$CustomWidgetType",
-		"WidgetId": def.ID,
+		"$ID":                    typeID,
+		"$Type":                  "CustomWidgets$CustomWidgetType",
+		"HelpUrl":                def.HelpURL,
+		"OfflineCapable":         def.OfflineCapable,
+		"StudioCategory":         def.StudioCategory,
+		"StudioProCategory":      def.StudioProCategory,
+		"SupportedPlatform":      platform,
+		"WidgetDescription":      def.Description,
+		"WidgetId":               def.ID,
+		"WidgetName":             def.Name,
+		"WidgetNeedsEntityContext": def.NeedsEntityContext,
+		"WidgetPluginWidget":     def.IsPluggable,
 		"ObjectType": map[string]any{
 			"$ID":           objTypeID,
 			"$Type":         "CustomWidgets$WidgetObjectType",
