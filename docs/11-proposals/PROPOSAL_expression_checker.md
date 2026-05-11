@@ -222,20 +222,89 @@ cmd/exprgrammar-mine/
 
 ## 7. Data Model
 
+### 7.1 Hint design principle (AI-self-contained)
+
+The shipped `mxcli` is consumed by an AI Agent that has **no access** to:
+- mxcli source code
+- the mined grammar tables (`mined.go`)
+- internal AST type names (`BinExpr`, `IfStmt.Condition`, etc.)
+
+The AI **does** have:
+- Mendix domain vocabulary from training (Enumeration, attribute, microflow)
+- the MDL it just generated (in its own context)
+- the hint output
+
+Therefore every `Hint` field that crosses the boundary to AI must use
+**MDL-source vocabulary or Mendix-concept vocabulary**. Internal SlotPath
+strings (`IfStmt.Condition`) are translated to user-facing context
+(`in IF condition`) before emission. Internal AST type names never leak.
+
+### 7.2 Hint code stability table
+
+Each hint carries a stable code (E0xx) and a descriptive slug. AI prompts
+can reliably grep on either. New codes are append-only; never re-used.
+
+| Code | Slug | Trigger | Severity |
+|------|------|---------|----------|
+| E001 | `enum-string-mismatch` | Enumeration slot/comparison receives string literal | error |
+| E002 | `bool-string-mismatch` | Boolean slot receives `'true'`/`'false'` string | error |
+| E003 | `null-to-empty` | `null` keyword used where `empty` expected | warning |
+| E004 | `concat-type` | `+` operands of incompatible kinds | error |
+| E005 | `func-arg-type` | Built-in function arg has wrong kind | error |
+| E006 | `func-arg-arity` | Built-in function call has wrong arg count | error |
+| E007 | `unknown-token` | Max-match recovery triggered | warning |
+| E008 | `enum-missing-module` | `Enum.Value` written without module prefix | error |
+| E009 | `slot-type-mismatch` | Generic slot kind mismatch (catch-all) | error |
+| E010 | `attribute-not-found` | `$x/Attr` where Attr doesn't exist on entity | error |
+
+The catalog of codes is documented in `docs/06-mdl-reference/expr-hints.md`
+(generated). `mxcli help hint <code>` (see §11.5) prints the same content
+on demand.
+
+### 7.3 Types
+
 ```go
-// hint.go
+// hint.go — fields named for the AI's mental model, not internal AST
 type Hint struct {
-    Severity Severity        // info / warning / error
-    SlotPath string          // e.g., "IfStmt.Condition"
-    Location SourceLoc       // microflow + line + col
-    Source   string          // exact wrong fragment
-    Parsed   string          // pretty-printed RobustExpr at point of failure
-    Expect   string          // suggested correct fragment
-    Values   []string        // optional — legal enum values, etc.
-    Reason   string          // one-line diagnostic
-    RuleTag  string          // e.g., "slot-mismatch", "func-arity",
-                             //       "concat-type", "null-to-empty"
+    Code     string         // e.g., "E001"
+    Slug     string         // e.g., "enum-string-mismatch"
+    Severity Severity       // info / warning / error
+
+    Where    HintLocation   // user-facing location
+
+    YouWrote string         // verbatim source line(s) — exactly what the AI sent
+    Problem  string         // one-paragraph explanation in Mendix vocabulary
+    Fix      string         // corrected MDL fragment, ready to paste
+
+    Reference *HintReference // optional: enum values, function signature, etc.
 }
+
+// HintLocation uses MDL/Mendix words, not Go-AST class names.
+type HintLocation struct {
+    File      string         // .mdl filename (or "<exec>" when running exec on string)
+    Line      int
+    Column    int
+    Microflow string         // qualified microflow name
+    Context   string         // e.g., "IF condition", "RETURN value",
+                             //       "argument of length()", "Status field of CHANGE"
+}
+
+// HintReference holds optional context: enum values, function signature,
+// attribute type, etc. Always serialises with self-explanatory keys.
+type HintReference struct {
+    Enum             string   `json:"enum,omitempty"`
+    EnumValues       []string `json:"values,omitempty"`
+    FunctionName     string   `json:"function,omitempty"`
+    FunctionArgs     []string `json:"function_args,omitempty"`     // textual descriptions
+    FunctionReturns  string   `json:"function_returns,omitempty"`
+    AttributeName    string   `json:"attribute,omitempty"`
+    AttributeType    string   `json:"attribute_type,omitempty"`
+    EntityType       string   `json:"entity_type,omitempty"`
+}
+
+// SlotPath remains internal to the parser/checker. Translated to
+// HintLocation.Context via slot_to_context.go before emission.
+type slotPath = string  // package-private, never exposed in Hint output
 
 // ast.go
 type RobustExpr interface{ isRobustExpr() }
@@ -359,59 +428,169 @@ Max-match invariant:
 
 | ID | Trigger | Output | Audience |
 |----|---------|--------|----------|
-| **F1** | `mxcli exec` | HINT lines per bad expression with `slot`, `source`, `expect`, `values` | AI fix loop |
-| **F2** | `mxcli check [--references]` | Same hints as `linter.Violation` (text/JSON/SARIF) | AI fix loop, no MPR side effect |
-| **F3** | F1/F2 sub-capability | Max-match: partial parse with pinpoint hints, recovered fragments preserved | AI on complex exprs |
-| **F4** | `mxcli show expr-slot <SlotPath>` | Slot expected `Kind` + sample expressions mined from MPR | AI lookup before write |
-| **F5** | `mxcli show functions [name]` | Function table with mined signatures + example calls | AI lookup before write |
+| **F1** | `mxcli exec` | Self-contained HINT blocks per bad expression (text mode default; `--hint-format json` for machine) | AI fix loop |
+| **F2** | `mxcli check [--references] [--format text\|json\|sarif]` | Same hint payload as `linter.Violation` (with `Code`, `Slug`, `Problem`, `Fix`, `Reference`) | AI fix loop, no MPR side effect |
+| **F3** | F1/F2 sub-capability | Max-match: partial parse with pinpoint hints; recovered fragments preserved and surfaced via `E007 unknown-token` hints | AI on complex exprs |
+| **F4** | `mxcli show expr-slot <slot-context>` | Slot expected kind in plain English + 5 highest-frequency mined sample expressions | AI lookup before write |
+| **F5** | `mxcli show functions [name]` | Function table with mined signatures + example calls in MDL | AI lookup before write |
 | **F6** | (implicit) `describe → check` | 0 hints guaranteed by Stage 3 self-test | AI safe template copy |
 | **F7** | `mxcli check --coverage` | Coverage report: matched / recovered / novel-shape counts | Health audit |
 | **F8** | `make mine-exprgrammar MPR=...` | Re-mine on new MPR; show diff vs current grammar | Maintenance |
-| **F9** | `mxcli explain expression <text> --slot <slotPath>` | Single-shot debug of a literal expression string | AI debug |
+| **F9** | `mxcli explain expression <text> --in <slot-context>` | Single-shot debug of an expression string | AI debug |
+| **F10** | `mxcli help hint <code>` | Static reference page per hint code (E001-E0xx): when, why wrong, how to fix, MDL examples | AI fallback when in-line hint isn't enough |
 
-## 10. Hint Format (concrete examples)
+## 10. Hint Format (concrete examples — AI-self-contained, no internal jargon)
 
-### F1 — `mxcli exec` stdout
-
-```
-HINT [SlotPath=IfStmt.Condition] FraudDetection.SUB_UpdateAlertStatus@line 36:
-  source:   $Alert/Status = 'NewAlert'
-  parsed:   BinExpr(=, AttributePathExpr($Alert/Status), StringLit('NewAlert'))
-            ★ slot expects Boolean; comparison RHS String against LHS Enumeration
-  expect:   $Alert/Status = FraudDetection.AlertStatus.NewAlert
-  values:   NewAlert | Validated | Processing | Closed | Error
-```
-
-### F2 — `mxcli check --format json`
+### 10.1 Mode A — JSON (machine-first, `--hint-format json`)
 
 ```json
 {
-  "ruleId":  "EXPR-SLOT-MISMATCH",
-  "severity":"error",
-  "slotPath":"IfStmt.Condition",
-  "location":{"document":"FraudDetection.SUB_UpdateAlertStatus","line":36,"col":5},
-  "source":  "$Alert/Status = 'NewAlert'",
-  "expect":  "$Alert/Status = FraudDetection.AlertStatus.NewAlert",
-  "values":  ["NewAlert","Validated","Processing","Closed","Error"]
+  "code": "E001",
+  "slug": "enum-string-mismatch",
+  "severity": "error",
+  "where": {
+    "file": "fraud.mdl",
+    "line": 36,
+    "column": 21,
+    "microflow": "FraudDetection.SUB_UpdateAlertStatus",
+    "context": "IF condition"
+  },
+  "you_wrote": "IF $Alert/Status = 'NewAlert' THEN ...",
+  "problem": "Comparing an Enumeration attribute against a string literal. In Mendix expressions, enumeration values must be written as Module.Enum.Value, never as a quoted string.",
+  "fix": "IF $Alert/Status = FraudDetection.AlertStatus.NewAlert THEN ...",
+  "reference": {
+    "enum": "FraudDetection.AlertStatus",
+    "values": ["NewAlert", "Validated", "Processing", "Closed", "Error"]
+  }
 }
 ```
 
-### F3 — Max-match with recovery
+### 10.2 Mode B — indented text (default stdout, grep-friendly)
 
 ```
-HINT [parsed-tree-recovery]:
-  source:   'count=' + length(@@@broken@@@) + ' items'
-  parsed:   BinExpr(+,
-              BinExpr(+, StringLit('count='), CallExpr(length, [RecoveredExpr])),
-              StringLit(' items'))
-  hints:
-    - call.arg-1 (length): UNRECOGNIZED '@@@broken@@@' near col 28
-        recovered to next safe boundary ')'
-        expect: String expression
-    - + concat: 'count=' + Integer + ' items'
-        Integer needs toString()
-        expect: 'count=' + toString(length(...)) + ' items'
+HINT [E001 enum-string-mismatch] error
+  WHERE:
+    fraud.mdl line 36, in IF condition of microflow
+    FraudDetection.SUB_UpdateAlertStatus
+
+  YOU WROTE:
+    IF $Alert/Status = 'NewAlert' THEN ...
+
+  PROBLEM:
+    Comparing an Enumeration attribute against a string literal.
+    In Mendix expressions, enumeration values must be written as
+    Module.Enum.Value, never as a quoted string.
+
+  FIX:
+    IF $Alert/Status = FraudDetection.AlertStatus.NewAlert THEN ...
+
+  LEGAL VALUES for FraudDetection.AlertStatus:
+    NewAlert, Validated, Processing, Closed, Error
 ```
+
+### 10.3 Max-match recovery (E007 + cascading)
+
+```
+HINT [E007 unknown-token] warning
+  WHERE:
+    fraud.mdl line 12, in argument of length() in microflow
+    FraudDetection.SomeMicroflow
+
+  YOU WROTE:
+    SET $msg = 'count=' + length(@@@broken@@@) + ' items';
+                                 ^^^^^^^^^^^^^^
+
+  PROBLEM:
+    The token '@@@broken@@@' is not a valid Mendix expression. The parser
+    skipped to the next ')' to continue parsing. The rest of the line
+    parsed successfully but produced additional hints below.
+
+  FIX:
+    Replace '@@@broken@@@' with a valid String expression — a string
+    literal '...', a variable like $someText, or a function call returning
+    String.
+
+HINT [E004 concat-type] error
+  WHERE:
+    fraud.mdl line 12, in '+' concatenation in microflow
+    FraudDetection.SomeMicroflow
+
+  YOU WROTE:
+    SET $msg = 'count=' + length(...) + ' items';
+
+  PROBLEM:
+    The '+' operator concatenates Strings. length() returns Integer, which
+    cannot be concatenated with a String directly.
+
+  FIX:
+    SET $msg = 'count=' + toString(length(...)) + ' items';
+```
+
+### 10.4 Internal-context translation table
+
+Internal slot names are translated to user-facing context strings before
+emission. The complete table lives in
+`mdl/exprcheck/slot_to_context.go`:
+
+| Internal SlotPath | User-facing context |
+|-------------------|---------------------|
+| `IfStmt.Condition` | `IF condition` |
+| `WhileStmt.Condition` | `WHILE condition` |
+| `ChangeItem.Value` | `<AttributeName> field of CHANGE` |
+| `CreateItem.Value` | `<AttributeName> field of CREATE` |
+| `ReturnStmt.Value` | `RETURN value` |
+| `CallArgument.Value` | `argument <ParamName> of CALL <microflow>` |
+| `RetrieveStmt.LimitExpr` | `LIMIT clause` |
+| `RetrieveStmt.OffsetExpr` | `OFFSET clause` |
+| `LogStmt.Message` | `LOG message` |
+| `MfSetStmt.Value` | `right-hand side of SET` |
+| `DeclareStmt.InitialValue` | `initial value of DECLARE <var>` |
+| `FuncCall.Arg[i]` | `argument <i> of <funcName>()` |
+
+If a user-facing context doesn't fit any pattern, the fallback is the
+Mendix-vocabulary statement name plus position
+(e.g., `expression in microflow body line N`).
+
+### 10.5 `mxcli help hint <code>` — static reference (F10)
+
+```
+$ mxcli help hint E001
+
+HINT CODE E001 — enum-string-mismatch (severity: error)
+
+WHEN THIS APPEARS:
+  Your MDL has a comparison or assignment where one side is an
+  Enumeration attribute (or Enumeration parameter) and the other side
+  is a quoted string literal like 'NewAlert'.
+
+WHY IT'S WRONG:
+  Mendix expressions cannot compare an Enumeration value to a String.
+  The comparison would always be false at runtime, or trigger CE0109
+  in Studio Pro.
+
+HOW TO FIX:
+  Replace the string literal with the fully-qualified enumeration
+  value:
+    'NewAlert'  →  FraudDetection.AlertStatus.NewAlert
+
+EXAMPLES:
+
+  CREATE / CHANGE assignment:
+    CHANGE $Alert (Status = 'NewAlert')                                -- wrong
+    CHANGE $Alert (Status = FraudDetection.AlertStatus.NewAlert)       -- right
+
+  IF / WHILE / SET expression:
+    IF $Alert/Status = 'NewAlert' THEN ...                             -- wrong
+    IF $Alert/Status = FraudDetection.AlertStatus.NewAlert THEN ...    -- right
+
+  CALL parameter:
+    CALL Mf($Status = 'Validated')                                     -- wrong
+    CALL Mf($Status = FraudDetection.AlertStatus.Validated)            -- right
+```
+
+The `mxcli help hint` content is generated from the same source-of-truth
+table that emits hints — guaranteed in sync. Stored under
+`docs/06-mdl-reference/expr-hints.md` (also generated).
 
 ## 11. Wiring
 
@@ -473,6 +652,21 @@ mine-exprgrammar:
 Three new sub-commands under `cmd/mxcli/`. Each is < 60 LoC; they read
 generated `mined.go` tables and (for `explain`) call the parser directly.
 
+### 11.5 `mxcli help hint <code>` (F10)
+
+Reads `docs/06-mdl-reference/expr-hints.md` (which itself is generated
+from the same `HintRegistry` table that emits hints) and prints the
+section for the requested code. `cmd/mxcli/cmd_help_hint.go`, < 40 LoC.
+
+A single source of truth — `mdl/exprcheck/hints/registry.go` —
+defines for each `Code`:
+- `Slug`, `Severity`, `Trigger`, `WhyWrong`, `HowToFix`
+- a list of `(wrong, right)` example pairs in MDL syntax
+
+The hint emitter, the `mxcli help hint` command, and the generated
+markdown reference all consume this same registry. Drift is impossible
+by construction.
+
 ## 12. Implementation Phases
 
 | Phase | Deliverable | Branch state |
@@ -483,11 +677,13 @@ generated `mined.go` tables and (for `explain`) call the parser directly.
 | **P3** | `FuncChecker` + `SlotChecker` complete; all mined slots and functions used | full coverage |
 | **P4** | Stage 3 round-trip test green over 1637 microflows | acceptance gate passes |
 | **P5** | F4/F5/F9 sub-commands | AI lookup utilities ship |
-| **P6** | F7 coverage report; modelsdk codegen FieldKind annotation | maintenance polish |
+| **P6** | F7 coverage report; F10 `help hint`; modelsdk codegen FieldKind annotation | maintenance polish |
 
 Each phase is self-contained, testable, mergeable in isolation.
 
 ## 13. Test Strategy
+
+### 13.1 Standard layers
 
 - `mdl/exprcheck/*_test.go` — table-driven unit tests per parser arm and
   recovery path.
@@ -499,6 +695,33 @@ Each phase is self-contained, testable, mergeable in isolation.
   regressions.
 - Integration: `mdl-examples/expr-checker/` golden-file tests for both
   `mxcli check` and `mxcli exec` paths.
+
+### 13.2 Hint readability self-test (LLM-in-the-loop)
+
+The hint format is a UX surface; correctness is "an AI Agent reads the hint
+and produces a fix that passes". Asserted by:
+
+```
+mdl/exprcheck/hints/readability_test.go (build tag: -tags=llm-readability)
+
+  for each (Code, sample wrong MDL, expected right MDL) in HintRegistry:
+    1. run mxcli check --hint-format json on wrong MDL → capture hint payload
+    2. send to a sidecar LLM (configurable: claude-sonnet via API)
+       prompt: "You wrote this MDL. Here is the hint output. Produce the
+                corrected MDL."
+       payload: { wrong_mdl, hint_json }
+    3. diff LLM output against expected right MDL
+    4. require ≥ 95% match across the registry corpus
+```
+
+Requirements for this test to pass = hint is genuinely AI-self-contained.
+Failures point to vague `Problem` text, missing `Fix`, or incomplete
+`Reference` data. Run nightly (not on every PR — costs API calls), gates
+hint format changes.
+
+LLM is pluggable behind `mdl/exprcheck/hints/llm.go` with a
+`type Reasoner interface { Fix(wrongMDL, hintJSON string) (string, error) }`
+so a deterministic stub fills in for offline / unit-test runs.
 
 ## 14. Open Questions
 
@@ -521,6 +744,13 @@ Each phase is self-contained, testable, mergeable in isolation.
 5. **`mxcli show expr-slot` granularity**: sample expressions in F4 — show
    raw text or pretty-printed normalised form? Proposal: raw, capped at
    5 examples sorted by frequency.
+6. **LLM readability test cost**: the hint readability test (§13.2) calls
+   a sidecar LLM. Run cadence — nightly is proposed; monthly may be
+   sufficient. Cost analysis pending P5.
+7. **HintRegistry hand-curation**: codes E001-E010 are seeded manually with
+   trigger / why-wrong / how-to-fix text. New codes added by future PRs need
+   the same fields populated; PR template enforces this. Open: whether to
+   automate parts of the registry from mined data.
 
 ## 15. Out of Scope (explicit)
 
