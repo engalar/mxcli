@@ -24,6 +24,7 @@ type SlotResolver interface {
 
 type CatalogReader interface {
 	AttributeKind(entityQN, attrName string) (TypeKind, bool)
+	AttributeEnumQN(entityQN, attrName string) (string, bool)
 	EnumCases(enumQN string) ([]string, bool)
 	MicroflowReturn(qn string) (TypeKind, bool)
 	MicroflowParam(qn, paramName string) (TypeKind, bool)

@@ -37,17 +37,22 @@ func (c *CheckAdapter) CheckMicroflow(stmt *ast.CreateMicroflowStmt) *Result {
 }
 
 func (c *CheckAdapter) walkBody(body []ast.MicroflowStatement, mf string, r *Result) {
+	scope := buildVarEntityScope(body)
+	c.walkBodyWithScope(body, mf, scope, r)
+}
+
+func (c *CheckAdapter) walkBodyWithScope(body []ast.MicroflowStatement, mf string, scope map[string]string, r *Result) {
 	for _, s := range body {
 		switch n := s.(type) {
 		case *ast.IfStmt:
 			c.checkExpr(n.Condition, "IfStmt.Condition", mf, r)
-			c.walkBody(n.ThenBody, mf, r)
-			c.walkBody(n.ElseBody, mf, r)
+			c.walkBodyWithScope(n.ThenBody, mf, scope, r)
+			c.walkBodyWithScope(n.ElseBody, mf, scope, r)
 		case *ast.WhileStmt:
 			c.checkExpr(n.Condition, "WhileStmt.Condition", mf, r)
-			c.walkBody(n.Body, mf, r)
+			c.walkBodyWithScope(n.Body, mf, scope, r)
 		case *ast.LoopStmt:
-			c.walkBody(n.Body, mf, r)
+			c.walkBodyWithScope(n.Body, mf, scope, r)
 		case *ast.ReturnStmt:
 			c.checkExpr(n.Value, "ReturnStmt.Value", mf, r)
 		case *ast.DeclareStmt:
@@ -57,12 +62,19 @@ func (c *CheckAdapter) walkBody(body []ast.MicroflowStatement, mf string, r *Res
 		case *ast.LogStmt:
 			c.checkExpr(n.Message, "LogStmt.Message", mf, r)
 		case *ast.CreateObjectStmt:
+			entityQN := n.EntityType.String()
 			for _, ci := range n.Changes {
-				c.checkExpr(ci.Value, "CreateItem.Value", mf, r)
+				slot := "CreateItem.Value:" + entityQN + "." + ci.Attribute
+				c.checkExpr(ci.Value, slot, mf, r)
 			}
 		case *ast.ChangeObjectStmt:
+			entityQN := scope[n.Variable]
 			for _, ci := range n.Changes {
-				c.checkExpr(ci.Value, "ChangeItem.Value", mf, r)
+				slot := "ChangeItem.Value"
+				if entityQN != "" {
+					slot = "ChangeItem.Value:" + entityQN + "." + ci.Attribute
+				}
+				c.checkExpr(ci.Value, slot, mf, r)
 			}
 		case *ast.CallMicroflowStmt:
 			for _, a := range n.Arguments {
