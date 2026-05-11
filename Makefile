@@ -277,3 +277,9 @@ mine-exprgrammar:
 .PHONY: roundtrip
 roundtrip:
 	GOPROXY=https://goproxy.cn,direct go test -tags=roundtrip ./mdl/exprcheck/ -run TestRoundTrip -count=1 -timeout 5m
+
+# expr-hints-md — regenerates docs/06-mdl-reference/expr-hints.md from the
+# canonical hint registry in mdl/exprcheck/hints/registry.go.
+.PHONY: expr-hints-md
+expr-hints-md:
+	GOPROXY=https://goproxy.cn,direct go run ./cmd/expr-hints-md
