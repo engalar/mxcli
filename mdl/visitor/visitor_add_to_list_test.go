@@ -33,7 +33,7 @@ END;`
 	if addStmt.List != "Labels" {
 		t.Fatalf("List = %q, want Labels", addStmt.List)
 	}
-	path, ok := addStmt.Value.(*ast.AttributePathExpr)
+	path, ok := ast.Unwrap(addStmt.Value).(*ast.AttributePathExpr)
 	if !ok {
 		t.Fatalf("Value = %T, want AttributePathExpr", addStmt.Value)
 	}
@@ -67,7 +67,7 @@ END;`
 	if addStmt.Item != "Order" {
 		t.Fatalf("Item = %q, want Order", addStmt.Item)
 	}
-	varExpr, ok := addStmt.Value.(*ast.VariableExpr)
+	varExpr, ok := ast.Unwrap(addStmt.Value).(*ast.VariableExpr)
 	if !ok {
 		t.Fatalf("Value = %T, want VariableExpr", addStmt.Value)
 	}

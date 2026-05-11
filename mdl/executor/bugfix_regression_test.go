@@ -438,7 +438,7 @@ end;`
 	found := false
 	for _, action := range stmt.Body {
 		if setStmt, ok := action.(*ast.MfSetStmt); ok {
-			if _, isIf := setStmt.Value.(*ast.IfThenElseExpr); isIf {
+			if _, isIf := ast.Unwrap(setStmt.Value).(*ast.IfThenElseExpr); isIf {
 				found = true
 			}
 		}

@@ -443,7 +443,7 @@ end;`
 	declStmt := stmt.Body[0].(*ast.DeclareStmt)
 
 	// The expression should be an AttributePathExpr, not a BinaryExpr
-	pathExpr, ok := declStmt.InitialValue.(*ast.AttributePathExpr)
+	pathExpr, ok := ast.Unwrap(declStmt.InitialValue).(*ast.AttributePathExpr)
 	if !ok {
 		t.Fatalf("Expected AttributePathExpr, got %T", declStmt.InitialValue)
 	}

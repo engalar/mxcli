@@ -153,3 +153,14 @@ type XPathStep struct {
 	Expr      Expression // The step expression (IdentifierExpr, QualifiedNameExpr, VariableExpr, LiteralExpr, TokenExpr)
 	Predicate Expression // Optional nested predicate expression (the content inside [...])
 }
+
+// Unwrap returns the inner Expression if e is a *SourceExpr, otherwise e
+// itself. Callers that do type assertions on Expression nodes should run the
+// value through Unwrap first to remain robust against the visitor's source-
+// preservation wrapper added in P1.11.
+func Unwrap(e Expression) Expression {
+	if se, ok := e.(*SourceExpr); ok {
+		return se.Expression
+	}
+	return e
+}
