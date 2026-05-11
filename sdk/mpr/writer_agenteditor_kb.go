@@ -46,6 +46,33 @@ func (w *Writer) CreateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) er
 	})
 }
 
+// UpdateAgentEditorKnowledgeBase replaces an existing Knowledge Base document, preserving its UUID.
+func (w *Writer) UpdateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error {
+	if k == nil {
+		return fmt.Errorf("knowledge base is nil")
+	}
+	if k.Provider == "" {
+		k.Provider = "MxCloudGenAI"
+	}
+
+	contentsJSON, err := encodeKnowledgeBaseContents(k)
+	if err != nil {
+		return err
+	}
+
+	return w.updateCustomBlobDocument(customBlobInput{
+		UnitID:             string(k.ID),
+		ContainerID:        string(k.ContainerID),
+		Name:               k.Name,
+		Documentation:      k.Documentation,
+		Excluded:           k.Excluded,
+		ExportLevel:        k.ExportLevel,
+		CustomDocumentType: agenteditor.CustomTypeKnowledgeBase,
+		ReadableTypeName:   agenteditor.ReadableKnowledgeBase,
+		ContentsJSON:       contentsJSON,
+	})
+}
+
 // DeleteAgentEditorKnowledgeBase removes a Knowledge Base by ID.
 func (w *Writer) DeleteAgentEditorKnowledgeBase(id string) error {
 	return w.deleteUnit(id)

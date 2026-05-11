@@ -58,6 +58,84 @@ func TestAddRestCallAction_ReturnsResponseUsesHttpResponseHandling(t *testing.T)
 	}
 }
 
+// `as Module.Entity` (no `list of`) marks the REST result as a single
+// object regardless of whether the underlying import mapping is
+// list-typed. Studio Pro stores this on the microflow's
+// ImportMappingCall (Range.SingleObject + ForceSingleOccurrence), so the
+// builder must trust the explicit MDL syntax — using mapping shape as a
+// proxy collides with cases like PCD's REST_GetEnvironmentByUUID, where
+// the mapping has MaxOccurs=-1 but the call site binds a single Object.
+func TestAddRestCallAction_MappingAsEntityProducesSingleObject(t *testing.T) {
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+
+	stmt := &ast.RestCallStmt{
+		OutputVariable: "Item",
+		Method:         ast.HttpMethodGet,
+		URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.com"},
+		Result: ast.RestResult{
+			Type:         ast.RestResultMapping,
+			MappingName:  ast.QualifiedName{Module: "Synthetic", Name: "MsgDefMapping"},
+			ResultEntity: ast.QualifiedName{Module: "Synthetic", Name: "Item"},
+			IsList:       false,
+		},
+	}
+	fb.addRestCallAction(stmt)
+
+	activity := fb.objects[0].(*microflows.ActionActivity)
+	action := activity.Action.(*microflows.RestCallAction)
+	mapping := action.ResultHandling.(*microflows.ResultHandlingMapping)
+	if !mapping.SingleObject {
+		t.Errorf("SingleObject = false, want true (no `list of` => single object)")
+	}
+	if mapping.ForceSingleOccurrence == nil || !*mapping.ForceSingleOccurrence {
+		t.Errorf("ForceSingleOccurrence = %v, want explicit true to mirror SingleObject", mapping.ForceSingleOccurrence)
+	}
+}
+
+// `as list of Module.Entity` produces a list-typed result regardless of
+// the import mapping's underlying shape. ForceSingleOccurrence mirrors
+// SingleObject so the writer reproduces the BSON layout Studio Pro emits.
+func TestAddRestCallAction_MappingAsListOfEntityProducesListResult(t *testing.T) {
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+
+	stmt := &ast.RestCallStmt{
+		OutputVariable: "Items",
+		Method:         ast.HttpMethodGet,
+		URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.com"},
+		Result: ast.RestResult{
+			Type:         ast.RestResultMapping,
+			MappingName:  ast.QualifiedName{Module: "Synthetic", Name: "RepeatingObjectMapping"},
+			ResultEntity: ast.QualifiedName{Module: "Synthetic", Name: "Item"},
+			IsList:       true,
+		},
+	}
+	fb.addRestCallAction(stmt)
+
+	activity := fb.objects[0].(*microflows.ActionActivity)
+	action := activity.Action.(*microflows.RestCallAction)
+	mapping := action.ResultHandling.(*microflows.ResultHandlingMapping)
+	if mapping.SingleObject {
+		t.Errorf("SingleObject = true, want false (`list of` => list result)")
+	}
+	if mapping.ForceSingleOccurrence == nil || *mapping.ForceSingleOccurrence {
+		t.Errorf("ForceSingleOccurrence = %v, want explicit false to mirror SingleObject", mapping.ForceSingleOccurrence)
+	}
+}
+
 func TestAddRestCallAction_MappingResultPreservesExplicitOutputVariable(t *testing.T) {
 	fb := &flowBuilder{
 		posX:         100,

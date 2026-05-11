@@ -552,3 +552,17 @@ func splitLines(s string) []string {
 	}
 	return lines
 }
+
+func TestJavaAction_OrModify(t *testing.T) {
+	prog, errs := Build("CREATE OR MODIFY JAVA ACTION MyModule.DoSomething() RETURNS Boolean AS $$ return true; $$;")
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors: %v", errs)
+	}
+	stmt, ok := prog.Statements[0].(*ast.CreateJavaActionStmt)
+	if !ok {
+		t.Fatalf("Expected CreateJavaActionStmt, got %T", prog.Statements[0])
+	}
+	if !stmt.CreateOrModify {
+		t.Error("Expected CreateOrModify=true")
+	}
+}

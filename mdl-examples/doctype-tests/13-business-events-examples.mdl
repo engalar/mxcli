@@ -83,13 +83,16 @@ create business event service BeTest.CustomerEventsApi
 -- PBE_AddressChangedEvent has AddressId: Long → message defines (AddressId: Long) ✓
 
 -- ============================================================================
--- PART 3: Create Or Replace
+-- PART 3: Create Or Modify (Idempotent — Preserves UUID)
 -- ============================================================================
 
 /**
- * Example 3.1: Overwrite existing service
+ * Example 3.1: Update existing service in-place (preferred form)
+ *
+ * CREATE OR MODIFY preserves the document UUID so any other document
+ * that references this service keeps working. OR REPLACE is a synonym.
  */
-create or replace business event service BeTest.SimpleEvents
+create or modify business event service BeTest.SimpleEvents
 (
   ServiceName: 'SimpleEventsUpdated',
   EventNamePrefix: 'v2'

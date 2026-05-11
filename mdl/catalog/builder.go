@@ -61,6 +61,7 @@ type CatalogReader interface {
 	ListPublishedRestServices() ([]*model.PublishedRestService, error)
 	ListBusinessEventServices() ([]*model.BusinessEventService, error)
 	ListDatabaseConnections() ([]*model.DatabaseConnection, error)
+	ListModuleSettings() ([]*types.ModuleSettings, error)
 
 	// Mappings & JSON structures
 	ListImportMappings() ([]*model.ImportMapping, error)
@@ -94,6 +95,7 @@ type Builder struct {
 	workflowCache           []*workflows.Workflow
 	businessEventCache      []*model.BusinessEventService
 	databaseConnectionCache []*model.DatabaseConnection
+	moduleSettingsCache     []*types.ModuleSettings
 }
 
 // SetFullMode enables or disables full parsing mode.
@@ -297,6 +299,17 @@ func (b *Builder) cachedDatabaseConnections() ([]*model.DatabaseConnection, erro
 	return b.databaseConnectionCache, nil
 }
 
+func (b *Builder) cachedModuleSettings() ([]*types.ModuleSettings, error) {
+	if b.moduleSettingsCache == nil {
+		var err error
+		b.moduleSettingsCache, err = b.reader.ListModuleSettings()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return b.moduleSettingsCache, nil
+}
+
 // Build populates all catalog tables from MPR data.
 func (b *Builder) Build(progress ProgressFunc) error {
 	b.progress = progress
@@ -392,6 +405,10 @@ func (b *Builder) Build(progress ProgressFunc) error {
 		return fmt.Errorf("failed to build database connections: %w", err)
 	}
 
+	if err := b.buildJarDependencies(); err != nil {
+		return fmt.Errorf("failed to build jar dependencies: %w", err)
+	}
+
 	if err := b.buildRestClients(); err != nil {
 		return fmt.Errorf("failed to build REST clients: %w", err)
 	}
@@ -414,6 +431,10 @@ func (b *Builder) Build(progress ProgressFunc) error {
 
 	if err := b.buildContractEntities(); err != nil {
 		return fmt.Errorf("failed to build contract entities: %w", err)
+	}
+
+	if err := b.buildContractEntityUsage(); err != nil {
+		return fmt.Errorf("failed to build contract entity usage: %w", err)
 	}
 
 	if err := b.buildContractMessages(); err != nil {

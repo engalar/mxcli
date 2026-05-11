@@ -350,7 +350,7 @@ func TestXPath_EnumValueReference(t *testing.T) {
 		want  string
 	}{
 		{
-			"3-part enum value becomes quoted value",
+			"3-part enum value becomes string literal for database XPath",
 			"[Status = BST.ComplianceStatus.Rectified]",
 			"[Status = 'Rectified']",
 		},

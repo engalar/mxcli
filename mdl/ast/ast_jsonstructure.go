@@ -10,7 +10,7 @@ type CreateJsonStructureStmt struct {
 	JsonSnippet     string            // Raw JSON snippet
 	Documentation   string            // Optional documentation comment
 	Folder          string            // Optional folder path within module
-	CreateOrReplace bool              // true for CREATE OR REPLACE
+	CreateOrModify bool // true for CREATE OR MODIFY (or OR REPLACE, treated identically)
 	CustomNameMap   map[string]string // Optional: JSON key → custom ExposedName
 }
 

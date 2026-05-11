@@ -61,5 +61,6 @@ type DatabaseConnectionBackend interface {
 type DataTransformerBackend interface {
 	ListDataTransformers() ([]*model.DataTransformer, error)
 	CreateDataTransformer(dt *model.DataTransformer) error
+	UpdateDataTransformer(dt *model.DataTransformer) error
 	DeleteDataTransformer(id model.ID) error
 }

@@ -36,3 +36,17 @@ func TestCreateDataTransformer(t *testing.T) {
 		t.Errorf("Got Technology %q", stmt.Steps[0].Technology)
 	}
 }
+
+func TestCreateDataTransformer_OrModify(t *testing.T) {
+	prog, errs := Build(`CREATE OR MODIFY DATA TRANSFORMER MyModule.LatExtract SOURCE JSON '{}' {};`)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors: %v", errs)
+	}
+	stmt, ok := prog.Statements[0].(*ast.CreateDataTransformerStmt)
+	if !ok {
+		t.Fatalf("Expected CreateDataTransformerStmt, got %T", prog.Statements[0])
+	}
+	if !stmt.CreateOrModify {
+		t.Error("Expected CreateOrModify=true")
+	}
+}

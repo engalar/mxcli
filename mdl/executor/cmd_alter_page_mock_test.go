@@ -135,6 +135,38 @@ func TestAlterPage_Snippet_Success(t *testing.T) {
 	assertContainsStr(t, buf.String(), "Altered snippet")
 }
 
+// Issue #402 — visitor sets ContainerType to uppercase "SNIPPET"; executor
+// must normalise before comparing so the snippet branch is taken.
+func TestAlterPage_Snippet_UppercaseContainerType_Issue402(t *testing.T) {
+	mod := mkModule("MyModule")
+	snp := mkSnippet(mod.ID, "TestSnippet")
+	saved := false
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListSnippetsFunc: func() ([]*pages.Snippet, error) {
+			return []*pages.Snippet{snp}, nil
+		},
+		OpenPageForMutationFunc: func(unitID model.ID) (backend.PageMutator, error) {
+			return &mock.MockPageMutator{
+				SaveFunc: func() error { saved = true; return nil },
+			}, nil
+		},
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, snp.ContainerID, mod.ID)
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, execAlterPage(ctx, &ast.AlterPageStmt{
+		ContainerType: "SNIPPET", // uppercase as produced by the AST visitor
+		PageName:      ast.QualifiedName{Module: "MyModule", Name: "TestSnippet"},
+	}))
+	if !saved {
+		t.Error("expected Save to be called")
+	}
+	assertContainsStr(t, buf.String(), "Altered snippet")
+}
+
 // ---------------------------------------------------------------------------
 // Open mutator error
 // ---------------------------------------------------------------------------

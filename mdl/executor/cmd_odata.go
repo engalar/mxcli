@@ -719,6 +719,7 @@ func outputExternalEntityMDL(ctx *ExecContext, entity *domainmodel.Entity, modul
 	props = append(props, fmt.Sprintf("  Creatable: %s", boolStr(entity.Creatable)))
 	props = append(props, fmt.Sprintf("  Deletable: %s", boolStr(entity.Deletable)))
 	props = append(props, fmt.Sprintf("  Updatable: %s", boolStr(entity.Updatable)))
+	props = append(props, fmt.Sprintf("  AllowCreateChangeLocally: %s", boolStr(entity.CreateChangeLocally)))
 	fmt.Fprintln(ctx.Output, strings.Join(props, ",\n"))
 
 	fmt.Fprintln(ctx.Output, ")")
@@ -814,6 +815,7 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 		existingEntity.Creatable = s.Creatable
 		existingEntity.Deletable = s.Deletable
 		existingEntity.Updatable = s.Updatable
+		existingEntity.CreateChangeLocally = s.AllowCreateChangeLocally
 		if len(attrs) > 0 {
 			existingEntity.Attributes = attrs
 		}
@@ -831,19 +833,20 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 	location := model.Point{X: 100 + len(dm.Entities)*150, Y: 100}
 
 	newEntity := &domainmodel.Entity{
-		Name:              s.Name.Name,
-		Documentation:     s.Documentation,
-		Persistable:       false, // External entities are not persistable
-		Location:          location,
-		Attributes:        attrs,
-		Source:            "Rest$ODataRemoteEntitySource",
-		RemoteServiceName: serviceRef,
-		RemoteEntitySet:   s.EntitySet,
-		RemoteEntityName:  s.RemoteName,
-		Countable:         s.Countable,
-		Creatable:         s.Creatable,
-		Deletable:         s.Deletable,
-		Updatable:         s.Updatable,
+		Name:                s.Name.Name,
+		Documentation:       s.Documentation,
+		Persistable:         false, // External entities are not persistable
+		Location:            location,
+		Attributes:          attrs,
+		Source:              "Rest$ODataRemoteEntitySource",
+		RemoteServiceName:   serviceRef,
+		RemoteEntitySet:     s.EntitySet,
+		RemoteEntityName:    s.RemoteName,
+		Countable:           s.Countable,
+		Creatable:           s.Creatable,
+		Deletable:           s.Deletable,
+		Updatable:           s.Updatable,
+		CreateChangeLocally: s.AllowCreateChangeLocally,
 	}
 	newEntity.ID = model.ID(types.GenerateID())
 

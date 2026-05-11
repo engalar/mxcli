@@ -118,6 +118,9 @@ Examples:
 			}
 		}
 
+		// Check for intra-script duplicate definitions (CREATE X … CREATE X without DROP)
+		violations = append(violations, executor.CheckScriptDuplicates(prog)...)
+
 		if isStructured {
 			// Always emit structured output (even when clean)
 			formatter.Format(violations, os.Stderr)
@@ -159,6 +162,10 @@ Examples:
 
 			// Validate the program (considers objects defined within the script)
 			validationErrors := exec.ValidateProgram(prog)
+
+			// Check for project conflicts: plain CREATE where the document already exists
+			validationErrors = append(validationErrors, exec.CheckProjectConflicts(prog)...)
+
 			if len(validationErrors) > 0 {
 				if isStructured {
 					var refViolations []linter.Violation

@@ -26,6 +26,18 @@ func (w *Writer) CreateDataTransformer(dt *model.DataTransformer) error {
 	return w.insertUnit(string(dt.ID), string(dt.ContainerID), "Documents", "DataTransformers$DataTransformer", contents)
 }
 
+// UpdateDataTransformer replaces an existing data transformer unit, preserving its UUID.
+func (w *Writer) UpdateDataTransformer(dt *model.DataTransformer) error {
+	dt.TypeName = "DataTransformers$DataTransformer"
+
+	contents, err := serializeDataTransformer(dt)
+	if err != nil {
+		return fmt.Errorf("failed to serialize data transformer: %w", err)
+	}
+
+	return w.updateUnit(string(dt.ID), contents)
+}
+
 // DeleteDataTransformer deletes a data transformer by ID.
 func (w *Writer) DeleteDataTransformer(id model.ID) error {
 	return w.deleteUnit(string(id))

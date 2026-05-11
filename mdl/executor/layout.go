@@ -28,8 +28,9 @@ const (
 	EventSize = 20
 
 	// Spacing
-	HorizontalSpacing = 150 // Space between activities horizontally
-	VerticalSpacing   = 120 // Space between branches vertically
+	HorizontalSpacing = 160 // Space between activities horizontally (edge-to-edge ~40px)
+	VerticalSpacing   = 90  // Space between branches for error-handler flows
+	BranchGap         = 40  // Minimum edge-to-edge gap between parallel branches
 	LoopPadding       = 50  // Padding inside loop boxes
 	MinLoopWidth      = 200
 	MinLoopHeight     = 100
@@ -46,7 +47,10 @@ type layoutMeasurer struct {
 	varTypes map[string]string
 }
 
-// measureStatements calculates the total bounds for a list of statements
+// measureStatements calculates the total bounds for a list of statements.
+// Spacing is only added between pairs of non-zero-width elements so that
+// zero-width statements (e.g. ReturnStmt, which produces no visual box)
+// don't artificially inflate the measured width.
 func (m *layoutMeasurer) measureStatements(stmts []ast.MicroflowStatement) Bounds {
 	if len(stmts) == 0 {
 		return Bounds{Width: 0, Height: 0}
@@ -55,14 +59,16 @@ func (m *layoutMeasurer) measureStatements(stmts []ast.MicroflowStatement) Bound
 	totalWidth := 0
 	maxHeight := ActivityHeight
 
-	for i, stmt := range stmts {
+	for _, stmt := range stmts {
 		bounds := m.measureStatement(stmt)
-		totalWidth += bounds.Width
 		maxHeight = max(maxHeight, bounds.Height)
-		// Add spacing between activities (but not after the last one)
-		if i < len(stmts)-1 {
+		if bounds.Width == 0 {
+			continue
+		}
+		if totalWidth > 0 {
 			totalWidth += HorizontalSpacing
 		}
+		totalWidth += bounds.Width
 	}
 
 	return Bounds{Width: totalWidth, Height: maxHeight}
@@ -75,6 +81,8 @@ func (m *layoutMeasurer) measureStatement(stmt ast.MicroflowStatement) Bounds {
 		return m.measureIfStatement(s)
 	case *ast.EnumSplitStmt:
 		return m.measureEnumSplitStatement(s)
+	case *ast.InheritanceSplitStmt:
+		return m.measureInheritanceSplitStatement(s)
 	case *ast.LoopStmt:
 		return m.measureLoopStatement(s)
 	case *ast.WhileStmt:
@@ -89,6 +97,36 @@ func (m *layoutMeasurer) measureStatement(stmt ast.MicroflowStatement) Bounds {
 }
 
 func (m *layoutMeasurer) measureEnumSplitStatement(s *ast.EnumSplitStmt) Bounds {
+	maxBranchWidth := 0
+	var branchHeights []int
+	for _, c := range s.Cases {
+		bounds := m.measureStatements(c.Body)
+		maxBranchWidth = max(maxBranchWidth, bounds.Width)
+		branchHeights = append(branchHeights, max(bounds.Height, ActivityHeight))
+	}
+	if len(s.ElseBody) > 0 {
+		bounds := m.measureStatements(s.ElseBody)
+		maxBranchWidth = max(maxBranchWidth, bounds.Width)
+		branchHeights = append(branchHeights, max(bounds.Height, ActivityHeight))
+	}
+	if maxBranchWidth == 0 {
+		maxBranchWidth = HorizontalSpacing / 2
+	}
+	if len(branchHeights) == 0 {
+		branchHeights = []int{ActivityHeight}
+	}
+
+	totalHeight := 0
+	for _, h := range branchHeights {
+		totalHeight += h
+	}
+	totalHeight += (len(branchHeights) - 1) * BranchGap
+
+	width := SplitWidth + HorizontalSpacing/2 + maxBranchWidth + HorizontalSpacing/2 + MergeSize
+	return Bounds{Width: width, Height: totalHeight}
+}
+
+func (m *layoutMeasurer) measureInheritanceSplitStatement(s *ast.InheritanceSplitStmt) Bounds {
 	maxBranchWidth := 0
 	branchCount := len(s.Cases)
 	for _, c := range s.Cases {
@@ -107,7 +145,7 @@ func (m *layoutMeasurer) measureEnumSplitStatement(s *ast.EnumSplitStmt) Bounds 
 		branchCount = 1
 	}
 
-	width := SplitWidth + HorizontalSpacing/2 + maxBranchWidth + HorizontalSpacing/2 + MergeSize
+	width := ActivityWidth + HorizontalSpacing/2 + maxBranchWidth + HorizontalSpacing/2 + MergeSize
 	height := ActivityHeight + (branchCount-1)*VerticalSpacing
 	return Bounds{Width: width, Height: height}
 }
@@ -136,14 +174,15 @@ func (m *layoutMeasurer) measureIfStatement(s *ast.IfStmt) Bounds {
 	var totalHeight int
 	if len(s.ElseBody) > 0 {
 		// IF WITH ELSE: TRUE path horizontal (main line), FALSE path below
-		// Height = main line height + vertical spacing + ELSE branch height
+		// Height = THEN branch height + gap + ELSE branch height
+		thenHeight := max(thenBounds.Height, ActivityHeight)
 		elseHeight := max(elseBounds.Height, ActivityHeight)
-		totalHeight = ActivityHeight + VerticalSpacing + elseHeight
+		totalHeight = thenHeight + BranchGap + elseHeight
 	} else {
 		// IF WITHOUT ELSE: FALSE path horizontal (main line), TRUE path below
-		// Height = main line height + vertical spacing + THEN branch height
+		// Height = main activity height + gap + THEN branch height
 		thenHeight := max(thenBounds.Height, ActivityHeight)
-		totalHeight = ActivityHeight + VerticalSpacing + thenHeight
+		totalHeight = ActivityHeight + BranchGap + thenHeight
 	}
 
 	return Bounds{Width: totalWidth, Height: totalHeight}

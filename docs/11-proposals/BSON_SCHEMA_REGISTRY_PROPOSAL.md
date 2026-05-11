@@ -1,5 +1,16 @@
 # Proposal: Version-Aware BSON Schema Registry
 
+> **Status: Superseded by [UNIFIED_SCHEMA_REGISTRY.md](UNIFIED_SCHEMA_REGISTRY.md)**
+>
+> The unified proposal keeps the registry concept and overall shape from this document
+> but replaces the data sources: `mx dump-mpr` and `.mpk` XML parsing instead of
+> TypeScript-derived reflection data + `supplements.json`. The unified proposal also
+> adds workflow integration (init/refresh/check/lsp/skills), inspection commands,
+> migration tooling, and native-vs-pluggable dispatch via data — none of which were
+> covered here.
+>
+> Preserved for context.
+
 ## Problem Statement
 
 Mendix documents are stored as BSON in `.mpr` files. The expected BSON structure varies by:

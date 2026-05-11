@@ -1,0 +1,90 @@
+-- ============================================================================
+-- Bug #519: REST mapping result cardinality must be authored at the call site
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   `returns mapping Module.IMM as Module.Entity` was the only form available.
+--   The same import mapping can yield either a single object or a list
+--   depending on the call site — Studio Pro stores the cardinality on the
+--   microflow's ImportMappingCall (Range.SingleObject + ForceSingleOccurrence),
+--   not on the import mapping itself. mxcli's builder had to guess from the
+--   import-mapping shape, which was lossy. With message-definition / XML-schema
+--   backed mappings (no JsonStructure), the guess flipped between releases —
+--   one version forced single, another forced list — producing CE0117 at the
+--   End event or CE0013 / CE0100 on downstream loop / aggregate / list-op
+--   activities depending on which way the heuristic went.
+--
+-- After fix:
+--   New MDL syntax `returns mapping Module.IMM as list of Module.Entity` makes
+--   the cardinality explicit at the call site. The describer emits `as list of`
+--   when SingleObject=false and `as` otherwise, so the roundtrip preserves the
+--   exact cardinality Studio Pro authored. The builder mirrors SingleObject
+--   into ForceSingleOccurrence so the writer reproduces the BSON layout
+--   Studio Pro emits.
+--
+-- Validation:
+--   `mxcli check 519-rest-mapping-as-list-of.mdl` parses both forms.
+--   Roundtrip (describe → exec → describe) preserves both cardinality forms
+--   byte-for-byte. `mx check` against the resulting MPR reports 0 errors for
+--   the single-object case (consumed via `return $Item`) and the list case
+--   (consumed via `count($Items)` and `loop`).
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/519-rest-mapping-as-list-of.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest519.MF_GetSinglePet"
+--   mxcli -p app.mpr -c "describe microflow BugTest519.MF_GetPetList"
+-- ============================================================================
+
+create module BugTest519;
+
+create json structure BugTest519.JSON_Pets
+snippet '[{"id": 1, "name": "Fido", "status": "available"}]';
+
+create non-persistent entity BugTest519.PetResponse (
+  PetId : integer,
+  Name : string,
+  Status : string
+);
+/
+
+create import mapping BugTest519.IMM_Pet
+  with json structure BugTest519.JSON_Pets
+{
+  create BugTest519.PetResponse {
+    PetId = id,
+    Name = name,
+    Status = status
+  }
+};
+
+-- Single-object form: pull the first element of a list-typed mapping into a
+-- single result. Mirrors the PrivateCloudData.REST_GetEnvironmentByUUID
+-- pattern (ForceSingleOccurrence=true, Range.SingleObject=false).
+create microflow BugTest519.MF_GetSinglePet (
+  $Url : string
+)
+returns BugTest519.PetResponse
+begin
+  $Pet = rest call get $Url
+    timeout 30
+    returns mapping BugTest519.IMM_Pet as BugTest519.PetResponse
+    on error rollback;
+  return $Pet;
+end;
+/
+
+-- List form: bind a list result. Mirrors the MendixSSO.RetrieveUserRoles
+-- pattern (ForceSingleOccurrence=false, Range.SingleObject=false).
+create microflow BugTest519.MF_GetPetList (
+  $Url : string
+)
+returns Integer
+begin
+  $Pets = rest call get $Url
+    timeout 30
+    returns mapping BugTest519.IMM_Pet as list of BugTest519.PetResponse
+    on error rollback;
+  declare $Count Integer = count($Pets);
+  return $Count;
+end;
+/

@@ -6,6 +6,7 @@ package executor
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -396,16 +397,29 @@ func expressionToXPath(expr ast.Expression) string {
 }
 
 // qualifiedNameToXPath converts a QualifiedNameExpr to XPath format.
-// For enum value references (3-part: Module.EnumName.Value), XPath requires
-// just the value name in quotes: 'Value'. For 2-part names (associations,
-// entity references), returns the qualified name as-is.
+// XPath constraints are evaluated at the database level where enum values are stored as plain strings.
+// 3-part names (Module.EnumName.Value) must be converted to string literals ('Value').
+// 2-part names (Module.AssocName) are association references and are passed through as-is.
 func qualifiedNameToXPath(e *ast.QualifiedNameExpr) string {
-	// 3-part names (Name contains a dot) are enum references: Module.EnumName.Value
 	if dotIdx := strings.LastIndex(e.QualifiedName.Name, "."); dotIdx >= 0 {
-		valueName := e.QualifiedName.Name[dotIdx+1:]
-		return "'" + valueName + "'"
+		return "'" + e.QualifiedName.Name[dotIdx+1:] + "'"
 	}
 	return e.QualifiedName.String()
+}
+
+// xpathEnumRefRe matches 3-part qualified enum value references like Module.EnumName.Value
+// in a raw XPath string. These must be replaced with string literals for database queries.
+var xpathEnumRefRe = regexp.MustCompile(`[A-Za-z][A-Za-z0-9_]*\.[A-Za-z][A-Za-z0-9_]*\.[A-Za-z][A-Za-z0-9_]*`)
+
+// normalizeXPathEnumRefs converts 3-part qualified enum value references in a raw XPath
+// string to the string literal format that Mendix database queries require.
+// Example: "[Status = XpathTest.OrderStatus.Open]" → "[Status = 'Open']".
+// This handles the SourceExpr (bracketed) path where qualifiedNameToXPath is bypassed.
+func normalizeXPathEnumRefs(xpath string) string {
+	return xpathEnumRefRe.ReplaceAllStringFunc(xpath, func(match string) string {
+		lastDot := strings.LastIndex(match, ".")
+		return "'" + match[lastDot+1:] + "'"
+	})
 }
 
 // memberExpressionToString converts an AST Expression to a Mendix expression string,
@@ -456,6 +470,135 @@ func (fb *flowBuilder) lookupEnumRef(entityQN, attrName string) string {
 		}
 	}
 	return ""
+}
+
+// ============================================================================
+// XPath Enum Enrichment (DESCRIBE output)
+// ============================================================================
+
+// enrichXPathExprWithEnums walks an XPath AST and replaces string-literal comparisons
+// against known enum attributes with QualifiedNameExpr references, so DESCRIBE output
+// reads as Module.EnumName.Value rather than 'Value'.
+//
+// enumAttrs maps bare attribute name → enumeration qualified name, e.g.
+// "Status" → "XpathTest.OrderStatus".
+func enrichXPathExprWithEnums(expr ast.Expression, enumAttrs map[string]string) ast.Expression {
+	if expr == nil || len(enumAttrs) == 0 {
+		return expr
+	}
+	switch e := expr.(type) {
+	case *ast.BinaryExpr:
+		// attr = 'Value' or 'Value' = attr
+		if attr := xpathBareAttrName(e.Left); attr != "" {
+			if enumRef, ok := enumAttrs[attr]; ok {
+				if lit, ok2 := e.Right.(*ast.LiteralExpr); ok2 && lit.Kind == ast.LiteralString {
+					return &ast.BinaryExpr{
+						Left:     e.Left,
+						Operator: e.Operator,
+						Right:    enumStringToQN(enumRef, fmt.Sprintf("%v", lit.Value)),
+					}
+				}
+			}
+		} else if attr := xpathBareAttrName(e.Right); attr != "" {
+			if enumRef, ok := enumAttrs[attr]; ok {
+				if lit, ok2 := e.Left.(*ast.LiteralExpr); ok2 && lit.Kind == ast.LiteralString {
+					return &ast.BinaryExpr{
+						Left:     enumStringToQN(enumRef, fmt.Sprintf("%v", lit.Value)),
+						Operator: e.Operator,
+						Right:    e.Right,
+					}
+				}
+			}
+		}
+		return &ast.BinaryExpr{
+			Left:     enrichXPathExprWithEnums(e.Left, enumAttrs),
+			Operator: e.Operator,
+			Right:    enrichXPathExprWithEnums(e.Right, enumAttrs),
+		}
+	case *ast.UnaryExpr:
+		return &ast.UnaryExpr{Operator: e.Operator, Operand: enrichXPathExprWithEnums(e.Operand, enumAttrs)}
+	case *ast.ParenExpr:
+		return &ast.ParenExpr{Inner: enrichXPathExprWithEnums(e.Inner, enumAttrs)}
+	case *ast.FunctionCallExpr:
+		enriched := make([]ast.Expression, len(e.Arguments))
+		for i, arg := range e.Arguments {
+			enriched[i] = enrichXPathExprWithEnums(arg, enumAttrs)
+		}
+		return &ast.FunctionCallExpr{Name: e.Name, Arguments: enriched}
+	}
+	return expr
+}
+
+// xpathBareAttrName returns the bare attribute name if expr is a simple
+// IdentifierExpr (e.g. "Status"), otherwise "".
+func xpathBareAttrName(expr ast.Expression) string {
+	if id, ok := expr.(*ast.IdentifierExpr); ok {
+		return id.Name
+	}
+	return ""
+}
+
+// enumStringToQN builds a QualifiedNameExpr for an enum value reference.
+// enumRef = "Module.EnumName", valueKey = "Open" → Module: "Module", Name: "EnumName.Open"
+func enumStringToQN(enumRef, valueKey string) *ast.QualifiedNameExpr {
+	parts := strings.SplitN(enumRef, ".", 2)
+	if len(parts) != 2 {
+		return &ast.QualifiedNameExpr{QualifiedName: ast.QualifiedName{Module: enumRef, Name: valueKey}}
+	}
+	return &ast.QualifiedNameExpr{
+		QualifiedName: ast.QualifiedName{Module: parts[0], Name: parts[1] + "." + valueKey},
+	}
+}
+
+// xpathExprToMDLString serializes an XPath expression for MDL DESCRIBE output.
+// Unlike expressionToXPath (which converts enum QualifiedNameExpr → 'Value' for BSON),
+// this preserves enum QualifiedNameExpr as Module.EnumName.Value for readability.
+func xpathExprToMDLString(expr ast.Expression) string {
+	if expr == nil {
+		return ""
+	}
+	switch e := expr.(type) {
+	case *ast.QualifiedNameExpr:
+		// Output qualified names as-is (including 3-part enum references)
+		return e.QualifiedName.String()
+	case *ast.BinaryExpr:
+		left := xpathExprToMDLString(e.Left)
+		right := xpathExprToMDLString(e.Right)
+		op := strings.ToLower(e.Operator)
+		return left + " " + op + " " + right
+	case *ast.UnaryExpr:
+		operand := xpathExprToMDLString(e.Operand)
+		op := strings.ToLower(e.Operator)
+		if op == "not" {
+			if p, ok := e.Operand.(*ast.ParenExpr); ok {
+				return "not(" + xpathExprToMDLString(p.Inner) + ")"
+			}
+			return "not(" + operand + ")"
+		}
+		return op + " " + operand
+	case *ast.ParenExpr:
+		return "(" + xpathExprToMDLString(e.Inner) + ")"
+	case *ast.FunctionCallExpr:
+		var args []string
+		for _, arg := range e.Arguments {
+			args = append(args, xpathExprToMDLString(arg))
+		}
+		return mendixFunctionName(e.Name) + "(" + strings.Join(args, ", ") + ")"
+	case *ast.XPathPathExpr:
+		var parts []string
+		for _, step := range e.Steps {
+			s := xpathExprToMDLString(step.Expr)
+			if step.Predicate != nil {
+				s += "[" + xpathExprToMDLString(step.Predicate) + "]"
+			}
+			parts = append(parts, s)
+		}
+		return strings.Join(parts, "/")
+	default:
+		// For all other types (literals, variables, tokens, etc.) use the BSON serializer —
+		// they don't need MDL-specific output.
+		return expressionToXPath(expr)
+	}
 }
 
 // xpathPathExprToString serializes an XPathPathExpr to an XPath path string.

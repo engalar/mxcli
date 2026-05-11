@@ -1,0 +1,7 @@
+-- Bug #418: SHOW WIDGETS WHERE Name LIKE returns no results
+-- Root cause: visitor set Operator="LIKE" (upper) but executor checked "like" (lower)
+-- Fix: use strings.EqualFold for operator comparison in cmd_widgets.go
+
+-- Requires a connected project with widgets named *button* (e.g. actionButton1).
+-- With the bug, this would return "No widgets found" even for existing widgets.
+SHOW WIDGETS WHERE Name LIKE '%button%';

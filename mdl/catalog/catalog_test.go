@@ -413,7 +413,7 @@ func TestCreateTablesAreQueryable(t *testing.T) {
 		"java_actions", "projects", "snapshots", "catalog_meta",
 		"workflows", "odata_clients", "odata_services",
 		"business_event_services", "database_connections",
-		"role_mappings",
+		"jar_dependencies", "role_mappings",
 	}
 	for _, tbl := range coreTables {
 		_, err := cat.Query("SELECT * FROM " + tbl)

@@ -1,0 +1,201 @@
+# CREATE AGENT
+
+## Synopsis
+
+```sql
+CREATE [ OR MODIFY ] AGENT module.Name (
+    UsageType: { Task | Conversational },
+    model: module.ModelName,
+    SystemPrompt: 'prompt' | $$ multi-line prompt $$,
+    UserPrompt: 'prompt' | $$ multi-line prompt $$
+    [, description: 'description' ]
+    [, variables: ( "Key": EntityAttribute [, ...] ) ]
+    [, MaxTokens: 16384 ]
+    [, Temperature: 0.7 ]
+    [, ToolChoice: { Auto | None | Required } ]
+)
+[ {
+    [ MCP SERVICE module.McpServiceName {
+        Enabled: true
+    } ]
+    [ KNOWLEDGE BASE alias {
+        source: module.KBName,
+        collection: 'collection-name',
+        MaxResults: 5,
+        description: 'description',
+        Enabled: true
+    } ]
+} ]
+;
+
+DROP AGENT module.Name
+```
+
+Requires Mendix 11.9+.
+
+## Description
+
+Creates an agent document in the Mendix Agent Editor. An agent defines how an AI assistant behaves: which model it uses, what instructions it follows, and which tools and knowledge bases it can access.
+
+### Usage Types
+
+| Value | Description |
+|-------|-------------|
+| `Task` | Single-turn task completion |
+| `Conversational` | Multi-turn conversational agent |
+
+### Prompts
+
+Both `SystemPrompt` and `UserPrompt` accept single-quoted strings or dollar-quoted (`$$...$$`) multi-line strings. Dollar-quoted strings preserve line breaks and are useful for structured prompts.
+
+### Variables
+
+The `variables` clause declares named template variables that can be referenced in prompts using `{{VariableName}}` syntax. Each variable maps a name to a Mendix type (e.g., `EntityAttribute`).
+
+```sql
+variables: ("Language": EntityAttribute)
+SystemPrompt: 'Translate the text into {{Language}}.'
+```
+
+### Body Blocks
+
+The optional body block (inside `{ }`) attaches tools and knowledge bases to the agent:
+
+- **MCP SERVICE** — attaches a consumed MCP service by its qualified name
+- **KNOWLEDGE BASE** — attaches a knowledge base with retrieval settings
+
+### OR MODIFY
+
+If `OR MODIFY` is specified and the agent already exists, its properties and body blocks are updated in place. The document UUID is preserved.
+
+## Parameters
+
+`module.Name`
+:   The qualified name of the agent document.
+
+`UsageType`
+:   Whether the agent is `Task` (single-turn) or `Conversational` (multi-turn).
+
+`model: module.ModelName`
+:   Qualified reference to the model document the agent uses.
+
+`SystemPrompt`
+:   Instructions for the AI model's behavior and persona.
+
+`UserPrompt`
+:   Default user message or prompt template.
+
+`description`
+:   Optional human-readable description of the agent's purpose.
+
+`variables`
+:   Optional template variable declarations. Keys are quoted strings; values are Mendix type keywords.
+
+`MaxTokens`
+:   Optional maximum number of tokens in the response.
+
+`Temperature`
+:   Optional sampling temperature (0.0–1.0). Higher values produce more creative output.
+
+`ToolChoice`
+:   Optional. `Auto` (let the model decide), `None` (no tools), or `Required` (always use a tool).
+
+## Examples
+
+### Simple task agent
+
+```sql
+CREATE AGENT MyModule."Summarizer" (
+    UsageType: Task,
+    model: MyModule.GPT4Model,
+    SystemPrompt: 'Summarize the given text in 3 sentences.',
+    UserPrompt: 'Enter text to summarize.'
+);
+/
+```
+
+### Agent with variable substitution
+
+```sql
+CREATE AGENT MyModule."Translator" (
+    UsageType: Task,
+    model: MyModule.GPT4Model,
+    variables: ("Language": EntityAttribute),
+    SystemPrompt: 'Translate the text into {{Language}}.',
+    UserPrompt: 'Hello world'
+);
+/
+```
+
+### Agent with multi-line dollar-quoted prompt
+
+```sql
+CREATE AGENT MyModule."CodeReviewer" (
+    UsageType: Task,
+    model: MyModule.GPT4Model,
+    SystemPrompt: $$You are a code review assistant.
+
+Review the provided code for:
+1. Security vulnerabilities
+2. Performance issues
+3. Code style and readability
+
+Provide specific, actionable feedback.$$,
+    UserPrompt: $$func main() {
+    fmt.Println("Hello, World!")
+}$$
+);
+/
+```
+
+### Conversational agent with MCP service and knowledge base
+
+```sql
+CREATE AGENT MyModule."ResearchAssistant" (
+    UsageType: Conversational,
+    description: 'Research assistant with web search and documentation',
+    model: MyModule.GPT4Model,
+    MaxTokens: 16384,
+    ToolChoice: Auto,
+    SystemPrompt: 'You are a research assistant. Use available tools.',
+    UserPrompt: 'Find information about quantum computing.'
+)
+{
+    MCP SERVICE MyModule.WebSearch {
+        Enabled: true
+    }
+
+    KNOWLEDGE BASE ProductKB {
+        source: MyModule.ProductDocs,
+        collection: 'product-docs',
+        MaxResults: 5,
+        description: 'Product documentation',
+        Enabled: true
+    }
+};
+/
+```
+
+### Idempotent upsert
+
+```sql
+CREATE OR MODIFY AGENT MyModule."ResearchAssistant" (
+    UsageType: Task,
+    model: MyModule.GPT4Model,
+    MaxTokens: 8192,
+    Temperature: 0.5,
+    SystemPrompt: $$You are an updated research assistant.$$,
+    UserPrompt: 'How can I help you today?'
+);
+/
+```
+
+## Notes
+
+- Agents must be dropped before their referenced models, knowledge bases, and MCP services.
+- The model and knowledge base documents must exist before the agent is created.
+- Dollar-quoted prompts (`$$...$$`) preserve all whitespace including newlines.
+
+## See Also
+
+[CREATE MODEL](create-model.md), [CREATE KNOWLEDGE BASE](create-knowledge-base.md), [CREATE CONSUMED MCP SERVICE](create-consumed-mcp-service.md)

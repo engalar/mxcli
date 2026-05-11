@@ -6,10 +6,11 @@ package ast
 //
 //	CREATE DATA TRANSFORMER Module.Name SOURCE JSON '...' { JSLT '...'; };
 type CreateDataTransformerStmt struct {
-	Name       QualifiedName
-	SourceType string // "JSON" or "XML"
-	SourceJSON string // the source content
-	Steps      []DataTransformerStepDef
+	Name           QualifiedName
+	SourceType     string // "JSON" or "XML"
+	SourceJSON     string // the source content
+	Steps          []DataTransformerStepDef
+	CreateOrModify bool   // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
 func (s *CreateDataTransformerStmt) isStatement() {}

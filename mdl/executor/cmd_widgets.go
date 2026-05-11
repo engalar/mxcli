@@ -31,7 +31,7 @@ func execShowWidgets(ctx *ExecContext, s *ast.ShowWidgetsStmt) error {
 
 	for _, f := range s.Filters {
 		col := mapWidgetFilterField(f.Field)
-		if f.Operator == "like" {
+		if strings.EqualFold(f.Operator, "like") {
 			query.WriteString(fmt.Sprintf(" and %s like ?", col))
 		} else {
 			query.WriteString(fmt.Sprintf(" and %s = ?", col))
@@ -153,7 +153,7 @@ func findMatchingWidgets(ctx *ExecContext, filters []ast.WidgetFilter, module st
 
 	for _, f := range filters {
 		col := mapWidgetFilterField(f.Field)
-		if f.Operator == "like" {
+		if strings.EqualFold(f.Operator, "like") {
 			query.WriteString(fmt.Sprintf(" and %s like ?", col))
 		} else {
 			query.WriteString(fmt.Sprintf(" and %s = ?", col))

@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```sql
-CREATE [ OR REPLACE ] BUSINESS EVENT SERVICE module.Name
+CREATE [ OR MODIFY ] BUSINESS EVENT SERVICE module.Name
 (
     ServiceName: 'service_name',
     EventNamePrefix: 'prefix'
@@ -21,7 +21,7 @@ Creates a business event service that defines one or more messages for event-dri
 
 Each message has a name, a set of typed attributes, and an operation mode (PUBLISH or SUBSCRIBE). A publishing message means this application sends events of that type. A subscribing message means this application receives and handles events of that type.
 
-The `OR REPLACE` option drops any existing service with the same name before creating the new one.
+The `OR MODIFY` option updates the existing service in-place, preserving its UUID so that references from other documents remain valid. `OR REPLACE` is also accepted as a synonym.
 
 ### Service Properties
 

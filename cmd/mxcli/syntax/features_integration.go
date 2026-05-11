@@ -91,7 +91,7 @@ func init() {
 			"rest operation", "microflow", "path parameter",
 			"grant access", "revoke access",
 		},
-		Syntax:  "CREATE [OR REPLACE] PUBLISHED REST SERVICE Module.Name (\n  Path: 'rest/api/v1',\n  Version: '1.0.0',\n  ServiceName: 'My API'\n)\n{\n  RESOURCE 'name' {\n    GET '' MICROFLOW Module.GetAll;\n    GET '{id}' MICROFLOW Module.GetById;\n    POST '' MICROFLOW Module.Create;\n  }\n};\n\nALTER PUBLISHED REST SERVICE Module.Name SET Version = '2.0.0';\nALTER PUBLISHED REST SERVICE Module.Name ADD RESOURCE 'items' { ... };\nALTER PUBLISHED REST SERVICE Module.Name DROP RESOURCE 'legacy';\nDROP PUBLISHED REST SERVICE Module.Name;",
+		Syntax:  "CREATE [OR MODIFY] PUBLISHED REST SERVICE Module.Name (\n  Path: 'rest/api/v1',\n  Version: '1.0.0',\n  ServiceName: 'My API'\n)\n{\n  RESOURCE 'name' {\n    GET '' MICROFLOW Module.GetAll;\n    GET '{id}' MICROFLOW Module.GetById;\n    POST '' MICROFLOW Module.Create;\n  }\n};\n\nALTER PUBLISHED REST SERVICE Module.Name SET Version = '2.0.0';\nALTER PUBLISHED REST SERVICE Module.Name ADD RESOURCE 'items' { ... };\nALTER PUBLISHED REST SERVICE Module.Name DROP RESOURCE 'legacy';\nDROP PUBLISHED REST SERVICE Module.Name;",
 		Example: "CREATE PUBLISHED REST SERVICE Module.OrderAPI (\n  Path: 'rest/orders/v1',\n  Version: '1.0.0',\n  ServiceName: 'Order API'\n)\n{\n  RESOURCE 'orders' {\n    GET '' MICROFLOW Module.GetAllOrders;\n    GET '{id}' MICROFLOW Module.GetOrderById;\n    POST '' MICROFLOW Module.CreateOrder;\n    DELETE '{id}' MICROFLOW Module.DeleteOrder;\n  }\n};\n\nGRANT ACCESS ON PUBLISHED REST SERVICE Module.OrderAPI\n  TO Module.User, Module.Admin;",
 		SeeAlso: []string{"rest", "rest.consumed"},
 	})
@@ -182,7 +182,7 @@ func init() {
 			"business event", "business events", "kafka",
 			"publish", "subscribe", "message", "event channel",
 		},
-		Syntax:  "SHOW BUSINESS EVENT SERVICES [IN Module];\nSHOW BUSINESS EVENTS [IN Module];\nDESCRIBE BUSINESS EVENT SERVICE Module.Name;\nCREATE [OR REPLACE] BUSINESS EVENT SERVICE Module.Name (...) { ... };\nDROP BUSINESS EVENT SERVICE Module.Name;",
+		Syntax:  "SHOW BUSINESS EVENT SERVICES [IN Module];\nSHOW BUSINESS EVENTS [IN Module];\nDESCRIBE BUSINESS EVENT SERVICE Module.Name;\nCREATE [OR MODIFY] BUSINESS EVENT SERVICE Module.Name (...) { ... };\nDROP BUSINESS EVENT SERVICE Module.Name;",
 		Example: "SHOW BUSINESS EVENT SERVICES;\nDESCRIBE BUSINESS EVENT SERVICE Module.CustomerEventsApi;",
 		SeeAlso: []string{"business-events.create", "integration"},
 	})
@@ -195,7 +195,7 @@ func init() {
 			"message", "publish", "subscribe", "entity",
 			"event name prefix",
 		},
-		Syntax:  "CREATE [OR REPLACE] BUSINESS EVENT SERVICE Module.Name\n(\n  ServiceName: 'Name',\n  EventNamePrefix: ''\n)\n{\n  MESSAGE EventName (Attr: Type, ...) PUBLISH|SUBSCRIBE\n    ENTITY Module.PBE_Entity;\n};\n\nDROP BUSINESS EVENT SERVICE Module.Name;",
+		Syntax:  "CREATE [OR MODIFY] BUSINESS EVENT SERVICE Module.Name\n(\n  ServiceName: 'Name',\n  EventNamePrefix: ''\n)\n{\n  MESSAGE EventName (Attr: Type, ...) PUBLISH|SUBSCRIBE\n    ENTITY Module.PBE_Entity;\n};\n\nDROP BUSINESS EVENT SERVICE Module.Name;",
 		Example: "CREATE BUSINESS EVENT SERVICE Module.CustomerEventsApi\n(\n  ServiceName: 'CustomerEventsApi',\n  EventNamePrefix: ''\n)\n{\n  MESSAGE CustomerChangedEvent (CustomerId: Long) PUBLISH\n    ENTITY Module.PBE_CustomerChangedEvent;\n};\n\nDROP BUSINESS EVENT SERVICE Module.CustomerEventsApi;",
 		SeeAlso: []string{"business-events"},
 	})
@@ -207,10 +207,10 @@ func init() {
 		Summary: "XPath constraint syntax for filtering data in RETRIEVE, pages, and security",
 		Keywords: []string{
 			"xpath", "constraint", "where", "predicate",
-			"filter", "retrieve", "association path",
+			"filter", "retrieve", "association path", "enumeration",
 		},
 		Syntax:  "WHERE [condition]\nWHERE [cond1][cond2]          -- implicit AND\nWHERE [cond1] AND [cond2]\nWHERE [cond1] OR [cond2]",
-		Example: "RETRIEVE $Orders FROM Module.Order\n  WHERE [State = 'Completed'][IsPaid = true]\n  SORT BY OrderDate DESC;\n\n-- Association path traversal\nWHERE [Module.Order_Customer/Module.Customer/Name = $Name]\n\n-- Mendix tokens\nWHERE [System.owner = '[%CurrentUser%]']",
+		Example: "RETRIEVE $Orders FROM Module.Order\n  WHERE [State = 'Completed'][IsPaid = true]\n  SORT BY OrderDate DESC;\n\n-- Enumeration attribute: qualified name preferred (mxcli converts to 'Open' in BSON)\nRETRIEVE $Open FROM Module.Order\n  WHERE [Status = Module.OrderStatus.Open];\n\n-- OR: string literal form also accepted\nRETRIEVE $Open FROM Module.Order\n  WHERE [Status = 'Open'];\n\n-- Association path traversal\nWHERE [Module.Order_Customer/Module.Customer/Name = $Name]\n\n-- Mendix tokens\nWHERE [System.owner = '[%CurrentUser%]']",
 		SeeAlso: []string{"xpath.functions"},
 	})
 
@@ -236,7 +236,7 @@ func init() {
 			"java action", "java", "call java",
 			"type parameter", "exposed as", "javaaction",
 		},
-		Syntax:  "SHOW JAVA ACTIONS [IN Module];\nDESCRIBE JAVA ACTION Module.Name;\nCREATE JAVA ACTION Module.Name(...) RETURNS Type AS $$ ... $$;\nDROP JAVA ACTION Module.Name;",
+		Syntax:  "SHOW JAVA ACTIONS [IN Module];\nDESCRIBE JAVA ACTION Module.Name;\nCREATE [OR MODIFY] JAVA ACTION Module.Name(...) RETURNS Type AS $$ ... $$;\nDROP JAVA ACTION Module.Name;\n\nNOTE: AS $$ ... $$ is mandatory — omitting the body causes a parse error.",
 		Example: "SHOW JAVA ACTIONS;\nDESCRIBE JAVA ACTION Utils.FormatCurrency;",
 		SeeAlso: []string{"java-action.create"},
 	})
@@ -245,12 +245,82 @@ func init() {
 		Path:    "java-action.create",
 		Summary: "Create Java actions with type parameters, EXPOSED AS, and inline code",
 		Keywords: []string{
-			"create java action", "type parameter", "entity parameter",
+			"create java action", "or modify java action", "type parameter", "entity parameter",
 			"exposed as", "returns", "generics", "drop java action",
 		},
-		Syntax:  "CREATE JAVA ACTION Module.Name(\n  Param: Type [NOT NULL],\n  EntityType: ENTITY <pEntity> NOT NULL,\n  Obj: pEntity\n) RETURNS ReturnType\n[EXPOSED AS 'Label' IN 'Category']\nAS $$\n// Java code\n$$;",
-		Example: "CREATE JAVA ACTION Utils.FormatCurrency(\n  Amount: Decimal NOT NULL\n) RETURNS String\nEXPOSED AS 'Format Currency' IN 'Formatting'\nAS $$\nreturn String.format(\"%.2f\", Amount);\n$$;\n\n-- Generic entity validator with type parameter\nCREATE JAVA ACTION Utils.IsValid(\n  EntityType: ENTITY <pEntity> NOT NULL,\n  Obj: pEntity NOT NULL\n) RETURNS Boolean\nAS $$\nreturn Obj != null;\n$$;",
+		Syntax:  "CREATE [OR MODIFY] JAVA ACTION Module.Name(\n  Param: Type [NOT NULL],\n  EntityType: ENTITY <pEntity> NOT NULL,\n  Obj: pEntity\n) RETURNS ReturnType\n[EXPOSED AS 'Label' IN 'Category']\nAS $$\n// Java code — AS $$ ... $$ is mandatory, cannot be omitted\n$$;\n\nOR MODIFY: updates signature/body in-place, preserves UUID.",
+		Example: "CREATE JAVA ACTION Utils.FormatCurrency(\n  Amount: Decimal NOT NULL\n) RETURNS String\nEXPOSED AS 'Format Currency' IN 'Formatting'\nAS $$\nreturn String.format(\"%.2f\", Amount);\n$$;\n\n-- Generic entity validator with type parameter\nCREATE JAVA ACTION Utils.IsValid(\n  EntityType: ENTITY <pEntity> NOT NULL,\n  Obj: pEntity NOT NULL\n) RETURNS Boolean\nAS $$\nreturn Obj != null;\n$$;\n\n-- Idempotent update (preserves UUID)\nCREATE OR MODIFY JAVA ACTION Utils.FormatCurrency(\n  Amount: Decimal NOT NULL,\n  Decimals: Integer NOT NULL\n) RETURNS String\nAS $$\nreturn String.format(\"%.\" + Decimals + \"f\", Amount);\n$$;",
 		SeeAlso: []string{"java-action"},
+	})
+
+	// ── JSON Structures ───────────────────────────────────────────────
+
+	Register(SyntaxFeature{
+		Path:    "json-structure",
+		Summary: "JSON structures — schema snapshots used by import/export mappings",
+		Keywords: []string{
+			"json structure", "create json structure", "drop json structure",
+			"snippet", "schema", "json schema",
+		},
+		Syntax:  "SHOW JSON STRUCTURES [IN Module];\nDESCRIBE JSON STRUCTURE Module.Name;\nCREATE JSON STRUCTURE Module.Name [COMMENT 'text'] SNIPPET '{ ... }';\nCREATE OR MODIFY JSON STRUCTURE Module.Name SNIPPET '{ ... }';\nDROP JSON STRUCTURE Module.Name;",
+		Example: "CREATE OR MODIFY JSON STRUCTURE MyModule.JSON_Pet\n  SNIPPET '{\"id\": 1, \"name\": \"Fido\", \"status\": \"available\"}';\n\nDESCRIBE JSON STRUCTURE MyModule.JSON_Pet;",
+		SeeAlso: []string{"import-mapping", "export-mapping"},
+	})
+
+	// ── Image Collections ─────────────────────────────────────────────
+
+	Register(SyntaxFeature{
+		Path:    "image-collection",
+		Summary: "Image collections — bundle images (icons, logos) within a module",
+		Keywords: []string{
+			"image collection", "create image collection", "drop image collection",
+			"export level", "image", "icon", "logo",
+		},
+		Syntax:  "SHOW IMAGE COLLECTION [IN Module];\nDESCRIBE IMAGE COLLECTION Module.Name;\nCREATE IMAGE COLLECTION Module.Name\n  [EXPORT LEVEL 'Hidden'|'Public']\n  [COMMENT 'text']\n  [(IMAGE 'name' FROM FILE 'path', ...)];\nCREATE OR MODIFY IMAGE COLLECTION Module.Name [...];\nDROP IMAGE COLLECTION Module.Name;",
+		Example: "CREATE OR MODIFY IMAGE COLLECTION MyModule.AppIcons\n  EXPORT LEVEL 'Public'\n  COMMENT 'Application icons' (\n  IMAGE 'logo' FROM FILE 'assets/logo.png',\n  IMAGE 'favicon' FROM FILE 'assets/favicon.ico'\n);\n\nDESCRIBE IMAGE COLLECTION MyModule.AppIcons;",
+		SeeAlso: []string{"integration"},
+	})
+
+	// ── Import / Export Mappings ──────────────────────────────────────
+
+	Register(SyntaxFeature{
+		Path:    "import-mapping",
+		Summary: "Import mappings — map JSON/XML to Mendix entities for inbound data",
+		Keywords: []string{
+			"import mapping", "create import mapping", "drop import mapping",
+			"show import mappings", "describe import mapping",
+			"with json structure", "find or create", "object handling",
+		},
+		Syntax:  "SHOW IMPORT MAPPINGS [IN Module];\nDESCRIBE IMPORT MAPPING Module.Name;\nCREATE [OR MODIFY] IMPORT MAPPING Module.Name\n  WITH JSON STRUCTURE Module.JsonStruct\n{\n  create|find|find or create Module.Entity {\n    Attr = jsonField [KEY],\n    Assoc/Module.Child = nestedKey { ... }\n  }\n};\nDROP IMPORT MAPPING Module.Name;\n\nOR MODIFY: updates mapping in-place, preserves UUID.",
+		Example: "CREATE IMPORT MAPPING Shop.IMM_Order\n  WITH JSON STRUCTURE Shop.JSON_Order\n{\n  create Shop.Order {\n    OrderId = orderId KEY,\n    TotalAmount = total\n  }\n};\n\n-- Idempotent update\nCREATE OR MODIFY IMPORT MAPPING Shop.IMM_Order\n  WITH JSON STRUCTURE Shop.JSON_Order\n{\n  find or create Shop.Order {\n    OrderId = orderId KEY,\n    TotalAmount = total,\n    Status = status\n  }\n};",
+		SeeAlso: []string{"export-mapping", "json-structure"},
+	})
+
+	Register(SyntaxFeature{
+		Path:    "export-mapping",
+		Summary: "Export mappings — map Mendix entities to JSON/XML for outbound data",
+		Keywords: []string{
+			"export mapping", "create export mapping", "drop export mapping",
+			"show export mappings", "describe export mapping",
+			"with json structure", "null values", "as jsonKey",
+		},
+		Syntax:  "SHOW EXPORT MAPPINGS [IN Module];\nDESCRIBE EXPORT MAPPING Module.Name;\nCREATE [OR MODIFY] EXPORT MAPPING Module.Name\n  WITH JSON STRUCTURE Module.JsonStruct\n  [NULL VALUES LeaveOutElement|SendAsNil]\n{\n  Module.Entity {\n    jsonField = Attr,\n    Assoc/Module.Child AS nestedKey { ... }\n  }\n};\nDROP EXPORT MAPPING Module.Name;\n\nOR MODIFY: updates mapping in-place, preserves UUID.",
+		Example: "CREATE EXPORT MAPPING Shop.EMM_Order\n  WITH JSON STRUCTURE Shop.JSON_Order\n  NULL VALUES LeaveOutElement\n{\n  Shop.Order {\n    orderId = OrderId,\n    total = TotalAmount\n  }\n};\n\n-- Idempotent update\nCREATE OR MODIFY EXPORT MAPPING Shop.EMM_Order\n  WITH JSON STRUCTURE Shop.JSON_Order\n{\n  Shop.Order {\n    orderId = OrderId,\n    total = TotalAmount,\n    status = Status\n  }\n};",
+		SeeAlso: []string{"import-mapping", "json-structure"},
+	})
+
+	// ── Data Transformers ─────────────────────────────────────────────
+
+	Register(SyntaxFeature{
+		Path:    "data-transformer",
+		Summary: "Data transformers — JSLT/XSLT document transformations (Mendix 11.9+)",
+		Keywords: []string{
+			"data transformer", "create data transformer", "drop data transformer",
+			"list data transformers", "jslt", "xslt", "transform",
+		},
+		Syntax:  "LIST DATA TRANSFORMERS [IN Module];\nDESCRIBE DATA TRANSFORMER Module.Name;\nCREATE [OR MODIFY] DATA TRANSFORMER Module.Name\n  SOURCE JSON '{ ... }'\n{\n  JSLT 'single-line-expression';\n  -- or multi-line:\n  JSLT $$\n{ ... }\n  $$;\n};\nDROP DATA TRANSFORMER Module.Name;\n\nOR MODIFY: updates transformer in-place, preserves UUID.",
+		Example: "CREATE DATA TRANSFORMER ETL.FlattenOrder\n  SOURCE JSON '{\"order\": {\"id\": 1, \"total\": 99.0}}'\n{\n  JSLT '{\"id\": .order.id, \"total\": .order.total}';\n};\n\n-- Multi-line JSLT\nCREATE OR MODIFY DATA TRANSFORMER ETL.WeatherSummary\n  SOURCE JSON '{\"current\": {\"temp\": 12.8, \"wind\": 18.3}}'\n{\n  JSLT $$\n{\n  \"temperature\": .current.temp,\n  \"wind_speed\":  .current.wind\n}\n  $$;\n};",
+		SeeAlso: []string{"integration"},
 	})
 
 	// ── AI Agents ──────────────────────────────────────────────────────

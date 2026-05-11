@@ -223,6 +223,16 @@ func parseCaseValue(raw any) microflows.CaseValue {
 				Value:       val,
 			}
 		}
+	case "Microflows$InheritanceCase":
+		entityName := extractString(caseMap["Value"])
+		if entityName == "" {
+			entityName = extractString(caseMap["Entity"])
+		}
+		return &microflows.InheritanceCase{
+			BaseElement:         model.BaseElement{ID: id},
+			EntityID:            model.ID(extractBsonID(caseMap["Entity"])),
+			EntityQualifiedName: entityName,
+		}
 	}
 	return nil
 }

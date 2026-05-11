@@ -19,7 +19,7 @@ func (b *Builder) buildContractEntities() error {
 	}
 
 	entityStmt, err := b.tx.Prepare(`
-		INSERT INTO contract_entities (Id, ServiceId, ServiceQualifiedName,
+		INSERT OR IGNORE INTO contract_entities (Id, ServiceId, ServiceQualifiedName,
 			EntityName, EntitySetName, KeyProperties, PropertyCount, NavigationCount,
 			Summary, Description, ModuleName,
 			ProjectId, SnapshotId, SnapshotDate, SnapshotSource)
@@ -31,7 +31,7 @@ func (b *Builder) buildContractEntities() error {
 	defer entityStmt.Close()
 
 	actionStmt, err := b.tx.Prepare(`
-		INSERT INTO contract_actions (Id, ServiceId, ServiceQualifiedName,
+		INSERT OR IGNORE INTO contract_actions (Id, ServiceId, ServiceQualifiedName,
 			ActionName, IsBound, ParameterCount, ReturnType, ModuleName,
 			ProjectId, SnapshotId, SnapshotDate, SnapshotSource)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -129,6 +129,24 @@ func (b *Builder) buildContractEntities() error {
 	return nil
 }
 
+// buildContractEntityUsage links contract_entities to the external_entities that
+// consume them. Runs after both buildExternalEntities and buildContractEntities.
+func (b *Builder) buildContractEntityUsage() error {
+	_, err := b.tx.Exec(`
+		UPDATE contract_entities
+		SET UsedByExternalEntity = (
+			SELECT ee.QualifiedName
+			FROM external_entities ee
+			JOIN odata_clients oc
+				ON oc.QualifiedName = ee.ServiceName
+			WHERE oc.Id = contract_entities.ServiceId
+			  AND ee.RemoteName = contract_entities.EntityName
+			LIMIT 1
+		)
+	`)
+	return err
+}
+
 // buildContractMessages parses cached AsyncAPI documents from business event client
 // services and populates the contract_messages catalog table.
 func (b *Builder) buildContractMessages() error {
@@ -138,7 +156,7 @@ func (b *Builder) buildContractMessages() error {
 	}
 
 	stmt, err := b.tx.Prepare(`
-		INSERT INTO contract_messages (Id, ServiceId, ServiceQualifiedName,
+		INSERT OR IGNORE INTO contract_messages (Id, ServiceId, ServiceQualifiedName,
 			ChannelName, OperationType, MessageName, Title, ContentType, PropertyCount,
 			ModuleName, ProjectId, SnapshotId, SnapshotDate, SnapshotSource)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

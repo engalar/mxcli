@@ -6,6 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-08
+
+### Added
+
+- **Inheritance split and cast** — `CASE $var IS Module.SubType THEN ... END CASE` and `CAST $var AS Module.SubType` statements in microflow/nanoflow bodies; full BSON roundtrip with branch anchors, nested continuation cases, and merge emission (CE0079)
+- **CREATE OR MODIFY** — Standardised `OR MODIFY` variant across all remaining document types so scripts are idempotent by default (#510)
+- **MDL-DUPDEF** — `mxcli check` detects duplicate `CREATE` for the same qualified name and reports `MDL-DUPDEF`
+
+### Fixed
+
+- Catalog crash on duplicate business event channels (#533)
+- `flowRefCollector` skipping EnumSplitStmt case and else bodies — impacted `show callers/callees` accuracy
+- CE0079: inheritance split branches that continue after the split were missing their merge node
+- Nested `traverseFlowUntilMerge` guard could cross an outer merge boundary (#528)
+- Inheritance split: branch anchors, case order, nested continuation tails, and nodes outside cases all preserved
+- List-typed Java action arguments not emitting the `empty` keyword (#521); broadened to cover all resolved `BasicParameterType` params
+- REST mapping cardinality not roundtripping — `as list of` syntax now parsed and emitted (#519)
+- Import mapping: `MinOccurs`/`MaxOccurs` not parsed on mapping elements; repeating Object root treated as list; `SingleObject` inferred when `JsonStructure` absent
+- Microflow layout: spacing, branch heights, and loop containment improved
+- `TEXTFILTER` inside `DATAGRID COLUMN` not wired to the column filter slot (#189)
+- `SET $obj/Assoc` path target rejected and produced wrong BSON (#511)
+- `SHOW WIDGETS WHERE … LIKE` silently degraded to equality match
+- Reserved OData attribute names not renamed when importing entities (#526)
+- Virtual `System.*` Java actions missing from `ListJavaActions` and catalog
+- `ConcurrencyMode=Fixed` incorrectly marked as Creatable during OData import (#525)
+- Reverse-Reference traversal through entity inheritance misclassified
+- `mxcli check --references` reporting false positives on `System.*` references (#523)
+- ANTLR4 version unpinned in CI caused flaky Maven Central lookup failures
+
+### Changed
+
+- Generated ANTLR parser removed from git; `make grammar` step added to CI (#514)
+- `MDLParser.g4` split into domain-specific grammar files for maintainability (#515)
+
 ## [0.8.0] - 2026-05-05
 
 ### Added

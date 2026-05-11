@@ -371,6 +371,53 @@ mxcli check script.mdl -p app.mpr --references  -- With reference validation`,
 	})
 
 	Register(SyntaxFeature{
+		Path:    "module.jar-dependencies",
+		Summary: "Manage Maven/JAR dependencies in a module's settings",
+		Keywords: []string{
+			"jar dependency", "maven", "jar dep", "module settings",
+			"group", "artifact", "classpath", "exclusion",
+		},
+		Syntax: `LIST JAR DEPENDENCIES [IN <module>];
+DESCRIBE JAR DEPENDENCY <module> '<group:artifact>';
+ALTER MODULE <name>
+  ADD JAR DEPENDENCY (
+    group    = '<group>',
+    artifact = '<artifact>',
+    version  = '<version>',
+    included = true|false,
+  );
+ALTER MODULE <name> SET JAR DEPENDENCY '<group:artifact>' VERSION '<version>';
+ALTER MODULE <name> SET JAR DEPENDENCY '<group:artifact>' INCLUDED true|false;
+ALTER MODULE <name> SET JAR DEPENDENCY '<group:artifact>' ADD EXCLUSION '<group:artifact>';
+ALTER MODULE <name> SET JAR DEPENDENCY '<group:artifact>' DROP EXCLUSION '<group:artifact>';
+ALTER MODULE <name> DROP JAR DEPENDENCY '<group:artifact>';`,
+		Example: `-- Add a new JAR dependency to a module
+ALTER MODULE MyModule
+  ADD JAR DEPENDENCY (
+    group    = 'org.duckdb',
+    artifact = 'duckdb_jdbc',
+    version  = '1.1.3',
+    included = true,
+  );
+
+-- Update the version
+ALTER MODULE MyModule SET JAR DEPENDENCY 'org.duckdb:duckdb_jdbc' VERSION '1.2.0';
+
+-- Exclude a transitive dependency
+ALTER MODULE MyModule SET JAR DEPENDENCY 'org.duckdb:duckdb_jdbc' ADD EXCLUSION 'com.example:unwanted';
+
+-- List all jar dependencies
+LIST JAR DEPENDENCIES;
+LIST JAR DEPENDENCIES IN MyModule;
+
+-- Describe (outputs roundtrippable MDL)
+DESCRIBE JAR DEPENDENCY MyModule 'org.duckdb:duckdb_jdbc';
+
+-- Remove a dependency
+ALTER MODULE MyModule DROP JAR DEPENDENCY 'org.duckdb:duckdb_jdbc';`,
+	})
+
+	Register(SyntaxFeature{
 		Path:    "errors.execution",
 		Summary: "Execution errors — entity exists, type mismatches, validation failures",
 		Keywords: []string{

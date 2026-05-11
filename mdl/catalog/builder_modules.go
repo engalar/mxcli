@@ -666,6 +666,56 @@ func (b *Builder) buildDatabaseConnections() error {
 	return nil
 }
 
+func (b *Builder) buildJarDependencies() error {
+	allSettings, err := b.cachedModuleSettings()
+	if err != nil {
+		return err
+	}
+
+	stmt, err := b.tx.Prepare(`
+		INSERT INTO jar_dependencies (Id, ModuleName, GroupId, ArtifactId, Coordinate, Version, IsIncluded,
+			ProjectId, ProjectName, SnapshotId, SnapshotDate, SnapshotSource,
+			SourceId, SourceBranch, SourceRevision)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	projectID, projectName, snapshotID, snapshotDate, snapshotSource, sourceID, sourceBranch, sourceRevision := b.snapshotMeta()
+
+	count := 0
+	for _, ms := range allSettings {
+		moduleName := b.hierarchy.getModuleName(ms.ContainerID)
+		for _, dep := range ms.JarDependencies {
+			coordinate := dep.GroupID + ":" + dep.ArtifactID
+			included := 0
+			if dep.IsIncluded {
+				included = 1
+			}
+			_, err := stmt.Exec(
+				string(dep.ID),
+				moduleName,
+				dep.GroupID,
+				dep.ArtifactID,
+				coordinate,
+				dep.Version,
+				included,
+				projectID, projectName, snapshotID, snapshotDate, snapshotSource,
+				sourceID, sourceBranch, sourceRevision,
+			)
+			if err != nil {
+				return err
+			}
+			count++
+		}
+	}
+
+	b.report("JAR Dependencies", count)
+	return nil
+}
+
 func (b *Builder) buildJsonStructures() error {
 	structures, err := b.reader.ListJsonStructures()
 	if err != nil {

@@ -108,6 +108,7 @@ type CreateAssociationStmt struct {
 	DeleteBehavior DeleteBehavior
 	Documentation  string
 	Comment        string
+	CreateOrModify bool // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
 func (s *CreateAssociationStmt) isStatement() {}

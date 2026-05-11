@@ -31,8 +31,8 @@ func (b *Builder) ExitCreateEntityStatement(ctx *parser.CreateEntityStatementCon
 	// Navigate to parent CreateStatement to get annotations and doc comment
 	createStmt := findParentCreateStatement(ctx)
 	if createStmt != nil {
-		// Check for CREATE OR MODIFY
-		if createStmt.OR() != nil && createStmt.MODIFY() != nil {
+		// REPLACE is treated as MODIFY for entities — changing the UUID would drop the database table.
+		if createStmt.OR() != nil && (createStmt.MODIFY() != nil || createStmt.REPLACE() != nil) {
 			stmt.CreateOrModify = true
 		}
 
@@ -685,6 +685,20 @@ func (b *Builder) ExitAlterEntityAction(ctx *parser.AlterEntityActionContext) {
 					Name:         name,
 					Operation:    ast.AlterEntityDropEventHandler,
 					EventHandler: eh,
+				})
+				return
+			}
+
+			// SET ALLOW_CREATE_CHANGE_LOCALLY = true/false
+			if ctx.SET() != nil && ctx.ALLOW_CREATE_CHANGE_LOCALLY() != nil {
+				boolVal := false
+				if ctx.TRUE() != nil {
+					boolVal = true
+				}
+				b.statements = append(b.statements, &ast.AlterEntityStmt{
+					Name:      name,
+					Operation: ast.AlterEntitySetAllowCreateChangeLocally,
+					BoolValue: boolVal,
 				})
 				return
 			}

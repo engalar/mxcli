@@ -92,7 +92,67 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 	// Cross-module associations use BY_NAME for the child entity
 	isCrossModule := parentModule != childModule
 
+	// OR MODIFY: update existing association properties in place, preserving its UUID.
+	if s.CreateOrModify {
+		if !isCrossModule {
+			for _, assoc := range dm.Associations {
+				if assoc.Name == s.Name.Name {
+					assoc.Type = assocType
+					assoc.Owner = owner
+					assoc.StorageFormat = storageFormat
+					assoc.ChildDeleteBehavior = &domainmodel.DeleteBehavior{Type: deleteBehavior}
+					if s.Comment != "" {
+						assoc.Documentation = s.Comment
+					}
+					if err := ctx.Backend.UpdateDomainModel(dm); err != nil {
+						return mdlerrors.NewBackend("update association", err)
+					}
+					invalidateHierarchy(ctx)
+					invalidateDomainModelsCache(ctx)
+					ctx.trackModifiedDomainModel(module.ID, module.Name)
+					fmt.Fprintf(ctx.Output, "Modified association: %s\n", s.Name)
+					return nil
+				}
+			}
+		} else {
+			childRef := childModule + "." + s.Child.Name
+			for _, ca := range dm.CrossAssociations {
+				if ca.Name == s.Name.Name {
+					ca.Type = assocType
+					ca.Owner = owner
+					ca.StorageFormat = storageFormat
+					ca.ChildDeleteBehavior = &domainmodel.DeleteBehavior{Type: deleteBehavior}
+					ca.ChildRef = childRef
+					if s.Comment != "" {
+						ca.Documentation = s.Comment
+					}
+					if err := ctx.Backend.UpdateDomainModel(dm); err != nil {
+						return mdlerrors.NewBackend("update cross-module association", err)
+					}
+					invalidateHierarchy(ctx)
+					invalidateDomainModelsCache(ctx)
+					ctx.trackModifiedDomainModel(module.ID, module.Name)
+					fmt.Fprintf(ctx.Output, "Modified association: %s\n", s.Name)
+					return nil
+				}
+			}
+		}
+		// Association not found — fall through to create it.
+	}
+
 	if isCrossModule {
+		if !s.CreateOrModify {
+			for _, ca := range dm.CrossAssociations {
+				if ca.Name == s.Name.Name {
+					return mdlerrors.NewAlreadyExists("association", s.Name.String())
+				}
+			}
+			for _, assoc := range dm.Associations {
+				if assoc.Name == s.Name.Name {
+					return mdlerrors.NewAlreadyExists("association", s.Name.String())
+				}
+			}
+		}
 		childRef := childModule + "." + s.Child.Name
 		ca := &domainmodel.CrossModuleAssociation{
 			Name:          s.Name.Name,
@@ -109,6 +169,19 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 			return mdlerrors.NewBackend("create cross-module association", err)
 		}
 	} else {
+		// Check for existing association when not using OR MODIFY.
+		if !s.CreateOrModify {
+			for _, assoc := range dm.Associations {
+				if assoc.Name == s.Name.Name {
+					return mdlerrors.NewAlreadyExists("association", s.Name.String())
+				}
+			}
+			for _, ca := range dm.CrossAssociations {
+				if ca.Name == s.Name.Name {
+					return mdlerrors.NewAlreadyExists("association", s.Name.String())
+				}
+			}
+		}
 		assoc := &domainmodel.Association{
 			Name:          s.Name.Name,
 			Type:          assocType,

@@ -1,0 +1,26 @@
+create module InheritanceSplitExample;
+
+create persistent entity InheritanceSplitExample.BaseInput (
+  Name: String(200)
+);
+/
+
+create persistent entity InheritanceSplitExample.SpecializedInput extends InheritanceSplitExample.BaseInput (
+  Code: String(50)
+);
+/
+
+create microflow InheritanceSplitExample.RouteInput (
+  $Input: InheritanceSplitExample.BaseInput
+)
+returns boolean
+begin
+  split type $Input
+  case InheritanceSplitExample.SpecializedInput
+    cast $SpecializedInput;
+    return true;
+  else
+    return false;
+  end split;
+end;
+/

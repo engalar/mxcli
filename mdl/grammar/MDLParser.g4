@@ -141,6 +141,7 @@ alterStatement
     | ALTER SNIPPET qualifiedName LBRACE alterPageOperation+ RBRACE
     | ALTER WORKFLOW qualifiedName alterWorkflowAction+ SEMICOLON?
     | ALTER PUBLISHED REST SERVICE qualifiedName alterPublishedRestServiceAction (COMMA? alterPublishedRestServiceAction)*
+    | alterModuleJarDepStatement
     ;
 
 alterPublishedRestServiceAction

@@ -1,0 +1,46 @@
+-- Bug test for issue #528:
+-- Microflow MDL extraction is faulty — shared activities after an outer
+-- if/merge are incorrectly placed inside the then-block when a nested guard
+-- split's false path leads directly to the outer ExclusiveMerge.
+--
+-- Verifies:
+--   1. When an inner guard (PipelineDate empty check) has its false path going
+--      straight to the outer ExclusiveMerge, the activities that follow the
+--      merge (change $Deal, DuplicatePressed handling) appear OUTSIDE the
+--      outer `if $Pipeline = true then … end if;` block — not inside it.
+--
+-- Reported by: jwinckelmann (Studio Pro v10.24.13, mxcli v0.8.0)
+-- Root cause:  traverseFlowUntilMerge's guard continuation was skipping
+--              through the outer ExclusiveMerge and swallowing the shared
+--              activities, leaving nothing to emit after `end if;`.
+
+-- This script cannot be executed directly because it describes a microflow
+-- that only exists in the reporter's project. The MDL below is the EXPECTED
+-- output from `DESCRIBE MICROFLOW TCUApp.ACT_Deal_SaveAsVRIPipeline` after
+-- the fix is applied — shared activities appear after `end if;`:
+
+--   if $Deal/Pipeline = true then
+--     if $Deal/PipelineDate = empty then
+--       show message ...;
+--       log info ...;
+--       return;
+--     end if;
+--   end if;
+--   change $Deal (...);
+--   if $Deal/DuplicatePressed then
+--     ...
+--   end if;
+--
+-- The broken output (before fix) placed `change $Deal` INSIDE the outer if:
+--
+--   if $Deal/Pipeline = true then
+--     if $Deal/PipelineDate = empty then
+--       ...
+--       return;
+--     end if;
+--     change $Deal (...);          ← wrong: should be outside the outer if
+--     if $Deal/DuplicatePressed then
+--       ...
+--     end if;
+--   end if;
+--                                  ← nothing here: shared acts were swallowed

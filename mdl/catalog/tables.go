@@ -625,6 +625,7 @@ func (c *Catalog) createTables() error {
 			Summary TEXT,
 			Description TEXT,
 			ModuleName TEXT,
+			UsedByExternalEntity TEXT,
 			ProjectId TEXT,
 			SnapshotId TEXT,
 			SnapshotDate TEXT,
@@ -673,6 +674,25 @@ func (c *Catalog) createTables() error {
 			Folder TEXT,
 			DatabaseType TEXT,
 			QueryCount INTEGER DEFAULT 0,
+			ProjectId TEXT,
+			ProjectName TEXT,
+			SnapshotId TEXT,
+			SnapshotDate TEXT,
+			SnapshotSource TEXT,
+			SourceId TEXT,
+			SourceBranch TEXT,
+			SourceRevision TEXT
+		)`,
+
+		// JAR dependencies — Maven dependencies declared in module settings
+		`CREATE TABLE IF NOT EXISTS jar_dependencies (
+			Id TEXT PRIMARY KEY,
+			ModuleName TEXT,
+			GroupId TEXT,
+			ArtifactId TEXT,
+			Coordinate TEXT,
+			Version TEXT,
+			IsIncluded INTEGER DEFAULT 1,
 			ProjectId TEXT,
 			ProjectName TEXT,
 			SnapshotId TEXT,
@@ -905,7 +925,11 @@ func (c *Catalog) createTables() error {
 			UNION ALL
 			SELECT CAST(Id AS TEXT), 'EXPORT_MAPPING' as ObjectType, Name, QualifiedName, ModuleName, Folder, Documentation as Description,
 				ProjectId, ProjectName, SnapshotId, SnapshotDate, SnapshotSource
-			FROM export_mappings`,
+			FROM export_mappings
+			UNION ALL
+			SELECT Id, 'JAR_DEPENDENCY' as ObjectType, Coordinate as Name, ModuleName || '.' || Coordinate as QualifiedName, ModuleName, '' as Folder, '' as Description,
+				ProjectId, ProjectName, SnapshotId, SnapshotDate, SnapshotSource
+			FROM jar_dependencies`,
 
 		// FTS5 virtual tables for full-text search
 		`CREATE VIRTUAL TABLE IF NOT EXISTS strings USING fts5(
@@ -990,6 +1014,8 @@ func (c *Catalog) createTables() error {
 		`CREATE INDEX IF NOT EXISTS idx_constants_module ON constants(ModuleName)`,
 		`CREATE INDEX IF NOT EXISTS idx_constant_values_constant ON constant_values(ConstantName)`,
 		`CREATE INDEX IF NOT EXISTS idx_constant_values_config ON constant_values(ConfigurationName)`,
+		`CREATE INDEX IF NOT EXISTS idx_jar_deps_module ON jar_dependencies(ModuleName)`,
+		`CREATE INDEX IF NOT EXISTS idx_jar_deps_coord ON jar_dependencies(Coordinate)`,
 	}
 
 	for _, schema := range schemas {

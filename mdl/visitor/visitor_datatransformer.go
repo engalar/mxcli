@@ -50,5 +50,10 @@ func (b *Builder) ExitCreateDataTransformerStatement(ctx *parser.CreateDataTrans
 		stmt.Steps = append(stmt.Steps, step)
 	}
 
+	if createStmt := findParentCreateStatement(ctx); createStmt != nil {
+		if createStmt.OR() != nil && (createStmt.MODIFY() != nil || createStmt.REPLACE() != nil) {
+			stmt.CreateOrModify = true
+		}
+	}
 	b.statements = append(b.statements, stmt)
 }

@@ -302,6 +302,7 @@ type DataGridColumnSpec struct {
 	Attribute    string         // Fully qualified attribute path (empty for action/custom-content columns)
 	Caption      string         // Column header caption
 	ChildWidgets []pages.Widget // Pre-built child widgets (for custom-content columns)
+	FilterWidget pages.Widget   // Pre-built filter widget for the column's filter slot (optional)
 	Properties   map[string]any // Column properties (Sortable, Resizable, Visible, etc.)
 }
 

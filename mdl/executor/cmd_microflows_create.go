@@ -70,7 +70,7 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 	for _, existing := range existingMicroflows {
 		if existing.Name == s.Name.Name && getModuleID(ctx, existing.ContainerID) == module.ID {
 			if !s.CreateOrModify {
-				return mdlerrors.NewAlreadyExistsMsg("microflow", s.Name.Module+"."+s.Name.Name, "microflow '"+s.Name.Module+"."+s.Name.Name+"' already exists (use create or replace to overwrite)")
+				return mdlerrors.NewAlreadyExistsMsg("microflow", s.Name.Module+"."+s.Name.Name, "microflow '"+s.Name.Module+"."+s.Name.Name+"' already exists (use create or modify to overwrite)")
 			}
 			existingID = existing.ID
 			existingContainerID = existing.ContainerID

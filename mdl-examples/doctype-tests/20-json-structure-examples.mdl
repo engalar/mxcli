@@ -77,12 +77,15 @@ CUSTOM NAME map (
 -- Describe a JSON structure (shows element tree + JSON snippet)
 describe json structure JsonTest.CustomerResponse;
 
--- MARK: Replace
+-- MARK: Modify (Idempotent — Preserves UUID)
 
 /**
- * Edit (replace) an existing JSON structure with an updated schema
+ * Update an existing JSON structure in-place.
+ *
+ * CREATE OR MODIFY preserves the document UUID so import/export mappings
+ * that reference this structure remain valid. OR REPLACE is a synonym.
  */
-create or replace json structure JsonTest.CustomerResponse snippet $${
+create or modify json structure JsonTest.CustomerResponse snippet $${
   "id": 1,
   "name": "John Doe",
   "email": "john@example.com",

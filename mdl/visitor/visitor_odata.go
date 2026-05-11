@@ -164,19 +164,22 @@ func (b *Builder) ExitCreateExternalEntityStatement(ctx *parser.CreateExternalEn
 		name := identifierOrKeywordText(prop.IdentifierOrKeyword())
 		value := odataAssignmentValueText(prop)
 
+		boolVal := strings.EqualFold(value, "true") || strings.EqualFold(value, "yes")
 		switch strings.ToLower(name) {
 		case "entityset":
 			stmt.EntitySet = value
 		case "remotename":
 			stmt.RemoteName = value
 		case "countable":
-			stmt.Countable = strings.EqualFold(value, "true") || strings.EqualFold(value, "yes")
+			stmt.Countable = boolVal
 		case "creatable":
-			stmt.Creatable = strings.EqualFold(value, "true") || strings.EqualFold(value, "yes")
+			stmt.Creatable = boolVal
 		case "deletable":
-			stmt.Deletable = strings.EqualFold(value, "true") || strings.EqualFold(value, "yes")
+			stmt.Deletable = boolVal
 		case "updatable":
-			stmt.Updatable = strings.EqualFold(value, "true") || strings.EqualFold(value, "yes")
+			stmt.Updatable = boolVal
+		case "allowcreatechangelocally", "allowcreatingandchanginglocally", "createchangelocally":
+			stmt.AllowCreateChangeLocally = boolVal
 		}
 	}
 

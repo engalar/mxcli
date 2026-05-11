@@ -122,17 +122,18 @@ func (s *DropODataServiceStmt) isStatement() {}
 
 // CreateExternalEntityStmt represents: CREATE [OR MODIFY] EXTERNAL ENTITY Module.Name FROM ODATA CLIENT Module.Service (...) (attrs);
 type CreateExternalEntityStmt struct {
-	Name           QualifiedName
-	ServiceRef     QualifiedName // FROM ODATA CLIENT ...
-	EntitySet      string
-	RemoteName     string
-	Countable      bool
-	Creatable      bool
-	Deletable      bool
-	Updatable      bool
-	Attributes     []Attribute // reuse from ast_entity.go
-	Documentation  string
-	CreateOrModify bool
+	Name                QualifiedName
+	ServiceRef          QualifiedName // FROM ODATA CLIENT ...
+	EntitySet           string
+	RemoteName          string
+	Countable           bool
+	Creatable           bool
+	Deletable           bool
+	Updatable           bool
+	AllowCreateChangeLocally bool // "Allow creating and changing locally" flag
+	Attributes          []Attribute // reuse from ast_entity.go
+	Documentation       string
+	CreateOrModify      bool
 }
 
 func (s *CreateExternalEntityStmt) isStatement() {}

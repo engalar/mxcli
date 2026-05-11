@@ -196,7 +196,7 @@ func assembleEntityContext(ctx *ExecContext, out *strings.Builder, name string, 
 	// Get entity basic info
 	out.WriteString("### Entity Definition\n\n")
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"select Name, EntityType, Generalization, AttributeCount, IndexCount from entities where QualifiedName = '%s'", name))
+		"select Name, EntityType, Generalization, AttributeCount from entities where QualifiedName = '%s'", name))
 	if err == nil && result.Count > 0 {
 		row := result.Rows[0]
 		out.WriteString(fmt.Sprintf("- **Name**: %v\n", row[0]))
@@ -205,7 +205,6 @@ func assembleEntityContext(ctx *ExecContext, out *strings.Builder, name string, 
 			out.WriteString(fmt.Sprintf("- **Extends**: %v\n", row[2]))
 		}
 		out.WriteString(fmt.Sprintf("- **Attributes**: %v\n", row[3]))
-		out.WriteString(fmt.Sprintf("- **Indexes**: %v\n", row[4]))
 	}
 	out.WriteString("\n")
 

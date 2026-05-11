@@ -141,6 +141,8 @@ func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
 		return listImportMappings(ctx, s.InModule)
 	case ast.ShowExportMappings:
 		return listExportMappings(ctx, s.InModule)
+	case ast.ShowJarDependencies:
+		return execListJarDependencies(ctx, s.InModule)
 	default:
 		return mdlerrors.NewUnsupported("unknown show object type")
 	}
@@ -233,6 +235,8 @@ func execDescribe(ctx *ExecContext, s *ast.DescribeStmt) error {
 			return describeImportMapping(ctx, s.Name)
 		case ast.DescribeExportMapping:
 			return describeExportMapping(ctx, s.Name)
+		case ast.DescribeJarDependency:
+			return execDescribeJarDependency(ctx, s.Name.String(), s.Qualifier)
 		default:
 			return mdlerrors.NewUnsupported("unknown describe object type")
 		}

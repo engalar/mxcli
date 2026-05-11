@@ -26,6 +26,15 @@ func (w *Writer) CreateImageCollection(ic *ImageCollection) error {
 		"Documents", "Images$ImageCollection", contents)
 }
 
+// UpdateImageCollection re-serializes an existing image collection in-place, preserving its ID.
+func (w *Writer) UpdateImageCollection(ic *ImageCollection) error {
+	contents, err := serializeImageCollection(ic)
+	if err != nil {
+		return err
+	}
+	return w.updateUnit(string(ic.ID), contents)
+}
+
 // DeleteImageCollection deletes an image collection by ID.
 func (w *Writer) DeleteImageCollection(id string) error {
 	return w.deleteUnit(id)

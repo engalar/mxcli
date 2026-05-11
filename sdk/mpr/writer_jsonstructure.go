@@ -34,6 +34,15 @@ func (w *Writer) CreateJsonStructure(js *JsonStructure) error {
 		"Documents", "JsonStructures$JsonStructure", contents)
 }
 
+// UpdateJsonStructure re-serializes an existing JSON structure in-place, preserving its ID.
+func (w *Writer) UpdateJsonStructure(js *JsonStructure) error {
+	contents, err := serializeJsonStructure(js)
+	if err != nil {
+		return err
+	}
+	return w.updateUnit(string(js.ID), contents)
+}
+
 // DeleteJsonStructure deletes a JSON structure by ID.
 func (w *Writer) DeleteJsonStructure(id string) error {
 	return w.deleteUnit(id)

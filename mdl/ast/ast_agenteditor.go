@@ -16,16 +16,17 @@ package ast
 //	  [, DeepLinkURL: '...']
 //	);
 type CreateModelStmt struct {
-	Name          QualifiedName
-	Documentation string
-	Provider      string         // "MxCloudGenAI" by default
-	Key           *QualifiedName // qualified name of the String constant holding the Portal key
-	DisplayName   string         // optional Portal-populated metadata
-	KeyName       string         // optional Portal-populated metadata
-	KeyID         string         // optional Portal-populated metadata
-	Environment   string         // optional Portal-populated metadata
-	ResourceName  string         // optional Portal-populated metadata
-	DeepLinkURL   string         // optional Portal-populated metadata
+	Name           QualifiedName
+	Documentation  string
+	Provider       string         // "MxCloudGenAI" by default
+	Key            *QualifiedName // qualified name of the String constant holding the Portal key
+	DisplayName    string         // optional Portal-populated metadata
+	KeyName        string         // optional Portal-populated metadata
+	KeyID          string         // optional Portal-populated metadata
+	Environment    string         // optional Portal-populated metadata
+	ResourceName   string         // optional Portal-populated metadata
+	DeepLinkURL    string         // optional Portal-populated metadata
+	CreateOrModify bool           // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
 func (s *CreateModelStmt) isStatement() {}
@@ -52,6 +53,7 @@ type CreateConsumedMCPServiceStmt struct {
 	Version                  string
 	ConnectionTimeoutSeconds int
 	InnerDocumentation       string // Contents.documentation field
+	CreateOrModify           bool   // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
 func (s *CreateConsumedMCPServiceStmt) isStatement() {}
@@ -80,6 +82,7 @@ type CreateKnowledgeBaseStmt struct {
 	KeyID            string
 	Environment      string
 	DeepLinkURL      string
+	CreateOrModify   bool   // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
 func (s *CreateKnowledgeBaseStmt) isStatement() {}
@@ -93,21 +96,22 @@ func (s *DropKnowledgeBaseStmt) isStatement() {}
 
 // CreateAgentStmt represents CREATE AGENT Module.Name (...) [{ body }].
 type CreateAgentStmt struct {
-	Name          QualifiedName
-	Documentation string
-	UsageType     string // "Task" or "Conversational"
-	Description   string
-	Model         *QualifiedName // reference to a Model document
-	Entity        *QualifiedName // reference to a domain entity
-	MaxTokens     *int
-	ToolChoice    string
-	Temperature   *float64
-	TopP          *float64
-	SystemPrompt  string
-	UserPrompt    string
-	Variables     []AgentVarDef
-	Tools         []AgentToolDef
-	KBTools       []AgentKBToolDef
+	Name           QualifiedName
+	Documentation  string
+	UsageType      string // "Task" or "Conversational"
+	Description    string
+	Model          *QualifiedName // reference to a Model document
+	Entity         *QualifiedName // reference to a domain entity
+	MaxTokens      *int
+	ToolChoice     string
+	Temperature    *float64
+	TopP           *float64
+	SystemPrompt   string
+	UserPrompt     string
+	Variables      []AgentVarDef
+	Tools          []AgentToolDef
+	KBTools        []AgentKBToolDef
+	CreateOrModify bool           // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
 func (s *CreateAgentStmt) isStatement() {}

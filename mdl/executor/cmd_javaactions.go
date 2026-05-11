@@ -317,18 +317,28 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)
 	}
+	var existingJAID model.ID
 	for _, existing := range jas {
 		existingModID := h.FindModuleID(existing.ContainerID)
 		existingModName := h.GetModuleName(existingModID)
 		if existingModName == s.Name.Module && existing.Name == s.Name.Name {
-			return mdlerrors.NewAlreadyExists("java action", s.Name.Module+"."+s.Name.Name)
+			if !s.CreateOrModify {
+				return mdlerrors.NewAlreadyExists("java action", s.Name.Module+"."+s.Name.Name)
+			}
+			existingJAID = existing.ID
+			break
 		}
+	}
+
+	newID := model.ID(types.GenerateID())
+	if existingJAID != "" {
+		newID = existingJAID
 	}
 
 	// Create the Java action
 	ja := &javaactions.JavaAction{
 		BaseElement: model.BaseElement{
-			ID:       model.ID(types.GenerateID()),
+			ID:       newID,
 			TypeName: "JavaActions$JavaAction",
 		},
 		ContainerID:   containerID,
@@ -412,9 +422,15 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 		}
 	}
 
-	// Create in MPR
-	if err := ctx.Backend.CreateJavaAction(ja); err != nil {
-		return mdlerrors.NewBackend("create java action", err)
+	// Create or update in MPR
+	if existingJAID != "" {
+		if err := ctx.Backend.UpdateJavaAction(ja); err != nil {
+			return mdlerrors.NewBackend("update java action", err)
+		}
+	} else {
+		if err := ctx.Backend.CreateJavaAction(ja); err != nil {
+			return mdlerrors.NewBackend("create java action", err)
+		}
 	}
 
 	// Write Java source file if code is provided
@@ -427,7 +443,11 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 	// Clear cache
 	ctx.InvalidateCache()
 
-	fmt.Fprintf(ctx.Output, "Created java action: %s.%s\n", s.Name.Module, s.Name.Name)
+	if existingJAID != "" {
+		fmt.Fprintf(ctx.Output, "Modified java action: %s.%s\n", s.Name.Module, s.Name.Name)
+	} else {
+		fmt.Fprintf(ctx.Output, "Created java action: %s.%s\n", s.Name.Module, s.Name.Name)
+	}
 	return nil
 }
 

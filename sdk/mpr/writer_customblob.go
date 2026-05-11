@@ -79,6 +79,46 @@ func (w *Writer) writeCustomBlobDocument(in customBlobInput) error {
 	return w.insertUnit(in.UnitID, in.ContainerID, "Documents", customBlobDocType, contents)
 }
 
+// updateCustomBlobDocument serializes a CustomBlobDocument BSON wrapper and
+// replaces the existing unit in the project, preserving its UUID.
+func (w *Writer) updateCustomBlobDocument(in customBlobInput) error {
+	if in.UnitID == "" {
+		return fmt.Errorf("CustomBlobDocument unit ID is required for update")
+	}
+	if in.ExportLevel == "" {
+		in.ExportLevel = "Hidden"
+	}
+	if in.MetadataID == "" {
+		in.MetadataID = generateUUID()
+	}
+
+	metadata := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(in.MetadataID)},
+		{Key: "$Type", Value: "CustomBlobDocuments$CustomBlobDocumentMetadata"},
+		{Key: "CreatedByExtension", Value: agenteditor.CreatedByExtensionID},
+		{Key: "ReadableTypeName", Value: in.ReadableTypeName},
+	}
+
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(in.UnitID)},
+		{Key: "$Type", Value: customBlobDocType},
+		{Key: "Contents", Value: in.ContentsJSON},
+		{Key: "CustomDocumentType", Value: in.CustomDocumentType},
+		{Key: "Documentation", Value: in.Documentation},
+		{Key: "Excluded", Value: in.Excluded},
+		{Key: "ExportLevel", Value: in.ExportLevel},
+		{Key: "Metadata", Value: metadata},
+		{Key: "Name", Value: in.Name},
+	}
+
+	contents, err := bson.Marshal(doc)
+	if err != nil {
+		return fmt.Errorf("failed to marshal CustomBlobDocument BSON: %w", err)
+	}
+
+	return w.updateUnit(in.UnitID, contents)
+}
+
 // marshalCanonicalJSON produces JSON without HTML escaping, matching the
 // shape Studio Pro's agent-editor extension produces.
 func marshalCanonicalJSON(v any) (string, error) {

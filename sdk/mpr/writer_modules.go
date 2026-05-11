@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 
@@ -234,6 +235,78 @@ func (w *Writer) serializeModuleSettings(id string) ([]byte, error) {
 		"ProtectedModuleType": "AddOn",
 		"SolutionIdentifier":  "",
 		"Version":             "1.0.0",
+	}
+	return bson.Marshal(doc)
+}
+
+// UpdateModuleSettings persists the full Projects$ModuleSettings document,
+// including all JarDependencies and their Exclusions.
+func (w *Writer) UpdateModuleSettings(ms *types.ModuleSettings) error {
+	contents, err := w.serializeModuleSettingsFull(ms)
+	if err != nil {
+		return fmt.Errorf("failed to serialize module settings: %w", err)
+	}
+	return w.updateUnit(string(ms.ID), contents)
+}
+
+// serializeModuleSettingsFull serializes a ModuleSettings with actual dependencies.
+func (w *Writer) serializeModuleSettingsFull(ms *types.ModuleSettings) ([]byte, error) {
+	exportLevel := ms.ExportLevel
+	if exportLevel == "" {
+		exportLevel = "Source"
+	}
+	protectedType := ms.ProtectedModuleType
+	if protectedType == "" {
+		protectedType = "AddOn"
+	}
+	ver := ms.Version
+	if ver == "" {
+		ver = "1.0.0"
+	}
+
+	deps := bson.A{int32(2)} // listType marker
+	for _, d := range ms.JarDependencies {
+		depID := string(d.ID)
+		if depID == "" {
+			depID = generateUUID()
+		}
+		depDoc := bson.M{
+			"$ID":        idToBsonBinary(depID),
+			"$Type":      "Projects$JarDependency",
+			"GroupId":    d.GroupID,
+			"ArtifactId": d.ArtifactID,
+			"Version":    d.Version,
+			"IsIncluded": d.IsIncluded,
+		}
+		if len(d.Exclusions) > 0 {
+			excArr := bson.A{int32(2)}
+			for _, e := range d.Exclusions {
+				excID := string(e.ID)
+				if excID == "" {
+					excID = generateUUID()
+				}
+				excArr = append(excArr, bson.M{
+					"$ID":        idToBsonBinary(excID),
+					"$Type":      "Projects$JarDependencyExclusion",
+					"GroupId":    e.GroupID,
+					"ArtifactId": e.ArtifactID,
+				})
+			}
+			depDoc["Exclusions"] = excArr
+		}
+		deps = append(deps, depDoc)
+	}
+
+	doc := bson.M{
+		"$ID":                 idToBsonBinary(string(ms.ID)),
+		"$Type":               "Projects$ModuleSettings",
+		"BasedOnVersion":      ms.BasedOnVersion,
+		"ExportLevel":         exportLevel,
+		"ExtensionName":       ms.ExtensionName,
+		"JarDependencies":     deps,
+		"ProtectedModuleType": protectedType,
+		"SolutionIdentifier":  ms.SolutionIdentifier,
+		"Version":             ver,
 	}
 	return bson.Marshal(doc)
 }

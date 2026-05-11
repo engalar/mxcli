@@ -376,6 +376,42 @@ create external entities from ProductClient.ProductDataApiClient
 create or modify external entities from ProductClient.ProductDataApiClient;
 ```
 
+### AllowCreateChangeLocally — Read-Only API, Editable in the App
+
+Use `AllowCreateChangeLocally: Yes` when the remote OData API only supports GET (read-only), but the Mendix app needs to let users edit the data locally before passing it to another API call — for example, an external action or a REST microflow that POSTs the change to a different endpoint.
+
+Without this flag, external entities are completely non-editable in the client: form widgets are read-only and no in-memory change can be committed. With the flag, Mendix allows the object to be created and changed locally (in memory or in the Mendix database), without trying to write back through the OData client.
+
+**Typical pattern:**
+1. Retrieve data via the OData client into the external entity (GET only).
+2. User edits the record in a page — possible because `AllowCreateChangeLocally` is set.
+3. A microflow reads the changed object and calls an external action or REST operation (POST/PUT) to submit the change to the remote system.
+
+```sql
+-- API is read-only (no insert/update/delete on the OData endpoint).
+-- AllowCreateChangeLocally lets users edit the object in the app
+-- and submit changes via a separate external action.
+create or modify external entity ShopClient.Product
+from odata client ShopClient.ShopApiClient
+(
+  EntitySet: 'Products',
+  Countable: Yes,
+  Creatable: No,
+  Deletable: No,
+  Updatable: No,
+  AllowCreateChangeLocally: Yes
+)
+(
+  ProductId: long,
+  Name: string,
+  Price: decimal
+);
+
+-- Toggle the flag without recreating the entity.
+alter entity ShopClient.Product set allow_create_change_locally = true;
+alter entity ShopClient.Product set allow_create_change_locally = false;
+```
+
 ## Step-by-Step: Read-Write API with Microflow Handlers
 
 For write operations (insert, update, delete), the OData service delegates to microflows that map between the view entity and the underlying persistent entities.

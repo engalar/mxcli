@@ -65,6 +65,11 @@ func (b *Builder) ExitCreateAssociationStatement(ctx *parser.CreateAssociationSt
 		}
 	}
 
+	if createStmt := findParentCreateStatement(ctx); createStmt != nil {
+		if createStmt.OR() != nil && (createStmt.MODIFY() != nil || createStmt.REPLACE() != nil) {
+			stmt.CreateOrModify = true
+		}
+	}
 	b.statements = append(b.statements, stmt)
 }
 

@@ -4,6 +4,8 @@
 package executor
 
 import (
+	"strings"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
@@ -525,7 +527,21 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		return fb.addCreateVariableAction(s)
 	case *ast.EnumSplitStmt:
 		return fb.addEnumSplit(s)
+	case *ast.InheritanceSplitStmt:
+		return fb.addInheritanceSplit(s)
+	case *ast.CastObjectStmt:
+		return fb.addCastAction(s)
 	case *ast.MfSetStmt:
+		if idx := strings.IndexByte(s.Target, '/'); idx >= 0 {
+			// Path target (e.g. "$Order/Sales.Order_Customer") → ChangeObjectAction
+			varName := strings.TrimPrefix(s.Target[:idx], "$")
+			assoc := s.Target[idx+1:]
+			return fb.addChangeObjectAction(&ast.ChangeObjectStmt{
+				Variable:    varName,
+				Changes:     []ast.ChangeItem{{Attribute: assoc, Value: s.Value}},
+				Annotations: s.Annotations,
+			})
+		}
 		return fb.addChangeVariableAction(s)
 	case *ast.ReturnStmt:
 		return fb.addEndEventWithReturn(s)

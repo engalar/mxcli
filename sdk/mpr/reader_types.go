@@ -34,7 +34,7 @@ type (
 	ProjectVersion     = types.ProjectVersion
 )
 
-// ListJavaActions returns all Java actions in the project.
+// ListJavaActions returns all Java actions in the project, including virtual System module actions.
 func (r *Reader) ListJavaActions() ([]*types.JavaAction, error) {
 	units, err := r.listUnitsByType("JavaActions$JavaAction")
 	if err != nil {
@@ -49,6 +49,9 @@ func (r *Reader) ListJavaActions() ([]*types.JavaAction, error) {
 		}
 		result = append(result, ja)
 	}
+
+	// Append virtual System module Java actions (not stored in the MPR database)
+	result = append(result, BuildSystemJavaActions()...)
 
 	return result, nil
 }

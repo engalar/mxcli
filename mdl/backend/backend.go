@@ -11,6 +11,7 @@ package backend
 type FullBackend interface {
 	ConnectionBackend
 	ModuleBackend
+	ModuleSettingsBackend
 	FolderBackend
 	DomainModelBackend
 	MicroflowBackend

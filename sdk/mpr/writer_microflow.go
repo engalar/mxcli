@@ -230,6 +230,8 @@ func buildSequenceFlowCase(cv microflows.CaseValue) bson.D {
 		cv = &c
 	case microflows.ExpressionCase:
 		cv = &c
+	case microflows.InheritanceCase:
+		cv = &c
 	}
 
 	switch c := cv.(type) {
@@ -265,6 +267,16 @@ func buildSequenceFlowCase(cv microflows.CaseValue) bson.D {
 			{Key: "$ID", Value: idToBsonBinary(id)},
 			{Key: "$Type", Value: "Microflows$EnumerationCase"},
 			{Key: "Value", Value: c.Expression},
+		}
+	case *microflows.InheritanceCase:
+		id := string(c.ID)
+		if id == "" {
+			id = generateUUID()
+		}
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(id)},
+			{Key: "$Type", Value: "Microflows$InheritanceCase"},
+			{Key: "Value", Value: c.EntityQualifiedName},
 		}
 	}
 	// Default: synthesise a NoCase document with a fresh ID.
@@ -585,6 +597,18 @@ func serializeMicroflowObject(obj microflows.MicroflowObject) bson.D {
 			{Key: "$Type", Value: "Microflows$ExclusiveMerge"},
 			{Key: "RelativeMiddlePoint", Value: pointToString(o.Position)},
 			{Key: "Size", Value: sizeToString(o.Size)},
+		}
+
+	case *microflows.InheritanceSplit:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(o.ID))},
+			{Key: "$Type", Value: "Microflows$InheritanceSplit"},
+			{Key: "Caption", Value: o.Caption},
+			{Key: "Documentation", Value: o.Documentation},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(o.ErrorHandlingType), "Rollback")},
+			{Key: "RelativeMiddlePoint", Value: pointToString(o.Position)},
+			{Key: "Size", Value: sizeToString(o.Size)},
+			{Key: "SplitVariableName", Value: o.VariableName},
 		}
 
 	case *microflows.LoopedActivity:

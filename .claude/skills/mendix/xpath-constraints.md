@@ -193,6 +193,46 @@ grant Module.Role on Module.Entity (
 
 Note the double single-quotes for escaping inside the string literal.
 
+## Enumeration Attributes
+
+**Critical**: XPath constraints are translated to database SQL WHERE clauses at runtime. The database stores enum values as plain strings (the value key), not qualified names. This means:
+
+- `[Status = 'Open']` — always valid: direct string literal match
+- `[Status = Module.OrderStatus.Open]` — also valid: mxcli converts to `'Open'` in BSON automatically
+
+Both forms are accepted by mxcli in the write direction. `DESCRIBE MICROFLOW` always shows the qualified name form for readability, even though BSON stores `'Open'`.
+
+**Do NOT use qualified names in expression context (IF, SET, DECLARE) for comparisons** — those contexts use a different form. See `write-microflows.md` "Enumeration Comparisons" section.
+
+```mdl
+-- Preferred (mxcli converts to 'Open' in BSON):
+retrieve $OpenOrders from Module.Order
+  where [Status = Module.OrderStatus.Open];
+
+-- Also accepted (stored as-is):
+retrieve $OpenOrders from Module.Order
+  where [Status = 'Open'];
+
+-- NOT equal
+retrieve $Active from Module.Order
+  where [Status != Module.OrderStatus.Cancelled];
+
+-- OR across multiple enum values
+retrieve $InProgress from Module.Order
+  where [Status = Module.OrderStatus.Open or Status = Module.OrderStatus.Processing];
+
+-- Enum combined with other predicates
+retrieve $Results from Module.Order
+  where [Status = Module.OrderStatus.Completed and TotalAmount >= $MinAmount];
+```
+
+### Troubleshooting silent empty results with enums
+
+If a RETRIEVE returns empty unexpectedly when filtering by an enum attribute:
+1. Check the **value key** (not caption) — the key is what's stored in the DB column. Check with `DESCRIBE ENUMERATION Module.EnumName`.
+2. Keys are **case-sensitive**: `'open'` ≠ `'Open'`.
+3. Confirm the attribute type is actually an enumeration and not a string — `DESCRIBE ENTITY Module.EntityName`.
+
 ## Common Patterns
 
 ### Parameterized Search
@@ -253,4 +293,6 @@ Always validate XPath syntax before execution:
 | `mismatched input` on keyword | Attribute name is a reserved word | This is handled — `xpathWord` accepts any keyword as identifier |
 | Token not quoted in BSON | Token in Mendix expression context | Use `[...]` bracket syntax for XPath, not bare expression |
 | `CE0111` path error | Missing module prefix on association | Use `Module.AssociationName`, not just `AssociationName` |
+| `CE0161` XPath constraint error | Qualified name used for non-enum or wrong format | Use string literal `'Value'` or qualified name `Module.Enum.Value`; mxcli converts automatically |
 | `not` parsed as keyword | Using `not` (uppercase) in XPath | XPath uses lowercase `not()` as a function |
+| Retrieve returns empty for enum filter | String literal value key mismatch | Key is case-sensitive; verify with `DESCRIBE ENUMERATION Module.Name` |

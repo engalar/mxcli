@@ -1,0 +1,683 @@
+-- ============================================================================
+-- Complex Layout Examples — Real-World Microflow Complexity Showcase
+-- ============================================================================
+--
+-- This file demonstrates enterprise-grade microflow complexity patterns
+-- derived from analysis of three production Mendix applications:
+--   - EnquiriesManagement  (VAL_EmailRecipients: 35 actions, McCabe 16)
+--   - Evora-FactoryManagement (VAL_Factory_NewEdit: 50 actions, McCabe 17;
+--                              OIDC.handleAuthorizationCode: 55 actions)
+--   - LatoProductInventory  (MiniSurveys.PostSubmission: 41 actions, McCabe 8)
+--
+-- PURPOSE: visually validate in Studio Pro how the mxcli layout algorithm
+-- handles enterprise-grade complexity — nesting depth, CASE branches, loop
+-- sizing — compared to the simple examples in 02-microflow-examples.mdl.
+--
+-- Patterns:
+--   1. CX_VAL_Factory          — multi-field range validation + accumulator
+--                                (~50 activities, McCabe ~17)
+--   2. CX_POST_SurveySubmission — sequential guard-chain waterfall
+--                                (~40 activities, McCabe ~8)
+--   3. CX_ACT_HandleAuthCode    — CASE with identical nested logic per branch
+--                                (~50 activities, McCabe ~10)
+--   4. CX_VAL_EmailTemplate     — optional-field format guards
+--                                (~35 activities, McCabe ~16)
+--   5. CX_ACT_BatchProcessFactories — loop with CASE + nested-if body
+--                                (~30 activities, McCabe ~8)
+--
+-- Usage:
+--   ./bin/mxcli check mdl-examples/doctype-tests/02c-complex-layout-examples.mdl
+--   ./bin/mxcli -p app.mpr exec mdl-examples/doctype-tests/02c-complex-layout-examples.mdl
+-- ============================================================================
+
+create module CxLayout;
+
+-- ============================================================================
+-- Domain Model
+-- ============================================================================
+
+create enumeration CxLayout.AuthMethod (
+  ClientSecretPost  'Client Secret (POST body)',
+  ClientSecretBasic 'Client Secret (Basic Auth)',
+  None              'None'
+);
+/
+
+create enumeration CxLayout.FactoryStatus (
+  Active           'Active',
+  Maintenance      'Under Maintenance',
+  Offline          'Offline',
+  Decommissioned   'Decommissioned'
+);
+/
+
+@position(100, 100)
+create persistent entity CxLayout.Factory (
+  Name:         string(200) not null,
+  Latitude:     decimal,
+  Longitude:    decimal,
+  Availability: decimal,
+  Performance:  decimal,
+  Quality:      decimal,
+  Status:       enumeration(CxLayout.FactoryStatus),
+  IsActive:     boolean default true,
+  EntryDate:    datetime,
+  LastModified: datetime
+);
+
+@position(400, 100)
+create persistent entity CxLayout.SurveyTracker (
+  TrackerId: string(100) not null,
+  IsActive:  boolean default true,
+  ExpiresAt: datetime
+);
+
+@position(700, 100)
+create persistent entity CxLayout.SurveySubmission (
+  TrackerId:    string(100) not null,
+  AnswerJson:   string(5000),
+  IsValid:      boolean default true,
+  IsFinished:   boolean default false,
+  StatusCode:   integer,
+  EntryDate:    datetime,
+  LastModified: datetime
+);
+
+@position(100, 350)
+create persistent entity CxLayout.AuthToken (
+  ClientId:    string(200) not null,
+  AuthMethod:  enumeration(CxLayout.AuthMethod),
+  RawResponse: string(5000),
+  IssuedAt:    datetime
+);
+
+@position(400, 350)
+create persistent entity CxLayout.EmailTemplate (
+  FromAddress:      string(500),
+  ToAddresses:      string(500),
+  ReplyTo:          string(500),
+  CC:               string(500),
+  BCC:              string(500),
+  Subject:          string(1000),
+  HtmlBody:         string(32000),
+  PlainTextBody:    string(32000),
+  UseOnlyPlainText: boolean default false,
+  IsActive:         boolean default true
+);
+
+create association CxLayout.SurveySubmission_SurveyTracker
+from CxLayout.SurveySubmission to CxLayout.SurveyTracker
+type reference
+owner default;
+
+-- Java action stub used by authentication microflow (Pattern 3)
+/** Exchanges an OAuth authorization code for tokens via HTTP. */
+create java action CxLayout.SUB_ExchangeAuthCode (
+  AuthCode:     string not null,
+  ClientId:     string not null,
+  ClientSecret: string not null,
+  RedirectUri:  string not null,
+  UseBasicAuth: boolean not null
+) returns string
+as $$
+/* Placeholder — implement with RestCallAction or HttpClient in production */
+return null;
+$$;
+/
+
+-- ============================================================================
+-- PATTERN 1: Multi-Field Range Validation with Error Accumulator
+-- Source: FactoryManagement.VAL_Factory_NewEdit (~50 actions, McCabe 17)
+-- Layout: long horizontal chain of split/merge pairs, one per field + one
+--         per range bound. Expected canvas width: very wide.
+-- ============================================================================
+
+/**
+ * Validates all editable fields of a Factory record.
+ *
+ * Each of 7 fields has 2–3 nested guard levels:
+ *   required fields  → empty-check → lower-bound check → upper-bound check
+ *   dependent fields → active-check → empty-check
+ *
+ * An integer error counter accumulates across all checks; a summary log
+ * is written at the end only when there are errors.
+ */
+create microflow CxLayout.CX_VAL_Factory (
+  $Factory: CxLayout.Factory
+)
+returns boolean as $IsValid
+begin
+  declare $IsValid     boolean = true;
+  declare $ErrorCount  integer = 0;
+
+  -- Field 1: Name (required, at least 3 characters)
+  if $Factory/Name = empty then
+    validation feedback $Factory/Name message 'Factory name is required';
+    set $IsValid    = false;
+    set $ErrorCount = $ErrorCount + 1;
+  else
+    if length($Factory/Name) < 3 then
+      validation feedback $Factory/Name message 'Factory name must be at least 3 characters';
+      set $IsValid    = false;
+      set $ErrorCount = $ErrorCount + 1;
+    end if;
+  end if;
+
+  -- Field 2: Latitude (required, -90 to 90)
+  if $Factory/Latitude = empty then
+    validation feedback $Factory/Latitude message 'Latitude is required';
+    set $IsValid    = false;
+    set $ErrorCount = $ErrorCount + 1;
+  else
+    if $Factory/Latitude < -90 then
+      validation feedback $Factory/Latitude message 'Latitude must be at least -90';
+      set $IsValid    = false;
+      set $ErrorCount = $ErrorCount + 1;
+    else
+      if $Factory/Latitude > 90 then
+        validation feedback $Factory/Latitude message 'Latitude must be at most 90';
+        set $IsValid    = false;
+        set $ErrorCount = $ErrorCount + 1;
+      end if;
+    end if;
+  end if;
+
+  -- Field 3: Longitude (required, -180 to 180)
+  if $Factory/Longitude = empty then
+    validation feedback $Factory/Longitude message 'Longitude is required';
+    set $IsValid    = false;
+    set $ErrorCount = $ErrorCount + 1;
+  else
+    if $Factory/Longitude < -180 then
+      validation feedback $Factory/Longitude message 'Longitude must be at least -180';
+      set $IsValid    = false;
+      set $ErrorCount = $ErrorCount + 1;
+    else
+      if $Factory/Longitude > 180 then
+        validation feedback $Factory/Longitude message 'Longitude must be at most 180';
+        set $IsValid    = false;
+        set $ErrorCount = $ErrorCount + 1;
+      end if;
+    end if;
+  end if;
+
+  -- Field 4: Availability (0–100)
+  if $Factory/Availability < 0 then
+    validation feedback $Factory/Availability message 'Availability must be at least 0';
+    set $IsValid    = false;
+    set $ErrorCount = $ErrorCount + 1;
+  else
+    if $Factory/Availability > 100 then
+      validation feedback $Factory/Availability message 'Availability cannot exceed 100';
+      set $IsValid    = false;
+      set $ErrorCount = $ErrorCount + 1;
+    end if;
+  end if;
+
+  -- Field 5: Performance (0–100)
+  if $Factory/Performance < 0 then
+    validation feedback $Factory/Performance message 'Performance must be at least 0';
+    set $IsValid    = false;
+    set $ErrorCount = $ErrorCount + 1;
+  else
+    if $Factory/Performance > 100 then
+      validation feedback $Factory/Performance message 'Performance cannot exceed 100';
+      set $IsValid    = false;
+      set $ErrorCount = $ErrorCount + 1;
+    end if;
+  end if;
+
+  -- Field 6: Quality (0–100)
+  if $Factory/Quality < 0 then
+    validation feedback $Factory/Quality message 'Quality must be at least 0';
+    set $IsValid    = false;
+    set $ErrorCount = $ErrorCount + 1;
+  else
+    if $Factory/Quality > 100 then
+      validation feedback $Factory/Quality message 'Quality cannot exceed 100';
+      set $IsValid    = false;
+      set $ErrorCount = $ErrorCount + 1;
+    end if;
+  end if;
+
+  -- Field 7: Status (required when factory is active)
+  if $Factory/IsActive = true then
+    if $Factory/Status = empty then
+      validation feedback $Factory/Status message 'Status is required for active factories';
+      set $IsValid    = false;
+      set $ErrorCount = $ErrorCount + 1;
+    end if;
+  end if;
+
+  if $ErrorCount > 0 then
+    log warning node 'Validation' 'Factory validation failed: '
+      + toString($ErrorCount) + ' error(s) on ' + $Factory/Name;
+  end if;
+
+  return $IsValid;
+end;
+/
+
+-- ============================================================================
+-- PATTERN 2: Sequential Guard-Chain (Conditional Waterfall)
+-- Source: MiniSurveys.PostSubmission (~41 actions, McCabe 8)
+-- Layout: each FALSE arm returns immediately, producing a staircase of
+--         early-exit branches descending downward. Happy path stays right.
+-- ============================================================================
+
+/**
+ * Processes a survey submission through a series of guard checks.
+ *
+ * Structure:
+ *   Guard 1 → inputs present?
+ *   Guard 2 → tracker exists?
+ *   Guard 3 → tracker still active?
+ *   Guard 4 → existing submission?
+ *     Guard 4a → already finished?  (returns 409)
+ *     Guard 4b → in-progress?       (updates and returns 200)
+ *   Happy path → create new submission (201)
+ *
+ * Expected layout: deep nested structure where each FALSE arm of the
+ * outer IFs produces an end event below the main flow.
+ */
+create microflow CxLayout.CX_POST_SurveySubmission (
+  $TrackerId:  string,
+  $AnswerJson: string
+)
+returns string as $ResponseBody
+begin
+  declare $ResponseBody string = empty;
+
+  -- Guard 1: required inputs present
+  if $TrackerId = empty or $AnswerJson = empty then
+    log warning node 'Survey' 'Missing required parameters';
+    set $ResponseBody = '{"status":"error","code":400,"message":"Missing required parameters"}';
+    return $ResponseBody;
+  end if;
+
+  -- Guard 2: survey tracker must exist
+  retrieve $Tracker from CxLayout.SurveyTracker
+    where TrackerId = $TrackerId
+    limit 1;
+
+  if $Tracker = empty then
+    log warning node 'Survey' 'Tracker not found: ' + $TrackerId;
+    set $ResponseBody = '{"status":"error","code":404,"message":"Survey not found"}';
+    return $ResponseBody;
+  end if;
+
+  -- Guard 3: tracker must still be active
+  if $Tracker/IsActive = false then
+    log info node 'Survey' 'Tracker expired: ' + $TrackerId;
+    set $ResponseBody = '{"status":"error","code":410,"message":"Survey is no longer active"}';
+    return $ResponseBody;
+  end if;
+
+  -- Guard 4: check for an existing submission
+  retrieve $ExistingSubmission from CxLayout.SurveySubmission
+    where TrackerId = $TrackerId
+    limit 1;
+
+  if $ExistingSubmission != empty then
+    -- Guard 4a: already completed?
+    if $ExistingSubmission/IsFinished = true then
+      log info node 'Survey' 'Survey already completed: ' + $TrackerId;
+      set $ResponseBody = '{"status":"error","code":409,"message":"Survey already submitted"}';
+      return $ResponseBody;
+    else
+      -- Guard 4b: update the in-progress submission
+      change $ExistingSubmission (
+        AnswerJson   = $AnswerJson,
+        LastModified = [%CurrentDateTime%]
+      );
+      commit $ExistingSubmission with events;
+      log info node 'Survey' 'Submission updated: ' + $TrackerId;
+      set $ResponseBody = '{"status":"ok","code":200,"message":"Submission updated"}';
+      return $ResponseBody;
+    end if;
+  end if;
+
+  -- All guards passed: create new submission
+  $NewSubmission = create CxLayout.SurveySubmission (
+    TrackerId    = $TrackerId,
+    AnswerJson   = $AnswerJson,
+    IsValid      = true,
+    IsFinished   = false,
+    StatusCode   = 201,
+    EntryDate    = [%CurrentDateTime%],
+    LastModified = [%CurrentDateTime%]
+  );
+  change $NewSubmission (CxLayout.SurveySubmission_SurveyTracker = $Tracker);
+  commit $NewSubmission with events;
+
+  log info node 'Survey' 'New submission created: ' + $TrackerId;
+  set $ResponseBody = '{"status":"ok","code":201,"message":"Submission created"}';
+  return $ResponseBody;
+end;
+/
+
+-- ============================================================================
+-- PATTERN 3: Enum Split with Parallel Nested Logic per Branch
+-- Source: OIDC.handleAuthorizationCode (~55 actions, McCabe 7)
+-- Layout: wide CASE fan-out with each branch arm containing its own
+--         retrieve + if-empty + create-or-update sub-flow.
+-- ============================================================================
+
+/**
+ * Handles OAuth authorization code exchange.
+ *
+ * Two guards check required inputs, then a CASE statement routes by
+ * AuthMethod. Each auth method branch:
+ *   - calls SUB_ExchangeAuthCode (with different UseBasicAuth flag)
+ *   - guards against empty response
+ *   - retrieves existing token for the client
+ *   - creates a new token record or updates the existing one
+ *
+ * The None and (empty) branches log and exit without success.
+ *
+ * Expected layout: wide enum-split with 4 branches; ClientSecretPost and
+ * ClientSecretBasic branches each produce a sub-flow of ~12 activities.
+ */
+create microflow CxLayout.CX_ACT_HandleAuthCode (
+  $AuthCode:     string,
+  $ClientId:     string,
+  $ClientSecret: string,
+  $RedirectUri:  string,
+  $AuthMethod:   enum CxLayout.AuthMethod
+)
+returns boolean as $Success
+begin
+  declare $Success boolean = false;
+
+  -- Guard: authorization code required
+  if $AuthCode = empty then
+    log error node 'Auth' 'Authorization code is empty';
+    return false;
+  end if;
+
+  -- Guard: client credentials required
+  if $ClientId = empty or $ClientSecret = empty then
+    log error node 'Auth' 'Client credentials are missing for: ' + $ClientId;
+    return false;
+  end if;
+
+  -- Route by authentication method
+  case $AuthMethod
+
+    when ClientSecretPost then
+      -- Credentials sent in POST body
+      $PostResponse = call java action CxLayout.SUB_ExchangeAuthCode (
+        AuthCode     = $AuthCode,
+        ClientId     = $ClientId,
+        ClientSecret = $ClientSecret,
+        RedirectUri  = $RedirectUri,
+        UseBasicAuth = false
+      ) on error without rollback {
+        log error node 'Auth' 'Token exchange failed (client_secret_post): ' + $ClientId;
+        return false;
+      };
+
+      if $PostResponse = empty then
+        log error node 'Auth' 'Empty token response (client_secret_post): ' + $ClientId;
+        return false;
+      end if;
+
+      retrieve $PostToken from CxLayout.AuthToken
+        where ClientId = $ClientId
+        limit 1;
+
+      if $PostToken = empty then
+        $NewPostToken = create CxLayout.AuthToken (
+          ClientId    = $ClientId,
+          AuthMethod  = CxLayout.AuthMethod.ClientSecretPost,
+          RawResponse = $PostResponse,
+          IssuedAt = [%CurrentDateTime%]
+        );
+        commit $NewPostToken with events;
+        log info node 'Auth' 'Token stored (post): ' + $ClientId;
+      else
+        change $PostToken (
+          RawResponse = $PostResponse,
+          IssuedAt = [%CurrentDateTime%]
+        );
+        commit $PostToken with events;
+        log info node 'Auth' 'Token refreshed (post): ' + $ClientId;
+      end if;
+
+      set $Success = true;
+
+    when ClientSecretBasic then
+      -- Credentials sent in Authorization header
+      $BasicResponse = call java action CxLayout.SUB_ExchangeAuthCode (
+        AuthCode     = $AuthCode,
+        ClientId     = $ClientId,
+        ClientSecret = $ClientSecret,
+        RedirectUri  = $RedirectUri,
+        UseBasicAuth = true
+      ) on error without rollback {
+        log error node 'Auth' 'Token exchange failed (client_secret_basic): ' + $ClientId;
+        return false;
+      };
+
+      if $BasicResponse = empty then
+        log error node 'Auth' 'Empty token response (client_secret_basic): ' + $ClientId;
+        return false;
+      end if;
+
+      retrieve $BasicToken from CxLayout.AuthToken
+        where ClientId = $ClientId
+        limit 1;
+
+      if $BasicToken = empty then
+        $NewBasicToken = create CxLayout.AuthToken (
+          ClientId    = $ClientId,
+          AuthMethod  = CxLayout.AuthMethod.ClientSecretBasic,
+          RawResponse = $BasicResponse,
+          IssuedAt = [%CurrentDateTime%]
+        );
+        commit $NewBasicToken with events;
+        log info node 'Auth' 'Token stored (basic): ' + $ClientId;
+      else
+        change $BasicToken (
+          RawResponse = $BasicResponse,
+          IssuedAt = [%CurrentDateTime%]
+        );
+        commit $BasicToken with events;
+        log info node 'Auth' 'Token refreshed (basic): ' + $ClientId;
+      end if;
+
+      set $Success = true;
+
+    when None then
+      log warning node 'Auth' 'No auth method configured for: ' + $ClientId;
+      set $Success = false;
+
+    when (empty) then
+      log error node 'Auth' 'Auth method is not set for: ' + $ClientId;
+      set $Success = false;
+
+  end case;
+
+  return $Success;
+end;
+/
+
+-- ============================================================================
+-- PATTERN 4: Optional-Field Validation with Per-Field Format Guards
+-- Source: Email_Connector.VAL_EmailRecipients (~35 actions, McCabe 16)
+-- Layout: alternating required/optional guard patterns; optional fields add
+--         one level of nesting only when a value is present.
+--         Body section adds a branch on the UseOnlyPlainText flag.
+-- ============================================================================
+
+/**
+ * Validates all address and body fields of an EmailTemplate.
+ *
+ * Required fields:  empty-check → format-check (2 levels)
+ * Optional fields:  presence-check → format-check (only when non-empty)
+ * Body section:     UseOnlyPlainText flag drives a separate validation path
+ *                   with its own nested empty-check inside each arm.
+ *
+ * Expected layout: 7 sequential split/merge pairs across the canvas, with
+ * the optional-field pairs slightly narrower than required-field pairs.
+ */
+create microflow CxLayout.CX_VAL_EmailTemplate (
+  $Template: CxLayout.EmailTemplate
+)
+returns boolean as $IsValid
+begin
+  declare $IsValid boolean = true;
+
+  -- Field 1: From (required + must contain @)
+  if $Template/FromAddress = empty then
+    validation feedback $Template/FromAddress message 'From address is required';
+    set $IsValid = false;
+  else
+    if contains($Template/FromAddress, '@') = false then
+      validation feedback $Template/FromAddress message 'From address must contain @';
+      set $IsValid = false;
+    end if;
+  end if;
+
+  -- Field 2: To (required — multiple addresses are comma-separated)
+  if $Template/ToAddresses = empty then
+    validation feedback $Template/ToAddresses message 'At least one recipient address is required';
+    set $IsValid = false;
+  end if;
+
+  -- Field 3: ReplyTo (optional — format-checked only when present)
+  if $Template/ReplyTo != empty then
+    if contains($Template/ReplyTo, '@') = false then
+      validation feedback $Template/ReplyTo message 'Reply-to address must contain @';
+      set $IsValid = false;
+    end if;
+  end if;
+
+  -- Field 4: CC (optional — format-checked only when present)
+  if $Template/CC != empty then
+    if contains($Template/CC, '@') = false then
+      validation feedback $Template/CC message 'CC address must contain @';
+      set $IsValid = false;
+    end if;
+  end if;
+
+  -- Field 5: BCC (optional — format-checked only when present)
+  if $Template/BCC != empty then
+    if contains($Template/BCC, '@') = false then
+      validation feedback $Template/BCC message 'BCC address must contain @';
+      set $IsValid = false;
+    end if;
+  end if;
+
+  -- Field 6: Subject (required, max 998 characters per RFC 5322)
+  if $Template/Subject = empty then
+    validation feedback $Template/Subject message 'Subject is required';
+    set $IsValid = false;
+  else
+    if length($Template/Subject) > 998 then
+      validation feedback $Template/Subject message 'Subject must not exceed 998 characters';
+      set $IsValid = false;
+    end if;
+  end if;
+
+  -- Field 7: Body — two separate validation paths driven by UseOnlyPlainText
+  if $Template/UseOnlyPlainText = true then
+    -- Plain-text only: HTML body is ignored, plain text is required
+    if $Template/PlainTextBody = empty then
+      validation feedback $Template/PlainTextBody message 'Plain text body is required when HTML is disabled';
+      set $IsValid = false;
+    end if;
+  else
+    -- HTML mode: HTML body is required; plain text fallback is optional but must be present if HTML is empty
+    if $Template/HtmlBody = empty then
+      if $Template/PlainTextBody = empty then
+        validation feedback $Template/HtmlBody message 'Provide at least an HTML body or a plain text body';
+        set $IsValid = false;
+      end if;
+    end if;
+  end if;
+
+  return $IsValid;
+end;
+/
+
+-- ============================================================================
+-- PATTERN 5: Batch Loop with CASE + Nested-If Body
+-- Source: common pattern across all three applications
+-- Layout: loop box auto-sized to contain a CASE with 4 branches, two of
+--         which contain nested IFs. Tests loop auto-sizer with deep body.
+-- ============================================================================
+
+/**
+ * Processes all active factories in a nightly batch run.
+ *
+ * For each factory:
+ *   - Skip decommissioned records immediately (outer IF)
+ *   - Route remaining by current status (CASE)
+ *     Active      → update LastModified, commit with error handling
+ *     Maintenance → check Availability threshold, conditionally promote to Active
+ *     Offline     → check for unexpected Performance reading, skip
+ *     (empty)     → log warning, skip
+ *
+ * Three counters (processed / skipped / errors) are logged at the end.
+ *
+ * Expected layout: loop box containing a wide CASE split; the Maintenance
+ * branch has a nested IF inside it, making it the tallest branch arm.
+ */
+create microflow CxLayout.CX_ACT_BatchProcessFactories ()
+returns integer as $ProcessedCount
+begin
+  declare $ProcessedCount integer = 0;
+  declare $SkippedCount   integer = 0;
+  declare $ErrorCount     integer = 0;
+
+  retrieve $Factories from CxLayout.Factory
+    where IsActive = true;
+
+  loop $Factory in $Factories
+  begin
+    case $Factory/Status
+
+      when Active then
+        change $Factory (LastModified = [%CurrentDateTime%]);
+        commit $Factory on error rollback;
+        set $ProcessedCount = $ProcessedCount + 1;
+
+      when Maintenance then
+        -- Promote back to Active when availability recovers above threshold
+        if $Factory/Availability > 80 then
+          change $Factory (
+            Status       = CxLayout.FactoryStatus.Active,
+            LastModified = [%CurrentDateTime%]
+          );
+          commit $Factory with events on error rollback;
+          log info node 'Batch' 'Factory returned to active: ' + $Factory/Name;
+        else
+          log info node 'Batch' 'Factory still in maintenance: ' + $Factory/Name;
+        end if;
+        set $ProcessedCount = $ProcessedCount + 1;
+
+      when Offline then
+        if $Factory/Performance > 0 then
+          log warning node 'Batch' 'Unexpected performance on offline factory: ' + $Factory/Name;
+        end if;
+        set $SkippedCount = $SkippedCount + 1;
+
+      when Decommissioned then
+        set $SkippedCount = $SkippedCount + 1;
+        log info node 'Batch' 'Skipping decommissioned factory: ' + $Factory/Name;
+
+      when (empty) then
+        log warning node 'Batch' 'Factory has no status set: ' + $Factory/Name;
+        set $SkippedCount = $SkippedCount + 1;
+
+    end case;
+  end loop;
+
+  log info node 'Batch' 'Batch complete — processed: ' + toString($ProcessedCount)
+    + ', skipped: ' + toString($SkippedCount)
+    + ', errors: '  + toString($ErrorCount);
+
+  return $ProcessedCount;
+end;
+/

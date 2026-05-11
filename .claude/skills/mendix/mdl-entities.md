@@ -30,8 +30,10 @@ create persistent entity Module.Customer (
   IsActive: boolean default true,
 
   -- Date/Time
-  CreatedDate: datetime,
   BirthDate: date,
+  -- Use autocreateddate (not datetime) to record when the object was created.
+  -- 'CreatedDate' as a plain datetime triggers lint error MDL020.
+  CreatedDate: autocreateddate,
 
   -- Enumeration
   status: Module.CustomerStatus default Active,
@@ -255,7 +257,7 @@ create persistent entity Shop.Customer (
   Email: string(200) not null unique,
   Phone: string(20),
   IsActive: boolean default true,
-  CreatedDate: datetime
+  CreatedDate: autocreateddate
 );
 /
 

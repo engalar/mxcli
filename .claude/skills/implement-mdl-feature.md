@@ -485,6 +485,90 @@ func (e *Executor) formatRestCallAction(a *microflows.RestCallAction) string {
 }
 ```
 
+## Part 7b: CREATE OR MODIFY Support
+
+Every new top-level document type that uses `CREATE` should also support
+`CREATE OR MODIFY` (for documents without a replace-by-recreate semantic) or
+`CREATE OR REPLACE` (when full replacement is acceptable).
+
+**Why UUID matters**: Mendix identifies documents by UUID. Dropping and
+re-creating a document generates a new UUID, which can silently break runtime
+references (associations, microflow call targets, etc.). `CREATE OR MODIFY`
+preserves the existing UUID by calling `Update*` instead of `Create*`.
+
+### Pattern: implement OR MODIFY in the executor
+
+```go
+func execCreateFoo(ctx *ExecContext, s *ast.CreateFooStmt) error {
+    if !ctx.ConnectedForWrite() {
+        return mdlerrors.NewNotConnectedWrite()
+    }
+
+    // 1. Check for existing document
+    existing, _ := ctx.Backend.GetFooByQualifiedName(s.Name.Module, s.Name.Name)
+    if existing != nil && !s.CreateOrModify {
+        return mdlerrors.NewAlreadyExists("foo", s.Name.String())
+    }
+
+    // 2. Build the new struct (always fresh)
+    foo := &model.Foo{
+        ContainerID: containerID,
+        Name:        s.Name.Name,
+        // ... other fields
+    }
+
+    // 3. If existing, preserve UUID and update
+    if existing != nil {
+        foo.ID = existing.ID
+        if err := ctx.Backend.UpdateFoo(foo); err != nil {
+            return mdlerrors.NewBackend("update foo", err)
+        }
+        if !ctx.Quiet {
+            fmt.Fprintf(ctx.Output, "Modified foo %s\n", s.Name)
+        }
+        return nil
+    }
+
+    // 4. Otherwise create
+    if err := ctx.Backend.CreateFoo(foo); err != nil {
+        return mdlerrors.NewBackend("create foo", err)
+    }
+    if !ctx.Quiet {
+        fmt.Fprintf(ctx.Output, "Created foo %s\n", s.Name)
+    }
+    return nil
+}
+```
+
+### Pattern: set CreateOrModify in the visitor
+
+```go
+func (v *Visitor) ExitCreateFooStatement(ctx *parser.CreateFooStatementContext) {
+    stmt := &ast.CreateFooStmt{ /* ... */ }
+    if createStmt := findParentCreateStatement(ctx); createStmt != nil {
+        if createStmt.OR() != nil && (createStmt.MODIFY() != nil || createStmt.REPLACE() != nil) {
+            stmt.CreateOrModify = true
+        }
+    }
+    v.program.Statements = append(v.program.Statements, stmt)
+}
+```
+
+### Required backend additions for OR MODIFY
+
+1. **`UpdateFoo(foo *model.Foo) error`** on the backend interface (`mdl/backend/`)
+2. **MPR implementation** in `mdl/backend/mpr/backend.go` delegating to `b.writer.UpdateFoo(foo)`
+3. **Mock stub** in `mdl/backend/mock/` with `UpdateFooFunc` field and descriptive default error
+4. **`CreateOrModify bool`** field on the AST struct in `mdl/ast/`
+
+### Entity / association special case
+
+- **Associations** have no own `Update*` in the SDK writer; mutate the struct
+  fields in the loaded `DomainModel` then call `UpdateDomainModel`.
+- **Entities**: `CREATE OR REPLACE entity` must map to `CreateOrModify=true`,
+  NOT to delete+recreate. Dropping and recreating an entity drops the DB table.
+  Always preserve the entity UUID.
+
 ## Part 8: Testing
 
 ### Step 1: Syntax Check

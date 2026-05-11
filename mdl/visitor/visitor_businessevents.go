@@ -80,11 +80,11 @@ func (b *Builder) ExitCreateBusinessEventServiceStatement(ctx *parser.CreateBusi
 		stmt.Messages = append(stmt.Messages, msg)
 	}
 
-	// Check for CREATE OR REPLACE and doc comment
+	// Check for CREATE OR MODIFY (or OR REPLACE, treated identically) and doc comment
 	createStmt := findParentCreateStatement(ctx)
 	if createStmt != nil {
 		if createStmt.OR() != nil && (createStmt.REPLACE() != nil || createStmt.MODIFY() != nil) {
-			stmt.CreateOrReplace = true
+			stmt.CreateOrModify = true
 		}
 	}
 	stmt.Documentation = findDocCommentText(ctx)

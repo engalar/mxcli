@@ -233,7 +233,9 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		}
 
 		// Process ELSE body (below the THEN path)
-		elseCenterY := centerY + VerticalSpacing
+		thenH := max(thenBounds.Height, ActivityHeight)
+		elseH := max(elseBounds.Height, ActivityHeight)
+		elseCenterY := centerY + thenH/2 + BranchGap + elseH/2
 		fb.posX = thenStartX
 		fb.posY = elseCenterY
 		fb.endsWithReturn = false
@@ -376,7 +378,8 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		// connect splitID to the next activity with nextFlowCase="false".
 
 		// TRUE path: goes below the main line
-		thenCenterY := centerY + VerticalSpacing
+		thenH := max(thenBounds.Height, ActivityHeight)
+		thenCenterY := centerY + ActivityHeight/2 + BranchGap + thenH/2
 		fb.posX = thenStartX
 		fb.posY = thenCenterY
 		fb.endsWithReturn = false
@@ -555,13 +558,6 @@ func isContinuingCustomErrorHandler(eh *ast.ErrorHandlingClause) bool {
 	return len(eh.Body) == 0 || !lastStmtIsReturn(eh.Body)
 }
 
-func errorBody(eh *ast.ErrorHandlingClause) []ast.MicroflowStatement {
-	if eh == nil {
-		return nil
-	}
-	return eh.Body
-}
-
 // addLoopStatement creates a LOOP statement using LoopedActivity.
 // Layout: Auto-sizes the loop box to fit content with padding
 func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
@@ -580,11 +576,11 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 	loopWidth := max(bodyBounds.Width+2*LoopPadding+iteratorSpace, MinLoopWidth)
 	loopHeight := max(bodyBounds.Height+2*LoopPadding, MinLoopHeight)
 
-	// Inner positioning: activities need to be offset from the iterator icon
-	// The iterator takes up space in the top-left, so we need extra X offset
-	// Looking at working Mendix loops, inner content starts further right
-	innerStartX := LoopPadding + iteratorSpace    // Extra offset for iterator icon and label
-	innerStartY := LoopPadding + ActivityHeight/2 // Center activities vertically with some padding
+	// Inner positioning: activities start after the iterator icon on the left,
+	// and are centred vertically within the loop box so that branching content
+	// (IF/CASE) centred on innerStartY stays within [0, loopHeight].
+	innerStartX := LoopPadding + iteratorSpace
+	innerStartY := loopHeight / 2
 
 	loopLeftX := fb.posX
 	loopCenterX := loopLeftX + loopWidth/2

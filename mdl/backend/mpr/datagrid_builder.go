@@ -301,6 +301,13 @@ func (b *MprBackend) cloneAndUpdateColumnProperties(templateProps bson.A, column
 			} else {
 				result = append(result, clonePropertyWithNewIDs(propMap))
 			}
+		case "filter":
+			if col.FilterWidget != nil {
+				entry := columnPropertyIDs["filter"]
+				result = append(result, buildColumnContentProperty(entry, mpr.SerializeWidget(col.FilterWidget)))
+			} else {
+				result = append(result, clonePropertyWithNewIDs(propMap))
+			}
 		case "visible":
 			visExpr := "true"
 			if col.Properties != nil {
@@ -478,7 +485,11 @@ func (b *MprBackend) buildDataGrid2ColumnObject(col *backend.DataGridColumnSpec,
 			}
 
 		case "filter":
-			properties = append(properties, buildColumnContentProperty(entry, nil))
+			if col.FilterWidget != nil {
+				properties = append(properties, buildColumnContentProperty(entry, mpr.SerializeWidget(col.FilterWidget)))
+			} else {
+				properties = append(properties, buildColumnContentProperty(entry, nil))
+			}
 
 		case "visible":
 			visExpr := "true"

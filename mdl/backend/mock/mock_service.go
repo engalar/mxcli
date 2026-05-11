@@ -193,6 +193,13 @@ func (m *MockBackend) CreateDataTransformer(dt *model.DataTransformer) error {
 	return nil
 }
 
+func (m *MockBackend) UpdateDataTransformer(dt *model.DataTransformer) error {
+	if m.UpdateDataTransformerFunc != nil {
+		return m.UpdateDataTransformerFunc(dt)
+	}
+	return nil
+}
+
 func (m *MockBackend) DeleteDataTransformer(id model.ID) error {
 	if m.DeleteDataTransformerFunc != nil {
 		return m.DeleteDataTransformerFunc(id)

@@ -1,5 +1,15 @@
 # Proposal: `mxcli schema extract` — Empirical Metamodel Schema Extraction
 
+> **Status: Superseded by [UNIFIED_SCHEMA_REGISTRY.md](UNIFIED_SCHEMA_REGISTRY.md)**
+>
+> The unified proposal adopts the empirical extraction approach from this document
+> (`mx dump-mpr`, `.mpk` XML parsing, mxunit decoding for verification) as the
+> backbone. It extends with: a single in-memory registry consumed by all subsystems,
+> end-to-end workflow integration, inspection commands, native-vs-pluggable keyword
+> dispatch, object-list child block syntax, and tier-based widget upgrade tooling.
+>
+> Preserved for context.
+
 ## Problem
 
 The BSON Schema Registry proposal (see `BSON_SCHEMA_REGISTRY_PROPOSAL.md`) requires accurate
@@ -133,6 +143,57 @@ types, traversing the schema graph from each document root.
 **Schema extraction**: Create a minimal instance of each type (entity, enumeration,
 association, etc.), decode the mxunit, and classify fields using the same algorithm.
 
+### Path 5: System module — `mx dump-mpr`
+
+**Problem**: The System module is a built-in, protected module. PED does not expose it for
+traversal, and it does not appear in `ListJavaActions()` because its documents are not stored
+in the user's `.mpr` file in the same way as user-defined documents. However, several mxcli
+features depend on knowing System's entities, enumerations, and Java actions:
+- `mxcli check --references` validates Java/JavaScript action calls against the catalog
+- `SHOW ENTITIES` hides or shows System entities based on `system_module.go`
+- Type inference for generalizations (e.g. `System.User`) requires knowing System entity attributes
+
+**Command**: `mx dump-mpr` exports the full model as JSON, and includes the System module by
+default (it even has an `--exclude-system-module` flag to opt out).
+
+```bash
+# Full System module JSON
+mx dump-mpr --module-names='System' blank.mpr
+
+# Just the domain model (entities, attributes, generalizations, associations)
+mx dump-mpr --module-names='System' --unit-type='DomainModels$DomainModel' blank.mpr
+
+# Just Java actions (e.g. System.VerifyPassword)
+mx dump-mpr --module-names='System' --unit-type='JavaActions$JavaAction' blank.mpr
+
+# Just enumerations (WorkflowState, UserType, DeviceType, etc.)
+mx dump-mpr --module-names='System' --unit-type='Enumerations$Enumeration' blank.mpr
+```
+
+Running against Mendix 11.9.0 produces (sample):
+- **1 Java action**: `System.VerifyPassword(userName, password) → Boolean`
+- **1 Microflow**: `System.ShowHomePage`
+- **14 Enumerations**: `WorkflowState`, `WorkflowActivityExecutionState`, `DeviceType`,
+  `UserType`, `QueueTaskStatus`, `ContextType`, `EventStatus`, etc.
+- **Domain model**: all System entities (User, Session, FileDocument, Token, etc.) with
+  attributes, generalizations, and associations — same content as `system_module.go`
+
+**Use as a generation source**: Run `mx dump-mpr --module-names='System'` against a blank
+project for each target Mendix version. Parse the resulting JSON to regenerate:
+- `sdk/mpr/system_module.go` — the `systemEntities` list (currently hand-maintained from 11.6.4)
+- `BuildSystemJavaActions()` — currently absent; needed for catalog Java action validation
+
+The `.mpr` file can be a blank project created via `mxcli new`. Exit code `4` ("project is in
+different Mendix version") acts as a version guard — the right `mx` binary must be used.
+
+**Advantages over other paths**:
+- Does not require Studio Pro to be running (only the `mx` CLI binary)
+- Works on all supported Mendix versions (not just those with MCP/PED support)
+- Output is authoritative structured JSON from `mx` itself — not derived from TypeScript
+  artifacts or regex-parsed compiled JS
+- CI-friendly: `mxcli setup mxbuild` already downloads the `mx` binary per version
+- `--unit-type` filtering makes it precise and fast
+
 ## Output Format
 
 The extractor writes one JSON file per Mendix version:
@@ -243,6 +304,7 @@ designed to be compatible with either source.
 | Built-in widgets | 78 | Known list + pagegen + mxunit | Full |
 | Pluggable widgets | project-dependent | `.mpk` XML parse | Full (per project) |
 | Other document types | ~40 domains | PED schema traversal + mxunit | Partial (reachable types only) |
+| **System module** | entities, enums, Java actions, microflows | `mx dump-mpr --module-names=System` | **Full — no MCP needed** |
 
 ## Implementation Plan
 
@@ -251,6 +313,14 @@ designed to be compatible with either source.
 - Create scratch module, create one microflow per action type
 - Decode mxunit, classify fields, write `{version}-extracted.json`
 - Validate: compare extracted storage names against current CLAUDE.md table
+
+### Phase 1.5: System module generator (no MCP required)
+- Implement `mxcli schema extract-system --version X.Y.Z`
+- Download `mx` for the target version via existing `mxcli setup mxbuild` logic
+- Create a blank `.mpr` with `mxcli new`, run `mx dump-mpr --module-names='System'`, parse JSON
+- Generate updated `sdk/mpr/system_module.go` (entity list) and `BuildSystemJavaActions()`
+- Write System section into `{version}-extracted.json` as `"systemModule": { ... }`
+- This phase can ship independently of the MCP extractor phases
 
 ### Phase 2: Domain model and nanoflow subset
 - Extend to domain model types (entity, attribute, association, enumeration)
@@ -273,9 +343,11 @@ designed to be compatible with either source.
 
 ## Open Questions
 
-1. **MCP availability**: The extractor requires a running Studio Pro instance. Should there be
-   a fallback that uses the existing reflection data when no MCP connection is available, or
-   should extraction always be an explicit developer operation?
+1. **MCP availability**: The extractor (Paths 1–4) requires a running Studio Pro instance.
+   Path 5 (`mx dump-mpr`) is the natural fallback for the System module when no MCP connection
+   is available — it only needs the `mx` binary and a blank `.mpr`. For non-System domains,
+   extraction without MCP falls back to the existing reflection data. Extraction is always an
+   explicit developer operation, not an automatic step.
 
 2. **Scratch module cleanup**: The extractor creates a `_SchemaExtract` module and deletes it
    after. What happens if extraction is interrupted mid-run? Should it be idempotent (detect

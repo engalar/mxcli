@@ -639,14 +639,15 @@ func (w *Writer) serializeDomainModel(dm *domainmodel.DomainModel) ([]byte, erro
 		crossAssociations = append(crossAssociations, serializeCrossAssociation(ca))
 	}
 
-	doc := bson.M{
-		"$ID":               idToBsonBinary(string(dm.ID)),
-		"$Type":             "DomainModels$DomainModel",
-		"Documentation":     "",
-		"Annotations":       bson.A{int32(3)}, // Empty with version prefix
-		"Entities":          entities,
-		"Associations":      associations,
-		"CrossAssociations": crossAssociations,
+	// Use bson.D (ordered) so $Type appears early — Mendix requires this for correct parsing
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(dm.ID))},
+		{Key: "$Type", Value: "DomainModels$DomainModel"},
+		{Key: "Documentation", Value: ""},
+		{Key: "Annotations", Value: bson.A{int32(3)}},
+		{Key: "Entities", Value: entities},
+		{Key: "Associations", Value: associations},
+		{Key: "CrossAssociations", Value: crossAssociations},
 	}
 	return bson.Marshal(doc)
 }

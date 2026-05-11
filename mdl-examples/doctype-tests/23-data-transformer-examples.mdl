@@ -62,3 +62,34 @@ describe data transformer DtTest.WeatherTransform;
 
 drop data transformer DtTest.FlattenNested;
 drop data transformer DtTest.WeatherTransform;
+
+-- ############################################################################
+-- PART 5: CREATE OR MODIFY (idempotent upsert)
+-- ############################################################################
+--
+-- CREATE OR MODIFY updates an existing transformer in-place, preserving its
+-- UUID. Re-run-safe: if the transformer doesn't exist it is created; if it
+-- does exist its steps are replaced without changing the document identity.
+
+create data transformer DtTest.WeatherTransform
+source json '{"latitude": 51.9, "longitude": 4.5, "current": {"temperature_2m": 12.8}}'
+{
+  jslt '{"lat": .latitude, "lon": .longitude, "temp": .current.temperature_2m}';
+};
+
+-- Now modify it to add a field — rerun safely with CREATE OR MODIFY:
+create or modify data transformer DtTest.WeatherTransform
+source json '{"latitude": 51.9, "longitude": 4.5, "timezone": "UTC", "current": {"temperature_2m": 12.8}}'
+{
+  jslt $$
+{
+  "lat":      .latitude,
+  "lon":      .longitude,
+  "timezone": .timezone,
+  "temp":     .current.temperature_2m
+}
+  $$;
+};
+
+describe data transformer DtTest.WeatherTransform;
+drop data transformer DtTest.WeatherTransform;

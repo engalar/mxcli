@@ -195,6 +195,11 @@ func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) e
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
+	existing, _ := ctx.Backend.GetImportMappingByQualifiedName(s.Name.Module, s.Name.Name)
+	if existing != nil && !s.CreateOrModify {
+		return mdlerrors.NewAlreadyExists("import mapping", s.Name.String())
+	}
+
 	module, err := findModule(ctx, s.Name.Module)
 	if err != nil {
 		return mdlerrors.NewNotFound("module", s.Name.Module)
@@ -218,7 +223,7 @@ func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) e
 	// Build path→JsonElement map from JSON structure — mapping elements clone from this
 	jsElementsByPath := map[string]*types.JsonElement{}
 	if s.SchemaKind == "JSON_STRUCTURE" && s.SchemaRef.Module != "" {
-		if js, err2 := ctx.Backend.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil {
+		if js, err2 := ctx.Backend.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil && js != nil {
 			buildJsonElementPathMap(js.Elements, jsElementsByPath)
 		}
 	}
@@ -227,6 +232,17 @@ func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) e
 	if s.RootElement != nil {
 		root := buildImportMappingElementModel(s.Name.Module, s.RootElement, "", "(Object)", ctx.Backend, jsElementsByPath, true)
 		im.Elements = append(im.Elements, root)
+	}
+
+	if existing != nil {
+		im.ID = existing.ID
+		if err := ctx.Backend.UpdateImportMapping(im); err != nil {
+			return mdlerrors.NewBackend("update import mapping", err)
+		}
+		if !ctx.Quiet {
+			fmt.Fprintf(ctx.Output, "Modified import mapping %s.%s\n", s.Name.Module, s.Name.Name)
+		}
+		return nil
 	}
 
 	if err := ctx.Backend.CreateImportMapping(im); err != nil {

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	mdltypes "github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"go.mongodb.org/mongo-driver/bson"
@@ -93,6 +94,13 @@ func formatActivity(
 		condition := formatSplitCondition(activity.SplitCondition)
 		return fmt.Sprintf("if %s then", condition)
 
+	case *microflows.InheritanceSplit:
+		varName := activity.VariableName
+		if !strings.HasPrefix(varName, "$") {
+			varName = "$" + varName
+		}
+		return fmt.Sprintf("split type %s;", varName)
+
 	case *microflows.ExclusiveMerge:
 		return "end if;"
 
@@ -143,6 +151,23 @@ func formatAction(
 	}
 
 	switch a := action.(type) {
+	case *microflows.CastAction:
+		outputVar := a.OutputVariable
+		if outputVar != "" && !strings.HasPrefix(outputVar, "$") {
+			outputVar = "$" + outputVar
+		}
+		objectVar := a.ObjectVariable
+		if objectVar != "" && !strings.HasPrefix(objectVar, "$") {
+			objectVar = "$" + objectVar
+		}
+		if objectVar == "" {
+			return fmt.Sprintf("cast %s;", outputVar)
+		}
+		if outputVar == "" {
+			return fmt.Sprintf("cast %s;", objectVar)
+		}
+		return fmt.Sprintf("%s = cast %s;", outputVar, objectVar)
+
 	case *microflows.CreateVariableAction:
 		varType := "Object"
 		if a.DataType != nil {
@@ -379,6 +404,10 @@ func formatAction(
 
 			if dbSource.XPathConstraint != "" {
 				constraint := strings.TrimSpace(dbSource.XPathConstraint)
+				// Enrich string literals for enum attributes to qualified names
+				// (e.g. Status = 'Open' → Status = Module.OrderStatus.Open) when
+				// the entity is known and we are connected to a project.
+				constraint = enrichXPathConstraintForDescribe(ctx, entityName, constraint)
 				// XPath may contain multiple predicates like [a][b] or [a]\n[b].
 				// Split them and join with MDL 'and' so the parser sees
 				// separate xpathConstraint nodes.
@@ -1296,7 +1325,16 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 			sb.WriteString("mapping ")
 			sb.WriteString(string(rh.MappingID))
 			if rh.ResultEntityID != "" {
-				sb.WriteString(" as ")
+				// `as list of Entity` when the mapping yields a list,
+				// otherwise `as Entity` for a single object. Studio Pro
+				// keeps this on the ImportMappingCall (Range.SingleObject
+				// + ForceSingleOccurrence); the parser collapses both into
+				// SingleObject, so a list is `!SingleObject`.
+				if rh.SingleObject {
+					sb.WriteString(" as ")
+				} else {
+					sb.WriteString(" as list of ")
+				}
 				sb.WriteString(string(rh.ResultEntityID))
 			}
 		case *microflows.ResultHandlingNone:
@@ -1806,4 +1844,24 @@ func canonicalBSONMap(m map[string]any) bson.D {
 		doc = append(doc, bson.E{Key: k, Value: canonicalBSONValue(v)})
 	}
 	return canonicalBSONDocument(doc)
+}
+
+// enrichXPathConstraintForDescribe enriches the raw BSON XPathConstraint string for
+// DESCRIBE output. String-literal comparisons against enum attributes are replaced with
+// qualified enum value references (e.g. Status = 'Open' → Status = Module.OrderStatus.Open).
+// Falls back to the original string on any parse failure.
+func enrichXPathConstraintForDescribe(ctx *ExecContext, entityQN, constraint string) string {
+	if entityQN == "" || constraint == "" {
+		return constraint
+	}
+	enumAttrs := buildEntityEnumAttrMap(ctx, entityQN)
+	if len(enumAttrs) == 0 {
+		return constraint
+	}
+	expr, ok := visitor.ParseXPathConstraint(constraint)
+	if !ok || expr == nil {
+		return constraint
+	}
+	enriched := enrichXPathExprWithEnums(expr, enumAttrs)
+	return "[" + xpathExprToMDLString(enriched) + "]"
 }

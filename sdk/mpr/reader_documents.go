@@ -6,6 +6,7 @@ package mpr
 import (
 	"fmt"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
@@ -901,4 +902,110 @@ func (r *Reader) buildContainerModuleNameMap() (map[model.ID]string, error) {
 	}
 
 	return result, nil
+}
+
+// ListModuleSettings returns all Projects$ModuleSettings documents in the project.
+func (r *Reader) ListModuleSettings() ([]*types.ModuleSettings, error) {
+	units, err := r.listUnitsByType("Projects$ModuleSettings")
+	if err != nil {
+		return nil, err
+	}
+	var result []*types.ModuleSettings
+	for _, u := range units {
+		ms, err := r.parseModuleSettings(u.ID, u.ContainerID, u.Contents)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, ms)
+	}
+	return result, nil
+}
+
+// GetModuleSettings returns the Projects$ModuleSettings for the given module ID.
+func (r *Reader) GetModuleSettings(moduleID model.ID) (*types.ModuleSettings, error) {
+	units, err := r.listUnitsByType("Projects$ModuleSettings")
+	if err != nil {
+		return nil, err
+	}
+	for _, u := range units {
+		if u.ContainerID == string(moduleID) {
+			return r.parseModuleSettings(u.ID, u.ContainerID, u.Contents)
+		}
+	}
+	return nil, fmt.Errorf("module settings not found for module: %s", moduleID)
+}
+
+func (r *Reader) parseModuleSettings(id, containerID string, contents []byte) (*types.ModuleSettings, error) {
+	var raw map[string]any
+	if err := bson.Unmarshal(contents, &raw); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal module settings: %w", err)
+	}
+
+	ms := &types.ModuleSettings{
+		ID:                  model.ID(id),
+		ContainerID:         model.ID(containerID),
+		ExportLevel:         extractString(raw["ExportLevel"]),
+		ProtectedModuleType: extractString(raw["ProtectedModuleType"]),
+		Version:             extractString(raw["Version"]),
+		BasedOnVersion:      extractString(raw["BasedOnVersion"]),
+		ExtensionName:       extractString(raw["ExtensionName"]),
+		SolutionIdentifier:  extractString(raw["SolutionIdentifier"]),
+	}
+	if ms.ExportLevel == "" {
+		ms.ExportLevel = "Source"
+	}
+	if ms.ProtectedModuleType == "" {
+		ms.ProtectedModuleType = "AddOn"
+	}
+	if ms.Version == "" {
+		ms.Version = "1.0.0"
+	}
+
+	if arr, ok := raw["JarDependencies"].(bson.A); ok {
+		for _, item := range arr {
+			if dep, ok := item.(map[string]any); ok {
+				jd := parseJarDependency(dep)
+				if jd != nil {
+					ms.JarDependencies = append(ms.JarDependencies, jd)
+				}
+			}
+		}
+	}
+
+	return ms, nil
+}
+
+func parseJarDependency(raw map[string]any) *types.JarDependency {
+	if raw["$Type"] == nil {
+		return nil
+	}
+	jd := &types.JarDependency{
+		ID:         model.ID(extractBsonID(raw["$ID"])),
+		GroupID:    extractString(raw["GroupId"]),
+		ArtifactID: extractString(raw["ArtifactId"]),
+		Version:    extractString(raw["Version"]),
+		IsIncluded: extractBool(raw["IsIncluded"], true),
+	}
+	if excArr, ok := raw["Exclusions"].(bson.A); ok {
+		for _, item := range excArr {
+			if excRaw, ok := item.(map[string]any); ok {
+				exc := parseJarDependencyExclusion(excRaw)
+				if exc != nil {
+					jd.Exclusions = append(jd.Exclusions, exc)
+				}
+			}
+		}
+	}
+	return jd
+}
+
+func parseJarDependencyExclusion(raw map[string]any) *types.JarDependencyExclusion {
+	if raw["$Type"] == nil {
+		return nil
+	}
+	return &types.JarDependencyExclusion{
+		ID:         model.ID(extractBsonID(raw["$ID"])),
+		GroupID:    extractString(raw["GroupId"]),
+		ArtifactID: extractString(raw["ArtifactId"]),
+	}
 }

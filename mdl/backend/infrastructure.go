@@ -54,12 +54,16 @@ type AgentEditorBackend interface {
 	ListAgentEditorConsumedMCPServices() ([]*agenteditor.ConsumedMCPService, error)
 	ListAgentEditorAgents() ([]*agenteditor.Agent, error)
 	CreateAgentEditorModel(m *agenteditor.Model) error
+	UpdateAgentEditorModel(m *agenteditor.Model) error
 	DeleteAgentEditorModel(id string) error
 	CreateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error
+	UpdateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error
 	DeleteAgentEditorKnowledgeBase(id string) error
 	CreateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error
+	UpdateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error
 	DeleteAgentEditorConsumedMCPService(id string) error
 	CreateAgentEditorAgent(a *agenteditor.Agent) error
+	UpdateAgentEditorAgent(a *agenteditor.Agent) error
 	DeleteAgentEditorAgent(id string) error
 }
 
@@ -73,6 +77,7 @@ type SettingsBackend interface {
 type ImageBackend interface {
 	ListImageCollections() ([]*types.ImageCollection, error)
 	CreateImageCollection(ic *types.ImageCollection) error
+	UpdateImageCollection(ic *types.ImageCollection) error
 	DeleteImageCollection(id string) error
 }
 

@@ -1,0 +1,107 @@
+-- ============================================================================
+-- Module JAR Dependency Examples
+-- ============================================================================
+--
+-- This file demonstrates the MDL syntax for managing Maven/JAR dependencies
+-- in a Mendix module's module settings (Projects$ModuleSettings).
+--
+-- Features demonstrated:
+--   - LIST JAR DEPENDENCIES
+--   - LIST JAR DEPENDENCIES IN <module>
+--   - DESCRIBE JAR DEPENDENCY <module> '<group:artifact>'
+--   - ALTER MODULE ... ADD JAR DEPENDENCY (...)
+--   - ALTER MODULE ... SET JAR DEPENDENCY '...' VERSION '...'
+--   - ALTER MODULE ... SET JAR DEPENDENCY '...' INCLUDED true|false
+--   - ALTER MODULE ... SET JAR DEPENDENCY '...' ADD EXCLUSION '...'
+--   - ALTER MODULE ... SET JAR DEPENDENCY '...' DROP EXCLUSION '...'
+--   - ALTER MODULE ... DROP JAR DEPENDENCY '...'
+--
+-- Prerequisites:
+--   - A module named 'JarTest' must exist (create it if running standalone)
+--
+-- ============================================================================
+
+create module JarTest;
+
+-- ============================================================================
+-- Add a JAR dependency
+-- ============================================================================
+
+alter module JarTest
+  add jar dependency (
+    group    = 'org.duckdb',
+    artifact = 'duckdb_jdbc',
+    version  = '1.1.3',
+    included = true,
+  );
+
+-- ============================================================================
+-- Add a second dependency (included = false by default when omitted means true)
+-- ============================================================================
+
+alter module JarTest
+  add jar dependency (
+    group    = 'com.google.guava',
+    artifact = 'guava',
+    version  = '33.0.0-jre',
+    included = true,
+  );
+
+-- ============================================================================
+-- List all jar dependencies
+-- ============================================================================
+
+list jar dependencies;
+
+-- ============================================================================
+-- List jar dependencies in a specific module
+-- ============================================================================
+
+list jar dependencies in JarTest;
+
+-- ============================================================================
+-- Describe a specific jar dependency (roundtrippable output)
+-- ============================================================================
+
+describe jar dependency JarTest 'org.duckdb:duckdb_jdbc';
+
+-- ============================================================================
+-- Update the version of a dependency
+-- ============================================================================
+
+alter module JarTest
+  set jar dependency 'org.duckdb:duckdb_jdbc' version '1.2.0';
+
+-- ============================================================================
+-- Disable a dependency (included = false)
+-- ============================================================================
+
+alter module JarTest
+  set jar dependency 'com.google.guava:guava' included false;
+
+-- ============================================================================
+-- Add an exclusion to a dependency
+-- ============================================================================
+
+alter module JarTest
+  set jar dependency 'org.duckdb:duckdb_jdbc' add exclusion 'com.example:unwanted';
+
+-- ============================================================================
+-- Drop an exclusion
+-- ============================================================================
+
+alter module JarTest
+  set jar dependency 'org.duckdb:duckdb_jdbc' drop exclusion 'com.example:unwanted';
+
+-- ============================================================================
+-- Drop a jar dependency
+-- ============================================================================
+
+alter module JarTest
+  drop jar dependency 'com.google.guava:guava';
+
+-- ============================================================================
+-- Cleanup
+-- ============================================================================
+
+-- drop module JarTest;

@@ -1,0 +1,40 @@
+-- Bug #189: TEXTFILTER inside DATAGRID COLUMN was added as custom content
+-- instead of wired into the column's filter slot, causing:
+--   1. "Upgrade Widgets" prompt in Studio Pro (wrong widget structure)
+--   2. Duplicated filter search (filter appeared in content AND filter row)
+--
+-- Fix: in buildDataGridV3, filter-type children (TEXTFILTER, NUMBERFILTER,
+-- DATEFILTER, DROPDOWNFILTER) of a COLUMN are routed through BuildFilterWidget
+-- and stored in DataGridColumnSpec.FilterWidget, which is then serialized
+-- into the column's "filter" property slot in both BSON construction paths.
+
+CREATE ENTITY Bug189.MyEntity ( Attribute: String, Attribute_2: String );
+
+CREATE OR REPLACE PAGE Bug189.MyEntity_Overview
+(
+  Title: 'MyEntity Overview',
+  Layout: Atlas_Core.Atlas_Default,
+  Url: 'MyEntityOverview'
+)
+{
+  LAYOUTGRID mainGrid {
+    ROW row1 {
+      COLUMN colContent (DesktopWidth: 12) {
+        DYNAMICTEXT heading (Content: 'MyEntity', RenderMode: H2)
+        DATAGRID MyEntityGrid (
+          DataSource: DATABASE FROM Bug189.MyEntity,
+          Selection: Single,
+          PageSize: 50,
+          Pagination: virtualScrolling
+        ) {
+          COLUMN colAttribute (Attribute: Attribute, Caption: 'Attribute', Tooltip: 'Attribute') {
+            TEXTFILTER textFilter1
+          }
+          COLUMN colAttribute2 (Attribute: Attribute_2, Caption: 'Attribute 2', Tooltip: 'Attribute 2') {
+            TEXTFILTER textFilter2
+          }
+        }
+      }
+    }
+  }
+}

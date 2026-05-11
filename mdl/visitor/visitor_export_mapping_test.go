@@ -36,3 +36,17 @@ func TestCreateExportMapping(t *testing.T) {
 		t.Fatal("Expected non-nil RootElement")
 	}
 }
+
+func TestCreateExportMapping_OrModify(t *testing.T) {
+	prog, errs := Build(`CREATE OR MODIFY EXPORT MAPPING MyModule.PetExport WITH JSON STRUCTURE MyModule.PetSchema { MyModule.Pet { name = Name } };`)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors: %v", errs)
+	}
+	stmt, ok := prog.Statements[0].(*ast.CreateExportMappingStmt)
+	if !ok {
+		t.Fatalf("Expected CreateExportMappingStmt, got %T", prog.Statements[0])
+	}
+	if !stmt.CreateOrModify {
+		t.Error("Expected CreateOrModify=true")
+	}
+}

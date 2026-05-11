@@ -28,21 +28,24 @@ func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStm
 
 	// Check if image collection already exists
 	existing := findImageCollection(ctx, s.Name.Module, s.Name.Name)
+	if existing != nil && !s.CreateOrModify {
+		return mdlerrors.NewAlreadyExists("image collection", s.Name.Module+"."+s.Name.Name)
+	}
+
+	containerID := module.ID
 	if existing != nil {
-		if !s.CreateOrReplace {
-			return mdlerrors.NewAlreadyExists("image collection", s.Name.Module+"."+s.Name.Name)
-		}
-		if err := ctx.Backend.DeleteImageCollection(string(existing.ID)); err != nil {
-			return mdlerrors.NewBackend("delete existing image collection", err)
-		}
+		containerID = existing.ContainerID
 	}
 
 	// Build ImageCollection
 	ic := &types.ImageCollection{
-		ContainerID:   module.ID,
+		ContainerID:   containerID,
 		Name:          s.Name.Name,
 		ExportLevel:   s.ExportLevel,
 		Documentation: s.Comment,
+	}
+	if existing != nil {
+		ic.ID = existing.ID
 	}
 
 	// Load image files
@@ -67,14 +70,20 @@ func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStm
 		})
 	}
 
-	if err := ctx.Backend.CreateImageCollection(ic); err != nil {
-		return mdlerrors.NewBackend("create image collection", err)
+	if existing != nil {
+		if err := ctx.Backend.UpdateImageCollection(ic); err != nil {
+			return mdlerrors.NewBackend("update image collection", err)
+		}
+		fmt.Fprintf(ctx.Output, "Modified image collection: %s\n", s.Name)
+	} else {
+		if err := ctx.Backend.CreateImageCollection(ic); err != nil {
+			return mdlerrors.NewBackend("create image collection", err)
+		}
+		fmt.Fprintf(ctx.Output, "Created image collection: %s\n", s.Name)
 	}
 
-	// Invalidate hierarchy cache so the new collection's container is visible
+	// Invalidate hierarchy cache so the collection's container is visible
 	invalidateHierarchy(ctx)
-
-	fmt.Fprintf(ctx.Output, "Created image collection: %s\n", s.Name)
 	return nil
 }
 
@@ -123,7 +132,7 @@ func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
 	qualifiedName := fmt.Sprintf("%s.%s", modName, ic.Name)
 
 	if len(ic.Images) == 0 {
-		fmt.Fprintf(ctx.Output, "create or replace image collection %s", qualifiedName)
+		fmt.Fprintf(ctx.Output, "create or modify image collection %s", qualifiedName)
 		if exportLevel != "Hidden" {
 			fmt.Fprintf(ctx.Output, " export level '%s'", exportLevel)
 		}
@@ -138,7 +147,7 @@ func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewBackend("create preview directory", err)
 	}
 
-	fmt.Fprintf(ctx.Output, "create or replace image collection %s", qualifiedName)
+	fmt.Fprintf(ctx.Output, "create or modify image collection %s", qualifiedName)
 	if exportLevel != "Hidden" {
 		fmt.Fprintf(ctx.Output, " export level '%s'", exportLevel)
 	}

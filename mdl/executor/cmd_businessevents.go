@@ -207,7 +207,7 @@ func describeBusinessEventService(ctx *ExecContext, name ast.QualifiedName) erro
 	if found.Documentation != "" {
 		outputJavadoc(ctx.Output, found.Documentation)
 	}
-	fmt.Fprintf(ctx.Output, "create or replace business event service %s.%s\n", foundModule, found.Name)
+	fmt.Fprintf(ctx.Output, "create or modify business event service %s.%s\n", foundModule, found.Name)
 
 	if found.Definition != nil {
 		fmt.Fprintf(ctx.Output, "(\n")
@@ -271,25 +271,23 @@ func createBusinessEventService(ctx *ExecContext, stmt *ast.CreateBusinessEventS
 		return mdlerrors.NewNotFound("module", moduleName)
 	}
 
-	// Check for existing service with same name (if not CREATE OR REPLACE)
+	// Check for existing service with same name
 	existingServices, _ := ctx.Backend.ListBusinessEventServices()
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
+	var existingID model.ID
 	for _, existing := range existingServices {
 		existModID := h.FindModuleID(existing.ContainerID)
 		existModName := h.GetModuleName(existModID)
 		if strings.EqualFold(existModName, moduleName) && strings.EqualFold(existing.Name, stmt.Name.Name) {
-			if stmt.CreateOrReplace {
-				// Delete existing
-				if err := ctx.Backend.DeleteBusinessEventService(existing.ID); err != nil {
-					return mdlerrors.NewBackend("delete existing service", err)
-				}
-			} else {
-				return mdlerrors.NewAlreadyExistsMsg("business event service", moduleName+"."+stmt.Name.Name, fmt.Sprintf("business event service already exists: %s.%s (use create or replace to overwrite)", moduleName, stmt.Name.Name))
+			if !stmt.CreateOrModify {
+				return mdlerrors.NewAlreadyExistsMsg("business event service", moduleName+"."+stmt.Name.Name, fmt.Sprintf("business event service already exists: %s.%s (use create or modify to update)", moduleName, stmt.Name.Name))
 			}
+			existingID = existing.ID
+			break
 		}
 	}
 
@@ -303,12 +301,15 @@ func createBusinessEventService(ctx *ExecContext, stmt *ast.CreateBusinessEventS
 		containerID = folderID
 	}
 
-	// Build the service from AST
+	// Build the service from AST, preserving existing ID on OR MODIFY
 	svc := &model.BusinessEventService{
 		ContainerID:   containerID,
 		Name:          stmt.Name.Name,
 		Documentation: stmt.Documentation,
 		ExportLevel:   "Hidden",
+	}
+	if existingID != "" {
+		svc.ID = existingID
 	}
 
 	// Build definition
@@ -365,11 +366,17 @@ func createBusinessEventService(ctx *ExecContext, stmt *ast.CreateBusinessEventS
 	svc.Definition = def
 
 	// Write to project
-	if err := ctx.Backend.CreateBusinessEventService(svc); err != nil {
-		return mdlerrors.NewBackend("create business event service", err)
+	if existingID != "" {
+		if err := ctx.Backend.UpdateBusinessEventService(svc); err != nil {
+			return mdlerrors.NewBackend("update business event service", err)
+		}
+		fmt.Fprintf(ctx.Output, "Modified business event service: %s.%s\n", moduleName, stmt.Name.Name)
+	} else {
+		if err := ctx.Backend.CreateBusinessEventService(svc); err != nil {
+			return mdlerrors.NewBackend("create business event service", err)
+		}
+		fmt.Fprintf(ctx.Output, "Created business event service: %s.%s\n", moduleName, stmt.Name.Name)
 	}
-
-	fmt.Fprintf(ctx.Output, "Created business event service: %s.%s\n", moduleName, stmt.Name.Name)
 	return nil
 }
 

@@ -34,6 +34,11 @@ func (b *Builder) ExitCreateImportMappingStatement(ctx *parser.CreateImportMappi
 		stmt.RootElement = buildImportRootElement(root.(*parser.ImportMappingRootElementContext))
 	}
 
+	if createStmt := findParentCreateStatement(ctx); createStmt != nil {
+		if createStmt.OR() != nil && (createStmt.MODIFY() != nil || createStmt.REPLACE() != nil) {
+			stmt.CreateOrModify = true
+		}
+	}
 	b.statements = append(b.statements, stmt)
 }
 
@@ -155,6 +160,11 @@ func (b *Builder) ExitCreateExportMappingStatement(ctx *parser.CreateExportMappi
 		stmt.RootElement = buildExportRootElement(root.(*parser.ExportMappingRootElementContext))
 	}
 
+	if createStmt := findParentCreateStatement(ctx); createStmt != nil {
+		if createStmt.OR() != nil && (createStmt.MODIFY() != nil || createStmt.REPLACE() != nil) {
+			stmt.CreateOrModify = true
+		}
+	}
 	b.statements = append(b.statements, stmt)
 }
 

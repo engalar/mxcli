@@ -12,6 +12,7 @@ import (
 
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/sdk/widgets/definitions"
+	"github.com/mendixlabs/mxcli/sdk/widgets/mpk"
 )
 
 // WidgetRegistry holds loaded widget definitions keyed by uppercase MDL name.
@@ -19,6 +20,8 @@ type WidgetRegistry struct {
 	byMDLName       map[string]*WidgetDefinition // keyed by uppercase MDLName
 	byWidgetID      map[string]*WidgetDefinition // keyed by widgetId
 	knownOperations map[string]bool              // operations accepted during validation
+	projectDir      string                       // project root for MPK fallback
+	mpkNameMap      map[string]string            // uppercase MDLName → widgetID (pre-scan)
 }
 
 // defaultKnownOperations is the set of operation names supported by the widget engine.
@@ -66,6 +69,7 @@ func NewWidgetRegistryWithOps(extraOps map[string]bool) (*WidgetRegistry, error)
 		byMDLName:       make(map[string]*WidgetDefinition),
 		byWidgetID:      make(map[string]*WidgetDefinition),
 		knownOperations: ops,
+		mpkNameMap:      make(map[string]string),
 	}
 
 	entries, err := definitions.EmbeddedFS.ReadDir(".")
@@ -105,14 +109,49 @@ func NewWidgetRegistryWithOps(extraOps map[string]bool) (*WidgetRegistry, error)
 
 // Get returns a widget definition by MDL name (case-insensitive).
 func (r *WidgetRegistry) Get(mdlName string) (*WidgetDefinition, bool) {
-	def, ok := r.byMDLName[strings.ToUpper(mdlName)]
-	return def, ok
+	name := strings.ToUpper(mdlName)
+	if def, ok := r.byMDLName[name]; ok {
+		return def, ok
+	}
+	if r.projectDir == "" {
+		return nil, false
+	}
+	widgetID, ok := r.mpkNameMap[name]
+	if !ok {
+		return nil, false
+	}
+	def, err := r.deriveFromMPK(widgetID)
+	if err != nil {
+		log.Printf("warning: MPK fallback for %s: %v", name, err)
+		return nil, false
+	}
+	if def == nil {
+		return nil, false
+	}
+	r.byMDLName[strings.ToUpper(def.MDLName)] = def
+	r.byWidgetID[def.WidgetID] = def
+	return def, true
 }
 
 // GetByWidgetID returns a widget definition by its full widget ID.
 func (r *WidgetRegistry) GetByWidgetID(widgetID string) (*WidgetDefinition, bool) {
-	def, ok := r.byWidgetID[widgetID]
-	return def, ok
+	if def, ok := r.byWidgetID[widgetID]; ok {
+		return def, ok
+	}
+	if r.projectDir == "" {
+		return nil, false
+	}
+	def, err := r.deriveFromMPK(widgetID)
+	if err != nil {
+		log.Printf("warning: MPK fallback for widget ID %s: %v", widgetID, err)
+		return nil, false
+	}
+	if def == nil {
+		return nil, false
+	}
+	r.byMDLName[strings.ToUpper(def.MDLName)] = def
+	r.byWidgetID[def.WidgetID] = def
+	return def, true
 }
 
 // All returns all registered definitions.
@@ -272,4 +311,125 @@ func (r *WidgetRegistry) validateMappings(mappings []PropertyMapping, source, mo
 		}
 	}
 	return nil
+}
+
+// SetProjectDir enables real-time MPK fallback for this registry.
+func (r *WidgetRegistry) SetProjectDir(projectDir string) error {
+	r.projectDir = projectDir
+	r.mpkNameMap = make(map[string]string)
+	return r.preScanWidgets(projectDir)
+}
+
+func (r *WidgetRegistry) preScanWidgets(projectDir string) error {
+	widgetsDir := filepath.Join(projectDir, "widgets")
+	matches, err := filepath.Glob(filepath.Join(widgetsDir, "*.mpk"))
+	if err != nil {
+		return fmt.Errorf("scan widgets dir: %w", err)
+	}
+	for _, mpkPath := range matches {
+		defs, err := mpk.ParseAll(mpkPath)
+		if err != nil {
+			log.Printf("warning: widget pre-scan skipping %s: %v", filepath.Base(mpkPath), err)
+			continue
+		}
+		for _, d := range defs {
+			name := strings.ToUpper(lastIDSegment(d.ID))
+			if _, exists := r.byMDLName[name]; exists {
+				continue // builtin or user-override wins
+			}
+			r.mpkNameMap[name] = d.ID
+		}
+	}
+	return nil
+}
+
+func (r *WidgetRegistry) deriveFromMPK(widgetID string) (*WidgetDefinition, error) {
+	mpkPath, err := mpk.FindMPK(r.projectDir, widgetID)
+	if err != nil {
+		return nil, fmt.Errorf("find mpk for %s: %w", widgetID, err)
+	}
+	if mpkPath == "" {
+		return nil, nil
+	}
+	mpkDef, err := mpk.ParseMPKForWidget(mpkPath, widgetID)
+	if err != nil {
+		return nil, fmt.Errorf("parse mpk for %s: %w", widgetID, err)
+	}
+	if mpkDef == nil {
+		return nil, nil
+	}
+	return buildDefinitionFromMPK(mpkDef), nil
+}
+
+// lastIDSegment returns the last dot-separated segment of a widget ID, lowercased.
+func lastIDSegment(widgetID string) string {
+	parts := strings.Split(widgetID, ".")
+	return strings.ToLower(parts[len(parts)-1])
+}
+
+func buildDefinitionFromMPK(mpkDef *mpk.WidgetDefinition) *WidgetDefinition {
+	mdlName := lastIDSegment(mpkDef.ID)
+	widgetKind := "custom"
+	if mpkDef.IsPluggable {
+		widgetKind = "pluggable"
+	}
+	def := &WidgetDefinition{
+		WidgetID:        mpkDef.ID,
+		MDLName:         mdlName,
+		WidgetKind:      widgetKind,
+		TemplateFile:    mdlName + ".json",
+		DefaultEditable: "Always",
+	}
+
+	var assocMappings []PropertyMapping
+	for _, p := range mpkDef.Properties {
+		switch p.Type {
+		case "widgets":
+			container := strings.ToUpper(p.Key)
+			if p.Key == "content" {
+				container = "TEMPLATE"
+			}
+			def.ChildSlots = append(def.ChildSlots, ChildSlotMapping{
+				PropertyKey:  p.Key,
+				MDLContainer: strings.ToLower(container),
+				Operation:    "widgets",
+			})
+		case "datasource":
+			def.PropertyMappings = append(def.PropertyMappings, PropertyMapping{
+				PropertyKey: p.Key,
+				Source:      "DataSource",
+				Operation:   "datasource",
+			})
+		case "attribute":
+			def.PropertyMappings = append(def.PropertyMappings, PropertyMapping{
+				PropertyKey: p.Key,
+				Source:      "Attribute",
+				Operation:   "attribute",
+			})
+		case "association":
+			assocMappings = append(assocMappings, PropertyMapping{
+				PropertyKey: p.Key,
+				Source:      "Association",
+				Operation:   "association",
+			})
+		case "selection":
+			def.PropertyMappings = append(def.PropertyMappings, PropertyMapping{
+				PropertyKey: p.Key,
+				Source:      "Selection",
+				Operation:   "selection",
+				Default:     p.DefaultValue,
+			})
+		case "boolean", "integer", "decimal", "string", "enumeration":
+			m := PropertyMapping{
+				PropertyKey: p.Key,
+				Operation:   "primitive",
+			}
+			if p.DefaultValue != "" {
+				m.Value = p.DefaultValue
+			}
+			def.PropertyMappings = append(def.PropertyMappings, m)
+		}
+	}
+	def.PropertyMappings = append(def.PropertyMappings, assocMappings...)
+	return def
 }

@@ -100,3 +100,67 @@ func TestDescribeExportMapping_NotFound(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, describeExportMapping(ctx, ast.QualifiedName{Module: "Integration", Name: "NoSuch"}))
 }
+
+func TestCreateExportMapping_OrModify_PreservesID(t *testing.T) {
+	mod := mkModule("Integration")
+	existingID := nextID("em")
+	existing := &model.ExportMapping{
+		BaseElement: model.BaseElement{ID: existingID},
+		ContainerID: mod.ID,
+		Name:        "ExportOrders",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, existing.ContainerID, mod.ID)
+
+	var updatedID model.ID
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetExportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ExportMapping, error) {
+			if moduleName == "Integration" && name == "ExportOrders" {
+				return existing, nil
+			}
+			return nil, nil
+		},
+		UpdateExportMappingFunc: func(em *model.ExportMapping) error {
+			updatedID = em.ID
+			return nil
+		},
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execCreateExportMapping(ctx, &ast.CreateExportMappingStmt{
+		Name:           ast.QualifiedName{Module: "Integration", Name: "ExportOrders"},
+		SchemaKind:     "JSON_STRUCTURE",
+		SchemaRef:      ast.QualifiedName{Module: "Integration", Name: "PetSchema"},
+		CreateOrModify: true,
+	})
+	assertNoError(t, err)
+	assertContainsStr(t, buf.String(), "Modified export mapping")
+	if updatedID != existingID {
+		t.Errorf("UpdateExportMapping called with ID %q, want %q", updatedID, existingID)
+	}
+}
+
+func TestCreateExportMapping_AlreadyExists_NoOrModify(t *testing.T) {
+	mod := mkModule("Integration")
+	existing := &model.ExportMapping{
+		BaseElement: model.BaseElement{ID: nextID("em")},
+		ContainerID: mod.ID,
+		Name:        "ExportOrders",
+	}
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetExportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ExportMapping, error) {
+			return existing, nil
+		},
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	err := execCreateExportMapping(ctx, &ast.CreateExportMappingStmt{
+		Name: ast.QualifiedName{Module: "Integration", Name: "ExportOrders"},
+	})
+	assertError(t, err)
+}

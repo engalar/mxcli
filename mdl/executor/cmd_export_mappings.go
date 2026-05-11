@@ -182,6 +182,11 @@ func execCreateExportMapping(ctx *ExecContext, s *ast.CreateExportMappingStmt) e
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
+	existing, _ := ctx.Backend.GetExportMappingByQualifiedName(s.Name.Module, s.Name.Name)
+	if existing != nil && !s.CreateOrModify {
+		return mdlerrors.NewAlreadyExists("export mapping", s.Name.String())
+	}
+
 	module, err := findModule(ctx, s.Name.Module)
 	if err != nil {
 		return mdlerrors.NewNotFound("module", s.Name.Module)
@@ -209,7 +214,7 @@ func execCreateExportMapping(ctx *ExecContext, s *ast.CreateExportMappingStmt) e
 	// Build a path→element info map from the JSON structure for schema alignment.
 	jsElems := map[string]*types.JsonElement{}
 	if s.SchemaKind == "JSON_STRUCTURE" && s.SchemaRef.Module != "" {
-		if js, err2 := ctx.Backend.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil {
+		if js, err2 := ctx.Backend.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil && js != nil {
 			buildJsonElementPathMap(js.Elements, jsElems)
 		}
 	}
@@ -218,6 +223,17 @@ func execCreateExportMapping(ctx *ExecContext, s *ast.CreateExportMappingStmt) e
 	if s.RootElement != nil {
 		root := buildExportMappingElementModel(s.Name.Module, s.RootElement, "", "(Object)", jsElems, ctx.Backend, true)
 		em.Elements = append(em.Elements, root)
+	}
+
+	if existing != nil {
+		em.ID = existing.ID
+		if err := ctx.Backend.UpdateExportMapping(em); err != nil {
+			return mdlerrors.NewBackend("update export mapping", err)
+		}
+		if !ctx.Quiet {
+			fmt.Fprintf(ctx.Output, "Modified export mapping %s.%s\n", s.Name.Module, s.Name.Name)
+		}
+		return nil
 	}
 
 	if err := ctx.Backend.CreateExportMapping(em); err != nil {

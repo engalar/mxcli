@@ -93,6 +93,9 @@ DELETE_BEHAVIOR: D E L E T E '_'? B E H A V I O R;
 CASCADE: C A S C A D E;
 PREVENT: P R E V E N T;
 
+// External entity capability flags
+ALLOW_CREATE_CHANGE_LOCALLY: A L L O W '_'? C R E A T E '_'? C H A N G E '_'? L O C A L L Y;
+
 // =============================================================================
 // CONNECTION KEYWORDS
 // =============================================================================
@@ -330,6 +333,12 @@ ATTRIBUTES: A T T R I B U T E S;
 FILTERTYPE: F I L T E R T Y P E;
 IMAGE: I M A G E;
 COLLECTION: C O L L E C T I O N;
+JAR: J A R;
+DEPENDENCY: D E P E N D E N C Y;
+DEPENDENCIES: D E P E N D E N C I E S;
+EXCLUSION: E X C L U S I O N;
+ARTIFACT: A R T I F A C T;
+INCLUDED: I N C L U D E D;
 MODEL: M O D E L;
 MODELS: M O D E L S;
 AGENT: A G E N T;

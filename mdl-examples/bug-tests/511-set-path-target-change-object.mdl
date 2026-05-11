@@ -1,0 +1,18 @@
+-- Bug #511: SET $obj/Module.Assoc = $other rejected with "variable not declared"
+-- Root cause 1: isVariableDeclared looked up the full "$Order/Sales.Order_Customer"
+--               instead of stripping $ and path suffix first.
+-- Root cause 2: path targets dispatched to ChangeVariableAction (wrong BSON type);
+--               should produce a ChangeObjectAction.
+
+create entity Sales.Order ( Name: String );
+create entity Sales.Customer ( Name: String );
+create association Sales.Order_Customer from Sales.Order to Sales.Customer;
+
+create microflow Sales.ACT_LinkCustomer (
+  $order: Sales.Order,
+  $customer: Sales.Customer
+)
+begin
+  set $order/Sales.Order_Customer = $customer;
+  return;
+end;

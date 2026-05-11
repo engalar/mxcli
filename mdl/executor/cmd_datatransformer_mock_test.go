@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 )
 
@@ -103,4 +104,69 @@ func TestDescribeDataTransformer_Mock(t *testing.T) {
 
 	out := buf.String()
 	assertContainsStr(t, out, "create data transformer")
+}
+
+func TestCreateDataTransformer_OrModify_PreservesID(t *testing.T) {
+	mod := mkModule("ETL")
+	existingID := nextID("dt")
+	existing := &model.DataTransformer{
+		BaseElement: model.BaseElement{ID: existingID},
+		ContainerID: mod.ID,
+		Name:        "LatExtract",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, existing.ContainerID, mod.ID)
+
+	var updatedID model.ID
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ProjectVersionFunc:      func() *types.ProjectVersion { return &types.ProjectVersion{ProductVersion: "11.9.0", MajorVersion: 11, MinorVersion: 9} },
+		ListModulesFunc:         func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListDataTransformersFunc: func() ([]*model.DataTransformer, error) {
+			return []*model.DataTransformer{existing}, nil
+		},
+		UpdateDataTransformerFunc: func(dt *model.DataTransformer) error {
+			updatedID = dt.ID
+			return nil
+		},
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execCreateDataTransformer(ctx, &ast.CreateDataTransformerStmt{
+		Name:           ast.QualifiedName{Module: "ETL", Name: "LatExtract"},
+		SourceType:     "JSON",
+		SourceJSON:     "{}",
+		CreateOrModify: true,
+	})
+	assertNoError(t, err)
+	assertContainsStr(t, buf.String(), "Modified")
+	if updatedID != existingID {
+		t.Errorf("UpdateDataTransformer called with ID %q, want %q", updatedID, existingID)
+	}
+}
+
+func TestCreateDataTransformer_AlreadyExists_NoOrModify(t *testing.T) {
+	mod := mkModule("ETL")
+	existing := &model.DataTransformer{
+		BaseElement: model.BaseElement{ID: nextID("dt")},
+		ContainerID: mod.ID,
+		Name:        "LatExtract",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, existing.ContainerID, mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ProjectVersionFunc:      func() *types.ProjectVersion { return &types.ProjectVersion{ProductVersion: "11.9.0", MajorVersion: 11, MinorVersion: 9} },
+		ListModulesFunc:         func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListDataTransformersFunc: func() ([]*model.DataTransformer, error) {
+			return []*model.DataTransformer{existing}, nil
+		},
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execCreateDataTransformer(ctx, &ast.CreateDataTransformerStmt{
+		Name: ast.QualifiedName{Module: "ETL", Name: "LatExtract"},
+	})
+	assertError(t, err)
 }

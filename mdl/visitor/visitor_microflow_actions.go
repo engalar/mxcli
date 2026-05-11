@@ -1433,6 +1433,11 @@ func buildRestCallStatement(ctx parser.IRestCallStatementContext) *ast.RestCallS
 			if len(qns) >= 2 {
 				result.ResultEntity = buildQualifiedName(qns[1])
 			}
+			// `as list of Module.Entity` marks the mapping result as a list;
+			// without LIST_OF the result is a single object.
+			if returnsCtx.LIST_OF() != nil {
+				result.IsList = true
+			}
 		} else if returnsCtx.NONE() != nil || returnsCtx.NOTHING() != nil {
 			result.Type = ast.RestResultNone
 		}

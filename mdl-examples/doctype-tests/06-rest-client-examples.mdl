@@ -1457,6 +1457,33 @@ begin
 end;
 /
 
+-- ============================================================================
+-- Level 15.2: GET single object via `as Module.Entity`
+-- ============================================================================
+--
+-- The `as Module.Entity` form binds a single object — Studio Pro stores
+-- this as ImportMappingCall.Range.SingleObject=true and writes
+-- VariableType=ObjectType.
+
+create microflow RestTest.ACT_RestMappingSingleObject ()
+returns RestTest.PetResponse
+begin
+  $Pet = rest call get 'https://api.example.com/pets/1'
+    header Accept = 'application/json'
+    timeout 15
+    returns mapping RestTest.IMM_Pet as RestTest.PetResponse
+    on error rollback;
+
+  return $Pet;
+end;
+/
+
+-- The `as list of Module.Entity` form is exercised by the dedicated
+-- bug-test `mdl-examples/bug-tests/519-rest-mapping-as-list-of.mdl`,
+-- which sets up a list-rooted JSON structure (the array root needed
+-- for a list-typed mapping is incompatible with the single-object
+-- `JSON_Pet` declared earlier in this file).
+
 -- ############################################################################
 -- PART 16: IMPORT/EXPORT MAPPING IN MICROFLOWS
 -- ############################################################################

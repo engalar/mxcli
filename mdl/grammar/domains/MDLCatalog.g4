@@ -85,6 +85,7 @@ showStatement
     | showOrList FEATURES (IN IDENTIFIER)?
     | showOrList FEATURES FOR VERSION NUMBER_LITERAL
     | showOrList FEATURES ADDED SINCE NUMBER_LITERAL
+    | showOrList JAR DEPENDENCIES (IN (qualifiedName | IDENTIFIER))?
     ;
 
 /**
@@ -167,6 +168,7 @@ describeStatement
     | DESCRIBE PUBLISHED REST SERVICE qualifiedName    // DESCRIBE PUBLISHED REST SERVICE Module.Name
     | DESCRIBE DATA TRANSFORMER qualifiedName          // DESCRIBE DATA TRANSFORMER Module.Name
     | DESCRIBE FRAGMENT identifierOrKeyword            // DESCRIBE FRAGMENT Name
+    | DESCRIBE JAR DEPENDENCY (qualifiedName | IDENTIFIER) STRING_LITERAL   // DESCRIBE JAR DEPENDENCY ModuleName 'group:artifact'
     ;
 
 catalogSelectQuery

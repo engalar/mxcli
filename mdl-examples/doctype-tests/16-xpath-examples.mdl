@@ -20,6 +20,14 @@ create module XpathTest;
 -- Setup: Domain Model for XPath Examples
 -- ============================================================================
 
+-- Enumeration used in WHERE clause examples (see MARK: Enumeration Attributes)
+create enumeration XpathTest.OrderStatus (
+  Open 'Open',
+  Processing 'Processing',
+  Completed 'Completed',
+  Cancelled 'Cancelled'
+);
+
 create persistent entity XpathTest.Customer (
   Name: string(200),
   Email: string(200),
@@ -32,6 +40,7 @@ create persistent entity XpathTest.Order (
   OrderNumber: string(50),
   TotalAmount: decimal,
   State: string(20),
+  Status: XpathTest.OrderStatus,
   OrderDate: datetime,
   IsPaid: boolean,
   Notes: string(2000)
@@ -360,6 +369,64 @@ begin
 end;
 
 -- ============================================================================
+-- MARK: Enumeration Attributes
+-- ============================================================================
+--
+-- For enumeration attributes, use the qualified value form in MDL:
+--   Module.EnumerationName.ValueKey
+-- mxcli stores this as a plain string literal in BSON (what Mendix expects)
+-- and enriches it back to the qualified form on DESCRIBE. Both forms are
+-- accepted as input; the qualified form is preferred for readability and
+-- future type-safety.
+
+/**
+ * Enum equality using qualified value: WHERE [Status = XpathTest.OrderStatus.Open]
+ * Stored in BSON as: Status = 'Open'
+ */
+create microflow XpathTest.Retrieve_EnumEquality ()
+returns boolean
+begin
+  retrieve $Open from XpathTest.Order
+    where [Status = XpathTest.OrderStatus.Open];
+  return true;
+end;
+
+/**
+ * Enum not-equal with qualified value
+ */
+create microflow XpathTest.Retrieve_EnumNotEqual ()
+returns boolean
+begin
+  retrieve $Active from XpathTest.Order
+    where [Status != XpathTest.OrderStatus.Cancelled];
+  return true;
+end;
+
+/**
+ * Enum OR: two qualified values joined with or
+ */
+create microflow XpathTest.Retrieve_EnumOr ()
+returns boolean
+begin
+  retrieve $InProgress from XpathTest.Order
+    where [Status = XpathTest.OrderStatus.Open or Status = XpathTest.OrderStatus.Processing];
+  return true;
+end;
+
+/**
+ * Enum check combined with numeric condition
+ */
+create microflow XpathTest.Retrieve_EnumAndAmount (
+  $MinAmount: decimal
+)
+returns boolean
+begin
+  retrieve $Results from XpathTest.Order
+    where [Status = XpathTest.OrderStatus.Completed and TotalAmount >= $MinAmount];
+  return true;
+end;
+
+-- ============================================================================
 -- MARK: Tokens ([%CurrentUser%], [%CurrentDateTime%])
 -- ============================================================================
 
@@ -370,7 +437,7 @@ create microflow XpathTest.Retrieve_DateTimeToken ()
 returns boolean
 begin
   retrieve $Recent from XpathTest.Order
-    where [OrderDate >= [%CurrentDateTime%]];
+    where [OrderDate >= '[%CurrentDateTime%]'];
   return true;
 end;
 

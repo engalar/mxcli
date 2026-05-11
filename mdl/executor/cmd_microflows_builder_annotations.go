@@ -15,6 +15,10 @@ func getStatementAnnotations(stmt ast.MicroflowStatement) *ast.ActivityAnnotatio
 	switch s := stmt.(type) {
 	case *ast.DeclareStmt:
 		return s.Annotations
+	case *ast.InheritanceSplitStmt:
+		return s.Annotations
+	case *ast.CastObjectStmt:
+		return s.Annotations
 	case *ast.MfSetStmt:
 		return s.Annotations
 	case *ast.ReturnStmt:

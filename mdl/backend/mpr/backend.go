@@ -113,6 +113,20 @@ func (b *MprBackend) DeleteModuleWithCleanup(id model.ID, moduleName string) err
 }
 
 // ---------------------------------------------------------------------------
+// ModuleSettingsBackend
+// ---------------------------------------------------------------------------
+
+func (b *MprBackend) ListModuleSettings() ([]*types.ModuleSettings, error) {
+	return b.reader.ListModuleSettings()
+}
+func (b *MprBackend) GetModuleSettings(moduleID model.ID) (*types.ModuleSettings, error) {
+	return b.reader.GetModuleSettings(moduleID)
+}
+func (b *MprBackend) UpdateModuleSettings(ms *types.ModuleSettings) error {
+	return b.writer.UpdateModuleSettings(ms)
+}
+
+// ---------------------------------------------------------------------------
 // FolderBackend
 // ---------------------------------------------------------------------------
 
@@ -497,6 +511,9 @@ func (b *MprBackend) ListDataTransformers() ([]*model.DataTransformer, error) {
 func (b *MprBackend) CreateDataTransformer(dt *model.DataTransformer) error {
 	return b.writer.CreateDataTransformer(dt)
 }
+func (b *MprBackend) UpdateDataTransformer(dt *model.DataTransformer) error {
+	return b.writer.UpdateDataTransformer(dt)
+}
 func (b *MprBackend) DeleteDataTransformer(id model.ID) error {
 	return b.writer.DeleteDataTransformer(id)
 }
@@ -551,6 +568,9 @@ func (b *MprBackend) GetJsonStructureByQualifiedName(moduleName, name string) (*
 }
 func (b *MprBackend) CreateJsonStructure(js *types.JsonStructure) error {
 	return b.writer.CreateJsonStructure(unconvertJsonStructure(js))
+}
+func (b *MprBackend) UpdateJsonStructure(js *types.JsonStructure) error {
+	return b.writer.UpdateJsonStructure(unconvertJsonStructure(js))
 }
 func (b *MprBackend) DeleteJsonStructure(id string) error {
 	return b.writer.DeleteJsonStructure(id)
@@ -614,6 +634,9 @@ func (b *MprBackend) GetWorkflow(id model.ID) (*workflows.Workflow, error) {
 func (b *MprBackend) CreateWorkflow(wf *workflows.Workflow) error {
 	return b.writer.CreateWorkflow(wf)
 }
+func (b *MprBackend) UpdateWorkflow(wf *workflows.Workflow) error {
+	return b.writer.UpdateWorkflow(wf)
+}
 func (b *MprBackend) DeleteWorkflow(id model.ID) error { return b.writer.DeleteWorkflow(id) }
 
 // ---------------------------------------------------------------------------
@@ -636,6 +659,9 @@ func (b *MprBackend) ListImageCollections() ([]*types.ImageCollection, error) {
 }
 func (b *MprBackend) CreateImageCollection(ic *types.ImageCollection) error {
 	return b.writer.CreateImageCollection(unconvertImageCollection(ic))
+}
+func (b *MprBackend) UpdateImageCollection(ic *types.ImageCollection) error {
+	return b.writer.UpdateImageCollection(unconvertImageCollection(ic))
 }
 func (b *MprBackend) DeleteImageCollection(id string) error {
 	return b.writer.DeleteImageCollection(id)
@@ -736,11 +762,17 @@ func (b *MprBackend) ListAgentEditorAgents() ([]*agenteditor.Agent, error) {
 func (b *MprBackend) CreateAgentEditorModel(m *agenteditor.Model) error {
 	return b.writer.CreateAgentEditorModel(m)
 }
+func (b *MprBackend) UpdateAgentEditorModel(m *agenteditor.Model) error {
+	return b.writer.UpdateAgentEditorModel(m)
+}
 func (b *MprBackend) DeleteAgentEditorModel(id string) error {
 	return b.writer.DeleteAgentEditorModel(id)
 }
 func (b *MprBackend) CreateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error {
 	return b.writer.CreateAgentEditorKnowledgeBase(k)
+}
+func (b *MprBackend) UpdateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error {
+	return b.writer.UpdateAgentEditorKnowledgeBase(k)
 }
 func (b *MprBackend) DeleteAgentEditorKnowledgeBase(id string) error {
 	return b.writer.DeleteAgentEditorKnowledgeBase(id)
@@ -748,11 +780,17 @@ func (b *MprBackend) DeleteAgentEditorKnowledgeBase(id string) error {
 func (b *MprBackend) CreateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error {
 	return b.writer.CreateAgentEditorConsumedMCPService(c)
 }
+func (b *MprBackend) UpdateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error {
+	return b.writer.UpdateAgentEditorConsumedMCPService(c)
+}
 func (b *MprBackend) DeleteAgentEditorConsumedMCPService(id string) error {
 	return b.writer.DeleteAgentEditorConsumedMCPService(id)
 }
 func (b *MprBackend) CreateAgentEditorAgent(a *agenteditor.Agent) error {
 	return b.writer.CreateAgentEditorAgent(a)
+}
+func (b *MprBackend) UpdateAgentEditorAgent(a *agenteditor.Agent) error {
+	return b.writer.UpdateAgentEditorAgent(a)
 }
 func (b *MprBackend) DeleteAgentEditorAgent(id string) error {
 	return b.writer.DeleteAgentEditorAgent(id)

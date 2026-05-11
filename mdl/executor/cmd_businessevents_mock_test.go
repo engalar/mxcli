@@ -74,7 +74,7 @@ func TestDescribeBusinessEventService_Mock(t *testing.T) {
 	assertNoError(t, describeBusinessEventService(ctx, ast.QualifiedName{Module: "MyModule", Name: "OrderEvents"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "create or replace business event service")
+	assertContainsStr(t, out, "create or modify business event service")
 	assertContainsStr(t, out, "MyModule.OrderEvents")
 }
 

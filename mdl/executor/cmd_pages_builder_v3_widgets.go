@@ -119,14 +119,25 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (*pages.CustomWidget, er
 				Caption:    child.GetCaption(),
 				Properties: child.Properties,
 			}
-			// Build child widgets for custom content columns
+			// Build child widgets; filter-type children go to the column filter slot
 			for _, grandchild := range child.Children {
-				childWidget, err := pb.buildWidgetV3(grandchild)
-				if err != nil {
-					return nil, mdlerrors.NewBackend("build column child widget", err)
-				}
-				if childWidget != nil {
-					col.ChildWidgets = append(col.ChildWidgets, childWidget)
+				if filterWidgetID := dataGridFilterWidgetID(grandchild.Type); filterWidgetID != "" {
+					fw, err := pb.widgetBackend.BuildFilterWidget(backend.FilterWidgetSpec{
+						WidgetID:   filterWidgetID,
+						FilterName: grandchild.Name,
+					}, pb.backend.Path())
+					if err != nil {
+						return nil, mdlerrors.NewBackend("build column filter widget", err)
+					}
+					col.FilterWidget = fw
+				} else {
+					childWidget, err := pb.buildWidgetV3(grandchild)
+					if err != nil {
+						return nil, mdlerrors.NewBackend("build column child widget", err)
+					}
+					if childWidget != nil {
+						col.ChildWidgets = append(col.ChildWidgets, childWidget)
+					}
 				}
 			}
 			columns = append(columns, col)
@@ -932,6 +943,22 @@ func (pb *pageBuilder) buildDynamicImageV3(w *ast.WidgetV3) (*pages.DynamicImage
 	}
 
 	return img, nil
+}
+
+// dataGridFilterWidgetID maps a MDL filter type keyword to its pluggable widget ID.
+// Returns "" for non-filter widget types.
+func dataGridFilterWidgetID(widgetType string) string {
+	switch strings.ToLower(widgetType) {
+	case "textfilter":
+		return pages.WidgetIDDataGridTextFilter
+	case "numberfilter":
+		return pages.WidgetIDDataGridNumberFilter
+	case "datefilter":
+		return pages.WidgetIDDataGridDateFilter
+	case "dropdownfilter":
+		return pages.WidgetIDDataGridDropdownFilter
+	}
+	return ""
 }
 
 // dataGridPagingPropMap maps PascalCase MDL property names to camelCase widget property keys.

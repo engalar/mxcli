@@ -1,0 +1,61 @@
+-- ============================================================================
+-- Bug #521: `empty` literal on a typed Java action parameter triggers CE0126
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   `mx check` reports CE0126 "Missing value for parameter X" on a
+--   `call java action Module.Foo(Param = empty)` when Param is a typed
+--   (non-entity, non-microflow) parameter — most commonly a list parameter
+--   or a String parameter. The builder emitted a BasicCodeActionParameterValue
+--   with `Argument: ""` instead of the literal `"empty"` keyword Studio Pro
+--   uses to mark an explicit empty literal. Studio Pro treats the empty
+--   string as a missing slot and fires CE0126 on validation.
+--
+-- After fix:
+--   When the backend resolves the Java action and the parameter is a
+--   BasicParameterType (StringType, ListType, ParameterizedEntityType, etc.),
+--   the builder emits `Argument: "empty"` for an MDL `empty` literal so
+--   Studio Pro reads the slot as an explicitly-empty value, not a missing
+--   one. Entity-typed parameters keep using EntityCodeActionParameterValue
+--   and microflow-typed parameters keep using MicroflowParameterValue, so
+--   this fix is scoped to BasicParameterType alone.
+--
+-- Validation:
+--   `mxcli check 521-empty-java-action-typed-arg.mdl` parses the script.
+--   `mx check` against the resulting MPR reports 0 errors for both the
+--   list-typed and string-typed `empty` arguments. Roundtrip preserves
+--   the `Argument: "empty"` BSON value byte-for-byte.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/521-empty-java-action-typed-arg.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest521.MF_CallWithEmpty"
+-- ============================================================================
+
+create module BugTest521;
+
+create non-persistent entity BugTest521.Item (
+  Code : string
+);
+/
+
+-- Java action with a list parameter and a string parameter — both typed
+-- (BasicParameterType) so they exercise the resolved-basic-arg path.
+create java action BugTest521.JA_ProcessBatch(Items: list of BugTest521.Item not null, Tag: string not null) returns boolean
+as $$
+return true;
+$$;
+/
+
+-- Calling with `empty` for both typed slots must produce
+-- BasicCodeActionParameterValue.Argument = "empty" so Studio Pro
+-- recognises the explicit empty literal and does not fire CE0126.
+create microflow BugTest521.MF_CallWithEmpty ()
+returns boolean
+begin
+  $Result = call java action BugTest521.JA_ProcessBatch(
+    Items = empty,
+    Tag = empty)
+    on error rollback;
+  return $Result;
+end;
+/

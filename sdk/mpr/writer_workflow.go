@@ -26,6 +26,18 @@ func (w *Writer) CreateWorkflow(wf *workflows.Workflow) error {
 	return w.insertUnit(string(wf.ID), string(wf.ContainerID), "Documents", "Workflows$Workflow", contents)
 }
 
+// UpdateWorkflow replaces an existing workflow unit in the MPR, preserving its UUID.
+func (w *Writer) UpdateWorkflow(wf *workflows.Workflow) error {
+	wf.TypeName = "Workflows$Workflow"
+
+	contents, err := w.serializeWorkflow(wf)
+	if err != nil {
+		return fmt.Errorf("failed to serialize workflow: %w", err)
+	}
+
+	return w.updateUnit(string(wf.ID), contents)
+}
+
 // DeleteWorkflow deletes a workflow from the MPR.
 func (w *Writer) DeleteWorkflow(id model.ID) error {
 	return w.deleteUnit(string(id))

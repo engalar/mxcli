@@ -1021,9 +1021,10 @@ func findSplitMergePointsForGraph(
 ) map[model.ID]model.ID {
 	result := make(map[model.ID]model.ID)
 	for _, obj := range activityMap {
-		if _, ok := obj.(*microflows.ExclusiveSplit); ok {
+		switch obj.(type) {
+		case *microflows.ExclusiveSplit, *microflows.InheritanceSplit:
 			splitID := obj.GetID()
-			// Find merge by following both branches until they converge
+			// Find merge by following both branches until they converge.
 			mergeID := findMergeForSplit(ctx, splitID, flowsByOrigin, activityMap)
 			if mergeID != "" {
 				result[splitID] = mergeID

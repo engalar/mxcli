@@ -158,6 +158,45 @@ describe knowledge base AgentTest.ProductDocs;
 describe consumed mcp service AgentTest.WebSearch;
 
 -- ============================================================================
+-- LEVEL 9: CREATE OR MODIFY (idempotent upsert)
+-- ============================================================================
+--
+-- All four agent-editor document types support CREATE OR MODIFY.
+-- The existing document is updated in-place and its UUID is preserved.
+-- Re-run-safe: creates the document if absent, updates it if present.
+
+create or modify model AgentTest."TestModel" (
+  Provider: MxCloudGenAI,
+  key: AgentTest.ModelKey,
+  DisplayName: 'Updated Model Name'
+);
+/
+
+create or modify knowledge base AgentTest."ProductDocs" (
+  Provider: MxCloudGenAI,
+  key: AgentTest.KBKey
+);
+/
+
+create or modify consumed mcp service AgentTest."WebSearch" (
+  ProtocolVersion: v2025_03_26,
+  version: '1.1',
+  ConnectionTimeoutSeconds: 60,
+  documentation: 'Updated web search MCP service'
+);
+/
+
+create or modify agent AgentTest."ResearchAssistant" (
+  UsageType: task,
+  model: AgentTest.TestModel,
+  MaxTokens: 8192,
+  Temperature: 0.5,
+  SystemPrompt: $$You are an updated research assistant.$$,
+  UserPrompt: 'How can I help you today?'
+);
+/
+
+-- ============================================================================
 -- Cleanup (reverse dependency order: agents first, then their dependencies)
 -- ============================================================================
 

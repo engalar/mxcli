@@ -30,6 +30,19 @@ create persistent entity Module.Photo (
 | Drop module | `drop module ModuleName;` | |
 | Rename module | `rename module OldName to NewName;` | Updates all qualified name references |
 
+## Module JAR Dependencies
+
+| Statement | Syntax | Notes |
+|-----------|--------|-------|
+| List dependencies | `list jar dependencies [in ModuleName];` | All modules or filtered by module |
+| Describe dependency | `describe jar dependency ModuleName 'group:artifact';` | Full MDL output (roundtrippable) |
+| Add dependency | `alter module Name add jar dependency (group = '...', artifact = '...', version = '...', included = true);` | `included` defaults to `true` |
+| Update version | `alter module Name set jar dependency 'group:artifact' version '...';` | Change version string |
+| Toggle inclusion | `alter module Name set jar dependency 'group:artifact' included true\|false;` | Enable/disable in classpath |
+| Add exclusion | `alter module Name set jar dependency 'group:artifact' add exclusion 'group:artifact';` | Transitive exclusion |
+| Drop exclusion | `alter module Name set jar dependency 'group:artifact' drop exclusion 'group:artifact';` | Remove transitive exclusion |
+| Drop dependency | `alter module Name drop jar dependency 'group:artifact';` | Remove dependency entirely |
+
 ## Domain Model
 
 | Statement | Syntax | Notes |
@@ -49,7 +62,7 @@ create persistent entity Module.Photo (
 | Show entities | `show entities [in module];` | List all or filter by module |
 | Create enumeration | `create [or modify] enumeration Module.Name (Value1 'caption', ...);` | |
 | Drop enumeration | `drop enumeration Module.Name;` | |
-| Create association | `create association Module.Name from Parent to Child type reference\|ReferenceSet [owner default\|both] [delete_behavior ...];` | |
+| Create association | `create [or modify] association Module.Name from Parent to Child type reference\|ReferenceSet [owner default\|both] [delete_behavior ...];` | OR MODIFY updates existing association in-place |
 | Drop association | `drop association Module.Name;` | |
 
 ## ALTER ENTITY
@@ -231,6 +244,11 @@ authentication basic, session
 | Call Java action | `$Result = call java action Module.Name (Param = $value);` | Java action (microflow only) |
 | Call web service | `$Result = call web service Module.Service operation OperationName;` | Legacy SOAP; quoted refs are fallback for dangling raw IDs |
 | Call web service raw | `$Result = call web service raw 'base64-bson';` | Escape hatch for byte-for-byte legacy SOAP round-trip |
+| REST call (string) | `$Var = rest call get '<url>' returns string;` | Body as string |
+| REST call (response) | `$Var = rest call get '<url>' returns response;` | `System.HttpResponse` object |
+| REST call (mapping single) | `$Var = rest call get '<url>' returns mapping Module.IMM as Module.Entity;` | Single object — Studio Pro emits `ForceSingleOccurrence=true` |
+| REST call (mapping list) | `$Var = rest call get '<url>' returns mapping Module.IMM as list of Module.Entity;` | List result |
+| REST call (none) | `rest call get '<url>' returns nothing;` | Discard response |
 | Show page | `show page Module.PageName ($Param = $value);` | Also accepts `(Param: $value)` |
 | Close page | `close page;` | |
 | Download file | `download file $FileDocument [show in browser];` | Streams a `System.FileDocument` |
@@ -243,6 +261,8 @@ authentication basic, session
 | Free annotation | `@annotation 'text'` before `@position(...)` | Free-floating visual note preserved by order |
 | IF | `if condition then ... [else ...] end if;` | |
 | Enum split | `case $Var when Value then ... end case;` | Enumeration decision branches |
+| Type split | `split type $Var case Module.Entity ... end split;` | Runtime specialization branches |
+| Cast | `cast $SpecificVar;` | Downcast inside a type split branch |
 | LOOP | `loop $item in $list begin ... end loop;` | FOR EACH over list |
 | WHILE | `while condition begin ... end while;` | Condition-based loop |
 | Return | `return $value;` | Required at end of every flow path |
@@ -468,6 +488,7 @@ create or replace navigation Responsive
 | Show in module | `show business events in module;` | Filter by module |
 | Describe service | `describe business event service Module.Name;` | Full MDL output |
 | Create service | `create business event service Module.Name (...) { message ... };` | See help topic for full syntax |
+| Create or modify | `create or modify business event service Module.Name (...) { ... };` | Preserves UUID — preferred for AI agents |
 | Drop service | `drop business event service Module.Name;` | Delete a service |
 
 ## Agents
@@ -481,7 +502,7 @@ the `AgentEditorCommons` marketplace module and Mendix 11.9+.
 |-----------|--------|-------|
 | List models | `list models [in module];` | Also `show models` |
 | Describe model | `describe model Module.Name;` | Full MDL output |
-| Create model | `create model Module.Name (Provider: MxCloudGenAI, key: Module.Const);` | Key must be a String constant |
+| Create model | `create [or modify] model Module.Name (Provider: MxCloudGenAI, key: Module.Const);` | OR MODIFY updates existing model, preserves UUID |
 | Drop model | `drop model Module.Name;` | |
 
 **Knowledge Base**
@@ -490,7 +511,7 @@ the `AgentEditorCommons` marketplace module and Mendix 11.9+.
 |-----------|--------|-------|
 | List knowledge bases | `list knowledge bases [in module];` | Also `show knowledge bases` |
 | Describe knowledge base | `describe knowledge base Module.Name;` | Full MDL output |
-| Create knowledge base | `create knowledge base Module.Name (Provider: MxCloudGenAI, key: Module.Const);` | Key must be a String constant |
+| Create knowledge base | `create [or modify] knowledge base Module.Name (Provider: MxCloudGenAI, key: Module.Const);` | OR MODIFY updates existing KB, preserves UUID |
 | Drop knowledge base | `drop knowledge base Module.Name;` | |
 
 **Consumed MCP Service**
@@ -499,7 +520,7 @@ the `AgentEditorCommons` marketplace module and Mendix 11.9+.
 |-----------|--------|-------|
 | List MCP services | `list consumed mcp services [in module];` | Also `show consumed mcp services` |
 | Describe MCP service | `describe consumed mcp service Module.Name;` | Full MDL output |
-| Create MCP service | `create consumed mcp service Module.Name (ProtocolVersion: v2025_03_26, version: '1.0', ConnectionTimeoutSeconds: 30, documentation: 'text');` | |
+| Create MCP service | `create [or modify] consumed mcp service Module.Name (ProtocolVersion: v2025_03_26, version: '1.0', ConnectionTimeoutSeconds: 30, documentation: 'text');` | OR MODIFY updates existing service, preserves UUID |
 | Drop MCP service | `drop consumed mcp service Module.Name;` | |
 
 **Agent**
@@ -509,6 +530,7 @@ the `AgentEditorCommons` marketplace module and Mendix 11.9+.
 | List agents | `list agents [in module];` | Also `show agents` |
 | Describe agent | `describe agent Module.Name;` | Full MDL output, re-executable |
 | Create agent | See example below | Requires a Model document |
+| Create or modify | `create or modify agent Module.Name (...) { ... };` | Updates existing agent, preserves UUID |
 | Drop agent | `drop agent Module.Name;` | Drop agents before their Model/KB/MCP dependencies |
 
 ```sql
@@ -558,6 +580,7 @@ Respond in {{Language}}.$$,
 | Show collections | `show image collection [in module];` | List all or filter by module |
 | Describe collection | `describe image collection Module.Name;` | Full MDL output with embedded images |
 | Create collection | `create image collection Module.Name [export level 'Hidden'\|'Public'] [comment 'text'] [(image Name from file 'path', ...)];` | With or without images |
+| Create or modify | `create or modify image collection Module.Name [...];` | Preserves UUID — preferred for AI agents |
 | Drop collection | `drop image collection Module.Name;` | Removes collection and all embedded images |
 
 **Export levels:** `'Hidden'` (default, internal to module), `'Public'` (accessible from other modules).
@@ -646,7 +669,7 @@ Operations, path/query parameters, headers, request body, response type, resourc
 | Show services | `show published rest services [in module];` | List all or filter by module |
 | Describe service | `describe published rest service Module.Name;` | Re-executable CREATE statement |
 | Create service | See below | |
-| Create or replace | `create or replace published rest service ...` | Replaces existing service |
+| Create or modify | `create or modify published rest service Module.Name (...) { ... };` | Preserves UUID — preferred for AI agents |
 | Alter service | `alter published rest service Module.Name set path = '...', version = '...';` | SET supports Path, Version, ServiceName |
 | Add resource | `alter published rest service Module.Name add resource 'name' { ... };` | Operation block uses CREATE syntax |
 | Drop resource | `alter published rest service Module.Name drop resource 'name';` | |
@@ -690,6 +713,7 @@ Requires Mendix 11.9+. Steps: `jslt`, `xslt`. Single-line: `jslt '...'`. Multi-l
 | List transformers | `list data transformers [in module];` | |
 | Describe transformer | `describe data transformer Module.Name;` | Re-executable CREATE |
 | Create transformer | See syntax below | |
+| Create or modify | `create or modify data transformer Module.Name ...;` | Updates existing transformer, preserves UUID |
 | Drop transformer | `drop data transformer Module.Name;` | |
 
 ```sql
@@ -710,10 +734,10 @@ source json '{"latitude": 51.9, "current": {"temp": 12.8}}'
 | Statement | Syntax | Notes |
 |-----------|--------|-------|
 | Show structures | `show json structures [in module];` | List all or filter by module |
-| Describe structure | `describe json structure Module.Name;` | Re-executable CREATE OR REPLACE + element tree |
+| Describe structure | `describe json structure Module.Name;` | Re-executable CREATE OR MODIFY + element tree |
 | Create structure | `create json structure Module.Name [comment 'text'] snippet '...json...';` | Element tree auto-built from snippet |
 | Create (multi-line) | `create json structure Module.Name snippet $${ "key": "value" }$$;` | Dollar-quoted snippet for readability |
-| Create or replace | `create or replace json structure Module.Name snippet '...';` | Idempotent — preferred for AI agents |
+| Create or modify | `create or modify json structure Module.Name snippet '...';` | Preserves UUID — preferred for AI agents |
 | Create with name map | `create json structure Module.Name snippet '...' CUSTOM NAME map ('jsonKey' as 'CustomName', ...);` | Override auto-generated ExposedNames |
 | Drop structure | `drop json structure Module.Name;` | |
 
@@ -724,6 +748,7 @@ source json '{"latitude": 51.9, "current": {"temp": 12.8}}'
 | Show mappings | `show import mappings [in module];` | List all or filter by module |
 | Describe mapping | `describe import mapping Module.Name;` | Re-executable CREATE statement |
 | Create mapping | See below | Assignment syntax: `attr = jsonField` |
+| Create or modify | `create or modify import mapping Module.Name ...;` | Updates existing mapping, preserves UUID |
 | Drop mapping | `drop import mapping Module.Name;` | |
 
 ```sql
@@ -755,6 +780,7 @@ create Module.OrderResponse_CustomerInfo/Module.CustomerInfo = customer {
 | Show mappings | `show export mappings [in module];` | List all or filter by module |
 | Describe mapping | `describe export mapping Module.Name;` | Re-executable CREATE statement |
 | Create mapping | See below | Assignment syntax: `jsonField = attr` |
+| Create or modify | `create or modify export mapping Module.Name ...;` | Updates existing mapping, preserves UUID |
 | Drop mapping | `drop export mapping Module.Name;` | |
 
 ```sql
@@ -784,7 +810,7 @@ Module.OrderResponse_CustomerInfo/Module.CustomerInfo as customer {
 |-----------|--------|-------|
 | Show Java actions | `show java actions [in module];` | List all or filtered by module |
 | Describe Java action | `describe java action Module.Name;` | Full MDL output with signature |
-| Create Java action | `create java action Module.Name(params) returns type as $$ ... $$;` | Inline Java code |
+| Create Java action | `create [or modify] java action Module.Name(params) returns type as $$ ... $$;` | OR MODIFY updates signature/body, preserves UUID |
 | Create with type params | `create java action Module.Name(EntityType: entity <pEntity>, Obj: pEntity) ...;` | Generic type parameters |
 | Create exposed action | `... exposed as 'caption' in 'Category' as $$ ... $$;` | Toolbox-visible in Studio Pro |
 | Rename Java action | `rename java action Module.Old to New;` | Renames BSON unit and .java source file |
@@ -792,6 +818,8 @@ Module.OrderResponse_CustomerInfo/Module.CustomerInfo as customer {
 | Drop Java action | `drop java action Module.Name;` | Deletes MPR unit and .java source file |
 | Call from microflow | `$Result = call java action Module.Name(Param = value);` | Inside BEGIN...END |
 | Empty argument | `call java action Module.Name(Param = empty);` | Unbound code-action parameter preserved as empty mapping |
+
+**`AS $$ ... $$` is mandatory** — the body cannot be omitted. Omitting it causes `no viable alternative at input '...'`. Use `as $$ return false; $$;` as a stub.
 
 **Parameter Types:** `string`, `integer`, `long`, `decimal`, `boolean`, `datetime`, `Module.Entity`, `list of Module.Entity`, `enum Module.EnumName`, `enumeration(Module.EnumName)`, `stringtemplate(sql)`, `stringtemplate(Oql)`, `entity <pEntity>` (type parameter declaration), bare `pEntity` (type parameter reference).
 

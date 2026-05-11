@@ -69,6 +69,7 @@ const (
 	AlterEntitySetPosition                           // SET POSITION (x, y)
 	AlterEntityAddEventHandler                       // ADD EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK CALL Mod.MF
 	AlterEntityDropEventHandler                      // DROP EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK
+	AlterEntitySetAllowCreateChangeLocally           // SET ALLOW_CREATE_CHANGE_LOCALLY = true/false
 )
 
 // EventHandlerDef represents an event handler in CREATE/ALTER ENTITY syntax.
@@ -96,6 +97,7 @@ type AlterEntityStmt struct {
 	IndexName           string           // For DROP INDEX
 	Position            *Position        // For SET POSITION
 	EventHandler        *EventHandlerDef // For ADD/DROP EVENT HANDLER
+	BoolValue           bool             // For SET ALLOW_CREATE_CHANGE_LOCALLY
 }
 
 func (s *AlterEntityStmt) isStatement() {}

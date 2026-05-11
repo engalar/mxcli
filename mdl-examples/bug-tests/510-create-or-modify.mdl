@@ -1,0 +1,111 @@
+-- Bug test for issue #510:
+-- Standardise on CREATE OR MODIFY — remove/deprecate CREATE OR REPLACE variants
+--
+-- Verifies:
+--   1. CREATE OR MODIFY works for business event services (preserves UUID)
+--   2. CREATE OR MODIFY works for published REST services (preserves UUID)
+--   3. CREATE OR MODIFY works for JSON structures (preserves UUID)
+--   4. CREATE OR MODIFY works for image collections (preserves UUID)
+--   5. Plain CREATE on an existing document returns a helpful error pointing
+--      to OR MODIFY, not OR REPLACE
+--
+-- The DESCRIBE output for all four types now emits CREATE OR MODIFY so the
+-- output is re-executable without breaking UUID references.
+
+create module BugTest510;
+
+-- ============================================================================
+-- JSON STRUCTURE
+-- ============================================================================
+
+create json structure BugTest510.JS_Order
+  snippet '{"orderId": 1, "status": "pending"}';
+
+-- Modify in-place: UUID must be preserved after this call.
+create or modify json structure BugTest510.JS_Order
+  snippet '{"orderId": 1, "status": "pending", "total": 0.0}';
+
+describe json structure BugTest510.JS_Order;
+-- Expected: "create or modify json structure ..." (not "create or replace ...")
+
+-- ============================================================================
+-- IMAGE COLLECTION
+-- ============================================================================
+
+create image collection BugTest510.TestIcons;
+
+-- Modify in-place
+create or modify image collection BugTest510.TestIcons
+  comment 'Updated comment';
+
+describe image collection BugTest510.TestIcons;
+-- Expected: "create or modify image collection ..." (not "create or replace ...")
+
+-- ============================================================================
+-- BUSINESS EVENT SERVICE
+-- ============================================================================
+
+@position(100,100)
+create or modify persistent entity BugTest510.BE_Payload (
+  PayloadId: long
+);
+
+create business event service BugTest510.OrderEvents
+(
+  ServiceName: 'OrderEvents',
+  EventNamePrefix: 'com.example'
+)
+{
+  message OrderCreated (OrderId: long) publish
+    entity BugTest510.BE_Payload;
+};
+
+-- Modify in-place: UUID must be preserved.
+create or modify business event service BugTest510.OrderEvents
+(
+  ServiceName: 'OrderEventsV2',
+  EventNamePrefix: 'com.example.v2'
+)
+{
+  message OrderCreated (OrderId: long) publish
+    entity BugTest510.BE_Payload;
+};
+
+describe business event service BugTest510.OrderEvents;
+-- Expected: "create or modify business event service ..." (not "create or replace ...")
+
+-- ============================================================================
+-- PUBLISHED REST SERVICE
+-- ============================================================================
+
+create microflow BugTest510.MF_GetOrders ($httpResponse: System.HttpResponse)
+returns string as $Result
+begin
+  declare $Result string = '[]';
+  return $Result;
+end;
+/
+
+create published rest service BugTest510.OrderAPI (
+  path: 'rest/orders/v1',
+  version: '1.0.0'
+)
+{
+  resource 'orders' {
+    get '' microflow BugTest510.MF_GetOrders;
+  }
+};
+
+-- Modify in-place: UUID must be preserved.
+create or modify published rest service BugTest510.OrderAPI (
+  path: 'rest/orders/v2',
+  version: '2.0.0'
+)
+{
+  resource 'orders' {
+    get '' microflow BugTest510.MF_GetOrders;
+  }
+};
+
+describe published rest service BugTest510.OrderAPI;
+-- Expected: "create or modify published rest service ..." (not "create published rest service ...")

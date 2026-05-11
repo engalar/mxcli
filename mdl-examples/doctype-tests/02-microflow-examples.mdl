@@ -1041,7 +1041,7 @@ begin
     if $row/IsValid then
       set $ValidCount = $ValidCount + 1;
     else
-      log warning node 'Import' 'Row ' + $row/RowNumber + ' invalid: ' + $row/ErrorMessage;
+      log warning node 'Import' 'Row ' + toString($row/RowNumber) + ' invalid: ' + $row/ErrorMessage;
     end if;
   end loop;
 

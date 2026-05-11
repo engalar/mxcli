@@ -99,39 +99,41 @@ func (w *Writer) serializeEnumeration(enum *model.Enumeration) ([]byte, error) {
 			}
 			sort.Strings(langs)
 			for _, langCode := range langs {
-				translationItems = append(translationItems, bson.M{
-					"$ID":          idToBsonBinary(generateUUID()),
-					"$Type":        "Texts$Translation",
-					"LanguageCode": langCode,
-					"Text":         v.Caption.Translations[langCode],
+				translationItems = append(translationItems, bson.D{
+					{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+					{Key: "$Type", Value: "Texts$Translation"},
+					{Key: "LanguageCode", Value: langCode},
+					{Key: "Text", Value: v.Caption.Translations[langCode]},
 				})
 			}
 		}
 
-		valueDoc := bson.M{
-			"$ID":   idToBsonBinary(valueID),
-			"$Type": "Enumerations$EnumerationValue",
-			"Name":  v.Name,
-			"Caption": bson.M{
-				"$ID":   idToBsonBinary(captionID),
-				"$Type": "Texts$Text",
-				"Items": translationItems,
-			},
-			"Image":       "",
-			"RemoteValue": nil,
+		// Use bson.D (ordered) so $Type appears first — Mendix requires this for correct parsing
+		valueDoc := bson.D{
+			{Key: "$ID", Value: idToBsonBinary(valueID)},
+			{Key: "$Type", Value: "Enumerations$EnumerationValue"},
+			{Key: "Name", Value: v.Name},
+			{Key: "Caption", Value: bson.D{
+				{Key: "$ID", Value: idToBsonBinary(captionID)},
+				{Key: "$Type", Value: "Texts$Text"},
+				{Key: "Items", Value: translationItems},
+			}},
+			{Key: "Image", Value: ""},
+			{Key: "RemoteValue", Value: nil},
 		}
 		values = append(values, valueDoc)
 	}
 
-	doc := bson.M{
-		"$ID":           idToBsonBinary(string(enum.ID)),
-		"$Type":         "Enumerations$Enumeration",
-		"Name":          enum.Name,
-		"Documentation": enum.Documentation,
-		"Excluded":      false,
-		"ExportLevel":   "Hidden",
-		"RemoteSource":  nil,
-		"Values":        values,
+	// Use bson.D (ordered) so $Type appears early — Mendix requires this for correct parsing
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(enum.ID))},
+		{Key: "$Type", Value: "Enumerations$Enumeration"},
+		{Key: "Name", Value: enum.Name},
+		{Key: "Documentation", Value: enum.Documentation},
+		{Key: "Excluded", Value: false},
+		{Key: "ExportLevel", Value: "Hidden"},
+		{Key: "RemoteSource", Value: nil},
+		{Key: "Values", Value: values},
 	}
 	return bson.Marshal(doc)
 }

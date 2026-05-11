@@ -456,6 +456,45 @@ func buildEntityQualifiedNames(ctx *ExecContext) map[string]bool {
 	return result
 }
 
+// buildEntityEnumAttrMap returns a map of bare attribute name → enumeration qualified name
+// for all enum-typed attributes on the given entity (e.g. "Status" → "Module.OrderStatus").
+// Returns an empty map if the entity is not found or has no enum attributes.
+func buildEntityEnumAttrMap(ctx *ExecContext, entityQN string) map[string]string {
+	result := make(map[string]string)
+	if !ctx.Connected() || entityQN == "" {
+		return result
+	}
+	parts := strings.SplitN(entityQN, ".", 2)
+	if len(parts) != 2 {
+		return result
+	}
+	mod, err := findModule(ctx, parts[0])
+	if err != nil {
+		return result
+	}
+	dms, err := ctx.Backend.ListDomainModels()
+	if err != nil {
+		return result
+	}
+	for _, dm := range dms {
+		if dm.ContainerID != mod.ID {
+			continue
+		}
+		for _, ent := range dm.Entities {
+			if ent.Name != parts[1] {
+				continue
+			}
+			for _, attr := range ent.Attributes {
+				if enumType, ok := attr.Type.(*domainmodel.EnumerationAttributeType); ok {
+					result[attr.Name] = enumType.EnumerationRef
+				}
+			}
+			return result
+		}
+	}
+	return result
+}
+
 // buildJavaActionQualifiedNames returns a set of all java action qualified names in the project.
 func buildJavaActionQualifiedNames(ctx *ExecContext) map[string]bool {
 	result := make(map[string]bool)

@@ -773,6 +773,15 @@ func newHorizontalFlowWithEnumCase(originID, destinationID model.ID, caseValue s
 	return flow
 }
 
+func newHorizontalFlowWithInheritanceCase(originID, destinationID model.ID, entity string) *microflows.SequenceFlow {
+	flow := newHorizontalFlow(originID, destinationID)
+	flow.CaseValue = &microflows.InheritanceCase{
+		BaseElement:         model.BaseElement{ID: model.ID(types.GenerateID())},
+		EntityQualifiedName: entity,
+	}
+	return flow
+}
+
 // newDownwardFlowWithCase creates a SequenceFlow going down from origin (Bottom) to destination (Left)
 // Used when TRUE path goes below the main line
 func newDownwardFlowWithCase(originID, destinationID model.ID, caseValue string) *microflows.SequenceFlow {
@@ -803,6 +812,20 @@ func caseValueForFlow(caseValue string) microflows.CaseValue {
 			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Value:       caseValue,
 		}
+	}
+}
+
+func newDownwardFlowWithInheritanceCase(originID, destinationID model.ID, entity string) *microflows.SequenceFlow {
+	return &microflows.SequenceFlow{
+		BaseElement:                model.BaseElement{ID: model.ID(types.GenerateID())},
+		OriginID:                   originID,
+		DestinationID:              destinationID,
+		OriginConnectionIndex:      AnchorBottom,
+		DestinationConnectionIndex: AnchorLeft,
+		CaseValue: &microflows.InheritanceCase{
+			BaseElement:         model.BaseElement{ID: model.ID(types.GenerateID())},
+			EntityQualifiedName: entity,
+		},
 	}
 }
 
@@ -913,6 +936,16 @@ func isTerminalStmt(stmt ast.MicroflowStatement) bool {
 		// produced an exhaustive set of value cases without a default flow —
 		// in both no-else and with-else forms the split terminates once we
 		// reach this point.
+		return true
+	case *ast.InheritanceSplitStmt:
+		if len(s.Cases) == 0 || len(s.ElseBody) == 0 || !lastStmtIsReturn(s.ElseBody) {
+			return false
+		}
+		for _, c := range s.Cases {
+			if !lastStmtIsReturn(c.Body) {
+				return false
+			}
+		}
 		return true
 	default:
 		return false

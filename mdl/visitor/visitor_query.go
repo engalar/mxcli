@@ -604,6 +604,17 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 			}
 		}
 		b.statements = append(b.statements, stmt)
+	} else if ctx.JAR() != nil && ctx.DEPENDENCIES() != nil {
+		// LIST JAR DEPENDENCIES [IN module]
+		stmt := &ast.ShowStmt{ObjectType: ast.ShowJarDependencies}
+		if ctx.IN() != nil {
+			if qn := ctx.QualifiedName(); qn != nil {
+				stmt.InModule = getQualifiedNameText(qn)
+			} else if id := ctx.IDENTIFIER(); id != nil {
+				stmt.InModule = id.GetText()
+			}
+		}
+		b.statements = append(b.statements, stmt)
 	} else if ctx.WIDGETS() != nil {
 		// SHOW WIDGETS [WHERE ...] [IN module]
 		stmt := &ast.ShowWidgetsStmt{
@@ -833,6 +844,26 @@ func (b *Builder) ExitDescribeStatement(ctx *parser.DescribeStatementContext) {
 				TableName: strings.ToLower(tableName),
 			})
 		}
+		return
+	}
+
+	// Handle DESCRIBE JAR DEPENDENCY ModuleName 'group:artifact'
+	if ctx.JAR() != nil && ctx.DEPENDENCY() != nil {
+		var moduleName string
+		if qn := ctx.QualifiedName(); qn != nil {
+			moduleName = getQualifiedNameText(qn)
+		} else if id := ctx.IDENTIFIER(); id != nil {
+			moduleName = id.GetText()
+		}
+		coordinate := ""
+		if sl := ctx.STRING_LITERAL(); sl != nil {
+			coordinate = unquoteString(sl.GetText())
+		}
+		b.statements = append(b.statements, &ast.DescribeStmt{
+			ObjectType: ast.DescribeJarDependency,
+			Name:       ast.QualifiedName{Name: moduleName},
+			Qualifier:  coordinate,
+		})
 		return
 	}
 

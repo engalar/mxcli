@@ -296,16 +296,24 @@ func outputContractEntityMDL(ctx *ExecContext, et *types.EdmEntityType, svcQN st
 				break
 			}
 		}
-		if isKey && p.Name == "ID" {
+		// Key-only virtual ID properties (e.g. Salesforce "ID") have no
+		// corresponding external attribute — skip them.
+		if isKey && strings.EqualFold(p.Name, "ID") && len(et.KeyProperties) == 1 {
 			continue
 		}
 
+		attrName := attrNameForOData(p.Name, et.Name)
 		mendixType := edmToMendixType(p)
 		comma := ","
 		if i == len(et.Properties)-1 {
 			comma = ""
 		}
-		fmt.Fprintf(ctx.Output, "    %s: %s%s\n", p.Name, mendixType, comma)
+		// When the OData property name was renamed (reserved word), show the
+		// original OData name as a comment so the user knows the mapping.
+		if attrName != p.Name {
+			fmt.Fprintf(ctx.Output, "    -- OData property: %s\n", p.Name)
+		}
+		fmt.Fprintf(ctx.Output, "    %s: %s%s\n", attrName, mendixType, comma)
 	}
 
 	fmt.Fprintln(ctx.Output, ");")
@@ -436,9 +444,24 @@ func edmToMendixType(p *types.EdmProperty) string {
 
 // reservedEntityAttrNames are Mendix-reserved attribute names that must be
 // renamed when imported from an OData property of the same name.
+// These names conflict with Mendix system members or runtime internals.
+// The check is case-insensitive (see attrNameForOData).
 var reservedEntityAttrNames = map[string]bool{
-	"id":   true,
+	// Mendix internal identifier
+	"id": true,
+	// Mendix system-managed attribute for the object name (present on many entities)
 	"name": true,
+	// System ownership association (HasOwner / System.owner)
+	"owner": true,
+	// System audit associations (HasChangedBy / System.changedBy)
+	"changedby": true,
+	// System audit attributes (HasChangedDate / HasCreatedDate)
+	"changeddate": true,
+	"createddate": true,
+	// Runtime type discriminator — conflicts with Mendix's internal type system
+	"type": true,
+	// Runtime context identifier — conflicts with Mendix OData connector internals
+	"context": true,
 }
 
 // createExternalEntities handles CREATE [OR MODIFY] EXTERNAL ENTITIES FROM Module.Service [INTO Module] [ENTITIES (...)].

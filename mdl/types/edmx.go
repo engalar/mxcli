@@ -317,6 +317,11 @@ func parseXmlEntityType(et *xmlEntityType) *EdmEntityType {
 			v := p.Nullable != "false"
 			prop.Nullable = &v
 		}
+		// ConcurrencyMode="Fixed" (OData v3) marks a property as an optimistic
+		// concurrency token — the server manages it, the client cannot set it.
+		if p.ConcurrencyMode == "Fixed" {
+			prop.Computed = true
+		}
 		for _, ann := range p.Annotations {
 			switch ann.Term {
 			case "Org.OData.Core.V1.Computed":
@@ -474,12 +479,13 @@ type xmlPropertyRef struct {
 }
 
 type xmlProperty struct {
-	Name        string          `xml:"Name,attr"`
-	Type        string          `xml:"Type,attr"`
-	Nullable    string          `xml:"Nullable,attr"`
-	MaxLength   string          `xml:"MaxLength,attr"`
-	Scale       string          `xml:"Scale,attr"`
-	Annotations []xmlAnnotation `xml:"Annotation"`
+	Name            string          `xml:"Name,attr"`
+	Type            string          `xml:"Type,attr"`
+	Nullable        string          `xml:"Nullable,attr"`
+	MaxLength       string          `xml:"MaxLength,attr"`
+	Scale           string          `xml:"Scale,attr"`
+	ConcurrencyMode string          `xml:"ConcurrencyMode,attr"` // OData v3: "Fixed" = optimistic concurrency token
+	Annotations     []xmlAnnotation `xml:"Annotation"`
 }
 
 type xmlNavigationProperty struct {

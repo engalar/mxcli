@@ -90,8 +90,8 @@ func describeJsonStructure(ctx *ExecContext, name ast.QualifiedName) error {
 		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", js.Documentation)
 	}
 
-	// Re-executable CREATE OR REPLACE statement
-	fmt.Fprintf(ctx.Output, "create or replace json structure %s", qualifiedName)
+	// Re-executable CREATE OR MODIFY statement
+	fmt.Fprintf(ctx.Output, "create or modify json structure %s", qualifiedName)
 	if folderPath := h.BuildFolderPath(js.ContainerID); folderPath != "" {
 		fmt.Fprintf(ctx.Output, "\n  folder '%s'", folderPath)
 	}
@@ -195,15 +195,8 @@ func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) e
 
 	// Check if already exists
 	existing := findJsonStructure(ctx, s.Name.Module, s.Name.Name)
-	if existing != nil {
-		if s.CreateOrReplace {
-			// Delete existing before recreating
-			if err := ctx.Backend.DeleteJsonStructure(string(existing.ID)); err != nil {
-				return mdlerrors.NewBackend("delete existing json structure", err)
-			}
-		} else {
-			return mdlerrors.NewAlreadyExists("json structure", s.Name.Module+"."+s.Name.Name)
-		}
+	if existing != nil && !s.CreateOrModify {
+		return mdlerrors.NewAlreadyExists("json structure", s.Name.Module+"."+s.Name.Name)
 	}
 
 	// Build element tree from JSON snippet, applying custom name mappings
@@ -212,7 +205,7 @@ func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) e
 		return mdlerrors.NewBackend("build element tree", err)
 	}
 
-	// For CREATE OR REPLACE, keep original folder unless a new one is specified
+	// On OR MODIFY, keep original folder unless a new one is explicitly specified
 	if existing != nil && s.Folder == "" {
 		containerID = existing.ContainerID
 	}
@@ -225,18 +218,21 @@ func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) e
 		Elements:      elements,
 	}
 
-	if err := ctx.Backend.CreateJsonStructure(js); err != nil {
-		return mdlerrors.NewBackend("create json structure", err)
+	if existing != nil {
+		js.ID = existing.ID
+		if err := ctx.Backend.UpdateJsonStructure(js); err != nil {
+			return mdlerrors.NewBackend("update json structure", err)
+		}
+		fmt.Fprintf(ctx.Output, "Modified json structure: %s\n", s.Name)
+	} else {
+		if err := ctx.Backend.CreateJsonStructure(js); err != nil {
+			return mdlerrors.NewBackend("create json structure", err)
+		}
+		fmt.Fprintf(ctx.Output, "Created json structure: %s\n", s.Name)
 	}
 
 	// Invalidate hierarchy cache
 	invalidateHierarchy(ctx)
-
-	action := "Created"
-	if existing != nil {
-		action = "Replaced"
-	}
-	fmt.Fprintf(ctx.Output, "%s json structure: %s\n", action, s.Name)
 	return nil
 }
 

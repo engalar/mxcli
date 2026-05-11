@@ -320,7 +320,13 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 		branches = append(branches, branch{body: s.ElseBody})
 	}
 
-	branchWidth := fb.measurer.measureStatements(appendEnumBodies(s)).Width
+	branchWidth := 0
+	for _, br := range branches {
+		w := fb.measurer.measureStatements(br.body).Width
+		if w > branchWidth {
+			branchWidth = w
+		}
+	}
 	if branchWidth == 0 {
 		branchWidth = HorizontalSpacing / 2
 	}
@@ -340,10 +346,35 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 		return merge
 	}
 
+	// Precompute each branch's height for cumulative Y positioning.
+	branchHeights := make([]int, len(branches))
+	for i, br := range branches {
+		h := fb.measurer.measureStatements(br.body).Height
+		branchHeights[i] = max(h, ActivityHeight)
+	}
+	// First branch is centred on the happy-path line; subsequent branches
+	// are placed so there is exactly BranchGap of empty space between them.
+	branchYs := make([]int, len(branches))
+	if len(branches) > 0 {
+		// Centre the whole stack on centerY
+		totalH := 0
+		for _, h := range branchHeights {
+			totalH += h
+		}
+		totalH += (len(branches) - 1) * BranchGap
+		y := centerY - totalH/2 + branchHeights[0]/2
+		for i := range branches {
+			branchYs[i] = y
+			if i < len(branches)-1 {
+				y += branchHeights[i]/2 + BranchGap + branchHeights[i+1]/2
+			}
+		}
+	}
+
 	savedEndsWithReturn := fb.endsWithReturn
 	allBranchesReturn := len(branches) > 0
 	for i, br := range branches {
-		branchY := centerY + i*VerticalSpacing
+		branchY := branchYs[i]
 		fb.posX = splitX + SplitWidth + HorizontalSpacing/2
 		fb.posY = branchY
 		fb.endsWithReturn = false
@@ -418,6 +449,183 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 		fb.endsWithReturn = true
 	} else {
 		fb.nextConnectionPoint = ensureMerge().ID
+	}
+	return splitID
+}
+
+func (fb *flowBuilder) addInheritanceSplit(s *ast.InheritanceSplitStmt) model.ID {
+	if len(s.Cases) == 0 && len(s.ElseBody) == 0 {
+		split := &microflows.InheritanceSplit{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+			VariableName:      s.Variable,
+		}
+		fb.objects = append(fb.objects, split)
+		fb.posX += fb.spacing
+		return split.ID
+	}
+	return fb.addStructuredInheritanceSplit(s)
+}
+
+func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt) model.ID {
+	if fb.measurer == nil {
+		fb.measurer = &layoutMeasurer{varTypes: fb.varTypes}
+	}
+
+	splitX := fb.posX
+	centerY := fb.posY
+	split := &microflows.InheritanceSplit{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: splitX, Y: centerY},
+			Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+		},
+		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+		VariableName:      s.Variable,
+	}
+	fb.objects = append(fb.objects, split)
+	splitID := split.ID
+	if fb.pendingAnnotations != nil {
+		fb.applyAnnotations(splitID, fb.pendingAnnotations)
+		fb.pendingAnnotations = nil
+	}
+
+	branchWidth := fb.measurer.measureStatements(appendInheritanceBodies(s)).Width
+	if branchWidth == 0 {
+		branchWidth = HorizontalSpacing / 2
+	}
+	branchStartX := splitX + ActivityWidth + HorizontalSpacing/2
+	mergeX := branchStartX + branchWidth + HorizontalSpacing/2
+
+	type branchTail struct {
+		id        model.ID
+		caseValue string
+		fromSplit bool
+		order     int
+		anchor    *ast.FlowAnchors
+	}
+	var branchTails []branchTail
+
+	savedEndsWithReturn := fb.endsWithReturn
+	allBranchesReturn := len(s.Cases) > 0 && len(s.ElseBody) > 0
+	branchIndex := 0
+
+	addBranch := func(caseValue string, body []ast.MicroflowStatement) {
+		branchNumber := branchIndex
+		branchY := centerY + branchIndex*VerticalSpacing
+		branchIndex++
+		if len(body) == 0 {
+			allBranchesReturn = false
+			branchTails = append(branchTails, branchTail{id: splitID, caseValue: caseValue, fromSplit: true, order: branchNumber})
+			return
+		}
+
+		fb.posX = branchStartX
+		fb.posY = branchY
+		fb.endsWithReturn = false
+
+		var lastID model.ID
+		var prevAnchor *ast.FlowAnchors
+		pendingCase := ""
+		for _, stmt := range body {
+			thisAnchor := stmtOwnAnchor(stmt)
+			actID := fb.addStatement(stmt)
+			if actID == "" {
+				continue
+			}
+			if cast, ok := stmt.(*ast.CastObjectStmt); ok && cast.OutputVariable != "" && caseValue != "" && fb.varTypes != nil {
+				fb.varTypes[cast.OutputVariable] = caseValue
+			}
+			if fb.pendingAnnotations != nil {
+				fb.applyAnnotations(actID, fb.pendingAnnotations)
+				fb.pendingAnnotations = nil
+			}
+			if lastID == "" {
+				var flow *microflows.SequenceFlow
+				if branchNumber == 0 {
+					flow = newHorizontalFlowWithInheritanceCase(splitID, actID, caseValue)
+				} else {
+					flow = newDownwardFlowWithInheritanceCase(splitID, actID, caseValue)
+				}
+				applyUserAnchors(flow, nil, thisAnchor)
+				fb.flows = append(fb.flows, flow)
+			} else {
+				if pendingCase != "" {
+					flow := newHorizontalFlowWithCase(lastID, actID, pendingCase)
+					applyUserAnchors(flow, prevAnchor, thisAnchor)
+					fb.flows = append(fb.flows, flow)
+					pendingCase = ""
+				} else {
+					flow := newHorizontalFlow(lastID, actID)
+					applyUserAnchors(flow, prevAnchor, thisAnchor)
+					fb.flows = append(fb.flows, flow)
+				}
+			}
+			prevAnchor = thisAnchor
+			if fb.nextConnectionPoint != "" {
+				lastID = fb.nextConnectionPoint
+				fb.nextConnectionPoint = ""
+				pendingCase = fb.nextFlowCase
+				fb.nextFlowCase = ""
+			} else {
+				lastID = actID
+			}
+		}
+
+		if !lastStmtIsReturn(body) {
+			allBranchesReturn = false
+			if lastID != "" {
+				branchTails = append(branchTails, branchTail{id: lastID, caseValue: pendingCase, anchor: prevAnchor})
+			}
+		}
+	}
+
+	for _, c := range s.Cases {
+		addBranch(qualifiedNameString(c.Entity), c.Body)
+	}
+	addBranch("", s.ElseBody)
+
+	fb.posX = mergeX
+	fb.posY = centerY
+	fb.endsWithReturn = savedEndsWithReturn
+	if allBranchesReturn {
+		fb.endsWithReturn = true
+	} else if len(branchTails) > 0 {
+		merge := &microflows.ExclusiveMerge{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Position:    model.Point{X: mergeX, Y: centerY},
+				Size:        model.Size{Width: MergeSize, Height: MergeSize},
+			},
+		}
+		fb.objects = append(fb.objects, merge)
+		for _, tail := range branchTails {
+			if tail.fromSplit {
+				var flow *microflows.SequenceFlow
+				if tail.order == 0 {
+					flow = newHorizontalFlowWithInheritanceCase(splitID, merge.ID, tail.caseValue)
+				} else {
+					flow = newDownwardFlowWithInheritanceCase(splitID, merge.ID, tail.caseValue)
+				}
+				applyInheritanceSplitCaseOrder(flow, tail.order)
+				fb.flows = append(fb.flows, flow)
+			} else {
+				if tail.caseValue != "" {
+					flow := newHorizontalFlowWithCase(tail.id, merge.ID, tail.caseValue)
+					applyUserAnchors(flow, tail.anchor, nil)
+					fb.flows = append(fb.flows, flow)
+				} else {
+					flow := newHorizontalFlow(tail.id, merge.ID)
+					applyUserAnchors(flow, tail.anchor, nil)
+					fb.flows = append(fb.flows, flow)
+				}
+			}
+		}
+		fb.nextConnectionPoint = merge.ID
 	}
 	return splitID
 }
@@ -518,6 +726,79 @@ func appendEnumBodies(s *ast.EnumSplitStmt) []ast.MicroflowStatement {
 	return stmts
 }
 
+func appendInheritanceBodies(s *ast.InheritanceSplitStmt) []ast.MicroflowStatement {
+	var stmts []ast.MicroflowStatement
+	for _, c := range s.Cases {
+		stmts = append(stmts, c.Body...)
+	}
+	stmts = append(stmts, s.ElseBody...)
+	return stmts
+}
+
+type inheritanceSplitCaseOrderAnchor struct {
+	origin      int
+	destination int
+}
+
+var inheritanceSplitCaseOrderAnchors = []inheritanceSplitCaseOrderAnchor{
+	{AnchorTop, AnchorLeft},
+	{AnchorRight, AnchorLeft},
+	{AnchorBottom, AnchorLeft},
+	{AnchorLeft, AnchorLeft},
+	{AnchorTop, AnchorTop},
+	{AnchorRight, AnchorTop},
+	{AnchorBottom, AnchorTop},
+	{AnchorLeft, AnchorTop},
+	{AnchorTop, AnchorRight},
+	{AnchorRight, AnchorRight},
+	{AnchorBottom, AnchorRight},
+	{AnchorLeft, AnchorRight},
+	{AnchorTop, AnchorBottom},
+	{AnchorRight, AnchorBottom},
+	{AnchorBottom, AnchorBottom},
+	{AnchorLeft, AnchorBottom},
+}
+
+func applyInheritanceSplitCaseOrder(flow *microflows.SequenceFlow, order int) {
+	if flow == nil || order < 0 || order >= len(inheritanceSplitCaseOrderAnchors) {
+		return
+	}
+	pair := inheritanceSplitCaseOrderAnchors[order]
+	flow.OriginConnectionIndex = pair.origin
+	flow.DestinationConnectionIndex = pair.destination
+}
+
+func qualifiedNameString(qn ast.QualifiedName) string {
+	if qn.Module == "" {
+		return qn.Name
+	}
+	return qn.Module + "." + qn.Name
+}
+
+func (fb *flowBuilder) addCastAction(s *ast.CastObjectStmt) model.ID {
+	action := &microflows.CastAction{
+		BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
+		ObjectVariable: s.ObjectVariable,
+		OutputVariable: s.OutputVariable,
+	}
+
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			AutoGenerateCaption: true,
+		},
+		Action: action,
+	}
+
+	fb.objects = append(fb.objects, activity)
+	fb.posX += fb.spacing
+	return activity.ID
+}
+
 // addRetrieveAction creates a RETRIEVE statement.
 func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 	var source microflows.RetrieveSource
@@ -541,6 +822,14 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 
 		outputUsedAsList := fb.listInputVariables != nil && fb.listInputVariables[s.Variable]
 		outputUsedAsObject := fb.objectInputVariables != nil && fb.objectInputVariables[s.Variable]
+		// startsFromChildSide is true when the retrieve's start variable is the
+		// child side of the association (or a subclass of it). Inheritance has
+		// to be honoured so traversals like `$httpRequest/System.HttpHeaders`
+		// — where HttpRequest extends HttpMessage and HttpHeaders has child
+		// HttpMessage — are still classified as reverse traversal.
+		startsFromChildSide := assocInfo != nil &&
+			assocInfo.childEntityQN != "" &&
+			fb.entityIsSubtypeOf(startVarType, assocInfo.childEntityQN)
 		// Owner-both Reference associations need later usage context: the same
 		// compact retrieve can be consumed as either a list or a single object.
 		// Owner="" means metadata was unavailable, so keep the association source.
@@ -549,7 +838,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 			assocInfo.Owner != "" &&
 			assocInfo.parentPersistable &&
 			assocInfo.childEntityQN != "" &&
-			startVarType == assocInfo.childEntityQN &&
+			startsFromChildSide &&
 			(assocInfo.Owner != domainmodel.AssociationOwnerBoth || (outputUsedAsList && !outputUsedAsObject))
 
 		if expandReverseReference {
@@ -577,10 +866,10 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 					// non-persistable reverse traversal can still use association
 					// source syntax, but keeps list typing for downstream actions.
 					otherEntity := assocInfo.childEntityQN
-					if startVarType == assocInfo.childEntityQN {
+					if startsFromChildSide {
 						otherEntity = assocInfo.parentEntityQN
 					}
-					if startVarType == assocInfo.childEntityQN && !outputUsedAsObject {
+					if startsFromChildSide && !outputUsedAsObject {
 						fb.varTypes[s.Variable] = "List of " + otherEntity
 					} else {
 						fb.varTypes[s.Variable] = otherEntity
@@ -589,7 +878,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 					// ReferenceSet traversal returns a list of the entity on the other side,
 					// not a list typed as the association itself.
 					otherEntity := assocInfo.childEntityQN
-					if startVarType == assocInfo.childEntityQN {
+					if startsFromChildSide {
 						otherEntity = assocInfo.parentEntityQN
 					}
 					if otherEntity != "" {
@@ -715,7 +1004,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 }
 
 func retrieveXPathConstraint(expr ast.Expression) string {
-	xpath := expressionToXPath(expr)
+	xpath := normalizeXPathEnumRefs(expressionToXPath(expr))
 	if strings.HasPrefix(strings.TrimSpace(xpath), "[") && strings.HasSuffix(strings.TrimSpace(xpath), "]") {
 		return strings.TrimSpace(xpath)
 	}
@@ -1282,6 +1571,49 @@ func (fb *flowBuilder) resolveAttributeInEntityHierarchy(entityQN, attrName stri
 		currentQN = entity.GeneralizationRef
 	}
 	return "", false
+}
+
+// entityIsSubtypeOf reports whether candidateQN is the same as ancestorQN or
+// inherits from it through the generalization chain. The walk consults the
+// domain model the same way resolveAttributeInEntityHierarchy does.
+func (fb *flowBuilder) entityIsSubtypeOf(candidateQN, ancestorQN string) bool {
+	if candidateQN == "" || ancestorQN == "" {
+		return false
+	}
+	if candidateQN == ancestorQN {
+		return true
+	}
+	if fb == nil || fb.backend == nil {
+		return false
+	}
+	seen := make(map[string]bool)
+	for currentQN := candidateQN; currentQN != ""; {
+		if seen[currentQN] {
+			return false
+		}
+		seen[currentQN] = true
+		if currentQN == ancestorQN {
+			return true
+		}
+		parts := strings.SplitN(currentQN, ".", 2)
+		if len(parts) != 2 {
+			return false
+		}
+		mod, err := fb.backend.GetModuleByName(parts[0])
+		if err != nil || mod == nil {
+			return false
+		}
+		dm, err := fb.backend.GetDomainModel(mod.ID)
+		if err != nil || dm == nil {
+			return false
+		}
+		entity := dm.FindEntityByName(parts[1])
+		if entity == nil {
+			return false
+		}
+		currentQN = entity.GeneralizationRef
+	}
+	return false
 }
 
 // resolveMemberChangeFallback preserves the authored member name shape when the

@@ -96,10 +96,13 @@ create published rest service PrsTest.CrmAPI (
 describe published rest service PrsTest.CrmAPI;
 
 -- ############################################################################
--- PART 4: CREATE OR REPLACE
+-- PART 4: CREATE OR MODIFY (Idempotent — Preserves UUID)
 -- ############################################################################
 
-create or replace published rest service PrsTest.CrmAPI (
+-- CREATE OR MODIFY updates the service in-place, preserving its UUID so that
+-- any references from other documents remain valid. OR REPLACE is a synonym.
+
+create or modify published rest service PrsTest.CrmAPI (
   path: 'rest/crm/v2',
   version: '2.0.0',
   ServiceName: 'CRM API v2'

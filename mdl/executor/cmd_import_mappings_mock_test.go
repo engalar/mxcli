@@ -100,3 +100,67 @@ func TestDescribeImportMapping_NotFound(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, describeImportMapping(ctx, ast.QualifiedName{Module: "Integration", Name: "NoSuch"}))
 }
+
+func TestCreateImportMapping_OrModify_PreservesID(t *testing.T) {
+	mod := mkModule("Integration")
+	existingID := nextID("im")
+	existing := &model.ImportMapping{
+		BaseElement: model.BaseElement{ID: existingID},
+		ContainerID: mod.ID,
+		Name:        "ImportOrders",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, existing.ContainerID, mod.ID)
+
+	var updatedID model.ID
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
+			if moduleName == "Integration" && name == "ImportOrders" {
+				return existing, nil
+			}
+			return nil, nil
+		},
+		UpdateImportMappingFunc: func(im *model.ImportMapping) error {
+			updatedID = im.ID
+			return nil
+		},
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execCreateImportMapping(ctx, &ast.CreateImportMappingStmt{
+		Name:           ast.QualifiedName{Module: "Integration", Name: "ImportOrders"},
+		SchemaKind:     "JSON_STRUCTURE",
+		SchemaRef:      ast.QualifiedName{Module: "Integration", Name: "PetSchema"},
+		CreateOrModify: true,
+	})
+	assertNoError(t, err)
+	assertContainsStr(t, buf.String(), "Modified import mapping")
+	if updatedID != existingID {
+		t.Errorf("UpdateImportMapping called with ID %q, want %q", updatedID, existingID)
+	}
+}
+
+func TestCreateImportMapping_AlreadyExists_NoOrModify(t *testing.T) {
+	mod := mkModule("Integration")
+	existing := &model.ImportMapping{
+		BaseElement: model.BaseElement{ID: nextID("im")},
+		ContainerID: mod.ID,
+		Name:        "ImportOrders",
+	}
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
+			return existing, nil
+		},
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	err := execCreateImportMapping(ctx, &ast.CreateImportMappingStmt{
+		Name: ast.QualifiedName{Module: "Integration", Name: "ImportOrders"},
+	})
+	assertError(t, err)
+}

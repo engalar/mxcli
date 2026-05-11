@@ -9,7 +9,7 @@ import (
 )
 
 func TestQualifiedNameToXPath_EnumValue(t *testing.T) {
-	// 3-part names (Module.EnumName.Value) should emit just the value in quotes
+	// 3-part names (Module.EnumName.Value) must be converted to string literals for database XPath
 	expr := &ast.QualifiedNameExpr{
 		QualifiedName: ast.QualifiedName{Module: "MyModule", Name: "ENUM_Status.Processing"},
 	}
@@ -33,7 +33,7 @@ func TestQualifiedNameToXPath_NonEnum(t *testing.T) {
 }
 
 func TestExpressionToXPath_EnumInComparison(t *testing.T) {
-	// WHERE Status = Module.ENUM.Value should produce: Status = 'Value'
+	// WHERE Status = Module.ENUM.Value — enum value must become a string literal for database XPath
 	expr := &ast.BinaryExpr{
 		Left:     &ast.IdentifierExpr{Name: "Status"},
 		Operator: "=",
@@ -221,5 +221,37 @@ func TestExpressionToString_NotWithoutParens(t *testing.T) {
 	want := "not $IsActive"
 	if got != want {
 		t.Errorf("expressionToString = %q, want %q", got, want)
+	}
+}
+
+// TestNormalizeXPathEnumRefs ensures that 3-part qualified enum value references in a raw
+// XPath string (from the bracketed SourceExpr path) are converted to string literals.
+// This is needed because XPath constraints are database-level SQL WHERE clauses; the DB
+// only knows string values, not enum qualified names.
+func TestNormalizeXPathEnumRefs(t *testing.T) {
+	cases := []struct {
+		input string
+		want  string
+	}{
+		// Single enum value
+		{"[Status = XpathTest.OrderStatus.Open]", "[Status = 'Open']"},
+		// Negation
+		{"[Status != XpathTest.OrderStatus.Cancelled]", "[Status != 'Cancelled']"},
+		// OR with two enum values
+		{"[Status = XpathTest.OrderStatus.Open or Status = XpathTest.OrderStatus.Processing]",
+			"[Status = 'Open' or Status = 'Processing']"},
+		// AND with non-enum part preserved
+		{"[Status = XpathTest.OrderStatus.Completed and TotalAmount >= $MinAmount]",
+			"[Status = 'Completed' and TotalAmount >= $MinAmount]"},
+		// 2-part association name not affected
+		{"[XpathTest.Order_Customer = $Customer]", "[XpathTest.Order_Customer = $Customer]"},
+		// String literal already correct — not double-quoted
+		{"[Status = 'Active']", "[Status = 'Active']"},
+	}
+	for _, tc := range cases {
+		got := normalizeXPathEnumRefs(tc.input)
+		if got != tc.want {
+			t.Errorf("normalizeXPathEnumRefs(%q) = %q, want %q", tc.input, got, tc.want)
+		}
 	}
 }

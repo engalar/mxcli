@@ -601,6 +601,7 @@ func convertCatalogTableNames(query string) string {
 		"catalog.external_actions":          "external_actions",
 		"catalog.business_events":           "business_events",
 		"catalog.database_connections":      "database_connections",
+		"catalog.jar_dependencies":          "jar_dependencies",
 		"catalog.contract_entities":         "contract_entities",
 		"catalog.contract_actions":          "contract_actions",
 		"catalog.contract_messages":         "contract_messages",

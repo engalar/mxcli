@@ -275,6 +275,53 @@ func TestCreateExternalEntity_AcceptsExistingClient(t *testing.T) {
 	}
 }
 
+// TestCreateExternalEntity_AllowCreateChangeLocally_Issue534 verifies that
+// AllowCreateChangeLocally is passed through to the new entity.
+func TestCreateExternalEntity_AllowCreateChangeLocally_Issue534(t *testing.T) {
+	mod := mkModule("TripPin")
+	h := mkHierarchy(mod)
+	svc := &model.ConsumedODataService{
+		BaseElement: model.BaseElement{ID: nextID("cos")},
+		ContainerID: mod.ID,
+		Name:        "TripPinClient",
+	}
+	withContainer(h, svc.ContainerID, mod.ID)
+	dm := &domainmodel.DomainModel{BaseElement: model.BaseElement{ID: nextID("dm")}, ContainerID: mod.ID}
+
+	var created *domainmodel.Entity
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{mod}, nil
+		},
+		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+			return dm, nil
+		},
+		ListConsumedODataServicesFunc: func() ([]*model.ConsumedODataService, error) {
+			return []*model.ConsumedODataService{svc}, nil
+		},
+		CreateEntityFunc: func(dmID model.ID, entity *domainmodel.Entity) error {
+			created = entity
+			return nil
+		},
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	stmt := &ast.CreateExternalEntityStmt{
+		Name:                     ast.QualifiedName{Module: "TripPin", Name: "People"},
+		ServiceRef:               ast.QualifiedName{Module: "TripPin", Name: "TripPinClient"},
+		EntitySet:                "People",
+		AllowCreateChangeLocally: true,
+	}
+	assertNoError(t, execCreateExternalEntity(ctx, stmt))
+	if created == nil {
+		t.Fatal("expected CreateEntity to be called")
+	}
+	if !created.CreateChangeLocally {
+		t.Errorf("expected CreateChangeLocally = true, got false")
+	}
+}
+
 // TestDescribeODataService_ExposeRoundtrip verifies that DESCRIBE ODATA SERVICE
 // output for entities with key/filterable/sortable members is valid MDL that
 // the parser can re-parse (issue #400).

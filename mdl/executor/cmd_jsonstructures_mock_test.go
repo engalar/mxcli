@@ -84,7 +84,7 @@ func TestDescribeJsonStructure_Mock(t *testing.T) {
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertNoError(t, describeJsonStructure(ctx, ast.QualifiedName{Module: "OrderMgmt", Name: "OrderSchema"}))
-	assertContainsStr(t, buf.String(), "create or replace json structure")
+	assertContainsStr(t, buf.String(), "create or modify json structure")
 }
 
 func TestDescribeJsonStructure_NotFound(t *testing.T) {

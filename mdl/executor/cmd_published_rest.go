@@ -99,7 +99,7 @@ func describePublishedRestService(ctx *ExecContext, name ast.QualifiedName) erro
 		}
 
 		// Output as re-executable MDL
-		fmt.Fprintf(ctx.Output, "create published rest service %s (\n", qualifiedName)
+		fmt.Fprintf(ctx.Output, "create or modify published rest service %s (\n", qualifiedName)
 		fmt.Fprintf(ctx.Output, "  Path: '%s'", svc.Path)
 		if svc.Version != "" {
 			fmt.Fprintf(ctx.Output, ",\n  Version: '%s'", svc.Version)
@@ -190,18 +190,15 @@ func execCreatePublishedRestService(ctx *ExecContext, s *ast.CreatePublishedRest
 		return err
 	}
 
-	// Handle CREATE OR REPLACE — delete existing if found
-	if s.CreateOrReplace {
-		existing, findErr := findPublishedRestService(ctx, s.Name.Module, s.Name.Name)
-		var nfe *mdlerrors.NotFoundError
-		if findErr != nil && !errors.As(findErr, &nfe) {
-			return mdlerrors.NewBackend("find existing service", findErr)
-		}
-		if existing != nil {
-			if err := ctx.Backend.DeletePublishedRestService(existing.ID); err != nil {
-				return mdlerrors.NewBackend("replace existing service", err)
-			}
-		}
+	// Check for existing service
+	existing, findErr := findPublishedRestService(ctx, s.Name.Module, s.Name.Name)
+	var nfe *mdlerrors.NotFoundError
+	if findErr != nil && !errors.As(findErr, &nfe) {
+		return mdlerrors.NewBackend("find existing service", findErr)
+	}
+	if existing != nil && !s.CreateOrModify {
+		return mdlerrors.NewAlreadyExistsMsg("published rest service", s.Name.Module+"."+s.Name.Name,
+			fmt.Sprintf("published rest service already exists: %s.%s (use create or modify to update)", s.Name.Module, s.Name.Name))
 	}
 
 	module, err := findModule(ctx, s.Name.Module)
@@ -225,6 +222,10 @@ func execCreatePublishedRestService(ctx *ExecContext, s *ast.CreatePublishedRest
 		Version:     s.Version,
 		ServiceName: s.ServiceName,
 	}
+	if existing != nil {
+		svc.ID = existing.ID
+		svc.AllowedRoles = existing.AllowedRoles
+	}
 
 	for _, resDef := range s.Resources {
 		resource := &model.PublishedRestResource{
@@ -243,12 +244,20 @@ func execCreatePublishedRestService(ctx *ExecContext, s *ast.CreatePublishedRest
 		svc.Resources = append(svc.Resources, resource)
 	}
 
-	if err := ctx.Backend.CreatePublishedRestService(svc); err != nil {
-		return mdlerrors.NewBackend("create published rest service", err)
-	}
-
-	if !ctx.Quiet {
-		fmt.Fprintf(ctx.Output, "Created published rest service %s.%s\n", s.Name.Module, s.Name.Name)
+	if existing != nil {
+		if err := ctx.Backend.UpdatePublishedRestService(svc); err != nil {
+			return mdlerrors.NewBackend("update published rest service", err)
+		}
+		if !ctx.Quiet {
+			fmt.Fprintf(ctx.Output, "Modified published rest service %s.%s\n", s.Name.Module, s.Name.Name)
+		}
+	} else {
+		if err := ctx.Backend.CreatePublishedRestService(svc); err != nil {
+			return mdlerrors.NewBackend("create published rest service", err)
+		}
+		if !ctx.Quiet {
+			fmt.Fprintf(ctx.Output, "Created published rest service %s.%s\n", s.Name.Module, s.Name.Name)
+		}
 	}
 	return nil
 }

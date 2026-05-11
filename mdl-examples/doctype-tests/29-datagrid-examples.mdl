@@ -393,6 +393,7 @@ create page DgTest.DG08_ShowContentAs (
 -- DG09: Custom content column — widgets inside a column cell
 -- ============================================================================
 
+-- @version: 11.0+
 /**
  * DG09: Column with ShowContentAs: customContent renders widgets instead of text.
  * Used for action buttons and conditional content in each row.

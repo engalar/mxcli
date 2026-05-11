@@ -136,13 +136,14 @@ func execCreateAgentEditorModel(ctx *ExecContext, s *ast.CreateModelStmt) error 
 		return mdlerrors.NewNotConnected()
 	}
 
+	existing := findAgentEditorModel(ctx, s.Name.Module, s.Name.Name)
+	if existing != nil && !s.CreateOrModify {
+		return mdlerrors.NewAlreadyExists("model", s.Name.String())
+	}
+
 	module, err := findOrCreateModule(ctx, s.Name.Module)
 	if err != nil {
 		return err
-	}
-
-	if existing := findAgentEditorModel(ctx, s.Name.Module, s.Name.Name); existing != nil {
-		return mdlerrors.NewAlreadyExists("model", s.Name.String())
 	}
 
 	var keyRef *agenteditor.ConstantRef
@@ -170,6 +171,16 @@ func execCreateAgentEditorModel(ctx *ExecContext, s *ast.CreateModelStmt) error 
 		Environment:   s.Environment,
 		ResourceName:  s.ResourceName,
 		DeepLinkURL:   s.DeepLinkURL,
+	}
+
+	if existing != nil {
+		m.ID = existing.ID
+		if err := ctx.Backend.UpdateAgentEditorModel(m); err != nil {
+			return mdlerrors.NewBackend("update model", err)
+		}
+		invalidateHierarchy(ctx)
+		fmt.Fprintf(ctx.Output, "Modified model: %s\n", s.Name)
+		return nil
 	}
 
 	if err := ctx.Backend.CreateAgentEditorModel(m); err != nil {

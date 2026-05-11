@@ -397,6 +397,9 @@ func parseCastAction(raw map[string]any) *microflows.CastAction {
 	action.ID = model.ID(extractBsonID(raw["$ID"]))
 	action.ObjectVariable = extractString(raw["ObjectVariableName"])
 	action.OutputVariable = extractString(raw["OutputVariableName"])
+	if action.OutputVariable == "" {
+		action.OutputVariable = extractString(raw["VariableName"])
+	}
 	return action
 }
 

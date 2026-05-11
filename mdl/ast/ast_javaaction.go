@@ -32,6 +32,7 @@ type CreateJavaActionStmt struct {
 	TypeParameters  []string          // Type parameter names (e.g., ["pEntity"])
 	ExposedCaption  string            // EXPOSED AS 'caption'
 	ExposedCategory string            // IN 'category'
+	CreateOrModify  bool              // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
 func (s *CreateJavaActionStmt) isStatement() {}

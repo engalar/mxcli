@@ -140,3 +140,58 @@ func TestCreateAgent_Basic(t *testing.T) {
 		t.Errorf("Got ToolChoice %q", stmt.ToolChoice)
 	}
 }
+
+func TestCreateModel_OrModify(t *testing.T) {
+	prog, errs := Build(`CREATE OR MODIFY MODEL MyModule.GPT4 (Provider: MxCloudGenAI);`)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors: %v", errs)
+	}
+	stmt := prog.Statements[0].(*ast.CreateModelStmt)
+	if !stmt.CreateOrModify {
+		t.Error("Expected CreateOrModify=true")
+	}
+}
+
+func TestCreateModel_OrReplace_MapsToModify(t *testing.T) {
+	prog, errs := Build(`CREATE OR REPLACE MODEL MyModule.GPT4 (Provider: MxCloudGenAI);`)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors: %v", errs)
+	}
+	stmt := prog.Statements[0].(*ast.CreateModelStmt)
+	if !stmt.CreateOrModify {
+		t.Error("Expected CreateOrModify=true for OR REPLACE on model")
+	}
+}
+
+func TestCreateConsumedMCPService_OrModify(t *testing.T) {
+	prog, errs := Build(`CREATE OR MODIFY CONSUMED MCP SERVICE MyModule.WebSearch (ProtocolVersion: 'v2025_03_26', Version: '1.0');`)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors: %v", errs)
+	}
+	stmt := prog.Statements[0].(*ast.CreateConsumedMCPServiceStmt)
+	if !stmt.CreateOrModify {
+		t.Error("Expected CreateOrModify=true")
+	}
+}
+
+func TestCreateKnowledgeBase_OrModify(t *testing.T) {
+	prog, errs := Build(`CREATE OR MODIFY KNOWLEDGE BASE MyModule.Docs (Provider: MxCloudGenAI);`)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors: %v", errs)
+	}
+	stmt := prog.Statements[0].(*ast.CreateKnowledgeBaseStmt)
+	if !stmt.CreateOrModify {
+		t.Error("Expected CreateOrModify=true")
+	}
+}
+
+func TestCreateAgent_OrModify(t *testing.T) {
+	prog, errs := Build(`CREATE OR MODIFY AGENT MyModule.Assistant (UsageType: 'UserInitiated', Model: MyModule.GPT4);`)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors: %v", errs)
+	}
+	stmt := prog.Statements[0].(*ast.CreateAgentStmt)
+	if !stmt.CreateOrModify {
+		t.Error("Expected CreateOrModify=true")
+	}
+}

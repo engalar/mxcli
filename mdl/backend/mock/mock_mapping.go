@@ -3,6 +3,8 @@
 package mock
 
 import (
+	"fmt"
+
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 )
@@ -110,6 +112,13 @@ func (m *MockBackend) CreateJsonStructure(js *types.JsonStructure) error {
 		return m.CreateJsonStructureFunc(js)
 	}
 	return nil
+}
+
+func (m *MockBackend) UpdateJsonStructure(js *types.JsonStructure) error {
+	if m.UpdateJsonStructureFunc != nil {
+		return m.UpdateJsonStructureFunc(js)
+	}
+	return fmt.Errorf("MockBackend.UpdateJsonStructure not configured")
 }
 
 func (m *MockBackend) DeleteJsonStructure(id string) error {

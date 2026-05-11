@@ -171,11 +171,12 @@ type CustomWidget struct {
 
 // PropertyTypeIDEntry holds the IDs for a property type from a cloned widget.
 type PropertyTypeIDEntry struct {
-	PropertyTypeID string
-	ValueTypeID    string
-	DefaultValue   string // Default value from the template's ValueType
-	ValueType      string // Type of value (Boolean, Integer, String, DataSource, etc.)
-	Required       bool   // Whether this property is required
+	PropertyTypeID     string
+	ValueTypeID        string
+	DefaultValue       string // Default value from the template's ValueType
+	ValueType          string // Type of value (Boolean, Integer, String, DataSource, etc.)
+	Required           bool   // Whether this property is required
+	DataSourceProperty string // Non-empty when this attribute is linked to another DataSource property
 	// For object list properties (IsList=true with ObjectType), these hold nested IDs
 	ObjectTypeID      string                         // ID of the nested ObjectType (for object lists like columns)
 	NestedPropertyIDs map[string]PropertyTypeIDEntry // Property IDs within the nested ObjectType

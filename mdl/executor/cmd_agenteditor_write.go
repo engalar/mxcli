@@ -20,12 +20,15 @@ func execCreateConsumedMCPService(ctx *ExecContext, s *ast.CreateConsumedMCPServ
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
+
+	existing := findAgentEditorConsumedMCPService(ctx, s.Name.Module, s.Name.Name)
+	if existing != nil && !s.CreateOrModify {
+		return mdlerrors.NewAlreadyExists("consumed mcp service", s.Name.String())
+	}
+
 	module, err := findOrCreateModule(ctx, s.Name.Module)
 	if err != nil {
 		return err
-	}
-	if existing := findAgentEditorConsumedMCPService(ctx, s.Name.Module, s.Name.Name); existing != nil {
-		return mdlerrors.NewAlreadyExists("consumed mcp service", s.Name.String())
 	}
 
 	c := &agenteditor.ConsumedMCPService{
@@ -36,6 +39,16 @@ func execCreateConsumedMCPService(ctx *ExecContext, s *ast.CreateConsumedMCPServ
 		Version:                  s.Version,
 		InnerDocumentation:       s.InnerDocumentation,
 		ConnectionTimeoutSeconds: s.ConnectionTimeoutSeconds,
+	}
+
+	if existing != nil {
+		c.ID = existing.ID
+		if err := ctx.Backend.UpdateAgentEditorConsumedMCPService(c); err != nil {
+			return mdlerrors.NewBackend("update consumed mcp service", err)
+		}
+		invalidateHierarchy(ctx)
+		fmt.Fprintf(ctx.Output, "Modified consumed mcp service: %s\n", s.Name)
+		return nil
 	}
 
 	if err := ctx.Backend.CreateAgentEditorConsumedMCPService(c); err != nil {
@@ -69,12 +82,15 @@ func execCreateKnowledgeBase(ctx *ExecContext, s *ast.CreateKnowledgeBaseStmt) e
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
+
+	existing := findAgentEditorKnowledgeBase(ctx, s.Name.Module, s.Name.Name)
+	if existing != nil && !s.CreateOrModify {
+		return mdlerrors.NewAlreadyExists("knowledge base", s.Name.String())
+	}
+
 	module, err := findOrCreateModule(ctx, s.Name.Module)
 	if err != nil {
 		return err
-	}
-	if existing := findAgentEditorKnowledgeBase(ctx, s.Name.Module, s.Name.Name); existing != nil {
-		return mdlerrors.NewAlreadyExists("knowledge base", s.Name.String())
 	}
 
 	var keyRef *agenteditor.ConstantRef
@@ -102,6 +118,16 @@ func execCreateKnowledgeBase(ctx *ExecContext, s *ast.CreateKnowledgeBaseStmt) e
 		KeyID:            s.KeyID,
 		Environment:      s.Environment,
 		DeepLinkURL:      s.DeepLinkURL,
+	}
+
+	if existing != nil {
+		k.ID = existing.ID
+		if err := ctx.Backend.UpdateAgentEditorKnowledgeBase(k); err != nil {
+			return mdlerrors.NewBackend("update knowledge base", err)
+		}
+		invalidateHierarchy(ctx)
+		fmt.Fprintf(ctx.Output, "Modified knowledge base: %s\n", s.Name)
+		return nil
 	}
 
 	if err := ctx.Backend.CreateAgentEditorKnowledgeBase(k); err != nil {
@@ -135,12 +161,15 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
+
+	existingAgent := findAgentEditorAgent(ctx, s.Name.Module, s.Name.Name)
+	if existingAgent != nil && !s.CreateOrModify {
+		return mdlerrors.NewAlreadyExists("agent", s.Name.String())
+	}
+
 	module, err := findOrCreateModule(ctx, s.Name.Module)
 	if err != nil {
 		return err
-	}
-	if existing := findAgentEditorAgent(ctx, s.Name.Module, s.Name.Name); existing != nil {
-		return mdlerrors.NewAlreadyExists("agent", s.Name.String())
 	}
 
 	a := &agenteditor.Agent{
@@ -228,6 +257,16 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 			}
 		}
 		a.KBTools = append(a.KBTools, akt)
+	}
+
+	if existingAgent != nil {
+		a.ID = existingAgent.ID
+		if err := ctx.Backend.UpdateAgentEditorAgent(a); err != nil {
+			return mdlerrors.NewBackend("update agent", err)
+		}
+		invalidateHierarchy(ctx)
+		fmt.Fprintf(ctx.Output, "Modified agent: %s\n", s.Name)
+		return nil
 	}
 
 	if err := ctx.Backend.CreateAgentEditorAgent(a); err != nil {

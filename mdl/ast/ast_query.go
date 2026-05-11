@@ -94,6 +94,7 @@ const (
 	ShowAgents                // SHOW AGENTS [IN module] (agent-editor Agent documents)
 	ShowKnowledgeBases        // SHOW KNOWLEDGE BASES [IN module] (agent-editor KB documents)
 	ShowConsumedMCPServices   // SHOW CONSUMED MCP SERVICES [IN module] (agent-editor MCP documents)
+	ShowJarDependencies       // LIST JAR DEPENDENCIES [IN module]
 )
 
 // String returns the human-readable name of the show object type.
@@ -229,6 +230,8 @@ func (t ShowObjectType) String() string {
 		return "KNOWLEDGE BASES"
 	case ShowConsumedMCPServices:
 		return "CONSUMED MCP SERVICES"
+	case ShowJarDependencies:
+		return "JAR DEPENDENCIES"
 	default:
 		return "UNKNOWN"
 	}
@@ -264,6 +267,7 @@ type DescribeStmt struct {
 	Name       QualifiedName
 	WithAll    bool   // For DESCRIBE MODULE ... WITH ALL
 	Format     string // For DESCRIBE CONTRACT ... FORMAT mdl
+	Qualifier  string // For DESCRIBE JAR DEPENDENCY: the 'group:artifact' coordinate
 }
 
 func (s *DescribeStmt) isStatement() {}
@@ -310,6 +314,7 @@ const (
 	DescribeAgent                // DESCRIBE AGENT Module.Name (agent-editor Agent document)
 	DescribeKnowledgeBase        // DESCRIBE KNOWLEDGE BASE Module.Name (agent-editor KB document)
 	DescribeConsumedMCPService   // DESCRIBE CONSUMED MCP SERVICE Module.Name (agent-editor MCP document)
+	DescribeJarDependency        // DESCRIBE JAR DEPENDENCY ModuleName 'group:artifact'
 )
 
 // String returns the human-readable name of the describe object type.
@@ -391,6 +396,8 @@ func (t DescribeObjectType) String() string {
 		return "KNOWLEDGE BASE"
 	case DescribeConsumedMCPService:
 		return "CONSUMED MCP SERVICE"
+	case DescribeJarDependency:
+		return "JAR DEPENDENCY"
 	default:
 		return "UNKNOWN"
 	}

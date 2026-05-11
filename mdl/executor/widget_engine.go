@@ -4,6 +4,7 @@ package executor
 
 import (
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 
@@ -127,6 +128,23 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 
 		if err := e.applyOperation(builder, mapping.Operation, mapping.PropertyKey, ctx); err != nil {
 			return nil, err
+		}
+	}
+
+	// 3.5 Warn about DataSource-type properties that were not configured.
+	// This gives AI assistants actionable feedback when they forget DataSource:
+	for _, m := range mappings {
+		if m.Source != "DataSource" {
+			continue
+		}
+		if w.GetDataSource() == nil {
+			// Collect linked attribute keys for the hint
+			linked := linkedPropertyKeysFor(m.PropertyKey, propertyTypeIDs)
+			hint := fmt.Sprintf("HINT [%s]: property '%s' is a DataSource type and was not configured.\n"+
+				"  Add inside this widget block: DataSource: Module.Entity [where [XPath]]\n"+
+				"  Linked attribute properties that draw from this datasource: %s",
+				w.Name, m.PropertyKey, linked)
+			log.Print(hint)
 		}
 	}
 
@@ -254,6 +272,20 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 		if !ok {
 			continue // not a known widget property key
 		}
+
+		// Handle action-type properties (e.g., onChange: nanoflow Module.NF)
+		if actionAST, isAction := propVal.(*ast.ActionV3); isAction {
+			if entry.ValueType == "Action" {
+				act, err := e.pageBuilder.buildClientActionV3(actionAST)
+				if err != nil {
+					log.Printf("warning: widget %s property %s: %v", w.Name, propName, err)
+				} else {
+					builder.SetAction(propName, act)
+				}
+			}
+			continue
+		}
+
 		// Convert non-string values (bool, int, float) to string for property setting
 		var strVal string
 		switch v := propVal.(type) {
@@ -285,6 +317,24 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 			}
 			if attrPath != "" {
 				builder.SetAttribute(propName, attrPath)
+			}
+			// Warn when a linked attribute appears to use the context entity instead of
+			// the datasource entity. Only fires when the attribute path has 2+ dots
+			// (fully qualified) and the entity portion matches the context entity.
+			if entry.DataSourceProperty != "" && strings.Count(strVal, ".") >= 2 {
+				parts := strings.SplitN(strVal, ".", 3)
+				attrEntity := parts[0] + "." + parts[1]
+				// Warn when the attribute entity doesn't match the datasource entity.
+				// After DataSource: processes gridData, entityContext is set to the
+				// datasource entity — linked attrs should use that same entity.
+				if e.pageBuilder.entityContext != "" && !strings.EqualFold(attrEntity, e.pageBuilder.entityContext) {
+					log.Printf("HINT [%s]: property '%s' is linked to datasource '%s'.\n"+
+						"  The attribute should reference the datasource entity '%s', not '%s'.\n"+
+						"  Correct: %s.%s (or similar) — configure DataSource: first so the entity context is set.",
+						w.Name, propName, entry.DataSourceProperty,
+						e.pageBuilder.entityContext, attrEntity,
+						e.pageBuilder.entityContext, parts[2])
+				}
 			}
 		default:
 			// Known non-attribute types: always use primitive
@@ -540,6 +590,22 @@ func (e *PluggableWidgetEngine) applyChildSlots(builder backend.WidgetObjectBuil
 	}
 
 	return nil
+}
+
+// linkedPropertyKeysFor returns a comma-separated list of property keys whose
+// DataSourceProperty field matches dsKey, drawn from the propertyTypeIDs map.
+func linkedPropertyKeysFor(dsKey string, propertyTypeIDs map[string]pages.PropertyTypeIDEntry) string {
+	var keys []string
+	for k, e := range propertyTypeIDs {
+		if e.DataSourceProperty == dsKey {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+	if len(keys) == 0 {
+		return "(none)"
+	}
+	return strings.Join(keys, ", ")
 }
 
 // isBuiltinPropName returns true for property names that are handled by

@@ -39,3 +39,17 @@ func TestCreateImportMapping(t *testing.T) {
 		t.Fatal("Expected non-nil RootElement")
 	}
 }
+
+func TestCreateImportMapping_OrModify(t *testing.T) {
+	prog, errs := Build(`CREATE OR MODIFY IMPORT MAPPING MyModule.PetMapping WITH JSON STRUCTURE MyModule.PetSchema { CREATE MyModule.Pet { Id = id KEY } };`)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors: %v", errs)
+	}
+	stmt, ok := prog.Statements[0].(*ast.CreateImportMappingStmt)
+	if !ok {
+		t.Fatalf("Expected CreateImportMappingStmt, got %T", prog.Statements[0])
+	}
+	if !stmt.CreateOrModify {
+		t.Error("Expected CreateOrModify=true")
+	}
+}

@@ -66,6 +66,11 @@ func (b *Builder) ExitCreateModelStatement(ctx *parser.CreateModelStatementConte
 		}
 	}
 
+	if createStmt := findParentCreateStatement(ctx); createStmt != nil {
+		if createStmt.OR() != nil && (createStmt.MODIFY() != nil || createStmt.REPLACE() != nil) {
+			stmt.CreateOrModify = true
+		}
+	}
 	b.statements = append(b.statements, stmt)
 }
 
@@ -160,6 +165,11 @@ func (b *Builder) ExitCreateConsumedMCPServiceStatement(ctx *parser.CreateConsum
 		fmt.Sscanf(v, "%d", &stmt.ConnectionTimeoutSeconds)
 	}
 
+	if createStmt := findParentCreateStatement(ctx); createStmt != nil {
+		if createStmt.OR() != nil && (createStmt.MODIFY() != nil || createStmt.REPLACE() != nil) {
+			stmt.CreateOrModify = true
+		}
+	}
 	b.statements = append(b.statements, stmt)
 }
 
@@ -183,6 +193,11 @@ func (b *Builder) ExitCreateKnowledgeBaseStatement(ctx *parser.CreateKnowledgeBa
 	stmt.Environment = props["environment"]
 	stmt.DeepLinkURL = props["deeplinkurl"]
 
+	if createStmt := findParentCreateStatement(ctx); createStmt != nil {
+		if createStmt.OR() != nil && (createStmt.MODIFY() != nil || createStmt.REPLACE() != nil) {
+			stmt.CreateOrModify = true
+		}
+	}
 	b.statements = append(b.statements, stmt)
 }
 
@@ -289,6 +304,11 @@ func (b *Builder) ExitCreateAgentStatement(ctx *parser.CreateAgentStatementConte
 		}
 	}
 
+	if createStmt := findParentCreateStatement(ctx); createStmt != nil {
+		if createStmt.OR() != nil && (createStmt.MODIFY() != nil || createStmt.REPLACE() != nil) {
+			stmt.CreateOrModify = true
+		}
+	}
 	b.statements = append(b.statements, stmt)
 }
 

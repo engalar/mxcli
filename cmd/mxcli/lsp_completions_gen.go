@@ -60,6 +60,7 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "DELETE_BEHAVIOR", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
 	{Label: "CASCADE", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
 	{Label: "PREVENT", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
+	{Label: "ALLOW_CREATE_CHANGE_LOCALLY", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
 
 	// Connection keyword
 	{Label: "CONNECT", Kind: protocol.CompletionItemKindKeyword, Detail: "Connection keyword"},
@@ -252,6 +253,12 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "FILTERTYPE", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
 	{Label: "IMAGE", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
 	{Label: "COLLECTION", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
+	{Label: "JAR", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
+	{Label: "DEPENDENCY", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
+	{Label: "DEPENDENCIES", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
+	{Label: "EXCLUSION", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
+	{Label: "ARTIFACT", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
+	{Label: "INCLUDED", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
 	{Label: "MODEL", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
 	{Label: "MODELS", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
 	{Label: "AGENT", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},

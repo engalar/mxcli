@@ -47,6 +47,16 @@ type ModuleBackend interface {
 	DeleteModuleWithCleanup(id model.ID, moduleName string) error
 }
 
+// ModuleSettingsBackend provides access to Projects$ModuleSettings (Maven/JAR dependencies).
+type ModuleSettingsBackend interface {
+	// ListModuleSettings returns all module settings documents in the project.
+	ListModuleSettings() ([]*types.ModuleSettings, error)
+	// GetModuleSettings returns the settings for the given module.
+	GetModuleSettings(moduleID model.ID) (*types.ModuleSettings, error)
+	// UpdateModuleSettings persists changes to the module settings (incl. JarDependencies).
+	UpdateModuleSettings(ms *types.ModuleSettings) error
+}
+
 // FolderBackend provides folder operations.
 type FolderBackend interface {
 	// ListFolders returns all folders in the project.

@@ -30,7 +30,7 @@ func execAlterPage(ctx *ExecContext, s *ast.AlterPageStmt) error {
 
 	var unitID model.ID
 	var containerID model.ID
-	containerType := s.ContainerType
+	containerType := strings.ToLower(s.ContainerType)
 	if containerType == "" {
 		containerType = "page"
 	}

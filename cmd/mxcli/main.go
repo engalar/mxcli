@@ -121,6 +121,12 @@ Examples:
 			defer logger.Close()
 			defer exec.Close()
 
+			// Suppress status messages when stdout is a pipe so that
+			// output can be piped directly to other tools (e.g. mxcli fmt).
+			if fi, statErr := os.Stdout.Stat(); statErr == nil && (fi.Mode()&os.ModeCharDevice) == 0 {
+				exec.SetQuiet(true)
+			}
+
 			// Auto-connect if project specified
 			if projectPath != "" {
 				commands = fmt.Sprintf("CONNECT LOCAL '%s'; %s", projectPath, commands)

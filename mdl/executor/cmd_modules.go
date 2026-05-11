@@ -10,6 +10,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
@@ -900,6 +901,249 @@ func sortEntitiesByGeneralization(entities []*domainmodel.Entity, moduleName str
 	}
 
 	return sorted
+}
+
+// =============================================================================
+// JAR DEPENDENCY COMMANDS
+// =============================================================================
+
+// execListJarDependencies implements: LIST JAR DEPENDENCIES [IN module]
+func execListJarDependencies(ctx *ExecContext, inModule string) error {
+	if !ctx.Connected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	modules, err := ctx.Backend.ListModules()
+	if err != nil {
+		return mdlerrors.NewBackend("list modules", err)
+	}
+
+	type row struct {
+		module   string
+		group    string
+		artifact string
+		version  string
+		included string
+	}
+	var rows []row
+
+	for _, m := range modules {
+		if m.Name == "System" {
+			continue
+		}
+		if inModule != "" && m.Name != inModule {
+			continue
+		}
+		ms, err := ctx.Backend.GetModuleSettings(m.ID)
+		if err != nil {
+			continue // module may have no settings unit yet
+		}
+		for _, dep := range ms.JarDependencies {
+			inc := "yes"
+			if !dep.IsIncluded {
+				inc = "no"
+			}
+			rows = append(rows, row{m.Name, dep.GroupID, dep.ArtifactID, dep.Version, inc})
+		}
+	}
+
+	if len(rows) == 0 {
+		fmt.Fprintln(ctx.Output, "(no jar dependencies)")
+		return nil
+	}
+
+	// Compute column widths
+	colModule, colGroup, colArtifact, colVersion := 6, 5, 8, 7
+	for _, r := range rows {
+		if len(r.module) > colModule {
+			colModule = len(r.module)
+		}
+		if len(r.group) > colGroup {
+			colGroup = len(r.group)
+		}
+		if len(r.artifact) > colArtifact {
+			colArtifact = len(r.artifact)
+		}
+		if len(r.version) > colVersion {
+			colVersion = len(r.version)
+		}
+	}
+
+	fmtLine := fmt.Sprintf("%%-%ds  %%-%ds  %%-%ds  %%-%ds  %%s\n",
+		colModule, colGroup, colArtifact, colVersion)
+	sep := func(n int) string { return strings.Repeat("-", n) }
+	fmt.Fprintf(ctx.Output, fmtLine, "Module", "Group", "Artifact", "Version", "Included")
+	fmt.Fprintf(ctx.Output, fmtLine,
+		sep(colModule), sep(colGroup), sep(colArtifact), sep(colVersion), "--------")
+	for _, r := range rows {
+		fmt.Fprintf(ctx.Output, fmtLine, r.module, r.group, r.artifact, r.version, r.included)
+	}
+	fmt.Fprintf(ctx.Output, "(%d jar %s)\n", len(rows), pluralize(len(rows), "dependency", "dependencies"))
+	return nil
+}
+
+// execDescribeJarDependency implements: DESCRIBE JAR DEPENDENCY ModuleName 'group:artifact'
+func execDescribeJarDependency(ctx *ExecContext, moduleName, coordinate string) error {
+	if !ctx.Connected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	module, err := ctx.Backend.GetModuleByName(moduleName)
+	if err != nil {
+		return fmt.Errorf("module '%s' not found: %w", moduleName, err)
+	}
+
+	ms, err := ctx.Backend.GetModuleSettings(module.ID)
+	if err != nil {
+		return fmt.Errorf("failed to read module settings: %w", err)
+	}
+
+	dep := jarDepByCoord(ms.JarDependencies, coordinate)
+	if dep == nil {
+		return fmt.Errorf("jar dependency '%s' not found in module '%s'", coordinate, moduleName)
+	}
+
+	inc := "true"
+	if !dep.IsIncluded {
+		inc = "false"
+	}
+	fmt.Fprintf(ctx.Output, "alter module %s\n", moduleName)
+	fmt.Fprintf(ctx.Output, "  add jar dependency (\n")
+	fmt.Fprintf(ctx.Output, "    group    = '%s',\n", dep.GroupID)
+	fmt.Fprintf(ctx.Output, "    artifact = '%s',\n", dep.ArtifactID)
+	fmt.Fprintf(ctx.Output, "    version  = '%s',\n", dep.Version)
+	fmt.Fprintf(ctx.Output, "    included = %s,\n", inc)
+	fmt.Fprintf(ctx.Output, "  );\n")
+	if len(dep.Exclusions) > 0 {
+		for _, excl := range dep.Exclusions {
+			fmt.Fprintf(ctx.Output, "alter module %s set jar dependency '%s:%s'\n",
+				moduleName, dep.GroupID, dep.ArtifactID)
+			fmt.Fprintf(ctx.Output, "  add exclusion '%s:%s';\n", excl.GroupID, excl.ArtifactID)
+		}
+	}
+	return nil
+}
+
+// execAlterModuleJarDep implements ALTER MODULE name <jarDepAction>+
+func execAlterModuleJarDep(ctx *ExecContext, s *ast.AlterModuleJarDepStmt) error {
+	if !ctx.Connected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	module, err := ctx.Backend.GetModuleByName(s.ModuleName)
+	if err != nil {
+		return fmt.Errorf("module '%s' not found: %w", s.ModuleName, err)
+	}
+
+	ms, err := ctx.Backend.GetModuleSettings(module.ID)
+	if err != nil {
+		return fmt.Errorf("failed to read module settings: %w", err)
+	}
+
+	for _, action := range s.Actions {
+		if err := applyJarDepAction(ms, action, s.ModuleName); err != nil {
+			return err
+		}
+	}
+
+	if err := ctx.Backend.UpdateModuleSettings(ms); err != nil {
+		return mdlerrors.NewBackend("update module settings", err)
+	}
+
+	fmt.Fprintf(ctx.Output, "Updated jar dependencies for module '%s'\n", s.ModuleName)
+	return nil
+}
+
+func applyJarDepAction(ms *types.ModuleSettings, action ast.JarDepAction, moduleName string) error {
+	switch a := action.(type) {
+	case *ast.AddJarDepAction:
+		coord := a.Group + ":" + a.Artifact
+		if jarDepByCoord(ms.JarDependencies, coord) != nil {
+			return fmt.Errorf("jar dependency '%s' already exists in module '%s'; use SET to update version", coord, moduleName)
+		}
+		ms.JarDependencies = append(ms.JarDependencies, &types.JarDependency{
+			GroupID:    a.Group,
+			ArtifactID: a.Artifact,
+			Version:    a.Version,
+			IsIncluded: a.Included,
+		})
+
+	case *ast.SetJarDepVersionAction:
+		dep := jarDepByCoord(ms.JarDependencies, a.Coordinate)
+		if dep == nil {
+			return fmt.Errorf("jar dependency '%s' not found in module '%s'", a.Coordinate, moduleName)
+		}
+		dep.Version = a.Version
+
+	case *ast.SetJarDepIncludedAction:
+		dep := jarDepByCoord(ms.JarDependencies, a.Coordinate)
+		if dep == nil {
+			return fmt.Errorf("jar dependency '%s' not found in module '%s'", a.Coordinate, moduleName)
+		}
+		dep.IsIncluded = a.Included
+
+	case *ast.DropJarDepAction:
+		idx := jarDepIdxByCoord(ms.JarDependencies, a.Coordinate)
+		if idx < 0 {
+			return fmt.Errorf("jar dependency '%s' not found in module '%s'", a.Coordinate, moduleName)
+		}
+		ms.JarDependencies = append(ms.JarDependencies[:idx], ms.JarDependencies[idx+1:]...)
+
+	case *ast.AddJarDepExclusionAction:
+		dep := jarDepByCoord(ms.JarDependencies, a.Coordinate)
+		if dep == nil {
+			return fmt.Errorf("jar dependency '%s' not found in module '%s'", a.Coordinate, moduleName)
+		}
+		for _, e := range dep.Exclusions {
+			if e.GroupID+":"+e.ArtifactID == a.Exclusion {
+				return fmt.Errorf("exclusion '%s' already exists on '%s'", a.Exclusion, a.Coordinate)
+			}
+		}
+		parts := strings.SplitN(a.Exclusion, ":", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("exclusion coordinate must be 'group:artifact', got: %s", a.Exclusion)
+		}
+		dep.Exclusions = append(dep.Exclusions, &types.JarDependencyExclusion{
+			GroupID:    parts[0],
+			ArtifactID: parts[1],
+		})
+
+	case *ast.DropJarDepExclusionAction:
+		dep := jarDepByCoord(ms.JarDependencies, a.Coordinate)
+		if dep == nil {
+			return fmt.Errorf("jar dependency '%s' not found in module '%s'", a.Coordinate, moduleName)
+		}
+		excIdx := -1
+		for i, e := range dep.Exclusions {
+			if e.GroupID+":"+e.ArtifactID == a.Exclusion {
+				excIdx = i
+				break
+			}
+		}
+		if excIdx < 0 {
+			return fmt.Errorf("exclusion '%s' not found on '%s'", a.Exclusion, a.Coordinate)
+		}
+		dep.Exclusions = append(dep.Exclusions[:excIdx], dep.Exclusions[excIdx+1:]...)
+	}
+	return nil
+}
+
+func jarDepByCoord(deps []*types.JarDependency, coordinate string) *types.JarDependency {
+	for _, d := range deps {
+		if d.GroupID+":"+d.ArtifactID == coordinate {
+			return d
+		}
+	}
+	return nil
+}
+
+func jarDepIdxByCoord(deps []*types.JarDependency, coordinate string) int {
+	for i, d := range deps {
+		if d.GroupID+":"+d.ArtifactID == coordinate {
+			return i
+		}
+	}
+	return -1
 }
 
 // Executor method wrappers for callers in unmigrated files.

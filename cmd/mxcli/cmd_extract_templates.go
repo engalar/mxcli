@@ -21,9 +21,9 @@ var extractTemplatesCmd = &cobra.Command{
 	Long: `Extract pluggable widget type definitions from a Mendix project
 and save them as JSON templates for use in mxcli.
 
-This command searches for CustomWidgets in the project and extracts
-their type definitions, which can then be embedded in mxcli for
-consistent widget creation across projects.
+This command scans all pages and snippets in the project for pluggable
+widgets and extracts their type definitions. The resulting JSON files can
+be embedded in mxcli for consistent widget creation across projects.
 
 Example:
   mxcli extract-templates -p app.mpr -o templates/mendix-11.6/`,
@@ -38,8 +38,8 @@ func init() {
 	rootCmd.AddCommand(extractTemplatesCmd)
 }
 
-// WidgetTemplate is the JSON structure for a widget template file.
-type WidgetTemplate struct {
+// extractedWidgetTemplate is the JSON structure for a widget template file.
+type extractedWidgetTemplate struct {
 	WidgetID      string         `json:"widgetId"`
 	Name          string         `json:"name"`
 	Version       string         `json:"version"`
@@ -52,93 +52,72 @@ func runExtractTemplates(cmd *cobra.Command, args []string) error {
 	projectPath, _ := cmd.Flags().GetString("project")
 	outputDir, _ := cmd.Flags().GetString("output")
 
-	// Open the project
 	reader, err := mpr.Open(projectPath)
 	if err != nil {
 		return fmt.Errorf("failed to open project: %w", err)
 	}
 	defer reader.Close()
 
-	// Get Mendix version
 	version, _ := reader.GetMendixVersion()
 	fmt.Printf("Extracting templates from Mendix %s project\n", version)
 
-	// Create output directory
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	// Widget IDs to extract
-	widgetIDs := []struct {
-		id       string
-		filename string
-		name     string
-	}{
-		{"com.mendix.widget.web.combobox.Combobox", "combobox.json", "Combo box"},
-		{"com.mendix.widget.web.gallery.Gallery", "gallery.json", "Gallery"},
-		{"com.mendix.widget.web.datagrid.Datagrid", "datagrid.json", "Data grid 2"},
-		{"com.mendix.widget.web.datagridtextfilter.DatagridTextFilter", "datagrid-text-filter.json", "Text filter"},
-		{"com.mendix.widget.web.datagriddatefilter.DatagridDateFilter", "datagrid-date-filter.json", "Date filter"},
-		{"com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter", "datagrid-dropdown-filter.json", "Dropdown filter"},
-		{"com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter", "datagrid-number-filter.json", "Number filter"},
-		{"com.mendix.widget.web.image.Image", "image.json", "Image"},
+	widgets, err := reader.ListAllCustomWidgetTypes()
+	if err != nil {
+		return fmt.Errorf("failed to scan project for widget types: %w", err)
 	}
+	if len(widgets) == 0 {
+		fmt.Println("No pluggable widget types found in this project.")
+		return nil
+	}
+	fmt.Printf("Found %d widget type(s)\n", len(widgets))
 
 	extracted := 0
-	for _, w := range widgetIDs {
-		rawWidget, err := reader.FindCustomWidgetType(w.id)
+	for _, w := range widgets {
+		typeMap, err := bsonDToMap(w.RawType)
 		if err != nil {
-			fmt.Printf("  [SKIP] %s: %v\n", w.name, err)
-			continue
-		}
-		if rawWidget == nil {
-			fmt.Printf("  [SKIP] %s: not found in project\n", w.name)
-			continue
-		}
-
-		// Convert BSON to JSON-compatible map
-		typeMap, err := bsonDToMap(rawWidget.RawType)
-		if err != nil {
-			fmt.Printf("  [SKIP] %s: failed to convert type BSON: %v\n", w.name, err)
+			fmt.Printf("  [SKIP] %s: failed to convert type BSON: %v\n", w.WidgetID, err)
 			continue
 		}
 
 		var objectMap map[string]any
-		if rawWidget.RawObject != nil {
-			objectMap, err = bsonDToMap(rawWidget.RawObject)
+		if w.RawObject != nil {
+			objectMap, err = bsonDToMap(w.RawObject)
 			if err != nil {
-				fmt.Printf("  [SKIP] %s: failed to convert object BSON: %v\n", w.name, err)
+				fmt.Printf("  [SKIP] %s: failed to convert object BSON: %v\n", w.WidgetID, err)
 				continue
 			}
 		}
 
-		template := WidgetTemplate{
-			WidgetID:      w.id,
-			Name:          w.name,
+		template := extractedWidgetTemplate{
+			WidgetID:      w.WidgetID,
 			Version:       version,
-			ExtractedFrom: rawWidget.UnitID,
+			ExtractedFrom: w.UnitID,
 			Type:          typeMap,
 			Object:        objectMap,
 		}
 
-		// Write to file
-		outPath := filepath.Join(outputDir, w.filename)
+		filename := filenameFromWidgetID(w.WidgetID)
+		outPath := filepath.Join(outputDir, filename)
 		data, err := json.MarshalIndent(template, "", "  ")
 		if err != nil {
-			fmt.Printf("  [SKIP] %s: failed to marshal JSON: %v\n", w.name, err)
+			fmt.Printf("  [SKIP] %s: failed to marshal JSON: %v\n", w.WidgetID, err)
 			continue
 		}
 
 		if err := os.WriteFile(outPath, data, 0644); err != nil {
-			fmt.Printf("  [SKIP] %s: failed to write file: %v\n", w.name, err)
+			fmt.Printf("  [SKIP] %s: failed to write file: %v\n", w.WidgetID, err)
 			continue
 		}
 
-		fmt.Printf("  [OK] %s -> %s\n", w.name, w.filename)
+		fmt.Printf("  [OK] %s -> %s\n", w.WidgetID, filename)
 		extracted++
 	}
 
-	fmt.Printf("\nExtracted %d widget templates to %s\n", extracted, outputDir)
+	fmt.Printf("\nExtracted %d/%d widget templates to %s\n", extracted, len(widgets), outputDir)
 	return nil
 }
 
@@ -167,7 +146,6 @@ func convertBsonValue(v any) any {
 		}
 		return arr
 	case primitive.Binary:
-		// Convert binary IDs to hex strings
 		return fmt.Sprintf("%x", val.Data)
 	case []byte:
 		return fmt.Sprintf("%x", val)
@@ -176,12 +154,11 @@ func convertBsonValue(v any) any {
 	}
 }
 
-// filenameFromWidgetID generates a filename from a widget ID.
+// filenameFromWidgetID generates a kebab-case filename from a widget ID.
+// e.g. "com.mendix.widget.web.combobox.Combobox" -> "combobox.json"
 func filenameFromWidgetID(widgetID string) string {
-	// Extract the last part after the last dot
 	parts := strings.Split(widgetID, ".")
 	name := parts[len(parts)-1]
-	// Convert camelCase to kebab-case
 	var result strings.Builder
 	for i, r := range name {
 		if i > 0 && r >= 'A' && r <= 'Z' {

@@ -43,6 +43,30 @@ func (w *Writer) CreateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPS
 	})
 }
 
+// UpdateAgentEditorConsumedMCPService replaces an existing Consumed MCP Service document, preserving its UUID.
+func (w *Writer) UpdateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error {
+	if c == nil {
+		return fmt.Errorf("consumed MCP service is nil")
+	}
+
+	contentsJSON, err := encodeConsumedMCPServiceContents(c)
+	if err != nil {
+		return err
+	}
+
+	return w.updateCustomBlobDocument(customBlobInput{
+		UnitID:             string(c.ID),
+		ContainerID:        string(c.ContainerID),
+		Name:               c.Name,
+		Documentation:      c.Documentation,
+		Excluded:           c.Excluded,
+		ExportLevel:        c.ExportLevel,
+		CustomDocumentType: agenteditor.CustomTypeConsumedMCPService,
+		ReadableTypeName:   agenteditor.ReadableConsumedMCPService,
+		ContentsJSON:       contentsJSON,
+	})
+}
+
 // DeleteAgentEditorConsumedMCPService removes a Consumed MCP Service by ID.
 func (w *Writer) DeleteAgentEditorConsumedMCPService(id string) error {
 	return w.deleteUnit(id)

@@ -116,7 +116,31 @@ type EnumSplitStmt struct {
 	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
 }
 
+// InheritanceSplitCase represents one typed branch in an inheritance split.
+type InheritanceSplitCase struct {
+	Entity QualifiedName
+	Body   []MicroflowStatement
+}
+
+// InheritanceSplitStmt represents: SPLIT TYPE $Var ... END SPLIT
+type InheritanceSplitStmt struct {
+	Variable    string // Variable name without $ prefix
+	Cases       []InheritanceSplitCase
+	ElseBody    []MicroflowStatement
+	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
 func (s *EnumSplitStmt) isMicroflowStatement() {}
+func (s *InheritanceSplitStmt) isMicroflowStatement() {}
+
+// CastObjectStmt represents: $Output = CAST $Object
+type CastObjectStmt struct {
+	OutputVariable string               // Output variable name without $ prefix
+	ObjectVariable string               // Source object variable name without $ prefix
+	Annotations    *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *CastObjectStmt) isMicroflowStatement() {}
 
 // MfSetStmt represents: SET $Var = expr or SET $Var/Attr = expr
 // (Named MfSetStmt to avoid conflict with existing SetStmt for SET key = value)
@@ -730,6 +754,13 @@ type RestResult struct {
 	Type         RestResultType // Result type
 	MappingName  QualifiedName  // Import mapping name (for Mapping type)
 	ResultEntity QualifiedName  // Result entity type (for Mapping type)
+	// IsList distinguishes `as Module.Entity` (single object) from
+	// `as list of Module.Entity` (list). Studio Pro stores this on the
+	// microflow's ImportMappingCall (Range.SingleObject /
+	// ForceSingleOccurrence), independently of whether the underlying
+	// import mapping is list-typed: the same mapping can yield either a
+	// single object or a list depending on this flag.
+	IsList bool
 }
 
 // RestCallStmt represents: $Var = REST CALL METHOD url [HEADER ...] [AUTH ...] [BODY ...] [TIMEOUT ...] RETURNS ...

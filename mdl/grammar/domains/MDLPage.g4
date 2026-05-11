@@ -282,7 +282,9 @@ widgetPropertyV3
     | EDITABLE COLON xpathConstraint                  // Editable: [Status != 'Closed']
     | EDITABLE COLON propertyValueV3                  // Editable: Never | Always
     | TOOLTIP COLON propertyValueV3                   // Tooltip: 'text'
+    | IDENTIFIER COLON actionExprV3                   // Named action: onChange: nanoflow Module.NF
     | IDENTIFIER COLON propertyValueV3                // Generic: any other property
+    | keyword COLON actionExprV3                      // Named action (keyword key): onCommit: nanoflow ...
     | keyword COLON propertyValueV3                  // Generic: keyword as property name (for pluggable widgets)
     ;
 

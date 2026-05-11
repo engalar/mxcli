@@ -1792,6 +1792,44 @@ rename java action JaTest.ParseCSV to ReadCsvFirstLine;
 drop java action JaTest.ReadCsvFirstLine;
 drop java action JaTest.ComputeHash;
 
+-- MARK: Level 10 - CREATE OR MODIFY
+
+-- ============================================================================
+-- LEVEL 10: CREATE OR MODIFY (idempotent upsert)
+-- ============================================================================
+--
+-- CREATE OR MODIFY updates an existing Java action in-place, preserving its
+-- UUID. The updated signature and body replace the stored document without
+-- changing the document identity or the .java source file path.
+--
+-- Re-run-safe: if the action doesn't exist it is created; if it does exist
+-- its parameters, return type, and body are replaced.
+--
+-- Use this form in scripts that may run multiple times (CI/CD pipelines,
+-- team-shared setup scripts, migrations).
+
+-- 10.1: Create a Java action initially
+create java action JaTest.PadString(
+  Input: string not null
+) returns string
+as $$
+return Input.trim();
+$$;
+
+-- 10.2: Re-run the same script with CREATE OR MODIFY to update the body
+create or modify java action JaTest.PadString(
+  Input: string not null,
+  PadChar: string not null,
+  Width: integer not null
+) returns string
+as $$
+String s = Input.trim();
+while (s.length() < Width) s = PadChar + s;
+return s;
+$$;
+
+drop java action JaTest.PadString;
+
 -- ============================================================================
 -- Java Action Feature Summary
 -- ============================================================================

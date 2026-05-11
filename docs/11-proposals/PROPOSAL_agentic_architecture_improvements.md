@@ -32,117 +32,77 @@ The problems are:
 
 ## Proposed Changes
 
-### Change 1: Remove Generated Parser Files from Git
+### Change 1: Remove Generated Parser Files from Git ✅ Implemented
 
-**What:** Add `mdl/grammar/parser/*.go` to `.gitignore` and stop tracking them. The `.g4` source files remain in git. Generated files are produced locally and in CI by running `make grammar`.
+**Status:** Shipped. `mdl/grammar/parser/` is excluded via `.gitignore` (line 42–43). The directory is not tracked; contributors regenerate with `make grammar`.
 
-**Why this eliminates the conflict:** The 119,737-line generated file is the source of every grammar-related merge conflict. The file is deterministically derived from the `.g4` source — there is no information in it that isn't in the grammar. Removing it from git means two branches that both add syntax no longer produce a file-level conflict; only the human-readable `.g4` source can conflict.
-
-**Prerequisites:** Contributors already have ANTLR4 installed (this has been verified — all grammar contributors have been able to run `make grammar` without issue). The barrier that would normally exist (requiring Java for ANTLR4) is not a practical concern here.
-
-**CI impact:** The CI pipeline must install ANTLR4 and run `make grammar` before `make build` or `make test`. The `push-test.yml` and `release.yml` workflows currently have no grammar step — both need a setup step added.
-
-**Implementation steps:**
-1. Add to `.gitignore`:
-   ```
-   # Generated ANTLR4 parser (regenerate with: make grammar)
-   mdl/grammar/parser/*.go
-   mdl/grammar/parser/*.interp
-   mdl/grammar/parser/*.tokens
-   ```
-2. Run `git rm --cached mdl/grammar/parser/*.go mdl/grammar/parser/*.interp mdl/grammar/parser/*.tokens`
-3. Add to CI workflows before the build step:
-   ```yaml
-   - name: Install ANTLR4
-     run: pip install antlr4-tools
-   - name: Generate parser
-     run: make grammar
-   ```
-4. Add `make grammar-check` target that regenerates and diffs — to catch cases where grammar source changed but `make grammar` was not run before committing
+**What was done:** Added `mdl/grammar/parser/` to `.gitignore`. The `.g4` source files remain in git; the generated Go parser is produced locally and in CI by `make grammar`. This eliminates the 119,737-line generated file as a source of merge conflicts entirely.
 
 ---
 
-### Change 2: Split the Grammar Source by Domain
+### Change 2: Split the Grammar Source by Domain ✅ Implemented
 
-**What:** Use ANTLR4's `import` directive to split `MDLParser.g4` into domain-specific grammar files, imported by a thin master grammar.
+**Status:** Shipped. `MDLParser.g4` is now a thin master grammar; domain rules live in `mdl/grammar/domains/`.
 
-**Why this reduces the remaining conflict surface:** After Change 1, grammar conflicts can only occur on the `.g4` source files. A monolithic 4,082-line grammar means two PRs touching different domains (e.g. microflows and pages) still conflict at the source level. Splitting by domain means those PRs are fully independent.
-
-**Proposed split:**
+**What was done:** The monolithic parser grammar was split into nine domain files imported via ANTLR4's `import` directive:
 
 ```
 mdl/grammar/
-  MDLParser.g4          # master grammar: imports only, top-level statement rule
+  MDLParser.g4          # master grammar: import directives + top-level statement rule
   MDLLexer.g4           # unchanged — tokens are shared across domains
   domains/
-    MDLDomainModel.g4   # entity, attribute, association rules
-    MDLMicroflow.g4     # microflow, nanoflow, activity rules
-    MDLPage.g4          # page, snippet, widget rules
-    MDLSecurity.g4      # roles, access rules, grant/revoke
-    MDLNavigation.g4    # navigation profiles, menus
-    MDLWorkflow.g4      # workflow, user task, decision rules
-    MDLService.g4       # REST, OData, published services
-    MDLCatalog.g4       # catalog queries, show/describe
-    MDLSettings.g4      # project settings, constants, enumerations
-    MDLSession.g4       # SET, USE, session-level commands
+    MDLAgent.g4
+    MDLCatalog.g4
+    MDLDomainModel.g4
+    MDLMicroflow.g4
+    MDLPage.g4
+    MDLSecurity.g4
+    MDLService.g4
+    MDLSettings.g4
+    MDLWorkflow.g4
 ```
 
-The master `MDLParser.g4` becomes:
-```antlr
-parser grammar MDLParser;
-import MDLDomainModel, MDLMicroflow, MDLPage, MDLSecurity,
-       MDLNavigation, MDLWorkflow, MDLService, MDLCatalog,
-       MDLSettings, MDLSession;
-options { tokenVocab=MDLLexer; }
-statement : domainStatement | microflowStatement | pageStatement | ... ;
-```
-
-**Note:** ANTLR4's `import` merges rules into the main grammar at generation time. The generated parser is still a single file — the split is a source-level convenience only. All existing listener/visitor code continues to work unchanged.
-
-**Implementation steps:**
-1. Identify rule boundaries in current `MDLParser.g4` by domain
-2. Extract each domain's rules into a `domains/MDL*.g4` file
-3. Replace extracted rules in `MDLParser.g4` with `import` directives
-4. Run `make grammar` and verify generated parser is functionally identical (test suite must pass)
-5. Update `mdl/grammar/Makefile` to list the domain files as dependencies
+Two PRs touching different domains now edit independent files and cannot conflict at the grammar source level. The generated parser is still a single file — the split is source-level only; all visitor/listener code is unchanged.
 
 ---
 
-### Change 3: Command Self-Registration in the Executor
+### Change 3: Command Self-Registration in the Executor ✅ Implemented
 
-**What:** Replace the central dispatch switch in the executor with a registration pattern where each `cmd_*.go` file self-registers its handler on package init.
+**Status:** Shipped. See `mdl/executor/registry.go` and `mdl/executor/register_stubs.go`.
 
-**Why this helps agentic development:** Currently, adding a new command requires: (a) creating a `cmd_*.go` file, (b) finding and editing the dispatch switch in `executor.go`, and (c) knowing the right context type. An agent has to read across multiple files to understand the pattern. With self-registration, a new command is entirely contained in its own file — no other file needs to change.
+**What was proposed:** Replace the central dispatch switch with a registration pattern using `init()` so each `cmd_*.go` file self-registers its handler, making a new command self-contained in one file.
 
-**Proposed pattern:**
+**What was implemented:** The registry pattern without `init()`. `NewRegistry()` in `registry.go` is the single composition root that calls 29 named `registerXxxHandlers(r)` functions — one per domain. The `init()` approach was explicitly rejected because it creates package-level global state that breaks test isolation.
+
+**Why `init()` was not used:** With `init()`-based registration, every import of the `executor` package pre-populates a global handler map before any test runs. This makes it impossible to create a registry with zero handlers for targeted isolation tests. The existing test suite depends on `emptyRegistry()` (a factory that returns a handler-free `*Registry`) for six tests covering dispatch, completeness, and duplicate-registration panics. `init()` also makes duplicate-registration panics surface at package-load time rather than at `NewRegistry()`, producing an obscure failure with no clear test attribution.
+
+**How it works now:**
 
 ```go
-// In each cmd_*.go file:
-func init() {
-    executor.Register(ast.KindCreateEntity, handleCreateEntity)
-    executor.Register(ast.KindAlterEntity, handleAlterEntity)
-}
-
-func handleCreateEntity(ctx *executor.ExecContext, stmt ast.Statement) error {
-    s := stmt.(*ast.CreateEntityStatement)
-    return ctx.Backend.DomainModel().CreateEntity(s.Name, ...)
+// mdl/executor/registry.go — the composition root
+func NewRegistry() *Registry {
+    r := &Registry{handlers: make(map[reflect.Type]StmtHandler)}
+    // Registration functions are called here explicitly (no init()).
+    registerEntityHandlers(r)
+    registerMicroflowAndNanoflowHandlers(r)
+    // ... 27 more domain-specific register calls
+    return r
 }
 ```
 
 ```go
-// In executor/registry.go:
-var handlers = map[ast.StatementKind]HandlerFunc{}
-
-func Register(kind ast.StatementKind, fn HandlerFunc) {
-    handlers[kind] = fn
+// mdl/executor/register_stubs.go — one function per domain
+func registerEntityHandlers(r *Registry) {
+    r.Register(&ast.CreateEntityStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
+        return execCreateEntity(ctx, stmt.(*ast.CreateEntityStmt))
+    })
+    // ...
 }
 ```
 
-**Implementation steps:**
-1. Add `executor/registry.go` with `Register()` and the handler map
-2. Replace the central dispatch switch with a lookup into the registry
-3. Migrate existing `cmd_*.go` files to register via `init()` — one file at a time, verifiable by running tests after each
-4. Remove the dispatch switch from `executor.go` once all commands are migrated
+**Adding a new command today:** Create `cmd_yourfeature.go` with the handler function, then add a `registerYourFeatureHandlers(r)` call in `NewRegistry()` and a corresponding stub function in `register_stubs.go`. The completeness test (`TestNewRegistry_Completeness`) will fail at CI if the registration step is missed.
+
+**Agent discovery cost:** An agent can read `register_stubs.go` as the canonical index of all registered commands and their handler signatures. Any existing `registerXxxHandlers` function is a complete, copy-pasteable example.
 
 ---
 
@@ -198,10 +158,10 @@ Because Go's `internal/` rule allows only the parent package and its children to
 
 | Change | Problem solved | Risk | Effort |
 |---|---|---|---|
-| 1. Gitignore generated parser | Eliminates 119k-line conflict entirely | Low | Low |
-| 2. Split grammar by domain | Reduces source-level grammar conflicts | Medium (grammar refactor) | Medium |
-| 3. Command self-registration | Reduces agent discovery cost | Medium (executor refactor) | Medium |
+| 1. Gitignore generated parser | Eliminates 119k-line conflict entirely | ✅ Done | — |
+| 2. Split grammar by domain | Reduces source-level grammar conflicts | ✅ Done | — |
+| 3. Command self-registration | Reduces agent discovery cost | ✅ Done — explicit `NewRegistry()`, no `init()` | — |
 | 4. Code-generate mock | Eliminates mock drift, reduces sync errors | Low | Low |
 | 5. Compiler-enforced boundary | Converts checklist rule to compile error | Medium (needs design) | Medium |
 
-**Recommended order:** Changes 1 and 4 first — both are low risk, high value, and immediately unblock parallel development. Changes 2 and 3 next, ideally in separate PRs. Change 5 needs a design decision on the `internal/` boundary approach before implementation.
+**Status:** Changes 1, 2, and 3 are shipped. Remaining work: Change 4 (code-generate mock) and Change 5 (compiler-enforced boundary, needs design decision on the `internal/` approach).

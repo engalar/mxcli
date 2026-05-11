@@ -114,6 +114,12 @@ func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStm
 		return err
 	}
 
+	// Check for existing transformer with the same name.
+	existing, existingID := findDataTransformer(ctx, s.Name.Module, s.Name.Name)
+	if existing != nil && !s.CreateOrModify {
+		return mdlerrors.NewAlreadyExists("data transformer", s.Name.String())
+	}
+
 	module, err := findModule(ctx, s.Name.Module)
 	if err != nil {
 		return mdlerrors.NewNotFound("module", s.Name.Module)
@@ -133,6 +139,18 @@ func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStm
 		})
 	}
 
+	if existingID != "" {
+		dt.ID = existingID
+		if err := ctx.Backend.UpdateDataTransformer(dt); err != nil {
+			return mdlerrors.NewBackend("update data transformer", err)
+		}
+		if !ctx.Quiet {
+			fmt.Fprintf(ctx.Output, "Modified data transformer: %s.%s (%d steps)\n",
+				s.Name.Module, s.Name.Name, len(dt.Steps))
+		}
+		return nil
+	}
+
 	if err := ctx.Backend.CreateDataTransformer(dt); err != nil {
 		return mdlerrors.NewBackend("create data transformer", err)
 	}
@@ -142,6 +160,26 @@ func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStm
 			s.Name.Module, s.Name.Name, len(dt.Steps))
 	}
 	return nil
+}
+
+// findDataTransformer looks up a data transformer by module and name, returning the struct and its ID.
+func findDataTransformer(ctx *ExecContext, moduleName, name string) (*model.DataTransformer, model.ID) {
+	transformers, err := ctx.Backend.ListDataTransformers()
+	if err != nil {
+		return nil, ""
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return nil, ""
+	}
+	for _, dt := range transformers {
+		modID := h.FindModuleID(dt.ContainerID)
+		modName := h.GetModuleName(modID)
+		if strings.EqualFold(modName, moduleName) && strings.EqualFold(dt.Name, name) {
+			return dt, dt.ID
+		}
+	}
+	return nil, ""
 }
 
 // execDropDataTransformer deletes a data transformer.

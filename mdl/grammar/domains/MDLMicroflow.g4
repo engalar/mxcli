@@ -100,6 +100,8 @@ microflowBody
 microflowStatement
     : annotation* declareStatement SEMICOLON?
     | annotation* caseStatement SEMICOLON?
+    | annotation* inheritanceSplitStatement SEMICOLON?
+    | annotation* castObjectStatement SEMICOLON?
     | annotation* setStatement SEMICOLON?
     | annotation* createListStatement SEMICOLON?       // Must be before createObjectStatement to match "CREATE LIST OF"
     | annotation* createObjectStatement SEMICOLON?
@@ -171,6 +173,20 @@ enumSplitSource
 enumSplitCaseValue
     : identifierOrKeyword
     | LPAREN EMPTY RPAREN
+    ;
+
+inheritanceSplitStatement
+    : SPLIT TYPE VARIABLE
+      (inheritanceSplitCase+ (ELSE microflowBody)? END SPLIT)?
+    ;
+
+inheritanceSplitCase
+    : CASE qualifiedName microflowBody
+    ;
+
+castObjectStatement
+    : CAST VARIABLE
+    | VARIABLE EQUALS CAST VARIABLE
     ;
 
 setStatement
@@ -520,11 +536,12 @@ restCallTimeoutClause
 
 // RETURNS clause specifies how to handle the response
 restCallReturnsClause
-    : RETURNS STRING_TYPE                                    // Return as string
-    | RETURNS RESPONSE                                       // Return HttpResponse object
-    | RETURNS MAPPING qualifiedName AS qualifiedName         // Import mapping with result entity
-    | RETURNS NONE                                           // Ignore response
-    | RETURNS NOTHING                                        // Ignore response (alias)
+    : RETURNS STRING_TYPE                                       // Return as string
+    | RETURNS RESPONSE                                          // Return HttpResponse object
+    | RETURNS MAPPING qualifiedName AS LIST_OF qualifiedName    // Import mapping → list result
+    | RETURNS MAPPING qualifiedName AS qualifiedName            // Import mapping → single object
+    | RETURNS NONE                                              // Ignore response
+    | RETURNS NOTHING                                           // Ignore response (alias)
     ;
 
 /**

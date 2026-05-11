@@ -2,7 +2,7 @@
 
 ## Synopsis
 
-    CREATE IMAGE COLLECTION module.name
+    CREATE [OR MODIFY] IMAGE COLLECTION module.name
         [EXPORT LEVEL 'Hidden' | 'Public']
         [COMMENT 'description']
         [(
@@ -12,7 +12,7 @@
 
 ## Description
 
-Creates a new image collection in the specified module. Image collections bundle images (icons, logos, graphics) within a module. Images can be loaded from the filesystem during creation, with the format detected automatically from the file extension.
+Creates a new image collection in the specified module. `OR MODIFY` updates an existing collection in-place, preserving its UUID so that widget references remain valid. `OR REPLACE` is accepted as a synonym for `OR MODIFY`. Image collections bundle images (icons, logos, graphics) within a module. Images can be loaded from the filesystem during creation, with the format detected automatically from the file extension.
 
 ## Parameters
 

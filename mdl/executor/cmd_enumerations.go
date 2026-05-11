@@ -54,19 +54,24 @@ func execCreateEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) error
 		})
 	}
 
-	// If enumeration exists and CREATE OR MODIFY, delete it first
-	if existingEnum != nil && s.CreateOrModify {
-		if err := ctx.Backend.DeleteEnumeration(existingEnum.ID); err != nil {
-			return mdlerrors.NewBackend("delete existing enumeration", err)
-		}
-	}
-
-	// Create enumeration
+	// Create or update enumeration
 	enum := &model.Enumeration{
 		ContainerID:   module.ID,
 		Name:          s.Name.Name,
 		Documentation: s.Documentation,
 		Values:        values,
+	}
+
+	if existingEnum != nil && s.CreateOrModify {
+		// In-place update: preserve the existing UUID so BSON git-diff sees a
+		// modification rather than a delete+insert pair.
+		enum.ID = existingEnum.ID
+		if err := ctx.Backend.UpdateEnumeration(enum); err != nil {
+			return mdlerrors.NewBackend("update enumeration", err)
+		}
+		invalidateHierarchy(ctx)
+		fmt.Fprintf(ctx.Output, "Modified enumeration: %s\n", s.Name)
+		return nil
 	}
 
 	if err := ctx.Backend.CreateEnumeration(enum); err != nil {
@@ -122,21 +127,42 @@ func execDropEnumeration(ctx *ExecContext, s *ast.DropEnumerationStmt) error {
 		return mdlerrors.NewBackend("list enumerations", err)
 	}
 
+	// Collect all enumerations matching the name (and optional module).
+	type match struct {
+		enum   *model.Enumeration
+		module *model.Module
+	}
+	var matches []match
 	for _, enum := range enums {
-		if enum.Name == s.Name.Name {
-			// Check module matches
-			module, err := findModuleByID(ctx, enum.ContainerID)
-			if err == nil && (s.Name.Module == "" || module.Name == s.Name.Module) {
-				if err := ctx.Backend.DeleteEnumeration(enum.ID); err != nil {
-					return mdlerrors.NewBackend("delete enumeration", err)
-				}
-				fmt.Fprintf(ctx.Output, "Dropped enumeration: %s\n", s.Name)
-				return nil
-			}
+		if enum.Name != s.Name.Name {
+			continue
+		}
+		module, err := findModuleByID(ctx, enum.ContainerID)
+		if err != nil {
+			continue
+		}
+		if s.Name.Module == "" || module.Name == s.Name.Module {
+			matches = append(matches, match{enum, module})
 		}
 	}
 
-	return mdlerrors.NewNotFound("enumeration", s.Name.String())
+	switch len(matches) {
+	case 0:
+		return mdlerrors.NewNotFound("enumeration", s.Name.String())
+	case 1:
+		if err := ctx.Backend.DeleteEnumeration(matches[0].enum.ID); err != nil {
+			return mdlerrors.NewBackend("delete enumeration", err)
+		}
+		fmt.Fprintf(ctx.Output, "Dropped enumeration: %s.%s\n", matches[0].module.Name, s.Name.Name)
+		return nil
+	default:
+		var names []string
+		for _, m := range matches {
+			names = append(names, m.module.Name+"."+s.Name.Name)
+		}
+		return mdlerrors.NewValidationf("ambiguous enumeration name %q — found in: %s; use a fully-qualified name",
+			s.Name.Name, strings.Join(names, ", "))
+	}
 }
 
 // listEnumerations handles SHOW ENUMERATIONS command.
@@ -263,8 +289,24 @@ var mendixReservedWords = map[string]bool{
 // This function does not require a project connection.
 func ValidateEnumeration(stmt *ast.CreateEnumerationStmt) []linter.Violation {
 	var violations []linter.Violation
+	seen := make(map[string]bool)
 	for _, v := range stmt.Values {
-		if mendixReservedWords[strings.ToLower(v.Name)] {
+		lower := strings.ToLower(v.Name)
+		if seen[lower] {
+			violations = append(violations, linter.Violation{
+				RuleID:   "MDL011",
+				Severity: linter.SeverityError,
+				Message: fmt.Sprintf(
+					"duplicate enumeration value name '%s'", v.Name),
+				Location: linter.Location{
+					DocumentType: "enumeration",
+					DocumentName: stmt.Name.String(),
+				},
+				Suggestion: "Each enumeration value must have a unique name",
+			})
+		}
+		seen[lower] = true
+		if mendixReservedWords[lower] {
 			violations = append(violations, linter.Violation{
 				RuleID:   "MDL010",
 				Severity: linter.SeverityError,
@@ -318,7 +360,7 @@ func ValidateEntity(stmt *ast.CreateEntityStmt) []linter.Violation {
 					DocumentType: "entity",
 					DocumentName: stmt.Name.String(),
 				},
-				Suggestion: fmt.Sprintf("Rename to avoid conflicts (e.g., 'Custom%s')", attr.Name),
+				Suggestion: fmt.Sprintf("To use the Mendix built-in audit field, declare it with the pseudo-type: '%s: Auto%s'. To store an unrelated date, choose a different name (e.g., 'EntryDate', 'RecordDate')", attr.Name, attr.Name),
 			})
 		}
 	}

@@ -43,7 +43,7 @@ func execCreateWorkflow(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && existing.Name == s.Name.Name {
 			if !s.CreateOrModify {
-				return mdlerrors.NewAlreadyExistsMsg("workflow", s.Name.Module+"."+s.Name.Name, "workflow '"+s.Name.Module+"."+s.Name.Name+"' already exists (use create or replace to overwrite)")
+				return mdlerrors.NewAlreadyExistsMsg("workflow", s.Name.Module+"."+s.Name.Name, "workflow '"+s.Name.Module+"."+s.Name.Name+"' already exists (use create or modify to overwrite)")
 			}
 			existingID = existing.ID
 			break
@@ -112,14 +112,15 @@ func execCreateWorkflow(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 	wf.Flow = flow
 
 	if existingID != "" {
-		// Delete existing and recreate
-		if err := ctx.Backend.DeleteWorkflow(existingID); err != nil {
-			return mdlerrors.NewBackend("delete existing workflow", err)
+		// In-place update: preserve UUID so references and BSON git-diff stay stable.
+		wf.ID = existingID
+		if err := ctx.Backend.UpdateWorkflow(wf); err != nil {
+			return mdlerrors.NewBackend("update workflow", err)
 		}
-	}
-
-	if err := ctx.Backend.CreateWorkflow(wf); err != nil {
-		return mdlerrors.NewBackend("create workflow", err)
+	} else {
+		if err := ctx.Backend.CreateWorkflow(wf); err != nil {
+			return mdlerrors.NewBackend("create workflow", err)
+		}
 	}
 
 	invalidateHierarchy(ctx)

@@ -240,6 +240,15 @@ return result;
 $$;
 ```
 
+**`AS $$ ... $$` is mandatory.** The body cannot be omitted even for placeholder or stub actions. Omitting it causes a parse error: `no viable alternative at input '...'`. Use a minimal body if the real implementation is not yet written:
+
+```mdl
+create java action Module.Stub() returns boolean
+as $$
+return false;
+$$;
+```
+
 ### Type Parameters (Generics)
 
 Type parameters let Java actions accept any entity type dynamically. Use `entity <pEntity>` in a parameter type to declare the type parameter inline. That parameter becomes the **entity type selector** (receives the entity type name, e.g., `'Module.Entity'`). Bare `pEntity` parameters become **parameterized entity** params (receive entity instances, e.g., `$Variable`).
@@ -1102,6 +1111,7 @@ Before deploying Java actions, verify:
 | `Could not find entity` | Wrong entity name | Use exact qualified name |
 | `attribute not found` | Wrong attribute name | Check model for exact name |
 | `ClassCastException` | Wrong type cast | Check parameter types |
+| `no viable alternative at input '...'` (parse error) | `AS $$ ... $$` body is missing — it is **mandatory** even for void/stub actions | Add `as $$ return null; $$;` (or appropriate stub) |
 
 ## Related Documentation
 

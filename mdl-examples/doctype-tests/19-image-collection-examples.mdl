@@ -115,10 +115,26 @@ describe image collection ImgTest.AppIcons;
 describe image collection ImgTest.SharedIcons;
 describe image collection ImgTest.BrandAssets;
 
+-- MARK: Modify (Idempotent — Preserves UUID)
+
+-- ============================================================================
+-- LEVEL 5: Create Or Modify
+-- ============================================================================
+
+/**
+ * Level 5.1: Update an existing collection in-place
+ *
+ * CREATE OR MODIFY preserves the document UUID so widget references
+ * remain valid. OR REPLACE is accepted as a synonym.
+ */
+create or modify image collection ImgTest.AppIcons
+  comment 'Updated description for AppIcons';
+/
+
 -- MARK: Drop
 
 -- ============================================================================
--- LEVEL 5: Drop Image Collection
+-- LEVEL 6: Drop Image Collection
 -- ============================================================================
 
 /**
@@ -144,6 +160,7 @@ show image collection in ImgTest;
 -- ✅ CREATE IMAGE COLLECTION with COMMENT 'description'
 -- ✅ CREATE IMAGE COLLECTION with IMAGE 'name' FROM FILE 'path'
 -- ✅ CREATE IMAGE COLLECTION with options + images combined
+-- ✅ CREATE OR MODIFY IMAGE COLLECTION Module.Name — idempotent update (preserves UUID)
 -- ✅ SHOW IMAGE COLLECTION [IN Module] — list all collections
 -- ✅ DESCRIBE IMAGE COLLECTION Module.Name — show full definition
 -- ✅ DROP IMAGE COLLECTION Module.Name — remove collection

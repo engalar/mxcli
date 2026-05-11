@@ -162,6 +162,23 @@ list models in ModelTest;
 -- → Error: model not found: ModelTest.DoesNotExist
 
 -- ============================================================================
+-- LEVEL 7: CREATE OR MODIFY (idempotent upsert)
+-- ============================================================================
+--
+-- CREATE OR MODIFY updates an existing model document in-place, preserving its
+-- UUID. Re-run-safe: if the model doesn't exist it is created; if it does, its
+-- properties are replaced without changing the document identity.
+--
+-- Useful in scripts that run multiple times (CI/CD pipelines, migrations).
+
+create or modify model ModelTest."GPT4Model" (
+  Provider: MxCloudGenAI,
+  key: ModelTest.GPT4Key,
+  DisplayName: 'GPT-4 Turbo (Updated)'
+);
+/
+
+-- ============================================================================
 -- Cleanup
 -- ============================================================================
 

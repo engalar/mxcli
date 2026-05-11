@@ -105,6 +105,8 @@ func parseImportObjectMappingElement(raw map[string]any) *model.ImportMappingEle
 	if v, ok := raw["Association"].(string); ok {
 		elem.Association = v
 	}
+	elem.MinOccurs = extractInt(raw["MinOccurs"])
+	elem.MaxOccurs = extractInt(raw["MaxOccurs"])
 
 	// Parse children recursively (mix of object and value elements)
 	if children, ok := raw["Children"].(bson.A); ok {
@@ -141,6 +143,8 @@ func parseImportValueMappingElement(raw map[string]any) *model.ImportMappingElem
 	if v, ok := raw["IsKey"].(bool); ok {
 		elem.IsKey = v
 	}
+	elem.MinOccurs = extractInt(raw["MinOccurs"])
+	elem.MaxOccurs = extractInt(raw["MaxOccurs"])
 
 	// Extract the primitive type from the nested Type object
 	if typeObj, ok := raw["Type"].(map[string]any); ok {

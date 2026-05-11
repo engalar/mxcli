@@ -345,11 +345,11 @@ func (b *Builder) ExitCreatePublishedRestServiceStatement(ctx *parser.CreatePubl
 		Name: buildQualifiedName(ctx.QualifiedName()),
 	}
 
-	// Check for CREATE OR REPLACE
+	// Check for CREATE OR MODIFY (or OR REPLACE, treated identically)
 	createStmt := findParentCreateStatement(ctx)
 	if createStmt != nil {
 		if createStmt.OR() != nil && (createStmt.REPLACE() != nil || createStmt.MODIFY() != nil) {
-			stmt.CreateOrReplace = true
+			stmt.CreateOrModify = true
 		}
 	}
 

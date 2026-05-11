@@ -1,0 +1,73 @@
+-- ============================================================================
+-- Bug #475: CE0079 on inheritance split when one branch continues
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   Studio Pro `mx check` reports CE0079 "Activity has no outgoing flow"
+--   on the body of a terminating branch in a `split type` whose other
+--   branch continues to a follow-up activity. mxcli's
+--   `addStructuredInheritanceSplit` took a "no-merge shortcut" when
+--   exactly one non-split branch continued: it wired the parent's next
+--   statement directly to the continuing branch's tail and skipped the
+--   ExclusiveMerge. The terminating branch's tail then had nowhere to
+--   converge — Studio Pro flagged its outgoing-flow gap as CE0079.
+--   On re-describe the parent's follow-up activity also leaked inside
+--   the case body, breaking subsequent roundtrips.
+--
+-- After fix:
+--   `addStructuredInheritanceSplit` always emits an ExclusiveMerge when
+--   any branch continues, mirroring the invariant `addEnumSplit`
+--   already enforces. Both terminating and continuing branches converge
+--   on the merge; the parent's next statement attaches after the merge.
+--
+-- Validation:
+--   `mxcli check` parses the script.
+--   `mx check` against the resulting MPR reports 0 errors.
+--   Roundtrip (describe → exec → describe) preserves the structure
+--   byte-for-byte: the post-split log activity stays outside both case
+--   bodies.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/475-inheritance-split-continuing-branch-merge.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest475.MF_TypedDispatch"
+-- ============================================================================
+
+create module BugTest475;
+
+create persistent entity BugTest475.Vehicle (
+  Plate : string
+);
+/
+
+create persistent entity BugTest475.Car
+  extends BugTest475.Vehicle (
+  Wheels : integer
+);
+/
+
+create persistent entity BugTest475.Boat
+  extends BugTest475.Vehicle (
+  HullLength : decimal
+);
+/
+
+-- One case continues into the post-split log activity; the other case
+-- terminates with a `return`. Before the fix this combination tripped
+-- CE0079 on the boat case. After the fix the merge converges both tails
+-- and the log activity attaches after the merge.
+create microflow BugTest475.MF_TypedDispatch (
+  $obj : BugTest475.Vehicle
+)
+returns boolean
+begin
+  split type $obj
+  case BugTest475.Car
+    log info node 'BugTest475' 'Dispatching car';
+  case BugTest475.Boat
+    log info node 'BugTest475' 'Dispatching boat';
+    return false;
+  end split;
+  log info node 'BugTest475' 'Dispatched';
+  return true;
+end;
+/

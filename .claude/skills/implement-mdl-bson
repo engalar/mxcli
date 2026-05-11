@@ -33,6 +33,36 @@ MDL Command → Grammar → AST → Executor → SDK Types → BSON → MPR File
 
 Before implementing, understand the Mendix metamodel structure.
 
+### Fast Metadata Inspection with mx dump-mpr
+
+`mx dump-mpr` exports project units as JSON — the fastest way to verify what Studio Pro actually stores before writing any parsing or serialisation code.
+
+```bash
+# Dump all microflow objects for a specific type (shows real field names and types)
+~/.mxcli/mxbuild/11.9.0/modeler/mx dump-mpr \
+    --unit-type=Microflows$InheritanceSplit \
+    /path/to/app.mpr 2>/dev/null | python3 -m json.tool | head -80
+
+# Dump a specific module (System module included by default)
+~/.mxcli/mxbuild/11.9.0/modeler/mx dump-mpr \
+    --module-names=System \
+    --unit-type=JavaActions$JavaAction \
+    /path/to/app.mpr 2>/dev/null | python3 -m json.tool
+
+# Exclude System module (project only)
+~/.mxcli/mxbuild/11.9.0/modeler/mx dump-mpr \
+    --exclude-system-module \
+    /path/to/app.mpr 2>/dev/null | python3 -m json.tool
+```
+
+**Important:** Exit code 4 means the mxbuild version doesn't match the project version — use the version that matches the project's `mxCliVersion` in the MPR metadata.
+
+Use `dump-mpr` to answer:
+- What is the exact BSON field name Studio Pro uses? (e.g. `OutputVariableName` vs `VariableName`)
+- Is this field a string, binary UUID, or embedded document?
+- What does the System module expose for built-in types (entities, Java actions)?
+- What array prefix value does Studio Pro write?
+
 ### Find Type Definition
 
 ```bash
@@ -488,7 +518,20 @@ bash ./recreate-app.sh test-fresh
 
 ### Debug by Comparing with Studio Pro Output
 
-When serialization fails, compare your output with what Studio Pro produces:
+When serialization fails, compare your output with what Studio Pro produces.
+
+**Preferred approach — `mx dump-mpr`:**
+
+```bash
+# After creating the element in Studio Pro, dump that unit type
+~/.mxcli/mxbuild/<version>/modeler/mx dump-mpr \
+    --unit-type=Microflows$CastAction \
+    /path/to/app.mpr 2>/dev/null | python3 -m json.tool
+```
+
+The JSON output shows every field name, value, and type exactly as stored — no Go code needed. Look for mismatched field names (e.g. `OutputVariableName` vs `VariableName`) or wrong value types (binary vs string).
+
+**Fallback — Go debug script (for complex BSON navigation or v2 MPR mxunit files):**
 
 1. Create the same element manually in Studio Pro
 2. Write a debug script to inspect the BSON:
@@ -602,6 +645,7 @@ MxCheck tests only fail if errors are **related to newly created artifacts**:
 ## Checklist
 
 - [ ] Studied metamodel for type structure
+- [ ] **Ran `mx dump-mpr --unit-type=<type>`** on a Studio Pro-created example to verify real field names and value types before writing parser/writer
 - [ ] Verified reference `kind` for all element references (BY_ID vs BY_NAME)
 - [ ] Audited similar types for same reference pattern
 - [ ] Created Go types in `sdk/` package
@@ -625,8 +669,9 @@ MxCheck tests only fail if errors are **related to newly created artifacts**:
 
 ## Common Mistakes
 
-1. **Wrong `$Type`**: Using `qualifiedName` instead of `storageName`
-2. **Wrong reference format**: BY_ID_REFERENCE needs binary UUID, BY_NAME_REFERENCE needs string
+1. **Guessing field names without `mx dump-mpr`**: Always verify the real BSON field name against a Studio Pro-produced MPR before writing any serialisation code — names differ from SDK docs (e.g. `OutputVariableName` vs `VariableName`)
+2. **Wrong `$Type`**: Using `qualifiedName` instead of `storageName`
+3. **Wrong reference format**: BY_ID_REFERENCE needs binary UUID, BY_NAME_REFERENCE needs string
 3. **Missing array prefix**: Arrays need `int32(2)` or `int32(3)` as first element
 4. **Field ordering**: Some types require `bson.D` for ordered serialization
 5. **Missing regeneration**: Forgot to run `antlr4` after grammar changes

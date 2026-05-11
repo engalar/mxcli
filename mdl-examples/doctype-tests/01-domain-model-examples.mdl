@@ -699,6 +699,32 @@ type ReferenceSet
 owner both;
 /
 
+-- ============================================================================
+-- Level 6.4: CREATE OR MODIFY ASSOCIATION (idempotent upsert)
+-- ============================================================================
+--
+-- CREATE OR MODIFY updates an existing association in-place, preserving the
+-- association's UUID. This is safe to re-run — if the association doesn't
+-- exist it is created, otherwise its properties (type, owner, delete behavior)
+-- are updated without touching the domain model UUID.
+
+-- Initial creation:
+create association DmTest.Project_Tags
+from DmTest.Project1 to DmTest.SimpleTag
+type ReferenceSet
+owner both;
+/
+
+-- Re-run safely with OR MODIFY to change delete behavior:
+create or modify association DmTest.Project_Tags
+from DmTest.Project1 to DmTest.SimpleTag
+type ReferenceSet
+owner default;
+/
+
+drop association DmTest.Project_Tags;
+/
+
 -- @version: 10.18+
 -- ############################################################################
 -- PART 7: VIEW ENTITIES (OQL) — requires Mendix 10.18+

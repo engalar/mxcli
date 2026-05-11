@@ -346,6 +346,11 @@ func TestGrantEntityAccess_XPathConstraint_PreservesRights(t *testing.T) {
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
 		},
+		GetModuleSecurityFunc: func(moduleID model.ID) (*security.ModuleSecurity, error) {
+			return &security.ModuleSecurity{
+				ModuleRoles: []*security.ModuleRole{{Name: "User"}},
+			}, nil
+		},
 		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
 			callCount++
 			if callCount == 1 {
@@ -429,4 +434,76 @@ func TestOutputEntityAccessGrants_XPathConstraint_EscapedQuotes(t *testing.T) {
 	assertNotContainsStr(t, out, "= 'Open'")
 	// The outer where clause delimiters must still be single quotes
 	assertContainsStr(t, out, "where '")
+}
+
+// TestGrantEntityAccess_FakeRole_Issue399 verifies that GRANT ON ENTITY rejects
+// a non-existent module role instead of silently creating a phantom access rule.
+func TestGrantEntityAccess_FakeRole_Issue399(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+	entity := &domainmodel.Entity{
+		BaseElement: model.BaseElement{ID: nextID("ent")},
+		Name:        "Order",
+		Persistable: true,
+	}
+	dm := &domainmodel.DomainModel{
+		BaseElement: model.BaseElement{ID: nextID("dm")},
+		ContainerID: mod.ID,
+		Entities:    []*domainmodel.Entity{entity},
+	}
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
+		// No roles defined in module security
+		GetModuleSecurityFunc: func(moduleID model.ID) (*security.ModuleSecurity, error) {
+			return &security.ModuleSecurity{ModuleRoles: nil}, nil
+		},
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execGrantEntityAccess(ctx, &ast.GrantEntityAccessStmt{
+		Entity: ast.QualifiedName{Module: "MyModule", Name: "Order"},
+		Roles:  []ast.QualifiedName{{Module: "MyModule", Name: "FakeRole"}},
+		Rights: []ast.EntityAccessRight{{Type: ast.EntityAccessReadAll}},
+	})
+	assertError(t, err)
+	assertContainsStr(t, err.Error(), "module role")
+	assertContainsStr(t, err.Error(), "FakeRole")
+}
+
+// TestRevokeEntityAccess_FakeRole_Issue399 verifies that REVOKE ON ENTITY also
+// rejects non-existent module roles.
+func TestRevokeEntityAccess_FakeRole_Issue399(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+	entity := &domainmodel.Entity{
+		BaseElement: model.BaseElement{ID: nextID("ent")},
+		Name:        "Customer",
+		Persistable: true,
+	}
+	dm := &domainmodel.DomainModel{
+		BaseElement: model.BaseElement{ID: nextID("dm")},
+		ContainerID: mod.ID,
+		Entities:    []*domainmodel.Entity{entity},
+	}
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:    func() bool { return true },
+		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
+		GetModuleSecurityFunc: func(moduleID model.ID) (*security.ModuleSecurity, error) {
+			return &security.ModuleSecurity{ModuleRoles: nil}, nil
+		},
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execRevokeEntityAccess(ctx, &ast.RevokeEntityAccessStmt{
+		Entity: ast.QualifiedName{Module: "MyModule", Name: "Customer"},
+		Roles:  []ast.QualifiedName{{Module: "MyModule", Name: "GhostRole"}},
+	})
+	assertError(t, err)
+	assertContainsStr(t, err.Error(), "module role")
+	assertContainsStr(t, err.Error(), "GhostRole")
 }

@@ -353,3 +353,48 @@ func TestParseEdmx_ExternalAnnotations_WithoutSlash(t *testing.T) {
 		t.Error("expected Updatable=true from external annotation without slash prefix")
 	}
 }
+
+// TestParseEdmx_ConcurrencyModeFixed verifies that a property with
+// ConcurrencyMode="Fixed" (OData v3 ETag token) is treated as Computed=true
+// so that mxcli does not mark it as Creatable in the generated external entity.
+// Regression test for issue #525 (TripPin Airline.Concurrency).
+func TestParseEdmx_ConcurrencyModeFixed(t *testing.T) {
+	xml := `<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="1.0" xmlns:edmx="http://schemas.microsoft.com/ado/2007/06/edmx">
+  <edmx:DataServices m:DataServiceVersion="3.0" xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata">
+    <Schema Namespace="TripPin" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
+      <EntityType Name="Airline">
+        <Key><PropertyRef Name="AirlineCode" /></Key>
+        <Property Name="AirlineCode" Type="Edm.String" Nullable="false" />
+        <Property Name="Name"        Type="Edm.String" Nullable="false" />
+        <Property Name="Concurrency" Type="Edm.Int64"  ConcurrencyMode="Fixed" />
+      </EntityType>
+      <EntityContainer Name="TripPinServiceRW" m:IsDefaultEntityContainer="true">
+        <EntitySet Name="Airlines" EntityType="TripPin.Airline" />
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>`
+
+	doc, err := ParseEdmx(xml)
+	if err != nil {
+		t.Fatalf("ParseEdmx error: %v", err)
+	}
+	if len(doc.Schemas) == 0 || len(doc.Schemas[0].EntityTypes) == 0 {
+		t.Fatal("expected at least one entity type")
+	}
+	et := doc.Schemas[0].EntityTypes[0]
+	var concProp *EdmProperty
+	for _, p := range et.Properties {
+		if p.Name == "Concurrency" {
+			concProp = p
+			break
+		}
+	}
+	if concProp == nil {
+		t.Fatal("expected Concurrency property in parsed entity type")
+	}
+	if !concProp.Computed {
+		t.Error("ConcurrencyMode='Fixed' must set Computed=true so the attribute is not marked Creatable (issue #525)")
+	}
+}

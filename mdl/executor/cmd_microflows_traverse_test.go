@@ -1361,3 +1361,101 @@ func TestTraverseFlow_BothBranchesToMerge_NoSwap(t *testing.T) {
 		t.Errorf("expected no negation when both branches go to merge, got:\n%s", output)
 	}
 }
+
+// TestTraverseFlow_Issue528_NestedGuardDoesNotSwallowSharedActivities is a
+// regression test for issue #528.
+//
+// Structure (matches TCUApp.ACT_Deal_SaveAsVRIPipeline):
+//
+//	outerSplit (condition: $Pipeline=true)
+//	  [true]  → innerGuardSplit (guard: $PipelineDate=empty, same Y, RIGHT→LEFT false path)
+//	               [true=true]  → showMsg → innerReturn (EndEvent)
+//	               [false=false] → outerMerge  (directly; same Y as innerGuardSplit)
+//	  [false=false] → outerMerge
+//	                      ↓
+//	               sharedAct  (change $Deal — must be OUTSIDE the outer if)
+//	                      ↓
+//	               end (EndEvent)
+//
+// Before the fix the guard continuation in traverseFlowUntilMerge would
+// "skip through" outerMerge and swallow sharedAct inside the outer then-block,
+// leaving nothing to emit after `end if;`.
+func TestTraverseFlow_Issue528_NestedGuardDoesNotSwallowSharedActivities(t *testing.T) {
+	e := newTestExecutor()
+
+	// inner guard split: same Y as outerSplit so its false path looks like a
+	// guard continuation (flowLooksLikeGuardContinuation relies on Y equality
+	// and RIGHT→LEFT connection indices).
+	innerGuardFalseFlow := mkBranchFlow("inner_guard", "outer_merge", &microflows.ExpressionCase{Expression: "false"})
+	innerGuardFalseFlow.OriginConnectionIndex = AnchorRight
+	innerGuardFalseFlow.DestinationConnectionIndex = AnchorLeft
+
+	mkObjAt := func(id string, x, y int) microflows.BaseMicroflowObject {
+		return microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: mkID(id)},
+			Position:    model.Point{X: x, Y: y},
+		}
+	}
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObjAt("start", 0, 60)},
+		mkID("outer_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObjAt("outer_split", 50, 60),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Pipeline = true"},
+		},
+		mkID("inner_guard"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObjAt("inner_guard", 150, 60),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$PipelineDate = empty"},
+		},
+		mkID("show_msg"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObjAt("show_msg", 150, 160)},
+			Action:       &microflows.LogMessageAction{LogLevel: "Warning", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "date required"}}},
+		},
+		mkID("inner_return"): &microflows.EndEvent{BaseMicroflowObject: mkObjAt("inner_return", 150, 260)},
+		mkID("outer_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObjAt("outer_merge", 300, 60)},
+		mkID("shared_act"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObjAt("shared_act", 400, 60)},
+			Action:       &microflows.CommitObjectsAction{CommitVariable: "Deal"},
+		},
+		mkID("end"): &microflows.EndEvent{BaseMicroflowObject: mkObjAt("end", 500, 60)},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "outer_split")},
+		mkID("outer_split"): {
+			mkBranchFlow("outer_split", "inner_guard", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("outer_split", "outer_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("inner_guard"): {
+			mkBranchFlow("inner_guard", "show_msg", &microflows.ExpressionCase{Expression: "true"}),
+			innerGuardFalseFlow,
+		},
+		mkID("show_msg"):   {mkFlow("show_msg", "inner_return")},
+		mkID("outer_merge"): {mkFlow("outer_merge", "shared_act")},
+		mkID("shared_act"): {mkFlow("shared_act", "end")},
+	}
+
+	splitMergeMap := map[model.ID]model.ID{
+		mkID("outer_split"): mkID("outer_merge"),
+		// inner_guard has no merge: its true branch terminates, false goes to outer_merge
+	}
+
+	var lines []string
+	visited := map[model.ID]bool{}
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, visited, nil, nil, &lines, 0, nil, 0, nil)
+
+	out := strings.Join(lines, "\n")
+
+	// shared_act must appear AFTER `end if;`, not inside the outer if block.
+	endIfIdx := strings.Index(out, "end if;")
+	sharedIdx := strings.Index(out, "commit $Deal;")
+	if endIfIdx < 0 {
+		t.Fatalf("expected 'end if;' in output, got:\n%s", out)
+	}
+	if sharedIdx < 0 {
+		t.Fatalf("expected 'commit $Deal;' in output, got:\n%s", out)
+	}
+	if sharedIdx <= endIfIdx {
+		t.Errorf("issue #528: shared activity emitted inside outer if block instead of after end if;\n%s", out)
+	}
+}

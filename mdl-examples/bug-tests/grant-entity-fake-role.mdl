@@ -1,0 +1,9 @@
+-- Issue #399: GRANT ... ON ENTITY must reject non-existent module roles.
+-- This script should fail on the GRANT line with "module role not found".
+-- Previously it silently created a phantom access rule.
+
+-- The entity and role that are NOT pre-existing:
+--   Module.FakeRole  → does not exist
+--   Module.MyEntity  → must exist for this test
+
+grant Module.FakeRole on Module.MyEntity (read *);

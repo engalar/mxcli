@@ -341,6 +341,39 @@ begin
 end;
 /
 
+-- ############################################################################
+-- PART 7: CREATE OR MODIFY (idempotent upsert)
+-- ############################################################################
+--
+-- CREATE OR MODIFY updates an existing mapping in-place, preserving its UUID.
+-- UUID preservation is critical: changing a mapping's UUID can break runtime
+-- references in microflows that call IMPORT FROM MAPPING or EXPORT TO MAPPING.
+--
+-- Use this form in scripts that may be run multiple times (migrations, CI
+-- pipelines) where re-creating from scratch is not safe.
+
+-- Update an import mapping that already exists (re-runs safely):
+create or modify import mapping MapTest.IMM_SimplePet
+  with json structure MapTest.JSON_Pet
+{
+  create MapTest.PetResponse {
+    PetId = id,
+    Name = name,
+    status = status
+  }
+};
+
+-- Update an export mapping that already exists (re-runs safely):
+create or modify export mapping MapTest.EMM_Pet
+  with json structure MapTest.JSON_Pet
+{
+  MapTest.PetResponse {
+    id = PetId,
+    name = Name,
+    status = status
+  }
+};
+
 -- ============================================================================
 -- END OF IMPORT/EXPORT MAPPING EXAMPLES
 -- ============================================================================

@@ -82,10 +82,13 @@ func (b *Builder) ExitCreateJavaActionStatement(ctx *parser.CreateJavaActionStat
 		stmt.JavaCode, stmt.Imports = extractJavaImports(code)
 	}
 
-	// Check for documentation comment from parent createStatement
+	// Check for documentation comment and OR MODIFY/REPLACE from parent createStatement
 	if parent, ok := ctx.GetParent().(*parser.CreateStatementContext); ok {
 		if docComment := parent.DocComment(); docComment != nil {
 			stmt.Documentation = extractDocComment(docComment.GetText())
+		}
+		if parent.OR() != nil && (parent.MODIFY() != nil || parent.REPLACE() != nil) {
+			stmt.CreateOrModify = true
 		}
 	}
 

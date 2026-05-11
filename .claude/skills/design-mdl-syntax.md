@@ -33,11 +33,11 @@ Reuse existing patterns. Never create a second syntax for the same concept.
 | Create | `create [MODIFIERS] <type> Module.Name (...)` | `create persistent entity Shop.Product (...)` |
 | Modify | `alter <type> Module.Name <operation>` | `alter entity Shop.Product add (...)` |
 | Remove | `drop <type> Module.Name` | `drop entity Shop.Product` |
-| List | `show <type>S [in module]` | `show entities in Shop` |
+| List | `list <type>S [in module]` | `list entities in Shop` |
 | Inspect | `describe <type> Module.Name` | `describe entity Shop.Product` |
 | Security | `grant/revoke <perm> on <target> to/from <role>` | `grant read on Shop.Product to Shop.User` |
 
-Do NOT use alternative verbs: `add` instead of `create`, `remove` instead of `drop`, `list` instead of `show`, `view` instead of `describe`.
+Do NOT use alternative verbs: `add` instead of `create`, `remove` instead of `drop`, `show` instead of `list`, `view` instead of `describe`. Note: `show` is the legacy verb — new commands use `list`.
 
 ### 3. Optimize for LLMs
 
@@ -72,10 +72,10 @@ Does an existing pattern cover this? If yes, extend it. Don't invent new syntax.
 
 ```
 New feature: "image collections"
-Existing pattern: create/alter/drop/show/describe
+Existing pattern: create/alter/drop/list/describe
 design: create image collection Module.Name (...)
         describe image collection Module.Name
-        show image COLLECTIONS [in module]
+        list image COLLECTIONS [in module]
 ```
 
 ### Step 2: Pick the Statement Shape
@@ -208,7 +208,7 @@ create rule Shop.ProcessOrder (
 
 Before merging any PR that adds new MDL syntax, verify:
 
-- [ ] Follows `create`/`alter`/`drop`/`show`/`describe` pattern
+- [ ] Follows `create`/`alter`/`drop`/`list`/`describe` pattern
 - [ ] Uses `Module.Element` qualified names (no bare names)
 - [ ] Property lists use `( key: value, ... )` format
 - [ ] Keywords are full English words (no abbreviations)

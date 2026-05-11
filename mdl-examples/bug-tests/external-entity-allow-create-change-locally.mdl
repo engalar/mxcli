@@ -1,0 +1,23 @@
+-- Issue #534: ALTER ENTITY SET ALLOW_CREATE_CHANGE_LOCALLY = true/false
+-- and CREATE EXTERNAL ENTITY with AllowCreateChangeLocally property.
+
+-- Create an external entity with the flag set at creation time.
+create or modify external entity TripPin.People
+from odata client TripPin.TripPinClient
+(
+  EntitySet: 'People',
+  Countable: Yes,
+  Creatable: Yes,
+  Deletable: No,
+  Updatable: Yes,
+  AllowCreateChangeLocally: Yes
+)
+(
+  UserName: String,
+  FirstName: String,
+  LastName: String
+);
+
+-- Toggle the flag using ALTER ENTITY.
+alter entity TripPin.People set allow_create_change_locally = true;
+alter entity TripPin.People set allow_create_change_locally = false;

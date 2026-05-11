@@ -91,21 +91,21 @@ func init() {
 			"many-to-one", "many-to-many", "foreign key",
 			"owner", "delete behavior",
 		},
-		Syntax:  "CREATE ASSOCIATION Module.Name\n  FROM Module.FromEntity TO Module.ToEntity\n  TYPE Reference|ReferenceSet\n  [OWNER Default|Both]\n  [DELETE_BEHAVIOR behavior]\n  [COMMENT 'text'];",
+		Syntax:  "CREATE [OR MODIFY] ASSOCIATION Module.Name\n  FROM Module.FromEntity TO Module.ToEntity\n  TYPE Reference|ReferenceSet\n  [OWNER Default|Both]\n  [DELETE_BEHAVIOR behavior]\n  [COMMENT 'text'];\nDROP ASSOCIATION Module.Name;\n\nOR MODIFY: updates type/owner/delete behavior in-place, preserves UUID.",
 		Example: "-- Many-to-one\nCREATE ASSOCIATION Shop.Order_Customer\n  FROM Shop.Order TO Shop.Customer\n  TYPE Reference\n  OWNER Default\n  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;\n\n-- Many-to-many\nCREATE ASSOCIATION Shop.Product_Tag\n  FROM Shop.Product TO Shop.Tag\n  TYPE ReferenceSet\n  OWNER Both;",
 		SeeAlso: []string{"domain-model.association.create", "domain-model.association.delete-behavior"},
 	})
 
 	Register(SyntaxFeature{
 		Path:    "domain-model.association.create",
-		Summary: "CREATE ASSOCIATION with type, owner, storage, and delete behavior options",
+		Summary: "CREATE [OR MODIFY] ASSOCIATION with type, owner, storage, and delete behavior options",
 		Keywords: []string{
-			"create association", "new association", "reference",
+			"create association", "or modify association", "new association", "reference",
 			"reference set", "junction table", "foreign key",
 			"owner default", "owner both", "storage column", "storage table",
 		},
-		Syntax:  "CREATE ASSOCIATION Module.AssociationName\n  FROM Module.FromEntity TO Module.ToEntity\n  TYPE Reference|ReferenceSet\n  [OWNER Default|Both]\n  [STORAGE COLUMN|TABLE]\n  [DELETE_BEHAVIOR behavior]\n  [COMMENT 'text'];\n\nDirection:\n  FROM = entity holding the FK (the \"many\" side)\n  TO   = entity being referenced (the \"one\" side)\n\nTypes:\n  Reference    = Many-to-one (FK column on FROM table)\n  ReferenceSet = Many-to-many (junction table)",
-		Example: "-- Many-to-one with delete behavior\nCREATE ASSOCIATION Shop.Order_Customer\n  FROM Shop.Order TO Shop.Customer\n  TYPE Reference\n  OWNER Default\n  DELETE_BEHAVIOR PREVENT;\n\n-- Many-to-many\nCREATE ASSOCIATION Shop.Product_Tag\n  FROM Shop.Product TO Shop.Tag\n  TYPE ReferenceSet\n  OWNER Both;\n\n-- One-to-one with cascade\nCREATE ASSOCIATION HR.Employee_Profile\n  FROM HR.Employee TO HR.EmployeeProfile\n  TYPE Reference\n  OWNER Default\n  DELETE_BEHAVIOR CASCADE;",
+		Syntax:  "CREATE [OR MODIFY] ASSOCIATION Module.AssociationName\n  FROM Module.FromEntity TO Module.ToEntity\n  TYPE Reference|ReferenceSet\n  [OWNER Default|Both]\n  [STORAGE COLUMN|TABLE]\n  [DELETE_BEHAVIOR behavior]\n  [COMMENT 'text'];\n\nDirection:\n  FROM = entity holding the FK (the \"many\" side)\n  TO   = entity being referenced (the \"one\" side)\n\nTypes:\n  Reference    = Many-to-one (FK column on FROM table)\n  ReferenceSet = Many-to-many (junction table)\n\nOR MODIFY: updates in-place, preserves UUID. Safe to re-run.",
+		Example: "-- Many-to-one with delete behavior\nCREATE ASSOCIATION Shop.Order_Customer\n  FROM Shop.Order TO Shop.Customer\n  TYPE Reference\n  OWNER Default\n  DELETE_BEHAVIOR PREVENT;\n\n-- Many-to-many\nCREATE ASSOCIATION Shop.Product_Tag\n  FROM Shop.Product TO Shop.Tag\n  TYPE ReferenceSet\n  OWNER Both;\n\n-- Idempotent update\nCREATE OR MODIFY ASSOCIATION Shop.Order_Customer\n  FROM Shop.Order TO Shop.Customer\n  TYPE Reference\n  OWNER Default\n  DELETE_BEHAVIOR CASCADE;",
 		SeeAlso: []string{"domain-model.association.delete-behavior", "domain-model.entity.create"},
 	})
 

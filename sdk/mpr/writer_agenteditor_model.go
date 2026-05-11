@@ -52,6 +52,33 @@ func (w *Writer) CreateAgentEditorModel(m *agenteditor.Model) error {
 	})
 }
 
+// UpdateAgentEditorModel replaces an existing Model document, preserving its UUID.
+func (w *Writer) UpdateAgentEditorModel(m *agenteditor.Model) error {
+	if m == nil {
+		return fmt.Errorf("model is nil")
+	}
+	if m.Provider == "" {
+		m.Provider = "MxCloudGenAI"
+	}
+
+	contentsJSON, err := encodeAgentEditorModelContents(m)
+	if err != nil {
+		return err
+	}
+
+	return w.updateCustomBlobDocument(customBlobInput{
+		UnitID:             string(m.ID),
+		ContainerID:        string(m.ContainerID),
+		Name:               m.Name,
+		Documentation:      m.Documentation,
+		Excluded:           m.Excluded,
+		ExportLevel:        m.ExportLevel,
+		CustomDocumentType: agenteditor.CustomTypeModel,
+		ReadableTypeName:   agenteditor.ReadableModel,
+		ContentsJSON:       contentsJSON,
+	})
+}
+
 // DeleteAgentEditorModel removes a Model document by ID.
 func (w *Writer) DeleteAgentEditorModel(id string) error {
 	return w.deleteUnit(id)

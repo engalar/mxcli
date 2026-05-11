@@ -31,14 +31,13 @@ func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnecti
 	existing, _ := ctx.Backend.ListDatabaseConnections()
 	h, _ := getHierarchy(ctx)
 
+	var existingConnID model.ID
 	for _, ex := range existing {
 		modID := h.FindModuleID(ex.ContainerID)
 		modName := h.GetModuleName(modID)
 		if strings.EqualFold(modName, stmt.Name.Module) && strings.EqualFold(ex.Name, stmt.Name.Name) {
 			if stmt.CreateOrModify {
-				if err := ctx.Backend.DeleteDatabaseConnection(ex.ID); err != nil {
-					return mdlerrors.NewBackend("delete existing connection", err)
-				}
+				existingConnID = ex.ID
 			} else {
 				return mdlerrors.NewAlreadyExistsMsg("database connection", modName+"."+ex.Name, fmt.Sprintf("database connection already exists: %s.%s (use create or modify to update)", modName, ex.Name))
 			}
@@ -109,6 +108,17 @@ func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnecti
 		}
 
 		conn.Queries = append(conn.Queries, q)
+	}
+
+	if existingConnID != "" {
+		// In-place update: preserve UUID so BSON git-diff sees a modification.
+		conn.ID = existingConnID
+		if err := ctx.Backend.UpdateDatabaseConnection(conn); err != nil {
+			return mdlerrors.NewBackend("update database connection", err)
+		}
+		invalidateHierarchy(ctx)
+		fmt.Fprintf(ctx.Output, "Modified database connection: %s.%s\n", stmt.Name.Module, stmt.Name.Name)
+		return nil
 	}
 
 	if err := ctx.Backend.CreateDatabaseConnection(conn); err != nil {

@@ -509,7 +509,7 @@ func parseInnerParameterType(raw map[string]any) javaactions.CodeActionParameter
 	return nil
 }
 
-// ListJavaActionsFull returns all Java actions with full details.
+// ListJavaActionsFull returns all Java actions with full details, including virtual System module actions.
 func (r *Reader) ListJavaActionsFull() ([]*javaactions.JavaAction, error) {
 	units, err := r.listUnitsByType("JavaActions$JavaAction")
 	if err != nil {
@@ -524,6 +524,9 @@ func (r *Reader) ListJavaActionsFull() ([]*javaactions.JavaAction, error) {
 		}
 		result = append(result, ja)
 	}
+
+	// Append virtual System module Java actions (not stored in the MPR database)
+	result = append(result, BuildSystemJavaActionsFull()...)
 
 	return result, nil
 }

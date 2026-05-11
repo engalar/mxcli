@@ -117,6 +117,14 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 			fb.validateScopedStatements(s.ElseBody)
 		}
 
+	case *ast.InheritanceSplitStmt:
+		for _, c := range s.Cases {
+			fb.validateScopedStatements(c.Body)
+		}
+		if len(s.ElseBody) > 0 {
+			fb.validateScopedStatements(s.ElseBody)
+		}
+
 	case *ast.LoopStmt:
 		// Register loop variable (derived from list type)
 		if s.ListVariable != "" {

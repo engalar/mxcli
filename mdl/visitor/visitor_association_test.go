@@ -73,3 +73,17 @@ func TestAlterAssociation_SetOwner(t *testing.T) {
 		t.Errorf("Expected OwnerBoth, got %v", stmt.Owner)
 	}
 }
+
+func TestCreateAssociation_OrModify(t *testing.T) {
+	prog, errs := Build(`CREATE OR MODIFY ASSOCIATION MyModule.Order_Customer FROM MyModule.Order TO MyModule.Customer TYPE REFERENCE;`)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors: %v", errs)
+	}
+	stmt, ok := prog.Statements[0].(*ast.CreateAssociationStmt)
+	if !ok {
+		t.Fatalf("Expected CreateAssociationStmt, got %T", prog.Statements[0])
+	}
+	if !stmt.CreateOrModify {
+		t.Error("Expected CreateOrModify=true")
+	}
+}

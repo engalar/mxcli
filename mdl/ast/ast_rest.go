@@ -108,7 +108,7 @@ type CreatePublishedRestServiceStmt struct {
 	ServiceName     string
 	Folder          string
 	Resources       []*PublishedRestResourceDef
-	CreateOrReplace bool
+	CreateOrModify bool
 }
 
 func (s *CreatePublishedRestServiceStmt) isStatement() {}

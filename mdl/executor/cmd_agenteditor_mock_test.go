@@ -710,3 +710,175 @@ func TestShowAgentEditorAgents_Mock_FilterByModule(t *testing.T) {
 	assertNotContainsStr(t, out, "A.Agent1")
 	assertContainsStr(t, out, "B.Agent2")
 }
+
+// ---------------------------------------------------------------------------
+// CREATE OR MODIFY — preserves UUID across all agent editor types
+// ---------------------------------------------------------------------------
+
+func TestCreateAgentEditorModel_OrModify_PreservesID(t *testing.T) {
+	mod := mkModule("M")
+	existingID := nextID("aem")
+	existing := &agenteditor.Model{
+		BaseElement: model.BaseElement{ID: existingID},
+		ContainerID: mod.ID,
+		Name:        "GPT4",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, existing.ContainerID, mod.ID)
+
+	var updatedID model.ID
+	mb := &mock.MockBackend{
+		IsConnectedFunc:           func() bool { return true },
+		ListModulesFunc:           func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return []*agenteditor.Model{existing}, nil },
+		ListConstantsFunc:         func() ([]*model.Constant, error) { return nil, nil },
+		UpdateAgentEditorModelFunc: func(m *agenteditor.Model) error {
+			updatedID = m.ID
+			return nil
+		},
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execCreateAgentEditorModel(ctx, &ast.CreateModelStmt{
+		Name:           ast.QualifiedName{Module: "M", Name: "GPT4"},
+		Provider:       "MxCloudGenAI",
+		CreateOrModify: true,
+	})
+	assertNoError(t, err)
+	assertContainsStr(t, buf.String(), "Modified model")
+	if updatedID != existingID {
+		t.Errorf("UpdateAgentEditorModel called with ID %q, want %q", updatedID, existingID)
+	}
+}
+
+func TestCreateConsumedMCPService_OrModify_PreservesID(t *testing.T) {
+	mod := mkModule("M")
+	existingID := nextID("aemcp")
+	existing := &agenteditor.ConsumedMCPService{
+		BaseElement: model.BaseElement{ID: existingID},
+		ContainerID: mod.ID,
+		Name:        "WebSearch",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, existing.ContainerID, mod.ID)
+
+	var updatedID model.ID
+	mb := &mock.MockBackend{
+		IsConnectedFunc:                        func() bool { return true },
+		ListModulesFunc:                        func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) { return []*agenteditor.ConsumedMCPService{existing}, nil },
+		UpdateAgentEditorConsumedMCPServiceFunc: func(c *agenteditor.ConsumedMCPService) error {
+			updatedID = c.ID
+			return nil
+		},
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execCreateConsumedMCPService(ctx, &ast.CreateConsumedMCPServiceStmt{
+		Name:            ast.QualifiedName{Module: "M", Name: "WebSearch"},
+		ProtocolVersion: "v2025_03_26",
+		CreateOrModify:  true,
+	})
+	assertNoError(t, err)
+	assertContainsStr(t, buf.String(), "Modified consumed mcp service")
+	if updatedID != existingID {
+		t.Errorf("UpdateAgentEditorConsumedMCPService called with ID %q, want %q", updatedID, existingID)
+	}
+}
+
+func TestCreateKnowledgeBase_OrModify_PreservesID(t *testing.T) {
+	mod := mkModule("M")
+	existingID := nextID("aekb")
+	existing := &agenteditor.KnowledgeBase{
+		BaseElement: model.BaseElement{ID: existingID},
+		ContainerID: mod.ID,
+		Name:        "Docs",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, existing.ContainerID, mod.ID)
+
+	var updatedID model.ID
+	mb := &mock.MockBackend{
+		IsConnectedFunc:                    func() bool { return true },
+		ListModulesFunc:                    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListAgentEditorKnowledgeBasesFunc:  func() ([]*agenteditor.KnowledgeBase, error) { return []*agenteditor.KnowledgeBase{existing}, nil },
+		ListConstantsFunc:                  func() ([]*model.Constant, error) { return nil, nil },
+		UpdateAgentEditorKnowledgeBaseFunc: func(k *agenteditor.KnowledgeBase) error { updatedID = k.ID; return nil },
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execCreateKnowledgeBase(ctx, &ast.CreateKnowledgeBaseStmt{
+		Name:           ast.QualifiedName{Module: "M", Name: "Docs"},
+		Provider:       "MxCloudGenAI",
+		CreateOrModify: true,
+	})
+	assertNoError(t, err)
+	assertContainsStr(t, buf.String(), "Modified knowledge base")
+	if updatedID != existingID {
+		t.Errorf("UpdateAgentEditorKnowledgeBase called with ID %q, want %q", updatedID, existingID)
+	}
+}
+
+func TestCreateAgent_OrModify_PreservesID(t *testing.T) {
+	mod := mkModule("M")
+	existingID := nextID("aeag")
+	existing := &agenteditor.Agent{
+		BaseElement: model.BaseElement{ID: existingID},
+		ContainerID: mod.ID,
+		Name:        "Assistant",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, existing.ContainerID, mod.ID)
+
+	var updatedID model.ID
+	mb := &mock.MockBackend{
+		IsConnectedFunc:           func() bool { return true },
+		ListModulesFunc:           func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return []*agenteditor.Agent{existing}, nil },
+		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return nil, nil },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) {
+			return nil, nil
+		},
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return nil, nil },
+		UpdateAgentEditorAgentFunc: func(a *agenteditor.Agent) error {
+			updatedID = a.ID
+			return nil
+		},
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execCreateAgent(ctx, &ast.CreateAgentStmt{
+		Name:           ast.QualifiedName{Module: "M", Name: "Assistant"},
+		UsageType:      "UserInitiated",
+		CreateOrModify: true,
+	})
+	assertNoError(t, err)
+	assertContainsStr(t, buf.String(), "Modified agent")
+	if updatedID != existingID {
+		t.Errorf("UpdateAgentEditorAgent called with ID %q, want %q", updatedID, existingID)
+	}
+}
+
+func TestCreateAgentEditorModel_AlreadyExists_NoOrModify(t *testing.T) {
+	mod := mkModule("M")
+	existing := &agenteditor.Model{
+		BaseElement: model.BaseElement{ID: nextID("aem")},
+		ContainerID: mod.ID,
+		Name:        "GPT4",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, existing.ContainerID, mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:           func() bool { return true },
+		ListModulesFunc:           func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return []*agenteditor.Model{existing}, nil },
+		ListConstantsFunc:         func() ([]*model.Constant, error) { return nil, nil },
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execCreateAgentEditorModel(ctx, &ast.CreateModelStmt{
+		Name: ast.QualifiedName{Module: "M", Name: "GPT4"},
+	})
+	assertError(t, err)
+}

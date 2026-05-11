@@ -48,10 +48,13 @@ create business event service Module.CustomerEventsApi
 };
 ```
 
-### Create or Replace (Overwrite Existing)
+### Create or Modify (Idempotent Update — Preferred)
+
+Preserves the existing UUID so other documents that reference this service remain valid.
+`OR REPLACE` is accepted as a synonym.
 
 ```sql
-create or replace business event service Module.CustomerEventsApi
+create or modify business event service Module.CustomerEventsApi
 (
   ServiceName: 'CustomerEventsApi',
   EventNamePrefix: ''

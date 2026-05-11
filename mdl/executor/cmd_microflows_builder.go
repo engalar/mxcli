@@ -141,12 +141,14 @@ func errorExampleDeclareVariable(varName string) string {
 
 // isVariableDeclared checks if a variable has been declared (either as primitive or entity).
 func (fb *flowBuilder) isVariableDeclared(varName string) bool {
-	// Check entity variables (from parameters with entity types)
-	if _, ok := fb.varTypes[varName]; ok {
+	name := strings.TrimPrefix(varName, "$")
+	if idx := strings.IndexByte(name, '/'); idx >= 0 {
+		name = name[:idx]
+	}
+	if _, ok := fb.varTypes[name]; ok {
 		return true
 	}
-	// Check primitive variables (from DECLARE statements or primitive parameters)
-	if _, ok := fb.declaredVars[varName]; ok {
+	if _, ok := fb.declaredVars[name]; ok {
 		return true
 	}
 	return false

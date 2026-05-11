@@ -328,6 +328,34 @@ from odata client OdTest.SalesforceAPI
 );
 /
 
+/**
+ * Level 8.6c: Create external entity with AllowCreateChangeLocally flag
+ * Enables local creation/changes for the entity, mirroring Studio Pro's
+ * "Allow creating and changing locally" checkbox on external entities.
+ */
+create or modify external entity OdTest.RemoteAccount
+from odata client OdTest.SalesforceAPI
+(
+  EntitySet: 'Accounts',
+  Countable: Yes,
+  Creatable: Yes,
+  Deletable: No,
+  Updatable: Yes,
+  AllowCreateChangeLocally: Yes
+)
+(
+  AccountId: string(200),
+  AccountName: string(255)
+);
+/
+
+/**
+ * Level 8.6d: ALTER ENTITY SET ALLOW_CREATE_CHANGE_LOCALLY
+ * Toggle the flag on an existing external entity.
+ */
+alter entity OdTest.RemoteAccount set allow_create_change_locally = true;
+alter entity OdTest.RemoteAccount set allow_create_change_locally = false;
+
 -- ############################################################################
 -- LEVEL 8.7: GRANT/REVOKE ACCESS ON ODATA SERVICE
 -- ############################################################################

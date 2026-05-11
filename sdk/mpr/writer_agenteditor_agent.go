@@ -55,6 +55,42 @@ func (w *Writer) CreateAgentEditorAgent(a *agenteditor.Agent) error {
 	})
 }
 
+// UpdateAgentEditorAgent replaces an existing Agent document, preserving its UUID.
+// Tool and KB entries without IDs get fresh stable IDs assigned.
+func (w *Writer) UpdateAgentEditorAgent(a *agenteditor.Agent) error {
+	if a == nil {
+		return fmt.Errorf("agent is nil")
+	}
+
+	for i := range a.Tools {
+		if a.Tools[i].ID == "" {
+			a.Tools[i].ID = generateUUID()
+		}
+	}
+	for i := range a.KBTools {
+		if a.KBTools[i].ID == "" {
+			a.KBTools[i].ID = generateUUID()
+		}
+	}
+
+	contentsJSON, err := encodeAgentContents(a)
+	if err != nil {
+		return err
+	}
+
+	return w.updateCustomBlobDocument(customBlobInput{
+		UnitID:             string(a.ID),
+		ContainerID:        string(a.ContainerID),
+		Name:               a.Name,
+		Documentation:      a.Documentation,
+		Excluded:           a.Excluded,
+		ExportLevel:        a.ExportLevel,
+		CustomDocumentType: agenteditor.CustomTypeAgent,
+		ReadableTypeName:   agenteditor.ReadableAgent,
+		ContentsJSON:       contentsJSON,
+	})
+}
+
 // DeleteAgentEditorAgent removes an Agent by ID.
 func (w *Writer) DeleteAgentEditorAgent(id string) error {
 	return w.deleteUnit(id)

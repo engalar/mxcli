@@ -324,6 +324,13 @@ func execGrantEntityAccess(ctx *ExecContext, s *ast.GrantEntityAccessStmt) error
 		return mdlerrors.NewNotFound("entity", s.Entity.Module+"."+s.Entity.Name)
 	}
 
+	// Validate all roles exist before creating any access rules
+	for _, role := range s.Roles {
+		if err := validateModuleRole(ctx, role); err != nil {
+			return err
+		}
+	}
+
 	// Build role name list
 	var roleNames []string
 	for _, role := range s.Roles {
@@ -485,6 +492,13 @@ func execRevokeEntityAccess(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) err
 	entity := dm.FindEntityByName(s.Entity.Name)
 	if entity == nil {
 		return mdlerrors.NewNotFound("entity", s.Entity.Module+"."+s.Entity.Name)
+	}
+
+	// Validate all roles exist before modifying any access rules
+	for _, role := range s.Roles {
+		if err := validateModuleRole(ctx, role); err != nil {
+			return err
+		}
 	}
 
 	// Build role name list
@@ -926,9 +940,11 @@ func validateModuleRole(ctx *ExecContext, role ast.QualifiedName) error {
 		return mdlerrors.NewBackend(fmt.Sprintf("read module security for %s", role.Module), err)
 	}
 
-	for _, mr := range ms.ModuleRoles {
-		if mr.Name == role.Name {
-			return nil
+	if ms != nil {
+		for _, mr := range ms.ModuleRoles {
+			if mr.Name == role.Name {
+				return nil
+			}
 		}
 	}
 
