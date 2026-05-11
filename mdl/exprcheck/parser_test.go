@@ -112,3 +112,26 @@ func (f fakeCatalog) AttributeKind(string, string) (TypeKind, bool)  { return f.
 func (f fakeCatalog) EnumCases(string) ([]string, bool)              { return f.values, true }
 func (f fakeCatalog) MicroflowReturn(string) (TypeKind, bool)        { return KindUnknown, false }
 func (f fakeCatalog) MicroflowParam(string, string) (TypeKind, bool) { return KindUnknown, false }
+
+func TestParser_E007_RecoveryAtPrimary(t *testing.T) {
+	p := NewParser()
+	expr, hs := p.Parse("'count=' + length(@@@broken@@@) + ' items'", Context{
+		SlotPath:  "MfSetStmt.Value",
+		Microflow: "M.F",
+	})
+	if _, ok := expr.(*BinExpr); !ok {
+		t.Fatalf("outer = %T, want *BinExpr", expr)
+	}
+	var sawE007 bool
+	for _, h := range hs {
+		if h.Code == "E007" {
+			sawE007 = true
+			if h.Fix == "" || h.Problem == "" {
+				t.Errorf("E007 missing prose: %+v", h)
+			}
+		}
+	}
+	if !sawE007 {
+		t.Fatalf("expected E007 in hints %+v", hs)
+	}
+}
