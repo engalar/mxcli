@@ -66,4 +66,19 @@ var Registry = &registry{byCode: map[string]Entry{
 			},
 		},
 	},
+	"E007": {
+		Code:     "E007",
+		Slug:     "unknown-token",
+		Severity: SeverityWarning,
+		Trigger:  "The parser encountered tokens it does not recognise as a valid Mendix expression and skipped to the next safe boundary.",
+		WhyWrong: "The unrecognised text is not part of the Mendix expression grammar — typos, foreign characters, or stray punctuation usually cause this.",
+		HowToFix: "Replace the unrecognised fragment with a valid expression: a literal, a variable, a function call, or a qualified name.",
+		Examples: []ExampleFix{
+			{
+				Wrong: "SET $msg = 'count=' + length(@@@broken@@@) + ' items';",
+				Right: "SET $msg = 'count=' + toString(length($list)) + ' items';",
+				Note:  "argument of length()",
+			},
+		},
+	},
 }}

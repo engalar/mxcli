@@ -140,11 +140,29 @@ func parsePrimary(s *Stream, ctx Context) (RobustExpr, []Hint) {
 		}
 		return &ParenExpr{baseNode: baseNode{P: t.Pos}, Inner: inner}, hints
 	}
+	pos := s.Peek().Pos
+	salvage := consumeUntilSafe(s)
+	if salvage == "" {
+		salvage = s.Consume().Text
+	}
 	return &RecoveredExpr{
-		baseNode:       baseNode{P: t.Pos},
-		SourceFragment: t.Text,
-		Reason:         "unrecognised token at primary position",
-	}, nil
+			baseNode:       baseNode{P: pos},
+			SourceFragment: salvage,
+			Reason:         "unrecognised tokens at primary expression position",
+		}, []Hint{{
+			Code:     "E007",
+			Slug:     "unknown-token",
+			Severity: hints.SeverityWarning,
+			Where: hints.Location{
+				Microflow: ctx.Microflow,
+				Context:   SlotToContext(ctx.SlotPath),
+				Line:      pos.Line,
+				Column:    pos.Column,
+			},
+			YouWrote: salvage,
+			Problem:  "Unrecognised tokens at this position. The parser skipped to the next safe boundary so the rest of the expression could be parsed; additional hints below assume that recovery point.",
+			Fix:      "Replace the highlighted fragment with a valid Mendix expression — a literal, variable, qualified name, or function call.",
+		}}
 }
 
 func parseIdentLed(s *Stream, ctx Context) (RobustExpr, []Hint) {
