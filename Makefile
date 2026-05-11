@@ -269,3 +269,11 @@ mine-exprgrammar:
 	GOPROXY=https://goproxy.cn,direct go run ./cmd/exprgrammar-mine \
 	    --mpr "$(MINE_MPR)" \
 	    --out generated/exprgrammar/mined.go
+
+# roundtrip — exprcheck round-trip CI gate over testdata/expr-checker/minimal.mpr.
+# Walks every microflow, regenerates MDL via DescribeMicroflowToString, parses
+# every expression with the robust parser, asserts 0 hints. Failures reveal
+# grammar gaps. Build tag 'roundtrip' keeps it out of the default suite.
+.PHONY: roundtrip
+roundtrip:
+	GOPROXY=https://goproxy.cn,direct go test -tags=roundtrip ./mdl/exprcheck/ -run TestRoundTrip -count=1 -timeout 5m

@@ -48,6 +48,29 @@ jobs:
         run: make test-integration
         timeout-minutes: 30
 
+  exprcheck-roundtrip:
+    name: exprcheck round-trip (regression gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+      - name: Cache ANTLR4 JAR
+        uses: actions/cache@v5
+        with:
+          path: ~/.m2/repository/org/antlr/antlr4
+          key: antlr4-4.13.2
+      - name: Install ANTLR4
+        run: pip install 'antlr4-tools==0.2.2'
+      - name: Generate parser
+        run: make grammar
+        env:
+          ANTLR4_TOOLS_ANTLR_VERSION: '4.13.2'
+      - name: Round-trip exprcheck
+        run: make roundtrip
+        timeout-minutes: 5
+
   nightly:
     needs: test
     runs-on: ubuntu-latest
