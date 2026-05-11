@@ -181,12 +181,12 @@ func parseIdentLed(s *Stream, ctx Context) (RobustExpr, []Hint) {
 	if s.Peek().Kind == TokLParen {
 		s.Consume()
 		var args []RobustExpr
-		var hints []Hint
+		var hs []Hint
 		if s.Peek().Kind != TokRParen {
 			for {
 				a, h := parseOr(s, ctx)
 				args = append(args, a)
-				hints = append(hints, h...)
+				hs = append(hs, h...)
 				if s.Peek().Kind == TokComma {
 					s.Consume()
 					continue
@@ -197,7 +197,8 @@ func parseIdentLed(s *Stream, ctx Context) (RobustExpr, []Hint) {
 		if s.Peek().Kind == TokRParen {
 			s.Consume()
 		}
-		return &CallExpr{baseNode: baseNode{P: t.Pos}, Name: name, Args: args}, hints
+		node := &CallExpr{baseNode: baseNode{P: t.Pos}, Name: name, Args: args}
+		return node, append(hs, checkCallExpr(node, ctx)...)
 	}
 	if s.Peek().Kind == TokDot {
 		s.Consume()
