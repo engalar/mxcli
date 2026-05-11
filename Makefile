@@ -15,6 +15,7 @@
 #   make docs-serve - Serve docs site locally with live reload
 #   make sbom      - Generate CycloneDX SBOM (Go + TypeScript)
 #   make sbom-report - Generate Markdown dependency report
+#   make mine-exprgrammar MPR=path/to/app.mpr - Re-mine generated/exprgrammar/mined.go from an MPR
 #   make clean     - Remove build artifacts
 
 BINARY_NAME = mxcli
@@ -251,3 +252,15 @@ sbom-report: sbom
 source-tree: build
 	@$(BUILD_DIR)/source_tree --all > source_tree.txt
 	@echo "Generated source_tree.txt"
+
+# Re-mine generated/exprgrammar/mined.go from an MPR.
+#   make mine-exprgrammar MPR=testdata/expr-checker/minimal.mpr   (~1s, 9 slots)
+#   make mine-exprgrammar MPR="/path/to/Factory Management.mpr"   (~11min, 11 slots)
+.PHONY: mine-exprgrammar
+mine-exprgrammar:
+	@if [ -z "$(MPR)" ]; then \
+		echo "usage: make mine-exprgrammar MPR=/path/to/app.mpr"; exit 2; \
+	fi
+	GOPROXY=https://goproxy.cn,direct go run ./cmd/exprgrammar-mine \
+	    --mpr "$(MPR)" \
+	    --out generated/exprgrammar/mined.go
