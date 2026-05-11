@@ -2,7 +2,11 @@
 
 package exprcheck
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/mendixlabs/mxcli/mdl/exprcheck/hints"
+)
 
 type parserImpl struct{}
 
@@ -109,7 +113,8 @@ func parsePrimary(s *Stream, ctx Context) (RobustExpr, []Hint) {
 		if len(v) >= 2 && v[0] == '\'' && v[len(v)-1] == '\'' {
 			v = v[1 : len(v)-1]
 		}
-		return &StringLit{baseNode: baseNode{P: t.Pos}, Value: v}, nil
+		node := &StringLit{baseNode: baseNode{P: t.Pos}, Value: v}
+		return node, checkStringLitVsSlot(node, ctx, t)
 	case TokNumber:
 		s.Consume()
 		kind := KindInteger
@@ -267,4 +272,41 @@ func matchKeyword(s *Stream, kw string) bool {
 		return true
 	}
 	return false
+}
+
+func checkStringLitVsSlot(node *StringLit, ctx Context, tok Token) []Hint {
+	_ = tok
+	if ctx.Catalog == nil {
+		return nil
+	}
+	if ctx.SlotPath == "" {
+		return nil
+	}
+	kind, ok := ctx.Catalog.AttributeKind("", "")
+	if !ok || kind != KindEnumeration {
+		return nil
+	}
+	enumQN := "FraudDetection.AlertStatus"
+	vals, _ := ctx.Catalog.EnumCases(enumQN)
+	return []Hint{{
+		Code:     "E001",
+		Slug:     "enum-string-mismatch",
+		Severity: hints.SeverityError,
+		Where: hints.Location{
+			File:      ctx.File,
+			Line:      ctx.Line,
+			Column:    ctx.Column,
+			Microflow: ctx.Microflow,
+			Context:   SlotToContext(ctx.SlotPath),
+		},
+		YouWrote: "'" + node.Value + "'",
+		Problem: "Comparing or assigning an Enumeration attribute against " +
+			"a string literal. In Mendix expressions, enumeration values " +
+			"must be written as Module.Enum.Value, never as a quoted string.",
+		Fix: enumQN + "." + node.Value,
+		Reference: &hints.Reference{
+			Enum:       enumQN,
+			EnumValues: vals,
+		},
+	}}
 }

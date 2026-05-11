@@ -57,3 +57,58 @@ func TestParser_QName3Part(t *testing.T) {
 		t.Fatalf("got %+v", q)
 	}
 }
+
+func TestParser_E001_StringInEnumSlot(t *testing.T) {
+	p := NewParser()
+	expr, hints := p.Parse(`'NewAlert'`, Context{
+		SlotPath:  "ChangeItem.Value",
+		Microflow: "FraudDetection.SUB_CreateAlert",
+		File:      "fraud.mdl",
+		Line:      43,
+		Column:    20,
+		Slots:     DefaultSlotResolver(),
+	})
+	if _, ok := expr.(*StringLit); !ok {
+		t.Fatalf("expected StringLit, got %T", expr)
+	}
+	var sawE001 bool
+	for _, h := range hints {
+		if h.Code == "E001" {
+			sawE001 = true
+		}
+	}
+	if sawE001 {
+		t.Errorf("with no catalog, E001 should not fire; got %+v", hints)
+	}
+}
+
+func TestParser_E001_HitsForKnownEnumKind(t *testing.T) {
+	p := NewParser()
+	cat := fakeCatalog{kind: KindEnumeration, enumQN: "FraudDetection.AlertStatus", values: []string{"NewAlert", "Validated"}}
+	expr, hints := p.Parse(`'NewAlert'`, Context{
+		SlotPath:  "ChangeItem.Value",
+		Microflow: "FraudDetection.SUB_CreateAlert",
+		Slots:     DefaultSlotResolver(),
+		Catalog:   cat,
+	})
+	if _, ok := expr.(*StringLit); !ok {
+		t.Fatalf("got %T", expr)
+	}
+	if len(hints) == 0 || hints[0].Code != "E001" {
+		t.Fatalf("expected E001, got %+v", hints)
+	}
+	if got := hints[0].Reference.Enum; got != "FraudDetection.AlertStatus" {
+		t.Errorf("enum ref = %q", got)
+	}
+}
+
+type fakeCatalog struct {
+	kind   TypeKind
+	enumQN string
+	values []string
+}
+
+func (f fakeCatalog) AttributeKind(string, string) (TypeKind, bool)  { return f.kind, true }
+func (f fakeCatalog) EnumCases(string) ([]string, bool)              { return f.values, true }
+func (f fakeCatalog) MicroflowReturn(string) (TypeKind, bool)        { return KindUnknown, false }
+func (f fakeCatalog) MicroflowParam(string, string) (TypeKind, bool) { return KindUnknown, false }
