@@ -341,40 +341,55 @@ func matchKeyword(s *Stream, kw string) bool {
 }
 
 func checkStringLitVsSlot(node *StringLit, ctx Context, tok Token) []Hint {
-	_ = tok
-	if ctx.Catalog == nil {
+	if ctx.Catalog == nil || ctx.SlotPath == "" {
 		return nil
 	}
-	if ctx.SlotPath == "" {
+	_, qual := splitSlotQual(ctx.SlotPath)
+	entity, attr := splitEntityAttr(qual)
+	if entity == "" || attr == "" {
 		return nil
 	}
-	kind, ok := ctx.Catalog.AttributeKind("", "")
+	kind, ok := ctx.Catalog.AttributeKind(entity, attr)
 	if !ok || kind != KindEnumeration {
 		return nil
 	}
-	enumQN := "FraudDetection.AlertStatus"
+	enumQN, _ := ctx.Catalog.AttributeEnumQN(entity, attr)
 	vals, _ := ctx.Catalog.EnumCases(enumQN)
 	return []Hint{{
 		Code:     "E001",
 		Slug:     "enum-string-mismatch",
 		Severity: hints.SeverityError,
-		Where: hints.Location{
-			File:      ctx.File,
-			Line:      ctx.Line,
-			Column:    ctx.Column,
-			Microflow: ctx.Microflow,
-			Context:   SlotToContext(ctx.SlotPath),
-		},
+		Where:    hintsLocation(ctx, tok.Pos),
 		YouWrote: "'" + node.Value + "'",
 		Problem: "Comparing or assigning an Enumeration attribute against " +
 			"a string literal. In Mendix expressions, enumeration values " +
 			"must be written as Module.Enum.Value, never as a quoted string.",
 		Fix: enumQN + "." + node.Value,
 		Reference: &hints.Reference{
-			Enum:       enumQN,
-			EnumValues: vals,
+			Enum:          enumQN,
+			EnumValues:    vals,
+			AttributeName: attr,
+			EntityType:    entity,
 		},
 	}}
+}
+
+// splitSlotQual splits "<base>:<entity.attr>" into base and qual parts.
+// If no ':' is present, qual is empty.
+func splitSlotQual(s string) (base, qual string) {
+	if i := strings.IndexByte(s, ':'); i >= 0 {
+		return s[:i], s[i+1:]
+	}
+	return s, ""
+}
+
+// splitEntityAttr splits "<Module.Entity>.<Attribute>" using the LAST dot:
+// "Sales.Customer.Status" → ("Sales.Customer", "Status").
+func splitEntityAttr(qual string) (entity, attr string) {
+	if i := strings.LastIndexByte(qual, '.'); i > 0 {
+		return qual[:i], qual[i+1:]
+	}
+	return "", ""
 }
 
 func slotKind(ctx Context) (SlotConstraint, bool) {

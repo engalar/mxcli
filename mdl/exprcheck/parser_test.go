@@ -89,7 +89,7 @@ func TestParser_E001_HitsForKnownEnumKind(t *testing.T) {
 	p := NewParser()
 	cat := fakeCatalog{kind: KindEnumeration, enumQN: "FraudDetection.AlertStatus", values: []string{"NewAlert", "Validated"}}
 	expr, hints := p.Parse(`'NewAlert'`, Context{
-		SlotPath:  "ChangeItem.Value",
+		SlotPath:  "ChangeItem.Value:FraudDetection.Alert.Status",
 		Microflow: "FraudDetection.SUB_CreateAlert",
 		Slots:     DefaultSlotResolver(),
 		Catalog:   cat,
@@ -111,10 +111,102 @@ type fakeCatalog struct {
 	values []string
 }
 
-func (f fakeCatalog) AttributeKind(string, string) (TypeKind, bool)  { return f.kind, true }
-func (f fakeCatalog) EnumCases(string) ([]string, bool)              { return f.values, true }
-func (f fakeCatalog) MicroflowReturn(string) (TypeKind, bool)        { return KindUnknown, false }
-func (f fakeCatalog) MicroflowParam(string, string) (TypeKind, bool) { return KindUnknown, false }
+func (f fakeCatalog) AttributeKind(string, string) (TypeKind, bool)   { return f.kind, true }
+func (f fakeCatalog) AttributeEnumQN(string, string) (string, bool)   { return f.enumQN, true }
+func (f fakeCatalog) EnumCases(string) ([]string, bool)               { return f.values, true }
+func (f fakeCatalog) MicroflowReturn(string) (TypeKind, bool)         { return KindUnknown, false }
+func (f fakeCatalog) MicroflowParam(string, string) (TypeKind, bool)  { return KindUnknown, false }
+
+func TestParser_E001_ChangeItemEnumViaCatalog(t *testing.T) {
+	p := NewParser()
+	cat := lookupCatalog{
+		kinds:  map[string]TypeKind{"Sales.Customer|Status": KindEnumeration},
+		enums:  map[string]string{"Sales.Customer|Status": "Sales.CustomerStatus"},
+		cases:  map[string][]string{"Sales.CustomerStatus": {"Active", "Inactive"}},
+	}
+	_, hs := p.Parse("'Active'", Context{
+		SlotPath: "ChangeItem.Value:Sales.Customer.Status",
+		Slots:    DefaultSlotResolver(),
+		Catalog:  cat,
+	})
+	if !hasCode(hs, "E001") {
+		t.Fatalf("expected E001 hit, got %+v", hs)
+	}
+}
+
+func TestParser_E001_CreateItemEnumViaCatalog(t *testing.T) {
+	p := NewParser()
+	cat := lookupCatalog{
+		kinds: map[string]TypeKind{"M.Customer|Status": KindEnumeration},
+		enums: map[string]string{"M.Customer|Status": "M.E"},
+		cases: map[string][]string{"M.E": {"A"}},
+	}
+	_, hs := p.Parse("'A'", Context{
+		SlotPath: "CreateItem.Value:M.Customer.Status",
+		Slots:    DefaultSlotResolver(),
+		Catalog:  cat,
+	})
+	if !hasCode(hs, "E001") {
+		t.Fatalf("expected E001 hit, got %+v", hs)
+	}
+}
+
+func TestParser_E001_NoFireForNonEnumAttr(t *testing.T) {
+	p := NewParser()
+	// Catalog returns String for this attribute → must NOT trigger E001.
+	cat := lookupCatalog{
+		kinds: map[string]TypeKind{"Sales.Customer|Name": KindString},
+	}
+	_, hs := p.Parse("'Acme'", Context{
+		SlotPath: "ChangeItem.Value:Sales.Customer.Name",
+		Slots:    DefaultSlotResolver(),
+		Catalog:  cat,
+	})
+	if hasCode(hs, "E001") {
+		t.Fatalf("E001 must not fire for String attribute; got %+v", hs)
+	}
+}
+
+func TestParser_E001_NoFireWithoutEntityAttrSuffix(t *testing.T) {
+	p := NewParser()
+	// SlotPath has no ":entity.attr" suffix → no catalog lookup, no E001.
+	cat := lookupCatalog{
+		kinds: map[string]TypeKind{"Sales.Customer|Status": KindEnumeration},
+	}
+	_, hs := p.Parse("'Active'", Context{
+		SlotPath: "ChangeItem.Value",
+		Slots:    DefaultSlotResolver(),
+		Catalog:  cat,
+	})
+	if hasCode(hs, "E001") {
+		t.Fatalf("E001 must not fire when slot lacks entity.attr; got %+v", hs)
+	}
+}
+
+// lookupCatalog is a precise CatalogReader keyed by "<entityQN>|<attr>".
+type lookupCatalog struct {
+	kinds map[string]TypeKind
+	enums map[string]string
+	cases map[string][]string
+}
+
+func (c lookupCatalog) AttributeKind(entity, attr string) (TypeKind, bool) {
+	k, ok := c.kinds[entity+"|"+attr]
+	return k, ok
+}
+
+func (c lookupCatalog) AttributeEnumQN(entity, attr string) (string, bool) {
+	q, ok := c.enums[entity+"|"+attr]
+	return q, ok
+}
+
+func (c lookupCatalog) EnumCases(qn string) ([]string, bool) {
+	v, ok := c.cases[qn]
+	return v, ok
+}
+
+func (c lookupCatalog) MicroflowReturn(string) (TypeKind, bool)        { return KindUnknown, false }
+func (c lookupCatalog) MicroflowParam(string, string) (TypeKind, bool) { return KindUnknown, false }
 
 func TestParser_E004_ConcatLiteralIntWithString(t *testing.T) {
 	p := NewParser()
