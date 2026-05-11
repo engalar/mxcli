@@ -13,50 +13,78 @@ type SlotConstraint struct {
 // names (e.g., "IfStmt.Condition"). Translation to user-facing context
 // happens in mdl/exprcheck/slot_to_context.go.
 var SlotExpectations = map[string]SlotConstraint{
-	"CallArgument.Value": {Kind: "Unknown", Frequency: 14, Samples: []string{
-		"$Feedback",
-		"$Feedback/SubmitterEmail",
-		"$Account/Name",
-		"$AccountPasswordData/OldPassword",
-		"$Feedback/ActiveUserRoles",
+	"CallArgument.Value": {Kind: "Unknown", Frequency: 3207, Samples: []string{
+		"empty",
+		"$ChatContext",
+		"$Request",
+		"$ConfigName",
+		"$Credentials",
 	}},
-	"ChangeItem.Value": {Kind: "Unknown", Frequency: 16, Samples: []string{
-		"$AccountPasswordData/NewPassword",
-		"$CurrentUser/Name",
-		"$SanitizedActiveUserRoles",
-		"$SanitizedBrowser",
-		"$SanitizedDescription",
-	}},
-	"CreateItem.Value": {Kind: "Unknown", Frequency: 4, Samples: []string{
-		"$Account",
-		"$NewAccount",
-	}},
-	"DeclareStmt.InitialValue": {Kind: "Unknown", Frequency: 2, Samples: []string{
-		"'https://feedback-api.mendix.com/v2/feedback-items'",
+	"ChangeItem.Value": {Kind: "Unknown", Frequency: 1114, Samples: []string{
+		"empty",
 		"true",
-	}},
-	"IfStmt.Condition": {Kind: "Unknown", Frequency: 12, Samples: []string{
-		"$AccountPasswordData/NewPassword = $AccountPasswordData/ConfirmPassword",
-		"$Feedback/AppID != '1'\nand\n$Feedback/AppID != empty\nand\n$Feedback/AppID != ''",
-		"$Feedback/ImageB64 != empty and\n$Feedback/ImageB64 != ''",
-		"$Feedback/SubmitterEmail != empty and\n$Feedback/SubmitterEmail != ''",
-		"$ImageB64 != empty and\n$ImageB64 != ''",
-	}},
-	"LogStmt.Message": {Kind: "Unknown", Frequency: 2, Samples: []string{
-		"'AppId in the widget has not been configured. Please fill the value with the appId in Sprintr'",
-		"'Unable to send the feedback to App Insights'",
-	}},
-	"MfSetStmt.Value": {Kind: "Unknown", Frequency: 3, Samples: []string{
 		"false",
-	}},
-	"RetrieveStmt.LimitExpr": {Kind: "Unknown", Frequency: 1, Samples: []string{
+		"[%CurrentDateTime%]",
 		"1",
 	}},
-	"ReturnStmt.Value": {Kind: "Unknown", Frequency: 8, Samples: []string{
+	"CreateItem.Value": {Kind: "Unknown", Frequency: 1189, Samples: []string{
+		"true",
+		"0",
+		"'Supplier ' + toString(round(random() * 1000000))",
+		"[%CurrentDateTime%]",
+		"'#01b4b1'",
+	}},
+	"DeclareStmt.InitialValue": {Kind: "Unknown", Frequency: 358, Samples: []string{
+		"true",
+		"''",
+		"false",
+		"0",
+		"1",
+	}},
+	"IfStmt.Condition": {Kind: "Unknown", Frequency: 1321, Samples: []string{
+		"$IsValid",
+		"$Valid",
+		"trim($ErrorMessage) = ''",
+		"$ServiceData != empty",
+		"$ShowFeedback",
+	}},
+	"LogStmt.Message": {Kind: "Unknown", Frequency: 171, Samples: []string{
+		"'{1}'",
+		"'Authentication error: Invalid or missing token, and HTTP response status code is not 403 or 401.'",
+		"'{2} with Stack trace {3}\\nwith message:\\n{1}\\n'",
+		"'Connecting to Teamcenter failed switched to local demo data. '",
+		"'latestError:\\nMessage - {1}\\nStacktrace - {2}\\nlatestHttpResponse:\\nStatusCode - {3}\\nReasonPhrase - {4}\\nContent - {5}\\n'",
+	}},
+	"MfSetStmt.Value": {Kind: "Unknown", Frequency: 408, Samples: []string{
+		"false",
+		"true",
+		"GenAICommons.ENUM_ModelSupport._True",
+		"'#3856cb'",
+		"'#AD0A3C'",
+	}},
+	"RetrieveStmt.LimitExpr": {Kind: "Unknown", Frequency: 208, Samples: []string{
+		"1",
+		"5",
+		"$Amount",
+		"$BatchSize",
+		"$Limit",
+	}},
+	"RetrieveStmt.OffsetExpr": {Kind: "Unknown", Frequency: 5, Samples: []string{
+		"0",
+		"$Pagination/PageSize*($Pagination/Offset-1)",
+	}},
+	"ReturnStmt.Value": {Kind: "Unknown", Frequency: 1425, Samples: []string{
 		"empty",
-		"$Response",
-		"$ValidFeedback",
-		"'https://appinsights.mendix.com/link/showfeedback/'+$uuid",
-		"substring($ImageB64,find($ImageB64, ',') + 1,length($ImageB64)-22)",
+		"true",
+		"false",
+		"$IsValid",
+		"''",
+	}},
+	"WhileStmt.Condition": {Kind: "Unknown", Frequency: 23, Samples: []string{
+		"true",
+		"$StartDate<$EndDate",
+		"$CountMaterials >= $CounterA",
+		"$CountSubMaterials >= $CounterB",
+		"$CountSubSubMaterials >= $CounterC",
 	}},
 }
