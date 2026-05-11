@@ -97,3 +97,26 @@ func typeKindNames(ks []TypeKind) []string {
 	}
 	return out
 }
+
+// KindName is the public accessor for the human-readable name of a TypeKind
+// (e.g. KindBoolean → "Boolean"). Used by cmd/mxcli for help/explain output.
+func KindName(k TypeKind) string { return typeKindName(k) }
+
+// PublicFuncSig is a JSON/CLI-friendly view of a built-in function signature.
+type PublicFuncSig struct {
+	Args    []string
+	Returns string
+}
+
+// PublicFuncTable returns a JSON-friendly view of the built-in function
+// signatures used by the checker.
+func PublicFuncTable() map[string]PublicFuncSig {
+	out := make(map[string]PublicFuncSig, len(funcTable))
+	for k, v := range funcTable {
+		out[k] = PublicFuncSig{
+			Args:    typeKindNames(v.args),
+			Returns: typeKindName(v.ret),
+		}
+	}
+	return out
+}
