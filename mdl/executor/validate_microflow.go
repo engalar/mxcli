@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/exprcheck/adapters"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 )
 
@@ -28,6 +29,8 @@ func ValidateMicroflow(stmt *ast.CreateMicroflowStmt) []linter.Violation {
 		}
 	}
 	v.validate(stmt.Body)
+	res := adapters.NewCheckAdapter(nil).CheckMicroflow(stmt)
+	v.violations = append(v.violations, res.AsViolations()...)
 	return v.violations
 }
 
