@@ -1287,3 +1287,8 @@ func isSplitJoinCandidate(obj microflows.MicroflowObject) bool {
 }
 
 // --- Executor method wrappers for callers in unmigrated code ---
+
+func DescribeMicroflowToString(ctx *ExecContext, name ast.QualifiedName) (string, error) {
+	s, _, err := describeMicroflowToString(ctx, name)
+	return s, err
+}
