@@ -62,15 +62,8 @@ const (
 	KindEmpty
 )
 
-// RobustExpr is the parser output type. Concrete AST nodes are added
-// in P1.2; for the P1.1 skeleton this is just a marker interface so
-// the Parser interface signature compiles.
-type RobustExpr interface {
-	robustExpr()
-}
-
 // Hint is a single diagnostic with optional fix suggestion. Full
 // definition (Code, Slug, Severity, Where, ...) lands in P1.6; the
 // stub here is enough for the Parser/HintSink interface signatures
-// to compile.
+// to compile. RobustExpr lives in ast.go (defined by P1.2).
 type Hint struct{}
