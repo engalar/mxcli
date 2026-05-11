@@ -32,11 +32,11 @@ END;
 	}
 	var ifCondSeen bool
 	for _, r := range m.Records {
-		if r.SlotPath == "IfStmt.Condition" && r.SourceText == "$ok=false" {
+		if r.SlotPath == "IfStmt.Condition" && r.SourceText == "$ok = false" {
 			ifCondSeen = true
 		}
 	}
 	if !ifCondSeen {
-		t.Fatalf("expected IfStmt.Condition record; got %+v", m.Records)
+		t.Fatalf("expected IfStmt.Condition record with source '$ok = false'; got %+v", m.Records)
 	}
 }
