@@ -29,5 +29,11 @@ func main() {
 }
 
 func run(mprPath, outPath string) error {
-	return fmt.Errorf("not implemented")
+	_ = outPath
+	m := NewMiner()
+	if err := MineMPR(m, mprPath); err != nil {
+		return err
+	}
+	fmt.Printf("mined %d expression records\n", len(m.Records))
+	return nil
 }
