@@ -243,3 +243,7 @@ func (ctx *ExecContext) ensureSqlMgr() *sqllib.Manager {
 	}
 	return ctx.SqlMgr
 }
+
+func GetHierarchyForMining(ctx *ExecContext) (*ContainerHierarchy, error) {
+	return getHierarchy(ctx)
+}
