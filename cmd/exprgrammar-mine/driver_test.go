@@ -11,10 +11,10 @@ const fixtureMPRPath = "/mnt/data_sdd/gh/Mx2026AIDay/Factory Management.mpr"
 
 func TestDriver_MinesFixtureMPR(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping slow MPR mining test in -short mode (P0.6 will add a fast small fixture)")
+		t.Skip("skipping slow MPR mining test in -short mode (see fixture_test.go for the fast minimal-fixture variant)")
 	}
 	if _, err := os.Stat(fixtureMPRPath); err != nil {
-		t.Skipf("fixture MPR not present at %s; P0.6 will provide a small fixture under testdata/", fixtureMPRPath)
+		t.Skipf("full corpus fixture not present at %s; the fast variant in fixture_test.go uses testdata/expr-checker/minimal.mpr", fixtureMPRPath)
 	}
 	m := NewMiner()
 	if err := MineMPR(m, fixtureMPRPath); err != nil {
