@@ -21,7 +21,7 @@ func WalkMDL(m *Miner, microflow, source string) error {
 		return fmt.Errorf("parse returned nil tree")
 	}
 	walker := antlr.NewParseTreeWalker()
-	listener := &slotListener{miner: m, microflow: microflow, input: is}
+	listener := &slotListener{miner: m, microflow: microflow}
 	walker.Walk(listener, tree)
 	return nil
 }
@@ -30,29 +30,18 @@ type slotListener struct {
 	*parser.BaseMDLParserListener
 	miner     *Miner
 	microflow string
-	input     *antlr.InputStream
 }
 
-func (l *slotListener) sourceText(ctx antlr.ParserRuleContext) string {
-	start, stop := ctx.GetStart(), ctx.GetStop()
-	if start == nil || stop == nil {
-		return ctx.GetText()
-	}
-	return l.input.GetTextFromInterval(antlr.NewInterval(start.GetStart(), stop.GetStop()))
-}
-
-func (l *slotListener) record(slotPath string, ctx antlr.ParserRuleContext) {
+func (l *slotListener) add(slotPath, source string) {
 	l.miner.Records = append(l.miner.Records, SlotRecord{
 		SlotPath:   slotPath,
-		SourceText: l.sourceText(ctx),
+		SourceText: source,
 		Microflow:  l.microflow,
 	})
 }
 
 func (l *slotListener) EnterIfStatement(ctx *parser.IfStatementContext) {
 	for _, expr := range ctx.AllExpression() {
-		if prc, ok := expr.(antlr.ParserRuleContext); ok {
-			l.record("IfStmt.Condition", prc)
-		}
+		l.add("IfStmt.Condition", expr.GetText())
 	}
 }
