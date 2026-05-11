@@ -2,7 +2,10 @@
 
 package exprcheck
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func parseFor(t *testing.T, src string) (RobustExpr, []Hint) {
 	t.Helper()
@@ -112,6 +115,46 @@ func (f fakeCatalog) AttributeKind(string, string) (TypeKind, bool)  { return f.
 func (f fakeCatalog) EnumCases(string) ([]string, bool)              { return f.values, true }
 func (f fakeCatalog) MicroflowReturn(string) (TypeKind, bool)        { return KindUnknown, false }
 func (f fakeCatalog) MicroflowParam(string, string) (TypeKind, bool) { return KindUnknown, false }
+
+func TestParser_E007_DegenerateCallArgsTerminates(t *testing.T) {
+	done := make(chan struct{})
+	go func() {
+		p := NewParser()
+		_, _ = p.Parse("length(", Context{Microflow: "M.F"})
+		_, _ = p.Parse("length(,)", Context{Microflow: "M.F"})
+		_, _ = p.Parse("length()", Context{Microflow: "M.F"})
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("parser did not terminate on degenerate call args within 2s")
+	}
+}
+
+func TestParser_E007_InsideCallArgs(t *testing.T) {
+	p := NewParser()
+	expr, hs := p.Parse("length(@@@bad@@@)", Context{Microflow: "M.F"})
+	call, ok := expr.(*CallExpr)
+	if !ok {
+		t.Fatalf("got %T", expr)
+	}
+	if call.Name != "length" || len(call.Args) != 1 {
+		t.Fatalf("call shape: %+v", call)
+	}
+	if _, ok := call.Args[0].(*RecoveredExpr); !ok {
+		t.Fatalf("arg 0 = %T, want *RecoveredExpr", call.Args[0])
+	}
+	var sawE007 bool
+	for _, h := range hs {
+		if h.Code == "E007" {
+			sawE007 = true
+		}
+	}
+	if !sawE007 {
+		t.Fatalf("expected E007 in %+v", hs)
+	}
+}
 
 func TestParser_E007_RecoveryAtPrimary(t *testing.T) {
 	p := NewParser()
