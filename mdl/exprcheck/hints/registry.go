@@ -66,6 +66,51 @@ var Registry = &registry{byCode: map[string]Entry{
 			},
 		},
 	},
+	"E002": {
+		Code: "E002", Slug: "bool-string-mismatch", Severity: SeverityError,
+		Trigger:  "A Boolean attribute is compared against a string literal like 'true' or 'false'.",
+		WhyWrong: "Mendix Boolean expressions use the unquoted literals true and false. Comparing a Boolean against a string is always false.",
+		HowToFix: "Replace 'true'/'false' with the unquoted literals true/false.",
+		Examples: []ExampleFix{
+			{Wrong: "IF $Config/IsActive = 'true' THEN ...", Right: "IF $Config/IsActive = true THEN ...", Note: "IF condition"},
+		},
+	},
+	"E003": {
+		Code: "E003", Slug: "null-to-empty", Severity: SeverityWarning,
+		Trigger:  "The keyword null is used in a Mendix expression.",
+		WhyWrong: "Mendix expressions use empty, not null. Tools auto-correct on write but the source becomes inconsistent on the next round-trip.",
+		HowToFix: "Replace null with empty.",
+		Examples: []ExampleFix{
+			{Wrong: "IF $Alert = null THEN ...", Right: "IF $Alert = empty THEN ..."},
+		},
+	},
+	"E004": {
+		Code: "E004", Slug: "concat-type", Severity: SeverityError,
+		Trigger:  "The '+' operator is used between values of incompatible kinds (e.g. String and Integer).",
+		WhyWrong: "'+' concatenates Strings only. Mixing kinds raises CE0109 in Studio Pro.",
+		HowToFix: "Wrap the non-String operand in toString().",
+		Examples: []ExampleFix{
+			{Wrong: "'count=' + $n", Right: "'count=' + toString($n)", Note: "$n is Integer"},
+		},
+	},
+	"E005": {
+		Code: "E005", Slug: "func-arg-type", Severity: SeverityError,
+		Trigger:  "A built-in function received an argument of the wrong kind.",
+		WhyWrong: "Built-in functions have fixed argument signatures.",
+		HowToFix: "Cast the argument to the expected kind, e.g. wrap with toString() or toInteger().",
+		Examples: []ExampleFix{
+			{Wrong: "length($Alert/RiskScore)", Right: "length(toString($Alert/RiskScore))", Note: "RiskScore is Decimal; length expects String"},
+		},
+	},
+	"E006": {
+		Code: "E006", Slug: "func-arg-arity", Severity: SeverityError,
+		Trigger:  "A built-in function was called with the wrong number of arguments.",
+		WhyWrong: "Each built-in expects a fixed number of arguments.",
+		HowToFix: "Provide the exact number of arguments listed in the function signature.",
+		Examples: []ExampleFix{
+			{Wrong: "substring('hello')", Right: "substring('hello', 0, 3)"},
+		},
+	},
 	"E007": {
 		Code:     "E007",
 		Slug:     "unknown-token",
@@ -79,6 +124,33 @@ var Registry = &registry{byCode: map[string]Entry{
 				Right: "SET $msg = 'count=' + toString(length($list)) + ' items';",
 				Note:  "argument of length()",
 			},
+		},
+	},
+	"E008": {
+		Code: "E008", Slug: "enum-missing-module", Severity: SeverityError,
+		Trigger:  "An enum value was written without its module prefix.",
+		WhyWrong: "Mendix requires fully-qualified Module.Enum.Value references.",
+		HowToFix: "Add the module prefix.",
+		Examples: []ExampleFix{
+			{Wrong: "$Status = AlertStatus.NewAlert", Right: "$Status = FraudDetection.AlertStatus.NewAlert"},
+		},
+	},
+	"E009": {
+		Code: "E009", Slug: "slot-type-mismatch", Severity: SeverityError,
+		Trigger:  "An expression's inferred kind does not match the slot's expected kind (catch-all).",
+		WhyWrong: "The surrounding statement requires a specific kind (Boolean for IF condition, Integer for LIMIT, etc.).",
+		HowToFix: "Adjust the expression so its result matches the slot's expected kind.",
+		Examples: []ExampleFix{
+			{Wrong: "IF 'active' THEN ...", Right: "IF $obj/IsActive THEN ..."},
+		},
+	},
+	"E010": {
+		Code: "E010", Slug: "attribute-not-found", Severity: SeverityError,
+		Trigger:  "An attribute path references an attribute that does not exist on the entity.",
+		WhyWrong: "Catalog lookup confirmed the entity does not have the requested attribute.",
+		HowToFix: "Use the correct attribute name from the entity definition.",
+		Examples: []ExampleFix{
+			{Wrong: "$Customer/EmialAddress", Right: "$Customer/EmailAddress"},
 		},
 	},
 }}
