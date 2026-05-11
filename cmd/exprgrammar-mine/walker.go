@@ -49,10 +49,46 @@ func (l *slotListener) record(slotPath string, ctx antlr.ParserRuleContext) {
 	})
 }
 
+func (l *slotListener) recordExpr(slotPath string, expr parser.IExpressionContext) {
+	if expr == nil {
+		return
+	}
+	if prc, ok := expr.(antlr.ParserRuleContext); ok {
+		l.record(slotPath, prc)
+	}
+}
+
 func (l *slotListener) EnterIfStatement(ctx *parser.IfStatementContext) {
 	for _, expr := range ctx.AllExpression() {
-		if prc, ok := expr.(antlr.ParserRuleContext); ok {
-			l.record("IfStmt.Condition", prc)
-		}
+		l.recordExpr("IfStmt.Condition", expr)
 	}
+}
+
+func (l *slotListener) EnterDeclareStatement(ctx *parser.DeclareStatementContext) {
+	l.recordExpr("DeclareStmt.InitialValue", ctx.Expression())
+}
+
+func (l *slotListener) EnterSetStatement(ctx *parser.SetStatementContext) {
+	l.recordExpr("MfSetStmt.Value", ctx.Expression())
+}
+
+func (l *slotListener) EnterWhileStatement(ctx *parser.WhileStatementContext) {
+	l.recordExpr("WhileStmt.Condition", ctx.Expression())
+}
+
+func (l *slotListener) EnterRetrieveStatement(ctx *parser.RetrieveStatementContext) {
+	l.recordExpr("RetrieveStmt.LimitExpr", ctx.GetLimitExpr())
+	l.recordExpr("RetrieveStmt.OffsetExpr", ctx.GetOffsetExpr())
+}
+
+func (l *slotListener) EnterLogStatement(ctx *parser.LogStatementContext) {
+	exprs := ctx.AllExpression()
+	if len(exprs) == 0 {
+		return
+	}
+	l.recordExpr("LogStmt.Message", exprs[len(exprs)-1])
+}
+
+func (l *slotListener) EnterReturnStatement(ctx *parser.ReturnStatementContext) {
+	l.recordExpr("ReturnStmt.Value", ctx.Expression())
 }

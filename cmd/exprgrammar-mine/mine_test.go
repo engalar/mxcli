@@ -40,3 +40,43 @@ END;
 		t.Fatalf("expected IfStmt.Condition record with source '$ok = false'; got %+v", m.Records)
 	}
 }
+
+func TestWalker_CoversAllSlots(t *testing.T) {
+	mdl := `
+CREATE MICROFLOW Mod.Foo ($p Integer)
+RETURNS Integer AS $r
+BEGIN
+    DECLARE $r Integer = 0;
+    SET $r = $p + 1;
+    WHILE $r < 10 BEGIN
+        SET $r = $r + 1;
+    END WHILE;
+    RETRIEVE $list FROM Mod.Entity LIMIT 5 OFFSET 1;
+    LOG INFO 'count=' + toString($r);
+    RETURN $r * 2;
+END;
+`
+	m := NewMiner()
+	if err := WalkMDL(m, "Mod.Foo", mdl); err != nil {
+		t.Fatalf("WalkMDL: %v", err)
+	}
+	want := map[string]bool{
+		"DeclareStmt.InitialValue": false,
+		"MfSetStmt.Value":          false,
+		"WhileStmt.Condition":      false,
+		"RetrieveStmt.LimitExpr":   false,
+		"RetrieveStmt.OffsetExpr":  false,
+		"LogStmt.Message":          false,
+		"ReturnStmt.Value":         false,
+	}
+	for _, r := range m.Records {
+		if _, ok := want[r.SlotPath]; ok {
+			want[r.SlotPath] = true
+		}
+	}
+	for slot, hit := range want {
+		if !hit {
+			t.Errorf("slot %s not recorded; records: %+v", slot, m.Records)
+		}
+	}
+}
