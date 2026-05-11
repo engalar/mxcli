@@ -9,6 +9,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
+	"github.com/mendixlabs/mxcli/mdl/exprcheck/adapters"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
@@ -16,6 +17,15 @@ import (
 
 // flowBuilder helps construct the flow graph from AST statements.
 type flowBuilder struct {
+	// execAdapter, when set, routes every expression that goes through
+	// exprToString via the exprcheck robust parser, printing hints to its
+	// writer and short-circuiting the BSON write on error-level hints.
+	// Left nil in P1; P3 attaches an adapter and supplies currentSlot /
+	// microflowQN per call site.
+	execAdapter *adapters.ExecAdapter
+	currentSlot string
+	microflowQN string
+
 	objects             []microflows.MicroflowObject
 	flows               []*microflows.SequenceFlow
 	annotationFlows     []*microflows.AnnotationFlow
@@ -421,7 +431,17 @@ func (fb *flowBuilder) resolveEntityQualifiedName(entityID model.ID) string {
 // exprToString converts an AST Expression to a Mendix expression string,
 // resolving association navigation paths to include the target entity qualifier.
 // e.g. $Order/MyModule.Order_Customer/Name → $Order/MyModule.Order_Customer/MyModule.Customer/Name
+//
+// When fb.execAdapter is non-nil the expression is also routed through the
+// exprcheck robust parser, which prints any hints to fb.execAdapter's writer
+// and skips the BSON write for error-level hints. Per-slot context wiring
+// (fb.currentSlot, fb.microflowQN) lands in P3.
 func (fb *flowBuilder) exprToString(expr ast.Expression) string {
+	if fb.execAdapter != nil {
+		if out := fb.execAdapter.ExprToBSON(fb.currentSlot, expr, fb.microflowQN); out != "" {
+			return out
+		}
+	}
 	resolved := fb.resolveAssociationPaths(expr)
 	return expressionToString(resolved)
 }
