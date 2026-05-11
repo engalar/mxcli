@@ -153,7 +153,7 @@ func TestShowPageMicroflowStyleArgsInWidget(t *testing.T) {
 
 // findQualifiedNameExpr recursively searches an expression tree for a QualifiedNameExpr.
 func findQualifiedNameExpr(expr ast.Expression) *ast.QualifiedNameExpr {
-	switch e := expr.(type) {
+	switch e := ast.Unwrap(expr).(type) {
 	case *ast.QualifiedNameExpr:
 		return e
 	case *ast.BinaryExpr:

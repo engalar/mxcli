@@ -15,19 +15,26 @@ import (
 // Expression Building
 // ----------------------------------------------------------------------------
 
-// buildExpression converts an expression context to an Expression AST node.
+// buildExpression converts an expression context to an Expression AST node,
+// wrapped in *ast.SourceExpr so downstream consumers (exprcheck robust
+// parser, hint emitter) can re-parse the original source. Production
+// executor code that does type assertions on Expression should run values
+// through ast.Unwrap first; expressionToString and other built-in
+// serializers already handle SourceExpr explicitly.
 func buildExpression(ctx parser.IExpressionContext) ast.Expression {
 	if ctx == nil {
 		return nil
 	}
 	exprCtx := ctx.(*parser.ExpressionContext)
 
-	// Expression is just orExpression at top level
+	var inner ast.Expression
 	if or := exprCtx.OrExpression(); or != nil {
-		return buildOrExpression(or)
+		inner = buildOrExpression(or)
 	}
-
-	return nil
+	if inner == nil {
+		return nil
+	}
+	return &ast.SourceExpr{Expression: inner, Source: exprCtx.GetText()}
 }
 
 // buildOrExpression handles OR expressions.

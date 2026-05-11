@@ -41,7 +41,7 @@ END`
 		t.Fatalf("expected IfStmt, got %T", mf.Body[0])
 	}
 
-	call, ok := ifStmt.Condition.(*ast.FunctionCallExpr)
+	call, ok := ast.Unwrap(ifStmt.Condition).(*ast.FunctionCallExpr)
 	if !ok {
 		t.Fatalf("expected FunctionCallExpr as if-condition, got %T", ifStmt.Condition)
 	}
@@ -55,17 +55,17 @@ END`
 	// Named argument `String = $S` parses as an equality BinaryExpr: this is
 	// how the describer already emits RuleSplitCondition parameter mappings
 	// and how the re-parse preserves the textual form.
-	bin, ok := call.Arguments[0].(*ast.BinaryExpr)
+	bin, ok := ast.Unwrap(call.Arguments[0]).(*ast.BinaryExpr)
 	if !ok {
 		t.Fatalf("expected BinaryExpr argument, got %T", call.Arguments[0])
 	}
 	if bin.Operator != "=" {
 		t.Errorf("operator = %q, want %q", bin.Operator, "=")
 	}
-	if id, ok := bin.Left.(*ast.IdentifierExpr); !ok || id.Name != "String" {
+	if id, ok := ast.Unwrap(bin.Left).(*ast.IdentifierExpr); !ok || id.Name != "String" {
 		t.Errorf("left = %+v, want IdentifierExpr{String}", bin.Left)
 	}
-	if v, ok := bin.Right.(*ast.VariableExpr); !ok || v.Name != "S" {
+	if v, ok := ast.Unwrap(bin.Right).(*ast.VariableExpr); !ok || v.Name != "S" {
 		t.Errorf("right = %+v, want VariableExpr{S}", bin.Right)
 	}
 }
@@ -89,7 +89,7 @@ END`
 	}
 	mf := prog.Statements[0].(*ast.CreateMicroflowStmt)
 	ifStmt := mf.Body[0].(*ast.IfStmt)
-	call, ok := ifStmt.Condition.(*ast.FunctionCallExpr)
+	call, ok := ast.Unwrap(ifStmt.Condition).(*ast.FunctionCallExpr)
 	if !ok {
 		t.Fatalf("expected FunctionCallExpr, got %T", ifStmt.Condition)
 	}
@@ -99,7 +99,7 @@ END`
 	if len(call.Arguments) != 1 {
 		t.Fatalf("expected 1 argument, got %d", len(call.Arguments))
 	}
-	if v, ok := call.Arguments[0].(*ast.VariableExpr); !ok || v.Name != "L" {
+	if v, ok := ast.Unwrap(call.Arguments[0]).(*ast.VariableExpr); !ok || v.Name != "L" {
 		t.Errorf("arg = %+v, want VariableExpr{L}", call.Arguments[0])
 	}
 }

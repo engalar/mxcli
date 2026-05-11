@@ -312,7 +312,7 @@ func TestLogWithTemplateSyntax(t *testing.T) {
 		t.Errorf("Expected log level INFO, got %s", logStmt.Level)
 	}
 
-	nodeLit, ok := logStmt.Node.(*ast.LiteralExpr)
+	nodeLit, ok := ast.Unwrap(logStmt.Node).(*ast.LiteralExpr)
 	if !ok || nodeLit.Kind != ast.LiteralString || nodeLit.Value != "OrderService" {
 		t.Fatalf("Expected node string literal 'OrderService', got %#v", logStmt.Node)
 	}
@@ -395,7 +395,7 @@ func TestLogWithNodeExpressionConstant(t *testing.T) {
 		t.Fatalf("Expected LogStmt, got %T", stmt.Body[0])
 	}
 
-	node, ok := logStmt.Node.(*ast.ConstantRefExpr)
+	node, ok := ast.Unwrap(logStmt.Node).(*ast.ConstantRefExpr)
 	if !ok {
 		t.Fatalf("Expected ConstantRefExpr for node, got %T", logStmt.Node)
 	}
@@ -1848,7 +1848,7 @@ END;`
 		t.Fatalf("body[0] = %T, want *ast.CallJavaActionStmt", stmt.Body[0])
 	}
 	for _, idx := range []int{0, 2} {
-		lit, ok := callStmt.Arguments[idx].Value.(*ast.LiteralExpr)
+		lit, ok := ast.Unwrap(callStmt.Arguments[idx].Value).(*ast.LiteralExpr)
 		if !ok {
 			t.Fatalf("argument %d value = %T, want *ast.LiteralExpr", idx, callStmt.Arguments[idx].Value)
 		}

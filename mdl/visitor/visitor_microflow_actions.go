@@ -1014,7 +1014,7 @@ func buildAddToListStatement(ctx parser.IAddToListStatementContext) *ast.AddToLi
 
 	if expr := addCtx.Expression(); expr != nil {
 		stmt.Value = buildExpression(expr)
-		if varExpr, ok := stmt.Value.(*ast.VariableExpr); ok {
+		if varExpr, ok := ast.Unwrap(stmt.Value).(*ast.VariableExpr); ok {
 			stmt.Item = varExpr.Name
 		}
 	}
