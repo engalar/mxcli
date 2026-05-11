@@ -15,7 +15,7 @@
 #   make docs-serve - Serve docs site locally with live reload
 #   make sbom      - Generate CycloneDX SBOM (Go + TypeScript)
 #   make sbom-report - Generate Markdown dependency report
-#   make mine-exprgrammar MPR=path/to/app.mpr - Re-mine generated/exprgrammar/mined.go from an MPR
+#   make mine-exprgrammar MINE_MPR=path/to/app.mpr - Re-mine generated/exprgrammar/mined.go from an MPR
 #   make clean     - Remove build artifacts
 
 BINARY_NAME = mxcli
@@ -254,18 +254,18 @@ source-tree: build
 	@echo "Generated source_tree.txt"
 
 # Re-mine generated/exprgrammar/mined.go from an MPR.
-#   make mine-exprgrammar MPR=testdata/expr-checker/minimal.mpr   (~1s, 9 slots)
-#   make mine-exprgrammar MPR="/path/to/Factory Management.mpr"   (~11min, 11 slots)
+# Uses MINE_MPR (not MPR) so the global "MPR ?= app.mpr" default for the
+# test-mdl target does not silently mask a missing argument here.
+#   make mine-exprgrammar MINE_MPR=testdata/expr-checker/minimal.mpr   (~1s, 9 slots)
+#   make mine-exprgrammar MINE_MPR="/path/to/Factory Management.mpr"   (~11min, 11 slots)
 .PHONY: mine-exprgrammar
 mine-exprgrammar:
-	@if [ -z "$(MPR)" ] || [ "$(MPR)" = "app.mpr" ]; then \
-		echo "usage: make mine-exprgrammar MPR=/path/to/app.mpr"; \
-		echo "  (the bare default 'app.mpr' from the test-mdl target is rejected)"; \
-		exit 2; \
+	@if [ -z "$(MINE_MPR)" ]; then \
+		echo "usage: make mine-exprgrammar MINE_MPR=/path/to/app.mpr"; exit 2; \
 	fi
-	@if [ ! -f "$(MPR)" ]; then \
-		echo "mine-exprgrammar: MPR file not found: $(MPR)"; exit 2; \
+	@if [ ! -f "$(MINE_MPR)" ]; then \
+		echo "mine-exprgrammar: MPR file not found: $(MINE_MPR)"; exit 2; \
 	fi
 	GOPROXY=https://goproxy.cn,direct go run ./cmd/exprgrammar-mine \
-	    --mpr "$(MPR)" \
+	    --mpr "$(MINE_MPR)" \
 	    --out generated/exprgrammar/mined.go
