@@ -29,11 +29,14 @@ func main() {
 }
 
 func run(mprPath, outPath string) error {
-	_ = outPath
 	m := NewMiner()
 	if err := MineMPR(m, mprPath); err != nil {
 		return err
 	}
-	fmt.Printf("mined %d expression records\n", len(m.Records))
+	sum := Cluster(m)
+	if err := Emit(sum, outPath); err != nil {
+		return err
+	}
+	fmt.Printf("mined %d records → %d slot kinds → %s\n", len(m.Records), len(sum.AllSlots()), outPath)
 	return nil
 }
