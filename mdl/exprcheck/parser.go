@@ -74,14 +74,30 @@ func parseCmp(s *Stream, ctx Context) (RobustExpr, []Hint) {
 }
 
 func parseAdd(s *Stream, ctx Context) (RobustExpr, []Hint) {
-	left, hints := parseMul(s, ctx)
+	left, hs := parseMul(s, ctx)
 	for s.Peek().Kind == TokPlus || s.Peek().Kind == TokMinus {
-		op := s.Consume().Text
+		opTok := s.Consume()
 		right, h := parseMul(s, ctx)
-		left = &BinExpr{Op: op, L: left, R: right}
-		hints = append(hints, h...)
+		hs = append(hs, h...)
+		if opTok.Kind == TokPlus {
+			lk := inferKind(left, ctx)
+			rk := inferKind(right, ctx)
+			if (lk == KindString || rk == KindString) && lk != rk &&
+				lk != KindUnknown && rk != KindUnknown {
+				hs = append(hs, Hint{
+					Code: "E004", Slug: "concat-type", Severity: hints.SeverityError,
+					Where:    hintsLocation(ctx, opTok.Pos),
+					YouWrote: "<left> + <right>",
+					Problem: "The '+' operator concatenates Strings. The other operand is " +
+						typeKindName(otherKind(lk, rk)) +
+						", which cannot be concatenated with a String directly.",
+					Fix: "Wrap the non-String operand in toString().",
+				})
+			}
+		}
+		left = &BinExpr{Op: opTok.Text, L: left, R: right}
 	}
-	return left, hints
+	return left, hs
 }
 
 func parseMul(s *Stream, ctx Context) (RobustExpr, []Hint) {
@@ -366,4 +382,60 @@ func slotKind(ctx Context) (SlotConstraint, bool) {
 		return SlotConstraint{}, false
 	}
 	return ctx.Slots.Expect(ctx.SlotPath)
+}
+
+func inferKind(e RobustExpr, ctx Context) TypeKind {
+	switch n := e.(type) {
+	case *StringLit:
+		return KindString
+	case *NumberLit:
+		return n.Kind
+	case *BoolLit:
+		return KindBoolean
+	case *EmptyExpr:
+		return KindEmpty
+	case *VariableExpr:
+		if ctx.Scope != nil {
+			if k, ok := ctx.Scope.Lookup(n.Name); ok {
+				return k
+			}
+		}
+	case *CallExpr:
+		if sig, ok := funcTable[n.Name]; ok {
+			return sig.ret
+		}
+	case *ParenExpr:
+		return inferKind(n.Inner, ctx)
+	case *BinExpr:
+		if n.Op == "+" {
+			l := inferKind(n.L, ctx)
+			r := inferKind(n.R, ctx)
+			if l == KindString && r == KindString {
+				return KindString
+			}
+			return l
+		}
+		if n.Op == "AND" || n.Op == "OR" || n.Op == "=" || n.Op == "!=" ||
+			n.Op == "<" || n.Op == "<=" || n.Op == ">" || n.Op == ">=" {
+			return KindBoolean
+		}
+	}
+	return KindUnknown
+}
+
+func hintsLocation(ctx Context, pos Position) hints.Location {
+	return hints.Location{
+		File:      ctx.File,
+		Line:      pos.Line,
+		Column:    pos.Column,
+		Microflow: ctx.Microflow,
+		Context:   SlotToContext(ctx.SlotPath),
+	}
+}
+
+func otherKind(l, r TypeKind) TypeKind {
+	if l == KindString {
+		return r
+	}
+	return l
 }

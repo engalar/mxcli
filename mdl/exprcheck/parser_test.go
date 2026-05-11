@@ -116,6 +116,14 @@ func (f fakeCatalog) EnumCases(string) ([]string, bool)              { return f.
 func (f fakeCatalog) MicroflowReturn(string) (TypeKind, bool)        { return KindUnknown, false }
 func (f fakeCatalog) MicroflowParam(string, string) (TypeKind, bool) { return KindUnknown, false }
 
+func TestParser_E004_ConcatLiteralIntWithString(t *testing.T) {
+	p := NewParser()
+	_, hs := p.Parse("'count=' + 5", Context{Microflow: "M.F"})
+	if !hasCode(hs, "E004") {
+		t.Fatalf("expected E004, got %+v", hs)
+	}
+}
+
 func TestParser_E003_NullToEmpty(t *testing.T) {
 	p := NewParser()
 	_, hs := p.Parse("null", Context{Microflow: "M.F"})
