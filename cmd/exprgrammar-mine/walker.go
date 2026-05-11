@@ -92,3 +92,32 @@ func (l *slotListener) EnterLogStatement(ctx *parser.LogStatementContext) {
 func (l *slotListener) EnterReturnStatement(ctx *parser.ReturnStatementContext) {
 	l.recordExpr("ReturnStmt.Value", ctx.Expression())
 }
+
+func (l *slotListener) recordMemberAssignments(slotPath string, list parser.IMemberAssignmentListContext) {
+	if list == nil {
+		return
+	}
+	mal, ok := list.(*parser.MemberAssignmentListContext)
+	if !ok {
+		return
+	}
+	for _, ma := range mal.AllMemberAssignment() {
+		mac, ok := ma.(*parser.MemberAssignmentContext)
+		if !ok {
+			continue
+		}
+		l.recordExpr(slotPath, mac.Expression())
+	}
+}
+
+func (l *slotListener) EnterCreateObjectStatement(ctx *parser.CreateObjectStatementContext) {
+	l.recordMemberAssignments("CreateItem.Value", ctx.MemberAssignmentList())
+}
+
+func (l *slotListener) EnterChangeObjectStatement(ctx *parser.ChangeObjectStatementContext) {
+	l.recordMemberAssignments("ChangeItem.Value", ctx.MemberAssignmentList())
+}
+
+func (l *slotListener) EnterCallArgument(ctx *parser.CallArgumentContext) {
+	l.recordExpr("CallArgument.Value", ctx.Expression())
+}
