@@ -114,7 +114,25 @@ func parsePrimary(s *Stream, ctx Context) (RobustExpr, []Hint) {
 			v = v[1 : len(v)-1]
 		}
 		node := &StringLit{baseNode: baseNode{P: t.Pos}, Value: v}
-		return node, checkStringLitVsSlot(node, ctx, t)
+		var hs []Hint
+		if v == "true" || v == "false" || v == "True" || v == "False" {
+			if sc, ok := slotKind(ctx); ok && sc.Kind == KindBoolean {
+				hs = append(hs, Hint{
+					Code: "E002", Slug: "bool-string-mismatch", Severity: hints.SeverityError,
+					Where: hints.Location{
+						Microflow: ctx.Microflow,
+						Context:   SlotToContext(ctx.SlotPath),
+						Line:      t.Pos.Line,
+						Column:    t.Pos.Column,
+					},
+					YouWrote: "'" + v + "'",
+					Problem:  "Mendix Boolean expressions use the unquoted literals true and false; a quoted string is never equal to a Boolean.",
+					Fix:      strings.ToLower(v),
+				})
+			}
+		}
+		hs = append(hs, checkStringLitVsSlot(node, ctx, t)...)
+		return node, hs
 	case TokNumber:
 		s.Consume()
 		kind := KindInteger
@@ -173,8 +191,21 @@ func parseIdentLed(s *Stream, ctx Context) (RobustExpr, []Hint) {
 		return &BoolLit{baseNode: baseNode{P: t.Pos}, Value: true}, nil
 	case "false":
 		return &BoolLit{baseNode: baseNode{P: t.Pos}, Value: false}, nil
-	case "empty", "null":
+	case "empty":
 		return &EmptyExpr{baseNode: baseNode{P: t.Pos}}, nil
+	case "null":
+		return &EmptyExpr{baseNode: baseNode{P: t.Pos}}, []Hint{{
+			Code: "E003", Slug: "null-to-empty", Severity: hints.SeverityWarning,
+			Where: hints.Location{
+				Microflow: ctx.Microflow,
+				Context:   SlotToContext(ctx.SlotPath),
+				Line:      t.Pos.Line,
+				Column:    t.Pos.Column,
+			},
+			YouWrote: "null",
+			Problem:  "Mendix expressions use 'empty', not 'null'. Tools auto-correct on BSON write but the source becomes inconsistent on the next round-trip.",
+			Fix:      "Replace null with empty.",
+		}}
 	case "if":
 		return parseIfThenElse(s, ctx, t.Pos)
 	}
@@ -328,4 +359,11 @@ func checkStringLitVsSlot(node *StringLit, ctx Context, tok Token) []Hint {
 			EnumValues: vals,
 		},
 	}}
+}
+
+func slotKind(ctx Context) (SlotConstraint, bool) {
+	if ctx.Slots == nil || ctx.SlotPath == "" {
+		return SlotConstraint{}, false
+	}
+	return ctx.Slots.Expect(ctx.SlotPath)
 }

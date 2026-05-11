@@ -116,6 +116,25 @@ func (f fakeCatalog) EnumCases(string) ([]string, bool)              { return f.
 func (f fakeCatalog) MicroflowReturn(string) (TypeKind, bool)        { return KindUnknown, false }
 func (f fakeCatalog) MicroflowParam(string, string) (TypeKind, bool) { return KindUnknown, false }
 
+func TestParser_E003_NullToEmpty(t *testing.T) {
+	p := NewParser()
+	_, hs := p.Parse("null", Context{Microflow: "M.F"})
+	if !hasCode(hs, "E003") {
+		t.Fatalf("expected E003, got %+v", hs)
+	}
+}
+
+func TestParser_E002_BoolStringInBoolSlot(t *testing.T) {
+	p := NewParser()
+	_, hs := p.Parse("'true'", Context{
+		SlotPath: "IfStmt.Condition",
+		Slots:    DefaultSlotResolver(),
+	})
+	if !hasCode(hs, "E002") {
+		t.Fatalf("expected E002, got %+v", hs)
+	}
+}
+
 func TestParser_E007_DegenerateCallArgsTerminates(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
