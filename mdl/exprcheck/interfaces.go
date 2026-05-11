@@ -62,8 +62,5 @@ const (
 	KindEmpty
 )
 
-// Hint is a single diagnostic with optional fix suggestion. Full
-// definition (Code, Slug, Severity, Where, ...) lands in P1.6; the
-// stub here is enough for the Parser/HintSink interface signatures
-// to compile. RobustExpr lives in ast.go (defined by P1.2).
-type Hint struct{}
+// Hint is now defined as a type alias to hints.Hint in hint.go (P1.6).
+// RobustExpr lives in ast.go (P1.2).
