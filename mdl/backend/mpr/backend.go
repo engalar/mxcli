@@ -369,22 +369,22 @@ func (b *MprBackend) SetProjectSecurityLevel(unitID model.ID, level string) erro
 	return b.setSecurityLevelViaModelsdk(unitID, level)
 }
 func (b *MprBackend) SetProjectDemoUsersEnabled(unitID model.ID, enabled bool) error {
-	return b.writer.SetProjectDemoUsersEnabled(unitID, enabled)
+	return b.setProjectDemoUsersEnabledViaModelsdk(unitID, enabled)
 }
 func (b *MprBackend) AddUserRole(unitID model.ID, name string, moduleRoles []string, manageAllRoles bool) error {
-	return b.writer.AddUserRole(unitID, name, moduleRoles, manageAllRoles)
+	return b.addUserRoleViaModelsdk(unitID, name, moduleRoles, manageAllRoles)
 }
 func (b *MprBackend) AlterUserRoleModuleRoles(unitID model.ID, userRoleName string, add bool, moduleRoles []string) error {
-	return b.writer.AlterUserRoleModuleRoles(unitID, userRoleName, add, moduleRoles)
+	return b.alterUserRoleModuleRolesViaModelsdk(unitID, userRoleName, add, moduleRoles)
 }
 func (b *MprBackend) RemoveUserRole(unitID model.ID, name string) error {
-	return b.writer.RemoveUserRole(unitID, name)
+	return b.removeUserRoleViaModelsdk(unitID, name)
 }
 func (b *MprBackend) AddDemoUser(unitID model.ID, userName, password, entity string, userRoles []string) error {
-	return b.writer.AddDemoUser(unitID, userName, password, entity, userRoles)
+	return b.addDemoUserViaModelsdk(unitID, userName, password, entity, userRoles)
 }
 func (b *MprBackend) RemoveDemoUser(unitID model.ID, userName string) error {
-	return b.writer.RemoveDemoUser(unitID, userName)
+	return b.removeDemoUserViaModelsdk(unitID, userName)
 }
 
 func (b *MprBackend) ListModuleSecurity() ([]*security.ModuleSecurity, error) {
