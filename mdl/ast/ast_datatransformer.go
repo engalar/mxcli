@@ -10,7 +10,7 @@ type CreateDataTransformerStmt struct {
 	SourceType     string // "JSON" or "XML"
 	SourceJSON     string // the source content
 	Steps          []DataTransformerStepDef
-	CreateOrModify bool   // true for CREATE OR MODIFY / CREATE OR REPLACE
+	CreateOrModify bool // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
 func (s *CreateDataTransformerStmt) isStatement() {}

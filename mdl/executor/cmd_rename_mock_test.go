@@ -434,9 +434,9 @@ func TestRename_Nanoflow_CollisionError(t *testing.T) {
 	nf1 := mkNanoflow(mod.ID, "NF1")
 	nf2 := mkNanoflow(mod.ID, "NF2")
 	mb := &mock.MockBackend{
-		IsConnectedFunc:  func() bool { return true },
-		ListModulesFunc:  func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc:  func() ([]*types.FolderInfo, error) { return nil, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
 		ListNanoflowsFunc: func() ([]*microflows.Nanoflow, error) {
 			return []*microflows.Nanoflow{nf1, nf2}, nil
 		},

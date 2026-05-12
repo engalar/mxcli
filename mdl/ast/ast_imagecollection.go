@@ -12,11 +12,11 @@ type ImageItem struct {
 //
 //	CREATE IMAGE COLLECTION Module.Name [EXPORT LEVEL 'Public'] [COMMENT '...'] [(IMAGE "name" FROM FILE 'path', ...)]
 type CreateImageCollectionStmt struct {
-	Name            QualifiedName
+	Name           QualifiedName
 	CreateOrModify bool
-	ExportLevel     string // "Hidden" (default) or "Public"
-	Comment         string
-	Images          []ImageItem
+	ExportLevel    string // "Hidden" (default) or "Public"
+	Comment        string
+	Images         []ImageItem
 }
 
 func (s *CreateImageCollectionStmt) isStatement() {}

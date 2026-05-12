@@ -764,9 +764,11 @@ func TestCreateConsumedMCPService_OrModify_PreservesID(t *testing.T) {
 
 	var updatedID model.ID
 	mb := &mock.MockBackend{
-		IsConnectedFunc:                        func() bool { return true },
-		ListModulesFunc:                        func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) { return []*agenteditor.ConsumedMCPService{existing}, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) {
+			return []*agenteditor.ConsumedMCPService{existing}, nil
+		},
 		UpdateAgentEditorConsumedMCPServiceFunc: func(c *agenteditor.ConsumedMCPService) error {
 			updatedID = c.ID
 			return nil

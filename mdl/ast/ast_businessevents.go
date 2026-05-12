@@ -8,7 +8,7 @@ type CreateBusinessEventServiceStmt struct {
 	ServiceName     string
 	EventNamePrefix string
 	Messages        []*BusinessEventMessageDef
-	CreateOrModify bool
+	CreateOrModify  bool
 	Folder          string
 	Documentation   string
 }

@@ -264,16 +264,16 @@ func setupProjectConflictCtx(t *testing.T) (*ExecContext, *model.Module) {
 			return []*microflows.Microflow{mf}, nil
 		},
 		// Other list functions return empty (no conflicts for those types)
-		ListEnumerationsFunc:               func() ([]*model.Enumeration, error) { return nil, nil },
-		ListConstantsFunc:                  func() ([]*model.Constant, error) { return nil, nil },
-		ListBusinessEventServicesFunc:      func() ([]*model.BusinessEventService, error) { return nil, nil },
-		ListPublishedRestServicesFunc:      func() ([]*model.PublishedRestService, error) { return nil, nil },
-		ListJsonStructuresFunc:             func() ([]*types.JsonStructure, error) { return nil, nil },
-		ListImportMappingsFunc:             func() ([]*model.ImportMapping, error) { return nil, nil },
-		ListExportMappingsFunc:             func() ([]*model.ExportMapping, error) { return nil, nil },
-		ListDataTransformersFunc:           func() ([]*model.DataTransformer, error) { return nil, nil },
-		ListAgentEditorModelsFunc:          func() ([]*agenteditor.Model, error) { return nil, nil },
-		ListAgentEditorKnowledgeBasesFunc:  func() ([]*agenteditor.KnowledgeBase, error) { return nil, nil },
+		ListEnumerationsFunc:              func() ([]*model.Enumeration, error) { return nil, nil },
+		ListConstantsFunc:                 func() ([]*model.Constant, error) { return nil, nil },
+		ListBusinessEventServicesFunc:     func() ([]*model.BusinessEventService, error) { return nil, nil },
+		ListPublishedRestServicesFunc:     func() ([]*model.PublishedRestService, error) { return nil, nil },
+		ListJsonStructuresFunc:            func() ([]*types.JsonStructure, error) { return nil, nil },
+		ListImportMappingsFunc:            func() ([]*model.ImportMapping, error) { return nil, nil },
+		ListExportMappingsFunc:            func() ([]*model.ExportMapping, error) { return nil, nil },
+		ListDataTransformersFunc:          func() ([]*model.DataTransformer, error) { return nil, nil },
+		ListAgentEditorModelsFunc:         func() ([]*agenteditor.Model, error) { return nil, nil },
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return nil, nil },
 		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) {
 			return nil, nil
 		},

@@ -6,12 +6,12 @@ package ast
 //
 //	CREATE [OR REPLACE] JSON STRUCTURE Module.Name [COMMENT 'doc'] SNIPPET '...json...' [CUSTOM NAME MAP (...)];
 type CreateJsonStructureStmt struct {
-	Name            QualifiedName
-	JsonSnippet     string            // Raw JSON snippet
-	Documentation   string            // Optional documentation comment
-	Folder          string            // Optional folder path within module
-	CreateOrModify bool // true for CREATE OR MODIFY (or OR REPLACE, treated identically)
-	CustomNameMap   map[string]string // Optional: JSON key → custom ExposedName
+	Name           QualifiedName
+	JsonSnippet    string            // Raw JSON snippet
+	Documentation  string            // Optional documentation comment
+	Folder         string            // Optional folder path within module
+	CreateOrModify bool              // true for CREATE OR MODIFY (or OR REPLACE, treated identically)
+	CustomNameMap  map[string]string // Optional: JSON key → custom ExposedName
 }
 
 func (s *CreateJsonStructureStmt) isStatement() {}

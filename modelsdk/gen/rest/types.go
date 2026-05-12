@@ -13,10 +13,10 @@ import (
 
 // Ensure imports are used.
 var (
-	_ = codec.DefaultRegistry
+	_                 = codec.DefaultRegistry
 	_ element.Element = nil
-	_ = property.DecodeString
-	_ bson.Raw = nil
+	_                 = property.DecodeString
+	_ bson.Raw        = nil
 )
 
 // ────────────────────────────────────────────────────────
@@ -117,7 +117,9 @@ func (o *CallMicroflowToChange) SetMicroflowQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *CallMicroflowToChange) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 }
 
@@ -155,7 +157,9 @@ func (o *CallMicroflowToRead) SetMicroflowQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *CallMicroflowToRead) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 }
 
@@ -217,7 +221,9 @@ func (o *ConstantValue) SetValueQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ConstantValue) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Value"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.value.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.value.SetFromDecode(s)
+		}
 	}
 }
 
@@ -227,48 +233,48 @@ func (o *ConstantValue) InitFromRaw(raw bson.Raw) {
 
 type ConsumedODataService struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	description *property.Primitive[string]
-	catalogUrl *property.Primitive[string]
-	icon *property.Primitive[string]
-	metadata *property.Primitive[string]
-	metadataUrl *property.Primitive[string]
-	serviceName *property.Primitive[string]
-	version *property.Primitive[string]
-	endpointId *property.Primitive[string]
-	minimumMxVersion *property.Primitive[string]
-	recommendedMxVersion *property.Primitive[string]
-	applicationId *property.Primitive[string]
-	environmentType *property.Enum[string]
-	metadataHash *property.Primitive[string]
-	validated *property.Primitive[bool]
-	validatedEntities *property.Primitive[string]
-	metadataReferences *property.PartList[element.Element]
-	proxyType *property.Enum[string]
-	proxyHost *property.ByNameRef[element.Element]
-	proxyPort *property.ByNameRef[element.Element]
-	proxyUsername *property.ByNameRef[element.Element]
-	proxyPassword *property.ByNameRef[element.Element]
-	httpConfiguration *property.Part[element.Element]
-	headersMicroflow *property.ByNameRef[element.Element]
+	name                   *property.Primitive[string]
+	documentation          *property.Primitive[string]
+	excluded               *property.Primitive[bool]
+	exportLevel            *property.Enum[string]
+	description            *property.Primitive[string]
+	catalogUrl             *property.Primitive[string]
+	icon                   *property.Primitive[string]
+	metadata               *property.Primitive[string]
+	metadataUrl            *property.Primitive[string]
+	serviceName            *property.Primitive[string]
+	version                *property.Primitive[string]
+	endpointId             *property.Primitive[string]
+	minimumMxVersion       *property.Primitive[string]
+	recommendedMxVersion   *property.Primitive[string]
+	applicationId          *property.Primitive[string]
+	environmentType        *property.Enum[string]
+	metadataHash           *property.Primitive[string]
+	validated              *property.Primitive[bool]
+	validatedEntities      *property.Primitive[string]
+	metadataReferences     *property.PartList[element.Element]
+	proxyType              *property.Enum[string]
+	proxyHost              *property.ByNameRef[element.Element]
+	proxyPort              *property.ByNameRef[element.Element]
+	proxyUsername          *property.ByNameRef[element.Element]
+	proxyPassword          *property.ByNameRef[element.Element]
+	httpConfiguration      *property.Part[element.Element]
+	headersMicroflow       *property.ByNameRef[element.Element]
 	configurationMicroflow *property.ByNameRef[element.Element]
-	timeoutModel *property.Part[element.Element]
-	timeoutExpression *property.Primitive[string]
-	oDataVersion *property.Enum[string]
-	versionApiMockResults *property.Primitive[string]
-	serviceId *property.Primitive[string]
-	lastUpdated *property.Primitive[string]
-	useQuerySegment *property.Primitive[bool]
+	timeoutModel           *property.Part[element.Element]
+	timeoutExpression      *property.Primitive[string]
+	oDataVersion           *property.Enum[string]
+	versionApiMockResults  *property.Primitive[string]
+	serviceId              *property.Primitive[string]
+	lastUpdated            *property.Primitive[string]
+	useQuerySegment        *property.Primitive[bool]
 	errorHandlingMicroflow *property.ByNameRef[element.Element]
-	serviceUrl *property.Primitive[string]
-	httpUsername *property.Primitive[string]
-	httpPassword *property.Primitive[string]
-	useAuthentication *property.Primitive[bool]
-	clientCertificate *property.Primitive[string]
-	headers *property.PartList[element.Element]
+	serviceUrl             *property.Primitive[string]
+	httpUsername           *property.Primitive[string]
+	httpPassword           *property.Primitive[string]
+	useAuthentication      *property.Primitive[bool]
+	clientCertificate      *property.Primitive[string]
+	headers                *property.PartList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -702,7 +708,9 @@ func (o *ConsumedODataService) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	o.description.Init(raw)
 	o.catalogUrl.Init(raw)
@@ -716,7 +724,9 @@ func (o *ConsumedODataService) InitFromRaw(raw bson.Raw) {
 	o.recommendedMxVersion.Init(raw)
 	o.applicationId.Init(raw)
 	if val, err := raw.LookupErr("EnvironmentType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.environmentType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.environmentType.SetFromDecode(s)
+		}
 	}
 	o.metadataHash.Init(raw)
 	o.validated.Init(raw)
@@ -727,42 +737,60 @@ func (o *ConsumedODataService) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("ProxyType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.proxyType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.proxyType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ProxyHost"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.proxyHost.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.proxyHost.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ProxyPort"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.proxyPort.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.proxyPort.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ProxyUsername"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.proxyUsername.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.proxyUsername.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ProxyPassword"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.proxyPassword.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.proxyPassword.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "HttpConfiguration"); err == nil {
 		o.httpConfiguration.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("HeadersMicroflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.headersMicroflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.headersMicroflow.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ConfigurationMicroflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.configurationMicroflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.configurationMicroflow.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "TimeoutModel"); err == nil {
 		o.timeoutModel.SetFromDecode(child)
 	}
 	o.timeoutExpression.Init(raw)
 	if val, err := raw.LookupErr("ODataVersion"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.oDataVersion.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.oDataVersion.SetFromDecode(s)
+		}
 	}
 	o.versionApiMockResults.Init(raw)
 	o.serviceId.Init(raw)
 	o.lastUpdated.Init(raw)
 	o.useQuerySegment.Init(raw)
 	if val, err := raw.LookupErr("ErrorHandlingMicroflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingMicroflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingMicroflow.SetFromDecode(s)
+		}
 	}
 	o.serviceUrl.Init(raw)
 	o.httpUsername.Init(raw)
@@ -782,15 +810,15 @@ func (o *ConsumedODataService) InitFromRaw(raw bson.Raw) {
 
 type ConsumedRestService struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	openApiFile *property.Part[element.Element]
-	baseUrl *property.Part[element.Element]
+	name                 *property.Primitive[string]
+	documentation        *property.Primitive[string]
+	excluded             *property.Primitive[bool]
+	exportLevel          *property.Enum[string]
+	openApiFile          *property.Part[element.Element]
+	baseUrl              *property.Part[element.Element]
 	authenticationScheme *property.Part[element.Element]
-	operations *property.PartList[element.Element]
-	baseUrlParameter *property.Part[element.Element]
+	operations           *property.PartList[element.Element]
+	baseUrlParameter     *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -894,7 +922,9 @@ func (o *ConsumedRestService) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "OpenApiFile"); err == nil {
 		o.openApiFile.SetFromDecode(child)
@@ -921,9 +951,9 @@ func (o *ConsumedRestService) InitFromRaw(raw bson.Raw) {
 
 type CorsConfiguration struct {
 	element.Base
-	allowedOrigins *property.ByNameRef[element.Element]
+	allowedOrigins      *property.ByNameRef[element.Element]
 	allowAuthentication *property.Primitive[bool]
-	maxAge *property.ByNameRef[element.Element]
+	maxAge              *property.ByNameRef[element.Element]
 }
 
 // AllowedOriginsQualifiedName returns the value of the allowedOrigins property.
@@ -959,11 +989,15 @@ func (o *CorsConfiguration) SetMaxAgeQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *CorsConfiguration) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("AllowedOrigins"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.allowedOrigins.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.allowedOrigins.SetFromDecode(s)
+		}
 	}
 	o.allowAuthentication.Init(raw)
 	if val, err := raw.LookupErr("MaxAge"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.maxAge.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.maxAge.SetFromDecode(s)
+		}
 	}
 }
 
@@ -973,7 +1007,7 @@ func (o *CorsConfiguration) InitFromRaw(raw bson.Raw) {
 
 type HeaderWithValueTemplate struct {
 	element.Base
-	name *property.Primitive[string]
+	name  *property.Primitive[string]
 	value *property.Part[element.Element]
 }
 
@@ -1012,7 +1046,7 @@ func (o *HeaderWithValueTemplate) InitFromRaw(raw bson.Raw) {
 type ImplicitMappingBody struct {
 	element.Base
 	rootMappingElement *property.Part[element.Element]
-	testValue *property.Part[element.Element]
+	testValue          *property.Part[element.Element]
 }
 
 // RootMappingElement returns the value of the rootMappingElement property.
@@ -1051,7 +1085,7 @@ func (o *ImplicitMappingBody) InitFromRaw(raw bson.Raw) {
 
 type RestOperationResponseHandling struct {
 	element.Base
-	statusCode *property.Primitive[int32]
+	statusCode  *property.Primitive[int32]
 	contentType *property.Primitive[string]
 }
 
@@ -1087,8 +1121,8 @@ func (o *RestOperationResponseHandling) InitFromRaw(raw bson.Raw) {
 
 type ImplicitMappingResponseHandling struct {
 	element.Base
-	statusCode *property.Primitive[int32]
-	contentType *property.Primitive[string]
+	statusCode         *property.Primitive[int32]
+	contentType        *property.Primitive[string]
 	rootMappingElement *property.Part[element.Element]
 }
 
@@ -1161,8 +1195,8 @@ func (o *JsonBody) InitFromRaw(raw bson.Raw) {
 
 type MetadataReference struct {
 	element.Base
-	uri *property.Primitive[string]
-	metadata *property.Primitive[string]
+	uri                *property.Primitive[string]
+	metadata           *property.Primitive[string]
 	metadataReferences *property.PartList[element.Element]
 }
 
@@ -1218,7 +1252,7 @@ func (o *MetadataReference) InitFromRaw(raw bson.Raw) {
 
 type NoResponseHandling struct {
 	element.Base
-	statusCode *property.Primitive[int32]
+	statusCode  *property.Primitive[int32]
 	contentType *property.Primitive[string]
 }
 
@@ -1256,8 +1290,8 @@ type ODataEntityTypeSource struct {
 	element.Base
 	sourceDocument *property.ByNameRef[element.Element]
 	entityTypeName *property.Primitive[string]
-	key *property.Part[element.Element]
-	isOpen *property.Primitive[bool]
+	key            *property.Part[element.Element]
+	isOpen         *property.Primitive[bool]
 }
 
 // SourceDocumentQualifiedName returns the value of the sourceDocument property.
@@ -1303,7 +1337,9 @@ func (o *ODataEntityTypeSource) SetIsOpen(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ODataEntityTypeSource) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("SourceDocument"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.sourceDocument.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.sourceDocument.SetFromDecode(s)
+		}
 	}
 	o.entityTypeName.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Key"); err == nil {
@@ -1351,11 +1387,11 @@ func (o *ODataKey) InitFromRaw(raw bson.Raw) {
 
 type ODataKeyPart struct {
 	element.Base
-	name *property.Primitive[string]
+	name              *property.Primitive[string]
 	entityKeyPartName *property.Primitive[string]
-	propType *property.Part[element.Element]
-	remoteType *property.Primitive[string]
-	filterable *property.Primitive[bool]
+	propType          *property.Part[element.Element]
+	remoteType        *property.Primitive[string]
+	filterable        *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -1426,8 +1462,8 @@ func (o *ODataKeyPart) InitFromRaw(raw bson.Raw) {
 type ODataMappedPrimitiveCollectionValue struct {
 	element.Base
 	defaultValueDesignTime *property.Primitive[string]
-	remoteName *property.Primitive[string]
-	remoteType *property.Primitive[string]
+	remoteName             *property.Primitive[string]
+	remoteType             *property.Primitive[string]
 }
 
 // DefaultValueDesignTime returns the value of the defaultValueDesignTime property.
@@ -1474,13 +1510,13 @@ func (o *ODataMappedPrimitiveCollectionValue) InitFromRaw(raw bson.Raw) {
 type ODataMappedValue struct {
 	element.Base
 	defaultValueDesignTime *property.Primitive[string]
-	remoteName *property.Primitive[string]
-	remoteType *property.Primitive[string]
-	filterable *property.Primitive[bool]
-	sortable *property.Primitive[bool]
-	representsStream *property.Primitive[bool]
-	updatable *property.Primitive[bool]
-	creatable *property.Primitive[bool]
+	remoteName             *property.Primitive[string]
+	remoteType             *property.Primitive[string]
+	filterable             *property.Primitive[bool]
+	sortable               *property.Primitive[bool]
+	representsStream       *property.Primitive[bool]
+	updatable              *property.Primitive[bool]
+	creatable              *property.Primitive[bool]
 }
 
 // DefaultValueDesignTime returns the value of the defaultValueDesignTime property.
@@ -1582,9 +1618,9 @@ func (o *ODataMappedValue) InitFromRaw(raw bson.Raw) {
 type ODataPrimitiveCollectionAssociationSource struct {
 	element.Base
 	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
+	entityPath       *property.Primitive[string]
+	entityRef        *property.Part[element.Element]
+	sourceVariable   *property.Part[element.Element]
 }
 
 // ForceFullObjects returns the value of the forceFullObjects property.
@@ -1661,7 +1697,9 @@ func (o *ODataPrimitiveCollectionEntitySource) SetSourceDocumentQualifiedName(v 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ODataPrimitiveCollectionEntitySource) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("SourceDocument"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.sourceDocument.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.sourceDocument.SetFromDecode(s)
+		}
 	}
 }
 
@@ -1671,18 +1709,18 @@ func (o *ODataPrimitiveCollectionEntitySource) InitFromRaw(raw bson.Raw) {
 
 type ODataRemoteAssociationSource struct {
 	element.Base
-	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
+	forceFullObjects               *property.Primitive[bool]
+	entityPath                     *property.Primitive[string]
+	entityRef                      *property.Part[element.Element]
+	sourceVariable                 *property.Part[element.Element]
 	remoteParentNavigationProperty *property.Primitive[string]
-	remoteChildNavigationProperty *property.Primitive[string]
-	navigability *property.Enum[string]
-	navigability2 *property.Enum[string]
-	updatableFromChild *property.Primitive[bool]
-	updatableFromParent *property.Primitive[bool]
-	creatableFromChild *property.Primitive[bool]
-	creatableFromParent *property.Primitive[bool]
+	remoteChildNavigationProperty  *property.Primitive[string]
+	navigability                   *property.Enum[string]
+	navigability2                  *property.Enum[string]
+	updatableFromChild             *property.Primitive[bool]
+	updatableFromParent            *property.Primitive[bool]
+	creatableFromChild             *property.Primitive[bool]
+	creatableFromParent            *property.Primitive[bool]
 }
 
 // ForceFullObjects returns the value of the forceFullObjects property.
@@ -1818,10 +1856,14 @@ func (o *ODataRemoteAssociationSource) InitFromRaw(raw bson.Raw) {
 	o.remoteParentNavigationProperty.Init(raw)
 	o.remoteChildNavigationProperty.Init(raw)
 	if val, err := raw.LookupErr("Navigability"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.navigability.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.navigability.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Navigability2"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.navigability2.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.navigability2.SetFromDecode(s)
+		}
 	}
 	o.updatableFromChild.Init(raw)
 	o.updatableFromParent.Init(raw)
@@ -1835,17 +1877,17 @@ func (o *ODataRemoteAssociationSource) InitFromRaw(raw bson.Raw) {
 
 type ODataRemoteEntitySource struct {
 	element.Base
-	sourceDocument *property.ByNameRef[element.Element]
-	remoteName *property.Primitive[string]
-	entityTypeName *property.Primitive[string]
-	entitySet *property.Primitive[string]
-	entitySetName *property.Primitive[string]
-	key *property.Part[element.Element]
-	countable *property.Primitive[bool]
-	creatable *property.Primitive[bool]
-	deletable *property.Primitive[bool]
-	topSupported *property.Primitive[bool]
-	skipSupported *property.Primitive[bool]
+	sourceDocument      *property.ByNameRef[element.Element]
+	remoteName          *property.Primitive[string]
+	entityTypeName      *property.Primitive[string]
+	entitySet           *property.Primitive[string]
+	entitySetName       *property.Primitive[string]
+	key                 *property.Part[element.Element]
+	countable           *property.Primitive[bool]
+	creatable           *property.Primitive[bool]
+	deletable           *property.Primitive[bool]
+	topSupported        *property.Primitive[bool]
+	skipSupported       *property.Primitive[bool]
 	createChangeLocally *property.Primitive[bool]
 }
 
@@ -1972,7 +2014,9 @@ func (o *ODataRemoteEntitySource) SetCreateChangeLocally(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ODataRemoteEntitySource) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("SourceDocument"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.sourceDocument.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.sourceDocument.SetFromDecode(s)
+		}
 	}
 	o.remoteName.Init(raw)
 	o.entityTypeName.Init(raw)
@@ -1996,7 +2040,7 @@ func (o *ODataRemoteEntitySource) InitFromRaw(raw bson.Raw) {
 type ODataRemoteEnumerationSource struct {
 	element.Base
 	consumedODataService *property.ByNameRef[element.Element]
-	remoteName *property.Primitive[string]
+	remoteName           *property.Primitive[string]
 }
 
 // ConsumedODataServiceQualifiedName returns the value of the consumedODataService property.
@@ -2022,7 +2066,9 @@ func (o *ODataRemoteEnumerationSource) SetRemoteName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ODataRemoteEnumerationSource) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ConsumedODataService"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.consumedODataService.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.consumedODataService.SetFromDecode(s)
+		}
 	}
 	o.remoteName.Init(raw)
 }
@@ -2081,8 +2127,8 @@ func (o *OpenApiFile) InitFromRaw(raw bson.Raw) {
 
 type OperationParameter struct {
 	element.Base
-	name *property.Primitive[string]
-	dataType *property.Part[element.Element]
+	name      *property.Primitive[string]
+	dataType  *property.Part[element.Element]
 	testValue *property.Part[element.Element]
 }
 
@@ -2170,8 +2216,8 @@ func (o *OptionalQueryParameterUsage) InitFromRaw(raw bson.Raw) {
 type PublishedODataContract struct {
 	element.Base
 	serviceFeed *property.Part[element.Element]
-	metadata *property.Primitive[string]
-	openApi *property.Primitive[string]
+	metadata    *property.Primitive[string]
+	openApi     *property.Primitive[string]
 }
 
 // ServiceFeed returns the value of the serviceFeed property.
@@ -2221,8 +2267,8 @@ type PublishedODataEnumeration struct {
 	element.Base
 	exposedName *property.Primitive[string]
 	enumeration *property.ByNameRef[element.Element]
-	values *property.PartList[element.Element]
-	summary *property.Primitive[string]
+	values      *property.PartList[element.Element]
+	summary     *property.Primitive[string]
 	description *property.Primitive[string]
 }
 
@@ -2285,7 +2331,9 @@ func (o *PublishedODataEnumeration) SetDescription(v string) {
 func (o *PublishedODataEnumeration) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	if val, err := raw.LookupErr("Enumeration"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.enumeration.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.enumeration.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Values"); err == nil {
 		for _, child := range children {
@@ -2302,10 +2350,10 @@ func (o *PublishedODataEnumeration) InitFromRaw(raw bson.Raw) {
 
 type PublishedODataEnumerationValue struct {
 	element.Base
-	exposedName *property.Primitive[string]
+	exposedName      *property.Primitive[string]
 	enumerationValue *property.ByNameRef[element.Element]
-	summary *property.Primitive[string]
-	description *property.Primitive[string]
+	summary          *property.Primitive[string]
+	description      *property.Primitive[string]
 }
 
 // ExposedName returns the value of the exposedName property.
@@ -2352,7 +2400,9 @@ func (o *PublishedODataEnumerationValue) SetDescription(v string) {
 func (o *PublishedODataEnumerationValue) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	if val, err := raw.LookupErr("EnumerationValue"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.enumerationValue.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.enumerationValue.SetFromDecode(s)
+		}
 	}
 	o.summary.Init(raw)
 	o.description.Init(raw)
@@ -2365,10 +2415,10 @@ func (o *PublishedODataEnumerationValue) InitFromRaw(raw bson.Raw) {
 type PublishedODataMicroflow struct {
 	element.Base
 	exposedName *property.Primitive[string]
-	microflow *property.ByNameRef[element.Element]
-	parameters *property.PartList[element.Element]
-	returnType *property.Part[element.Element]
-	summary *property.Primitive[string]
+	microflow   *property.ByNameRef[element.Element]
+	parameters  *property.PartList[element.Element]
+	returnType  *property.Part[element.Element]
+	summary     *property.Primitive[string]
 	description *property.Primitive[string]
 }
 
@@ -2441,7 +2491,9 @@ func (o *PublishedODataMicroflow) SetDescription(v string) {
 func (o *PublishedODataMicroflow) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Parameters"); err == nil {
 		for _, child := range children {
@@ -2461,13 +2513,13 @@ func (o *PublishedODataMicroflow) InitFromRaw(raw bson.Raw) {
 
 type PublishedODataMicroflowParameter struct {
 	element.Base
-	exposedName *property.Primitive[string]
+	exposedName        *property.Primitive[string]
 	microflowParameter *property.ByNameRef[element.Element]
-	propType *property.Part[element.Element]
-	dataType *property.Part[element.Element]
-	canBeEmpty *property.Primitive[bool]
-	summary *property.Primitive[string]
-	description *property.Primitive[string]
+	propType           *property.Part[element.Element]
+	dataType           *property.Part[element.Element]
+	canBeEmpty         *property.Primitive[bool]
+	summary            *property.Primitive[string]
+	description        *property.Primitive[string]
 }
 
 // ExposedName returns the value of the exposedName property.
@@ -2544,7 +2596,9 @@ func (o *PublishedODataMicroflowParameter) SetDescription(v string) {
 func (o *PublishedODataMicroflowParameter) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	if val, err := raw.LookupErr("MicroflowParameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflowParameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflowParameter.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Type"); err == nil {
 		o.propType.SetFromDecode(child)
@@ -2563,26 +2617,26 @@ func (o *PublishedODataMicroflowParameter) InitFromRaw(raw bson.Raw) {
 
 type PublishedODataService struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	namespace *property.Primitive[string]
-	path *property.Primitive[string]
-	allowedModuleRoles *property.ByNameRefList[element.Element]
-	serviceName *property.Primitive[string]
-	resources *property.PartList[element.Element]
-	microflows *property.PartList[element.Element]
-	enumerations *property.PartList[element.Element]
-	publishAssociations *property.Primitive[bool]
-	version *property.Primitive[string]
+	name                    *property.Primitive[string]
+	documentation           *property.Primitive[string]
+	excluded                *property.Primitive[bool]
+	exportLevel             *property.Enum[string]
+	namespace               *property.Primitive[string]
+	path                    *property.Primitive[string]
+	allowedModuleRoles      *property.ByNameRefList[element.Element]
+	serviceName             *property.Primitive[string]
+	resources               *property.PartList[element.Element]
+	microflows              *property.PartList[element.Element]
+	enumerations            *property.PartList[element.Element]
+	publishAssociations     *property.Primitive[bool]
+	version                 *property.Primitive[string]
 	authenticationMicroflow *property.ByNameRef[element.Element]
-	authenticationTypes *property.EnumList[string]
-	summary *property.Primitive[string]
-	description *property.Primitive[string]
-	replaceIllegalChars *property.Primitive[bool]
-	useGeneralization *property.Primitive[bool]
-	oDataVersion *property.Enum[string]
+	authenticationTypes     *property.EnumList[string]
+	summary                 *property.Primitive[string]
+	description             *property.Primitive[string]
+	replaceIllegalChars     *property.Primitive[bool]
+	useGeneralization       *property.Primitive[bool]
+	oDataVersion            *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -2811,7 +2865,9 @@ func (o *PublishedODataService) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	o.namespace.Init(raw)
 	o.path.Init(raw)
@@ -2820,7 +2876,9 @@ func (o *PublishedODataService) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.allowedModuleRoles.SetFromDecode(qnames)
 		}
@@ -2844,14 +2902,18 @@ func (o *PublishedODataService) InitFromRaw(raw bson.Raw) {
 	o.publishAssociations.Init(raw)
 	o.version.Init(raw)
 	if val, err := raw.LookupErr("AuthenticationMicroflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.authenticationMicroflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.authenticationMicroflow.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("AuthenticationTypes"); err == nil {
 		if arr, ok := val.ArrayOK(); ok {
 			vals, _ := arr.Values()
 			items := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { items = append(items, s) }
+				if s, ok := v.StringValueOK(); ok {
+					items = append(items, s)
+				}
 			}
 			o.authenticationTypes.SetFromDecode(items)
 		}
@@ -2861,7 +2923,9 @@ func (o *PublishedODataService) InitFromRaw(raw bson.Raw) {
 	o.replaceIllegalChars.Init(raw)
 	o.useGeneralization.Init(raw)
 	if val, err := raw.LookupErr("ODataVersion"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.oDataVersion.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.oDataVersion.SetFromDecode(s)
+		}
 	}
 }
 
@@ -2871,24 +2935,24 @@ func (o *PublishedODataService) InitFromRaw(raw bson.Raw) {
 
 type PublishedRestResource struct {
 	element.Base
-	dataEntity *property.Part[element.Element]
-	path *property.Primitive[string]
-	exposedName *property.Primitive[string]
-	summary *property.Primitive[string]
-	description *property.Primitive[string]
-	usePaging *property.Primitive[bool]
-	pageSize *property.Primitive[int32]
-	updatable *property.Primitive[bool]
+	dataEntity      *property.Part[element.Element]
+	path            *property.Primitive[string]
+	exposedName     *property.Primitive[string]
+	summary         *property.Primitive[string]
+	description     *property.Primitive[string]
+	usePaging       *property.Primitive[bool]
+	pageSize        *property.Primitive[int32]
+	updatable       *property.Primitive[bool]
 	updateMicroflow *property.ByNameRef[element.Element]
-	insertable *property.Primitive[bool]
-	deletable *property.Primitive[bool]
-	updateMode *property.Part[element.Element]
-	insertMode *property.Part[element.Element]
-	deleteMode *property.Part[element.Element]
-	readMode *property.Part[element.Element]
-	queryOptions *property.Part[element.Element]
-	queryMicroflow *property.ByNameRef[element.Element]
-	countMicroflow *property.ByNameRef[element.Element]
+	insertable      *property.Primitive[bool]
+	deletable       *property.Primitive[bool]
+	updateMode      *property.Part[element.Element]
+	insertMode      *property.Part[element.Element]
+	deleteMode      *property.Part[element.Element]
+	readMode        *property.Part[element.Element]
+	queryOptions    *property.Part[element.Element]
+	queryMicroflow  *property.ByNameRef[element.Element]
+	countMicroflow  *property.ByNameRef[element.Element]
 }
 
 // DataEntity returns the value of the dataEntity property.
@@ -3084,7 +3148,9 @@ func (o *PublishedRestResource) InitFromRaw(raw bson.Raw) {
 	o.pageSize.Init(raw)
 	o.updatable.Init(raw)
 	if val, err := raw.LookupErr("UpdateMicroflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.updateMicroflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.updateMicroflow.SetFromDecode(s)
+		}
 	}
 	o.insertable.Init(raw)
 	o.deletable.Init(raw)
@@ -3104,10 +3170,14 @@ func (o *PublishedRestResource) InitFromRaw(raw bson.Raw) {
 		o.queryOptions.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("QueryMicroflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.queryMicroflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.queryMicroflow.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("CountMicroflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.countMicroflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.countMicroflow.SetFromDecode(s)
+		}
 	}
 }
 
@@ -3117,20 +3187,20 @@ func (o *PublishedRestResource) InitFromRaw(raw bson.Raw) {
 
 type PublishedRestService struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	path *property.Primitive[string]
-	serviceName *property.Primitive[string]
-	version *property.Primitive[string]
-	authenticationType *property.Enum[string]
-	authenticationTypes *property.EnumList[string]
+	name                    *property.Primitive[string]
+	documentation           *property.Primitive[string]
+	excluded                *property.Primitive[bool]
+	exportLevel             *property.Enum[string]
+	path                    *property.Primitive[string]
+	serviceName             *property.Primitive[string]
+	version                 *property.Primitive[string]
+	authenticationType      *property.Enum[string]
+	authenticationTypes     *property.EnumList[string]
 	authenticationMicroflow *property.ByNameRef[element.Element]
-	corsConfiguration *property.Part[element.Element]
-	allowedRoles *property.ByNameRefList[element.Element]
-	resources *property.PartList[element.Element]
-	parameters *property.PartList[element.Element]
+	corsConfiguration       *property.Part[element.Element]
+	allowedRoles            *property.ByNameRefList[element.Element]
+	resources               *property.PartList[element.Element]
+	parameters              *property.PartList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -3294,26 +3364,34 @@ func (o *PublishedRestService) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	o.path.Init(raw)
 	o.serviceName.Init(raw)
 	o.version.Init(raw)
 	if val, err := raw.LookupErr("AuthenticationType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.authenticationType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.authenticationType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("AuthenticationTypes"); err == nil {
 		if arr, ok := val.ArrayOK(); ok {
 			vals, _ := arr.Values()
 			items := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { items = append(items, s) }
+				if s, ok := v.StringValueOK(); ok {
+					items = append(items, s)
+				}
 			}
 			o.authenticationTypes.SetFromDecode(items)
 		}
 	}
 	if val, err := raw.LookupErr("AuthenticationMicroflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.authenticationMicroflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.authenticationMicroflow.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "CorsConfiguration"); err == nil {
 		o.corsConfiguration.SetFromDecode(child)
@@ -3323,7 +3401,9 @@ func (o *PublishedRestService) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.allowedRoles.SetFromDecode(qnames)
 		}
@@ -3346,17 +3426,17 @@ func (o *PublishedRestService) InitFromRaw(raw bson.Raw) {
 
 type PublishedRestServiceOperation struct {
 	element.Base
-	summary *property.Primitive[string]
-	documentation *property.Primitive[string]
-	path *property.Primitive[string]
-	deprecated *property.Primitive[bool]
-	parameters *property.PartList[element.Element]
-	httpMethod *property.Enum[string]
-	microflow *property.ByNameRef[element.Element]
-	exportMapping *property.ByNameRef[element.Element]
-	importMapping *property.ByNameRef[element.Element]
+	summary              *property.Primitive[string]
+	documentation        *property.Primitive[string]
+	path                 *property.Primitive[string]
+	deprecated           *property.Primitive[bool]
+	parameters           *property.PartList[element.Element]
+	httpMethod           *property.Enum[string]
+	microflow            *property.ByNameRef[element.Element]
+	exportMapping        *property.ByNameRef[element.Element]
+	importMapping        *property.ByNameRef[element.Element]
 	objectHandlingBackup *property.Enum[string]
-	commit *property.Enum[string]
+	commit               *property.Enum[string]
 }
 
 // Summary returns the value of the summary property.
@@ -3486,22 +3566,34 @@ func (o *PublishedRestServiceOperation) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("HttpMethod"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.httpMethod.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.httpMethod.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ExportMapping"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportMapping.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportMapping.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ImportMapping"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.importMapping.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.importMapping.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ObjectHandlingBackup"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.objectHandlingBackup.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.objectHandlingBackup.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Commit"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.commit.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.commit.SetFromDecode(s)
+		}
 	}
 }
 
@@ -3511,9 +3603,9 @@ func (o *PublishedRestServiceOperation) InitFromRaw(raw bson.Raw) {
 
 type PublishedRestServiceResource struct {
 	element.Base
-	name *property.Primitive[string]
+	name          *property.Primitive[string]
 	documentation *property.Primitive[string]
-	operations *property.PartList[element.Element]
+	operations    *property.PartList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -3568,8 +3660,8 @@ func (o *PublishedRestServiceResource) InitFromRaw(raw bson.Raw) {
 
 type QueryOptions struct {
 	element.Base
-	countable *property.Primitive[bool]
-	topSupported *property.Primitive[bool]
+	countable     *property.Primitive[bool]
+	topSupported  *property.Primitive[bool]
 	skipSupported *property.Primitive[bool]
 }
 
@@ -3616,8 +3708,8 @@ func (o *QueryOptions) InitFromRaw(raw bson.Raw) {
 
 type QueryParameter struct {
 	element.Base
-	name *property.Primitive[string]
-	testValue *property.Primitive[string]
+	name           *property.Primitive[string]
+	testValue      *property.Primitive[string]
 	parameterUsage *property.Part[element.Element]
 }
 
@@ -3690,15 +3782,15 @@ func (o *RequiredQueryParameterUsage) InitFromRaw(raw bson.Raw) {
 
 type RestOperation struct {
 	element.Base
-	name *property.Primitive[string]
-	path *property.Part[element.Element]
-	method *property.Part[element.Element]
-	timeout *property.Primitive[int32]
-	headers *property.PartList[element.Element]
-	parameters *property.PartList[element.Element]
-	queryParameters *property.PartList[element.Element]
+	name             *property.Primitive[string]
+	path             *property.Part[element.Element]
+	method           *property.Part[element.Element]
+	timeout          *property.Primitive[int32]
+	headers          *property.PartList[element.Element]
+	parameters       *property.PartList[element.Element]
+	queryParameters  *property.PartList[element.Element]
 	responseHandling *property.Part[element.Element]
-	tags *property.Primitive[string]
+	tags             *property.Primitive[string]
 }
 
 // Name returns the value of the name property.
@@ -3854,7 +3946,9 @@ func (o *RestOperationMethod) SetHttpMethod(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *RestOperationMethod) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("HttpMethod"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.httpMethod.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.httpMethod.SetFromDecode(s)
+		}
 	}
 }
 
@@ -3865,7 +3959,7 @@ func (o *RestOperationMethod) InitFromRaw(raw bson.Raw) {
 type RestOperationMethodWithBody struct {
 	element.Base
 	httpMethod *property.Enum[string]
-	body *property.Part[element.Element]
+	body       *property.Part[element.Element]
 }
 
 // HttpMethod returns the value of the httpMethod property.
@@ -3891,7 +3985,9 @@ func (o *RestOperationMethodWithBody) SetBody(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *RestOperationMethodWithBody) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("HttpMethod"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.httpMethod.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.httpMethod.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Body"); err == nil {
 		o.body.SetFromDecode(child)
@@ -3920,7 +4016,9 @@ func (o *RestOperationMethodWithoutBody) SetHttpMethod(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *RestOperationMethodWithoutBody) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("HttpMethod"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.httpMethod.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.httpMethod.SetFromDecode(s)
+		}
 	}
 }
 
@@ -3930,12 +4028,12 @@ func (o *RestOperationMethodWithoutBody) InitFromRaw(raw bson.Raw) {
 
 type RestOperationParameter struct {
 	element.Base
-	name *property.Primitive[string]
+	name               *property.Primitive[string]
 	microflowParameter *property.ByNameRef[element.Element]
-	propType *property.Part[element.Element]
-	parameterType *property.Enum[string]
-	description *property.Primitive[string]
-	dataType *property.Primitive[string]
+	propType           *property.Part[element.Element]
+	parameterType      *property.Enum[string]
+	description        *property.Primitive[string]
+	dataType           *property.Primitive[string]
 }
 
 // Name returns the value of the name property.
@@ -4002,13 +4100,17 @@ func (o *RestOperationParameter) SetDataType(v string) {
 func (o *RestOperationParameter) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if val, err := raw.LookupErr("MicroflowParameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflowParameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflowParameter.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Type"); err == nil {
 		o.propType.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ParameterType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameterType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameterType.SetFromDecode(s)
+		}
 	}
 	o.description.Init(raw)
 	o.dataType.Init(raw)
@@ -4020,8 +4122,8 @@ func (o *RestOperationParameter) InitFromRaw(raw bson.Raw) {
 
 type RestParameter struct {
 	element.Base
-	name *property.Primitive[string]
-	dataType *property.Part[element.Element]
+	name      *property.Primitive[string]
+	dataType  *property.Part[element.Element]
 	testValue *property.Part[element.Element]
 }
 
@@ -4072,7 +4174,7 @@ func (o *RestParameter) InitFromRaw(raw bson.Raw) {
 
 type ServiceFeed struct {
 	element.Base
-	xml *property.Primitive[string]
+	xml  *property.Primitive[string]
 	json *property.Primitive[string]
 }
 
@@ -4108,7 +4210,7 @@ func (o *ServiceFeed) InitFromRaw(raw bson.Raw) {
 
 type StringBody struct {
 	element.Base
-	value *property.Primitive[string]
+	value         *property.Primitive[string]
 	valueTemplate *property.Part[element.Element]
 }
 
@@ -4194,13 +4296,13 @@ func (o *ValueTemplate) InitFromRaw(raw bson.Raw) {
 
 type RestCallOperation struct {
 	element.Base
-	httpMethod *property.Primitive[string]
-	url *property.Primitive[string]
+	httpMethod        *property.Primitive[string]
+	url               *property.Primitive[string]
 	timeoutExpression *property.Primitive[string]
-	proxyType *property.Primitive[string]
-	parameters *property.PartList[element.Element]
-	queryParameters *property.PartList[element.Element]
-	headers *property.PartList[element.Element]
+	proxyType         *property.Primitive[string]
+	parameters        *property.PartList[element.Element]
+	queryParameters   *property.PartList[element.Element]
+	headers           *property.PartList[element.Element]
 }
 
 // HttpMethod returns the value of the httpMethod property.
@@ -4317,9 +4419,9 @@ func (o *RestCallOperation) InitFromRaw(raw bson.Raw) {
 
 type RestCallParameter struct {
 	element.Base
-	name *property.Primitive[string]
-	propType *property.Primitive[string]
-	value *property.Primitive[string]
+	name      *property.Primitive[string]
+	propType  *property.Primitive[string]
+	value     *property.Primitive[string]
 	testValue *property.Primitive[string]
 }
 
@@ -4377,7 +4479,7 @@ func (o *RestCallParameter) InitFromRaw(raw bson.Raw) {
 
 type RestCallHeader struct {
 	element.Base
-	name *property.Primitive[string]
+	name  *property.Primitive[string]
 	value *property.Primitive[string]
 }
 
@@ -4413,16 +4515,16 @@ func (o *RestCallHeader) InitFromRaw(raw bson.Raw) {
 
 type PublishedRestOperation struct {
 	element.Base
-	path *property.Primitive[string]
-	httpMethod *property.Primitive[string]
-	deprecated *property.Primitive[bool]
-	summary *property.Primitive[string]
-	description *property.Primitive[string]
-	microflow *property.ByNameRef[element.Element]
-	importMapping *property.ByNameRef[element.Element]
-	exportMapping *property.ByNameRef[element.Element]
+	path                 *property.Primitive[string]
+	httpMethod           *property.Primitive[string]
+	deprecated           *property.Primitive[bool]
+	summary              *property.Primitive[string]
+	description          *property.Primitive[string]
+	microflow            *property.ByNameRef[element.Element]
+	importMapping        *property.ByNameRef[element.Element]
+	exportMapping        *property.ByNameRef[element.Element]
 	objectHandlingBackup *property.Primitive[string]
-	commit *property.Primitive[string]
+	commit               *property.Primitive[string]
 }
 
 // Path returns the value of the path property.
@@ -4533,13 +4635,19 @@ func (o *PublishedRestOperation) InitFromRaw(raw bson.Raw) {
 	o.summary.Init(raw)
 	o.description.Init(raw)
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ImportMapping"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.importMapping.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.importMapping.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ExportMapping"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportMapping.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportMapping.SetFromDecode(s)
+		}
 	}
 	o.objectHandlingBackup.Init(raw)
 	o.commit.Init(raw)
@@ -4559,7 +4667,7 @@ func initBasicAuthenticationScheme() *BasicAuthenticationScheme {
 	o.username.Bind(&o.Base, 0)
 	o.password = property.NewPart[element.Element]("Password")
 	o.password.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.username, o.password, })
+	o.SetProperties([]element.Property{o.username, o.password})
 	return o
 }
 
@@ -4580,7 +4688,7 @@ func initCallMicroflowToChange() *CallMicroflowToChange {
 	o.SetTypeName("Rest$CallMicroflowToChange")
 	o.microflow = property.NewByNameRef[element.Element]("Microflow", "Microflows$Microflow")
 	o.microflow.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.microflow, })
+	o.SetProperties([]element.Property{o.microflow})
 	return o
 }
 
@@ -4601,7 +4709,7 @@ func initCallMicroflowToRead() *CallMicroflowToRead {
 	o.SetTypeName("Rest$CallMicroflowToRead")
 	o.microflow = property.NewByNameRef[element.Element]("Microflow", "Microflows$Microflow")
 	o.microflow.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.microflow, })
+	o.SetProperties([]element.Property{o.microflow})
 	return o
 }
 
@@ -4660,7 +4768,7 @@ func initConstantValue() *ConstantValue {
 	o.SetTypeName("Rest$ConstantValue")
 	o.value = property.NewByNameRef[element.Element]("Value", "Constants$Constant")
 	o.value.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.value, })
+	o.SetProperties([]element.Property{o.value})
 	return o
 }
 
@@ -4763,7 +4871,7 @@ func initConsumedODataService() *ConsumedODataService {
 	o.clientCertificate.Bind(&o.Base, 40)
 	o.headers = property.NewPartList[element.Element]("Headers")
 	o.headers.Bind(&o.Base, 41)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.description, o.catalogUrl, o.icon, o.metadata, o.metadataUrl, o.serviceName, o.version, o.endpointId, o.minimumMxVersion, o.recommendedMxVersion, o.applicationId, o.environmentType, o.metadataHash, o.validated, o.validatedEntities, o.metadataReferences, o.proxyType, o.proxyHost, o.proxyPort, o.proxyUsername, o.proxyPassword, o.httpConfiguration, o.headersMicroflow, o.configurationMicroflow, o.timeoutModel, o.timeoutExpression, o.oDataVersion, o.versionApiMockResults, o.serviceId, o.lastUpdated, o.useQuerySegment, o.errorHandlingMicroflow, o.serviceUrl, o.httpUsername, o.httpPassword, o.useAuthentication, o.clientCertificate, o.headers, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.description, o.catalogUrl, o.icon, o.metadata, o.metadataUrl, o.serviceName, o.version, o.endpointId, o.minimumMxVersion, o.recommendedMxVersion, o.applicationId, o.environmentType, o.metadataHash, o.validated, o.validatedEntities, o.metadataReferences, o.proxyType, o.proxyHost, o.proxyPort, o.proxyUsername, o.proxyPassword, o.httpConfiguration, o.headersMicroflow, o.configurationMicroflow, o.timeoutModel, o.timeoutExpression, o.oDataVersion, o.versionApiMockResults, o.serviceId, o.lastUpdated, o.useQuerySegment, o.errorHandlingMicroflow, o.serviceUrl, o.httpUsername, o.httpPassword, o.useAuthentication, o.clientCertificate, o.headers})
 	return o
 }
 
@@ -4800,7 +4908,7 @@ func initConsumedRestService() *ConsumedRestService {
 	o.operations.Bind(&o.Base, 7)
 	o.baseUrlParameter = property.NewPart[element.Element]("BaseUrlParameter")
 	o.baseUrlParameter.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.openApiFile, o.baseUrl, o.authenticationScheme, o.operations, o.baseUrlParameter, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.openApiFile, o.baseUrl, o.authenticationScheme, o.operations, o.baseUrlParameter})
 	return o
 }
 
@@ -4825,7 +4933,7 @@ func initCorsConfiguration() *CorsConfiguration {
 	o.allowAuthentication.Bind(&o.Base, 1)
 	o.maxAge = property.NewByNameRef[element.Element]("MaxAge", "Constants$Constant")
 	o.maxAge.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.allowedOrigins, o.allowAuthentication, o.maxAge, })
+	o.SetProperties([]element.Property{o.allowedOrigins, o.allowAuthentication, o.maxAge})
 	return o
 }
 
@@ -4848,7 +4956,7 @@ func initHeaderWithValueTemplate() *HeaderWithValueTemplate {
 	o.name.Bind(&o.Base, 0)
 	o.value = property.NewPart[element.Element]("Value")
 	o.value.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.name, o.value, })
+	o.SetProperties([]element.Property{o.name, o.value})
 	return o
 }
 
@@ -4871,7 +4979,7 @@ func initImplicitMappingBody() *ImplicitMappingBody {
 	o.rootMappingElement.Bind(&o.Base, 0)
 	o.testValue = property.NewPart[element.Element]("TestValue")
 	o.testValue.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.rootMappingElement, o.testValue, })
+	o.SetProperties([]element.Property{o.rootMappingElement, o.testValue})
 	return o
 }
 
@@ -4896,7 +5004,7 @@ func initImplicitMappingResponseHandling() *ImplicitMappingResponseHandling {
 	o.contentType.Bind(&o.Base, 1)
 	o.rootMappingElement = property.NewPart[element.Element]("RootMappingElement")
 	o.rootMappingElement.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.statusCode, o.contentType, o.rootMappingElement, })
+	o.SetProperties([]element.Property{o.statusCode, o.contentType, o.rootMappingElement})
 	return o
 }
 
@@ -4917,7 +5025,7 @@ func initJsonBody() *JsonBody {
 	o.SetTypeName("Rest$JsonBody")
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.value, })
+	o.SetProperties([]element.Property{o.value})
 	return o
 }
 
@@ -4942,7 +5050,7 @@ func initMetadataReference() *MetadataReference {
 	o.metadata.Bind(&o.Base, 1)
 	o.metadataReferences = property.NewPartList[element.Element]("MetadataReferences")
 	o.metadataReferences.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.uri, o.metadata, o.metadataReferences, })
+	o.SetProperties([]element.Property{o.uri, o.metadata, o.metadataReferences})
 	return o
 }
 
@@ -4965,7 +5073,7 @@ func initNoResponseHandling() *NoResponseHandling {
 	o.statusCode.Bind(&o.Base, 0)
 	o.contentType = property.NewPrimitive[string]("ContentType", property.DecodeString)
 	o.contentType.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.statusCode, o.contentType, })
+	o.SetProperties([]element.Property{o.statusCode, o.contentType})
 	return o
 }
 
@@ -4992,7 +5100,7 @@ func initODataEntityTypeSource() *ODataEntityTypeSource {
 	o.key.Bind(&o.Base, 2)
 	o.isOpen = property.NewPrimitive[bool]("IsOpen", property.DecodeBool)
 	o.isOpen.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.sourceDocument, o.entityTypeName, o.key, o.isOpen, })
+	o.SetProperties([]element.Property{o.sourceDocument, o.entityTypeName, o.key, o.isOpen})
 	return o
 }
 
@@ -5013,7 +5121,7 @@ func initODataKey() *ODataKey {
 	o.SetTypeName("Rest$ODataKey")
 	o.parts = property.NewPartList[element.Element]("Parts")
 	o.parts.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.parts, })
+	o.SetProperties([]element.Property{o.parts})
 	return o
 }
 
@@ -5042,7 +5150,7 @@ func initODataKeyPart() *ODataKeyPart {
 	o.remoteType.Bind(&o.Base, 3)
 	o.filterable = property.NewPrimitive[bool]("Filterable", property.DecodeBool)
 	o.filterable.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.name, o.entityKeyPartName, o.propType, o.remoteType, o.filterable, })
+	o.SetProperties([]element.Property{o.name, o.entityKeyPartName, o.propType, o.remoteType, o.filterable})
 	return o
 }
 
@@ -5067,7 +5175,7 @@ func initODataMappedPrimitiveCollectionValue() *ODataMappedPrimitiveCollectionVa
 	o.remoteName.Bind(&o.Base, 1)
 	o.remoteType = property.NewPrimitive[string]("RemoteType", property.DecodeString)
 	o.remoteType.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.defaultValueDesignTime, o.remoteName, o.remoteType, })
+	o.SetProperties([]element.Property{o.defaultValueDesignTime, o.remoteName, o.remoteType})
 	return o
 }
 
@@ -5102,7 +5210,7 @@ func initODataMappedValue() *ODataMappedValue {
 	o.updatable.Bind(&o.Base, 6)
 	o.creatable = property.NewPrimitive[bool]("Creatable", property.DecodeBool)
 	o.creatable.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.defaultValueDesignTime, o.remoteName, o.remoteType, o.filterable, o.sortable, o.representsStream, o.updatable, o.creatable, })
+	o.SetProperties([]element.Property{o.defaultValueDesignTime, o.remoteName, o.remoteType, o.filterable, o.sortable, o.representsStream, o.updatable, o.creatable})
 	return o
 }
 
@@ -5129,7 +5237,7 @@ func initODataPrimitiveCollectionAssociationSource() *ODataPrimitiveCollectionAs
 	o.entityRef.Bind(&o.Base, 2)
 	o.sourceVariable = property.NewPart[element.Element]("SourceVariable")
 	o.sourceVariable.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, })
+	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable})
 	return o
 }
 
@@ -5150,7 +5258,7 @@ func initODataPrimitiveCollectionEntitySource() *ODataPrimitiveCollectionEntityS
 	o.SetTypeName("Rest$ODataPrimitiveCollectionEntitySource")
 	o.sourceDocument = property.NewByNameRef[element.Element]("SourceDocument", "Rest$ConsumedODataService")
 	o.sourceDocument.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.sourceDocument, })
+	o.SetProperties([]element.Property{o.sourceDocument})
 	return o
 }
 
@@ -5193,7 +5301,7 @@ func initODataRemoteAssociationSource() *ODataRemoteAssociationSource {
 	o.creatableFromChild.Bind(&o.Base, 10)
 	o.creatableFromParent = property.NewPrimitive[bool]("CreatableFromParent", property.DecodeBool)
 	o.creatableFromParent.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.remoteParentNavigationProperty, o.remoteChildNavigationProperty, o.navigability, o.navigability2, o.updatableFromChild, o.updatableFromParent, o.creatableFromChild, o.creatableFromParent, })
+	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.remoteParentNavigationProperty, o.remoteChildNavigationProperty, o.navigability, o.navigability2, o.updatableFromChild, o.updatableFromParent, o.creatableFromChild, o.creatableFromParent})
 	return o
 }
 
@@ -5236,7 +5344,7 @@ func initODataRemoteEntitySource() *ODataRemoteEntitySource {
 	o.skipSupported.Bind(&o.Base, 10)
 	o.createChangeLocally = property.NewPrimitive[bool]("CreateChangeLocally", property.DecodeBool)
 	o.createChangeLocally.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.sourceDocument, o.remoteName, o.entityTypeName, o.entitySet, o.entitySetName, o.key, o.countable, o.creatable, o.deletable, o.topSupported, o.skipSupported, o.createChangeLocally, })
+	o.SetProperties([]element.Property{o.sourceDocument, o.remoteName, o.entityTypeName, o.entitySet, o.entitySetName, o.key, o.countable, o.creatable, o.deletable, o.topSupported, o.skipSupported, o.createChangeLocally})
 	return o
 }
 
@@ -5259,7 +5367,7 @@ func initODataRemoteEnumerationSource() *ODataRemoteEnumerationSource {
 	o.consumedODataService.Bind(&o.Base, 0)
 	o.remoteName = property.NewPrimitive[string]("RemoteName", property.DecodeString)
 	o.remoteName.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.consumedODataService, o.remoteName, })
+	o.SetProperties([]element.Property{o.consumedODataService, o.remoteName})
 	return o
 }
 
@@ -5280,7 +5388,7 @@ func initODataRemoteEnumerationValue() *ODataRemoteEnumerationValue {
 	o.SetTypeName("Rest$ODataRemoteEnumerationValue")
 	o.remoteName = property.NewPrimitive[string]("RemoteName", property.DecodeString)
 	o.remoteName.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.remoteName, })
+	o.SetProperties([]element.Property{o.remoteName})
 	return o
 }
 
@@ -5301,7 +5409,7 @@ func initOpenApiFile() *OpenApiFile {
 	o.SetTypeName("Rest$OpenApiFile")
 	o.content = property.NewPrimitive[string]("Content", property.DecodeString)
 	o.content.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.content, })
+	o.SetProperties([]element.Property{o.content})
 	return o
 }
 
@@ -5326,7 +5434,7 @@ func initOperationParameter() *OperationParameter {
 	o.dataType.Bind(&o.Base, 1)
 	o.testValue = property.NewPart[element.Element]("TestValue")
 	o.testValue.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.name, o.dataType, o.testValue, })
+	o.SetProperties([]element.Property{o.name, o.dataType, o.testValue})
 	return o
 }
 
@@ -5347,7 +5455,7 @@ func initOptionalQueryParameterUsage() *OptionalQueryParameterUsage {
 	o.SetTypeName("Rest$OptionalQueryParameterUsage")
 	o.included = property.NewPrimitive[bool]("Included", property.DecodeBool)
 	o.included.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.included, })
+	o.SetProperties([]element.Property{o.included})
 	return o
 }
 
@@ -5372,7 +5480,7 @@ func initPublishedODataContract() *PublishedODataContract {
 	o.metadata.Bind(&o.Base, 1)
 	o.openApi = property.NewPrimitive[string]("OpenApi", property.DecodeString)
 	o.openApi.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.serviceFeed, o.metadata, o.openApi, })
+	o.SetProperties([]element.Property{o.serviceFeed, o.metadata, o.openApi})
 	return o
 }
 
@@ -5401,7 +5509,7 @@ func initPublishedODataEnumeration() *PublishedODataEnumeration {
 	o.summary.Bind(&o.Base, 3)
 	o.description = property.NewPrimitive[string]("Description", property.DecodeString)
 	o.description.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.exposedName, o.enumeration, o.values, o.summary, o.description, })
+	o.SetProperties([]element.Property{o.exposedName, o.enumeration, o.values, o.summary, o.description})
 	return o
 }
 
@@ -5428,7 +5536,7 @@ func initPublishedODataEnumerationValue() *PublishedODataEnumerationValue {
 	o.summary.Bind(&o.Base, 2)
 	o.description = property.NewPrimitive[string]("Description", property.DecodeString)
 	o.description.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.exposedName, o.enumerationValue, o.summary, o.description, })
+	o.SetProperties([]element.Property{o.exposedName, o.enumerationValue, o.summary, o.description})
 	return o
 }
 
@@ -5459,7 +5567,7 @@ func initPublishedODataMicroflow() *PublishedODataMicroflow {
 	o.summary.Bind(&o.Base, 4)
 	o.description = property.NewPrimitive[string]("Description", property.DecodeString)
 	o.description.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.exposedName, o.microflow, o.parameters, o.returnType, o.summary, o.description, })
+	o.SetProperties([]element.Property{o.exposedName, o.microflow, o.parameters, o.returnType, o.summary, o.description})
 	return o
 }
 
@@ -5492,7 +5600,7 @@ func initPublishedODataMicroflowParameter() *PublishedODataMicroflowParameter {
 	o.summary.Bind(&o.Base, 5)
 	o.description = property.NewPrimitive[string]("Description", property.DecodeString)
 	o.description.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.exposedName, o.microflowParameter, o.propType, o.dataType, o.canBeEmpty, o.summary, o.description, })
+	o.SetProperties([]element.Property{o.exposedName, o.microflowParameter, o.propType, o.dataType, o.canBeEmpty, o.summary, o.description})
 	return o
 }
 
@@ -5551,7 +5659,7 @@ func initPublishedODataService() *PublishedODataService {
 	o.useGeneralization.Bind(&o.Base, 18)
 	o.oDataVersion = property.NewEnum[string]("ODataVersion")
 	o.oDataVersion.Bind(&o.Base, 19)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.namespace, o.path, o.allowedModuleRoles, o.serviceName, o.resources, o.microflows, o.enumerations, o.publishAssociations, o.version, o.authenticationMicroflow, o.authenticationTypes, o.summary, o.description, o.replaceIllegalChars, o.useGeneralization, o.oDataVersion, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.namespace, o.path, o.allowedModuleRoles, o.serviceName, o.resources, o.microflows, o.enumerations, o.publishAssociations, o.version, o.authenticationMicroflow, o.authenticationTypes, o.summary, o.description, o.replaceIllegalChars, o.useGeneralization, o.oDataVersion})
 	return o
 }
 
@@ -5606,7 +5714,7 @@ func initPublishedRestResource() *PublishedRestResource {
 	o.queryMicroflow.Bind(&o.Base, 16)
 	o.countMicroflow = property.NewByNameRef[element.Element]("CountMicroflow", "Microflows$Microflow")
 	o.countMicroflow.Bind(&o.Base, 17)
-	o.SetProperties([]element.Property{o.dataEntity, o.path, o.exposedName, o.summary, o.description, o.usePaging, o.pageSize, o.updatable, o.updateMicroflow, o.insertable, o.deletable, o.updateMode, o.insertMode, o.deleteMode, o.readMode, o.queryOptions, o.queryMicroflow, o.countMicroflow, })
+	o.SetProperties([]element.Property{o.dataEntity, o.path, o.exposedName, o.summary, o.description, o.usePaging, o.pageSize, o.updatable, o.updateMicroflow, o.insertable, o.deletable, o.updateMode, o.insertMode, o.deleteMode, o.readMode, o.queryOptions, o.queryMicroflow, o.countMicroflow})
 	return o
 }
 
@@ -5653,7 +5761,7 @@ func initPublishedRestService() *PublishedRestService {
 	o.resources.Bind(&o.Base, 12)
 	o.parameters = property.NewPartList[element.Element]("Parameters")
 	o.parameters.Bind(&o.Base, 13)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.path, o.serviceName, o.version, o.authenticationType, o.authenticationTypes, o.authenticationMicroflow, o.corsConfiguration, o.allowedRoles, o.resources, o.parameters, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.path, o.serviceName, o.version, o.authenticationType, o.authenticationTypes, o.authenticationMicroflow, o.corsConfiguration, o.allowedRoles, o.resources, o.parameters})
 	return o
 }
 
@@ -5694,7 +5802,7 @@ func initPublishedRestServiceOperation() *PublishedRestServiceOperation {
 	o.objectHandlingBackup.Bind(&o.Base, 9)
 	o.commit = property.NewEnum[string]("Commit")
 	o.commit.Bind(&o.Base, 10)
-	o.SetProperties([]element.Property{o.summary, o.documentation, o.path, o.deprecated, o.parameters, o.httpMethod, o.microflow, o.exportMapping, o.importMapping, o.objectHandlingBackup, o.commit, })
+	o.SetProperties([]element.Property{o.summary, o.documentation, o.path, o.deprecated, o.parameters, o.httpMethod, o.microflow, o.exportMapping, o.importMapping, o.objectHandlingBackup, o.commit})
 	return o
 }
 
@@ -5719,7 +5827,7 @@ func initPublishedRestServiceResource() *PublishedRestServiceResource {
 	o.documentation.Bind(&o.Base, 1)
 	o.operations = property.NewPartList[element.Element]("Operations")
 	o.operations.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.operations, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.operations})
 	return o
 }
 
@@ -5744,7 +5852,7 @@ func initQueryOptions() *QueryOptions {
 	o.topSupported.Bind(&o.Base, 1)
 	o.skipSupported = property.NewPrimitive[bool]("SkipSupported", property.DecodeBool)
 	o.skipSupported.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.countable, o.topSupported, o.skipSupported, })
+	o.SetProperties([]element.Property{o.countable, o.topSupported, o.skipSupported})
 	return o
 }
 
@@ -5769,7 +5877,7 @@ func initQueryParameter() *QueryParameter {
 	o.testValue.Bind(&o.Base, 1)
 	o.parameterUsage = property.NewPart[element.Element]("ParameterUsage")
 	o.parameterUsage.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.name, o.testValue, o.parameterUsage, })
+	o.SetProperties([]element.Property{o.name, o.testValue, o.parameterUsage})
 	return o
 }
 
@@ -5844,7 +5952,7 @@ func initRestOperation() *RestOperation {
 	o.responseHandling.Bind(&o.Base, 7)
 	o.tags = property.NewPrimitive[string]("Tags", property.DecodeString)
 	o.tags.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.name, o.path, o.method, o.timeout, o.headers, o.parameters, o.queryParameters, o.responseHandling, o.tags, })
+	o.SetProperties([]element.Property{o.name, o.path, o.method, o.timeout, o.headers, o.parameters, o.queryParameters, o.responseHandling, o.tags})
 	return o
 }
 
@@ -5867,7 +5975,7 @@ func initRestOperationMethodWithBody() *RestOperationMethodWithBody {
 	o.httpMethod.Bind(&o.Base, 0)
 	o.body = property.NewPart[element.Element]("Body")
 	o.body.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.httpMethod, o.body, })
+	o.SetProperties([]element.Property{o.httpMethod, o.body})
 	return o
 }
 
@@ -5888,7 +5996,7 @@ func initRestOperationMethodWithoutBody() *RestOperationMethodWithoutBody {
 	o.SetTypeName("Rest$RestOperationMethodWithoutBody")
 	o.httpMethod = property.NewEnum[string]("HttpMethod")
 	o.httpMethod.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.httpMethod, })
+	o.SetProperties([]element.Property{o.httpMethod})
 	return o
 }
 
@@ -5919,7 +6027,7 @@ func initRestOperationParameter() *RestOperationParameter {
 	o.description.Bind(&o.Base, 4)
 	o.dataType = property.NewPrimitive[string]("DataType", property.DecodeString)
 	o.dataType.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.name, o.microflowParameter, o.propType, o.parameterType, o.description, o.dataType, })
+	o.SetProperties([]element.Property{o.name, o.microflowParameter, o.propType, o.parameterType, o.description, o.dataType})
 	return o
 }
 
@@ -5944,7 +6052,7 @@ func initRestParameter() *RestParameter {
 	o.dataType.Bind(&o.Base, 1)
 	o.testValue = property.NewPart[element.Element]("TestValue")
 	o.testValue.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.name, o.dataType, o.testValue, })
+	o.SetProperties([]element.Property{o.name, o.dataType, o.testValue})
 	return o
 }
 
@@ -5967,7 +6075,7 @@ func initServiceFeed() *ServiceFeed {
 	o.xml.Bind(&o.Base, 0)
 	o.json = property.NewPrimitive[string]("Json", property.DecodeString)
 	o.json.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.xml, o.json, })
+	o.SetProperties([]element.Property{o.xml, o.json})
 	return o
 }
 
@@ -5990,7 +6098,7 @@ func initStringBody() *StringBody {
 	o.value.Bind(&o.Base, 0)
 	o.valueTemplate = property.NewPart[element.Element]("ValueTemplate")
 	o.valueTemplate.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.value, o.valueTemplate, })
+	o.SetProperties([]element.Property{o.value, o.valueTemplate})
 	return o
 }
 
@@ -6011,7 +6119,7 @@ func initStringValue() *StringValue {
 	o.SetTypeName("Rest$StringValue")
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.value, })
+	o.SetProperties([]element.Property{o.value})
 	return o
 }
 
@@ -6032,7 +6140,7 @@ func initValueTemplate() *ValueTemplate {
 	o.SetTypeName("Rest$ValueTemplate")
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.value, })
+	o.SetProperties([]element.Property{o.value})
 	return o
 }
 
@@ -6065,7 +6173,7 @@ func initRestCallOperation() *RestCallOperation {
 	o.queryParameters.Bind(&o.Base, 5)
 	o.headers = property.NewPartList[element.Element]("Headers")
 	o.headers.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.httpMethod, o.url, o.timeoutExpression, o.proxyType, o.parameters, o.queryParameters, o.headers, })
+	o.SetProperties([]element.Property{o.httpMethod, o.url, o.timeoutExpression, o.proxyType, o.parameters, o.queryParameters, o.headers})
 	return o
 }
 
@@ -6092,7 +6200,7 @@ func initRestCallParameter() *RestCallParameter {
 	o.value.Bind(&o.Base, 2)
 	o.testValue = property.NewPrimitive[string]("TestValue", property.DecodeString)
 	o.testValue.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.name, o.propType, o.value, o.testValue, })
+	o.SetProperties([]element.Property{o.name, o.propType, o.value, o.testValue})
 	return o
 }
 
@@ -6115,7 +6223,7 @@ func initRestCallHeader() *RestCallHeader {
 	o.name.Bind(&o.Base, 0)
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.name, o.value, })
+	o.SetProperties([]element.Property{o.name, o.value})
 	return o
 }
 
@@ -6154,7 +6262,7 @@ func initPublishedRestOperation() *PublishedRestOperation {
 	o.objectHandlingBackup.Bind(&o.Base, 8)
 	o.commit = property.NewPrimitive[string]("Commit", property.DecodeString)
 	o.commit.Bind(&o.Base, 9)
-	o.SetProperties([]element.Property{o.path, o.httpMethod, o.deprecated, o.summary, o.description, o.microflow, o.importMapping, o.exportMapping, o.objectHandlingBackup, o.commit, })
+	o.SetProperties([]element.Property{o.path, o.httpMethod, o.deprecated, o.summary, o.description, o.microflow, o.importMapping, o.exportMapping, o.objectHandlingBackup, o.commit})
 	return o
 }
 
@@ -6166,7 +6274,6 @@ func NewPublishedRestOperation() *PublishedRestOperation {
 	o.MarkDirty(63)
 	return o
 }
-
 
 func init() {
 	codec.DefaultRegistry.Register("Rest$BasicAuthenticationScheme", func() element.Element {

@@ -13,10 +13,10 @@ import (
 
 // Ensure imports are used.
 var (
-	_ = codec.DefaultRegistry
+	_                 = codec.DefaultRegistry
 	_ element.Element = nil
-	_ = property.DecodeString
-	_ bson.Raw = nil
+	_                 = property.DecodeString
+	_ bson.Raw        = nil
 )
 
 // ────────────────────────────────────────────────────────
@@ -25,12 +25,12 @@ var (
 
 type WorkflowActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -111,13 +111,13 @@ func (o *WorkflowActivity) InitFromRaw(raw bson.Raw) {
 
 type ConditionOutcomeActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	outcomes *property.PartList[element.Element]
+	size                *property.Primitive[string]
+	outcomes            *property.PartList[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -218,16 +218,16 @@ func (o *ConditionOutcomeActivity) InitFromRaw(raw bson.Raw) {
 
 type MicroflowBasedActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	outcomes *property.PartList[element.Element]
-	microflow *property.ByNameRef[element.Element]
-	parameterMappings *property.PartList[element.Element]
-	boundaryEvents *property.PartList[element.Element]
+	size                *property.Primitive[string]
+	outcomes            *property.PartList[element.Element]
+	microflow           *property.ByNameRef[element.Element]
+	parameterMappings   *property.PartList[element.Element]
+	boundaryEvents      *property.PartList[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -361,7 +361,9 @@ func (o *MicroflowBasedActivity) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -381,16 +383,16 @@ func (o *MicroflowBasedActivity) InitFromRaw(raw bson.Raw) {
 
 type AIAgentTaskActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	outcomes *property.PartList[element.Element]
-	microflow *property.ByNameRef[element.Element]
-	parameterMappings *property.PartList[element.Element]
-	boundaryEvents *property.PartList[element.Element]
+	size                *property.Primitive[string]
+	outcomes            *property.PartList[element.Element]
+	microflow           *property.ByNameRef[element.Element]
+	parameterMappings   *property.PartList[element.Element]
+	boundaryEvents      *property.PartList[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -524,7 +526,9 @@ func (o *AIAgentTaskActivity) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -628,7 +632,7 @@ func (o *Line) InitFromRaw(raw bson.Raw) {
 
 type BezierCurve struct {
 	element.Base
-	originControlVector *property.Primitive[string]
+	originControlVector      *property.Primitive[string]
 	destinationControlVector *property.Primitive[string]
 }
 
@@ -701,7 +705,7 @@ func (o *BooleanCase) InitFromRaw(raw bson.Raw) {
 type Outcome struct {
 	element.Base
 	persistentId *property.Primitive[string]
-	flow *property.Part[element.Element]
+	flow         *property.Part[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -739,7 +743,7 @@ func (o *Outcome) InitFromRaw(raw bson.Raw) {
 type ConditionOutcome struct {
 	element.Base
 	persistentId *property.Primitive[string]
-	flow *property.Part[element.Element]
+	flow         *property.Part[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -777,8 +781,8 @@ func (o *ConditionOutcome) InitFromRaw(raw bson.Raw) {
 type BooleanConditionOutcome struct {
 	element.Base
 	persistentId *property.Primitive[string]
-	flow *property.Part[element.Element]
-	value *property.Primitive[bool]
+	flow         *property.Part[element.Element]
+	value        *property.Primitive[bool]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -826,13 +830,13 @@ func (o *BooleanConditionOutcome) InitFromRaw(raw bson.Raw) {
 
 type BoundaryEvent struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	flow *property.Part[element.Element]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId   *property.Primitive[string]
+	flow           *property.Part[element.Element]
+	caption        *property.Primitive[string]
+	annotation     *property.Part[element.Element]
 	isInterrupting *property.Primitive[bool]
-	eventType *property.Primitive[string]
-	delay *property.Primitive[string]
+	eventType      *property.Primitive[string]
+	delay          *property.Primitive[string]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -926,16 +930,16 @@ func (o *BoundaryEvent) InitFromRaw(raw bson.Raw) {
 
 type CallMicroflowActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	outcomes *property.PartList[element.Element]
-	microflow *property.ByNameRef[element.Element]
-	parameterMappings *property.PartList[element.Element]
-	boundaryEvents *property.PartList[element.Element]
+	size                *property.Primitive[string]
+	outcomes            *property.PartList[element.Element]
+	microflow           *property.ByNameRef[element.Element]
+	parameterMappings   *property.PartList[element.Element]
+	boundaryEvents      *property.PartList[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -1069,7 +1073,9 @@ func (o *CallMicroflowActivity) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -1089,16 +1095,16 @@ func (o *CallMicroflowActivity) InitFromRaw(raw bson.Raw) {
 
 type CallMicroflowTask struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	outcomes *property.PartList[element.Element]
-	microflow *property.ByNameRef[element.Element]
-	parameterMappings *property.PartList[element.Element]
-	boundaryEvents *property.PartList[element.Element]
+	size                *property.Primitive[string]
+	outcomes            *property.PartList[element.Element]
+	microflow           *property.ByNameRef[element.Element]
+	parameterMappings   *property.PartList[element.Element]
+	boundaryEvents      *property.PartList[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -1232,7 +1238,9 @@ func (o *CallMicroflowTask) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -1252,17 +1260,17 @@ func (o *CallMicroflowTask) InitFromRaw(raw bson.Raw) {
 
 type CallWorkflowActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	workflow *property.ByNameRef[element.Element]
+	size                *property.Primitive[string]
+	workflow            *property.ByNameRef[element.Element]
 	parameterExpression *property.Primitive[string]
-	parameterMappings *property.PartList[element.Element]
-	boundaryEvents *property.PartList[element.Element]
-	executeAsync *property.Primitive[bool]
+	parameterMappings   *property.PartList[element.Element]
+	boundaryEvents      *property.PartList[element.Element]
+	executeAsync        *property.Primitive[bool]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -1396,7 +1404,9 @@ func (o *CallWorkflowActivity) InitFromRaw(raw bson.Raw) {
 	o.relativeMiddlePoint.Init(raw)
 	o.size.Init(raw)
 	if val, err := raw.LookupErr("Workflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.workflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.workflow.SetFromDecode(s)
+		}
 	}
 	o.parameterExpression.Init(raw)
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
@@ -1484,12 +1494,12 @@ func (o *EmptyUserSource) InitFromRaw(raw bson.Raw) {
 
 type EndOfBoundaryEventPathActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -1570,12 +1580,12 @@ func (o *EndOfBoundaryEventPathActivity) InitFromRaw(raw bson.Raw) {
 
 type EndOfParallelSplitPathActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -1656,12 +1666,12 @@ func (o *EndOfParallelSplitPathActivity) InitFromRaw(raw bson.Raw) {
 
 type EndWorkflowActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -1743,8 +1753,8 @@ func (o *EndWorkflowActivity) InitFromRaw(raw bson.Raw) {
 type EnumerationValueConditionOutcome struct {
 	element.Base
 	persistentId *property.Primitive[string]
-	flow *property.Part[element.Element]
-	value *property.ByNameRef[element.Element]
+	flow         *property.Part[element.Element]
+	value        *property.ByNameRef[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -1784,7 +1794,9 @@ func (o *EnumerationValueConditionOutcome) InitFromRaw(raw bson.Raw) {
 		o.flow.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Value"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.value.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.value.SetFromDecode(s)
+		}
 	}
 }
 
@@ -1795,10 +1807,10 @@ func (o *EnumerationValueConditionOutcome) InitFromRaw(raw bson.Raw) {
 type EventSubProcess struct {
 	element.Base
 	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	flow *property.Part[element.Element]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	name         *property.Primitive[string]
+	flow         *property.Part[element.Element]
+	caption      *property.Primitive[string]
+	annotation   *property.Part[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -1870,14 +1882,14 @@ func (o *EventSubProcess) InitFromRaw(raw bson.Raw) {
 
 type ExclusiveSplitActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	outcomes *property.PartList[element.Element]
-	expression *property.Primitive[string]
+	size                *property.Primitive[string]
+	outcomes            *property.PartList[element.Element]
+	expression          *property.Primitive[string]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -1989,9 +2001,9 @@ func (o *ExclusiveSplitActivity) InitFromRaw(raw bson.Raw) {
 
 type FloatingAnnotation struct {
 	element.Base
-	description *property.Primitive[string]
+	description         *property.Primitive[string]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // Description returns the value of the description property.
@@ -2070,14 +2082,14 @@ func (o *Flow) InitFromRaw(raw bson.Raw) {
 
 type FlowLine struct {
 	element.Base
-	origin *property.ByIdRef[element.Element]
-	destination *property.ByIdRef[element.Element]
-	line *property.Part[element.Element]
-	originConnectionSide *property.Enum[string]
-	originalConnectionFactor *property.Primitive[float64]
-	destinationConnectionSide *property.Enum[string]
+	origin                      *property.ByIdRef[element.Element]
+	destination                 *property.ByIdRef[element.Element]
+	line                        *property.Part[element.Element]
+	originConnectionSide        *property.Enum[string]
+	originalConnectionFactor    *property.Primitive[float64]
+	destinationConnectionSide   *property.Enum[string]
 	destinationConnectionFactor *property.Primitive[float64]
-	caseValues *property.PartList[element.Element]
+	caseValues                  *property.PartList[element.Element]
 }
 
 // OriginRefID returns the value of the origin property.
@@ -2185,11 +2197,15 @@ func (o *FlowLine) InitFromRaw(raw bson.Raw) {
 		o.line.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("OriginConnectionSide"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.originConnectionSide.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.originConnectionSide.SetFromDecode(s)
+		}
 	}
 	o.originalConnectionFactor.Init(raw)
 	if val, err := raw.LookupErr("DestinationConnectionSide"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.destinationConnectionSide.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.destinationConnectionSide.SetFromDecode(s)
+		}
 	}
 	o.destinationConnectionFactor.Init(raw)
 	if children, err := codec.DecodeChildren(raw, "CaseValues"); err == nil {
@@ -2205,13 +2221,13 @@ func (o *FlowLine) InitFromRaw(raw bson.Raw) {
 
 type InterruptingTimerBoundaryEvent struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	flow *property.Part[element.Element]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
-	isInterrupting *property.Primitive[bool]
-	eventType *property.Primitive[string]
-	delay *property.Primitive[string]
+	persistentId       *property.Primitive[string]
+	flow               *property.Part[element.Element]
+	caption            *property.Primitive[string]
+	annotation         *property.Part[element.Element]
+	isInterrupting     *property.Primitive[bool]
+	eventType          *property.Primitive[string]
+	delay              *property.Primitive[string]
 	firstExecutionTime *property.Primitive[string]
 }
 
@@ -2317,13 +2333,13 @@ func (o *InterruptingTimerBoundaryEvent) InitFromRaw(raw bson.Raw) {
 
 type JumpToActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	targetActivity *property.ByNameRef[element.Element]
+	size                *property.Primitive[string]
+	targetActivity      *property.ByNameRef[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -2407,7 +2423,9 @@ func (o *JumpToActivity) InitFromRaw(raw bson.Raw) {
 	o.relativeMiddlePoint.Init(raw)
 	o.size.Init(raw)
 	if val, err := raw.LookupErr("TargetActivity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.targetActivity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.targetActivity.SetFromDecode(s)
+		}
 	}
 }
 
@@ -2429,8 +2447,8 @@ func (o *Recurrence) InitFromRaw(raw bson.Raw) {
 
 type LinearRecurrence struct {
 	element.Base
-	intervalType *property.Enum[string]
-	interval *property.Primitive[int32]
+	intervalType  *property.Enum[string]
+	interval      *property.Primitive[int32]
 	maxExecutions *property.Primitive[int32]
 }
 
@@ -2467,7 +2485,9 @@ func (o *LinearRecurrence) SetMaxExecutions(v int32) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *LinearRecurrence) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("IntervalType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.intervalType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.intervalType.SetFromDecode(s)
+		}
 	}
 	o.interval.Init(raw)
 	o.maxExecutions.Init(raw)
@@ -2479,7 +2499,7 @@ func (o *LinearRecurrence) InitFromRaw(raw bson.Raw) {
 
 type MajorityCompletionCriteria struct {
 	element.Base
-	completionType *property.Enum[string]
+	completionType  *property.Enum[string]
 	fallbackOutcome *property.ByIdRef[element.Element]
 }
 
@@ -2506,7 +2526,9 @@ func (o *MajorityCompletionCriteria) SetFallbackOutcomeID(v element.ID) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MajorityCompletionCriteria) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("CompletionType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.completionType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.completionType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("FallbackOutcomePointer"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -2523,12 +2545,12 @@ func (o *MajorityCompletionCriteria) InitFromRaw(raw bson.Raw) {
 
 type MergeActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -2637,7 +2659,9 @@ func (o *MicroflowBasedEvent) SetMicroflowQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowBasedEvent) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 }
 
@@ -2675,7 +2699,9 @@ func (o *MicroflowBasedTargeting) SetMicroflowQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowBasedTargeting) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 }
 
@@ -2701,7 +2727,9 @@ func (o *MicroflowBasedUserSource) SetMicroflowQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowBasedUserSource) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 }
 
@@ -2711,7 +2739,7 @@ func (o *MicroflowBasedUserSource) InitFromRaw(raw bson.Raw) {
 
 type MicroflowCallParameterMapping struct {
 	element.Base
-	parameter *property.ByNameRef[element.Element]
+	parameter  *property.ByNameRef[element.Element]
 	expression *property.Primitive[string]
 }
 
@@ -2738,7 +2766,9 @@ func (o *MicroflowCallParameterMapping) SetExpression(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowCallParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	o.expression.Init(raw)
 }
@@ -2765,7 +2795,9 @@ func (o *MicroflowCompletionCriteria) SetMicroflowQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowCompletionCriteria) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 }
 
@@ -2791,7 +2823,9 @@ func (o *MicroflowEventHandler) SetMicroflowQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowEventHandler) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 }
 
@@ -2817,7 +2851,9 @@ func (o *MicroflowGroupTargeting) SetMicroflowQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowGroupTargeting) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 }
 
@@ -2843,7 +2879,9 @@ func (o *MicroflowUserTargeting) SetMicroflowQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowUserTargeting) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 }
 
@@ -2865,9 +2903,9 @@ func (o *UserTaskCompletion) InitFromRaw(raw bson.Raw) {
 
 type MultiInputCompletion struct {
 	element.Base
-	targetUserInput *property.Part[element.Element]
+	targetUserInput    *property.Part[element.Element]
 	completionCriteria *property.Part[element.Element]
-	awaitAllUsers *property.Primitive[bool]
+	awaitAllUsers      *property.Primitive[bool]
 }
 
 // TargetUserInput returns the value of the targetUserInput property.
@@ -2917,21 +2955,21 @@ func (o *MultiInputCompletion) InitFromRaw(raw bson.Raw) {
 
 type UserTaskActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
-	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	taskPage *property.Part[element.Element]
-	taskName *property.Part[element.Element]
-	taskDescription *property.Part[element.Element]
-	dueDate *property.Primitive[string]
-	userSource *property.Part[element.Element]
-	userTargeting *property.Part[element.Element]
-	outcomes *property.PartList[element.Element]
-	boundaryEvents *property.PartList[element.Element]
-	onCreatedEvent *property.Part[element.Element]
+	persistentId               *property.Primitive[string]
+	name                       *property.Primitive[string]
+	caption                    *property.Primitive[string]
+	annotation                 *property.Part[element.Element]
+	relativeMiddlePoint        *property.Primitive[string]
+	size                       *property.Primitive[string]
+	taskPage                   *property.Part[element.Element]
+	taskName                   *property.Part[element.Element]
+	taskDescription            *property.Part[element.Element]
+	dueDate                    *property.Primitive[string]
+	userSource                 *property.Part[element.Element]
+	userTargeting              *property.Part[element.Element]
+	outcomes                   *property.PartList[element.Element]
+	boundaryEvents             *property.PartList[element.Element]
+	onCreatedEvent             *property.Part[element.Element]
 	autoAssignSingleTargetUser *property.Primitive[bool]
 }
 
@@ -3153,25 +3191,25 @@ func (o *UserTaskActivity) InitFromRaw(raw bson.Raw) {
 
 type MultiUserTaskActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
-	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	taskPage *property.Part[element.Element]
-	taskName *property.Part[element.Element]
-	taskDescription *property.Part[element.Element]
-	dueDate *property.Primitive[string]
-	userSource *property.Part[element.Element]
-	userTargeting *property.Part[element.Element]
-	outcomes *property.PartList[element.Element]
-	boundaryEvents *property.PartList[element.Element]
-	onCreatedEvent *property.Part[element.Element]
+	persistentId               *property.Primitive[string]
+	name                       *property.Primitive[string]
+	caption                    *property.Primitive[string]
+	annotation                 *property.Part[element.Element]
+	relativeMiddlePoint        *property.Primitive[string]
+	size                       *property.Primitive[string]
+	taskPage                   *property.Part[element.Element]
+	taskName                   *property.Part[element.Element]
+	taskDescription            *property.Part[element.Element]
+	dueDate                    *property.Primitive[string]
+	userSource                 *property.Part[element.Element]
+	userTargeting              *property.Part[element.Element]
+	outcomes                   *property.PartList[element.Element]
+	boundaryEvents             *property.PartList[element.Element]
+	onCreatedEvent             *property.Part[element.Element]
 	autoAssignSingleTargetUser *property.Primitive[bool]
-	targetUserInput *property.Part[element.Element]
-	completionCriteria *property.Part[element.Element]
-	awaitAllUsers *property.Primitive[bool]
+	targetUserInput            *property.Part[element.Element]
+	completionCriteria         *property.Part[element.Element]
+	awaitAllUsers              *property.Primitive[bool]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -3453,12 +3491,12 @@ func (o *NoUserTargeting) InitFromRaw(raw bson.Raw) {
 
 type NonInterruptingNotificationEventSubProcessStartActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -3567,7 +3605,9 @@ func (o *NonInterruptingNotificationEventSubProcessStartActivityTarget) SetActiv
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *NonInterruptingNotificationEventSubProcessStartActivityTarget) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Activity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.activity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.activity.SetFromDecode(s)
+		}
 	}
 }
 
@@ -3577,15 +3617,15 @@ func (o *NonInterruptingNotificationEventSubProcessStartActivityTarget) InitFrom
 
 type NonInterruptingTimerBoundaryEvent struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	flow *property.Part[element.Element]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
-	isInterrupting *property.Primitive[bool]
-	eventType *property.Primitive[string]
-	delay *property.Primitive[string]
+	persistentId       *property.Primitive[string]
+	flow               *property.Part[element.Element]
+	caption            *property.Primitive[string]
+	annotation         *property.Part[element.Element]
+	isInterrupting     *property.Primitive[bool]
+	eventType          *property.Primitive[string]
+	delay              *property.Primitive[string]
 	firstExecutionTime *property.Primitive[string]
-	recurrence *property.Part[element.Element]
+	recurrence         *property.Part[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -3719,7 +3759,9 @@ func (o *NotifyWaitForNotificationActivityTarget) SetActivityQualifiedName(v str
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *NotifyWaitForNotificationActivityTarget) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Activity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.activity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.activity.SetFromDecode(s)
+		}
 	}
 }
 
@@ -3748,7 +3790,7 @@ func (o *OrthogonalPath) InitFromRaw(raw bson.Raw) {
 
 type PageParameterMapping struct {
 	element.Base
-	parameter *property.ByNameRef[element.Element]
+	parameter  *property.ByNameRef[element.Element]
 	expression *property.Primitive[string]
 }
 
@@ -3775,7 +3817,9 @@ func (o *PageParameterMapping) SetExpression(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *PageParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	o.expression.Init(raw)
 }
@@ -3802,7 +3846,9 @@ func (o *PageReference) SetPageQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *PageReference) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Page"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.page.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.page.SetFromDecode(s)
+		}
 	}
 }
 
@@ -3812,13 +3858,13 @@ func (o *PageReference) InitFromRaw(raw bson.Raw) {
 
 type ParallelSplitActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	outcomes *property.PartList[element.Element]
+	size                *property.Primitive[string]
+	outcomes            *property.PartList[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -3920,7 +3966,7 @@ func (o *ParallelSplitActivity) InitFromRaw(raw bson.Raw) {
 type ParallelSplitOutcome struct {
 	element.Base
 	persistentId *property.Primitive[string]
-	flow *property.Part[element.Element]
+	flow         *property.Part[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -3958,8 +4004,8 @@ func (o *ParallelSplitOutcome) InitFromRaw(raw bson.Raw) {
 type Parameter struct {
 	element.Base
 	entityRef *property.Part[element.Element]
-	entity *property.ByNameRef[element.Element]
-	name *property.Primitive[string]
+	entity    *property.ByNameRef[element.Element]
+	name      *property.Primitive[string]
 }
 
 // EntityRef returns the value of the entityRef property.
@@ -3998,7 +4044,9 @@ func (o *Parameter) InitFromRaw(raw bson.Raw) {
 		o.entityRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Entity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.entity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.entity.SetFromDecode(s)
+		}
 	}
 	o.name.Init(raw)
 }
@@ -4045,21 +4093,21 @@ func (o *SingleInputCompletion) InitFromRaw(raw bson.Raw) {
 
 type SingleUserTaskActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
-	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	taskPage *property.Part[element.Element]
-	taskName *property.Part[element.Element]
-	taskDescription *property.Part[element.Element]
-	dueDate *property.Primitive[string]
-	userSource *property.Part[element.Element]
-	userTargeting *property.Part[element.Element]
-	outcomes *property.PartList[element.Element]
-	boundaryEvents *property.PartList[element.Element]
-	onCreatedEvent *property.Part[element.Element]
+	persistentId               *property.Primitive[string]
+	name                       *property.Primitive[string]
+	caption                    *property.Primitive[string]
+	annotation                 *property.Part[element.Element]
+	relativeMiddlePoint        *property.Primitive[string]
+	size                       *property.Primitive[string]
+	taskPage                   *property.Part[element.Element]
+	taskName                   *property.Part[element.Element]
+	taskDescription            *property.Part[element.Element]
+	dueDate                    *property.Primitive[string]
+	userSource                 *property.Part[element.Element]
+	userTargeting              *property.Part[element.Element]
+	outcomes                   *property.PartList[element.Element]
+	boundaryEvents             *property.PartList[element.Element]
+	onCreatedEvent             *property.Part[element.Element]
 	autoAssignSingleTargetUser *property.Primitive[bool]
 }
 
@@ -4281,12 +4329,12 @@ func (o *SingleUserTaskActivity) InitFromRaw(raw bson.Raw) {
 
 type StartWorkflowActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -4391,8 +4439,8 @@ func (o *StringCase) InitFromRaw(raw bson.Raw) {
 
 type ThresholdCompletionCriteria struct {
 	element.Base
-	completionType *property.Enum[string]
-	threshold *property.Primitive[int32]
+	completionType  *property.Enum[string]
+	threshold       *property.Primitive[int32]
 	fallbackOutcome *property.ByIdRef[element.Element]
 }
 
@@ -4429,7 +4477,9 @@ func (o *ThresholdCompletionCriteria) SetFallbackOutcomeID(v element.ID) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ThresholdCompletionCriteria) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("CompletionType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.completionType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.completionType.SetFromDecode(s)
+		}
 	}
 	o.threshold.Init(raw)
 	if val, err := raw.LookupErr("FallbackOutcomePointer"); err == nil {
@@ -4447,13 +4497,13 @@ func (o *ThresholdCompletionCriteria) InitFromRaw(raw bson.Raw) {
 
 type TimerBoundaryEvent struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	flow *property.Part[element.Element]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId   *property.Primitive[string]
+	flow           *property.Part[element.Element]
+	caption        *property.Primitive[string]
+	annotation     *property.Part[element.Element]
 	isInterrupting *property.Primitive[bool]
-	eventType *property.Primitive[string]
-	delay *property.Primitive[string]
+	eventType      *property.Primitive[string]
+	delay          *property.Primitive[string]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -4547,24 +4597,24 @@ func (o *TimerBoundaryEvent) InitFromRaw(raw bson.Raw) {
 
 type UserTask struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
-	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	userTaskEntity *property.ByNameRef[element.Element]
-	page *property.ByNameRef[element.Element]
-	taskPage *property.Part[element.Element]
-	taskName *property.Part[element.Element]
-	taskDescription *property.Part[element.Element]
-	dueDate *property.Primitive[string]
-	userSource *property.Part[element.Element]
-	outcomes *property.PartList[element.Element]
-	allowedModuleRoles *property.ByNameRefList[element.Element]
-	onCreatedEvent *property.Part[element.Element]
+	persistentId               *property.Primitive[string]
+	name                       *property.Primitive[string]
+	caption                    *property.Primitive[string]
+	annotation                 *property.Part[element.Element]
+	relativeMiddlePoint        *property.Primitive[string]
+	size                       *property.Primitive[string]
+	userTaskEntity             *property.ByNameRef[element.Element]
+	page                       *property.ByNameRef[element.Element]
+	taskPage                   *property.Part[element.Element]
+	taskName                   *property.Part[element.Element]
+	taskDescription            *property.Part[element.Element]
+	dueDate                    *property.Primitive[string]
+	userSource                 *property.Part[element.Element]
+	outcomes                   *property.PartList[element.Element]
+	allowedModuleRoles         *property.ByNameRefList[element.Element]
+	onCreatedEvent             *property.Part[element.Element]
 	autoAssignSingleTargetUser *property.Primitive[bool]
-	userTaskCompletion *property.Part[element.Element]
+	userTaskCompletion         *property.Part[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -4768,10 +4818,14 @@ func (o *UserTask) InitFromRaw(raw bson.Raw) {
 	o.relativeMiddlePoint.Init(raw)
 	o.size.Init(raw)
 	if val, err := raw.LookupErr("UserTaskEntity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.userTaskEntity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.userTaskEntity.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Page"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.page.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.page.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "TaskPage"); err == nil {
 		o.taskPage.SetFromDecode(child)
@@ -4796,7 +4850,9 @@ func (o *UserTask) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.allowedModuleRoles.SetFromDecode(qnames)
 		}
@@ -4817,10 +4873,10 @@ func (o *UserTask) InitFromRaw(raw bson.Raw) {
 type UserTaskOutcome struct {
 	element.Base
 	persistentId *property.Primitive[string]
-	flow *property.Part[element.Element]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	value *property.Primitive[string]
+	flow         *property.Part[element.Element]
+	name         *property.Primitive[string]
+	caption      *property.Primitive[string]
+	value        *property.Primitive[string]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -4933,7 +4989,7 @@ func (o *VoidCase) InitFromRaw(raw bson.Raw) {
 type VoidConditionOutcome struct {
 	element.Base
 	persistentId *property.Primitive[string]
-	flow *property.Part[element.Element]
+	flow         *property.Part[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -4970,13 +5026,13 @@ func (o *VoidConditionOutcome) InitFromRaw(raw bson.Raw) {
 
 type WaitForNotificationActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	boundaryEvents *property.PartList[element.Element]
+	size                *property.Primitive[string]
+	boundaryEvents      *property.PartList[element.Element]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -5077,13 +5133,13 @@ func (o *WaitForNotificationActivity) InitFromRaw(raw bson.Raw) {
 
 type WaitForTimerActivity struct {
 	element.Base
-	persistentId *property.Primitive[string]
-	name *property.Primitive[string]
-	caption *property.Primitive[string]
-	annotation *property.Part[element.Element]
+	persistentId        *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Primitive[string]
+	annotation          *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	delay *property.Primitive[string]
+	size                *property.Primitive[string]
+	delay               *property.Primitive[string]
 }
 
 // PersistentId returns the value of the persistentId property.
@@ -5175,30 +5231,30 @@ func (o *WaitForTimerActivity) InitFromRaw(raw bson.Raw) {
 
 type Workflow struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	persistentId *property.Primitive[string]
-	title *property.Primitive[string]
-	contextEntity *property.ByNameRef[element.Element]
-	parameter *property.Part[element.Element]
-	workflowEntity *property.ByNameRef[element.Element]
-	workflowType *property.Part[element.Element]
-	overviewPage *property.ByNameRef[element.Element]
-	adminPage *property.Part[element.Element]
-	flow *property.Part[element.Element]
-	workflowName *property.Part[element.Element]
-	workflowDescription *property.Part[element.Element]
-	dueDate *property.Primitive[string]
-	allowedModuleRoles *property.ByNameRefList[element.Element]
+	name                       *property.Primitive[string]
+	documentation              *property.Primitive[string]
+	excluded                   *property.Primitive[bool]
+	exportLevel                *property.Enum[string]
+	persistentId               *property.Primitive[string]
+	title                      *property.Primitive[string]
+	contextEntity              *property.ByNameRef[element.Element]
+	parameter                  *property.Part[element.Element]
+	workflowEntity             *property.ByNameRef[element.Element]
+	workflowType               *property.Part[element.Element]
+	overviewPage               *property.ByNameRef[element.Element]
+	adminPage                  *property.Part[element.Element]
+	flow                       *property.Part[element.Element]
+	workflowName               *property.Part[element.Element]
+	workflowDescription        *property.Part[element.Element]
+	dueDate                    *property.Primitive[string]
+	allowedModuleRoles         *property.ByNameRefList[element.Element]
 	workflowOnStateChangeEvent *property.Part[element.Element]
 	usertaskOnStateChangeEvent *property.Part[element.Element]
-	onWorkflowEvent *property.PartList[element.Element]
-	eventSubProcesses *property.PartList[element.Element]
-	annotation *property.Part[element.Element]
-	workflowMetaData *property.Part[element.Element]
-	workflowV2 *property.Primitive[bool]
+	onWorkflowEvent            *property.PartList[element.Element]
+	eventSubProcesses          *property.PartList[element.Element]
+	annotation                 *property.Part[element.Element]
+	workflowMetaData           *property.Part[element.Element]
+	workflowV2                 *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -5462,24 +5518,32 @@ func (o *Workflow) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	o.persistentId.Init(raw)
 	o.title.Init(raw)
 	if val, err := raw.LookupErr("ContextEntity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.contextEntity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.contextEntity.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Parameter"); err == nil {
 		o.parameter.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("WorkflowEntity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.workflowEntity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.workflowEntity.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "WorkflowType"); err == nil {
 		o.workflowType.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("OverviewPage"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.overviewPage.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.overviewPage.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "AdminPage"); err == nil {
 		o.adminPage.SetFromDecode(child)
@@ -5499,7 +5563,9 @@ func (o *Workflow) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.allowedModuleRoles.SetFromDecode(qnames)
 		}
@@ -5535,7 +5601,7 @@ func (o *Workflow) InitFromRaw(raw bson.Raw) {
 
 type WorkflowCallParameterMapping struct {
 	element.Base
-	parameter *property.ByNameRef[element.Element]
+	parameter  *property.ByNameRef[element.Element]
 	expression *property.Primitive[string]
 }
 
@@ -5562,7 +5628,9 @@ func (o *WorkflowCallParameterMapping) SetExpression(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *WorkflowCallParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	o.expression.Init(raw)
 }
@@ -5601,7 +5669,9 @@ func (o *WorkflowDefinitionNameSelection) SetWorkflowQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *WorkflowDefinitionNameSelection) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Workflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.workflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.workflow.SetFromDecode(s)
+		}
 	}
 }
 
@@ -5635,10 +5705,10 @@ func (o *WorkflowDefinitionObjectSelection) InitFromRaw(raw bson.Raw) {
 
 type WorkflowEventHandler struct {
 	element.Base
-	description *property.Primitive[string]
+	description           *property.Primitive[string]
 	microflowEventHandler *property.Part[element.Element]
-	eventTypes *property.EnumList[string]
-	documentation *property.Primitive[string]
+	eventTypes            *property.EnumList[string]
+	documentation         *property.Primitive[string]
 }
 
 // Description returns the value of the description property.
@@ -5692,7 +5762,9 @@ func (o *WorkflowEventHandler) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			items := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { items = append(items, s) }
+				if s, ok := v.StringValueOK(); ok {
+					items = append(items, s)
+				}
 			}
 			o.eventTypes.SetFromDecode(items)
 		}
@@ -5707,8 +5779,8 @@ func (o *WorkflowEventHandler) InitFromRaw(raw bson.Raw) {
 type WorkflowMetaData struct {
 	element.Base
 	detachedActivities *property.PartList[element.Element]
-	flowLines *property.PartList[element.Element]
-	annotation *property.PartList[element.Element]
+	flowLines          *property.PartList[element.Element]
+	annotation         *property.PartList[element.Element]
 }
 
 // DetachedActivitiesItems returns the value of the detachedActivities property.
@@ -5797,7 +5869,9 @@ func (o *WorkflowType) SetEntityQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *WorkflowType) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Entity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.entity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.entity.SetFromDecode(s)
+		}
 	}
 }
 
@@ -5903,10 +5977,10 @@ func (o *XPathUserTargeting) InitFromRaw(raw bson.Raw) {
 
 type ExclusiveSplitOutcome struct {
 	element.Base
-	name *property.Primitive[string]
+	name    *property.Primitive[string]
 	caption *property.Primitive[string]
-	value *property.Primitive[string]
-	flow *property.Part[element.Element]
+	value   *property.Primitive[string]
+	flow    *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -5989,7 +6063,7 @@ func initAIAgentTaskActivity() *AIAgentTaskActivity {
 	o.parameterMappings.Bind(&o.Base, 8)
 	o.boundaryEvents = property.NewPartList[element.Element]("BoundaryEvents")
 	o.boundaryEvents.Bind(&o.Base, 9)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.outcomes, o.microflow, o.parameterMappings, o.boundaryEvents, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.outcomes, o.microflow, o.parameterMappings, o.boundaryEvents})
 	return o
 }
 
@@ -6010,7 +6084,7 @@ func initAbsoluteAmountUserInput() *AbsoluteAmountUserInput {
 	o.SetTypeName("Workflows$AbsoluteAmountUserInput")
 	o.amount = property.NewPrimitive[int32]("Amount", property.DecodeInt32)
 	o.amount.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.amount, })
+	o.SetProperties([]element.Property{o.amount})
 	return o
 }
 
@@ -6050,7 +6124,7 @@ func initAnnotation() *Annotation {
 	o.SetTypeName("Workflows$AnnotationActivity")
 	o.description = property.NewPrimitive[string]("Description", property.DecodeString)
 	o.description.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.description, })
+	o.SetProperties([]element.Property{o.description})
 	return o
 }
 
@@ -6073,7 +6147,7 @@ func initBezierCurve() *BezierCurve {
 	o.originControlVector.Bind(&o.Base, 0)
 	o.destinationControlVector = property.NewPrimitive[string]("DestinationControlVector", property.DecodeString)
 	o.destinationControlVector.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.originControlVector, o.destinationControlVector, })
+	o.SetProperties([]element.Property{o.originControlVector, o.destinationControlVector})
 	return o
 }
 
@@ -6094,7 +6168,7 @@ func initBooleanCase() *BooleanCase {
 	o.SetTypeName("Workflows$BooleanCase")
 	o.value = property.NewPrimitive[bool]("Value", property.DecodeBool)
 	o.value.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.value, })
+	o.SetProperties([]element.Property{o.value})
 	return o
 }
 
@@ -6119,7 +6193,7 @@ func initBooleanConditionOutcome() *BooleanConditionOutcome {
 	o.flow.Bind(&o.Base, 1)
 	o.value = property.NewPrimitive[bool]("Value", property.DecodeBool)
 	o.value.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.persistentId, o.flow, o.value, })
+	o.SetProperties([]element.Property{o.persistentId, o.flow, o.value})
 	return o
 }
 
@@ -6152,7 +6226,7 @@ func initBoundaryEvent() *BoundaryEvent {
 	o.eventType.Bind(&o.Base, 5)
 	o.delay = property.NewPrimitive[string]("Delay", property.DecodeString)
 	o.delay.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.persistentId, o.flow, o.caption, o.annotation, o.isInterrupting, o.eventType, o.delay, })
+	o.SetProperties([]element.Property{o.persistentId, o.flow, o.caption, o.annotation, o.isInterrupting, o.eventType, o.delay})
 	return o
 }
 
@@ -6191,7 +6265,7 @@ func initCallMicroflowActivity() *CallMicroflowActivity {
 	o.parameterMappings.Bind(&o.Base, 8)
 	o.boundaryEvents = property.NewPartList[element.Element]("BoundaryEvents")
 	o.boundaryEvents.Bind(&o.Base, 9)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.outcomes, o.microflow, o.parameterMappings, o.boundaryEvents, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.outcomes, o.microflow, o.parameterMappings, o.boundaryEvents})
 	return o
 }
 
@@ -6230,7 +6304,7 @@ func initCallMicroflowTask() *CallMicroflowTask {
 	o.parameterMappings.Bind(&o.Base, 8)
 	o.boundaryEvents = property.NewPartList[element.Element]("BoundaryEvents")
 	o.boundaryEvents.Bind(&o.Base, 9)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.outcomes, o.microflow, o.parameterMappings, o.boundaryEvents, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.outcomes, o.microflow, o.parameterMappings, o.boundaryEvents})
 	return o
 }
 
@@ -6271,7 +6345,7 @@ func initCallWorkflowActivity() *CallWorkflowActivity {
 	o.boundaryEvents.Bind(&o.Base, 9)
 	o.executeAsync = property.NewPrimitive[bool]("ExecuteAsync", property.DecodeBool)
 	o.executeAsync.Bind(&o.Base, 10)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.workflow, o.parameterExpression, o.parameterMappings, o.boundaryEvents, o.executeAsync, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.workflow, o.parameterExpression, o.parameterMappings, o.boundaryEvents, o.executeAsync})
 	return o
 }
 
@@ -6292,7 +6366,7 @@ func initConsensusCompletionCriteria() *ConsensusCompletionCriteria {
 	o.SetTypeName("Workflows$ConsensusCompletionCriteria")
 	o.fallbackOutcome = property.NewByIdRef[element.Element]("FallbackOutcomePointer")
 	o.fallbackOutcome.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.fallbackOutcome, })
+	o.SetProperties([]element.Property{o.fallbackOutcome})
 	return o
 }
 
@@ -6342,7 +6416,7 @@ func initEndOfBoundaryEventPathActivity() *EndOfBoundaryEventPathActivity {
 	o.relativeMiddlePoint.Bind(&o.Base, 4)
 	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
 	o.size.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -6373,7 +6447,7 @@ func initEndOfParallelSplitPathActivity() *EndOfParallelSplitPathActivity {
 	o.relativeMiddlePoint.Bind(&o.Base, 4)
 	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
 	o.size.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -6404,7 +6478,7 @@ func initEndWorkflowActivity() *EndWorkflowActivity {
 	o.relativeMiddlePoint.Bind(&o.Base, 4)
 	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
 	o.size.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -6429,7 +6503,7 @@ func initEnumerationValueConditionOutcome() *EnumerationValueConditionOutcome {
 	o.flow.Bind(&o.Base, 1)
 	o.value = property.NewByNameRef[element.Element]("Value", "Enumerations$EnumerationValue")
 	o.value.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.persistentId, o.flow, o.value, })
+	o.SetProperties([]element.Property{o.persistentId, o.flow, o.value})
 	return o
 }
 
@@ -6458,7 +6532,7 @@ func initEventSubProcess() *EventSubProcess {
 	o.caption.Bind(&o.Base, 3)
 	o.annotation = property.NewPart[element.Element]("Annotation")
 	o.annotation.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.flow, o.caption, o.annotation, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.flow, o.caption, o.annotation})
 	return o
 }
 
@@ -6493,7 +6567,7 @@ func initExclusiveSplitActivity() *ExclusiveSplitActivity {
 	o.outcomes.Bind(&o.Base, 6)
 	o.expression = property.NewPrimitive[string]("Expression", property.DecodeString)
 	o.expression.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.outcomes, o.expression, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.outcomes, o.expression})
 	return o
 }
 
@@ -6518,7 +6592,7 @@ func initFloatingAnnotation() *FloatingAnnotation {
 	o.relativeMiddlePoint.Bind(&o.Base, 1)
 	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
 	o.size.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.description, o.relativeMiddlePoint, o.size, })
+	o.SetProperties([]element.Property{o.description, o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -6539,7 +6613,7 @@ func initFlow() *Flow {
 	o.SetTypeName("Workflows$Flow")
 	o.activities = property.NewPartList[element.Element]("Activities")
 	o.activities.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.activities, })
+	o.SetProperties([]element.Property{o.activities})
 	return o
 }
 
@@ -6574,7 +6648,7 @@ func initFlowLine() *FlowLine {
 	o.destinationConnectionFactor.Bind(&o.Base, 6)
 	o.caseValues = property.NewPartList[element.Element]("CaseValues")
 	o.caseValues.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.origin, o.destination, o.line, o.originConnectionSide, o.originalConnectionFactor, o.destinationConnectionSide, o.destinationConnectionFactor, o.caseValues, })
+	o.SetProperties([]element.Property{o.origin, o.destination, o.line, o.originConnectionSide, o.originalConnectionFactor, o.destinationConnectionSide, o.destinationConnectionFactor, o.caseValues})
 	return o
 }
 
@@ -6609,7 +6683,7 @@ func initInterruptingTimerBoundaryEvent() *InterruptingTimerBoundaryEvent {
 	o.delay.Bind(&o.Base, 6)
 	o.firstExecutionTime = property.NewPrimitive[string]("FirstExecutionTime", property.DecodeString)
 	o.firstExecutionTime.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.persistentId, o.flow, o.caption, o.annotation, o.isInterrupting, o.eventType, o.delay, o.firstExecutionTime, })
+	o.SetProperties([]element.Property{o.persistentId, o.flow, o.caption, o.annotation, o.isInterrupting, o.eventType, o.delay, o.firstExecutionTime})
 	return o
 }
 
@@ -6642,7 +6716,7 @@ func initJumpToActivity() *JumpToActivity {
 	o.size.Bind(&o.Base, 5)
 	o.targetActivity = property.NewByNameRef[element.Element]("TargetActivity", "Workflows$WorkflowActivity")
 	o.targetActivity.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.targetActivity, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.targetActivity})
 	return o
 }
 
@@ -6667,7 +6741,7 @@ func initLinearRecurrence() *LinearRecurrence {
 	o.interval.Bind(&o.Base, 1)
 	o.maxExecutions = property.NewPrimitive[int32]("MaxExecutions", property.DecodeInt32)
 	o.maxExecutions.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.intervalType, o.interval, o.maxExecutions, })
+	o.SetProperties([]element.Property{o.intervalType, o.interval, o.maxExecutions})
 	return o
 }
 
@@ -6690,7 +6764,7 @@ func initMajorityCompletionCriteria() *MajorityCompletionCriteria {
 	o.completionType.Bind(&o.Base, 0)
 	o.fallbackOutcome = property.NewByIdRef[element.Element]("FallbackOutcomePointer")
 	o.fallbackOutcome.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.completionType, o.fallbackOutcome, })
+	o.SetProperties([]element.Property{o.completionType, o.fallbackOutcome})
 	return o
 }
 
@@ -6721,7 +6795,7 @@ func initMergeActivity() *MergeActivity {
 	o.relativeMiddlePoint.Bind(&o.Base, 4)
 	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
 	o.size.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -6742,7 +6816,7 @@ func initMicroflowBasedEvent() *MicroflowBasedEvent {
 	o.SetTypeName("Workflows$MicroflowBasedEvent")
 	o.microflow = property.NewByNameRef[element.Element]("Microflow", "Microflows$Microflow")
 	o.microflow.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.microflow, })
+	o.SetProperties([]element.Property{o.microflow})
 	return o
 }
 
@@ -6763,7 +6837,7 @@ func initMicroflowBasedUserSource() *MicroflowBasedUserSource {
 	o.SetTypeName("Workflows$MicroflowBasedUserSource")
 	o.microflow = property.NewByNameRef[element.Element]("Microflow", "Microflows$Microflow")
 	o.microflow.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.microflow, })
+	o.SetProperties([]element.Property{o.microflow})
 	return o
 }
 
@@ -6786,7 +6860,7 @@ func initMicroflowCallParameterMapping() *MicroflowCallParameterMapping {
 	o.parameter.Bind(&o.Base, 0)
 	o.expression = property.NewPrimitive[string]("Expression", property.DecodeString)
 	o.expression.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.parameter, o.expression, })
+	o.SetProperties([]element.Property{o.parameter, o.expression})
 	return o
 }
 
@@ -6807,7 +6881,7 @@ func initMicroflowCompletionCriteria() *MicroflowCompletionCriteria {
 	o.SetTypeName("Workflows$MicroflowCompletionCriteria")
 	o.microflow = property.NewByNameRef[element.Element]("Microflow", "Microflows$Microflow")
 	o.microflow.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.microflow, })
+	o.SetProperties([]element.Property{o.microflow})
 	return o
 }
 
@@ -6828,7 +6902,7 @@ func initMicroflowEventHandler() *MicroflowEventHandler {
 	o.SetTypeName("Workflows$MicroflowEventHandler")
 	o.microflow = property.NewByNameRef[element.Element]("Microflow", "Microflows$Microflow")
 	o.microflow.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.microflow, })
+	o.SetProperties([]element.Property{o.microflow})
 	return o
 }
 
@@ -6849,7 +6923,7 @@ func initMicroflowGroupTargeting() *MicroflowGroupTargeting {
 	o.SetTypeName("Workflows$MicroflowGroupTargeting")
 	o.microflow = property.NewByNameRef[element.Element]("Microflow", "Microflows$Microflow")
 	o.microflow.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.microflow, })
+	o.SetProperties([]element.Property{o.microflow})
 	return o
 }
 
@@ -6870,7 +6944,7 @@ func initMicroflowUserTargeting() *MicroflowUserTargeting {
 	o.SetTypeName("Workflows$MicroflowUserTargeting")
 	o.microflow = property.NewByNameRef[element.Element]("Microflow", "Microflows$Microflow")
 	o.microflow.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.microflow, })
+	o.SetProperties([]element.Property{o.microflow})
 	return o
 }
 
@@ -6895,7 +6969,7 @@ func initMultiInputCompletion() *MultiInputCompletion {
 	o.completionCriteria.Bind(&o.Base, 1)
 	o.awaitAllUsers = property.NewPrimitive[bool]("AwaitAllUsers", property.DecodeBool)
 	o.awaitAllUsers.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.targetUserInput, o.completionCriteria, o.awaitAllUsers, })
+	o.SetProperties([]element.Property{o.targetUserInput, o.completionCriteria, o.awaitAllUsers})
 	return o
 }
 
@@ -6952,7 +7026,7 @@ func initMultiUserTaskActivity() *MultiUserTaskActivity {
 	o.completionCriteria.Bind(&o.Base, 17)
 	o.awaitAllUsers = property.NewPrimitive[bool]("AwaitAllUsers", property.DecodeBool)
 	o.awaitAllUsers.Bind(&o.Base, 18)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.taskPage, o.taskName, o.taskDescription, o.dueDate, o.userSource, o.userTargeting, o.outcomes, o.boundaryEvents, o.onCreatedEvent, o.autoAssignSingleTargetUser, o.targetUserInput, o.completionCriteria, o.awaitAllUsers, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.taskPage, o.taskName, o.taskDescription, o.dueDate, o.userSource, o.userTargeting, o.outcomes, o.boundaryEvents, o.onCreatedEvent, o.autoAssignSingleTargetUser, o.targetUserInput, o.completionCriteria, o.awaitAllUsers})
 	return o
 }
 
@@ -7021,7 +7095,7 @@ func initNonInterruptingNotificationEventSubProcessStartActivity() *NonInterrupt
 	o.relativeMiddlePoint.Bind(&o.Base, 4)
 	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
 	o.size.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -7042,7 +7116,7 @@ func initNonInterruptingNotificationEventSubProcessStartActivityTarget() *NonInt
 	o.SetTypeName("Workflows$NonInterruptingNotificationEventSubProcessStartActivityTarget")
 	o.activity = property.NewByNameRef[element.Element]("Activity", "Workflows$NonInterruptingNotificationEventSubProcessStartActivity")
 	o.activity.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.activity, })
+	o.SetProperties([]element.Property{o.activity})
 	return o
 }
 
@@ -7079,7 +7153,7 @@ func initNonInterruptingTimerBoundaryEvent() *NonInterruptingTimerBoundaryEvent 
 	o.firstExecutionTime.Bind(&o.Base, 7)
 	o.recurrence = property.NewPart[element.Element]("Recurrence")
 	o.recurrence.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.persistentId, o.flow, o.caption, o.annotation, o.isInterrupting, o.eventType, o.delay, o.firstExecutionTime, o.recurrence, })
+	o.SetProperties([]element.Property{o.persistentId, o.flow, o.caption, o.annotation, o.isInterrupting, o.eventType, o.delay, o.firstExecutionTime, o.recurrence})
 	return o
 }
 
@@ -7100,7 +7174,7 @@ func initNotifyWaitForNotificationActivityTarget() *NotifyWaitForNotificationAct
 	o.SetTypeName("Workflows$NotifyWaitForNotificationActivityTarget")
 	o.activity = property.NewByNameRef[element.Element]("Activity", "Workflows$WaitForNotificationActivity")
 	o.activity.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.activity, })
+	o.SetProperties([]element.Property{o.activity})
 	return o
 }
 
@@ -7121,7 +7195,7 @@ func initOrthogonalPath() *OrthogonalPath {
 	o.SetTypeName("Workflows$OrthogonalPath")
 	o.segmentPositions = property.NewPrimitive[string]("SegmentPositions", property.DecodeString)
 	o.segmentPositions.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.segmentPositions, })
+	o.SetProperties([]element.Property{o.segmentPositions})
 	return o
 }
 
@@ -7144,7 +7218,7 @@ func initPageParameterMapping() *PageParameterMapping {
 	o.parameter.Bind(&o.Base, 0)
 	o.expression = property.NewPrimitive[string]("Expression", property.DecodeString)
 	o.expression.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.parameter, o.expression, })
+	o.SetProperties([]element.Property{o.parameter, o.expression})
 	return o
 }
 
@@ -7165,7 +7239,7 @@ func initPageReference() *PageReference {
 	o.SetTypeName("Workflows$PageReference")
 	o.page = property.NewByNameRef[element.Element]("Page", "Forms$Page")
 	o.page.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.page, })
+	o.SetProperties([]element.Property{o.page})
 	return o
 }
 
@@ -7198,7 +7272,7 @@ func initParallelSplitActivity() *ParallelSplitActivity {
 	o.size.Bind(&o.Base, 5)
 	o.outcomes = property.NewPartList[element.Element]("Outcomes")
 	o.outcomes.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.outcomes, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.outcomes})
 	return o
 }
 
@@ -7221,7 +7295,7 @@ func initParallelSplitOutcome() *ParallelSplitOutcome {
 	o.persistentId.Bind(&o.Base, 0)
 	o.flow = property.NewPart[element.Element]("Flow")
 	o.flow.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.persistentId, o.flow, })
+	o.SetProperties([]element.Property{o.persistentId, o.flow})
 	return o
 }
 
@@ -7246,7 +7320,7 @@ func initParameter() *Parameter {
 	o.entity.Bind(&o.Base, 1)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.entityRef, o.entity, o.name, })
+	o.SetProperties([]element.Property{o.entityRef, o.entity, o.name})
 	return o
 }
 
@@ -7267,7 +7341,7 @@ func initPercentageAmountUserInput() *PercentageAmountUserInput {
 	o.SetTypeName("Workflows$PercentageAmountUserInput")
 	o.percentage = property.NewPrimitive[int32]("Percentage", property.DecodeInt32)
 	o.percentage.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.percentage, })
+	o.SetProperties([]element.Property{o.percentage})
 	return o
 }
 
@@ -7337,7 +7411,7 @@ func initSingleUserTaskActivity() *SingleUserTaskActivity {
 	o.onCreatedEvent.Bind(&o.Base, 14)
 	o.autoAssignSingleTargetUser = property.NewPrimitive[bool]("AutoAssignSingleTargetUser", property.DecodeBool)
 	o.autoAssignSingleTargetUser.Bind(&o.Base, 15)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.taskPage, o.taskName, o.taskDescription, o.dueDate, o.userSource, o.userTargeting, o.outcomes, o.boundaryEvents, o.onCreatedEvent, o.autoAssignSingleTargetUser, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.taskPage, o.taskName, o.taskDescription, o.dueDate, o.userSource, o.userTargeting, o.outcomes, o.boundaryEvents, o.onCreatedEvent, o.autoAssignSingleTargetUser})
 	return o
 }
 
@@ -7368,7 +7442,7 @@ func initStartWorkflowActivity() *StartWorkflowActivity {
 	o.relativeMiddlePoint.Bind(&o.Base, 4)
 	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
 	o.size.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -7389,7 +7463,7 @@ func initStringCase() *StringCase {
 	o.SetTypeName("Workflows$StringCase")
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.value, })
+	o.SetProperties([]element.Property{o.value})
 	return o
 }
 
@@ -7414,7 +7488,7 @@ func initThresholdCompletionCriteria() *ThresholdCompletionCriteria {
 	o.threshold.Bind(&o.Base, 1)
 	o.fallbackOutcome = property.NewByIdRef[element.Element]("FallbackOutcomePointer")
 	o.fallbackOutcome.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.completionType, o.threshold, o.fallbackOutcome, })
+	o.SetProperties([]element.Property{o.completionType, o.threshold, o.fallbackOutcome})
 	return o
 }
 
@@ -7447,7 +7521,7 @@ func initTimerBoundaryEvent() *TimerBoundaryEvent {
 	o.eventType.Bind(&o.Base, 5)
 	o.delay = property.NewPrimitive[string]("Delay", property.DecodeString)
 	o.delay.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.persistentId, o.flow, o.caption, o.annotation, o.isInterrupting, o.eventType, o.delay, })
+	o.SetProperties([]element.Property{o.persistentId, o.flow, o.caption, o.annotation, o.isInterrupting, o.eventType, o.delay})
 	return o
 }
 
@@ -7502,7 +7576,7 @@ func initUserTask() *UserTask {
 	o.autoAssignSingleTargetUser.Bind(&o.Base, 16)
 	o.userTaskCompletion = property.NewPart[element.Element]("UserTaskCompletion")
 	o.userTaskCompletion.Bind(&o.Base, 17)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.userTaskEntity, o.page, o.taskPage, o.taskName, o.taskDescription, o.dueDate, o.userSource, o.outcomes, o.allowedModuleRoles, o.onCreatedEvent, o.autoAssignSingleTargetUser, o.userTaskCompletion, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.userTaskEntity, o.page, o.taskPage, o.taskName, o.taskDescription, o.dueDate, o.userSource, o.outcomes, o.allowedModuleRoles, o.onCreatedEvent, o.autoAssignSingleTargetUser, o.userTaskCompletion})
 	return o
 }
 
@@ -7531,7 +7605,7 @@ func initUserTaskOutcome() *UserTaskOutcome {
 	o.caption.Bind(&o.Base, 3)
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.persistentId, o.flow, o.name, o.caption, o.value, })
+	o.SetProperties([]element.Property{o.persistentId, o.flow, o.name, o.caption, o.value})
 	return o
 }
 
@@ -7552,7 +7626,7 @@ func initVetoCompletionCriteria() *VetoCompletionCriteria {
 	o.SetTypeName("Workflows$VetoCompletionCriteria")
 	o.vetoOutcome = property.NewByIdRef[element.Element]("VetoOutcomePointer")
 	o.vetoOutcome.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.vetoOutcome, })
+	o.SetProperties([]element.Property{o.vetoOutcome})
 	return o
 }
 
@@ -7594,7 +7668,7 @@ func initVoidConditionOutcome() *VoidConditionOutcome {
 	o.persistentId.Bind(&o.Base, 0)
 	o.flow = property.NewPart[element.Element]("Flow")
 	o.flow.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.persistentId, o.flow, })
+	o.SetProperties([]element.Property{o.persistentId, o.flow})
 	return o
 }
 
@@ -7627,7 +7701,7 @@ func initWaitForNotificationActivity() *WaitForNotificationActivity {
 	o.size.Bind(&o.Base, 5)
 	o.boundaryEvents = property.NewPartList[element.Element]("BoundaryEvents")
 	o.boundaryEvents.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.boundaryEvents, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.boundaryEvents})
 	return o
 }
 
@@ -7660,7 +7734,7 @@ func initWaitForTimerActivity() *WaitForTimerActivity {
 	o.size.Bind(&o.Base, 5)
 	o.delay = property.NewPrimitive[string]("Delay", property.DecodeString)
 	o.delay.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.delay, })
+	o.SetProperties([]element.Property{o.persistentId, o.name, o.caption, o.annotation, o.relativeMiddlePoint, o.size, o.delay})
 	return o
 }
 
@@ -7727,7 +7801,7 @@ func initWorkflow() *Workflow {
 	o.workflowMetaData.Bind(&o.Base, 22)
 	o.workflowV2 = property.NewPrimitive[bool]("WorkflowV2", property.DecodeBool)
 	o.workflowV2.Bind(&o.Base, 23)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.persistentId, o.title, o.contextEntity, o.parameter, o.workflowEntity, o.workflowType, o.overviewPage, o.adminPage, o.flow, o.workflowName, o.workflowDescription, o.dueDate, o.allowedModuleRoles, o.workflowOnStateChangeEvent, o.usertaskOnStateChangeEvent, o.onWorkflowEvent, o.eventSubProcesses, o.annotation, o.workflowMetaData, o.workflowV2, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.persistentId, o.title, o.contextEntity, o.parameter, o.workflowEntity, o.workflowType, o.overviewPage, o.adminPage, o.flow, o.workflowName, o.workflowDescription, o.dueDate, o.allowedModuleRoles, o.workflowOnStateChangeEvent, o.usertaskOnStateChangeEvent, o.onWorkflowEvent, o.eventSubProcesses, o.annotation, o.workflowMetaData, o.workflowV2})
 	return o
 }
 
@@ -7750,7 +7824,7 @@ func initWorkflowCallParameterMapping() *WorkflowCallParameterMapping {
 	o.parameter.Bind(&o.Base, 0)
 	o.expression = property.NewPrimitive[string]("Expression", property.DecodeString)
 	o.expression.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.parameter, o.expression, })
+	o.SetProperties([]element.Property{o.parameter, o.expression})
 	return o
 }
 
@@ -7771,7 +7845,7 @@ func initWorkflowDefinitionNameSelection() *WorkflowDefinitionNameSelection {
 	o.SetTypeName("Workflows$WorkflowDefinitionNameSelection")
 	o.workflow = property.NewByNameRef[element.Element]("Workflow", "Workflows$Workflow")
 	o.workflow.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.workflow, })
+	o.SetProperties([]element.Property{o.workflow})
 	return o
 }
 
@@ -7792,7 +7866,7 @@ func initWorkflowDefinitionObjectSelection() *WorkflowDefinitionObjectSelection 
 	o.SetTypeName("Workflows$WorkflowDefinitionObjectSelection")
 	o.workflowDefinitionVariable = property.NewPrimitive[string]("WorkflowDefinitionVariable", property.DecodeString)
 	o.workflowDefinitionVariable.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.workflowDefinitionVariable, })
+	o.SetProperties([]element.Property{o.workflowDefinitionVariable})
 	return o
 }
 
@@ -7819,7 +7893,7 @@ func initWorkflowEventHandler() *WorkflowEventHandler {
 	o.eventTypes.Bind(&o.Base, 2)
 	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
 	o.documentation.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.description, o.microflowEventHandler, o.eventTypes, o.documentation, })
+	o.SetProperties([]element.Property{o.description, o.microflowEventHandler, o.eventTypes, o.documentation})
 	return o
 }
 
@@ -7844,7 +7918,7 @@ func initWorkflowMetaData() *WorkflowMetaData {
 	o.flowLines.Bind(&o.Base, 1)
 	o.annotation = property.NewPartList[element.Element]("Annotation")
 	o.annotation.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.detachedActivities, o.flowLines, o.annotation, })
+	o.SetProperties([]element.Property{o.detachedActivities, o.flowLines, o.annotation})
 	return o
 }
 
@@ -7865,7 +7939,7 @@ func initWorkflowType() *WorkflowType {
 	o.SetTypeName("Workflows$WorkflowType")
 	o.entity = property.NewByNameRef[element.Element]("Entity", "DomainModels$Entity")
 	o.entity.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.entity, })
+	o.SetProperties([]element.Property{o.entity})
 	return o
 }
 
@@ -7886,7 +7960,7 @@ func initXPathBasedUserSource() *XPathBasedUserSource {
 	o.SetTypeName("Workflows$XPathBasedUserSource")
 	o.xPathConstraint = property.NewPrimitive[string]("XPathConstraint", property.DecodeString)
 	o.xPathConstraint.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.xPathConstraint, })
+	o.SetProperties([]element.Property{o.xPathConstraint})
 	return o
 }
 
@@ -7907,7 +7981,7 @@ func initXPathGroupTargeting() *XPathGroupTargeting {
 	o.SetTypeName("Workflows$XPathGroupTargeting")
 	o.xPathConstraint = property.NewPrimitive[string]("XPathConstraint", property.DecodeString)
 	o.xPathConstraint.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.xPathConstraint, })
+	o.SetProperties([]element.Property{o.xPathConstraint})
 	return o
 }
 
@@ -7928,7 +8002,7 @@ func initXPathUserTargeting() *XPathUserTargeting {
 	o.SetTypeName("Workflows$XPathUserTargeting")
 	o.xPathConstraint = property.NewPrimitive[string]("XPathConstraint", property.DecodeString)
 	o.xPathConstraint.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.xPathConstraint, })
+	o.SetProperties([]element.Property{o.xPathConstraint})
 	return o
 }
 
@@ -7955,7 +8029,7 @@ func initExclusiveSplitOutcome() *ExclusiveSplitOutcome {
 	o.value.Bind(&o.Base, 2)
 	o.flow = property.NewPart[element.Element]("Flow")
 	o.flow.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.name, o.caption, o.value, o.flow, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.value, o.flow})
 	return o
 }
 
@@ -7967,7 +8041,6 @@ func NewExclusiveSplitOutcome() *ExclusiveSplitOutcome {
 	o.MarkDirty(63)
 	return o
 }
-
 
 func init() {
 	codec.DefaultRegistry.Register("Workflows$AIAgentTaskActivity", func() element.Element {

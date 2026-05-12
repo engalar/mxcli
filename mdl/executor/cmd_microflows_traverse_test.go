@@ -1412,7 +1412,7 @@ func TestTraverseFlow_Issue528_NestedGuardDoesNotSwallowSharedActivities(t *test
 			Action:       &microflows.LogMessageAction{LogLevel: "Warning", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "date required"}}},
 		},
 		mkID("inner_return"): &microflows.EndEvent{BaseMicroflowObject: mkObjAt("inner_return", 150, 260)},
-		mkID("outer_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObjAt("outer_merge", 300, 60)},
+		mkID("outer_merge"):  &microflows.ExclusiveMerge{BaseMicroflowObject: mkObjAt("outer_merge", 300, 60)},
 		mkID("shared_act"): &microflows.ActionActivity{
 			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObjAt("shared_act", 400, 60)},
 			Action:       &microflows.CommitObjectsAction{CommitVariable: "Deal"},
@@ -1430,9 +1430,9 @@ func TestTraverseFlow_Issue528_NestedGuardDoesNotSwallowSharedActivities(t *test
 			mkBranchFlow("inner_guard", "show_msg", &microflows.ExpressionCase{Expression: "true"}),
 			innerGuardFalseFlow,
 		},
-		mkID("show_msg"):   {mkFlow("show_msg", "inner_return")},
+		mkID("show_msg"):    {mkFlow("show_msg", "inner_return")},
 		mkID("outer_merge"): {mkFlow("outer_merge", "shared_act")},
-		mkID("shared_act"): {mkFlow("shared_act", "end")},
+		mkID("shared_act"):  {mkFlow("shared_act", "end")},
 	}
 
 	splitMergeMap := map[model.ID]model.ID{

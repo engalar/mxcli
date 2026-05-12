@@ -149,7 +149,7 @@ type supplements struct {
 	ExtraTypes           map[string]json.RawMessage `json:"extra_types"`
 
 	// Derived after loading.
-	forceConcreteSet map[string]bool            // built from ForceConcreteTypes slice
+	forceConcreteSet map[string]bool // built from ForceConcreteTypes slice
 	parsedExtraProps map[string][]supplementProp
 	parsedExtraTypes map[string][]supplementTypeDef
 }

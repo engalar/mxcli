@@ -453,8 +453,8 @@ func TestGrantEntityAccess_FakeRole_Issue399(t *testing.T) {
 	}
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		IsConnectedFunc:    func() bool { return true },
+		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
 		// No roles defined in module security
 		GetModuleSecurityFunc: func(moduleID model.ID) (*security.ModuleSecurity, error) {

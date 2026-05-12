@@ -69,17 +69,17 @@ type xmlWidgetFile struct {
 
 // xmlWidget represents <widget> root element in widget XML.
 type xmlWidget struct {
-	ID                  string         `xml:"id,attr"`
-	PluginWidget        string         `xml:"pluginWidget,attr"`
-	OfflineCapable      string         `xml:"offlineCapable,attr"`
-	NeedsEntityContext  string         `xml:"needsEntityContext,attr"`
-	SupportedPlatform   string         `xml:"supportedPlatform,attr"`
-	HelpURL             string         `xml:"helpUrl,attr"`
-	StudioCategory      string         `xml:"studioCategory,attr"`
-	StudioProCategory   string         `xml:"studioProCategory,attr"`
-	Name                string         `xml:"name"`
-	Description         string         `xml:"description"`
-	PropertyGroups      []xmlPropGroup `xml:"properties>propertyGroup"`
+	ID                 string         `xml:"id,attr"`
+	PluginWidget       string         `xml:"pluginWidget,attr"`
+	OfflineCapable     string         `xml:"offlineCapable,attr"`
+	NeedsEntityContext string         `xml:"needsEntityContext,attr"`
+	SupportedPlatform  string         `xml:"supportedPlatform,attr"`
+	HelpURL            string         `xml:"helpUrl,attr"`
+	StudioCategory     string         `xml:"studioCategory,attr"`
+	StudioProCategory  string         `xml:"studioProCategory,attr"`
+	Name               string         `xml:"name"`
+	Description        string         `xml:"description"`
+	PropertyGroups     []xmlPropGroup `xml:"properties>propertyGroup"`
 }
 
 // xmlPropGroup represents <propertyGroup caption="..."> element.
