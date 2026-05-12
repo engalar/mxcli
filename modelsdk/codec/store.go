@@ -42,7 +42,7 @@ func OpenForWriting(path string) (*Store, error) {
 		return nil, fmt.Errorf("open MPR for writing: %w", err)
 	}
 	return &Store{
-		reader:   w.Reader(),
+		reader:   w.Reader().(*mpr.Reader),
 		writer:   w,
 		writable: true,
 	}, nil
