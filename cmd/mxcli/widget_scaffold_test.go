@@ -255,3 +255,37 @@ func TestScaffoldPackage_EmptySrc(t *testing.T) {
 		t.Errorf("package.xml must not list widget files yet\ngot:\n%s", string(xmlBytes))
 	}
 }
+
+func TestAppendWidgetFileToPackageXML(t *testing.T) {
+	dir := t.TempDir()
+	initial := generatePackageXML("MyPkg", []string{"WidgetA"})
+	pkgXML := filepath.Join(dir, "package.xml")
+	os.WriteFile(pkgXML, []byte(initial), 0644)
+
+	if err := appendWidgetFileToPackageXML(pkgXML, "WidgetB"); err != nil {
+		t.Fatalf("appendWidgetFileToPackageXML: %v", err)
+	}
+
+	data, _ := os.ReadFile(pkgXML)
+	content := string(data)
+	if !strings.Contains(content, `path="WidgetA.xml"`) {
+		t.Errorf("WidgetA entry must still exist\ngot:\n%s", content)
+	}
+	if !strings.Contains(content, `path="WidgetB.xml"`) {
+		t.Errorf("WidgetB entry must be added\ngot:\n%s", content)
+	}
+}
+
+func TestAppendWidgetFileToPackageXML_NoDuplicate(t *testing.T) {
+	dir := t.TempDir()
+	initial := generatePackageXML("MyPkg", []string{"WidgetA"})
+	pkgXML := filepath.Join(dir, "package.xml")
+	os.WriteFile(pkgXML, []byte(initial), 0644)
+
+	_ = appendWidgetFileToPackageXML(pkgXML, "WidgetA")
+	data, _ := os.ReadFile(pkgXML)
+	count := strings.Count(string(data), `path="WidgetA.xml"`)
+	if count != 1 {
+		t.Errorf("expected 1 WidgetA entry, got %d\ncontent:\n%s", count, string(data))
+	}
+}
