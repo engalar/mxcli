@@ -10,6 +10,43 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
+// ── ViewEntitySourceDocument ──────────────────────────
+
+func (b *MprBackend) deleteViewEntitySourceDocumentViaModelsdk(id model.ID) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	return b.msdkWriter.DeleteUnit(string(id))
+}
+
+func (b *MprBackend) deleteViewEntitySourceDocumentByNameViaModelsdk(moduleName, docName string) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	docID, err := b.writer.FindViewEntitySourceDocumentID(moduleName, docName)
+	if err != nil {
+		return fmt.Errorf("find view entity source document: %w", err)
+	}
+	if docID == "" {
+		return nil
+	}
+	return b.msdkWriter.DeleteUnit(string(docID))
+}
+
+func (b *MprBackend) moveViewEntitySourceDocumentViaModelsdk(sourceModuleName string, targetModuleID model.ID, docName string) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	docID, err := b.writer.FindViewEntitySourceDocumentID(sourceModuleName, docName)
+	if err != nil {
+		return fmt.Errorf("find view entity source document: %w", err)
+	}
+	if docID == "" {
+		return nil
+	}
+	return b.msdkWriter.UpdateUnitContainer(string(docID), string(targetModuleID))
+}
+
 // writeDomainModel reads the domain model by ID, applies mutateFn, then writes
 // back via modelsdk WriteTransaction (avoids sdk/mpr updateTransactionID).
 func (b *MprBackend) writeDomainModel(domainModelID model.ID, mutateFn func(dm *domainmodel.DomainModel) error) error {
