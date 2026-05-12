@@ -153,4 +153,26 @@ var Registry = &registry{byCode: map[string]Entry{
 			{Wrong: "$Customer/EmialAddress", Right: "$Customer/EmailAddress"},
 		},
 	},
+	"E011": {
+		Code:     "E011",
+		Slug:     "not-missing-parens",
+		Severity: SeverityError,
+		Trigger:  "The 'not' keyword is used without parentheses around its operand.",
+		WhyWrong: "Mendix expression syntax requires not(expr) — 'not expr' without parentheses is rejected by Studio Pro with CE0117.",
+		HowToFix: "Wrap the operand in parentheses: not(expr).",
+		Examples: []ExampleFix{
+			{
+				Wrong: "not $Validation/IsValid",
+				Right: "not($Validation/IsValid)",
+			},
+			{
+				Wrong: "not isMatch($Value, '^[0-9]+$')",
+				Right: "not(isMatch($Value, '^[0-9]+$'))",
+			},
+			{
+				Wrong: "$x != empty and not contains($s, '@')",
+				Right: "$x != empty and not(contains($s, '@'))",
+			},
+		},
+	},
 }}

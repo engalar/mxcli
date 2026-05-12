@@ -54,7 +54,20 @@ func parseAnd(s *Stream, ctx Context) (RobustExpr, []Hint) {
 
 func parseNot(s *Stream, ctx Context) (RobustExpr, []Hint) {
 	if matchKeyword(s, "not") {
+		notPos := s.Peek().Pos
+		needsParens := s.Peek().Kind != TokLParen
 		inner, h := parseCmp(s, ctx)
+		if needsParens {
+			h = append(h, Hint{
+				Code:     "E011",
+				Slug:     "not-missing-parens",
+				Severity: hints.SeverityError,
+				Where:    hintsLocation(ctx, notPos),
+				YouWrote: "not <expr>",
+				Problem:  "Mendix requires parentheses: not(expr). 'not expr' without parentheses is rejected by Studio Pro with CE0117.",
+				Fix:      "Wrap the operand in parentheses: not(<expr>)",
+			})
+		}
 		h = append(h, checkBoolOperand(inner, ctx, "not")...)
 		return &UnaryExpr{Op: "NOT", Operand: inner}, h
 	}

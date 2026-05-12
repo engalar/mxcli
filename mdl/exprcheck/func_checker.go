@@ -14,18 +14,72 @@ type funcSig struct {
 }
 
 var funcTable = map[string]funcSig{
-	"length":       {args: []TypeKind{KindString}, ret: KindInteger},
+	// Boolean
+	"not": {args: []TypeKind{KindBoolean}, ret: KindBoolean},
+
+	// String — predicates
+	"contains":   {args: []TypeKind{KindString, KindString}, ret: KindBoolean},
+	"startsWith": {args: []TypeKind{KindString, KindString}, ret: KindBoolean},
+	"endsWith":   {args: []TypeKind{KindString, KindString}, ret: KindBoolean},
+	"isMatch":    {args: []TypeKind{KindString, KindString}, ret: KindBoolean},
+
+	// String — transforms
+	"length":     {args: []TypeKind{KindString}, ret: KindInteger},
+	"find":       {args: []TypeKind{KindString, KindString}, ret: KindInteger},
+	"substring":  {args: []TypeKind{KindString, KindInteger, KindInteger}, ret: KindString},
+	"trim":       {args: []TypeKind{KindString}, ret: KindString},
+	"toUpperCase": {args: []TypeKind{KindString}, ret: KindString},
+	"toLowerCase": {args: []TypeKind{KindString}, ret: KindString},
+	"replaceAll": {args: []TypeKind{KindString, KindString, KindString}, ret: KindString},
+	"replace":    {args: []TypeKind{KindString, KindString, KindString}, ret: KindString},
+	"urlEncode":  {args: []TypeKind{KindString}, ret: KindString},
+	"urlDecode":  {args: []TypeKind{KindString}, ret: KindString},
+
+	// Type conversion
 	"toString":     {args: []TypeKind{KindAny}, ret: KindString},
 	"parseInteger": {args: []TypeKind{KindString}, ret: KindInteger},
 	"parseDecimal": {args: []TypeKind{KindString}, ret: KindDecimal},
-	"trim":         {args: []TypeKind{KindString}, ret: KindString},
-	"toUpperCase":  {args: []TypeKind{KindString}, ret: KindString},
-	"toLowerCase":  {args: []TypeKind{KindString}, ret: KindString},
-	"substring":    {args: []TypeKind{KindString, KindInteger, KindInteger}, ret: KindString},
-	"find":         {args: []TypeKind{KindString, KindString}, ret: KindInteger},
-	"contains":     {args: []TypeKind{KindString, KindString}, ret: KindBoolean},
-	"startsWith":   {args: []TypeKind{KindString, KindString}, ret: KindBoolean},
-	"endsWith":     {args: []TypeKind{KindString, KindString}, ret: KindBoolean},
+	"parseBoolean": {args: []TypeKind{KindString}, ret: KindBoolean},
+
+	// Math
+	"abs":   {args: []TypeKind{KindDecimal}, ret: KindDecimal},
+	"round": {args: []TypeKind{KindDecimal, KindInteger}, ret: KindDecimal},
+	"floor": {args: []TypeKind{KindDecimal}, ret: KindDecimal},
+	"ceil":  {args: []TypeKind{KindDecimal}, ret: KindDecimal},
+	"pow":   {args: []TypeKind{KindDecimal, KindDecimal}, ret: KindDecimal},
+	"sqrt":  {args: []TypeKind{KindDecimal}, ret: KindDecimal},
+	"max":   {args: []TypeKind{KindDecimal, KindDecimal}, ret: KindDecimal},
+	"min":   {args: []TypeKind{KindDecimal, KindDecimal}, ret: KindDecimal},
+	"random": {args: []TypeKind{}, ret: KindDecimal},
+
+	// DateTime — construction / current
+	"currentDateTime":   {args: []TypeKind{}, ret: KindDateTime},
+	"dateTime":          {args: []TypeKind{KindInteger, KindInteger, KindInteger, KindInteger, KindInteger, KindInteger}, ret: KindDateTime},
+
+	// DateTime — arithmetic
+	"addSeconds": {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addMinutes": {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addHours":   {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addDays":    {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addWeeks":   {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addMonths":  {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addYears":   {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+
+	// DateTime — difference
+	"secondsBetween": {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+	"minutesBetween": {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+	"hoursBetween":   {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+	"daysBetween":    {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+	"weeksBetween":   {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+	"monthsBetween":  {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+	"yearsBetween":   {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+
+	// DateTime — formatting / parsing
+	"formatDateTime": {args: []TypeKind{KindDateTime, KindString}, ret: KindString},
+	"parseDateTime":  {args: []TypeKind{KindString, KindString}, ret: KindDateTime},
+
+	// DateTime — extraction
+	"dateTimeToDate": {args: []TypeKind{KindDateTime}, ret: KindDateTime},
 }
 
 // checkCallExpr returns hints for arity / arg-type mismatches against

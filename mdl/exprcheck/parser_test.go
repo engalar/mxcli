@@ -432,3 +432,44 @@ func TestParser_E009_AndOrUnknown_NoHint(t *testing.T) {
 		})
 	}
 }
+
+func TestParser_E011_NotMissingParens(t *testing.T) {
+	p := NewParser()
+	cases := []struct {
+		name string
+		src  string
+	}{
+		{"attribute path", "not $Validation/IsValid"},
+		{"contains call", "not contains($s, '@')"},
+		{"isMatch call", "not isMatch($v, '^[0-9]+$')"},
+		{"compound and", "$x != empty and not isMatch($v, '^[0-9]+$')"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, hs := p.Parse(tc.src, Context{Microflow: "M.F"})
+			if !hasCode(hs, "E011") {
+				t.Fatalf("expected E011 for %q, got %+v", tc.src, hs)
+			}
+		})
+	}
+}
+
+func TestParser_E011_NotWithParens_NoHint(t *testing.T) {
+	p := NewParser()
+	cases := []struct {
+		name string
+		src  string
+	}{
+		{"attribute path with parens", "not($Validation/IsValid)"},
+		{"isMatch with parens", "not(isMatch($v, '^[0-9]+$'))"},
+		{"compound with parens", "$x != empty and not(contains($s, '@'))"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, hs := p.Parse(tc.src, Context{Microflow: "M.F"})
+			if hasCode(hs, "E011") {
+				t.Fatalf("E011 must not fire for %q; got %+v", tc.src, hs)
+			}
+		})
+	}
+}
