@@ -30,13 +30,17 @@ func isContentsHashSchemaError(err error) bool {
 // updateTransactionID updates the _Transaction table with a new UUID.
 // Studio Pro uses this to detect external changes during F4 sync.
 // Only applies to MPR v2 projects (Mendix >= 10.18).
-func (w *Writer) updateTransactionID() error {
+//
+// Errors are intentionally silenced (matches modelsdk behavior). The
+// _Transaction table is a best-effort F4 sync hint, not data; on
+// hard-linked MPR files the UPDATE fails with SQLITE_READONLY_DBMOVED
+// (1544) and that failure must not abort the surrounding write.
+func (w *Writer) updateTransactionID() {
 	if w.reader.version != MPRVersionV2 {
-		return nil
+		return
 	}
 	newID := generateUUID()
-	_, err := w.reader.db.Exec(`UPDATE _Transaction SET LastTransactionID = ?`, newID)
-	return err
+	_, _ = w.reader.db.Exec(`UPDATE _Transaction SET LastTransactionID = ?`, newID)
 }
 
 // placeholderBinaryPrefix is the GUID-swapped byte pattern for placeholder IDs generated
@@ -103,9 +107,7 @@ func (w *Writer) insertUnit(unitID, containerID, containmentName, unitType strin
 			return err
 		}
 		w.reader.InvalidateCache()
-		if err := w.updateTransactionID(); err != nil {
-			return fmt.Errorf("failed to update transaction ID: %w", err)
-		}
+		w.updateTransactionID()
 		return nil
 	}
 
@@ -161,9 +163,7 @@ func (w *Writer) updateUnit(unitID string, contents []byte) error {
 		`, contentsHash, unitIDBlob)
 		if err == nil {
 			w.reader.InvalidateCache()
-			if txErr := w.updateTransactionID(); txErr != nil {
-				return fmt.Errorf("failed to update transaction ID: %w", txErr)
-			}
+			w.updateTransactionID()
 		}
 		return err
 	}
@@ -228,9 +228,7 @@ func (w *Writer) deleteUnit(unitID string) error {
 	}
 
 	w.reader.InvalidateCache()
-	if err := w.updateTransactionID(); err != nil {
-		return fmt.Errorf("failed to update transaction ID after deleting unit: %w", err)
-	}
+	w.updateTransactionID()
 	return nil
 }
 
