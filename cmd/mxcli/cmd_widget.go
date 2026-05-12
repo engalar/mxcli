@@ -75,6 +75,20 @@ var widgetDocsCmd = &cobra.Command{
 	RunE:  runWidgetDocs,
 }
 
+var widgetNewCmd = &cobra.Command{
+	Use:   "new <name>",
+	Short: "Scaffold a new pluggable widget project",
+	Long: `Create a new Mendix pluggable widget project with a parameterized XML definition,
+JSX stub, editorConfig, editorPreview, and placeholder icons.
+
+Examples:
+  mxcli widget new MySlider
+  mxcli widget new MySlider --property "value:attribute:Decimal" --property "label:string" --property "onChange:action"
+  mxcli widget new MySlider --id com.acme.widget.MySlider --offline
+  mxcli widget new CrusherWidgets --package`,
+	RunE: runWidgetNew,
+}
+
 func init() {
 	widgetExtractCmd.Flags().String("mpk", "", "Path to .mpk widget package file")
 	widgetExtractCmd.Flags().StringP("output", "o", "", "Output directory (default: .mxcli/widgets/)")
@@ -88,10 +102,16 @@ func init() {
 	widgetDocsCmd.Flags().StringP("project", "p", "", "Path to .mpr project file")
 	widgetDocsCmd.MarkFlagRequired("project")
 
+	widgetNewCmd.Flags().String("id", "", "Widget ID (default: com.mendix.widget.custom.<Name>.<Name>)")
+	widgetNewCmd.Flags().StringArray("property", nil, "Property spec: key:type or key:type:subtype (repeatable)")
+	widgetNewCmd.Flags().Bool("offline", false, "Set offlineCapable=true in the widget XML")
+	widgetNewCmd.Flags().Bool("package", false, "Create a multi-widget package project (empty src/)")
+
 	widgetCmd.AddCommand(widgetExtractCmd)
 	widgetCmd.AddCommand(widgetListCmd)
 	widgetCmd.AddCommand(widgetInitCmd)
 	widgetCmd.AddCommand(widgetDocsCmd)
+	widgetCmd.AddCommand(widgetNewCmd)
 	rootCmd.AddCommand(widgetCmd)
 }
 
