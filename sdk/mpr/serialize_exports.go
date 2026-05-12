@@ -4,7 +4,11 @@ package mpr
 
 import (
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
+	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/sdk/pages"
+	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // Public Serialize* wrappers expose the existing private serialize* functions
@@ -84,4 +88,39 @@ func (w *Writer) SerializeEnumeration(enum *model.Enumeration) ([]byte, error) {
 // SerializeConstant returns BSON bytes for a constant unit.
 func (w *Writer) SerializeConstant(constant *model.Constant) ([]byte, error) {
 	return w.serializeConstant(constant)
+}
+
+// SerializeMicroflow returns BSON bytes for a microflow unit.
+func (w *Writer) SerializeMicroflow(mf *microflows.Microflow) ([]byte, error) {
+	return w.serializeMicroflow(mf)
+}
+
+// SerializeNanoflow returns BSON bytes for a nanoflow unit.
+func (w *Writer) SerializeNanoflow(nf *microflows.Nanoflow) ([]byte, error) {
+	return w.serializeNanoflow(nf)
+}
+
+// SerializePage returns BSON bytes for a page unit.
+func (w *Writer) SerializePage(page *pages.Page) ([]byte, error) {
+	return w.serializePage(page)
+}
+
+// SerializeLayout returns BSON bytes for a layout unit.
+func (w *Writer) SerializeLayout(layout *pages.Layout) ([]byte, error) {
+	return w.serializeLayout(layout)
+}
+
+// SerializeSnippet returns BSON bytes for a snippet unit.
+func (w *Writer) SerializeSnippet(snippet *pages.Snippet) ([]byte, error) {
+	return w.serializeSnippet(snippet)
+}
+
+// SerializeWorkflow returns BSON bytes for a workflow unit.
+func (w *Writer) SerializeWorkflow(wf *workflows.Workflow) ([]byte, error) {
+	return w.serializeWorkflow(wf)
+}
+
+// SerializeDomainModel returns BSON bytes for a domain model unit.
+func (w *Writer) SerializeDomainModel(dm *domainmodel.DomainModel) ([]byte, error) {
+	return w.serializeDomainModel(dm)
 }

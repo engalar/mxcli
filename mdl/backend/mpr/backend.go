@@ -173,7 +173,7 @@ func (b *MprBackend) GetDomainModelByID(id model.ID) (*domainmodel.DomainModel, 
 	return b.reader.GetDomainModelByID(id)
 }
 func (b *MprBackend) UpdateDomainModel(dm *domainmodel.DomainModel) error {
-	return b.writer.UpdateDomainModel(dm)
+	return b.updateDomainModelViaModelsdk(dm)
 }
 
 func (b *MprBackend) CreateEntity(domainModelID model.ID, entity *domainmodel.Entity) error {
@@ -248,10 +248,10 @@ func (b *MprBackend) GetMicroflow(id model.ID) (*microflows.Microflow, error) {
 	return b.reader.GetMicroflow(id)
 }
 func (b *MprBackend) CreateMicroflow(mf *microflows.Microflow) error {
-	return b.writer.CreateMicroflow(mf)
+	return b.createMicroflowViaModelsdk(mf)
 }
 func (b *MprBackend) UpdateMicroflow(mf *microflows.Microflow) error {
-	return b.writer.UpdateMicroflow(mf)
+	return b.updateMicroflowViaModelsdk(mf)
 }
 func (b *MprBackend) DeleteMicroflow(id model.ID) error { return b.deleteMicroflowViaModelsdk(id) }
 func (b *MprBackend) MoveMicroflow(mf *microflows.Microflow) error {
@@ -274,10 +274,10 @@ func (b *MprBackend) GetNanoflow(id model.ID) (*microflows.Nanoflow, error) {
 	return b.reader.GetNanoflow(id)
 }
 func (b *MprBackend) CreateNanoflow(nf *microflows.Nanoflow) error {
-	return b.writer.CreateNanoflow(nf)
+	return b.createNanoflowViaModelsdk(nf)
 }
 func (b *MprBackend) UpdateNanoflow(nf *microflows.Nanoflow) error {
-	return b.writer.UpdateNanoflow(nf)
+	return b.updateNanoflowViaModelsdk(nf)
 }
 func (b *MprBackend) DeleteNanoflow(id model.ID) error { return b.deleteNanoflowViaModelsdk(id) }
 func (b *MprBackend) MoveNanoflow(nf *microflows.Nanoflow) error {
@@ -290,23 +290,23 @@ func (b *MprBackend) MoveNanoflow(nf *microflows.Nanoflow) error {
 
 func (b *MprBackend) ListPages() ([]*pages.Page, error)        { return b.reader.ListPages() }
 func (b *MprBackend) GetPage(id model.ID) (*pages.Page, error) { return b.reader.GetPage(id) }
-func (b *MprBackend) CreatePage(page *pages.Page) error        { return b.writer.CreatePage(page) }
-func (b *MprBackend) UpdatePage(page *pages.Page) error        { return b.writer.UpdatePage(page) }
+func (b *MprBackend) CreatePage(page *pages.Page) error        { return b.createPageViaModelsdk(page) }
+func (b *MprBackend) UpdatePage(page *pages.Page) error        { return b.updatePageViaModelsdk(page) }
 func (b *MprBackend) DeletePage(id model.ID) error             { return b.deletePageViaModelsdk(id) }
 func (b *MprBackend) MovePage(page *pages.Page) error          { return b.movePageViaModelsdk(page) }
 
 func (b *MprBackend) ListLayouts() ([]*pages.Layout, error)        { return b.reader.ListLayouts() }
 func (b *MprBackend) GetLayout(id model.ID) (*pages.Layout, error) { return b.reader.GetLayout(id) }
-func (b *MprBackend) CreateLayout(layout *pages.Layout) error      { return b.writer.CreateLayout(layout) }
-func (b *MprBackend) UpdateLayout(layout *pages.Layout) error      { return b.writer.UpdateLayout(layout) }
+func (b *MprBackend) CreateLayout(layout *pages.Layout) error      { return b.createLayoutViaModelsdk(layout) }
+func (b *MprBackend) UpdateLayout(layout *pages.Layout) error      { return b.updateLayoutViaModelsdk(layout) }
 func (b *MprBackend) DeleteLayout(id model.ID) error               { return b.deleteLayoutViaModelsdk(id) }
 
 func (b *MprBackend) ListSnippets() ([]*pages.Snippet, error) { return b.reader.ListSnippets() }
 func (b *MprBackend) CreateSnippet(snippet *pages.Snippet) error {
-	return b.writer.CreateSnippet(snippet)
+	return b.createSnippetViaModelsdk(snippet)
 }
 func (b *MprBackend) UpdateSnippet(snippet *pages.Snippet) error {
-	return b.writer.UpdateSnippet(snippet)
+	return b.updateSnippetViaModelsdk(snippet)
 }
 func (b *MprBackend) DeleteSnippet(id model.ID) error          { return b.deleteSnippetViaModelsdk(id) }
 func (b *MprBackend) MoveSnippet(snippet *pages.Snippet) error { return b.moveSnippetViaModelsdk(snippet) }
@@ -656,10 +656,10 @@ func (b *MprBackend) GetWorkflow(id model.ID) (*workflows.Workflow, error) {
 	return b.reader.GetWorkflow(id)
 }
 func (b *MprBackend) CreateWorkflow(wf *workflows.Workflow) error {
-	return b.writer.CreateWorkflow(wf)
+	return b.createWorkflowViaModelsdk(wf)
 }
 func (b *MprBackend) UpdateWorkflow(wf *workflows.Workflow) error {
-	return b.writer.UpdateWorkflow(wf)
+	return b.updateWorkflowViaModelsdk(wf)
 }
 func (b *MprBackend) DeleteWorkflow(id model.ID) error { return b.deleteWorkflowViaModelsdk(id) }
 
