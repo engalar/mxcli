@@ -3,7 +3,13 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
+	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
 )
@@ -246,6 +252,40 @@ func generatePackageJSON(packageName string) string {
   }
 }
 `, packageName)
+}
+
+// scaffoldWidget writes all source files for one widget into dir/src/.
+func scaffoldWidget(dir, name, widgetID string, offline bool, props []PropertySpec) error {
+	srcDir := filepath.Join(dir, "src")
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		return err
+	}
+	files := map[string][]byte{
+		name + ".xml":              []byte(generateWidgetXML(name, widgetID, offline, props)),
+		name + ".jsx":              []byte(generateJSX(name, props)),
+		name + ".editorConfig.js":  []byte(generateEditorConfig(name, props)),
+		name + ".editorPreview.js": []byte(generateEditorPreview()),
+		name + ".icon.png":         minimalPNG(),
+		name + ".icon.dark.png":    minimalPNG(),
+		name + ".tile.png":         minimalPNG(),
+		name + ".tile.dark.png":    minimalPNG(),
+	}
+	for filename, content := range files {
+		dest := filepath.Join(srcDir, filename)
+		if err := os.WriteFile(dest, content, 0644); err != nil {
+			return fmt.Errorf("writing %s: %w", filename, err)
+		}
+	}
+	return nil
+}
+
+// minimalPNG returns a minimal valid 1x1 transparent PNG image as bytes.
+func minimalPNG() []byte {
+	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	img.Set(0, 0, color.Transparent)
+	var buf bytes.Buffer
+	_ = png.Encode(&buf, img)
+	return buf.Bytes()
 }
 
 // generatePackageXML renders package.xml — the MPK manifest listing all widget XML files.
