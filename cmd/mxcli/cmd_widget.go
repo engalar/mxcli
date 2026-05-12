@@ -101,6 +101,21 @@ Examples:
 	RunE: runWidgetAddWidget,
 }
 
+var widgetBuildCmd = &cobra.Command{
+	Use:   "build",
+	Short: "Build widget project into an .mpk package",
+	Long: `Build a Mendix pluggable widget project into an .mpk file.
+
+Discovers all widgets in src/*.xml, validates their definitions, invokes esbuild
+(via bun or npm) to compile each JSX bundle, copies assets, packages everything
+into <PackageName>.mpk, and verifies the output.
+
+Examples:
+  mxcli widget build
+  mxcli widget build --dir ./CrusherWidgets`,
+	RunE: runWidgetBuild,
+}
+
 func init() {
 	widgetExtractCmd.Flags().String("mpk", "", "Path to .mpk widget package file")
 	widgetExtractCmd.Flags().StringP("output", "o", "", "Output directory (default: .mxcli/widgets/)")
@@ -123,12 +138,15 @@ func init() {
 	widgetAddWidgetCmd.Flags().StringArray("property", nil, "Property spec: key:type or key:type:subtype (repeatable)")
 	widgetAddWidgetCmd.Flags().Bool("offline", false, "Set offlineCapable=true")
 
+	widgetBuildCmd.Flags().String("dir", ".", "Widget project root directory")
+
 	widgetCmd.AddCommand(widgetExtractCmd)
 	widgetCmd.AddCommand(widgetListCmd)
 	widgetCmd.AddCommand(widgetInitCmd)
 	widgetCmd.AddCommand(widgetDocsCmd)
 	widgetCmd.AddCommand(widgetNewCmd)
 	widgetCmd.AddCommand(widgetAddWidgetCmd)
+	widgetCmd.AddCommand(widgetBuildCmd)
 	rootCmd.AddCommand(widgetCmd)
 }
 
