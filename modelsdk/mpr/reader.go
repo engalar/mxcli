@@ -33,6 +33,7 @@ type Reader struct {
 	version        MPRVersion
 	contentsDir    string
 	readOnly       bool
+	ownsDB         bool
 	projectVersion *version.ProjectVersion
 
 	// Cache for unit metadata to avoid repeated file reads
@@ -102,6 +103,7 @@ func OpenWithOptions(path string, opts OpenOptions) (*Reader, error) {
 	}
 
 	r.db = db
+	r.ownsDB = true
 
 	// Detect project version from metadata
 	pv, err := version.DetectFromDB(db)
@@ -133,10 +135,37 @@ func OpenWithOptions(path string, opts OpenOptions) (*Reader, error) {
 
 // Close closes the reader and releases resources.
 func (r *Reader) Close() error {
-	if r.db != nil {
+	if r.db != nil && r.ownsDB {
 		return r.db.Close()
 	}
 	return nil
+}
+
+// OpenWithDB creates a Reader that reuses an existing *sql.DB connection.
+// The caller owns the db and is responsible for closing it.
+// contentsDir should be the mprcontents folder path (v2) or empty string (v1).
+func OpenWithDB(db *sql.DB, path, contentsDir string) (*Reader, error) {
+	r := &Reader{
+		path:     path,
+		ownsDB:   false,
+		readOnly: false,
+	}
+	if contentsDir != "" {
+		r.version = MPRVersionV2
+		r.contentsDir = contentsDir
+	} else {
+		r.version = MPRVersionV1
+	}
+	r.db = db
+	pv, err := version.DetectFromDB(db)
+	if err != nil {
+		return nil, fmt.Errorf("detect project version: %w", err)
+	}
+	r.projectVersion = pv
+	if err := r.verify(); err != nil {
+		return nil, err
+	}
+	return r, nil
 }
 
 // unitTableHasContents checks whether the Unit table has a Contents column.
