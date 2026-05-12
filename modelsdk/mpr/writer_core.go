@@ -64,8 +64,13 @@ func (w *Writer) Close() error {
 }
 
 // Reader returns the underlying reader as a UnitReader interface.
-// Callers needing the concrete *Reader can type-assert.
 func (w *Writer) Reader() UnitReader {
+	return w.reader
+}
+
+// ConcreteReader returns the underlying *Reader for callers that need
+// concrete methods not exposed by UnitReader (e.g. codec.Store).
+func (w *Writer) ConcreteReader() *Reader {
 	return w.reader
 }
 
