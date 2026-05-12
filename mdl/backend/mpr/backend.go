@@ -126,10 +126,10 @@ func (b *MprBackend) GetModuleByName(name string) (*model.Module, error) {
 	return b.reader.GetModuleByName(name)
 }
 func (b *MprBackend) CreateModule(module *model.Module) error { return b.writer.CreateModule(module) }
-func (b *MprBackend) UpdateModule(module *model.Module) error { return b.writer.UpdateModule(module) }
-func (b *MprBackend) DeleteModule(id model.ID) error          { return b.writer.DeleteModule(id) }
+func (b *MprBackend) UpdateModule(module *model.Module) error { return b.updateModuleViaModelsdk(module) }
+func (b *MprBackend) DeleteModule(id model.ID) error          { return b.deleteModuleViaModelsdk(id) }
 func (b *MprBackend) DeleteModuleWithCleanup(id model.ID, moduleName string) error {
-	return b.writer.DeleteModuleWithCleanup(id, moduleName)
+	return b.deleteModuleWithCleanupViaModelsdk(id, moduleName)
 }
 
 // ---------------------------------------------------------------------------
@@ -143,7 +143,7 @@ func (b *MprBackend) GetModuleSettings(moduleID model.ID) (*types.ModuleSettings
 	return b.reader.GetModuleSettings(moduleID)
 }
 func (b *MprBackend) UpdateModuleSettings(ms *types.ModuleSettings) error {
-	return b.writer.UpdateModuleSettings(ms)
+	return b.updateModuleSettingsViaModelsdk(ms)
 }
 
 // ---------------------------------------------------------------------------
@@ -154,9 +154,9 @@ func (b *MprBackend) ListFolders() ([]*types.FolderInfo, error) {
 	return convertFolderInfoSlice(b.reader.ListFolders())
 }
 func (b *MprBackend) CreateFolder(folder *model.Folder) error { return b.writer.CreateFolder(folder) }
-func (b *MprBackend) DeleteFolder(id model.ID) error          { return b.writer.DeleteFolder(id) }
+func (b *MprBackend) DeleteFolder(id model.ID) error          { return b.deleteFolderViaModelsdk(id) }
 func (b *MprBackend) MoveFolder(id model.ID, newContainerID model.ID) error {
-	return b.writer.MoveFolder(id, newContainerID)
+	return b.moveFolderViaModelsdk(id, newContainerID)
 }
 
 // ---------------------------------------------------------------------------
