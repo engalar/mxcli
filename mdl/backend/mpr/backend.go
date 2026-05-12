@@ -332,12 +332,14 @@ func (b *MprBackend) CreateEnumeration(enum *model.Enumeration) error {
 	return b.writer.CreateEnumeration(enum)
 }
 func (b *MprBackend) UpdateEnumeration(enum *model.Enumeration) error {
-	return b.writer.UpdateEnumeration(enum)
+	return b.updateEnumerationViaModelsdk(enum)
 }
 func (b *MprBackend) MoveEnumeration(enum *model.Enumeration) error {
-	return b.writer.MoveEnumeration(enum)
+	return b.moveEnumerationViaModelsdk(enum)
 }
-func (b *MprBackend) DeleteEnumeration(id model.ID) error { return b.writer.DeleteEnumeration(id) }
+func (b *MprBackend) DeleteEnumeration(id model.ID) error {
+	return b.deleteEnumerationViaModelsdk(id)
+}
 
 // ---------------------------------------------------------------------------
 // ConstantBackend
@@ -351,12 +353,14 @@ func (b *MprBackend) CreateConstant(constant *model.Constant) error {
 	return b.writer.CreateConstant(constant)
 }
 func (b *MprBackend) UpdateConstant(constant *model.Constant) error {
-	return b.writer.UpdateConstant(constant)
+	return b.updateConstantViaModelsdk(constant)
 }
 func (b *MprBackend) MoveConstant(constant *model.Constant) error {
-	return b.writer.MoveConstant(constant)
+	return b.moveConstantViaModelsdk(constant)
 }
-func (b *MprBackend) DeleteConstant(id model.ID) error { return b.writer.DeleteConstant(id) }
+func (b *MprBackend) DeleteConstant(id model.ID) error {
+	return b.deleteConstantViaModelsdk(id)
+}
 
 // ---------------------------------------------------------------------------
 // SecurityBackend (ProjectSecurityBackend + ModuleSecurityBackend + EntityAccessBackend)
@@ -735,7 +739,10 @@ func (b *MprBackend) GetRawMicroflowByName(qualifiedName string) ([]byte, error)
 	return b.reader.GetRawMicroflowByName(qualifiedName)
 }
 func (b *MprBackend) UpdateRawUnit(unitID string, contents []byte) error {
-	return b.writer.UpdateRawUnit(unitID, contents)
+	if b.msdkWriter == nil {
+		return b.writer.UpdateRawUnit(unitID, contents)
+	}
+	return b.msdkWriter.UpdateRawUnit(unitID, contents)
 }
 
 // ---------------------------------------------------------------------------
