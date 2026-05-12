@@ -394,13 +394,13 @@ func (b *MprBackend) GetModuleSecurity(moduleID model.ID) (*security.ModuleSecur
 	return b.reader.GetModuleSecurity(moduleID)
 }
 func (b *MprBackend) AddModuleRole(unitID model.ID, roleName, description string) error {
-	return b.writer.AddModuleRole(unitID, roleName, description)
+	return b.addModuleRoleViaModelsdk(unitID, roleName, description)
 }
 func (b *MprBackend) RemoveModuleRole(unitID model.ID, roleName string) error {
-	return b.writer.RemoveModuleRole(unitID, roleName)
+	return b.removeModuleRoleViaModelsdk(unitID, roleName)
 }
 func (b *MprBackend) RemoveModuleRoleFromAllUserRoles(unitID model.ID, qualifiedRole string) (int, error) {
-	return b.writer.RemoveModuleRoleFromAllUserRoles(unitID, qualifiedRole)
+	return 0, b.removeModuleRoleFromAllUserRolesViaModelsdk(unitID, qualifiedRole)
 }
 
 func (b *MprBackend) UpdateAllowedRoles(unitID model.ID, roles []string) error {
