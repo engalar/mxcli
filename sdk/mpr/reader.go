@@ -179,6 +179,12 @@ func (r *Reader) ContentsDir() string {
 	return r.contentsDir
 }
 
+// DB returns the underlying *sql.DB connection.
+// Used for sharing the connection with modelsdk-based writers.
+func (r *Reader) DB() *sql.DB {
+	return r.db
+}
+
 // ListAllUnitIDs returns all unit UUIDs from the Unit table.
 func (r *Reader) ListAllUnitIDs() ([]string, error) {
 	rows, err := r.db.Query("SELECT UnitID FROM Unit")
