@@ -63,8 +63,9 @@ func (w *Writer) Close() error {
 	return w.reader.Close()
 }
 
-// Reader returns the underlying reader.
-func (w *Writer) Reader() *Reader {
+// Reader returns the underlying reader as a UnitReader interface.
+// Callers needing the concrete *Reader can type-assert.
+func (w *Writer) Reader() UnitReader {
 	return w.reader
 }
 
