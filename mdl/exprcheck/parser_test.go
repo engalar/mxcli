@@ -297,3 +297,46 @@ func TestParser_E007_RecoveryAtPrimary(t *testing.T) {
 		t.Fatalf("expected E007 in hints %+v", hs)
 	}
 }
+
+func TestInferKind_Coverage(t *testing.T) {
+	ctx := Context{}
+	cases := []struct {
+		name string
+		node RobustExpr
+		want TypeKind
+	}{
+		{"StringLit", &StringLit{Value: "x"}, KindString},
+		{"NumberLit int", &NumberLit{Value: "1", Kind: KindInteger}, KindInteger},
+		{"NumberLit dec", &NumberLit{Value: "1.5", Kind: KindDecimal}, KindDecimal},
+		{"BoolLit", &BoolLit{Value: true}, KindBoolean},
+		{"EmptyExpr", &EmptyExpr{}, KindEmpty},
+		{"VariableExpr no scope", &VariableExpr{Name: "x"}, KindUnknown},
+		{"AttributePathExpr", &AttributePathExpr{Variable: "x", Path: []string{"Attr"}}, KindUnknown},
+		{"QNameExpr", &QNameExpr{Module: "M", Name: "E", Sub: "V"}, KindUnknown},
+		{"CallExpr known", &CallExpr{Name: "length", Args: []RobustExpr{&StringLit{Value: "x"}}}, KindInteger},
+		{"CallExpr unknown func", &CallExpr{Name: "myCustomFunc"}, KindUnknown},
+		{"BinExpr AND", &BinExpr{Op: "AND", L: &BoolLit{Value: true}, R: &BoolLit{Value: false}}, KindBoolean},
+		{"BinExpr OR", &BinExpr{Op: "OR", L: &BoolLit{Value: true}, R: &BoolLit{Value: false}}, KindBoolean},
+		{"BinExpr eq", &BinExpr{Op: "=", L: &StringLit{Value: "a"}, R: &StringLit{Value: "b"}}, KindBoolean},
+		{"BinExpr + strings", &BinExpr{Op: "+", L: &StringLit{Value: "a"}, R: &StringLit{Value: "b"}}, KindString},
+		{"UnaryExpr NOT", &UnaryExpr{Op: "NOT", Operand: &BoolLit{Value: true}}, KindBoolean},
+		{"UnaryExpr minus int", &UnaryExpr{Op: "-", Operand: &NumberLit{Value: "1", Kind: KindInteger}}, KindInteger},
+		{"ParenExpr bool", &ParenExpr{Inner: &BoolLit{Value: true}}, KindBoolean},
+		{"IfThenElseExpr string branches", &IfThenElseExpr{
+			Cond: &BoolLit{Value: true},
+			Then: &StringLit{Value: "yes"},
+			Else: &StringLit{Value: "no"},
+		}, KindString},
+		{"TokenExpr", &TokenExpr{Token: "Translation.text"}, KindString},
+		{"ConstantRef", &ConstantRef{QName: "M.Const"}, KindUnknown},
+		{"RecoveredExpr", &RecoveredExpr{SourceFragment: "???"}, KindUnknown},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := inferKind(tc.node, ctx)
+			if got != tc.want {
+				t.Errorf("inferKind(%T) = %v, want %v", tc.node, got, tc.want)
+			}
+		})
+	}
+}

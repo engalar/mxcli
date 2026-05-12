@@ -434,6 +434,25 @@ func inferKind(e RobustExpr, ctx Context) TypeKind {
 			n.Op == "<" || n.Op == "<=" || n.Op == ">" || n.Op == ">=" {
 			return KindBoolean
 		}
+	case *UnaryExpr:
+		if n.Op == "NOT" {
+			return KindBoolean
+		}
+		return inferKind(n.Operand, ctx)
+	case *IfThenElseExpr:
+		if n.Then != nil {
+			if k := inferKind(n.Then, ctx); k != KindUnknown {
+				return k
+			}
+		}
+		if n.Else != nil {
+			return inferKind(n.Else, ctx)
+		}
+		return KindUnknown
+	case *TokenExpr:
+		return KindString
+	case *AttributePathExpr, *QNameExpr, *ConstantRef, *RecoveredExpr:
+		return KindUnknown
 	}
 	return KindUnknown
 }
