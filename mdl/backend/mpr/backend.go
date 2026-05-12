@@ -183,7 +183,7 @@ func (b *MprBackend) UpdateEntity(domainModelID model.ID, entity *domainmodel.En
 	return b.writer.UpdateEntity(domainModelID, entity)
 }
 func (b *MprBackend) DeleteEntity(domainModelID model.ID, entityID model.ID) error {
-	return b.writer.DeleteEntity(domainModelID, entityID)
+	return b.deleteEntityViaModelsdk(domainModelID, entityID)
 }
 func (b *MprBackend) MoveEntity(entity *domainmodel.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error) {
 	return b.writer.MoveEntity(entity, sourceDMID, targetDMID, sourceModuleName, targetModuleName)
@@ -196,7 +196,7 @@ func (b *MprBackend) UpdateAttribute(domainModelID model.ID, entityID model.ID, 
 	return b.writer.UpdateAttribute(domainModelID, entityID, attr)
 }
 func (b *MprBackend) DeleteAttribute(domainModelID model.ID, entityID model.ID, attrID model.ID) error {
-	return b.writer.DeleteAttribute(domainModelID, entityID, attrID)
+	return b.deleteAttributeViaModelsdk(domainModelID, entityID, attrID)
 }
 
 func (b *MprBackend) CreateAssociation(domainModelID model.ID, assoc *domainmodel.Association) error {
@@ -206,10 +206,10 @@ func (b *MprBackend) CreateCrossAssociation(domainModelID model.ID, ca *domainmo
 	return b.writer.CreateCrossAssociation(domainModelID, ca)
 }
 func (b *MprBackend) DeleteAssociation(domainModelID model.ID, assocID model.ID) error {
-	return b.writer.DeleteAssociation(domainModelID, assocID)
+	return b.deleteAssociationViaModelsdk(domainModelID, assocID)
 }
 func (b *MprBackend) DeleteCrossAssociation(domainModelID model.ID, assocID model.ID) error {
-	return b.writer.DeleteCrossAssociation(domainModelID, assocID)
+	return b.deleteCrossAssociationViaModelsdk(domainModelID, assocID)
 }
 
 func (b *MprBackend) CreateViewEntitySourceDocument(moduleID model.ID, moduleName, docName, oqlQuery, documentation string) (model.ID, error) {
@@ -253,9 +253,9 @@ func (b *MprBackend) CreateMicroflow(mf *microflows.Microflow) error {
 func (b *MprBackend) UpdateMicroflow(mf *microflows.Microflow) error {
 	return b.writer.UpdateMicroflow(mf)
 }
-func (b *MprBackend) DeleteMicroflow(id model.ID) error { return b.writer.DeleteMicroflow(id) }
+func (b *MprBackend) DeleteMicroflow(id model.ID) error { return b.deleteMicroflowViaModelsdk(id) }
 func (b *MprBackend) MoveMicroflow(mf *microflows.Microflow) error {
-	return b.writer.MoveMicroflow(mf)
+	return b.moveMicroflowViaModelsdk(mf)
 }
 func (b *MprBackend) IsRule(qualifiedName string) (bool, error) {
 	return b.reader.IsRule(qualifiedName)
@@ -279,9 +279,9 @@ func (b *MprBackend) CreateNanoflow(nf *microflows.Nanoflow) error {
 func (b *MprBackend) UpdateNanoflow(nf *microflows.Nanoflow) error {
 	return b.writer.UpdateNanoflow(nf)
 }
-func (b *MprBackend) DeleteNanoflow(id model.ID) error { return b.writer.DeleteNanoflow(id) }
+func (b *MprBackend) DeleteNanoflow(id model.ID) error { return b.deleteNanoflowViaModelsdk(id) }
 func (b *MprBackend) MoveNanoflow(nf *microflows.Nanoflow) error {
-	return b.writer.MoveNanoflow(nf)
+	return b.moveNanoflowViaModelsdk(nf)
 }
 
 // ---------------------------------------------------------------------------
@@ -292,14 +292,14 @@ func (b *MprBackend) ListPages() ([]*pages.Page, error)        { return b.reader
 func (b *MprBackend) GetPage(id model.ID) (*pages.Page, error) { return b.reader.GetPage(id) }
 func (b *MprBackend) CreatePage(page *pages.Page) error        { return b.writer.CreatePage(page) }
 func (b *MprBackend) UpdatePage(page *pages.Page) error        { return b.writer.UpdatePage(page) }
-func (b *MprBackend) DeletePage(id model.ID) error             { return b.writer.DeletePage(id) }
-func (b *MprBackend) MovePage(page *pages.Page) error          { return b.writer.MovePage(page) }
+func (b *MprBackend) DeletePage(id model.ID) error             { return b.deletePageViaModelsdk(id) }
+func (b *MprBackend) MovePage(page *pages.Page) error          { return b.movePageViaModelsdk(page) }
 
 func (b *MprBackend) ListLayouts() ([]*pages.Layout, error)        { return b.reader.ListLayouts() }
 func (b *MprBackend) GetLayout(id model.ID) (*pages.Layout, error) { return b.reader.GetLayout(id) }
 func (b *MprBackend) CreateLayout(layout *pages.Layout) error      { return b.writer.CreateLayout(layout) }
 func (b *MprBackend) UpdateLayout(layout *pages.Layout) error      { return b.writer.UpdateLayout(layout) }
-func (b *MprBackend) DeleteLayout(id model.ID) error               { return b.writer.DeleteLayout(id) }
+func (b *MprBackend) DeleteLayout(id model.ID) error               { return b.deleteLayoutViaModelsdk(id) }
 
 func (b *MprBackend) ListSnippets() ([]*pages.Snippet, error) { return b.reader.ListSnippets() }
 func (b *MprBackend) CreateSnippet(snippet *pages.Snippet) error {
@@ -308,8 +308,8 @@ func (b *MprBackend) CreateSnippet(snippet *pages.Snippet) error {
 func (b *MprBackend) UpdateSnippet(snippet *pages.Snippet) error {
 	return b.writer.UpdateSnippet(snippet)
 }
-func (b *MprBackend) DeleteSnippet(id model.ID) error          { return b.writer.DeleteSnippet(id) }
-func (b *MprBackend) MoveSnippet(snippet *pages.Snippet) error { return b.writer.MoveSnippet(snippet) }
+func (b *MprBackend) DeleteSnippet(id model.ID) error          { return b.deleteSnippetViaModelsdk(id) }
+func (b *MprBackend) MoveSnippet(snippet *pages.Snippet) error { return b.moveSnippetViaModelsdk(snippet) }
 
 func (b *MprBackend) ListBuildingBlocks() ([]*pages.BuildingBlock, error) {
 	return b.reader.ListBuildingBlocks()
@@ -626,7 +626,7 @@ func (b *MprBackend) UpdateJavaAction(ja *javaactions.JavaAction) error {
 	return b.writer.UpdateJavaAction(ja)
 }
 func (b *MprBackend) DeleteJavaAction(id model.ID) error {
-	return b.writer.DeleteJavaAction(id)
+	return b.deleteJavaActionViaModelsdk(id)
 }
 func (b *MprBackend) WriteJavaSourceFile(moduleName, actionName string, javaCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType, extraImports []string, extraCode string) error {
 	return b.writer.WriteJavaSourceFile(moduleName, actionName, javaCode, params, returnType, extraImports, extraCode)
@@ -661,7 +661,7 @@ func (b *MprBackend) CreateWorkflow(wf *workflows.Workflow) error {
 func (b *MprBackend) UpdateWorkflow(wf *workflows.Workflow) error {
 	return b.writer.UpdateWorkflow(wf)
 }
-func (b *MprBackend) DeleteWorkflow(id model.ID) error { return b.writer.DeleteWorkflow(id) }
+func (b *MprBackend) DeleteWorkflow(id model.ID) error { return b.deleteWorkflowViaModelsdk(id) }
 
 // ---------------------------------------------------------------------------
 // SettingsBackend
@@ -688,7 +688,7 @@ func (b *MprBackend) UpdateImageCollection(ic *types.ImageCollection) error {
 	return b.writer.UpdateImageCollection(unconvertImageCollection(ic))
 }
 func (b *MprBackend) DeleteImageCollection(id string) error {
-	return b.writer.DeleteImageCollection(id)
+	return b.deleteImageCollectionViaModelsdk(id)
 }
 
 // ---------------------------------------------------------------------------
@@ -793,7 +793,7 @@ func (b *MprBackend) UpdateAgentEditorModel(m *agenteditor.Model) error {
 	return b.writer.UpdateAgentEditorModel(m)
 }
 func (b *MprBackend) DeleteAgentEditorModel(id string) error {
-	return b.writer.DeleteAgentEditorModel(id)
+	return b.deleteAgentEditorModelViaModelsdk(id)
 }
 func (b *MprBackend) CreateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error {
 	return b.writer.CreateAgentEditorKnowledgeBase(k)
@@ -802,7 +802,7 @@ func (b *MprBackend) UpdateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase
 	return b.writer.UpdateAgentEditorKnowledgeBase(k)
 }
 func (b *MprBackend) DeleteAgentEditorKnowledgeBase(id string) error {
-	return b.writer.DeleteAgentEditorKnowledgeBase(id)
+	return b.deleteAgentEditorKnowledgeBaseViaModelsdk(id)
 }
 func (b *MprBackend) CreateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error {
 	return b.writer.CreateAgentEditorConsumedMCPService(c)
@@ -811,7 +811,7 @@ func (b *MprBackend) UpdateAgentEditorConsumedMCPService(c *agenteditor.Consumed
 	return b.writer.UpdateAgentEditorConsumedMCPService(c)
 }
 func (b *MprBackend) DeleteAgentEditorConsumedMCPService(id string) error {
-	return b.writer.DeleteAgentEditorConsumedMCPService(id)
+	return b.deleteAgentEditorConsumedMCPServiceViaModelsdk(id)
 }
 func (b *MprBackend) CreateAgentEditorAgent(a *agenteditor.Agent) error {
 	return b.writer.CreateAgentEditorAgent(a)
@@ -820,7 +820,7 @@ func (b *MprBackend) UpdateAgentEditorAgent(a *agenteditor.Agent) error {
 	return b.writer.UpdateAgentEditorAgent(a)
 }
 func (b *MprBackend) DeleteAgentEditorAgent(id string) error {
-	return b.writer.DeleteAgentEditorAgent(id)
+	return b.deleteAgentEditorAgentViaModelsdk(id)
 }
 
 // ---------------------------------------------------------------------------
