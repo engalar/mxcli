@@ -104,3 +104,24 @@ func TestDetectToolchain_FindsSomething(t *testing.T) {
 		t.Errorf("error must mention bun: %v", err)
 	}
 }
+
+func TestPackageMPK_CreatesZip(t *testing.T) {
+	dir := t.TempDir()
+	distDir := filepath.Join(dir, "dist")
+	jsDir := filepath.Join(distDir, "com", "mendix", "widget", "custom", "MySlider")
+	os.MkdirAll(jsDir, 0755)
+	os.WriteFile(filepath.Join(jsDir, "MySlider.js"), []byte("// bundle"), 0644)
+	os.WriteFile(filepath.Join(distDir, "MySlider.xml"), []byte("<widget/>"), 0644)
+	os.WriteFile(filepath.Join(distDir, "package.xml"), []byte("<package/>"), 0644)
+
+	mpkPath, err := packageMPK(dir, "MySlider")
+	if err != nil {
+		t.Fatalf("packageMPK: %v", err)
+	}
+	if _, err := os.Stat(mpkPath); err != nil {
+		t.Errorf("MPK file not created at %s: %v", mpkPath, err)
+	}
+	if !strings.HasSuffix(mpkPath, "MySlider.mpk") {
+		t.Errorf("expected MySlider.mpk, got %s", mpkPath)
+	}
+}
