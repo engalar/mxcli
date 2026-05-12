@@ -75,3 +75,13 @@ func (w *Writer) SerializePublishedRestService(svc *model.PublishedRestService) 
 func (w *Writer) SerializeJavaAction(ja *javaactions.JavaAction) ([]byte, error) {
 	return w.serializeJavaAction(ja)
 }
+
+// SerializeEnumeration returns BSON bytes for an enumeration unit.
+func (w *Writer) SerializeEnumeration(enum *model.Enumeration) ([]byte, error) {
+	return w.serializeEnumeration(enum)
+}
+
+// SerializeConstant returns BSON bytes for a constant unit.
+func (w *Writer) SerializeConstant(constant *model.Constant) ([]byte, error) {
+	return w.serializeConstant(constant)
+}
