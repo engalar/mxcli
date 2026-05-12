@@ -125,3 +125,28 @@ func TestPackageMPK_CreatesZip(t *testing.T) {
 		t.Errorf("expected MySlider.mpk, got %s", mpkPath)
 	}
 }
+
+func TestRoundTrip_ScaffoldThenDiscover(t *testing.T) {
+	dir := t.TempDir()
+	props := []PropertySpec{
+		{Key: "value", XMLType: "attribute", Subtype: "Decimal"},
+		{Key: "label", XMLType: "string"},
+	}
+	err := scaffoldWidget(dir, "RoundTrip", "com.test.widget.RoundTrip.RoundTrip", false, props)
+	if err != nil {
+		t.Fatalf("scaffoldWidget: %v", err)
+	}
+	infos, err := discoverWidgets(dir)
+	if err != nil {
+		t.Fatalf("discoverWidgets: %v", err)
+	}
+	if len(infos) != 1 {
+		t.Fatalf("expected 1 widget, got %d", len(infos))
+	}
+	if err := validateWidgetInfo(infos[0]); err != nil {
+		t.Errorf("validateWidgetInfo failed on scaffolded widget: %v", err)
+	}
+	if infos[0].WidgetID != "com.test.widget.RoundTrip.RoundTrip" {
+		t.Errorf("wrong widgetID: %s", infos[0].WidgetID)
+	}
+}
