@@ -340,3 +340,49 @@ func TestInferKind_Coverage(t *testing.T) {
 		})
 	}
 }
+
+func TestParser_E009_NotNonBoolean(t *testing.T) {
+	p := NewParser()
+	cases := []struct {
+		name string
+		src  string
+	}{
+		{"string operand", "not 'hello'"},
+		{"integer operand", "not 5"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, hs := p.Parse(tc.src, Context{Microflow: "M.F"})
+			if !hasCode(hs, "E009") {
+				t.Fatalf("expected E009 for %q, got %+v", tc.src, hs)
+			}
+		})
+	}
+}
+
+func TestParser_E009_NotBoolLit_NoHint(t *testing.T) {
+	p := NewParser()
+	cases := []struct {
+		name string
+		src  string
+	}{
+		{"bool literal", "not true"},
+		{"bool expression", "not (1 = 1)"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, hs := p.Parse(tc.src, Context{Microflow: "M.F"})
+			if hasCode(hs, "E009") {
+				t.Fatalf("E009 must not fire for bool operand %q; got %+v", tc.src, hs)
+			}
+		})
+	}
+}
+
+func TestParser_E009_NotUnknownOperand_NoHint(t *testing.T) {
+	p := NewParser()
+	_, hs := p.Parse("not $Validation/IsValid", Context{Microflow: "M.F"})
+	if hasCode(hs, "E009") {
+		t.Fatalf("E009 must not fire for unknown-kind operand; got %+v", hs)
+	}
+}

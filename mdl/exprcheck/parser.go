@@ -43,6 +43,7 @@ func parseAnd(s *Stream, ctx Context) (RobustExpr, []Hint) {
 func parseNot(s *Stream, ctx Context) (RobustExpr, []Hint) {
 	if matchKeyword(s, "not") {
 		inner, h := parseCmp(s, ctx)
+		h = append(h, checkBoolOperand(inner, ctx, "not")...)
 		return &UnaryExpr{Op: "NOT", Operand: inner}, h
 	}
 	return parseCmp(s, ctx)
@@ -455,6 +456,26 @@ func inferKind(e RobustExpr, ctx Context) TypeKind {
 		return KindUnknown
 	}
 	return KindUnknown
+}
+
+// checkBoolOperand emits E009 when expr's inferred kind is known and non-Boolean.
+// op is the operator keyword ("not", "and", "or") used in the hint message.
+func checkBoolOperand(expr RobustExpr, ctx Context, op string) []Hint {
+	k := inferKind(expr, ctx)
+	if k == KindUnknown || k == KindBoolean {
+		return nil
+	}
+	return []Hint{{
+		Code:     "E009",
+		Slug:     "slot-type-mismatch",
+		Severity: hints.SeverityError,
+		Where:    hintsLocation(ctx, expr.Pos()),
+		YouWrote: op + " <" + typeKindName(k) + ">",
+		Problem: "'" + op + "' requires a Boolean operand, but this expression has kind " +
+			typeKindName(k) + ".",
+		Fix: "Replace the operand with a Boolean expression " +
+			"(e.g. a comparison, a Boolean attribute path, or true/false).",
+	}}
 }
 
 func hintsLocation(ctx Context, pos Position) hints.Location {
