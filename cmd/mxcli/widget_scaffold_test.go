@@ -2,6 +2,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -178,5 +180,37 @@ func TestGeneratePackageJSON(t *testing.T) {
 	}
 	if !strings.Contains(json, `"name": "my-slider"`) {
 		t.Errorf("generatePackageJSON: missing name\ngot:\n%s", json)
+	}
+}
+
+func TestScaffoldWidget_CreatesExpectedFiles(t *testing.T) {
+	dir := t.TempDir()
+	props := []PropertySpec{
+		{Key: "value", XMLType: "attribute", Subtype: "Decimal"},
+		{Key: "label", XMLType: "string"},
+	}
+	err := scaffoldWidget(dir, "MySlider", "com.acme.widget.MySlider.MySlider", false, props)
+	if err != nil {
+		t.Fatalf("scaffoldWidget: %v", err)
+	}
+	wantFiles := []string{
+		"src/MySlider.xml",
+		"src/MySlider.jsx",
+		"src/MySlider.editorConfig.js",
+		"src/MySlider.editorPreview.js",
+		"src/MySlider.icon.png",
+		"src/MySlider.icon.dark.png",
+		"src/MySlider.tile.png",
+		"src/MySlider.tile.dark.png",
+	}
+	for _, rel := range wantFiles {
+		full := filepath.Join(dir, rel)
+		if _, err := os.Stat(full); err != nil {
+			t.Errorf("expected file %s to exist: %v", rel, err)
+		}
+	}
+	xmlBytes, _ := os.ReadFile(filepath.Join(dir, "src/MySlider.xml"))
+	if !strings.Contains(string(xmlBytes), "com.acme.widget.MySlider.MySlider") {
+		t.Errorf("MySlider.xml missing widget ID")
 	}
 }
