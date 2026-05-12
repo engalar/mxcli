@@ -2,6 +2,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -82,5 +83,52 @@ func TestHumanizeWidgetName(t *testing.T) {
 				t.Errorf("humanizeWidgetName(%q) = %q, want %q", tc.input, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestGenerateWidgetXML(t *testing.T) {
+	props := []PropertySpec{
+		{Key: "value", XMLType: "attribute", Subtype: "Decimal"},
+		{Key: "label", XMLType: "string"},
+		{Key: "onChange", XMLType: "action"},
+	}
+	xml := generateWidgetXML("MySlider", "com.acme.widget.MySlider.MySlider", false, props)
+
+	checks := []string{
+		`id="com.acme.widget.MySlider.MySlider"`,
+		`pluginWidget="true"`,
+		`offlineCapable="false"`,
+		`<name>My Slider</name>`,
+		`key="value" type="attribute"`,
+		`<attributeType name="Decimal"/>`,
+		`key="label" type="string"`,
+		`key="onChange" type="action"`,
+	}
+	for _, want := range checks {
+		if !strings.Contains(xml, want) {
+			t.Errorf("generateWidgetXML: missing %q\ngot:\n%s", want, xml)
+		}
+	}
+}
+
+func TestGenerateWidgetXML_Offline(t *testing.T) {
+	xml := generateWidgetXML("Foo", "com.a.b.c.Foo.Foo", true, nil)
+	if !strings.Contains(xml, `offlineCapable="true"`) {
+		t.Errorf("expected offlineCapable=true, got:\n%s", xml)
+	}
+}
+
+func TestGeneratePackageXML(t *testing.T) {
+	xml := generatePackageXML("MyPkg", []string{"WidgetA", "WidgetB"})
+	checks := []string{
+		`name="MyPkg"`,
+		`version="1.0.0"`,
+		`<widgetFile path="WidgetA.xml"/>`,
+		`<widgetFile path="WidgetB.xml"/>`,
+	}
+	for _, want := range checks {
+		if !strings.Contains(xml, want) {
+			t.Errorf("generatePackageXML: missing %q\ngot:\n%s", want, xml)
+		}
 	}
 }
