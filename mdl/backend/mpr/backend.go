@@ -177,10 +177,10 @@ func (b *MprBackend) UpdateDomainModel(dm *domainmodel.DomainModel) error {
 }
 
 func (b *MprBackend) CreateEntity(domainModelID model.ID, entity *domainmodel.Entity) error {
-	return b.writer.CreateEntity(domainModelID, entity)
+	return b.createEntityViaModelsdk(domainModelID, entity)
 }
 func (b *MprBackend) UpdateEntity(domainModelID model.ID, entity *domainmodel.Entity) error {
-	return b.writer.UpdateEntity(domainModelID, entity)
+	return b.updateEntityViaModelsdk(domainModelID, entity)
 }
 func (b *MprBackend) DeleteEntity(domainModelID model.ID, entityID model.ID) error {
 	return b.deleteEntityViaModelsdk(domainModelID, entityID)
@@ -190,20 +190,20 @@ func (b *MprBackend) MoveEntity(entity *domainmodel.Entity, sourceDMID, targetDM
 }
 
 func (b *MprBackend) AddAttribute(domainModelID model.ID, entityID model.ID, attr *domainmodel.Attribute) error {
-	return b.writer.AddAttribute(domainModelID, entityID, attr)
+	return b.addAttributeViaModelsdk(domainModelID, entityID, attr)
 }
 func (b *MprBackend) UpdateAttribute(domainModelID model.ID, entityID model.ID, attr *domainmodel.Attribute) error {
-	return b.writer.UpdateAttribute(domainModelID, entityID, attr)
+	return b.updateAttributeViaModelsdk(domainModelID, entityID, attr)
 }
 func (b *MprBackend) DeleteAttribute(domainModelID model.ID, entityID model.ID, attrID model.ID) error {
 	return b.deleteAttributeViaModelsdk(domainModelID, entityID, attrID)
 }
 
 func (b *MprBackend) CreateAssociation(domainModelID model.ID, assoc *domainmodel.Association) error {
-	return b.writer.CreateAssociation(domainModelID, assoc)
+	return b.createAssociationViaModelsdk(domainModelID, assoc)
 }
 func (b *MprBackend) CreateCrossAssociation(domainModelID model.ID, ca *domainmodel.CrossModuleAssociation) error {
-	return b.writer.CreateCrossAssociation(domainModelID, ca)
+	return b.createCrossAssociationViaModelsdk(domainModelID, ca)
 }
 func (b *MprBackend) DeleteAssociation(domainModelID model.ID, assocID model.ID) error {
 	return b.deleteAssociationViaModelsdk(domainModelID, assocID)
