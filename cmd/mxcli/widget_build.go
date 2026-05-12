@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -63,4 +64,30 @@ func validateWidgetInfo(info widgetInfo) error {
 		return fmt.Errorf("widget %q: <name> element is empty in XML", info.Name)
 	}
 	return nil
+}
+
+// detectToolchain returns "bun" or "npm" depending on what is available in PATH.
+func detectToolchain() (string, error) {
+	if _, err := exec.LookPath("bun"); err == nil {
+		return "bun", nil
+	}
+	if _, err := exec.LookPath("npm"); err == nil {
+		return "npm", nil
+	}
+	return "", fmt.Errorf("bun not found, npm not found\n" +
+		"  install bun: curl -fsSL https://bun.sh/install | bash\n" +
+		"  install npm: https://nodejs.org/")
+}
+
+// installDeps runs bun install or npm install if node_modules/ is absent.
+func installDeps(projectDir, tool string) error {
+	if _, err := os.Stat(filepath.Join(projectDir, "node_modules")); err == nil {
+		return nil
+	}
+	fmt.Printf("Installing dependencies (%s install)...\n", tool)
+	cmd := exec.Command(tool, "install")
+	cmd.Dir = projectDir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }

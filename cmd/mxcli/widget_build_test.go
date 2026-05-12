@@ -94,3 +94,13 @@ func TestValidateWidgetInfo_EmptyName(t *testing.T) {
 		t.Errorf("validateWidgetInfo: expected error for empty display name")
 	}
 }
+
+func TestDetectToolchain_FindsSomething(t *testing.T) {
+	tool, err := detectToolchain()
+	if err == nil && tool != "bun" && tool != "npm" {
+		t.Errorf("detectToolchain returned unexpected tool %q", tool)
+	}
+	if err != nil && !strings.Contains(err.Error(), "bun") {
+		t.Errorf("error must mention bun: %v", err)
+	}
+}
