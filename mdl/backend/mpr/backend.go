@@ -6,7 +6,6 @@
 package mprbackend
 
 import (
-	"errors"
 	"log"
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
@@ -37,7 +36,7 @@ var _ linter.LintReader = (*MprBackend)(nil)
 type MprBackend struct {
 	reader     *mpr.Reader
 	writer     *mpr.Writer
-	msdkWriter *modelsdkmpr.Writer
+	msdkWriter modelsdkmpr.UnitWriter
 	path       string
 }
 
@@ -51,9 +50,11 @@ func New() *MprBackend {
 // and we want to expose it through the Backend interface without opening
 // a second connection.
 func Wrap(writer *mpr.Writer, path string) *MprBackend {
-	mw, err := modelsdkmpr.NewWriter(path)
+	db := writer.Reader().DB()
+	contentsDir := writer.Reader().ContentsDir()
+	mw, err := modelsdkmpr.NewWriterFromDB(db, path, contentsDir)
 	if err != nil {
-		log.Printf("mprbackend: Wrap: failed to open modelsdk writer for %s: %v", path, err)
+		log.Printf("mprbackend: Wrap: failed to create modelsdk writer for %s: %v", path, err)
 	}
 	return &MprBackend{
 		reader:     writer.Reader(),
@@ -72,7 +73,9 @@ func (b *MprBackend) Connect(path string) error {
 	if err != nil {
 		return err
 	}
-	mw, err := modelsdkmpr.NewWriter(path)
+	db := w.Reader().DB()
+	contentsDir := w.Reader().ContentsDir()
+	mw, err := modelsdkmpr.NewWriterFromDB(db, path, contentsDir)
 	if err != nil {
 		_ = w.Close()
 		return err
@@ -89,11 +92,6 @@ func (b *MprBackend) Disconnect() error {
 		return nil
 	}
 	err := b.writer.Close()
-	if b.msdkWriter != nil {
-		if cerr := b.msdkWriter.Close(); cerr != nil {
-			err = errors.Join(err, cerr)
-		}
-	}
 	b.writer = nil
 	b.reader = nil
 	b.msdkWriter = nil
