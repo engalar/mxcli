@@ -463,7 +463,7 @@ func (b *MprBackend) UpdateConsumedODataService(svc *model.ConsumedODataService)
 	return b.writer.UpdateConsumedODataService(svc)
 }
 func (b *MprBackend) DeleteConsumedODataService(id model.ID) error {
-	return b.writer.DeleteConsumedODataService(id)
+	return b.deleteConsumedODataServiceViaModelsdk(id)
 }
 func (b *MprBackend) CreatePublishedODataService(svc *model.PublishedODataService) error {
 	return b.writer.CreatePublishedODataService(svc)
@@ -472,7 +472,7 @@ func (b *MprBackend) UpdatePublishedODataService(svc *model.PublishedODataServic
 	return b.writer.UpdatePublishedODataService(svc)
 }
 func (b *MprBackend) DeletePublishedODataService(id model.ID) error {
-	return b.writer.DeletePublishedODataService(id)
+	return b.deletePublishedODataServiceViaModelsdk(id)
 }
 
 func (b *MprBackend) ListConsumedRestServices() ([]*model.ConsumedRestService, error) {
@@ -488,7 +488,7 @@ func (b *MprBackend) UpdateConsumedRestService(svc *model.ConsumedRestService) e
 	return b.writer.UpdateConsumedRestService(svc)
 }
 func (b *MprBackend) DeleteConsumedRestService(id model.ID) error {
-	return b.writer.DeleteConsumedRestService(id)
+	return b.deleteConsumedRestServiceViaModelsdk(id)
 }
 func (b *MprBackend) CreatePublishedRestService(svc *model.PublishedRestService) error {
 	return b.writer.CreatePublishedRestService(svc)
@@ -497,7 +497,7 @@ func (b *MprBackend) UpdatePublishedRestService(svc *model.PublishedRestService)
 	return b.writer.UpdatePublishedRestService(svc)
 }
 func (b *MprBackend) DeletePublishedRestService(id model.ID) error {
-	return b.writer.DeletePublishedRestService(id)
+	return b.deletePublishedRestServiceViaModelsdk(id)
 }
 
 func (b *MprBackend) ListBusinessEventServices() ([]*model.BusinessEventService, error) {
@@ -510,7 +510,7 @@ func (b *MprBackend) UpdateBusinessEventService(svc *model.BusinessEventService)
 	return b.writer.UpdateBusinessEventService(svc)
 }
 func (b *MprBackend) DeleteBusinessEventService(id model.ID) error {
-	return b.writer.DeleteBusinessEventService(id)
+	return b.deleteBusinessEventServiceViaModelsdk(id)
 }
 
 func (b *MprBackend) ListDatabaseConnections() ([]*model.DatabaseConnection, error) {
@@ -523,10 +523,10 @@ func (b *MprBackend) UpdateDatabaseConnection(conn *model.DatabaseConnection) er
 	return b.writer.UpdateDatabaseConnection(conn)
 }
 func (b *MprBackend) MoveDatabaseConnection(conn *model.DatabaseConnection) error {
-	return b.writer.MoveDatabaseConnection(conn)
+	return b.moveDatabaseConnectionViaModelsdk(conn)
 }
 func (b *MprBackend) DeleteDatabaseConnection(id model.ID) error {
-	return b.writer.DeleteDatabaseConnection(id)
+	return b.deleteDatabaseConnectionViaModelsdk(id)
 }
 
 func (b *MprBackend) ListDataTransformers() ([]*model.DataTransformer, error) {
@@ -539,7 +539,7 @@ func (b *MprBackend) UpdateDataTransformer(dt *model.DataTransformer) error {
 	return b.writer.UpdateDataTransformer(dt)
 }
 func (b *MprBackend) DeleteDataTransformer(id model.ID) error {
-	return b.writer.DeleteDataTransformer(id)
+	return b.deleteDataTransformerViaModelsdk(id)
 }
 
 // ---------------------------------------------------------------------------
@@ -559,10 +559,10 @@ func (b *MprBackend) UpdateImportMapping(im *model.ImportMapping) error {
 	return b.writer.UpdateImportMapping(im)
 }
 func (b *MprBackend) DeleteImportMapping(id model.ID) error {
-	return b.writer.DeleteImportMapping(id)
+	return b.deleteImportMappingViaModelsdk(id)
 }
 func (b *MprBackend) MoveImportMapping(im *model.ImportMapping) error {
-	return b.writer.MoveImportMapping(im)
+	return b.moveImportMappingViaModelsdk(im)
 }
 
 func (b *MprBackend) ListExportMappings() ([]*model.ExportMapping, error) {
@@ -578,10 +578,10 @@ func (b *MprBackend) UpdateExportMapping(em *model.ExportMapping) error {
 	return b.writer.UpdateExportMapping(em)
 }
 func (b *MprBackend) DeleteExportMapping(id model.ID) error {
-	return b.writer.DeleteExportMapping(id)
+	return b.deleteExportMappingViaModelsdk(id)
 }
 func (b *MprBackend) MoveExportMapping(em *model.ExportMapping) error {
-	return b.writer.MoveExportMapping(em)
+	return b.moveExportMappingViaModelsdk(em)
 }
 
 func (b *MprBackend) ListJsonStructures() ([]*types.JsonStructure, error) {
@@ -597,7 +597,7 @@ func (b *MprBackend) UpdateJsonStructure(js *types.JsonStructure) error {
 	return b.writer.UpdateJsonStructure(unconvertJsonStructure(js))
 }
 func (b *MprBackend) DeleteJsonStructure(id string) error {
-	return b.writer.DeleteJsonStructure(id)
+	return b.deleteJsonStructureViaModelsdk(id)
 }
 
 // ---------------------------------------------------------------------------
