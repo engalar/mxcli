@@ -10,6 +10,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
@@ -31,9 +32,10 @@ var _ linter.LintReader = (*MprBackend)(nil)
 // pointer dereference. The executor enforces connection state via
 // ConnectionBackend.IsConnected() before dispatching handlers.
 type MprBackend struct {
-	reader *mpr.Reader
-	writer *mpr.Writer
-	path   string
+	reader     *mpr.Reader
+	writer     *mpr.Writer
+	msdkWriter *modelsdkmpr.Writer
+	path       string
 }
 
 // New creates a new unconnected MprBackend. Call Connect(path) to open a project.
@@ -46,10 +48,12 @@ func New() *MprBackend {
 // and we want to expose it through the Backend interface without opening
 // a second connection.
 func Wrap(writer *mpr.Writer, path string) *MprBackend {
+	mw, _ := modelsdkmpr.NewWriter(path) // best-effort; nil if path unavailable
 	return &MprBackend{
-		reader: writer.Reader(),
-		writer: writer,
-		path:   path,
+		reader:     writer.Reader(),
+		writer:     writer,
+		msdkWriter: mw,
+		path:       path,
 	}
 }
 
@@ -62,8 +66,14 @@ func (b *MprBackend) Connect(path string) error {
 	if err != nil {
 		return err
 	}
+	mw, err := modelsdkmpr.NewWriter(path)
+	if err != nil {
+		_ = w.Close()
+		return err
+	}
 	b.writer = w
 	b.reader = w.Reader()
+	b.msdkWriter = mw
 	b.path = path
 	return nil
 }
@@ -73,8 +83,14 @@ func (b *MprBackend) Disconnect() error {
 		return nil
 	}
 	err := b.writer.Close()
+	if b.msdkWriter != nil {
+		if cerr := b.msdkWriter.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}
 	b.writer = nil
 	b.reader = nil
+	b.msdkWriter = nil
 	b.path = ""
 	return err
 }
