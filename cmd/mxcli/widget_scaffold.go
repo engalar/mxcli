@@ -160,6 +160,94 @@ func renderPropertyXML(p PropertySpec) string {
 	return b.String()
 }
 
+// generateJSX renders the React stub for src/<Name>.jsx.
+func generateJSX(name string, props []PropertySpec) string {
+	var params []string
+	for _, p := range props {
+		params = append(params, p.Key)
+	}
+	propsStr := ""
+	if len(params) > 0 {
+		propsStr = "{ " + strings.Join(params, ", ") + " }"
+	} else {
+		propsStr = "_props"
+	}
+	labelExpr := fmt.Sprintf("'%s'", name)
+	for _, p := range props {
+		if p.Key == "label" {
+			labelExpr = "label ?? '" + name + "'"
+			break
+		}
+	}
+	return fmt.Sprintf(
+		`import { createElement } from 'react';
+
+export function %s(%s) {
+    return createElement('div', { className: '%s' },
+        createElement('span', null, %s),
+        // TODO: implement
+    );
+}
+
+export default %s;
+`, name, propsStr, strings.ToLower(name), labelExpr, name)
+}
+
+// generateEditorConfig renders the Studio Pro design-time preview script.
+func generateEditorConfig(name string, props []PropertySpec) string {
+	hasLabel := false
+	for _, p := range props {
+		if p.Key == "label" {
+			hasLabel = true
+			break
+		}
+	}
+	captionBody := fmt.Sprintf(`return %q;`, name)
+	if hasLabel {
+		captionBody = fmt.Sprintf(`return props && props.label ? props.label : %q;`, name)
+	}
+	return fmt.Sprintf(
+		`"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getCustomCaption = function (props) {
+    %s
+};
+exports.getPreview = function (props, isDarkMode) {
+    return {
+        type: "RowLayout",
+        columnSize: "grow",
+        children: [{
+            type: "Text",
+            content: %q,
+            fontColor: isDarkMode ? "#cba6f7" : "#89b4fa",
+        }]
+    };
+};
+`, captionBody, name)
+}
+
+// generateEditorPreview renders the minimal browser-preview stub.
+func generateEditorPreview() string {
+	return `"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.preview = function () { return null; };
+`
+}
+
+// generatePackageJSON renders the package.json with esbuild as the only dev dependency.
+func generatePackageJSON(packageName string) string {
+	return fmt.Sprintf(`{
+  "name": %q,
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  }
+}
+`, packageName)
+}
+
 // generatePackageXML renders package.xml — the MPK manifest listing all widget XML files.
 func generatePackageXML(packageName string, widgetNames []string) string {
 	var b strings.Builder

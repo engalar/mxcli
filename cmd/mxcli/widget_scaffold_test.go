@@ -132,3 +132,51 @@ func TestGeneratePackageXML(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateJSX(t *testing.T) {
+	props := []PropertySpec{
+		{Key: "value", XMLType: "attribute"},
+		{Key: "label", XMLType: "string"},
+		{Key: "onChange", XMLType: "action"},
+	}
+	jsx := generateJSX("MySlider", props)
+	checks := []string{
+		`export function MySlider`,
+		`{ value, label, onChange }`,
+		`export default MySlider`,
+		`createElement`,
+	}
+	for _, want := range checks {
+		if !strings.Contains(jsx, want) {
+			t.Errorf("generateJSX: missing %q\ngot:\n%s", want, jsx)
+		}
+	}
+}
+
+func TestGenerateJSX_NoProps(t *testing.T) {
+	jsx := generateJSX("Foo", nil)
+	if !strings.Contains(jsx, "export function Foo(") {
+		t.Errorf("generateJSX (no props): missing function signature\ngot:\n%s", jsx)
+	}
+}
+
+func TestGenerateEditorConfig(t *testing.T) {
+	props := []PropertySpec{{Key: "label", XMLType: "string"}}
+	js := generateEditorConfig("MySlider", props)
+	if !strings.Contains(js, "getCustomCaption") || !strings.Contains(js, "getPreview") {
+		t.Errorf("generateEditorConfig: missing functions\ngot:\n%s", js)
+	}
+	if !strings.Contains(js, "MySlider") {
+		t.Errorf("generateEditorConfig: missing widget name\ngot:\n%s", js)
+	}
+}
+
+func TestGeneratePackageJSON(t *testing.T) {
+	json := generatePackageJSON("my-slider")
+	if !strings.Contains(json, `"esbuild"`) {
+		t.Errorf("generatePackageJSON: missing esbuild\ngot:\n%s", json)
+	}
+	if !strings.Contains(json, `"name": "my-slider"`) {
+		t.Errorf("generatePackageJSON: missing name\ngot:\n%s", json)
+	}
+}
