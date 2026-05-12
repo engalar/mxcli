@@ -44,7 +44,11 @@ func (b *MprBackend) msdkWrite(unitID model.ID, mutateFn func(elem element.Eleme
 		_ = wtx.Rollback()
 		return fmt.Errorf("write unit: %w", err)
 	}
-	return wtx.Commit()
+	if err := wtx.Commit(); err != nil {
+		return err
+	}
+	b.reader.InvalidateCache()
+	return nil
 }
 
 func (b *MprBackend) setProjectDemoUsersEnabledViaModelsdk(unitID model.ID, enabled bool) error {
