@@ -5,46 +5,50 @@ package mprbackend
 import (
 	"fmt"
 
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
-	"github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"go.mongodb.org/mongo-driver/bson"
+	msdksecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
-// setSecurityLevelViaModelsdk patches the SecurityLevel field on the
-// Security$ProjectSecurity unit using the modelsdk decode→mutate→encode→write
-// pipeline instead of the legacy sdk/mpr BSON-patch path.
+// setSecurityLevelViaModelsdk writes the SecurityLevel field using the modelsdk
+// decode→mutate→encode roundtrip. This avoids the sdk/mpr updateTransactionID()
+// call that triggers SQLITE_READONLY_DBMOVED (1544) on hard-linked MPR files.
 func (b *MprBackend) setSecurityLevelViaModelsdk(unitID model.ID, level string) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
 
-	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(unitID))
+	rawBytes, err := b.msdkWriter.Reader().GetRawUnitBytes(string(unitID))
 	if err != nil {
-		return fmt.Errorf("read security unit %s: %w", unitID, err)
+		return fmt.Errorf("read security unit: %w", err)
 	}
 
-	dec := codec.NewDecoder(codec.DefaultRegistry)
-	elem, err := dec.Decode(bson.Raw(raw))
+	elem, err := codec.NewDecoder(codec.DefaultRegistry).Decode(bson.Raw(rawBytes))
 	if err != nil {
-		return fmt.Errorf("decode security unit %s: %w", unitID, err)
+		return fmt.Errorf("decode security unit: %w", err)
 	}
 
-	ps, ok := elem.(*security.ProjectSecurity)
+	ps, ok := elem.(*msdksecurity.ProjectSecurity)
 	if !ok {
-		return fmt.Errorf("unit %s is not Security$ProjectSecurity (got %s)", unitID, elem.TypeName())
+		return fmt.Errorf("unexpected type %T for security unit (want *security.ProjectSecurity)", elem)
 	}
 
 	ps.SetSecurityLevel(level)
 
-	enc := &codec.Encoder{}
-	encoded, err := enc.Encode(ps)
+	newBytes, err := (&codec.Encoder{}).Encode(ps)
 	if err != nil {
-		return fmt.Errorf("encode security unit %s: %w", unitID, err)
+		return fmt.Errorf("encode security unit: %w", err)
 	}
 
-	if err := b.msdkWriter.UpdateRawUnit(string(unitID), encoded); err != nil {
-		return fmt.Errorf("write security unit %s: %w", unitID, err)
+	wtx, err := b.msdkWriter.BeginWriteTransaction()
+	if err != nil {
+		return fmt.Errorf("begin write transaction: %w", err)
 	}
-	return nil
+	if err := wtx.WriteUnit(string(unitID), newBytes); err != nil {
+		_ = wtx.Rollback()
+		return fmt.Errorf("write security unit: %w", err)
+	}
+	return wtx.Commit()
 }
