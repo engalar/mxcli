@@ -404,13 +404,13 @@ func (b *MprBackend) RemoveModuleRoleFromAllUserRoles(unitID model.ID, qualified
 }
 
 func (b *MprBackend) UpdateAllowedRoles(unitID model.ID, roles []string) error {
-	return b.writer.UpdateAllowedRoles(unitID, roles)
+	return b.updateAllowedRolesViaModelsdk(unitID, roles)
 }
 func (b *MprBackend) UpdatePublishedRestServiceRoles(unitID model.ID, roles []string) error {
-	return b.writer.UpdatePublishedRestServiceRoles(unitID, roles)
+	return b.updatePublishedRestServiceRolesViaModelsdk(unitID, roles)
 }
 func (b *MprBackend) RemoveFromAllowedRoles(unitID model.ID, roleName string) (bool, error) {
-	return b.writer.RemoveFromAllowedRoles(unitID, roleName)
+	return b.removeFromAllowedRolesViaModelsdk(unitID, roleName)
 }
 func (b *MprBackend) AddEntityAccessRule(params backend.EntityAccessRuleParams) error {
 	return b.writer.AddEntityAccessRule(params.UnitID, params.EntityName, params.RoleNames, params.AllowCreate, params.AllowDelete, params.DefaultMemberAccess, params.XPathConstraint, unconvertEntityMemberAccessSlice(params.MemberAccesses))
