@@ -329,7 +329,7 @@ func (b *MprBackend) GetEnumeration(id model.ID) (*model.Enumeration, error) {
 	return b.reader.GetEnumeration(id)
 }
 func (b *MprBackend) CreateEnumeration(enum *model.Enumeration) error {
-	return b.writer.CreateEnumeration(enum)
+	return b.createEnumerationViaModelsdk(enum)
 }
 func (b *MprBackend) UpdateEnumeration(enum *model.Enumeration) error {
 	return b.updateEnumerationViaModelsdk(enum)
@@ -350,7 +350,7 @@ func (b *MprBackend) GetConstant(id model.ID) (*model.Constant, error) {
 	return b.reader.GetConstant(id)
 }
 func (b *MprBackend) CreateConstant(constant *model.Constant) error {
-	return b.writer.CreateConstant(constant)
+	return b.createConstantViaModelsdk(constant)
 }
 func (b *MprBackend) UpdateConstant(constant *model.Constant) error {
 	return b.updateConstantViaModelsdk(constant)
@@ -457,7 +457,7 @@ func (b *MprBackend) ListPublishedODataServices() ([]*model.PublishedODataServic
 	return b.reader.ListPublishedODataServices()
 }
 func (b *MprBackend) CreateConsumedODataService(svc *model.ConsumedODataService) error {
-	return b.writer.CreateConsumedODataService(svc)
+	return b.createConsumedODataServiceViaModelsdk(svc)
 }
 func (b *MprBackend) UpdateConsumedODataService(svc *model.ConsumedODataService) error {
 	return b.updateConsumedODataServiceViaModelsdk(svc)
@@ -466,7 +466,7 @@ func (b *MprBackend) DeleteConsumedODataService(id model.ID) error {
 	return b.deleteConsumedODataServiceViaModelsdk(id)
 }
 func (b *MprBackend) CreatePublishedODataService(svc *model.PublishedODataService) error {
-	return b.writer.CreatePublishedODataService(svc)
+	return b.createPublishedODataServiceViaModelsdk(svc)
 }
 func (b *MprBackend) UpdatePublishedODataService(svc *model.PublishedODataService) error {
 	return b.updatePublishedODataServiceViaModelsdk(svc)
@@ -482,7 +482,7 @@ func (b *MprBackend) ListPublishedRestServices() ([]*model.PublishedRestService,
 	return b.reader.ListPublishedRestServices()
 }
 func (b *MprBackend) CreateConsumedRestService(svc *model.ConsumedRestService) error {
-	return b.writer.CreateConsumedRestService(svc)
+	return b.createConsumedRestServiceViaModelsdk(svc)
 }
 func (b *MprBackend) UpdateConsumedRestService(svc *model.ConsumedRestService) error {
 	return b.updateConsumedRestServiceViaModelsdk(svc)
@@ -491,7 +491,7 @@ func (b *MprBackend) DeleteConsumedRestService(id model.ID) error {
 	return b.deleteConsumedRestServiceViaModelsdk(id)
 }
 func (b *MprBackend) CreatePublishedRestService(svc *model.PublishedRestService) error {
-	return b.writer.CreatePublishedRestService(svc)
+	return b.createPublishedRestServiceViaModelsdk(svc)
 }
 func (b *MprBackend) UpdatePublishedRestService(svc *model.PublishedRestService) error {
 	return b.updatePublishedRestServiceViaModelsdk(svc)
@@ -504,7 +504,7 @@ func (b *MprBackend) ListBusinessEventServices() ([]*model.BusinessEventService,
 	return b.reader.ListBusinessEventServices()
 }
 func (b *MprBackend) CreateBusinessEventService(svc *model.BusinessEventService) error {
-	return b.writer.CreateBusinessEventService(svc)
+	return b.createBusinessEventServiceViaModelsdk(svc)
 }
 func (b *MprBackend) UpdateBusinessEventService(svc *model.BusinessEventService) error {
 	return b.updateBusinessEventServiceViaModelsdk(svc)
@@ -517,7 +517,7 @@ func (b *MprBackend) ListDatabaseConnections() ([]*model.DatabaseConnection, err
 	return b.reader.ListDatabaseConnections()
 }
 func (b *MprBackend) CreateDatabaseConnection(conn *model.DatabaseConnection) error {
-	return b.writer.CreateDatabaseConnection(conn)
+	return b.createDatabaseConnectionViaModelsdk(conn)
 }
 func (b *MprBackend) UpdateDatabaseConnection(conn *model.DatabaseConnection) error {
 	return b.updateDatabaseConnectionViaModelsdk(conn)
@@ -533,7 +533,7 @@ func (b *MprBackend) ListDataTransformers() ([]*model.DataTransformer, error) {
 	return b.reader.ListDataTransformers()
 }
 func (b *MprBackend) CreateDataTransformer(dt *model.DataTransformer) error {
-	return b.writer.CreateDataTransformer(dt)
+	return b.createDataTransformerViaModelsdk(dt)
 }
 func (b *MprBackend) UpdateDataTransformer(dt *model.DataTransformer) error {
 	return b.updateDataTransformerViaModelsdk(dt)
@@ -553,7 +553,7 @@ func (b *MprBackend) GetImportMappingByQualifiedName(moduleName, name string) (*
 	return b.reader.GetImportMappingByQualifiedName(moduleName, name)
 }
 func (b *MprBackend) CreateImportMapping(im *model.ImportMapping) error {
-	return b.writer.CreateImportMapping(im)
+	return b.createImportMappingViaModelsdk(im)
 }
 func (b *MprBackend) UpdateImportMapping(im *model.ImportMapping) error {
 	return b.updateImportMappingViaModelsdk(im)
@@ -572,7 +572,7 @@ func (b *MprBackend) GetExportMappingByQualifiedName(moduleName, name string) (*
 	return b.reader.GetExportMappingByQualifiedName(moduleName, name)
 }
 func (b *MprBackend) CreateExportMapping(em *model.ExportMapping) error {
-	return b.writer.CreateExportMapping(em)
+	return b.createExportMappingViaModelsdk(em)
 }
 func (b *MprBackend) UpdateExportMapping(em *model.ExportMapping) error {
 	return b.updateExportMappingViaModelsdk(em)
@@ -591,7 +591,7 @@ func (b *MprBackend) GetJsonStructureByQualifiedName(moduleName, name string) (*
 	return convertJsonStructurePtr(b.reader.GetJsonStructureByQualifiedName(moduleName, name))
 }
 func (b *MprBackend) CreateJsonStructure(js *types.JsonStructure) error {
-	return b.writer.CreateJsonStructure(unconvertJsonStructure(js))
+	return b.createJsonStructureViaModelsdk(js)
 }
 func (b *MprBackend) UpdateJsonStructure(js *types.JsonStructure) error {
 	return b.updateJsonStructureViaModelsdk(js)
@@ -620,7 +620,7 @@ func (b *MprBackend) ReadJavaScriptActionByName(qualifiedName string) (*types.Ja
 	return convertJavaScriptActionPtr(b.reader.ReadJavaScriptActionByName(qualifiedName))
 }
 func (b *MprBackend) CreateJavaAction(ja *javaactions.JavaAction) error {
-	return b.writer.CreateJavaAction(ja)
+	return b.createJavaActionViaModelsdk(ja)
 }
 func (b *MprBackend) UpdateJavaAction(ja *javaactions.JavaAction) error {
 	return b.updateJavaActionViaModelsdk(ja)
@@ -682,7 +682,7 @@ func (b *MprBackend) ListImageCollections() ([]*types.ImageCollection, error) {
 	return convertImageCollectionSlice(b.reader.ListImageCollections())
 }
 func (b *MprBackend) CreateImageCollection(ic *types.ImageCollection) error {
-	return b.writer.CreateImageCollection(unconvertImageCollection(ic))
+	return b.createImageCollectionViaModelsdk(ic)
 }
 func (b *MprBackend) UpdateImageCollection(ic *types.ImageCollection) error {
 	return b.updateImageCollectionViaModelsdk(ic)
