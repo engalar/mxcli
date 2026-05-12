@@ -20,6 +20,8 @@ type UnitWriter interface {
 	UpdateRawUnit(unitID string, contents []byte) error
 	InsertUnit(unitID, containerID, containmentName, unitType string, contents []byte) error
 	DeleteUnit(unitID string) error
+	DeleteChildUnits(parentID string) error
+	UpdateUnitContainer(unitID, newContainerID string) error
 	Close() error
 }
 
