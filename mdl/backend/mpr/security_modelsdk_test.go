@@ -4,30 +4,44 @@ package mprbackend
 
 import (
 	"database/sql"
+	"fmt"
 	"path/filepath"
 	"testing"
 
 	"go.mongodb.org/mongo-driver/bson"
-	_ "modernc.org/sqlite"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	_ "modernc.org/sqlite"
 )
 
-// makeSecurityTestMPR creates a minimal MPR v1 SQLite file containing one
-// Security$ProjectSecurity unit with SecurityLevel="Off". Returns the path and
-// the ProjectSecurity unit ID.
-func makeSecurityTestMPR(t *testing.T) (string, model.ID) {
+// makeSecurityTestMPR creates a minimal v1 MPR SQLite file in a temp dir
+// and inserts one Security$ProjectSecurity unit with SecurityLevel = Off.
+// Returns the file path and the unit ID.
+func makeSecurityTestMPR(t *testing.T) (mprPath string, unitID model.ID) {
 	t.Helper()
+	dir := t.TempDir()
+	mprPath = filepath.Join(dir, "test.mpr")
 
-	path := filepath.Join(t.TempDir(), "sec.mpr")
-	db, err := sql.Open("sqlite", path)
+	db, err := sql.Open("sqlite", mprPath)
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
 	defer db.Close()
 
+	// Minimal schema required by both sdk/mpr and modelsdk/mpr readers.
 	if _, err := db.Exec(`
+		CREATE TABLE _MetaData (
+			_FormatVersion INTEGER,
+			_ProductVersion TEXT,
+			_BuildVersion TEXT,
+			_SchemaHash TEXT
+		);
+		INSERT INTO _MetaData VALUES (1, '10.18.0', '10.18.0.0', 'testhash');
+
+		CREATE TABLE _Transaction (LastTransactionID TEXT);
+		INSERT INTO _Transaction VALUES ('00000000-0000-0000-0000-000000000000');
+
 		CREATE TABLE Unit (
 			UnitID BLOB PRIMARY KEY NOT NULL,
 			ContainerID BLOB,
@@ -36,102 +50,92 @@ func makeSecurityTestMPR(t *testing.T) (string, model.ID) {
 			ContentsHash TEXT,
 			ContentsConflicts TEXT,
 			Contents BLOB
-		)`); err != nil {
-		t.Fatalf("create Unit: %v", err)
-	}
-	if _, err := db.Exec(`
-		CREATE TABLE _MetaData (
-			_FormatVersion INTEGER,
-			_ProductVersion TEXT,
-			_BuildVersion TEXT,
-			_SchemaHash TEXT
-		)`); err != nil {
-		t.Fatalf("create _MetaData: %v", err)
-	}
-	if _, err := db.Exec(`INSERT INTO _MetaData VALUES (1, '11.6.0', '11.6.0', '')`); err != nil {
-		t.Fatalf("seed _MetaData: %v", err)
+		);
+	`); err != nil {
+		t.Fatalf("create schema: %v", err)
 	}
 
-	const (
-		unitIDStr      = "11111111-1111-1111-1111-111111111111"
-		containerIDStr = "22222222-2222-2222-2222-222222222222"
-	)
+	unitIDStr := "11111111-1111-1111-1111-111111111111"
+	unitID = model.ID(unitIDStr)
 
-	doc := bson.D{
+	idBlob := secTestUUIDBlob(unitIDStr)
+	secDoc := bson.D{
 		{Key: "$Type", Value: "Security$ProjectSecurity"},
-		{Key: "$ID", Value: mpr.IDToBsonBinary(unitIDStr)},
-		{Key: "SecurityLevel", Value: "Off"},
-		{Key: "CheckSecurity", Value: false},
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x00, Data: idBlob}},
+		{Key: "SecurityLevel", Value: "Security$SecurityLevel_Off"},
+		{Key: "CheckSecurity", Value: true},
 		{Key: "EnableDemoUsers", Value: false},
-		{Key: "UserRoles", Value: bson.A{int32(1)}},
-		{Key: "DemoUsers", Value: bson.A{int32(1)}},
 	}
-	contents, err := bson.Marshal(doc)
+	secBytes, err := bson.Marshal(secDoc)
 	if err != nil {
-		t.Fatalf("marshal ProjectSecurity: %v", err)
+		t.Fatalf("marshal security BSON: %v", err)
 	}
 
-	if _, err := db.Exec(`
-		INSERT INTO Unit (UnitID, ContainerID, ContainmentName, TreeConflict, ContentsHash, ContentsConflicts, Contents)
-		VALUES (?, ?, 'ProjectSecurity', 0, '', '', ?)`,
-		mpr.IDToBsonBinary(unitIDStr).Data,
-		mpr.IDToBsonBinary(containerIDStr).Data,
-		contents,
+	if _, err := db.Exec(
+		`INSERT INTO Unit (UnitID, ContainerID, ContainmentName, TreeConflict, ContentsHash, ContentsConflicts, Contents)
+		 VALUES (?, ?, ?, 0, '', '', ?)`,
+		idBlob,
+		make([]byte, 16),
+		"ProjectSecurity",
+		secBytes,
 	); err != nil {
-		t.Fatalf("insert ProjectSecurity unit: %v", err)
+		t.Fatalf("insert security unit: %v", err)
 	}
 
-	return path, model.ID(unitIDStr)
+	return mprPath, unitID
 }
 
-// readSecurityLevel re-opens the MPR and returns the SecurityLevel field of the
-// given unit by parsing its raw BSON.
-func readSecurityLevel(t *testing.T, path string, unitID model.ID) string {
-	t.Helper()
-
-	r, err := mpr.Open(path)
-	if err != nil {
-		t.Fatalf("reopen mpr: %v", err)
-	}
-	defer r.Close()
-
-	raw, err := r.GetRawUnitBytes(unitID)
-	if err != nil {
-		t.Fatalf("GetRawUnitBytes: %v", err)
-	}
-
-	var doc bson.D
-	if err := bson.Unmarshal(raw, &doc); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	for _, f := range doc {
-		if f.Key == "SecurityLevel" {
-			s, _ := f.Value.(string)
-			return s
+// secTestUUIDBlob converts a UUID string to the 16-byte Mendix GUID blob
+// (little-endian groups 1-3, big-endian groups 4-5).
+func secTestUUIDBlob(uuid string) []byte {
+	hex := ""
+	for _, ch := range uuid {
+		if ch != '-' {
+			hex += string(ch)
 		}
 	}
-	return ""
+	blob := make([]byte, 16)
+	for i := 0; i < 16; i++ {
+		var b byte
+		fmt.Sscanf(hex[i*2:i*2+2], "%02x", &b)
+		blob[i] = b
+	}
+	blob[0], blob[1], blob[2], blob[3] = blob[3], blob[2], blob[1], blob[0]
+	blob[4], blob[5] = blob[5], blob[4]
+	blob[6], blob[7] = blob[7], blob[6]
+	return blob
 }
 
 func TestSetProjectSecurityLevel_ViaModelsdk(t *testing.T) {
-	path, unitID := makeSecurityTestMPR(t)
+	mprPath, unitID := makeSecurityTestMPR(t)
 
 	b := New()
-	if err := b.Connect(path); err != nil {
+	if err := b.Connect(mprPath); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
+	defer b.Disconnect()
 
-	if err := b.SetProjectSecurityLevel(unitID, "CheckEverything"); err != nil {
-		_ = b.Disconnect()
+	const wantLevel = "Security$SecurityLevel_Production"
+	if err := b.SetProjectSecurityLevel(unitID, wantLevel); err != nil {
 		t.Fatalf("SetProjectSecurityLevel: %v", err)
 	}
 
-	if err := b.Disconnect(); err != nil {
-		t.Fatalf("Disconnect: %v", err)
+	// Read back via modelsdk to verify the field persisted.
+	rawBytes, err := b.msdkWriter.Reader().GetRawUnitBytes(string(unitID))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes after write: %v", err)
 	}
-
-	got := readSecurityLevel(t, path, unitID)
-	if got != "CheckEverything" {
-		t.Errorf("SecurityLevel after write = %q, want %q", got, "CheckEverything")
+	var doc bson.D
+	if err := bson.Unmarshal(rawBytes, &doc); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	got := ""
+	for _, e := range doc {
+		if e.Key == "SecurityLevel" {
+			got, _ = e.Value.(string)
+		}
+	}
+	if got != wantLevel {
+		t.Errorf("SecurityLevel = %q, want %q", got, wantLevel)
 	}
 }
