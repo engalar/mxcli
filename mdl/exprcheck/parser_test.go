@@ -111,18 +111,18 @@ type fakeCatalog struct {
 	values []string
 }
 
-func (f fakeCatalog) AttributeKind(string, string) (TypeKind, bool)   { return f.kind, true }
-func (f fakeCatalog) AttributeEnumQN(string, string) (string, bool)   { return f.enumQN, true }
-func (f fakeCatalog) EnumCases(string) ([]string, bool)               { return f.values, true }
-func (f fakeCatalog) MicroflowReturn(string) (TypeKind, bool)         { return KindUnknown, false }
-func (f fakeCatalog) MicroflowParam(string, string) (TypeKind, bool)  { return KindUnknown, false }
+func (f fakeCatalog) AttributeKind(string, string) (TypeKind, bool)  { return f.kind, true }
+func (f fakeCatalog) AttributeEnumQN(string, string) (string, bool)  { return f.enumQN, true }
+func (f fakeCatalog) EnumCases(string) ([]string, bool)              { return f.values, true }
+func (f fakeCatalog) MicroflowReturn(string) (TypeKind, bool)        { return KindUnknown, false }
+func (f fakeCatalog) MicroflowParam(string, string) (TypeKind, bool) { return KindUnknown, false }
 
 func TestParser_E001_ChangeItemEnumViaCatalog(t *testing.T) {
 	p := NewParser()
 	cat := lookupCatalog{
-		kinds:  map[string]TypeKind{"Sales.Customer|Status": KindEnumeration},
-		enums:  map[string]string{"Sales.Customer|Status": "Sales.CustomerStatus"},
-		cases:  map[string][]string{"Sales.CustomerStatus": {"Active", "Inactive"}},
+		kinds: map[string]TypeKind{"Sales.Customer|Status": KindEnumeration},
+		enums: map[string]string{"Sales.Customer|Status": "Sales.CustomerStatus"},
+		cases: map[string][]string{"Sales.CustomerStatus": {"Active", "Inactive"}},
 	}
 	_, hs := p.Parse("'Active'", Context{
 		SlotPath: "ChangeItem.Value:Sales.Customer.Status",
@@ -384,5 +384,51 @@ func TestParser_E009_NotUnknownOperand_NoHint(t *testing.T) {
 	_, hs := p.Parse("not $Validation/IsValid", Context{Microflow: "M.F"})
 	if hasCode(hs, "E009") {
 		t.Fatalf("E009 must not fire for unknown-kind operand; got %+v", hs)
+	}
+}
+
+func TestParser_E009_AndNonBoolean(t *testing.T) {
+	p := NewParser()
+	cases := []struct {
+		name string
+		src  string
+	}{
+		{"string left operand", "'hello' and true"},
+		{"integer right operand", "true and 5"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, hs := p.Parse(tc.src, Context{Microflow: "M.F"})
+			if !hasCode(hs, "E009") {
+				t.Fatalf("expected E009 for %q, got %+v", tc.src, hs)
+			}
+		})
+	}
+}
+
+func TestParser_E009_OrNonBoolean(t *testing.T) {
+	p := NewParser()
+	_, hs := p.Parse("'hello' or true", Context{Microflow: "M.F"})
+	if !hasCode(hs, "E009") {
+		t.Fatalf("expected E009, got %+v", hs)
+	}
+}
+
+func TestParser_E009_AndOrUnknown_NoHint(t *testing.T) {
+	p := NewParser()
+	cases := []struct {
+		name string
+		src  string
+	}{
+		{"and with unknown right", "true and $x/Attr"},
+		{"or with unknown left", "$x/Attr or true"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, hs := p.Parse(tc.src, Context{Microflow: "M.F"})
+			if hasCode(hs, "E009") {
+				t.Fatalf("E009 must not fire for unknown-kind operand %q; got %+v", tc.src, hs)
+			}
+		})
 	}
 }

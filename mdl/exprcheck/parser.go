@@ -22,20 +22,32 @@ func (p *parserImpl) Parse(src string, ctx Context) (RobustExpr, []Hint) {
 
 func parseOr(s *Stream, ctx Context) (RobustExpr, []Hint) {
 	left, hints := parseAnd(s, ctx)
+	first := true
 	for matchKeyword(s, "or") {
+		if first {
+			hints = append(hints, checkBoolOperand(left, ctx, "or")...)
+			first = false
+		}
 		right, h := parseAnd(s, ctx)
-		left = &BinExpr{Op: "OR", L: left, R: right}
 		hints = append(hints, h...)
+		hints = append(hints, checkBoolOperand(right, ctx, "or")...)
+		left = &BinExpr{Op: "OR", L: left, R: right}
 	}
 	return left, hints
 }
 
 func parseAnd(s *Stream, ctx Context) (RobustExpr, []Hint) {
 	left, hints := parseNot(s, ctx)
+	first := true
 	for matchKeyword(s, "and") {
+		if first {
+			hints = append(hints, checkBoolOperand(left, ctx, "and")...)
+			first = false
+		}
 		right, h := parseNot(s, ctx)
-		left = &BinExpr{Op: "AND", L: left, R: right}
 		hints = append(hints, h...)
+		hints = append(hints, checkBoolOperand(right, ctx, "and")...)
+		left = &BinExpr{Op: "AND", L: left, R: right}
 	}
 	return left, hints
 }
