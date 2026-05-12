@@ -216,10 +216,10 @@ func (b *MprBackend) CreateViewEntitySourceDocument(moduleID model.ID, moduleNam
 	return b.writer.CreateViewEntitySourceDocument(moduleID, moduleName, docName, oqlQuery, documentation)
 }
 func (b *MprBackend) DeleteViewEntitySourceDocument(id model.ID) error {
-	return b.writer.DeleteViewEntitySourceDocument(id)
+	return b.deleteViewEntitySourceDocumentViaModelsdk(id)
 }
 func (b *MprBackend) DeleteViewEntitySourceDocumentByName(moduleName, docName string) error {
-	return b.writer.DeleteViewEntitySourceDocumentByName(moduleName, docName)
+	return b.deleteViewEntitySourceDocumentByNameViaModelsdk(moduleName, docName)
 }
 func (b *MprBackend) FindViewEntitySourceDocumentID(moduleName, docName string) (model.ID, error) {
 	return b.writer.FindViewEntitySourceDocumentID(moduleName, docName)
@@ -228,7 +228,7 @@ func (b *MprBackend) FindAllViewEntitySourceDocumentIDs(moduleName, docName stri
 	return b.writer.FindAllViewEntitySourceDocumentIDs(moduleName, docName)
 }
 func (b *MprBackend) MoveViewEntitySourceDocument(sourceModuleName string, targetModuleID model.ID, docName string) error {
-	return b.writer.MoveViewEntitySourceDocument(sourceModuleName, targetModuleID, docName)
+	return b.moveViewEntitySourceDocumentViaModelsdk(sourceModuleName, targetModuleID, docName)
 }
 func (b *MprBackend) UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualifiedName string) (int, error) {
 	return b.writer.UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualifiedName)
