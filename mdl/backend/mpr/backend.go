@@ -368,7 +368,7 @@ func (b *MprBackend) GetProjectSecurity() (*security.ProjectSecurity, error) {
 	return b.reader.GetProjectSecurity()
 }
 func (b *MprBackend) SetProjectSecurityLevel(unitID model.ID, level string) error {
-	return b.writer.SetProjectSecurityLevel(unitID, level)
+	return b.setSecurityLevelViaModelsdk(unitID, level)
 }
 func (b *MprBackend) SetProjectDemoUsersEnabled(unitID model.ID, enabled bool) error {
 	return b.writer.SetProjectDemoUsersEnabled(unitID, enabled)
