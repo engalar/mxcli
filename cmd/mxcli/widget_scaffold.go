@@ -380,3 +380,73 @@ func runWidgetNew(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Build:     cd %s && mxcli widget build\n", outDir)
 	return nil
 }
+
+// appendWidgetFileToPackageXML reads package.xml, adds a <widgetFile> entry for widgetName
+// (if not already present), and writes it back. Inserts before </widgetFiles> if the
+// container exists, otherwise creates a new <widgetFiles> block before </clientModule>.
+func appendWidgetFileToPackageXML(pkgXMLPath, widgetName string) error {
+	data, err := os.ReadFile(pkgXMLPath)
+	if err != nil {
+		return fmt.Errorf("reading package.xml: %w", err)
+	}
+	entry := fmt.Sprintf(`path="%s.xml"`, widgetName)
+	if strings.Contains(string(data), entry) {
+		return nil
+	}
+	content := string(data)
+	if strings.Contains(content, "</widgetFiles>") {
+		newEntry := fmt.Sprintf("      <widgetFile path=%q/>\n", widgetName+".xml")
+		content = strings.Replace(content, "</widgetFiles>", newEntry+"    </widgetFiles>", 1)
+	} else if strings.Contains(content, "</clientModule>") {
+		block := fmt.Sprintf("    <widgetFiles>\n      <widgetFile path=%q/>\n    </widgetFiles>\n  ", widgetName+".xml")
+		content = strings.Replace(content, "</clientModule>", block+"</clientModule>", 1)
+	} else {
+		return fmt.Errorf("could not find </widgetFiles> or </clientModule> in package.xml")
+	}
+	return os.WriteFile(pkgXMLPath, []byte(content), 0644)
+}
+
+// runWidgetAddWidget implements `mxcli widget add-widget <name>` (run inside package dir).
+func runWidgetAddWidget(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("widget name required: mxcli widget add-widget <name>")
+	}
+	name := args[0]
+	dir := "."
+
+	pkgXMLPath := filepath.Join(dir, "package.xml")
+	if _, err := os.Stat(pkgXMLPath); err != nil {
+		return fmt.Errorf("package.xml not found in current directory — run this command inside a widget package project")
+	}
+
+	widgetID, _ := cmd.Flags().GetString("id")
+	if widgetID == "" {
+		widgetID = deriveWidgetID(name)
+	}
+	offline, _ := cmd.Flags().GetBool("offline")
+	propStrs, _ := cmd.Flags().GetStringArray("property")
+	var props []PropertySpec
+	for _, s := range propStrs {
+		p, err := parsePropertySpec(s)
+		if err != nil {
+			return err
+		}
+		props = append(props, p)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "src", name+".xml")); err == nil {
+		return fmt.Errorf("widget %q already exists in src/", name)
+	}
+
+	if err := scaffoldWidget(dir, name, widgetID, offline, props); err != nil {
+		return fmt.Errorf("scaffolding widget: %w", err)
+	}
+	if err := appendWidgetFileToPackageXML(pkgXMLPath, name); err != nil {
+		return fmt.Errorf("updating package.xml: %w", err)
+	}
+
+	fmt.Printf("Added widget: %s\n", name)
+	fmt.Printf("  Edit: src/%s.jsx\n", name)
+	fmt.Printf("  Build: mxcli widget build\n")
+	return nil
+}

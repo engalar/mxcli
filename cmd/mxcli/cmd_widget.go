@@ -89,6 +89,18 @@ Examples:
 	RunE: runWidgetNew,
 }
 
+var widgetAddWidgetCmd = &cobra.Command{
+	Use:   "add-widget <name>",
+	Short: "Add a widget to an existing package project",
+	Long: `Add a new widget to a multi-widget package project.
+Run inside the package directory (where package.xml lives).
+
+Examples:
+  mxcli widget add-widget CrusherSlider
+  mxcli widget add-widget CrusherSlider --property "value:attribute:Decimal" --property "label:string"`,
+	RunE: runWidgetAddWidget,
+}
+
 func init() {
 	widgetExtractCmd.Flags().String("mpk", "", "Path to .mpk widget package file")
 	widgetExtractCmd.Flags().StringP("output", "o", "", "Output directory (default: .mxcli/widgets/)")
@@ -107,11 +119,16 @@ func init() {
 	widgetNewCmd.Flags().Bool("offline", false, "Set offlineCapable=true in the widget XML")
 	widgetNewCmd.Flags().Bool("package", false, "Create a multi-widget package project (empty src/)")
 
+	widgetAddWidgetCmd.Flags().String("id", "", "Widget ID (default: com.mendix.widget.custom.<Name>.<Name>)")
+	widgetAddWidgetCmd.Flags().StringArray("property", nil, "Property spec: key:type or key:type:subtype (repeatable)")
+	widgetAddWidgetCmd.Flags().Bool("offline", false, "Set offlineCapable=true")
+
 	widgetCmd.AddCommand(widgetExtractCmd)
 	widgetCmd.AddCommand(widgetListCmd)
 	widgetCmd.AddCommand(widgetInitCmd)
 	widgetCmd.AddCommand(widgetDocsCmd)
 	widgetCmd.AddCommand(widgetNewCmd)
+	widgetCmd.AddCommand(widgetAddWidgetCmd)
 	rootCmd.AddCommand(widgetCmd)
 }
 
