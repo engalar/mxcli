@@ -74,6 +74,10 @@ func (b *MprBackend) removeFromAllowedRolesViaModelsdk(unitID model.ID, roleName
 }
 
 // msdkWriteRaw writes pre-patched raw BSON bytes via WriteTransaction.
+// After committing, it invalidates the sdk/mpr reader's unit cache so that
+// consecutive writes via writeDomainModel always read fresh data (v2 unitCache
+// stores metadata only, but invalidation ensures correctness after any unit
+// structural change such as InsertUnit or cross-domain model operations).
 func (b *MprBackend) msdkWriteRaw(unitID model.ID, contents []byte) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
@@ -86,5 +90,9 @@ func (b *MprBackend) msdkWriteRaw(unitID model.ID, contents []byte) error {
 		_ = wtx.Rollback()
 		return fmt.Errorf("write unit: %w", err)
 	}
-	return wtx.Commit()
+	if err := wtx.Commit(); err != nil {
+		return err
+	}
+	b.reader.InvalidateCache()
+	return nil
 }
