@@ -47,6 +47,17 @@ func NewWriter(path string) (*Writer, error) {
 	return &Writer{reader: reader}, nil
 }
 
+// NewWriterFromDB creates a Writer that reuses an existing *sql.DB connection.
+// The caller owns the db lifecycle; this Writer's Close() does not close the db.
+// contentsDir should be the mprcontents folder path (v2) or empty string (v1).
+func NewWriterFromDB(db *sql.DB, path, contentsDir string) (*Writer, error) {
+	reader, err := OpenWithDB(db, path, contentsDir)
+	if err != nil {
+		return nil, fmt.Errorf("open reader with shared db: %w", err)
+	}
+	return &Writer{reader: reader}, nil
+}
+
 // Close closes the writer.
 func (w *Writer) Close() error {
 	return w.reader.Close()
