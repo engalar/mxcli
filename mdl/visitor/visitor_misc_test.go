@@ -61,9 +61,9 @@ func TestHelp(t *testing.T) {
 
 func TestSessionSet_StringValue(t *testing.T) {
 	for _, tc := range []struct {
-		input    string
-		key      string
-		wantVal  string
+		input   string
+		key     string
+		wantVal string
 	}{
 		{`SET format = json;`, "format", "json"},
 		{`SET format = 'table';`, "format", "table"},

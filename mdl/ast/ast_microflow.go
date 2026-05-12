@@ -130,7 +130,7 @@ type InheritanceSplitStmt struct {
 	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
 }
 
-func (s *EnumSplitStmt) isMicroflowStatement() {}
+func (s *EnumSplitStmt) isMicroflowStatement()        {}
 func (s *InheritanceSplitStmt) isMicroflowStatement() {}
 
 // CastObjectStmt represents: $Output = CAST $Object

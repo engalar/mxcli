@@ -13,10 +13,10 @@ import (
 
 // Ensure imports are used.
 var (
-	_ = codec.DefaultRegistry
+	_                 = codec.DefaultRegistry
 	_ element.Element = nil
-	_ = property.DecodeString
-	_ bson.Raw = nil
+	_                 = property.DecodeString
+	_ bson.Raw        = nil
 )
 
 // ────────────────────────────────────────────────────────
@@ -38,8 +38,8 @@ func (o *AbstractDesignPropertyValue) InitFromRaw(raw bson.Raw) {
 type AccessibilitySettings struct {
 	element.Base
 	screenReaderDescription *property.Part[element.Element]
-	screenReaderTitle *property.Part[element.Element]
-	accessible *property.Primitive[bool]
+	screenReaderTitle       *property.Part[element.Element]
+	accessible              *property.Primitive[bool]
 }
 
 // ScreenReaderDescription returns the value of the screenReaderDescription property.
@@ -89,11 +89,11 @@ func (o *AccessibilitySettings) InitFromRaw(raw bson.Raw) {
 
 type Widget struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	name       *property.Primitive[string]
+	class      *property.Primitive[string]
+	style      *property.Primitive[string]
 	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	tabIndex   *property.Primitive[int32]
 }
 
 // Name returns the value of the name property.
@@ -163,13 +163,13 @@ func (o *Widget) InitFromRaw(raw bson.Raw) {
 
 type ConditionallyVisibleWidget struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -265,18 +265,18 @@ func (o *ConditionallyVisibleWidget) InitFromRaw(raw bson.Raw) {
 
 type Button struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	renderType *property.Enum[string]
-	buttonStyle *property.Enum[string]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	renderType                    *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -424,10 +424,14 @@ func (o *Button) InitFromRaw(raw bson.Raw) {
 		o.icon.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 }
 
@@ -437,22 +441,22 @@ func (o *Button) InitFromRaw(raw bson.Raw) {
 
 type ActionButton struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	renderType *property.Enum[string]
-	buttonStyle *property.Enum[string]
-	action *property.Part[element.Element]
-	ariaRole *property.Enum[string]
-	disabledDuringAction *property.Primitive[bool]
-	nativeAccessibilitySettings *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	renderType                    *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
+	action                        *property.Part[element.Element]
+	ariaRole                      *property.Enum[string]
+	disabledDuringAction          *property.Primitive[bool]
+	nativeAccessibilitySettings   *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -640,16 +644,22 @@ func (o *ActionButton) InitFromRaw(raw bson.Raw) {
 		o.icon.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Action"); err == nil {
 		o.action.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("AriaRole"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.ariaRole.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.ariaRole.SetFromDecode(s)
+		}
 	}
 	o.disabledDuringAction.Init(raw)
 	if child, err := codec.DecodeChild(raw, "NativeAccessibilitySettings"); err == nil {
@@ -689,10 +699,10 @@ func (o *ActionItem) InitFromRaw(raw bson.Raw) {
 
 type Appearance struct {
 	element.Base
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	class            *property.Primitive[string]
+	style            *property.Primitive[string]
 	designProperties *property.PartList[element.Element]
-	dynamicClasses *property.Primitive[string]
+	dynamicClasses   *property.Primitive[string]
 }
 
 // Class returns the value of the class property.
@@ -783,9 +793,9 @@ func (o *DataSource) InitFromRaw(raw bson.Raw) {
 type EntityPathSource struct {
 	element.Base
 	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
+	entityPath       *property.Primitive[string]
+	entityRef        *property.Part[element.Element]
+	sourceVariable   *property.Part[element.Element]
 }
 
 // ForceFullObjects returns the value of the forceFullObjects property.
@@ -847,9 +857,9 @@ func (o *EntityPathSource) InitFromRaw(raw bson.Raw) {
 type AssociationSource struct {
 	element.Base
 	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
+	entityPath       *property.Primitive[string]
+	entityRef        *property.Part[element.Element]
+	sourceVariable   *property.Part[element.Element]
 }
 
 // ForceFullObjects returns the value of the forceFullObjects property.
@@ -910,15 +920,15 @@ func (o *AssociationSource) InitFromRaw(raw bson.Raw) {
 
 type ConditionallyEditableWidget struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
+	editable                       *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -1030,7 +1040,9 @@ func (o *ConditionallyEditableWidget) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 }
 
@@ -1040,18 +1052,18 @@ func (o *ConditionallyEditableWidget) InitFromRaw(raw bson.Raw) {
 
 type InputWidget struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -1193,7 +1205,9 @@ func (o *InputWidget) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -1212,21 +1226,21 @@ func (o *InputWidget) InitFromRaw(raw bson.Raw) {
 
 type MemberWidget struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	attributePath                  *property.Primitive[string]
+	attributeRef                   *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -1398,7 +1412,9 @@ func (o *MemberWidget) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -1414,7 +1430,9 @@ func (o *MemberWidget) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 }
 
@@ -1424,26 +1442,26 @@ func (o *MemberWidget) InitFromRaw(raw bson.Raw) {
 
 type AssociationWidget struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
-	selectorSource *property.Part[element.Element]
-	selectPageSettings *property.Part[element.Element]
-	onChangeMicroflowSettings *property.Part[element.Element]
-	onChangeAction *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	attributePath                  *property.Primitive[string]
+	attributeRef                   *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
+	selectorSource                 *property.Part[element.Element]
+	selectPageSettings             *property.Part[element.Element]
+	onChangeMicroflowSettings      *property.Part[element.Element]
+	onChangeAction                 *property.Part[element.Element]
+	sourceVariable                 *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -1665,7 +1683,9 @@ func (o *AssociationWidget) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -1681,7 +1701,9 @@ func (o *AssociationWidget) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "SelectorSource"); err == nil {
 		o.selectorSource.SetFromDecode(child)
@@ -1706,32 +1728,32 @@ func (o *AssociationWidget) InitFromRaw(raw bson.Raw) {
 
 type AttributeWidget struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
-	required *property.Primitive[bool]
-	requiredMessage *property.Part[element.Element]
-	validation *property.Part[element.Element]
-	onChangeMicroflowSettings *property.Part[element.Element]
-	onEnterMicroflowSettings *property.Part[element.Element]
-	onLeaveMicroflowSettings *property.Part[element.Element]
-	onChangeAction *property.Part[element.Element]
-	onEnterAction *property.Part[element.Element]
-	onLeaveAction *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	ariaRequired *property.Primitive[bool]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	attributePath                  *property.Primitive[string]
+	attributeRef                   *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
+	required                       *property.Primitive[bool]
+	requiredMessage                *property.Part[element.Element]
+	validation                     *property.Part[element.Element]
+	onChangeMicroflowSettings      *property.Part[element.Element]
+	onEnterMicroflowSettings       *property.Part[element.Element]
+	onLeaveMicroflowSettings       *property.Part[element.Element]
+	onChangeAction                 *property.Part[element.Element]
+	onEnterAction                  *property.Part[element.Element]
+	onLeaveAction                  *property.Part[element.Element]
+	sourceVariable                 *property.Part[element.Element]
+	ariaRequired                   *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -2013,7 +2035,9 @@ func (o *AttributeWidget) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -2029,7 +2053,9 @@ func (o *AttributeWidget) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 	o.required.Init(raw)
 	if child, err := codec.DecodeChild(raw, "RequiredMessage"); err == nil {
@@ -2068,34 +2094,34 @@ func (o *AttributeWidget) InitFromRaw(raw bson.Raw) {
 
 type AttributeWidgetWithPlaceholder struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
-	required *property.Primitive[bool]
-	requiredMessage *property.Part[element.Element]
-	validation *property.Part[element.Element]
-	onChangeMicroflowSettings *property.Part[element.Element]
-	onEnterMicroflowSettings *property.Part[element.Element]
-	onLeaveMicroflowSettings *property.Part[element.Element]
-	onChangeAction *property.Part[element.Element]
-	onEnterAction *property.Part[element.Element]
-	onLeaveAction *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	ariaRequired *property.Primitive[bool]
-	placeholder *property.Part[element.Element]
-	placeholderTemplate *property.Part[element.Element]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	attributePath                  *property.Primitive[string]
+	attributeRef                   *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
+	required                       *property.Primitive[bool]
+	requiredMessage                *property.Part[element.Element]
+	validation                     *property.Part[element.Element]
+	onChangeMicroflowSettings      *property.Part[element.Element]
+	onEnterMicroflowSettings       *property.Part[element.Element]
+	onLeaveMicroflowSettings       *property.Part[element.Element]
+	onChangeAction                 *property.Part[element.Element]
+	onEnterAction                  *property.Part[element.Element]
+	onLeaveAction                  *property.Part[element.Element]
+	sourceVariable                 *property.Part[element.Element]
+	ariaRequired                   *property.Primitive[bool]
+	placeholder                    *property.Part[element.Element]
+	placeholderTemplate            *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -2397,7 +2423,9 @@ func (o *AttributeWidgetWithPlaceholder) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -2413,7 +2441,9 @@ func (o *AttributeWidgetWithPlaceholder) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 	o.required.Init(raw)
 	if child, err := codec.DecodeChild(raw, "RequiredMessage"); err == nil {
@@ -2458,18 +2488,18 @@ func (o *AttributeWidgetWithPlaceholder) InitFromRaw(raw bson.Raw) {
 
 type BackButton struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	renderType *property.Enum[string]
-	buttonStyle *property.Enum[string]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	renderType                    *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -2617,10 +2647,14 @@ func (o *BackButton) InitFromRaw(raw bson.Raw) {
 		o.icon.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 }
 
@@ -2630,12 +2664,12 @@ func (o *BackButton) InitFromRaw(raw bson.Raw) {
 
 type FormBase struct {
 	element.Base
-	name *property.Primitive[string]
+	name          *property.Primitive[string]
 	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	canvasWidth *property.Primitive[int32]
-	canvasHeight *property.Primitive[int32]
+	excluded      *property.Primitive[bool]
+	exportLevel   *property.Enum[string]
+	canvasWidth   *property.Primitive[int32]
+	canvasHeight  *property.Primitive[int32]
 }
 
 // Name returns the value of the name property.
@@ -2704,7 +2738,9 @@ func (o *FormBase) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	o.canvasWidth.Init(raw)
 	o.canvasHeight.Init(raw)
@@ -2716,17 +2752,17 @@ func (o *FormBase) InitFromRaw(raw bson.Raw) {
 
 type TemplateFormBase struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	canvasWidth *property.Primitive[int32]
-	canvasHeight *property.Primitive[int32]
-	displayName *property.Primitive[string]
-	documentationUrl *property.Primitive[string]
-	templateCategory *property.Primitive[string]
+	name                   *property.Primitive[string]
+	documentation          *property.Primitive[string]
+	excluded               *property.Primitive[bool]
+	exportLevel            *property.Enum[string]
+	canvasWidth            *property.Primitive[int32]
+	canvasHeight           *property.Primitive[int32]
+	displayName            *property.Primitive[string]
+	documentationUrl       *property.Primitive[string]
+	templateCategory       *property.Primitive[string]
 	templateCategoryWeight *property.Primitive[int32]
-	imageData *property.Primitive[string]
+	imageData              *property.Primitive[string]
 }
 
 // Name returns the value of the name property.
@@ -2845,7 +2881,9 @@ func (o *TemplateFormBase) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	o.canvasWidth.Init(raw)
 	o.canvasHeight.Init(raw)
@@ -2862,20 +2900,20 @@ func (o *TemplateFormBase) InitFromRaw(raw bson.Raw) {
 
 type BuildingBlock struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	canvasWidth *property.Primitive[int32]
-	canvasHeight *property.Primitive[int32]
-	displayName *property.Primitive[string]
-	documentationUrl *property.Primitive[string]
-	templateCategory *property.Primitive[string]
+	name                   *property.Primitive[string]
+	documentation          *property.Primitive[string]
+	excluded               *property.Primitive[bool]
+	exportLevel            *property.Enum[string]
+	canvasWidth            *property.Primitive[int32]
+	canvasHeight           *property.Primitive[int32]
+	displayName            *property.Primitive[string]
+	documentationUrl       *property.Primitive[string]
+	templateCategory       *property.Primitive[string]
 	templateCategoryWeight *property.Primitive[int32]
-	imageData *property.Primitive[string]
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
-	platform *property.Enum[string]
+	imageData              *property.Primitive[string]
+	widget                 *property.Part[element.Element]
+	widgets                *property.PartList[element.Element]
+	platform               *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -3029,7 +3067,9 @@ func (o *BuildingBlock) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	o.canvasWidth.Init(raw)
 	o.canvasHeight.Init(raw)
@@ -3047,7 +3087,9 @@ func (o *BuildingBlock) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("Platform"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.platform.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.platform.SetFromDecode(s)
+		}
 	}
 }
 
@@ -3082,12 +3124,12 @@ func (o *ClientAction) InitFromRaw(raw bson.Raw) {
 type CallNanoflowClientAction struct {
 	element.Base
 	disabledDuringExecution *property.Primitive[bool]
-	nanoflow *property.ByNameRef[element.Element]
-	parameterMappings *property.PartList[element.Element]
-	progressBar *property.Enum[string]
-	progressMessage *property.Part[element.Element]
-	confirmationInfo *property.Part[element.Element]
-	outputMappings *property.PartList[element.Element]
+	nanoflow                *property.ByNameRef[element.Element]
+	parameterMappings       *property.PartList[element.Element]
+	progressBar             *property.Enum[string]
+	progressMessage         *property.Part[element.Element]
+	confirmationInfo        *property.Part[element.Element]
+	outputMappings          *property.PartList[element.Element]
 }
 
 // DisabledDuringExecution returns the value of the disabledDuringExecution property.
@@ -3174,7 +3216,9 @@ func (o *CallNanoflowClientAction) RemoveOutputMappings(index int) {
 func (o *CallNanoflowClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if val, err := raw.LookupErr("Nanoflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.nanoflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.nanoflow.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -3182,7 +3226,9 @@ func (o *CallNanoflowClientAction) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("ProgressBar"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.progressBar.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.progressBar.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ProgressMessage"); err == nil {
 		o.progressMessage.SetFromDecode(child)
@@ -3204,10 +3250,10 @@ func (o *CallNanoflowClientAction) InitFromRaw(raw bson.Raw) {
 type CallWorkflowClientAction struct {
 	element.Base
 	disabledDuringExecution *property.Primitive[bool]
-	workflow *property.ByNameRef[element.Element]
-	closePage *property.Primitive[bool]
-	commit *property.Primitive[bool]
-	confirmationInfo *property.Part[element.Element]
+	workflow                *property.ByNameRef[element.Element]
+	closePage               *property.Primitive[bool]
+	commit                  *property.Primitive[bool]
+	confirmationInfo        *property.Part[element.Element]
 }
 
 // DisabledDuringExecution returns the value of the disabledDuringExecution property.
@@ -3264,7 +3310,9 @@ func (o *CallWorkflowClientAction) SetConfirmationInfo(v element.Element) {
 func (o *CallWorkflowClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if val, err := raw.LookupErr("Workflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.workflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.workflow.SetFromDecode(s)
+		}
 	}
 	o.closePage.Init(raw)
 	o.commit.Init(raw)
@@ -3279,19 +3327,19 @@ func (o *CallWorkflowClientAction) InitFromRaw(raw bson.Raw) {
 
 type CancelButton struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	renderType *property.Enum[string]
-	buttonStyle *property.Enum[string]
-	closePage *property.Primitive[bool]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	renderType                    *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
+	closePage                     *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -3449,10 +3497,14 @@ func (o *CancelButton) InitFromRaw(raw bson.Raw) {
 		o.icon.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	o.closePage.Init(raw)
 }
@@ -3464,7 +3516,7 @@ func (o *CancelButton) InitFromRaw(raw bson.Raw) {
 type CancelChangesClientAction struct {
 	element.Base
 	disabledDuringExecution *property.Primitive[bool]
-	closePage *property.Primitive[bool]
+	closePage               *property.Primitive[bool]
 }
 
 // DisabledDuringExecution returns the value of the disabledDuringExecution property.
@@ -3523,35 +3575,35 @@ func (o *CancelSynchronizationClientAction) InitFromRaw(raw bson.Raw) {
 
 type CheckBox struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
-	required *property.Primitive[bool]
-	requiredMessage *property.Part[element.Element]
-	validation *property.Part[element.Element]
-	onChangeMicroflowSettings *property.Part[element.Element]
-	onEnterMicroflowSettings *property.Part[element.Element]
-	onLeaveMicroflowSettings *property.Part[element.Element]
-	onChangeAction *property.Part[element.Element]
-	onEnterAction *property.Part[element.Element]
-	onLeaveAction *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	ariaRequired *property.Primitive[bool]
-	labelPosition *property.Enum[string]
-	nativeRenderMode *property.Enum[string]
-	nativeAccessibilitySettings *property.Part[element.Element]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	attributePath                  *property.Primitive[string]
+	attributeRef                   *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
+	required                       *property.Primitive[bool]
+	requiredMessage                *property.Part[element.Element]
+	validation                     *property.Part[element.Element]
+	onChangeMicroflowSettings      *property.Part[element.Element]
+	onEnterMicroflowSettings       *property.Part[element.Element]
+	onLeaveMicroflowSettings       *property.Part[element.Element]
+	onChangeAction                 *property.Part[element.Element]
+	onEnterAction                  *property.Part[element.Element]
+	onLeaveAction                  *property.Part[element.Element]
+	sourceVariable                 *property.Part[element.Element]
+	ariaRequired                   *property.Primitive[bool]
+	labelPosition                  *property.Enum[string]
+	nativeRenderMode               *property.Enum[string]
+	nativeAccessibilitySettings    *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -3863,7 +3915,9 @@ func (o *CheckBox) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -3879,7 +3933,9 @@ func (o *CheckBox) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 	o.required.Init(raw)
 	if child, err := codec.DecodeChild(raw, "RequiredMessage"); err == nil {
@@ -3911,10 +3967,14 @@ func (o *CheckBox) InitFromRaw(raw bson.Raw) {
 	}
 	o.ariaRequired.Init(raw)
 	if val, err := raw.LookupErr("LabelPosition"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.labelPosition.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.labelPosition.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("NativeRenderMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.nativeRenderMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.nativeRenderMode.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "NativeAccessibilitySettings"); err == nil {
 		o.nativeAccessibilitySettings.SetFromDecode(child)
@@ -3927,9 +3987,9 @@ func (o *CheckBox) InitFromRaw(raw bson.Raw) {
 
 type ClientTemplate struct {
 	element.Base
-	template *property.Part[element.Element]
+	template   *property.Part[element.Element]
 	parameters *property.PartList[element.Element]
-	fallback *property.Part[element.Element]
+	fallback   *property.Part[element.Element]
 }
 
 // Template returns the value of the template property.
@@ -3988,9 +4048,9 @@ func (o *ClientTemplate) InitFromRaw(raw bson.Raw) {
 
 type ClientTemplateParameter struct {
 	element.Base
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	expression *property.Primitive[string]
+	attributePath  *property.Primitive[string]
+	attributeRef   *property.Part[element.Element]
+	expression     *property.Primitive[string]
 	formattingInfo *property.Part[element.Element]
 	sourceVariable *property.Part[element.Element]
 }
@@ -4067,8 +4127,8 @@ func (o *ClientTemplateParameter) InitFromRaw(raw bson.Raw) {
 type ClosePageClientAction struct {
 	element.Base
 	disabledDuringExecution *property.Primitive[bool]
-	numberOfPages *property.Primitive[int32]
-	numberOfPagesToClose *property.Primitive[string]
+	numberOfPages           *property.Primitive[int32]
+	numberOfPagesToClose    *property.Primitive[string]
 }
 
 // DisabledDuringExecution returns the value of the disabledDuringExecution property.
@@ -4114,14 +4174,14 @@ func (o *ClosePageClientAction) InitFromRaw(raw bson.Raw) {
 
 type EntityWidget struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	dataSource *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	dataSource                    *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -4230,14 +4290,14 @@ func (o *EntityWidget) InitFromRaw(raw bson.Raw) {
 
 type ListenTargetWidget struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	dataSource *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	dataSource                    *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -4346,22 +4406,22 @@ func (o *ListenTargetWidget) InitFromRaw(raw bson.Raw) {
 
 type Grid struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	dataSource *property.Part[element.Element]
-	isControlBarVisible *property.Primitive[bool]
-	isPagingEnabled *property.Primitive[bool]
-	showPagingBar *property.Enum[string]
-	selectionMode *property.Enum[string]
-	selectFirst *property.Primitive[bool]
-	defaultButtonTrigger *property.Enum[string]
-	refreshTime *property.Primitive[int32]
-	controlBar *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	dataSource                    *property.Part[element.Element]
+	isControlBarVisible           *property.Primitive[bool]
+	isPagingEnabled               *property.Primitive[bool]
+	showPagingBar                 *property.Enum[string]
+	selectionMode                 *property.Enum[string]
+	selectFirst                   *property.Primitive[bool]
+	defaultButtonTrigger          *property.Enum[string]
+	refreshTime                   *property.Primitive[int32]
+	controlBar                    *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -4545,14 +4605,20 @@ func (o *Grid) InitFromRaw(raw bson.Raw) {
 	o.isControlBarVisible.Init(raw)
 	o.isPagingEnabled.Init(raw)
 	if val, err := raw.LookupErr("ShowPagingBar"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.showPagingBar.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.showPagingBar.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("SelectionMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.selectionMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.selectionMode.SetFromDecode(s)
+		}
 	}
 	o.selectFirst.Init(raw)
 	if val, err := raw.LookupErr("DefaultButtonTrigger"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.defaultButtonTrigger.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.defaultButtonTrigger.SetFromDecode(s)
+		}
 	}
 	o.refreshTime.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ControlBar"); err == nil {
@@ -4566,27 +4632,27 @@ func (o *Grid) InitFromRaw(raw bson.Raw) {
 
 type ColumnGrid struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	dataSource *property.Part[element.Element]
-	isControlBarVisible *property.Primitive[bool]
-	isPagingEnabled *property.Primitive[bool]
-	showPagingBar *property.Enum[string]
-	selectionMode *property.Enum[string]
-	selectFirst *property.Primitive[bool]
-	defaultButtonTrigger *property.Enum[string]
-	refreshTime *property.Primitive[int32]
-	controlBar *property.Part[element.Element]
-	columns *property.PartList[element.Element]
-	numberOfRows *property.Primitive[int32]
-	showEmptyRows *property.Primitive[bool]
-	widthUnit *property.Enum[string]
-	tooltipPage *property.ByNameRef[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	dataSource                    *property.Part[element.Element]
+	isControlBarVisible           *property.Primitive[bool]
+	isPagingEnabled               *property.Primitive[bool]
+	showPagingBar                 *property.Enum[string]
+	selectionMode                 *property.Enum[string]
+	selectFirst                   *property.Primitive[bool]
+	defaultButtonTrigger          *property.Enum[string]
+	refreshTime                   *property.Primitive[int32]
+	controlBar                    *property.Part[element.Element]
+	columns                       *property.PartList[element.Element]
+	numberOfRows                  *property.Primitive[int32]
+	showEmptyRows                 *property.Primitive[bool]
+	widthUnit                     *property.Enum[string]
+	tooltipPage                   *property.ByNameRef[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -4825,14 +4891,20 @@ func (o *ColumnGrid) InitFromRaw(raw bson.Raw) {
 	o.isControlBarVisible.Init(raw)
 	o.isPagingEnabled.Init(raw)
 	if val, err := raw.LookupErr("ShowPagingBar"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.showPagingBar.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.showPagingBar.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("SelectionMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.selectionMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.selectionMode.SetFromDecode(s)
+		}
 	}
 	o.selectFirst.Init(raw)
 	if val, err := raw.LookupErr("DefaultButtonTrigger"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.defaultButtonTrigger.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.defaultButtonTrigger.SetFromDecode(s)
+		}
 	}
 	o.refreshTime.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ControlBar"); err == nil {
@@ -4846,10 +4918,14 @@ func (o *ColumnGrid) InitFromRaw(raw bson.Raw) {
 	o.numberOfRows.Init(raw)
 	o.showEmptyRows.Init(raw)
 	if val, err := raw.LookupErr("WidthUnit"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.widthUnit.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.widthUnit.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("TooltipPage"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.tooltipPage.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.tooltipPage.SetFromDecode(s)
+		}
 	}
 }
 
@@ -4883,12 +4959,12 @@ func (o *ControlBarItem) InitFromRaw(raw bson.Raw) {
 
 type SearchField struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	placeholder *property.Part[element.Element]
+	name             *property.Primitive[string]
+	caption          *property.Part[element.Element]
+	placeholder      *property.Part[element.Element]
 	customDateFormat *property.Primitive[string]
-	propType *property.Enum[string]
-	defaultValue *property.Primitive[string]
+	propType         *property.Enum[string]
+	defaultValue     *property.Primitive[string]
 }
 
 // Name returns the value of the name property.
@@ -4962,7 +5038,9 @@ func (o *SearchField) InitFromRaw(raw bson.Raw) {
 	}
 	o.customDateFormat.Init(raw)
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 	o.defaultValue.Init(raw)
 }
@@ -4973,15 +5051,15 @@ func (o *SearchField) InitFromRaw(raw bson.Raw) {
 
 type SingleSearchField struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	placeholder *property.Part[element.Element]
+	name             *property.Primitive[string]
+	caption          *property.Part[element.Element]
+	placeholder      *property.Part[element.Element]
 	customDateFormat *property.Primitive[string]
-	propType *property.Enum[string]
-	defaultValue *property.Primitive[string]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	operator *property.Enum[string]
+	propType         *property.Enum[string]
+	defaultValue     *property.Primitive[string]
+	attributePath    *property.Primitive[string]
+	attributeRef     *property.Part[element.Element]
+	operator         *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -5085,7 +5163,9 @@ func (o *SingleSearchField) InitFromRaw(raw bson.Raw) {
 	}
 	o.customDateFormat.Init(raw)
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 	o.defaultValue.Init(raw)
 	o.attributePath.Init(raw)
@@ -5093,7 +5173,9 @@ func (o *SingleSearchField) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Operator"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.operator.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.operator.SetFromDecode(s)
+		}
 	}
 }
 
@@ -5103,15 +5185,15 @@ func (o *SingleSearchField) InitFromRaw(raw bson.Raw) {
 
 type ComparisonSearchField struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	placeholder *property.Part[element.Element]
+	name             *property.Primitive[string]
+	caption          *property.Part[element.Element]
+	placeholder      *property.Part[element.Element]
 	customDateFormat *property.Primitive[string]
-	propType *property.Enum[string]
-	defaultValue *property.Primitive[string]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	operator *property.Enum[string]
+	propType         *property.Enum[string]
+	defaultValue     *property.Primitive[string]
+	attributePath    *property.Primitive[string]
+	attributeRef     *property.Part[element.Element]
+	operator         *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -5215,7 +5297,9 @@ func (o *ComparisonSearchField) InitFromRaw(raw bson.Raw) {
 	}
 	o.customDateFormat.Init(raw)
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 	o.defaultValue.Init(raw)
 	o.attributePath.Init(raw)
@@ -5223,7 +5307,9 @@ func (o *ComparisonSearchField) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Operator"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.operator.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.operator.SetFromDecode(s)
+		}
 	}
 }
 
@@ -5266,10 +5352,10 @@ func (o *CompoundDesignPropertyValue) InitFromRaw(raw bson.Raw) {
 
 type ConditionalSettings struct {
 	element.Base
-	attribute *property.ByNameRef[element.Element]
-	conditions *property.PartList[element.Element]
-	expression *property.Primitive[string]
-	sourceVariable *property.Part[element.Element]
+	attribute       *property.ByNameRef[element.Element]
+	conditions      *property.PartList[element.Element]
+	expression      *property.Primitive[string]
+	sourceVariable  *property.Part[element.Element]
 	expressionModel *property.Part[element.Element]
 }
 
@@ -5331,7 +5417,9 @@ func (o *ConditionalSettings) SetExpressionModel(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ConditionalSettings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Attribute"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.attribute.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Conditions"); err == nil {
 		for _, child := range children {
@@ -5353,10 +5441,10 @@ func (o *ConditionalSettings) InitFromRaw(raw bson.Raw) {
 
 type ConditionalEditabilitySettings struct {
 	element.Base
-	attribute *property.ByNameRef[element.Element]
-	conditions *property.PartList[element.Element]
-	expression *property.Primitive[string]
-	sourceVariable *property.Part[element.Element]
+	attribute       *property.ByNameRef[element.Element]
+	conditions      *property.PartList[element.Element]
+	expression      *property.Primitive[string]
+	sourceVariable  *property.Part[element.Element]
 	expressionModel *property.Part[element.Element]
 }
 
@@ -5418,7 +5506,9 @@ func (o *ConditionalEditabilitySettings) SetExpressionModel(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ConditionalEditabilitySettings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Attribute"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.attribute.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Conditions"); err == nil {
 		for _, child := range children {
@@ -5440,13 +5530,13 @@ func (o *ConditionalEditabilitySettings) InitFromRaw(raw bson.Raw) {
 
 type ConditionalVisibilitySettings struct {
 	element.Base
-	attribute *property.ByNameRef[element.Element]
-	conditions *property.PartList[element.Element]
-	expression *property.Primitive[string]
-	sourceVariable *property.Part[element.Element]
+	attribute       *property.ByNameRef[element.Element]
+	conditions      *property.PartList[element.Element]
+	expression      *property.Primitive[string]
+	sourceVariable  *property.Part[element.Element]
 	expressionModel *property.Part[element.Element]
-	moduleRoles *property.ByNameRefList[element.Element]
-	ignoreSecurity *property.Primitive[bool]
+	moduleRoles     *property.ByNameRefList[element.Element]
+	ignoreSecurity  *property.Primitive[bool]
 }
 
 // AttributeQualifiedName returns the value of the attribute property.
@@ -5532,7 +5622,9 @@ func (o *ConditionalVisibilitySettings) SetIgnoreSecurity(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ConditionalVisibilitySettings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Attribute"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.attribute.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Conditions"); err == nil {
 		for _, child := range children {
@@ -5551,7 +5643,9 @@ func (o *ConditionalVisibilitySettings) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.moduleRoles.SetFromDecode(qnames)
 		}
@@ -5565,9 +5659,9 @@ func (o *ConditionalVisibilitySettings) InitFromRaw(raw bson.Raw) {
 
 type ConfirmationInfo struct {
 	element.Base
-	question *property.Part[element.Element]
+	question             *property.Part[element.Element]
 	proceedButtonCaption *property.Part[element.Element]
-	cancelButtonCaption *property.Part[element.Element]
+	cancelButtonCaption  *property.Part[element.Element]
 }
 
 // Question returns the value of the question property.
@@ -5652,15 +5746,15 @@ func (o *ControlBar) InitFromRaw(raw bson.Raw) {
 
 type ControlBarButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -5774,7 +5868,9 @@ func (o *ControlBarButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 }
 
@@ -5785,10 +5881,10 @@ func (o *ControlBarButton) InitFromRaw(raw bson.Raw) {
 type CreateObjectClientAction struct {
 	element.Base
 	disabledDuringExecution *property.Primitive[bool]
-	entityRef *property.Part[element.Element]
-	pageSettings *property.Part[element.Element]
-	numberOfPagesToClose *property.Primitive[int32]
-	numberOfPagesToClose2 *property.Primitive[string]
+	entityRef               *property.Part[element.Element]
+	pageSettings            *property.Part[element.Element]
+	numberOfPagesToClose    *property.Primitive[int32]
+	numberOfPagesToClose2   *property.Primitive[string]
 }
 
 // DisabledDuringExecution returns the value of the disabledDuringExecution property.
@@ -5884,28 +5980,28 @@ func (o *CustomDesignPropertyValue) InitFromRaw(raw bson.Raw) {
 
 type DataGrid struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	dataSource *property.Part[element.Element]
-	isControlBarVisible *property.Primitive[bool]
-	isPagingEnabled *property.Primitive[bool]
-	showPagingBar *property.Enum[string]
-	selectionMode *property.Enum[string]
-	selectFirst *property.Primitive[bool]
-	defaultButtonTrigger *property.Enum[string]
-	refreshTime *property.Primitive[int32]
-	controlBar *property.Part[element.Element]
-	columns *property.PartList[element.Element]
-	numberOfRows *property.Primitive[int32]
-	showEmptyRows *property.Primitive[bool]
-	widthUnit *property.Enum[string]
-	tooltipPage *property.ByNameRef[element.Element]
-	caption *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	dataSource                    *property.Part[element.Element]
+	isControlBarVisible           *property.Primitive[bool]
+	isPagingEnabled               *property.Primitive[bool]
+	showPagingBar                 *property.Enum[string]
+	selectionMode                 *property.Enum[string]
+	selectFirst                   *property.Primitive[bool]
+	defaultButtonTrigger          *property.Enum[string]
+	refreshTime                   *property.Primitive[int32]
+	controlBar                    *property.Part[element.Element]
+	columns                       *property.PartList[element.Element]
+	numberOfRows                  *property.Primitive[int32]
+	showEmptyRows                 *property.Primitive[bool]
+	widthUnit                     *property.Enum[string]
+	tooltipPage                   *property.ByNameRef[element.Element]
+	caption                       *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -6154,14 +6250,20 @@ func (o *DataGrid) InitFromRaw(raw bson.Raw) {
 	o.isControlBarVisible.Init(raw)
 	o.isPagingEnabled.Init(raw)
 	if val, err := raw.LookupErr("ShowPagingBar"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.showPagingBar.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.showPagingBar.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("SelectionMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.selectionMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.selectionMode.SetFromDecode(s)
+		}
 	}
 	o.selectFirst.Init(raw)
 	if val, err := raw.LookupErr("DefaultButtonTrigger"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.defaultButtonTrigger.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.defaultButtonTrigger.SetFromDecode(s)
+		}
 	}
 	o.refreshTime.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ControlBar"); err == nil {
@@ -6175,10 +6277,14 @@ func (o *DataGrid) InitFromRaw(raw bson.Raw) {
 	o.numberOfRows.Init(raw)
 	o.showEmptyRows.Init(raw)
 	if val, err := raw.LookupErr("WidthUnit"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.widthUnit.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.widthUnit.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("TooltipPage"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.tooltipPage.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.tooltipPage.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
 		o.caption.SetFromDecode(child)
@@ -6191,15 +6297,15 @@ func (o *DataGrid) InitFromRaw(raw bson.Raw) {
 
 type GridControlBarButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -6313,7 +6419,9 @@ func (o *GridControlBarButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 }
 
@@ -6323,16 +6431,16 @@ func (o *GridControlBarButton) InitFromRaw(raw bson.Raw) {
 
 type DataGridAddButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
-	pageSettings *property.Part[element.Element]
+	buttonStyle                   *property.Enum[string]
+	pageSettings                  *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -6456,7 +6564,9 @@ func (o *DataGridAddButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "PageSettings"); err == nil {
 		o.pageSettings.SetFromDecode(child)
@@ -6469,21 +6579,21 @@ func (o *DataGridAddButton) InitFromRaw(raw bson.Raw) {
 
 type DataGridExportToCSVButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
-	maxNumberOfRows *property.Primitive[int32]
-	decimalSeparator *property.Primitive[string]
-	groupSeparator *property.Primitive[string]
-	delimiter *property.Primitive[string]
-	generateExcelHint *property.Primitive[bool]
-	useGridDateFormat *property.Primitive[bool]
+	buttonStyle                   *property.Enum[string]
+	maxNumberOfRows               *property.Primitive[int32]
+	decimalSeparator              *property.Primitive[string]
+	groupSeparator                *property.Primitive[string]
+	delimiter                     *property.Primitive[string]
+	generateExcelHint             *property.Primitive[bool]
+	useGridDateFormat             *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -6657,7 +6767,9 @@ func (o *DataGridExportToCSVButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	o.maxNumberOfRows.Init(raw)
 	o.decimalSeparator.Init(raw)
@@ -6673,17 +6785,17 @@ func (o *DataGridExportToCSVButton) InitFromRaw(raw bson.Raw) {
 
 type DataGridExportToExcelButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
-	maxNumberOfRows *property.Primitive[int32]
-	useExcelDateType *property.Primitive[bool]
+	buttonStyle                   *property.Enum[string]
+	maxNumberOfRows               *property.Primitive[int32]
+	useExcelDateType              *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -6817,7 +6929,9 @@ func (o *DataGridExportToExcelButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	o.maxNumberOfRows.Init(raw)
 	o.useExcelDateType.Init(raw)
@@ -6829,15 +6943,15 @@ func (o *DataGridExportToExcelButton) InitFromRaw(raw bson.Raw) {
 
 type DataGridRemoveButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -6951,7 +7065,9 @@ func (o *DataGridRemoveButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 }
 
@@ -6961,29 +7077,29 @@ func (o *DataGridRemoveButton) InitFromRaw(raw bson.Raw) {
 
 type DataView struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	dataSource *property.Part[element.Element]
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
-	footerWidget *property.Part[element.Element]
-	footerWidgets *property.PartList[element.Element]
-	editable *property.Primitive[bool]
-	editability *property.Enum[string]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
+	dataSource                     *property.Part[element.Element]
+	widget                         *property.Part[element.Element]
+	widgets                        *property.PartList[element.Element]
+	footerWidget                   *property.Part[element.Element]
+	footerWidgets                  *property.PartList[element.Element]
+	editable                       *property.Primitive[bool]
+	editability                    *property.Enum[string]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	showControlBar *property.Primitive[bool]
-	showFooter *property.Primitive[bool]
-	closeOnSaveOrCancel *property.Primitive[bool]
-	useSchema *property.Primitive[bool]
-	noEntityMessage *property.Part[element.Element]
-	labelWidth *property.Primitive[int32]
-	controlBar *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
+	showControlBar                 *property.Primitive[bool]
+	showFooter                     *property.Primitive[bool]
+	closeOnSaveOrCancel            *property.Primitive[bool]
+	useSchema                      *property.Primitive[bool]
+	noEntityMessage                *property.Part[element.Element]
+	labelWidth                     *property.Primitive[int32]
+	controlBar                     *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -7262,7 +7378,9 @@ func (o *DataView) InitFromRaw(raw bson.Raw) {
 	}
 	o.editable.Init(raw)
 	if val, err := raw.LookupErr("Editability"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editability.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editability.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ConditionalEditabilitySettings"); err == nil {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
@@ -7279,7 +7397,9 @@ func (o *DataView) InitFromRaw(raw bson.Raw) {
 		o.controlBar.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 }
 
@@ -7289,16 +7409,16 @@ func (o *DataView) InitFromRaw(raw bson.Raw) {
 
 type DataViewControlBarButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
-	tabIndex *property.Primitive[int32]
+	buttonStyle                   *property.Enum[string]
+	tabIndex                      *property.Primitive[int32]
 }
 
 // Name returns the value of the name property.
@@ -7422,7 +7542,9 @@ func (o *DataViewControlBarButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	o.tabIndex.Init(raw)
 }
@@ -7433,17 +7555,17 @@ func (o *DataViewControlBarButton) InitFromRaw(raw bson.Raw) {
 
 type DataViewActionButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
-	tabIndex *property.Primitive[int32]
-	action *property.Part[element.Element]
+	buttonStyle                   *property.Enum[string]
+	tabIndex                      *property.Primitive[int32]
+	action                        *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -7577,7 +7699,9 @@ func (o *DataViewActionButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	o.tabIndex.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Action"); err == nil {
@@ -7591,16 +7715,16 @@ func (o *DataViewActionButton) InitFromRaw(raw bson.Raw) {
 
 type DataViewCancelButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
-	tabIndex *property.Primitive[int32]
+	buttonStyle                   *property.Enum[string]
+	tabIndex                      *property.Primitive[int32]
 }
 
 // Name returns the value of the name property.
@@ -7724,7 +7848,9 @@ func (o *DataViewCancelButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	o.tabIndex.Init(raw)
 }
@@ -7735,16 +7861,16 @@ func (o *DataViewCancelButton) InitFromRaw(raw bson.Raw) {
 
 type DataViewCloseButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
-	tabIndex *property.Primitive[int32]
+	buttonStyle                   *property.Enum[string]
+	tabIndex                      *property.Primitive[int32]
 }
 
 // Name returns the value of the name property.
@@ -7868,7 +7994,9 @@ func (o *DataViewCloseButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	o.tabIndex.Init(raw)
 }
@@ -7879,7 +8007,7 @@ func (o *DataViewCloseButton) InitFromRaw(raw bson.Raw) {
 
 type DataViewControlBar struct {
 	element.Base
-	items *property.PartList[element.Element]
+	items       *property.PartList[element.Element]
 	closeButton *property.ByIdRef[element.Element]
 }
 
@@ -7930,17 +8058,17 @@ func (o *DataViewControlBar) InitFromRaw(raw bson.Raw) {
 
 type DataViewSaveButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
-	tabIndex *property.Primitive[int32]
-	syncAutomatically *property.Primitive[bool]
+	buttonStyle                   *property.Enum[string]
+	tabIndex                      *property.Primitive[int32]
+	syncAutomatically             *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -8074,7 +8202,9 @@ func (o *DataViewSaveButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	o.tabIndex.Init(raw)
 	o.syncAutomatically.Init(raw)
@@ -8087,10 +8217,10 @@ func (o *DataViewSaveButton) InitFromRaw(raw bson.Raw) {
 type DataViewSource struct {
 	element.Base
 	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	pageParameter *property.ByNameRef[element.Element]
+	entityPath       *property.Primitive[string]
+	entityRef        *property.Part[element.Element]
+	sourceVariable   *property.Part[element.Element]
+	pageParameter    *property.ByNameRef[element.Element]
 	snippetParameter *property.ByNameRef[element.Element]
 }
 
@@ -8165,10 +8295,14 @@ func (o *DataViewSource) InitFromRaw(raw bson.Raw) {
 		o.sourceVariable.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("PageParameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.pageParameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.pageParameter.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("SnippetParameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.snippetParameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.snippetParameter.SetFromDecode(s)
+		}
 	}
 }
 
@@ -8179,8 +8313,8 @@ func (o *DataViewSource) InitFromRaw(raw bson.Raw) {
 type DatabaseConstraint struct {
 	element.Base
 	attribute *property.ByNameRef[element.Element]
-	operator *property.Enum[string]
-	value *property.Primitive[string]
+	operator  *property.Enum[string]
+	value     *property.Primitive[string]
 }
 
 // AttributeQualifiedName returns the value of the attribute property.
@@ -8216,10 +8350,14 @@ func (o *DatabaseConstraint) SetValue(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *DatabaseConstraint) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Attribute"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.attribute.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Operator"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.operator.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.operator.SetFromDecode(s)
+		}
 	}
 	o.value.Init(raw)
 }
@@ -8231,10 +8369,10 @@ func (o *DatabaseConstraint) InitFromRaw(raw bson.Raw) {
 type SortableEntityPathSource struct {
 	element.Base
 	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	sortBar *property.Part[element.Element]
+	entityPath       *property.Primitive[string]
+	entityRef        *property.Part[element.Element]
+	sourceVariable   *property.Part[element.Element]
+	sortBar          *property.Part[element.Element]
 }
 
 // ForceFullObjects returns the value of the forceFullObjects property.
@@ -8308,11 +8446,11 @@ func (o *SortableEntityPathSource) InitFromRaw(raw bson.Raw) {
 
 type DatabaseSourceBase struct {
 	element.Base
-	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	sortBar *property.Part[element.Element]
+	forceFullObjects    *property.Primitive[bool]
+	entityPath          *property.Primitive[string]
+	entityRef           *property.Part[element.Element]
+	sourceVariable      *property.Part[element.Element]
+	sortBar             *property.Part[element.Element]
 	databaseConstraints *property.PartList[element.Element]
 }
 
@@ -8407,36 +8545,36 @@ func (o *DatabaseSourceBase) InitFromRaw(raw bson.Raw) {
 
 type DatePicker struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
-	required *property.Primitive[bool]
-	requiredMessage *property.Part[element.Element]
-	validation *property.Part[element.Element]
-	onChangeMicroflowSettings *property.Part[element.Element]
-	onEnterMicroflowSettings *property.Part[element.Element]
-	onLeaveMicroflowSettings *property.Part[element.Element]
-	onChangeAction *property.Part[element.Element]
-	onEnterAction *property.Part[element.Element]
-	onLeaveAction *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	ariaRequired *property.Primitive[bool]
-	placeholder *property.Part[element.Element]
-	placeholderTemplate *property.Part[element.Element]
-	formattingInfo *property.Part[element.Element]
-	nativeAccessibilitySettings *property.Part[element.Element]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	attributePath                  *property.Primitive[string]
+	attributeRef                   *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
+	required                       *property.Primitive[bool]
+	requiredMessage                *property.Part[element.Element]
+	validation                     *property.Part[element.Element]
+	onChangeMicroflowSettings      *property.Part[element.Element]
+	onEnterMicroflowSettings       *property.Part[element.Element]
+	onLeaveMicroflowSettings       *property.Part[element.Element]
+	onChangeAction                 *property.Part[element.Element]
+	onEnterAction                  *property.Part[element.Element]
+	onLeaveAction                  *property.Part[element.Element]
+	sourceVariable                 *property.Part[element.Element]
+	ariaRequired                   *property.Primitive[bool]
+	placeholder                    *property.Part[element.Element]
+	placeholderTemplate            *property.Part[element.Element]
+	formattingInfo                 *property.Part[element.Element]
+	nativeAccessibilitySettings    *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -8758,7 +8896,9 @@ func (o *DatePicker) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -8774,7 +8914,9 @@ func (o *DatePicker) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 	o.required.Init(raw)
 	if child, err := codec.DecodeChild(raw, "RequiredMessage"); err == nil {
@@ -8826,8 +8968,8 @@ func (o *DatePicker) InitFromRaw(raw bson.Raw) {
 type DeleteClientAction struct {
 	element.Base
 	disabledDuringExecution *property.Primitive[bool]
-	closePage *property.Primitive[bool]
-	sourceVariable *property.Part[element.Element]
+	closePage               *property.Primitive[bool]
+	sourceVariable          *property.Part[element.Element]
 }
 
 // DisabledDuringExecution returns the value of the disabledDuringExecution property.
@@ -8875,11 +9017,11 @@ func (o *DeleteClientAction) InitFromRaw(raw bson.Raw) {
 
 type DesignPropertyValue struct {
 	element.Base
-	key *property.Primitive[string]
-	propType *property.Enum[string]
-	stringValue *property.Primitive[string]
+	key          *property.Primitive[string]
+	propType     *property.Enum[string]
+	stringValue  *property.Primitive[string]
 	booleanValue *property.Primitive[bool]
-	value *property.Part[element.Element]
+	value        *property.Part[element.Element]
 }
 
 // Key returns the value of the key property.
@@ -8936,7 +9078,9 @@ func (o *DesignPropertyValue) SetValue(v element.Element) {
 func (o *DesignPropertyValue) InitFromRaw(raw bson.Raw) {
 	o.key.Init(raw)
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 	o.stringValue.Init(raw)
 	o.booleanValue.Init(raw)
@@ -8951,19 +9095,19 @@ func (o *DesignPropertyValue) InitFromRaw(raw bson.Raw) {
 
 type DivContainer struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
-	renderMode *property.Enum[string]
-	onClickAction *property.Part[element.Element]
-	screenReaderHidden *property.Primitive[bool]
-	nativeAccessibilitySettings *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	widget                        *property.Part[element.Element]
+	widgets                       *property.PartList[element.Element]
+	renderMode                    *property.Enum[string]
+	onClickAction                 *property.Part[element.Element]
+	screenReaderHidden            *property.Primitive[bool]
+	nativeAccessibilitySettings   *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -9125,7 +9269,9 @@ func (o *DivContainer) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("RenderMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderMode.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "OnClickAction"); err == nil {
 		o.onClickAction.SetFromDecode(child)
@@ -9142,34 +9288,34 @@ func (o *DivContainer) InitFromRaw(raw bson.Raw) {
 
 type DropDown struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
-	required *property.Primitive[bool]
-	requiredMessage *property.Part[element.Element]
-	validation *property.Part[element.Element]
-	onChangeMicroflowSettings *property.Part[element.Element]
-	onEnterMicroflowSettings *property.Part[element.Element]
-	onLeaveMicroflowSettings *property.Part[element.Element]
-	onChangeAction *property.Part[element.Element]
-	onEnterAction *property.Part[element.Element]
-	onLeaveAction *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	ariaRequired *property.Primitive[bool]
-	emptyOptionCaption *property.Part[element.Element]
-	nativeAccessibilitySettings *property.Part[element.Element]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	attributePath                  *property.Primitive[string]
+	attributeRef                   *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
+	required                       *property.Primitive[bool]
+	requiredMessage                *property.Part[element.Element]
+	validation                     *property.Part[element.Element]
+	onChangeMicroflowSettings      *property.Part[element.Element]
+	onEnterMicroflowSettings       *property.Part[element.Element]
+	onLeaveMicroflowSettings       *property.Part[element.Element]
+	onChangeAction                 *property.Part[element.Element]
+	onEnterAction                  *property.Part[element.Element]
+	onLeaveAction                  *property.Part[element.Element]
+	sourceVariable                 *property.Part[element.Element]
+	ariaRequired                   *property.Primitive[bool]
+	emptyOptionCaption             *property.Part[element.Element]
+	nativeAccessibilitySettings    *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -9471,7 +9617,9 @@ func (o *DropDown) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -9487,7 +9635,9 @@ func (o *DropDown) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 	o.required.Init(raw)
 	if child, err := codec.DecodeChild(raw, "RequiredMessage"); err == nil {
@@ -9532,19 +9682,19 @@ func (o *DropDown) InitFromRaw(raw bson.Raw) {
 
 type DropDownButton struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	renderType *property.Enum[string]
-	buttonStyle *property.Enum[string]
-	items *property.PartList[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	renderType                    *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
+	items                         *property.PartList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -9707,10 +9857,14 @@ func (o *DropDownButton) InitFromRaw(raw bson.Raw) {
 		o.icon.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {
@@ -9725,9 +9879,9 @@ func (o *DropDownButton) InitFromRaw(raw bson.Raw) {
 
 type DropDownButtonItem struct {
 	element.Base
-	action *property.Part[element.Element]
+	action  *property.Part[element.Element]
 	caption *property.Part[element.Element]
-	image *property.ByNameRef[element.Element]
+	image   *property.ByNameRef[element.Element]
 }
 
 // Action returns the value of the action property.
@@ -9769,7 +9923,9 @@ func (o *DropDownButtonItem) InitFromRaw(raw bson.Raw) {
 		o.caption.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Image"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.image.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.image.SetFromDecode(s)
+		}
 	}
 }
 
@@ -9779,17 +9935,17 @@ func (o *DropDownButtonItem) InitFromRaw(raw bson.Raw) {
 
 type DropDownSearchField struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	placeholder *property.Part[element.Element]
-	customDateFormat *property.Primitive[string]
-	propType *property.Enum[string]
-	defaultValue *property.Primitive[string]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	operator *property.Enum[string]
-	sortBar *property.Part[element.Element]
-	xPathConstraint *property.Primitive[string]
+	name                *property.Primitive[string]
+	caption             *property.Part[element.Element]
+	placeholder         *property.Part[element.Element]
+	customDateFormat    *property.Primitive[string]
+	propType            *property.Enum[string]
+	defaultValue        *property.Primitive[string]
+	attributePath       *property.Primitive[string]
+	attributeRef        *property.Part[element.Element]
+	operator            *property.Enum[string]
+	sortBar             *property.Part[element.Element]
+	xPathConstraint     *property.Primitive[string]
 	allowMultipleSelect *property.Primitive[bool]
 }
 
@@ -9924,7 +10080,9 @@ func (o *DropDownSearchField) InitFromRaw(raw bson.Raw) {
 	}
 	o.customDateFormat.Init(raw)
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 	o.defaultValue.Init(raw)
 	o.attributePath.Init(raw)
@@ -9932,7 +10090,9 @@ func (o *DropDownSearchField) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Operator"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.operator.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.operator.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "SortBar"); err == nil {
 		o.sortBar.SetFromDecode(child)
@@ -9947,26 +10107,26 @@ func (o *DropDownSearchField) InitFromRaw(raw bson.Raw) {
 
 type DynamicImageViewer struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	dataSource *property.Part[element.Element]
-	defaultImage *property.ByNameRef[element.Element]
-	widthUnit *property.Enum[string]
-	heightUnit *property.Enum[string]
-	width *property.Primitive[int32]
-	height *property.Primitive[int32]
-	responsive *property.Primitive[bool]
-	showAsThumbnail *property.Primitive[bool]
-	onClickBehavior *property.Part[element.Element]
-	clickAction *property.Part[element.Element]
-	onClickEnlarge *property.Primitive[bool]
-	alternativeText *property.Part[element.Element]
-	nativeAccessibilitySettings *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	dataSource                    *property.Part[element.Element]
+	defaultImage                  *property.ByNameRef[element.Element]
+	widthUnit                     *property.Enum[string]
+	heightUnit                    *property.Enum[string]
+	width                         *property.Primitive[int32]
+	height                        *property.Primitive[int32]
+	responsive                    *property.Primitive[bool]
+	showAsThumbnail               *property.Primitive[bool]
+	onClickBehavior               *property.Part[element.Element]
+	clickAction                   *property.Part[element.Element]
+	onClickEnlarge                *property.Primitive[bool]
+	alternativeText               *property.Part[element.Element]
+	nativeAccessibilitySettings   *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -10188,13 +10348,19 @@ func (o *DynamicImageViewer) InitFromRaw(raw bson.Raw) {
 		o.dataSource.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("DefaultImage"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.defaultImage.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.defaultImage.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("WidthUnit"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.widthUnit.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.widthUnit.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("HeightUnit"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.heightUnit.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.heightUnit.SetFromDecode(s)
+		}
 	}
 	o.width.Init(raw)
 	o.height.Init(raw)
@@ -10221,17 +10387,17 @@ func (o *DynamicImageViewer) InitFromRaw(raw bson.Raw) {
 
 type DynamicText struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	content *property.Part[element.Element]
-	renderMode *property.Enum[string]
-	nativeTextStyle *property.Enum[string]
-	nativeAccessibilitySettings *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	content                       *property.Part[element.Element]
+	renderMode                    *property.Enum[string]
+	nativeTextStyle               *property.Enum[string]
+	nativeAccessibilitySettings   *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -10363,10 +10529,14 @@ func (o *DynamicText) InitFromRaw(raw bson.Raw) {
 		o.content.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderMode.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("NativeTextStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.nativeTextStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.nativeTextStyle.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "NativeAccessibilitySettings"); err == nil {
 		o.nativeAccessibilitySettings.SetFromDecode(child)
@@ -10403,22 +10573,22 @@ func (o *EditPageTemplateType) InitFromRaw(raw bson.Raw) {
 
 type FileManager struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	allowedExtensions *property.Primitive[string]
-	propType *property.Enum[string]
-	maxFileSize *property.Primitive[int32]
-	showFileInBrowser *property.Primitive[bool]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	allowedExtensions              *property.Primitive[string]
+	propType                       *property.Enum[string]
+	maxFileSize                    *property.Primitive[int32]
+	showFileInBrowser              *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -10600,7 +10770,9 @@ func (o *FileManager) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -10613,7 +10785,9 @@ func (o *FileManager) InitFromRaw(raw bson.Raw) {
 	}
 	o.allowedExtensions.Init(raw)
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 	o.maxFileSize.Init(raw)
 	o.showFileInBrowser.Init(raw)
@@ -10626,9 +10800,9 @@ func (o *FileManager) InitFromRaw(raw bson.Raw) {
 type FormattingInfo struct {
 	element.Base
 	decimalPrecision *property.Primitive[int32]
-	groupDigits *property.Primitive[bool]
-	enumFormat *property.Enum[string]
-	dateFormat *property.Enum[string]
+	groupDigits      *property.Primitive[bool]
+	enumFormat       *property.Enum[string]
+	dateFormat       *property.Enum[string]
 	customDateFormat *property.Primitive[string]
 }
 
@@ -10687,10 +10861,14 @@ func (o *FormattingInfo) InitFromRaw(raw bson.Raw) {
 	o.decimalPrecision.Init(raw)
 	o.groupDigits.Init(raw)
 	if val, err := raw.LookupErr("EnumFormat"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.enumFormat.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.enumFormat.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("DateFormat"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.dateFormat.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.dateFormat.SetFromDecode(s)
+		}
 	}
 	o.customDateFormat.Init(raw)
 }
@@ -10737,16 +10915,16 @@ func (o *GlyphIcon) InitFromRaw(raw bson.Raw) {
 
 type GridActionButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
-	action *property.Part[element.Element]
+	name                            *property.Primitive[string]
+	caption                         *property.Part[element.Element]
+	tooltip                         *property.Part[element.Element]
+	icon                            *property.Part[element.Element]
+	class                           *property.Primitive[string]
+	style                           *property.Primitive[string]
+	appearance                      *property.Part[element.Element]
+	conditionalVisibilitySettings   *property.Part[element.Element]
+	buttonStyle                     *property.Enum[string]
+	action                          *property.Part[element.Element]
 	maintainSelectionAfterMicroflow *property.Primitive[bool]
 }
 
@@ -10881,7 +11059,9 @@ func (o *GridActionButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Action"); err == nil {
 		o.action.SetFromDecode(child)
@@ -10896,11 +11076,11 @@ func (o *GridActionButton) InitFromRaw(raw bson.Raw) {
 type GridBaseSource struct {
 	element.Base
 	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	sortBar *property.Part[element.Element]
-	searchBar *property.Part[element.Element]
+	entityPath       *property.Primitive[string]
+	entityRef        *property.Part[element.Element]
+	sourceVariable   *property.Part[element.Element]
+	sortBar          *property.Part[element.Element]
+	searchBar        *property.Part[element.Element]
 }
 
 // ForceFullObjects returns the value of the forceFullObjects property.
@@ -10987,19 +11167,19 @@ func (o *GridBaseSource) InitFromRaw(raw bson.Raw) {
 
 type GridColumn struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	formattingInfo *property.Part[element.Element]
-	showTooltip *property.Primitive[bool]
-	aggregateCaption *property.Part[element.Element]
+	name              *property.Primitive[string]
+	caption           *property.Part[element.Element]
+	attributePath     *property.Primitive[string]
+	attributeRef      *property.Part[element.Element]
+	formattingInfo    *property.Part[element.Element]
+	showTooltip       *property.Primitive[bool]
+	aggregateCaption  *property.Part[element.Element]
 	aggregateFunction *property.Enum[string]
-	editable *property.Primitive[bool]
-	width *property.Primitive[int32]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	editable          *property.Primitive[bool]
+	width             *property.Primitive[int32]
+	class             *property.Primitive[string]
+	style             *property.Primitive[string]
+	appearance        *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -11150,7 +11330,9 @@ func (o *GridColumn) InitFromRaw(raw bson.Raw) {
 		o.aggregateCaption.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("AggregateFunction"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.aggregateFunction.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.aggregateFunction.SetFromDecode(s)
+		}
 	}
 	o.editable.Init(raw)
 	o.width.Init(raw)
@@ -11167,8 +11349,8 @@ func (o *GridColumn) InitFromRaw(raw bson.Raw) {
 
 type GridControlBar struct {
 	element.Base
-	items *property.PartList[element.Element]
-	searchButton *property.Part[element.Element]
+	items         *property.PartList[element.Element]
+	searchButton  *property.Part[element.Element]
 	defaultButton *property.ByIdRef[element.Element]
 }
 
@@ -11232,13 +11414,13 @@ func (o *GridControlBar) InitFromRaw(raw bson.Raw) {
 
 type GridDatabaseSource struct {
 	element.Base
-	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	sortBar *property.Part[element.Element]
+	forceFullObjects    *property.Primitive[bool]
+	entityPath          *property.Primitive[string]
+	entityRef           *property.Part[element.Element]
+	sourceVariable      *property.Part[element.Element]
+	sortBar             *property.Part[element.Element]
 	databaseConstraints *property.PartList[element.Element]
-	searchBar *property.Part[element.Element]
+	searchBar           *property.Part[element.Element]
 }
 
 // ForceFullObjects returns the value of the forceFullObjects property.
@@ -11345,15 +11527,15 @@ func (o *GridDatabaseSource) InitFromRaw(raw bson.Raw) {
 
 type GridDeleteButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -11467,7 +11649,9 @@ func (o *GridDeleteButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 }
 
@@ -11477,15 +11661,15 @@ func (o *GridDeleteButton) InitFromRaw(raw bson.Raw) {
 
 type GridDeselectAllButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -11599,7 +11783,9 @@ func (o *GridDeselectAllButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 }
 
@@ -11609,17 +11795,17 @@ func (o *GridDeselectAllButton) InitFromRaw(raw bson.Raw) {
 
 type GridEditButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
-	pageSettings *property.Part[element.Element]
-	pagesForSpecializations *property.PartList[element.Element]
+	buttonStyle                   *property.Enum[string]
+	pageSettings                  *property.Part[element.Element]
+	pagesForSpecializations       *property.PartList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -11758,7 +11944,9 @@ func (o *GridEditButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "PageSettings"); err == nil {
 		o.pageSettings.SetFromDecode(child)
@@ -11776,19 +11964,19 @@ func (o *GridEditButton) InitFromRaw(raw bson.Raw) {
 
 type GridNewButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
-	entity *property.ByNameRef[element.Element]
-	editLocation *property.Enum[string]
-	pageSettings *property.Part[element.Element]
-	isPersistent *property.Primitive[bool]
+	buttonStyle                   *property.Enum[string]
+	entity                        *property.ByNameRef[element.Element]
+	editLocation                  *property.Enum[string]
+	pageSettings                  *property.Part[element.Element]
+	isPersistent                  *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -11942,13 +12130,19 @@ func (o *GridNewButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Entity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.entity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.entity.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("EditLocation"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editLocation.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editLocation.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "PageSettings"); err == nil {
 		o.pageSettings.SetFromDecode(child)
@@ -11962,15 +12156,15 @@ func (o *GridNewButton) InitFromRaw(raw bson.Raw) {
 
 type GridSearchButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -12084,7 +12278,9 @@ func (o *GridSearchButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 }
 
@@ -12094,16 +12290,16 @@ func (o *GridSearchButton) InitFromRaw(raw bson.Raw) {
 
 type GridSelectAllButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
-	selectionType *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
+	selectionType                 *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -12227,10 +12423,14 @@ func (o *GridSelectAllButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("SelectionType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.selectionType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.selectionType.SetFromDecode(s)
+		}
 	}
 }
 
@@ -12274,7 +12474,7 @@ func (o *GridSortBar) InitFromRaw(raw bson.Raw) {
 type GridSortItem struct {
 	element.Base
 	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
+	attributeRef  *property.Part[element.Element]
 	sortDirection *property.Enum[string]
 }
 
@@ -12315,7 +12515,9 @@ func (o *GridSortItem) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("SortDirection"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.sortDirection.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.sortDirection.SetFromDecode(s)
+		}
 	}
 }
 
@@ -12325,14 +12527,14 @@ func (o *GridSortItem) InitFromRaw(raw bson.Raw) {
 
 type GridXPathSource struct {
 	element.Base
-	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	sortBar *property.Part[element.Element]
-	searchBar *property.Part[element.Element]
-	xPathConstraint *property.Primitive[string]
-	applyContext *property.Primitive[bool]
+	forceFullObjects     *property.Primitive[bool]
+	entityPath           *property.Primitive[string]
+	entityRef            *property.Part[element.Element]
+	sourceVariable       *property.Part[element.Element]
+	sortBar              *property.Part[element.Element]
+	searchBar            *property.Part[element.Element]
+	xPathConstraint      *property.Primitive[string]
+	applyContext         *property.Primitive[bool]
 	removeAllFromContext *property.Primitive[bool]
 	removeFromContextIds *property.ByNameRefList[element.Element]
 }
@@ -12466,7 +12668,9 @@ func (o *GridXPathSource) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.removeFromContextIds.SetFromDecode(qnames)
 		}
@@ -12479,18 +12683,18 @@ func (o *GridXPathSource) InitFromRaw(raw bson.Raw) {
 
 type GroupBox struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
-	collapsible *property.Enum[string]
-	headerMode *property.Enum[string]
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
+	collapsible                   *property.Enum[string]
+	headerMode                    *property.Enum[string]
+	widget                        *property.Part[element.Element]
+	widgets                       *property.PartList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -12637,10 +12841,14 @@ func (o *GroupBox) InitFromRaw(raw bson.Raw) {
 		o.caption.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Collapsible"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.collapsible.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.collapsible.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("HeaderMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.headerMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.headerMode.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Widget"); err == nil {
 		o.widget.SetFromDecode(child)
@@ -12658,14 +12866,14 @@ func (o *GroupBox) InitFromRaw(raw bson.Raw) {
 
 type Header struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	leftWidget *property.Part[element.Element]
-	leftWidgets *property.PartList[element.Element]
-	rightWidget *property.Part[element.Element]
+	name         *property.Primitive[string]
+	class        *property.Primitive[string]
+	style        *property.Primitive[string]
+	appearance   *property.Part[element.Element]
+	tabIndex     *property.Primitive[int32]
+	leftWidget   *property.Part[element.Element]
+	leftWidgets  *property.PartList[element.Element]
+	rightWidget  *property.Part[element.Element]
 	rightWidgets *property.PartList[element.Element]
 }
 
@@ -12802,18 +13010,18 @@ func (o *Header) InitFromRaw(raw bson.Raw) {
 
 type SplitPane struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	firstWidget *property.Part[element.Element]
-	secondWidget *property.Part[element.Element]
-	firstWidgets *property.PartList[element.Element]
-	secondWidgets *property.PartList[element.Element]
+	name           *property.Primitive[string]
+	class          *property.Primitive[string]
+	style          *property.Primitive[string]
+	appearance     *property.Part[element.Element]
+	tabIndex       *property.Primitive[int32]
+	firstWidget    *property.Part[element.Element]
+	secondWidget   *property.Part[element.Element]
+	firstWidgets   *property.PartList[element.Element]
+	secondWidgets  *property.PartList[element.Element]
 	animatedResize *property.Primitive[bool]
-	height *property.Primitive[int32]
-	position *property.Primitive[int32]
+	height         *property.Primitive[int32]
+	position       *property.Primitive[int32]
 }
 
 // Name returns the value of the name property.
@@ -12982,18 +13190,18 @@ func (o *SplitPane) InitFromRaw(raw bson.Raw) {
 
 type HorizontalSplitPane struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	firstWidget *property.Part[element.Element]
-	secondWidget *property.Part[element.Element]
-	firstWidgets *property.PartList[element.Element]
-	secondWidgets *property.PartList[element.Element]
+	name           *property.Primitive[string]
+	class          *property.Primitive[string]
+	style          *property.Primitive[string]
+	appearance     *property.Part[element.Element]
+	tabIndex       *property.Primitive[int32]
+	firstWidget    *property.Part[element.Element]
+	secondWidget   *property.Part[element.Element]
+	firstWidgets   *property.PartList[element.Element]
+	secondWidgets  *property.PartList[element.Element]
 	animatedResize *property.Primitive[bool]
-	height *property.Primitive[int32]
-	position *property.Primitive[int32]
+	height         *property.Primitive[int32]
+	position       *property.Primitive[int32]
 }
 
 // Name returns the value of the name property.
@@ -13178,7 +13386,9 @@ func (o *IconCollectionIcon) SetImageQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *IconCollectionIcon) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Image"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.image.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.image.SetFromDecode(s)
+		}
 	}
 }
 
@@ -13204,7 +13414,9 @@ func (o *ImageIcon) SetImageQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ImageIcon) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Image"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.image.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.image.SetFromDecode(s)
+		}
 	}
 }
 
@@ -13214,21 +13426,21 @@ func (o *ImageIcon) InitFromRaw(raw bson.Raw) {
 
 type ImageUploader struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	allowedExtensions *property.Primitive[string]
-	thumbnailSize *property.Primitive[string]
-	maxFileSize *property.Primitive[int32]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	allowedExtensions              *property.Primitive[string]
+	thumbnailSize                  *property.Primitive[string]
+	maxFileSize                    *property.Primitive[int32]
 }
 
 // Name returns the value of the name property.
@@ -13400,7 +13612,9 @@ func (o *ImageUploader) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -13423,9 +13637,9 @@ func (o *ImageUploader) InitFromRaw(raw bson.Raw) {
 type ImageViewerSource struct {
 	element.Base
 	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
+	entityPath       *property.Primitive[string]
+	entityRef        *property.Part[element.Element]
+	sourceVariable   *property.Part[element.Element]
 }
 
 // ForceFullObjects returns the value of the forceFullObjects property.
@@ -13486,26 +13700,26 @@ func (o *ImageViewerSource) InitFromRaw(raw bson.Raw) {
 
 type InputReferenceSetSelector struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
-	selectorSource *property.Part[element.Element]
-	selectPageSettings *property.Part[element.Element]
-	onChangeMicroflowSettings *property.Part[element.Element]
-	onChangeAction *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	attributePath                  *property.Primitive[string]
+	attributeRef                   *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
+	selectorSource                 *property.Part[element.Element]
+	selectPageSettings             *property.Part[element.Element]
+	onChangeMicroflowSettings      *property.Part[element.Element]
+	onChangeAction                 *property.Part[element.Element]
+	sourceVariable                 *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -13727,7 +13941,9 @@ func (o *InputReferenceSetSelector) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -13743,7 +13959,9 @@ func (o *InputReferenceSetSelector) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "SelectorSource"); err == nil {
 		o.selectorSource.SetFromDecode(child)
@@ -13768,14 +13986,14 @@ func (o *InputReferenceSetSelector) InitFromRaw(raw bson.Raw) {
 
 type Label struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -13884,27 +14102,27 @@ func (o *Label) InitFromRaw(raw bson.Raw) {
 
 type Layout struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	canvasWidth *property.Primitive[int32]
-	canvasHeight *property.Primitive[int32]
-	content *property.Part[element.Element]
-	appearance *property.Part[element.Element]
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
-	layoutCall *property.Part[element.Element]
-	layoutType *property.Enum[string]
-	mainPlaceholder *property.ByNameRef[element.Element]
-	acceptButtonPlaceholder *property.ByNameRef[element.Element]
-	cancelButtonPlaceholder *property.ByNameRef[element.Element]
-	mainPlaceholderName *property.Primitive[string]
-	acceptPlaceholderName *property.Primitive[string]
-	cancelPlaceholderName *property.Primitive[string]
+	name                        *property.Primitive[string]
+	documentation               *property.Primitive[string]
+	excluded                    *property.Primitive[bool]
+	exportLevel                 *property.Enum[string]
+	canvasWidth                 *property.Primitive[int32]
+	canvasHeight                *property.Primitive[int32]
+	content                     *property.Part[element.Element]
+	appearance                  *property.Part[element.Element]
+	widget                      *property.Part[element.Element]
+	widgets                     *property.PartList[element.Element]
+	layoutCall                  *property.Part[element.Element]
+	layoutType                  *property.Enum[string]
+	mainPlaceholder             *property.ByNameRef[element.Element]
+	acceptButtonPlaceholder     *property.ByNameRef[element.Element]
+	cancelButtonPlaceholder     *property.ByNameRef[element.Element]
+	mainPlaceholderName         *property.Primitive[string]
+	acceptPlaceholderName       *property.Primitive[string]
+	cancelPlaceholderName       *property.Primitive[string]
 	useMainPlaceholderForPopups *property.Primitive[bool]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	class                       *property.Primitive[string]
+	style                       *property.Primitive[string]
 }
 
 // Name returns the value of the name property.
@@ -14128,7 +14346,9 @@ func (o *Layout) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	o.canvasWidth.Init(raw)
 	o.canvasHeight.Init(raw)
@@ -14150,16 +14370,24 @@ func (o *Layout) InitFromRaw(raw bson.Raw) {
 		o.layoutCall.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("LayoutType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.layoutType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.layoutType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("MainPlaceholder"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.mainPlaceholder.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.mainPlaceholder.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("AcceptButtonPlaceholder"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.acceptButtonPlaceholder.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.acceptButtonPlaceholder.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("CancelButtonPlaceholder"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.cancelButtonPlaceholder.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.cancelButtonPlaceholder.SetFromDecode(s)
+		}
 	}
 	o.mainPlaceholderName.Init(raw)
 	o.acceptPlaceholderName.Init(raw)
@@ -14175,7 +14403,7 @@ func (o *Layout) InitFromRaw(raw bson.Raw) {
 
 type LayoutCall struct {
 	element.Base
-	layout *property.ByNameRef[element.Element]
+	layout    *property.ByNameRef[element.Element]
 	arguments *property.PartList[element.Element]
 }
 
@@ -14207,7 +14435,9 @@ func (o *LayoutCall) RemoveArguments(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *LayoutCall) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Layout"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.layout.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.layout.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Arguments"); err == nil {
 		for _, child := range children {
@@ -14223,9 +14453,9 @@ func (o *LayoutCall) InitFromRaw(raw bson.Raw) {
 type LayoutCallArgument struct {
 	element.Base
 	parameterName *property.Primitive[string]
-	parameter *property.ByNameRef[element.Element]
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
+	parameter     *property.ByNameRef[element.Element]
+	widget        *property.Part[element.Element]
+	widgets       *property.PartList[element.Element]
 }
 
 // ParameterName returns the value of the parameterName property.
@@ -14277,7 +14507,9 @@ func (o *LayoutCallArgument) RemoveWidgets(index int) {
 func (o *LayoutCallArgument) InitFromRaw(raw bson.Raw) {
 	o.parameterName.Init(raw)
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Widget"); err == nil {
 		o.widget.SetFromDecode(child)
@@ -14307,15 +14539,15 @@ func (o *LayoutContent) InitFromRaw(raw bson.Raw) {
 
 type LayoutGrid struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	width *property.Enum[string]
-	rows *property.PartList[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	width                         *property.Enum[string]
+	rows                          *property.PartList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -14429,7 +14661,9 @@ func (o *LayoutGrid) InitFromRaw(raw bson.Raw) {
 		o.accessibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Width"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.width.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.width.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Rows"); err == nil {
 		for _, child := range children {
@@ -14444,15 +14678,15 @@ func (o *LayoutGrid) InitFromRaw(raw bson.Raw) {
 
 type LayoutGridColumn struct {
 	element.Base
-	weight *property.Primitive[int32]
-	tabletWeight *property.Primitive[int32]
-	phoneWeight *property.Primitive[int32]
-	previewWidth *property.Primitive[int32]
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	weight            *property.Primitive[int32]
+	tabletWeight      *property.Primitive[int32]
+	phoneWeight       *property.Primitive[int32]
+	previewWidth      *property.Primitive[int32]
+	widget            *property.Part[element.Element]
+	widgets           *property.PartList[element.Element]
+	class             *property.Primitive[string]
+	style             *property.Primitive[string]
+	appearance        *property.Part[element.Element]
 	verticalAlignment *property.Enum[string]
 }
 
@@ -14581,7 +14815,9 @@ func (o *LayoutGridColumn) InitFromRaw(raw bson.Raw) {
 		o.appearance.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("VerticalAlignment"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.verticalAlignment.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.verticalAlignment.SetFromDecode(s)
+		}
 	}
 }
 
@@ -14591,14 +14827,14 @@ func (o *LayoutGridColumn) InitFromRaw(raw bson.Raw) {
 
 type LayoutGridRow struct {
 	element.Base
-	columns *property.PartList[element.Element]
+	columns                       *property.PartList[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	verticalAlignment *property.Enum[string]
-	horizontalAlignment *property.Enum[string]
-	spacingBetweenColumns *property.Primitive[bool]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	verticalAlignment             *property.Enum[string]
+	horizontalAlignment           *property.Enum[string]
+	spacingBetweenColumns         *property.Primitive[bool]
 }
 
 // ColumnsItems returns the value of the columns property.
@@ -14702,10 +14938,14 @@ func (o *LayoutGridRow) InitFromRaw(raw bson.Raw) {
 		o.appearance.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("VerticalAlignment"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.verticalAlignment.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.verticalAlignment.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("HorizontalAlignment"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.horizontalAlignment.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.horizontalAlignment.SetFromDecode(s)
+		}
 	}
 	o.spacingBetweenColumns.Init(raw)
 }
@@ -14740,20 +14980,20 @@ func (o *LayoutParameter) InitFromRaw(raw bson.Raw) {
 
 type LinkButton struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	renderType *property.Enum[string]
-	buttonStyle *property.Enum[string]
-	linkType *property.Enum[string]
-	address *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	renderType                    *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
+	linkType                      *property.Enum[string]
+	address                       *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -14921,13 +15161,19 @@ func (o *LinkButton) InitFromRaw(raw bson.Raw) {
 		o.icon.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("LinkType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.linkType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.linkType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Address"); err == nil {
 		o.address.SetFromDecode(child)
@@ -14940,23 +15186,23 @@ func (o *LinkButton) InitFromRaw(raw bson.Raw) {
 
 type ListView struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	dataSource *property.Part[element.Element]
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
-	pageSize *property.Primitive[int32]
-	clickAction *property.Part[element.Element]
-	editable *property.Primitive[bool]
-	templates *property.PartList[element.Element]
-	scrollDirection *property.Enum[string]
-	numberOfColumns *property.Primitive[int32]
-	pullDownAction *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	dataSource                    *property.Part[element.Element]
+	widget                        *property.Part[element.Element]
+	widgets                       *property.PartList[element.Element]
+	pageSize                      *property.Primitive[int32]
+	clickAction                   *property.Part[element.Element]
+	editable                      *property.Primitive[bool]
+	templates                     *property.PartList[element.Element]
+	scrollDirection               *property.Enum[string]
+	numberOfColumns               *property.Primitive[int32]
+	pullDownAction                *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -15176,7 +15422,9 @@ func (o *ListView) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("ScrollDirection"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.scrollDirection.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.scrollDirection.SetFromDecode(s)
+		}
 	}
 	o.numberOfColumns.Init(raw)
 	if child, err := codec.DecodeChild(raw, "PullDownAction"); err == nil {
@@ -15190,13 +15438,13 @@ func (o *ListView) InitFromRaw(raw bson.Raw) {
 
 type ListViewDatabaseSource struct {
 	element.Base
-	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	sortBar *property.Part[element.Element]
+	forceFullObjects    *property.Primitive[bool]
+	entityPath          *property.Primitive[string]
+	entityRef           *property.Part[element.Element]
+	sourceVariable      *property.Part[element.Element]
+	sortBar             *property.Part[element.Element]
 	databaseConstraints *property.PartList[element.Element]
-	search *property.Part[element.Element]
+	search              *property.Part[element.Element]
 }
 
 // ForceFullObjects returns the value of the forceFullObjects property.
@@ -15304,7 +15552,7 @@ func (o *ListViewDatabaseSource) InitFromRaw(raw bson.Raw) {
 type ListViewSearch struct {
 	element.Base
 	searchPaths *property.Primitive[string]
-	searchRefs *property.PartList[element.Element]
+	searchRefs  *property.PartList[element.Element]
 }
 
 // SearchPaths returns the value of the searchPaths property.
@@ -15344,8 +15592,8 @@ func (o *ListViewSearch) InitFromRaw(raw bson.Raw) {
 type ListViewTemplate struct {
 	element.Base
 	specialization *property.ByNameRef[element.Element]
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
+	widget         *property.Part[element.Element]
+	widgets        *property.PartList[element.Element]
 }
 
 // SpecializationQualifiedName returns the value of the specialization property.
@@ -15386,7 +15634,9 @@ func (o *ListViewTemplate) RemoveWidgets(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ListViewTemplate) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Specialization"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.specialization.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.specialization.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Widget"); err == nil {
 		o.widget.SetFromDecode(child)
@@ -15405,11 +15655,11 @@ func (o *ListViewTemplate) InitFromRaw(raw bson.Raw) {
 type XPathSourceBase struct {
 	element.Base
 	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	sortBar *property.Part[element.Element]
-	xPathConstraint *property.Primitive[string]
+	entityPath       *property.Primitive[string]
+	entityRef        *property.Part[element.Element]
+	sourceVariable   *property.Part[element.Element]
+	sortBar          *property.Part[element.Element]
+	xPathConstraint  *property.Primitive[string]
 }
 
 // ForceFullObjects returns the value of the forceFullObjects property.
@@ -15495,12 +15745,12 @@ func (o *XPathSourceBase) InitFromRaw(raw bson.Raw) {
 type ListViewXPathSource struct {
 	element.Base
 	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	sortBar *property.Part[element.Element]
-	xPathConstraint *property.Primitive[string]
-	search *property.Part[element.Element]
+	entityPath       *property.Primitive[string]
+	entityRef        *property.Part[element.Element]
+	sourceVariable   *property.Part[element.Element]
+	sortBar          *property.Part[element.Element]
+	xPathConstraint  *property.Primitive[string]
+	search           *property.Part[element.Element]
 }
 
 // ForceFullObjects returns the value of the forceFullObjects property.
@@ -15599,7 +15849,7 @@ func (o *ListViewXPathSource) InitFromRaw(raw bson.Raw) {
 type ListenTargetSource struct {
 	element.Base
 	forceFullObjects *property.Primitive[bool]
-	listenTarget *property.Primitive[string]
+	listenTarget     *property.Primitive[string]
 }
 
 // ForceFullObjects returns the value of the forceFullObjects property.
@@ -15634,7 +15884,7 @@ func (o *ListenTargetSource) InitFromRaw(raw bson.Raw) {
 
 type LocalVariable struct {
 	element.Base
-	name *property.Primitive[string]
+	name         *property.Primitive[string]
 	variableType *property.Part[element.Element]
 	defaultValue *property.Primitive[string]
 }
@@ -15684,19 +15934,19 @@ func (o *LocalVariable) InitFromRaw(raw bson.Raw) {
 
 type LoginButton struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	renderType *property.Enum[string]
-	buttonStyle *property.Enum[string]
-	validationMessageWidget *property.Primitive[string]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	renderType                    *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
+	validationMessageWidget       *property.Primitive[string]
 }
 
 // Name returns the value of the name property.
@@ -15854,10 +16104,14 @@ func (o *LoginButton) InitFromRaw(raw bson.Raw) {
 		o.icon.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	o.validationMessageWidget.Init(raw)
 }
@@ -15868,13 +16122,13 @@ func (o *LoginButton) InitFromRaw(raw bson.Raw) {
 
 type LoginTextBox struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	label *property.Part[element.Element]
-	labelWidth *property.Primitive[int32]
+	name        *property.Primitive[string]
+	class       *property.Primitive[string]
+	style       *property.Primitive[string]
+	appearance  *property.Part[element.Element]
+	tabIndex    *property.Primitive[int32]
+	label       *property.Part[element.Element]
+	labelWidth  *property.Primitive[int32]
 	placeholder *property.Part[element.Element]
 }
 
@@ -15982,13 +16236,13 @@ func (o *LoginTextBox) InitFromRaw(raw bson.Raw) {
 
 type LoginIdTextBox struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	label *property.Part[element.Element]
-	labelWidth *property.Primitive[int32]
+	name        *property.Primitive[string]
+	class       *property.Primitive[string]
+	style       *property.Primitive[string]
+	appearance  *property.Part[element.Element]
+	tabIndex    *property.Primitive[int32]
+	label       *property.Part[element.Element]
+	labelWidth  *property.Primitive[int32]
 	placeholder *property.Part[element.Element]
 }
 
@@ -16096,18 +16350,18 @@ func (o *LoginIdTextBox) InitFromRaw(raw bson.Raw) {
 
 type LogoutButton struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	renderType *property.Enum[string]
-	buttonStyle *property.Enum[string]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	renderType                    *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -16255,10 +16509,14 @@ func (o *LogoutButton) InitFromRaw(raw bson.Raw) {
 		o.icon.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 }
 
@@ -16268,13 +16526,13 @@ func (o *LogoutButton) InitFromRaw(raw bson.Raw) {
 
 type MasterDetail struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	name       *property.Primitive[string]
+	class      *property.Primitive[string]
+	style      *property.Primitive[string]
 	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	master *property.Part[element.Element]
-	detail *property.Part[element.Element]
+	tabIndex   *property.Primitive[int32]
+	master     *property.Part[element.Element]
+	detail     *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -16371,8 +16629,8 @@ func (o *MasterDetail) InitFromRaw(raw bson.Raw) {
 type MasterDetailRegion struct {
 	element.Base
 	widget *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	class  *property.Primitive[string]
+	style  *property.Primitive[string]
 }
 
 // Widget returns the value of the widget property.
@@ -16420,12 +16678,12 @@ func (o *MasterDetailRegion) InitFromRaw(raw bson.Raw) {
 
 type MasterDetailDetailRegion struct {
 	element.Base
-	widget *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	widget           *property.Part[element.Element]
+	class            *property.Primitive[string]
+	style            *property.Primitive[string]
 	responsiveWeight *property.Primitive[int32]
-	tabletWeight *property.Primitive[int32]
-	title *property.Part[element.Element]
+	tabletWeight     *property.Primitive[int32]
+	title            *property.Part[element.Element]
 }
 
 // Widget returns the value of the widget property.
@@ -16508,11 +16766,11 @@ func (o *MasterDetailDetailRegion) InitFromRaw(raw bson.Raw) {
 
 type MasterDetailMasterRegion struct {
 	element.Base
-	widget *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	widget           *property.Part[element.Element]
+	class            *property.Primitive[string]
+	style            *property.Primitive[string]
 	responsiveWeight *property.Primitive[int32]
-	tabletWeight *property.Primitive[int32]
+	tabletWeight     *property.Primitive[int32]
 }
 
 // Widget returns the value of the widget property.
@@ -16582,11 +16840,11 @@ func (o *MasterDetailMasterRegion) InitFromRaw(raw bson.Raw) {
 
 type MenuWidget struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	name       *property.Primitive[string]
+	class      *property.Primitive[string]
+	style      *property.Primitive[string]
 	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	tabIndex   *property.Primitive[int32]
 	menuSource *property.Part[element.Element]
 }
 
@@ -16670,11 +16928,11 @@ func (o *MenuWidget) InitFromRaw(raw bson.Raw) {
 
 type MenuBar struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	name       *property.Primitive[string]
+	class      *property.Primitive[string]
+	style      *property.Primitive[string]
 	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	tabIndex   *property.Primitive[int32]
 	menuSource *property.Part[element.Element]
 }
 
@@ -16786,7 +17044,9 @@ func (o *MenuDocumentSource) SetMenuQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MenuDocumentSource) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Menu"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.menu.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.menu.SetFromDecode(s)
+		}
 	}
 }
 
@@ -16797,7 +17057,7 @@ func (o *MenuDocumentSource) InitFromRaw(raw bson.Raw) {
 type MicroflowClientAction struct {
 	element.Base
 	disabledDuringExecution *property.Primitive[bool]
-	microflowSettings *property.Part[element.Element]
+	microflowSettings       *property.Part[element.Element]
 }
 
 // DisabledDuringExecution returns the value of the disabledDuringExecution property.
@@ -16834,10 +17094,10 @@ func (o *MicroflowClientAction) InitFromRaw(raw bson.Raw) {
 
 type MicroflowParameterMapping struct {
 	element.Base
-	parameter *property.ByNameRef[element.Element]
-	expression *property.Primitive[string]
-	variable *property.Part[element.Element]
-	widget *property.ByNameRef[element.Element]
+	parameter   *property.ByNameRef[element.Element]
+	expression  *property.Primitive[string]
+	variable    *property.Part[element.Element]
+	widget      *property.ByNameRef[element.Element]
 	useAllPages *property.Primitive[bool]
 }
 
@@ -16894,14 +17154,18 @@ func (o *MicroflowParameterMapping) SetUseAllPages(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	o.expression.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Variable"); err == nil {
 		o.variable.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Widget"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.widget.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.widget.SetFromDecode(s)
+		}
 	}
 	o.useAllPages.Init(raw)
 }
@@ -16912,15 +17176,15 @@ func (o *MicroflowParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type MicroflowSettings struct {
 	element.Base
-	microflow *property.ByNameRef[element.Element]
+	microflow         *property.ByNameRef[element.Element]
 	parameterMappings *property.PartList[element.Element]
-	useAllPages *property.Primitive[bool]
-	progressBar *property.Enum[string]
-	progressMessage *property.Part[element.Element]
-	asynchronous *property.Primitive[bool]
-	formValidations *property.Enum[string]
-	confirmationInfo *property.Part[element.Element]
-	outputMappings *property.PartList[element.Element]
+	useAllPages       *property.Primitive[bool]
+	progressBar       *property.Enum[string]
+	progressMessage   *property.Part[element.Element]
+	asynchronous      *property.Primitive[bool]
+	formValidations   *property.Enum[string]
+	confirmationInfo  *property.Part[element.Element]
+	outputMappings    *property.PartList[element.Element]
 }
 
 // MicroflowQualifiedName returns the value of the microflow property.
@@ -17026,7 +17290,9 @@ func (o *MicroflowSettings) RemoveOutputMappings(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowSettings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -17035,14 +17301,18 @@ func (o *MicroflowSettings) InitFromRaw(raw bson.Raw) {
 	}
 	o.useAllPages.Init(raw)
 	if val, err := raw.LookupErr("ProgressBar"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.progressBar.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.progressBar.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ProgressMessage"); err == nil {
 		o.progressMessage.SetFromDecode(child)
 	}
 	o.asynchronous.Init(raw)
 	if val, err := raw.LookupErr("FormValidations"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.formValidations.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.formValidations.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ConfirmationInfo"); err == nil {
 		o.confirmationInfo.SetFromDecode(child)
@@ -17060,7 +17330,7 @@ func (o *MicroflowSettings) InitFromRaw(raw bson.Raw) {
 
 type MicroflowSource struct {
 	element.Base
-	forceFullObjects *property.Primitive[bool]
+	forceFullObjects  *property.Primitive[bool]
 	microflowSettings *property.Part[element.Element]
 }
 
@@ -17098,7 +17368,7 @@ func (o *MicroflowSource) InitFromRaw(raw bson.Raw) {
 
 type NamedValue struct {
 	element.Base
-	name *property.Primitive[string]
+	name  *property.Primitive[string]
 	value *property.Primitive[string]
 }
 
@@ -17134,10 +17404,10 @@ func (o *NamedValue) InitFromRaw(raw bson.Raw) {
 
 type NanoflowParameterMapping struct {
 	element.Base
-	parameter *property.ByNameRef[element.Element]
-	expression *property.Primitive[string]
-	variable *property.Part[element.Element]
-	widget *property.ByNameRef[element.Element]
+	parameter   *property.ByNameRef[element.Element]
+	expression  *property.Primitive[string]
+	variable    *property.Part[element.Element]
+	widget      *property.ByNameRef[element.Element]
 	useAllPages *property.Primitive[bool]
 }
 
@@ -17194,14 +17464,18 @@ func (o *NanoflowParameterMapping) SetUseAllPages(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *NanoflowParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	o.expression.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Variable"); err == nil {
 		o.variable.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Widget"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.widget.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.widget.SetFromDecode(s)
+		}
 	}
 	o.useAllPages.Init(raw)
 }
@@ -17212,8 +17486,8 @@ func (o *NanoflowParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type NanoflowSource struct {
 	element.Base
-	forceFullObjects *property.Primitive[bool]
-	nanoflow *property.ByNameRef[element.Element]
+	forceFullObjects  *property.Primitive[bool]
+	nanoflow          *property.ByNameRef[element.Element]
 	parameterMappings *property.PartList[element.Element]
 }
 
@@ -17256,7 +17530,9 @@ func (o *NanoflowSource) RemoveParameterMappings(index int) {
 func (o *NanoflowSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	if val, err := raw.LookupErr("Nanoflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.nanoflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.nanoflow.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -17271,12 +17547,12 @@ func (o *NanoflowSource) InitFromRaw(raw bson.Raw) {
 
 type NativeLayoutContent struct {
 	element.Base
-	layoutType *property.Enum[string]
-	widgets *property.PartList[element.Element]
+	layoutType             *property.Enum[string]
+	widgets                *property.PartList[element.Element]
 	rightHeaderPlaceholder *property.Part[element.Element]
-	showBottomBar *property.Primitive[bool]
-	sidebar *property.Primitive[bool]
-	sidebarWidgets *property.PartList[element.Element]
+	showBottomBar          *property.Primitive[bool]
+	sidebar                *property.Primitive[bool]
+	sidebarWidgets         *property.PartList[element.Element]
 }
 
 // LayoutType returns the value of the layoutType property.
@@ -17352,7 +17628,9 @@ func (o *NativeLayoutContent) RemoveSidebarWidgets(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *NativeLayoutContent) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("LayoutType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.layoutType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.layoutType.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Widgets"); err == nil {
 		for _, child := range children {
@@ -17377,14 +17655,14 @@ func (o *NativeLayoutContent) InitFromRaw(raw bson.Raw) {
 
 type NavigationList struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	items *property.PartList[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	items                         *property.PartList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -17500,12 +17778,12 @@ func (o *NavigationList) InitFromRaw(raw bson.Raw) {
 
 type NavigationListItem struct {
 	element.Base
-	action *property.Part[element.Element]
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	action                        *property.Part[element.Element]
+	widget                        *property.Part[element.Element]
+	widgets                       *property.PartList[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
 }
 
@@ -17613,7 +17891,7 @@ func (o *NavigationListItem) InitFromRaw(raw bson.Raw) {
 
 type NavigationSource struct {
 	element.Base
-	profileType *property.Enum[string]
+	profileType       *property.Enum[string]
 	navigationProfile *property.ByNameRef[element.Element]
 }
 
@@ -17640,10 +17918,14 @@ func (o *NavigationSource) SetNavigationProfileQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *NavigationSource) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ProfileType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.profileType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.profileType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("NavigationProfile"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.navigationProfile.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.navigationProfile.SetFromDecode(s)
+		}
 	}
 }
 
@@ -17653,11 +17935,11 @@ func (o *NavigationSource) InitFromRaw(raw bson.Raw) {
 
 type NavigationTree struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	name       *property.Primitive[string]
+	class      *property.Primitive[string]
+	style      *property.Primitive[string]
 	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	tabIndex   *property.Primitive[int32]
 	menuSource *property.Part[element.Element]
 }
 
@@ -17741,22 +18023,22 @@ func (o *NavigationTree) InitFromRaw(raw bson.Raw) {
 
 type NewButton struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	renderType *property.Enum[string]
-	buttonStyle *property.Enum[string]
-	entity *property.ByNameRef[element.Element]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	pageSettings *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	renderType                    *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
+	entity                        *property.ByNameRef[element.Element]
+	entityPath                    *property.Primitive[string]
+	entityRef                     *property.Part[element.Element]
+	pageSettings                  *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -17944,13 +18226,19 @@ func (o *NewButton) InitFromRaw(raw bson.Raw) {
 		o.icon.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Entity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.entity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.entity.SetFromDecode(s)
+		}
 	}
 	o.entityPath.Init(raw)
 	if child, err := codec.DecodeChild(raw, "EntityRef"); err == nil {
@@ -17991,7 +18279,7 @@ func (o *NoClientAction) InitFromRaw(raw bson.Raw) {
 
 type OfflineSchema struct {
 	element.Base
-	role *property.ByNameRef[element.Element]
+	role   *property.ByNameRef[element.Element]
 	tables *property.Primitive[string]
 }
 
@@ -18013,7 +18301,9 @@ func (o *OfflineSchema) Tables() string {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *OfflineSchema) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Role"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.role.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.role.SetFromDecode(s)
+		}
 	}
 	o.tables.Init(raw)
 }
@@ -18025,7 +18315,7 @@ func (o *OfflineSchema) InitFromRaw(raw bson.Raw) {
 type OfflineSchemaFetchInstruction struct {
 	element.Base
 	tableName *property.Primitive[string]
-	xPath *property.Primitive[string]
+	xPath     *property.Primitive[string]
 }
 
 // TableName returns the value of the tableName property.
@@ -18123,8 +18413,8 @@ func (o *OnClickNothing) InitFromRaw(raw bson.Raw) {
 type OpenLinkClientAction struct {
 	element.Base
 	disabledDuringExecution *property.Primitive[bool]
-	linkType *property.Enum[string]
-	address *property.Part[element.Element]
+	linkType                *property.Enum[string]
+	address                 *property.Part[element.Element]
 }
 
 // DisabledDuringExecution returns the value of the disabledDuringExecution property.
@@ -18161,7 +18451,9 @@ func (o *OpenLinkClientAction) SetAddress(v element.Element) {
 func (o *OpenLinkClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if val, err := raw.LookupErr("LinkType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.linkType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.linkType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Address"); err == nil {
 		o.address.SetFromDecode(child)
@@ -18175,8 +18467,8 @@ func (o *OpenLinkClientAction) InitFromRaw(raw bson.Raw) {
 type OpenUserTaskClientAction struct {
 	element.Base
 	disabledDuringExecution *property.Primitive[bool]
-	assignOnOpen *property.Primitive[bool]
-	openWhenAssigned *property.Primitive[bool]
+	assignOnOpen            *property.Primitive[bool]
+	openWhenAssigned        *property.Primitive[bool]
 }
 
 // DisabledDuringExecution returns the value of the disabledDuringExecution property.
@@ -18223,7 +18515,7 @@ func (o *OpenUserTaskClientAction) InitFromRaw(raw bson.Raw) {
 type OpenWorkflowClientAction struct {
 	element.Base
 	disabledDuringExecution *property.Primitive[bool]
-	defaultPage *property.ByNameRef[element.Element]
+	defaultPage             *property.ByNameRef[element.Element]
 }
 
 // DisabledDuringExecution returns the value of the disabledDuringExecution property.
@@ -18250,7 +18542,9 @@ func (o *OpenWorkflowClientAction) SetDefaultPageQualifiedName(v string) {
 func (o *OpenWorkflowClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if val, err := raw.LookupErr("DefaultPage"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.defaultPage.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.defaultPage.SetFromDecode(s)
+		}
 	}
 }
 
@@ -18284,9 +18578,9 @@ func (o *OptionDesignPropertyValue) InitFromRaw(raw bson.Raw) {
 
 type OutputMapping struct {
 	element.Base
-	sourceVariable *property.Part[element.Element]
-	expression *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
+	sourceVariable     *property.Part[element.Element]
+	expression         *property.Primitive[string]
+	attributeRef       *property.Part[element.Element]
 	sourceAttributeRef *property.Part[element.Element]
 }
 
@@ -18362,27 +18656,27 @@ func (o *OverviewPageTemplateType) InitFromRaw(raw bson.Raw) {
 
 type Page struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	canvasWidth *property.Primitive[int32]
-	canvasHeight *property.Primitive[int32]
-	parameters *property.PartList[element.Element]
-	layoutCall *property.Part[element.Element]
-	title *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	allowedRoles *property.ByNameRefList[element.Element]
+	name             *property.Primitive[string]
+	documentation    *property.Primitive[string]
+	excluded         *property.Primitive[bool]
+	exportLevel      *property.Enum[string]
+	canvasWidth      *property.Primitive[int32]
+	canvasHeight     *property.Primitive[int32]
+	parameters       *property.PartList[element.Element]
+	layoutCall       *property.Part[element.Element]
+	title            *property.Part[element.Element]
+	class            *property.Primitive[string]
+	style            *property.Primitive[string]
+	appearance       *property.Part[element.Element]
+	allowedRoles     *property.ByNameRefList[element.Element]
 	popupCloseAction *property.Primitive[string]
-	popupWidth *property.Primitive[int32]
-	popupHeight *property.Primitive[int32]
-	popupResizable *property.Primitive[bool]
-	markAsUsed *property.Primitive[bool]
-	url *property.Primitive[string]
-	autofocus *property.Enum[string]
-	variables *property.PartList[element.Element]
+	popupWidth       *property.Primitive[int32]
+	popupHeight      *property.Primitive[int32]
+	popupResizable   *property.Primitive[bool]
+	markAsUsed       *property.Primitive[bool]
+	url              *property.Primitive[string]
+	autofocus        *property.Enum[string]
+	variables        *property.PartList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -18616,7 +18910,9 @@ func (o *Page) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	o.canvasWidth.Init(raw)
 	o.canvasHeight.Init(raw)
@@ -18641,7 +18937,9 @@ func (o *Page) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.allowedRoles.SetFromDecode(qnames)
 		}
@@ -18653,7 +18951,9 @@ func (o *Page) InitFromRaw(raw bson.Raw) {
 	o.markAsUsed.Init(raw)
 	o.url.Init(raw)
 	if val, err := raw.LookupErr("Autofocus"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.autofocus.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.autofocus.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Variables"); err == nil {
 		for _, child := range children {
@@ -18669,10 +18969,10 @@ func (o *Page) InitFromRaw(raw bson.Raw) {
 type PageClientAction struct {
 	element.Base
 	disabledDuringExecution *property.Primitive[bool]
-	pageSettings *property.Part[element.Element]
+	pageSettings            *property.Part[element.Element]
 	pagesForSpecializations *property.PartList[element.Element]
-	numberOfPagesToClose *property.Primitive[int32]
-	numberOfPagesToClose2 *property.Primitive[string]
+	numberOfPagesToClose    *property.Primitive[int32]
+	numberOfPagesToClose2   *property.Primitive[string]
 }
 
 // DisabledDuringExecution returns the value of the disabledDuringExecution property.
@@ -18751,7 +19051,7 @@ func (o *PageClientAction) InitFromRaw(raw bson.Raw) {
 
 type PageForSpecialization struct {
 	element.Base
-	entity *property.ByNameRef[element.Element]
+	entity       *property.ByNameRef[element.Element]
 	pageSettings *property.Part[element.Element]
 }
 
@@ -18778,7 +19078,9 @@ func (o *PageForSpecialization) SetPageSettings(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *PageForSpecialization) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Entity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.entity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.entity.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "PageSettings"); err == nil {
 		o.pageSettings.SetFromDecode(child)
@@ -18791,10 +19093,10 @@ func (o *PageForSpecialization) InitFromRaw(raw bson.Raw) {
 
 type PageParameter struct {
 	element.Base
-	name *property.Primitive[string]
+	name          *property.Primitive[string]
 	parameterType *property.Part[element.Element]
-	isRequired *property.Primitive[bool]
-	defaultValue *property.Primitive[string]
+	isRequired    *property.Primitive[bool]
+	defaultValue  *property.Primitive[string]
 }
 
 // Name returns the value of the name property.
@@ -18854,8 +19156,8 @@ func (o *PageParameter) InitFromRaw(raw bson.Raw) {
 type PageParameterMapping struct {
 	element.Base
 	parameter *property.ByNameRef[element.Element]
-	variable *property.Part[element.Element]
-	argument *property.Primitive[string]
+	variable  *property.Part[element.Element]
+	argument  *property.Primitive[string]
 }
 
 // ParameterQualifiedName returns the value of the parameter property.
@@ -18891,7 +19193,9 @@ func (o *PageParameterMapping) SetArgument(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *PageParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Variable"); err == nil {
 		o.variable.SetFromDecode(child)
@@ -18921,7 +19225,9 @@ func (o *PagePrimitiveParameterUrlSegment) SetPageParameterQualifiedName(v strin
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *PagePrimitiveParameterUrlSegment) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("PageParameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.pageParameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.pageParameter.SetFromDecode(s)
+		}
 	}
 }
 
@@ -18931,10 +19237,10 @@ func (o *PagePrimitiveParameterUrlSegment) InitFromRaw(raw bson.Raw) {
 
 type PageSettings struct {
 	element.Base
-	page *property.ByNameRef[element.Element]
-	formTitle *property.Part[element.Element]
-	titleOverride *property.Part[element.Element]
-	location *property.Enum[string]
+	page              *property.ByNameRef[element.Element]
+	formTitle         *property.Part[element.Element]
+	titleOverride     *property.Part[element.Element]
+	location          *property.Enum[string]
 	parameterMappings *property.PartList[element.Element]
 }
 
@@ -18996,7 +19302,9 @@ func (o *PageSettings) RemoveParameterMappings(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *PageSettings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Form"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.page.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.page.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "FormTitle"); err == nil {
 		o.formTitle.SetFromDecode(child)
@@ -19005,7 +19313,9 @@ func (o *PageSettings) InitFromRaw(raw bson.Raw) {
 		o.titleOverride.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Location"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.location.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.location.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -19020,23 +19330,23 @@ func (o *PageSettings) InitFromRaw(raw bson.Raw) {
 
 type PageTemplate struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	canvasWidth *property.Primitive[int32]
-	canvasHeight *property.Primitive[int32]
-	displayName *property.Primitive[string]
-	documentationUrl *property.Primitive[string]
-	templateCategory *property.Primitive[string]
+	name                   *property.Primitive[string]
+	documentation          *property.Primitive[string]
+	excluded               *property.Primitive[bool]
+	exportLevel            *property.Enum[string]
+	canvasWidth            *property.Primitive[int32]
+	canvasHeight           *property.Primitive[int32]
+	displayName            *property.Primitive[string]
+	documentationUrl       *property.Primitive[string]
+	templateCategory       *property.Primitive[string]
 	templateCategoryWeight *property.Primitive[int32]
-	imageData *property.Primitive[string]
-	propType *property.Enum[string]
-	layoutCall *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	templateType *property.Part[element.Element]
+	imageData              *property.Primitive[string]
+	propType               *property.Enum[string]
+	layoutCall             *property.Part[element.Element]
+	class                  *property.Primitive[string]
+	style                  *property.Primitive[string]
+	appearance             *property.Part[element.Element]
+	templateType           *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -19215,7 +19525,9 @@ func (o *PageTemplate) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	o.canvasWidth.Init(raw)
 	o.canvasHeight.Init(raw)
@@ -19225,7 +19537,9 @@ func (o *PageTemplate) InitFromRaw(raw bson.Raw) {
 	o.templateCategoryWeight.Init(raw)
 	o.imageData.Init(raw)
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "LayoutCall"); err == nil {
 		o.layoutCall.SetFromDecode(child)
@@ -19246,12 +19560,12 @@ func (o *PageTemplate) InitFromRaw(raw bson.Raw) {
 
 type PageVariable struct {
 	element.Base
-	widget *property.ByNameRef[element.Element]
-	pageParameter *property.ByNameRef[element.Element]
+	widget           *property.ByNameRef[element.Element]
+	pageParameter    *property.ByNameRef[element.Element]
 	snippetParameter *property.ByNameRef[element.Element]
-	localVariable *property.ByNameRef[element.Element]
-	useAllPages *property.Primitive[bool]
-	subKey *property.Primitive[string]
+	localVariable    *property.ByNameRef[element.Element]
+	useAllPages      *property.Primitive[bool]
+	subKey           *property.Primitive[string]
 }
 
 // WidgetQualifiedName returns the value of the widget property.
@@ -19317,16 +19631,24 @@ func (o *PageVariable) SetSubKey(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *PageVariable) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Widget"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.widget.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.widget.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("PageParameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.pageParameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.pageParameter.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("SnippetParameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.snippetParameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.snippetParameter.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("LocalVariable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.localVariable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.localVariable.SetFromDecode(s)
+		}
 	}
 	o.useAllPages.Init(raw)
 	o.subKey.Init(raw)
@@ -19339,7 +19661,7 @@ func (o *PageVariable) InitFromRaw(raw bson.Raw) {
 type ParameterAttributeUrlSegment struct {
 	element.Base
 	pageParameter *property.ByNameRef[element.Element]
-	attribute *property.ByNameRef[element.Element]
+	attribute     *property.ByNameRef[element.Element]
 }
 
 // PageParameterQualifiedName returns the value of the pageParameter property.
@@ -19365,10 +19687,14 @@ func (o *ParameterAttributeUrlSegment) SetAttributeQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ParameterAttributeUrlSegment) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("PageParameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.pageParameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.pageParameter.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Attribute"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.attribute.SetFromDecode(s)
+		}
 	}
 }
 
@@ -19394,7 +19720,9 @@ func (o *ParameterIdUrlSegment) SetPageParameterQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ParameterIdUrlSegment) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("PageParameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.pageParameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.pageParameter.SetFromDecode(s)
+		}
 	}
 }
 
@@ -19404,13 +19732,13 @@ func (o *ParameterIdUrlSegment) InitFromRaw(raw bson.Raw) {
 
 type PasswordTextBox struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	label *property.Part[element.Element]
-	labelWidth *property.Primitive[int32]
+	name        *property.Primitive[string]
+	class       *property.Primitive[string]
+	style       *property.Primitive[string]
+	appearance  *property.Part[element.Element]
+	tabIndex    *property.Primitive[int32]
+	label       *property.Part[element.Element]
+	labelWidth  *property.Primitive[int32]
 	placeholder *property.Part[element.Element]
 }
 
@@ -19518,11 +19846,11 @@ func (o *PasswordTextBox) InitFromRaw(raw bson.Raw) {
 
 type Placeholder struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	name       *property.Primitive[string]
+	class      *property.Primitive[string]
+	style      *property.Primitive[string]
 	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	tabIndex   *property.Primitive[int32]
 }
 
 // Name returns the value of the name property.
@@ -19592,33 +19920,33 @@ func (o *Placeholder) InitFromRaw(raw bson.Raw) {
 
 type RadioButtonGroup struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
-	required *property.Primitive[bool]
-	requiredMessage *property.Part[element.Element]
-	validation *property.Part[element.Element]
-	onChangeMicroflowSettings *property.Part[element.Element]
-	onEnterMicroflowSettings *property.Part[element.Element]
-	onLeaveMicroflowSettings *property.Part[element.Element]
-	onChangeAction *property.Part[element.Element]
-	onEnterAction *property.Part[element.Element]
-	onLeaveAction *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	ariaRequired *property.Primitive[bool]
-	renderHorizontal *property.Primitive[bool]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	attributePath                  *property.Primitive[string]
+	attributeRef                   *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
+	required                       *property.Primitive[bool]
+	requiredMessage                *property.Part[element.Element]
+	validation                     *property.Part[element.Element]
+	onChangeMicroflowSettings      *property.Part[element.Element]
+	onEnterMicroflowSettings       *property.Part[element.Element]
+	onLeaveMicroflowSettings       *property.Part[element.Element]
+	onChangeAction                 *property.Part[element.Element]
+	onEnterAction                  *property.Part[element.Element]
+	onLeaveAction                  *property.Part[element.Element]
+	sourceVariable                 *property.Part[element.Element]
+	ariaRequired                   *property.Primitive[bool]
+	renderHorizontal               *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -19910,7 +20238,9 @@ func (o *RadioButtonGroup) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -19926,7 +20256,9 @@ func (o *RadioButtonGroup) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 	o.required.Init(raw)
 	if child, err := codec.DecodeChild(raw, "RequiredMessage"); err == nil {
@@ -19966,18 +20298,18 @@ func (o *RadioButtonGroup) InitFromRaw(raw bson.Raw) {
 
 type RangeSearchField struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	placeholder *property.Part[element.Element]
+	name             *property.Primitive[string]
+	caption          *property.Part[element.Element]
+	placeholder      *property.Part[element.Element]
 	customDateFormat *property.Primitive[string]
-	propType *property.Enum[string]
-	defaultValue *property.Primitive[string]
-	lowerBound *property.Primitive[string]
-	upperBound *property.Primitive[string]
-	lowerBoundRef *property.Part[element.Element]
-	upperBoundRef *property.Part[element.Element]
-	includeLower *property.Primitive[bool]
-	includeUpper *property.Primitive[bool]
+	propType         *property.Enum[string]
+	defaultValue     *property.Primitive[string]
+	lowerBound       *property.Primitive[string]
+	upperBound       *property.Primitive[string]
+	lowerBoundRef    *property.Part[element.Element]
+	upperBoundRef    *property.Part[element.Element]
+	includeLower     *property.Primitive[bool]
+	includeUpper     *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -20111,7 +20443,9 @@ func (o *RangeSearchField) InitFromRaw(raw bson.Raw) {
 	}
 	o.customDateFormat.Init(raw)
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 	o.defaultValue.Init(raw)
 	o.lowerBound.Init(raw)
@@ -20132,34 +20466,34 @@ func (o *RangeSearchField) InitFromRaw(raw bson.Raw) {
 
 type ReferenceSelector struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
-	selectorSource *property.Part[element.Element]
-	selectPageSettings *property.Part[element.Element]
-	onChangeMicroflowSettings *property.Part[element.Element]
-	onChangeAction *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	required *property.Primitive[bool]
-	requiredMessage *property.Part[element.Element]
-	validation *property.Part[element.Element]
-	renderMode *property.Enum[string]
-	gotoPageSettings *property.Part[element.Element]
-	formattingInfo *property.Part[element.Element]
-	emptyOptionCaption *property.Part[element.Element]
-	nativeAccessibilitySettings *property.Part[element.Element]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	attributePath                  *property.Primitive[string]
+	attributeRef                   *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
+	selectorSource                 *property.Part[element.Element]
+	selectPageSettings             *property.Part[element.Element]
+	onChangeMicroflowSettings      *property.Part[element.Element]
+	onChangeAction                 *property.Part[element.Element]
+	sourceVariable                 *property.Part[element.Element]
+	required                       *property.Primitive[bool]
+	requiredMessage                *property.Part[element.Element]
+	validation                     *property.Part[element.Element]
+	renderMode                     *property.Enum[string]
+	gotoPageSettings               *property.Part[element.Element]
+	formattingInfo                 *property.Part[element.Element]
+	emptyOptionCaption             *property.Part[element.Element]
+	nativeAccessibilitySettings    *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -20461,7 +20795,9 @@ func (o *ReferenceSelector) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -20477,7 +20813,9 @@ func (o *ReferenceSelector) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "SelectorSource"); err == nil {
 		o.selectorSource.SetFromDecode(child)
@@ -20502,7 +20840,9 @@ func (o *ReferenceSelector) InitFromRaw(raw bson.Raw) {
 		o.validation.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderMode.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "GotoPageSettings"); err == nil {
 		o.gotoPageSettings.SetFromDecode(child)
@@ -20524,34 +20864,34 @@ func (o *ReferenceSelector) InitFromRaw(raw bson.Raw) {
 
 type ReferenceSetSelector struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	dataSource *property.Part[element.Element]
-	isControlBarVisible *property.Primitive[bool]
-	isPagingEnabled *property.Primitive[bool]
-	showPagingBar *property.Enum[string]
-	selectionMode *property.Enum[string]
-	selectFirst *property.Primitive[bool]
-	defaultButtonTrigger *property.Enum[string]
-	refreshTime *property.Primitive[int32]
-	controlBar *property.Part[element.Element]
-	columns *property.PartList[element.Element]
-	numberOfRows *property.Primitive[int32]
-	showEmptyRows *property.Primitive[bool]
-	widthUnit *property.Enum[string]
-	tooltipPage *property.ByNameRef[element.Element]
-	onChangeMicroflowSettings *property.Part[element.Element]
-	onChangeAction *property.Part[element.Element]
-	constrainedBy *property.Primitive[string]
-	constrainedByRefs *property.PartList[element.Element]
-	xPathConstraint *property.Primitive[string]
-	removeAllFromContext *property.Primitive[bool]
-	removeFromContextEntities *property.ByNameRefList[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	dataSource                    *property.Part[element.Element]
+	isControlBarVisible           *property.Primitive[bool]
+	isPagingEnabled               *property.Primitive[bool]
+	showPagingBar                 *property.Enum[string]
+	selectionMode                 *property.Enum[string]
+	selectFirst                   *property.Primitive[bool]
+	defaultButtonTrigger          *property.Enum[string]
+	refreshTime                   *property.Primitive[int32]
+	controlBar                    *property.Part[element.Element]
+	columns                       *property.PartList[element.Element]
+	numberOfRows                  *property.Primitive[int32]
+	showEmptyRows                 *property.Primitive[bool]
+	widthUnit                     *property.Enum[string]
+	tooltipPage                   *property.ByNameRef[element.Element]
+	onChangeMicroflowSettings     *property.Part[element.Element]
+	onChangeAction                *property.Part[element.Element]
+	constrainedBy                 *property.Primitive[string]
+	constrainedByRefs             *property.PartList[element.Element]
+	xPathConstraint               *property.Primitive[string]
+	removeAllFromContext          *property.Primitive[bool]
+	removeFromContextEntities     *property.ByNameRefList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -20865,14 +21205,20 @@ func (o *ReferenceSetSelector) InitFromRaw(raw bson.Raw) {
 	o.isControlBarVisible.Init(raw)
 	o.isPagingEnabled.Init(raw)
 	if val, err := raw.LookupErr("ShowPagingBar"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.showPagingBar.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.showPagingBar.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("SelectionMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.selectionMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.selectionMode.SetFromDecode(s)
+		}
 	}
 	o.selectFirst.Init(raw)
 	if val, err := raw.LookupErr("DefaultButtonTrigger"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.defaultButtonTrigger.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.defaultButtonTrigger.SetFromDecode(s)
+		}
 	}
 	o.refreshTime.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ControlBar"); err == nil {
@@ -20886,10 +21232,14 @@ func (o *ReferenceSetSelector) InitFromRaw(raw bson.Raw) {
 	o.numberOfRows.Init(raw)
 	o.showEmptyRows.Init(raw)
 	if val, err := raw.LookupErr("WidthUnit"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.widthUnit.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.widthUnit.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("TooltipPage"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.tooltipPage.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.tooltipPage.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "OnChangeMicroflowSettings"); err == nil {
 		o.onChangeMicroflowSettings.SetFromDecode(child)
@@ -20910,7 +21260,9 @@ func (o *ReferenceSetSelector) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.removeFromContextEntities.SetFromDecode(qnames)
 		}
@@ -20924,11 +21276,11 @@ func (o *ReferenceSetSelector) InitFromRaw(raw bson.Raw) {
 type ReferenceSetSource struct {
 	element.Base
 	forceFullObjects *property.Primitive[bool]
-	entityPath *property.Primitive[string]
-	entityRef *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	sortBar *property.Part[element.Element]
-	searchBar *property.Part[element.Element]
+	entityPath       *property.Primitive[string]
+	entityRef        *property.Part[element.Element]
+	sourceVariable   *property.Part[element.Element]
+	sortBar          *property.Part[element.Element]
+	searchBar        *property.Part[element.Element]
 }
 
 // ForceFullObjects returns the value of the forceFullObjects property.
@@ -21027,18 +21379,18 @@ func (o *RegularPageTemplateType) InitFromRaw(raw bson.Raw) {
 
 type RetrievalQuery struct {
 	element.Base
-	queryId *property.Primitive[string]
-	allowedUserRoles *property.ByNameRefList[element.Element]
+	queryId             *property.Primitive[string]
+	allowedUserRoles    *property.ByNameRefList[element.Element]
 	allowedUserRoleSets *property.PartList[element.Element]
-	xPath *property.Primitive[string]
-	microflow *property.ByNameRef[element.Element]
-	entityPath *property.Primitive[string]
-	pageName *property.Primitive[string]
-	widgetName *property.Primitive[string]
-	usedAssociations *property.Primitive[string]
-	usedAttributes *property.Primitive[string]
-	schemaId *property.Primitive[string]
-	parameters *property.PartList[element.Element]
+	xPath               *property.Primitive[string]
+	microflow           *property.ByNameRef[element.Element]
+	entityPath          *property.Primitive[string]
+	pageName            *property.Primitive[string]
+	widgetName          *property.Primitive[string]
+	usedAssociations    *property.Primitive[string]
+	usedAttributes      *property.Primitive[string]
+	schemaId            *property.Primitive[string]
+	parameters          *property.PartList[element.Element]
 }
 
 // QueryId returns the value of the queryId property.
@@ -21174,7 +21526,9 @@ func (o *RetrievalQuery) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.allowedUserRoles.SetFromDecode(qnames)
 		}
@@ -21186,7 +21540,9 @@ func (o *RetrievalQuery) InitFromRaw(raw bson.Raw) {
 	}
 	o.xPath.Init(raw)
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 	o.entityPath.Init(raw)
 	o.pageName.Init(raw)
@@ -21207,9 +21563,9 @@ func (o *RetrievalQuery) InitFromRaw(raw bson.Raw) {
 
 type RetrievalQueryParameter struct {
 	element.Base
-	name *property.Primitive[string]
+	name     *property.Primitive[string]
 	propType *property.Primitive[string]
-	types *property.Primitive[string]
+	types    *property.Primitive[string]
 }
 
 // Name returns the value of the name property.
@@ -21250,10 +21606,10 @@ func (o *RetrievalQueryParameter) InitFromRaw(raw bson.Raw) {
 
 type RetrievalSchema struct {
 	element.Base
-	usedAttributes *property.Primitive[string]
+	usedAttributes   *property.Primitive[string]
 	usedAssociations *property.Primitive[string]
-	widgetName *property.Primitive[string]
-	entity *property.Primitive[string]
+	widgetName       *property.Primitive[string]
+	entity           *property.Primitive[string]
 }
 
 // UsedAttributes returns the value of the usedAttributes property.
@@ -21300,12 +21656,12 @@ func (o *RetrievalSchema) InitFromRaw(raw bson.Raw) {
 
 type RuntimeOperation struct {
 	element.Base
-	operationId *property.Primitive[string]
-	parameters *property.PartList[element.Element]
-	constants *property.PartList[element.Element]
-	operationType *property.Primitive[string]
-	operationName *property.Primitive[string]
-	allowedUserRoles *property.ByNameRefList[element.Element]
+	operationId         *property.Primitive[string]
+	parameters          *property.PartList[element.Element]
+	constants           *property.PartList[element.Element]
+	operationType       *property.Primitive[string]
+	operationName       *property.Primitive[string]
+	allowedUserRoles    *property.ByNameRefList[element.Element]
 	allowedUserRoleSets *property.PartList[element.Element]
 }
 
@@ -21419,7 +21775,9 @@ func (o *RuntimeOperation) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.allowedUserRoles.SetFromDecode(qnames)
 		}
@@ -21437,20 +21795,20 @@ func (o *RuntimeOperation) InitFromRaw(raw bson.Raw) {
 
 type SaveButton struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	renderType *property.Enum[string]
-	buttonStyle *property.Enum[string]
-	syncAutomatically *property.Primitive[bool]
-	closePage *property.Primitive[bool]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	renderType                    *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
+	syncAutomatically             *property.Primitive[bool]
+	closePage                     *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -21618,10 +21976,14 @@ func (o *SaveButton) InitFromRaw(raw bson.Raw) {
 		o.icon.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	o.syncAutomatically.Init(raw)
 	o.closePage.Init(raw)
@@ -21634,8 +21996,8 @@ func (o *SaveButton) InitFromRaw(raw bson.Raw) {
 type SaveChangesClientAction struct {
 	element.Base
 	disabledDuringExecution *property.Primitive[bool]
-	syncAutomatically *property.Primitive[bool]
-	closePage *property.Primitive[bool]
+	syncAutomatically       *property.Primitive[bool]
+	closePage               *property.Primitive[bool]
 }
 
 // DisabledDuringExecution returns the value of the disabledDuringExecution property.
@@ -21681,21 +22043,21 @@ func (o *SaveChangesClientAction) InitFromRaw(raw bson.Raw) {
 
 type ScrollContainer struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	center *property.Part[element.Element]
-	left *property.Part[element.Element]
-	right *property.Part[element.Element]
-	top *property.Part[element.Element]
-	bottom *property.Part[element.Element]
-	layoutMode *property.Enum[string]
-	widthMode *property.Enum[string]
-	width *property.Primitive[int32]
-	alignment *property.Enum[string]
-	scrollBehavior *property.Enum[string]
+	name                 *property.Primitive[string]
+	class                *property.Primitive[string]
+	style                *property.Primitive[string]
+	appearance           *property.Part[element.Element]
+	tabIndex             *property.Primitive[int32]
+	center               *property.Part[element.Element]
+	left                 *property.Part[element.Element]
+	right                *property.Part[element.Element]
+	top                  *property.Part[element.Element]
+	bottom               *property.Part[element.Element]
+	layoutMode           *property.Enum[string]
+	widthMode            *property.Enum[string]
+	width                *property.Primitive[int32]
+	alignment            *property.Enum[string]
+	scrollBehavior       *property.Enum[string]
 	nativeHideScrollbars *property.Primitive[bool]
 }
 
@@ -21884,17 +22246,25 @@ func (o *ScrollContainer) InitFromRaw(raw bson.Raw) {
 		o.bottom.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("LayoutMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.layoutMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.layoutMode.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("WidthMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.widthMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.widthMode.SetFromDecode(s)
+		}
 	}
 	o.width.Init(raw)
 	if val, err := raw.LookupErr("Alignment"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.alignment.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.alignment.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ScrollBehavior"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.scrollBehavior.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.scrollBehavior.SetFromDecode(s)
+		}
 	}
 	o.nativeHideScrollbars.Init(raw)
 }
@@ -21905,12 +22275,12 @@ func (o *ScrollContainer) InitFromRaw(raw bson.Raw) {
 
 type ScrollContainerRegion struct {
 	element.Base
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
-	sizeMode *property.Enum[string]
-	size *property.Primitive[int32]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	widget     *property.Part[element.Element]
+	widgets    *property.PartList[element.Element]
+	sizeMode   *property.Enum[string]
+	size       *property.Primitive[int32]
+	class      *property.Primitive[string]
+	style      *property.Primitive[string]
 	appearance *property.Part[element.Element]
 	toggleMode *property.Enum[string]
 }
@@ -22011,7 +22381,9 @@ func (o *ScrollContainerRegion) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("SizeMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.sizeMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.sizeMode.SetFromDecode(s)
+		}
 	}
 	o.size.Init(raw)
 	o.class.Init(raw)
@@ -22020,7 +22392,9 @@ func (o *ScrollContainerRegion) InitFromRaw(raw bson.Raw) {
 		o.appearance.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ToggleMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.toggleMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.toggleMode.SetFromDecode(s)
+		}
 	}
 }
 
@@ -22030,8 +22404,8 @@ func (o *ScrollContainerRegion) InitFromRaw(raw bson.Raw) {
 
 type SearchBar struct {
 	element.Base
-	items *property.PartList[element.Element]
-	propType *property.Enum[string]
+	items         *property.PartList[element.Element]
+	propType      *property.Enum[string]
 	waitForSearch *property.Primitive[bool]
 }
 
@@ -22078,7 +22452,9 @@ func (o *SearchBar) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 	o.waitForSearch.Init(raw)
 }
@@ -22089,15 +22465,15 @@ func (o *SearchBar) InitFromRaw(raw bson.Raw) {
 
 type SelectButton struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	buttonStyle *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -22211,7 +22587,9 @@ func (o *SelectButton) InitFromRaw(raw bson.Raw) {
 		o.conditionalVisibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 }
 
@@ -22246,7 +22624,7 @@ func (o *SelectorSource) InitFromRaw(raw bson.Raw) {
 type SelectorDatabaseSource struct {
 	element.Base
 	databaseConstraints *property.PartList[element.Element]
-	sortBar *property.Part[element.Element]
+	sortBar             *property.Part[element.Element]
 }
 
 // DatabaseConstraintsItems returns the value of the databaseConstraints property.
@@ -22318,12 +22696,12 @@ func (o *SelectorMicroflowSource) InitFromRaw(raw bson.Raw) {
 
 type SelectorXPathSource struct {
 	element.Base
-	sortBar *property.Part[element.Element]
-	xPathConstraint *property.Primitive[string]
-	constrainedBy *property.Primitive[string]
-	constrainedByRefs *property.PartList[element.Element]
-	applyContext *property.Primitive[bool]
-	removeAllFromContext *property.Primitive[bool]
+	sortBar                   *property.Part[element.Element]
+	xPathConstraint           *property.Primitive[string]
+	constrainedBy             *property.Primitive[string]
+	constrainedByRefs         *property.PartList[element.Element]
+	applyContext              *property.Primitive[bool]
+	removeAllFromContext      *property.Primitive[bool]
 	removeFromContextEntities *property.ByNameRefList[element.Element]
 }
 
@@ -22421,7 +22799,9 @@ func (o *SelectorXPathSource) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.removeFromContextEntities.SetFromDecode(qnames)
 		}
@@ -22435,10 +22815,10 @@ func (o *SelectorXPathSource) InitFromRaw(raw bson.Raw) {
 type SetTaskOutcomeClientAction struct {
 	element.Base
 	disabledDuringExecution *property.Primitive[bool]
-	outcome *property.ByNameRef[element.Element]
-	outcomeValue *property.Primitive[string]
-	closePage *property.Primitive[bool]
-	commit *property.Primitive[bool]
+	outcome                 *property.ByNameRef[element.Element]
+	outcomeValue            *property.Primitive[string]
+	closePage               *property.Primitive[bool]
+	commit                  *property.Primitive[bool]
 }
 
 // DisabledDuringExecution returns the value of the disabledDuringExecution property.
@@ -22495,7 +22875,9 @@ func (o *SetTaskOutcomeClientAction) SetCommit(v bool) {
 func (o *SetTaskOutcomeClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if val, err := raw.LookupErr("Outcome"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.outcome.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.outcome.SetFromDecode(s)
+		}
 	}
 	o.outcomeValue.Init(raw)
 	o.closePage.Init(raw)
@@ -22508,21 +22890,21 @@ func (o *SetTaskOutcomeClientAction) InitFromRaw(raw bson.Raw) {
 
 type SidebarToggleButton struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	renderType *property.Enum[string]
-	buttonStyle *property.Enum[string]
-	region *property.Enum[string]
-	mode *property.Enum[string]
-	initiallyOpen *property.Primitive[bool]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	renderType                    *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
+	region                        *property.Enum[string]
+	mode                          *property.Enum[string]
+	initiallyOpen                 *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -22700,16 +23082,24 @@ func (o *SidebarToggleButton) InitFromRaw(raw bson.Raw) {
 		o.icon.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Region"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.region.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.region.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Mode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.mode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.mode.SetFromDecode(s)
+		}
 	}
 	o.initiallyOpen.Init(raw)
 }
@@ -22744,12 +23134,12 @@ func (o *SignOutClientAction) InitFromRaw(raw bson.Raw) {
 
 type SimpleMenuBar struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	menuSource *property.Part[element.Element]
+	name        *property.Primitive[string]
+	class       *property.Primitive[string]
+	style       *property.Primitive[string]
+	appearance  *property.Part[element.Element]
+	tabIndex    *property.Primitive[int32]
+	menuSource  *property.Part[element.Element]
 	orientation *property.Enum[string]
 }
 
@@ -22836,7 +23226,9 @@ func (o *SimpleMenuBar) InitFromRaw(raw bson.Raw) {
 		o.menuSource.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Orientation"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.orientation.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.orientation.SetFromDecode(s)
+		}
 	}
 }
 
@@ -22846,18 +23238,18 @@ func (o *SimpleMenuBar) InitFromRaw(raw bson.Raw) {
 
 type Snippet struct {
 	element.Base
-	name *property.Primitive[string]
+	name          *property.Primitive[string]
 	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	canvasWidth *property.Primitive[int32]
-	canvasHeight *property.Primitive[int32]
-	entity *property.ByNameRef[element.Element]
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
-	propType *property.Enum[string]
-	parameters *property.PartList[element.Element]
-	variables *property.PartList[element.Element]
+	excluded      *property.Primitive[bool]
+	exportLevel   *property.Enum[string]
+	canvasWidth   *property.Primitive[int32]
+	canvasHeight  *property.Primitive[int32]
+	entity        *property.ByNameRef[element.Element]
+	widget        *property.Part[element.Element]
+	widgets       *property.PartList[element.Element]
+	propType      *property.Enum[string]
+	parameters    *property.PartList[element.Element]
+	variables     *property.PartList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -23001,12 +23393,16 @@ func (o *Snippet) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	o.canvasWidth.Init(raw)
 	o.canvasHeight.Init(raw)
 	if val, err := raw.LookupErr("Entity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.entity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.entity.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Widget"); err == nil {
 		o.widget.SetFromDecode(child)
@@ -23017,7 +23413,9 @@ func (o *Snippet) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Parameters"); err == nil {
 		for _, child := range children {
@@ -23037,7 +23435,7 @@ func (o *Snippet) InitFromRaw(raw bson.Raw) {
 
 type SnippetCall struct {
 	element.Base
-	snippet *property.ByNameRef[element.Element]
+	snippet           *property.ByNameRef[element.Element]
 	parameterMappings *property.PartList[element.Element]
 }
 
@@ -23069,7 +23467,9 @@ func (o *SnippetCall) RemoveParameterMappings(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *SnippetCall) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Form"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.snippet.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.snippet.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -23084,11 +23484,11 @@ func (o *SnippetCall) InitFromRaw(raw bson.Raw) {
 
 type SnippetCallWidget struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name        *property.Primitive[string]
+	class       *property.Primitive[string]
+	style       *property.Primitive[string]
+	appearance  *property.Part[element.Element]
+	tabIndex    *property.Primitive[int32]
 	snippetCall *property.Part[element.Element]
 }
 
@@ -23172,7 +23572,7 @@ func (o *SnippetCallWidget) InitFromRaw(raw bson.Raw) {
 
 type SnippetParameter struct {
 	element.Base
-	name *property.Primitive[string]
+	name          *property.Primitive[string]
 	parameterType *property.Part[element.Element]
 }
 
@@ -23211,8 +23611,8 @@ func (o *SnippetParameter) InitFromRaw(raw bson.Raw) {
 type SnippetParameterMapping struct {
 	element.Base
 	parameter *property.ByNameRef[element.Element]
-	variable *property.Part[element.Element]
-	argument *property.Primitive[string]
+	variable  *property.Part[element.Element]
+	argument  *property.Primitive[string]
 }
 
 // ParameterQualifiedName returns the value of the parameter property.
@@ -23248,7 +23648,9 @@ func (o *SnippetParameterMapping) SetArgument(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *SnippetParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Variable"); err == nil {
 		o.variable.SetFromDecode(child)
@@ -23262,22 +23664,22 @@ func (o *SnippetParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type StaticImageViewer struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	image *property.ByNameRef[element.Element]
-	widthUnit *property.Enum[string]
-	heightUnit *property.Enum[string]
-	width *property.Primitive[int32]
-	height *property.Primitive[int32]
-	clickAction *property.Part[element.Element]
-	responsive *property.Primitive[bool]
-	alternativeText *property.Part[element.Element]
-	nativeAccessibilitySettings *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	image                         *property.ByNameRef[element.Element]
+	widthUnit                     *property.Enum[string]
+	heightUnit                    *property.Enum[string]
+	width                         *property.Primitive[int32]
+	height                        *property.Primitive[int32]
+	clickAction                   *property.Part[element.Element]
+	responsive                    *property.Primitive[bool]
+	alternativeText               *property.Part[element.Element]
+	nativeAccessibilitySettings   *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -23456,13 +23858,19 @@ func (o *StaticImageViewer) InitFromRaw(raw bson.Raw) {
 		o.accessibilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Image"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.image.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.image.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("WidthUnit"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.widthUnit.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.widthUnit.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("HeightUnit"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.heightUnit.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.heightUnit.SetFromDecode(s)
+		}
 	}
 	o.width.Init(raw)
 	o.height.Init(raw)
@@ -23484,9 +23892,9 @@ func (o *StaticImageViewer) InitFromRaw(raw bson.Raw) {
 
 type StaticOrDynamicString struct {
 	element.Base
-	isDynamic *property.Primitive[bool]
-	value *property.Primitive[string]
-	attribute *property.Primitive[string]
+	isDynamic    *property.Primitive[bool]
+	value        *property.Primitive[string]
+	attribute    *property.Primitive[string]
 	attributeRef *property.Part[element.Element]
 }
 
@@ -23582,18 +23990,18 @@ func (o *StaticUrlSegment) InitFromRaw(raw bson.Raw) {
 
 type SyncButton struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	caption *property.Part[element.Element]
-	tooltip *property.Part[element.Element]
-	icon *property.Part[element.Element]
-	renderType *property.Enum[string]
-	buttonStyle *property.Enum[string]
+	accessibilitySettings         *property.Part[element.Element]
+	caption                       *property.Part[element.Element]
+	tooltip                       *property.Part[element.Element]
+	icon                          *property.Part[element.Element]
+	renderType                    *property.Enum[string]
+	buttonStyle                   *property.Enum[string]
 }
 
 // Name returns the value of the name property.
@@ -23741,10 +24149,14 @@ func (o *SyncButton) InitFromRaw(raw bson.Raw) {
 		o.icon.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RenderType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.renderType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.renderType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ButtonStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.buttonStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.buttonStyle.SetFromDecode(s)
+		}
 	}
 }
 
@@ -23778,18 +24190,18 @@ func (o *SyncClientAction) InitFromRaw(raw bson.Raw) {
 
 type TabContainer struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	tabPages *property.PartList[element.Element]
-	defaultPage *property.ByIdRef[element.Element]
-	activePageAttributeRef *property.Part[element.Element]
-	activePageSourceVariable *property.Part[element.Element]
-	activePageOnChangeAction *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	tabPages                      *property.PartList[element.Element]
+	defaultPage                   *property.ByIdRef[element.Element]
+	activePageAttributeRef        *property.Part[element.Element]
+	activePageSourceVariable      *property.Part[element.Element]
+	activePageOnChangeAction      *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -23961,13 +24373,13 @@ func (o *TabContainer) InitFromRaw(raw bson.Raw) {
 
 type TabPage struct {
 	element.Base
-	name *property.Primitive[string]
-	caption *property.Part[element.Element]
-	refreshOnShow *property.Primitive[bool]
+	name                          *property.Primitive[string]
+	caption                       *property.Part[element.Element]
+	refreshOnShow                 *property.Primitive[bool]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
-	badge *property.Part[element.Element]
+	widget                        *property.Part[element.Element]
+	widgets                       *property.PartList[element.Element]
+	badge                         *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -24074,17 +24486,17 @@ func (o *TabPage) InitFromRaw(raw bson.Raw) {
 
 type Table struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	cells *property.PartList[element.Element]
-	columns *property.PartList[element.Element]
-	widthUnit *property.Enum[string]
-	rows *property.PartList[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	cells                         *property.PartList[element.Element]
+	columns                       *property.PartList[element.Element]
+	widthUnit                     *property.Enum[string]
+	rows                          *property.PartList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -24238,7 +24650,9 @@ func (o *Table) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("WidthUnit"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.widthUnit.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.widthUnit.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Rows"); err == nil {
 		for _, child := range children {
@@ -24253,16 +24667,16 @@ func (o *Table) InitFromRaw(raw bson.Raw) {
 
 type TableCell struct {
 	element.Base
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	isHeader *property.Primitive[bool]
-	widget *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
+	class           *property.Primitive[string]
+	style           *property.Primitive[string]
+	appearance      *property.Part[element.Element]
+	isHeader        *property.Primitive[bool]
+	widget          *property.Part[element.Element]
+	widgets         *property.PartList[element.Element]
 	leftColumnIndex *property.Primitive[int32]
-	topRowIndex *property.Primitive[int32]
-	width *property.Primitive[int32]
-	height *property.Primitive[int32]
+	topRowIndex     *property.Primitive[int32]
+	width           *property.Primitive[int32]
+	height          *property.Primitive[int32]
 }
 
 // Class returns the value of the class property.
@@ -24422,9 +24836,9 @@ func (o *TableColumn) InitFromRaw(raw bson.Raw) {
 
 type TableRow struct {
 	element.Base
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
 	conditionalVisibilitySettings *property.Part[element.Element]
 }
 
@@ -24486,25 +24900,25 @@ func (o *TableRow) InitFromRaw(raw bson.Raw) {
 
 type TemplateGrid struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	dataSource *property.Part[element.Element]
-	isControlBarVisible *property.Primitive[bool]
-	isPagingEnabled *property.Primitive[bool]
-	showPagingBar *property.Enum[string]
-	selectionMode *property.Enum[string]
-	selectFirst *property.Primitive[bool]
-	defaultButtonTrigger *property.Enum[string]
-	refreshTime *property.Primitive[int32]
-	controlBar *property.Part[element.Element]
-	contents *property.Part[element.Element]
-	numberOfRows *property.Primitive[int32]
-	numberOfColumns *property.Primitive[int32]
+	accessibilitySettings         *property.Part[element.Element]
+	dataSource                    *property.Part[element.Element]
+	isControlBarVisible           *property.Primitive[bool]
+	isPagingEnabled               *property.Primitive[bool]
+	showPagingBar                 *property.Enum[string]
+	selectionMode                 *property.Enum[string]
+	selectFirst                   *property.Primitive[bool]
+	defaultButtonTrigger          *property.Enum[string]
+	refreshTime                   *property.Primitive[int32]
+	controlBar                    *property.Part[element.Element]
+	contents                      *property.Part[element.Element]
+	numberOfRows                  *property.Primitive[int32]
+	numberOfColumns               *property.Primitive[int32]
 }
 
 // Name returns the value of the name property.
@@ -24718,14 +25132,20 @@ func (o *TemplateGrid) InitFromRaw(raw bson.Raw) {
 	o.isControlBarVisible.Init(raw)
 	o.isPagingEnabled.Init(raw)
 	if val, err := raw.LookupErr("ShowPagingBar"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.showPagingBar.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.showPagingBar.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("SelectionMode"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.selectionMode.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.selectionMode.SetFromDecode(s)
+		}
 	}
 	o.selectFirst.Init(raw)
 	if val, err := raw.LookupErr("DefaultButtonTrigger"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.defaultButtonTrigger.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.defaultButtonTrigger.SetFromDecode(s)
+		}
 	}
 	o.refreshTime.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ControlBar"); err == nil {
@@ -24744,7 +25164,7 @@ func (o *TemplateGrid) InitFromRaw(raw bson.Raw) {
 
 type TemplateGridContents struct {
 	element.Base
-	widget *property.Part[element.Element]
+	widget  *property.Part[element.Element]
 	widgets *property.PartList[element.Element]
 }
 
@@ -24791,12 +25211,12 @@ func (o *TemplateGridContents) InitFromRaw(raw bson.Raw) {
 
 type TemplatePlaceholder struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	name       *property.Primitive[string]
+	class      *property.Primitive[string]
+	style      *property.Primitive[string]
 	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	propType *property.Primitive[string]
+	tabIndex   *property.Primitive[int32]
+	propType   *property.Primitive[string]
 }
 
 // Name returns the value of the name property.
@@ -24877,36 +25297,36 @@ func (o *TemplatePlaceholder) InitFromRaw(raw bson.Raw) {
 
 type TextWidget struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
-	required *property.Primitive[bool]
-	requiredMessage *property.Part[element.Element]
-	validation *property.Part[element.Element]
-	onChangeMicroflowSettings *property.Part[element.Element]
-	onEnterMicroflowSettings *property.Part[element.Element]
-	onLeaveMicroflowSettings *property.Part[element.Element]
-	onChangeAction *property.Part[element.Element]
-	onEnterAction *property.Part[element.Element]
-	onLeaveAction *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	ariaRequired *property.Primitive[bool]
-	placeholder *property.Part[element.Element]
-	placeholderTemplate *property.Part[element.Element]
-	maxLengthCode *property.Primitive[int32]
-	autoFocus *property.Primitive[bool]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	attributePath                  *property.Primitive[string]
+	attributeRef                   *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
+	required                       *property.Primitive[bool]
+	requiredMessage                *property.Part[element.Element]
+	validation                     *property.Part[element.Element]
+	onChangeMicroflowSettings      *property.Part[element.Element]
+	onEnterMicroflowSettings       *property.Part[element.Element]
+	onLeaveMicroflowSettings       *property.Part[element.Element]
+	onChangeAction                 *property.Part[element.Element]
+	onEnterAction                  *property.Part[element.Element]
+	onLeaveAction                  *property.Part[element.Element]
+	sourceVariable                 *property.Part[element.Element]
+	ariaRequired                   *property.Primitive[bool]
+	placeholder                    *property.Part[element.Element]
+	placeholderTemplate            *property.Part[element.Element]
+	maxLengthCode                  *property.Primitive[int32]
+	autoFocus                      *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -25228,7 +25648,9 @@ func (o *TextWidget) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -25244,7 +25666,9 @@ func (o *TextWidget) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 	o.required.Init(raw)
 	if child, err := codec.DecodeChild(raw, "RequiredMessage"); err == nil {
@@ -25291,43 +25715,43 @@ func (o *TextWidget) InitFromRaw(raw bson.Raw) {
 
 type TextArea struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
-	required *property.Primitive[bool]
-	requiredMessage *property.Part[element.Element]
-	validation *property.Part[element.Element]
-	onChangeMicroflowSettings *property.Part[element.Element]
-	onEnterMicroflowSettings *property.Part[element.Element]
-	onLeaveMicroflowSettings *property.Part[element.Element]
-	onChangeAction *property.Part[element.Element]
-	onEnterAction *property.Part[element.Element]
-	onLeaveAction *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	ariaRequired *property.Primitive[bool]
-	placeholder *property.Part[element.Element]
-	placeholderTemplate *property.Part[element.Element]
-	maxLengthCode *property.Primitive[int32]
-	autoFocus *property.Primitive[bool]
-	numberOfLines *property.Primitive[int32]
-	counterMessage *property.Part[element.Element]
-	textTooLongMessage *property.Part[element.Element]
-	autocomplete *property.Primitive[bool]
-	submitBehaviour *property.Enum[string]
-	submitOnInputDelay *property.Primitive[int32]
-	nativeAccessibilitySettings *property.Part[element.Element]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	attributePath                  *property.Primitive[string]
+	attributeRef                   *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
+	required                       *property.Primitive[bool]
+	requiredMessage                *property.Part[element.Element]
+	validation                     *property.Part[element.Element]
+	onChangeMicroflowSettings      *property.Part[element.Element]
+	onEnterMicroflowSettings       *property.Part[element.Element]
+	onLeaveMicroflowSettings       *property.Part[element.Element]
+	onChangeAction                 *property.Part[element.Element]
+	onEnterAction                  *property.Part[element.Element]
+	onLeaveAction                  *property.Part[element.Element]
+	sourceVariable                 *property.Part[element.Element]
+	ariaRequired                   *property.Primitive[bool]
+	placeholder                    *property.Part[element.Element]
+	placeholderTemplate            *property.Part[element.Element]
+	maxLengthCode                  *property.Primitive[int32]
+	autoFocus                      *property.Primitive[bool]
+	numberOfLines                  *property.Primitive[int32]
+	counterMessage                 *property.Part[element.Element]
+	textTooLongMessage             *property.Part[element.Element]
+	autocomplete                   *property.Primitive[bool]
+	submitBehaviour                *property.Enum[string]
+	submitOnInputDelay             *property.Primitive[int32]
+	nativeAccessibilitySettings    *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -25719,7 +26143,9 @@ func (o *TextArea) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -25735,7 +26161,9 @@ func (o *TextArea) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 	o.required.Init(raw)
 	if child, err := codec.DecodeChild(raw, "RequiredMessage"); err == nil {
@@ -25783,7 +26211,9 @@ func (o *TextArea) InitFromRaw(raw bson.Raw) {
 	}
 	o.autocomplete.Init(raw)
 	if val, err := raw.LookupErr("SubmitBehaviour"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.submitBehaviour.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.submitBehaviour.SetFromDecode(s)
+		}
 	}
 	o.submitOnInputDelay.Init(raw)
 	if child, err := codec.DecodeChild(raw, "NativeAccessibilitySettings"); err == nil {
@@ -25797,46 +26227,46 @@ func (o *TextArea) InitFromRaw(raw bson.Raw) {
 
 type TextBox struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
+	name                           *property.Primitive[string]
+	class                          *property.Primitive[string]
+	style                          *property.Primitive[string]
+	appearance                     *property.Part[element.Element]
+	tabIndex                       *property.Primitive[int32]
+	conditionalVisibilitySettings  *property.Part[element.Element]
+	accessibilitySettings          *property.Part[element.Element]
 	conditionalEditabilitySettings *property.Part[element.Element]
-	editable *property.Enum[string]
-	label *property.Part[element.Element]
-	labelTemplate *property.Part[element.Element]
-	screenReaderLabel *property.Part[element.Element]
-	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	readOnlyStyle *property.Enum[string]
-	required *property.Primitive[bool]
-	requiredMessage *property.Part[element.Element]
-	validation *property.Part[element.Element]
-	onChangeMicroflowSettings *property.Part[element.Element]
-	onEnterMicroflowSettings *property.Part[element.Element]
-	onLeaveMicroflowSettings *property.Part[element.Element]
-	onChangeAction *property.Part[element.Element]
-	onEnterAction *property.Part[element.Element]
-	onLeaveAction *property.Part[element.Element]
-	sourceVariable *property.Part[element.Element]
-	ariaRequired *property.Primitive[bool]
-	placeholder *property.Part[element.Element]
-	placeholderTemplate *property.Part[element.Element]
-	maxLengthCode *property.Primitive[int32]
-	autoFocus *property.Primitive[bool]
-	inputMask *property.Primitive[string]
-	formattingInfo *property.Part[element.Element]
-	isPasswordBox *property.Primitive[bool]
-	keyboardType *property.Enum[string]
-	onEnterKeyPressAction *property.Part[element.Element]
-	autocomplete *property.Primitive[bool]
-	autocompletePurpose *property.Enum[string]
-	submitBehaviour *property.Enum[string]
-	submitOnInputDelay *property.Primitive[int32]
-	nativeAccessibilitySettings *property.Part[element.Element]
+	editable                       *property.Enum[string]
+	label                          *property.Part[element.Element]
+	labelTemplate                  *property.Part[element.Element]
+	screenReaderLabel              *property.Part[element.Element]
+	attributePath                  *property.Primitive[string]
+	attributeRef                   *property.Part[element.Element]
+	readOnlyStyle                  *property.Enum[string]
+	required                       *property.Primitive[bool]
+	requiredMessage                *property.Part[element.Element]
+	validation                     *property.Part[element.Element]
+	onChangeMicroflowSettings      *property.Part[element.Element]
+	onEnterMicroflowSettings       *property.Part[element.Element]
+	onLeaveMicroflowSettings       *property.Part[element.Element]
+	onChangeAction                 *property.Part[element.Element]
+	onEnterAction                  *property.Part[element.Element]
+	onLeaveAction                  *property.Part[element.Element]
+	sourceVariable                 *property.Part[element.Element]
+	ariaRequired                   *property.Primitive[bool]
+	placeholder                    *property.Part[element.Element]
+	placeholderTemplate            *property.Part[element.Element]
+	maxLengthCode                  *property.Primitive[int32]
+	autoFocus                      *property.Primitive[bool]
+	inputMask                      *property.Primitive[string]
+	formattingInfo                 *property.Part[element.Element]
+	isPasswordBox                  *property.Primitive[bool]
+	keyboardType                   *property.Enum[string]
+	onEnterKeyPressAction          *property.Part[element.Element]
+	autocomplete                   *property.Primitive[bool]
+	autocompletePurpose            *property.Enum[string]
+	submitBehaviour                *property.Enum[string]
+	submitOnInputDelay             *property.Primitive[int32]
+	nativeAccessibilitySettings    *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -26258,7 +26688,9 @@ func (o *TextBox) InitFromRaw(raw bson.Raw) {
 		o.conditionalEditabilitySettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Editable"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.editable.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.editable.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Label"); err == nil {
 		o.label.SetFromDecode(child)
@@ -26274,7 +26706,9 @@ func (o *TextBox) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ReadOnlyStyle"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.readOnlyStyle.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.readOnlyStyle.SetFromDecode(s)
+		}
 	}
 	o.required.Init(raw)
 	if child, err := codec.DecodeChild(raw, "RequiredMessage"); err == nil {
@@ -26319,17 +26753,23 @@ func (o *TextBox) InitFromRaw(raw bson.Raw) {
 	}
 	o.isPasswordBox.Init(raw)
 	if val, err := raw.LookupErr("KeyboardType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.keyboardType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.keyboardType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "OnEnterKeyPressAction"); err == nil {
 		o.onEnterKeyPressAction.SetFromDecode(child)
 	}
 	o.autocomplete.Init(raw)
 	if val, err := raw.LookupErr("AutocompletePurpose"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.autocompletePurpose.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.autocompletePurpose.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("SubmitBehaviour"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.submitBehaviour.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.submitBehaviour.SetFromDecode(s)
+		}
 	}
 	o.submitOnInputDelay.Init(raw)
 	if child, err := codec.DecodeChild(raw, "NativeAccessibilitySettings"); err == nil {
@@ -26343,14 +26783,14 @@ func (o *TextBox) InitFromRaw(raw bson.Raw) {
 
 type Title struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	name                          *property.Primitive[string]
+	class                         *property.Primitive[string]
+	style                         *property.Primitive[string]
+	appearance                    *property.Part[element.Element]
+	tabIndex                      *property.Primitive[int32]
 	conditionalVisibilitySettings *property.Part[element.Element]
-	accessibilitySettings *property.Part[element.Element]
-	nativeAccessibilitySettings *property.Part[element.Element]
+	accessibilitySettings         *property.Part[element.Element]
+	nativeAccessibilitySettings   *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -26496,7 +26936,9 @@ func (o *UserRoleSet) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.userRoles.SetFromDecode(qnames)
 		}
@@ -26533,11 +26975,11 @@ func (o *UserTaskTemplateType) InitFromRaw(raw bson.Raw) {
 
 type ValidationMessage struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	name       *property.Primitive[string]
+	class      *property.Primitive[string]
+	style      *property.Primitive[string]
 	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
+	tabIndex   *property.Primitive[int32]
 }
 
 // Name returns the value of the name property.
@@ -26607,12 +27049,12 @@ func (o *ValidationMessage) InitFromRaw(raw bson.Raw) {
 
 type VerticalFlow struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
+	name       *property.Primitive[string]
+	class      *property.Primitive[string]
+	style      *property.Primitive[string]
 	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	widgets *property.PartList[element.Element]
+	tabIndex   *property.Primitive[int32]
+	widgets    *property.PartList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -26702,18 +27144,18 @@ func (o *VerticalFlow) InitFromRaw(raw bson.Raw) {
 
 type VerticalSplitPane struct {
 	element.Base
-	name *property.Primitive[string]
-	class *property.Primitive[string]
-	style *property.Primitive[string]
-	appearance *property.Part[element.Element]
-	tabIndex *property.Primitive[int32]
-	firstWidget *property.Part[element.Element]
-	secondWidget *property.Part[element.Element]
-	firstWidgets *property.PartList[element.Element]
-	secondWidgets *property.PartList[element.Element]
+	name           *property.Primitive[string]
+	class          *property.Primitive[string]
+	style          *property.Primitive[string]
+	appearance     *property.Part[element.Element]
+	tabIndex       *property.Primitive[int32]
+	firstWidget    *property.Part[element.Element]
+	secondWidget   *property.Part[element.Element]
+	firstWidgets   *property.PartList[element.Element]
+	secondWidgets  *property.PartList[element.Element]
 	animatedResize *property.Primitive[bool]
-	height *property.Primitive[int32]
-	position *property.Primitive[int32]
+	height         *property.Primitive[int32]
+	position       *property.Primitive[int32]
 }
 
 // Name returns the value of the name property.
@@ -26884,7 +27326,7 @@ type WebLayoutContent struct {
 	element.Base
 	layoutType *property.Enum[string]
 	layoutCall *property.Part[element.Element]
-	widgets *property.PartList[element.Element]
+	widgets    *property.PartList[element.Element]
 }
 
 // LayoutType returns the value of the layoutType property.
@@ -26925,7 +27367,9 @@ func (o *WebLayoutContent) RemoveWidgets(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *WebLayoutContent) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("LayoutType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.layoutType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.layoutType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "LayoutCall"); err == nil {
 		o.layoutCall.SetFromDecode(child)
@@ -26943,9 +27387,9 @@ func (o *WebLayoutContent) InitFromRaw(raw bson.Raw) {
 
 type WidgetValidation struct {
 	element.Base
-	expression *property.Primitive[string]
+	expression      *property.Primitive[string]
 	expressionModel *property.Part[element.Element]
-	message *property.Part[element.Element]
+	message         *property.Part[element.Element]
 }
 
 // Expression returns the value of the expression property.
@@ -27017,7 +27461,7 @@ func initAccessibilitySettings() *AccessibilitySettings {
 	o.screenReaderTitle.Bind(&o.Base, 1)
 	o.accessible = property.NewPrimitive[bool]("Accessible", property.DecodeBool)
 	o.accessible.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.screenReaderDescription, o.screenReaderTitle, o.accessible, })
+	o.SetProperties([]element.Property{o.screenReaderDescription, o.screenReaderTitle, o.accessible})
 	return o
 }
 
@@ -27068,7 +27512,7 @@ func initActionButton() *ActionButton {
 	o.disabledDuringAction.Bind(&o.Base, 14)
 	o.nativeAccessibilitySettings = property.NewPart[element.Element]("NativeAccessibilitySettings")
 	o.nativeAccessibilitySettings.Bind(&o.Base, 15)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.action, o.ariaRole, o.disabledDuringAction, o.nativeAccessibilitySettings, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.action, o.ariaRole, o.disabledDuringAction, o.nativeAccessibilitySettings})
 	return o
 }
 
@@ -27095,7 +27539,7 @@ func initAppearance() *Appearance {
 	o.designProperties.Bind(&o.Base, 2)
 	o.dynamicClasses = property.NewPrimitive[string]("DynamicClasses", property.DecodeString)
 	o.dynamicClasses.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.class, o.style, o.designProperties, o.dynamicClasses, })
+	o.SetProperties([]element.Property{o.class, o.style, o.designProperties, o.dynamicClasses})
 	return o
 }
 
@@ -27122,7 +27566,7 @@ func initAssociationSource() *AssociationSource {
 	o.entityRef.Bind(&o.Base, 2)
 	o.sourceVariable = property.NewPart[element.Element]("SourceVariable")
 	o.sourceVariable.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, })
+	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable})
 	return o
 }
 
@@ -27165,7 +27609,7 @@ func initBackButton() *BackButton {
 	o.renderType.Bind(&o.Base, 10)
 	o.buttonStyle = property.NewEnum[string]("ButtonStyle")
 	o.buttonStyle.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle})
 	return o
 }
 
@@ -27212,7 +27656,7 @@ func initBuildingBlock() *BuildingBlock {
 	o.widgets.Bind(&o.Base, 12)
 	o.platform = property.NewEnum[string]("Platform")
 	o.platform.Bind(&o.Base, 13)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.canvasWidth, o.canvasHeight, o.displayName, o.documentationUrl, o.templateCategory, o.templateCategoryWeight, o.imageData, o.widget, o.widgets, o.platform, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.canvasWidth, o.canvasHeight, o.displayName, o.documentationUrl, o.templateCategory, o.templateCategoryWeight, o.imageData, o.widget, o.widgets, o.platform})
 	return o
 }
 
@@ -27245,7 +27689,7 @@ func initCallNanoflowClientAction() *CallNanoflowClientAction {
 	o.confirmationInfo.Bind(&o.Base, 5)
 	o.outputMappings = property.NewPartList[element.Element]("OutputMappings")
 	o.outputMappings.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, o.nanoflow, o.parameterMappings, o.progressBar, o.progressMessage, o.confirmationInfo, o.outputMappings, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution, o.nanoflow, o.parameterMappings, o.progressBar, o.progressMessage, o.confirmationInfo, o.outputMappings})
 	return o
 }
 
@@ -27274,7 +27718,7 @@ func initCallWorkflowClientAction() *CallWorkflowClientAction {
 	o.commit.Bind(&o.Base, 3)
 	o.confirmationInfo = property.NewPart[element.Element]("ConfirmationInfo")
 	o.confirmationInfo.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, o.workflow, o.closePage, o.commit, o.confirmationInfo, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution, o.workflow, o.closePage, o.commit, o.confirmationInfo})
 	return o
 }
 
@@ -27319,7 +27763,7 @@ func initCancelButton() *CancelButton {
 	o.buttonStyle.Bind(&o.Base, 11)
 	o.closePage = property.NewPrimitive[bool]("ClosePage", property.DecodeBool)
 	o.closePage.Bind(&o.Base, 12)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.closePage, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.closePage})
 	return o
 }
 
@@ -27342,7 +27786,7 @@ func initCancelChangesClientAction() *CancelChangesClientAction {
 	o.disabledDuringExecution.Bind(&o.Base, 0)
 	o.closePage = property.NewPrimitive[bool]("ClosePage", property.DecodeBool)
 	o.closePage.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, o.closePage, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution, o.closePage})
 	return o
 }
 
@@ -27363,7 +27807,7 @@ func initCancelSynchronizationClientAction() *CancelSynchronizationClientAction 
 	o.SetTypeName("Forms$CancelSynchronizationClientAction")
 	o.disabledDuringExecution = property.NewPrimitive[bool]("DisabledDuringExecution", property.DecodeBool)
 	o.disabledDuringExecution.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution})
 	return o
 }
 
@@ -27440,7 +27884,7 @@ func initCheckBox() *CheckBox {
 	o.nativeRenderMode.Bind(&o.Base, 27)
 	o.nativeAccessibilitySettings = property.NewPart[element.Element]("NativeAccessibilitySettings")
 	o.nativeAccessibilitySettings.Bind(&o.Base, 28)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.required, o.requiredMessage, o.validation, o.onChangeMicroflowSettings, o.onEnterMicroflowSettings, o.onLeaveMicroflowSettings, o.onChangeAction, o.onEnterAction, o.onLeaveAction, o.sourceVariable, o.ariaRequired, o.labelPosition, o.nativeRenderMode, o.nativeAccessibilitySettings, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.required, o.requiredMessage, o.validation, o.onChangeMicroflowSettings, o.onEnterMicroflowSettings, o.onLeaveMicroflowSettings, o.onChangeAction, o.onEnterAction, o.onLeaveAction, o.sourceVariable, o.ariaRequired, o.labelPosition, o.nativeRenderMode, o.nativeAccessibilitySettings})
 	return o
 }
 
@@ -27465,7 +27909,7 @@ func initClientTemplate() *ClientTemplate {
 	o.parameters.Bind(&o.Base, 1)
 	o.fallback = property.NewPart[element.Element]("Fallback")
 	o.fallback.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.template, o.parameters, o.fallback, })
+	o.SetProperties([]element.Property{o.template, o.parameters, o.fallback})
 	return o
 }
 
@@ -27494,7 +27938,7 @@ func initClientTemplateParameter() *ClientTemplateParameter {
 	o.formattingInfo.Bind(&o.Base, 3)
 	o.sourceVariable = property.NewPart[element.Element]("SourceVariable")
 	o.sourceVariable.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.attributePath, o.attributeRef, o.expression, o.formattingInfo, o.sourceVariable, })
+	o.SetProperties([]element.Property{o.attributePath, o.attributeRef, o.expression, o.formattingInfo, o.sourceVariable})
 	return o
 }
 
@@ -27519,7 +27963,7 @@ func initClosePageClientAction() *ClosePageClientAction {
 	o.numberOfPages.Bind(&o.Base, 1)
 	o.numberOfPagesToClose = property.NewPrimitive[string]("NumberOfPagesToClose", property.DecodeString)
 	o.numberOfPagesToClose.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, o.numberOfPages, o.numberOfPagesToClose, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution, o.numberOfPages, o.numberOfPagesToClose})
 	return o
 }
 
@@ -27556,7 +28000,7 @@ func initComparisonSearchField() *ComparisonSearchField {
 	o.attributeRef.Bind(&o.Base, 7)
 	o.operator = property.NewEnum[string]("Operator")
 	o.operator.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.name, o.caption, o.placeholder, o.customDateFormat, o.propType, o.defaultValue, o.attributePath, o.attributeRef, o.operator, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.placeholder, o.customDateFormat, o.propType, o.defaultValue, o.attributePath, o.attributeRef, o.operator})
 	return o
 }
 
@@ -27577,7 +28021,7 @@ func initCompoundDesignPropertyValue() *CompoundDesignPropertyValue {
 	o.SetTypeName("Forms$CompoundDesignPropertyValue")
 	o.properties = property.NewPartList[element.Element]("Properties")
 	o.properties.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.properties, })
+	o.SetProperties([]element.Property{o.properties})
 	return o
 }
 
@@ -27606,7 +28050,7 @@ func initConditionalEditabilitySettings() *ConditionalEditabilitySettings {
 	o.sourceVariable.Bind(&o.Base, 3)
 	o.expressionModel = property.NewPart[element.Element]("ExpressionModel")
 	o.expressionModel.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.attribute, o.conditions, o.expression, o.sourceVariable, o.expressionModel, })
+	o.SetProperties([]element.Property{o.attribute, o.conditions, o.expression, o.sourceVariable, o.expressionModel})
 	return o
 }
 
@@ -27639,7 +28083,7 @@ func initConditionalVisibilitySettings() *ConditionalVisibilitySettings {
 	o.moduleRoles.Bind(&o.Base, 5)
 	o.ignoreSecurity = property.NewPrimitive[bool]("IgnoreSecurity", property.DecodeBool)
 	o.ignoreSecurity.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.attribute, o.conditions, o.expression, o.sourceVariable, o.expressionModel, o.moduleRoles, o.ignoreSecurity, })
+	o.SetProperties([]element.Property{o.attribute, o.conditions, o.expression, o.sourceVariable, o.expressionModel, o.moduleRoles, o.ignoreSecurity})
 	return o
 }
 
@@ -27664,7 +28108,7 @@ func initConfirmationInfo() *ConfirmationInfo {
 	o.proceedButtonCaption.Bind(&o.Base, 1)
 	o.cancelButtonCaption = property.NewPart[element.Element]("CancelButtonCaption")
 	o.cancelButtonCaption.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.question, o.proceedButtonCaption, o.cancelButtonCaption, })
+	o.SetProperties([]element.Property{o.question, o.proceedButtonCaption, o.cancelButtonCaption})
 	return o
 }
 
@@ -27693,7 +28137,7 @@ func initCreateObjectClientAction() *CreateObjectClientAction {
 	o.numberOfPagesToClose.Bind(&o.Base, 3)
 	o.numberOfPagesToClose2 = property.NewPrimitive[string]("NumberOfPagesToClose2", property.DecodeString)
 	o.numberOfPagesToClose2.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, o.entityRef, o.pageSettings, o.numberOfPagesToClose, o.numberOfPagesToClose2, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution, o.entityRef, o.pageSettings, o.numberOfPagesToClose, o.numberOfPagesToClose2})
 	return o
 }
 
@@ -27714,7 +28158,7 @@ func initCustomDesignPropertyValue() *CustomDesignPropertyValue {
 	o.SetTypeName("Forms$CustomDesignPropertyValue")
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.value, })
+	o.SetProperties([]element.Property{o.value})
 	return o
 }
 
@@ -27777,7 +28221,7 @@ func initDataGrid() *DataGrid {
 	o.tooltipPage.Bind(&o.Base, 20)
 	o.caption = property.NewPart[element.Element]("Caption")
 	o.caption.Bind(&o.Base, 21)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.dataSource, o.isControlBarVisible, o.isPagingEnabled, o.showPagingBar, o.selectionMode, o.selectFirst, o.defaultButtonTrigger, o.refreshTime, o.controlBar, o.columns, o.numberOfRows, o.showEmptyRows, o.widthUnit, o.tooltipPage, o.caption, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.dataSource, o.isControlBarVisible, o.isPagingEnabled, o.showPagingBar, o.selectionMode, o.selectFirst, o.defaultButtonTrigger, o.refreshTime, o.controlBar, o.columns, o.numberOfRows, o.showEmptyRows, o.widthUnit, o.tooltipPage, o.caption})
 	return o
 }
 
@@ -27816,7 +28260,7 @@ func initDataGridAddButton() *DataGridAddButton {
 	o.buttonStyle.Bind(&o.Base, 8)
 	o.pageSettings = property.NewPart[element.Element]("PageSettings")
 	o.pageSettings.Bind(&o.Base, 9)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.pageSettings, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.pageSettings})
 	return o
 }
 
@@ -27865,7 +28309,7 @@ func initDataGridExportToCSVButton() *DataGridExportToCSVButton {
 	o.generateExcelHint.Bind(&o.Base, 13)
 	o.useGridDateFormat = property.NewPrimitive[bool]("UseGridDateFormat", property.DecodeBool)
 	o.useGridDateFormat.Bind(&o.Base, 14)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.maxNumberOfRows, o.decimalSeparator, o.groupSeparator, o.delimiter, o.generateExcelHint, o.useGridDateFormat, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.maxNumberOfRows, o.decimalSeparator, o.groupSeparator, o.delimiter, o.generateExcelHint, o.useGridDateFormat})
 	return o
 }
 
@@ -27906,7 +28350,7 @@ func initDataGridExportToExcelButton() *DataGridExportToExcelButton {
 	o.maxNumberOfRows.Bind(&o.Base, 9)
 	o.useExcelDateType = property.NewPrimitive[bool]("UseExcelDateType", property.DecodeBool)
 	o.useExcelDateType.Bind(&o.Base, 10)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.maxNumberOfRows, o.useExcelDateType, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.maxNumberOfRows, o.useExcelDateType})
 	return o
 }
 
@@ -27943,7 +28387,7 @@ func initDataGridRemoveButton() *DataGridRemoveButton {
 	o.conditionalVisibilitySettings.Bind(&o.Base, 7)
 	o.buttonStyle = property.NewEnum[string]("ButtonStyle")
 	o.buttonStyle.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle})
 	return o
 }
 
@@ -28008,7 +28452,7 @@ func initDataView() *DataView {
 	o.controlBar.Bind(&o.Base, 21)
 	o.readOnlyStyle = property.NewEnum[string]("ReadOnlyStyle")
 	o.readOnlyStyle.Bind(&o.Base, 22)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.dataSource, o.widget, o.widgets, o.footerWidget, o.footerWidgets, o.editable, o.editability, o.conditionalEditabilitySettings, o.showControlBar, o.showFooter, o.closeOnSaveOrCancel, o.useSchema, o.noEntityMessage, o.labelWidth, o.controlBar, o.readOnlyStyle, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.dataSource, o.widget, o.widgets, o.footerWidget, o.footerWidgets, o.editable, o.editability, o.conditionalEditabilitySettings, o.showControlBar, o.showFooter, o.closeOnSaveOrCancel, o.useSchema, o.noEntityMessage, o.labelWidth, o.controlBar, o.readOnlyStyle})
 	return o
 }
 
@@ -28049,7 +28493,7 @@ func initDataViewActionButton() *DataViewActionButton {
 	o.tabIndex.Bind(&o.Base, 9)
 	o.action = property.NewPart[element.Element]("Action")
 	o.action.Bind(&o.Base, 10)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.tabIndex, o.action, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.tabIndex, o.action})
 	return o
 }
 
@@ -28088,7 +28532,7 @@ func initDataViewCancelButton() *DataViewCancelButton {
 	o.buttonStyle.Bind(&o.Base, 8)
 	o.tabIndex = property.NewPrimitive[int32]("TabIndex", property.DecodeInt32)
 	o.tabIndex.Bind(&o.Base, 9)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.tabIndex, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.tabIndex})
 	return o
 }
 
@@ -28127,7 +28571,7 @@ func initDataViewCloseButton() *DataViewCloseButton {
 	o.buttonStyle.Bind(&o.Base, 8)
 	o.tabIndex = property.NewPrimitive[int32]("TabIndex", property.DecodeInt32)
 	o.tabIndex.Bind(&o.Base, 9)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.tabIndex, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.tabIndex})
 	return o
 }
 
@@ -28150,7 +28594,7 @@ func initDataViewControlBar() *DataViewControlBar {
 	o.items.Bind(&o.Base, 0)
 	o.closeButton = property.NewByIdRef[element.Element]("CloseButton")
 	o.closeButton.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.items, o.closeButton, })
+	o.SetProperties([]element.Property{o.items, o.closeButton})
 	return o
 }
 
@@ -28191,7 +28635,7 @@ func initDataViewSaveButton() *DataViewSaveButton {
 	o.tabIndex.Bind(&o.Base, 9)
 	o.syncAutomatically = property.NewPrimitive[bool]("SyncAutomatically", property.DecodeBool)
 	o.syncAutomatically.Bind(&o.Base, 10)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.tabIndex, o.syncAutomatically, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.tabIndex, o.syncAutomatically})
 	return o
 }
 
@@ -28222,7 +28666,7 @@ func initDataViewSource() *DataViewSource {
 	o.pageParameter.Bind(&o.Base, 4)
 	o.snippetParameter = property.NewByNameRef[element.Element]("SnippetParameter", "Forms$SnippetParameter")
 	o.snippetParameter.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.pageParameter, o.snippetParameter, })
+	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.pageParameter, o.snippetParameter})
 	return o
 }
 
@@ -28247,7 +28691,7 @@ func initDatabaseConstraint() *DatabaseConstraint {
 	o.operator.Bind(&o.Base, 1)
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.attribute, o.operator, o.value, })
+	o.SetProperties([]element.Property{o.attribute, o.operator, o.value})
 	return o
 }
 
@@ -28326,7 +28770,7 @@ func initDatePicker() *DatePicker {
 	o.formattingInfo.Bind(&o.Base, 28)
 	o.nativeAccessibilitySettings = property.NewPart[element.Element]("NativeAccessibilitySettings")
 	o.nativeAccessibilitySettings.Bind(&o.Base, 29)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.required, o.requiredMessage, o.validation, o.onChangeMicroflowSettings, o.onEnterMicroflowSettings, o.onLeaveMicroflowSettings, o.onChangeAction, o.onEnterAction, o.onLeaveAction, o.sourceVariable, o.ariaRequired, o.placeholder, o.placeholderTemplate, o.formattingInfo, o.nativeAccessibilitySettings, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.required, o.requiredMessage, o.validation, o.onChangeMicroflowSettings, o.onEnterMicroflowSettings, o.onLeaveMicroflowSettings, o.onChangeAction, o.onEnterAction, o.onLeaveAction, o.sourceVariable, o.ariaRequired, o.placeholder, o.placeholderTemplate, o.formattingInfo, o.nativeAccessibilitySettings})
 	return o
 }
 
@@ -28351,7 +28795,7 @@ func initDeleteClientAction() *DeleteClientAction {
 	o.closePage.Bind(&o.Base, 1)
 	o.sourceVariable = property.NewPart[element.Element]("SourceVariable")
 	o.sourceVariable.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, o.closePage, o.sourceVariable, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution, o.closePage, o.sourceVariable})
 	return o
 }
 
@@ -28380,7 +28824,7 @@ func initDesignPropertyValue() *DesignPropertyValue {
 	o.booleanValue.Bind(&o.Base, 3)
 	o.value = property.NewPart[element.Element]("Value")
 	o.value.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.key, o.propType, o.stringValue, o.booleanValue, o.value, })
+	o.SetProperties([]element.Property{o.key, o.propType, o.stringValue, o.booleanValue, o.value})
 	return o
 }
 
@@ -28425,7 +28869,7 @@ func initDivContainer() *DivContainer {
 	o.screenReaderHidden.Bind(&o.Base, 11)
 	o.nativeAccessibilitySettings = property.NewPart[element.Element]("NativeAccessibilitySettings")
 	o.nativeAccessibilitySettings.Bind(&o.Base, 12)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.widget, o.widgets, o.renderMode, o.onClickAction, o.screenReaderHidden, o.nativeAccessibilitySettings, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.widget, o.widgets, o.renderMode, o.onClickAction, o.screenReaderHidden, o.nativeAccessibilitySettings})
 	return o
 }
 
@@ -28500,7 +28944,7 @@ func initDropDown() *DropDown {
 	o.emptyOptionCaption.Bind(&o.Base, 26)
 	o.nativeAccessibilitySettings = property.NewPart[element.Element]("NativeAccessibilitySettings")
 	o.nativeAccessibilitySettings.Bind(&o.Base, 27)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.required, o.requiredMessage, o.validation, o.onChangeMicroflowSettings, o.onEnterMicroflowSettings, o.onLeaveMicroflowSettings, o.onChangeAction, o.onEnterAction, o.onLeaveAction, o.sourceVariable, o.ariaRequired, o.emptyOptionCaption, o.nativeAccessibilitySettings, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.required, o.requiredMessage, o.validation, o.onChangeMicroflowSettings, o.onEnterMicroflowSettings, o.onLeaveMicroflowSettings, o.onChangeAction, o.onEnterAction, o.onLeaveAction, o.sourceVariable, o.ariaRequired, o.emptyOptionCaption, o.nativeAccessibilitySettings})
 	return o
 }
 
@@ -28545,7 +28989,7 @@ func initDropDownButton() *DropDownButton {
 	o.buttonStyle.Bind(&o.Base, 11)
 	o.items = property.NewPartList[element.Element]("Items")
 	o.items.Bind(&o.Base, 12)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.items, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.items})
 	return o
 }
 
@@ -28570,7 +29014,7 @@ func initDropDownButtonItem() *DropDownButtonItem {
 	o.caption.Bind(&o.Base, 1)
 	o.image = property.NewByNameRef[element.Element]("Image", "Images$Image")
 	o.image.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.action, o.caption, o.image, })
+	o.SetProperties([]element.Property{o.action, o.caption, o.image})
 	return o
 }
 
@@ -28613,7 +29057,7 @@ func initDropDownSearchField() *DropDownSearchField {
 	o.xPathConstraint.Bind(&o.Base, 10)
 	o.allowMultipleSelect = property.NewPrimitive[bool]("AllowMultipleSelect", property.DecodeBool)
 	o.allowMultipleSelect.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.name, o.caption, o.placeholder, o.customDateFormat, o.propType, o.defaultValue, o.attributePath, o.attributeRef, o.operator, o.sortBar, o.xPathConstraint, o.allowMultipleSelect, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.placeholder, o.customDateFormat, o.propType, o.defaultValue, o.attributePath, o.attributeRef, o.operator, o.sortBar, o.xPathConstraint, o.allowMultipleSelect})
 	return o
 }
 
@@ -28672,7 +29116,7 @@ func initDynamicImageViewer() *DynamicImageViewer {
 	o.alternativeText.Bind(&o.Base, 18)
 	o.nativeAccessibilitySettings = property.NewPart[element.Element]("NativeAccessibilitySettings")
 	o.nativeAccessibilitySettings.Bind(&o.Base, 19)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.dataSource, o.defaultImage, o.widthUnit, o.heightUnit, o.width, o.height, o.responsive, o.showAsThumbnail, o.onClickBehavior, o.clickAction, o.onClickEnlarge, o.alternativeText, o.nativeAccessibilitySettings, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.dataSource, o.defaultImage, o.widthUnit, o.heightUnit, o.width, o.height, o.responsive, o.showAsThumbnail, o.onClickBehavior, o.clickAction, o.onClickEnlarge, o.alternativeText, o.nativeAccessibilitySettings})
 	return o
 }
 
@@ -28713,7 +29157,7 @@ func initDynamicText() *DynamicText {
 	o.nativeTextStyle.Bind(&o.Base, 9)
 	o.nativeAccessibilitySettings = property.NewPart[element.Element]("NativeAccessibilitySettings")
 	o.nativeAccessibilitySettings.Bind(&o.Base, 10)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.content, o.renderMode, o.nativeTextStyle, o.nativeAccessibilitySettings, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.content, o.renderMode, o.nativeTextStyle, o.nativeAccessibilitySettings})
 	return o
 }
 
@@ -28783,7 +29227,7 @@ func initFileManager() *FileManager {
 	o.maxFileSize.Bind(&o.Base, 14)
 	o.showFileInBrowser = property.NewPrimitive[bool]("ShowFileInBrowser", property.DecodeBool)
 	o.showFileInBrowser.Bind(&o.Base, 15)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.allowedExtensions, o.propType, o.maxFileSize, o.showFileInBrowser, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.allowedExtensions, o.propType, o.maxFileSize, o.showFileInBrowser})
 	return o
 }
 
@@ -28812,7 +29256,7 @@ func initFormattingInfo() *FormattingInfo {
 	o.dateFormat.Bind(&o.Base, 3)
 	o.customDateFormat = property.NewPrimitive[string]("CustomDateFormat", property.DecodeString)
 	o.customDateFormat.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.decimalPrecision, o.groupDigits, o.enumFormat, o.dateFormat, o.customDateFormat, })
+	o.SetProperties([]element.Property{o.decimalPrecision, o.groupDigits, o.enumFormat, o.dateFormat, o.customDateFormat})
 	return o
 }
 
@@ -28833,7 +29277,7 @@ func initGlyphIcon() *GlyphIcon {
 	o.SetTypeName("Forms$GlyphIcon")
 	o.code = property.NewPrimitive[int32]("Code", property.DecodeInt32)
 	o.code.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.code, })
+	o.SetProperties([]element.Property{o.code})
 	return o
 }
 
@@ -28874,7 +29318,7 @@ func initGridActionButton() *GridActionButton {
 	o.action.Bind(&o.Base, 9)
 	o.maintainSelectionAfterMicroflow = property.NewPrimitive[bool]("MaintainSelectionAfterMicroflow", property.DecodeBool)
 	o.maintainSelectionAfterMicroflow.Bind(&o.Base, 10)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.action, o.maintainSelectionAfterMicroflow, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.action, o.maintainSelectionAfterMicroflow})
 	return o
 }
 
@@ -28919,7 +29363,7 @@ func initGridColumn() *GridColumn {
 	o.style.Bind(&o.Base, 11)
 	o.appearance = property.NewPart[element.Element]("Appearance")
 	o.appearance.Bind(&o.Base, 12)
-	o.SetProperties([]element.Property{o.name, o.caption, o.attributePath, o.attributeRef, o.formattingInfo, o.showTooltip, o.aggregateCaption, o.aggregateFunction, o.editable, o.width, o.class, o.style, o.appearance, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.attributePath, o.attributeRef, o.formattingInfo, o.showTooltip, o.aggregateCaption, o.aggregateFunction, o.editable, o.width, o.class, o.style, o.appearance})
 	return o
 }
 
@@ -28944,7 +29388,7 @@ func initGridControlBar() *GridControlBar {
 	o.searchButton.Bind(&o.Base, 1)
 	o.defaultButton = property.NewByIdRef[element.Element]("DefaultButtonPointer")
 	o.defaultButton.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.items, o.searchButton, o.defaultButton, })
+	o.SetProperties([]element.Property{o.items, o.searchButton, o.defaultButton})
 	return o
 }
 
@@ -28977,7 +29421,7 @@ func initGridDatabaseSource() *GridDatabaseSource {
 	o.databaseConstraints.Bind(&o.Base, 5)
 	o.searchBar = property.NewPart[element.Element]("SearchBar")
 	o.searchBar.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.sortBar, o.databaseConstraints, o.searchBar, })
+	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.sortBar, o.databaseConstraints, o.searchBar})
 	return o
 }
 
@@ -29014,7 +29458,7 @@ func initGridDeleteButton() *GridDeleteButton {
 	o.conditionalVisibilitySettings.Bind(&o.Base, 7)
 	o.buttonStyle = property.NewEnum[string]("ButtonStyle")
 	o.buttonStyle.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle})
 	return o
 }
 
@@ -29051,7 +29495,7 @@ func initGridDeselectAllButton() *GridDeselectAllButton {
 	o.conditionalVisibilitySettings.Bind(&o.Base, 7)
 	o.buttonStyle = property.NewEnum[string]("ButtonStyle")
 	o.buttonStyle.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle})
 	return o
 }
 
@@ -29092,7 +29536,7 @@ func initGridEditButton() *GridEditButton {
 	o.pageSettings.Bind(&o.Base, 9)
 	o.pagesForSpecializations = property.NewPartList[element.Element]("PagesForSpecializations")
 	o.pagesForSpecializations.Bind(&o.Base, 10)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.pageSettings, o.pagesForSpecializations, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.pageSettings, o.pagesForSpecializations})
 	return o
 }
 
@@ -29137,7 +29581,7 @@ func initGridNewButton() *GridNewButton {
 	o.pageSettings.Bind(&o.Base, 11)
 	o.isPersistent = property.NewPrimitive[bool]("IsPersistent", property.DecodeBool)
 	o.isPersistent.Bind(&o.Base, 12)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.entity, o.editLocation, o.pageSettings, o.isPersistent, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.entity, o.editLocation, o.pageSettings, o.isPersistent})
 	return o
 }
 
@@ -29174,7 +29618,7 @@ func initGridSearchButton() *GridSearchButton {
 	o.conditionalVisibilitySettings.Bind(&o.Base, 7)
 	o.buttonStyle = property.NewEnum[string]("ButtonStyle")
 	o.buttonStyle.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle})
 	return o
 }
 
@@ -29213,7 +29657,7 @@ func initGridSelectAllButton() *GridSelectAllButton {
 	o.buttonStyle.Bind(&o.Base, 8)
 	o.selectionType = property.NewEnum[string]("SelectionType")
 	o.selectionType.Bind(&o.Base, 9)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.selectionType, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, o.selectionType})
 	return o
 }
 
@@ -29234,7 +29678,7 @@ func initGridSortBar() *GridSortBar {
 	o.SetTypeName("Forms$GridSortBar")
 	o.sortItems = property.NewPartList[element.Element]("SortItems")
 	o.sortItems.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.sortItems, })
+	o.SetProperties([]element.Property{o.sortItems})
 	return o
 }
 
@@ -29259,7 +29703,7 @@ func initGridSortItem() *GridSortItem {
 	o.attributeRef.Bind(&o.Base, 1)
 	o.sortDirection = property.NewEnum[string]("SortDirection")
 	o.sortDirection.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.attributePath, o.attributeRef, o.sortDirection, })
+	o.SetProperties([]element.Property{o.attributePath, o.attributeRef, o.sortDirection})
 	return o
 }
 
@@ -29298,7 +29742,7 @@ func initGridXPathSource() *GridXPathSource {
 	o.removeAllFromContext.Bind(&o.Base, 8)
 	o.removeFromContextIds = property.NewByNameRefList[element.Element]("RemoveFromContextIds", "DomainModels$Entity")
 	o.removeFromContextIds.Bind(&o.Base, 9)
-	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.sortBar, o.searchBar, o.xPathConstraint, o.applyContext, o.removeAllFromContext, o.removeFromContextIds, })
+	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.sortBar, o.searchBar, o.xPathConstraint, o.applyContext, o.removeAllFromContext, o.removeFromContextIds})
 	return o
 }
 
@@ -29341,7 +29785,7 @@ func initGroupBox() *GroupBox {
 	o.widget.Bind(&o.Base, 10)
 	o.widgets = property.NewPartList[element.Element]("Widgets")
 	o.widgets.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.collapsible, o.headerMode, o.widget, o.widgets, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.collapsible, o.headerMode, o.widget, o.widgets})
 	return o
 }
 
@@ -29378,7 +29822,7 @@ func initHeader() *Header {
 	o.rightWidget.Bind(&o.Base, 7)
 	o.rightWidgets = property.NewPartList[element.Element]("RightWidgets")
 	o.rightWidgets.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.leftWidget, o.leftWidgets, o.rightWidget, o.rightWidgets, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.leftWidget, o.leftWidgets, o.rightWidget, o.rightWidgets})
 	return o
 }
 
@@ -29421,7 +29865,7 @@ func initHorizontalSplitPane() *HorizontalSplitPane {
 	o.height.Bind(&o.Base, 10)
 	o.position = property.NewPrimitive[int32]("Position", property.DecodeInt32)
 	o.position.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.firstWidget, o.secondWidget, o.firstWidgets, o.secondWidgets, o.animatedResize, o.height, o.position, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.firstWidget, o.secondWidget, o.firstWidgets, o.secondWidgets, o.animatedResize, o.height, o.position})
 	return o
 }
 
@@ -29442,7 +29886,7 @@ func initIconCollectionIcon() *IconCollectionIcon {
 	o.SetTypeName("Forms$IconCollectionIcon")
 	o.image = property.NewByNameRef[element.Element]("Image", "CustomIcons$CustomIcon")
 	o.image.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.image, })
+	o.SetProperties([]element.Property{o.image})
 	return o
 }
 
@@ -29463,7 +29907,7 @@ func initImageIcon() *ImageIcon {
 	o.SetTypeName("Forms$ImageIcon")
 	o.image = property.NewByNameRef[element.Element]("Image", "Images$Image")
 	o.image.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.image, })
+	o.SetProperties([]element.Property{o.image})
 	return o
 }
 
@@ -29512,7 +29956,7 @@ func initImageUploader() *ImageUploader {
 	o.thumbnailSize.Bind(&o.Base, 13)
 	o.maxFileSize = property.NewPrimitive[int32]("MaxFileSize", property.DecodeInt32)
 	o.maxFileSize.Bind(&o.Base, 14)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.allowedExtensions, o.thumbnailSize, o.maxFileSize, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.allowedExtensions, o.thumbnailSize, o.maxFileSize})
 	return o
 }
 
@@ -29539,7 +29983,7 @@ func initImageViewerSource() *ImageViewerSource {
 	o.entityRef.Bind(&o.Base, 2)
 	o.sourceVariable = property.NewPart[element.Element]("SourceVariable")
 	o.sourceVariable.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, })
+	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable})
 	return o
 }
 
@@ -29598,7 +30042,7 @@ func initInputReferenceSetSelector() *InputReferenceSetSelector {
 	o.onChangeAction.Bind(&o.Base, 18)
 	o.sourceVariable = property.NewPart[element.Element]("SourceVariable")
 	o.sourceVariable.Bind(&o.Base, 19)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.selectorSource, o.selectPageSettings, o.onChangeMicroflowSettings, o.onChangeAction, o.sourceVariable, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.selectorSource, o.selectPageSettings, o.onChangeMicroflowSettings, o.onChangeAction, o.sourceVariable})
 	return o
 }
 
@@ -29633,7 +30077,7 @@ func initLabel() *Label {
 	o.accessibilitySettings.Bind(&o.Base, 6)
 	o.caption = property.NewPart[element.Element]("Caption")
 	o.caption.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption})
 	return o
 }
 
@@ -29694,7 +30138,7 @@ func initLayout() *Layout {
 	o.class.Bind(&o.Base, 19)
 	o.style = property.NewPrimitive[string]("Style", property.DecodeString)
 	o.style.Bind(&o.Base, 20)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.canvasWidth, o.canvasHeight, o.content, o.appearance, o.widget, o.widgets, o.layoutCall, o.layoutType, o.mainPlaceholder, o.acceptButtonPlaceholder, o.cancelButtonPlaceholder, o.mainPlaceholderName, o.acceptPlaceholderName, o.cancelPlaceholderName, o.useMainPlaceholderForPopups, o.class, o.style, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.canvasWidth, o.canvasHeight, o.content, o.appearance, o.widget, o.widgets, o.layoutCall, o.layoutType, o.mainPlaceholder, o.acceptButtonPlaceholder, o.cancelButtonPlaceholder, o.mainPlaceholderName, o.acceptPlaceholderName, o.cancelPlaceholderName, o.useMainPlaceholderForPopups, o.class, o.style})
 	return o
 }
 
@@ -29717,7 +30161,7 @@ func initLayoutCall() *LayoutCall {
 	o.layout.Bind(&o.Base, 0)
 	o.arguments = property.NewPartList[element.Element]("Arguments")
 	o.arguments.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.layout, o.arguments, })
+	o.SetProperties([]element.Property{o.layout, o.arguments})
 	return o
 }
 
@@ -29744,7 +30188,7 @@ func initLayoutCallArgument() *LayoutCallArgument {
 	o.widget.Bind(&o.Base, 2)
 	o.widgets = property.NewPartList[element.Element]("Widgets")
 	o.widgets.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.parameterName, o.parameter, o.widget, o.widgets, })
+	o.SetProperties([]element.Property{o.parameterName, o.parameter, o.widget, o.widgets})
 	return o
 }
 
@@ -29781,7 +30225,7 @@ func initLayoutGrid() *LayoutGrid {
 	o.width.Bind(&o.Base, 7)
 	o.rows = property.NewPartList[element.Element]("Rows")
 	o.rows.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.width, o.rows, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.width, o.rows})
 	return o
 }
 
@@ -29820,7 +30264,7 @@ func initLayoutGridColumn() *LayoutGridColumn {
 	o.appearance.Bind(&o.Base, 8)
 	o.verticalAlignment = property.NewEnum[string]("VerticalAlignment")
 	o.verticalAlignment.Bind(&o.Base, 9)
-	o.SetProperties([]element.Property{o.weight, o.tabletWeight, o.phoneWeight, o.previewWidth, o.widget, o.widgets, o.class, o.style, o.appearance, o.verticalAlignment, })
+	o.SetProperties([]element.Property{o.weight, o.tabletWeight, o.phoneWeight, o.previewWidth, o.widget, o.widgets, o.class, o.style, o.appearance, o.verticalAlignment})
 	return o
 }
 
@@ -29855,7 +30299,7 @@ func initLayoutGridRow() *LayoutGridRow {
 	o.horizontalAlignment.Bind(&o.Base, 6)
 	o.spacingBetweenColumns = property.NewPrimitive[bool]("SpacingBetweenColumns", property.DecodeBool)
 	o.spacingBetweenColumns.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.columns, o.conditionalVisibilitySettings, o.class, o.style, o.appearance, o.verticalAlignment, o.horizontalAlignment, o.spacingBetweenColumns, })
+	o.SetProperties([]element.Property{o.columns, o.conditionalVisibilitySettings, o.class, o.style, o.appearance, o.verticalAlignment, o.horizontalAlignment, o.spacingBetweenColumns})
 	return o
 }
 
@@ -29902,7 +30346,7 @@ func initLinkButton() *LinkButton {
 	o.linkType.Bind(&o.Base, 12)
 	o.address = property.NewPart[element.Element]("Address")
 	o.address.Bind(&o.Base, 13)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.linkType, o.address, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.linkType, o.address})
 	return o
 }
 
@@ -29955,7 +30399,7 @@ func initListView() *ListView {
 	o.numberOfColumns.Bind(&o.Base, 15)
 	o.pullDownAction = property.NewPart[element.Element]("PullDownAction")
 	o.pullDownAction.Bind(&o.Base, 16)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.dataSource, o.widget, o.widgets, o.pageSize, o.clickAction, o.editable, o.templates, o.scrollDirection, o.numberOfColumns, o.pullDownAction, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.dataSource, o.widget, o.widgets, o.pageSize, o.clickAction, o.editable, o.templates, o.scrollDirection, o.numberOfColumns, o.pullDownAction})
 	return o
 }
 
@@ -29988,7 +30432,7 @@ func initListViewDatabaseSource() *ListViewDatabaseSource {
 	o.databaseConstraints.Bind(&o.Base, 5)
 	o.search = property.NewPart[element.Element]("Search")
 	o.search.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.sortBar, o.databaseConstraints, o.search, })
+	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.sortBar, o.databaseConstraints, o.search})
 	return o
 }
 
@@ -30011,7 +30455,7 @@ func initListViewSearch() *ListViewSearch {
 	o.searchPaths.Bind(&o.Base, 0)
 	o.searchRefs = property.NewPartList[element.Element]("SearchRefs")
 	o.searchRefs.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.searchPaths, o.searchRefs, })
+	o.SetProperties([]element.Property{o.searchPaths, o.searchRefs})
 	return o
 }
 
@@ -30036,7 +30480,7 @@ func initListViewTemplate() *ListViewTemplate {
 	o.widget.Bind(&o.Base, 1)
 	o.widgets = property.NewPartList[element.Element]("Widgets")
 	o.widgets.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.specialization, o.widget, o.widgets, })
+	o.SetProperties([]element.Property{o.specialization, o.widget, o.widgets})
 	return o
 }
 
@@ -30069,7 +30513,7 @@ func initListViewXPathSource() *ListViewXPathSource {
 	o.xPathConstraint.Bind(&o.Base, 5)
 	o.search = property.NewPart[element.Element]("Search")
 	o.search.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.sortBar, o.xPathConstraint, o.search, })
+	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.sortBar, o.xPathConstraint, o.search})
 	return o
 }
 
@@ -30092,7 +30536,7 @@ func initListenTargetSource() *ListenTargetSource {
 	o.forceFullObjects.Bind(&o.Base, 0)
 	o.listenTarget = property.NewPrimitive[string]("ListenTarget", property.DecodeString)
 	o.listenTarget.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.forceFullObjects, o.listenTarget, })
+	o.SetProperties([]element.Property{o.forceFullObjects, o.listenTarget})
 	return o
 }
 
@@ -30117,7 +30561,7 @@ func initLocalVariable() *LocalVariable {
 	o.variableType.Bind(&o.Base, 1)
 	o.defaultValue = property.NewPrimitive[string]("DefaultValue", property.DecodeString)
 	o.defaultValue.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.name, o.variableType, o.defaultValue, })
+	o.SetProperties([]element.Property{o.name, o.variableType, o.defaultValue})
 	return o
 }
 
@@ -30162,7 +30606,7 @@ func initLoginButton() *LoginButton {
 	o.buttonStyle.Bind(&o.Base, 11)
 	o.validationMessageWidget = property.NewPrimitive[string]("ValidationMessageWidget", property.DecodeString)
 	o.validationMessageWidget.Bind(&o.Base, 12)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.validationMessageWidget, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.validationMessageWidget})
 	return o
 }
 
@@ -30197,7 +30641,7 @@ func initLoginIdTextBox() *LoginIdTextBox {
 	o.labelWidth.Bind(&o.Base, 6)
 	o.placeholder = property.NewPart[element.Element]("Placeholder")
 	o.placeholder.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.label, o.labelWidth, o.placeholder, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.label, o.labelWidth, o.placeholder})
 	return o
 }
 
@@ -30240,7 +30684,7 @@ func initLogoutButton() *LogoutButton {
 	o.renderType.Bind(&o.Base, 10)
 	o.buttonStyle = property.NewEnum[string]("ButtonStyle")
 	o.buttonStyle.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle})
 	return o
 }
 
@@ -30273,7 +30717,7 @@ func initMasterDetail() *MasterDetail {
 	o.master.Bind(&o.Base, 5)
 	o.detail = property.NewPart[element.Element]("Detail")
 	o.detail.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.master, o.detail, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.master, o.detail})
 	return o
 }
 
@@ -30304,7 +30748,7 @@ func initMasterDetailDetailRegion() *MasterDetailDetailRegion {
 	o.tabletWeight.Bind(&o.Base, 4)
 	o.title = property.NewPart[element.Element]("Title")
 	o.title.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.widget, o.class, o.style, o.responsiveWeight, o.tabletWeight, o.title, })
+	o.SetProperties([]element.Property{o.widget, o.class, o.style, o.responsiveWeight, o.tabletWeight, o.title})
 	return o
 }
 
@@ -30333,7 +30777,7 @@ func initMasterDetailMasterRegion() *MasterDetailMasterRegion {
 	o.responsiveWeight.Bind(&o.Base, 3)
 	o.tabletWeight = property.NewPrimitive[int32]("TabletWeight", property.DecodeInt32)
 	o.tabletWeight.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.widget, o.class, o.style, o.responsiveWeight, o.tabletWeight, })
+	o.SetProperties([]element.Property{o.widget, o.class, o.style, o.responsiveWeight, o.tabletWeight})
 	return o
 }
 
@@ -30364,7 +30808,7 @@ func initMenuBar() *MenuBar {
 	o.tabIndex.Bind(&o.Base, 4)
 	o.menuSource = property.NewPart[element.Element]("MenuSource")
 	o.menuSource.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.menuSource, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.menuSource})
 	return o
 }
 
@@ -30385,7 +30829,7 @@ func initMenuDocumentSource() *MenuDocumentSource {
 	o.SetTypeName("Forms$MenuDocumentSource")
 	o.menu = property.NewByNameRef[element.Element]("Menu", "Menus$MenuDocument")
 	o.menu.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.menu, })
+	o.SetProperties([]element.Property{o.menu})
 	return o
 }
 
@@ -30408,7 +30852,7 @@ func initMicroflowClientAction() *MicroflowClientAction {
 	o.disabledDuringExecution.Bind(&o.Base, 0)
 	o.microflowSettings = property.NewPart[element.Element]("MicroflowSettings")
 	o.microflowSettings.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, o.microflowSettings, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution, o.microflowSettings})
 	return o
 }
 
@@ -30437,7 +30881,7 @@ func initMicroflowParameterMapping() *MicroflowParameterMapping {
 	o.widget.Bind(&o.Base, 3)
 	o.useAllPages = property.NewPrimitive[bool]("UseAllPages", property.DecodeBool)
 	o.useAllPages.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.parameter, o.expression, o.variable, o.widget, o.useAllPages, })
+	o.SetProperties([]element.Property{o.parameter, o.expression, o.variable, o.widget, o.useAllPages})
 	return o
 }
 
@@ -30474,7 +30918,7 @@ func initMicroflowSettings() *MicroflowSettings {
 	o.confirmationInfo.Bind(&o.Base, 7)
 	o.outputMappings = property.NewPartList[element.Element]("OutputMappings")
 	o.outputMappings.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.microflow, o.parameterMappings, o.useAllPages, o.progressBar, o.progressMessage, o.asynchronous, o.formValidations, o.confirmationInfo, o.outputMappings, })
+	o.SetProperties([]element.Property{o.microflow, o.parameterMappings, o.useAllPages, o.progressBar, o.progressMessage, o.asynchronous, o.formValidations, o.confirmationInfo, o.outputMappings})
 	return o
 }
 
@@ -30497,7 +30941,7 @@ func initMicroflowSource() *MicroflowSource {
 	o.forceFullObjects.Bind(&o.Base, 0)
 	o.microflowSettings = property.NewPart[element.Element]("MicroflowSettings")
 	o.microflowSettings.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.forceFullObjects, o.microflowSettings, })
+	o.SetProperties([]element.Property{o.forceFullObjects, o.microflowSettings})
 	return o
 }
 
@@ -30520,7 +30964,7 @@ func initNamedValue() *NamedValue {
 	o.name.Bind(&o.Base, 0)
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.name, o.value, })
+	o.SetProperties([]element.Property{o.name, o.value})
 	return o
 }
 
@@ -30549,7 +30993,7 @@ func initNanoflowParameterMapping() *NanoflowParameterMapping {
 	o.widget.Bind(&o.Base, 3)
 	o.useAllPages = property.NewPrimitive[bool]("UseAllPages", property.DecodeBool)
 	o.useAllPages.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.parameter, o.expression, o.variable, o.widget, o.useAllPages, })
+	o.SetProperties([]element.Property{o.parameter, o.expression, o.variable, o.widget, o.useAllPages})
 	return o
 }
 
@@ -30574,7 +31018,7 @@ func initNanoflowSource() *NanoflowSource {
 	o.nanoflow.Bind(&o.Base, 1)
 	o.parameterMappings = property.NewPartList[element.Element]("ParameterMappings")
 	o.parameterMappings.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.forceFullObjects, o.nanoflow, o.parameterMappings, })
+	o.SetProperties([]element.Property{o.forceFullObjects, o.nanoflow, o.parameterMappings})
 	return o
 }
 
@@ -30605,7 +31049,7 @@ func initNativeLayoutContent() *NativeLayoutContent {
 	o.sidebar.Bind(&o.Base, 4)
 	o.sidebarWidgets = property.NewPartList[element.Element]("SidebarWidgets")
 	o.sidebarWidgets.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.layoutType, o.widgets, o.rightHeaderPlaceholder, o.showBottomBar, o.sidebar, o.sidebarWidgets, })
+	o.SetProperties([]element.Property{o.layoutType, o.widgets, o.rightHeaderPlaceholder, o.showBottomBar, o.sidebar, o.sidebarWidgets})
 	return o
 }
 
@@ -30640,7 +31084,7 @@ func initNavigationList() *NavigationList {
 	o.accessibilitySettings.Bind(&o.Base, 6)
 	o.items = property.NewPartList[element.Element]("Items")
 	o.items.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.items, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.items})
 	return o
 }
 
@@ -30673,7 +31117,7 @@ func initNavigationListItem() *NavigationListItem {
 	o.appearance.Bind(&o.Base, 5)
 	o.conditionalVisibilitySettings = property.NewPart[element.Element]("ConditionalVisibilitySettings")
 	o.conditionalVisibilitySettings.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.action, o.widget, o.widgets, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, })
+	o.SetProperties([]element.Property{o.action, o.widget, o.widgets, o.class, o.style, o.appearance, o.conditionalVisibilitySettings})
 	return o
 }
 
@@ -30696,7 +31140,7 @@ func initNavigationSource() *NavigationSource {
 	o.profileType.Bind(&o.Base, 0)
 	o.navigationProfile = property.NewByNameRef[element.Element]("NavigationProfile", "Navigation$NavigationProfile")
 	o.navigationProfile.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.profileType, o.navigationProfile, })
+	o.SetProperties([]element.Property{o.profileType, o.navigationProfile})
 	return o
 }
 
@@ -30727,7 +31171,7 @@ func initNavigationTree() *NavigationTree {
 	o.tabIndex.Bind(&o.Base, 4)
 	o.menuSource = property.NewPart[element.Element]("MenuSource")
 	o.menuSource.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.menuSource, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.menuSource})
 	return o
 }
 
@@ -30778,7 +31222,7 @@ func initNewButton() *NewButton {
 	o.entityRef.Bind(&o.Base, 14)
 	o.pageSettings = property.NewPart[element.Element]("PageSettings")
 	o.pageSettings.Bind(&o.Base, 15)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.entity, o.entityPath, o.entityRef, o.pageSettings, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.entity, o.entityPath, o.entityRef, o.pageSettings})
 	return o
 }
 
@@ -30799,7 +31243,7 @@ func initNoClientAction() *NoClientAction {
 	o.SetTypeName("Forms$NoAction")
 	o.disabledDuringExecution = property.NewPrimitive[bool]("DisabledDuringExecution", property.DecodeBool)
 	o.disabledDuringExecution.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution})
 	return o
 }
 
@@ -30822,7 +31266,7 @@ func initOfflineSchema() *OfflineSchema {
 	o.role.Bind(&o.Base, 0)
 	o.tables = property.NewPrimitive[string]("Tables", property.DecodeString)
 	o.tables.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.role, o.tables, })
+	o.SetProperties([]element.Property{o.role, o.tables})
 	return o
 }
 
@@ -30845,7 +31289,7 @@ func initOfflineSchemaFetchInstruction() *OfflineSchemaFetchInstruction {
 	o.tableName.Bind(&o.Base, 0)
 	o.xPath = property.NewPrimitive[string]("XPath", property.DecodeString)
 	o.xPath.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.tableName, o.xPath, })
+	o.SetProperties([]element.Property{o.tableName, o.xPath})
 	return o
 }
 
@@ -30885,7 +31329,7 @@ func initOnClickMicroflow() *OnClickMicroflow {
 	o.SetTypeName("Forms$OnClickMicroflow")
 	o.microflowSettings = property.NewPart[element.Element]("MicroflowSettings")
 	o.microflowSettings.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.microflowSettings, })
+	o.SetProperties([]element.Property{o.microflowSettings})
 	return o
 }
 
@@ -30929,7 +31373,7 @@ func initOpenLinkClientAction() *OpenLinkClientAction {
 	o.linkType.Bind(&o.Base, 1)
 	o.address = property.NewPart[element.Element]("Address")
 	o.address.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, o.linkType, o.address, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution, o.linkType, o.address})
 	return o
 }
 
@@ -30954,7 +31398,7 @@ func initOpenUserTaskClientAction() *OpenUserTaskClientAction {
 	o.assignOnOpen.Bind(&o.Base, 1)
 	o.openWhenAssigned = property.NewPrimitive[bool]("OpenWhenAssigned", property.DecodeBool)
 	o.openWhenAssigned.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, o.assignOnOpen, o.openWhenAssigned, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution, o.assignOnOpen, o.openWhenAssigned})
 	return o
 }
 
@@ -30977,7 +31421,7 @@ func initOpenWorkflowClientAction() *OpenWorkflowClientAction {
 	o.disabledDuringExecution.Bind(&o.Base, 0)
 	o.defaultPage = property.NewByNameRef[element.Element]("DefaultPage", "Forms$Page")
 	o.defaultPage.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, o.defaultPage, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution, o.defaultPage})
 	return o
 }
 
@@ -30998,7 +31442,7 @@ func initOptionDesignPropertyValue() *OptionDesignPropertyValue {
 	o.SetTypeName("Forms$OptionDesignPropertyValue")
 	o.option = property.NewPrimitive[string]("Option", property.DecodeString)
 	o.option.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.option, })
+	o.SetProperties([]element.Property{o.option})
 	return o
 }
 
@@ -31025,7 +31469,7 @@ func initOutputMapping() *OutputMapping {
 	o.attributeRef.Bind(&o.Base, 2)
 	o.sourceAttributeRef = property.NewPart[element.Element]("SourceAttributeRef")
 	o.sourceAttributeRef.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.sourceVariable, o.expression, o.attributeRef, o.sourceAttributeRef, })
+	o.SetProperties([]element.Property{o.sourceVariable, o.expression, o.attributeRef, o.sourceAttributeRef})
 	return o
 }
 
@@ -31105,7 +31549,7 @@ func initPage() *Page {
 	o.autofocus.Bind(&o.Base, 19)
 	o.variables = property.NewPartList[element.Element]("Variables")
 	o.variables.Bind(&o.Base, 20)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.canvasWidth, o.canvasHeight, o.parameters, o.layoutCall, o.title, o.class, o.style, o.appearance, o.allowedRoles, o.popupCloseAction, o.popupWidth, o.popupHeight, o.popupResizable, o.markAsUsed, o.url, o.autofocus, o.variables, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.canvasWidth, o.canvasHeight, o.parameters, o.layoutCall, o.title, o.class, o.style, o.appearance, o.allowedRoles, o.popupCloseAction, o.popupWidth, o.popupHeight, o.popupResizable, o.markAsUsed, o.url, o.autofocus, o.variables})
 	return o
 }
 
@@ -31134,7 +31578,7 @@ func initPageClientAction() *PageClientAction {
 	o.numberOfPagesToClose.Bind(&o.Base, 3)
 	o.numberOfPagesToClose2 = property.NewPrimitive[string]("NumberOfPagesToClose2", property.DecodeString)
 	o.numberOfPagesToClose2.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, o.pageSettings, o.pagesForSpecializations, o.numberOfPagesToClose, o.numberOfPagesToClose2, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution, o.pageSettings, o.pagesForSpecializations, o.numberOfPagesToClose, o.numberOfPagesToClose2})
 	return o
 }
 
@@ -31157,7 +31601,7 @@ func initPageForSpecialization() *PageForSpecialization {
 	o.entity.Bind(&o.Base, 0)
 	o.pageSettings = property.NewPart[element.Element]("PageSettings")
 	o.pageSettings.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.entity, o.pageSettings, })
+	o.SetProperties([]element.Property{o.entity, o.pageSettings})
 	return o
 }
 
@@ -31184,7 +31628,7 @@ func initPageParameter() *PageParameter {
 	o.isRequired.Bind(&o.Base, 2)
 	o.defaultValue = property.NewPrimitive[string]("DefaultValue", property.DecodeString)
 	o.defaultValue.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.name, o.parameterType, o.isRequired, o.defaultValue, })
+	o.SetProperties([]element.Property{o.name, o.parameterType, o.isRequired, o.defaultValue})
 	return o
 }
 
@@ -31209,7 +31653,7 @@ func initPageParameterMapping() *PageParameterMapping {
 	o.variable.Bind(&o.Base, 1)
 	o.argument = property.NewPrimitive[string]("Argument", property.DecodeString)
 	o.argument.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.parameter, o.variable, o.argument, })
+	o.SetProperties([]element.Property{o.parameter, o.variable, o.argument})
 	return o
 }
 
@@ -31230,7 +31674,7 @@ func initPagePrimitiveParameterUrlSegment() *PagePrimitiveParameterUrlSegment {
 	o.SetTypeName("Forms$PagePrimitiveParameterUrlSegment")
 	o.pageParameter = property.NewByNameRef[element.Element]("PageParameter", "Forms$PageParameter")
 	o.pageParameter.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.pageParameter, })
+	o.SetProperties([]element.Property{o.pageParameter})
 	return o
 }
 
@@ -31259,7 +31703,7 @@ func initPageSettings() *PageSettings {
 	o.location.Bind(&o.Base, 3)
 	o.parameterMappings = property.NewPartList[element.Element]("ParameterMappings")
 	o.parameterMappings.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.page, o.formTitle, o.titleOverride, o.location, o.parameterMappings, })
+	o.SetProperties([]element.Property{o.page, o.formTitle, o.titleOverride, o.location, o.parameterMappings})
 	return o
 }
 
@@ -31312,7 +31756,7 @@ func initPageTemplate() *PageTemplate {
 	o.appearance.Bind(&o.Base, 15)
 	o.templateType = property.NewPart[element.Element]("TemplateType")
 	o.templateType.Bind(&o.Base, 16)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.canvasWidth, o.canvasHeight, o.displayName, o.documentationUrl, o.templateCategory, o.templateCategoryWeight, o.imageData, o.propType, o.layoutCall, o.class, o.style, o.appearance, o.templateType, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.canvasWidth, o.canvasHeight, o.displayName, o.documentationUrl, o.templateCategory, o.templateCategoryWeight, o.imageData, o.propType, o.layoutCall, o.class, o.style, o.appearance, o.templateType})
 	return o
 }
 
@@ -31343,7 +31787,7 @@ func initPageVariable() *PageVariable {
 	o.useAllPages.Bind(&o.Base, 4)
 	o.subKey = property.NewPrimitive[string]("SubKey", property.DecodeString)
 	o.subKey.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.widget, o.pageParameter, o.snippetParameter, o.localVariable, o.useAllPages, o.subKey, })
+	o.SetProperties([]element.Property{o.widget, o.pageParameter, o.snippetParameter, o.localVariable, o.useAllPages, o.subKey})
 	return o
 }
 
@@ -31366,7 +31810,7 @@ func initParameterAttributeUrlSegment() *ParameterAttributeUrlSegment {
 	o.pageParameter.Bind(&o.Base, 0)
 	o.attribute = property.NewByNameRef[element.Element]("Attribute", "DomainModels$Attribute")
 	o.attribute.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.pageParameter, o.attribute, })
+	o.SetProperties([]element.Property{o.pageParameter, o.attribute})
 	return o
 }
 
@@ -31387,7 +31831,7 @@ func initParameterIdUrlSegment() *ParameterIdUrlSegment {
 	o.SetTypeName("Forms$ParameterIdUrlSegment")
 	o.pageParameter = property.NewByNameRef[element.Element]("PageParameter", "Forms$PageParameter")
 	o.pageParameter.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.pageParameter, })
+	o.SetProperties([]element.Property{o.pageParameter})
 	return o
 }
 
@@ -31422,7 +31866,7 @@ func initPasswordTextBox() *PasswordTextBox {
 	o.labelWidth.Bind(&o.Base, 6)
 	o.placeholder = property.NewPart[element.Element]("Placeholder")
 	o.placeholder.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.label, o.labelWidth, o.placeholder, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.label, o.labelWidth, o.placeholder})
 	return o
 }
 
@@ -31451,7 +31895,7 @@ func initPlaceholder() *Placeholder {
 	o.appearance.Bind(&o.Base, 3)
 	o.tabIndex = property.NewPrimitive[int32]("TabIndex", property.DecodeInt32)
 	o.tabIndex.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex})
 	return o
 }
 
@@ -31524,7 +31968,7 @@ func initRadioButtonGroup() *RadioButtonGroup {
 	o.ariaRequired.Bind(&o.Base, 25)
 	o.renderHorizontal = property.NewPrimitive[bool]("RenderHorizontal", property.DecodeBool)
 	o.renderHorizontal.Bind(&o.Base, 26)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.required, o.requiredMessage, o.validation, o.onChangeMicroflowSettings, o.onEnterMicroflowSettings, o.onLeaveMicroflowSettings, o.onChangeAction, o.onEnterAction, o.onLeaveAction, o.sourceVariable, o.ariaRequired, o.renderHorizontal, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.required, o.requiredMessage, o.validation, o.onChangeMicroflowSettings, o.onEnterMicroflowSettings, o.onLeaveMicroflowSettings, o.onChangeAction, o.onEnterAction, o.onLeaveAction, o.sourceVariable, o.ariaRequired, o.renderHorizontal})
 	return o
 }
 
@@ -31567,7 +32011,7 @@ func initRangeSearchField() *RangeSearchField {
 	o.includeLower.Bind(&o.Base, 10)
 	o.includeUpper = property.NewPrimitive[bool]("IncludeUpper", property.DecodeBool)
 	o.includeUpper.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.name, o.caption, o.placeholder, o.customDateFormat, o.propType, o.defaultValue, o.lowerBound, o.upperBound, o.lowerBoundRef, o.upperBoundRef, o.includeLower, o.includeUpper, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.placeholder, o.customDateFormat, o.propType, o.defaultValue, o.lowerBound, o.upperBound, o.lowerBoundRef, o.upperBoundRef, o.includeLower, o.includeUpper})
 	return o
 }
 
@@ -31642,7 +32086,7 @@ func initReferenceSelector() *ReferenceSelector {
 	o.emptyOptionCaption.Bind(&o.Base, 26)
 	o.nativeAccessibilitySettings = property.NewPart[element.Element]("NativeAccessibilitySettings")
 	o.nativeAccessibilitySettings.Bind(&o.Base, 27)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.selectorSource, o.selectPageSettings, o.onChangeMicroflowSettings, o.onChangeAction, o.sourceVariable, o.required, o.requiredMessage, o.validation, o.renderMode, o.gotoPageSettings, o.formattingInfo, o.emptyOptionCaption, o.nativeAccessibilitySettings, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.selectorSource, o.selectPageSettings, o.onChangeMicroflowSettings, o.onChangeAction, o.sourceVariable, o.required, o.requiredMessage, o.validation, o.renderMode, o.gotoPageSettings, o.formattingInfo, o.emptyOptionCaption, o.nativeAccessibilitySettings})
 	return o
 }
 
@@ -31717,7 +32161,7 @@ func initReferenceSetSelector() *ReferenceSetSelector {
 	o.removeAllFromContext.Bind(&o.Base, 26)
 	o.removeFromContextEntities = property.NewByNameRefList[element.Element]("RemoveFromContextEntities", "DomainModels$Entity")
 	o.removeFromContextEntities.Bind(&o.Base, 27)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.dataSource, o.isControlBarVisible, o.isPagingEnabled, o.showPagingBar, o.selectionMode, o.selectFirst, o.defaultButtonTrigger, o.refreshTime, o.controlBar, o.columns, o.numberOfRows, o.showEmptyRows, o.widthUnit, o.tooltipPage, o.onChangeMicroflowSettings, o.onChangeAction, o.constrainedBy, o.constrainedByRefs, o.xPathConstraint, o.removeAllFromContext, o.removeFromContextEntities, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.dataSource, o.isControlBarVisible, o.isPagingEnabled, o.showPagingBar, o.selectionMode, o.selectFirst, o.defaultButtonTrigger, o.refreshTime, o.controlBar, o.columns, o.numberOfRows, o.showEmptyRows, o.widthUnit, o.tooltipPage, o.onChangeMicroflowSettings, o.onChangeAction, o.constrainedBy, o.constrainedByRefs, o.xPathConstraint, o.removeAllFromContext, o.removeFromContextEntities})
 	return o
 }
 
@@ -31748,7 +32192,7 @@ func initReferenceSetSource() *ReferenceSetSource {
 	o.sortBar.Bind(&o.Base, 4)
 	o.searchBar = property.NewPart[element.Element]("SearchBar")
 	o.searchBar.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.sortBar, o.searchBar, })
+	o.SetProperties([]element.Property{o.forceFullObjects, o.entityPath, o.entityRef, o.sourceVariable, o.sortBar, o.searchBar})
 	return o
 }
 
@@ -31810,7 +32254,7 @@ func initRetrievalQuery() *RetrievalQuery {
 	o.schemaId.Bind(&o.Base, 10)
 	o.parameters = property.NewPartList[element.Element]("Parameters")
 	o.parameters.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.queryId, o.allowedUserRoles, o.allowedUserRoleSets, o.xPath, o.microflow, o.entityPath, o.pageName, o.widgetName, o.usedAssociations, o.usedAttributes, o.schemaId, o.parameters, })
+	o.SetProperties([]element.Property{o.queryId, o.allowedUserRoles, o.allowedUserRoleSets, o.xPath, o.microflow, o.entityPath, o.pageName, o.widgetName, o.usedAssociations, o.usedAttributes, o.schemaId, o.parameters})
 	return o
 }
 
@@ -31835,7 +32279,7 @@ func initRetrievalQueryParameter() *RetrievalQueryParameter {
 	o.propType.Bind(&o.Base, 1)
 	o.types = property.NewPrimitive[string]("Types", property.DecodeString)
 	o.types.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.name, o.propType, o.types, })
+	o.SetProperties([]element.Property{o.name, o.propType, o.types})
 	return o
 }
 
@@ -31862,7 +32306,7 @@ func initRetrievalSchema() *RetrievalSchema {
 	o.widgetName.Bind(&o.Base, 2)
 	o.entity = property.NewPrimitive[string]("Entity", property.DecodeString)
 	o.entity.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.usedAttributes, o.usedAssociations, o.widgetName, o.entity, })
+	o.SetProperties([]element.Property{o.usedAttributes, o.usedAssociations, o.widgetName, o.entity})
 	return o
 }
 
@@ -31895,7 +32339,7 @@ func initRuntimeOperation() *RuntimeOperation {
 	o.allowedUserRoles.Bind(&o.Base, 5)
 	o.allowedUserRoleSets = property.NewPartList[element.Element]("AllowedUserRoleSets")
 	o.allowedUserRoleSets.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.operationId, o.parameters, o.constants, o.operationType, o.operationName, o.allowedUserRoles, o.allowedUserRoleSets, })
+	o.SetProperties([]element.Property{o.operationId, o.parameters, o.constants, o.operationType, o.operationName, o.allowedUserRoles, o.allowedUserRoleSets})
 	return o
 }
 
@@ -31942,7 +32386,7 @@ func initSaveButton() *SaveButton {
 	o.syncAutomatically.Bind(&o.Base, 12)
 	o.closePage = property.NewPrimitive[bool]("ClosePage", property.DecodeBool)
 	o.closePage.Bind(&o.Base, 13)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.syncAutomatically, o.closePage, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.syncAutomatically, o.closePage})
 	return o
 }
 
@@ -31967,7 +32411,7 @@ func initSaveChangesClientAction() *SaveChangesClientAction {
 	o.syncAutomatically.Bind(&o.Base, 1)
 	o.closePage = property.NewPrimitive[bool]("ClosePage", property.DecodeBool)
 	o.closePage.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, o.syncAutomatically, o.closePage, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution, o.syncAutomatically, o.closePage})
 	return o
 }
 
@@ -32018,7 +32462,7 @@ func initScrollContainer() *ScrollContainer {
 	o.scrollBehavior.Bind(&o.Base, 14)
 	o.nativeHideScrollbars = property.NewPrimitive[bool]("NativeHideScrollbars", property.DecodeBool)
 	o.nativeHideScrollbars.Bind(&o.Base, 15)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.center, o.left, o.right, o.top, o.bottom, o.layoutMode, o.widthMode, o.width, o.alignment, o.scrollBehavior, o.nativeHideScrollbars, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.center, o.left, o.right, o.top, o.bottom, o.layoutMode, o.widthMode, o.width, o.alignment, o.scrollBehavior, o.nativeHideScrollbars})
 	return o
 }
 
@@ -32053,7 +32497,7 @@ func initScrollContainerRegion() *ScrollContainerRegion {
 	o.appearance.Bind(&o.Base, 6)
 	o.toggleMode = property.NewEnum[string]("ToggleMode")
 	o.toggleMode.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.widget, o.widgets, o.sizeMode, o.size, o.class, o.style, o.appearance, o.toggleMode, })
+	o.SetProperties([]element.Property{o.widget, o.widgets, o.sizeMode, o.size, o.class, o.style, o.appearance, o.toggleMode})
 	return o
 }
 
@@ -32078,7 +32522,7 @@ func initSearchBar() *SearchBar {
 	o.propType.Bind(&o.Base, 1)
 	o.waitForSearch = property.NewPrimitive[bool]("WaitForSearch", property.DecodeBool)
 	o.waitForSearch.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.items, o.propType, o.waitForSearch, })
+	o.SetProperties([]element.Property{o.items, o.propType, o.waitForSearch})
 	return o
 }
 
@@ -32115,7 +32559,7 @@ func initSelectButton() *SelectButton {
 	o.conditionalVisibilitySettings.Bind(&o.Base, 7)
 	o.buttonStyle = property.NewEnum[string]("ButtonStyle")
 	o.buttonStyle.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.tooltip, o.icon, o.class, o.style, o.appearance, o.conditionalVisibilitySettings, o.buttonStyle})
 	return o
 }
 
@@ -32157,7 +32601,7 @@ func initSelectorDatabaseSource() *SelectorDatabaseSource {
 	o.databaseConstraints.Bind(&o.Base, 0)
 	o.sortBar = property.NewPart[element.Element]("SortBar")
 	o.sortBar.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.databaseConstraints, o.sortBar, })
+	o.SetProperties([]element.Property{o.databaseConstraints, o.sortBar})
 	return o
 }
 
@@ -32178,7 +32622,7 @@ func initSelectorMicroflowSource() *SelectorMicroflowSource {
 	o.SetTypeName("Forms$SelectorMicroflowSource")
 	o.dataSourceMicroflowSettings = property.NewPart[element.Element]("DataSourceMicroflowSettings")
 	o.dataSourceMicroflowSettings.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.dataSourceMicroflowSettings, })
+	o.SetProperties([]element.Property{o.dataSourceMicroflowSettings})
 	return o
 }
 
@@ -32211,7 +32655,7 @@ func initSelectorXPathSource() *SelectorXPathSource {
 	o.removeAllFromContext.Bind(&o.Base, 5)
 	o.removeFromContextEntities = property.NewByNameRefList[element.Element]("RemoveFromContextEntities", "DomainModels$Entity")
 	o.removeFromContextEntities.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.sortBar, o.xPathConstraint, o.constrainedBy, o.constrainedByRefs, o.applyContext, o.removeAllFromContext, o.removeFromContextEntities, })
+	o.SetProperties([]element.Property{o.sortBar, o.xPathConstraint, o.constrainedBy, o.constrainedByRefs, o.applyContext, o.removeAllFromContext, o.removeFromContextEntities})
 	return o
 }
 
@@ -32240,7 +32684,7 @@ func initSetTaskOutcomeClientAction() *SetTaskOutcomeClientAction {
 	o.closePage.Bind(&o.Base, 3)
 	o.commit = property.NewPrimitive[bool]("Commit", property.DecodeBool)
 	o.commit.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, o.outcome, o.outcomeValue, o.closePage, o.commit, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution, o.outcome, o.outcomeValue, o.closePage, o.commit})
 	return o
 }
 
@@ -32289,7 +32733,7 @@ func initSidebarToggleButton() *SidebarToggleButton {
 	o.mode.Bind(&o.Base, 13)
 	o.initiallyOpen = property.NewPrimitive[bool]("InitiallyOpen", property.DecodeBool)
 	o.initiallyOpen.Bind(&o.Base, 14)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.region, o.mode, o.initiallyOpen, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, o.region, o.mode, o.initiallyOpen})
 	return o
 }
 
@@ -32310,7 +32754,7 @@ func initSignOutClientAction() *SignOutClientAction {
 	o.SetTypeName("Forms$SignOutClientAction")
 	o.disabledDuringExecution = property.NewPrimitive[bool]("DisabledDuringExecution", property.DecodeBool)
 	o.disabledDuringExecution.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution})
 	return o
 }
 
@@ -32343,7 +32787,7 @@ func initSimpleMenuBar() *SimpleMenuBar {
 	o.menuSource.Bind(&o.Base, 5)
 	o.orientation = property.NewEnum[string]("Orientation")
 	o.orientation.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.menuSource, o.orientation, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.menuSource, o.orientation})
 	return o
 }
 
@@ -32386,7 +32830,7 @@ func initSnippet() *Snippet {
 	o.parameters.Bind(&o.Base, 10)
 	o.variables = property.NewPartList[element.Element]("Variables")
 	o.variables.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.canvasWidth, o.canvasHeight, o.entity, o.widget, o.widgets, o.propType, o.parameters, o.variables, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.canvasWidth, o.canvasHeight, o.entity, o.widget, o.widgets, o.propType, o.parameters, o.variables})
 	return o
 }
 
@@ -32409,7 +32853,7 @@ func initSnippetCall() *SnippetCall {
 	o.snippet.Bind(&o.Base, 0)
 	o.parameterMappings = property.NewPartList[element.Element]("ParameterMappings")
 	o.parameterMappings.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.snippet, o.parameterMappings, })
+	o.SetProperties([]element.Property{o.snippet, o.parameterMappings})
 	return o
 }
 
@@ -32440,7 +32884,7 @@ func initSnippetCallWidget() *SnippetCallWidget {
 	o.tabIndex.Bind(&o.Base, 4)
 	o.snippetCall = property.NewPart[element.Element]("SnippetCall")
 	o.snippetCall.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.snippetCall, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.snippetCall})
 	return o
 }
 
@@ -32463,7 +32907,7 @@ func initSnippetParameter() *SnippetParameter {
 	o.name.Bind(&o.Base, 0)
 	o.parameterType = property.NewPart[element.Element]("ParameterType")
 	o.parameterType.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.name, o.parameterType, })
+	o.SetProperties([]element.Property{o.name, o.parameterType})
 	return o
 }
 
@@ -32488,7 +32932,7 @@ func initSnippetParameterMapping() *SnippetParameterMapping {
 	o.variable.Bind(&o.Base, 1)
 	o.argument = property.NewPrimitive[string]("Argument", property.DecodeString)
 	o.argument.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.parameter, o.variable, o.argument, })
+	o.SetProperties([]element.Property{o.parameter, o.variable, o.argument})
 	return o
 }
 
@@ -32539,7 +32983,7 @@ func initStaticImageViewer() *StaticImageViewer {
 	o.alternativeText.Bind(&o.Base, 14)
 	o.nativeAccessibilitySettings = property.NewPart[element.Element]("NativeAccessibilitySettings")
 	o.nativeAccessibilitySettings.Bind(&o.Base, 15)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.image, o.widthUnit, o.heightUnit, o.width, o.height, o.clickAction, o.responsive, o.alternativeText, o.nativeAccessibilitySettings, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.image, o.widthUnit, o.heightUnit, o.width, o.height, o.clickAction, o.responsive, o.alternativeText, o.nativeAccessibilitySettings})
 	return o
 }
 
@@ -32566,7 +33010,7 @@ func initStaticOrDynamicString() *StaticOrDynamicString {
 	o.attribute.Bind(&o.Base, 2)
 	o.attributeRef = property.NewPart[element.Element]("AttributeRef")
 	o.attributeRef.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.isDynamic, o.value, o.attribute, o.attributeRef, })
+	o.SetProperties([]element.Property{o.isDynamic, o.value, o.attribute, o.attributeRef})
 	return o
 }
 
@@ -32587,7 +33031,7 @@ func initStaticUrlSegment() *StaticUrlSegment {
 	o.SetTypeName("Forms$StaticUrlSegment")
 	o.segment = property.NewPrimitive[string]("Segment", property.DecodeString)
 	o.segment.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.segment, })
+	o.SetProperties([]element.Property{o.segment})
 	return o
 }
 
@@ -32630,7 +33074,7 @@ func initSyncButton() *SyncButton {
 	o.renderType.Bind(&o.Base, 10)
 	o.buttonStyle = property.NewEnum[string]("ButtonStyle")
 	o.buttonStyle.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.caption, o.tooltip, o.icon, o.renderType, o.buttonStyle})
 	return o
 }
 
@@ -32651,7 +33095,7 @@ func initSyncClientAction() *SyncClientAction {
 	o.SetTypeName("Forms$SyncClientAction")
 	o.disabledDuringExecution = property.NewPrimitive[bool]("DisabledDuringExecution", property.DecodeBool)
 	o.disabledDuringExecution.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.disabledDuringExecution, })
+	o.SetProperties([]element.Property{o.disabledDuringExecution})
 	return o
 }
 
@@ -32694,7 +33138,7 @@ func initTabContainer() *TabContainer {
 	o.activePageSourceVariable.Bind(&o.Base, 10)
 	o.activePageOnChangeAction = property.NewPart[element.Element]("ActivePageOnChangeAction")
 	o.activePageOnChangeAction.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.tabPages, o.defaultPage, o.activePageAttributeRef, o.activePageSourceVariable, o.activePageOnChangeAction, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.tabPages, o.defaultPage, o.activePageAttributeRef, o.activePageSourceVariable, o.activePageOnChangeAction})
 	return o
 }
 
@@ -32727,7 +33171,7 @@ func initTabPage() *TabPage {
 	o.widgets.Bind(&o.Base, 5)
 	o.badge = property.NewPart[element.Element]("Badge")
 	o.badge.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.name, o.caption, o.refreshOnShow, o.conditionalVisibilitySettings, o.widget, o.widgets, o.badge, })
+	o.SetProperties([]element.Property{o.name, o.caption, o.refreshOnShow, o.conditionalVisibilitySettings, o.widget, o.widgets, o.badge})
 	return o
 }
 
@@ -32768,7 +33212,7 @@ func initTable() *Table {
 	o.widthUnit.Bind(&o.Base, 9)
 	o.rows = property.NewPartList[element.Element]("Rows")
 	o.rows.Bind(&o.Base, 10)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.cells, o.columns, o.widthUnit, o.rows, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.cells, o.columns, o.widthUnit, o.rows})
 	return o
 }
 
@@ -32807,7 +33251,7 @@ func initTableCell() *TableCell {
 	o.width.Bind(&o.Base, 8)
 	o.height = property.NewPrimitive[int32]("Height", property.DecodeInt32)
 	o.height.Bind(&o.Base, 9)
-	o.SetProperties([]element.Property{o.class, o.style, o.appearance, o.isHeader, o.widget, o.widgets, o.leftColumnIndex, o.topRowIndex, o.width, o.height, })
+	o.SetProperties([]element.Property{o.class, o.style, o.appearance, o.isHeader, o.widget, o.widgets, o.leftColumnIndex, o.topRowIndex, o.width, o.height})
 	return o
 }
 
@@ -32828,7 +33272,7 @@ func initTableColumn() *TableColumn {
 	o.SetTypeName("Forms$TableColumn")
 	o.width = property.NewPrimitive[int32]("Width", property.DecodeInt32)
 	o.width.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.width, })
+	o.SetProperties([]element.Property{o.width})
 	return o
 }
 
@@ -32855,7 +33299,7 @@ func initTableRow() *TableRow {
 	o.appearance.Bind(&o.Base, 2)
 	o.conditionalVisibilitySettings = property.NewPart[element.Element]("ConditionalVisibilitySettings")
 	o.conditionalVisibilitySettings.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.class, o.style, o.appearance, o.conditionalVisibilitySettings, })
+	o.SetProperties([]element.Property{o.class, o.style, o.appearance, o.conditionalVisibilitySettings})
 	return o
 }
 
@@ -32912,7 +33356,7 @@ func initTemplateGrid() *TemplateGrid {
 	o.numberOfRows.Bind(&o.Base, 17)
 	o.numberOfColumns = property.NewPrimitive[int32]("NumberOfColumns", property.DecodeInt32)
 	o.numberOfColumns.Bind(&o.Base, 18)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.dataSource, o.isControlBarVisible, o.isPagingEnabled, o.showPagingBar, o.selectionMode, o.selectFirst, o.defaultButtonTrigger, o.refreshTime, o.controlBar, o.contents, o.numberOfRows, o.numberOfColumns, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.dataSource, o.isControlBarVisible, o.isPagingEnabled, o.showPagingBar, o.selectionMode, o.selectFirst, o.defaultButtonTrigger, o.refreshTime, o.controlBar, o.contents, o.numberOfRows, o.numberOfColumns})
 	return o
 }
 
@@ -32935,7 +33379,7 @@ func initTemplateGridContents() *TemplateGridContents {
 	o.widget.Bind(&o.Base, 0)
 	o.widgets = property.NewPartList[element.Element]("Widgets")
 	o.widgets.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.widget, o.widgets, })
+	o.SetProperties([]element.Property{o.widget, o.widgets})
 	return o
 }
 
@@ -32966,7 +33410,7 @@ func initTemplatePlaceholder() *TemplatePlaceholder {
 	o.tabIndex.Bind(&o.Base, 4)
 	o.propType = property.NewPrimitive[string]("Type", property.DecodeString)
 	o.propType.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.propType, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.propType})
 	return o
 }
 
@@ -33059,7 +33503,7 @@ func initTextArea() *TextArea {
 	o.submitOnInputDelay.Bind(&o.Base, 35)
 	o.nativeAccessibilitySettings = property.NewPart[element.Element]("NativeAccessibilitySettings")
 	o.nativeAccessibilitySettings.Bind(&o.Base, 36)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.required, o.requiredMessage, o.validation, o.onChangeMicroflowSettings, o.onEnterMicroflowSettings, o.onLeaveMicroflowSettings, o.onChangeAction, o.onEnterAction, o.onLeaveAction, o.sourceVariable, o.ariaRequired, o.placeholder, o.placeholderTemplate, o.maxLengthCode, o.autoFocus, o.numberOfLines, o.counterMessage, o.textTooLongMessage, o.autocomplete, o.submitBehaviour, o.submitOnInputDelay, o.nativeAccessibilitySettings, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.required, o.requiredMessage, o.validation, o.onChangeMicroflowSettings, o.onEnterMicroflowSettings, o.onLeaveMicroflowSettings, o.onChangeAction, o.onEnterAction, o.onLeaveAction, o.sourceVariable, o.ariaRequired, o.placeholder, o.placeholderTemplate, o.maxLengthCode, o.autoFocus, o.numberOfLines, o.counterMessage, o.textTooLongMessage, o.autocomplete, o.submitBehaviour, o.submitOnInputDelay, o.nativeAccessibilitySettings})
 	return o
 }
 
@@ -33158,7 +33602,7 @@ func initTextBox() *TextBox {
 	o.submitOnInputDelay.Bind(&o.Base, 38)
 	o.nativeAccessibilitySettings = property.NewPart[element.Element]("NativeAccessibilitySettings")
 	o.nativeAccessibilitySettings.Bind(&o.Base, 39)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.required, o.requiredMessage, o.validation, o.onChangeMicroflowSettings, o.onEnterMicroflowSettings, o.onLeaveMicroflowSettings, o.onChangeAction, o.onEnterAction, o.onLeaveAction, o.sourceVariable, o.ariaRequired, o.placeholder, o.placeholderTemplate, o.maxLengthCode, o.autoFocus, o.inputMask, o.formattingInfo, o.isPasswordBox, o.keyboardType, o.onEnterKeyPressAction, o.autocomplete, o.autocompletePurpose, o.submitBehaviour, o.submitOnInputDelay, o.nativeAccessibilitySettings, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.conditionalEditabilitySettings, o.editable, o.label, o.labelTemplate, o.screenReaderLabel, o.attributePath, o.attributeRef, o.readOnlyStyle, o.required, o.requiredMessage, o.validation, o.onChangeMicroflowSettings, o.onEnterMicroflowSettings, o.onLeaveMicroflowSettings, o.onChangeAction, o.onEnterAction, o.onLeaveAction, o.sourceVariable, o.ariaRequired, o.placeholder, o.placeholderTemplate, o.maxLengthCode, o.autoFocus, o.inputMask, o.formattingInfo, o.isPasswordBox, o.keyboardType, o.onEnterKeyPressAction, o.autocomplete, o.autocompletePurpose, o.submitBehaviour, o.submitOnInputDelay, o.nativeAccessibilitySettings})
 	return o
 }
 
@@ -33193,7 +33637,7 @@ func initTitle() *Title {
 	o.accessibilitySettings.Bind(&o.Base, 6)
 	o.nativeAccessibilitySettings = property.NewPart[element.Element]("NativeAccessibilitySettings")
 	o.nativeAccessibilitySettings.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.nativeAccessibilitySettings, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.conditionalVisibilitySettings, o.accessibilitySettings, o.nativeAccessibilitySettings})
 	return o
 }
 
@@ -33233,7 +33677,7 @@ func initUserRoleSet() *UserRoleSet {
 	o.SetTypeName("Forms$UserRoleSet")
 	o.userRoles = property.NewByNameRefList[element.Element]("UserRoles", "Security$UserRole")
 	o.userRoles.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.userRoles, })
+	o.SetProperties([]element.Property{o.userRoles})
 	return o
 }
 
@@ -33281,7 +33725,7 @@ func initValidationMessage() *ValidationMessage {
 	o.appearance.Bind(&o.Base, 3)
 	o.tabIndex = property.NewPrimitive[int32]("TabIndex", property.DecodeInt32)
 	o.tabIndex.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex})
 	return o
 }
 
@@ -33312,7 +33756,7 @@ func initVerticalFlow() *VerticalFlow {
 	o.tabIndex.Bind(&o.Base, 4)
 	o.widgets = property.NewPartList[element.Element]("Widgets")
 	o.widgets.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.widgets, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.widgets})
 	return o
 }
 
@@ -33355,7 +33799,7 @@ func initVerticalSplitPane() *VerticalSplitPane {
 	o.height.Bind(&o.Base, 10)
 	o.position = property.NewPrimitive[int32]("Position", property.DecodeInt32)
 	o.position.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.firstWidget, o.secondWidget, o.firstWidgets, o.secondWidgets, o.animatedResize, o.height, o.position, })
+	o.SetProperties([]element.Property{o.name, o.class, o.style, o.appearance, o.tabIndex, o.firstWidget, o.secondWidget, o.firstWidgets, o.secondWidgets, o.animatedResize, o.height, o.position})
 	return o
 }
 
@@ -33380,7 +33824,7 @@ func initWebLayoutContent() *WebLayoutContent {
 	o.layoutCall.Bind(&o.Base, 1)
 	o.widgets = property.NewPartList[element.Element]("Widgets")
 	o.widgets.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.layoutType, o.layoutCall, o.widgets, })
+	o.SetProperties([]element.Property{o.layoutType, o.layoutCall, o.widgets})
 	return o
 }
 
@@ -33405,7 +33849,7 @@ func initWidgetValidation() *WidgetValidation {
 	o.expressionModel.Bind(&o.Base, 1)
 	o.message = property.NewPart[element.Element]("Message")
 	o.message.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.expression, o.expressionModel, o.message, })
+	o.SetProperties([]element.Property{o.expression, o.expressionModel, o.message})
 	return o
 }
 
@@ -33436,7 +33880,6 @@ func NewWorkflowOverviewTemplateType() *WorkflowOverviewTemplateType {
 	o.MarkDirty(63)
 	return o
 }
-
 
 func init() {
 	codec.DefaultRegistry.Register("Forms$AccessibilitySettings", func() element.Element {

@@ -978,4 +978,3 @@ func TestSanitizeColumnName(t *testing.T) {
 		}
 	}
 }
-

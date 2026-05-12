@@ -21,7 +21,7 @@ type CreateImportMappingStmt struct {
 	SchemaKind     string        // "JSON_STRUCTURE" or "XML_SCHEMA" or ""
 	SchemaRef      QualifiedName // qualified name of the schema source
 	RootElement    *ImportMappingElementDef
-	CreateOrModify bool          // true for CREATE OR MODIFY / CREATE OR REPLACE
+	CreateOrModify bool // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
 func (s *CreateImportMappingStmt) isStatement() {}
@@ -73,7 +73,7 @@ type CreateExportMappingStmt struct {
 	SchemaRef       QualifiedName // qualified name of the schema source
 	NullValueOption string        // "LeaveOutElement" or "SendAsNil" (default: "LeaveOutElement")
 	RootElement     *ExportMappingElementDef
-	CreateOrModify  bool          // true for CREATE OR MODIFY / CREATE OR REPLACE
+	CreateOrModify  bool // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
 func (s *CreateExportMappingStmt) isStatement() {}

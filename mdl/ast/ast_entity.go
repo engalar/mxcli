@@ -58,18 +58,18 @@ func (s *DropEntityStmt) isStatement() {}
 type AlterEntityOp int
 
 const (
-	AlterEntityAddAttribute     AlterEntityOp = iota // ADD ATTRIBUTE / ADD COLUMN
-	AlterEntityRenameAttribute                       // RENAME ATTRIBUTE / RENAME COLUMN
-	AlterEntityModifyAttribute                       // MODIFY ATTRIBUTE / MODIFY COLUMN
-	AlterEntityDropAttribute                         // DROP ATTRIBUTE / DROP COLUMN
-	AlterEntitySetDocumentation                      // SET DOCUMENTATION
-	AlterEntitySetComment                            // SET COMMENT
-	AlterEntityAddIndex                              // ADD INDEX
-	AlterEntityDropIndex                             // DROP INDEX
-	AlterEntitySetPosition                           // SET POSITION (x, y)
-	AlterEntityAddEventHandler                       // ADD EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK CALL Mod.MF
-	AlterEntityDropEventHandler                      // DROP EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK
-	AlterEntitySetAllowCreateChangeLocally           // SET ALLOW_CREATE_CHANGE_LOCALLY = true/false
+	AlterEntityAddAttribute                AlterEntityOp = iota // ADD ATTRIBUTE / ADD COLUMN
+	AlterEntityRenameAttribute                                  // RENAME ATTRIBUTE / RENAME COLUMN
+	AlterEntityModifyAttribute                                  // MODIFY ATTRIBUTE / MODIFY COLUMN
+	AlterEntityDropAttribute                                    // DROP ATTRIBUTE / DROP COLUMN
+	AlterEntitySetDocumentation                                 // SET DOCUMENTATION
+	AlterEntitySetComment                                       // SET COMMENT
+	AlterEntityAddIndex                                         // ADD INDEX
+	AlterEntityDropIndex                                        // DROP INDEX
+	AlterEntitySetPosition                                      // SET POSITION (x, y)
+	AlterEntityAddEventHandler                                  // ADD EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK CALL Mod.MF
+	AlterEntityDropEventHandler                                 // DROP EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK
+	AlterEntitySetAllowCreateChangeLocally                      // SET ALLOW_CREATE_CHANGE_LOCALLY = true/false
 )
 
 // EventHandlerDef represents an event handler in CREATE/ALTER ENTITY syntax.

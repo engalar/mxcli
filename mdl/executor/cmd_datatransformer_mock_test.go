@@ -120,8 +120,10 @@ func TestCreateDataTransformer_OrModify_PreservesID(t *testing.T) {
 	var updatedID model.ID
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		ProjectVersionFunc:      func() *types.ProjectVersion { return &types.ProjectVersion{ProductVersion: "11.9.0", MajorVersion: 11, MinorVersion: 9} },
-		ListModulesFunc:         func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ProjectVersionFunc: func() *types.ProjectVersion {
+			return &types.ProjectVersion{ProductVersion: "11.9.0", MajorVersion: 11, MinorVersion: 9}
+		},
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListDataTransformersFunc: func() ([]*model.DataTransformer, error) {
 			return []*model.DataTransformer{existing}, nil
 		},
@@ -157,8 +159,10 @@ func TestCreateDataTransformer_AlreadyExists_NoOrModify(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		ProjectVersionFunc:      func() *types.ProjectVersion { return &types.ProjectVersion{ProductVersion: "11.9.0", MajorVersion: 11, MinorVersion: 9} },
-		ListModulesFunc:         func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ProjectVersionFunc: func() *types.ProjectVersion {
+			return &types.ProjectVersion{ProductVersion: "11.9.0", MajorVersion: 11, MinorVersion: 9}
+		},
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListDataTransformersFunc: func() ([]*model.DataTransformer, error) {
 			return []*model.DataTransformer{existing}, nil
 		},

@@ -24,10 +24,10 @@ func findPropertyType(propTypes []any, key string) (ptMap map[string]any, ptID s
 // the ObjectType's PropertyTypes and the corresponding Object Properties from each
 // WidgetObject instance.
 type nestedObjectContext struct {
-	nestedObjType    map[string]any
-	nestedPropTypes  []any
-	nestedObjProps   [][]any            // Properties array per WidgetObject
-	objPropContainers []map[string]any  // WidgetObject containers (for write-back)
+	nestedObjType     map[string]any
+	nestedPropTypes   []any
+	nestedObjProps    [][]any          // Properties array per WidgetObject
+	objPropContainers []map[string]any // WidgetObject containers (for write-back)
 }
 
 // resolveNestedObjectContext navigates from a matched PropertyType into its

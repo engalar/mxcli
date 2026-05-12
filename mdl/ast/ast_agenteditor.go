@@ -82,7 +82,7 @@ type CreateKnowledgeBaseStmt struct {
 	KeyID            string
 	Environment      string
 	DeepLinkURL      string
-	CreateOrModify   bool   // true for CREATE OR MODIFY / CREATE OR REPLACE
+	CreateOrModify   bool // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
 func (s *CreateKnowledgeBaseStmt) isStatement() {}
@@ -111,7 +111,7 @@ type CreateAgentStmt struct {
 	Variables      []AgentVarDef
 	Tools          []AgentToolDef
 	KBTools        []AgentKBToolDef
-	CreateOrModify bool           // true for CREATE OR MODIFY / CREATE OR REPLACE
+	CreateOrModify bool // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
 func (s *CreateAgentStmt) isStatement() {}

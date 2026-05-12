@@ -139,6 +139,53 @@ Run `mxcli syntax keywords` for the full list of 320+ reserved keywords.
    ./bin/mxcli exec script.mdl -p app.mpr
    ```
 
+### Expression Validation (for microflow expressions)
+
+Every expression inside a microflow statement must be separately validated with the expression checker. `mxcli check` catches structural MDL errors; the expression checker catches semantic errors (wrong types, enum mismatches, arity mistakes).
+
+**Before writing an expression** — look up what type the slot expects and see real examples:
+```bash
+./bin/mxcli show expr-slot IfStmt.Condition
+./bin/mxcli show expr-slot ChangeItem.Value
+./bin/mxcli show expr-slot CallArgument.Value
+# → prints ExpectedKind (Boolean / Integer / …) and mined sample expressions
+```
+
+**SlotPath reference:**
+
+| MDL position | SlotPath |
+|---|---|
+| `IF <expr> THEN` | `IfStmt.Condition` |
+| `WHILE <expr> BEGIN` | `WhileStmt.Condition` |
+| `RETURN <expr>` | `ReturnStmt.Value` |
+| `DECLARE $x T = <expr>` | `DeclareStmt.InitialValue` |
+| `SET $x = <expr>` | `MfSetStmt.Value` |
+| `CHANGE $obj (Attr = <expr>)` | `ChangeItem.Value` |
+| `CREATE Mod.Entity (Attr = <expr>)` | `CreateItem.Value` |
+| `CALL Mf(Param = <expr>)` | `CallArgument.Value` |
+| `LOG INFO <expr>` | `LogStmt.Message` |
+
+**After writing an expression** — validate it before using it:
+```bash
+./bin/mxcli explain expression '$Alert/Status = empty' --in IfStmt.Condition
+# → "no hints — expression is well-formed for this slot" means safe to use
+
+./bin/mxcli explain expression "'NewAlert'" --in ChangeItem.Value
+# → HINT [E001 enum-string-mismatch] error — must fix before using
+```
+
+**If a hint code appears**, look it up:
+```bash
+./bin/mxcli hint E001   # enum-string-mismatch
+./bin/mxcli hint E002   # bool-string-mismatch
+./bin/mxcli hint E003   # null-to-empty (use empty, not null)
+./bin/mxcli hint E004   # concat-type (toString() needed)
+./bin/mxcli hint E006   # func-arg-arity (wrong number of args)
+./bin/mxcli hint E007   # unknown-token (parse error in expression)
+```
+
+**Rule:** An expression is only safe when `mxcli explain expression` returns `no hints`.
+
 ## Script Execution Behavior
 
 **IMPORTANT: Script execution is atomic per statement, NOT per script.**
@@ -276,3 +323,10 @@ Extra tokens found:
 - [/overview-pages](./overview-pages.md) - Page building syntax
 - [/resolve-forward-references](./resolve-forward-references.md) - Placeholder pattern and declaration ordering
 - [/migrate-oracle-forms](./migrate-oracle-forms.md) - Migration-specific guidance
+
+## Expression Hint Reference
+
+All 10 hint codes (E001–E010) with full explanations and fix examples:
+`docs/06-mdl-reference/expr-hints.md`
+
+Quick lookup: `./bin/mxcli hint <code>`

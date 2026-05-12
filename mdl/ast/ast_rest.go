@@ -102,12 +102,12 @@ func (s *DescribeContractFromOpenAPIStmt) isStatement() {}
 //
 //	CREATE PUBLISHED REST SERVICE Module.Name (Path: '...', Version: '...') { RESOURCE ... };
 type CreatePublishedRestServiceStmt struct {
-	Name            QualifiedName
-	Path            string
-	Version         string
-	ServiceName     string
-	Folder          string
-	Resources       []*PublishedRestResourceDef
+	Name           QualifiedName
+	Path           string
+	Version        string
+	ServiceName    string
+	Folder         string
+	Resources      []*PublishedRestResourceDef
 	CreateOrModify bool
 }
 

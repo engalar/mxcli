@@ -1170,13 +1170,14 @@ Before executing a microflow script, verify:
 - [ ] Microflow ends with `/` separator
 - [ ] Parameters start with `$` prefix
 - [ ] Proper closing for control structures (`end if`, `end loop`)
+- [ ] **Every expression validated with `mxcli explain expression '<expr>' --in <SlotPath>`** until "no hints"
 
 ## Common Studio Pro Errors
 
 | Error Code | Message | Fix |
 |------------|---------|-----|
 | CE0053 | Selected type is not allowed | Use `declare $var EntityType;` (no AS, no = empty) |
-| CE0117 | Error in expression | Use qualified association names |
+| CE0117 | Error in expression | Use qualified association names; run `mxcli explain expression '<expr>' --in <SlotPath>` to pinpoint the issue |
 | CE0104 | Action activity is unreachable | Remove code after RETURN |
 | CE0105 | Must end with end event | Add RETURN statement |
 | CE0008 | No action defined | Define action for activity |

@@ -56,7 +56,7 @@ func TestResolveSnippetRef_FromCache(t *testing.T) {
 // from both cache and backend, a "not found" error is returned.
 func TestResolveSnippetRef_NotFoundInCache(t *testing.T) {
 	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
+		IsConnectedFunc:  func() bool { return true },
 		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return nil, nil },
 		ListModulesFunc:  func() ([]*model.Module, error) { return nil, nil },
 	}

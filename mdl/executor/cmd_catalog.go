@@ -568,7 +568,7 @@ func convertCatalogTableNames(query string) string {
 		"catalog.modules":                   "modules",
 		"catalog.entities":                  "entities",
 		"catalog.associations":              "associations",
-		"catalog.attributes":               "attributes",
+		"catalog.attributes":                "attributes",
 		"catalog.microflows":                "microflows",
 		"catalog.nanoflows":                 "nanoflows",
 		"catalog.pages":                     "pages",

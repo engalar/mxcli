@@ -91,6 +91,7 @@ Examples:
 		lint.AddRule(rules.NewValidationFeedbackRule())
 		lint.AddRule(rules.NewImageSourceRule())
 		lint.AddRule(rules.NewEmptyContainerRule())
+		lint.AddRule(rules.NewDataGrid2ColumnRule())
 		lint.AddRule(rules.NewPageNavigationSecurityRule())
 		lint.AddRule(rules.NewNoEntityAccessRulesRule())
 		lint.AddRule(rules.NewWeakPasswordPolicyRule())

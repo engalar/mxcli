@@ -49,7 +49,7 @@ type flowBuilder struct {
 	// and the error-handler tail loops back to the same merge). Cleared after
 	// the outer loop consumes it for the next flow.
 	incomingRedirect model.ID
-	nextFlowCase        string            // If set, next connecting flow uses this case value (for merge-less splits)
+	nextFlowCase     string // If set, next connecting flow uses this case value (for merge-less splits)
 	// nextFlowAnchor carries the branch-specific FlowAnchors that should be
 	// applied to the flow created by the NEXT iteration of buildFlowGraph.
 	// Used by guard-pattern IFs (where one branch returns and the other
