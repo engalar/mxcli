@@ -214,3 +214,44 @@ func TestScaffoldWidget_CreatesExpectedFiles(t *testing.T) {
 		t.Errorf("MySlider.xml missing widget ID")
 	}
 }
+
+func TestScaffoldSingleWidget_TopLevelFiles(t *testing.T) {
+	dir := t.TempDir()
+	props := []PropertySpec{{Key: "label", XMLType: "string"}}
+	if err := scaffoldWidget(dir, "MySlider", deriveWidgetID("MySlider"), false, props); err != nil {
+		t.Fatalf("scaffoldWidget: %v", err)
+	}
+	pkgJSON := filepath.Join(dir, "package.json")
+	pkgXML := filepath.Join(dir, "package.xml")
+	if err := os.WriteFile(pkgJSON, []byte(generatePackageJSON("my-slider")), 0644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	if err := os.WriteFile(pkgXML, []byte(generatePackageXML("MySlider", []string{"MySlider"})), 0644); err != nil {
+		t.Fatalf("write package.xml: %v", err)
+	}
+	for _, rel := range []string{"package.json", "package.xml", "src/MySlider.xml", "src/MySlider.jsx"} {
+		if _, err := os.Stat(filepath.Join(dir, rel)); err != nil {
+			t.Errorf("expected %s to exist: %v", rel, err)
+		}
+	}
+}
+
+func TestScaffoldPackage_EmptySrc(t *testing.T) {
+	dir := t.TempDir()
+	if err := scaffoldPackage(dir, "CrusherWidgets"); err != nil {
+		t.Fatalf("scaffoldPackage: %v", err)
+	}
+	for _, rel := range []string{"package.json", "package.xml", "src"} {
+		if _, err := os.Stat(filepath.Join(dir, rel)); err != nil {
+			t.Errorf("expected %s to exist: %v", rel, err)
+		}
+	}
+	entries, _ := os.ReadDir(filepath.Join(dir, "src"))
+	if len(entries) != 0 {
+		t.Errorf("src/ must be empty for package scaffold, got %d entries", len(entries))
+	}
+	xmlBytes, _ := os.ReadFile(filepath.Join(dir, "package.xml"))
+	if strings.Contains(string(xmlBytes), "<widgetFile") {
+		t.Errorf("package.xml must not list widget files yet\ngot:\n%s", string(xmlBytes))
+	}
+}

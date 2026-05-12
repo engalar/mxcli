@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"unicode"
+
+	"github.com/spf13/cobra"
 )
 
 // PropertySpec represents one parsed --property flag value (key:type[:subtype]).
@@ -296,12 +298,85 @@ func generatePackageXML(packageName string, widgetNames []string) string {
 	b.WriteString(fmt.Sprintf(
 		`  <clientModule name=%q version="1.0.0" xmlns="http://www.mendix.com/clientmodule/1.0/">`+"\n",
 		packageName))
-	b.WriteString("    <widgetFiles>\n")
-	for _, name := range widgetNames {
-		b.WriteString(fmt.Sprintf("      <widgetFile path=%q/>\n", name+".xml"))
+	if len(widgetNames) > 0 {
+		b.WriteString("    <widgetFiles>\n")
+		for _, name := range widgetNames {
+			b.WriteString(fmt.Sprintf("      <widgetFile path=%q/>\n", name+".xml"))
+		}
+		b.WriteString("    </widgetFiles>\n")
 	}
-	b.WriteString("    </widgetFiles>\n")
 	b.WriteString("  </clientModule>\n")
 	b.WriteString("</package>\n")
 	return b.String()
+}
+
+// scaffoldPackage creates an empty multi-widget package project skeleton.
+func scaffoldPackage(dir, name string) error {
+	if err := os.MkdirAll(filepath.Join(dir, "src"), 0755); err != nil {
+		return err
+	}
+	pkgName := strings.ToLower(name)
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(generatePackageJSON(pkgName)), 0644); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "package.xml"), []byte(generatePackageXML(name, nil)), 0644)
+}
+
+// runWidgetNew implements `mxcli widget new <name>`.
+func runWidgetNew(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("widget name required: mxcli widget new <name>")
+	}
+	name := args[0]
+	isPackage, _ := cmd.Flags().GetBool("package")
+	outDir := name
+
+	if _, err := os.Stat(outDir); err == nil {
+		return fmt.Errorf("directory %q already exists", outDir)
+	}
+	if err := os.MkdirAll(outDir, 0755); err != nil {
+		return fmt.Errorf("creating directory: %w", err)
+	}
+
+	if isPackage {
+		if err := scaffoldPackage(outDir, name); err != nil {
+			return fmt.Errorf("scaffolding package: %w", err)
+		}
+		fmt.Printf("Created widget package project: %s/\n", outDir)
+		fmt.Printf("  Add widgets: cd %s && mxcli widget add-widget <WidgetName>\n", outDir)
+		fmt.Printf("  Build:       mxcli widget build\n")
+		return nil
+	}
+
+	widgetID, _ := cmd.Flags().GetString("id")
+	if widgetID == "" {
+		widgetID = deriveWidgetID(name)
+	}
+	offline, _ := cmd.Flags().GetBool("offline")
+	propStrs, _ := cmd.Flags().GetStringArray("property")
+	var props []PropertySpec
+	for _, s := range propStrs {
+		p, err := parsePropertySpec(s)
+		if err != nil {
+			return err
+		}
+		props = append(props, p)
+	}
+
+	if err := scaffoldWidget(outDir, name, widgetID, offline, props); err != nil {
+		return fmt.Errorf("scaffolding widget: %w", err)
+	}
+	pkgName := strings.ToLower(name)
+	if err := os.WriteFile(filepath.Join(outDir, "package.json"), []byte(generatePackageJSON(pkgName)), 0644); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(outDir, "package.xml"), []byte(generatePackageXML(name, []string{name})), 0644); err != nil {
+		return err
+	}
+
+	fmt.Printf("Created widget project: %s/\n", outDir)
+	fmt.Printf("  Widget ID: %s\n", widgetID)
+	fmt.Printf("  Edit:      %s/src/%s.jsx\n", outDir, name)
+	fmt.Printf("  Build:     cd %s && mxcli widget build\n", outDir)
+	return nil
 }
