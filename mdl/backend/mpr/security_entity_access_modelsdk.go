@@ -9,32 +9,6 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
-// writeUnitContents commits already-serialized BSON bytes for a unit through a
-// modelsdk WriteTransaction. Mirrors the tail of msdkWrite (Begin → WriteUnit
-// → Commit → InvalidateCache) and avoids sdk/mpr's updateTransactionID() which
-// fails with SQLITE_READONLY_DBMOVED 1544 on hard-linked MPR files. Used by
-// the entity-access Patch* helpers, whose encode logic stays in sdk/mpr to
-// preserve the AllowedModuleRoles BSON key (gen AccessRule still binds to the
-// older "ModuleRoles" key — gen-native migration deferred to a separate plan).
-func (b *MprBackend) writeUnitContents(unitID model.ID, contents []byte) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	wtx, err := b.msdkWriter.BeginWriteTransaction()
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	if err := wtx.WriteUnit(string(unitID), contents); err != nil {
-		_ = wtx.Rollback()
-		return fmt.Errorf("write unit: %w", err)
-	}
-	if err := wtx.Commit(); err != nil {
-		return err
-	}
-	b.reader.InvalidateCache()
-	return nil
-}
-
 // addEntityAccessRuleViaModelsdk patches an entity access rule through the
 // modelsdk write path. Bypasses sdk/mpr.Writer.updateUnit (1544 bug).
 func (b *MprBackend) addEntityAccessRuleViaModelsdk(unitID model.ID, entityName string, roleNames []string,
