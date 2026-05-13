@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
+	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/model"
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
@@ -29,6 +30,15 @@ type ExecContext struct {
 	// Backend provides all domain operations (read/write/connect).
 	// Nil when not connected.
 	Backend backend.FullBackend
+
+	// Microflows is the Stage 3 modelsdk-native microflow repository.
+	// Populated only when Backend implements RepoProvider (currently
+	// MprBackend); nil for ad-hoc test contexts that pass MockBackend
+	// or build the context literally without going through Executor.
+	// Stage 3.1 only cuts over delete-by-ID paths (no type mismatch);
+	// list/get/create/update paths still use Backend until handlers
+	// migrate to gen types.
+	Microflows repos.MicroflowRepository
 
 	// Output is the writer for user-visible output (with line-limit guard).
 	Output io.Writer
