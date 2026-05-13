@@ -526,36 +526,7 @@ func (w *Writer) DeleteViewEntitySourceDocument(id model.ID) error {
 // FindViewEntitySourceDocumentID finds a ViewEntitySourceDocument by module and document name.
 // Returns the document ID if found, empty string if not found.
 func (w *Writer) FindViewEntitySourceDocumentID(moduleName, docName string) (model.ID, error) {
-	units, err := w.reader.listUnitsByType("DomainModels$ViewEntitySourceDocument")
-	if err != nil {
-		return "", err
-	}
-
-	// Build module ID -> name map
-	modules, err := w.reader.ListModules()
-	if err != nil {
-		return "", err
-	}
-	moduleNames := make(map[string]string)
-	for _, m := range modules {
-		moduleNames[string(m.ID)] = m.Name
-	}
-
-	for _, u := range units {
-		var raw map[string]any
-		if err := bson.Unmarshal(u.Contents, &raw); err != nil {
-			continue
-		}
-
-		name, _ := raw["Name"].(string)
-		modName := moduleNames[u.ContainerID]
-
-		if modName == moduleName && name == docName {
-			return model.ID(u.ID), nil
-		}
-	}
-
-	return "", nil // Not found
+	return w.reader.FindViewEntitySourceDocumentID(moduleName, docName)
 }
 
 // DeleteViewEntitySourceDocumentByName deletes ALL ViewEntitySourceDocuments matching the
@@ -578,37 +549,7 @@ func (w *Writer) DeleteViewEntitySourceDocumentByName(moduleName, docName string
 // FindAllViewEntitySourceDocumentIDs finds ALL ViewEntitySourceDocuments matching the
 // given module and document name. Returns all matching IDs (not just the first).
 func (w *Writer) FindAllViewEntitySourceDocumentIDs(moduleName, docName string) ([]model.ID, error) {
-	units, err := w.reader.listUnitsByType("DomainModels$ViewEntitySourceDocument")
-	if err != nil {
-		return nil, err
-	}
-
-	// Build module ID -> name map
-	modules, err := w.reader.ListModules()
-	if err != nil {
-		return nil, err
-	}
-	moduleNames := make(map[string]string)
-	for _, m := range modules {
-		moduleNames[string(m.ID)] = m.Name
-	}
-
-	var ids []model.ID
-	for _, u := range units {
-		var raw map[string]any
-		if err := bson.Unmarshal(u.Contents, &raw); err != nil {
-			continue
-		}
-
-		name, _ := raw["Name"].(string)
-		modName := moduleNames[u.ContainerID]
-
-		if modName == moduleName && name == docName {
-			ids = append(ids, model.ID(u.ID))
-		}
-	}
-
-	return ids, nil
+	return w.reader.FindAllViewEntitySourceDocumentIDs(moduleName, docName)
 }
 func (w *Writer) serializeDomainModel(dm *domainmodel.DomainModel) ([]byte, error) {
 	// Look up module name for qualified names in validation rules
