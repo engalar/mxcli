@@ -21,6 +21,11 @@ type microflowsRepoProvider interface {
 	Microflows() repos.MicroflowRepository
 }
 
+// nanoflowsRepoProvider mirrors microflowsRepoProvider for nanoflows.
+type nanoflowsRepoProvider interface {
+	Nanoflows() repos.NanoflowRepository
+}
+
 // extractMicroflowsRepo returns the modelsdk-native MicroflowRepository
 // if the backend supports it, else nil. Callers (handlers) MUST check
 // nil and fall back to ctx.Backend during the Stage 3.x incremental
@@ -32,6 +37,17 @@ func extractMicroflowsRepo(b backend.FullBackend) repos.MicroflowRepository {
 	}
 	if p, ok := b.(microflowsRepoProvider); ok {
 		return p.Microflows()
+	}
+	return nil
+}
+
+// extractNanoflowsRepo mirrors extractMicroflowsRepo for nanoflows.
+func extractNanoflowsRepo(b backend.FullBackend) repos.NanoflowRepository {
+	if b == nil {
+		return nil
+	}
+	if p, ok := b.(nanoflowsRepoProvider); ok {
+		return p.Nanoflows()
 	}
 	return nil
 }
@@ -52,4 +68,27 @@ func (ctx *ExecContext) deleteMicroflowViaRepoOrBackend(id model.ID) error {
 		return ctx.Microflows.Delete(id)
 	}
 	return ctx.Backend.DeleteMicroflow(id)
+}
+
+// deleteNanoflowViaRepoOrBackend mirrors deleteMicroflowViaRepoOrBackend.
+func (ctx *ExecContext) deleteNanoflowViaRepoOrBackend(id model.ID) error {
+	if ctx.Nanoflows != nil {
+		return ctx.Nanoflows.Delete(id)
+	}
+	return ctx.Backend.DeleteNanoflow(id)
+}
+
+// isRuleViaRepoOrBackend checks whether a microflow qualified name
+// refers to a Rule. Routes through the Microflows repo when available
+// (modelsdk-native scan) or falls back to backend.IsRule (legacy path).
+// The free-function form takes the components explicitly so callers
+// without an *ExecContext (e.g., flowBuilder methods) can use it too.
+func isRuleViaRepoOrBackend(repo repos.MicroflowRepository, b backend.FullBackend, qn string) (bool, error) {
+	if repo != nil {
+		return repo.IsRule(qn)
+	}
+	if b == nil {
+		return false, nil
+	}
+	return b.IsRule(qn)
 }

@@ -142,7 +142,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	if nfs, err := ctx.Backend.ListNanoflows(); err == nil {
 		for _, nf := range nfs {
 			if moduleContainers[nf.ContainerID] {
-				if err := ctx.Backend.DeleteNanoflow(nf.ID); err != nil {
+				if err := ctx.deleteNanoflowViaRepoOrBackend(nf.ID); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete nanoflow %s: %v\n", nf.Name, err)
 				} else {
 					nNanoflows++

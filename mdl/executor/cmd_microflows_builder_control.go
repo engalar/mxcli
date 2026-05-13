@@ -614,8 +614,9 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 		varTypes:     cloneStringMap(fb.varTypes),     // Clone: loop body vars must not leak to outer scope
 		declaredVars: cloneStringMap(fb.declaredVars), // Clone: same reason
 		measurer:     fb.measurer,                     // Share measurer
-		backend:      fb.backend,                      // Share backend
-		hierarchy:    fb.hierarchy,                    // Share hierarchy
+		backend:        fb.backend,         // Share backend
+		microflowsRepo: fb.microflowsRepo, // Share Stage 3.1 repo
+		hierarchy:      fb.hierarchy,       // Share hierarchy
 		restServices: fb.restServices,                 // Share REST services for parameter classification
 		isNanoflow:   fb.isNanoflow,
 	}
@@ -914,10 +915,11 @@ func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
 		varTypes:     fb.varTypes,
 		declaredVars: fb.declaredVars,
 		measurer:     fb.measurer,
-		backend:      fb.backend,
-		hierarchy:    fb.hierarchy,
-		restServices: fb.restServices,
-		isNanoflow:   fb.isNanoflow,
+		backend:        fb.backend,
+		microflowsRepo: fb.microflowsRepo,
+		hierarchy:      fb.hierarchy,
+		restServices:   fb.restServices,
+		isNanoflow:     fb.isNanoflow,
 	}
 
 	var lastBodyID model.ID

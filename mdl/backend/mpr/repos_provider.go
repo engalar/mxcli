@@ -15,6 +15,17 @@ import (
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
+// concreteWriter returns the underlying *mmpr.Writer that the modelsdk
+// repos require, or (nil, false) if msdkWriter is unset or non-concrete.
+// Used by every Stage 3 repo accessor on this type.
+func (b *MprBackend) concreteWriter() (*mmpr.Writer, bool) {
+	if b.msdkWriter == nil {
+		return nil, false
+	}
+	w, ok := b.msdkWriter.(*mmpr.Writer)
+	return w, ok
+}
+
 // Microflows returns the modelsdk-native MicroflowRepository, or nil if
 // the backend has no modelsdk writer (Connect failed or backend was
 // constructed in a way that left msdkWriter unset).
@@ -24,16 +35,19 @@ import (
 // this method heavily can promote it to a memoized field if profiling
 // shows allocation pressure.
 func (b *MprBackend) Microflows() repos.MicroflowRepository {
-	if b.msdkWriter == nil {
-		return nil
-	}
-	w, ok := b.msdkWriter.(*mmpr.Writer)
+	w, ok := b.concreteWriter()
 	if !ok {
-		// Defensive: in production msdkWriter is always *mmpr.Writer (set
-		// by Connect/Wrap). A non-concrete value here means a test or a
-		// future caller swapped in a different impl — return nil so the
-		// executor falls back to ctx.Backend.
 		return nil
 	}
 	return mprrepos.NewMicroflowRepository(w)
+}
+
+// Nanoflows returns the modelsdk-native NanoflowRepository, or nil with
+// the same conditions as Microflows().
+func (b *MprBackend) Nanoflows() repos.NanoflowRepository {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil
+	}
+	return mprrepos.NewNanoflowRepository(w)
 }
