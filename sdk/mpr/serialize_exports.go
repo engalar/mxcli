@@ -5,29 +5,23 @@ package mpr
 import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
-// Public Serialize* wrappers expose the existing private serialize* functions
-// so that callers (e.g. the mprbackend modelsdk-write helpers) can produce
-// canonical BSON bytes without going through Writer.updateUnit, which calls
-// updateTransactionID() and fails on hard-linked MPR files
-// (SQLITE_READONLY_DBMOVED 1544).
+// Public Serialize* package-level functions produce canonical BSON bytes for
+// each unit type without going through Writer.updateUnit (which calls
+// updateTransactionID() and fails on hard-linked MPR files —
+// SQLITE_READONLY_DBMOVED 1544).
 //
-// These wrappers are intentionally thin — they exist only to widen the
-// visibility of serialization functions that are otherwise correct.
+// SerializeMicroflow / SerializeNanoflow / SerializeDomainModel live in
+// writer_microflow.go and writer_domainmodel.go because they take a
+// ProjectVersion parameter.
 
 // SerializeDatabaseConnection returns BSON bytes for a database connection unit.
 func SerializeDatabaseConnection(conn *model.DatabaseConnection) ([]byte, error) {
 	return serializeDatabaseConnection(conn)
-}
-
-func (w *Writer) SerializeDatabaseConnection(conn *model.DatabaseConnection) ([]byte, error) {
-	return SerializeDatabaseConnection(conn)
 }
 
 // SerializeDataTransformer returns BSON bytes for a data transformer unit.
@@ -50,17 +44,9 @@ func SerializeImportMapping(im *model.ImportMapping) ([]byte, error) {
 	return serializeImportMapping(im)
 }
 
-func (w *Writer) SerializeImportMapping(im *model.ImportMapping) ([]byte, error) {
-	return SerializeImportMapping(im)
-}
-
 // SerializeExportMapping returns BSON bytes for an export mapping unit.
 func SerializeExportMapping(em *model.ExportMapping) ([]byte, error) {
 	return serializeExportMapping(em)
-}
-
-func (w *Writer) SerializeExportMapping(em *model.ExportMapping) ([]byte, error) {
-	return SerializeExportMapping(em)
 }
 
 // SerializeBusinessEventService returns BSON bytes for a business event service unit.
@@ -68,17 +54,9 @@ func SerializeBusinessEventService(svc *model.BusinessEventService) ([]byte, err
 	return serializeBusinessEventService(svc)
 }
 
-func (w *Writer) SerializeBusinessEventService(svc *model.BusinessEventService) ([]byte, error) {
-	return SerializeBusinessEventService(svc)
-}
-
 // SerializeConsumedODataService returns BSON bytes for a consumed OData service unit.
 func SerializeConsumedODataService(svc *model.ConsumedODataService) ([]byte, error) {
 	return serializeConsumedODataService(svc)
-}
-
-func (w *Writer) SerializeConsumedODataService(svc *model.ConsumedODataService) ([]byte, error) {
-	return SerializeConsumedODataService(svc)
 }
 
 // SerializePublishedODataService returns BSON bytes for a published OData service unit.
@@ -86,17 +64,9 @@ func SerializePublishedODataService(svc *model.PublishedODataService) ([]byte, e
 	return serializePublishedODataService(svc)
 }
 
-func (w *Writer) SerializePublishedODataService(svc *model.PublishedODataService) ([]byte, error) {
-	return SerializePublishedODataService(svc)
-}
-
 // SerializeConsumedRestService returns BSON bytes for a consumed REST service unit.
 func SerializeConsumedRestService(svc *model.ConsumedRestService) ([]byte, error) {
 	return serializeConsumedRestService(svc)
-}
-
-func (w *Writer) SerializeConsumedRestService(svc *model.ConsumedRestService) ([]byte, error) {
-	return SerializeConsumedRestService(svc)
 }
 
 // SerializePublishedRestService returns BSON bytes for a published REST service unit.
@@ -104,17 +74,9 @@ func SerializePublishedRestService(svc *model.PublishedRestService) ([]byte, err
 	return serializePublishedRestService(svc)
 }
 
-func (w *Writer) SerializePublishedRestService(svc *model.PublishedRestService) ([]byte, error) {
-	return SerializePublishedRestService(svc)
-}
-
 // SerializeJavaAction returns BSON bytes for a Java action unit.
 func SerializeJavaAction(ja *javaactions.JavaAction) ([]byte, error) {
 	return serializeJavaAction(ja)
-}
-
-func (w *Writer) SerializeJavaAction(ja *javaactions.JavaAction) ([]byte, error) {
-	return SerializeJavaAction(ja)
 }
 
 // SerializeEnumeration returns BSON bytes for an enumeration unit.
@@ -122,37 +84,9 @@ func SerializeEnumeration(enum *model.Enumeration) ([]byte, error) {
 	return serializeEnumeration(enum)
 }
 
-func (w *Writer) SerializeEnumeration(enum *model.Enumeration) ([]byte, error) {
-	return SerializeEnumeration(enum)
-}
-
 // SerializeConstant returns BSON bytes for a constant unit.
 func SerializeConstant(constant *model.Constant) ([]byte, error) {
 	return serializeConstant(constant)
-}
-
-func (w *Writer) SerializeConstant(constant *model.Constant) ([]byte, error) {
-	return SerializeConstant(constant)
-}
-
-// SerializeMicroflow returns BSON bytes for a microflow unit.
-//
-// Deprecated: prefer the package-level SerializeMicroflow(mf, pv) which does
-// not require a *Writer and decouples encoding from reader state. This receiver
-// shim is kept for backwards compatibility and will be removed once all callers
-// migrate (see retire-serialize-writer-receiver plan).
-func (w *Writer) SerializeMicroflow(mf *microflows.Microflow) ([]byte, error) {
-	return w.serializeMicroflow(mf)
-}
-
-// SerializeNanoflow returns BSON bytes for a nanoflow unit.
-//
-// Deprecated: prefer the package-level SerializeNanoflow(nf, pv) which does
-// not require a *Writer and decouples encoding from reader state. This receiver
-// shim is kept for backwards compatibility and will be removed once all callers
-// migrate (see retire-serialize-writer-receiver plan).
-func (w *Writer) SerializeNanoflow(nf *microflows.Nanoflow) ([]byte, error) {
-	return w.serializeNanoflow(nf)
 }
 
 // SerializePage returns BSON bytes for a page unit.
@@ -160,17 +94,9 @@ func SerializePage(page *pages.Page) ([]byte, error) {
 	return serializePage(page)
 }
 
-func (w *Writer) SerializePage(page *pages.Page) ([]byte, error) {
-	return SerializePage(page)
-}
-
 // SerializeLayout returns BSON bytes for a layout unit.
 func SerializeLayout(layout *pages.Layout) ([]byte, error) {
 	return serializeLayout(layout)
-}
-
-func (w *Writer) SerializeLayout(layout *pages.Layout) ([]byte, error) {
-	return SerializeLayout(layout)
 }
 
 // SerializeSnippet returns BSON bytes for a snippet unit.
@@ -178,27 +104,9 @@ func SerializeSnippet(snippet *pages.Snippet) ([]byte, error) {
 	return serializeSnippet(snippet)
 }
 
-func (w *Writer) SerializeSnippet(snippet *pages.Snippet) ([]byte, error) {
-	return SerializeSnippet(snippet)
-}
-
 // SerializeWorkflow returns BSON bytes for a workflow unit.
 func SerializeWorkflow(wf *workflows.Workflow) ([]byte, error) {
 	return serializeWorkflow(wf)
-}
-
-func (w *Writer) SerializeWorkflow(wf *workflows.Workflow) ([]byte, error) {
-	return SerializeWorkflow(wf)
-}
-
-// SerializeDomainModel returns BSON bytes for a domain model unit.
-//
-// Deprecated: prefer the package-level SerializeDomainModel(dm, moduleName, pv)
-// which does not require a *Writer and decouples encoding from reader state.
-// This receiver shim is kept for backwards compatibility and will be removed
-// once all callers migrate (see retire-serialize-writer-receiver plan).
-func (w *Writer) SerializeDomainModel(dm *domainmodel.DomainModel) ([]byte, error) {
-	return w.serializeDomainModel(dm)
 }
 
 // SerializeProjectSettings returns BSON bytes for the project settings unit.
@@ -206,17 +114,9 @@ func SerializeProjectSettings(ps *model.ProjectSettings) ([]byte, error) {
 	return serializeProjectSettings(ps)
 }
 
-func (w *Writer) SerializeProjectSettings(ps *model.ProjectSettings) ([]byte, error) {
-	return SerializeProjectSettings(ps)
-}
-
 // SerializeModule returns BSON bytes for a module unit.
 func SerializeModule(module *model.Module) ([]byte, error) {
 	return serializeModule(module)
-}
-
-func (w *Writer) SerializeModule(module *model.Module) ([]byte, error) {
-	return SerializeModule(module)
 }
 
 // SerializeFolder returns BSON bytes for a folder unit.
@@ -224,26 +124,14 @@ func SerializeFolder(folder *model.Folder) ([]byte, error) {
 	return serializeFolder(folder)
 }
 
-func (w *Writer) SerializeFolder(folder *model.Folder) ([]byte, error) {
-	return SerializeFolder(folder)
-}
-
 // SerializeModuleSecurity returns BSON bytes for an empty module security unit.
 func SerializeModuleSecurity(id string) ([]byte, error) {
 	return serializeModuleSecurity(id)
 }
 
-func (w *Writer) SerializeModuleSecurity(id string) ([]byte, error) {
-	return SerializeModuleSecurity(id)
-}
-
 // SerializeModuleSettings returns BSON bytes for a default module settings unit.
 func SerializeModuleSettings(id string) ([]byte, error) {
 	return serializeModuleSettings(id)
-}
-
-func (w *Writer) SerializeModuleSettings(id string) ([]byte, error) {
-	return SerializeModuleSettings(id)
 }
 
 // SerializeAgentEditorModel returns canonical CustomBlobDocument BSON bytes for
