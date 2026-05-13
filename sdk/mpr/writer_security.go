@@ -1653,3 +1653,829 @@ func stripInvalidAccessRuleProps(doc bson.D) (bson.D, bool) {
 
 // ensure primitive import is used
 var _ = primitive.Binary{}
+
+// ============================================================================
+// Patch* helpers: BSON-only versions of the entity access mutators.
+//
+// These accept raw BSON bytes and return patched bytes without writing to
+// disk. They are used by the modelsdk write path (mdl/backend/mpr) to avoid
+// the legacy sdk/mpr.Writer.updateUnit transaction bug (1544 error).
+// The receiver is *Writer purely for symmetry; no Writer state is read.
+// ============================================================================
+
+// patchAddEntityAccessRuleDoc is the shared body used by both the legacy
+// AddEntityAccessRule and the new PatchAddEntityAccessRule entry point.
+func patchAddEntityAccessRuleDoc(doc bson.D, entityName string, roleNames []string,
+	allowCreate, allowDelete bool,
+	defaultMemberAccess string, xpathConstraint string,
+	memberAccesses []EntityMemberAccess) (bson.D, error) {
+
+	entitiesArr := getBsonArray(doc, "Entities")
+	if entitiesArr == nil {
+		return doc, fmt.Errorf("no Entities array found in domain model")
+	}
+
+	found := false
+	for i, item := range entitiesArr {
+		entityDoc, ok := item.(bson.D)
+		if !ok {
+			continue
+		}
+		name := ""
+		for _, f := range entityDoc {
+			if f.Key == "Name" {
+				name = bsonutil.String(f.Value, "Name")
+				break
+			}
+		}
+		if name != entityName {
+			continue
+		}
+		found = true
+
+		var memberAccessesBson bson.A
+		if len(memberAccesses) > 0 {
+			memberAccessesBson = bson.A{int32(3)}
+			for _, ma := range memberAccesses {
+				maDoc := bson.D{
+					{Key: "$Type", Value: "DomainModels$MemberAccess"},
+					{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+					{Key: "AccessRights", Value: ma.AccessRights},
+				}
+				if ma.AttributeRef != "" {
+					maDoc = append(maDoc, bson.E{Key: "Attribute", Value: ma.AttributeRef})
+				}
+				if ma.AssociationRef != "" {
+					maDoc = append(maDoc, bson.E{Key: "Association", Value: ma.AssociationRef})
+				}
+				memberAccessesBson = append(memberAccessesBson, maDoc)
+			}
+		} else {
+			memberAccessesBson = bson.A{int32(3)}
+		}
+
+		var accessRules bson.A
+		accessRulesIdx := -1
+		for j, f := range entityDoc {
+			if f.Key == "AccessRules" {
+				if arr, ok := f.Value.(bson.A); ok {
+					accessRules = arr
+				}
+				accessRulesIdx = j
+				break
+			}
+		}
+		if accessRules == nil {
+			accessRules = bson.A{int32(3)}
+		}
+
+		existingIdx := -1
+		existingID := ""
+		for ri, ruleItem := range accessRules {
+			ruleDoc, ok := ruleItem.(bson.D)
+			if !ok {
+				continue
+			}
+			if rolesMatch(ruleDoc, roleNames) {
+				existingIdx = ri
+				for _, rf := range ruleDoc {
+					if rf.Key == "$ID" {
+						existingID = extractBsonIDValue(rf.Value)
+						break
+					}
+				}
+				break
+			}
+		}
+
+		ruleID := generateUUID()
+		if existingID != "" {
+			ruleID = existingID
+		}
+		newRule := bson.D{
+			{Key: "$Type", Value: "DomainModels$AccessRule"},
+			{Key: "$ID", Value: idToBsonBinary(ruleID)},
+			{Key: "AllowedModuleRoles", Value: makeMendixStringArray(roleNames)},
+			{Key: "AllowCreate", Value: allowCreate},
+			{Key: "AllowDelete", Value: allowDelete},
+			{Key: "DefaultMemberAccessRights", Value: defaultMemberAccess},
+			{Key: "XPathConstraint", Value: xpathConstraint},
+			{Key: "XPathConstraintCaption", Value: ""},
+			{Key: "Documentation", Value: ""},
+			{Key: "MemberAccesses", Value: memberAccessesBson},
+		}
+
+		if existingIdx >= 0 {
+			existingRule, _ := accessRules[existingIdx].(bson.D)
+			newRule = mergeAccessRule(existingRule, newRule)
+			accessRules[existingIdx] = newRule
+		} else {
+			accessRules = append(accessRules, newRule)
+		}
+
+		if accessRulesIdx >= 0 {
+			entityDoc[accessRulesIdx].Value = accessRules
+		} else {
+			entityDoc = append(entityDoc, bson.E{Key: "AccessRules", Value: accessRules})
+		}
+		entitiesArr[i] = entityDoc
+		break
+	}
+
+	if !found {
+		return doc, fmt.Errorf("entity not found: %s", entityName)
+	}
+
+	return setBsonField(doc, "Entities", entitiesArr), nil
+}
+
+// PatchAddEntityAccessRule is the BSON-only version of AddEntityAccessRule.
+// It returns the patched BSON bytes without writing to disk.
+func (w *Writer) PatchAddEntityAccessRule(rawBytes []byte, entityName string, roleNames []string,
+	allowCreate, allowDelete bool,
+	defaultMemberAccess string, xpathConstraint string,
+	memberAccesses []EntityMemberAccess) ([]byte, error) {
+
+	var doc bson.D
+	if err := bson.Unmarshal(rawBytes, &doc); err != nil {
+		return nil, fmt.Errorf("unmarshal: %w", err)
+	}
+	doc, err := patchAddEntityAccessRuleDoc(doc, entityName, roleNames, allowCreate, allowDelete, defaultMemberAccess, xpathConstraint, memberAccesses)
+	if err != nil {
+		return nil, err
+	}
+	return bson.Marshal(doc)
+}
+
+// patchRemoveEntityAccessRuleDoc removes the given roles from access rules
+// on the named entity. Returns the patched doc and the count of modified rules.
+func patchRemoveEntityAccessRuleDoc(doc bson.D, entityName string, roleNames []string) (bson.D, int, error) {
+	modified := 0
+	entitiesArr := getBsonArray(doc, "Entities")
+	if entitiesArr == nil {
+		return doc, 0, fmt.Errorf("no Entities array found in domain model")
+	}
+
+	removeRoles := make(map[string]bool)
+	for _, r := range roleNames {
+		removeRoles[r] = true
+	}
+
+	found := false
+	for i, item := range entitiesArr {
+		entityDoc, ok := item.(bson.D)
+		if !ok {
+			continue
+		}
+		name := ""
+		for _, f := range entityDoc {
+			if f.Key == "Name" {
+				name = bsonutil.String(f.Value, "Name")
+				break
+			}
+		}
+		if name != entityName {
+			continue
+		}
+		found = true
+
+		for j, f := range entityDoc {
+			if f.Key != "AccessRules" {
+				continue
+			}
+			arr, ok := f.Value.(bson.A)
+			if !ok {
+				break
+			}
+
+			var filtered bson.A
+			for _, ruleItem := range arr {
+				if _, ok := ruleItem.(int32); ok {
+					filtered = append(filtered, ruleItem)
+					continue
+				}
+				ruleDoc, ok := ruleItem.(bson.D)
+				if !ok {
+					filtered = append(filtered, ruleItem)
+					continue
+				}
+
+				keepRule, wasModified := removeRolesFromAccessRule(ruleDoc, removeRoles)
+				if wasModified {
+					modified++
+				}
+				if keepRule {
+					filtered = append(filtered, ruleDoc)
+				}
+			}
+
+			entityDoc[j].Value = filtered
+			break
+		}
+
+		entitiesArr[i] = entityDoc
+		break
+	}
+
+	if !found {
+		return doc, 0, fmt.Errorf("entity not found: %s", entityName)
+	}
+
+	return setBsonField(doc, "Entities", entitiesArr), modified, nil
+}
+
+// PatchRemoveEntityAccessRule is the BSON-only version of RemoveEntityAccessRule.
+// Returns the patched bytes and the count of modified rules.
+func (w *Writer) PatchRemoveEntityAccessRule(rawBytes []byte, entityName string, roleNames []string) ([]byte, int, error) {
+	var doc bson.D
+	if err := bson.Unmarshal(rawBytes, &doc); err != nil {
+		return nil, 0, fmt.Errorf("unmarshal: %w", err)
+	}
+	doc, modified, err := patchRemoveEntityAccessRuleDoc(doc, entityName, roleNames)
+	if err != nil {
+		return nil, 0, err
+	}
+	out, err := bson.Marshal(doc)
+	if err != nil {
+		return nil, 0, fmt.Errorf("marshal: %w", err)
+	}
+	return out, modified, nil
+}
+
+// patchRevokeEntityMemberAccessDoc applies a partial revoke to a matching access rule.
+func patchRevokeEntityMemberAccessDoc(doc bson.D, entityName string, roleNames []string, revocation EntityAccessRevocation) (bson.D, int, error) {
+	modified := 0
+	entitiesArr := getBsonArray(doc, "Entities")
+	if entitiesArr == nil {
+		return doc, 0, fmt.Errorf("no Entities array found in domain model")
+	}
+
+	found := false
+	for i, item := range entitiesArr {
+		entityDoc, ok := item.(bson.D)
+		if !ok {
+			continue
+		}
+		name := ""
+		for _, f := range entityDoc {
+			if f.Key == "Name" {
+				name = bsonutil.String(f.Value, "Name")
+				break
+			}
+		}
+		if name != entityName {
+			continue
+		}
+		found = true
+
+		for j, f := range entityDoc {
+			if f.Key != "AccessRules" {
+				continue
+			}
+			arr, ok := f.Value.(bson.A)
+			if !ok {
+				break
+			}
+
+			for ri, ruleItem := range arr {
+				ruleDoc, ok := ruleItem.(bson.D)
+				if !ok {
+					continue
+				}
+				if !rolesMatch(ruleDoc, roleNames) {
+					continue
+				}
+
+				ruleModified := false
+
+				revokeReadSet := make(map[string]bool)
+				for _, ref := range revocation.RevokeReadMembers {
+					revokeReadSet[ref] = true
+				}
+				revokeWriteSet := make(map[string]bool)
+				for _, ref := range revocation.RevokeWriteMembers {
+					revokeWriteSet[ref] = true
+				}
+
+				for k, rf := range ruleDoc {
+					switch rf.Key {
+					case "AllowCreate":
+						if revocation.RevokeCreate {
+							ruleDoc[k].Value = false
+							ruleModified = true
+						}
+					case "AllowDelete":
+						if revocation.RevokeDelete {
+							ruleDoc[k].Value = false
+							ruleModified = true
+						}
+					case "DefaultMemberAccessRights":
+						if revocation.RevokeReadAll {
+							ruleDoc[k].Value = "None"
+							ruleModified = true
+						} else if revocation.RevokeWriteAll {
+							cur := bsonutil.String(rf.Value, "DefaultMemberAccessRights")
+							if cur == "ReadWrite" {
+								ruleDoc[k].Value = "ReadOnly"
+								ruleModified = true
+							}
+						}
+					case "MemberAccesses":
+						maArr, ok := rf.Value.(bson.A)
+						if !ok {
+							break
+						}
+						for mi, maItem := range maArr {
+							maDoc, ok := maItem.(bson.D)
+							if !ok {
+								continue
+							}
+							var ref, rights string
+							for _, mf := range maDoc {
+								switch mf.Key {
+								case "Attribute":
+									ref = bsonutil.String(mf.Value, "Attribute")
+								case "Association":
+									ref = bsonutil.String(mf.Value, "Association")
+								case "AccessRights":
+									rights = bsonutil.String(mf.Value, "AccessRights")
+								}
+							}
+							if ref == "" {
+								continue
+							}
+
+							newRights := rights
+							if revocation.RevokeReadAll || revokeReadSet[ref] {
+								newRights = "None"
+							} else if revocation.RevokeWriteAll || revokeWriteSet[ref] {
+								if rights == "ReadWrite" {
+									newRights = "ReadOnly"
+								}
+							}
+
+							if newRights != rights {
+								for mk, mf := range maDoc {
+									if mf.Key == "AccessRights" {
+										maDoc[mk].Value = newRights
+										break
+									}
+								}
+								maArr[mi] = maDoc
+								ruleModified = true
+							}
+						}
+						ruleDoc[k].Value = maArr
+					}
+				}
+
+				if ruleModified {
+					arr[ri] = ruleDoc
+					modified++
+				}
+				break
+			}
+
+			entityDoc[j].Value = arr
+			break
+		}
+
+		entitiesArr[i] = entityDoc
+		break
+	}
+
+	if !found {
+		return doc, 0, fmt.Errorf("entity not found: %s", entityName)
+	}
+
+	return setBsonField(doc, "Entities", entitiesArr), modified, nil
+}
+
+// PatchRevokeEntityMemberAccess is the BSON-only version of RevokeEntityMemberAccess.
+func (w *Writer) PatchRevokeEntityMemberAccess(rawBytes []byte, entityName string, roleNames []string, revocation EntityAccessRevocation) ([]byte, int, error) {
+	var doc bson.D
+	if err := bson.Unmarshal(rawBytes, &doc); err != nil {
+		return nil, 0, fmt.Errorf("unmarshal: %w", err)
+	}
+	doc, modified, err := patchRevokeEntityMemberAccessDoc(doc, entityName, roleNames, revocation)
+	if err != nil {
+		return nil, 0, err
+	}
+	out, err := bson.Marshal(doc)
+	if err != nil {
+		return nil, 0, fmt.Errorf("marshal: %w", err)
+	}
+	return out, modified, nil
+}
+
+// patchRemoveRoleFromAllEntitiesDoc removes a role from every entity access rule.
+func patchRemoveRoleFromAllEntitiesDoc(doc bson.D, roleName string) (bson.D, int) {
+	modified := 0
+	entitiesArr := getBsonArray(doc, "Entities")
+	if entitiesArr == nil {
+		return doc, 0
+	}
+
+	removeRoles := map[string]bool{roleName: true}
+
+	for i, item := range entitiesArr {
+		entityDoc, ok := item.(bson.D)
+		if !ok {
+			continue
+		}
+
+		for j, f := range entityDoc {
+			if f.Key != "AccessRules" {
+				continue
+			}
+			arr, ok := f.Value.(bson.A)
+			if !ok {
+				break
+			}
+
+			var filtered bson.A
+			for _, ruleItem := range arr {
+				if _, ok := ruleItem.(int32); ok {
+					filtered = append(filtered, ruleItem)
+					continue
+				}
+				ruleDoc, ok := ruleItem.(bson.D)
+				if !ok {
+					filtered = append(filtered, ruleItem)
+					continue
+				}
+
+				keepRule, wasModified := removeRolesFromAccessRule(ruleDoc, removeRoles)
+				if wasModified {
+					modified++
+				}
+				if keepRule {
+					filtered = append(filtered, ruleDoc)
+				}
+			}
+
+			entityDoc[j].Value = filtered
+			break
+		}
+
+		entitiesArr[i] = entityDoc
+	}
+
+	return setBsonField(doc, "Entities", entitiesArr), modified
+}
+
+// PatchRemoveRoleFromAllEntities is the BSON-only version of RemoveRoleFromAllEntities.
+func (w *Writer) PatchRemoveRoleFromAllEntities(rawBytes []byte, roleName string) ([]byte, int, error) {
+	var doc bson.D
+	if err := bson.Unmarshal(rawBytes, &doc); err != nil {
+		return nil, 0, fmt.Errorf("unmarshal: %w", err)
+	}
+	doc, modified := patchRemoveRoleFromAllEntitiesDoc(doc, roleName)
+	out, err := bson.Marshal(doc)
+	if err != nil {
+		return nil, 0, fmt.Errorf("marshal: %w", err)
+	}
+	return out, modified, nil
+}
+
+// patchReconcileMemberAccessesDoc reconciles MemberAccesses on every AccessRule
+// in the domain model so they match the current entity structure.
+func patchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, int) {
+	modified := 0
+
+	entitiesArr := getBsonArray(doc, "Entities")
+	if entitiesArr == nil {
+		return doc, 0
+	}
+
+	assocNames := map[string]bool{}
+	assocArr := getBsonArray(doc, "Associations")
+	for _, item := range assocArr {
+		assocDoc, ok := item.(bson.D)
+		if !ok {
+			continue
+		}
+		for _, f := range assocDoc {
+			if f.Key == "Name" {
+				if name, ok := f.Value.(string); ok {
+					assocNames[name] = true
+				}
+				break
+			}
+		}
+	}
+	crossArr := getBsonArray(doc, "CrossAssociations")
+	for _, item := range crossArr {
+		crossDoc, ok := item.(bson.D)
+		if !ok {
+			continue
+		}
+		for _, f := range crossDoc {
+			if f.Key == "Name" {
+				if name, ok := f.Value.(string); ok {
+					assocNames[name] = true
+				}
+				break
+			}
+		}
+	}
+
+	for i, item := range entitiesArr {
+		entityDoc, ok := item.(bson.D)
+		if !ok {
+			continue
+		}
+
+		entityName := ""
+		for _, f := range entityDoc {
+			if f.Key == "Name" {
+				entityName = bsonutil.String(f.Value, "Name")
+				break
+			}
+		}
+		if entityName == "" {
+			continue
+		}
+
+		attrNames := map[string]bool{}
+		calculatedAttrs := map[string]bool{}
+		attrsArr := getBsonArray(entityDoc, "Attributes")
+		for _, attrItem := range attrsArr {
+			attrDoc, ok := attrItem.(bson.D)
+			if !ok {
+				continue
+			}
+			attrName := ""
+			isCalculated := false
+			for _, f := range attrDoc {
+				if f.Key == "Name" {
+					attrName = bsonutil.String(f.Value, "Name")
+				}
+				if f.Key == "Value" {
+					if valueDoc, ok := f.Value.(bson.D); ok {
+						for _, vf := range valueDoc {
+							if vf.Key == "$Type" {
+								if vt, ok := vf.Value.(string); ok && vt == "DomainModels$CalculatedValue" {
+									isCalculated = true
+								}
+							}
+						}
+					}
+				}
+			}
+			if attrName != "" {
+				attrNames[attrName] = true
+				if isCalculated {
+					calculatedAttrs[attrName] = true
+				}
+			}
+		}
+
+		entityID := ""
+		for _, f := range entityDoc {
+			if f.Key == "$ID" {
+				entityID = extractBsonIDValue(f.Value)
+				break
+			}
+		}
+		entityAssocNames := map[string]bool{}
+
+		systemAssocRefs := map[string]bool{}
+		for _, f := range entityDoc {
+			if f.Key == "Generalization" || f.Key == "MaybeGeneralization" {
+				if genDoc, ok := f.Value.(bson.D); ok {
+					for _, gf := range genDoc {
+						if gf.Key == "$Type" {
+							if gt, ok := gf.Value.(string); ok && gt == "DomainModels$NoGeneralization" {
+								for _, ngf := range genDoc {
+									switch ngf.Key {
+									case "HasOwner":
+										if v, ok := ngf.Value.(bool); ok && v {
+											systemAssocRefs["System.owner"] = true
+										}
+									case "HasChangedBy":
+										if v, ok := ngf.Value.(bool); ok && v {
+											systemAssocRefs["System.changedBy"] = true
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				break
+			}
+		}
+		for _, aItem := range assocArr {
+			aDoc, ok := aItem.(bson.D)
+			if !ok {
+				continue
+			}
+			aParentID := ""
+			aName := ""
+			for _, f := range aDoc {
+				switch f.Key {
+				case "ParentPointer":
+					aParentID = extractBsonIDValue(f.Value)
+				case "Name":
+					aName = bsonutil.String(f.Value, "Name")
+				}
+			}
+			if aParentID == entityID && aName != "" {
+				entityAssocNames[aName] = true
+			}
+		}
+		for _, caItem := range crossArr {
+			caDoc, ok := caItem.(bson.D)
+			if !ok {
+				continue
+			}
+			parentID := ""
+			caName := ""
+			for _, f := range caDoc {
+				if f.Key == "ParentPointer" {
+					parentID = extractBsonIDValue(f.Value)
+				}
+				if f.Key == "Name" {
+					caName = bsonutil.String(f.Value, "Name")
+				}
+			}
+			if parentID == entityID && caName != "" {
+				entityAssocNames[caName] = true
+			}
+		}
+
+		for j, f := range entityDoc {
+			if f.Key != "AccessRules" {
+				continue
+			}
+			rulesArr, ok := f.Value.(bson.A)
+			if !ok {
+				break
+			}
+
+			for k, ruleItem := range rulesArr {
+				ruleDoc, ok := ruleItem.(bson.D)
+				if !ok {
+					continue
+				}
+
+				ruleDoc, stripped := stripInvalidAccessRuleProps(ruleDoc)
+				if stripped {
+					rulesArr[k] = ruleDoc
+					modified++
+				}
+
+				for m, rf := range ruleDoc {
+					if rf.Key != "MemberAccesses" {
+						continue
+					}
+					maArr, ok := rf.Value.(bson.A)
+					if !ok {
+						break
+					}
+
+					if len(maArr) <= 1 {
+						break
+					}
+
+					defaultRights := "ReadWrite"
+					for _, drf := range ruleDoc {
+						if drf.Key == "DefaultMemberAccessRights" {
+							if dr, ok := drf.Value.(string); ok {
+								defaultRights = dr
+							}
+							break
+						}
+					}
+
+					coveredAttrs := map[string]bool{}
+					coveredAssocs := map[string]bool{}
+					changed := false
+					var filtered bson.A
+					if len(maArr) > 0 {
+						filtered = bson.A{maArr[0]}
+					}
+
+					coveredSystemAssocs := map[string]bool{}
+					for _, maItem := range maArr[1:] {
+						maDoc, ok := maItem.(bson.D)
+						if !ok {
+							continue
+						}
+						attrRef := ""
+						assocRef := ""
+						for _, mf := range maDoc {
+							if mf.Key == "Attribute" {
+								attrRef = bsonutil.String(mf.Value, "Attribute")
+							}
+							if mf.Key == "Association" {
+								assocRef = bsonutil.String(mf.Value, "Association")
+							}
+						}
+
+						if attrRef != "" {
+							parts := splitQualifiedRef(attrRef)
+							if parts != "" && attrNames[parts] {
+								coveredAttrs[parts] = true
+								if calculatedAttrs[parts] {
+									maDoc = downgradeCalculatedAttrRights(maDoc)
+								}
+								filtered = append(filtered, maDoc)
+							} else {
+								changed = true
+							}
+						} else if assocRef != "" {
+							if systemAssocRefs[assocRef] {
+								coveredSystemAssocs[assocRef] = true
+								filtered = append(filtered, maItem)
+							} else {
+								parts := splitAssocRef(assocRef)
+								if parts != "" && entityAssocNames[parts] {
+									coveredAssocs[parts] = true
+									filtered = append(filtered, maItem)
+								} else {
+									changed = true
+								}
+							}
+						} else {
+							filtered = append(filtered, maItem)
+						}
+					}
+
+					for attrName := range attrNames {
+						if !coveredAttrs[attrName] {
+							rights := defaultRights
+							if calculatedAttrs[attrName] && (rights == "ReadWrite" || rights == "WriteOnly") {
+								rights = "ReadOnly"
+							}
+							newMA := bson.D{
+								{Key: "$Type", Value: "DomainModels$MemberAccess"},
+								{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+								{Key: "AccessRights", Value: rights},
+								{Key: "Attribute", Value: moduleName + "." + entityName + "." + attrName},
+							}
+							filtered = append(filtered, newMA)
+							changed = true
+						}
+					}
+
+					for aName := range entityAssocNames {
+						if !coveredAssocs[aName] {
+							newMA := bson.D{
+								{Key: "$Type", Value: "DomainModels$MemberAccess"},
+								{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+								{Key: "AccessRights", Value: defaultRights},
+								{Key: "Association", Value: moduleName + "." + aName},
+							}
+							filtered = append(filtered, newMA)
+							changed = true
+						}
+					}
+
+					for sysRef := range systemAssocRefs {
+						if !coveredSystemAssocs[sysRef] {
+							newMA := bson.D{
+								{Key: "$Type", Value: "DomainModels$MemberAccess"},
+								{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+								{Key: "AccessRights", Value: defaultRights},
+								{Key: "Association", Value: sysRef},
+							}
+							filtered = append(filtered, newMA)
+							changed = true
+						}
+					}
+
+					if changed {
+						ruleDoc[m].Value = filtered
+						rulesArr[k] = ruleDoc
+						modified++
+					}
+
+					break
+				}
+			}
+
+			entityDoc[j].Value = rulesArr
+			break
+		}
+
+		entitiesArr[i] = entityDoc
+	}
+
+	return setBsonField(doc, "Entities", entitiesArr), modified
+}
+
+// PatchReconcileMemberAccesses is the BSON-only version of ReconcileMemberAccesses.
+func (w *Writer) PatchReconcileMemberAccesses(rawBytes []byte, moduleName string) ([]byte, int, error) {
+	var doc bson.D
+	if err := bson.Unmarshal(rawBytes, &doc); err != nil {
+		return nil, 0, fmt.Errorf("unmarshal: %w", err)
+	}
+	doc, modified := patchReconcileMemberAccessesDoc(doc, moduleName)
+	out, err := bson.Marshal(doc)
+	if err != nil {
+		return nil, 0, fmt.Errorf("marshal: %w", err)
+	}
+	return out, modified, nil
+}

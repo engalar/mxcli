@@ -25,57 +25,82 @@ type NavMenuItemSpec = types.NavMenuItemSpec
 // UpdateNavigationProfile patches a navigation profile's home pages, login page, and menu.
 func (w *Writer) UpdateNavigationProfile(navDocID model.ID, profileName string, spec NavigationProfileSpec) error {
 	return w.readPatchWrite(navDocID, func(doc bson.D) (bson.D, error) {
-		profiles := getBsonArray(doc, "Profiles")
-		if profiles == nil {
-			return doc, fmt.Errorf("no Profiles array found in navigation document")
-		}
-
-		found := false
-		for i, item := range profiles {
-			profDoc, ok := item.(bson.D)
-			if !ok {
-				continue
-			}
-
-			// Match profile by name (case-insensitive)
-			name := ""
-			for _, f := range profDoc {
-				if f.Key == "Name" {
-					name, _ = f.Value.(string)
-					break
-				}
-			}
-			if !strings.EqualFold(name, profileName) {
-				continue
-			}
-			found = true
-
-			// Determine if this is a native profile
-			isNative := false
-			for _, f := range profDoc {
-				if f.Key == "$Type" {
-					typeName, _ := f.Value.(string)
-					isNative = typeName == "Navigation$NativeNavigationProfile"
-					break
-				}
-			}
-
-			if isNative {
-				profDoc = patchNativeProfile(profDoc, spec)
-			} else {
-				profDoc = patchWebProfile(profDoc, spec)
-			}
-
-			profiles[i] = profDoc
-			break
-		}
-
-		if !found {
-			return doc, fmt.Errorf("navigation profile not found: %s", profileName)
-		}
-
-		return setBsonField(doc, "Profiles", profiles), nil
+		return patchNavigationProfileDoc(doc, profileName, spec)
 	})
+}
+
+// PatchNavigationProfile applies a navigation profile patch to raw BSON bytes,
+// returning the new bytes. This is the BSON-level helper used by the modelsdk
+// write path; it shares the same in-memory transform as UpdateNavigationProfile
+// but does not touch the sdk/mpr writer's underlying SQLite connection.
+func (w *Writer) PatchNavigationProfile(rawBytes []byte, profileName string, spec NavigationProfileSpec) ([]byte, error) {
+	var doc bson.D
+	if err := bson.Unmarshal(rawBytes, &doc); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal BSON: %w", err)
+	}
+	doc, err := patchNavigationProfileDoc(doc, profileName, spec)
+	if err != nil {
+		return nil, err
+	}
+	newBytes, err := bson.Marshal(doc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal BSON: %w", err)
+	}
+	return newBytes, nil
+}
+
+// patchNavigationProfileDoc applies the navigation profile patch to a parsed BSON document.
+func patchNavigationProfileDoc(doc bson.D, profileName string, spec NavigationProfileSpec) (bson.D, error) {
+	profiles := getBsonArray(doc, "Profiles")
+	if profiles == nil {
+		return doc, fmt.Errorf("no Profiles array found in navigation document")
+	}
+
+	found := false
+	for i, item := range profiles {
+		profDoc, ok := item.(bson.D)
+		if !ok {
+			continue
+		}
+
+		// Match profile by name (case-insensitive)
+		name := ""
+		for _, f := range profDoc {
+			if f.Key == "Name" {
+				name, _ = f.Value.(string)
+				break
+			}
+		}
+		if !strings.EqualFold(name, profileName) {
+			continue
+		}
+		found = true
+
+		// Determine if this is a native profile
+		isNative := false
+		for _, f := range profDoc {
+			if f.Key == "$Type" {
+				typeName, _ := f.Value.(string)
+				isNative = typeName == "Navigation$NativeNavigationProfile"
+				break
+			}
+		}
+
+		if isNative {
+			profDoc = patchNativeProfile(profDoc, spec)
+		} else {
+			profDoc = patchWebProfile(profDoc, spec)
+		}
+
+		profiles[i] = profDoc
+		break
+	}
+
+	if !found {
+		return doc, fmt.Errorf("navigation profile not found: %s", profileName)
+	}
+
+	return setBsonField(doc, "Profiles", profiles), nil
 }
 
 // patchWebProfile applies the spec to a web navigation profile.
