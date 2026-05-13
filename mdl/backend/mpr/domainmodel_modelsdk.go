@@ -308,3 +308,32 @@ func (b *MprBackend) updateOqlQueriesForMovedEntityViaModelsdk(oldQualifiedName,
 	}
 	return count, nil
 }
+
+// ── UpdateEnumerationRefsInAllDomainModels ────────────
+
+func (b *MprBackend) updateEnumerationRefsInAllDomainModelsViaModelsdk(oldQualifiedName, newQualifiedName string) error {
+	dms, err := b.reader.ListDomainModels()
+	if err != nil {
+		return fmt.Errorf("list domain models: %w", err)
+	}
+	for _, dm := range dms {
+		changed := false
+		for _, entity := range dm.Entities {
+			for _, attr := range entity.Attributes {
+				if enumType, ok := attr.Type.(*domainmodel.EnumerationAttributeType); ok {
+					if enumType.EnumerationRef == oldQualifiedName {
+						enumType.EnumerationRef = newQualifiedName
+						enumType.EnumerationID = model.ID(newQualifiedName)
+						changed = true
+					}
+				}
+			}
+		}
+		if changed {
+			if err := b.updateDomainModelViaModelsdk(dm); err != nil {
+				return fmt.Errorf("update domain model %s: %w", dm.ID, err)
+			}
+		}
+	}
+	return nil
+}
