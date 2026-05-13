@@ -12,6 +12,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	_ "modernc.org/sqlite"
 )
 
@@ -397,6 +398,122 @@ func TestUpdatePublishedRestServiceViaModelsdk(t *testing.T) {
 	}
 	if got := readBSONField(t, raw, "Version"); got != "2" {
 		t.Errorf("Version = %q, want %q", got, "2")
+	}
+	if got := readBSONField(t, raw, "Path"); got != "/new" {
+		t.Errorf("Path = %q, want %q", got, "/new")
+	}
+}
+
+func TestUpdateJavaActionViaModelsdk(t *testing.T) {
+	const unitID = "11111111-4444-4444-4444-444444444444"
+	contents := makeBSONUnit(t, unitID, "JavaActions$JavaAction", bson.D{
+		{Key: "Name", Value: "OldAction"},
+		{Key: "Documentation", Value: ""},
+		{Key: "Excluded", Value: false},
+		{Key: "ExportLevel", Value: "Hidden"},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	ja := &javaactions.JavaAction{
+		Name:        "NewAction",
+		ExportLevel: "Hidden",
+	}
+	ja.ID = id
+
+	if err := b.updateJavaActionViaModelsdk(ja); err != nil {
+		t.Fatalf("updateJavaActionViaModelsdk: %v", err)
+	}
+
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	if got := readBSONField(t, raw, "Name"); got != "NewAction" {
+		t.Errorf("Name = %q, want %q", got, "NewAction")
+	}
+}
+
+func TestUpdateConsumedODataServiceViaModelsdk(t *testing.T) {
+	const unitID = "11111111-5555-5555-5555-555555555555"
+	contents := makeBSONUnit(t, unitID, "Rest$ConsumedODataService", bson.D{
+		{Key: "Name", Value: "OldOData"},
+		{Key: "Documentation", Value: ""},
+		{Key: "Excluded", Value: false},
+		{Key: "ExportLevel", Value: "Hidden"},
+		{Key: "Version", Value: "1.0"},
+		{Key: "ServiceName", Value: "OldSvc"},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	svc := &model.ConsumedODataService{
+		Name:         "NewOData",
+		Version:      "2.0",
+		ServiceName:  "NewSvc",
+		ODataVersion: "V4",
+	}
+	svc.ID = id
+	if err := b.updateConsumedODataServiceViaModelsdk(svc); err != nil {
+		t.Fatalf("updateConsumedODataServiceViaModelsdk: %v", err)
+	}
+
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	if got := readBSONField(t, raw, "Name"); got != "NewOData" {
+		t.Errorf("Name = %q, want %q", got, "NewOData")
+	}
+	if got := readBSONField(t, raw, "Version"); got != "2.0" {
+		t.Errorf("Version = %q, want %q", got, "2.0")
+	}
+}
+
+func TestUpdatePublishedODataServiceViaModelsdk(t *testing.T) {
+	const unitID = "11111111-6666-6666-6666-666666666666"
+	contents := makeBSONUnit(t, unitID, "ODataPublish$PublishedODataService2", bson.D{
+		{Key: "Name", Value: "OldPubOData"},
+		{Key: "Documentation", Value: ""},
+		{Key: "Excluded", Value: false},
+		{Key: "ExportLevel", Value: "Hidden"},
+		{Key: "Version", Value: "1"},
+		{Key: "Path", Value: "/old"},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	svc := &model.PublishedODataService{
+		Name:    "NewPubOData",
+		Version: "2",
+		Path:    "/new",
+	}
+	svc.ID = id
+	if err := b.updatePublishedODataServiceViaModelsdk(svc); err != nil {
+		t.Fatalf("updatePublishedODataServiceViaModelsdk: %v", err)
+	}
+
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	if got := readBSONField(t, raw, "Name"); got != "NewPubOData" {
+		t.Errorf("Name = %q, want %q", got, "NewPubOData")
 	}
 	if got := readBSONField(t, raw, "Path"); got != "/new" {
 		t.Errorf("Path = %q, want %q", got, "/new")

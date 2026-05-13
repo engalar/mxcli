@@ -13,26 +13,41 @@ import (
 	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	genEM "github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings"
 	genIM "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJsonStructures "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
+	genODP "github.com/mendixlabs/mxcli/modelsdk/gen/odatapublish"
 	genREST "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
-// All Update* methods in this file produce canonical BSON via the existing
-// sdk/mpr Serialize* helpers, then write the bytes through msdkWriteRaw
-// (defined in security_allowed_roles_modelsdk.go), which bypasses sdk/mpr's
-// updateTransactionID() — that call fails on hard-linked MPR files
-// (SQLITE_READONLY_DBMOVED 1544).
+// All Update* methods in this file decode the existing unit BSON, mutate
+// scalar/enum/ref properties on the gen type, and write back via msdkWrite.
+// PartList/Part children (operations, resources, queries, etc.) are preserved
+// by LazyDoc and are mutated via dedicated mutator operations elsewhere.
+//
+// updateImageCollectionViaModelsdk still uses the legacy Serialize+msdkWriteRaw
+// path because the modelsdk gen type is not yet wired up.
 
 // ── JavaAction ────────────────────────────────────────────────────────────
 
 func (b *MprBackend) updateJavaActionViaModelsdk(ja *javaactions.JavaAction) error {
-	contents, err := b.writer.SerializeJavaAction(ja)
-	if err != nil {
-		return fmt.Errorf("serialize java action: %w", err)
-	}
-	return b.msdkWriteRaw(ja.ID, contents)
+	return b.msdkWrite(ja.ID, func(elem element.Element) error {
+		typed, ok := elem.(*genJA.JavaAction)
+		if !ok {
+			return fmt.Errorf("unexpected type %T (want *JavaAction)", elem)
+		}
+		typed.SetName(ja.Name)
+		typed.SetDocumentation(ja.Documentation)
+		typed.SetExcluded(ja.Excluded)
+		typed.SetExportLevel(ja.ExportLevel)
+		typed.SetActionDefaultReturnName(ja.ActionDefaultReturnName)
+		// ActionReturnType (Part — polymorphic VoidType/StringType/etc.),
+		// ActionParameters, ActionTypeParameters (PartList) and Java return
+		// type (Part) preserved by LazyDoc; updated by dedicated mutator
+		// operations.
+		return nil
+	})
 }
 
 // ── DatabaseConnection ────────────────────────────────────────────────────
@@ -159,19 +174,62 @@ func (b *MprBackend) updateBusinessEventServiceViaModelsdk(svc *model.BusinessEv
 // ── OData services ────────────────────────────────────────────────────────
 
 func (b *MprBackend) updateConsumedODataServiceViaModelsdk(svc *model.ConsumedODataService) error {
-	contents, err := b.writer.SerializeConsumedODataService(svc)
-	if err != nil {
-		return fmt.Errorf("serialize consumed odata service: %w", err)
-	}
-	return b.msdkWriteRaw(svc.ID, contents)
+	return b.msdkWrite(svc.ID, func(elem element.Element) error {
+		typed, ok := elem.(*genREST.ConsumedODataService)
+		if !ok {
+			return fmt.Errorf("unexpected type %T (want *ConsumedODataService)", elem)
+		}
+		typed.SetName(svc.Name)
+		typed.SetDocumentation(svc.Documentation)
+		typed.SetExcluded(svc.Excluded)
+		typed.SetServiceName(svc.ServiceName)
+		typed.SetVersion(svc.Version)
+		typed.SetODataVersion(svc.ODataVersion)
+		typed.SetMetadataUrl(svc.MetadataUrl)
+		typed.SetTimeoutExpression(svc.TimeoutExpression)
+		typed.SetProxyType(svc.ProxyType)
+		typed.SetDescription(svc.Description)
+		typed.SetValidated(svc.Validated)
+		typed.SetMetadata(svc.Metadata)
+		typed.SetMetadataHash(svc.MetadataHash)
+		typed.SetApplicationId(svc.ApplicationId)
+		typed.SetEndpointId(svc.EndpointId)
+		typed.SetCatalogUrl(svc.CatalogUrl)
+		typed.SetEnvironmentType(svc.EnvironmentType)
+		typed.SetConfigurationMicroflowQualifiedName(svc.ConfigurationMicroflow)
+		typed.SetErrorHandlingMicroflowQualifiedName(svc.ErrorHandlingMicroflow)
+		typed.SetProxyHostQualifiedName(svc.ProxyHost)
+		typed.SetProxyPortQualifiedName(svc.ProxyPort)
+		typed.SetProxyUsernameQualifiedName(svc.ProxyUsername)
+		typed.SetProxyPasswordQualifiedName(svc.ProxyPassword)
+		// HttpConfiguration (Part) preserved by LazyDoc.
+		return nil
+	})
 }
 
 func (b *MprBackend) updatePublishedODataServiceViaModelsdk(svc *model.PublishedODataService) error {
-	contents, err := b.writer.SerializePublishedODataService(svc)
-	if err != nil {
-		return fmt.Errorf("serialize published odata service: %w", err)
-	}
-	return b.msdkWriteRaw(svc.ID, contents)
+	return b.msdkWrite(svc.ID, func(elem element.Element) error {
+		typed, ok := elem.(*genODP.PublishedODataService2)
+		if !ok {
+			return fmt.Errorf("unexpected type %T (want *PublishedODataService2)", elem)
+		}
+		typed.SetName(svc.Name)
+		typed.SetDocumentation(svc.Documentation)
+		typed.SetExcluded(svc.Excluded)
+		typed.SetPath(svc.Path)
+		typed.SetNamespace(svc.Namespace)
+		typed.SetServiceName(svc.ServiceName)
+		typed.SetVersion(svc.Version)
+		typed.SetODataVersion(svc.ODataVersion)
+		typed.SetSummary(svc.Summary)
+		typed.SetDescription(svc.Description)
+		typed.SetPublishAssociations(svc.PublishAssociations)
+		typed.SetUseGeneralization(svc.UseGeneralization)
+		typed.SetAuthenticationMicroflowQualifiedName(svc.AuthMicroflow)
+		typed.SetAllowedModuleRolesQualifiedNames(svc.AllowedModuleRoles)
+		// EntityTypes, EntitySets (PartList) preserved by LazyDoc.
+		return nil
+	})
 }
 
 // ── REST services ─────────────────────────────────────────────────────────
