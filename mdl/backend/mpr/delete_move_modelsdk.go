@@ -5,43 +5,76 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // ── Domain Model ──────────────────────────────────────
+//
+// Entity、Attribute、Association 是 DomainModel BSON 内的嵌入对象，
+// 不是 Unit 表的独立行。删除操作必须通过 writeDomainModel 读取-修改-
+// 回写整个 DomainModel 单元，不能直接调用 msdkWriter.DeleteUnit(entityID)。
 
 func (b *MprBackend) deleteEntityViaModelsdk(domainModelID, entityID model.ID) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	_ = domainModelID
-	return b.msdkWriter.DeleteUnit(string(entityID))
+	return b.writeDomainModel(domainModelID, func(dm *domainmodel.DomainModel) error {
+		for i, e := range dm.Entities {
+			if e.ID == entityID {
+				dm.Entities = append(dm.Entities[:i], dm.Entities[i+1:]...)
+				// 同步清理同 DM 内引用该实体的关联（防止悬空指针）
+				var kept []*domainmodel.Association
+				for _, a := range dm.Associations {
+					if a.ParentID != entityID && a.ChildID != entityID {
+						kept = append(kept, a)
+					}
+				}
+				dm.Associations = kept
+				return nil
+			}
+		}
+		return fmt.Errorf("entity not found: %s", entityID)
+	})
 }
 
 func (b *MprBackend) deleteAttributeViaModelsdk(domainModelID, entityID, attrID model.ID) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	_ = domainModelID
-	_ = entityID
-	return b.msdkWriter.DeleteUnit(string(attrID))
+	return b.writeDomainModel(domainModelID, func(dm *domainmodel.DomainModel) error {
+		for _, e := range dm.Entities {
+			if e.ID == entityID {
+				for i, a := range e.Attributes {
+					if a.ID == attrID {
+						e.Attributes = append(e.Attributes[:i], e.Attributes[i+1:]...)
+						return nil
+					}
+				}
+				return fmt.Errorf("attribute not found: %s", attrID)
+			}
+		}
+		return fmt.Errorf("entity not found: %s", entityID)
+	})
 }
 
 func (b *MprBackend) deleteAssociationViaModelsdk(domainModelID, assocID model.ID) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	_ = domainModelID
-	return b.msdkWriter.DeleteUnit(string(assocID))
+	return b.writeDomainModel(domainModelID, func(dm *domainmodel.DomainModel) error {
+		for i, a := range dm.Associations {
+			if a.ID == assocID {
+				dm.Associations = append(dm.Associations[:i], dm.Associations[i+1:]...)
+				return nil
+			}
+		}
+		return fmt.Errorf("association not found: %s", assocID)
+	})
 }
 
 func (b *MprBackend) deleteCrossAssociationViaModelsdk(domainModelID, assocID model.ID) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	_ = domainModelID
-	return b.msdkWriter.DeleteUnit(string(assocID))
+	return b.writeDomainModel(domainModelID, func(dm *domainmodel.DomainModel) error {
+		for i, ca := range dm.CrossAssociations {
+			if ca.ID == assocID {
+				dm.CrossAssociations = append(dm.CrossAssociations[:i], dm.CrossAssociations[i+1:]...)
+				return nil
+			}
+		}
+		return fmt.Errorf("cross-module association not found: %s", assocID)
+	})
 }
 
 // ── Microflow / Nanoflow ───────────────────────────────

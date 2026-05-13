@@ -8,7 +8,7 @@ import "github.com/mendixlabs/mxcli/modelsdk/codec"
 
 func init() {
 	codec.DefaultRefRegistry.RegisterRefs("DomainModels$AccessRule", []codec.RefMeta{
-		{Prop: "ModuleRoles", Kind: codec.RefByNameList, Target: "Security$ModuleRole"},
+		{Prop: "AllowedModuleRoles", Kind: codec.RefByNameList, Target: "Security$ModuleRole"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("DomainModels$AssociationBase", []codec.RefMeta{
 		{Prop: "Parent", Kind: codec.RefById, Target: ""},
