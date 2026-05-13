@@ -30,7 +30,7 @@ import (
 func TestFormatActionGen_MicroflowCallAction(t *testing.T) {
 	t.Run("nil MicroflowCall falls back to placeholder name, no return var", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$MicroflowCallAction").(*genMf.MicroflowCallAction)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call microflow Microflow();"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -43,7 +43,7 @@ func TestFormatActionGen_MicroflowCallAction(t *testing.T) {
 		call.SetMicroflowQualifiedName("Sales.RecalculateTotals")
 		a.SetMicroflowCall(call)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call microflow Sales.RecalculateTotals();"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -58,7 +58,7 @@ func TestFormatActionGen_MicroflowCallAction(t *testing.T) {
 		a.SetUseReturnVariable(true)
 		a.SetOutputVariableName("Total")
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Total = call microflow Sales.GetCustomerTotal();"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -73,7 +73,7 @@ func TestFormatActionGen_MicroflowCallAction(t *testing.T) {
 		a.SetOutputVariableName("Discarded")
 		// UseReturnVariable left false.
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call microflow Sales.Touch();"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -98,7 +98,7 @@ func TestFormatActionGen_MicroflowCallAction(t *testing.T) {
 		a.SetUseReturnVariable(true)
 		a.SetOutputVariableName("Order")
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Order = call microflow Sales.PlaceOrder(Customer = $Customer, Total = $Total);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -111,7 +111,7 @@ func TestFormatActionGen_MicroflowCallAction(t *testing.T) {
 		// Leave qualified name empty.
 		a.SetMicroflowCall(call)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call microflow Microflow();"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -126,7 +126,7 @@ func TestFormatActionGen_MicroflowCallAction(t *testing.T) {
 func TestFormatActionGen_NanoflowCallAction(t *testing.T) {
 	t.Run("nil NanoflowCall falls back to placeholder", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$NanoflowCallAction").(*genMf.NanoflowCallAction)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call nanoflow Nanoflow();"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -139,7 +139,7 @@ func TestFormatActionGen_NanoflowCallAction(t *testing.T) {
 		call.SetNanoflowQualifiedName("Mobile.OnLogin")
 		a.SetNanoflowCall(call)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call nanoflow Mobile.OnLogin();"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -160,7 +160,7 @@ func TestFormatActionGen_NanoflowCallAction(t *testing.T) {
 		a.SetUseReturnVariable(true)
 		a.SetOutputVariableName("Profile")
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Profile = call nanoflow Mobile.LoadProfile(AccountId = $Id);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -174,7 +174,7 @@ func TestFormatActionGen_NanoflowCallAction(t *testing.T) {
 		a.SetNanoflowCall(call)
 		a.SetOutputVariableName("Discarded") // ignored — UseReturnVariable=false
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call nanoflow Mobile.Touch();"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -189,7 +189,7 @@ func TestFormatActionGen_NanoflowCallAction(t *testing.T) {
 func TestFormatActionGen_JavaActionCallAction(t *testing.T) {
 	t.Run("missing action reference falls back to placeholder", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$JavaActionCallAction").(*genMf.JavaActionCallAction)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call java action JavaAction();"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -200,7 +200,7 @@ func TestFormatActionGen_JavaActionCallAction(t *testing.T) {
 		a := newGenAction(t, "Microflows$JavaActionCallAction").(*genMf.JavaActionCallAction)
 		a.SetJavaActionQualifiedName("Toolbox.SendEmail")
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call java action Toolbox.SendEmail();"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -222,7 +222,7 @@ func TestFormatActionGen_JavaActionCallAction(t *testing.T) {
 		pm.SetValue(pv)
 		a.AddParameterMappings(pm)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Rendered = call java action Toolbox.RenderTemplate(Greeting = 'Hello {1}!');"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -243,7 +243,7 @@ func TestFormatActionGen_JavaActionCallAction(t *testing.T) {
 		pm.SetParameterValue(pv) // not SetValue
 		a.AddParameterMappings(pm)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call java action Toolbox.Echo(Input = $Input);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -261,7 +261,7 @@ func TestFormatActionGen_JavaActionCallAction(t *testing.T) {
 		pm.SetValue(pv)
 		a.AddParameterMappings(pm)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call java action Toolbox.Maybe(OptionalArg = empty);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -279,7 +279,7 @@ func TestFormatActionGen_JavaActionCallAction(t *testing.T) {
 		pm.SetValue(pv)
 		a.AddParameterMappings(pm)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call java action Toolbox.RegisterCallback(Microflow = 'Sales.OnOrderPlaced');"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -297,7 +297,7 @@ func TestFormatActionGen_JavaActionCallAction(t *testing.T) {
 		pm.SetValue(pv)
 		a.AddParameterMappings(pm)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call java action Toolbox.RegisterCallback(Microflow = empty);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -315,7 +315,7 @@ func TestFormatActionGen_JavaActionCallAction(t *testing.T) {
 		pm.SetValue(pv)
 		a.AddParameterMappings(pm)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call java action Toolbox.GetMetaInfo(EntityType = 'Sales.Order');"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -340,7 +340,7 @@ func TestFormatActionGen_JavaActionCallAction(t *testing.T) {
 		pm2.SetValue(basic)
 		a.AddParameterMappings(pm2)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call java action Toolbox.Combo(Expr = $x + 1, Basic = $y);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -363,7 +363,7 @@ func TestFormatActionGen_JavaActionCallAction(t *testing.T) {
 		pmKeep.SetValue(basic)
 		a.AddParameterMappings(pmKeep)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call java action Toolbox.Skip(Keep = $kept);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -378,7 +378,7 @@ func TestFormatActionGen_JavaActionCallAction(t *testing.T) {
 func TestFormatActionGen_JavaScriptActionCallAction(t *testing.T) {
 	t.Run("missing action ref, no params: literal placeholder", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$JavaScriptActionCallAction").(*genMf.JavaScriptActionCallAction)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "-- JavaScriptAction: missing action reference"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -394,7 +394,7 @@ func TestFormatActionGen_JavaScriptActionCallAction(t *testing.T) {
 		pm.SetParameterValue(basic)
 		a.AddParameterMappings(pm)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "-- JavaScriptAction: missing action reference (1 param)"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -408,7 +408,7 @@ func TestFormatActionGen_JavaScriptActionCallAction(t *testing.T) {
 			pm.SetParameterQualifiedName("Mobile.X.P")
 			a.AddParameterMappings(pm)
 		}
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "-- JavaScriptAction: missing action reference (3 params)"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -419,7 +419,7 @@ func TestFormatActionGen_JavaScriptActionCallAction(t *testing.T) {
 		a := newGenAction(t, "Microflows$JavaScriptActionCallAction").(*genMf.JavaScriptActionCallAction)
 		a.SetJavaScriptActionQualifiedName("Mobile.Beep")
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call javascript action Mobile.Beep();"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -441,7 +441,7 @@ func TestFormatActionGen_JavaScriptActionCallAction(t *testing.T) {
 		pm.SetParameterValue(pv)
 		a.AddParameterMappings(pm)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Rendered = call javascript action Mobile.RenderTemplate(Body = 'Hi {1}');"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -468,7 +468,7 @@ func TestFormatActionGen_JavaScriptActionCallAction(t *testing.T) {
 		pmKeep.SetParameterValue(basic)
 		a.AddParameterMappings(pmKeep)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call javascript action Mobile.Combo(Required = $req);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -486,7 +486,7 @@ func TestFormatActionGen_JavaScriptActionCallAction(t *testing.T) {
 		pm.SetParameterValue(pv)
 		a.AddParameterMappings(pm)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call javascript action Mobile.Inspect(EntityType = 'Sales.Order');"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -504,7 +504,7 @@ func TestFormatActionGen_JavaScriptActionCallAction(t *testing.T) {
 		pm.SetParameterValue(pv)
 		a.AddParameterMappings(pm)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "call javascript action Mobile.Reject();"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)

@@ -40,7 +40,7 @@ func TestFormatActionGen_DeleteAction(t *testing.T) {
 	a := newGenAction(t, "Microflows$DeleteAction").(*genMf.DeleteAction)
 	a.SetDeleteVariableName("Account")
 
-	got := formatActionGen(a)
+	got := formatActionGen(nil, a)
 	want := "delete $Account;"
 	if got != want {
 		t.Errorf("DeleteAction:\n got: %q\nwant: %q", got, want)
@@ -67,7 +67,7 @@ func TestFormatActionGen_CommitAction(t *testing.T) {
 			a.SetCommitVariableName(tc.varName)
 			a.SetWithEvents(tc.withEvents)
 			a.SetRefreshInClient(tc.refresh)
-			if got := formatActionGen(a); got != tc.want {
+			if got := formatActionGen(nil, a); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -89,7 +89,7 @@ func TestFormatActionGen_RollbackAction(t *testing.T) {
 			a := newGenAction(t, "Microflows$RollbackAction").(*genMf.RollbackAction)
 			a.SetRollbackVariableName(tc.varName)
 			a.SetRefreshInClient(tc.refresh)
-			if got := formatActionGen(a); got != tc.want {
+			if got := formatActionGen(nil, a); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -101,7 +101,7 @@ func TestFormatActionGen_CreateObjectAction(t *testing.T) {
 		a := newGenAction(t, "Microflows$CreateObjectAction").(*genMf.CreateObjectAction)
 		a.SetEntityQualifiedName("Sales.Order")
 		a.SetOutputVariableName("NewOrder")
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$NewOrder = create Sales.Order;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -111,7 +111,7 @@ func TestFormatActionGen_CreateObjectAction(t *testing.T) {
 	t.Run("default output var", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$CreateObjectAction").(*genMf.CreateObjectAction)
 		a.SetEntityQualifiedName("Sales.Order")
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$NewObject = create Sales.Order;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -141,7 +141,7 @@ func TestFormatActionGen_CreateObjectAction(t *testing.T) {
 		mCross.SetValue("$Carrier")
 		a.AddItems(mCross)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$NewOrder = create Sales.Order (Total = 0, Order_Customer = $Customer, Logistics.Order_Carrier = $Carrier);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -151,7 +151,7 @@ func TestFormatActionGen_CreateObjectAction(t *testing.T) {
 	t.Run("empty entity qualified name falls back to 'Entity'", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$CreateObjectAction").(*genMf.CreateObjectAction)
 		a.SetOutputVariableName("X")
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$X = create Entity;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -163,7 +163,7 @@ func TestFormatActionGen_ChangeObjectAction(t *testing.T) {
 	t.Run("bare", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$ChangeObjectAction").(*genMf.ChangeObjectAction)
 		a.SetChangeVariableName("Account")
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "change $Account;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -180,7 +180,7 @@ func TestFormatActionGen_ChangeObjectAction(t *testing.T) {
 		m.SetValue("$AccountPasswordData/NewPassword")
 		a.AddItems(m)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "change $Account (Password = $AccountPasswordData/NewPassword) refresh;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -196,7 +196,7 @@ func TestFormatActionGen_ChangeObjectAction(t *testing.T) {
 		m.SetValue("$Customer")
 		a.AddItems(m)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "change $Order (Sales.Order_Customer = $Customer);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -205,7 +205,7 @@ func TestFormatActionGen_ChangeObjectAction(t *testing.T) {
 
 	t.Run("default change variable", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$ChangeObjectAction").(*genMf.ChangeObjectAction)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "change $Object;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -219,7 +219,7 @@ func TestFormatActionGen_AggregateListAction(t *testing.T) {
 		a.SetInputListVariableName("Orders")
 		a.SetOutputVariableName("OrderCount")
 		// Empty AggregateFunction defaults to Count.
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$OrderCount = count($Orders);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -232,7 +232,7 @@ func TestFormatActionGen_AggregateListAction(t *testing.T) {
 		a.SetOutputVariableName("Total")
 		a.SetAggregateFunction(genMf.AggregateFunctionEnumSum)
 		a.SetAttributeQualifiedName("Sales.Order.Amount")
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Total = sum($Orders.Amount);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -246,7 +246,7 @@ func TestFormatActionGen_AggregateListAction(t *testing.T) {
 		a.SetAggregateFunction(genMf.AggregateFunctionEnumAverage)
 		a.SetUseExpression(true)
 		a.SetExpression("$currentObject/Amount + 1")
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Avg = average($Orders, $currentObject/Amount + 1);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -259,7 +259,7 @@ func TestFormatActionGen_AggregateListAction(t *testing.T) {
 		a.SetOutputVariableName("N")
 		a.SetAggregateFunction(genMf.AggregateFunctionEnumCount)
 		a.SetAttributeQualifiedName("Sales.Order.Amount")
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$N = count($Orders);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -269,7 +269,7 @@ func TestFormatActionGen_AggregateListAction(t *testing.T) {
 	t.Run("default output var", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$AggregateAction").(*genMf.AggregateListAction)
 		a.SetInputListVariableName("Orders")
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Result = count($Orders);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -282,15 +282,16 @@ func TestFormatActionGen_AggregateListAction(t *testing.T) {
 // unsupported action returns "" so the caller falls back to its
 // existing TODO placeholder line.
 func TestFormatActionGen_NilAndUnsupported(t *testing.T) {
-	if got := formatActionGen(nil); got != "-- Empty action" {
+	if got := formatActionGen(nil, nil); got != "-- Empty action" {
 		t.Errorf("nil action: got %q, want %q", got, "-- Empty action")
 	}
 
-	// A valid gen element of a kind we don't handle. CastAction is
-	// not in the Stage 3.2.2.{a,b} scope.
-	cast := newGenAction(t, "Microflows$CastAction")
-	if got := formatActionGen(cast); got != "" {
-		t.Errorf("unsupported CastAction: got %q, want empty", got)
+	// A valid gen element of a kind we don't handle yet. CastAction
+	// landed in Stage 3.2.2.e; AppServiceCallAction is held back for
+	// the external-integration family in Stage 3.2.2.f.
+	unsupported := newGenAction(t, "Microflows$AppServiceCallAction")
+	if got := formatActionGen(nil, unsupported); got != "" {
+		t.Errorf("unsupported AppServiceCallAction: got %q, want empty", got)
 	}
 }
 
@@ -305,7 +306,7 @@ func TestFormatActionGen_ShowPageAction(t *testing.T) {
 		ps.SetPageQualifiedName("Sales.OrderOverview")
 		a.SetPageSettings(ps)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show page Sales.OrderOverview;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -324,7 +325,7 @@ func TestFormatActionGen_ShowPageAction(t *testing.T) {
 
 		a.SetPageSettings(ps)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show page Administration.ChangePasswordForm($AccountPasswordData = $AccountPasswordData);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -347,7 +348,7 @@ func TestFormatActionGen_ShowPageAction(t *testing.T) {
 		}
 		a.SetPageSettings(ps)
 
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show page Sales.OrderEdit($Order = $Order, $Customer = $Customer);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -356,7 +357,7 @@ func TestFormatActionGen_ShowPageAction(t *testing.T) {
 
 	t.Run("missing PageSettings falls back to UnknownPage", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$ShowFormAction").(*genMf.ShowPageAction)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show page UnknownPage;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -368,7 +369,7 @@ func TestFormatActionGen_ShowPageAction(t *testing.T) {
 		ps := newGenAction(t, "Pages$PageSettings").(*genPg.PageSettings)
 		// Leave PageQualifiedName empty.
 		a.SetPageSettings(ps)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show page UnknownPage;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -391,7 +392,7 @@ func TestFormatActionGen_CloseFormAction(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			a := newGenAction(t, "Microflows$CloseFormAction").(*genMf.CloseFormAction)
 			a.SetNumberOfPages(tc.numberOfPages)
-			if got := formatActionGen(a); got != tc.want {
+			if got := formatActionGen(nil, a); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -401,7 +402,7 @@ func TestFormatActionGen_CloseFormAction(t *testing.T) {
 func TestFormatActionGen_ShowHomePageAction(t *testing.T) {
 	t.Run("constant output regardless of state", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$ShowHomePageAction").(*genMf.ShowHomePageAction)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show home page;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -411,7 +412,7 @@ func TestFormatActionGen_ShowHomePageAction(t *testing.T) {
 	t.Run("error-handling field set should not affect output", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$ShowHomePageAction").(*genMf.ShowHomePageAction)
 		a.SetErrorHandlingType("Custom")
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show home page;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -453,7 +454,7 @@ func TestFormatActionGen_ShowMessageAction(t *testing.T) {
 
 	t.Run("no template defaults to ellipsis literal and Information type", func(t *testing.T) {
 		a := build(t, "", nil)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show message '...' type Information;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -464,7 +465,7 @@ func TestFormatActionGen_ShowMessageAction(t *testing.T) {
 		a := build(t, genMf.ShowMessageTypeWarning, map[string]string{
 			"en_US": "Order saved",
 		})
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show message 'Order saved' type Warning;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -475,7 +476,7 @@ func TestFormatActionGen_ShowMessageAction(t *testing.T) {
 		a := build(t, genMf.ShowMessageTypeError, map[string]string{
 			"nl_NL": "Bestelling opgeslagen",
 		})
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show message 'Bestelling opgeslagen' type Error;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -488,7 +489,7 @@ func TestFormatActionGen_ShowMessageAction(t *testing.T) {
 			"en_US": "Hello",
 			"de_DE": "Hallo",
 		})
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show message 'Hello' type Information;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -500,7 +501,7 @@ func TestFormatActionGen_ShowMessageAction(t *testing.T) {
 			map[string]string{"en_US": "Saved {1} of {2}"},
 			"$Order/Number", "$Order/Total",
 		)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show message 'Saved {1} of {2}' type Information objects [$Order/Number, $Order/Total];"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -512,7 +513,7 @@ func TestFormatActionGen_ShowMessageAction(t *testing.T) {
 		// present — the legacy formatter still emits the objects clause
 		// alongside the unquoted placeholder text.
 		a := build(t, genMf.ShowMessageTypeWarning, nil, "$x")
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show message '...' type Warning objects [$x];"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -523,7 +524,7 @@ func TestFormatActionGen_ShowMessageAction(t *testing.T) {
 		a := build(t, genMf.ShowMessageTypeInformation, map[string]string{
 			"en_US": "It's done",
 		})
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "show message 'It''s done' type Information;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -551,7 +552,7 @@ func TestFormatActionGen_CreateListAction(t *testing.T) {
 			a := newGenAction(t, "Microflows$CreateListAction").(*genMf.CreateListAction)
 			a.SetEntityQualifiedName(tc.entityQN)
 			a.SetOutputVariableName(tc.outputVar)
-			if got := formatActionGen(a); got != tc.want {
+			if got := formatActionGen(nil, a); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -578,7 +579,7 @@ func TestFormatActionGen_ChangeListAction(t *testing.T) {
 			a.SetChangeVariableName(tc.varName)
 			a.SetType(tc.typ)
 			a.SetValue(tc.value)
-			if got := formatActionGen(a); got != tc.want {
+			if got := formatActionGen(nil, a); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -588,7 +589,7 @@ func TestFormatActionGen_ChangeListAction(t *testing.T) {
 func TestFormatActionGen_ListOperationAction_DefaultsAndNil(t *testing.T) {
 	t.Run("nil operation gives placeholder with default Result", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$ListOperationsAction").(*genMf.ListOperationAction)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Result = list operation ...;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -598,7 +599,7 @@ func TestFormatActionGen_ListOperationAction_DefaultsAndNil(t *testing.T) {
 	t.Run("nil operation respects custom output var", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$ListOperationsAction").(*genMf.ListOperationAction)
 		a.SetOutputVariableName("Custom")
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Custom = list operation ...;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -610,7 +611,7 @@ func TestFormatActionGen_ListOperationAction_DefaultsAndNil(t *testing.T) {
 		head := newGenAction(t, "Microflows$Head").(*genMf.Head)
 		head.SetListVariableName("Orders")
 		a.SetOperation(head)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Result = head($Orders);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -643,7 +644,7 @@ func TestFormatActionGen_HeadOperation(t *testing.T) {
 			h := newGenAction(t, "Microflows$Head").(*genMf.Head)
 			h.SetListVariableName(tc.listVar)
 			a := newListOpAction(t, tc.out, h)
-			if got := formatActionGen(a); got != tc.want {
+			if got := formatActionGen(nil, a); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -665,7 +666,7 @@ func TestFormatActionGen_TailOperation(t *testing.T) {
 			tl := newGenAction(t, "Microflows$Tail").(*genMf.Tail)
 			tl.SetListVariableName(tc.listVar)
 			a := newListOpAction(t, tc.out, tl)
-			if got := formatActionGen(a); got != tc.want {
+			if got := formatActionGen(nil, a); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -689,7 +690,7 @@ func TestFormatActionGen_FindByExpression(t *testing.T) {
 			f.SetListVariableName(tc.listVar)
 			f.SetExpression(tc.expr)
 			a := newListOpAction(t, tc.out, f)
-			if got := formatActionGen(a); got != tc.want {
+			if got := formatActionGen(nil, a); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -713,7 +714,7 @@ func TestFormatActionGen_FilterByExpression(t *testing.T) {
 			f.SetListVariableName(tc.listVar)
 			f.SetExpression(tc.expr)
 			a := newListOpAction(t, tc.out, f)
-			if got := formatActionGen(a); got != tc.want {
+			if got := formatActionGen(nil, a); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -730,7 +731,7 @@ func TestFormatActionGen_FindByAttribute(t *testing.T) {
 		f.SetAttributeQualifiedName("Sales.Order.Status")
 		f.SetExpression("'Open'")
 		a := newListOpAction(t, "Open", f)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Open = find($Orders, Status = 'Open');"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -743,7 +744,7 @@ func TestFormatActionGen_FindByAttribute(t *testing.T) {
 		f.SetAssociationQualifiedName("Sales.Order_Customer")
 		f.SetExpression("$Customer")
 		a := newListOpAction(t, "Found", f)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Found = find($Orders, Order_Customer = $Customer);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -755,7 +756,7 @@ func TestFormatActionGen_FindByAttribute(t *testing.T) {
 		f.SetListVariableName("Orders")
 		f.SetExpression("$currentObject/Total > 0")
 		a := newListOpAction(t, "Pos", f)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Pos = find($Orders, $currentObject/Total > 0);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -766,7 +767,7 @@ func TestFormatActionGen_FindByAttribute(t *testing.T) {
 		f := newGenAction(t, "Microflows$Find").(*genMf.Find)
 		f.SetListVariableName("Orders")
 		a := newListOpAction(t, "X", f)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "-- $X = find($Orders) — missing attribute/expression"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -781,7 +782,7 @@ func TestFormatActionGen_FilterByAttribute(t *testing.T) {
 		f.SetAttributeQualifiedName("Sales.Order.Status")
 		f.SetExpression("'Open'")
 		a := newListOpAction(t, "Open", f)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Open = filter($Orders, Status = 'Open');"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -793,7 +794,7 @@ func TestFormatActionGen_FilterByAttribute(t *testing.T) {
 		f.SetListVariableName("Orders")
 		f.SetExpression("$currentObject/Total > 0")
 		a := newListOpAction(t, "Pos", f)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Pos = filter($Orders, $currentObject/Total > 0);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -804,7 +805,7 @@ func TestFormatActionGen_FilterByAttribute(t *testing.T) {
 		f := newGenAction(t, "Microflows$Filter").(*genMf.Filter)
 		f.SetListVariableName("Orders")
 		a := newListOpAction(t, "X", f)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "-- $X = filter($Orders) — missing attribute/expression"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -817,7 +818,7 @@ func TestFormatActionGen_SortOperation(t *testing.T) {
 		s := newGenAction(t, "Microflows$Sort").(*genMf.Sort)
 		s.SetListVariableName("Orders")
 		a := newListOpAction(t, "Sorted", s)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Sorted = sort($Orders);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -836,7 +837,7 @@ func TestFormatActionGen_SortOperation(t *testing.T) {
 		s.SetSortItemList(list)
 
 		a := newListOpAction(t, "Sorted", s)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Sorted = sort($Orders, OrderDate asc);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -859,7 +860,7 @@ func TestFormatActionGen_SortOperation(t *testing.T) {
 		s.SetSortItemList(list)
 
 		a := newListOpAction(t, "Sorted", s)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Sorted = sort($Orders, Total desc);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -885,7 +886,7 @@ func TestFormatActionGen_SortOperation(t *testing.T) {
 		s.SetSortItemList(list)
 
 		a := newListOpAction(t, "Sorted", s)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Sorted = sort($Orders, Customer asc, Total desc);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -904,7 +905,7 @@ func TestFormatActionGen_SortOperation(t *testing.T) {
 		s.SetSortItemList(list)
 
 		a := newListOpAction(t, "Sorted", s)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Sorted = sort($Orders, ... asc);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -939,7 +940,7 @@ func TestFormatActionGen_SetOperations(t *testing.T) {
 				t.Fatalf("unexpected element type %T", el)
 			}
 			a := newListOpAction(t, "Combined", el)
-			if got := formatActionGen(a); got != tc.want {
+			if got := formatActionGen(nil, a); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -952,7 +953,7 @@ func TestFormatActionGen_ContainsAndEquals(t *testing.T) {
 		c.SetListVariableName("Orders")
 		c.SetSecondListOrObjectVariableName("Order")
 		a := newListOpAction(t, "Has", c)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Has = contains($Orders, $Order);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -964,7 +965,7 @@ func TestFormatActionGen_ContainsAndEquals(t *testing.T) {
 		e.SetListVariableName("A")
 		e.SetSecondListOrObjectVariableName("B")
 		a := newListOpAction(t, "Eq", e)
-		got := formatActionGen(a)
+		got := formatActionGen(nil, a)
 		want := "$Eq = equals($A, $B);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
@@ -995,7 +996,7 @@ func TestFormatActionGen_ListRangeOperation(t *testing.T) {
 				r.SetCustomRange(cr)
 			}
 			a := newListOpAction(t, "Page", r)
-			if got := formatActionGen(a); got != tc.want {
+			if got := formatActionGen(nil, a); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -1264,6 +1265,32 @@ func newGenAction(t *testing.T, typeName string) element.Element {
 		return genMf.NewEntityTypeCodeActionParameterValue()
 	case "Microflows$TypedTemplate":
 		return genMf.NewTypedTemplate()
+	// Stage 3.2.2.e — Variable / Expression / Data family.
+	case "Microflows$CreateVariableAction":
+		return genMf.NewCreateVariableAction()
+	case "Microflows$ChangeVariableAction":
+		return genMf.NewChangeVariableAction()
+	case "Microflows$RetrieveAction":
+		return genMf.NewRetrieveAction()
+	case "Microflows$DatabaseRetrieveSource":
+		return genMf.NewDatabaseRetrieveSource()
+	case "Microflows$AssociationRetrieveSource":
+		return genMf.NewAssociationRetrieveSource()
+	case "Microflows$ConstantRange":
+		return genMf.NewConstantRange()
+	case "Microflows$LogMessageAction":
+		return genMf.NewLogMessageAction()
+	case "Microflows$StringTemplate":
+		return genMf.NewStringTemplate()
+	case "Microflows$DownloadFileAction":
+		return genMf.NewDownloadFileAction()
+	case "Microflows$ValidationFeedbackAction":
+		return genMf.NewValidationFeedbackAction()
+	// Sentinel for the "still unsupported" guard test in
+	// TestFormatActionGen_NilAndUnsupported. Stage 3.2.2.f will
+	// pick this up.
+	case "Microflows$AppServiceCallAction":
+		return genMf.NewAppServiceCallAction()
 	default:
 		t.Fatalf("newGenAction: unknown type %q", typeName)
 		return nil
