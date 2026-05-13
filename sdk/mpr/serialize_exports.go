@@ -92,11 +92,21 @@ func (w *Writer) SerializeConstant(constant *model.Constant) ([]byte, error) {
 }
 
 // SerializeMicroflow returns BSON bytes for a microflow unit.
+//
+// Deprecated: prefer the package-level SerializeMicroflow(mf, pv) which does
+// not require a *Writer and decouples encoding from reader state. This receiver
+// shim is kept for backwards compatibility and will be removed once all callers
+// migrate (see retire-serialize-writer-receiver plan).
 func (w *Writer) SerializeMicroflow(mf *microflows.Microflow) ([]byte, error) {
 	return w.serializeMicroflow(mf)
 }
 
 // SerializeNanoflow returns BSON bytes for a nanoflow unit.
+//
+// Deprecated: prefer the package-level SerializeNanoflow(nf, pv) which does
+// not require a *Writer and decouples encoding from reader state. This receiver
+// shim is kept for backwards compatibility and will be removed once all callers
+// migrate (see retire-serialize-writer-receiver plan).
 func (w *Writer) SerializeNanoflow(nf *microflows.Nanoflow) ([]byte, error) {
 	return w.serializeNanoflow(nf)
 }
