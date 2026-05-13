@@ -21,11 +21,10 @@ type PageWriter interface {
 	Move(id model.ID, newParentUUID string) error
 }
 
-// PageRepository combines reader + writer; the mutator factory
-// (OpenForMutation → PageMutator) is added in Task 3 once the
-// PageMutator interface exists. Stage 2 task ordering avoids forward
-// references in this file.
+// PageRepository combines reader + writer + the mutator factory for
+// large-unit incremental editing (spec section 5 Mutator interfaces).
 type PageRepository interface {
 	PageReader
 	PageWriter
+	OpenForMutation(pageID model.ID) (PageMutator, error)
 }
