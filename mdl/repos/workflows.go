@@ -26,11 +26,8 @@ type WorkflowWriter interface {
 	Move(id model.ID, newParentUUID string) error
 }
 
-// WorkflowRepository combines reader + writer; the mutator factory
-// (OpenForMutation → WorkflowMutator) is added in Task 3 once the
-// WorkflowMutator interface exists. Stage 2 task ordering avoids forward
-// references in this file.
 type WorkflowRepository interface {
 	WorkflowReader
 	WorkflowWriter
+	OpenForMutation(workflowID model.ID) (WorkflowMutator, error)
 }
