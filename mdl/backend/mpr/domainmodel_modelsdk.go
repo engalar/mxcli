@@ -26,7 +26,7 @@ func (b *MprBackend) deleteViewEntitySourceDocumentByNameViaModelsdk(moduleName,
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	docID, err := b.writer.FindViewEntitySourceDocumentID(moduleName, docName)
+	docID, err := b.reader.FindViewEntitySourceDocumentID(moduleName, docName)
 	if err != nil {
 		return fmt.Errorf("find view entity source document: %w", err)
 	}
@@ -40,7 +40,7 @@ func (b *MprBackend) moveViewEntitySourceDocumentViaModelsdk(sourceModuleName st
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	docID, err := b.writer.FindViewEntitySourceDocumentID(sourceModuleName, docName)
+	docID, err := b.reader.FindViewEntitySourceDocumentID(sourceModuleName, docName)
 	if err != nil {
 		return fmt.Errorf("find view entity source document: %w", err)
 	}
@@ -297,6 +297,9 @@ func (b *MprBackend) moveEntityViaModelsdk(entity *domainmodel.Entity, sourceDMI
 // ── UpdateOqlQueriesForMovedEntity ────────────────────
 
 func (b *MprBackend) updateOqlQueriesForMovedEntityViaModelsdk(oldQualifiedName, newQualifiedName string) (int, error) {
+	if b.msdkWriter == nil {
+		return 0, fmt.Errorf("modelsdk writer not initialized")
+	}
 	patches, count, err := b.writer.ScanOqlQueryUpdates(oldQualifiedName, newQualifiedName)
 	if err != nil {
 		return 0, err
@@ -312,6 +315,9 @@ func (b *MprBackend) updateOqlQueriesForMovedEntityViaModelsdk(oldQualifiedName,
 // ── UpdateEnumerationRefsInAllDomainModels ────────────
 
 func (b *MprBackend) updateEnumerationRefsInAllDomainModelsViaModelsdk(oldQualifiedName, newQualifiedName string) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
 	dms, err := b.reader.ListDomainModels()
 	if err != nil {
 		return fmt.Errorf("list domain models: %w", err)
