@@ -220,6 +220,7 @@ func execCreateNanoflow(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		declaredVars: declaredVars,
 		measurer:     &layoutMeasurer{varTypes: varTypes},
 		backend:      ctx.Backend,
+		microflowsRepo: ctx.Microflows,
 		hierarchy:    hierarchy,
 		restServices: restServices,
 		isNanoflow:   true,

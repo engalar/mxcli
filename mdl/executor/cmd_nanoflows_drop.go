@@ -34,7 +34,7 @@ func execDropNanoflow(ctx *ExecContext, s *ast.DropNanoflowStmt) error {
 		if modName == s.Name.Module && nf.Name == s.Name.Name {
 			qualifiedName := s.Name.Module + "." + s.Name.Name
 			rememberDroppedNanoflow(ctx, qualifiedName, nf.ID, nf.ContainerID, nf.AllowedModuleRoles)
-			if err := ctx.Backend.DeleteNanoflow(nf.ID); err != nil {
+			if err := ctx.deleteNanoflowViaRepoOrBackend(nf.ID); err != nil {
 				return mdlerrors.NewBackend("delete nanoflow", err)
 			}
 			// Clear executor-level caches

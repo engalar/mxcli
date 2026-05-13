@@ -71,6 +71,7 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 		Context:          ctx,
 		Backend:          e.backend,
 		Microflows:       extractMicroflowsRepo(e.backend),
+		Nanoflows:        extractNanoflowsRepo(e.backend),
 		Output:           e.output,
 		Format:           e.format,
 		Quiet:            e.quiet,

@@ -10,6 +10,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/exprcheck/adapters"
+	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
@@ -58,6 +59,7 @@ type flowBuilder struct {
 	// outer loop, not by addIfStatement.
 	nextFlowAnchor       *ast.FlowAnchors
 	backend              backend.FullBackend          // For looking up page/microflow references
+	microflowsRepo       repos.MicroflowRepository    // Stage 3.1 modelsdk-native path; nil = fall back to backend
 	hierarchy            *ContainerHierarchy          // For resolving container IDs to module names
 	pendingAnnotations   *ast.ActivityAnnotations     // Pending annotations to attach to next activity
 	restServices         []*model.ConsumedRestService // Cached REST services for parameter classification
@@ -577,7 +579,7 @@ func (fb *flowBuilder) tryBuildRuleSplitCondition(expr ast.Expression) *microflo
 	if !strings.Contains(call.Name, ".") {
 		return nil
 	}
-	isRule, err := fb.backend.IsRule(call.Name)
+	isRule, err := isRuleViaRepoOrBackend(fb.microflowsRepo, fb.backend, call.Name)
 	if err != nil || !isRule {
 		return nil
 	}
