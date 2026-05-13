@@ -110,3 +110,15 @@ func TestReadJavaSourceFileViaPath(t *testing.T) {
 		t.Fatalf("content = %q, want %q", got, content)
 	}
 }
+
+// =============================================================================
+// UpdateRawUnit — msdkWriter == nil must return an error (no b.writer fallback)
+// =============================================================================
+
+func TestUpdateRawUnit_ReturnsErrorWhenMsdkWriterNil(t *testing.T) {
+	b := &MprBackend{} // msdkWriter is nil, writer is nil
+	err := b.UpdateRawUnit("some-unit-id", []byte("data"))
+	if err == nil {
+		t.Fatal("expected error when msdkWriter is nil, got nil")
+	}
+}

@@ -6,6 +6,7 @@
 package mprbackend
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
@@ -740,7 +741,7 @@ func (b *MprBackend) GetRawMicroflowByName(qualifiedName string) ([]byte, error)
 }
 func (b *MprBackend) UpdateRawUnit(unitID string, contents []byte) error {
 	if b.msdkWriter == nil {
-		return b.writer.UpdateRawUnit(unitID, contents)
+		return fmt.Errorf("modelsdk writer not initialized")
 	}
 	return b.msdkWriter.UpdateRawUnit(unitID, contents)
 }
