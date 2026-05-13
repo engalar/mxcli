@@ -533,6 +533,42 @@ func TestRemoveFromAllowedRolesViaModelsdk_Microflow(t *testing.T) {
 	}
 }
 
+func TestUpdatePublishedRestServiceRolesViaModelsdk(t *testing.T) {
+	const unitID = "66666666-6666-6666-6666-666666666666"
+	contents := makeBSONUnit(t, unitID, "Rest$PublishedRestService", bson.D{
+		{Key: "Name", Value: "TestREST"},
+		{Key: "AllowedRoles", Value: bson.A{int32(3)}},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	roles := []string{"MyModule.UserRole"}
+	if err := b.updatePublishedRestServiceRolesViaModelsdk(id, roles); err != nil {
+		t.Fatalf("updatePublishedRestServiceRolesViaModelsdk: %v", err)
+	}
+
+	raw, _ := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	var doc bson.D
+	bson.Unmarshal(raw, &doc)
+	for _, e := range doc {
+		if e.Key == "AllowedRoles" {
+			if arr, ok := e.Value.(bson.A); ok {
+				for _, item := range arr {
+					if s, ok := item.(string); ok && s == "MyModule.UserRole" {
+						return
+					}
+				}
+			}
+		}
+	}
+	t.Error("AllowedRoles does not contain expected role")
+}
+
 func TestUpdateJavaActionViaModelsdk(t *testing.T) {
 	const unitID = "11111111-4444-4444-4444-444444444444"
 	contents := makeBSONUnit(t, unitID, "JavaActions$JavaAction", bson.D{
