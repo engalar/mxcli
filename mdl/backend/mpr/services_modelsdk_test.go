@@ -404,6 +404,135 @@ func TestUpdatePublishedRestServiceViaModelsdk(t *testing.T) {
 	}
 }
 
+func TestUpdateAllowedRolesViaModelsdk_Microflow(t *testing.T) {
+	const unitID = "44444444-4444-4444-4444-444444444444"
+	contents := makeBSONUnit(t, unitID, "Microflows$Microflow", bson.D{
+		{Key: "Name", Value: "TestMF"},
+		{Key: "AllowedModuleRoles", Value: bson.A{int32(3)}},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	roles := []string{"MyModule.UserRole", "MyModule.AdminRole"}
+	if err := b.updateAllowedRolesViaModelsdk(id, roles); err != nil {
+		t.Fatalf("updateAllowedRolesViaModelsdk: %v", err)
+	}
+
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	var doc bson.D
+	if err := bson.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	var gotRoles []string
+	for _, e := range doc {
+		if e.Key == "AllowedModuleRoles" {
+			if arr, ok := e.Value.(bson.A); ok {
+				for _, item := range arr {
+					if s, ok := item.(string); ok {
+						gotRoles = append(gotRoles, s)
+					}
+				}
+			}
+		}
+	}
+	if len(gotRoles) != 2 || gotRoles[0] != "MyModule.UserRole" || gotRoles[1] != "MyModule.AdminRole" {
+		t.Errorf("AllowedModuleRoles = %v, want %v", gotRoles, roles)
+	}
+}
+
+func TestUpdateAllowedRolesViaModelsdk_Page(t *testing.T) {
+	const unitID = "55555555-5555-5555-5555-555555555555"
+	contents := makeBSONUnit(t, unitID, "Forms$Page", bson.D{
+		{Key: "Name", Value: "TestPage"},
+		{Key: "AllowedRoles", Value: bson.A{int32(3)}},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	roles := []string{"MyModule.UserRole"}
+	if err := b.updateAllowedRolesViaModelsdk(id, roles); err != nil {
+		t.Fatalf("updateAllowedRolesViaModelsdk: %v", err)
+	}
+
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	var doc bson.D
+	if err := bson.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	for _, e := range doc {
+		if e.Key == "AllowedRoles" {
+			if arr, ok := e.Value.(bson.A); ok {
+				var found bool
+				for _, item := range arr {
+					if s, ok := item.(string); ok && s == "MyModule.UserRole" {
+						found = true
+					}
+				}
+				if !found {
+					t.Errorf("AllowedRoles does not contain MyModule.UserRole: %v", arr)
+				}
+				return
+			}
+		}
+	}
+	t.Error("AllowedRoles field not found in BSON")
+}
+
+func TestRemoveFromAllowedRolesViaModelsdk_Microflow(t *testing.T) {
+	const unitID = "44444444-5555-5555-5555-555555555555"
+	contents := makeBSONUnit(t, unitID, "Microflows$Microflow", bson.D{
+		{Key: "Name", Value: "TestMF"},
+		{Key: "AllowedModuleRoles", Value: bson.A{int32(3), "MyModule.UserRole", "MyModule.AdminRole"}},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	removed, err := b.removeFromAllowedRolesViaModelsdk(id, "MyModule.UserRole")
+	if err != nil {
+		t.Fatalf("removeFromAllowedRolesViaModelsdk: %v", err)
+	}
+	if !removed {
+		t.Errorf("removed = false, want true")
+	}
+
+	raw, _ := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	var doc bson.D
+	bson.Unmarshal(raw, &doc)
+	for _, e := range doc {
+		if e.Key == "AllowedModuleRoles" {
+			if arr, ok := e.Value.(bson.A); ok {
+				for _, item := range arr {
+					if s, ok := item.(string); ok && s == "MyModule.UserRole" {
+						t.Errorf("AllowedModuleRoles still contains MyModule.UserRole: %v", arr)
+					}
+				}
+				return
+			}
+		}
+	}
+}
+
 func TestUpdateJavaActionViaModelsdk(t *testing.T) {
 	const unitID = "11111111-4444-4444-4444-444444444444"
 	contents := makeBSONUnit(t, unitID, "JavaActions$JavaAction", bson.D{
