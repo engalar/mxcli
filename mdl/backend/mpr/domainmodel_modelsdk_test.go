@@ -123,6 +123,109 @@ func makeEnumRefMPR(t *testing.T, oldRef string) (mprPath string, dmID model.ID)
 	return mprPath, dmID
 }
 
+// makeDomainModelTestMPR creates a minimal MPR with one Module unit and one
+// empty DomainModel unit owned by it. Used by TestCreateEntityViaModelsdk as a
+// regression guard for writeDomainModel's transport tail.
+func makeDomainModelTestMPR(t *testing.T) (mprPath string, dmID model.ID) {
+	t.Helper()
+	dir := t.TempDir()
+	mprPath = filepath.Join(dir, "test.mpr")
+
+	db, err := sql.Open("sqlite", mprPath)
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	defer db.Close()
+
+	if _, err := db.Exec(`
+		CREATE TABLE _MetaData (
+			_FormatVersion INTEGER,
+			_ProductVersion TEXT,
+			_BuildVersion TEXT,
+			_SchemaHash TEXT
+		);
+		INSERT INTO _MetaData VALUES (1, '10.18.0', '10.18.0.0', 'testhash');
+
+		CREATE TABLE _Transaction (LastTransactionID TEXT);
+		INSERT INTO _Transaction VALUES ('00000000-0000-0000-0000-000000000000');
+
+		CREATE TABLE Unit (
+			UnitID BLOB PRIMARY KEY NOT NULL,
+			ContainerID BLOB,
+			ContainmentName TEXT,
+			TreeConflict LONG,
+			ContentsHash TEXT,
+			ContentsConflicts TEXT,
+			Contents BLOB
+		);
+	`); err != nil {
+		t.Fatalf("create schema: %v", err)
+	}
+
+	moduleIDStr := "11111111-2222-3333-4444-555555555555"
+	moduleBlob := secTestUUIDBlob(moduleIDStr)
+	dmIDStr := "66666666-7777-8888-9999-aaaaaaaaaaaa"
+	dmBlob := secTestUUIDBlob(dmIDStr)
+	dmID = model.ID(dmIDStr)
+
+	dmDoc := bson.D{
+		{Key: "$Type", Value: "DomainModels$DomainModel"},
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x00, Data: dmBlob}},
+		{Key: "Entities", Value: bson.A{}},
+		{Key: "Associations", Value: bson.A{}},
+		{Key: "CrossAssociations", Value: bson.A{}},
+	}
+	dmBytes, err := bson.Marshal(dmDoc)
+	if err != nil {
+		t.Fatalf("marshal domain model: %v", err)
+	}
+
+	if _, err := db.Exec(
+		`INSERT INTO Unit (UnitID, ContainerID, ContainmentName, TreeConflict, ContentsHash, ContentsConflicts, Contents)
+		 VALUES (?, ?, ?, 0, '', '', ?)`,
+		dmBlob, moduleBlob, "DomainModel", dmBytes,
+	); err != nil {
+		t.Fatalf("insert domain model unit: %v", err)
+	}
+
+	return mprPath, dmID
+}
+
+// TestCreateEntityViaModelsdk verifies createEntityViaModelsdk persists a new
+// entity through writeDomainModel. Regression guard for the transport-level
+// switch from msdkWriteRaw to BeginWriteTransaction/WriteUnit/Commit.
+func TestCreateEntityViaModelsdk(t *testing.T) {
+	mprPath, dmID := makeDomainModelTestMPR(t)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	entity := &domainmodel.Entity{
+		Name:        "Customer",
+		Persistable: true,
+	}
+	if err := b.createEntityViaModelsdk(dmID, entity); err != nil {
+		t.Fatalf("createEntityViaModelsdk: %v", err)
+	}
+
+	dm, err := b.reader.GetDomainModelByID(dmID)
+	if err != nil {
+		t.Fatalf("GetDomainModelByID after create: %v", err)
+	}
+	if got, want := len(dm.Entities), 1; got != want {
+		t.Fatalf("Entities count = %d, want %d", got, want)
+	}
+	if got := dm.Entities[0].Name; got != "Customer" {
+		t.Errorf("Entities[0].Name = %q, want %q", got, "Customer")
+	}
+	if dm.Entities[0].ID == "" {
+		t.Error("Entities[0].ID was not auto-generated")
+	}
+}
+
 func TestUpdateEnumerationRefsInAllDomainModels_NoChange(t *testing.T) {
 	mprPath, _ := makeEnumRefMPR(t, "OldModule.StatusEnum")
 
