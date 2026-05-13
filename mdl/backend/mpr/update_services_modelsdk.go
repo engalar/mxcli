@@ -9,6 +9,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
+	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	genEM "github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings"
 	genIM "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
 	genJsonStructures "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
@@ -45,11 +46,23 @@ func (b *MprBackend) updateDatabaseConnectionViaModelsdk(conn *model.DatabaseCon
 // ── DataTransformer ───────────────────────────────────────────────────────
 
 func (b *MprBackend) updateDataTransformerViaModelsdk(dt *model.DataTransformer) error {
-	contents, err := mpr.SerializeDataTransformer(dt)
-	if err != nil {
-		return fmt.Errorf("serialize data transformer: %w", err)
-	}
-	return b.msdkWriteRaw(dt.ID, contents)
+	return b.msdkWrite(dt.ID, func(elem element.Element) error {
+		typed, ok := elem.(*genDT.DataTransformer)
+		if !ok {
+			return fmt.Errorf("unexpected type %T (want *DataTransformer)", elem)
+		}
+		typed.SetName(dt.Name)
+		typed.SetExcluded(dt.Excluded)
+		if dt.SourceType != "" {
+			typed.SetSourceType(dt.SourceType)
+		}
+		if dt.SourceJSON != "" {
+			typed.SetSourceJson(dt.SourceJSON)
+		}
+		// Source (Part) and Elements/Steps (PartList) preserved by LazyDoc;
+		// updated by dedicated mutator operations.
+		return nil
+	})
 }
 
 // ── ImportMapping ─────────────────────────────────────────────────────────
