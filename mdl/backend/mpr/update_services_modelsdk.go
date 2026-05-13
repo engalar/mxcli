@@ -9,6 +9,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
+	genDB "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
 	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	genEM "github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings"
 	genIM "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
@@ -36,11 +37,23 @@ func (b *MprBackend) updateJavaActionViaModelsdk(ja *javaactions.JavaAction) err
 // ── DatabaseConnection ────────────────────────────────────────────────────
 
 func (b *MprBackend) updateDatabaseConnectionViaModelsdk(conn *model.DatabaseConnection) error {
-	contents, err := b.writer.SerializeDatabaseConnection(conn)
-	if err != nil {
-		return fmt.Errorf("serialize database connection: %w", err)
-	}
-	return b.msdkWriteRaw(conn.ID, contents)
+	return b.msdkWrite(conn.ID, func(elem element.Element) error {
+		typed, ok := elem.(*genDB.DatabaseConnection)
+		if !ok {
+			return fmt.Errorf("unexpected type %T (want *DatabaseConnection)", elem)
+		}
+		typed.SetName(conn.Name)
+		typed.SetDocumentation(conn.Documentation)
+		typed.SetExcluded(conn.Excluded)
+		typed.SetExportLevel(conn.ExportLevel)
+		typed.SetDatabaseType(conn.DatabaseType)
+		typed.SetConnectionStringQualifiedName(conn.ConnectionString)
+		typed.SetUserNameQualifiedName(conn.UserName)
+		typed.SetPasswordQualifiedName(conn.Password)
+		// ConnectionInput (Part — JDBC URL value) and Queries (PartList)
+		// preserved by LazyDoc; updated by dedicated mutator operations.
+		return nil
+	})
 }
 
 // ── DataTransformer ───────────────────────────────────────────────────────
