@@ -1009,3 +1009,64 @@ func parseJarDependencyExclusion(raw map[string]any) *types.JarDependencyExclusi
 		ArtifactID: extractString(raw["ArtifactId"]),
 	}
 }
+
+// FindViewEntitySourceDocumentID finds a ViewEntitySourceDocument by module and document name.
+// Returns the document ID if found, empty string if not found.
+func (r *Reader) FindViewEntitySourceDocumentID(moduleName, docName string) (model.ID, error) {
+	units, err := r.listUnitsByType("DomainModels$ViewEntitySourceDocument")
+	if err != nil {
+		return "", err
+	}
+
+	modules, err := r.ListModules()
+	if err != nil {
+		return "", err
+	}
+	moduleNames := make(map[string]string)
+	for _, m := range modules {
+		moduleNames[string(m.ID)] = m.Name
+	}
+
+	for _, u := range units {
+		var raw map[string]any
+		if err := bson.Unmarshal(u.Contents, &raw); err != nil {
+			continue
+		}
+		name, _ := raw["Name"].(string)
+		if moduleNames[u.ContainerID] == moduleName && name == docName {
+			return model.ID(u.ID), nil
+		}
+	}
+	return "", nil
+}
+
+// FindAllViewEntitySourceDocumentIDs finds ALL ViewEntitySourceDocuments matching the
+// given module and document name. Returns all matching IDs (not just the first).
+func (r *Reader) FindAllViewEntitySourceDocumentIDs(moduleName, docName string) ([]model.ID, error) {
+	units, err := r.listUnitsByType("DomainModels$ViewEntitySourceDocument")
+	if err != nil {
+		return nil, err
+	}
+
+	modules, err := r.ListModules()
+	if err != nil {
+		return nil, err
+	}
+	moduleNames := make(map[string]string)
+	for _, m := range modules {
+		moduleNames[string(m.ID)] = m.Name
+	}
+
+	var ids []model.ID
+	for _, u := range units {
+		var raw map[string]any
+		if err := bson.Unmarshal(u.Contents, &raw); err != nil {
+			continue
+		}
+		name, _ := raw["Name"].(string)
+		if moduleNames[u.ContainerID] == moduleName && name == docName {
+			ids = append(ids, model.ID(u.ID))
+		}
+	}
+	return ids, nil
+}
