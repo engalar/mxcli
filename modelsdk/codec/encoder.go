@@ -150,9 +150,11 @@ func setField(doc bson.D, key string, val any) bson.D {
 
 // idToBinarySubtype0 converts a UUID string to BSON Binary subtype 0
 // using the Mendix byte-swap convention (via sdk/mpr.IDToBsonBinary).
+// When id is empty (new element, no ID assigned), a fresh UUID is generated
+// so the BSON always carries a valid Binary $ID.
 func idToBinarySubtype0(id element.ID) any {
 	if id == "" {
-		return id
+		return mpr.IDToBsonBinary(mpr.GenerateID())
 	}
 	return mpr.IDToBsonBinary(string(id))
 }

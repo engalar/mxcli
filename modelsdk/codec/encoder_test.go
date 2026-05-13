@@ -27,6 +27,33 @@ func TestEncoderNewElementHasBinaryID(t *testing.T) {
 	}
 }
 
+func TestEncoderNewElementWithNoIDHasBinaryID(t *testing.T) {
+	// New element with no ID assigned (the bug case: NewAccessRule() leaves id="").
+	elem := &element.Base{}
+	elem.SetTypeName("Test$NoID")
+	elem.MarkDirty(63) // new element flag
+
+	enc := &Encoder{}
+	out, err := enc.Encode(elem)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+
+	raw := bson.Raw(out)
+	idVal, err := raw.LookupErr("$ID")
+	if err != nil {
+		t.Fatalf("$ID field missing from encoded output")
+	}
+	if idVal.Type.String() != "binary" {
+		t.Errorf("$ID type = %q, want \"binary\" — new element with no pre-set ID wrote a non-binary $ID", idVal.Type)
+	}
+	// Also confirm the binary is 16 bytes (a real UUID, not zero-length).
+	_, data := idVal.Binary()
+	if len(data) != 16 {
+		t.Errorf("$ID binary length = %d, want 16", len(data))
+	}
+}
+
 func TestEncoderPreservesUnknownFields(t *testing.T) {
 	original := mustMarshal(bson.D{
 		{Key: "$ID", Value: "id-1"},
