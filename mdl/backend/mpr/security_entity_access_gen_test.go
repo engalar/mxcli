@@ -3,9 +3,12 @@
 package mprbackend
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
@@ -173,6 +176,67 @@ func countVersionedEntries(arr bson.A) int {
 		}
 	}
 	return count
+}
+
+// allIDsAreBinary recursively walks a bson.D and returns the path of any $ID
+// field whose value is not primitive.Binary. Returns nil if all $ID fields are
+// Binary (the passing case).
+func allIDsAreBinary(doc bson.D, prefix string) []string {
+	var bad []string
+	for _, f := range doc {
+		path := prefix + "." + f.Key
+		if f.Key == "$ID" {
+			if _, ok := f.Value.(primitive.Binary); !ok {
+				bad = append(bad, fmt.Sprintf("%s = %T(%v)", path, f.Value, f.Value))
+			}
+			continue
+		}
+		switch v := f.Value.(type) {
+		case bson.D:
+			bad = append(bad, allIDsAreBinary(v, path)...)
+		case bson.A:
+			for i, item := range v {
+				if sub, ok := item.(bson.D); ok {
+					bad = append(bad, allIDsAreBinary(sub, fmt.Sprintf("%s[%d]", path, i))...)
+				}
+			}
+		}
+	}
+	return bad
+}
+
+// TestAddEntityAccessRuleViaModelsdk_BinaryID is a regression guard for the
+// empty-string $ID bug: when NewAccessRule/NewMemberAccess creates elements
+// with no pre-set ID, the encoder must auto-generate a UUID and write it as
+// BSON Binary — not as an empty string that causes InvalidCastException in
+// Studio Pro / mx check.
+func TestAddEntityAccessRuleViaModelsdk_BinaryID(t *testing.T) {
+	b, dmID := seedEntityForAccessTest(t)
+
+	if err := b.addEntityAccessRuleViaModelsdk(
+		dmID, "Customer",
+		[]string{"TestModule.UserRole"},
+		true, false,
+		"ReadWrite", "",
+		[]mpr.EntityMemberAccess{
+			{AttributeRef: "TestModule.Customer.Name", AccessRights: "ReadWrite"},
+		},
+	); err != nil {
+		t.Fatalf("addEntityAccessRuleViaModelsdk: %v", err)
+	}
+
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(dmID))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	var doc bson.D
+	if err := bson.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if bad := allIDsAreBinary(doc, "DomainModel"); len(bad) > 0 {
+		t.Errorf("found non-Binary $ID fields (Studio Pro will crash with InvalidCastException):\n  %s",
+			strings.Join(bad, "\n  "))
+	}
 }
 
 // TestRemoveEntityAccessRuleViaModelsdk_GenNative locks in the role-match
