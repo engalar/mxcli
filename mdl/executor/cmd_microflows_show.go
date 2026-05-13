@@ -466,22 +466,12 @@ func describeMicroflowToString(ctx *ExecContext, name ast.QualifiedName) (string
 		return "", nil, mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	entityNames := make(map[model.ID]string)
-	domainModels, _ := ctx.Backend.ListDomainModels()
-	for _, dm := range domainModels {
-		modName := h.GetModuleName(dm.ContainerID)
-		for _, entity := range dm.Entities {
-			entityNames[entity.ID] = modName + "." + entity.Name
-		}
-	}
+	entityNames := getEntityNames(ctx, h)
+	microflowNames := getMicroflowNames(ctx, h)
 
-	microflowNames := make(map[model.ID]string)
-	allMicroflows, err := ctx.Backend.ListMicroflows()
+	allMicroflows, err := getAllMicroflows(ctx)
 	if err != nil {
 		return "", nil, mdlerrors.NewBackend("list microflows", err)
-	}
-	for _, mf := range allMicroflows {
-		microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
 	}
 
 	var targetMf *microflows.Microflow

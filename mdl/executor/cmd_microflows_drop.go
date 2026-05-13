@@ -47,6 +47,7 @@ func execDropMicroflow(ctx *ExecContext, s *ast.DropMicroflowStmt) error {
 				delete(ctx.Cache.createdMicroflows, qualifiedName)
 			}
 			invalidateHierarchy(ctx)
+			invalidateMicroflowsCache(ctx)
 			fmt.Fprintf(ctx.Output, "Dropped microflow: %s.%s\n", s.Name.Module, s.Name.Name)
 			return nil
 		}

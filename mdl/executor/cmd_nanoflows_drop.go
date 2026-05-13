@@ -42,6 +42,7 @@ func execDropNanoflow(ctx *ExecContext, s *ast.DropNanoflowStmt) error {
 				delete(ctx.Cache.createdNanoflows, qualifiedName)
 			}
 			invalidateHierarchy(ctx)
+			invalidateMicroflowsCache(ctx)
 			fmt.Fprintf(ctx.Output, "Dropped nanoflow: %s.%s\n", s.Name.Module, s.Name.Name)
 			return nil
 		}
