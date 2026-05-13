@@ -22,7 +22,7 @@ func (b *MprBackend) updateQualifiedNameInAllUnitsViaModelsdk(oldName, newName s
 	}
 	updated := 0
 	for _, p := range patches {
-		if err := b.msdkWriteRaw(model.ID(p.ID), p.Contents); err != nil {
+		if err := b.writeUnitContents(model.ID(p.ID), p.Contents); err != nil {
 			return updated, err
 		}
 		updated++
@@ -42,7 +42,7 @@ func (b *MprBackend) renameReferencesViaModelsdk(oldName, newName string, dryRun
 	}
 	if !dryRun {
 		for _, p := range patches {
-			if err := b.msdkWriteRaw(model.ID(p.ID), p.Contents); err != nil {
+			if err := b.writeUnitContents(model.ID(p.ID), p.Contents); err != nil {
 				return hits, err
 			}
 		}

@@ -17,7 +17,7 @@ import (
 // existing sdk/mpr Serialize* helpers, then write the bytes through the
 // modelsdk write path:
 //   - Create*: msdkWriter.InsertUnit
-//   - Update*: msdkWriteRaw (defined in security_allowed_roles_modelsdk.go)
+//   - Update*: writeUnitContents (defined in write_helpers.go)
 //
 // This bypasses sdk/mpr's updateTransactionID(), which fails on hard-linked
 // MPR files (SQLITE_READONLY_DBMOVED 1544).
@@ -53,7 +53,7 @@ func (b *MprBackend) updateMicroflowViaModelsdk(mf *microflows.Microflow) error 
 	if err != nil {
 		return fmt.Errorf("serialize microflow: %w", err)
 	}
-	return b.msdkWriteRaw(mf.ID, contents)
+	return b.writeUnitContents(mf.ID, contents)
 }
 
 // ── Nanoflow ──────────────────────────────────────────────────────────────
@@ -87,7 +87,7 @@ func (b *MprBackend) updateNanoflowViaModelsdk(nf *microflows.Nanoflow) error {
 	if err != nil {
 		return fmt.Errorf("serialize nanoflow: %w", err)
 	}
-	return b.msdkWriteRaw(nf.ID, contents)
+	return b.writeUnitContents(nf.ID, contents)
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ func (b *MprBackend) updatePageViaModelsdk(page *pages.Page) error {
 	if err != nil {
 		return fmt.Errorf("serialize page: %w", err)
 	}
-	return b.msdkWriteRaw(page.ID, contents)
+	return b.writeUnitContents(page.ID, contents)
 }
 
 // ── Layout ────────────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ func (b *MprBackend) updateLayoutViaModelsdk(layout *pages.Layout) error {
 	if err != nil {
 		return fmt.Errorf("serialize layout: %w", err)
 	}
-	return b.msdkWriteRaw(layout.ID, contents)
+	return b.writeUnitContents(layout.ID, contents)
 }
 
 // ── Snippet ───────────────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ func (b *MprBackend) updateSnippetViaModelsdk(snippet *pages.Snippet) error {
 	if err != nil {
 		return fmt.Errorf("serialize snippet: %w", err)
 	}
-	return b.msdkWriteRaw(snippet.ID, contents)
+	return b.writeUnitContents(snippet.ID, contents)
 }
 
 // ── Workflow ──────────────────────────────────────────────────────────────
@@ -223,7 +223,7 @@ func (b *MprBackend) updateWorkflowViaModelsdk(wf *workflows.Workflow) error {
 	if err != nil {
 		return fmt.Errorf("serialize workflow: %w", err)
 	}
-	return b.msdkWriteRaw(wf.ID, contents)
+	return b.writeUnitContents(wf.ID, contents)
 }
 
 // ── DomainModel ───────────────────────────────────────────────────────────

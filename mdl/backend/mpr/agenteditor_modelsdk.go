@@ -14,7 +14,7 @@ import (
 // All Create / Update methods for the four agent-editor document types
 // (Model, KnowledgeBase, ConsumedMCPService, Agent) build the canonical
 // CustomBlobDocument BSON via sdk/mpr.SerializeAgentEditor* helpers, then
-// route writes through msdkWriter.InsertUnit / msdkWriteRaw — bypassing
+// route writes through msdkWriter.InsertUnit / writeUnitContents — bypassing
 // sdk/mpr's updateTransactionID() that fails on hard-linked MPR files
 // (SQLITE_READONLY_DBMOVED 1544). The unit type for all four is
 // "CustomBlobDocuments$CustomBlobDocument", containment "Documents".
@@ -63,7 +63,7 @@ func (b *MprBackend) updateAgentEditorModelViaModelsdk(m *agenteditor.Model) err
 	if err != nil {
 		return fmt.Errorf("serialize agent editor model: %w", err)
 	}
-	return b.msdkWriteRaw(m.ID, contents)
+	return b.writeUnitContents(m.ID, contents)
 }
 
 // ── Agent Editor Knowledge Base ───────────────────────────────────────────
@@ -105,7 +105,7 @@ func (b *MprBackend) updateAgentEditorKnowledgeBaseViaModelsdk(k *agenteditor.Kn
 	if err != nil {
 		return fmt.Errorf("serialize agent editor knowledge base: %w", err)
 	}
-	return b.msdkWriteRaw(k.ID, contents)
+	return b.writeUnitContents(k.ID, contents)
 }
 
 // ── Agent Editor Consumed MCP Service ─────────────────────────────────────
@@ -147,7 +147,7 @@ func (b *MprBackend) updateAgentEditorConsumedMCPServiceViaModelsdk(c *agentedit
 	if err != nil {
 		return fmt.Errorf("serialize agent editor consumed MCP service: %w", err)
 	}
-	return b.msdkWriteRaw(c.ID, contents)
+	return b.writeUnitContents(c.ID, contents)
 }
 
 // ── Agent Editor Agent ────────────────────────────────────────────────────
@@ -189,5 +189,5 @@ func (b *MprBackend) updateAgentEditorAgentViaModelsdk(a *agenteditor.Agent) err
 	if err != nil {
 		return fmt.Errorf("serialize agent editor agent: %w", err)
 	}
-	return b.msdkWriteRaw(a.ID, contents)
+	return b.writeUnitContents(a.ID, contents)
 }

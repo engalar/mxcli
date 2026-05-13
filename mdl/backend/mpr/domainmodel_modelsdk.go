@@ -305,7 +305,7 @@ func (b *MprBackend) updateOqlQueriesForMovedEntityViaModelsdk(oldQualifiedName,
 		return 0, err
 	}
 	for _, p := range patches {
-		if err := b.msdkWriteRaw(model.ID(p.ID), p.Contents); err != nil {
+		if err := b.writeUnitContents(model.ID(p.ID), p.Contents); err != nil {
 			return count, fmt.Errorf("write ViewEntitySourceDocument %s: %w", p.ID, err)
 		}
 	}
