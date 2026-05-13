@@ -283,7 +283,7 @@ func (w *Writer) UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQua
 
 // MoveViewEntitySourceDocument moves a ViewEntitySourceDocument to a new module.
 func (w *Writer) MoveViewEntitySourceDocument(sourceModuleName string, targetModuleID model.ID, docName string) error {
-	docID, err := w.FindViewEntitySourceDocumentID(sourceModuleName, docName)
+	docID, err := w.reader.FindViewEntitySourceDocumentID(sourceModuleName, docName)
 	if err != nil {
 		return err
 	}
@@ -529,18 +529,12 @@ func (w *Writer) DeleteViewEntitySourceDocument(id model.ID) error {
 	return w.deleteUnit(string(id))
 }
 
-// FindViewEntitySourceDocumentID finds a ViewEntitySourceDocument by module and document name.
-// Returns the document ID if found, empty string if not found.
-func (w *Writer) FindViewEntitySourceDocumentID(moduleName, docName string) (model.ID, error) {
-	return w.reader.FindViewEntitySourceDocumentID(moduleName, docName)
-}
-
 // DeleteViewEntitySourceDocumentByName deletes ALL ViewEntitySourceDocuments matching the
 // given module and document name. This handles cleanup of duplicate documents that may
 // have accumulated from previous script runs or incomplete deletions.
 // Returns nil if documents were deleted or none existed.
 func (w *Writer) DeleteViewEntitySourceDocumentByName(moduleName, docName string) error {
-	docIDs, err := w.FindAllViewEntitySourceDocumentIDs(moduleName, docName)
+	docIDs, err := w.reader.FindAllViewEntitySourceDocumentIDs(moduleName, docName)
 	if err != nil {
 		return err
 	}
@@ -552,11 +546,6 @@ func (w *Writer) DeleteViewEntitySourceDocumentByName(moduleName, docName string
 	return nil
 }
 
-// FindAllViewEntitySourceDocumentIDs finds ALL ViewEntitySourceDocuments matching the
-// given module and document name. Returns all matching IDs (not just the first).
-func (w *Writer) FindAllViewEntitySourceDocumentIDs(moduleName, docName string) ([]model.ID, error) {
-	return w.reader.FindAllViewEntitySourceDocumentIDs(moduleName, docName)
-}
 func (w *Writer) serializeDomainModel(dm *domainmodel.DomainModel) ([]byte, error) {
 	// Look up module name for qualified names in validation rules
 	moduleName := ""
