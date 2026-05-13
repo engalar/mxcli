@@ -19,25 +19,25 @@ type ExecutorContext struct {
 	Microflows MicroflowRepository
 	Pages      PageRepository
 
-	// Stage 3 wiring (declared here so handler code can compile against
-	// the final shape; populated by NewExecutorContext as each
-	// implementation lands):
-	// Nanoflows    NanoflowRepository
-	// Layouts      LayoutRepository
-	// Snippets     SnippetRepository
-	// DomainModels DomainModelRepository
-	// Modules      ModuleRepository
-	// Enumerations EnumerationRepository
-	// Constants    ConstantRepository
-	// Workflows    WorkflowRepository
-	// Services     ServiceRepository
-	// Mappings     MappingRepository
-	// ProjectSet   ProjectSettingsRepository
-	// ModuleSet    ModuleSettingsRepository
-	// Security     SecurityRepository
-	// Folders      FolderRepository
-	// Images       ImageRepository
-	// Agents       AgentRepository
+	// Stage 2.6 wired domains (15 fields, one per stub repo).
+	// Settings is split into ProjectSet (singleton) + ModuleSet
+	// (per-module) — same shape as the underlying interface split.
+	Nanoflows    NanoflowRepository
+	Layouts      LayoutRepository
+	Snippets     SnippetRepository
+	DomainModels DomainModelRepository
+	Modules      ModuleRepository
+	Enumerations EnumerationRepository
+	Constants    ConstantRepository
+	Workflows    WorkflowRepository
+	Services     ServiceRepository
+	Mappings     MappingRepository
+	ProjectSet   ProjectSettingsRepository
+	ModuleSet    ModuleSettingsRepository
+	Security     SecurityRepository
+	Folders      FolderRepository
+	Images       ImageRepository
+	Agents       AgentRepository
 
 	IDs   IDGenerator
 	Tx    TransactionFactory

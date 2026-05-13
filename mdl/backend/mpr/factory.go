@@ -21,9 +21,30 @@ func NewExecutorContext(w *mmpr.Writer) *repos.ExecutorContext {
 	return &repos.ExecutorContext{
 		Microflows: mprrepos.NewMicroflowRepository(w),
 		Pages:      mprrepos.NewPageRepository(w),
-		IDs:        mprrepos.NewIDGenerator(),
-		Tx:         mprrepos.NewTransactionFactory(w),
-		Names:      mprrepos.NewQualifiedNameResolver(w),
-		Cache:      mprrepos.NewReaderCache(w),
+
+		// Stage 2.6 — 15 domains landed via Plan T1-T15. ProjectSet
+		// and ModuleSet share Settings$ProjectSettings and
+		// Projects$ModuleSettings storage respectively.
+		Nanoflows:    mprrepos.NewNanoflowRepository(w),
+		Layouts:      mprrepos.NewLayoutRepository(w),
+		Snippets:     mprrepos.NewSnippetRepository(w),
+		DomainModels: mprrepos.NewDomainModelRepository(w),
+		Modules:      mprrepos.NewModuleRepository(w),
+		Enumerations: mprrepos.NewEnumerationRepository(w),
+		Constants:    mprrepos.NewConstantRepository(w),
+		Workflows:    mprrepos.NewWorkflowRepository(w),
+		Services:     mprrepos.NewServiceRepository(w),
+		Mappings:     mprrepos.NewMappingRepository(w),
+		ProjectSet:   mprrepos.NewProjectSettingsRepository(w),
+		ModuleSet:    mprrepos.NewModuleSettingsRepository(w),
+		Security:     mprrepos.NewSecurityRepository(w),
+		Folders:      mprrepos.NewFolderRepository(w),
+		Images:       mprrepos.NewImageRepository(w),
+		Agents:       mprrepos.NewAgentRepository(w),
+
+		IDs:   mprrepos.NewIDGenerator(),
+		Tx:    mprrepos.NewTransactionFactory(w),
+		Names: mprrepos.NewQualifiedNameResolver(w),
+		Cache: mprrepos.NewReaderCache(w),
 	}
 }

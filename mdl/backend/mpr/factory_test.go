@@ -49,6 +49,56 @@ func TestNewExecutorContext_AllFieldsWired(t *testing.T) {
 	if ctx.Cache == nil {
 		t.Error("ctx.Cache = nil")
 	}
+
+	// Stage 2.6 — 15 newly wired domains.
+	if ctx.Nanoflows == nil {
+		t.Error("ctx.Nanoflows = nil")
+	}
+	if ctx.Layouts == nil {
+		t.Error("ctx.Layouts = nil")
+	}
+	if ctx.Snippets == nil {
+		t.Error("ctx.Snippets = nil")
+	}
+	if ctx.DomainModels == nil {
+		t.Error("ctx.DomainModels = nil")
+	}
+	if ctx.Modules == nil {
+		t.Error("ctx.Modules = nil")
+	}
+	if ctx.Enumerations == nil {
+		t.Error("ctx.Enumerations = nil")
+	}
+	if ctx.Constants == nil {
+		t.Error("ctx.Constants = nil")
+	}
+	if ctx.Workflows == nil {
+		t.Error("ctx.Workflows = nil")
+	}
+	if ctx.Services == nil {
+		t.Error("ctx.Services = nil")
+	}
+	if ctx.Mappings == nil {
+		t.Error("ctx.Mappings = nil")
+	}
+	if ctx.ProjectSet == nil {
+		t.Error("ctx.ProjectSet = nil")
+	}
+	if ctx.ModuleSet == nil {
+		t.Error("ctx.ModuleSet = nil")
+	}
+	if ctx.Security == nil {
+		t.Error("ctx.Security = nil")
+	}
+	if ctx.Folders == nil {
+		t.Error("ctx.Folders = nil")
+	}
+	if ctx.Images == nil {
+		t.Error("ctx.Images = nil")
+	}
+	if ctx.Agents == nil {
+		t.Error("ctx.Agents = nil")
+	}
 }
 
 func TestNewExecutorContext_RepoSmokeMicroflows(t *testing.T) {
@@ -96,6 +146,143 @@ func TestNewExecutorContext_IDsProduceFreshUUIDs(t *testing.T) {
 	}
 	if len(string(a)) != 36 {
 		t.Errorf("NewID len = %d, want 36", len(string(a)))
+	}
+}
+
+// Stage 2.6 fixture-backed smoke tests: per-domain List against the
+// canonical fixture must return the expected count. Numbers come
+// from the same probes the per-domain implementations were written
+// against (see commit messages).
+
+func TestNewExecutorContext_RepoSmokeNanoflows(t *testing.T) {
+	w := openTestWriter(t)
+	ctx := NewExecutorContext(w)
+	got, err := ctx.Nanoflows.List("")
+	if err != nil {
+		t.Fatalf("Nanoflows.List: %v", err)
+	}
+	if len(got) != 13 {
+		t.Errorf("Nanoflows.List: got %d, want 13", len(got))
+	}
+}
+
+func TestNewExecutorContext_RepoSmokeLayouts(t *testing.T) {
+	w := openTestWriter(t)
+	ctx := NewExecutorContext(w)
+	got, err := ctx.Layouts.List("")
+	if err != nil {
+		t.Fatalf("Layouts.List: %v", err)
+	}
+	if len(got) != 22 {
+		t.Errorf("Layouts.List: got %d, want 22", len(got))
+	}
+}
+
+func TestNewExecutorContext_RepoSmokeSnippets(t *testing.T) {
+	w := openTestWriter(t)
+	ctx := NewExecutorContext(w)
+	got, err := ctx.Snippets.List("")
+	if err != nil {
+		t.Fatalf("Snippets.List: %v", err)
+	}
+	if len(got) != 4 {
+		t.Errorf("Snippets.List: got %d, want 4", len(got))
+	}
+}
+
+func TestNewExecutorContext_RepoSmokeDomainModels(t *testing.T) {
+	w := openTestWriter(t)
+	ctx := NewExecutorContext(w)
+	got, err := ctx.DomainModels.List("")
+	if err != nil {
+		t.Fatalf("DomainModels.List: %v", err)
+	}
+	if len(got) != 8 {
+		t.Errorf("DomainModels.List: got %d, want 8", len(got))
+	}
+}
+
+func TestNewExecutorContext_RepoSmokeModules(t *testing.T) {
+	w := openTestWriter(t)
+	ctx := NewExecutorContext(w)
+	got, err := ctx.Modules.ListAll()
+	if err != nil {
+		t.Fatalf("Modules.ListAll: %v", err)
+	}
+	if len(got) != 8 {
+		t.Errorf("Modules.ListAll: got %d, want 8", len(got))
+	}
+}
+
+func TestNewExecutorContext_RepoSmokeEnumerations(t *testing.T) {
+	w := openTestWriter(t)
+	ctx := NewExecutorContext(w)
+	got, err := ctx.Enumerations.List("")
+	if err != nil {
+		t.Fatalf("Enumerations.List: %v", err)
+	}
+	if len(got) != 7 {
+		t.Errorf("Enumerations.List: got %d, want 7", len(got))
+	}
+}
+
+func TestNewExecutorContext_RepoSmokeConstants(t *testing.T) {
+	w := openTestWriter(t)
+	ctx := NewExecutorContext(w)
+	got, err := ctx.Constants.List("")
+	if err != nil {
+		t.Fatalf("Constants.List: %v", err)
+	}
+	if len(got) != 2 {
+		t.Errorf("Constants.List: got %d, want 2", len(got))
+	}
+}
+
+func TestNewExecutorContext_RepoSmokeProjectSet(t *testing.T) {
+	w := openTestWriter(t)
+	ctx := NewExecutorContext(w)
+	ps, err := ctx.ProjectSet.Get()
+	if err != nil {
+		t.Fatalf("ProjectSet.Get: %v", err)
+	}
+	if ps == nil {
+		t.Error("ProjectSet.Get returned nil singleton")
+	}
+}
+
+func TestNewExecutorContext_RepoSmokeSecurity(t *testing.T) {
+	w := openTestWriter(t)
+	ctx := NewExecutorContext(w)
+	ps, err := ctx.Security.Get()
+	if err != nil {
+		t.Fatalf("Security.Get: %v", err)
+	}
+	if ps == nil {
+		t.Error("Security.Get returned nil singleton")
+	}
+}
+
+func TestNewExecutorContext_RepoSmokeFolders(t *testing.T) {
+	w := openTestWriter(t)
+	ctx := NewExecutorContext(w)
+	got, err := ctx.Folders.List("")
+	if err != nil {
+		t.Fatalf("Folders.List: %v", err)
+	}
+	if len(got) != 80 {
+		t.Errorf("Folders.List: got %d, want 80", len(got))
+	}
+}
+
+func TestNewExecutorContext_RepoSmokeImages(t *testing.T) {
+	w := openTestWriter(t)
+	ctx := NewExecutorContext(w)
+	got, err := ctx.Images.ListCollections("")
+	if err != nil {
+		t.Fatalf("Images.ListCollections: %v", err)
+	}
+	if len(got) != 7 {
+		t.Errorf("Images.ListCollections: got %d, want 7", len(got))
 	}
 }
 
