@@ -10,7 +10,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
-	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/property"
 )
 
@@ -113,10 +112,10 @@ func (m *pageMutator) ReplaceWidget(widgetID model.ID, replacement element.Eleme
 
 // SetLayout points the page's LayoutCall at the layout identified by
 // layoutQN. If the page has no LayoutCall yet (fresh page), one is
-// constructed on the fly. The layout is verified to actually exist on
-// the project — Stage 2.5 task 1 implementation does the lookup
-// directly via mmpr.Reader.ListUnitsByType / ResolveModuleName; Stage
-// 2.5 task 3 swaps in the QualifiedNameResolver.
+// constructed on the fly. Layout existence is verified through
+// QualifiedNameResolver (Stage 2.5 task 3); the resolved kind must
+// be "layout" — pointing at a microflow/page/etc surfaces an
+// explicit wrong-kind error.
 func (m *pageMutator) SetLayout(layoutQN string) error {
 	if err := m.verifyLayoutExists(layoutQN); err != nil {
 		return err
@@ -136,53 +135,20 @@ func (m *pageMutator) SetLayout(layoutQN string) error {
 	return nil
 }
 
-// verifyLayoutExists scans Forms$Layout units in the project and returns
-// an error unless one matches `layoutQN` ("Module.LayoutName"). Stage 2.5
-// task 3 will rewrite this to delegate to QualifiedNameResolver and
-// require the resolved kind == "layout".
+// verifyLayoutExists delegates to QualifiedNameResolver. The resolver
+// already returns "invalid qualified name" / "not found" with the
+// layoutQN substring; we wrap the error with a SetLayout: prefix so
+// callers don't have to special-case those classes.
 func (m *pageMutator) verifyLayoutExists(layoutQN string) error {
-	moduleName, simpleName, ok := splitQN(layoutQN)
-	if !ok {
-		return fmt.Errorf("SetLayout: invalid qualified name %q (want Module.LayoutName)", layoutQN)
-	}
-	r := m.repo.r
-	refs, err := r.ListUnitsByType("Forms$Layout")
+	res := NewQualifiedNameResolver(m.repo.w)
+	_, kind, err := res.ResolveQualifiedName(layoutQN)
 	if err != nil {
-		return fmt.Errorf("SetLayout: list Forms$Layout: %w", err)
+		return fmt.Errorf("SetLayout: %w", err)
 	}
-	mods, err := r.ListModules()
-	if err != nil {
-		return fmt.Errorf("SetLayout: list modules: %w", err)
+	if kind != "layout" {
+		return fmt.Errorf("SetLayout: %q is a %s, not a layout", layoutQN, kind)
 	}
-	moduleMap := make(map[string]string, len(mods))
-	for _, mod := range mods {
-		moduleMap[mod.ID] = mod.Name
-	}
-	parents, err := r.BuildContainerParent()
-	if err != nil {
-		return fmt.Errorf("SetLayout: build container parents: %w", err)
-	}
-	for _, ref := range refs {
-		if ref.Type != "Forms$Layout" {
-			continue
-		}
-		if mmpr.ResolveModuleName(ref.ContainerID, moduleMap, parents) != moduleName {
-			continue
-		}
-		bts, err := r.GetRawUnitBytes(ref.ID)
-		if err != nil {
-			continue
-		}
-		// Reuse the decoder so we get the typed *Layout with Name().
-		elem, derr := m.repo.dec.Decode(bts)
-		if derr != nil {
-			continue
-		}
-		if nv, ok := elem.(interface{ Name() string }); ok && nv.Name() == simpleName {
-			return nil
-		}
-	}
-	return fmt.Errorf("SetLayout: layout %q not found", layoutQN)
+	return nil
 }
 
 // Commit persists the mutated page via pageRepo.Update — the canonical
