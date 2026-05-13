@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -589,13 +590,18 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 		loopLeftX = loopCenterX - loopWidth/2
 	}
 
-	// Add loop variable to varTypes with element type derived from list type
-	// If $ProductList is "List of MfTest.Product", then $Product is "MfTest.Product"
+	// Guard: reject duplicate loop variable before writing to varTypes.
+	if _, exists := fb.varTypes[s.LoopVariable]; exists {
+		hint := suggestLoopVarName(s.LoopVariable, s.ListVariable, fb.varTypes)
+		fb.addError("loop variable '$%s' is already declared in this scope (CE0111)\nHint: %s",
+			s.LoopVariable, hint)
+		return ""
+	}
+	// Add loop variable to varTypes with element type derived from list type.
 	if fb.varTypes != nil {
 		listType := fb.varTypes[s.ListVariable]
 		if after, ok := strings.CutPrefix(listType, "List of "); ok {
-			elementType := after
-			fb.varTypes[s.LoopVariable] = elementType
+			fb.varTypes[s.LoopVariable] = after
 		}
 	}
 
@@ -605,12 +611,12 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 		posY:         innerStartY,
 		baseY:        innerStartY,
 		spacing:      HorizontalSpacing,
-		varTypes:     fb.varTypes,     // Share variable scope
-		declaredVars: fb.declaredVars, // Share declared vars (fixes nil map panic)
-		measurer:     fb.measurer,     // Share measurer
-		backend:      fb.backend,      // Share backend
-		hierarchy:    fb.hierarchy,    // Share hierarchy
-		restServices: fb.restServices, // Share REST services for parameter classification
+		varTypes:     cloneStringMap(fb.varTypes),     // Clone: loop body vars must not leak to outer scope
+		declaredVars: cloneStringMap(fb.declaredVars), // Clone: same reason
+		measurer:     fb.measurer,                     // Share measurer
+		backend:      fb.backend,                      // Share backend
+		hierarchy:    fb.hierarchy,                    // Share hierarchy
+		restServices: fb.restServices,                 // Share REST services for parameter classification
 		isNanoflow:   fb.isNanoflow,
 	}
 
@@ -676,6 +682,23 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 	fb.posX = loopLeftX + loopWidth + HorizontalSpacing
 
 	return loop.ID
+}
+
+// suggestLoopVarName returns a human-readable rename hint for a conflicting
+// loop variable. It tries to derive a descriptive name from the list element
+// type; if the type is unknown it falls back to appending "2".
+func suggestLoopVarName(conflictName, listVarName string, varTypes map[string]string) string {
+	if listVarName != "" {
+		if listType, ok := varTypes[listVarName]; ok {
+			if after, ok := strings.CutPrefix(listType, "List of "); ok {
+				parts := strings.Split(after, ".")
+				entity := parts[len(parts)-1]
+				candidate := "$" + entity + "Item"
+				return fmt.Sprintf("rename '$%s' to '%s' (descriptive name from list element type)", conflictName, candidate)
+			}
+		}
+	}
+	return fmt.Sprintf("rename '$%s' to '$%s2' or a more descriptive name", conflictName, conflictName)
 }
 
 func isManualWhileTrueCandidate(s *ast.WhileStmt) bool {
