@@ -1233,6 +1233,37 @@ func newGenAction(t *testing.T, typeName string) element.Element {
 		return genMf.NewCustomRange()
 	case "DomainModels$AttributeRef":
 		return genDM.NewAttributeRef()
+	// Stage 3.2.2.d — Microflow/Java/JavaScript call action family.
+	case "Microflows$MicroflowCallAction":
+		return genMf.NewMicroflowCallAction()
+	case "Microflows$MicroflowCall":
+		return genMf.NewMicroflowCall()
+	case "Microflows$MicroflowCallParameterMapping":
+		return genMf.NewMicroflowCallParameterMapping()
+	case "Microflows$NanoflowCallAction":
+		return genMf.NewNanoflowCallAction()
+	case "Microflows$NanoflowCall":
+		return genMf.NewNanoflowCall()
+	case "Microflows$NanoflowCallParameterMapping":
+		return genMf.NewNanoflowCallParameterMapping()
+	case "Microflows$JavaActionCallAction":
+		return genMf.NewJavaActionCallAction()
+	case "Microflows$JavaActionParameterMapping":
+		return genMf.NewJavaActionParameterMapping()
+	case "Microflows$JavaScriptActionCallAction":
+		return genMf.NewJavaScriptActionCallAction()
+	case "Microflows$JavaScriptActionParameterMapping":
+		return genMf.NewJavaScriptActionParameterMapping()
+	case "Microflows$StringTemplateParameterValue":
+		return genMf.NewStringTemplateParameterValue()
+	case "Microflows$BasicCodeActionParameterValue":
+		return genMf.NewBasicCodeActionParameterValue()
+	case "Microflows$MicroflowParameterValue":
+		return genMf.NewMicroflowParameterValue()
+	case "Microflows$EntityTypeCodeActionParameterValue":
+		return genMf.NewEntityTypeCodeActionParameterValue()
+	case "Microflows$TypedTemplate":
+		return genMf.NewTypedTemplate()
 	default:
 		t.Fatalf("newGenAction: unknown type %q", typeName)
 		return nil

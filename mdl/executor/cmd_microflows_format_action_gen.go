@@ -3,6 +3,9 @@
 // Stage 3.2.2.a — Object Actions family formatters (gen-typed).
 // Stage 3.2.2.b — Form Actions family formatters (gen-typed).
 // Stage 3.2.2.c — List operations family formatters (gen-typed).
+// Stage 3.2.2.d — Microflow/Java/JavaScript call action family formatters
+//                 (gen-typed). See `cmd_microflows_format_calls_gen.go` for
+//                 the per-type implementations and parameter-value helpers.
 //
 // This file implements the gen-typed counterpart to legacy
 // `cmd_microflows_format_action.go`. It is invoked from
@@ -122,6 +125,14 @@ func formatActionGen(action element.Element) string {
 		return formatChangeListActionGen(a)
 	case *genMf.ListOperationAction:
 		return formatListOperationActionGen(a)
+	case *genMf.MicroflowCallAction:
+		return formatMicroflowCallActionGen(a)
+	case *genMf.NanoflowCallAction:
+		return formatNanoflowCallActionGen(a)
+	case *genMf.JavaActionCallAction:
+		return formatJavaActionCallActionGen(a)
+	case *genMf.JavaScriptActionCallAction:
+		return formatJavaScriptActionCallActionGen(a)
 	default:
 		return ""
 	}
