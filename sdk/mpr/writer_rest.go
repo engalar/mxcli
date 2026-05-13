@@ -18,7 +18,7 @@ func (w *Writer) CreateConsumedRestService(svc *model.ConsumedRestService) error
 	}
 	svc.TypeName = "Rest$ConsumedRestService"
 
-	contents, err := w.serializeConsumedRestService(svc)
+	contents, err := serializeConsumedRestService(svc)
 	if err != nil {
 		return fmt.Errorf("failed to serialize consumed REST service: %w", err)
 	}
@@ -28,7 +28,7 @@ func (w *Writer) CreateConsumedRestService(svc *model.ConsumedRestService) error
 
 // UpdateConsumedRestService updates an existing consumed REST service.
 func (w *Writer) UpdateConsumedRestService(svc *model.ConsumedRestService) error {
-	contents, err := w.serializeConsumedRestService(svc)
+	contents, err := serializeConsumedRestService(svc)
 	if err != nil {
 		return fmt.Errorf("failed to serialize consumed REST service: %w", err)
 	}
@@ -42,7 +42,7 @@ func (w *Writer) DeleteConsumedRestService(id model.ID) error {
 }
 
 // serializeConsumedRestService converts a ConsumedRestService to BSON bytes.
-func (w *Writer) serializeConsumedRestService(svc *model.ConsumedRestService) ([]byte, error) {
+func serializeConsumedRestService(svc *model.ConsumedRestService) ([]byte, error) {
 	doc := bson.M{
 		"$ID":           idToBsonBinary(string(svc.ID)),
 		"$Type":         "Rest$ConsumedRestService",
@@ -452,7 +452,7 @@ func (w *Writer) CreatePublishedRestService(svc *model.PublishedRestService) err
 	}
 	svc.TypeName = "Rest$PublishedRestService"
 
-	contents, err := w.serializePublishedRestService(svc)
+	contents, err := serializePublishedRestService(svc)
 	if err != nil {
 		return fmt.Errorf("failed to serialize published REST service: %w", err)
 	}
@@ -468,14 +468,14 @@ func (w *Writer) DeletePublishedRestService(id model.ID) error {
 // UpdatePublishedRestService re-serializes an existing published REST
 // service. Used by ALTER PUBLISHED REST SERVICE.
 func (w *Writer) UpdatePublishedRestService(svc *model.PublishedRestService) error {
-	contents, err := w.serializePublishedRestService(svc)
+	contents, err := serializePublishedRestService(svc)
 	if err != nil {
 		return fmt.Errorf("failed to serialize published REST service: %w", err)
 	}
 	return w.updateUnit(string(svc.ID), contents)
 }
 
-func (w *Writer) serializePublishedRestService(svc *model.PublishedRestService) ([]byte, error) {
+func serializePublishedRestService(svc *model.PublishedRestService) ([]byte, error) {
 	resources := bson.A{int32(2)}
 	for _, res := range svc.Resources {
 		ops := bson.A{int32(2)}

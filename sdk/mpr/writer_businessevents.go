@@ -17,7 +17,7 @@ func (w *Writer) CreateBusinessEventService(svc *model.BusinessEventService) err
 	}
 	svc.TypeName = "BusinessEvents$BusinessEventService"
 
-	contents, err := w.serializeBusinessEventService(svc)
+	contents, err := serializeBusinessEventService(svc)
 	if err != nil {
 		return fmt.Errorf("failed to serialize business event service: %w", err)
 	}
@@ -27,7 +27,7 @@ func (w *Writer) CreateBusinessEventService(svc *model.BusinessEventService) err
 
 // UpdateBusinessEventService updates an existing business event service.
 func (w *Writer) UpdateBusinessEventService(svc *model.BusinessEventService) error {
-	contents, err := w.serializeBusinessEventService(svc)
+	contents, err := serializeBusinessEventService(svc)
 	if err != nil {
 		return fmt.Errorf("failed to serialize business event service: %w", err)
 	}
@@ -41,7 +41,7 @@ func (w *Writer) DeleteBusinessEventService(id model.ID) error {
 }
 
 // serializeBusinessEventService converts a BusinessEventService to BSON bytes.
-func (w *Writer) serializeBusinessEventService(svc *model.BusinessEventService) ([]byte, error) {
+func serializeBusinessEventService(svc *model.BusinessEventService) ([]byte, error) {
 	doc := bson.M{
 		"$ID":           idToBsonBinary(string(svc.ID)),
 		"$Type":         "BusinessEvents$BusinessEventService",

@@ -22,8 +22,12 @@ import (
 // visibility of serialization functions that are otherwise correct.
 
 // SerializeDatabaseConnection returns BSON bytes for a database connection unit.
+func SerializeDatabaseConnection(conn *model.DatabaseConnection) ([]byte, error) {
+	return serializeDatabaseConnection(conn)
+}
+
 func (w *Writer) SerializeDatabaseConnection(conn *model.DatabaseConnection) ([]byte, error) {
-	return w.serializeDatabaseConnection(conn)
+	return SerializeDatabaseConnection(conn)
 }
 
 // SerializeDataTransformer returns BSON bytes for a data transformer unit.
@@ -42,53 +46,93 @@ func SerializeJsonStructure(js *JsonStructure) ([]byte, error) {
 }
 
 // SerializeImportMapping returns BSON bytes for an import mapping unit.
+func SerializeImportMapping(im *model.ImportMapping) ([]byte, error) {
+	return serializeImportMapping(im)
+}
+
 func (w *Writer) SerializeImportMapping(im *model.ImportMapping) ([]byte, error) {
-	return w.serializeImportMapping(im)
+	return SerializeImportMapping(im)
 }
 
 // SerializeExportMapping returns BSON bytes for an export mapping unit.
+func SerializeExportMapping(em *model.ExportMapping) ([]byte, error) {
+	return serializeExportMapping(em)
+}
+
 func (w *Writer) SerializeExportMapping(em *model.ExportMapping) ([]byte, error) {
-	return w.serializeExportMapping(em)
+	return SerializeExportMapping(em)
 }
 
 // SerializeBusinessEventService returns BSON bytes for a business event service unit.
+func SerializeBusinessEventService(svc *model.BusinessEventService) ([]byte, error) {
+	return serializeBusinessEventService(svc)
+}
+
 func (w *Writer) SerializeBusinessEventService(svc *model.BusinessEventService) ([]byte, error) {
-	return w.serializeBusinessEventService(svc)
+	return SerializeBusinessEventService(svc)
 }
 
 // SerializeConsumedODataService returns BSON bytes for a consumed OData service unit.
+func SerializeConsumedODataService(svc *model.ConsumedODataService) ([]byte, error) {
+	return serializeConsumedODataService(svc)
+}
+
 func (w *Writer) SerializeConsumedODataService(svc *model.ConsumedODataService) ([]byte, error) {
-	return w.serializeConsumedODataService(svc)
+	return SerializeConsumedODataService(svc)
 }
 
 // SerializePublishedODataService returns BSON bytes for a published OData service unit.
+func SerializePublishedODataService(svc *model.PublishedODataService) ([]byte, error) {
+	return serializePublishedODataService(svc)
+}
+
 func (w *Writer) SerializePublishedODataService(svc *model.PublishedODataService) ([]byte, error) {
-	return w.serializePublishedODataService(svc)
+	return SerializePublishedODataService(svc)
 }
 
 // SerializeConsumedRestService returns BSON bytes for a consumed REST service unit.
+func SerializeConsumedRestService(svc *model.ConsumedRestService) ([]byte, error) {
+	return serializeConsumedRestService(svc)
+}
+
 func (w *Writer) SerializeConsumedRestService(svc *model.ConsumedRestService) ([]byte, error) {
-	return w.serializeConsumedRestService(svc)
+	return SerializeConsumedRestService(svc)
 }
 
 // SerializePublishedRestService returns BSON bytes for a published REST service unit.
+func SerializePublishedRestService(svc *model.PublishedRestService) ([]byte, error) {
+	return serializePublishedRestService(svc)
+}
+
 func (w *Writer) SerializePublishedRestService(svc *model.PublishedRestService) ([]byte, error) {
-	return w.serializePublishedRestService(svc)
+	return SerializePublishedRestService(svc)
 }
 
 // SerializeJavaAction returns BSON bytes for a Java action unit.
+func SerializeJavaAction(ja *javaactions.JavaAction) ([]byte, error) {
+	return serializeJavaAction(ja)
+}
+
 func (w *Writer) SerializeJavaAction(ja *javaactions.JavaAction) ([]byte, error) {
-	return w.serializeJavaAction(ja)
+	return SerializeJavaAction(ja)
 }
 
 // SerializeEnumeration returns BSON bytes for an enumeration unit.
+func SerializeEnumeration(enum *model.Enumeration) ([]byte, error) {
+	return serializeEnumeration(enum)
+}
+
 func (w *Writer) SerializeEnumeration(enum *model.Enumeration) ([]byte, error) {
-	return w.serializeEnumeration(enum)
+	return SerializeEnumeration(enum)
 }
 
 // SerializeConstant returns BSON bytes for a constant unit.
+func SerializeConstant(constant *model.Constant) ([]byte, error) {
+	return serializeConstant(constant)
+}
+
 func (w *Writer) SerializeConstant(constant *model.Constant) ([]byte, error) {
-	return w.serializeConstant(constant)
+	return SerializeConstant(constant)
 }
 
 // SerializeMicroflow returns BSON bytes for a microflow unit.
@@ -112,23 +156,39 @@ func (w *Writer) SerializeNanoflow(nf *microflows.Nanoflow) ([]byte, error) {
 }
 
 // SerializePage returns BSON bytes for a page unit.
+func SerializePage(page *pages.Page) ([]byte, error) {
+	return serializePage(page)
+}
+
 func (w *Writer) SerializePage(page *pages.Page) ([]byte, error) {
-	return w.serializePage(page)
+	return SerializePage(page)
 }
 
 // SerializeLayout returns BSON bytes for a layout unit.
+func SerializeLayout(layout *pages.Layout) ([]byte, error) {
+	return serializeLayout(layout)
+}
+
 func (w *Writer) SerializeLayout(layout *pages.Layout) ([]byte, error) {
-	return w.serializeLayout(layout)
+	return SerializeLayout(layout)
 }
 
 // SerializeSnippet returns BSON bytes for a snippet unit.
+func SerializeSnippet(snippet *pages.Snippet) ([]byte, error) {
+	return serializeSnippet(snippet)
+}
+
 func (w *Writer) SerializeSnippet(snippet *pages.Snippet) ([]byte, error) {
-	return w.serializeSnippet(snippet)
+	return SerializeSnippet(snippet)
 }
 
 // SerializeWorkflow returns BSON bytes for a workflow unit.
+func SerializeWorkflow(wf *workflows.Workflow) ([]byte, error) {
+	return serializeWorkflow(wf)
+}
+
 func (w *Writer) SerializeWorkflow(wf *workflows.Workflow) ([]byte, error) {
-	return w.serializeWorkflow(wf)
+	return SerializeWorkflow(wf)
 }
 
 // SerializeDomainModel returns BSON bytes for a domain model unit.
@@ -142,28 +202,48 @@ func (w *Writer) SerializeDomainModel(dm *domainmodel.DomainModel) ([]byte, erro
 }
 
 // SerializeProjectSettings returns BSON bytes for the project settings unit.
+func SerializeProjectSettings(ps *model.ProjectSettings) ([]byte, error) {
+	return serializeProjectSettings(ps)
+}
+
 func (w *Writer) SerializeProjectSettings(ps *model.ProjectSettings) ([]byte, error) {
-	return w.serializeProjectSettings(ps)
+	return SerializeProjectSettings(ps)
 }
 
 // SerializeModule returns BSON bytes for a module unit.
+func SerializeModule(module *model.Module) ([]byte, error) {
+	return serializeModule(module)
+}
+
 func (w *Writer) SerializeModule(module *model.Module) ([]byte, error) {
-	return w.serializeModule(module)
+	return SerializeModule(module)
 }
 
 // SerializeFolder returns BSON bytes for a folder unit.
+func SerializeFolder(folder *model.Folder) ([]byte, error) {
+	return serializeFolder(folder)
+}
+
 func (w *Writer) SerializeFolder(folder *model.Folder) ([]byte, error) {
-	return w.serializeFolder(folder)
+	return SerializeFolder(folder)
 }
 
 // SerializeModuleSecurity returns BSON bytes for an empty module security unit.
+func SerializeModuleSecurity(id string) ([]byte, error) {
+	return serializeModuleSecurity(id)
+}
+
 func (w *Writer) SerializeModuleSecurity(id string) ([]byte, error) {
-	return w.serializeModuleSecurity(id)
+	return SerializeModuleSecurity(id)
 }
 
 // SerializeModuleSettings returns BSON bytes for a default module settings unit.
+func SerializeModuleSettings(id string) ([]byte, error) {
+	return serializeModuleSettings(id)
+}
+
 func (w *Writer) SerializeModuleSettings(id string) ([]byte, error) {
-	return w.serializeModuleSettings(id)
+	return SerializeModuleSettings(id)
 }
 
 // SerializeAgentEditorModel returns canonical CustomBlobDocument BSON bytes for

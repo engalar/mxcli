@@ -18,7 +18,7 @@ func (w *Writer) CreateEnumeration(enum *model.Enumeration) error {
 	}
 	enum.TypeName = "Enumerations$Enumeration"
 
-	contents, err := w.serializeEnumeration(enum)
+	contents, err := serializeEnumeration(enum)
 	if err != nil {
 		return fmt.Errorf("failed to serialize enumeration: %w", err)
 	}
@@ -28,7 +28,7 @@ func (w *Writer) CreateEnumeration(enum *model.Enumeration) error {
 
 // UpdateEnumeration updates an existing enumeration.
 func (w *Writer) UpdateEnumeration(enum *model.Enumeration) error {
-	contents, err := w.serializeEnumeration(enum)
+	contents, err := serializeEnumeration(enum)
 	if err != nil {
 		return fmt.Errorf("failed to serialize enumeration: %w", err)
 	}
@@ -59,7 +59,7 @@ func (w *Writer) CreateConstant(constant *model.Constant) error {
 	}
 	constant.TypeName = "Constants$Constant"
 
-	contents, err := w.serializeConstant(constant)
+	contents, err := serializeConstant(constant)
 	if err != nil {
 		return fmt.Errorf("failed to serialize constant: %w", err)
 	}
@@ -69,7 +69,7 @@ func (w *Writer) CreateConstant(constant *model.Constant) error {
 
 // UpdateConstant updates an existing constant.
 func (w *Writer) UpdateConstant(constant *model.Constant) error {
-	contents, err := w.serializeConstant(constant)
+	contents, err := serializeConstant(constant)
 	if err != nil {
 		return fmt.Errorf("failed to serialize constant: %w", err)
 	}
@@ -81,7 +81,7 @@ func (w *Writer) UpdateConstant(constant *model.Constant) error {
 func (w *Writer) DeleteConstant(id model.ID) error {
 	return w.deleteUnit(string(id))
 }
-func (w *Writer) serializeEnumeration(enum *model.Enumeration) ([]byte, error) {
+func serializeEnumeration(enum *model.Enumeration) ([]byte, error) {
 	values := bson.A{int32(3)} // Version prefix
 	for _, v := range enum.Values {
 		valueID := string(v.ID)
@@ -138,7 +138,7 @@ func (w *Writer) serializeEnumeration(enum *model.Enumeration) ([]byte, error) {
 	return bson.Marshal(doc)
 }
 
-func (w *Writer) serializeConstant(constant *model.Constant) ([]byte, error) {
+func serializeConstant(constant *model.Constant) ([]byte, error) {
 	doc := bson.M{
 		"$ID":             idToBsonBinary(string(constant.ID)),
 		"$Type":           "Constants$Constant",

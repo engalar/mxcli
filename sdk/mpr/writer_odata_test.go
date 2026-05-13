@@ -10,7 +10,6 @@ import (
 )
 
 func TestSerializeConsumedODataService(t *testing.T) {
-	w := &Writer{}
 	svc := &model.ConsumedODataService{
 		BaseElement: model.BaseElement{
 			ID:       "test-consumed-id",
@@ -28,7 +27,7 @@ func TestSerializeConsumedODataService(t *testing.T) {
 		Validated:         true,
 	}
 
-	data, err := w.serializeConsumedODataService(svc)
+	data, err := serializeConsumedODataService(svc)
 	if err != nil {
 		t.Fatalf("serialize failed: %v", err)
 	}
@@ -55,7 +54,6 @@ func TestSerializeConsumedODataService(t *testing.T) {
 }
 
 func TestSerializeConsumedODataServiceWithHttpConfig(t *testing.T) {
-	w := &Writer{}
 	svc := &model.ConsumedODataService{
 		BaseElement: model.BaseElement{
 			ID:       "test-consumed-full-id",
@@ -91,7 +89,7 @@ func TestSerializeConsumedODataServiceWithHttpConfig(t *testing.T) {
 		},
 	}
 
-	data, err := w.serializeConsumedODataService(svc)
+	data, err := serializeConsumedODataService(svc)
 	if err != nil {
 		t.Fatalf("serialize failed: %v", err)
 	}
@@ -140,7 +138,6 @@ func TestSerializeConsumedODataServiceWithHttpConfig(t *testing.T) {
 }
 
 func TestSerializePublishedODataService(t *testing.T) {
-	w := &Writer{}
 	svc := &model.PublishedODataService{
 		BaseElement: model.BaseElement{
 			ID:       "test-published-id",
@@ -195,7 +192,7 @@ func TestSerializePublishedODataService(t *testing.T) {
 		},
 	}
 
-	data, err := w.serializePublishedODataService(svc)
+	data, err := serializePublishedODataService(svc)
 	if err != nil {
 		t.Fatalf("serialize failed: %v", err)
 	}
