@@ -175,6 +175,27 @@ func (r *microflowRepo) FindByQualifiedName(qn string) (*genMf.Microflow, error)
 	return nil, nil
 }
 
+// GetContainerUUID returns the parent container UUID for a microflow
+// unit by querying the MPR Unit table directly. Codec-decoded gen
+// objects shed their container linkage during BSON roundtrip, so module
+// resolution callers retrieve the parent ID from SQLite rather than
+// walking Container().
+func (r *microflowRepo) GetContainerUUID(id model.ID) (model.ID, error) {
+	if id == "" {
+		return "", fmt.Errorf("GetContainerUUID: empty id")
+	}
+	bin := mmpr.IDToBsonBinary(string(id))
+	if len(bin.Data) != 16 {
+		return "", fmt.Errorf("GetContainerUUID: invalid id %q", id)
+	}
+	var blob []byte
+	err := r.r.DB().QueryRow("SELECT ContainerID FROM Unit WHERE UnitID = ?", bin.Data).Scan(&blob)
+	if err != nil {
+		return "", fmt.Errorf("GetContainerUUID(%s): %w", id, err)
+	}
+	return model.ID(mmpr.BlobToUUID(blob)), nil
+}
+
 // IsRule reports whether the qualified name refers to a Microflows$Rule
 // (a microflow stored under the Rule subtype). Ports the legacy
 // sdk/mpr.Reader.IsRule shape onto modelsdk/mpr APIs.

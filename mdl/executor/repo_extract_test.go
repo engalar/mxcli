@@ -97,10 +97,11 @@ func (f *fakeMicroflowRepo) IsRule(qn string) (bool, error) {
 	f.isRuleCalls = append(f.isRuleCalls, qn)
 	return f.isRuleResult, f.isRuleErr
 }
-func (f *fakeMicroflowRepo) Create(_, _ string, _ *genMf.Microflow) error { return nil }
-func (f *fakeMicroflowRepo) Update(_ *genMf.Microflow) error              { return nil }
-func (f *fakeMicroflowRepo) Delete(_ model.ID) error                      { return nil }
-func (f *fakeMicroflowRepo) Move(_ model.ID, _ string) error             { return nil }
+func (f *fakeMicroflowRepo) GetContainerUUID(_ model.ID) (model.ID, error)  { return "", nil }
+func (f *fakeMicroflowRepo) Create(_, _ string, _ *genMf.Microflow) error    { return nil }
+func (f *fakeMicroflowRepo) Update(_ *genMf.Microflow) error                 { return nil }
+func (f *fakeMicroflowRepo) Delete(_ model.ID) error                         { return nil }
+func (f *fakeMicroflowRepo) Move(_ model.ID, _ string) error                 { return nil }
 
 func TestIsRuleViaRepoOrBackend_PrefersRepoWhenSet(t *testing.T) {
 	repo := &fakeMicroflowRepo{isRuleResult: true}
