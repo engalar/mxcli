@@ -30,20 +30,19 @@ type customBlobInput struct {
 	ContentsJSON       string // type-specific JSON payload
 }
 
-// writeCustomBlobDocument serializes a CustomBlobDocument BSON wrapper
-// and inserts it as a Documents-containment unit in the project.
-func (w *Writer) writeCustomBlobDocument(in customBlobInput) error {
+// serializeCustomBlobDocument builds the canonical BSON wrapper for a
+// CustomBlobDocument unit. Both writeCustomBlobDocument and
+// updateCustomBlobDocument delegate to this helper so the BSON shape is
+// produced identically on insert and update.
+func serializeCustomBlobDocument(in *customBlobInput) ([]byte, error) {
 	if in.UnitID == "" {
-		return fmt.Errorf("CustomBlobDocument unit ID is required")
-	}
-	if in.ContainerID == "" {
-		return fmt.Errorf("CustomBlobDocument container ID is required")
+		return nil, fmt.Errorf("CustomBlobDocument unit ID is required")
 	}
 	if in.CustomDocumentType == "" {
-		return fmt.Errorf("CustomDocumentType is required")
+		return nil, fmt.Errorf("CustomDocumentType is required")
 	}
 	if in.ReadableTypeName == "" {
-		return fmt.Errorf("ReadableTypeName is required")
+		return nil, fmt.Errorf("ReadableTypeName is required")
 	}
 	if in.ExportLevel == "" {
 		in.ExportLevel = "Hidden"
@@ -73,9 +72,21 @@ func (w *Writer) writeCustomBlobDocument(in customBlobInput) error {
 
 	contents, err := bson.Marshal(doc)
 	if err != nil {
-		return fmt.Errorf("failed to marshal CustomBlobDocument BSON: %w", err)
+		return nil, fmt.Errorf("failed to marshal CustomBlobDocument BSON: %w", err)
 	}
+	return contents, nil
+}
 
+// writeCustomBlobDocument serializes a CustomBlobDocument BSON wrapper
+// and inserts it as a Documents-containment unit in the project.
+func (w *Writer) writeCustomBlobDocument(in customBlobInput) error {
+	if in.ContainerID == "" {
+		return fmt.Errorf("CustomBlobDocument container ID is required")
+	}
+	contents, err := serializeCustomBlobDocument(&in)
+	if err != nil {
+		return err
+	}
 	return w.insertUnit(in.UnitID, in.ContainerID, "Documents", customBlobDocType, contents)
 }
 
@@ -85,37 +96,10 @@ func (w *Writer) updateCustomBlobDocument(in customBlobInput) error {
 	if in.UnitID == "" {
 		return fmt.Errorf("CustomBlobDocument unit ID is required for update")
 	}
-	if in.ExportLevel == "" {
-		in.ExportLevel = "Hidden"
-	}
-	if in.MetadataID == "" {
-		in.MetadataID = generateUUID()
-	}
-
-	metadata := bson.D{
-		{Key: "$ID", Value: idToBsonBinary(in.MetadataID)},
-		{Key: "$Type", Value: "CustomBlobDocuments$CustomBlobDocumentMetadata"},
-		{Key: "CreatedByExtension", Value: agenteditor.CreatedByExtensionID},
-		{Key: "ReadableTypeName", Value: in.ReadableTypeName},
-	}
-
-	doc := bson.D{
-		{Key: "$ID", Value: idToBsonBinary(in.UnitID)},
-		{Key: "$Type", Value: customBlobDocType},
-		{Key: "Contents", Value: in.ContentsJSON},
-		{Key: "CustomDocumentType", Value: in.CustomDocumentType},
-		{Key: "Documentation", Value: in.Documentation},
-		{Key: "Excluded", Value: in.Excluded},
-		{Key: "ExportLevel", Value: in.ExportLevel},
-		{Key: "Metadata", Value: metadata},
-		{Key: "Name", Value: in.Name},
-	}
-
-	contents, err := bson.Marshal(doc)
+	contents, err := serializeCustomBlobDocument(&in)
 	if err != nil {
-		return fmt.Errorf("failed to marshal CustomBlobDocument BSON: %w", err)
+		return err
 	}
-
 	return w.updateUnit(in.UnitID, contents)
 }
 

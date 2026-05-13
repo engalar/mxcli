@@ -84,6 +84,128 @@ func (w *Writer) RenameReferences(oldName, newName string, dryRun bool) ([]Renam
 	return hits, nil
 }
 
+// ScanRenameReferences scans every unit and returns the patches + hit list
+// produced by replacing oldName with newName (exact or prefix). It performs
+// no writes — callers persist patches via the modelsdk write transaction.
+func (w *Writer) ScanRenameReferences(oldName, newName string) ([]UnitPatch, []RenameHit, error) {
+	units, err := w.reader.listUnitsByType("")
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to list units: %w", err)
+	}
+
+	var (
+		patches []UnitPatch
+		hits    []RenameHit
+	)
+
+	for _, unit := range units {
+		contents, err := w.reader.resolveContents(unit.ID, unit.Contents)
+		if err != nil {
+			continue
+		}
+		if len(contents) == 0 {
+			continue
+		}
+
+		var raw bson.D
+		if err := bson.Unmarshal(contents, &raw); err != nil {
+			continue
+		}
+
+		count := 0
+		updated := replaceStringsInDoc(raw, oldName, newName, &count)
+		if count == 0 {
+			continue
+		}
+
+		docName := ""
+		for _, elem := range updated {
+			if elem.Key == "Name" {
+				if s, ok := elem.Value.(string); ok {
+					docName = s
+				}
+			}
+		}
+
+		hits = append(hits, RenameHit{
+			UnitID:   unit.ID,
+			UnitType: unit.Type,
+			Name:     docName,
+			Count:    count,
+		})
+
+		newContents, err := bson.Marshal(updated)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to marshal updated document %s: %w", unit.ID, err)
+		}
+		patches = append(patches, UnitPatch{ID: unit.ID, Contents: newContents})
+	}
+
+	return patches, hits, nil
+}
+
+// FindRenameTarget locates the document Name==oldName within moduleName and
+// returns its unit ID together with patched BSON contents that have the Name
+// field rewritten to newName. It performs no writes — callers are expected to
+// persist the returned bytes (e.g. via the modelsdk write path).
+//
+// Returns an error if the module or document cannot be found.
+func (w *Writer) FindRenameTarget(moduleName, oldName, newName string) (string, []byte, error) {
+	modules, err := w.reader.ListModules()
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to list modules: %w", err)
+	}
+
+	var moduleID string
+	for _, m := range modules {
+		if m.Name == moduleName {
+			moduleID = string(m.ID)
+			break
+		}
+	}
+	if moduleID == "" {
+		return "", nil, fmt.Errorf("module not found: %s", moduleName)
+	}
+
+	hierarchy := buildContainerSet(w.reader, moduleID)
+
+	units, err := w.reader.listUnitsByType("")
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to list units: %w", err)
+	}
+
+	for _, unit := range units {
+		if !hierarchy[unit.ContainerID] {
+			continue
+		}
+
+		contents, err := w.reader.resolveContents(unit.ID, unit.Contents)
+		if err != nil || len(contents) == 0 {
+			continue
+		}
+
+		var raw bson.D
+		if err := bson.Unmarshal(contents, &raw); err != nil {
+			continue
+		}
+
+		for i, elem := range raw {
+			if elem.Key == "Name" {
+				if s, ok := elem.Value.(string); ok && s == oldName {
+					raw[i].Value = newName
+					newContents, err := bson.Marshal(raw)
+					if err != nil {
+						return "", nil, fmt.Errorf("failed to marshal: %w", err)
+					}
+					return unit.ID, newContents, nil
+				}
+			}
+		}
+	}
+
+	return "", nil, fmt.Errorf("document '%s.%s' not found", moduleName, oldName)
+}
+
 // RenameDocumentByName finds a document by module and name, then updates its Name field.
 // This works for any document type (microflow, nanoflow, page, constant, enumeration, etc.)
 // by doing a raw BSON scan of all units in the module.
