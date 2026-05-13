@@ -52,6 +52,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	msdkprop "github.com/mendixlabs/mxcli/modelsdk/property"
 )
 
 // flowBuilderGen builds the flow graph from AST statements using
@@ -263,6 +264,45 @@ func assignFreshID(e genElementWithID) element.ID {
 	id := element.ID(types.GenerateID())
 	e.SetID(id)
 	return id
+}
+
+// genBaseHolder is the minimal interface every concrete gen element
+// satisfies for ad-hoc property injection. element.Base implements
+// AddProperty (see modelsdk/element/element.go:138 — explicitly intended
+// for "inherited or ad-hoc properties that the codegen doesn't produce").
+type genBaseHolder interface {
+	AddProperty(p element.Property, bit uint)
+}
+
+// setExtraStringField injects a string-valued ad-hoc field onto a gen
+// element so the codec emits it on encode. Used to bridge gen-schema
+// gaps where the reflection-data carries a field but codegen didn't
+// produce a typed setter (e.g. CastAction.ObjectVariableName — gen
+// reads it via raw BSON in show_gen but exposes no setter).
+//
+// The injected Property is a fresh `*property.Primitive[string]` with
+// the supplied value pre-Set (so it reports Dirty and the encoder
+// overlays it onto the BSON output document via setField).
+//
+// The bit argument is forwarded to Base.AddProperty for dirty
+// tracking; gen elements use bits 0..N for codegen-bound properties
+// and bit 63 for "is new". Bit 62 is reserved here for ad-hoc fields
+// (no codegen Property uses it, so collisions are impossible).
+//
+// No-op when value is empty — Mendix BSON omits empty optional
+// strings, and adding a dirty empty Property would cause the codec
+// to emit a stray empty key.
+func setExtraStringField(e element.Element, key, value string) {
+	if value == "" {
+		return
+	}
+	holder, ok := e.(genBaseHolder)
+	if !ok {
+		return
+	}
+	prop := msdkprop.NewPrimitive[string](key, msdkprop.DecodeString)
+	prop.Set(value)
+	holder.AddProperty(prop, 62)
 }
 
 // exprToString converts an AST Expression to a Mendix expression string
