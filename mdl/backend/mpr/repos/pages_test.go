@@ -427,6 +427,51 @@ func TestPageMutator_SetLayout_ChangesReference(t *testing.T) {
 	}
 }
 
+// TestPageMutator_SetLayout_UsesResolver asserts SetLayout now goes
+// through QualifiedNameResolver: a QN that resolves to a non-layout
+// kind (e.g. a microflow) is rejected with a wrong-kind error rather
+// than the prior "layout not found" lookup miss.
+func TestPageMutator_SetLayout_UsesResolver(t *testing.T) {
+	w := openTestWriter(t)
+	parentID := lookupModuleUUID(t, w, "MyFirstModule")
+	repo := NewPageRepository(w)
+
+	page := newPageWithLayoutCallArgument(t, "SetLayoutResolverProbe")
+	if err := repo.Create(parentID, "Documents", page); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	mut, err := repo.OpenForMutation(model.ID(page.ID()))
+	if err != nil {
+		t.Fatalf("OpenForMutation: %v", err)
+	}
+
+	// Resolver-known QN that points at a microflow, NOT a layout.
+	if err := mut.SetLayout("Administration.ChangeMyPassword"); err == nil {
+		t.Error("SetLayout(microflow QN): expected wrong-kind error, got nil")
+	} else if !strings.Contains(err.Error(), "is a microflow") {
+		t.Errorf("SetLayout(microflow QN) error = %v, want substring \"is a microflow\"", err)
+	}
+
+	// Real layout still works end-to-end.
+	if err := mut.SetLayout("Atlas_Core.Atlas_Default"); err != nil {
+		t.Fatalf("SetLayout(real layout): %v", err)
+	}
+	if err := mut.Commit(); err != nil {
+		t.Fatalf("Commit: %v", err)
+	}
+	got, err := repo.Get(model.ID(page.ID()))
+	if err != nil {
+		t.Fatalf("Get post-Commit: %v", err)
+	}
+	gotLC, ok := got.LayoutCall().(*genPg.LayoutCall)
+	if !ok || gotLC == nil {
+		t.Fatalf("post-Commit LayoutCall = %v (%T)", got.LayoutCall(), got.LayoutCall())
+	}
+	if qn := gotLC.LayoutQualifiedName(); qn != "Atlas_Core.Atlas_Default" {
+		t.Errorf("post-Commit LayoutQualifiedName = %q, want Atlas_Core.Atlas_Default", qn)
+	}
+}
+
 // --- helpers ---
 
 func lookupModuleUUID(t *testing.T, w *mmpr.Writer, name string) string {
