@@ -7,6 +7,8 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genJsonStructures "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
@@ -70,11 +72,18 @@ func (b *MprBackend) updateExportMappingViaModelsdk(em *model.ExportMapping) err
 // ── JsonStructure ─────────────────────────────────────────────────────────
 
 func (b *MprBackend) updateJsonStructureViaModelsdk(js *types.JsonStructure) error {
-	contents, err := mpr.SerializeJsonStructure(unconvertJsonStructure(js))
-	if err != nil {
-		return fmt.Errorf("serialize json structure: %w", err)
-	}
-	return b.msdkWriteRaw(js.ID, contents)
+	return b.msdkWrite(js.ID, func(elem element.Element) error {
+		typed, ok := elem.(*genJsonStructures.JsonStructure)
+		if !ok {
+			return fmt.Errorf("unexpected type %T (want *JsonStructure)", elem)
+		}
+		typed.SetName(js.Name)
+		typed.SetDocumentation(js.Documentation)
+		typed.SetExcluded(js.Excluded)
+		typed.SetExportLevel(js.ExportLevel)
+		typed.SetJsonSnippet(js.JsonSnippet)
+		return nil
+	})
 }
 
 // ── BusinessEventService ──────────────────────────────────────────────────
