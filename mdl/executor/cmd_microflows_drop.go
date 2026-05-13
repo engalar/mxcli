@@ -39,7 +39,7 @@ func execDropMicroflow(ctx *ExecContext, s *ast.DropMicroflowStmt) error {
 			// delete+insert into an in-place update from the file's
 			// perspective — same UnitID, same folder, just new bytes.
 			rememberDroppedMicroflow(ctx, qualifiedName, mf.ID, mf.ContainerID, mf.AllowedModuleRoles)
-			if err := ctx.Backend.DeleteMicroflow(mf.ID); err != nil {
+			if err := ctx.deleteMicroflowViaRepoOrBackend(mf.ID); err != nil {
 				return mdlerrors.NewBackend("delete microflow", err)
 			}
 			// Clear executor-level caches so subsequent CREATE sees fresh state

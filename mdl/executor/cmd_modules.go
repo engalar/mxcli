@@ -129,7 +129,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	if mfs, err := ctx.Backend.ListMicroflows(); err == nil {
 		for _, mf := range mfs {
 			if moduleContainers[mf.ContainerID] {
-				if err := ctx.Backend.DeleteMicroflow(mf.ID); err != nil {
+				if err := ctx.deleteMicroflowViaRepoOrBackend(mf.ID); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete microflow %s: %v\n", mf.Name, err)
 				} else {
 					nMicroflows++
