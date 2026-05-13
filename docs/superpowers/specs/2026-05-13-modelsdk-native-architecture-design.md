@@ -1,8 +1,9 @@
 # Modelsdk-Native Architecture Design
 
 **Date:** 2026-05-13
-**Status:** Design — pending implementation plan
+**Status:** PoC validated (2026-05-13) — Stage 2 plan pending
 **Scope:** Full end-to-end migration from `sdk/*` types to `modelsdk/gen/*` types, with SOLID-compliant per-domain repository architecture
+**Addendum:** [`2026-05-13-modelsdk-native-architecture-design-addendum.md`](2026-05-13-modelsdk-native-architecture-design-addendum.md) — empirical PoC findings; resolves Section 9 Blockers and Section 11 Open Decisions. Section 5 below incorporates the addendum's amendments.
 
 ---
 
@@ -150,7 +151,12 @@ type MicroflowReader interface {
 }
 
 type MicroflowWriter interface {
-    Create(mf *genMf.Microflow) error
+    // Create inserts a new microflow. parentUUID is the container unit's UUID
+    // (typically a Folder or Module); containmentName is the BSON containment
+    // slot ("Documents" for module-level documents). Lineage is supplied as
+    // call parameters because gen types do not expose SetContainerID — see
+    // addendum Blocker 2.
+    Create(parentUUID string, containmentName string, mf *genMf.Microflow) error
     Update(mf *genMf.Microflow) error
     Delete(id model.ID) error
     Move(id model.ID, targetModuleID model.ID) error
@@ -162,7 +168,10 @@ type MicroflowRepository interface {
 }
 ```
 
-The same pattern applies to all ~16 domain repos.
+The same pattern applies to all ~16 domain repos. Every domain's `Writer.Create`
+takes `(parentUUID, containmentName, elem)` for the same reason — the BSON
+encoder consumes only the element's own properties; container lineage is data
+on the write call, not state on the element (addendum Blocker 2).
 
 ### Why three categories of interface
 
@@ -222,7 +231,55 @@ type ReaderCache interface {
 }
 ```
 
-Repos invalidate the cache after Write operations.
+Repos invalidate the cache after Write operations. **Note (post-PoC):** the
+underlying `modelsdk/mpr.Writer` already invalidates its own reader cache on
+both `InsertUnit` and `WriteTransaction.Commit` (addendum Blocker 4), so the
+default repo implementations do not need to call `Invalidate()` explicitly.
+The `ReaderCache` interface stays for explicit cross-process invalidation and
+for tests that bypass `Writer`.
+
+### Mutator interfaces for large units (post-PoC amendment)
+
+PoC Blocker 3 measured that `Encoder.Encode()` rebuilds the entire root
+document whenever any root-level dirty bit is set — incremental vs full
+encoding came in at **1.06×**, not the 5× the design assumed (addendum
+Blocker 3, 419 µs / 168 KB / 3 591 allocs per encode on a 25 KB microflow).
+For microflow-sized units this is acceptable. For pages and workflows whose
+widget trees often exceed 100 KB, the standard `Update(elem)` path becomes
+performance-prohibitive on `ALTER PAGE` / `ALTER WORKFLOW`.
+
+To preserve interactive ALTER throughput on large units, the design adds
+mutator interfaces that operate on raw BSON sub-trees rather than re-encoding
+the whole element:
+
+```go
+// mdl/repos/page_mutator.go
+type PageMutator interface {
+    SetWidgetProperty(widgetID model.ID, prop string, value any) error
+    InsertWidget(parentID model.ID, slot string, widget element.Element) error
+    DeleteWidget(widgetID model.ID) error
+    ReplaceWidget(widgetID model.ID, replacement element.Element) error
+    SetLayout(layoutQN string) error
+    Commit() error  // single InsertUnit/WriteTransaction at the end
+}
+
+type PageRepository interface {
+    PageReader
+    PageWriter
+    OpenForMutation(pageID model.ID) (PageMutator, error)
+}
+
+// mdl/repos/workflow_mutator.go — analogous shape for WorkflowRepository
+```
+
+Routing rule: handlers that perform whole-element CRUD (`CREATE PAGE`,
+`DROP PAGE`) use the standard `PageWriter`; handlers that perform localized
+in-place edits (`ALTER PAGE`, `ALTER WORKFLOW`) use the mutator. This mirrors
+the existing `OpenPageForMutation` pattern in the legacy `MprBackend` and
+keeps the spec's overall layering intact.
+
+Microflow / domain-model / smaller domains do **not** need a mutator — the
+standard `Update(elem)` path is fast enough at their typical unit sizes.
 
 ### UnitOfWork for atomic cross-domain operations
 
@@ -372,6 +429,12 @@ This package is part of the design, not an afterthought. It must be created in l
 
 ## 9. Blockers Requiring PoC Validation Before Implementation
 
+> **Status (2026-05-13): all four blockers validated.** See
+> [`addendum`](2026-05-13-modelsdk-native-architecture-design-addendum.md).
+> Three PASS, Blocker 3 MARGINAL (1.06×) — resolved by adding the
+> `PageMutator` / `WorkflowMutator` interfaces in Section 5. The original
+> blocker text below is preserved as historical context for the PoC scope.
+
 Four assumptions must be empirically confirmed before committing to the design. Any failure forces a redesign loop.
 
 ### Blocker 1: Encoding freshly-constructed gen objects
@@ -427,9 +490,18 @@ flows, _ := ctx.Microflows.List(mid)   // reads via mpr.Reader
 
 ## 10. Migration Strategy (Big Bang, Four Stages)
 
-### Stage 1 — PoC validation (1-2 weeks)
+### Stage 1 — PoC validation (✅ complete, 2026-05-13)
 
-Run the four blocker validations. Any failure triggers design revision before proceeding. Output: a brief PoC report confirming the design is buildable, and possibly an addendum to this spec for any decisions deferred from the design phase (e.g., "Encoder is full-rewrite, so PageMutator survives as a Writer method").
+Plan: `docs/superpowers/plans/2026-05-13-modelsdk-native-stage1-poc.md`.
+Tests: `modelsdk/codec/poc/` (5 tests + 3 benchmarks). Findings: addendum.
+
+Outcome: PROCEED with two spec amendments (already folded into Section 5):
+1. `repo.Create` takes `(parentUUID, containmentName, elem)` — addendum
+   Blocker 2.
+2. New `PageMutator` / `WorkflowMutator` interfaces for large-unit ALTER —
+   addendum Blocker 3.
+
+No deal-breakers; Stage 2 is unblocked.
 
 ### Stage 2 — Infrastructure (additive, non-breaking)
 
@@ -466,12 +538,23 @@ After Stage 3 lands and stabilizes:
 
 ## 11. Open Decisions Deferred to Plan
 
-These are design decisions that depend on Stage 1 PoC outcomes:
+> **All resolved by the 2026-05-13 PoC addendum. Summary below; full
+> rationale and benchmark numbers in the addendum's "Open Decisions
+> Resolved" table.**
 
-- **PageMutator interface presence**: Decided after Blocker 3 result
-- **Cache invalidation strategy**: Per-unit vs full invalidation, decided after Blocker 4 result
-- **gen type constructor location**: `modelsdk/gen/*/constructors.go` vs codegen-emitted; decided after Blocker 2 result
-- **TransactionFactory implementation**: Whether to use `msdkWriter.BeginWriteTransaction` directly or wrap it; decided during Stage 2 implementation
+- **PageMutator interface presence** — ✅ **Yes, required.** Blocker 3
+  measured 1.06× (not 5×); large-unit ALTER needs a mutator. Interface
+  defined in Section 5 above.
+- **Cache invalidation strategy** — ✅ **Automatic in `modelsdk/mpr.Writer`**;
+  explicit `ReaderCache.Invalidate()` retained as optional escape hatch.
+  Blocker 4.
+- **gen type constructor location** — ✅ **Already in `modelsdk/gen/*`**
+  (`NewMicroflow()` etc.); no codegen change needed. Blocker 1 + 2.
+- **TransactionFactory implementation** — ✅ **Direct wrap** of
+  `Writer.BeginWriteTransaction()`; commit handles cache invalidation.
+  Blocker 4 transactional path PASS.
+- **`repo.Create` lineage** — ✅ **Parameters** `(parentUUID, containmentName)`,
+  not state on the element. Blocker 2; reflected in Section 5.
 
 ---
 
