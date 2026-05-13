@@ -19,6 +19,7 @@ import (
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
+	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 const fixtureMprPath = "../../testdata/expr-checker/minimal.mpr"
@@ -54,7 +55,23 @@ func findMicroflowByQN(t *testing.T, w *mmpr.Writer, qn string) *genMf.Microflow
 func newGenDescribeContext(t *testing.T, w *mmpr.Writer) *ExecContext {
 	t.Helper()
 	repoCtx := mprbackend.NewExecutorContext(w)
+
+	// Wire up a backend so getHierarchy(ctx) can resolve module names
+	// from the SQL-backed container chain (the canonical path used by
+	// genMicroflowQualifiedName after BSON roundtrip strips Container()).
+	// We open a second sdk/mpr.Writer on the same MPR file (already
+	// copied into a tempdir by the helper) and Wrap it; modernc/sqlite
+	// supports multiple opens of the same file.
+	path := w.ConcreteReader().Path()
+	sdkW, err := sdkmpr.NewWriter(path)
+	if err != nil {
+		t.Fatalf("sdkmpr.NewWriter(%s): %v", path, err)
+	}
+	t.Cleanup(func() { _ = sdkW.Close() })
+	be := mprbackend.Wrap(sdkW, path)
+
 	return &ExecContext{
+		Backend:    be,
 		Microflows: repoCtx.Microflows,
 		Output:     io.Discard,
 	}
@@ -73,12 +90,17 @@ func TestDescribeMicroflowGenToString_StructuralSkeleton(t *testing.T) {
 	}
 
 	mustContain(t, out,
-		"create or modify microflow ", // header keyword
-		".MyFirstLogic",               // dotted qualified name suffix
-		"\nbegin\n",                   // body open
-		"\nend;",                      // body close
-		"\n/",                         // statement terminator
+		"create or modify microflow MyFirstModule.MyFirstLogic", // resolved module name
+		"\nbegin\n", // body open
+		"\nend;",    // body close
+		"\n/",       // statement terminator
 	)
+
+	// Stage 3.2.2.a: the SQL-backed module-name resolution should never
+	// emit the placeholder.
+	if strings.Contains(out, "<unknown>") {
+		t.Errorf("module name should resolve from container chain (no <unknown>); got:\n%s", out)
+	}
 
 	// A trivial Start→End microflow should emit a bare `return;` from
 	// the EndEvent emit helper — no TODO placeholder for any activity.
@@ -103,10 +125,14 @@ func TestDescribeMicroflowGenToString_IfElseFraming(t *testing.T) {
 	}
 
 	mustContain(t, out,
+		"create or modify microflow Administration.SaveNewAccount", // resolved module name
 		"if ", " then\n",
 		"\n  else\n",
 		"\n  end if;",
 	)
+	if strings.Contains(out, "<unknown>") {
+		t.Errorf("module name should resolve from container chain (no <unknown>); got:\n%s", out)
+	}
 
 	// 3.2.1 leaves all activity bodies (action activities, end-event
 	// arguments, etc.) as TODO placeholders. Saving the password flow
@@ -134,10 +160,14 @@ func TestDescribeMicroflowGenToString_InheritanceCaseFraming(t *testing.T) {
 	}
 
 	mustContain(t, out,
+		"create or modify microflow Administration.ManageMyAccount", // resolved module name
 		"case $", " inheritance\n", // inheritance case header
 		"    when ", " then\n", // at least one when arm
 		"\n  end case;\n", // case terminator
 	)
+	if strings.Contains(out, "<unknown>") {
+		t.Errorf("module name should resolve from container chain (no <unknown>); got:\n%s", out)
+	}
 }
 
 // TestDescribeMicroflowGenToString_ParametersAndReturn checks that the

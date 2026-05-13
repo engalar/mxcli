@@ -16,6 +16,12 @@ type MicroflowReader interface {
 	ListAll() ([]*genMf.Microflow, error)
 	FindByQualifiedName(qn string) (*genMf.Microflow, error)
 	IsRule(qn string) (bool, error)
+
+	// GetContainerUUID returns the parent container UUID of a microflow
+	// unit (folder or module ID). Codec-decoded gen objects do not carry
+	// container linkage, so we retrieve it from the MPR Unit table by
+	// UnitID. Returns "" with a non-nil error if the unit is not found.
+	GetContainerUUID(id model.ID) (model.ID, error)
 }
 
 // MicroflowWriter creates/updates/deletes/moves microflows. Container

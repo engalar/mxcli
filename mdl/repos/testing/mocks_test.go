@@ -56,6 +56,7 @@ func TestRecordingMicroflowRepository_RecordsAllReadCalls(t *testing.T) {
 	_, _ = rec.ListAll()
 	_, _ = rec.FindByQualifiedName("M.Foo")
 	_, _ = rec.IsRule("M.Bar")
+	_, _ = rec.GetContainerUUID("id-3")
 
 	if len(rec.GotIDs) != 2 {
 		t.Errorf("GotIDs = %d, want 2", len(rec.GotIDs))
@@ -71,6 +72,32 @@ func TestRecordingMicroflowRepository_RecordsAllReadCalls(t *testing.T) {
 	}
 	if len(rec.IsRuleQNs) != 1 || rec.IsRuleQNs[0] != "M.Bar" {
 		t.Errorf("IsRuleQNs = %v", rec.IsRuleQNs)
+	}
+	if len(rec.GetContainerIDs) != 1 || rec.GetContainerIDs[0] != model.ID("id-3") {
+		t.Errorf("GetContainerIDs = %v, want [id-3]", rec.GetContainerIDs)
+	}
+}
+
+// TestRecordingMicroflowRepository_GetContainerUUID_FuncOverride verifies
+// the Stage 3.2.2.a addition: a custom Func is honoured (not silently
+// ignored), and its return value reaches the caller.
+func TestRecordingMicroflowRepository_GetContainerUUID_FuncOverride(t *testing.T) {
+	want := model.ID("container-99")
+	wantErr := errors.New("inject")
+	rec := &RecordingMicroflowRepository{
+		GetContainerUUIDFunc: func(model.ID) (model.ID, error) {
+			return want, wantErr
+		},
+	}
+	got, err := rec.GetContainerUUID("any")
+	if got != want {
+		t.Errorf("GetContainerUUID got = %q, want %q", got, want)
+	}
+	if !errors.Is(err, wantErr) {
+		t.Errorf("err = %v, want %v", err, wantErr)
+	}
+	if len(rec.GetContainerIDs) != 1 {
+		t.Errorf("call still recorded? GetContainerIDs = %v", rec.GetContainerIDs)
 	}
 }
 

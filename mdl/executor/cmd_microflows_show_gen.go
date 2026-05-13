@@ -28,6 +28,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
@@ -43,7 +44,7 @@ func DescribeMicroflowGenToString(ctx *ExecContext, mf *genMf.Microflow) (string
 		return "", fmt.Errorf("DescribeMicroflowGenToString: nil microflow")
 	}
 
-	moduleName, qualifiedName := genMicroflowQualifiedName(mf)
+	moduleName, qualifiedName := genMicroflowQualifiedName(ctx, mf)
 
 	var lines []string
 
@@ -124,20 +125,47 @@ func DescribeMicroflowGenToString(ctx *ExecContext, mf *genMf.Microflow) (string
 }
 
 // genMicroflowQualifiedName resolves the microflow's owning module name
-// from its container chain and returns (moduleName, "Module.Name").
-// Falls back to "<unknown>.Name" if the chain is not loaded.
-func genMicroflowQualifiedName(mf *genMf.Microflow) (string, string) {
+// and returns (moduleName, "Module.Name").
+//
+// Resolution strategy (in order):
+//   1. ctx.Microflows.GetContainerUUID(mf.ID) + ctx.Cache.hierarchy
+//      (FindModuleID + GetModuleName) — the canonical path that works
+//      after a BSON roundtrip strips Container() linkage.
+//   2. Walk Container() chain looking for `Projects$Module` (works for
+//      freshly-built in-memory graphs that still carry container refs).
+//   3. Fallback "<unknown>.Name" — only if no other source resolves it.
+func genMicroflowQualifiedName(ctx *ExecContext, mf *genMf.Microflow) (string, string) {
 	name := mf.Name()
-	module := "<unknown>"
-	for c := mf.Container(); c != nil; c = c.Container() {
-		if t := c.TypeName(); t == "Projects$Module" {
-			if nv, ok := c.(interface{ NameValue() string }); ok {
-				if mn := nv.NameValue(); mn != "" {
+	module := ""
+
+	// Path 1: SQL-backed container UUID + ContainerHierarchy.
+	if ctx != nil && ctx.Microflows != nil && ctx.Connected() {
+		if containerID, err := ctx.Microflows.GetContainerUUID(model.ID(mf.ID())); err == nil && containerID != "" {
+			if h, err := getHierarchy(ctx); err == nil && h != nil {
+				modID := h.FindModuleID(containerID)
+				if mn := h.GetModuleName(modID); mn != "" {
 					module = mn
-					break
 				}
 			}
 		}
+	}
+
+	// Path 2: in-memory Container() walk (no roundtrip).
+	if module == "" {
+		for c := mf.Container(); c != nil; c = c.Container() {
+			if t := c.TypeName(); t == "Projects$Module" {
+				if nv, ok := c.(interface{ NameValue() string }); ok {
+					if mn := nv.NameValue(); mn != "" {
+						module = mn
+						break
+					}
+				}
+			}
+		}
+	}
+
+	if module == "" {
+		module = "<unknown>"
 	}
 	return module, module + "." + name
 }

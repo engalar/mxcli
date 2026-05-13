@@ -27,21 +27,23 @@ type MicroflowMoveCall struct {
 // methods record their args and either invoke the matching Func or
 // return nil (success). All recorded slices are appended in call order.
 type RecordingMicroflowRepository struct {
-	GotIDs       []model.ID
-	ListedModule []model.ID
-	ListedAll    int
-	FoundQNs     []string
-	IsRuleQNs    []string
-	Created      []MicroflowCreateCall
-	Updated      []*genMf.Microflow
-	Deleted      []model.ID
-	Moved        []MicroflowMoveCall
+	GotIDs           []model.ID
+	ListedModule     []model.ID
+	ListedAll        int
+	FoundQNs         []string
+	IsRuleQNs        []string
+	GetContainerIDs  []model.ID
+	Created          []MicroflowCreateCall
+	Updated          []*genMf.Microflow
+	Deleted          []model.ID
+	Moved            []MicroflowMoveCall
 
 	GetFunc                 func(model.ID) (*genMf.Microflow, error)
 	ListFunc                func(model.ID) ([]*genMf.Microflow, error)
 	ListAllFunc             func() ([]*genMf.Microflow, error)
 	FindByQualifiedNameFunc func(string) (*genMf.Microflow, error)
 	IsRuleFunc              func(string) (bool, error)
+	GetContainerUUIDFunc    func(model.ID) (model.ID, error)
 	CreateFunc              func(MicroflowCreateCall) error
 	UpdateFunc              func(*genMf.Microflow) error
 	DeleteFunc              func(model.ID) error
@@ -88,6 +90,14 @@ func (m *RecordingMicroflowRepository) IsRule(qn string) (bool, error) {
 		return m.IsRuleFunc(qn)
 	}
 	return false, nil
+}
+
+func (m *RecordingMicroflowRepository) GetContainerUUID(id model.ID) (model.ID, error) {
+	m.GetContainerIDs = append(m.GetContainerIDs, id)
+	if m.GetContainerUUIDFunc != nil {
+		return m.GetContainerUUIDFunc(id)
+	}
+	return "", nil
 }
 
 func (m *RecordingMicroflowRepository) Create(parentUUID string, containmentName string, mf *genMf.Microflow) error {

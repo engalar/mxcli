@@ -203,6 +203,53 @@ func TestMicroflowRepo_FindByQualifiedName(t *testing.T) {
 	}
 }
 
+// TestMicroflowRepo_GetContainerUUID_RoundTrips proves the SQL-backed
+// container-ID lookup returns the same parent that BuildContainerParent
+// reports for every microflow in the fixture. This is the primitive
+// genMicroflowQualifiedName uses to defeat BSON-roundtrip Container()
+// loss.
+func TestMicroflowRepo_GetContainerUUID_RoundTrips(t *testing.T) {
+	w := openTestWriter(t)
+	r := w.ConcreteReader()
+
+	parents, err := r.BuildContainerParent()
+	if err != nil {
+		t.Fatalf("BuildContainerParent: %v", err)
+	}
+
+	repo := NewMicroflowRepository(w)
+	all, err := repo.ListAll()
+	if err != nil {
+		t.Fatalf("ListAll: %v", err)
+	}
+	if len(all) == 0 {
+		t.Fatal("fixture has no microflows")
+	}
+
+	for _, mf := range all {
+		got, err := repo.GetContainerUUID(model.ID(mf.ID()))
+		if err != nil {
+			t.Errorf("GetContainerUUID(%s) %s: %v", mf.Name(), mf.ID(), err)
+			continue
+		}
+		want := parents[string(mf.ID())]
+		if string(got) != want {
+			t.Errorf("GetContainerUUID(%s): got %q, want %q", mf.Name(), got, want)
+		}
+	}
+}
+
+// TestMicroflowRepo_GetContainerUUID_NotFound — a UUID that doesn't
+// match any unit must return an error (no silent empty value).
+func TestMicroflowRepo_GetContainerUUID_NotFound(t *testing.T) {
+	w := openTestWriter(t)
+	repo := NewMicroflowRepository(w)
+	bogus := model.ID("00000000-0000-0000-0000-000000000000")
+	if got, err := repo.GetContainerUUID(bogus); err == nil {
+		t.Errorf("expected error for bogus UUID, got %q", got)
+	}
+}
+
 // TestMicroflowRepo_IsRule_Negative — the Stage 2 fixture has no rules,
 // so IsRule on any name must return false.
 func TestMicroflowRepo_IsRule_Negative(t *testing.T) {
