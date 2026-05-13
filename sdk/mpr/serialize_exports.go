@@ -122,6 +122,11 @@ func (w *Writer) SerializeWorkflow(wf *workflows.Workflow) ([]byte, error) {
 }
 
 // SerializeDomainModel returns BSON bytes for a domain model unit.
+//
+// Deprecated: prefer the package-level SerializeDomainModel(dm, moduleName, pv)
+// which does not require a *Writer and decouples encoding from reader state.
+// This receiver shim is kept for backwards compatibility and will be removed
+// once all callers migrate (see retire-serialize-writer-receiver plan).
 func (w *Writer) SerializeDomainModel(dm *domainmodel.DomainModel) ([]byte, error) {
 	return w.serializeDomainModel(dm)
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	"github.com/mendixlabs/mxcli/sdk/mpr/version"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -285,5 +286,35 @@ func TestScanOqlQueryUpdates_WithMatch(t *testing.T) {
 	oql, _ := raw["Oql"].(string)
 	if oql != "from NewModule.Customer as c return c" {
 		t.Fatalf("expected updated OQL, got %q", oql)
+	}
+}
+
+// TestSerializeDomainModelStandalone verifies that SerializeDomainModel works
+// as a standalone package-level function — no *Writer required. Callers pass
+// the module name and project version explicitly so the encoder is decoupled
+// from reader state. This is part of retiring Writer Serialize* receivers.
+func TestSerializeDomainModelStandalone(t *testing.T) {
+	dm := &domainmodel.DomainModel{
+		ContainerID: "container-id",
+	}
+	dm.ID = model.ID("11111111-1111-1111-1111-111111111111")
+	dm.TypeName = "DomainModels$DomainModel"
+
+	pv := version.DefaultVersion()
+
+	contents, err := SerializeDomainModel(dm, "MyModule", pv)
+	if err != nil {
+		t.Fatalf("SerializeDomainModel: %v", err)
+	}
+	if len(contents) == 0 {
+		t.Fatal("expected non-empty BSON, got 0 bytes")
+	}
+
+	var raw map[string]any
+	if err := bson.Unmarshal(contents, &raw); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if raw["$Type"] != "DomainModels$DomainModel" {
+		t.Fatalf("expected $Type=DomainModels$DomainModel, got %v", raw["$Type"])
 	}
 }
