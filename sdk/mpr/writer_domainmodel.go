@@ -836,7 +836,7 @@ func serializeOqlViewEntitySource(sourceObjectID model.ID, sourceDocumentRef, oq
 	}
 	// Mendix 10.x stores the OQL query inline on the source object (reflection data: 10.21 has "Oql" property).
 	// Mendix 11.0+ removed this field; only the ViewEntitySourceDocument stores the OQL.
-	if !pv.IsAtLeast(11, 0) {
+	if pv == nil || !pv.IsAtLeast(11, 0) {
 		doc = append(doc, bson.E{Key: "Oql", Value: oqlQuery})
 	}
 	doc = append(doc, bson.E{Key: "SourceDocument", Value: sourceDocumentRef})
