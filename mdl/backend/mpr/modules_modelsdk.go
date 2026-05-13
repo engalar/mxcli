@@ -14,6 +14,7 @@ import (
 	msdkprojects "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // ────────────────────────────────────────────────────────
@@ -173,7 +174,7 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 		return fmt.Errorf("failed to get project root: %w", err)
 	}
 
-	moduleContents, err := b.writer.SerializeModule(module)
+	moduleContents, err := mpr.SerializeModule(module)
 	if err != nil {
 		return fmt.Errorf("failed to serialize module: %w", err)
 	}
@@ -187,7 +188,7 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 	}
 	dm.ID = model.ID(dmID)
 	dm.TypeName = "DomainModels$DomainModel"
-	dmContents, err := b.writer.SerializeDomainModel(dm)
+	dmContents, err := mpr.SerializeDomainModel(dm, module.Name, b.reader.ProjectVersion())
 	if err != nil {
 		return fmt.Errorf("failed to serialize domain model: %w", err)
 	}
@@ -196,7 +197,7 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 	}
 
 	msID := modelsdkmpr.GenerateID()
-	msContents, err := b.writer.SerializeModuleSecurity(msID)
+	msContents, err := mpr.SerializeModuleSecurity(msID)
 	if err != nil {
 		return fmt.Errorf("failed to serialize module security: %w", err)
 	}
@@ -205,7 +206,7 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 	}
 
 	settingsID := modelsdkmpr.GenerateID()
-	settingsContents, err := b.writer.SerializeModuleSettings(settingsID)
+	settingsContents, err := mpr.SerializeModuleSettings(settingsID)
 	if err != nil {
 		return fmt.Errorf("failed to serialize module settings: %w", err)
 	}
@@ -230,7 +231,7 @@ func (b *MprBackend) createFolderViaModelsdk(folder *model.Folder) error {
 	}
 	folder.TypeName = "Projects$Folder"
 
-	contents, err := b.writer.SerializeFolder(folder)
+	contents, err := mpr.SerializeFolder(folder)
 	if err != nil {
 		return fmt.Errorf("failed to serialize folder: %w", err)
 	}
