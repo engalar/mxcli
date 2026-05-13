@@ -9,6 +9,7 @@ import (
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
@@ -32,7 +33,7 @@ func (b *MprBackend) createMicroflowViaModelsdk(mf *microflows.Microflow) error 
 		mf.ID = model.ID(modelsdkmpr.GenerateID())
 	}
 	mf.TypeName = "Microflows$Microflow"
-	contents, err := b.writer.SerializeMicroflow(mf)
+	contents, err := mpr.SerializeMicroflow(mf, b.reader.ProjectVersion())
 	if err != nil {
 		return fmt.Errorf("serialize microflow: %w", err)
 	}
@@ -49,7 +50,7 @@ func (b *MprBackend) updateMicroflowViaModelsdk(mf *microflows.Microflow) error 
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeMicroflow(mf)
+	contents, err := mpr.SerializeMicroflow(mf, b.reader.ProjectVersion())
 	if err != nil {
 		return fmt.Errorf("serialize microflow: %w", err)
 	}
@@ -66,7 +67,7 @@ func (b *MprBackend) createNanoflowViaModelsdk(nf *microflows.Nanoflow) error {
 		nf.ID = model.ID(modelsdkmpr.GenerateID())
 	}
 	nf.TypeName = "Microflows$Nanoflow"
-	contents, err := b.writer.SerializeNanoflow(nf)
+	contents, err := mpr.SerializeNanoflow(nf, b.reader.ProjectVersion())
 	if err != nil {
 		return fmt.Errorf("serialize nanoflow: %w", err)
 	}
@@ -83,7 +84,7 @@ func (b *MprBackend) updateNanoflowViaModelsdk(nf *microflows.Nanoflow) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeNanoflow(nf)
+	contents, err := mpr.SerializeNanoflow(nf, b.reader.ProjectVersion())
 	if err != nil {
 		return fmt.Errorf("serialize nanoflow: %w", err)
 	}
@@ -100,7 +101,7 @@ func (b *MprBackend) createPageViaModelsdk(page *pages.Page) error {
 		page.ID = model.ID(modelsdkmpr.GenerateID())
 	}
 	page.TypeName = "Forms$Page"
-	contents, err := b.writer.SerializePage(page)
+	contents, err := mpr.SerializePage(page)
 	if err != nil {
 		return fmt.Errorf("serialize page: %w", err)
 	}
@@ -117,7 +118,7 @@ func (b *MprBackend) updatePageViaModelsdk(page *pages.Page) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializePage(page)
+	contents, err := mpr.SerializePage(page)
 	if err != nil {
 		return fmt.Errorf("serialize page: %w", err)
 	}
@@ -134,7 +135,7 @@ func (b *MprBackend) createLayoutViaModelsdk(layout *pages.Layout) error {
 		layout.ID = model.ID(modelsdkmpr.GenerateID())
 	}
 	layout.TypeName = "Forms$Layout"
-	contents, err := b.writer.SerializeLayout(layout)
+	contents, err := mpr.SerializeLayout(layout)
 	if err != nil {
 		return fmt.Errorf("serialize layout: %w", err)
 	}
@@ -151,7 +152,7 @@ func (b *MprBackend) updateLayoutViaModelsdk(layout *pages.Layout) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeLayout(layout)
+	contents, err := mpr.SerializeLayout(layout)
 	if err != nil {
 		return fmt.Errorf("serialize layout: %w", err)
 	}
@@ -168,7 +169,7 @@ func (b *MprBackend) createSnippetViaModelsdk(snippet *pages.Snippet) error {
 		snippet.ID = model.ID(modelsdkmpr.GenerateID())
 	}
 	snippet.TypeName = "Forms$Snippet"
-	contents, err := b.writer.SerializeSnippet(snippet)
+	contents, err := mpr.SerializeSnippet(snippet)
 	if err != nil {
 		return fmt.Errorf("serialize snippet: %w", err)
 	}
@@ -185,7 +186,7 @@ func (b *MprBackend) updateSnippetViaModelsdk(snippet *pages.Snippet) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeSnippet(snippet)
+	contents, err := mpr.SerializeSnippet(snippet)
 	if err != nil {
 		return fmt.Errorf("serialize snippet: %w", err)
 	}
@@ -202,7 +203,7 @@ func (b *MprBackend) createWorkflowViaModelsdk(wf *workflows.Workflow) error {
 		wf.ID = model.ID(modelsdkmpr.GenerateID())
 	}
 	wf.TypeName = "Workflows$Workflow"
-	contents, err := b.writer.SerializeWorkflow(wf)
+	contents, err := mpr.SerializeWorkflow(wf)
 	if err != nil {
 		return fmt.Errorf("serialize workflow: %w", err)
 	}
@@ -219,7 +220,7 @@ func (b *MprBackend) updateWorkflowViaModelsdk(wf *workflows.Workflow) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeWorkflow(wf)
+	contents, err := mpr.SerializeWorkflow(wf)
 	if err != nil {
 		return fmt.Errorf("serialize workflow: %w", err)
 	}
@@ -238,7 +239,15 @@ func (b *MprBackend) updateDomainModelViaModelsdk(dm *domainmodel.DomainModel) e
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeDomainModel(dm)
+	// Module name is best-effort: used for qualified names in validation rules.
+	// Mirrors the soft-lookup behavior of the legacy (*Writer).serializeDomainModel.
+	moduleName := ""
+	if dm.ContainerID != "" {
+		if module, mErr := b.reader.GetModule(dm.ContainerID); mErr == nil && module != nil {
+			moduleName = module.Name
+		}
+	}
+	contents, err := mpr.SerializeDomainModel(dm, moduleName, b.reader.ProjectVersion())
 	if err != nil {
 		return fmt.Errorf("serialize domain model: %w", err)
 	}
