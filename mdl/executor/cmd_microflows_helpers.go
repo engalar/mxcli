@@ -329,10 +329,15 @@ func expressionToString(expr ast.Expression) string {
 		elseStr := expressionToString(e.ElseExpr)
 		return "if " + cond + " then " + thenStr + " else " + elseStr
 	case *ast.SourceExpr:
-		if e.Source != "" {
-			return e.Source
+		// Always rebuild from the parsed AST to ensure correct spacing around
+		// operators (e.g. `and`, `or`, `>`, `=`). The raw Source text comes
+		// from Antlr token concatenation which strips whitespace, so returning
+		// it directly produces expressions like "$A>0and$B>0" that Mendix
+		// rejects with CE0109.
+		if e.Expression != nil {
+			return expressionToString(e.Expression)
 		}
-		return expressionToString(e.Expression)
+		return e.Source
 	default:
 		return ""
 	}
