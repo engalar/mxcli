@@ -4,6 +4,7 @@ package mpr
 
 import (
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
@@ -123,4 +124,134 @@ func (w *Writer) SerializeWorkflow(wf *workflows.Workflow) ([]byte, error) {
 // SerializeDomainModel returns BSON bytes for a domain model unit.
 func (w *Writer) SerializeDomainModel(dm *domainmodel.DomainModel) ([]byte, error) {
 	return w.serializeDomainModel(dm)
+}
+
+// SerializeProjectSettings returns BSON bytes for the project settings unit.
+func (w *Writer) SerializeProjectSettings(ps *model.ProjectSettings) ([]byte, error) {
+	return w.serializeProjectSettings(ps)
+}
+
+// SerializeModule returns BSON bytes for a module unit.
+func (w *Writer) SerializeModule(module *model.Module) ([]byte, error) {
+	return w.serializeModule(module)
+}
+
+// SerializeFolder returns BSON bytes for a folder unit.
+func (w *Writer) SerializeFolder(folder *model.Folder) ([]byte, error) {
+	return w.serializeFolder(folder)
+}
+
+// SerializeModuleSecurity returns BSON bytes for an empty module security unit.
+func (w *Writer) SerializeModuleSecurity(id string) ([]byte, error) {
+	return w.serializeModuleSecurity(id)
+}
+
+// SerializeModuleSettings returns BSON bytes for a default module settings unit.
+func (w *Writer) SerializeModuleSettings(id string) ([]byte, error) {
+	return w.serializeModuleSettings(id)
+}
+
+// SerializeAgentEditorModel returns canonical CustomBlobDocument BSON bytes for
+// an agent-editor Model unit. The Provider defaults to "MxCloudGenAI" when
+// unset, mirroring the validation in CreateAgentEditorModel.
+func SerializeAgentEditorModel(m *agenteditor.Model) ([]byte, error) {
+	if m.Provider == "" {
+		m.Provider = "MxCloudGenAI"
+	}
+	contentsJSON, err := encodeAgentEditorModelContents(m)
+	if err != nil {
+		return nil, err
+	}
+	return serializeCustomBlobDocument(&customBlobInput{
+		UnitID:             string(m.ID),
+		ContainerID:        string(m.ContainerID),
+		Name:               m.Name,
+		Documentation:      m.Documentation,
+		Excluded:           m.Excluded,
+		ExportLevel:        m.ExportLevel,
+		CustomDocumentType: agenteditor.CustomTypeModel,
+		ReadableTypeName:   agenteditor.ReadableModel,
+		ContentsJSON:       contentsJSON,
+	})
+}
+
+// SerializeAgentEditorKnowledgeBase returns canonical CustomBlobDocument BSON
+// bytes for an agent-editor KnowledgeBase unit.
+func SerializeAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) ([]byte, error) {
+	if k.Provider == "" {
+		k.Provider = "MxCloudGenAI"
+	}
+	contentsJSON, err := encodeKnowledgeBaseContents(k)
+	if err != nil {
+		return nil, err
+	}
+	return serializeCustomBlobDocument(&customBlobInput{
+		UnitID:             string(k.ID),
+		ContainerID:        string(k.ContainerID),
+		Name:               k.Name,
+		Documentation:      k.Documentation,
+		Excluded:           k.Excluded,
+		ExportLevel:        k.ExportLevel,
+		CustomDocumentType: agenteditor.CustomTypeKnowledgeBase,
+		ReadableTypeName:   agenteditor.ReadableKnowledgeBase,
+		ContentsJSON:       contentsJSON,
+	})
+}
+
+// SerializeAgentEditorConsumedMCPService returns canonical CustomBlobDocument
+// BSON bytes for an agent-editor Consumed MCP Service unit.
+func SerializeAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) ([]byte, error) {
+	contentsJSON, err := encodeConsumedMCPServiceContents(c)
+	if err != nil {
+		return nil, err
+	}
+	return serializeCustomBlobDocument(&customBlobInput{
+		UnitID:             string(c.ID),
+		ContainerID:        string(c.ContainerID),
+		Name:               c.Name,
+		Documentation:      c.Documentation,
+		Excluded:           c.Excluded,
+		ExportLevel:        c.ExportLevel,
+		CustomDocumentType: agenteditor.CustomTypeConsumedMCPService,
+		ReadableTypeName:   agenteditor.ReadableConsumedMCPService,
+		ContentsJSON:       contentsJSON,
+	})
+}
+
+// SerializeAgentEditorAgent returns canonical CustomBlobDocument BSON bytes
+// for an agent-editor Agent unit. Tool / KB-tool entries without IDs are
+// assigned fresh stable IDs, mirroring CreateAgentEditorAgent.
+func SerializeAgentEditorAgent(a *agenteditor.Agent) ([]byte, error) {
+	for i := range a.Tools {
+		if a.Tools[i].ID == "" {
+			a.Tools[i].ID = generateUUID()
+		}
+	}
+	for i := range a.KBTools {
+		if a.KBTools[i].ID == "" {
+			a.KBTools[i].ID = generateUUID()
+		}
+	}
+	contentsJSON, err := encodeAgentContents(a)
+	if err != nil {
+		return nil, err
+	}
+	return serializeCustomBlobDocument(&customBlobInput{
+		UnitID:             string(a.ID),
+		ContainerID:        string(a.ContainerID),
+		Name:               a.Name,
+		Documentation:      a.Documentation,
+		Excluded:           a.Excluded,
+		ExportLevel:        a.ExportLevel,
+		CustomDocumentType: agenteditor.CustomTypeAgent,
+		ReadableTypeName:   agenteditor.ReadableAgent,
+		ContentsJSON:       contentsJSON,
+	})
+}
+
+// GenerateJavaSource generates Java source code for a Java action.
+// Exported so that callers outside sdk/mpr can produce Java source
+// without going through the Writer (e.g., path-based file operations).
+func GenerateJavaSource(moduleName, actionName string, userCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType, extraImports []string, extraCode string) string {
+	return generateJavaSource(moduleName, actionName, userCode, params, returnType, extraImports, extraCode)
 }
