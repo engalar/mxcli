@@ -5,8 +5,6 @@ package mpr
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
@@ -42,73 +40,6 @@ func (w *Writer) UpdateJavaAction(ja *javaactions.JavaAction) error {
 // DeleteJavaAction deletes a Java action by ID.
 func (w *Writer) DeleteJavaAction(id model.ID) error {
 	return w.deleteUnit(string(id))
-}
-
-// WriteJavaSourceFile writes the Java source file to the javasource directory.
-// moduleName is the lowercase module name (e.g., "mymodule")
-// actionName is the action name (e.g., "ValidateEmail")
-// javaCode is the executeAction() body code
-// params is the list of parameters with their types
-// returnType is the return type (can be nil for void)
-func (w *Writer) WriteJavaSourceFile(moduleName, actionName string, javaCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType, extraImports []string, extraCode string) error {
-	// Get project root directory (parent of .mpr file)
-	projectRoot := filepath.Dir(w.reader.path)
-
-	// Build the javasource path
-	moduleNameLower := strings.ToLower(moduleName)
-	javaDir := filepath.Join(projectRoot, "javasource", moduleNameLower, "actions")
-
-	// Create directory if it doesn't exist
-	if err := os.MkdirAll(javaDir, 0755); err != nil {
-		return fmt.Errorf("failed to create javasource directory: %w", err)
-	}
-
-	// Generate Java source
-	source := generateJavaSource(moduleName, actionName, javaCode, params, returnType, extraImports, extraCode)
-
-	// Write the file
-	filePath := filepath.Join(javaDir, actionName+".java")
-	if err := os.WriteFile(filePath, []byte(source), 0644); err != nil {
-		return fmt.Errorf("failed to write Java source file: %w", err)
-	}
-
-	return nil
-}
-
-// DeleteJavaSourceFile removes the Java source file for a dropped Java action.
-func (w *Writer) DeleteJavaSourceFile(moduleName, actionName string) error {
-	projectRoot := filepath.Dir(w.reader.path)
-	filePath := filepath.Join(projectRoot, "javasource", strings.ToLower(moduleName), "actions", actionName+".java")
-	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to delete Java source file: %w", err)
-	}
-	return nil
-}
-
-// RenameJavaSourceFile renames the Java source file when a Java action is renamed.
-func (w *Writer) RenameJavaSourceFile(moduleName, oldName, newName string) error {
-	projectRoot := filepath.Dir(w.reader.path)
-	dir := filepath.Join(projectRoot, "javasource", strings.ToLower(moduleName), "actions")
-	oldPath := filepath.Join(dir, oldName+".java")
-	newPath := filepath.Join(dir, newName+".java")
-	if err := os.Rename(oldPath, newPath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to rename Java source file: %w", err)
-	}
-	return nil
-}
-
-// ReadJavaSourceFile reads the Java source file for a Java action.
-func (w *Writer) ReadJavaSourceFile(moduleName, actionName string) (string, error) {
-	projectRoot := filepath.Dir(w.reader.path)
-	moduleNameLower := strings.ToLower(moduleName)
-	filePath := filepath.Join(projectRoot, "javasource", moduleNameLower, "actions", actionName+".java")
-
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read Java source file: %w", err)
-	}
-
-	return string(content), nil
 }
 
 // generateJavaSource generates the Java source code for a Java action.
