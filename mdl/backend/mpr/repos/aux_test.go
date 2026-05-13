@@ -65,9 +65,72 @@ func TestQualifiedNameResolver_ModuleNameByID_FromFixture(t *testing.T) {
 	}
 }
 
-// TestQualifiedNameResolver_ResolveQualifiedName_PortPending guards the
-// stubbed Stage 2 implementation. Once the body is ported, replace
-// t.Skip with a real round-trip assertion against a known fixture name.
-func TestQualifiedNameResolver_ResolveQualifiedName_PortPending(t *testing.T) {
-	t.Skip("resolver port pending: ResolveQualifiedName body stubbed in Stage 2; finish before MicroflowRepo or executor consumes Names")
+// TestResolveQualifiedName_FromFixture covers the four most common
+// kinds (microflow, page, entity, layout) plus an enumeration if the
+// fixture has any. Replaces the prior Stage-2-port-pending t.Skip.
+func TestResolveQualifiedName_FromFixture(t *testing.T) {
+	w := openTestWriter(t)
+	res := NewQualifiedNameResolver(w)
+
+	cases := []struct {
+		qn       string
+		wantKind string
+	}{
+		{"Administration.ChangeMyPassword", "microflow"},
+		{"Atlas_Web_Content.ACT_Login", "nanoflow"},
+		{"Administration.MyAccount", "page"},
+		{"Administration.Account", "entity"},
+		{"Atlas_Core.Atlas_Default", "layout"},
+		{"Administration.ReadMe", "snippet"},
+	}
+	for _, tc := range cases {
+		id, kind, err := res.ResolveQualifiedName(tc.qn)
+		if err != nil {
+			t.Errorf("ResolveQualifiedName(%q): unexpected error: %v", tc.qn, err)
+			continue
+		}
+		if kind != tc.wantKind {
+			t.Errorf("ResolveQualifiedName(%q) kind = %q, want %q", tc.qn, kind, tc.wantKind)
+		}
+		if id == "" {
+			t.Errorf("ResolveQualifiedName(%q) id = empty", tc.qn)
+		}
+	}
+}
+
+// TestResolveQualifiedName_NotFound asserts a fabricated QN whose
+// module exists but whose simple name does not yields an explicit
+// not-found error rather than silently returning empty.
+func TestResolveQualifiedName_NotFound(t *testing.T) {
+	w := openTestWriter(t)
+	res := NewQualifiedNameResolver(w)
+
+	id, kind, err := res.ResolveQualifiedName("Administration.NoSuchThing_zzzz_42")
+	if err == nil {
+		t.Fatalf("expected not-found error, got id=%q kind=%q", id, kind)
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("error = %v, want substring \"not found\"", err)
+	}
+	if id != "" || kind != "" {
+		t.Errorf("on not-found want empty id/kind, got id=%q kind=%q", id, kind)
+	}
+}
+
+// TestResolveQualifiedName_InvalidQN asserts that a QN missing the
+// "Module.Simple" structure surfaces an explicit malformed error.
+func TestResolveQualifiedName_InvalidQN(t *testing.T) {
+	w := openTestWriter(t)
+	res := NewQualifiedNameResolver(w)
+
+	for _, bad := range []string{"BadFormat", "", ".LeadingDot", "TrailingDot."} {
+		id, kind, err := res.ResolveQualifiedName(bad)
+		if err == nil {
+			t.Errorf("ResolveQualifiedName(%q) want error, got id=%q kind=%q", bad, id, kind)
+			continue
+		}
+		if !strings.Contains(err.Error(), "invalid qualified name") {
+			t.Errorf("ResolveQualifiedName(%q) error = %v, want substring \"invalid qualified name\"", bad, err)
+		}
+	}
 }
