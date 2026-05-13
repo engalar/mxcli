@@ -55,6 +55,7 @@
     "_doc": "ClassName.propertyName → BSON key where it differs from PascalCase(JS name). Wildcard *.prop matches any class.",
     "NavigationProfile.menuItemCollection":              "Menu",
     "NavigationProfile.roleBasedHomePages":              "HomeItems",
+    "AccessRule.moduleRoles":                            "AllowedModuleRoles",
     "Association.parent":                                "ParentPointer",
     "Association.child":                                 "ChildPointer",
     "CrossAssociation.parent":                           "ParentPointer",

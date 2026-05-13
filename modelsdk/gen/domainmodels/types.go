@@ -132,7 +132,7 @@ func (o *AccessRule) InitFromRaw(raw bson.Raw) {
 			o.memberAccesses.AppendFromDecode(child)
 		}
 	}
-	if val, err := raw.LookupErr("ModuleRoles"); err == nil {
+	if val, err := raw.LookupErr("AllowedModuleRoles"); err == nil {
 		if arr, ok := val.ArrayOK(); ok {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
@@ -2910,10 +2910,6 @@ func (o *RemoteAssociationSource) InitFromRaw(raw bson.Raw) {
 
 type RemoteEntitySourceDocument struct {
 	element.Base
-	name                 *property.Primitive[string]
-	documentation        *property.Primitive[string]
-	excluded             *property.Primitive[bool]
-	exportLevel          *property.Enum[string]
 	description          *property.Primitive[string]
 	catalogUrl           *property.Primitive[string]
 	icon                 *property.Primitive[string]
@@ -2929,46 +2925,6 @@ type RemoteEntitySourceDocument struct {
 	metadataHash         *property.Primitive[string]
 	validated            *property.Primitive[bool]
 	validatedEntities    *property.Primitive[string]
-}
-
-// Name returns the value of the name property.
-func (o *RemoteEntitySourceDocument) Name() string {
-	return o.name.Get()
-}
-
-// SetName sets the value of the name property.
-func (o *RemoteEntitySourceDocument) SetName(v string) {
-	o.name.Set(v)
-}
-
-// Documentation returns the value of the documentation property.
-func (o *RemoteEntitySourceDocument) Documentation() string {
-	return o.documentation.Get()
-}
-
-// SetDocumentation sets the value of the documentation property.
-func (o *RemoteEntitySourceDocument) SetDocumentation(v string) {
-	o.documentation.Set(v)
-}
-
-// Excluded returns the value of the excluded property.
-func (o *RemoteEntitySourceDocument) Excluded() bool {
-	return o.excluded.Get()
-}
-
-// SetExcluded sets the value of the excluded property.
-func (o *RemoteEntitySourceDocument) SetExcluded(v bool) {
-	o.excluded.Set(v)
-}
-
-// ExportLevel returns the value of the exportLevel property.
-func (o *RemoteEntitySourceDocument) ExportLevel() string {
-	return o.exportLevel.Get()
-}
-
-// SetExportLevel sets the value of the exportLevel property.
-func (o *RemoteEntitySourceDocument) SetExportLevel(v string) {
-	o.exportLevel.Set(v)
 }
 
 // Description returns the value of the description property.
@@ -3118,14 +3074,6 @@ func (o *RemoteEntitySourceDocument) ValidatedEntities() string {
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *RemoteEntitySourceDocument) InitFromRaw(raw bson.Raw) {
-	o.name.Init(raw)
-	o.documentation.Init(raw)
-	o.excluded.Init(raw)
-	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok {
-			o.exportLevel.SetFromDecode(s)
-		}
-	}
 	o.description.Init(raw)
 	o.catalogUrl.Init(raw)
 	o.icon.Init(raw)
@@ -3281,51 +3229,7 @@ func (o *ValidationRule) InitFromRaw(raw bson.Raw) {
 
 type ViewEntitySourceDocument struct {
 	element.Base
-	name          *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded      *property.Primitive[bool]
-	exportLevel   *property.Enum[string]
-	oql           *property.Primitive[string]
-}
-
-// Name returns the value of the name property.
-func (o *ViewEntitySourceDocument) Name() string {
-	return o.name.Get()
-}
-
-// SetName sets the value of the name property.
-func (o *ViewEntitySourceDocument) SetName(v string) {
-	o.name.Set(v)
-}
-
-// Documentation returns the value of the documentation property.
-func (o *ViewEntitySourceDocument) Documentation() string {
-	return o.documentation.Get()
-}
-
-// SetDocumentation sets the value of the documentation property.
-func (o *ViewEntitySourceDocument) SetDocumentation(v string) {
-	o.documentation.Set(v)
-}
-
-// Excluded returns the value of the excluded property.
-func (o *ViewEntitySourceDocument) Excluded() bool {
-	return o.excluded.Get()
-}
-
-// SetExcluded sets the value of the excluded property.
-func (o *ViewEntitySourceDocument) SetExcluded(v bool) {
-	o.excluded.Set(v)
-}
-
-// ExportLevel returns the value of the exportLevel property.
-func (o *ViewEntitySourceDocument) ExportLevel() string {
-	return o.exportLevel.Get()
-}
-
-// SetExportLevel sets the value of the exportLevel property.
-func (o *ViewEntitySourceDocument) SetExportLevel(v string) {
-	o.exportLevel.Set(v)
+	oql *property.Primitive[string]
 }
 
 // Oql returns the value of the oql property.
@@ -3340,14 +3244,6 @@ func (o *ViewEntitySourceDocument) SetOql(v string) {
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ViewEntitySourceDocument) InitFromRaw(raw bson.Raw) {
-	o.name.Init(raw)
-	o.documentation.Init(raw)
-	o.excluded.Init(raw)
-	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok {
-			o.exportLevel.SetFromDecode(s)
-		}
-	}
 	o.oql.Init(raw)
 }
 
@@ -3363,7 +3259,7 @@ func initAccessRule() *AccessRule {
 	o.SetTypeName("DomainModels$AccessRule")
 	o.memberAccesses = property.NewPartList[element.Element]("MemberAccesses")
 	o.memberAccesses.Bind(&o.Base, 0)
-	o.moduleRoles = property.NewByNameRefList[element.Element]("ModuleRoles", "Security$ModuleRole")
+	o.moduleRoles = property.NewByNameRefList[element.Element]("AllowedModuleRoles", "Security$ModuleRole")
 	o.moduleRoles.Bind(&o.Base, 1)
 	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
 	o.documentation.Bind(&o.Base, 2)
@@ -4560,17 +4456,9 @@ func NewValidationRule() *ValidationRule {
 func initViewEntitySourceDocument() *ViewEntitySourceDocument {
 	o := &ViewEntitySourceDocument{}
 	o.SetTypeName("DomainModels$ViewEntitySourceDocument")
-	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
-	o.name.Bind(&o.Base, 0)
-	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
-	o.documentation.Bind(&o.Base, 1)
-	o.excluded = property.NewPrimitive[bool]("Excluded", property.DecodeBool)
-	o.excluded.Bind(&o.Base, 2)
-	o.exportLevel = property.NewEnum[string]("ExportLevel")
-	o.exportLevel.Bind(&o.Base, 3)
 	o.oql = property.NewPrimitive[string]("Oql", property.DecodeString)
-	o.oql.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.oql})
+	o.oql.Bind(&o.Base, 0)
+	o.SetProperties([]element.Property{o.oql})
 	return o
 }
 
