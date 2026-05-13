@@ -500,18 +500,14 @@ func (w *Writer) DeleteViewEntitySourceDocumentByName(moduleName, docName string
 	return nil
 }
 
-func (w *Writer) serializeDomainModel(dm *domainmodel.DomainModel) ([]byte, error) {
-	// Look up module name for qualified names in validation rules
-	moduleName := ""
-	if dm.ContainerID != "" {
-		module, err := w.reader.GetModule(dm.ContainerID)
-		if err == nil && module != nil {
-			moduleName = module.Name
-		}
-	}
-
+// SerializeDomainModel encodes a DomainModel into canonical BSON bytes without
+// requiring a *Writer. Callers pass the owning module name (used to build
+// qualified attribute names inside validation rules) and the project version
+// (used by serializeEntity for version-gated fields). Decoupling from the
+// reader lets MprBackend serialize via gen-native paths without holding
+// b.writer.
+func SerializeDomainModel(dm *domainmodel.DomainModel, moduleName string, pv *version.ProjectVersion) ([]byte, error) {
 	// Entities array with version prefix 3
-	pv := w.reader.ProjectVersion()
 	entities := bson.A{int32(3)}
 	for _, e := range dm.Entities {
 		entities = append(entities, serializeEntity(e, moduleName, pv))
@@ -540,6 +536,18 @@ func (w *Writer) serializeDomainModel(dm *domainmodel.DomainModel) ([]byte, erro
 		{Key: "CrossAssociations", Value: crossAssociations},
 	}
 	return bson.Marshal(doc)
+}
+
+func (w *Writer) serializeDomainModel(dm *domainmodel.DomainModel) ([]byte, error) {
+	// Look up module name for qualified names in validation rules
+	moduleName := ""
+	if dm.ContainerID != "" {
+		module, err := w.reader.GetModule(dm.ContainerID)
+		if err == nil && module != nil {
+			moduleName = module.Name
+		}
+	}
+	return SerializeDomainModel(dm, moduleName, w.reader.ProjectVersion())
 }
 
 func serializeEntity(e *domainmodel.Entity, moduleName string, pv *version.ProjectVersion) bson.D {
