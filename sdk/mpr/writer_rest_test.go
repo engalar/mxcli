@@ -10,7 +10,6 @@ import (
 )
 
 func TestSerializeConsumedRestServiceBasic(t *testing.T) {
-	w := &Writer{}
 	svc := &model.ConsumedRestService{
 		BaseElement: model.BaseElement{
 			ID:       "test-rest-id",
@@ -21,7 +20,7 @@ func TestSerializeConsumedRestServiceBasic(t *testing.T) {
 		BaseUrl:     "https://petstore.swagger.io/v2",
 	}
 
-	data, err := w.serializeConsumedRestService(svc)
+	data, err := serializeConsumedRestService(svc)
 	if err != nil {
 		t.Fatalf("serialize failed: %v", err)
 	}
@@ -49,7 +48,6 @@ func TestSerializeConsumedRestServiceBasic(t *testing.T) {
 }
 
 func TestSerializeConsumedRestServiceWithAuth(t *testing.T) {
-	w := &Writer{}
 	svc := &model.ConsumedRestService{
 		BaseElement: model.BaseElement{
 			ID: "test-rest-auth-id",
@@ -64,7 +62,7 @@ func TestSerializeConsumedRestServiceWithAuth(t *testing.T) {
 		},
 	}
 
-	data, err := w.serializeConsumedRestService(svc)
+	data, err := serializeConsumedRestService(svc)
 	if err != nil {
 		t.Fatalf("serialize failed: %v", err)
 	}
@@ -99,7 +97,6 @@ func TestSerializeConsumedRestServiceWithAuth(t *testing.T) {
 }
 
 func TestSerializeConsumedRestServiceWithConstantAuth(t *testing.T) {
-	w := &Writer{}
 	svc := &model.ConsumedRestService{
 		BaseElement: model.BaseElement{
 			ID: "test-rest-const-auth",
@@ -114,7 +111,7 @@ func TestSerializeConsumedRestServiceWithConstantAuth(t *testing.T) {
 		},
 	}
 
-	data, err := w.serializeConsumedRestService(svc)
+	data, err := serializeConsumedRestService(svc)
 	if err != nil {
 		t.Fatalf("serialize failed: %v", err)
 	}
@@ -335,7 +332,6 @@ func TestHttpMethodToMendix(t *testing.T) {
 }
 
 func TestSerializeConsumedRestServiceFullRoundtrip(t *testing.T) {
-	w := &Writer{}
 	svc := &model.ConsumedRestService{
 		BaseElement: model.BaseElement{
 			ID: "test-roundtrip-id",
@@ -386,7 +382,7 @@ func TestSerializeConsumedRestServiceFullRoundtrip(t *testing.T) {
 		},
 	}
 
-	data, err := w.serializeConsumedRestService(svc)
+	data, err := serializeConsumedRestService(svc)
 	if err != nil {
 		t.Fatalf("serialize failed: %v", err)
 	}

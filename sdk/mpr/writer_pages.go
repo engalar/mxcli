@@ -19,7 +19,7 @@ func (w *Writer) CreatePage(page *pages.Page) error {
 	}
 	page.TypeName = "Forms$Page"
 
-	contents, err := w.serializePage(page)
+	contents, err := serializePage(page)
 	if err != nil {
 		return fmt.Errorf("failed to serialize page: %w", err)
 	}
@@ -29,7 +29,7 @@ func (w *Writer) CreatePage(page *pages.Page) error {
 
 // UpdatePage updates an existing page.
 func (w *Writer) UpdatePage(page *pages.Page) error {
-	contents, err := w.serializePage(page)
+	contents, err := serializePage(page)
 	if err != nil {
 		return fmt.Errorf("failed to serialize page: %w", err)
 	}
@@ -55,7 +55,7 @@ func (w *Writer) CreateLayout(layout *pages.Layout) error {
 	}
 	layout.TypeName = "Forms$Layout"
 
-	contents, err := w.serializeLayout(layout)
+	contents, err := serializeLayout(layout)
 	if err != nil {
 		return fmt.Errorf("failed to serialize layout: %w", err)
 	}
@@ -65,7 +65,7 @@ func (w *Writer) CreateLayout(layout *pages.Layout) error {
 
 // UpdateLayout updates an existing layout.
 func (w *Writer) UpdateLayout(layout *pages.Layout) error {
-	contents, err := w.serializeLayout(layout)
+	contents, err := serializeLayout(layout)
 	if err != nil {
 		return fmt.Errorf("failed to serialize layout: %w", err)
 	}
@@ -85,7 +85,7 @@ func (w *Writer) CreateSnippet(snippet *pages.Snippet) error {
 	}
 	snippet.TypeName = "Forms$Snippet"
 
-	contents, err := w.serializeSnippet(snippet)
+	contents, err := serializeSnippet(snippet)
 	if err != nil {
 		return fmt.Errorf("failed to serialize snippet: %w", err)
 	}
@@ -100,7 +100,7 @@ func (w *Writer) DeleteSnippet(id model.ID) error {
 
 // UpdateSnippet updates an existing snippet.
 func (w *Writer) UpdateSnippet(snippet *pages.Snippet) error {
-	contents, err := w.serializeSnippet(snippet)
+	contents, err := serializeSnippet(snippet)
 	if err != nil {
 		return fmt.Errorf("failed to serialize snippet: %w", err)
 	}
@@ -114,7 +114,7 @@ func (w *Writer) MoveSnippet(snippet *pages.Snippet) error {
 	return w.moveUnitByID(string(snippet.ID), string(snippet.ContainerID))
 }
 
-func (w *Writer) serializePage(page *pages.Page) ([]byte, error) {
+func serializePage(page *pages.Page) ([]byte, error) {
 	// Build document with Mendix 10+ format (Forms$Page)
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(string(page.ID))},
@@ -267,7 +267,7 @@ func (w *Writer) serializePage(page *pages.Page) ([]byte, error) {
 	return bson.Marshal(doc)
 }
 
-func (w *Writer) serializeLayout(layout *pages.Layout) ([]byte, error) {
+func serializeLayout(layout *pages.Layout) ([]byte, error) {
 	doc := bson.M{
 		"$ID":           string(layout.ID),
 		"$Type":         layout.TypeName,
@@ -278,7 +278,7 @@ func (w *Writer) serializeLayout(layout *pages.Layout) ([]byte, error) {
 	return bson.Marshal(doc)
 }
 
-func (w *Writer) serializeSnippet(snippet *pages.Snippet) ([]byte, error) {
+func serializeSnippet(snippet *pages.Snippet) ([]byte, error) {
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(string(snippet.ID))},
 		{Key: "$Type", Value: "Forms$Snippet"},

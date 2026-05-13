@@ -18,7 +18,7 @@ func safeInt64(v int) int64 {
 // UpdateProjectSettings updates the project settings document.
 // The project settings document always exists, so this only needs update, not create/delete.
 func (w *Writer) UpdateProjectSettings(ps *model.ProjectSettings) error {
-	contents, err := w.serializeProjectSettings(ps)
+	contents, err := serializeProjectSettings(ps)
 	if err != nil {
 		return fmt.Errorf("failed to serialize project settings: %w", err)
 	}
@@ -29,7 +29,7 @@ func (w *Writer) UpdateProjectSettings(ps *model.ProjectSettings) error {
 // serializeProjectSettings converts ProjectSettings to BSON bytes.
 // It uses the RawParts for round-trip fidelity, updating only the parts
 // that have been parsed and modified.
-func (w *Writer) serializeProjectSettings(ps *model.ProjectSettings) ([]byte, error) {
+func serializeProjectSettings(ps *model.ProjectSettings) ([]byte, error) {
 	doc := bson.M{
 		"$ID":   idToBsonBinary(string(ps.ID)),
 		"$Type": "Settings$ProjectSettings",

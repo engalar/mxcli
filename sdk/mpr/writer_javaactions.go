@@ -19,7 +19,7 @@ func (w *Writer) CreateJavaAction(ja *javaactions.JavaAction) error {
 	}
 	ja.TypeName = "JavaActions$JavaAction"
 
-	contents, err := w.serializeJavaAction(ja)
+	contents, err := serializeJavaAction(ja)
 	if err != nil {
 		return fmt.Errorf("failed to serialize java action: %w", err)
 	}
@@ -29,7 +29,7 @@ func (w *Writer) CreateJavaAction(ja *javaactions.JavaAction) error {
 
 // UpdateJavaAction updates an existing Java action.
 func (w *Writer) UpdateJavaAction(ja *javaactions.JavaAction) error {
-	contents, err := w.serializeJavaAction(ja)
+	contents, err := serializeJavaAction(ja)
 	if err != nil {
 		return fmt.Errorf("failed to serialize java action: %w", err)
 	}
@@ -209,7 +209,7 @@ func getJavaParamType(t javaactions.CodeActionParameterType) string {
 }
 
 // serializeJavaAction serializes a Java action to BSON.
-func (w *Writer) serializeJavaAction(ja *javaactions.JavaAction) ([]byte, error) {
+func serializeJavaAction(ja *javaactions.JavaAction) ([]byte, error) {
 	// Build parameters array (storageListType: 2)
 	params := bson.A{int32(2)} // Array type marker for storageListType: 2
 	for _, param := range ja.Parameters {

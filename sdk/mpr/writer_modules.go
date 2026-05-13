@@ -30,7 +30,7 @@ func (w *Writer) CreateModule(module *model.Module) error {
 	}
 
 	// Serialize and insert module
-	contents, err := w.serializeModule(module)
+	contents, err := serializeModule(module)
 	if err != nil {
 		return fmt.Errorf("failed to serialize module: %w", err)
 	}
@@ -58,7 +58,7 @@ func (w *Writer) CreateModule(module *model.Module) error {
 
 	// Create empty module security for the module
 	msID := generateUUID()
-	msContents, err := w.serializeModuleSecurity(msID)
+	msContents, err := serializeModuleSecurity(msID)
 	if err != nil {
 		return fmt.Errorf("failed to serialize module security: %w", err)
 	}
@@ -69,7 +69,7 @@ func (w *Writer) CreateModule(module *model.Module) error {
 
 	// Create module settings for the module
 	settingsID := generateUUID()
-	settingsContents, err := w.serializeModuleSettings(settingsID)
+	settingsContents, err := serializeModuleSettings(settingsID)
 	if err != nil {
 		return fmt.Errorf("failed to serialize module settings: %w", err)
 	}
@@ -83,7 +83,7 @@ func (w *Writer) CreateModule(module *model.Module) error {
 
 // UpdateModule updates an existing module.
 func (w *Writer) UpdateModule(module *model.Module) error {
-	contents, err := w.serializeModule(module)
+	contents, err := serializeModule(module)
 	if err != nil {
 		return fmt.Errorf("failed to serialize module: %w", err)
 	}
@@ -163,7 +163,7 @@ func (w *Writer) CreateFolder(folder *model.Folder) error {
 	folder.TypeName = "Projects$Folder"
 
 	// Serialize and insert folder
-	contents, err := w.serializeFolder(folder)
+	contents, err := serializeFolder(folder)
 	if err != nil {
 		return fmt.Errorf("failed to serialize folder: %w", err)
 	}
@@ -176,7 +176,7 @@ func (w *Writer) CreateFolder(folder *model.Folder) error {
 }
 
 // serializeFolder serializes a folder to BSON.
-func (w *Writer) serializeFolder(folder *model.Folder) ([]byte, error) {
+func serializeFolder(folder *model.Folder) ([]byte, error) {
 	doc := bson.M{
 		"$ID":   idToBsonBinary(string(folder.ID)),
 		"$Type": "Projects$Folder",
@@ -215,7 +215,7 @@ func (w *Writer) MoveFolder(id model.ID, newContainerID model.ID) error {
 	return w.moveUnitByID(string(id), string(newContainerID))
 }
 
-func (w *Writer) serializeModuleSecurity(id string) ([]byte, error) {
+func serializeModuleSecurity(id string) ([]byte, error) {
 	doc := bson.M{
 		"$ID":         idToBsonBinary(id),
 		"$Type":       "Security$ModuleSecurity",
@@ -224,7 +224,7 @@ func (w *Writer) serializeModuleSecurity(id string) ([]byte, error) {
 	return bson.Marshal(doc)
 }
 
-func (w *Writer) serializeModuleSettings(id string) ([]byte, error) {
+func serializeModuleSettings(id string) ([]byte, error) {
 	doc := bson.M{
 		"$ID":                 idToBsonBinary(id),
 		"$Type":               "Projects$ModuleSettings",
@@ -311,7 +311,7 @@ func (w *Writer) serializeModuleSettingsFull(ms *types.ModuleSettings) ([]byte, 
 	return bson.Marshal(doc)
 }
 
-func (w *Writer) serializeModule(module *model.Module) ([]byte, error) {
+func serializeModule(module *model.Module) ([]byte, error) {
 	doc := bson.M{
 		"$ID":                     idToBsonBinary(string(module.ID)),
 		"$Type":                   "Projects$ModuleImpl",

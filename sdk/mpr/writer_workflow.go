@@ -18,7 +18,7 @@ func (w *Writer) CreateWorkflow(wf *workflows.Workflow) error {
 	}
 	wf.TypeName = "Workflows$Workflow"
 
-	contents, err := w.serializeWorkflow(wf)
+	contents, err := serializeWorkflow(wf)
 	if err != nil {
 		return fmt.Errorf("failed to serialize workflow: %w", err)
 	}
@@ -30,7 +30,7 @@ func (w *Writer) CreateWorkflow(wf *workflows.Workflow) error {
 func (w *Writer) UpdateWorkflow(wf *workflows.Workflow) error {
 	wf.TypeName = "Workflows$Workflow"
 
-	contents, err := w.serializeWorkflow(wf)
+	contents, err := serializeWorkflow(wf)
 	if err != nil {
 		return fmt.Errorf("failed to serialize workflow: %w", err)
 	}
@@ -43,7 +43,7 @@ func (w *Writer) DeleteWorkflow(id model.ID) error {
 	return w.deleteUnit(string(id))
 }
 
-func (w *Writer) serializeWorkflow(wf *workflows.Workflow) ([]byte, error) {
+func serializeWorkflow(wf *workflows.Workflow) ([]byte, error) {
 	// AdminPage is a PartProperty (object or null), not a string.
 	// When empty, it must be null, not "".
 	var adminPageValue any

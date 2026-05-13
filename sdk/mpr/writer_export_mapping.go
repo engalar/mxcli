@@ -17,7 +17,7 @@ func (w *Writer) CreateExportMapping(em *model.ExportMapping) error {
 	}
 	em.TypeName = "ExportMappings$ExportMapping"
 
-	contents, err := w.serializeExportMapping(em)
+	contents, err := serializeExportMapping(em)
 	if err != nil {
 		return fmt.Errorf("failed to serialize export mapping: %w", err)
 	}
@@ -27,7 +27,7 @@ func (w *Writer) CreateExportMapping(em *model.ExportMapping) error {
 
 // UpdateExportMapping updates an existing export mapping document.
 func (w *Writer) UpdateExportMapping(em *model.ExportMapping) error {
-	contents, err := w.serializeExportMapping(em)
+	contents, err := serializeExportMapping(em)
 	if err != nil {
 		return fmt.Errorf("failed to serialize export mapping: %w", err)
 	}
@@ -44,7 +44,7 @@ func (w *Writer) MoveExportMapping(em *model.ExportMapping) error {
 	return w.moveUnitByID(string(em.ID), string(em.ContainerID))
 }
 
-func (w *Writer) serializeExportMapping(em *model.ExportMapping) ([]byte, error) {
+func serializeExportMapping(em *model.ExportMapping) ([]byte, error) {
 	elements := bson.A{int32(2)}
 	for _, elem := range em.Elements {
 		elements = append(elements, serializeExportMappingElement(elem, "(Object)"))

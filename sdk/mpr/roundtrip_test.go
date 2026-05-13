@@ -37,14 +37,13 @@ func toNDSL(t *testing.T, data []byte) string {
 func roundtripPage(t *testing.T, baselineBytes []byte) {
 	t.Helper()
 	r := testReader()
-	w := testWriter()
 
 	// First pass: baseline → parse → serialize
 	page1, err := r.parsePage("test-unit-id", "test-container-id", baselineBytes)
 	if err != nil {
 		t.Fatalf("parsePage (pass 1) failed: %v", err)
 	}
-	serialized1, err := w.serializePage(page1)
+	serialized1, err := serializePage(page1)
 	if err != nil {
 		t.Fatalf("serializePage (pass 1) failed: %v", err)
 	}
@@ -54,7 +53,7 @@ func roundtripPage(t *testing.T, baselineBytes []byte) {
 	if err != nil {
 		t.Fatalf("parsePage (pass 2) failed: %v", err)
 	}
-	serialized2, err := w.serializePage(page2)
+	serialized2, err := serializePage(page2)
 	if err != nil {
 		t.Fatalf("serializePage (pass 2) failed: %v", err)
 	}
@@ -142,13 +141,12 @@ func roundtripNanoflow(t *testing.T, baselineBytes []byte) {
 func roundtripSnippet(t *testing.T, baselineBytes []byte) {
 	t.Helper()
 	r := testReader()
-	w := testWriter()
 
 	snippet1, err := r.parseSnippet("test-unit-id", "test-container-id", baselineBytes)
 	if err != nil {
 		t.Fatalf("parseSnippet (pass 1) failed: %v", err)
 	}
-	serialized1, err := w.serializeSnippet(snippet1)
+	serialized1, err := serializeSnippet(snippet1)
 	if err != nil {
 		t.Fatalf("serializeSnippet (pass 1) failed: %v", err)
 	}
@@ -157,7 +155,7 @@ func roundtripSnippet(t *testing.T, baselineBytes []byte) {
 	if err != nil {
 		t.Fatalf("parseSnippet (pass 2) failed: %v", err)
 	}
-	serialized2, err := w.serializeSnippet(snippet2)
+	serialized2, err := serializeSnippet(snippet2)
 	if err != nil {
 		t.Fatalf("serializeSnippet (pass 2) failed: %v", err)
 	}
@@ -175,13 +173,12 @@ func roundtripSnippet(t *testing.T, baselineBytes []byte) {
 func roundtripEnumeration(t *testing.T, baselineBytes []byte) {
 	t.Helper()
 	r := testReader()
-	w := testWriter()
 
 	enum1, err := r.parseEnumeration("test-unit-id", "test-container-id", baselineBytes)
 	if err != nil {
 		t.Fatalf("parseEnumeration (pass 1) failed: %v", err)
 	}
-	serialized1, err := w.serializeEnumeration(enum1)
+	serialized1, err := serializeEnumeration(enum1)
 	if err != nil {
 		t.Fatalf("serializeEnumeration (pass 1) failed: %v", err)
 	}
@@ -190,7 +187,7 @@ func roundtripEnumeration(t *testing.T, baselineBytes []byte) {
 	if err != nil {
 		t.Fatalf("parseEnumeration (pass 2) failed: %v", err)
 	}
-	serialized2, err := w.serializeEnumeration(enum2)
+	serialized2, err := serializeEnumeration(enum2)
 	if err != nil {
 		t.Fatalf("serializeEnumeration (pass 2) failed: %v", err)
 	}

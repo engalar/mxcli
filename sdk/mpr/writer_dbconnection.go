@@ -16,7 +16,7 @@ func (w *Writer) CreateDatabaseConnection(conn *model.DatabaseConnection) error 
 	}
 	conn.TypeName = "DatabaseConnector$DatabaseConnection"
 
-	contents, err := w.serializeDatabaseConnection(conn)
+	contents, err := serializeDatabaseConnection(conn)
 	if err != nil {
 		return fmt.Errorf("failed to serialize database connection: %w", err)
 	}
@@ -27,7 +27,7 @@ func (w *Writer) CreateDatabaseConnection(conn *model.DatabaseConnection) error 
 
 // UpdateDatabaseConnection updates an existing database connection.
 func (w *Writer) UpdateDatabaseConnection(conn *model.DatabaseConnection) error {
-	contents, err := w.serializeDatabaseConnection(conn)
+	contents, err := serializeDatabaseConnection(conn)
 	if err != nil {
 		return fmt.Errorf("failed to serialize database connection: %w", err)
 	}
@@ -45,7 +45,7 @@ func (w *Writer) DeleteDatabaseConnection(id model.ID) error {
 	return w.deleteUnit(string(id))
 }
 
-func (w *Writer) serializeDatabaseConnection(conn *model.DatabaseConnection) ([]byte, error) {
+func serializeDatabaseConnection(conn *model.DatabaseConnection) ([]byte, error) {
 	// Build ConnectionInput — stores actual JDBC URL for Studio Pro development
 	connInput := bson.M{
 		"$Type": "DatabaseConnector$ConnectionString",

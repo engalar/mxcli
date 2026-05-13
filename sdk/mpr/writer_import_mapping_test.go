@@ -14,7 +14,6 @@ import (
 // "ImportMappings$ValueMappingElement" — the namespace prefix is never repeated in the
 // element name. Using the wrong name causes TypeCacheUnknownTypeException in Studio Pro.
 func TestSerializeImportMapping_TypeNames(t *testing.T) {
-	w := &Writer{}
 	im := &model.ImportMapping{
 		BaseElement: model.BaseElement{
 			ID:       "test-im-id",
@@ -50,7 +49,7 @@ func TestSerializeImportMapping_TypeNames(t *testing.T) {
 		},
 	}
 
-	data, err := w.serializeImportMapping(im)
+	data, err := serializeImportMapping(im)
 	if err != nil {
 		t.Fatalf("serializeImportMapping: %v", err)
 	}
@@ -97,14 +96,13 @@ func TestSerializeImportMapping_TypeNames(t *testing.T) {
 }
 
 func TestSerializeImportMapping_RequiredFields(t *testing.T) {
-	w := &Writer{}
 	im := &model.ImportMapping{
 		BaseElement: model.BaseElement{ID: "test-im-required"},
 		ContainerID: "test-module-id",
 		Name:        "MinimalMapping",
 	}
 
-	data, err := w.serializeImportMapping(im)
+	data, err := serializeImportMapping(im)
 	if err != nil {
 		t.Fatalf("serializeImportMapping: %v", err)
 	}
@@ -138,7 +136,6 @@ func TestSerializeImportMapping_RequiredFields(t *testing.T) {
 }
 
 func TestSerializeImportMapping_DefaultExportLevel(t *testing.T) {
-	w := &Writer{}
 	im := &model.ImportMapping{
 		BaseElement: model.BaseElement{ID: "test-im-default-export"},
 		ContainerID: "test-module-id",
@@ -146,7 +143,7 @@ func TestSerializeImportMapping_DefaultExportLevel(t *testing.T) {
 		// ExportLevel intentionally omitted
 	}
 
-	data, err := w.serializeImportMapping(im)
+	data, err := serializeImportMapping(im)
 	if err != nil {
 		t.Fatalf("serializeImportMapping: %v", err)
 	}
@@ -160,7 +157,6 @@ func TestSerializeImportMapping_DefaultExportLevel(t *testing.T) {
 }
 
 func TestSerializeImportMapping_WithJsonStructureRef(t *testing.T) {
-	w := &Writer{}
 	im := &model.ImportMapping{
 		BaseElement:   model.BaseElement{ID: "test-im-js-ref"},
 		ContainerID:   "test-module-id",
@@ -168,7 +164,7 @@ func TestSerializeImportMapping_WithJsonStructureRef(t *testing.T) {
 		JsonStructure: "MyModule.PetJsonStructure",
 	}
 
-	data, err := w.serializeImportMapping(im)
+	data, err := serializeImportMapping(im)
 	if err != nil {
 		t.Fatalf("serializeImportMapping: %v", err)
 	}
@@ -182,7 +178,6 @@ func TestSerializeImportMapping_WithJsonStructureRef(t *testing.T) {
 }
 
 func TestSerializeImportMapping_FindOrCreateUsesFindWithCreateBackup(t *testing.T) {
-	w := &Writer{}
 	im := &model.ImportMapping{
 		BaseElement: model.BaseElement{ID: "test-im-upsert"},
 		ContainerID: "test-module-id",
@@ -197,7 +192,7 @@ func TestSerializeImportMapping_FindOrCreateUsesFindWithCreateBackup(t *testing.
 		},
 	}
 
-	data, err := w.serializeImportMapping(im)
+	data, err := serializeImportMapping(im)
 	if err != nil {
 		t.Fatalf("serializeImportMapping: %v", err)
 	}

@@ -17,7 +17,7 @@ func (w *Writer) CreateImportMapping(im *model.ImportMapping) error {
 	}
 	im.TypeName = "ImportMappings$ImportMapping"
 
-	contents, err := w.serializeImportMapping(im)
+	contents, err := serializeImportMapping(im)
 	if err != nil {
 		return fmt.Errorf("failed to serialize import mapping: %w", err)
 	}
@@ -27,7 +27,7 @@ func (w *Writer) CreateImportMapping(im *model.ImportMapping) error {
 
 // UpdateImportMapping updates an existing import mapping document.
 func (w *Writer) UpdateImportMapping(im *model.ImportMapping) error {
-	contents, err := w.serializeImportMapping(im)
+	contents, err := serializeImportMapping(im)
 	if err != nil {
 		return fmt.Errorf("failed to serialize import mapping: %w", err)
 	}
@@ -44,7 +44,7 @@ func (w *Writer) MoveImportMapping(im *model.ImportMapping) error {
 	return w.moveUnitByID(string(im.ID), string(im.ContainerID))
 }
 
-func (w *Writer) serializeImportMapping(im *model.ImportMapping) ([]byte, error) {
+func serializeImportMapping(im *model.ImportMapping) ([]byte, error) {
 	elements := bson.A{int32(2)}
 	for _, elem := range im.Elements {
 		elements = append(elements, serializeImportMappingElement(elem, "(Object)"))

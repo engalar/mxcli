@@ -14,7 +14,6 @@ import (
 // "ExportMappings$ValueMappingElement" — the namespace prefix is never repeated.
 // Using "ExportMappings$ExportObjectMappingElement" causes TypeCacheUnknownTypeException.
 func TestSerializeExportMapping_TypeNames(t *testing.T) {
-	w := &Writer{}
 	em := &model.ExportMapping{
 		BaseElement: model.BaseElement{
 			ID:       "test-em-id",
@@ -53,7 +52,7 @@ func TestSerializeExportMapping_TypeNames(t *testing.T) {
 		},
 	}
 
-	data, err := w.serializeExportMapping(em)
+	data, err := serializeExportMapping(em)
 	if err != nil {
 		t.Fatalf("serializeExportMapping: %v", err)
 	}
@@ -96,7 +95,6 @@ func TestSerializeExportMapping_TypeNames(t *testing.T) {
 }
 
 func TestSerializeExportMapping_DefaultNullValueOption(t *testing.T) {
-	w := &Writer{}
 	em := &model.ExportMapping{
 		BaseElement: model.BaseElement{ID: "test-em-default-null"},
 		ContainerID: "test-module-id",
@@ -104,7 +102,7 @@ func TestSerializeExportMapping_DefaultNullValueOption(t *testing.T) {
 		// NullValueOption intentionally omitted — should default to "LeaveOutElement"
 	}
 
-	data, err := w.serializeExportMapping(em)
+	data, err := serializeExportMapping(em)
 	if err != nil {
 		t.Fatalf("serializeExportMapping: %v", err)
 	}
@@ -119,14 +117,13 @@ func TestSerializeExportMapping_DefaultNullValueOption(t *testing.T) {
 }
 
 func TestSerializeExportMapping_RequiredFields(t *testing.T) {
-	w := &Writer{}
 	em := &model.ExportMapping{
 		BaseElement: model.BaseElement{ID: "test-em-required"},
 		ContainerID: "test-module-id",
 		Name:        "MinimalExportMapping",
 	}
 
-	data, err := w.serializeExportMapping(em)
+	data, err := serializeExportMapping(em)
 	if err != nil {
 		t.Fatalf("serializeExportMapping: %v", err)
 	}
@@ -153,7 +150,6 @@ func TestSerializeExportMapping_RequiredFields(t *testing.T) {
 }
 
 func TestSerializeExportMapping_WithJsonStructureRef(t *testing.T) {
-	w := &Writer{}
 	em := &model.ExportMapping{
 		BaseElement:   model.BaseElement{ID: "test-em-js-ref"},
 		ContainerID:   "test-module-id",
@@ -161,7 +157,7 @@ func TestSerializeExportMapping_WithJsonStructureRef(t *testing.T) {
 		JsonStructure: "MyModule.PetJsonStructure",
 	}
 
-	data, err := w.serializeExportMapping(em)
+	data, err := serializeExportMapping(em)
 	if err != nil {
 		t.Fatalf("serializeExportMapping: %v", err)
 	}
@@ -175,7 +171,6 @@ func TestSerializeExportMapping_WithJsonStructureRef(t *testing.T) {
 }
 
 func TestSerializeExportMapping_NullValueOptionSendAsNil(t *testing.T) {
-	w := &Writer{}
 	em := &model.ExportMapping{
 		BaseElement:     model.BaseElement{ID: "test-em-send-nil"},
 		ContainerID:     "test-module-id",
@@ -183,7 +178,7 @@ func TestSerializeExportMapping_NullValueOptionSendAsNil(t *testing.T) {
 		NullValueOption: "SendAsNil",
 	}
 
-	data, err := w.serializeExportMapping(em)
+	data, err := serializeExportMapping(em)
 	if err != nil {
 		t.Fatalf("serializeExportMapping: %v", err)
 	}

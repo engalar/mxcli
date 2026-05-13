@@ -22,7 +22,7 @@ func (w *Writer) CreateConsumedODataService(svc *model.ConsumedODataService) err
 	}
 	svc.TypeName = "Rest$ConsumedODataService"
 
-	contents, err := w.serializeConsumedODataService(svc)
+	contents, err := serializeConsumedODataService(svc)
 	if err != nil {
 		return fmt.Errorf("failed to serialize consumed OData service: %w", err)
 	}
@@ -32,7 +32,7 @@ func (w *Writer) CreateConsumedODataService(svc *model.ConsumedODataService) err
 
 // UpdateConsumedODataService updates an existing consumed OData service.
 func (w *Writer) UpdateConsumedODataService(svc *model.ConsumedODataService) error {
-	contents, err := w.serializeConsumedODataService(svc)
+	contents, err := serializeConsumedODataService(svc)
 	if err != nil {
 		return fmt.Errorf("failed to serialize consumed OData service: %w", err)
 	}
@@ -46,7 +46,7 @@ func (w *Writer) DeleteConsumedODataService(id model.ID) error {
 }
 
 // serializeConsumedODataService converts a ConsumedODataService to BSON bytes.
-func (w *Writer) serializeConsumedODataService(svc *model.ConsumedODataService) ([]byte, error) {
+func serializeConsumedODataService(svc *model.ConsumedODataService) ([]byte, error) {
 	doc := bson.M{
 		"$ID":                  idToBsonBinary(string(svc.ID)),
 		"$Type":                "Rest$ConsumedODataService",
@@ -178,7 +178,7 @@ func (w *Writer) CreatePublishedODataService(svc *model.PublishedODataService) e
 	}
 	svc.TypeName = "ODataPublish$PublishedODataService2"
 
-	contents, err := w.serializePublishedODataService(svc)
+	contents, err := serializePublishedODataService(svc)
 	if err != nil {
 		return fmt.Errorf("failed to serialize published OData service: %w", err)
 	}
@@ -188,7 +188,7 @@ func (w *Writer) CreatePublishedODataService(svc *model.PublishedODataService) e
 
 // UpdatePublishedODataService updates an existing published OData service.
 func (w *Writer) UpdatePublishedODataService(svc *model.PublishedODataService) error {
-	contents, err := w.serializePublishedODataService(svc)
+	contents, err := serializePublishedODataService(svc)
 	if err != nil {
 		return fmt.Errorf("failed to serialize published OData service: %w", err)
 	}
@@ -202,7 +202,7 @@ func (w *Writer) DeletePublishedODataService(id model.ID) error {
 }
 
 // serializePublishedODataService converts a PublishedODataService to BSON bytes.
-func (w *Writer) serializePublishedODataService(svc *model.PublishedODataService) ([]byte, error) {
+func serializePublishedODataService(svc *model.PublishedODataService) ([]byte, error) {
 	// Authentication types array (versioned: starts with int32(3))
 	authTypes := bson.A{int32(3)}
 	for _, at := range svc.AuthenticationTypes {
