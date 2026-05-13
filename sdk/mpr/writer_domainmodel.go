@@ -250,37 +250,6 @@ func (w *Writer) MoveEntity(entity *domainmodel.Entity, sourceDMID, targetDMID m
 	return convertedAssocs, nil
 }
 
-// UpdateEnumerationRefsInAllDomainModels updates enumeration references across all domain models.
-// When an enumeration is moved to a different module, its qualified name changes and all
-// EnumerationAttributeType references need to be updated.
-func (w *Writer) UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName string) error {
-	dms, err := w.reader.ListDomainModels()
-	if err != nil {
-		return fmt.Errorf("failed to list domain models: %w", err)
-	}
-
-	for _, dm := range dms {
-		changed := false
-		for _, entity := range dm.Entities {
-			for _, attr := range entity.Attributes {
-				if enumType, ok := attr.Type.(*domainmodel.EnumerationAttributeType); ok {
-					if enumType.EnumerationRef == oldQualifiedName {
-						enumType.EnumerationRef = newQualifiedName
-						enumType.EnumerationID = model.ID(newQualifiedName)
-						changed = true
-					}
-				}
-			}
-		}
-		if changed {
-			if err := w.updateDomainModel(dm); err != nil {
-				return fmt.Errorf("failed to update domain model %s: %w", dm.ID, err)
-			}
-		}
-	}
-	return nil
-}
-
 // MoveViewEntitySourceDocument moves a ViewEntitySourceDocument to a new module.
 func (w *Writer) MoveViewEntitySourceDocument(sourceModuleName string, targetModuleID model.ID, docName string) error {
 	docID, err := w.reader.FindViewEntitySourceDocumentID(sourceModuleName, docName)
