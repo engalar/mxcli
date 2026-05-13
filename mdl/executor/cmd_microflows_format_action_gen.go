@@ -15,6 +15,14 @@
 //                 CallExternal / RestCall / RestOperationCall /
 //                 ExecuteDatabaseQuery / ImportXml / ExportXml /
 //                 TransformJson / WebServiceCall.
+// Stage 3.2.2.g — Workflow / Misc family formatters (gen-typed).
+//                 See `cmd_microflows_format_workflow_gen.go` for
+//                 GetWorkflowData / WorkflowCall / GetWorkflows /
+//                 GetWorkflowActivityRecords / WorkflowOperation
+//                 (incl. Abort/Continue/Pause/Restart/Retry/Unpause/
+//                 Resume sub-ops) / SetTaskOutcome / OpenUserTask /
+//                 NotifyWorkflow / OpenWorkflow / LockWorkflow /
+//                 UnlockWorkflow. Stage 3.2.2 complete.
 //
 // This file implements the gen-typed counterpart to legacy
 // `cmd_microflows_format_action.go`. It is invoked from
@@ -105,7 +113,7 @@ func formatActivityGen(ctx *ExecContext, obj element.Element) string {
 
 // formatActionGen dispatches the inner action of an ActionActivity to a
 // per-type formatter. Returns "" for action kinds not yet covered by
-// Stage 3.2.2.{a,b,c,d,e,f} so the caller falls back to a placeholder.
+// Stage 3.2.2.{a,b,c,d,e,f,g} so the caller falls back to a placeholder.
 //
 // `ctx` is required by the data family's RetrieveAction path (XPath
 // enum enrichment + reverse-association detection); other formatters
@@ -181,6 +189,29 @@ func formatActionGen(ctx *ExecContext, action element.Element) string {
 		return formatTransformJsonActionGen(a)
 	case *genMf.WebServiceCallAction:
 		return formatWebServiceCallActionGen(a)
+	// Stage 3.2.2.g — Workflow / Misc family.
+	case *genMf.GetWorkflowDataAction:
+		return formatGetWorkflowDataActionGen(a)
+	case *genMf.WorkflowCallAction:
+		return formatWorkflowCallActionGen(a)
+	case *genMf.GetWorkflowsAction:
+		return formatGetWorkflowsActionGen(a)
+	case *genMf.GetWorkflowActivityRecordsAction:
+		return formatGetWorkflowActivityRecordsActionGen(a)
+	case *genMf.WorkflowOperationAction:
+		return formatWorkflowOperationActionGen(a)
+	case *genMf.SetTaskOutcomeAction:
+		return formatSetTaskOutcomeActionGen(a)
+	case *genMf.OpenUserTaskAction:
+		return formatOpenUserTaskActionGen(a)
+	case *genMf.NotifyWorkflowAction:
+		return formatNotifyWorkflowActionGen(a)
+	case *genMf.OpenWorkflowAction:
+		return formatOpenWorkflowActionGen(a)
+	case *genMf.LockWorkflowAction:
+		return formatLockWorkflowActionGen(a)
+	case *genMf.UnlockWorkflowAction:
+		return formatUnlockWorkflowActionGen(a)
 	default:
 		return ""
 	}
