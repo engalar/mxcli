@@ -26,5 +26,5 @@ func (b *MprBackend) updateNavigationProfileViaModelsdk(navDocID model.ID, profi
 	if err != nil {
 		return err
 	}
-	return b.msdkWriteRaw(navDocID, patched)
+	return b.writeUnitContents(navDocID, patched)
 }

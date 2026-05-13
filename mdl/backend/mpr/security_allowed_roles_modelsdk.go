@@ -103,25 +103,3 @@ func (b *MprBackend) updatePublishedRestServiceRolesViaModelsdk(unitID model.ID,
 	})
 }
 
-// msdkWriteRaw writes pre-patched raw BSON bytes via WriteTransaction.
-// Retained for the few remaining call sites that have not yet been migrated to
-// msdkWrite (notably updateImageCollectionViaModelsdk and the entity-access /
-// domain-model paths in Phase 3). New code should use msdkWrite instead.
-func (b *MprBackend) msdkWriteRaw(unitID model.ID, contents []byte) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	wtx, err := b.msdkWriter.BeginWriteTransaction()
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	if err := wtx.WriteUnit(string(unitID), contents); err != nil {
-		_ = wtx.Rollback()
-		return fmt.Errorf("write unit: %w", err)
-	}
-	if err := wtx.Commit(); err != nil {
-		return err
-	}
-	b.reader.InvalidateCache()
-	return nil
-}

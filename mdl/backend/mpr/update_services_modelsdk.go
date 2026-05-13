@@ -26,8 +26,9 @@ import (
 // PartList/Part children (operations, resources, queries, etc.) are preserved
 // by LazyDoc and are mutated via dedicated mutator operations elsewhere.
 //
-// updateImageCollectionViaModelsdk still uses the legacy Serialize+msdkWriteRaw
-// path because the modelsdk gen type is not yet wired up.
+// updateImageCollectionViaModelsdk still uses the legacy
+// Serialize+writeUnitContents path because the modelsdk gen type is not yet
+// wired up.
 
 // ── JavaAction ────────────────────────────────────────────────────────────
 
@@ -273,5 +274,5 @@ func (b *MprBackend) updateImageCollectionViaModelsdk(ic *types.ImageCollection)
 	if err != nil {
 		return fmt.Errorf("serialize image collection: %w", err)
 	}
-	return b.msdkWriteRaw(ic.ID, contents)
+	return b.writeUnitContents(ic.ID, contents)
 }
