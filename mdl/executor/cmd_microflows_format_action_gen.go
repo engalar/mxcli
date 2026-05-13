@@ -2,6 +2,7 @@
 
 // Stage 3.2.2.a — Object Actions family formatters (gen-typed).
 // Stage 3.2.2.b — Form Actions family formatters (gen-typed).
+// Stage 3.2.2.c — List operations family formatters (gen-typed).
 //
 // This file implements the gen-typed counterpart to legacy
 // `cmd_microflows_format_action.go`. It is invoked from
@@ -26,6 +27,32 @@
 //   | *genMf.ShowHomePageAction    | ShowHomePageAction   | `show home page;`    |
 //   | *genMf.ShowMessageAction     | ShowMessageAction    | `show message …;`    |
 //
+// List Operations (Stage 3.2.2.c):
+//   | gen Go type                  | BSON $Type            | MDL keyword                |
+//   |------------------------------|-----------------------|----------------------------|
+//   | *genMf.CreateListAction      | CreateListAction      | `$L = create list of E;`   |
+//   | *genMf.ChangeListAction      | ChangeListAction      | `add/remove/clear/set …;`  |
+//   | *genMf.ListOperationAction   | ListOperationsAction  | `$X = head/tail/find(…);`  |
+//
+// ListOperationAction.Operation() dispatches to one of the gen
+// list-operation primitives below (all live in `formatListOperationGen`):
+//
+//   | gen Go type           | BSON $Type            | Maps to legacy           |
+//   |-----------------------|-----------------------|--------------------------|
+//   | *genMf.Head           | Microflows$Head           | HeadOperation            |
+//   | *genMf.Tail           | Microflows$Tail           | TailOperation            |
+//   | *genMf.FindByExpression | Microflows$FindByExpression | FindOperation       |
+//   | *genMf.Find           | Microflows$Find           | FindByAttributeOperation |
+//   | *genMf.FilterByExpression | Microflows$FilterByExpression | FilterOperation |
+//   | *genMf.Filter         | Microflows$Filter         | FilterByAttributeOperation |
+//   | *genMf.Sort           | Microflows$Sort           | SortOperation            |
+//   | *genMf.Union          | Microflows$Union          | UnionOperation           |
+//   | *genMf.Intersect      | Microflows$Intersect      | IntersectOperation       |
+//   | *genMf.Subtract       | Microflows$Subtract       | SubtractOperation        |
+//   | *genMf.Contains       | Microflows$Contains       | ContainsOperation        |
+//   | *genMf.ListEquals     | Microflows$ListEquals     | EqualsOperation          |
+//   | *genMf.ListRange      | Microflows$ListRange      | ListRangeOperation       |
+//
 // The output strings are 1:1 with the legacy formatters in
 // `cmd_microflows_format_action.go` so that the textual diff between
 // the legacy and gen-typed paths is empty for these action kinds.
@@ -41,6 +68,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDM "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genTx "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
@@ -88,6 +116,12 @@ func formatActionGen(action element.Element) string {
 		return formatShowHomePageActionGen(a)
 	case *genMf.ShowMessageAction:
 		return formatShowMessageActionGen(a)
+	case *genMf.CreateListAction:
+		return formatCreateListActionGen(a)
+	case *genMf.ChangeListAction:
+		return formatChangeListActionGen(a)
+	case *genMf.ListOperationAction:
+		return formatListOperationActionGen(a)
 	default:
 		return ""
 	}
@@ -369,6 +403,212 @@ func formatShowMessageActionGen(a *genMf.ShowMessageAction) string {
 	}
 
 	return result + ";"
+}
+
+// ────────────────────────────────────────────────────────
+// Stage 3.2.2.c — List operations family
+// ────────────────────────────────────────────────────────
+
+// formatCreateListActionGen emits `$Var = create list of Module.Entity;`.
+// Mirrors legacy CreateListAction handling. Unlike the object variant,
+// CreateListAction never carries member initialisers — it just declares
+// an empty typed list. Falls back to bare "Entity" when no qualified
+// name is set, matching legacy.
+func formatCreateListActionGen(a *genMf.CreateListAction) string {
+	entityName := strings.TrimSpace(a.EntityQualifiedName())
+	if entityName == "" {
+		entityName = "Entity"
+	}
+	return fmt.Sprintf("$%s = create list of %s;", a.OutputVariableName(), entityName)
+}
+
+// formatChangeListActionGen emits one of four forms depending on
+// `Type`, mirroring legacy ChangeListAction:
+//
+//   - Add:    `add <value> to $Var;`
+//   - Remove: `remove <value> from $Var;`
+//   - Clear:  `clear $Var;`
+//   - Set:    `set $Var = <value>;`
+//
+// Anything else (defensive default) renders as
+// `change list $Var (<Type>);` to mirror legacy's fall-through.
+func formatChangeListActionGen(a *genMf.ChangeListAction) string {
+	varName := a.ChangeVariableName()
+	switch a.Type() {
+	case genMf.ChangeListActionTypeAdd:
+		return fmt.Sprintf("add %s to $%s;", a.Value(), varName)
+	case genMf.ChangeListActionTypeRemove:
+		return fmt.Sprintf("remove %s from $%s;", a.Value(), varName)
+	case genMf.ChangeListActionTypeClear:
+		return fmt.Sprintf("clear $%s;", varName)
+	case genMf.ChangeListActionTypeSet:
+		return fmt.Sprintf("set $%s = %s;", varName, a.Value())
+	default:
+		return fmt.Sprintf("change list $%s (%s);", varName, a.Type())
+	}
+}
+
+// formatListOperationActionGen wraps the inner Operation element with
+// the action's output variable. Mirrors legacy ListOperationAction:
+// missing OutputVariable defaults to "Result"; nil Operation gives the
+// stable `$Var = list operation ...;` placeholder.
+func formatListOperationActionGen(a *genMf.ListOperationAction) string {
+	outputVar := a.OutputVariableName()
+	if outputVar == "" {
+		outputVar = "Result"
+	}
+	return formatListOperationGen(a.Operation(), outputVar)
+}
+
+// formatListOperationGen dispatches a list-operation primitive (Head,
+// Tail, Find, Filter, Sort, Union, Intersect, Subtract, Contains,
+// ListEquals, ListRange, FindByExpression, FilterByExpression) to its
+// MDL form. The output is 1:1 with legacy `formatListOperation` so the
+// migrated body can be diffed against the SDK path during the cutover.
+//
+// Note on naming: legacy's `FindOperation` / `FilterOperation` are the
+// expression-only variants; in gen those live under
+// `FindByExpression` / `FilterByExpression`. Conversely, legacy's
+// `FindByAttributeOperation` / `FilterByAttributeOperation` (which
+// also accept an attribute or association reference alongside the
+// expression) are gen's bare `Find` / `Filter`. This file handles all
+// four forms with the same MDL surface.
+func formatListOperationGen(op element.Element, outputVar string) string {
+	if op == nil {
+		return fmt.Sprintf("$%s = list operation ...;", outputVar)
+	}
+
+	switch o := op.(type) {
+	case *genMf.Head:
+		return fmt.Sprintf("$%s = head($%s);", outputVar, o.ListVariableName())
+	case *genMf.Tail:
+		return fmt.Sprintf("$%s = tail($%s);", outputVar, o.ListVariableName())
+	case *genMf.FindByExpression:
+		return fmt.Sprintf("$%s = find($%s, %s);", outputVar, o.ListVariableName(), o.Expression())
+	case *genMf.FilterByExpression:
+		return fmt.Sprintf("$%s = filter($%s, %s);", outputVar, o.ListVariableName(), o.Expression())
+	case *genMf.Find:
+		fieldName := extractFieldNameGen(o.AttributeQualifiedName(), o.AssociationQualifiedName())
+		expr := o.Expression()
+		if fieldName != "" && expr != "" {
+			return fmt.Sprintf("$%s = find($%s, %s = %s);", outputVar, o.ListVariableName(), fieldName, expr)
+		} else if expr != "" {
+			return fmt.Sprintf("$%s = find($%s, %s);", outputVar, o.ListVariableName(), expr)
+		}
+		return fmt.Sprintf("-- $%s = find($%s) — missing attribute/expression", outputVar, o.ListVariableName())
+	case *genMf.Filter:
+		fieldName := extractFieldNameGen(o.AttributeQualifiedName(), o.AssociationQualifiedName())
+		expr := o.Expression()
+		if fieldName != "" && expr != "" {
+			return fmt.Sprintf("$%s = filter($%s, %s = %s);", outputVar, o.ListVariableName(), fieldName, expr)
+		} else if expr != "" {
+			return fmt.Sprintf("$%s = filter($%s, %s);", outputVar, o.ListVariableName(), expr)
+		}
+		return fmt.Sprintf("-- $%s = filter($%s) — missing attribute/expression", outputVar, o.ListVariableName())
+	case *genMf.Sort:
+		sortCols := collectSortColumnsGen(o)
+		if len(sortCols) > 0 {
+			return fmt.Sprintf("$%s = sort($%s, %s);", outputVar, o.ListVariableName(), strings.Join(sortCols, ", "))
+		}
+		return fmt.Sprintf("$%s = sort($%s);", outputVar, o.ListVariableName())
+	case *genMf.Union:
+		return fmt.Sprintf("$%s = union($%s, $%s);", outputVar, o.ListVariableName(), o.SecondListOrObjectVariableName())
+	case *genMf.Intersect:
+		return fmt.Sprintf("$%s = intersect($%s, $%s);", outputVar, o.ListVariableName(), o.SecondListOrObjectVariableName())
+	case *genMf.Subtract:
+		return fmt.Sprintf("$%s = subtract($%s, $%s);", outputVar, o.ListVariableName(), o.SecondListOrObjectVariableName())
+	case *genMf.Contains:
+		return fmt.Sprintf("$%s = contains($%s, $%s);", outputVar, o.ListVariableName(), o.SecondListOrObjectVariableName())
+	case *genMf.ListEquals:
+		return fmt.Sprintf("$%s = equals($%s, $%s);", outputVar, o.ListVariableName(), o.SecondListOrObjectVariableName())
+	case *genMf.ListRange:
+		offset, limit := extractListRangeBoundsGen(o)
+		if offset != "" && limit != "" {
+			return fmt.Sprintf("$%s = range($%s, %s, %s);", outputVar, o.ListVariableName(), offset, limit)
+		} else if offset != "" {
+			return fmt.Sprintf("$%s = range($%s, %s);", outputVar, o.ListVariableName(), offset)
+		} else if limit != "" {
+			return fmt.Sprintf("$%s = range($%s, 0, %s);", outputVar, o.ListVariableName(), limit)
+		}
+		return fmt.Sprintf("$%s = range($%s);", outputVar, o.ListVariableName())
+	default:
+		return fmt.Sprintf("$%s = list operation %T;", outputVar, op)
+	}
+}
+
+// extractFieldNameGen returns the short field name from a qualified
+// attribute or association reference (e.g. "MyModule.Entity.Status" →
+// "Status", "MyModule.Order_Customer" → "Order_Customer"). Mirrors
+// legacy `extractFieldName` (preferring attribute over association,
+// taking the substring after the last '.').
+func extractFieldNameGen(attribute, association string) string {
+	ref := attribute
+	if ref == "" {
+		ref = association
+	}
+	if ref == "" {
+		return ""
+	}
+	parts := strings.Split(ref, ".")
+	return parts[len(parts)-1]
+}
+
+// collectSortColumnsGen renders the SortItem list of a gen Sort op as
+// the `Attr asc, Other desc, …` clause used inside `sort(…)`. Mirrors
+// legacy SortOperation handling: each item shows the bare attribute
+// name (last '.' segment) and the direction ("asc"/"desc"). When the
+// attribute can't be determined, the placeholder "..." is used so the
+// rendered text remains parseable.
+//
+// Two attribute sources are tried in order, matching the legacy parser
+// (parseSortItems): the modern AttributeRef.AttributeQualifiedName,
+// then the legacy AttributePath fallback.
+func collectSortColumnsGen(s *genMf.Sort) []string {
+	listEl, ok := s.SortItemList().(*genMf.SortItemList)
+	if !ok || listEl == nil {
+		return nil
+	}
+	var cols []string
+	for _, it := range listEl.ItemsItems() {
+		si, ok := it.(*genMf.SortItem)
+		if !ok || si == nil {
+			continue
+		}
+		dir := "asc"
+		if si.SortOrder() == genMf.SortOrderEnumDescending {
+			dir = "desc"
+		}
+		attrName := ""
+		if ar, ok := si.AttributeRef().(*genDM.AttributeRef); ok && ar != nil {
+			attrName = ar.AttributeQualifiedName()
+		}
+		if attrName == "" {
+			attrName = si.AttributePath()
+		}
+		if attrName != "" {
+			if parts := strings.Split(attrName, "."); len(parts) > 0 {
+				attrName = parts[len(parts)-1]
+			}
+		}
+		if attrName == "" {
+			attrName = "..."
+		}
+		cols = append(cols, fmt.Sprintf("%s %s", attrName, dir))
+	}
+	return cols
+}
+
+// extractListRangeBoundsGen returns (offsetExpr, limitExpr) from a
+// ListRange's nested CustomRange, or ("","") when the range has no
+// CustomRange (e.g. a ConstantRange single-object form, which we treat
+// the same as "no bounds" so the rendered output collapses to
+// `$X = range($L);` — matching legacy's behaviour for that BSON shape).
+func extractListRangeBoundsGen(r *genMf.ListRange) (string, string) {
+	cr, ok := r.CustomRange().(*genMf.CustomRange)
+	if !ok || cr == nil {
+		return "", ""
+	}
+	return cr.OffsetExpression(), cr.LimitExpression()
 }
 
 // pickTextTranslationGen returns the text body of a Texts$Text, with
