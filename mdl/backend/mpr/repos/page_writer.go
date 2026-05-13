@@ -30,7 +30,11 @@ func (r *pageWriter) Create(parentUUID string, containmentName string, page *gen
 		page.SetID(element.ID(mmpr.GenerateID()))
 	}
 	if page.TypeName() == "" {
-		page.SetTypeName("Pages$Page")
+		// Mendix BSON $Type for pages is "Forms$Page" (legacy). The
+		// codegen NewPage() / initPage() already pre-sets this; the
+		// guard here covers callers that constructed a page via &Page{}
+		// or zeroed TypeName by hand.
+		page.SetTypeName("Forms$Page")
 	}
 	contents, err := r.enc.Encode(page)
 	if err != nil {

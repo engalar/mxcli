@@ -97,6 +97,9 @@ func (r *microflowRepo) List(moduleID model.ID) ([]*genMf.Microflow, error) {
 	}
 	result := make([]*genMf.Microflow, 0, len(refs))
 	for _, ref := range refs {
+		if ref.Type != microflowTypeName {
+			continue
+		}
 		if mmpr.ResolveModuleName(ref.ContainerID, moduleMap, parents) != wantName {
 			continue
 		}
@@ -117,6 +120,11 @@ func (r *microflowRepo) ListAll() ([]*genMf.Microflow, error) {
 	}
 	result := make([]*genMf.Microflow, 0, len(refs))
 	for _, ref := range refs {
+		// ListUnitsByType is prefix-matched; filter to exact $Type to
+		// avoid pulling in similarly-prefixed unit kinds.
+		if ref.Type != microflowTypeName {
+			continue
+		}
 		mf, err := r.Get(model.ID(ref.ID))
 		if err != nil {
 			return nil, fmt.Errorf("decode microflow %s: %w", ref.ID, err)
@@ -150,6 +158,9 @@ func (r *microflowRepo) FindByQualifiedName(qn string) (*genMf.Microflow, error)
 		return nil, err
 	}
 	for _, ref := range refs {
+		if ref.Type != microflowTypeName {
+			continue
+		}
 		if mmpr.ResolveModuleName(ref.ContainerID, moduleMap, parents) != moduleName {
 			continue
 		}
