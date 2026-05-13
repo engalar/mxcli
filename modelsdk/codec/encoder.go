@@ -54,19 +54,31 @@ func (e *Encoder) buildDoc(elem element.Element) (bson.D, error) {
 		key := prop.Name()
 
 		// Handle child properties (Part) — recursive encode.
+		// Three branches mirror the PartList logic below:
+		//   1. Self-dirty: Part.Set was called → re-encode child.
+		//   2. Child-dirty: Part itself unchanged but the held child was
+		//      mutated in place → re-encode child so its changes reach
+		//      the output (without this branch the parent passes through
+		//      raw bytes and deep edits silently disappear).
+		//   3. Completely clean: leave the raw field untouched.
 		if cp, ok := prop.(element.ChildProperty); ok {
-			if !wp.Dirty() {
-				continue
-			}
 			child := cp.ChildElement()
-			if child != nil {
+			if wp.Dirty() {
+				if child != nil {
+					childDoc, err := e.buildDoc(child)
+					if err != nil {
+						return nil, err
+					}
+					doc = setField(doc, key, childDoc)
+				} else {
+					doc = setField(doc, key, nil)
+				}
+			} else if child != nil && child.IsDirty() {
 				childDoc, err := e.buildDoc(child)
 				if err != nil {
 					return nil, err
 				}
 				doc = setField(doc, key, childDoc)
-			} else {
-				doc = setField(doc, key, nil)
 			}
 			continue
 		}
