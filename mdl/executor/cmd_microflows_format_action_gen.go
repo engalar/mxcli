@@ -6,6 +6,10 @@
 // Stage 3.2.2.d — Microflow/Java/JavaScript call action family formatters
 //                 (gen-typed). See `cmd_microflows_format_calls_gen.go` for
 //                 the per-type implementations and parameter-value helpers.
+// Stage 3.2.2.e — Variable / Expression / Data family formatters
+//                 (gen-typed). See `cmd_microflows_format_data_gen.go`
+//                 for Cast / CreateVariable / ChangeVariable / Retrieve /
+//                 LogMessage / DownloadFile / ValidationFeedback.
 //
 // This file implements the gen-typed counterpart to legacy
 // `cmd_microflows_format_action.go`. It is invoked from
@@ -70,6 +74,8 @@ import (
 	"fmt"
 	"strings"
 
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDM "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
@@ -83,18 +89,22 @@ import (
 // to emit a placeholder or skip the line entirely. Non-ActionActivity
 // nodes (Annotations, control-flow events) are out of scope and also
 // return "".
-func formatActivityGen(_ *ExecContext, obj element.Element) string {
+func formatActivityGen(ctx *ExecContext, obj element.Element) string {
 	aa, ok := obj.(*genMf.ActionActivity)
 	if !ok || aa == nil {
 		return ""
 	}
-	return formatActionGen(aa.Action())
+	return formatActionGen(ctx, aa.Action())
 }
 
 // formatActionGen dispatches the inner action of an ActionActivity to a
 // per-type formatter. Returns "" for action kinds not yet covered by
-// Stage 3.2.2.{a,b} so the caller falls back to a placeholder.
-func formatActionGen(action element.Element) string {
+// Stage 3.2.2.{a,b,c,d,e} so the caller falls back to a placeholder.
+//
+// `ctx` is required by the data family's RetrieveAction path (XPath
+// enum enrichment + reverse-association detection); other formatters
+// ignore it.
+func formatActionGen(ctx *ExecContext, action element.Element) string {
 	if action == nil {
 		return "-- Empty action"
 	}
@@ -133,6 +143,21 @@ func formatActionGen(action element.Element) string {
 		return formatJavaActionCallActionGen(a)
 	case *genMf.JavaScriptActionCallAction:
 		return formatJavaScriptActionCallActionGen(a)
+	// Stage 3.2.2.e — Variable / Expression / Data family.
+	case *genMf.CastAction:
+		return formatCastActionGen(a)
+	case *genMf.CreateVariableAction:
+		return formatCreateVariableActionGen(a)
+	case *genMf.ChangeVariableAction:
+		return formatChangeVariableActionGen(a)
+	case *genMf.RetrieveAction:
+		return formatRetrieveActionGen(ctx, a)
+	case *genMf.LogMessageAction:
+		return formatLogMessageActionGen(a)
+	case *genMf.DownloadFileAction:
+		return formatDownloadFileActionGen(a)
+	case *genMf.ValidationFeedbackAction:
+		return formatValidationFeedbackActionGen(a)
 	default:
 		return ""
 	}
@@ -628,28 +653,85 @@ func extractListRangeBoundsGen(r *genMf.ListRange) (string, string) {
 // translations are present at all (so the caller can keep the legacy
 // `'...'` placeholder, which is intentionally pre-quoted and must not
 // flow through mdlQuote a second time).
+//
+// gen's Texts$Text decodes its translations from the BSON key
+// "Translations", but real Mendix MPRs store the array under "Items"
+// (the legacy parser fixed this discrepancy in its hand-written
+// `parseText` helper). When `TranslationsItems()` is empty we fall
+// back to reading the "Items" array from the element's raw BSON.
 func pickTextTranslationGen(t *genTx.Text) (string, bool) {
 	items := t.TranslationsItems()
-	if len(items) == 0 {
+	var translations []translationPair
+	if len(items) > 0 {
+		for _, it := range items {
+			tr, ok := it.(*genTx.Translation)
+			if !ok || tr == nil {
+				continue
+			}
+			translations = append(translations, translationPair{
+				lang: tr.LanguageCode(),
+				text: tr.Text(),
+			})
+		}
+	}
+	if len(translations) == 0 {
+		// gen-incompleteness fallback: real MPR shape uses "Items".
+		translations = readTextItemsFromRaw(t.Raw())
+	}
+	if len(translations) == 0 {
 		return "", false
 	}
 	var firstAny string
 	var foundAny bool
-	for _, it := range items {
-		tr, ok := it.(*genTx.Translation)
-		if !ok || tr == nil {
-			continue
-		}
-		if tr.LanguageCode() == "en_US" {
-			return tr.Text(), true
+	for _, tr := range translations {
+		if tr.lang == "en_US" {
+			return tr.text, true
 		}
 		if !foundAny {
-			firstAny = tr.Text()
+			firstAny = tr.text
 			foundAny = true
 		}
 	}
-	if !foundAny {
-		return "", false
+	return firstAny, foundAny
+}
+
+// translationPair is the minimal lang/text shape used by
+// pickTextTranslationGen so the gen-decoded and raw-BSON code paths
+// can share the precedence loop.
+type translationPair struct {
+	lang string
+	text string
+}
+
+// readTextItemsFromRaw decodes the "Items" array of a Texts$Text raw
+// BSON document. The array is a versioned BSON array
+// `[<int32 version>, <doc>, <doc>, …]`; each `<doc>` is a
+// Texts$Translation with LanguageCode + Text string fields.
+func readTextItemsFromRaw(raw []byte) []translationPair {
+	if len(raw) == 0 {
+		return nil
 	}
-	return firstAny, true
+	var doc bson.M
+	if err := bson.Unmarshal(raw, &doc); err != nil {
+		return nil
+	}
+	itemsRaw, ok := doc["Items"]
+	if !ok {
+		return nil
+	}
+	arr, ok := itemsRaw.(bson.A)
+	if !ok {
+		return nil
+	}
+	var out []translationPair
+	for _, item := range arr {
+		m, ok := item.(bson.M)
+		if !ok {
+			continue
+		}
+		lang, _ := m["LanguageCode"].(string)
+		text, _ := m["Text"].(string)
+		out = append(out, translationPair{lang: lang, text: text})
+	}
+	return out
 }

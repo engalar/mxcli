@@ -134,12 +134,15 @@ func TestDescribeMicroflowGenToString_IfElseFraming(t *testing.T) {
 		t.Errorf("module name should resolve from container chain (no <unknown>); got:\n%s", out)
 	}
 
-	// 3.2.1 leaves all activity bodies (action activities, end-event
-	// arguments, etc.) as TODO placeholders. Saving the password flow
-	// has multiple ActionActivity nodes, so we should see ≥ 1.
-	if !strings.Contains(out, "// TODO Stage 3.2.2: format ") {
-		t.Errorf("expected TODO placeholders for activity bodies; got:\n%s", out)
-	}
+	// As of Stage 3.2.2.e the data family covers RetrieveAction, so the
+	// previously-TODO retrieve line in this fixture now renders as the
+	// real `retrieve $V from …` statement. Spot-check that the formatter
+	// reached the body — both the retrieve and the change-with-refresh
+	// surfaces should appear inside the if-branch.
+	mustContain(t, out,
+		"retrieve $",
+		"change $Account",
+	)
 
 	// Footer: roles section.
 	if !strings.Contains(out, "grant execute on microflow ") {
