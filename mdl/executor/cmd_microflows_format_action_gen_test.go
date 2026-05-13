@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Stage 3.2.2.a tests for the gen-typed Object Actions family.
+// Stage 3.2.2.b tests for the gen-typed Form Actions family.
 //
 // Two test surfaces:
 //  1. Fixture-driven (whatever the testdata MPR happens to contain)
-//     covers CreateObjectAction / ChangeObjectAction / DeleteAction
-//     end-to-end through DescribeMicroflowGenToString.
+//     covers CreateObjectAction / ChangeObjectAction / DeleteAction /
+//     ShowPageAction end-to-end through DescribeMicroflowGenToString.
 //  2. Direct-construction unit tests build minimal gen objects in
 //     memory to cover every action kind including ones the fixture
-//     doesn't carry (CommitAction, RollbackAction, AggregateListAction).
+//     doesn't carry (CommitAction, RollbackAction, AggregateListAction,
+//     CloseFormAction, ShowHomePageAction, ShowMessageAction).
 //
 // String comparison is exact — the formatter is intentionally 1:1 with
 // the legacy `cmd_microflows_format_action.go` so the migrated output
@@ -22,6 +24,8 @@ import (
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
+	genTx "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 )
 
 // ────────────────────────────────────────────────────────
@@ -279,11 +283,248 @@ func TestFormatActionGen_NilAndUnsupported(t *testing.T) {
 	}
 
 	// A valid gen element of a kind we don't handle. CastAction is
-	// not in the Stage 3.2.2.a scope.
+	// not in the Stage 3.2.2.{a,b} scope.
 	cast := newGenAction(t, "Microflows$CastAction")
 	if got := formatActionGen(cast); got != "" {
 		t.Errorf("unsupported CastAction: got %q, want empty", got)
 	}
+}
+
+// ────────────────────────────────────────────────────────
+// Stage 3.2.2.b — Form Actions family (direct construction)
+// ────────────────────────────────────────────────────────
+
+func TestFormatActionGen_ShowPageAction(t *testing.T) {
+	t.Run("bare page reference (no parameters)", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$ShowFormAction").(*genMf.ShowPageAction)
+		ps := newGenAction(t, "Pages$PageSettings").(*genPg.PageSettings)
+		ps.SetPageQualifiedName("Sales.OrderOverview")
+		a.SetPageSettings(ps)
+
+		got := formatActionGen(a)
+		want := "show page Sales.OrderOverview;"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("with parameter mapping", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$ShowFormAction").(*genMf.ShowPageAction)
+		ps := newGenAction(t, "Pages$PageSettings").(*genPg.PageSettings)
+		ps.SetPageQualifiedName("Administration.ChangePasswordForm")
+
+		ppm := newGenAction(t, "Pages$PageParameterMapping").(*genPg.PageParameterMapping)
+		ppm.SetParameterQualifiedName("Administration.ChangePasswordForm.AccountPasswordData")
+		ppm.SetArgument("$AccountPasswordData")
+		ps.AddParameterMappings(ppm)
+
+		a.SetPageSettings(ps)
+
+		got := formatActionGen(a)
+		want := "show page Administration.ChangePasswordForm($AccountPasswordData = $AccountPasswordData);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("multiple parameter mappings", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$ShowFormAction").(*genMf.ShowPageAction)
+		ps := newGenAction(t, "Pages$PageSettings").(*genPg.PageSettings)
+		ps.SetPageQualifiedName("Sales.OrderEdit")
+
+		for _, pair := range []struct{ qn, arg string }{
+			{"Sales.OrderEdit.Order", "$Order"},
+			{"Sales.OrderEdit.Customer", "$Customer"},
+		} {
+			ppm := newGenAction(t, "Pages$PageParameterMapping").(*genPg.PageParameterMapping)
+			ppm.SetParameterQualifiedName(pair.qn)
+			ppm.SetArgument(pair.arg)
+			ps.AddParameterMappings(ppm)
+		}
+		a.SetPageSettings(ps)
+
+		got := formatActionGen(a)
+		want := "show page Sales.OrderEdit($Order = $Order, $Customer = $Customer);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("missing PageSettings falls back to UnknownPage", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$ShowFormAction").(*genMf.ShowPageAction)
+		got := formatActionGen(a)
+		want := "show page UnknownPage;"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("PageSettings with empty page name falls back to UnknownPage", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$ShowFormAction").(*genMf.ShowPageAction)
+		ps := newGenAction(t, "Pages$PageSettings").(*genPg.PageSettings)
+		// Leave PageQualifiedName empty.
+		a.SetPageSettings(ps)
+		got := formatActionGen(a)
+		want := "show page UnknownPage;"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+}
+
+func TestFormatActionGen_CloseFormAction(t *testing.T) {
+	cases := []struct {
+		name          string
+		numberOfPages int32
+		want          string
+	}{
+		{"default (zero)", 0, "close page;"},
+		{"single page", 1, "close page;"},
+		{"two pages", 2, "close page 2;"},
+		{"five pages", 5, "close page 5;"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			a := newGenAction(t, "Microflows$CloseFormAction").(*genMf.CloseFormAction)
+			a.SetNumberOfPages(tc.numberOfPages)
+			if got := formatActionGen(a); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFormatActionGen_ShowHomePageAction(t *testing.T) {
+	t.Run("constant output regardless of state", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$ShowHomePageAction").(*genMf.ShowHomePageAction)
+		got := formatActionGen(a)
+		want := "show home page;"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("error-handling field set should not affect output", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$ShowHomePageAction").(*genMf.ShowHomePageAction)
+		a.SetErrorHandlingType("Custom")
+		got := formatActionGen(a)
+		want := "show home page;"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+}
+
+func TestFormatActionGen_ShowMessageAction(t *testing.T) {
+	// Helper: build a ShowMessageAction with a TextTemplate whose nested
+	// Texts$Text carries the supplied {languageCode -> text} translations
+	// and the supplied parameter expressions.
+	build := func(t *testing.T, msgType string, translations map[string]string, params ...string) *genMf.ShowMessageAction {
+		t.Helper()
+		a := newGenAction(t, "Microflows$ShowMessageAction").(*genMf.ShowMessageAction)
+		if msgType != "" {
+			a.SetType(msgType)
+		}
+		if translations != nil || len(params) > 0 {
+			tmpl := newGenAction(t, "Microflows$TextTemplate").(*genMf.TextTemplate)
+			if translations != nil {
+				text := newGenAction(t, "Texts$Text").(*genTx.Text)
+				for lang, body := range translations {
+					tr := newGenAction(t, "Texts$Translation").(*genTx.Translation)
+					tr.SetLanguageCode(lang)
+					tr.SetText(body)
+					text.AddTranslations(tr)
+				}
+				tmpl.SetText(text)
+			}
+			for _, expr := range params {
+				ta := newGenAction(t, "Microflows$TemplateArgument").(*genMf.TemplateArgument)
+				ta.SetExpression(expr)
+				tmpl.AddArguments(ta)
+			}
+			a.SetTemplate(tmpl)
+		}
+		return a
+	}
+
+	t.Run("no template defaults to ellipsis literal and Information type", func(t *testing.T) {
+		a := build(t, "", nil)
+		got := formatActionGen(a)
+		want := "show message '...' type Information;"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("explicit Warning type with single en_US translation", func(t *testing.T) {
+		a := build(t, genMf.ShowMessageTypeWarning, map[string]string{
+			"en_US": "Order saved",
+		})
+		got := formatActionGen(a)
+		want := "show message 'Order saved' type Warning;"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("non-English translation falls back when en_US missing", func(t *testing.T) {
+		a := build(t, genMf.ShowMessageTypeError, map[string]string{
+			"nl_NL": "Bestelling opgeslagen",
+		})
+		got := formatActionGen(a)
+		want := "show message 'Bestelling opgeslagen' type Error;"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("en_US wins over other languages", func(t *testing.T) {
+		a := build(t, genMf.ShowMessageTypeInformation, map[string]string{
+			"nl_NL": "Hallo",
+			"en_US": "Hello",
+			"de_DE": "Hallo",
+		})
+		got := formatActionGen(a)
+		want := "show message 'Hello' type Information;"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("template parameters render as objects clause", func(t *testing.T) {
+		a := build(t, genMf.ShowMessageTypeInformation,
+			map[string]string{"en_US": "Saved {1} of {2}"},
+			"$Order/Number", "$Order/Total",
+		)
+		got := formatActionGen(a)
+		want := "show message 'Saved {1} of {2}' type Information objects [$Order/Number, $Order/Total];"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("template parameters with no translation keep the placeholder text", func(t *testing.T) {
+		// No Text element on the TextTemplate, but Arguments are
+		// present — the legacy formatter still emits the objects clause
+		// alongside the unquoted placeholder text.
+		a := build(t, genMf.ShowMessageTypeWarning, nil, "$x")
+		got := formatActionGen(a)
+		want := "show message '...' type Warning objects [$x];"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("text containing single quotes is escaped", func(t *testing.T) {
+		a := build(t, genMf.ShowMessageTypeInformation, map[string]string{
+			"en_US": "It's done",
+		})
+		got := formatActionGen(a)
+		want := "show message 'It''s done' type Information;"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
 }
 
 // TestFormatActivityGen_NonAction verifies the wrapper returns "" for
@@ -347,6 +588,56 @@ func TestDescribeMicroflowGenToString_ObjectActions_Fixture(t *testing.T) {
 	}
 }
 
+// TestDescribeMicroflowGenToString_FormActions_Fixture exercises the
+// gen-typed body renderer end-to-end for the Form Actions family. The
+// fixture's only Form Action surface is ShowPage; CloseForm /
+// ShowHomePage / ShowMessage are covered by the direct-construction
+// tests above (the fixture does not carry those action kinds).
+//
+// Each case asserts the formatter's full statement appears in the
+// rendered microflow body — enough to confirm the activity-level dispatch
+// reaches `formatShowPageActionGen` through `formatActivityGen`.
+func TestDescribeMicroflowGenToString_FormActions_Fixture(t *testing.T) {
+	w := openMprWriterForTest(t)
+	cases := []struct {
+		qn   string
+		want []string
+	}{
+		{
+			"Administration.NewAccount",
+			[]string{
+				"show page Administration.Account_New($AccountPasswordData = $AccountPasswordData);",
+			},
+		},
+		{
+			"Administration.ShowMyPasswordForm",
+			[]string{
+				"show page Administration.ChangeMyPasswordForm($AccountPasswordData = $AccountPasswordData);",
+			},
+		},
+		{
+			"Administration.ShowPasswordForm",
+			[]string{
+				"show page Administration.ChangePasswordForm($AccountPasswordData = $AccountPasswordData);",
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.qn, func(t *testing.T) {
+			mf := findMicroflowByQN(t, w, tc.qn)
+			out, err := DescribeMicroflowGenToString(newGenDescribeContext(t, w), mf)
+			if err != nil {
+				t.Fatalf("DescribeMicroflowGenToString: %v", err)
+			}
+			for _, want := range tc.want {
+				if !strings.Contains(out, want) {
+					t.Errorf("missing expected line %q in output:\n%s", want, out)
+				}
+			}
+		})
+	}
+}
+
 // ────────────────────────────────────────────────────────
 // Helpers
 // ────────────────────────────────────────────────────────
@@ -377,6 +668,27 @@ func newGenAction(t *testing.T, typeName string) element.Element {
 		return genMf.NewStartEvent()
 	case "Microflows$EndEvent":
 		return genMf.NewEndEvent()
+	// Stage 3.2.2.b — Form Actions family.
+	case "Microflows$ShowFormAction": // gen Go type: ShowPageAction
+		return genMf.NewShowPageAction()
+	case "Microflows$CloseFormAction":
+		return genMf.NewCloseFormAction()
+	case "Microflows$ShowHomePageAction":
+		return genMf.NewShowHomePageAction()
+	case "Microflows$ShowMessageAction":
+		return genMf.NewShowMessageAction()
+	case "Microflows$TextTemplate":
+		return genMf.NewTextTemplate()
+	case "Microflows$TemplateArgument":
+		return genMf.NewTemplateArgument()
+	case "Pages$PageSettings":
+		return genPg.NewPageSettings()
+	case "Pages$PageParameterMapping":
+		return genPg.NewPageParameterMapping()
+	case "Texts$Text":
+		return genTx.NewText()
+	case "Texts$Translation":
+		return genTx.NewTranslation()
 	default:
 		t.Fatalf("newGenAction: unknown type %q", typeName)
 		return nil
