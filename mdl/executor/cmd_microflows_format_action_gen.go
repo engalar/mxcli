@@ -10,6 +10,11 @@
 //                 (gen-typed). See `cmd_microflows_format_data_gen.go`
 //                 for Cast / CreateVariable / ChangeVariable / Retrieve /
 //                 LogMessage / DownloadFile / ValidationFeedback.
+// Stage 3.2.2.f — External integration family formatters (gen-typed).
+//                 See `cmd_microflows_format_external_gen.go` for
+//                 CallExternal / RestCall / RestOperationCall /
+//                 ExecuteDatabaseQuery / ImportXml / ExportXml /
+//                 TransformJson / WebServiceCall.
 //
 // This file implements the gen-typed counterpart to legacy
 // `cmd_microflows_format_action.go`. It is invoked from
@@ -77,6 +82,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDC "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
 	genDM "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
@@ -99,7 +105,7 @@ func formatActivityGen(ctx *ExecContext, obj element.Element) string {
 
 // formatActionGen dispatches the inner action of an ActionActivity to a
 // per-type formatter. Returns "" for action kinds not yet covered by
-// Stage 3.2.2.{a,b,c,d,e} so the caller falls back to a placeholder.
+// Stage 3.2.2.{a,b,c,d,e,f} so the caller falls back to a placeholder.
 //
 // `ctx` is required by the data family's RetrieveAction path (XPath
 // enum enrichment + reverse-association detection); other formatters
@@ -158,6 +164,23 @@ func formatActionGen(ctx *ExecContext, action element.Element) string {
 		return formatDownloadFileActionGen(a)
 	case *genMf.ValidationFeedbackAction:
 		return formatValidationFeedbackActionGen(a)
+	// Stage 3.2.2.f — External integration family.
+	case *genMf.CallExternalAction:
+		return formatCallExternalActionGen(a)
+	case *genMf.RestCallAction:
+		return formatRestCallActionGen(a)
+	case *genMf.RestOperationCallAction:
+		return formatRestOperationCallActionGen(a)
+	case *genDC.ExecuteDatabaseQueryAction:
+		return formatExecuteDatabaseQueryActionGen(a)
+	case *genMf.ImportXmlAction:
+		return formatImportXmlActionGen(a)
+	case *genMf.ExportXmlAction:
+		return formatExportXmlActionGen(a)
+	case *genMf.TransformJsonAction:
+		return formatTransformJsonActionGen(a)
+	case *genMf.WebServiceCallAction:
+		return formatWebServiceCallActionGen(a)
 	default:
 		return ""
 	}
