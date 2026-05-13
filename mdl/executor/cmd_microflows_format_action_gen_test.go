@@ -2,6 +2,7 @@
 
 // Stage 3.2.2.a tests for the gen-typed Object Actions family.
 // Stage 3.2.2.b tests for the gen-typed Form Actions family.
+// Stage 3.2.2.c tests for the gen-typed List operations family.
 //
 // Two test surfaces:
 //  1. Fixture-driven (whatever the testdata MPR happens to contain)
@@ -10,7 +11,9 @@
 //  2. Direct-construction unit tests build minimal gen objects in
 //     memory to cover every action kind including ones the fixture
 //     doesn't carry (CommitAction, RollbackAction, AggregateListAction,
-//     CloseFormAction, ShowHomePageAction, ShowMessageAction).
+//     CloseFormAction, ShowHomePageAction, ShowMessageAction, plus all
+//     of the List operations family — the fixture has no list ops at
+//     all so direct construction is the only coverage path).
 //
 // String comparison is exact — the formatter is intentionally 1:1 with
 // the legacy `cmd_microflows_format_action.go` so the migrated output
@@ -23,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDM "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genTx "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
@@ -527,6 +531,505 @@ func TestFormatActionGen_ShowMessageAction(t *testing.T) {
 	})
 }
 
+// ────────────────────────────────────────────────────────
+// Stage 3.2.2.c — List operations family (direct construction)
+// ────────────────────────────────────────────────────────
+
+func TestFormatActionGen_CreateListAction(t *testing.T) {
+	cases := []struct {
+		name       string
+		entityQN   string
+		outputVar  string
+		want       string
+	}{
+		{"basic", "Sales.Order", "Orders", "$Orders = create list of Sales.Order;"},
+		{"empty entity falls back to 'Entity'", "", "L", "$L = create list of Entity;"},
+		{"cross-module entity uses qualified name", "Logistics.Carrier", "Carriers", "$Carriers = create list of Logistics.Carrier;"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			a := newGenAction(t, "Microflows$CreateListAction").(*genMf.CreateListAction)
+			a.SetEntityQualifiedName(tc.entityQN)
+			a.SetOutputVariableName(tc.outputVar)
+			if got := formatActionGen(a); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFormatActionGen_ChangeListAction(t *testing.T) {
+	cases := []struct {
+		name    string
+		typ     string
+		varName string
+		value   string
+		want    string
+	}{
+		{"add object", genMf.ChangeListActionTypeAdd, "Orders", "$NewOrder", "add $NewOrder to $Orders;"},
+		{"remove object", genMf.ChangeListActionTypeRemove, "Orders", "$OldOrder", "remove $OldOrder from $Orders;"},
+		{"clear ignores value", genMf.ChangeListActionTypeClear, "Orders", "$Ignored", "clear $Orders;"},
+		{"set assigns expression", genMf.ChangeListActionTypeSet, "Orders", "$NewList", "set $Orders = $NewList;"},
+		{"unknown type falls through to legacy form", "Frobnicate", "Orders", "$X", "change list $Orders (Frobnicate);"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			a := newGenAction(t, "Microflows$ChangeListAction").(*genMf.ChangeListAction)
+			a.SetChangeVariableName(tc.varName)
+			a.SetType(tc.typ)
+			a.SetValue(tc.value)
+			if got := formatActionGen(a); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFormatActionGen_ListOperationAction_DefaultsAndNil(t *testing.T) {
+	t.Run("nil operation gives placeholder with default Result", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$ListOperationsAction").(*genMf.ListOperationAction)
+		got := formatActionGen(a)
+		want := "$Result = list operation ...;"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("nil operation respects custom output var", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$ListOperationsAction").(*genMf.ListOperationAction)
+		a.SetOutputVariableName("Custom")
+		got := formatActionGen(a)
+		want := "$Custom = list operation ...;"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("empty output var defaults to Result for non-nil operation", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$ListOperationsAction").(*genMf.ListOperationAction)
+		head := newGenAction(t, "Microflows$Head").(*genMf.Head)
+		head.SetListVariableName("Orders")
+		a.SetOperation(head)
+		got := formatActionGen(a)
+		want := "$Result = head($Orders);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+}
+
+// newListOpAction is a small helper that builds a ListOperationAction
+// wrapping the supplied inner operation with `outputVar`.
+func newListOpAction(t *testing.T, outputVar string, op element.Element) *genMf.ListOperationAction {
+	t.Helper()
+	a := newGenAction(t, "Microflows$ListOperationsAction").(*genMf.ListOperationAction)
+	a.SetOutputVariableName(outputVar)
+	a.SetOperation(op)
+	return a
+}
+
+func TestFormatActionGen_HeadOperation(t *testing.T) {
+	cases := []struct {
+		name    string
+		listVar string
+		out     string
+		want    string
+	}{
+		{"basic", "Orders", "First", "$First = head($Orders);"},
+		{"empty list var still emits dollar prefix", "", "First", "$First = head($);"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newGenAction(t, "Microflows$Head").(*genMf.Head)
+			h.SetListVariableName(tc.listVar)
+			a := newListOpAction(t, tc.out, h)
+			if got := formatActionGen(a); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFormatActionGen_TailOperation(t *testing.T) {
+	cases := []struct {
+		name    string
+		listVar string
+		out     string
+		want    string
+	}{
+		{"basic", "Orders", "Rest", "$Rest = tail($Orders);"},
+		{"different list", "Customers", "Tail", "$Tail = tail($Customers);"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tl := newGenAction(t, "Microflows$Tail").(*genMf.Tail)
+			tl.SetListVariableName(tc.listVar)
+			a := newListOpAction(t, tc.out, tl)
+			if got := formatActionGen(a); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFormatActionGen_FindByExpression(t *testing.T) {
+	cases := []struct {
+		name    string
+		listVar string
+		expr    string
+		out     string
+		want    string
+	}{
+		{"basic predicate", "Orders", "$currentObject/Status = 'Open'", "Open", "$Open = find($Orders, $currentObject/Status = 'Open');"},
+		{"complex expression", "Items", "$currentObject/Qty > 0 and $currentObject/Active", "Active", "$Active = find($Items, $currentObject/Qty > 0 and $currentObject/Active);"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newGenAction(t, "Microflows$FindByExpression").(*genMf.FindByExpression)
+			f.SetListVariableName(tc.listVar)
+			f.SetExpression(tc.expr)
+			a := newListOpAction(t, tc.out, f)
+			if got := formatActionGen(a); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFormatActionGen_FilterByExpression(t *testing.T) {
+	cases := []struct {
+		name    string
+		listVar string
+		expr    string
+		out     string
+		want    string
+	}{
+		{"basic predicate", "Orders", "$currentObject/Total > 100", "Big", "$Big = filter($Orders, $currentObject/Total > 100);"},
+		{"alphanumeric var", "Customers", "$currentObject/Name != empty", "Named", "$Named = filter($Customers, $currentObject/Name != empty);"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newGenAction(t, "Microflows$FilterByExpression").(*genMf.FilterByExpression)
+			f.SetListVariableName(tc.listVar)
+			f.SetExpression(tc.expr)
+			a := newListOpAction(t, tc.out, f)
+			if got := formatActionGen(a); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestFormatActionGen_FindByAttribute exercises the gen `Find` element
+// (legacy `FindByAttributeOperation`): qualified attribute or
+// association reference combined with an expression.
+func TestFormatActionGen_FindByAttribute(t *testing.T) {
+	t.Run("attribute + expression renders equality form", func(t *testing.T) {
+		f := newGenAction(t, "Microflows$Find").(*genMf.Find)
+		f.SetListVariableName("Orders")
+		f.SetAttributeQualifiedName("Sales.Order.Status")
+		f.SetExpression("'Open'")
+		a := newListOpAction(t, "Open", f)
+		got := formatActionGen(a)
+		want := "$Open = find($Orders, Status = 'Open');"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("association + expression strips qualifier", func(t *testing.T) {
+		f := newGenAction(t, "Microflows$Find").(*genMf.Find)
+		f.SetListVariableName("Orders")
+		f.SetAssociationQualifiedName("Sales.Order_Customer")
+		f.SetExpression("$Customer")
+		a := newListOpAction(t, "Found", f)
+		got := formatActionGen(a)
+		want := "$Found = find($Orders, Order_Customer = $Customer);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("expression only (no attribute or association)", func(t *testing.T) {
+		f := newGenAction(t, "Microflows$Find").(*genMf.Find)
+		f.SetListVariableName("Orders")
+		f.SetExpression("$currentObject/Total > 0")
+		a := newListOpAction(t, "Pos", f)
+		got := formatActionGen(a)
+		want := "$Pos = find($Orders, $currentObject/Total > 0);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("missing both attribute and expression yields commented placeholder", func(t *testing.T) {
+		f := newGenAction(t, "Microflows$Find").(*genMf.Find)
+		f.SetListVariableName("Orders")
+		a := newListOpAction(t, "X", f)
+		got := formatActionGen(a)
+		want := "-- $X = find($Orders) — missing attribute/expression"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+}
+
+func TestFormatActionGen_FilterByAttribute(t *testing.T) {
+	t.Run("attribute + expression renders equality form", func(t *testing.T) {
+		f := newGenAction(t, "Microflows$Filter").(*genMf.Filter)
+		f.SetListVariableName("Orders")
+		f.SetAttributeQualifiedName("Sales.Order.Status")
+		f.SetExpression("'Open'")
+		a := newListOpAction(t, "Open", f)
+		got := formatActionGen(a)
+		want := "$Open = filter($Orders, Status = 'Open');"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("expression only", func(t *testing.T) {
+		f := newGenAction(t, "Microflows$Filter").(*genMf.Filter)
+		f.SetListVariableName("Orders")
+		f.SetExpression("$currentObject/Total > 0")
+		a := newListOpAction(t, "Pos", f)
+		got := formatActionGen(a)
+		want := "$Pos = filter($Orders, $currentObject/Total > 0);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("missing both yields commented placeholder", func(t *testing.T) {
+		f := newGenAction(t, "Microflows$Filter").(*genMf.Filter)
+		f.SetListVariableName("Orders")
+		a := newListOpAction(t, "X", f)
+		got := formatActionGen(a)
+		want := "-- $X = filter($Orders) — missing attribute/expression"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+}
+
+func TestFormatActionGen_SortOperation(t *testing.T) {
+	t.Run("no sort items renders bare sort()", func(t *testing.T) {
+		s := newGenAction(t, "Microflows$Sort").(*genMf.Sort)
+		s.SetListVariableName("Orders")
+		a := newListOpAction(t, "Sorted", s)
+		got := formatActionGen(a)
+		want := "$Sorted = sort($Orders);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("single ascending column via AttributePath fallback", func(t *testing.T) {
+		s := newGenAction(t, "Microflows$Sort").(*genMf.Sort)
+		s.SetListVariableName("Orders")
+
+		list := newGenAction(t, "Microflows$SortItemList").(*genMf.SortItemList)
+		si := newGenAction(t, "Microflows$SortItem").(*genMf.SortItem)
+		si.SetAttributePath("Sales.Order.OrderDate")
+		si.SetSortOrder(genMf.SortOrderEnumAscending)
+		list.AddItems(si)
+		s.SetSortItemList(list)
+
+		a := newListOpAction(t, "Sorted", s)
+		got := formatActionGen(a)
+		want := "$Sorted = sort($Orders, OrderDate asc);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("AttributeRef wins over AttributePath", func(t *testing.T) {
+		s := newGenAction(t, "Microflows$Sort").(*genMf.Sort)
+		s.SetListVariableName("Orders")
+
+		list := newGenAction(t, "Microflows$SortItemList").(*genMf.SortItemList)
+		si := newGenAction(t, "Microflows$SortItem").(*genMf.SortItem)
+		ar := newGenAction(t, "DomainModels$AttributeRef").(*genDM.AttributeRef)
+		ar.SetAttributeQualifiedName("Sales.Order.Total")
+		si.SetAttributeRef(ar)
+		// AttributePath would lose the race even if set.
+		si.SetAttributePath("ignored.Path.Loser")
+		si.SetSortOrder(genMf.SortOrderEnumDescending)
+		list.AddItems(si)
+		s.SetSortItemList(list)
+
+		a := newListOpAction(t, "Sorted", s)
+		got := formatActionGen(a)
+		want := "$Sorted = sort($Orders, Total desc);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("multiple columns with mixed direction", func(t *testing.T) {
+		s := newGenAction(t, "Microflows$Sort").(*genMf.Sort)
+		s.SetListVariableName("Orders")
+
+		list := newGenAction(t, "Microflows$SortItemList").(*genMf.SortItemList)
+		for _, p := range []struct {
+			path, dir string
+		}{
+			{"Sales.Order.Customer", genMf.SortOrderEnumAscending},
+			{"Sales.Order.Total", genMf.SortOrderEnumDescending},
+		} {
+			si := newGenAction(t, "Microflows$SortItem").(*genMf.SortItem)
+			si.SetAttributePath(p.path)
+			si.SetSortOrder(p.dir)
+			list.AddItems(si)
+		}
+		s.SetSortItemList(list)
+
+		a := newListOpAction(t, "Sorted", s)
+		got := formatActionGen(a)
+		want := "$Sorted = sort($Orders, Customer asc, Total desc);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("missing attribute substitutes ellipsis placeholder", func(t *testing.T) {
+		s := newGenAction(t, "Microflows$Sort").(*genMf.Sort)
+		s.SetListVariableName("Orders")
+
+		list := newGenAction(t, "Microflows$SortItemList").(*genMf.SortItemList)
+		si := newGenAction(t, "Microflows$SortItem").(*genMf.SortItem)
+		// Leave AttributePath/AttributeRef empty.
+		si.SetSortOrder(genMf.SortOrderEnumAscending)
+		list.AddItems(si)
+		s.SetSortItemList(list)
+
+		a := newListOpAction(t, "Sorted", s)
+		got := formatActionGen(a)
+		want := "$Sorted = sort($Orders, ... asc);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+}
+
+func TestFormatActionGen_SetOperations(t *testing.T) {
+	cases := []struct {
+		name     string
+		typeName string
+		want     string
+	}{
+		{"union", "Microflows$Union", "$Combined = union($A, $B);"},
+		{"intersect", "Microflows$Intersect", "$Combined = intersect($A, $B);"},
+		{"subtract", "Microflows$Subtract", "$Combined = subtract($A, $B);"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			el := newGenAction(t, tc.typeName)
+			switch o := el.(type) {
+			case *genMf.Union:
+				o.SetListVariableName("A")
+				o.SetSecondListOrObjectVariableName("B")
+			case *genMf.Intersect:
+				o.SetListVariableName("A")
+				o.SetSecondListOrObjectVariableName("B")
+			case *genMf.Subtract:
+				o.SetListVariableName("A")
+				o.SetSecondListOrObjectVariableName("B")
+			default:
+				t.Fatalf("unexpected element type %T", el)
+			}
+			a := newListOpAction(t, "Combined", el)
+			if got := formatActionGen(a); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFormatActionGen_ContainsAndEquals(t *testing.T) {
+	t.Run("contains", func(t *testing.T) {
+		c := newGenAction(t, "Microflows$Contains").(*genMf.Contains)
+		c.SetListVariableName("Orders")
+		c.SetSecondListOrObjectVariableName("Order")
+		a := newListOpAction(t, "Has", c)
+		got := formatActionGen(a)
+		want := "$Has = contains($Orders, $Order);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("equals (gen ListEquals)", func(t *testing.T) {
+		e := newGenAction(t, "Microflows$ListEquals").(*genMf.ListEquals)
+		e.SetListVariableName("A")
+		e.SetSecondListOrObjectVariableName("B")
+		a := newListOpAction(t, "Eq", e)
+		got := formatActionGen(a)
+		want := "$Eq = equals($A, $B);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+}
+
+func TestFormatActionGen_ListRangeOperation(t *testing.T) {
+	cases := []struct {
+		name   string
+		offset string
+		limit  string
+		want   string
+	}{
+		{"no custom range collapses to bare range()", "", "", "$Page = range($Orders);"},
+		{"offset only", "10", "", "$Page = range($Orders, 10);"},
+		{"limit only forces zero offset", "", "20", "$Page = range($Orders, 0, 20);"},
+		{"offset and limit", "10", "20", "$Page = range($Orders, 10, 20);"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := newGenAction(t, "Microflows$ListRange").(*genMf.ListRange)
+			r.SetListVariableName("Orders")
+			if tc.offset != "" || tc.limit != "" {
+				cr := newGenAction(t, "Microflows$CustomRange").(*genMf.CustomRange)
+				cr.SetOffsetExpression(tc.offset)
+				cr.SetLimitExpression(tc.limit)
+				r.SetCustomRange(cr)
+			}
+			a := newListOpAction(t, "Page", r)
+			if got := formatActionGen(a); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestFormatListOperationGen_DirectDispatch exercises the helper
+// directly to guard the nil-op placeholder path and a handful of
+// representative dispatch cases without going through the wrapping
+// ListOperationAction. This is the entry point the renderer uses for
+// any future caller that already has the inner operation in hand.
+func TestFormatListOperationGen_DirectDispatch(t *testing.T) {
+	t.Run("nil op placeholder", func(t *testing.T) {
+		got := formatListOperationGen(nil, "X")
+		want := "$X = list operation ...;"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("unsupported op type renders %T placeholder", func(t *testing.T) {
+		// Reach for an element kind that's a valid gen type but is
+		// not a list operation primitive — Annotation works.
+		ann := genMf.NewAnnotation()
+		got := formatListOperationGen(ann, "X")
+		if !strings.Contains(got, "$X = list operation ") {
+			t.Errorf("got %q, want containing %q", got, "$X = list operation ")
+		}
+		if !strings.Contains(got, "Annotation") {
+			t.Errorf("got %q, want containing %q", got, "Annotation")
+		}
+	})
+}
+
 // TestFormatActivityGen_NonAction verifies the wrapper returns "" for
 // non-ActionActivity nodes (start/end events, annotations, etc.) so
 // the caller's structural framing is not bypassed.
@@ -689,6 +1192,47 @@ func newGenAction(t *testing.T, typeName string) element.Element {
 		return genTx.NewText()
 	case "Texts$Translation":
 		return genTx.NewTranslation()
+	// Stage 3.2.2.c — List operations family.
+	case "Microflows$CreateListAction":
+		return genMf.NewCreateListAction()
+	case "Microflows$ChangeListAction":
+		return genMf.NewChangeListAction()
+	case "Microflows$ListOperationsAction": // gen Go type: ListOperationAction
+		return genMf.NewListOperationAction()
+	case "Microflows$Head":
+		return genMf.NewHead()
+	case "Microflows$Tail":
+		return genMf.NewTail()
+	case "Microflows$Find":
+		return genMf.NewFind()
+	case "Microflows$FindByExpression":
+		return genMf.NewFindByExpression()
+	case "Microflows$Filter":
+		return genMf.NewFilter()
+	case "Microflows$FilterByExpression":
+		return genMf.NewFilterByExpression()
+	case "Microflows$Sort":
+		return genMf.NewSort()
+	case "Microflows$SortItemList":
+		return genMf.NewSortItemList()
+	case "Microflows$SortItem":
+		return genMf.NewSortItem()
+	case "Microflows$Union":
+		return genMf.NewUnion()
+	case "Microflows$Intersect":
+		return genMf.NewIntersect()
+	case "Microflows$Subtract":
+		return genMf.NewSubtract()
+	case "Microflows$Contains":
+		return genMf.NewContains()
+	case "Microflows$ListEquals":
+		return genMf.NewListEquals()
+	case "Microflows$ListRange":
+		return genMf.NewListRange()
+	case "Microflows$CustomRange":
+		return genMf.NewCustomRange()
+	case "DomainModels$AttributeRef":
+		return genDM.NewAttributeRef()
 	default:
 		t.Fatalf("newGenAction: unknown type %q", typeName)
 		return nil
