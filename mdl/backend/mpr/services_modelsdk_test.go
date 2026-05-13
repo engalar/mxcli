@@ -325,3 +325,80 @@ func TestUpdateDatabaseConnectionViaModelsdk(t *testing.T) {
 		t.Errorf("ConnectionString = %q, want %q", got, "MyModule.NewConn")
 	}
 }
+
+func TestUpdateConsumedRestServiceViaModelsdk(t *testing.T) {
+	const unitID = "11111111-2222-2222-2222-222222222222"
+	contents := makeBSONUnit(t, unitID, "Rest$ConsumedRestService", bson.D{
+		{Key: "Name", Value: "OldRest"},
+		{Key: "Documentation", Value: ""},
+		{Key: "Excluded", Value: false},
+		{Key: "ExportLevel", Value: "Hidden"},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	svc := &model.ConsumedRestService{
+		Name:          "NewRest",
+		Documentation: "Updated docs",
+	}
+	svc.ID = id
+	if err := b.updateConsumedRestServiceViaModelsdk(svc); err != nil {
+		t.Fatalf("updateConsumedRestServiceViaModelsdk: %v", err)
+	}
+
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	if got := readBSONField(t, raw, "Name"); got != "NewRest" {
+		t.Errorf("Name = %q, want %q", got, "NewRest")
+	}
+	if got := readBSONField(t, raw, "Documentation"); got != "Updated docs" {
+		t.Errorf("Documentation = %q, want %q", got, "Updated docs")
+	}
+}
+
+func TestUpdatePublishedRestServiceViaModelsdk(t *testing.T) {
+	const unitID = "11111111-3333-3333-3333-333333333333"
+	contents := makeBSONUnit(t, unitID, "Rest$PublishedRestService", bson.D{
+		{Key: "Name", Value: "OldPub"},
+		{Key: "Documentation", Value: ""},
+		{Key: "Excluded", Value: false},
+		{Key: "ExportLevel", Value: "Hidden"},
+		{Key: "Version", Value: "1"},
+		{Key: "Path", Value: "/old"},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	svc := &model.PublishedRestService{
+		Name:    "NewPub",
+		Version: "2",
+		Path:    "/new",
+	}
+	svc.ID = id
+	if err := b.updatePublishedRestServiceViaModelsdk(svc); err != nil {
+		t.Fatalf("updatePublishedRestServiceViaModelsdk: %v", err)
+	}
+
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	if got := readBSONField(t, raw, "Version"); got != "2" {
+		t.Errorf("Version = %q, want %q", got, "2")
+	}
+	if got := readBSONField(t, raw, "Path"); got != "/new" {
+		t.Errorf("Path = %q, want %q", got, "/new")
+	}
+}
