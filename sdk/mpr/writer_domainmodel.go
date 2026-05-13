@@ -324,21 +324,6 @@ func (w *Writer) ScanOqlQueryUpdates(oldQualifiedName, newQualifiedName string) 
 	return patches, len(patches), nil
 }
 
-// UpdateOqlQueriesForMovedEntity updates OQL queries in all ViewEntitySourceDocuments
-// to reflect a moved entity's new qualified name.
-func (w *Writer) UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualifiedName string) (int, error) {
-	patches, count, err := w.ScanOqlQueryUpdates(oldQualifiedName, newQualifiedName)
-	if err != nil {
-		return 0, err
-	}
-	for _, p := range patches {
-		if err := w.updateUnit(p.ID, p.Contents); err != nil {
-			return count, fmt.Errorf("failed to update ViewEntitySourceDocument %s: %w", p.ID, err)
-		}
-	}
-	return count, nil
-}
-
 // moveUnitByID changes a unit's ContainerID without modifying its contents.
 func (w *Writer) moveUnitByID(unitID string, newContainerID string) error {
 	unitIDBlob := uuidToBlob(unitID)
