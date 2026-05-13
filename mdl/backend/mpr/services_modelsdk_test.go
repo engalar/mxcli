@@ -280,3 +280,48 @@ func TestUpdateDataTransformerViaModelsdk(t *testing.T) {
 		t.Errorf("Name = %q, want %q", got, "NewTransformer")
 	}
 }
+
+func TestUpdateDatabaseConnectionViaModelsdk(t *testing.T) {
+	const unitID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+	contents := makeBSONUnit(t, unitID, "DatabaseConnector$DatabaseConnection", bson.D{
+		{Key: "Name", Value: "OldConn"},
+		{Key: "Documentation", Value: ""},
+		{Key: "Excluded", Value: false},
+		{Key: "ExportLevel", Value: "Hidden"},
+		{Key: "DatabaseType", Value: "PostgreSQL"},
+		{Key: "ConnectionString", Value: "MyModule.OldConn"},
+		{Key: "UserName", Value: "MyModule.OldUser"},
+		{Key: "Password", Value: "MyModule.OldPass"},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	conn := &model.DatabaseConnection{
+		Name:             "NewConn",
+		DatabaseType:     "MySQL",
+		ConnectionString: "MyModule.NewConn",
+		UserName:         "MyModule.NewUser",
+		Password:         "MyModule.NewPass",
+		ExportLevel:      "Hidden",
+	}
+	conn.ID = id
+	if err := b.updateDatabaseConnectionViaModelsdk(conn); err != nil {
+		t.Fatalf("updateDatabaseConnectionViaModelsdk: %v", err)
+	}
+
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	if got := readBSONField(t, raw, "DatabaseType"); got != "MySQL" {
+		t.Errorf("DatabaseType = %q, want %q", got, "MySQL")
+	}
+	if got := readBSONField(t, raw, "ConnectionString"); got != "MyModule.NewConn" {
+		t.Errorf("ConnectionString = %q, want %q", got, "MyModule.NewConn")
+	}
+}
