@@ -179,10 +179,11 @@ func TestPageMutator_SetWidgetProperty_OnPageRoot(t *testing.T) {
 	}
 }
 
-// TestPageMutator_StubMethods_ReturnExplicitErrors guards Stage 2.5
-// follow-ups: InsertWidget / DeleteWidget / ReplaceWidget / SetLayout
-// must surface explicit errors rather than fail silently.
-func TestPageMutator_StubMethods_ReturnExplicitErrors(t *testing.T) {
+// TestPageMutator_StubErrors_OnInvalidInput guards the explicit-error
+// surface for invalid arguments after Stage 2.5 wired up the four
+// previously-stub methods. The intent is the same as the original
+// "Stage 2.5 follow-up" sentinel: never fail silently.
+func TestPageMutator_StubErrors_OnInvalidInput(t *testing.T) {
 	w := openTestWriter(t)
 	parentID := lookupModuleUUID(t, w, "MyFirstModule")
 	repo := NewPageRepository(w)
@@ -197,21 +198,232 @@ func TestPageMutator_StubMethods_ReturnExplicitErrors(t *testing.T) {
 
 	probeID := model.ID("00000000-0000-0000-0000-000000000999")
 
-	if err := mut.InsertWidget(probeID, "slot", nil); err == nil ||
-		!strings.Contains(err.Error(), "Stage 2.5") {
-		t.Errorf("InsertWidget: want Stage 2.5 stub error, got %v", err)
+	// nil widget on Insert
+	if err := mut.InsertWidget(probeID, "Widgets", nil); err == nil ||
+		!strings.Contains(err.Error(), "nil") {
+		t.Errorf("InsertWidget(nil): want nil-widget error, got %v", err)
 	}
+	// Insert into a non-existent parent
+	if err := mut.InsertWidget(probeID, "Widgets", genPg.NewLayoutCallArgument()); err == nil ||
+		!strings.Contains(err.Error(), "not found") {
+		t.Errorf("InsertWidget(unknown parent): want parent-not-found error, got %v", err)
+	}
+	// Delete unknown widget
 	if err := mut.DeleteWidget(probeID); err == nil ||
-		!strings.Contains(err.Error(), "Stage 2.5") {
-		t.Errorf("DeleteWidget: want Stage 2.5 stub error, got %v", err)
+		!strings.Contains(err.Error(), "not found") {
+		t.Errorf("DeleteWidget(unknown): want not-found error, got %v", err)
 	}
+	// Replace with nil
 	if err := mut.ReplaceWidget(probeID, nil); err == nil ||
-		!strings.Contains(err.Error(), "Stage 2.5") {
-		t.Errorf("ReplaceWidget: want Stage 2.5 stub error, got %v", err)
+		!strings.Contains(err.Error(), "nil") {
+		t.Errorf("ReplaceWidget(nil): want nil-replacement error, got %v", err)
 	}
-	if err := mut.SetLayout("Layouts.Foo"); err == nil ||
-		!strings.Contains(err.Error(), "Stage 2.5") {
-		t.Errorf("SetLayout: want Stage 2.5 stub error, got %v", err)
+	// SetLayout to invalid QN
+	if err := mut.SetLayout("BadFormatNoDot"); err == nil ||
+		!strings.Contains(err.Error(), "invalid qualified name") {
+		t.Errorf("SetLayout(bad qn): want invalid-qn error, got %v", err)
+	}
+	// SetLayout to non-existent layout
+	if err := mut.SetLayout("Atlas_Core.NoSuchLayout"); err == nil ||
+		!strings.Contains(err.Error(), "not found") {
+		t.Errorf("SetLayout(missing): want not-found error, got %v", err)
+	}
+}
+
+// TestPageMutator_InsertWidget_AddsToParentSlot verifies that
+// InsertWidget appends a child to the named PartList slot on a parent
+// element identified by ID, and the change survives a Commit + reopen.
+func TestPageMutator_InsertWidget_AddsToParentSlot(t *testing.T) {
+	w := openTestWriter(t)
+	parentID := lookupModuleUUID(t, w, "MyFirstModule")
+	repo := NewPageRepository(w)
+
+	page := newPageWithLayoutCallArgument(t, "InsertProbe")
+	if err := repo.Create(parentID, "Documents", page); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	lc := page.LayoutCall().(*genPg.LayoutCall)
+	arg := lc.ArgumentsItems()[0].(*genPg.LayoutCallArgument)
+
+	// Open mutator → insert a fresh DataView under the LayoutCallArgument's "Widgets" slot
+	mut, err := repo.OpenForMutation(model.ID(page.ID()))
+	if err != nil {
+		t.Fatalf("OpenForMutation: %v", err)
+	}
+	dv := genPg.NewDataView()
+	dv.SetID(element.ID(mmpr.GenerateID()))
+	if err := mut.InsertWidget(model.ID(arg.ID()), "Widgets", dv); err != nil {
+		t.Fatalf("InsertWidget: %v", err)
+	}
+	if err := mut.Commit(); err != nil {
+		t.Fatalf("Commit: %v", err)
+	}
+
+	// Reopen and verify the widget shows up under arg.Widgets
+	got, err := repo.Get(model.ID(page.ID()))
+	if err != nil {
+		t.Fatalf("Get post-Commit: %v", err)
+	}
+	gotArg := got.LayoutCall().(*genPg.LayoutCall).ArgumentsItems()[0].(*genPg.LayoutCallArgument)
+	widgets := gotArg.WidgetsItems()
+	if len(widgets) != 1 {
+		t.Fatalf("post-Commit Widgets len = %d, want 1", len(widgets))
+	}
+	if widgets[0].ID() != dv.ID() {
+		t.Errorf("post-Commit widget ID = %s, want %s", widgets[0].ID(), dv.ID())
+	}
+}
+
+// TestPageMutator_DeleteWidget_RoundTrip verifies that a widget added
+// via InsertWidget can be removed via DeleteWidget, and the deletion
+// survives Commit + reopen.
+func TestPageMutator_DeleteWidget_RoundTrip(t *testing.T) {
+	w := openTestWriter(t)
+	parentID := lookupModuleUUID(t, w, "MyFirstModule")
+	repo := NewPageRepository(w)
+
+	page := newPageWithLayoutCallArgument(t, "DeleteProbe")
+	if err := repo.Create(parentID, "Documents", page); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	lc := page.LayoutCall().(*genPg.LayoutCall)
+	arg := lc.ArgumentsItems()[0].(*genPg.LayoutCallArgument)
+
+	mut, err := repo.OpenForMutation(model.ID(page.ID()))
+	if err != nil {
+		t.Fatalf("OpenForMutation: %v", err)
+	}
+	dv := genPg.NewDataView()
+	dv.SetID(element.ID(mmpr.GenerateID()))
+	if err := mut.InsertWidget(model.ID(arg.ID()), "Widgets", dv); err != nil {
+		t.Fatalf("InsertWidget: %v", err)
+	}
+	if err := mut.Commit(); err != nil {
+		t.Fatalf("Commit (post-insert): %v", err)
+	}
+
+	// Reopen and delete
+	mut2, err := repo.OpenForMutation(model.ID(page.ID()))
+	if err != nil {
+		t.Fatalf("OpenForMutation 2: %v", err)
+	}
+	if err := mut2.DeleteWidget(model.ID(dv.ID())); err != nil {
+		t.Fatalf("DeleteWidget: %v", err)
+	}
+	if err := mut2.Commit(); err != nil {
+		t.Fatalf("Commit (post-delete): %v", err)
+	}
+
+	// Reopen and verify gone
+	got, err := repo.Get(model.ID(page.ID()))
+	if err != nil {
+		t.Fatalf("Get post-delete: %v", err)
+	}
+	gotArg := got.LayoutCall().(*genPg.LayoutCall).ArgumentsItems()[0].(*genPg.LayoutCallArgument)
+	if n := len(gotArg.WidgetsItems()); n != 0 {
+		t.Errorf("post-delete Widgets len = %d, want 0", n)
+	}
+}
+
+// TestPageMutator_ReplaceWidget_PreservesIndex verifies that ReplaceWidget
+// swaps the middle of a 3-widget list while keeping the order:
+// [A, B, C] → ReplaceWidget(B, X) → [A, X, C].
+func TestPageMutator_ReplaceWidget_PreservesIndex(t *testing.T) {
+	w := openTestWriter(t)
+	parentID := lookupModuleUUID(t, w, "MyFirstModule")
+	repo := NewPageRepository(w)
+
+	page := newPageWithLayoutCallArgument(t, "ReplaceProbe")
+	if err := repo.Create(parentID, "Documents", page); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	lc := page.LayoutCall().(*genPg.LayoutCall)
+	arg := lc.ArgumentsItems()[0].(*genPg.LayoutCallArgument)
+
+	a := freshDataView(t, "A")
+	b := freshDataView(t, "B")
+	c := freshDataView(t, "C")
+
+	mut, err := repo.OpenForMutation(model.ID(page.ID()))
+	if err != nil {
+		t.Fatalf("OpenForMutation: %v", err)
+	}
+	for _, dv := range []*genPg.DataView{a, b, c} {
+		if err := mut.InsertWidget(model.ID(arg.ID()), "Widgets", dv); err != nil {
+			t.Fatalf("InsertWidget(%s): %v", dv.ID(), err)
+		}
+	}
+	if err := mut.Commit(); err != nil {
+		t.Fatalf("Commit (post-3-inserts): %v", err)
+	}
+
+	// Reopen and replace B → X
+	mut2, err := repo.OpenForMutation(model.ID(page.ID()))
+	if err != nil {
+		t.Fatalf("OpenForMutation 2: %v", err)
+	}
+	x := freshDataView(t, "X")
+	if err := mut2.ReplaceWidget(model.ID(b.ID()), x); err != nil {
+		t.Fatalf("ReplaceWidget: %v", err)
+	}
+	if err := mut2.Commit(); err != nil {
+		t.Fatalf("Commit (post-replace): %v", err)
+	}
+
+	got, err := repo.Get(model.ID(page.ID()))
+	if err != nil {
+		t.Fatalf("Get post-replace: %v", err)
+	}
+	gotArg := got.LayoutCall().(*genPg.LayoutCall).ArgumentsItems()[0].(*genPg.LayoutCallArgument)
+	widgets := gotArg.WidgetsItems()
+	if len(widgets) != 3 {
+		t.Fatalf("post-replace Widgets len = %d, want 3", len(widgets))
+	}
+	gotIDs := []element.ID{widgets[0].ID(), widgets[1].ID(), widgets[2].ID()}
+	wantIDs := []element.ID{a.ID(), x.ID(), c.ID()}
+	for i := range wantIDs {
+		if gotIDs[i] != wantIDs[i] {
+			t.Errorf("post-replace position %d = %s, want %s", i, gotIDs[i], wantIDs[i])
+		}
+	}
+}
+
+// TestPageMutator_SetLayout_ChangesReference verifies that SetLayout
+// updates the page's LayoutCall.LayoutQualifiedName and the change
+// survives Commit + reopen.
+func TestPageMutator_SetLayout_ChangesReference(t *testing.T) {
+	w := openTestWriter(t)
+	parentID := lookupModuleUUID(t, w, "MyFirstModule")
+	repo := NewPageRepository(w)
+
+	page := newPageWithLayoutCallArgument(t, "SetLayoutProbe")
+	// Pre-set a layout so we can verify the change.
+	page.LayoutCall().(*genPg.LayoutCall).SetLayoutQualifiedName("Atlas_Core.Atlas_TopBar")
+	if err := repo.Create(parentID, "Documents", page); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	mut, err := repo.OpenForMutation(model.ID(page.ID()))
+	if err != nil {
+		t.Fatalf("OpenForMutation: %v", err)
+	}
+	if err := mut.SetLayout("Atlas_Core.Atlas_Default"); err != nil {
+		t.Fatalf("SetLayout: %v", err)
+	}
+	if err := mut.Commit(); err != nil {
+		t.Fatalf("Commit: %v", err)
+	}
+
+	got, err := repo.Get(model.ID(page.ID()))
+	if err != nil {
+		t.Fatalf("Get post-Commit: %v", err)
+	}
+	gotLC, ok := got.LayoutCall().(*genPg.LayoutCall)
+	if !ok || gotLC == nil {
+		t.Fatalf("post-Commit LayoutCall = %v (%T), want *genPg.LayoutCall", got.LayoutCall(), got.LayoutCall())
+	}
+	if qn := gotLC.LayoutQualifiedName(); qn != "Atlas_Core.Atlas_Default" {
+		t.Errorf("post-Commit LayoutQualifiedName = %q, want Atlas_Core.Atlas_Default", qn)
 	}
 }
 
@@ -238,4 +450,29 @@ func newEmptyPage(t *testing.T, name string) *genPg.Page {
 	page.SetID(element.ID(mmpr.GenerateID()))
 	page.SetName(name)
 	return page
+}
+
+// newPageWithLayoutCallArgument builds a fresh page with a populated
+// LayoutCall containing a single LayoutCallArgument — the standard
+// shape Mendix pages use to host root widgets.
+func newPageWithLayoutCallArgument(t *testing.T, name string) *genPg.Page {
+	t.Helper()
+	page := newEmptyPage(t, name)
+	lc := genPg.NewLayoutCall()
+	lc.SetID(element.ID(mmpr.GenerateID()))
+	arg := genPg.NewLayoutCallArgument()
+	arg.SetID(element.ID(mmpr.GenerateID()))
+	lc.AddArguments(arg)
+	page.SetLayoutCall(lc)
+	return page
+}
+
+func freshDataView(t *testing.T, name string) *genPg.DataView {
+	t.Helper()
+	dv := genPg.NewDataView()
+	dv.SetID(element.ID(mmpr.GenerateID()))
+	if setter, ok := any(dv).(interface{ SetName(string) }); ok {
+		setter.SetName(name)
+	}
+	return dv
 }
