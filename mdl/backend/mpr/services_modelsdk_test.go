@@ -169,3 +169,79 @@ func TestUpdateBusinessEventServiceViaModelsdk(t *testing.T) {
 		t.Errorf("Documentation = %q, want %q", got, "Updated docs")
 	}
 }
+
+func TestUpdateImportMappingViaModelsdk(t *testing.T) {
+	const unitID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+	contents := makeBSONUnit(t, unitID, "ImportMappings$ImportMapping", bson.D{
+		{Key: "Name", Value: "OldMapping"},
+		{Key: "Documentation", Value: ""},
+		{Key: "Excluded", Value: false},
+		{Key: "ExportLevel", Value: "Hidden"},
+		{Key: "XmlSchema", Value: ""},
+		{Key: "JsonStructure", Value: ""},
+		{Key: "RootElementName", Value: ""},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	im := &model.ImportMapping{
+		Name:          "NewMapping",
+		Documentation: "docs",
+		ExportLevel:   "Hidden",
+		JsonStructure: "MyModule.MyStructure",
+	}
+	im.ID = id
+	if err := b.updateImportMappingViaModelsdk(im); err != nil {
+		t.Fatalf("updateImportMappingViaModelsdk: %v", err)
+	}
+
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	if got := readBSONField(t, raw, "Name"); got != "NewMapping" {
+		t.Errorf("Name = %q, want %q", got, "NewMapping")
+	}
+	if got := readBSONField(t, raw, "JsonStructure"); got != "MyModule.MyStructure" {
+		t.Errorf("JsonStructure = %q, want %q", got, "MyModule.MyStructure")
+	}
+}
+
+func TestUpdateExportMappingViaModelsdk(t *testing.T) {
+	const unitID = "dddddddd-dddd-dddd-dddd-dddddddddddd"
+	contents := makeBSONUnit(t, unitID, "ExportMappings$ExportMapping", bson.D{
+		{Key: "Name", Value: "OldExport"},
+		{Key: "Documentation", Value: ""},
+		{Key: "Excluded", Value: false},
+		{Key: "ExportLevel", Value: "Hidden"},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	em := &model.ExportMapping{
+		Name:        "NewExport",
+		ExportLevel: "Hidden",
+	}
+	em.ID = id
+	if err := b.updateExportMappingViaModelsdk(em); err != nil {
+		t.Fatalf("updateExportMappingViaModelsdk: %v", err)
+	}
+
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	if got := readBSONField(t, raw, "Name"); got != "NewExport" {
+		t.Errorf("Name = %q, want %q", got, "NewExport")
+	}
+}

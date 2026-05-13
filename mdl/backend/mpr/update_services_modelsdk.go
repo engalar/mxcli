@@ -9,6 +9,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
+	genEM "github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings"
+	genIM "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
 	genJsonStructures "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
@@ -53,21 +55,42 @@ func (b *MprBackend) updateDataTransformerViaModelsdk(dt *model.DataTransformer)
 // ── ImportMapping ─────────────────────────────────────────────────────────
 
 func (b *MprBackend) updateImportMappingViaModelsdk(im *model.ImportMapping) error {
-	contents, err := b.writer.SerializeImportMapping(im)
-	if err != nil {
-		return fmt.Errorf("serialize import mapping: %w", err)
-	}
-	return b.msdkWriteRaw(im.ID, contents)
+	return b.msdkWrite(im.ID, func(elem element.Element) error {
+		typed, ok := elem.(*genIM.ImportMapping)
+		if !ok {
+			return fmt.Errorf("unexpected type %T (want *ImportMapping)", elem)
+		}
+		typed.SetName(im.Name)
+		typed.SetDocumentation(im.Documentation)
+		typed.SetExcluded(im.Excluded)
+		typed.SetExportLevel(im.ExportLevel)
+		typed.SetXmlSchemaQualifiedName(im.XmlSchema)
+		typed.SetJsonStructureQualifiedName(im.JsonStructure)
+		typed.SetMessageDefinitionQualifiedName(im.MessageDefinition)
+		// RootMappingElements (PartList) preserved by LazyDoc.
+		return nil
+	})
 }
 
 // ── ExportMapping ─────────────────────────────────────────────────────────
 
 func (b *MprBackend) updateExportMappingViaModelsdk(em *model.ExportMapping) error {
-	contents, err := b.writer.SerializeExportMapping(em)
-	if err != nil {
-		return fmt.Errorf("serialize export mapping: %w", err)
-	}
-	return b.msdkWriteRaw(em.ID, contents)
+	return b.msdkWrite(em.ID, func(elem element.Element) error {
+		typed, ok := elem.(*genEM.ExportMapping)
+		if !ok {
+			return fmt.Errorf("unexpected type %T (want *ExportMapping)", elem)
+		}
+		typed.SetName(em.Name)
+		typed.SetDocumentation(em.Documentation)
+		typed.SetExcluded(em.Excluded)
+		typed.SetExportLevel(em.ExportLevel)
+		typed.SetXmlSchemaQualifiedName(em.XmlSchema)
+		typed.SetJsonStructureQualifiedName(em.JsonStructure)
+		typed.SetMessageDefinitionQualifiedName(em.MessageDefinition)
+		typed.SetNullValueOption(em.NullValueOption)
+		// RootMappingElements (PartList) preserved by LazyDoc.
+		return nil
+	})
 }
 
 // ── JsonStructure ─────────────────────────────────────────────────────────
