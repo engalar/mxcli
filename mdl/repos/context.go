@@ -43,4 +43,10 @@ type ExecutorContext struct {
 	Tx    TransactionFactory
 	Names QualifiedNameResolver
 	Cache ReaderCache
+
+	// Stage 2.7 cross-domain services. References may be nil if the
+	// caller constructed the context without an sdk/mpr Writer; CascadeService
+	// is always wired (pure modelsdk).
+	Cascade    CascadeService
+	References ReferenceService
 }

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
+	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 const fixturePath = "../../../testdata/expr-checker/minimal.mpr"
@@ -48,6 +49,15 @@ func TestNewExecutorContext_AllFieldsWired(t *testing.T) {
 	}
 	if ctx.Cache == nil {
 		t.Error("ctx.Cache = nil")
+	}
+
+	// Stage 2.7 — Cascade always wired by NewExecutorContext; References
+	// requires the with-references constructor.
+	if ctx.Cascade == nil {
+		t.Error("ctx.Cascade = nil (Stage 2.7 always-wired service)")
+	}
+	if ctx.References != nil {
+		t.Error("ctx.References = non-nil from NewExecutorContext (use NewExecutorContextWithReferences for that)")
 	}
 
 	// Stage 2.6 — 15 newly wired domains.
@@ -283,6 +293,41 @@ func TestNewExecutorContext_RepoSmokeImages(t *testing.T) {
 	}
 	if len(got) != 7 {
 		t.Errorf("Images.ListCollections: got %d, want 7", len(got))
+	}
+}
+
+// Stage 2.7: NewExecutorContextWithReferences wires both Cascade
+// (always wired) and References (requires sdk/mpr Writer).
+func TestNewExecutorContextWithReferences_BothServicesWired(t *testing.T) {
+	dst := copyFixture(t, fixturePath, t.TempDir())
+	mw, err := mmpr.NewWriter(dst)
+	if err != nil {
+		t.Fatalf("mmpr.NewWriter: %v", err)
+	}
+	t.Cleanup(func() { _ = mw.Close() })
+	sdkW, err := sdkmpr.NewWriter(dst)
+	if err != nil {
+		t.Fatalf("sdkmpr.NewWriter: %v", err)
+	}
+	t.Cleanup(func() { _ = sdkW.Close() })
+
+	ctx := NewExecutorContextWithReferences(mw, sdkW)
+	if ctx == nil {
+		t.Fatal("NewExecutorContextWithReferences returned nil")
+	}
+	if ctx.Cascade == nil {
+		t.Error("ctx.Cascade = nil")
+	}
+	if ctx.References == nil {
+		t.Error("ctx.References = nil")
+	}
+	// Smoke: ScanRename with non-matching name should be a no-op (zero hits).
+	hits, err := ctx.References.ScanRename("Module.NoSuchEntity_xyz", "Module.NewName_xyz")
+	if err != nil {
+		t.Fatalf("ScanRename: %v", err)
+	}
+	if len(hits) != 0 {
+		t.Errorf("ScanRename hits = %d, want 0 for non-matching name", len(hits))
 	}
 }
 
