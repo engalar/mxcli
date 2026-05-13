@@ -22,7 +22,7 @@ func (b *MprBackend) createJavaActionViaModelsdk(ja *javaactions.JavaAction) err
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeJavaAction(ja)
+	contents, err := mpr.SerializeJavaAction(ja)
 	if err != nil {
 		return fmt.Errorf("serialize java action: %w", err)
 	}
@@ -41,7 +41,7 @@ func (b *MprBackend) createDatabaseConnectionViaModelsdk(conn *model.DatabaseCon
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeDatabaseConnection(conn)
+	contents, err := mpr.SerializeDatabaseConnection(conn)
 	if err != nil {
 		return fmt.Errorf("serialize database connection: %w", err)
 	}
@@ -79,7 +79,7 @@ func (b *MprBackend) createImportMappingViaModelsdk(im *model.ImportMapping) err
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeImportMapping(im)
+	contents, err := mpr.SerializeImportMapping(im)
 	if err != nil {
 		return fmt.Errorf("serialize import mapping: %w", err)
 	}
@@ -98,7 +98,7 @@ func (b *MprBackend) createExportMappingViaModelsdk(em *model.ExportMapping) err
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeExportMapping(em)
+	contents, err := mpr.SerializeExportMapping(em)
 	if err != nil {
 		return fmt.Errorf("serialize export mapping: %w", err)
 	}
@@ -136,7 +136,7 @@ func (b *MprBackend) createBusinessEventServiceViaModelsdk(svc *model.BusinessEv
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeBusinessEventService(svc)
+	contents, err := mpr.SerializeBusinessEventService(svc)
 	if err != nil {
 		return fmt.Errorf("serialize business event service: %w", err)
 	}
@@ -155,7 +155,7 @@ func (b *MprBackend) createConsumedODataServiceViaModelsdk(svc *model.ConsumedOD
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeConsumedODataService(svc)
+	contents, err := mpr.SerializeConsumedODataService(svc)
 	if err != nil {
 		return fmt.Errorf("serialize consumed odata service: %w", err)
 	}
@@ -172,7 +172,7 @@ func (b *MprBackend) createPublishedODataServiceViaModelsdk(svc *model.Published
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializePublishedODataService(svc)
+	contents, err := mpr.SerializePublishedODataService(svc)
 	if err != nil {
 		return fmt.Errorf("serialize published odata service: %w", err)
 	}
@@ -191,7 +191,7 @@ func (b *MprBackend) createConsumedRestServiceViaModelsdk(svc *model.ConsumedRes
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeConsumedRestService(svc)
+	contents, err := mpr.SerializeConsumedRestService(svc)
 	if err != nil {
 		return fmt.Errorf("serialize consumed rest service: %w", err)
 	}
@@ -208,7 +208,7 @@ func (b *MprBackend) createPublishedRestServiceViaModelsdk(svc *model.PublishedR
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializePublishedRestService(svc)
+	contents, err := mpr.SerializePublishedRestService(svc)
 	if err != nil {
 		return fmt.Errorf("serialize published rest service: %w", err)
 	}
@@ -246,7 +246,7 @@ func (b *MprBackend) createEnumerationViaModelsdk(enum *model.Enumeration) error
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeEnumeration(enum)
+	contents, err := mpr.SerializeEnumeration(enum)
 	if err != nil {
 		return fmt.Errorf("serialize enumeration: %w", err)
 	}
@@ -265,7 +265,7 @@ func (b *MprBackend) createConstantViaModelsdk(constant *model.Constant) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeConstant(constant)
+	contents, err := mpr.SerializeConstant(constant)
 	if err != nil {
 		return fmt.Errorf("serialize constant: %w", err)
 	}

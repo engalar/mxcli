@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // updateProjectSettingsViaModelsdk reuses the canonical sdk/mpr serializer
@@ -15,7 +16,7 @@ func (b *MprBackend) updateProjectSettingsViaModelsdk(ps *model.ProjectSettings)
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := b.writer.SerializeProjectSettings(ps)
+	contents, err := mpr.SerializeProjectSettings(ps)
 	if err != nil {
 		return fmt.Errorf("serialize project settings: %w", err)
 	}
