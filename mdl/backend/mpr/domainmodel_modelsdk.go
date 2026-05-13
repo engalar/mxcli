@@ -4,6 +4,9 @@ package mprbackend
 
 import (
 	"fmt"
+	"strings"
+
+	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/mpr"
@@ -162,4 +165,146 @@ func (b *MprBackend) createCrossAssociationViaModelsdk(domainModelID model.ID, c
 		dm.CrossAssociations = append(dm.CrossAssociations, ca)
 		return nil
 	})
+}
+
+// ── CreateViewEntitySourceDocument ────────────────────
+
+func (b *MprBackend) createViewEntitySourceDocumentViaModelsdk(moduleID model.ID, moduleName, docName, oqlQuery, documentation string) (model.ID, error) {
+	if b.msdkWriter == nil {
+		return "", fmt.Errorf("modelsdk writer not initialized")
+	}
+	docID := model.ID(mpr.GenerateID())
+	doc := bson.D{
+		{Key: "$ID", Value: mpr.IDToBsonBinary(string(docID))},
+		{Key: "$Type", Value: "DomainModels$ViewEntitySourceDocument"},
+		{Key: "Documentation", Value: documentation},
+		{Key: "Excluded", Value: false},
+		{Key: "ExportLevel", Value: "Hidden"},
+		{Key: "Name", Value: docName},
+		{Key: "Oql", Value: oqlQuery},
+	}
+	contents, err := bson.Marshal(doc)
+	if err != nil {
+		return "", fmt.Errorf("serialize ViewEntitySourceDocument: %w", err)
+	}
+	if err := b.msdkWriter.InsertUnit(string(docID), string(moduleID), "Documents", "DomainModels$ViewEntitySourceDocument", contents); err != nil {
+		return "", fmt.Errorf("insert ViewEntitySourceDocument: %w", err)
+	}
+	_ = moduleName
+	return docID, nil
+}
+
+// ── MoveEntity ────────────────────────────────────────
+
+func (b *MprBackend) moveEntityViaModelsdk(entity *domainmodel.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error) {
+	if b.msdkWriter == nil {
+		return nil, fmt.Errorf("modelsdk writer not initialized")
+	}
+
+	sourceDM, err := b.reader.GetDomainModelByID(sourceDMID)
+	if err != nil {
+		return nil, fmt.Errorf("load source domain model: %w", err)
+	}
+
+	found := false
+	for i, e := range sourceDM.Entities {
+		if e.ID == entity.ID {
+			sourceDM.Entities = append(sourceDM.Entities[:i], sourceDM.Entities[i+1:]...)
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("entity not found in source domain model: %s", entity.ID)
+	}
+
+	targetDM, err := b.reader.GetDomainModelByID(targetDMID)
+	if err != nil {
+		return nil, fmt.Errorf("load target domain model: %w", err)
+	}
+
+	var convertedAssocs []string
+	var keptAssocs []*domainmodel.Association
+	for _, a := range sourceDM.Associations {
+		if a.ChildID == entity.ID {
+			ca := &domainmodel.CrossModuleAssociation{}
+			ca.ID = a.ID
+			ca.TypeName = "DomainModels$CrossAssociation"
+			ca.ContainerID = sourceDMID
+			ca.Name = a.Name
+			ca.Documentation = a.Documentation
+			ca.ParentID = a.ParentID
+			ca.ChildRef = targetModuleName + "." + entity.Name
+			ca.Type = a.Type
+			ca.Owner = a.Owner
+			ca.StorageFormat = a.StorageFormat
+			ca.ParentDeleteBehavior = a.ParentDeleteBehavior
+			ca.ChildDeleteBehavior = a.ChildDeleteBehavior
+			sourceDM.CrossAssociations = append(sourceDM.CrossAssociations, ca)
+			convertedAssocs = append(convertedAssocs, a.Name)
+		} else if a.ParentID == entity.ID {
+			var childEntityName string
+			for _, e := range sourceDM.Entities {
+				if e.ID == a.ChildID {
+					childEntityName = e.Name
+					break
+				}
+			}
+			ca := &domainmodel.CrossModuleAssociation{}
+			ca.ID = a.ID
+			ca.TypeName = "DomainModels$CrossAssociation"
+			ca.ContainerID = targetDMID
+			ca.Name = a.Name
+			ca.Documentation = a.Documentation
+			ca.ParentID = a.ParentID
+			ca.ChildRef = sourceModuleName + "." + childEntityName
+			ca.Type = a.Type
+			ca.Owner = a.Owner
+			ca.StorageFormat = a.StorageFormat
+			ca.ParentDeleteBehavior = a.ParentDeleteBehavior
+			ca.ChildDeleteBehavior = a.ChildDeleteBehavior
+			targetDM.CrossAssociations = append(targetDM.CrossAssociations, ca)
+			convertedAssocs = append(convertedAssocs, a.Name)
+		} else {
+			keptAssocs = append(keptAssocs, a)
+		}
+	}
+	sourceDM.Associations = keptAssocs
+
+	oldPrefix := sourceModuleName + "."
+	newPrefix := targetModuleName + "."
+	for _, vr := range entity.ValidationRules {
+		attrIDStr := string(vr.AttributeID)
+		if strings.HasPrefix(attrIDStr, oldPrefix) {
+			vr.AttributeID = model.ID(newPrefix + attrIDStr[len(oldPrefix):])
+		}
+	}
+	if entity.Source == "DomainModels$OqlViewEntitySource" && entity.SourceDocumentRef != "" {
+		if strings.HasPrefix(entity.SourceDocumentRef, oldPrefix) {
+			entity.SourceDocumentRef = newPrefix + entity.SourceDocumentRef[len(oldPrefix):]
+		}
+	}
+
+	if err := b.updateDomainModelViaModelsdk(sourceDM); err != nil {
+		return nil, fmt.Errorf("update source domain model: %w", err)
+	}
+
+	entity.ContainerID = targetDMID
+	targetDM.Entities = append(targetDM.Entities, entity)
+	return convertedAssocs, b.updateDomainModelViaModelsdk(targetDM)
+}
+
+// ── UpdateOqlQueriesForMovedEntity ────────────────────
+
+func (b *MprBackend) updateOqlQueriesForMovedEntityViaModelsdk(oldQualifiedName, newQualifiedName string) (int, error) {
+	patches, count, err := b.writer.ScanOqlQueryUpdates(oldQualifiedName, newQualifiedName)
+	if err != nil {
+		return 0, err
+	}
+	for _, p := range patches {
+		if err := b.msdkWriteRaw(model.ID(p.ID), p.Contents); err != nil {
+			return count, fmt.Errorf("write ViewEntitySourceDocument %s: %w", p.ID, err)
+		}
+	}
+	return count, nil
 }

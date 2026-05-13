@@ -235,7 +235,7 @@ func (b *MprBackend) MoveViewEntitySourceDocument(sourceModuleName string, targe
 	return b.moveViewEntitySourceDocumentViaModelsdk(sourceModuleName, targetModuleID, docName)
 }
 func (b *MprBackend) UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualifiedName string) (int, error) {
-	return b.writer.UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualifiedName)
+	return b.updateOqlQueriesForMovedEntityViaModelsdk(oldQualifiedName, newQualifiedName)
 }
 func (b *MprBackend) UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName string) error {
 	return b.writer.UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName)
