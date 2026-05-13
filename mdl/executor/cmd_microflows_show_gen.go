@@ -505,8 +505,13 @@ func traverseFlowGen(
 		return
 	}
 
-	// Any other node: opaque activity placeholder. Then walk on.
-	*lines = append(*lines, indentStr+placeholderForGen(obj))
+	// Any other node: try the gen-typed activity formatter first; fall
+	// back to a TODO placeholder for unsupported kinds.
+	if rendered := formatActivityGen(ctx, obj); rendered != "" {
+		*lines = append(*lines, indentStr+rendered)
+	} else {
+		*lines = append(*lines, indentStr+placeholderForGen(obj))
+	}
 	for _, f := range findNormalFlowsGen(flowsByOrigin[currentID]) {
 		traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)
 	}
