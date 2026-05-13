@@ -94,6 +94,7 @@ func nanoflowELKGen(ctx *ExecContext, name string) error {
 		ReturnType:       targetNf.ReturnType(),
 		Parameters:       genFlowParametersFromCollection(targetNf.ObjectCollection()),
 		ObjectCollection: targetNf.ObjectCollection(),
+		TopLevelFlows:    targetNf.FlowsItems(),
 		EntityNames:      entityNames,
 		MdlSource:        mdlSource,
 		SourceMap:        sourceMap,
@@ -105,12 +106,17 @@ func nanoflowELKGen(ctx *ExecContext, name string) error {
 // ────────────────────────────────────────────────────────
 
 // flowELKInputGen mirrors legacy `flowELKInput` but accepts gen types.
+//
+// Flows live on the Microflow / Nanoflow itself in the gen surface
+// (not on the ObjectCollection); callers extract them with
+// `FlowsItems()` and pass them in via TopLevelFlows.
 type flowELKInputGen struct {
 	FlowType         string
 	QualifiedName    string
 	ReturnType       string
 	Parameters       []genFlowParameter
 	ObjectCollection element.Element
+	TopLevelFlows    []element.Element
 	EntityNames      map[model.ID]string
 	MdlSource        string
 	SourceMap        map[string]elkSourceRange
@@ -190,8 +196,11 @@ func buildFlowELKGen(ctx *ExecContext, in flowELKInputGen) error {
 		data.Nodes = append(data.Nodes, node)
 	}
 
-	// Build edges — only top-level flows.
-	flows := genSequenceFlows(col)
+	// Build edges — top-level flows live on the Microflow/Nanoflow,
+	// passed in via in.TopLevelFlows. Loop body flows are still
+	// co-mingled with activities inside the loop's own ObjectCollection
+	// (handled by buildMicroflowELKNodeHierarchicalGen).
+	flows := genSequenceFlowsFromList(in.TopLevelFlows)
 	sort.SliceStable(flows, func(i, j int) bool {
 		return flows[i].OriginConnectionIndex() < flows[j].OriginConnectionIndex()
 	})
@@ -201,6 +210,18 @@ func buildFlowELKGen(ctx *ExecContext, in flowELKInputGen) error {
 	}
 
 	return emitMicroflowELKGen(ctx, data)
+}
+
+// genSequenceFlowsFromList filters a slice of element.Element for
+// SequenceFlow elements, returning the strongly-typed slice.
+func genSequenceFlowsFromList(items []element.Element) []*genMf.SequenceFlow {
+	var out []*genMf.SequenceFlow
+	for _, obj := range items {
+		if sf, ok := obj.(*genMf.SequenceFlow); ok && sf != nil {
+			out = append(out, sf)
+		}
+	}
+	return out
 }
 
 // genActivityObjects returns the non-flow, non-parameter activity
