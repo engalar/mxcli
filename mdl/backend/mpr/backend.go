@@ -633,20 +633,16 @@ func (b *MprBackend) DeleteJavaAction(id model.ID) error {
 	return b.deleteJavaActionViaModelsdk(id)
 }
 func (b *MprBackend) WriteJavaSourceFile(moduleName, actionName string, javaCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType, extraImports []string, extraCode string) error {
-	return b.writer.WriteJavaSourceFile(moduleName, actionName, javaCode, params, returnType, extraImports, extraCode)
+	return b.writeJavaSourceFileViaPath(moduleName, actionName, javaCode, params, returnType, extraImports, extraCode)
 }
 func (b *MprBackend) DeleteJavaSourceFile(moduleName, actionName string) error {
-	return b.writer.DeleteJavaSourceFile(moduleName, actionName)
+	return b.deleteJavaSourceFileViaPath(moduleName, actionName)
 }
 func (b *MprBackend) RenameJavaSourceFile(moduleName, oldName, newName string) error {
-	return b.writer.RenameJavaSourceFile(moduleName, oldName, newName)
+	return b.renameJavaSourceFileViaPath(moduleName, oldName, newName)
 }
-
-// ReadJavaSourceFile delegates to writer because the mpr SDK places this
-// read operation on Writer (it needs write-transaction access to the
-// contents directory).
 func (b *MprBackend) ReadJavaSourceFile(moduleName, actionName string) (string, error) {
-	return b.writer.ReadJavaSourceFile(moduleName, actionName)
+	return b.readJavaSourceFileViaPath(moduleName, actionName)
 }
 
 // ---------------------------------------------------------------------------

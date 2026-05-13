@@ -1,0 +1,60 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package mprbackend
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/sdk/javaactions"
+)
+
+// javaSourceDir returns the javasource/actions directory for the given module,
+// derived from b.path (the .mpr file path) without touching b.writer.
+func (b *MprBackend) javaSourceDir(moduleName string) string {
+	projectRoot := filepath.Dir(b.path)
+	return filepath.Join(projectRoot, "javasource", strings.ToLower(moduleName), "actions")
+}
+
+func (b *MprBackend) writeJavaSourceFileViaPath(moduleName, actionName string, javaCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType, extraImports []string, extraCode string) error {
+	dir := b.javaSourceDir(moduleName)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("create javasource directory: %w", err)
+	}
+	source := sdkmpr.GenerateJavaSource(moduleName, actionName, javaCode, params, returnType, extraImports, extraCode)
+	filePath := filepath.Join(dir, actionName+".java")
+	if err := os.WriteFile(filePath, []byte(source), 0644); err != nil {
+		return fmt.Errorf("write Java source file: %w", err)
+	}
+	return nil
+}
+
+func (b *MprBackend) deleteJavaSourceFileViaPath(moduleName, actionName string) error {
+	filePath := filepath.Join(b.javaSourceDir(moduleName), actionName+".java")
+	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("delete Java source file: %w", err)
+	}
+	return nil
+}
+
+func (b *MprBackend) renameJavaSourceFileViaPath(moduleName, oldName, newName string) error {
+	dir := b.javaSourceDir(moduleName)
+	oldPath := filepath.Join(dir, oldName+".java")
+	newPath := filepath.Join(dir, newName+".java")
+	if err := os.Rename(oldPath, newPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("rename Java source file: %w", err)
+	}
+	return nil
+}
+
+func (b *MprBackend) readJavaSourceFileViaPath(moduleName, actionName string) (string, error) {
+	filePath := filepath.Join(b.javaSourceDir(moduleName), actionName+".java")
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", fmt.Errorf("read Java source file: %w", err)
+	}
+	return string(content), nil
+}
