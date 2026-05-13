@@ -255,5 +255,6 @@ func execCreateNanoflow(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 	ctx.trackCreatedNanoflow(s.Name.Module, s.Name.Name, nf.ID, containerID, returnEntityName)
 
 	invalidateHierarchy(ctx)
+	invalidateMicroflowsCache(ctx)
 	return nil
 }

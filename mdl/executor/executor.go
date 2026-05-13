@@ -20,6 +20,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	"github.com/mendixlabs/mxcli/sdk/microflows"
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
 
@@ -29,8 +30,9 @@ type executorCache struct {
 	units        []*types.UnitInfo
 	folders      []*types.FolderInfo
 	domainModels []*domainmodel.DomainModel
+	microflows   []*microflows.Microflow
 	hierarchy    *ContainerHierarchy
-	// pages, layouts, microflows are cached separately as they may change during execution
+	// pages, layouts are cached separately as they may change during execution
 
 	// Track items created during this session (not yet visible via reader)
 	createdMicroflows map[string]*createdMicroflowInfo // qualifiedName -> info
@@ -125,13 +127,45 @@ func getEntityNames(ctx *ExecContext, h *ContainerHierarchy) map[model.ID]string
 	return entityNames
 }
 
+// getAllMicroflows returns the cached list of microflows, loading from the
+// backend on first call. Repeated DescribeMicroflowToString calls (e.g.
+// MineMPR over 1500+ microflows) used to call ListMicroflows once per
+// describe, producing O(N²) load time. Caching brings the cost back to O(N).
+//
+// Invalidate via invalidateMicroflowsCache after any write that creates,
+// renames, deletes, or moves a microflow or nanoflow (Microflow and
+// Nanoflow share the same MPR storage, so both invalidations clear this).
+func getAllMicroflows(ctx *ExecContext) ([]*microflows.Microflow, error) {
+	if ctx.Cache != nil && ctx.Cache.microflows != nil {
+		return ctx.Cache.microflows, nil
+	}
+	mfs, err := ctx.Backend.ListMicroflows()
+	if err != nil {
+		return nil, err
+	}
+	if ctx.Cache != nil {
+		ctx.Cache.microflows = mfs
+	}
+	return mfs, nil
+}
+
+// invalidateMicroflowsCache clears the cached microflow list and the
+// pre-warmed microflowNames map. Call from any write path that affects
+// microflow or nanoflow units.
+func invalidateMicroflowsCache(ctx *ExecContext) {
+	if ctx.Cache != nil {
+		ctx.Cache.microflows = nil
+		ctx.Cache.microflowNames = nil
+	}
+}
+
 // getMicroflowNames returns the microflow name lookup map, using the pre-warmed cache if available.
 func getMicroflowNames(ctx *ExecContext, h *ContainerHierarchy) map[model.ID]string {
 	if ctx.Cache != nil && len(ctx.Cache.microflowNames) > 0 {
 		return ctx.Cache.microflowNames
 	}
 	microflowNames := make(map[model.ID]string)
-	mfs, err := ctx.Backend.ListMicroflows()
+	mfs, err := getAllMicroflows(ctx)
 	if err != nil {
 		if ctx.Logger != nil {
 			ctx.Logger.Warn("getMicroflowNames: ListMicroflows failed", "error", err)

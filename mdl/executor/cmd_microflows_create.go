@@ -285,5 +285,6 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 
 	// Invalidate hierarchy cache so the new microflow's container is visible
 	invalidateHierarchy(ctx)
+	invalidateMicroflowsCache(ctx)
 	return nil
 }
