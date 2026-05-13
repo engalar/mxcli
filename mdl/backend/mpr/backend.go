@@ -125,7 +125,9 @@ func (b *MprBackend) GetModule(id model.ID) (*model.Module, error) { return b.re
 func (b *MprBackend) GetModuleByName(name string) (*model.Module, error) {
 	return b.reader.GetModuleByName(name)
 }
-func (b *MprBackend) CreateModule(module *model.Module) error { return b.writer.CreateModule(module) }
+func (b *MprBackend) CreateModule(module *model.Module) error {
+	return b.createModuleViaModelsdk(module)
+}
 func (b *MprBackend) UpdateModule(module *model.Module) error { return b.updateModuleViaModelsdk(module) }
 func (b *MprBackend) DeleteModule(id model.ID) error          { return b.deleteModuleViaModelsdk(id) }
 func (b *MprBackend) DeleteModuleWithCleanup(id model.ID, moduleName string) error {
@@ -153,7 +155,9 @@ func (b *MprBackend) UpdateModuleSettings(ms *types.ModuleSettings) error {
 func (b *MprBackend) ListFolders() ([]*types.FolderInfo, error) {
 	return convertFolderInfoSlice(b.reader.ListFolders())
 }
-func (b *MprBackend) CreateFolder(folder *model.Folder) error { return b.writer.CreateFolder(folder) }
+func (b *MprBackend) CreateFolder(folder *model.Folder) error {
+	return b.createFolderViaModelsdk(folder)
+}
 func (b *MprBackend) DeleteFolder(id model.ID) error          { return b.deleteFolderViaModelsdk(id) }
 func (b *MprBackend) MoveFolder(id model.ID, newContainerID model.ID) error {
 	return b.moveFolderViaModelsdk(id, newContainerID)
@@ -186,7 +190,7 @@ func (b *MprBackend) DeleteEntity(domainModelID model.ID, entityID model.ID) err
 	return b.deleteEntityViaModelsdk(domainModelID, entityID)
 }
 func (b *MprBackend) MoveEntity(entity *domainmodel.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error) {
-	return b.writer.MoveEntity(entity, sourceDMID, targetDMID, sourceModuleName, targetModuleName)
+	return b.moveEntityViaModelsdk(entity, sourceDMID, targetDMID, sourceModuleName, targetModuleName)
 }
 
 func (b *MprBackend) AddAttribute(domainModelID model.ID, entityID model.ID, attr *domainmodel.Attribute) error {
@@ -213,7 +217,7 @@ func (b *MprBackend) DeleteCrossAssociation(domainModelID model.ID, assocID mode
 }
 
 func (b *MprBackend) CreateViewEntitySourceDocument(moduleID model.ID, moduleName, docName, oqlQuery, documentation string) (model.ID, error) {
-	return b.writer.CreateViewEntitySourceDocument(moduleID, moduleName, docName, oqlQuery, documentation)
+	return b.createViewEntitySourceDocumentViaModelsdk(moduleID, moduleName, docName, oqlQuery, documentation)
 }
 func (b *MprBackend) DeleteViewEntitySourceDocument(id model.ID) error {
 	return b.deleteViewEntitySourceDocumentViaModelsdk(id)
@@ -222,10 +226,10 @@ func (b *MprBackend) DeleteViewEntitySourceDocumentByName(moduleName, docName st
 	return b.deleteViewEntitySourceDocumentByNameViaModelsdk(moduleName, docName)
 }
 func (b *MprBackend) FindViewEntitySourceDocumentID(moduleName, docName string) (model.ID, error) {
-	return b.writer.FindViewEntitySourceDocumentID(moduleName, docName)
+	return b.reader.FindViewEntitySourceDocumentID(moduleName, docName)
 }
 func (b *MprBackend) FindAllViewEntitySourceDocumentIDs(moduleName, docName string) ([]model.ID, error) {
-	return b.writer.FindAllViewEntitySourceDocumentIDs(moduleName, docName)
+	return b.reader.FindAllViewEntitySourceDocumentIDs(moduleName, docName)
 }
 func (b *MprBackend) MoveViewEntitySourceDocument(sourceModuleName string, targetModuleID model.ID, docName string) error {
 	return b.moveViewEntitySourceDocumentViaModelsdk(sourceModuleName, targetModuleID, docName)
@@ -417,19 +421,19 @@ func (b *MprBackend) RemoveFromAllowedRoles(unitID model.ID, roleName string) (b
 	return b.removeFromAllowedRolesViaModelsdk(unitID, roleName)
 }
 func (b *MprBackend) AddEntityAccessRule(params backend.EntityAccessRuleParams) error {
-	return b.writer.AddEntityAccessRule(params.UnitID, params.EntityName, params.RoleNames, params.AllowCreate, params.AllowDelete, params.DefaultMemberAccess, params.XPathConstraint, unconvertEntityMemberAccessSlice(params.MemberAccesses))
+	return b.addEntityAccessRuleViaModelsdk(params.UnitID, params.EntityName, params.RoleNames, params.AllowCreate, params.AllowDelete, params.DefaultMemberAccess, params.XPathConstraint, unconvertEntityMemberAccessSlice(params.MemberAccesses))
 }
 func (b *MprBackend) RemoveEntityAccessRule(unitID model.ID, entityName string, roleNames []string) (int, error) {
-	return b.writer.RemoveEntityAccessRule(unitID, entityName, roleNames)
+	return b.removeEntityAccessRuleViaModelsdk(unitID, entityName, roleNames)
 }
 func (b *MprBackend) RevokeEntityMemberAccess(unitID model.ID, entityName string, roleNames []string, revocation types.EntityAccessRevocation) (int, error) {
-	return b.writer.RevokeEntityMemberAccess(unitID, entityName, roleNames, unconvertEntityAccessRevocation(revocation))
+	return b.revokeEntityMemberAccessViaModelsdk(unitID, entityName, roleNames, unconvertEntityAccessRevocation(revocation))
 }
 func (b *MprBackend) RemoveRoleFromAllEntities(unitID model.ID, roleName string) (int, error) {
-	return b.writer.RemoveRoleFromAllEntities(unitID, roleName)
+	return b.removeRoleFromAllEntitiesViaModelsdk(unitID, roleName)
 }
 func (b *MprBackend) ReconcileMemberAccesses(unitID model.ID, moduleName string) (int, error) {
-	return b.writer.ReconcileMemberAccesses(unitID, moduleName)
+	return b.reconcileMemberAccessesViaModelsdk(unitID, moduleName)
 }
 
 // ---------------------------------------------------------------------------
@@ -443,7 +447,7 @@ func (b *MprBackend) GetNavigation() (*types.NavigationDocument, error) {
 	return convertNavDocPtr(b.reader.GetNavigation())
 }
 func (b *MprBackend) UpdateNavigationProfile(navDocID model.ID, profileName string, spec types.NavigationProfileSpec) error {
-	return b.writer.UpdateNavigationProfile(navDocID, profileName, unconvertNavProfileSpec(spec))
+	return b.updateNavigationProfileViaModelsdk(navDocID, profileName, unconvertNavProfileSpec(spec))
 }
 
 // ---------------------------------------------------------------------------
@@ -671,7 +675,7 @@ func (b *MprBackend) GetProjectSettings() (*model.ProjectSettings, error) {
 	return b.reader.GetProjectSettings()
 }
 func (b *MprBackend) UpdateProjectSettings(ps *model.ProjectSettings) error {
-	return b.writer.UpdateProjectSettings(ps)
+	return b.updateProjectSettingsViaModelsdk(ps)
 }
 
 // ---------------------------------------------------------------------------
@@ -707,13 +711,13 @@ func (b *MprBackend) GetScheduledEvent(id model.ID) (*model.ScheduledEvent, erro
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) UpdateQualifiedNameInAllUnits(oldName, newName string) (int, error) {
-	return b.writer.UpdateQualifiedNameInAllUnits(oldName, newName)
+	return b.updateQualifiedNameInAllUnitsViaModelsdk(oldName, newName)
 }
 func (b *MprBackend) RenameReferences(oldName, newName string, dryRun bool) ([]types.RenameHit, error) {
-	return convertRenameHitSlice(b.writer.RenameReferences(oldName, newName, dryRun))
+	return convertRenameHitSlice(b.renameReferencesViaModelsdk(oldName, newName, dryRun))
 }
 func (b *MprBackend) RenameDocumentByName(moduleName, oldName, newName string) error {
-	return b.writer.RenameDocumentByName(moduleName, oldName, newName)
+	return b.renameDocumentByNameViaModelsdk(moduleName, oldName, newName)
 }
 
 // ---------------------------------------------------------------------------
@@ -787,37 +791,37 @@ func (b *MprBackend) ListAgentEditorAgents() ([]*agenteditor.Agent, error) {
 	return b.reader.ListAgentEditorAgents()
 }
 func (b *MprBackend) CreateAgentEditorModel(m *agenteditor.Model) error {
-	return b.writer.CreateAgentEditorModel(m)
+	return b.createAgentEditorModelViaModelsdk(m)
 }
 func (b *MprBackend) UpdateAgentEditorModel(m *agenteditor.Model) error {
-	return b.writer.UpdateAgentEditorModel(m)
+	return b.updateAgentEditorModelViaModelsdk(m)
 }
 func (b *MprBackend) DeleteAgentEditorModel(id string) error {
 	return b.deleteAgentEditorModelViaModelsdk(id)
 }
 func (b *MprBackend) CreateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error {
-	return b.writer.CreateAgentEditorKnowledgeBase(k)
+	return b.createAgentEditorKnowledgeBaseViaModelsdk(k)
 }
 func (b *MprBackend) UpdateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error {
-	return b.writer.UpdateAgentEditorKnowledgeBase(k)
+	return b.updateAgentEditorKnowledgeBaseViaModelsdk(k)
 }
 func (b *MprBackend) DeleteAgentEditorKnowledgeBase(id string) error {
 	return b.deleteAgentEditorKnowledgeBaseViaModelsdk(id)
 }
 func (b *MprBackend) CreateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error {
-	return b.writer.CreateAgentEditorConsumedMCPService(c)
+	return b.createAgentEditorConsumedMCPServiceViaModelsdk(c)
 }
 func (b *MprBackend) UpdateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error {
-	return b.writer.UpdateAgentEditorConsumedMCPService(c)
+	return b.updateAgentEditorConsumedMCPServiceViaModelsdk(c)
 }
 func (b *MprBackend) DeleteAgentEditorConsumedMCPService(id string) error {
 	return b.deleteAgentEditorConsumedMCPServiceViaModelsdk(id)
 }
 func (b *MprBackend) CreateAgentEditorAgent(a *agenteditor.Agent) error {
-	return b.writer.CreateAgentEditorAgent(a)
+	return b.createAgentEditorAgentViaModelsdk(a)
 }
 func (b *MprBackend) UpdateAgentEditorAgent(a *agenteditor.Agent) error {
-	return b.writer.UpdateAgentEditorAgent(a)
+	return b.updateAgentEditorAgentViaModelsdk(a)
 }
 func (b *MprBackend) DeleteAgentEditorAgent(id string) error {
 	return b.deleteAgentEditorAgentViaModelsdk(id)
