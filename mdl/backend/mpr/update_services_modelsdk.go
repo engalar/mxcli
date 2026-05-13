@@ -8,6 +8,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
 	genJsonStructures "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
@@ -89,11 +90,20 @@ func (b *MprBackend) updateJsonStructureViaModelsdk(js *types.JsonStructure) err
 // ── BusinessEventService ──────────────────────────────────────────────────
 
 func (b *MprBackend) updateBusinessEventServiceViaModelsdk(svc *model.BusinessEventService) error {
-	contents, err := b.writer.SerializeBusinessEventService(svc)
-	if err != nil {
-		return fmt.Errorf("serialize business event service: %w", err)
-	}
-	return b.msdkWriteRaw(svc.ID, contents)
+	return b.msdkWrite(svc.ID, func(elem element.Element) error {
+		typed, ok := elem.(*genBE.BusinessEventService)
+		if !ok {
+			return fmt.Errorf("unexpected type %T (want *BusinessEventService)", elem)
+		}
+		typed.SetName(svc.Name)
+		typed.SetDocumentation(svc.Documentation)
+		typed.SetExcluded(svc.Excluded)
+		typed.SetExportLevel(svc.ExportLevel)
+		typed.SetDocument(svc.Document)
+		// Definition (Part) and OperationImplementations (PartList) are
+		// preserved by LazyDoc; updated by dedicated mutator operations.
+		return nil
+	})
 }
 
 // ── OData services ────────────────────────────────────────────────────────

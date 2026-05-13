@@ -129,3 +129,43 @@ func TestUpdateJsonStructureViaModelsdk(t *testing.T) {
 		t.Errorf("JsonSnippet = %q, want updated value", got)
 	}
 }
+
+func TestUpdateBusinessEventServiceViaModelsdk(t *testing.T) {
+	const unitID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	contents := makeBSONUnit(t, unitID, "BusinessEvents$BusinessEventService", bson.D{
+		{Key: "Name", Value: "OldService"},
+		{Key: "Documentation", Value: ""},
+		{Key: "Excluded", Value: false},
+		{Key: "ExportLevel", Value: "Hidden"},
+		{Key: "Definition", Value: nil},
+		{Key: "SourceApi", Value: nil},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	svc := &model.BusinessEventService{
+		Name:          "NewService",
+		Documentation: "Updated docs",
+		ExportLevel:   "Hidden",
+	}
+	svc.ID = id
+	if err := b.updateBusinessEventServiceViaModelsdk(svc); err != nil {
+		t.Fatalf("updateBusinessEventServiceViaModelsdk: %v", err)
+	}
+
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	if got := readBSONField(t, raw, "Name"); got != "NewService" {
+		t.Errorf("Name = %q, want %q", got, "NewService")
+	}
+	if got := readBSONField(t, raw, "Documentation"); got != "Updated docs" {
+		t.Errorf("Documentation = %q, want %q", got, "Updated docs")
+	}
+}
