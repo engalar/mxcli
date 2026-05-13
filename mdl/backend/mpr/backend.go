@@ -238,7 +238,7 @@ func (b *MprBackend) UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualifi
 	return b.updateOqlQueriesForMovedEntityViaModelsdk(oldQualifiedName, newQualifiedName)
 }
 func (b *MprBackend) UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName string) error {
-	return b.writer.UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName)
+	return b.updateEnumerationRefsInAllDomainModelsViaModelsdk(oldQualifiedName, newQualifiedName)
 }
 
 // ---------------------------------------------------------------------------
