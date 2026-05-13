@@ -295,42 +295,48 @@ func (w *Writer) MoveViewEntitySourceDocument(sourceModuleName string, targetMod
 	return w.moveUnitByID(string(docID), string(targetModuleID))
 }
 
-// UpdateOqlQueriesForMovedEntity updates OQL queries in all ViewEntitySourceDocuments
-// to reflect a moved entity's new qualified name. For example, when DmTest.Customer moves
-// to DmTest2.Customer, all OQL references like "DmTest.Customer" are updated.
-func (w *Writer) UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualifiedName string) (int, error) {
+// ScanOqlQueryUpdates scans all ViewEntitySourceDocuments and returns patches
+// for those whose OQL contains oldQualifiedName replaced with newQualifiedName.
+// The returned count equals len(patches). No writes are performed.
+func (w *Writer) ScanOqlQueryUpdates(oldQualifiedName, newQualifiedName string) ([]UnitPatch, int, error) {
 	units, err := w.reader.listUnitsByType("DomainModels$ViewEntitySourceDocument")
 	if err != nil {
-		return 0, err
+		return nil, 0, err
 	}
 
-	updated := 0
+	var patches []UnitPatch
 	for _, u := range units {
 		var raw map[string]any
 		if err := bson.Unmarshal(u.Contents, &raw); err != nil {
 			continue
 		}
-
 		oql, _ := raw["Oql"].(string)
 		if oql == "" || !strings.Contains(oql, oldQualifiedName) {
 			continue
 		}
-
-		// Replace entity references in OQL
-		newOql := strings.ReplaceAll(oql, oldQualifiedName, newQualifiedName)
-		raw["Oql"] = newOql
-
-		// Re-serialize and update
+		raw["Oql"] = strings.ReplaceAll(oql, oldQualifiedName, newQualifiedName)
 		contents, err := bson.Marshal(raw)
 		if err != nil {
 			continue
 		}
-		if err := w.updateUnit(u.ID, contents); err != nil {
-			return updated, fmt.Errorf("failed to update ViewEntitySourceDocument %s: %w", u.ID, err)
-		}
-		updated++
+		patches = append(patches, UnitPatch{ID: u.ID, Contents: contents})
 	}
-	return updated, nil
+	return patches, len(patches), nil
+}
+
+// UpdateOqlQueriesForMovedEntity updates OQL queries in all ViewEntitySourceDocuments
+// to reflect a moved entity's new qualified name.
+func (w *Writer) UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualifiedName string) (int, error) {
+	patches, count, err := w.ScanOqlQueryUpdates(oldQualifiedName, newQualifiedName)
+	if err != nil {
+		return 0, err
+	}
+	for _, p := range patches {
+		if err := w.updateUnit(p.ID, p.Contents); err != nil {
+			return count, fmt.Errorf("failed to update ViewEntitySourceDocument %s: %w", p.ID, err)
+		}
+	}
+	return count, nil
 }
 
 // moveUnitByID changes a unit's ContainerID without modifying its contents.
