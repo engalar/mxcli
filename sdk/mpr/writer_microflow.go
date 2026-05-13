@@ -207,19 +207,19 @@ func serializeSequenceFlow(flow *microflows.SequenceFlow, majorVersion int) bson
 		//   - OriginBezierVector / DestinationBezierVector are top-level strings
 		//     (no nested Line: Microflows$BezierCurve document)
 		doc = append(doc, bson.E{Key: "DestinationBezierVector", Value: destCV})
-		doc = append(doc, bson.E{Key: "DestinationConnectionIndex", Value: int32(flow.DestinationConnectionIndex)})
+		doc = append(doc, bson.E{Key: "DestinationConnectionIndex", Value: int64(flow.DestinationConnectionIndex)})
 		doc = append(doc, bson.E{Key: "DestinationPointer", Value: idToBsonBinary(string(flow.DestinationID))})
 		doc = append(doc, bson.E{Key: "IsErrorHandler", Value: flow.IsErrorHandler})
 		doc = append(doc, bson.E{Key: "NewCaseValue", Value: caseDoc})
 		doc = append(doc, bson.E{Key: "OriginBezierVector", Value: originCV})
-		doc = append(doc, bson.E{Key: "OriginConnectionIndex", Value: int32(flow.OriginConnectionIndex)})
+		doc = append(doc, bson.E{Key: "OriginConnectionIndex", Value: int64(flow.OriginConnectionIndex)})
 		doc = append(doc, bson.E{Key: "OriginPointer", Value: idToBsonBinary(string(flow.OriginID))})
 		return doc
 	}
 
 	// Modern format (Mx 10+): CaseValues = [marker, caseDoc].
 	doc = append(doc, bson.E{Key: "CaseValues", Value: bson.A{int32(2), caseDoc}})
-	doc = append(doc, bson.E{Key: "DestinationConnectionIndex", Value: int32(flow.DestinationConnectionIndex)})
+	doc = append(doc, bson.E{Key: "DestinationConnectionIndex", Value: int64(flow.DestinationConnectionIndex)})
 	doc = append(doc, bson.E{Key: "DestinationPointer", Value: idToBsonBinary(string(flow.DestinationID))})
 	doc = append(doc, bson.E{Key: "IsErrorHandler", Value: flow.IsErrorHandler})
 	doc = append(doc, bson.E{Key: "Line", Value: bson.D{
@@ -228,7 +228,7 @@ func serializeSequenceFlow(flow *microflows.SequenceFlow, majorVersion int) bson
 		{Key: "DestinationControlVector", Value: destCV},
 		{Key: "OriginControlVector", Value: originCV},
 	}})
-	doc = append(doc, bson.E{Key: "OriginConnectionIndex", Value: int32(flow.OriginConnectionIndex)})
+	doc = append(doc, bson.E{Key: "OriginConnectionIndex", Value: int64(flow.OriginConnectionIndex)})
 	doc = append(doc, bson.E{Key: "OriginPointer", Value: idToBsonBinary(string(flow.OriginID))})
 	return doc
 }
@@ -311,17 +311,17 @@ func serializeAnnotationFlow(af *microflows.AnnotationFlow, majorVersion int) bs
 			{Key: "$ID", Value: idToBsonBinary(string(af.ID))},
 			{Key: "$Type", Value: "Microflows$AnnotationFlow"},
 			{Key: "DestinationBezierVector", Value: "0;0"},
-			{Key: "DestinationConnectionIndex", Value: int32(0)},
+			{Key: "DestinationConnectionIndex", Value: int64(0)},
 			{Key: "DestinationPointer", Value: idToBsonBinary(string(af.DestinationID))},
 			{Key: "OriginBezierVector", Value: "0;0"},
-			{Key: "OriginConnectionIndex", Value: int32(0)},
+			{Key: "OriginConnectionIndex", Value: int64(0)},
 			{Key: "OriginPointer", Value: idToBsonBinary(string(af.OriginID))},
 		}
 	}
 	return bson.D{
 		{Key: "$ID", Value: idToBsonBinary(string(af.ID))},
 		{Key: "$Type", Value: "Microflows$AnnotationFlow"},
-		{Key: "DestinationConnectionIndex", Value: int32(0)},
+		{Key: "DestinationConnectionIndex", Value: int64(0)},
 		{Key: "DestinationPointer", Value: idToBsonBinary(string(af.DestinationID))},
 		{Key: "Line", Value: bson.D{
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
@@ -329,7 +329,7 @@ func serializeAnnotationFlow(af *microflows.AnnotationFlow, majorVersion int) bs
 			{Key: "DestinationControlVector", Value: "0;0"},
 			{Key: "OriginControlVector", Value: "0;0"},
 		}},
-		{Key: "OriginConnectionIndex", Value: int32(0)},
+		{Key: "OriginConnectionIndex", Value: int64(0)},
 		{Key: "OriginPointer", Value: idToBsonBinary(string(af.OriginID))},
 	}
 }
@@ -630,6 +630,7 @@ func serializeMicroflowObject(obj microflows.MicroflowObject) bson.D {
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(o.ID))},
 			{Key: "$Type", Value: "Microflows$LoopedActivity"},
+			{Key: "Documentation", Value: o.Documentation},
 			{Key: "ErrorHandlingType", Value: string(o.ErrorHandlingType)},
 		}
 		// Serialize LoopSource (IterableList or WhileLoopCondition)
