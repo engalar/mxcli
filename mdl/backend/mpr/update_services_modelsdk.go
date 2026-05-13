@@ -14,6 +14,7 @@ import (
 	genEM "github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings"
 	genIM "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
 	genJsonStructures "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
+	genREST "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
@@ -176,19 +177,35 @@ func (b *MprBackend) updatePublishedODataServiceViaModelsdk(svc *model.Published
 // ── REST services ─────────────────────────────────────────────────────────
 
 func (b *MprBackend) updateConsumedRestServiceViaModelsdk(svc *model.ConsumedRestService) error {
-	contents, err := b.writer.SerializeConsumedRestService(svc)
-	if err != nil {
-		return fmt.Errorf("serialize consumed rest service: %w", err)
-	}
-	return b.msdkWriteRaw(svc.ID, contents)
+	return b.msdkWrite(svc.ID, func(elem element.Element) error {
+		typed, ok := elem.(*genREST.ConsumedRestService)
+		if !ok {
+			return fmt.Errorf("unexpected type %T (want *ConsumedRestService)", elem)
+		}
+		typed.SetName(svc.Name)
+		typed.SetDocumentation(svc.Documentation)
+		typed.SetExcluded(svc.Excluded)
+		// BaseUrl, AuthenticationScheme, OpenApiFile, Operations are
+		// Part/PartList children — preserved by LazyDoc.
+		return nil
+	})
 }
 
 func (b *MprBackend) updatePublishedRestServiceViaModelsdk(svc *model.PublishedRestService) error {
-	contents, err := b.writer.SerializePublishedRestService(svc)
-	if err != nil {
-		return fmt.Errorf("serialize published rest service: %w", err)
-	}
-	return b.msdkWriteRaw(svc.ID, contents)
+	return b.msdkWrite(svc.ID, func(elem element.Element) error {
+		typed, ok := elem.(*genREST.PublishedRestService)
+		if !ok {
+			return fmt.Errorf("unexpected type %T (want *PublishedRestService)", elem)
+		}
+		typed.SetName(svc.Name)
+		typed.SetExcluded(svc.Excluded)
+		typed.SetServiceName(svc.ServiceName)
+		typed.SetVersion(svc.Version)
+		typed.SetPath(svc.Path)
+		typed.SetAllowedRolesQualifiedNames(svc.AllowedRoles)
+		// Resources (PartList) preserved by LazyDoc.
+		return nil
+	})
 }
 
 // ── ImageCollection ───────────────────────────────────────────────────────
