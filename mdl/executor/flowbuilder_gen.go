@@ -48,6 +48,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/exprcheck/adapters"
 	"github.com/mendixlabs/mxcli/mdl/repos"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
@@ -237,6 +238,31 @@ func layoutPos(x, y int) string {
 // field. Companion to layoutPos.
 func layoutSize(width, height int) string {
 	return fmt.Sprintf("%d %d", width, height)
+}
+
+// genElementWithID is the minimal interface every gen element exposes
+// for ID assignment. Used by newGenID to keep the per-statement
+// adders free of explicit `SetID(element.ID(types.GenerateID()))`
+// boilerplate at every emission site.
+type genElementWithID interface {
+	ID() element.ID
+	SetID(element.ID)
+}
+
+// assignFreshID stamps a freshly-generated UUID on a gen element if it
+// doesn't already carry one. Returns the resulting ID. The legacy
+// builder relied on `model.BaseElement{ID: model.ID(types.GenerateID())}`
+// at every construction site; the gen path centralises that pattern
+// here so SequenceFlows, AnnotationFlows, and downstream lookups can
+// reference the element immediately rather than waiting for the codec
+// to backfill empty IDs at encode time.
+func assignFreshID(e genElementWithID) element.ID {
+	if id := e.ID(); id != "" {
+		return id
+	}
+	id := element.ID(types.GenerateID())
+	e.SetID(id)
+	return id
 }
 
 // exprToString converts an AST Expression to a Mendix expression string
