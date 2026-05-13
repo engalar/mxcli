@@ -86,7 +86,20 @@ func (w *Writer) MoveNanoflow(nf *microflows.Nanoflow) error {
 	return w.moveUnitByID(string(nf.ID), string(nf.ContainerID))
 }
 
-func (w *Writer) serializeMicroflow(mf *microflows.Microflow) ([]byte, error) {
+// SerializeMicroflow returns canonical BSON bytes for a microflow unit.
+//
+// pv selects the version-specific shape (Mendix 9 vs 10+). When pv is nil the
+// package default version is used so callers without a detected ProjectVersion
+// (e.g. in-memory tests) still get a serializable result.
+//
+// This is the writer-receiver-free entry point used by mprbackend's modelsdk
+// write helpers; the (w *Writer) wrappers delegate to this function.
+func SerializeMicroflow(mf *microflows.Microflow, pv *version.ProjectVersion) ([]byte, error) {
+	majorVersion := version.DefaultVersion().MajorVersion
+	if pv != nil {
+		majorVersion = pv.MajorVersion
+	}
+
 	// Build main document with required fields in correct order
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(string(mf.ID))},
@@ -106,12 +119,6 @@ func (w *Writer) serializeMicroflow(mf *microflows.Microflow) ([]byte, error) {
 	}
 
 	// Add Flows array (SequenceFlows and AnnotationFlows go here, not in ObjectCollection)
-	// The serialized shape depends on the project's Mendix major version.
-	// Fall back to the project default when no MPR is attached (in-memory tests).
-	majorVersion := version.DefaultVersion().MajorVersion
-	if pv := w.reader.ProjectVersion(); pv != nil {
-		majorVersion = pv.MajorVersion
-	}
 	flows := bson.A{int32(3)} // Start with array type marker
 	if mf.ObjectCollection != nil {
 		for _, flow := range mf.ObjectCollection.Flows {
@@ -157,6 +164,14 @@ func (w *Writer) serializeMicroflow(mf *microflows.Microflow) ([]byte, error) {
 	doc = append(doc, bson.E{Key: "WorkflowActionInfo", Value: nil})
 
 	return bson.Marshal(doc)
+}
+
+// serializeMicroflow is a thin shim that pulls ProjectVersion off the attached
+// reader and delegates to the package-level SerializeMicroflow. Retained so the
+// existing CreateMicroflow / UpdateMicroflow paths keep compiling; the writer
+// receiver itself contributes nothing beyond the version lookup.
+func (w *Writer) serializeMicroflow(mf *microflows.Microflow) ([]byte, error) {
+	return SerializeMicroflow(mf, w.reader.ProjectVersion())
 }
 
 // serializeSequenceFlow serializes a SequenceFlow to BSON with correct structure.
@@ -801,10 +816,16 @@ func serializeTextTemplate(text *model.Text, params []string) bson.D {
 	}
 }
 
-func (w *Writer) serializeNanoflow(nf *microflows.Nanoflow) ([]byte, error) {
-	// Determine project major version for version-specific serialization.
+// SerializeNanoflow returns canonical BSON bytes for a nanoflow unit.
+//
+// pv selects the version-specific shape (Mendix 9 vs 10+). When pv is nil the
+// package default version is used.
+//
+// Companion to SerializeMicroflow — both are the writer-receiver-free entry
+// points used by mprbackend's modelsdk write helpers.
+func SerializeNanoflow(nf *microflows.Nanoflow, pv *version.ProjectVersion) ([]byte, error) {
 	majorVersion := version.DefaultVersion().MajorVersion
-	if pv := w.reader.ProjectVersion(); pv != nil {
+	if pv != nil {
 		majorVersion = pv.MajorVersion
 	}
 
@@ -845,6 +866,12 @@ func (w *Writer) serializeNanoflow(nf *microflows.Nanoflow) ([]byte, error) {
 	// Parameters stored inside ObjectCollection.Objects, not as a separate key.
 
 	return bson.Marshal(doc)
+}
+
+// serializeNanoflow is a thin shim that pulls ProjectVersion off the attached
+// reader and delegates to the package-level SerializeNanoflow.
+func (w *Writer) serializeNanoflow(nf *microflows.Nanoflow) ([]byte, error) {
+	return SerializeNanoflow(nf, w.reader.ProjectVersion())
 }
 
 // stringOrDefault returns the value if non-empty, otherwise the default.

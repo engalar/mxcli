@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/sdk/mpr/version"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -180,5 +181,95 @@ func TestBuildSequenceFlowCase_ExpressionCase_UsesEnumerationCase(t *testing.T) 
 	}
 	if got := bsonGetKey(doc, "Value"); got != "false" {
 		t.Fatalf("Value = %v, want false", got)
+	}
+}
+
+// TestSerializeMicroflowStandalone_V10 verifies the package-level SerializeMicroflow
+// function works without a Writer/Reader, accepting an explicit ProjectVersion.
+// This is the writer-receiver-free path used by mprbackend/modelsdk-write helpers.
+func TestSerializeMicroflowStandalone_V10(t *testing.T) {
+	mf := &microflows.Microflow{
+		BaseElement: model.BaseElement{ID: "mf-1"},
+		Name:        "TestMF",
+	}
+	pv := &version.ProjectVersion{MajorVersion: 10, MinorVersion: 18, PatchVersion: 0}
+
+	contents, err := SerializeMicroflow(mf, pv)
+	if err != nil {
+		t.Fatalf("SerializeMicroflow: %v", err)
+	}
+	if len(contents) == 0 {
+		t.Fatal("SerializeMicroflow returned empty contents")
+	}
+
+	var doc bson.D
+	if err := bson.Unmarshal(contents, &doc); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	// Mendix 10+ must include ReturnVariableName / StableId / Url / UrlSearchParameters.
+	for _, key := range []string{"ReturnVariableName", "StableId", "Url", "UrlSearchParameters"} {
+		if !bsonHasKey(doc, key) {
+			t.Errorf("Mx 10 microflow must include %q", key)
+		}
+	}
+}
+
+// TestSerializeMicroflowStandalone_V9 verifies the package-level function omits
+// Mx 10+ keys when given a Mendix 9 ProjectVersion.
+func TestSerializeMicroflowStandalone_V9(t *testing.T) {
+	mf := &microflows.Microflow{
+		BaseElement: model.BaseElement{ID: "mf-1"},
+		Name:        "TestMF",
+	}
+	pv := &version.ProjectVersion{MajorVersion: 9, MinorVersion: 24, PatchVersion: 0}
+
+	contents, err := SerializeMicroflow(mf, pv)
+	if err != nil {
+		t.Fatalf("SerializeMicroflow: %v", err)
+	}
+
+	var doc bson.D
+	if err := bson.Unmarshal(contents, &doc); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	for _, key := range []string{"ReturnVariableName", "StableId", "Url", "UrlSearchParameters"} {
+		if bsonHasKey(doc, key) {
+			t.Errorf("Mx 9 microflow must NOT include %q", key)
+		}
+	}
+}
+
+// TestSerializeMicroflowStandalone_NilVersion verifies a nil ProjectVersion
+// falls back to the package default (currently 11.x), so callers without a
+// detected version still get a serializable result.
+func TestSerializeMicroflowStandalone_NilVersion(t *testing.T) {
+	mf := &microflows.Microflow{
+		BaseElement: model.BaseElement{ID: "mf-1"},
+		Name:        "TestMF",
+	}
+	contents, err := SerializeMicroflow(mf, nil)
+	if err != nil {
+		t.Fatalf("SerializeMicroflow(nil pv): %v", err)
+	}
+	if len(contents) == 0 {
+		t.Fatal("expected non-empty contents")
+	}
+}
+
+// TestSerializeNanoflowStandalone_V10 verifies the package-level SerializeNanoflow
+// works without a Writer/Reader.
+func TestSerializeNanoflowStandalone_V10(t *testing.T) {
+	nf := &microflows.Nanoflow{
+		BaseElement: model.BaseElement{ID: "nf-1"},
+		Name:        "TestNF",
+	}
+	pv := &version.ProjectVersion{MajorVersion: 10, MinorVersion: 18, PatchVersion: 0}
+
+	contents, err := SerializeNanoflow(nf, pv)
+	if err != nil {
+		t.Fatalf("SerializeNanoflow: %v", err)
+	}
+	if len(contents) == 0 {
+		t.Fatal("SerializeNanoflow returned empty contents")
 	}
 }
