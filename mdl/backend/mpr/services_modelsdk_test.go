@@ -245,3 +245,38 @@ func TestUpdateExportMappingViaModelsdk(t *testing.T) {
 		t.Errorf("Name = %q, want %q", got, "NewExport")
 	}
 }
+
+func TestUpdateDataTransformerViaModelsdk(t *testing.T) {
+	const unitID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+	contents := makeBSONUnit(t, unitID, "DataTransformers$DataTransformer", bson.D{
+		{Key: "Name", Value: "OldTransformer"},
+		{Key: "Documentation", Value: ""},
+		{Key: "Excluded", Value: false},
+		{Key: "ExportLevel", Value: "Hidden"},
+		{Key: "SourceType", Value: "XML"},
+		{Key: "SourceJson", Value: ""},
+	})
+	mprPath, id := makeServiceTestMPR(t, unitID, contents)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	dt := &model.DataTransformer{
+		Name: "NewTransformer",
+	}
+	dt.ID = id
+	if err := b.updateDataTransformerViaModelsdk(dt); err != nil {
+		t.Fatalf("updateDataTransformerViaModelsdk: %v", err)
+	}
+
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(id))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	if got := readBSONField(t, raw, "Name"); got != "NewTransformer" {
+		t.Errorf("Name = %q, want %q", got, "NewTransformer")
+	}
+}
