@@ -14,7 +14,6 @@ import (
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 func TestShowEnumerations_Mock_JSON(t *testing.T) {
@@ -493,17 +492,15 @@ func TestListDataTransformers_Mock_JSON(t *testing.T) {
 func TestShowAccessOnPage_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	pg := mkPage(mod.ID, "Page_Home")
-	pg.AllowedRoles = []model.ID{"MyModule.User"}
-	withContainer(h, pg.ContainerID, mod.ID)
+	pg := mkPageGen(string(nextID("pg")), "Page_Home")
+	pg.SetAllowedRolesQualifiedNames([]string{"MyModule.User"})
+	withContainer(h, mod.ID, mod.ID)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return []*pages.Page{pg}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	name := &ast.QualifiedName{Module: "MyModule", Name: "Page_Home"}
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
+	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
 	assertNoError(t, listAccessOnPageGen(ctx, name))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "User")

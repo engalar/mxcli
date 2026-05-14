@@ -1000,19 +1000,23 @@ func listAccessOnPageGen(ctx *ExecContext, name *ast.QualifiedName) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	pages, err := ctx.Backend.ListPages()
+	pairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
 
-	for _, pg := range pages {
-		modName := h.GetModuleName(h.FindModuleID(pg.ContainerID))
-		if modName == name.Module && pg.Name == name.Name {
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modName := h.GetModuleName(h.FindModuleID(model.ID(p.ContainerID)))
+		if modName == name.Module && p.Elem.Name() == name.Name {
+			allowed := p.Elem.AllowedRolesQualifiedNames()
 			if ctx.Format == FormatJSON {
 				result := &TableResult{Columns: []string{"Module", "Role"}}
-				for _, role := range pg.AllowedRoles {
-					parts := strings.SplitN(string(role), ".", 2)
-					mod, r := "", string(role)
+				for _, role := range allowed {
+					parts := strings.SplitN(role, ".", 2)
+					mod, r := "", role
 					if len(parts) == 2 {
 						mod, r = parts[0], parts[1]
 					}
@@ -1020,13 +1024,13 @@ func listAccessOnPageGen(ctx *ExecContext, name *ast.QualifiedName) error {
 				}
 				return writeResult(ctx, result)
 			}
-			if len(pg.AllowedRoles) == 0 {
-				fmt.Fprintf(ctx.Output, "No module roles granted view access on %s.%s\n", modName, pg.Name)
+			if len(allowed) == 0 {
+				fmt.Fprintf(ctx.Output, "No module roles granted view access on %s.%s\n", modName, p.Elem.Name())
 				return nil
 			}
-			fmt.Fprintf(ctx.Output, "Allowed module roles for %s.%s:\n", modName, pg.Name)
-			for _, role := range pg.AllowedRoles {
-				fmt.Fprintf(ctx.Output, "  %s\n", string(role))
+			fmt.Fprintf(ctx.Output, "Allowed module roles for %s.%s:\n", modName, p.Elem.Name())
+			for _, role := range allowed {
+				fmt.Fprintf(ctx.Output, "  %s\n", role)
 			}
 			return nil
 		}

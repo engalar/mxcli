@@ -28,6 +28,7 @@ func newSecurityTestContext(t *testing.T) *ExecContext {
 	ctx := &ExecContext{
 		Backend:  be,
 		Security: repoCtx.Security,
+		Pages:    repoCtx.Pages,
 		Output:   io.Discard,
 	}
 	ctx.ensureCache()
