@@ -10,7 +10,6 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
@@ -420,55 +419,10 @@ func structureSnippets(ctx *ExecContext, moduleName string) {
 	}
 }
 
-// outputJavaActions outputs java actions for a module.
-func outputJavaActions(ctx *ExecContext, moduleName string, actions []*javaactions.JavaAction, withNames bool) {
-	if len(actions) == 0 {
-		return
-	}
-
-	// Sort alphabetically
-	sorted := make([]*javaactions.JavaAction, len(actions))
-	copy(sorted, actions)
-	sort.Slice(sorted, func(i, j int) bool {
-		return strings.ToLower(sorted[i].Name) < strings.ToLower(sorted[j].Name)
-	})
-
-	for _, ja := range sorted {
-		sig := formatJavaActionSignature(ja, withNames)
-		fmt.Fprintf(ctx.Output, "  JavaAction %s.%s%s\n", moduleName, ja.Name, sig)
-	}
-}
-
-// formatJavaActionSignature formats the parameter list and return type of a java action.
-func formatJavaActionSignature(ja *javaactions.JavaAction, withNames bool) string {
-	var paramParts []string
-	for _, p := range ja.Parameters {
-		typeName := ""
-		if p.ParameterType != nil {
-			typeName = formatJATypeDisplay(p.ParameterType.TypeString())
-		}
-		if withNames && p.Name != "" {
-			paramParts = append(paramParts, fmt.Sprintf("%s: %s", p.Name, typeName))
-		} else {
-			paramParts = append(paramParts, typeName)
-		}
-	}
-
-	sig := "(" + strings.Join(paramParts, ", ") + ")"
-
-	// Add return type
-	if ja.ReturnType != nil {
-		retStr := ja.ReturnType.TypeString()
-		if retStr != "" && retStr != "Void" && retStr != "Nothing" {
-			sig += " → " + formatJATypeDisplay(retStr)
-		}
-	}
-
-	return sig
-}
-
-// outputJavaActionsGen is the gen-typed parallel of outputJavaActions.
-// It reads name/signature from *genJA.JavaAction instead of *javaactions.JavaAction.
+// outputJavaActionsGen outputs java actions for a module (gen-typed).
+// Stage 3.3.2.E1: legacy outputJavaActions / formatJavaActionSignature
+// / formatJATypeDisplay deleted — only the gen variants survive
+// (cmd_structure_gen.go already routes here).
 func outputJavaActionsGen(ctx *ExecContext, moduleName string, actions []*genJA.JavaAction, withNames bool) {
 	if len(actions) == 0 {
 		return
@@ -515,20 +469,6 @@ func formatJavaActionSignatureGen(ja *genJA.JavaAction, withNames bool) string {
 	}
 
 	return sig
-}
-
-// formatJATypeDisplay formats a java action type string for display.
-func formatJATypeDisplay(typeStr string) string {
-	// TypeString() returns things like "Module.Entity", "List of Module.Entity", "Boolean", etc.
-	if after, ok := strings.CutPrefix(typeStr, "List of "); ok {
-		entity := after
-		return "List<" + shortName(entity) + ">"
-	}
-	// Check if it's a qualified name (contains a dot)
-	if strings.Contains(typeStr, ".") {
-		return shortName(typeStr)
-	}
-	return typeStr
 }
 
 // structureODataClients outputs OData clients for a module.

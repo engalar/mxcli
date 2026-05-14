@@ -432,7 +432,16 @@ func execRenameJavaAction(ctx *ExecContext, s *ast.RenameStmt) error {
 		if p.Elem == nil {
 			continue
 		}
-		modID := h.FindModuleID(model.ID(p.ContainerID))
+		// Mock test contexts (no ctx.JavaActions repo) leave
+		// p.ContainerID empty; the test wires withContainer using the
+		// element ID directly, so walk the hierarchy from the element ID
+		// itself which works in both production (Unit→Container chain)
+		// and mock (direct ID→Module mapping).
+		startID := model.ID(p.ContainerID)
+		if startID == "" {
+			startID = model.ID(p.Elem.ID())
+		}
+		modID := h.FindModuleID(startID)
 		if h.GetModuleName(modID) != s.Name.Module {
 			continue
 		}
