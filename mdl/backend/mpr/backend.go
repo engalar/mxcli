@@ -685,20 +685,49 @@ func (b *MprBackend) ReadJavaActionByNameGen(qualifiedName string) (*genJA.JavaA
 	return mprrepos.NewJavaActionRepository(w).FindByQualifiedName(qualifiedName)
 }
 
+// CreateJavaActionGen routes through the proven createJavaActionViaModelsdk
+// path (Stage 3.3.2.D5). The gen JavaAction is bridged to a sdk JavaAction
+// via genJavaActionToSDK below; the sdk path then handles BSON
+// serialization through mpr.SerializeJavaAction + msdkWriter.InsertUnit.
+// Bypasses the repo's stub Create method until Stage 4 retires sdk/mpr.
 func (b *MprBackend) CreateJavaActionGen(parentUUID, containmentName string, ja *genJA.JavaAction) error {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return fmt.Errorf("CreateJavaActionGen: no modelsdk writer")
+	if ja == nil {
+		return fmt.Errorf("CreateJavaActionGen: nil JavaAction")
 	}
-	return mprrepos.NewJavaActionRepository(w).Create(parentUUID, containmentName, ja)
+	sdkJA := genJavaActionToSDK(ja, model.ID(parentUUID))
+	return b.createJavaActionViaModelsdk(sdkJA)
 }
 
+// UpdateJavaActionGen mirrors CreateJavaActionGen — gen→sdk bridge to
+// updateJavaActionViaModelsdk's load-modify-save closure (Stage 3.3.2.D5).
 func (b *MprBackend) UpdateJavaActionGen(ja *genJA.JavaAction) error {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return fmt.Errorf("UpdateJavaActionGen: no modelsdk writer")
+	if ja == nil {
+		return fmt.Errorf("UpdateJavaActionGen: nil JavaAction")
 	}
-	return mprrepos.NewJavaActionRepository(w).Update(ja)
+	// updateJavaActionViaModelsdk only reads ID + scalar setters from
+	// the sdk struct; container UUID is implicit (existing unit).
+	sdkJA := genJavaActionToSDK(ja, "")
+	return b.updateJavaActionViaModelsdk(sdkJA)
+}
+
+// genJavaActionToSDK converts a gen JavaAction into the sdk representation
+// expected by createJavaActionViaModelsdk / updateJavaActionViaModelsdk.
+// Only the scalar fields needed by Serialize / load-modify-save are
+// populated; gen-only collections (ActionParametersItems, etc.) are
+// preserved on the underlying gen unit by LazyDoc roundtrip.
+func genJavaActionToSDK(ja *genJA.JavaAction, parentID model.ID) *javaactions.JavaAction {
+	out := &javaactions.JavaAction{
+		Name:                    ja.Name(),
+		Documentation:           ja.Documentation(),
+		Excluded:                ja.Excluded(),
+		ExportLevel:             ja.ExportLevel(),
+		ActionDefaultReturnName: ja.ActionDefaultReturnName(),
+	}
+	out.ID = model.ID(ja.ID())
+	if parentID != "" {
+		out.ContainerID = parentID
+	}
+	return out
 }
 
 func (b *MprBackend) WriteJavaSourceFileGen(moduleName, actionName string, javaCode string, params []*genJA.JavaActionParameter, returnType element.Element, extraImports []string, extraCode string) error {
