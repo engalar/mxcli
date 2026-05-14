@@ -13,8 +13,6 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	"github.com/mendixlabs/mxcli/modelsdk/element"
-	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
 func TestFlowBuilderGenAddErrorAccumulates(t *testing.T) {
@@ -176,39 +174,6 @@ func TestFlowBuilderGenExprToStringOfflinePathsResolveAssociation(t *testing.T) 
 	}
 }
 
-func TestSetExtraStringFieldEmptyValueNoOp(t *testing.T) {
-	// CastAction has no SetObjectVariableName setter — the gap that
-	// motivated this helper. Calling with empty value must add no
-	// property (Mendix BSON omits empty optional strings).
-	act := genMf.NewCastAction()
-	before := len(act.Properties())
-	setExtraStringField(act, "ObjectVariableName", "")
-	if got := len(act.Properties()); got != before {
-		t.Fatalf("expected no property added for empty value, before=%d after=%d", before, got)
-	}
-}
-
-func TestSetExtraStringFieldAttachesDirtyProperty(t *testing.T) {
-	act := genMf.NewCastAction()
-	before := len(act.Properties())
-	setExtraStringField(act, "ObjectVariableName", "MyObj")
-
-	props := act.Properties()
-	if len(props) != before+1 {
-		t.Fatalf("want one extra property, before=%d after=%d", before, len(props))
-	}
-	added := props[len(props)-1]
-	if added.Name() != "ObjectVariableName" {
-		t.Fatalf("property name = %q, want ObjectVariableName", added.Name())
-	}
-	wp, ok := added.(element.WritableProperty)
-	if !ok {
-		t.Fatalf("ad-hoc property must implement WritableProperty (got %T)", added)
-	}
-	if !wp.Dirty() {
-		t.Fatal("ad-hoc property must be marked dirty so encoder writes it")
-	}
-	if got := wp.BSONValue(); got != "MyObj" {
-		t.Fatalf("BSONValue = %v, want MyObj", got)
-	}
-}
+// setExtraStringField was removed in Stage 3.2.3.f0b; coverage for
+// the ad-hoc Property injection path now lives in
+// flowbuilder_raw_setter_gen_test.go (TestSetRawBSONField*).
