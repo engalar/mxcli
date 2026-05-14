@@ -170,6 +170,10 @@ func TestListDemoUsersGen_DisabledMessage(t *testing.T) {
 	if ps == nil {
 		t.Fatal("ProjectSecurity is nil in fixture")
 	}
+	// If getProjectSecurityGen ever deep-copies its return value, this test will
+	// silently stop exercising the disabled branch (the next call would re-read the
+	// fixture's enabled state). TestListDemoUsersGen_EnabledOutputsUsers would still
+	// pass, masking the regression. Re-evaluate this trick if cache semantics change.
 	ps.SetEnableDemoUsers(false) // mutate cached object — cache is NOT invalidated
 
 	var buf bytes.Buffer
@@ -180,5 +184,27 @@ func TestListDemoUsersGen_DisabledMessage(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "disabled") {
 		t.Errorf("expected disabled message, got: %q", buf.String())
+	}
+}
+
+// TestListDemoUsersGen_EnabledOutputsUsers exercises the enabled branch:
+// type-assert loop, role join, and summary. The fixture has demo users
+// enabled (demo_administrator + demo_user) so no cache mutation is needed.
+func TestListDemoUsersGen_EnabledOutputsUsers(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	ctx.Format = FormatTable
+	if err := listDemoUsersGen(ctx); err != nil {
+		t.Fatalf("listDemoUsersGen: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{"User Name", "User Roles", "demo users)"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output missing %q; got: %q", want, out)
+		}
+	}
+	if !strings.Contains(out, "demo_administrator") && !strings.Contains(out, "demo_user") {
+		t.Errorf("output missing any known demo user name; got: %q", out)
 	}
 }
