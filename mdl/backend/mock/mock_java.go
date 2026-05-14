@@ -17,84 +17,84 @@ func (m *MockBackend) ListJavaActions() ([]*types.JavaAction, error) {
 	if m.ListJavaActionsFunc != nil {
 		return m.ListJavaActionsFunc()
 	}
-	return nil, nil
+	return nil, fmt.Errorf("MockBackend.ListJavaActions not configured")
 }
 
 func (m *MockBackend) ListJavaActionsFull() ([]*javaactions.JavaAction, error) {
 	if m.ListJavaActionsFullFunc != nil {
 		return m.ListJavaActionsFullFunc()
 	}
-	return nil, nil
+	return nil, fmt.Errorf("MockBackend.ListJavaActionsFull not configured")
 }
 
 func (m *MockBackend) ListJavaScriptActions() ([]*types.JavaScriptAction, error) {
 	if m.ListJavaScriptActionsFunc != nil {
 		return m.ListJavaScriptActionsFunc()
 	}
-	return nil, nil
+	return nil, fmt.Errorf("MockBackend.ListJavaScriptActions not configured")
 }
 
 func (m *MockBackend) ReadJavaActionByName(qualifiedName string) (*javaactions.JavaAction, error) {
 	if m.ReadJavaActionByNameFunc != nil {
 		return m.ReadJavaActionByNameFunc(qualifiedName)
 	}
-	return nil, nil
+	return nil, fmt.Errorf("MockBackend.ReadJavaActionByName not configured")
 }
 
 func (m *MockBackend) ReadJavaScriptActionByName(qualifiedName string) (*types.JavaScriptAction, error) {
 	if m.ReadJavaScriptActionByNameFunc != nil {
 		return m.ReadJavaScriptActionByNameFunc(qualifiedName)
 	}
-	return nil, nil
+	return nil, fmt.Errorf("MockBackend.ReadJavaScriptActionByName not configured")
 }
 
 func (m *MockBackend) CreateJavaAction(ja *javaactions.JavaAction) error {
 	if m.CreateJavaActionFunc != nil {
 		return m.CreateJavaActionFunc(ja)
 	}
-	return nil
+	return fmt.Errorf("MockBackend.CreateJavaAction not configured")
 }
 
 func (m *MockBackend) UpdateJavaAction(ja *javaactions.JavaAction) error {
 	if m.UpdateJavaActionFunc != nil {
 		return m.UpdateJavaActionFunc(ja)
 	}
-	return nil
+	return fmt.Errorf("MockBackend.UpdateJavaAction not configured")
 }
 
 func (m *MockBackend) DeleteJavaAction(id model.ID) error {
 	if m.DeleteJavaActionFunc != nil {
 		return m.DeleteJavaActionFunc(id)
 	}
-	return nil
+	return fmt.Errorf("MockBackend.DeleteJavaAction not configured")
 }
 
 func (m *MockBackend) WriteJavaSourceFile(moduleName, actionName string, javaCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType, extraImports []string, extraCode string) error {
 	if m.WriteJavaSourceFileFunc != nil {
 		return m.WriteJavaSourceFileFunc(moduleName, actionName, javaCode, params, returnType, extraImports, extraCode)
 	}
-	return nil
+	return fmt.Errorf("MockBackend.WriteJavaSourceFile not configured")
 }
 
 func (m *MockBackend) DeleteJavaSourceFile(moduleName, actionName string) error {
 	if m.DeleteJavaSourceFileFunc != nil {
 		return m.DeleteJavaSourceFileFunc(moduleName, actionName)
 	}
-	return nil
+	return fmt.Errorf("MockBackend.DeleteJavaSourceFile not configured")
 }
 
 func (m *MockBackend) RenameJavaSourceFile(moduleName, oldName, newName string) error {
 	if m.RenameJavaSourceFileFunc != nil {
 		return m.RenameJavaSourceFileFunc(moduleName, oldName, newName)
 	}
-	return nil
+	return fmt.Errorf("MockBackend.RenameJavaSourceFile not configured")
 }
 
 func (m *MockBackend) ReadJavaSourceFile(moduleName, actionName string) (string, error) {
 	if m.ReadJavaSourceFileFunc != nil {
 		return m.ReadJavaSourceFileFunc(moduleName, actionName)
 	}
-	return "", nil
+	return "", fmt.Errorf("MockBackend.ReadJavaSourceFile not configured")
 }
 
 // ── Stage 3.3.2.C3 gen-typed siblings ─────────────────────────────────

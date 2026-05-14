@@ -295,6 +295,9 @@ func TestExecDropJavaAction_Mock(t *testing.T) {
 			called = true
 			return nil
 		},
+		// MockBackend.DeleteJavaSourceFile no longer returns nil by default
+		// (Stage 3.3.2.C5 mock audit) — must opt in explicitly.
+		DeleteJavaSourceFileFunc: func(moduleName, actionName string) error { return nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
