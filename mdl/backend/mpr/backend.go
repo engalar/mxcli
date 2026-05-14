@@ -9,8 +9,11 @@ import (
 	"fmt"
 	"log"
 
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
@@ -996,6 +999,37 @@ func (b *MprBackend) SerializeDataSource(ds pages.DataSource) (any, error) {
 
 func (b *MprBackend) SerializeWorkflowActivity(a workflows.WorkflowActivity) (any, error) {
 	return mpr.SerializeWorkflowActivity(a), nil
+}
+
+// SerializeWorkflowActivityGen routes through codec.Encode + bson.Unmarshal
+// (Stage 3.3.3.D7). Returns a bson.D that the mutator's raw-bson
+// manipulation (serializeAndDedupGen / buildSubFlowBsonGen) can append
+// to existing Activity / Outcome / Path / Branch / BoundaryEvent arrays.
+//
+// BSON byte-identity argument: the same Encoder is used by
+// CreateWorkflowGen / UpdateWorkflowGen — so any divergence from
+// mpr.SerializeWorkflowActivity here would also break the gen-typed
+// CREATE WORKFLOW round-trip caught by D2's unit tests.
+func (b *MprBackend) SerializeWorkflowActivityGen(a element.Element) (any, error) {
+	if a == nil {
+		return nil, fmt.Errorf("SerializeWorkflowActivityGen: nil element")
+	}
+	enc := newEncoderForGenSerialize()
+	bytes, err := enc.Encode(a)
+	if err != nil {
+		return nil, fmt.Errorf("encode %s: %w", a.TypeName(), err)
+	}
+	var doc bson.D
+	if err := bson.Unmarshal(bytes, &doc); err != nil {
+		return nil, fmt.Errorf("unmarshal %s: %w", a.TypeName(), err)
+	}
+	return doc, nil
+}
+
+// newEncoderForGenSerialize wraps the codec.Encoder construction so the
+// SerializeWorkflowActivityGen call site stays self-contained.
+func newEncoderForGenSerialize() *codec.Encoder {
+	return &codec.Encoder{}
 }
 
 // Stage 3.3.4 C1 — gen-typed domain model read/write methods.

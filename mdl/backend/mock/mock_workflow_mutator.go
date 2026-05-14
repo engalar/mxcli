@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Stage 3.3.3.C5 — MockWorkflowMutator stubs return descriptive errors
+// Stage 3.3.3.C5+D7 — MockWorkflowMutator stubs return descriptive errors
 // for unset Funcs per CLAUDE.md MockBackend audit rule. The previous
 // nil-return behaviour silently masked test misconfiguration.
 
@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -34,6 +35,14 @@ type MockWorkflowMutator struct {
 	InsertBoundaryEventFunc   func(activityRef string, atPos int, eventType string, delay string, activities []workflows.WorkflowActivity) error
 	DropBoundaryEventFunc     func(activityRef string, atPos int) error
 	SaveFunc                  func() error
+
+	// Stage 3.3.3.D7 gen-typed siblings.
+	InsertAfterActivityGenFunc   func(activityRef string, atPos int, activities []element.Element) error
+	ReplaceActivityGenFunc       func(activityRef string, atPos int, activities []element.Element) error
+	InsertOutcomeGenFunc         func(activityRef string, atPos int, outcomeName string, activities []element.Element) error
+	InsertPathGenFunc            func(activityRef string, atPos int, pathCaption string, activities []element.Element) error
+	InsertBranchGenFunc          func(activityRef string, atPos int, condition string, activities []element.Element) error
+	InsertBoundaryEventGenFunc   func(activityRef string, atPos int, eventType string, delay string, activities []element.Element) error
 }
 
 func (m *MockWorkflowMutator) SetProperty(prop string, value string) error {
@@ -139,4 +148,48 @@ func (m *MockWorkflowMutator) Save() error {
 		return m.SaveFunc()
 	}
 	return fmt.Errorf("MockWorkflowMutator.Save not configured")
+}
+
+// ── Stage 3.3.3.D7 gen-typed siblings ─────────────────────────────────
+
+func (m *MockWorkflowMutator) InsertAfterActivityGen(activityRef string, atPos int, activities []element.Element) error {
+	if m.InsertAfterActivityGenFunc != nil {
+		return m.InsertAfterActivityGenFunc(activityRef, atPos, activities)
+	}
+	return fmt.Errorf("MockWorkflowMutator.InsertAfterActivityGen not configured")
+}
+
+func (m *MockWorkflowMutator) ReplaceActivityGen(activityRef string, atPos int, activities []element.Element) error {
+	if m.ReplaceActivityGenFunc != nil {
+		return m.ReplaceActivityGenFunc(activityRef, atPos, activities)
+	}
+	return fmt.Errorf("MockWorkflowMutator.ReplaceActivityGen not configured")
+}
+
+func (m *MockWorkflowMutator) InsertOutcomeGen(activityRef string, atPos int, outcomeName string, activities []element.Element) error {
+	if m.InsertOutcomeGenFunc != nil {
+		return m.InsertOutcomeGenFunc(activityRef, atPos, outcomeName, activities)
+	}
+	return fmt.Errorf("MockWorkflowMutator.InsertOutcomeGen not configured")
+}
+
+func (m *MockWorkflowMutator) InsertPathGen(activityRef string, atPos int, pathCaption string, activities []element.Element) error {
+	if m.InsertPathGenFunc != nil {
+		return m.InsertPathGenFunc(activityRef, atPos, pathCaption, activities)
+	}
+	return fmt.Errorf("MockWorkflowMutator.InsertPathGen not configured")
+}
+
+func (m *MockWorkflowMutator) InsertBranchGen(activityRef string, atPos int, condition string, activities []element.Element) error {
+	if m.InsertBranchGenFunc != nil {
+		return m.InsertBranchGenFunc(activityRef, atPos, condition, activities)
+	}
+	return fmt.Errorf("MockWorkflowMutator.InsertBranchGen not configured")
+}
+
+func (m *MockWorkflowMutator) InsertBoundaryEventGen(activityRef string, atPos int, eventType string, delay string, activities []element.Element) error {
+	if m.InsertBoundaryEventGenFunc != nil {
+		return m.InsertBoundaryEventGenFunc(activityRef, atPos, eventType, delay, activities)
+	}
+	return fmt.Errorf("MockWorkflowMutator.InsertBoundaryEventGen not configured")
 }

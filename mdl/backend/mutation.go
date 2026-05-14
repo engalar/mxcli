@@ -4,6 +4,7 @@ package backend
 
 import (
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
@@ -154,6 +155,10 @@ type PluggablePropertyContext struct {
 // WorkflowMutator provides fine-grained mutation operations on a single
 // workflow unit. Obtain one via WorkflowMutationBackend.OpenWorkflowForMutation.
 // All methods operate on the in-memory representation; call Save to persist.
+//
+// Stage 3.3.3.D7+D8 adds gen-typed *Gen siblings (additive). The legacy
+// sdk-typed methods stay until Phase E1 retires them once every consumer
+// migrates.
 type WorkflowMutator interface {
 	// --- Top-level property operations ---
 
@@ -212,6 +217,19 @@ type WorkflowMutator interface {
 	// DropBoundaryEvent removes the boundary event from the referenced activity.
 	DropBoundaryEvent(activityRef string, atPos int) error
 
+	// --- Stage 3.3.3.D7 gen-typed siblings ---
+	// Each accepts []element.Element built by buildWorkflowActivitiesGen
+	// and serializes via SerializeWorkflowActivityGen (codec.Encode +
+	// bson.Unmarshal). The mutator's raw-bson manipulation logic is
+	// unchanged; only the input adapter switches.
+
+	InsertAfterActivityGen(activityRef string, atPos int, activities []element.Element) error
+	ReplaceActivityGen(activityRef string, atPos int, activities []element.Element) error
+	InsertOutcomeGen(activityRef string, atPos int, outcomeName string, activities []element.Element) error
+	InsertPathGen(activityRef string, atPos int, pathCaption string, activities []element.Element) error
+	InsertBranchGen(activityRef string, atPos int, condition string, activities []element.Element) error
+	InsertBoundaryEventGen(activityRef string, atPos int, eventType string, delay string, activities []element.Element) error
+
 	// Save persists the mutations to the backend.
 	Save() error
 }
@@ -248,6 +266,14 @@ type WidgetSerializationBackend interface {
 
 	// SerializeWorkflowActivity converts a domain WorkflowActivity to storage format.
 	SerializeWorkflowActivity(a workflows.WorkflowActivity) (any, error)
+
+	// SerializeWorkflowActivityGen converts a gen-typed workflow activity
+	// element to storage format (Stage 3.3.3.D7 sibling). Implementations
+	// route through codec.Encode + bson.Unmarshal so the BSON shape
+	// matches what the codec round-trip produces — this is the same path
+	// CreateWorkflowGen / UpdateWorkflowGen take, so any divergence
+	// would also break the gen-typed CREATE WORKFLOW round-trip.
+	SerializeWorkflowActivityGen(a element.Element) (any, error)
 }
 
 // WidgetObjectBuilder provides storage-agnostic operations on a loaded pluggable widget template.

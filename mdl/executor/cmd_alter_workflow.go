@@ -8,6 +8,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -102,11 +103,11 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 			}
 
 		case *ast.InsertAfterOp:
-			acts := buildAndBindActivities(ctx, []ast.WorkflowActivityNode{o.NewActivity})
+			acts := buildAndBindActivitiesGen(ctx, []ast.WorkflowActivityNode{o.NewActivity})
 			if len(acts) == 0 {
 				return mdlerrors.NewValidation("failed to build new activity")
 			}
-			if err := mutator.InsertAfterActivity(o.ActivityRef, o.AtPosition, acts); err != nil {
+			if err := mutator.InsertAfterActivityGen(o.ActivityRef, o.AtPosition, acts); err != nil {
 				return mdlerrors.NewBackend("insert after", err)
 			}
 
@@ -116,17 +117,17 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 			}
 
 		case *ast.ReplaceActivityOp:
-			acts := buildAndBindActivities(ctx, []ast.WorkflowActivityNode{o.NewActivity})
+			acts := buildAndBindActivitiesGen(ctx, []ast.WorkflowActivityNode{o.NewActivity})
 			if len(acts) == 0 {
 				return mdlerrors.NewValidation("failed to build replacement activity")
 			}
-			if err := mutator.ReplaceActivity(o.ActivityRef, o.AtPosition, acts); err != nil {
+			if err := mutator.ReplaceActivityGen(o.ActivityRef, o.AtPosition, acts); err != nil {
 				return mdlerrors.NewBackend("replace activity", err)
 			}
 
 		case *ast.InsertOutcomeOp:
-			acts := buildAndBindActivities(ctx, o.Activities)
-			if err := mutator.InsertOutcome(o.ActivityRef, o.AtPosition, o.OutcomeName, acts); err != nil {
+			acts := buildAndBindActivitiesGen(ctx, o.Activities)
+			if err := mutator.InsertOutcomeGen(o.ActivityRef, o.AtPosition, o.OutcomeName, acts); err != nil {
 				return mdlerrors.NewBackend("insert outcome", err)
 			}
 
@@ -136,8 +137,8 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 			}
 
 		case *ast.InsertPathOp:
-			acts := buildAndBindActivities(ctx, o.Activities)
-			if err := mutator.InsertPath(o.ActivityRef, o.AtPosition, "", acts); err != nil {
+			acts := buildAndBindActivitiesGen(ctx, o.Activities)
+			if err := mutator.InsertPathGen(o.ActivityRef, o.AtPosition, "", acts); err != nil {
 				return mdlerrors.NewBackend("insert path", err)
 			}
 
@@ -147,8 +148,8 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 			}
 
 		case *ast.InsertBranchOp:
-			acts := buildAndBindActivities(ctx, o.Activities)
-			if err := mutator.InsertBranch(o.ActivityRef, o.AtPosition, o.Condition, acts); err != nil {
+			acts := buildAndBindActivitiesGen(ctx, o.Activities)
+			if err := mutator.InsertBranchGen(o.ActivityRef, o.AtPosition, o.Condition, acts); err != nil {
 				return mdlerrors.NewBackend("insert branch", err)
 			}
 
@@ -158,8 +159,8 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 			}
 
 		case *ast.InsertBoundaryEventOp:
-			acts := buildAndBindActivities(ctx, o.Activities)
-			if err := mutator.InsertBoundaryEvent(o.ActivityRef, o.AtPosition, o.EventType, o.Delay, acts); err != nil {
+			acts := buildAndBindActivitiesGen(ctx, o.Activities)
+			if err := mutator.InsertBoundaryEventGen(o.ActivityRef, o.AtPosition, o.EventType, o.Delay, acts); err != nil {
 				return mdlerrors.NewBackend("insert boundary event", err)
 			}
 
@@ -184,8 +185,22 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 }
 
 // buildAndBindActivities builds workflow activities from AST nodes and auto-binds parameters.
+//
+// Stage 3.3.3.D8: now an unused helper kept for legacy execCreateWorkflow
+// (which is itself dispatched off in D6). It is removed alongside
+// cmd_workflows_write.go in Phase E2.
 func buildAndBindActivities(ctx *ExecContext, nodes []ast.WorkflowActivityNode) []workflows.WorkflowActivity {
 	acts := buildWorkflowActivities(nodes)
 	autoBindActivitiesInFlow(ctx, acts)
+	return acts
+}
+
+// buildAndBindActivitiesGen is the gen-typed twin used by ALTER WORKFLOW.
+// Mirrors buildAndBindActivities semantically but returns []element.Element
+// for the gen mutator surface (D7).
+func buildAndBindActivitiesGen(ctx *ExecContext, nodes []ast.WorkflowActivityNode) []element.Element {
+	acts := buildWorkflowActivitiesGen(nodes)
+	autoBindWorkflowGen(ctx, acts)
+	deduplicateActivityNamesGen(acts)
 	return acts
 }
