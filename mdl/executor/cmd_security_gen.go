@@ -25,6 +25,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
@@ -398,6 +399,96 @@ func entityRuleRoleStrings(rule *domainmodel.AccessRule) []string {
 		out = append(out, string(rid))
 	}
 	return out
+}
+
+// listProjectSecurityGen handles SHOW PROJECT SECURITY using the gen-typed
+// ProjectSecurity from ctx.Security. Mirrors listProjectSecurity exactly
+// in output shape; only the type source changes.
+func listProjectSecurityGen(ctx *ExecContext) error {
+	ps, err := getProjectSecurityGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("read project security", err)
+	}
+	if ps == nil {
+		return mdlerrors.NewBackend("read project security", fmt.Errorf("ProjectSecurity unit not found"))
+	}
+
+	// schema gap: PasswordPolicySettings() returns element.Element; type-assert
+	// to *genSec.PasswordPolicySettings to access typed fields.
+	var pp *genSec.PasswordPolicySettings
+	if raw := ps.PasswordPolicySettings(); raw != nil {
+		pp, _ = raw.(*genSec.PasswordPolicySettings)
+	}
+
+	if ctx.Format == FormatJSON {
+		result := &TableResult{Columns: []string{"Property", "Value"}}
+		result.Rows = append(result.Rows,
+			[]any{"SecurityLevel", securityLevelDisplay(ps.SecurityLevel())},
+			[]any{"CheckSecurity", fmt.Sprintf("%v", ps.CheckSecurity())},
+			[]any{"StrictMode", fmt.Sprintf("%v", ps.StrictMode())},
+			[]any{"DemoUsersEnabled", fmt.Sprintf("%v", ps.EnableDemoUsers())},
+			[]any{"GuestAccess", fmt.Sprintf("%v", ps.EnableGuestAccess())},
+			[]any{"UserRoles", fmt.Sprintf("%d", len(ps.UserRolesItems()))},
+			[]any{"DemoUsers", fmt.Sprintf("%d", len(ps.DemoUsersItems()))},
+		)
+		if ps.AdminUserName() != "" {
+			result.Rows = append(result.Rows, []any{"AdminUser", ps.AdminUserName()})
+		}
+		// schema gap: GuestUserRoleQualifiedName() does not exist; gen uses GuestUserRoleName()
+		if ps.GuestUserRoleName() != "" {
+			result.Rows = append(result.Rows, []any{"GuestUserRole", ps.GuestUserRoleName()})
+		}
+		if pp != nil {
+			result.Rows = append(result.Rows,
+				[]any{"PasswordPolicy.MinimumLength", fmt.Sprintf("%d", pp.MinimumLength())},
+				[]any{"PasswordPolicy.RequireDigit", fmt.Sprintf("%v", pp.RequireDigit())},
+				[]any{"PasswordPolicy.RequireMixedCase", fmt.Sprintf("%v", pp.RequireMixedCase())},
+				[]any{"PasswordPolicy.RequireSymbol", fmt.Sprintf("%v", pp.RequireSymbol())},
+			)
+		}
+		return writeResult(ctx, result)
+	}
+
+	fmt.Fprintf(ctx.Output, "Security Level: %s\n", securityLevelDisplay(ps.SecurityLevel()))
+	fmt.Fprintf(ctx.Output, "Check Security: %v\n", ps.CheckSecurity())
+	fmt.Fprintf(ctx.Output, "Strict Mode: %v\n", ps.StrictMode())
+	fmt.Fprintf(ctx.Output, "Demo Users Enabled: %v\n", ps.EnableDemoUsers())
+	fmt.Fprintf(ctx.Output, "Guest Access: %v\n", ps.EnableGuestAccess())
+	if ps.AdminUserName() != "" {
+		fmt.Fprintf(ctx.Output, "Admin User: %s\n", ps.AdminUserName())
+	}
+	// schema gap: GuestUserRoleQualifiedName() does not exist; gen uses GuestUserRoleName()
+	if ps.GuestUserRoleName() != "" {
+		fmt.Fprintf(ctx.Output, "Guest User Role: %s\n", ps.GuestUserRoleName())
+	}
+	fmt.Fprintf(ctx.Output, "User Roles: %d\n", len(ps.UserRolesItems()))
+	fmt.Fprintf(ctx.Output, "Demo Users: %d\n", len(ps.DemoUsersItems()))
+
+	if pp != nil {
+		fmt.Fprintf(ctx.Output, "\nPassword Policy:\n")
+		fmt.Fprintf(ctx.Output, "  Minimum Length: %d\n", pp.MinimumLength())
+		fmt.Fprintf(ctx.Output, "  Require Digit: %v\n", pp.RequireDigit())
+		fmt.Fprintf(ctx.Output, "  Require Mixed Case: %v\n", pp.RequireMixedCase())
+		fmt.Fprintf(ctx.Output, "  Require Symbol: %v\n", pp.RequireSymbol())
+	}
+	return nil
+}
+
+// securityLevelDisplay maps gen-typed BSON SecurityLevel constants to the
+// human-friendly labels used by `show project security`. Mirrors
+// security.SecurityLevelDisplay (sdk/security/security.go) without
+// importing the sdk package.
+func securityLevelDisplay(level string) string {
+	switch level {
+	case "CheckNothing":
+		return "Off"
+	case "CheckFormsAndMicroflows":
+		return "Prototype / demo"
+	case "CheckEverything":
+		return "Production"
+	default:
+		return level
+	}
 }
 
 // entityRuleRightStrings computes CRUD right tokens for an entity
