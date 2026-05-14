@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Stage 3.3.2.A1-A5 tests: gen-typed read paths for Java/JavaScript actions.
+// Stage 3.3.2.D1-D2 tests: AST→gen converters and execCreateJavaActionGen.
 
 package executor
 
@@ -10,6 +11,10 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 )
 
 // ─────────────────────────────────────────────────────────────────────
@@ -282,3 +287,415 @@ func TestDescribeJavaScriptActionGen_NotFound(t *testing.T) {
 		t.Fatal("expected error for missing JS action, got nil")
 	}
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// D1 — astDataTypeToJavaActionParamTypeGen + ReturnTypeGen
+// ─────────────────────────────────────────────────────────────────────
+
+func TestAstDataTypeToJavaActionParamTypeGen_PrimitiveTypes(t *testing.T) {
+	cases := []struct {
+		name     string
+		dt       ast.DataType
+		wantType string
+	}{
+		{"Boolean", ast.DataType{Kind: ast.TypeBoolean}, "JavaActions$BooleanType"},
+		{"Integer", ast.DataType{Kind: ast.TypeInteger}, "JavaActions$IntegerType"},
+		{"Decimal", ast.DataType{Kind: ast.TypeDecimal}, "JavaActions$DecimalType"},
+		{"String", ast.DataType{Kind: ast.TypeString}, "JavaActions$StringType"},
+		{"DateTime", ast.DataType{Kind: ast.TypeDateTime}, "JavaActions$DateTimeType"},
+		{"Date", ast.DataType{Kind: ast.TypeDate}, "JavaActions$DateTimeType"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			elem := astDataTypeToJavaActionParamTypeGen(c.dt, nil)
+			if elem == nil {
+				t.Fatal("got nil element")
+			}
+			if elem.TypeName() != c.wantType {
+				t.Errorf("got %q, want %q", elem.TypeName(), c.wantType)
+			}
+		})
+	}
+}
+
+func TestAstDataTypeToJavaActionParamTypeGen_ConcreteEntity(t *testing.T) {
+	dt := ast.DataType{
+		Kind:      ast.TypeEntity,
+		EntityRef: &ast.QualifiedName{Module: "Sales", Name: "Order"},
+	}
+	elem := astDataTypeToJavaActionParamTypeGen(dt, nil)
+	et, ok := elem.(*genJA.ConcreteEntityType)
+	if !ok {
+		t.Fatalf("got %T, want *ConcreteEntityType", elem)
+	}
+	if et.EntityQualifiedName() != "Sales.Order" {
+		t.Errorf("got %q, want Sales.Order", et.EntityQualifiedName())
+	}
+}
+
+func TestAstDataTypeToJavaActionParamTypeGen_EntityList(t *testing.T) {
+	dt := ast.DataType{
+		Kind:      ast.TypeListOf,
+		EntityRef: &ast.QualifiedName{Module: "Sales", Name: "Order"},
+	}
+	elem := astDataTypeToJavaActionParamTypeGen(dt, nil)
+	lt, ok := elem.(*genJA.ListType)
+	if !ok {
+		t.Fatalf("got %T, want *ListType", elem)
+	}
+	inner, ok := lt.Parameter().(*genJA.ConcreteEntityType)
+	if !ok {
+		t.Fatalf("inner = %T, want *ConcreteEntityType", lt.Parameter())
+	}
+	if inner.EntityQualifiedName() != "Sales.Order" {
+		t.Errorf("inner entity = %q, want Sales.Order", inner.EntityQualifiedName())
+	}
+}
+
+func TestAstDataTypeToJavaActionParamTypeGen_TypeParamRef(t *testing.T) {
+	typeParamIDs := map[string]element.ID{"pEntity": element.ID("tp-uuid-123")}
+	dt := ast.DataType{Kind: ast.TypeEntityTypeParam, TypeParamName: "pEntity"}
+	elem := astDataTypeToJavaActionParamTypeGen(dt, typeParamIDs)
+	etp, ok := elem.(*genJA.EntityTypeParameterType)
+	if !ok {
+		t.Fatalf("got %T, want *EntityTypeParameterType", elem)
+	}
+	if etp.TypeParameterRefID() != element.ID("tp-uuid-123") {
+		t.Errorf("got %q, want tp-uuid-123", etp.TypeParameterRefID())
+	}
+}
+
+func TestAstDataTypeToJavaActionReturnTypeGen_VoidAndPrimitives(t *testing.T) {
+	cases := []struct {
+		name     string
+		dt       ast.DataType
+		wantType string
+	}{
+		{"Void", ast.DataType{Kind: ast.TypeVoid}, "CodeActions$VoidType"},
+		{"Boolean", ast.DataType{Kind: ast.TypeBoolean}, "JavaActions$BooleanType"},
+		{"String", ast.DataType{Kind: ast.TypeString}, "JavaActions$StringType"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			elem := astDataTypeToJavaActionReturnTypeGen(c.dt, nil)
+			if elem == nil {
+				t.Fatal("got nil element")
+			}
+			if elem.TypeName() != c.wantType {
+				t.Errorf("got %q, want %q", elem.TypeName(), c.wantType)
+			}
+		})
+	}
+}
+
+func TestAstDataTypeToJavaActionReturnTypeGen_ConcreteEntity(t *testing.T) {
+	dt := ast.DataType{
+		Kind:      ast.TypeEntity,
+		EntityRef: &ast.QualifiedName{Module: "M", Name: "Customer"},
+	}
+	elem := astDataTypeToJavaActionReturnTypeGen(dt, nil)
+	et, ok := elem.(*genJA.ConcreteEntityType)
+	if !ok {
+		t.Fatalf("got %T, want *ConcreteEntityType", elem)
+	}
+	if et.EntityQualifiedName() != "M.Customer" {
+		t.Errorf("got %q, want M.Customer", et.EntityQualifiedName())
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// D2 — execCreateJavaActionGen
+// ─────────────────────────────────────────────────────────────────────
+
+// newCreateJavaActionMockCtx wires a writable mock backend with a single
+// module + an empty JavaActions list, capturing CreateJavaActionGen calls
+// in the returned slice for assertion. CreateJavaAction routes to the
+// gen path through ctx.Backend (per plan §7 D2 — no direct repo call).
+func newCreateJavaActionMockCtx(t *testing.T, moduleName string) (*ExecContext, *bytes.Buffer, *[]*genJA.JavaAction, *[]*genJA.JavaAction) {
+	t.Helper()
+	mod := mkModule(moduleName)
+	h := mkHierarchy(mod)
+	created := []*genJA.JavaAction{}
+	updated := []*genJA.JavaAction{}
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		CreateJavaActionGenFunc: func(parentUUID, containmentName string, ja *genJA.JavaAction) error {
+			created = append(created, ja)
+			return nil
+		},
+		UpdateJavaActionGenFunc: func(ja *genJA.JavaAction) error {
+			updated = append(updated, ja)
+			return nil
+		},
+		WriteJavaSourceFileGenFunc: func(moduleName, actionName string, javaCode string, params []*genJA.JavaActionParameter, returnType element.Element, extraImports []string, extraCode string) error {
+			return nil
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	// JavaActions repo: empty by default (no existing actions).
+	ctx.JavaActions = &emptyJavaActionRepo{}
+	return ctx, buf, &created, &updated
+}
+
+// emptyJavaActionRepo is a minimal repo for tests that only need the
+// existence-check path to find no matches.
+type emptyJavaActionRepo struct {
+	items []*genJA.JavaAction
+}
+
+func (r *emptyJavaActionRepo) Get(id model.ID) (*genJA.JavaAction, error)        { return nil, nil }
+func (r *emptyJavaActionRepo) List(moduleID model.ID) ([]*genJA.JavaAction, error) { return nil, nil }
+func (r *emptyJavaActionRepo) ListAll() ([]*genJA.JavaAction, error)              { return r.items, nil }
+func (r *emptyJavaActionRepo) FindByQualifiedName(qn string) (*genJA.JavaAction, error) {
+	return nil, nil
+}
+func (r *emptyJavaActionRepo) GetContainerUUID(id model.ID) (model.ID, error) { return "", nil }
+func (r *emptyJavaActionRepo) Create(parentUUID, containmentName string, ja *genJA.JavaAction) error {
+	return nil
+}
+func (r *emptyJavaActionRepo) Update(ja *genJA.JavaAction) error { return nil }
+func (r *emptyJavaActionRepo) Delete(id model.ID) error          { return nil }
+
+func TestExecCreateJavaActionGen_BasicCreate(t *testing.T) {
+	ctx, buf, created, _ := newCreateJavaActionMockCtx(t, "TestModule")
+	stmt := &ast.CreateJavaActionStmt{
+		Name:          ast.QualifiedName{Module: "TestModule", Name: "MyAction"},
+		Documentation: "test docs",
+		ReturnType:    ast.DataType{Kind: ast.TypeBoolean},
+	}
+	if err := execCreateJavaActionGen(ctx, stmt); err != nil {
+		t.Fatalf("execCreateJavaActionGen: %v", err)
+	}
+	if len(*created) != 1 {
+		t.Fatalf("expected 1 created action, got %d", len(*created))
+	}
+	ja := (*created)[0]
+	if ja.Name() != "MyAction" {
+		t.Errorf("Name = %q, want MyAction", ja.Name())
+	}
+	if ja.Documentation() != "test docs" {
+		t.Errorf("Documentation = %q, want 'test docs'", ja.Documentation())
+	}
+	if ja.ExportLevel() != "Public" {
+		t.Errorf("ExportLevel = %q, want Public", ja.ExportLevel())
+	}
+	out := buf.String()
+	if !strings.Contains(out, "Created java action: TestModule.MyAction") {
+		t.Errorf("expected success message, got: %q", out)
+	}
+}
+
+func TestExecCreateJavaActionGen_WithParameters(t *testing.T) {
+	ctx, _, created, _ := newCreateJavaActionMockCtx(t, "TestModule")
+	stmt := &ast.CreateJavaActionStmt{
+		Name: ast.QualifiedName{Module: "TestModule", Name: "MyAction"},
+		Parameters: []ast.JavaActionParam{
+			{Name: "p1", Type: ast.DataType{Kind: ast.TypeString}, IsRequired: true},
+			{Name: "p2", Type: ast.DataType{Kind: ast.TypeInteger}, IsRequired: false},
+		},
+		ReturnType: ast.DataType{Kind: ast.TypeBoolean},
+	}
+	if err := execCreateJavaActionGen(ctx, stmt); err != nil {
+		t.Fatalf("execCreateJavaActionGen: %v", err)
+	}
+	if len(*created) != 1 {
+		t.Fatalf("expected 1 created action, got %d", len(*created))
+	}
+	ja := (*created)[0]
+	params := ja.ActionParametersItems()
+	if len(params) != 2 {
+		t.Fatalf("ActionParameters count = %d, want 2", len(params))
+	}
+	p1, ok := params[0].(*genJA.JavaActionParameter)
+	if !ok {
+		t.Fatalf("params[0] = %T, want *JavaActionParameter", params[0])
+	}
+	if p1.Name() != "p1" {
+		t.Errorf("p1.Name = %q, want p1", p1.Name())
+	}
+	if !p1.IsRequired() {
+		t.Errorf("p1.IsRequired = false, want true")
+	}
+	if p1.ActionParameterType() == nil || p1.ActionParameterType().TypeName() != "JavaActions$StringType" {
+		t.Errorf("p1 type = %v, want JavaActions$StringType", p1.ActionParameterType())
+	}
+	p2 := params[1].(*genJA.JavaActionParameter)
+	if p2.Name() != "p2" {
+		t.Errorf("p2.Name = %q, want p2", p2.Name())
+	}
+	if p2.IsRequired() {
+		t.Errorf("p2.IsRequired = true, want false")
+	}
+}
+
+func TestExecCreateJavaActionGen_ConcreteEntityReturnType(t *testing.T) {
+	ctx, _, created, _ := newCreateJavaActionMockCtx(t, "TestModule")
+	stmt := &ast.CreateJavaActionStmt{
+		Name: ast.QualifiedName{Module: "TestModule", Name: "MyAction"},
+		ReturnType: ast.DataType{
+			Kind:      ast.TypeEntity,
+			EntityRef: &ast.QualifiedName{Module: "Sales", Name: "Order"},
+		},
+	}
+	if err := execCreateJavaActionGen(ctx, stmt); err != nil {
+		t.Fatalf("execCreateJavaActionGen: %v", err)
+	}
+	if len(*created) != 1 {
+		t.Fatalf("expected 1 created action, got %d", len(*created))
+	}
+	ja := (*created)[0]
+	rt := ja.ActionReturnType()
+	if rt == nil {
+		t.Fatal("ActionReturnType is nil")
+	}
+	et, ok := rt.(*genJA.ConcreteEntityType)
+	if !ok {
+		t.Fatalf("ActionReturnType = %T, want *ConcreteEntityType", rt)
+	}
+	if et.EntityQualifiedName() != "Sales.Order" {
+		t.Errorf("entity = %q, want Sales.Order", et.EntityQualifiedName())
+	}
+}
+
+func TestExecCreateJavaActionGen_AlreadyExists(t *testing.T) {
+	mod := mkModule("TestModule")
+	h := mkHierarchy(mod)
+	// Pre-populate JavaActions repo with one item that the existence
+	// check will resolve to TestModule.MyAction. The cache-helper path
+	// reads container UUIDs via GetContainerUUID; we return the module
+	// ID so the hierarchy resolves the module name.
+	existing := genJA.NewJavaAction()
+	existing.SetID(element.ID(nextID("ja")))
+	existing.SetName("MyAction")
+	repo := &existingJavaActionRepo{
+		items:        []*genJA.JavaAction{existing},
+		containerOf:  map[model.ID]model.ID{model.ID(existing.ID()): mod.ID},
+	}
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.JavaActions = repo
+
+	stmt := &ast.CreateJavaActionStmt{
+		Name:           ast.QualifiedName{Module: "TestModule", Name: "MyAction"},
+		ReturnType:     ast.DataType{Kind: ast.TypeBoolean},
+		CreateOrModify: false,
+	}
+	err := execCreateJavaActionGen(ctx, stmt)
+	if err == nil {
+		t.Fatal("expected error when action already exists, got nil")
+	}
+	if !strings.Contains(err.Error(), "already exists") && !strings.Contains(err.Error(), "MyAction") {
+		t.Errorf("expected 'already exists' or action name in error, got: %v", err)
+	}
+}
+
+func TestExecCreateJavaActionGen_ModuleNotFound(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(mkHierarchy()))
+	ctx.JavaActions = &emptyJavaActionRepo{}
+
+	stmt := &ast.CreateJavaActionStmt{
+		Name:       ast.QualifiedName{Module: "NoSuchModule", Name: "MyAction"},
+		ReturnType: ast.DataType{Kind: ast.TypeBoolean},
+	}
+	err := execCreateJavaActionGen(ctx, stmt)
+	if err == nil {
+		t.Fatal("expected error when module not found, got nil")
+	}
+}
+
+func TestExecCreateJavaActionGen_OrModifyOverwrites(t *testing.T) {
+	mod := mkModule("TestModule")
+	h := mkHierarchy(mod)
+	existing := genJA.NewJavaAction()
+	existingID := element.ID(nextID("ja"))
+	existing.SetID(existingID)
+	existing.SetName("MyAction")
+	repo := &existingJavaActionRepo{
+		items:       []*genJA.JavaAction{existing},
+		containerOf: map[model.ID]model.ID{model.ID(existingID): mod.ID},
+	}
+	created := []*genJA.JavaAction{}
+	updated := []*genJA.JavaAction{}
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		CreateJavaActionGenFunc: func(parentUUID, containmentName string, ja *genJA.JavaAction) error {
+			created = append(created, ja)
+			return nil
+		},
+		UpdateJavaActionGenFunc: func(ja *genJA.JavaAction) error {
+			updated = append(updated, ja)
+			return nil
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.JavaActions = repo
+
+	stmt := &ast.CreateJavaActionStmt{
+		Name:           ast.QualifiedName{Module: "TestModule", Name: "MyAction"},
+		Documentation:  "updated docs",
+		ReturnType:     ast.DataType{Kind: ast.TypeBoolean},
+		CreateOrModify: true,
+	}
+	if err := execCreateJavaActionGen(ctx, stmt); err != nil {
+		t.Fatalf("execCreateJavaActionGen: %v", err)
+	}
+	if len(created) != 0 {
+		t.Errorf("expected 0 created (existing path → update), got %d", len(created))
+	}
+	if len(updated) != 1 {
+		t.Fatalf("expected 1 updated action, got %d", len(updated))
+	}
+	if updated[0].ID() != existingID {
+		t.Errorf("updated action ID = %q, want %q (must reuse existing)", updated[0].ID(), existingID)
+	}
+	if updated[0].Documentation() != "updated docs" {
+		t.Errorf("updated Documentation = %q, want 'updated docs'", updated[0].Documentation())
+	}
+	out := buf.String()
+	if !strings.Contains(out, "Modified java action") {
+		t.Errorf("expected 'Modified java action' message, got: %q", out)
+	}
+}
+
+// existingJavaActionRepo is a minimal repo that returns a pre-populated
+// list of JavaActions and resolves their container via a name-keyed map.
+type existingJavaActionRepo struct {
+	items       []*genJA.JavaAction
+	containerOf map[model.ID]model.ID
+}
+
+func (r *existingJavaActionRepo) Get(id model.ID) (*genJA.JavaAction, error) {
+	for _, ja := range r.items {
+		if model.ID(ja.ID()) == id {
+			return ja, nil
+		}
+	}
+	return nil, nil
+}
+func (r *existingJavaActionRepo) List(moduleID model.ID) ([]*genJA.JavaAction, error) {
+	return nil, nil
+}
+func (r *existingJavaActionRepo) ListAll() ([]*genJA.JavaAction, error) { return r.items, nil }
+func (r *existingJavaActionRepo) FindByQualifiedName(qn string) (*genJA.JavaAction, error) {
+	return nil, nil
+}
+func (r *existingJavaActionRepo) GetContainerUUID(id model.ID) (model.ID, error) {
+	if c, ok := r.containerOf[id]; ok {
+		return c, nil
+	}
+	return "", nil
+}
+func (r *existingJavaActionRepo) Create(parentUUID, containmentName string, ja *genJA.JavaAction) error {
+	return nil
+}
+func (r *existingJavaActionRepo) Update(ja *genJA.JavaAction) error { return nil }
+func (r *existingJavaActionRepo) Delete(id model.ID) error          { return nil }

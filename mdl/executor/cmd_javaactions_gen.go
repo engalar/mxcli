@@ -67,6 +67,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
@@ -878,4 +879,324 @@ func execDropJavaActionGen(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
 		return nil
 	}
 	return mdlerrors.NewNotFound("java action", s.Name.Module+"."+s.Name.Name)
+}
+
+// newGenElementByType allocates a bare *element.Base with the given
+// storage TypeName. Used as a stub for gen schema gaps (LongType,
+// VoidType, etc.) until codegen ships dedicated constructors. The
+// resulting element has no properties wired so it can only carry its
+// $Type marker on roundtrip — fine for JavaAction parameter / return
+// types where the inner shape is empty (no nested fields).
+//
+// schema gap: Remove call sites once gen ships New<Name>Type for the
+// missing CodeActions$ variants.
+func newGenElementByType(name string) element.Element {
+	b := &element.Base{}
+	b.SetTypeName(name)
+	return b
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// D1 — AST → gen JavaAction param/return type converters
+// ─────────────────────────────────────────────────────────────────────
+
+// astDataTypeToJavaActionParamTypeGen mirrors astDataTypeToJavaActionParamType
+// (cmd_javaactions.go:455) but returns a gen element.Element instead of an
+// sdk-typed CodeActionParameterType. typeParamIDs resolves type-parameter
+// names (e.g., "pEntity") to the TypeParameter unit IDs created in the
+// same execCreateJavaActionGen call so EntityTypeParameterType can carry
+// the BY_ID pointer.
+//
+// schema gap: gen has no constructor for several CodeActions$ variants
+// (LongType, FileDocumentType). Phase D code emits a plain *element.Base
+// for those by allocating via element.New for the CodeActions$ namespace
+// (Studio Pro's storage convention). The format helpers already dispatch
+// on TypeName() for both namespaces (see schema-gap note (2) at top of
+// file). Remove these element.New fallbacks when codegen ships them.
+func astDataTypeToJavaActionParamTypeGen(dt ast.DataType, typeParamIDs map[string]element.ID) element.Element {
+	switch dt.Kind {
+	case ast.TypeBoolean:
+		return genJA.NewBooleanType()
+	case ast.TypeInteger:
+		return genJA.NewIntegerType()
+	case ast.TypeLong:
+		// schema gap: no NewLongType() in gen. Allocate a bare
+		// *element.Base with Studio Pro's CodeActions$LongType
+		// storage namespace; the format helpers already dispatch on
+		// TypeName for both namespaces. Remove when gen exposes
+		// NewLongType().
+		return newGenElementByType("CodeActions$LongType")
+	case ast.TypeDecimal:
+		return genJA.NewDecimalType()
+	case ast.TypeString:
+		return genJA.NewStringType()
+	case ast.TypeDateTime, ast.TypeDate:
+		return genJA.NewDateTimeType()
+	case ast.TypeEntityTypeParam:
+		etp := genJA.NewEntityTypeParameterType()
+		if id, ok := typeParamIDs[dt.TypeParamName]; ok {
+			etp.SetTypeParameterID(id)
+		}
+		return etp
+	case ast.TypeEntity, ast.TypeEnumeration:
+		// TypeEnumeration with a qualified name is treated as entity
+		// type here; the visitor cannot distinguish entity from
+		// enumeration types for bare qualified names like
+		// Module.EntityName (see CLAUDE.md).
+		entityName := ""
+		if dt.EntityRef != nil {
+			entityName = dt.EntityRef.Module + "." + dt.EntityRef.Name
+		} else if dt.EnumRef != nil {
+			entityName = dt.EnumRef.Module + "." + dt.EnumRef.Name
+		}
+		et := genJA.NewConcreteEntityType()
+		et.SetEntityQualifiedName(entityName)
+		return et
+	case ast.TypeListOf:
+		entityName := ""
+		if dt.EntityRef != nil {
+			entityName = dt.EntityRef.Module + "." + dt.EntityRef.Name
+		}
+		inner := genJA.NewConcreteEntityType()
+		inner.SetEntityQualifiedName(entityName)
+		lt := genJA.NewListType()
+		lt.SetParameter(inner)
+		return lt
+	default:
+		return genJA.NewStringType()
+	}
+}
+
+// astDataTypeToJavaActionReturnTypeGen converts an AST DataType to a gen
+// element.Element for use as a Java action return type. Twin of
+// astDataTypeToJavaActionParamTypeGen with TypeVoid → CodeActions$VoidType
+// fallback (gen has no NewVoidType()).
+//
+// "void" sometimes parses as a bare TypeEnumeration with a single-part
+// EnumRef name (e.g., {Module: "", Name: "void"}); we detect that
+// pattern and emit VoidType to match the legacy converter behaviour.
+func astDataTypeToJavaActionReturnTypeGen(dt ast.DataType, typeParamIDs map[string]element.ID) element.Element {
+	if dt.Kind == ast.TypeVoid {
+		// schema gap: no NewVoidType() in gen. Allocate a bare
+		// *element.Base with the CodeActions$VoidType storage
+		// namespace. Remove when gen ships NewVoidType().
+		return newGenElementByType("CodeActions$VoidType")
+	}
+	// Detect "void" parsed as a bare TypeEnumeration / TypeEntity name.
+	if dt.Kind == ast.TypeEntity || dt.Kind == ast.TypeEnumeration {
+		entityName := ""
+		if dt.EntityRef != nil {
+			entityName = dt.EntityRef.Module + "." + dt.EntityRef.Name
+		} else if dt.EnumRef != nil {
+			entityName = dt.EnumRef.Module + "." + dt.EnumRef.Name
+		}
+		if strings.EqualFold(strings.TrimPrefix(entityName, "."), "void") {
+			return newGenElementByType("CodeActions$VoidType")
+		}
+	}
+	return astDataTypeToJavaActionParamTypeGen(dt, typeParamIDs)
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// D2 — execCreateJavaActionGen
+// ─────────────────────────────────────────────────────────────────────
+
+// execCreateJavaActionGen handles CREATE JAVA ACTION via the gen-typed
+// write path. Mirrors execCreateJavaAction (cmd_javaactions.go:285) but:
+//
+//   - Existence check goes through listJavaActionsWithContainerGen
+//     (cache-aware, gen-typed) instead of ctx.Backend.ListJavaActions
+//     (sdk-typed).
+//   - The JavaAction object is built via genJA.New* constructors and
+//     SetX accessors. Parameter / return types come from the D1
+//     converters (astDataTypeToJavaActionParamTypeGen /
+//     astDataTypeToJavaActionReturnTypeGen).
+//   - Persistence routes through ctx.Backend.{CreateJavaActionGen,
+//     UpdateJavaActionGen} (the gen-aware sibling of CreateJavaAction).
+//   - Java source file IO routes through ctx.Backend.WriteJavaSourceFileGen.
+//     This currently returns "not implemented (Phase D6)"; we tolerate
+//     that error so the BSON unit is still created — D6 will replace
+//     the stub with a real generator and source files will start
+//     materialising automatically.
+//
+// schema gap: per the dual-accessor note (3) at top of file, Studio
+// Pro fixtures populate the legacy Parameters/ReturnType BSON keys.
+// For NEW elements emitted by the gen path, we use the canonical
+// ActionParameters / ActionReturnType setters; downstream readers
+// already dispatch on both flavours via javaActionParametersOf /
+// javaActionReturnTypeElement (no schema-gap mismatch on roundtrip).
+func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
+	if !ctx.ConnectedForWrite() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	// Find the module (no auto-create — keeps parity with legacy
+	// execCreateJavaAction behaviour: missing module → NotFound).
+	modules, err := ctx.Backend.ListModules()
+	if err != nil {
+		return mdlerrors.NewBackend("get modules", err)
+	}
+	var (
+		containerID model.ID
+		moduleName  string
+	)
+	for _, mod := range modules {
+		if mod.Name == s.Name.Module {
+			containerID = mod.ID
+			moduleName = mod.Name
+			break
+		}
+	}
+	if containerID == "" {
+		return mdlerrors.NewNotFound("module", s.Name.Module)
+	}
+
+	// Existence check via the cache helper. The helper resolves each
+	// JavaAction's container UUID so we can match by module name.
+	pairs, err := listJavaActionsWithContainerGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("list java actions", err)
+	}
+	var existingJA *genJA.JavaAction
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
+			if !s.CreateOrModify {
+				return mdlerrors.NewAlreadyExists("java action", s.Name.Module+"."+s.Name.Name)
+			}
+			existingJA = p.Elem
+			break
+		}
+	}
+
+	// Build the gen JavaAction.
+	ja := genJA.NewJavaAction()
+	if existingJA != nil {
+		// Reuse existing element ID so refs and dirty bits don't
+		// shift across replace.
+		ja.SetID(existingJA.ID())
+	} else {
+		ja.SetID(element.ID(types.GenerateID()))
+	}
+	ja.SetName(s.Name.Name)
+	ja.SetDocumentation(s.Documentation)
+	ja.SetExportLevel("Public")
+
+	// Build type parameter definitions; track ID by name so EntityType
+	// parameter / parameterized entity types can wire BY_ID pointers.
+	typeParamIDs := make(map[string]element.ID, len(s.TypeParameters))
+	for _, tpName := range s.TypeParameters {
+		tp := genJA.NewTypeParameter()
+		tp.SetID(element.ID(types.GenerateID()))
+		tp.SetName(tpName)
+		ja.AddActionTypeParameters(tp)
+		typeParamIDs[tpName] = tp.ID()
+	}
+
+	// Set up type-param name lookup for bare-name parameter types
+	// (mirrors legacy isTypeParamRef helper).
+	typeParamNames := make(map[string]bool, len(s.TypeParameters))
+	for _, tpName := range s.TypeParameters {
+		typeParamNames[tpName] = true
+	}
+
+	// Convert parameters.
+	for _, param := range s.Parameters {
+		jaParam := genJA.NewJavaActionParameter()
+		jaParam.SetID(element.ID(types.GenerateID()))
+		jaParam.SetName(param.Name)
+		jaParam.SetIsRequired(param.IsRequired)
+
+		var paramType element.Element
+		switch {
+		case param.Type.Kind == ast.TypeEntityTypeParam:
+			paramType = astDataTypeToJavaActionParamTypeGen(param.Type, typeParamIDs)
+		case isTypeParamRef(param.Type, typeParamNames):
+			// Bare name matching a type parameter →
+			// ParameterizedEntityType (use-site BY_ID reference).
+			tpName := getTypeParamRefName(param.Type)
+			pet := genJA.NewParameterizedEntityType()
+			if id, ok := typeParamIDs[tpName]; ok {
+				pet.SetTypeParameterID(id)
+			}
+			paramType = pet
+		default:
+			paramType = astDataTypeToJavaActionParamTypeGen(param.Type, typeParamIDs)
+		}
+		jaParam.SetActionParameterType(paramType)
+		ja.AddActionParameters(jaParam)
+	}
+
+	// Convert return type — also handle bare type-param refs.
+	if isTypeParamRef(s.ReturnType, typeParamNames) {
+		tpName := getTypeParamRefName(s.ReturnType)
+		pet := genJA.NewParameterizedEntityType()
+		if id, ok := typeParamIDs[tpName]; ok {
+			pet.SetTypeParameterID(id)
+		}
+		ja.SetActionReturnType(pet)
+	} else {
+		ja.SetActionReturnType(astDataTypeToJavaActionReturnTypeGen(s.ReturnType, typeParamIDs))
+	}
+
+	// MicroflowActionInfo when EXPOSED AS clause is present.
+	if s.ExposedCaption != "" {
+		mai := genJA.NewMicroflowActionInfo()
+		mai.SetCaption(s.ExposedCaption)
+		mai.SetCategory(s.ExposedCategory)
+		ja.SetMicroflowActionInfo(mai)
+	}
+
+	// Persist via the gen-aware backend siblings.
+	if existingJA != nil {
+		if err := ctx.Backend.UpdateJavaActionGen(ja); err != nil {
+			return mdlerrors.NewBackend("update java action", err)
+		}
+	} else {
+		if err := ctx.Backend.CreateJavaActionGen(string(containerID), "Documents", ja); err != nil {
+			return mdlerrors.NewBackend("create java action", err)
+		}
+	}
+
+	// Java source file. ctx.Backend.WriteJavaSourceFileGen currently
+	// returns "not implemented (Phase D6)"; tolerate that so the BSON
+	// unit is still created. D6 fills in the real generator and source
+	// files start materialising automatically.
+	//
+	// TODO(Stage 3.3.2.D6): drop the "not implemented" fallback once
+	// writeJavaSourceFileViaPathGen lands a real generator.
+	if s.JavaCode != "" {
+		params := make([]*genJA.JavaActionParameter, 0, len(ja.ActionParametersItems()))
+		for _, p := range ja.ActionParametersItems() {
+			if pp, ok := p.(*genJA.JavaActionParameter); ok {
+				params = append(params, pp)
+			}
+		}
+		if werr := ctx.Backend.WriteJavaSourceFileGen(moduleName, s.Name.Name, s.JavaCode, params, ja.ActionReturnType(), s.Imports, s.ExtraCode); werr != nil {
+			if !strings.Contains(werr.Error(), "not implemented") {
+				return mdlerrors.NewBackend("write java source file", werr)
+			}
+			// Fall through: BSON unit still created; source file
+			// writer is Phase D6's responsibility.
+		}
+	}
+
+	invalidateJavaActionsCache(ctx)
+	invalidateHierarchy(ctx)
+
+	if existingJA != nil {
+		fmt.Fprintf(ctx.Output, "Modified java action: %s.%s\n", s.Name.Module, s.Name.Name)
+	} else {
+		fmt.Fprintf(ctx.Output, "Created java action: %s.%s\n", s.Name.Module, s.Name.Name)
+	}
+	return nil
 }

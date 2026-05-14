@@ -119,7 +119,7 @@ func registerPageHandlers(r *Registry) {
 		return execDropJavaActionGen(ctx, stmt.(*ast.DropJavaActionStmt))
 	})
 	r.Register(&ast.CreateJavaActionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateJavaAction(ctx, stmt.(*ast.CreateJavaActionStmt))
+		return execCreateJavaActionGen(ctx, stmt.(*ast.CreateJavaActionStmt))
 	})
 	r.Register(&ast.DropFolderStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execDropFolder(ctx, stmt.(*ast.DropFolderStmt))
