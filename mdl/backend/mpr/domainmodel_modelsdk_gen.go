@@ -97,6 +97,58 @@ func genEntityToSdk(g *genDm.Entity) *domainmodel.Entity {
 	return out
 }
 
+// CreateAssociationGen creates a new association in the given domain
+// model from a gen-typed *Association. Bridges to the existing
+// createAssociationViaModelsdk write helper.
+func (b *MprBackend) CreateAssociationGen(domainModelID model.ID, assoc *genDm.Association) error {
+	if assoc == nil {
+		return fmt.Errorf("CreateAssociationGen: nil association")
+	}
+	sdkAssoc := genAssociationToSdk(assoc)
+	return b.createAssociationViaModelsdk(domainModelID, sdkAssoc)
+}
+
+// genAssociationToSdk performs a shallow gen → sdk conversion preserving
+// the fields the *ViaModelsdk write helper consumes:
+//   - Name / ID / Documentation
+//   - ParentID (FROM entity, FK owner per CLAUDE.md "Association Parent/Child Pointer Semantics")
+//   - ChildID (TO entity)
+//   - Type / Owner / StorageFormat strings → sdk enums via the small
+//     converter functions inline below.
+func genAssociationToSdk(g *genDm.Association) *domainmodel.Association {
+	if g == nil {
+		return nil
+	}
+	out := &domainmodel.Association{
+		Name:          g.Name(),
+		Documentation: g.Documentation(),
+	}
+	out.ID = model.ID(g.ID())
+	out.TypeName = "DomainModels$Association"
+	out.ParentID = model.ID(g.ParentRefID())
+	out.ChildID = model.ID(g.ChildRefID())
+
+	switch g.Type() {
+	case "ReferenceSet":
+		out.Type = domainmodel.AssociationTypeReferenceSet
+	default:
+		out.Type = domainmodel.AssociationTypeReference
+	}
+	switch g.Owner() {
+	case "Both":
+		out.Owner = domainmodel.AssociationOwnerBoth
+	default:
+		out.Owner = domainmodel.AssociationOwnerDefault
+	}
+	switch g.StorageFormat() {
+	case "Column":
+		out.StorageFormat = domainmodel.StorageFormatColumn
+	default:
+		out.StorageFormat = domainmodel.StorageFormatTable
+	}
+	return out
+}
+
 // stubAttrTypeFromGen returns the matching sdk AttributeType subtype for
 // a given gen storage TypeName, wired with default values. Round-trip
 // from gen to sdk loses parameter values (length, enum ref, etc.); D8.attr
