@@ -32,18 +32,21 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	// Find workflow by qualified name
-	allWorkflows, err := ctx.Backend.ListWorkflows()
+	// Find workflow by qualified name (gen-typed lookup via cache helper).
+	pairs, err := listWorkflowsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list workflows", err)
 	}
 
 	var wfID model.ID
-	for _, wf := range allWorkflows {
-		modID := h.FindModuleID(wf.ContainerID)
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
-		if modName == s.Name.Module && wf.Name == s.Name.Name {
-			wfID = wf.ID
+		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
+			wfID = model.ID(p.Elem.ID())
 			break
 		}
 	}

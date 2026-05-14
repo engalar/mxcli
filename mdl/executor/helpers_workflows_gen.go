@@ -25,10 +25,20 @@ func listWorkflowsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genWf.
 		return nil, nil
 	}
 	listFn := func() ([]*genWf.Workflow, error) {
-		if ctx.Workflows == nil {
+		// Prefer ctx.Workflows (gen-native repo wired via the duck-type
+		// provider on MprBackend); fall back to ctx.Backend.ListWorkflowsGen
+		// which goes through the regular FullBackend interface (used by
+		// MockBackend tests that wire ListWorkflowsGenFunc).
+		var all []*genWf.Workflow
+		var err error
+		switch {
+		case ctx.Workflows != nil:
+			all, err = ctx.Workflows.ListAll()
+		case ctx.Backend != nil:
+			all, err = ctx.Backend.ListWorkflowsGen()
+		default:
 			return nil, nil
 		}
-		all, err := ctx.Workflows.ListAll()
 		if err != nil {
 			return nil, err
 		}
@@ -47,6 +57,17 @@ func listWorkflowsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genWf.
 		if ctx.Workflows != nil {
 			c, err := ctx.Workflows.GetContainerUUID(model.ID(id))
 			return element.ID(c), err
+		}
+		// MockBackend fallback: gen Workflow drops ContainerID during
+		// codec roundtrip, but the legacy sdk Workflow carries it.
+		// Mock tests typically wire ListWorkflowsFunc/GetWorkflowFunc,
+		// so we fish ContainerID out of the legacy GetWorkflow path.
+		// Returning "" is safe: the hierarchy walker tolerates it (the
+		// caller's eventual h.FindModuleID just yields the empty module).
+		if ctx.Backend != nil {
+			if wf, err := ctx.Backend.GetWorkflow(model.ID(id)); err == nil && wf != nil {
+				return element.ID(wf.ContainerID), nil
+			}
 		}
 		return "", nil
 	}

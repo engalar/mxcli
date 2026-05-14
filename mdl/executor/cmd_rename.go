@@ -232,15 +232,18 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 			}
 		}
 	case "workflow":
-		wfs, _ := ctx.Backend.ListWorkflows()
-		for _, wf := range wfs {
-			modID := h.FindModuleID(wf.ContainerID)
+		pairs, _ := listWorkflowsWithContainerGen(ctx)
+		for _, p := range pairs {
+			if p.Elem == nil {
+				continue
+			}
+			modID := h.FindModuleID(model.ID(p.ContainerID))
 			if h.GetModuleName(modID) != s.Name.Module {
 				continue
 			}
-			if wf.Name == s.Name.Name {
+			if p.Elem.Name() == s.Name.Name {
 				found = true
-			} else if wf.Name == s.NewName {
+			} else if p.Elem.Name() == s.NewName {
 				collision = true
 			}
 		}

@@ -16,6 +16,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -254,6 +255,17 @@ func mkWorkflow(containerID model.ID, name string) *workflows.Workflow {
 		ContainerID: containerID,
 		Name:        name,
 	}
+}
+
+// mkWorkflowGen builds a gen-typed Workflow alongside the sdk fixture.
+// Stage 3.3.3.C6/C7: tests for cmd_rename, validate_duplicates,
+// cmd_alter_workflow now read via the gen cache helper, so we wire the
+// gen sibling. The returned *genWf.Workflow carries the same ID + Name.
+func mkWorkflowGen(id, name string) *genWf.Workflow {
+	wf := genWf.NewWorkflow()
+	wf.SetID(element.ID(id))
+	wf.SetName(name)
+	return wf
 }
 
 // --- Assertion helpers ---
