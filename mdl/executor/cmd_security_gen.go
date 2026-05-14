@@ -643,6 +643,57 @@ func describeModuleRoleGen(ctx *ExecContext, name ast.QualifiedName) error {
 	return mdlerrors.NewNotFound("module role", name.String())
 }
 
+// describeUserRoleGen handles DESCRIBE USER ROLE '<name>' using the gen-typed
+// ProjectSecurity from ctx.Security. Mirrors describeUserRole output exactly —
+// same quoting style, module role parentheses, manage-all-roles suffix,
+// semicolon + slash terminators, and trailing comment lines for description
+// and check-security flag.
+//
+// schema gap: UserRolesItems() returns []element.Element; type-assert each
+// entry to *genSec.UserRole. Remove cast when gen narrows return to []*UserRole.
+func describeUserRoleGen(ctx *ExecContext, name ast.QualifiedName) error {
+	ps, err := getProjectSecurityGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("read project security", err)
+	}
+	if ps == nil {
+		return mdlerrors.NewNotFound("user role", name.Name)
+	}
+	for _, ur := range ps.UserRolesItems() {
+		typed, ok := ur.(*genSec.UserRole)
+		if !ok || typed.Name() != name.Name {
+			continue
+		}
+		fmt.Fprintf(ctx.Output, "create user role %s", typed.Name())
+
+		// Module roles
+		moduleRoles := typed.ModuleRolesQualifiedNames()
+		if len(moduleRoles) > 0 {
+			fmt.Fprintf(ctx.Output, " (%s)", strings.Join(moduleRoles, ", "))
+		}
+
+		if typed.ManageAllRoles() {
+			fmt.Fprint(ctx.Output, " manage all roles")
+		}
+
+		fmt.Fprintln(ctx.Output, ";")
+		fmt.Fprintln(ctx.Output, "/")
+
+		// Show description if present
+		if typed.Description() != "" {
+			fmt.Fprintf(ctx.Output, "\n-- Description: %s\n", typed.Description())
+		}
+
+		// Show check security flag
+		if typed.CheckSecurity() {
+			fmt.Fprintln(ctx.Output, "-- Check security: enabled")
+		}
+
+		return nil
+	}
+	return mdlerrors.NewNotFound("user role", name.Name)
+}
+
 // listDemoUsersGen handles SHOW DEMO USERS using the gen-typed ProjectSecurity
 // from ctx.Security. When demo users are disabled it emits a human-readable
 // hint (table format) or an empty TableResult (JSON format).
