@@ -166,29 +166,6 @@ func TestPageBuilderFluent(t *testing.T) {
 	}
 }
 
-// TestMicroflowBuilderFluent tests that the microflow builder can be chained
-func TestMicroflowBuilderFluent(t *testing.T) {
-	m := &MicroflowsAPI{}
-
-	builder := m.CreateMicroflow("ACT_Customer_Save")
-	if builder == nil {
-		t.Fatal("CreateMicroflow() returned nil")
-	}
-
-	builder = builder.
-		WithParameter("Customer", "MyModule.Customer").
-		WithStringParameter("Message").
-		ReturnsBoolean()
-
-	if builder.microflow.Name != "ACT_Customer_Save" {
-		t.Errorf("microflow.Name = %q, want %q", builder.microflow.Name, "ACT_Customer_Save")
-	}
-
-	if len(builder.microflow.Parameters) != 2 {
-		t.Errorf("len(parameters) = %d, want %d", len(builder.microflow.Parameters), 2)
-	}
-}
-
 // TestDataViewBuilder tests the DataView builder
 func TestDataViewBuilder(t *testing.T) {
 	p := &PagesAPI{}

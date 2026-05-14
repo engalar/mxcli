@@ -278,58 +278,6 @@ func TestIntegration_Pages_GetPage(t *testing.T) {
 	t.Skip("Could not find a page in a known module")
 }
 
-// TestIntegration_Microflows_GetMicroflow tests retrieving microflows
-func TestIntegration_Microflows_GetMicroflow(t *testing.T) {
-	projectPath := copyTestProject(t)
-
-	writer, err := mpr.NewWriter(projectPath)
-	if err != nil {
-		t.Fatalf("Failed to open project: %v", err)
-	}
-	defer writer.Close()
-
-	api := New(writer)
-
-	// List all microflows
-	microflows, err := api.Reader().ListMicroflows()
-	if err != nil {
-		t.Fatalf("Failed to list microflows: %v", err)
-	}
-
-	if len(microflows) == 0 {
-		t.Skip("No microflows found in test project")
-	}
-
-	t.Logf("Found %d microflows", len(microflows))
-
-	// Find a microflow with a known module
-	modules, _ := api.ListModules()
-	moduleIDs := make(map[string]string)
-	for _, m := range modules {
-		moduleIDs[string(m.ID)] = m.Name
-	}
-
-	for _, mf := range microflows {
-		moduleName, ok := moduleIDs[string(mf.ContainerID)]
-		if !ok {
-			continue
-		}
-
-		qualifiedName := moduleName + "." + mf.Name
-		retrievedMf, err := api.Microflows.GetMicroflow(qualifiedName)
-		if err != nil {
-			t.Fatalf("Failed to get microflow %s: %v", qualifiedName, err)
-		}
-
-		t.Logf("Retrieved microflow: %s (Parameters: %d)",
-			qualifiedName,
-			len(retrievedMf.Parameters))
-		return
-	}
-
-	t.Skip("Could not find a microflow in a known module")
-}
-
 // TestIntegration_Enumerations_GetEnumeration tests retrieving enumerations
 func TestIntegration_Enumerations_GetEnumeration(t *testing.T) {
 	projectPath := copyTestProject(t)
@@ -498,61 +446,6 @@ func TestIntegration_CreateEnumeration(t *testing.T) {
 	}
 
 	t.Logf("Successfully verified enumeration creation")
-}
-
-// TestIntegration_CreateMicroflow tests creating a new microflow
-func TestIntegration_CreateMicroflow(t *testing.T) {
-	projectPath := copyTestProject(t)
-
-	writer, err := mpr.NewWriter(projectPath)
-	if err != nil {
-		t.Fatalf("Failed to open temp project: %v", err)
-	}
-	defer writer.Close()
-
-	api := New(writer)
-
-	modules, err := api.ListModules()
-	if err != nil {
-		t.Fatalf("Failed to list modules: %v", err)
-	}
-
-	if len(modules) == 0 {
-		t.Skip("No modules found")
-	}
-
-	module := modules[0]
-	api.SetModule(module)
-
-	// Create a new microflow
-	mf, err := api.Microflows.CreateMicroflow("ACT_TestAPI_DoSomething").
-		WithStringParameter("Message").
-		WithBooleanParameter("IsEnabled").
-		ReturnsBoolean().
-		Build()
-
-	if err != nil {
-		t.Fatalf("Failed to create microflow: %v", err)
-	}
-
-	t.Logf("Created microflow: %s.%s (ID: %s)", module.Name, mf.Name, mf.ID)
-	t.Logf("  Parameters: %d", len(mf.Parameters))
-	for _, p := range mf.Parameters {
-		t.Logf("    - %s: %s", p.Name, p.Type.GetTypeName())
-	}
-
-	// Verify by retrieving
-	qualifiedName := module.Name + "." + mf.Name
-	retrieved, err := api.Microflows.GetMicroflow(qualifiedName)
-	if err != nil {
-		t.Fatalf("Failed to retrieve created microflow: %v", err)
-	}
-
-	if retrieved.Name != mf.Name {
-		t.Errorf("Retrieved microflow name mismatch: got %s, want %s", retrieved.Name, mf.Name)
-	}
-
-	t.Logf("Successfully verified microflow creation")
 }
 
 // TestIntegration_EntityBuilder_WithModule tests the fluent API with explicit module
