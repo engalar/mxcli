@@ -31,6 +31,18 @@ type securityRepoProvider interface {
 	Security() repos.SecurityRepository
 }
 
+// javaActionsRepoProvider mirrors microflowsRepoProvider for Java actions
+// (Stage 3.3.2). MprBackend implements this in repos_provider.go.
+type javaActionsRepoProvider interface {
+	JavaActions() repos.JavaActionRepository
+}
+
+// javaScriptActionsRepoProvider mirrors microflowsRepoProvider for
+// JavaScript actions (Stage 3.3.2).
+type javaScriptActionsRepoProvider interface {
+	JavaScriptActions() repos.JavaScriptActionRepository
+}
+
 // extractMicroflowsRepo returns the modelsdk-native MicroflowRepository
 // if the backend supports it, else nil. Callers (handlers) MUST check
 // nil and fall back to ctx.Backend during the Stage 3.x incremental
@@ -64,6 +76,29 @@ func extractSecurityRepo(b backend.FullBackend) repos.SecurityRepository {
 	}
 	if p, ok := b.(securityRepoProvider); ok {
 		return p.Security()
+	}
+	return nil
+}
+
+// extractJavaActionsRepo mirrors extractMicroflowsRepo for Java actions
+// (Stage 3.3.2 A0).
+func extractJavaActionsRepo(b backend.FullBackend) repos.JavaActionRepository {
+	if b == nil {
+		return nil
+	}
+	if p, ok := b.(javaActionsRepoProvider); ok {
+		return p.JavaActions()
+	}
+	return nil
+}
+
+// extractJavaScriptActionsRepo mirrors extractJavaActionsRepo for JS actions.
+func extractJavaScriptActionsRepo(b backend.FullBackend) repos.JavaScriptActionRepository {
+	if b == nil {
+		return nil
+	}
+	if p, ok := b.(javaScriptActionsRepoProvider); ok {
+		return p.JavaScriptActions()
 	}
 	return nil
 }

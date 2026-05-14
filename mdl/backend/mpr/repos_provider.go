@@ -61,3 +61,23 @@ func (b *MprBackend) Security() repos.SecurityRepository {
 	}
 	return mprrepos.NewSecurityRepository(w)
 }
+
+// JavaActions returns the modelsdk-native JavaActionRepository, or nil
+// with the same conditions as Microflows() (Stage 3.3.2 A0).
+func (b *MprBackend) JavaActions() repos.JavaActionRepository {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil
+	}
+	return mprrepos.NewJavaActionRepository(w)
+}
+
+// JavaScriptActions returns the modelsdk-native JavaScriptActionRepository,
+// or nil with the same conditions as Microflows().
+func (b *MprBackend) JavaScriptActions() repos.JavaScriptActionRepository {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil
+	}
+	return mprrepos.NewJavaScriptActionRepository(w)
+}
