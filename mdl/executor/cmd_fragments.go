@@ -10,7 +10,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 // execDefineFragment stores a fragment definition in the executor's session state.
@@ -83,42 +83,50 @@ func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) err
 
 	switch s.ContainerType {
 	case "page":
-		allPages, err := ctx.Backend.ListPages()
+		// Stage 3.3.5.C7a: walk gen-typed Page listings via the
+		// listPagesWithContainerGen cache helper.
+		pairs, err := listPagesWithContainerGen(ctx)
 		if err != nil {
 			return mdlerrors.NewBackend("list pages", err)
 		}
-		var foundPage *pages.Page
-		for _, p := range allPages {
-			modID := h.FindModuleID(p.ContainerID)
+		var foundID model.ID
+		for _, p := range pairs {
+			if p.Elem == nil {
+				continue
+			}
+			modID := h.FindModuleID(model.ID(p.ContainerID))
 			modName := h.GetModuleName(modID)
-			if p.Name == s.ContainerName.Name && (s.ContainerName.Module == "" || modName == s.ContainerName.Module) {
-				foundPage = p
+			if p.Elem.Name() == s.ContainerName.Name && (s.ContainerName.Module == "" || modName == s.ContainerName.Module) {
+				foundID = model.ID(p.Elem.ID())
 				break
 			}
 		}
-		if foundPage == nil {
+		if foundID == "" {
 			return mdlerrors.NewNotFound("page", s.ContainerName.String())
 		}
-		rawWidgets = getPageWidgetsFromRaw(ctx, foundPage.ID)
+		rawWidgets = getPageWidgetsFromRaw(ctx, foundID)
 
 	case "snippet":
-		allSnippets, err := ctx.Backend.ListSnippets()
+		pairs, err := listSnippetsWithContainerGen(ctx)
 		if err != nil {
 			return mdlerrors.NewBackend("list snippets", err)
 		}
-		var foundSnippet *pages.Snippet
-		for _, sn := range allSnippets {
-			modID := h.FindModuleID(sn.ContainerID)
+		var foundID model.ID
+		for _, sn := range pairs {
+			if sn.Elem == nil {
+				continue
+			}
+			modID := h.FindModuleID(model.ID(sn.ContainerID))
 			modName := h.GetModuleName(modID)
-			if sn.Name == s.ContainerName.Name && (s.ContainerName.Module == "" || modName == s.ContainerName.Module) {
-				foundSnippet = sn
+			if sn.Elem.Name() == s.ContainerName.Name && (s.ContainerName.Module == "" || modName == s.ContainerName.Module) {
+				foundID = model.ID(sn.Elem.ID())
 				break
 			}
 		}
-		if foundSnippet == nil {
+		if foundID == "" {
 			return mdlerrors.NewNotFound("snippet", s.ContainerName.String())
 		}
-		rawWidgets = getSnippetWidgetsFromRaw(ctx, foundSnippet.ID)
+		rawWidgets = getSnippetWidgetsFromRaw(ctx, foundID)
 	}
 
 	// Find the widget by name
