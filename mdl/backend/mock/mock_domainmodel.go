@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
@@ -171,6 +172,36 @@ func (m *MockBackend) UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualif
 func (m *MockBackend) UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName string) error {
 	if m.UpdateEnumerationRefsInAllDomainModelsFunc != nil {
 		return m.UpdateEnumerationRefsInAllDomainModelsFunc(oldQualifiedName, newQualifiedName)
+	}
+	return nil
+}
+
+// Stage 3.3.4 C1 — gen-typed Mock implementations.
+
+func (m *MockBackend) ListDomainModelsGen() ([]*genDm.DomainModel, error) {
+	if m.ListDomainModelsGenFunc != nil {
+		return m.ListDomainModelsGenFunc()
+	}
+	return nil, fmt.Errorf("MockBackend.ListDomainModelsGen not configured")
+}
+
+func (m *MockBackend) GetDomainModelGen(moduleID model.ID) (*genDm.DomainModel, error) {
+	if m.GetDomainModelGenFunc != nil {
+		return m.GetDomainModelGenFunc(moduleID)
+	}
+	return nil, fmt.Errorf("MockBackend.GetDomainModelGen not configured")
+}
+
+func (m *MockBackend) GetDomainModelByIDGen(id model.ID) (*genDm.DomainModel, error) {
+	if m.GetDomainModelByIDGenFunc != nil {
+		return m.GetDomainModelByIDGenFunc(id)
+	}
+	return nil, fmt.Errorf("MockBackend.GetDomainModelByIDGen not configured")
+}
+
+func (m *MockBackend) UpdateDomainModelGen(dm *genDm.DomainModel) error {
+	if m.UpdateDomainModelGenFunc != nil {
+		return m.UpdateDomainModelGenFunc(dm)
 	}
 	return nil
 }

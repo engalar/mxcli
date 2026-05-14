@@ -4,6 +4,7 @@ package backend
 
 import (
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
@@ -15,6 +16,15 @@ type DomainModelBackend interface {
 	GetDomainModel(moduleID model.ID) (*domainmodel.DomainModel, error)
 	GetDomainModelByID(id model.ID) (*domainmodel.DomainModel, error)
 	UpdateDomainModel(dm *domainmodel.DomainModel) error
+
+	// Stage 3.3.4 C1 — gen-typed read methods (additive). Write
+	// counterparts (CreateEntityGen, UpdateEntityGen, etc.) land in
+	// Phase D8 alongside the gen-typed write helpers in
+	// mdl/backend/mpr/domainmodel_modelsdk.go.
+	ListDomainModelsGen() ([]*genDm.DomainModel, error)
+	GetDomainModelGen(moduleID model.ID) (*genDm.DomainModel, error)
+	GetDomainModelByIDGen(id model.ID) (*genDm.DomainModel, error)
+	UpdateDomainModelGen(dm *genDm.DomainModel) error
 
 	// Entities
 	CreateEntity(domainModelID model.ID, entity *domainmodel.Entity) error

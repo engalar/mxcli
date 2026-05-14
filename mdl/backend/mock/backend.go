@@ -10,6 +10,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
@@ -81,6 +82,12 @@ type MockBackend struct {
 	MoveViewEntitySourceDocumentFunc           func(sourceModuleName string, targetModuleID model.ID, docName string) error
 	UpdateOqlQueriesForMovedEntityFunc         func(oldQualifiedName, newQualifiedName string) (int, error)
 	UpdateEnumerationRefsInAllDomainModelsFunc func(oldQualifiedName, newQualifiedName string) error
+
+	// Stage 3.3.4 C1 — gen-typed sibling Func fields (additive)
+	ListDomainModelsGenFunc   func() ([]*genDm.DomainModel, error)
+	GetDomainModelGenFunc     func(moduleID model.ID) (*genDm.DomainModel, error)
+	GetDomainModelByIDGenFunc func(id model.ID) (*genDm.DomainModel, error)
+	UpdateDomainModelGenFunc  func(dm *genDm.DomainModel) error
 
 	// MicroflowBackend — Followup E6 retired Get / Create / Update /
 	// Move / Parse; Followup F3 retired the sdk-typed ListMicroflows /

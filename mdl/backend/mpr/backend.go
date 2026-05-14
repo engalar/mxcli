@@ -15,6 +15,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
@@ -963,4 +964,50 @@ func (b *MprBackend) SerializeDataSource(ds pages.DataSource) (any, error) {
 
 func (b *MprBackend) SerializeWorkflowActivity(a workflows.WorkflowActivity) (any, error) {
 	return mpr.SerializeWorkflowActivity(a), nil
+}
+
+// Stage 3.3.4 C1 — gen-typed domain model read/write methods.
+// Routes through mprrepos.NewDomainModelRepository which exposes the
+// modelsdk-native gen DomainModel; bypasses the legacy sdk parser.
+
+func (b *MprBackend) ListDomainModelsGen() ([]*genDm.DomainModel, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("ListDomainModelsGen: no modelsdk writer")
+	}
+	return mprrepos.NewDomainModelRepository(w).List("")
+}
+
+func (b *MprBackend) GetDomainModelGen(moduleID model.ID) (*genDm.DomainModel, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("GetDomainModelGen: no modelsdk writer")
+	}
+	dms, err := mprrepos.NewDomainModelRepository(w).List(moduleID)
+	if err != nil {
+		return nil, err
+	}
+	if len(dms) == 0 {
+		return nil, nil
+	}
+	return dms[0], nil
+}
+
+func (b *MprBackend) GetDomainModelByIDGen(id model.ID) (*genDm.DomainModel, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("GetDomainModelByIDGen: no modelsdk writer")
+	}
+	return mprrepos.NewDomainModelRepository(w).Get(id)
+}
+
+func (b *MprBackend) UpdateDomainModelGen(dm *genDm.DomainModel) error {
+	if dm == nil {
+		return fmt.Errorf("UpdateDomainModelGen: nil DomainModel")
+	}
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("UpdateDomainModelGen: no modelsdk writer")
+	}
+	return mprrepos.NewDomainModelRepository(w).Update(dm)
 }
