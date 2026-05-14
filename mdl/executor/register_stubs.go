@@ -158,16 +158,16 @@ func registerSecurityHandlers(r *Registry) {
 		return execRevokeEntityAccess(ctx, stmt.(*ast.RevokeEntityAccessStmt))
 	})
 	r.Register(&ast.GrantMicroflowAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execGrantMicroflowAccess(ctx, stmt.(*ast.GrantMicroflowAccessStmt))
+		return execGrantMicroflowAccessGen(ctx, stmt.(*ast.GrantMicroflowAccessStmt))
 	})
 	r.Register(&ast.RevokeMicroflowAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execRevokeMicroflowAccess(ctx, stmt.(*ast.RevokeMicroflowAccessStmt))
+		return execRevokeMicroflowAccessGen(ctx, stmt.(*ast.RevokeMicroflowAccessStmt))
 	})
 	r.Register(&ast.GrantNanoflowAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execGrantNanoflowAccess(ctx, stmt.(*ast.GrantNanoflowAccessStmt))
+		return execGrantNanoflowAccessGen(ctx, stmt.(*ast.GrantNanoflowAccessStmt))
 	})
 	r.Register(&ast.RevokeNanoflowAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execRevokeNanoflowAccess(ctx, stmt.(*ast.RevokeNanoflowAccessStmt))
+		return execRevokeNanoflowAccessGen(ctx, stmt.(*ast.RevokeNanoflowAccessStmt))
 	})
 	r.Register(&ast.GrantPageAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execGrantPageAccess(ctx, stmt.(*ast.GrantPageAccessStmt))

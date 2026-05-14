@@ -487,27 +487,25 @@ func listSecurityMatrix(ctx *ExecContext, moduleName string) error {
 	fmt.Fprintln(ctx.Output, "## Microflow Access")
 	fmt.Fprintln(ctx.Output)
 
-	mfs, err := ctx.Backend.ListMicroflows()
+	mfs, err := listMicroflowsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list microflows", err)
 	}
 
 	mfFound := false
-	for _, mf := range mfs {
-		if len(mf.AllowedModuleRoles) == 0 {
+	for _, item := range mfs {
+		mf := item.MF
+		roleStrs := mf.AllowedModuleRolesQualifiedNames()
+		if len(roleStrs) == 0 {
 			continue
 		}
-		modID := h.FindModuleID(mf.ContainerID)
+		modID := h.FindModuleID(item.ContainerUUID)
 		modName := h.GetModuleName(modID)
 		if moduleName != "" && modName != moduleName {
 			continue
 		}
 		mfFound = true
-		var roleStrs []string
-		for _, r := range mf.AllowedModuleRoles {
-			roleStrs = append(roleStrs, string(r))
-		}
-		fmt.Fprintf(ctx.Output, "  %s.%s: %s\n", modName, mf.Name, strings.Join(roleStrs, ", "))
+		fmt.Fprintf(ctx.Output, "  %s.%s: %s\n", modName, mf.Name(), strings.Join(roleStrs, ", "))
 	}
 	if !mfFound {
 		fmt.Fprintln(ctx.Output, "(no microflow access rules configured)")
@@ -622,23 +620,21 @@ func listSecurityMatrixJSON(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Microflows
-	mfs, _ := ctx.Backend.ListMicroflows()
-	for _, mf := range mfs {
-		if len(mf.AllowedModuleRoles) == 0 {
+	mfItems, _ := listMicroflowsWithContainerGen(ctx)
+	for _, item := range mfItems {
+		mf := item.MF
+		roleStrs := mf.AllowedModuleRolesQualifiedNames()
+		if len(roleStrs) == 0 {
 			continue
 		}
-		modID := h.FindModuleID(mf.ContainerID)
+		modID := h.FindModuleID(item.ContainerUUID)
 		modName := h.GetModuleName(modID)
 		if moduleName != "" && modName != moduleName {
 			continue
 		}
-		var roleStrs []string
-		for _, r := range mf.AllowedModuleRoles {
-			roleStrs = append(roleStrs, string(r))
-		}
 		tr.Rows = append(tr.Rows, []any{
 			"Microflow",
-			modName + "." + mf.Name,
+			modName + "." + mf.Name(),
 			strings.Join(roleStrs, ", "),
 			"X",
 		})

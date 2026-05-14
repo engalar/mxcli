@@ -126,11 +126,11 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete microflows in this module
-	if mfs, err := ctx.Backend.ListMicroflows(); err == nil {
-		for _, mf := range mfs {
-			if moduleContainers[mf.ContainerID] {
-				if err := ctx.deleteMicroflowViaRepoOrBackend(mf.ID); err != nil {
-					fmt.Fprintf(ctx.Output, "Warning: failed to delete microflow %s: %v\n", mf.Name, err)
+	if mfs, err := listMicroflowsWithContainerGen(ctx); err == nil {
+		for _, item := range mfs {
+			if moduleContainers[item.ContainerUUID] {
+				if err := ctx.deleteMicroflowViaRepoOrBackend(model.ID(item.MF.ID())); err != nil {
+					fmt.Fprintf(ctx.Output, "Warning: failed to delete microflow %s: %v\n", item.MF.Name(), err)
 				} else {
 					nMicroflows++
 				}
@@ -139,11 +139,11 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete nanoflows in this module
-	if nfs, err := ctx.Backend.ListNanoflows(); err == nil {
-		for _, nf := range nfs {
-			if moduleContainers[nf.ContainerID] {
-				if err := ctx.deleteNanoflowViaRepoOrBackend(nf.ID); err != nil {
-					fmt.Fprintf(ctx.Output, "Warning: failed to delete nanoflow %s: %v\n", nf.Name, err)
+	if nfs, err := listNanoflowsWithContainerGen(ctx); err == nil {
+		for _, item := range nfs {
+			if moduleContainers[item.ContainerUUID] {
+				if err := ctx.deleteNanoflowViaRepoOrBackend(model.ID(item.NF.ID())); err != nil {
+					fmt.Fprintf(ctx.Output, "Warning: failed to delete nanoflow %s: %v\n", item.NF.Name(), err)
 				} else {
 					nNanoflows++
 				}
@@ -472,17 +472,17 @@ func listModules(ctx *ExecContext) error {
 	}
 
 	// Count microflows
-	if mfs, err := ctx.Backend.ListMicroflows(); err == nil {
-		for _, mf := range mfs {
-			modID := h.FindModuleID(mf.ContainerID)
+	if mfs, err := listMicroflowsWithContainerGen(ctx); err == nil {
+		for _, item := range mfs {
+			modID := h.FindModuleID(item.ContainerUUID)
 			microflowCounts[modID]++
 		}
 	}
 
 	// Count nanoflows
-	if nfs, err := ctx.Backend.ListNanoflows(); err == nil {
-		for _, nf := range nfs {
-			modID := h.FindModuleID(nf.ContainerID)
+	if nfs, err := listNanoflowsWithContainerGen(ctx); err == nil {
+		for _, item := range nfs {
+			modID := h.FindModuleID(item.ContainerUUID)
 			nanoflowCounts[modID]++
 		}
 	}
@@ -654,10 +654,10 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Output microflows
-	if mfs, err := ctx.Backend.ListMicroflows(); err == nil {
-		for _, mf := range mfs {
-			if moduleContainers[mf.ContainerID] {
-				if err := describeMicroflowGen(ctx, ast.QualifiedName{Module: moduleName, Name: mf.Name}); err == nil {
+	if mfs, err := listMicroflowsWithContainerGen(ctx); err == nil {
+		for _, item := range mfs {
+			if moduleContainers[item.ContainerUUID] {
+				if err := describeMicroflowGen(ctx, ast.QualifiedName{Module: moduleName, Name: item.MF.Name()}); err == nil {
 					fmt.Fprintln(ctx.Output)
 				}
 			}
