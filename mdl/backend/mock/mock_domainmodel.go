@@ -205,3 +205,19 @@ func (m *MockBackend) UpdateDomainModelGen(dm *genDm.DomainModel) error {
 	}
 	return nil
 }
+
+// Stage 3.3.4 D8 — gen-typed entity write Mock impls.
+
+func (m *MockBackend) CreateEntityGen(domainModelID model.ID, entity *genDm.Entity) error {
+	if m.CreateEntityGenFunc != nil {
+		return m.CreateEntityGenFunc(domainModelID, entity)
+	}
+	return nil
+}
+
+func (m *MockBackend) UpdateEntityGen(domainModelID model.ID, entity *genDm.Entity) error {
+	if m.UpdateEntityGenFunc != nil {
+		return m.UpdateEntityGenFunc(domainModelID, entity)
+	}
+	return nil
+}
