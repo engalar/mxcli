@@ -6,7 +6,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
@@ -78,6 +77,13 @@ func (b *MprBackend) deleteCrossAssociationViaModelsdk(domainModelID, assocID mo
 }
 
 // ── Microflow / Nanoflow ───────────────────────────────
+//
+// Move helpers were retired in Followup E6 — production routes
+// through ctx.Microflows.Move / ctx.Nanoflows.Move (modelsdk repos).
+// Delete helpers stay because deleteMicroflowViaRepoOrBackend /
+// deleteNanoflowViaRepoOrBackend in mdl/executor still falls back to
+// ctx.Backend.DeleteMicroflow / DeleteNanoflow when the repos are
+// not wired in mock-only test contexts.
 
 func (b *MprBackend) deleteMicroflowViaModelsdk(id model.ID) error {
 	if b.msdkWriter == nil {
@@ -86,25 +92,11 @@ func (b *MprBackend) deleteMicroflowViaModelsdk(id model.ID) error {
 	return b.msdkWriter.DeleteUnit(string(id))
 }
 
-func (b *MprBackend) moveMicroflowViaModelsdk(mf *microflows.Microflow) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	return b.msdkWriter.UpdateUnitContainer(string(mf.ID), string(mf.ContainerID))
-}
-
 func (b *MprBackend) deleteNanoflowViaModelsdk(id model.ID) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
 	return b.msdkWriter.DeleteUnit(string(id))
-}
-
-func (b *MprBackend) moveNanoflowViaModelsdk(nf *microflows.Nanoflow) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	return b.msdkWriter.UpdateUnitContainer(string(nf.ID), string(nf.ContainerID))
 }
 
 // ── Pages / Layouts / Snippets ────────────────────────

@@ -246,6 +246,12 @@ func (b *MprBackend) UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, ne
 // ---------------------------------------------------------------------------
 // MicroflowBackend
 // ---------------------------------------------------------------------------
+//
+// Followup E6 retired Get / Create / Update / Move / Parse on the
+// FullBackend interface — production routes through ctx.Microflows /
+// ctx.Nanoflows (modelsdk-native repos) directly. The remaining
+// surface keeps the four sdk-typed methods that the catalog builder
+// (mdl/catalog) and the mock-test fallback paths still consume.
 
 func (b *MprBackend) ListMicroflows() ([]*microflows.Microflow, error) {
 	return b.reader.ListMicroflows()
@@ -253,16 +259,7 @@ func (b *MprBackend) ListMicroflows() ([]*microflows.Microflow, error) {
 func (b *MprBackend) GetMicroflow(id model.ID) (*microflows.Microflow, error) {
 	return b.reader.GetMicroflow(id)
 }
-func (b *MprBackend) CreateMicroflow(mf *microflows.Microflow) error {
-	return b.createMicroflowViaModelsdk(mf)
-}
-func (b *MprBackend) UpdateMicroflow(mf *microflows.Microflow) error {
-	return b.updateMicroflowViaModelsdk(mf)
-}
 func (b *MprBackend) DeleteMicroflow(id model.ID) error { return b.deleteMicroflowViaModelsdk(id) }
-func (b *MprBackend) MoveMicroflow(mf *microflows.Microflow) error {
-	return b.moveMicroflowViaModelsdk(mf)
-}
 func (b *MprBackend) IsRule(qualifiedName string) (bool, error) {
 	return b.reader.IsRule(qualifiedName)
 }
@@ -270,6 +267,8 @@ func (b *MprBackend) IsRule(qualifiedName string) (bool, error) {
 func (b *MprBackend) ListNanoflows() ([]*microflows.Nanoflow, error) {
 	return b.reader.ListNanoflows()
 }
+
+func (b *MprBackend) DeleteNanoflow(id model.ID) error { return b.deleteNanoflowViaModelsdk(id) }
 
 // ListMicroflowsGen routes through the modelsdk-native microflow repo
 // (b.Microflows()), returning gen-typed values. Returns an error if the
@@ -290,25 +289,6 @@ func (b *MprBackend) ListNanoflowsGen() ([]*genMf.Nanoflow, error) {
 		return nil, fmt.Errorf("ListNanoflowsGen: modelsdk writer unavailable (backend not connected)")
 	}
 	return repo.List("")
-}
-func (b *MprBackend) ParseMicroflowFromRaw(raw map[string]any, unitID, containerID model.ID) *microflows.Microflow {
-	return mpr.ParseMicroflowFromRaw(raw, unitID, containerID)
-}
-func (b *MprBackend) ParseMicroflowBSON(contents []byte, unitID, containerID model.ID) (*microflows.Microflow, error) {
-	return mpr.ParseMicroflowBSON(contents, unitID, containerID)
-}
-func (b *MprBackend) GetNanoflow(id model.ID) (*microflows.Nanoflow, error) {
-	return b.reader.GetNanoflow(id)
-}
-func (b *MprBackend) CreateNanoflow(nf *microflows.Nanoflow) error {
-	return b.createNanoflowViaModelsdk(nf)
-}
-func (b *MprBackend) UpdateNanoflow(nf *microflows.Nanoflow) error {
-	return b.updateNanoflowViaModelsdk(nf)
-}
-func (b *MprBackend) DeleteNanoflow(id model.ID) error { return b.deleteNanoflowViaModelsdk(id) }
-func (b *MprBackend) MoveNanoflow(nf *microflows.Nanoflow) error {
-	return b.moveNanoflowViaModelsdk(nf)
 }
 
 // ---------------------------------------------------------------------------

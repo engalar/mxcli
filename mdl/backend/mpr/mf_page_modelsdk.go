@@ -8,7 +8,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -23,73 +22,10 @@ import (
 // This bypasses sdk/mpr's updateTransactionID(), which fails on hard-linked
 // MPR files (SQLITE_READONLY_DBMOVED 1544).
 
-// ── Microflow ─────────────────────────────────────────────────────────────
-
-func (b *MprBackend) createMicroflowViaModelsdk(mf *microflows.Microflow) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	if mf.ID == "" {
-		mf.ID = model.ID(modelsdkmpr.GenerateID())
-	}
-	mf.TypeName = "Microflows$Microflow"
-	contents, err := mpr.SerializeMicroflow(mf, b.reader.ProjectVersion())
-	if err != nil {
-		return fmt.Errorf("serialize microflow: %w", err)
-	}
-	return b.msdkWriter.InsertUnit(
-		string(mf.ID),
-		string(mf.ContainerID),
-		"Documents",
-		"Microflows$Microflow",
-		contents,
-	)
-}
-
-func (b *MprBackend) updateMicroflowViaModelsdk(mf *microflows.Microflow) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	contents, err := mpr.SerializeMicroflow(mf, b.reader.ProjectVersion())
-	if err != nil {
-		return fmt.Errorf("serialize microflow: %w", err)
-	}
-	return b.writeUnitContents(mf.ID, contents)
-}
-
-// ── Nanoflow ──────────────────────────────────────────────────────────────
-
-func (b *MprBackend) createNanoflowViaModelsdk(nf *microflows.Nanoflow) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	if nf.ID == "" {
-		nf.ID = model.ID(modelsdkmpr.GenerateID())
-	}
-	nf.TypeName = "Microflows$Nanoflow"
-	contents, err := mpr.SerializeNanoflow(nf, b.reader.ProjectVersion())
-	if err != nil {
-		return fmt.Errorf("serialize nanoflow: %w", err)
-	}
-	return b.msdkWriter.InsertUnit(
-		string(nf.ID),
-		string(nf.ContainerID),
-		"Documents",
-		"Microflows$Nanoflow",
-		contents,
-	)
-}
-
-func (b *MprBackend) updateNanoflowViaModelsdk(nf *microflows.Nanoflow) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	contents, err := mpr.SerializeNanoflow(nf, b.reader.ProjectVersion())
-	if err != nil {
-		return fmt.Errorf("serialize nanoflow: %w", err)
-	}
-	return b.writeUnitContents(nf.ID, contents)
-}
+// Microflow / Nanoflow Create+Update helpers were retired in
+// Followup E6 — production routes through the modelsdk-native repos
+// (mdl/backend/mpr/repos/microflow_writer.go) directly. Pages,
+// layouts, snippets, and workflows remain on this sdk-typed path.
 
 // ── Page ──────────────────────────────────────────────────────────────────
 
