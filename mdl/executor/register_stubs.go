@@ -219,10 +219,10 @@ func registerImageHandlers(r *Registry) {
 
 func registerWorkflowHandlers(r *Registry) {
 	r.Register(&ast.CreateWorkflowStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateWorkflow(ctx, stmt.(*ast.CreateWorkflowStmt))
+		return execCreateWorkflowGen(ctx, stmt.(*ast.CreateWorkflowStmt))
 	})
 	r.Register(&ast.DropWorkflowStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDropWorkflow(ctx, stmt.(*ast.DropWorkflowStmt))
+		return execDropWorkflowGen(ctx, stmt.(*ast.DropWorkflowStmt))
 	})
 	r.Register(&ast.AlterWorkflowStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execAlterWorkflow(ctx, stmt.(*ast.AlterWorkflowStmt))
