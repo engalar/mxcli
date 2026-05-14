@@ -25,10 +25,23 @@ func listWorkflowsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genWf.
 		return nil, nil
 	}
 	listFn := func() ([]*genWf.Workflow, error) {
-		if ctx.Workflows != nil {
-			return ctx.Workflows.ListAll()
+		if ctx.Workflows == nil {
+			return nil, nil
 		}
-		return nil, nil
+		all, err := ctx.Workflows.ListAll()
+		if err != nil {
+			return nil, err
+		}
+		// Drop nil entries before handing off to the generic helper —
+		// listUnitsWithContainerGen does NOT skip nils (its godoc names
+		// per-domain filtering as the caller's contract).
+		filtered := all[:0]
+		for _, w := range all {
+			if w != nil {
+				filtered = append(filtered, w)
+			}
+		}
+		return filtered, nil
 	}
 	resolveFn := func(id element.ID) (element.ID, error) {
 		if ctx.Workflows != nil {
