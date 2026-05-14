@@ -22,6 +22,7 @@ import (
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
@@ -337,6 +338,128 @@ func (b *MprBackend) ListBuildingBlocks() ([]*pages.BuildingBlock, error) {
 }
 func (b *MprBackend) ListPageTemplates() ([]*pages.PageTemplate, error) {
 	return b.reader.ListPageTemplates()
+}
+
+// ---------------------------------------------------------------------------
+// Stage 3.3.5.C1 — gen-typed Page / Layout / Snippet surface
+//
+// Each method routes through the gen-native repos
+// (mdl/backend/mpr/repos/{pages,layouts,snippets}.go) using
+// `mprrepos.NewPageRepository(w)` etc. Stage 3.3.5.E1 will retire the
+// legacy sdk-typed siblings above once consumers migrate.
+
+func (b *MprBackend) ListPagesGen() ([]*genPg.Page, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("ListPagesGen: no modelsdk writer")
+	}
+	return mprrepos.NewPageRepository(w).ListAll()
+}
+
+func (b *MprBackend) GetPageGen(id model.ID) (*genPg.Page, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("GetPageGen: no modelsdk writer")
+	}
+	return mprrepos.NewPageRepository(w).Get(id)
+}
+
+func (b *MprBackend) CreatePageGen(parentUUID, containmentName string, page *genPg.Page) error {
+	if page == nil {
+		return fmt.Errorf("CreatePageGen: nil Page")
+	}
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("CreatePageGen: no modelsdk writer")
+	}
+	return mprrepos.NewPageRepository(w).Create(parentUUID, containmentName, page)
+}
+
+func (b *MprBackend) UpdatePageGen(page *genPg.Page) error {
+	if page == nil {
+		return fmt.Errorf("UpdatePageGen: nil Page")
+	}
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("UpdatePageGen: no modelsdk writer")
+	}
+	return mprrepos.NewPageRepository(w).Update(page)
+}
+
+func (b *MprBackend) ListLayoutsGen() ([]*genPg.Layout, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("ListLayoutsGen: no modelsdk writer")
+	}
+	return mprrepos.NewLayoutRepository(w).ListAll()
+}
+
+func (b *MprBackend) GetLayoutGen(id model.ID) (*genPg.Layout, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("GetLayoutGen: no modelsdk writer")
+	}
+	return mprrepos.NewLayoutRepository(w).Get(id)
+}
+
+func (b *MprBackend) CreateLayoutGen(parentUUID, containmentName string, layout *genPg.Layout) error {
+	if layout == nil {
+		return fmt.Errorf("CreateLayoutGen: nil Layout")
+	}
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("CreateLayoutGen: no modelsdk writer")
+	}
+	return mprrepos.NewLayoutRepository(w).Create(parentUUID, containmentName, layout)
+}
+
+func (b *MprBackend) UpdateLayoutGen(layout *genPg.Layout) error {
+	if layout == nil {
+		return fmt.Errorf("UpdateLayoutGen: nil Layout")
+	}
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("UpdateLayoutGen: no modelsdk writer")
+	}
+	return mprrepos.NewLayoutRepository(w).Update(layout)
+}
+
+func (b *MprBackend) ListSnippetsGen() ([]*genPg.Snippet, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("ListSnippetsGen: no modelsdk writer")
+	}
+	return mprrepos.NewSnippetRepository(w).ListAll()
+}
+
+func (b *MprBackend) GetSnippetGen(id model.ID) (*genPg.Snippet, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("GetSnippetGen: no modelsdk writer")
+	}
+	return mprrepos.NewSnippetRepository(w).Get(id)
+}
+
+func (b *MprBackend) CreateSnippetGen(parentUUID, containmentName string, snippet *genPg.Snippet) error {
+	if snippet == nil {
+		return fmt.Errorf("CreateSnippetGen: nil Snippet")
+	}
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("CreateSnippetGen: no modelsdk writer")
+	}
+	return mprrepos.NewSnippetRepository(w).Create(parentUUID, containmentName, snippet)
+}
+
+func (b *MprBackend) UpdateSnippetGen(snippet *genPg.Snippet) error {
+	if snippet == nil {
+		return fmt.Errorf("UpdateSnippetGen: nil Snippet")
+	}
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("UpdateSnippetGen: no modelsdk writer")
+	}
+	return mprrepos.NewSnippetRepository(w).Update(snippet)
 }
 
 // ---------------------------------------------------------------------------
