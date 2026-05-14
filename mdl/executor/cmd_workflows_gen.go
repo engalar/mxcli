@@ -29,6 +29,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
@@ -236,10 +237,129 @@ func countOutcomeFlowGen(oc element.Element, total, userTasks, decisions *int) {
 	}
 }
 
-// describeWorkflowGen / describeWorkflowToStringGen land in A4 once
-// the heavy formatters (UserTask / CallMicroflow / CallWorkflow /
-// ExclusiveSplit / ParallelSplit / SystemTask) are in place in A3.
-// This A2 commit lands the dispatcher + leaf formatters.
+// describeWorkflowGen handles DESCRIBE WORKFLOW via gen-typed Workflow
+// units. Mirrors describeWorkflow (cmd_workflows.go:134).
+func describeWorkflowGen(ctx *ExecContext, name ast.QualifiedName) error {
+	output, _, err := describeWorkflowToStringGen(ctx, name)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(ctx.Output, output)
+	return nil
+}
+
+// describeWorkflowToStringGen renders MDL output for a gen-typed
+// workflow. The signature mirrors describeWorkflowToString — the
+// elkSourceRange map is always nil because the legacy implementation
+// returned nil too (see cmd_workflows.go:234); R10 in the plan was
+// based on a stale read of the legacy code.
+func describeWorkflowToStringGen(ctx *ExecContext, name ast.QualifiedName) (string, map[string]elkSourceRange, error) {
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return "", nil, mdlerrors.NewBackend("build hierarchy", err)
+	}
+	pairs, err := listWorkflowsWithContainerGen(ctx)
+	if err != nil {
+		return "", nil, mdlerrors.NewBackend("list workflows", err)
+	}
+
+	var target *genWf.Workflow
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modName := ""
+		if h != nil {
+			modID := h.FindModuleID(model.ID(p.ContainerID))
+			modName = h.GetModuleName(modID)
+		}
+		if modName == name.Module && p.Elem.Name() == name.Name {
+			target = p.Elem
+			break
+		}
+	}
+	if target == nil {
+		return "", nil, mdlerrors.NewNotFound("workflow", name.String())
+	}
+
+	qualifiedName := name.Module + "." + name.Name
+
+	var lines []string
+
+	if doc := target.Documentation(); doc != "" {
+		lines = append(lines, "/**")
+		for docLine := range strings.SplitSeq(doc, "\n") {
+			lines = append(lines, " * "+docLine)
+		}
+		lines = append(lines, " */")
+	}
+
+	lines = append(lines, fmt.Sprintf("-- Workflow: %s", qualifiedName))
+	if anno := workflowAnnotationStringGen(target); anno != "" {
+		lines = append(lines, fmt.Sprintf("-- %s", anno))
+	}
+	lines = append(lines, "")
+
+	lines = append(lines, fmt.Sprintf("create workflow %s", qualifiedName))
+
+	if ent := workflowParameterEntityGen(target); ent != "" {
+		lines = append(lines, fmt.Sprintf("  parameter $WorkflowContext: %s", ent))
+	}
+
+	if displayName := readTextElementGen(target.WorkflowName()); displayName != "" {
+		escaped := strings.ReplaceAll(displayName, "'", "''")
+		lines = append(lines, fmt.Sprintf("  display '%s'", escaped))
+	} else if title := target.Title(); title != "" {
+		escaped := strings.ReplaceAll(title, "'", "''")
+		lines = append(lines, fmt.Sprintf("  display '%s'", escaped))
+	}
+
+	if desc := readTextElementGen(target.WorkflowDescription()); desc != "" {
+		escaped := strings.ReplaceAll(desc, "'", "''")
+		lines = append(lines, fmt.Sprintf("  description '%s'", escaped))
+	}
+
+	if lvl := target.ExportLevel(); lvl != "" {
+		lines = append(lines, fmt.Sprintf("  export level %s", lvl))
+	}
+
+	if op := target.OverviewPageQualifiedName(); op != "" {
+		lines = append(lines, fmt.Sprintf("  overview page %s", op))
+	}
+
+	if dd := target.DueDate(); dd != "" {
+		lines = append(lines, fmt.Sprintf("  due date '%s'", dd))
+	}
+
+	lines = append(lines, "")
+
+	lines = append(lines, "begin")
+	if flow, ok := target.Flow().(*genWf.Flow); ok {
+		lines = append(lines, formatWorkflowActivitiesGen(flow, "  ")...)
+	}
+	lines = append(lines, "end workflow")
+	lines = append(lines, "/")
+
+	return strings.Join(lines, "\n"), nil, nil
+}
+
+// workflowAnnotationStringGen extracts the Description text from a
+// workflow's Annotation Part (legacy header-comment field). Returns ""
+// if absent.
+func workflowAnnotationStringGen(wf *genWf.Workflow) string {
+	if wf == nil {
+		return ""
+	}
+	a := wf.Annotation()
+	if a == nil {
+		return ""
+	}
+	if anno, ok := a.(*genWf.Annotation); ok {
+		return anno.Description()
+	}
+	v, _ := codec.ReadBSONFieldString(a.Raw(), "Description")
+	return v
+}
 
 // readTextElementGen extracts the inner Text scalar from a Texts$Text
 // wrapper element. Returns "" if elem is nil or has no Text field.
