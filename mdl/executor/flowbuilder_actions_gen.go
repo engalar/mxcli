@@ -13,7 +13,7 @@
 //   - addDeleteActionGen          — `delete $X;`
 //   - addRollbackActionGen        — `rollback $X;`
 //   - addCastActionGen            — `[$Y = ]cast $X;` (uses
-//                                    setExtraStringField for the
+//                                    setRawBSONField for the
 //                                    ObjectVariableName gap)
 //   - addCreateListActionGen      — `$L = create list of E;`
 //   - addAddToListActionGen       — `add $X to $L;`
@@ -135,14 +135,16 @@ func (fb *flowBuilderGen) addRollbackActionGen(s *ast.RollbackStmt) element.ID {
 }
 
 // addCastActionGen emits a `[$Y = ]cast $X;` activity. The gen
-// CastAction lacks `SetObjectVariableName` — Stage 3.2.3.f
-// (setExtraStringField) bridges that gap by injecting an ad-hoc
-// Property into the element, which the codec overlays on encode.
+// CastAction lacks `SetObjectVariableName` — Stage 3.2.3.f0
+// (setRawBSONField) bridges that gap by injecting an ad-hoc Property
+// into the element, which the codec overlays on encode.
+//
+// Schema-gap tracking: CastAction.ObjectVariableName (string).
 func (fb *flowBuilderGen) addCastActionGen(s *ast.CastObjectStmt) element.ID {
 	action := genMf.NewCastAction()
 	assignFreshID(action)
 	action.SetOutputVariableName(s.OutputVariable)
-	setExtraStringField(action, "ObjectVariableName", s.ObjectVariable)
+	setRawBSONField(action, "ObjectVariableName", s.ObjectVariable)
 	return fb.genActivityWrap(action, nil, "")
 }
 
