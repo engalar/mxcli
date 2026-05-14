@@ -6,8 +6,9 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
-	"github.com/mendixlabs/mxcli/sdk/security"
 )
+
+const securityLevelProduction = "CheckEverything"
 
 // --- SEC001: NoEntityAccessRules ---
 
@@ -120,7 +121,7 @@ func (r *DemoUsersActiveRule) Check(ctx *linter.LintContext) []linter.Violation 
 		return nil
 	}
 
-	if !ps.EnableDemoUsers || ps.SecurityLevel != security.SecurityLevelProduction {
+	if !ps.EnableDemoUsers || ps.SecurityLevel != securityLevelProduction {
 		return nil
 	}
 
