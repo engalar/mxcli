@@ -56,7 +56,7 @@ func diffMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) (*DiffResult
 			var buf bytes.Buffer
 			oldOutput := ctx.Output
 			ctx.Output = &buf
-			describeMicroflow(ctx, s.Name)
+			describeMicroflowGen(ctx, s.Name)
 			ctx.Output = oldOutput
 			result.Current = strings.TrimSuffix(buf.String(), "\n")
 			result.Changes = compareMicroflows(ctx, result.Current, result.Proposed)
@@ -99,7 +99,7 @@ func diffNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) (*DiffResult, 
 				oldOutput := ctx.Output
 				ctx.Output = &buf
 				defer func() { ctx.Output = oldOutput }()
-				return describeNanoflow(ctx, s.Name)
+				return describeNanoflowGen(ctx, s.Name)
 			}(); err != nil {
 				return nil, err
 			}

@@ -7,59 +7,28 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
-// execShowStructure handles SHOW STRUCTURE [DEPTH n] [IN module] [ALL].
-func execShowStructure(ctx *ExecContext, s *ast.ShowStmt) error {
-	if !ctx.Connected() {
-		return mdlerrors.NewNotConnected()
-	}
-
-	depth := min(max(s.Depth, 1), 3)
-
-	// Ensure catalog is built (fast mode is sufficient)
-	if err := ensureCatalog(ctx, false); err != nil {
-		return mdlerrors.NewBackend("build catalog", err)
-	}
-
-	// Get modules from catalog
-	modules, err := getStructureModules(ctx, s.InModule, s.All)
-	if err != nil {
-		return err
-	}
-
-	if len(modules) == 0 {
-		if ctx.Format == FormatJSON {
-			fmt.Fprintln(ctx.Output, "[]")
-		} else {
-			fmt.Fprintln(ctx.Output, "(no modules found)")
-		}
-		return nil
-	}
-
-	// JSON mode: emit structured table
-	if ctx.Format == FormatJSON {
-		return structureDepth1JSON(ctx, modules)
-	}
-
-	switch depth {
-	case 1:
-		return structureDepth1(ctx, modules)
-	case 2:
-		return structureDepth2(ctx, modules)
-	case 3:
-		return structureDepth3(ctx, modules)
-	default:
-		return structureDepth2(ctx, modules)
-	}
-}
+// Stage 3.2.6.3a: `execShowStructure` removed — the dispatch in
+// executor_query.go (ShowStructure case) now calls
+// `execShowStructureGen`. The legacy `structureDepth2` /
+// `structureDepth3` (which iterated sdk/microflows-typed slices) and
+// the helpers `formatMicroflowSignature` / `formatDataTypeDisplay` /
+// `sortMicroflows` / `sortNanoflows` were also dropped — equivalents
+// (`structureDepth2Gen`, `formatMicroflowSignatureGen`,
+// `sortGenMicroflows`, etc.) live in cmd_structure_gen.go.
+//
+// `structureDepth1` / `structureDepth1JSON` and the non-microflow
+// helpers (`getStructureModules`, `structureEntities`, `structurePages`,
+// `structureSnippets`, `structureWorkflows`, `outputJavaActions`,
+// `structureODataClients/Services/BusinessEventServices`,
+// `formatConstantTypeBrief`, `pluralize`, `shortName`, ...) stay in
+// this file — both the gen path and other callers depend on them.
 
 // structureDepth1JSON emits structure as a JSON table with one row per module
 // and columns for each element type count.
@@ -307,323 +276,6 @@ func pluralize(count int, singular, plural string) string {
 		return fmt.Sprintf("%d %s", count, singular)
 	}
 	return fmt.Sprintf("%d %s", count, plural)
-}
-
-// ============================================================================
-// Depth 2 — Elements with Signatures
-// ============================================================================
-
-func structureDepth2(ctx *ExecContext, modules []structureModule) error {
-	// Pre-load data from the backend
-	h, err := getHierarchy(ctx)
-	if err != nil {
-		return mdlerrors.NewBackend("build hierarchy", err)
-	}
-
-	// Load domain models for associations
-	domainModels, _ := ctx.Backend.ListDomainModels()
-	dmByModule := make(map[string]*domainmodel.DomainModel)
-	for _, dm := range domainModels {
-		modID := h.FindModuleID(dm.ContainerID)
-		modName := h.GetModuleName(modID)
-		dmByModule[modName] = dm
-	}
-
-	// Load enumerations for values
-	allEnums, _ := ctx.Backend.ListEnumerations()
-	enumsByModule := make(map[string][]*model.Enumeration)
-	for _, enum := range allEnums {
-		modID := h.FindModuleID(enum.ContainerID)
-		modName := h.GetModuleName(modID)
-		enumsByModule[modName] = append(enumsByModule[modName], enum)
-	}
-
-	// Load microflows for parameter types
-	allMicroflows, _ := ctx.Backend.ListMicroflows()
-	mfByModule := make(map[string][]*microflows.Microflow)
-	for _, mf := range allMicroflows {
-		modID := h.FindModuleID(mf.ContainerID)
-		modName := h.GetModuleName(modID)
-		mfByModule[modName] = append(mfByModule[modName], mf)
-	}
-
-	// Load nanoflows
-	allNanoflows, _ := ctx.Backend.ListNanoflows()
-	nfByModule := make(map[string][]*microflows.Nanoflow)
-	for _, nf := range allNanoflows {
-		modID := h.FindModuleID(nf.ContainerID)
-		modName := h.GetModuleName(modID)
-		nfByModule[modName] = append(nfByModule[modName], nf)
-	}
-
-	// Load constants
-	allConstants, _ := ctx.Backend.ListConstants()
-	constByModule := make(map[string][]*model.Constant)
-	for _, c := range allConstants {
-		modID := h.FindModuleID(c.ContainerID)
-		modName := h.GetModuleName(modID)
-		constByModule[modName] = append(constByModule[modName], c)
-	}
-
-	// Load scheduled events
-	allEvents, _ := ctx.Backend.ListScheduledEvents()
-	eventsByModule := make(map[string][]*model.ScheduledEvent)
-	for _, ev := range allEvents {
-		modID := h.FindModuleID(ev.ContainerID)
-		modName := h.GetModuleName(modID)
-		eventsByModule[modName] = append(eventsByModule[modName], ev)
-	}
-
-	// Load java actions for parameter types
-	allJavaActions, _ := ctx.Backend.ListJavaActionsFull()
-	jaByModule := make(map[string][]*javaactions.JavaAction)
-	for _, ja := range allJavaActions {
-		modID := h.FindModuleID(ja.ContainerID)
-		modName := h.GetModuleName(modID)
-		jaByModule[modName] = append(jaByModule[modName], ja)
-	}
-
-	// Load workflows
-	allWorkflows, _ := ctx.Backend.ListWorkflows()
-	wfByModule := make(map[string][]*workflows.Workflow)
-	for _, wf := range allWorkflows {
-		modID := h.FindModuleID(wf.ContainerID)
-		modName := h.GetModuleName(modID)
-		wfByModule[modName] = append(wfByModule[modName], wf)
-	}
-
-	for i, m := range modules {
-		if i > 0 {
-			fmt.Fprintln(ctx.Output)
-		}
-		fmt.Fprintln(ctx.Output, m.Name)
-
-		// Entities
-		structureEntities(ctx, m.Name, dmByModule[m.Name], false)
-
-		// Enumerations
-		if enums, ok := enumsByModule[m.Name]; ok {
-			sortEnumerations(enums)
-			for _, enum := range enums {
-				values := make([]string, len(enum.Values))
-				for i, v := range enum.Values {
-					values[i] = v.Name
-				}
-				fmt.Fprintf(ctx.Output, "  Enumeration %s.%s [%s]\n", m.Name, enum.Name, strings.Join(values, ", "))
-			}
-		}
-
-		// Microflows
-		if mfs, ok := mfByModule[m.Name]; ok {
-			sortMicroflows(mfs)
-			for _, mf := range mfs {
-				fmt.Fprintf(ctx.Output, "  Microflow %s.%s%s\n", m.Name, mf.Name, formatMicroflowSignature(mf.Parameters, mf.ReturnType, false))
-			}
-		}
-
-		// Nanoflows
-		if nfs, ok := nfByModule[m.Name]; ok {
-			sortNanoflows(nfs)
-			for _, nf := range nfs {
-				fmt.Fprintf(ctx.Output, "  Nanoflow %s.%s%s\n", m.Name, nf.Name, formatMicroflowSignature(nf.Parameters, nf.ReturnType, false))
-			}
-		}
-
-		// Workflows
-		structureWorkflows(ctx, m.Name, wfByModule[m.Name], false)
-
-		// Pages (from catalog)
-		structurePages(ctx, m.Name)
-
-		// Snippets (from catalog)
-		structureSnippets(ctx, m.Name)
-
-		// Java Actions
-		outputJavaActions(ctx, m.Name, jaByModule[m.Name], false)
-
-		// Constants
-		if consts, ok := constByModule[m.Name]; ok {
-			sortConstants(consts)
-			for _, c := range consts {
-				fmt.Fprintf(ctx.Output, "  Constant %s.%s: %s\n", m.Name, c.Name, formatConstantTypeBrief(c.Type))
-			}
-		}
-
-		// Scheduled Events
-		if events, ok := eventsByModule[m.Name]; ok {
-			sortScheduledEvents(events)
-			for _, ev := range events {
-				fmt.Fprintf(ctx.Output, "  ScheduledEvent %s.%s\n", m.Name, ev.Name)
-			}
-		}
-
-		// OData Clients
-		structureODataClients(ctx, m.Name)
-
-		// OData Services
-		structureODataServices(ctx, m.Name)
-
-		// Business Event Services
-		structureBusinessEventServices(ctx, m.Name)
-	}
-
-	return nil
-}
-
-// ============================================================================
-// Depth 3 — Include Types and Details
-// ============================================================================
-
-func structureDepth3(ctx *ExecContext, modules []structureModule) error {
-	// Same data loading as depth 2
-	h, err := getHierarchy(ctx)
-	if err != nil {
-		return mdlerrors.NewBackend("build hierarchy", err)
-	}
-
-	domainModels, _ := ctx.Backend.ListDomainModels()
-	dmByModule := make(map[string]*domainmodel.DomainModel)
-	for _, dm := range domainModels {
-		modID := h.FindModuleID(dm.ContainerID)
-		modName := h.GetModuleName(modID)
-		dmByModule[modName] = dm
-	}
-
-	allEnums, _ := ctx.Backend.ListEnumerations()
-	enumsByModule := make(map[string][]*model.Enumeration)
-	for _, enum := range allEnums {
-		modID := h.FindModuleID(enum.ContainerID)
-		modName := h.GetModuleName(modID)
-		enumsByModule[modName] = append(enumsByModule[modName], enum)
-	}
-
-	allMicroflows, _ := ctx.Backend.ListMicroflows()
-	mfByModule := make(map[string][]*microflows.Microflow)
-	for _, mf := range allMicroflows {
-		modID := h.FindModuleID(mf.ContainerID)
-		modName := h.GetModuleName(modID)
-		mfByModule[modName] = append(mfByModule[modName], mf)
-	}
-
-	allNanoflows, _ := ctx.Backend.ListNanoflows()
-	nfByModule := make(map[string][]*microflows.Nanoflow)
-	for _, nf := range allNanoflows {
-		modID := h.FindModuleID(nf.ContainerID)
-		modName := h.GetModuleName(modID)
-		nfByModule[modName] = append(nfByModule[modName], nf)
-	}
-
-	allConstants, _ := ctx.Backend.ListConstants()
-	constByModule := make(map[string][]*model.Constant)
-	for _, c := range allConstants {
-		modID := h.FindModuleID(c.ContainerID)
-		modName := h.GetModuleName(modID)
-		constByModule[modName] = append(constByModule[modName], c)
-	}
-
-	allEvents, _ := ctx.Backend.ListScheduledEvents()
-	eventsByModule := make(map[string][]*model.ScheduledEvent)
-	for _, ev := range allEvents {
-		modID := h.FindModuleID(ev.ContainerID)
-		modName := h.GetModuleName(modID)
-		eventsByModule[modName] = append(eventsByModule[modName], ev)
-	}
-
-	allJavaActions, _ := ctx.Backend.ListJavaActionsFull()
-	jaByModule := make(map[string][]*javaactions.JavaAction)
-	for _, ja := range allJavaActions {
-		modID := h.FindModuleID(ja.ContainerID)
-		modName := h.GetModuleName(modID)
-		jaByModule[modName] = append(jaByModule[modName], ja)
-	}
-
-	// Load workflows
-	allWorkflows, _ := ctx.Backend.ListWorkflows()
-	wfByModule := make(map[string][]*workflows.Workflow)
-	for _, wf := range allWorkflows {
-		modID := h.FindModuleID(wf.ContainerID)
-		modName := h.GetModuleName(modID)
-		wfByModule[modName] = append(wfByModule[modName], wf)
-	}
-
-	for i, m := range modules {
-		if i > 0 {
-			fmt.Fprintln(ctx.Output)
-		}
-		fmt.Fprintln(ctx.Output, m.Name)
-
-		// Entities (with types)
-		structureEntities(ctx, m.Name, dmByModule[m.Name], true)
-
-		// Enumerations
-		if enums, ok := enumsByModule[m.Name]; ok {
-			sortEnumerations(enums)
-			for _, enum := range enums {
-				values := make([]string, len(enum.Values))
-				for i, v := range enum.Values {
-					values[i] = v.Name
-				}
-				fmt.Fprintf(ctx.Output, "  Enumeration %s.%s [%s]\n", m.Name, enum.Name, strings.Join(values, ", "))
-			}
-		}
-
-		// Microflows (with param names)
-		if mfs, ok := mfByModule[m.Name]; ok {
-			sortMicroflows(mfs)
-			for _, mf := range mfs {
-				fmt.Fprintf(ctx.Output, "  Microflow %s.%s%s\n", m.Name, mf.Name, formatMicroflowSignature(mf.Parameters, mf.ReturnType, true))
-			}
-		}
-
-		// Nanoflows (with param names)
-		if nfs, ok := nfByModule[m.Name]; ok {
-			sortNanoflows(nfs)
-			for _, nf := range nfs {
-				fmt.Fprintf(ctx.Output, "  Nanoflow %s.%s%s\n", m.Name, nf.Name, formatMicroflowSignature(nf.Parameters, nf.ReturnType, true))
-			}
-		}
-
-		// Workflows (with details)
-		structureWorkflows(ctx, m.Name, wfByModule[m.Name], true)
-
-		// Pages
-		structurePages(ctx, m.Name)
-
-		// Snippets
-		structureSnippets(ctx, m.Name)
-
-		// Java Actions (with param names)
-		outputJavaActions(ctx, m.Name, jaByModule[m.Name], true)
-
-		// Constants (with default value)
-		if consts, ok := constByModule[m.Name]; ok {
-			sortConstants(consts)
-			for _, c := range consts {
-				s := fmt.Sprintf("  Constant %s.%s: %s", m.Name, c.Name, formatConstantTypeBrief(c.Type))
-				if c.DefaultValue != "" {
-					s += " = " + c.DefaultValue
-				}
-				fmt.Fprintln(ctx.Output, s)
-			}
-		}
-
-		// Scheduled Events
-		if events, ok := eventsByModule[m.Name]; ok {
-			sortScheduledEvents(events)
-			for _, ev := range events {
-				fmt.Fprintf(ctx.Output, "  ScheduledEvent %s.%s\n", m.Name, ev.Name)
-			}
-		}
-
-		// OData
-		structureODataClients(ctx, m.Name)
-		structureODataServices(ctx, m.Name)
-
-		// Business Event Services
-		structureBusinessEventServices(ctx, m.Name)
-	}
-
-	return nil
 }
 
 // ============================================================================
@@ -1002,65 +654,12 @@ func countStructureFlowActivities(flow *workflows.Flow, total, userTasks, microf
 // Formatting Helpers
 // ============================================================================
 
-// formatMicroflowSignature formats the parameter list and return type of a microflow.
-func formatMicroflowSignature(params []*microflows.MicroflowParameter, returnType microflows.DataType, withNames bool) string {
-	var paramParts []string
-	for _, p := range params {
-		typeName := formatDataTypeDisplay(p.Type)
-		if withNames && p.Name != "" {
-			paramParts = append(paramParts, fmt.Sprintf("%s: %s", p.Name, typeName))
-		} else {
-			paramParts = append(paramParts, typeName)
-		}
-	}
-
-	sig := "(" + strings.Join(paramParts, ", ") + ")"
-
-	// Add return type
-	if returnType != nil {
-		retName := formatDataTypeDisplay(returnType)
-		if retName != "" && retName != "Void" && retName != "Nothing" {
-			sig += " → " + retName
-		}
-	}
-
-	return sig
-}
-
-// formatDataTypeDisplay formats a microflow DataType for display.
-func formatDataTypeDisplay(dt microflows.DataType) string {
-	if dt == nil {
-		return ""
-	}
-	switch t := dt.(type) {
-	case *microflows.BooleanType:
-		return "Boolean"
-	case *microflows.IntegerType:
-		return "Integer"
-	case *microflows.LongType:
-		return "Long"
-	case *microflows.DecimalType:
-		return "Decimal"
-	case *microflows.StringType:
-		return "String"
-	case *microflows.DateTimeType:
-		return "DateTime"
-	case *microflows.DateType:
-		return "Date"
-	case *microflows.ObjectType:
-		return shortName(t.EntityQualifiedName)
-	case *microflows.ListType:
-		return "List<" + shortName(t.EntityQualifiedName) + ">"
-	case *microflows.EnumerationType:
-		return shortName(t.EnumerationQualifiedName)
-	case *microflows.VoidType:
-		return "Void"
-	case *microflows.BinaryType:
-		return "Binary"
-	default:
-		return dt.GetTypeName()
-	}
-}
+// Stage 3.2.6.3a: `formatMicroflowSignature` and
+// `formatDataTypeDisplay` removed. Equivalents using gen types live in
+// cmd_structure_gen.go (`formatMicroflowSignatureGen` /
+// `formatGenParameterTypeDisplay`). Same applies to `sortMicroflows` /
+// `sortNanoflows` further below — replaced by `sortGenMicroflows` /
+// `sortGenNanoflows`.
 
 // formatAttributeWithType formats an attribute with its type for depth 3.
 func formatAttributeWithType(attr *domainmodel.Attribute) string {
@@ -1136,17 +735,8 @@ func sortEnumerations(enums []*model.Enumeration) {
 	})
 }
 
-func sortMicroflows(mfs []*microflows.Microflow) {
-	sort.Slice(mfs, func(i, j int) bool {
-		return strings.ToLower(mfs[i].Name) < strings.ToLower(mfs[j].Name)
-	})
-}
-
-func sortNanoflows(nfs []*microflows.Nanoflow) {
-	sort.Slice(nfs, func(i, j int) bool {
-		return strings.ToLower(nfs[i].Name) < strings.ToLower(nfs[j].Name)
-	})
-}
+// sortMicroflows / sortNanoflows: see cmd_structure_gen.go's
+// sortGenMicroflows / sortGenNanoflows for the gen replacements.
 
 func sortConstants(consts []*model.Constant) {
 	sort.Slice(consts, func(i, j int) bool {

@@ -41,6 +41,14 @@ func (e *Executor) NanoflowELKGen(name string) error {
 	return nanoflowELKGen(e.newExecContext(context.Background()), name)
 }
 
+// NanoflowELK is the public Executor wrapper consumed by
+// cmd/mxcli/cmd_describe.go. Stage 3.2.6.3a moved this method out of
+// the (deleted) cmd_nanoflow_elk.go; the body always routes through
+// the gen path now that legacy `nanoflowELK` is gone.
+func (e *Executor) NanoflowELK(name string) error {
+	return nanoflowELKGen(e.newExecContext(context.Background()), name)
+}
+
 func nanoflowELKGen(ctx *ExecContext, name string) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
@@ -86,7 +94,7 @@ func nanoflowELKGen(ctx *ExecContext, name string) error {
 	}
 
 	// MDL source for source map — best-effort, diagram works without it.
-	mdlSource, sourceMap, _ := describeNanoflowToString(ctx, qn)
+	mdlSource, sourceMap, _ := describeNanoflowGenToString(ctx, qn)
 
 	return buildFlowELKGen(ctx, flowELKInputGen{
 		FlowType:         "nanoflow",

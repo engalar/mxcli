@@ -50,39 +50,16 @@ func TestShowConstants_Mock_JSON(t *testing.T) {
 	assertContainsStr(t, buf.String(), "Timeout")
 }
 
-func TestShowMicroflows_Mock_JSON(t *testing.T) {
-	mod := mkModule("MyModule")
-	h := mkHierarchy(mod)
-	mf := mkMicroflow(mod.ID, "ACT_DoStuff")
-	withContainer(h, mf.ContainerID, mod.ID)
-
-	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) { return []*microflows.Microflow{mf}, nil },
-	}
-
-	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listMicroflows(ctx, ""))
-	assertValidJSON(t, buf.String())
-	assertContainsStr(t, buf.String(), "ACT_DoStuff")
-}
-
-func TestShowNanoflows_Mock_JSON(t *testing.T) {
-	mod := mkModule("MyModule")
-	h := mkHierarchy(mod)
-	nf := mkNanoflow(mod.ID, "NF_Validate")
-	withContainer(h, nf.ContainerID, mod.ID)
-
-	mb := &mock.MockBackend{
-		IsConnectedFunc:   func() bool { return true },
-		ListNanoflowsFunc: func() ([]*microflows.Nanoflow, error) { return []*microflows.Nanoflow{nf}, nil },
-	}
-
-	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listNanoflows(ctx, ""))
-	assertValidJSON(t, buf.String())
-	assertContainsStr(t, buf.String(), "NF_Validate")
-}
+// Stage 3.2.6.3a: TestShowMicroflows_Mock_JSON / TestShowNanoflows_Mock_JSON
+// removed. The new gen-path `listMicroflows` / `listNanoflows` (in
+// cmd_microflows_show_list_gen.go) reads from ctx.Microflows /
+// ctx.Nanoflows repos, not from the sdk-typed mock backend's
+// ListMicroflowsFunc / ListNanoflowsFunc, so seeding `mf` / `nf` via
+// the mock backend is never observed by the formatter. Equivalent
+// JSON-output coverage will land alongside a mock repo surface for
+// gen flows; in the meantime the gen path is exercised by the
+// fixture-based tests in cmd_microflows_show_gen_test.go and
+// cmd_nanoflows_show_gen_test.go, plus the live MPR roundtrip tests.
 
 func TestShowPages_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")

@@ -38,23 +38,16 @@ func TestShowConstants_Mock_BackendError(t *testing.T) {
 	assertError(t, listConstants(ctx, ""))
 }
 
-func TestShowMicroflows_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) { return nil, errBackend },
-	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listMicroflows(ctx, ""))
-}
-
-func TestShowNanoflows_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:   func() bool { return true },
-		ListNanoflowsFunc: func() ([]*microflows.Nanoflow, error) { return nil, errBackend },
-	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listNanoflows(ctx, ""))
-}
+// Stage 3.2.6.3a: TestShowMicroflows_Mock_BackendError /
+// TestShowNanoflows_Mock_BackendError removed. The new
+// gen-path `listMicroflows` / `listNanoflows` (in
+// cmd_microflows_show_list_gen.go) read from ctx.Microflows /
+// ctx.Nanoflows repos, not from the sdk-typed mock backend's
+// ListMicroflowsFunc / ListNanoflowsFunc, so the simulated
+// backend error never reaches the dispatch path. Equivalent
+// error coverage lives in repo-level tests once the mock repo
+// surface lands; for now the gen path returns an empty list when
+// the repo is nil.
 
 func TestShowPages_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
@@ -319,14 +312,12 @@ func TestDescribeConstant_Mock_BackendError(t *testing.T) {
 	assertError(t, describeConstant(ctx, ast.QualifiedName{Module: "M", Name: "C"}))
 }
 
-func TestDescribeMicroflow_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) { return nil, errBackend },
-	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, describeMicroflow(ctx, ast.QualifiedName{Module: "M", Name: "F"}))
-}
+// Stage 3.2.6.3a: TestDescribeMicroflow_Mock_BackendError removed.
+// `describeMicroflow` (legacy sdk/microflows) is being deleted; the
+// gen-typed `describeMicroflowGen` reads from ctx.Microflows (modelsdk
+// repository) rather than ctx.Backend.ListMicroflowsFunc, so the error
+// path tested here is no longer reachable through this mock surface.
+// Equivalent error-path coverage lives in cmd_microflows_show_gen_test.go.
 
 func TestDescribeWorkflow_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
