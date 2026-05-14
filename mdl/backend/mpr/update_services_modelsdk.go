@@ -13,11 +13,9 @@ import (
 	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	genEM "github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings"
 	genIM "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
-	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJsonStructures "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
 	genODP "github.com/mendixlabs/mxcli/modelsdk/gen/odatapublish"
 	genREST "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
-	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
@@ -29,27 +27,10 @@ import (
 // updateImageCollectionViaModelsdk still uses the legacy
 // Serialize+writeUnitContents path because the modelsdk gen type is not yet
 // wired up.
-
-// ── JavaAction ────────────────────────────────────────────────────────────
-
-func (b *MprBackend) updateJavaActionViaModelsdk(ja *javaactions.JavaAction) error {
-	return b.msdkWrite(ja.ID, func(elem element.Element) error {
-		typed, ok := elem.(*genJA.JavaAction)
-		if !ok {
-			return fmt.Errorf("unexpected type %T (want *JavaAction)", elem)
-		}
-		typed.SetName(ja.Name)
-		typed.SetDocumentation(ja.Documentation)
-		typed.SetExcluded(ja.Excluded)
-		typed.SetExportLevel(ja.ExportLevel)
-		typed.SetActionDefaultReturnName(ja.ActionDefaultReturnName)
-		// ActionReturnType (Part — polymorphic VoidType/StringType/etc.),
-		// ActionParameters, ActionTypeParameters (PartList) and Java return
-		// type (Part) preserved by LazyDoc; updated by dedicated mutator
-		// operations.
-		return nil
-	})
-}
+//
+// JavaAction was migrated to the gen-native javaActionRepo in Stage
+// 3.3.2.D (commit c5695850); the bridge updateJavaActionViaModelsdk
+// was retired in Stage 3.3.2.E1.
 
 // ── DatabaseConnection ────────────────────────────────────────────────────
 

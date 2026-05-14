@@ -144,18 +144,11 @@ func TestConvertRawCustomWidgetTypeSlice(t *testing.T) {
 	}
 }
 
-func TestConvertJavaActionSlice(t *testing.T) {
-	in := []*mpr.JavaAction{
-		{BaseElement: model.BaseElement{ID: model.ID("j1")}, ContainerID: model.ID("c1"), Name: "MyJA", Documentation: "doc"},
-	}
-	out, err := convertJavaActionSlice(in, nil)
-	if err != nil || len(out) != 1 {
-		t.Fatalf("unexpected: out=%v err=%v", out, err)
-	}
-	if out[0].Name != "MyJA" || out[0].Documentation != "doc" {
-		t.Errorf("field mismatch: %+v", out[0])
-	}
-}
+// TestConvertJavaActionSlice retired in Stage 3.3.2.E1 along with
+// convertJavaActionSlice itself. Consumers now read gen-typed
+// *genJA.JavaAction via the modelsdk-native ListJavaActionsGen path
+// (see TestJavaActionRepo_* in mdl/backend/mpr/repos for coverage of
+// the new read path).
 
 // TestConvertJavaScriptAction* tests retired in Stage 3.3.2.C1 along
 // with the convertJavaScriptAction* helpers and types.JavaScriptAction.

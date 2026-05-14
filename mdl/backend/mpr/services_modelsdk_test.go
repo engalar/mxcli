@@ -12,7 +12,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	_ "modernc.org/sqlite"
 )
 
@@ -569,7 +568,7 @@ func TestUpdatePublishedRestServiceRolesViaModelsdk(t *testing.T) {
 	t.Error("AllowedRoles does not contain expected role")
 }
 
-func TestUpdateJavaActionViaModelsdk(t *testing.T) {
+func TestUpdateJavaActionGen(t *testing.T) {
 	const unitID = "11111111-4444-4444-4444-444444444444"
 	contents := makeBSONUnit(t, unitID, "JavaActions$JavaAction", bson.D{
 		{Key: "Name", Value: "OldAction"},
@@ -585,14 +584,26 @@ func TestUpdateJavaActionViaModelsdk(t *testing.T) {
 	}
 	defer b.Disconnect()
 
-	ja := &javaactions.JavaAction{
-		Name:        "NewAction",
-		ExportLevel: "Hidden",
+	// Stage 3.3.2.E1: gen-native UpdateJavaActionGen via repo.
+	ja, err := b.ReadJavaActionByNameGen("MyModule.OldAction")
+	if err != nil || ja == nil {
+		// FindByQualifiedName needs the module/container join; fall
+		// back to reading the raw unit and decoding.
+		all, _ := b.ListJavaActionsGen()
+		for _, candidate := range all {
+			if string(candidate.ID()) == unitID {
+				ja = candidate
+				break
+			}
+		}
+		if ja == nil {
+			t.Fatalf("could not locate test JavaAction by ID %q", unitID)
+		}
 	}
-	ja.ID = id
+	ja.SetName("NewAction")
 
-	if err := b.updateJavaActionViaModelsdk(ja); err != nil {
-		t.Fatalf("updateJavaActionViaModelsdk: %v", err)
+	if err := b.UpdateJavaActionGen(ja); err != nil {
+		t.Fatalf("UpdateJavaActionGen: %v", err)
 	}
 
 	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(id))

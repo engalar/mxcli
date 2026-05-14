@@ -277,28 +277,18 @@ func TestExecDropAssociation_Mock(t *testing.T) {
 
 func TestExecDropJavaAction_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
-	jaID := nextID("ja")
-	ja := &types.JavaAction{
-		BaseElement: model.BaseElement{ID: jaID},
-		ContainerID: mod.ID,
-		Name:        "MyAction",
-	}
 
 	h := mkHierarchy(mod)
 
-	// Stage 3.3.2.E2: execDropJavaActionGen now reads via the gen path
-	// (ctx.JavaActions or ctx.Backend.ListJavaActionsGen). Provide both
-	// the legacy and gen mocks so the test fixture is independent of the
-	// helper's internal fallback.
+	// Stage 3.3.2.E1: execDropJavaActionGen reads via the gen path
+	// (ctx.JavaActions or ctx.Backend.ListJavaActionsGen). Legacy
+	// types.JavaAction fixture removed — only gen mock now.
 	jaGen := genJA.NewJavaAction()
 	jaGen.SetName("MyAction")
 
 	called := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		ListJavaActionsFunc: func() ([]*types.JavaAction, error) {
-			return []*types.JavaAction{ja}, nil
-		},
 		ListJavaActionsGenFunc: func() ([]*genJA.JavaAction, error) {
 			return []*genJA.JavaAction{jaGen}, nil
 		},

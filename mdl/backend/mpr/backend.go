@@ -22,7 +22,6 @@ import (
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -636,26 +635,8 @@ func (b *MprBackend) DeleteJsonStructure(id string) error {
 // JavaBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListJavaActions() ([]*types.JavaAction, error) {
-	return convertJavaActionSlice(b.reader.ListJavaActions())
-}
-func (b *MprBackend) ListJavaActionsFull() ([]*javaactions.JavaAction, error) {
-	return b.reader.ListJavaActionsFull()
-}
-func (b *MprBackend) ReadJavaActionByName(qualifiedName string) (*javaactions.JavaAction, error) {
-	return b.reader.ReadJavaActionByName(qualifiedName)
-}
-func (b *MprBackend) CreateJavaAction(ja *javaactions.JavaAction) error {
-	return b.createJavaActionViaModelsdk(ja)
-}
-func (b *MprBackend) UpdateJavaAction(ja *javaactions.JavaAction) error {
-	return b.updateJavaActionViaModelsdk(ja)
-}
 func (b *MprBackend) DeleteJavaAction(id model.ID) error {
 	return b.deleteJavaActionViaModelsdk(id)
-}
-func (b *MprBackend) WriteJavaSourceFile(moduleName, actionName string, javaCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType, extraImports []string, extraCode string) error {
-	return b.writeJavaSourceFileViaPath(moduleName, actionName, javaCode, params, returnType, extraImports, extraCode)
 }
 func (b *MprBackend) DeleteJavaSourceFile(moduleName, actionName string) error {
 	return b.deleteJavaSourceFileViaPath(moduleName, actionName)
