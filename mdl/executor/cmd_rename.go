@@ -206,15 +206,21 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 			}
 		}
 	case "page":
-		pgs, _ := ctx.Backend.ListPages()
-		for _, pg := range pgs {
-			modID := h.FindModuleID(pg.ContainerID)
+		// Stage 3.3.5.C6: switch the rename validate-loop to the gen
+		// cache helper so the rest of the file no longer needs sdk-typed
+		// page listings.
+		pairs, _ := listPagesWithContainerGen(ctx)
+		for _, p := range pairs {
+			if p.Elem == nil {
+				continue
+			}
+			modID := h.FindModuleID(model.ID(p.ContainerID))
 			if h.GetModuleName(modID) != s.Name.Module {
 				continue
 			}
-			if pg.Name == s.Name.Name {
+			if p.Elem.Name() == s.Name.Name {
 				found = true
-			} else if pg.Name == s.NewName {
+			} else if p.Elem.Name() == s.NewName {
 				collision = true
 			}
 		}

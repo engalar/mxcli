@@ -13,7 +13,6 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // mkGenProjectSecurity builds a gen-typed ProjectSecurity for use with
@@ -325,10 +324,10 @@ func TestShowAccessOnPage_Mock_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return nil, nil },
-	}
+	// Stage 3.3.5.C6: ListPagesFunc not wired — MockBackend returns
+	// (nil, nil) by default, which is enough to exercise the
+	// "not-found" path in listAccessOnPageGen.
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertError(t, listAccessOnPageGen(ctx, &ast.QualifiedName{Module: "MyModule", Name: "NonExistent"}))
 }

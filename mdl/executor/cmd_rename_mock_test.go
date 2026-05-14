@@ -15,7 +15,6 @@ import (
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // ---------------------------------------------------------------------------
@@ -193,11 +192,14 @@ func TestRename_Microflow_Success(t *testing.T) {
 
 func TestRename_Page_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
+	// Stage 3.3.5.C6: rename "page" path now goes through ctx.Pages
+	// (listPagesWithContainerGen). Leaving ctx.Pages nil makes the
+	// helper return an empty slice — the not-found path remains the
+	// same.
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return nil, nil },
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
