@@ -4,8 +4,10 @@ package catalog
 
 import (
 	"database/sql"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
@@ -38,39 +40,45 @@ func (b *Builder) buildPermissions() error {
 	return nil
 }
 
-// buildEntityPermissions extracts entity-level and member-level access permissions.
+// buildEntityPermissions extracts entity-level and member-level access
+// permissions on the gen-typed read path (Stage 3.3.4 C2.b).
 func (b *Builder) buildEntityPermissions(stmt *sql.Stmt, projectID, snapshotID string) int {
 	count := 0
 
-	dms, err := b.reader.ListDomainModels()
+	dms, err := b.cachedDomainModelsGen()
 	if err != nil {
 		return 0
 	}
 
 	for _, dm := range dms {
-		moduleID := b.hierarchy.findModuleID(dm.ContainerID)
+		if dm == nil {
+			continue
+		}
+		moduleID := b.hierarchy.findModuleID(model.ID(dm.ID()))
 		moduleName := b.hierarchy.getModuleName(moduleID)
 
-		for _, ent := range dm.Entities {
-			entityQN := moduleName + "." + ent.Name
+		for _, e := range dm.EntitiesItems() {
+			ent, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			entityQN := moduleName + "." + ent.Name()
 
-			for _, rule := range ent.AccessRules {
-				// Each access rule can apply to multiple module roles
-				roleNames := rule.ModuleRoleNames
+			for _, r := range ent.AccessRulesItems() {
+				rule, ok := r.(*genDm.AccessRule)
+				if !ok {
+					continue
+				}
+				roleNames := rule.ModuleRolesQualifiedNames()
 				if len(roleNames) == 0 {
 					continue
 				}
 
-				xpath := rule.XPathConstraint
-
-				// Derive entity-level READ/WRITE from member access configuration.
-				// In Mendix, read/write is controlled via DefaultMemberAccessRights
-				// and MemberAccesses, not by AllowRead/AllowWrite flags.
-				hasRead, hasWrite := entityAccessFromMemberRights(rule)
+				xpath := rule.XPathConstraint()
+				hasRead, hasWrite := entityAccessFromMemberRightsGen(rule)
 
 				for _, roleName := range roleNames {
-					// Entity-level permissions
-					if rule.AllowCreate {
+					if rule.AllowCreate() {
 						stmt.Exec(roleName, "ENTITY", entityQN, nil, "CREATE", xpath, moduleName, projectID, snapshotID)
 						count++
 					}
@@ -82,13 +90,11 @@ func (b *Builder) buildEntityPermissions(stmt *sql.Stmt, projectID, snapshotID s
 						stmt.Exec(roleName, "ENTITY", entityQN, nil, "WRITE", xpath, moduleName, projectID, snapshotID)
 						count++
 					}
-					if rule.AllowDelete {
+					if rule.AllowDelete() {
 						stmt.Exec(roleName, "ENTITY", entityQN, nil, "DELETE", xpath, moduleName, projectID, snapshotID)
 						count++
 					}
-
-					// Member-level permissions
-					count += b.emitMemberPermissions(stmt, rule, ent, roleName, entityQN, xpath, moduleName, projectID, snapshotID)
+					count += b.emitMemberPermissionsGen(stmt, rule, ent, roleName, entityQN, xpath, moduleName, projectID, snapshotID)
 				}
 			}
 		}
@@ -97,11 +103,9 @@ func (b *Builder) buildEntityPermissions(stmt *sql.Stmt, projectID, snapshotID s
 	return count
 }
 
-// entityAccessFromMemberRights derives entity-level READ/WRITE from an access rule's
-// member access configuration. In Mendix, entity-level read/write is not controlled
-// by separate boolean flags but is implied by the member access rights:
-//   - If any member has read access, the entity is readable
-//   - If any member has write access, the entity is writable
+// entityAccessFromMemberRights — legacy sdk-typed helper. Kept until
+// builder_permissions_test.go migrates to fixtures using gen types
+// (Stage 3.3.4 C6 territory).
 func entityAccessFromMemberRights(rule *domainmodel.AccessRule) (hasRead, hasWrite bool) {
 	if len(rule.MemberAccesses) > 0 {
 		for _, ma := range rule.MemberAccesses {
@@ -124,48 +128,105 @@ func entityAccessFromMemberRights(rule *domainmodel.AccessRule) (hasRead, hasWri
 	return
 }
 
-// emitMemberPermissions emits MEMBER_READ/MEMBER_WRITE rows for entity attributes and associations.
-// When MemberAccesses is non-empty, use explicit per-member rights.
-// When MemberAccesses is empty, expand DefaultMemberAccessRights to all attributes.
-func (b *Builder) emitMemberPermissions(stmt *sql.Stmt, rule *domainmodel.AccessRule, ent *domainmodel.Entity,
+// entityAccessFromMemberRightsGen mirrors the legacy helper but reads
+// gen accessors (DefaultMemberAccessRights() string, MemberAccess.AccessRights()
+// string).
+func entityAccessFromMemberRightsGen(rule *genDm.AccessRule) (hasRead, hasWrite bool) {
+	mems := rule.MemberAccessesItems()
+	if len(mems) > 0 {
+		for _, m := range mems {
+			ma, ok := m.(*genDm.MemberAccess)
+			if !ok {
+				continue
+			}
+			switch ma.AccessRights() {
+			case "ReadWrite":
+				hasRead = true
+				hasWrite = true
+			case "ReadOnly":
+				hasRead = true
+			}
+		}
+	} else {
+		switch rule.DefaultMemberAccessRights() {
+		case "ReadWrite":
+			hasRead = true
+			hasWrite = true
+		case "ReadOnly":
+			hasRead = true
+		}
+	}
+	return
+}
+
+// emitMemberPermissionsGen mirrors emitMemberPermissions for the gen
+// AccessRule / Entity (Stage 3.3.4 C2.b). The MemberAccess element
+// references attributes / associations by qualified name in gen
+// (AttributeQualifiedName / AssociationQualifiedName); we use the
+// trailing segment as the member name.
+func (b *Builder) emitMemberPermissionsGen(stmt *sql.Stmt, rule *genDm.AccessRule, ent *genDm.Entity,
 	roleName, entityQN, xpath, moduleName, projectID, snapshotID string) int {
 	count := 0
 
-	if len(rule.MemberAccesses) > 0 {
-		// Explicit member-level access
-		for _, ma := range rule.MemberAccesses {
-			memberName := ma.AttributeName
+	mems := rule.MemberAccessesItems()
+	if len(mems) > 0 {
+		for _, m := range mems {
+			ma, ok := m.(*genDm.MemberAccess)
+			if !ok {
+				continue
+			}
+			memberName := simpleNameFromQN(ma.AttributeQualifiedName())
 			if memberName == "" {
-				memberName = ma.AssociationName
+				memberName = simpleNameFromQN(ma.AssociationQualifiedName())
 			}
 			if memberName == "" {
 				continue
 			}
-
-			if ma.AccessRights == domainmodel.MemberAccessRightsReadOnly || ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
+			switch ma.AccessRights() {
+			case "ReadWrite":
+				stmt.Exec(roleName, "ENTITY", entityQN, memberName, "MEMBER_READ", xpath, moduleName, projectID, snapshotID)
+				stmt.Exec(roleName, "ENTITY", entityQN, memberName, "MEMBER_WRITE", xpath, moduleName, projectID, snapshotID)
+				count += 2
+			case "ReadOnly":
 				stmt.Exec(roleName, "ENTITY", entityQN, memberName, "MEMBER_READ", xpath, moduleName, projectID, snapshotID)
 				count++
 			}
-			if ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
-				stmt.Exec(roleName, "ENTITY", entityQN, memberName, "MEMBER_WRITE", xpath, moduleName, projectID, snapshotID)
-				count++
-			}
 		}
-	} else if rule.DefaultMemberAccessRights != "" && rule.DefaultMemberAccessRights != domainmodel.MemberAccessRightsNone {
-		// Expand default to all attributes
-		for _, attr := range ent.Attributes {
-			if rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadOnly || rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite {
-				stmt.Exec(roleName, "ENTITY", entityQN, attr.Name, "MEMBER_READ", xpath, moduleName, projectID, snapshotID)
-				count++
+	} else {
+		def := rule.DefaultMemberAccessRights()
+		if def == "" || def == "None" {
+			return 0
+		}
+		for _, a := range ent.AttributesItems() {
+			attr, ok := a.(*genDm.Attribute)
+			if !ok {
+				continue
 			}
-			if rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite {
-				stmt.Exec(roleName, "ENTITY", entityQN, attr.Name, "MEMBER_WRITE", xpath, moduleName, projectID, snapshotID)
+			switch def {
+			case "ReadWrite":
+				stmt.Exec(roleName, "ENTITY", entityQN, attr.Name(), "MEMBER_READ", xpath, moduleName, projectID, snapshotID)
+				stmt.Exec(roleName, "ENTITY", entityQN, attr.Name(), "MEMBER_WRITE", xpath, moduleName, projectID, snapshotID)
+				count += 2
+			case "ReadOnly":
+				stmt.Exec(roleName, "ENTITY", entityQN, attr.Name(), "MEMBER_READ", xpath, moduleName, projectID, snapshotID)
 				count++
 			}
 		}
 	}
 
 	return count
+}
+
+// simpleNameFromQN extracts the trailing segment from a dotted QN
+// (e.g. "Module.Entity.Attr" → "Attr"). Empty input returns empty.
+func simpleNameFromQN(qn string) string {
+	if qn == "" {
+		return ""
+	}
+	if i := strings.LastIndex(qn, "."); i >= 0 && i < len(qn)-1 {
+		return qn[i+1:]
+	}
+	return qn
 }
 
 // buildMicroflowPermissions extracts microflow execution permissions.
@@ -218,7 +279,6 @@ func (b *Builder) buildPagePermissions(stmt *sql.Stmt, projectID, snapshotID str
 		pgQN := moduleName + "." + pg.Name
 
 		for _, roleID := range pg.AllowedRoles {
-			// AllowedRoles are BY_NAME strings stored as model.ID
 			roleName := string(roleID)
 			stmt.Exec(roleName, "PAGE", pgQN, nil, "VIEW", nil, moduleName, projectID, snapshotID)
 			count++
