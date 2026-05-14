@@ -147,11 +147,18 @@ func DescribeMicroflowGenToString(ctx *ExecContext, mf *genMf.Microflow) (string
 		lines = append(lines, fmt.Sprintf("create or modify microflow %s ()", qualifiedName))
 	}
 
-	// Returns clause (skeleton: surface only the primitive name; full
-	// formatting — entity QN resolution, "List of X", enums — comes in
-	// 3.2.2 alongside the activity formatters).
-	if rt := strings.TrimSpace(mf.ReturnType()); rt != "" && !strings.EqualFold(rt, "Void") {
-		returnLine := "returns " + rt
+	// Returns clause. Mirror the nanoflow path (genFlowReturnDisplay):
+	// prefer the rich `MicroflowReturnType()` part element (a DataType
+	// subtype that carries the full entity QN / list wrapping / enum
+	// reference); fall back to the bare `ReturnType()` string for shapes
+	// that only carry the short primitive tag.
+	//
+	// In real fixtures the `ReturnType()` string is almost always empty
+	// (the type info lives entirely inside the part element). The
+	// pre-3.2 code only consulted the string and silently dropped the
+	// clause for every entity- or primitive-typed microflow.
+	if rendered := genFlowReturnDisplay(mf.ReturnType(), mf.MicroflowReturnType()); rendered != "" {
+		returnLine := "returns " + rendered
 		if rv := mf.ReturnVariableName(); rv != "" && rv != "Variable" {
 			returnLine += " as $" + rv
 		}
