@@ -587,6 +587,62 @@ func entityRuleRightStrings(rule *domainmodel.AccessRule) []string {
 	return rights
 }
 
+// describeModuleRoleGen handles DESCRIBE MODULE ROLE Module.Role using
+// gen-typed ModuleSecurity units. Emits a re-executable CREATE MODULE ROLE
+// statement followed by inclusion in user roles (if any).
+// Not yet wired into executor_query.go dispatch — DESCRIBE MODULE ROLE still
+// routes to legacy describeModuleRole. Dispatcher cutover in task A10.
+func describeModuleRoleGen(ctx *ExecContext, name ast.QualifiedName) error {
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+	pairs, err := listModuleSecurityWithContainerGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("read module security", err)
+	}
+	for _, p := range pairs {
+		modName := h.GetModuleName(p.ContainerID)
+		if name.Module != "" && modName != name.Module {
+			continue
+		}
+		// schema gap: ModuleRolesItems() returns []element.Element; type-assert
+		// each entry to *genSec.ModuleRole. Remove when gen narrows return to []*ModuleRole.
+		for _, mr := range p.MS.ModuleRolesItems() {
+			typed, ok := mr.(*genSec.ModuleRole)
+			if !ok || typed.Name() != name.Name {
+				continue
+			}
+			fmt.Fprintf(ctx.Output, "create module role %s.%s", modName, typed.Name())
+			if typed.Description() != "" {
+				fmt.Fprintf(ctx.Output, " description '%s'", typed.Description())
+			}
+			fmt.Fprintln(ctx.Output, ";")
+			fmt.Fprintln(ctx.Output, "/")
+			qualifiedRole := modName + "." + typed.Name()
+			if ps, psErr := getProjectSecurityGen(ctx); psErr == nil && ps != nil {
+				var includedBy []string
+				for _, ur := range ps.UserRolesItems() {
+					urTyped, ok := ur.(*genSec.UserRole)
+					if !ok {
+						continue
+					}
+					for _, mref := range urTyped.ModuleRolesQualifiedNames() {
+						if mref == qualifiedRole {
+							includedBy = append(includedBy, urTyped.Name())
+						}
+					}
+				}
+				if len(includedBy) > 0 {
+					fmt.Fprintf(ctx.Output, "\n-- Included in user roles: %s\n", strings.Join(includedBy, ", "))
+				}
+			}
+			return nil
+		}
+	}
+	return mdlerrors.NewNotFound("module role", name.String())
+}
+
 // listDemoUsersGen handles SHOW DEMO USERS using the gen-typed ProjectSecurity
 // from ctx.Security. When demo users are disabled it emits a human-readable
 // hint (table format) or an empty TableResult (JSON format).
