@@ -275,6 +275,140 @@ func TestBuildUserTaskOutcomesGen_ValueMatchesCaption(t *testing.T) {
 	}
 }
 
+// ── D1.c — CallMicroflow / CallWorkflow / ParameterMapping tests ──────
+
+func TestBuildCallMicroflowGenActivity_FullyQualifiedMappings(t *testing.T) {
+	n := &ast.WorkflowCallMicroflowNode{
+		Microflow: ast.QualifiedName{Module: "Demo", Name: "Action"},
+		Caption:   "do thing",
+		ParameterMappings: []ast.WorkflowParameterMappingNode{
+			{Parameter: "X", Expression: "$WorkflowContext"},
+		},
+	}
+	got := buildCallMicroflowGenActivity(n)
+	if got.TypeName() != "Workflows$CallMicroflowActivity" {
+		t.Errorf("TypeName = %q, want CallMicroflowActivity", got.TypeName())
+	}
+	if got.Name() != "Action" {
+		t.Errorf("Name = %q", got.Name())
+	}
+	if got.MicroflowQualifiedName() != "Demo.Action" {
+		t.Errorf("MicroflowQualifiedName = %q", got.MicroflowQualifiedName())
+	}
+	pms := got.ParameterMappingsItems()
+	if len(pms) != 1 {
+		t.Fatalf("expected 1 mapping, got %d", len(pms))
+	}
+	pm, _ := pms[0].(*genWf.MicroflowCallParameterMapping)
+	if pm == nil {
+		t.Fatalf("wrong mapping type: %T", pms[0])
+	}
+	if pm.ParameterQualifiedName() != "Demo.Action.X" {
+		t.Errorf("Parameter = %q (BSON requires fully qualified)", pm.ParameterQualifiedName())
+	}
+	if pm.Expression() != "$WorkflowContext" {
+		t.Errorf("Expression = %q", pm.Expression())
+	}
+}
+
+func TestBuildCallMicroflowGenActivity_DefaultCaptionMirrorsName(t *testing.T) {
+	n := &ast.WorkflowCallMicroflowNode{
+		Microflow: ast.QualifiedName{Module: "M", Name: "DoIt"},
+	}
+	got := buildCallMicroflowGenActivity(n)
+	if got.Caption() != "DoIt" {
+		t.Errorf("default caption = %q, want microflow simple name", got.Caption())
+	}
+}
+
+func TestBuildCallWorkflowGenActivity_AutoBindsParameterExpression(t *testing.T) {
+	n := &ast.WorkflowCallWorkflowNode{
+		Workflow: ast.QualifiedName{Module: "Demo", Name: "Sub"},
+		Caption:  "call sub",
+		ParameterMappings: []ast.WorkflowParameterMappingNode{
+			{Parameter: "WorkflowContext", Expression: "$WorkflowContext"},
+		},
+	}
+	got := buildCallWorkflowGenActivity(n)
+	if got.TypeName() != "Workflows$CallWorkflowActivity" {
+		t.Errorf("TypeName = %q", got.TypeName())
+	}
+	if got.WorkflowQualifiedName() != "Demo.Sub" {
+		t.Errorf("WorkflowQualifiedName = %q", got.WorkflowQualifiedName())
+	}
+	if got.ParameterExpression() != "$WorkflowContext" {
+		t.Errorf("ParameterExpression = %q (should auto-bind)", got.ParameterExpression())
+	}
+	pms := got.ParameterMappingsItems()
+	if len(pms) != 1 {
+		t.Fatalf("expected 1 mapping, got %d", len(pms))
+	}
+	pm, _ := pms[0].(*genWf.WorkflowCallParameterMapping)
+	if pm == nil {
+		t.Fatalf("wrong mapping type: %T", pms[0])
+	}
+	if pm.ParameterQualifiedName() != "Demo.Sub.WorkflowContext" {
+		t.Errorf("Parameter = %q", pm.ParameterQualifiedName())
+	}
+}
+
+func TestBuildConditionOutcomeGen_True(t *testing.T) {
+	got := buildConditionOutcomeGen(ast.WorkflowConditionOutcomeNode{Value: "True"})
+	bo, ok := got.(*genWf.BooleanConditionOutcome)
+	if !ok {
+		t.Fatalf("wrong type: %T", got)
+	}
+	if !bo.Value() {
+		t.Error("Value should be true for 'True' AST")
+	}
+}
+
+func TestBuildConditionOutcomeGen_False(t *testing.T) {
+	got := buildConditionOutcomeGen(ast.WorkflowConditionOutcomeNode{Value: "False"})
+	bo, ok := got.(*genWf.BooleanConditionOutcome)
+	if !ok {
+		t.Fatalf("wrong type: %T", got)
+	}
+	if bo.Value() {
+		t.Error("Value should be false for 'False' AST")
+	}
+}
+
+func TestBuildConditionOutcomeGen_Default(t *testing.T) {
+	got := buildConditionOutcomeGen(ast.WorkflowConditionOutcomeNode{Value: "Default"})
+	if got.TypeName() != "Workflows$VoidConditionOutcome" {
+		t.Errorf("TypeName = %q, want VoidConditionOutcome", got.TypeName())
+	}
+}
+
+func TestBuildConditionOutcomeGen_Enumeration(t *testing.T) {
+	got := buildConditionOutcomeGen(ast.WorkflowConditionOutcomeNode{Value: "MyModule.MyEnum.OptionA"})
+	ev, ok := got.(*genWf.EnumerationValueConditionOutcome)
+	if !ok {
+		t.Fatalf("wrong type: %T", got)
+	}
+	if ev.ValueQualifiedName() != "MyModule.MyEnum.OptionA" {
+		t.Errorf("ValueQualifiedName = %q", ev.ValueQualifiedName())
+	}
+}
+
+func TestBuildConditionOutcomeGen_WithSubFlow(t *testing.T) {
+	got := buildConditionOutcomeGen(ast.WorkflowConditionOutcomeNode{
+		Value: "True",
+		Activities: []ast.WorkflowActivityNode{
+			&ast.WorkflowJumpToNode{Target: "X"},
+		},
+	})
+	bo, _ := got.(*genWf.BooleanConditionOutcome)
+	flow, ok := bo.Flow().(*genWf.Flow)
+	if !ok || flow == nil {
+		t.Fatal("expected non-nil Flow")
+	}
+	if len(flow.ActivitiesItems()) != 1 {
+		t.Errorf("nested activities = %d", len(flow.ActivitiesItems()))
+	}
+}
+
 func TestBuildWorkflowActivitiesGen_DispatchesLeafTypes(t *testing.T) {
 	nodes := []ast.WorkflowActivityNode{
 		&ast.WorkflowJumpToNode{Target: "A"},

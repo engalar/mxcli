@@ -64,9 +64,11 @@ func buildWorkflowActivityGen(node ast.WorkflowActivityNode) element.Element {
 		return buildAnnotationActivityGen(n)
 	case *ast.WorkflowUserTaskNode:
 		return buildUserTaskGenActivity(n)
-	// Composite cases land in D1.c/d:
-	//   *ast.WorkflowCallMicroflowNode   — D1.c
-	//   *ast.WorkflowCallWorkflowNode    — D1.c
+	case *ast.WorkflowCallMicroflowNode:
+		return buildCallMicroflowGenActivity(n)
+	case *ast.WorkflowCallWorkflowNode:
+		return buildCallWorkflowGenActivity(n)
+	// Composite cases land in D1.d:
 	//   *ast.WorkflowDecisionNode        — D1.d
 	//   *ast.WorkflowParallelSplitNode   — D1.d
 	}
@@ -315,6 +317,132 @@ func buildUserTaskOutcomesGen(nodes []ast.WorkflowUserTaskOutcomeNode) []*genWf.
 		out = append(out, oc)
 	}
 	return out
+}
+
+// ---------------------------------------------------------------------------
+// D1.c — CallMicroflow + CallWorkflow + ParameterMapping
+// ---------------------------------------------------------------------------
+
+// buildCallMicroflowGenActivity mirrors buildCallMicroflowTask
+// (cmd_workflows_write.go:291). Picks Workflows$CallMicroflowActivity
+// (the gen-canonical storage) over the legacy CallMicroflowTask so
+// fresh writes round-trip through the new gen schema.
+func buildCallMicroflowGenActivity(n *ast.WorkflowCallMicroflowNode) *genWf.CallMicroflowActivity {
+	act := genWf.NewCallMicroflowActivity()
+	act.SetID(element.ID(types.GenerateID()))
+	act.SetName(n.Microflow.Name)
+	caption := n.Caption
+	if caption == "" {
+		caption = n.Microflow.Name
+	}
+	act.SetCaption(caption)
+	mfQN := n.Microflow.Module + "." + n.Microflow.Name
+	act.SetMicroflowQualifiedName(mfQN)
+
+	// Outcomes
+	for _, oc := range buildConditionOutcomesGen(n.Outcomes) {
+		act.AddOutcomes(oc)
+	}
+
+	// Parameter mappings — fully qualified per BSON requirement
+	// (legacy buildCallMicroflowTask:312).
+	for _, pm := range n.ParameterMappings {
+		mapping := genWf.NewMicroflowCallParameterMapping()
+		mapping.SetID(element.ID(types.GenerateID()))
+		mapping.SetParameterQualifiedName(mfQN + "." + pm.Parameter)
+		mapping.SetExpression(pm.Expression)
+		act.AddParameterMappings(mapping)
+	}
+
+	// Boundary events
+	for _, ev := range buildBoundaryEventsGen(n.BoundaryEvents) {
+		act.AddBoundaryEvents(ev)
+	}
+	return act
+}
+
+// buildCallWorkflowGenActivity mirrors buildCallWorkflowActivity
+// (cmd_workflows_write.go:325).
+func buildCallWorkflowGenActivity(n *ast.WorkflowCallWorkflowNode) *genWf.CallWorkflowActivity {
+	act := genWf.NewCallWorkflowActivity()
+	act.SetID(element.ID(types.GenerateID()))
+	act.SetName(n.Workflow.Name)
+	caption := n.Caption
+	if caption == "" {
+		caption = n.Workflow.Name
+	}
+	act.SetCaption(caption)
+	wfQN := n.Workflow.Module + "." + n.Workflow.Name
+	act.SetWorkflowQualifiedName(wfQN)
+	// Auto-bind $WorkflowContext expression — same default the legacy
+	// builder applied. autoBindCallWorkflowGen (D5) will refine when
+	// the target workflow has no Parameter.
+	act.SetParameterExpression("$WorkflowContext")
+
+	for _, pm := range n.ParameterMappings {
+		mapping := genWf.NewWorkflowCallParameterMapping()
+		mapping.SetID(element.ID(types.GenerateID()))
+		mapping.SetParameterQualifiedName(wfQN + "." + pm.Parameter)
+		mapping.SetExpression(pm.Expression)
+		act.AddParameterMappings(mapping)
+	}
+	return act
+}
+
+// buildConditionOutcomesGen mirrors the outcomes loop in
+// buildCallMicroflowTask (cmd_workflows_write.go:302). Dispatches on
+// AST Value to BooleanConditionOutcome / VoidConditionOutcome /
+// EnumerationValueConditionOutcome.
+func buildConditionOutcomesGen(nodes []ast.WorkflowConditionOutcomeNode) []element.Element {
+	out := make([]element.Element, 0, len(nodes))
+	for _, n := range nodes {
+		oc := buildConditionOutcomeGen(n)
+		if oc != nil {
+			out = append(out, oc)
+		}
+	}
+	return out
+}
+
+// buildConditionOutcomeGen mirrors buildConditionOutcome
+// (cmd_workflows_write.go:390).
+func buildConditionOutcomeGen(n ast.WorkflowConditionOutcomeNode) element.Element {
+	subFlow := newGenFlowWithActivities(buildWorkflowActivitiesGen(n.Activities))
+	switch n.Value {
+	case "True":
+		o := genWf.NewBooleanConditionOutcome()
+		o.SetID(element.ID(types.GenerateID()))
+		o.SetValue(true)
+		if subFlow != nil {
+			o.SetFlow(subFlow)
+		}
+		return o
+	case "False":
+		o := genWf.NewBooleanConditionOutcome()
+		o.SetID(element.ID(types.GenerateID()))
+		o.SetValue(false)
+		if subFlow != nil {
+			o.SetFlow(subFlow)
+		}
+		return o
+	case "Default":
+		o := genWf.NewVoidConditionOutcome()
+		o.SetID(element.ID(types.GenerateID()))
+		if subFlow != nil {
+			o.SetFlow(subFlow)
+		}
+		return o
+	default:
+		// Enumeration value — sdk EnumerationValueConditionOutcome.Value
+		// is just the bare value; gen exposes it as ValueQualifiedName.
+		o := genWf.NewEnumerationValueConditionOutcome()
+		o.SetID(element.ID(types.GenerateID()))
+		o.SetValueQualifiedName(n.Value)
+		if subFlow != nil {
+			o.SetFlow(subFlow)
+		}
+		return o
+	}
 }
 
 // newTextWrapperGen wraps a plain string in a Texts$Text element with
