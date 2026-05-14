@@ -9,7 +9,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
 // flowRefCollector.collectFromStatements must descend into EnumSplitStmt
@@ -29,9 +28,11 @@ func TestValidateMicroflowReferences_DescendsIntoEnumSplitCases(t *testing.T) {
 				Name:        "SyntheticAudit",
 			}}, nil
 		},
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
-			return nil, nil
-		},
+		// No microflow list seeded — buildMicroflowQualifiedNamesGen
+		// (the validation path) treats an empty / unavailable list as
+		// "no microflows in project", so the call to
+		// SyntheticAudit.MissingHandler / MissingFallback below is
+		// reported as missing, which is what these tests assert.
 	}
 	ctx, _ := newMockCtx(t, withBackend(backend))
 
@@ -74,9 +75,11 @@ func TestValidateMicroflowReferences_DescendsIntoEnumSplitElse(t *testing.T) {
 				Name:        "SyntheticAudit",
 			}}, nil
 		},
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
-			return nil, nil
-		},
+		// No microflow list seeded — buildMicroflowQualifiedNamesGen
+		// (the validation path) treats an empty / unavailable list as
+		// "no microflows in project", so the call to
+		// SyntheticAudit.MissingHandler / MissingFallback below is
+		// reported as missing, which is what these tests assert.
 	}
 	ctx, _ := newMockCtx(t, withBackend(backend))
 

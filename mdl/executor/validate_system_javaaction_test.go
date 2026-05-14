@@ -10,7 +10,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
 // `mxcli check --references` must not flag System.* Java actions
@@ -28,9 +27,10 @@ func TestValidateMicroflowReferencesSkipsSystemJavaAction(t *testing.T) {
 				Name:        "Administration",
 			}}, nil
 		},
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
-			return nil, nil
-		},
+		// No microflow list seeded — buildMicroflowQualifiedNamesGen
+		// gets an empty set, which is what these tests need: the
+		// CallJavaActionStmt is what's being validated, not the
+		// surrounding microflow body.
 		ListJavaActionsFunc: nil,
 	}
 	ctx, _ := newMockCtx(t, withBackend(backend))
@@ -61,9 +61,10 @@ func TestValidateMicroflowReferencesReportsMissingUserJavaAction(t *testing.T) {
 				Name:        "Administration",
 			}}, nil
 		},
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
-			return nil, nil
-		},
+		// No microflow list seeded — buildMicroflowQualifiedNamesGen
+		// gets an empty set, which is what these tests need: the
+		// CallJavaActionStmt is what's being validated, not the
+		// surrounding microflow body.
 		ListJavaActionsFunc: nil,
 		ReadJavaActionByNameFunc: func(qn string) (*javaactions.JavaAction, error) {
 			return nil, nil
