@@ -1,5 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
+// Stage 3.3.5.C6 — page mock tests migrated to gen.
+//
+// SHOW PAGES / SNIPPETS / LAYOUTS now exercise listPagesGen /
+// listSnippetsGen / listLayoutsGen via Recording*Repository fixtures
+// wired into ctx.Pages / ctx.Layouts / ctx.Snippets (Stage 3.3.5.A0).
+//
+// describePage / describeSnippet / describeLayout still go through
+// the legacy sdk-typed handlers — the gen-typed describe path is
+// part of the deferred Phase A2-A5 widget formatter rebuild and
+// retains its sdk-typed mock fixtures until then.
+
 package executor
 
 import (
@@ -7,23 +18,77 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
+// makePagesRepo wires a RecordingPageRepository whose ListAll returns
+// pgs and whose GetContainerUUID always returns containerID. Mirrors
+// makeWorkflowsRepo (Stage 3.3.3.E0).
+func makePagesRepo(pgs []*genPg.Page, containerID model.ID) *repostesting.RecordingPageRepository {
+	return &repostesting.RecordingPageRepository{
+		ListAllFunc:          func() ([]*genPg.Page, error) { return pgs, nil },
+		GetContainerUUIDFunc: func(_ model.ID) (model.ID, error) { return containerID, nil },
+	}
+}
+
+func makeLayoutsRepo(lays []*genPg.Layout, containerID model.ID) *repostesting.RecordingLayoutRepository {
+	return &repostesting.RecordingLayoutRepository{
+		ListAllFunc:          func() ([]*genPg.Layout, error) { return lays, nil },
+		GetContainerUUIDFunc: func(_ model.ID) (model.ID, error) { return containerID, nil },
+	}
+}
+
+func makeSnippetsRepo(snps []*genPg.Snippet, containerID model.ID) *repostesting.RecordingSnippetRepository {
+	return &repostesting.RecordingSnippetRepository{
+		ListAllFunc:          func() ([]*genPg.Snippet, error) { return snps, nil },
+		GetContainerUUIDFunc: func(_ model.ID) (model.ID, error) { return containerID, nil },
+	}
+}
+
+// makePagesRepoMulti wires per-page container resolution by ID. Used
+// for tests that mix pages from multiple modules.
+func makePagesRepoMulti(pgs []*genPg.Page, containerByID map[element.ID]model.ID) *repostesting.RecordingPageRepository {
+	return &repostesting.RecordingPageRepository{
+		ListAllFunc: func() ([]*genPg.Page, error) { return pgs, nil },
+		GetContainerUUIDFunc: func(id model.ID) (model.ID, error) {
+			return containerByID[element.ID(id)], nil
+		},
+	}
+}
+
+func makeLayoutsRepoMulti(lays []*genPg.Layout, containerByID map[element.ID]model.ID) *repostesting.RecordingLayoutRepository {
+	return &repostesting.RecordingLayoutRepository{
+		ListAllFunc: func() ([]*genPg.Layout, error) { return lays, nil },
+		GetContainerUUIDFunc: func(id model.ID) (model.ID, error) {
+			return containerByID[element.ID(id)], nil
+		},
+	}
+}
+
+func makeSnippetsRepoMulti(snps []*genPg.Snippet, containerByID map[element.ID]model.ID) *repostesting.RecordingSnippetRepository {
+	return &repostesting.RecordingSnippetRepository{
+		ListAllFunc: func() ([]*genPg.Snippet, error) { return snps, nil },
+		GetContainerUUIDFunc: func(id model.ID) (model.ID, error) {
+			return containerByID[element.ID(id)], nil
+		},
+	}
+}
+
 func TestShowPages_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
-	pg := mkPage(mod.ID, "Home")
+	pg := mkPageGen(string(nextID("pg")), "Home")
 
 	h := mkHierarchy(mod)
-	withContainer(h, pg.ContainerID, mod.ID)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return []*pages.Page{pg}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listPages(ctx, ""))
+	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
+	assertNoError(t, listPagesGen(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.Home")
@@ -33,20 +98,22 @@ func TestShowPages_Mock(t *testing.T) {
 func TestShowPages_Mock_FilterByModule(t *testing.T) {
 	mod1 := mkModule("Sales")
 	mod2 := mkModule("HR")
-	pg1 := mkPage(mod1.ID, "OrderList")
-	pg2 := mkPage(mod2.ID, "EmployeeList")
+	pg1 := mkPageGen(string(nextID("pg")), "OrderList")
+	pg2 := mkPageGen(string(nextID("pg")), "EmployeeList")
 
 	h := mkHierarchy(mod1, mod2)
-	withContainer(h, pg1.ContainerID, mod1.ID)
-	withContainer(h, pg2.ContainerID, mod2.ID)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return []*pages.Page{pg1, pg2}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listPages(ctx, "HR"))
+	ctx.Pages = makePagesRepoMulti(
+		[]*genPg.Page{pg1, pg2},
+		map[element.ID]model.ID{
+			pg1.ID(): mod1.ID,
+			pg2.ID(): mod2.ID,
+		},
+	)
+	assertNoError(t, listPagesGen(ctx, "HR"))
 
 	out := buf.String()
 	assertNotContainsStr(t, out, "Sales.OrderList")
@@ -56,20 +123,22 @@ func TestShowPages_Mock_FilterByModule(t *testing.T) {
 func TestShowSnippets_Mock_FilterByModule(t *testing.T) {
 	mod1 := mkModule("Sales")
 	mod2 := mkModule("HR")
-	snp1 := mkSnippet(mod1.ID, "OrderHeader")
-	snp2 := mkSnippet(mod2.ID, "EmployeeCard")
+	snp1 := mkSnippetGen(string(nextID("snp")), "OrderHeader")
+	snp2 := mkSnippetGen(string(nextID("snp")), "EmployeeCard")
 
 	h := mkHierarchy(mod1, mod2)
-	withContainer(h, snp1.ContainerID, mod1.ID)
-	withContainer(h, snp2.ContainerID, mod2.ID)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc:  func() bool { return true },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return []*pages.Snippet{snp1, snp2}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listSnippets(ctx, "HR"))
+	ctx.Snippets = makeSnippetsRepoMulti(
+		[]*genPg.Snippet{snp1, snp2},
+		map[element.ID]model.ID{
+			snp1.ID(): mod1.ID,
+			snp2.ID(): mod2.ID,
+		},
+	)
+	assertNoError(t, listSnippetsGen(ctx, "HR"))
 
 	out := buf.String()
 	assertNotContainsStr(t, out, "Sales.OrderHeader")
@@ -79,25 +148,31 @@ func TestShowSnippets_Mock_FilterByModule(t *testing.T) {
 func TestShowLayouts_Mock_FilterByModule(t *testing.T) {
 	mod1 := mkModule("Sales")
 	mod2 := mkModule("HR")
-	lay1 := mkLayout(mod1.ID, "SalesLayout")
-	lay2 := mkLayout(mod2.ID, "HRLayout")
+	lay1 := mkLayoutGen(string(nextID("lay")), "SalesLayout")
+	lay2 := mkLayoutGen(string(nextID("lay")), "HRLayout")
 
 	h := mkHierarchy(mod1, mod2)
-	withContainer(h, lay1.ContainerID, mod1.ID)
-	withContainer(h, lay2.ContainerID, mod2.ID)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListLayoutsFunc: func() ([]*pages.Layout, error) { return []*pages.Layout{lay1, lay2}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listLayouts(ctx, "HR"))
+	ctx.Layouts = makeLayoutsRepoMulti(
+		[]*genPg.Layout{lay1, lay2},
+		map[element.ID]model.ID{
+			lay1.ID(): mod1.ID,
+			lay2.ID(): mod2.ID,
+		},
+	)
+	assertNoError(t, listLayoutsGen(ctx, "HR"))
 
 	out := buf.String()
 	assertNotContainsStr(t, out, "Sales.SalesLayout")
 	assertContainsStr(t, out, "HR.HRLayout")
 }
+
+// describePage / describeSnippet / describeLayout still use the legacy
+// sdk-typed mock surface — the gen-typed describe handlers are part
+// of the deferred Phase A2-A5 widget formatter rebuild.
 
 func TestDescribePage_Mock_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
@@ -140,18 +215,15 @@ func TestDescribeLayout_Mock_NotFound(t *testing.T) {
 
 func TestShowSnippets_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
-	snp := mkSnippet(mod.ID, "Header")
+	snp := mkSnippetGen(string(nextID("snp")), "Header")
 
 	h := mkHierarchy(mod)
-	withContainer(h, snp.ContainerID, mod.ID)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc:  func() bool { return true },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return []*pages.Snippet{snp}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listSnippets(ctx, ""))
+	ctx.Snippets = makeSnippetsRepo([]*genPg.Snippet{snp}, mod.ID)
+	assertNoError(t, listSnippetsGen(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.Header")
@@ -160,18 +232,15 @@ func TestShowSnippets_Mock(t *testing.T) {
 
 func TestShowLayouts_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
-	lay := mkLayout(mod.ID, "Atlas_Default")
+	lay := mkLayoutGen(string(nextID("lay")), "Atlas_Default")
 
 	h := mkHierarchy(mod)
-	withContainer(h, lay.ContainerID, mod.ID)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListLayoutsFunc: func() ([]*pages.Layout, error) { return []*pages.Layout{lay}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listLayouts(ctx, ""))
+	ctx.Layouts = makeLayoutsRepo([]*genPg.Layout{lay}, mod.ID)
+	assertNoError(t, listLayoutsGen(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.Atlas_Default")
