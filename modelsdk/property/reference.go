@@ -41,7 +41,19 @@ func NewByNameRefList[T element.Element](name, targetType string) *ByNameRefList
 
 func (r *ByNameRefList[T]) TargetType() string       { return r.targetType }
 func (r *ByNameRefList[T]) QualifiedNames() []string { return r.qnames }
-func (r *ByNameRefList[T]) BSONValue() any           { return r.qnames }
+
+// BSONValue returns a versioned BSON array ([]any) with int32(1) as the
+// first element followed by the qualified-name strings. Mendix requires this
+// version prefix for string-only reference lists (AllowedModuleRoles, ModuleRoles,
+// etc.); omitting it causes CE0003 ("entity access is out of date") in Studio Pro.
+func (r *ByNameRefList[T]) BSONValue() any {
+	out := make([]any, 0, len(r.qnames)+1)
+	out = append(out, int32(1))
+	for _, qn := range r.qnames {
+		out = append(out, qn)
+	}
+	return out
+}
 
 // Append adds a qualified name to the list and marks the property dirty.
 func (r *ByNameRefList[T]) Append(qn string) {

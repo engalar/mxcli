@@ -142,6 +142,77 @@ func TestByNameRefListAppend(t *testing.T) {
 	}
 }
 
+// TestByNameRefList_BSONValue_PrependsVersionPrefix verifies that BSONValue()
+// returns a []any with int32(1) version prefix followed by the qualified names.
+// Mendix versioned string arrays (AllowedModuleRoles, ModuleRoles, etc.) require
+// this prefix — omitting it causes CE0003 in Studio Pro.
+func TestByNameRefList_BSONValue_PrependsVersionPrefix(t *testing.T) {
+	r := NewByNameRefList[element.Element]("roles", "Security$ModuleRole")
+	r.SetQualifiedNames([]string{"MyModule.User", "MyModule.Editor"})
+	bv := r.BSONValue()
+	arr, ok := bv.([]any)
+	if !ok {
+		t.Fatalf("expected []any, got %T", bv)
+	}
+	if len(arr) != 3 {
+		t.Fatalf("expected 3 entries (1 version + 2 names), got %d: %v", len(arr), arr)
+	}
+	v, ok := arr[0].(int32)
+	if !ok || v != 1 {
+		t.Errorf("expected arr[0] = int32(1), got %v (%T)", arr[0], arr[0])
+	}
+	if arr[1] != "MyModule.User" || arr[2] != "MyModule.Editor" {
+		t.Errorf("expected names at indices 1+2, got %v %v", arr[1], arr[2])
+	}
+}
+
+// TestByNameRefList_BSONValue_EmptyNoPanic verifies that BSONValue() on an
+// empty ByNameRefList returns a []any with only the version prefix (no panic).
+func TestByNameRefList_BSONValue_EmptyNoPanic(t *testing.T) {
+	r := NewByNameRefList[element.Element]("roles", "Security$ModuleRole")
+	bv := r.BSONValue()
+	arr, ok := bv.([]any)
+	if !ok {
+		t.Fatalf("expected []any, got %T", bv)
+	}
+	if len(arr) != 1 {
+		t.Fatalf("expected 1 entry (version only), got %d: %v", len(arr), arr)
+	}
+	v, ok := arr[0].(int32)
+	if !ok || v != 1 {
+		t.Errorf("expected arr[0] = int32(1), got %v (%T)", arr[0], arr[0])
+	}
+}
+
+// TestByNameRefList_SetFromDecode_StripsVersionPrefix verifies that
+// SetFromDecode does NOT store the version prefix — callers (gen-typed
+// InitFromRaw) already strip it via StringValueOK(), so SetFromDecode must
+// only receive plain string values.
+func TestByNameRefList_SetFromDecode_RoundTrip(t *testing.T) {
+	r := NewByNameRefList[element.Element]("roles", "Security$ModuleRole")
+	// Simulate what InitFromRaw does: passes only the string values (no int32 prefix).
+	r.SetFromDecode([]string{"MyModule.RoleA", "MyModule.RoleB"})
+	if r.Dirty() {
+		t.Error("SetFromDecode should not mark dirty")
+	}
+	bv := r.BSONValue()
+	// BSONValue must NOT be called on a clean property in normal encoder flow
+	// (encoder skips non-dirty), but if called, must still return versioned array.
+	// After SetFromDecode we mark dirty to trigger BSONValue in this test.
+	r.SetQualifiedNames(r.QualifiedNames()) // re-set same values to mark dirty
+	bv = r.BSONValue()
+	arr, ok := bv.([]any)
+	if !ok {
+		t.Fatalf("expected []any after roundtrip, got %T", bv)
+	}
+	if len(arr) != 3 {
+		t.Fatalf("expected 3 entries after roundtrip, got %d: %v", len(arr), arr)
+	}
+	if v, ok := arr[0].(int32); !ok || v != 1 {
+		t.Errorf("version prefix wrong after roundtrip: %v (%T)", arr[0], arr[0])
+	}
+}
+
 // --- ByIdRef edge cases ---
 
 func TestByIdRefSetFromDecodeNotDirty(t *testing.T) {
