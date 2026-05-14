@@ -11,6 +11,7 @@ import (
 	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
@@ -333,18 +334,17 @@ func TestRename_Entity_BackendError(t *testing.T) {
 
 func TestRename_JavaAction_Success(t *testing.T) {
 	mod := mkModule("MyModule")
-	ja := &types.JavaAction{
-		BaseElement: model.BaseElement{ID: nextID("ja")},
-		ContainerID: mod.ID,
-		Name:        "OldHelper",
-	}
+	jaGen := genJA.NewJavaAction()
+	jaGen.SetName("OldHelper")
 	documentRenamed := false
 	sourceRenamed := false
 	mb := &mock.MockBackend{
-		IsConnectedFunc:     func() bool { return true },
-		ListModulesFunc:     func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc:     func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListJavaActionsFunc: func() ([]*types.JavaAction, error) { return []*types.JavaAction{ja}, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListJavaActionsGenFunc: func() ([]*genJA.JavaAction, error) {
+			return []*genJA.JavaAction{jaGen}, nil
+		},
 		RenameReferencesFunc: func(old, new string, dryRun bool) ([]types.RenameHit, error) {
 			return []types.RenameHit{{UnitID: "u1", Name: "SomeMF", Count: 1}}, nil
 		},
@@ -358,7 +358,7 @@ func TestRename_JavaAction_Success(t *testing.T) {
 		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, ja.ContainerID, mod.ID)
+	withContainer(h, model.ID(jaGen.ID()), mod.ID)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertNoError(t, execRename(ctx, &ast.RenameStmt{
 		ObjectType: "javaaction",
@@ -383,10 +383,12 @@ func TestRename_JavaAction_Success(t *testing.T) {
 func TestRename_JavaAction_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
 	mb := &mock.MockBackend{
-		IsConnectedFunc:     func() bool { return true },
-		ListModulesFunc:     func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc:     func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListJavaActionsFunc: func() ([]*types.JavaAction, error) { return nil, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListJavaActionsGenFunc: func() ([]*genJA.JavaAction, error) {
+			return nil, nil
+		},
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
