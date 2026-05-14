@@ -9,7 +9,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -180,119 +179,6 @@ func (r *Reader) GetDomainModelByID(id model.ID) (*domainmodel.DomainModel, erro
 	}
 
 	return nil, fmt.Errorf("domain model not found: %s", id)
-}
-
-// ListMicroflows returns all microflows in the project.
-func (r *Reader) ListMicroflows() ([]*microflows.Microflow, error) {
-	units, err := r.listUnitsByType("Microflows$Microflow")
-	if err != nil {
-		return nil, err
-	}
-
-	var result []*microflows.Microflow
-	for _, u := range units {
-		mf, err := r.parseMicroflow(u.ID, u.ContainerID, u.Contents)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse microflow %s: %w", u.ID, err)
-		}
-		result = append(result, mf)
-	}
-
-	return result, nil
-}
-
-// GetMicroflow retrieves a microflow by ID.
-// Uses a direct unit lookup (O(1) for V1, O(cache) for V2) instead of loading all microflows.
-func (r *Reader) GetMicroflow(id model.ID) (*microflows.Microflow, error) {
-	unit, err := r.getUnitByID(string(id))
-	if err != nil {
-		return nil, err
-	}
-	if unit == nil {
-		return nil, fmt.Errorf("microflow not found: %s", id)
-	}
-	return r.parseMicroflow(unit.ID, unit.ContainerID, unit.Contents)
-}
-
-// IsRule reports whether the given qualified name refers to a rule
-// (Microflows$Rule). Rules share the microflow namespace but are stored
-// under a distinct BSON type — the flow-builder needs this distinction so
-// it can emit RuleSplitCondition instead of ExpressionSplitCondition for
-// rule-based IF statements.
-func (r *Reader) IsRule(qualifiedName string) (bool, error) {
-	if qualifiedName == "" {
-		return false, nil
-	}
-	units, err := r.listUnitsByType("Microflows$Rule")
-	if err != nil {
-		return false, err
-	}
-	if len(units) == 0 {
-		return false, nil
-	}
-	modules, err := r.ListModules()
-	if err != nil {
-		return false, err
-	}
-	moduleMap := make(map[string]string, len(modules))
-	for _, m := range modules {
-		moduleMap[string(m.ID)] = m.Name
-	}
-	containerParent, err := r.buildContainerParent()
-	if err != nil {
-		return false, err
-	}
-	for _, u := range units {
-		var raw map[string]any
-		if err := bson.Unmarshal(u.Contents, &raw); err != nil {
-			continue
-		}
-		name, _ := raw["Name"].(string)
-		if name == "" {
-			continue
-		}
-		moduleName := resolveModuleName(u.ContainerID, moduleMap, containerParent)
-		fullName := name
-		if moduleName != "" {
-			fullName = moduleName + "." + name
-		}
-		if fullName == qualifiedName {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-// ListNanoflows returns all nanoflows in the project.
-func (r *Reader) ListNanoflows() ([]*microflows.Nanoflow, error) {
-	units, err := r.listUnitsByType("Microflows$Nanoflow")
-	if err != nil {
-		return nil, err
-	}
-
-	var result []*microflows.Nanoflow
-	for _, u := range units {
-		nf, err := r.parseNanoflow(u.ID, u.ContainerID, u.Contents)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse nanoflow %s: %w", u.ID, err)
-		}
-		result = append(result, nf)
-	}
-
-	return result, nil
-}
-
-// GetNanoflow retrieves a nanoflow by ID.
-// Uses a direct unit lookup (O(1) for V1, O(cache) for V2) instead of loading all nanoflows.
-func (r *Reader) GetNanoflow(id model.ID) (*microflows.Nanoflow, error) {
-	unit, err := r.getUnitByID(string(id))
-	if err != nil {
-		return nil, err
-	}
-	if unit == nil {
-		return nil, fmt.Errorf("nanoflow not found: %s", id)
-	}
-	return r.parseNanoflow(unit.ID, unit.ContainerID, unit.Contents)
 }
 
 // ListPages returns all pages in the project.
