@@ -211,11 +211,9 @@ type MockBackend struct {
 	DeleteJsonStructureFunc             func(id string) error
 
 	// JavaBackend
-	ListJavaActionsFunc            func() ([]*types.JavaAction, error)
-	ListJavaActionsFullFunc        func() ([]*javaactions.JavaAction, error)
-	ListJavaScriptActionsFunc      func() ([]*types.JavaScriptAction, error)
-	ReadJavaActionByNameFunc       func(qualifiedName string) (*javaactions.JavaAction, error)
-	ReadJavaScriptActionByNameFunc func(qualifiedName string) (*types.JavaScriptAction, error)
+	ListJavaActionsFunc      func() ([]*types.JavaAction, error)
+	ListJavaActionsFullFunc  func() ([]*javaactions.JavaAction, error)
+	ReadJavaActionByNameFunc func(qualifiedName string) (*javaactions.JavaAction, error)
 	CreateJavaActionFunc           func(ja *javaactions.JavaAction) error
 	UpdateJavaActionFunc           func(ja *javaactions.JavaAction) error
 	DeleteJavaActionFunc           func(id model.ID) error

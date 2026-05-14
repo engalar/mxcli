@@ -157,55 +157,8 @@ func TestConvertJavaActionSlice(t *testing.T) {
 	}
 }
 
-func TestConvertJavaScriptAction_AllFields(t *testing.T) {
-	in := &mpr.JavaScriptAction{
-		BaseElement:             model.BaseElement{ID: model.ID("jsa1")},
-		ContainerID:             model.ID("c1"),
-		Name:                    "MyJSA",
-		Documentation:           "doc",
-		Platform:                "web",
-		Excluded:                true,
-		ExportLevel:             "Hidden",
-		ActionDefaultReturnName: "result",
-	}
-	out := convertJavaScriptAction(in)
-	if out.Name != "MyJSA" || out.Platform != "web" || !out.Excluded ||
-		out.ExportLevel != "Hidden" || out.ActionDefaultReturnName != "result" {
-		t.Errorf("field mismatch: %+v", out)
-	}
-}
-
-func TestConvertJavaScriptActionSlice(t *testing.T) {
-	in := []*mpr.JavaScriptAction{
-		{BaseElement: model.BaseElement{ID: model.ID("jsa1")}, Name: "JSA1"},
-	}
-	out, err := convertJavaScriptActionSlice(in, nil)
-	if err != nil || len(out) != 1 || out[0].Name != "JSA1" {
-		t.Errorf("unexpected: out=%v err=%v", out, err)
-	}
-}
-
-func TestConvertJavaScriptActionSlice_ErrorPassthrough(t *testing.T) {
-	_, err := convertJavaScriptActionSlice(nil, errTest)
-	if err != errTest {
-		t.Errorf("expected errTest, got %v", err)
-	}
-}
-
-func TestConvertJavaScriptActionPtr(t *testing.T) {
-	in := &mpr.JavaScriptAction{BaseElement: model.BaseElement{ID: model.ID("jsa1")}, Name: "JSA1"}
-	out, err := convertJavaScriptActionPtr(in, nil)
-	if err != nil || out == nil || out.Name != "JSA1" {
-		t.Errorf("unexpected: out=%v err=%v", out, err)
-	}
-}
-
-func TestConvertJavaScriptActionPtr_ErrorPassthrough(t *testing.T) {
-	_, err := convertJavaScriptActionPtr(nil, errTest)
-	if err != errTest {
-		t.Errorf("expected errTest, got %v", err)
-	}
-}
+// TestConvertJavaScriptAction* tests retired in Stage 3.3.2.C1 along
+// with the convertJavaScriptAction* helpers and types.JavaScriptAction.
 
 func TestConvertNavDoc_FullyPopulated(t *testing.T) {
 	in := &mpr.NavigationDocument{
@@ -612,8 +565,9 @@ func TestFieldCountDrift(t *testing.T) {
 	assertFieldCount(t, "types.RawCustomWidgetType", types.RawCustomWidgetType{}, 6)
 	assertFieldCount(t, "mpr.JavaAction", mpr.JavaAction{}, 4)
 	assertFieldCount(t, "types.JavaAction", types.JavaAction{}, 4)
+	// mpr.JavaScriptAction stays in sdk/mpr (Stage 4 territory);
+	// types.JavaScriptAction was retired in Stage 3.3.2.C1.
 	assertFieldCount(t, "mpr.JavaScriptAction", mpr.JavaScriptAction{}, 12)
-	assertFieldCount(t, "types.JavaScriptAction", types.JavaScriptAction{}, 12)
 	assertFieldCount(t, "mpr.NavigationDocument", mpr.NavigationDocument{}, 4)
 	assertFieldCount(t, "types.NavigationDocument", types.NavigationDocument{}, 4)
 	assertFieldCount(t, "mpr.JsonStructure", mpr.JsonStructure{}, 8)

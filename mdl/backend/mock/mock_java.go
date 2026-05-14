@@ -27,25 +27,11 @@ func (m *MockBackend) ListJavaActionsFull() ([]*javaactions.JavaAction, error) {
 	return nil, fmt.Errorf("MockBackend.ListJavaActionsFull not configured")
 }
 
-func (m *MockBackend) ListJavaScriptActions() ([]*types.JavaScriptAction, error) {
-	if m.ListJavaScriptActionsFunc != nil {
-		return m.ListJavaScriptActionsFunc()
-	}
-	return nil, fmt.Errorf("MockBackend.ListJavaScriptActions not configured")
-}
-
 func (m *MockBackend) ReadJavaActionByName(qualifiedName string) (*javaactions.JavaAction, error) {
 	if m.ReadJavaActionByNameFunc != nil {
 		return m.ReadJavaActionByNameFunc(qualifiedName)
 	}
 	return nil, fmt.Errorf("MockBackend.ReadJavaActionByName not configured")
-}
-
-func (m *MockBackend) ReadJavaScriptActionByName(qualifiedName string) (*types.JavaScriptAction, error) {
-	if m.ReadJavaScriptActionByNameFunc != nil {
-		return m.ReadJavaScriptActionByNameFunc(qualifiedName)
-	}
-	return nil, fmt.Errorf("MockBackend.ReadJavaScriptActionByName not configured")
 }
 
 func (m *MockBackend) CreateJavaAction(ja *javaactions.JavaAction) error {

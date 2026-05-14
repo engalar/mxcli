@@ -483,12 +483,17 @@ func buildJavaScriptActionQualifiedNames(ctx *ExecContext) map[string]bool {
 	if err != nil {
 		return result
 	}
-	jsas, err := ctx.Backend.ListJavaScriptActions()
+	// Stage 3.3.2.C1: source from gen-typed pairs via the cache helper.
+	// ContainerID comes from the MPR Unit table (codec strips Container linkage).
+	pairs, err := listJavaScriptActionsWithContainerGen(ctx)
 	if err != nil {
 		return result
 	}
-	for _, jsa := range jsas {
-		qn := h.GetQualifiedName(jsa.ContainerID, jsa.Name)
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		qn := h.GetQualifiedName(model.ID(p.ContainerID), p.Elem.Name())
 		result[qn] = true
 	}
 	return result

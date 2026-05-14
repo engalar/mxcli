@@ -21,7 +21,10 @@ func (ja *JavaAction) GetName() string { return ja.Name }
 // GetContainerID returns the container ID.
 func (ja *JavaAction) GetContainerID() model.ID { return ja.ContainerID }
 
-// JavaScriptAction is a JavaScript action descriptor.
+// JavaScriptAction is a JavaScript action descriptor. Stage 3.3.2.C1
+// retired the mdl/* consumers (they now use *genJSA.JavaScriptAction
+// directly via ctx.JavaScriptActions); the struct is preserved because
+// sdk/mpr aliases it (Stage 4 territory).
 type JavaScriptAction struct {
 	model.BaseElement
 	ContainerID             model.ID                           `json:"containerId"`

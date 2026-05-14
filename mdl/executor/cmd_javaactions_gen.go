@@ -60,6 +60,8 @@ package executor
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -71,6 +73,47 @@ import (
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 )
+
+// readJavaScriptActionSource extracts user code and extra code from the
+// project's javascriptsource/<module>/actions/<action>.js file. Stage
+// 3.3.2.C1 moved this helper here from the deleted
+// cmd_javascript_actions.go (its only caller is describeJavaScriptActionGen).
+func readJavaScriptActionSource(mprPath, moduleName, actionName string) (userCode, extraCode string) {
+	if mprPath == "" {
+		return "", ""
+	}
+	projectRoot := filepath.Dir(mprPath)
+	jsPath := filepath.Join(projectRoot, "javascriptsource", moduleName, "actions", actionName+".js")
+	content, err := os.ReadFile(jsPath)
+	if err != nil {
+		jsPath = filepath.Join(projectRoot, "javascriptsource", strings.ToLower(moduleName), "actions", actionName+".js")
+		content, err = os.ReadFile(jsPath)
+		if err != nil {
+			return "", ""
+		}
+	}
+	source := string(content)
+
+	if beginIdx := strings.Index(source, "// begin user CODE"); beginIdx != -1 {
+		if endIdx := strings.Index(source, "// end user CODE"); endIdx != -1 && endIdx > beginIdx {
+			uc := source[beginIdx+len("// begin user CODE") : endIdx]
+			uc = strings.TrimPrefix(uc, "\n")
+			uc = strings.TrimSuffix(uc, "\n")
+			uc = strings.TrimRight(uc, " \t")
+			userCode = uc
+		}
+	}
+	if beginIdx := strings.Index(source, "// begin EXTRA CODE"); beginIdx != -1 {
+		if endIdx := strings.Index(source, "// end EXTRA CODE"); endIdx != -1 && endIdx > beginIdx {
+			ec := source[beginIdx+len("// begin EXTRA CODE") : endIdx]
+			ec = strings.TrimSpace(ec)
+			if ec != "" {
+				extraCode = ec
+			}
+		}
+	}
+	return userCode, extraCode
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // A1 — listJavaActionsGen

@@ -126,40 +126,9 @@ func convertJavaActionSlice(in []*mpr.JavaAction, err error) ([]*types.JavaActio
 	return out, nil
 }
 
-func convertJavaScriptActionSlice(in []*mpr.JavaScriptAction, err error) ([]*types.JavaScriptAction, error) {
-	if err != nil || in == nil {
-		return nil, err
-	}
-	out := make([]*types.JavaScriptAction, len(in))
-	for i, jsa := range in {
-		out[i] = convertJavaScriptAction(jsa)
-	}
-	return out, nil
-}
-
-func convertJavaScriptActionPtr(in *mpr.JavaScriptAction, err error) (*types.JavaScriptAction, error) {
-	if err != nil || in == nil {
-		return nil, err
-	}
-	return convertJavaScriptAction(in), nil
-}
-
-func convertJavaScriptAction(in *mpr.JavaScriptAction) *types.JavaScriptAction {
-	return &types.JavaScriptAction{
-		BaseElement:             in.BaseElement,
-		ContainerID:             in.ContainerID,
-		Name:                    in.Name,
-		Documentation:           in.Documentation,
-		Platform:                in.Platform,
-		Excluded:                in.Excluded,
-		ExportLevel:             in.ExportLevel,
-		ActionDefaultReturnName: in.ActionDefaultReturnName,
-		ReturnType:              in.ReturnType,
-		Parameters:              in.Parameters,
-		TypeParameters:          in.TypeParameters,
-		MicroflowActionInfo:     in.MicroflowActionInfo,
-	}
-}
+// convertJavaScriptAction* helpers were retired in Stage 3.3.2.C1 along
+// with types.JavaScriptAction. Consumers now use *genJSA.JavaScriptAction
+// via ListJavaScriptActionsGen / ReadJavaScriptActionByNameGen.
 
 func convertNavDocSlice(in []*mpr.NavigationDocument, err error) ([]*types.NavigationDocument, error) {
 	if err != nil || in == nil {
