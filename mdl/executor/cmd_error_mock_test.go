@@ -127,7 +127,7 @@ func TestShowJavaActions_Mock_BackendError(t *testing.T) {
 		ListJavaActionsFunc: func() ([]*types.JavaAction, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listJavaActions(ctx, ""))
+	assertError(t, listJavaActionsGen(ctx, ""))
 }
 
 // TestShowJavaScriptActions_Mock_BackendError retired in Stage 3.3.2.C1

@@ -10,9 +10,10 @@ import (
 	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -216,20 +217,19 @@ func TestShowPublishedRestServices_Mock_JSON(t *testing.T) {
 func TestShowJavaActions_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	ja := &types.JavaAction{
-		BaseElement: model.BaseElement{ID: nextID("ja")},
-		ContainerID: mod.ID,
-		Name:        "MyJavaAction",
-	}
-	withContainer(h, ja.ContainerID, mod.ID)
+	jaGen := genJA.NewJavaAction()
+	jaGen.SetName("MyJavaAction")
+	withContainer(h, model.ID(jaGen.ID()), mod.ID)
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:     func() bool { return true },
-		ListJavaActionsFunc: func() ([]*types.JavaAction, error) { return []*types.JavaAction{ja}, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListJavaActionsGenFunc: func() ([]*genJA.JavaAction, error) {
+			return []*genJA.JavaAction{jaGen}, nil
+		},
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listJavaActions(ctx, ""))
+	assertNoError(t, listJavaActionsGen(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "MyJavaAction")
 }

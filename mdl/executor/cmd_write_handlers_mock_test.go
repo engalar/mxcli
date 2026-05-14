@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
@@ -285,11 +286,21 @@ func TestExecDropJavaAction_Mock(t *testing.T) {
 
 	h := mkHierarchy(mod)
 
+	// Stage 3.3.2.E2: execDropJavaActionGen now reads via the gen path
+	// (ctx.JavaActions or ctx.Backend.ListJavaActionsGen). Provide both
+	// the legacy and gen mocks so the test fixture is independent of the
+	// helper's internal fallback.
+	jaGen := genJA.NewJavaAction()
+	jaGen.SetName("MyAction")
+
 	called := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListJavaActionsFunc: func() ([]*types.JavaAction, error) {
 			return []*types.JavaAction{ja}, nil
+		},
+		ListJavaActionsGenFunc: func() ([]*genJA.JavaAction, error) {
+			return []*genJA.JavaAction{jaGen}, nil
 		},
 		DeleteJavaActionFunc: func(id model.ID) error {
 			called = true
@@ -299,9 +310,10 @@ func TestExecDropJavaAction_Mock(t *testing.T) {
 		// (Stage 3.3.2.C5 mock audit) — must opt in explicitly.
 		DeleteJavaSourceFileFunc: func(moduleName, actionName string) error { return nil },
 	}
+	withContainer(h, model.ID(jaGen.ID()), mod.ID)
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execDropJavaAction(ctx, &ast.DropJavaActionStmt{
+	err := execDropJavaActionGen(ctx, &ast.DropJavaActionStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "MyAction"},
 	})
 	assertNoError(t, err)
