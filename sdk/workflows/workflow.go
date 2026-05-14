@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package workflows provides types for Mendix workflows.
+//
+// DEPRECATED — Stage 3.3.3 (2026-05-15): all in-scope consumers
+// (mdl/, modelsdk/, api/) have migrated to modelsdk/gen/workflows.
+// This package is kept ONLY because sdk/mpr/parser_workflow.go,
+// sdk/mpr/reader_documents.go, sdk/mpr/serialize_exports.go,
+// sdk/mpr/writer_workflow.go (plus their internal tests) still import
+// it. Stage 4 will rewrite those files BSON-natively against
+// modelsdk/gen/workflows + mdl/types, after which this package can be
+// deleted.
+//
+// New code MUST use modelsdk/gen/workflows instead of sdk/workflows.
 package workflows
 
 import (
