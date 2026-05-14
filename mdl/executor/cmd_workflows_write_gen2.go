@@ -714,12 +714,16 @@ func recurseConditionOutcomesAutoBindGen(ctx *ExecContext, outcomes []element.El
 	}
 }
 
-// autoBindCallMicroflowGenActivity is the D4 stub — full microflow
-// parameter resolution lands in the D4 commit. For D2 it just sanitises
-// the activity name and ensures a default VoidConditionOutcome exists
-// (mirrors the legacy autoBindCallMicroflow's CE6686 fix).
+// autoBindCallMicroflowGenActivity mirrors autoBindCallMicroflow
+// (cmd_workflows_write.go:681). Sanitises the activity name, ensures
+// a default VoidConditionOutcome exists (CE6686), and walks
+// ctx.Microflows to resolve the called microflow's parameters,
+// auto-generating MicroflowCallParameterMapping entries with
+// $WorkflowContext expressions.
 func autoBindCallMicroflowGenActivity(ctx *ExecContext, act *genWf.CallMicroflowActivity) {
 	act.SetName(sanitizeActivityName(act.Name()))
+
+	// CE6686: every CallMicroflowActivity must own at least one outcome.
 	if len(act.OutcomesItems()) == 0 {
 		oc := genWf.NewVoidConditionOutcome()
 		oc.SetID(element.ID(types.GenerateID()))
@@ -728,15 +732,92 @@ func autoBindCallMicroflowGenActivity(ctx *ExecContext, act *genWf.CallMicroflow
 		oc.SetFlow(emptyFlow)
 		act.AddOutcomes(oc)
 	}
-	// D4 fills in the parameter mapping resolution via ctx.Microflows.
+
+	// Skip parameter auto-binding if explicit mappings already exist.
+	if len(act.ParameterMappingsItems()) > 0 {
+		return
+	}
+
+	// Resolve the called microflow's parameters via ctx.Microflows
+	// (gen-typed cache helper).
+	mfs, err := listMicroflowsWithContainerGen(ctx)
+	if err != nil {
+		return
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return
+	}
+	target := act.MicroflowQualifiedName()
+	for _, item := range mfs {
+		mf := item.MF
+		if mf == nil {
+			continue
+		}
+		modID := h.FindModuleID(item.ContainerUUID)
+		modName := h.GetModuleName(modID)
+		qn := modName + "." + mf.Name()
+		if qn != target {
+			continue
+		}
+		// Walk the microflow's ObjectCollection for MicroflowParameter
+		// elements (gen Microflow stores parameters there, not in a
+		// dedicated typed slice).
+		for _, paramName := range genMicroflowParameterNames(mf) {
+			mapping := genWf.NewMicroflowCallParameterMapping()
+			mapping.SetID(element.ID(types.GenerateID()))
+			mapping.SetParameterQualifiedName(qn + "." + paramName)
+			mapping.SetExpression("$WorkflowContext")
+			act.AddParameterMappings(mapping)
+		}
+		break
+	}
 }
 
-// autoBindCallWorkflowGenActivity is the D5 stub — full workflow
-// parameter resolution lands in the D5 commit. For D2 it just
-// sanitises the activity name.
+// autoBindCallWorkflowGenActivity mirrors autoBindCallWorkflow
+// (cmd_workflows_write.go:748). Sanitises the activity name and, when
+// the target workflow has a Parameter, generates a single
+// WorkflowCallParameterMapping with $WorkflowContext expression.
 func autoBindCallWorkflowGenActivity(ctx *ExecContext, act *genWf.CallWorkflowActivity) {
 	act.SetName(sanitizeActivityName(act.Name()))
-	// D5 fills in WorkflowCallParameterMapping resolution.
+
+	// Skip if explicit mappings already exist.
+	if len(act.ParameterMappingsItems()) > 0 {
+		return
+	}
+
+	// Look up the target workflow via the gen cache helper to inspect
+	// its Parameter (entity-typed input).
+	pairs, err := listWorkflowsWithContainerGen(ctx)
+	if err != nil {
+		return
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return
+	}
+	target := act.WorkflowQualifiedName()
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		qn := modName + "." + p.Elem.Name()
+		if qn != target {
+			continue
+		}
+		// Only auto-bind when the target carries an entity parameter.
+		if entity := workflowParameterEntityGen(p.Elem); entity != "" {
+			act.SetParameterExpression("$WorkflowContext")
+			mapping := genWf.NewWorkflowCallParameterMapping()
+			mapping.SetID(element.ID(types.GenerateID()))
+			mapping.SetParameterQualifiedName(qn + ".WorkflowContext")
+			mapping.SetExpression("$WorkflowContext")
+			act.AddParameterMappings(mapping)
+		}
+		break
+	}
 }
 
 // deduplicateActivityNamesGen mirrors deduplicateActivityNames
