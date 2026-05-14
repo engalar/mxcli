@@ -694,6 +694,38 @@ func describeUserRoleGen(ctx *ExecContext, name ast.QualifiedName) error {
 	return mdlerrors.NewNotFound("user role", name.Name)
 }
 
+// describeDemoUserGen handles DESCRIBE DEMO USER 'name' using the gen-typed
+// ProjectSecurity. Mirrors legacy describeDemoUser output exactly.
+// schema gap: DemoUsersItems() returns []element.Element; type-assert each
+// entry to *genSec.DemoUser. Remove cast when gen narrows return to []*DemoUser.
+func describeDemoUserGen(ctx *ExecContext, userName string) error {
+	ps, err := getProjectSecurityGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("read project security", err)
+	}
+	if ps == nil {
+		return mdlerrors.NewNotFound("demo user", userName)
+	}
+	for _, du := range ps.DemoUsersItems() {
+		typed, ok := du.(*genSec.DemoUser)
+		if !ok || typed.UserName() != userName {
+			continue
+		}
+		fmt.Fprintf(ctx.Output, "create demo user '%s' password '***'", typed.UserName())
+		if typed.EntityQualifiedName() != "" {
+			fmt.Fprintf(ctx.Output, " entity %s", typed.EntityQualifiedName())
+		}
+		roles := typed.UserRolesQualifiedNames()
+		if len(roles) > 0 {
+			fmt.Fprintf(ctx.Output, " (%s)", strings.Join(roles, ", "))
+		}
+		fmt.Fprintln(ctx.Output, ";")
+		fmt.Fprintln(ctx.Output, "/")
+		return nil
+	}
+	return mdlerrors.NewNotFound("demo user", userName)
+}
+
 // listDemoUsersGen handles SHOW DEMO USERS using the gen-typed ProjectSecurity
 // from ctx.Security. When demo users are disabled it emits a human-readable
 // hint (table format) or an empty TableResult (JSON format).
