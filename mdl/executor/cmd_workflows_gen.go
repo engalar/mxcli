@@ -241,6 +241,24 @@ func countOutcomeFlowGen(oc element.Element, total, userTasks, decisions *int) {
 // ExclusiveSplit / ParallelSplit / SystemTask) are in place in A3.
 // This A2 commit lands the dispatcher + leaf formatters.
 
+// readTextElementGen extracts the inner Text scalar from a Texts$Text
+// wrapper element. Returns "" if elem is nil or has no Text field.
+//
+// Mendix Texts$Text wraps a localized translations table; for MDL
+// describe output we surface the first available translation by reading
+// the BSON field directly.
+func readTextElementGen(elem element.Element) string {
+	if elem == nil {
+		return ""
+	}
+	for _, field := range []string{"Text", "Translation", "Value"} {
+		if v, _ := codec.ReadBSONFieldString(elem.Raw(), field); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 // formatAnnotationGen returns an ANNOTATION statement line for an
 // activity-level annotation Part. Returns "" if the annotation is nil
 // or has no Description.
@@ -377,19 +395,21 @@ func formatWorkflowActivitiesGen(flow *genWf.Flow, indent string) []string {
 				continue
 			}
 			actLines = []string{line}
-		// UserTask / CallMicroflow / CallWorkflow / ExclusiveSplit /
-		// ParallelSplit / SystemTask formatters land in A3.
 		case "Workflows$UserTask",
 			"Workflows$SingleUserTaskActivity",
-			"Workflows$MultiUserTaskActivity",
-			"Workflows$CallMicroflowTask",
-			"Workflows$CallMicroflowActivity",
-			"Workflows$CallWorkflowActivity",
-			"Workflows$ExclusiveSplitActivity",
-			"Workflows$ParallelSplitActivity",
-			"Workflows$SystemTask":
-			isComment = true
-			actLines = []string{fmt.Sprintf("%s-- [%s pending A3]", indent, act.TypeName())}
+			"Workflows$MultiUserTaskActivity":
+			actLines = formatUserTaskGen(act, indent)
+		case "Workflows$CallMicroflowTask",
+			"Workflows$CallMicroflowActivity":
+			actLines = formatCallMicroflowGen(act, indent)
+		case "Workflows$CallWorkflowActivity":
+			actLines = formatCallWorkflowGen(act, indent)
+		case "Workflows$ExclusiveSplitActivity":
+			actLines = formatExclusiveSplitGen(act, indent)
+		case "Workflows$ParallelSplitActivity":
+			actLines = formatParallelSplitGen(act, indent)
+		case "Workflows$SystemTask":
+			actLines = formatSystemTaskGen(act, indent)
 		default:
 			isComment = true
 			actLines = []string{fmt.Sprintf("%s-- [unknown activity: %s]", indent, act.TypeName())}
@@ -475,6 +495,432 @@ func formatWaitForNotificationGen(elem element.Element, indent string) []string 
 	}
 	lines = append(lines, fmt.Sprintf("%swait for notification -- %s", indent, caption))
 	lines = append(lines, formatBoundaryEventsGen(wn.BoundaryEventsItems(), indent+"  ")...)
+	return lines
+}
+
+// userTaskShapeGen normalises the three concrete UserTask gen subtypes
+// (UserTask, SingleUserTaskActivity, MultiUserTaskActivity) into a
+// single shape so formatUserTaskGen can be one function.
+type userTaskShapeGen struct {
+	Name           string
+	Caption        string
+	Annotation     element.Element
+	Page           string // PageQualifiedName (UserTask only)
+	UserSource     element.Element
+	UserTaskEntity string
+	DueDate        string
+	Description    string // task-level Description
+	Outcomes       []element.Element
+	BoundaryEvents []element.Element
+	IsMulti        bool
+}
+
+func userTaskShapeGenFor(elem element.Element) (userTaskShapeGen, bool) {
+	switch v := elem.(type) {
+	case *genWf.UserTask:
+		return userTaskShapeGen{
+			Name:           v.Name(),
+			Caption:        v.Caption(),
+			Annotation:     v.Annotation(),
+			Page:           v.PageQualifiedName(),
+			UserSource:     v.UserSource(),
+			UserTaskEntity: v.UserTaskEntityQualifiedName(),
+			DueDate:        v.DueDate(),
+			Description:    readTextElementGen(v.TaskDescription()),
+			Outcomes:       v.OutcomesItems(),
+			BoundaryEvents: nil, // gen UserTask has no boundary events accessor
+			IsMulti:        false,
+		}, true
+	case *genWf.SingleUserTaskActivity:
+		return userTaskShapeGen{
+			Name:           v.Name(),
+			Caption:        v.Caption(),
+			Annotation:     v.Annotation(),
+			UserSource:     v.UserSource(),
+			DueDate:        v.DueDate(),
+			Description:    readTextElementGen(v.TaskDescription()),
+			Outcomes:       v.OutcomesItems(),
+			BoundaryEvents: v.BoundaryEventsItems(),
+			IsMulti:        false,
+		}, true
+	case *genWf.MultiUserTaskActivity:
+		return userTaskShapeGen{
+			Name:           v.Name(),
+			Caption:        v.Caption(),
+			Annotation:     v.Annotation(),
+			UserSource:     v.UserSource(),
+			DueDate:        v.DueDate(),
+			Description:    readTextElementGen(v.TaskDescription()),
+			Outcomes:       v.OutcomesItems(),
+			BoundaryEvents: v.BoundaryEventsItems(),
+			IsMulti:        true,
+		}, true
+	}
+	return userTaskShapeGen{}, false
+}
+
+// formatUserTaskGen renders a UserTask / SingleUserTaskActivity /
+// MultiUserTaskActivity. Mirrors formatUserTask (cmd_workflows.go:398).
+func formatUserTaskGen(elem element.Element, indent string) []string {
+	shape, ok := userTaskShapeGenFor(elem)
+	if !ok {
+		return nil
+	}
+	var lines []string
+	if a := formatAnnotationGen(shape.Annotation, indent); a != "" {
+		lines = append(lines, a)
+	}
+	caption := shape.Caption
+	if caption == "" {
+		caption = shape.Name
+	}
+	nameStr := shape.Name
+	if nameStr == "" {
+		nameStr = "unnamed"
+	}
+	keyword := "user task"
+	if shape.IsMulti {
+		keyword = "multi user task"
+	}
+	lines = append(lines, fmt.Sprintf("%s%s %s '%s'", indent, keyword, nameStr, caption))
+	if shape.Page != "" {
+		lines = append(lines, fmt.Sprintf("%s  page %s", indent, shape.Page))
+	}
+	lines = append(lines, formatUserSourceGen(shape.UserSource, indent+"  ")...)
+	if shape.UserTaskEntity != "" {
+		lines = append(lines, fmt.Sprintf("%s  entity %s", indent, shape.UserTaskEntity))
+	}
+	if shape.DueDate != "" {
+		escaped := strings.ReplaceAll(shape.DueDate, "'", "''")
+		lines = append(lines, fmt.Sprintf("%s  due date '%s'", indent, escaped))
+	}
+	if shape.Description != "" {
+		escaped := strings.ReplaceAll(shape.Description, "'", "''")
+		lines = append(lines, fmt.Sprintf("%s  description '%s'", indent, escaped))
+	}
+	if len(shape.Outcomes) > 0 {
+		lines = append(lines, fmt.Sprintf("%s  outcomes", indent))
+		for _, oc := range shape.Outcomes {
+			lines = append(lines, formatUserTaskOutcomeGen(oc, indent+"    ")...)
+		}
+	}
+	lines = append(lines, formatBoundaryEventsGen(shape.BoundaryEvents, indent+"  ")...)
+	return lines
+}
+
+// formatUserSourceGen renders the per-user-source MDL clause.
+func formatUserSourceGen(src element.Element, indent string) []string {
+	if src == nil {
+		return nil
+	}
+	switch v := src.(type) {
+	case *genWf.MicroflowBasedUserSource:
+		if mf := v.MicroflowQualifiedName(); mf != "" {
+			return []string{fmt.Sprintf("%stargeting users microflow %s", indent, mf)}
+		}
+	case *genWf.XPathBasedUserSource:
+		if xp := v.XPathConstraint(); xp != "" {
+			return []string{fmt.Sprintf("%stargeting users xpath '%s'", indent, xp)}
+		}
+	case *genWf.MicroflowGroupTargeting:
+		if mf := v.MicroflowQualifiedName(); mf != "" {
+			return []string{fmt.Sprintf("%stargeting groups microflow %s", indent, mf)}
+		}
+	case *genWf.XPathGroupTargeting:
+		if xp := v.XPathConstraint(); xp != "" {
+			return []string{fmt.Sprintf("%stargeting groups xpath '%s'", indent, xp)}
+		}
+	}
+	return nil
+}
+
+// formatUserTaskOutcomeGen renders one UserTaskOutcome inside an
+// "outcomes" block. Mirrors the legacy single-quote-wrapped output.
+func formatUserTaskOutcomeGen(elem element.Element, indent string) []string {
+	oc, ok := elem.(*genWf.UserTaskOutcome)
+	if !ok {
+		return nil
+	}
+	value := oc.Value()
+	if value == "" {
+		value = oc.Caption()
+	}
+	if value == "" {
+		value = oc.Name()
+	}
+	if flow, ok := oc.Flow().(*genWf.Flow); ok && flow != nil && len(flow.ActivitiesItems()) > 0 {
+		var lines []string
+		lines = append(lines, fmt.Sprintf("%s'%s' {", indent, value))
+		lines = append(lines, formatWorkflowActivitiesGen(flow, indent+"  ")...)
+		lines = append(lines, fmt.Sprintf("%s}", indent))
+		return lines
+	}
+	return []string{fmt.Sprintf("%s'%s' { }", indent, value)}
+}
+
+// callMicroflowShapeGen normalises CallMicroflowActivity vs
+// CallMicroflowTask into a single shape.
+type callMicroflowShapeGen struct {
+	Name              string
+	Caption           string
+	Annotation        element.Element
+	Microflow         string
+	ParameterMappings []element.Element
+	BoundaryEvents    []element.Element
+	Outcomes          []element.Element
+}
+
+func callMicroflowShapeGenFor(elem element.Element) (callMicroflowShapeGen, bool) {
+	switch v := elem.(type) {
+	case *genWf.CallMicroflowActivity:
+		return callMicroflowShapeGen{
+			Name:              v.Name(),
+			Caption:           v.Caption(),
+			Annotation:        v.Annotation(),
+			Microflow:         v.MicroflowQualifiedName(),
+			ParameterMappings: v.ParameterMappingsItems(),
+			BoundaryEvents:    v.BoundaryEventsItems(),
+			Outcomes:          v.OutcomesItems(),
+		}, true
+	case *genWf.CallMicroflowTask:
+		return callMicroflowShapeGen{
+			Name:              v.Name(),
+			Caption:           v.Caption(),
+			Annotation:        v.Annotation(),
+			Microflow:         v.MicroflowQualifiedName(),
+			ParameterMappings: v.ParameterMappingsItems(),
+			BoundaryEvents:    v.BoundaryEventsItems(),
+			Outcomes:          v.OutcomesItems(),
+		}, true
+	}
+	return callMicroflowShapeGen{}, false
+}
+
+// formatCallMicroflowGen renders CallMicroflowActivity / CallMicroflowTask.
+func formatCallMicroflowGen(elem element.Element, indent string) []string {
+	shape, ok := callMicroflowShapeGenFor(elem)
+	if !ok {
+		return nil
+	}
+	var lines []string
+	if a := formatAnnotationGen(shape.Annotation, indent); a != "" {
+		lines = append(lines, a)
+	}
+	caption := shape.Caption
+	if caption == "" {
+		caption = shape.Name
+	}
+	mf := shape.Microflow
+	if mf == "" {
+		mf = "?"
+	}
+	if len(shape.ParameterMappings) > 0 {
+		params := formatMicroflowCallParamsGen(shape.ParameterMappings)
+		lines = append(lines, fmt.Sprintf("%scall microflow %s with (%s) -- %s", indent, mf, strings.Join(params, ", "), caption))
+	} else {
+		lines = append(lines, fmt.Sprintf("%scall microflow %s -- %s", indent, mf, caption))
+	}
+	lines = append(lines, formatBoundaryEventsGen(shape.BoundaryEvents, indent+"  ")...)
+	lines = append(lines, formatConditionOutcomesGen(shape.Outcomes, indent)...)
+	return lines
+}
+
+// formatMicroflowCallParamsGen renders ParameterMapping entries as
+// "name = 'expr'" pairs (legacy semantics — bare last-segment name
+// from ParameterQualifiedName).
+func formatMicroflowCallParamsGen(items []element.Element) []string {
+	out := make([]string, 0, len(items))
+	for _, m := range items {
+		paramName, expr := paramMappingNameExprGen(m)
+		if paramName == "" && expr == "" {
+			continue
+		}
+		if idx := strings.LastIndex(paramName, "."); idx >= 0 {
+			paramName = paramName[idx+1:]
+		}
+		escaped := strings.ReplaceAll(expr, "'", "''")
+		out = append(out, fmt.Sprintf("%s = '%s'", paramName, escaped))
+	}
+	return out
+}
+
+// paramMappingNameExprGen extracts (qualifiedName, expression) from
+// either MicroflowCallParameterMapping or WorkflowCallParameterMapping
+// (gen splits the type per call-site).
+func paramMappingNameExprGen(elem element.Element) (string, string) {
+	switch v := elem.(type) {
+	case *genWf.MicroflowCallParameterMapping:
+		return v.ParameterQualifiedName(), v.Expression()
+	case *genWf.WorkflowCallParameterMapping:
+		return v.ParameterQualifiedName(), v.Expression()
+	}
+	return "", ""
+}
+
+// formatCallWorkflowGen renders CallWorkflowActivity.
+func formatCallWorkflowGen(elem element.Element, indent string) []string {
+	cw, ok := elem.(*genWf.CallWorkflowActivity)
+	if !ok {
+		return nil
+	}
+	var lines []string
+	if a := formatAnnotationGen(cw.Annotation(), indent); a != "" {
+		lines = append(lines, a)
+	}
+	caption := cw.Caption()
+	if caption == "" {
+		caption = cw.Name()
+	}
+	wf := cw.WorkflowQualifiedName()
+	if wf == "" {
+		wf = "?"
+	}
+	escapedCaption := strings.ReplaceAll(caption, "'", "''")
+	if items := cw.ParameterMappingsItems(); len(items) > 0 {
+		params := formatMicroflowCallParamsGen(items)
+		lines = append(lines, fmt.Sprintf("%scall workflow %s comment '%s' with (%s)", indent, wf, escapedCaption, strings.Join(params, ", ")))
+	} else {
+		lines = append(lines, fmt.Sprintf("%scall workflow %s comment '%s'", indent, wf, escapedCaption))
+	}
+	lines = append(lines, formatBoundaryEventsGen(cw.BoundaryEventsItems(), indent+"  ")...)
+	return lines
+}
+
+// formatExclusiveSplitGen renders an ExclusiveSplitActivity (decision).
+func formatExclusiveSplitGen(elem element.Element, indent string) []string {
+	es, ok := elem.(*genWf.ExclusiveSplitActivity)
+	if !ok {
+		return nil
+	}
+	var lines []string
+	if a := formatAnnotationGen(es.Annotation(), indent); a != "" {
+		lines = append(lines, a)
+	}
+	caption := es.Caption()
+	if caption == "" {
+		caption = es.Name()
+	}
+	if expr := es.Expression(); expr != "" {
+		escapedExpr := strings.ReplaceAll(expr, "'", "''")
+		lines = append(lines, fmt.Sprintf("%sdecision '%s' -- %s", indent, escapedExpr, caption))
+	} else {
+		lines = append(lines, fmt.Sprintf("%sdecision -- %s", indent, caption))
+	}
+	lines = append(lines, formatConditionOutcomesGen(es.OutcomesItems(), indent)...)
+	return lines
+}
+
+// formatParallelSplitGen renders a ParallelSplitActivity.
+func formatParallelSplitGen(elem element.Element, indent string) []string {
+	ps, ok := elem.(*genWf.ParallelSplitActivity)
+	if !ok {
+		return nil
+	}
+	var lines []string
+	if a := formatAnnotationGen(ps.Annotation(), indent); a != "" {
+		lines = append(lines, a)
+	}
+	caption := ps.Caption()
+	if caption == "" {
+		caption = ps.Name()
+	}
+	lines = append(lines, fmt.Sprintf("%sparallel split -- %s", indent, caption))
+	for i, outcome := range ps.OutcomesItems() {
+		lines = append(lines, fmt.Sprintf("%s  path %d {", indent, i+1))
+		if pso, ok := outcome.(*genWf.ParallelSplitOutcome); ok {
+			if flow, ok := pso.Flow().(*genWf.Flow); ok && flow != nil && len(flow.ActivitiesItems()) > 0 {
+				lines = append(lines, formatWorkflowActivitiesGen(flow, indent+"    ")...)
+			}
+		}
+		lines = append(lines, fmt.Sprintf("%s  }", indent))
+	}
+	return lines
+}
+
+// formatConditionOutcomesGen renders a slice of ConditionOutcome
+// elements (used by ExclusiveSplit, CallMicroflow, SystemTask).
+func formatConditionOutcomesGen(outcomes []element.Element, indent string) []string {
+	if len(outcomes) == 0 {
+		return nil
+	}
+	var lines []string
+	lines = append(lines, fmt.Sprintf("%s  outcomes", indent))
+	for _, oc := range outcomes {
+		name, flow := conditionOutcomeNameFlowGen(oc)
+		if flow != nil && len(flow.ActivitiesItems()) > 0 {
+			lines = append(lines, fmt.Sprintf("%s    %s -> {", indent, name))
+			lines = append(lines, formatWorkflowActivitiesGen(flow, indent+"      ")...)
+			lines = append(lines, fmt.Sprintf("%s    }", indent))
+		} else {
+			lines = append(lines, fmt.Sprintf("%s    %s -> { }", indent, name))
+		}
+	}
+	return lines
+}
+
+// conditionOutcomeNameFlowGen extracts (name, *Flow) from any concrete
+// ConditionOutcome gen type.
+func conditionOutcomeNameFlowGen(oc element.Element) (string, *genWf.Flow) {
+	if oc == nil {
+		return "", nil
+	}
+	switch v := oc.(type) {
+	case *genWf.BooleanConditionOutcome:
+		name := "false"
+		if v.Value() {
+			name = "true"
+		}
+		f, _ := v.Flow().(*genWf.Flow)
+		return name, f
+	case *genWf.EnumerationValueConditionOutcome:
+		name := v.ValueQualifiedName()
+		if idx := strings.LastIndex(name, "."); idx >= 0 {
+			name = name[idx+1:]
+		}
+		f, _ := v.Flow().(*genWf.Flow)
+		return name, f
+	case *genWf.VoidConditionOutcome:
+		f, _ := v.Flow().(*genWf.Flow)
+		return "default", f
+	case *genWf.ExclusiveSplitOutcome:
+		// Generic outcome — read raw BSON for the value caption.
+		val, _ := codec.ReadBSONFieldString(v.Raw(), "Value")
+		f, _ := v.Flow().(*genWf.Flow)
+		return val, f
+	}
+	return "", nil
+}
+
+// formatSystemTaskGen renders a SystemTask. gen has no narrow type for
+// it, so this reads the legacy fields out of raw BSON.
+func formatSystemTaskGen(elem element.Element, indent string) []string {
+	if elem == nil {
+		return nil
+	}
+	raw := elem.Raw()
+	annotation, _ := codec.ReadBSONFieldString(raw, "Annotation")
+	name, _ := codec.ReadBSONFieldString(raw, "Name")
+	caption, _ := codec.ReadBSONFieldString(raw, "Caption")
+	mf, _ := codec.ReadBSONFieldString(raw, "Microflow")
+
+	var lines []string
+	if annotation != "" {
+		escaped := strings.ReplaceAll(annotation, "'", "''")
+		lines = append(lines, fmt.Sprintf("%sannotation '%s';", indent, escaped))
+	}
+	displayCaption := caption
+	if displayCaption == "" {
+		displayCaption = name
+	}
+	if mf == "" {
+		mf = "?"
+	}
+	lines = append(lines, fmt.Sprintf("%scall microflow %s -- %s", indent, mf, displayCaption))
+	// SystemTask outcomes are handled by the dispatcher's call site
+	// because gen does not surface them as a typed accessor; the legacy
+	// formatter walked Outcomes for visualisation only — round-trip
+	// invariant is already preserved by the BSON re-encode path, so we
+	// skip nested outcome rendering here.
 	return lines
 }
 

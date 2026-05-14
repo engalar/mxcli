@@ -176,6 +176,145 @@ func TestFormatWorkflowActivitiesGen_FloatingAnnotationEmptyOmitted(t *testing.T
 	}
 }
 
+func TestFormatUserTaskGen_BasicShape(t *testing.T) {
+	flow := genWf.NewFlow()
+	ut := genWf.NewSingleUserTaskActivity()
+	ut.SetName("Approve")
+	ut.SetCaption("approve order")
+	ut.SetDueDate("[%CurrentDateTime%]")
+	flow.AddActivities(ut)
+
+	lines := formatWorkflowActivitiesGen(flow, "  ")
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "user task Approve 'approve order'") {
+		t.Errorf("missing header: %q", joined)
+	}
+	if !strings.Contains(joined, "due date '[%CurrentDateTime%]'") {
+		t.Errorf("missing due date: %q", joined)
+	}
+}
+
+func TestFormatUserTaskGen_MultiKeyword(t *testing.T) {
+	flow := genWf.NewFlow()
+	ut := genWf.NewMultiUserTaskActivity()
+	ut.SetName("Review")
+	ut.SetCaption("multi review")
+	flow.AddActivities(ut)
+
+	lines := formatWorkflowActivitiesGen(flow, "  ")
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "multi user task Review 'multi review'") {
+		t.Errorf("multi keyword missing: %q", joined)
+	}
+}
+
+func TestFormatUserTaskGen_OutcomesEmptyAndPopulated(t *testing.T) {
+	flow := genWf.NewFlow()
+	ut := genWf.NewSingleUserTaskActivity()
+	ut.SetName("Check")
+	ut.SetCaption("check thing")
+	o1 := genWf.NewUserTaskOutcome()
+	o1.SetValue("approved")
+	ut.AddOutcomes(o1)
+	o2 := genWf.NewUserTaskOutcome()
+	o2.SetCaption("rejected")
+	subFlow := genWf.NewFlow()
+	subFlow.AddActivities(genWf.NewJumpToActivity())
+	o2.SetFlow(subFlow)
+	ut.AddOutcomes(o2)
+	flow.AddActivities(ut)
+
+	lines := formatWorkflowActivitiesGen(flow, "  ")
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "outcomes") {
+		t.Errorf("missing outcomes header: %q", joined)
+	}
+	if !strings.Contains(joined, "'approved' { }") {
+		t.Errorf("missing empty outcome: %q", joined)
+	}
+	if !strings.Contains(joined, "'rejected' {") {
+		t.Errorf("missing populated outcome opener: %q", joined)
+	}
+}
+
+func TestFormatCallMicroflowGen_NoMappings(t *testing.T) {
+	flow := genWf.NewFlow()
+	cm := genWf.NewCallMicroflowActivity()
+	cm.SetName("DoIt")
+	cm.SetCaption("do thing")
+	cm.SetMicroflowQualifiedName("Demo.Action")
+	flow.AddActivities(cm)
+
+	lines := formatWorkflowActivitiesGen(flow, "  ")
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "call microflow Demo.Action; -- do thing") {
+		t.Errorf("expected call microflow line; got: %q", joined)
+	}
+}
+
+func TestFormatCallMicroflowGen_WithMappings(t *testing.T) {
+	flow := genWf.NewFlow()
+	cm := genWf.NewCallMicroflowActivity()
+	cm.SetName("DoIt")
+	cm.SetMicroflowQualifiedName("Demo.Action")
+	pm := genWf.NewMicroflowCallParameterMapping()
+	pm.SetParameterQualifiedName("Demo.Action.X")
+	pm.SetExpression("$WorkflowContext")
+	cm.AddParameterMappings(pm)
+	flow.AddActivities(cm)
+
+	lines := formatWorkflowActivitiesGen(flow, "  ")
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "with (X = '$WorkflowContext')") {
+		t.Errorf("missing parameter mapping: %q", joined)
+	}
+}
+
+func TestFormatExclusiveSplitGen_WithExpression(t *testing.T) {
+	flow := genWf.NewFlow()
+	es := genWf.NewExclusiveSplitActivity()
+	es.SetName("Split")
+	es.SetCaption("decide")
+	es.SetExpression("$x = 1")
+	o := genWf.NewBooleanConditionOutcome()
+	o.SetValue(true)
+	es.AddOutcomes(o)
+	flow.AddActivities(es)
+
+	lines := formatWorkflowActivitiesGen(flow, "  ")
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "decision '$x = 1' -- decide") {
+		t.Errorf("missing decision line: %q", joined)
+	}
+	if !strings.Contains(joined, "true -> { }") {
+		t.Errorf("missing boolean outcome: %q", joined)
+	}
+}
+
+func TestFormatParallelSplitGen(t *testing.T) {
+	flow := genWf.NewFlow()
+	ps := genWf.NewParallelSplitActivity()
+	ps.SetName("Fork")
+	ps.SetCaption("fork it")
+	o1 := genWf.NewParallelSplitOutcome()
+	subFlow := genWf.NewFlow()
+	subFlow.AddActivities(genWf.NewJumpToActivity())
+	o1.SetFlow(subFlow)
+	ps.AddOutcomes(o1)
+	o2 := genWf.NewParallelSplitOutcome()
+	ps.AddOutcomes(o2)
+	flow.AddActivities(ps)
+
+	lines := formatWorkflowActivitiesGen(flow, "  ")
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "parallel split -- fork it") {
+		t.Errorf("missing parallel split header: %q", joined)
+	}
+	if !strings.Contains(joined, "path 1 {") || !strings.Contains(joined, "path 2 {") {
+		t.Errorf("missing path entries: %q", joined)
+	}
+}
+
 func TestCountWorkflowActivitiesGen_UserTaskAndDecision(t *testing.T) {
 	wf := genWf.NewWorkflow()
 	flow := genWf.NewFlow()
