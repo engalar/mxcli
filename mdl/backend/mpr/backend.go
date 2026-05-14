@@ -256,7 +256,11 @@ func (b *MprBackend) UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, ne
 
 func (b *MprBackend) DeleteMicroflow(id model.ID) error { return b.deleteMicroflowViaModelsdk(id) }
 func (b *MprBackend) IsRule(qualifiedName string) (bool, error) {
-	return b.reader.IsRule(qualifiedName)
+	repo := b.Microflows()
+	if repo == nil {
+		return false, fmt.Errorf("MprBackend.IsRule: microflow repo not initialized (backend not connected)")
+	}
+	return repo.IsRule(qualifiedName)
 }
 
 func (b *MprBackend) DeleteNanoflow(id model.ID) error { return b.deleteNanoflowViaModelsdk(id) }
