@@ -5,37 +5,39 @@ package catalog
 import (
 	"testing"
 
-	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
-func newAction(id string, action microflows.MicroflowAction) *microflows.ActionActivity {
-	return &microflows.ActionActivity{
-		BaseActivity: microflows.BaseActivity{
-			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(id)},
-			},
-		},
-		Action: action,
+// newAction builds a gen ActionActivity with the given ID and inner
+// action. element IDs are stamped via SetID so the deeply-nested
+// "deep" assertion below stays meaningful.
+func newAction(id string, action element.Element) *genMf.ActionActivity {
+	a := genMf.NewActionActivity()
+	a.SetID(element.ID(id))
+	if action != nil {
+		a.SetAction(action)
 	}
+	return a
 }
 
-func newLoop(id string, children ...microflows.MicroflowObject) *microflows.LoopedActivity {
-	return &microflows.LoopedActivity{
-		BaseMicroflowObject: microflows.BaseMicroflowObject{
-			BaseElement: model.BaseElement{ID: model.ID(id)},
-		},
-		ObjectCollection: &microflows.MicroflowObjectCollection{Objects: children},
+// newLoop builds a gen LoopedActivity owning the supplied children.
+func newLoop(id string, children ...element.Element) *genMf.LoopedActivity {
+	loop := genMf.NewLoopedActivity()
+	loop.SetID(element.ID(id))
+	body := genMf.NewMicroflowObjectCollection()
+	for _, child := range children {
+		body.AddObjects(child)
 	}
+	loop.SetObjectCollection(body)
+	return loop
 }
 
 func TestCollectActionActivities_TopLevelOnly(t *testing.T) {
-	oc := &microflows.MicroflowObjectCollection{
-		Objects: []microflows.MicroflowObject{
-			newAction("a1", &microflows.MicroflowCallAction{}),
-			newAction("a2", &microflows.CreateObjectAction{}),
-		},
-	}
+	oc := genMf.NewMicroflowObjectCollection()
+	oc.AddObjects(newAction("a1", genMf.NewMicroflowCallAction()))
+	oc.AddObjects(newAction("a2", genMf.NewCreateObjectAction()))
+
 	result := collectActionActivities(oc)
 	if len(result) != 2 {
 		t.Fatalf("expected 2 activities, got %d", len(result))
@@ -43,15 +45,13 @@ func TestCollectActionActivities_TopLevelOnly(t *testing.T) {
 }
 
 func TestCollectActionActivities_InsideLoop(t *testing.T) {
-	oc := &microflows.MicroflowObjectCollection{
-		Objects: []microflows.MicroflowObject{
-			newLoop("loop1",
-				newAction("inner1", &microflows.MicroflowCallAction{}),
-				newAction("inner2", &microflows.ShowPageAction{}),
-			),
-			newAction("outer1", &microflows.RetrieveAction{}),
-		},
-	}
+	oc := genMf.NewMicroflowObjectCollection()
+	oc.AddObjects(newLoop("loop1",
+		newAction("inner1", genMf.NewMicroflowCallAction()),
+		newAction("inner2", genMf.NewShowPageAction()),
+	))
+	oc.AddObjects(newAction("outer1", genMf.NewRetrieveAction()))
+
 	result := collectActionActivities(oc)
 	if len(result) != 3 {
 		t.Fatalf("expected 3 activities (2 inside loop + 1 outside), got %d", len(result))
@@ -59,21 +59,19 @@ func TestCollectActionActivities_InsideLoop(t *testing.T) {
 }
 
 func TestCollectActionActivities_NestedLoops(t *testing.T) {
-	oc := &microflows.MicroflowObjectCollection{
-		Objects: []microflows.MicroflowObject{
-			newLoop("outer-loop",
-				newLoop("inner-loop",
-					newAction("deep", &microflows.MicroflowCallAction{}),
-				),
-			),
-		},
-	}
+	oc := genMf.NewMicroflowObjectCollection()
+	oc.AddObjects(newLoop("outer-loop",
+		newLoop("inner-loop",
+			newAction("deep", genMf.NewMicroflowCallAction()),
+		),
+	))
+
 	result := collectActionActivities(oc)
 	if len(result) != 1 {
 		t.Fatalf("expected 1 deeply nested activity, got %d", len(result))
 	}
-	if result[0].ID != "deep" {
-		t.Errorf("expected activity ID 'deep', got %q", result[0].ID)
+	if got := string(result[0].ID()); got != "deep" {
+		t.Errorf("expected activity ID 'deep', got %q", got)
 	}
 }
 
@@ -85,12 +83,10 @@ func TestCollectActionActivities_NilCollection(t *testing.T) {
 }
 
 func TestCollectActionActivities_SkipsNilActions(t *testing.T) {
-	oc := &microflows.MicroflowObjectCollection{
-		Objects: []microflows.MicroflowObject{
-			newAction("no-action", nil),
-			newAction("has-action", &microflows.MicroflowCallAction{}),
-		},
-	}
+	oc := genMf.NewMicroflowObjectCollection()
+	oc.AddObjects(newAction("no-action", nil))
+	oc.AddObjects(newAction("has-action", genMf.NewMicroflowCallAction()))
+
 	result := collectActionActivities(oc)
 	if len(result) != 1 {
 		t.Fatalf("expected 1 activity (skipping nil action), got %d", len(result))
