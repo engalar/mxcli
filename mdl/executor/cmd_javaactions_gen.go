@@ -832,3 +832,50 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 	}
 	return nil
 }
+
+
+// ─────────────────────────────────────────────────────────────────────
+// D3 — execDropJavaActionGen
+// ─────────────────────────────────────────────────────────────────────
+
+// execDropJavaActionGen handles DROP JAVA ACTION using gen-typed reads
+// from listJavaActionsWithContainerGen and the gen-aware repo path.
+// Mirrors execDropJavaAction (cmd_javaactions.go:249) but consumes
+// container UUIDs from the cache helper rather than from a sdk-typed
+// ContainerID field that gen objects don't carry.
+func execDropJavaActionGen(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
+	if !ctx.ConnectedForWrite() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+	pairs, err := listJavaActionsWithContainerGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("list java actions", err)
+	}
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if modName != s.Name.Module || p.Elem.Name() != s.Name.Name {
+			continue
+		}
+		// Phase D Delete is not yet wired through the gen repo (Phase
+		// D5 fills the writer); for now route through the legacy
+		// backend Delete which targets the same MPR Unit row by ID.
+		if err := ctx.Backend.DeleteJavaAction(model.ID(p.Elem.ID())); err != nil {
+			return mdlerrors.NewBackend("delete java action", err)
+		}
+		if err := ctx.Backend.DeleteJavaSourceFile(modName, p.Elem.Name()); err != nil {
+			return mdlerrors.NewBackend("delete java source file", err)
+		}
+		invalidateJavaActionsCache(ctx)
+		fmt.Fprintf(ctx.Output, "Dropped java action: %s.%s\n", s.Name.Module, s.Name.Name)
+		return nil
+	}
+	return mdlerrors.NewNotFound("java action", s.Name.Module+"."+s.Name.Name)
+}

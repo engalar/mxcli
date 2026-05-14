@@ -116,7 +116,7 @@ func registerPageHandlers(r *Registry) {
 		return execDropSnippet(ctx, stmt.(*ast.DropSnippetStmt))
 	})
 	r.Register(&ast.DropJavaActionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDropJavaAction(ctx, stmt.(*ast.DropJavaActionStmt))
+		return execDropJavaActionGen(ctx, stmt.(*ast.DropJavaActionStmt))
 	})
 	r.Register(&ast.CreateJavaActionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execCreateJavaAction(ctx, stmt.(*ast.CreateJavaActionStmt))
