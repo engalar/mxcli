@@ -462,6 +462,18 @@ func (b *MprBackend) UpdateSnippetGen(snippet *genPg.Snippet) error {
 	return mprrepos.NewSnippetRepository(w).Update(snippet)
 }
 
+// GetPageContainerUUID exposes the gen-native PageRepository's
+// GetContainerUUID lookup on the FullBackend surface so lint rules
+// (and other callers without direct repo access) can resolve a Page's
+// parent container without re-implementing the SQL probe.
+func (b *MprBackend) GetPageContainerUUID(id model.ID) (model.ID, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return "", fmt.Errorf("GetPageContainerUUID: no modelsdk writer")
+	}
+	return mprrepos.NewPageRepository(w).GetContainerUUID(id)
+}
+
 // ---------------------------------------------------------------------------
 // EnumerationBackend
 // ---------------------------------------------------------------------------

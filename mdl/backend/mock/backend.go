@@ -140,6 +140,7 @@ type MockBackend struct {
 	GetSnippetGenFunc     func(id model.ID) (*genPg.Snippet, error)
 	CreateSnippetGenFunc  func(parentUUID, containmentName string, snippet *genPg.Snippet) error
 	UpdateSnippetGenFunc  func(snippet *genPg.Snippet) error
+	GetPageContainerUUIDFunc func(id model.ID) (model.ID, error)
 
 	// EnumerationBackend
 	ListEnumerationsFunc  func() ([]*model.Enumeration, error)
