@@ -214,16 +214,9 @@ func TestAddStatementGenAttachesPendingFreeAnnotations(t *testing.T) {
 // covered by the IfStmt/LoopStmt/etc placeholder cases (h2-h4 not
 // yet landed) — those return "" until their adders ship.
 
-func TestAddStatementGenIfStmtPlaceholderReturnsEmpty(t *testing.T) {
-	// IfStmt has no adder yet (sub-stage h2). Dispatcher case is
-	// present; should return "" rather than panic so the dispatcher
-	// stays buildable while h2 lands.
-	fb := newActionTestFb()
-	id := fb.addStatementGen(&ast.IfStmt{})
-	if id != "" {
-		t.Fatalf("h2 placeholder should return empty ID, got %s", id)
-	}
-}
+// TestAddStatementGenIfStmtPlaceholderReturnsEmpty was removed when
+// h2 wired IfStmt → addIfStatementGen. See
+// flowbuilder_control_if_gen_test.go for IfStmt routing coverage.
 
 func TestAddStatementGenLoopStmtPlaceholderReturnsEmpty(t *testing.T) {
 	fb := newActionTestFb()
