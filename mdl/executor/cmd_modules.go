@@ -12,6 +12,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
@@ -269,11 +270,15 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Remove module roles from user roles in ProjectSecurity
-	if ms, err := ctx.Backend.GetModuleSecurity(targetModule.ID); err == nil {
-		if ps, err := ctx.Backend.GetProjectSecurity(); err == nil {
-			for _, mr := range ms.ModuleRoles {
-				qualifiedRole := s.Name + "." + mr.Name
-				if n, err := ctx.Backend.RemoveModuleRoleFromAllUserRoles(ps.ID, qualifiedRole); err == nil && n > 0 {
+	if ms, err := ctx.Backend.GetModuleSecurityGen(targetModule.ID); err == nil && ms != nil {
+		if ps, err := ctx.Backend.GetProjectSecurityGen(); err == nil && ps != nil {
+			for _, mrItem := range ms.ModuleRolesItems() {
+				mr, ok := mrItem.(*genSec.ModuleRole)
+				if !ok {
+					continue
+				}
+				qualifiedRole := s.Name + "." + mr.Name()
+				if n, err := ctx.Backend.RemoveModuleRoleFromAllUserRoles(model.ID(ps.ID()), qualifiedRole); err == nil && n > 0 {
 					fmt.Fprintf(ctx.Output, "Removed %s from %d user role(s)\n", qualifiedRole, n)
 				}
 			}

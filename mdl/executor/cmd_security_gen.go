@@ -140,9 +140,9 @@ func listSecurityMatrixGen(ctx *ExecContext, moduleName string) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	allMS, err := ctx.Backend.ListModuleSecurity()
+	modules, err := ctx.Backend.ListModules()
 	if err != nil {
-		return mdlerrors.NewBackend("read module security", err)
+		return mdlerrors.NewBackend("list modules", err)
 	}
 
 	// Build role list for the target module(s).
@@ -151,16 +151,20 @@ func listSecurityMatrixGen(ctx *ExecContext, moduleName string) error {
 		roleName   string
 	}
 	var roles []moduleRoleInfo
-	for _, ms := range allMS {
-		modName := h.GetModuleName(ms.ContainerID)
-		if modName == "" {
+	for _, mod := range modules {
+		if moduleName != "" && mod.Name != moduleName {
 			continue
 		}
-		if moduleName != "" && modName != moduleName {
+		ms, err := ctx.Backend.GetModuleSecurityGen(mod.ID)
+		if err != nil || ms == nil {
 			continue
 		}
-		for _, mr := range ms.ModuleRoles {
-			roles = append(roles, moduleRoleInfo{modName, mr.Name})
+		for _, mrItem := range ms.ModuleRolesItems() {
+			mr, ok := mrItem.(*genSec.ModuleRole)
+			if !ok {
+				continue
+			}
+			roles = append(roles, moduleRoleInfo{mod.Name, mr.Name()})
 		}
 	}
 

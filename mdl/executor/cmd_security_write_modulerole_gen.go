@@ -169,8 +169,8 @@ func execDropModuleRoleGen(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
 	}
 
 	// Cascade: remove role from user roles in ProjectSecurity.
-	if ps, err := ctx.Backend.GetProjectSecurity(); err == nil {
-		if n, err := ctx.Backend.RemoveModuleRoleFromAllUserRoles(ps.ID, qualifiedRole); err == nil && n > 0 {
+	if ps, err := ctx.Backend.GetProjectSecurityGen(); err == nil && ps != nil {
+		if n, err := ctx.Backend.RemoveModuleRoleFromAllUserRoles(model.ID(ps.ID()), qualifiedRole); err == nil && n > 0 {
 			fmt.Fprintf(ctx.Output, "Removed %s from %d user role(s)\n", qualifiedRole, n)
 		}
 		if err := pruneInvalidUserRoles(ctx, nil); err != nil {
