@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/security"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
 const (
@@ -28,30 +28,36 @@ func defaultDocumentAccessRoles(ctx *ExecContext, module *model.Module) []model.
 		return nil
 	}
 
-	ms, err := ctx.Backend.GetModuleSecurity(module.ID)
+	ms, err := ctx.Backend.GetModuleSecurityGen(module.ID)
 	if err != nil || ms == nil {
 		return nil
 	}
-	if moduleUsesAutoDocumentRole(ms) {
+	if moduleUsesAutoDocumentRoleGen(ms) {
 		return []model.ID{model.ID(module.Name + "." + autoDocumentRoleName)}
 	}
-	if len(ms.ModuleRoles) > 0 {
+	if len(ms.ModuleRolesItems()) > 0 {
 		return nil
 	}
 
-	if err := ctx.Backend.AddModuleRole(ms.ID, autoDocumentRoleName, autoDocumentRoleDescription); err != nil {
+	if err := ctx.Backend.AddModuleRole(model.ID(ms.ID()), autoDocumentRoleName, autoDocumentRoleDescription); err != nil {
 		return nil
 	}
 	return []model.ID{model.ID(module.Name + "." + autoDocumentRoleName)}
 }
 
-func moduleUsesAutoDocumentRole(ms *security.ModuleSecurity) bool {
+func moduleUsesAutoDocumentRoleGen(ms *genSec.ModuleSecurity) bool {
 	if ms == nil {
 		return false
 	}
-	return len(ms.ModuleRoles) == 1 &&
-		ms.ModuleRoles[0].Name == autoDocumentRoleName &&
-		ms.ModuleRoles[0].Description == autoDocumentRoleDescription
+	items := ms.ModuleRolesItems()
+	if len(items) != 1 {
+		return false
+	}
+	mr, ok := items[0].(*genSec.ModuleRole)
+	if !ok {
+		return false
+	}
+	return mr.Name() == autoDocumentRoleName && mr.Description() == autoDocumentRoleDescription
 }
 
 func remapDocumentAccessRoles(ctx *ExecContext, targetModule *model.Module, currentRoles []model.ID) []model.ID {
@@ -59,17 +65,20 @@ func remapDocumentAccessRoles(ctx *ExecContext, targetModule *model.Module, curr
 		return nil
 	}
 
-	ms, err := ctx.Backend.GetModuleSecurity(targetModule.ID)
+	ms, err := ctx.Backend.GetModuleSecurityGen(targetModule.ID)
 	if err != nil || ms == nil {
 		return nil
 	}
-	if len(ms.ModuleRoles) == 0 || moduleUsesAutoDocumentRole(ms) {
+	items := ms.ModuleRolesItems()
+	if len(items) == 0 || moduleUsesAutoDocumentRoleGen(ms) {
 		return defaultDocumentAccessRoles(ctx, targetModule)
 	}
 
-	targetRoleNames := make(map[string]bool, len(ms.ModuleRoles))
-	for _, role := range ms.ModuleRoles {
-		targetRoleNames[role.Name] = true
+	targetRoleNames := make(map[string]bool, len(items))
+	for _, item := range items {
+		if mr, ok := item.(*genSec.ModuleRole); ok {
+			targetRoleNames[mr.Name()] = true
+		}
 	}
 
 	var remapped []model.ID
@@ -112,16 +121,19 @@ func cloneRoleIDs(roles []model.ID) []model.ID {
 
 // pruneInvalidUserRoles removes user roles that no longer have any non-System
 // module role assignments. Mendix rejects those roles with CE0157.
-func pruneInvalidUserRoles(ctx *ExecContext, ps *security.ProjectSecurity) error {
-	if latest, err := ctx.Backend.GetProjectSecurity(); err == nil {
-		ps = latest
-	} else if ps == nil {
+func pruneInvalidUserRoles(ctx *ExecContext, _ *genSec.ProjectSecurity) error {
+	ps, err := ctx.Backend.GetProjectSecurityGen()
+	if err != nil || ps == nil {
 		return err
 	}
 
-	for _, userRole := range ps.UserRoles {
+	for _, ur := range ps.UserRolesItems() {
+		typed, ok := ur.(*genSec.UserRole)
+		if !ok {
+			continue
+		}
 		hasNonSystemRole := false
-		for _, moduleRole := range userRole.ModuleRoles {
+		for _, moduleRole := range typed.ModuleRolesQualifiedNames() {
 			if !strings.HasPrefix(moduleRole, "System.") {
 				hasNonSystemRole = true
 				break
@@ -130,11 +142,11 @@ func pruneInvalidUserRoles(ctx *ExecContext, ps *security.ProjectSecurity) error
 		if hasNonSystemRole {
 			continue
 		}
-		if err := ctx.Backend.RemoveUserRole(ps.ID, userRole.Name); err != nil {
+		if err := ctx.Backend.RemoveUserRole(model.ID(ps.ID()), typed.Name()); err != nil {
 			return err
 		}
 		if !ctx.Quiet {
-			fmt.Fprintf(ctx.Output, "Dropped invalid user role: %s\n", userRole.Name)
+			fmt.Fprintf(ctx.Output, "Dropped invalid user role: %s\n", typed.Name())
 		}
 	}
 
