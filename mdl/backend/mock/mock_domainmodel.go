@@ -3,29 +3,36 @@
 package mock
 
 import (
+	"fmt"
+
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
+
+// Stage 3.3.4 C5: read accessors return descriptive errors when no
+// Func is configured (mirrors Stage 3.3.2 javaactions / Stage 3.3.1
+// security audit). Write accessors keep the silent-success default
+// since many tests pre-flight a write without caring about the result.
 
 func (m *MockBackend) ListDomainModels() ([]*domainmodel.DomainModel, error) {
 	if m.ListDomainModelsFunc != nil {
 		return m.ListDomainModelsFunc()
 	}
-	return nil, nil
+	return nil, fmt.Errorf("MockBackend.ListDomainModels not configured")
 }
 
 func (m *MockBackend) GetDomainModel(moduleID model.ID) (*domainmodel.DomainModel, error) {
 	if m.GetDomainModelFunc != nil {
 		return m.GetDomainModelFunc(moduleID)
 	}
-	return nil, nil
+	return nil, fmt.Errorf("MockBackend.GetDomainModel not configured")
 }
 
 func (m *MockBackend) GetDomainModelByID(id model.ID) (*domainmodel.DomainModel, error) {
 	if m.GetDomainModelByIDFunc != nil {
 		return m.GetDomainModelByIDFunc(id)
 	}
-	return nil, nil
+	return nil, fmt.Errorf("MockBackend.GetDomainModelByID not configured")
 }
 
 func (m *MockBackend) UpdateDomainModel(dm *domainmodel.DomainModel) error {
@@ -60,7 +67,7 @@ func (m *MockBackend) MoveEntity(entity *domainmodel.Entity, sourceDMID, targetD
 	if m.MoveEntityFunc != nil {
 		return m.MoveEntityFunc(entity, sourceDMID, targetDMID, sourceModuleName, targetModuleName)
 	}
-	return nil, nil
+	return nil, fmt.Errorf("MockBackend.MoveEntity not configured")
 }
 
 func (m *MockBackend) AddAttribute(domainModelID model.ID, entityID model.ID, attr *domainmodel.Attribute) error {
@@ -116,7 +123,7 @@ func (m *MockBackend) CreateViewEntitySourceDocument(moduleID model.ID, moduleNa
 	if m.CreateViewEntitySourceDocumentFunc != nil {
 		return m.CreateViewEntitySourceDocumentFunc(moduleID, moduleName, docName, oqlQuery, documentation)
 	}
-	return "", nil
+	return "", fmt.Errorf("MockBackend.CreateViewEntitySourceDocument not configured")
 }
 
 func (m *MockBackend) DeleteViewEntitySourceDocument(id model.ID) error {
@@ -137,14 +144,14 @@ func (m *MockBackend) FindViewEntitySourceDocumentID(moduleName, docName string)
 	if m.FindViewEntitySourceDocumentIDFunc != nil {
 		return m.FindViewEntitySourceDocumentIDFunc(moduleName, docName)
 	}
-	return "", nil
+	return "", fmt.Errorf("MockBackend.FindViewEntitySourceDocumentID not configured")
 }
 
 func (m *MockBackend) FindAllViewEntitySourceDocumentIDs(moduleName, docName string) ([]model.ID, error) {
 	if m.FindAllViewEntitySourceDocumentIDsFunc != nil {
 		return m.FindAllViewEntitySourceDocumentIDsFunc(moduleName, docName)
 	}
-	return nil, nil
+	return nil, fmt.Errorf("MockBackend.FindAllViewEntitySourceDocumentIDs not configured")
 }
 
 func (m *MockBackend) MoveViewEntitySourceDocument(sourceModuleName string, targetModuleID model.ID, docName string) error {
