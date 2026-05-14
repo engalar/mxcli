@@ -10,6 +10,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 // execRename handles RENAME statements for all document types.
@@ -173,28 +174,34 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 	collision := false
 	switch docType {
 	case "microflow":
-		mfs, _ := ctx.Backend.ListMicroflows()
+		mfs, _ := listMicroflowsGen(ctx)
 		for _, mf := range mfs {
-			modID := h.FindModuleID(mf.ContainerID)
-			if h.GetModuleName(modID) != s.Name.Module {
+			if mf == nil {
 				continue
 			}
-			if mf.Name == s.Name.Name {
+			modName := genFlowContainerModule(ctx, h, model.ID(mf.ID()))
+			if modName != s.Name.Module {
+				continue
+			}
+			if mf.Name() == s.Name.Name {
 				found = true
-			} else if mf.Name == s.NewName {
+			} else if mf.Name() == s.NewName {
 				collision = true
 			}
 		}
 	case "nanoflow":
-		nfs, _ := ctx.Backend.ListNanoflows()
+		nfs, _ := listNanoflowsGen(ctx)
 		for _, nf := range nfs {
-			modID := h.FindModuleID(nf.ContainerID)
-			if h.GetModuleName(modID) != s.Name.Module {
+			if nf == nil {
 				continue
 			}
-			if nf.Name == s.Name.Name {
+			modName := genFlowContainerModule(ctx, h, model.ID(nf.ID()))
+			if modName != s.Name.Module {
+				continue
+			}
+			if nf.Name() == s.Name.Name {
 				found = true
-			} else if nf.Name == s.NewName {
+			} else if nf.Name() == s.NewName {
 				collision = true
 			}
 		}

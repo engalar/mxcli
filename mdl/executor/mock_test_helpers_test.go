@@ -17,7 +17,6 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
@@ -179,22 +178,6 @@ func mkAssociation(containerID model.ID, name string, parentID, childID model.ID
 		ChildID:     childID,
 		Type:        "Reference",
 		Owner:       "Default",
-	}
-}
-
-func mkMicroflow(containerID model.ID, name string) *microflows.Microflow {
-	return &microflows.Microflow{
-		BaseElement: model.BaseElement{ID: nextID("mf")},
-		ContainerID: containerID,
-		Name:        name,
-	}
-}
-
-func mkNanoflow(containerID model.ID, name string) *microflows.Nanoflow {
-	return &microflows.Nanoflow{
-		BaseElement: model.BaseElement{ID: nextID("nf")},
-		ContainerID: containerID,
-		Name:        name,
 	}
 }
 

@@ -8,10 +8,11 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
@@ -142,13 +143,13 @@ func TestRename_Entity_DryRun(t *testing.T) {
 
 func TestRename_Microflow_Success(t *testing.T) {
 	mod := mkModule("MyModule")
-	mf := mkMicroflow(mod.ID, "OldMF")
+	mf := mkMicroflowGen("OldMF")
+	mfID := model.ID(mf.ID())
 	renameCalled := false
 	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc:    func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) { return []*microflows.Microflow{mf}, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
 		RenameReferencesFunc: func(old, new string, dryRun bool) ([]types.RenameHit, error) {
 			return nil, nil
 		},
@@ -157,9 +158,23 @@ func TestRename_Microflow_Success(t *testing.T) {
 			return nil
 		},
 	}
+	mfRepo := &repostesting.RecordingMicroflowRepository{
+		ListAllFunc: func() ([]*genMf.Microflow, error) {
+			return []*genMf.Microflow{mf}, nil
+		},
+		GetContainerUUIDFunc: func(id model.ID) (model.ID, error) {
+			if id == mfID {
+				return mod.ID, nil
+			}
+			return "", nil
+		},
+	}
 	h := mkHierarchy(mod)
-	withContainer(h, mf.ContainerID, mod.ID)
-	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx, buf := newMockCtx(t,
+		withBackend(mb),
+		withHierarchy(h),
+		withMicroflowsRepo(mfRepo),
+	)
 	assertNoError(t, execRename(ctx, &ast.RenameStmt{
 		ObjectType: "microflow",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldMF"},
@@ -431,20 +446,39 @@ func TestRename_Workflow_Success(t *testing.T) {
 
 func TestRename_Nanoflow_CollisionError(t *testing.T) {
 	mod := mkModule("MyModule")
-	nf1 := mkNanoflow(mod.ID, "NF1")
-	nf2 := mkNanoflow(mod.ID, "NF2")
+	nf1 := mkNanoflowGen("NF1")
+	nf2 := mkNanoflowGen("NF2")
+	nf1ID := model.ID(nf1.ID())
+	nf2ID := model.ID(nf2.ID())
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListNanoflowsFunc: func() ([]*microflows.Nanoflow, error) {
-			return []*microflows.Nanoflow{nf1, nf2}, nil
+	}
+	// genFlowContainerModule resolves nanoflow container via
+	// ctx.Microflows.GetContainerUUID (nanoflows live alongside
+	// microflows in the unit table); seed both repos.
+	containerLookup := func(id model.ID) (model.ID, error) {
+		if id == nf1ID || id == nf2ID {
+			return mod.ID, nil
+		}
+		return "", nil
+	}
+	mfRepo := &repostesting.RecordingMicroflowRepository{
+		GetContainerUUIDFunc: containerLookup,
+	}
+	nfRepo := &repostesting.RecordingNanoflowRepository{
+		ListFunc: func(model.ID) ([]*genMf.Nanoflow, error) {
+			return []*genMf.Nanoflow{nf1, nf2}, nil
 		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, nf1.ContainerID, mod.ID)
-	withContainer(h, nf2.ContainerID, mod.ID)
-	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx, _ := newMockCtx(t,
+		withBackend(mb),
+		withHierarchy(h),
+		withMicroflowsRepo(mfRepo),
+		withNanoflowsRepo(nfRepo),
+	)
 	err := execRename(ctx, &ast.RenameStmt{
 		ObjectType: "nanoflow",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "NF1"},
@@ -456,18 +490,32 @@ func TestRename_Nanoflow_CollisionError(t *testing.T) {
 
 func TestRename_Microflow_CollisionError(t *testing.T) {
 	mod := mkModule("MyModule")
-	mf1 := mkMicroflow(mod.ID, "MF1")
-	mf2 := mkMicroflow(mod.ID, "MF2")
+	mf1 := mkMicroflowGen("MF1")
+	mf2 := mkMicroflowGen("MF2")
+	mf1ID := model.ID(mf1.ID())
+	mf2ID := model.ID(mf2.ID())
 	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc:    func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) { return []*microflows.Microflow{mf1, mf2}, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+	}
+	mfRepo := &repostesting.RecordingMicroflowRepository{
+		ListAllFunc: func() ([]*genMf.Microflow, error) {
+			return []*genMf.Microflow{mf1, mf2}, nil
+		},
+		GetContainerUUIDFunc: func(id model.ID) (model.ID, error) {
+			if id == mf1ID || id == mf2ID {
+				return mod.ID, nil
+			}
+			return "", nil
+		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, mf1.ContainerID, mod.ID)
-	withContainer(h, mf2.ContainerID, mod.ID)
-	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx, _ := newMockCtx(t,
+		withBackend(mb),
+		withHierarchy(h),
+		withMicroflowsRepo(mfRepo),
+	)
 	err := execRename(ctx, &ast.RenameStmt{
 		ObjectType: "microflow",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "MF1"},
