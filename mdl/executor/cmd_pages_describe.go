@@ -10,7 +10,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -27,18 +27,23 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	// Find the page
-	allPages, err := ctx.Backend.ListPages()
+	// Find the page via gen-typed listing.
+	pairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
 
-	var foundPage *pages.Page
-	for _, p := range allPages {
-		modID := h.FindModuleID(p.ContainerID)
+	var foundPage *genPg.Page
+	var foundContainerID model.ID
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
-		if p.Name == name.Name && (name.Module == "" || modName == name.Module) {
-			foundPage = p
+		if p.Elem.Name() == name.Name && (name.Module == "" || modName == name.Module) {
+			foundPage = p.Elem
+			foundContainerID = model.ID(p.ContainerID)
 			break
 		}
 	}
@@ -47,13 +52,13 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewNotFound("page", name.String())
 	}
 
-	// Get module name for the page
-	modID := h.FindModuleID(foundPage.ContainerID)
+	pageID := model.ID(foundPage.ID())
+	modID := h.FindModuleID(foundContainerID)
 	modName := h.GetModuleName(modID)
 
 	// Output documentation if present
-	if foundPage.Documentation != "" {
-		lines := strings.Split(foundPage.Documentation, "\n")
+	if doc := foundPage.Documentation(); doc != "" {
+		lines := strings.Split(doc, "\n")
 		fmt.Fprint(ctx.Output, "/**\n")
 		for _, line := range lines {
 			fmt.Fprintf(ctx.Output, " * %s\n", line)
@@ -62,20 +67,11 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Get title
-	title := ""
-	if foundPage.Title != nil {
-		title = foundPage.Title.GetTranslation("en_US")
-		if title == "" {
-			for _, text := range foundPage.Title.Translations {
-				title = text
-				break
-			}
-		}
-	}
+	title := pickPageTitleGen(foundPage)
 
 	// Get layout from raw data
 	layoutName := ""
-	rawData, _ := ctx.Backend.GetRawUnit(foundPage.ID)
+	rawData, _ := ctx.Backend.GetRawUnit(pageID)
 	if rawData != nil {
 		if formCall, ok := rawData["FormCall"].(map[string]any); ok {
 			if layoutID := extractBinaryID(formCall["Layout"]); layoutID != "" {
@@ -87,12 +83,12 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// @excluded annotation
-	if foundPage.Excluded {
+	if foundPage.Excluded() {
 		fmt.Fprintln(ctx.Output, "@excluded")
 	}
 
 	// V3 syntax: CREATE PAGE Module.Page (Title: '...', Layout: ..., Params: { })
-	header := fmt.Sprintf("create or modify page %s.%s", modName, foundPage.Name)
+	header := fmt.Sprintf("create or modify page %s.%s", modName, foundPage.Name())
 	props := []string{}
 	if title != "" {
 		props = append(props, fmt.Sprintf("Title: %s", mdlQuote(title)))
@@ -100,17 +96,21 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	if layoutName != "" {
 		props = append(props, fmt.Sprintf("Layout: %s", layoutName))
 	}
-	if foundPage.URL != "" {
-		props = append(props, fmt.Sprintf("Url: %s", mdlQuote(foundPage.URL)))
+	if url := foundPage.Url(); url != "" {
+		props = append(props, fmt.Sprintf("Url: %s", mdlQuote(url)))
 	}
-	if folderPath := h.BuildFolderPath(foundPage.ContainerID); folderPath != "" {
+	if folderPath := h.BuildFolderPath(foundContainerID); folderPath != "" {
 		props = append(props, fmt.Sprintf("Folder: %s", mdlQuote(folderPath)))
 	}
-	if len(foundPage.Parameters) > 0 {
+	pageParamsItems := foundPage.ParametersItems()
+	if len(pageParamsItems) > 0 {
 		params := []string{}
-		for _, p := range foundPage.Parameters {
-			typeName := pageParamTypeMDL(p)
-			params = append(params, fmt.Sprintf("$%s: %s", p.Name, typeName))
+		for _, elem := range pageParamsItems {
+			pp, ok := elem.(*genPg.PageParameter)
+			if !ok || pp == nil {
+				continue
+			}
+			params = append(params, fmt.Sprintf("$%s: %s", pp.Name(), pageParamTypeMDLGen(pp.ParameterType())))
 		}
 		props = append(props, fmt.Sprintf("Params: { %s }", strings.Join(params, ", ")))
 	}
@@ -135,7 +135,7 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Output widgets from raw page data
-	rawWidgets := getPageWidgetsFromRaw(ctx, foundPage.ID)
+	rawWidgets := getPageWidgetsFromRaw(ctx, pageID)
 	if len(rawWidgets) > 0 {
 		formatWidgetProps(ctx.Output, "", header, props, " {\n")
 		for _, w := range rawWidgets {
@@ -147,13 +147,9 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Add GRANT VIEW if roles are assigned
-	if len(foundPage.AllowedRoles) > 0 {
-		roles := make([]string, len(foundPage.AllowedRoles))
-		for i, r := range foundPage.AllowedRoles {
-			roles[i] = string(r)
-		}
+	if allowed := foundPage.AllowedRolesQualifiedNames(); len(allowed) > 0 {
 		fmt.Fprintf(ctx.Output, "\n\ngrant view on page %s.%s to %s;",
-			modName, foundPage.Name, strings.Join(roles, ", "))
+			modName, foundPage.Name(), strings.Join(allowed, ", "))
 	}
 
 	fmt.Fprint(ctx.Output, "\n")
@@ -182,18 +178,23 @@ func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	// Find the snippet
-	allSnippets, err := ctx.Backend.ListSnippets()
+	// Find the snippet via gen-typed listing.
+	pairs, err := listSnippetsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list snippets", err)
 	}
 
-	var foundSnippet *pages.Snippet
-	for _, s := range allSnippets {
-		modID := h.FindModuleID(s.ContainerID)
+	var foundSnippet *genPg.Snippet
+	var foundContainerID model.ID
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
-		if s.Name == name.Name && (name.Module == "" || modName == name.Module) {
-			foundSnippet = s
+		if p.Elem.Name() == name.Name && (name.Module == "" || modName == name.Module) {
+			foundSnippet = p.Elem
+			foundContainerID = model.ID(p.ContainerID)
 			break
 		}
 	}
@@ -202,13 +203,13 @@ func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewNotFound("snippet", name.String())
 	}
 
-	// Get module name for the snippet
-	modID := h.FindModuleID(foundSnippet.ContainerID)
+	snippetID := model.ID(foundSnippet.ID())
+	modID := h.FindModuleID(foundContainerID)
 	modName := h.GetModuleName(modID)
 
 	// Output documentation if present
-	if foundSnippet.Documentation != "" {
-		lines := strings.Split(foundSnippet.Documentation, "\n")
+	if doc := foundSnippet.Documentation(); doc != "" {
+		lines := strings.Split(doc, "\n")
 		fmt.Fprint(ctx.Output, "/**\n")
 		for _, line := range lines {
 			fmt.Fprintf(ctx.Output, " * %s\n", line)
@@ -216,24 +217,24 @@ func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
 		fmt.Fprint(ctx.Output, " */\n")
 	}
 
-	// Get raw data to check for parameters
-	rawData, _ := ctx.Backend.GetRawUnit(foundSnippet.ID)
-	var params []map[string]any
-	if rawData != nil {
-		params = getBsonArrayMaps(rawData["Parameters"])
-	}
-
 	// Output CREATE SNIPPET statement (V3 syntax)
-	fmt.Fprintf(ctx.Output, "create or modify snippet %s.%s", modName, foundSnippet.Name)
-	folderPath := h.BuildFolderPath(foundSnippet.ContainerID)
-	if len(params) > 0 || folderPath != "" {
+	fmt.Fprintf(ctx.Output, "create or modify snippet %s.%s", modName, foundSnippet.Name())
+	folderPath := h.BuildFolderPath(foundContainerID)
+	snippetParamsItems := foundSnippet.ParametersItems()
+	if len(snippetParamsItems) > 0 || folderPath != "" {
 		snippetProps := []string{}
-		if len(params) > 0 {
+		if len(snippetParamsItems) > 0 {
 			paramParts := []string{}
-			for _, p := range params {
-				paramName, _ := p["Name"].(string)
-				entityName := extractEntityQualifiedName(p["ParameterType"])
-				paramParts = append(paramParts, fmt.Sprintf("$%s: %s", paramName, entityName))
+			for _, elem := range snippetParamsItems {
+				sp, ok := elem.(*genPg.SnippetParameter)
+				if !ok || sp == nil {
+					continue
+				}
+				typeStr := pageParamTypeMDLGen(sp.ParameterType())
+				if typeStr == "" {
+					typeStr = "Unknown"
+				}
+				paramParts = append(paramParts, fmt.Sprintf("$%s: %s", sp.Name(), typeStr))
 			}
 			snippetProps = append(snippetProps, fmt.Sprintf("Params: { %s }", strings.Join(paramParts, ", ")))
 		}
@@ -244,7 +245,7 @@ func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Output widgets from raw snippet data
-	rawWidgets := getSnippetWidgetsFromRaw(ctx, foundSnippet.ID)
+	rawWidgets := getSnippetWidgetsFromRaw(ctx, snippetID)
 	if len(rawWidgets) > 0 {
 		fmt.Fprint(ctx.Output, " {\n")
 		for _, w := range rawWidgets {
@@ -265,18 +266,23 @@ func describeLayout(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	// Find the layout
-	allLayouts, err := ctx.Backend.ListLayouts()
+	// Find the layout via gen-typed listing.
+	pairs, err := listLayoutsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list layouts", err)
 	}
 
-	var foundLayout *pages.Layout
-	for _, l := range allLayouts {
-		modID := h.FindModuleID(l.ContainerID)
+	var foundLayout *genPg.Layout
+	var foundContainerID model.ID
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
-		if l.Name == name.Name && (name.Module == "" || modName == name.Module) {
-			foundLayout = l
+		if p.Elem.Name() == name.Name && (name.Module == "" || modName == name.Module) {
+			foundLayout = p.Elem
+			foundContainerID = model.ID(p.ContainerID)
 			break
 		}
 	}
@@ -285,13 +291,13 @@ func describeLayout(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewNotFound("layout", name.String())
 	}
 
-	// Get module name for the layout
-	modID := h.FindModuleID(foundLayout.ContainerID)
+	layoutID := model.ID(foundLayout.ID())
+	modID := h.FindModuleID(foundContainerID)
 	modName := h.GetModuleName(modID)
 
 	// Output documentation if present
-	if foundLayout.Documentation != "" {
-		lines := strings.Split(foundLayout.Documentation, "\n")
+	if doc := foundLayout.Documentation(); doc != "" {
+		lines := strings.Split(doc, "\n")
 		fmt.Fprint(ctx.Output, "/**\n")
 		for _, line := range lines {
 			fmt.Fprintf(ctx.Output, " * %s\n", line)
@@ -300,7 +306,7 @@ func describeLayout(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Output layout type comment
-	layoutTypeStr := string(foundLayout.LayoutType)
+	layoutTypeStr := foundLayout.LayoutType()
 	if layoutTypeStr == "" {
 		layoutTypeStr = "Responsive"
 	}
@@ -310,10 +316,10 @@ func describeLayout(ctx *ExecContext, name ast.QualifiedName) error {
 	fmt.Fprintf(ctx.Output, "-- Layouts cannot be created via MDL; they must be created in Studio Pro.\n\n")
 
 	// Output as a comment showing the layout name
-	fmt.Fprintf(ctx.Output, "-- layout %s.%s\n", modName, foundLayout.Name)
+	fmt.Fprintf(ctx.Output, "-- layout %s.%s\n", modName, foundLayout.Name())
 
 	// Output widgets from raw layout data
-	rawWidgets := getLayoutWidgetsFromRaw(ctx, foundLayout.ID)
+	rawWidgets := getLayoutWidgetsFromRaw(ctx, layoutID)
 	if len(rawWidgets) > 0 {
 		fmt.Fprint(ctx.Output, "-- Widget structure:\n")
 		for _, w := range rawWidgets {
@@ -381,27 +387,6 @@ func getSnippetWidgetsFromRaw(ctx *ExecContext, snippetID model.ID) []rawWidget 
 		}
 	}
 	return result
-}
-
-// extractEntityQualifiedName extracts the entity qualified name from a parameter type.
-func extractEntityQualifiedName(paramType any) string {
-	if paramType == nil {
-		return "Unknown"
-	}
-	ptMap, ok := paramType.(map[string]any)
-	if !ok {
-		return "Unknown"
-	}
-
-	// Check for EntityType or ObjectType (snippet parameters use DataTypes$ObjectType)
-	if entityType, ok := ptMap["$Type"].(string); ok {
-		if entityType == "Pages$EntityType" || entityType == "Forms$EntityType" || entityType == "DataTypes$ObjectType" {
-			if entityRef, ok := ptMap["Entity"].(string); ok && entityRef != "" {
-				return entityRef
-			}
-		}
-	}
-	return "Unknown"
 }
 
 // getBsonArrayMaps extracts []map[string]interface{} from BSON array types.
@@ -731,29 +716,3 @@ func wrapStringLiteralExpression(value string) string {
 	return "'" + value + "'"
 }
 
-// pageParamTypeMDL returns the MDL type string for a page parameter.
-// Primitive params return "String", "Integer", etc.; entity params return the qualified name.
-func pageParamTypeMDL(p *pages.PageParameter) string {
-	if p.TypeName != "" {
-		switch p.TypeName {
-		case "DataTypes$StringType":
-			return "String"
-		case "DataTypes$IntegerType":
-			return "Integer"
-		case "DataTypes$LongType":
-			return "Long"
-		case "DataTypes$DecimalType":
-			return "Decimal"
-		case "DataTypes$BooleanType":
-			return "Boolean"
-		case "DataTypes$DateTimeType":
-			return "DateTime"
-		default:
-			return p.TypeName
-		}
-	}
-	if p.EntityName != "" {
-		return p.EntityName
-	}
-	return string(p.EntityID)
-}
