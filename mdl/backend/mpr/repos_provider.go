@@ -51,3 +51,13 @@ func (b *MprBackend) Nanoflows() repos.NanoflowRepository {
 	}
 	return mprrepos.NewNanoflowRepository(w)
 }
+
+// Security returns the modelsdk-native SecurityRepository, or nil with
+// the same conditions as Microflows().
+func (b *MprBackend) Security() repos.SecurityRepository {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil
+	}
+	return mprrepos.NewSecurityRepository(w)
+}

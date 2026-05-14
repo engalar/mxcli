@@ -31,7 +31,7 @@ type ExecContext struct {
 	// Nil when not connected.
 	Backend backend.FullBackend
 
-	// Microflows / Nanoflows are the Stage 3 modelsdk-native repos.
+	// Microflows / Nanoflows / Security are the Stage 3 modelsdk-native repos.
 	// Populated only when Backend implements the matching repo-provider
 	// duck type (currently MprBackend); nil for ad-hoc test contexts.
 	// Stage 3.1 cuts over the type-safe call surfaces (delete-by-ID,
@@ -39,6 +39,8 @@ type ExecContext struct {
 	// migrate from sdk types to gen types in Stage 3.2+.
 	Microflows repos.MicroflowRepository
 	Nanoflows  repos.NanoflowRepository
+	// Security is the Stage 3.3 modelsdk-native security repo.
+	Security repos.SecurityRepository
 
 	// Output is the writer for user-visible output (with line-limit guard).
 	Output io.Writer
