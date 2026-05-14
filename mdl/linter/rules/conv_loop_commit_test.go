@@ -6,16 +6,14 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
 func TestFindCommitsInLoops_NoLoop(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ActionActivity{
-			BaseActivity: microflows.BaseActivity{},
-			Action:       &microflows.CommitObjectsAction{},
-		},
-	}
+	commit := genMf.NewActionActivity()
+	commit.SetAction(genMf.NewCommitAction())
+	objects := []element.Element{commit}
 
 	var violations []linter.Violation
 	r := NewNoCommitInLoopRule()
@@ -27,19 +25,16 @@ func TestFindCommitsInLoops_NoLoop(t *testing.T) {
 }
 
 func TestFindCommitsInLoops_CommitInsideLoop(t *testing.T) {
-	loopBody := &microflows.MicroflowObjectCollection{
-		Objects: []microflows.MicroflowObject{
-			&microflows.ActionActivity{
-				BaseActivity: microflows.BaseActivity{},
-				Action:       &microflows.CommitObjectsAction{},
-			},
-		},
-	}
-	objects := []microflows.MicroflowObject{
-		&microflows.LoopedActivity{
-			ObjectCollection: loopBody,
-		},
-	}
+	commit := genMf.NewActionActivity()
+	commit.SetAction(genMf.NewCommitAction())
+
+	loopBody := genMf.NewMicroflowObjectCollection()
+	loopBody.AddObjects(commit)
+
+	loop := genMf.NewLoopedActivity()
+	loop.SetObjectCollection(loopBody)
+
+	objects := []element.Element{loop}
 
 	var violations []linter.Violation
 	r := NewNoCommitInLoopRule()
@@ -54,12 +49,9 @@ func TestFindCommitsInLoops_CommitInsideLoop(t *testing.T) {
 }
 
 func TestFindCommitsInLoops_NilAction(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ActionActivity{
-			BaseActivity: microflows.BaseActivity{},
-			Action:       nil,
-		},
-	}
+	// ActionActivity with no inner action — should not panic and
+	// should not violate.
+	objects := []element.Element{genMf.NewActionActivity()}
 
 	var violations []linter.Violation
 	r := NewNoCommitInLoopRule()

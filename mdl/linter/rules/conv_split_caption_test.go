@@ -6,13 +6,19 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
+// splitWith builds a fresh ExclusiveSplit with the given caption.
+func splitWith(caption string) *genMf.ExclusiveSplit {
+	s := genMf.NewExclusiveSplit()
+	s.SetCaption(caption)
+	return s
+}
+
 func TestFindEmptySplitCaptions_EmptyCaption(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ExclusiveSplit{Caption: ""},
-	}
+	objects := []element.Element{splitWith("")}
 
 	var violations []linter.Violation
 	r := NewExclusiveSplitCaptionRule()
@@ -27,9 +33,7 @@ func TestFindEmptySplitCaptions_EmptyCaption(t *testing.T) {
 }
 
 func TestFindEmptySplitCaptions_WithCaption(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ExclusiveSplit{Caption: "Is order valid?"},
-	}
+	objects := []element.Element{splitWith("Is order valid?")}
 
 	var violations []linter.Violation
 	r := NewExclusiveSplitCaptionRule()
@@ -41,9 +45,7 @@ func TestFindEmptySplitCaptions_WithCaption(t *testing.T) {
 }
 
 func TestFindEmptySplitCaptions_WhitespaceOnly(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ExclusiveSplit{Caption: "   "},
-	}
+	objects := []element.Element{splitWith("   ")}
 
 	var violations []linter.Violation
 	r := NewExclusiveSplitCaptionRule()
@@ -55,16 +57,13 @@ func TestFindEmptySplitCaptions_WhitespaceOnly(t *testing.T) {
 }
 
 func TestFindEmptySplitCaptions_InsideLoop(t *testing.T) {
-	loopBody := &microflows.MicroflowObjectCollection{
-		Objects: []microflows.MicroflowObject{
-			&microflows.ExclusiveSplit{Caption: ""},
-		},
-	}
-	objects := []microflows.MicroflowObject{
-		&microflows.LoopedActivity{
-			ObjectCollection: loopBody,
-		},
-	}
+	loopBody := genMf.NewMicroflowObjectCollection()
+	loopBody.AddObjects(splitWith(""))
+
+	loop := genMf.NewLoopedActivity()
+	loop.SetObjectCollection(loopBody)
+
+	objects := []element.Element{loop}
 
 	var violations []linter.Violation
 	r := NewExclusiveSplitCaptionRule()
