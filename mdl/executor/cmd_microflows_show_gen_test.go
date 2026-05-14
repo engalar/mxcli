@@ -200,6 +200,70 @@ func TestDescribeMicroflowGenToString_NilGuard(t *testing.T) {
 	}
 }
 
+// TestDescribeMicroflowGenToString_ReturnTypeDisplay verifies the
+// returns-clause renders correctly for each return-type shape. All
+// fixtures in expr-checker/minimal.mpr have empty `ReturnType()` strings
+// — the real type information lives inside the `MicroflowReturnType()`
+// part element (a DataType subtype). Until Stage 3.2 this code only
+// looked at the bare string and silently dropped the clause, hiding
+// entity/list/primitive returns from `describe microflow` output.
+//
+// Parity with `genFlowReturnDisplay` (used by nanoflows since 3.2.5c).
+func TestDescribeMicroflowGenToString_ReturnTypeDisplay(t *testing.T) {
+	w := openMprWriterForTest(t)
+	ctx := newGenDescribeContext(t, w)
+
+	cases := []struct {
+		qn      string
+		want    string // exact substring expected in output
+		notWant string // optional negative assertion
+	}{
+		// StringType — primitive
+		{qn: "FeedbackModule.ConvertUUIDToURL", want: "\nreturns String\n"},
+		// BooleanType — primitive
+		{qn: "FeedbackModule.VAL_Feedback", want: "\nreturns Boolean\n"},
+		// ObjectType — entity (short-name display)
+		{qn: "FeedbackModule.SUB_Feedback_SendToServer", want: "\nreturns "},
+		// VoidType — must NOT emit a returns clause
+		{qn: "MyFirstModule.MyFirstLogic", notWant: "\nreturns "},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.qn, func(t *testing.T) {
+			mf := findMicroflowByQN(t, w, tc.qn)
+			out, err := DescribeMicroflowGenToString(ctx, mf)
+			if err != nil {
+				t.Fatalf("DescribeMicroflowGenToString: %v", err)
+			}
+			if tc.want != "" && !strings.Contains(out, tc.want) {
+				t.Errorf("expected substring %q; got:\n%s", tc.want, out)
+			}
+			if tc.notWant != "" && strings.Contains(out, tc.notWant) {
+				t.Errorf("did not expect substring %q; got:\n%s", tc.notWant, out)
+			}
+		})
+	}
+
+	// Spot-check the entity case more thoroughly: SUB_Feedback_SendToServer
+	// returns the Feedback entity. The nanoflow-side parity test already
+	// asserts the same entity short-name flows out of the helper.
+	t.Run("entity-return short-name", func(t *testing.T) {
+		mf := findMicroflowByQN(t, w, "FeedbackModule.SUB_Feedback_SendToServer")
+		out, err := DescribeMicroflowGenToString(ctx, mf)
+		if err != nil {
+			t.Fatalf("DescribeMicroflowGenToString: %v", err)
+		}
+		// Must NOT degrade to "Object" or empty — those would mean we
+		// surfaced the gen TypeName instead of the resolved entity name.
+		if strings.Contains(out, "\nreturns Object\n") {
+			t.Errorf("entity-returning microflow should not surface bare 'Object'; got:\n%s", out)
+		}
+		if !strings.Contains(out, "\nreturns ") {
+			t.Errorf("entity-returning microflow should emit a returns clause; got:\n%s", out)
+		}
+	})
+}
+
 // mustContain reports a test failure listing every needle that's not in
 // the haystack — easier to debug than rerunning to find the next miss.
 func mustContain(t *testing.T, haystack string, needles ...string) {
