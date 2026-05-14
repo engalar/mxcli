@@ -106,6 +106,105 @@ func buildMicroflowQualifiedNamesGen(ctx *ExecContext) map[string]bool {
 	return result
 }
 
+// MicroflowGenWithContainer pairs a gen-typed *Microflow with its
+// container UUID (the parent folder or module ID, resolved from the
+// MPR Unit table). Returned by listMicroflowsWithContainerGen so call
+// sites can do "for _, item := range list { ... item.ContainerUUID
+// ... item.MF.Name() ... }" without doing a per-element
+// GetContainerUUID lookup.
+type MicroflowGenWithContainer struct {
+	MF            *genMf.Microflow
+	ContainerUUID model.ID
+}
+
+// NanoflowGenWithContainer mirrors MicroflowGenWithContainer for nanoflows.
+type NanoflowGenWithContainer struct {
+	NF            *genMf.Nanoflow
+	ContainerUUID model.ID
+}
+
+// listMicroflowsWithContainerGen returns every microflow in the
+// project paired with its container UUID, caching the result on
+// ctx.Cache.microflowsWithContainerGen for the duration of the
+// session.
+//
+// Why this exists (Followup E1, [[Executor cache pattern]]):
+// Migrating production callers from the legacy sdk-typed
+// ctx.Backend.ListMicroflows() to the gen-typed
+// ctx.Microflows.ListAll() lost the inline ContainerID field
+// (codec roundtrip drops Container linkage by design). The naive
+// fix — calling ctx.Microflows.GetContainerUUID(mf.ID()) inside the
+// loop — turns every list-and-filter pass into O(N²) SQL on large
+// projects. This helper resolves all containers once and caches the
+// pairing so the second caller in the same session pays O(1).
+//
+// Cache invalidation: invalidateMicroflowsCache (called by
+// microflow/nanoflow create/drop paths) clears this slice along with
+// microflowNames so subsequent reads see fresh container linkage.
+func listMicroflowsWithContainerGen(ctx *ExecContext) ([]MicroflowGenWithContainer, error) {
+	if ctx == nil {
+		return nil, nil
+	}
+	if ctx.Cache != nil && ctx.Cache.microflowsWithContainerGen != nil {
+		return ctx.Cache.microflowsWithContainerGen, nil
+	}
+	mfs, err := listMicroflowsGen(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]MicroflowGenWithContainer, 0, len(mfs))
+	for _, mf := range mfs {
+		if mf == nil {
+			continue
+		}
+		var containerUUID model.ID
+		if ctx.Microflows != nil {
+			if cid, err := ctx.Microflows.GetContainerUUID(model.ID(mf.ID())); err == nil {
+				containerUUID = cid
+			}
+		}
+		out = append(out, MicroflowGenWithContainer{MF: mf, ContainerUUID: containerUUID})
+	}
+	if ctx.Cache != nil {
+		ctx.Cache.microflowsWithContainerGen = out
+	}
+	return out, nil
+}
+
+// listNanoflowsWithContainerGen mirrors listMicroflowsWithContainerGen
+// for nanoflows. Container UUIDs are resolved through ctx.Microflows
+// because nanoflows live alongside microflows in the Unit table and
+// share the same lookup path.
+func listNanoflowsWithContainerGen(ctx *ExecContext) ([]NanoflowGenWithContainer, error) {
+	if ctx == nil {
+		return nil, nil
+	}
+	if ctx.Cache != nil && ctx.Cache.nanoflowsWithContainerGen != nil {
+		return ctx.Cache.nanoflowsWithContainerGen, nil
+	}
+	nfs, err := listNanoflowsGen(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]NanoflowGenWithContainer, 0, len(nfs))
+	for _, nf := range nfs {
+		if nf == nil {
+			continue
+		}
+		var containerUUID model.ID
+		if ctx.Microflows != nil {
+			if cid, err := ctx.Microflows.GetContainerUUID(model.ID(nf.ID())); err == nil {
+				containerUUID = cid
+			}
+		}
+		out = append(out, NanoflowGenWithContainer{NF: nf, ContainerUUID: containerUUID})
+	}
+	if ctx.Cache != nil {
+		ctx.Cache.nanoflowsWithContainerGen = out
+	}
+	return out, nil
+}
+
 // buildNanoflowQualifiedNamesGen returns a set of all nanoflow
 // qualified names in the project, using gen types via ctx.Nanoflows.
 func buildNanoflowQualifiedNamesGen(ctx *ExecContext) map[string]bool {
