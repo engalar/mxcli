@@ -76,13 +76,11 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		return fmt.Errorf("%s", errMsg)
 	}
 
-	// Stage 3.2.5c does not yet build compound bodies. Refuse early
-	// with a hint so callers don't get a half-written nanoflow on disk.
-	if !isTrivialNanoflowBody(s.Body) {
-		return mdlerrors.NewValidationf(
-			"create nanoflow %s: gen-typed write path supports only trivial bodies (empty or bare `return`); compound bodies await Stage 3.2.3 (flowBuilder rewrite). Use legacy execCreateNanoflow for now",
-			qualifiedName)
-	}
+	// Stage 3.2.3 lifted the trivial-body restriction: compound
+	// bodies route through the shared flowBuilderGen / buildFlowGraphGen
+	// path below (see "Compound body emission" branch). The
+	// validateNanoflow guard above already rejects nanoflow-disallowed
+	// statement types before we reach this point.
 
 	// ── Existence + replace handling ──────────────────────────
 	var (
@@ -154,33 +152,110 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		nf.SetAllowedModuleRolesQualifiedNames(defaultDocumentAccessRoleQNames(ctx, module))
 	}
 
-	// Parameters — emitted as MicroflowParameter elements inside the
-	// ObjectCollection (matches what the gen reader expects when
-	// describeNanoflowGen walks the collection looking for both the
-	// MicroflowParameter and NanoflowParameter tags).
-	oc := genMf.NewMicroflowObjectCollection()
+	// Parameter elements — emitted into the ObjectCollection so the
+	// gen describer's walk over the collection finds them
+	// (MicroflowParameter / NanoflowParameter tags).
+	paramElements := make([]*genMf.MicroflowParameter, 0, len(s.Parameters))
 	for _, p := range s.Parameters {
 		param := genMf.NewMicroflowParameter()
 		param.SetName(p.Name)
 		if t := paramASTToShortType(p.Type); t != "" {
 			param.SetType(t)
 		}
-		oc.AddObjects(param)
+		paramElements = append(paramElements, param)
 	}
 
-	// Trivial body emission — Start → End SequenceFlow pair.
-	start := genMf.NewStartEvent()
-	end := genMf.NewEndEvent()
-	if rv := returnExpressionFromBody(s.Body); rv != "" {
-		end.SetReturnValue(rv)
-	}
-	oc.AddObjects(start)
-	oc.AddObjects(end)
+	// Body emission — two paths:
+	//
+	//  - Trivial (empty / bare `return`): inline Start→End pair so the
+	//    output exactly matches the original Stage 3.2.5c shape that
+	//    fixtures + roundtrip tests assert against.
+	//
+	//  - Compound (any statement that's not a bare return): route
+	//    through flowBuilderGen.buildFlowGraphGen — Stage 3.2.3 shipped
+	//    the full flow-graph builder and made compound nanoflow bodies
+	//    feasible without legacy.
+	var oc *genMf.MicroflowObjectCollection
+	if isTrivialNanoflowBody(s.Body) {
+		oc = genMf.NewMicroflowObjectCollection()
+		for _, param := range paramElements {
+			oc.AddObjects(param)
+		}
+		start := genMf.NewStartEvent()
+		assignFreshID(start)
+		end := genMf.NewEndEvent()
+		assignFreshID(end)
+		if rv := returnExpressionFromBody(s.Body); rv != "" {
+			end.SetReturnValue(rv)
+		}
+		oc.AddObjects(start)
+		oc.AddObjects(end)
 
-	flow := genMf.NewSequenceFlow()
-	flow.SetOriginID(start.ID())
-	flow.SetDestinationID(end.ID())
-	nf.AddFlows(flow)
+		flow := genMf.NewSequenceFlow()
+		assignFreshID(flow)
+		flow.SetOriginID(start.ID())
+		flow.SetDestinationID(end.ID())
+		nf.AddFlows(flow)
+	} else {
+		hierarchy, _ := getHierarchy(ctx)
+		restServices, _ := loadRestServices(ctx)
+
+		fb := &flowBuilderGen{
+			posX:           200,
+			posY:           200,
+			baseY:          200,
+			spacing:        HorizontalSpacing,
+			varTypes:       map[string]string{},
+			declaredVars:   map[string]string{},
+			measurer:       &layoutMeasurer{varTypes: map[string]string{}},
+			backend:        ctx.Backend,
+			microflowsRepo: ctx.Microflows,
+			nanoflowsRepo:  ctx.Nanoflows,
+			hierarchy:      hierarchy,
+			restServices:   restServices,
+			isNanoflow:     true, // EH defaults to "Abort" instead of "Rollback"
+		}
+
+		// Initialise variable types from parameters so body statements
+		// can resolve member access on entity-typed params.
+		for _, p := range s.Parameters {
+			if p.Type.EntityRef != nil {
+				entityQN := p.Type.EntityRef.Module + "." + p.Type.EntityRef.Name
+				if p.Type.Kind == ast.TypeListOf {
+					fb.varTypes[p.Name] = "List of " + entityQN
+				} else {
+					fb.varTypes[p.Name] = entityQN
+				}
+			} else {
+				fb.declaredVars[p.Name] = p.Type.Kind.String()
+			}
+		}
+
+		oc = fb.buildFlowGraphGen(s.Body, s.ReturnType)
+
+		// Surface validation errors collected during build.
+		if errs := fb.GetErrors(); len(errs) > 0 {
+			return mdlerrors.NewValidationf(
+				"nanoflow '%s' has validation errors:\n  - %s",
+				qualifiedName, strings.Join(errs, "\n  - "))
+		}
+
+		// Inject parameters alongside body activities (gen describer
+		// walks the collection looking for both kinds).
+		for _, param := range paramElements {
+			oc.AddObjects(param)
+		}
+
+		// Append all sequence flows + annotation flows onto the
+		// nanoflow's Flows array (top-level placement, not nested in
+		// the ObjectCollection — matches the microflow path).
+		for _, flow := range fb.flows {
+			nf.AddFlows(flow)
+		}
+		for _, af := range fb.annotationFlows {
+			nf.AddFlows(af)
+		}
+	}
 
 	nf.SetObjectCollection(oc)
 
