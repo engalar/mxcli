@@ -509,6 +509,36 @@ func listModuleRolesGen(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
+// listUserRolesGen handles SHOW USER ROLES using the gen-typed ProjectSecurity
+// from ctx.Security. Mirrors listUserRoles output shape; only the type source changes.
+func listUserRolesGen(ctx *ExecContext) error {
+	ps, err := getProjectSecurityGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("read project security", err)
+	}
+	if ps == nil {
+		return mdlerrors.NewBackend("read project security", fmt.Errorf("ProjectSecurity not found"))
+	}
+	result := &TableResult{Columns: []string{"Name", "Module Roles", "Manage All", "Check Security"}}
+	for _, ur := range ps.UserRolesItems() {
+		typed, ok := ur.(*genSec.UserRole)
+		if !ok {
+			continue
+		}
+		ma := "No"
+		if typed.ManageAllRoles() {
+			ma = "Yes"
+		}
+		cs := "No"
+		if typed.CheckSecurity() {
+			cs = "Yes"
+		}
+		result.Rows = append(result.Rows, []any{typed.Name(), len(typed.ModuleRolesQualifiedNames()), ma, cs})
+	}
+	result.Summary = fmt.Sprintf("(%d user roles)", len(result.Rows))
+	return writeResult(ctx, result)
+}
+
 // securityLevelDisplay maps gen-typed BSON SecurityLevel constants to the
 // human-friendly labels used by `show project security`. Mirrors
 // security.SecurityLevelDisplay (sdk/security/security.go) without
