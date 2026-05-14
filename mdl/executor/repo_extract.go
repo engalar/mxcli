@@ -43,6 +43,13 @@ type javaScriptActionsRepoProvider interface {
 	JavaScriptActions() repos.JavaScriptActionRepository
 }
 
+// domainModelsRepoProvider mirrors microflowsRepoProvider for the
+// domainmodel domain (Stage 3.3.4 A0). MprBackend implements this in
+// repos_provider.go.
+type domainModelsRepoProvider interface {
+	DomainModels() repos.DomainModelRepository
+}
+
 // extractMicroflowsRepo returns the modelsdk-native MicroflowRepository
 // if the backend supports it, else nil. Callers (handlers) MUST check
 // nil and fall back to ctx.Backend during the Stage 3.x incremental
@@ -99,6 +106,18 @@ func extractJavaScriptActionsRepo(b backend.FullBackend) repos.JavaScriptActionR
 	}
 	if p, ok := b.(javaScriptActionsRepoProvider); ok {
 		return p.JavaScriptActions()
+	}
+	return nil
+}
+
+// extractDomainModelsRepo mirrors extractMicroflowsRepo for the
+// domainmodel domain (Stage 3.3.4 A0).
+func extractDomainModelsRepo(b backend.FullBackend) repos.DomainModelRepository {
+	if b == nil {
+		return nil
+	}
+	if p, ok := b.(domainModelsRepoProvider); ok {
+		return p.DomainModels()
 	}
 	return nil
 }

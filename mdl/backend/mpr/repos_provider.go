@@ -81,3 +81,13 @@ func (b *MprBackend) JavaScriptActions() repos.JavaScriptActionRepository {
 	}
 	return mprrepos.NewJavaScriptActionRepository(w)
 }
+
+// DomainModels returns the modelsdk-native DomainModelRepository, or nil
+// with the same conditions as Microflows() (Stage 3.3.4 A0).
+func (b *MprBackend) DomainModels() repos.DomainModelRepository {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil
+	}
+	return mprrepos.NewDomainModelRepository(w)
+}
