@@ -375,3 +375,44 @@ func TestListAccessOnEntityGen_NilName(t *testing.T) {
 		t.Fatalf("expected validation error for nil name, got nil")
 	}
 }
+
+// TestListAccessOnPageGen_OutputsForFixturePage exercises the happy
+// path against a real fixture page (Administration.Account_Edit) and
+// asserts either the "no roles granted" message or the allowed-roles
+// header line is rendered. Either branch confirms the page was found.
+func TestListAccessOnPageGen_OutputsForFixturePage(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	ctx.Format = FormatTable
+	name := ast.QualifiedName{Module: "Administration", Name: "Account_Edit"}
+	if err := listAccessOnPageGen(ctx, &name); err != nil {
+		t.Fatalf("listAccessOnPageGen: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "Account_Edit") {
+		t.Errorf("expected page name in output, got: %q", out)
+	}
+}
+
+// TestListAccessOnPageGen_NotFound verifies the NotFound error path
+// fires for a bogus page name.
+func TestListAccessOnPageGen_NotFound(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	name := ast.QualifiedName{Module: "Nope", Name: "DoesNotExist_Stage3_3_A9"}
+	err := listAccessOnPageGen(ctx, &name)
+	if err == nil {
+		t.Fatalf("expected NotFound error for bogus page, got nil")
+	}
+	if !strings.Contains(err.Error(), "page") {
+		t.Errorf("expected error mentioning 'page', got: %q", err.Error())
+	}
+}
+
+// TestListAccessOnPageGen_NilName verifies the nil-name validation path.
+func TestListAccessOnPageGen_NilName(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	if err := listAccessOnPageGen(ctx, nil); err == nil {
+		t.Fatalf("expected validation error for nil name, got nil")
+	}
+}

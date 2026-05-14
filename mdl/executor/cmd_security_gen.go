@@ -901,3 +901,56 @@ func listAccessOnEntityGen(ctx *ExecContext, name *ast.QualifiedName) error {
 
 	return nil
 }
+
+// listAccessOnPageGen handles SHOW ACCESS ON PAGE Module.Page using
+// the same backend.ListPages() path as legacy listAccessOnPage. Pages
+// domain has no gen migration yet (Stage 3.3 priority #5), so this is
+// a passthrough rename — no behavior change. Once pages migrates, the
+// AllowedRoles read can be replaced by gen-typed Page.AllowedRoles.
+//
+// Wiring: not yet routed from executor_query.go; the dispatcher cutover
+// happens in task A10 once all A1-A9 gen twins exist.
+func listAccessOnPageGen(ctx *ExecContext, name *ast.QualifiedName) error {
+	if name == nil {
+		return mdlerrors.NewValidation("page name required")
+	}
+
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	pages, err := ctx.Backend.ListPages()
+	if err != nil {
+		return mdlerrors.NewBackend("list pages", err)
+	}
+
+	for _, pg := range pages {
+		modName := h.GetModuleName(h.FindModuleID(pg.ContainerID))
+		if modName == name.Module && pg.Name == name.Name {
+			if ctx.Format == FormatJSON {
+				result := &TableResult{Columns: []string{"Module", "Role"}}
+				for _, role := range pg.AllowedRoles {
+					parts := strings.SplitN(string(role), ".", 2)
+					mod, r := "", string(role)
+					if len(parts) == 2 {
+						mod, r = parts[0], parts[1]
+					}
+					result.Rows = append(result.Rows, []any{mod, r})
+				}
+				return writeResult(ctx, result)
+			}
+			if len(pg.AllowedRoles) == 0 {
+				fmt.Fprintf(ctx.Output, "No module roles granted view access on %s.%s\n", modName, pg.Name)
+				return nil
+			}
+			fmt.Fprintf(ctx.Output, "Allowed module roles for %s.%s:\n", modName, pg.Name)
+			for _, role := range pg.AllowedRoles {
+				fmt.Fprintf(ctx.Output, "  %s\n", string(role))
+			}
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFound("page", name.String())
+}
