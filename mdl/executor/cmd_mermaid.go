@@ -42,6 +42,13 @@ func describeMermaid(ctx *ExecContext, objectType, name string) error {
 
 	switch strings.ToLower(objectType) {
 	case "entity", "domainmodel":
+		// Stage 3.3.4 B3: prefer the gen-typed renderer when the
+		// modelsdk-native DomainModels repo is wired (production
+		// MprBackend path). Mock backends don't carry the repo and
+		// fall back to the legacy renderer until they're updated.
+		if ctx.DomainModels != nil {
+			return domainModelToMermaidGen(ctx, qn.Module)
+		}
 		return domainModelToMermaid(ctx, qn.Module)
 	case "microflow":
 		return microflowToMermaidGen(ctx, qn)
