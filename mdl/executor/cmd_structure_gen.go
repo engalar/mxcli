@@ -38,9 +38,9 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // ────────────────────────────────────────────────────────
@@ -344,12 +344,17 @@ func loadStructureSharedDataGen(ctx *ExecContext, h *ContainerHierarchy) (
 		jaByModule[modName] = append(jaByModule[modName], p.Elem)
 	}
 
-	allWorkflows, _ := ctx.Backend.ListWorkflows()
+	// gen Workflow loses container linkage during BSON roundtrip; use
+	// the cache helper which joins through the MPR Unit table to recover it.
+	wfPairs, _ := listWorkflowsWithContainerGen(ctx)
 	wfByModule = make(structureWfMapGen)
-	for _, wf := range allWorkflows {
-		modID := h.FindModuleID(wf.ContainerID)
+	for _, p := range wfPairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
-		wfByModule[modName] = append(wfByModule[modName], wf)
+		wfByModule[modName] = append(wfByModule[modName], p.Elem)
 	}
 	return
 }
@@ -510,5 +515,5 @@ type (
 	structureConstMapGen = map[string][]*model.Constant
 	structureEventMapGen = map[string][]*model.ScheduledEvent
 	structureJaMapGen    = map[string][]*genJA.JavaAction
-	structureWfMapGen    = map[string][]*workflows.Workflow
+	structureWfMapGen    = map[string][]*genWf.Workflow
 )

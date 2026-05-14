@@ -10,7 +10,8 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 )
@@ -549,25 +550,23 @@ func structureBusinessEventServices(ctx *ExecContext, moduleName string) {
 	}
 }
 
-// structureWorkflows outputs workflows for a module.
-func structureWorkflows(ctx *ExecContext, moduleName string, wfs []*workflows.Workflow, withDetails bool) {
+// structureWorkflows outputs workflows for a module (gen-typed).
+func structureWorkflows(ctx *ExecContext, moduleName string, wfs []*genWf.Workflow, withDetails bool) {
 	if len(wfs) == 0 {
 		return
 	}
 
-	// Sort alphabetically
-	sorted := make([]*workflows.Workflow, len(wfs))
+	sorted := make([]*genWf.Workflow, len(wfs))
 	copy(sorted, wfs)
 	sort.Slice(sorted, func(i, j int) bool {
-		return strings.ToLower(sorted[i].Name) < strings.ToLower(sorted[j].Name)
+		return strings.ToLower(sorted[i].Name()) < strings.ToLower(sorted[j].Name())
 	})
 
 	for _, wf := range sorted {
-		qualName := moduleName + "." + wf.Name
+		qualName := moduleName + "." + wf.Name()
 		var parts []string
 
-		// Count activities
-		total, userTasks, _, decisions := countStructureWorkflowActivities(wf)
+		total, userTasks, _, decisions := countStructureWorkflowActivitiesGen(wf)
 		if total > 0 {
 			parts = append(parts, pluralize(total, "activity", "activities"))
 		}
@@ -578,9 +577,10 @@ func structureWorkflows(ctx *ExecContext, moduleName string, wfs []*workflows.Wo
 			parts = append(parts, pluralize(decisions, "decision", "decisions"))
 		}
 
-		if withDetails && wf.Parameter != nil && wf.Parameter.EntityRef != "" {
-			entityPart := "param: " + shortName(wf.Parameter.EntityRef)
-			parts = append(parts, entityPart)
+		if withDetails {
+			if entity := workflowParameterEntityGen(wf); entity != "" {
+				parts = append(parts, "param: "+shortName(entity))
+			}
 		}
 
 		if len(parts) > 0 {
@@ -591,53 +591,104 @@ func structureWorkflows(ctx *ExecContext, moduleName string, wfs []*workflows.Wo
 	}
 }
 
-// countStructureWorkflowActivities counts activity types in a workflow for structure output.
-func countStructureWorkflowActivities(wf *workflows.Workflow) (total, userTasks, microflowCalls, decisions int) {
-	if wf.Flow == nil {
+// countStructureWorkflowActivitiesGen counts activity types in a gen
+// workflow for structure output. Reuses the same activity-counting
+// algorithm as cmd_workflows_gen.go but with the microflowCalls metric
+// the structure command needs (decision and userTasks are already
+// counted by countWorkflowActivitiesGen, but it doesn't expose
+// microflowCalls). We dispatch here directly.
+func countStructureWorkflowActivitiesGen(wf *genWf.Workflow) (total, userTasks, microflowCalls, decisions int) {
+	if wf == nil {
 		return
 	}
-	countStructureFlowActivities(wf.Flow, &total, &userTasks, &microflowCalls, &decisions)
-	return
-}
-
-// countStructureFlowActivities recursively counts activity types in a flow.
-func countStructureFlowActivities(flow *workflows.Flow, total, userTasks, microflowCalls, decisions *int) {
+	flow, _ := wf.Flow().(*genWf.Flow)
 	if flow == nil {
 		return
 	}
-	for _, act := range flow.Activities {
+	countStructureFlowActivitiesGen(flow, &total, &userTasks, &microflowCalls, &decisions)
+	return
+}
+
+func countStructureFlowActivitiesGen(flow *genWf.Flow, total, userTasks, microflowCalls, decisions *int) {
+	if flow == nil {
+		return
+	}
+	for _, act := range flow.ActivitiesItems() {
+		if act == nil {
+			continue
+		}
 		*total++
-		switch a := act.(type) {
-		case *workflows.UserTask:
+		switch act.TypeName() {
+		case "Workflows$UserTask",
+			"Workflows$SingleUserTaskActivity",
+			"Workflows$MultiUserTaskActivity":
 			*userTasks++
-			for _, outcome := range a.Outcomes {
-				countStructureFlowActivities(outcome.Flow, total, userTasks, microflowCalls, decisions)
-			}
-		case *workflows.CallMicroflowTask:
+		case "Workflows$CallMicroflowTask",
+			"Workflows$CallMicroflowActivity",
+			"Workflows$SystemTask":
 			*microflowCalls++
-			for _, outcome := range a.Outcomes {
-				if outcome != nil {
-					countStructureFlowActivities(outcome.GetFlow(), total, userTasks, microflowCalls, decisions)
-				}
-			}
-		case *workflows.SystemTask:
-			*microflowCalls++
-			for _, outcome := range a.Outcomes {
-				if outcome != nil {
-					countStructureFlowActivities(outcome.GetFlow(), total, userTasks, microflowCalls, decisions)
-				}
-			}
-		case *workflows.ExclusiveSplitActivity:
+		case "Workflows$ExclusiveSplitActivity":
 			*decisions++
-			for _, outcome := range a.Outcomes {
-				if outcome != nil {
-					countStructureFlowActivities(outcome.GetFlow(), total, userTasks, microflowCalls, decisions)
+		}
+		// Recurse into outcomes' nested flows.
+		switch v := act.(type) {
+		case *genWf.UserTask:
+			for _, oc := range v.OutcomesItems() {
+				if utc, ok := oc.(*genWf.UserTaskOutcome); ok {
+					if f, ok := utc.Flow().(*genWf.Flow); ok {
+						countStructureFlowActivitiesGen(f, total, userTasks, microflowCalls, decisions)
+					}
 				}
 			}
-		case *workflows.ParallelSplitActivity:
-			for _, outcome := range a.Outcomes {
-				countStructureFlowActivities(outcome.Flow, total, userTasks, microflowCalls, decisions)
+		case *genWf.SingleUserTaskActivity:
+			for _, oc := range v.OutcomesItems() {
+				if utc, ok := oc.(*genWf.UserTaskOutcome); ok {
+					if f, ok := utc.Flow().(*genWf.Flow); ok {
+						countStructureFlowActivitiesGen(f, total, userTasks, microflowCalls, decisions)
+					}
+				}
 			}
+		case *genWf.MultiUserTaskActivity:
+			for _, oc := range v.OutcomesItems() {
+				if utc, ok := oc.(*genWf.UserTaskOutcome); ok {
+					if f, ok := utc.Flow().(*genWf.Flow); ok {
+						countStructureFlowActivitiesGen(f, total, userTasks, microflowCalls, decisions)
+					}
+				}
+			}
+		case *genWf.CallMicroflowActivity:
+			structureRecurseConditionOutcomesGen(v.OutcomesItems(), total, userTasks, microflowCalls, decisions)
+		case *genWf.CallMicroflowTask:
+			structureRecurseConditionOutcomesGen(v.OutcomesItems(), total, userTasks, microflowCalls, decisions)
+		case *genWf.ExclusiveSplitActivity:
+			structureRecurseConditionOutcomesGen(v.OutcomesItems(), total, userTasks, microflowCalls, decisions)
+		case *genWf.ParallelSplitActivity:
+			for _, oc := range v.OutcomesItems() {
+				if pso, ok := oc.(*genWf.ParallelSplitOutcome); ok {
+					if f, ok := pso.Flow().(*genWf.Flow); ok {
+						countStructureFlowActivitiesGen(f, total, userTasks, microflowCalls, decisions)
+					}
+				}
+			}
+		}
+	}
+}
+
+func structureRecurseConditionOutcomesGen(outcomes []element.Element, total, userTasks, microflowCalls, decisions *int) {
+	for _, oc := range outcomes {
+		var f *genWf.Flow
+		switch v := oc.(type) {
+		case *genWf.BooleanConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		case *genWf.EnumerationValueConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		case *genWf.VoidConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		case *genWf.ExclusiveSplitOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		}
+		if f != nil {
+			countStructureFlowActivitiesGen(f, total, userTasks, microflowCalls, decisions)
 		}
 	}
 }
