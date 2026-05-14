@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli"
+	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
+	"github.com/mendixlabs/mxcli/modelsdk/mprread"
 )
 
 // redactSensitiveFields recursively walks a JSON map and replaces values
@@ -110,27 +112,30 @@ func main() {
 	}
 
 	fmt.Println("\n=== Microflows ===")
-	microflows, err := reader.ListMicroflows()
-	if err != nil {
-		fmt.Printf("Error listing microflows: %v\n", err)
+	mreader, mreaderErr := mmpr.Open(mprPath)
+	if mreaderErr != nil {
+		fmt.Printf("Error opening MPR for microflow listing: %v\n", mreaderErr)
 	} else {
-		fmt.Printf("  Total: %d microflows\n", len(microflows))
-		for _, mf := range microflows {
-			fmt.Printf("  - %s\n", mf.Name)
-			if len(mf.Parameters) > 0 {
-				fmt.Printf("    Parameters: %d\n", len(mf.Parameters))
+		defer mreader.Close()
+		microflows, err := mprread.ListMicroflows(mreader)
+		if err != nil {
+			fmt.Printf("Error listing microflows: %v\n", err)
+		} else {
+			fmt.Printf("  Total: %d microflows\n", len(microflows))
+			for _, mf := range microflows {
+				fmt.Printf("  - %s\n", mf.Name())
 			}
 		}
-	}
 
-	fmt.Println("\n=== Nanoflows ===")
-	nanoflows, err := reader.ListNanoflows()
-	if err != nil {
-		fmt.Printf("Error listing nanoflows: %v\n", err)
-	} else {
-		fmt.Printf("  Total: %d nanoflows\n", len(nanoflows))
-		for _, nf := range nanoflows {
-			fmt.Printf("  - %s\n", nf.Name)
+		fmt.Println("\n=== Nanoflows ===")
+		nanoflows, err := mprread.ListNanoflows(mreader)
+		if err != nil {
+			fmt.Printf("Error listing nanoflows: %v\n", err)
+		} else {
+			fmt.Printf("  Total: %d nanoflows\n", len(nanoflows))
+			for _, nf := range nanoflows {
+				fmt.Printf("  - %s\n", nf.Name())
+			}
 		}
 	}
 
