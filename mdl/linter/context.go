@@ -10,8 +10,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/security"
 )
 
 // LintReader provides read access to MPR document data needed by lint rules.
@@ -22,7 +22,7 @@ import (
 // catalog consume.
 type LintReader interface {
 	GetMicroflowGen(id model.ID) (*genMf.Microflow, error)
-	GetProjectSecurity() (*security.ProjectSecurity, error)
+	GetProjectSecurityGen() (*genSec.ProjectSecurity, error)
 	GetNavigation() (*types.NavigationDocument, error)
 	ListPages() ([]*pages.Page, error)
 	ListModules() ([]*model.Module, error)
@@ -319,17 +319,22 @@ func (ctx *LintContext) UserRoles() []UserRoleInfo {
 	if reader == nil {
 		return nil
 	}
-	ps, err := reader.GetProjectSecurity()
+	ps, err := reader.GetProjectSecurityGen()
 	if err != nil || ps == nil {
 		return nil
 	}
 
+	guestRole := ps.GuestUserRoleName()
 	var roles []UserRoleInfo
-	for _, ur := range ps.UserRoles {
+	for _, item := range ps.UserRolesItems() {
+		ur, ok := item.(*genSec.UserRole)
+		if !ok {
+			continue
+		}
 		roles = append(roles, UserRoleInfo{
-			Name:        ur.Name,
-			IsAnonymous: ur.Name == ps.GuestUserRole,
-			ModuleRoles: ur.ModuleRoles,
+			Name:        ur.Name(),
+			IsAnonymous: ur.Name() == guestRole,
+			ModuleRoles: ur.ModuleRolesQualifiedNames(),
 		})
 	}
 	return roles
