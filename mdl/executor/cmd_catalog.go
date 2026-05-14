@@ -703,7 +703,7 @@ func captureDescribe(ctx *ExecContext, objectType string, qualifiedName string) 
 	case "enumeration":
 		err = describeEnumeration(ctx, qn)
 	case "workflow":
-		err = describeWorkflow(ctx, qn)
+		err = describeWorkflowGen(ctx, qn)
 	default:
 		return "", mdlerrors.NewUnsupported("object type for describe: " + objectType)
 	}
@@ -728,14 +728,15 @@ func captureDescribeParallel(ctx *ExecContext, objectType string, qualifiedName 
 	// Create a goroutine-local context: shared backend + cache, own output buffer.
 	var buf bytes.Buffer
 	localCtx := &ExecContext{
-		Context: ctx.Context,
-		Output:  &buf,
-		Format:  ctx.Format,
-		Quiet:   ctx.Quiet,
-		Logger:  ctx.Logger,
-		Backend: ctx.Backend,
-		Cache:   ctx.Cache,
-		MprPath: ctx.MprPath,
+		Context:   ctx.Context,
+		Output:    &buf,
+		Format:    ctx.Format,
+		Quiet:     ctx.Quiet,
+		Logger:    ctx.Logger,
+		Backend:   ctx.Backend,
+		Cache:     ctx.Cache,
+		MprPath:   ctx.MprPath,
+		Workflows: ctx.Workflows,
 	}
 
 	var err error
@@ -753,7 +754,7 @@ func captureDescribeParallel(ctx *ExecContext, objectType string, qualifiedName 
 	case "enumeration":
 		err = describeEnumeration(localCtx, qn)
 	case "workflow":
-		err = describeWorkflow(localCtx, qn)
+		err = describeWorkflowGen(localCtx, qn)
 	default:
 		return "", mdlerrors.NewUnsupported("object type for describe: " + objectType)
 	}

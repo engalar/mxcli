@@ -96,7 +96,7 @@ func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
 	case ast.ShowStructure:
 		return execShowStructureGen(ctx, s)
 	case ast.ShowWorkflows:
-		return listWorkflows(ctx, s.InModule)
+		return listWorkflowsGen(ctx, s.InModule)
 	case ast.ShowBusinessEventServices:
 		return listBusinessEventServices(ctx, s.InModule)
 	case ast.ShowBusinessEventClients:
@@ -198,7 +198,7 @@ func execDescribe(ctx *ExecContext, s *ast.DescribeStmt) error {
 		case ast.DescribeNavigation:
 			return describeNavigation(ctx, s.Name)
 		case ast.DescribeWorkflow:
-			return describeWorkflow(ctx, s.Name)
+			return describeWorkflowGen(ctx, s.Name)
 		case ast.DescribeBusinessEventService:
 			return describeBusinessEventService(ctx, s.Name)
 		case ast.DescribeDatabaseConnection:
