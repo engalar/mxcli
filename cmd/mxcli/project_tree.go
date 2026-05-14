@@ -11,6 +11,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
+	"github.com/mendixlabs/mxcli/modelsdk/mprread"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/spf13/cobra"
 )
@@ -73,6 +75,17 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		return nil, fmt.Errorf("failed to open project: %w", err)
 	}
 	defer reader.Close()
+
+	// Open a parallel modelsdk/mpr reader for microflow/nanoflow listing.
+	// Both readers open the same .mpr in read-only mode; their SQLite
+	// connections are independent. mprread.List* returns gen-typed
+	// elements that callers can later iterate using modelsdk semantics
+	// (Stage 4 Task A migration off sdk/mpr microflow APIs).
+	mreader, err := mmpr.Open(projectPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open project (modelsdk reader): %w", err)
+	}
+	defer mreader.Close()
 
 	h, err := executor.NewContainerHierarchy(reader)
 	if err != nil {
@@ -142,26 +155,45 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		}
 	}
 
-	// Collect microflows
-	mfs, _ := reader.ListMicroflows()
+	// Collect microflows (modelsdk-native gen path).
+	// gen-typed Microflow loses Container() linkage on codec roundtrip,
+	// so resolve ContainerID by joining mprread results against the
+	// raw UnitRef list keyed on unit ID.
+	mfRefs, _ := mreader.ListUnitsByType("Microflows$Microflow")
+	mfContainerByID := make(map[string]model.ID, len(mfRefs))
+	for _, ref := range mfRefs {
+		if ref.Type == "Microflows$Microflow" {
+			mfContainerByID[ref.ID] = model.ID(ref.ContainerID)
+		}
+	}
+	mfs, _ := mprread.ListMicroflows(mreader)
 	for _, mf := range mfs {
-		modID := h.FindModuleID(mf.ContainerID)
+		containerID := mfContainerByID[string(mf.ID())]
+		modID := h.FindModuleID(containerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: mf.Name, ContainerID: mf.ContainerID, Type: "microflow"})
+		md.documents = append(md.documents, treeElement{Name: mf.Name(), ContainerID: containerID, Type: "microflow"})
 	}
 
-	// Collect nanoflows
-	nfs, _ := reader.ListNanoflows()
+	// Collect nanoflows (modelsdk-native gen path).
+	nfRefs, _ := mreader.ListUnitsByType("Microflows$Nanoflow")
+	nfContainerByID := make(map[string]model.ID, len(nfRefs))
+	for _, ref := range nfRefs {
+		if ref.Type == "Microflows$Nanoflow" {
+			nfContainerByID[ref.ID] = model.ID(ref.ContainerID)
+		}
+	}
+	nfs, _ := mprread.ListNanoflows(mreader)
 	for _, nf := range nfs {
-		modID := h.FindModuleID(nf.ContainerID)
+		containerID := nfContainerByID[string(nf.ID())]
+		modID := h.FindModuleID(containerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: nf.Name, ContainerID: nf.ContainerID, Type: "nanoflow"})
+		md.documents = append(md.documents, treeElement{Name: nf.Name(), ContainerID: containerID, Type: "nanoflow"})
 	}
 
 	// Collect pages
