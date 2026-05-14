@@ -76,6 +76,7 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 		JavaActions:       extractJavaActionsRepo(e.backend),
 		JavaScriptActions: extractJavaScriptActionsRepo(e.backend),
 		DomainModels:      extractDomainModelsRepo(e.backend),
+		Workflows:         extractWorkflowsRepo(e.backend),
 		Output:           e.output,
 		Format:           e.format,
 		Quiet:            e.quiet,

@@ -50,6 +50,12 @@ type domainModelsRepoProvider interface {
 	DomainModels() repos.DomainModelRepository
 }
 
+// workflowsRepoProvider mirrors microflowsRepoProvider for the workflows
+// domain (Stage 3.3.3 A0). MprBackend implements this in repos_provider.go.
+type workflowsRepoProvider interface {
+	Workflows() repos.WorkflowRepository
+}
+
 // extractMicroflowsRepo returns the modelsdk-native MicroflowRepository
 // if the backend supports it, else nil. Callers (handlers) MUST check
 // nil and fall back to ctx.Backend during the Stage 3.x incremental
@@ -118,6 +124,18 @@ func extractDomainModelsRepo(b backend.FullBackend) repos.DomainModelRepository 
 	}
 	if p, ok := b.(domainModelsRepoProvider); ok {
 		return p.DomainModels()
+	}
+	return nil
+}
+
+// extractWorkflowsRepo mirrors extractMicroflowsRepo for the workflows
+// domain (Stage 3.3.3 A0).
+func extractWorkflowsRepo(b backend.FullBackend) repos.WorkflowRepository {
+	if b == nil {
+		return nil
+	}
+	if p, ok := b.(workflowsRepoProvider); ok {
+		return p.Workflows()
 	}
 	return nil
 }

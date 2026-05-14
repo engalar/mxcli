@@ -24,21 +24,27 @@ type WorkflowMoveCall struct {
 
 // RecordingWorkflowRepository records every call to its methods.
 type RecordingWorkflowRepository struct {
-	GotIDs       []model.ID
-	ListedModule []model.ID
-	OpenedIDs    []model.ID
-	Created      []WorkflowCreateCall
-	Updated      []*genWf.Workflow
-	Deleted      []model.ID
-	Moved        []WorkflowMoveCall
+	GotIDs           []model.ID
+	ListedModule     []model.ID
+	ListedAll        int
+	FoundQNs         []string
+	GotContainerIDs  []model.ID
+	OpenedIDs        []model.ID
+	Created          []WorkflowCreateCall
+	Updated          []*genWf.Workflow
+	Deleted          []model.ID
+	Moved            []WorkflowMoveCall
 
-	GetFunc             func(model.ID) (*genWf.Workflow, error)
-	ListFunc            func(model.ID) ([]*genWf.Workflow, error)
-	CreateFunc          func(WorkflowCreateCall) error
-	UpdateFunc          func(*genWf.Workflow) error
-	DeleteFunc          func(model.ID) error
-	MoveFunc            func(WorkflowMoveCall) error
-	OpenForMutationFunc func(model.ID) (repos.WorkflowMutator, error)
+	GetFunc                 func(model.ID) (*genWf.Workflow, error)
+	ListFunc                func(model.ID) ([]*genWf.Workflow, error)
+	ListAllFunc             func() ([]*genWf.Workflow, error)
+	FindByQualifiedNameFunc func(string) (*genWf.Workflow, error)
+	GetContainerUUIDFunc    func(model.ID) (model.ID, error)
+	CreateFunc              func(WorkflowCreateCall) error
+	UpdateFunc              func(*genWf.Workflow) error
+	DeleteFunc              func(model.ID) error
+	MoveFunc                func(WorkflowMoveCall) error
+	OpenForMutationFunc     func(model.ID) (repos.WorkflowMutator, error)
 }
 
 var _ repos.WorkflowRepository = (*RecordingWorkflowRepository)(nil)
@@ -57,6 +63,30 @@ func (m *RecordingWorkflowRepository) List(moduleID model.ID) ([]*genWf.Workflow
 		return m.ListFunc(moduleID)
 	}
 	return nil, nil
+}
+
+func (m *RecordingWorkflowRepository) ListAll() ([]*genWf.Workflow, error) {
+	m.ListedAll++
+	if m.ListAllFunc != nil {
+		return m.ListAllFunc()
+	}
+	return nil, nil
+}
+
+func (m *RecordingWorkflowRepository) FindByQualifiedName(qn string) (*genWf.Workflow, error) {
+	m.FoundQNs = append(m.FoundQNs, qn)
+	if m.FindByQualifiedNameFunc != nil {
+		return m.FindByQualifiedNameFunc(qn)
+	}
+	return nil, nil
+}
+
+func (m *RecordingWorkflowRepository) GetContainerUUID(id model.ID) (model.ID, error) {
+	m.GotContainerIDs = append(m.GotContainerIDs, id)
+	if m.GetContainerUUIDFunc != nil {
+		return m.GetContainerUUIDFunc(id)
+	}
+	return "", nil
 }
 
 func (m *RecordingWorkflowRepository) Create(parentUUID string, containmentName string, wf *genWf.Workflow) error {
