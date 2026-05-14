@@ -5,10 +5,15 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/model"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
+	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 func TestBuildJumpToGenActivity(t *testing.T) {
@@ -532,6 +537,234 @@ func TestBuildWorkflowActivityGen_DispatchesAllTypes(t *testing.T) {
 				t.Errorf("TypeName = %q, want %q", got.TypeName(), tc.want)
 			}
 		})
+	}
+}
+
+// ── D2 — execCreateWorkflowGen tests ──────────────────────────────────
+
+func TestExecCreateWorkflowGen_NewUnit_RoutesThroughCreate(t *testing.T) {
+	mod := mkModule("BPModule")
+	createCalled := false
+	var createdWf *genWf.Workflow
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListWorkflowsGenFunc: func() ([]*genWf.Workflow, error) {
+			return nil, nil
+		},
+		CreateWorkflowGenFunc: func(parentUUID, containmentName string, wf *genWf.Workflow) error {
+			createCalled = true
+			createdWf = wf
+			if parentUUID != string(mod.ID) {
+				t.Errorf("parentUUID = %q, want %q", parentUUID, mod.ID)
+			}
+			if containmentName != "Documents" {
+				t.Errorf("containmentName = %q", containmentName)
+			}
+			return nil
+		},
+	}
+	h := mkHierarchy(mod)
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+
+	stmt := &ast.CreateWorkflowStmt{
+		Name:            ast.QualifiedName{Module: "BPModule", Name: "Approve"},
+		Documentation:   "approval",
+		ParameterEntity: ast.QualifiedName{Module: "BPModule", Name: "Order"},
+		DisplayName:     "Approve order",
+		Description:     "Approves the order",
+		ExportLevel:     "Hidden",
+		DueDate:         "[%CurrentDateTime%]",
+		OverviewPage:    ast.QualifiedName{Module: "BPModule", Name: "Overview"},
+		Activities: []ast.WorkflowActivityNode{
+			&ast.WorkflowUserTaskNode{Name: "Step1", Caption: "first step"},
+		},
+	}
+	if err := execCreateWorkflowGen(ctx, stmt); err != nil {
+		t.Fatalf("execCreateWorkflowGen: %v", err)
+	}
+	if !createCalled {
+		t.Fatal("CreateWorkflowGen was not called")
+	}
+	if !strings.Contains(buf.String(), "Created workflow: BPModule.Approve") {
+		t.Errorf("missing user message: %q", buf.String())
+	}
+	if createdWf.Name() != "Approve" {
+		t.Errorf("Name = %q", createdWf.Name())
+	}
+	if createdWf.Documentation() != "approval" {
+		t.Errorf("Documentation = %q", createdWf.Documentation())
+	}
+	if createdWf.OverviewPageQualifiedName() != "BPModule.Overview" {
+		t.Errorf("OverviewPageQualifiedName = %q", createdWf.OverviewPageQualifiedName())
+	}
+	if createdWf.ExportLevel() != "Hidden" {
+		t.Errorf("ExportLevel = %q", createdWf.ExportLevel())
+	}
+	if createdWf.DueDate() != "[%CurrentDateTime%]" {
+		t.Errorf("DueDate = %q", createdWf.DueDate())
+	}
+	if createdWf.Title() != "Approve order" {
+		t.Errorf("Title = %q (legacy decode mirror)", createdWf.Title())
+	}
+	param, _ := createdWf.Parameter().(*genWf.Parameter)
+	if param == nil {
+		t.Fatal("Parameter was not set")
+	}
+	if param.EntityQualifiedName() != "BPModule.Order" {
+		t.Errorf("Parameter.Entity = %q", param.EntityQualifiedName())
+	}
+	flow, _ := createdWf.Flow().(*genWf.Flow)
+	if flow == nil {
+		t.Fatal("Flow was not set")
+	}
+	acts := flow.ActivitiesItems()
+	// Start + UserTask + End = 3 activities
+	if len(acts) != 3 {
+		t.Errorf("expected 3 activities (Start + UserTask + End), got %d", len(acts))
+	}
+	if acts[0].TypeName() != "Workflows$StartWorkflowActivity" {
+		t.Errorf("first activity should be Start, got %q", acts[0].TypeName())
+	}
+	if acts[len(acts)-1].TypeName() != "Workflows$EndWorkflowActivity" {
+		t.Errorf("last activity should be End, got %q", acts[len(acts)-1].TypeName())
+	}
+}
+
+func TestExecCreateWorkflowGen_ExistingWithoutModify_Errors(t *testing.T) {
+	mod := mkModule("BPModule")
+	wfGen := mkWorkflowGen("WF1", "Approve")
+	wfSdk := mkWorkflow(mod.ID, "Approve")
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListWorkflowsGenFunc: func() ([]*genWf.Workflow, error) {
+			return []*genWf.Workflow{wfGen}, nil
+		},
+		GetWorkflowFunc: func(id model.ID) (*workflows.Workflow, error) {
+			if string(id) == "WF1" {
+				return wfSdk, nil
+			}
+			return nil, nil
+		},
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, wfSdk.ContainerID, mod.ID)
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+
+	stmt := &ast.CreateWorkflowStmt{
+		Name: ast.QualifiedName{Module: "BPModule", Name: "Approve"},
+	}
+	err := execCreateWorkflowGen(ctx, stmt)
+	if err == nil {
+		t.Fatal("expected error for existing workflow without create-or-modify")
+	}
+	if !strings.Contains(err.Error(), "already exists") {
+		t.Errorf("expected already-exists error, got %v", err)
+	}
+}
+
+func TestExecCreateWorkflowGen_ExistingWithModify_RoutesThroughUpdate(t *testing.T) {
+	mod := mkModule("BPModule")
+	wfGen := mkWorkflowGen("WF1", "Approve")
+	wfSdk := mkWorkflow(mod.ID, "Approve")
+	updateCalled := false
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListWorkflowsGenFunc: func() ([]*genWf.Workflow, error) {
+			return []*genWf.Workflow{wfGen}, nil
+		},
+		GetWorkflowFunc: func(id model.ID) (*workflows.Workflow, error) {
+			return wfSdk, nil
+		},
+		UpdateWorkflowGenFunc: func(wf *genWf.Workflow) error {
+			updateCalled = true
+			if wf.ID() != "WF1" {
+				t.Errorf("expected to preserve UnitID WF1, got %q", wf.ID())
+			}
+			return nil
+		},
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, wfSdk.ContainerID, mod.ID)
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+
+	stmt := &ast.CreateWorkflowStmt{
+		Name:           ast.QualifiedName{Module: "BPModule", Name: "Approve"},
+		CreateOrModify: true,
+	}
+	if err := execCreateWorkflowGen(ctx, stmt); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !updateCalled {
+		t.Error("UpdateWorkflowGen was not called")
+	}
+}
+
+// ── D3 — execDropWorkflowGen tests ────────────────────────────────────
+
+func TestExecDropWorkflowGen_DeletesByID(t *testing.T) {
+	mod := mkModule("BPModule")
+	wfGen := mkWorkflowGen("WF1", "Approve")
+	wfSdk := mkWorkflow(mod.ID, "Approve")
+	deleted := false
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListWorkflowsGenFunc: func() ([]*genWf.Workflow, error) {
+			return []*genWf.Workflow{wfGen}, nil
+		},
+		GetWorkflowFunc: func(id model.ID) (*workflows.Workflow, error) {
+			return wfSdk, nil
+		},
+		DeleteWorkflowFunc: func(id model.ID) error {
+			deleted = true
+			if string(id) != "WF1" {
+				t.Errorf("DeleteWorkflow id = %q, want WF1", id)
+			}
+			return nil
+		},
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, wfSdk.ContainerID, mod.ID)
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+
+	stmt := &ast.DropWorkflowStmt{Name: ast.QualifiedName{Module: "BPModule", Name: "Approve"}}
+	if err := execDropWorkflowGen(ctx, stmt); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !deleted {
+		t.Error("DeleteWorkflow was not called")
+	}
+	if !strings.Contains(buf.String(), "Dropped workflow: BPModule.Approve") {
+		t.Errorf("missing user message: %q", buf.String())
+	}
+}
+
+func TestExecDropWorkflowGen_NotFound(t *testing.T) {
+	mod := mkModule("BPModule")
+	mb := &mock.MockBackend{
+		IsConnectedFunc:      func() bool { return true },
+		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc:      func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListWorkflowsGenFunc: func() ([]*genWf.Workflow, error) { return nil, nil },
+	}
+	h := mkHierarchy(mod)
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+
+	err := execDropWorkflowGen(ctx, &ast.DropWorkflowStmt{
+		Name: ast.QualifiedName{Module: "BPModule", Name: "Missing"},
+	})
+	if err == nil {
+		t.Fatal("expected not-found error")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("expected not-found error, got %v", err)
 	}
 }
 

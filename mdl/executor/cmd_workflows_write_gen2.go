@@ -26,8 +26,12 @@
 package executor
 
 import (
+	"fmt"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
@@ -508,6 +512,349 @@ func buildParallelSplitGenActivity(n *ast.WorkflowParallelSplitNode) *genWf.Para
 		act.AddOutcomes(oc)
 	}
 	return act
+}
+
+// ---------------------------------------------------------------------------
+// D2 — execCreateWorkflowGen
+// ---------------------------------------------------------------------------
+
+// execCreateWorkflowGen mirrors execCreateWorkflow (cmd_workflows_write.go:20).
+// Builds a gen-typed Workflow from the AST and routes through
+// CreateWorkflowGen / UpdateWorkflowGen on FullBackend (added in C1).
+//
+// Implicit Start/End activities are added at flow boundaries to match
+// Studio Pro's convention. Activity name dedup happens via
+// deduplicateActivityNamesGen (defined below). autoBindWorkflowGen
+// fills CallMicroflow ParameterMappings via D4/D5 helpers.
+func execCreateWorkflowGen(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
+	if !ctx.ConnectedForWrite() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	module, err := findOrCreateModule(ctx, s.Name.Module)
+	if err != nil {
+		return err
+	}
+
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	// Existence check via gen cache helper.
+	pairs, err := listWorkflowsWithContainerGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("list workflows", err)
+	}
+	var existingID model.ID
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
+			if !s.CreateOrModify {
+				qn := s.Name.Module + "." + s.Name.Name
+				return mdlerrors.NewAlreadyExistsMsg("workflow", qn,
+					"workflow '"+qn+"' already exists (use create or modify to overwrite)")
+			}
+			existingID = model.ID(p.Elem.ID())
+			break
+		}
+	}
+
+	// Construct the gen Workflow.
+	wf := genWf.NewWorkflow()
+	wf.SetName(s.Name.Name)
+	wf.SetDocumentation(s.Documentation)
+
+	// Parameter
+	if s.ParameterEntity.Module != "" {
+		param := genWf.NewParameter()
+		param.SetID(element.ID(generateWorkflowUUID()))
+		param.SetEntityQualifiedName(s.ParameterEntity.Module + "." + s.ParameterEntity.Name)
+		wf.SetParameter(param)
+	}
+
+	if s.OverviewPage.Module != "" {
+		wf.SetOverviewPageQualifiedName(s.OverviewPage.Module + "." + s.OverviewPage.Name)
+	}
+
+	// Display metadata. WorkflowName / WorkflowDescription are Texts$Text
+	// wrappers in the gen schema (per Phase A R1 dual-storage finding).
+	if s.DisplayName != "" {
+		wf.SetWorkflowName(newTextWrapperGen(s.DisplayName))
+		// Mirror Title for legacy decode round-trip.
+		wf.SetTitle(s.DisplayName)
+	}
+	if s.Description != "" {
+		wf.SetWorkflowDescription(newTextWrapperGen(s.Description))
+	}
+	if s.ExportLevel != "" {
+		wf.SetExportLevel(s.ExportLevel)
+	}
+	wf.SetDueDate(s.DueDate)
+
+	// Build flow with implicit Start + user activities + End.
+	startAct := genWf.NewStartWorkflowActivity()
+	startAct.SetID(element.ID(generateWorkflowUUID()))
+	startAct.SetCaption("Start")
+	startAct.SetName("Start")
+
+	endAct := genWf.NewEndWorkflowActivity()
+	endAct.SetID(element.ID(generateWorkflowUUID()))
+	endAct.SetCaption("End")
+	endAct.SetName("End")
+
+	userActivities := buildWorkflowActivitiesGen(s.Activities)
+	autoBindWorkflowGen(ctx, userActivities)
+	deduplicateActivityNamesGen(userActivities)
+
+	flow := genWf.NewFlow()
+	flow.SetID(element.ID(generateWorkflowUUID()))
+	flow.AddActivities(startAct)
+	for _, a := range userActivities {
+		flow.AddActivities(a)
+	}
+	flow.AddActivities(endAct)
+	wf.SetFlow(flow)
+
+	if existingID != "" {
+		// In-place update: preserve UnitID so references and BSON git-diff
+		// stay stable.
+		wf.SetID(element.ID(existingID))
+		if err := ctx.Backend.UpdateWorkflowGen(wf); err != nil {
+			return mdlerrors.NewBackend("update workflow", err)
+		}
+	} else {
+		// New unit: gen Create generates a fresh UnitID.
+		if err := ctx.Backend.CreateWorkflowGen(string(module.ID), "Documents", wf); err != nil {
+			return mdlerrors.NewBackend("create workflow", err)
+		}
+	}
+
+	invalidateHierarchy(ctx)
+	invalidateWorkflowsCache(ctx)
+	fmt.Fprintf(ctx.Output, "Created workflow: %s.%s\n", s.Name.Module, s.Name.Name)
+	return nil
+}
+
+// autoBindWorkflowGen is the gen-typed twin of autoBindWorkflowParameters
+// (cmd_workflows_write.go:615). D4/D5 fill in the CallMicroflow /
+// CallWorkflow parameter binding logic; for now it sanitises activity
+// names so the Studio Pro identifier rules are honoured.
+func autoBindWorkflowGen(ctx *ExecContext, activities []element.Element) {
+	for _, act := range activities {
+		switch v := act.(type) {
+		case *genWf.SingleUserTaskActivity:
+			v.SetName(sanitizeActivityName(v.Name()))
+			recurseUserTaskOutcomesGen(ctx, v.OutcomesItems())
+		case *genWf.MultiUserTaskActivity:
+			v.SetName(sanitizeActivityName(v.Name()))
+			recurseUserTaskOutcomesGen(ctx, v.OutcomesItems())
+		case *genWf.UserTask:
+			v.SetName(sanitizeActivityName(v.Name()))
+			recurseUserTaskOutcomesGen(ctx, v.OutcomesItems())
+		case *genWf.CallMicroflowActivity:
+			autoBindCallMicroflowGenActivity(ctx, v)
+			recurseConditionOutcomesAutoBindGen(ctx, v.OutcomesItems())
+		case *genWf.CallMicroflowTask:
+			// Legacy storage shape — sanitise + recurse only.
+			v.SetName(sanitizeActivityName(v.Name()))
+			recurseConditionOutcomesAutoBindGen(ctx, v.OutcomesItems())
+		case *genWf.CallWorkflowActivity:
+			autoBindCallWorkflowGenActivity(ctx, v)
+		case *genWf.ExclusiveSplitActivity:
+			v.SetName(sanitizeActivityName(v.Name()))
+			recurseConditionOutcomesAutoBindGen(ctx, v.OutcomesItems())
+		case *genWf.ParallelSplitActivity:
+			v.SetName(sanitizeActivityName(v.Name()))
+			for _, oc := range v.OutcomesItems() {
+				if pso, ok := oc.(*genWf.ParallelSplitOutcome); ok {
+					if f, ok := pso.Flow().(*genWf.Flow); ok && f != nil {
+						autoBindWorkflowGen(ctx, f.ActivitiesItems())
+					}
+				}
+			}
+		case *genWf.JumpToActivity:
+			v.SetName(sanitizeActivityName(v.Name()))
+		case *genWf.WaitForTimerActivity:
+			v.SetName(sanitizeActivityName(v.Name()))
+		case *genWf.WaitForNotificationActivity:
+			v.SetName(sanitizeActivityName(v.Name()))
+		}
+	}
+}
+
+func recurseUserTaskOutcomesGen(ctx *ExecContext, outcomes []element.Element) {
+	for _, oc := range outcomes {
+		if utc, ok := oc.(*genWf.UserTaskOutcome); ok {
+			if f, ok := utc.Flow().(*genWf.Flow); ok && f != nil {
+				autoBindWorkflowGen(ctx, f.ActivitiesItems())
+			}
+		}
+	}
+}
+
+func recurseConditionOutcomesAutoBindGen(ctx *ExecContext, outcomes []element.Element) {
+	for _, oc := range outcomes {
+		var f *genWf.Flow
+		switch v := oc.(type) {
+		case *genWf.BooleanConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		case *genWf.VoidConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		case *genWf.EnumerationValueConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		}
+		if f != nil {
+			autoBindWorkflowGen(ctx, f.ActivitiesItems())
+		}
+	}
+}
+
+// autoBindCallMicroflowGenActivity is the D4 stub — full microflow
+// parameter resolution lands in the D4 commit. For D2 it just sanitises
+// the activity name and ensures a default VoidConditionOutcome exists
+// (mirrors the legacy autoBindCallMicroflow's CE6686 fix).
+func autoBindCallMicroflowGenActivity(ctx *ExecContext, act *genWf.CallMicroflowActivity) {
+	act.SetName(sanitizeActivityName(act.Name()))
+	if len(act.OutcomesItems()) == 0 {
+		oc := genWf.NewVoidConditionOutcome()
+		oc.SetID(element.ID(types.GenerateID()))
+		emptyFlow := genWf.NewFlow()
+		emptyFlow.SetID(element.ID(types.GenerateID()))
+		oc.SetFlow(emptyFlow)
+		act.AddOutcomes(oc)
+	}
+	// D4 fills in the parameter mapping resolution via ctx.Microflows.
+}
+
+// autoBindCallWorkflowGenActivity is the D5 stub — full workflow
+// parameter resolution lands in the D5 commit. For D2 it just
+// sanitises the activity name.
+func autoBindCallWorkflowGenActivity(ctx *ExecContext, act *genWf.CallWorkflowActivity) {
+	act.SetName(sanitizeActivityName(act.Name()))
+	// D5 fills in WorkflowCallParameterMapping resolution.
+}
+
+// deduplicateActivityNamesGen mirrors deduplicateActivityNames
+// (cmd_workflows_write.go:503). Walks the gen activity tree and
+// renames duplicates by appending a count suffix so Studio Pro's
+// CE0495 (unique activity names) is satisfied.
+func deduplicateActivityNamesGen(activities []element.Element) {
+	nameCount := make(map[string]int)
+	deduplicateActivityNamesInFlowGen(activities, nameCount)
+}
+
+func deduplicateActivityNamesInFlowGen(activities []element.Element, nameCount map[string]int) {
+	for _, act := range activities {
+		switch v := act.(type) {
+		case *genWf.SingleUserTaskActivity:
+			v.SetName(uniqueName(v.Name(), nameCount))
+			recurseUserTaskOutcomesDedupGen(v.OutcomesItems(), nameCount)
+		case *genWf.MultiUserTaskActivity:
+			v.SetName(uniqueName(v.Name(), nameCount))
+			recurseUserTaskOutcomesDedupGen(v.OutcomesItems(), nameCount)
+		case *genWf.UserTask:
+			v.SetName(uniqueName(v.Name(), nameCount))
+			recurseUserTaskOutcomesDedupGen(v.OutcomesItems(), nameCount)
+		case *genWf.CallMicroflowActivity:
+			v.SetName(uniqueName(v.Name(), nameCount))
+			recurseConditionOutcomesDedupGen(v.OutcomesItems(), nameCount)
+		case *genWf.CallMicroflowTask:
+			v.SetName(uniqueName(v.Name(), nameCount))
+			recurseConditionOutcomesDedupGen(v.OutcomesItems(), nameCount)
+		case *genWf.CallWorkflowActivity:
+			v.SetName(uniqueName(v.Name(), nameCount))
+		case *genWf.ExclusiveSplitActivity:
+			v.SetName(uniqueName(v.Name(), nameCount))
+			recurseConditionOutcomesDedupGen(v.OutcomesItems(), nameCount)
+		case *genWf.ParallelSplitActivity:
+			v.SetName(uniqueName(v.Name(), nameCount))
+			for _, oc := range v.OutcomesItems() {
+				if pso, ok := oc.(*genWf.ParallelSplitOutcome); ok {
+					if f, ok := pso.Flow().(*genWf.Flow); ok && f != nil {
+						deduplicateActivityNamesInFlowGen(f.ActivitiesItems(), nameCount)
+					}
+				}
+			}
+		case *genWf.JumpToActivity:
+			v.SetName(uniqueName(v.Name(), nameCount))
+		case *genWf.WaitForTimerActivity:
+			v.SetName(uniqueName(v.Name(), nameCount))
+		case *genWf.WaitForNotificationActivity:
+			v.SetName(uniqueName(v.Name(), nameCount))
+		case *genWf.EndWorkflowActivity:
+			v.SetName(uniqueName(v.Name(), nameCount))
+		}
+	}
+}
+
+func recurseUserTaskOutcomesDedupGen(outcomes []element.Element, nameCount map[string]int) {
+	for _, oc := range outcomes {
+		if utc, ok := oc.(*genWf.UserTaskOutcome); ok {
+			if f, ok := utc.Flow().(*genWf.Flow); ok && f != nil {
+				deduplicateActivityNamesInFlowGen(f.ActivitiesItems(), nameCount)
+			}
+		}
+	}
+}
+
+func recurseConditionOutcomesDedupGen(outcomes []element.Element, nameCount map[string]int) {
+	for _, oc := range outcomes {
+		var f *genWf.Flow
+		switch v := oc.(type) {
+		case *genWf.BooleanConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		case *genWf.VoidConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		case *genWf.EnumerationValueConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		}
+		if f != nil {
+			deduplicateActivityNamesInFlowGen(f.ActivitiesItems(), nameCount)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// D3 — execDropWorkflowGen
+// ---------------------------------------------------------------------------
+
+// execDropWorkflowGen mirrors execDropWorkflow (cmd_workflows_write.go:133).
+// Lists via gen cache helper, deletes via FullBackend.DeleteWorkflow
+// (sdk-typed but ID-only — no migration needed).
+func execDropWorkflowGen(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
+	if !ctx.ConnectedForWrite() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+	pairs, err := listWorkflowsWithContainerGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("list workflows", err)
+	}
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
+			if err := ctx.Backend.DeleteWorkflow(model.ID(p.Elem.ID())); err != nil {
+				return mdlerrors.NewBackend("delete workflow", err)
+			}
+			invalidateHierarchy(ctx)
+			invalidateWorkflowsCache(ctx)
+			fmt.Fprintf(ctx.Output, "Dropped workflow: %s.%s\n", s.Name.Module, s.Name.Name)
+			return nil
+		}
+	}
+	return mdlerrors.NewNotFound("workflow", s.Name.Module+"."+s.Name.Name)
 }
 
 // newTextWrapperGen wraps a plain string in a Texts$Text element with
