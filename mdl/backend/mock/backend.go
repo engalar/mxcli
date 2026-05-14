@@ -80,22 +80,18 @@ type MockBackend struct {
 	UpdateOqlQueriesForMovedEntityFunc         func(oldQualifiedName, newQualifiedName string) (int, error)
 	UpdateEnumerationRefsInAllDomainModelsFunc func(oldQualifiedName, newQualifiedName string) error
 
-	// MicroflowBackend
-	ListMicroflowsFunc        func() ([]*microflows.Microflow, error)
-	GetMicroflowFunc          func(id model.ID) (*microflows.Microflow, error)
-	CreateMicroflowFunc       func(mf *microflows.Microflow) error
-	UpdateMicroflowFunc       func(mf *microflows.Microflow) error
-	DeleteMicroflowFunc       func(id model.ID) error
-	MoveMicroflowFunc         func(mf *microflows.Microflow) error
-	ParseMicroflowFromRawFunc func(raw map[string]any, unitID, containerID model.ID) *microflows.Microflow
-	ParseMicroflowBSONFunc    func(contents []byte, unitID, containerID model.ID) (*microflows.Microflow, error)
-	ListNanoflowsFunc         func() ([]*microflows.Nanoflow, error)
-	GetNanoflowFunc           func(id model.ID) (*microflows.Nanoflow, error)
-	CreateNanoflowFunc        func(nf *microflows.Nanoflow) error
-	UpdateNanoflowFunc        func(nf *microflows.Nanoflow) error
-	DeleteNanoflowFunc        func(id model.ID) error
-	MoveNanoflowFunc          func(nf *microflows.Nanoflow) error
-	IsRuleFunc                func(qualifiedName string) (bool, error)
+	// MicroflowBackend — Followup E6 retained only the four sdk-typed
+	// methods that the catalog builder still needs and the two delete
+	// fallbacks consumed by repo_extract.go's mock-only paths.
+	// Get / Create / Update / Move / Parse have been retired; tests
+	// that need to seed flow data should use the gen-typed
+	// repostesting.RecordingMicroflowRepository (via withMicroflowsRepo).
+	ListMicroflowsFunc  func() ([]*microflows.Microflow, error)
+	GetMicroflowFunc    func(id model.ID) (*microflows.Microflow, error)
+	DeleteMicroflowFunc func(id model.ID) error
+	ListNanoflowsFunc   func() ([]*microflows.Nanoflow, error)
+	DeleteNanoflowFunc  func(id model.ID) error
+	IsRuleFunc          func(qualifiedName string) (bool, error)
 	// gen-typed surfaces (Followup C). Tests on the modelsdk-native code
 	// path should configure these instead of the sdk-typed *Func fields.
 	ListMicroflowsGenFunc func() ([]*genMf.Microflow, error)
