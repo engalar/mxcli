@@ -312,7 +312,7 @@ func TestShowAccessOnEntity_Mock_NilName(t *testing.T) {
 		IsConnectedFunc: func() bool { return true },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listAccessOnEntity(ctx, nil))
+	assertError(t, listAccessOnEntityGen(ctx, nil))
 }
 
 // Stage 3.2.6.5: TestShowAccessOnMicroflow_Mock_NotFound removed —
@@ -330,7 +330,7 @@ func TestShowAccessOnPage_Mock_NotFound(t *testing.T) {
 		ListPagesFunc:   func() ([]*pages.Page, error) { return nil, nil },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertError(t, listAccessOnPage(ctx, &ast.QualifiedName{Module: "MyModule", Name: "NonExistent"}))
+	assertError(t, listAccessOnPageGen(ctx, &ast.QualifiedName{Module: "MyModule", Name: "NonExistent"}))
 }
 
 func TestShowAccessOnWorkflow_Mock_Unsupported(t *testing.T) {
@@ -441,7 +441,7 @@ func TestGrantEntityAccess_XPathConstraint_PreservesRights(t *testing.T) {
 		},
 		XPathConstraint: "[Status = 'Open']",
 	}
-	assertNoError(t, execGrantEntityAccess(ctx, stmt))
+	assertNoError(t, execGrantEntityAccessGen(ctx, stmt))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Granted access")
@@ -522,7 +522,7 @@ func TestGrantEntityAccess_FakeRole_Issue399(t *testing.T) {
 	}
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execGrantEntityAccess(ctx, &ast.GrantEntityAccessStmt{
+	err := execGrantEntityAccessGen(ctx, &ast.GrantEntityAccessStmt{
 		Entity: ast.QualifiedName{Module: "MyModule", Name: "Order"},
 		Roles:  []ast.QualifiedName{{Module: "MyModule", Name: "FakeRole"}},
 		Rights: []ast.EntityAccessRight{{Type: ast.EntityAccessReadAll}},
@@ -558,7 +558,7 @@ func TestRevokeEntityAccess_FakeRole_Issue399(t *testing.T) {
 	}
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execRevokeEntityAccess(ctx, &ast.RevokeEntityAccessStmt{
+	err := execRevokeEntityAccessGen(ctx, &ast.RevokeEntityAccessStmt{
 		Entity: ast.QualifiedName{Module: "MyModule", Name: "Customer"},
 		Roles:  []ast.QualifiedName{{Module: "MyModule", Name: "GhostRole"}},
 	})

@@ -530,7 +530,7 @@ func TestShowAccessOnPage_Mock_JSON(t *testing.T) {
 
 	name := &ast.QualifiedName{Module: "MyModule", Name: "Page_Home"}
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listAccessOnPage(ctx, name))
+	assertNoError(t, listAccessOnPageGen(ctx, name))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "User")
 }
