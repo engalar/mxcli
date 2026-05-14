@@ -77,6 +77,11 @@ type executorCache struct {
 	// listJavaScriptActionsWithContainerGen (Stage 3.3.2 A0).
 	javaActionsWithContainerGen       []ContainerWithGen[*genJA.JavaAction]
 	javaScriptActionsWithContainerGen []ContainerWithGen[*genJSA.JavaScriptAction]
+
+	// Cached gen-typed DomainModel listing with container UUID resolved
+	// (Stage 3.3.4 A0). Each module owns at most one DomainModel; the
+	// container ID is the owning module's UUID.
+	domainModelsWithContainerGen []DomainModelGenWithContainer
 }
 
 // createdMicroflowInfo tracks a microflow created during this session.

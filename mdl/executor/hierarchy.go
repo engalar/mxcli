@@ -152,10 +152,13 @@ func invalidateHierarchy(ctx *ExecContext) {
 	}
 }
 
-// invalidateDomainModelsCache clears the cached domain models so they will be reloaded.
-// This should be called after any write operation that creates or modifies entities.
+// invalidateDomainModelsCache clears both the legacy sdk-typed and the
+// Stage 3.3.4 gen-typed domain-model caches so the next read reloads
+// from the writer. Call after any write that creates or modifies
+// entities, associations, indexes, or generalizations.
 func invalidateDomainModelsCache(ctx *ExecContext) {
 	if ctx.Cache != nil {
 		ctx.Cache.domainModels = nil
 	}
+	invalidateDomainModelsGenCache(ctx)
 }

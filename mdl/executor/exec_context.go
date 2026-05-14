@@ -45,6 +45,9 @@ type ExecContext struct {
 	// Populated via the same provider duck-type pattern as Microflows/Security.
 	JavaActions       repos.JavaActionRepository
 	JavaScriptActions repos.JavaScriptActionRepository
+	// DomainModels is the Stage 3.3.4 modelsdk-native repo. Populated via
+	// the same provider duck-type pattern.
+	DomainModels repos.DomainModelRepository
 
 	// Output is the writer for user-visible output (with line-limit guard).
 	Output io.Writer
