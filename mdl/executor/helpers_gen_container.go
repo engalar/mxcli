@@ -30,6 +30,28 @@ type ContainerWithGen[T element.Element] struct {
 //                   appropriate ctx.Cache.<domain>WithContainerGen field.
 //                   cacheGet returns (slice, true) on hit; on miss the
 //                   factory builds, calls cachePut, and returns.
+//
+// # ID-type contract for domain authors (element.ID vs model.ID)
+//
+// ContainerID and the resolveContainer parameter use element.ID rather than
+// model.ID so this file does not need to import the model package. Both are
+// "type ID string" aliases but Go treats them as distinct named types.
+// Per-domain wrapper authors wiring up ctx.*.GetContainerUUID (which returns
+// model.ID) must cast both directions in their adapter closure:
+//
+//	func(id element.ID) (element.ID, error) {
+//	    c, err := ctx.Microflows.GetContainerUUID(model.ID(id))
+//	    return element.ID(c), err
+//	}
+//
+// # Nil-entry contract for list callers
+//
+// The factory does NOT defensively skip nil entries returned by list.
+// Per-domain list callers MUST filter nil before returning — see the
+// pattern used at helpers_gen.go:158 ("if mf == nil { continue }").
+// A typed-nil interface check inside this factory would silently miss
+// (*Microflow)(nil) because any(e) == nil returns false for interfaces
+// wrapping nil pointers.
 func listUnitsWithContainerGen[T element.Element](
 	list func() ([]T, error),
 	resolveContainer func(element.ID) (element.ID, error),
