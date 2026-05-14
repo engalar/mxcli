@@ -11,6 +11,19 @@
 //
 // See docs/11-proposals/PROPOSAL_agent_document_support.md for the
 // observed BSON and JSON schemas.
+//
+// DEPRECATED — Stage 3.3.6 (2026-05-14): all in-scope consumers
+// (mdl/, modelsdk/, api/) have migrated to mdl/types/agenteditor.go.
+// This package is kept ONLY because sdk/mpr/parser_customblob.go,
+// sdk/mpr/reader_agenteditor.go, sdk/mpr/serialize_exports.go,
+// sdk/mpr/writer_customblob.go, and sdk/mpr/writer_agenteditor_*.go
+// still import it. Stage 4 will rewrite those files BSON-natively
+// against modelsdk/gen/customblobdocuments + mdl/types, after which
+// this package can be deleted.
+//
+// New code MUST use mdl/types instead of sdk/agenteditor. The
+// mdl/backend/mpr/agenteditor_convert.go shim bridges the two type
+// families until Stage 4 lands.
 package agenteditor
 
 import "github.com/mendixlabs/mxcli/model"
