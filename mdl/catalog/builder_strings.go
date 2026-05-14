@@ -5,9 +5,10 @@ package catalog
 import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/modelsdk/gen/texts"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
 
 // buildStrings extracts string literals from documents into the FTS5 strings table.
@@ -105,27 +106,31 @@ func (b *Builder) buildStrings() error {
 		}
 	}
 
-	// Extract from workflows — using cached list
+	// Extract from workflows — using cached gen list
 	wfList, err := b.cachedWorkflows()
 	if err == nil {
 		for _, wf := range wfList {
-			moduleID := b.hierarchy.findModuleID(wf.ContainerID)
+			if wf == nil {
+				continue
+			}
+			moduleID := b.hierarchy.findModuleID(model.ID(wf.ID()))
 			moduleName := b.hierarchy.getModuleName(moduleID)
-			qn := moduleName + "." + wf.Name
+			qn := moduleName + "." + wf.Name()
 
-			wfID := string(wf.ID)
-			if wf.WorkflowName != "" {
-				insert(qn, "WORKFLOW", wf.WorkflowName, "workflow_name", "", wfID, moduleName)
+			wfID := string(wf.ID())
+			if name := readWorkflowTextElement(wf.WorkflowName()); name != "" {
+				insert(qn, "WORKFLOW", name, "workflow_name", "", wfID, moduleName)
+			} else if title := wf.Title(); title != "" {
+				insert(qn, "WORKFLOW", title, "workflow_name", "", wfID, moduleName)
 			}
-			if wf.WorkflowDescription != "" {
-				insert(qn, "WORKFLOW", wf.WorkflowDescription, "workflow_description", "", wfID, moduleName)
+			if desc := readWorkflowTextElement(wf.WorkflowDescription()); desc != "" {
+				insert(qn, "WORKFLOW", desc, "workflow_description", "", wfID, moduleName)
 			}
-			if wf.Documentation != "" {
-				insert(qn, "WORKFLOW", wf.Documentation, "documentation", "", wfID, moduleName)
+			if doc := wf.Documentation(); doc != "" {
+				insert(qn, "WORKFLOW", doc, "documentation", "", wfID, moduleName)
 			}
-
-			if wf.Flow != nil {
-				extractWorkflowFlowStrings(wf.Flow, qn, moduleName, insert)
+			if flow, ok := wf.Flow().(*genWf.Flow); ok && flow != nil {
+				extractWorkflowFlowStringsGen(flow, qn, moduleName, insert)
 			}
 		}
 	}
@@ -161,54 +166,138 @@ func (b *Builder) buildStrings() error {
 	return nil
 }
 
-// extractWorkflowFlowStrings extracts strings from workflow activities recursively.
-func extractWorkflowFlowStrings(flow *workflows.Flow, qn, moduleName string, insert func(string, string, string, string, string, string, string)) {
-	for _, act := range flow.Activities {
-		actID := string(act.GetID())
-		if act.GetCaption() != "" {
-			insert(qn, "WORKFLOW", act.GetCaption(), "activity_caption", "", actID, moduleName)
+// readWorkflowTextElement extracts the inner Text scalar from a Texts$Text
+// wrapper element.
+func readWorkflowTextElement(elem element.Element) string {
+	if elem == nil {
+		return ""
+	}
+	for _, field := range []string{"Text", "Translation", "Value"} {
+		if v, _ := codec.ReadBSONFieldString(elem.Raw(), field); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+// activityCaptionGen extracts the Caption field across the heterogenous
+// gen activity types via a small reflection-free type switch.
+func activityCaptionGen(act element.Element) string {
+	switch v := act.(type) {
+	case *genWf.UserTask:
+		return v.Caption()
+	case *genWf.SingleUserTaskActivity:
+		return v.Caption()
+	case *genWf.MultiUserTaskActivity:
+		return v.Caption()
+	case *genWf.CallMicroflowActivity:
+		return v.Caption()
+	case *genWf.CallMicroflowTask:
+		return v.Caption()
+	case *genWf.CallWorkflowActivity:
+		return v.Caption()
+	case *genWf.ExclusiveSplitActivity:
+		return v.Caption()
+	case *genWf.ParallelSplitActivity:
+		return v.Caption()
+	case *genWf.JumpToActivity:
+		return v.Caption()
+	case *genWf.WaitForTimerActivity:
+		return v.Caption()
+	case *genWf.WaitForNotificationActivity:
+		return v.Caption()
+	}
+	v, _ := codec.ReadBSONFieldString(act.Raw(), "Caption")
+	return v
+}
+
+// extractWorkflowFlowStringsGen extracts strings from workflow activities
+// recursively. Mirrors the legacy extractWorkflowFlowStrings semantics.
+func extractWorkflowFlowStringsGen(flow *genWf.Flow, qn, moduleName string, insert func(string, string, string, string, string, string, string)) {
+	if flow == nil {
+		return
+	}
+	for _, act := range flow.ActivitiesItems() {
+		if act == nil {
+			continue
+		}
+		actID := string(act.ID())
+		if cap := activityCaptionGen(act); cap != "" {
+			insert(qn, "WORKFLOW", cap, "activity_caption", "", actID, moduleName)
 		}
 
-		switch a := act.(type) {
-		case *workflows.UserTask:
-			if a.TaskName != "" {
-				insert(qn, "WORKFLOW", a.TaskName, "task_name", "", actID, moduleName)
+		// User-task family: TaskName + TaskDescription + outcome captions
+		switch v := act.(type) {
+		case *genWf.UserTask:
+			if name := readWorkflowTextElement(v.TaskName()); name != "" {
+				insert(qn, "WORKFLOW", name, "task_name", "", actID, moduleName)
 			}
-			if a.TaskDescription != "" {
-				insert(qn, "WORKFLOW", a.TaskDescription, "task_description", "", actID, moduleName)
+			if desc := readWorkflowTextElement(v.TaskDescription()); desc != "" {
+				insert(qn, "WORKFLOW", desc, "task_description", "", actID, moduleName)
 			}
-			for _, outcome := range a.Outcomes {
-				if outcome.Caption != "" {
-					insert(qn, "WORKFLOW", outcome.Caption, "outcome_caption", "", actID, moduleName)
+			extractUserTaskOutcomeStringsGen(v.OutcomesItems(), qn, moduleName, actID, insert)
+		case *genWf.SingleUserTaskActivity:
+			if name := readWorkflowTextElement(v.TaskName()); name != "" {
+				insert(qn, "WORKFLOW", name, "task_name", "", actID, moduleName)
+			}
+			if desc := readWorkflowTextElement(v.TaskDescription()); desc != "" {
+				insert(qn, "WORKFLOW", desc, "task_description", "", actID, moduleName)
+			}
+			extractUserTaskOutcomeStringsGen(v.OutcomesItems(), qn, moduleName, actID, insert)
+		case *genWf.MultiUserTaskActivity:
+			if name := readWorkflowTextElement(v.TaskName()); name != "" {
+				insert(qn, "WORKFLOW", name, "task_name", "", actID, moduleName)
+			}
+			if desc := readWorkflowTextElement(v.TaskDescription()); desc != "" {
+				insert(qn, "WORKFLOW", desc, "task_description", "", actID, moduleName)
+			}
+			extractUserTaskOutcomeStringsGen(v.OutcomesItems(), qn, moduleName, actID, insert)
+		case *genWf.CallMicroflowActivity:
+			extractConditionOutcomeStringsGen(v.OutcomesItems(), qn, moduleName, insert)
+		case *genWf.CallMicroflowTask:
+			extractConditionOutcomeStringsGen(v.OutcomesItems(), qn, moduleName, insert)
+		case *genWf.ExclusiveSplitActivity:
+			extractConditionOutcomeStringsGen(v.OutcomesItems(), qn, moduleName, insert)
+		case *genWf.ParallelSplitActivity:
+			for _, oc := range v.OutcomesItems() {
+				if pso, ok := oc.(*genWf.ParallelSplitOutcome); ok {
+					if f, ok := pso.Flow().(*genWf.Flow); ok {
+						extractWorkflowFlowStringsGen(f, qn, moduleName, insert)
+					}
 				}
-				if outcome.Flow != nil {
-					extractWorkflowFlowStrings(outcome.Flow, qn, moduleName, insert)
-				}
 			}
-		case *workflows.SystemTask:
-			for _, outcome := range a.Outcomes {
-				if f := outcome.GetFlow(); f != nil {
-					extractWorkflowFlowStrings(f, qn, moduleName, insert)
-				}
+		}
+	}
+}
+
+func extractUserTaskOutcomeStringsGen(outcomes []element.Element, qn, moduleName, actID string, insert func(string, string, string, string, string, string, string)) {
+	for _, oc := range outcomes {
+		if utc, ok := oc.(*genWf.UserTaskOutcome); ok {
+			if cap := utc.Caption(); cap != "" {
+				insert(qn, "WORKFLOW", cap, "outcome_caption", "", actID, moduleName)
 			}
-		case *workflows.CallMicroflowTask:
-			for _, outcome := range a.Outcomes {
-				if f := outcome.GetFlow(); f != nil {
-					extractWorkflowFlowStrings(f, qn, moduleName, insert)
-				}
+			if f, ok := utc.Flow().(*genWf.Flow); ok && f != nil {
+				extractWorkflowFlowStringsGen(f, qn, moduleName, insert)
 			}
-		case *workflows.ExclusiveSplitActivity:
-			for _, outcome := range a.Outcomes {
-				if f := outcome.GetFlow(); f != nil {
-					extractWorkflowFlowStrings(f, qn, moduleName, insert)
-				}
-			}
-		case *workflows.ParallelSplitActivity:
-			for _, outcome := range a.Outcomes {
-				if outcome.Flow != nil {
-					extractWorkflowFlowStrings(outcome.Flow, qn, moduleName, insert)
-				}
-			}
+		}
+	}
+}
+
+func extractConditionOutcomeStringsGen(outcomes []element.Element, qn, moduleName string, insert func(string, string, string, string, string, string, string)) {
+	for _, oc := range outcomes {
+		var f *genWf.Flow
+		switch v := oc.(type) {
+		case *genWf.BooleanConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		case *genWf.EnumerationValueConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		case *genWf.VoidConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		case *genWf.ExclusiveSplitOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		}
+		if f != nil {
+			extractWorkflowFlowStringsGen(f, qn, moduleName, insert)
 		}
 	}
 }

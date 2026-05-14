@@ -11,11 +11,11 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // CatalogReader defines the read-only backend surface used by the catalog builder.
@@ -56,8 +56,10 @@ type CatalogReader interface {
 	ListLayouts() ([]*pages.Layout, error)
 	ListSnippets() ([]*pages.Snippet, error)
 
-	// Workflows
-	ListWorkflows() ([]*workflows.Workflow, error)
+	// Workflows — gen-typed (Stage 3.3.3.C3). Container linkage resolved
+	// via b.hierarchy from the unit's own UUID, mirroring the microflow
+	// + javaaction patterns.
+	ListWorkflowsGen() ([]*genWf.Workflow, error)
 
 	// Java actions — gen-typed (Stage 3.3.2.C2). Container linkage
 	// resolved via b.hierarchy from the unit's own UUID, mirroring the
@@ -107,7 +109,7 @@ type Builder struct {
 	domainModelCache        []*domainmodel.DomainModel
 	domainModelGenCache     []*genDm.DomainModel
 	enumerationCache        []*model.Enumeration
-	workflowCache           []*workflows.Workflow
+	workflowCache           []*genWf.Workflow
 	businessEventCache      []*model.BusinessEventService
 	databaseConnectionCache []*model.DatabaseConnection
 	moduleSettingsCache     []*types.ModuleSettings
@@ -294,10 +296,10 @@ func (b *Builder) cachedEnumerations() ([]*model.Enumeration, error) {
 	return b.enumerationCache, nil
 }
 
-func (b *Builder) cachedWorkflows() ([]*workflows.Workflow, error) {
+func (b *Builder) cachedWorkflows() ([]*genWf.Workflow, error) {
 	if b.workflowCache == nil {
 		var err error
-		b.workflowCache, err = b.reader.ListWorkflows()
+		b.workflowCache, err = b.reader.ListWorkflowsGen()
 		if err != nil {
 			return nil, err
 		}
