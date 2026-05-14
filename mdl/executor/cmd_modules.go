@@ -657,7 +657,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	if mfs, err := ctx.Backend.ListMicroflows(); err == nil {
 		for _, mf := range mfs {
 			if moduleContainers[mf.ContainerID] {
-				if err := describeMicroflow(ctx, ast.QualifiedName{Module: moduleName, Name: mf.Name}); err == nil {
+				if err := describeMicroflowGen(ctx, ast.QualifiedName{Module: moduleName, Name: mf.Name}); err == nil {
 					fmt.Fprintln(ctx.Output)
 				}
 			}

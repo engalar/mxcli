@@ -34,11 +34,11 @@ func describeMermaid(ctx *ExecContext, objectType, name string) error {
 	case "entity", "domainmodel":
 		return domainModelToMermaid(ctx, qn.Module)
 	case "microflow":
-		return microflowToMermaid(ctx, qn)
+		return microflowToMermaidGen(ctx, qn)
 	case "page":
 		return pageToMermaid(ctx, qn)
 	case "nanoflow":
-		return nanoflowToMermaid(ctx, qn)
+		return nanoflowToMermaidGen(ctx, qn)
 	default:
 		return mdlerrors.NewUnsupported(fmt.Sprintf("mermaid format not supported for type: %s", objectType))
 	}

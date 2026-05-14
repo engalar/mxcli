@@ -432,6 +432,10 @@ func emitMicroflowELK(ctx *ExecContext, data microflowELKData) error {
 }
 
 // MicroflowELK is an Executor method wrapper for callers in unmigrated code.
+// Stage 3.2.6.1: re-routed to the gen-typed `microflowELKGen` —
+// `microflowELK` (the legacy sdk/microflows-typed implementation) is
+// scheduled for deletion in Stage 3.2.6.3b. The wrapper signature stays
+// stable for `cmd/mxcli/cmd_describe.go`.
 func (e *Executor) MicroflowELK(name string) error {
-	return microflowELK(e.newExecContext(context.Background()), name)
+	return microflowELKGen(e.newExecContext(context.Background()), name)
 }

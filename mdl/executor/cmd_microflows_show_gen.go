@@ -28,10 +28,49 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/mdl/ast"
+	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
+
+// describeMicroflowGen prints the gen-rendered MDL for a microflow to
+// ctx.Output. Mirror of describeNanoflowGen — locates the microflow by
+// (module, name) via ctx.Microflows.ListAll() + container module
+// resolution, then delegates to DescribeMicroflowGenToString.
+func describeMicroflowGen(ctx *ExecContext, name ast.QualifiedName) error {
+	if ctx == nil || ctx.Microflows == nil {
+		return mdlerrors.NewBackend("microflow repository", fmt.Errorf("ctx.Microflows is nil"))
+	}
+
+	all, err := ctx.Microflows.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list microflows", err)
+	}
+
+	var target *genMf.Microflow
+	for _, mf := range all {
+		if mf == nil {
+			continue
+		}
+		modName, _ := genMicroflowQualifiedName(ctx, mf)
+		if modName == name.Module && mf.Name() == name.Name {
+			target = mf
+			break
+		}
+	}
+	if target == nil {
+		return mdlerrors.NewNotFound("microflow", name.String())
+	}
+
+	rendered, err := DescribeMicroflowGenToString(ctx, target)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(ctx.Output, rendered)
+	return nil
+}
 
 // DescribeMicroflowGenToString renders a *genMf.Microflow as MDL source
 // using only the modelsdk/gen API surface. It returns the rendered text
