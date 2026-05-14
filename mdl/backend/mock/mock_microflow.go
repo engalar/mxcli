@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/model"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -112,4 +113,18 @@ func (m *MockBackend) IsRule(qualifiedName string) (bool, error) {
 		return m.IsRuleFunc(qualifiedName)
 	}
 	return false, nil
+}
+
+func (m *MockBackend) ListMicroflowsGen() ([]*genMf.Microflow, error) {
+	if m.ListMicroflowsGenFunc != nil {
+		return m.ListMicroflowsGenFunc()
+	}
+	return nil, fmt.Errorf("MockBackend.ListMicroflowsGen not configured")
+}
+
+func (m *MockBackend) ListNanoflowsGen() ([]*genMf.Nanoflow, error) {
+	if m.ListNanoflowsGenFunc != nil {
+		return m.ListNanoflowsGenFunc()
+	}
+	return nil, fmt.Errorf("MockBackend.ListNanoflowsGen not configured")
 }

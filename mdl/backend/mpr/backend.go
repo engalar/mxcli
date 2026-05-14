@@ -13,6 +13,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
@@ -268,6 +269,27 @@ func (b *MprBackend) IsRule(qualifiedName string) (bool, error) {
 
 func (b *MprBackend) ListNanoflows() ([]*microflows.Nanoflow, error) {
 	return b.reader.ListNanoflows()
+}
+
+// ListMicroflowsGen routes through the modelsdk-native microflow repo
+// (b.Microflows()), returning gen-typed values. Returns an error if the
+// modelsdk writer is unavailable (backend not connected).
+func (b *MprBackend) ListMicroflowsGen() ([]*genMf.Microflow, error) {
+	repo := b.Microflows()
+	if repo == nil {
+		return nil, fmt.Errorf("ListMicroflowsGen: modelsdk writer unavailable (backend not connected)")
+	}
+	return repo.ListAll()
+}
+
+// ListNanoflowsGen routes through the modelsdk-native nanoflow repo
+// (b.Nanoflows()). Empty moduleID means "all modules".
+func (b *MprBackend) ListNanoflowsGen() ([]*genMf.Nanoflow, error) {
+	repo := b.Nanoflows()
+	if repo == nil {
+		return nil, fmt.Errorf("ListNanoflowsGen: modelsdk writer unavailable (backend not connected)")
+	}
+	return repo.List("")
 }
 func (b *MprBackend) ParseMicroflowFromRaw(raw map[string]any, unitID, containerID model.ID) *microflows.Microflow {
 	return mpr.ParseMicroflowFromRaw(raw, unitID, containerID)
