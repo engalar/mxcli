@@ -158,7 +158,7 @@ func execDropModuleRole(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
 		if n, err := ctx.Backend.RemoveModuleRoleFromAllUserRoles(ps.ID, qualifiedRole); err == nil && n > 0 {
 			fmt.Fprintf(ctx.Output, "Removed %s from %d user role(s)\n", qualifiedRole, n)
 		}
-		if err := pruneInvalidUserRoles(ctx, ps); err != nil {
+		if err := pruneInvalidUserRoles(ctx, nil); err != nil {
 			return mdlerrors.NewBackend("cleanup invalid user roles", err)
 		}
 	}
