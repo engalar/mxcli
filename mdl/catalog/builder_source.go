@@ -97,9 +97,12 @@ func (b *Builder) buildSource() error {
 	wfList, err := b.cachedWorkflows()
 	if err == nil {
 		for _, wf := range wfList {
-			moduleID := b.hierarchy.findModuleID(wf.ContainerID)
+			if wf == nil {
+				continue
+			}
+			moduleID := b.hierarchy.findModuleID(model.ID(wf.ID()))
 			moduleName := b.hierarchy.getModuleName(moduleID)
-			items = append(items, sourceItem{"WORKFLOW", moduleName + "." + wf.Name, moduleName})
+			items = append(items, sourceItem{"WORKFLOW", moduleName + "." + wf.Name(), moduleName})
 		}
 	}
 

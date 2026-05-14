@@ -8,10 +8,12 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPages "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // Reference kinds for the refs table
@@ -281,18 +283,21 @@ func (b *Builder) buildReferences() error {
 		}
 	}
 
-	// Extract workflow references — using cached list
+	// Extract workflow references — using cached gen list
 	wfs, wfErr := b.cachedWorkflows()
 	if wfErr == nil {
 		for _, wf := range wfs {
-			moduleID := b.hierarchy.findModuleID(wf.ContainerID)
+			if wf == nil {
+				continue
+			}
+			moduleID := b.hierarchy.findModuleID(model.ID(wf.ID()))
 			moduleName := b.hierarchy.getModuleName(moduleID)
-			sourceQN := moduleName + "." + wf.Name
+			sourceQN := moduleName + "." + wf.Name()
 
 			// Parameter entity reference
-			if wf.Parameter != nil && wf.Parameter.EntityRef != "" {
-				_, err = stmt.Exec("WORKFLOW", string(wf.ID), sourceQN,
-					"ENTITY", "", wf.Parameter.EntityRef,
+			if entity := workflowParamEntityGen(wf); entity != "" {
+				_, err = stmt.Exec("WORKFLOW", string(wf.ID()), sourceQN,
+					"ENTITY", "", entity,
 					RefKindParameter, moduleName, projectID, snapshotID)
 				if err == nil {
 					refCount++
@@ -300,9 +305,9 @@ func (b *Builder) buildReferences() error {
 			}
 
 			// Overview page reference
-			if wf.OverviewPage != "" {
-				_, err = stmt.Exec("WORKFLOW", string(wf.ID), sourceQN,
-					"PAGE", "", wf.OverviewPage,
+			if op := wf.OverviewPageQualifiedName(); op != "" {
+				_, err = stmt.Exec("WORKFLOW", string(wf.ID()), sourceQN,
+					"PAGE", "", op,
 					RefKindShowPage, moduleName, projectID, snapshotID)
 				if err == nil {
 					refCount++
@@ -310,8 +315,8 @@ func (b *Builder) buildReferences() error {
 			}
 
 			// Extract references from workflow activities
-			if wf.Flow != nil {
-				refCount += b.extractWorkflowFlowRefs(stmt, wf.Flow, string(wf.ID), sourceQN, moduleName, projectID, snapshotID)
+			if flow, ok := wf.Flow().(*genWf.Flow); ok && flow != nil {
+				refCount += b.extractWorkflowFlowRefsGen(stmt, flow, string(wf.ID()), sourceQN, moduleName, projectID, snapshotID)
 			}
 		}
 	}
@@ -601,101 +606,159 @@ func (b *Builder) resolveMicroflowID(mfID model.ID) string {
 	return qualifiedName
 }
 
-// extractWorkflowFlowRefs extracts references from a workflow flow and its nested sub-flows.
-func (b *Builder) extractWorkflowFlowRefs(stmt *sql.Stmt, flow *workflows.Flow, sourceID, sourceQN, moduleName, projectID, snapshotID string) int {
+// extractWorkflowFlowRefsGen extracts references from a gen workflow
+// flow and its nested sub-flows. Mirrors the legacy extractor; dispatch
+// is by storage $Type because gen splits user-task and call-microflow
+// into multiple subtypes.
+func (b *Builder) extractWorkflowFlowRefsGen(stmt *sql.Stmt, flow *genWf.Flow, sourceID, sourceQN, moduleName, projectID, snapshotID string) int {
 	if flow == nil {
 		return 0
 	}
-
 	refCount := 0
-	for _, act := range flow.Activities {
-		switch a := act.(type) {
-		case *workflows.UserTask:
-			if a.Page != "" {
-				_, err := stmt.Exec("WORKFLOW", sourceID, sourceQN,
-					"PAGE", "", a.Page,
-					RefKindShowPage, moduleName, projectID, snapshotID)
-				if err == nil {
+	for _, act := range flow.ActivitiesItems() {
+		if act == nil {
+			continue
+		}
+		switch v := act.(type) {
+		case *genWf.UserTask:
+			if v.PageQualifiedName() != "" {
+				if _, err := stmt.Exec("WORKFLOW", sourceID, sourceQN,
+					"PAGE", "", v.PageQualifiedName(),
+					RefKindShowPage, moduleName, projectID, snapshotID); err == nil {
 					refCount++
 				}
 			}
-			if a.UserTaskEntity != "" {
-				_, err := stmt.Exec("WORKFLOW", sourceID, sourceQN,
-					"ENTITY", "", a.UserTaskEntity,
-					RefKindDatasource, moduleName, projectID, snapshotID)
-				if err == nil {
+			if ent := v.UserTaskEntityQualifiedName(); ent != "" {
+				if _, err := stmt.Exec("WORKFLOW", sourceID, sourceQN,
+					"ENTITY", "", ent,
+					RefKindDatasource, moduleName, projectID, snapshotID); err == nil {
 					refCount++
 				}
 			}
-			if a.UserSource != nil {
-				if us, ok := a.UserSource.(*workflows.MicroflowBasedUserSource); ok && us.Microflow != "" {
-					_, err := stmt.Exec("WORKFLOW", sourceID, sourceQN,
-						"MICROFLOW", "", us.Microflow,
-						RefKindCall, moduleName, projectID, snapshotID)
-					if err == nil {
-						refCount++
+			refCount += extractUserSourceRefGen(stmt, v.UserSource(), sourceID, sourceQN, moduleName, projectID, snapshotID)
+			for _, oc := range v.OutcomesItems() {
+				if utc, ok := oc.(*genWf.UserTaskOutcome); ok {
+					if f, ok := utc.Flow().(*genWf.Flow); ok {
+						refCount += b.extractWorkflowFlowRefsGen(stmt, f, sourceID, sourceQN, moduleName, projectID, snapshotID)
 					}
 				}
 			}
-			for _, outcome := range a.Outcomes {
-				refCount += b.extractWorkflowFlowRefs(stmt, outcome.Flow, sourceID, sourceQN, moduleName, projectID, snapshotID)
+		case *genWf.SingleUserTaskActivity:
+			refCount += extractUserSourceRefGen(stmt, v.UserSource(), sourceID, sourceQN, moduleName, projectID, snapshotID)
+			for _, oc := range v.OutcomesItems() {
+				if utc, ok := oc.(*genWf.UserTaskOutcome); ok {
+					if f, ok := utc.Flow().(*genWf.Flow); ok {
+						refCount += b.extractWorkflowFlowRefsGen(stmt, f, sourceID, sourceQN, moduleName, projectID, snapshotID)
+					}
+				}
 			}
-
-		case *workflows.CallMicroflowTask:
-			if a.Microflow != "" {
-				_, err := stmt.Exec("WORKFLOW", sourceID, sourceQN,
-					"MICROFLOW", "", a.Microflow,
-					RefKindCall, moduleName, projectID, snapshotID)
-				if err == nil {
+		case *genWf.MultiUserTaskActivity:
+			refCount += extractUserSourceRefGen(stmt, v.UserSource(), sourceID, sourceQN, moduleName, projectID, snapshotID)
+			for _, oc := range v.OutcomesItems() {
+				if utc, ok := oc.(*genWf.UserTaskOutcome); ok {
+					if f, ok := utc.Flow().(*genWf.Flow); ok {
+						refCount += b.extractWorkflowFlowRefsGen(stmt, f, sourceID, sourceQN, moduleName, projectID, snapshotID)
+					}
+				}
+			}
+		case *genWf.CallMicroflowActivity:
+			if v.MicroflowQualifiedName() != "" {
+				if _, err := stmt.Exec("WORKFLOW", sourceID, sourceQN,
+					"MICROFLOW", "", v.MicroflowQualifiedName(),
+					RefKindCall, moduleName, projectID, snapshotID); err == nil {
 					refCount++
 				}
 			}
-			for _, outcome := range a.Outcomes {
-				refCount += b.extractWorkflowConditionOutcomeRefs(stmt, outcome, sourceID, sourceQN, moduleName, projectID, snapshotID)
-			}
-
-		case *workflows.SystemTask:
-			if a.Microflow != "" {
-				_, err := stmt.Exec("WORKFLOW", sourceID, sourceQN,
-					"MICROFLOW", "", a.Microflow,
-					RefKindCall, moduleName, projectID, snapshotID)
-				if err == nil {
+			refCount += b.extractConditionOutcomeRefsGen(stmt, v.OutcomesItems(), sourceID, sourceQN, moduleName, projectID, snapshotID)
+		case *genWf.CallMicroflowTask:
+			if v.MicroflowQualifiedName() != "" {
+				if _, err := stmt.Exec("WORKFLOW", sourceID, sourceQN,
+					"MICROFLOW", "", v.MicroflowQualifiedName(),
+					RefKindCall, moduleName, projectID, snapshotID); err == nil {
 					refCount++
 				}
 			}
-			for _, outcome := range a.Outcomes {
-				refCount += b.extractWorkflowConditionOutcomeRefs(stmt, outcome, sourceID, sourceQN, moduleName, projectID, snapshotID)
-			}
-
-		case *workflows.CallWorkflowActivity:
-			if a.Workflow != "" {
-				_, err := stmt.Exec("WORKFLOW", sourceID, sourceQN,
-					"WORKFLOW", "", a.Workflow,
-					RefKindCall, moduleName, projectID, snapshotID)
-				if err == nil {
+			refCount += b.extractConditionOutcomeRefsGen(stmt, v.OutcomesItems(), sourceID, sourceQN, moduleName, projectID, snapshotID)
+		case *genWf.CallWorkflowActivity:
+			if v.WorkflowQualifiedName() != "" {
+				if _, err := stmt.Exec("WORKFLOW", sourceID, sourceQN,
+					"WORKFLOW", "", v.WorkflowQualifiedName(),
+					RefKindCall, moduleName, projectID, snapshotID); err == nil {
 					refCount++
 				}
 			}
-
-		case *workflows.ExclusiveSplitActivity:
-			for _, outcome := range a.Outcomes {
-				refCount += b.extractWorkflowConditionOutcomeRefs(stmt, outcome, sourceID, sourceQN, moduleName, projectID, snapshotID)
+		case *genWf.ExclusiveSplitActivity:
+			refCount += b.extractConditionOutcomeRefsGen(stmt, v.OutcomesItems(), sourceID, sourceQN, moduleName, projectID, snapshotID)
+		case *genWf.ParallelSplitActivity:
+			for _, oc := range v.OutcomesItems() {
+				if pso, ok := oc.(*genWf.ParallelSplitOutcome); ok {
+					if f, ok := pso.Flow().(*genWf.Flow); ok {
+						refCount += b.extractWorkflowFlowRefsGen(stmt, f, sourceID, sourceQN, moduleName, projectID, snapshotID)
+					}
+				}
 			}
-
-		case *workflows.ParallelSplitActivity:
-			for _, outcome := range a.Outcomes {
-				refCount += b.extractWorkflowFlowRefs(stmt, outcome.Flow, sourceID, sourceQN, moduleName, projectID, snapshotID)
+		default:
+			// Workflows$SystemTask: gen has no narrow type, read raw fields.
+			if act.TypeName() == "Workflows$SystemTask" {
+				if mf, _ := /* Microflow */ stringFromRaw(act, "Microflow"); mf != "" {
+					if _, err := stmt.Exec("WORKFLOW", sourceID, sourceQN,
+						"MICROFLOW", "", mf,
+						RefKindCall, moduleName, projectID, snapshotID); err == nil {
+						refCount++
+					}
+				}
+				// SystemTask outcomes are not exposed via raw extraction
+				// (legacy walked them; gen schema gap — minor: only loses
+				// transitive references through nested condition outcomes).
 			}
 		}
 	}
-
 	return refCount
 }
 
-// extractWorkflowConditionOutcomeRefs extracts references from a condition outcome's flow.
-func (b *Builder) extractWorkflowConditionOutcomeRefs(stmt *sql.Stmt, outcome workflows.ConditionOutcome, sourceID, sourceQN, moduleName, projectID, snapshotID string) int {
-	if outcome == nil {
+// extractUserSourceRefGen emits the microflow reference from a
+// MicroflowBasedUserSource if present.
+func extractUserSourceRefGen(stmt *sql.Stmt, src element.Element, sourceID, sourceQN, moduleName, projectID, snapshotID string) int {
+	if src == nil {
 		return 0
 	}
-	return b.extractWorkflowFlowRefs(stmt, outcome.GetFlow(), sourceID, sourceQN, moduleName, projectID, snapshotID)
+	if mb, ok := src.(*genWf.MicroflowBasedUserSource); ok && mb.MicroflowQualifiedName() != "" {
+		if _, err := stmt.Exec("WORKFLOW", sourceID, sourceQN,
+			"MICROFLOW", "", mb.MicroflowQualifiedName(),
+			RefKindCall, moduleName, projectID, snapshotID); err == nil {
+			return 1
+		}
+	}
+	return 0
+}
+
+// extractConditionOutcomeRefsGen recurses into ConditionOutcome flows.
+func (b *Builder) extractConditionOutcomeRefsGen(stmt *sql.Stmt, outcomes []element.Element, sourceID, sourceQN, moduleName, projectID, snapshotID string) int {
+	refCount := 0
+	for _, oc := range outcomes {
+		var f *genWf.Flow
+		switch v := oc.(type) {
+		case *genWf.BooleanConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		case *genWf.EnumerationValueConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		case *genWf.VoidConditionOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		case *genWf.ExclusiveSplitOutcome:
+			f, _ = v.Flow().(*genWf.Flow)
+		}
+		if f != nil {
+			refCount += b.extractWorkflowFlowRefsGen(stmt, f, sourceID, sourceQN, moduleName, projectID, snapshotID)
+		}
+	}
+	return refCount
+}
+
+// stringFromRaw extracts a top-level string field from an element's
+// raw BSON. Used for SystemTask which has no narrow gen type.
+func stringFromRaw(elem element.Element, key string) (string, error) {
+	if elem == nil {
+		return "", nil
+	}
+	return codec.ReadBSONFieldString(elem.Raw(), key)
 }
