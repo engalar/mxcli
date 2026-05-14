@@ -117,8 +117,8 @@ package modelsdk
 
 import (
 	"github.com/mendixlabs/mxcli/model"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
@@ -161,11 +161,11 @@ type (
 	// Association represents an association between entities.
 	Association = domainmodel.Association
 
-	// Microflow represents a microflow.
-	Microflow = microflows.Microflow
+	// Microflow represents a microflow (modelsdk gen-typed).
+	Microflow = genMf.Microflow
 
-	// Nanoflow represents a nanoflow.
-	Nanoflow = microflows.Nanoflow
+	// Nanoflow represents a nanoflow (modelsdk gen-typed).
+	Nanoflow = genMf.Nanoflow
 
 	// Page represents a page.
 	Page = pages.Page
@@ -276,20 +276,6 @@ func NewReferenceSetAssociation(name string, parentID, childID ID) *Association 
 		ChildID:  childID,
 		Type:     domainmodel.AssociationTypeReferenceSet,
 		Owner:    domainmodel.AssociationOwnerDefault,
-	}
-}
-
-// NewMicroflow creates a new microflow.
-func NewMicroflow(name string) *Microflow {
-	return &Microflow{
-		Name: name,
-	}
-}
-
-// NewNanoflow creates a new nanoflow.
-func NewNanoflow(name string) *Nanoflow {
-	return &Nanoflow{
-		Name: name,
 	}
 }
 
