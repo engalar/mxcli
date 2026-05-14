@@ -114,6 +114,21 @@ func TestListModuleRolesGen_FiltersByModule(t *testing.T) {
 	}
 }
 
+// TestListUserRolesGen_OutputsRoleNames asserts listUserRolesGen completes
+// without error and emits a "Name" column header.
+func TestListUserRolesGen_OutputsRoleNames(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	ctx.Format = FormatTable
+	if err := listUserRolesGen(ctx); err != nil {
+		t.Fatalf("listUserRolesGen: %v", err)
+	}
+	if !strings.Contains(buf.String(), "Name") {
+		t.Errorf("expected column header Name, got: %q", buf.String())
+	}
+}
+
 // TestListSecurityMatrixGen_Smoke asserts the matrix renderer does not
 // error and emits the section headers ("## Microflow Access" etc.).
 func TestListSecurityMatrixGen_Smoke(t *testing.T) {
