@@ -16,7 +16,9 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
@@ -124,6 +126,99 @@ func TestSortGenMicroflows_StableAndCaseInsensitive(t *testing.T) {
 		if mf.Name() != want[i] {
 			t.Errorf("position %d: got %q, want %q", i, mf.Name(), want[i])
 		}
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// C4 — outputJavaActionsGen / formatJavaActionSignatureGen
+// ─────────────────────────────────────────────────────────────────────
+
+// TestOutputJavaActionsGen_Empty verifies nothing is printed for an empty slice.
+func TestOutputJavaActionsGen_Empty(t *testing.T) {
+	var buf bytes.Buffer
+	ctx := newJavaActionsTestContext(t)
+	ctx.Output = &buf
+	outputJavaActionsGen(ctx, "TestMod", nil, false)
+	if buf.Len() != 0 {
+		t.Errorf("expected empty output for nil actions, got %q", buf.String())
+	}
+}
+
+// TestOutputJavaActionsGen_SingleAction verifies name and module appear.
+func TestOutputJavaActionsGen_SingleAction(t *testing.T) {
+	ja := genJA.NewJavaAction()
+	ja.SetName("MyJavaAction")
+
+	var buf bytes.Buffer
+	ctx := newJavaActionsTestContext(t)
+	ctx.Output = &buf
+	outputJavaActionsGen(ctx, "TestMod", []*genJA.JavaAction{ja}, false)
+
+	out := buf.String()
+	if !strings.Contains(out, "JavaAction TestMod.MyJavaAction") {
+		t.Errorf("expected 'JavaAction TestMod.MyJavaAction' in output, got %q", out)
+	}
+}
+
+// TestOutputJavaActionsGen_SortedAlphabetically verifies alphabetical ordering.
+func TestOutputJavaActionsGen_SortedAlphabetically(t *testing.T) {
+	jaZ := genJA.NewJavaAction()
+	jaZ.SetName("Zebra")
+	jaA := genJA.NewJavaAction()
+	jaA.SetName("Apple")
+	jaM := genJA.NewJavaAction()
+	jaM.SetName("Mango")
+
+	var buf bytes.Buffer
+	ctx := newJavaActionsTestContext(t)
+	ctx.Output = &buf
+	outputJavaActionsGen(ctx, "Mod", []*genJA.JavaAction{jaZ, jaA, jaM}, false)
+
+	out := buf.String()
+	posA := strings.Index(out, "Apple")
+	posMango := strings.Index(out, "Mango")
+	posZ := strings.Index(out, "Zebra")
+
+	if posA < 0 || posMango < 0 || posZ < 0 {
+		t.Fatalf("not all names found in output: %q", out)
+	}
+	if !(posA < posMango && posMango < posZ) {
+		t.Errorf("actions not sorted alphabetically: A=%d Mango=%d Z=%d in %q", posA, posMango, posZ, out)
+	}
+}
+
+// TestFormatJavaActionSignatureGen_NoParams verifies empty params renders as "()".
+func TestFormatJavaActionSignatureGen_NoParams(t *testing.T) {
+	ja := genJA.NewJavaAction()
+	ja.SetName("NoParams")
+	sig := formatJavaActionSignatureGen(ja, false)
+	if sig != "()" {
+		t.Errorf("expected '()', got %q", sig)
+	}
+}
+
+// TestExecShowStructureGen_Depth2_ContainsJavaAction verifies the gen
+// structure path renders JavaAction lines via gen types (not legacy sdk).
+// Needs both Microflows (from newGenVizContext) and JavaActions repos wired.
+func TestExecShowStructureGen_Depth2_ContainsJavaAction(t *testing.T) {
+	var out bytes.Buffer
+	ctx := newGenVizContext(t, &out)
+	ctx.Format = FormatTable
+	ctx.Quiet = true
+
+	// Wire JavaActions repo so loadStructureSharedDataGen can find them.
+	w := openMprWriterForTest(t)
+	ctx.JavaActions = mprrepos.NewJavaActionRepository(w)
+	ctx.JavaScriptActions = mprrepos.NewJavaScriptActionRepository(w)
+	ctx.ensureCache()
+
+	if err := execShowStructureGen(ctx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 2}); err != nil {
+		t.Fatalf("execShowStructureGen depth=2: %v", err)
+	}
+	output := out.String()
+	// Depth=2 renders java actions as a per-module summary line "Java Actions: N".
+	if !strings.Contains(output, "Java Actions:") {
+		t.Errorf("expected 'Java Actions:' summary in depth=2 output, got:\n%s", output)
 	}
 }
 

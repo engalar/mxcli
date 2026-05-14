@@ -12,6 +12,8 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
+
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 )
 
 // Stage 3.2.6.3a: `execShowStructure` removed — the dispatch in
@@ -459,6 +461,56 @@ func formatJavaActionSignature(ja *javaactions.JavaAction, withNames bool) strin
 		retStr := ja.ReturnType.TypeString()
 		if retStr != "" && retStr != "Void" && retStr != "Nothing" {
 			sig += " → " + formatJATypeDisplay(retStr)
+		}
+	}
+
+	return sig
+}
+
+// outputJavaActionsGen is the gen-typed parallel of outputJavaActions.
+// It reads name/signature from *genJA.JavaAction instead of *javaactions.JavaAction.
+func outputJavaActionsGen(ctx *ExecContext, moduleName string, actions []*genJA.JavaAction, withNames bool) {
+	if len(actions) == 0 {
+		return
+	}
+	sorted := make([]*genJA.JavaAction, len(actions))
+	copy(sorted, actions)
+	sort.Slice(sorted, func(i, j int) bool {
+		return strings.ToLower(sorted[i].Name()) < strings.ToLower(sorted[j].Name())
+	})
+	for _, ja := range sorted {
+		sig := formatJavaActionSignatureGen(ja, withNames)
+		fmt.Fprintf(ctx.Output, "  JavaAction %s.%s%s\n", moduleName, ja.Name(), sig)
+	}
+}
+
+// formatJavaActionSignatureGen formats parameter list and return type for a gen-typed JavaAction.
+// Uses the dual-accessor helpers from cmd_javaactions_gen.go (ParametersItems preference over ActionParametersItems).
+func formatJavaActionSignatureGen(ja *genJA.JavaAction, withNames bool) string {
+	typeParams := javaActionTypeParametersOf(ja)
+	params := javaActionParametersOf(ja)
+
+	var paramParts []string
+	for _, p := range params {
+		pp, ok := p.(*genJA.JavaActionParameter)
+		if !ok {
+			continue
+		}
+		typeName := formatJavaActionTypeGen(javaActionParameterParameterType(pp), typeParams)
+		if withNames && pp.Name() != "" {
+			paramParts = append(paramParts, fmt.Sprintf("%s: %s", pp.Name(), typeName))
+		} else {
+			paramParts = append(paramParts, typeName)
+		}
+	}
+
+	sig := "(" + strings.Join(paramParts, ", ") + ")"
+
+	rt := javaActionReturnTypeElement(ja)
+	if rt != nil {
+		retStr := formatJavaActionReturnTypeGen(rt, typeParams)
+		if retStr != "" && retStr != "Void" && retStr != "Nothing" {
+			sig += " → " + retStr
 		}
 	}
 
