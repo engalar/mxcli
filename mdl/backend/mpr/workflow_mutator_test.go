@@ -6,7 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendixlabs/mxcli/sdk/workflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -487,13 +488,17 @@ func TestWorkflowMutator_BsonArrayMarkerConstant(t *testing.T) {
 // Helper: create a concrete WorkflowActivity for Insert/Replace tests
 // ---------------------------------------------------------------------------
 
-func makeTestWorkflowActivity(name, caption string) workflows.WorkflowActivity {
-	return &workflows.UserTask{
-		BaseWorkflowActivity: workflows.BaseWorkflowActivity{
-			Name:    name,
-			Caption: caption,
-		},
-	}
+// makeTestWorkflowActivity returns a gen-typed UserTask for use in
+// Insert*/Replace tests. Stage 3.3.3.E0 — switched from sdk
+// *workflows.UserTask to *genWf.UserTask in lockstep with the
+// E1 retirement of the sdk-typed mutator methods. The returned value is
+// element.Element so call sites can pass []element.Element{...} directly
+// to the Gen mutator siblings.
+func makeTestWorkflowActivity(name, caption string) element.Element {
+	t := genWf.NewUserTask()
+	t.SetName(name)
+	t.SetCaption(caption)
+	return t
 }
 
 // makeWfActivityWithOutcomes builds an activity with named outcomes.
@@ -563,7 +568,7 @@ func TestWorkflowMutator_InsertAfterActivity(t *testing.T) {
 	m := newMutator(makeWorkflowDoc(act1, act2))
 
 	newAct := makeTestWorkflowActivity("inserted", "Inserted")
-	if err := m.InsertAfterActivity("First", 0, []workflows.WorkflowActivity{newAct}); err != nil {
+	if err := m.InsertAfterActivityGen("First", 0, []element.Element{newAct}); err != nil {
 		t.Fatalf("InsertAfterActivity failed: %v", err)
 	}
 
@@ -585,7 +590,7 @@ func TestWorkflowMutator_InsertAfterActivity(t *testing.T) {
 
 func TestWorkflowMutator_InsertAfterActivity_NotFound(t *testing.T) {
 	m := newMutator(makeWorkflowDoc(makeWfActivity("Workflows$UserTask", "Only", "task1")))
-	err := m.InsertAfterActivity("Missing", 0, []workflows.WorkflowActivity{makeTestWorkflowActivity("new", "New")})
+	err := m.InsertAfterActivityGen("Missing", 0, []element.Element{makeTestWorkflowActivity("new", "New")})
 	if err == nil {
 		t.Fatal("Expected error for missing activity")
 	}
@@ -603,7 +608,7 @@ func TestWorkflowMutator_ReplaceActivity(t *testing.T) {
 
 	repA := makeTestWorkflowActivity("repA", "ReplacementA")
 	repB := makeTestWorkflowActivity("repB", "ReplacementB")
-	if err := m.ReplaceActivity("ToReplace", 0, []workflows.WorkflowActivity{repA, repB}); err != nil {
+	if err := m.ReplaceActivityGen("ToReplace", 0, []element.Element{repA, repB}); err != nil {
 		t.Fatalf("ReplaceActivity failed: %v", err)
 	}
 
@@ -627,7 +632,7 @@ func TestWorkflowMutator_ReplaceActivity(t *testing.T) {
 
 func TestWorkflowMutator_ReplaceActivity_NotFound(t *testing.T) {
 	m := newMutator(makeWorkflowDoc(makeWfActivity("Workflows$UserTask", "Only", "task1")))
-	err := m.ReplaceActivity("Missing", 0, []workflows.WorkflowActivity{makeTestWorkflowActivity("new", "New")})
+	err := m.ReplaceActivityGen("Missing", 0, []element.Element{makeTestWorkflowActivity("new", "New")})
 	if err == nil {
 		t.Fatal("Expected error for missing activity")
 	}
@@ -641,7 +646,7 @@ func TestWorkflowMutator_InsertOutcome(t *testing.T) {
 	act := makeWfActivityWithOutcomes("Review", "task1")
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.InsertOutcome("Review", 0, "Approved", nil); err != nil {
+	if err := m.InsertOutcomeGen("Review", 0, "Approved", nil); err != nil {
 		t.Fatalf("InsertOutcome failed: %v", err)
 	}
 
@@ -667,7 +672,7 @@ func TestWorkflowMutator_InsertOutcome_WithActivities(t *testing.T) {
 	m := newMutator(makeWorkflowDoc(act))
 
 	subAct := makeTestWorkflowActivity("sub1", "SubTask")
-	if err := m.InsertOutcome("Review", 0, "Rejected", []workflows.WorkflowActivity{subAct}); err != nil {
+	if err := m.InsertOutcomeGen("Review", 0, "Rejected", []element.Element{subAct}); err != nil {
 		t.Fatalf("InsertOutcome with activities failed: %v", err)
 	}
 
@@ -685,7 +690,7 @@ func TestWorkflowMutator_InsertOutcome_WithActivities(t *testing.T) {
 
 func TestWorkflowMutator_InsertOutcome_ActivityNotFound(t *testing.T) {
 	m := newMutator(makeWorkflowDoc(makeWfActivity("Workflows$UserTask", "Only", "task1")))
-	err := m.InsertOutcome("Missing", 0, "x", nil)
+	err := m.InsertOutcomeGen("Missing", 0, "x", nil)
 	if err == nil {
 		t.Fatal("Expected error for missing activity")
 	}
@@ -742,7 +747,7 @@ func TestWorkflowMutator_InsertPath(t *testing.T) {
 	act[1] = bson.E{Key: "$Type", Value: "Workflows$ParallelSplitActivity"}
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.InsertPath("Split", 0, "", nil); err != nil {
+	if err := m.InsertPathGen("Split", 0, "", nil); err != nil {
 		t.Fatalf("InsertPath failed: %v", err)
 	}
 
@@ -763,7 +768,7 @@ func TestWorkflowMutator_InsertPath_WithActivities(t *testing.T) {
 	m := newMutator(makeWorkflowDoc(act))
 
 	subAct := makeTestWorkflowActivity("path_act", "PathAct")
-	if err := m.InsertPath("Split", 0, "", []workflows.WorkflowActivity{subAct}); err != nil {
+	if err := m.InsertPathGen("Split", 0, "", []element.Element{subAct}); err != nil {
 		t.Fatalf("InsertPath with activities failed: %v", err)
 	}
 
@@ -855,7 +860,7 @@ func TestWorkflowMutator_InsertBranch_True(t *testing.T) {
 	act[1] = bson.E{Key: "$Type", Value: "Workflows$ExclusiveSplitActivity"}
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.InsertBranch("Decision", 0, "true", nil); err != nil {
+	if err := m.InsertBranchGen("Decision", 0, "true", nil); err != nil {
 		t.Fatalf("InsertBranch true failed: %v", err)
 	}
 
@@ -877,7 +882,7 @@ func TestWorkflowMutator_InsertBranch_False(t *testing.T) {
 	act := makeWfActivityWithOutcomes("Decision", "dec1")
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.InsertBranch("Decision", 0, "false", nil); err != nil {
+	if err := m.InsertBranchGen("Decision", 0, "false", nil); err != nil {
 		t.Fatalf("InsertBranch false failed: %v", err)
 	}
 
@@ -893,7 +898,7 @@ func TestWorkflowMutator_InsertBranch_Default(t *testing.T) {
 	act := makeWfActivityWithOutcomes("Decision", "dec1")
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.InsertBranch("Decision", 0, "default", nil); err != nil {
+	if err := m.InsertBranchGen("Decision", 0, "default", nil); err != nil {
 		t.Fatalf("InsertBranch default failed: %v", err)
 	}
 
@@ -909,7 +914,7 @@ func TestWorkflowMutator_InsertBranch_Enum(t *testing.T) {
 	act := makeWfActivityWithOutcomes("Decision", "dec1")
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.InsertBranch("Decision", 0, "MyModule.Status.Active", nil); err != nil {
+	if err := m.InsertBranchGen("Decision", 0, "MyModule.Status.Active", nil); err != nil {
 		t.Fatalf("InsertBranch enum failed: %v", err)
 	}
 
@@ -929,7 +934,7 @@ func TestWorkflowMutator_InsertBranch_WithActivities(t *testing.T) {
 	m := newMutator(makeWorkflowDoc(act))
 
 	subAct := makeTestWorkflowActivity("branch_act", "BranchAct")
-	if err := m.InsertBranch("Decision", 0, "true", []workflows.WorkflowActivity{subAct}); err != nil {
+	if err := m.InsertBranchGen("Decision", 0, "true", []element.Element{subAct}); err != nil {
 		t.Fatalf("InsertBranch with activities failed: %v", err)
 	}
 
@@ -1048,7 +1053,7 @@ func TestWorkflowMutator_InsertBoundaryEvent_InterruptingTimer(t *testing.T) {
 	act = append(act, bson.E{Key: "BoundaryEvents", Value: bson.A{int32(3)}})
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.InsertBoundaryEvent("Review", 0, "InterruptingTimer", "PT1H", nil); err != nil {
+	if err := m.InsertBoundaryEventGen("Review", 0, "InterruptingTimer", "PT1H", nil); err != nil {
 		t.Fatalf("InsertBoundaryEvent failed: %v", err)
 	}
 
@@ -1071,7 +1076,7 @@ func TestWorkflowMutator_InsertBoundaryEvent_NonInterruptingTimer(t *testing.T) 
 	act = append(act, bson.E{Key: "BoundaryEvents", Value: bson.A{int32(3)}})
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.InsertBoundaryEvent("Review", 0, "NonInterruptingTimer", "PT30M", nil); err != nil {
+	if err := m.InsertBoundaryEventGen("Review", 0, "NonInterruptingTimer", "PT30M", nil); err != nil {
 		t.Fatalf("InsertBoundaryEvent NonInterrupting failed: %v", err)
 	}
 
@@ -1099,7 +1104,7 @@ func TestWorkflowMutator_InsertBoundaryEvent_WithActivities(t *testing.T) {
 	m := newMutator(makeWorkflowDoc(act))
 
 	subAct := makeTestWorkflowActivity("evt_act", "EventAct")
-	if err := m.InsertBoundaryEvent("Review", 0, "Timer", "", []workflows.WorkflowActivity{subAct}); err != nil {
+	if err := m.InsertBoundaryEventGen("Review", 0, "Timer", "", []element.Element{subAct}); err != nil {
 		t.Fatalf("InsertBoundaryEvent with activities failed: %v", err)
 	}
 
@@ -1117,7 +1122,7 @@ func TestWorkflowMutator_InsertBoundaryEvent_NoDelay(t *testing.T) {
 	act = append(act, bson.E{Key: "BoundaryEvents", Value: bson.A{int32(3)}})
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.InsertBoundaryEvent("Review", 0, "Timer", "", nil); err != nil {
+	if err := m.InsertBoundaryEventGen("Review", 0, "Timer", "", nil); err != nil {
 		t.Fatalf("InsertBoundaryEvent no delay failed: %v", err)
 	}
 

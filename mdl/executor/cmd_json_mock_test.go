@@ -12,8 +12,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 func TestShowEnumerations_Mock_JSON(t *testing.T) {
@@ -115,16 +115,16 @@ func TestShowLayouts_Mock_JSON(t *testing.T) {
 func TestShowWorkflows_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	wf := mkWorkflow(mod.ID, "WF_Approve")
-	withContainer(h, wf.ContainerID, mod.ID)
+	wf := mkWorkflowGen(string(nextID("wf")), "WF_Approve")
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc:   func() bool { return true },
-		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return []*workflows.Workflow{wf}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listWorkflows(ctx, ""))
+	ctx.Workflows = &repostesting.RecordingWorkflowRepository{
+		ListAllFunc:          func() ([]*genWf.Workflow, error) { return []*genWf.Workflow{wf}, nil },
+		GetContainerUUIDFunc: func(_ model.ID) (model.ID, error) { return mod.ID, nil },
+	}
+	assertNoError(t, listWorkflowsGen(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "WF_Approve")
 }
