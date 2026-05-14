@@ -9,10 +9,83 @@
 package executor
 
 import (
+	"fmt"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 )
+
+// astToAttributeGen builds a gen-typed *Attribute from an AST
+// AttributeDef. The Type element is set via astToAttributeTypeGen.
+// CalculatedValue / StoredValue are wired when the AST signals
+// a.Calculated / a.HasDefault. Note that resolving CalculatedMicroflow
+// to an ID is the caller's responsibility — the gen CalculatedValue
+// stores the qualified name, not the ID, so this builder uses the
+// AST string directly.
+func astToAttributeGen(a *ast.Attribute) *genDm.Attribute {
+	if a == nil {
+		return nil
+	}
+	attr := genDm.NewAttribute()
+	attr.SetName(a.Name)
+	attr.SetDocumentation(a.Documentation)
+	attr.SetType(astToAttributeTypeGen(a.Type))
+
+	if a.Calculated {
+		cv := genDm.NewCalculatedValue()
+		if a.CalculatedMicroflow != nil {
+			cv.SetMicroflowQualifiedName(a.CalculatedMicroflow.String())
+		}
+		attr.SetValue(cv)
+	} else if a.HasDefault {
+		sv := genDm.NewStoredValue()
+		sv.SetDefaultValue(astAttributeDefaultStringGen(a))
+		attr.SetValue(sv)
+	}
+	return attr
+}
+
+// astAttributeDefaultStringGen renders an AST default value as the
+// string the gen StoredValue.DefaultValue stores. For enum attributes
+// Mendix stores just the value name (the trailing segment of the
+// qualified default), matching legacy execCreateEntity behavior.
+func astAttributeDefaultStringGen(a *ast.Attribute) string {
+	if !a.HasDefault {
+		return ""
+	}
+	def := stringifyDefault(a.DefaultValue)
+	if a.Type.Kind == ast.TypeEnumeration {
+		// Strip leading "Module.Enum." prefix if present so the BSON
+		// stores just the value name (e.g. "Open" not "MyMod.Status.Open").
+		if i := lastDotIndex(def); i >= 0 && i < len(def)-1 {
+			def = def[i+1:]
+		}
+	}
+	return def
+}
+
+// stringifyDefault converts the AST DefaultValue (any) to its string
+// form using the same fmt-based rendering as legacy execCreateEntity.
+func stringifyDefault(v any) string {
+	if v == nil {
+		return ""
+	}
+	switch s := v.(type) {
+	case string:
+		return s
+	}
+	return fmt.Sprintf("%v", v)
+}
+
+func lastDotIndex(s string) int {
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == '.' {
+			return i
+		}
+	}
+	return -1
+}
 
 // astToAttributeTypeGen mirrors convertDataType for the gen-typed write
 // path. Returns the concrete *genDm.*AttributeType element matching the

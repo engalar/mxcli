@@ -105,6 +105,81 @@ func TestAstToAttributeTypeGen_EnumerationNilRef(t *testing.T) {
 	}
 }
 
+func TestAstToAttributeGen_NameType(t *testing.T) {
+	a := &ast.Attribute{
+		Name:          "Email",
+		Documentation: "user email",
+		Type:          ast.DataType{Kind: ast.TypeString, Length: 200},
+	}
+	got := astToAttributeGen(a)
+	if got == nil {
+		t.Fatal("nil attr")
+	}
+	if got.Name() != "Email" {
+		t.Errorf("Name = %q", got.Name())
+	}
+	if got.Documentation() != "user email" {
+		t.Errorf("Documentation = %q", got.Documentation())
+	}
+	if got.Type() == nil {
+		t.Error("Type is nil")
+	}
+}
+
+func TestAstToAttributeGen_Calculated(t *testing.T) {
+	a := &ast.Attribute{
+		Name:                "Total",
+		Type:                ast.DataType{Kind: ast.TypeDecimal},
+		Calculated:          true,
+		CalculatedMicroflow: &ast.QualifiedName{Module: "M", Name: "CalcTotal"},
+	}
+	got := astToAttributeGen(a)
+	cv, ok := got.Value().(*genDm.CalculatedValue)
+	if !ok {
+		t.Fatalf("Value should be *CalculatedValue, got %T", got.Value())
+	}
+	if cv.MicroflowQualifiedName() != "M.CalcTotal" {
+		t.Errorf("MicroflowQualifiedName = %q", cv.MicroflowQualifiedName())
+	}
+}
+
+func TestAstToAttributeGen_DefaultStringValue(t *testing.T) {
+	a := &ast.Attribute{
+		Name:         "Status",
+		Type:         ast.DataType{Kind: ast.TypeString},
+		HasDefault:   true,
+		DefaultValue: "active",
+	}
+	got := astToAttributeGen(a)
+	sv, ok := got.Value().(*genDm.StoredValue)
+	if !ok {
+		t.Fatalf("Value should be *StoredValue, got %T", got.Value())
+	}
+	if sv.DefaultValue() != "active" {
+		t.Errorf("DefaultValue = %q", sv.DefaultValue())
+	}
+}
+
+func TestAstToAttributeGen_EnumDefaultStripsPrefix(t *testing.T) {
+	a := &ast.Attribute{
+		Name:         "Status",
+		Type:         ast.DataType{Kind: ast.TypeEnumeration, EnumRef: &ast.QualifiedName{Module: "M", Name: "Status"}},
+		HasDefault:   true,
+		DefaultValue: "M.Status.Open",
+	}
+	got := astToAttributeGen(a)
+	sv := got.Value().(*genDm.StoredValue)
+	if sv.DefaultValue() != "Open" {
+		t.Errorf("Enum default should strip prefix; got %q", sv.DefaultValue())
+	}
+}
+
+func TestAstToAttributeGen_NilInput(t *testing.T) {
+	if got := astToAttributeGen(nil); got != nil {
+		t.Errorf("nil input should return nil, got %v", got)
+	}
+}
+
 func TestAstToAttributeTypeGen_DefaultFallback(t *testing.T) {
 	got := astToAttributeTypeGen(ast.DataType{Kind: 999})
 	s, ok := got.(*genDm.StringAttributeType)
