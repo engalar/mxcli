@@ -22,6 +22,7 @@ import (
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
@@ -82,6 +83,10 @@ type executorCache struct {
 	// (Stage 3.3.4 A0). Each module owns at most one DomainModel; the
 	// container ID is the owning module's UUID.
 	domainModelsWithContainerGen []DomainModelGenWithContainer
+
+	// Cached gen-typed Workflow listing with container UUID resolved
+	// (Stage 3.3.3 A0).
+	workflowsWithContainerGen []ContainerWithGen[*genWf.Workflow]
 }
 
 // createdMicroflowInfo tracks a microflow created during this session.

@@ -113,6 +113,80 @@ func (r *workflowRepo) List(moduleID model.ID) ([]*genWf.Workflow, error) {
 	return result, nil
 }
 
+func (r *workflowRepo) ListAll() ([]*genWf.Workflow, error) {
+	refs, err := r.r.ListUnitsByType(workflowTypeName)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*genWf.Workflow, 0, len(refs))
+	for _, ref := range refs {
+		if ref.Type != workflowTypeName {
+			continue
+		}
+		wf, err := r.Get(model.ID(ref.ID))
+		if err != nil {
+			return nil, fmt.Errorf("decode workflow %s: %w", ref.ID, err)
+		}
+		result = append(result, wf)
+	}
+	return result, nil
+}
+
+func (r *workflowRepo) FindByQualifiedName(qn string) (*genWf.Workflow, error) {
+	moduleName, simpleName, ok := splitQN(qn)
+	if !ok {
+		return nil, fmt.Errorf("FindByQualifiedName: invalid qualified name %q (want Module.Name)", qn)
+	}
+	mods, err := r.r.ListModules()
+	if err != nil {
+		return nil, err
+	}
+	moduleMap := make(map[string]string, len(mods))
+	for _, m := range mods {
+		moduleMap[m.ID] = m.Name
+	}
+	parents, err := r.r.BuildContainerParent()
+	if err != nil {
+		return nil, err
+	}
+	refs, err := r.r.ListUnitsByType(workflowTypeName)
+	if err != nil {
+		return nil, err
+	}
+	for _, ref := range refs {
+		if ref.Type != workflowTypeName {
+			continue
+		}
+		if mmpr.ResolveModuleName(ref.ContainerID, moduleMap, parents) != moduleName {
+			continue
+		}
+		wf, err := r.Get(model.ID(ref.ID))
+		if err != nil {
+			return nil, err
+		}
+		if wf.Name() == simpleName {
+			return wf, nil
+		}
+	}
+	return nil, nil
+}
+
+func (r *workflowRepo) GetContainerUUID(id model.ID) (model.ID, error) {
+	if id == "" {
+		return "", fmt.Errorf("GetContainerUUID: empty id")
+	}
+	bin := mmpr.IDToBsonBinary(string(id))
+	if len(bin.Data) != 16 {
+		return "", fmt.Errorf("GetContainerUUID: invalid id %q", id)
+	}
+	var blob []byte
+	err := r.r.DB().QueryRow("SELECT ContainerID FROM Unit WHERE UnitID = ?", bin.Data).Scan(&blob)
+	if err != nil {
+		return "", fmt.Errorf("GetContainerUUID(%s): %w", id, err)
+	}
+	return model.ID(mmpr.BlobToUUID(blob)), nil
+}
+
 func (r *workflowRepo) Create(parentUUID string, containmentName string, wf *genWf.Workflow) error {
 	if wf.ID() == "" {
 		wf.SetID(element.ID(mmpr.GenerateID()))

@@ -7,18 +7,26 @@ import (
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
 
-// WorkflowReader / WorkflowWriter / WorkflowRepository — signatures
-// intentionally minimal until Stage 3 cutover. Workflows are large
-// composite units whose ALTER paths require the WorkflowMutator
-// (analogous to PageMutator) — see workflow_mutator.go.
-//
-// TODO Stage 3 cutover: flesh out signatures from the legacy interface
-// and produce an MPR implementation.
+// WorkflowReader queries workflows. Implementations decode raw BSON via
+// codec.Decoder; freshly-decoded gen objects are returned by value-pointer
+// (the caller may mutate freely without affecting the cache).
 type WorkflowReader interface {
 	Get(id model.ID) (*genWf.Workflow, error)
 	List(moduleID model.ID) ([]*genWf.Workflow, error)
+	ListAll() ([]*genWf.Workflow, error)
+	FindByQualifiedName(qn string) (*genWf.Workflow, error)
+
+	// GetContainerUUID returns the parent container UUID (folder or
+	// module ID) of a workflow unit. Codec-decoded gen objects do not
+	// carry container linkage, so callers retrieve it from the MPR Unit
+	// table by UnitID. Returns "" with a non-nil error if the unit is
+	// not found.
+	GetContainerUUID(id model.ID) (model.ID, error)
 }
 
+// WorkflowWriter creates/updates/deletes/moves workflows. Container
+// lineage is supplied positionally (parentUUID, containmentName) — gen
+// objects do not store container identity (addendum Blocker 2).
 type WorkflowWriter interface {
 	Create(parentUUID string, containmentName string, wf *genWf.Workflow) error
 	Update(wf *genWf.Workflow) error

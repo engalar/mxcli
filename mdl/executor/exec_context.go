@@ -48,6 +48,9 @@ type ExecContext struct {
 	// DomainModels is the Stage 3.3.4 modelsdk-native repo. Populated via
 	// the same provider duck-type pattern.
 	DomainModels repos.DomainModelRepository
+	// Workflows is the Stage 3.3.3 modelsdk-native repo. Populated via
+	// the same provider duck-type pattern.
+	Workflows repos.WorkflowRepository
 
 	// Output is the writer for user-visible output (with line-limit guard).
 	Output io.Writer
