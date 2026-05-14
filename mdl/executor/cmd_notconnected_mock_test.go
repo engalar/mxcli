@@ -167,7 +167,7 @@ func TestExecDropAssociation_Mock_NotConnected(t *testing.T) {
 
 func TestExecDropJavaAction_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, execDropJavaAction(ctx, &ast.DropJavaActionStmt{
+	assertError(t, execDropJavaActionGen(ctx, &ast.DropJavaActionStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "J"},
 	}))
 }

@@ -1200,3 +1200,66 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 	}
 	return nil
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// E2 — helpers extracted from the deleted cmd_javaactions.go
+// ─────────────────────────────────────────────────────────────────────
+
+// readJavaActionUserCode reads the Java source file and extracts the
+// user code section between BEGIN USER CODE / END USER CODE markers.
+// Mirror of the helper that lived in the now-deleted cmd_javaactions.go.
+func readJavaActionUserCode(mprPath, moduleName, actionName string) string {
+	if mprPath == "" {
+		return ""
+	}
+	projectRoot := filepath.Dir(mprPath)
+	moduleNameLower := strings.ToLower(moduleName)
+	javaPath := filepath.Join(projectRoot, "javasource", moduleNameLower, "actions", actionName+".java")
+	content, err := os.ReadFile(javaPath)
+	if err != nil {
+		return ""
+	}
+	source := string(content)
+	beginMarker := "// begin user CODE"
+	endMarker := "// end user CODE"
+	beginIdx := strings.Index(source, beginMarker)
+	endIdx := strings.Index(source, endMarker)
+	if beginIdx == -1 || endIdx == -1 || endIdx <= beginIdx {
+		return ""
+	}
+	userCode := source[beginIdx+len(beginMarker) : endIdx]
+	userCode = strings.TrimPrefix(userCode, "\n")
+	userCode = strings.TrimSuffix(userCode, "\n")
+	userCode = strings.TrimRight(userCode, " \t")
+	return userCode
+}
+
+// isTypeParamRef checks whether an ast.DataType refers to a type
+// parameter by name. Used by the AST→gen converters when resolving
+// EntityTypeParameterType references against an action's type parameter list.
+func isTypeParamRef(dt ast.DataType, typeParamNames map[string]bool) bool {
+	name := getTypeParamRefName(dt)
+	return name != "" && typeParamNames[name]
+}
+
+// getTypeParamRefName extracts the name from a DataType that could be a
+// type parameter reference. Returns empty string if not a type-param ref.
+func getTypeParamRefName(dt ast.DataType) string {
+	switch dt.Kind {
+	case ast.TypeEnumeration:
+		if dt.EnumRef != nil && dt.EnumRef.Module == "" {
+			return dt.EnumRef.Name
+		}
+		if dt.EnumRef != nil {
+			return dt.EnumRef.Module + "." + dt.EnumRef.Name
+		}
+	case ast.TypeEntity:
+		if dt.EntityRef != nil && dt.EntityRef.Module == "" {
+			return dt.EntityRef.Name
+		}
+		if dt.EntityRef != nil {
+			return dt.EntityRef.Module + "." + dt.EntityRef.Name
+		}
+	}
+	return ""
+}
