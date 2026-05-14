@@ -466,12 +466,15 @@ func buildJavaActionQualifiedNames(ctx *ExecContext) map[string]bool {
 	if err != nil {
 		return result
 	}
-	jas, err := ctx.Backend.ListJavaActions()
+	pairs, err := listJavaActionsWithContainerGen(ctx)
 	if err != nil {
 		return result
 	}
-	for _, ja := range jas {
-		qn := h.GetQualifiedName(ja.ContainerID, ja.Name)
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		qn := h.GetQualifiedName(model.ID(p.ContainerID), p.Elem.Name())
 		result[qn] = true
 	}
 	return result

@@ -204,12 +204,15 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 		}
 	}
 
-	// Delete Java actions in this module
-	if jas, err := ctx.Backend.ListJavaActions(); err == nil {
-		for _, ja := range jas {
-			if moduleContainers[ja.ContainerID] {
-				if err := ctx.Backend.DeleteJavaAction(ja.ID); err != nil {
-					fmt.Fprintf(ctx.Output, "Warning: failed to delete Java action %s: %v\n", ja.Name, err)
+	// Delete Java actions in this module (gen-typed, container UUID via cache helper)
+	if pairs, err := listJavaActionsWithContainerGen(ctx); err == nil {
+		for _, p := range pairs {
+			if p.Elem == nil {
+				continue
+			}
+			if moduleContainers[model.ID(p.ContainerID)] {
+				if err := ctx.Backend.DeleteJavaAction(model.ID(p.Elem.ID())); err != nil {
+					fmt.Fprintf(ctx.Output, "Warning: failed to delete Java action %s: %v\n", p.Elem.Name(), err)
 				} else {
 					nJavaActions++
 				}
@@ -500,10 +503,10 @@ func listModules(ctx *ExecContext) error {
 		}
 	}
 
-	// Count Java actions
-	if jas, err := ctx.Backend.ListJavaActions(); err == nil {
-		for _, ja := range jas {
-			modID := h.FindModuleID(ja.ContainerID)
+	// Count Java actions (gen-typed)
+	if pairs, err := listJavaActionsWithContainerGen(ctx); err == nil {
+		for _, p := range pairs {
+			modID := h.FindModuleID(model.ID(p.ContainerID))
 			javaActionCounts[modID]++
 		}
 	}
@@ -669,11 +672,14 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 		}
 	}
 
-	// Output java actions
-	if jaList, err := ctx.Backend.ListJavaActions(); err == nil {
-		for _, ja := range jaList {
-			if moduleContainers[ja.ContainerID] {
-				if err := describeJavaAction(ctx, ast.QualifiedName{Module: moduleName, Name: ja.Name}); err == nil {
+	// Output java actions (gen-typed)
+	if pairs, err := listJavaActionsWithContainerGen(ctx); err == nil {
+		for _, p := range pairs {
+			if p.Elem == nil {
+				continue
+			}
+			if moduleContainers[model.ID(p.ContainerID)] {
+				if err := describeJavaActionGen(ctx, ast.QualifiedName{Module: moduleName, Name: p.Elem.Name()}); err == nil {
 					fmt.Fprintln(ctx.Output)
 				}
 			}

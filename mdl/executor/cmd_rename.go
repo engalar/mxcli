@@ -413,7 +413,13 @@ func execRenameJavaAction(ctx *ExecContext, s *ast.RenameStmt) error {
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
-	// Verify the Java action exists
+	// Verify the Java action exists.
+	// NOTE: this stays on the legacy ctx.Backend.ListJavaActions path
+	// because the rename mock test fixture wires the rename-time check
+	// through ListJavaActionsFunc; migrating to listJavaActionsWithContainerGen
+	// requires extending hierarchy.FindModuleID to resolve gen-typed
+	// JavaAction units, which is out of scope for Stage 3.3.2 Phase E
+	// preparation. Migrate together with the cmd_rename refactor.
 	jas, err := ctx.Backend.ListJavaActions()
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)

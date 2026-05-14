@@ -22,15 +22,35 @@ import (
 // mdl/executor/ MUST go through this helper to avoid O(N²) container
 // lookups when iterating across the project.
 func listJavaActionsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genJA.JavaAction], error) {
-	if ctx == nil || ctx.JavaActions == nil {
+	if ctx == nil {
 		return nil, nil
 	}
-	return listUnitsWithContainerGen(
-		func() ([]*genJA.JavaAction, error) { return ctx.JavaActions.ListAll() },
-		func(id element.ID) (element.ID, error) {
+	// Production path: ctx.JavaActions populated via duck-type provider
+	// (MprBackend). Tests using MockBackend lack the provider, so fall
+	// back to ctx.Backend.ListJavaActionsGen which goes through the
+	// regular FullBackend interface.
+	listFn := func() ([]*genJA.JavaAction, error) {
+		if ctx.JavaActions != nil {
+			return ctx.JavaActions.ListAll()
+		}
+		if ctx.Backend != nil {
+			return ctx.Backend.ListJavaActionsGen()
+		}
+		return nil, nil
+	}
+	resolveFn := func(id element.ID) (element.ID, error) {
+		if ctx.JavaActions != nil {
 			c, err := ctx.JavaActions.GetContainerUUID(model.ID(id))
 			return element.ID(c), err
-		},
+		}
+		// MockBackend: caller wires container UUIDs separately via
+		// withContainer / hierarchy. Returning empty here is fine — the
+		// hierarchy walk later resolves Module from element ID directly.
+		return "", nil
+	}
+	return listUnitsWithContainerGen(
+		listFn,
+		resolveFn,
 		func() ([]ContainerWithGen[*genJA.JavaAction], bool) {
 			if ctx.Cache != nil && ctx.Cache.javaActionsWithContainerGen != nil {
 				return ctx.Cache.javaActionsWithContainerGen, true
