@@ -9,6 +9,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
@@ -36,6 +37,9 @@ type CatalogReader interface {
 
 	// Domain models & enumerations
 	ListDomainModels() ([]*domainmodel.DomainModel, error)
+	// Stage 3.3.4 C2: gen-typed sibling. Reader implementations expose
+	// both until E2 retires the sdk-typed legacy method.
+	ListDomainModelsGen() ([]*genDm.DomainModel, error)
 	ListEnumerations() ([]*model.Enumeration, error)
 	ListConstants() ([]*model.Constant, error)
 
@@ -101,6 +105,7 @@ type Builder struct {
 	nanoflowCache           []*genMf.Nanoflow
 	pageCache               []*pages.Page
 	domainModelCache        []*domainmodel.DomainModel
+	domainModelGenCache     []*genDm.DomainModel
 	enumerationCache        []*model.Enumeration
 	workflowCache           []*workflows.Workflow
 	businessEventCache      []*model.BusinessEventService
@@ -263,6 +268,19 @@ func (b *Builder) cachedDomainModels() ([]*domainmodel.DomainModel, error) {
 		}
 	}
 	return b.domainModelCache, nil
+}
+
+// cachedDomainModelsGen is the gen-typed counterpart to cachedDomainModels
+// (Stage 3.3.4 C2). Read-side consumers progressively migrate to this.
+func (b *Builder) cachedDomainModelsGen() ([]*genDm.DomainModel, error) {
+	if b.domainModelGenCache == nil {
+		var err error
+		b.domainModelGenCache, err = b.reader.ListDomainModelsGen()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return b.domainModelGenCache, nil
 }
 
 func (b *Builder) cachedEnumerations() ([]*model.Enumeration, error) {
