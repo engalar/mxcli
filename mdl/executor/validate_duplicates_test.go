@@ -15,7 +15,6 @@ import (
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // ---------------------------------------------------------------------------
@@ -274,8 +273,8 @@ func setupProjectConflictCtx(t *testing.T) (*ExecContext, *model.Module) {
 		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return nil, nil },
 		ListImageCollectionsFunc:  func() ([]*types.ImageCollection, error) { return nil, nil },
 		ListDomainModelsFunc:      func() ([]*domainmodel.DomainModel, error) { return nil, nil },
-		ListPagesFunc:             func() ([]*pages.Page, error) { return nil, nil },
-		ListSnippetsFunc:          func() ([]*pages.Snippet, error) { return nil, nil },
+		// Stage 3.3.5.C6: ListPagesFunc / ListSnippetsFunc no longer
+		// needed — MockBackend returns (nil, nil) by default.
 	}
 
 	// Wire ctx.Microflows / ctx.Nanoflows so buildMicroflowQualifiedNamesGen

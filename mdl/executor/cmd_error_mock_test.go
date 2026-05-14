@@ -12,6 +12,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
@@ -50,30 +51,30 @@ func TestShowConstants_Mock_BackendError(t *testing.T) {
 // the repo is nil.
 
 func TestShowPages_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return nil, errBackend },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listPages(ctx, ""))
+	ctx.Pages = &repostesting.RecordingPageRepository{
+		ListAllFunc: func() ([]*genPg.Page, error) { return nil, errBackend },
+	}
+	assertError(t, listPagesGen(ctx, ""))
 }
 
 func TestShowSnippets_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:  func() bool { return true },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return nil, errBackend },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listSnippets(ctx, ""))
+	ctx.Snippets = &repostesting.RecordingSnippetRepository{
+		ListAllFunc: func() ([]*genPg.Snippet, error) { return nil, errBackend },
+	}
+	assertError(t, listSnippetsGen(ctx, ""))
 }
 
 func TestShowLayouts_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListLayoutsFunc: func() ([]*pages.Layout, error) { return nil, errBackend },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listLayouts(ctx, ""))
+	ctx.Layouts = &repostesting.RecordingLayoutRepository{
+		ListAllFunc: func() ([]*genPg.Layout, error) { return nil, errBackend },
+	}
+	assertError(t, listLayoutsGen(ctx, ""))
 }
 
 func TestShowWorkflows_Mock_BackendError(t *testing.T) {
