@@ -222,13 +222,9 @@ func TestAddStatementGenAttachesPendingFreeAnnotations(t *testing.T) {
 // when h3 wired LoopStmt → addLoopStatementGen. See
 // flowbuilder_control_loop_gen_test.go for routing coverage.
 
-func TestAddStatementGenEnumSplitStmtPlaceholderReturnsEmpty(t *testing.T) {
-	fb := newActionTestFb()
-	id := fb.addStatementGen(&ast.EnumSplitStmt{})
-	if id != "" {
-		t.Fatalf("h4 placeholder should return empty ID, got %s", id)
-	}
-}
+// TestAddStatementGenEnumSplitStmtPlaceholderReturnsEmpty was removed
+// when h4 wired EnumSplitStmt → addEnumSplitGen. See
+// flowbuilder_control_split_gen_test.go for routing coverage.
 
 func TestAddStatementGenRoutesCallWorkflowToWorkflowCallAction(t *testing.T) {
 	fb := newActionTestFb()
