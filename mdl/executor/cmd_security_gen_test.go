@@ -286,3 +286,43 @@ func TestDescribeUserRoleGen_NotFound(t *testing.T) {
 		t.Errorf("error should mention user role; got %q", err.Error())
 	}
 }
+
+// TestDescribeDemoUserGen_OutputsCreateStatement asserts that describeDemoUserGen
+// emits a CREATE DEMO USER statement for an existing demo user.
+// Fixture has demo_administrator (entity Administration.Account, roles Administrator).
+func TestDescribeDemoUserGen_OutputsCreateStatement(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	if err := describeDemoUserGen(ctx, "demo_administrator"); err != nil {
+		t.Fatalf("describeDemoUserGen: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "create demo user 'demo_administrator'") {
+		t.Errorf("expected create demo user statement, got: %q", out)
+	}
+	if !strings.Contains(out, "password '***'") {
+		t.Errorf("expected masked password, got: %q", out)
+	}
+	if !strings.Contains(out, ";") {
+		t.Errorf("expected semicolon terminator, got: %q", out)
+	}
+	if !strings.Contains(out, "/") {
+		t.Errorf("expected / terminator, got: %q", out)
+	}
+}
+
+// TestDescribeDemoUserGen_NotFound asserts that a non-existent demo user
+// returns a not-found error from describeDemoUserGen.
+func TestDescribeDemoUserGen_NotFound(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	err := describeDemoUserGen(ctx, "DoesNotExist_Stage3_3_A7")
+	if err == nil {
+		t.Fatalf("expected NotFound error, got nil")
+	}
+	if !strings.Contains(err.Error(), "demo user") {
+		t.Errorf("error should mention demo user; got %q", err.Error())
+	}
+}
