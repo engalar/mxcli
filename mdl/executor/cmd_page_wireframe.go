@@ -12,7 +12,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
 
 // pageWireframeData is the JSON output for page wireframe diagrams.
@@ -107,18 +107,23 @@ func PageWireframeJSON(ctx *ExecContext, name string) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	// Find the page
-	allPages, err := ctx.Backend.ListPages()
+	// Find the page via gen-typed listing.
+	pairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
 
-	var foundPage *pages.Page
-	for _, p := range allPages {
-		modID := h.FindModuleID(p.ContainerID)
+	var foundPage *genPg.Page
+	var foundContainerID model.ID
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
-		if p.Name == qn.Name && (qn.Module == "" || modName == qn.Module) {
-			foundPage = p
+		if p.Elem.Name() == qn.Name && (qn.Module == "" || modName == qn.Module) {
+			foundPage = p.Elem
+			foundContainerID = model.ID(p.ContainerID)
 			break
 		}
 	}
@@ -127,24 +132,16 @@ func PageWireframeJSON(ctx *ExecContext, name string) error {
 		return mdlerrors.NewNotFound("page", name)
 	}
 
-	modID := h.FindModuleID(foundPage.ContainerID)
+	pageID := model.ID(foundPage.ID())
+	modID := h.FindModuleID(foundContainerID)
 	modName := h.GetModuleName(modID)
-	qualifiedName := modName + "." + foundPage.Name
+	qualifiedName := modName + "." + foundPage.Name()
 
 	// Extract page metadata
-	title := ""
-	if foundPage.Title != nil {
-		title = foundPage.Title.GetTranslation("en_US")
-		if title == "" {
-			for _, text := range foundPage.Title.Translations {
-				title = text
-				break
-			}
-		}
-	}
+	title := pickPageTitleGen(foundPage)
 
 	layoutName := ""
-	rawData, _ := ctx.Backend.GetRawUnit(foundPage.ID)
+	rawData, _ := ctx.Backend.GetRawUnit(pageID)
 	if rawData != nil {
 		if formCall, ok := rawData["FormCall"].(map[string]any); ok {
 			if layoutID := extractBinaryID(formCall["Layout"]); layoutID != "" {
@@ -155,21 +152,21 @@ func PageWireframeJSON(ctx *ExecContext, name string) error {
 		}
 	}
 
-	// Extract parameters
+	// Extract parameters from gen Page.
 	var params []pageWireframeParam
-	for _, p := range foundPage.Parameters {
-		entityName := p.EntityName
-		if entityName == "" {
-			entityName = string(p.EntityID)
+	for _, elem := range foundPage.ParametersItems() {
+		pp, ok := elem.(*genPg.PageParameter)
+		if !ok || pp == nil {
+			continue
 		}
 		params = append(params, pageWireframeParam{
-			Name: p.Name,
-			Type: entityName,
+			Name: pp.Name(),
+			Type: parameterEntityNameGen(pp.ParameterType()),
 		})
 	}
 
 	// Get widget tree
-	rawWidgets := getPageWidgetsFromRaw(ctx, foundPage.ID)
+	rawWidgets := getPageWidgetsFromRaw(ctx, pageID)
 
 	// Convert to wireframe nodes
 	counter := &wireframeCounter{}
@@ -219,17 +216,22 @@ func SnippetWireframeJSON(ctx *ExecContext, name string) error {
 	}
 	qn := ast.QualifiedName{Module: parts[0], Name: parts[1]}
 
-	allSnippets, err := ctx.Backend.ListSnippets()
+	pairs, err := listSnippetsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list snippets", err)
 	}
 
-	var foundSnippet *pages.Snippet
-	for _, s := range allSnippets {
-		modID := h.FindModuleID(s.ContainerID)
+	var foundSnippet *genPg.Snippet
+	var foundContainerID model.ID
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
-		if s.Name == qn.Name && (qn.Module == "" || modName == qn.Module) {
-			foundSnippet = s
+		if p.Elem.Name() == qn.Name && (qn.Module == "" || modName == qn.Module) {
+			foundSnippet = p.Elem
+			foundContainerID = model.ID(p.ContainerID)
 			break
 		}
 	}
@@ -238,11 +240,11 @@ func SnippetWireframeJSON(ctx *ExecContext, name string) error {
 		return mdlerrors.NewNotFound("snippet", name)
 	}
 
-	modID := h.FindModuleID(foundSnippet.ContainerID)
+	modID := h.FindModuleID(foundContainerID)
 	modName := h.GetModuleName(modID)
-	qualifiedName := modName + "." + foundSnippet.Name
+	qualifiedName := modName + "." + foundSnippet.Name()
 
-	rawWidgets := getSnippetWidgetsFromRaw(ctx, foundSnippet.ID)
+	rawWidgets := getSnippetWidgetsFromRaw(ctx, model.ID(foundSnippet.ID()))
 
 	counter := &wireframeCounter{}
 	var root []wireframeNode

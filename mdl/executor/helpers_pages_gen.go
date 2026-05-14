@@ -14,6 +14,7 @@ package executor
 import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
 
@@ -169,4 +170,33 @@ func invalidatePagesGenCache(ctx *ExecContext) {
 	ctx.Cache.pagesWithContainerGen = nil
 	ctx.Cache.layoutsWithContainerGen = nil
 	ctx.Cache.snippetsWithContainerGen = nil
+}
+
+// parameterEntityNameGen extracts the qualified entity name from a
+// gen-typed page/snippet parameter type element. Mirrors the legacy
+// pages.PageParameter.EntityName fallback chain. Returns "" when the
+// parameter is a primitive type (caller dispatches to MDL primitives via
+// pageParamTypeMDL or similar) or when no entity is referenced.
+func parameterEntityNameGen(paramType element.Element) string {
+	if paramType == nil {
+		return ""
+	}
+	switch t := paramType.(type) {
+	case *genDt.EntityType:
+		if t == nil {
+			return ""
+		}
+		return t.EntityQualifiedName()
+	case *genDt.ListType:
+		if t == nil {
+			return ""
+		}
+		return t.EntityQualifiedName()
+	case *genDt.ObjectType:
+		if t == nil {
+			return ""
+		}
+		return t.EntityQualifiedName()
+	}
+	return ""
 }
