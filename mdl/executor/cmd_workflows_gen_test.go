@@ -96,6 +96,86 @@ func TestCountWorkflowActivitiesGen_NilWorkflowReturnsZero(t *testing.T) {
 	}
 }
 
+func TestFormatWorkflowActivitiesGen_JumpTo(t *testing.T) {
+	flow := genWf.NewFlow()
+	jt := genWf.NewJumpToActivity()
+	jt.SetName("J1")
+	jt.SetCaption("go back")
+	jt.SetTargetActivityQualifiedName("Demo.Approve.Outcome1")
+	flow.AddActivities(jt)
+
+	lines := formatWorkflowActivitiesGen(flow, "  ")
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "jump to Demo.Approve.Outcome1 comment 'go back';") {
+		t.Errorf("missing jump-to line: %q", joined)
+	}
+}
+
+func TestFormatWorkflowActivitiesGen_WaitForTimerWithDelay(t *testing.T) {
+	flow := genWf.NewFlow()
+	wt := genWf.NewWaitForTimerActivity()
+	wt.SetName("WT1")
+	wt.SetCaption("hold")
+	wt.SetDelay("dateTime(2026,1,1)")
+	flow.AddActivities(wt)
+
+	lines := formatWorkflowActivitiesGen(flow, "  ")
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "wait for timer 'dateTime(2026,1,1)' comment 'hold';") {
+		t.Errorf("missing wait-for-timer line: %q", joined)
+	}
+}
+
+func TestFormatWorkflowActivitiesGen_WaitForTimerNoDelay(t *testing.T) {
+	flow := genWf.NewFlow()
+	wt := genWf.NewWaitForTimerActivity()
+	wt.SetName("WT2")
+	wt.SetCaption("pause")
+	flow.AddActivities(wt)
+
+	lines := formatWorkflowActivitiesGen(flow, "  ")
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "wait for timer comment 'pause';") {
+		t.Errorf("missing wait-for-timer (no delay) line: %q", joined)
+	}
+}
+
+func TestFormatWorkflowActivitiesGen_StartEndOmitted(t *testing.T) {
+	flow := genWf.NewFlow()
+	flow.AddActivities(genWf.NewStartWorkflowActivity())
+	flow.AddActivities(genWf.NewEndWorkflowActivity())
+	flow.AddActivities(genWf.NewEndOfParallelSplitPathActivity())
+	flow.AddActivities(genWf.NewEndOfBoundaryEventPathActivity())
+
+	lines := formatWorkflowActivitiesGen(flow, "  ")
+	if len(lines) != 0 {
+		t.Errorf("Start/End activities must be omitted; got %v", lines)
+	}
+}
+
+func TestFormatWorkflowActivitiesGen_FloatingAnnotation(t *testing.T) {
+	flow := genWf.NewFlow()
+	a := genWf.NewFloatingAnnotation()
+	a.SetDescription("note 1")
+	flow.AddActivities(a)
+
+	lines := formatWorkflowActivitiesGen(flow, "  ")
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "annotation 'note 1';") {
+		t.Errorf("missing floating-annotation line: %q", joined)
+	}
+}
+
+func TestFormatWorkflowActivitiesGen_FloatingAnnotationEmptyOmitted(t *testing.T) {
+	flow := genWf.NewFlow()
+	flow.AddActivities(genWf.NewFloatingAnnotation())
+
+	lines := formatWorkflowActivitiesGen(flow, "  ")
+	if len(lines) != 0 {
+		t.Errorf("empty annotation must be omitted; got %v", lines)
+	}
+}
+
 func TestCountWorkflowActivitiesGen_UserTaskAndDecision(t *testing.T) {
 	wf := genWf.NewWorkflow()
 	flow := genWf.NewFlow()
