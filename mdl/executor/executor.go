@@ -22,6 +22,7 @@ import (
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	sqllib "github.com/mendixlabs/mxcli/sql"
@@ -87,6 +88,12 @@ type executorCache struct {
 	// Cached gen-typed Workflow listing with container UUID resolved
 	// (Stage 3.3.3 A0).
 	workflowsWithContainerGen []ContainerWithGen[*genWf.Workflow]
+
+	// Cached gen-typed Page / Layout / Snippet listings with container
+	// UUID resolved (Stage 3.3.5 A0).
+	pagesWithContainerGen    []ContainerWithGen[*genPg.Page]
+	layoutsWithContainerGen  []ContainerWithGen[*genPg.Layout]
+	snippetsWithContainerGen []ContainerWithGen[*genPg.Snippet]
 }
 
 // createdMicroflowInfo tracks a microflow created during this session.

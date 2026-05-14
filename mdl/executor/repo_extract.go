@@ -56,6 +56,23 @@ type workflowsRepoProvider interface {
 	Workflows() repos.WorkflowRepository
 }
 
+// pagesRepoProvider mirrors microflowsRepoProvider for the pages
+// domain (Stage 3.3.5 A0). MprBackend implements this in
+// repos_provider.go.
+type pagesRepoProvider interface {
+	Pages() repos.PageRepository
+}
+
+// layoutsRepoProvider mirrors pagesRepoProvider for layouts.
+type layoutsRepoProvider interface {
+	Layouts() repos.LayoutRepository
+}
+
+// snippetsRepoProvider mirrors pagesRepoProvider for snippets.
+type snippetsRepoProvider interface {
+	Snippets() repos.SnippetRepository
+}
+
 // extractMicroflowsRepo returns the modelsdk-native MicroflowRepository
 // if the backend supports it, else nil. Callers (handlers) MUST check
 // nil and fall back to ctx.Backend during the Stage 3.x incremental
@@ -136,6 +153,40 @@ func extractWorkflowsRepo(b backend.FullBackend) repos.WorkflowRepository {
 	}
 	if p, ok := b.(workflowsRepoProvider); ok {
 		return p.Workflows()
+	}
+	return nil
+}
+
+// extractPagesRepo mirrors extractMicroflowsRepo for the pages domain
+// (Stage 3.3.5 A0).
+func extractPagesRepo(b backend.FullBackend) repos.PageRepository {
+	if b == nil {
+		return nil
+	}
+	if p, ok := b.(pagesRepoProvider); ok {
+		return p.Pages()
+	}
+	return nil
+}
+
+// extractLayoutsRepo mirrors extractPagesRepo for layouts.
+func extractLayoutsRepo(b backend.FullBackend) repos.LayoutRepository {
+	if b == nil {
+		return nil
+	}
+	if p, ok := b.(layoutsRepoProvider); ok {
+		return p.Layouts()
+	}
+	return nil
+}
+
+// extractSnippetsRepo mirrors extractPagesRepo for snippets.
+func extractSnippetsRepo(b backend.FullBackend) repos.SnippetRepository {
+	if b == nil {
+		return nil
+	}
+	if p, ok := b.(snippetsRepoProvider); ok {
+		return p.Snippets()
 	}
 	return nil
 }
