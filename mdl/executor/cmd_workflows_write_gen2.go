@@ -27,6 +27,8 @@ package executor
 
 import (
 	"fmt"
+	"strings"
+	"unicode"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
@@ -936,6 +938,49 @@ func execDropWorkflowGen(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
 		}
 	}
 	return mdlerrors.NewNotFound("workflow", s.Name.Module+"."+s.Name.Name)
+}
+
+// ---------------------------------------------------------------------------
+// Pure helpers (no sdk dependency — relocated from cmd_workflows_write.go
+// in preparation for Phase E2 deletion of the legacy file).
+// ---------------------------------------------------------------------------
+
+// generateWorkflowUUID generates a UUID for workflow elements.
+func generateWorkflowUUID() string {
+	return types.GenerateID()
+}
+
+// sanitizeActivityName converts a display caption to a valid Mendix
+// identifier. Mendix names must start with a letter/underscore and
+// contain only letters, digits, underscores.
+func sanitizeActivityName(name string) string {
+	var b strings.Builder
+	for i, r := range name {
+		if unicode.IsLetter(r) || r == '_' {
+			b.WriteRune(r)
+		} else if unicode.IsDigit(r) && i > 0 {
+			b.WriteRune(r)
+		} else if r == ' ' || r == '-' {
+			b.WriteRune('_')
+		}
+	}
+	result := b.String()
+	if result == "" {
+		return "activity"
+	}
+	return result
+}
+
+// uniqueName returns a unique name by appending a number if the name
+// was seen before. Starts disambiguation at 2 (Mendix Studio Pro
+// convention; matches uniqueNameForGen).
+func uniqueName(name string, nameCount map[string]int) string {
+	nameCount[name]++
+	count := nameCount[name]
+	if count == 1 {
+		return name
+	}
+	return fmt.Sprintf("%s%d", name, count)
 }
 
 // newTextWrapperGen wraps a plain string in a Texts$Text element with
