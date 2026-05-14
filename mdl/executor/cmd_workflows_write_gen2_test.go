@@ -409,6 +409,132 @@ func TestBuildConditionOutcomeGen_WithSubFlow(t *testing.T) {
 	}
 }
 
+// ── D1.d — ExclusiveSplit / ParallelSplit tests ───────────────────────
+
+func TestBuildExclusiveSplitGenActivity_BasicShape(t *testing.T) {
+	n := &ast.WorkflowDecisionNode{
+		Expression: "$ctx/score > 50",
+		Caption:    "score check",
+		Outcomes: []ast.WorkflowConditionOutcomeNode{
+			{Value: "True"},
+			{Value: "False"},
+		},
+	}
+	got := buildExclusiveSplitGenActivity(n)
+	if got.TypeName() != "Workflows$ExclusiveSplitActivity" {
+		t.Errorf("TypeName = %q", got.TypeName())
+	}
+	if got.Expression() != "$ctx/score > 50" {
+		t.Errorf("Expression = %q", got.Expression())
+	}
+	if got.Caption() != "score check" {
+		t.Errorf("Caption = %q", got.Caption())
+	}
+	if len(got.OutcomesItems()) != 2 {
+		t.Errorf("expected 2 outcomes, got %d", len(got.OutcomesItems()))
+	}
+}
+
+func TestBuildExclusiveSplitGenActivity_DropsDefaultOnBooleanDecision(t *testing.T) {
+	n := &ast.WorkflowDecisionNode{
+		Outcomes: []ast.WorkflowConditionOutcomeNode{
+			{Value: "True"},
+			{Value: "False"},
+			{Value: "Default"}, // must be dropped — Mendix 11 runtime rejects VoidConditionOutcome on a boolean decision
+		},
+	}
+	got := buildExclusiveSplitGenActivity(n)
+	if len(got.OutcomesItems()) != 2 {
+		t.Errorf("expected 2 outcomes (Default dropped), got %d", len(got.OutcomesItems()))
+	}
+	for _, oc := range got.OutcomesItems() {
+		if oc.TypeName() == "Workflows$VoidConditionOutcome" {
+			t.Error("Default outcome should be dropped on boolean decision")
+		}
+	}
+}
+
+func TestBuildExclusiveSplitGenActivity_DefaultCaption(t *testing.T) {
+	got := buildExclusiveSplitGenActivity(&ast.WorkflowDecisionNode{})
+	if got.Caption() != "Decision" {
+		t.Errorf("default caption = %q", got.Caption())
+	}
+	if got.Name() != "Decision" {
+		t.Errorf("default name = %q", got.Name())
+	}
+}
+
+func TestBuildParallelSplitGenActivity_PathsBecomeOutcomes(t *testing.T) {
+	n := &ast.WorkflowParallelSplitNode{
+		Caption: "fork",
+		Paths: []ast.WorkflowParallelPathNode{
+			{Activities: []ast.WorkflowActivityNode{&ast.WorkflowJumpToNode{Target: "X"}}},
+			{Activities: nil},
+		},
+	}
+	got := buildParallelSplitGenActivity(n)
+	if got.TypeName() != "Workflows$ParallelSplitActivity" {
+		t.Errorf("TypeName = %q", got.TypeName())
+	}
+	if got.Caption() != "fork" {
+		t.Errorf("Caption = %q", got.Caption())
+	}
+	outcomes := got.OutcomesItems()
+	if len(outcomes) != 2 {
+		t.Fatalf("expected 2 outcomes, got %d", len(outcomes))
+	}
+	if pso, ok := outcomes[0].(*genWf.ParallelSplitOutcome); ok {
+		if pso.Flow() == nil {
+			t.Error("first outcome should have non-nil Flow")
+		}
+	}
+	if pso, ok := outcomes[1].(*genWf.ParallelSplitOutcome); ok {
+		if pso.Flow() != nil {
+			t.Error("second outcome (no activities) should have nil Flow")
+		}
+	}
+}
+
+func TestBuildParallelSplitGenActivity_DefaultCaption(t *testing.T) {
+	got := buildParallelSplitGenActivity(&ast.WorkflowParallelSplitNode{})
+	if got.Caption() != "Parallel split" {
+		t.Errorf("default caption = %q", got.Caption())
+	}
+}
+
+// ── End-to-end dispatcher coverage ────────────────────────────────────
+
+func TestBuildWorkflowActivityGen_DispatchesAllTypes(t *testing.T) {
+	cases := []struct {
+		name string
+		node ast.WorkflowActivityNode
+		want string
+	}{
+		{"jump", &ast.WorkflowJumpToNode{Target: "T"}, "Workflows$JumpToActivity"},
+		{"timer", &ast.WorkflowWaitForTimerNode{}, "Workflows$WaitForTimerActivity"},
+		{"notif", &ast.WorkflowWaitForNotificationNode{}, "Workflows$WaitForNotificationActivity"},
+		{"end", &ast.WorkflowEndNode{}, "Workflows$EndWorkflowActivity"},
+		{"anno", &ast.WorkflowAnnotationActivityNode{Text: "n"}, "Workflows$FloatingAnnotation"},
+		{"singleut", &ast.WorkflowUserTaskNode{Name: "U"}, "Workflows$SingleUserTaskActivity"},
+		{"multiut", &ast.WorkflowUserTaskNode{Name: "U", IsMultiUser: true}, "Workflows$MultiUserTaskActivity"},
+		{"callmf", &ast.WorkflowCallMicroflowNode{Microflow: ast.QualifiedName{Module: "M", Name: "F"}}, "Workflows$CallMicroflowActivity"},
+		{"callwf", &ast.WorkflowCallWorkflowNode{Workflow: ast.QualifiedName{Module: "M", Name: "W"}}, "Workflows$CallWorkflowActivity"},
+		{"decision", &ast.WorkflowDecisionNode{}, "Workflows$ExclusiveSplitActivity"},
+		{"parallel", &ast.WorkflowParallelSplitNode{}, "Workflows$ParallelSplitActivity"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := buildWorkflowActivityGen(tc.node)
+			if got == nil {
+				t.Fatal("nil result")
+			}
+			if got.TypeName() != tc.want {
+				t.Errorf("TypeName = %q, want %q", got.TypeName(), tc.want)
+			}
+		})
+	}
+}
+
 func TestBuildWorkflowActivitiesGen_DispatchesLeafTypes(t *testing.T) {
 	nodes := []ast.WorkflowActivityNode{
 		&ast.WorkflowJumpToNode{Target: "A"},

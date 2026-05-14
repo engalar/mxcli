@@ -68,9 +68,10 @@ func buildWorkflowActivityGen(node ast.WorkflowActivityNode) element.Element {
 		return buildCallMicroflowGenActivity(n)
 	case *ast.WorkflowCallWorkflowNode:
 		return buildCallWorkflowGenActivity(n)
-	// Composite cases land in D1.d:
-	//   *ast.WorkflowDecisionNode        — D1.d
-	//   *ast.WorkflowParallelSplitNode   — D1.d
+	case *ast.WorkflowDecisionNode:
+		return buildExclusiveSplitGenActivity(n)
+	case *ast.WorkflowParallelSplitNode:
+		return buildParallelSplitGenActivity(n)
 	}
 	return nil
 }
@@ -443,6 +444,70 @@ func buildConditionOutcomeGen(n ast.WorkflowConditionOutcomeNode) element.Elemen
 		}
 		return o
 	}
+}
+
+// ---------------------------------------------------------------------------
+// D1.d — ExclusiveSplit + ParallelSplit
+// ---------------------------------------------------------------------------
+
+// buildExclusiveSplitGenActivity mirrors buildExclusiveSplit
+// (cmd_workflows_write.go:354). Implements the same boolean-decision
+// detection rule: if any outcome is True/False, we drop any "Default"
+// outcome (Mendix 11 runtime rejects VoidConditionOutcome on a
+// boolean decision).
+func buildExclusiveSplitGenActivity(n *ast.WorkflowDecisionNode) *genWf.ExclusiveSplitActivity {
+	act := genWf.NewExclusiveSplitActivity()
+	act.SetID(element.ID(types.GenerateID()))
+	act.SetExpression(n.Expression)
+	caption := n.Caption
+	if caption == "" {
+		caption = "Decision"
+	}
+	act.SetCaption(caption)
+	act.SetName(caption)
+
+	isBooleanDecision := false
+	for _, o := range n.Outcomes {
+		if o.Value == "True" || o.Value == "False" {
+			isBooleanDecision = true
+			break
+		}
+	}
+
+	for _, oc := range n.Outcomes {
+		if isBooleanDecision && oc.Value == "Default" {
+			continue
+		}
+		built := buildConditionOutcomeGen(oc)
+		if built != nil {
+			act.AddOutcomes(built)
+		}
+	}
+	return act
+}
+
+// buildParallelSplitGenActivity mirrors buildParallelSplit
+// (cmd_workflows_write.go:420). Each AST path becomes a
+// ParallelSplitOutcome carrying its own gen Flow.
+func buildParallelSplitGenActivity(n *ast.WorkflowParallelSplitNode) *genWf.ParallelSplitActivity {
+	act := genWf.NewParallelSplitActivity()
+	act.SetID(element.ID(types.GenerateID()))
+	caption := n.Caption
+	if caption == "" {
+		caption = "Parallel split"
+	}
+	act.SetCaption(caption)
+	act.SetName(caption)
+
+	for _, p := range n.Paths {
+		oc := genWf.NewParallelSplitOutcome()
+		oc.SetID(element.ID(types.GenerateID()))
+		if flow := newGenFlowWithActivities(buildWorkflowActivitiesGen(p.Activities)); flow != nil {
+			oc.SetFlow(flow)
+		}
+		act.AddOutcomes(oc)
+	}
+	return act
 }
 
 // newTextWrapperGen wraps a plain string in a Texts$Text element with
