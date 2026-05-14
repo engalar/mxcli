@@ -11,7 +11,6 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // describeMermaid generates a Mermaid diagram for the given object type and name.
@@ -225,27 +224,32 @@ func pageToMermaid(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	allPages, err := ctx.Backend.ListPages()
+	// Stage 3.3.5.B1: walk gen-typed Page listings via the
+	// listPagesWithContainerGen cache helper.
+	pairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
 
-	var foundPage *pages.Page
-	for _, p := range allPages {
-		modID := h.FindModuleID(p.ContainerID)
+	var foundID model.ID
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
-		if modName == name.Module && p.Name == name.Name {
-			foundPage = p
+		if modName == name.Module && p.Elem.Name() == name.Name {
+			foundID = model.ID(p.Elem.ID())
 			break
 		}
 	}
 
-	if foundPage == nil {
+	if foundID == "" {
 		return mdlerrors.NewNotFound("page", name.String())
 	}
 
 	// Use raw widget data (same approach as describePage)
-	rawWidgets := getPageWidgetsFromRaw(ctx, foundPage.ID)
+	rawWidgets := getPageWidgetsFromRaw(ctx, foundID)
 
 	var sb strings.Builder
 	sb.WriteString("block-beta\n")
