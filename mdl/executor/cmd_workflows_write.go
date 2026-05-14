@@ -1,12 +1,29 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Package executor - CREATE/DROP WORKFLOW commands
+// Package executor - CREATE/DROP WORKFLOW commands.
+//
+// DEPRECATED (Stage 3.3.3 Phase E partial): the dispatcher cutover in
+// commit 723433f3 (Stage 3.3.3.D6) routes CreateWorkflowStmt to
+// execCreateWorkflowGen and DropWorkflowStmt to execDropWorkflowGen
+// (both in cmd_workflows_write_gen2.go). The exec* functions here are
+// unused by the production dispatcher but retained because:
+//   1. Mock-test fixtures (cmd_workflows_write_gen_test.go and the
+//      sdk-typed assertions in cmd_workflows_describe_test.go) still
+//      reach into the legacy buildWorkflowActivities / autoBindCallMicroflow /
+//      buildUserTask path directly.
+//   2. The legacy autoBindCallMicroflowGen helper in
+//      cmd_workflows_write_gen.go (Stage 3.2.5b) consumes a sdk-typed
+//      *workflows.CallMicroflowTask that the gen path no longer creates.
+//      D2's autoBindCallMicroflowGenActivity is the gen-native
+//      replacement.
+//
+// This file plus cmd_workflows_write_gen.go are deletable once those
+// test fixtures migrate (planned: a follow-up E2 commit with the
+// bundled fixture migration).
 package executor
 
 import (
 	"fmt"
-	"strings"
-	"unicode"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
@@ -159,11 +176,6 @@ func execDropWorkflow(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
 	}
 
 	return mdlerrors.NewNotFound("workflow", s.Name.Module+"."+s.Name.Name)
-}
-
-// generateWorkflowUUID generates a UUID for workflow elements.
-func generateWorkflowUUID() string {
-	return types.GenerateID()
 }
 
 // buildWorkflowActivities converts AST activity nodes to SDK workflow activities.
@@ -573,41 +585,11 @@ func deduplicateActivityNamesInFlow(activities []workflows.WorkflowActivity, nam
 	}
 }
 
-// uniqueName returns a unique name by appending a number if the name was seen before.
-func uniqueName(name string, nameCount map[string]int) string {
-	nameCount[name]++
-	count := nameCount[name]
-	if count == 1 {
-		return name
-	}
-	return fmt.Sprintf("%s%d", name, count)
-}
-
 func buildAnnotationActivity(n *ast.WorkflowAnnotationActivityNode) *workflows.WorkflowAnnotationActivity {
 	a := &workflows.WorkflowAnnotationActivity{}
 	a.ID = model.ID(types.GenerateID())
 	a.Description = n.Text
 	return a
-}
-
-// sanitizeActivityName converts a display caption to a valid Mendix identifier.
-// Mendix names must start with a letter/underscore and contain only letters, digits, underscores.
-func sanitizeActivityName(name string) string {
-	var b strings.Builder
-	for i, r := range name {
-		if unicode.IsLetter(r) || r == '_' {
-			b.WriteRune(r)
-		} else if unicode.IsDigit(r) && i > 0 {
-			b.WriteRune(r)
-		} else if r == ' ' || r == '-' {
-			b.WriteRune('_')
-		}
-	}
-	result := b.String()
-	if result == "" {
-		return "activity"
-	}
-	return result
 }
 
 // autoBindWorkflowParameters resolves microflow/workflow parameters and generates

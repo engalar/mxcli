@@ -64,6 +64,11 @@ func listWorkflowsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genWf.
 		// so we fish ContainerID out of the legacy GetWorkflow path.
 		// Returning "" is safe: the hierarchy walker tolerates it (the
 		// caller's eventual h.FindModuleID just yields the empty module).
+		//
+		// E1 deletion: this fallback survives until Phase E1 retires
+		// FullBackend.GetWorkflow. At that point mock tests must wire
+		// RecordingWorkflowRepository.GetContainerUUIDFunc directly via
+		// ctx.Workflows.
 		if ctx.Backend != nil {
 			if wf, err := ctx.Backend.GetWorkflow(model.ID(id)); err == nil && wf != nil {
 				return element.ID(wf.ContainerID), nil

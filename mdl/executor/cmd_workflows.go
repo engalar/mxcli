@@ -1,6 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Package executor - Workflow SHOW/DESCRIBE commands
+// Package executor - Workflow SHOW/DESCRIBE commands.
+//
+// DEPRECATED (Stage 3.3.3 Phase E partial): the dispatcher cutover in
+// commit e80a5e9f (Stage 3.3.3.A5) routes SHOW/DESCRIBE WORKFLOW to the
+// gen-typed twins in cmd_workflows_gen.go. The functions in this file
+// are unused by the production dispatcher but retained because:
+//   1. Mock-test fixtures in cmd_workflows_mock_test.go +
+//      cmd_workflows_describe_test.go still call listWorkflows /
+//      describeWorkflow / formatWorkflowActivities directly.
+//   2. The helpers_workflows_gen.go MockBackend fallback uses
+//      ctx.Backend.GetWorkflow to resolve ContainerID for mock tests
+//      that do not wire ctx.Workflows.
+//
+// This file is deletable once those test fixtures migrate to gen
+// (planned: a follow-up E2 commit with the bundled fixture migration).
 package executor
 
 import (
