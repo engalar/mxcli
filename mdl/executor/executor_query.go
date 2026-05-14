@@ -40,9 +40,9 @@ func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
 	case ast.ShowLayouts:
 		return listLayouts(ctx, s.InModule)
 	case ast.ShowJavaActions:
-		return listJavaActions(ctx, s.InModule)
+		return listJavaActionsGen(ctx, s.InModule)
 	case ast.ShowJavaScriptActions:
-		return listJavaScriptActions(ctx, s.InModule)
+		return listJavaScriptActionsGen(ctx, s.InModule)
 	case ast.ShowVersion:
 		return listVersion(ctx)
 	case ast.ShowCatalogTables:
@@ -180,9 +180,9 @@ func execDescribe(ctx *ExecContext, s *ast.DescribeStmt) error {
 		case ast.DescribeConstant:
 			return describeConstant(ctx, s.Name)
 		case ast.DescribeJavaAction:
-			return describeJavaAction(ctx, s.Name)
+			return describeJavaActionGen(ctx, s.Name)
 		case ast.DescribeJavaScriptAction:
-			return describeJavaScriptAction(ctx, s.Name)
+			return describeJavaScriptActionGen(ctx, s.Name)
 		case ast.DescribeModuleRole:
 			return describeModuleRoleGen(ctx, s.Name)
 		case ast.DescribeUserRole:
