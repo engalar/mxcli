@@ -8,8 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
+	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // javaSourceDir returns the javasource/actions directory for the given module,
@@ -30,6 +32,15 @@ func (b *MprBackend) writeJavaSourceFileViaPath(moduleName, actionName string, j
 		return fmt.Errorf("write Java source file: %w", err)
 	}
 	return nil
+}
+
+// writeJavaSourceFileViaPathGen is the gen-typed counterpart of
+// writeJavaSourceFileViaPath. Phase D6 will replace the stub with a real
+// generator that walks gen-typed JavaActionParameter lists and dispatches
+// on returnType.TypeName() to render the Java type. Until then, this
+// stub keeps the FullBackend interface satisfied.
+func (b *MprBackend) writeJavaSourceFileViaPathGen(moduleName, actionName string, javaCode string, params []*genJA.JavaActionParameter, returnType element.Element, extraImports []string, extraCode string) error {
+	return fmt.Errorf("WriteJavaSourceFileGen: not implemented (Phase D6)")
 }
 
 func (b *MprBackend) deleteJavaSourceFileViaPath(moduleName, actionName string) error {

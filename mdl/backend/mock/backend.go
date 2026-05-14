@@ -9,6 +9,9 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
+	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
@@ -220,6 +223,15 @@ type MockBackend struct {
 	DeleteJavaSourceFileFunc       func(moduleName, actionName string) error
 	RenameJavaSourceFileFunc       func(moduleName, oldName, newName string) error
 	ReadJavaSourceFileFunc         func(moduleName, actionName string) (string, error)
+
+	// Stage 3.3.2.C3 gen-typed siblings
+	ListJavaActionsGenFunc            func() ([]*genJA.JavaAction, error)
+	ReadJavaActionByNameGenFunc       func(qualifiedName string) (*genJA.JavaAction, error)
+	CreateJavaActionGenFunc           func(parentUUID, containmentName string, ja *genJA.JavaAction) error
+	UpdateJavaActionGenFunc           func(ja *genJA.JavaAction) error
+	WriteJavaSourceFileGenFunc        func(moduleName, actionName string, javaCode string, params []*genJA.JavaActionParameter, returnType element.Element, extraImports []string, extraCode string) error
+	ListJavaScriptActionsGenFunc      func() ([]*genJSA.JavaScriptAction, error)
+	ReadJavaScriptActionByNameGenFunc func(qualifiedName string) (*genJSA.JavaScriptAction, error)
 
 	// WorkflowBackend
 	ListWorkflowsFunc  func() ([]*workflows.Workflow, error)

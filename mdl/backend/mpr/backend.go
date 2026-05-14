@@ -10,9 +10,13 @@ import (
 	"log"
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
+	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
+	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
@@ -665,6 +669,64 @@ func (b *MprBackend) DeleteJavaSourceFile(moduleName, actionName string) error {
 func (b *MprBackend) RenameJavaSourceFile(moduleName, oldName, newName string) error {
 	return b.renameJavaSourceFileViaPath(moduleName, oldName, newName)
 }
+// ── Stage 3.3.2.C3 gen-typed siblings ─────────────────────────────────
+// List/Read route through the modelsdk-native repo (introduced in A0).
+// Create/Update delegate to the repo's Phase D stubs (return descriptive
+// errors until D2/D3 land). WriteJavaSourceFileGen routes through the
+// existing path-based writer with gen-typed parameters.
+
+func (b *MprBackend) ListJavaActionsGen() ([]*genJA.JavaAction, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("ListJavaActionsGen: no modelsdk writer")
+	}
+	return mprrepos.NewJavaActionRepository(w).ListAll()
+}
+
+func (b *MprBackend) ReadJavaActionByNameGen(qualifiedName string) (*genJA.JavaAction, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("ReadJavaActionByNameGen: no modelsdk writer")
+	}
+	return mprrepos.NewJavaActionRepository(w).FindByQualifiedName(qualifiedName)
+}
+
+func (b *MprBackend) CreateJavaActionGen(parentUUID, containmentName string, ja *genJA.JavaAction) error {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("CreateJavaActionGen: no modelsdk writer")
+	}
+	return mprrepos.NewJavaActionRepository(w).Create(parentUUID, containmentName, ja)
+}
+
+func (b *MprBackend) UpdateJavaActionGen(ja *genJA.JavaAction) error {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("UpdateJavaActionGen: no modelsdk writer")
+	}
+	return mprrepos.NewJavaActionRepository(w).Update(ja)
+}
+
+func (b *MprBackend) WriteJavaSourceFileGen(moduleName, actionName string, javaCode string, params []*genJA.JavaActionParameter, returnType element.Element, extraImports []string, extraCode string) error {
+	return b.writeJavaSourceFileViaPathGen(moduleName, actionName, javaCode, params, returnType, extraImports, extraCode)
+}
+
+func (b *MprBackend) ListJavaScriptActionsGen() ([]*genJSA.JavaScriptAction, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("ListJavaScriptActionsGen: no modelsdk writer")
+	}
+	return mprrepos.NewJavaScriptActionRepository(w).ListAll()
+}
+
+func (b *MprBackend) ReadJavaScriptActionByNameGen(qualifiedName string) (*genJSA.JavaScriptAction, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("ReadJavaScriptActionByNameGen: no modelsdk writer")
+	}
+	return mprrepos.NewJavaScriptActionRepository(w).FindByQualifiedName(qualifiedName)
+}
+
 func (b *MprBackend) ReadJavaSourceFile(moduleName, actionName string) (string, error) {
 	return b.readJavaSourceFileViaPath(moduleName, actionName)
 }
