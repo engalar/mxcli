@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
@@ -295,7 +296,7 @@ func (b *Builder) buildEnumerations() error {
 }
 
 func (b *Builder) buildJavaActions() error {
-	actions, err := b.reader.ListJavaActionsFull()
+	actions, err := b.reader.ListJavaActionsGen()
 	if err != nil {
 		return err
 	}
@@ -315,26 +316,45 @@ func (b *Builder) buildJavaActions() error {
 	projectID, projectName, snapshotID, snapshotDate, snapshotSource, sourceID, sourceBranch, sourceRevision := b.snapshotMeta()
 
 	for _, ja := range actions {
-		moduleID := b.hierarchy.findModuleID(ja.ContainerID)
+		if ja == nil {
+			continue
+		}
+		// Codec-decoded gen JavaAction loses Container() linkage; resolve
+		// owning module by walking the unit hierarchy from the action's
+		// own UUID (same pattern as microflows in builder_microflows.go).
+		jaUUID := model.ID(ja.ID())
+		moduleID := b.hierarchy.findModuleID(jaUUID)
 		moduleName := b.hierarchy.getModuleName(moduleID)
-		qualifiedName := moduleName + "." + ja.Name
-		folder := b.hierarchy.buildFolderPath(ja.ContainerID)
+		qualifiedName := moduleName + "." + ja.Name()
+		folder := b.hierarchy.buildFolderPath(jaUUID)
 
+		// Render return type from the gen polymorphic Element. Prefer
+		// JavaReturnType (legacy "JavaReturnType" key, used by Studio
+		// Pro) per the dual-accessor empirical from Stage 3.3.2.A1-A5.
 		returnType := ""
-		if ja.ReturnType != nil {
-			returnType = ja.ReturnType.TypeString()
+		if rt := ja.JavaReturnType(); rt != nil {
+			returnType = rt.TypeName()
+		} else if rt := ja.ActionReturnType(); rt != nil {
+			returnType = rt.TypeName()
+		}
+
+		// Same dual-accessor preference for parameters: ParametersItems
+		// is canonical per fixture, ActionParametersItems is empty.
+		paramCount := len(ja.ParametersItems())
+		if paramCount == 0 {
+			paramCount = len(ja.ActionParametersItems())
 		}
 
 		_, err := stmt.Exec(
-			string(ja.ID),
-			ja.Name,
+			string(ja.ID()),
+			ja.Name(),
 			qualifiedName,
 			moduleName,
 			folder,
-			ja.Documentation,
-			ja.ExportLevel,
+			ja.Documentation(),
+			ja.ExportLevel(),
 			returnType,
-			len(ja.Parameters),
+			paramCount,
 			projectID, projectName, snapshotID, snapshotDate, snapshotSource,
 			sourceID, sourceBranch, sourceRevision,
 		)
