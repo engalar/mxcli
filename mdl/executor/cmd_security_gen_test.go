@@ -208,3 +208,34 @@ func TestListDemoUsersGen_EnabledOutputsUsers(t *testing.T) {
 		t.Errorf("output missing any known demo user name; got: %q", out)
 	}
 }
+
+// TestDescribeModuleRoleGen_OutputsCreateStatement asserts that
+// describeModuleRoleGen emits a CREATE MODULE ROLE statement for an existing role.
+// The fixture module role is "MyFirstModule.User" (not "TestModule.User" from the
+// spec template — the fixture module is MyFirstModule per A2 fixture-name swap).
+func TestDescribeModuleRoleGen_OutputsCreateStatement(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	if err := describeModuleRoleGen(ctx, ast.QualifiedName{Module: "MyFirstModule", Name: "User"}); err != nil {
+		t.Fatalf("describeModuleRoleGen: %v", err)
+	}
+	if !strings.Contains(buf.String(), "create module role MyFirstModule.User") {
+		t.Errorf("expected create statement, got: %q", buf.String())
+	}
+}
+
+// TestDescribeModuleRoleGen_NotFound asserts that a non-existent module role
+// returns a not-found error from describeModuleRoleGen.
+func TestDescribeModuleRoleGen_NotFound(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	err := describeModuleRoleGen(ctx, ast.QualifiedName{Module: "Nope", Name: "Bogus"})
+	if err == nil {
+		t.Fatalf("expected NotFound error, got nil")
+	}
+	if !strings.Contains(err.Error(), "module role") {
+		t.Errorf("error should mention module role; got %q", err.Error())
+	}
+}
