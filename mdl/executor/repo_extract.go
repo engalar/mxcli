@@ -26,6 +26,11 @@ type nanoflowsRepoProvider interface {
 	Nanoflows() repos.NanoflowRepository
 }
 
+// securityRepoProvider mirrors microflowsRepoProvider for the security domain.
+type securityRepoProvider interface {
+	Security() repos.SecurityRepository
+}
+
 // extractMicroflowsRepo returns the modelsdk-native MicroflowRepository
 // if the backend supports it, else nil. Callers (handlers) MUST check
 // nil and fall back to ctx.Backend during the Stage 3.x incremental
@@ -48,6 +53,17 @@ func extractNanoflowsRepo(b backend.FullBackend) repos.NanoflowRepository {
 	}
 	if p, ok := b.(nanoflowsRepoProvider); ok {
 		return p.Nanoflows()
+	}
+	return nil
+}
+
+// extractSecurityRepo mirrors extractMicroflowsRepo for the security domain.
+func extractSecurityRepo(b backend.FullBackend) repos.SecurityRepository {
+	if b == nil {
+		return nil
+	}
+	if p, ok := b.(securityRepoProvider); ok {
+		return p.Security()
 	}
 	return nil
 }

@@ -19,6 +19,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
@@ -63,6 +64,11 @@ type executorCache struct {
 	// N per-element GetContainerUUID lookups (Followup E1).
 	microflowsWithContainerGen []MicroflowGenWithContainer
 	nanoflowsWithContainerGen  []NanoflowGenWithContainer
+
+	// Cached gen-typed security listings. Populated lazily by
+	// getProjectSecurityGen / listModuleSecurityWithContainerGen.
+	projectSecurityGen             *genSec.ProjectSecurity
+	moduleSecurityWithContainerGen []ModuleSecurityGenWithContainer
 }
 
 // createdMicroflowInfo tracks a microflow created during this session.
