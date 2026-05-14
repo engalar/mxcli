@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/linter"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 // nameRegistry tracks which document names are currently "alive" (created but
@@ -420,11 +421,15 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 		}
 	}
 
-	// Workflows
+	// Workflows — gen-typed via cache helper. Container linkage is shed
+	// during BSON roundtrip, so we use the helper's ContainerID.
 	ps.workflows = make(map[string]bool)
-	if wfs, err := ctx.Backend.ListWorkflows(); err == nil {
-		for _, w := range wfs {
-			ps.workflows[h.GetQualifiedName(w.ContainerID, w.Name)] = true
+	if pairs, err := listWorkflowsWithContainerGen(ctx); err == nil {
+		for _, p := range pairs {
+			if p.Elem == nil {
+				continue
+			}
+			ps.workflows[h.GetQualifiedName(model.ID(p.ContainerID), p.Elem.Name())] = true
 		}
 	}
 

@@ -13,6 +13,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/model"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -253,12 +254,22 @@ func setupProjectConflictCtx(t *testing.T) (*ExecContext, *model.Module) {
 	h := mkHierarchy(mod)
 
 	wf := mkWorkflow(mod.ID, "ExistingWF")
+	wfGen := mkWorkflowGen(string(wf.ID), "ExistingWF")
 	mf := mkMicroflowGen("ExistingMF")
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) {
 			return []*workflows.Workflow{wf}, nil
+		},
+		ListWorkflowsGenFunc: func() ([]*genWf.Workflow, error) {
+			return []*genWf.Workflow{wfGen}, nil
+		},
+		GetWorkflowFunc: func(id model.ID) (*workflows.Workflow, error) {
+			if id == wf.ID {
+				return wf, nil
+			}
+			return nil, nil
 		},
 		// Other list functions return empty (no conflicts for those types)
 		ListEnumerationsFunc:              func() ([]*model.Enumeration, error) { return nil, nil },
