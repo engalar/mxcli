@@ -786,9 +786,9 @@ func preWarmCache(ctx *ExecContext) {
 
 	// Build microflow name lookup
 	ctx.Cache.microflowNames = make(map[model.ID]string)
-	mfs, _ := ctx.Backend.ListMicroflows()
-	for _, mf := range mfs {
-		ctx.Cache.microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
+	mfs, _ := listMicroflowsWithContainerGen(ctx)
+	for _, item := range mfs {
+		ctx.Cache.microflowNames[model.ID(item.MF.ID())] = h.GetQualifiedName(item.ContainerUUID, item.MF.Name())
 	}
 
 	// Build page name lookup

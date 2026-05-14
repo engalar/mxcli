@@ -12,6 +12,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -700,7 +701,7 @@ func autoBindCallMicroflow(ctx *ExecContext, task *workflows.CallMicroflowTask) 
 	}
 
 	// Look up the microflow to get its parameters
-	mfs, err := ctx.Backend.ListMicroflows()
+	mfs, err := listMicroflowsWithContainerGen(ctx)
 	if err != nil {
 		return
 	}
@@ -710,17 +711,28 @@ func autoBindCallMicroflow(ctx *ExecContext, task *workflows.CallMicroflowTask) 
 		return
 	}
 
-	for _, mf := range mfs {
-		modID := h.FindModuleID(mf.ContainerID)
+	for _, item := range mfs {
+		mf := item.MF
+		modID := h.FindModuleID(item.ContainerUUID)
 		modName := h.GetModuleName(modID)
-		qualifiedName := modName + "." + mf.Name
+		qualifiedName := modName + "." + mf.Name()
 		if qualifiedName != task.Microflow {
 			continue
 		}
 
-		// Found the microflow — bind parameters
-		for _, param := range mf.Parameters {
-			paramQualifiedName := qualifiedName + "." + param.Name
+		// Found the microflow — walk its ObjectCollection for parameter
+		// objects (gen Microflow stores parameters there, not in a
+		// dedicated Parameters slice like the legacy sdk type).
+		col, _ := mf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if col == nil {
+			break
+		}
+		for _, obj := range col.ObjectsItems() {
+			param, ok := obj.(*genMf.MicroflowParameter)
+			if !ok || param == nil {
+				continue
+			}
+			paramQualifiedName := qualifiedName + "." + param.Name()
 			mapping := &workflows.ParameterMapping{
 				Parameter:  paramQualifiedName,
 				Expression: "$WorkflowContext",

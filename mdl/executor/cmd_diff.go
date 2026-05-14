@@ -298,16 +298,16 @@ func diffMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) (*DiffResult, e
 		return result, nil
 	}
 
-	mfs, err := ctx.Backend.ListMicroflows()
+	mfs, err := listMicroflowsWithContainerGen(ctx)
 	if err != nil {
 		result.IsNew = true
 		return result, nil
 	}
 
-	for _, mf := range mfs {
-		modID := h.FindModuleID(mf.ContainerID)
+	for _, item := range mfs {
+		modID := h.FindModuleID(item.ContainerUUID)
 		modName := h.GetModuleName(modID)
-		if modName == s.Name.Module && mf.Name == s.Name.Name {
+		if modName == s.Name.Module && item.MF.Name() == s.Name.Name {
 			// Capture current MDL representation
 			var buf bytes.Buffer
 			oldOutput := ctx.Output
@@ -340,16 +340,16 @@ func diffNanoflow(ctx *ExecContext, s *ast.CreateNanoflowStmt) (*DiffResult, err
 		return result, nil
 	}
 
-	nfs, err := ctx.Backend.ListNanoflows()
+	nfs, err := listNanoflowsWithContainerGen(ctx)
 	if err != nil {
 		result.IsNew = true
 		return result, nil
 	}
 
-	for _, nf := range nfs {
-		modID := h.FindModuleID(nf.ContainerID)
+	for _, item := range nfs {
+		modID := h.FindModuleID(item.ContainerUUID)
 		modName := h.GetModuleName(modID)
-		if modName == s.Name.Module && nf.Name == s.Name.Name {
+		if modName == s.Name.Module && item.NF.Name() == s.Name.Name {
 			// Capture current MDL representation
 			var buf bytes.Buffer
 			if err := func() error {
