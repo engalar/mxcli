@@ -146,9 +146,20 @@ func movePage(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.
 }
 
 // moveMicroflow moves a microflow to a new container.
+//
+// Uses the gen-typed flow listing (Followup E4): container linkage
+// lives in the SQL Unit row, not the gen Microflow object, so the move
+// flows through ctx.Microflows.Move(id, parentUUID) — there is no
+// "set ContainerID then call MoveMicroflow" path on the gen surface.
+// Cross-module remap also goes through ctx.Microflows.Update because
+// the legacy Backend.UpdateAllowedRoles took an mfID + []string and
+// mutated through the sdk type.
 func moveMicroflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID, targetModule *model.Module, isCrossModuleMove bool) error {
-	// Find the microflow
-	mfs, err := ctx.Backend.ListMicroflows()
+	if ctx.Microflows == nil {
+		return mdlerrors.NewBackend("microflows repo unavailable", nil)
+	}
+
+	mfs, err := listMicroflowsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list microflows", err)
 	}
@@ -158,24 +169,32 @@ func moveMicroflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID m
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	for _, mf := range mfs {
-		modID := h.FindModuleID(mf.ContainerID)
+	for _, item := range mfs {
+		mf := item.MF
+		modID := h.FindModuleID(item.ContainerUUID)
 		modName := h.GetModuleName(modID)
-		if modName == name.Module && mf.Name == name.Name {
-			// Update container ID and move the unit
-			mf.ContainerID = targetContainerID
-			if err := ctx.Backend.MoveMicroflow(mf); err != nil {
-				return mdlerrors.NewBackend("move microflow", err)
-			}
-			if isCrossModuleMove {
-				mf.AllowedModuleRoles = remapDocumentAccessRoles(ctx, targetModule, mf.AllowedModuleRoles)
-				if err := ctx.Backend.UpdateAllowedRoles(mf.ID, documentRoleStrings(mf.AllowedModuleRoles)); err != nil {
-					return mdlerrors.NewBackend("remap microflow access", err)
-				}
-			}
-			fmt.Fprintf(ctx.Output, "Moved microflow %s to new location\n", name.String())
-			return nil
+		if modName != name.Module || mf.Name() != name.Name {
+			continue
 		}
+		mfID := model.ID(mf.ID())
+		if err := ctx.Microflows.Move(mfID, string(targetContainerID)); err != nil {
+			return mdlerrors.NewBackend("move microflow", err)
+		}
+		if isCrossModuleMove {
+			existing := mf.AllowedModuleRolesQualifiedNames()
+			currentRoleIDs := make([]model.ID, len(existing))
+			for i, qn := range existing {
+				currentRoleIDs[i] = model.ID(qn)
+			}
+			remappedIDs := remapDocumentAccessRoles(ctx, targetModule, currentRoleIDs)
+			mf.SetAllowedModuleRolesQualifiedNames(documentRoleStrings(remappedIDs))
+			if err := ctx.Microflows.Update(mf); err != nil {
+				return mdlerrors.NewBackend("remap microflow access", err)
+			}
+		}
+		invalidateMicroflowsCache(ctx)
+		fmt.Fprintf(ctx.Output, "Moved microflow %s to new location\n", name.String())
+		return nil
 	}
 
 	return mdlerrors.NewNotFound("microflow", name.String())
@@ -212,9 +231,16 @@ func moveSnippet(ctx *ExecContext, name ast.QualifiedName, targetContainerID mod
 }
 
 // moveNanoflow moves a nanoflow to a new container.
+//
+// See moveMicroflow for the gen-flow Move rationale (Followup E4): the
+// container update is a SQL Unit row mutation, not a BSON field
+// rewrite, so we go through ctx.Nanoflows.Move(id, parentUUID).
 func moveNanoflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID) error {
-	// Find the nanoflow
-	nfs, err := ctx.Backend.ListNanoflows()
+	if ctx.Nanoflows == nil {
+		return mdlerrors.NewBackend("nanoflows repo unavailable", nil)
+	}
+
+	nfs, err := listNanoflowsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list nanoflows", err)
 	}
@@ -224,18 +250,19 @@ func moveNanoflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID mo
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	for _, nf := range nfs {
-		modID := h.FindModuleID(nf.ContainerID)
+	for _, item := range nfs {
+		nf := item.NF
+		modID := h.FindModuleID(item.ContainerUUID)
 		modName := h.GetModuleName(modID)
-		if modName == name.Module && nf.Name == name.Name {
-			// Update container ID and move the unit
-			nf.ContainerID = targetContainerID
-			if err := ctx.Backend.MoveNanoflow(nf); err != nil {
-				return mdlerrors.NewBackend("move nanoflow", err)
-			}
-			fmt.Fprintf(ctx.Output, "Moved nanoflow %s to new location\n", name.String())
-			return nil
+		if modName != name.Module || nf.Name() != name.Name {
+			continue
 		}
+		if err := ctx.Nanoflows.Move(model.ID(nf.ID()), string(targetContainerID)); err != nil {
+			return mdlerrors.NewBackend("move nanoflow", err)
+		}
+		invalidateMicroflowsCache(ctx)
+		fmt.Fprintf(ctx.Output, "Moved nanoflow %s to new location\n", name.String())
+		return nil
 	}
 
 	return mdlerrors.NewNotFound("nanoflow", name.String())
