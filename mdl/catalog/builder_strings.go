@@ -3,7 +3,10 @@
 package catalog
 
 import (
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -60,19 +63,22 @@ func (b *Builder) buildStrings() error {
 	mfList, err := b.cachedMicroflows()
 	if err == nil {
 		for _, mf := range mfList {
-			moduleID := b.hierarchy.findModuleID(mf.ContainerID)
+			if mf == nil {
+				continue
+			}
+			moduleID := b.hierarchy.findModuleID(model.ID(mf.ID()))
 			moduleName := b.hierarchy.getModuleName(moduleID)
-			qn := moduleName + "." + mf.Name
+			qn := moduleName + "." + mf.Name()
 
-			mfID := string(mf.ID)
+			mfID := string(mf.ID())
 
 			// Documentation (no language)
-			if mf.Documentation != "" {
-				insert(qn, "MICROFLOW", mf.Documentation, "documentation", "", mfID, moduleName)
+			if doc := mf.Documentation(); doc != "" {
+				insert(qn, "MICROFLOW", doc, "documentation", "", mfID, moduleName)
 			}
 
 			// Extract strings from activities
-			extractActivityStrings(mf.ObjectCollection, qn, "MICROFLOW", moduleName, insert)
+			extractActivityStrings(flowObjectCollection(mf.ObjectCollection()), qn, "MICROFLOW", moduleName, insert)
 		}
 	}
 
@@ -208,41 +214,82 @@ func extractWorkflowFlowStrings(flow *workflows.Flow, qn, moduleName string, ins
 }
 
 // extractActivityStrings extracts string literals from microflow/nanoflow activities.
-func extractActivityStrings(oc *microflows.MicroflowObjectCollection, qn, objType, moduleName string, insert func(string, string, string, string, string, string, string)) {
+// Walks gen-typed ObjectCollections; mirrors the legacy sdk-typed
+// switch but reads through TextTranslations on the gen Text element.
+func extractActivityStrings(oc *genMf.MicroflowObjectCollection, qn, objType, moduleName string, insert func(string, string, string, string, string, string, string)) {
 	if oc == nil {
 		return
 	}
 
-	for _, obj := range oc.Objects {
-		act, ok := obj.(*microflows.ActionActivity)
-		if !ok || act.Action == nil {
+	for _, obj := range oc.ObjectsItems() {
+		act, ok := obj.(*genMf.ActionActivity)
+		if !ok {
+			continue
+		}
+		inner := act.Action()
+		if inner == nil {
 			continue
 		}
 
-		actID := string(act.ID)
+		actID := string(act.ID())
 
-		switch a := act.Action.(type) {
-		case *microflows.LogMessageAction:
-			if a.MessageTemplate != nil && a.MessageTemplate.Translations != nil {
-				for lang, t := range a.MessageTemplate.Translations {
-					insert(qn, objType, t, "log_message", lang, actID, moduleName)
-				}
+		switch a := inner.(type) {
+		case *genMf.LogMessageAction:
+			emitTextTranslations(a.MessageTemplate(), qn, objType, "log_message", actID, moduleName, insert)
+			if node := a.Node(); node != "" {
+				insert(qn, objType, node, "log_node", "", actID, moduleName)
 			}
-			if a.LogNodeName != "" {
-				insert(qn, objType, a.LogNodeName, "log_node", "", actID, moduleName)
-			}
-		case *microflows.ShowMessageAction:
-			if a.Template != nil && a.Template.Translations != nil {
-				for lang, t := range a.Template.Translations {
-					insert(qn, objType, t, "show_message", lang, actID, moduleName)
-				}
-			}
-		case *microflows.ValidationFeedbackAction:
-			if a.Template != nil && a.Template.Translations != nil {
-				for lang, t := range a.Template.Translations {
-					insert(qn, objType, t, "validation_message", lang, actID, moduleName)
-				}
-			}
+		case *genMf.ShowMessageAction:
+			emitTextTranslations(a.Template(), qn, objType, "show_message", actID, moduleName, insert)
+		case *genMf.ValidationFeedbackAction:
+			emitTextTranslations(a.FeedbackTemplate(), qn, objType, "validation_message", actID, moduleName, insert)
 		}
 	}
+}
+
+// emitTextTranslations walks a gen Text element's translations and
+// emits one insert call per (language, text) pair. No-op when the
+// element is nil or not a *texts.Text.
+func emitTextTranslations(text textElement, qn, objType, ctxKey, actID, moduleName string, insert func(string, string, string, string, string, string, string)) {
+	if text == nil {
+		return
+	}
+	for _, item := range textTranslations(text) {
+		insert(qn, objType, item.text, ctxKey, item.lang, actID, moduleName)
+	}
+}
+
+// textElement is the abstract surface used by emitTextTranslations.
+// Both gen Text (texts.Text) and any future text-bearing element with
+// the same TranslationsItems() shape will satisfy it.
+type textElement = element.Element
+
+// translationPair is a (language code, text) tuple extracted from a
+// gen Text element's Translations list.
+type translationPair struct {
+	lang string
+	text string
+}
+
+// textTranslations extracts the Translations list of a gen
+// texts.Text element. Returns nil for unknown element shapes (the
+// caller will simply not emit anything).
+func textTranslations(e element.Element) []translationPair {
+	if e == nil {
+		return nil
+	}
+	t, ok := e.(*texts.Text)
+	if !ok {
+		return nil
+	}
+	items := t.TranslationsItems()
+	out := make([]translationPair, 0, len(items))
+	for _, child := range items {
+		tr, ok := child.(*texts.Translation)
+		if !ok || tr == nil {
+			continue
+		}
+		out = append(out, translationPair{lang: tr.LanguageCode(), text: tr.Text()})
+	}
+	return out
 }

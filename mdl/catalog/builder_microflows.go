@@ -4,8 +4,11 @@ package catalog
 
 import (
 	"database/sql"
+	"strings"
 
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
 func (b *Builder) buildMicroflows() error {
@@ -57,36 +60,36 @@ func (b *Builder) buildMicroflows() error {
 
 	// Process microflows
 	for _, mf := range mfs {
-		// Get module name
-		moduleID := b.hierarchy.findModuleID(mf.ContainerID)
-		moduleName := b.hierarchy.getModuleName(moduleID)
-		qualifiedName := moduleName + "." + mf.Name
-
-		// ListMicroflows() already returns fully-parsed objects — no need to call GetMicroflow()
-		returnType := ""
-		if mf.ReturnType != nil {
-			returnType = getDataTypeName(mf.ReturnType)
+		if mf == nil {
+			continue
 		}
+		// Resolve owning module via the unit-table hierarchy.
+		// Codec-decoded gen flows don't carry Container linkage, so
+		// we walk the unit hierarchy from the flow's own UUID; the
+		// hierarchy maps mf.UUID -> parent (module/folder) -> ... -> module.
+		moduleID := b.hierarchy.findModuleID(model.ID(mf.ID()))
+		moduleName := b.hierarchy.getModuleName(moduleID)
+		qualifiedName := moduleName + "." + mf.Name()
 
-		// Count activities (excluding structural elements like Start/End events)
-		activityCount := countMicroflowActivities(mf)
-
-		// Calculate McCabe cyclomatic complexity
-		complexity := calculateMcCabeComplexity(mf)
+		oc := flowObjectCollection(mf.ObjectCollection())
+		paramCount := countFlowParameters(oc)
+		activityCount := countFlowActivities(oc)
+		complexity := calculateFlowComplexity(oc)
+		returnType := strings.TrimSpace(mf.ReturnType())
 
 		_, err = mfStmt.Exec(
-			string(mf.ID),
-			mf.Name,
+			string(mf.ID()),
+			mf.Name(),
 			qualifiedName,
 			moduleName,
 			moduleName, // Folder
 			"MICROFLOW",
-			mf.Documentation,
+			mf.Documentation(),
 			returnType,
-			len(mf.Parameters),
+			paramCount,
 			activityCount,
 			complexity,
-			mf.Excluded,
+			mf.Excluded(),
 			projectID, projectName, snapshotID, snapshotDate, snapshotSource,
 			sourceID, sourceBranch, sourceRevision,
 		)
@@ -96,88 +99,41 @@ func (b *Builder) buildMicroflows() error {
 		mfCount++
 
 		// Insert activities only in full mode
-		if b.fullMode && mf.ObjectCollection != nil {
-			for seq, obj := range mf.ObjectCollection.Objects {
-				activityType := getMicroflowObjectType(obj)
-				activityName := activityType
-				caption := "Activity"
-				entityRef := ""
-				actionType := ""
-				serviceRef := ""
-				actionRef := ""
-
-				if act, ok := obj.(*microflows.ActionActivity); ok {
-					if act.Action != nil {
-						actionType = getMicroflowActionType(act.Action)
-						activityName = actionType
-
-						switch a := act.Action.(type) {
-						case *microflows.CreateObjectAction:
-							entityRef = a.EntityQualifiedName
-						case *microflows.CallExternalAction:
-							serviceRef = a.ConsumedODataService
-							actionRef = a.Name
-						}
-					}
-				}
-
-				_, err = actStmt.Exec(
-					string(obj.GetID()),
-					activityName,
-					caption,
-					activityType,
-					seq+1, // 1-based sequence number
-					string(mf.ID),
-					qualifiedName,
-					moduleName,
-					moduleName,
-					entityRef,
-					actionType,
-					serviceRef,
-					actionRef,
-					"",
-					projectID, projectName, snapshotID, snapshotDate, snapshotSource,
-					sourceID, sourceBranch, sourceRevision,
-				)
-				if err != nil {
-					return err
-				}
-				actCount++
-			}
+		if b.fullMode && oc != nil {
+			actCount += b.insertFlowActivities(actStmt, oc, string(mf.ID()), qualifiedName, moduleName,
+				projectID, projectName, snapshotID, snapshotDate, snapshotSource,
+				sourceID, sourceBranch, sourceRevision)
 		}
 	}
 
 	// Process nanoflows
 	for _, nf := range nfs {
-		// Get module name
-		moduleID := b.hierarchy.findModuleID(nf.ContainerID)
-		moduleName := b.hierarchy.getModuleName(moduleID)
-		qualifiedName := moduleName + "." + nf.Name
-
-		returnType := ""
-		if nf.ReturnType != nil {
-			returnType = getDataTypeName(nf.ReturnType)
+		if nf == nil {
+			continue
 		}
+		moduleID := b.hierarchy.findModuleID(model.ID(nf.ID()))
+		moduleName := b.hierarchy.getModuleName(moduleID)
+		qualifiedName := moduleName + "." + nf.Name()
 
-		// Count activities (excluding structural elements like Start/End events)
-		activityCount := countNanoflowActivities(nf)
-
-		// Calculate McCabe cyclomatic complexity
-		complexity := calculateNanoflowComplexity(nf)
+		oc := flowObjectCollection(nf.ObjectCollection())
+		paramCount := countFlowParameters(oc)
+		activityCount := countFlowActivities(oc)
+		complexity := calculateFlowComplexity(oc)
+		returnType := strings.TrimSpace(nf.ReturnType())
 
 		_, err = mfStmt.Exec(
-			string(nf.ID),
-			nf.Name,
+			string(nf.ID()),
+			nf.Name(),
 			qualifiedName,
 			moduleName,
 			moduleName, // Folder
 			"NANOFLOW",
-			nf.Documentation,
+			nf.Documentation(),
 			returnType,
-			len(nf.Parameters),
+			paramCount,
 			activityCount,
 			complexity,
-			nf.Excluded,
+			nf.Excluded(),
 			projectID, projectName, snapshotID, snapshotDate, snapshotSource,
 			sourceID, sourceBranch, sourceRevision,
 		)
@@ -187,54 +143,10 @@ func (b *Builder) buildMicroflows() error {
 		nfCount++
 
 		// Insert activities only in full mode
-		if b.fullMode && nf.ObjectCollection != nil {
-			for seq, obj := range nf.ObjectCollection.Objects {
-				activityType := getMicroflowObjectType(obj)
-				activityName := activityType
-				caption := "Activity"
-				entityRef := ""
-				actionType := ""
-				serviceRef := ""
-				actionRef := ""
-
-				if act, ok := obj.(*microflows.ActionActivity); ok {
-					if act.Action != nil {
-						actionType = getMicroflowActionType(act.Action)
-						activityName = actionType
-
-						switch a := act.Action.(type) {
-						case *microflows.CreateObjectAction:
-							entityRef = a.EntityQualifiedName
-						case *microflows.CallExternalAction:
-							serviceRef = a.ConsumedODataService
-							actionRef = a.Name
-						}
-					}
-				}
-
-				_, err = actStmt.Exec(
-					string(obj.GetID()),
-					activityName,
-					caption,
-					activityType,
-					seq+1, // 1-based sequence number
-					string(nf.ID),
-					qualifiedName,
-					moduleName,
-					moduleName,
-					entityRef,
-					actionType,
-					serviceRef,
-					actionRef,
-					"",
-					projectID, projectName, snapshotID, snapshotDate, snapshotSource,
-					sourceID, sourceBranch, sourceRevision,
-				)
-				if err != nil {
-					return err
-				}
-				actCount++
-			}
+		if b.fullMode && oc != nil {
+			actCount += b.insertFlowActivities(actStmt, oc, string(nf.ID()), qualifiedName, moduleName,
+				projectID, projectName, snapshotID, snapshotDate, snapshotSource,
+				sourceID, sourceBranch, sourceRevision)
 		}
 	}
 
@@ -246,30 +158,106 @@ func (b *Builder) buildMicroflows() error {
 	return nil
 }
 
+// insertFlowActivities iterates a gen ObjectCollection and inserts one
+// row per activity into the activities table. Returns the number of
+// rows successfully inserted.
+func (b *Builder) insertFlowActivities(actStmt *sql.Stmt, oc *genMf.MicroflowObjectCollection,
+	flowID, flowQN, moduleName,
+	projectID, projectName, snapshotID, snapshotDate, snapshotSource, sourceID, sourceBranch, sourceRevision string) int {
+
+	if oc == nil {
+		return 0
+	}
+	count := 0
+	for seq, obj := range oc.ObjectsItems() {
+		activityType := getMicroflowObjectType(obj)
+		activityName := activityType
+		caption := "Activity"
+		entityRef := ""
+		actionType := ""
+		serviceRef := ""
+		actionRef := ""
+
+		if act, ok := obj.(*genMf.ActionActivity); ok {
+			inner := act.Action()
+			if inner != nil {
+				actionType = getMicroflowActionType(inner)
+				activityName = actionType
+
+				switch a := inner.(type) {
+				case *genMf.CreateObjectAction:
+					entityRef = a.EntityQualifiedName()
+				case *genMf.CallExternalAction:
+					serviceRef = a.ConsumedODataServiceQualifiedName()
+					actionRef = a.Name()
+				}
+			}
+		}
+
+		_, err := actStmt.Exec(
+			string(obj.ID()),
+			activityName,
+			caption,
+			activityType,
+			seq+1,
+			flowID,
+			flowQN,
+			moduleName,
+			moduleName,
+			entityRef,
+			actionType,
+			serviceRef,
+			actionRef,
+			"",
+			projectID, projectName, snapshotID, snapshotDate, snapshotSource,
+			sourceID, sourceBranch, sourceRevision,
+		)
+		if err != nil {
+			continue
+		}
+		count++
+	}
+	return count
+}
+
+// flowObjectCollection unwraps a Microflow/Nanoflow ObjectCollection
+// element.Element to its concrete *genMf.MicroflowObjectCollection.
+// Returns nil if the element is missing or of an unexpected type.
+func flowObjectCollection(e element.Element) *genMf.MicroflowObjectCollection {
+	if e == nil {
+		return nil
+	}
+	oc, _ := e.(*genMf.MicroflowObjectCollection)
+	return oc
+}
+
 // getMicroflowObjectType returns the type name for a microflow object.
-func getMicroflowObjectType(obj microflows.MicroflowObject) string {
+// Type names mirror the legacy sdk-typed catalog so downstream
+// consumers (`activities.ActivityType` filters etc) keep working
+// across the migration.
+func getMicroflowObjectType(obj element.Element) string {
 	switch obj.(type) {
-	case *microflows.ActionActivity:
+	case *genMf.ActionActivity:
 		return "ActionActivity"
-	case *microflows.StartEvent:
+	case *genMf.StartEvent:
 		return "StartEvent"
-	case *microflows.EndEvent:
+	case *genMf.EndEvent:
 		return "EndEvent"
-	case *microflows.ExclusiveSplit:
+	case *genMf.ExclusiveSplit:
 		return "ExclusiveSplit"
-	case *microflows.InheritanceSplit:
+	case *genMf.InheritanceSplit:
 		return "InheritanceSplit"
-	case *microflows.ExclusiveMerge:
+	case *genMf.ExclusiveMerge:
 		return "ExclusiveMerge"
-	case *microflows.LoopedActivity:
+	case *genMf.LoopedActivity:
 		return "LoopedActivity"
-	case *microflows.Annotation:
+	case *genMf.Annotation:
 		return "Annotation"
-	case *microflows.BreakEvent:
+	case *genMf.BreakEvent:
 		return "BreakEvent"
-	case *microflows.ContinueEvent:
+	case *genMf.ContinueEvent:
 		return "ContinueEvent"
-	case *microflows.ErrorEvent:
+	case *genMf.ErrorEvent:
 		return "ErrorEvent"
 	default:
 		return "MicroflowObject"
@@ -277,180 +265,136 @@ func getMicroflowObjectType(obj microflows.MicroflowObject) string {
 }
 
 // getMicroflowActionType returns the type name for a microflow action.
-func getMicroflowActionType(action microflows.MicroflowAction) string {
+// Returned names use the legacy sdk-typed action class names (e.g.
+// "ClosePageAction", not gen's "CloseFormAction") so that catalog
+// rows remain stable for SQL consumers and lint rules; the gen→legacy
+// alias map below mirrors the BSON storage-name table from CLAUDE.md.
+func getMicroflowActionType(action element.Element) string {
 	switch action.(type) {
-	case *microflows.CreateObjectAction:
+	case *genMf.CreateObjectAction:
 		return "CreateObjectAction"
-	case *microflows.ChangeObjectAction:
+	case *genMf.ChangeObjectAction:
 		return "ChangeObjectAction"
-	case *microflows.RetrieveAction:
+	case *genMf.RetrieveAction:
 		return "RetrieveAction"
-	case *microflows.MicroflowCallAction:
+	case *genMf.MicroflowCallAction:
 		return "MicroflowCallAction"
-	case *microflows.JavaActionCallAction:
+	case *genMf.JavaActionCallAction:
 		return "JavaActionCallAction"
-	case *microflows.ShowMessageAction:
+	case *genMf.ShowMessageAction:
 		return "ShowMessageAction"
-	case *microflows.LogMessageAction:
+	case *genMf.LogMessageAction:
 		return "LogMessageAction"
-	case *microflows.ValidationFeedbackAction:
+	case *genMf.ValidationFeedbackAction:
 		return "ValidationFeedbackAction"
-	case *microflows.ChangeVariableAction:
+	case *genMf.ChangeVariableAction:
 		return "ChangeVariableAction"
-	case *microflows.CreateVariableAction:
+	case *genMf.CreateVariableAction:
 		return "CreateVariableAction"
-	case *microflows.AggregateListAction:
+	case *genMf.AggregateListAction:
 		return "AggregateListAction"
-	case *microflows.ListOperationAction:
+	case *genMf.ListOperationAction:
 		return "ListOperationAction"
-	case *microflows.CastAction:
+	case *genMf.CastAction:
 		return "CastAction"
-	case *microflows.DownloadFileAction:
+	case *genMf.DownloadFileAction:
 		return "DownloadFileAction"
-	case *microflows.ClosePageAction:
+	// Gen renames — the legacy class names are the catalog contract.
+	case *genMf.CloseFormAction:
 		return "ClosePageAction"
-	case *microflows.ShowPageAction:
+	case *genMf.ShowPageAction:
 		return "ShowPageAction"
-	case *microflows.CallExternalAction:
+	case *genMf.CallExternalAction:
 		return "CallExternalAction"
+	case *genMf.DeleteAction:
+		return "DeleteObjectAction"
+	case *genMf.CommitAction:
+		return "CommitObjectsAction"
+	case *genMf.RollbackAction:
+		return "RollbackObjectAction"
 	default:
 		return "MicroflowAction"
 	}
 }
 
-// getDataTypeName returns a string representation of a data type.
-func getDataTypeName(dt microflows.DataType) string {
-	if dt == nil {
-		return ""
-	}
-	switch t := dt.(type) {
-	case *microflows.BooleanType:
-		return "Boolean"
-	case *microflows.IntegerType:
-		return "Integer"
-	case *microflows.LongType:
-		return "Long"
-	case *microflows.DecimalType:
-		return "Decimal"
-	case *microflows.StringType:
-		return "String"
-	case *microflows.DateTimeType:
-		return "DateTime"
-	case *microflows.DateType:
-		return "Date"
-	case *microflows.ObjectType:
-		return "Object:" + t.EntityQualifiedName
-	case *microflows.ListType:
-		return "List:" + t.EntityQualifiedName
-	case *microflows.EnumerationType:
-		return "Enumeration:" + t.EnumerationQualifiedName
-	case *microflows.VoidType:
-		return "Void"
-	default:
-		return "Unknown"
-	}
-}
-
-// countMicroflowActivities counts activities in a microflow, excluding structural elements.
-// This excludes Start/End events and Merge nodes which are structural, not business logic.
-func countMicroflowActivities(mf *microflows.Microflow) int {
-	if mf.ObjectCollection == nil {
+// countFlowParameters counts MicroflowParameter / MicroflowParameterObject
+// elements at the top level of an ObjectCollection. Mirrors the legacy
+// `len(mf.Parameters)` field — gen models the parameters as
+// MicroflowParameter children of the ObjectCollection (not as a
+// flat slice on the flow itself).
+func countFlowParameters(oc *genMf.MicroflowObjectCollection) int {
+	if oc == nil {
 		return 0
 	}
-
 	count := 0
-	for _, obj := range mf.ObjectCollection.Objects {
+	for _, obj := range oc.ObjectsItems() {
 		switch obj.(type) {
-		case *microflows.StartEvent, *microflows.EndEvent:
-			// Don't count start/end events
-		case *microflows.ExclusiveMerge:
-			// Don't count merge nodes (they're structural)
-		default:
-			// Count all other activities (ActionActivity, ExclusiveSplit, LoopedActivity, etc.)
+		case *genMf.MicroflowParameter, *genMf.MicroflowParameterObject:
 			count++
 		}
 	}
 	return count
 }
 
-// calculateMcCabeComplexity calculates the McCabe cyclomatic complexity of a microflow.
-// McCabe complexity = 1 + number of decision points (IF, LOOP, error handlers)
-// A higher complexity indicates more paths through the code and higher testing burden.
-// Typical thresholds: 1-10 (simple), 11-20 (moderate), 21-50 (complex), 50+ (untestable)
-func calculateMcCabeComplexity(mf *microflows.Microflow) int {
-	// Base complexity is 1 (the main path through the microflow)
-	complexity := 1
+// countFlowActivities counts business-meaningful activities, excluding
+// structural elements (start/end, merges, parameters). Mirrors the
+// legacy countMicroflowActivities/countNanoflowActivities.
+func countFlowActivities(oc *genMf.MicroflowObjectCollection) int {
+	if oc == nil {
+		return 0
+	}
+	count := 0
+	for _, obj := range oc.ObjectsItems() {
+		switch obj.(type) {
+		case *genMf.StartEvent, *genMf.EndEvent:
+			// Don't count start/end events
+		case *genMf.ExclusiveMerge:
+			// Don't count merge nodes (they're structural)
+		case *genMf.MicroflowParameter, *genMf.MicroflowParameterObject:
+			// Don't count parameters (they're structural)
+		default:
+			count++
+		}
+	}
+	return count
+}
 
-	if mf.ObjectCollection == nil {
+// calculateFlowComplexity computes McCabe cyclomatic complexity for a
+// gen flow. Each conditional branch (ExclusiveSplit, InheritanceSplit,
+// LoopedActivity, ErrorEvent) adds 1; baseline = 1 (the entry path).
+// Loop bodies recurse so nested decisions also contribute.
+func calculateFlowComplexity(oc *genMf.MicroflowObjectCollection) int {
+	complexity := 1
+	if oc == nil {
 		return complexity
 	}
-
-	// Count decision points in the main flow
-	complexity += countDecisionPoints(mf.ObjectCollection.Objects)
-
+	complexity += countDecisionPoints(oc.ObjectsItems())
 	return complexity
 }
 
-// countDecisionPoints counts decision points in a list of microflow objects.
-// This recursively processes nested structures like LoopedActivity.
-func countDecisionPoints(objects []microflows.MicroflowObject) int {
+// countDecisionPoints recursively counts decision points in a list of
+// gen microflow objects, descending into LoopedActivity bodies.
+func countDecisionPoints(objects []element.Element) int {
 	count := 0
-
 	for _, obj := range objects {
-		switch activity := obj.(type) {
-		case *microflows.ExclusiveSplit:
-			// Each IF/decision adds 1 to complexity
+		switch a := obj.(type) {
+		case *genMf.ExclusiveSplit:
 			count++
-
-		case *microflows.InheritanceSplit:
-			// Type check split adds 1 to complexity
+		case *genMf.InheritanceSplit:
 			count++
-
-		case *microflows.LoopedActivity:
-			// Each loop adds 1 to complexity
+		case *genMf.LoopedActivity:
 			count++
-			// Also count decision points inside the loop body
-			if activity.ObjectCollection != nil {
-				count += countDecisionPoints(activity.ObjectCollection.Objects)
+			if body := flowObjectCollection(a.ObjectCollection()); body != nil {
+				count += countDecisionPoints(body.ObjectsItems())
 			}
-
-		case *microflows.ErrorEvent:
-			// Error handling path adds complexity
-			count++
-		}
-	}
-
-	return count
-}
-
-// countNanoflowActivities counts activities in a nanoflow, excluding structural elements.
-func countNanoflowActivities(nf *microflows.Nanoflow) int {
-	if nf.ObjectCollection == nil {
-		return 0
-	}
-
-	count := 0
-	for _, obj := range nf.ObjectCollection.Objects {
-		switch obj.(type) {
-		case *microflows.StartEvent, *microflows.EndEvent:
-			// Don't count start/end events
-		case *microflows.ExclusiveMerge:
-			// Don't count merge nodes (they're structural)
-		default:
+		case *genMf.ErrorEvent:
 			count++
 		}
 	}
 	return count
 }
 
-// calculateNanoflowComplexity calculates the McCabe cyclomatic complexity of a nanoflow.
-func calculateNanoflowComplexity(nf *microflows.Nanoflow) int {
-	complexity := 1
-
-	if nf.ObjectCollection == nil {
-		return complexity
-	}
-
-	complexity += countDecisionPoints(nf.ObjectCollection.Objects)
-	return complexity
-}
+// Note: legacy `getDataTypeName(microflows.DataType)` is gone
+// (Followup F1). The gen *Microflow.ReturnType() / *Nanoflow.ReturnType()
+// methods return the formatted name string directly, removing the
+// per-DataType-class switch the legacy code needed.

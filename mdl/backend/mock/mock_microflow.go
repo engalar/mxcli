@@ -72,3 +72,10 @@ func (m *MockBackend) ListNanoflowsGen() ([]*genMf.Nanoflow, error) {
 	}
 	return nil, fmt.Errorf("MockBackend.ListNanoflowsGen not configured")
 }
+
+func (m *MockBackend) GetMicroflowGen(id model.ID) (*genMf.Microflow, error) {
+	if m.GetMicroflowGenFunc != nil {
+		return m.GetMicroflowGenFunc(id)
+	}
+	return nil, fmt.Errorf("MockBackend.GetMicroflowGen not configured")
+}

@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
+	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/mendixlabs/mxcli/mdl/catalog"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/spf13/cobra"
 )
 
@@ -73,18 +73,21 @@ Examples:
 }
 
 func buildCatalog(projectPath string) (*catalog.Catalog, error) {
-	reader, err := mpr.Open(projectPath)
-	if err != nil {
+	// Followup F1: catalog walks gen-typed microflows / nanoflows now,
+	// so route through MprBackend (which provides ListMicroflowsGen
+	// via the modelsdk-native repos) instead of an mpr.Reader.
+	be := mprbackend.New()
+	if err := be.Connect(projectPath); err != nil {
 		return nil, fmt.Errorf("failed to open project: %w", err)
 	}
-	defer reader.Close()
+	defer be.Disconnect()
 
 	cat, err := catalog.New()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create catalog: %w", err)
 	}
 
-	builder := catalog.NewBuilder(cat, reader)
+	builder := catalog.NewBuilder(cat, be)
 	if err := builder.Build(nil); err != nil {
 		return nil, fmt.Errorf("failed to build catalog: %w", err)
 	}
