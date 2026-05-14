@@ -137,7 +137,7 @@ func (fb *flowBuilderGen) addStatementGen(stmt ast.MicroflowStatement) element.I
 
 	// ─── Control flow — h2/h3 ───
 	case *ast.IfStmt:
-		return "" // TODO Stage 3.2.3.h2: addIfStatementGen
+		return fb.addIfStatementGen(s)
 	case *ast.LoopStmt:
 		return "" // TODO Stage 3.2.3.h3: addLoopStatementGen
 	case *ast.WhileStmt:
