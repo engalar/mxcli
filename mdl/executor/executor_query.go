@@ -60,25 +60,25 @@ func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
 	case ast.ShowContext:
 		return execShowContext(ctx, s)
 	case ast.ShowProjectSecurity:
-		return listProjectSecurity(ctx)
+		return listProjectSecurityGen(ctx)
 	case ast.ShowModuleRoles:
-		return listModuleRoles(ctx, s.InModule)
+		return listModuleRolesGen(ctx, s.InModule)
 	case ast.ShowUserRoles:
-		return listUserRoles(ctx)
+		return listUserRolesGen(ctx)
 	case ast.ShowDemoUsers:
-		return listDemoUsers(ctx)
+		return listDemoUsersGen(ctx)
 	case ast.ShowAccessOn:
-		return listAccessOnEntity(ctx, s.Name)
+		return listAccessOnEntityGen(ctx, s.Name)
 	case ast.ShowAccessOnMicroflow:
 		return listAccessOnMicroflowGen(ctx, s.Name)
 	case ast.ShowAccessOnPage:
-		return listAccessOnPage(ctx, s.Name)
+		return listAccessOnPageGen(ctx, s.Name)
 	case ast.ShowAccessOnWorkflow:
 		return listAccessOnWorkflow(ctx, s.Name)
 	case ast.ShowAccessOnNanoflow:
 		return listAccessOnNanoflowGen(ctx, s.Name)
 	case ast.ShowSecurityMatrix:
-		return listSecurityMatrix(ctx, s.InModule)
+		return listSecurityMatrixGen(ctx, s.InModule)
 	case ast.ShowODataClients:
 		return listODataClients(ctx, s.InModule)
 	case ast.ShowODataServices:
@@ -184,11 +184,11 @@ func execDescribe(ctx *ExecContext, s *ast.DescribeStmt) error {
 		case ast.DescribeJavaScriptAction:
 			return describeJavaScriptAction(ctx, s.Name)
 		case ast.DescribeModuleRole:
-			return describeModuleRole(ctx, s.Name)
+			return describeModuleRoleGen(ctx, s.Name)
 		case ast.DescribeUserRole:
-			return describeUserRole(ctx, s.Name)
+			return describeUserRoleGen(ctx, s.Name)
 		case ast.DescribeDemoUser:
-			return describeDemoUser(ctx, s.Name.Name)
+			return describeDemoUserGen(ctx, s.Name.Name)
 		case ast.DescribeODataClient:
 			return describeODataClient(ctx, s.Name)
 		case ast.DescribeODataService:
