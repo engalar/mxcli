@@ -13,7 +13,6 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -80,20 +79,16 @@ type MockBackend struct {
 	UpdateOqlQueriesForMovedEntityFunc         func(oldQualifiedName, newQualifiedName string) (int, error)
 	UpdateEnumerationRefsInAllDomainModelsFunc func(oldQualifiedName, newQualifiedName string) error
 
-	// MicroflowBackend — Followup E6 retained only the four sdk-typed
-	// methods that the catalog builder still needs and the two delete
-	// fallbacks consumed by repo_extract.go's mock-only paths.
-	// Get / Create / Update / Move / Parse have been retired; tests
-	// that need to seed flow data should use the gen-typed
-	// repostesting.RecordingMicroflowRepository (via withMicroflowsRepo).
-	ListMicroflowsFunc  func() ([]*microflows.Microflow, error)
-	GetMicroflowFunc    func(id model.ID) (*microflows.Microflow, error)
-	DeleteMicroflowFunc func(id model.ID) error
-	ListNanoflowsFunc   func() ([]*microflows.Nanoflow, error)
-	DeleteNanoflowFunc  func(id model.ID) error
-	IsRuleFunc          func(qualifiedName string) (bool, error)
-	// gen-typed surfaces (Followup C/F). Tests on the modelsdk-native
-	// code path should configure these instead of the sdk-typed *Func fields.
+	// MicroflowBackend — Followup E6 retired Get / Create / Update /
+	// Move / Parse; Followup F3 retired the sdk-typed ListMicroflows /
+	// GetMicroflow / ListNanoflows. The remaining surface keeps the
+	// gen-typed reads and the small fallbacks (Delete*, IsRule).
+	// Tests that need to seed flow data should use the gen-typed
+	// repostesting.RecordingMicroflowRepository (via withMicroflowsRepo)
+	// or configure ListMicroflowsGenFunc / GetMicroflowGenFunc.
+	DeleteMicroflowFunc   func(id model.ID) error
+	DeleteNanoflowFunc    func(id model.ID) error
+	IsRuleFunc            func(qualifiedName string) (bool, error)
 	ListMicroflowsGenFunc func() ([]*genMf.Microflow, error)
 	ListNanoflowsGenFunc  func() ([]*genMf.Nanoflow, error)
 	GetMicroflowGenFunc   func(id model.ID) (*genMf.Microflow, error)

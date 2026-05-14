@@ -5,54 +5,33 @@ package backend
 import (
 	"github.com/mendixlabs/mxcli/model"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
 // MicroflowBackend provides microflow and nanoflow operations.
 //
-// After Followup E (Stage 3.2 closeout) the executor consumes
+// After Followups E (Stage 3.2 closeout) and F (catalog + linter
+// migration), the executor / catalog / linter all consume
 // modelsdk-native gen objects everywhere. The remaining surface here
 // is intentionally small:
 //
-//   - ListMicroflows / ListNanoflows — kept as the sdk-typed reads
-//     because the catalog builder (mdl/catalog) still consumes
-//     *microflows.Microflow / *microflows.Nanoflow through the
-//     CatalogReader structural interface. After Followup F1 the
-//     catalog also walks gen objects, but these methods are kept on
-//     FullBackend until Followup F3 retires them so external
-//     CatalogReader implementations have a deprecation window.
 //   - DeleteMicroflow / DeleteNanoflow — fallback path used by
 //     repo_extract.go's deleteMicroflowViaRepoOrBackend when
 //     ctx.Microflows is nil (mock-only test contexts).
 //   - IsRule — fallback for isRuleViaRepoOrBackend, same rationale.
 //   - ListMicroflowsGen / ListNanoflowsGen / GetMicroflowGen — the
-//     forward-looking gen-typed surface; production catalog +
-//     linter consumers route through these.
+//     forward-looking gen-typed surface; catalog + linter consumers
+//     route through these.
 //
-// All other CRUD methods (Create / Update / Move / Parse) have
-// been retired — production routes through ctx.Microflows /
-// ctx.Nanoflows (modelsdk repos) directly.
+// Followup F3 retired the sdk-typed ListMicroflows / GetMicroflow /
+// ListNanoflows methods. All other CRUD methods (Get / Create /
+// Update / Move / Parse) were retired earlier in Followup E6.
+// Production routes through ctx.Microflows / ctx.Nanoflows
+// (modelsdk repos) directly.
 type MicroflowBackend interface {
-	// ListMicroflows returns every microflow as the legacy sdk type.
-	// Deprecated by Followup F1 — the catalog now walks gen-typed
-	// objects via ListMicroflowsGen. Retained until Followup F3
-	// retires the sdk-typed surface.
-	ListMicroflows() ([]*microflows.Microflow, error)
-
-	// GetMicroflow fetches a single microflow by ID as the legacy sdk
-	// type. Deprecated by Followup F2 — the linter now fetches
-	// gen-typed bodies via GetMicroflowGen. Retained until Followup F3
-	// retires the sdk-typed surface.
-	GetMicroflow(id model.ID) (*microflows.Microflow, error)
-
 	// DeleteMicroflow removes a microflow by ID. Retained as the
 	// fallback for deleteMicroflowViaRepoOrBackend in mock-only test
 	// contexts that do not wire ctx.Microflows.
 	DeleteMicroflow(id model.ID) error
-
-	// ListNanoflows mirrors ListMicroflows. Same catalog-only retention.
-	// Deprecated by Followup F1.
-	ListNanoflows() ([]*microflows.Nanoflow, error)
 
 	// DeleteNanoflow mirrors DeleteMicroflow. Same fallback retention.
 	DeleteNanoflow(id model.ID) error

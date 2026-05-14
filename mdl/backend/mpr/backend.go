@@ -18,7 +18,6 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
@@ -248,24 +247,16 @@ func (b *MprBackend) UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, ne
 // ---------------------------------------------------------------------------
 //
 // Followup E6 retired Get / Create / Update / Move / Parse on the
-// FullBackend interface — production routes through ctx.Microflows /
-// ctx.Nanoflows (modelsdk-native repos) directly. The remaining
-// surface keeps the four sdk-typed methods that the catalog builder
-// (mdl/catalog) and the mock-test fallback paths still consume.
+// FullBackend interface; Followup F3 retired the sdk-typed
+// ListMicroflows / GetMicroflow / ListNanoflows. Production routes
+// through ctx.Microflows / ctx.Nanoflows (modelsdk-native repos)
+// directly. The remaining surface keeps the gen-typed reads and the
+// three small fallbacks (Delete*, IsRule) consumed by mock-only test
+// contexts that don't wire ctx.Microflows.
 
-func (b *MprBackend) ListMicroflows() ([]*microflows.Microflow, error) {
-	return b.reader.ListMicroflows()
-}
-func (b *MprBackend) GetMicroflow(id model.ID) (*microflows.Microflow, error) {
-	return b.reader.GetMicroflow(id)
-}
 func (b *MprBackend) DeleteMicroflow(id model.ID) error { return b.deleteMicroflowViaModelsdk(id) }
 func (b *MprBackend) IsRule(qualifiedName string) (bool, error) {
 	return b.reader.IsRule(qualifiedName)
-}
-
-func (b *MprBackend) ListNanoflows() ([]*microflows.Nanoflow, error) {
-	return b.reader.ListNanoflows()
 }
 
 func (b *MprBackend) DeleteNanoflow(id model.ID) error { return b.deleteNanoflowViaModelsdk(id) }
