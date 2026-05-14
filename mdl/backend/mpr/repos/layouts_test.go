@@ -129,6 +129,76 @@ func TestLayoutRepo_CreateUpdateDeleteCycle(t *testing.T) {
 	}
 }
 
+// TestLayoutRepo_ListAll_FixtureCount asserts the strict Forms$Layout
+// filtering — without it ListAll could return additional Forms$* prefix
+// matches.
+func TestLayoutRepo_ListAll_FixtureCount(t *testing.T) {
+	w := openTestWriter(t)
+	repo := NewLayoutRepository(w)
+	got, err := repo.ListAll()
+	if err != nil {
+		t.Fatalf("ListAll: %v", err)
+	}
+	if len(got) != fixtureLayoutCount {
+		t.Errorf("ListAll: got %d layouts, want %d", len(got), fixtureLayoutCount)
+	}
+}
+
+func TestLayoutRepo_FindByQualifiedName_FreshLayout(t *testing.T) {
+	w := openTestWriter(t)
+	r := w.ConcreteReader()
+	mods, err := r.ListModules()
+	if err != nil {
+		t.Fatalf("ListModules: %v", err)
+	}
+	var parentID string
+	for _, m := range mods {
+		if m.Name == "MyFirstModule" {
+			parentID = m.ID
+			break
+		}
+	}
+	if parentID == "" {
+		t.Skip("fixture missing MyFirstModule")
+	}
+
+	repo := NewLayoutRepository(w)
+	probe := newEmptyLayout(t, "QNLayoutProbe")
+	if err := repo.Create(parentID, "Documents", probe); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := repo.FindByQualifiedName("MyFirstModule.QNLayoutProbe")
+	if err != nil {
+		t.Fatalf("FindByQualifiedName: %v", err)
+	}
+	if got == nil {
+		t.Fatal("FindByQualifiedName returned nil for known layout")
+	}
+	if got.ID() != probe.ID() {
+		t.Errorf("FindByQualifiedName ID = %s, want %s", got.ID(), probe.ID())
+	}
+}
+
+func TestLayoutRepo_GetContainerUUID_NonEmpty(t *testing.T) {
+	w := openTestWriter(t)
+	repo := NewLayoutRepository(w)
+	all, err := repo.ListAll()
+	if err != nil {
+		t.Fatalf("ListAll: %v", err)
+	}
+	if len(all) == 0 {
+		t.Fatal("fixture has no layouts")
+	}
+	cid, err := repo.GetContainerUUID(model.ID(all[0].ID()))
+	if err != nil {
+		t.Fatalf("GetContainerUUID: %v", err)
+	}
+	if cid == "" {
+		t.Error("GetContainerUUID returned empty container UUID")
+	}
+}
+
 func newEmptyLayout(t *testing.T, name string) *genPg.Layout {
 	t.Helper()
 	l := genPg.NewLayout()

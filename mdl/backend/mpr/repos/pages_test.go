@@ -472,6 +472,29 @@ func TestPageMutator_SetLayout_UsesResolver(t *testing.T) {
 	}
 }
 
+// TestPageRepo_GetContainerUUID_NonEmpty verifies the Stage 3.3.5.A0
+// container linkage — listPagesWithContainerGen relies on it to pair
+// each page with its parent module/folder UUID without an extra unit
+// scan.
+func TestPageRepo_GetContainerUUID_NonEmpty(t *testing.T) {
+	w := openTestWriter(t)
+	repo := NewPageRepository(w)
+	all, err := repo.ListAll()
+	if err != nil {
+		t.Fatalf("ListAll: %v", err)
+	}
+	if len(all) == 0 {
+		t.Fatal("fixture has no pages")
+	}
+	cid, err := repo.GetContainerUUID(model.ID(all[0].ID()))
+	if err != nil {
+		t.Fatalf("GetContainerUUID: %v", err)
+	}
+	if cid == "" {
+		t.Error("GetContainerUUID returned empty container UUID")
+	}
+}
+
 // --- helpers ---
 
 func lookupModuleUUID(t *testing.T, w *mmpr.Writer, name string) string {

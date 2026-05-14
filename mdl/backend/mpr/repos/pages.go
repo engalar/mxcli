@@ -168,6 +168,22 @@ func (r *pageRepo) FindByQualifiedName(qn string) (*genPg.Page, error) {
 	return nil, nil
 }
 
+func (r *pageRepo) GetContainerUUID(id model.ID) (model.ID, error) {
+	if id == "" {
+		return "", fmt.Errorf("GetContainerUUID: empty id")
+	}
+	bin := mmpr.IDToBsonBinary(string(id))
+	if len(bin.Data) != 16 {
+		return "", fmt.Errorf("GetContainerUUID: invalid id %q", id)
+	}
+	var blob []byte
+	err := r.r.DB().QueryRow("SELECT ContainerID FROM Unit WHERE UnitID = ?", bin.Data).Scan(&blob)
+	if err != nil {
+		return "", fmt.Errorf("GetContainerUUID(%s): %w", id, err)
+	}
+	return model.ID(mmpr.BlobToUUID(blob)), nil
+}
+
 // OpenForMutation opens a Page for incremental editing. Stage 2 uses
 // Option A (decode-edit-encode); Commit re-encodes and writes via
 // repo.Update. Stage 2.5 may swap for direct raw-BSON edits if
