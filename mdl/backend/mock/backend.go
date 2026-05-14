@@ -10,6 +10,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
@@ -131,6 +132,7 @@ type MockBackend struct {
 
 	// SecurityBackend
 	GetProjectSecurityFunc               func() (*security.ProjectSecurity, error)
+	GetProjectSecurityGenFunc            func() (*genSec.ProjectSecurity, error)
 	SetProjectSecurityLevelFunc          func(unitID model.ID, level string) error
 	SetProjectDemoUsersEnabledFunc       func(unitID model.ID, enabled bool) error
 	AddUserRoleFunc                      func(unitID model.ID, name string, moduleRoles []string, manageAllRoles bool) error
@@ -140,6 +142,8 @@ type MockBackend struct {
 	RemoveDemoUserFunc                   func(unitID model.ID, userName string) error
 	ListModuleSecurityFunc               func() ([]*security.ModuleSecurity, error)
 	GetModuleSecurityFunc                func(moduleID model.ID) (*security.ModuleSecurity, error)
+	GetModuleSecurityGenFunc             func(moduleID model.ID) (*genSec.ModuleSecurity, error)
+	ListModuleSecurityGenFunc            func() ([]*genSec.ModuleSecurity, error)
 	AddModuleRoleFunc                    func(unitID model.ID, roleName, description string) error
 	RemoveModuleRoleFunc                 func(unitID model.ID, roleName string) error
 	RemoveModuleRoleFromAllUserRolesFunc func(unitID model.ID, qualifiedRole string) (int, error)

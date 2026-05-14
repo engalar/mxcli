@@ -15,6 +15,24 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+func TestGetProjectSecurityGen_ReturnsSingleton(t *testing.T) {
+	mprPath, _ := makeSecurityTestMPR(t)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	ps, err := b.GetProjectSecurityGen()
+	if err != nil {
+		t.Fatalf("GetProjectSecurityGen: %v", err)
+	}
+	if ps == nil {
+		t.Fatal("GetProjectSecurityGen returned nil")
+	}
+}
+
 // makeSecurityTestMPR creates a minimal v1 MPR SQLite file in a temp dir
 // and inserts one Security$ProjectSecurity unit with SecurityLevel = Off.
 // Returns the file path and the unit ID.
