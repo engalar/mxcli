@@ -4,7 +4,11 @@
 // Returns qualified names for modules, entities, microflows, pages, etc.
 package executor
 
-import "context"
+import (
+	"context"
+
+	"github.com/mendixlabs/mxcli/model"
+)
 
 // getModuleNames returns a list of all module names for autocomplete.
 func getModuleNames(ctx *ExecContext) []string {
@@ -203,16 +207,19 @@ func getJavaActionNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	actions, err := ctx.Backend.ListJavaActions()
+	pairs, err := listJavaActionsWithContainerGen(ctx)
 	if err != nil {
 		return nil
 	}
-	names := make([]string, 0)
-	for _, action := range actions {
-		modID := h.FindModuleID(action.ContainerID)
+	names := make([]string, 0, len(pairs))
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
 		if moduleFilter == "" || modName == moduleFilter {
-			names = append(names, modName+"."+action.Name)
+			names = append(names, modName+"."+p.Elem.Name())
 		}
 	}
 	return names
