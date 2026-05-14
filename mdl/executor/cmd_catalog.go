@@ -692,8 +692,10 @@ func captureDescribe(ctx *ExecContext, objectType string, qualifiedName string) 
 	switch strings.ToLower(objectType) {
 	case "entity":
 		err = describeEntity(ctx, qn)
-	case "microflow", "nanoflow":
-		err = describeMicroflow(ctx, qn)
+	case "microflow":
+		err = describeMicroflowGen(ctx, qn)
+	case "nanoflow":
+		err = describeNanoflowGen(ctx, qn)
 	case "page":
 		err = describePage(ctx, qn)
 	case "snippet":
@@ -740,8 +742,10 @@ func captureDescribeParallel(ctx *ExecContext, objectType string, qualifiedName 
 	switch strings.ToLower(objectType) {
 	case "entity":
 		err = describeEntity(localCtx, qn)
-	case "microflow", "nanoflow":
-		err = describeMicroflow(localCtx, qn)
+	case "microflow":
+		err = describeMicroflowGen(localCtx, qn)
+	case "nanoflow":
+		err = describeNanoflowGen(localCtx, qn)
 	case "page":
 		err = describePage(localCtx, qn)
 	case "snippet":

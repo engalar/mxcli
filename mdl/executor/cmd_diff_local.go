@@ -491,18 +491,19 @@ func attributeBsonToMDL(_ *ExecContext, raw map[string]any) string {
 	return result.String()
 }
 
-// microflowBsonToMDL converts a microflow BSON to MDL using the same
-// renderer as DESCRIBE MICROFLOW, so diffs include activity bodies.
-// Falls back to a header-only stub if parsing fails.
-func microflowBsonToMDL(ctx *ExecContext, raw map[string]any, qualifiedName string) string {
-	qn := splitQualifiedName(qualifiedName)
-	mf := ctx.Backend.ParseMicroflowFromRaw(raw, model.ID(qn.Name), "")
-	if mf == nil {
-		return fmt.Sprintf("microflow %s\n  -- parse failed --\nend microflow\n", qualifiedName)
-	}
-
-	entityNames, microflowNames := buildNameLookups(ctx)
-	return renderMicroflowMDL(ctx, "microflow", mf, qn, entityNames, microflowNames, nil)
+// microflowBsonToMDL converts a microflow BSON to MDL.
+//
+// Stage 3.2.6.3a: returns a header-only placeholder. The legacy
+// implementation called `renderMicroflowMDL` (sdk/microflows-typed),
+// which has been deleted. A gen-path rewrite must decode the raw BSON
+// via modelsdk/codec.Decoder into a *genMf.Microflow, then call
+// DescribeMicroflowGenToString. Tracking: rewrite as a follow-up
+// before this stub is removed; meanwhile diff-local reports the change
+// without a body diff.
+func microflowBsonToMDL(_ *ExecContext, _ map[string]any, qualifiedName string) string {
+	return fmt.Sprintf(
+		"microflow %s\n  // diff-local body rendering pending gen-path rewrite (Stage 3.2.6.3a)\nend microflow\n",
+		qualifiedName)
 }
 
 // splitQualifiedName parses "Module.Name" into an ast.QualifiedName.

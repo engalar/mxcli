@@ -28,6 +28,14 @@ func (e *Executor) MicroflowELKGen(name string) error {
 	return microflowELKGen(e.newExecContext(context.Background()), name)
 }
 
+// MicroflowELK is the public Executor wrapper consumed by
+// cmd/mxcli/cmd_describe.go. Stage 3.2.6.3a moved this method out of
+// the (deleted) cmd_microflow_elk.go; the body always routes through
+// the gen path now that legacy `microflowELK` is gone.
+func (e *Executor) MicroflowELK(name string) error {
+	return microflowELKGen(e.newExecContext(context.Background()), name)
+}
+
 func microflowELKGen(ctx *ExecContext, name string) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
@@ -60,7 +68,7 @@ func microflowELKGen(ctx *ExecContext, name string) error {
 		return mdlerrors.NewNotFound("microflow", name)
 	}
 
-	mdlSource, sourceMap, _ := describeMicroflowToString(ctx, qn)
+	mdlSource, sourceMap, _ := describeMicroflowGenToString(ctx, qn)
 
 	return buildFlowELKGen(ctx, flowELKInputGen{
 		FlowType:         "microflow",

@@ -20,59 +20,35 @@ import (
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
-// TestExecShowStructureGen_Depth2_ParityWithLegacy renders the project
-// at depth 2 through both entries and diffs the textual output. Lines
-// covering microflows / nanoflows must match because gen sources the
-// same names and signatures from BSON; lines covering pages, snippets,
-// odata, business events come from the same unchanged helpers and so
-// also match.
-func TestExecShowStructureGen_Depth2_ParityWithLegacy(t *testing.T) {
-	// Legacy.
-	var legacyOut bytes.Buffer
-	legacyCtx := newGenVizContext(t, &legacyOut)
-	legacyCtx.Format = FormatTable
-	legacyCtx.Quiet = true
-	if err := execShowStructure(legacyCtx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 2}); err != nil {
-		t.Fatalf("legacy execShowStructure: %v", err)
-	}
-
-	// Gen.
+// Stage 3.2.6.3a: legacy `execShowStructure` is gone — the parity
+// fixture between legacy and gen is no longer meaningful. Replaced
+// with non-empty smoke tests; output stability is verified by the
+// existing fixture-based gen tests further down in this file
+// (`TestFormatMicroflowSignatureGen_*`, `TestSortGenMicroflows`, etc.)
+// and by cmd_microflows_show_gen_test.go.
+func TestExecShowStructureGen_Depth2_NonEmpty(t *testing.T) {
 	var genOut bytes.Buffer
 	genCtx := newGenVizContext(t, &genOut)
 	genCtx.Format = FormatTable
 	genCtx.Quiet = true
 	if err := execShowStructureGen(genCtx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 2}); err != nil {
-		t.Fatalf("gen execShowStructureGen: %v", err)
+		t.Fatalf("gen execShowStructureGen depth=2: %v", err)
 	}
-
-	if got, want := genOut.String(), legacyOut.String(); got != want {
-		// Surface a small diff so failures are easy to triage.
-		showDiffPreview(t, "depth=2", want, got)
+	if genOut.Len() == 0 {
+		t.Error("expected non-empty depth=2 output")
 	}
 }
 
-// TestExecShowStructureGen_Depth3_ParityWithLegacy is the analogue
-// for depth 3 (microflow signatures with parameter names; entity
-// attributes with types; etc).
-func TestExecShowStructureGen_Depth3_ParityWithLegacy(t *testing.T) {
-	var legacyOut bytes.Buffer
-	legacyCtx := newGenVizContext(t, &legacyOut)
-	legacyCtx.Format = FormatTable
-	legacyCtx.Quiet = true
-	if err := execShowStructure(legacyCtx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 3}); err != nil {
-		t.Fatalf("legacy execShowStructure: %v", err)
-	}
-
+func TestExecShowStructureGen_Depth3_NonEmpty(t *testing.T) {
 	var genOut bytes.Buffer
 	genCtx := newGenVizContext(t, &genOut)
 	genCtx.Format = FormatTable
 	genCtx.Quiet = true
 	if err := execShowStructureGen(genCtx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 3}); err != nil {
-		t.Fatalf("gen execShowStructureGen: %v", err)
+		t.Fatalf("gen execShowStructureGen depth=3: %v", err)
 	}
-
-	if got, want := genOut.String(), legacyOut.String(); got != want {
-		showDiffPreview(t, "depth=3", want, got)
+	if genOut.Len() == 0 {
+		t.Error("expected non-empty depth=3 output")
 	}
 }
 

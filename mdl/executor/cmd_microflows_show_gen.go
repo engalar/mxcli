@@ -40,13 +40,42 @@ import (
 // (module, name) via ctx.Microflows.ListAll() + container module
 // resolution, then delegates to DescribeMicroflowGenToString.
 func describeMicroflowGen(ctx *ExecContext, name ast.QualifiedName) error {
+	rendered, _, err := describeMicroflowGenToString(ctx, name)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(ctx.Output, rendered)
+	return nil
+}
+
+// DescribeMicroflowToString is the public package-level wrapper consumed
+// by cmd/exprgrammar-mine (and any other unmigrated tooling). Returns
+// the gen-rendered MDL text plus any error; the source-map is dropped
+// because external callers don't use it.
+//
+// Stage 3.2.6.3a: replaces the deleted legacy `DescribeMicroflowToString`
+// (in cmd_microflows_show.go) — the new body always routes through the
+// gen path, so the function name is unchanged but the implementation
+// has no sdk/microflows dependency.
+func DescribeMicroflowToString(ctx *ExecContext, name ast.QualifiedName) (string, error) {
+	rendered, _, err := describeMicroflowGenToString(ctx, name)
+	return rendered, err
+}
+
+// describeMicroflowGenToString resolves a microflow by qualified name and
+// returns the gen-rendered MDL plus an empty source-map (the gen
+// traverser does not yet attribute lines to node IDs — kept in the
+// signature for symmetry with describeNanoflowGenToString and to
+// future-proof callers like microflowELKGen which forward sourceMap to
+// ELK output).
+func describeMicroflowGenToString(ctx *ExecContext, name ast.QualifiedName) (string, map[string]elkSourceRange, error) {
 	if ctx == nil || ctx.Microflows == nil {
-		return mdlerrors.NewBackend("microflow repository", fmt.Errorf("ctx.Microflows is nil"))
+		return "", nil, mdlerrors.NewBackend("microflow repository", fmt.Errorf("ctx.Microflows is nil"))
 	}
 
 	all, err := ctx.Microflows.ListAll()
 	if err != nil {
-		return mdlerrors.NewBackend("list microflows", err)
+		return "", nil, mdlerrors.NewBackend("list microflows", err)
 	}
 
 	var target *genMf.Microflow
@@ -61,15 +90,14 @@ func describeMicroflowGen(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 	}
 	if target == nil {
-		return mdlerrors.NewNotFound("microflow", name.String())
+		return "", nil, mdlerrors.NewNotFound("microflow", name.String())
 	}
 
 	rendered, err := DescribeMicroflowGenToString(ctx, target)
 	if err != nil {
-		return err
+		return "", nil, err
 	}
-	fmt.Fprintln(ctx.Output, rendered)
-	return nil
+	return rendered, map[string]elkSourceRange{}, nil
 }
 
 // DescribeMicroflowGenToString renders a *genMf.Microflow as MDL source
