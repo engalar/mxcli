@@ -9,7 +9,6 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // execAlterWorkflow handles ALTER WORKFLOW Module.Name { operations }.
@@ -182,17 +181,6 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 	invalidateHierarchy(ctx)
 	fmt.Fprintf(ctx.Output, "Altered workflow %s.%s\n", s.Name.Module, s.Name.Name)
 	return nil
-}
-
-// buildAndBindActivities builds workflow activities from AST nodes and auto-binds parameters.
-//
-// Stage 3.3.3.D8: now an unused helper kept for legacy execCreateWorkflow
-// (which is itself dispatched off in D6). It is removed alongside
-// cmd_workflows_write.go in Phase E2.
-func buildAndBindActivities(ctx *ExecContext, nodes []ast.WorkflowActivityNode) []workflows.WorkflowActivity {
-	acts := buildWorkflowActivities(nodes)
-	autoBindActivitiesInFlow(ctx, acts)
-	return acts
 }
 
 // buildAndBindActivitiesGen is the gen-typed twin used by ALTER WORKFLOW.
