@@ -9,11 +9,11 @@
 package executor
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 )
 
 // listAgentEditorModels handles SHOW MODELS [IN module].
@@ -146,7 +146,7 @@ func execCreateAgentEditorModel(ctx *ExecContext, s *ast.CreateModelStmt) error 
 		return err
 	}
 
-	var keyRef *agenteditor.ConstantRef
+	var keyRef *types.ConstantRef
 	if s.Key != nil {
 		keyRef, err = resolveConstantRef(ctx, *s.Key)
 		if err != nil {
@@ -159,7 +159,7 @@ func execCreateAgentEditorModel(ctx *ExecContext, s *ast.CreateModelStmt) error 
 		provider = "MxCloudGenAI"
 	}
 
-	m := &agenteditor.Model{
+	m := &types.Model{
 		ContainerID:   module.ID,
 		Name:          s.Name.Name,
 		Documentation: s.Documentation,
@@ -212,7 +212,7 @@ func execDropAgentEditorModel(ctx *ExecContext, s *ast.DropModelStmt) error {
 // resolveConstantRef looks up a String constant by qualified name and
 // returns a ConstantRef ready to embed in a Model/KnowledgeBase
 // document's providerFields.key field.
-func resolveConstantRef(ctx *ExecContext, name ast.QualifiedName) (*agenteditor.ConstantRef, error) {
+func resolveConstantRef(ctx *ExecContext, name ast.QualifiedName) (*types.ConstantRef, error) {
 	consts, err := ctx.Backend.ListConstants()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list constants: %w", err)
@@ -225,7 +225,7 @@ func resolveConstantRef(ctx *ExecContext, name ast.QualifiedName) (*agenteditor.
 		modID := h.FindModuleID(c.ContainerID)
 		modName := h.GetModuleName(modID)
 		if c.Name == name.Name && modName == name.Module {
-			return &agenteditor.ConstantRef{
+			return &types.ConstantRef{
 				DocumentID:    string(c.ID),
 				QualifiedName: name.String(),
 			}, nil
@@ -235,7 +235,7 @@ func resolveConstantRef(ctx *ExecContext, name ast.QualifiedName) (*agenteditor.
 }
 
 // findAgentEditorModel looks up a model by module and name.
-func findAgentEditorModel(ctx *ExecContext, moduleName, modelName string) *agenteditor.Model {
+func findAgentEditorModel(ctx *ExecContext, moduleName, modelName string) *types.Model {
 	models, err := ctx.Backend.ListAgentEditorModels()
 	if err != nil {
 		return nil

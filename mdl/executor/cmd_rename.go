@@ -409,18 +409,16 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 }
 
 // execRenameJavaAction renames a Java action and its .java source file.
+//
+// Stage 3.3.2.E1 prep: migrated from legacy ctx.Backend.ListJavaActions
+// to listJavaActionsWithContainerGen — the cache helper carries the
+// gen-typed JavaAction + its container UUID without needing a
+// hierarchy.FindModuleID lookup.
 func execRenameJavaAction(ctx *ExecContext, s *ast.RenameStmt) error {
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
-	// Verify the Java action exists.
-	// NOTE: this stays on the legacy ctx.Backend.ListJavaActions path
-	// because the rename mock test fixture wires the rename-time check
-	// through ListJavaActionsFunc; migrating to listJavaActionsWithContainerGen
-	// requires extending hierarchy.FindModuleID to resolve gen-typed
-	// JavaAction units, which is out of scope for Stage 3.3.2 Phase E
-	// preparation. Migrate together with the cmd_rename refactor.
-	jas, err := ctx.Backend.ListJavaActions()
+	pairs, err := listJavaActionsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)
 	}
@@ -430,14 +428,18 @@ func execRenameJavaAction(ctx *ExecContext, s *ast.RenameStmt) error {
 	}
 	found := false
 	collision := false
-	for _, ja := range jas {
-		modID := h.FindModuleID(ja.ContainerID)
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
 		if h.GetModuleName(modID) != s.Name.Module {
 			continue
 		}
-		if ja.Name == s.Name.Name {
+		name := p.Elem.Name()
+		if name == s.Name.Name {
 			found = true
-		} else if ja.Name == s.NewName {
+		} else if name == s.NewName {
 			collision = true
 		}
 	}

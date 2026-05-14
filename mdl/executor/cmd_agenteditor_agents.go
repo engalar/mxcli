@@ -8,12 +8,12 @@
 package executor
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"fmt"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 )
 
 // listAgentEditorAgents handles SHOW AGENTS [IN module].
@@ -168,7 +168,7 @@ func describeAgentEditorAgent(ctx *ExecContext, name ast.QualifiedName) error {
 }
 
 // emitToolBlock writes one TOOL or MCP SERVICE block for the agent body.
-func emitToolBlock(ctx *ExecContext, t agenteditor.AgentTool) {
+func emitToolBlock(ctx *ExecContext, t types.AgentTool) {
 	switch t.ToolType {
 	case "mcp":
 		if t.Document == nil {
@@ -206,7 +206,7 @@ func emitToolBlock(ctx *ExecContext, t agenteditor.AgentTool) {
 }
 
 // emitKBBlock writes one KNOWLEDGE BASE block for the agent body.
-func emitKBBlock(ctx *ExecContext, kb agenteditor.AgentKBTool) {
+func emitKBBlock(ctx *ExecContext, kb types.AgentKBTool) {
 	name := kb.Name
 	if name == "" {
 		name = "KB_" + strings.ReplaceAll(kb.ID, "-", "")[:8]
@@ -229,7 +229,7 @@ func emitKBBlock(ctx *ExecContext, kb agenteditor.AgentKBTool) {
 }
 
 // findAgentEditorAgent looks up an agent by module and name.
-func findAgentEditorAgent(ctx *ExecContext, moduleName, agentName string) *agenteditor.Agent {
+func findAgentEditorAgent(ctx *ExecContext, moduleName, agentName string) *types.Agent {
 	agents, err := ctx.Backend.ListAgentEditorAgents()
 	if err != nil {
 		return nil

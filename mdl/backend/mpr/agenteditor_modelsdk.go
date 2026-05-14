@@ -5,9 +5,9 @@ package mprbackend
 import (
 	"fmt"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
@@ -18,6 +18,11 @@ import (
 // sdk/mpr's updateTransactionID() that fails on hard-linked MPR files
 // (SQLITE_READONLY_DBMOVED 1544). The unit type for all four is
 // "CustomBlobDocuments$CustomBlobDocument", containment "Documents".
+//
+// Stage 3.3.6.C2: helpers now take *mdl/types.* inputs (the relocated
+// inner JSON types). The toSdk* converters in agenteditor_convert.go
+// bridge to the still-sdk-typed mpr.SerializeAgentEditor* writers,
+// which live in sdk/mpr (Stage 4 territory; not touched here).
 
 const (
 	customBlobUnitType        = "CustomBlobDocuments$CustomBlobDocument"
@@ -26,7 +31,7 @@ const (
 
 // ── Agent Editor Model ────────────────────────────────────────────────────
 
-func (b *MprBackend) createAgentEditorModelViaModelsdk(m *agenteditor.Model) error {
+func (b *MprBackend) createAgentEditorModelViaModelsdk(m *types.Model) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
@@ -42,7 +47,7 @@ func (b *MprBackend) createAgentEditorModelViaModelsdk(m *agenteditor.Model) err
 	if m.ID == "" {
 		m.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	contents, err := mpr.SerializeAgentEditorModel(m)
+	contents, err := mpr.SerializeAgentEditorModel(toSdkModel(m))
 	if err != nil {
 		return fmt.Errorf("serialize agent editor model: %w", err)
 	}
@@ -55,11 +60,11 @@ func (b *MprBackend) createAgentEditorModelViaModelsdk(m *agenteditor.Model) err
 	)
 }
 
-func (b *MprBackend) updateAgentEditorModelViaModelsdk(m *agenteditor.Model) error {
+func (b *MprBackend) updateAgentEditorModelViaModelsdk(m *types.Model) error {
 	if m == nil {
 		return fmt.Errorf("model is nil")
 	}
-	contents, err := mpr.SerializeAgentEditorModel(m)
+	contents, err := mpr.SerializeAgentEditorModel(toSdkModel(m))
 	if err != nil {
 		return fmt.Errorf("serialize agent editor model: %w", err)
 	}
@@ -68,7 +73,7 @@ func (b *MprBackend) updateAgentEditorModelViaModelsdk(m *agenteditor.Model) err
 
 // ── Agent Editor Knowledge Base ───────────────────────────────────────────
 
-func (b *MprBackend) createAgentEditorKnowledgeBaseViaModelsdk(k *agenteditor.KnowledgeBase) error {
+func (b *MprBackend) createAgentEditorKnowledgeBaseViaModelsdk(k *types.KnowledgeBase) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
@@ -84,7 +89,7 @@ func (b *MprBackend) createAgentEditorKnowledgeBaseViaModelsdk(k *agenteditor.Kn
 	if k.ID == "" {
 		k.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	contents, err := mpr.SerializeAgentEditorKnowledgeBase(k)
+	contents, err := mpr.SerializeAgentEditorKnowledgeBase(toSdkKnowledgeBase(k))
 	if err != nil {
 		return fmt.Errorf("serialize agent editor knowledge base: %w", err)
 	}
@@ -97,11 +102,11 @@ func (b *MprBackend) createAgentEditorKnowledgeBaseViaModelsdk(k *agenteditor.Kn
 	)
 }
 
-func (b *MprBackend) updateAgentEditorKnowledgeBaseViaModelsdk(k *agenteditor.KnowledgeBase) error {
+func (b *MprBackend) updateAgentEditorKnowledgeBaseViaModelsdk(k *types.KnowledgeBase) error {
 	if k == nil {
 		return fmt.Errorf("knowledge base is nil")
 	}
-	contents, err := mpr.SerializeAgentEditorKnowledgeBase(k)
+	contents, err := mpr.SerializeAgentEditorKnowledgeBase(toSdkKnowledgeBase(k))
 	if err != nil {
 		return fmt.Errorf("serialize agent editor knowledge base: %w", err)
 	}
@@ -110,7 +115,7 @@ func (b *MprBackend) updateAgentEditorKnowledgeBaseViaModelsdk(k *agenteditor.Kn
 
 // ── Agent Editor Consumed MCP Service ─────────────────────────────────────
 
-func (b *MprBackend) createAgentEditorConsumedMCPServiceViaModelsdk(c *agenteditor.ConsumedMCPService) error {
+func (b *MprBackend) createAgentEditorConsumedMCPServiceViaModelsdk(c *types.ConsumedMCPService) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
@@ -126,7 +131,7 @@ func (b *MprBackend) createAgentEditorConsumedMCPServiceViaModelsdk(c *agentedit
 	if c.ID == "" {
 		c.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	contents, err := mpr.SerializeAgentEditorConsumedMCPService(c)
+	contents, err := mpr.SerializeAgentEditorConsumedMCPService(toSdkConsumedMCPService(c))
 	if err != nil {
 		return fmt.Errorf("serialize agent editor consumed MCP service: %w", err)
 	}
@@ -139,11 +144,11 @@ func (b *MprBackend) createAgentEditorConsumedMCPServiceViaModelsdk(c *agentedit
 	)
 }
 
-func (b *MprBackend) updateAgentEditorConsumedMCPServiceViaModelsdk(c *agenteditor.ConsumedMCPService) error {
+func (b *MprBackend) updateAgentEditorConsumedMCPServiceViaModelsdk(c *types.ConsumedMCPService) error {
 	if c == nil {
 		return fmt.Errorf("consumed MCP service is nil")
 	}
-	contents, err := mpr.SerializeAgentEditorConsumedMCPService(c)
+	contents, err := mpr.SerializeAgentEditorConsumedMCPService(toSdkConsumedMCPService(c))
 	if err != nil {
 		return fmt.Errorf("serialize agent editor consumed MCP service: %w", err)
 	}
@@ -152,7 +157,7 @@ func (b *MprBackend) updateAgentEditorConsumedMCPServiceViaModelsdk(c *agentedit
 
 // ── Agent Editor Agent ────────────────────────────────────────────────────
 
-func (b *MprBackend) createAgentEditorAgentViaModelsdk(a *agenteditor.Agent) error {
+func (b *MprBackend) createAgentEditorAgentViaModelsdk(a *types.Agent) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
@@ -168,7 +173,7 @@ func (b *MprBackend) createAgentEditorAgentViaModelsdk(a *agenteditor.Agent) err
 	if a.ID == "" {
 		a.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	contents, err := mpr.SerializeAgentEditorAgent(a)
+	contents, err := mpr.SerializeAgentEditorAgent(toSdkAgent(a))
 	if err != nil {
 		return fmt.Errorf("serialize agent editor agent: %w", err)
 	}
@@ -181,11 +186,11 @@ func (b *MprBackend) createAgentEditorAgentViaModelsdk(a *agenteditor.Agent) err
 	)
 }
 
-func (b *MprBackend) updateAgentEditorAgentViaModelsdk(a *agenteditor.Agent) error {
+func (b *MprBackend) updateAgentEditorAgentViaModelsdk(a *types.Agent) error {
 	if a == nil {
 		return fmt.Errorf("agent is nil")
 	}
-	contents, err := mpr.SerializeAgentEditorAgent(a)
+	contents, err := mpr.SerializeAgentEditorAgent(toSdkAgent(a))
 	if err != nil {
 		return fmt.Errorf("serialize agent editor agent: %w", err)
 	}

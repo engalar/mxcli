@@ -13,7 +13,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/model"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -270,12 +269,12 @@ func setupProjectConflictCtx(t *testing.T) (*ExecContext, *model.Module) {
 		ListImportMappingsFunc:            func() ([]*model.ImportMapping, error) { return nil, nil },
 		ListExportMappingsFunc:            func() ([]*model.ExportMapping, error) { return nil, nil },
 		ListDataTransformersFunc:          func() ([]*model.DataTransformer, error) { return nil, nil },
-		ListAgentEditorModelsFunc:         func() ([]*agenteditor.Model, error) { return nil, nil },
-		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return nil, nil },
-		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) {
+		ListAgentEditorModelsFunc:         func() ([]*types.Model, error) { return nil, nil },
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*types.KnowledgeBase, error) { return nil, nil },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*types.ConsumedMCPService, error) {
 			return nil, nil
 		},
-		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return nil, nil },
+		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return nil, nil },
 		ListImageCollectionsFunc:  func() ([]*types.ImageCollection, error) { return nil, nil },
 		ListDomainModelsFunc:      func() ([]*domainmodel.DomainModel, error) { return nil, nil },
 		ListPagesFunc:             func() ([]*pages.Page, error) { return nil, nil },

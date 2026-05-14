@@ -11,7 +11,6 @@ import (
 	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -227,7 +226,7 @@ func TestShowBusinessEventServices_Mock_BackendError(t *testing.T) {
 func TestShowAgentEditorModels_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return nil, errBackend },
+		ListAgentEditorModelsFunc: func() ([]*types.Model, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, listAgentEditorModels(ctx, ""))
@@ -236,7 +235,7 @@ func TestShowAgentEditorModels_Mock_BackendError(t *testing.T) {
 func TestShowAgentEditorAgents_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return nil, errBackend },
+		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, listAgentEditorAgents(ctx, ""))
@@ -245,7 +244,7 @@ func TestShowAgentEditorAgents_Mock_BackendError(t *testing.T) {
 func TestShowAgentEditorKnowledgeBases_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                   func() bool { return true },
-		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return nil, errBackend },
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*types.KnowledgeBase, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, listAgentEditorKnowledgeBases(ctx, ""))
@@ -254,7 +253,7 @@ func TestShowAgentEditorKnowledgeBases_Mock_BackendError(t *testing.T) {
 func TestShowAgentEditorMCPServices_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                        func() bool { return true },
-		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) { return nil, errBackend },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*types.ConsumedMCPService, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, listAgentEditorConsumedMCPServices(ctx, ""))

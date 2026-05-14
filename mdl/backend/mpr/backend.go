@@ -21,7 +21,6 @@ import (
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
@@ -884,49 +883,71 @@ func (b *MprBackend) FindAllCustomWidgetTypes(widgetID string) ([]*types.RawCust
 // AgentEditorBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListAgentEditorModels() ([]*agenteditor.Model, error) {
-	return b.reader.ListAgentEditorModels()
+// Stage 3.3.6.C1+C2: AgentEditorBackend interface uses mdl/types. Reader
+// still returns sdk/agenteditor (Stage 4 territory; not touched here),
+// so List* shims convert via toTypes*. Write helpers in
+// agenteditor_modelsdk.go now take *mdl/types inputs and convert
+// internally (toSdk*) to feed sdk/mpr.SerializeAgentEditor*.
+
+func (b *MprBackend) ListAgentEditorModels() ([]*types.Model, error) {
+	in, err := b.reader.ListAgentEditorModels()
+	if err != nil {
+		return nil, err
+	}
+	return toTypesModels(in), nil
 }
-func (b *MprBackend) ListAgentEditorKnowledgeBases() ([]*agenteditor.KnowledgeBase, error) {
-	return b.reader.ListAgentEditorKnowledgeBases()
+func (b *MprBackend) ListAgentEditorKnowledgeBases() ([]*types.KnowledgeBase, error) {
+	in, err := b.reader.ListAgentEditorKnowledgeBases()
+	if err != nil {
+		return nil, err
+	}
+	return toTypesKnowledgeBases(in), nil
 }
-func (b *MprBackend) ListAgentEditorConsumedMCPServices() ([]*agenteditor.ConsumedMCPService, error) {
-	return b.reader.ListAgentEditorConsumedMCPServices()
+func (b *MprBackend) ListAgentEditorConsumedMCPServices() ([]*types.ConsumedMCPService, error) {
+	in, err := b.reader.ListAgentEditorConsumedMCPServices()
+	if err != nil {
+		return nil, err
+	}
+	return toTypesConsumedMCPServices(in), nil
 }
-func (b *MprBackend) ListAgentEditorAgents() ([]*agenteditor.Agent, error) {
-	return b.reader.ListAgentEditorAgents()
+func (b *MprBackend) ListAgentEditorAgents() ([]*types.Agent, error) {
+	in, err := b.reader.ListAgentEditorAgents()
+	if err != nil {
+		return nil, err
+	}
+	return toTypesAgents(in), nil
 }
-func (b *MprBackend) CreateAgentEditorModel(m *agenteditor.Model) error {
+func (b *MprBackend) CreateAgentEditorModel(m *types.Model) error {
 	return b.createAgentEditorModelViaModelsdk(m)
 }
-func (b *MprBackend) UpdateAgentEditorModel(m *agenteditor.Model) error {
+func (b *MprBackend) UpdateAgentEditorModel(m *types.Model) error {
 	return b.updateAgentEditorModelViaModelsdk(m)
 }
 func (b *MprBackend) DeleteAgentEditorModel(id string) error {
 	return b.deleteAgentEditorModelViaModelsdk(id)
 }
-func (b *MprBackend) CreateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error {
+func (b *MprBackend) CreateAgentEditorKnowledgeBase(k *types.KnowledgeBase) error {
 	return b.createAgentEditorKnowledgeBaseViaModelsdk(k)
 }
-func (b *MprBackend) UpdateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error {
+func (b *MprBackend) UpdateAgentEditorKnowledgeBase(k *types.KnowledgeBase) error {
 	return b.updateAgentEditorKnowledgeBaseViaModelsdk(k)
 }
 func (b *MprBackend) DeleteAgentEditorKnowledgeBase(id string) error {
 	return b.deleteAgentEditorKnowledgeBaseViaModelsdk(id)
 }
-func (b *MprBackend) CreateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error {
+func (b *MprBackend) CreateAgentEditorConsumedMCPService(c *types.ConsumedMCPService) error {
 	return b.createAgentEditorConsumedMCPServiceViaModelsdk(c)
 }
-func (b *MprBackend) UpdateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error {
+func (b *MprBackend) UpdateAgentEditorConsumedMCPService(c *types.ConsumedMCPService) error {
 	return b.updateAgentEditorConsumedMCPServiceViaModelsdk(c)
 }
 func (b *MprBackend) DeleteAgentEditorConsumedMCPService(id string) error {
 	return b.deleteAgentEditorConsumedMCPServiceViaModelsdk(id)
 }
-func (b *MprBackend) CreateAgentEditorAgent(a *agenteditor.Agent) error {
+func (b *MprBackend) CreateAgentEditorAgent(a *types.Agent) error {
 	return b.createAgentEditorAgentViaModelsdk(a)
 }
-func (b *MprBackend) UpdateAgentEditorAgent(a *agenteditor.Agent) error {
+func (b *MprBackend) UpdateAgentEditorAgent(a *types.Agent) error {
 	return b.updateAgentEditorAgentViaModelsdk(a)
 }
 func (b *MprBackend) DeleteAgentEditorAgent(id string) error {
