@@ -12,10 +12,11 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
@@ -45,8 +46,15 @@ type pageBuilder struct {
 	// Per-operation caches (may change during execution)
 	layoutsCache    []*pages.Layout
 	pagesCache      []*pages.Page
-	microflowsCache []*microflows.Microflow
+	microflowsCache []*genMf.Microflow
 	foldersCache    []*types.FolderInfo
+
+	// Microflow / nanoflow repositories for resolveMicroflowRef and
+	// nanoflow return-type lookups (populated by callers from
+	// ctx.Microflows / ctx.Nanoflows). Optional — when nil the
+	// getMicroflows / getNanoflows accessors return an empty slice.
+	microflowsRepo repos.MicroflowRepository
+	nanoflowsRepo  repos.NanoflowRepository
 
 	// Entity context for resolving short attribute names inside DataViews
 	entityContext string // Qualified entity name (e.g., "Module.Entity")
@@ -163,15 +171,23 @@ func (pb *pageBuilder) getPages() ([]*pages.Page, error) {
 	return pb.pagesCache, nil
 }
 
-// getMicroflows returns cached microflows or loads them.
-func (pb *pageBuilder) getMicroflows() ([]*microflows.Microflow, error) {
-	if pb.microflowsCache == nil {
-		var err error
-		pb.microflowsCache, err = pb.backend.ListMicroflows()
-		if err != nil {
-			return nil, err
-		}
+// getMicroflows returns cached gen microflows or loads them via the
+// modelsdk repo. Stage 3.2.6.5: rewired from
+// backend.ListMicroflows (sdk-typed) to ctx.Microflows.ListAll.
+// Returns an empty slice when the repo is nil (e.g., in tests that
+// don't seed a repo) so callers don't crash.
+func (pb *pageBuilder) getMicroflows() ([]*genMf.Microflow, error) {
+	if pb.microflowsCache != nil {
+		return pb.microflowsCache, nil
 	}
+	if pb.microflowsRepo == nil {
+		return nil, nil
+	}
+	mfs, err := pb.microflowsRepo.ListAll()
+	if err != nil {
+		return nil, err
+	}
+	pb.microflowsCache = mfs
 	return pb.microflowsCache, nil
 }
 

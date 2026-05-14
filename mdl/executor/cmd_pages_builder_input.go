@@ -147,12 +147,17 @@ func (pb *pageBuilder) resolveMicroflow(qualifiedName string) (model.ID, error) 
 		return "", mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	// Find matching microflow
+	// Find matching microflow. Stage 3.2.6.5: gen Microflow exposes
+	// container via the repo's GetContainerUUID lookup since the gen
+	// element doesn't carry container linkage post-roundtrip.
 	for _, mf := range mfs {
-		modID := h.FindModuleID(mf.ContainerID)
-		modName := h.GetModuleName(modID)
-		if modName == moduleName && mf.Name == mfName {
-			return mf.ID, nil
+		if mf == nil {
+			continue
+		}
+		containerID, _ := pb.microflowsRepo.GetContainerUUID(model.ID(mf.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if modName == moduleName && mf.Name() == mfName {
+			return model.ID(mf.ID()), nil
 		}
 	}
 

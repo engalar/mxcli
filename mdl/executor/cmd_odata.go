@@ -18,8 +18,8 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
 // outputJavadoc writes a javadoc-style comment block.
@@ -525,13 +525,16 @@ func listExternalEntities(ctx *ExecContext, moduleName string) error {
 // listExternalActions handles SHOW EXTERNAL ACTIONS [IN module] command.
 // It scans all microflows and nanoflows for CallExternalAction activities
 // and displays the unique actions grouped by consumed OData service.
+//
+// Stage 3.2.6.5: rewired to consume gen objects from ctx.Microflows /
+// ctx.Nanoflows; the legacy sdk-typed walker (microflows.MicroflowObjectCollection /
+// microflows.ActionActivity / microflows.CallExternalAction) was deleted.
 func listExternalActions(ctx *ExecContext, moduleName string) error {
-
-	mfs, err := ctx.Backend.ListMicroflows()
+	mfs, err := listMicroflowsGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list microflows", err)
 	}
-	nfs, err := ctx.Backend.ListNanoflows()
+	nfs, err := listNanoflowsGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list nanoflows", err)
 	}
@@ -550,37 +553,39 @@ func listExternalActions(ctx *ExecContext, moduleName string) error {
 	}
 	actionMap := make(map[string]*actionInfo) // key = service.actionName
 
-	// Helper to extract actions from a microflow object collection
-	extractActions := func(oc *microflows.MicroflowObjectCollection, flowModule, flowName string) {
+	extractActions := func(oc *genMf.MicroflowObjectCollection, flowModule, flowName string) {
 		if oc == nil {
 			return
 		}
-		for _, obj := range oc.Objects {
-			act, ok := obj.(*microflows.ActionActivity)
-			if !ok || act.Action == nil {
+		for _, obj := range oc.ObjectsItems() {
+			act, ok := obj.(*genMf.ActionActivity)
+			if !ok {
 				continue
 			}
-			cea, ok := act.Action.(*microflows.CallExternalAction)
+			cea, ok := act.Action().(*genMf.CallExternalAction)
 			if !ok {
 				continue
 			}
 
-			key := cea.ConsumedODataService + "." + cea.Name
+			service := cea.ConsumedODataServiceQualifiedName()
+			actionName := cea.Name()
+			key := service + "." + actionName
 			info, exists := actionMap[key]
 			if !exists {
 				var params []string
-				for _, pm := range cea.ParameterMappings {
-					params = append(params, pm.ParameterName)
+				for _, pmElem := range cea.ParameterMappingsItems() {
+					if pm, ok := pmElem.(*genMf.ExternalActionParameterMapping); ok {
+						params = append(params, pm.ParameterName())
+					}
 				}
 				info = &actionInfo{
-					service:    cea.ConsumedODataService,
-					actionName: cea.Name,
+					service:    service,
+					actionName: actionName,
 					params:     params,
 				}
 				actionMap[key] = info
 			}
 			caller := flowModule + "." + flowName
-			// Avoid duplicate caller entries
 			found := false
 			for _, c := range info.callers {
 				if c == caller {
@@ -591,31 +596,39 @@ func listExternalActions(ctx *ExecContext, moduleName string) error {
 			if !found {
 				info.callers = append(info.callers, caller)
 			}
-			// Merge parameter names from different call sites
-			if len(cea.ParameterMappings) > len(info.params) {
+			pmElems := cea.ParameterMappingsItems()
+			if len(pmElems) > len(info.params) {
 				info.params = nil
-				for _, pm := range cea.ParameterMappings {
-					info.params = append(info.params, pm.ParameterName)
+				for _, pmElem := range pmElems {
+					if pm, ok := pmElem.(*genMf.ExternalActionParameterMapping); ok {
+						info.params = append(info.params, pm.ParameterName())
+					}
 				}
 			}
 		}
 	}
 
 	for _, mf := range mfs {
-		modID := h.FindModuleID(mf.ContainerID)
-		modName := h.GetModuleName(modID)
+		if mf == nil {
+			continue
+		}
+		modName := genFlowContainerModule(ctx, h, model.ID(mf.ID()))
 		if moduleName != "" && !strings.EqualFold(modName, moduleName) {
 			continue
 		}
-		extractActions(mf.ObjectCollection, modName, mf.Name)
+		oc, _ := mf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		extractActions(oc, modName, mf.Name())
 	}
 	for _, nf := range nfs {
-		modID := h.FindModuleID(nf.ContainerID)
-		modName := h.GetModuleName(modID)
+		if nf == nil {
+			continue
+		}
+		modName := genFlowContainerModule(ctx, h, model.ID(nf.ID()))
 		if moduleName != "" && !strings.EqualFold(modName, moduleName) {
 			continue
 		}
-		extractActions(nf.ObjectCollection, modName, nf.Name)
+		oc, _ := nf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		extractActions(oc, modName, nf.Name())
 	}
 
 	if len(actionMap) == 0 && ctx.Format != FormatJSON {

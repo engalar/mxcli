@@ -12,7 +12,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
@@ -772,33 +771,51 @@ func (pb *pageBuilder) getMicroflowReturnEntityName(qualifiedName string) string
 		return ""
 	}
 
-	// Find matching microflow
+	// Find matching microflow. Stage 3.2.6.5: gen Microflow exposes
+	// container via repo.GetContainerUUID + return type via the
+	// ReturnType() string accessor (qualified name when entity / list,
+	// "Void" / primitive otherwise).
 	for _, mf := range mfs {
-		modID := h.FindModuleID(mf.ContainerID)
-		modName := h.GetModuleName(modID)
-		if modName == moduleName && mf.Name == mfName {
-			// Extract entity name from return type
-			return extractEntityFromReturnType(mf.ReturnType)
+		if mf == nil || pb.microflowsRepo == nil {
+			continue
+		}
+		containerID, _ := pb.microflowsRepo.GetContainerUUID(model.ID(mf.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if modName == moduleName && mf.Name() == mfName {
+			return extractEntityFromGenReturnType(mf.ReturnType())
 		}
 	}
 
 	return ""
 }
 
-// extractEntityFromReturnType extracts the entity qualified name from a DataType.
-func extractEntityFromReturnType(dt microflows.DataType) string {
-	if dt == nil {
+// extractEntityFromGenReturnType peels the "List of " prefix off a
+// gen-rendered return-type string and returns the bare entity QN.
+// Empty / void / primitive return types yield "" since they carry no
+// entity identity.
+func extractEntityFromGenReturnType(rt string) string {
+	rt = strings.TrimSpace(rt)
+	if rt == "" || rt == "Void" {
 		return ""
 	}
+	if after, ok := strings.CutPrefix(rt, "List of "); ok {
+		return after
+	}
+	if isPrimitiveReturnType(rt) {
+		return ""
+	}
+	if strings.Contains(rt, ".") {
+		return rt
+	}
+	return ""
+}
 
-	switch t := dt.(type) {
-	case *microflows.ObjectType:
-		return t.EntityQualifiedName
-	case *microflows.ListType:
-		return t.EntityQualifiedName
-	default:
-		return ""
+func isPrimitiveReturnType(rt string) bool {
+	switch rt {
+	case "Boolean", "Integer", "Long", "Decimal", "String", "DateTime", "Date", "Binary":
+		return true
 	}
+	return false
 }
 
 // getNanoflowReturnEntityName looks up a nanoflow and returns its return type entity name.
@@ -814,7 +831,10 @@ func (pb *pageBuilder) getNanoflowReturnEntityName(qualifiedName string) string 
 		name = qualifiedName
 	}
 
-	nanoflows, err := pb.backend.ListNanoflows()
+	if pb.nanoflowsRepo == nil {
+		return ""
+	}
+	nanoflows, err := pb.nanoflowsRepo.List("")
 	if err != nil {
 		return ""
 	}
@@ -825,16 +845,15 @@ func (pb *pageBuilder) getNanoflowReturnEntityName(qualifiedName string) string 
 	}
 
 	for _, nf := range nanoflows {
-		modID := h.FindModuleID(nf.ContainerID)
-		modName := ""
-		for _, m := range pb.getModules() {
-			if m.ID == modID {
-				modName = m.Name
-				break
-			}
+		if nf == nil {
+			continue
 		}
-		if modName == moduleName && nf.Name == name {
-			return extractEntityFromReturnType(nf.ReturnType)
+		// Nanoflows live in the same Unit table as microflows, so the
+		// microflow repo's container helper resolves them too.
+		containerID, _ := pb.microflowsRepo.GetContainerUUID(model.ID(nf.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if modName == moduleName && nf.Name() == name {
+			return extractEntityFromGenReturnType(nf.ReturnType())
 		}
 	}
 
@@ -1139,7 +1158,10 @@ func (pb *pageBuilder) resolveNanoflowByName(nfName string) (model.ID, error) {
 		name = nfName
 	}
 
-	nanoflows, err := pb.backend.ListNanoflows()
+	if pb.nanoflowsRepo == nil {
+		return "", mdlerrors.NewNotFound("nanoflow", nfName)
+	}
+	nanoflows, err := pb.nanoflowsRepo.List("")
 	if err != nil {
 		return "", mdlerrors.NewBackend("list nanoflows", err)
 	}
@@ -1150,16 +1172,13 @@ func (pb *pageBuilder) resolveNanoflowByName(nfName string) (model.ID, error) {
 	}
 
 	for _, nf := range nanoflows {
-		modID := h.FindModuleID(nf.ContainerID)
-		modName := ""
-		for _, m := range pb.getModules() {
-			if m.ID == modID {
-				modName = m.Name
-				break
-			}
+		if nf == nil {
+			continue
 		}
-		if modName == moduleName && nf.Name == name {
-			return nf.ID, nil
+		containerID, _ := pb.microflowsRepo.GetContainerUUID(model.ID(nf.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if modName == moduleName && nf.Name() == name {
+			return model.ID(nf.ID()), nil
 		}
 	}
 

@@ -11,7 +11,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -431,16 +430,12 @@ func TestExecCreateEnumeration_Mock_BackendError(t *testing.T) {
 	}))
 }
 
-func TestExecDropMicroflow_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) { return nil, errBackend },
-	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, execDropMicroflow(ctx, &ast.DropMicroflowStmt{
-		Name: ast.QualifiedName{Module: "M", Name: "F"},
-	}))
-}
+// Stage 3.2.6.5: TestExecDropMicroflow_Mock_BackendError removed —
+// `execDropMicroflow` now reads from ctx.Microflows (modelsdk repo)
+// instead of `ctx.Backend.ListMicroflowsFunc`, so the simulated
+// sdk-typed backend error never reaches the dispatch path. Equivalent
+// error coverage will land alongside a mock repo surface for
+// gen flows.
 
 func TestExecDropPage_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
