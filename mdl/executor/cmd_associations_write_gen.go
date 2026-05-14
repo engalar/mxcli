@@ -1,0 +1,127 @@
+// SPDX-License-Identifier: Apache-2.0
+
+// Stage 3.3.4 D1.c: AST → gen Entity / Generalization / Association
+// builders. Continues cmd_entities_write_gen.go (D1.a + D1.b).
+
+package executor
+
+import (
+	"github.com/mendixlabs/mxcli/mdl/ast"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+)
+
+// astToEntityGen builds a gen-typed *Entity from a CREATE ENTITY AST.
+//
+// Pseudo-types (AutoOwner / AutoChangedBy / AutoCreatedDate /
+// AutoChangedDate) flip the corresponding flag on the entity's
+// NoGeneralization element rather than producing real attributes,
+// matching legacy execCreateEntity semantics.
+func astToEntityGen(s *ast.CreateEntityStmt) *genDm.Entity {
+	if s == nil {
+		return nil
+	}
+	entity := genDm.NewEntity()
+	entity.SetName(s.Name.Name)
+	entity.SetDocumentation(s.Documentation)
+
+	persistable := s.Kind != ast.EntityNonPersistent
+	gen := astToGeneralizationGen(s, persistable)
+	entity.SetGeneralization(gen)
+
+	noGen, hasNoGen := gen.(*genDm.NoGeneralization)
+	for _, a := range s.Attributes {
+		if hasNoGen {
+			switch a.Type.Kind {
+			case ast.TypeAutoOwner:
+				noGen.SetHasOwner(true)
+				continue
+			case ast.TypeAutoChangedBy:
+				noGen.SetHasChangedBy(true)
+				continue
+			case ast.TypeAutoCreatedDate:
+				noGen.SetHasCreatedDate(true)
+				continue
+			case ast.TypeAutoChangedDate:
+				noGen.SetHasChangedDate(true)
+				continue
+			}
+		}
+		ac := a
+		if ac.Type.Kind == ast.TypeBoolean && !ac.HasDefault {
+			ac.HasDefault = true
+			ac.DefaultValue = false
+		}
+		attr := astToAttributeGen(&ac)
+		if attr != nil {
+			entity.AddAttributes(attr)
+		}
+	}
+	return entity
+}
+
+// astToGeneralizationGen returns the entity's Generalization element:
+// *Generalization when the AST signals "extends Module.Parent", else
+// *NoGeneralization with Persistable set per the entity kind.
+func astToGeneralizationGen(s *ast.CreateEntityStmt, persistable bool) element.Element {
+	if s != nil && s.Generalization != nil && s.Generalization.String() != "" {
+		g := genDm.NewGeneralization()
+		g.SetGeneralizationQualifiedName(s.Generalization.String())
+		return g
+	}
+	noGen := genDm.NewNoGeneralization()
+	noGen.SetPersistable(persistable)
+	return noGen
+}
+
+// astToAssociationGen builds a gen-typed *Association from a CREATE
+// ASSOCIATION AST. Caller resolves from/to entity IDs before invoking.
+//
+// Per CLAUDE.md "Association Parent/Child Pointer Semantics":
+// ParentRefID = FROM entity (FK owner), ChildRefID = TO entity.
+func astToAssociationGen(s *ast.CreateAssociationStmt, fromID, toID element.ID) *genDm.Association {
+	if s == nil {
+		return nil
+	}
+	a := genDm.NewAssociation()
+	a.SetName(s.Name.Name)
+	a.SetParentID(fromID)
+	a.SetChildID(toID)
+	a.SetType(astAssociationTypeStringGen(s))
+	a.SetOwner(astAssociationOwnerStringGen(s))
+	a.SetStorageFormat(astAssociationStorageStringGen(s))
+	if s.Documentation != "" {
+		a.SetDocumentation(s.Documentation)
+	}
+	return a
+}
+
+func astAssociationTypeStringGen(s *ast.CreateAssociationStmt) string {
+	if s == nil {
+		return "Reference"
+	}
+	if s.Type == ast.AssocReferenceSet {
+		return "ReferenceSet"
+	}
+	return "Reference"
+}
+
+func astAssociationOwnerStringGen(s *ast.CreateAssociationStmt) string {
+	if s == nil {
+		return "Default"
+	}
+	if s.Owner == ast.OwnerBoth {
+		return "Both"
+	}
+	return "Default"
+}
+
+func astAssociationStorageStringGen(s *ast.CreateAssociationStmt) string {
+	if s == nil {
+		return "Table"
+	}
+	if s.Storage == ast.StorageColumn {
+		return "Column"
+	}
+	return "Table"
+}
