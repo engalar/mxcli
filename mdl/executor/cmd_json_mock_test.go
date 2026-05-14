@@ -10,7 +10,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -505,24 +504,11 @@ func TestListDataTransformers_Mock_JSON(t *testing.T) {
 	assertContainsStr(t, buf.String(), "Transform1")
 }
 
-func TestShowAccessOnMicroflow_Mock_JSON(t *testing.T) {
-	mod := mkModule("MyModule")
-	h := mkHierarchy(mod)
-	mf := mkMicroflow(mod.ID, "ACT_DoStuff")
-	mf.AllowedModuleRoles = []model.ID{"MyModule.User", "MyModule.Admin"}
-	withContainer(h, mf.ContainerID, mod.ID)
-
-	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) { return []*microflows.Microflow{mf}, nil },
-	}
-
-	name := &ast.QualifiedName{Module: "MyModule", Name: "ACT_DoStuff"}
-	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listAccessOnMicroflow(ctx, name))
-	assertValidJSON(t, buf.String())
-	assertContainsStr(t, buf.String(), "User")
-}
+// Stage 3.2.6.5: TestShowAccessOnMicroflow_Mock_JSON removed —
+// `listAccessOnMicroflow` (sdk-typed) is gone; the dispatch in
+// executor_query.go now calls `listAccessOnMicroflowGen` which reads
+// from ctx.Microflows. Equivalent JSON-output coverage will land
+// alongside a gen-typed mock repo surface.
 
 func TestShowAccessOnPage_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")

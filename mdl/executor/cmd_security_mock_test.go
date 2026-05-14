@@ -10,7 +10,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 )
@@ -253,17 +252,11 @@ func TestShowAccessOnEntity_Mock_NilName(t *testing.T) {
 	assertError(t, listAccessOnEntity(ctx, nil))
 }
 
-func TestShowAccessOnMicroflow_Mock_NotFound(t *testing.T) {
-	mod := mkModule("MyModule")
-	h := mkHierarchy(mod)
-
-	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) { return nil, nil },
-	}
-	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertError(t, listAccessOnMicroflow(ctx, &ast.QualifiedName{Module: "MyModule", Name: "NonExistent"}))
-}
+// Stage 3.2.6.5: TestShowAccessOnMicroflow_Mock_NotFound removed —
+// `listAccessOnMicroflow` (legacy sdk-typed) is gone; the dispatch
+// in executor_query.go now calls `listAccessOnMicroflowGen` which
+// reads from ctx.Microflows. Equivalent gen coverage is exercised
+// via cmd_security_gen.go's NotFound paths.
 
 func TestShowAccessOnPage_Mock_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
