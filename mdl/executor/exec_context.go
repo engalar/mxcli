@@ -41,6 +41,10 @@ type ExecContext struct {
 	Nanoflows  repos.NanoflowRepository
 	// Security is the Stage 3.3 modelsdk-native security repo.
 	Security repos.SecurityRepository
+	// JavaActions / JavaScriptActions are the Stage 3.3.2 modelsdk-native repos.
+	// Populated via the same provider duck-type pattern as Microflows/Security.
+	JavaActions       repos.JavaActionRepository
+	JavaScriptActions repos.JavaScriptActionRepository
 
 	// Output is the writer for user-visible output (with line-limit guard).
 	Output io.Writer

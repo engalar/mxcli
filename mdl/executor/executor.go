@@ -19,6 +19,8 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
+	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	sqllib "github.com/mendixlabs/mxcli/sql"
@@ -69,6 +71,12 @@ type executorCache struct {
 	// getProjectSecurityGen / listModuleSecurityWithContainerGen.
 	projectSecurityGen             *genSec.ProjectSecurity
 	moduleSecurityWithContainerGen []ModuleSecurityGenWithContainer
+
+	// Cached gen-typed Java action / JavaScript action listings.
+	// Populated lazily by listJavaActionsWithContainerGen /
+	// listJavaScriptActionsWithContainerGen (Stage 3.3.2 A0).
+	javaActionsWithContainerGen       []ContainerWithGen[*genJA.JavaAction]
+	javaScriptActionsWithContainerGen []ContainerWithGen[*genJSA.JavaScriptAction]
 }
 
 // createdMicroflowInfo tracks a microflow created during this session.
