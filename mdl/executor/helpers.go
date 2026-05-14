@@ -228,7 +228,7 @@ func validateWidgetReferences(ctx *ExecContext, widgets []*ast.WidgetV3, sc *scr
 	var errors []string
 
 	if len(refs.microflows) > 0 {
-		known := buildMicroflowQualifiedNames(ctx)
+		known := buildMicroflowQualifiedNamesGen(ctx)
 		for _, ref := range refs.microflows {
 			if !known[ref] && !sc.microflows[ref] {
 				errors = append(errors, fmt.Sprintf("microflow not found: %s", ref))
@@ -237,7 +237,7 @@ func validateWidgetReferences(ctx *ExecContext, widgets []*ast.WidgetV3, sc *scr
 	}
 
 	if len(refs.nanoflows) > 0 {
-		known := buildNanoflowQualifiedNames(ctx)
+		known := buildNanoflowQualifiedNamesGen(ctx)
 		for _, ref := range refs.nanoflows {
 			if !known[ref] {
 				errors = append(errors, fmt.Sprintf("nanoflow not found: %s", ref))
