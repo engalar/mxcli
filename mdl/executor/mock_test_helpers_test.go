@@ -16,6 +16,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
@@ -248,6 +249,34 @@ func mkLayout(containerID model.ID, name string) *pages.Layout {
 	}
 }
 
+
+// mkPageGen builds a gen-typed Page fixture for the Stage 3.3.5 mock
+// test migration. Stage 3.3.5.A0 introduced ctx.Pages + the
+// listPagesWithContainerGen helper; tests now wire fixtures through
+// RecordingPageRepository and call listPagesGen directly. The fixture
+// carries no container linkage — tests pair it with a per-call
+// container ID via withPagesGenRepo (matches the workflows
+// makeWorkflowsRepo / mkWorkflowGen pattern).
+func mkPageGen(id, name string) *genPg.Page {
+	pg := genPg.NewPage()
+	pg.SetID(element.ID(id))
+	pg.SetName(name)
+	return pg
+}
+
+func mkLayoutGen(id, name string) *genPg.Layout {
+	l := genPg.NewLayout()
+	l.SetID(element.ID(id))
+	l.SetName(name)
+	return l
+}
+
+func mkSnippetGen(id, name string) *genPg.Snippet {
+	s := genPg.NewSnippet()
+	s.SetID(element.ID(id))
+	s.SetName(name)
+	return s
+}
 
 // mkWorkflowGen builds a gen-typed Workflow alongside the sdk fixture.
 // Stage 3.3.3.C6/C7: tests for cmd_rename, validate_duplicates,
