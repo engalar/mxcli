@@ -9,6 +9,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
@@ -95,6 +96,10 @@ type MockBackend struct {
 	DeleteNanoflowFunc        func(id model.ID) error
 	MoveNanoflowFunc          func(nf *microflows.Nanoflow) error
 	IsRuleFunc                func(qualifiedName string) (bool, error)
+	// gen-typed surfaces (Followup C). Tests on the modelsdk-native code
+	// path should configure these instead of the sdk-typed *Func fields.
+	ListMicroflowsGenFunc func() ([]*genMf.Microflow, error)
+	ListNanoflowsGenFunc  func() ([]*genMf.Nanoflow, error)
 
 	// PageBackend
 	ListPagesFunc          func() ([]*pages.Page, error)
