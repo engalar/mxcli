@@ -326,3 +326,52 @@ func TestDescribeDemoUserGen_NotFound(t *testing.T) {
 		t.Errorf("error should mention demo user; got %q", err.Error())
 	}
 }
+
+// TestListAccessOnEntityGen_OutputsHeaders asserts that listAccessOnEntityGen
+// emits the expected access-rule output for an entity that has access rules.
+// Fixture: Administration.Account has 3 access rules.
+func TestListAccessOnEntityGen_OutputsHeaders(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	name := &ast.QualifiedName{Module: "Administration", Name: "Account"}
+	if err := listAccessOnEntityGen(ctx, name); err != nil {
+		t.Fatalf("listAccessOnEntityGen: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "Access rules for Administration.Account") {
+		t.Errorf("expected header line, got: %q", out)
+	}
+	if !strings.Contains(out, "Rule 1:") {
+		t.Errorf("expected 'Rule 1:' in output, got: %q", out)
+	}
+	if !strings.Contains(out, "Rights:") {
+		t.Errorf("expected 'Rights:' in output, got: %q", out)
+	}
+}
+
+// TestListAccessOnEntityGen_NotFound asserts that a non-existent entity
+// returns a not-found error from listAccessOnEntityGen.
+func TestListAccessOnEntityGen_NotFound(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	name := &ast.QualifiedName{Module: "Administration", Name: "DoesNotExist_Stage3_3_A8"}
+	err := listAccessOnEntityGen(ctx, name)
+	if err == nil {
+		t.Fatalf("expected NotFound error, got nil")
+	}
+	if !strings.Contains(err.Error(), "entity") {
+		t.Errorf("error should mention entity; got %q", err.Error())
+	}
+}
+
+// TestListAccessOnEntityGen_NilName asserts that a nil name returns a
+// validation error from listAccessOnEntityGen.
+func TestListAccessOnEntityGen_NilName(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	err := listAccessOnEntityGen(ctx, nil)
+	if err == nil {
+		t.Fatalf("expected validation error for nil name, got nil")
+	}
+}
