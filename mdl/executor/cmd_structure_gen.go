@@ -37,9 +37,9 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -167,7 +167,7 @@ func structureDepth2Gen(ctx *ExecContext, modules []structureModule) error {
 		structurePages(ctx, m.Name)
 		structureSnippets(ctx, m.Name)
 
-		outputJavaActions(ctx, m.Name, jaByModule[m.Name], false)
+		outputJavaActionsGen(ctx, m.Name, jaByModule[m.Name], false)
 
 		if consts, ok := constByModule[m.Name]; ok {
 			sortConstants(consts)
@@ -254,7 +254,7 @@ func structureDepth3Gen(ctx *ExecContext, modules []structureModule) error {
 		structureWorkflows(ctx, m.Name, wfByModule[m.Name], true)
 		structurePages(ctx, m.Name)
 		structureSnippets(ctx, m.Name)
-		outputJavaActions(ctx, m.Name, jaByModule[m.Name], true)
+		outputJavaActionsGen(ctx, m.Name, jaByModule[m.Name], true)
 
 		if consts, ok := constByModule[m.Name]; ok {
 			sortConstants(consts)
@@ -331,12 +331,17 @@ func loadStructureSharedDataGen(ctx *ExecContext, h *ContainerHierarchy) (
 		eventsByModule[modName] = append(eventsByModule[modName], ev)
 	}
 
-	allJavaActions, _ := ctx.Backend.ListJavaActionsFull()
+	// gen JavaAction loses container linkage during BSON roundtrip; use
+	// the cache helper which joins through the MPR Unit table to recover it.
+	jaPairs, _ := listJavaActionsWithContainerGen(ctx)
 	jaByModule = make(structureJaMapGen)
-	for _, ja := range allJavaActions {
-		modID := h.FindModuleID(ja.ContainerID)
+	for _, p := range jaPairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
-		jaByModule[modName] = append(jaByModule[modName], ja)
+		jaByModule[modName] = append(jaByModule[modName], p.Elem)
 	}
 
 	allWorkflows, _ := ctx.Backend.ListWorkflows()
@@ -504,6 +509,6 @@ type (
 	structureEnumMapGen  = map[string][]*model.Enumeration
 	structureConstMapGen = map[string][]*model.Constant
 	structureEventMapGen = map[string][]*model.ScheduledEvent
-	structureJaMapGen    = map[string][]*javaactions.JavaAction
+	structureJaMapGen    = map[string][]*genJA.JavaAction
 	structureWfMapGen    = map[string][]*workflows.Workflow
 )
