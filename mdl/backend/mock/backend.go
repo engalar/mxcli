@@ -18,7 +18,6 @@ import (
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 var _ backend.FullBackend = (*MockBackend)(nil)
@@ -235,14 +234,9 @@ type MockBackend struct {
 	ListJavaScriptActionsGenFunc      func() ([]*genJSA.JavaScriptAction, error)
 	ReadJavaScriptActionByNameGenFunc func(qualifiedName string) (*genJSA.JavaScriptAction, error)
 
-	// WorkflowBackend (legacy sdk-typed surface)
-	ListWorkflowsFunc  func() ([]*workflows.Workflow, error)
-	GetWorkflowFunc    func(id model.ID) (*workflows.Workflow, error)
-	CreateWorkflowFunc func(wf *workflows.Workflow) error
-	UpdateWorkflowFunc func(wf *workflows.Workflow) error
-	DeleteWorkflowFunc func(id model.ID) error
-
-	// Stage 3.3.3.C1 — gen-typed WorkflowBackend surface
+	// WorkflowBackend (gen-typed surface; pure-ID DeleteWorkflow lives
+	// alongside the gen-typed quartet after Stage 3.3.3.E1).
+	DeleteWorkflowFunc    func(id model.ID) error
 	ListWorkflowsGenFunc  func() ([]*genWf.Workflow, error)
 	GetWorkflowGenFunc    func(id model.ID) (*genWf.Workflow, error)
 	CreateWorkflowGenFunc func(parentUUID, containmentName string, wf *genWf.Workflow) error
@@ -296,10 +290,9 @@ type MockBackend struct {
 	OpenWorkflowForMutationFunc func(unitID model.ID) (backend.WorkflowMutator, error)
 
 	// WidgetSerializationBackend
-	SerializeWidgetFunc           func(w pages.Widget) (any, error)
-	SerializeClientActionFunc     func(a pages.ClientAction) (any, error)
-	SerializeDataSourceFunc       func(ds pages.DataSource) (any, error)
-	SerializeWorkflowActivityFunc    func(a workflows.WorkflowActivity) (any, error)
+	SerializeWidgetFunc              func(w pages.Widget) (any, error)
+	SerializeClientActionFunc        func(a pages.ClientAction) (any, error)
+	SerializeDataSourceFunc          func(ds pages.DataSource) (any, error)
 	SerializeWorkflowActivityGenFunc func(a element.Element) (any, error)
 
 	// WidgetBuilderBackend

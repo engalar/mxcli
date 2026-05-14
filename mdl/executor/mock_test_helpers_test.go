@@ -19,7 +19,6 @@ import (
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // --- Context construction ---
@@ -249,13 +248,6 @@ func mkLayout(containerID model.ID, name string) *pages.Layout {
 	}
 }
 
-func mkWorkflow(containerID model.ID, name string) *workflows.Workflow {
-	return &workflows.Workflow{
-		BaseElement: model.BaseElement{ID: nextID("wf")},
-		ContainerID: containerID,
-		Name:        name,
-	}
-}
 
 // mkWorkflowGen builds a gen-typed Workflow alongside the sdk fixture.
 // Stage 3.3.3.C6/C7: tests for cmd_rename, validate_duplicates,

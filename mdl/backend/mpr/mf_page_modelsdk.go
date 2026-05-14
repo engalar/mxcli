@@ -10,7 +10,6 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // All Create*/Update* methods in this file produce canonical BSON via the
@@ -129,39 +128,9 @@ func (b *MprBackend) updateSnippetViaModelsdk(snippet *pages.Snippet) error {
 	return b.writeUnitContents(snippet.ID, contents)
 }
 
-// ── Workflow ──────────────────────────────────────────────────────────────
-
-func (b *MprBackend) createWorkflowViaModelsdk(wf *workflows.Workflow) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	if wf.ID == "" {
-		wf.ID = model.ID(modelsdkmpr.GenerateID())
-	}
-	wf.TypeName = "Workflows$Workflow"
-	contents, err := mpr.SerializeWorkflow(wf)
-	if err != nil {
-		return fmt.Errorf("serialize workflow: %w", err)
-	}
-	return b.msdkWriter.InsertUnit(
-		string(wf.ID),
-		string(wf.ContainerID),
-		"Documents",
-		"Workflows$Workflow",
-		contents,
-	)
-}
-
-func (b *MprBackend) updateWorkflowViaModelsdk(wf *workflows.Workflow) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	contents, err := mpr.SerializeWorkflow(wf)
-	if err != nil {
-		return fmt.Errorf("serialize workflow: %w", err)
-	}
-	return b.writeUnitContents(wf.ID, contents)
-}
+// Workflow create/update helpers retired in Stage 3.3.3.E1; the gen-typed
+// path (mprrepos.NewWorkflowRepository(...).Create / .Update) is the only
+// production write surface.
 
 // ── DomainModel ───────────────────────────────────────────────────────────
 

@@ -13,7 +13,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 func TestBuildJumpToGenActivity(t *testing.T) {
@@ -635,24 +634,14 @@ func TestExecCreateWorkflowGen_NewUnit_RoutesThroughCreate(t *testing.T) {
 func TestExecCreateWorkflowGen_ExistingWithoutModify_Errors(t *testing.T) {
 	mod := mkModule("BPModule")
 	wfGen := mkWorkflowGen("WF1", "Approve")
-	wfSdk := mkWorkflow(mod.ID, "Approve")
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListWorkflowsGenFunc: func() ([]*genWf.Workflow, error) {
-			return []*genWf.Workflow{wfGen}, nil
-		},
-		GetWorkflowFunc: func(id model.ID) (*workflows.Workflow, error) {
-			if string(id) == "WF1" {
-				return wfSdk, nil
-			}
-			return nil, nil
-		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, wfSdk.ContainerID, mod.ID)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Workflows = makeWorkflowsRepo([]*genWf.Workflow{wfGen}, mod.ID)
 
 	stmt := &ast.CreateWorkflowStmt{
 		Name: ast.QualifiedName{Module: "BPModule", Name: "Approve"},
@@ -669,18 +658,11 @@ func TestExecCreateWorkflowGen_ExistingWithoutModify_Errors(t *testing.T) {
 func TestExecCreateWorkflowGen_ExistingWithModify_RoutesThroughUpdate(t *testing.T) {
 	mod := mkModule("BPModule")
 	wfGen := mkWorkflowGen("WF1", "Approve")
-	wfSdk := mkWorkflow(mod.ID, "Approve")
 	updateCalled := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListWorkflowsGenFunc: func() ([]*genWf.Workflow, error) {
-			return []*genWf.Workflow{wfGen}, nil
-		},
-		GetWorkflowFunc: func(id model.ID) (*workflows.Workflow, error) {
-			return wfSdk, nil
-		},
 		UpdateWorkflowGenFunc: func(wf *genWf.Workflow) error {
 			updateCalled = true
 			if wf.ID() != "WF1" {
@@ -690,8 +672,8 @@ func TestExecCreateWorkflowGen_ExistingWithModify_RoutesThroughUpdate(t *testing
 		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, wfSdk.ContainerID, mod.ID)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Workflows = makeWorkflowsRepo([]*genWf.Workflow{wfGen}, mod.ID)
 
 	stmt := &ast.CreateWorkflowStmt{
 		Name:           ast.QualifiedName{Module: "BPModule", Name: "Approve"},
@@ -710,18 +692,11 @@ func TestExecCreateWorkflowGen_ExistingWithModify_RoutesThroughUpdate(t *testing
 func TestExecDropWorkflowGen_DeletesByID(t *testing.T) {
 	mod := mkModule("BPModule")
 	wfGen := mkWorkflowGen("WF1", "Approve")
-	wfSdk := mkWorkflow(mod.ID, "Approve")
 	deleted := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListWorkflowsGenFunc: func() ([]*genWf.Workflow, error) {
-			return []*genWf.Workflow{wfGen}, nil
-		},
-		GetWorkflowFunc: func(id model.ID) (*workflows.Workflow, error) {
-			return wfSdk, nil
-		},
 		DeleteWorkflowFunc: func(id model.ID) error {
 			deleted = true
 			if string(id) != "WF1" {
@@ -731,8 +706,8 @@ func TestExecDropWorkflowGen_DeletesByID(t *testing.T) {
 		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, wfSdk.ContainerID, mod.ID)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Workflows = makeWorkflowsRepo([]*genWf.Workflow{wfGen}, mod.ID)
 
 	stmt := &ast.DropWorkflowStmt{Name: ast.QualifiedName{Module: "BPModule", Name: "Approve"}}
 	if err := execDropWorkflowGen(ctx, stmt); err != nil {
