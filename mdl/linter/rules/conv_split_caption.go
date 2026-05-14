@@ -8,7 +8,8 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
 // ExclusiveSplitCaptionRule flags exclusive splits without meaningful captions.
@@ -40,22 +41,26 @@ func (r *ExclusiveSplitCaptionRule) Check(ctx *linter.LintContext) []linter.Viol
 			continue
 		}
 
-		fullMF, err := reader.GetMicroflow(model.ID(mf.ID))
-		if err != nil || fullMF == nil || fullMF.ObjectCollection == nil {
+		fullMF, err := reader.GetMicroflowGen(model.ID(mf.ID))
+		if err != nil || fullMF == nil {
+			continue
+		}
+		oc, _ := fullMF.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if oc == nil {
 			continue
 		}
 
-		findEmptySplitCaptions(fullMF.ObjectCollection.Objects, mf, r, &violations)
+		findEmptySplitCaptions(oc.ObjectsItems(), mf, r, &violations)
 	}
 
 	return violations
 }
 
-func findEmptySplitCaptions(objects []microflows.MicroflowObject, mf linter.Microflow, r *ExclusiveSplitCaptionRule, violations *[]linter.Violation) {
+func findEmptySplitCaptions(objects []element.Element, mf linter.Microflow, r *ExclusiveSplitCaptionRule, violations *[]linter.Violation) {
 	for _, obj := range objects {
 		switch act := obj.(type) {
-		case *microflows.ExclusiveSplit:
-			caption := strings.TrimSpace(act.Caption)
+		case *genMf.ExclusiveSplit:
+			caption := strings.TrimSpace(act.Caption())
 			if caption == "" {
 				*violations = append(*violations, linter.Violation{
 					RuleID:   r.ID(),
@@ -72,9 +77,9 @@ func findEmptySplitCaptions(objects []microflows.MicroflowObject, mf linter.Micr
 					Suggestion: "Set a caption that describes the decision, e.g., 'Is the order valid?'",
 				})
 			}
-		case *microflows.LoopedActivity:
-			if act.ObjectCollection != nil {
-				findEmptySplitCaptions(act.ObjectCollection.Objects, mf, r, violations)
+		case *genMf.LoopedActivity:
+			if body, ok := act.ObjectCollection().(*genMf.MicroflowObjectCollection); ok && body != nil {
+				findEmptySplitCaptions(body.ObjectsItems(), mf, r, violations)
 			}
 		}
 	}
