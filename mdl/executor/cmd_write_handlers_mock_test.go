@@ -14,7 +14,7 @@ import (
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/security"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
 func TestExecCreateModule_Mock(t *testing.T) {
@@ -505,16 +505,15 @@ func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
 		},
 	}
 
+	ms := genSec.NewModuleSecurity()
+
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
 		},
-		GetModuleSecurityFunc: func(moduleID model.ID) (*security.ModuleSecurity, error) {
-			return &security.ModuleSecurity{
-				BaseElement: model.BaseElement{ID: nextID("ms")},
-				ContainerID: moduleID,
-			}, nil
+		GetModuleSecurityGenFunc: func(moduleID model.ID) (*genSec.ModuleSecurity, error) {
+			return ms, nil
 		},
 		AddModuleRoleFunc: func(moduleSecurityID model.ID, name, description string) error {
 			return nil

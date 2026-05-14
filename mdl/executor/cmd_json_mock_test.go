@@ -7,11 +7,12 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/security"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -318,62 +319,67 @@ func TestShowJsonStructures_Mock_JSON(t *testing.T) {
 }
 
 func TestShowUserRoles_Mock_JSON(t *testing.T) {
-	ps := &security.ProjectSecurity{
-		BaseElement: model.BaseElement{ID: nextID("ps")},
-		UserRoles: []*security.UserRole{
-			{Name: "Administrator"},
-		},
-	}
+	ps := genSec.NewProjectSecurity()
+	ur := genSec.NewUserRole()
+	ur.SetName("Administrator")
+	ps.AddUserRoles(ur)
 
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return ps, nil },
+	}
 	mb := &mock.MockBackend{
-		IsConnectedFunc:        func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) { return ps, nil },
+		IsConnectedFunc: func() bool { return true },
 	}
 
-	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON))
-	assertNoError(t, listUserRoles(ctx))
+	ctx, buf := newMockCtx(t, withBackend(mb), withSecurityRepo(sec), withFormat(FormatJSON))
+	assertNoError(t, listUserRolesGen(ctx))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Administrator")
 }
 
 func TestShowModuleRoles_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
-	ms := &security.ModuleSecurity{
-		BaseElement: model.BaseElement{ID: nextID("ms")},
-		ContainerID: mod.ID,
-		ModuleRoles: []*security.ModuleRole{
-			{Name: "User"},
+	ms := genSec.NewModuleSecurity()
+	mr := genSec.NewModuleRole()
+	mr.SetName("User")
+	ms.AddModuleRoles(mr)
+
+	sec := &repostesting.RecordingSecurityRepository{
+		GetModuleSecFunc: func(id model.ID) (*genSec.ModuleSecurity, error) {
+			if id == mod.ID {
+				return ms, nil
+			}
+			return nil, nil
 		},
 	}
-
 	mb := &mock.MockBackend{
-		IsConnectedFunc:        func() bool { return true },
-		ListModuleSecurityFunc: func() ([]*security.ModuleSecurity, error) { return []*security.ModuleSecurity{ms}, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 	}
 
 	h := mkHierarchy(mod)
-	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listModuleRoles(ctx, ""))
+	ctx, buf := newMockCtx(t, withBackend(mb), withSecurityRepo(sec), withFormat(FormatJSON), withHierarchy(h))
+	assertNoError(t, listModuleRolesGen(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "User")
 }
 
 func TestShowDemoUsers_Mock_JSON(t *testing.T) {
-	ps := &security.ProjectSecurity{
-		BaseElement:     model.BaseElement{ID: nextID("ps")},
-		EnableDemoUsers: true,
-		DemoUsers: []*security.DemoUser{
-			{UserName: "demo_admin"},
-		},
-	}
+	ps := genSec.NewProjectSecurity()
+	ps.SetEnableDemoUsers(true)
+	du := genSec.NewDemoUser()
+	du.SetUserName("demo_admin")
+	ps.AddDemoUsers(du)
 
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return ps, nil },
+	}
 	mb := &mock.MockBackend{
-		IsConnectedFunc:        func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) { return ps, nil },
+		IsConnectedFunc: func() bool { return true },
 	}
 
-	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON))
-	assertNoError(t, listDemoUsers(ctx))
+	ctx, buf := newMockCtx(t, withBackend(mb), withSecurityRepo(sec), withFormat(FormatJSON))
+	assertNoError(t, listDemoUsersGen(ctx))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "demo_admin")
 }
