@@ -6,6 +6,9 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
+	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
 const (
@@ -91,18 +94,99 @@ func TestJavaActionRepo_GetContainerUUID_NonEmpty(t *testing.T) {
 	}
 }
 
-func TestJavaActionRepo_WriterStubs_ReturnNotImplemented(t *testing.T) {
+func TestJavaActionRepo_Create_NilElement_Errors(t *testing.T) {
 	w := openTestWriter(t)
 	repo := NewJavaActionRepository(w)
 	if err := repo.Create("", "", nil); err == nil {
-		t.Error("Create: expected not-implemented error, got nil")
+		t.Error("Create(nil): expected error, got nil")
 	}
 	if err := repo.Update(nil); err == nil {
-		t.Error("Update: expected not-implemented error, got nil")
+		t.Error("Update(nil): expected error, got nil")
 	}
-	if err := repo.Delete("dummy"); err == nil {
-		t.Error("Delete: expected not-implemented error, got nil")
+}
+
+// TestJavaActionRepo_CreateUpdateDeleteCycle exercises the full
+// direct-mode write path against a known module's container UUID.
+// Mirrors the nanoflow cycle test (Phase D template).
+func TestJavaActionRepo_CreateUpdateDeleteCycle(t *testing.T) {
+	w := openTestWriter(t)
+	r := w.ConcreteReader()
+	mods, err := r.ListModules()
+	if err != nil {
+		t.Fatalf("ListModules: %v", err)
 	}
+
+	var parentID string
+	for _, m := range mods {
+		if m.Name == "MyFirstModule" {
+			parentID = m.ID
+			break
+		}
+	}
+	if parentID == "" {
+		t.Skip("fixture missing MyFirstModule")
+	}
+
+	repo := NewJavaActionRepository(w)
+	baseline, err := repo.ListAll()
+	if err != nil {
+		t.Fatalf("ListAll baseline: %v", err)
+	}
+
+	newJA := newEmptyJavaAction(t, "RepoJavaActionCycleTest")
+	if err := repo.Create(parentID, "Documents", newJA); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	afterCreate, err := repo.ListAll()
+	if err != nil {
+		t.Fatalf("ListAll after Create: %v", err)
+	}
+	if len(afterCreate) != len(baseline)+1 {
+		t.Errorf("after Create: count = %d, want %d", len(afterCreate), len(baseline)+1)
+	}
+
+	got, err := repo.Get(model.ID(newJA.ID()))
+	if err != nil {
+		t.Fatalf("Get(newJA): %v", err)
+	}
+	if got.Name() != "RepoJavaActionCycleTest" {
+		t.Errorf("post-Create Name = %q, want RepoJavaActionCycleTest", got.Name())
+	}
+
+	got.SetName("RepoJavaActionCycleTestUpdated")
+	if err := repo.Update(got); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	got2, err := repo.Get(model.ID(newJA.ID()))
+	if err != nil {
+		t.Fatalf("Get after Update: %v", err)
+	}
+	if got2.Name() != "RepoJavaActionCycleTestUpdated" {
+		t.Errorf("post-Update Name = %q, want RepoJavaActionCycleTestUpdated", got2.Name())
+	}
+
+	if err := repo.Delete(model.ID(newJA.ID())); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	afterDelete, err := repo.ListAll()
+	if err != nil {
+		t.Fatalf("ListAll after Delete: %v", err)
+	}
+	if len(afterDelete) != len(baseline) {
+		t.Errorf("after Delete: count = %d, want baseline %d", len(afterDelete), len(baseline))
+	}
+}
+
+// newEmptyJavaAction returns a freshly-minted *genJA.JavaAction with a
+// fresh ID, the canonical type name, and the given simple name set.
+func newEmptyJavaAction(t *testing.T, name string) *genJA.JavaAction {
+	t.Helper()
+	ja := genJA.NewJavaAction()
+	ja.SetID(element.ID(mmpr.GenerateID()))
+	ja.SetTypeName(javaActionTypeName)
+	ja.SetName(name)
+	return ja
 }
 
 func TestJavaScriptActionRepo_ListAll_FixtureCount(t *testing.T) {
