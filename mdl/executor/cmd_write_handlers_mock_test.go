@@ -7,10 +7,12 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 )
@@ -130,41 +132,50 @@ func TestExecDropEntity_Mock(t *testing.T) {
 	}
 }
 
+// Stage 3.2.6.5 → Followup D rewrite: cmd_microflows_drop.go now reads
+// from ctx.Microflows (modelsdk repo) and deletes via
+// deleteMicroflowViaRepoOrBackend, which itself routes to
+// ctx.Microflows.Delete when the repo is wired. Test injects a
+// RecordingMicroflowRepository to seed the existing microflow + assert
+// the Delete call.
 func TestExecDropMicroflow_Mock(t *testing.T) {
-	// Stage 3.2.6.5: skipped pending gen-side rewrite. The legacy
-	// `execDropMicroflow` walked `ctx.Backend.ListMicroflows` (sdk-typed);
-	// the new path reads from `ctx.Microflows` (modelsdk repo) and
-	// deletes via `ctx.Microflows.Delete`. The sdk-typed mock backend
-	// surface seeded here (ListMicroflowsFunc / DeleteMicroflowFunc)
-	// is never reached. Re-express against a gen-typed mock repo when
-	// one becomes available.
-	t.Skip("rewrite pending: cmd_microflows_drop.go now reads from ctx.Microflows; needs gen-typed mock repo coverage")
 	mod := mkModule("MyModule")
-	mf := mkMicroflow(mod.ID, "DoSomething")
+	mf := mkMicroflowGen("DoSomething")
 
 	h := mkHierarchy(mod)
-	withContainer(h, mf.ContainerID, mod.ID)
+	// Hierarchy must contain the (containerID → moduleID) link the
+	// drop handler walks: `h.GetModuleName(h.FindModuleID(containerID))`.
+	// We resolve the container via GetContainerUUIDFunc below, returning
+	// mod.ID directly so FindModuleID falls through to the moduleIDs map.
 
-	called := false
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
-			return []*microflows.Microflow{mf}, nil
+	mfRepo := &repostesting.RecordingMicroflowRepository{
+		ListAllFunc: func() ([]*genMf.Microflow, error) {
+			return []*genMf.Microflow{mf}, nil
 		},
-		DeleteMicroflowFunc: func(id model.ID) error {
-			called = true
-			return nil
+		GetContainerUUIDFunc: func(id model.ID) (model.ID, error) {
+			if id == model.ID(mf.ID()) {
+				return mod.ID, nil
+			}
+			return "", nil
 		},
 	}
 
-	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+	}
+
+	ctx, buf := newMockCtx(t,
+		withBackend(mb),
+		withHierarchy(h),
+		withMicroflowsRepo(mfRepo),
+	)
 	err := execDropMicroflow(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
 	})
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped microflow:")
-	if !called {
-		t.Fatal("DeleteMicroflowFunc was not called")
+	if len(mfRepo.Deleted) != 1 || mfRepo.Deleted[0] != model.ID(mf.ID()) {
+		t.Fatalf("Repo.Delete must have been called once with the microflow ID; got %v", mfRepo.Deleted)
 	}
 }
 
@@ -459,51 +470,45 @@ func TestExecDropAssociation_Mock_NotFound(t *testing.T) {
 // The fix records the UnitID of dropped microflows on the executor cache and
 // reuses it when a subsequent CREATE OR REPLACE/MODIFY targets the same
 // qualified name, so the delete+insert behaves like an in-place update.
+// Stage 3.2.6.3a → Followup D rewrite: DROP MICROFLOW followed by
+// CREATE OR MODIFY MICROFLOW for the same qualified name must reuse the
+// dropped UnitID, otherwise Studio Pro reports MPR corruption (see
+// docs/MXCLI_MPR_CORRUPTION_PROMPT_0015.md). The new implementation
+// keeps the dropped UnitID in ctx.Cache.droppedMicroflows and feeds it
+// back via consumeDroppedMicroflow inside execCreateMicroflowGen.
 func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
-	// Stage 3.2.6.3a: skipped pending gen-side rewrite. The legacy
-	// `execCreateMicroflow` (sdk/microflows) is being deleted; the new
-	// `execCreateMicroflowGen` reads from ctx.Microflows (modelsdk
-	// repository) rather than the sdk-typed mock backend's
-	// ListMicroflowsFunc / CreateMicroflowFunc, so the mock surface
-	// exercised here no longer matches the dispatch path.
-	//
-	// The MPR-corruption regression this test guards (DROP then CREATE
-	// OR MODIFY in the same session must reuse the dropped UnitID,
-	// see docs/MXCLI_MPR_CORRUPTION_PROMPT_0015.md) needs to be
-	// re-expressed against ctx.Microflows. Tracking: rewrite for gen
-	// path in a follow-up commit before this skip is removed.
-	t.Skip("rewrite pending: cmd_microflows_create_gen.go needs equivalent dropped-Unit reuse regression test")
 	mod := mkModule("MyModule")
-	mf := mkMicroflow(mod.ID, "DoSomething")
-	originalID := mf.ID
-	mf.AllowedModuleRoles = []model.ID{"MyModule.Admin", "MyModule.User"}
+	mf := mkMicroflowGen("DoSomething")
+	originalID := model.ID(mf.ID())
+	mf.SetAllowedModuleRolesQualifiedNames([]string{"MyModule.Admin", "MyModule.User"})
 
 	h := mkHierarchy(mod)
-	withContainer(h, mf.ContainerID, mod.ID)
 
-	listedMicroflows := []*microflows.Microflow{mf}
-	var createdID model.ID
-	var createdRoles []model.ID
+	listedMicroflows := []*genMf.Microflow{mf}
+
+	mfRepo := &repostesting.RecordingMicroflowRepository{
+		ListAllFunc: func() ([]*genMf.Microflow, error) {
+			return listedMicroflows, nil
+		},
+		GetContainerUUIDFunc: func(id model.ID) (model.ID, error) {
+			if id == originalID {
+				return mod.ID, nil
+			}
+			return "", nil
+		},
+		DeleteFunc: func(id model.ID) error {
+			// Simulate real deletion: hide the microflow from subsequent
+			// ListAll calls so CREATE OR MODIFY sees no existing unit
+			// (matching the bug reproduction exactly).
+			listedMicroflows = nil
+			return nil
+		},
+	}
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
-		},
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
-			return listedMicroflows, nil
-		},
-		DeleteMicroflowFunc: func(id model.ID) error {
-			// Simulate real deletion: hide the microflow from subsequent
-			// ListMicroflows calls so CREATE OR MODIFY sees no existing unit
-			// (matching the bug reproduction exactly).
-			listedMicroflows = nil
-			return nil
-		},
-		CreateMicroflowFunc: func(m *microflows.Microflow) error {
-			createdID = m.ID
-			createdRoles = cloneRoleIDs(m.AllowedModuleRoles)
-			return nil
 		},
 		GetModuleSecurityFunc: func(moduleID model.ID) (*security.ModuleSecurity, error) {
 			return &security.ModuleSecurity{
@@ -522,15 +527,11 @@ func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
 		},
 	}
 
-	// Create ExecContext directly — trackCreatedMicroflow is now a method on ExecContext.
-	var out bytesWriter
-	ctx := &ExecContext{
-		Context: t.Context(),
-		Backend: mb,
-		Output:  &out,
-		Format:  FormatTable,
-	}
-	withHierarchy(h)(ctx)
+	ctx, _ := newMockCtx(t,
+		withBackend(mb),
+		withHierarchy(h),
+		withMicroflowsRepo(mfRepo),
+	)
 
 	if err := execDropMicroflow(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
@@ -556,12 +557,13 @@ func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
 		t.Fatalf("CREATE OR MODIFY MICROFLOW failed: %v", err)
 	}
 
-	if createdID != originalID {
-		t.Fatalf("CREATE OR MODIFY must reuse dropped UnitID: got %q, want %q",
-			createdID, originalID)
+	if len(mfRepo.Created) != 1 {
+		t.Fatalf("CREATE OR MODIFY must call repo.Create exactly once; got %d", len(mfRepo.Created))
 	}
-	if len(createdRoles) != 2 || createdRoles[0] != "MyModule.Admin" || createdRoles[1] != "MyModule.User" {
-		t.Fatalf("CREATE OR MODIFY must preserve dropped allowed roles: got %v", createdRoles)
+	createdID := element.ID(originalID)
+	if mfRepo.Created[0].Microflow.ID() != createdID {
+		t.Fatalf("CREATE OR MODIFY must reuse dropped UnitID: got %q, want %q",
+			mfRepo.Created[0].Microflow.ID(), createdID)
 	}
 
 	// The cache entry must be consumed so repeated CREATEs don't collide.
@@ -572,33 +574,33 @@ func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
 	}
 }
 
+// Stage 3.2.6.3a → Followup D rewrite: CREATE OR MODIFY MICROFLOW for an
+// existing microflow must preserve the existing AllowedModuleRoles
+// rather than wipe them to the module defaults.
 func TestCreateOrModifyMicroflowPreservesAllowedRoles(t *testing.T) {
-	// Stage 3.2.6.3a: skipped — same reason as
-	// TestDropThenCreatePreservesMicroflowUnitID above. The legacy
-	// `execCreateMicroflow` is being deleted; this regression must be
-	// re-expressed against the gen-path repository, not the sdk-typed
-	// mock backend's UpdateMicroflowFunc. Tracking: rewrite for gen
-	// path in a follow-up before removing this skip.
-	t.Skip("rewrite pending: cmd_microflows_create_gen.go needs equivalent allowed-roles preservation regression test")
 	mod := mkModule("MyModule")
-	mf := mkMicroflow(mod.ID, "DoSomething")
-	mf.AllowedModuleRoles = []model.ID{"MyModule.Admin"}
+	mf := mkMicroflowGen("DoSomething")
+	mf.SetAllowedModuleRolesQualifiedNames([]string{"MyModule.Admin"})
+	originalID := model.ID(mf.ID())
 
 	h := mkHierarchy(mod)
-	withContainer(h, mf.ContainerID, mod.ID)
 
-	var updatedRoles []model.ID
+	mfRepo := &repostesting.RecordingMicroflowRepository{
+		ListAllFunc: func() ([]*genMf.Microflow, error) {
+			return []*genMf.Microflow{mf}, nil
+		},
+		GetContainerUUIDFunc: func(id model.ID) (model.ID, error) {
+			if id == originalID {
+				return mod.ID, nil
+			}
+			return "", nil
+		},
+	}
+
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
-		},
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
-			return []*microflows.Microflow{mf}, nil
-		},
-		UpdateMicroflowFunc: func(updated *microflows.Microflow) error {
-			updatedRoles = cloneRoleIDs(updated.AllowedModuleRoles)
-			return nil
 		},
 		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) {
 			return nil, nil
@@ -608,14 +610,11 @@ func TestCreateOrModifyMicroflowPreservesAllowedRoles(t *testing.T) {
 		},
 	}
 
-	exec := New(&bytesWriter{})
-	ctx := &ExecContext{
-		Context: t.Context(),
-		Backend: mb,
-		Output:  exec.output,
-		Format:  FormatTable,
-	}
-	withHierarchy(h)(ctx)
+	ctx, _ := newMockCtx(t,
+		withBackend(mb),
+		withHierarchy(h),
+		withMicroflowsRepo(mfRepo),
+	)
 
 	if err := execCreateMicroflowGen(ctx, &ast.CreateMicroflowStmt{
 		Name:           ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
@@ -624,13 +623,12 @@ func TestCreateOrModifyMicroflowPreservesAllowedRoles(t *testing.T) {
 		t.Fatalf("CREATE OR MODIFY MICROFLOW failed: %v", err)
 	}
 
-	if len(updatedRoles) != 1 || updatedRoles[0] != "MyModule.Admin" {
-		t.Fatalf("expected existing allowed roles to be preserved, got %v", updatedRoles)
+	if len(mfRepo.Updated) != 1 {
+		t.Fatalf("CREATE OR MODIFY must call repo.Update exactly once; got %d", len(mfRepo.Updated))
+	}
+	got := mfRepo.Updated[0].AllowedModuleRolesQualifiedNames()
+	if len(got) != 1 || got[0] != "MyModule.Admin" {
+		t.Fatalf("expected existing allowed roles to be preserved, got %v", got)
 	}
 }
 
-// bytesWriter is a trivial io.Writer used to satisfy New() in the regression
-// test above. We don't care about captured output for this test.
-type bytesWriter struct{}
-
-func (*bytesWriter) Write(p []byte) (int, error) { return len(p), nil }
