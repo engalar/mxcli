@@ -22,7 +22,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // makePagesRepo wires a RecordingPageRepository whose ListAll returns
@@ -170,20 +169,20 @@ func TestShowLayouts_Mock_FilterByModule(t *testing.T) {
 	assertContainsStr(t, out, "HR.HRLayout")
 }
 
-// describePage / describeSnippet / describeLayout still use the legacy
-// sdk-typed mock surface — the gen-typed describe handlers are part
-// of the deferred Phase A2-A5 widget formatter rebuild.
+// describePage / describeSnippet / describeLayout were migrated to the
+// gen-typed listPagesWithContainerGen family in Stage 3.3.5.C7b.
+// Leaving the gen repos unset (ctx.Pages == nil etc.) makes the lookup
+// return zero pairs, exercising the not-found path without exposing
+// sdk-typed Page/Snippet/Layout fixtures here.
 
 func TestDescribePage_Mock_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return []*pages.Page{}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	_ = mod
 	assertError(t, describePage(ctx, ast.QualifiedName{Module: "MyModule", Name: "NonExistent"}))
 }
 
@@ -191,12 +190,10 @@ func TestDescribeSnippet_Mock_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc:  func() bool { return true },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return []*pages.Snippet{}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	_ = mod
 	assertError(t, describeSnippet(ctx, ast.QualifiedName{Module: "MyModule", Name: "NonExistent"}))
 }
 
@@ -204,12 +201,10 @@ func TestDescribeLayout_Mock_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListLayoutsFunc: func() ([]*pages.Layout, error) { return []*pages.Layout{}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	_ = mod
 	assertError(t, describeLayout(ctx, ast.QualifiedName{Module: "MyModule", Name: "NonExistent"}))
 }
 
