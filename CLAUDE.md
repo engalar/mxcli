@@ -73,14 +73,6 @@ ModelSDKGo/
 ├── modelsdk.go              # Main public api (open, OpenForWriting, helpers)
 ├── model/                   # Core types: ID, QualifiedName, module, Element interface
 │
-├── api/                     # High-level fluent api (inspired by Mendix Web Extensibility api)
-│   ├── api.go               # ModelAPI entry point with namespace access
-│   ├── domainmodels.go      # EntityBuilder, AssociationBuilder, AttributeBuilder
-│   ├── enumerations.go      # EnumerationBuilder
-│   ├── microflows.go        # MicroflowBuilder
-│   ├── pages.go             # PageBuilder, widget builders
-│   └── modules.go           # ModulesAPI
-│
 ├── sdk/                     # SDK implementation packages (hand-written, ~480 types, 5-10 domains)
 │   ├── domainmodel/         # entity, attribute, association, DomainModel
 │   ├── microflows/          # microflow, nanoflow, activities (60+ types)
@@ -219,23 +211,6 @@ defer reader.Close()
 writer, err := modelsdk.OpenForWriting("/path/to/project.mpr")
 defer writer.Close()
 ```
-
-### High-Level Fluent API (in api/)
-The `api/` package provides a simplified, fluent API inspired by Mendix Web Extensibility Model API:
-
-```go
-modelAPI := api.New(writer)
-module, _ := modelAPI.Modules.GetModule("MyModule")
-modelAPI.SetModule(module)
-
-entity, _ := modelAPI.DomainModels.CreateEntity("Customer").
-    persistent().
-    WithStringAttribute("Name", 100).
-    WithIntegerAttribute("Age").
-    build()
-```
-
-Available namespaces: `DomainModels`, `enumerations`, `microflows`, `pages`, `modules`
 
 ## Code Style Guidelines
 
@@ -484,7 +459,6 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - MDL CLI (`mxcli`) with ANTLR4 parser
 - MDL support for domain model, microflows, pages, and security
 - Security management (module roles, user roles, access control, demo users)
-- High-level fluent API (`api/` package) for simplified model manipulation
 - LSP server with hover, go-to-definition, completion, diagnostics, symbols, folding
 - VS Code extension (`vscode-mdl`) with context menu commands (Run/Check/Selection)
 - Docker build integration (`mxcli docker build`) with PAD patching (Phase 1)
@@ -517,8 +491,6 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 ## Useful Files for Context
 
 - `README.md` - User documentation and API reference
-- `api/api.go` - High-level fluent API entry point
-- `api/domainmodels.go` - Entity/Association/Attribute builders
 - `docs/SDK_EQUIVALENCE.md` - Detailed comparison with TypeScript SDK, gap analysis
 - `sdk/mpr/parser.go` - BSON parsing logic (complex, handles polymorphic types)
 - `sdk/mpr/writer_widgets.go` - Widget BSON serialization
