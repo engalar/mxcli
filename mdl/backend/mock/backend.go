@@ -15,6 +15,7 @@ import (
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
@@ -123,6 +124,22 @@ type MockBackend struct {
 	MoveSnippetFunc        func(snippet *pages.Snippet) error
 	ListBuildingBlocksFunc func() ([]*pages.BuildingBlock, error)
 	ListPageTemplatesFunc  func() ([]*pages.PageTemplate, error)
+
+	// Stage 3.3.5.C1 gen-typed PageBackend surface (additive alongside
+	// the legacy sdk-typed Func fields above; legacy fields will be
+	// retired in Stage 3.3.5.E1).
+	ListPagesGenFunc      func() ([]*genPg.Page, error)
+	GetPageGenFunc        func(id model.ID) (*genPg.Page, error)
+	CreatePageGenFunc     func(parentUUID, containmentName string, page *genPg.Page) error
+	UpdatePageGenFunc     func(page *genPg.Page) error
+	ListLayoutsGenFunc    func() ([]*genPg.Layout, error)
+	GetLayoutGenFunc      func(id model.ID) (*genPg.Layout, error)
+	CreateLayoutGenFunc   func(parentUUID, containmentName string, layout *genPg.Layout) error
+	UpdateLayoutGenFunc   func(layout *genPg.Layout) error
+	ListSnippetsGenFunc   func() ([]*genPg.Snippet, error)
+	GetSnippetGenFunc     func(id model.ID) (*genPg.Snippet, error)
+	CreateSnippetGenFunc  func(parentUUID, containmentName string, snippet *genPg.Snippet) error
+	UpdateSnippetGenFunc  func(snippet *genPg.Snippet) error
 
 	// EnumerationBackend
 	ListEnumerationsFunc  func() ([]*model.Enumeration, error)
