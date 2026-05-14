@@ -35,6 +35,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
@@ -1000,4 +1001,35 @@ func newTextWrapperGen(s string) element.Element {
 	tr.SetText(s)
 	tx.AddTranslations(tr)
 	return tx
+}
+
+// genMicroflowParameterNames returns the parameter names of a gen
+// Microflow, walking the ObjectCollection for MicroflowParameter
+// elements. Mirrors the inline scan in genMicroflowParameters
+// (cmd_microflows_show_gen.go) but returns just the names — that's
+// all the workflow auto-binder needs.
+//
+// Stage 3.3.3.E2 — relocated from cmd_workflows_write_gen.go (which
+// retired in this commit alongside its sdk-typed sibling helpers).
+func genMicroflowParameterNames(mf *genMf.Microflow) []string {
+	if mf == nil {
+		return nil
+	}
+	oc, ok := mf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+	if !ok || oc == nil {
+		return nil
+	}
+	var out []string
+	for _, obj := range oc.ObjectsItems() {
+		if obj == nil {
+			continue
+		}
+		if obj.TypeName() != "Microflows$MicroflowParameter" {
+			continue
+		}
+		if nv, ok := obj.(interface{ NameValue() string }); ok {
+			out = append(out, nv.NameValue())
+		}
+	}
+	return out
 }
