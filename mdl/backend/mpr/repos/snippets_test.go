@@ -116,6 +116,70 @@ func TestSnippetRepo_CreateUpdateDeleteCycle(t *testing.T) {
 	}
 }
 
+func TestSnippetRepo_ListAll_FixtureCount(t *testing.T) {
+	w := openTestWriter(t)
+	repo := NewSnippetRepository(w)
+	got, err := repo.ListAll()
+	if err != nil {
+		t.Fatalf("ListAll: %v", err)
+	}
+	if len(got) != fixtureSnippetCount {
+		t.Errorf("ListAll: got %d snippets, want %d", len(got), fixtureSnippetCount)
+	}
+}
+
+func TestSnippetRepo_FindByQualifiedName_FreshSnippet(t *testing.T) {
+	w := openTestWriter(t)
+	r := w.ConcreteReader()
+	mods, _ := r.ListModules()
+	var parentID string
+	for _, m := range mods {
+		if m.Name == "MyFirstModule" {
+			parentID = m.ID
+			break
+		}
+	}
+	if parentID == "" {
+		t.Skip("fixture missing MyFirstModule")
+	}
+
+	repo := NewSnippetRepository(w)
+	probe := newEmptySnippet(t, "QNSnippetProbe")
+	if err := repo.Create(parentID, "Documents", probe); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := repo.FindByQualifiedName("MyFirstModule.QNSnippetProbe")
+	if err != nil {
+		t.Fatalf("FindByQualifiedName: %v", err)
+	}
+	if got == nil {
+		t.Fatal("FindByQualifiedName returned nil for known snippet")
+	}
+	if got.ID() != probe.ID() {
+		t.Errorf("FindByQualifiedName ID = %s, want %s", got.ID(), probe.ID())
+	}
+}
+
+func TestSnippetRepo_GetContainerUUID_NonEmpty(t *testing.T) {
+	w := openTestWriter(t)
+	repo := NewSnippetRepository(w)
+	all, err := repo.ListAll()
+	if err != nil {
+		t.Fatalf("ListAll: %v", err)
+	}
+	if len(all) == 0 {
+		t.Fatal("fixture has no snippets")
+	}
+	cid, err := repo.GetContainerUUID(model.ID(all[0].ID()))
+	if err != nil {
+		t.Fatalf("GetContainerUUID: %v", err)
+	}
+	if cid == "" {
+		t.Error("GetContainerUUID returned empty container UUID")
+	}
+}
+
 func newEmptySnippet(t *testing.T, name string) *genPg.Snippet {
 	t.Helper()
 	s := genPg.NewSnippet()

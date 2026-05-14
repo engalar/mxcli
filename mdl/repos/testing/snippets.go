@@ -25,17 +25,22 @@ type SnippetMoveCall struct {
 type RecordingSnippetRepository struct {
 	GotIDs       []model.ID
 	ListedModule []model.ID
+	ListedAll    int
+	FoundQNs     []string
 	Created      []SnippetCreateCall
 	Updated      []*genPg.Snippet
 	Deleted      []model.ID
 	Moved        []SnippetMoveCall
 
-	GetFunc    func(model.ID) (*genPg.Snippet, error)
-	ListFunc   func(model.ID) ([]*genPg.Snippet, error)
-	CreateFunc func(SnippetCreateCall) error
-	UpdateFunc func(*genPg.Snippet) error
-	DeleteFunc func(model.ID) error
-	MoveFunc   func(SnippetMoveCall) error
+	GetFunc                 func(model.ID) (*genPg.Snippet, error)
+	ListFunc                func(model.ID) ([]*genPg.Snippet, error)
+	ListAllFunc             func() ([]*genPg.Snippet, error)
+	FindByQualifiedNameFunc func(string) (*genPg.Snippet, error)
+	GetContainerUUIDFunc    func(model.ID) (model.ID, error)
+	CreateFunc              func(SnippetCreateCall) error
+	UpdateFunc              func(*genPg.Snippet) error
+	DeleteFunc              func(model.ID) error
+	MoveFunc                func(SnippetMoveCall) error
 }
 
 var _ repos.SnippetRepository = (*RecordingSnippetRepository)(nil)
@@ -54,6 +59,29 @@ func (m *RecordingSnippetRepository) List(moduleID model.ID) ([]*genPg.Snippet, 
 		return m.ListFunc(moduleID)
 	}
 	return nil, nil
+}
+
+func (m *RecordingSnippetRepository) ListAll() ([]*genPg.Snippet, error) {
+	m.ListedAll++
+	if m.ListAllFunc != nil {
+		return m.ListAllFunc()
+	}
+	return nil, nil
+}
+
+func (m *RecordingSnippetRepository) FindByQualifiedName(qn string) (*genPg.Snippet, error) {
+	m.FoundQNs = append(m.FoundQNs, qn)
+	if m.FindByQualifiedNameFunc != nil {
+		return m.FindByQualifiedNameFunc(qn)
+	}
+	return nil, nil
+}
+
+func (m *RecordingSnippetRepository) GetContainerUUID(id model.ID) (model.ID, error) {
+	if m.GetContainerUUIDFunc != nil {
+		return m.GetContainerUUIDFunc(id)
+	}
+	return "", nil
 }
 
 func (m *RecordingSnippetRepository) Create(parentUUID string, containmentName string, s *genPg.Snippet) error {

@@ -130,6 +130,7 @@ type RecordingPageRepository struct {
 	ListFunc                func(model.ID) ([]*genPg.Page, error)
 	ListAllFunc             func() ([]*genPg.Page, error)
 	FindByQualifiedNameFunc func(string) (*genPg.Page, error)
+	GetContainerUUIDFunc    func(model.ID) (model.ID, error)
 	OpenForMutationFunc     func(model.ID) (repos.PageMutator, error)
 	CreateFunc              func(PageCreateCall) error
 	UpdateFunc              func(*genPg.Page) error
@@ -169,6 +170,13 @@ func (m *RecordingPageRepository) FindByQualifiedName(qn string) (*genPg.Page, e
 		return m.FindByQualifiedNameFunc(qn)
 	}
 	return nil, nil
+}
+
+func (m *RecordingPageRepository) GetContainerUUID(id model.ID) (model.ID, error) {
+	if m.GetContainerUUIDFunc != nil {
+		return m.GetContainerUUIDFunc(id)
+	}
+	return "", nil
 }
 
 func (m *RecordingPageRepository) OpenForMutation(pageID model.ID) (repos.PageMutator, error) {

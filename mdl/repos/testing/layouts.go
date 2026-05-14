@@ -25,17 +25,22 @@ type LayoutMoveCall struct {
 type RecordingLayoutRepository struct {
 	GotIDs       []model.ID
 	ListedModule []model.ID
+	ListedAll    int
+	FoundQNs     []string
 	Created      []LayoutCreateCall
 	Updated      []*genPg.Layout
 	Deleted      []model.ID
 	Moved        []LayoutMoveCall
 
-	GetFunc    func(model.ID) (*genPg.Layout, error)
-	ListFunc   func(model.ID) ([]*genPg.Layout, error)
-	CreateFunc func(LayoutCreateCall) error
-	UpdateFunc func(*genPg.Layout) error
-	DeleteFunc func(model.ID) error
-	MoveFunc   func(LayoutMoveCall) error
+	GetFunc                 func(model.ID) (*genPg.Layout, error)
+	ListFunc                func(model.ID) ([]*genPg.Layout, error)
+	ListAllFunc             func() ([]*genPg.Layout, error)
+	FindByQualifiedNameFunc func(string) (*genPg.Layout, error)
+	GetContainerUUIDFunc    func(model.ID) (model.ID, error)
+	CreateFunc              func(LayoutCreateCall) error
+	UpdateFunc              func(*genPg.Layout) error
+	DeleteFunc              func(model.ID) error
+	MoveFunc                func(LayoutMoveCall) error
 }
 
 var _ repos.LayoutRepository = (*RecordingLayoutRepository)(nil)
@@ -54,6 +59,29 @@ func (m *RecordingLayoutRepository) List(moduleID model.ID) ([]*genPg.Layout, er
 		return m.ListFunc(moduleID)
 	}
 	return nil, nil
+}
+
+func (m *RecordingLayoutRepository) ListAll() ([]*genPg.Layout, error) {
+	m.ListedAll++
+	if m.ListAllFunc != nil {
+		return m.ListAllFunc()
+	}
+	return nil, nil
+}
+
+func (m *RecordingLayoutRepository) FindByQualifiedName(qn string) (*genPg.Layout, error) {
+	m.FoundQNs = append(m.FoundQNs, qn)
+	if m.FindByQualifiedNameFunc != nil {
+		return m.FindByQualifiedNameFunc(qn)
+	}
+	return nil, nil
+}
+
+func (m *RecordingLayoutRepository) GetContainerUUID(id model.ID) (model.ID, error) {
+	if m.GetContainerUUIDFunc != nil {
+		return m.GetContainerUUIDFunc(id)
+	}
+	return "", nil
 }
 
 func (m *RecordingLayoutRepository) Create(parentUUID string, containmentName string, layout *genPg.Layout) error {

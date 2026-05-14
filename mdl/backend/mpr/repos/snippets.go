@@ -110,6 +110,80 @@ func (r *snippetRepo) List(moduleID model.ID) ([]*genPg.Snippet, error) {
 	return result, nil
 }
 
+func (r *snippetRepo) ListAll() ([]*genPg.Snippet, error) {
+	refs, err := r.r.ListUnitsByType(snippetTypeName)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*genPg.Snippet, 0, len(refs))
+	for _, ref := range refs {
+		if ref.Type != snippetTypeName {
+			continue
+		}
+		s, err := r.Get(model.ID(ref.ID))
+		if err != nil {
+			return nil, fmt.Errorf("decode snippet %s: %w", ref.ID, err)
+		}
+		result = append(result, s)
+	}
+	return result, nil
+}
+
+func (r *snippetRepo) FindByQualifiedName(qn string) (*genPg.Snippet, error) {
+	moduleName, simpleName, ok := splitQN(qn)
+	if !ok {
+		return nil, fmt.Errorf("FindByQualifiedName: invalid qualified name %q (want Module.Name)", qn)
+	}
+	mods, err := r.r.ListModules()
+	if err != nil {
+		return nil, err
+	}
+	moduleMap := make(map[string]string, len(mods))
+	for _, m := range mods {
+		moduleMap[m.ID] = m.Name
+	}
+	parents, err := r.r.BuildContainerParent()
+	if err != nil {
+		return nil, err
+	}
+	refs, err := r.r.ListUnitsByType(snippetTypeName)
+	if err != nil {
+		return nil, err
+	}
+	for _, ref := range refs {
+		if ref.Type != snippetTypeName {
+			continue
+		}
+		if mmpr.ResolveModuleName(ref.ContainerID, moduleMap, parents) != moduleName {
+			continue
+		}
+		s, err := r.Get(model.ID(ref.ID))
+		if err != nil {
+			return nil, err
+		}
+		if s.Name() == simpleName {
+			return s, nil
+		}
+	}
+	return nil, nil
+}
+
+func (r *snippetRepo) GetContainerUUID(id model.ID) (model.ID, error) {
+	if id == "" {
+		return "", fmt.Errorf("GetContainerUUID: empty id")
+	}
+	bin := mmpr.IDToBsonBinary(string(id))
+	if len(bin.Data) != 16 {
+		return "", fmt.Errorf("GetContainerUUID: invalid id %q", id)
+	}
+	var blob []byte
+	err := r.r.DB().QueryRow("SELECT ContainerID FROM Unit WHERE UnitID = ?", bin.Data).Scan(&blob)
+	if err != nil {
+		return "", fmt.Errorf("GetContainerUUID(%s): %w", id, err)
+	}
+	return model.ID(mmpr.BlobToUUID(blob)), nil
+}
+
 func (r *snippetRepo) Create(parentUUID string, containmentName string, s *genPg.Snippet) error {
 	if s.ID() == "" {
 		s.SetID(element.ID(mmpr.GenerateID()))

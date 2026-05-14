@@ -16,6 +16,15 @@ import (
 type SnippetReader interface {
 	Get(id model.ID) (*genPg.Snippet, error)
 	List(moduleID model.ID) ([]*genPg.Snippet, error)
+	ListAll() ([]*genPg.Snippet, error)
+	FindByQualifiedName(qn string) (*genPg.Snippet, error)
+
+	// GetContainerUUID returns the parent container UUID (folder or
+	// module ID) of a snippet unit. Codec-decoded gen objects do not
+	// carry container linkage, so callers retrieve it from the MPR Unit
+	// table by UnitID. Returns "" with a non-nil error if the unit is
+	// not found.
+	GetContainerUUID(id model.ID) (model.ID, error)
 }
 
 type SnippetWriter interface {
