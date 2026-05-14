@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
@@ -64,16 +65,13 @@ func TestShowConstants_Mock_JSON(t *testing.T) {
 func TestShowPages_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	pg := mkPage(mod.ID, "Page_Home")
-	withContainer(h, pg.ContainerID, mod.ID)
+	pg := mkPageGen(string(nextID("pg")), "Page_Home")
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return []*pages.Page{pg}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listPages(ctx, ""))
+	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
+	assertNoError(t, listPagesGen(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Page_Home")
 }
@@ -81,16 +79,13 @@ func TestShowPages_Mock_JSON(t *testing.T) {
 func TestShowSnippets_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	snp := mkSnippet(mod.ID, "Snippet_Header")
-	withContainer(h, snp.ContainerID, mod.ID)
+	snp := mkSnippetGen(string(nextID("snp")), "Snippet_Header")
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc:  func() bool { return true },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return []*pages.Snippet{snp}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listSnippets(ctx, ""))
+	ctx.Snippets = makeSnippetsRepo([]*genPg.Snippet{snp}, mod.ID)
+	assertNoError(t, listSnippetsGen(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Snippet_Header")
 }
@@ -98,16 +93,13 @@ func TestShowSnippets_Mock_JSON(t *testing.T) {
 func TestShowLayouts_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	lay := mkLayout(mod.ID, "Layout_Main")
-	withContainer(h, lay.ContainerID, mod.ID)
+	lay := mkLayoutGen(string(nextID("lay")), "Layout_Main")
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListLayoutsFunc: func() ([]*pages.Layout, error) { return []*pages.Layout{lay}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listLayouts(ctx, ""))
+	ctx.Layouts = makeLayoutsRepo([]*genPg.Layout{lay}, mod.ID)
+	assertNoError(t, listLayoutsGen(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Layout_Main")
 }
