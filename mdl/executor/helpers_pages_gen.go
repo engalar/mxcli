@@ -12,6 +12,8 @@
 package executor
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/ast"
+	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
@@ -199,6 +201,47 @@ func parameterEntityNameGen(paramType element.Element) string {
 		return t.EntityQualifiedName()
 	}
 	return ""
+}
+
+// findPageIDGen resolves a Page by qualified name through the gen-typed
+// listing and returns its model.ID. Used by consumers that only need the
+// page identifier (e.g. raw-BSON widget tree readers) and want to skip
+// the legacy sdk-typed Page lookup.
+func findPageIDGen(ctx *ExecContext, name ast.QualifiedName, h *ContainerHierarchy) (model.ID, error) {
+	pairs, err := listPagesWithContainerGen(ctx)
+	if err != nil {
+		return "", mdlerrors.NewBackend("list pages", err)
+	}
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if p.Elem.Name() == name.Name && (name.Module == "" || modName == name.Module) {
+			return model.ID(p.Elem.ID()), nil
+		}
+	}
+	return "", mdlerrors.NewNotFound("page", name.String())
+}
+
+// findSnippetIDGen mirrors findPageIDGen for snippets.
+func findSnippetIDGen(ctx *ExecContext, name ast.QualifiedName, h *ContainerHierarchy) (model.ID, error) {
+	pairs, err := listSnippetsWithContainerGen(ctx)
+	if err != nil {
+		return "", mdlerrors.NewBackend("list snippets", err)
+	}
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if p.Elem.Name() == name.Name && (name.Module == "" || modName == name.Module) {
+			return model.ID(p.Elem.ID()), nil
+		}
+	}
+	return "", mdlerrors.NewNotFound("snippet", name.String())
 }
 
 // pageParamTypeMDLGen returns the MDL type string for a gen-typed page

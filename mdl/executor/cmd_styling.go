@@ -128,45 +128,17 @@ func execDescribeStyling(ctx *ExecContext, s *ast.DescribeStylingStmt) error {
 	var rawWidgets []rawWidget
 
 	if s.ContainerType == "page" {
-		// Find page
-		allPages, err := ctx.Backend.ListPages()
+		pageID, err := findPageIDGen(ctx, s.ContainerName, h)
 		if err != nil {
-			return mdlerrors.NewBackend("list pages", err)
+			return err
 		}
-
-		var foundPage *pages.Page
-		for _, p := range allPages {
-			modID := h.FindModuleID(p.ContainerID)
-			modName := h.GetModuleName(modID)
-			if p.Name == s.ContainerName.Name && (s.ContainerName.Module == "" || modName == s.ContainerName.Module) {
-				foundPage = p
-				break
-			}
-		}
-		if foundPage == nil {
-			return mdlerrors.NewNotFound("page", s.ContainerName.String())
-		}
-		rawWidgets = getPageWidgetsFromRaw(ctx, foundPage.ID)
+		rawWidgets = getPageWidgetsFromRaw(ctx, pageID)
 	} else if s.ContainerType == "snippet" {
-		// Find snippet
-		allSnippets, err := ctx.Backend.ListSnippets()
+		snippetID, err := findSnippetIDGen(ctx, s.ContainerName, h)
 		if err != nil {
-			return mdlerrors.NewBackend("list snippets", err)
+			return err
 		}
-
-		var foundSnippet *pages.Snippet
-		for _, sn := range allSnippets {
-			modID := h.FindModuleID(sn.ContainerID)
-			modName := h.GetModuleName(modID)
-			if sn.Name == s.ContainerName.Name && (s.ContainerName.Module == "" || modName == s.ContainerName.Module) {
-				foundSnippet = sn
-				break
-			}
-		}
-		if foundSnippet == nil {
-			return mdlerrors.NewNotFound("snippet", s.ContainerName.String())
-		}
-		rawWidgets = getSnippetWidgetsFromRaw(ctx, foundSnippet.ID)
+		rawWidgets = getSnippetWidgetsFromRaw(ctx, snippetID)
 	}
 
 	if len(rawWidgets) == 0 {
