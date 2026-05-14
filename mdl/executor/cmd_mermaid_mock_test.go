@@ -9,7 +9,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 func TestDescribeMermaid_DomainModel_Mock(t *testing.T) {
@@ -65,10 +64,12 @@ func TestDescribeMermaid_Page_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
 
+	// Stage 3.3.5.B1 routes pageToMermaid through ctx.Pages — leaving
+	// it nil makes listPagesWithContainerGen return empty, which is
+	// enough for the not-found assertion.
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return nil, nil },
 	}
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
