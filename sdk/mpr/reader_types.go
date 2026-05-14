@@ -290,16 +290,6 @@ func (r *Reader) ExportJSON() ([]byte, error) {
 		domainModels = nil
 	}
 
-	microflowsList, err := r.ListMicroflows()
-	if err != nil {
-		microflowsList = nil
-	}
-
-	nanoflows, err := r.ListNanoflows()
-	if err != nil {
-		nanoflows = nil
-	}
-
 	pagesList, err := r.ListPages()
 	if err != nil {
 		pagesList = nil
@@ -323,8 +313,6 @@ func (r *Reader) ExportJSON() ([]byte, error) {
 	export := map[string]any{
 		"modules":      modules,
 		"domainModels": domainModels,
-		"microflows":   microflowsList,
-		"nanoflows":    nanoflows,
 		"pages":        pagesList,
 		"layouts":      layouts,
 		"enumerations": enumerations,
