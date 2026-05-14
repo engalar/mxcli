@@ -34,11 +34,11 @@ func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
 	case ast.ShowNanoflows:
 		return listNanoflows(ctx, s.InModule)
 	case ast.ShowPages:
-		return listPages(ctx, s.InModule)
+		return listPagesGen(ctx, s.InModule)
 	case ast.ShowSnippets:
-		return listSnippets(ctx, s.InModule)
+		return listSnippetsGen(ctx, s.InModule)
 	case ast.ShowLayouts:
-		return listLayouts(ctx, s.InModule)
+		return listLayoutsGen(ctx, s.InModule)
 	case ast.ShowJavaActions:
 		return listJavaActionsGen(ctx, s.InModule)
 	case ast.ShowJavaScriptActions:
