@@ -25,10 +25,23 @@ func listPagesWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genPg.Page
 		return nil, nil
 	}
 	listFn := func() ([]*genPg.Page, error) {
-		if ctx.Pages != nil {
-			return ctx.Pages.ListAll()
+		if ctx.Pages == nil {
+			return nil, nil
 		}
-		return nil, nil
+		all, err := ctx.Pages.ListAll()
+		if err != nil {
+			return nil, err
+		}
+		// Per helpers_gen_container.go contract: list callers MUST
+		// filter nil entries — the generic factory dereferences
+		// e.ID() unconditionally.
+		filtered := all[:0]
+		for _, p := range all {
+			if p != nil {
+				filtered = append(filtered, p)
+			}
+		}
+		return filtered, nil
 	}
 	resolveFn := func(id element.ID) (element.ID, error) {
 		if ctx.Pages != nil {
@@ -61,10 +74,20 @@ func listLayoutsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genPg.La
 		return nil, nil
 	}
 	listFn := func() ([]*genPg.Layout, error) {
-		if ctx.Layouts != nil {
-			return ctx.Layouts.ListAll()
+		if ctx.Layouts == nil {
+			return nil, nil
 		}
-		return nil, nil
+		all, err := ctx.Layouts.ListAll()
+		if err != nil {
+			return nil, err
+		}
+		filtered := all[:0]
+		for _, l := range all {
+			if l != nil {
+				filtered = append(filtered, l)
+			}
+		}
+		return filtered, nil
 	}
 	resolveFn := func(id element.ID) (element.ID, error) {
 		if ctx.Layouts != nil {
@@ -97,10 +120,20 @@ func listSnippetsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genPg.S
 		return nil, nil
 	}
 	listFn := func() ([]*genPg.Snippet, error) {
-		if ctx.Snippets != nil {
-			return ctx.Snippets.ListAll()
+		if ctx.Snippets == nil {
+			return nil, nil
 		}
-		return nil, nil
+		all, err := ctx.Snippets.ListAll()
+		if err != nil {
+			return nil, err
+		}
+		filtered := all[:0]
+		for _, s := range all {
+			if s != nil {
+				filtered = append(filtered, s)
+			}
+		}
+		return filtered, nil
 	}
 	resolveFn := func(id element.ID) (element.ID, error) {
 		if ctx.Snippets != nil {
