@@ -35,7 +35,7 @@ func newSecurityTestContext(t *testing.T) *ExecContext {
 }
 
 func TestListModuleSecurityWithContainerGen_CachesAcrossCalls(t *testing.T) {
-	ctx := newSecurityTestContext(t) // helper from cmd_security_gen_test.go
+	ctx := newSecurityTestContext(t)
 	list1, err := listModuleSecurityWithContainerGen(ctx)
 	if err != nil {
 		t.Fatalf("listModuleSecurityWithContainerGen: %v", err)

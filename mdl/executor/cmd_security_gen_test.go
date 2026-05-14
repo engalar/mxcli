@@ -82,6 +82,21 @@ func TestSplitRoleQualifiedName(t *testing.T) {
 	}
 }
 
+// TestListProjectSecurityGen_OutputsLevel asserts that listProjectSecurityGen
+// completes without error and emits a "Security Level:" line.
+func TestListProjectSecurityGen_OutputsLevel(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	ctx.Format = FormatTable
+	if err := listProjectSecurityGen(ctx); err != nil {
+		t.Fatalf("listProjectSecurityGen: %v", err)
+	}
+	if !strings.Contains(buf.String(), "Security Level:") {
+		t.Errorf("output missing Security Level line: %q", buf.String())
+	}
+}
+
 // TestListSecurityMatrixGen_Smoke asserts the matrix renderer does not
 // error and emits the section headers ("## Microflow Access" etc.).
 func TestListSecurityMatrixGen_Smoke(t *testing.T) {
