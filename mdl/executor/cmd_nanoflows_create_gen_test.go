@@ -122,26 +122,29 @@ func TestExecCreateNanoflowGen_ReplaceExisting(t *testing.T) {
 	})
 }
 
-// TestExecCreateNanoflowGen_CompoundBodyDeferred asserts the explicit
-// "deferred to 3.2.3" rejection — non-trivial bodies must surface a
-// readable error rather than silently writing a malformed nanoflow.
-func TestExecCreateNanoflowGen_CompoundBodyDeferred(t *testing.T) {
+// TestExecCreateNanoflowGen_CompoundBodyAccepted verifies the
+// Stage 3.2.3 lift of the trivial-body restriction: compound bodies
+// (Declare / IfStmt / etc.) are now supported via the shared
+// flowBuilderGen path. The earlier "deferred to 3.2.3" rejection is
+// gone — Stage 3.2.3 shipped the full flow-graph builder so
+// compound nanoflow bodies route through buildFlowGraphGen.
+func TestExecCreateNanoflowGen_CompoundBodyAccepted(t *testing.T) {
 	w := openMprWriterForTest(t)
 	ctx := newGenNanoflowDescribeContext(t, w)
 
-	// IfStmt-only body — disallowed in Stage 3.2.5c's gen write.
+	// Declare-only body — was previously deferred, now must succeed.
 	stmt := &ast.CreateNanoflowStmt{
 		Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_Compound"},
 		Body: []ast.MicroflowStatement{
-			&ast.IfStmt{},
+			&ast.DeclareStmt{
+				Variable:     "X",
+				Type:         ast.DataType{Kind: ast.TypeBoolean},
+				InitialValue: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			},
 		},
 	}
-	err := execCreateNanoflowGen(ctx, stmt)
-	if err == nil {
-		t.Fatal("expected deferred-body error, got nil")
-	}
-	if !strings.Contains(err.Error(), "Stage 3.2.3") {
-		t.Errorf("error should reference Stage 3.2.3 deferral; got: %v", err)
+	if err := execCreateNanoflowGen(ctx, stmt); err != nil {
+		t.Fatalf("compound body should be accepted post-Stage-3.2.3, got error: %v", err)
 	}
 }
 
