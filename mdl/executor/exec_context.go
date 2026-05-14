@@ -51,6 +51,11 @@ type ExecContext struct {
 	// Workflows is the Stage 3.3.3 modelsdk-native repo. Populated via
 	// the same provider duck-type pattern.
 	Workflows repos.WorkflowRepository
+	// Pages / Layouts / Snippets are the Stage 3.3.5 modelsdk-native
+	// repos. Populated via the same provider duck-type pattern.
+	Pages    repos.PageRepository
+	Layouts  repos.LayoutRepository
+	Snippets repos.SnippetRepository
 
 	// Output is the writer for user-visible output (with line-limit guard).
 	Output io.Writer

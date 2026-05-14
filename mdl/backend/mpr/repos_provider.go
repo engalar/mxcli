@@ -91,3 +91,43 @@ func (b *MprBackend) DomainModels() repos.DomainModelRepository {
 	}
 	return mprrepos.NewDomainModelRepository(w)
 }
+
+// Workflows returns the modelsdk-native WorkflowRepository, or nil
+// with the same conditions as Microflows() (Stage 3.3.3 A0).
+func (b *MprBackend) Workflows() repos.WorkflowRepository {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil
+	}
+	return mprrepos.NewWorkflowRepository(w)
+}
+
+// Pages returns the modelsdk-native PageRepository, or nil with the
+// same conditions as Microflows() (Stage 3.3.5 A0).
+func (b *MprBackend) Pages() repos.PageRepository {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil
+	}
+	return mprrepos.NewPageRepository(w)
+}
+
+// Layouts returns the modelsdk-native LayoutRepository, or nil with
+// the same conditions as Microflows() (Stage 3.3.5 A0).
+func (b *MprBackend) Layouts() repos.LayoutRepository {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil
+	}
+	return mprrepos.NewLayoutRepository(w)
+}
+
+// Snippets returns the modelsdk-native SnippetRepository, or nil with
+// the same conditions as Microflows() (Stage 3.3.5 A0).
+func (b *MprBackend) Snippets() repos.SnippetRepository {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil
+	}
+	return mprrepos.NewSnippetRepository(w)
+}
