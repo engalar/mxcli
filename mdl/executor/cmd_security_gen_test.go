@@ -154,3 +154,31 @@ func TestListSecurityMatrixGen_Smoke(t *testing.T) {
 		}
 	}
 }
+
+// TestListDemoUsersGen_DisabledMessage asserts that listDemoUsersGen emits a
+// "disabled" message when demo users are disabled.
+// Note: the fixture MPR has demo users enabled; this test disables them on
+// the in-memory object (without clearing cache) so the cached ps reflects
+// the disabled state when listDemoUsersGen calls getProjectSecurityGen.
+func TestListDemoUsersGen_DisabledMessage(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	// warm the cache, then flip the flag on the cached object
+	ps, err := getProjectSecurityGen(ctx)
+	if err != nil {
+		t.Fatalf("getProjectSecurityGen: %v", err)
+	}
+	if ps == nil {
+		t.Fatal("ProjectSecurity is nil in fixture")
+	}
+	ps.SetEnableDemoUsers(false) // mutate cached object — cache is NOT invalidated
+
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	ctx.Format = FormatTable
+	if err := listDemoUsersGen(ctx); err != nil {
+		t.Fatalf("listDemoUsersGen: %v", err)
+	}
+	if !strings.Contains(buf.String(), "disabled") {
+		t.Errorf("expected disabled message, got: %q", buf.String())
+	}
+}

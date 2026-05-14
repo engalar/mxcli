@@ -586,3 +586,37 @@ func entityRuleRightStrings(rule *domainmodel.AccessRule) []string {
 	}
 	return rights
 }
+
+// listDemoUsersGen handles SHOW DEMO USERS using the gen-typed ProjectSecurity
+// from ctx.Security. When demo users are disabled it emits a human-readable
+// hint (table format) or an empty TableResult (JSON format).
+// schema gap: DemoUsersItems() returns []element.Element; type-assert each
+// entry to *genSec.DemoUser. Remove cast when gen narrows return to []*DemoUser.
+func listDemoUsersGen(ctx *ExecContext) error {
+	ps, err := getProjectSecurityGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("read project security", err)
+	}
+	if ps == nil {
+		return mdlerrors.NewBackend("read project security", fmt.Errorf("ProjectSecurity not found"))
+	}
+	if !ps.EnableDemoUsers() {
+		if ctx.Format != FormatJSON {
+			fmt.Fprintln(ctx.Output, "Demo users are disabled.")
+			fmt.Fprintln(ctx.Output, "Enable with: alter project security demo users on;")
+			return nil
+		}
+		return writeResult(ctx, &TableResult{Columns: []string{"User Name", "User Roles"}})
+	}
+	result := &TableResult{Columns: []string{"User Name", "User Roles"}}
+	for _, du := range ps.DemoUsersItems() {
+		typed, ok := du.(*genSec.DemoUser)
+		if !ok {
+			continue
+		}
+		rolesStr := strings.Join(typed.UserRolesQualifiedNames(), ", ")
+		result.Rows = append(result.Rows, []any{typed.UserName(), rolesStr})
+	}
+	result.Summary = fmt.Sprintf("(%d demo users)", len(result.Rows))
+	return writeResult(ctx, result)
+}
