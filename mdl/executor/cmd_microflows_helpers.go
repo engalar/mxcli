@@ -10,64 +10,11 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
-// convertASTToMicroflowDataType converts an AST DataType to a microflows.DataType.
-// entityResolver is optional - if provided, it resolves entity qualified names to IDs.
-func convertASTToMicroflowDataType(dt ast.DataType, entityResolver func(ast.QualifiedName) model.ID) microflows.DataType {
-	switch dt.Kind {
-	case ast.TypeBoolean:
-		return &microflows.BooleanType{}
-	case ast.TypeInteger:
-		return &microflows.IntegerType{}
-	case ast.TypeLong:
-		return &microflows.LongType{}
-	case ast.TypeDecimal:
-		return &microflows.DecimalType{}
-	case ast.TypeString:
-		return &microflows.StringType{}
-	case ast.TypeDateTime:
-		return &microflows.DateTimeType{}
-	case ast.TypeDate:
-		return &microflows.DateType{}
-	case ast.TypeBinary:
-		return &microflows.BinaryType{}
-	case ast.TypeVoid:
-		return &microflows.VoidType{}
-	case ast.TypeEntity:
-		lt := &microflows.ObjectType{}
-		if dt.EntityRef != nil {
-			// Set qualified name for BY_NAME_REFERENCE serialization
-			lt.EntityQualifiedName = dt.EntityRef.Module + "." + dt.EntityRef.Name
-			if entityResolver != nil {
-				lt.EntityID = entityResolver(*dt.EntityRef)
-			}
-		}
-		return lt
-	case ast.TypeListOf:
-		lt := &microflows.ListType{}
-		if dt.EntityRef != nil {
-			// Set qualified name for BY_NAME_REFERENCE serialization
-			lt.EntityQualifiedName = dt.EntityRef.Module + "." + dt.EntityRef.Name
-			if entityResolver != nil {
-				lt.EntityID = entityResolver(*dt.EntityRef)
-			}
-		}
-		return lt
-	case ast.TypeEnumeration:
-		et := &microflows.EnumerationType{}
-		if dt.EnumRef != nil {
-			// Set qualified name for BY_NAME_REFERENCE serialization
-			et.EnumerationQualifiedName = dt.EnumRef.Module + "." + dt.EnumRef.Name
-		}
-		return et
-	default:
-		return &microflows.VoidType{}
-	}
-}
+// Stage 3.2.6.4: removed `convertASTToMicroflowDataType` (sdk-typed
+// conversion). The gen-typed equivalent is `convertASTToGenDataType`
+// in flowbuilder_actions_gen.go, used by the gen builders.
 
 // mendixBuiltinFunctions is the canonical spelling of every built-in Mendix
 // expression function. The expression runtime is case-sensitive: it only
@@ -427,55 +374,10 @@ func normalizeXPathEnumRefs(xpath string) string {
 	})
 }
 
-// memberExpressionToString converts an AST Expression to a Mendix expression string,
-// resolving enum string literals to qualified enum names when the attribute type is known.
-// For example, 'Processing' becomes MyModule.ENUM_Status.Processing when the attribute
-// is of type Enumeration(MyModule.ENUM_Status).
-func (fb *flowBuilder) memberExpressionToString(expr ast.Expression, entityQN, attrName string) string {
-	// Only transform string literals for enum attributes
-	if lit, ok := expr.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
-		if enumRef := fb.lookupEnumRef(entityQN, attrName); enumRef != "" {
-			// Convert 'Value' to Module.EnumName.Value
-			return enumRef + "." + fmt.Sprintf("%v", lit.Value)
-		}
-	}
-	return fb.exprToString(expr)
-}
-
-// lookupEnumRef returns the enumeration qualified name (e.g., "MyModule.ENUM_Status")
-// for an attribute if it is an enumeration type. Returns "" if the attribute is not
-// an enumeration or if the domain model is not available.
-func (fb *flowBuilder) lookupEnumRef(entityQN, attrName string) string {
-	if fb.backend == nil || entityQN == "" || attrName == "" {
-		return ""
-	}
-	parts := strings.SplitN(entityQN, ".", 2)
-	if len(parts) != 2 {
-		return ""
-	}
-	mod, err := fb.backend.GetModuleByName(parts[0])
-	if err != nil || mod == nil {
-		return ""
-	}
-	dm, err := fb.backend.GetDomainModel(mod.ID)
-	if err != nil || dm == nil {
-		return ""
-	}
-	for _, entity := range dm.Entities {
-		if entity.Name == parts[1] {
-			for _, attr := range entity.Attributes {
-				if attr.Name == attrName {
-					if enumType, ok := attr.Type.(*domainmodel.EnumerationAttributeType); ok {
-						return enumType.EnumerationRef
-					}
-					return ""
-				}
-			}
-			return ""
-		}
-	}
-	return ""
-}
+// Stage 3.2.6.4: removed `(fb *flowBuilder) memberExpressionToString`
+// and `(fb *flowBuilder) lookupEnumRef`. Standalone gen replacements
+// (`memberExpressionToStringGen`, `lookupEnumRefGen`) live in
+// flowbuilder_actions_change_gen.go and flowbuilder_assoc_lookup_gen.go.
 
 // ============================================================================
 // XPath Enum Enrichment (DESCRIBE output)
@@ -619,74 +521,9 @@ func xpathPathExprToString(path *ast.XPathPathExpr) string {
 	return strings.Join(parts, "/")
 }
 
-// countMicroflowActivities counts the number of meaningful activities in a microflow.
-// Excludes structural elements like StartEvent, EndEvent, and merge nodes.
-func countMicroflowActivities(mf *microflows.Microflow) int {
-	if mf.ObjectCollection == nil {
-		return 0
-	}
-
-	count := 0
-	for _, obj := range mf.ObjectCollection.Objects {
-		switch obj.(type) {
-		case *microflows.StartEvent, *microflows.EndEvent:
-			// Don't count start/end events
-		case *microflows.ExclusiveMerge:
-			// Don't count merge nodes (they're structural)
-		default:
-			// Count all other activities (ActionActivity, ExclusiveSplit, LoopedActivity, etc.)
-			count++
-		}
-	}
-	return count
-}
-
-// calculateMicroflowComplexity calculates the McCabe cyclomatic complexity of a microflow.
-// McCabe complexity = 1 + number of decision points (IF, LOOP, error handlers)
-// A higher complexity indicates more paths through the code and higher testing burden.
-// Typical thresholds: 1-10 (simple), 11-20 (moderate), 21-50 (complex), 50+ (untestable)
-func calculateMicroflowComplexity(mf *microflows.Microflow) int {
-	// Base complexity is 1 (the main path through the microflow)
-	complexity := 1
-
-	if mf.ObjectCollection == nil {
-		return complexity
-	}
-
-	// Count decision points in the main flow
-	complexity += countMicroflowDecisionPoints(mf.ObjectCollection.Objects)
-
-	return complexity
-}
-
-// countMicroflowDecisionPoints counts decision points in a list of microflow objects.
-// This recursively processes nested structures like LoopedActivity.
-func countMicroflowDecisionPoints(objects []microflows.MicroflowObject) int {
-	count := 0
-
-	for _, obj := range objects {
-		switch activity := obj.(type) {
-		case *microflows.ExclusiveSplit:
-			// Each IF/decision adds 1 to complexity
-			count++
-
-		case *microflows.InheritanceSplit:
-			// Type check split adds 1 to complexity
-			count++
-
-		case *microflows.LoopedActivity:
-			// Each loop adds 1 to complexity
-			count++
-			// Also count decision points inside the loop body
-			if activity.ObjectCollection != nil {
-				count += countMicroflowDecisionPoints(activity.ObjectCollection.Objects)
-			}
-
-		case *microflows.ErrorEvent:
-			// Error handling path adds complexity
-			count++
-		}
-	}
-
-	return count
-}
+// Stage 3.2.6.4: removed sdk-typed counters
+// (`countMicroflowActivities`, `calculateMicroflowComplexity`,
+// `countMicroflowDecisionPoints`). The gen-typed equivalents
+// (`countGenFlowActivities`, `calculateGenFlowComplexity`) live in
+// cmd_microflows_show_list_gen.go and are consumed by the SHOW
+// MICROFLOWS / NANOFLOWS table emitters.

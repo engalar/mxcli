@@ -24,7 +24,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
 // addCreateObjectActionGen emits a `$X = create E (member = expr, ...)`
@@ -103,26 +102,12 @@ type resolvedMemberChange struct {
 }
 
 // resolveMemberChangeGen classifies a member name as attribute or
-// association by delegating to the legacy resolver — its behaviour
-// is identical to what's needed here, and it has no SDK type
-// references in the lookup logic itself (only the legacy MemberChange
-// struct it mutates). We pass a throwaway *microflows.MemberChange
-// purely as a destination buffer, then read the resolved fields out.
-//
-// This keeps the gen path free of `microflows.MemberChange` in its
-// public surface, while sharing the cross-module association lookup
-// algorithm without duplicating it.
+// association. Stage 3.2.6.4: switched to the standalone
+// `resolveMemberChangeGenStandalone` (in flowbuilder_assoc_lookup_gen.go);
+// the legacy `flowBuilder.resolveMemberChange` was deleted with the
+// rest of the legacy builder family.
 func (fb *flowBuilderGen) resolveMemberChangeGen(memberName, entityQN string) resolvedMemberChange {
-	mc := &microflows.MemberChange{}
-	legacy := &flowBuilder{
-		backend:   fb.backend,
-		hierarchy: fb.hierarchy,
-	}
-	legacy.resolveMemberChange(mc, memberName, entityQN)
-	return resolvedMemberChange{
-		attributeQN:   mc.AttributeQualifiedName,
-		associationQN: mc.AssociationQualifiedName,
-	}
+	return resolveMemberChangeGenStandalone(fb.backend, memberName, entityQN)
 }
 
 // applyResolvedMemberChangeGen overlays the resolved (attribute QN,
@@ -147,11 +132,9 @@ func applyResolvedMemberChangeGen(mc *genMf.MemberChange, r resolvedMemberChange
 // them as enum references.
 func (fb *flowBuilderGen) memberExpressionToStringGen(expr ast.Expression, entityQN, attrName string) string {
 	if lit, ok := expr.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
-		legacy := &flowBuilder{
-			backend:   fb.backend,
-			hierarchy: fb.hierarchy,
-		}
-		if enumRef := legacy.lookupEnumRef(entityQN, attrName); enumRef != "" {
+		// Stage 3.2.6.4: standalone enum lookup (was a legacy
+		// `flowBuilder.lookupEnumRef` adapter; legacy builder is gone).
+		if enumRef := lookupEnumRefGen(fb.backend, entityQN, attrName); enumRef != "" {
 			if v, ok := lit.Value.(string); ok {
 				return enumRef + "." + v
 			}

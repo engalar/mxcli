@@ -198,17 +198,20 @@ func (fb *flowBuilderGen) listAttributeFilterGen(s *ast.ListOperationStmt) *genM
 	return op
 }
 
-// resolveListOperationMember delegates to the legacy resolver so the
-// gen path shares the cross-module association lookup logic without
-// duplicating it. Same delegation pattern as resolveMemberChangeGen
-// (cf. flowbuilder_actions_change_gen.go).
+// resolveListOperationMember resolves a list-operation member name
+// (attribute vs association) using the same algorithm as
+// resolveMemberChangeGen, so list ops follow the same qualification
+// rules as change-object members. Stage 3.2.6.4: standalone — the
+// legacy `flowBuilder.resolveListOperationMember` adapter is gone.
 func (fb *flowBuilderGen) resolveListOperationMember(listVariable, memberName string) (attribute, association string) {
-	legacy := &flowBuilder{
-		backend:   fb.backend,
-		hierarchy: fb.hierarchy,
-		varTypes:  fb.varTypes,
+	entityQN := ""
+	if fb.varTypes != nil {
+		if listType := fb.varTypes[listVariable]; strings.HasPrefix(listType, "List of ") {
+			entityQN = strings.TrimPrefix(listType, "List of ")
+		}
 	}
-	return legacy.resolveListOperationMember(listVariable, memberName)
+	resolved := resolveMemberChangeGenStandalone(fb.backend, memberName, entityQN)
+	return resolved.attributeQN, resolved.associationQN
 }
 
 // buildSortItemListGen builds a *genMf.SortItemList with one
