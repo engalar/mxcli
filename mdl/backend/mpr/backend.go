@@ -21,7 +21,6 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -382,9 +381,6 @@ func (b *MprBackend) DeleteConstant(id model.ID) error {
 // SecurityBackend (ProjectSecurityBackend + ModuleSecurityBackend + EntityAccessBackend)
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) GetProjectSecurity() (*security.ProjectSecurity, error) {
-	return b.reader.GetProjectSecurity()
-}
 func (b *MprBackend) GetProjectSecurityGen() (*genSec.ProjectSecurity, error) {
 	return b.Security().Get()
 }
@@ -410,12 +406,6 @@ func (b *MprBackend) RemoveDemoUser(unitID model.ID, userName string) error {
 	return b.removeDemoUserViaModelsdk(unitID, userName)
 }
 
-func (b *MprBackend) ListModuleSecurity() ([]*security.ModuleSecurity, error) {
-	return b.reader.ListModuleSecurity()
-}
-func (b *MprBackend) GetModuleSecurity(moduleID model.ID) (*security.ModuleSecurity, error) {
-	return b.reader.GetModuleSecurity(moduleID)
-}
 func (b *MprBackend) GetModuleSecurityGen(moduleID model.ID) (*genSec.ModuleSecurity, error) {
 	return b.Security().GetModuleSecurity(moduleID)
 }

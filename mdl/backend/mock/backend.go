@@ -15,7 +15,6 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -131,7 +130,6 @@ type MockBackend struct {
 	DeleteConstantFunc func(id model.ID) error
 
 	// SecurityBackend
-	GetProjectSecurityFunc               func() (*security.ProjectSecurity, error)
 	GetProjectSecurityGenFunc            func() (*genSec.ProjectSecurity, error)
 	SetProjectSecurityLevelFunc          func(unitID model.ID, level string) error
 	SetProjectDemoUsersEnabledFunc       func(unitID model.ID, enabled bool) error
@@ -140,8 +138,6 @@ type MockBackend struct {
 	RemoveUserRoleFunc                   func(unitID model.ID, name string) error
 	AddDemoUserFunc                      func(unitID model.ID, userName, password, entity string, userRoles []string) error
 	RemoveDemoUserFunc                   func(unitID model.ID, userName string) error
-	ListModuleSecurityFunc               func() ([]*security.ModuleSecurity, error)
-	GetModuleSecurityFunc                func(moduleID model.ID) (*security.ModuleSecurity, error)
 	GetModuleSecurityGenFunc             func(moduleID model.ID) (*genSec.ModuleSecurity, error)
 	ListModuleSecurityGenFunc            func() ([]*genSec.ModuleSecurity, error)
 	AddModuleRoleFunc                    func(unitID model.ID, roleName, description string) error
