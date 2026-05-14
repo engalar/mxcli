@@ -510,6 +510,15 @@ func classifyEntity(entity *domainmodel.Entity) string {
 // --- Executor method wrappers for callers not yet migrated ---
 
 // DomainModelELK is the exported Executor method, called from outside the package.
+// Stage 3.3.4 B3: prefers the gen-typed renderer when DomainModels is
+// wired (production MprBackend); falls back to the legacy renderer for
+// mock contexts that lack the repo. entityFocusELK (focused
+// single-entity view) is still routed through the legacy path inside
+// domainModelELKGen until its gen sibling lands.
 func (e *Executor) DomainModelELK(name string) error {
-	return domainModelELK(e.newExecContext(context.Background()), name)
+	ctx := e.newExecContext(context.Background())
+	if ctx.DomainModels != nil {
+		return domainModelELKGen(ctx, name)
+	}
+	return domainModelELK(ctx, name)
 }
