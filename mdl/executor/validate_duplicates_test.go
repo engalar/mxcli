@@ -280,8 +280,7 @@ func setupProjectConflictCtx(t *testing.T) (*ExecContext, *model.Module) {
 		ListDomainModelsFunc:      func() ([]*domainmodel.DomainModel, error) { return nil, nil },
 		ListPagesFunc:             func() ([]*pages.Page, error) { return nil, nil },
 		ListSnippetsFunc:          func() ([]*pages.Snippet, error) { return nil, nil },
-		ListJavaActionsFunc:       func() ([]*types.JavaAction, error) { return nil, nil },
-		ListJavaScriptActionsFunc: func() ([]*types.JavaScriptAction, error) { return nil, nil },
+		ListJavaActionsFunc: func() ([]*types.JavaAction, error) { return nil, nil },
 	}
 
 	// Wire ctx.Microflows / ctx.Nanoflows so buildMicroflowQualifiedNamesGen

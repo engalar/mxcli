@@ -21,7 +21,7 @@ import (
 func TestTypeAliasesAreIdentical(t *testing.T) {
 	// Each assignment proves the alias: mpr.X == types.X
 	var _ *types.JavaAction = new(mpr.JavaAction)
-	var _ *types.JavaScriptAction = new(mpr.JavaScriptAction)
+	// types.JavaScriptAction was retired in Stage 3.3.2.C1.
 	var _ *types.NavigationDocument = new(mpr.NavigationDocument)
 	var _ *types.NavigationProfile = new(mpr.NavigationProfile)
 	var _ *types.NavHomePage = new(mpr.NavHomePage)
@@ -41,9 +41,7 @@ func TestTypeAliasesAreIdentical(t *testing.T) {
 	var mprSlice []*mpr.FolderInfo = typesSlice
 	_ = mprSlice
 
-	var typesJSSlice []*types.JavaScriptAction
-	var mprJSSlice []*mpr.JavaScriptAction = typesJSSlice
-	_ = mprJSSlice
+	// JS slice passthrough test retired in Stage 3.3.2.C1.
 }
 
 // TestFolderInfoSlicePassthrough verifies that a []*mpr.FolderInfo value can

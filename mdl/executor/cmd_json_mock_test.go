@@ -234,26 +234,9 @@ func TestShowJavaActions_Mock_JSON(t *testing.T) {
 	assertContainsStr(t, buf.String(), "MyJavaAction")
 }
 
-func TestShowJavaScriptActions_Mock_JSON(t *testing.T) {
-	mod := mkModule("MyModule")
-	h := mkHierarchy(mod)
-	jsa := &types.JavaScriptAction{
-		BaseElement: model.BaseElement{ID: nextID("jsa")},
-		ContainerID: mod.ID,
-		Name:        "MyJSAction",
-	}
-	withContainer(h, jsa.ContainerID, mod.ID)
-
-	mb := &mock.MockBackend{
-		IsConnectedFunc:           func() bool { return true },
-		ListJavaScriptActionsFunc: func() ([]*types.JavaScriptAction, error) { return []*types.JavaScriptAction{jsa}, nil },
-	}
-
-	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listJavaScriptActions(ctx, ""))
-	assertValidJSON(t, buf.String())
-	assertContainsStr(t, buf.String(), "MyJSAction")
-}
+// TestShowJavaScriptActions_Mock_JSON retired in Stage 3.3.2.C1 — the
+// gen path renders via ctx.JavaScriptActions and is exercised through
+// listJavaScriptActionsGen in cmd_javaactions_gen_test.go.
 
 func TestShowDatabaseConnections_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")

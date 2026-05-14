@@ -642,14 +642,8 @@ func (b *MprBackend) ListJavaActions() ([]*types.JavaAction, error) {
 func (b *MprBackend) ListJavaActionsFull() ([]*javaactions.JavaAction, error) {
 	return b.reader.ListJavaActionsFull()
 }
-func (b *MprBackend) ListJavaScriptActions() ([]*types.JavaScriptAction, error) {
-	return convertJavaScriptActionSlice(b.reader.ListJavaScriptActions())
-}
 func (b *MprBackend) ReadJavaActionByName(qualifiedName string) (*javaactions.JavaAction, error) {
 	return b.reader.ReadJavaActionByName(qualifiedName)
-}
-func (b *MprBackend) ReadJavaScriptActionByName(qualifiedName string) (*types.JavaScriptAction, error) {
-	return convertJavaScriptActionPtr(b.reader.ReadJavaScriptActionByName(qualifiedName))
 }
 func (b *MprBackend) CreateJavaAction(ja *javaactions.JavaAction) error {
 	return b.createJavaActionViaModelsdk(ja)

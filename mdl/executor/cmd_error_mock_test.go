@@ -130,14 +130,9 @@ func TestShowJavaActions_Mock_BackendError(t *testing.T) {
 	assertError(t, listJavaActions(ctx, ""))
 }
 
-func TestShowJavaScriptActions_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:           func() bool { return true },
-		ListJavaScriptActionsFunc: func() ([]*types.JavaScriptAction, error) { return nil, errBackend },
-	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listJavaScriptActions(ctx, ""))
-}
+// TestShowJavaScriptActions_Mock_BackendError retired in Stage 3.3.2.C1
+// along with listJavaScriptActions (the gen variant has its own test
+// in cmd_javaactions_gen_test.go).
 
 func TestShowDatabaseConnections_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{

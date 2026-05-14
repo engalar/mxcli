@@ -14,13 +14,13 @@ import (
 // JavaBackend provides Java and JavaScript action operations.
 //
 // Stage 3.3.2 C3 introduced *Gen siblings to every method that exposed
-// sdk-typed values. Legacy methods stay until Phase E retires them.
+// sdk-typed values. Stage 3.3.2 C1 retired the JavaScript sdk surface
+// entirely (consumers use ListJavaScriptActionsGen / ReadJavaScriptActionByNameGen).
+// Remaining sdk-typed Java methods retire in Phase E1.
 type JavaBackend interface {
 	ListJavaActions() ([]*types.JavaAction, error)
 	ListJavaActionsFull() ([]*javaactions.JavaAction, error)
-	ListJavaScriptActions() ([]*types.JavaScriptAction, error)
 	ReadJavaActionByName(qualifiedName string) (*javaactions.JavaAction, error)
-	ReadJavaScriptActionByName(qualifiedName string) (*types.JavaScriptAction, error)
 	CreateJavaAction(ja *javaactions.JavaAction) error
 	UpdateJavaAction(ja *javaactions.JavaAction) error
 	DeleteJavaAction(id model.ID) error
@@ -30,8 +30,8 @@ type JavaBackend interface {
 	ReadJavaSourceFile(moduleName, actionName string) (string, error)
 
 	// ── Stage 3.3.2.C3 gen-typed siblings ─────────────────────────────
-	// These return *genJA.JavaAction / *genJSA.JavaScriptAction sourced
-	// from the modelsdk gen registry. Production wiring lives in
+	// Return *genJA.JavaAction / *genJSA.JavaScriptAction sourced from
+	// the modelsdk gen registry. Production wiring lives in
 	// mdl/backend/mpr/backend.go and routes through the repo introduced
 	// in Stage 3.3.2.A0. Mock backend provides descriptive-error stubs.
 	ListJavaActionsGen() ([]*genJA.JavaAction, error)
