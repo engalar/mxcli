@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/mendixlabs/mxcli/mdl/executor"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 func MineMPR(m *Miner, mprPath string) error {
@@ -21,7 +22,7 @@ func MineMPR(m *Miner, mprPath string) error {
 	defer be.Disconnect()
 	ctx := newMiningContext(be)
 
-	mfs, err := be.ListMicroflows()
+	mfs, err := be.ListMicroflowsGen()
 	if err != nil {
 		return fmt.Errorf("list microflows: %w", err)
 	}
@@ -30,12 +31,17 @@ func MineMPR(m *Miner, mprPath string) error {
 		return fmt.Errorf("hierarchy: %w", err)
 	}
 	for _, mf := range mfs {
-		modID := h.FindModuleID(mf.ContainerID)
-		modName := h.GetModuleName(modID)
-		if modName == "" || mf.Name == "" {
+		if mf == nil {
 			continue
 		}
-		qn := ast.QualifiedName{Module: modName, Name: mf.Name}
+		// Codec-decoded gen flows don't carry Container linkage; the
+		// mining hierarchy maps mf UUID -> parent (folder/module) -> module.
+		modID := h.FindModuleID(model.ID(mf.ID()))
+		modName := h.GetModuleName(modID)
+		if modName == "" || mf.Name() == "" {
+			continue
+		}
+		qn := ast.QualifiedName{Module: modName, Name: mf.Name()}
 		mdlText, err := executor.DescribeMicroflowToString(ctx, qn)
 		if err != nil {
 			fmt.Printf("skip %s: %v\n", qn.String(), err)
