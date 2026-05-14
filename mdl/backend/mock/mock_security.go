@@ -9,15 +9,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"github.com/mendixlabs/mxcli/sdk/security"
 )
-
-func (m *MockBackend) GetProjectSecurity() (*security.ProjectSecurity, error) {
-	if m.GetProjectSecurityFunc != nil {
-		return m.GetProjectSecurityFunc()
-	}
-	return nil, fmt.Errorf("MockBackend.GetProjectSecurity not configured")
-}
 
 func (m *MockBackend) GetProjectSecurityGen() (*genSec.ProjectSecurity, error) {
 	if m.GetProjectSecurityGenFunc != nil {
@@ -73,20 +65,6 @@ func (m *MockBackend) RemoveDemoUser(unitID model.ID, userName string) error {
 		return m.RemoveDemoUserFunc(unitID, userName)
 	}
 	return nil
-}
-
-func (m *MockBackend) ListModuleSecurity() ([]*security.ModuleSecurity, error) {
-	if m.ListModuleSecurityFunc != nil {
-		return m.ListModuleSecurityFunc()
-	}
-	return nil, fmt.Errorf("MockBackend.ListModuleSecurity not configured")
-}
-
-func (m *MockBackend) GetModuleSecurity(moduleID model.ID) (*security.ModuleSecurity, error) {
-	if m.GetModuleSecurityFunc != nil {
-		return m.GetModuleSecurityFunc(moduleID)
-	}
-	return nil, fmt.Errorf("MockBackend.GetModuleSecurity not configured")
 }
 
 func (m *MockBackend) GetModuleSecurityGen(moduleID model.ID) (*genSec.ModuleSecurity, error) {
