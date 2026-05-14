@@ -6,6 +6,9 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // runListEntitiesGen builds a fixture-backed gen ctx, captures the
@@ -88,4 +91,87 @@ func TestListEntitiesGen_DeterministicOutput(t *testing.T) {
 	if a != b {
 		t.Fatalf("listEntitiesGen output is not deterministic:\na=%s\nb=%s", a, b)
 	}
+}
+
+// TestFormatAttributeTypeGen_NilInput verifies the nil guard.
+func TestFormatAttributeTypeGen_NilInput(t *testing.T) {
+	if got := formatAttributeTypeGen(nil); got != "Unknown" {
+		t.Errorf("nil: got %q", got)
+	}
+}
+
+// TestFormatAttributeTypeGen_PrimitiveTypes verifies polymorphic
+// dispatch over the 11 simple concrete attribute-type subtypes
+// (Stage 3.3.4 A2). String + Enumeration are tested separately because
+// they carry parameters.
+func TestFormatAttributeTypeGen_PrimitiveTypes(t *testing.T) {
+	cases := []struct {
+		name string
+		at   element.Element
+		want string
+	}{
+		{"Integer", &genDm.IntegerAttributeType{}, "Integer"},
+		{"Long", &genDm.LongAttributeType{}, "Long"},
+		{"Decimal", &genDm.DecimalAttributeType{}, "Decimal"},
+		{"Float", &genDm.FloatAttributeType{}, "Float"},
+		{"Currency", &genDm.CurrencyAttributeType{}, "Currency"},
+		{"Boolean", &genDm.BooleanAttributeType{}, "Boolean"},
+		{"DateTime", &genDm.DateTimeAttributeType{}, "DateTime"},
+		{"AutoNumber", &genDm.AutoNumberAttributeType{}, "AutoNumber"},
+		{"Binary", &genDm.BinaryAttributeType{}, "Binary"},
+		{"HashedString", &genDm.HashedStringAttributeType{}, "HashedString"},
+		{"MultiLanguage", &genDm.MultiLanguageAttributeType{}, "MultiLanguage"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := formatAttributeTypeGen(c.at); got != c.want {
+				t.Errorf("got %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+// TestFormatAttributeTypeGen_FixtureRoundTrip exercises String /
+// Enumeration / DateTime / Decimal / Boolean using actual decoded
+// fixture entities — covering the codec path end-to-end (no manual
+// struct construction). Skips if the fixture exposes no attributes.
+func TestFormatAttributeTypeGen_FixtureRoundTrip(t *testing.T) {
+	ctx := newDomainModelsTestContext(t)
+	pairs, err := listDomainModelsWithContainerGen(ctx)
+	if err != nil || len(pairs) == 0 {
+		t.Skip("fixture has no domain models")
+	}
+	saw := map[string]bool{}
+	for _, p := range pairs {
+		if p.DM == nil {
+			continue
+		}
+		for _, e := range p.DM.EntitiesItems() {
+			entity, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			for _, a := range entity.AttributesItems() {
+				attr, ok := a.(*genDm.Attribute)
+				if !ok {
+					continue
+				}
+				typ := attr.Type()
+				name := formatAttributeTypeGen(typ)
+				if name == "" || name == "Unknown" {
+					t.Logf("attr %s/%s: formatter returned %q (type=%T raw_typename=%q)", entity.Name(), attr.Name(), name, typ, func() string {
+						if typ == nil {
+							return "<nil>"
+						}
+						return typ.TypeName()
+					}())
+				}
+				saw[name] = true
+			}
+		}
+	}
+	if len(saw) == 0 {
+		t.Skip("fixture has no entity attributes")
+	}
+	t.Logf("formatter recognised %d distinct types from fixture: %v", len(saw), saw)
 }

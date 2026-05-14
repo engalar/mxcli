@@ -283,3 +283,67 @@ func findEntityGen(ctx *ExecContext, qn ast.QualifiedName) (*genDm.Entity, strin
 // _ keeps the element import live during incremental landing — A2/A3
 // will use element.Element pervasively for polymorphic dispatch.
 var _ element.Element = (*genDm.Entity)(nil)
+
+// formatAttributeTypeGen mirrors helpers.go::getAttributeTypeName on the
+// gen-typed read path (Stage 3.3.4 A2). Polymorphic dispatch over the
+// 14 concrete attribute-type subtypes; falls back to TypeName() for any
+// unrecognised variant so future schema additions degrade gracefully.
+//
+// Per CLAUDE.md "Map iteration is deterministic": no map iteration here,
+// but downstream callers must sort their attribute slices before
+// rendering.
+//
+// Schema gap (per memory project_gen_schema_gaps + plan R7):
+// gen has no separate DateAttributeType — Date and DateTime share
+// DateTimeAttributeType. We render both as "DateTime" until the gen
+// schema gains a Date discriminator. Mendix Studio Pro distinguishes
+// purely date columns at the UI layer, not in the BSON shape exposed
+// here.
+func formatAttributeTypeGen(at element.Element) string {
+	if at == nil {
+		return "Unknown"
+	}
+	switch t := at.(type) {
+	case *genDm.StringAttributeType:
+		if l := t.Length(); l > 0 {
+			return fmt.Sprintf("String(%d)", l)
+		}
+		return "String(unlimited)"
+	case *genDm.IntegerAttributeType:
+		return "Integer"
+	case *genDm.LongAttributeType:
+		return "Long"
+	case *genDm.DecimalAttributeType:
+		return "Decimal"
+	case *genDm.FloatAttributeType:
+		return "Float"
+	case *genDm.CurrencyAttributeType:
+		return "Currency"
+	case *genDm.BooleanAttributeType:
+		return "Boolean"
+	case *genDm.DateTimeAttributeType:
+		return "DateTime"
+	case *genDm.AutoNumberAttributeType:
+		return "AutoNumber"
+	case *genDm.BinaryAttributeType:
+		return "Binary"
+	case *genDm.HashedStringAttributeType:
+		return "HashedString"
+	case *genDm.MultiLanguageAttributeType:
+		return "MultiLanguage"
+	case *genDm.EnumerationAttributeType:
+		if qn := t.EnumerationQualifiedName(); qn != "" {
+			return fmt.Sprintf("Enumeration(%s)", qn)
+		}
+		return "Enumeration"
+	}
+	// Fallback: use the BSON $Type tag minus the "DomainModels$" prefix.
+	tn := at.TypeName()
+	if tn == "" {
+		return "Unknown"
+	}
+	if strings.HasPrefix(tn, "DomainModels$") {
+		return strings.TrimPrefix(tn, "DomainModels$")
+	}
+	return tn
+}
