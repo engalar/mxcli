@@ -6,53 +6,67 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
-	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 )
 
+// makeText builds a gen *texts.Text with the supplied (lang -> body)
+// translations. Order doesn't matter for the empty-template check.
+func makeText(translations map[string]string) *texts.Text {
+	t := texts.NewText()
+	for lang, body := range translations {
+		tr := texts.NewTranslation()
+		tr.SetLanguageCode(lang)
+		tr.SetText(body)
+		t.AddTranslations(tr)
+	}
+	return t
+}
+
+// vfWith builds a ValidationFeedbackAction whose FeedbackTemplate
+// is the given gen text element (or nil to model the absent case).
+func vfWith(template element.Element) *genMf.ValidationFeedbackAction {
+	vf := genMf.NewValidationFeedbackAction()
+	if template != nil {
+		vf.SetFeedbackTemplate(template)
+	}
+	return vf
+}
+
+// activityWith wraps an inner action in a freshly-built ActionActivity.
+func activityWith(inner element.Element) *genMf.ActionActivity {
+	a := genMf.NewActionActivity()
+	a.SetAction(inner)
+	return a
+}
+
 func TestIsEmptyTemplate_Nil(t *testing.T) {
-	vf := &microflows.ValidationFeedbackAction{Template: nil}
-	if !isEmptyTemplate(vf) {
+	if !isEmptyFeedbackTemplate(vfWith(nil)) {
 		t.Error("expected true for nil template")
 	}
 }
 
 func TestIsEmptyTemplate_EmptyTranslations(t *testing.T) {
-	vf := &microflows.ValidationFeedbackAction{
-		Template: &model.Text{Translations: map[string]string{}},
-	}
-	if !isEmptyTemplate(vf) {
+	if !isEmptyFeedbackTemplate(vfWith(makeText(map[string]string{}))) {
 		t.Error("expected true for empty translations")
 	}
 }
 
 func TestIsEmptyTemplate_AllEmpty(t *testing.T) {
-	vf := &microflows.ValidationFeedbackAction{
-		Template: &model.Text{Translations: map[string]string{"en_US": "", "nl_NL": ""}},
-	}
-	if !isEmptyTemplate(vf) {
+	if !isEmptyFeedbackTemplate(vfWith(makeText(map[string]string{"en_US": "", "nl_NL": ""}))) {
 		t.Error("expected true when all translations empty")
 	}
 }
 
 func TestIsEmptyTemplate_HasContent(t *testing.T) {
-	vf := &microflows.ValidationFeedbackAction{
-		Template: &model.Text{Translations: map[string]string{"en_US": "Please fill in this field"}},
-	}
-	if isEmptyTemplate(vf) {
+	if isEmptyFeedbackTemplate(vfWith(makeText(map[string]string{"en_US": "Please fill in this field"}))) {
 		t.Error("expected false when translation has content")
 	}
 }
 
 func TestWalkObjects_EmptyValidation(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ActionActivity{
-			BaseActivity: microflows.BaseActivity{},
-			Action: &microflows.ValidationFeedbackAction{
-				Template: nil,
-			},
-		},
-	}
+	objects := []element.Element{activityWith(vfWith(nil))}
 
 	var violations []linter.Violation
 	r := NewValidationFeedbackRule()
@@ -67,13 +81,8 @@ func TestWalkObjects_EmptyValidation(t *testing.T) {
 }
 
 func TestWalkObjects_ValidFeedback(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ActionActivity{
-			BaseActivity: microflows.BaseActivity{},
-			Action: &microflows.ValidationFeedbackAction{
-				Template: &model.Text{Translations: map[string]string{"en_US": "Required"}},
-			},
-		},
+	objects := []element.Element{
+		activityWith(vfWith(makeText(map[string]string{"en_US": "Required"}))),
 	}
 
 	var violations []linter.Violation
@@ -86,21 +95,13 @@ func TestWalkObjects_ValidFeedback(t *testing.T) {
 }
 
 func TestWalkObjects_InsideLoop(t *testing.T) {
-	loopBody := &microflows.MicroflowObjectCollection{
-		Objects: []microflows.MicroflowObject{
-			&microflows.ActionActivity{
-				BaseActivity: microflows.BaseActivity{},
-				Action: &microflows.ValidationFeedbackAction{
-					Template: nil,
-				},
-			},
-		},
-	}
-	objects := []microflows.MicroflowObject{
-		&microflows.LoopedActivity{
-			ObjectCollection: loopBody,
-		},
-	}
+	loopBody := genMf.NewMicroflowObjectCollection()
+	loopBody.AddObjects(activityWith(vfWith(nil)))
+
+	loop := genMf.NewLoopedActivity()
+	loop.SetObjectCollection(loopBody)
+
+	objects := []element.Element{loop}
 
 	var violations []linter.Violation
 	r := NewValidationFeedbackRule()

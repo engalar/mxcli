@@ -6,17 +6,32 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
+// activityWithEH builds an ActionActivity owning the given inner
+// action with its ErrorHandlingType set. Mirrors the legacy test
+// pattern of "activity{ErrorHandlingType: X, Action: Y}" — but in
+// gen the property lives on the inner action, not the activity.
+func activityWithEH(inner ehSetter, eh string) *genMf.ActionActivity {
+	inner.SetErrorHandlingType(eh)
+	a := genMf.NewActionActivity()
+	a.SetAction(inner.(element.Element))
+	return a
+}
+
+// ehSetter is the small interface every gen action with an
+// ErrorHandlingType property satisfies — used by activityWithEH so
+// the test cases stay readable.
+type ehSetter interface {
+	element.Element
+	SetErrorHandlingType(v string)
+}
+
 func TestFindUnhandledCalls_RestCallNoCustom(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ActionActivity{
-			BaseActivity: microflows.BaseActivity{
-				ErrorHandlingType: microflows.ErrorHandlingTypeAbort,
-			},
-			Action: &microflows.RestCallAction{},
-		},
+	objects := []element.Element{
+		activityWithEH(genMf.NewRestCallAction(), genMf.ErrorHandlingTypeAbort),
 	}
 
 	var violations []linter.Violation
@@ -32,13 +47,8 @@ func TestFindUnhandledCalls_RestCallNoCustom(t *testing.T) {
 }
 
 func TestFindUnhandledCalls_RestCallCustom(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ActionActivity{
-			BaseActivity: microflows.BaseActivity{
-				ErrorHandlingType: microflows.ErrorHandlingTypeCustom,
-			},
-			Action: &microflows.RestCallAction{},
-		},
+	objects := []element.Element{
+		activityWithEH(genMf.NewRestCallAction(), genMf.ErrorHandlingTypeCustom),
 	}
 
 	var violations []linter.Violation
@@ -51,13 +61,8 @@ func TestFindUnhandledCalls_RestCallCustom(t *testing.T) {
 }
 
 func TestFindUnhandledCalls_CustomWithoutRollback(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ActionActivity{
-			BaseActivity: microflows.BaseActivity{
-				ErrorHandlingType: microflows.ErrorHandlingTypeCustomWithoutRollback,
-			},
-			Action: &microflows.RestCallAction{},
-		},
+	objects := []element.Element{
+		activityWithEH(genMf.NewRestCallAction(), genMf.ErrorHandlingTypeCustomWithoutRollBack),
 	}
 
 	var violations []linter.Violation
@@ -65,18 +70,13 @@ func TestFindUnhandledCalls_CustomWithoutRollback(t *testing.T) {
 	findUnhandledCalls(objects, testMicroflow(), r, &violations)
 
 	if len(violations) != 0 {
-		t.Errorf("expected 0 violations with CustomWithoutRollback, got %d", len(violations))
+		t.Errorf("expected 0 violations with CustomWithoutRollBack, got %d", len(violations))
 	}
 }
 
 func TestFindUnhandledCalls_JavaAction(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ActionActivity{
-			BaseActivity: microflows.BaseActivity{
-				ErrorHandlingType: microflows.ErrorHandlingTypeAbort,
-			},
-			Action: &microflows.JavaActionCallAction{},
-		},
+	objects := []element.Element{
+		activityWithEH(genMf.NewJavaActionCallAction(), genMf.ErrorHandlingTypeAbort),
 	}
 
 	var violations []linter.Violation
@@ -89,13 +89,8 @@ func TestFindUnhandledCalls_JavaAction(t *testing.T) {
 }
 
 func TestFindUnhandledCalls_WebServiceCall(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ActionActivity{
-			BaseActivity: microflows.BaseActivity{
-				ErrorHandlingType: microflows.ErrorHandlingTypeContinue,
-			},
-			Action: &microflows.WebServiceCallAction{},
-		},
+	objects := []element.Element{
+		activityWithEH(genMf.NewWebServiceCallAction(), genMf.ErrorHandlingTypeContinue),
 	}
 
 	var violations []linter.Violation
@@ -111,13 +106,9 @@ func TestFindUnhandledCalls_WebServiceCall(t *testing.T) {
 }
 
 func TestFindUnhandledCalls_NonExternalAction(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ActionActivity{
-			BaseActivity: microflows.BaseActivity{
-				ErrorHandlingType: microflows.ErrorHandlingTypeAbort,
-			},
-			Action: &microflows.CommitObjectsAction{},
-		},
+	// CommitAction is the gen rename of legacy CommitObjectsAction.
+	objects := []element.Element{
+		activityWithEH(genMf.NewCommitAction(), genMf.ErrorHandlingTypeAbort),
 	}
 
 	var violations []linter.Violation
@@ -130,21 +121,13 @@ func TestFindUnhandledCalls_NonExternalAction(t *testing.T) {
 }
 
 func TestFindUnhandledCalls_InsideLoop(t *testing.T) {
-	loopBody := &microflows.MicroflowObjectCollection{
-		Objects: []microflows.MicroflowObject{
-			&microflows.ActionActivity{
-				BaseActivity: microflows.BaseActivity{
-					ErrorHandlingType: microflows.ErrorHandlingTypeAbort,
-				},
-				Action: &microflows.RestCallAction{},
-			},
-		},
-	}
-	objects := []microflows.MicroflowObject{
-		&microflows.LoopedActivity{
-			ObjectCollection: loopBody,
-		},
-	}
+	loopBody := genMf.NewMicroflowObjectCollection()
+	loopBody.AddObjects(activityWithEH(genMf.NewRestCallAction(), genMf.ErrorHandlingTypeAbort))
+
+	loop := genMf.NewLoopedActivity()
+	loop.SetObjectCollection(loopBody)
+
+	objects := []element.Element{loop}
 
 	var violations []linter.Violation
 	r := NewErrorHandlingOnCallsRule()
@@ -158,15 +141,13 @@ func TestFindUnhandledCalls_InsideLoop(t *testing.T) {
 // --- CONV014 tests ---
 
 func TestFindContinueErrorHandling_Activity(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ActionActivity{
-			BaseActivity: microflows.BaseActivity{
-				Caption:           "Do something",
-				ErrorHandlingType: microflows.ErrorHandlingTypeContinue,
-			},
-			Action: &microflows.CommitObjectsAction{},
-		},
-	}
+	commit := genMf.NewCommitAction()
+	commit.SetErrorHandlingType(genMf.ErrorHandlingTypeContinue)
+	a := genMf.NewActionActivity()
+	a.SetAction(commit)
+	a.SetCaption("Do something")
+
+	objects := []element.Element{a}
 
 	var violations []linter.Violation
 	r := NewNoContinueErrorHandlingRule()
@@ -181,12 +162,13 @@ func TestFindContinueErrorHandling_Activity(t *testing.T) {
 }
 
 func TestFindContinueErrorHandling_Loop(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.LoopedActivity{
-			Caption:           "Process items",
-			ErrorHandlingType: microflows.ErrorHandlingTypeContinue,
-		},
-	}
+	loop := genMf.NewLoopedActivity()
+	loop.SetErrorHandlingType(genMf.ErrorHandlingTypeContinue)
+	// Gen LoopedActivity has no Caption; set Documentation so the
+	// violation message uses something descriptive.
+	loop.SetDocumentation("Process items")
+
+	objects := []element.Element{loop}
 
 	var violations []linter.Violation
 	r := NewNoContinueErrorHandlingRule()
@@ -198,13 +180,8 @@ func TestFindContinueErrorHandling_Loop(t *testing.T) {
 }
 
 func TestFindContinueErrorHandling_AbortIsOk(t *testing.T) {
-	objects := []microflows.MicroflowObject{
-		&microflows.ActionActivity{
-			BaseActivity: microflows.BaseActivity{
-				ErrorHandlingType: microflows.ErrorHandlingTypeAbort,
-			},
-			Action: &microflows.CommitObjectsAction{},
-		},
+	objects := []element.Element{
+		activityWithEH(genMf.NewCommitAction(), genMf.ErrorHandlingTypeAbort),
 	}
 
 	var violations []linter.Violation
