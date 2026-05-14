@@ -200,3 +200,32 @@ func parameterEntityNameGen(paramType element.Element) string {
 	}
 	return ""
 }
+
+// pageParamTypeMDLGen returns the MDL type string for a gen-typed page
+// parameter. Mirrors pageParamTypeMDL: primitive types collapse to
+// "String"/"Integer"/etc., entity types return the qualified name, and
+// the raw BSON storage name is the last-resort fallback so unknown
+// parameter shapes are still introspectable in DESCRIBE output.
+func pageParamTypeMDLGen(paramType element.Element) string {
+	if paramType == nil {
+		return ""
+	}
+	if name := parameterEntityNameGen(paramType); name != "" {
+		return name
+	}
+	switch paramType.TypeName() {
+	case "DataTypes$StringType":
+		return "String"
+	case "DataTypes$IntegerType":
+		return "Integer"
+	case "DataTypes$LongType":
+		return "Long"
+	case "DataTypes$DecimalType":
+		return "Decimal"
+	case "DataTypes$BooleanType":
+		return "Boolean"
+	case "DataTypes$DateTimeType":
+		return "DateTime"
+	}
+	return paramType.TypeName()
+}
