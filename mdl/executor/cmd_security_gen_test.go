@@ -97,6 +97,23 @@ func TestListProjectSecurityGen_OutputsLevel(t *testing.T) {
 	}
 }
 
+// TestListModuleRolesGen_FiltersByModule asserts that listModuleRolesGen
+// completes without error and emits a "Module" column header. The fixture
+// module name is "MyFirstModule" (not "TestModule" from the spec template).
+func TestListModuleRolesGen_FiltersByModule(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	ctx.Format = FormatTable
+	if err := listModuleRolesGen(ctx, "MyFirstModule"); err != nil {
+		t.Fatalf("listModuleRolesGen: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "MyFirstModule") {
+		t.Errorf("expected MyFirstModule in output, got: %q", out)
+	}
+}
+
 // TestListSecurityMatrixGen_Smoke asserts the matrix renderer does not
 // error and emits the section headers ("## Microflow Access" etc.).
 func TestListSecurityMatrixGen_Smoke(t *testing.T) {
