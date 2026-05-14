@@ -78,11 +78,15 @@ func decodeTypeName(raw bson.Raw) string {
 }
 
 // fieldAliases maps SDK property names to their BSON storage names where they
-// differ. Mendix historically used "Form" for "Layout" and "Page".
+// differ. Mendix historically used "Form" for "Layout" and "Page", and the
+// Attribute.Type child element is stored as "NewType" in current MPR BSON
+// (see sdk/mpr/parser_domainmodel.go::parseAttribute — the legacy "Type"
+// remains a fallback for ancient projects).
 var fieldAliases = map[string]string{
 	"LayoutCall":   "FormCall",
 	"PageSettings": "FormSettings",
 	"Layout":       "Form",
+	"Type":         "NewType",
 }
 
 // DecodeChild decodes a single embedded document child from raw BSON by key.
