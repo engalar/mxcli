@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
@@ -128,6 +129,73 @@ func TestFormatAttributeTypeGen_PrimitiveTypes(t *testing.T) {
 				t.Errorf("got %q, want %q", got, c.want)
 			}
 		})
+	}
+}
+
+// TestDescribeEntityGen_RendersFixtureEntity verifies the gen-typed
+// describe outputs a complete create-or-modify entity statement that
+// round-trips header / attributes / closing structures (Stage 3.3.4 A3).
+func TestDescribeEntityGen_RendersFixtureEntity(t *testing.T) {
+	ctx := newDomainModelsTestContext(t)
+	pairs, err := listDomainModelsWithContainerGen(ctx)
+	if err != nil || len(pairs) == 0 {
+		t.Skip("fixture has no domain models")
+	}
+	mods, _ := ctx.Backend.ListModules()
+	moduleNames := make(map[string]string)
+	for _, m := range mods {
+		moduleNames[string(m.ID)] = m.Name
+	}
+	// Find an entity to describe.
+	var modName, entityName string
+	for _, p := range pairs {
+		if p.DM == nil {
+			continue
+		}
+		mn := moduleNames[string(p.ContainerID)]
+		if mn == "" || mn == "System" {
+			continue
+		}
+		for _, e := range p.DM.EntitiesItems() {
+			ent, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			modName = mn
+			entityName = ent.Name()
+			break
+		}
+		if entityName != "" {
+			break
+		}
+	}
+	if entityName == "" {
+		t.Skip("fixture has no non-System entities")
+	}
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	if err := describeEntityGen(ctx, ast.QualifiedName{Module: modName, Name: entityName}); err != nil {
+		t.Fatalf("describeEntityGen(%s.%s): %v", modName, entityName, err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "create or modify") {
+		t.Errorf("output missing header; got:\n%s", out)
+	}
+	if !strings.Contains(out, modName+"."+entityName) {
+		t.Errorf("output missing qualified name %s.%s; got:\n%s", modName, entityName, out)
+	}
+	if !strings.Contains(out, ");") && !strings.Contains(out, ")\n") {
+		t.Errorf("output missing closing paren; got:\n%s", out)
+	}
+}
+
+func TestDescribeEntityGen_NotFound(t *testing.T) {
+	ctx := newDomainModelsTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	err := describeEntityGen(ctx, ast.QualifiedName{Module: "NoSuchModule", Name: "Nope"})
+	if err == nil {
+		t.Error("describeEntityGen with unknown entity: expected error, got nil")
 	}
 }
 

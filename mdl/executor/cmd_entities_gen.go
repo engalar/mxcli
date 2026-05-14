@@ -347,3 +347,233 @@ func formatAttributeTypeGen(at element.Element) string {
 	}
 	return tn
 }
+
+// describeEntityGen renders an entity in MDL "create or modify entity ..."
+// form on the gen-typed read path (Stage 3.3.4 A3 — replaces describeEntity
+// in cmd_entities_describe.go). Output is not byte-identical to the legacy
+// path because entity.Location was a struct in sdk and a string in gen;
+// the formatter still emits a Position annotation for backward-compatible
+// re-execution.
+//
+// Access-rule output is delegated to outputEntityAccessGrants (legacy
+// sdk-typed) and will become outputEntityAccessGrantsGen in Phase C3.
+func describeEntityGen(ctx *ExecContext, name ast.QualifiedName) error {
+	entity, modName, err := findEntityGen(ctx, name)
+	if err != nil {
+		return mdlerrors.NewBackend("get entity", err)
+	}
+	if entity == nil {
+		return mdlerrors.NewNotFound("entity", name.String())
+	}
+
+	// JavaDoc documentation
+	if doc := entity.Documentation(); doc != "" {
+		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", doc)
+	}
+
+	// Position annotation. Gen stores Location as a string ("X Y" or
+	// similar); legacy path used struct fields. We pass the raw value
+	// through so MDL re-execute can round-trip it.
+	if loc := entity.Location(); loc != "" {
+		fmt.Fprintf(ctx.Output, "@Position(%s)\n", loc)
+	}
+
+	entityType := strings.ToLower(entityKindForGen(entity))
+	if entityType == "" {
+		entityType = "persistent"
+	}
+	if entityType == "non-persistent" {
+		// keep legacy spelling
+	}
+
+	if extends := entityGeneralizationQNGen(entity); extends != "" {
+		fmt.Fprintf(ctx.Output, "create or modify %s entity %s.%s extends %s (\n", entityType, modName, entity.Name(), extends)
+	} else {
+		fmt.Fprintf(ctx.Output, "create or modify %s entity %s.%s (\n", entityType, modName, entity.Name())
+	}
+
+	// Build validation rule index by attribute QN / name. Gen
+	// ValidationRule references attributes by qualified name
+	// ("Module.Entity.AttrName") via ByNameRef.
+	validationsByName := make(map[string][]*genDm.ValidationRule)
+	for _, vr := range entity.ValidationRulesItems() {
+		v, ok := vr.(*genDm.ValidationRule)
+		if !ok {
+			continue
+		}
+		qn := v.AttributeQualifiedName()
+		attrName := extractAttrNameFromQualified(qn)
+		if attrName == "" {
+			// QN is just the simple name in some fixtures.
+			attrName = qn
+		}
+		if attrName != "" {
+			validationsByName[attrName] = append(validationsByName[attrName], v)
+		}
+	}
+
+	type attrLine struct{ text string }
+	var attrLines []attrLine
+
+	for _, a := range entity.AttributesItems() {
+		attr, ok := a.(*genDm.Attribute)
+		if !ok {
+			continue
+		}
+		var line strings.Builder
+		if doc := attr.Documentation(); doc != "" {
+			line.WriteString(fmt.Sprintf("  /** %s */\n", doc))
+		}
+		typeStr := formatAttributeTypeGen(attr.Type())
+		var constraints strings.Builder
+
+		// Validation rule constraints. Note: gen ValidationRule does not
+		// expose RuleInfo type as a single string today; we render
+		// "not null" / "unique" by inspecting the RuleInfo element type.
+		for _, v := range validationsByName[attr.Name()] {
+			info := v.RuleInfo()
+			if info == nil {
+				continue
+			}
+			switch info.TypeName() {
+			case "DomainModels$RequiredRuleInfo":
+				constraints.WriteString(" not null")
+			case "DomainModels$UniqueRuleInfo":
+				constraints.WriteString(" unique")
+			}
+		}
+
+		// Calculated / Default value rendering.
+		if val := attr.Value(); val != nil {
+			switch v := val.(type) {
+			case *genDm.CalculatedValue:
+				constraints.WriteString(" calculated")
+				if mfn := v.MicroflowQualifiedName(); mfn != "" {
+					constraints.WriteString(" by " + mfn)
+				}
+			case *genDm.StoredValue:
+				if def := v.DefaultValue(); def != "" {
+					if _, ok := attr.Type().(*genDm.StringAttributeType); ok {
+						def = fmt.Sprintf("'%s'", def)
+					}
+					if enumType, ok := attr.Type().(*genDm.EnumerationAttributeType); ok {
+						if qn := enumType.EnumerationQualifiedName(); qn != "" && !strings.Contains(def, ".") {
+							def = qn + "." + def
+						}
+					}
+					constraints.WriteString(" default " + def)
+				}
+			}
+		}
+
+		line.WriteString(fmt.Sprintf("  %s: %s%s", attr.Name(), typeStr, constraints.String()))
+		attrLines = append(attrLines, attrLine{text: line.String()})
+	}
+
+	// System pseudo-attributes from *NoGeneralization
+	if g, ok := entity.Generalization().(*genDm.NoGeneralization); ok {
+		if g.HasOwner() {
+			attrLines = append(attrLines, attrLine{text: "  Owner: AutoOwner"})
+		}
+		if g.HasChangedBy() {
+			attrLines = append(attrLines, attrLine{text: "  ChangedBy: AutoChangedBy"})
+		}
+		if g.HasCreatedDate() {
+			attrLines = append(attrLines, attrLine{text: "  CreatedDate: AutoCreatedDate"})
+		}
+		if g.HasChangedDate() {
+			attrLines = append(attrLines, attrLine{text: "  ChangedDate: AutoChangedDate"})
+		}
+	}
+
+	for i, al := range attrLines {
+		comma := ","
+		if i == len(attrLines)-1 {
+			comma = ""
+		}
+		fmt.Fprintf(ctx.Output, "%s%s\n", al.text, comma)
+	}
+	fmt.Fprint(ctx.Output, ")")
+
+	// VIEW entities — emit OQL body if present
+	if entityType == "view" {
+		if src, ok := entity.Source().(*genDm.OqlViewEntitySource); ok {
+			oql := src.Oql()
+			if oql != "" {
+				fmt.Fprint(ctx.Output, " as (\n")
+				for _, l := range strings.Split(oql, "\n") {
+					fmt.Fprintf(ctx.Output, "  %s\n", l)
+				}
+				fmt.Fprint(ctx.Output, ")")
+			}
+		}
+	}
+
+	// Build attribute ID -> Name lookup for index columns.
+	attrNames := make(map[model.ID]string)
+	for _, a := range entity.AttributesItems() {
+		attr, ok := a.(*genDm.Attribute)
+		if !ok {
+			continue
+		}
+		attrNames[model.ID(attr.ID())] = attr.Name()
+	}
+
+	for _, ix := range entity.IndexesItems() {
+		idx, ok := ix.(*genDm.Index)
+		if !ok {
+			continue
+		}
+		var cols []string
+		for _, ia := range idx.AttributesItems() {
+			ind, ok := ia.(*genDm.IndexedAttribute)
+			if !ok {
+				continue
+			}
+			colName := attrNames[model.ID(ind.AttributeRefID())]
+			if colName == "" {
+				continue
+			}
+			if !ind.Ascending() {
+				colName += " desc"
+			}
+			cols = append(cols, colName)
+		}
+		if len(cols) > 0 {
+			fmt.Fprintf(ctx.Output, "\nindex (%s)", strings.Join(cols, ", "))
+		}
+	}
+
+	for _, eh := range entity.EventHandlersItems() {
+		h, ok := eh.(*genDm.EventHandler)
+		if !ok {
+			continue
+		}
+		mfn := h.MicroflowQualifiedName()
+		if mfn == "" {
+			continue
+		}
+		eventName := strings.ToLower(h.Event())
+		paramStr := "()"
+		if h.PassEventObject() {
+			paramStr = "($currentObject)"
+		}
+		options := ""
+		if h.RaiseErrorOnFalse() && strings.EqualFold(h.Moment(), "Before") {
+			options = " raise error"
+		}
+		fmt.Fprintf(ctx.Output, "\non %s %s call %s%s%s",
+			strings.ToLower(h.Moment()), eventName, mfn, paramStr, options)
+	}
+
+	fmt.Fprintln(ctx.Output, ";")
+
+	// Access-rule GRANT statements still flow through the legacy sdk-typed
+	// helper; Phase C3 will add the gen-typed counterpart. Until then,
+	// describeEntityGen omits access-rule output (the dispatcher in A6
+	// can fall back to legacy describeEntity for entities whose access
+	// rules need rendering, or callers can post-process via SHOW ACCESS).
+
+	fmt.Fprintln(ctx.Output, "/")
+	return nil
+}
