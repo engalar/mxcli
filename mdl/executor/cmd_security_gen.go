@@ -25,6 +25,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
@@ -177,7 +178,7 @@ func listSecurityMatrixGen(ctx *ExecContext, moduleName string) error {
 		return nil
 	}
 
-	dms, err := ctx.Backend.ListDomainModels()
+	pairs, err := listDomainModelsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list domain models", err)
 	}
@@ -189,28 +190,38 @@ func listSecurityMatrixGen(ctx *ExecContext, moduleName string) error {
 	fmt.Fprintln(ctx.Output, ":")
 	fmt.Fprintln(ctx.Output)
 
-	// Entities section — domainmodel reads stay in cmd_security.go land.
+	// Entities section — gen-typed walk (Stage 3.3.4 C3).
 	fmt.Fprintln(ctx.Output, "## Entity Access")
 	fmt.Fprintln(ctx.Output)
 
 	entityFound := false
-	for _, dm := range dms {
-		modID := h.FindModuleID(dm.ContainerID)
+	for _, p := range pairs {
+		if p.DM == nil {
+			continue
+		}
+		modID := h.FindModuleID(p.ContainerID)
 		modName := h.GetModuleName(modID)
 		if moduleName != "" && modName != moduleName {
 			continue
 		}
-
-		for _, entity := range dm.Entities {
-			if len(entity.AccessRules) == 0 {
+		for _, e := range p.DM.EntitiesItems() {
+			entity, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			rules := entity.AccessRulesItems()
+			if len(rules) == 0 {
 				continue
 			}
 			entityFound = true
-			fmt.Fprintf(ctx.Output, "### %s.%s\n", modName, entity.Name)
-
-			for _, rule := range entity.AccessRules {
-				roleStrs := entityRuleRoleStrings(rule)
-				rights := entityRuleRightStrings(rule)
+			fmt.Fprintf(ctx.Output, "### %s.%s\n", modName, entity.Name())
+			for _, r := range rules {
+				rule, ok := r.(*genDm.AccessRule)
+				if !ok {
+					continue
+				}
+				roleStrs := entityRuleRoleStringsGen(rule)
+				rights := entityRuleRightStringsGen(rule)
 				fmt.Fprintf(ctx.Output, "  %s: %s\n", strings.Join(roleStrs, ", "), strings.Join(rights, ""))
 			}
 			fmt.Fprintln(ctx.Output)
@@ -305,21 +316,32 @@ func listSecurityMatrixJSONGen(ctx *ExecContext, moduleName string) error {
 		Columns: []string{"ObjectType", "QualifiedName", "Roles", "Rights"},
 	}
 
-	// Entities — same path as legacy.
-	dms, _ := ctx.Backend.ListDomainModels()
-	for _, dm := range dms {
-		modID := h.FindModuleID(dm.ContainerID)
+	// Entities — gen-typed walk (Stage 3.3.4 C3).
+	pairs, _ := listDomainModelsWithContainerGen(ctx)
+	for _, p := range pairs {
+		if p.DM == nil {
+			continue
+		}
+		modID := h.FindModuleID(p.ContainerID)
 		modName := h.GetModuleName(modID)
 		if moduleName != "" && modName != moduleName {
 			continue
 		}
-		for _, entity := range dm.Entities {
-			for _, rule := range entity.AccessRules {
-				roleStrs := entityRuleRoleStrings(rule)
-				rights := entityRuleRightStrings(rule)
+		for _, e := range p.DM.EntitiesItems() {
+			entity, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			for _, r := range entity.AccessRulesItems() {
+				rule, ok := r.(*genDm.AccessRule)
+				if !ok {
+					continue
+				}
+				roleStrs := entityRuleRoleStringsGen(rule)
+				rights := entityRuleRightStringsGen(rule)
 				tr.Rows = append(tr.Rows, []any{
 					"Entity",
-					modName + "." + entity.Name,
+					modName + "." + entity.Name(),
 					strings.Join(roleStrs, ", "),
 					strings.Join(rights, ""),
 				})
@@ -402,6 +424,20 @@ func entityRuleRoleStrings(rule *domainmodel.AccessRule) []string {
 	for _, rid := range rule.ModuleRoles {
 		out = append(out, string(rid))
 	}
+	return out
+}
+
+// entityRuleRoleStringsGen mirrors entityRuleRoleStrings for the
+// gen-typed AccessRule. Gen exposes role qualified names via the
+// combined accessor ModuleRolesQualifiedNames(); the historical
+// ModuleRoleNames vs ModuleRoles split from sdk has been collapsed.
+func entityRuleRoleStringsGen(rule *genDm.AccessRule) []string {
+	if rule == nil {
+		return nil
+	}
+	qns := rule.ModuleRolesQualifiedNames()
+	out := make([]string, len(qns))
+	copy(out, qns)
 	return out
 }
 
@@ -586,6 +622,46 @@ func entityRuleRightStrings(rule *domainmodel.AccessRule) []string {
 		rights = append(rights, "W")
 	}
 	if rule.AllowDelete {
+		rights = append(rights, "D")
+	}
+	return rights
+}
+
+// entityRuleRightStringsGen mirrors entityRuleRightStrings for the
+// gen-typed AccessRule. Gen exposes DefaultMemberAccessRights() as a
+// plain string ("ReadOnly", "ReadWrite", "None") and per-member
+// AccessRights via MemberAccessesItems()[i].(*MemberAccess).AccessRights().
+func entityRuleRightStringsGen(rule *genDm.AccessRule) []string {
+	if rule == nil {
+		return nil
+	}
+	var rights []string
+	if rule.AllowCreate() {
+		rights = append(rights, "C")
+	}
+	def := rule.DefaultMemberAccessRights()
+	rr := def == "ReadOnly" || def == "ReadWrite"
+	rw := def == "ReadWrite"
+	for _, m := range rule.MemberAccessesItems() {
+		ma, ok := m.(*genDm.MemberAccess)
+		if !ok {
+			continue
+		}
+		switch ma.AccessRights() {
+		case "ReadWrite":
+			rr = true
+			rw = true
+		case "ReadOnly":
+			rr = true
+		}
+	}
+	if rr {
+		rights = append(rights, "R")
+	}
+	if rw {
+		rights = append(rights, "W")
+	}
+	if rule.AllowDelete() {
 		rights = append(rights, "D")
 	}
 	return rights
