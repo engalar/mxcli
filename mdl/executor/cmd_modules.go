@@ -447,11 +447,14 @@ func listModules(ctx *ExecContext) error {
 		}
 	}
 
-	// Count entities from domain models
-	if dms, err := ctx.Backend.ListDomainModels(); err == nil {
-		for _, dm := range dms {
-			modID := h.FindModuleID(dm.ContainerID)
-			entityCounts[modID] += len(dm.Entities)
+	// Count entities from domain models (Stage 3.3.4 C2.c — gen path).
+	if pairs, err := listDomainModelsWithContainerGen(ctx); err == nil {
+		for _, p := range pairs {
+			if p.DM == nil {
+				continue
+			}
+			modID := h.FindModuleID(p.ContainerID)
+			entityCounts[modID] += len(p.DM.EntitiesItems())
 		}
 	}
 
