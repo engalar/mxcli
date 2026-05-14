@@ -9,15 +9,19 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 )
 
 // LintReader provides read access to MPR document data needed by lint rules.
 // Implemented by MprBackend (and any backend satisfying these signatures).
+//
+// Followup F2: GetMicroflow returns the gen-typed flow body so rules
+// walk the same modelsdk-native representation the executor and
+// catalog consume.
 type LintReader interface {
-	GetMicroflow(id model.ID) (*microflows.Microflow, error)
+	GetMicroflowGen(id model.ID) (*genMf.Microflow, error)
 	GetProjectSecurity() (*security.ProjectSecurity, error)
 	GetNavigation() (*types.NavigationDocument, error)
 	ListPages() ([]*pages.Page, error)

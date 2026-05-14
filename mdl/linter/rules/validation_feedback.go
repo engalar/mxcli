@@ -7,7 +7,9 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 )
 
 // ValidationFeedbackRule checks for validation feedback actions with empty message templates.
@@ -41,27 +43,33 @@ func (r *ValidationFeedbackRule) Check(ctx *linter.LintContext) []linter.Violati
 			continue
 		}
 
-		fullMF, err := reader.GetMicroflow(model.ID(mf.ID))
-		if err != nil || fullMF == nil || fullMF.ObjectCollection == nil {
+		fullMF, err := reader.GetMicroflowGen(model.ID(mf.ID))
+		if err != nil || fullMF == nil {
+			continue
+		}
+		oc, _ := fullMF.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if oc == nil {
 			continue
 		}
 
-		walkObjects(fullMF.ObjectCollection.Objects, mf, r, &violations)
+		walkObjects(oc.ObjectsItems(), mf, r, &violations)
 	}
 
 	return violations
 }
 
-// walkObjects recursively walks microflow objects looking for empty validation feedback.
-func walkObjects(objects []microflows.MicroflowObject, mf linter.Microflow, r *ValidationFeedbackRule, violations *[]linter.Violation) {
+// walkObjects recursively walks gen ObjectCollection items looking
+// for empty validation feedback templates.
+func walkObjects(objects []element.Element, mf linter.Microflow, r *ValidationFeedbackRule, violations *[]linter.Violation) {
 	for _, obj := range objects {
 		switch act := obj.(type) {
-		case *microflows.ActionActivity:
-			if act.Action == nil {
+		case *genMf.ActionActivity:
+			inner := act.Action()
+			if inner == nil {
 				continue
 			}
-			if vf, ok := act.Action.(*microflows.ValidationFeedbackAction); ok {
-				if isEmptyTemplate(vf) {
+			if vf, ok := inner.(*genMf.ValidationFeedbackAction); ok {
+				if isEmptyFeedbackTemplate(vf) {
 					*violations = append(*violations, linter.Violation{
 						RuleID:   r.ID(),
 						Severity: r.DefaultSeverity(),
@@ -78,25 +86,33 @@ func walkObjects(objects []microflows.MicroflowObject, mf linter.Microflow, r *V
 					})
 				}
 			}
-		case *microflows.LoopedActivity:
-			if act.ObjectCollection != nil {
-				walkObjects(act.ObjectCollection.Objects, mf, r, violations)
+		case *genMf.LoopedActivity:
+			if body, ok := act.ObjectCollection().(*genMf.MicroflowObjectCollection); ok && body != nil {
+				walkObjects(body.ObjectsItems(), mf, r, violations)
 			}
 		}
 	}
 }
 
-// isEmptyTemplate checks if a ValidationFeedbackAction has an empty or nil template.
-func isEmptyTemplate(vf *microflows.ValidationFeedbackAction) bool {
-	if vf.Template == nil {
+// isEmptyFeedbackTemplate reports whether a gen ValidationFeedbackAction
+// has no usable feedback text. The template is empty when it's missing,
+// not a *texts.Text, has no translations, or all translation texts are
+// empty strings.
+func isEmptyFeedbackTemplate(vf *genMf.ValidationFeedbackAction) bool {
+	tmpl, ok := vf.FeedbackTemplate().(*texts.Text)
+	if !ok || tmpl == nil {
 		return true
 	}
-	if len(vf.Template.Translations) == 0 {
+	items := tmpl.TranslationsItems()
+	if len(items) == 0 {
 		return true
 	}
-	// Check if all translations are empty strings
-	for _, text := range vf.Template.Translations {
-		if text != "" {
+	for _, child := range items {
+		tr, ok := child.(*texts.Translation)
+		if !ok || tr == nil {
+			continue
+		}
+		if tr.Text() != "" {
 			return false
 		}
 	}

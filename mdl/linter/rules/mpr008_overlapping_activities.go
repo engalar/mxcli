@@ -7,7 +7,8 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
 // activityBoxWidth and activityBoxHeight are the approximate pixel dimensions of a
@@ -37,6 +38,13 @@ func (r *OverlappingActivitiesRule) Description() string {
 	return "Microflow activities whose canvas positions overlap, typically caused by missing @position annotations in MDL"
 }
 
+// activityPos pairs a parsed (x, y) canvas coordinate with the
+// activity's caption — both used by the overlap-detection inner loop.
+type activityPos struct {
+	x, y    int
+	caption string
+}
+
 func (r *OverlappingActivitiesRule) Check(ctx *linter.LintContext) []linter.Violation {
 	reader := ctx.Reader()
 	if reader == nil {
@@ -50,48 +58,51 @@ func (r *OverlappingActivitiesRule) Check(ctx *linter.LintContext) []linter.Viol
 			continue
 		}
 
-		fullMF, err := reader.GetMicroflow(model.ID(mf.ID))
-		if err != nil || fullMF == nil || fullMF.ObjectCollection == nil {
+		fullMF, err := reader.GetMicroflowGen(model.ID(mf.ID))
+		if err != nil || fullMF == nil {
+			continue
+		}
+		oc, _ := fullMF.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if oc == nil {
 			continue
 		}
 
-		type actInfo struct {
-			x, y    int
-			caption string
-		}
-
-		var activities []actInfo
-		var collect func(objects []microflows.MicroflowObject)
-		collect = func(objects []microflows.MicroflowObject) {
+		var activities []activityPos
+		var collect func(objects []element.Element)
+		collect = func(objects []element.Element) {
 			for _, obj := range objects {
 				switch act := obj.(type) {
-				case *microflows.ActionActivity:
-					p := act.GetPosition()
-					caption := act.Caption
-					if caption == "" {
-						caption = "(unnamed)"
+				case *genMf.ActionActivity:
+					if x, y, ok := parseActivityPos(act.RelativeMiddlePoint()); ok {
+						caption := act.Caption()
+						if caption == "" {
+							caption = "(unnamed)"
+						}
+						activities = append(activities, activityPos{x, y, caption})
 					}
-					activities = append(activities, actInfo{p.X, p.Y, caption})
-				case *microflows.LoopedActivity:
-					p := act.GetPosition()
-					caption := act.Caption
-					if caption == "" {
-						caption = "(loop)"
+				case *genMf.LoopedActivity:
+					if x, y, ok := parseActivityPos(act.RelativeMiddlePoint()); ok {
+						caption := act.Documentation()
+						if caption == "" {
+							caption = "(loop)"
+						}
+						activities = append(activities, activityPos{x, y, caption})
 					}
-					activities = append(activities, actInfo{p.X, p.Y, caption})
-					if act.ObjectCollection != nil {
-						collect(act.ObjectCollection.Objects)
+					if body, ok := act.ObjectCollection().(*genMf.MicroflowObjectCollection); ok && body != nil {
+						collect(body.ObjectsItems())
 					}
-				case *microflows.ExclusiveSplit:
-					p := act.GetPosition()
-					activities = append(activities, actInfo{p.X, p.Y, act.Caption})
-				case *microflows.ExclusiveMerge:
-					p := act.GetPosition()
-					activities = append(activities, actInfo{p.X, p.Y, "(merge)"})
+				case *genMf.ExclusiveSplit:
+					if x, y, ok := parseActivityPos(act.RelativeMiddlePoint()); ok {
+						activities = append(activities, activityPos{x, y, act.Caption()})
+					}
+				case *genMf.ExclusiveMerge:
+					if x, y, ok := parseActivityPos(act.RelativeMiddlePoint()); ok {
+						activities = append(activities, activityPos{x, y, "(merge)"})
+					}
 				}
 			}
 		}
-		collect(fullMF.ObjectCollection.Objects)
+		collect(oc.ObjectsItems())
 
 		// Check all pairs for overlapping positions.
 		// Skip activities at the origin (0,0) — these are unpositioned/default.
@@ -139,4 +150,20 @@ func (r *OverlappingActivitiesRule) Check(ctx *linter.LintContext) []linter.Viol
 	}
 
 	return violations
+}
+
+// parseActivityPos parses gen's "<x> <y>" RelativeMiddlePoint string
+// (space-separated integers). Returns ok=false for an empty or
+// malformed value so the caller can skip the activity rather than
+// emit a false-positive overlap at (0, 0).
+func parseActivityPos(s string) (int, int, bool) {
+	if s == "" {
+		return 0, 0, false
+	}
+	var x, y int
+	n, err := fmt.Sscanf(s, "%d %d", &x, &y)
+	if err != nil || n != 2 {
+		return 0, 0, false
+	}
+	return x, y, true
 }

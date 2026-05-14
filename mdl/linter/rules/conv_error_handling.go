@@ -7,8 +7,42 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
+
+// errorHandled reports whether the given gen action's error handling is
+// already "Custom" or "Custom without rollback" — the two settings the
+// CONV013 rule treats as adequate. Returns false for any other value
+// or for actions that don't expose ErrorHandlingType().
+//
+// Gen renames the legacy ErrorHandlingTypeCustomWithoutRollback (lower-case
+// 'b' in 'Rollback') to ErrorHandlingTypeCustomWithoutRollBack (upper-case
+// 'B'); the underlying string value is unchanged ("CustomWithoutRollBack").
+func errorHandled(action element.Element) bool {
+	type ehGetter interface {
+		ErrorHandlingType() string
+	}
+	if g, ok := action.(ehGetter); ok {
+		eh := g.ErrorHandlingType()
+		return eh == genMf.ErrorHandlingTypeCustom || eh == genMf.ErrorHandlingTypeCustomWithoutRollBack
+	}
+	return false
+}
+
+// errorHandlingType returns the action's ErrorHandlingType setting,
+// or "" if the element is not an action with that property. Used by
+// CONV014 (Continue swallows errors) which needs to compare against
+// the "Continue" enum value across all action types and LoopedActivity.
+func errorHandlingType(e element.Element) string {
+	type ehGetter interface {
+		ErrorHandlingType() string
+	}
+	if g, ok := e.(ehGetter); ok {
+		return g.ErrorHandlingType()
+	}
+	return ""
+}
 
 // --- CONV013: ErrorHandlingOnCalls ---
 
@@ -41,56 +75,60 @@ func (r *ErrorHandlingOnCallsRule) Check(ctx *linter.LintContext) []linter.Viola
 			continue
 		}
 
-		fullMF, err := reader.GetMicroflow(model.ID(mf.ID))
-		if err != nil || fullMF == nil || fullMF.ObjectCollection == nil {
+		fullMF, err := reader.GetMicroflowGen(model.ID(mf.ID))
+		if err != nil || fullMF == nil {
+			continue
+		}
+		oc, _ := fullMF.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if oc == nil {
 			continue
 		}
 
-		findUnhandledCalls(fullMF.ObjectCollection.Objects, mf, r, &violations)
+		findUnhandledCalls(oc.ObjectsItems(), mf, r, &violations)
 	}
 
 	return violations
 }
 
-func findUnhandledCalls(objects []microflows.MicroflowObject, mf linter.Microflow, r *ErrorHandlingOnCallsRule, violations *[]linter.Violation) {
+func findUnhandledCalls(objects []element.Element, mf linter.Microflow, r *ErrorHandlingOnCallsRule, violations *[]linter.Violation) {
 	for _, obj := range objects {
 		switch act := obj.(type) {
-		case *microflows.ActionActivity:
-			if act.Action == nil {
+		case *genMf.ActionActivity:
+			inner := act.Action()
+			if inner == nil {
 				continue
 			}
 			actionName := ""
-			switch act.Action.(type) {
-			case *microflows.RestCallAction:
+			switch inner.(type) {
+			case *genMf.RestCallAction:
 				actionName = "REST call"
-			case *microflows.WebServiceCallAction:
+			case *genMf.WebServiceCallAction:
 				actionName = "Web service call"
-			case *microflows.JavaActionCallAction:
+			case *genMf.JavaActionCallAction:
 				actionName = "Java action call"
 			default:
 				continue
 			}
 
-			// Check if error handling is not custom
-			if act.ErrorHandlingType != microflows.ErrorHandlingTypeCustom &&
-				act.ErrorHandlingType != microflows.ErrorHandlingTypeCustomWithoutRollback {
-				*violations = append(*violations, linter.Violation{
-					RuleID:   r.ID(),
-					Severity: r.DefaultSeverity(),
-					Message: fmt.Sprintf("%s in '%s.%s' uses '%s' error handling instead of Custom.",
-						actionName, mf.ModuleName, mf.Name, act.ErrorHandlingType),
-					Location: linter.Location{
-						Module:       mf.ModuleName,
-						DocumentType: "microflow",
-						DocumentName: mf.Name,
-						DocumentID:   mf.ID,
-					},
-					Suggestion: "Set error handling to 'Custom with rollback' and add an error handler flow",
-				})
+			if errorHandled(inner) {
+				continue
 			}
-		case *microflows.LoopedActivity:
-			if act.ObjectCollection != nil {
-				findUnhandledCalls(act.ObjectCollection.Objects, mf, r, violations)
+			*violations = append(*violations, linter.Violation{
+				RuleID:   r.ID(),
+				Severity: r.DefaultSeverity(),
+				Message: fmt.Sprintf("%s in '%s.%s' uses '%s' error handling instead of Custom.",
+					actionName, mf.ModuleName, mf.Name, errorHandlingType(inner)),
+				Location: linter.Location{
+					Module:       mf.ModuleName,
+					DocumentType: "microflow",
+					DocumentName: mf.Name,
+					DocumentID:   mf.ID,
+				},
+				Suggestion: "Set error handling to 'Custom with rollback' and add an error handler flow",
+			})
+		case *genMf.LoopedActivity:
+			if body, ok := act.ObjectCollection().(*genMf.MicroflowObjectCollection); ok && body != nil {
+				findUnhandledCalls(body.ObjectsItems(), mf, r, violations)
 			}
 		}
 	}
@@ -129,23 +167,28 @@ func (r *NoContinueErrorHandlingRule) Check(ctx *linter.LintContext) []linter.Vi
 			continue
 		}
 
-		fullMF, err := reader.GetMicroflow(model.ID(mf.ID))
-		if err != nil || fullMF == nil || fullMF.ObjectCollection == nil {
+		fullMF, err := reader.GetMicroflowGen(model.ID(mf.ID))
+		if err != nil || fullMF == nil {
+			continue
+		}
+		oc, _ := fullMF.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if oc == nil {
 			continue
 		}
 
-		findContinueErrorHandling(fullMF.ObjectCollection.Objects, mf, r, &violations)
+		findContinueErrorHandling(oc.ObjectsItems(), mf, r, &violations)
 	}
 
 	return violations
 }
 
-func findContinueErrorHandling(objects []microflows.MicroflowObject, mf linter.Microflow, r *NoContinueErrorHandlingRule, violations *[]linter.Violation) {
+func findContinueErrorHandling(objects []element.Element, mf linter.Microflow, r *NoContinueErrorHandlingRule, violations *[]linter.Violation) {
 	for _, obj := range objects {
 		switch act := obj.(type) {
-		case *microflows.ActionActivity:
-			if act.ErrorHandlingType == microflows.ErrorHandlingTypeContinue {
-				caption := act.Caption
+		case *genMf.ActionActivity:
+			// In gen, ErrorHandlingType lives on the inner action (not the activity).
+			if errorHandlingType(act.Action()) == genMf.ErrorHandlingTypeContinue {
+				caption := act.Caption()
 				if caption == "" {
 					caption = "(unnamed activity)"
 				}
@@ -163,9 +206,13 @@ func findContinueErrorHandling(objects []microflows.MicroflowObject, mf linter.M
 					Suggestion: "Change error handling to 'Custom with rollback' or 'Abort' to properly handle errors",
 				})
 			}
-		case *microflows.LoopedActivity:
-			if act.ErrorHandlingType == microflows.ErrorHandlingTypeContinue {
-				caption := act.Caption
+		case *genMf.LoopedActivity:
+			if act.ErrorHandlingType() == genMf.ErrorHandlingTypeContinue {
+				// Gen LoopedActivity has no Caption property (the
+				// legacy sdk's BaseActivity.Caption isn't carried
+				// across); fall back to Documentation, then a
+				// placeholder, so the message stays readable.
+				caption := act.Documentation()
 				if caption == "" {
 					caption = "(unnamed loop)"
 				}
@@ -183,8 +230,8 @@ func findContinueErrorHandling(objects []microflows.MicroflowObject, mf linter.M
 					Suggestion: "Change error handling to 'Custom with rollback' or 'Abort' to properly handle errors",
 				})
 			}
-			if act.ObjectCollection != nil {
-				findContinueErrorHandling(act.ObjectCollection.Objects, mf, r, violations)
+			if body, ok := act.ObjectCollection().(*genMf.MicroflowObjectCollection); ok && body != nil {
+				findContinueErrorHandling(body.ObjectsItems(), mf, r, violations)
 			}
 		}
 	}

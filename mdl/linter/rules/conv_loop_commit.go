@@ -7,7 +7,8 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
 // NoCommitInLoopRule flags commit actions inside loops, which cause N+1 database operations.
@@ -37,25 +38,38 @@ func (r *NoCommitInLoopRule) Check(ctx *linter.LintContext) []linter.Violation {
 			continue
 		}
 
-		fullMF, err := reader.GetMicroflow(model.ID(mf.ID))
-		if err != nil || fullMF == nil || fullMF.ObjectCollection == nil {
+		fullMF, err := reader.GetMicroflowGen(model.ID(mf.ID))
+		if err != nil || fullMF == nil {
+			continue
+		}
+		oc, _ := fullMF.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if oc == nil {
 			continue
 		}
 
-		findCommitsInLoops(fullMF.ObjectCollection.Objects, mf, r, &violations, false)
+		findCommitsInLoops(oc.ObjectsItems(), mf, r, &violations, false)
 	}
 
 	return violations
 }
 
-func findCommitsInLoops(objects []microflows.MicroflowObject, mf linter.Microflow, r *NoCommitInLoopRule, violations *[]linter.Violation, insideLoop bool) {
+// findCommitsInLoops walks a gen ObjectCollection looking for
+// CommitAction inner actions inside an ActionActivity that lives
+// directly or transitively inside a LoopedActivity. Note: gen renames
+// "CommitObjectsAction" to "CommitAction" but the BSON storage type
+// stays "CommitAction" (see CLAUDE.md storage-name table).
+func findCommitsInLoops(objects []element.Element, mf linter.Microflow, r *NoCommitInLoopRule, violations *[]linter.Violation, insideLoop bool) {
 	for _, obj := range objects {
 		switch act := obj.(type) {
-		case *microflows.ActionActivity:
-			if !insideLoop || act.Action == nil {
+		case *genMf.ActionActivity:
+			if !insideLoop {
 				continue
 			}
-			if _, ok := act.Action.(*microflows.CommitObjectsAction); ok {
+			inner := act.Action()
+			if inner == nil {
+				continue
+			}
+			if _, ok := inner.(*genMf.CommitAction); ok {
 				*violations = append(*violations, linter.Violation{
 					RuleID:   r.ID(),
 					Severity: r.DefaultSeverity(),
@@ -71,9 +85,9 @@ func findCommitsInLoops(objects []microflows.MicroflowObject, mf linter.Microflo
 					Suggestion: "Move the commit outside the loop, or collect objects in a list and commit once after the loop",
 				})
 			}
-		case *microflows.LoopedActivity:
-			if act.ObjectCollection != nil {
-				findCommitsInLoops(act.ObjectCollection.Objects, mf, r, violations, true)
+		case *genMf.LoopedActivity:
+			if body, ok := act.ObjectCollection().(*genMf.MicroflowObjectCollection); ok && body != nil {
+				findCommitsInLoops(body.ObjectsItems(), mf, r, violations, true)
 			}
 		}
 	}
