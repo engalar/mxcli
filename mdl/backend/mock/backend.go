@@ -15,7 +15,6 @@ import (
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/pages"
@@ -307,20 +306,20 @@ type MockBackend struct {
 	BuildFilterWidgetFunc           func(spec backend.FilterWidgetSpec, projectPath string) (pages.Widget, error)
 
 	// AgentEditorBackend
-	ListAgentEditorModelsFunc               func() ([]*agenteditor.Model, error)
-	ListAgentEditorKnowledgeBasesFunc       func() ([]*agenteditor.KnowledgeBase, error)
-	ListAgentEditorConsumedMCPServicesFunc  func() ([]*agenteditor.ConsumedMCPService, error)
-	ListAgentEditorAgentsFunc               func() ([]*agenteditor.Agent, error)
-	CreateAgentEditorModelFunc              func(m *agenteditor.Model) error
-	UpdateAgentEditorModelFunc              func(m *agenteditor.Model) error
+	ListAgentEditorModelsFunc               func() ([]*types.Model, error)
+	ListAgentEditorKnowledgeBasesFunc       func() ([]*types.KnowledgeBase, error)
+	ListAgentEditorConsumedMCPServicesFunc  func() ([]*types.ConsumedMCPService, error)
+	ListAgentEditorAgentsFunc               func() ([]*types.Agent, error)
+	CreateAgentEditorModelFunc              func(m *types.Model) error
+	UpdateAgentEditorModelFunc              func(m *types.Model) error
 	DeleteAgentEditorModelFunc              func(id string) error
-	CreateAgentEditorKnowledgeBaseFunc      func(kb *agenteditor.KnowledgeBase) error
-	UpdateAgentEditorKnowledgeBaseFunc      func(kb *agenteditor.KnowledgeBase) error
+	CreateAgentEditorKnowledgeBaseFunc      func(kb *types.KnowledgeBase) error
+	UpdateAgentEditorKnowledgeBaseFunc      func(kb *types.KnowledgeBase) error
 	DeleteAgentEditorKnowledgeBaseFunc      func(id string) error
-	CreateAgentEditorConsumedMCPServiceFunc func(svc *agenteditor.ConsumedMCPService) error
-	UpdateAgentEditorConsumedMCPServiceFunc func(svc *agenteditor.ConsumedMCPService) error
+	CreateAgentEditorConsumedMCPServiceFunc func(svc *types.ConsumedMCPService) error
+	UpdateAgentEditorConsumedMCPServiceFunc func(svc *types.ConsumedMCPService) error
 	DeleteAgentEditorConsumedMCPServiceFunc func(id string) error
-	CreateAgentEditorAgentFunc              func(a *agenteditor.Agent) error
-	UpdateAgentEditorAgentFunc              func(a *agenteditor.Agent) error
+	CreateAgentEditorAgentFunc              func(a *types.Agent) error
+	UpdateAgentEditorAgentFunc              func(a *types.Agent) error
 	DeleteAgentEditorAgentFunc              func(id string) error
 }

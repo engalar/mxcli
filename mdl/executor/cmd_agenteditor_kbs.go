@@ -9,11 +9,11 @@
 package executor
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 )
 
 // listAgentEditorKnowledgeBases handles SHOW KNOWLEDGE BASES [IN module].
@@ -125,7 +125,7 @@ func describeAgentEditorKnowledgeBase(ctx *ExecContext, name ast.QualifiedName) 
 }
 
 // findAgentEditorKnowledgeBase looks up a KB by module and name.
-func findAgentEditorKnowledgeBase(ctx *ExecContext, moduleName, kbName string) *agenteditor.KnowledgeBase {
+func findAgentEditorKnowledgeBase(ctx *ExecContext, moduleName, kbName string) *types.KnowledgeBase {
 	kbs, err := ctx.Backend.ListAgentEditorKnowledgeBases()
 	if err != nil {
 		return nil

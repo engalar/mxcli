@@ -12,7 +12,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
@@ -391,7 +390,7 @@ func TestShowBusinessEventServices_Mock_JSON(t *testing.T) {
 func TestShowAgentEditorModels_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	m1 := &agenteditor.Model{
+	m1 := &types.Model{
 		BaseElement: model.BaseElement{ID: nextID("aem")},
 		ContainerID: mod.ID,
 		Name:        "GPT4o",
@@ -400,7 +399,7 @@ func TestShowAgentEditorModels_Mock_JSON(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return []*agenteditor.Model{m1}, nil },
+		ListAgentEditorModelsFunc: func() ([]*types.Model, error) { return []*types.Model{m1}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
@@ -412,7 +411,7 @@ func TestShowAgentEditorModels_Mock_JSON(t *testing.T) {
 func TestShowAgentEditorAgents_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	a1 := &agenteditor.Agent{
+	a1 := &types.Agent{
 		BaseElement: model.BaseElement{ID: nextID("aea")},
 		ContainerID: mod.ID,
 		Name:        "Helper",
@@ -421,7 +420,7 @@ func TestShowAgentEditorAgents_Mock_JSON(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return []*agenteditor.Agent{a1}, nil },
+		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return []*types.Agent{a1}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
@@ -433,7 +432,7 @@ func TestShowAgentEditorAgents_Mock_JSON(t *testing.T) {
 func TestShowAgentEditorKnowledgeBases_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	kb := &agenteditor.KnowledgeBase{
+	kb := &types.KnowledgeBase{
 		BaseElement: model.BaseElement{ID: nextID("aek")},
 		ContainerID: mod.ID,
 		Name:        "FAQ",
@@ -442,7 +441,7 @@ func TestShowAgentEditorKnowledgeBases_Mock_JSON(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                   func() bool { return true },
-		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return []*agenteditor.KnowledgeBase{kb}, nil },
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*types.KnowledgeBase, error) { return []*types.KnowledgeBase{kb}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
@@ -454,7 +453,7 @@ func TestShowAgentEditorKnowledgeBases_Mock_JSON(t *testing.T) {
 func TestShowAgentEditorMCPServices_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	svc := &agenteditor.ConsumedMCPService{
+	svc := &types.ConsumedMCPService{
 		BaseElement: model.BaseElement{ID: nextID("aes")},
 		ContainerID: mod.ID,
 		Name:        "ToolSvc",
@@ -463,7 +462,7 @@ func TestShowAgentEditorMCPServices_Mock_JSON(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                        func() bool { return true },
-		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) { return []*agenteditor.ConsumedMCPService{svc}, nil },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*types.ConsumedMCPService, error) { return []*types.ConsumedMCPService{svc}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))

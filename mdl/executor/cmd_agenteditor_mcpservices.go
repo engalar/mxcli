@@ -9,11 +9,11 @@
 package executor
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 )
 
 // listAgentEditorConsumedMCPServices handles SHOW CONSUMED MCP SERVICES [IN module].
@@ -109,7 +109,7 @@ func describeAgentEditorConsumedMCPService(ctx *ExecContext, name ast.QualifiedN
 }
 
 // findAgentEditorConsumedMCPService looks up an MCP service by module and name.
-func findAgentEditorConsumedMCPService(ctx *ExecContext, moduleName, svcName string) *agenteditor.ConsumedMCPService {
+func findAgentEditorConsumedMCPService(ctx *ExecContext, moduleName, svcName string) *types.ConsumedMCPService {
 	svcs, err := ctx.Backend.ListAgentEditorConsumedMCPServices()
 	if err != nil {
 		return nil

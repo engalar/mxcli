@@ -7,7 +7,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 )
 
 // ---------------------------------------------------------------------------
@@ -162,42 +161,42 @@ func (m *MockBackend) FindAllCustomWidgetTypes(widgetID string) ([]*types.RawCus
 // AgentEditorBackend
 // ---------------------------------------------------------------------------
 
-func (m *MockBackend) ListAgentEditorModels() ([]*agenteditor.Model, error) {
+func (m *MockBackend) ListAgentEditorModels() ([]*types.Model, error) {
 	if m.ListAgentEditorModelsFunc != nil {
 		return m.ListAgentEditorModelsFunc()
 	}
 	return nil, fmt.Errorf("MockBackend.ListAgentEditorModels not configured")
 }
 
-func (m *MockBackend) ListAgentEditorKnowledgeBases() ([]*agenteditor.KnowledgeBase, error) {
+func (m *MockBackend) ListAgentEditorKnowledgeBases() ([]*types.KnowledgeBase, error) {
 	if m.ListAgentEditorKnowledgeBasesFunc != nil {
 		return m.ListAgentEditorKnowledgeBasesFunc()
 	}
 	return nil, fmt.Errorf("MockBackend.ListAgentEditorKnowledgeBases not configured")
 }
 
-func (m *MockBackend) ListAgentEditorConsumedMCPServices() ([]*agenteditor.ConsumedMCPService, error) {
+func (m *MockBackend) ListAgentEditorConsumedMCPServices() ([]*types.ConsumedMCPService, error) {
 	if m.ListAgentEditorConsumedMCPServicesFunc != nil {
 		return m.ListAgentEditorConsumedMCPServicesFunc()
 	}
 	return nil, fmt.Errorf("MockBackend.ListAgentEditorConsumedMCPServices not configured")
 }
 
-func (m *MockBackend) ListAgentEditorAgents() ([]*agenteditor.Agent, error) {
+func (m *MockBackend) ListAgentEditorAgents() ([]*types.Agent, error) {
 	if m.ListAgentEditorAgentsFunc != nil {
 		return m.ListAgentEditorAgentsFunc()
 	}
 	return nil, fmt.Errorf("MockBackend.ListAgentEditorAgents not configured")
 }
 
-func (m *MockBackend) CreateAgentEditorModel(model *agenteditor.Model) error {
+func (m *MockBackend) CreateAgentEditorModel(model *types.Model) error {
 	if m.CreateAgentEditorModelFunc != nil {
 		return m.CreateAgentEditorModelFunc(model)
 	}
 	return fmt.Errorf("MockBackend.CreateAgentEditorModel not configured")
 }
 
-func (m *MockBackend) UpdateAgentEditorModel(model *agenteditor.Model) error {
+func (m *MockBackend) UpdateAgentEditorModel(model *types.Model) error {
 	if m.UpdateAgentEditorModelFunc != nil {
 		return m.UpdateAgentEditorModelFunc(model)
 	}
@@ -211,14 +210,14 @@ func (m *MockBackend) DeleteAgentEditorModel(id string) error {
 	return fmt.Errorf("MockBackend.DeleteAgentEditorModel not configured")
 }
 
-func (m *MockBackend) CreateAgentEditorKnowledgeBase(kb *agenteditor.KnowledgeBase) error {
+func (m *MockBackend) CreateAgentEditorKnowledgeBase(kb *types.KnowledgeBase) error {
 	if m.CreateAgentEditorKnowledgeBaseFunc != nil {
 		return m.CreateAgentEditorKnowledgeBaseFunc(kb)
 	}
 	return fmt.Errorf("MockBackend.CreateAgentEditorKnowledgeBase not configured")
 }
 
-func (m *MockBackend) UpdateAgentEditorKnowledgeBase(kb *agenteditor.KnowledgeBase) error {
+func (m *MockBackend) UpdateAgentEditorKnowledgeBase(kb *types.KnowledgeBase) error {
 	if m.UpdateAgentEditorKnowledgeBaseFunc != nil {
 		return m.UpdateAgentEditorKnowledgeBaseFunc(kb)
 	}
@@ -232,14 +231,14 @@ func (m *MockBackend) DeleteAgentEditorKnowledgeBase(id string) error {
 	return fmt.Errorf("MockBackend.DeleteAgentEditorKnowledgeBase not configured")
 }
 
-func (m *MockBackend) CreateAgentEditorConsumedMCPService(svc *agenteditor.ConsumedMCPService) error {
+func (m *MockBackend) CreateAgentEditorConsumedMCPService(svc *types.ConsumedMCPService) error {
 	if m.CreateAgentEditorConsumedMCPServiceFunc != nil {
 		return m.CreateAgentEditorConsumedMCPServiceFunc(svc)
 	}
 	return fmt.Errorf("MockBackend.CreateAgentEditorConsumedMCPService not configured")
 }
 
-func (m *MockBackend) UpdateAgentEditorConsumedMCPService(svc *agenteditor.ConsumedMCPService) error {
+func (m *MockBackend) UpdateAgentEditorConsumedMCPService(svc *types.ConsumedMCPService) error {
 	if m.UpdateAgentEditorConsumedMCPServiceFunc != nil {
 		return m.UpdateAgentEditorConsumedMCPServiceFunc(svc)
 	}
@@ -253,14 +252,14 @@ func (m *MockBackend) DeleteAgentEditorConsumedMCPService(id string) error {
 	return fmt.Errorf("MockBackend.DeleteAgentEditorConsumedMCPService not configured")
 }
 
-func (m *MockBackend) CreateAgentEditorAgent(a *agenteditor.Agent) error {
+func (m *MockBackend) CreateAgentEditorAgent(a *types.Agent) error {
 	if m.CreateAgentEditorAgentFunc != nil {
 		return m.CreateAgentEditorAgentFunc(a)
 	}
 	return fmt.Errorf("MockBackend.CreateAgentEditorAgent not configured")
 }
 
-func (m *MockBackend) UpdateAgentEditorAgent(a *agenteditor.Agent) error {
+func (m *MockBackend) UpdateAgentEditorAgent(a *types.Agent) error {
 	if m.UpdateAgentEditorAgentFunc != nil {
 		return m.UpdateAgentEditorAgentFunc(a)
 	}

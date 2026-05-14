@@ -5,11 +5,11 @@
 package executor
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 )
 
 // ---------------------------------------------------------------------------
@@ -31,7 +31,7 @@ func execCreateConsumedMCPService(ctx *ExecContext, s *ast.CreateConsumedMCPServ
 		return err
 	}
 
-	c := &agenteditor.ConsumedMCPService{
+	c := &types.ConsumedMCPService{
 		ContainerID:              module.ID,
 		Name:                     s.Name.Name,
 		Documentation:            s.OuterDocumentation,
@@ -93,7 +93,7 @@ func execCreateKnowledgeBase(ctx *ExecContext, s *ast.CreateKnowledgeBaseStmt) e
 		return err
 	}
 
-	var keyRef *agenteditor.ConstantRef
+	var keyRef *types.ConstantRef
 	if s.Key != nil {
 		keyRef, err = resolveConstantRef(ctx, *s.Key)
 		if err != nil {
@@ -106,7 +106,7 @@ func execCreateKnowledgeBase(ctx *ExecContext, s *ast.CreateKnowledgeBaseStmt) e
 		provider = "MxCloudGenAI"
 	}
 
-	k := &agenteditor.KnowledgeBase{
+	k := &types.KnowledgeBase{
 		ContainerID:      module.ID,
 		Name:             s.Name.Name,
 		Documentation:    s.Documentation,
@@ -172,7 +172,7 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 		return err
 	}
 
-	a := &agenteditor.Agent{
+	a := &types.Agent{
 		ContainerID:   module.ID,
 		Name:          s.Name.Name,
 		Documentation: s.Documentation,
@@ -192,7 +192,7 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 		if m == nil {
 			return fmt.Errorf("create agent %s: model not found: %s", s.Name, s.Model)
 		}
-		a.Model = &agenteditor.DocRef{
+		a.Model = &types.DocRef{
 			DocumentID:    string(m.ID),
 			QualifiedName: s.Model.String(),
 		}
@@ -202,14 +202,14 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 	// opaque agent-editor-internal ID (not a unit UUID), so we set only
 	// qualifiedName here. ASU_AgentEditor populates documentId at runtime.
 	if s.Entity != nil {
-		a.Entity = &agenteditor.DocRef{
+		a.Entity = &types.DocRef{
 			QualifiedName: s.Entity.String(),
 		}
 	}
 
 	// Variables
 	for _, v := range s.Variables {
-		a.Variables = append(a.Variables, agenteditor.AgentVar{
+		a.Variables = append(a.Variables, types.AgentVar{
 			Key:                 v.Key,
 			IsAttributeInEntity: v.IsAttributeInEntity,
 		})
@@ -217,7 +217,7 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 
 	// Tools (MCP SERVICE and TOOL blocks)
 	for _, td := range s.Tools {
-		at := agenteditor.AgentTool{
+		at := types.AgentTool{
 			Name:        td.Name,
 			Description: td.Description,
 			Enabled:     td.Enabled,
@@ -229,7 +229,7 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 			if svc == nil {
 				return fmt.Errorf("create agent %s: consumed mcp service not found: %s", s.Name, td.Document)
 			}
-			at.Document = &agenteditor.DocRef{
+			at.Document = &types.DocRef{
 				DocumentID:    string(svc.ID),
 				QualifiedName: td.Document.String(),
 			}
@@ -239,7 +239,7 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 
 	// Knowledge base tools
 	for _, kbd := range s.KBTools {
-		akt := agenteditor.AgentKBTool{
+		akt := types.AgentKBTool{
 			Name:                 kbd.Name,
 			Description:          kbd.Description,
 			Enabled:              kbd.Enabled,
@@ -251,7 +251,7 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 			if kb == nil {
 				return fmt.Errorf("create agent %s: knowledge base not found: %s", s.Name, kbd.Source)
 			}
-			akt.Document = &agenteditor.DocRef{
+			akt.Document = &types.DocRef{
 				DocumentID:    string(kb.ID),
 				QualifiedName: kbd.Source.String(),
 			}

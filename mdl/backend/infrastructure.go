@@ -5,7 +5,6 @@ package backend
 import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 )
 
 // RenameBackend provides cross-cutting rename and reference-update operations.
@@ -49,21 +48,21 @@ type WidgetBackend interface {
 // AgentEditorBackend provides agent editor document operations.
 // Delete methods take string IDs to match the SDK writer layer convention.
 type AgentEditorBackend interface {
-	ListAgentEditorModels() ([]*agenteditor.Model, error)
-	ListAgentEditorKnowledgeBases() ([]*agenteditor.KnowledgeBase, error)
-	ListAgentEditorConsumedMCPServices() ([]*agenteditor.ConsumedMCPService, error)
-	ListAgentEditorAgents() ([]*agenteditor.Agent, error)
-	CreateAgentEditorModel(m *agenteditor.Model) error
-	UpdateAgentEditorModel(m *agenteditor.Model) error
+	ListAgentEditorModels() ([]*types.Model, error)
+	ListAgentEditorKnowledgeBases() ([]*types.KnowledgeBase, error)
+	ListAgentEditorConsumedMCPServices() ([]*types.ConsumedMCPService, error)
+	ListAgentEditorAgents() ([]*types.Agent, error)
+	CreateAgentEditorModel(m *types.Model) error
+	UpdateAgentEditorModel(m *types.Model) error
 	DeleteAgentEditorModel(id string) error
-	CreateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error
-	UpdateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error
+	CreateAgentEditorKnowledgeBase(k *types.KnowledgeBase) error
+	UpdateAgentEditorKnowledgeBase(k *types.KnowledgeBase) error
 	DeleteAgentEditorKnowledgeBase(id string) error
-	CreateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error
-	UpdateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error
+	CreateAgentEditorConsumedMCPService(c *types.ConsumedMCPService) error
+	UpdateAgentEditorConsumedMCPService(c *types.ConsumedMCPService) error
 	DeleteAgentEditorConsumedMCPService(id string) error
-	CreateAgentEditorAgent(a *agenteditor.Agent) error
-	UpdateAgentEditorAgent(a *agenteditor.Agent) error
+	CreateAgentEditorAgent(a *types.Agent) error
+	UpdateAgentEditorAgent(a *types.Agent) error
 	DeleteAgentEditorAgent(id string) error
 }
 

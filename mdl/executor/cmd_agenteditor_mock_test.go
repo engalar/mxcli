@@ -3,13 +3,13 @@
 package executor
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 )
 
 // ---------------------------------------------------------------------------
@@ -27,9 +27,9 @@ func TestCreateAgentEditorModel_Mock(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
 		ListModulesFunc:           func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return nil, nil },
+		ListAgentEditorModelsFunc: func() ([]*types.Model, error) { return nil, nil },
 		ListConstantsFunc:         func() ([]*model.Constant, error) { return []*model.Constant{apiKey}, nil },
-		CreateAgentEditorModelFunc: func(m *agenteditor.Model) error {
+		CreateAgentEditorModelFunc: func(m *types.Model) error {
 			called = true
 			return nil
 		},
@@ -51,7 +51,7 @@ func TestCreateAgentEditorModel_Mock(t *testing.T) {
 
 func TestDropAgentEditorModel_Mock(t *testing.T) {
 	mod := mkModule("M")
-	m1 := &agenteditor.Model{
+	m1 := &types.Model{
 		BaseElement: model.BaseElement{ID: nextID("aem")},
 		ContainerID: mod.ID,
 		Name:        "GPT4",
@@ -63,7 +63,7 @@ func TestDropAgentEditorModel_Mock(t *testing.T) {
 	called := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return []*agenteditor.Model{m1}, nil },
+		ListAgentEditorModelsFunc: func() ([]*types.Model, error) { return []*types.Model{m1}, nil },
 		DeleteAgentEditorModelFunc: func(id string) error {
 			called = true
 			return nil
@@ -92,8 +92,8 @@ func TestCreateConsumedMCPService_Mock(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                        func() bool { return true },
 		ListModulesFunc:                        func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) { return nil, nil },
-		CreateAgentEditorConsumedMCPServiceFunc: func(svc *agenteditor.ConsumedMCPService) error {
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*types.ConsumedMCPService, error) { return nil, nil },
+		CreateAgentEditorConsumedMCPServiceFunc: func(svc *types.ConsumedMCPService) error {
 			called = true
 			return nil
 		},
@@ -114,7 +114,7 @@ func TestCreateConsumedMCPService_Mock(t *testing.T) {
 
 func TestDropConsumedMCPService_Mock(t *testing.T) {
 	mod := mkModule("M")
-	svc := &agenteditor.ConsumedMCPService{
+	svc := &types.ConsumedMCPService{
 		BaseElement: model.BaseElement{ID: nextID("aemcp")},
 		ContainerID: mod.ID,
 		Name:        "WebSearch",
@@ -126,7 +126,7 @@ func TestDropConsumedMCPService_Mock(t *testing.T) {
 	called := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                        func() bool { return true },
-		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) { return []*agenteditor.ConsumedMCPService{svc}, nil },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*types.ConsumedMCPService, error) { return []*types.ConsumedMCPService{svc}, nil },
 		DeleteAgentEditorConsumedMCPServiceFunc: func(id string) error {
 			called = true
 			return nil
@@ -159,9 +159,9 @@ func TestCreateKnowledgeBase_Mock(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                   func() bool { return true },
 		ListModulesFunc:                   func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return nil, nil },
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*types.KnowledgeBase, error) { return nil, nil },
 		ListConstantsFunc:                 func() ([]*model.Constant, error) { return []*model.Constant{kbKey}, nil },
-		CreateAgentEditorKnowledgeBaseFunc: func(kb *agenteditor.KnowledgeBase) error {
+		CreateAgentEditorKnowledgeBaseFunc: func(kb *types.KnowledgeBase) error {
 			called = true
 			return nil
 		},
@@ -183,7 +183,7 @@ func TestCreateKnowledgeBase_Mock(t *testing.T) {
 
 func TestDropKnowledgeBase_Mock(t *testing.T) {
 	mod := mkModule("M")
-	kb := &agenteditor.KnowledgeBase{
+	kb := &types.KnowledgeBase{
 		BaseElement: model.BaseElement{ID: nextID("aekb")},
 		ContainerID: mod.ID,
 		Name:        "ProductDocs",
@@ -195,7 +195,7 @@ func TestDropKnowledgeBase_Mock(t *testing.T) {
 	called := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                   func() bool { return true },
-		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return []*agenteditor.KnowledgeBase{kb}, nil },
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*types.KnowledgeBase, error) { return []*types.KnowledgeBase{kb}, nil },
 		DeleteAgentEditorKnowledgeBaseFunc: func(id string) error {
 			called = true
 			return nil
@@ -219,7 +219,7 @@ func TestDropKnowledgeBase_Mock(t *testing.T) {
 
 func TestCreateAgent_Mock(t *testing.T) {
 	mod := mkModule("M")
-	mdl := &agenteditor.Model{
+	mdl := &types.Model{
 		BaseElement: model.BaseElement{ID: nextID("aem")},
 		ContainerID: mod.ID,
 		Name:        "GPT4",
@@ -232,9 +232,9 @@ func TestCreateAgent_Mock(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
 		ListModulesFunc:           func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return nil, nil },
-		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return []*agenteditor.Model{mdl}, nil },
-		CreateAgentEditorAgentFunc: func(a *agenteditor.Agent) error {
+		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return nil, nil },
+		ListAgentEditorModelsFunc: func() ([]*types.Model, error) { return []*types.Model{mdl}, nil },
+		CreateAgentEditorAgentFunc: func(a *types.Agent) error {
 			called = true
 			return nil
 		},
@@ -258,7 +258,7 @@ func TestCreateAgent_Mock(t *testing.T) {
 
 func TestDropAgent_Mock(t *testing.T) {
 	mod := mkModule("M")
-	a := &agenteditor.Agent{
+	a := &types.Agent{
 		BaseElement: model.BaseElement{ID: nextID("aea")},
 		ContainerID: mod.ID,
 		Name:        "Summarizer",
@@ -270,7 +270,7 @@ func TestDropAgent_Mock(t *testing.T) {
 	called := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return []*agenteditor.Agent{a}, nil },
+		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return []*types.Agent{a}, nil },
 		DeleteAgentEditorAgentFunc: func(id string) error {
 			called = true
 			return nil
@@ -290,13 +290,13 @@ func TestDropAgent_Mock(t *testing.T) {
 
 func TestShowAgentEditorModels_Mock(t *testing.T) {
 	mod := mkModule("M")
-	m1 := &agenteditor.Model{
+	m1 := &types.Model{
 		BaseElement: model.BaseElement{ID: nextID("aem")},
 		ContainerID: mod.ID,
 		Name:        "GPT4",
 		Provider:    "MxCloudGenAI",
 		DisplayName: "GPT-4 Turbo",
-		Key:         &agenteditor.ConstantRef{QualifiedName: "M.APIKey"},
+		Key:         &types.ConstantRef{QualifiedName: "M.APIKey"},
 	}
 
 	h := mkHierarchy(mod)
@@ -304,7 +304,7 @@ func TestShowAgentEditorModels_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return []*agenteditor.Model{m1}, nil },
+		ListAgentEditorModelsFunc: func() ([]*types.Model, error) { return []*types.Model{m1}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -324,12 +324,12 @@ func TestShowAgentEditorModels_Mock(t *testing.T) {
 
 func TestDescribeAgentEditorModel_Mock(t *testing.T) {
 	mod := mkModule("M")
-	m1 := &agenteditor.Model{
+	m1 := &types.Model{
 		BaseElement: model.BaseElement{ID: nextID("aem")},
 		ContainerID: mod.ID,
 		Name:        "GPT4",
 		Provider:    "MxCloudGenAI",
-		Key:         &agenteditor.ConstantRef{QualifiedName: "M.APIKey"},
+		Key:         &types.ConstantRef{QualifiedName: "M.APIKey"},
 	}
 
 	h := mkHierarchy(mod)
@@ -337,7 +337,7 @@ func TestDescribeAgentEditorModel_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return []*agenteditor.Model{m1}, nil },
+		ListAgentEditorModelsFunc: func() ([]*types.Model, error) { return []*types.Model{m1}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -351,14 +351,14 @@ func TestDescribeAgentEditorModel_Mock(t *testing.T) {
 
 func TestShowAgentEditorAgents_Mock(t *testing.T) {
 	mod := mkModule("M")
-	a1 := &agenteditor.Agent{
+	a1 := &types.Agent{
 		BaseElement: model.BaseElement{ID: nextID("aea")},
 		ContainerID: mod.ID,
 		Name:        "MyAgent",
 		UsageType:   "Chat",
-		Model:       &agenteditor.DocRef{QualifiedName: "M.GPT4"},
-		Tools:       []agenteditor.AgentTool{{ID: "t1", Enabled: true}},
-		KBTools:     []agenteditor.AgentKBTool{{ID: "kb1", Enabled: true}},
+		Model:       &types.DocRef{QualifiedName: "M.GPT4"},
+		Tools:       []types.AgentTool{{ID: "t1", Enabled: true}},
+		KBTools:     []types.AgentKBTool{{ID: "kb1", Enabled: true}},
 	}
 
 	h := mkHierarchy(mod)
@@ -366,7 +366,7 @@ func TestShowAgentEditorAgents_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return []*agenteditor.Agent{a1}, nil },
+		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return []*types.Agent{a1}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -385,12 +385,12 @@ func TestShowAgentEditorAgents_Mock(t *testing.T) {
 
 func TestDescribeAgentEditorAgent_Mock(t *testing.T) {
 	mod := mkModule("M")
-	a1 := &agenteditor.Agent{
+	a1 := &types.Agent{
 		BaseElement: model.BaseElement{ID: nextID("aea")},
 		ContainerID: mod.ID,
 		Name:        "MyAgent",
 		UsageType:   "Chat",
-		Model:       &agenteditor.DocRef{QualifiedName: "M.GPT4"},
+		Model:       &types.DocRef{QualifiedName: "M.GPT4"},
 	}
 
 	h := mkHierarchy(mod)
@@ -398,7 +398,7 @@ func TestDescribeAgentEditorAgent_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return []*agenteditor.Agent{a1}, nil },
+		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return []*types.Agent{a1}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -412,12 +412,12 @@ func TestDescribeAgentEditorAgent_Mock(t *testing.T) {
 
 func TestShowAgentEditorKnowledgeBases_Mock(t *testing.T) {
 	mod := mkModule("M")
-	kb := &agenteditor.KnowledgeBase{
+	kb := &types.KnowledgeBase{
 		BaseElement:      model.BaseElement{ID: nextID("aekb")},
 		ContainerID:      mod.ID,
 		Name:             "MyKB",
 		Provider:         "MxCloudGenAI",
-		Key:              &agenteditor.ConstantRef{QualifiedName: "M.KBKey"},
+		Key:              &types.ConstantRef{QualifiedName: "M.KBKey"},
 		ModelDisplayName: "text-embedding-ada-002",
 	}
 
@@ -426,7 +426,7 @@ func TestShowAgentEditorKnowledgeBases_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                   func() bool { return true },
-		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return []*agenteditor.KnowledgeBase{kb}, nil },
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*types.KnowledgeBase, error) { return []*types.KnowledgeBase{kb}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -445,12 +445,12 @@ func TestShowAgentEditorKnowledgeBases_Mock(t *testing.T) {
 
 func TestDescribeAgentEditorKnowledgeBase_Mock(t *testing.T) {
 	mod := mkModule("M")
-	kb := &agenteditor.KnowledgeBase{
+	kb := &types.KnowledgeBase{
 		BaseElement: model.BaseElement{ID: nextID("aekb")},
 		ContainerID: mod.ID,
 		Name:        "MyKB",
 		Provider:    "MxCloudGenAI",
-		Key:         &agenteditor.ConstantRef{QualifiedName: "M.KBKey"},
+		Key:         &types.ConstantRef{QualifiedName: "M.KBKey"},
 	}
 
 	h := mkHierarchy(mod)
@@ -458,7 +458,7 @@ func TestDescribeAgentEditorKnowledgeBase_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                   func() bool { return true },
-		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return []*agenteditor.KnowledgeBase{kb}, nil },
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*types.KnowledgeBase, error) { return []*types.KnowledgeBase{kb}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -471,7 +471,7 @@ func TestDescribeAgentEditorKnowledgeBase_Mock(t *testing.T) {
 
 func TestShowAgentEditorConsumedMCPServices_Mock(t *testing.T) {
 	mod := mkModule("M")
-	svc := &agenteditor.ConsumedMCPService{
+	svc := &types.ConsumedMCPService{
 		BaseElement:              model.BaseElement{ID: nextID("aemcp")},
 		ContainerID:              mod.ID,
 		Name:                     "MySvc",
@@ -485,7 +485,7 @@ func TestShowAgentEditorConsumedMCPServices_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                        func() bool { return true },
-		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) { return []*agenteditor.ConsumedMCPService{svc}, nil },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*types.ConsumedMCPService, error) { return []*types.ConsumedMCPService{svc}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -503,7 +503,7 @@ func TestShowAgentEditorConsumedMCPServices_Mock(t *testing.T) {
 
 func TestDescribeAgentEditorConsumedMCPService_Mock(t *testing.T) {
 	mod := mkModule("M")
-	svc := &agenteditor.ConsumedMCPService{
+	svc := &types.ConsumedMCPService{
 		BaseElement:              model.BaseElement{ID: nextID("aemcp")},
 		ContainerID:              mod.ID,
 		Name:                     "MySvc",
@@ -517,7 +517,7 @@ func TestDescribeAgentEditorConsumedMCPService_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                        func() bool { return true },
-		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) { return []*agenteditor.ConsumedMCPService{svc}, nil },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*types.ConsumedMCPService, error) { return []*types.ConsumedMCPService{svc}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -545,7 +545,7 @@ func TestDescribeAgentEditorModel_Mock_NotFound(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return nil, nil },
+		ListAgentEditorModelsFunc: func() ([]*types.Model, error) { return nil, nil },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertError(t, describeAgentEditorModel(ctx, ast.QualifiedName{Module: "M", Name: "NonExistent"}))
@@ -557,7 +557,7 @@ func TestDescribeAgentEditorAgent_Mock_NotFound(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return nil, nil },
+		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return nil, nil },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertError(t, describeAgentEditorAgent(ctx, ast.QualifiedName{Module: "M", Name: "NonExistent"}))
@@ -569,7 +569,7 @@ func TestDescribeAgentEditorKnowledgeBase_Mock_NotFound(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                   func() bool { return true },
-		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return nil, nil },
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*types.KnowledgeBase, error) { return nil, nil },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertError(t, describeAgentEditorKnowledgeBase(ctx, ast.QualifiedName{Module: "M", Name: "NonExistent"}))
@@ -581,7 +581,7 @@ func TestDescribeAgentEditorConsumedMCPService_Mock_NotFound(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                        func() bool { return true },
-		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) { return nil, nil },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*types.ConsumedMCPService, error) { return nil, nil },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertError(t, describeAgentEditorConsumedMCPService(ctx, ast.QualifiedName{Module: "M", Name: "NonExistent"}))
@@ -597,7 +597,7 @@ func TestDropAgentEditorModel_Mock_NotFound(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return nil, nil },
+		ListAgentEditorModelsFunc: func() ([]*types.Model, error) { return nil, nil },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertError(t, execDropAgentEditorModel(ctx, &ast.DropModelStmt{
@@ -611,7 +611,7 @@ func TestDropConsumedMCPService_Mock_NotFound(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                        func() bool { return true },
-		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) { return nil, nil },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*types.ConsumedMCPService, error) { return nil, nil },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertError(t, execDropConsumedMCPService(ctx, &ast.DropConsumedMCPServiceStmt{
@@ -625,7 +625,7 @@ func TestDropKnowledgeBase_Mock_NotFound(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                   func() bool { return true },
-		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return nil, nil },
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*types.KnowledgeBase, error) { return nil, nil },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertError(t, execDropKnowledgeBase(ctx, &ast.DropKnowledgeBaseStmt{
@@ -639,7 +639,7 @@ func TestDropAgent_Mock_NotFound(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return nil, nil },
+		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return nil, nil },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertError(t, execDropAgent(ctx, &ast.DropAgentStmt{
@@ -654,12 +654,12 @@ func TestDropAgent_Mock_NotFound(t *testing.T) {
 func TestShowAgentEditorModels_Mock_FilterByModule(t *testing.T) {
 	mod1 := mkModule("A")
 	mod2 := mkModule("B")
-	m1 := &agenteditor.Model{
+	m1 := &types.Model{
 		BaseElement: model.BaseElement{ID: nextID("aem")},
 		ContainerID: mod1.ID,
 		Name:        "M1",
 	}
-	m2 := &agenteditor.Model{
+	m2 := &types.Model{
 		BaseElement: model.BaseElement{ID: nextID("aem")},
 		ContainerID: mod2.ID,
 		Name:        "M2",
@@ -671,7 +671,7 @@ func TestShowAgentEditorModels_Mock_FilterByModule(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return []*agenteditor.Model{m1, m2}, nil },
+		ListAgentEditorModelsFunc: func() ([]*types.Model, error) { return []*types.Model{m1, m2}, nil },
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertNoError(t, listAgentEditorModels(ctx, "B"))
@@ -684,12 +684,12 @@ func TestShowAgentEditorModels_Mock_FilterByModule(t *testing.T) {
 func TestShowAgentEditorAgents_Mock_FilterByModule(t *testing.T) {
 	mod1 := mkModule("A")
 	mod2 := mkModule("B")
-	a1 := &agenteditor.Agent{
+	a1 := &types.Agent{
 		BaseElement: model.BaseElement{ID: nextID("aea")},
 		ContainerID: mod1.ID,
 		Name:        "Agent1",
 	}
-	a2 := &agenteditor.Agent{
+	a2 := &types.Agent{
 		BaseElement: model.BaseElement{ID: nextID("aea")},
 		ContainerID: mod2.ID,
 		Name:        "Agent2",
@@ -701,7 +701,7 @@ func TestShowAgentEditorAgents_Mock_FilterByModule(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return []*agenteditor.Agent{a1, a2}, nil },
+		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return []*types.Agent{a1, a2}, nil },
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertNoError(t, listAgentEditorAgents(ctx, "B"))
@@ -718,7 +718,7 @@ func TestShowAgentEditorAgents_Mock_FilterByModule(t *testing.T) {
 func TestCreateAgentEditorModel_OrModify_PreservesID(t *testing.T) {
 	mod := mkModule("M")
 	existingID := nextID("aem")
-	existing := &agenteditor.Model{
+	existing := &types.Model{
 		BaseElement: model.BaseElement{ID: existingID},
 		ContainerID: mod.ID,
 		Name:        "GPT4",
@@ -730,9 +730,9 @@ func TestCreateAgentEditorModel_OrModify_PreservesID(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
 		ListModulesFunc:           func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return []*agenteditor.Model{existing}, nil },
+		ListAgentEditorModelsFunc: func() ([]*types.Model, error) { return []*types.Model{existing}, nil },
 		ListConstantsFunc:         func() ([]*model.Constant, error) { return nil, nil },
-		UpdateAgentEditorModelFunc: func(m *agenteditor.Model) error {
+		UpdateAgentEditorModelFunc: func(m *types.Model) error {
 			updatedID = m.ID
 			return nil
 		},
@@ -754,7 +754,7 @@ func TestCreateAgentEditorModel_OrModify_PreservesID(t *testing.T) {
 func TestCreateConsumedMCPService_OrModify_PreservesID(t *testing.T) {
 	mod := mkModule("M")
 	existingID := nextID("aemcp")
-	existing := &agenteditor.ConsumedMCPService{
+	existing := &types.ConsumedMCPService{
 		BaseElement: model.BaseElement{ID: existingID},
 		ContainerID: mod.ID,
 		Name:        "WebSearch",
@@ -766,10 +766,10 @@ func TestCreateConsumedMCPService_OrModify_PreservesID(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) {
-			return []*agenteditor.ConsumedMCPService{existing}, nil
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*types.ConsumedMCPService, error) {
+			return []*types.ConsumedMCPService{existing}, nil
 		},
-		UpdateAgentEditorConsumedMCPServiceFunc: func(c *agenteditor.ConsumedMCPService) error {
+		UpdateAgentEditorConsumedMCPServiceFunc: func(c *types.ConsumedMCPService) error {
 			updatedID = c.ID
 			return nil
 		},
@@ -791,7 +791,7 @@ func TestCreateConsumedMCPService_OrModify_PreservesID(t *testing.T) {
 func TestCreateKnowledgeBase_OrModify_PreservesID(t *testing.T) {
 	mod := mkModule("M")
 	existingID := nextID("aekb")
-	existing := &agenteditor.KnowledgeBase{
+	existing := &types.KnowledgeBase{
 		BaseElement: model.BaseElement{ID: existingID},
 		ContainerID: mod.ID,
 		Name:        "Docs",
@@ -803,9 +803,9 @@ func TestCreateKnowledgeBase_OrModify_PreservesID(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:                    func() bool { return true },
 		ListModulesFunc:                    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListAgentEditorKnowledgeBasesFunc:  func() ([]*agenteditor.KnowledgeBase, error) { return []*agenteditor.KnowledgeBase{existing}, nil },
+		ListAgentEditorKnowledgeBasesFunc:  func() ([]*types.KnowledgeBase, error) { return []*types.KnowledgeBase{existing}, nil },
 		ListConstantsFunc:                  func() ([]*model.Constant, error) { return nil, nil },
-		UpdateAgentEditorKnowledgeBaseFunc: func(k *agenteditor.KnowledgeBase) error { updatedID = k.ID; return nil },
+		UpdateAgentEditorKnowledgeBaseFunc: func(k *types.KnowledgeBase) error { updatedID = k.ID; return nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -824,7 +824,7 @@ func TestCreateKnowledgeBase_OrModify_PreservesID(t *testing.T) {
 func TestCreateAgent_OrModify_PreservesID(t *testing.T) {
 	mod := mkModule("M")
 	existingID := nextID("aeag")
-	existing := &agenteditor.Agent{
+	existing := &types.Agent{
 		BaseElement: model.BaseElement{ID: existingID},
 		ContainerID: mod.ID,
 		Name:        "Assistant",
@@ -836,13 +836,13 @@ func TestCreateAgent_OrModify_PreservesID(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
 		ListModulesFunc:           func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return []*agenteditor.Agent{existing}, nil },
-		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return nil, nil },
-		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) {
+		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return []*types.Agent{existing}, nil },
+		ListAgentEditorModelsFunc: func() ([]*types.Model, error) { return nil, nil },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*types.ConsumedMCPService, error) {
 			return nil, nil
 		},
-		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return nil, nil },
-		UpdateAgentEditorAgentFunc: func(a *agenteditor.Agent) error {
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*types.KnowledgeBase, error) { return nil, nil },
+		UpdateAgentEditorAgentFunc: func(a *types.Agent) error {
 			updatedID = a.ID
 			return nil
 		},
@@ -863,7 +863,7 @@ func TestCreateAgent_OrModify_PreservesID(t *testing.T) {
 
 func TestCreateAgentEditorModel_AlreadyExists_NoOrModify(t *testing.T) {
 	mod := mkModule("M")
-	existing := &agenteditor.Model{
+	existing := &types.Model{
 		BaseElement: model.BaseElement{ID: nextID("aem")},
 		ContainerID: mod.ID,
 		Name:        "GPT4",
@@ -874,7 +874,7 @@ func TestCreateAgentEditorModel_AlreadyExists_NoOrModify(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
 		ListModulesFunc:           func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return []*agenteditor.Model{existing}, nil },
+		ListAgentEditorModelsFunc: func() ([]*types.Model, error) { return []*types.Model{existing}, nil },
 		ListConstantsFunc:         func() ([]*model.Constant, error) { return nil, nil },
 	}
 
