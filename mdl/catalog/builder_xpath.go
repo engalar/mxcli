@@ -10,7 +10,8 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/model"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
 // XPath usage types
@@ -50,11 +51,14 @@ func (b *Builder) buildXPathExpressions() error {
 	mfs, err := b.cachedMicroflows()
 	if err == nil {
 		for _, mf := range mfs {
-			moduleID := b.hierarchy.findModuleID(mf.ContainerID)
+			if mf == nil {
+				continue
+			}
+			moduleID := b.hierarchy.findModuleID(model.ID(mf.ID()))
 			moduleName := b.hierarchy.getModuleName(moduleID)
-			sourceQN := moduleName + "." + mf.Name
+			sourceQN := moduleName + "." + mf.Name()
 
-			count += b.extractMicroflowXPath(stmt, mf.ObjectCollection, "MICROFLOW", string(mf.ID), sourceQN, moduleName,
+			count += b.extractMicroflowXPath(stmt, flowObjectCollection(mf.ObjectCollection()), "MICROFLOW", string(mf.ID()), sourceQN, moduleName,
 				projectID, projectName, snapshotID, snapshotDate, snapshotSource, sourceID, sourceBranch, sourceRevision)
 		}
 	}
@@ -62,11 +66,14 @@ func (b *Builder) buildXPathExpressions() error {
 	nfs, err := b.cachedNanoflows()
 	if err == nil {
 		for _, nf := range nfs {
-			moduleID := b.hierarchy.findModuleID(nf.ContainerID)
+			if nf == nil {
+				continue
+			}
+			moduleID := b.hierarchy.findModuleID(model.ID(nf.ID()))
 			moduleName := b.hierarchy.getModuleName(moduleID)
-			sourceQN := moduleName + "." + nf.Name
+			sourceQN := moduleName + "." + nf.Name()
 
-			count += b.extractMicroflowXPath(stmt, nf.ObjectCollection, "NANOFLOW", string(nf.ID), sourceQN, moduleName,
+			count += b.extractMicroflowXPath(stmt, flowObjectCollection(nf.ObjectCollection()), "NANOFLOW", string(nf.ID()), sourceQN, moduleName,
 				projectID, projectName, snapshotID, snapshotDate, snapshotSource, sourceID, sourceBranch, sourceRevision)
 		}
 	}
@@ -138,8 +145,10 @@ func (b *Builder) buildXPathExpressions() error {
 }
 
 // extractMicroflowXPath extracts XPath constraints from microflow/nanoflow actions.
+// Walks gen-typed ObjectCollections; pulls XPathConstraint and the
+// owning entity's qualified name off the gen DatabaseRetrieveSource.
 func (b *Builder) extractMicroflowXPath(stmt *sql.Stmt,
-	oc *microflows.MicroflowObjectCollection, docType, docID, docQN, moduleName,
+	oc *genMf.MicroflowObjectCollection, docType, docID, docQN, moduleName,
 	projectID, projectName, snapshotID, snapshotDate, snapshotSource, sourceID, sourceBranch, sourceRevision string) int {
 
 	if oc == nil {
@@ -147,28 +156,36 @@ func (b *Builder) extractMicroflowXPath(stmt *sql.Stmt,
 	}
 
 	count := 0
-	for _, obj := range oc.Objects {
-		act, ok := obj.(*microflows.ActionActivity)
-		if !ok || act.Action == nil {
+	for _, obj := range oc.ObjectsItems() {
+		act, ok := obj.(*genMf.ActionActivity)
+		if !ok {
+			continue
+		}
+		inner := act.Action()
+		if inner == nil {
 			continue
 		}
 
 		var xpath, entityQN, componentName string
 		var componentID string
 
-		switch a := act.Action.(type) {
-		case *microflows.RetrieveAction:
-			if a.Source == nil {
+		switch a := inner.(type) {
+		case *genMf.RetrieveAction:
+			src := a.RetrieveSource()
+			if src == nil {
 				continue
 			}
-			dbSrc, ok := a.Source.(*microflows.DatabaseRetrieveSource)
-			if !ok || dbSrc.XPathConstraint == "" {
+			dbSrc, ok := src.(*genMf.DatabaseRetrieveSource)
+			if !ok {
 				continue
 			}
-			xpath = dbSrc.XPathConstraint
-			entityQN = dbSrc.EntityQualifiedName
-			componentID = string(act.ID)
-			componentName = act.Caption
+			xpath = dbSrc.XPathConstraint()
+			if xpath == "" {
+				continue
+			}
+			entityQN = dbSrc.EntityQualifiedName()
+			componentID = string(act.ID())
+			componentName = act.Caption()
 		default:
 			continue
 		}

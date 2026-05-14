@@ -8,7 +8,8 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genPages "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
@@ -30,21 +31,22 @@ const (
 	RefKindMenuItem   = "menu_item"  // Navigation menu item page reference
 )
 
-// collectActionActivities returns all ActionActivity objects from an ObjectCollection,
-// recursing into LoopedActivity bodies to find nested actions.
-func collectActionActivities(oc *microflows.MicroflowObjectCollection) []*microflows.ActionActivity {
+// collectActionActivities returns all ActionActivity objects from a
+// gen ObjectCollection, recursing into LoopedActivity bodies to find
+// nested actions. Activities with a nil inner Action are skipped.
+func collectActionActivities(oc *genMf.MicroflowObjectCollection) []*genMf.ActionActivity {
 	if oc == nil {
 		return nil
 	}
-	var result []*microflows.ActionActivity
-	for _, obj := range oc.Objects {
+	var result []*genMf.ActionActivity
+	for _, obj := range oc.ObjectsItems() {
 		switch o := obj.(type) {
-		case *microflows.ActionActivity:
-			if o.Action != nil {
+		case *genMf.ActionActivity:
+			if o.Action() != nil {
 				result = append(result, o)
 			}
-		case *microflows.LoopedActivity:
-			result = append(result, collectActionActivities(o.ObjectCollection)...)
+		case *genMf.LoopedActivity:
+			result = append(result, collectActionActivities(flowObjectCollection(o.ObjectCollection()))...)
 		}
 	}
 	return result
@@ -77,43 +79,50 @@ func (b *Builder) buildReferences() error {
 	}
 
 	for _, mf := range mfs {
-		moduleID := b.hierarchy.findModuleID(mf.ContainerID)
+		if mf == nil {
+			continue
+		}
+		moduleID := b.hierarchy.findModuleID(model.ID(mf.ID()))
 		moduleName := b.hierarchy.getModuleName(moduleID)
-		sourceQN := moduleName + "." + mf.Name
+		sourceQN := moduleName + "." + mf.Name()
 		sourceType := "MICROFLOW"
+		mfID := string(mf.ID())
 
-		if mf.ObjectCollection == nil {
+		oc := flowObjectCollection(mf.ObjectCollection())
+		if oc == nil {
 			continue
 		}
 
-		for _, act := range collectActionActivities(mf.ObjectCollection) {
-			switch a := act.Action.(type) {
-			case *microflows.MicroflowCallAction:
-				if a.MicroflowCall != nil && a.MicroflowCall.Microflow != "" {
-					_, err = stmt.Exec(sourceType, string(mf.ID), sourceQN,
-						"MICROFLOW", "", a.MicroflowCall.Microflow,
-						RefKindCall, moduleName, projectID, snapshotID)
-					if err == nil {
-						refCount++
+		for _, act := range collectActionActivities(oc) {
+			switch a := act.Action().(type) {
+			case *genMf.MicroflowCallAction:
+				if call, ok := a.MicroflowCall().(*genMf.MicroflowCall); ok && call != nil {
+					if qn := call.MicroflowQualifiedName(); qn != "" {
+						_, err = stmt.Exec(sourceType, mfID, sourceQN,
+							"MICROFLOW", "", qn,
+							RefKindCall, moduleName, projectID, snapshotID)
+						if err == nil {
+							refCount++
+						}
 					}
 				}
 
-			case *microflows.CreateObjectAction:
-				if a.EntityQualifiedName != "" {
-					_, err = stmt.Exec(sourceType, string(mf.ID), sourceQN,
-						"ENTITY", "", a.EntityQualifiedName,
+			case *genMf.CreateObjectAction:
+				if qn := a.EntityQualifiedName(); qn != "" {
+					_, err = stmt.Exec(sourceType, mfID, sourceQN,
+						"ENTITY", "", qn,
 						RefKindCreate, moduleName, projectID, snapshotID)
 					if err == nil {
 						refCount++
 					}
 				}
 
-			case *microflows.RetrieveAction:
-				if a.Source != nil {
-					if dbSrc, ok := a.Source.(*microflows.DatabaseRetrieveSource); ok {
-						if dbSrc.EntityQualifiedName != "" {
-							_, err = stmt.Exec(sourceType, string(mf.ID), sourceQN,
-								"ENTITY", "", dbSrc.EntityQualifiedName,
+			case *genMf.RetrieveAction:
+				if src := a.RetrieveSource(); src != nil {
+					if dbSrc, ok := src.(*genMf.DatabaseRetrieveSource); ok {
+						if qn := dbSrc.EntityQualifiedName(); qn != "" {
+							_, err = stmt.Exec(sourceType, mfID, sourceQN,
+								"ENTITY", "", qn,
 								RefKindRetrieve, moduleName, projectID, snapshotID)
 							if err == nil {
 								refCount++
@@ -122,20 +131,22 @@ func (b *Builder) buildReferences() error {
 					}
 				}
 
-			case *microflows.ShowPageAction:
-				if a.PageName != "" {
-					_, err = stmt.Exec(sourceType, string(mf.ID), sourceQN,
-						"PAGE", "", a.PageName,
-						RefKindShowPage, moduleName, projectID, snapshotID)
-					if err == nil {
-						refCount++
+			case *genMf.ShowPageAction:
+				if settings, ok := a.PageSettings().(*genPages.PageSettings); ok && settings != nil {
+					if qn := settings.PageQualifiedName(); qn != "" {
+						_, err = stmt.Exec(sourceType, mfID, sourceQN,
+							"PAGE", "", qn,
+							RefKindShowPage, moduleName, projectID, snapshotID)
+						if err == nil {
+							refCount++
+						}
 					}
 				}
 
-			case *microflows.JavaActionCallAction:
-				if a.JavaAction != "" {
-					_, err = stmt.Exec(sourceType, string(mf.ID), sourceQN,
-						"JAVA_ACTION", "", a.JavaAction,
+			case *genMf.JavaActionCallAction:
+				if qn := a.JavaActionQualifiedName(); qn != "" {
+					_, err = stmt.Exec(sourceType, mfID, sourceQN,
+						"JAVA_ACTION", "", qn,
 						RefKindCall, moduleName, projectID, snapshotID)
 					if err == nil {
 						refCount++

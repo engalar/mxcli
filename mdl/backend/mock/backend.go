@@ -92,10 +92,11 @@ type MockBackend struct {
 	ListNanoflowsFunc   func() ([]*microflows.Nanoflow, error)
 	DeleteNanoflowFunc  func(id model.ID) error
 	IsRuleFunc          func(qualifiedName string) (bool, error)
-	// gen-typed surfaces (Followup C). Tests on the modelsdk-native code
-	// path should configure these instead of the sdk-typed *Func fields.
+	// gen-typed surfaces (Followup C/F). Tests on the modelsdk-native
+	// code path should configure these instead of the sdk-typed *Func fields.
 	ListMicroflowsGenFunc func() ([]*genMf.Microflow, error)
 	ListNanoflowsGenFunc  func() ([]*genMf.Nanoflow, error)
+	GetMicroflowGenFunc   func(id model.ID) (*genMf.Microflow, error)
 
 	// PageBackend
 	ListPagesFunc          func() ([]*pages.Page, error)

@@ -5,6 +5,8 @@ package catalog
 import (
 	"runtime"
 	"sync"
+
+	"github.com/mendixlabs/mxcli/model"
 )
 
 // sourceItem represents a single element to generate MDL source for.
@@ -51,9 +53,12 @@ func (b *Builder) buildSource() error {
 	mfList, err := b.cachedMicroflows()
 	if err == nil {
 		for _, mf := range mfList {
-			moduleID := b.hierarchy.findModuleID(mf.ContainerID)
+			if mf == nil {
+				continue
+			}
+			moduleID := b.hierarchy.findModuleID(model.ID(mf.ID()))
 			moduleName := b.hierarchy.getModuleName(moduleID)
-			items = append(items, sourceItem{"MICROFLOW", moduleName + "." + mf.Name, moduleName})
+			items = append(items, sourceItem{"MICROFLOW", moduleName + "." + mf.Name(), moduleName})
 		}
 	}
 
@@ -61,9 +66,12 @@ func (b *Builder) buildSource() error {
 	nfList, err := b.cachedNanoflows()
 	if err == nil {
 		for _, nf := range nfList {
-			moduleID := b.hierarchy.findModuleID(nf.ContainerID)
+			if nf == nil {
+				continue
+			}
+			moduleID := b.hierarchy.findModuleID(model.ID(nf.ID()))
 			moduleName := b.hierarchy.getModuleName(moduleID)
-			items = append(items, sourceItem{"NANOFLOW", moduleName + "." + nf.Name, moduleName})
+			items = append(items, sourceItem{"NANOFLOW", moduleName + "." + nf.Name(), moduleName})
 		}
 	}
 

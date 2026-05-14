@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/model"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
 // buildExternalEntities populates the external_entities catalog table
@@ -80,11 +81,11 @@ func (b *Builder) buildExternalEntities() error {
 // buildExternalActions populates the external_actions catalog table
 // by scanning all microflows and nanoflows for CallExternalAction activities.
 func (b *Builder) buildExternalActions() error {
-	mfs, err := b.reader.ListMicroflows()
+	mfs, err := b.cachedMicroflows()
 	if err != nil {
 		return err
 	}
-	nfs, err := b.reader.ListNanoflows()
+	nfs, err := b.cachedNanoflows()
 	if err != nil {
 		return err
 	}
@@ -113,30 +114,38 @@ func (b *Builder) buildExternalActions() error {
 	}
 	actionMap := make(map[string]*actionInfo)
 
-	extractActions := func(oc *microflows.MicroflowObjectCollection, flowModule, flowName string) {
+	extractActions := func(oc *genMf.MicroflowObjectCollection, flowModule, flowName string) {
 		if oc == nil {
 			return
 		}
-		for _, obj := range oc.Objects {
-			act, ok := obj.(*microflows.ActionActivity)
-			if !ok || act.Action == nil {
+		for _, obj := range oc.ObjectsItems() {
+			act, ok := obj.(*genMf.ActionActivity)
+			if !ok {
 				continue
 			}
-			cea, ok := act.Action.(*microflows.CallExternalAction)
+			inner := act.Action()
+			if inner == nil {
+				continue
+			}
+			cea, ok := inner.(*genMf.CallExternalAction)
 			if !ok {
 				continue
 			}
 
-			key := cea.ConsumedODataService + "|" + cea.Name
+			service := cea.ConsumedODataServiceQualifiedName()
+			actionName := cea.Name()
+			paramItems := cea.ParameterMappingsItems()
+
+			key := service + "|" + actionName
 			info, exists := actionMap[key]
 			if !exists {
 				var params []string
-				for _, pm := range cea.ParameterMappings {
-					params = append(params, pm.ParameterName)
+				for _, pm := range paramItems {
+					params = append(params, externalParamName(pm))
 				}
 				info = &actionInfo{
-					service:    cea.ConsumedODataService,
-					actionName: cea.Name,
+					service:    service,
+					actionName: actionName,
 					module:     flowModule,
 					params:     params,
 				}
@@ -156,24 +165,30 @@ func (b *Builder) buildExternalActions() error {
 				info.callers = append(info.callers, caller)
 			}
 			// Merge parameter names from different call sites
-			if len(cea.ParameterMappings) > len(info.params) {
+			if len(paramItems) > len(info.params) {
 				info.params = nil
-				for _, pm := range cea.ParameterMappings {
-					info.params = append(info.params, pm.ParameterName)
+				for _, pm := range paramItems {
+					info.params = append(info.params, externalParamName(pm))
 				}
 			}
 		}
 	}
 
 	for _, mf := range mfs {
-		modID := b.hierarchy.findModuleID(mf.ContainerID)
+		if mf == nil {
+			continue
+		}
+		modID := b.hierarchy.findModuleID(model.ID(mf.ID()))
 		modName := b.hierarchy.getModuleName(modID)
-		extractActions(mf.ObjectCollection, modName, mf.Name)
+		extractActions(flowObjectCollection(mf.ObjectCollection()), modName, mf.Name())
 	}
 	for _, nf := range nfs {
-		modID := b.hierarchy.findModuleID(nf.ContainerID)
+		if nf == nil {
+			continue
+		}
+		modID := b.hierarchy.findModuleID(model.ID(nf.ID()))
 		modName := b.hierarchy.getModuleName(modID)
-		extractActions(nf.ObjectCollection, modName, nf.Name)
+		extractActions(flowObjectCollection(nf.ObjectCollection()), modName, nf.Name())
 	}
 
 	for _, info := range actionMap {
@@ -196,4 +211,16 @@ func (b *Builder) buildExternalActions() error {
 
 	b.report("External Actions", len(actionMap))
 	return nil
+}
+
+// externalParamName extracts the parameter-name string from a gen
+// ExternalActionParameterMapping element. Returns "" for unexpected
+// element types so the caller's collected []string keeps positional
+// alignment with ParameterMappingsItems().
+func externalParamName(e any) string {
+	pm, ok := e.(*genMf.ExternalActionParameterMapping)
+	if !ok || pm == nil {
+		return ""
+	}
+	return pm.ParameterName()
 }

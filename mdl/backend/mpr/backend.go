@@ -291,6 +291,19 @@ func (b *MprBackend) ListNanoflowsGen() ([]*genMf.Nanoflow, error) {
 	return repo.List("")
 }
 
+// GetMicroflowGen fetches a single microflow body by ID as a
+// modelsdk-native gen object via b.Microflows().Get. Linter rules and
+// the catalog's per-flow walks consume this. Returns (nil, nil) when
+// the modelsdk writer is unavailable so callers can fall through to a
+// no-op rather than failing the entire build.
+func (b *MprBackend) GetMicroflowGen(id model.ID) (*genMf.Microflow, error) {
+	repo := b.Microflows()
+	if repo == nil {
+		return nil, nil
+	}
+	return repo.Get(id)
+}
+
 // ---------------------------------------------------------------------------
 // PageBackend
 // ---------------------------------------------------------------------------

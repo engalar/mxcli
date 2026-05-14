@@ -5,6 +5,7 @@ package catalog
 import (
 	"database/sql"
 
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
@@ -171,23 +172,25 @@ func (b *Builder) emitMemberPermissions(stmt *sql.Stmt, rule *domainmodel.Access
 func (b *Builder) buildMicroflowPermissions(stmt *sql.Stmt, projectID, snapshotID string) int {
 	count := 0
 
-	mfs, err := b.reader.ListMicroflows()
+	mfs, err := b.cachedMicroflows()
 	if err != nil {
 		return 0
 	}
 
 	for _, mf := range mfs {
-		if len(mf.AllowedModuleRoles) == 0 {
+		if mf == nil {
+			continue
+		}
+		roles := mf.AllowedModuleRolesQualifiedNames()
+		if len(roles) == 0 {
 			continue
 		}
 
-		moduleID := b.hierarchy.findModuleID(mf.ContainerID)
+		moduleID := b.hierarchy.findModuleID(model.ID(mf.ID()))
 		moduleName := b.hierarchy.getModuleName(moduleID)
-		mfQN := moduleName + "." + mf.Name
+		mfQN := moduleName + "." + mf.Name()
 
-		for _, roleID := range mf.AllowedModuleRoles {
-			// AllowedModuleRoles are BY_NAME strings stored as model.ID
-			roleName := string(roleID)
+		for _, roleName := range roles {
 			stmt.Exec(roleName, "MICROFLOW", mfQN, nil, "EXECUTE", nil, moduleName, projectID, snapshotID)
 			count++
 		}

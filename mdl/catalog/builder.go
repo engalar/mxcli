@@ -9,9 +9,9 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -39,9 +39,13 @@ type CatalogReader interface {
 	ListEnumerations() ([]*model.Enumeration, error)
 	ListConstants() ([]*model.Constant, error)
 
-	// Microflows & nanoflows
-	ListMicroflows() ([]*microflows.Microflow, error)
-	ListNanoflows() ([]*microflows.Nanoflow, error)
+	// Microflows & nanoflows — gen-typed (Followup F1).
+	// Returns modelsdk-native objects so the catalog walks the same
+	// representation the rest of the executor consumes. Container
+	// linkage is dropped by the codec roundtrip; the catalog resolves
+	// owning module/folder via the MPR Unit hierarchy (see buildHierarchy).
+	ListMicroflowsGen() ([]*genMf.Microflow, error)
+	ListNanoflowsGen() ([]*genMf.Nanoflow, error)
 
 	// Pages, layouts & snippets
 	ListPages() ([]*pages.Page, error)
@@ -87,8 +91,12 @@ type Builder struct {
 	// Document caches — avoid redundant BSON parsing across builder phases.
 	// Each List* call on the reader re-parses ALL documents from BSON.
 	// By caching results, we parse each document type exactly once.
-	microflowCache          []*microflows.Microflow
-	nanoflowCache           []*microflows.Nanoflow
+	//
+	// microflowCache / nanoflowCache hold gen-typed objects (Followup F1);
+	// container linkage is resolved via the hierarchy (built from the
+	// MPR Unit table) since codec-decoded gen objects don't carry it.
+	microflowCache          []*genMf.Microflow
+	nanoflowCache           []*genMf.Nanoflow
 	pageCache               []*pages.Page
 	domainModelCache        []*domainmodel.DomainModel
 	enumerationCache        []*model.Enumeration
@@ -211,10 +219,10 @@ func NewBuilder(catalog *Catalog, reader CatalogReader) *Builder {
 
 // Cached document accessors — each parses from BSON at most once per build.
 
-func (b *Builder) cachedMicroflows() ([]*microflows.Microflow, error) {
+func (b *Builder) cachedMicroflows() ([]*genMf.Microflow, error) {
 	if b.microflowCache == nil {
 		var err error
-		b.microflowCache, err = b.reader.ListMicroflows()
+		b.microflowCache, err = b.reader.ListMicroflowsGen()
 		if err != nil {
 			return nil, err
 		}
@@ -222,10 +230,10 @@ func (b *Builder) cachedMicroflows() ([]*microflows.Microflow, error) {
 	return b.microflowCache, nil
 }
 
-func (b *Builder) cachedNanoflows() ([]*microflows.Nanoflow, error) {
+func (b *Builder) cachedNanoflows() ([]*genMf.Nanoflow, error) {
 	if b.nanoflowCache == nil {
 		var err error
-		b.nanoflowCache, err = b.reader.ListNanoflows()
+		b.nanoflowCache, err = b.reader.ListNanoflowsGen()
 		if err != nil {
 			return nil, err
 		}
