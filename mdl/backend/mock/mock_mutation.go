@@ -62,7 +62,7 @@ func (m *MockBackend) SerializeWorkflowActivity(a workflows.WorkflowActivity) (a
 	if m.SerializeWorkflowActivityFunc != nil {
 		return m.SerializeWorkflowActivityFunc(a)
 	}
-	return nil, nil
+	return nil, fmt.Errorf("MockBackend.SerializeWorkflowActivity not configured")
 }
 
 // ---------------------------------------------------------------------------
