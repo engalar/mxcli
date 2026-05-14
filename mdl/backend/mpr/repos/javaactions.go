@@ -3,9 +3,6 @@
 // All write paths rely on mmpr.Writer's automatic cache invalidation
 // (addendum Blocker 4). Repos do NOT call ReaderCache.Invalidate
 // after each write.
-//
-// Phase A (read path) implementation: writer methods stub to errors;
-// Phase D (write path) replaces them with gen-native serialization.
 
 package mprrepos
 
@@ -14,6 +11,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
@@ -25,19 +23,23 @@ const (
 )
 
 // javaActionRepo is the direct-mode JavaActionRepository: reads via the
-// concrete *mmpr.Reader; Phase A stubs writers.
+// concrete *mmpr.Reader, writes via a writeSink (no transaction).
 type javaActionRepo struct {
-	w   *mmpr.Writer
-	r   *mmpr.Reader
-	dec *decoder
+	w    *mmpr.Writer
+	r    *mmpr.Reader
+	dec  *decoder
+	enc  *encoder
+	sink writeSink
 }
 
 // NewJavaActionRepository constructs the direct-mode repository.
 func NewJavaActionRepository(w *mmpr.Writer) repos.JavaActionRepository {
 	return &javaActionRepo{
-		w:   w,
-		r:   w.ConcreteReader(),
-		dec: newDecoder(),
+		w:    w,
+		r:    w.ConcreteReader(),
+		dec:  newDecoder(),
+		enc:  newEncoder(),
+		sink: newWriterSink(w),
 	}
 }
 
@@ -183,19 +185,36 @@ func (r *javaActionRepo) GetContainerUUID(id model.ID) (model.ID, error) {
 	return model.ID(mmpr.BlobToUUID(blob)), nil
 }
 
-// Writer methods stub to "not implemented (Phase D)" until the
-// gen-native serializer lands. Phase D replaces these with real
-// implementations mirroring microflowWriter.
 func (r *javaActionRepo) Create(parentUUID, containmentName string, ja *genJA.JavaAction) error {
-	return fmt.Errorf("javaActionRepo.Create: not implemented (Phase D)")
+	if ja == nil {
+		return fmt.Errorf("javaActionRepo.Create: nil JavaAction")
+	}
+	if ja.ID() == "" {
+		ja.SetID(element.ID(mmpr.GenerateID()))
+	}
+	if ja.TypeName() == "" {
+		ja.SetTypeName(javaActionTypeName)
+	}
+	contents, err := r.enc.Encode(ja)
+	if err != nil {
+		return err
+	}
+	return r.sink.InsertUnit(string(ja.ID()), parentUUID, containmentName, ja.TypeName(), contents)
 }
 
 func (r *javaActionRepo) Update(ja *genJA.JavaAction) error {
-	return fmt.Errorf("javaActionRepo.Update: not implemented (Phase D)")
+	if ja == nil {
+		return fmt.Errorf("javaActionRepo.Update: nil JavaAction")
+	}
+	contents, err := r.enc.Encode(ja)
+	if err != nil {
+		return err
+	}
+	return r.sink.UpdateRawUnit(string(ja.ID()), contents)
 }
 
 func (r *javaActionRepo) Delete(id model.ID) error {
-	return fmt.Errorf("javaActionRepo.Delete: not implemented (Phase D)")
+	return r.sink.DeleteUnit(string(id))
 }
 
 var _ repos.JavaActionRepository = (*javaActionRepo)(nil)
