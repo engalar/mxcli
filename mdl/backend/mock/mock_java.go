@@ -5,61 +5,17 @@ package mock
 import (
 	"fmt"
 
-	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
-	"github.com/mendixlabs/mxcli/sdk/javaactions"
 )
-
-func (m *MockBackend) ListJavaActions() ([]*types.JavaAction, error) {
-	if m.ListJavaActionsFunc != nil {
-		return m.ListJavaActionsFunc()
-	}
-	return nil, fmt.Errorf("MockBackend.ListJavaActions not configured")
-}
-
-func (m *MockBackend) ListJavaActionsFull() ([]*javaactions.JavaAction, error) {
-	if m.ListJavaActionsFullFunc != nil {
-		return m.ListJavaActionsFullFunc()
-	}
-	return nil, fmt.Errorf("MockBackend.ListJavaActionsFull not configured")
-}
-
-func (m *MockBackend) ReadJavaActionByName(qualifiedName string) (*javaactions.JavaAction, error) {
-	if m.ReadJavaActionByNameFunc != nil {
-		return m.ReadJavaActionByNameFunc(qualifiedName)
-	}
-	return nil, fmt.Errorf("MockBackend.ReadJavaActionByName not configured")
-}
-
-func (m *MockBackend) CreateJavaAction(ja *javaactions.JavaAction) error {
-	if m.CreateJavaActionFunc != nil {
-		return m.CreateJavaActionFunc(ja)
-	}
-	return fmt.Errorf("MockBackend.CreateJavaAction not configured")
-}
-
-func (m *MockBackend) UpdateJavaAction(ja *javaactions.JavaAction) error {
-	if m.UpdateJavaActionFunc != nil {
-		return m.UpdateJavaActionFunc(ja)
-	}
-	return fmt.Errorf("MockBackend.UpdateJavaAction not configured")
-}
 
 func (m *MockBackend) DeleteJavaAction(id model.ID) error {
 	if m.DeleteJavaActionFunc != nil {
 		return m.DeleteJavaActionFunc(id)
 	}
 	return fmt.Errorf("MockBackend.DeleteJavaAction not configured")
-}
-
-func (m *MockBackend) WriteJavaSourceFile(moduleName, actionName string, javaCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType, extraImports []string, extraCode string) error {
-	if m.WriteJavaSourceFileFunc != nil {
-		return m.WriteJavaSourceFileFunc(moduleName, actionName, javaCode, params, returnType, extraImports, extraCode)
-	}
-	return fmt.Errorf("MockBackend.WriteJavaSourceFile not configured")
 }
 
 func (m *MockBackend) DeleteJavaSourceFile(moduleName, actionName string) error {

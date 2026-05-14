@@ -22,10 +22,13 @@ func makeJavaFilesBackend(t *testing.T) (*MprBackend, string) {
 	return b, dir
 }
 
-func TestWriteJavaSourceFileViaPath(t *testing.T) {
+func TestWriteJavaSourceFileViaPathGen(t *testing.T) {
 	b, projectRoot := makeJavaFilesBackend(t)
 
-	if err := b.writeJavaSourceFileViaPath("MyModule", "MyAction", "return true;", nil, nil, nil, ""); err != nil {
+	// nil params + nil return type exercises the empty-params + Boolean
+	// default return type path (matches the legacy
+	// TestWriteJavaSourceFileViaPath behaviour).
+	if err := b.writeJavaSourceFileViaPathGen("MyModule", "MyAction", "return true;", nil, nil, nil, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 

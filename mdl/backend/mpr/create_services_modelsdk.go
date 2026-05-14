@@ -7,7 +7,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
@@ -15,25 +14,10 @@ import (
 // sdk/mpr Serialize* helpers, then write the bytes through msdkWriter.InsertUnit
 // (the modelsdk write path), bypassing sdk/mpr's updateTransactionID() — that
 // call fails on hard-linked MPR files (SQLITE_READONLY_DBMOVED 1544).
-
-// ── JavaAction ────────────────────────────────────────────────────────────
-
-func (b *MprBackend) createJavaActionViaModelsdk(ja *javaactions.JavaAction) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	contents, err := mpr.SerializeJavaAction(ja)
-	if err != nil {
-		return fmt.Errorf("serialize java action: %w", err)
-	}
-	return b.msdkWriter.InsertUnit(
-		string(ja.ID),
-		string(ja.ContainerID),
-		"Documents",
-		"JavaActions$JavaAction",
-		contents,
-	)
-}
+//
+// JavaAction was migrated to the gen-native javaActionRepo in Stage
+// 3.3.2.D (commit c5695850); the bridge createJavaActionViaModelsdk
+// was retired in Stage 3.3.2.E1.
 
 // ── DatabaseConnection ────────────────────────────────────────────────────
 

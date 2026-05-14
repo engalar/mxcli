@@ -16,7 +16,6 @@ import (
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
@@ -219,19 +218,14 @@ type MockBackend struct {
 	UpdateJsonStructureFunc             func(js *types.JsonStructure) error
 	DeleteJsonStructureFunc             func(id string) error
 
-	// JavaBackend
-	ListJavaActionsFunc      func() ([]*types.JavaAction, error)
-	ListJavaActionsFullFunc  func() ([]*javaactions.JavaAction, error)
-	ReadJavaActionByNameFunc func(qualifiedName string) (*javaactions.JavaAction, error)
-	CreateJavaActionFunc           func(ja *javaactions.JavaAction) error
-	UpdateJavaActionFunc           func(ja *javaactions.JavaAction) error
-	DeleteJavaActionFunc           func(id model.ID) error
-	WriteJavaSourceFileFunc        func(moduleName, actionName string, javaCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType, extraImports []string, extraCode string) error
-	DeleteJavaSourceFileFunc       func(moduleName, actionName string) error
-	RenameJavaSourceFileFunc       func(moduleName, oldName, newName string) error
-	ReadJavaSourceFileFunc         func(moduleName, actionName string) (string, error)
+	// JavaBackend (sdk-typed methods retired in Stage 3.3.2.E1; only
+	// ID-/string-keyed file operations remain)
+	DeleteJavaActionFunc     func(id model.ID) error
+	DeleteJavaSourceFileFunc func(moduleName, actionName string) error
+	RenameJavaSourceFileFunc func(moduleName, oldName, newName string) error
+	ReadJavaSourceFileFunc   func(moduleName, actionName string) (string, error)
 
-	// Stage 3.3.2.C3 gen-typed siblings
+	// Gen-typed JavaBackend surface
 	ListJavaActionsGenFunc            func() ([]*genJA.JavaAction, error)
 	ReadJavaActionByNameGenFunc       func(qualifiedName string) (*genJA.JavaAction, error)
 	CreateJavaActionGenFunc           func(parentUUID, containmentName string, ja *genJA.JavaAction) error

@@ -11,8 +11,9 @@ import (
 	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
+	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -122,8 +123,8 @@ func TestShowPublishedRestServices_Mock_BackendError(t *testing.T) {
 
 func TestShowJavaActions_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
-		IsConnectedFunc:     func() bool { return true },
-		ListJavaActionsFunc: func() ([]*types.JavaAction, error) { return nil, errBackend },
+		IsConnectedFunc:        func() bool { return true },
+		ListJavaActionsGenFunc: func() ([]*genJA.JavaAction, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, listJavaActionsGen(ctx, ""))

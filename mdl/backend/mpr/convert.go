@@ -110,25 +110,12 @@ func convertRawCustomWidgetTypeSlice(in []*mpr.RawCustomWidgetType, err error) (
 	return out, nil
 }
 
-func convertJavaActionSlice(in []*mpr.JavaAction, err error) ([]*types.JavaAction, error) {
-	if err != nil || in == nil {
-		return nil, err
-	}
-	out := make([]*types.JavaAction, len(in))
-	for i, ja := range in {
-		out[i] = &types.JavaAction{
-			BaseElement:   ja.BaseElement,
-			ContainerID:   ja.ContainerID,
-			Name:          ja.Name,
-			Documentation: ja.Documentation,
-		}
-	}
-	return out, nil
-}
-
-// convertJavaScriptAction* helpers were retired in Stage 3.3.2.C1 along
-// with types.JavaScriptAction. Consumers now use *genJSA.JavaScriptAction
-// via ListJavaScriptActionsGen / ReadJavaScriptActionByNameGen.
+// convertJavaActionSlice + convertJavaScriptAction* helpers were
+// retired in Stage 3.3.2.C1 / E1. Consumers now read gen-typed
+// *genJA.JavaAction / *genJSA.JavaScriptAction via the
+// ListJavaActionsGen / ListJavaScriptActionsGen surface; the legacy
+// types.JavaAction lite struct remains only in the catalog/import
+// paths that don't need the full gen unit shape.
 
 func convertNavDocSlice(in []*mpr.NavigationDocument, err error) ([]*types.NavigationDocument, error) {
 	if err != nil || in == nil {
