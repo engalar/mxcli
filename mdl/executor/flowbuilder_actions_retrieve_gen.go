@@ -103,23 +103,19 @@ func (fb *flowBuilderGen) buildAssociationRetrieveSourceGen(s *ast.RetrieveStmt)
 	assocQN := s.Source.Module + "." + s.Source.Name
 
 	// Backend-driven reverse-Reference promotion (when metadata
-	// available). This delegates to the legacy lookupAssociation /
-	// entityIsSubtypeOf — both pure-read helpers that don't mutate
-	// the legacy builder.
+	// available). Stage 3.2.6.4: standalone helpers replaced the
+	// legacy `flowBuilder` adapter — both `lookupAssociationGen` and
+	// `entityIsSubtypeOfGen` are pure-read and live in
+	// flowbuilder_assoc_lookup_gen.go.
 	if fb.backend != nil {
-		legacy := &flowBuilder{
-			backend:   fb.backend,
-			hierarchy: fb.hierarchy,
-			varTypes:  fb.varTypes,
-		}
-		assocInfo := legacy.lookupAssociation(s.Source.Module, s.Source.Name)
+		assocInfo := lookupAssociationGen(fb.backend, s.Source.Module, s.Source.Name)
 		startVarType := ""
 		if fb.varTypes != nil {
 			startVarType = fb.varTypes[s.StartVariable]
 		}
 		startsFromChildSide := assocInfo != nil &&
 			assocInfo.childEntityQN != "" &&
-			legacy.entityIsSubtypeOf(startVarType, assocInfo.childEntityQN)
+			entityIsSubtypeOfGen(fb.backend, startVarType, assocInfo.childEntityQN)
 
 		if assocInfo != nil &&
 			assocInfo.Type == domainmodel.AssociationTypeReference &&

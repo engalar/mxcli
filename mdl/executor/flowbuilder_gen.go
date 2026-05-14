@@ -388,9 +388,9 @@ func (fb *flowBuilderGen) resolvePathSegments(path []string) []string {
 		if len(parts) != 2 {
 			continue
 		}
-		// Reuse the legacy lookup. assocLookupResult is shared.
-		legacy := &flowBuilder{backend: fb.backend, hierarchy: fb.hierarchy}
-		result := legacy.lookupAssociation(parts[0], parts[1])
+		// Stage 3.2.6.4: standalone lookup (was previously a method
+		// on the legacy `flowBuilder`; the type is being deleted).
+		result := lookupAssociationGen(fb.backend, parts[0], parts[1])
 		if result != nil && result.childEntityQN != "" {
 			resolved = append(resolved, result.childEntityQN)
 		}
