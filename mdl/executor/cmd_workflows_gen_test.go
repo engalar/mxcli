@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/mdl/ast"
 	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/model"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
@@ -173,6 +174,58 @@ func TestFormatWorkflowActivitiesGen_FloatingAnnotationEmptyOmitted(t *testing.T
 	lines := formatWorkflowActivitiesGen(flow, "  ")
 	if len(lines) != 0 {
 		t.Errorf("empty annotation must be omitted; got %v", lines)
+	}
+}
+
+func TestDescribeWorkflowToStringGen_BasicShape(t *testing.T) {
+	wf := genWf.NewWorkflow()
+	wf.SetID("WF1")
+	wf.SetName("Approve")
+	wf.SetDocumentation("Approval workflow")
+	wf.SetTitle("Approve order")
+	wf.SetExportLevel("public")
+	wf.SetOverviewPageQualifiedName("Demo.Overview")
+	wf.SetDueDate("[%CurrentDateTime%]")
+
+	flow := genWf.NewFlow()
+	wf.SetFlow(flow)
+	ut := genWf.NewSingleUserTaskActivity()
+	ut.SetName("Step1")
+	ut.SetCaption("first")
+	flow.AddActivities(ut)
+
+	ctx := newListWorkflowsTestCtx(t, []*genWf.Workflow{wf})
+	out, ranges, err := describeWorkflowToStringGen(ctx, ast.QualifiedName{Module: "", Name: "Approve"})
+	if err != nil {
+		t.Fatalf("describeWorkflowToStringGen: %v", err)
+	}
+	if ranges != nil {
+		t.Errorf("expected nil ELK ranges (legacy parity), got %v", ranges)
+	}
+	for _, want := range []string{
+		"create workflow .Approve",
+		"display 'Approve order'",
+		"export level public",
+		"overview page Demo.Overview",
+		"due date '[%CurrentDateTime%]'",
+		"begin",
+		"user task Step1 'first'",
+		"end workflow",
+		"/",
+		"/**",
+		"Approval workflow",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("describe output missing %q in:\n%s", want, out)
+		}
+	}
+}
+
+func TestDescribeWorkflowToStringGen_NotFound(t *testing.T) {
+	ctx := newListWorkflowsTestCtx(t, nil)
+	_, _, err := describeWorkflowToStringGen(ctx, ast.QualifiedName{Module: "Demo", Name: "Missing"})
+	if err == nil {
+		t.Error("expected error for missing workflow")
 	}
 }
 
