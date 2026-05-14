@@ -52,6 +52,13 @@ type PageBackend interface {
 	CreateSnippetGen(parentUUID, containmentName string, snippet *genPg.Snippet) error
 	UpdateSnippetGen(snippet *genPg.Snippet) error
 
+	// GetPageContainerUUID resolves the parent container UUID (folder
+	// or module ID) of a Page unit. Gen objects do not carry container
+	// IDs; this helper bridges Page-level lint rules and other
+	// consumers that need to build qualified names from gen-typed
+	// Page listings.
+	GetPageContainerUUID(id model.ID) (model.ID, error)
+
 	// Building blocks and page templates (read-only)
 	ListBuildingBlocks() ([]*pages.BuildingBlock, error)
 	ListPageTemplates() ([]*pages.PageTemplate, error)

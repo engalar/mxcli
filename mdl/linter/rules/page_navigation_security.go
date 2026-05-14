@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 // PageNavigationSecurityRule checks that pages used in navigation have at least
@@ -133,10 +134,14 @@ func collectMenuPages(items []*types.NavMenuItem, profileName string, navPages m
 }
 
 // buildPageRoleCountMap builds a map of qualified page name → number of allowed roles.
+//
+// Stage 3.3.5.C4: walks gen-typed Pages via reader.ListPagesGen.
+// Container linkage is resolved per-page via reader.GetPageContainerUUID
+// since gen objects do not carry container IDs.
 func buildPageRoleCountMap(reader linter.LintReader) map[string]int {
 	result := make(map[string]int)
 
-	pages, err := reader.ListPages()
+	pages, err := reader.ListPagesGen()
 	if err != nil {
 		return result
 	}
@@ -177,12 +182,19 @@ func buildPageRoleCountMap(reader linter.LintReader) map[string]int {
 	}
 
 	for _, pg := range pages {
-		moduleName := resolveModule(string(pg.ContainerID))
+		if pg == nil {
+			continue
+		}
+		containerID, err := reader.GetPageContainerUUID(model.ID(pg.ID()))
+		if err != nil {
+			continue
+		}
+		moduleName := resolveModule(string(containerID))
 		if moduleName == "" {
 			continue
 		}
-		qualifiedName := moduleName + "." + pg.Name
-		result[qualifiedName] = len(pg.AllowedRoles)
+		qualifiedName := moduleName + "." + pg.Name()
+		result[qualifiedName] = len(pg.AllowedRolesQualifiedNames())
 	}
 
 	return result

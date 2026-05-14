@@ -227,3 +227,10 @@ func (m *MockBackend) UpdateSnippetGen(snippet *genPg.Snippet) error {
 	}
 	return fmt.Errorf("MockBackend.UpdateSnippetGen not configured")
 }
+
+func (m *MockBackend) GetPageContainerUUID(id model.ID) (model.ID, error) {
+	if m.GetPageContainerUUIDFunc != nil {
+		return m.GetPageContainerUUIDFunc(id)
+	}
+	return "", fmt.Errorf("MockBackend.GetPageContainerUUID not configured")
+}
