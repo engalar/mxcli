@@ -71,6 +71,13 @@ func registerEntityHandlers(r *Registry) {
 		return execAlterEntity(ctx, stmt.(*ast.AlterEntityStmt))
 	})
 	r.Register(&ast.DropEntityStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
+		// Stage 3.3.4 D9.drop: prefer the gen-typed executor when the
+		// modelsdk-native DomainModels repo is wired (production
+		// MprBackend path). Mock contexts that lack the repo fall back
+		// to the legacy executor.
+		if ctx.DomainModels != nil {
+			return execDropEntityGen(ctx, stmt.(*ast.DropEntityStmt))
+		}
 		return execDropEntity(ctx, stmt.(*ast.DropEntityStmt))
 	})
 }
