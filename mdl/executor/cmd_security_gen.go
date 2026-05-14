@@ -759,3 +759,145 @@ func listDemoUsersGen(ctx *ExecContext) error {
 	result.Summary = fmt.Sprintf("(%d demo users)", len(result.Rows))
 	return writeResult(ctx, result)
 }
+
+// listAccessOnEntityGen handles SHOW ACCESS ON ENTITY Module.Entity using
+// sdk/domainmodel types via ctx.Backend.GetDomainModel (domainmodel domain
+// not migrated to gen-typed yet — deferred to Stage 3.3 priority #4).
+// A8b passthrough: function is a rename of listAccessOnEntity; no sdk/security
+// symbols. Not yet wired into executor_query.go dispatch — SHOW ACCESS ON
+// ENTITY still routes to legacy listAccessOnEntity. Cutover in task A10.
+func listAccessOnEntityGen(ctx *ExecContext, name *ast.QualifiedName) error {
+	if name == nil {
+		return mdlerrors.NewValidation("entity name required")
+	}
+
+	module, err := findModule(ctx, name.Module)
+	if err != nil {
+		return err
+	}
+
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	if err != nil {
+		return mdlerrors.NewBackend("get domain model", err)
+	}
+
+	var entity *domainmodel.Entity
+	for _, ent := range dm.Entities {
+		if ent.Name == name.Name {
+			entity = ent
+			break
+		}
+	}
+	if entity == nil {
+		return mdlerrors.NewNotFound("entity", name.String())
+	}
+
+	// Build attribute name map (shared by both output paths)
+	attrNames := make(map[string]string)
+	for _, attr := range entity.Attributes {
+		attrNames[string(attr.ID)] = attr.Name
+	}
+
+	// ruleRoles returns the role name list for a rule.
+	ruleRoles := func(rule *domainmodel.AccessRule) []string {
+		if len(rule.ModuleRoleNames) > 0 {
+			return rule.ModuleRoleNames
+		}
+		var out []string
+		for _, rid := range rule.ModuleRoles {
+			out = append(out, string(rid))
+		}
+		return out
+	}
+
+	// ruleRights computes CRUD rights for a rule.
+	ruleRights := func(rule *domainmodel.AccessRule) []string {
+		var rights []string
+		if rule.AllowCreate {
+			rights = append(rights, "create")
+		}
+		hasRead := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadOnly ||
+			rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
+		hasWrite := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
+		for _, ma := range rule.MemberAccesses {
+			if ma.AccessRights == domainmodel.MemberAccessRightsReadOnly || ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
+				hasRead = true
+			}
+			if ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
+				hasWrite = true
+			}
+		}
+		if hasRead {
+			rights = append(rights, "read")
+		}
+		if hasWrite {
+			rights = append(rights, "write")
+		}
+		if rule.AllowDelete {
+			rights = append(rights, "delete")
+		}
+		return rights
+	}
+
+	// memberName resolves display name for a MemberAccess entry.
+	memberName := func(ma *domainmodel.MemberAccess) string {
+		if ma.AttributeName != "" {
+			return ma.AttributeName
+		}
+		if ma.AssociationName != "" {
+			return ma.AssociationName
+		}
+		if an, ok := attrNames[string(ma.AttributeID)]; ok {
+			return an
+		}
+		return string(ma.AttributeID)
+	}
+
+	if ctx.Format == FormatJSON {
+		result := &TableResult{
+			Columns: []string{"Rule", "Roles", "Rights", "DefaultMemberAccess", "MemberAccess", "XPath"},
+		}
+		for i, rule := range entity.AccessRules {
+			var memberParts []string
+			for _, ma := range rule.MemberAccesses {
+				memberParts = append(memberParts, memberName(ma)+":"+string(ma.AccessRights))
+			}
+			result.Rows = append(result.Rows, []any{
+				i + 1,
+				strings.Join(ruleRoles(rule), ", "),
+				strings.Join(ruleRights(rule), ", "),
+				string(rule.DefaultMemberAccessRights),
+				strings.Join(memberParts, ", "),
+				rule.XPathConstraint,
+			})
+		}
+		return writeResult(ctx, result)
+	}
+
+	if len(entity.AccessRules) == 0 {
+		fmt.Fprintf(ctx.Output, "No access rules on %s\n", name)
+		return nil
+	}
+
+	fmt.Fprintf(ctx.Output, "Access rules for %s.%s:\n\n", name.Module, name.Name)
+
+	for i, rule := range entity.AccessRules {
+		fmt.Fprintf(ctx.Output, "Rule %d: %s\n", i+1, strings.Join(ruleRoles(rule), ", "))
+		fmt.Fprintf(ctx.Output, "  Rights: %s\n", strings.Join(ruleRights(rule), ", "))
+
+		if rule.DefaultMemberAccessRights != "" {
+			fmt.Fprintf(ctx.Output, "  Default member access: %s\n", rule.DefaultMemberAccessRights)
+		}
+
+		for _, ma := range rule.MemberAccesses {
+			fmt.Fprintf(ctx.Output, "  %s: %s\n", memberName(ma), ma.AccessRights)
+		}
+
+		if rule.XPathConstraint != "" {
+			fmt.Fprintf(ctx.Output, "  where '%s'\n", rule.XPathConstraint)
+		}
+		fmt.Fprintln(ctx.Output)
+	}
+
+	return nil
+}
