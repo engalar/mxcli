@@ -12,7 +12,10 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
@@ -193,6 +196,42 @@ func mkNanoflow(containerID model.ID, name string) *microflows.Nanoflow {
 		ContainerID: containerID,
 		Name:        name,
 	}
+}
+
+// mkMicroflowGen builds a modelsdk-native gen Microflow with the given
+// name and a freshly generated ID. Container linkage is NOT carried by
+// gen objects (codec roundtrip strips it); pair this with a
+// GetContainerUUIDFunc on a RecordingMicroflowRepository (see
+// withMicroflowsRepo) when validation needs to resolve owning module.
+func mkMicroflowGen(name string) *genMf.Microflow {
+	mf := genMf.NewMicroflow()
+	mf.SetID(element.ID(nextID("mf")))
+	mf.SetName(name)
+	return mf
+}
+
+// mkNanoflowGen builds a modelsdk-native gen Nanoflow. See mkMicroflowGen
+// for the container-linkage caveat.
+func mkNanoflowGen(name string) *genMf.Nanoflow {
+	nf := genMf.NewNanoflow()
+	nf.SetID(element.ID(nextID("nf")))
+	nf.SetName(name)
+	return nf
+}
+
+// withMicroflowsRepo wires a custom modelsdk-native MicroflowRepository
+// into the ExecContext. Tests typically pass a
+// repostesting.RecordingMicroflowRepository so they can both seed reads
+// (ListAllFunc, GetContainerUUIDFunc, ...) and assert writes (Created,
+// Updated, ...).
+func withMicroflowsRepo(r repos.MicroflowRepository) mockCtxOption {
+	return func(ctx *ExecContext) { ctx.Microflows = r }
+}
+
+// withNanoflowsRepo wires a custom modelsdk-native NanoflowRepository
+// (typically a repostesting.RecordingNanoflowRepository).
+func withNanoflowsRepo(r repos.NanoflowRepository) mockCtxOption {
+	return func(ctx *ExecContext) { ctx.Nanoflows = r }
 }
 
 func mkPage(containerID model.ID, name string) *pages.Page {

@@ -398,8 +398,8 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 	}
 
 	ps.entities = buildEntityQualifiedNames(ctx)
-	ps.microflows = buildMicroflowQualifiedNames(ctx)
-	ps.nanoflows = buildNanoflowQualifiedNames(ctx)
+	ps.microflows = buildMicroflowQualifiedNamesGen(ctx)
+	ps.nanoflows = buildNanoflowQualifiedNamesGen(ctx)
 	ps.pages = buildPageQualifiedNames(ctx)
 	ps.snippets = buildSnippetQualifiedNames(ctx)
 	ps.javaActions = buildJavaActionQualifiedNames(ctx)

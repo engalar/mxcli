@@ -8,12 +8,13 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/model"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
@@ -253,15 +254,12 @@ func setupProjectConflictCtx(t *testing.T) (*ExecContext, *model.Module) {
 	h := mkHierarchy(mod)
 
 	wf := mkWorkflow(mod.ID, "ExistingWF")
-	mf := mkMicroflow(mod.ID, "ExistingMF")
+	mf := mkMicroflowGen("ExistingMF")
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) {
 			return []*workflows.Workflow{wf}, nil
-		},
-		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
-			return []*microflows.Microflow{mf}, nil
 		},
 		// Other list functions return empty (no conflicts for those types)
 		ListEnumerationsFunc:              func() ([]*model.Enumeration, error) { return nil, nil },
@@ -280,14 +278,34 @@ func setupProjectConflictCtx(t *testing.T) (*ExecContext, *model.Module) {
 		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return nil, nil },
 		ListImageCollectionsFunc:  func() ([]*types.ImageCollection, error) { return nil, nil },
 		ListDomainModelsFunc:      func() ([]*domainmodel.DomainModel, error) { return nil, nil },
-		ListNanoflowsFunc:         func() ([]*microflows.Nanoflow, error) { return nil, nil },
 		ListPagesFunc:             func() ([]*pages.Page, error) { return nil, nil },
 		ListSnippetsFunc:          func() ([]*pages.Snippet, error) { return nil, nil },
 		ListJavaActionsFunc:       func() ([]*types.JavaAction, error) { return nil, nil },
 		ListJavaScriptActionsFunc: func() ([]*types.JavaScriptAction, error) { return nil, nil },
 	}
 
-	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	// Wire ctx.Microflows / ctx.Nanoflows so buildMicroflowQualifiedNamesGen
+	// resolves the microflow's owning module via GetContainerUUID; the
+	// hierarchy's containerParent map is then walked to "M".
+	mfRepo := &repostesting.RecordingMicroflowRepository{
+		ListAllFunc: func() ([]*genMf.Microflow, error) {
+			return []*genMf.Microflow{mf}, nil
+		},
+		GetContainerUUIDFunc: func(id model.ID) (model.ID, error) {
+			if id == model.ID(mf.ID()) {
+				return mod.ID, nil
+			}
+			return "", nil
+		},
+	}
+	nfRepo := &repostesting.RecordingNanoflowRepository{}
+
+	ctx, _ := newMockCtx(t,
+		withBackend(mb),
+		withHierarchy(h),
+		withMicroflowsRepo(mfRepo),
+		withNanoflowsRepo(nfRepo),
+	)
 	return ctx, mod
 }
 

@@ -466,7 +466,7 @@ func validateFlowBodyReferences(ctx *ExecContext, body []ast.MicroflowStatement,
 	}
 
 	if len(refs.microflows) > 0 {
-		known := buildMicroflowQualifiedNames(ctx)
+		known := buildMicroflowQualifiedNamesGen(ctx)
 		for _, ref := range refs.microflows {
 			if !known[ref] && !sc.microflows[ref] {
 				errors = append(errors, fmt.Sprintf("microflow not found: %s (referenced by call microflow)", ref))
@@ -475,7 +475,7 @@ func validateFlowBodyReferences(ctx *ExecContext, body []ast.MicroflowStatement,
 	}
 
 	if len(refs.nanoflows) > 0 {
-		known := buildNanoflowQualifiedNames(ctx)
+		known := buildNanoflowQualifiedNamesGen(ctx)
 		for _, ref := range refs.nanoflows {
 			if !known[ref] && !sc.nanoflows[ref] {
 				errors = append(errors, fmt.Sprintf("nanoflow not found: %s (referenced by call nanoflow)", ref))
