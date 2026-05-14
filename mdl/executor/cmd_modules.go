@@ -644,21 +644,18 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Output entities in dependency order (base entities before derived entities)
-	// and associations after all entities
-	if dm, err := ctx.Backend.GetDomainModel(targetModule.ID); err == nil {
-		// Topologically sort entities by generalization (inheritance)
-		sortedEntities := sortEntitiesByGeneralization(dm.Entities, moduleName)
-
-		// Output entities in sorted order
+	// and associations after all entities (Stage 3.3.4 C2.d — gen path).
+	if entities, err := listEntitiesForModuleGen(ctx, moduleName); err == nil {
+		sortedEntities := sortEntitiesByGeneralizationGen(entities, moduleName)
 		for _, entity := range sortedEntities {
-			if err := describeEntity(ctx, ast.QualifiedName{Module: moduleName, Name: entity.Name}); err == nil {
+			if err := describeEntity(ctx, ast.QualifiedName{Module: moduleName, Name: entity.Name()}); err == nil {
 				fmt.Fprintln(ctx.Output)
 			}
 		}
-
-		// Output associations (after all entities are defined)
-		for _, assoc := range dm.Associations {
-			if err := describeAssociation(ctx, ast.QualifiedName{Module: moduleName, Name: assoc.Name}); err == nil {
+	}
+	if assocs, err := listAssociationsForModuleGen(ctx, moduleName); err == nil {
+		for _, assoc := range assocs {
+			if err := describeAssociation(ctx, ast.QualifiedName{Module: moduleName, Name: assoc.Name()}); err == nil {
 				fmt.Fprintln(ctx.Output)
 			}
 		}
