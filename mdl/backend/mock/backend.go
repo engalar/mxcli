@@ -13,6 +13,7 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
@@ -234,12 +235,18 @@ type MockBackend struct {
 	ListJavaScriptActionsGenFunc      func() ([]*genJSA.JavaScriptAction, error)
 	ReadJavaScriptActionByNameGenFunc func(qualifiedName string) (*genJSA.JavaScriptAction, error)
 
-	// WorkflowBackend
+	// WorkflowBackend (legacy sdk-typed surface)
 	ListWorkflowsFunc  func() ([]*workflows.Workflow, error)
 	GetWorkflowFunc    func(id model.ID) (*workflows.Workflow, error)
 	CreateWorkflowFunc func(wf *workflows.Workflow) error
 	UpdateWorkflowFunc func(wf *workflows.Workflow) error
 	DeleteWorkflowFunc func(id model.ID) error
+
+	// Stage 3.3.3.C1 — gen-typed WorkflowBackend surface
+	ListWorkflowsGenFunc  func() ([]*genWf.Workflow, error)
+	GetWorkflowGenFunc    func(id model.ID) (*genWf.Workflow, error)
+	CreateWorkflowGenFunc func(parentUUID, containmentName string, wf *genWf.Workflow) error
+	UpdateWorkflowGenFunc func(wf *genWf.Workflow) error
 
 	// SettingsBackend
 	GetProjectSettingsFunc    func() (*model.ProjectSettings, error)

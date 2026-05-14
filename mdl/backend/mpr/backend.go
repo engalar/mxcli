@@ -20,6 +20,7 @@ import (
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
@@ -736,6 +737,51 @@ func (b *MprBackend) UpdateWorkflow(wf *workflows.Workflow) error {
 	return b.updateWorkflowViaModelsdk(wf)
 }
 func (b *MprBackend) DeleteWorkflow(id model.ID) error { return b.deleteWorkflowViaModelsdk(id) }
+
+// Stage 3.3.3.C1 — gen-typed Workflow surface.
+//
+// All four methods route through the gen-native workflowRepo
+// (mdl/backend/mpr/repos/workflows.go) using `mprrepos.NewWorkflowRepository(w)`.
+// The legacy sdk-typed methods above stay until Phase E1 retires them
+// once every consumer migrates.
+
+func (b *MprBackend) ListWorkflowsGen() ([]*genWf.Workflow, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("ListWorkflowsGen: no modelsdk writer")
+	}
+	return mprrepos.NewWorkflowRepository(w).ListAll()
+}
+
+func (b *MprBackend) GetWorkflowGen(id model.ID) (*genWf.Workflow, error) {
+	w, ok := b.concreteWriter()
+	if !ok {
+		return nil, fmt.Errorf("GetWorkflowGen: no modelsdk writer")
+	}
+	return mprrepos.NewWorkflowRepository(w).Get(id)
+}
+
+func (b *MprBackend) CreateWorkflowGen(parentUUID, containmentName string, wf *genWf.Workflow) error {
+	if wf == nil {
+		return fmt.Errorf("CreateWorkflowGen: nil Workflow")
+	}
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("CreateWorkflowGen: no modelsdk writer")
+	}
+	return mprrepos.NewWorkflowRepository(w).Create(parentUUID, containmentName, wf)
+}
+
+func (b *MprBackend) UpdateWorkflowGen(wf *genWf.Workflow) error {
+	if wf == nil {
+		return fmt.Errorf("UpdateWorkflowGen: nil Workflow")
+	}
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("UpdateWorkflowGen: no modelsdk writer")
+	}
+	return mprrepos.NewWorkflowRepository(w).Update(wf)
+}
 
 // ---------------------------------------------------------------------------
 // SettingsBackend
