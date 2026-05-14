@@ -80,9 +80,9 @@ func genFlowContainerModule(ctx *ExecContext, h *ContainerHierarchy, id model.ID
 }
 
 // buildMicroflowQualifiedNamesGen returns a set of all microflow
-// qualified names in the project. Same shape as
-// buildMicroflowQualifiedNames in helpers.go, but consumes gen
-// types via ctx.Microflows.
+// qualified names in the project. Consumes gen types via
+// ctx.Microflows (or ctx.Backend.ListMicroflowsGen as a fallback in
+// mock-only test contexts).
 func buildMicroflowQualifiedNamesGen(ctx *ExecContext) map[string]bool {
 	result := make(map[string]bool)
 	h, err := getHierarchy(ctx)

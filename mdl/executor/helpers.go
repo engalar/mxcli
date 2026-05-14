@@ -357,42 +357,6 @@ func (c *widgetRefCollector) collectFromAction(action *ast.ActionV3) {
 // Qualified Name Builders (used by validation and autocomplete)
 // ----------------------------------------------------------------------------
 
-// buildMicroflowQualifiedNames returns a set of all microflow qualified names in the project.
-func buildMicroflowQualifiedNames(ctx *ExecContext) map[string]bool {
-	result := make(map[string]bool)
-	h, err := getHierarchy(ctx)
-	if err != nil {
-		return result
-	}
-	mfs, err := ctx.Backend.ListMicroflows()
-	if err != nil {
-		return result
-	}
-	for _, mf := range mfs {
-		qn := h.GetQualifiedName(mf.ContainerID, mf.Name)
-		result[qn] = true
-	}
-	return result
-}
-
-// buildNanoflowQualifiedNames returns a set of all nanoflow qualified names in the project.
-func buildNanoflowQualifiedNames(ctx *ExecContext) map[string]bool {
-	result := make(map[string]bool)
-	h, err := getHierarchy(ctx)
-	if err != nil {
-		return result
-	}
-	nfs, err := ctx.Backend.ListNanoflows()
-	if err != nil {
-		return result
-	}
-	for _, nf := range nfs {
-		qn := h.GetQualifiedName(nf.ContainerID, nf.Name)
-		result[qn] = true
-	}
-	return result
-}
-
 // buildPageQualifiedNames returns a set of all page qualified names in the project.
 func buildPageQualifiedNames(ctx *ExecContext) map[string]bool {
 	result := make(map[string]bool)
