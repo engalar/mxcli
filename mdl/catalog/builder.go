@@ -9,10 +9,10 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
@@ -55,8 +55,10 @@ type CatalogReader interface {
 	// Workflows
 	ListWorkflows() ([]*workflows.Workflow, error)
 
-	// Java actions
-	ListJavaActionsFull() ([]*javaactions.JavaAction, error)
+	// Java actions — gen-typed (Stage 3.3.2.C2). Container linkage
+	// resolved via b.hierarchy from the unit's own UUID, mirroring the
+	// microflow pattern.
+	ListJavaActionsGen() ([]*genJA.JavaAction, error)
 
 	// Services
 	ListConsumedODataServices() ([]*model.ConsumedODataService, error)
