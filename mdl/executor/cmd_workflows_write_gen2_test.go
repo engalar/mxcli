@@ -166,6 +166,115 @@ func TestBuildBoundaryEventGen_WithSubFlow(t *testing.T) {
 	}
 }
 
+// ── D1.b — UserTask family tests ──────────────────────────────────────
+
+func TestBuildUserTaskGenActivity_SingleByDefault(t *testing.T) {
+	n := &ast.WorkflowUserTaskNode{Name: "Approve", Caption: "approve"}
+	got := buildUserTaskGenActivity(n)
+	if got.TypeName() != "Workflows$SingleUserTaskActivity" {
+		t.Errorf("TypeName = %q, want SingleUserTaskActivity", got.TypeName())
+	}
+}
+
+func TestBuildUserTaskGenActivity_MultiWhenFlagSet(t *testing.T) {
+	n := &ast.WorkflowUserTaskNode{Name: "Vote", IsMultiUser: true}
+	got := buildUserTaskGenActivity(n)
+	if got.TypeName() != "Workflows$MultiUserTaskActivity" {
+		t.Errorf("TypeName = %q, want MultiUserTaskActivity", got.TypeName())
+	}
+}
+
+func TestBuildSingleUserTaskGenActivity_FieldsPropagate(t *testing.T) {
+	n := &ast.WorkflowUserTaskNode{
+		Name:            "Step",
+		Caption:         "step caption",
+		DueDate:         "[%CurrentDateTime%]",
+		TaskDescription: "do this",
+	}
+	got := buildSingleUserTaskGenActivity(n)
+	if got.Name() != "Step" {
+		t.Errorf("Name = %q", got.Name())
+	}
+	if got.Caption() != "step caption" {
+		t.Errorf("Caption = %q", got.Caption())
+	}
+	if got.DueDate() != "[%CurrentDateTime%]" {
+		t.Errorf("DueDate = %q", got.DueDate())
+	}
+	if got.TaskDescription() == nil {
+		t.Error("TaskDescription was not set (Texts$Text wrapper missing)")
+	}
+}
+
+func TestBuildUserSourceGen_AllKinds(t *testing.T) {
+	cases := []struct {
+		name   string
+		t      ast.WorkflowTargetingNode
+		expect string
+	}{
+		{
+			name:   "microflow",
+			t:      ast.WorkflowTargetingNode{Kind: "microflow", Microflow: ast.QualifiedName{Module: "M", Name: "Pick"}},
+			expect: "Workflows$MicroflowBasedUserSource",
+		},
+		{
+			name:   "xpath",
+			t:      ast.WorkflowTargetingNode{Kind: "xpath", XPath: "//User"},
+			expect: "Workflows$XPathBasedUserSource",
+		},
+		{
+			name:   "group_microflow",
+			t:      ast.WorkflowTargetingNode{Kind: "group_microflow", Microflow: ast.QualifiedName{Module: "M", Name: "Group"}},
+			expect: "Workflows$MicroflowGroupTargeting",
+		},
+		{
+			name:   "group_xpath",
+			t:      ast.WorkflowTargetingNode{Kind: "group_xpath", XPath: "//Group"},
+			expect: "Workflows$XPathGroupTargeting",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			src := buildUserSourceGen(tc.t)
+			if src == nil {
+				t.Fatal("nil source")
+			}
+			if src.TypeName() != tc.expect {
+				t.Errorf("TypeName = %q, want %q", src.TypeName(), tc.expect)
+			}
+		})
+	}
+}
+
+func TestBuildUserSourceGen_EmptyKindReturnsNil(t *testing.T) {
+	src := buildUserSourceGen(ast.WorkflowTargetingNode{Kind: ""})
+	if src != nil {
+		t.Errorf("expected nil for empty kind, got %v", src)
+	}
+}
+
+func TestBuildUserTaskOutcomesGen_ValueMatchesCaption(t *testing.T) {
+	nodes := []ast.WorkflowUserTaskOutcomeNode{
+		{Caption: "Approved"},
+		{Caption: "Rejected", Activities: []ast.WorkflowActivityNode{
+			&ast.WorkflowJumpToNode{Target: "X"},
+		}},
+	}
+	out := buildUserTaskOutcomesGen(nodes)
+	if len(out) != 2 {
+		t.Fatalf("expected 2 outcomes, got %d", len(out))
+	}
+	if out[0].Value() != "Approved" || out[0].Name() != "Approved" || out[0].Caption() != "Approved" {
+		t.Errorf("outcome 0 fields mismatch: V=%q N=%q C=%q", out[0].Value(), out[0].Name(), out[0].Caption())
+	}
+	if out[0].Flow() != nil {
+		t.Error("outcome with no activities should have nil Flow")
+	}
+	if out[1].Flow() == nil {
+		t.Error("outcome with activities should have non-nil Flow")
+	}
+}
+
 func TestBuildWorkflowActivitiesGen_DispatchesLeafTypes(t *testing.T) {
 	nodes := []ast.WorkflowActivityNode{
 		&ast.WorkflowJumpToNode{Target: "A"},
