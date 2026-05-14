@@ -53,26 +53,15 @@ func listWorkflowsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genWf.
 		}
 		return filtered, nil
 	}
+	// Resolver: ctx.Workflows is the only source of container linkage
+	// after Stage 3.3.3.E1 retired FullBackend.GetWorkflow. Mock tests
+	// must wire RecordingWorkflowRepository.GetContainerUUIDFunc via
+	// ctx.Workflows; tests that don't need container linkage can return
+	// "" from this helper since the hierarchy walker tolerates it.
 	resolveFn := func(id element.ID) (element.ID, error) {
 		if ctx.Workflows != nil {
 			c, err := ctx.Workflows.GetContainerUUID(model.ID(id))
 			return element.ID(c), err
-		}
-		// MockBackend fallback: gen Workflow drops ContainerID during
-		// codec roundtrip, but the legacy sdk Workflow carries it.
-		// Mock tests typically wire ListWorkflowsFunc/GetWorkflowFunc,
-		// so we fish ContainerID out of the legacy GetWorkflow path.
-		// Returning "" is safe: the hierarchy walker tolerates it (the
-		// caller's eventual h.FindModuleID just yields the empty module).
-		//
-		// E1 deletion: this fallback survives until Phase E1 retires
-		// FullBackend.GetWorkflow. At that point mock tests must wire
-		// RecordingWorkflowRepository.GetContainerUUIDFunc directly via
-		// ctx.Workflows.
-		if ctx.Backend != nil {
-			if wf, err := ctx.Backend.GetWorkflow(model.ID(id)); err == nil && wf != nil {
-				return element.ID(wf.ContainerID), nil
-			}
 		}
 		return "", nil
 	}

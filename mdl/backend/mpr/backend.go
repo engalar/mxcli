@@ -28,7 +28,6 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 var _ backend.FullBackend = (*MprBackend)(nil)
@@ -727,26 +726,14 @@ func (b *MprBackend) ReadJavaSourceFile(moduleName, actionName string) (string, 
 // WorkflowBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListWorkflows() ([]*workflows.Workflow, error) {
-	return b.reader.ListWorkflows()
-}
-func (b *MprBackend) GetWorkflow(id model.ID) (*workflows.Workflow, error) {
-	return b.reader.GetWorkflow(id)
-}
-func (b *MprBackend) CreateWorkflow(wf *workflows.Workflow) error {
-	return b.createWorkflowViaModelsdk(wf)
-}
-func (b *MprBackend) UpdateWorkflow(wf *workflows.Workflow) error {
-	return b.updateWorkflowViaModelsdk(wf)
-}
 func (b *MprBackend) DeleteWorkflow(id model.ID) error { return b.deleteWorkflowViaModelsdk(id) }
 
 // Stage 3.3.3.C1 — gen-typed Workflow surface.
 //
 // All four methods route through the gen-native workflowRepo
 // (mdl/backend/mpr/repos/workflows.go) using `mprrepos.NewWorkflowRepository(w)`.
-// The legacy sdk-typed methods above stay until Phase E1 retires them
-// once every consumer migrates.
+// Stage 3.3.3.E1 retired the legacy sdk-typed siblings; only the
+// pure-ID DeleteWorkflow remains alongside this gen-typed quartet.
 
 func (b *MprBackend) ListWorkflowsGen() ([]*genWf.Workflow, error) {
 	w, ok := b.concreteWriter()
@@ -995,10 +982,6 @@ func (b *MprBackend) SerializeClientAction(a pages.ClientAction) (any, error) {
 
 func (b *MprBackend) SerializeDataSource(ds pages.DataSource) (any, error) {
 	return mpr.SerializeCustomWidgetDataSource(ds), nil
-}
-
-func (b *MprBackend) SerializeWorkflowActivity(a workflows.WorkflowActivity) (any, error) {
-	return mpr.SerializeWorkflowActivity(a), nil
 }
 
 // SerializeWorkflowActivityGen routes through codec.Encode + bson.Unmarshal

@@ -6,7 +6,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // ContainerKind represents the type of page container (page, layout, or snippet).
@@ -156,9 +155,10 @@ type PluggablePropertyContext struct {
 // workflow unit. Obtain one via WorkflowMutationBackend.OpenWorkflowForMutation.
 // All methods operate on the in-memory representation; call Save to persist.
 //
-// Stage 3.3.3.D7+D8 adds gen-typed *Gen siblings (additive). The legacy
-// sdk-typed methods stay until Phase E1 retires them once every consumer
-// migrates.
+// Stage 3.3.3.E1 retired the legacy sdk-typed activity inputs; the
+// surface is fully gen-typed. Each *Gen-suffixed method accepts
+// []element.Element built by buildWorkflowActivitiesGen and serializes
+// via SerializeWorkflowActivityGen (codec.Encode + bson.Unmarshal).
 type WorkflowMutator interface {
 	// --- Top-level property operations ---
 
@@ -176,52 +176,30 @@ type WorkflowMutator interface {
 	// caption and optional position index.
 	SetActivityProperty(activityRef string, atPos int, prop string, value string) error
 
-	// InsertAfterActivity inserts new activities after the referenced activity.
-	InsertAfterActivity(activityRef string, atPos int, activities []workflows.WorkflowActivity) error
-
 	// DropActivity removes the referenced activity.
 	DropActivity(activityRef string, atPos int) error
 
-	// ReplaceActivity replaces the referenced activity with new ones.
-	ReplaceActivity(activityRef string, atPos int, activities []workflows.WorkflowActivity) error
-
 	// --- Outcome operations ---
-
-	// InsertOutcome adds a new outcome to the referenced activity.
-	InsertOutcome(activityRef string, atPos int, outcomeName string, activities []workflows.WorkflowActivity) error
 
 	// DropOutcome removes an outcome by name from the referenced activity.
 	DropOutcome(activityRef string, atPos int, outcomeName string) error
 
 	// --- Path operations (parallel split) ---
 
-	// InsertPath adds a new path to a parallel split activity.
-	InsertPath(activityRef string, atPos int, pathCaption string, activities []workflows.WorkflowActivity) error
-
 	// DropPath removes a path by caption from a parallel split activity.
 	DropPath(activityRef string, atPos int, pathCaption string) error
 
 	// --- Branch operations (exclusive split) ---
-
-	// InsertBranch adds a new branch with a condition to an exclusive split activity.
-	InsertBranch(activityRef string, atPos int, condition string, activities []workflows.WorkflowActivity) error
 
 	// DropBranch removes a branch by name from an exclusive split activity.
 	DropBranch(activityRef string, atPos int, branchName string) error
 
 	// --- Boundary event operations ---
 
-	// InsertBoundaryEvent adds a boundary event to the referenced activity.
-	InsertBoundaryEvent(activityRef string, atPos int, eventType string, delay string, activities []workflows.WorkflowActivity) error
-
 	// DropBoundaryEvent removes the boundary event from the referenced activity.
 	DropBoundaryEvent(activityRef string, atPos int) error
 
-	// --- Stage 3.3.3.D7 gen-typed siblings ---
-	// Each accepts []element.Element built by buildWorkflowActivitiesGen
-	// and serializes via SerializeWorkflowActivityGen (codec.Encode +
-	// bson.Unmarshal). The mutator's raw-bson manipulation logic is
-	// unchanged; only the input adapter switches.
+	// --- Gen-typed activity insertion / replacement ---
 
 	InsertAfterActivityGen(activityRef string, atPos int, activities []element.Element) error
 	ReplaceActivityGen(activityRef string, atPos int, activities []element.Element) error
@@ -264,15 +242,11 @@ type WidgetSerializationBackend interface {
 	// SerializeDataSource converts a domain DataSource to storage format.
 	SerializeDataSource(ds pages.DataSource) (any, error)
 
-	// SerializeWorkflowActivity converts a domain WorkflowActivity to storage format.
-	SerializeWorkflowActivity(a workflows.WorkflowActivity) (any, error)
-
 	// SerializeWorkflowActivityGen converts a gen-typed workflow activity
-	// element to storage format (Stage 3.3.3.D7 sibling). Implementations
-	// route through codec.Encode + bson.Unmarshal so the BSON shape
-	// matches what the codec round-trip produces — this is the same path
-	// CreateWorkflowGen / UpdateWorkflowGen take, so any divergence
-	// would also break the gen-typed CREATE WORKFLOW round-trip.
+	// element to storage format. Routes through codec.Encode +
+	// bson.Unmarshal so the BSON shape matches the codec round-trip
+	// produced by CreateWorkflowGen / UpdateWorkflowGen — divergence
+	// here would also break the gen-typed CREATE WORKFLOW round-trip.
 	SerializeWorkflowActivityGen(a element.Element) (any, error)
 }
 

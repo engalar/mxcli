@@ -9,7 +9,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // ---------------------------------------------------------------------------
@@ -57,13 +56,6 @@ func (m *MockBackend) SerializeDataSource(ds pages.DataSource) (any, error) {
 		return m.SerializeDataSourceFunc(ds)
 	}
 	return nil, nil
-}
-
-func (m *MockBackend) SerializeWorkflowActivity(a workflows.WorkflowActivity) (any, error) {
-	if m.SerializeWorkflowActivityFunc != nil {
-		return m.SerializeWorkflowActivityFunc(a)
-	}
-	return nil, fmt.Errorf("MockBackend.SerializeWorkflowActivity not configured")
 }
 
 func (m *MockBackend) SerializeWorkflowActivityGen(a element.Element) (any, error) {

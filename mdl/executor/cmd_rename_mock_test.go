@@ -16,7 +16,6 @@ import (
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // ---------------------------------------------------------------------------
@@ -408,21 +407,12 @@ func TestRename_JavaAction_NotFound(t *testing.T) {
 
 func TestRename_Workflow_Success(t *testing.T) {
 	mod := mkModule("BPModule")
-	wf := mkWorkflow(mod.ID, "OldProcess")
-	wfGen := mkWorkflowGen(string(wf.ID), "OldProcess")
+	wfGen := mkWorkflowGen(string(nextID("wf")), "OldProcess")
 	renameCalled := false
 	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc:      func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListWorkflowsFunc:    func() ([]*workflows.Workflow, error) { return []*workflows.Workflow{wf}, nil },
-		ListWorkflowsGenFunc: func() ([]*genWf.Workflow, error) { return []*genWf.Workflow{wfGen}, nil },
-		GetWorkflowFunc: func(id model.ID) (*workflows.Workflow, error) {
-			if id == wf.ID {
-				return wf, nil
-			}
-			return nil, nil
-		},
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
 		RenameReferencesFunc: func(old, new string, dryRun bool) ([]types.RenameHit, error) {
 			return nil, nil
 		},
@@ -432,8 +422,8 @@ func TestRename_Workflow_Success(t *testing.T) {
 		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, wf.ContainerID, mod.ID)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Workflows = makeWorkflowsRepo([]*genWf.Workflow{wfGen}, mod.ID)
 	assertNoError(t, execRename(ctx, &ast.RenameStmt{
 		ObjectType: "workflow",
 		Name:       ast.QualifiedName{Module: "BPModule", Name: "OldProcess"},
@@ -560,13 +550,13 @@ func TestRename_Entity_CollisionError(t *testing.T) {
 func TestRename_Workflow_NotFound(t *testing.T) {
 	mod := mkModule("BPModule")
 	mb := &mock.MockBackend{
-		IsConnectedFunc:   func() bool { return true },
-		ListModulesFunc:   func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc:   func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return nil, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Workflows = makeWorkflowsRepo(nil, "")
 	err := execRename(ctx, &ast.RenameStmt{
 		ObjectType: "workflow",
 		Name:       ast.QualifiedName{Module: "BPModule", Name: "Missing"},

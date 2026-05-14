@@ -12,8 +12,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/bsonutil"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // bsonArrayMarker is the Mendix BSON array type marker (storageListType 3 = reference/association lists).
@@ -213,24 +211,6 @@ func (m *mprWorkflowMutator) SetActivityProperty(activityRef string, atPos int, 
 	}
 }
 
-func (m *mprWorkflowMutator) InsertAfterActivity(activityRef string, atPos int, activities []workflows.WorkflowActivity) error {
-	idx, acts, containingFlow, err := m.findActivityIndex(activityRef, atPos)
-	if err != nil {
-		return err
-	}
-
-	newBsonActs := m.serializeAndDedup(activities)
-
-	insertIdx := idx + 1
-	newArr := make([]any, 0, len(acts)+len(newBsonActs))
-	newArr = append(newArr, acts[:insertIdx]...)
-	newArr = append(newArr, newBsonActs...)
-	newArr = append(newArr, acts[insertIdx:]...)
-
-	dSetArray(containingFlow, "Activities", newArr)
-	return nil
-}
-
 func (m *mprWorkflowMutator) DropActivity(activityRef string, atPos int) error {
 	idx, acts, containingFlow, err := m.findActivityIndex(activityRef, atPos)
 	if err != nil {
@@ -245,52 +225,9 @@ func (m *mprWorkflowMutator) DropActivity(activityRef string, atPos int) error {
 	return nil
 }
 
-func (m *mprWorkflowMutator) ReplaceActivity(activityRef string, atPos int, activities []workflows.WorkflowActivity) error {
-	idx, acts, containingFlow, err := m.findActivityIndex(activityRef, atPos)
-	if err != nil {
-		return err
-	}
-
-	newBsonActs := m.serializeAndDedup(activities)
-
-	newArr := make([]any, 0, len(acts)-1+len(newBsonActs))
-	newArr = append(newArr, acts[:idx]...)
-	newArr = append(newArr, newBsonActs...)
-	newArr = append(newArr, acts[idx+1:]...)
-
-	dSetArray(containingFlow, "Activities", newArr)
-	return nil
-}
-
 // ---------------------------------------------------------------------------
 // WorkflowMutator interface — outcome operations
 // ---------------------------------------------------------------------------
-
-func (m *mprWorkflowMutator) InsertOutcome(activityRef string, atPos int, outcomeName string, activities []workflows.WorkflowActivity) error {
-	actDoc, err := m.findActivityByCaption(activityRef, atPos)
-	if err != nil {
-		return err
-	}
-
-	outcomeDoc := bson.D{
-		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-		{Key: "$Type", Value: "Workflows$UserTaskOutcome"},
-	}
-
-	if len(activities) > 0 {
-		outcomeDoc = append(outcomeDoc, bson.E{Key: "Flow", Value: m.buildSubFlowBson(activities)})
-	}
-
-	outcomeDoc = append(outcomeDoc,
-		bson.E{Key: "PersistentId", Value: bsonutil.NewIDBsonBinary()},
-		bson.E{Key: "Value", Value: outcomeName},
-	)
-
-	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
-	outcomes = append(outcomes, outcomeDoc)
-	dSetArray(actDoc, "Outcomes", outcomes)
-	return nil
-}
 
 func (m *mprWorkflowMutator) DropOutcome(activityRef string, atPos int, outcomeName string) error {
 	actDoc, err := m.findActivityByCaption(activityRef, atPos)
@@ -330,29 +267,6 @@ func (m *mprWorkflowMutator) DropOutcome(activityRef string, atPos int, outcomeN
 // WorkflowMutator interface — path operations (parallel split)
 // ---------------------------------------------------------------------------
 
-func (m *mprWorkflowMutator) InsertPath(activityRef string, atPos int, pathCaption string, activities []workflows.WorkflowActivity) error {
-	actDoc, err := m.findActivityByCaption(activityRef, atPos)
-	if err != nil {
-		return err
-	}
-
-	pathDoc := bson.D{
-		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-		{Key: "$Type", Value: "Workflows$ParallelSplitOutcome"},
-	}
-
-	if len(activities) > 0 {
-		pathDoc = append(pathDoc, bson.E{Key: "Flow", Value: m.buildSubFlowBson(activities)})
-	}
-
-	pathDoc = append(pathDoc, bson.E{Key: "PersistentId", Value: bsonutil.NewIDBsonBinary()})
-
-	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
-	outcomes = append(outcomes, pathDoc)
-	dSetArray(actDoc, "Outcomes", outcomes)
-	return nil
-}
-
 func (m *mprWorkflowMutator) DropPath(activityRef string, atPos int, pathCaption string) error {
 	actDoc, err := m.findActivityByCaption(activityRef, atPos)
 	if err != nil {
@@ -387,49 +301,6 @@ func (m *mprWorkflowMutator) DropPath(activityRef string, atPos int, pathCaption
 // ---------------------------------------------------------------------------
 // WorkflowMutator interface — branch operations (exclusive split)
 // ---------------------------------------------------------------------------
-
-func (m *mprWorkflowMutator) InsertBranch(activityRef string, atPos int, condition string, activities []workflows.WorkflowActivity) error {
-	actDoc, err := m.findActivityByCaption(activityRef, atPos)
-	if err != nil {
-		return err
-	}
-
-	var outcomeDoc bson.D
-	switch strings.ToLower(condition) {
-	case "true":
-		outcomeDoc = bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Workflows$BooleanConditionOutcome"},
-			{Key: "Value", Value: true},
-		}
-	case "false":
-		outcomeDoc = bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Workflows$BooleanConditionOutcome"},
-			{Key: "Value", Value: false},
-		}
-	case "default":
-		outcomeDoc = bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Workflows$VoidConditionOutcome"},
-		}
-	default:
-		outcomeDoc = bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Workflows$EnumerationValueConditionOutcome"},
-			{Key: "Value", Value: condition},
-		}
-	}
-
-	if len(activities) > 0 {
-		outcomeDoc = append(outcomeDoc, bson.E{Key: "Flow", Value: m.buildSubFlowBson(activities)})
-	}
-
-	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
-	outcomes = append(outcomes, outcomeDoc)
-	dSetArray(actDoc, "Outcomes", outcomes)
-	return nil
-}
 
 func (m *mprWorkflowMutator) DropBranch(activityRef string, atPos int, branchName string) error {
 	actDoc, err := m.findActivityByCaption(activityRef, atPos)
@@ -489,46 +360,6 @@ func (m *mprWorkflowMutator) DropBranch(activityRef string, atPos int, branchNam
 // WorkflowMutator interface — boundary event operations
 // ---------------------------------------------------------------------------
 
-func (m *mprWorkflowMutator) InsertBoundaryEvent(activityRef string, atPos int, eventType string, delay string, activities []workflows.WorkflowActivity) error {
-	actDoc, err := m.findActivityByCaption(activityRef, atPos)
-	if err != nil {
-		return err
-	}
-
-	typeName := "Workflows$InterruptingTimerBoundaryEvent"
-	switch eventType {
-	case "NonInterruptingTimer":
-		typeName = "Workflows$NonInterruptingTimerBoundaryEvent"
-	case "Timer":
-		typeName = "Workflows$TimerBoundaryEvent"
-	}
-
-	eventDoc := bson.D{
-		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-		{Key: "$Type", Value: typeName},
-		{Key: "Caption", Value: ""},
-	}
-
-	if delay != "" {
-		eventDoc = append(eventDoc, bson.E{Key: "FirstExecutionTime", Value: delay})
-	}
-
-	if len(activities) > 0 {
-		eventDoc = append(eventDoc, bson.E{Key: "Flow", Value: m.buildSubFlowBson(activities)})
-	}
-
-	eventDoc = append(eventDoc, bson.E{Key: "PersistentId", Value: bsonutil.NewIDBsonBinary()})
-
-	if typeName == "Workflows$NonInterruptingTimerBoundaryEvent" {
-		eventDoc = append(eventDoc, bson.E{Key: "Recurrence", Value: nil})
-	}
-
-	events := dGetArrayElements(dGet(actDoc, "BoundaryEvents"))
-	events = append(events, eventDoc)
-	dSetArray(actDoc, "BoundaryEvents", events)
-	return nil
-}
-
 func (m *mprWorkflowMutator) DropBoundaryEvent(activityRef string, atPos int) error {
 	actDoc, err := m.findActivityByCaption(activityRef, atPos)
 	if err != nil {
@@ -546,14 +377,12 @@ func (m *mprWorkflowMutator) DropBoundaryEvent(activityRef string, atPos int) er
 }
 
 // ---------------------------------------------------------------------------
-// Stage 3.3.3.D7 gen-typed siblings
+// Gen-typed activity insertion / replacement
 // ---------------------------------------------------------------------------
 //
-// Each *Gen sibling is a thin wrapper around the legacy raw-bson
-// mutation logic that swaps serializeAndDedup → serializeAndDedupGen
-// (and buildSubFlowBson → buildSubFlowBsonGen for nested flows). The
-// raw-bson tree manipulation (insert into Activities / Outcomes /
-// BoundaryEvents) is unchanged.
+// Each method routes new activities through serializeAndDedupGen
+// (codec.Encode + bson.Unmarshal) and stitches the resulting bson.D
+// into the workflow's Activities / Outcomes / BoundaryEvents arrays.
 
 func (m *mprWorkflowMutator) InsertAfterActivityGen(activityRef string, atPos int, activities []element.Element) error {
 	idx, acts, containingFlow, err := m.findActivityIndex(activityRef, atPos)
@@ -908,55 +737,17 @@ func collectNamesRecursive(flow bson.D, names map[string]bool) {
 	}
 }
 
-// deduplicateNewActivityName ensures a new activity name doesn't conflict.
-func deduplicateNewActivityName(act workflows.WorkflowActivity, existingNames map[string]bool) {
-	name := act.GetName()
-	if name == "" {
-		return
-	}
-	if !existingNames[name] {
-		existingNames[name] = true
-		return
-	}
-	for i := 2; i < 1000; i++ {
-		candidate := fmt.Sprintf("%s_%d", name, i)
-		if !existingNames[candidate] {
-			act.SetName(candidate)
-			existingNames[candidate] = true
-			return
-		}
-	}
-}
-
 // ---------------------------------------------------------------------------
 // Internal helpers — serialization
 // ---------------------------------------------------------------------------
 
-// serializeAndDedup serializes workflow activities to BSON, deduplicating names.
-func (m *mprWorkflowMutator) serializeAndDedup(activities []workflows.WorkflowActivity) []any {
-	existingNames := m.collectAllActivityNames()
-	for _, act := range activities {
-		deduplicateNewActivityName(act, existingNames)
-	}
-
-	result := make([]any, 0, len(activities))
-	for _, act := range activities {
-		bsonDoc := mpr.SerializeWorkflowActivity(act)
-		if bsonDoc != nil {
-			result = append(result, bsonDoc)
-		}
-	}
-	return result
-}
-
-// serializeAndDedupGen is the Stage 3.3.3.D7 gen-typed twin of
-// serializeAndDedup. Routes each gen activity through
+// serializeAndDedupGen routes each gen activity through
 // SerializeWorkflowActivityGen (codec.Encode + bson.Unmarshal), then
 // deduplicates the resulting Name fields against existing activities.
 //
-// The dedup runs on the bson.D output (post-encode) because gen
-// elements expose Name() but the dedup table still tracks the existing
-// raw-bson Name strings the mutator already scanned via
+// The dedup runs BEFORE serialize so the encoded bson.D carries the
+// disambiguated Name; the dedup table tracks the existing raw-bson
+// Name strings the mutator already scanned via
 // collectAllActivityNames().
 func (m *mprWorkflowMutator) serializeAndDedupGen(activities []element.Element) []any {
 	existingNames := m.collectAllActivityNames()
@@ -983,9 +774,8 @@ func (m *mprWorkflowMutator) serializeAndDedupGen(activities []element.Element) 
 	return result
 }
 
-// buildSubFlowBsonGen is the gen-typed twin of buildSubFlowBson. Wraps
-// gen activities in a Workflows$Flow bson.D shaped exactly like the
-// legacy output (bsonArrayMarker prefix in Activities).
+// buildSubFlowBsonGen wraps gen activities in a Workflows$Flow bson.D
+// (bsonArrayMarker prefix in Activities matches the legacy storage shape).
 func (m *mprWorkflowMutator) buildSubFlowBsonGen(activities []element.Element) bson.D {
 	subActs := make(bson.A, 0, len(activities)+1)
 	subActs = append(subActs, bsonArrayMarker)
@@ -999,9 +789,10 @@ func (m *mprWorkflowMutator) buildSubFlowBsonGen(activities []element.Element) b
 	}
 }
 
-// uniqueNameForGen mirrors the dedup logic in deduplicateNewActivityName
-// but operates on the existingNames map directly (gen elements are
-// encoded individually so we can't hand them to the legacy walker).
+// uniqueNameForGen suffixes name with the lowest integer that doesn't
+// collide with anything in existing, registers the chosen name in
+// existing, and returns it. Mirrors the dedup behaviour the workflow
+// mutator already applies to incoming activity names.
 func uniqueNameForGen(name string, existing map[string]bool) string {
 	if !existing[name] {
 		existing[name] = true
@@ -1036,24 +827,3 @@ func setGenActivityName(elem element.Element, name string) {
 	}
 }
 
-// buildSubFlowBson builds a Workflows$Flow BSON document from activities.
-func (m *mprWorkflowMutator) buildSubFlowBson(activities []workflows.WorkflowActivity) bson.D {
-	existingNames := m.collectAllActivityNames()
-	for _, act := range activities {
-		deduplicateNewActivityName(act, existingNames)
-	}
-
-	var subActsBson bson.A
-	subActsBson = append(subActsBson, bsonArrayMarker)
-	for _, act := range activities {
-		bsonDoc := mpr.SerializeWorkflowActivity(act)
-		if bsonDoc != nil {
-			subActsBson = append(subActsBson, bsonDoc)
-		}
-	}
-	return bson.D{
-		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-		{Key: "$Type", Value: "Workflows$Flow"},
-		{Key: "Activities", Value: subActsBson},
-	}
-}
