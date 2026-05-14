@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode"
 
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkstruct"
 )
@@ -511,32 +512,33 @@ func (r *StarlarkRule) builtinProjectSecurity(_ *starlark.Thread, _ *starlark.Bu
 		return starlark.None, nil
 	}
 
-	ps, err := reader.GetProjectSecurity()
+	ps, err := reader.GetProjectSecurityGen()
 	if err != nil || ps == nil {
 		return starlark.None, nil
 	}
 
-	// Build password_policy sub-struct
+	// Build password_policy sub-struct.
+	// schema gap: PasswordPolicySettings() returns element.Element; type-assert to concrete type.
 	ppDict := starlark.StringDict{
 		"min_length":         starlark.MakeInt(0),
 		"require_digit":      starlark.Bool(false),
 		"require_mixed_case": starlark.Bool(false),
 		"require_symbol":     starlark.Bool(false),
 	}
-	if ps.PasswordPolicy != nil {
-		ppDict["min_length"] = starlark.MakeInt(ps.PasswordPolicy.MinimumLength)
-		ppDict["require_digit"] = starlark.Bool(ps.PasswordPolicy.RequireDigit)
-		ppDict["require_mixed_case"] = starlark.Bool(ps.PasswordPolicy.RequireMixedCase)
-		ppDict["require_symbol"] = starlark.Bool(ps.PasswordPolicy.RequireSymbol)
+	if pp, ok := ps.PasswordPolicySettings().(*genSec.PasswordPolicySettings); ok && pp != nil {
+		ppDict["min_length"] = starlark.MakeInt(int(pp.MinimumLength()))
+		ppDict["require_digit"] = starlark.Bool(pp.RequireDigit())
+		ppDict["require_mixed_case"] = starlark.Bool(pp.RequireMixedCase())
+		ppDict["require_symbol"] = starlark.Bool(pp.RequireSymbol())
 	}
 
 	return starlarkstruct.FromStringDict(starlark.String("project_security"), starlark.StringDict{
-		"security_level":      starlark.String(ps.SecurityLevel),
-		"enable_demo_users":   starlark.Bool(ps.EnableDemoUsers),
-		"enable_guest_access": starlark.Bool(ps.EnableGuestAccess),
-		"check_security":      starlark.Bool(ps.CheckSecurity),
-		"strict_mode":         starlark.Bool(ps.StrictMode),
-		"anonymous_user_role": starlark.String(ps.GuestUserRole),
+		"security_level":      starlark.String(ps.SecurityLevel()),
+		"enable_demo_users":   starlark.Bool(ps.EnableDemoUsers()),
+		"enable_guest_access": starlark.Bool(ps.EnableGuestAccess()),
+		"check_security":      starlark.Bool(ps.CheckSecurity()),
+		"strict_mode":         starlark.Bool(ps.StrictMode()),
+		"anonymous_user_role": starlark.String(ps.GuestUserRoleName()),
 		"password_policy":     starlarkstruct.FromStringDict(starlark.String("password_policy"), ppDict),
 	}), nil
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
 const securityLevelProduction = "CheckEverything"
@@ -72,12 +73,14 @@ func (r *WeakPasswordPolicyRule) Check(ctx *linter.LintContext) []linter.Violati
 		return nil
 	}
 
-	ps, err := reader.GetProjectSecurity()
+	ps, err := reader.GetProjectSecurityGen()
 	if err != nil || ps == nil {
 		return nil
 	}
 
-	if ps.PasswordPolicy == nil || ps.PasswordPolicy.MinimumLength >= 8 {
+	// schema gap: PasswordPolicySettings() returns element.Element; type-assert to concrete type.
+	pp, ok := ps.PasswordPolicySettings().(*genSec.PasswordPolicySettings)
+	if !ok || pp == nil || pp.MinimumLength() >= 8 {
 		return nil
 	}
 
@@ -85,7 +88,7 @@ func (r *WeakPasswordPolicyRule) Check(ctx *linter.LintContext) []linter.Violati
 		RuleID:   r.ID(),
 		Severity: r.DefaultSeverity(),
 		Message: fmt.Sprintf("Password policy minimum length is %d (recommended: 8 or more)",
-			ps.PasswordPolicy.MinimumLength),
+			pp.MinimumLength()),
 		Location: linter.Location{
 			DocumentType: "security",
 			DocumentName: "ProjectSecurity",
@@ -116,12 +119,12 @@ func (r *DemoUsersActiveRule) Check(ctx *linter.LintContext) []linter.Violation 
 		return nil
 	}
 
-	ps, err := reader.GetProjectSecurity()
+	ps, err := reader.GetProjectSecurityGen()
 	if err != nil || ps == nil {
 		return nil
 	}
 
-	if !ps.EnableDemoUsers || ps.SecurityLevel != securityLevelProduction {
+	if !ps.EnableDemoUsers() || ps.SecurityLevel() != securityLevelProduction {
 		return nil
 	}
 

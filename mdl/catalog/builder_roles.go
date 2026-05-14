@@ -2,12 +2,16 @@
 
 package catalog
 
-import "strings"
+import (
+	"strings"
+
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
+)
 
 // buildRoleMappings populates the role_mappings table from project security.
 // This maps user roles to their assigned module roles.
 func (b *Builder) buildRoleMappings() error {
-	ps, err := b.reader.GetProjectSecurity()
+	ps, err := b.reader.GetProjectSecurityGen()
 	if err != nil {
 		// No project security — skip silently
 		return nil
@@ -29,14 +33,18 @@ func (b *Builder) buildRoleMappings() error {
 	snapshotID := b.snapshot.ID
 	count := 0
 
-	for _, ur := range ps.UserRoles {
-		for _, mr := range ur.ModuleRoles {
+	for _, item := range ps.UserRolesItems() {
+		ur, ok := item.(*genSec.UserRole)
+		if !ok {
+			continue
+		}
+		for _, mr := range ur.ModuleRolesQualifiedNames() {
 			// Module role is a qualified name like "MyModule.Admin"
 			moduleName := ""
 			if parts := strings.SplitN(mr, ".", 2); len(parts) == 2 {
 				moduleName = parts[0]
 			}
-			stmt.Exec(ur.Name, mr, moduleName, projectID, snapshotID)
+			stmt.Exec(ur.Name(), mr, moduleName, projectID, snapshotID)
 			count++
 		}
 	}

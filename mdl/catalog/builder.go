@@ -10,10 +10,10 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -31,7 +31,7 @@ type CatalogReader interface {
 
 	// Settings & security
 	GetProjectSettings() (*model.ProjectSettings, error)
-	GetProjectSecurity() (*security.ProjectSecurity, error)
+	GetProjectSecurityGen() (*genSec.ProjectSecurity, error)
 	GetNavigation() (*types.NavigationDocument, error)
 
 	// Domain models & enumerations
