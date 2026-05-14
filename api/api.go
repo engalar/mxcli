@@ -33,7 +33,7 @@ import (
 
 // ModelAPI is the main entry point for the high-level API.
 // It provides access to domain-specific APIs for pages, domain models,
-// microflows, and enumerations.
+// and enumerations.
 type ModelAPI struct {
 	writer *mpr.Writer
 	reader *mpr.Reader
@@ -44,7 +44,6 @@ type ModelAPI struct {
 	// Domain-specific APIs
 	Pages        *PagesAPI
 	DomainModels *DomainModelsAPI
-	Microflows   *MicroflowsAPI
 	Enumerations *EnumerationsAPI
 	Modules      *ModulesAPI
 }
@@ -59,7 +58,6 @@ func New(writer *mpr.Writer) *ModelAPI {
 	// Initialize domain-specific APIs
 	api.Pages = &PagesAPI{api: api}
 	api.DomainModels = &DomainModelsAPI{api: api}
-	api.Microflows = &MicroflowsAPI{api: api}
 	api.Enumerations = &EnumerationsAPI{api: api}
 	api.Modules = &ModulesAPI{api: api}
 
