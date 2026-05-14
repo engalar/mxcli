@@ -12,6 +12,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
@@ -103,24 +104,39 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete entities in domain models belonging to this module
-	if dms, err := ctx.Backend.ListDomainModels(); err == nil {
-		for _, dm := range dms {
-			if moduleContainers[dm.ContainerID] {
-				// Delete all associations in this domain model first (they reference entities)
-				for _, assoc := range dm.Associations {
-					if err := ctx.Backend.DeleteAssociation(dm.ID, assoc.ID); err != nil {
-						fmt.Fprintf(ctx.Output, "Warning: failed to delete association %s: %v\n", assoc.Name, err)
-					} else {
-						nAssocs++
-					}
+	// (Stage 3.3.4 C2.e — gen path; DeleteEntity / DeleteAssociation
+	// already take ID-only signatures so no gen variant is needed).
+	if pairs, err := listDomainModelsWithContainerGen(ctx); err == nil {
+		for _, p := range pairs {
+			if p.DM == nil {
+				continue
+			}
+			if !moduleContainers[p.ContainerID] {
+				continue
+			}
+			dmID := model.ID(p.DM.ID())
+			// Delete all associations first (they reference entities).
+			for _, a := range p.DM.AssociationsItems() {
+				assoc, ok := a.(*genDm.Association)
+				if !ok {
+					continue
 				}
-				// Delete all entities in this domain model
-				for _, entity := range dm.Entities {
-					if err := ctx.Backend.DeleteEntity(dm.ID, entity.ID); err != nil {
-						fmt.Fprintf(ctx.Output, "Warning: failed to delete entity %s: %v\n", entity.Name, err)
-					} else {
-						nEntities++
-					}
+				if err := ctx.Backend.DeleteAssociation(dmID, model.ID(assoc.ID())); err != nil {
+					fmt.Fprintf(ctx.Output, "Warning: failed to delete association %s: %v\n", assoc.Name(), err)
+				} else {
+					nAssocs++
+				}
+			}
+			// Delete all entities in this domain model.
+			for _, e := range p.DM.EntitiesItems() {
+				entity, ok := e.(*genDm.Entity)
+				if !ok {
+					continue
+				}
+				if err := ctx.Backend.DeleteEntity(dmID, model.ID(entity.ID())); err != nil {
+					fmt.Fprintf(ctx.Output, "Warning: failed to delete entity %s: %v\n", entity.Name(), err)
+				} else {
+					nEntities++
 				}
 			}
 		}
