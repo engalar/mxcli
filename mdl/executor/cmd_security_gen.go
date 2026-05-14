@@ -474,6 +474,41 @@ func listProjectSecurityGen(ctx *ExecContext) error {
 	return nil
 }
 
+// listModuleRolesGen handles SHOW MODULE ROLES [IN module] using
+// gen-typed ModuleSecurity units from listModuleSecurityWithContainerGen.
+func listModuleRolesGen(ctx *ExecContext, moduleName string) error {
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+	pairs, err := listModuleSecurityWithContainerGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("read module security", err)
+	}
+	result := &TableResult{Columns: []string{"Qualified Name", "Module", "Role", "Description"}}
+	for _, p := range pairs {
+		modName := h.GetModuleName(p.ContainerID)
+		if modName == "" {
+			continue
+		}
+		if moduleName != "" && modName != moduleName {
+			continue
+		}
+		// schema gap: ModuleRolesItems() returns []element.Element; type-assert
+		// each entry to *genSec.ModuleRole. Remove when gen narrows return to []*ModuleRole.
+		for _, mr := range p.MS.ModuleRolesItems() {
+			typed, ok := mr.(*genSec.ModuleRole)
+			if !ok {
+				continue
+			}
+			qn := modName + "." + typed.Name()
+			result.Rows = append(result.Rows, []any{qn, modName, typed.Name(), typed.Description()})
+		}
+	}
+	result.Summary = fmt.Sprintf("(%d module roles)", len(result.Rows))
+	return writeResult(ctx, result)
+}
+
 // securityLevelDisplay maps gen-typed BSON SecurityLevel constants to the
 // human-friendly labels used by `show project security`. Mirrors
 // security.SecurityLevelDisplay (sdk/security/security.go) without
