@@ -88,9 +88,9 @@ func (fb *flowBuilderGen) addStatementGen(stmt ast.MicroflowStatement) element.I
 
 	// ─── Splits — h4 ───
 	case *ast.EnumSplitStmt:
-		return "" // TODO Stage 3.2.3.h4: addEnumSplitGen
+		return fb.addEnumSplitGen(s)
 	case *ast.InheritanceSplitStmt:
-		return "" // TODO Stage 3.2.3.h4: addInheritanceSplitGen
+		return fb.addInheritanceSplitGen(s)
 
 	case *ast.CastObjectStmt:
 		return fb.addCastActionGen(s)
