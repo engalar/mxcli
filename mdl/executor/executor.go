@@ -55,6 +55,14 @@ type executorCache struct {
 	entityNames    map[model.ID]string // entity ID -> "Module.EntityName"
 	microflowNames map[model.ID]string // microflow ID -> "Module.MicroflowName"
 	pageNames      map[model.ID]string // page ID -> "Module.PageName"
+
+	// Cached gen-typed flow listings with container UUID resolved.
+	// Populated lazily by listMicroflowsWithContainerGen /
+	// listNanoflowsWithContainerGen so repeated callers in a single
+	// session pay one ListAll + one batch container scan instead of
+	// N per-element GetContainerUUID lookups (Followup E1).
+	microflowsWithContainerGen []MicroflowGenWithContainer
+	nanoflowsWithContainerGen  []NanoflowGenWithContainer
 }
 
 // createdMicroflowInfo tracks a microflow created during this session.
@@ -135,6 +143,8 @@ func getEntityNames(ctx *ExecContext, h *ContainerHierarchy) map[model.ID]string
 func invalidateMicroflowsCache(ctx *ExecContext) {
 	if ctx.Cache != nil {
 		ctx.Cache.microflowNames = nil
+		ctx.Cache.microflowsWithContainerGen = nil
+		ctx.Cache.nanoflowsWithContainerGen = nil
 	}
 }
 
