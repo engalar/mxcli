@@ -12,6 +12,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/security"
 )
 
@@ -689,21 +690,22 @@ func execRevokeWorkflowAccess(ctx *ExecContext, s *ast.RevokeWorkflowAccessStmt)
 	return mdlerrors.NewUnsupported("revoke execute on workflow is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
 }
 
-// validateModuleRole checks that a module role exists in the project.
+// validateModuleRole checks that a module role exists in the project using
+// the gen-typed ModuleSecurity reader.
 func validateModuleRole(ctx *ExecContext, role ast.QualifiedName) error {
 	module, err := findModule(ctx, role.Module)
 	if err != nil {
 		return mdlerrors.NewBackend(fmt.Sprintf("module not found for role %s.%s", role.Module, role.Name), err)
 	}
 
-	ms, err := ctx.Backend.GetModuleSecurity(module.ID)
+	ms, err := ctx.Backend.GetModuleSecurityGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend(fmt.Sprintf("read module security for %s", role.Module), err)
 	}
 
 	if ms != nil {
-		for _, mr := range ms.ModuleRoles {
-			if mr.Name == role.Name {
+		for _, item := range ms.ModuleRolesItems() {
+			if mr, ok := item.(*genSec.ModuleRole); ok && mr.Name() == role.Name {
 				return nil
 			}
 		}

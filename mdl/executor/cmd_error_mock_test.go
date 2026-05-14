@@ -8,11 +8,12 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/security"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -175,39 +176,48 @@ func TestShowNavigation_Mock_BackendError(t *testing.T) {
 }
 
 func TestShowProjectSecurity_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:        func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) { return nil, errBackend },
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return nil, errBackend },
 	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listProjectSecurity(ctx))
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertError(t, listProjectSecurityGen(ctx))
 }
 
 func TestShowModuleRoles_Mock_BackendError(t *testing.T) {
+	// listModuleRolesGen propagates errors from ListModules (not from per-module
+	// GetModuleSecurity, which is silently skipped on error).
+	sec := &repostesting.RecordingSecurityRepository{}
 	mb := &mock.MockBackend{
-		IsConnectedFunc:        func() bool { return true },
-		ListModuleSecurityFunc: func() ([]*security.ModuleSecurity, error) { return nil, errBackend },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return nil, errBackend },
 	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listModuleRoles(ctx, ""))
+	ctx, _ := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertError(t, listModuleRolesGen(ctx, ""))
 }
 
 func TestShowUserRoles_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:        func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) { return nil, errBackend },
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return nil, errBackend },
 	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listUserRoles(ctx))
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertError(t, listUserRolesGen(ctx))
 }
 
 func TestShowDemoUsers_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:        func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) { return nil, errBackend },
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return nil, errBackend },
 	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listDemoUsers(ctx))
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertError(t, listDemoUsersGen(ctx))
 }
 
 func TestShowBusinessEventServices_Mock_BackendError(t *testing.T) {
@@ -382,30 +392,37 @@ func TestDescribeDatabaseConnection_Mock_BackendError(t *testing.T) {
 }
 
 func TestDescribeModuleRole_Mock_BackendError(t *testing.T) {
+	// describeModuleRoleGen propagates errors from ListModules (not from per-module
+	// GetModuleSecurity, which is silently skipped on error).
+	sec := &repostesting.RecordingSecurityRepository{}
 	mb := &mock.MockBackend{
-		IsConnectedFunc:        func() bool { return true },
-		ListModuleSecurityFunc: func() ([]*security.ModuleSecurity, error) { return nil, errBackend },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return nil, errBackend },
 	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, describeModuleRole(ctx, ast.QualifiedName{Module: "M", Name: "R"}))
+	ctx, _ := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertError(t, describeModuleRoleGen(ctx, ast.QualifiedName{Module: "M", Name: "R"}))
 }
 
 func TestDescribeUserRole_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:        func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) { return nil, errBackend },
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return nil, errBackend },
 	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, describeUserRole(ctx, ast.QualifiedName{Module: "", Name: "Admin"}))
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertError(t, describeUserRoleGen(ctx, ast.QualifiedName{Module: "", Name: "Admin"}))
 }
 
 func TestDescribeDemoUser_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:        func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) { return nil, errBackend },
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return nil, errBackend },
 	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, describeDemoUser(ctx, "demo"))
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertError(t, describeDemoUserGen(ctx, "demo"))
 }
 
 // Write handler backend errors

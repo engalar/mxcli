@@ -217,6 +217,13 @@ func withNanoflowsRepo(r repos.NanoflowRepository) mockCtxOption {
 	return func(ctx *ExecContext) { ctx.Nanoflows = r }
 }
 
+// withSecurityRepo wires a modelsdk-native SecurityRepository into the
+// ExecContext. Use with a repostesting.RecordingSecurityRepository to
+// seed gen-typed fixtures for tests that exercise gen security paths.
+func withSecurityRepo(r repos.SecurityRepository) mockCtxOption {
+	return func(ctx *ExecContext) { ctx.Security = r }
+}
+
 func mkPage(containerID model.ID, name string) *pages.Page {
 	return &pages.Page{
 		BaseElement: model.BaseElement{ID: nextID("pg")},

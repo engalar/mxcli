@@ -8,28 +8,67 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/security"
 )
 
+// mkGenProjectSecurity builds a gen-typed ProjectSecurity for use with
+// withSecurityRepo. Returns both the object and the repo so tests can
+// customise further before passing it to withSecurityRepo.
+func mkGenProjectSecurity() *genSec.ProjectSecurity {
+	return genSec.NewProjectSecurity()
+}
+
+func mkGenModuleSecurity() *genSec.ModuleSecurity {
+	return genSec.NewModuleSecurity()
+}
+
+func mkGenModuleRole(name, description string) *genSec.ModuleRole {
+	mr := genSec.NewModuleRole()
+	mr.SetName(name)
+	mr.SetDescription(description)
+	return mr
+}
+
+func mkGenUserRole(name string, moduleRoles []string) *genSec.UserRole {
+	ur := genSec.NewUserRole()
+	ur.SetID(element.ID(nextID("ur")))
+	ur.SetName(name)
+	ur.SetModuleRolesQualifiedNames(moduleRoles)
+	return ur
+}
+
+func mkGenDemoUser(userName string, userRoles []string) *genSec.DemoUser {
+	du := genSec.NewDemoUser()
+	du.SetUserName(userName)
+	du.SetUserRolesQualifiedNames(userRoles)
+	return du
+}
+
 func TestShowProjectSecurity_Mock(t *testing.T) {
+	ps := mkGenProjectSecurity()
+	ps.SetSecurityLevel("CheckEverything")
+	ps.SetEnableDemoUsers(true)
+	ps.SetAdminUserName("MxAdmin")
+	ur1 := mkGenUserRole("Admin", nil)
+	ur2 := mkGenUserRole("User", nil)
+	ps.AddUserRoles(ur1)
+	ps.AddUserRoles(ur2)
+	du := mkGenDemoUser("demo_admin", nil)
+	ps.AddDemoUsers(du)
+
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return ps, nil },
+	}
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) {
-			return &security.ProjectSecurity{
-				SecurityLevel:   "CheckEverything",
-				EnableDemoUsers: true,
-				AdminUserName:   "MxAdmin",
-				UserRoles:       []*security.UserRole{{Name: "Admin"}, {Name: "User"}},
-				DemoUsers:       []*security.DemoUser{{UserName: "demo_admin"}},
-				PasswordPolicy:  &security.PasswordPolicy{MinimumLength: 8},
-			}, nil
-		},
 	}
-	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, listProjectSecurity(ctx))
+	ctx, buf := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertNoError(t, listProjectSecurityGen(ctx))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Security Level:")
@@ -41,20 +80,24 @@ func TestShowModuleRoles_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListModuleSecurityFunc: func() ([]*security.ModuleSecurity, error) {
-			return []*security.ModuleSecurity{{
-				ContainerID: mod.ID,
-				ModuleRoles: []*security.ModuleRole{
-					{Name: "Admin"},
-					{Name: "User"},
-				},
-			}}, nil
+	ms := mkGenModuleSecurity()
+	ms.AddModuleRoles(mkGenModuleRole("Admin", ""))
+	ms.AddModuleRoles(mkGenModuleRole("User", ""))
+
+	sec := &repostesting.RecordingSecurityRepository{
+		GetModuleSecFunc: func(id model.ID) (*genSec.ModuleSecurity, error) {
+			if id == mod.ID {
+				return ms, nil
+			}
+			return nil, nil
 		},
 	}
-	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listModuleRoles(ctx, ""))
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withSecurityRepo(sec), withHierarchy(h))
+	assertNoError(t, listModuleRolesGen(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Qualified Name")
@@ -64,19 +107,18 @@ func TestShowModuleRoles_Mock(t *testing.T) {
 }
 
 func TestShowUserRoles_Mock(t *testing.T) {
+	ps := mkGenProjectSecurity()
+	ps.AddUserRoles(mkGenUserRole("Administrator", []string{"MyModule.Admin"}))
+	ps.AddUserRoles(mkGenUserRole("NormalUser", []string{"MyModule.User"}))
+
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return ps, nil },
+	}
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) {
-			return &security.ProjectSecurity{
-				UserRoles: []*security.UserRole{
-					{Name: "Administrator", ModuleRoles: []string{"MyModule.Admin"}},
-					{Name: "NormalUser", ModuleRoles: []string{"MyModule.User"}},
-				},
-			}, nil
-		},
 	}
-	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, listUserRoles(ctx))
+	ctx, buf := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertNoError(t, listUserRolesGen(ctx))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Name")
@@ -86,19 +128,18 @@ func TestShowUserRoles_Mock(t *testing.T) {
 }
 
 func TestShowDemoUsers_Mock(t *testing.T) {
+	ps := mkGenProjectSecurity()
+	ps.SetEnableDemoUsers(true)
+	ps.AddDemoUsers(mkGenDemoUser("demo_admin", []string{"Administrator"}))
+
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return ps, nil },
+	}
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) {
-			return &security.ProjectSecurity{
-				EnableDemoUsers: true,
-				DemoUsers: []*security.DemoUser{
-					{UserName: "demo_admin", UserRoles: []string{"Administrator"}},
-				},
-			}, nil
-		},
 	}
-	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, listDemoUsers(ctx))
+	ctx, buf := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertNoError(t, listDemoUsersGen(ctx))
 
 	out := buf.String()
 	assertContainsStr(t, out, "User Name")
@@ -106,16 +147,17 @@ func TestShowDemoUsers_Mock(t *testing.T) {
 }
 
 func TestShowDemoUsers_Disabled_Mock(t *testing.T) {
+	ps := mkGenProjectSecurity()
+	ps.SetEnableDemoUsers(false)
+
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return ps, nil },
+	}
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) {
-			return &security.ProjectSecurity{
-				EnableDemoUsers: false,
-			}, nil
-		},
 	}
-	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, listDemoUsers(ctx))
+	ctx, buf := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertNoError(t, listDemoUsersGen(ctx))
 	assertContainsStr(t, buf.String(), "Demo users are disabled.")
 }
 
@@ -123,57 +165,58 @@ func TestDescribeModuleRole_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListModuleSecurityFunc: func() ([]*security.ModuleSecurity, error) {
-			return []*security.ModuleSecurity{{
-				ContainerID: mod.ID,
-				ModuleRoles: []*security.ModuleRole{{Name: "Admin", Description: "Full access"}},
-			}}, nil
-		},
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) {
-			return &security.ProjectSecurity{
-				UserRoles: []*security.UserRole{
-					{Name: "Administrator", ModuleRoles: []string{"MyModule.Admin"}},
-				},
-			}, nil
+	ms := mkGenModuleSecurity()
+	ms.AddModuleRoles(mkGenModuleRole("Admin", "Full access"))
+
+	psRoles := mkGenProjectSecurity()
+	psRoles.AddUserRoles(mkGenUserRole("Administrator", []string{"MyModule.Admin"}))
+
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return psRoles, nil },
+		GetModuleSecFunc: func(id model.ID) (*genSec.ModuleSecurity, error) {
+			if id == mod.ID {
+				return ms, nil
+			}
+			return nil, nil
 		},
 	}
-	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, describeModuleRole(ctx, ast.QualifiedName{Module: "MyModule", Name: "Admin"}))
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withSecurityRepo(sec), withHierarchy(h))
+	assertNoError(t, describeModuleRoleGen(ctx, ast.QualifiedName{Module: "MyModule", Name: "Admin"}))
 	assertContainsStr(t, buf.String(), "create module role")
 }
 
 func TestDescribeUserRole_Mock(t *testing.T) {
+	ps := mkGenProjectSecurity()
+	ps.AddUserRoles(mkGenUserRole("Administrator", []string{"MyModule.Admin"}))
+
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return ps, nil },
+	}
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) {
-			return &security.ProjectSecurity{
-				UserRoles: []*security.UserRole{
-					{Name: "Administrator", ModuleRoles: []string{"MyModule.Admin"}},
-				},
-			}, nil
-		},
 	}
-	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, describeUserRole(ctx, ast.QualifiedName{Name: "Administrator"}))
+	ctx, buf := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertNoError(t, describeUserRoleGen(ctx, ast.QualifiedName{Name: "Administrator"}))
 	assertContainsStr(t, buf.String(), "create user role")
 }
 
 func TestDescribeDemoUser_Mock(t *testing.T) {
+	ps := mkGenProjectSecurity()
+	ps.SetEnableDemoUsers(true)
+	ps.AddDemoUsers(mkGenDemoUser("demo_admin", []string{"Administrator"}))
+
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return ps, nil },
+	}
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) {
-			return &security.ProjectSecurity{
-				EnableDemoUsers: true,
-				DemoUsers: []*security.DemoUser{
-					{UserName: "demo_admin", UserRoles: []string{"Administrator"}},
-				},
-			}, nil
-		},
 	}
-	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, describeDemoUser(ctx, "demo_admin"))
+	ctx, buf := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertNoError(t, describeDemoUserGen(ctx, "demo_admin"))
 	assertContainsStr(t, buf.String(), "create demo user")
 }
 
@@ -182,17 +225,29 @@ func TestShowModuleRoles_Mock_FilterByModule(t *testing.T) {
 	mod2 := mkModule("HR")
 	h := mkHierarchy(mod1, mod2)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListModuleSecurityFunc: func() ([]*security.ModuleSecurity, error) {
-			return []*security.ModuleSecurity{
-				{ContainerID: mod1.ID, ModuleRoles: []*security.ModuleRole{{Name: "Manager"}}},
-				{ContainerID: mod2.ID, ModuleRoles: []*security.ModuleRole{{Name: "Employee"}}},
-			}, nil
+	ms1 := mkGenModuleSecurity()
+	ms1.AddModuleRoles(mkGenModuleRole("Manager", ""))
+
+	ms2 := mkGenModuleSecurity()
+	ms2.AddModuleRoles(mkGenModuleRole("Employee", ""))
+
+	sec := &repostesting.RecordingSecurityRepository{
+		GetModuleSecFunc: func(id model.ID) (*genSec.ModuleSecurity, error) {
+			switch id {
+			case mod1.ID:
+				return ms1, nil
+			case mod2.ID:
+				return ms2, nil
+			}
+			return nil, nil
 		},
 	}
-	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listModuleRoles(ctx, "HR"))
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod1, mod2}, nil },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withSecurityRepo(sec), withHierarchy(h))
+	assertNoError(t, listModuleRolesGen(ctx, "HR"))
 
 	out := buf.String()
 	assertNotContainsStr(t, out, "Sales")
@@ -204,44 +259,52 @@ func TestDescribeModuleRole_Mock_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListModuleSecurityFunc: func() ([]*security.ModuleSecurity, error) {
-			return []*security.ModuleSecurity{{
-				ContainerID: mod.ID,
-				ModuleRoles: []*security.ModuleRole{{Name: "Admin"}},
-			}}, nil
+	ms := mkGenModuleSecurity()
+	ms.AddModuleRoles(mkGenModuleRole("Admin", ""))
+
+	sec := &repostesting.RecordingSecurityRepository{
+		GetModuleSecFunc: func(id model.ID) (*genSec.ModuleSecurity, error) {
+			if id == mod.ID {
+				return ms, nil
+			}
+			return nil, nil
 		},
 	}
-	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertError(t, describeModuleRole(ctx, ast.QualifiedName{Module: "MyModule", Name: "NonExistent"}))
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withSecurityRepo(sec), withHierarchy(h))
+	assertError(t, describeModuleRoleGen(ctx, ast.QualifiedName{Module: "MyModule", Name: "NonExistent"}))
 }
 
 func TestDescribeUserRole_Mock_NotFound(t *testing.T) {
+	ps := mkGenProjectSecurity()
+	ps.AddUserRoles(mkGenUserRole("Admin", nil))
+
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return ps, nil },
+	}
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) {
-			return &security.ProjectSecurity{
-				UserRoles: []*security.UserRole{{Name: "Admin"}},
-			}, nil
-		},
 	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, describeUserRole(ctx, ast.QualifiedName{Name: "NonExistent"}))
+	ctx, _ := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertError(t, describeUserRoleGen(ctx, ast.QualifiedName{Name: "NonExistent"}))
 }
 
 func TestDescribeDemoUser_Mock_NotFound(t *testing.T) {
+	ps := mkGenProjectSecurity()
+	ps.SetEnableDemoUsers(true)
+	ps.AddDemoUsers(mkGenDemoUser("demo_admin", nil))
+
+	sec := &repostesting.RecordingSecurityRepository{
+		GetFunc: func() (*genSec.ProjectSecurity, error) { return ps, nil },
+	}
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) {
-			return &security.ProjectSecurity{
-				EnableDemoUsers: true,
-				DemoUsers:       []*security.DemoUser{{UserName: "demo_admin"}},
-			}, nil
-		},
 	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, describeDemoUser(ctx, "nonexistent"))
+	ctx, _ := newMockCtx(t, withBackend(mb), withSecurityRepo(sec))
+	assertError(t, describeDemoUserGen(ctx, "nonexistent"))
 }
 
 func TestShowAccessOnEntity_Mock_NilName(t *testing.T) {
@@ -334,15 +397,18 @@ func TestGrantEntityAccess_XPathConstraint_PreservesRights(t *testing.T) {
 	}
 
 	callCount := 0
+
+	// gen-typed ModuleSecurity with "User" role for role validation
+	ms := mkGenModuleSecurity()
+	ms.AddModuleRoles(mkGenModuleRole("User", ""))
+
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
 		},
-		GetModuleSecurityFunc: func(moduleID model.ID) (*security.ModuleSecurity, error) {
-			return &security.ModuleSecurity{
-				ModuleRoles: []*security.ModuleRole{{Name: "User"}},
-			}, nil
+		GetModuleSecurityGenFunc: func(moduleID model.ID) (*genSec.ModuleSecurity, error) {
+			return ms, nil
 		},
 		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
 			callCount++
@@ -450,8 +516,8 @@ func TestGrantEntityAccess_FakeRole_Issue399(t *testing.T) {
 		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
 		// No roles defined in module security
-		GetModuleSecurityFunc: func(moduleID model.ID) (*security.ModuleSecurity, error) {
-			return &security.ModuleSecurity{ModuleRoles: nil}, nil
+		GetModuleSecurityGenFunc: func(moduleID model.ID) (*genSec.ModuleSecurity, error) {
+			return genSec.NewModuleSecurity(), nil
 		},
 	}
 
@@ -486,8 +552,8 @@ func TestRevokeEntityAccess_FakeRole_Issue399(t *testing.T) {
 		IsConnectedFunc:    func() bool { return true },
 		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
-		GetModuleSecurityFunc: func(moduleID model.ID) (*security.ModuleSecurity, error) {
-			return &security.ModuleSecurity{ModuleRoles: nil}, nil
+		GetModuleSecurityGenFunc: func(moduleID model.ID) (*genSec.ModuleSecurity, error) {
+			return genSec.NewModuleSecurity(), nil
 		},
 	}
 
