@@ -87,6 +87,9 @@ type MockBackend struct {
 	GetDomainModelGenFunc     func(moduleID model.ID) (*genDm.DomainModel, error)
 	GetDomainModelByIDGenFunc func(id model.ID) (*genDm.DomainModel, error)
 	UpdateDomainModelGenFunc  func(dm *genDm.DomainModel) error
+	// Stage 3.3.4 D8 — gen-typed entity write Func fields (additive)
+	CreateEntityGenFunc func(domainModelID model.ID, entity *genDm.Entity) error
+	UpdateEntityGenFunc func(domainModelID model.ID, entity *genDm.Entity) error
 
 	// MicroflowBackend — Followup E6 retired Get / Create / Update /
 	// Move / Parse; Followup F3 retired the sdk-typed ListMicroflows /

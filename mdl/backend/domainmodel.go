@@ -17,14 +17,16 @@ type DomainModelBackend interface {
 	GetDomainModelByID(id model.ID) (*domainmodel.DomainModel, error)
 	UpdateDomainModel(dm *domainmodel.DomainModel) error
 
-	// Stage 3.3.4 C1 — gen-typed read methods (additive). Write
-	// counterparts (CreateEntityGen, UpdateEntityGen, etc.) land in
-	// Phase D8 alongside the gen-typed write helpers in
-	// mdl/backend/mpr/domainmodel_modelsdk.go.
+	// Stage 3.3.4 C1 — gen-typed read methods (additive).
 	ListDomainModelsGen() ([]*genDm.DomainModel, error)
 	GetDomainModelGen(moduleID model.ID) (*genDm.DomainModel, error)
 	GetDomainModelByIDGen(id model.ID) (*genDm.DomainModel, error)
 	UpdateDomainModelGen(dm *genDm.DomainModel) error
+	// Stage 3.3.4 D8 — gen-typed entity write methods. The bridge
+	// implementation in MprBackend converts to sdk types and delegates
+	// to *ViaModelsdk write helpers (Stage 4 will retire the bridge).
+	CreateEntityGen(domainModelID model.ID, entity *genDm.Entity) error
+	UpdateEntityGen(domainModelID model.ID, entity *genDm.Entity) error
 
 	// Entities
 	CreateEntity(domainModelID model.ID, entity *domainmodel.Entity) error
