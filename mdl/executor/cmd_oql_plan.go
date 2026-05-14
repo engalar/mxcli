@@ -10,7 +10,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // --- OQL Query Plan data structures ---
@@ -60,8 +59,13 @@ type oqlPlanColumn struct {
 }
 
 // OqlQueryPlanELK generates a query plan visualization for a view entity's OQL query.
-func OqlQueryPlanELK(ctx *ExecContext, qualifiedName string, entity *domainmodel.Entity) error {
-	plan := parseOqlPlan(qualifiedName, entity.OqlQuery)
+// The OQL query is passed as a string so callers can extract it from
+// either the legacy *domainmodel.Entity (entity.OqlQuery) or the gen
+// *genDm.Entity (entity.Source().(*OqlViewEntitySource).Oql()).
+// Stage 3.3.4 C8: signature changed to take the query string directly,
+// removing the sdk/domainmodel dependency from this file.
+func OqlQueryPlanELK(ctx *ExecContext, qualifiedName string, oqlQuery string) error {
+	plan := parseOqlPlan(qualifiedName, oqlQuery)
 
 	out, err := json.MarshalIndent(plan, "", "  ")
 	if err != nil {

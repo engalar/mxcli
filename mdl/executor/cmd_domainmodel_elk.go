@@ -190,7 +190,7 @@ func entityFocusELK(ctx *ExecContext, qualifiedName string) error {
 
 	// If this is a view entity with an OQL query, render query plan instead
 	if classifyEntity(focusEntity) == "view" && focusEntity.OqlQuery != "" {
-		return OqlQueryPlanELK(ctx, qualifiedName, focusEntity)
+		return OqlQueryPlanELK(ctx, qualifiedName, focusEntity.OqlQuery)
 	}
 
 	allEntityNames, _ := buildAllEntityNames(ctx)
