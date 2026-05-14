@@ -239,3 +239,50 @@ func TestDescribeModuleRoleGen_NotFound(t *testing.T) {
 		t.Errorf("error should mention module role; got %q", err.Error())
 	}
 }
+
+// TestDescribeUserRoleGen_OutputsCreateStatement asserts that describeUserRoleGen
+// emits a CREATE USER ROLE statement for an existing user role.
+// The fixture user role "User" has 4 module roles and checkSecurity=true,
+// matching the legacy describe user role 'User' output.
+func TestDescribeUserRoleGen_OutputsCreateStatement(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	if err := describeUserRoleGen(ctx, ast.QualifiedName{Name: "User"}); err != nil {
+		t.Fatalf("describeUserRoleGen: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "create user role User") {
+		t.Errorf("expected create statement with role name, got: %q", out)
+	}
+	// module roles must be parenthesized
+	if !strings.Contains(out, "(") || !strings.Contains(out, ")") {
+		t.Errorf("expected parenthesized module roles, got: %q", out)
+	}
+	// terminator
+	if !strings.Contains(out, ";") {
+		t.Errorf("expected semicolon terminator, got: %q", out)
+	}
+	if !strings.Contains(out, "/") {
+		t.Errorf("expected / terminator, got: %q", out)
+	}
+	// check security comment (User role has checkSecurity=true in fixture)
+	if !strings.Contains(out, "-- Check security: enabled") {
+		t.Errorf("expected check security comment, got: %q", out)
+	}
+}
+
+// TestDescribeUserRoleGen_NotFound asserts that a non-existent user role
+// returns a not-found error from describeUserRoleGen.
+func TestDescribeUserRoleGen_NotFound(t *testing.T) {
+	ctx := newSecurityTestContext(t)
+	var buf bytes.Buffer
+	ctx.Output = &buf
+	err := describeUserRoleGen(ctx, ast.QualifiedName{Name: "DoesNotExist_Stage3_3_A6"})
+	if err == nil {
+		t.Fatalf("expected NotFound error, got nil")
+	}
+	if !strings.Contains(err.Error(), "user role") {
+		t.Errorf("error should mention user role; got %q", err.Error())
+	}
+}
