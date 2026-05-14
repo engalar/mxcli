@@ -31,16 +31,16 @@ func getMicroflowNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	mfs, err := ctx.Backend.ListMicroflows()
+	mfs, err := listMicroflowsWithContainerGen(ctx)
 	if err != nil {
 		return nil
 	}
 	names := make([]string, 0)
-	for _, mf := range mfs {
-		modID := h.FindModuleID(mf.ContainerID)
+	for _, item := range mfs {
+		modID := h.FindModuleID(item.ContainerUUID)
 		modName := h.GetModuleName(modID)
 		if moduleFilter == "" || modName == moduleFilter {
-			names = append(names, modName+"."+mf.Name)
+			names = append(names, modName+"."+item.MF.Name())
 		}
 	}
 	return names
