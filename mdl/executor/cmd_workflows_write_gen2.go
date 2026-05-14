@@ -29,6 +29,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	"github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
 
@@ -61,8 +62,9 @@ func buildWorkflowActivityGen(node ast.WorkflowActivityNode) element.Element {
 		return buildEndWorkflowGenActivity(n)
 	case *ast.WorkflowAnnotationActivityNode:
 		return buildAnnotationActivityGen(n)
-	// Composite cases land in D1.b/c/d:
-	//   *ast.WorkflowUserTaskNode        — D1.b
+	case *ast.WorkflowUserTaskNode:
+		return buildUserTaskGenActivity(n)
+	// Composite cases land in D1.c/d:
 	//   *ast.WorkflowCallMicroflowNode   — D1.c
 	//   *ast.WorkflowCallWorkflowNode    — D1.c
 	//   *ast.WorkflowDecisionNode        — D1.d
@@ -211,4 +213,125 @@ func newGenFlowWithActivities(activities []element.Element) *genWf.Flow {
 		flow.AddActivities(a)
 	}
 	return flow
+}
+
+// ---------------------------------------------------------------------------
+// D1.b — UserTask family + UserSource + UserTaskOutcome
+// ---------------------------------------------------------------------------
+
+// buildUserTaskGenActivity mirrors buildUserTask (cmd_workflows_write.go:229).
+// Dispatches by AST IsMultiUser to either MultiUserTaskActivity (true)
+// or SingleUserTaskActivity (false). The legacy unified UserTask gen
+// type still exists for back-compat decode; new writes pick a concrete
+// subtype.
+func buildUserTaskGenActivity(n *ast.WorkflowUserTaskNode) element.Element {
+	if n.IsMultiUser {
+		return buildMultiUserTaskGenActivity(n)
+	}
+	return buildSingleUserTaskGenActivity(n)
+}
+
+func buildSingleUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.SingleUserTaskActivity {
+	task := genWf.NewSingleUserTaskActivity()
+	task.SetID(element.ID(types.GenerateID()))
+	task.SetName(n.Name)
+	task.SetCaption(n.Caption)
+	task.SetDueDate(n.DueDate)
+	if n.TaskDescription != "" {
+		task.SetTaskDescription(newTextWrapperGen(n.TaskDescription))
+	}
+	if src := buildUserSourceGen(n.Targeting); src != nil {
+		task.SetUserSource(src)
+	}
+	for _, oc := range buildUserTaskOutcomesGen(n.Outcomes) {
+		task.AddOutcomes(oc)
+	}
+	for _, ev := range buildBoundaryEventsGen(n.BoundaryEvents) {
+		task.AddBoundaryEvents(ev)
+	}
+	return task
+}
+
+func buildMultiUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.MultiUserTaskActivity {
+	task := genWf.NewMultiUserTaskActivity()
+	task.SetID(element.ID(types.GenerateID()))
+	task.SetName(n.Name)
+	task.SetCaption(n.Caption)
+	task.SetDueDate(n.DueDate)
+	if n.TaskDescription != "" {
+		task.SetTaskDescription(newTextWrapperGen(n.TaskDescription))
+	}
+	if src := buildUserSourceGen(n.Targeting); src != nil {
+		task.SetUserSource(src)
+	}
+	for _, oc := range buildUserTaskOutcomesGen(n.Outcomes) {
+		task.AddOutcomes(oc)
+	}
+	for _, ev := range buildBoundaryEventsGen(n.BoundaryEvents) {
+		task.AddBoundaryEvents(ev)
+	}
+	return task
+}
+
+// buildUserSourceGen builds a gen UserSource element from the AST
+// targeting node. gen rename: MicroflowGroupSource → MicroflowGroupTargeting,
+// XPathGroupSource → XPathGroupTargeting (per Phase A R5 finding).
+func buildUserSourceGen(t ast.WorkflowTargetingNode) element.Element {
+	switch t.Kind {
+	case "microflow":
+		src := genWf.NewMicroflowBasedUserSource()
+		src.SetMicroflowQualifiedName(t.Microflow.Module + "." + t.Microflow.Name)
+		return src
+	case "xpath":
+		src := genWf.NewXPathBasedUserSource()
+		src.SetXPathConstraint(t.XPath)
+		return src
+	case "group_microflow":
+		src := genWf.NewMicroflowGroupTargeting()
+		src.SetMicroflowQualifiedName(t.Microflow.Module + "." + t.Microflow.Name)
+		return src
+	case "group_xpath":
+		src := genWf.NewXPathGroupTargeting()
+		src.SetXPathConstraint(t.XPath)
+		return src
+	}
+	return nil
+}
+
+// buildUserTaskOutcomesGen mirrors the outcomes loop in buildUserTask
+// (cmd_workflows_write.go:267). Each outcome stores the same string in
+// Name/Caption/Value (legacy semantics).
+func buildUserTaskOutcomesGen(nodes []ast.WorkflowUserTaskOutcomeNode) []*genWf.UserTaskOutcome {
+	out := make([]*genWf.UserTaskOutcome, 0, len(nodes))
+	for _, n := range nodes {
+		oc := genWf.NewUserTaskOutcome()
+		oc.SetID(element.ID(types.GenerateID()))
+		oc.SetName(n.Caption)
+		oc.SetCaption(n.Caption)
+		oc.SetValue(n.Caption)
+		if flow := newGenFlowWithActivities(buildWorkflowActivitiesGen(n.Activities)); flow != nil {
+			oc.SetFlow(flow)
+		}
+		out = append(out, oc)
+	}
+	return out
+}
+
+// newTextWrapperGen wraps a plain string in a Texts$Text element with
+// a single English Translation (LanguageCode="en_US"). Mirrors the
+// shape Studio Pro emits for default-language workflow text fields
+// (TaskName, TaskDescription, WorkflowName, WorkflowDescription).
+//
+// The describe-side reader (readTextElementGen) accepts Text /
+// Translation / Value field names with raw-BSON fallback so the
+// round-trip is symmetrical even with this minimal payload.
+func newTextWrapperGen(s string) element.Element {
+	tx := texts.NewText()
+	tx.SetID(element.ID(types.GenerateID()))
+	tr := texts.NewTranslation()
+	tr.SetID(element.ID(types.GenerateID()))
+	tr.SetLanguageCode("en_US")
+	tr.SetText(s)
+	tx.AddTranslations(tr)
+	return tx
 }
