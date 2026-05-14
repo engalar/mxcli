@@ -555,9 +555,9 @@ func buildNameLookups(ctx *ExecContext) (map[model.ID]string, map[model.ID]strin
 			}
 		}
 	}
-	if microflows, err := ctx.Backend.ListMicroflows(); err == nil {
-		for _, mf := range microflows {
-			microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
+	if microflows, err := listMicroflowsWithContainerGen(ctx); err == nil {
+		for _, item := range microflows {
+			microflowNames[model.ID(item.MF.ID())] = h.GetQualifiedName(item.ContainerUUID, item.MF.Name())
 		}
 	}
 	return entityNames, microflowNames

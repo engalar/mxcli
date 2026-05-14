@@ -472,7 +472,7 @@ func resolveMicroflowByName(ctx *ExecContext, qualifiedName string) (model.ID, e
 	}
 
 	// Search existing microflows
-	allMicroflows, err := ctx.Backend.ListMicroflows()
+	allMicroflows, err := listMicroflowsWithContainerGen(ctx)
 	if err != nil {
 		return "", mdlerrors.NewBackend("list microflows", err)
 	}
@@ -482,11 +482,11 @@ func resolveMicroflowByName(ctx *ExecContext, qualifiedName string) (model.ID, e
 		return "", mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	for _, mf := range allMicroflows {
-		modID := h.FindModuleID(mf.ContainerID)
+	for _, item := range allMicroflows {
+		modID := h.FindModuleID(item.ContainerUUID)
 		modName := h.GetModuleName(modID)
-		if modName == moduleName && mf.Name == mfName {
-			return mf.ID, nil
+		if modName == moduleName && item.MF.Name() == mfName {
+			return model.ID(item.MF.ID()), nil
 		}
 	}
 
@@ -495,7 +495,7 @@ func resolveMicroflowByName(ctx *ExecContext, qualifiedName string) (model.ID, e
 
 // lookupMicroflowName reverse-looks up a microflow ID to its qualified name.
 func lookupMicroflowName(ctx *ExecContext, mfID model.ID) string {
-	allMicroflows, err := ctx.Backend.ListMicroflows()
+	allMicroflows, err := listMicroflowsWithContainerGen(ctx)
 	if err != nil {
 		return ""
 	}
@@ -505,14 +505,14 @@ func lookupMicroflowName(ctx *ExecContext, mfID model.ID) string {
 		return ""
 	}
 
-	for _, mf := range allMicroflows {
-		if mf.ID == mfID {
-			modID := h.FindModuleID(mf.ContainerID)
+	for _, item := range allMicroflows {
+		if model.ID(item.MF.ID()) == mfID {
+			modID := h.FindModuleID(item.ContainerUUID)
 			modName := h.GetModuleName(modID)
 			if modName != "" {
-				return modName + "." + mf.Name
+				return modName + "." + item.MF.Name()
 			}
-			return mf.Name
+			return item.MF.Name()
 		}
 	}
 	return ""
