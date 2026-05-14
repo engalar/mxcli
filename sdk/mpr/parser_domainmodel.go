@@ -708,5 +708,3 @@ func parseEventHandler(raw map[string]any) *domainmodel.EventHandler {
 
 	return handler
 }
-
-// parseMicroflow parses microflow contents from BSON.
