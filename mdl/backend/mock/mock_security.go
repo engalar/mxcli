@@ -3,9 +3,12 @@
 package mock
 
 import (
+	"fmt"
+
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/security"
 )
 
@@ -14,6 +17,13 @@ func (m *MockBackend) GetProjectSecurity() (*security.ProjectSecurity, error) {
 		return m.GetProjectSecurityFunc()
 	}
 	return nil, nil
+}
+
+func (m *MockBackend) GetProjectSecurityGen() (*genSec.ProjectSecurity, error) {
+	if m.GetProjectSecurityGenFunc != nil {
+		return m.GetProjectSecurityGenFunc()
+	}
+	return nil, fmt.Errorf("MockBackend.GetProjectSecurityGen not configured")
 }
 
 func (m *MockBackend) SetProjectSecurityLevel(unitID model.ID, level string) error {
@@ -77,6 +87,20 @@ func (m *MockBackend) GetModuleSecurity(moduleID model.ID) (*security.ModuleSecu
 		return m.GetModuleSecurityFunc(moduleID)
 	}
 	return nil, nil
+}
+
+func (m *MockBackend) GetModuleSecurityGen(moduleID model.ID) (*genSec.ModuleSecurity, error) {
+	if m.GetModuleSecurityGenFunc != nil {
+		return m.GetModuleSecurityGenFunc(moduleID)
+	}
+	return nil, fmt.Errorf("MockBackend.GetModuleSecurityGen not configured")
+}
+
+func (m *MockBackend) ListModuleSecurityGen() ([]*genSec.ModuleSecurity, error) {
+	if m.ListModuleSecurityGenFunc != nil {
+		return m.ListModuleSecurityGenFunc()
+	}
+	return nil, fmt.Errorf("MockBackend.ListModuleSecurityGen not configured")
 }
 
 func (m *MockBackend) AddModuleRole(unitID model.ID, roleName, description string) error {

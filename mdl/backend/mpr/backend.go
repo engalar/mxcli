@@ -14,6 +14,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
@@ -384,6 +385,9 @@ func (b *MprBackend) DeleteConstant(id model.ID) error {
 func (b *MprBackend) GetProjectSecurity() (*security.ProjectSecurity, error) {
 	return b.reader.GetProjectSecurity()
 }
+func (b *MprBackend) GetProjectSecurityGen() (*genSec.ProjectSecurity, error) {
+	return b.Security().Get()
+}
 func (b *MprBackend) SetProjectSecurityLevel(unitID model.ID, level string) error {
 	return b.setSecurityLevelViaModelsdk(unitID, level)
 }
@@ -411,6 +415,25 @@ func (b *MprBackend) ListModuleSecurity() ([]*security.ModuleSecurity, error) {
 }
 func (b *MprBackend) GetModuleSecurity(moduleID model.ID) (*security.ModuleSecurity, error) {
 	return b.reader.GetModuleSecurity(moduleID)
+}
+func (b *MprBackend) GetModuleSecurityGen(moduleID model.ID) (*genSec.ModuleSecurity, error) {
+	return b.Security().GetModuleSecurity(moduleID)
+}
+func (b *MprBackend) ListModuleSecurityGen() ([]*genSec.ModuleSecurity, error) {
+	modules, err := b.ListModules()
+	if err != nil {
+		return nil, err
+	}
+	repo := b.Security()
+	out := make([]*genSec.ModuleSecurity, 0, len(modules))
+	for _, m := range modules {
+		ms, err := repo.GetModuleSecurity(m.ID)
+		if err != nil || ms == nil {
+			continue
+		}
+		out = append(out, ms)
+	}
+	return out, nil
 }
 func (b *MprBackend) AddModuleRole(unitID model.ID, roleName, description string) error {
 	return b.addModuleRoleViaModelsdk(unitID, roleName, description)

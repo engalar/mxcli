@@ -6,6 +6,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/security"
+
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
 // SecurityBackend composes all security-related sub-interfaces.
@@ -24,6 +26,7 @@ type SecurityBackend interface {
 // ProjectSecurityBackend manages project-level security settings.
 type ProjectSecurityBackend interface {
 	GetProjectSecurity() (*security.ProjectSecurity, error)
+	GetProjectSecurityGen() (*genSec.ProjectSecurity, error)
 	SetProjectSecurityLevel(unitID model.ID, level string) error
 	SetProjectDemoUsersEnabled(unitID model.ID, enabled bool) error
 	AddUserRole(unitID model.ID, name string, moduleRoles []string, manageAllRoles bool) error
@@ -37,6 +40,8 @@ type ProjectSecurityBackend interface {
 type ModuleSecurityBackend interface {
 	ListModuleSecurity() ([]*security.ModuleSecurity, error)
 	GetModuleSecurity(moduleID model.ID) (*security.ModuleSecurity, error)
+	GetModuleSecurityGen(moduleID model.ID) (*genSec.ModuleSecurity, error)
+	ListModuleSecurityGen() ([]*genSec.ModuleSecurity, error)
 	AddModuleRole(unitID model.ID, roleName, description string) error
 	RemoveModuleRole(unitID model.ID, roleName string) error
 	RemoveModuleRoleFromAllUserRoles(unitID model.ID, qualifiedRole string) (int, error)
