@@ -1,37 +1,41 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Stage 3.2.5b tests for the gen-typed workflow write helpers.
+// Stage 3.3.3.E0 — gen-typed parity tests for the autoBind helper.
+// Replaces the legacy autoBindCallMicroflowGen tests (which still
+// operated on sdk *workflows.CallMicroflowTask) with the gen-native
+// autoBindCallMicroflowGenActivity sibling shipped in Stage 3.3.3.D2.
 
 package executor
 
 import (
 	"testing"
 
-	"github.com/mendixlabs/mxcli/sdk/workflows"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
 
 // TestAutoBindCallMicroflowGen_DefaultOutcomeInjected asserts the
 // gen-typed auto-binder still injects a default VoidConditionOutcome
-// when the task has no outcomes (CE6686 parity with the legacy
+// when the activity has no outcomes (CE6686 parity with the legacy
 // autoBindCallMicroflow).
 func TestAutoBindCallMicroflowGen_DefaultOutcomeInjected(t *testing.T) {
 	w := openMprWriterForTest(t)
 	ctx := newGenDescribeContext(t, w)
 
-	task := &workflows.CallMicroflowTask{
-		Microflow: "MyFirstModule.UnknownMicroflow",
-	}
-	task.Name = "  CallMF  " // sanitize will trim/clean
+	act := genWf.NewCallMicroflowActivity()
+	act.SetMicroflowQualifiedName("MyFirstModule.UnknownMicroflow")
+	act.SetName("  CallMF  ") // sanitize will trim/clean
 
-	autoBindCallMicroflowGen(ctx, task)
+	autoBindCallMicroflowGenActivity(ctx, act)
 
-	if len(task.Outcomes) != 1 {
-		t.Fatalf("expected 1 default VoidConditionOutcome, got %d", len(task.Outcomes))
+	outcomes := act.OutcomesItems()
+	if len(outcomes) != 1 {
+		t.Fatalf("expected 1 default VoidConditionOutcome, got %d", len(outcomes))
 	}
-	if _, ok := task.Outcomes[0].(*workflows.VoidConditionOutcome); !ok {
-		t.Errorf("expected VoidConditionOutcome, got %T", task.Outcomes[0])
+	oc, ok := outcomes[0].(*genWf.VoidConditionOutcome)
+	if !ok {
+		t.Errorf("expected VoidConditionOutcome, got %T", outcomes[0])
 	}
-	if task.Outcomes[0].(*workflows.VoidConditionOutcome).Flow == nil {
+	if oc != nil && oc.Flow() == nil {
 		t.Errorf("VoidConditionOutcome must have non-nil Flow (BSON ID required)")
 	}
 }
@@ -42,21 +46,21 @@ func TestAutoBindCallMicroflowGen_SkipsExistingMappings(t *testing.T) {
 	w := openMprWriterForTest(t)
 	ctx := newGenDescribeContext(t, w)
 
-	existingMapping := &workflows.ParameterMapping{
-		Parameter:  "MyFirstModule.SomeMF.Foo",
-		Expression: "$Custom",
-	}
-	task := &workflows.CallMicroflowTask{
-		Microflow:         "MyFirstModule.MyFirstLogic",
-		ParameterMappings: []*workflows.ParameterMapping{existingMapping},
-	}
+	existingMapping := genWf.NewMicroflowCallParameterMapping()
+	existingMapping.SetParameterQualifiedName("MyFirstModule.SomeMF.Foo")
+	existingMapping.SetExpression("$Custom")
 
-	autoBindCallMicroflowGen(ctx, task)
+	act := genWf.NewCallMicroflowActivity()
+	act.SetMicroflowQualifiedName("MyFirstModule.MyFirstLogic")
+	act.AddParameterMappings(existingMapping)
 
-	if len(task.ParameterMappings) != 1 {
-		t.Fatalf("expected 1 ParameterMapping (explicit), got %d", len(task.ParameterMappings))
+	autoBindCallMicroflowGenActivity(ctx, act)
+
+	mappings := act.ParameterMappingsItems()
+	if len(mappings) != 1 {
+		t.Fatalf("expected 1 ParameterMapping (explicit), got %d", len(mappings))
 	}
-	if task.ParameterMappings[0] != existingMapping {
+	if mappings[0] != existingMapping {
 		t.Errorf("explicit mapping was replaced; auto-bind should be skipped")
 	}
 }
@@ -68,18 +72,17 @@ func TestAutoBindCallMicroflowGen_MissingMicroflow(t *testing.T) {
 	w := openMprWriterForTest(t)
 	ctx := newGenDescribeContext(t, w)
 
-	task := &workflows.CallMicroflowTask{
-		Microflow: "MyFirstModule.DoesNotExist_Stage3_2_5b",
-	}
+	act := genWf.NewCallMicroflowActivity()
+	act.SetMicroflowQualifiedName("MyFirstModule.DoesNotExist_Stage3_2_5b")
 
-	autoBindCallMicroflowGen(ctx, task)
+	autoBindCallMicroflowGenActivity(ctx, act)
 
-	if len(task.ParameterMappings) != 0 {
-		t.Errorf("expected no ParameterMappings for unknown microflow, got %d", len(task.ParameterMappings))
+	if mappings := act.ParameterMappingsItems(); len(mappings) != 0 {
+		t.Errorf("expected no ParameterMappings for unknown microflow, got %d", len(mappings))
 	}
 	// Default outcome should still have been injected.
-	if len(task.Outcomes) != 1 {
-		t.Errorf("expected default outcome injection regardless of lookup result, got %d", len(task.Outcomes))
+	if outcomes := act.OutcomesItems(); len(outcomes) != 1 {
+		t.Errorf("expected default outcome injection regardless of lookup result, got %d", len(outcomes))
 	}
 }
 

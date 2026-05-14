@@ -13,8 +13,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // errBackend is a sentinel used in backend-error tests.
@@ -77,12 +77,12 @@ func TestShowLayouts_Mock_BackendError(t *testing.T) {
 }
 
 func TestShowWorkflows_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:   func() bool { return true },
-		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return nil, errBackend },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listWorkflows(ctx, ""))
+	ctx.Workflows = &repostesting.RecordingWorkflowRepository{
+		ListAllFunc: func() ([]*genWf.Workflow, error) { return nil, errBackend },
+	}
+	assertError(t, listWorkflowsGen(ctx, ""))
 }
 
 func TestShowODataClients_Mock_BackendError(t *testing.T) {
@@ -324,12 +324,12 @@ func TestDescribeConstant_Mock_BackendError(t *testing.T) {
 // Equivalent error-path coverage lives in cmd_microflows_show_gen_test.go.
 
 func TestDescribeWorkflow_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:   func() bool { return true },
-		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return nil, errBackend },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, describeWorkflow(ctx, ast.QualifiedName{Module: "M", Name: "W"}))
+	ctx.Workflows = &repostesting.RecordingWorkflowRepository{
+		ListAllFunc: func() ([]*genWf.Workflow, error) { return nil, errBackend },
+	}
+	assertError(t, describeWorkflowGen(ctx, ast.QualifiedName{Module: "M", Name: "W"}))
 }
 
 func TestDescribeNavigation_Mock_BackendError(t *testing.T) {

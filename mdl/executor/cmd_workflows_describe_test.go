@@ -6,16 +6,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendixlabs/mxcli/sdk/workflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
 
-// formatSingleActivity is a test helper that wraps a single activity in a Flow
-// and runs formatWorkflowActivities to get the DESCRIBE output.
-func formatSingleActivity(act workflows.WorkflowActivity, indent string) []string {
-	flow := &workflows.Flow{
-		Activities: []workflows.WorkflowActivity{act},
-	}
-	return formatWorkflowActivities(flow, indent)
+// formatSingleActivityGen is a test helper that wraps a single gen-typed
+// activity in a Flow and runs formatWorkflowActivitiesGen to get the
+// DESCRIBE output. Stage 3.3.3.E0 — replaces the legacy sdk-typed
+// formatSingleActivity helper.
+func formatSingleActivityGen(act element.Element, indent string) []string {
+	flow := genWf.NewFlow()
+	flow.AddActivities(act)
+	return formatWorkflowActivitiesGen(flow, indent)
 }
 
 // --- P0: strip Module.Microflow prefix from parameter names ---
@@ -45,16 +47,16 @@ func TestFormatCallMicroflowTask_ParameterNameStripping(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			task := &workflows.CallMicroflowTask{
-				Microflow: "Module.SomeMicroflow",
-				ParameterMappings: []*workflows.ParameterMapping{
-					{Parameter: tc.paramName, Expression: "$WorkflowContext"},
-				},
-			}
-			task.Name = "callMfTask"
-			task.Caption = "Call MF"
+			task := genWf.NewCallMicroflowTask()
+			task.SetMicroflowQualifiedName("Module.SomeMicroflow")
+			task.SetName("callMfTask")
+			task.SetCaption("Call MF")
+			pm := genWf.NewMicroflowCallParameterMapping()
+			pm.SetParameterQualifiedName(tc.paramName)
+			pm.SetExpression("$WorkflowContext")
+			task.AddParameterMappings(pm)
 
-			lines := formatCallMicroflowTask(task, "  ")
+			lines := formatCallMicroflowGen(task, "  ")
 			output := strings.Join(lines, "\n")
 
 			wantFragment := tc.wantParamName + " = "
@@ -101,13 +103,12 @@ func TestFormatJumpTo_CaptionCommentFormat(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			activity := &workflows.JumpToActivity{
-				TargetActivity: "target1",
-			}
-			activity.Name = tc.actName
-			activity.Caption = tc.caption
+			activity := genWf.NewJumpToActivity()
+			activity.SetTargetActivityQualifiedName("target1")
+			activity.SetName(tc.actName)
+			activity.SetCaption(tc.caption)
 
-			lines := formatSingleActivity(activity, "")
+			lines := formatSingleActivityGen(activity, "")
 			output := strings.Join(lines, "\n")
 
 			if !strings.Contains(output, tc.want) {
@@ -143,13 +144,12 @@ func TestFormatWaitForTimer_CaptionCommentFormat(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			activity := &workflows.WaitForTimerActivity{
-				DelayExpression: tc.delay,
-			}
-			activity.Name = tc.actName
-			activity.Caption = tc.caption
+			activity := genWf.NewWaitForTimerActivity()
+			activity.SetDelay(tc.delay)
+			activity.SetName(tc.actName)
+			activity.SetCaption(tc.caption)
 
-			lines := formatSingleActivity(activity, "")
+			lines := formatSingleActivityGen(activity, "")
 			output := strings.Join(lines, "\n")
 
 			if !strings.Contains(output, tc.want) {
@@ -182,13 +182,12 @@ func TestFormatCallWorkflowActivity_CaptionCommentFormat(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			activity := &workflows.CallWorkflowActivity{
-				Workflow: "Module.SubFlow",
-			}
-			activity.Name = tc.actName
-			activity.Caption = tc.caption
+			activity := genWf.NewCallWorkflowActivity()
+			activity.SetWorkflowQualifiedName("Module.SubFlow")
+			activity.SetName(tc.actName)
+			activity.SetCaption(tc.caption)
 
-			lines := formatCallWorkflowActivity(activity, "")
+			lines := formatCallWorkflowGen(activity, "")
 			output := strings.Join(lines, "\n")
 
 			if !strings.Contains(output, tc.want) {

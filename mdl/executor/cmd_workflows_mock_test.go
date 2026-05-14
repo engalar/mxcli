@@ -7,24 +7,35 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
+	"github.com/mendixlabs/mxcli/model"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
+
+// makeWorkflowsRepo wires a RecordingWorkflowRepository whose ListAll
+// returns wfs and whose GetContainerUUID always returns containerID.
+// Stage 3.3.3.E0 — gen-typed replacement for the legacy
+// MockBackend.ListWorkflowsFunc fixture (codec-decoded gen Workflow
+// drops ContainerID, so the repo carries the linkage explicitly).
+func makeWorkflowsRepo(wfs []*genWf.Workflow, containerID model.ID) *repostesting.RecordingWorkflowRepository {
+	return &repostesting.RecordingWorkflowRepository{
+		ListAllFunc:          func() ([]*genWf.Workflow, error) { return wfs, nil },
+		GetContainerUUIDFunc: func(_ model.ID) (model.ID, error) { return containerID, nil },
+	}
+}
 
 func TestShowWorkflows_Mock(t *testing.T) {
 	mod := mkModule("Sales")
-	wf := mkWorkflow(mod.ID, "ApproveOrder")
+	wf := mkWorkflowGen(string(nextID("wf")), "ApproveOrder")
 
 	h := mkHierarchy(mod)
-	withContainer(h, wf.ContainerID, mod.ID)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc:   func() bool { return true },
-		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return []*workflows.Workflow{wf}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listWorkflows(ctx, ""))
+	ctx.Workflows = makeWorkflowsRepo([]*genWf.Workflow{wf}, mod.ID)
+	assertNoError(t, listWorkflowsGen(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Qualified Name")
@@ -33,19 +44,18 @@ func TestShowWorkflows_Mock(t *testing.T) {
 
 func TestDescribeWorkflow_Mock(t *testing.T) {
 	mod := mkModule("Sales")
-	wf := mkWorkflow(mod.ID, "ApproveOrder")
-	wf.Parameter = &workflows.WorkflowParameter{EntityRef: "Sales.Order"}
+	wf := mkWorkflowGen(string(nextID("wf")), "ApproveOrder")
+	param := genWf.NewParameter()
+	param.SetEntityQualifiedName("Sales.Order")
+	wf.SetParameter(param)
 
 	h := mkHierarchy(mod)
-	withContainer(h, wf.ContainerID, mod.ID)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc:   func() bool { return true },
-		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return []*workflows.Workflow{wf}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, describeWorkflow(ctx, ast.QualifiedName{Module: "Sales", Name: "ApproveOrder"}))
+	ctx.Workflows = makeWorkflowsRepo([]*genWf.Workflow{wf}, mod.ID)
+	assertNoError(t, describeWorkflowGen(ctx, ast.QualifiedName{Module: "Sales", Name: "ApproveOrder"}))
 
 	out := buf.String()
 	assertContainsStr(t, out, "create workflow")
@@ -59,27 +69,23 @@ func TestDescribeWorkflow_Mock(t *testing.T) {
 }
 
 func TestDescribeWorkflow_NotFound(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:   func() bool { return true },
-		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return nil, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, describeWorkflow(ctx, ast.QualifiedName{Module: "X", Name: "NoSuch"}))
+	ctx.Workflows = makeWorkflowsRepo(nil, "")
+	assertError(t, describeWorkflowGen(ctx, ast.QualifiedName{Module: "X", Name: "NoSuch"}))
 }
 
 func TestShowWorkflows_FilterByModule(t *testing.T) {
 	mod := mkModule("Sales")
-	wf := mkWorkflow(mod.ID, "ApproveOrder")
+	wf := mkWorkflowGen(string(nextID("wf")), "ApproveOrder")
 
 	h := mkHierarchy(mod)
-	withContainer(h, wf.ContainerID, mod.ID)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc:   func() bool { return true },
-		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return []*workflows.Workflow{wf}, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listWorkflows(ctx, "Sales"))
+	ctx.Workflows = makeWorkflowsRepo([]*genWf.Workflow{wf}, mod.ID)
+	assertNoError(t, listWorkflowsGen(ctx, "Sales"))
 	assertContainsStr(t, buf.String(), "Sales.ApproveOrder")
 }
+
