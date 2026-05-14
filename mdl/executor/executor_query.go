@@ -22,11 +22,11 @@ func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
 	case ast.ShowConstantValues:
 		return listConstantValues(ctx, s.InModule)
 	case ast.ShowEntities:
-		return listEntities(ctx, s.InModule)
+		return listEntitiesGen(ctx, s.InModule)
 	case ast.ShowEntity:
 		return listEntity(ctx, s.Name)
 	case ast.ShowAssociations:
-		return listAssociations(ctx, s.InModule)
+		return listAssociationsGen(ctx, s.InModule)
 	case ast.ShowAssociation:
 		return listAssociation(ctx, s.Name)
 	case ast.ShowMicroflows:
@@ -162,9 +162,9 @@ func execDescribe(ctx *ExecContext, s *ast.DescribeStmt) error {
 		case ast.DescribeEnumeration:
 			return describeEnumeration(ctx, s.Name)
 		case ast.DescribeEntity:
-			return describeEntity(ctx, s.Name)
+			return describeEntityGen(ctx, s.Name)
 		case ast.DescribeAssociation:
-			return describeAssociation(ctx, s.Name)
+			return describeAssociationGen(ctx, s.Name)
 		case ast.DescribeMicroflow:
 			return describeMicroflowGen(ctx, s.Name)
 		case ast.DescribeNanoflow:
