@@ -299,7 +299,8 @@ type MockBackend struct {
 	SerializeWidgetFunc           func(w pages.Widget) (any, error)
 	SerializeClientActionFunc     func(a pages.ClientAction) (any, error)
 	SerializeDataSourceFunc       func(ds pages.DataSource) (any, error)
-	SerializeWorkflowActivityFunc func(a workflows.WorkflowActivity) (any, error)
+	SerializeWorkflowActivityFunc    func(a workflows.WorkflowActivity) (any, error)
+	SerializeWorkflowActivityGenFunc func(a element.Element) (any, error)
 
 	// WidgetBuilderBackend
 	LoadWidgetTemplateFunc          func(widgetID string, projectPath string) (backend.WidgetObjectBuilder, error)

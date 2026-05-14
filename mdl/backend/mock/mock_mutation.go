@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
@@ -63,6 +64,13 @@ func (m *MockBackend) SerializeWorkflowActivity(a workflows.WorkflowActivity) (a
 		return m.SerializeWorkflowActivityFunc(a)
 	}
 	return nil, fmt.Errorf("MockBackend.SerializeWorkflowActivity not configured")
+}
+
+func (m *MockBackend) SerializeWorkflowActivityGen(a element.Element) (any, error) {
+	if m.SerializeWorkflowActivityGenFunc != nil {
+		return m.SerializeWorkflowActivityGenFunc(a)
+	}
+	return nil, fmt.Errorf("MockBackend.SerializeWorkflowActivityGen not configured")
 }
 
 // ---------------------------------------------------------------------------

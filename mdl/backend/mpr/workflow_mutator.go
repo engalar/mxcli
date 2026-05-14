@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/bsonutil"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
@@ -545,6 +546,160 @@ func (m *mprWorkflowMutator) DropBoundaryEvent(activityRef string, atPos int) er
 }
 
 // ---------------------------------------------------------------------------
+// Stage 3.3.3.D7 gen-typed siblings
+// ---------------------------------------------------------------------------
+//
+// Each *Gen sibling is a thin wrapper around the legacy raw-bson
+// mutation logic that swaps serializeAndDedup → serializeAndDedupGen
+// (and buildSubFlowBson → buildSubFlowBsonGen for nested flows). The
+// raw-bson tree manipulation (insert into Activities / Outcomes /
+// BoundaryEvents) is unchanged.
+
+func (m *mprWorkflowMutator) InsertAfterActivityGen(activityRef string, atPos int, activities []element.Element) error {
+	idx, acts, containingFlow, err := m.findActivityIndex(activityRef, atPos)
+	if err != nil {
+		return err
+	}
+	newBsonActs := m.serializeAndDedupGen(activities)
+	insertIdx := idx + 1
+	newArr := make([]any, 0, len(acts)+len(newBsonActs))
+	newArr = append(newArr, acts[:insertIdx]...)
+	newArr = append(newArr, newBsonActs...)
+	newArr = append(newArr, acts[insertIdx:]...)
+	dSetArray(containingFlow, "Activities", newArr)
+	return nil
+}
+
+func (m *mprWorkflowMutator) ReplaceActivityGen(activityRef string, atPos int, activities []element.Element) error {
+	idx, acts, containingFlow, err := m.findActivityIndex(activityRef, atPos)
+	if err != nil {
+		return err
+	}
+	newBsonActs := m.serializeAndDedupGen(activities)
+	newArr := make([]any, 0, len(acts)-1+len(newBsonActs))
+	newArr = append(newArr, acts[:idx]...)
+	newArr = append(newArr, newBsonActs...)
+	newArr = append(newArr, acts[idx+1:]...)
+	dSetArray(containingFlow, "Activities", newArr)
+	return nil
+}
+
+func (m *mprWorkflowMutator) InsertOutcomeGen(activityRef string, atPos int, outcomeName string, activities []element.Element) error {
+	actDoc, err := m.findActivityByCaption(activityRef, atPos)
+	if err != nil {
+		return err
+	}
+	outcomeDoc := bson.D{
+		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+		{Key: "$Type", Value: "Workflows$UserTaskOutcome"},
+	}
+	if len(activities) > 0 {
+		outcomeDoc = append(outcomeDoc, bson.E{Key: "Flow", Value: m.buildSubFlowBsonGen(activities)})
+	}
+	outcomeDoc = append(outcomeDoc,
+		bson.E{Key: "PersistentId", Value: bsonutil.NewIDBsonBinary()},
+		bson.E{Key: "Name", Value: outcomeName},
+		bson.E{Key: "Caption", Value: outcomeName},
+		bson.E{Key: "Value", Value: outcomeName},
+	)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	outcomes = append(outcomes, outcomeDoc)
+	dSetArray(actDoc, "Outcomes", outcomes)
+	return nil
+}
+
+func (m *mprWorkflowMutator) InsertPathGen(activityRef string, atPos int, pathCaption string, activities []element.Element) error {
+	actDoc, err := m.findActivityByCaption(activityRef, atPos)
+	if err != nil {
+		return err
+	}
+	outcomeDoc := bson.D{
+		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+		{Key: "$Type", Value: "Workflows$ParallelSplitOutcome"},
+	}
+	if len(activities) > 0 {
+		outcomeDoc = append(outcomeDoc, bson.E{Key: "Flow", Value: m.buildSubFlowBsonGen(activities)})
+	}
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	outcomes = append(outcomes, outcomeDoc)
+	dSetArray(actDoc, "Outcomes", outcomes)
+	return nil
+}
+
+func (m *mprWorkflowMutator) InsertBranchGen(activityRef string, atPos int, condition string, activities []element.Element) error {
+	actDoc, err := m.findActivityByCaption(activityRef, atPos)
+	if err != nil {
+		return err
+	}
+	var outcomeDoc bson.D
+	switch strings.ToLower(condition) {
+	case "true":
+		outcomeDoc = bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Workflows$BooleanConditionOutcome"},
+			{Key: "Value", Value: true},
+		}
+	case "false":
+		outcomeDoc = bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Workflows$BooleanConditionOutcome"},
+			{Key: "Value", Value: false},
+		}
+	case "default":
+		outcomeDoc = bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Workflows$VoidConditionOutcome"},
+		}
+	default:
+		outcomeDoc = bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Workflows$EnumerationValueConditionOutcome"},
+			{Key: "Value", Value: condition},
+		}
+	}
+	if len(activities) > 0 {
+		outcomeDoc = append(outcomeDoc, bson.E{Key: "Flow", Value: m.buildSubFlowBsonGen(activities)})
+	}
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	outcomes = append(outcomes, outcomeDoc)
+	dSetArray(actDoc, "Outcomes", outcomes)
+	return nil
+}
+
+func (m *mprWorkflowMutator) InsertBoundaryEventGen(activityRef string, atPos int, eventType string, delay string, activities []element.Element) error {
+	actDoc, err := m.findActivityByCaption(activityRef, atPos)
+	if err != nil {
+		return err
+	}
+	typeName := "Workflows$InterruptingTimerBoundaryEvent"
+	switch eventType {
+	case "NonInterruptingTimer":
+		typeName = "Workflows$NonInterruptingTimerBoundaryEvent"
+	case "Timer":
+		typeName = "Workflows$TimerBoundaryEvent"
+	}
+	eventDoc := bson.D{
+		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+		{Key: "$Type", Value: typeName},
+		{Key: "Caption", Value: ""},
+	}
+	if delay != "" {
+		eventDoc = append(eventDoc, bson.E{Key: "FirstExecutionTime", Value: delay})
+	}
+	if len(activities) > 0 {
+		eventDoc = append(eventDoc, bson.E{Key: "Flow", Value: m.buildSubFlowBsonGen(activities)})
+	}
+	eventDoc = append(eventDoc, bson.E{Key: "PersistentId", Value: bsonutil.NewIDBsonBinary()})
+	if typeName == "Workflows$NonInterruptingTimerBoundaryEvent" {
+		eventDoc = append(eventDoc, bson.E{Key: "Recurrence", Value: nil})
+	}
+	events := dGetArrayElements(dGet(actDoc, "BoundaryEvents"))
+	events = append(events, eventDoc)
+	dSetArray(actDoc, "BoundaryEvents", events)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
 // Save
 // ---------------------------------------------------------------------------
 
@@ -792,6 +947,93 @@ func (m *mprWorkflowMutator) serializeAndDedup(activities []workflows.WorkflowAc
 		}
 	}
 	return result
+}
+
+// serializeAndDedupGen is the Stage 3.3.3.D7 gen-typed twin of
+// serializeAndDedup. Routes each gen activity through
+// SerializeWorkflowActivityGen (codec.Encode + bson.Unmarshal), then
+// deduplicates the resulting Name fields against existing activities.
+//
+// The dedup runs on the bson.D output (post-encode) because gen
+// elements expose Name() but the dedup table still tracks the existing
+// raw-bson Name strings the mutator already scanned via
+// collectAllActivityNames().
+func (m *mprWorkflowMutator) serializeAndDedupGen(activities []element.Element) []any {
+	existingNames := m.collectAllActivityNames()
+	result := make([]any, 0, len(activities))
+	for _, act := range activities {
+		if act == nil {
+			continue
+		}
+		// Dedup BEFORE serialize so the encoded bson.D carries the
+		// disambiguated Name. genActivityName/setGenActivityName cover
+		// every concrete gen activity type with a Name() accessor.
+		if name := genActivityName(act); name != "" {
+			deduped := uniqueNameForGen(name, existingNames)
+			if deduped != name {
+				setGenActivityName(act, deduped)
+			}
+		}
+		raw, err := m.backend.SerializeWorkflowActivityGen(act)
+		if err != nil || raw == nil {
+			continue
+		}
+		result = append(result, raw)
+	}
+	return result
+}
+
+// buildSubFlowBsonGen is the gen-typed twin of buildSubFlowBson. Wraps
+// gen activities in a Workflows$Flow bson.D shaped exactly like the
+// legacy output (bsonArrayMarker prefix in Activities).
+func (m *mprWorkflowMutator) buildSubFlowBsonGen(activities []element.Element) bson.D {
+	subActs := make(bson.A, 0, len(activities)+1)
+	subActs = append(subActs, bsonArrayMarker)
+	for _, doc := range m.serializeAndDedupGen(activities) {
+		subActs = append(subActs, doc)
+	}
+	return bson.D{
+		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+		{Key: "$Type", Value: "Workflows$Flow"},
+		{Key: "Activities", Value: subActs},
+	}
+}
+
+// uniqueNameForGen mirrors the dedup logic in deduplicateNewActivityName
+// but operates on the existingNames map directly (gen elements are
+// encoded individually so we can't hand them to the legacy walker).
+func uniqueNameForGen(name string, existing map[string]bool) string {
+	if !existing[name] {
+		existing[name] = true
+		return name
+	}
+	for i := 2; ; i++ {
+		candidate := fmt.Sprintf("%s%d", name, i)
+		if !existing[candidate] {
+			existing[candidate] = true
+			return candidate
+		}
+	}
+}
+
+// genActivityName returns the Name() field for any concrete gen
+// activity element with one. Used by the gen mutator dedup path.
+func genActivityName(elem element.Element) string {
+	type named interface{ Name() string }
+	if n, ok := elem.(named); ok {
+		return n.Name()
+	}
+	return ""
+}
+
+// setGenActivityName sets Name on any concrete gen activity element
+// with a SetName accessor. Used by the gen mutator dedup path to
+// disambiguate before serialization.
+func setGenActivityName(elem element.Element, name string) {
+	type setter interface{ SetName(string) }
+	if s, ok := elem.(setter); ok {
+		s.SetName(name)
+	}
 }
 
 // buildSubFlowBson builds a Workflows$Flow BSON document from activities.
