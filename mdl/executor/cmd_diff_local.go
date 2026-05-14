@@ -14,6 +14,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -295,9 +297,9 @@ func bsonToMDL(ctx *ExecContext, unitType, unitID string, content []byte) string
 	case strings.Contains(unitType, "Entity"):
 		return entityBsonToMDL(ctx, raw, qualifiedName)
 	case strings.Contains(unitType, "Microflow"):
-		return microflowBsonToMDL(ctx, raw, qualifiedName)
+		return microflowBsonToMDL(ctx, content, qualifiedName)
 	case strings.Contains(unitType, "Nanoflow"):
-		return nanoflowBsonToMDL(ctx, raw, qualifiedName)
+		return nanoflowBsonToMDL(ctx, content, qualifiedName)
 	case strings.Contains(unitType, "Enumeration"):
 		return enumerationBsonToMDL(ctx, raw, qualifiedName)
 	case strings.Contains(unitType, "Page"):
@@ -491,19 +493,35 @@ func attributeBsonToMDL(_ *ExecContext, raw map[string]any) string {
 	return result.String()
 }
 
-// microflowBsonToMDL converts a microflow BSON to MDL.
+// microflowBsonToMDL renders a microflow BSON document as MDL by
+// decoding the raw bytes through `modelsdk/codec` into a typed
+// `*genMf.Microflow` and feeding it to `DescribeMicroflowGenToString`.
 //
-// Stage 3.2.6.3a: returns a header-only placeholder. The legacy
-// implementation called `renderMicroflowMDL` (sdk/microflows-typed),
-// which has been deleted. A gen-path rewrite must decode the raw BSON
-// via modelsdk/codec.Decoder into a *genMf.Microflow, then call
-// DescribeMicroflowGenToString. Tracking: rewrite as a follow-up
-// before this stub is removed; meanwhile diff-local reports the change
-// without a body diff.
-func microflowBsonToMDL(_ *ExecContext, _ map[string]any, qualifiedName string) string {
-	return fmt.Sprintf(
-		"microflow %s\n  // diff-local body rendering pending gen-path rewrite (Stage 3.2.6.3a)\nend microflow\n",
-		qualifiedName)
+// On any decode/cast failure we fall back to a one-line placeholder so
+// `mxcli diff-local` still produces *some* output rather than aborting
+// the whole diff for one corrupted unit.
+func microflowBsonToMDL(ctx *ExecContext, content []byte, qualifiedName string) string {
+	if len(content) == 0 {
+		return microflowBsonFallback(qualifiedName, "empty BSON")
+	}
+	dec := codec.NewDecoder(codec.DefaultRegistry)
+	elem, err := dec.Decode(bson.Raw(content))
+	if err != nil {
+		return microflowBsonFallback(qualifiedName, fmt.Sprintf("codec.Decode: %v", err))
+	}
+	mf, ok := elem.(*genMf.Microflow)
+	if !ok || mf == nil {
+		return microflowBsonFallback(qualifiedName, fmt.Sprintf("not a Microflow ($Type=%s)", elem.TypeName()))
+	}
+	out, err := DescribeMicroflowGenToString(ctx, mf)
+	if err != nil {
+		return microflowBsonFallback(qualifiedName, fmt.Sprintf("DescribeMicroflowGenToString: %v", err))
+	}
+	return out
+}
+
+func microflowBsonFallback(qualifiedName, why string) string {
+	return fmt.Sprintf("-- microflow %s\n-- diff-local: %s\n", qualifiedName, why)
 }
 
 // splitQualifiedName parses "Module.Name" into an ast.QualifiedName.
@@ -545,30 +563,34 @@ func buildNameLookups(ctx *ExecContext) (map[model.ID]string, map[model.ID]strin
 	return entityNames, microflowNames
 }
 
-// nanoflowBsonToMDL converts a nanoflow BSON to MDL
-func nanoflowBsonToMDL(_ *ExecContext, raw map[string]any, qualifiedName string) string {
-	var lines []string
-
-	if doc := extractString(raw["Documentation"]); doc != "" {
-		lines = append(lines, "/**")
-		lines = append(lines, " * "+doc)
-		lines = append(lines, " */")
+// nanoflowBsonToMDL renders a nanoflow BSON document as MDL by
+// decoding the raw bytes through `modelsdk/codec` into a typed
+// `*genMf.Nanoflow` and feeding it to `DescribeNanoflowGenToString`.
+//
+// Mirrors microflowBsonToMDL — same decode + describe pattern, just a
+// different element type. Falls back to a placeholder line on failure.
+func nanoflowBsonToMDL(ctx *ExecContext, content []byte, qualifiedName string) string {
+	if len(content) == 0 {
+		return nanoflowBsonFallback(qualifiedName, "empty BSON")
 	}
-
-	lines = append(lines, fmt.Sprintf("create nanoflow %s ()", qualifiedName))
-
-	returnType := "Void"
-	if rt := extractString(raw["ReturnType"]); rt != "" {
-		returnType = rt
+	dec := codec.NewDecoder(codec.DefaultRegistry)
+	elem, err := dec.Decode(bson.Raw(content))
+	if err != nil {
+		return nanoflowBsonFallback(qualifiedName, fmt.Sprintf("codec.Decode: %v", err))
 	}
-	lines = append(lines, fmt.Sprintf("returns %s", returnType))
+	nf, ok := elem.(*genMf.Nanoflow)
+	if !ok || nf == nil {
+		return nanoflowBsonFallback(qualifiedName, fmt.Sprintf("not a Nanoflow ($Type=%s)", elem.TypeName()))
+	}
+	out, err := DescribeNanoflowGenToString(ctx, nf)
+	if err != nil {
+		return nanoflowBsonFallback(qualifiedName, fmt.Sprintf("DescribeNanoflowGenToString: %v", err))
+	}
+	return out
+}
 
-	lines = append(lines, "begin")
-	lines = append(lines, "  -- (nanoflow body)")
-	lines = append(lines, "end;")
-	lines = append(lines, "/")
-
-	return strings.Join(lines, "\n")
+func nanoflowBsonFallback(qualifiedName, why string) string {
+	return fmt.Sprintf("-- nanoflow %s\n-- diff-local: %s\n", qualifiedName, why)
 }
 
 // enumerationBsonToMDL converts an enumeration BSON to MDL
