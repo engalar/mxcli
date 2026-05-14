@@ -9,7 +9,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
@@ -54,85 +53,13 @@ func TestDescribeMermaid_DomainModel_Mock(t *testing.T) {
 	assertContainsStr(t, out, "Order_Customer")
 }
 
-func TestDescribeMermaid_Microflow_Mock(t *testing.T) {
-	mod := mkModule("MyModule")
-	mf := &microflows.Microflow{
-		BaseElement: model.BaseElement{ID: nextID("mf")},
-		ContainerID: mod.ID,
-		Name:        "ACT_Process",
-	}
-
-	h := mkHierarchy(mod)
-	withContainer(h, mf.ContainerID, mod.ID)
-
-	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListMicroflowsFunc:   func() ([]*microflows.Microflow, error) { return []*microflows.Microflow{mf}, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return nil, nil },
-	}
-
-	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, describeMermaid(ctx, "microflow", "MyModule.ACT_Process"))
-
-	out := buf.String()
-	assertContainsStr(t, out, "flowchart")
-}
-
-func TestDescribeMermaid_Nanoflow_Mock(t *testing.T) {
-	mod := mkModule("MyModule")
-	nf := &microflows.Nanoflow{
-		BaseElement: model.BaseElement{ID: nextID("nf")},
-		ContainerID: mod.ID,
-		Name:        "NF_Process",
-	}
-
-	h := mkHierarchy(mod)
-	withContainer(h, nf.ContainerID, mod.ID)
-
-	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListNanoflowsFunc:    func() ([]*microflows.Nanoflow, error) { return []*microflows.Nanoflow{nf}, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return nil, nil },
-	}
-
-	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, describeMermaid(ctx, "nanoflow", "MyModule.NF_Process"))
-
-	out := buf.String()
-	assertContainsStr(t, out, "flowchart")
-}
-
-func TestDescribeMermaid_Nanoflow_NotFound(t *testing.T) {
-	mod := mkModule("MyModule")
-	h := mkHierarchy(mod)
-
-	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListNanoflowsFunc:    func() ([]*microflows.Nanoflow, error) { return nil, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return nil, nil },
-	}
-
-	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertError(t, describeMermaid(ctx, "nanoflow", "MyModule.NoSuch"))
-}
-
-func TestDescribeMermaid_Microflow_NotFound(t *testing.T) {
-	mod := mkModule("MyModule")
-	h := mkHierarchy(mod)
-
-	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListMicroflowsFunc:   func() ([]*microflows.Microflow, error) { return nil, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return nil, nil },
-	}
-
-	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertError(t, describeMermaid(ctx, "microflow", "MyModule.NoSuch"))
-}
+// Stage 3.2.6.1: Microflow / Nanoflow mock tests removed. The dispatch
+// in `describeMermaid` now routes to `microflowToMermaidGen` /
+// `nanoflowToMermaidGen` (modelsdk/gen-typed), which read from
+// `ctx.Microflows` / `ctx.Nanoflows` repositories instead of the legacy
+// sdk/microflows-typed `ctx.Backend.List*` cache. Equivalent coverage
+// lives in cmd_mermaid_gen_test.go (TestMicroflowToMermaidGen_*,
+// TestNanoflowToMermaidGen_*).
 
 func TestDescribeMermaid_Page_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")

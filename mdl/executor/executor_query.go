@@ -94,7 +94,7 @@ func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
 	case ast.ShowNavigationHomes:
 		return listNavigationHomes(ctx)
 	case ast.ShowStructure:
-		return execShowStructure(ctx, s)
+		return execShowStructureGen(ctx, s)
 	case ast.ShowWorkflows:
 		return listWorkflows(ctx, s.InModule)
 	case ast.ShowBusinessEventServices:
@@ -166,9 +166,9 @@ func execDescribe(ctx *ExecContext, s *ast.DescribeStmt) error {
 		case ast.DescribeAssociation:
 			return describeAssociation(ctx, s.Name)
 		case ast.DescribeMicroflow:
-			return describeMicroflow(ctx, s.Name)
+			return describeMicroflowGen(ctx, s.Name)
 		case ast.DescribeNanoflow:
-			return describeNanoflow(ctx, s.Name)
+			return describeNanoflowGen(ctx, s.Name)
 		case ast.DescribeModule:
 			return describeModule(ctx, s.Name.Module, s.WithAll)
 		case ast.DescribePage:

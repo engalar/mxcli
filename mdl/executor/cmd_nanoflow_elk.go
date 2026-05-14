@@ -71,6 +71,8 @@ func nanoflowELK(ctx *ExecContext, name string) error {
 }
 
 // NanoflowELK is an Executor method wrapper.
+// Stage 3.2.6.1: re-routed to `nanoflowELKGen`. Legacy `nanoflowELK`
+// (sdk/microflows-typed) is scheduled for removal in Stage 3.2.6.3b.
 func (e *Executor) NanoflowELK(name string) error {
-	return nanoflowELK(e.newExecContext(context.Background()), name)
+	return nanoflowELKGen(e.newExecContext(context.Background()), name)
 }
