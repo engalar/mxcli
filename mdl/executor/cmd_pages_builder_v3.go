@@ -1795,7 +1795,7 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (element.Element, error)
 			}
 			for _, grandchild := range child.Children {
 				if filterWidgetID := dataGridFilterWidgetID(grandchild.Type); filterWidgetID != "" {
-					fw, err := pb.widgetBackend.BuildFilterWidget(backend.FilterWidgetSpec{
+					fw, err := pb.widgetBackend.BuildFilterWidgetGen(backend.FilterWidgetSpec{
 						WidgetID:   filterWidgetID,
 						FilterName: grandchild.Name,
 					}, pb.backend.Path())
