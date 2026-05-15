@@ -16,6 +16,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
+	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
@@ -313,6 +314,28 @@ func sdkValidationRuleFromGen(vr *genDm.ValidationRule, attrNameToID map[string]
 		out.Type = "Unique"
 		out.Rule = &domainmodel.UniqueValidationRuleInfo{}
 	default:
+		return nil
+	}
+	if txt := modelTextFromGen(vr.ErrorMessage()); txt != nil {
+		out.ErrorMessage = txt
+	}
+	return out
+}
+
+func modelTextFromGen(elem any) *model.Text {
+	txt, ok := elem.(*genTexts.Text)
+	if !ok || txt == nil {
+		return nil
+	}
+	out := &model.Text{Translations: map[string]string{}}
+	for _, trElem := range txt.TranslationsItems() {
+		tr, ok := trElem.(*genTexts.Translation)
+		if !ok {
+			continue
+		}
+		out.Translations[tr.LanguageCode()] = tr.Text()
+	}
+	if len(out.Translations) == 0 {
 		return nil
 	}
 	return out
