@@ -5,129 +5,26 @@ package mprbackend
 import (
 	"fmt"
 
-	"github.com/mendixlabs/mxcli/mdl/backend"
-	"github.com/mendixlabs/mxcli/model"
-	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
-// All Create*/Update* methods in this file produce canonical BSON via the
-// existing sdk/mpr Serialize* helpers, then write the bytes through the
-// modelsdk write path:
-//   - Create*: msdkWriter.InsertUnit
-//   - Update*: writeUnitContents (defined in write_helpers.go)
+// updateDomainModelViaModelsdk produces canonical BSON via sdk/mpr's
+// SerializeDomainModel, then commits the bytes through the modelsdk
+// write path. This bypasses sdk/mpr's updateTransactionID(), which fails
+// on hard-linked MPR files (SQLITE_READONLY_DBMOVED 1544).
 //
-// This bypasses sdk/mpr's updateTransactionID(), which fails on hard-linked
-// MPR files (SQLITE_READONLY_DBMOVED 1544).
-
 // Microflow / Nanoflow Create+Update helpers were retired in
 // Followup E6 — production routes through the modelsdk-native repos
-// (mdl/backend/mpr/repos/microflow_writer.go) directly. Pages,
-// layouts, snippets, and workflows remain on this sdk-typed path.
+// (mdl/backend/mpr/repos/microflow_writer.go) directly.
 
-// ── Page ──────────────────────────────────────────────────────────────────
-
-func (b *MprBackend) createPageViaModelsdk(page *backend.Page) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	if page.ID == "" {
-		page.ID = model.ID(modelsdkmpr.GenerateID())
-	}
-	page.TypeName = "Forms$Page"
-	contents, err := mpr.SerializePage(page)
-	if err != nil {
-		return fmt.Errorf("serialize page: %w", err)
-	}
-	return b.msdkWriter.InsertUnit(
-		string(page.ID),
-		string(page.ContainerID),
-		"Documents",
-		"Forms$Page",
-		contents,
-	)
-}
-
-func (b *MprBackend) updatePageViaModelsdk(page *backend.Page) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	contents, err := mpr.SerializePage(page)
-	if err != nil {
-		return fmt.Errorf("serialize page: %w", err)
-	}
-	return b.writeUnitContents(page.ID, contents)
-}
-
-// ── Layout ────────────────────────────────────────────────────────────────
-
-func (b *MprBackend) createLayoutViaModelsdk(layout *backend.Layout) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	if layout.ID == "" {
-		layout.ID = model.ID(modelsdkmpr.GenerateID())
-	}
-	layout.TypeName = "Forms$Layout"
-	contents, err := mpr.SerializeLayout(layout)
-	if err != nil {
-		return fmt.Errorf("serialize layout: %w", err)
-	}
-	return b.msdkWriter.InsertUnit(
-		string(layout.ID),
-		string(layout.ContainerID),
-		"Documents",
-		"Forms$Layout",
-		contents,
-	)
-}
-
-func (b *MprBackend) updateLayoutViaModelsdk(layout *backend.Layout) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	contents, err := mpr.SerializeLayout(layout)
-	if err != nil {
-		return fmt.Errorf("serialize layout: %w", err)
-	}
-	return b.writeUnitContents(layout.ID, contents)
-}
-
-// ── Snippet ───────────────────────────────────────────────────────────────
-
-func (b *MprBackend) createSnippetViaModelsdk(snippet *backend.Snippet) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	if snippet.ID == "" {
-		snippet.ID = model.ID(modelsdkmpr.GenerateID())
-	}
-	snippet.TypeName = "Forms$Snippet"
-	contents, err := mpr.SerializeSnippet(snippet)
-	if err != nil {
-		return fmt.Errorf("serialize snippet: %w", err)
-	}
-	return b.msdkWriter.InsertUnit(
-		string(snippet.ID),
-		string(snippet.ContainerID),
-		"Documents",
-		"Forms$Snippet",
-		contents,
-	)
-}
-
-func (b *MprBackend) updateSnippetViaModelsdk(snippet *backend.Snippet) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	contents, err := mpr.SerializeSnippet(snippet)
-	if err != nil {
-		return fmt.Errorf("serialize snippet: %w", err)
-	}
-	return b.writeUnitContents(snippet.ID, contents)
-}
-
+// Page / Layout / Snippet create/update helpers retired in Stage 3.3.5.E1;
+// the gen-typed path (mprrepos.NewPageRepository(...).Create / .Update,
+// etc.) is the only production write surface. The V3 page builder still
+// emits sdk-typed structs which are converted through the
+// SDKPageToGen / SDKSnippetToGen bridges (page_bridge.go) before hitting
+// the gen writer.
+//
 // Workflow create/update helpers retired in Stage 3.3.3.E1; the gen-typed
 // path (mprrepos.NewWorkflowRepository(...).Create / .Update) is the only
 // production write surface.

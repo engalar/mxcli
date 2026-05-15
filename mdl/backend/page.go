@@ -9,26 +9,24 @@ import (
 
 // PageBackend provides page, layout, and snippet operations.
 type PageBackend interface {
-	// Pages — legacy sdk-typed surface, retired in Stage 3.3.5.E1.
+	// Pages — legacy sdk-typed read + delete/move surface. The
+	// Create/Update writers were retired in Stage 3.3.5.E1; consumers
+	// route writes through CreatePageGen / UpdatePageGen below.
 	ListPages() ([]*Page, error)
 	GetPage(id model.ID) (*Page, error)
-	CreatePage(page *Page) error
-	UpdatePage(page *Page) error
 	DeletePage(id model.ID) error
 	MovePage(page *Page) error
 
-	// Layouts — legacy sdk-typed surface, retired in Stage 3.3.5.E1.
+	// Layouts — legacy sdk-typed read + delete surface. The
+	// Create/Update writers were retired in Stage 3.3.5.E1.
 	ListLayouts() ([]*Layout, error)
 	GetLayout(id model.ID) (*Layout, error)
-	CreateLayout(layout *Layout) error
-	UpdateLayout(layout *Layout) error
 	DeleteLayout(id model.ID) error
 
-	// Snippets — legacy sdk-typed surface, retired in Stage 3.3.5.E1.
+	// Snippets — legacy sdk-typed read + delete/move surface. The
+	// Create/Update writers were retired in Stage 3.3.5.E1.
 	// No GetSnippet: snippets are resolved by qualified name via ListSnippets.
 	ListSnippets() ([]*Snippet, error)
-	CreateSnippet(snippet *Snippet) error
-	UpdateSnippet(snippet *Snippet) error
 	DeleteSnippet(id model.ID) error
 	MoveSnippet(snippet *Snippet) error
 
