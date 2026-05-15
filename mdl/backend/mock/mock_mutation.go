@@ -130,3 +130,10 @@ func (m *MockBackend) BuildFilterWidgetGen(spec backend.FilterWidgetSpec, projec
 	}
 	return nil, fmt.Errorf("MockBackend.BuildFilterWidgetGen not configured")
 }
+
+func (m *MockBackend) SerializeGenElemToOpaque(elem element.Element) backend.OpaqueWidget {
+	if m.SerializeGenElemToOpaqueFunc != nil {
+		return m.SerializeGenElemToOpaqueFunc(elem)
+	}
+	return nil
+}

@@ -89,6 +89,7 @@ type MockBackend struct {
 	// Stage 3.3.4 D8 — gen-typed entity write Func fields (additive)
 	CreateEntityGenFunc      func(domainModelID model.ID, entity *genDm.Entity) error
 	UpdateEntityGenFunc      func(domainModelID model.ID, entity *genDm.Entity) error
+	MoveEntityGenFunc        func(entity *genDm.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error)
 	CreateAssociationGenFunc func(domainModelID model.ID, assoc *genDm.Association) error
 
 	// MicroflowBackend — Followup E6 retired Get / Create / Update /
@@ -329,6 +330,7 @@ type MockBackend struct {
 	BuildFilterWidgetFunc             func(spec backend.FilterWidgetSpec, projectPath string) (backend.Widget, error)
 	BuildDataGrid2WidgetGenFunc       func(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.GenCustomWidgetElem, error)
 	BuildFilterWidgetGenFunc          func(spec backend.FilterWidgetSpec, projectPath string) (*backend.GenCustomWidgetElem, error)
+	SerializeGenElemToOpaqueFunc      func(elem element.Element) backend.OpaqueWidget
 
 	// AgentEditorBackend
 	ListAgentEditorModelsFunc               func() ([]*types.Model, error)
