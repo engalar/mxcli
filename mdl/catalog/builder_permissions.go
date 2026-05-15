@@ -261,25 +261,35 @@ func (b *Builder) buildMicroflowPermissions(stmt *sql.Stmt, projectID, snapshotI
 }
 
 // buildPagePermissions extracts page view permissions.
+//
+// Stage 3.3.5.C7e: walks gen-typed Page units. AllowedRolesQualifiedNames()
+// returns the role names directly (no ID-to-name lookup needed) which
+// matches the legacy stringification of the sdk-typed AllowedRoles
+// model.IDs that were stored as role names in the BSON.
 func (b *Builder) buildPagePermissions(stmt *sql.Stmt, projectID, snapshotID string) int {
 	count := 0
 
-	pages, err := b.reader.ListPages()
+	pageGenList, err := b.cachedPagesGen()
 	if err != nil {
 		return 0
 	}
 
-	for _, pg := range pages {
-		if len(pg.AllowedRoles) == 0 {
+	for _, pg := range pageGenList {
+		if pg == nil {
+			continue
+		}
+		roles := pg.AllowedRolesQualifiedNames()
+		if len(roles) == 0 {
 			continue
 		}
 
-		moduleID := b.hierarchy.findModuleID(pg.ContainerID)
+		pgID := model.ID(pg.ID())
+		containerID := b.hierarchy.containerParent[pgID]
+		moduleID := b.hierarchy.findModuleID(containerID)
 		moduleName := b.hierarchy.getModuleName(moduleID)
-		pgQN := moduleName + "." + pg.Name
+		pgQN := moduleName + "." + pg.Name()
 
-		for _, roleID := range pg.AllowedRoles {
-			roleName := string(roleID)
+		for _, roleName := range roles {
 			stmt.Exec(roleName, "PAGE", pgQN, nil, "VIEW", nil, moduleName, projectID, snapshotID)
 			count++
 		}
