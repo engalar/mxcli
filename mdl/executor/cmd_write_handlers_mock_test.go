@@ -13,9 +13,9 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
+	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 func TestExecCreateModule_Mock(t *testing.T) {
@@ -182,61 +182,55 @@ func TestExecDropMicroflow_Mock(t *testing.T) {
 
 func TestExecDropPage_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
-	pg := mkPage(mod.ID, "HomePage")
+	pg := mkPageGen(string(nextID("pg")), "HomePage")
 
 	h := mkHierarchy(mod)
-	withContainer(h, pg.ContainerID, mod.ID)
 
 	called := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		ListPagesFunc: func() ([]*pages.Page, error) {
-			return []*pages.Page{pg}, nil
-		},
-		DeletePageFunc: func(id model.ID) error {
+		DeletePageGenFunc: func(id model.ID) error {
 			called = true
 			return nil
 		},
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
 	err := execDropPage(ctx, &ast.DropPageStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "HomePage"},
 	})
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped page")
 	if !called {
-		t.Fatal("DeletePageFunc was not called")
+		t.Fatal("DeletePageGenFunc was not called")
 	}
 }
 
 func TestExecDropSnippet_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
-	snp := mkSnippet(mod.ID, "HeaderSnippet")
+	snp := mkSnippetGen(string(nextID("snp")), "HeaderSnippet")
 
 	h := mkHierarchy(mod)
-	withContainer(h, snp.ContainerID, mod.ID)
 
 	called := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) {
-			return []*pages.Snippet{snp}, nil
-		},
-		DeleteSnippetFunc: func(id model.ID) error {
+		DeleteSnippetGenFunc: func(id model.ID) error {
 			called = true
 			return nil
 		},
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Snippets = makeSnippetsRepo([]*genPg.Snippet{snp}, mod.ID)
 	err := execDropSnippet(ctx, &ast.DropSnippetStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "HeaderSnippet"},
 	})
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped snippet")
 	if !called {
-		t.Fatal("DeleteSnippetFunc was not called")
+		t.Fatal("DeleteSnippetGenFunc was not called")
 	}
 }
 
@@ -420,11 +414,9 @@ func TestExecDropPage_Mock_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return nil, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Pages = makePagesRepo(nil, mod.ID)
 	assertError(t, execDropPage(ctx, &ast.DropPageStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
 	}))
@@ -434,11 +426,9 @@ func TestExecDropSnippet_Mock_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
 
-	mb := &mock.MockBackend{
-		IsConnectedFunc:  func() bool { return true },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return nil, nil },
-	}
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Snippets = makeSnippetsRepo(nil, mod.ID)
 	assertError(t, execDropSnippet(ctx, &ast.DropSnippetStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
 	}))

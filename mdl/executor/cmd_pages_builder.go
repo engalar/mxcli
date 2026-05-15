@@ -372,18 +372,28 @@ func execDropPage(ctx *ExecContext, s *ast.DropPageStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	pages, err := ctx.Backend.ListPages()
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	pairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
 
-	for _, p := range pages {
-		modID := getModuleID(ctx, p.ContainerID)
-		modName := getModuleName(ctx, modID)
-		if modName == s.Name.Module && p.Name == s.Name.Name {
-			if err := ctx.Backend.DeletePage(p.ID); err != nil {
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
+			pgID := model.ID(p.Elem.ID())
+			if err := ctx.Backend.DeletePageGen(pgID); err != nil {
 				return mdlerrors.NewBackend("delete page", err)
 			}
+			invalidatePagesGenCache(ctx)
 			fmt.Fprintf(ctx.Output, "Dropped page %s\n", s.Name.String())
 			return nil
 		}
@@ -398,18 +408,28 @@ func execDropSnippet(ctx *ExecContext, s *ast.DropSnippetStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	snippets, err := ctx.Backend.ListSnippets()
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	pairs, err := listSnippetsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list snippets", err)
 	}
 
-	for _, snip := range snippets {
-		modID := getModuleID(ctx, snip.ContainerID)
-		modName := getModuleName(ctx, modID)
-		if modName == s.Name.Module && snip.Name == s.Name.Name {
-			if err := ctx.Backend.DeleteSnippet(snip.ID); err != nil {
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
+			snpID := model.ID(p.Elem.ID())
+			if err := ctx.Backend.DeleteSnippetGen(snpID); err != nil {
 				return mdlerrors.NewBackend("delete snippet", err)
 			}
+			invalidatePagesGenCache(ctx)
 			fmt.Fprintf(ctx.Output, "Dropped snippet %s\n", s.Name.String())
 			return nil
 		}
