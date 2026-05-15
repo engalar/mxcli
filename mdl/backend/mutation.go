@@ -3,6 +3,8 @@
 package backend
 
 import (
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
@@ -10,39 +12,19 @@ import (
 )
 
 // Re-export sdk/pages types still used by the legacy mutation surface.
-// Stage 3.3.5.E1 will retire these once DataGridSpec and PageMutator are
-// fully migrated to the gen-typed surface.
+// DataGridSpec fields have been migrated to pre-serialized bson.D in Stage 3.3.5.E1.b;
+// the aliases below cover the remaining PageMutator / WidgetBuilder / PluggableProperty paths.
 type (
-	Widget               = pages.Widget
-	DataSource           = pages.DataSource
-	ClientAction         = pages.ClientAction
-	CustomWidget         = pages.CustomWidget
-	PropertyTypeIDEntry  = pages.PropertyTypeIDEntry
-	BaseWidget           = pages.BaseWidget
-	DataViewSource       = pages.DataViewSource
-	DatabaseSource       = pages.DatabaseSource
-	MicroflowSource      = pages.MicroflowSource
-	NanoflowSource       = pages.NanoflowSource
-	AssociationSource    = pages.AssociationSource
+	Widget              = pages.Widget
+	DataSource          = pages.DataSource
+	ClientAction        = pages.ClientAction
+	CustomWidget        = pages.CustomWidget
+	PropertyTypeIDEntry = pages.PropertyTypeIDEntry
+	BaseWidget          = pages.BaseWidget
+	DatabaseSource      = pages.DatabaseSource
+	MicroflowSource     = pages.MicroflowSource
+	NanoflowSource      = pages.NanoflowSource
 	ListenToWidgetSource = pages.ListenToWidgetSource
-	GridSort             = pages.GridSort
-	SortDirection              = pages.SortDirection
-	DataGridColumn             = pages.DataGridColumn
-	ActionButton               = pages.ActionButton
-	Container                  = pages.Container
-	ButtonStyle                = pages.ButtonStyle
-	ClientTemplate             = pages.ClientTemplate
-	SaveChangesClientAction    = pages.SaveChangesClientAction
-	CancelChangesClientAction  = pages.CancelChangesClientAction
-	ClosePageClientAction      = pages.ClosePageClientAction
-	PageClientAction           = pages.PageClientAction
-	MicroflowClientAction      = pages.MicroflowClientAction
-)
-
-const (
-	SortDirectionAscending  = pages.SortDirectionAscending
-	SortDirectionDescending = pages.SortDirectionDescending
-	ButtonStyleDefault      = pages.ButtonStyleDefault
 )
 
 // ContainerKind represents the type of page container (page, layout, or snippet).
@@ -352,21 +334,21 @@ type WidgetObjectBuilder interface {
 }
 
 // DataGridColumnSpec carries pre-resolved column data for DataGrid2 construction.
-// All attribute paths are fully qualified. Child widgets are already built as
-// domain objects; the backend serializes them to storage format internally.
+// All attribute paths are fully qualified. Child widgets and filter widget are
+// pre-serialized to BSON by the executor; the backend embeds them directly.
 type DataGridColumnSpec struct {
-	Attribute    string         // Fully qualified attribute path (empty for action/custom-content columns)
-	Caption      string         // Column header caption
-	ChildWidgets []Widget       // Pre-built child widgets (for custom-content columns)
-	FilterWidget Widget         // Pre-built filter widget for the column's filter slot (optional)
-	Properties   map[string]any // Column properties (Sortable, Resizable, Visible, etc.)
+	Attribute        string         // Fully qualified attribute path (empty for action/custom-content columns)
+	Caption          string         // Column header caption
+	ChildWidgetsBSON []bson.D       // Pre-serialized child widget BSON (for custom-content columns)
+	FilterWidgetBSON bson.D         // Pre-serialized filter widget BSON for the column's filter slot (optional)
+	Properties       map[string]any // Column properties (Sortable, Resizable, Visible, etc.)
 }
 
 // DataGridSpec carries all inputs needed to build a DataGrid2 widget object.
 type DataGridSpec struct {
-	DataSource    DataSource
-	Columns       []DataGridColumnSpec
-	HeaderWidgets []Widget // Pre-built CONTROLBAR widgets for filtersPlaceholder
+	DataSourceBSON  bson.D             // Pre-serialized datasource BSON
+	Columns         []DataGridColumnSpec
+	HeaderWidgetsBSON []bson.D         // Pre-serialized CONTROLBAR widgets for filtersPlaceholder
 	// Paging overrides (empty string = use template default)
 	PagingOverrides map[string]string // camelCase widget key → string value
 	SelectionMode   string            // empty = no override
