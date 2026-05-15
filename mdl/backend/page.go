@@ -59,6 +59,21 @@ type PageBackend interface {
 	// Page listings.
 	GetPageContainerUUID(id model.ID) (model.ID, error)
 
+	// Stage 3.3.5.D5.c gen-typed delete + move: thin wrappers over the
+	// modelsdk writer's DeleteUnit / UpdateUnitContainer that keep the
+	// executor off the sdk-typed Page/Layout/Snippet structs entirely.
+	// The MovePageGen / MoveSnippetGen / MoveLayoutGen signatures take
+	// unit ID + new container ID directly; the executor is responsible
+	// for resolving the new container before calling.
+	DeletePageGen(id model.ID) error
+	MovePageGen(id, containerID model.ID) error
+
+	DeleteLayoutGen(id model.ID) error
+	MoveLayoutGen(id, containerID model.ID) error
+
+	DeleteSnippetGen(id model.ID) error
+	MoveSnippetGen(id, containerID model.ID) error
+
 	// Building blocks and page templates (read-only)
 	ListBuildingBlocks() ([]*pages.BuildingBlock, error)
 	ListPageTemplates() ([]*pages.PageTemplate, error)
