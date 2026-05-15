@@ -92,26 +92,62 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*genPg.Page, error)
 		page.SetTitle(genSimpleLabel(s.Title))
 	}
 
-	// Resolve layout and build LayoutCall
+	// Build parameters FIRST so paramScope/paramEntityNames are populated
+	// before widget building (widgets may reference parameters as datasources).
+	for _, param := range s.Parameters {
+		pp := genPg.NewPageParameter()
+		assignFreshID(pp)
+		pp.SetName(param.Name)
+		pp.SetIsRequired(true)
+
+		if bsonType := pageParamBSONType(param.Type); bsonType != "" {
+			// Primitive type — inject via raw BSON (no standalone gen DataType nodes yet)
+			setRawBSONField(pp, "ParameterType_type", bsonType)
+		} else if param.EntityType.Name != "" {
+			entityID, err := pb.resolveEntity(param.EntityType)
+			if err != nil {
+				return nil, mdlerrors.NewBackend("resolve entity "+param.EntityType.String(), err)
+			}
+			entityName := param.EntityType.String()
+			pb.paramScope[param.Name] = entityID
+			pb.paramEntityNames[param.Name] = entityName
+			setRawBSONField(pp, "ParameterType_type", bsonTypeObjectType)
+			setRawBSONField(pp, "ParameterType_entity", entityName)
+		}
+
+		page.AddParameters(pp)
+	}
+
+	// Build variables
+	for _, v := range s.Variables {
+		lv := genPg.NewLocalVariable()
+		assignFreshID(lv)
+		lv.SetName(v.Name)
+		setRawBSONField(lv, "VariableType", mdlTypeToBsonType(v.DataType))
+		if v.DefaultValue != "" {
+			setRawBSONField(lv, "DefaultValue", v.DefaultValue)
+		}
+		page.AddVariables(lv)
+	}
+
+	// Resolve layout and build LayoutCall (after parameters so widgets can use paramScope)
 	if s.Layout != "" {
 		layoutID, err := pb.resolveLayout(s.Layout)
 		if err != nil {
 			log.Printf("warning: layout %s not found", s.Layout)
 		} else {
-			_ = layoutID // layout ID is carried in the ByNameRef within LayoutCall
+			_ = layoutID
 
 			lc := genPg.NewLayoutCall()
 			assignFreshID(lc)
 			lc.SetLayoutQualifiedName(s.Layout)
 
-			// Build FormCallArgument for the main placeholder
 			mainPlaceholderRef := pb.getMainPlaceholderRef(s.Layout)
 
 			arg := genPg.NewLayoutCallArgument()
 			assignFreshID(arg)
 			arg.SetParameterQualifiedName(mainPlaceholderRef)
 
-			// Build V3 widgets into a root DivContainer
 			if len(s.Widgets) > 0 {
 				containerWidget := genPg.NewDivContainer()
 				assignFreshID(containerWidget)
@@ -134,48 +170,6 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*genPg.Page, error)
 			lc.AddArguments(arg)
 			page.SetLayoutCall(lc)
 		}
-	}
-
-	// Build parameters
-	for _, param := range s.Parameters {
-		pp := genPg.NewPageParameter()
-		assignFreshID(pp)
-		pp.SetName(param.Name)
-		pp.SetIsRequired(true)
-
-		if bsonType := pageParamBSONType(param.Type); bsonType != "" {
-			// Primitive type parameter — create appropriate gen DataType element
-			ptElem := genPrimDataType(param.Type.Kind)
-			if ptElem != nil {
-				pp.SetParameterType(ptElem)
-			}
-		} else if param.EntityType.Name != "" {
-			entityID, err := pb.resolveEntity(param.EntityType)
-			if err != nil {
-				return nil, mdlerrors.NewBackend("resolve entity "+param.EntityType.String(), err)
-			}
-			entityName := param.EntityType.String()
-			pb.paramScope[param.Name] = entityID
-			pb.paramEntityNames[param.Name] = entityName
-			// Set entity type parameter via raw BSON (no gen ObjectType constructor)
-			// The entity qualified name is stored as the parameter type reference
-			setRawBSONField(pp, "ParameterType_type", bsonTypeObjectType)
-			setRawBSONField(pp, "ParameterType_entity", entityName)
-		}
-
-		page.AddParameters(pp)
-	}
-
-	// Build variables
-	for _, v := range s.Variables {
-		lv := genPg.NewLocalVariable()
-		assignFreshID(lv)
-		lv.SetName(v.Name)
-		setRawBSONField(lv, "VariableType", mdlTypeToBsonType(v.DataType))
-		if v.DefaultValue != "" {
-			setRawBSONField(lv, "DefaultValue", v.DefaultValue)
-		}
-		page.AddVariables(lv)
 	}
 
 	return page, nil
@@ -400,33 +394,13 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (element.Element, error) {
 	return widget, nil
 }
 
-// customWidgetToElement converts a *backend.CustomWidget (from PluggableWidgetEngine.Build)
-// to an element.Element via BSON roundtrip — same approach as BuildDataGrid2WidgetGen.
-func (pb *pageBuilder) customWidgetToElement(cw *backend.CustomWidget) (element.Element, error) {
+// customWidgetToElement returns the element.Element from a *backend.GenCustomWidgetElem.
+// Build() now returns *GenCustomWidgetElem which implements element.Element directly.
+func (pb *pageBuilder) customWidgetToElement(cw *backend.GenCustomWidgetElem) (element.Element, error) {
 	if cw == nil {
-		return nil, fmt.Errorf("customWidgetToElement: nil CustomWidget")
+		return nil, fmt.Errorf("customWidgetToElement: nil GenCustomWidgetElem")
 	}
-	genElem, err := pb.widgetBackend.BuildDataGrid2WidgetGen(cw.ID, cw.GetName(), backend.DataGridSpec{}, pb.getProjectPath())
-	// BuildDataGrid2WidgetGen with empty spec won't work for arbitrary custom widgets.
-	// Use the standard widget serialization path instead.
-	_ = genElem
-	_ = err
-
-	// Preferred path: if backend.GenCustomWidgetElem is available (set by BuildDataGrid2WidgetGen
-	// or BuildFilterWidgetGen), use AsElement(). For general CustomWidget, serialize via
-	// sdk/mpr and decode to gen element.
-	if gcwe, ok := any(cw).(*backend.GenCustomWidgetElem); ok {
-		return gcwe.AsElement(), nil
-	}
-	// For legacy *pages.CustomWidget, the GenCustomWidgetElem bridge wraps the inner element.
-	// Use the WidgetBuilderBackend's serialization then roundtrip.
-	// This requires the backend to expose SerializeWidget → gen decode.
-	// For now, return the legacy CustomWidget wrapped in GenCustomWidgetElem via the
-	// WidgetBuilderBackend's SerializeWidgetToOpaque pattern.
-	//
-	// TODO(Cat-B): replace with a proper gen-native pluggable engine that returns element.Element
-	// directly from Build() without any BSON roundtrip.
-	return nil, fmt.Errorf("customWidgetToElement: cannot convert *CustomWidget to element.Element without BSON roundtrip; upgrade PluggableWidgetEngine.Build to return element.Element")
+	return cw.AsElement(), nil
 }
 
 // applyConditionalSettingsGen sets ConditionalVisibilitySettings and
@@ -2627,14 +2601,7 @@ func (pb *pageBuilder) buildSnippetCallParamsGen(sc *genPg.SnippetCall, snippetQ
 		pm := genPg.NewSnippetParameterMapping()
 		assignFreshID(pm)
 		pm.SetParameterQualifiedName(paramName)
-		if strings.HasPrefix(argument, "$") {
-			pv := genPg.NewPageVariable()
-			assignFreshID(pv)
-			pv.SetPageParameterQualifiedName(argument)
-			pm.SetVariable(pv)
-		} else {
-			pm.SetArgument(argument)
-		}
+		pm.SetArgument(argument)
 		sc.AddParameterMappings(pm)
 	}
 

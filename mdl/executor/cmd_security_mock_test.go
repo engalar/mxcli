@@ -329,7 +329,10 @@ func TestShowAccessOnPage_Mock_NotFound(t *testing.T) {
 	// (nil, nil) by default, which is enough to exercise the
 	// "not-found" path in listAccessOnPageGen.
 	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
-	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx, _ := newMockCtx(t,
+		withBackend(mb),
+		withHierarchy(h),
+	)
 	assertError(t, listAccessOnPageGen(ctx, &ast.QualifiedName{Module: "MyModule", Name: "NonExistent"}))
 }
 
@@ -359,41 +362,6 @@ func TestGrantEntityAccess_XPathConstraint_PreservesRights(t *testing.T) {
 		Persistable: true,
 		Attributes:  []*domainmodel.Attribute{statusAttr},
 		AccessRules: nil, // no rules yet
-	}
-	dmBefore := &domainmodel.DomainModel{
-		BaseElement: model.BaseElement{ID: nextID("dm")},
-		ContainerID: mod.ID,
-		Entities:    []*domainmodel.Entity{entityBefore},
-	}
-
-	// After AddEntityAccessRule, the second GetDomainModel call returns the entity
-	// with the rule already applied (simulating what a real MPR backend would do).
-	entityAfter := &domainmodel.Entity{
-		BaseElement: model.BaseElement{ID: entityBefore.ID},
-		ContainerID: mod.ID,
-		Name:        "Order",
-		Persistable: true,
-		Attributes:  []*domainmodel.Attribute{statusAttr},
-		AccessRules: []*domainmodel.AccessRule{
-			{
-				ModuleRoleNames:           []string{"MyModule.User"},
-				AllowCreate:               false,
-				AllowDelete:               false,
-				DefaultMemberAccessRights: domainmodel.MemberAccessRightsReadWrite,
-				XPathConstraint:           "[Status = 'Open']",
-				MemberAccesses: []*domainmodel.MemberAccess{
-					{
-						AttributeName: "MyModule.Order.Status",
-						AccessRights:  domainmodel.MemberAccessRightsReadWrite,
-					},
-				},
-			},
-		},
-	}
-	dmAfter := &domainmodel.DomainModel{
-		BaseElement: model.BaseElement{ID: dmBefore.ID},
-		ContainerID: mod.ID,
-		Entities:    []*domainmodel.Entity{entityAfter},
 	}
 	entityAfterGen := mkEntityGen("Order")
 	entityAfterGen.SetID(element.ID(entityBefore.ID))
@@ -427,12 +395,12 @@ func TestGrantEntityAccess_XPathConstraint_PreservesRights(t *testing.T) {
 		GetModuleSecurityGenFunc: func(moduleID model.ID) (*genSec.ModuleSecurity, error) {
 			return ms, nil
 		},
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) {
 			callCount++
 			if callCount == 1 {
-				return dmBefore, nil // first call: before grant
+				return mkDomainModelGen(mod.ID, mkEntityGen("Order")), nil // first call: existence check
 			}
-			return dmAfter, nil // second call (formatAccessRuleResult): after grant
+			return dmAfterGen, nil // second call (formatAccessRuleResult): after grant
 		},
 		AddEntityAccessRuleFunc: func(params backend.EntityAccessRuleParams) error {
 			if params.XPathConstraint != "[Status = 'Open']" {
@@ -512,28 +480,26 @@ func TestOutputEntityAccessGrants_XPathConstraint_EscapedQuotes(t *testing.T) {
 func TestGrantEntityAccess_FakeRole_Issue399(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	entity := &domainmodel.Entity{
-		BaseElement: model.BaseElement{ID: nextID("ent")},
-		Name:        "Order",
-		Persistable: true,
-	}
-	dm := &domainmodel.DomainModel{
-		BaseElement: model.BaseElement{ID: nextID("dm")},
-		ContainerID: mod.ID,
-		Entities:    []*domainmodel.Entity{entity},
-	}
+	entity := mkEntityGen("Order")
+	dm := mkDomainModelGen(mod.ID, entity)
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
+		IsConnectedFunc:       func() bool { return true },
+		ListModulesFunc:       func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
 		// No roles defined in module security
 		GetModuleSecurityGenFunc: func(moduleID model.ID) (*genSec.ModuleSecurity, error) {
 			return genSec.NewModuleSecurity(), nil
 		},
 	}
 
-	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx, _ := newMockCtx(t,
+		withBackend(mb),
+		withHierarchy(h),
+		withDomainModelsRepo(makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{
+			mod.ID: {dm},
+		})),
+	)
 	err := execGrantEntityAccessGen(ctx, &ast.GrantEntityAccessStmt{
 		Entity: ast.QualifiedName{Module: "MyModule", Name: "Order"},
 		Roles:  []ast.QualifiedName{{Module: "MyModule", Name: "FakeRole"}},
@@ -549,27 +515,25 @@ func TestGrantEntityAccess_FakeRole_Issue399(t *testing.T) {
 func TestRevokeEntityAccess_FakeRole_Issue399(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	entity := &domainmodel.Entity{
-		BaseElement: model.BaseElement{ID: nextID("ent")},
-		Name:        "Customer",
-		Persistable: true,
-	}
-	dm := &domainmodel.DomainModel{
-		BaseElement: model.BaseElement{ID: nextID("dm")},
-		ContainerID: mod.ID,
-		Entities:    []*domainmodel.Entity{entity},
-	}
+	entity := mkEntityGen("Customer")
+	dm := mkDomainModelGen(mod.ID, entity)
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
+		IsConnectedFunc:       func() bool { return true },
+		ListModulesFunc:       func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
 		GetModuleSecurityGenFunc: func(moduleID model.ID) (*genSec.ModuleSecurity, error) {
 			return genSec.NewModuleSecurity(), nil
 		},
 	}
 
-	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx, _ := newMockCtx(t,
+		withBackend(mb),
+		withHierarchy(h),
+		withDomainModelsRepo(makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{
+			mod.ID: {dm},
+		})),
+	)
 	err := execRevokeEntityAccessGen(ctx, &ast.RevokeEntityAccessStmt{
 		Entity: ast.QualifiedName{Module: "MyModule", Name: "Customer"},
 		Roles:  []ast.QualifiedName{{Module: "MyModule", Name: "GhostRole"}},

@@ -11,8 +11,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // execCreateAssociation handles CREATE ASSOCIATION statements.
@@ -27,9 +27,12 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
+	}
+	if dm == nil {
+		return mdlerrors.NewBackend("get domain model", nil)
 	}
 
 	// Find parent and child entities (supports cross-module associations)
@@ -37,55 +40,27 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 	if parentModule == "" {
 		parentModule = s.Name.Module
 	}
-	parentEntity, err := findEntity(ctx, parentModule, s.Parent.Name)
+	parentEntity, _, err := findEntityGen(ctx, ast.QualifiedName{Module: parentModule, Name: s.Parent.Name})
 	if err != nil {
+		return mdlerrors.NewBackend("get parent entity", err)
+	}
+	if parentEntity == nil {
 		return mdlerrors.NewNotFound("parent entity", s.Parent.String())
 	}
-	parentID := parentEntity.ID
+	parentID := element.ID(parentEntity.ID())
 
 	childModule := s.Child.Module
 	if childModule == "" {
 		childModule = s.Name.Module
 	}
-	childEntity, err := findEntity(ctx, childModule, s.Child.Name)
+	childEntity, _, err := findEntityGen(ctx, ast.QualifiedName{Module: childModule, Name: s.Child.Name})
 	if err != nil {
+		return mdlerrors.NewBackend("get child entity", err)
+	}
+	if childEntity == nil {
 		return mdlerrors.NewNotFound("child entity", s.Child.String())
 	}
-	childID := childEntity.ID
-
-	// Convert types
-	assocType := domainmodel.AssociationTypeReference
-	if s.Type == ast.AssocReferenceSet {
-		assocType = domainmodel.AssociationTypeReferenceSet
-	}
-
-	owner := domainmodel.AssociationOwnerDefault
-	switch s.Owner {
-	case ast.OwnerBoth:
-		owner = domainmodel.AssociationOwnerBoth
-	}
-
-	// Convert delete behavior
-	var deleteBehavior domainmodel.DeleteBehaviorType
-	switch s.DeleteBehavior {
-	case ast.DeleteKeepReferences:
-		deleteBehavior = domainmodel.DeleteBehaviorTypeDeleteMeButKeepReferences
-	case ast.DeleteCascade:
-		deleteBehavior = domainmodel.DeleteBehaviorTypeDeleteMeAndReferences
-	case ast.DeleteIfNoReferences:
-		deleteBehavior = domainmodel.DeleteBehaviorTypeDeleteMeIfNoReferences
-	default:
-		deleteBehavior = domainmodel.DeleteBehaviorTypeDeleteMeButKeepReferences
-	}
-
-	// Convert storage type (default: Column = foreign key in parent table)
-	storageFormat := domainmodel.StorageFormatColumn
-	switch s.Storage {
-	case ast.StorageColumn:
-		storageFormat = domainmodel.StorageFormatColumn
-	case ast.StorageTable:
-		storageFormat = domainmodel.StorageFormatTable
-	}
+	childID := element.ID(childEntity.ID())
 
 	// Create association
 	// ParentID = FROM entity (the one with the FK)
@@ -96,46 +71,50 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 	// OR MODIFY: update existing association properties in place, preserving its UUID.
 	if s.CreateOrModify {
 		if !isCrossModule {
-			for _, assoc := range dm.Associations {
-				if assoc.Name == s.Name.Name {
-					assoc.Type = assocType
-					assoc.Owner = owner
-					assoc.StorageFormat = storageFormat
-					assoc.ChildDeleteBehavior = &domainmodel.DeleteBehavior{Type: deleteBehavior}
-					if s.Comment != "" {
-						assoc.Documentation = s.Comment
-					}
-					if err := ctx.Backend.UpdateDomainModel(dm); err != nil {
-						return mdlerrors.NewBackend("update association", err)
-					}
-					invalidateHierarchy(ctx)
-					invalidateDomainModelsCache(ctx)
-					ctx.trackModifiedDomainModel(module.ID, module.Name)
-					fmt.Fprintf(ctx.Output, "Modified association: %s\n", s.Name)
-					return nil
+			for _, assocElem := range dm.AssociationsItems() {
+				assoc, ok := assocElem.(*genDm.Association)
+				if !ok || assoc.Name() != s.Name.Name {
+					continue
 				}
+				assoc.SetType(astAssociationTypeStringGen(s))
+				assoc.SetOwner(astAssociationOwnerStringGen(s))
+				assoc.SetStorageFormat(astAssociationStorageStringGen(s))
+				assoc.SetDeleteBehavior(astAssociationDeleteBehaviorGen(s))
+				if doc := associationDocumentation(s); doc != "" {
+					assoc.SetDocumentation(doc)
+				}
+				if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
+					return mdlerrors.NewBackend("update association", err)
+				}
+				invalidateHierarchy(ctx)
+				invalidateDomainModelsCache(ctx)
+				ctx.trackModifiedDomainModel(module.ID, module.Name)
+				fmt.Fprintf(ctx.Output, "Modified association: %s\n", s.Name)
+				return nil
 			}
 		} else {
 			childRef := childModule + "." + s.Child.Name
-			for _, ca := range dm.CrossAssociations {
-				if ca.Name == s.Name.Name {
-					ca.Type = assocType
-					ca.Owner = owner
-					ca.StorageFormat = storageFormat
-					ca.ChildDeleteBehavior = &domainmodel.DeleteBehavior{Type: deleteBehavior}
-					ca.ChildRef = childRef
-					if s.Comment != "" {
-						ca.Documentation = s.Comment
-					}
-					if err := ctx.Backend.UpdateDomainModel(dm); err != nil {
-						return mdlerrors.NewBackend("update cross-module association", err)
-					}
-					invalidateHierarchy(ctx)
-					invalidateDomainModelsCache(ctx)
-					ctx.trackModifiedDomainModel(module.ID, module.Name)
-					fmt.Fprintf(ctx.Output, "Modified association: %s\n", s.Name)
-					return nil
+			for _, crossElem := range dm.CrossAssociationsItems() {
+				ca, ok := crossElem.(*genDm.CrossAssociation)
+				if !ok || ca.Name() != s.Name.Name {
+					continue
 				}
+				ca.SetType(astAssociationTypeStringGen(s))
+				ca.SetOwner(astAssociationOwnerStringGen(s))
+				ca.SetStorageFormat(astAssociationStorageStringGen(s))
+				ca.SetDeleteBehavior(astAssociationDeleteBehaviorGen(s))
+				ca.SetChildQualifiedName(childRef)
+				if doc := associationDocumentation(s); doc != "" {
+					ca.SetDocumentation(doc)
+				}
+				if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
+					return mdlerrors.NewBackend("update cross-module association", err)
+				}
+				invalidateHierarchy(ctx)
+				invalidateDomainModelsCache(ctx)
+				ctx.trackModifiedDomainModel(module.ID, module.Name)
+				fmt.Fprintf(ctx.Output, "Modified association: %s\n", s.Name)
+				return nil
 			}
 		}
 		// Association not found — fall through to create it.
@@ -143,58 +122,54 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 
 	if isCrossModule {
 		if !s.CreateOrModify {
-			for _, ca := range dm.CrossAssociations {
-				if ca.Name == s.Name.Name {
+			for _, crossElem := range dm.CrossAssociationsItems() {
+				ca, ok := crossElem.(*genDm.CrossAssociation)
+				if ok && ca.Name() == s.Name.Name {
 					return mdlerrors.NewAlreadyExists("association", s.Name.String())
 				}
 			}
-			for _, assoc := range dm.Associations {
-				if assoc.Name == s.Name.Name {
+			for _, assocElem := range dm.AssociationsItems() {
+				assoc, ok := assocElem.(*genDm.Association)
+				if ok && assoc.Name() == s.Name.Name {
 					return mdlerrors.NewAlreadyExists("association", s.Name.String())
 				}
 			}
 		}
-		childRef := childModule + "." + s.Child.Name
-		ca := &domainmodel.CrossModuleAssociation{
-			Name:          s.Name.Name,
-			Type:          assocType,
-			Owner:         owner,
-			StorageFormat: storageFormat,
-			ParentID:      parentID,
-			ChildRef:      childRef,
-			ChildDeleteBehavior: &domainmodel.DeleteBehavior{
-				Type: deleteBehavior,
-			},
+		ca := genDm.NewCrossAssociation()
+		ca.SetName(s.Name.Name)
+		ca.SetParentID(parentID)
+		ca.SetChildQualifiedName(childModule + "." + s.Child.Name)
+		ca.SetType(astAssociationTypeStringGen(s))
+		ca.SetOwner(astAssociationOwnerStringGen(s))
+		ca.SetStorageFormat(astAssociationStorageStringGen(s))
+		ca.SetDeleteBehavior(astAssociationDeleteBehaviorGen(s))
+		if doc := associationDocumentation(s); doc != "" {
+			ca.SetDocumentation(doc)
 		}
-		if err := ctx.Backend.CreateCrossAssociation(dm.ID, ca); err != nil {
+		dm.AddCrossAssociations(ca)
+		if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
 			return mdlerrors.NewBackend("create cross-module association", err)
 		}
 	} else {
-		// Check for existing association when not using OR MODIFY.
 		if !s.CreateOrModify {
-			for _, assoc := range dm.Associations {
-				if assoc.Name == s.Name.Name {
+			for _, assocElem := range dm.AssociationsItems() {
+				assoc, ok := assocElem.(*genDm.Association)
+				if ok && assoc.Name() == s.Name.Name {
 					return mdlerrors.NewAlreadyExists("association", s.Name.String())
 				}
 			}
-			for _, ca := range dm.CrossAssociations {
-				if ca.Name == s.Name.Name {
+			for _, crossElem := range dm.CrossAssociationsItems() {
+				ca, ok := crossElem.(*genDm.CrossAssociation)
+				if ok && ca.Name() == s.Name.Name {
 					return mdlerrors.NewAlreadyExists("association", s.Name.String())
 				}
 			}
 		}
-		assoc := &domainmodel.Association{
-			Name:          s.Name.Name,
-			Type:          assocType,
-			Owner:         owner,
-			StorageFormat: storageFormat,
-			ParentID:      parentID,
-			ChildID:       childID,
-			ChildDeleteBehavior: &domainmodel.DeleteBehavior{
-				Type: deleteBehavior,
-			},
+		assoc := astToAssociationGen(s, parentID, childID)
+		if doc := associationDocumentation(s); doc != "" {
+			assoc.SetDocumentation(doc)
 		}
-		if err := ctx.Backend.CreateAssociation(dm.ID, assoc); err != nil {
+		if err := ctx.Backend.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
 			return mdlerrors.NewBackend("create association", err)
 		}
 	}
@@ -214,6 +189,19 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 	ctx.trackModifiedDomainModel(module.ID, module.Name)
 	fmt.Fprintf(ctx.Output, "Created association: %s\n", s.Name)
 	return nil
+}
+
+func associationDocumentation(s *ast.CreateAssociationStmt) string {
+	if s == nil {
+		return ""
+	}
+	if s.Documentation != "" {
+		return s.Documentation
+	}
+	if s.Comment != "" {
+		return s.Comment
+	}
+	return ""
 }
 
 // execAlterAssociation handles ALTER ASSOCIATION statements.

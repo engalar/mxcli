@@ -11,7 +11,9 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
 )
 
 // listContractEntities handles SHOW CONTRACT ENTITIES FROM Module.Service.
@@ -502,15 +504,21 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 	if err != nil {
 		return err
 	}
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
+	if dm == nil {
+		return mdlerrors.NewBackend("get domain model", nil)
+	}
 
 	// Index existing entities by name for upsert
-	existing := make(map[string]*domainmodel.Entity)
-	for _, ent := range dm.Entities {
-		existing[ent.Name] = ent
+	existing := make(map[string]*genDm.Entity)
+	for _, item := range dm.EntitiesItems() {
+		ent, ok := item.(*genDm.Entity)
+		if ok {
+			existing[ent.Name()] = ent
+		}
 	}
 
 	// Build a global type lookup so we can resolve BaseType references across schemas.
@@ -554,7 +562,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 			}
 
 			// Build key parts from the resolved key (root entity in the chain)
-			var keyParts []*domainmodel.RemoteKeyPart
+			var keyParts []*genRest.ODataKeyPart
 			for _, keyName := range keyProps {
 				var keyProp *types.EdmProperty
 				for _, p := range mergedProps {
@@ -566,12 +574,13 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 				if keyProp == nil {
 					continue
 				}
-				keyParts = append(keyParts, &domainmodel.RemoteKeyPart{
-					Name:       attrNameForOData(keyName, et.Name),
-					RemoteName: keyName,
-					RemoteType: keyProp.Type,
-					Type:       edmToDomainModelAttrType(keyProp, true),
-				})
+				keyPart := genRest.NewODataKeyPart()
+				keyPart.SetName(keyName)
+				keyPart.SetEntityKeyPartName(attrNameForOData(keyName, et.Name))
+				keyPart.SetRemoteType(keyProp.Type)
+				keyPart.SetFilterable(true)
+				keyPart.SetType(edmToAttributeTypeGen(keyProp, true))
+				keyParts = append(keyParts, keyPart)
 			}
 
 			// Default Creatable / Updatable for attributes. For top-level
@@ -606,7 +615,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 			}
 
 			// Build attributes from merged properties
-			var attrs []*domainmodel.Attribute
+			var attrs []*genDm.Attribute
 			for _, p := range mergedProps {
 				// Drop collection-of-primitive — handled separately as primitive
 				// collection NPEs (not yet implemented).
@@ -634,17 +643,18 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 				}
 
 				attrName := attrNameForOData(p.Name, et.Name)
-				attr := &domainmodel.Attribute{
-					Name:       attrName,
-					Type:       edmToDomainModelAttrType(p, keyPropSet[p.Name]),
-					RemoteName: p.Name,
-					RemoteType: p.Type,
-					Filterable: true,
-					Sortable:   true,
-					Creatable:  creatable,
-					Updatable:  updatable,
-				}
-				attr.ID = model.ID(types.GenerateID())
+				attr := genDm.NewAttribute()
+				attr.SetID(element.ID(types.GenerateID()))
+				attr.SetName(attrName)
+				attr.SetType(edmToAttributeTypeGen(p, keyPropSet[p.Name]))
+				mapped := genRest.NewODataMappedValue()
+				mapped.SetRemoteName(p.Name)
+				mapped.SetRemoteType(p.Type)
+				mapped.SetFilterable(true)
+				mapped.SetSortable(true)
+				mapped.SetCreatable(creatable)
+				mapped.SetUpdatable(updatable)
+				attr.SetValue(mapped)
 				attrs = append(attrs, attr)
 			}
 
@@ -655,7 +665,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 					continue
 				}
 				applyExternalEntityFields(existingEntity, et, isTopLevel, serviceRef, entitySet, keyParts, attrs)
-				if err := ctx.Backend.UpdateEntity(dm.ID, existingEntity); err != nil {
+				if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), existingEntity); err != nil {
 					fmt.Fprintf(ctx.Output, "  FAILED: %s.%s — %v\n", targetModule, mendixName, err)
 					failed++
 					continue
@@ -664,14 +674,12 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 				continue
 			}
 
-			location := model.Point{X: 100 + (created+updated)*150, Y: 100}
-			newEntity := &domainmodel.Entity{
-				Name:     mendixName,
-				Location: location,
-			}
-			newEntity.ID = model.ID(types.GenerateID())
+			newEntity := genDm.NewEntity()
+			newEntity.SetID(element.ID(types.GenerateID()))
+			newEntity.SetName(mendixName)
+			newEntity.SetLocation(fmt.Sprintf("%d,%d", 100+(created+updated)*150, 100))
 			applyExternalEntityFields(newEntity, et, isTopLevel, serviceRef, entitySet, keyParts, attrs)
-			if err := ctx.Backend.CreateEntity(dm.ID, newEntity); err != nil {
+			if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), newEntity); err != nil {
 				fmt.Fprintf(ctx.Output, "  FAILED: %s.%s — %v\n", targetModule, mendixName, err)
 				failed++
 				continue
@@ -683,7 +691,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 	// Second pass: create primitive-collection NPEs (e.g. TripTag for
 	// Trip.Tags = Collection(Edm.String)) and the association from the
 	// parent entity to each NPE.
-	dm, err = ctx.Backend.GetDomainModel(module.ID)
+	dm, err = ctx.Backend.GetDomainModelGen(module.ID)
 	if err == nil {
 		npesCreated := createPrimitiveCollectionNPEs(ctx, dm, doc, typeByQualified, esMap, serviceRef)
 		if npesCreated > 0 {
@@ -694,7 +702,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 	// Third pass: walk navigation properties and create associations between
 	// the entities we just created. Re-read the domain model so the NPEs
 	// from the previous pass are visible.
-	dm, err = ctx.Backend.GetDomainModel(module.ID)
+	dm, err = ctx.Backend.GetDomainModelGen(module.ID)
 	if err == nil {
 		assocsCreated := createNavigationAssociations(ctx, dm, doc, typeByQualified, esMap, serviceRef)
 		if assocsCreated > 0 {
@@ -721,21 +729,22 @@ type assocKey struct {
 // TripTag NPE and a Trip_TripTag ReferenceSet.
 func createPrimitiveCollectionNPEs(
 	ctx *ExecContext,
-	dm *domainmodel.DomainModel,
+	dm *genDm.DomainModel,
 	doc *types.EdmxDocument,
 	typeByQualified map[string]*types.EdmEntityType,
 	esMap map[string]string,
 	serviceRef string,
 ) int {
 	// Lookup parent Mendix entity by EDMX type qualified name.
-	parentByQN := make(map[string]*domainmodel.Entity)
+	parentByQN := make(map[string]*genDm.Entity)
 	for qn, et := range typeByQualified {
 		mendixName := et.Name
 		if es := esMap[qn]; es != "" {
 			mendixName = es
 		}
-		for _, ent := range dm.Entities {
-			if ent.Name == mendixName {
+		for _, item := range dm.EntitiesItems() {
+			ent, ok := item.(*genDm.Entity)
+			if ok && ent.Name() == mendixName {
 				parentByQN[qn] = ent
 				break
 			}
@@ -755,7 +764,7 @@ func createPrimitiveCollectionNPEs(
 			// Mendix forbids associations from a persistable to a non-
 			// persistable entity (CE0001), so a top-level entity-set entity
 			// can't own an NPE child.
-			if parentEnt.Persistable {
+			if entityIsPersistable(parentEnt) {
 				continue
 			}
 
@@ -773,7 +782,7 @@ func createPrimitiveCollectionNPEs(
 					continue
 				}
 
-				npeName := parentEnt.Name + singular(p.Name)
+				npeName := parentEnt.Name() + singular(p.Name)
 
 				// Skip if NPE already exists (idempotent re-runs)
 				if findEntityByName(dm, npeName) != nil {
@@ -789,26 +798,29 @@ func createPrimitiveCollectionNPEs(
 					Scale:     p.Scale,
 				}
 
-				attr := &domainmodel.Attribute{
-					Name:                  singular(p.Name),
-					Type:                  edmToDomainModelAttrType(innerProp, false),
-					RemoteName:            p.Name,
-					RemoteType:            primitiveCollectionRemoteType(innerType, p.Nullable),
-					IsPrimitiveCollection: true,
-				}
-				attr.ID = model.ID(types.GenerateID())
+				attr := genDm.NewAttribute()
+				attr.SetID(element.ID(types.GenerateID()))
+				attr.SetName(singular(p.Name))
+				attr.SetType(edmToAttributeTypeGen(innerProp, false))
+				mapped := genRest.NewODataMappedPrimitiveCollectionValue()
+				mapped.SetRemoteName(p.Name)
+				mapped.SetRemoteType(primitiveCollectionRemoteType(innerType, p.Nullable))
+				attr.SetValue(mapped)
 
-				npe := &domainmodel.Entity{
-					Name:              npeName,
-					Persistable:       false,
-					Location:          model.Point{X: parentEnt.Location.X + 200, Y: parentEnt.Location.Y + 100},
-					Attributes:        []*domainmodel.Attribute{attr},
-					Source:            "Rest$ODataPrimitiveCollectionEntitySource",
-					RemoteServiceName: serviceRef,
-				}
-				npe.ID = model.ID(types.GenerateID())
+				loc := entityLocation(parentEnt)
+				npe := genDm.NewEntity()
+				npe.SetID(element.ID(types.GenerateID()))
+				npe.SetName(npeName)
+				npe.SetLocation(fmt.Sprintf("%d,%d", loc.X+200, loc.Y+100))
+				noGen := genDm.NewNoGeneralization()
+				noGen.SetPersistable(false)
+				npe.SetGeneralization(noGen)
+				src := genRest.NewODataPrimitiveCollectionEntitySource()
+				src.SetSourceDocumentQualifiedName(serviceRef)
+				npe.SetSource(src)
+				npe.AddAttributes(attr)
 
-				if err := ctx.Backend.CreateEntity(dm.ID, npe); err != nil {
+				if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), npe); err != nil {
 					fmt.Fprintf(ctx.Output, "  NPE FAILED: %s — %v\n", npeName, err)
 					continue
 				}
@@ -818,18 +830,17 @@ func createPrimitiveCollectionNPEs(
 				// Studio Pro names this <ParentEntityName>_<NPEName> and uses
 				// Rest$ODataPrimitiveCollectionAssociationSource (a marker
 				// type with no fields, paired with the NPE's source type).
-				assocName := parentEnt.Name + "_" + npeName
-				assoc := &domainmodel.Association{
-					Name:          assocName,
-					ParentID:      parentEnt.ID,
-					ChildID:       npe.ID,
-					Type:          domainmodel.AssociationTypeReferenceSet,
-					Owner:         domainmodel.AssociationOwnerDefault,
-					StorageFormat: domainmodel.StorageFormatColumn,
-					Source:        "Rest$ODataPrimitiveCollectionAssociationSource",
-				}
-				assoc.ID = model.ID(types.GenerateID())
-				if err := ctx.Backend.CreateAssociation(dm.ID, assoc); err != nil {
+				assocName := parentEnt.Name() + "_" + npeName
+				assoc := genDm.NewAssociation()
+				assoc.SetID(element.ID(types.GenerateID()))
+				assoc.SetName(assocName)
+				assoc.SetParentID(parentEnt.ID())
+				assoc.SetChildID(npe.ID())
+				assoc.SetType(genDm.AssociationTypeReferenceSet)
+				assoc.SetOwner(string(genDm.AssociationOwnerDefault))
+				assoc.SetStorageFormat(string(genDm.AssociationStorageColumn))
+				assoc.SetSource(genRest.NewODataPrimitiveCollectionAssociationSource())
+				if err := ctx.Backend.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
 					fmt.Fprintf(ctx.Output, "  NPE ASSOC FAILED: %s — %v\n", assocName, err)
 				}
 			}
@@ -850,9 +861,10 @@ func isInheritedProperty(et *types.EdmEntityType, propName string, byQN map[stri
 }
 
 // findEntityByName returns a domain model entity by name, or nil if not found.
-func findEntityByName(dm *domainmodel.DomainModel, name string) *domainmodel.Entity {
-	for _, ent := range dm.Entities {
-		if ent.Name == name {
+func findEntityByName(dm *genDm.DomainModel, name string) *genDm.Entity {
+	for _, item := range dm.EntitiesItems() {
+		ent, ok := item.(*genDm.Entity)
+		if ok && ent.Name() == name {
 			return ent
 		}
 	}
@@ -904,7 +916,7 @@ func singular(name string) string {
 // annotations.
 func createNavigationAssociations(
 	ctx *ExecContext,
-	dm *domainmodel.DomainModel,
+	dm *genDm.DomainModel,
 	doc *types.EdmxDocument,
 	typeByQualified map[string]*types.EdmEntityType,
 	esMap map[string]string,
@@ -936,15 +948,16 @@ func createNavigationAssociations(
 	// Build a lookup from EDMX type qualified name → existing Mendix entity.
 	// An entity type matches by its EntitySet name when present, otherwise by
 	// its bare type name.
-	mendixByType := make(map[string]*domainmodel.Entity)
+	mendixByType := make(map[string]*genDm.Entity)
 	for qn, et := range typeByQualified {
 		entitySetName := esMap[qn]
 		mendixName := et.Name
 		if entitySetName != "" {
 			mendixName = entitySetName
 		}
-		for _, ent := range dm.Entities {
-			if ent.Name == mendixName {
+		for _, item := range dm.EntitiesItems() {
+			ent, ok := item.(*genDm.Entity)
+			if ok && ent.Name() == mendixName {
 				mendixByType[qn] = ent
 				break
 			}
@@ -954,11 +967,15 @@ func createNavigationAssociations(
 	// Track associations we've already created to avoid duplicates from
 	// inherited nav properties.
 	existingAssocs := make(map[assocKey]bool)
-	for _, a := range dm.Associations {
-		// Find parent entity name for this association
-		for _, ent := range dm.Entities {
-			if ent.ID == a.ParentID {
-				existingAssocs[assocKey{ent.Name, a.Name}] = true
+	for _, item := range dm.AssociationsItems() {
+		a, ok := item.(*genDm.Association)
+		if !ok {
+			continue
+		}
+		for _, entItem := range dm.EntitiesItems() {
+			ent, ok := entItem.(*genDm.Entity)
+			if ok && ent.ID() == a.ParentRefID() {
+				existingAssocs[assocKey{ent.Name(), a.Name()}] = true
 				break
 			}
 		}
@@ -998,7 +1015,7 @@ func createNavigationAssociations(
 				// non-persistable entity (CE0001). Skip these for now —
 				// Studio Pro doesn't create them either when the target is
 				// stored as Rest$ODataEntityTypeSource (Persistable=false).
-				if parentEnt.Persistable && !childEnt.Persistable {
+				if entityIsPersistable(parentEnt) && !entityIsPersistable(childEnt) {
 					continue
 				}
 
@@ -1008,9 +1025,9 @@ func createNavigationAssociations(
 				// a numeric suffix.
 				assocName := uniqueAssocName(np.Name, dm, existingAssocs)
 
-				assocType := domainmodel.AssociationTypeReference
+				assocType := genDm.AssociationTypeReference
 				if isMany {
-					assocType = domainmodel.AssociationTypeReferenceSet
+					assocType = genDm.AssociationTypeReferenceSet
 				}
 
 				// Per-association capability defaults. For a top-level FROM
@@ -1037,26 +1054,26 @@ func createNavigationAssociations(
 					}
 				}
 
-				assoc := &domainmodel.Association{
-					Name:                           assocName,
-					ParentID:                       parentEnt.ID,
-					ChildID:                        childEnt.ID,
-					Type:                           assocType,
-					Owner:                          domainmodel.AssociationOwnerDefault,
-					StorageFormat:                  domainmodel.StorageFormatColumn,
-					Source:                         "Rest$ODataRemoteAssociationSource",
-					RemoteParentNavigationProperty: np.Name,
-					Navigability2:                  "ParentToChild",
-					CreatableFromParent:            creatable,
-					UpdatableFromParent:            updatable,
-				}
-				assoc.ID = model.ID(types.GenerateID())
+				assoc := genDm.NewAssociation()
+				assoc.SetID(element.ID(types.GenerateID()))
+				assoc.SetName(assocName)
+				assoc.SetParentID(parentEnt.ID())
+				assoc.SetChildID(childEnt.ID())
+				assoc.SetType(string(assocType))
+				assoc.SetOwner(string(genDm.AssociationOwnerDefault))
+				assoc.SetStorageFormat(string(genDm.AssociationStorageColumn))
+				src := genRest.NewODataRemoteAssociationSource()
+				src.SetRemoteParentNavigationProperty(np.Name)
+				src.SetNavigability2("ParentToChild")
+				src.SetCreatableFromParent(creatable)
+				src.SetUpdatableFromParent(updatable)
+				assoc.SetSource(src)
 
-				if err := ctx.Backend.CreateAssociation(dm.ID, assoc); err != nil {
-					fmt.Fprintf(ctx.Output, "  ASSOC FAILED: %s.%s — %v\n", parentEnt.Name, assocName, err)
+				if err := ctx.Backend.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
+					fmt.Fprintf(ctx.Output, "  ASSOC FAILED: %s.%s — %v\n", parentEnt.Name(), assocName, err)
 					continue
 				}
-				existingAssocs[assocKey{parentEnt.Name, assocName}] = true
+				existingAssocs[assocKey{parentEnt.Name(), assocName}] = true
 				count++
 			}
 		}
@@ -1067,10 +1084,11 @@ func createNavigationAssociations(
 // uniqueAssocName returns a Mendix-safe association name for an OData nav
 // property. If the requested name collides with an existing entity name OR an
 // already-created association name, append a numeric suffix.
-func uniqueAssocName(base string, dm *domainmodel.DomainModel, existingAssocs map[assocKey]bool) string {
+func uniqueAssocName(base string, dm *genDm.DomainModel, existingAssocs map[assocKey]bool) string {
 	collides := func(name string) bool {
-		for _, ent := range dm.Entities {
-			if ent.Name == name {
+		for _, item := range dm.EntitiesItems() {
+			ent, ok := item.(*genDm.Entity)
+			if ok && ent.Name() == name {
 				return true
 			}
 		}
@@ -1104,53 +1122,108 @@ func uniqueAssocName(base string, dm *domainmodel.DomainModel, existingAssocs ma
 // (InsertRestrictions/UpdateRestrictions/DeleteRestrictions) override the
 // optimistic defaults.
 func applyExternalEntityFields(
-	ent *domainmodel.Entity,
+	ent *genDm.Entity,
 	et *types.EdmEntityType,
 	isTopLevel bool,
 	serviceRef string,
 	entitySet *types.EdmEntitySet,
-	keyParts []*domainmodel.RemoteKeyPart,
-	attrs []*domainmodel.Attribute,
+	keyParts []*genRest.ODataKeyPart,
+	attrs []*genDm.Attribute,
 ) {
-	ent.RemoteServiceName = serviceRef
-	ent.RemoteEntityName = et.Name
-	ent.RemoteKeyParts = keyParts
-	ent.Attributes = attrs
+	replaceContractEntityAttributes(ent, attrs)
+	noGen, ok := ent.Generalization().(*genDm.NoGeneralization)
+	if !ok || noGen == nil {
+		noGen = genDm.NewNoGeneralization()
+		ent.SetGeneralization(noGen)
+	}
 
 	if isTopLevel {
-		ent.Source = "Rest$ODataRemoteEntitySource"
-		ent.Persistable = true
-		ent.RemoteEntitySet = entitySet.Name
-		ent.Countable = true
+		noGen.SetPersistable(true)
+		src := genRest.NewODataRemoteEntitySource()
+		src.SetSourceDocumentQualifiedName(serviceRef)
+		src.SetRemoteName(et.Name)
+		src.SetEntityTypeName(et.Name)
+		src.SetEntitySet(entitySet.Name)
+		src.SetCountable(true)
 		// Capabilities default to false when the entity set's Capabilities
 		// annotations are absent. Silent metadata means the service doesn't
 		// advertise write support, so Mendix treats it as read-only — this
 		// matches Studio Pro's behaviour and mxbuild's validation rules.
 		// Rest$ODataRemoteEntitySource has no Updatable field; updatability
 		// is expressed per attribute via Rest$ODataMappedValue.
-		ent.Creatable = entitySet.Insertable != nil && *entitySet.Insertable
-		ent.Deletable = entitySet.Deletable != nil && *entitySet.Deletable
-		ent.Updatable = false
-		ent.SkipSupported = true
-		ent.TopSupported = true
-		ent.CreateChangeLocally = false
+		src.SetCreatable(entitySet.Insertable != nil && *entitySet.Insertable)
+		src.SetDeletable(entitySet.Deletable != nil && *entitySet.Deletable)
+		src.SetSkipSupported(true)
+		src.SetTopSupported(true)
+		src.SetCreateChangeLocally(false)
+		if len(keyParts) > 0 {
+			key := genRest.NewODataKey()
+			for _, part := range keyParts {
+				if part != nil {
+					key.AddParts(part)
+				}
+			}
+			src.SetKey(key)
+		}
+		ent.SetSource(src)
 		return
 	}
 
 	// Derived / abstract / contained-target entity (no entity set)
-	ent.Source = "Rest$ODataEntityTypeSource"
-	ent.Persistable = false
-	ent.IsOpen = et.IsOpen
-	ent.RemoteEntitySet = ""
-	// CRUD/skip/top fields are not used for entity-type sources; clear them
-	// in case we're updating an existing entity that previously had them.
-	ent.Countable = false
-	ent.Creatable = false
-	ent.Deletable = false
-	ent.Updatable = false
-	ent.SkipSupported = false
-	ent.TopSupported = false
-	ent.CreateChangeLocally = false
+	noGen.SetPersistable(false)
+	src := genRest.NewODataEntityTypeSource()
+	src.SetSourceDocumentQualifiedName(serviceRef)
+	src.SetEntityTypeName(et.Name)
+	src.SetIsOpen(et.IsOpen)
+	if len(keyParts) > 0 {
+		key := genRest.NewODataKey()
+		for _, part := range keyParts {
+			if part != nil {
+				key.AddParts(part)
+			}
+		}
+		src.SetKey(key)
+	}
+	ent.SetSource(src)
+}
+
+func replaceContractEntityAttributes(ent *genDm.Entity, attrs []*genDm.Attribute) {
+	if ent == nil {
+		return
+	}
+	for i := len(ent.AttributesItems()) - 1; i >= 0; i-- {
+		ent.RemoveAttributes(i)
+	}
+	for _, attr := range attrs {
+		if attr != nil {
+			ent.AddAttributes(attr)
+		}
+	}
+}
+
+func entityIsPersistable(ent *genDm.Entity) bool {
+	if ent == nil {
+		return false
+	}
+	noGen, ok := ent.Generalization().(*genDm.NoGeneralization)
+	if !ok || noGen == nil {
+		return false
+	}
+	return noGen.Persistable()
+}
+
+func entityLocation(ent *genDm.Entity) model.Point {
+	if ent == nil {
+		return model.Point{}
+	}
+	parts := strings.Split(ent.Location(), ",")
+	if len(parts) != 2 {
+		return model.Point{}
+	}
+	var p model.Point
+	fmt.Sscanf(strings.TrimSpace(parts[0]), "%d", &p.X)
+	fmt.Sscanf(strings.TrimSpace(parts[1]), "%d", &p.Y)
+	return p
 }
 
 // mergedPropertiesWithKey walks the BaseType chain of an entity type and
@@ -1199,7 +1272,7 @@ func attrNameForOData(propName, entityName string) string {
 // edmToDomainModelAttrType converts an EDM property to a domainmodel attribute type.
 // isKey forces a non-zero length for string keys: Mendix forbids unlimited
 // strings as part of an external entity key (CE6121).
-func edmToDomainModelAttrType(p *types.EdmProperty, isKey bool) domainmodel.AttributeType {
+func edmToAttributeTypeGen(p *types.EdmProperty, isKey bool) element.Element {
 	switch p.Type {
 	case "Edm.String":
 		// Studio Pro stores Length=0 (unlimited) for OData strings without MaxLength.
@@ -1210,23 +1283,29 @@ func edmToDomainModelAttrType(p *types.EdmProperty, isKey bool) domainmodel.Attr
 		if isKey && length == 0 {
 			length = 100 // Mendix requires bounded length for key attributes
 		}
-		return &domainmodel.StringAttributeType{Length: length}
+		t := genDm.NewStringAttributeType()
+		t.SetLength(int32(length))
+		return t
 	case "Edm.Int32", "Edm.Int16", "Edm.Byte", "Edm.SByte":
-		return &domainmodel.IntegerAttributeType{}
+		return genDm.NewIntegerAttributeType()
 	case "Edm.Int64":
-		return &domainmodel.LongAttributeType{}
+		return genDm.NewLongAttributeType()
 	case "Edm.Decimal", "Edm.Double", "Edm.Single":
-		return &domainmodel.DecimalAttributeType{}
+		return genDm.NewDecimalAttributeType()
 	case "Edm.Boolean":
-		return &domainmodel.BooleanAttributeType{}
+		return genDm.NewBooleanAttributeType()
 	case "Edm.DateTime", "Edm.DateTimeOffset", "Edm.Date":
-		return &domainmodel.DateTimeAttributeType{}
+		return genDm.NewDateTimeAttributeType()
 	case "Edm.Guid":
-		return &domainmodel.StringAttributeType{Length: 36}
+		t := genDm.NewStringAttributeType()
+		t.SetLength(36)
+		return t
 	case "Edm.Binary":
-		return &domainmodel.BinaryAttributeType{}
+		return genDm.NewBinaryAttributeType()
 	default:
-		return &domainmodel.StringAttributeType{Length: 0}
+		t := genDm.NewStringAttributeType()
+		t.SetLength(0)
+		return t
 	}
 }
 

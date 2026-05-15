@@ -31,6 +31,67 @@
 - D8.entity CreateEntityGen + UpdateEntityGen via gen→sdk bridge
 - D9.drop DropEntity dispatcher cuts to execDropEntityGen
 
+**Progress update (2026-05-15, later):**
+- Phase 1 is complete:
+  - C9 landed: `executorCache.domainModelsGen` plus `cachedDomainModelsGen` / invalidation helpers.
+  - C7 landed: pages-builder reads moved to gen cache path (`cmd_pages_builder.go` and related callers), unblocking pages R9.
+- Catalog read-path migration is complete:
+  - `mdl/catalog/builder.go`
+  - `mdl/catalog/builder_modules.go`
+  - `mdl/catalog/builder_associations.go`
+  - `mdl/catalog/builder_permissions.go`
+  - `mdl/catalog/builder_external.go`
+  - `mdl/catalog/builder_source.go`
+  - `mdl/catalog/builder_xpath.go`
+  - `mdl/catalog/builder_references.go`
+  - `mdl/catalog/builder_permissions_test.go`
+- Additional executor read-side migrations landed:
+  - `mdl/executor/executor.go`
+  - `mdl/executor/autocomplete.go`
+  - `mdl/executor/helpers.go` (partial; legacy `findEntity` still remains for legacy callers)
+  - `mdl/executor/cmd_catalog.go`
+  - `mdl/executor/cmd_diff_local.go`
+  - `mdl/executor/cmd_pages_builder.go`
+  - `mdl/executor/microflow_format_helpers.go`
+  - `mdl/executor/cmd_security_write_demouser_gen.go`
+- Rename command migration is complete:
+  - `mdl/executor/cmd_rename.go`
+  - `mdl/executor/cmd_rename_mock_test.go`
+- Association command migration is partial:
+  - migrated: ALTER / DROP / SHOW-LIST-DESCRIBE paths and reconcile-after-create refresh
+  - remaining: `execCreateAssociation` still uses legacy sdk/domainmodel structs for the create / modify bridge
+- Security write migration progressed:
+  - `mdl/executor/cmd_security_write_update_gen.go`
+  - `mdl/executor/cmd_security_write_modulerole_gen.go`
+  - `mdl/executor/cmd_create_association_gen.go`
+  - `mdl/executor/cmd_security_write_entity_gen.go`
+- Import-mapping attribute type resolution now reads gen domain models:
+  - `mdl/executor/cmd_import_mappings.go`
+- Test fixtures progressed:
+  - `mdl/executor/cmd_security_mock_test.go` updated for gen domain-model reads
+  - `mdl/executor/cmd_write_handlers_mock_test.go` updated for association path changes
+- Current verification status:
+  - `~/go1.26/bin/go test ./mdl/catalog/...` passing
+  - `~/go1.26/bin/go test ./mdl/executor/... -count=1 -timeout 120s` passing
+  - `~/go1.26/bin/go build ./...` passing
+
+**Current focus / remaining highest-signal work:**
+- `mdl/executor/cmd_entities.go`
+- `mdl/executor/cmd_associations.go` (`execCreateAssociation`)
+- `mdl/executor/cmd_odata.go`
+- `mdl/executor/cmd_contract.go`
+- `mdl/executor/cmd_move.go`
+- backend bridge retirement:
+  - `mdl/backend/domainmodel.go`
+  - `mdl/backend/mpr/backend.go`
+  - `mdl/backend/mock/backend.go`
+  - `mdl/backend/mock/mock_domainmodel.go`
+  - `mdl/backend/mpr/domainmodel_modelsdk.go`
+  - `mdl/backend/mpr/domainmodel_modelsdk_gen.go`
+  - `mdl/backend/mpr/modules_modelsdk.go`
+  - `mdl/backend/mpr/delete_move_modelsdk.go`
+  - `mdl/backend/mpr/mf_page_modelsdk.go`
+
 **Remaining 48 importers split into 6 categories**:
 
 | Category | Importers | Files |
@@ -55,7 +116,7 @@
 - Modify: `mdl/executor/executor.go` (executorCache.domainModels field type)
 - Modify: `mdl/executor/helpers.go` (any executorCache.domainModels accessor)
 
-- [ ] **Step 1.1.1: Inspect current cache field**
+- [x] **Step 1.1.1: Inspect current cache field**
 
 ```bash
 grep -n "domainModels\s*\[\]" mdl/executor/executor.go | head -5
@@ -64,7 +125,7 @@ grep -n "ctx.Cache.domainModels" mdl/executor/*.go | head -10
 
 Expected: `domainModels []*domainmodel.DomainModel` field + 5-10 callers.
 
-- [ ] **Step 1.1.2: Add gen sibling field**
+- [x] **Step 1.1.2: Add gen sibling field**
 
 In `mdl/executor/executor.go::executorCache` struct:
 
@@ -80,7 +141,7 @@ type executorCache struct {
 
 (Don't delete legacy field yet — Phase 2 consumer migration switches callers, then Phase E retires the field.)
 
-- [ ] **Step 1.1.3: Add cache helper**
+- [x] **Step 1.1.3: Add cache helper**
 
 In `mdl/executor/helpers_domainmodels_gen.go` (likely already exists per prior C2 work):
 
@@ -104,14 +165,14 @@ func invalidateDomainModelsGenCache(ctx *ExecContext) {
 }
 ```
 
-- [ ] **Step 1.1.4: Build + test**
+- [x] **Step 1.1.4: Build + test**
 
 ```bash
 GOPROXY=https://mirrors.aliyun.com/goproxy/,direct ~/go1.26/bin/go build ./...
 GOPROXY=https://mirrors.aliyun.com/goproxy/,direct ~/go1.26/bin/go test ./mdl/executor/ -count=1 -timeout 60s
 ```
 
-- [ ] **Step 1.1.5: Commit**
+- [x] **Step 1.1.5: Commit**
 
 ```bash
 git add mdl/executor/executor.go mdl/executor/helpers_domainmodels_gen.go
@@ -138,9 +199,9 @@ EOF
 
 This is THE unblock for the parallel pages plan Phase 2. After this commit lands, the pages teammate can resume cmd_pages_builder family migration.
 
-- [ ] **Step 1.2.1-N**: Migrate per file. Use `cachedDomainModelsGen(ctx)`.
+- [x] **Step 1.2.1-N**: Migrate per file. Use `cachedDomainModelsGen(ctx)`.
 
-- [ ] **Step 1.2.final: Commit `feat(executor): Stage 3.3.4.C7 — pages-builder reads on gen DomainModel (R9 unblock)`**
+- [x] **Step 1.2.final: Commit `feat(executor): Stage 3.3.4.C7 — pages-builder reads on gen DomainModel (R9 unblock)`**
 
 ---
 
@@ -150,10 +211,13 @@ Per file commit. Each migration drops 1 sdk/domainmodel importer. Use `cachedDom
 
 ### Task 2.1: cmd_modules.go (1 commit)
 ### Task 2.2: cmd_entities.go + cmd_entities_describe.go + cmd_entities_access.go (3 commits, separate per file)
+Status: `cmd_entities_describe.go` / gen describe-side work is already landed elsewhere; `cmd_entities.go` remains the main legacy-heavy executor file.
 ### Task 2.3: cmd_associations.go (1 commit)
+Status: partially complete; create / modify bridge remains.
 ### Task 2.4: cmd_domainmodel_elk.go + cmd_mermaid.go (2 commits — or bundled if small)
 ### Task 2.5: cmd_move.go + cmd_diff_mdl.go (2 commits)
 ### Task 2.6: cmd_odata.go + cmd_contract.go + cmd_import.go (3 commits)
+Status: `cmd_import_mappings.go` read-path helper updated; `cmd_odata.go` and `cmd_contract.go` still remain.
 ### Task 2.7: cmd_security_gen.go (1 commit)
 ### Task 2.8: cmd_structure.go + cmd_structure_gen.go (2 commits)
 ### Task 2.9: oql_type_inference.go + flowbuilder_assoc_lookup_gen.go + flowbuilder_actions_retrieve_gen.go (3 commits — or bundled)
@@ -173,8 +237,11 @@ For each file, the pattern is:
 ## §4 Phase 3 — Cat-C Catalog Migration (4 importers, ~3hr)
 
 ### Task 3.1: catalog/builder.go (1 commit)
+Status: complete.
 ### Task 3.2: catalog/builder_modules.go (1 commit)
+Status: complete.
 ### Task 3.3: catalog/builder_permissions.go + builder_permissions_test.go (1 commit)
+Status: complete.
 
 Pattern same as Phase 2.
 
@@ -225,7 +292,7 @@ Per workflows E0 commit `60890815` pattern. Bundled OR per-file.
 - [ ] cmd_modules_mock_test.go — 1 commit
 - [ ] cmd_entities_mock_test.go + cmd_associations_mock_test.go — 1-2 commits
 - [ ] cmd_mermaid_mock_test.go + cmd_odata_mock_test.go — 1 commit (small)
-- [ ] cmd_rename_mock_test.go + cmd_security_mock_test.go + cmd_write_handlers_mock_test.go — 1-2 commits
+- [x] cmd_rename_mock_test.go + cmd_security_mock_test.go + cmd_write_handlers_mock_test.go — 1-2 commits
 - [ ] validate_duplicates_test.go — 1 commit
 - [ ] mpr/domainmodel_modelsdk_test.go (gen path test) — 1 commit
 - [ ] mpr/security_entity_access_gen_test.go — 1 commit

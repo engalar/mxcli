@@ -9,7 +9,9 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
 )
 
 func TestShowODataClients_Mock(t *testing.T) {
@@ -208,14 +210,15 @@ func TestDescribeODataService_NotFound(t *testing.T) {
 func TestCreateExternalEntity_RejectsNonExistentClient(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	dm := &domainmodel.DomainModel{BaseElement: model.BaseElement{ID: nextID("dm")}, ContainerID: mod.ID}
+	dm := mkDomainModelGen(mod.ID)
+	dm.SetID(element.ID(nextID("dm")))
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
 		},
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) {
 			return dm, nil
 		},
 		ListConsumedODataServicesFunc: func() ([]*model.ConsumedODataService, error) {
@@ -243,21 +246,22 @@ func TestCreateExternalEntity_AcceptsExistingClient(t *testing.T) {
 		Name:        "ProductsClient",
 	}
 	withContainer(h, svc.ContainerID, mod.ID)
-	dm := &domainmodel.DomainModel{BaseElement: model.BaseElement{ID: nextID("dm")}, ContainerID: mod.ID}
+	dm := mkDomainModelGen(mod.ID)
+	dm.SetID(element.ID(nextID("dm")))
 
-	var created *domainmodel.Entity
+	var created *genDm.Entity
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
 		},
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) {
 			return dm, nil
 		},
 		ListConsumedODataServicesFunc: func() ([]*model.ConsumedODataService, error) {
 			return []*model.ConsumedODataService{svc}, nil
 		},
-		CreateEntityFunc: func(dmID model.ID, entity *domainmodel.Entity) error {
+		CreateEntityGenFunc: func(dmID model.ID, entity *genDm.Entity) error {
 			created = entity
 			return nil
 		},
@@ -286,21 +290,22 @@ func TestCreateExternalEntity_AllowCreateChangeLocally_Issue534(t *testing.T) {
 		Name:        "TripPinClient",
 	}
 	withContainer(h, svc.ContainerID, mod.ID)
-	dm := &domainmodel.DomainModel{BaseElement: model.BaseElement{ID: nextID("dm")}, ContainerID: mod.ID}
+	dm := mkDomainModelGen(mod.ID)
+	dm.SetID(element.ID(nextID("dm")))
 
-	var created *domainmodel.Entity
+	var created *genDm.Entity
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
 		},
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) {
 			return dm, nil
 		},
 		ListConsumedODataServicesFunc: func() ([]*model.ConsumedODataService, error) {
 			return []*model.ConsumedODataService{svc}, nil
 		},
-		CreateEntityFunc: func(dmID model.ID, entity *domainmodel.Entity) error {
+		CreateEntityGenFunc: func(dmID model.ID, entity *genDm.Entity) error {
 			created = entity
 			return nil
 		},
@@ -317,7 +322,8 @@ func TestCreateExternalEntity_AllowCreateChangeLocally_Issue534(t *testing.T) {
 	if created == nil {
 		t.Fatal("expected CreateEntity to be called")
 	}
-	if !created.CreateChangeLocally {
+	src, _ := created.Source().(*genRest.ODataRemoteEntitySource)
+	if src == nil || !src.CreateChangeLocally() {
 		t.Errorf("expected CreateChangeLocally = true, got false")
 	}
 }

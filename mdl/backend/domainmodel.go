@@ -27,6 +27,7 @@ type DomainModelBackend interface {
 	// to *ViaModelsdk write helpers (Stage 4 will retire the bridge).
 	CreateEntityGen(domainModelID model.ID, entity *genDm.Entity) error
 	UpdateEntityGen(domainModelID model.ID, entity *genDm.Entity) error
+	MoveEntityGen(entity *genDm.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error)
 	CreateAssociationGen(domainModelID model.ID, assoc *genDm.Association) error
 
 	// Entities
