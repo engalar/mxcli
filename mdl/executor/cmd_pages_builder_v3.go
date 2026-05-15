@@ -5,14 +5,16 @@ package executor
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
 
 // ============================================================================
@@ -20,7 +22,7 @@ import (
 // ============================================================================
 
 // buildPageV3 creates a Page from a CreatePageStmtV3.
-func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error) {
+func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*backend.Page, error) {
 	// Resolve folder if specified
 	containerID := pb.moduleID
 	if s.Folder != "" {
@@ -31,7 +33,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 		containerID = folderID
 	}
 
-	page := &pages.Page{
+	page := &backend.Page{
 		BaseElement: model.BaseElement{
 			ID:       model.ID(types.GenerateID()),
 			TypeName: "Forms$Page",
@@ -65,7 +67,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 			page.LayoutID = layoutID
 
 			// Create LayoutCall with arguments for placeholders
-			page.LayoutCall = &pages.LayoutCall{
+			page.LayoutCall = &backend.LayoutCall{
 				BaseElement: model.BaseElement{
 					ID:       model.ID(types.GenerateID()),
 					TypeName: "Forms$LayoutCall",
@@ -78,7 +80,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 
 	// Build parameters
 	for _, param := range s.Parameters {
-		pageParam := &pages.PageParameter{
+		pageParam := &backend.PageParameter{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$PageParameter",
@@ -110,7 +112,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 
 	// Build variables
 	for _, v := range s.Variables {
-		localVar := &pages.LocalVariable{
+		localVar := &backend.LocalVariable{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$LocalVariable",
@@ -127,7 +129,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 	if page.LayoutCall != nil {
 		mainPlaceholderRef := pb.getMainPlaceholderRef(s.Layout)
 
-		arg := &pages.LayoutCallArgument{
+		arg := &backend.LayoutCallArgument{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$FormCallArgument",
@@ -137,8 +139,8 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 
 		// Build V3 widgets (expanding fragments)
 		if len(s.Widgets) > 0 {
-			containerWidget := &pages.Container{
-				BaseWidget: pages.BaseWidget{
+			containerWidget := &backend.Container{
+				BaseWidget: backend.BaseWidget{
 					BaseElement: model.BaseElement{
 						ID:       model.ID(types.GenerateID()),
 						TypeName: "Forms$DivContainer",
@@ -169,7 +171,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 }
 
 // buildSnippetV3 creates a Snippet from a CreateSnippetStmtV3.
-func (pb *pageBuilder) buildSnippetV3(s *ast.CreateSnippetStmtV3) (*pages.Snippet, error) {
+func (pb *pageBuilder) buildSnippetV3(s *ast.CreateSnippetStmtV3) (*backend.Snippet, error) {
 	// Resolve folder if specified
 	containerID := pb.moduleID
 	if s.Folder != "" {
@@ -180,7 +182,7 @@ func (pb *pageBuilder) buildSnippetV3(s *ast.CreateSnippetStmtV3) (*pages.Snippe
 		containerID = folderID
 	}
 
-	snippet := &pages.Snippet{
+	snippet := &backend.Snippet{
 		BaseElement: model.BaseElement{
 			ID:       model.ID(types.GenerateID()),
 			TypeName: "Forms$Snippet",
@@ -192,7 +194,7 @@ func (pb *pageBuilder) buildSnippetV3(s *ast.CreateSnippetStmtV3) (*pages.Snippe
 
 	// Build parameters
 	for _, param := range s.Parameters {
-		snippetParam := &pages.SnippetParameter{
+		snippetParam := &backend.SnippetParameter{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$SnippetParameter",
@@ -219,7 +221,7 @@ func (pb *pageBuilder) buildSnippetV3(s *ast.CreateSnippetStmtV3) (*pages.Snippe
 
 	// Build variables
 	for _, v := range s.Variables {
-		localVar := &pages.LocalVariable{
+		localVar := &backend.LocalVariable{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$LocalVariable",
@@ -251,9 +253,9 @@ func (pb *pageBuilder) buildSnippetV3(s *ast.CreateSnippetStmtV3) (*pages.Snippe
 	return snippet, nil
 }
 
-// buildWidgetV3 converts a V3 AST widget to a pages.Widget.
-func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
-	var widget pages.Widget
+// buildWidgetV3 converts a V3 AST widget to a backend.Widget.
+func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (backend.Widget, error) {
+	var widget backend.Widget
 	var err error
 
 	switch strings.ToLower(w.Type) {
@@ -369,9 +371,9 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
 
 // applyConditionalSettings sets ConditionalVisibility and ConditionalEditability
 // on a widget if VISIBLE IF or EDITABLE IF properties are specified in the AST.
-func applyConditionalSettings(widget pages.Widget, w *ast.WidgetV3) {
+func applyConditionalSettings(widget backend.Widget, w *ast.WidgetV3) {
 	type baseWidgetGetter interface {
-		GetBaseWidget() *pages.BaseWidget
+		GetBaseWidget() *backend.BaseWidget
 	}
 	bwg, ok := widget.(baseWidgetGetter)
 	if !ok {
@@ -380,7 +382,7 @@ func applyConditionalSettings(widget pages.Widget, w *ast.WidgetV3) {
 	bw := bwg.GetBaseWidget()
 
 	if visibleIf := w.GetStringProp("VisibleIf"); visibleIf != "" {
-		bw.ConditionalVisibility = &pages.ConditionalVisibilitySettings{
+		bw.ConditionalVisibility = &backend.ConditionalVisibilitySettings{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$ConditionalVisibilitySettings",
@@ -390,7 +392,7 @@ func applyConditionalSettings(widget pages.Widget, w *ast.WidgetV3) {
 	}
 
 	if editableIf := w.GetStringProp("EditableIf"); editableIf != "" {
-		bw.ConditionalEditability = &pages.ConditionalEditabilitySettings{
+		bw.ConditionalEditability = &backend.ConditionalEditabilitySettings{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$ConditionalEditabilitySettings",
@@ -402,7 +404,7 @@ func applyConditionalSettings(widget pages.Widget, w *ast.WidgetV3) {
 
 // applyWidgetAppearance sets Class, Style, and DesignProperties on a widget if specified in the AST.
 // The theme registry (if non-nil) is used to determine the correct BSON type for each design property.
-func applyWidgetAppearance(widget pages.Widget, w *ast.WidgetV3, theme *ThemeRegistry) {
+func applyWidgetAppearance(widget backend.Widget, w *ast.WidgetV3, theme *ThemeRegistry) {
 	class, style := w.GetClass(), w.GetStyle()
 	if class != "" || style != "" {
 		type appearanceSetter interface {
@@ -416,18 +418,18 @@ func applyWidgetAppearance(widget pages.Widget, w *ast.WidgetV3, theme *ThemeReg
 	// Apply design properties
 	astProps := w.GetDesignProperties()
 	if len(astProps) > 0 {
-		var dpValues []pages.DesignPropertyValue
+		var dpValues []backend.DesignPropertyValue
 		for _, p := range astProps {
 			switch strings.ToLower(p.Value) {
 			case "on":
-				dpValues = append(dpValues, pages.DesignPropertyValue{
+				dpValues = append(dpValues, backend.DesignPropertyValue{
 					Key:       p.Key,
 					ValueType: "toggle",
 				})
 			case "off":
 				// OFF means toggle absence - skip
 			default:
-				dpValues = append(dpValues, pages.DesignPropertyValue{
+				dpValues = append(dpValues, backend.DesignPropertyValue{
 					Key:       p.Key,
 					ValueType: "option",
 					Option:    p.Value,
@@ -436,7 +438,7 @@ func applyWidgetAppearance(widget pages.Widget, w *ast.WidgetV3, theme *ThemeReg
 		}
 		if len(dpValues) > 0 {
 			type designPropSetter interface {
-				SetDesignProperties(props []pages.DesignPropertyValue)
+				SetDesignProperties(props []backend.DesignPropertyValue)
 			}
 			if setter, ok := widget.(designPropSetter); ok {
 				setter.SetDesignProperties(dpValues)
@@ -467,9 +469,9 @@ func resolveDesignPropertyValueType(key string, themeProps []ThemeProperty) stri
 // V3 DataSource and Action Builders
 // =============================================================================
 
-// buildDataSourceV3 converts a V3 DataSource AST to a pages.DataSource.
+// buildDataSourceV3 converts a V3 DataSource AST to a backend.DataSource.
 // Returns the datasource, the entity name for context, and any error.
-func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource, string, error) {
+func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (backend.DataSource, string, error) {
 	switch ds.Type {
 	case "parameter":
 		// Parameter reference: $ParamName
@@ -498,7 +500,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 		}
 
 		// Use DataViewSource with IsSnippetParameter flag
-		return &pages.DataViewSource{
+		return &backend.DataViewSource{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$DataViewSource",
@@ -519,7 +521,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 			return nil, "", mdlerrors.NewBackend("resolve entity", err)
 		}
 
-		dbSource := &pages.DatabaseSource{
+		dbSource := &backend.DatabaseSource{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$DatabaseSource", // Note: actual BSON $Type depends on widget context (grid/listview/dataview)
@@ -535,11 +537,11 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 
 		// Handle ORDER BY
 		for _, ob := range ds.OrderBy {
-			direction := pages.SortDirectionAscending
+			direction := backend.SortDirectionAscending
 			if strings.ToLower(ob.Direction) == "desc" {
-				direction = pages.SortDirectionDescending
+				direction = backend.SortDirectionDescending
 			}
-			sortItem := &pages.GridSort{
+			sortItem := &backend.GridSort{
 				BaseElement: model.BaseElement{
 					ID:       model.ID(types.GenerateID()),
 					TypeName: "Forms$GridSort",
@@ -562,7 +564,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 		// Get entity name from microflow's return type for context resolution
 		entityName := pb.getMicroflowReturnEntityName(ds.Reference)
 
-		return &pages.MicroflowSource{
+		return &backend.MicroflowSource{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$MicroflowSource",
@@ -581,7 +583,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 		// Get entity name from nanoflow's return type for context resolution
 		entityName := pb.getNanoflowReturnEntityName(ds.Reference)
 
-		return &pages.NanoflowSource{
+		return &backend.NanoflowSource{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$NanoflowSource",
@@ -612,7 +614,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 
 		// Return destEntity as the child context so column bindings inside the
 		// widget can resolve short attribute names against it.
-		return &pages.AssociationSource{
+		return &backend.AssociationSource{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$AssociationSource",
@@ -632,7 +634,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 		// Get the entity context from the source widget if available
 		entityName := pb.paramEntityNames[widgetName]
 
-		return &pages.ListenToWidgetSource{
+		return &backend.ListenToWidgetSource{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$ListenTargetSource",
@@ -662,26 +664,30 @@ func (pb *pageBuilder) resolveAssociationDestination(assocQN, contextEntity stri
 	}
 	modName, assocName := parts[0], parts[1]
 
-	domainModels, err := pb.backend.ListDomainModels()
+	pairs, err := pb.getDomainModelsWithContainer()
 	if err != nil {
 		return ""
 	}
-	for _, dm := range domainModels {
+	for _, pair := range pairs {
+		if pair.DM == nil {
+			continue
+		}
 		// Module-scope the search: only look at the domain model whose module name
 		// matches the first segment of the qualified association name. Association
 		// names are not unique across the project (e.g., both AssocGrid and ODataSvc
 		// can have an "OrderLine_Order" association) — without this check, we'd
 		// pick the wrong one.
-		if pb.moduleNameByID(dm.ContainerID) != modName {
+		if pb.moduleNameByID(pair.ContainerID) != modName {
 			continue
 		}
-		for _, a := range dm.Associations {
-			if a.Name != assocName {
+		for _, a := range pair.DM.AssociationsItems() {
+			assoc, ok := a.(*genDm.Association)
+			if !ok || assoc.Name() != assocName {
 				continue
 			}
 			// Resolve entity qualified names for ParentID and ChildID.
-			parentEntity := pb.entityQNByID(a.ParentID)
-			childEntity := pb.entityQNByID(a.ChildID)
+			parentEntity := pb.entityQNByID(model.ID(assoc.ParentRefID()))
+			childEntity := pb.entityQNByID(model.ID(assoc.ChildRefID()))
 			// The "destination" is the end OPPOSITE to the context.
 			if contextEntity != "" {
 				if contextEntity == childEntity {
@@ -705,19 +711,26 @@ func (pb *pageBuilder) entityQNByID(entityID model.ID) string {
 	if entityID == "" {
 		return ""
 	}
-	domainModels, err := pb.backend.ListDomainModels()
+	pairs, err := pb.getDomainModelsWithContainer()
 	if err != nil {
 		return ""
 	}
-	for _, dm := range domainModels {
-		for _, e := range dm.Entities {
-			if e.ID == entityID {
+	for _, pair := range pairs {
+		if pair.DM == nil {
+			continue
+		}
+		for _, elem := range pair.DM.EntitiesItems() {
+			e, ok := elem.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			if model.ID(e.ID()) == entityID {
 				// Look up module name via the domain model's container
-				modName := pb.moduleNameByID(dm.ContainerID)
+				modName := pb.moduleNameByID(pair.ContainerID)
 				if modName == "" {
-					return e.Name
+					return e.Name()
 				}
-				return modName + "." + e.Name
+				return modName + "." + e.Name()
 			}
 		}
 	}
@@ -729,10 +742,7 @@ func (pb *pageBuilder) moduleNameByID(moduleID model.ID) string {
 	if moduleID == "" {
 		return ""
 	}
-	modules, err := pb.backend.ListModules()
-	if err != nil {
-		return ""
-	}
+	modules := pb.getModules()
 	for _, m := range modules {
 		if m.ID == moduleID {
 			return m.Name
@@ -860,11 +870,11 @@ func (pb *pageBuilder) getNanoflowReturnEntityName(qualifiedName string) string 
 	return ""
 }
 
-// buildClientActionV3 converts a V3 Action AST to a pages.ClientAction.
-func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAction, error) {
+// buildClientActionV3 converts a V3 Action AST to a backend.ClientAction.
+func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (backend.ClientAction, error) {
 	switch action.Type {
 	case "save":
-		return &pages.SaveChangesClientAction{
+		return &backend.SaveChangesClientAction{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$SaveChangesClientAction",
@@ -873,7 +883,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 		}, nil
 
 	case "cancel":
-		return &pages.CancelChangesClientAction{
+		return &backend.CancelChangesClientAction{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$CancelChangesClientAction",
@@ -882,7 +892,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 		}, nil
 
 	case "close":
-		return &pages.ClosePageClientAction{
+		return &backend.ClosePageClientAction{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$ClosePageClientAction",
@@ -890,7 +900,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 		}, nil
 
 	case "delete":
-		return &pages.DeleteClientAction{
+		return &backend.DeleteClientAction{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$DeleteClientAction",
@@ -906,7 +916,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 			return nil, mdlerrors.NewBackend("resolve entity for create", err)
 		}
 
-		createAct := &pages.CreateObjectClientAction{
+		createAct := &backend.CreateObjectClientAction{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$CreateObjectClientAction",
@@ -933,7 +943,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 			return nil, mdlerrors.NewBackend("resolve page", err)
 		}
 
-		pageAction := &pages.PageClientAction{
+		pageAction := &backend.PageClientAction{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$PageClientAction",
@@ -943,7 +953,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 
 		// Build parameter mappings from Args
 		for _, arg := range action.Args {
-			mapping := &pages.PageClientParameterMapping{
+			mapping := &backend.PageClientParameterMapping{
 				BaseElement: model.BaseElement{
 					ID:       model.ID(types.GenerateID()),
 					TypeName: "Forms$PageParameterMapping",
@@ -972,7 +982,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 			return nil, mdlerrors.NewBackend("resolve microflow", err)
 		}
 
-		mfAction := &pages.MicroflowClientAction{
+		mfAction := &backend.MicroflowClientAction{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$MicroflowAction",
@@ -983,7 +993,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 
 		// Build parameter mappings from Args
 		for _, arg := range action.Args {
-			mapping := &pages.MicroflowParameterMapping{
+			mapping := &backend.MicroflowParameterMapping{
 				BaseElement: model.BaseElement{
 					ID:       model.ID(types.GenerateID()),
 					TypeName: "Forms$MicroflowParameterMapping",
@@ -1012,7 +1022,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 			return nil, mdlerrors.NewBackend("resolve nanoflow", err)
 		}
 
-		nfAction := &pages.NanoflowClientAction{
+		nfAction := &backend.NanoflowClientAction{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$NanoflowAction",
@@ -1023,7 +1033,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 
 		// Build parameter mappings from Args
 		for _, arg := range action.Args {
-			mapping := &pages.NanoflowParameterMapping{
+			mapping := &backend.NanoflowParameterMapping{
 				BaseElement: model.BaseElement{
 					ID:       model.ID(types.GenerateID()),
 					TypeName: "Forms$NanoflowParameterMapping",
@@ -1047,17 +1057,17 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 		return nfAction, nil
 
 	case "openLink":
-		return &pages.LinkClientAction{
+		return &backend.LinkClientAction{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$LinkClientAction",
 			},
-			LinkType: pages.LinkTypeWeb,
+			LinkType: backend.LinkTypeWeb,
 			Address:  action.LinkURL,
 		}, nil
 
 	case "signOut":
-		return &pages.SignOutClientAction{
+		return &backend.SignOutClientAction{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$SignOutClientAction",
@@ -1065,7 +1075,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 		}, nil
 
 	case "completeTask":
-		return &pages.SetTaskOutcomeClientAction{
+		return &backend.SetTaskOutcomeClientAction{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$SetTaskOutcomeClientAction",
@@ -1293,7 +1303,7 @@ func (pb *pageBuilder) resolveTemplateAttributePath(attrRef string) string {
 // For non-String attributes (Integer, Decimal, DateTime, Boolean, etc.), the binding
 // is automatically converted to a toString() expression since DYNAMICTEXT template
 // parameters require String values.
-func (pb *pageBuilder) resolveTemplateAttributePathFull(attrRef string, param *pages.ClientTemplateParameter) {
+func (pb *pageBuilder) resolveTemplateAttributePathFull(attrRef string, param *backend.ClientTemplateParameter) {
 	if attrRef == "" {
 		return
 	}
@@ -1427,4 +1437,1382 @@ func prefixWidgetNames(widgets []*ast.WidgetV3, prefix string) {
 		}
 		prefixWidgetNames(w.Children, prefix)
 	}
+}
+
+func (pb *pageBuilder) buildLayoutGridV3(w *ast.WidgetV3) (*backend.LayoutGrid, error) {
+	lg := &backend.LayoutGrid{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$LayoutGrid",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Build rows from children
+	for _, child := range w.Children {
+		if strings.ToLower(child.Type) == "row" {
+			row, err := pb.buildLayoutGridRowV3(child)
+			if err != nil {
+				return nil, err
+			}
+			lg.Rows = append(lg.Rows, row)
+		}
+	}
+
+	return lg, nil
+}
+
+func (pb *pageBuilder) buildLayoutGridRowV3(w *ast.WidgetV3) (*backend.LayoutGridRow, error) {
+	row := &backend.LayoutGridRow{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(types.GenerateID()),
+			TypeName: "Forms$LayoutGridRow",
+		},
+	}
+
+	// Build columns from children
+	for _, child := range w.Children {
+		if strings.ToLower(child.Type) == "column" {
+			col, err := pb.buildLayoutGridColumnV3(child)
+			if err != nil {
+				return nil, err
+			}
+			row.Columns = append(row.Columns, col)
+		}
+	}
+
+	return row, nil
+}
+
+func (pb *pageBuilder) buildLayoutGridColumnV3(w *ast.WidgetV3) (*backend.LayoutGridColumn, error) {
+	col := &backend.LayoutGridColumn{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(types.GenerateID()),
+			TypeName: "Forms$LayoutGridColumn",
+		},
+		Weight: 0, // 0 → columnWeight() maps to -1 (auto-fill) in the serializer
+	}
+
+	// Handle DesktopWidth
+	if dw := w.GetDesktopWidth(); dw != nil {
+		switch v := dw.(type) {
+		case int:
+			col.Weight = v
+		case string:
+			if strings.ToUpper(v) == "autofill" {
+				col.Weight = -1 // Auto
+			}
+		}
+	}
+
+	// Handle TabletWidth
+	if tw := w.Properties["TabletWidth"]; tw != nil {
+		switch v := tw.(type) {
+		case int:
+			col.TabletWeight = v
+		case string:
+			if strings.ToUpper(v) == "autofill" {
+				col.TabletWeight = -1
+			}
+		}
+	}
+
+	// Handle PhoneWidth
+	if pw := w.Properties["PhoneWidth"]; pw != nil {
+		switch v := pw.(type) {
+		case int:
+			col.PhoneWeight = v
+		case string:
+			if strings.ToUpper(v) == "autofill" {
+				col.PhoneWeight = -1
+			}
+		}
+	}
+
+	// Build child widgets
+	for _, child := range w.Children {
+		widget, err := pb.buildWidgetV3(child)
+		if err != nil {
+			return nil, err
+		}
+		col.Widgets = append(col.Widgets, widget)
+	}
+
+	return col, nil
+}
+
+// buildContainerWithRowV3 creates a Container holding a LayoutGrid with one row.
+func (pb *pageBuilder) buildContainerWithRowV3(w *ast.WidgetV3) (*backend.Container, error) {
+	container := &backend.Container{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$DivContainer",
+			},
+			Name: w.Name,
+		},
+	}
+
+	lg := &backend.LayoutGrid{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$LayoutGrid",
+			},
+			Name: w.Name + "_grid",
+		},
+	}
+
+	row, err := pb.buildLayoutGridRowV3(w)
+	if err != nil {
+		return nil, err
+	}
+	lg.Rows = append(lg.Rows, row)
+	container.Widgets = append(container.Widgets, lg)
+
+	return container, nil
+}
+
+// buildContainerWithColumnV3 creates a Container holding a LayoutGrid with one column.
+func (pb *pageBuilder) buildContainerWithColumnV3(w *ast.WidgetV3) (*backend.Container, error) {
+	container := &backend.Container{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$DivContainer",
+			},
+			Name: w.Name,
+		},
+	}
+
+	lg := &backend.LayoutGrid{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$LayoutGrid",
+			},
+			Name: w.Name + "_grid",
+		},
+	}
+
+	row := &backend.LayoutGridRow{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(types.GenerateID()),
+			TypeName: "Forms$LayoutGridRow",
+		},
+	}
+
+	col, err := pb.buildLayoutGridColumnV3(w)
+	if err != nil {
+		return nil, err
+	}
+	row.Columns = append(row.Columns, col)
+	lg.Rows = append(lg.Rows, row)
+	container.Widgets = append(container.Widgets, lg)
+
+	return container, nil
+}
+
+func (pb *pageBuilder) buildContainerV3(w *ast.WidgetV3) (*backend.Container, error) {
+	container := &backend.Container{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$DivContainer",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Handle RenderMode
+	if rm := w.GetRenderMode(); rm != "" {
+		container.RenderMode = backend.ContainerRenderMode(rm)
+	}
+
+	// Build child widgets
+	for _, child := range w.Children {
+		widget, err := pb.buildWidgetV3(child)
+		if err != nil {
+			return nil, err
+		}
+		container.Widgets = append(container.Widgets, widget)
+	}
+
+	return container, nil
+}
+
+func (pb *pageBuilder) buildTabContainerV3(w *ast.WidgetV3) (*backend.TabContainer, error) {
+	tc := &backend.TabContainer{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$TabControl",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Build tab pages from children
+	for _, child := range w.Children {
+		if strings.ToLower(child.Type) == "tabpage" {
+			tp, err := pb.buildTabPageV3(child)
+			if err != nil {
+				return nil, err
+			}
+			tc.TabPages = append(tc.TabPages, tp)
+		}
+	}
+
+	if err := pb.registerWidgetName(w.Name, tc.ID); err != nil {
+		return nil, err
+	}
+
+	return tc, nil
+}
+
+func (pb *pageBuilder) buildTabPageV3(w *ast.WidgetV3) (*backend.TabPage, error) {
+	tp := &backend.TabPage{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(types.GenerateID()),
+			TypeName: "Forms$TabPage",
+		},
+		Name: w.Name,
+	}
+
+	// Handle Caption
+	if caption := w.GetCaption(); caption != "" {
+		tp.Caption = &model.Text{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Texts$Text",
+			},
+			Translations: map[string]string{"en_US": caption},
+		}
+	}
+
+	// Build child widgets
+	for _, child := range w.Children {
+		widget, err := pb.buildWidgetV3(child)
+		if err != nil {
+			return nil, err
+		}
+		tp.Widgets = append(tp.Widgets, widget)
+	}
+
+	if err := pb.registerWidgetName(w.Name, tp.ID); err != nil {
+		return nil, err
+	}
+
+	return tp, nil
+}
+
+func (pb *pageBuilder) buildGroupBoxV3(w *ast.WidgetV3) (*backend.GroupBox, error) {
+	gb := &backend.GroupBox{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$GroupBox",
+			},
+			Name: w.Name,
+		},
+		Collapsible: "No",
+		HeaderMode:  "Div",
+	}
+
+	// Handle Caption — uses ClientTemplate (same as DynamicText Content)
+	if caption := w.GetCaption(); caption != "" {
+		gb.Caption = &backend.ClientTemplate{
+			Template: &model.Text{
+				BaseElement: model.BaseElement{
+					ID:       model.ID(types.GenerateID()),
+					TypeName: "Texts$Text",
+				},
+				Translations: map[string]string{"en_US": caption},
+			},
+		}
+	}
+
+	// Handle Collapsible: Yes/YesExpanded/YesCollapsed/No
+	if collapsible := w.GetStringProp("Collapsible"); collapsible != "" {
+		switch strings.ToLower(collapsible) {
+		case "yesexpanded", "yesinitiallyexpanded", "yes":
+			gb.Collapsible = "YesInitiallyExpanded"
+		case "yescollapsed", "yesinitiallycollapsed":
+			gb.Collapsible = "YesInitiallyCollapsed"
+		case "no":
+			gb.Collapsible = "No"
+		default:
+			gb.Collapsible = collapsible
+		}
+	}
+
+	// Handle HeaderMode: Div, H1-H6
+	if headerMode := w.GetStringProp("HeaderMode"); headerMode != "" {
+		gb.HeaderMode = headerMode
+	}
+
+	// Build child widgets
+	for _, child := range w.Children {
+		widget, err := pb.buildWidgetV3(child)
+		if err != nil {
+			return nil, err
+		}
+		gb.Widgets = append(gb.Widgets, widget)
+	}
+
+	if err := pb.registerWidgetName(w.Name, gb.ID); err != nil {
+		return nil, err
+	}
+
+	return gb, nil
+}
+
+// buildFooterV3 creates a Footer container widget from V3 syntax.
+func (pb *pageBuilder) buildFooterV3(w *ast.WidgetV3) (*backend.Container, error) {
+	footer := &backend.Container{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$DivContainer",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Build children
+	for _, child := range w.Children {
+		childWidget, err := pb.buildWidgetV3(child)
+		if err != nil {
+			return nil, err
+		}
+		footer.Widgets = append(footer.Widgets, childWidget)
+	}
+
+	if err := pb.registerWidgetName(w.Name, footer.ID); err != nil {
+		return nil, err
+	}
+
+	return footer, nil
+}
+
+// buildHeaderV3 creates a Header container widget from V3 syntax.
+func (pb *pageBuilder) buildHeaderV3(w *ast.WidgetV3) (*backend.Container, error) {
+	header := &backend.Container{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$DivContainer",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Build children
+	for _, child := range w.Children {
+		childWidget, err := pb.buildWidgetV3(child)
+		if err != nil {
+			return nil, err
+		}
+		header.Widgets = append(header.Widgets, childWidget)
+	}
+
+	if err := pb.registerWidgetName(w.Name, header.ID); err != nil {
+		return nil, err
+	}
+
+	return header, nil
+}
+
+// buildControlBarV3 creates a ControlBar container widget from V3 syntax.
+func (pb *pageBuilder) buildControlBarV3(w *ast.WidgetV3) (*backend.Container, error) {
+	controlBar := &backend.Container{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$DivContainer",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Build children
+	for _, child := range w.Children {
+		childWidget, err := pb.buildWidgetV3(child)
+		if err != nil {
+			return nil, err
+		}
+		controlBar.Widgets = append(controlBar.Widgets, childWidget)
+	}
+
+	if err := pb.registerWidgetName(w.Name, controlBar.ID); err != nil {
+		return nil, err
+	}
+
+	return controlBar, nil
+}
+func (pb *pageBuilder) buildDataViewV3(w *ast.WidgetV3) (*backend.DataView, error) {
+	dv := &backend.DataView{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$DataView",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Handle DataSource
+	if ds := w.GetDataSource(); ds != nil {
+		dataSource, entityName, err := pb.buildDataSourceV3(ds)
+		if err != nil {
+			return nil, mdlerrors.NewBackend("build datasource", err)
+		}
+		dv.DataSource = dataSource
+
+		// Save and restore entity context so nested DataViews work correctly
+		oldContext := pb.entityContext
+		pb.entityContext = entityName
+		defer func() { pb.entityContext = oldContext }()
+
+		// Register the widget name with its entity so template params like $dvOrder.Attr
+		// can be resolved to Entity.Attr
+		if w.Name != "" && entityName != "" {
+			pb.paramEntityNames[w.Name] = entityName
+		}
+	}
+
+	// Build child widgets, separating FOOTER widgets into FooterWidgets
+	for _, child := range w.Children {
+		// Check if this is a FOOTER widget - its children go to FooterWidgets
+		if child.Type == "footer" {
+			dv.ShowFooter = true
+			for _, fw := range child.Children {
+				widget, err := pb.buildWidgetV3(fw)
+				if err != nil {
+					return nil, err
+				}
+				dv.FooterWidgets = append(dv.FooterWidgets, widget)
+			}
+			continue
+		}
+		childWidget, err := pb.buildWidgetV3(child)
+		if err != nil {
+			return nil, err
+		}
+		dv.Widgets = append(dv.Widgets, childWidget)
+	}
+
+	// Also build footer widgets from Properties (legacy support)
+	if footerWidgets, ok := w.Properties["Footer"].([]*ast.WidgetV3); ok {
+		dv.ShowFooter = true
+		for _, fw := range footerWidgets {
+			widget, err := pb.buildWidgetV3(fw)
+			if err != nil {
+				return nil, err
+			}
+			dv.FooterWidgets = append(dv.FooterWidgets, widget)
+		}
+	}
+
+	if err := pb.registerWidgetName(w.Name, dv.ID); err != nil {
+		return nil, err
+	}
+
+	return dv, nil
+}
+
+func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (*backend.CustomWidget, error) {
+	widgetID := model.ID(types.GenerateID())
+
+	// Build datasource from V3 DataSource property
+	var datasource backend.DataSource
+	if ds := w.GetDataSource(); ds != nil {
+		dataSource, entityName, err := pb.buildDataSourceV3(ds)
+		if err != nil {
+			return nil, mdlerrors.NewBackend("build datasource", err)
+		}
+		datasource = dataSource
+
+		// Save and restore entity context so nested containers work correctly
+		oldContext := pb.entityContext
+		pb.entityContext = entityName
+		defer func() { pb.entityContext = oldContext }()
+	}
+
+	// Extract column definitions and CONTROLBAR widgets from children
+	var columns []backend.DataGridColumnSpec
+	var headerWidgets []backend.Widget
+	for _, child := range w.Children {
+		switch strings.ToLower(child.Type) {
+		case "column":
+			attr := child.GetAttribute()
+			if attr == "" && child.Name != "" && len(child.Children) == 0 {
+				attr = child.Name
+			}
+			col := backend.DataGridColumnSpec{
+				Attribute:  pb.resolveAttributePath(attr),
+				Caption:    child.GetCaption(),
+				Properties: child.Properties,
+			}
+			// Build child widgets; filter-type children go to the column filter slot
+			for _, grandchild := range child.Children {
+				if filterWidgetID := dataGridFilterWidgetID(grandchild.Type); filterWidgetID != "" {
+					fw, err := pb.widgetBackend.BuildFilterWidget(backend.FilterWidgetSpec{
+						WidgetID:   filterWidgetID,
+						FilterName: grandchild.Name,
+					}, pb.backend.Path())
+					if err != nil {
+						return nil, mdlerrors.NewBackend("build column filter widget", err)
+					}
+					col.FilterWidget = fw
+				} else {
+					childWidget, err := pb.buildWidgetV3(grandchild)
+					if err != nil {
+						return nil, mdlerrors.NewBackend("build column child widget", err)
+					}
+					if childWidget != nil {
+						col.ChildWidgets = append(col.ChildWidgets, childWidget)
+					}
+				}
+			}
+			columns = append(columns, col)
+		case "controlbar":
+			for _, controlBarChild := range child.Children {
+				childWidget, err := pb.buildWidgetV3(controlBarChild)
+				if err != nil {
+					return nil, mdlerrors.NewBackend("build controlbar widget", err)
+				}
+				if childWidget != nil {
+					headerWidgets = append(headerWidgets, childWidget)
+				}
+			}
+		}
+	}
+
+	// Collect paging overrides from AST properties
+	pagingOverrides := make(map[string]string)
+	for mdlKey, widgetKey := range dataGridPagingPropMap {
+		if v := w.GetStringProp(mdlKey); v != "" {
+			pagingOverrides[widgetKey] = v
+		} else if iv := w.GetIntProp(mdlKey); iv > 0 {
+			pagingOverrides[widgetKey] = fmt.Sprintf("%d", iv)
+		} else if bv, ok := w.Properties[mdlKey]; ok {
+			if boolVal, isBool := bv.(bool); isBool {
+				if boolVal {
+					pagingOverrides[widgetKey] = "yes"
+				} else {
+					pagingOverrides[widgetKey] = "no"
+				}
+			}
+		}
+	}
+
+	spec := backend.DataGridSpec{
+		DataSource:      datasource,
+		Columns:         columns,
+		HeaderWidgets:   headerWidgets,
+		PagingOverrides: pagingOverrides,
+		SelectionMode:   w.GetSelection(),
+	}
+
+	grid, err := pb.widgetBackend.BuildDataGrid2Widget(widgetID, w.Name, spec, pb.backend.Path())
+	if err != nil {
+		return nil, err
+	}
+
+	if err := pb.registerWidgetName(w.Name, grid.ID); err != nil {
+		return nil, err
+	}
+
+	return grid, nil
+}
+
+func (pb *pageBuilder) buildDataGridColumnV3(w *ast.WidgetV3) (*backend.DataGridColumn, error) {
+	col := &backend.DataGridColumn{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(types.GenerateID()),
+			TypeName: "Forms$DataGridColumn",
+		},
+		Name:     w.Name,
+		Editable: true,
+	}
+
+	// Get attribute from Attribute property
+	if attr := w.GetAttribute(); attr != "" {
+		col.AttributePath = pb.resolveAttributePath(attr)
+	}
+
+	// Get caption
+	if caption := w.GetCaption(); caption != "" {
+		col.Caption = &model.Text{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Texts$Text",
+			},
+			Translations: map[string]string{"en_US": caption},
+		}
+	}
+
+	return col, nil
+}
+
+func (pb *pageBuilder) buildListViewV3(w *ast.WidgetV3) (*backend.ListView, error) {
+	lv := &backend.ListView{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$ListView",
+			},
+			Name: w.Name,
+		},
+		PageSize: 20,
+	}
+
+	// Handle DataSource
+	if ds := w.GetDataSource(); ds != nil {
+		dataSource, entityName, err := pb.buildDataSourceV3(ds)
+		if err != nil {
+			return nil, mdlerrors.NewBackend("build datasource", err)
+		}
+		lv.DataSource = dataSource
+
+		// Save and restore entity context so nested containers work correctly
+		oldContext := pb.entityContext
+		pb.entityContext = entityName
+		defer func() { pb.entityContext = oldContext }()
+
+		// Register widget name with entity for SELECTION datasource lookup
+		if w.Name != "" && entityName != "" {
+			pb.paramEntityNames[w.Name] = entityName
+		}
+	}
+
+	// Register widget scope for SELECTION references
+	if err := pb.registerWidgetName(w.Name, lv.ID); err != nil {
+		return nil, err
+	}
+
+	// Build template widgets
+	for _, child := range w.Children {
+		widget, err := pb.buildWidgetV3(child)
+		if err != nil {
+			return nil, err
+		}
+		lv.Widgets = append(lv.Widgets, widget)
+	}
+
+	return lv, nil
+}
+
+func (pb *pageBuilder) buildTextBoxV3(w *ast.WidgetV3) (*backend.TextBox, error) {
+	tb := &backend.TextBox{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$TextBox",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Handle Attribute (attribute path)
+	if attr := w.GetAttribute(); attr != "" {
+		tb.AttributePath = pb.resolveAttributePath(attr)
+	}
+
+	// Handle Label
+	if label := w.GetLabel(); label != "" {
+		tb.Label = label
+	}
+
+	if err := pb.registerWidgetName(w.Name, tb.ID); err != nil {
+		return nil, err
+	}
+
+	return tb, nil
+}
+
+func (pb *pageBuilder) buildTextAreaV3(w *ast.WidgetV3) (*backend.TextArea, error) {
+	ta := &backend.TextArea{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$TextArea",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Handle Attribute
+	if attr := w.GetAttribute(); attr != "" {
+		ta.AttributePath = pb.resolveAttributePath(attr)
+	}
+
+	// Handle Label
+	if label := w.GetLabel(); label != "" {
+		ta.Label = label
+	}
+
+	if err := pb.registerWidgetName(w.Name, ta.ID); err != nil {
+		return nil, err
+	}
+
+	return ta, nil
+}
+
+func (pb *pageBuilder) buildDatePickerV3(w *ast.WidgetV3) (*backend.DatePicker, error) {
+	dp := &backend.DatePicker{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$DatePicker",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Handle Attribute
+	if attr := w.GetAttribute(); attr != "" {
+		dp.AttributePath = pb.resolveAttributePath(attr)
+	}
+
+	// Handle Label
+	if label := w.GetLabel(); label != "" {
+		dp.Label = label
+	}
+
+	if err := pb.registerWidgetName(w.Name, dp.ID); err != nil {
+		return nil, err
+	}
+
+	return dp, nil
+}
+
+func (pb *pageBuilder) buildDropdownV3(w *ast.WidgetV3) (*backend.DropDown, error) {
+	dd := &backend.DropDown{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$DropDown",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Handle Attribute
+	if attr := w.GetAttribute(); attr != "" {
+		dd.AttributePath = pb.resolveAttributePath(attr)
+	}
+
+	// Handle Label
+	if label := w.GetLabel(); label != "" {
+		dd.Label = label
+	}
+
+	if err := pb.registerWidgetName(w.Name, dd.ID); err != nil {
+		return nil, err
+	}
+
+	return dd, nil
+}
+
+func (pb *pageBuilder) buildCheckBoxV3(w *ast.WidgetV3) (*backend.CheckBox, error) {
+	cb := &backend.CheckBox{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$CheckBox",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Handle Attribute
+	if attr := w.GetAttribute(); attr != "" {
+		cb.AttributePath = pb.resolveAttributePath(attr)
+	}
+
+	// Handle Label
+	if label := w.GetLabel(); label != "" {
+		cb.Label = label
+	}
+
+	if err := pb.registerWidgetName(w.Name, cb.ID); err != nil {
+		return nil, err
+	}
+
+	return cb, nil
+}
+
+// buildRadioButtonsV3 creates RadioButtons from V3 syntax.
+func (pb *pageBuilder) buildRadioButtonsV3(w *ast.WidgetV3) (*backend.RadioButtons, error) {
+	rb := &backend.RadioButtons{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$RadioButtonGroup",
+			},
+			Name: w.Name,
+		},
+		Label: w.GetLabel(),
+	}
+
+	// Get attribute path from Attribute property
+	if attr := w.GetAttribute(); attr != "" {
+		rb.AttributePath = pb.resolveAttributePath(attr)
+	}
+
+	if err := pb.registerWidgetName(w.Name, rb.ID); err != nil {
+		return nil, err
+	}
+
+	return rb, nil
+}
+
+func (pb *pageBuilder) buildTextWidgetV3(w *ast.WidgetV3) (*backend.Text, error) {
+	st := &backend.Text{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$Text",
+			},
+			Name: w.Name,
+		},
+		RenderMode: backend.TextRenderModeText,
+	}
+
+	// Handle Content
+	if content := w.GetContent(); content != "" {
+		st.Caption = &model.Text{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Texts$Text",
+			},
+			Translations: map[string]string{"en_US": content},
+		}
+	}
+
+	// Handle RenderMode
+	if rm := w.GetRenderMode(); rm != "" {
+		st.RenderMode = backend.TextRenderMode(rm)
+	}
+
+	if err := pb.registerWidgetName(w.Name, st.ID); err != nil {
+		return nil, err
+	}
+
+	return st, nil
+}
+
+func (pb *pageBuilder) buildDynamicTextV3(w *ast.WidgetV3) (*backend.DynamicText, error) {
+	dt := &backend.DynamicText{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$DynamicText",
+			},
+			Name: w.Name,
+		},
+		RenderMode: backend.TextRenderModeText,
+	}
+
+	// Handle RenderMode
+	if rm := w.GetRenderMode(); rm != "" {
+		dt.RenderMode = backend.TextRenderMode(rm)
+	}
+
+	// Handle Content
+	content := w.GetContent()
+	explicitParams := w.GetContentParams()
+
+	// Check if Content is an attribute reference AND no explicit params provided
+	// If so, auto-generate template {1} and add the attribute as a parameter
+	// Examples:
+	//   Content: $widget.Name            -> auto-generate {1} with $widget.Name as param
+	//   Content: Entity.Attribute        -> auto-generate {1} with Entity.Attribute as param
+	//   Content: SomeStaticText          -> literal string, no params (no dot, no $)
+	//   Content: 'Name: {1}', ContentParams: [Name] -> use explicit template and params
+	var autoGeneratedParams []string
+	if content != "" && explicitParams == nil {
+		// Only auto-generate for:
+		// - Variable references: $var or $widget.Attr (starts with $)
+		// - Entity paths: Entity.Attribute (identifier.identifier pattern, not version numbers like "1.0")
+		// Simple identifiers without dots are treated as static text
+		isEntityPath := false
+		if strings.Contains(content, ".") && !strings.HasPrefix(content, "$") {
+			// Check if it looks like Entity.Attribute (letter followed by word chars, dot, letter followed by word chars)
+			// This avoids matching strings like "Version 1.0" or "Dashboard - V2.1"
+			isEntityPath = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*$`).MatchString(content)
+		}
+		if strings.HasPrefix(content, "$") || isEntityPath {
+			autoGeneratedParams = append(autoGeneratedParams, content)
+			content = "{1}"
+		}
+	}
+
+	if content == "" {
+		content = "{1}"
+	}
+
+	dt.Content = &backend.ClientTemplate{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(types.GenerateID()),
+			TypeName: "Forms$ClientTemplate",
+		},
+		Template: &model.Text{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Texts$Text",
+			},
+			Translations: map[string]string{"en_US": content},
+		},
+	}
+
+	// Add auto-generated parameters first
+	for _, attrRef := range autoGeneratedParams {
+		param := &backend.ClientTemplateParameter{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$ClientTemplateParameter",
+			},
+		}
+		pb.resolveTemplateAttributePathFull(attrRef, param)
+		dt.Content.Parameters = append(dt.Content.Parameters, param)
+	}
+
+	// Handle explicit ContentParams
+	if explicitParams != nil {
+		for _, p := range explicitParams {
+			param := &backend.ClientTemplateParameter{
+				BaseElement: model.BaseElement{
+					ID:       model.ID(types.GenerateID()),
+					TypeName: "Forms$ClientTemplateParameter",
+				},
+			}
+			// Check if it's an attribute reference or literal
+			if strVal, ok := p.Value.(string); ok {
+				if strings.HasPrefix(strVal, "'") || strings.HasPrefix(strVal, "\"") {
+					// Already a quoted string literal - use as-is
+					param.Expression = strVal
+				} else if strings.HasPrefix(strVal, "$") || strings.Contains(strVal, ".") {
+					// Attribute reference - resolve widget references to entity paths
+					pb.resolveTemplateAttributePathFull(strVal, param)
+				} else {
+					// Unquoted literal value - assume attribute in current context
+					pb.resolveTemplateAttributePathFull(strVal, param)
+				}
+			}
+			dt.Content.Parameters = append(dt.Content.Parameters, param)
+		}
+	}
+
+	if err := pb.registerWidgetName(w.Name, dt.ID); err != nil {
+		return nil, err
+	}
+
+	return dt, nil
+}
+
+func (pb *pageBuilder) buildTitleV3(w *ast.WidgetV3) (*backend.Title, error) {
+	title := &backend.Title{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$Title",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Set caption from Content property
+	content := w.GetContent()
+	if content != "" {
+		title.Caption = &model.Text{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Texts$Text",
+			},
+			Translations: map[string]string{"en_US": content},
+		}
+	}
+
+	if err := pb.registerWidgetName(w.Name, title.ID); err != nil {
+		return nil, err
+	}
+
+	return title, nil
+}
+
+func (pb *pageBuilder) buildButtonV3(w *ast.WidgetV3) (*backend.ActionButton, error) {
+	btn := &backend.ActionButton{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$ActionButton",
+			},
+			Name: w.Name,
+		},
+		ButtonStyle: backend.ButtonStyleDefault,
+	}
+
+	// Handle Caption
+	if caption := w.GetCaption(); caption != "" {
+		btn.CaptionTemplate = &backend.ClientTemplate{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$ClientTemplate",
+			},
+			Template: &model.Text{
+				BaseElement: model.BaseElement{
+					ID:       model.ID(types.GenerateID()),
+					TypeName: "Texts$Text",
+				},
+				Translations: map[string]string{"en_US": caption},
+			},
+		}
+
+		// Handle CaptionParams (template parameters like {1}, {2})
+		if params := w.GetCaptionParams(); params != nil {
+			for _, p := range params {
+				param := &backend.ClientTemplateParameter{
+					BaseElement: model.BaseElement{
+						ID:       model.ID(types.GenerateID()),
+						TypeName: "Forms$ClientTemplateParameter",
+					},
+				}
+				// Check if it's an attribute reference or literal
+				if strVal, ok := p.Value.(string); ok {
+					if strings.HasPrefix(strVal, "'") || strings.HasPrefix(strVal, "\"") {
+						// Already a quoted string literal - use as-is
+						param.Expression = strVal
+					} else if strings.HasPrefix(strVal, "$") || strings.Contains(strVal, ".") {
+						// Attribute reference - resolve widget references to entity paths
+						param.AttributeRef = pb.resolveTemplateAttributePath(strVal)
+					} else {
+						// Unquoted literal value - wrap in quotes for expression
+						param.Expression = "'" + strVal + "'"
+					}
+				}
+				btn.CaptionTemplate.Parameters = append(btn.CaptionTemplate.Parameters, param)
+			}
+		}
+	}
+
+	// Handle ButtonStyle
+	if style := w.GetButtonStyle(); style != "" {
+		btn.ButtonStyle = backend.ButtonStyle(style)
+	}
+
+	// Handle Action
+	if action := w.GetAction(); action != nil {
+		act, err := pb.buildClientActionV3(action)
+		if err != nil {
+			return nil, mdlerrors.NewBackend("build action", err)
+		}
+		btn.Action = act
+	}
+
+	if err := pb.registerWidgetName(w.Name, btn.ID); err != nil {
+		return nil, err
+	}
+
+	return btn, nil
+}
+
+// buildNavigationListV3 creates a NavigationList widget from V3 syntax.
+func (pb *pageBuilder) buildNavigationListV3(w *ast.WidgetV3) (*backend.NavigationList, error) {
+	navList := &backend.NavigationList{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$NavigationList",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Build items from children (ITEM widgets)
+	for _, child := range w.Children {
+		if strings.ToLower(child.Type) == "item" {
+			item, err := pb.buildNavigationListItemV3(child)
+			if err != nil {
+				return nil, err
+			}
+			navList.Items = append(navList.Items, item)
+		}
+	}
+
+	if err := pb.registerWidgetName(w.Name, navList.ID); err != nil {
+		return nil, err
+	}
+
+	return navList, nil
+}
+
+// buildNavigationListItemV3 creates a NavigationListItem from V3 syntax.
+func (pb *pageBuilder) buildNavigationListItemV3(w *ast.WidgetV3) (*backend.NavigationListItem, error) {
+	if w.Name == "" {
+		return nil, mdlerrors.NewValidation("item inside navigationlist requires a name")
+	}
+
+	item := &backend.NavigationListItem{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(types.GenerateID()),
+			TypeName: "Forms$NavigationListItem",
+		},
+		Name: w.Name,
+	}
+
+	if err := pb.registerWidgetName(w.Name, item.ID); err != nil {
+		return nil, err
+	}
+
+	// Set caption from Caption property
+	if caption := w.GetCaption(); caption != "" {
+		item.Caption = &model.Text{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Texts$Text",
+			},
+			Translations: map[string]string{"en_US": caption},
+		}
+	}
+
+	// Handle Action property
+	if action := w.GetAction(); action != nil {
+		clientAction, err := pb.buildClientActionV3(action)
+		if err != nil {
+			return nil, err
+		}
+		item.Action = clientAction
+	}
+
+	// Build child widgets
+	for _, child := range w.Children {
+		childWidget, err := pb.buildWidgetV3(child)
+		if err != nil {
+			return nil, err
+		}
+		item.Widgets = append(item.Widgets, childWidget)
+	}
+
+	return item, nil
+}
+
+// buildSnippetCallV3 creates a SnippetCallWidget from V3 syntax.
+func (pb *pageBuilder) buildSnippetCallV3(w *ast.WidgetV3) (*backend.SnippetCallWidget, error) {
+	sc := &backend.SnippetCallWidget{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$SnippetCallWidget",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Handle Snippet property - resolve snippet and store both ID and name
+	snippetName := w.GetSnippet()
+	if snippetName != "" {
+		snippetID, err := pb.resolveSnippetRef(snippetName)
+		if err != nil {
+			return nil, mdlerrors.NewBackend(fmt.Sprintf("resolve snippet %s", snippetName), err)
+		}
+		sc.SnippetID = snippetID
+		sc.SnippetName = snippetName // Store qualified name for BY_NAME_REFERENCE serialization
+
+		// Validate and wire up parameter mappings.
+		if err := pb.buildSnippetCallParams(sc, snippetName, w.GetSnippetParams()); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := pb.registerWidgetName(w.Name, sc.ID); err != nil {
+		return nil, err
+	}
+
+	return sc, nil
+}
+
+// buildSnippetCallParams validates the supplied param mappings against the
+// snippet's declared parameters and populates sc.ParameterMappings.
+func (pb *pageBuilder) buildSnippetCallParams(sc *backend.SnippetCallWidget, snippetQName string, supplied []ast.SnippetCallParam) error {
+	snippets, err := pb.backend.ListSnippetsGen()
+	if err != nil {
+		return err
+	}
+
+	// Find the target snippet to read its declared parameters.
+	var targetSnippet *genPg.Snippet
+	for _, s := range snippets {
+		if s == nil {
+			continue
+		}
+		name := s.Name()
+		if name != "" && (name == snippetQName || strings.HasSuffix(snippetQName, "."+name)) {
+			targetSnippet = s
+			break
+		}
+	}
+	if targetSnippet == nil || len(targetSnippet.ParametersItems()) == 0 {
+		// Snippet has no declared parameters — nothing to validate or map.
+		return nil
+	}
+
+	// Build a lookup of supplied mappings by parameter name (strip leading $).
+	suppliedByName := make(map[string]string, len(supplied))
+	for _, p := range supplied {
+		name := strings.TrimPrefix(p.ParamName, "$")
+		suppliedByName[name] = p.Variable
+	}
+
+	// Validate that every declared parameter has a mapping, then build the list.
+	for _, rawParam := range targetSnippet.ParametersItems() {
+		sp, ok := rawParam.(*genPg.SnippetParameter)
+		if !ok || sp == nil {
+			continue
+		}
+		paramName := sp.Name()
+		argument, found := suppliedByName[paramName]
+		if !found {
+			return mdlerrors.NewValidationf(
+				"snippet %s requires parameter $%s — add Params: {%s: $<variable>} to the SNIPPETCALL",
+				snippetQName, paramName, paramName,
+			)
+		}
+		sc.ParameterMappings = append(sc.ParameterMappings, backend.SnippetParamMapping{
+			ParamName: paramName,
+			Argument:  argument,
+		})
+	}
+
+	return nil
+}
+
+// buildTemplateV3 creates a Container to hold template content.
+func (pb *pageBuilder) buildTemplateV3(w *ast.WidgetV3) (*backend.Container, error) {
+	container := &backend.Container{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$DivContainer",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Build children
+	for _, child := range w.Children {
+		childWidget, err := pb.buildWidgetV3(child)
+		if err != nil {
+			return nil, err
+		}
+		container.Widgets = append(container.Widgets, childWidget)
+	}
+
+	return container, nil
+}
+
+// buildFilterV3 creates a Container to hold filter widgets.
+func (pb *pageBuilder) buildFilterV3(w *ast.WidgetV3) (*backend.Container, error) {
+	container := &backend.Container{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$DivContainer",
+			},
+			Name: w.Name,
+		},
+	}
+
+	// Build children (filter widgets)
+	for _, child := range w.Children {
+		childWidget, err := pb.buildWidgetV3(child)
+		if err != nil {
+			return nil, err
+		}
+		container.Widgets = append(container.Widgets, childWidget)
+	}
+
+	return container, nil
+}
+
+func (pb *pageBuilder) buildStaticImageV3(w *ast.WidgetV3) (*backend.StaticImage, error) {
+	img := &backend.StaticImage{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$StaticImageViewer",
+			},
+			Name: w.Name,
+		},
+		Responsive: true,
+	}
+
+	if width := w.GetIntProp("Width"); width > 0 {
+		img.Width = width
+	}
+	if height := w.GetIntProp("Height"); height > 0 {
+		img.Height = height
+	}
+
+	if err := pb.registerWidgetName(w.Name, img.ID); err != nil {
+		return nil, err
+	}
+
+	return img, nil
+}
+
+func (pb *pageBuilder) buildDynamicImageV3(w *ast.WidgetV3) (*backend.DynamicImage, error) {
+	img := &backend.DynamicImage{
+		BaseWidget: backend.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Forms$ImageViewer",
+			},
+			Name: w.Name,
+		},
+		Responsive: true,
+	}
+
+	if width := w.GetIntProp("Width"); width > 0 {
+		img.Width = width
+	}
+	if height := w.GetIntProp("Height"); height > 0 {
+		img.Height = height
+	}
+
+	if err := pb.registerWidgetName(w.Name, img.ID); err != nil {
+		return nil, err
+	}
+
+	return img, nil
+}
+
+// dataGridFilterWidgetID maps a MDL filter type keyword to its pluggable widget ID.
+// Returns "" for non-filter widget types.
+func dataGridFilterWidgetID(widgetType string) string {
+	switch strings.ToLower(widgetType) {
+	case "textfilter":
+		return widgetIDDataGridTextFilter
+	case "numberfilter":
+		return widgetIDDataGridNumberFilter
+	case "datefilter":
+		return widgetIDDataGridDateFilter
+	case "dropdownfilter":
+		return widgetIDDataGridDropdownFilter
+	}
+	return ""
+}
+
+// dataGridPagingPropMap maps PascalCase MDL property names to camelCase widget property keys.
+var dataGridPagingPropMap = map[string]string{
+	"PageSize":          "pageSize",
+	"Pagination":        "pagination",
+	"PagingPosition":    "pagingPosition",
+	"ShowPagingButtons": "showPagingButtons",
+	// "ShowNumberOfRows" is defined in DataGrid2 type but not yet fully supported;
+	// setting it to a non-default value causes CE0463 "widget definition changed".
 }

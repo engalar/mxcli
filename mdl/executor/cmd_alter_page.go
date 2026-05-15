@@ -7,14 +7,17 @@ import (
 	"sort"
 	"strings"
 
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // execAlterPage handles ALTER PAGE/SNIPPET Module.Name { operations }.
@@ -210,12 +213,12 @@ func applyInsertWidgetMutator(ctx *ExecContext, mutator backend.PageMutator, op 
 	entityCtx := mutator.EnclosingEntity(op.Target.Widget)
 
 	// Build new widgets from AST
-	widgets, err := buildWidgetsFromAST(ctx, op.Widgets, moduleName, moduleID, entityCtx, mutator)
+	widgets, err := buildWidgetsFromASTGen(ctx, op.Widgets, moduleName, moduleID, entityCtx, mutator)
 	if err != nil {
 		return mdlerrors.NewBackend("build widgets", err)
 	}
 
-	return mutator.InsertWidget(op.Target.Widget, op.Target.Column, backend.InsertPosition(op.Position), widgets)
+	return mutator.InsertWidgetGen(op.Target.Widget, op.Target.Column, backend.InsertPosition(op.Position), widgets)
 }
 
 // ============================================================================
@@ -246,21 +249,21 @@ func applyReplaceWidgetMutator(ctx *ExecContext, mutator backend.PageMutator, op
 	entityCtx := mutator.EnclosingEntity(op.Target.Widget)
 
 	// Build new widgets from AST
-	widgets, err := buildWidgetsFromAST(ctx, op.NewWidgets, moduleName, moduleID, entityCtx, mutator)
+	widgets, err := buildWidgetsFromASTGen(ctx, op.NewWidgets, moduleName, moduleID, entityCtx, mutator)
 	if err != nil {
 		return mdlerrors.NewBackend("build replacement widgets", err)
 	}
 
-	return mutator.ReplaceWidget(op.Target.Widget, op.Target.Column, widgets)
+	return mutator.ReplaceWidgetGen(op.Target.Widget, op.Target.Column, widgets)
 }
 
 // ============================================================================
 // Widget building from AST (domain logic stays in executor)
 // ============================================================================
 
-// buildWidgetsFromAST converts AST widgets to pages.Widget domain objects.
+// buildWidgetsFromASTGen converts AST widgets to gen-typed element.Element values.
 // It uses the mutator for scope resolution (WidgetScope, ParamScope).
-func buildWidgetsFromAST(ctx *ExecContext, widgets []*ast.WidgetV3, moduleName string, moduleID model.ID, entityContext string, mutator backend.PageMutator) ([]pages.Widget, error) {
+func buildWidgetsFromASTGen(ctx *ExecContext, widgets []*ast.WidgetV3, moduleName string, moduleID model.ID, entityContext string, mutator backend.PageMutator) ([]element.Element, error) {
 	paramScope, paramEntityNames := mutator.ParamScope()
 	widgetScope := mutator.WidgetScope()
 
@@ -279,7 +282,7 @@ func buildWidgetsFromAST(ctx *ExecContext, widgets []*ast.WidgetV3, moduleName s
 		snippetsRepo:     ctx.Snippets,
 	}
 
-	var result []pages.Widget
+	var result []element.Element
 	for _, w := range widgets {
 		widget, err := pb.buildWidgetV3(w)
 		if err != nil {
@@ -288,7 +291,16 @@ func buildWidgetsFromAST(ctx *ExecContext, widgets []*ast.WidgetV3, moduleName s
 		if widget == nil {
 			continue
 		}
-		result = append(result, widget)
+		raw := sdkmpr.SerializeWidget(widget)
+		rawBSON, err := bson.Marshal(raw)
+		if err != nil {
+			return nil, mdlerrors.NewBackend("marshal widget "+w.Name, err)
+		}
+		elem, err := codec.NewDecoder(codec.DefaultRegistry).Decode(bson.Raw(rawBSON))
+		if err != nil {
+			return nil, mdlerrors.NewBackend("decode widget "+w.Name+" to gen", err)
+		}
+		result = append(result, elem)
 	}
 	return result, nil
 }
