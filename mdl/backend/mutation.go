@@ -134,6 +134,21 @@ type PageMutator interface {
 
 	// Save persists the mutations to the backend.
 	Save() error
+
+	// ── Stage 3.3.5.D0 gen-typed additive siblings ──────────────────────────
+	// These accept modelsdk element.Element inputs (codec-encoded to BSON) instead
+	// of sdk/pages struct types. Legacy methods above are unchanged — D1+ will
+	// migrate callers, E1 will retire the legacy surface.
+
+	// SetWidgetDataSourceGen sets the DataSource on the named widget using a
+	// gen-typed DataSource element (codec-encoded to BSON).
+	SetWidgetDataSourceGen(widgetRef string, ds element.Element) error
+
+	// InsertWidgetGen inserts gen-typed widget elements at the given position.
+	InsertWidgetGen(widgetRef string, columnRef string, position InsertPosition, widgets []element.Element) error
+
+	// ReplaceWidgetGen replaces the target widget or column with gen-typed widgets.
+	ReplaceWidgetGen(widgetRef string, columnRef string, widgets []element.Element) error
 }
 
 // PluggablePropertyContext carries operation-specific values for
