@@ -9,51 +9,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
-
-// outputEntityAccessGrants is kept for the legacy sdk-typed describeEntity path.
-func outputEntityAccessGrants(ctx *ExecContext, entity *domainmodel.Entity, moduleName, entityName string) {
-	if len(entity.AccessRules) == 0 {
-		return
-	}
-
-	attrNames := make(map[string]string)
-	for _, attr := range entity.Attributes {
-		attrNames[string(attr.ID)] = attr.Name
-	}
-
-	for _, rule := range entity.AccessRules {
-		var roleStrs []string
-		for _, rn := range rule.ModuleRoleNames {
-			roleStrs = append(roleStrs, rn)
-		}
-		if len(roleStrs) == 0 {
-			for _, rid := range rule.ModuleRoles {
-				roleStrs = append(roleStrs, string(rid))
-			}
-		}
-		if len(roleStrs) == 0 {
-			continue
-		}
-
-		rightsStr := formatAccessRuleRights(rule, attrNames)
-		if rightsStr == "" {
-			continue
-		}
-
-		grantLine := fmt.Sprintf("\ngrant %s on %s.%s (%s)",
-			strings.Join(roleStrs, ", "), moduleName, entityName, rightsStr)
-
-		if rule.XPathConstraint != "" {
-			escaped := strings.ReplaceAll(rule.XPathConstraint, "'", "''")
-			grantLine += fmt.Sprintf(" where '%s'", escaped)
-		}
-		grantLine += ";"
-
-		fmt.Fprintln(ctx.Output, grantLine)
-	}
-}
 
 // outputEntityAccessGrantsGen outputs GRANT statements for entity access rules.
 func outputEntityAccessGrantsGen(ctx *ExecContext, entity *genDm.Entity, moduleName, entityName string) {
@@ -97,54 +53,6 @@ func outputEntityAccessGrantsGen(ctx *ExecContext, entity *genDm.Entity, moduleN
 
 		fmt.Fprintln(ctx.Output, grantLine)
 	}
-}
-
-func resolveEntityMemberAccess(rule *domainmodel.AccessRule, attrNames map[string]string) (readMembers []string, writeMembers []string) {
-	if len(rule.MemberAccesses) == 0 {
-		return nil, nil
-	}
-	allMatchDefault := true
-	for _, ma := range rule.MemberAccesses {
-		if ma.AccessRights != rule.DefaultMemberAccessRights {
-			allMatchDefault = false
-			break
-		}
-	}
-	if allMatchDefault {
-		return nil, nil
-	}
-	var readOnly, readWrite []string
-	for _, ma := range rule.MemberAccesses {
-		memberName := ma.AttributeName
-		if memberName == "" {
-			memberName = ma.AssociationName
-		}
-		if memberName == "" {
-			if an, ok := attrNames[string(ma.AttributeID)]; ok {
-				memberName = an
-			} else {
-				memberName = string(ma.AttributeID)
-			}
-		}
-		switch ma.AccessRights {
-		case domainmodel.MemberAccessRightsReadWrite:
-			readWrite = append(readWrite, memberName)
-		case domainmodel.MemberAccessRightsReadOnly:
-			readOnly = append(readOnly, memberName)
-		}
-	}
-	allReadable := append(readOnly, readWrite...)
-	if len(allReadable) == 0 {
-		readMembers = nil
-	} else {
-		readMembers = allReadable
-	}
-	if len(readWrite) == 0 {
-		writeMembers = []string{}
-	} else {
-		writeMembers = readWrite
-	}
-	return readMembers, writeMembers
 }
 
 // resolveEntityMemberAccessGen determines per-member READ/WRITE access.
@@ -207,46 +115,6 @@ func resolveEntityMemberAccessGen(rule *genDm.AccessRule, attrNames map[string]s
 	}
 
 	return readMembers, writeMembers
-}
-
-func formatAccessRuleRights(rule *domainmodel.AccessRule, attrNames map[string]string) string {
-	var rights []string
-	if rule.AllowCreate {
-		rights = append(rights, "create")
-	}
-	if rule.AllowDelete {
-		rights = append(rights, "delete")
-	}
-	hasRead := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadOnly ||
-		rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
-	hasWrite := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
-	if !hasRead || !hasWrite {
-		for _, ma := range rule.MemberAccesses {
-			if ma.AccessRights == domainmodel.MemberAccessRightsReadOnly ||
-				ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
-				hasRead = true
-			}
-			if ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
-				hasWrite = true
-			}
-		}
-	}
-	readMembers, writeMembers := resolveEntityMemberAccess(rule, attrNames)
-	if hasRead {
-		if readMembers == nil {
-			rights = append(rights, "read *")
-		} else {
-			rights = append(rights, fmt.Sprintf("read (%s)", strings.Join(readMembers, ", ")))
-		}
-	}
-	if hasWrite {
-		if writeMembers == nil {
-			rights = append(rights, "write *")
-		} else if len(writeMembers) > 0 {
-			rights = append(rights, fmt.Sprintf("write (%s)", strings.Join(writeMembers, ", ")))
-		}
-	}
-	return strings.Join(rights, ", ")
 }
 
 // formatAccessRuleRightsGen formats the rights portion of an access rule as a string.
