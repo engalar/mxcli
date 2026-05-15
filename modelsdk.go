@@ -118,9 +118,9 @@ package modelsdk
 import (
 	"github.com/mendixlabs/mxcli/model"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // Version is the library version.
@@ -168,13 +168,13 @@ type (
 	Nanoflow = genMf.Nanoflow
 
 	// Page represents a page.
-	Page = pages.Page
+	Page = genPg.Page
 
 	// Layout represents a layout.
-	Layout = pages.Layout
+	Layout = genPg.Layout
 
 	// Snippet represents a page snippet.
-	Snippet = pages.Snippet
+	Snippet = genPg.Snippet
 
 	// Reader provides methods to read Mendix project files.
 	Reader = mpr.Reader
@@ -281,9 +281,9 @@ func NewReferenceSetAssociation(name string, parentID, childID ID) *Association 
 
 // NewPage creates a new page.
 func NewPage(name string) *Page {
-	return &Page{
-		Name: name,
-	}
+	p := genPg.NewPage()
+	p.SetName(name)
+	return p
 }
 
 // GenerateID generates a new unique ID for model elements.
