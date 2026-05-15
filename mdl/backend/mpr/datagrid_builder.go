@@ -17,7 +17,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/widgets"
 )
 
@@ -49,10 +48,10 @@ func (b *MprBackend) buildDataGrid2WidgetDoc(id model.ID, name string, spec back
 
 	// Build the object
 	var updatedObject bson.D
-	if len(spec.Columns) > 0 || len(spec.HeaderWidgets) > 0 {
+	if len(spec.Columns) > 0 || len(spec.HeaderWidgetsBSON) > 0 {
 		updatedObject = b.updateDataGrid2Object(embeddedObject, propertyTypeIDs, spec)
 	} else {
-		updatedObject = b.cloneDataGrid2ObjectWithDatasourceOnly(embeddedObject, propertyTypeIDs, spec.DataSource)
+		updatedObject = b.cloneDataGrid2ObjectWithDatasourceOnly(embeddedObject, propertyTypeIDs, spec.DataSourceBSON)
 	}
 
 	// Apply paging overrides
@@ -148,12 +147,6 @@ func (b *MprBackend) updateDataGrid2Properties(props bson.A, propertyTypeIDs map
 	columnsEntry := propertyTypeIDs["columns"]
 	filtersPlaceholderEntry := propertyTypeIDs["filtersPlaceholder"]
 
-	// Serialize header widgets to BSON
-	var headerWidgetsBSON []bson.D
-	for _, w := range spec.HeaderWidgets {
-		headerWidgetsBSON = append(headerWidgetsBSON, mpr.SerializeWidget(w))
-	}
-
 	for _, propVal := range props {
 		if _, ok := propVal.(int32); ok {
 			continue
@@ -167,11 +160,11 @@ func (b *MprBackend) updateDataGrid2Properties(props bson.A, propertyTypeIDs map
 		typePointer := getTypePointerFromProperty(propMap)
 
 		if typePointer == datasourceEntry.PropertyTypeID {
-			result = append(result, buildDataGrid2Property(datasourceEntry, spec.DataSource, "", "", b))
+			result = append(result, buildDataGrid2Property(datasourceEntry, spec.DataSourceBSON))
 		} else if typePointer == columnsEntry.PropertyTypeID {
 			result = append(result, b.cloneAndUpdateColumnsProperty(propMap, columnsEntry, propertyTypeIDs, spec.Columns))
-		} else if typePointer == filtersPlaceholderEntry.PropertyTypeID && len(headerWidgetsBSON) > 0 {
-			result = append(result, buildFiltersPlaceholderProperty(filtersPlaceholderEntry, headerWidgetsBSON))
+		} else if typePointer == filtersPlaceholderEntry.PropertyTypeID && len(spec.HeaderWidgetsBSON) > 0 {
+			result = append(result, buildFiltersPlaceholderProperty(filtersPlaceholderEntry, spec.HeaderWidgetsBSON))
 		} else {
 			result = append(result, clonePropertyWithNewIDs(propMap))
 		}
@@ -253,11 +246,7 @@ func (b *MprBackend) cloneAndUpdateColumnObject(templateCol bson.D, col *backend
 		caption = col.Attribute
 	}
 
-	// Serialize child widgets to BSON
-	var contentWidgets []bson.D
-	for _, child := range col.ChildWidgets {
-		contentWidgets = append(contentWidgets, mpr.SerializeWidget(child))
-	}
+	contentWidgets := col.ChildWidgetsBSON
 
 	result := make(bson.D, 0, len(templateCol))
 	for _, elem := range templateCol {
@@ -327,9 +316,9 @@ func (b *MprBackend) cloneAndUpdateColumnProperties(templateProps bson.A, column
 				result = append(result, clonePropertyWithNewIDs(propMap))
 			}
 		case "filter":
-			if col.FilterWidget != nil {
+			if col.FilterWidgetBSON != nil {
 				entry := columnPropertyIDs["filter"]
-				result = append(result, buildColumnContentProperty(entry, mpr.SerializeWidget(col.FilterWidget)))
+				result = append(result, buildColumnContentProperty(entry, col.FilterWidgetBSON))
 			} else {
 				result = append(result, clonePropertyWithNewIDs(propMap))
 			}
@@ -462,11 +451,7 @@ func (b *MprBackend) cloneAndUpdateColumnProperties(templateProps bson.A, column
 func (b *MprBackend) buildDataGrid2ColumnObject(col *backend.DataGridColumnSpec, columnObjectTypeID string, columnPropertyIDs map[string]types.PropertyTypeIDEntry) bson.D {
 	attrPath := col.Attribute
 
-	// Serialize child widgets to BSON
-	var contentWidgets []bson.D
-	for _, child := range col.ChildWidgets {
-		contentWidgets = append(contentWidgets, mpr.SerializeWidget(child))
-	}
+	contentWidgets := col.ChildWidgetsBSON
 	hasCustomContent := len(contentWidgets) > 0
 
 	properties := bson.A{int32(2)}
@@ -510,8 +495,8 @@ func (b *MprBackend) buildDataGrid2ColumnObject(col *backend.DataGridColumnSpec,
 			}
 
 		case "filter":
-			if col.FilterWidget != nil {
-				properties = append(properties, buildColumnContentProperty(entry, mpr.SerializeWidget(col.FilterWidget)))
+			if col.FilterWidgetBSON != nil {
+				properties = append(properties, buildColumnContentProperty(entry, col.FilterWidgetBSON))
 			} else {
 				properties = append(properties, buildColumnContentProperty(entry, nil))
 			}
@@ -619,7 +604,7 @@ func (b *MprBackend) buildDataGrid2ColumnObject(col *backend.DataGridColumnSpec,
 	}
 }
 
-func (b *MprBackend) cloneDataGrid2ObjectWithDatasourceOnly(templateObject bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, datasource backend.DataSource) bson.D {
+func (b *MprBackend) cloneDataGrid2ObjectWithDatasourceOnly(templateObject bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, datasourceBSON bson.D) bson.D {
 	result := make(bson.D, 0, len(templateObject))
 
 	for _, elem := range templateObject {
@@ -627,7 +612,7 @@ func (b *MprBackend) cloneDataGrid2ObjectWithDatasourceOnly(templateObject bson.
 			result = append(result, bson.E{Key: "$ID", Value: bsonutil.NewIDBsonBinary()})
 		} else if elem.Key == "Properties" {
 			if propsArr, ok := elem.Value.(bson.A); ok {
-				updatedProps := b.updateOnlyDatasource(propsArr, propertyTypeIDs, datasource)
+				updatedProps := b.updateOnlyDatasource(propsArr, propertyTypeIDs, datasourceBSON)
 				result = append(result, bson.E{Key: "Properties", Value: updatedProps})
 			} else {
 				result = append(result, elem)
@@ -640,7 +625,7 @@ func (b *MprBackend) cloneDataGrid2ObjectWithDatasourceOnly(templateObject bson.
 	return result
 }
 
-func (b *MprBackend) updateOnlyDatasource(props bson.A, propertyTypeIDs map[string]types.PropertyTypeIDEntry, datasource backend.DataSource) bson.A {
+func (b *MprBackend) updateOnlyDatasource(props bson.A, propertyTypeIDs map[string]types.PropertyTypeIDEntry, datasourceBSON bson.D) bson.A {
 	result := bson.A{int32(2)}
 	datasourceEntry := propertyTypeIDs["datasource"]
 
@@ -655,7 +640,7 @@ func (b *MprBackend) updateOnlyDatasource(props bson.A, propertyTypeIDs map[stri
 
 		typePointer := getTypePointerFromProperty(propMap)
 		if typePointer == datasourceEntry.PropertyTypeID {
-			result = append(result, buildDataGrid2Property(datasourceEntry, datasource, "", "", b))
+			result = append(result, buildDataGrid2Property(datasourceEntry, datasourceBSON))
 		} else {
 			result = append(result, clonePropertyWithNewIDs(propMap))
 		}
@@ -745,30 +730,19 @@ func (b *MprBackend) applyDataGridSelectionProp(obj bson.D, propertyTypeIDs map[
 // BSON property builders (package-level, no receiver needed)
 // ===========================================================================
 
-// buildDataGrid2Property builds a single property BSON document for a DataGrid2 column.
-// attrRef and primitiveValue are reserved for future column types that require direct
-// attribute references or primitive default values; current callers pass empty strings.
-func buildDataGrid2Property(entry types.PropertyTypeIDEntry, datasource backend.DataSource, attrRef string, primitiveValue string, _ *MprBackend) bson.D {
-	var datasourceBSON any
-	if datasource != nil {
-		datasourceBSON = mpr.SerializeCustomWidgetDataSource(datasource)
-	}
-
-	var attrRefBSON any
-	if attrRef != "" {
-		attrRefBSON = bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "DomainModels$AttributeRef"},
-			{Key: "Attribute", Value: attrRef},
-			{Key: "EntityRef", Value: nil},
-		}
+// buildDataGrid2Property builds a single datasource property BSON document for a DataGrid2 widget.
+// datasourceBSON is the pre-serialized datasource (may be nil for no datasource).
+func buildDataGrid2Property(entry types.PropertyTypeIDEntry, datasourceBSON bson.D) bson.D {
+	var ds any
+	if datasourceBSON != nil {
+		ds = datasourceBSON
 	}
 
 	return bson.D{
 		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 		{Key: "$Type", Value: "CustomWidgets$WidgetProperty"},
 		{Key: "TypePointer", Value: bsonutil.IDToBsonBinary(entry.PropertyTypeID)},
-		{Key: "Value", Value: buildDefaultWidgetValueBSON(entry, datasourceBSON, attrRefBSON, primitiveValue, nil, nil)},
+		{Key: "Value", Value: buildDefaultWidgetValueBSON(entry, ds, nil, "", nil, nil)},
 	}
 }
 

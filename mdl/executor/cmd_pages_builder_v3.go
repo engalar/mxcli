@@ -8,9 +8,12 @@ import (
 	"regexp"
 	"strings"
 
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/bsonutil"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -1764,14 +1767,14 @@ func (pb *pageBuilder) buildDataViewV3(w *ast.WidgetV3) (element.Element, error)
 func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (element.Element, error) {
 	widgetID := model.ID(types.GenerateID())
 
-	// Build datasource using backend types (DataGridSpec still uses backend.DataSource)
-	var datasource backend.DataSource
+	// Build datasource BSON (pre-serialized for DataGridSpec)
+	var datasourceBSON bson.D
 	if ds := w.GetDataSource(); ds != nil {
-		backendDS, entityName, err := pb.buildDataSourceBackend(ds)
+		dsDoc, entityName, err := pb.buildDataGridDataSourceBSON(ds)
 		if err != nil {
 			return nil, mdlerrors.NewBackend("build datasource", err)
 		}
-		datasource = backendDS
+		datasourceBSON = dsDoc
 
 		oldContext := pb.entityContext
 		pb.entityContext = entityName
@@ -1780,7 +1783,7 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (element.Element, error)
 
 	// Extract column definitions and CONTROLBAR widgets from children
 	var columns []backend.DataGridColumnSpec
-	var headerWidgets []backend.Widget
+	var headerWidgetsBSON []bson.D
 	for _, child := range w.Children {
 		switch strings.ToLower(child.Type) {
 		case "column":
@@ -1802,27 +1805,32 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (element.Element, error)
 					if err != nil {
 						return nil, mdlerrors.NewBackend("build column filter widget", err)
 					}
-					col.FilterWidget = fw
+					// Serialize GenCustomWidgetElem to bson.D
+					fwDoc, err := pb.serializeGenWidgetToBsonD(fw)
+					if err != nil {
+						return nil, mdlerrors.NewBackend("serialize filter widget", err)
+					}
+					col.FilterWidgetBSON = fwDoc
 				} else {
-					// Build as backend widget for compatibility with DataGridSpec
-					childWidget, err := pb.buildWidgetBackend(grandchild)
+					// Build child widget as pre-serialized BSON
+					childDoc, err := pb.buildWidgetBSON(grandchild)
 					if err != nil {
 						return nil, mdlerrors.NewBackend("build column child widget", err)
 					}
-					if childWidget != nil {
-						col.ChildWidgets = append(col.ChildWidgets, childWidget)
+					if childDoc != nil {
+						col.ChildWidgetsBSON = append(col.ChildWidgetsBSON, childDoc)
 					}
 				}
 			}
 			columns = append(columns, col)
 		case "controlbar":
 			for _, controlBarChild := range child.Children {
-				childWidget, err := pb.buildWidgetBackend(controlBarChild)
+				childDoc, err := pb.buildWidgetBSON(controlBarChild)
 				if err != nil {
 					return nil, mdlerrors.NewBackend("build controlbar widget", err)
 				}
-				if childWidget != nil {
-					headerWidgets = append(headerWidgets, childWidget)
+				if childDoc != nil {
+					headerWidgetsBSON = append(headerWidgetsBSON, childDoc)
 				}
 			}
 		}
@@ -1847,11 +1855,11 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (element.Element, error)
 	}
 
 	spec := backend.DataGridSpec{
-		DataSource:      datasource,
-		Columns:         columns,
-		HeaderWidgets:   headerWidgets,
-		PagingOverrides: pagingOverrides,
-		SelectionMode:   w.GetSelection(),
+		DataSourceBSON:    datasourceBSON,
+		Columns:           columns,
+		HeaderWidgetsBSON: headerWidgetsBSON,
+		PagingOverrides:   pagingOverrides,
+		SelectionMode:     w.GetSelection(),
 	}
 
 	// Use gen-native DataGrid2 builder
@@ -1867,9 +1875,9 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (element.Element, error)
 	return grid.AsElement(), nil
 }
 
-// buildDataSourceBackend builds a backend.DataSource for use in DataGridSpec.
-// This is the legacy sdk-typed path required by DataGridSpec.
-func (pb *pageBuilder) buildDataSourceBackend(ds *ast.DataSourceV3) (backend.DataSource, string, error) {
+// buildDataGridDataSourceBSON builds a pre-serialized bson.D datasource for use in DataGridSpec.
+// Returns the datasource BSON document, the resolved entity name, and any error.
+func (pb *pageBuilder) buildDataGridDataSourceBSON(ds *ast.DataSourceV3) (bson.D, string, error) {
 	switch ds.Type {
 	case "parameter":
 		paramName := strings.TrimPrefix(ds.Reference, "$")
@@ -1889,82 +1897,115 @@ func (pb *pageBuilder) buildDataSourceBackend(ds *ast.DataSourceV3) (backend.Dat
 				log.Printf("warning: could not resolve entity name for ID %s: %v", entityID, err)
 			}
 		}
-		return &backend.DataViewSource{
-			BaseElement: model.BaseElement{
-				ID:       model.ID(types.GenerateID()),
-				TypeName: "Forms$DataViewSource",
-			},
-			EntityID:           entityID,
-			EntityName:         entityName,
-			ParameterName:      paramName,
-			IsSnippetParameter: pb.isSnippet,
-		}, entityName, nil
+		var entityRef any
+		if entityName != "" {
+			entityRef = bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "DomainModels$DirectEntityRef"},
+				{Key: "Entity", Value: entityName},
+			}
+		}
+		doc := bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$DataViewSource"},
+			{Key: "EntityRef", Value: entityRef},
+			{Key: "ForceFullObjects", Value: false},
+			{Key: "SourceVariable", Value: nil},
+		}
+		return doc, entityName, nil
 
 	case "database":
-		entityID, err := pb.resolveEntity(ast.QualifiedName{
+		_, err := pb.resolveEntity(ast.QualifiedName{
 			Module: pb.extractModule(ds.Reference),
 			Name:   pb.extractName(ds.Reference),
 		})
 		if err != nil {
 			return nil, "", mdlerrors.NewBackend("resolve entity", err)
 		}
-		dbSource := &backend.DatabaseSource{
-			BaseElement: model.BaseElement{
-				ID:       model.ID(types.GenerateID()),
-				TypeName: "Forms$DatabaseSource",
-			},
-			EntityID:   entityID,
-			EntityName: ds.Reference,
+		var entityRef any
+		if ds.Reference != "" {
+			entityRef = bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "DomainModels$DirectEntityRef"},
+				{Key: "Entity", Value: ds.Reference},
+			}
 		}
-		if ds.Where != "" {
-			dbSource.XPathConstraint = ds.Where
-		}
+		sortItems := bson.A{int32(2)}
 		for _, ob := range ds.OrderBy {
-			direction := backend.SortDirectionAscending
+			direction := "Ascending"
 			if strings.ToLower(ob.Direction) == "desc" {
-				direction = backend.SortDirectionDescending
+				direction = "Descending"
 			}
-			sortItem := &backend.GridSort{
-				BaseElement: model.BaseElement{
-					ID:       model.ID(types.GenerateID()),
-					TypeName: "Forms$GridSort",
-				},
-				AttributePath: pb.resolveAttributePathForEntity(ob.Attribute, ds.Reference),
-				Direction:     direction,
+			sortItem := bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "Forms$GridSortItem"},
+				{Key: "AttributeRef", Value: bson.D{
+					{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+					{Key: "$Type", Value: "DomainModels$AttributeRef"},
+					{Key: "Attribute", Value: pb.resolveAttributePathForEntity(ob.Attribute, ds.Reference)},
+					{Key: "EntityRef", Value: nil},
+				}},
+				{Key: "SortOrder", Value: direction},
 			}
-			dbSource.Sorting = append(dbSource.Sorting, sortItem)
+			sortItems = append(sortItems, sortItem)
 		}
-		return dbSource, ds.Reference, nil
+		doc := bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "CustomWidgets$CustomWidgetXPathSource"},
+			{Key: "EntityRef", Value: entityRef},
+			{Key: "ForceFullObjects", Value: false},
+			{Key: "SortBar", Value: bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "Forms$GridSortBar"},
+				{Key: "SortItems", Value: sortItems},
+			}},
+			{Key: "SourceVariable", Value: nil},
+			{Key: "XPathConstraint", Value: ds.Where},
+		}
+		return doc, ds.Reference, nil
 
 	case "microflow":
 		mfID, err := pb.resolveMicroflow(ds.Reference)
 		if err != nil {
 			return nil, "", mdlerrors.NewBackend("resolve microflow", err)
 		}
+		_ = mfID
 		entityName := pb.getMicroflowReturnEntityName(ds.Reference)
-		return &backend.MicroflowSource{
-			BaseElement: model.BaseElement{
-				ID:       model.ID(types.GenerateID()),
-				TypeName: "Forms$MicroflowSource",
-			},
-			MicroflowID: mfID,
-			Microflow:   ds.Reference,
-		}, entityName, nil
+		doc := bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$MicroflowSource"},
+			{Key: "MicroflowSettings", Value: bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "Forms$MicroflowSettings"},
+				{Key: "Asynchronous", Value: false},
+				{Key: "ConfirmationInfo", Value: nil},
+				{Key: "FormValidations", Value: "All"},
+				{Key: "Microflow", Value: ds.Reference},
+				{Key: "ParameterMappings", Value: bson.A{int32(3)}},
+				{Key: "ProgressBar", Value: "None"},
+				{Key: "ProgressMessage", Value: nil},
+			}},
+		}
+		return doc, entityName, nil
 
 	case "nanoflow":
 		nfID, err := pb.resolveNanoflowByName(ds.Reference)
 		if err != nil {
 			return nil, "", mdlerrors.NewBackend("resolve nanoflow", err)
 		}
+		_ = nfID
 		entityName := pb.getNanoflowReturnEntityName(ds.Reference)
-		return &backend.NanoflowSource{
-			BaseElement: model.BaseElement{
-				ID:       model.ID(types.GenerateID()),
-				TypeName: "Forms$NanoflowSource",
-			},
-			NanoflowID: nfID,
-			Nanoflow:   ds.Reference,
-		}, entityName, nil
+		doc := bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$NanoflowSource"},
+			{Key: "NanoflowSettings", Value: bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "Forms$NanoflowSettings"},
+				{Key: "Nanoflow", Value: ds.Reference},
+				{Key: "ParameterMappings", Value: bson.A{int32(3)}},
+			}},
+		}
+		return doc, entityName, nil
 
 	case "association":
 		ctxVar := ds.ContextVariable
@@ -1979,14 +2020,38 @@ func (pb *pageBuilder) buildDataSourceBackend(ds *ast.DataSourceV3) (backend.Dat
 		} else {
 			destEntity = pb.resolveAssociationDestination(path, pb.entityContext)
 		}
-		return &backend.AssociationSource{
-			BaseElement: model.BaseElement{
-				ID:       model.ID(types.GenerateID()),
-				TypeName: "Forms$AssociationSource",
-			},
-			EntityPath:      path + "/" + destEntity,
-			ContextVariable: ctxVar,
-		}, destEntity, nil
+		step := bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "DomainModels$EntityRefStep"},
+			{Key: "Association", Value: path},
+			{Key: "DestinationEntity", Value: destEntity},
+		}
+		entityRef := bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "DomainModels$IndirectEntityRef"},
+			{Key: "Steps", Value: bson.A{int32(2), step}},
+		}
+		var sourceVar any
+		if ctxVar != "" {
+			sourceVar = bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "Forms$PageVariable"},
+				{Key: "LocalVariable", Value: ""},
+				{Key: "PageParameter", Value: ctxVar},
+				{Key: "SnippetParameter", Value: ""},
+				{Key: "SubKey", Value: ""},
+				{Key: "UseAllPages", Value: false},
+				{Key: "Widget", Value: ""},
+			}
+		}
+		doc := bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$AssociationSource"},
+			{Key: "EntityRef", Value: entityRef},
+			{Key: "ForceFullObjects", Value: false},
+			{Key: "SourceVariable", Value: sourceVar},
+		}
+		return doc, destEntity, nil
 
 	case "selection":
 		widgetName := ds.Reference
@@ -1994,144 +2059,220 @@ func (pb *pageBuilder) buildDataSourceBackend(ds *ast.DataSourceV3) (backend.Dat
 		if !ok {
 			return nil, "", mdlerrors.NewNotFound("widget", widgetName)
 		}
+		_ = widgetID
 		entityName := pb.paramEntityNames[widgetName]
-		return &backend.ListenToWidgetSource{
-			BaseElement: model.BaseElement{
-				ID:       model.ID(types.GenerateID()),
-				TypeName: "Forms$ListenTargetSource",
-			},
-			WidgetID:   widgetID,
-			WidgetName: widgetName,
-		}, entityName, nil
+		doc := bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$ListenTargetSource"},
+			{Key: "ListenTarget", Value: widgetName},
+		}
+		return doc, entityName, nil
 
 	default:
 		return nil, "", mdlerrors.NewUnsupported("unsupported datasource type: " + ds.Type)
 	}
 }
 
-// buildWidgetBackend builds a backend.Widget (sdk-typed) for use in DataGridSpec.
+// buildWidgetBSON builds a pre-serialized bson.D widget for use in DataGridSpec.
 // Used internally by buildDataGridV3 for column child widgets and controlbar widgets.
-func (pb *pageBuilder) buildWidgetBackend(w *ast.WidgetV3) (backend.Widget, error) {
-	// For DataGrid internals we still need sdk-typed widgets.
-	// Build as gen element and wrap, or fall back to simple backend types.
+func (pb *pageBuilder) buildWidgetBSON(w *ast.WidgetV3) (bson.D, error) {
 	switch strings.ToLower(w.Type) {
 	case "button", "actionbutton":
-		btn := &backend.ActionButton{
-			BaseWidget: backend.BaseWidget{
-				BaseElement: model.BaseElement{
-					ID:       model.ID(types.GenerateID()),
-					TypeName: "Forms$ActionButton",
-				},
-				Name: w.Name,
-			},
-			ButtonStyle: backend.ButtonStyleDefault,
-		}
-		if caption := w.GetCaption(); caption != "" {
-			btn.CaptionTemplate = &backend.ClientTemplate{
-				BaseElement: model.BaseElement{
-					ID:       model.ID(types.GenerateID()),
-					TypeName: "Forms$ClientTemplate",
-				},
-				Template: &model.Text{
-					BaseElement: model.BaseElement{
-						ID:       model.ID(types.GenerateID()),
-						TypeName: "Texts$Text",
-					},
-					Translations: map[string]string{"en_US": caption},
-				},
-			}
-		}
+		buttonStyle := "Default"
 		if style := w.GetButtonStyle(); style != "" {
-			btn.ButtonStyle = backend.ButtonStyle(style)
+			buttonStyle = style
+		}
+		// Build action BSON
+		actionBSON := bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$NoAction"},
+			{Key: "DisabledDuringExecution", Value: true},
 		}
 		if action := w.GetAction(); action != nil {
-			act, err := pb.buildClientActionBackend(action)
+			ab, err := pb.buildClientActionBSON(action)
 			if err != nil {
 				return nil, mdlerrors.NewBackend("build action", err)
 			}
-			btn.Action = act
+			if ab != nil {
+				actionBSON = ab
+			}
 		}
-		return btn, nil
+		// Build caption template
+		captionTemplate := buildMinimalClientTemplate(w.GetCaption())
+		doc := bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$ActionButton"},
+			{Key: "Action", Value: actionBSON},
+			{Key: "Appearance", Value: buildMinimalAppearance()},
+			{Key: "AriaRole", Value: "Button"},
+			{Key: "ButtonStyle", Value: buttonStyle},
+			{Key: "CaptionTemplate", Value: captionTemplate},
+			{Key: "ConditionalVisibilitySettings", Value: nil},
+			{Key: "Icon", Value: nil},
+			{Key: "Name", Value: w.Name},
+			{Key: "NativeAccessibilitySettings", Value: nil},
+			{Key: "RenderType", Value: "Button"},
+			{Key: "TabIndex", Value: int64(0)},
+			{Key: "Tooltip", Value: bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "Texts$Text"},
+				{Key: "Items", Value: bson.A{int32(3)}},
+			}},
+		}
+		return doc, nil
 	default:
 		// For other widget types in DataGrid context, create a minimal DivContainer
-		c := &backend.Container{
-			BaseWidget: backend.BaseWidget{
-				BaseElement: model.BaseElement{
-					ID:       model.ID(types.GenerateID()),
-					TypeName: "Forms$DivContainer",
-				},
-				Name: w.Name,
-			},
+		doc := bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$DivContainer"},
+			{Key: "Appearance", Value: buildMinimalAppearance()},
+			{Key: "ConditionalVisibilitySettings", Value: nil},
+			{Key: "Name", Value: w.Name},
+			{Key: "NativeAccessibilitySettings", Value: nil},
+			{Key: "OnClickAction", Value: bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "Forms$NoAction"},
+				{Key: "DisabledDuringExecution", Value: true},
+			}},
+			{Key: "RenderMode", Value: "Div"},
+			{Key: "ScreenReaderHidden", Value: false},
+			{Key: "TabIndex", Value: int64(0)},
+			{Key: "Widgets", Value: bson.A{int32(2)}},
 		}
-		return c, nil
+		return doc, nil
 	}
 }
 
-// buildClientActionBackend builds a backend.ClientAction (sdk-typed) for use in DataGrid context.
-func (pb *pageBuilder) buildClientActionBackend(action *ast.ActionV3) (backend.ClientAction, error) {
+// buildClientActionBSON builds a pre-serialized bson.D client action for DataGrid button widgets.
+func (pb *pageBuilder) buildClientActionBSON(action *ast.ActionV3) (bson.D, error) {
 	switch action.Type {
 	case "save":
-		return &backend.SaveChangesClientAction{
-			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID()), TypeName: "Forms$SaveChangesClientAction"},
-			ClosePage:   action.ClosePage,
+		return bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$SaveChangesClientAction"},
+			{Key: "ClosePage", Value: action.ClosePage},
+			{Key: "SyncAutomatically", Value: true},
 		}, nil
 	case "cancel":
-		return &backend.CancelChangesClientAction{
-			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID()), TypeName: "Forms$CancelChangesClientAction"},
-			ClosePage:   action.ClosePage,
+		return bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$CancelChangesClientAction"},
+			{Key: "ClosePage", Value: action.ClosePage},
 		}, nil
 	case "close":
-		return &backend.ClosePageClientAction{
-			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID()), TypeName: "Forms$ClosePageClientAction"},
+		return bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$ClosePageClientAction"},
 		}, nil
 	case "showPage":
-		pageAction := &backend.PageClientAction{
-			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID()), TypeName: "Forms$PageClientAction"},
-			PageName:    action.Target,
-		}
-		return pageAction, nil
+		return bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$PageClientAction"},
+			{Key: "DisabledDuringExecution", Value: true},
+			{Key: "NumberOfPagesToClose2", Value: ""},
+			{Key: "PageSettings", Value: bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "Forms$FormSettings"},
+				{Key: "Form", Value: action.Target},
+				{Key: "ParameterMappings", Value: bson.A{int32(2)}},
+				{Key: "TitleOverride", Value: buildMinimalClientTemplate("")},
+			}},
+		}, nil
 	case "microflow":
 		mfID, err := pb.resolveMicroflow(action.Target)
 		if err != nil {
 			return nil, mdlerrors.NewBackend("resolve microflow", err)
 		}
-		return &backend.MicroflowClientAction{
-			BaseElement:   model.BaseElement{ID: model.ID(types.GenerateID()), TypeName: "Forms$MicroflowAction"},
-			MicroflowID:   mfID,
-			MicroflowName: action.Target,
+		_ = mfID
+		return bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$MicroflowAction"},
+			{Key: "DisabledDuringExecution", Value: true},
+			{Key: "MicroflowSettings", Value: bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "Forms$MicroflowSettings"},
+				{Key: "Asynchronous", Value: false},
+				{Key: "ConfirmationInfo", Value: nil},
+				{Key: "FormValidations", Value: "All"},
+				{Key: "Microflow", Value: action.Target},
+				{Key: "ParameterMappings", Value: bson.A{int32(3)}},
+				{Key: "ProgressBar", Value: "None"},
+				{Key: "ProgressMessage", Value: nil},
+			}},
 		}, nil
 	default:
-		return &backend.ClosePageClientAction{
-			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID()), TypeName: "Forms$ClosePageClientAction"},
+		return bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$ClosePageClientAction"},
 		}, nil
 	}
 }
 
-func (pb *pageBuilder) buildDataGridColumnV3(w *ast.WidgetV3) (*backend.DataGridColumn, error) {
-	col := &backend.DataGridColumn{
-		BaseElement: model.BaseElement{
-			ID:       model.ID(types.GenerateID()),
-			TypeName: "Forms$DataGridColumn",
-		},
-		Name:     w.Name,
-		Editable: true,
+// serializeGenWidgetToBsonD encodes a GenCustomWidgetElem to bson.D.
+// Used for pre-serializing filter widgets into DataGridColumnSpec.FilterWidgetBSON.
+func (pb *pageBuilder) serializeGenWidgetToBsonD(fw *backend.GenCustomWidgetElem) (bson.D, error) {
+	if fw == nil {
+		return nil, nil
 	}
-
-	if attr := w.GetAttribute(); attr != "" {
-		col.AttributePath = pb.resolveAttributePath(attr)
+	opaque := pb.widgetBackend.SerializeGenElemToOpaque(fw.AsElement())
+	if opaque == nil {
+		return nil, fmt.Errorf("serializeGenWidgetToBsonD: encode returned nil")
 	}
-
-	if caption := w.GetCaption(); caption != "" {
-		col.Caption = &model.Text{
-			BaseElement: model.BaseElement{
-				ID:       model.ID(types.GenerateID()),
-				TypeName: "Texts$Text",
-			},
-			Translations: map[string]string{"en_US": caption},
+	// SerializeGenElemToOpaque returns bson.Raw — unmarshal to bson.D for embedding.
+	var doc bson.D
+	switch v := opaque.(type) {
+	case bson.Raw:
+		if err := bson.Unmarshal([]byte(v), &doc); err != nil {
+			return nil, fmt.Errorf("serializeGenWidgetToBsonD: unmarshal: %w", err)
 		}
+	case bson.D:
+		doc = v
+	default:
+		return nil, fmt.Errorf("serializeGenWidgetToBsonD: unexpected opaque type %T", opaque)
 	}
+	return doc, nil
+}
 
-	return col, nil
+// buildMinimalClientTemplate builds a minimal Forms$ClientTemplate BSON with optional text.
+func buildMinimalClientTemplate(text string) bson.D {
+	var templateItems bson.A
+	if text != "" {
+		templateItems = bson.A{int32(3), bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Texts$Translation"},
+			{Key: "LanguageCode", Value: "en_US"},
+			{Key: "Text", Value: text},
+		}}
+	} else {
+		templateItems = bson.A{int32(3)}
+	}
+	return bson.D{
+		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+		{Key: "$Type", Value: "Forms$ClientTemplate"},
+		{Key: "Fallback", Value: bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Texts$Text"},
+			{Key: "Items", Value: bson.A{int32(3)}},
+		}},
+		{Key: "Parameters", Value: bson.A{int32(2)}},
+		{Key: "Template", Value: bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Texts$Text"},
+			{Key: "Items", Value: templateItems},
+		}},
+	}
+}
+
+// buildMinimalAppearance builds a minimal Forms$Appearance BSON.
+func buildMinimalAppearance() bson.D {
+	return bson.D{
+		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+		{Key: "$Type", Value: "Forms$Appearance"},
+		{Key: "Class", Value: ""},
+		{Key: "DesignProperties", Value: bson.A{int32(3)}},
+		{Key: "DynamicClasses", Value: ""},
+		{Key: "Style", Value: ""},
+	}
 }
 
 func (pb *pageBuilder) buildListViewV3(w *ast.WidgetV3) (element.Element, error) {
