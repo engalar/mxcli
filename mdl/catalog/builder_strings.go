@@ -36,26 +36,31 @@ func (b *Builder) buildStrings() error {
 		count++
 	}
 
-	// Extract from pages (title, URL) — using cached list
-	pageList, err := b.cachedPages()
+	// Extract from pages (title, URL) — using cached gen list. Container
+	// linkage is resolved via the unit hierarchy (Stage 3.3.5.C7e).
+	pageGenList, err := b.cachedPagesGen()
 	if err == nil {
-		for _, pg := range pageList {
-			moduleID := b.hierarchy.findModuleID(pg.ContainerID)
+		for _, pg := range pageGenList {
+			if pg == nil {
+				continue
+			}
+			pgID := model.ID(pg.ID())
+			containerID := b.hierarchy.containerParent[pgID]
+			moduleID := b.hierarchy.findModuleID(containerID)
 			moduleName := b.hierarchy.getModuleName(moduleID)
-			qn := moduleName + "." + pg.Name
+			qn := moduleName + "." + pg.Name()
 
-			pageID := string(pg.ID)
+			pageIDStr := string(pgID)
 
-			// Page title translations (with language code)
-			if pg.Title != nil && pg.Title.Translations != nil {
-				for lang, t := range pg.Title.Translations {
-					insert(qn, "PAGE", t, "page_title", lang, pageID, moduleName)
-				}
+			// Page title translations (with language code). gen Page
+			// stores Title as element.Element decoded into *texts.Text.
+			for _, item := range textTranslations(pg.Title()) {
+				insert(qn, "PAGE", item.text, "page_title", item.lang, pageIDStr, moduleName)
 			}
 
 			// Page URL (no language)
-			if pg.URL != "" {
-				insert(qn, "PAGE", pg.URL, "page_url", "", pageID, moduleName)
+			if url := pg.Url(); url != "" {
+				insert(qn, "PAGE", url, "page_url", "", pageIDStr, moduleName)
 			}
 		}
 	}
