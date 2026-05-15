@@ -401,12 +401,13 @@ func buildSnippetQualifiedNames(ctx *ExecContext) map[string]bool {
 	if err != nil {
 		return result
 	}
-	snippets, err := ctx.Backend.ListSnippets()
+	snippetPairs, err := listSnippetsWithContainerGen(ctx)
 	if err != nil {
 		return result
 	}
-	for _, s := range snippets {
-		qn := h.GetQualifiedName(s.ContainerID, s.Name)
+	for _, pair := range snippetPairs {
+		s := pair.Elem
+		qn := h.GetQualifiedName(model.ID(pair.ContainerID), s.Name())
 		result[qn] = true
 	}
 	return result
