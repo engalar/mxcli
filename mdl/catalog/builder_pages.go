@@ -13,8 +13,13 @@ import (
 )
 
 func (b *Builder) buildPages() error {
-	// Get all pages (cached — reused by buildReferences and buildStrings)
-	pageList, err := b.cachedPages()
+	// Stage 3.3.5.C7e: walks gen-typed Page units. Container linkage
+	// resolved via the unit hierarchy. Title is decoded from gen
+	// element.Element via pickPageTitleCatalog (returns the first
+	// translation it finds, matching the legacy "first translation
+	// wins" behaviour). Widgets and layout ref stay on raw BSON until
+	// the D-phase widget builder migration.
+	pageGenList, err := b.cachedPagesGen()
 	if err != nil {
 		return err
 	}
@@ -52,19 +57,24 @@ func (b *Builder) buildPages() error {
 	pageCount := 0
 	widgetCount := 0
 
-	for _, pg := range pageList {
-		// Get module name
-		moduleID := b.hierarchy.findModuleID(pg.ContainerID)
+	for _, pg := range pageGenList {
+		if pg == nil {
+			continue
+		}
+		pgID := model.ID(pg.ID())
+		containerID := b.hierarchy.containerParent[pgID]
+		moduleID := b.hierarchy.findModuleID(containerID)
 		moduleName := b.hierarchy.getModuleName(moduleID)
-		qualifiedName := moduleName + "." + pg.Name
-		folder := b.hierarchy.buildFolderPath(pg.ContainerID)
+		qualifiedName := moduleName + "." + pg.Name()
+		folder := b.hierarchy.buildFolderPath(containerID)
 
+		// First-translation-wins title (parity with the legacy code's
+		// `for _, t := range pg.Title.Translations { title = t; break }`
+		// pattern). textTranslations preserves the codec ordering.
 		title := ""
-		if pg.Title != nil && pg.Title.Translations != nil {
-			for _, t := range pg.Title.Translations {
-				title = t
-				break
-			}
+		for _, item := range textTranslations(pg.Title()) {
+			title = item.text
+			break
 		}
 
 		// Get layout ref and widgets from raw BSON data
@@ -73,27 +83,27 @@ func (b *Builder) buildPages() error {
 		var rawWidgets []rawWidgetInfo
 
 		if b.fullMode {
-			rawData, _ := b.reader.GetRawUnit(pg.ID)
+			rawData, _ := b.reader.GetRawUnit(pgID)
 			if rawData != nil {
 				layoutRef = extractLayoutRef(rawData)
-				rawWidgets = extractPageWidgets(rawData, string(pg.ID))
+				rawWidgets = extractPageWidgets(rawData, string(pgID))
 				widgetCnt = len(rawWidgets)
 			}
 		}
 
 		_, err = pageStmt.Exec(
-			string(pg.ID),
-			pg.Name,
+			string(pgID),
+			pg.Name(),
 			qualifiedName,
 			moduleName,
 			folder,
 			title,
-			pg.URL,
+			pg.Url(),
 			layoutRef,
-			pg.Documentation,
-			len(pg.Parameters),
+			pg.Documentation(),
+			len(pg.ParametersItems()),
 			widgetCnt,
-			pg.Excluded,
+			pg.Excluded(),
 			projectID, projectName, snapshotID, snapshotDate, snapshotSource,
 			sourceID, sourceBranch, sourceRevision,
 		)
@@ -109,7 +119,7 @@ func (b *Builder) buildPages() error {
 					w.ID,
 					w.Name,
 					w.WidgetType,
-					string(pg.ID),
+					string(pgID),
 					qualifiedName,
 					"PAGE",
 					moduleName,
