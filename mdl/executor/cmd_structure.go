@@ -9,7 +9,6 @@ import (
 
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 
@@ -283,78 +282,6 @@ func pluralize(count int, singular, plural string) string {
 // ============================================================================
 // Shared Element Formatters
 // ============================================================================
-
-// structureEntities outputs entities for a module.
-func structureEntities(ctx *ExecContext, moduleName string, dm *domainmodel.DomainModel, withTypes bool) {
-	if dm == nil {
-		return
-	}
-
-	// Build entity ID → name map for association resolution
-	entityByID := make(map[model.ID]string)
-	for _, ent := range dm.Entities {
-		entityByID[ent.ID] = ent.Name
-	}
-
-	// Sort entities alphabetically
-	entities := make([]*domainmodel.Entity, len(dm.Entities))
-	copy(entities, dm.Entities)
-	sort.Slice(entities, func(i, j int) bool {
-		return strings.ToLower(entities[i].Name) < strings.ToLower(entities[j].Name)
-	})
-
-	// Build association lookup: parent entity ID → associations
-	assocByParent := make(map[model.ID][]*domainmodel.Association)
-	for _, assoc := range dm.Associations {
-		assocByParent[assoc.ParentID] = append(assocByParent[assoc.ParentID], assoc)
-	}
-
-	for _, ent := range entities {
-		// Format attributes
-		var attrParts []string
-		for _, attr := range ent.Attributes {
-			if withTypes {
-				attrParts = append(attrParts, formatAttributeWithType(attr))
-			} else {
-				attrParts = append(attrParts, attr.Name)
-			}
-		}
-		qualName := moduleName + "." + ent.Name
-		if len(attrParts) > 0 {
-			fmt.Fprintf(ctx.Output, "  Entity %s [%s]\n", qualName, strings.Join(attrParts, ", "))
-		} else {
-			fmt.Fprintf(ctx.Output, "  Entity %s\n", qualName)
-		}
-
-		// Format associations (owned by this entity)
-		if assocs, ok := assocByParent[ent.ID]; ok {
-			var assocParts []string
-			for _, assoc := range assocs {
-				childName := entityByID[assoc.ChildID]
-				if childName == "" {
-					childName = "?"
-				}
-				cardinality := "(1)"
-				if assoc.Type == domainmodel.AssociationTypeReferenceSet {
-					cardinality = "(*)"
-				}
-				part := fmt.Sprintf("→ %s %s", childName, cardinality)
-				if withTypes {
-					// Add delete behavior if non-default (DeleteMeButKeepReferences is default)
-					if assoc.ChildDeleteBehavior != nil && assoc.ChildDeleteBehavior.Type == domainmodel.DeleteBehaviorTypeDeleteMeAndReferences {
-						part += " cascade"
-					} else if assoc.ChildDeleteBehavior != nil && assoc.ChildDeleteBehavior.Type == domainmodel.DeleteBehaviorTypeDeleteMeIfNoReferences {
-						part += " RESTRICT"
-					}
-				}
-				assocParts = append(assocParts, part)
-			}
-			if len(assocParts) > 0 {
-				fmt.Fprintf(ctx.Output, "    %s\n", strings.Join(assocParts, ", "))
-			}
-		}
-	}
-}
 
 // structurePages outputs pages for a module from the catalog.
 func structurePages(ctx *ExecContext, moduleName string) {
@@ -703,24 +630,6 @@ func structureRecurseConditionOutcomesGen(outcomes []element.Element, total, use
 // `formatGenParameterTypeDisplay`). Same applies to `sortMicroflows` /
 // `sortNanoflows` further below — replaced by `sortGenMicroflows` /
 // `sortGenNanoflows`.
-
-// formatAttributeWithType formats an attribute with its type for depth 3.
-func formatAttributeWithType(attr *domainmodel.Attribute) string {
-	if attr.Type == nil {
-		return attr.Name
-	}
-	switch t := attr.Type.(type) {
-	case *domainmodel.StringAttributeType:
-		if t.Length > 0 {
-			return fmt.Sprintf("%s: String(%d)", attr.Name, t.Length)
-		}
-		return attr.Name + ": String(unlimited)"
-	case *domainmodel.EnumerationAttributeType:
-		return attr.Name + ": " + shortName(t.EnumerationRef)
-	default:
-		return attr.Name + ": " + attr.Type.GetTypeName()
-	}
-}
 
 // formatConstantTypeBrief formats a constant type for display.
 func formatConstantTypeBrief(dt model.ConstantDataType) string {

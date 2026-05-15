@@ -37,10 +37,10 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
-	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
 
 // ────────────────────────────────────────────────────────
@@ -127,8 +127,7 @@ func structureDepth2Gen(ctx *ExecContext, modules []structureModule) error {
 		}
 		fmt.Fprintln(ctx.Output, m.Name)
 
-		// Entities — unchanged sdk/domainmodel helper.
-		structureEntities(ctx, m.Name, dmByModule[m.Name], false)
+		structureEntitiesGen(ctx, m.Name, dmByModule[m.Name], false)
 
 		// Enumerations — unchanged.
 		if enums, ok := enumsByModule[m.Name]; ok {
@@ -220,7 +219,7 @@ func structureDepth3Gen(ctx *ExecContext, modules []structureModule) error {
 		}
 		fmt.Fprintln(ctx.Output, m.Name)
 
-		structureEntities(ctx, m.Name, dmByModule[m.Name], true)
+		structureEntitiesGen(ctx, m.Name, dmByModule[m.Name], true)
 
 		if enums, ok := enumsByModule[m.Name]; ok {
 			sortEnumerations(enums)
@@ -299,12 +298,15 @@ func loadStructureSharedDataGen(ctx *ExecContext, h *ContainerHierarchy) (
 	wfByModule structureWfMapGen,
 	err error,
 ) {
-	domainModels, _ := ctx.Backend.ListDomainModels()
+	domainModels, _ := listDomainModelsWithContainerGen(ctx)
 	dmByModule = make(structureDmMapGen)
-	for _, dm := range domainModels {
-		modID := h.FindModuleID(dm.ContainerID)
+	for _, pair := range domainModels {
+		if pair.DM == nil {
+			continue
+		}
+		modID := h.FindModuleID(pair.ContainerID)
 		modName := h.GetModuleName(modID)
-		dmByModule[modName] = dm
+		dmByModule[modName] = pair.DM
 	}
 
 	allEnums, _ := ctx.Backend.ListEnumerations()
@@ -510,10 +512,90 @@ func sortGenNanoflows(nfs []*genMf.Nanoflow) {
 // sdk/microflows surface; sdk/domainmodel, sdk/workflows,
 // sdk/javaactions remain in scope for later stages (#3 / #4).
 type (
-	structureDmMapGen    = map[string]*domainmodel.DomainModel
+	structureDmMapGen    = map[string]*genDm.DomainModel
 	structureEnumMapGen  = map[string][]*model.Enumeration
 	structureConstMapGen = map[string][]*model.Constant
 	structureEventMapGen = map[string][]*model.ScheduledEvent
 	structureJaMapGen    = map[string][]*genJA.JavaAction
 	structureWfMapGen    = map[string][]*genWf.Workflow
 )
+
+func structureEntitiesGen(ctx *ExecContext, moduleName string, dm *genDm.DomainModel, withTypes bool) {
+	if dm == nil {
+		return
+	}
+
+	entityByID := make(map[model.ID]string)
+	var entities []*genDm.Entity
+	for _, item := range dm.EntitiesItems() {
+		ent, ok := item.(*genDm.Entity)
+		if !ok || ent == nil {
+			continue
+		}
+		entityByID[model.ID(ent.ID())] = ent.Name()
+		entities = append(entities, ent)
+	}
+
+	sort.Slice(entities, func(i, j int) bool {
+		return strings.ToLower(entities[i].Name()) < strings.ToLower(entities[j].Name())
+	})
+
+	assocByParent := make(map[model.ID][]*genDm.Association)
+	for _, item := range dm.AssociationsItems() {
+		assoc, ok := item.(*genDm.Association)
+		if !ok || assoc == nil {
+			continue
+		}
+		assocByParent[model.ID(assoc.ParentRefID())] = append(assocByParent[model.ID(assoc.ParentRefID())], assoc)
+	}
+
+	for _, ent := range entities {
+		var attrParts []string
+		for _, item := range ent.AttributesItems() {
+			attr, ok := item.(*genDm.Attribute)
+			if !ok || attr == nil {
+				continue
+			}
+			if withTypes {
+				attrParts = append(attrParts, fmt.Sprintf("%s: %s", attr.Name(), formatAttributeTypeGen(attr.Type())))
+			} else {
+				attrParts = append(attrParts, attr.Name())
+			}
+		}
+		qualName := moduleName + "." + ent.Name()
+		if len(attrParts) > 0 {
+			fmt.Fprintf(ctx.Output, "  Entity %s [%s]\n", qualName, strings.Join(attrParts, ", "))
+		} else {
+			fmt.Fprintf(ctx.Output, "  Entity %s\n", qualName)
+		}
+
+		if assocs, ok := assocByParent[model.ID(ent.ID())]; ok {
+			var assocParts []string
+			for _, assoc := range assocs {
+				childName := entityByID[model.ID(assoc.ChildRefID())]
+				if childName == "" {
+					childName = "?"
+				}
+				cardinality := "(1)"
+				if assoc.Type() == "ReferenceSet" {
+					cardinality = "(*)"
+				}
+				part := fmt.Sprintf("→ %s %s", childName, cardinality)
+				if withTypes {
+					if dbe, ok := assoc.DeleteBehavior().(*genDm.AssociationDeleteBehavior); ok && dbe != nil {
+						switch dbe.ChildDeleteBehavior() {
+						case "DeleteMeAndReferences":
+							part += " cascade"
+						case "DeleteMeIfNoReferences":
+							part += " RESTRICT"
+						}
+					}
+				}
+				assocParts = append(assocParts, part)
+			}
+			if len(assocParts) > 0 {
+				fmt.Fprintf(ctx.Output, "    %s\n", strings.Join(assocParts, ", "))
+			}
+		}
+	}
+}

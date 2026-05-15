@@ -10,7 +10,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/linter"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // OQLColumnInfo represents inferred type information for an OQL SELECT column.
@@ -540,14 +541,15 @@ func inferAttributeTypeFromEntity(ctx *ExecContext, entityQualifiedName, attrNam
 	moduleName := parts[0]
 	entityName := parts[1]
 
-	entity, err := findEntity(ctx, moduleName, entityName)
+	entity, err := findEntityForOQL(ctx, moduleName, entityName)
 	if err != nil {
 		return ast.DataType{Kind: ast.TypeUnknown}
 	}
 
-	for _, attr := range entity.Attributes {
-		if attr.Name == attrName {
-			return convertDomainModelTypeToAST(attr.Type)
+	for _, item := range entity.AttributesItems() {
+		attr, ok := item.(*genDm.Attribute)
+		if ok && attr.Name() == attrName {
+			return convertDomainModelTypeToAST(attr.Type())
 		}
 	}
 
@@ -641,15 +643,16 @@ func inferAttributeType(ctx *ExecContext, attrPath string, col *OQLColumnInfo) a
 	}
 
 	// Look up the entity in the project
-	entity, err := findEntity(ctx, moduleName, entityName)
+	entity, err := findEntityForOQL(ctx, moduleName, entityName)
 	if err != nil {
 		return ast.DataType{Kind: ast.TypeUnknown}
 	}
 
 	// Find the attribute
-	for _, attr := range entity.Attributes {
-		if attr.Name == attrName {
-			return convertDomainModelTypeToAST(attr.Type)
+	for _, item := range entity.AttributesItems() {
+		attr, ok := item.(*genDm.Attribute)
+		if ok && attr.Name() == attrName {
+			return convertDomainModelTypeToAST(attr.Type())
 		}
 	}
 
@@ -657,64 +660,44 @@ func inferAttributeType(ctx *ExecContext, attrPath string, col *OQLColumnInfo) a
 }
 
 // findEntity looks up an entity by module and name.
-func findEntity(ctx *ExecContext, moduleName, entityName string) (*domainmodel.Entity, error) {
-	// Get all entities
-	dms, err := ctx.Backend.ListDomainModels()
+func findEntityForOQL(ctx *ExecContext, moduleName, entityName string) (*genDm.Entity, error) {
+	entity, _, err := findEntityGen(ctx, ast.QualifiedName{Module: moduleName, Name: entityName})
 	if err != nil {
 		return nil, err
 	}
-
-	h, err := getHierarchy(ctx)
-	if err != nil {
-		return nil, err
+	if entity == nil {
+		return nil, mdlerrors.NewNotFound("entity", moduleName+"."+entityName)
 	}
-
-	for _, dm := range dms {
-		modID := h.FindModuleID(dm.ID)
-		modName := h.GetModuleName(modID)
-		if modName != moduleName {
-			continue
-		}
-
-		for _, entity := range dm.Entities {
-			if entity.Name == entityName {
-				return entity, nil
-			}
-		}
-	}
-
-	return nil, mdlerrors.NewNotFound("entity", moduleName+"."+entityName)
+	return entity, nil
 }
 
-// convertDomainModelTypeToAST converts a domainmodel.AttributeType to ast.DataType.
-func convertDomainModelTypeToAST(attrType domainmodel.AttributeType) ast.DataType {
+// convertDomainModelTypeToAST converts a gen domainmodel attribute type to ast.DataType.
+func convertDomainModelTypeToAST(attrType element.Element) ast.DataType {
 	if attrType == nil {
 		return ast.DataType{Kind: ast.TypeUnknown}
 	}
 
 	switch t := attrType.(type) {
-	case *domainmodel.StringAttributeType:
-		return ast.DataType{Kind: ast.TypeString, Length: t.Length}
-	case *domainmodel.IntegerAttributeType:
+	case *genDm.StringAttributeType:
+		return ast.DataType{Kind: ast.TypeString, Length: int(t.Length())}
+	case *genDm.IntegerAttributeType:
 		return ast.DataType{Kind: ast.TypeInteger}
-	case *domainmodel.LongAttributeType:
+	case *genDm.LongAttributeType:
 		return ast.DataType{Kind: ast.TypeLong}
-	case *domainmodel.DecimalAttributeType:
+	case *genDm.DecimalAttributeType:
 		return ast.DataType{Kind: ast.TypeDecimal}
-	case *domainmodel.BooleanAttributeType:
+	case *genDm.BooleanAttributeType:
 		return ast.DataType{Kind: ast.TypeBoolean}
-	case *domainmodel.DateTimeAttributeType:
+	case *genDm.DateTimeAttributeType:
 		return ast.DataType{Kind: ast.TypeDateTime}
-	case *domainmodel.DateAttributeType:
-		return ast.DataType{Kind: ast.TypeDate}
-	case *domainmodel.AutoNumberAttributeType:
+	case *genDm.AutoNumberAttributeType:
 		return ast.DataType{Kind: ast.TypeAutoNumber}
-	case *domainmodel.BinaryAttributeType:
+	case *genDm.BinaryAttributeType:
 		return ast.DataType{Kind: ast.TypeBinary}
-	case *domainmodel.EnumerationAttributeType:
+	case *genDm.EnumerationAttributeType:
 		var enumRef *ast.QualifiedName
-		if t.EnumerationRef != "" {
-			parts := strings.Split(t.EnumerationRef, ".")
+		if qn := t.EnumerationQualifiedName(); qn != "" {
+			parts := strings.Split(qn, ".")
 			if len(parts) == 2 {
 				enumRef = &ast.QualifiedName{Module: parts[0], Name: parts[1]}
 			}

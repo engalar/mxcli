@@ -10,7 +10,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
 
@@ -113,7 +113,7 @@ func resolveImportLinks(ctx *ExecContext, goCtx context.Context, mendixConn *sql
 	targetModule := targetParts[0]
 
 	// Load domain models to find associations
-	dms, err := ctx.Backend.ListDomainModels()
+	dms, err := listDomainModelsWithContainerGen(ctx)
 	if err != nil {
 		return nil, mdlerrors.NewBackend("list domain models", err)
 	}
@@ -125,11 +125,18 @@ func resolveImportLinks(ctx *ExecContext, goCtx context.Context, mendixConn *sql
 
 	// Build entity ID → qualified name map
 	entityNames := make(map[string]string) // entity ID string → "Module.Entity"
-	for _, dm := range dms {
-		modID := h.FindModuleID(dm.ID)
+	for _, pair := range dms {
+		if pair.DM == nil {
+			continue
+		}
+		modID := h.FindModuleID(pair.ContainerID)
 		modName := h.GetModuleName(modID)
-		for _, ent := range dm.Entities {
-			entityNames[string(ent.ID)] = modName + "." + ent.Name
+		for _, item := range pair.DM.EntitiesItems() {
+			ent, ok := item.(*genDm.Entity)
+			if !ok || ent == nil {
+				continue
+			}
+			entityNames[string(ent.ID())] = modName + "." + ent.Name()
 		}
 	}
 
@@ -161,24 +168,28 @@ func resolveOneLink(
 	mendixConn *sqllib.Connection,
 	link ast.LinkMapping,
 	targetModule string,
-	dms []*domainmodel.DomainModel,
+	dms []DomainModelGenWithContainer,
 	h *ContainerHierarchy,
 	entityNames map[string]string,
 ) (*sqllib.AssocInfo, error) {
 
 	// Find the association in the domain models
 	assocQualName := targetModule + "." + link.AssociationName
-	var foundAssoc *domainmodel.Association
-	var foundCross *domainmodel.CrossModuleAssociation
+	var foundAssoc *genDm.Association
+	var foundCross *genDm.CrossAssociation
 
-	for _, dm := range dms {
-		modID := h.FindModuleID(dm.ID)
+	for _, pair := range dms {
+		if pair.DM == nil {
+			continue
+		}
+		modID := h.FindModuleID(pair.ContainerID)
 		modName := h.GetModuleName(modID)
 		if modName != targetModule {
 			continue
 		}
-		for _, a := range dm.Associations {
-			if a.Name == link.AssociationName {
+		for _, item := range pair.DM.AssociationsItems() {
+			a, ok := item.(*genDm.Association)
+			if ok && a.Name() == link.AssociationName {
 				foundAssoc = a
 				break
 			}
@@ -186,8 +197,9 @@ func resolveOneLink(
 		if foundAssoc != nil {
 			break
 		}
-		for _, ca := range dm.CrossAssociations {
-			if ca.Name == link.AssociationName {
+		for _, item := range pair.DM.CrossAssociationsItems() {
+			ca, ok := item.(*genDm.CrossAssociation)
+			if ok && ca.Name() == link.AssociationName {
 				foundCross = ca
 				break
 			}
@@ -207,23 +219,23 @@ func resolveOneLink(
 	var assocType string
 
 	if foundAssoc != nil {
-		storageFormat = string(foundAssoc.StorageFormat)
+		storageFormat = foundAssoc.StorageFormat()
 		if storageFormat == "" {
 			storageFormat = "Table" // default
 		}
-		childEntity = entityNames[string(foundAssoc.ChildID)]
-		assocType = string(foundAssoc.Type)
+		childEntity = entityNames[string(foundAssoc.ChildRefID())]
+		assocType = foundAssoc.Type()
 	} else {
-		storageFormat = string(foundCross.StorageFormat)
+		storageFormat = foundCross.StorageFormat()
 		if storageFormat == "" {
 			storageFormat = "Table"
 		}
-		childEntity = foundCross.ChildRef
-		assocType = string(foundCross.Type)
+		childEntity = foundCross.ChildQualifiedName()
+		assocType = foundCross.Type()
 	}
 
 	// Reject ReferenceSet associations (not supported in MVP)
-	if assocType == string(domainmodel.AssociationTypeReferenceSet) {
+	if assocType == "ReferenceSet" {
 		return nil, mdlerrors.NewUnsupported(fmt.Sprintf("association %q is ReferenceSet — not supported in import link (use manual sql)", assocQualName))
 	}
 
@@ -298,18 +310,18 @@ func resolveOneLink(
 }
 
 // getParentID returns the parent entity ID from either a regular or cross-module association.
-func getParentID(a *domainmodel.Association, ca *domainmodel.CrossModuleAssociation) string {
+func getParentID(a *genDm.Association, ca *genDm.CrossAssociation) string {
 	if a != nil {
-		return string(a.ParentID)
+		return string(a.ParentRefID())
 	}
 	if ca != nil {
-		return string(ca.ParentID)
+		return string(ca.ParentRefID())
 	}
 	return ""
 }
 
 // getParentEntityName returns the parent entity qualified name.
-func getParentEntityName(a *domainmodel.Association, ca *domainmodel.CrossModuleAssociation, entityNames map[string]string) string {
+func getParentEntityName(a *genDm.Association, ca *genDm.CrossAssociation, entityNames map[string]string) string {
 	id := getParentID(a, ca)
 	return entityNames[id]
 }

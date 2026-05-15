@@ -96,6 +96,23 @@ func findModuleByID(ctx *ExecContext, id model.ID) (*model.Module, error) {
 	return nil, mdlerrors.NewNotFoundMsg("module", string(id), "module not found with ID: "+string(id))
 }
 
+func findEntity(ctx *ExecContext, moduleName, entityName string) (*domainmodel.Entity, error) {
+	module, err := findModule(ctx, moduleName)
+	if err != nil {
+		return nil, err
+	}
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	if err != nil {
+		return nil, mdlerrors.NewBackend("get domain model", err)
+	}
+	for _, entity := range dm.Entities {
+		if entity != nil && entity.Name == entityName {
+			return entity, nil
+		}
+	}
+	return nil, mdlerrors.NewNotFound("entity", moduleName+"."+entityName)
+}
+
 // resolveFolder resolves a folder path (e.g., "Resources/Images") to a folder ID.
 // The path is relative to the given module. If the folder doesn't exist, it creates it.
 func resolveFolder(ctx *ExecContext, moduleID model.ID, folderPath string) (model.ID, error) {
