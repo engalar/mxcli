@@ -15,6 +15,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 )
 
 // execCreateEntityGen handles CREATE ENTITY on the gen-typed write path.
@@ -43,6 +44,9 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 	if err != nil {
 		return err
 	}
+	if err := validateCreateEntityTypeRefsGen(ctx, s); err != nil {
+		return err
+	}
 
 	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
 	if err != nil {
@@ -52,7 +56,7 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 		return mdlerrors.NewBackend("get domain model", nil)
 	}
 
-	// Existence check.
+	var existingEntity element.Element
 	for _, e := range dm.EntitiesItems() {
 		ent, ok := e.(interface{ Name() string })
 		if !ok {
@@ -63,7 +67,8 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 				"entity already exists: "+s.Name.Module+"."+s.Name.Name+" (use create or modify to update)")
 		}
 		if ent.Name() == s.Name.Name && s.CreateOrModify {
-			return execCreateEntity(ctx, s)
+			existingEntity = e
+			break
 		}
 	}
 
@@ -73,6 +78,18 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 	}
 	if entity.Location() == "" {
 		entity.SetLocation(fmt.Sprintf("%d,%d", 100+len(dm.EntitiesItems())*150, 100))
+	}
+
+	if existingEntity != nil {
+		entity.SetID(element.ID(existingEntity.ID()))
+		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+			return mdlerrors.NewBackend("update entity (gen)", err)
+		}
+		invalidateDomainModelsCache(ctx)
+		invalidateHierarchy(ctx)
+		fmt.Fprintf(ctx.Output, "Modified entity: %s\n", s.Name)
+		ctx.trackModifiedDomainModel(module.ID, module.Name)
+		return nil
 	}
 
 	if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), entity); err != nil {
@@ -87,19 +104,28 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 }
 
 func canExecCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) bool {
-	if ctx == nil || ctx.DomainModels == nil || s == nil || s.CreateOrModify {
-		return false
+	return ctx != nil && s != nil
+}
+
+func validateCreateEntityTypeRefsGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
+	if ctx == nil || s == nil {
+		return nil
 	}
 	for _, a := range s.Attributes {
-		if a.NotNullError != "" || a.UniqueError != "" {
-			return false
+		if a.Type.Kind != ast.TypeEnumeration || a.Type.EnumRef == nil {
+			continue
 		}
-		if a.Type.Kind == ast.TypeEnumeration {
-			// The parser currently uses TypeEnumeration for both enum refs
-			// and entity refs in some ambiguous cases. Keep those on the
-			// legacy path until the gen create path handles both shapes.
-			return false
+		refModule := a.Type.EnumRef.Module
+		refName := a.Type.EnumRef.Name
+		if findEnumeration(ctx, refModule, refName) != nil {
+			continue
 		}
+		if _, err := findEntity(ctx, refModule, refName); err == nil {
+			continue
+		}
+		return mdlerrors.NewValidationf(
+			"attribute '%s': unknown type '%s' — not a primitive, enumeration, or entity",
+			a.Name, a.Type.EnumRef.String())
 	}
-	return true
+	return nil
 }

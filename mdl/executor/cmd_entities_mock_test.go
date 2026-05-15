@@ -127,18 +127,26 @@ func TestCreateEntity_UnknownAttributeType_Issue392(t *testing.T) {
 // ALTER ENTITY SET ALLOW_CREATE_CHANGE_LOCALLY = true sets CreateChangeLocally on the entity.
 func TestAlterEntity_AllowCreateChangeLocally_Issue534(t *testing.T) {
 	mod := mkModule("TripPin")
-	entity := &domainmodel.Entity{
-		BaseElement: model.BaseElement{ID: nextID("ent")},
-		Name:        "People",
-	}
-	dm := mkDomainModel(mod.ID, entity)
+	// Use gen entity with an OData remote source (CreateChangeLocally is on the source)
+	entity := mkEntityGen("People")
+	src := genRest.NewODataRemoteEntitySource()
+	src.SetSourceDocumentQualifiedName("TripPin.Service")
+	src.SetRemoteName("People")
+	src.SetCreateChangeLocally(false)
+	entity.SetSource(src)
+	dm := mkDomainModelGen(mod.ID, entity)
 
-	var updated *domainmodel.Entity
+	var updated *genDm.Entity
 	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
-		UpdateEntityFunc:   func(dmID model.ID, e *domainmodel.Entity) error { updated = e; return nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) {
+			return dm, nil
+		},
+		UpdateEntityGenFunc: func(dmID model.ID, e *genDm.Entity) error {
+			updated = e
+			return nil
+		},
 	}
 
 	ctx, _ := newMockCtx(t, withBackend(mb))
@@ -149,9 +157,13 @@ func TestAlterEntity_AllowCreateChangeLocally_Issue534(t *testing.T) {
 	})
 	assertNoError(t, err)
 	if updated == nil {
-		t.Fatal("expected UpdateEntity to be called")
+		t.Fatal("expected UpdateEntityGen to be called")
 	}
-	if !updated.CreateChangeLocally {
+	updatedSrc, ok := updated.Source().(*genRest.ODataRemoteEntitySource)
+	if !ok {
+		t.Fatalf("expected ODataRemoteEntitySource, got %T", updated.Source())
+	}
+	if !updatedSrc.CreateChangeLocally() {
 		t.Errorf("expected CreateChangeLocally = true, got false")
 	}
 }
@@ -283,6 +295,114 @@ func TestAlterEntity_ModifyAttribute_GenCalculated(t *testing.T) {
 	val, _ := got.Value().(*genDm.CalculatedValue)
 	if val == nil || val.MicroflowQualifiedName() != "TripPin.ComputeDisplayName" {
 		t.Fatalf("expected calculated value with microflow, got %#v", got.Value())
+	}
+}
+
+func TestAlterEntity_AddAttribute_Gen(t *testing.T) {
+	mod := mkModule("TripPin")
+	entity := mkEntityGen("People")
+	dm := mkDomainModelGen(mod.ID, entity)
+
+	var updated *genDm.Entity
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) {
+			return dm, nil
+		},
+		UpdateEntityGenFunc: func(dmID model.ID, e *genDm.Entity) error {
+			updated = e
+			return nil
+		},
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	err := execAlterEntity(ctx, &ast.AlterEntityStmt{
+		Name:      ast.QualifiedName{Module: "TripPin", Name: "People"},
+		Operation: ast.AlterEntityAddAttribute,
+		Attribute: &ast.Attribute{
+			Name:    "IsActive",
+			Type:    ast.DataType{Kind: ast.TypeBoolean},
+			NotNull: true,
+		},
+	})
+	assertNoError(t, err)
+	if updated == nil {
+		t.Fatal("expected UpdateEntityGen to be called")
+	}
+	got := findAttributeGenByName(updated, "IsActive")
+	if got == nil {
+		t.Fatal("expected added attribute to exist")
+	}
+	val, _ := got.Value().(*genDm.StoredValue)
+	if val == nil || val.DefaultValue() != "false" {
+		t.Fatalf("expected boolean default false, got %#v", got.Value())
+	}
+	if len(updated.ValidationRulesItems()) != 1 {
+		t.Fatalf("expected 1 validation rule, got %d", len(updated.ValidationRulesItems()))
+	}
+}
+
+func TestAlterEntity_DropAttribute_GenCleanup(t *testing.T) {
+	mod := mkModule("TripPin")
+	entity := mkEntityGen("People")
+	attr := genDm.NewAttribute()
+	attr.SetName("DisplayName")
+	entity.AddAttributes(attr)
+
+	vr := genDm.NewValidationRule()
+	vr.SetAttributeQualifiedName("TripPin.People.DisplayName")
+	vr.SetRuleInfo(genDm.NewRequiredRuleInfo())
+	entity.AddValidationRules(vr)
+
+	idx := genDm.NewIndex()
+	ia := genDm.NewIndexedAttribute()
+	ia.SetAttributeID(attr.ID())
+	idx.AddAttributes(ia)
+	entity.AddIndexes(idx)
+
+	ar := genDm.NewAccessRule()
+	ma := genDm.NewMemberAccess()
+	ma.SetAttributeQualifiedName("TripPin.People.DisplayName")
+	ar.AddMemberAccesses(ma)
+	entity.AddAccessRules(ar)
+
+	dm := mkDomainModelGen(mod.ID, entity)
+	var updated *genDm.Entity
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) {
+			return dm, nil
+		},
+		UpdateEntityGenFunc: func(dmID model.ID, e *genDm.Entity) error {
+			updated = e
+			return nil
+		},
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	err := execAlterEntity(ctx, &ast.AlterEntityStmt{
+		Name:          ast.QualifiedName{Module: "TripPin", Name: "People"},
+		Operation:     ast.AlterEntityDropAttribute,
+		AttributeName: "DisplayName",
+	})
+	assertNoError(t, err)
+	if updated == nil {
+		t.Fatal("expected UpdateEntityGen to be called")
+	}
+	if findAttributeGenByName(updated, "DisplayName") != nil {
+		t.Fatal("expected attribute to be removed")
+	}
+	if len(updated.ValidationRulesItems()) != 0 {
+		t.Fatalf("expected validation rules to be cleaned up, got %d", len(updated.ValidationRulesItems()))
+	}
+	if len(updated.IndexesItems()) != 0 {
+		t.Fatalf("expected indexes to be cleaned up, got %d", len(updated.IndexesItems()))
+	}
+	rule, _ := updated.AccessRulesItems()[0].(*genDm.AccessRule)
+	if rule == nil || len(rule.MemberAccessesItems()) != 0 {
+		t.Fatalf("expected member access cleanup, got %#v", updated.AccessRulesItems())
 	}
 }
 
