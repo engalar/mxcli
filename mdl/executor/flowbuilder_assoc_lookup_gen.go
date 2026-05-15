@@ -18,13 +18,13 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // assocLookupResult holds resolved association metadata.
 type assocLookupResult struct {
-	Type              domainmodel.AssociationType
-	Owner             domainmodel.AssociationOwner
+	Type              string
+	Owner             string
 	parentEntityQN    string // Qualified name of the parent (FROM/owner) entity
 	childEntityQN     string // Qualified name of the child (TO/referenced) entity
 	parentPersistable bool
@@ -43,27 +43,35 @@ func lookupAssociationGen(b backend.FullBackend, moduleName, assocName string) *
 	if err != nil || mod == nil {
 		return nil
 	}
-	dm, err := b.GetDomainModel(mod.ID)
+	dm, err := b.GetDomainModelGen(mod.ID)
 	if err != nil || dm == nil {
 		return nil
 	}
 
-	entityNames := make(map[model.ID]string, len(dm.Entities))
-	entityPersistable := make(map[model.ID]bool, len(dm.Entities))
-	for _, e := range dm.Entities {
-		entityNames[e.ID] = moduleName + "." + e.Name
-		entityPersistable[e.ID] = e.Persistable
+	entityNames := make(map[model.ID]string, len(dm.EntitiesItems()))
+	entityPersistable := make(map[model.ID]bool, len(dm.EntitiesItems()))
+	for _, item := range dm.EntitiesItems() {
+		e, ok := item.(*genDm.Entity)
+		if !ok {
+			continue
+		}
+		entityNames[model.ID(e.ID())] = moduleName + "." + e.Name()
+		entityPersistable[model.ID(e.ID())] = entityPersistableGen(e)
 	}
 
-	for _, a := range dm.Associations {
-		if a.Name == assocName {
+	for _, item := range dm.AssociationsItems() {
+		a, ok := item.(*genDm.Association)
+		if !ok {
+			continue
+		}
+		if a.Name() == assocName {
 			return &assocLookupResult{
-				Type:              a.Type,
-				Owner:             a.Owner,
-				parentEntityQN:    entityNames[a.ParentID],
-				childEntityQN:     entityNames[a.ChildID],
-				parentPersistable: entityPersistable[a.ParentID],
-				childPersistable:  entityPersistable[a.ChildID],
+				Type:              a.Type(),
+				Owner:             a.Owner(),
+				parentEntityQN:    entityNames[model.ID(a.ParentRefID())],
+				childEntityQN:     entityNames[model.ID(a.ChildRefID())],
+				parentPersistable: entityPersistable[model.ID(a.ParentRefID())],
+				childPersistable:  entityPersistable[model.ID(a.ChildRefID())],
 			}
 		}
 	}
@@ -82,12 +90,13 @@ func isEntityGen(b backend.FullBackend, moduleName, entityName string) bool {
 	if err != nil || mod == nil {
 		return false
 	}
-	dm, err := b.GetDomainModel(mod.ID)
+	dm, err := b.GetDomainModelGen(mod.ID)
 	if err != nil || dm == nil {
 		return false
 	}
-	for _, e := range dm.Entities {
-		if e.Name == entityName {
+	for _, item := range dm.EntitiesItems() {
+		e, ok := item.(*genDm.Entity)
+		if ok && e.Name() == entityName {
 			return true
 		}
 	}
@@ -110,22 +119,26 @@ func lookupEnumRefGen(b backend.FullBackend, entityQN, attrName string) string {
 	if err != nil || mod == nil {
 		return ""
 	}
-	dm, err := b.GetDomainModel(mod.ID)
+	dm, err := b.GetDomainModelGen(mod.ID)
 	if err != nil || dm == nil {
 		return ""
 	}
-	for _, entity := range dm.Entities {
-		if entity.Name == parts[1] {
-			for _, attr := range entity.Attributes {
-				if attr.Name == attrName {
-					if enumType, ok := attr.Type.(*domainmodel.EnumerationAttributeType); ok {
-						return enumType.EnumerationRef
-					}
-					return ""
-				}
+	for _, item := range dm.EntitiesItems() {
+		entity, ok := item.(*genDm.Entity)
+		if !ok || entity.Name() != parts[1] {
+			continue
+		}
+		for _, attrItem := range entity.AttributesItems() {
+			attr, ok := attrItem.(*genDm.Attribute)
+			if !ok || attr.Name() != attrName {
+				continue
+			}
+			if enumType, ok := attr.Type().(*genDm.EnumerationAttributeType); ok {
+				return enumType.EnumerationQualifiedName()
 			}
 			return ""
 		}
+		return ""
 	}
 	return ""
 }
@@ -153,20 +166,21 @@ func resolveAttributeInEntityHierarchyGen(b backend.FullBackend, entityQN, attrN
 		if err != nil || mod == nil {
 			return "", false
 		}
-		dm, err := b.GetDomainModel(mod.ID)
+		dm, err := b.GetDomainModelGen(mod.ID)
 		if err != nil || dm == nil {
 			return "", false
 		}
-		entity := dm.FindEntityByName(parts[1])
+		entity := findEntityInDomainModelGen(dm, parts[1])
 		if entity == nil {
 			return "", false
 		}
-		for _, attr := range entity.Attributes {
-			if attr != nil && attr.Name == attrName {
+		for _, item := range entity.AttributesItems() {
+			attr, ok := item.(*genDm.Attribute)
+			if ok && attr.Name() == attrName {
 				return currentQN + "." + attrName, true
 			}
 		}
-		currentQN = entity.GeneralizationRef
+		currentQN = entityGeneralizationQNGen(entity)
 	}
 	return "", false
 }
@@ -207,14 +221,16 @@ func resolveMemberChangeGenStandalone(b backend.FullBackend, memberName, entityQ
 
 	if b != nil {
 		if mod, err := b.GetModuleByName(lookupModule); err == nil && mod != nil {
-			if dm, err := b.GetDomainModel(mod.ID); err == nil && dm != nil {
-				for _, a := range dm.Associations {
-					if a.Name == bareName {
+			if dm, err := b.GetDomainModelGen(mod.ID); err == nil && dm != nil {
+				for _, item := range dm.AssociationsItems() {
+					a, ok := item.(*genDm.Association)
+					if ok && a.Name() == bareName {
 						return resolvedMemberChange{associationQN: qualifiedName}
 					}
 				}
-				for _, a := range dm.CrossAssociations {
-					if a.Name == bareName {
+				for _, item := range dm.CrossAssociationsItems() {
+					a, ok := item.(*genDm.CrossAssociation)
+					if ok && a.Name() == bareName {
 						return resolvedMemberChange{associationQN: qualifiedName}
 					}
 				}
@@ -286,15 +302,38 @@ func entityIsSubtypeOfGen(b backend.FullBackend, candidateQN, ancestorQN string)
 		if err != nil || mod == nil {
 			return false
 		}
-		dm, err := b.GetDomainModel(mod.ID)
+		dm, err := b.GetDomainModelGen(mod.ID)
 		if err != nil || dm == nil {
 			return false
 		}
-		entity := dm.FindEntityByName(parts[1])
+		entity := findEntityInDomainModelGen(dm, parts[1])
 		if entity == nil {
 			return false
 		}
-		currentQN = entity.GeneralizationRef
+		currentQN = entityGeneralizationQNGen(entity)
 	}
 	return false
+}
+
+func entityPersistableGen(entity *genDm.Entity) bool {
+	if entity == nil {
+		return false
+	}
+	if g, ok := entity.Generalization().(*genDm.NoGeneralization); ok {
+		return g.Persistable()
+	}
+	return true
+}
+
+func findEntityInDomainModelGen(dm *genDm.DomainModel, name string) *genDm.Entity {
+	if dm == nil {
+		return nil
+	}
+	for _, item := range dm.EntitiesItems() {
+		entity, ok := item.(*genDm.Entity)
+		if ok && entity.Name() == name {
+			return entity
+		}
+	}
+	return nil
 }

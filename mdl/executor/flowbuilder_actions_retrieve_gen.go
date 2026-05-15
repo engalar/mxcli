@@ -39,7 +39,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // addRetrieveActionGen emits a `retrieve $V from ...` activity.
@@ -118,12 +117,12 @@ func (fb *flowBuilderGen) buildAssociationRetrieveSourceGen(s *ast.RetrieveStmt)
 			entityIsSubtypeOfGen(fb.backend, startVarType, assocInfo.childEntityQN)
 
 		if assocInfo != nil &&
-			assocInfo.Type == domainmodel.AssociationTypeReference &&
+			assocInfo.Type == "Reference" &&
 			assocInfo.Owner != "" &&
 			assocInfo.parentPersistable &&
 			assocInfo.childEntityQN != "" &&
 			startsFromChildSide &&
-			(assocInfo.Owner != domainmodel.AssociationOwnerBoth) {
+			(assocInfo.Owner != "Both") {
 			// Reverse traversal: child → parent (one-to-many).
 			src := genMf.NewDatabaseRetrieveSource()
 			assignFreshID(src)
@@ -143,13 +142,13 @@ func (fb *flowBuilderGen) buildAssociationRetrieveSourceGen(s *ast.RetrieveStmt)
 				otherEntity = assocInfo.parentEntityQN
 			}
 			switch assocInfo.Type {
-			case domainmodel.AssociationTypeReference:
+			case "Reference":
 				if startsFromChildSide {
 					fb.varTypes[s.Variable] = "List of " + otherEntity
 				} else {
 					fb.varTypes[s.Variable] = otherEntity
 				}
-			case domainmodel.AssociationTypeReferenceSet:
+			case "ReferenceSet":
 				if otherEntity != "" {
 					fb.varTypes[s.Variable] = "List of " + otherEntity
 				} else {
