@@ -75,22 +75,33 @@ func (b *Builder) buildSource() error {
 		}
 	}
 
-	// Pages
-	pageList, err := b.cachedPages()
+	// Pages — gen-typed (Stage 3.3.5.C7e). Container linkage resolved
+	// via the unit hierarchy.
+	pageGenList, err := b.cachedPagesGen()
 	if err == nil {
-		for _, pg := range pageList {
-			moduleID := b.hierarchy.findModuleID(pg.ContainerID)
+		for _, pg := range pageGenList {
+			if pg == nil {
+				continue
+			}
+			pgID := model.ID(pg.ID())
+			containerID := b.hierarchy.containerParent[pgID]
+			moduleID := b.hierarchy.findModuleID(containerID)
 			moduleName := b.hierarchy.getModuleName(moduleID)
-			items = append(items, sourceItem{"PAGE", moduleName + "." + pg.Name, moduleName})
+			items = append(items, sourceItem{"PAGE", moduleName + "." + pg.Name(), moduleName})
 		}
 	}
 
-	// Snippets (not cached — only used here)
-	snippetList, _ := b.reader.ListSnippets()
-	for _, sn := range snippetList {
-		moduleID := b.hierarchy.findModuleID(sn.ContainerID)
+	// Snippets — gen-typed (Stage 3.3.5.C7e). Same hierarchy resolution.
+	snippetGenList, _ := b.cachedSnippetsGen()
+	for _, sn := range snippetGenList {
+		if sn == nil {
+			continue
+		}
+		snID := model.ID(sn.ID())
+		containerID := b.hierarchy.containerParent[snID]
+		moduleID := b.hierarchy.findModuleID(containerID)
 		moduleName := b.hierarchy.getModuleName(moduleID)
-		items = append(items, sourceItem{"SNIPPET", moduleName + "." + sn.Name, moduleName})
+		items = append(items, sourceItem{"SNIPPET", moduleName + "." + sn.Name(), moduleName})
 	}
 
 	// Workflows
