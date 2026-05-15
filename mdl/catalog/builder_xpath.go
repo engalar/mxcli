@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
@@ -79,27 +80,36 @@ func (b *Builder) buildXPathExpressions() error {
 	}
 
 	// 2. Extract from entity access rules
-	dms, err := b.cachedDomainModels()
+	dms, err := b.cachedDomainModelsGen()
 	if err == nil {
 		for _, dm := range dms {
-			moduleID := b.hierarchy.findModuleID(dm.ContainerID)
+			if dm == nil {
+				continue
+			}
+			moduleID := b.hierarchy.findModuleID(model.ID(dm.ID()))
 			moduleName := b.hierarchy.getModuleName(moduleID)
 
-			for _, ent := range dm.Entities {
-				entityQN := moduleName + "." + ent.Name
+			for _, entityElem := range dm.EntitiesItems() {
+				ent, ok := entityElem.(*genDm.Entity)
+				if !ok {
+					continue
+				}
+				entityQN := moduleName + "." + ent.Name()
 
-				for _, rule := range ent.AccessRules {
-					if rule.XPathConstraint == "" {
+				for _, ruleElem := range ent.AccessRulesItems() {
+					rule, ok := ruleElem.(*genDm.AccessRule)
+					if !ok || rule.XPathConstraint() == "" {
 						continue
 					}
 
-					id := xpathID(string(ent.ID), string(rule.ID), rule.XPathConstraint)
-					isParam := boolToInt(containsVariable(rule.XPathConstraint))
-					refs := extractReferencedEntities(rule.XPathConstraint)
+					xpath := rule.XPathConstraint()
+					id := xpathID(string(ent.ID()), string(rule.ID()), xpath)
+					isParam := boolToInt(containsVariable(xpath))
+					refs := extractReferencedEntities(xpath)
 
-					stmt.Exec(id, "DOMAIN_MODEL", string(dm.ID), entityQN,
-						"ACCESS_RULE", string(rule.ID), "",
-						rule.XPathConstraint, entityQN, refs,
+					stmt.Exec(id, "DOMAIN_MODEL", string(dm.ID()), entityQN,
+						"ACCESS_RULE", string(rule.ID()), "",
+						xpath, entityQN, refs,
 						isParam, XPathUsageSecurity, moduleName,
 						projectID, projectName, snapshotID, snapshotDate,
 						snapshotSource, sourceID, sourceBranch, sourceRevision)

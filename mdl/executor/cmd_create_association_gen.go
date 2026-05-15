@@ -90,8 +90,8 @@ func execCreateAssociationGen(ctx *ExecContext, s *ast.CreateAssociationStmt) er
 	invalidateHierarchy(ctx)
 	invalidateDomainModelsCache(ctx)
 
-	if freshDM, err := ctx.Backend.GetDomainModel(module.ID); err == nil {
-		if count, err := ctx.Backend.ReconcileMemberAccesses(freshDM.ID, module.Name); err == nil && count > 0 {
+	if freshDM, err := ctx.Backend.GetDomainModelGen(module.ID); err == nil && freshDM != nil {
+		if count, err := ctx.Backend.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil && count > 0 {
 			fmt.Fprintf(ctx.Output, "Reconciled %d access rule(s) for new association\n", count)
 		}
 	}

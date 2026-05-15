@@ -1923,7 +1923,7 @@ func (pb *pageBuilder) buildDataViewV3(w *ast.WidgetV3) (*backend.DataView, erro
 	return dv, nil
 }
 
-func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (*backend.CustomWidget, error) {
+func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (*backend.GenCustomWidgetElem, error) {
 	widgetID := model.ID(types.GenerateID())
 
 	// Build datasource from V3 DataSource property
@@ -1959,7 +1959,7 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (*backend.CustomWidget, 
 			// Build child widgets; filter-type children go to the column filter slot
 			for _, grandchild := range child.Children {
 				if filterWidgetID := dataGridFilterWidgetID(grandchild.Type); filterWidgetID != "" {
-					fw, err := pb.widgetBackend.BuildFilterWidget(backend.FilterWidgetSpec{
+					fw, err := pb.widgetBackend.BuildFilterWidgetGen(backend.FilterWidgetSpec{
 						WidgetID:   filterWidgetID,
 						FilterName: grandchild.Name,
 					}, pb.backend.Path())
@@ -2017,12 +2017,12 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (*backend.CustomWidget, 
 		SelectionMode:   w.GetSelection(),
 	}
 
-	grid, err := pb.widgetBackend.BuildDataGrid2Widget(widgetID, w.Name, spec, pb.backend.Path())
+	grid, err := pb.widgetBackend.BuildDataGrid2WidgetGen(widgetID, w.Name, spec, pb.backend.Path())
 	if err != nil {
 		return nil, err
 	}
 
-	if err := pb.registerWidgetName(w.Name, grid.ID); err != nil {
+	if err := pb.registerWidgetName(w.Name, grid.GetID()); err != nil {
 		return nil, err
 	}
 

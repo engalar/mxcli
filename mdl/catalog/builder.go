@@ -11,11 +11,10 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
-	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
 
 // CatalogReader defines the read-only backend surface used by the catalog builder.
@@ -36,9 +35,6 @@ type CatalogReader interface {
 	GetNavigation() (*types.NavigationDocument, error)
 
 	// Domain models & enumerations
-	ListDomainModels() ([]*domainmodel.DomainModel, error)
-	// Stage 3.3.4 C2: gen-typed sibling. Reader implementations expose
-	// both until E2 retires the sdk-typed legacy method.
 	ListDomainModelsGen() ([]*genDm.DomainModel, error)
 	ListEnumerations() ([]*model.Enumeration, error)
 	ListConstants() ([]*model.Constant, error)
@@ -111,7 +107,6 @@ type Builder struct {
 	pageGenCache            []*genPg.Page
 	layoutGenCache          []*genPg.Layout
 	snippetGenCache         []*genPg.Snippet
-	domainModelCache        []*domainmodel.DomainModel
 	domainModelGenCache     []*genDm.DomainModel
 	enumerationCache        []*model.Enumeration
 	workflowCache           []*genWf.Workflow
@@ -293,19 +288,7 @@ func (b *Builder) cachedSnippetsGen() ([]*genPg.Snippet, error) {
 	return b.snippetGenCache, nil
 }
 
-func (b *Builder) cachedDomainModels() ([]*domainmodel.DomainModel, error) {
-	if b.domainModelCache == nil {
-		var err error
-		b.domainModelCache, err = b.reader.ListDomainModels()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return b.domainModelCache, nil
-}
-
-// cachedDomainModelsGen is the gen-typed counterpart to cachedDomainModels
-// (Stage 3.3.4 C2). Read-side consumers progressively migrate to this.
+// cachedDomainModelsGen returns gen-typed domain models.
 func (b *Builder) cachedDomainModelsGen() ([]*genDm.DomainModel, error) {
 	if b.domainModelGenCache == nil {
 		var err error

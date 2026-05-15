@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
@@ -236,12 +237,12 @@ func TestExecDropSnippet_Mock(t *testing.T) {
 
 func TestExecDropAssociation_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
-	ent1 := mkEntity(mod.ID, "Order")
-	ent2 := mkEntity(mod.ID, "Customer")
-	assoc := mkAssociation(mod.ID, "Order_Customer", ent1.ID, ent2.ID)
+	ent1 := mkEntityGen("Order")
+	ent2 := mkEntityGen("Customer")
+	assoc := mkAssociationGen("Order_Customer", model.ID(ent1.ID()), model.ID(ent2.ID()))
 
-	dm := mkDomainModel(mod.ID, ent1, ent2)
-	dm.Associations = []*domainmodel.Association{assoc}
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
+	dm.AddAssociations(assoc)
 
 	called := false
 	mb := &mock.MockBackend{
@@ -249,7 +250,7 @@ func TestExecDropAssociation_Mock(t *testing.T) {
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
 		},
-		GetDomainModelFunc: func(moduleID model.ID) (*domainmodel.DomainModel, error) {
+		GetDomainModelGenFunc: func(moduleID model.ID) (*genDm.DomainModel, error) {
 			return dm, nil
 		},
 		DeleteAssociationFunc: func(domainModelID model.ID, assocID model.ID) error {
@@ -625,4 +626,3 @@ func TestCreateOrModifyMicroflowPreservesAllowedRoles(t *testing.T) {
 		t.Fatalf("expected existing allowed roles to be preserved, got %v", got)
 	}
 }
-

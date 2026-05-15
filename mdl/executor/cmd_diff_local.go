@@ -15,6 +15,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -547,11 +548,18 @@ func buildNameLookups(ctx *ExecContext) (map[model.ID]string, map[model.ID]strin
 	if err != nil {
 		return entityNames, microflowNames
 	}
-	if domainModels, err := ctx.Backend.ListDomainModels(); err == nil {
+	if domainModels, err := cachedDomainModelsGen(ctx); err == nil {
 		for _, dm := range domainModels {
-			modName := h.GetModuleName(dm.ContainerID)
-			for _, entity := range dm.Entities {
-				entityNames[entity.ID] = modName + "." + entity.Name
+			if dm == nil {
+				continue
+			}
+			modName := h.GetModuleName(h.FindModuleID(model.ID(dm.ID())))
+			for _, entityElem := range dm.EntitiesItems() {
+				entity, ok := entityElem.(*genDm.Entity)
+				if !ok {
+					continue
+				}
+				entityNames[model.ID(entity.ID())] = modName + "." + entity.Name()
 			}
 		}
 	}

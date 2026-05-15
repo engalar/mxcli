@@ -327,6 +327,8 @@ type MockBackend struct {
 	BuildCreateAttributeObjectFunc    func(attributePath string, objectTypeID, propertyTypeID, valueTypeID string) (any, error)
 	BuildDataGrid2WidgetFunc          func(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.CustomWidget, error)
 	BuildFilterWidgetFunc             func(spec backend.FilterWidgetSpec, projectPath string) (backend.Widget, error)
+	BuildDataGrid2WidgetGenFunc       func(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.GenCustomWidgetElem, error)
+	BuildFilterWidgetGenFunc          func(spec backend.FilterWidgetSpec, projectPath string) (*backend.GenCustomWidgetElem, error)
 
 	// AgentEditorBackend
 	ListAgentEditorModelsFunc               func() ([]*types.Model, error)

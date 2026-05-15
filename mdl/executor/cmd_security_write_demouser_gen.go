@@ -24,6 +24,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
@@ -151,9 +152,6 @@ func execDropDemoUserGen(ctx *ExecContext, s *ast.DropDemoUserStmt) error {
 }
 
 // detectUserEntityGen finds the entity that generalizes System.User.
-// Intentionally keeps using ctx.Backend.ListDomainModels() (sdk/domainmodel path)
-// because the domain-model domain has not been migrated to gen-typed yet.
-// Accesses only string/ID fields on the returned structs.
 func detectUserEntityGen(ctx *ExecContext) (string, error) {
 	modules, err := ctx.Backend.ListModules()
 	if err != nil {
@@ -164,17 +162,29 @@ func detectUserEntityGen(ctx *ExecContext) (string, error) {
 		moduleNameByID[m.ID] = m.Name
 	}
 
-	dms, err := ctx.Backend.ListDomainModels()
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return "", mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	dms, err := cachedDomainModelsGen(ctx)
 	if err != nil {
 		return "", mdlerrors.NewBackend("list domain models", err)
 	}
 
 	var candidates []string
 	for _, dm := range dms {
-		moduleName := moduleNameByID[dm.ContainerID]
-		for _, ent := range dm.Entities {
-			if ent.GeneralizationRef == "System.User" {
-				candidates = append(candidates, moduleName+"."+ent.Name)
+		if dm == nil {
+			continue
+		}
+		moduleName := moduleNameByID[h.FindModuleID(model.ID(dm.ID()))]
+		for _, entityElem := range dm.EntitiesItems() {
+			ent, ok := entityElem.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			if entityGeneralizationQNGen(ent) == "System.User" {
+				candidates = append(candidates, moduleName+"."+ent.Name())
 			}
 		}
 	}

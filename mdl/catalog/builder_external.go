@@ -8,13 +8,15 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
 )
 
 // buildExternalEntities populates the external_entities catalog table
 // from domain model entities that have an OData remote entity source.
 func (b *Builder) buildExternalEntities() error {
-	domainModels, err := b.reader.ListDomainModels()
+	domainModels, err := b.cachedDomainModelsGen()
 	if err != nil {
 		return err
 	}
@@ -35,15 +37,23 @@ func (b *Builder) buildExternalEntities() error {
 
 	count := 0
 	for _, dm := range domainModels {
-		moduleID := b.hierarchy.findModuleID(dm.ContainerID)
+		if dm == nil {
+			continue
+		}
+		moduleID := b.hierarchy.findModuleID(model.ID(dm.ID()))
 		moduleName := b.hierarchy.getModuleName(moduleID)
 
-		for _, entity := range dm.Entities {
-			if entity.Source != "Rest$ODataRemoteEntitySource" {
+		for _, entityElem := range dm.EntitiesItems() {
+			entity, ok := entityElem.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			source, ok := entity.Source().(*genRest.ODataRemoteEntitySource)
+			if !ok || source == nil {
 				continue
 			}
 
-			qualifiedName := moduleName + "." + entity.Name
+			qualifiedName := moduleName + "." + entity.Name()
 
 			boolToInt := func(b bool) int {
 				if b {
@@ -53,18 +63,18 @@ func (b *Builder) buildExternalEntities() error {
 			}
 
 			_, err := stmt.Exec(
-				string(entity.ID),
-				entity.Name,
+				string(entity.ID()),
+				entity.Name(),
 				qualifiedName,
 				moduleName,
-				entity.RemoteServiceName,
-				entity.RemoteEntitySet,
-				entity.RemoteEntityName,
-				boolToInt(entity.Countable),
-				boolToInt(entity.Creatable),
-				boolToInt(entity.Deletable),
-				boolToInt(entity.Updatable),
-				len(entity.Attributes),
+				source.SourceDocumentQualifiedName(),
+				source.EntitySet(),
+				source.RemoteName(),
+				boolToInt(source.Countable()),
+				boolToInt(source.Creatable()),
+				boolToInt(source.Deletable()),
+				0, // Updatable is not exposed on ODataRemoteEntitySource in gen.
+				len(entity.AttributesItems()),
 				projectID, projectName, snapshotID, snapshotDate, snapshotSource,
 			)
 			if err != nil {

@@ -21,6 +21,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // execGrantEntityAccessGen handles GRANT roles ON MODULE.ENTITY [(rights...)].
@@ -35,12 +37,18 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
+	if dm == nil {
+		return mdlerrors.NewNotFound("entity", s.Entity.Module+"."+s.Entity.Name)
+	}
 
-	entity := dm.FindEntityByName(s.Entity.Name)
+	entity, _, err := findEntityGen(ctx, s.Entity)
+	if err != nil {
+		return mdlerrors.NewBackend("find entity", err)
+	}
 	if entity == nil {
 		return mdlerrors.NewNotFound("entity", s.Entity.Module+"."+s.Entity.Name)
 	}
@@ -90,62 +98,73 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		readMemberSet[m] = true
 	}
 
-	for _, attr := range entity.Attributes {
+	for _, attrElem := range entity.AttributesItems() {
+		attr, ok := attrElem.(*genDm.Attribute)
+		if !ok {
+			continue
+		}
 		rights := defaultMemberAccess
-		if writeMemberSet[attr.Name] {
+		if writeMemberSet[attr.Name()] {
 			rights = "ReadWrite"
-		} else if readMemberSet[attr.Name] {
+		} else if readMemberSet[attr.Name()] {
 			rights = "ReadOnly"
 		}
 		// Calculated attributes cannot have write rights (CE6592).
-		isCalculated := attr.Value != nil && attr.Value.Type == "CalculatedValue"
+		isCalculated := false
+		if val := attr.Value(); val != nil && val.TypeName() == "DomainModels$CalculatedValue" {
+			isCalculated = true
+		}
 		if isCalculated && (rights == "ReadWrite" || rights == "WriteOnly") {
 			rights = "ReadOnly"
 		}
 		memberAccesses = append(memberAccesses, types.EntityMemberAccess{
-			AttributeRef: module.Name + "." + s.Entity.Name + "." + attr.Name,
+			AttributeRef: module.Name + "." + s.Entity.Name + "." + attr.Name(),
 			AccessRights: rights,
 		})
 	}
 
 	// MemberAccess for associations is only required on the FROM entity
 	// (ParentID = FROM entity / FK owner). Adding to the TO side triggers CE0066.
-	for _, assoc := range dm.Associations {
-		if assoc.ParentID == entity.ID {
+	for _, assocElem := range dm.AssociationsItems() {
+		assoc, ok := assocElem.(*genDm.Association)
+		if !ok || model.ID(assoc.ParentRefID()) != model.ID(entity.ID()) {
+			continue
+		}
 			rights := defaultMemberAccess
-			if writeMemberSet[assoc.Name] {
+			if writeMemberSet[assoc.Name()] {
 				rights = "ReadWrite"
-			} else if readMemberSet[assoc.Name] {
+			} else if readMemberSet[assoc.Name()] {
 				rights = "ReadOnly"
 			}
 			memberAccesses = append(memberAccesses, types.EntityMemberAccess{
-				AssociationRef: module.Name + "." + assoc.Name,
+				AssociationRef: module.Name + "." + assoc.Name(),
 				AccessRights:   rights,
 			})
-		}
 	}
-	for _, ca := range dm.CrossAssociations {
-		if ca.ParentID == entity.ID {
+	for _, crossElem := range dm.CrossAssociationsItems() {
+		ca, ok := crossElem.(*genDm.CrossAssociation)
+		if !ok || model.ID(ca.ParentRefID()) != model.ID(entity.ID()) {
+			continue
+		}
 			rights := defaultMemberAccess
-			if writeMemberSet[ca.Name] {
+			if writeMemberSet[ca.Name()] {
 				rights = "ReadWrite"
-			} else if readMemberSet[ca.Name] {
+			} else if readMemberSet[ca.Name()] {
 				rights = "ReadOnly"
 			}
 			memberAccesses = append(memberAccesses, types.EntityMemberAccess{
-				AssociationRef: module.Name + "." + ca.Name,
+				AssociationRef: module.Name + "." + ca.Name(),
 				AccessRights:   rights,
 			})
-		}
 	}
 
-	if entity.HasOwner {
+	if ng, ok := entity.Generalization().(*genDm.NoGeneralization); ok && ng.HasOwner() {
 		memberAccesses = append(memberAccesses, types.EntityMemberAccess{
 			AssociationRef: "System.owner",
 			AccessRights:   defaultMemberAccess,
 		})
 	}
-	if entity.HasChangedBy {
+	if ng, ok := entity.Generalization().(*genDm.NoGeneralization); ok && ng.HasChangedBy() {
 		memberAccesses = append(memberAccesses, types.EntityMemberAccess{
 			AssociationRef: "System.changedBy",
 			AccessRights:   defaultMemberAccess,
@@ -153,7 +172,7 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 	}
 
 	if err := ctx.Backend.AddEntityAccessRule(backend.EntityAccessRuleParams{
-		UnitID:              dm.ID,
+		UnitID:              model.ID(dm.ID()),
 		EntityName:          s.Entity.Name,
 		RoleNames:           roleNames,
 		AllowCreate:         allowCreate,
@@ -165,7 +184,7 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		return mdlerrors.NewBackend("grant entity access", err)
 	}
 
-	if count, err := ctx.Backend.ReconcileMemberAccesses(dm.ID, module.Name); err != nil {
+	if count, err := ctx.Backend.ReconcileMemberAccesses(model.ID(dm.ID()), module.Name); err != nil {
 		return mdlerrors.NewBackend("reconcile member accesses", err)
 	} else if count > 0 && !ctx.Quiet {
 		fmt.Fprintf(ctx.Output, "Reconciled %d access rule(s) in module %s\n", count, module.Name)
@@ -191,12 +210,18 @@ func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) 
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
+	if dm == nil {
+		return mdlerrors.NewNotFound("entity", s.Entity.Module+"."+s.Entity.Name)
+	}
 
-	entity := dm.FindEntityByName(s.Entity.Name)
+	entity, _, err := findEntityGen(ctx, s.Entity)
+	if err != nil {
+		return mdlerrors.NewBackend("find entity", err)
+	}
 	if entity == nil {
 		return mdlerrors.NewNotFound("entity", s.Entity.Module+"."+s.Entity.Name)
 	}
@@ -239,7 +264,7 @@ func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) 
 			}
 		}
 
-		modified, err := ctx.Backend.RevokeEntityMemberAccess(dm.ID, s.Entity.Name, roleNames, revocation)
+		modified, err := ctx.Backend.RevokeEntityMemberAccess(model.ID(dm.ID()), s.Entity.Name, roleNames, revocation)
 		if err != nil {
 			return mdlerrors.NewBackend("revoke entity access", err)
 		}
@@ -256,7 +281,7 @@ func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) 
 		}
 	} else {
 		// Full revoke — remove entire access rule.
-		modified, err := ctx.Backend.RemoveEntityAccessRule(dm.ID, s.Entity.Name, roleNames)
+		modified, err := ctx.Backend.RemoveEntityAccessRule(model.ID(dm.ID()), s.Entity.Name, roleNames)
 		if err != nil {
 			return mdlerrors.NewBackend("revoke entity access", err)
 		}

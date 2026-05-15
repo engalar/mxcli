@@ -16,6 +16,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/widgets"
 )
@@ -98,6 +99,49 @@ func (b *MprBackend) BuildFilterWidget(spec backend.FilterWidgetSpec, projectPat
 		RawType:   getBsonField(bsonD, "Type"),
 	}
 	return w, nil
+}
+
+// BuildDataGrid2WidgetGen is the Stage 3.3.5.D1 gen-native sibling of
+// BuildDataGrid2Widget. It delegates to the legacy builder then round-trips
+// the result through the mpr serializer + gen codec, returning a
+// *backend.GenCustomWidgetElem that satisfies both backend.Widget and
+// element.Element. To be the primary call-site once Cat-B migration replaces
+// cmd_pages_builder_v3.go's sdk-typed widget tree.
+func (b *MprBackend) BuildDataGrid2WidgetGen(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.GenCustomWidgetElem, error) {
+	cw, err := b.BuildDataGrid2Widget(id, name, spec, projectPath)
+	if err != nil {
+		return nil, err
+	}
+	doc := mpr.SerializeWidget(cw)
+	raw, err := bson.Marshal(doc)
+	if err != nil {
+		return nil, fmt.Errorf("BuildDataGrid2WidgetGen: marshal: %w", err)
+	}
+	dec := codec.NewDecoder(codec.DefaultRegistry)
+	elem, err := dec.Decode(bson.Raw(raw))
+	if err != nil {
+		return nil, fmt.Errorf("BuildDataGrid2WidgetGen: decode: %w", err)
+	}
+	return backend.NewGenCustomWidgetElem(elem), nil
+}
+
+// BuildFilterWidgetGen is the Stage 3.3.5.D1 gen-native sibling of BuildFilterWidget.
+func (b *MprBackend) BuildFilterWidgetGen(spec backend.FilterWidgetSpec, projectPath string) (*backend.GenCustomWidgetElem, error) {
+	w, err := b.BuildFilterWidget(spec, projectPath)
+	if err != nil {
+		return nil, err
+	}
+	doc := mpr.SerializeWidget(w)
+	raw, err := bson.Marshal(doc)
+	if err != nil {
+		return nil, fmt.Errorf("BuildFilterWidgetGen: marshal: %w", err)
+	}
+	dec := codec.NewDecoder(codec.DefaultRegistry)
+	elem, err := dec.Decode(bson.Raw(raw))
+	if err != nil {
+		return nil, fmt.Errorf("BuildFilterWidgetGen: decode: %w", err)
+	}
+	return backend.NewGenCustomWidgetElem(elem), nil
 }
 
 // ===========================================================================
