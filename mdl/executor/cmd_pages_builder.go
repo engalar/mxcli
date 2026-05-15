@@ -15,8 +15,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
@@ -143,19 +143,27 @@ func (pb *pageBuilder) getLayouts() ([]*pages.Layout, error) {
 	return pb.layoutsCache, nil
 }
 
-// getDomainModels returns cached domain models or loads them.
-func (pb *pageBuilder) getDomainModels() ([]*domainmodel.DomainModel, error) {
-	if pb.execCache != nil && pb.execCache.domainModels != nil {
-		return pb.execCache.domainModels, nil
+// getDomainModelsWithContainer returns gen-typed domain models paired with
+// their owning module ID. Caches on execCache.domainModelsWithContainerGen
+// (shared with listDomainModelsWithContainerGen). Stage 3.3.4.C7 migration
+// from legacy sdk/domainmodel.
+func (pb *pageBuilder) getDomainModelsWithContainer() ([]DomainModelGenWithContainer, error) {
+	if pb.execCache != nil && pb.execCache.domainModelsWithContainerGen != nil {
+		return pb.execCache.domainModelsWithContainerGen, nil
 	}
-	domainModels, err := pb.backend.ListDomainModels()
-	if err != nil {
-		return nil, err
+	modules := pb.getModules()
+	out := make([]DomainModelGenWithContainer, 0, len(modules))
+	for _, m := range modules {
+		dm, err := pb.backend.GetDomainModelGen(m.ID)
+		if err != nil || dm == nil {
+			continue
+		}
+		out = append(out, DomainModelGenWithContainer{DM: dm, ContainerID: m.ID})
 	}
 	if pb.execCache != nil {
-		pb.execCache.domainModels = domainModels
+		pb.execCache.domainModelsWithContainerGen = out
 	}
-	return domainModels, nil
+	return out, nil
 }
 
 // getPages returns cached pages or loads them.
@@ -226,8 +234,7 @@ func (pb *pageBuilder) resolveLayout(layoutName string) (model.ID, error) {
 
 // resolveEntity finds an entity by qualified name.
 func (pb *pageBuilder) resolveEntity(entityRef ast.QualifiedName) (model.ID, error) {
-	// Get domain models which contain entities
-	domainModels, err := pb.getDomainModels()
+	pairs, err := pb.getDomainModelsWithContainer()
 	if err != nil {
 		return "", mdlerrors.NewBackend("list domain models", err)
 	}
@@ -237,12 +244,15 @@ func (pb *pageBuilder) resolveEntity(entityRef ast.QualifiedName) (model.ID, err
 		return "", mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	// Search for entity in domain models
-	for _, dm := range domainModels {
-		modName := h.GetModuleName(dm.ContainerID)
-		for _, e := range dm.Entities {
-			if e.Name == entityRef.Name && (entityRef.Module == "" || modName == entityRef.Module) {
-				return e.ID, nil
+	for _, pair := range pairs {
+		modName := h.GetModuleName(pair.ContainerID)
+		for _, elem := range pair.DM.EntitiesItems() {
+			e, ok := elem.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			if e.Name() == entityRef.Name && (entityRef.Module == "" || modName == entityRef.Module) {
+				return model.ID(e.ID()), nil
 			}
 		}
 	}

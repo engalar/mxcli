@@ -5,7 +5,8 @@ package executor
 import (
 	"strings"
 
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
@@ -16,21 +17,24 @@ func (pb *pageBuilder) getFilterWidgetIDForAttribute(attrPath string) string {
 	}
 
 	switch attrType.(type) {
-	case *domainmodel.StringAttributeType:
+	case *genDm.StringAttributeType:
 		return pages.WidgetIDDataGridTextFilter
-	case *domainmodel.IntegerAttributeType, *domainmodel.LongAttributeType,
-		*domainmodel.DecimalAttributeType, *domainmodel.AutoNumberAttributeType:
+	case *genDm.IntegerAttributeType, *genDm.LongAttributeType,
+		*genDm.DecimalAttributeType, *genDm.AutoNumberAttributeType:
 		return pages.WidgetIDDataGridNumberFilter
-	case *domainmodel.DateTimeAttributeType, *domainmodel.DateAttributeType:
+	case *genDm.DateTimeAttributeType:
 		return pages.WidgetIDDataGridDateFilter
-	case *domainmodel.BooleanAttributeType, *domainmodel.EnumerationAttributeType:
+	case *genDm.BooleanAttributeType, *genDm.EnumerationAttributeType:
 		return pages.WidgetIDDataGridDropdownFilter
 	default:
 		return pages.WidgetIDDataGridTextFilter
 	}
 }
 
-func (pb *pageBuilder) findAttributeType(attrPath string) domainmodel.AttributeType {
+// findAttributeType returns the gen-typed attribute type element for the given
+// attribute path, or nil if not found. Returns element.Element for type-switching
+// on gen attribute type structs (Stage 3.3.4.C7 migration from sdk/domainmodel).
+func (pb *pageBuilder) findAttributeType(attrPath string) element.Element {
 	if attrPath == "" {
 		return nil
 	}
@@ -63,7 +67,7 @@ func (pb *pageBuilder) findAttributeType(attrPath string) domainmodel.AttributeT
 	}
 
 	// Find the entity and attribute
-	domainModels, err := pb.getDomainModels()
+	pairs, err := pb.getDomainModelsWithContainer()
 	if err != nil {
 		return nil
 	}
@@ -82,19 +86,29 @@ func (pb *pageBuilder) findAttributeType(attrPath string) domainmodel.AttributeT
 	entityShortName := entityParts[1]
 
 	// Find the entity
-	for _, dm := range domainModels {
-		modName := h.GetModuleName(dm.ContainerID)
+	for _, pair := range pairs {
+		modName := h.GetModuleName(pair.ContainerID)
 		if modName != moduleName {
 			continue
 		}
-		for _, entity := range dm.Entities {
-			if entity.Name == entityShortName {
-				attr := entity.FindAttributeByName(attrName)
-				if attr != nil {
-					return attr.Type
-				}
-				return nil
+		for _, entityElem := range pair.DM.EntitiesItems() {
+			entity, ok := entityElem.(*genDm.Entity)
+			if !ok {
+				continue
 			}
+			if entity.Name() != entityShortName {
+				continue
+			}
+			for _, attrElem := range entity.AttributesItems() {
+				attr, ok := attrElem.(*genDm.Attribute)
+				if !ok {
+					continue
+				}
+				if attr.Name() == attrName {
+					return attr.Type()
+				}
+			}
+			return nil
 		}
 	}
 
