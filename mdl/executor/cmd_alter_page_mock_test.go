@@ -11,7 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
 
 // ---------------------------------------------------------------------------
@@ -38,10 +38,10 @@ func TestAlterPage_PageNotFound(t *testing.T) {
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return nil, nil },
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Pages = makePagesRepo(nil, mod.ID)
 	err := execAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "MyModule", Name: "Missing"},
 	})
@@ -55,14 +55,13 @@ func TestAlterPage_PageNotFound(t *testing.T) {
 
 func TestAlterPage_SetProperty_Success(t *testing.T) {
 	mod := mkModule("MyModule")
-	pg := mkPage(mod.ID, "TestPage")
+	pg := mkPageGen(string(nextID("pg")), "TestPage")
 	saved := false
 	setPropCalled := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return []*pages.Page{pg}, nil },
 		OpenPageForMutationFunc: func(unitID model.ID) (backend.PageMutator, error) {
 			return &mock.MockPageMutator{
 				SetWidgetPropertyFunc: func(widgetRef string, prop string, value any) error {
@@ -80,8 +79,8 @@ func TestAlterPage_SetProperty_Success(t *testing.T) {
 		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, pg.ContainerID, mod.ID)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
 	assertNoError(t, execAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "MyModule", Name: "TestPage"},
 		Operations: []ast.AlterPageOperation{
@@ -107,15 +106,12 @@ func TestAlterPage_SetProperty_Success(t *testing.T) {
 
 func TestAlterPage_Snippet_Success(t *testing.T) {
 	mod := mkModule("MyModule")
-	snp := mkSnippet(mod.ID, "TestSnippet")
+	snp := mkSnippetGen(string(nextID("snp")), "TestSnippet")
 	saved := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) {
-			return []*pages.Snippet{snp}, nil
-		},
 		OpenPageForMutationFunc: func(unitID model.ID) (backend.PageMutator, error) {
 			return &mock.MockPageMutator{
 				SaveFunc: func() error { saved = true; return nil },
@@ -123,8 +119,8 @@ func TestAlterPage_Snippet_Success(t *testing.T) {
 		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, snp.ContainerID, mod.ID)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Snippets = makeSnippetsRepo([]*genPg.Snippet{snp}, mod.ID)
 	assertNoError(t, execAlterPage(ctx, &ast.AlterPageStmt{
 		ContainerType: "snippet",
 		PageName:      ast.QualifiedName{Module: "MyModule", Name: "TestSnippet"},
@@ -139,15 +135,12 @@ func TestAlterPage_Snippet_Success(t *testing.T) {
 // must normalise before comparing so the snippet branch is taken.
 func TestAlterPage_Snippet_UppercaseContainerType_Issue402(t *testing.T) {
 	mod := mkModule("MyModule")
-	snp := mkSnippet(mod.ID, "TestSnippet")
+	snp := mkSnippetGen(string(nextID("snp")), "TestSnippet")
 	saved := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) {
-			return []*pages.Snippet{snp}, nil
-		},
 		OpenPageForMutationFunc: func(unitID model.ID) (backend.PageMutator, error) {
 			return &mock.MockPageMutator{
 				SaveFunc: func() error { saved = true; return nil },
@@ -155,8 +148,8 @@ func TestAlterPage_Snippet_UppercaseContainerType_Issue402(t *testing.T) {
 		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, snp.ContainerID, mod.ID)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Snippets = makeSnippetsRepo([]*genPg.Snippet{snp}, mod.ID)
 	assertNoError(t, execAlterPage(ctx, &ast.AlterPageStmt{
 		ContainerType: "SNIPPET", // uppercase as produced by the AST visitor
 		PageName:      ast.QualifiedName{Module: "MyModule", Name: "TestSnippet"},
@@ -173,19 +166,18 @@ func TestAlterPage_Snippet_UppercaseContainerType_Issue402(t *testing.T) {
 
 func TestAlterPage_OpenMutatorError(t *testing.T) {
 	mod := mkModule("MyModule")
-	pg := mkPage(mod.ID, "TestPage")
+	pg := mkPageGen(string(nextID("pg")), "TestPage")
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return []*pages.Page{pg}, nil },
 		OpenPageForMutationFunc: func(unitID model.ID) (backend.PageMutator, error) {
 			return nil, fmt.Errorf("lock error")
 		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, pg.ContainerID, mod.ID)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
 	err := execAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "MyModule", Name: "TestPage"},
 	})
@@ -199,12 +191,11 @@ func TestAlterPage_OpenMutatorError(t *testing.T) {
 
 func TestAlterPage_SaveError(t *testing.T) {
 	mod := mkModule("MyModule")
-	pg := mkPage(mod.ID, "TestPage")
+	pg := mkPageGen(string(nextID("pg")), "TestPage")
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return []*pages.Page{pg}, nil },
 		OpenPageForMutationFunc: func(unitID model.ID) (backend.PageMutator, error) {
 			return &mock.MockPageMutator{
 				SaveFunc: func() error { return fmt.Errorf("disk full") },
@@ -212,8 +203,8 @@ func TestAlterPage_SaveError(t *testing.T) {
 		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, pg.ContainerID, mod.ID)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
 	err := execAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "MyModule", Name: "TestPage"},
 	})
@@ -227,13 +218,12 @@ func TestAlterPage_SaveError(t *testing.T) {
 
 func TestAlterPage_DropWidget_Success(t *testing.T) {
 	mod := mkModule("MyModule")
-	pg := mkPage(mod.ID, "TestPage")
+	pg := mkPageGen(string(nextID("pg")), "TestPage")
 	dropCalled := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return []*pages.Page{pg}, nil },
 		OpenPageForMutationFunc: func(unitID model.ID) (backend.PageMutator, error) {
 			return &mock.MockPageMutator{
 				DropWidgetFunc: func(refs []backend.WidgetRef) error {
@@ -248,8 +238,8 @@ func TestAlterPage_DropWidget_Success(t *testing.T) {
 		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, pg.ContainerID, mod.ID)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
 	assertNoError(t, execAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "MyModule", Name: "TestPage"},
 		Operations: []ast.AlterPageOperation{
@@ -270,13 +260,12 @@ func TestAlterPage_DropWidget_Success(t *testing.T) {
 
 func TestAlterPage_AddVariable_Success(t *testing.T) {
 	mod := mkModule("MyModule")
-	pg := mkPage(mod.ID, "TestPage")
+	pg := mkPageGen(string(nextID("pg")), "TestPage")
 	addVarCalled := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return []*pages.Page{pg}, nil },
 		OpenPageForMutationFunc: func(unitID model.ID) (backend.PageMutator, error) {
 			return &mock.MockPageMutator{
 				AddVariableFunc: func(name, dataType, defaultValue string) error {
@@ -291,8 +280,8 @@ func TestAlterPage_AddVariable_Success(t *testing.T) {
 		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, pg.ContainerID, mod.ID)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
 	assertNoError(t, execAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "MyModule", Name: "TestPage"},
 		Operations: []ast.AlterPageOperation{
@@ -313,21 +302,18 @@ func TestAlterPage_AddVariable_Success(t *testing.T) {
 
 func TestAlterPage_SetLayout_Snippet_Unsupported(t *testing.T) {
 	mod := mkModule("MyModule")
-	snp := mkSnippet(mod.ID, "TestSnippet")
+	snp := mkSnippetGen(string(nextID("snp")), "TestSnippet")
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) {
-			return []*pages.Snippet{snp}, nil
-		},
 		OpenPageForMutationFunc: func(unitID model.ID) (backend.PageMutator, error) {
 			return &mock.MockPageMutator{}, nil
 		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, snp.ContainerID, mod.ID)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Snippets = makeSnippetsRepo([]*genPg.Snippet{snp}, mod.ID)
 	err := execAlterPage(ctx, &ast.AlterPageStmt{
 		ContainerType: "snippet",
 		PageName:      ast.QualifiedName{Module: "MyModule", Name: "TestSnippet"},

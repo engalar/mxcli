@@ -35,20 +35,31 @@ func execAlterPage(ctx *ExecContext, s *ast.AlterPageStmt) error {
 		containerType = "page"
 	}
 
+	// Stage 3.3.5.D5.b: lookup goes through gen-typed find helpers so
+	// the test fixtures wire RecordingPageRepository / RecordingSnippet
+	// Repository (matches the C6.* pattern used for SHOW + describe
+	// tests). Container resolution still walks the unit hierarchy so
+	// the mutator is opened against the correct module ID.
 	if containerType == "snippet" {
-		snippet, modID, err := findSnippetByName(ctx, s.PageName, h)
+		snipID, err := findSnippetIDGen(ctx, s.PageName, h)
 		if err != nil {
 			return err
 		}
-		unitID = snippet.ID
-		containerID = modID
+		unitID = snipID
+		if ctx.Snippets != nil {
+			c, _ := ctx.Snippets.GetContainerUUID(snipID)
+			containerID = h.FindModuleID(c)
+		}
 	} else {
-		page, err := findPageByName(ctx, s.PageName, h)
+		pageID, err := findPageIDGen(ctx, s.PageName, h)
 		if err != nil {
 			return err
 		}
-		unitID = page.ID
-		containerID = h.FindModuleID(page.ContainerID)
+		unitID = pageID
+		if ctx.Pages != nil {
+			c, _ := ctx.Pages.GetContainerUUID(pageID)
+			containerID = h.FindModuleID(c)
+		}
 	}
 
 	// Open the page for mutation via the backend
