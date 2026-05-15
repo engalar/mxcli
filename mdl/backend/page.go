@@ -8,41 +8,22 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
-// Re-export sdk/pages types still used by the legacy PageBackend surface.
-// Stage 3.3.5.E1 will retire these once all callers switch to the gen surface.
+// Re-export sdk/pages types still used by the read-only BuildingBlock /
+// PageTemplate surface. The Page/Layout/Snippet aliases were retired in
+// Stage 3.3.5.E1 alongside the legacy ListPages/ListLayouts/ListSnippets
+// and Delete* PageBackend methods.
 type (
-	Page          = pages.Page
-	Layout        = pages.Layout
-	Snippet       = pages.Snippet
 	BuildingBlock = pages.BuildingBlock
 	PageTemplate  = pages.PageTemplate
 )
 
 // PageBackend provides page, layout, and snippet operations.
 type PageBackend interface {
-	// Pages — legacy sdk-typed read + delete/move surface. The
-	// Create/Update writers were retired in Stage 3.3.5.E1; consumers
-	// route writes through CreatePageGen / UpdatePageGen below.
-	ListPages() ([]*Page, error)
-	GetPage(id model.ID) (*Page, error)
-	DeletePage(id model.ID) error
-
-	// Layouts — legacy sdk-typed read + delete surface. The
-	// Create/Update writers were retired in Stage 3.3.5.E1.
-	ListLayouts() ([]*Layout, error)
-	GetLayout(id model.ID) (*Layout, error)
-	DeleteLayout(id model.ID) error
-
-	// Snippets — legacy sdk-typed read + delete/move surface. The
-	// Create/Update writers were retired in Stage 3.3.5.E1.
-	// No GetSnippet: snippets are resolved by qualified name via ListSnippets.
-	ListSnippets() ([]*Snippet, error)
-	DeleteSnippet(id model.ID) error
-
-	// Stage 3.3.5.C1 gen-typed Page/Layout/Snippet surface — additive
-	// alongside the legacy sdk-typed methods. Production wiring in
-	// mdl/backend/mpr/backend.go; mock stubs in mdl/backend/mock/
-	// return descriptive errors per the MockBackend audit rule.
+	// Stage 3.3.5.C1 gen-typed Page/Layout/Snippet surface — sole
+	// supported read/write API after the Stage 3.3.5.E1 cutover.
+	// Production wiring in mdl/backend/mpr/backend.go; mock stubs in
+	// mdl/backend/mock/ return descriptive errors per the MockBackend
+	// audit rule.
 	ListPagesGen() ([]*genPg.Page, error)
 	GetPageGen(id model.ID) (*genPg.Page, error)
 	CreatePageGen(parentUUID, containmentName string, page *genPg.Page) error
@@ -83,5 +64,4 @@ type PageBackend interface {
 	// Building blocks and page templates (read-only)
 	ListBuildingBlocks() ([]*BuildingBlock, error)
 	ListPageTemplates() ([]*PageTemplate, error)
-
 }

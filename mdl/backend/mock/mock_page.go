@@ -10,62 +10,6 @@ import (
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
 
-func (m *MockBackend) ListPages() ([]*backend.Page, error) {
-	if m.ListPagesFunc != nil {
-		return m.ListPagesFunc()
-	}
-	return nil, nil
-}
-
-func (m *MockBackend) GetPage(id model.ID) (*backend.Page, error) {
-	if m.GetPageFunc != nil {
-		return m.GetPageFunc(id)
-	}
-	return nil, nil
-}
-
-func (m *MockBackend) DeletePage(id model.ID) error {
-	if m.DeletePageFunc != nil {
-		return m.DeletePageFunc(id)
-	}
-	return nil
-}
-
-func (m *MockBackend) ListLayouts() ([]*backend.Layout, error) {
-	if m.ListLayoutsFunc != nil {
-		return m.ListLayoutsFunc()
-	}
-	return nil, nil
-}
-
-func (m *MockBackend) GetLayout(id model.ID) (*backend.Layout, error) {
-	if m.GetLayoutFunc != nil {
-		return m.GetLayoutFunc(id)
-	}
-	return nil, nil
-}
-
-func (m *MockBackend) DeleteLayout(id model.ID) error {
-	if m.DeleteLayoutFunc != nil {
-		return m.DeleteLayoutFunc(id)
-	}
-	return nil
-}
-
-func (m *MockBackend) ListSnippets() ([]*backend.Snippet, error) {
-	if m.ListSnippetsFunc != nil {
-		return m.ListSnippetsFunc()
-	}
-	return nil, nil
-}
-
-func (m *MockBackend) DeleteSnippet(id model.ID) error {
-	if m.DeleteSnippetFunc != nil {
-		return m.DeleteSnippetFunc(id)
-	}
-	return nil
-}
-
 func (m *MockBackend) ListBuildingBlocks() ([]*backend.BuildingBlock, error) {
 	if m.ListBuildingBlocksFunc != nil {
 		return m.ListBuildingBlocksFunc()
