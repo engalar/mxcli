@@ -9,7 +9,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // ============================================================================
@@ -531,107 +531,117 @@ func microflowStatementToMDL(ctx *ExecContext, stmt ast.MicroflowStatement, inde
 // Project to MDL Converters
 // ============================================================================
 
-// entityToMDL converts a project entity to MDL text
-func entityToMDL(ctx *ExecContext, moduleName string, entity *domainmodel.Entity, dm *domainmodel.DomainModel) string {
+// entityToMDLGen converts a gen-typed project entity to MDL text.
+func entityToMDLGen(ctx *ExecContext, moduleName string, entity *genDm.Entity) string {
 	var lines []string
 
 	// Documentation
-	if entity.Documentation != "" {
+	if entity.Documentation() != "" {
 		lines = append(lines, "/**")
-		lines = append(lines, " * "+entity.Documentation)
+		lines = append(lines, " * "+entity.Documentation())
 		lines = append(lines, " */")
 	}
 
 	// Position
-	lines = append(lines, fmt.Sprintf("@Position(%d, %d)", entity.Location.X, entity.Location.Y))
+	if loc := entity.Location(); loc != "" {
+		lines = append(lines, fmt.Sprintf("@Position(%s)", loc))
+	}
 
 	// Entity type
 	entityType := "persistent"
-	if strings.Contains(entity.Source, "OqlView") {
+	if src := entity.Source(); src != nil && strings.Contains(src.TypeName(), "OqlView") {
 		entityType = "view"
-	} else if !entity.Persistable {
+	} else if g, ok := entity.Generalization().(*genDm.NoGeneralization); ok && !g.Persistable() {
 		entityType = "non-persistent"
 	}
 
-	lines = append(lines, fmt.Sprintf("create %s entity %s.%s (", entityType, moduleName, entity.Name))
+	lines = append(lines, fmt.Sprintf("create %s entity %s.%s (", entityType, moduleName, entity.Name()))
 
-	// Build validation rules map
-	validationsByAttr := make(map[model.ID][]*domainmodel.ValidationRule)
-	validationsByName := make(map[string][]*domainmodel.ValidationRule)
-	for _, vr := range entity.ValidationRules {
-		validationsByAttr[vr.AttributeID] = append(validationsByAttr[vr.AttributeID], vr)
-		attrName := extractAttrNameFromQualified(string(vr.AttributeID))
+	// Build validation rules map by attribute name.
+	validationsByName := make(map[string][]*genDm.ValidationRule)
+	for _, item := range entity.ValidationRulesItems() {
+		vr, ok := item.(*genDm.ValidationRule)
+		if !ok {
+			continue
+		}
+		attrName := extractAttrNameFromQualified(vr.AttributeQualifiedName())
 		if attrName != "" {
 			validationsByName[attrName] = append(validationsByName[attrName], vr)
 		}
 	}
 
 	// Attributes
-	for i, attr := range entity.Attributes {
+	attrs := entity.AttributesItems()
+	for i, item := range attrs {
+		attr, ok := item.(*genDm.Attribute)
+		if !ok {
+			continue
+		}
 		// Documentation
-		if attr.Documentation != "" {
-			lines = append(lines, fmt.Sprintf("  /** %s */", attr.Documentation))
+		if attr.Documentation() != "" {
+			lines = append(lines, fmt.Sprintf("  /** %s */", attr.Documentation()))
 		}
 
-		typeStr := formatAttributeType(attr.Type)
+		typeStr := formatAttributeTypeGen(attr.Type())
 		var constraints strings.Builder
 
-		// Check for validation rules
-		attrValidations := validationsByAttr[attr.ID]
-		if len(attrValidations) == 0 {
-			attrValidations = validationsByName[attr.Name]
-		}
-		for _, vr := range attrValidations {
-			if vr.Type == "Required" {
+		// Check validation rules.
+		for _, vr := range validationsByName[attr.Name()] {
+			switch vr.RuleInfo().TypeName() {
+			case "DomainModels$RequiredRuleInfo":
 				constraints.WriteString(" not null")
-				if vr.ErrorMessage != nil {
-					errMsg := vr.ErrorMessage.GetTranslation("en_US")
-					if errMsg != "" {
-						constraints.WriteString(fmt.Sprintf(" error '%s'", errMsg))
-					}
-				}
-			}
-			if vr.Type == "Unique" {
+			case "DomainModels$UniqueRuleInfo":
 				constraints.WriteString(" unique")
-				if vr.ErrorMessage != nil {
-					errMsg := vr.ErrorMessage.GetTranslation("en_US")
-					if errMsg != "" {
-						constraints.WriteString(fmt.Sprintf(" error '%s'", errMsg))
-					}
-				}
 			}
 		}
 
 		// Default value
-		if attr.Value != nil && attr.Value.DefaultValue != "" {
-			defaultVal := attr.Value.DefaultValue
-			if _, ok := attr.Type.(*domainmodel.StringAttributeType); ok {
+		if val, ok := attr.Value().(*genDm.StoredValue); ok && val.DefaultValue() != "" {
+			defaultVal := val.DefaultValue()
+			if _, ok := attr.Type().(*genDm.StringAttributeType); ok {
 				defaultVal = fmt.Sprintf("'%s'", defaultVal)
+			}
+			if enumType, ok := attr.Type().(*genDm.EnumerationAttributeType); ok {
+				if qn := enumType.EnumerationQualifiedName(); qn != "" && !strings.Contains(defaultVal, ".") {
+					defaultVal = qn + "." + defaultVal
+				}
 			}
 			constraints.WriteString(fmt.Sprintf(" default %s", defaultVal))
 		}
 
 		comma := ","
-		if i == len(entity.Attributes)-1 {
+		if i == len(attrs)-1 {
 			comma = ""
 		}
-		lines = append(lines, fmt.Sprintf("  %s: %s%s%s", attr.Name, typeStr, constraints.String(), comma))
+		lines = append(lines, fmt.Sprintf("  %s: %s%s%s", attr.Name(), typeStr, constraints.String(), comma))
 	}
 
 	lines = append(lines, ")")
 
 	// Build attr name map for indexes
 	attrNames := make(map[model.ID]string)
-	for _, attr := range entity.Attributes {
-		attrNames[attr.ID] = attr.Name
+	for _, item := range attrs {
+		attr, ok := item.(*genDm.Attribute)
+		if !ok {
+			continue
+		}
+		attrNames[model.ID(attr.ID())] = attr.Name()
 	}
 
 	// Indexes
-	for _, idx := range entity.Indexes {
+	for _, item := range entity.IndexesItems() {
+		idx, ok := item.(*genDm.Index)
+		if !ok {
+			continue
+		}
 		var cols []string
-		for _, ia := range idx.Attributes {
-			colName := attrNames[ia.AttributeID]
-			if !ia.Ascending {
+		for _, idxItem := range idx.AttributesItems() {
+			ia, ok := idxItem.(*genDm.IndexedAttribute)
+			if !ok {
+				continue
+			}
+			colName := attrNames[model.ID(ia.AttributeRefID())]
+			if !ia.Ascending() {
 				colName += " desc"
 			}
 			cols = append(cols, colName)
@@ -647,31 +657,38 @@ func entityToMDL(ctx *ExecContext, moduleName string, entity *domainmodel.Entity
 	return strings.Join(lines, "\n")
 }
 
-// viewEntityFromProjectToMDL converts a view entity from project to MDL
-func viewEntityFromProjectToMDL(ctx *ExecContext, moduleName string, entity *domainmodel.Entity, dm *domainmodel.DomainModel) string {
+// viewEntityFromProjectToMDLGen converts a gen-typed view entity to MDL.
+func viewEntityFromProjectToMDLGen(ctx *ExecContext, moduleName string, entity *genDm.Entity) string {
 	var lines []string
 
-	if entity.Documentation != "" {
+	if entity.Documentation() != "" {
 		lines = append(lines, "/**")
-		lines = append(lines, " * "+entity.Documentation)
+		lines = append(lines, " * "+entity.Documentation())
 		lines = append(lines, " */")
 	}
 
-	lines = append(lines, fmt.Sprintf("@Position(%d, %d)", entity.Location.X, entity.Location.Y))
-	lines = append(lines, fmt.Sprintf("create view entity %s.%s (", moduleName, entity.Name))
+	if loc := entity.Location(); loc != "" {
+		lines = append(lines, fmt.Sprintf("@Position(%s)", loc))
+	}
+	lines = append(lines, fmt.Sprintf("create view entity %s.%s (", moduleName, entity.Name()))
 
-	for i, attr := range entity.Attributes {
-		typeStr := formatAttributeType(attr.Type)
+	attrs := entity.AttributesItems()
+	for i, item := range attrs {
+		attr, ok := item.(*genDm.Attribute)
+		if !ok {
+			continue
+		}
+		typeStr := formatAttributeTypeGen(attr.Type())
 		comma := ","
-		if i == len(entity.Attributes)-1 {
+		if i == len(attrs)-1 {
 			comma = ""
 		}
-		lines = append(lines, fmt.Sprintf("  %s: %s%s", attr.Name, typeStr, comma))
+		lines = append(lines, fmt.Sprintf("  %s: %s%s", attr.Name(), typeStr, comma))
 	}
 
 	lines = append(lines, ") as (")
-	if entity.OqlQuery != "" {
-		for line := range strings.SplitSeq(entity.OqlQuery, "\n") {
+	if src, ok := entity.Source().(*genDm.OqlViewEntitySource); ok && src.Oql() != "" {
+		for line := range strings.SplitSeq(src.Oql(), "\n") {
 			lines = append(lines, "  "+line)
 		}
 	}
@@ -711,46 +728,117 @@ func enumerationToMDL(ctx *ExecContext, moduleName string, enum *model.Enumerati
 	return strings.Join(lines, "\n")
 }
 
-// associationToMDL converts a project association to MDL text
-func associationToMDL(ctx *ExecContext, moduleName string, assoc *domainmodel.Association, dm *domainmodel.DomainModel) string {
+// associationToMDLGen converts a gen-typed project association to MDL.
+func associationToMDLGen(ctx *ExecContext, moduleName string, assoc *genDm.Association, dm *genDm.DomainModel) string {
 	var lines []string
 
 	// Build entity name map
 	entityNames := make(map[model.ID]string)
-	for _, entity := range dm.Entities {
-		entityNames[entity.ID] = entity.Name
+	for _, item := range dm.EntitiesItems() {
+		entity, ok := item.(*genDm.Entity)
+		if !ok {
+			continue
+		}
+		entityNames[model.ID(entity.ID())] = entity.Name()
 	}
 
-	if assoc.Documentation != "" {
+	if assoc.Documentation() != "" {
 		lines = append(lines, "/**")
-		lines = append(lines, " * "+assoc.Documentation)
+		lines = append(lines, " * "+assoc.Documentation())
 		lines = append(lines, " */")
 	}
 
-	fromEntity := entityNames[assoc.ParentID]
-	toEntity := entityNames[assoc.ChildID]
+	fromEntity := entityNames[model.ID(assoc.ParentRefID())]
+	toEntity := entityNames[model.ID(assoc.ChildRefID())]
 
-	lines = append(lines, fmt.Sprintf("create association %s.%s", moduleName, assoc.Name))
+	lines = append(lines, fmt.Sprintf("create association %s.%s", moduleName, assoc.Name()))
 	lines = append(lines, fmt.Sprintf("from %s.%s to %s.%s", moduleName, fromEntity, moduleName, toEntity))
 
 	assocType := "Reference"
-	if assoc.Type == domainmodel.AssociationTypeReferenceSet {
+	if assoc.Type() == "ReferenceSet" {
 		assocType = "ReferenceSet"
 	}
 	lines = append(lines, fmt.Sprintf("type %s", assocType))
 
 	owner := "Default"
-	if assoc.Owner == domainmodel.AssociationOwnerBoth {
+	if assoc.Owner() == "Both" {
 		owner = "Both"
 	}
 	lines = append(lines, fmt.Sprintf("owner %s", owner))
 
 	deleteBehavior := "DELETE_BUT_KEEP_REFERENCES"
-	if assoc.ChildDeleteBehavior != nil {
-		switch assoc.ChildDeleteBehavior.Type {
-		case domainmodel.DeleteBehaviorTypeDeleteMeAndReferences:
+	if dbe, ok := assoc.DeleteBehavior().(*genDm.AssociationDeleteBehavior); ok && dbe != nil {
+		switch dbe.ChildDeleteBehavior() {
+		case "DeleteMeAndReferences":
 			deleteBehavior = "DELETE_CASCADE"
-		case domainmodel.DeleteBehaviorTypeDeleteMeIfNoReferences:
+		case "DeleteMeIfNoReferences":
+			deleteBehavior = "DELETE_IF_NO_REFERENCES"
+		}
+	}
+	lines = append(lines, fmt.Sprintf("delete_behavior %s;", deleteBehavior))
+	lines = append(lines, "/")
+
+	return strings.Join(lines, "\n")
+}
+
+// crossAssociationToMDLGen converts a gen-typed cross-association to MDL.
+func crossAssociationToMDLGen(ctx *ExecContext, moduleName string, assoc *genDm.CrossAssociation, pairs []DomainModelGenWithContainer) string {
+	var lines []string
+
+	entityNames := make(map[model.ID]string)
+	moduleNames := make(map[model.ID]string)
+	if mods, err := ctx.Backend.ListModules(); err == nil {
+		for _, m := range mods {
+			moduleNames[m.ID] = m.Name
+		}
+	}
+	for _, pair := range pairs {
+		if pair.DM == nil {
+			continue
+		}
+		modName := moduleNames[pair.ContainerID]
+		for _, item := range pair.DM.EntitiesItems() {
+			entity, ok := item.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			entityNames[model.ID(entity.ID())] = modName + "." + entity.Name()
+		}
+	}
+
+	if assoc.Documentation() != "" {
+		lines = append(lines, "/**")
+		lines = append(lines, " * "+assoc.Documentation())
+		lines = append(lines, " */")
+	}
+
+	fromEntity := entityNames[model.ID(assoc.ParentRefID())]
+	if fromEntity == "" {
+		fromEntity = string(assoc.ParentRefID())
+	}
+	toEntity := assoc.ChildQualifiedName()
+
+	lines = append(lines, fmt.Sprintf("create association %s.%s", moduleName, assoc.Name()))
+	lines = append(lines, fmt.Sprintf("from %s to %s", fromEntity, toEntity))
+
+	assocType := "Reference"
+	if assoc.Type() == "ReferenceSet" {
+		assocType = "ReferenceSet"
+	}
+	lines = append(lines, fmt.Sprintf("type %s", assocType))
+
+	owner := "Default"
+	if assoc.Owner() == "Both" {
+		owner = "Both"
+	}
+	lines = append(lines, fmt.Sprintf("owner %s", owner))
+
+	deleteBehavior := "DELETE_BUT_KEEP_REFERENCES"
+	if dbe, ok := assoc.DeleteBehavior().(*genDm.AssociationDeleteBehavior); ok && dbe != nil {
+		switch dbe.ChildDeleteBehavior() {
+		case "DeleteMeAndReferences":
+			deleteBehavior = "DELETE_CASCADE"
+		case "DeleteMeIfNoReferences":
 			deleteBehavior = "DELETE_IF_NO_REFERENCES"
 		}
 	}
