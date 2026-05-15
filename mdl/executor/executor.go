@@ -19,6 +19,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
@@ -84,6 +85,11 @@ type executorCache struct {
 	// (Stage 3.3.4 A0). Each module owns at most one DomainModel; the
 	// container ID is the owning module's UUID.
 	domainModelsWithContainerGen []DomainModelGenWithContainer
+
+	// Flat gen-typed DomainModel list (Stage 3.3.4.C9). Populated lazily
+	// by cachedDomainModelsGen via ctx.Backend.ListDomainModelsGen.
+	// Used by cmd_pages_builder getDomainModels migration (C7).
+	domainModelsGen []*genDm.DomainModel
 
 	// Cached gen-typed Workflow listing with container UUID resolved
 	// (Stage 3.3.3 A0).

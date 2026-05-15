@@ -97,8 +97,26 @@ func findDomainModelGenByModule(ctx *ExecContext, moduleName string) (*genDm.Dom
 	return nil, nil
 }
 
+// cachedDomainModelsGen returns the flat gen-typed DomainModel list, populated
+// lazily from ctx.Backend.ListDomainModelsGen on first call. Required for cache
+// discipline per memory feedback_executor_cache_pattern — direct
+// ctx.Backend.ListDomainModelsGen calls in batch contexts are O(N²).
+func cachedDomainModelsGen(ctx *ExecContext) ([]*genDm.DomainModel, error) {
+	if ctx.Cache != nil && ctx.Cache.domainModelsGen != nil {
+		return ctx.Cache.domainModelsGen, nil
+	}
+	list, err := ctx.Backend.ListDomainModelsGen()
+	if err != nil {
+		return nil, err
+	}
+	if ctx.Cache != nil {
+		ctx.Cache.domainModelsGen = list
+	}
+	return list, nil
+}
+
 // invalidateDomainModelsGenCache clears the cached gen-typed DomainModel
-// listing. The legacy invalidateDomainModelsCache (in hierarchy.go,
+// listings. The legacy invalidateDomainModelsCache (in hierarchy.go,
 // which clears the sdk-typed slice) is also extended to call this so
 // older callers automatically refresh both caches; new gen-only call
 // sites should prefer invalidateDomainModelsGenCache directly.
@@ -107,4 +125,5 @@ func invalidateDomainModelsGenCache(ctx *ExecContext) {
 		return
 	}
 	ctx.Cache.domainModelsWithContainerGen = nil
+	ctx.Cache.domainModelsGen = nil
 }
