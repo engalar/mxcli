@@ -16,7 +16,6 @@ import (
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // CatalogReader defines the read-only backend surface used by the catalog builder.
@@ -51,11 +50,6 @@ type CatalogReader interface {
 	// owning module/folder via the MPR Unit hierarchy (see buildHierarchy).
 	ListMicroflowsGen() ([]*genMf.Microflow, error)
 	ListNanoflowsGen() ([]*genMf.Nanoflow, error)
-
-	// Pages, layouts & snippets
-	ListPages() ([]*pages.Page, error)
-	ListLayouts() ([]*pages.Layout, error)
-	ListSnippets() ([]*pages.Snippet, error)
 
 	// Pages, layouts & snippets — gen-typed (Stage 3.3.5.C7e). Sibling
 	// methods serve catalog phases that don't need the legacy widget
@@ -114,7 +108,6 @@ type Builder struct {
 	// MPR Unit table) since codec-decoded gen objects don't carry it.
 	microflowCache          []*genMf.Microflow
 	nanoflowCache           []*genMf.Nanoflow
-	pageCache               []*pages.Page
 	pageGenCache            []*genPg.Page
 	layoutGenCache          []*genPg.Layout
 	snippetGenCache         []*genPg.Snippet
@@ -262,21 +255,7 @@ func (b *Builder) cachedNanoflows() ([]*genMf.Nanoflow, error) {
 	return b.nanoflowCache, nil
 }
 
-func (b *Builder) cachedPages() ([]*pages.Page, error) {
-	if b.pageCache == nil {
-		var err error
-		b.pageCache, err = b.reader.ListPages()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return b.pageCache, nil
-}
-
-// cachedPagesGen is the gen-typed counterpart to cachedPages
-// (Stage 3.3.5.C7e). Read-side phases that don't need the legacy
-// sdk widget trees should prefer this — title/url/parameters/
-// allowed-roles are all available off the gen Page accessors.
+// cachedPagesGen returns gen-typed pages (Stage 3.3.5.C7e).
 func (b *Builder) cachedPagesGen() ([]*genPg.Page, error) {
 	if b.pageGenCache == nil {
 		var err error
