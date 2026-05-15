@@ -17,7 +17,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/widgets"
 )
 
@@ -32,7 +31,7 @@ const (
 )
 
 // BuildDataGrid2Widget builds a complete DataGrid2 CustomWidget from domain-typed inputs.
-func (b *MprBackend) BuildDataGrid2Widget(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*pages.CustomWidget, error) {
+func (b *MprBackend) BuildDataGrid2Widget(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.CustomWidget, error) {
 	// Load embedded template
 	embeddedType, embeddedObject, embeddedIDs, embeddedObjectTypeID, err :=
 		widgets.GetTemplateFullBSON(widgetIDDataGrid2, types.GenerateID, projectPath)
@@ -63,8 +62,8 @@ func (b *MprBackend) BuildDataGrid2Widget(id model.ID, name string, spec backend
 		updatedObject = b.applyDataGridSelectionProp(updatedObject, propertyTypeIDs, spec.SelectionMode)
 	}
 
-	grid := &pages.CustomWidget{
-		BaseWidget: pages.BaseWidget{
+	grid := &backend.CustomWidget{
+		BaseWidget: backend.BaseWidget{
 			BaseElement: model.BaseElement{
 				ID:       id,
 				TypeName: "CustomWidgets$CustomWidget",
@@ -82,12 +81,12 @@ func (b *MprBackend) BuildDataGrid2Widget(id model.ID, name string, spec backend
 }
 
 // BuildFilterWidget builds a filter widget for DataGrid2.
-func (b *MprBackend) BuildFilterWidget(spec backend.FilterWidgetSpec, projectPath string) (pages.Widget, error) {
+func (b *MprBackend) BuildFilterWidget(spec backend.FilterWidgetSpec, projectPath string) (backend.Widget, error) {
 	bsonD := b.buildFilterWidgetBSON(spec.WidgetID, spec.FilterName, projectPath)
 
 	// Wrap the BSON in a CustomWidget
-	w := &pages.CustomWidget{
-		BaseWidget: pages.BaseWidget{
+	w := &backend.CustomWidget{
+		BaseWidget: backend.BaseWidget{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(types.GenerateID()),
 				TypeName: "CustomWidgets$CustomWidget",
@@ -604,7 +603,7 @@ func (b *MprBackend) buildDataGrid2ColumnObject(col *backend.DataGridColumnSpec,
 	}
 }
 
-func (b *MprBackend) cloneDataGrid2ObjectWithDatasourceOnly(templateObject bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, datasource pages.DataSource) bson.D {
+func (b *MprBackend) cloneDataGrid2ObjectWithDatasourceOnly(templateObject bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, datasource backend.DataSource) bson.D {
 	result := make(bson.D, 0, len(templateObject))
 
 	for _, elem := range templateObject {
@@ -625,7 +624,7 @@ func (b *MprBackend) cloneDataGrid2ObjectWithDatasourceOnly(templateObject bson.
 	return result
 }
 
-func (b *MprBackend) updateOnlyDatasource(props bson.A, propertyTypeIDs map[string]types.PropertyTypeIDEntry, datasource pages.DataSource) bson.A {
+func (b *MprBackend) updateOnlyDatasource(props bson.A, propertyTypeIDs map[string]types.PropertyTypeIDEntry, datasource backend.DataSource) bson.A {
 	result := bson.A{int32(2)}
 	datasourceEntry := propertyTypeIDs["datasource"]
 
@@ -733,7 +732,7 @@ func (b *MprBackend) applyDataGridSelectionProp(obj bson.D, propertyTypeIDs map[
 // buildDataGrid2Property builds a single property BSON document for a DataGrid2 column.
 // attrRef and primitiveValue are reserved for future column types that require direct
 // attribute references or primitive default values; current callers pass empty strings.
-func buildDataGrid2Property(entry types.PropertyTypeIDEntry, datasource pages.DataSource, attrRef string, primitiveValue string, _ *MprBackend) bson.D {
+func buildDataGrid2Property(entry types.PropertyTypeIDEntry, datasource backend.DataSource, attrRef string, primitiveValue string, _ *MprBackend) bson.D {
 	var datasourceBSON any
 	if datasource != nil {
 		datasourceBSON = mpr.SerializeCustomWidgetDataSource(datasource)

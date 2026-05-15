@@ -13,10 +13,10 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
-	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
@@ -28,7 +28,6 @@ import (
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 var _ backend.FullBackend = (*MprBackend)(nil)
@@ -136,8 +135,10 @@ func (b *MprBackend) GetModuleByName(name string) (*model.Module, error) {
 func (b *MprBackend) CreateModule(module *model.Module) error {
 	return b.createModuleViaModelsdk(module)
 }
-func (b *MprBackend) UpdateModule(module *model.Module) error { return b.updateModuleViaModelsdk(module) }
-func (b *MprBackend) DeleteModule(id model.ID) error          { return b.deleteModuleViaModelsdk(id) }
+func (b *MprBackend) UpdateModule(module *model.Module) error {
+	return b.updateModuleViaModelsdk(module)
+}
+func (b *MprBackend) DeleteModule(id model.ID) error { return b.deleteModuleViaModelsdk(id) }
 func (b *MprBackend) DeleteModuleWithCleanup(id model.ID, moduleName string) error {
 	return b.deleteModuleWithCleanupViaModelsdk(id, moduleName)
 }
@@ -166,7 +167,7 @@ func (b *MprBackend) ListFolders() ([]*types.FolderInfo, error) {
 func (b *MprBackend) CreateFolder(folder *model.Folder) error {
 	return b.createFolderViaModelsdk(folder)
 }
-func (b *MprBackend) DeleteFolder(id model.ID) error          { return b.deleteFolderViaModelsdk(id) }
+func (b *MprBackend) DeleteFolder(id model.ID) error { return b.deleteFolderViaModelsdk(id) }
 func (b *MprBackend) MoveFolder(id model.ID, newContainerID model.ID) error {
 	return b.moveFolderViaModelsdk(id, newContainerID)
 }
@@ -310,33 +311,39 @@ func (b *MprBackend) GetMicroflowGen(id model.ID) (*genMf.Microflow, error) {
 // PageBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListPages() ([]*pages.Page, error)        { return b.reader.ListPages() }
-func (b *MprBackend) GetPage(id model.ID) (*pages.Page, error) { return b.reader.GetPage(id) }
-func (b *MprBackend) CreatePage(page *pages.Page) error        { return b.createPageViaModelsdk(page) }
-func (b *MprBackend) UpdatePage(page *pages.Page) error        { return b.updatePageViaModelsdk(page) }
-func (b *MprBackend) DeletePage(id model.ID) error             { return b.deletePageViaModelsdk(id) }
-func (b *MprBackend) MovePage(page *pages.Page) error          { return b.movePageViaModelsdk(page) }
+func (b *MprBackend) ListPages() ([]*backend.Page, error)        { return b.reader.ListPages() }
+func (b *MprBackend) GetPage(id model.ID) (*backend.Page, error) { return b.reader.GetPage(id) }
+func (b *MprBackend) CreatePage(page *backend.Page) error        { return b.createPageViaModelsdk(page) }
+func (b *MprBackend) UpdatePage(page *backend.Page) error        { return b.updatePageViaModelsdk(page) }
+func (b *MprBackend) DeletePage(id model.ID) error               { return b.deletePageViaModelsdk(id) }
+func (b *MprBackend) MovePage(page *backend.Page) error          { return b.movePageViaModelsdk(page) }
 
-func (b *MprBackend) ListLayouts() ([]*pages.Layout, error)        { return b.reader.ListLayouts() }
-func (b *MprBackend) GetLayout(id model.ID) (*pages.Layout, error) { return b.reader.GetLayout(id) }
-func (b *MprBackend) CreateLayout(layout *pages.Layout) error      { return b.createLayoutViaModelsdk(layout) }
-func (b *MprBackend) UpdateLayout(layout *pages.Layout) error      { return b.updateLayoutViaModelsdk(layout) }
-func (b *MprBackend) DeleteLayout(id model.ID) error               { return b.deleteLayoutViaModelsdk(id) }
+func (b *MprBackend) ListLayouts() ([]*backend.Layout, error)        { return b.reader.ListLayouts() }
+func (b *MprBackend) GetLayout(id model.ID) (*backend.Layout, error) { return b.reader.GetLayout(id) }
+func (b *MprBackend) CreateLayout(layout *backend.Layout) error {
+	return b.createLayoutViaModelsdk(layout)
+}
+func (b *MprBackend) UpdateLayout(layout *backend.Layout) error {
+	return b.updateLayoutViaModelsdk(layout)
+}
+func (b *MprBackend) DeleteLayout(id model.ID) error { return b.deleteLayoutViaModelsdk(id) }
 
-func (b *MprBackend) ListSnippets() ([]*pages.Snippet, error) { return b.reader.ListSnippets() }
-func (b *MprBackend) CreateSnippet(snippet *pages.Snippet) error {
+func (b *MprBackend) ListSnippets() ([]*backend.Snippet, error) { return b.reader.ListSnippets() }
+func (b *MprBackend) CreateSnippet(snippet *backend.Snippet) error {
 	return b.createSnippetViaModelsdk(snippet)
 }
-func (b *MprBackend) UpdateSnippet(snippet *pages.Snippet) error {
+func (b *MprBackend) UpdateSnippet(snippet *backend.Snippet) error {
 	return b.updateSnippetViaModelsdk(snippet)
 }
-func (b *MprBackend) DeleteSnippet(id model.ID) error          { return b.deleteSnippetViaModelsdk(id) }
-func (b *MprBackend) MoveSnippet(snippet *pages.Snippet) error { return b.moveSnippetViaModelsdk(snippet) }
+func (b *MprBackend) DeleteSnippet(id model.ID) error { return b.deleteSnippetViaModelsdk(id) }
+func (b *MprBackend) MoveSnippet(snippet *backend.Snippet) error {
+	return b.moveSnippetViaModelsdk(snippet)
+}
 
-func (b *MprBackend) ListBuildingBlocks() ([]*pages.BuildingBlock, error) {
+func (b *MprBackend) ListBuildingBlocks() ([]*backend.BuildingBlock, error) {
 	return b.reader.ListBuildingBlocks()
 }
-func (b *MprBackend) ListPageTemplates() ([]*pages.PageTemplate, error) {
+func (b *MprBackend) ListPageTemplates() ([]*backend.PageTemplate, error) {
 	return b.reader.ListPageTemplates()
 }
 
@@ -830,6 +837,7 @@ func (b *MprBackend) DeleteJavaSourceFile(moduleName, actionName string) error {
 func (b *MprBackend) RenameJavaSourceFile(moduleName, oldName, newName string) error {
 	return b.renameJavaSourceFileViaPath(moduleName, oldName, newName)
 }
+
 // ── Stage 3.3.2.C3 gen-typed siblings ─────────────────────────────────
 // List/Read route through the modelsdk-native repo (introduced in A0).
 // Create/Update delegate to the repo's Phase D stubs (return descriptive
@@ -1155,15 +1163,15 @@ func (b *MprBackend) OpenWorkflowForMutation(unitID model.ID) (backend.WorkflowM
 // ---------------------------------------------------------------------------
 // WidgetSerializationBackend
 
-func (b *MprBackend) SerializeWidget(w pages.Widget) (any, error) {
+func (b *MprBackend) SerializeWidget(w backend.Widget) (any, error) {
 	return mpr.SerializeWidget(w), nil
 }
 
-func (b *MprBackend) SerializeClientAction(a pages.ClientAction) (any, error) {
+func (b *MprBackend) SerializeClientAction(a backend.ClientAction) (any, error) {
 	return mpr.SerializeClientAction(a), nil
 }
 
-func (b *MprBackend) SerializeDataSource(ds pages.DataSource) (any, error) {
+func (b *MprBackend) SerializeDataSource(ds backend.DataSource) (any, error) {
 	return mpr.SerializeCustomWidgetDataSource(ds), nil
 }
 

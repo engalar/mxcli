@@ -4,9 +4,9 @@ package mprbackend
 import (
 	"fmt"
 
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // ── Domain Model ──────────────────────────────────────
@@ -108,7 +108,7 @@ func (b *MprBackend) deletePageViaModelsdk(id model.ID) error {
 	return b.msdkWriter.DeleteUnit(string(id))
 }
 
-func (b *MprBackend) movePageViaModelsdk(page *pages.Page) error {
+func (b *MprBackend) movePageViaModelsdk(page *backend.Page) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
@@ -129,7 +129,7 @@ func (b *MprBackend) deleteSnippetViaModelsdk(id model.ID) error {
 	return b.msdkWriter.DeleteUnit(string(id))
 }
 
-func (b *MprBackend) moveSnippetViaModelsdk(snippet *pages.Snippet) error {
+func (b *MprBackend) moveSnippetViaModelsdk(snippet *backend.Snippet) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}

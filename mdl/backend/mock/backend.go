@@ -13,12 +13,11 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
-	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 var _ backend.FullBackend = (*MockBackend)(nil)
@@ -106,40 +105,40 @@ type MockBackend struct {
 	GetMicroflowGenFunc   func(id model.ID) (*genMf.Microflow, error)
 
 	// PageBackend
-	ListPagesFunc          func() ([]*pages.Page, error)
-	GetPageFunc            func(id model.ID) (*pages.Page, error)
-	CreatePageFunc         func(page *pages.Page) error
-	UpdatePageFunc         func(page *pages.Page) error
+	ListPagesFunc          func() ([]*backend.Page, error)
+	GetPageFunc            func(id model.ID) (*backend.Page, error)
+	CreatePageFunc         func(page *backend.Page) error
+	UpdatePageFunc         func(page *backend.Page) error
 	DeletePageFunc         func(id model.ID) error
-	MovePageFunc           func(page *pages.Page) error
-	ListLayoutsFunc        func() ([]*pages.Layout, error)
-	GetLayoutFunc          func(id model.ID) (*pages.Layout, error)
-	CreateLayoutFunc       func(layout *pages.Layout) error
-	UpdateLayoutFunc       func(layout *pages.Layout) error
+	MovePageFunc           func(page *backend.Page) error
+	ListLayoutsFunc        func() ([]*backend.Layout, error)
+	GetLayoutFunc          func(id model.ID) (*backend.Layout, error)
+	CreateLayoutFunc       func(layout *backend.Layout) error
+	UpdateLayoutFunc       func(layout *backend.Layout) error
 	DeleteLayoutFunc       func(id model.ID) error
-	ListSnippetsFunc       func() ([]*pages.Snippet, error)
-	CreateSnippetFunc      func(snippet *pages.Snippet) error
-	UpdateSnippetFunc      func(snippet *pages.Snippet) error
+	ListSnippetsFunc       func() ([]*backend.Snippet, error)
+	CreateSnippetFunc      func(snippet *backend.Snippet) error
+	UpdateSnippetFunc      func(snippet *backend.Snippet) error
 	DeleteSnippetFunc      func(id model.ID) error
-	MoveSnippetFunc        func(snippet *pages.Snippet) error
-	ListBuildingBlocksFunc func() ([]*pages.BuildingBlock, error)
-	ListPageTemplatesFunc  func() ([]*pages.PageTemplate, error)
+	MoveSnippetFunc        func(snippet *backend.Snippet) error
+	ListBuildingBlocksFunc func() ([]*backend.BuildingBlock, error)
+	ListPageTemplatesFunc  func() ([]*backend.PageTemplate, error)
 
 	// Stage 3.3.5.C1 gen-typed PageBackend surface (additive alongside
 	// the legacy sdk-typed Func fields above; legacy fields will be
 	// retired in Stage 3.3.5.E1).
-	ListPagesGenFunc      func() ([]*genPg.Page, error)
-	GetPageGenFunc        func(id model.ID) (*genPg.Page, error)
-	CreatePageGenFunc     func(parentUUID, containmentName string, page *genPg.Page) error
-	UpdatePageGenFunc     func(page *genPg.Page) error
-	ListLayoutsGenFunc    func() ([]*genPg.Layout, error)
-	GetLayoutGenFunc      func(id model.ID) (*genPg.Layout, error)
-	CreateLayoutGenFunc   func(parentUUID, containmentName string, layout *genPg.Layout) error
-	UpdateLayoutGenFunc   func(layout *genPg.Layout) error
-	ListSnippetsGenFunc   func() ([]*genPg.Snippet, error)
-	GetSnippetGenFunc     func(id model.ID) (*genPg.Snippet, error)
-	CreateSnippetGenFunc  func(parentUUID, containmentName string, snippet *genPg.Snippet) error
-	UpdateSnippetGenFunc  func(snippet *genPg.Snippet) error
+	ListPagesGenFunc         func() ([]*genPg.Page, error)
+	GetPageGenFunc           func(id model.ID) (*genPg.Page, error)
+	CreatePageGenFunc        func(parentUUID, containmentName string, page *genPg.Page) error
+	UpdatePageGenFunc        func(page *genPg.Page) error
+	ListLayoutsGenFunc       func() ([]*genPg.Layout, error)
+	GetLayoutGenFunc         func(id model.ID) (*genPg.Layout, error)
+	CreateLayoutGenFunc      func(parentUUID, containmentName string, layout *genPg.Layout) error
+	UpdateLayoutGenFunc      func(layout *genPg.Layout) error
+	ListSnippetsGenFunc      func() ([]*genPg.Snippet, error)
+	GetSnippetGenFunc        func(id model.ID) (*genPg.Snippet, error)
+	CreateSnippetGenFunc     func(parentUUID, containmentName string, snippet *genPg.Snippet) error
+	UpdateSnippetGenFunc     func(snippet *genPg.Snippet) error
 	GetPageContainerUUIDFunc func(id model.ID) (model.ID, error)
 
 	// Stage 3.3.5.D5.c gen-typed delete + move Func fields.
@@ -316,18 +315,19 @@ type MockBackend struct {
 	OpenWorkflowForMutationFunc func(unitID model.ID) (backend.WorkflowMutator, error)
 
 	// WidgetSerializationBackend
-	SerializeWidgetFunc              func(w pages.Widget) (any, error)
-	SerializeClientActionFunc        func(a pages.ClientAction) (any, error)
-	SerializeDataSourceFunc          func(ds pages.DataSource) (any, error)
+	SerializeWidgetFunc              func(w backend.Widget) (any, error)
+	SerializeClientActionFunc        func(a backend.ClientAction) (any, error)
+	SerializeDataSourceFunc          func(ds backend.DataSource) (any, error)
 	SerializeWorkflowActivityGenFunc func(a element.Element) (any, error)
 
 	// WidgetBuilderBackend
-	LoadWidgetTemplateFunc          func(widgetID string, projectPath string) (backend.WidgetObjectBuilder, error)
-	SerializeWidgetToOpaqueFunc     func(w pages.Widget) any
-	SerializeDataSourceToOpaqueFunc func(ds pages.DataSource) any
-	BuildCreateAttributeObjectFunc  func(attributePath string, objectTypeID, propertyTypeID, valueTypeID string) (any, error)
-	BuildDataGrid2WidgetFunc        func(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*pages.CustomWidget, error)
-	BuildFilterWidgetFunc           func(spec backend.FilterWidgetSpec, projectPath string) (pages.Widget, error)
+	LoadWidgetTemplateFunc            func(widgetID string, projectPath string) (backend.WidgetObjectBuilder, error)
+	SerializeWidgetToOpaqueFunc       func(w backend.Widget) backend.OpaqueWidget
+	SerializeDataSourceToOpaqueFunc   func(ds backend.DataSource) backend.OpaqueDataSource
+	SerializeClientActionToOpaqueFunc func(a backend.ClientAction) backend.OpaqueAction
+	BuildCreateAttributeObjectFunc    func(attributePath string, objectTypeID, propertyTypeID, valueTypeID string) (any, error)
+	BuildDataGrid2WidgetFunc          func(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.CustomWidget, error)
+	BuildFilterWidgetFunc             func(spec backend.FilterWidgetSpec, projectPath string) (backend.Widget, error)
 
 	// AgentEditorBackend
 	ListAgentEditorModelsFunc               func() ([]*types.Model, error)
