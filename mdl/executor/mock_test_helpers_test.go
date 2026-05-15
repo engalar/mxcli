@@ -19,7 +19,6 @@ import (
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // --- Context construction ---
@@ -224,31 +223,6 @@ func withNanoflowsRepo(r repos.NanoflowRepository) mockCtxOption {
 func withSecurityRepo(r repos.SecurityRepository) mockCtxOption {
 	return func(ctx *ExecContext) { ctx.Security = r }
 }
-
-func mkPage(containerID model.ID, name string) *pages.Page {
-	return &pages.Page{
-		BaseElement: model.BaseElement{ID: nextID("pg")},
-		ContainerID: containerID,
-		Name:        name,
-	}
-}
-
-func mkSnippet(containerID model.ID, name string) *pages.Snippet {
-	return &pages.Snippet{
-		BaseElement: model.BaseElement{ID: nextID("snp")},
-		ContainerID: containerID,
-		Name:        name,
-	}
-}
-
-func mkLayout(containerID model.ID, name string) *pages.Layout {
-	return &pages.Layout{
-		BaseElement: model.BaseElement{ID: nextID("lay")},
-		ContainerID: containerID,
-		Name:        name,
-	}
-}
-
 
 // mkPageGen builds a gen-typed Page fixture for the Stage 3.3.5 mock
 // test migration. Stage 3.3.5.A0 introduced ctx.Pages + the
