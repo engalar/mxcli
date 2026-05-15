@@ -27,7 +27,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // listAccessOnMicroflowGen handles SHOW ACCESS ON MICROFLOW Module.MF
@@ -412,21 +411,6 @@ func splitRoleQualifiedName(qn string) (string, string) {
 	return "", qn
 }
 
-// entityRuleRoleStrings returns the role names for an entity access
-// rule, preferring ModuleRoleNames over the raw ModuleRoles ID list.
-func entityRuleRoleStrings(rule *domainmodel.AccessRule) []string {
-	if len(rule.ModuleRoleNames) > 0 {
-		out := make([]string, len(rule.ModuleRoleNames))
-		copy(out, rule.ModuleRoleNames)
-		return out
-	}
-	out := make([]string, 0, len(rule.ModuleRoles))
-	for _, rid := range rule.ModuleRoles {
-		out = append(out, string(rid))
-	}
-	return out
-}
-
 // entityRuleRoleStringsGen mirrors entityRuleRoleStrings for the
 // gen-typed AccessRule. Gen exposes role qualified names via the
 // combined accessor ModuleRolesQualifiedNames(); the historical
@@ -594,37 +578,6 @@ func securityLevelDisplay(level string) string {
 	default:
 		return level
 	}
-}
-
-// entityRuleRightStrings computes CRUD right tokens for an entity
-// access rule. Mirrors the rights computation inline in
-// listSecurityMatrix / listSecurityMatrixJSON.
-func entityRuleRightStrings(rule *domainmodel.AccessRule) []string {
-	var rights []string
-	if rule.AllowCreate {
-		rights = append(rights, "C")
-	}
-	rr := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadOnly ||
-		rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
-	rw := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
-	for _, ma := range rule.MemberAccesses {
-		if ma.AccessRights == domainmodel.MemberAccessRightsReadOnly || ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
-			rr = true
-		}
-		if ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
-			rw = true
-		}
-	}
-	if rr {
-		rights = append(rights, "R")
-	}
-	if rw {
-		rights = append(rights, "W")
-	}
-	if rule.AllowDelete {
-		rights = append(rights, "D")
-	}
-	return rights
 }
 
 // entityRuleRightStringsGen mirrors entityRuleRightStrings for the
@@ -841,140 +794,114 @@ func listDemoUsersGen(ctx *ExecContext) error {
 }
 
 // listAccessOnEntityGen handles SHOW ACCESS ON ENTITY Module.Entity using
-// sdk/domainmodel types via ctx.Backend.GetDomainModel (domainmodel domain
-// not migrated to gen-typed yet — deferred to Stage 3.3 priority #4).
-// A8b passthrough: function is a rename of listAccessOnEntity; no sdk/security
-// symbols. Not yet wired into executor_query.go dispatch — SHOW ACCESS ON
-// ENTITY still routes to legacy listAccessOnEntity. Cutover in task A10.
+// the gen-typed domainmodel walk.
 func listAccessOnEntityGen(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
 		return mdlerrors.NewValidation("entity name required")
 	}
 
-	module, err := findModule(ctx, name.Module)
+	entity, _, err := findEntityGen(ctx, *name)
 	if err != nil {
-		return err
-	}
-
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
-	if err != nil {
-		return mdlerrors.NewBackend("get domain model", err)
-	}
-
-	var entity *domainmodel.Entity
-	for _, ent := range dm.Entities {
-		if ent.Name == name.Name {
-			entity = ent
-			break
-		}
+		return mdlerrors.NewBackend("get entity", err)
 	}
 	if entity == nil {
 		return mdlerrors.NewNotFound("entity", name.String())
 	}
 
-	// Build attribute name map (shared by both output paths)
 	attrNames := make(map[string]string)
-	for _, attr := range entity.Attributes {
-		attrNames[string(attr.ID)] = attr.Name
-	}
-
-	// ruleRoles returns the role name list for a rule.
-	ruleRoles := func(rule *domainmodel.AccessRule) []string {
-		if len(rule.ModuleRoleNames) > 0 {
-			return rule.ModuleRoleNames
+	for _, a := range entity.AttributesItems() {
+		attr, ok := a.(*genDm.Attribute)
+		if !ok {
+			continue
 		}
-		var out []string
-		for _, rid := range rule.ModuleRoles {
-			out = append(out, string(rid))
-		}
-		return out
-	}
-
-	// ruleRights computes CRUD rights for a rule.
-	ruleRights := func(rule *domainmodel.AccessRule) []string {
-		var rights []string
-		if rule.AllowCreate {
-			rights = append(rights, "create")
-		}
-		hasRead := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadOnly ||
-			rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
-		hasWrite := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
-		for _, ma := range rule.MemberAccesses {
-			if ma.AccessRights == domainmodel.MemberAccessRightsReadOnly || ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
-				hasRead = true
-			}
-			if ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
-				hasWrite = true
-			}
-		}
-		if hasRead {
-			rights = append(rights, "read")
-		}
-		if hasWrite {
-			rights = append(rights, "write")
-		}
-		if rule.AllowDelete {
-			rights = append(rights, "delete")
-		}
-		return rights
-	}
-
-	// memberName resolves display name for a MemberAccess entry.
-	memberName := func(ma *domainmodel.MemberAccess) string {
-		if ma.AttributeName != "" {
-			return ma.AttributeName
-		}
-		if ma.AssociationName != "" {
-			return ma.AssociationName
-		}
-		if an, ok := attrNames[string(ma.AttributeID)]; ok {
-			return an
-		}
-		return string(ma.AttributeID)
+		attrNames[string(attr.ID())] = attr.Name()
+		attrNames[attr.Name()] = attr.Name()
 	}
 
 	if ctx.Format == FormatJSON {
 		result := &TableResult{
 			Columns: []string{"Rule", "Roles", "Rights", "DefaultMemberAccess", "MemberAccess", "XPath"},
 		}
-		for i, rule := range entity.AccessRules {
+		ruleNum := 0
+		for _, r := range entity.AccessRulesItems() {
+			rule, ok := r.(*genDm.AccessRule)
+			if !ok {
+				continue
+			}
+			ruleNum++
 			var memberParts []string
-			for _, ma := range rule.MemberAccesses {
-				memberParts = append(memberParts, memberName(ma)+":"+string(ma.AccessRights))
+			for _, m := range rule.MemberAccessesItems() {
+				ma, ok := m.(*genDm.MemberAccess)
+				if !ok {
+					continue
+				}
+				memberName := ma.AttributeQualifiedName()
+				if memberName == "" {
+					memberName = ma.AssociationQualifiedName()
+				}
+				if mapped, ok := attrNames[memberName]; ok {
+					memberName = mapped
+				} else if attrName := extractAttrNameFromQualified(memberName); attrName != "" {
+					memberName = attrName
+				}
+				memberParts = append(memberParts, memberName+":"+ma.AccessRights())
 			}
 			result.Rows = append(result.Rows, []any{
-				i + 1,
-				strings.Join(ruleRoles(rule), ", "),
-				strings.Join(ruleRights(rule), ", "),
-				string(rule.DefaultMemberAccessRights),
+				ruleNum,
+				strings.Join(entityRuleRoleStringsGen(rule), ", "),
+				strings.ToLower(strings.Join(entityRuleRightStringsGen(rule), ", ")),
+				rule.DefaultMemberAccessRights(),
 				strings.Join(memberParts, ", "),
-				rule.XPathConstraint,
+				rule.XPathConstraint(),
 			})
 		}
 		return writeResult(ctx, result)
 	}
 
-	if len(entity.AccessRules) == 0 {
+	if len(entity.AccessRulesItems()) == 0 {
 		fmt.Fprintf(ctx.Output, "No access rules on %s\n", name)
 		return nil
 	}
 
 	fmt.Fprintf(ctx.Output, "Access rules for %s.%s:\n\n", name.Module, name.Name)
 
-	for i, rule := range entity.AccessRules {
-		fmt.Fprintf(ctx.Output, "Rule %d: %s\n", i+1, strings.Join(ruleRoles(rule), ", "))
-		fmt.Fprintf(ctx.Output, "  Rights: %s\n", strings.Join(ruleRights(rule), ", "))
+	ruleNum := 0
+	for _, r := range entity.AccessRulesItems() {
+		rule, ok := r.(*genDm.AccessRule)
+		if !ok {
+			continue
+		}
+		ruleNum++
+		var rights []string
+		for _, right := range entityRuleRightStringsGen(rule) {
+			rights = append(rights, strings.ToLower(right))
+		}
+		fmt.Fprintf(ctx.Output, "Rule %d: %s\n", ruleNum, strings.Join(entityRuleRoleStringsGen(rule), ", "))
+		fmt.Fprintf(ctx.Output, "  Rights: %s\n", strings.Join(rights, ", "))
 
-		if rule.DefaultMemberAccessRights != "" {
-			fmt.Fprintf(ctx.Output, "  Default member access: %s\n", rule.DefaultMemberAccessRights)
+		if rule.DefaultMemberAccessRights() != "" {
+			fmt.Fprintf(ctx.Output, "  Default member access: %s\n", rule.DefaultMemberAccessRights())
 		}
 
-		for _, ma := range rule.MemberAccesses {
-			fmt.Fprintf(ctx.Output, "  %s: %s\n", memberName(ma), ma.AccessRights)
+		for _, m := range rule.MemberAccessesItems() {
+			ma, ok := m.(*genDm.MemberAccess)
+			if !ok {
+				continue
+			}
+			memberName := ma.AttributeQualifiedName()
+			if memberName == "" {
+				memberName = ma.AssociationQualifiedName()
+			}
+			if mapped, ok := attrNames[memberName]; ok {
+				memberName = mapped
+			} else if attrName := extractAttrNameFromQualified(memberName); attrName != "" {
+				memberName = attrName
+			}
+			fmt.Fprintf(ctx.Output, "  %s: %s\n", memberName, ma.AccessRights())
 		}
 
-		if rule.XPathConstraint != "" {
-			fmt.Fprintf(ctx.Output, "  where '%s'\n", rule.XPathConstraint)
+		if rule.XPathConstraint() != "" {
+			fmt.Fprintf(ctx.Output, "  where '%s'\n", rule.XPathConstraint())
 		}
 		fmt.Fprintln(ctx.Output)
 	}
