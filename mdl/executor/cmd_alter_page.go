@@ -11,6 +11,9 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
@@ -138,12 +141,12 @@ func applySetPropertyMutator(mutator backend.PageMutator, op *ast.SetPropertyOp)
 				return mdlerrors.NewBackend("set "+propName+" on "+op.Target.Name(), err)
 			}
 		} else if propName == "DataSource" {
-			// DataSource requires special handling via SetWidgetDataSource
-			ds, err := convertASTDataSource(value)
+			// DataSource requires special handling via SetWidgetDataSourceGen
+			ds, err := convertASTDataSourceGen(value)
 			if err != nil {
 				return err
 			}
-			if err := mutator.SetWidgetDataSource(op.Target.Widget, ds); err != nil {
+			if err := mutator.SetWidgetDataSourceGen(op.Target.Widget, ds); err != nil {
 				return mdlerrors.NewBackend("set DataSource on "+op.Target.Name(), err)
 			}
 		} else {
@@ -155,8 +158,9 @@ func applySetPropertyMutator(mutator backend.PageMutator, op *ast.SetPropertyOp)
 	return nil
 }
 
-// convertASTDataSource converts an AST DataSource value to a pages.DataSource.
-func convertASTDataSource(value interface{}) (pages.DataSource, error) {
+// convertASTDataSourceGen converts an AST DataSource value to a gen-typed element.Element.
+// Returns one of: ListenTargetSource, DataViewSource, MicroflowSource, NanoflowSource.
+func convertASTDataSourceGen(value interface{}) (element.Element, error) {
 	ds, ok := value.(*ast.DataSourceV3)
 	if !ok {
 		return nil, mdlerrors.NewValidation("DataSource value must be a datasource expression")
@@ -164,13 +168,27 @@ func convertASTDataSource(value interface{}) (pages.DataSource, error) {
 
 	switch ds.Type {
 	case "selection":
-		return &pages.ListenToWidgetSource{WidgetName: ds.Reference}, nil
+		o := genPg.NewListenTargetSource()
+		o.SetListenTarget(ds.Reference)
+		return o, nil
 	case "database":
-		return &pages.DatabaseSource{EntityName: ds.Reference}, nil
+		o := genPg.NewDataViewSource()
+		if ds.Reference != "" {
+			ref := genDm.NewDirectEntityRef()
+			ref.SetEntityQualifiedName(ds.Reference)
+			o.SetEntityRef(ref)
+		}
+		return o, nil
 	case "microflow":
-		return &pages.MicroflowSource{Microflow: ds.Reference}, nil
+		settings := genPg.NewMicroflowSettings()
+		settings.SetMicroflowQualifiedName(ds.Reference)
+		o := genPg.NewMicroflowSource()
+		o.SetMicroflowSettings(settings)
+		return o, nil
 	case "nanoflow":
-		return &pages.NanoflowSource{Nanoflow: ds.Reference}, nil
+		o := genPg.NewNanoflowSource()
+		o.SetNanoflowQualifiedName(ds.Reference)
+		return o, nil
 	default:
 		return nil, mdlerrors.NewUnsupported("unsupported DataSource type for alter page set: " + ds.Type)
 	}
