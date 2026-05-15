@@ -110,13 +110,11 @@ type MockBackend struct {
 	ListPagesFunc          func() ([]*backend.Page, error)
 	GetPageFunc            func(id model.ID) (*backend.Page, error)
 	DeletePageFunc         func(id model.ID) error
-	MovePageFunc           func(page *backend.Page) error
 	ListLayoutsFunc        func() ([]*backend.Layout, error)
 	GetLayoutFunc          func(id model.ID) (*backend.Layout, error)
 	DeleteLayoutFunc       func(id model.ID) error
 	ListSnippetsFunc       func() ([]*backend.Snippet, error)
 	DeleteSnippetFunc      func(id model.ID) error
-	MoveSnippetFunc        func(snippet *backend.Snippet) error
 	ListBuildingBlocksFunc func() ([]*backend.BuildingBlock, error)
 	ListPageTemplatesFunc  func() ([]*backend.PageTemplate, error)
 

@@ -31,13 +31,6 @@ func (m *MockBackend) DeletePage(id model.ID) error {
 	return nil
 }
 
-func (m *MockBackend) MovePage(page *backend.Page) error {
-	if m.MovePageFunc != nil {
-		return m.MovePageFunc(page)
-	}
-	return nil
-}
-
 func (m *MockBackend) ListLayouts() ([]*backend.Layout, error) {
 	if m.ListLayoutsFunc != nil {
 		return m.ListLayoutsFunc()
@@ -69,13 +62,6 @@ func (m *MockBackend) ListSnippets() ([]*backend.Snippet, error) {
 func (m *MockBackend) DeleteSnippet(id model.ID) error {
 	if m.DeleteSnippetFunc != nil {
 		return m.DeleteSnippetFunc(id)
-	}
-	return nil
-}
-
-func (m *MockBackend) MoveSnippet(snippet *backend.Snippet) error {
-	if m.MoveSnippetFunc != nil {
-		return m.MoveSnippetFunc(snippet)
 	}
 	return nil
 }
