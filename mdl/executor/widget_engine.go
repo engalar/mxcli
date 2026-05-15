@@ -13,7 +13,6 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // defaultSlotContainer is the MDLContainer name that receives default (non-containerized) child widgets.
@@ -73,8 +72,8 @@ type BuildContext struct {
 	AssocPath      string
 	EntityName     string
 	PrimitiveVal   string
-	DataSource     pages.DataSource
-	Action         pages.ClientAction // Domain-typed client action
+	DataSource     backend.OpaqueDataSource
+	Action         backend.OpaqueAction
 	pageBuilder    *pageBuilder
 }
 
@@ -97,7 +96,7 @@ func NewPluggableWidgetEngine(b backend.WidgetBuilderBackend, pb *pageBuilder) *
 }
 
 // Build constructs a CustomWidget from a definition and AST widget node.
-func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*pages.CustomWidget, error) {
+func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*backend.CustomWidget, error) {
 	// Save and restore entity context (DataSource mappings may change it)
 	oldEntityContext := e.pageBuilder.entityContext
 	defer func() { e.pageBuilder.entityContext = oldEntityContext }()
@@ -166,7 +165,7 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 					if err != nil {
 						return nil, mdlerrors.NewBackend("auto datasource for "+propKey, err)
 					}
-					builder.SetDataSource(propKey, dataSource)
+					builder.SetDataSourceOpaque(propKey, e.backend.SerializeDataSourceToOpaque(dataSource))
 					if entityName != "" {
 						e.pageBuilder.entityContext = entityName
 					}
@@ -202,18 +201,20 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 				continue
 			}
 			if strings.ToUpper(child.Name) == upperKey {
-				var childWidgets []pages.Widget
+				var childWidgets []backend.OpaqueWidget
 				for _, slotChild := range child.Children {
 					widget, err := e.pageBuilder.buildWidgetV3(slotChild)
 					if err != nil {
 						return nil, err
 					}
 					if widget != nil {
-						childWidgets = append(childWidgets, widget)
+						if opaque := e.backend.SerializeWidgetToOpaque(widget); opaque != nil {
+							childWidgets = append(childWidgets, opaque)
+						}
 					}
 				}
 				if len(childWidgets) > 0 {
-					builder.SetChildWidgets(propKey, childWidgets)
+					builder.SetChildWidgetsOpaque(propKey, childWidgets)
 					handledSlotKeys[propKey] = true
 				}
 				matchedChildren[i] = true
@@ -226,7 +227,7 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 	for _, s := range slots {
 		defSlotContainers[strings.ToUpper(s.MDLContainer)] = true
 	}
-	var defaultWidgets []pages.Widget
+	var defaultWidgets []backend.OpaqueWidget
 	for i, child := range w.Children {
 		if matchedChildren[i] {
 			continue
@@ -242,13 +243,15 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 			return nil, err
 		}
 		if widget != nil {
-			defaultWidgets = append(defaultWidgets, widget)
+			if opaque := e.backend.SerializeWidgetToOpaque(widget); opaque != nil {
+				defaultWidgets = append(defaultWidgets, opaque)
+			}
 		}
 	}
 	if len(defaultWidgets) > 0 {
 		for _, propKey := range widgetsPropKeys {
 			if !handledSlotKeys[propKey] {
-				builder.SetChildWidgets(propKey, defaultWidgets)
+				builder.SetChildWidgetsOpaque(propKey, defaultWidgets)
 				break
 			}
 		}
@@ -280,7 +283,7 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 				if err != nil {
 					log.Printf("warning: widget %s property %s: %v", w.Name, propName, err)
 				} else {
-					builder.SetAction(propName, act)
+					builder.SetActionOpaque(propName, e.backend.SerializeClientActionToOpaque(act))
 				}
 			}
 			continue
@@ -381,13 +384,13 @@ func (e *PluggableWidgetEngine) applyOperation(builder backend.WidgetObjectBuild
 	case "expression":
 		builder.SetExpression(propKey, ctx.PrimitiveVal)
 	case "datasource":
-		builder.SetDataSource(propKey, ctx.DataSource)
+		builder.SetDataSourceOpaque(propKey, ctx.DataSource)
 	case "widgets":
 		// ctx doesn't carry child widgets for this path — handled by applyChildSlots
 	case "texttemplate":
 		builder.SetTextTemplate(propKey, ctx.PrimitiveVal)
 	case "action":
-		builder.SetAction(propKey, ctx.Action)
+		builder.SetActionOpaque(propKey, ctx.Action)
 	case "attributeObjects":
 		builder.SetAttributeObjects(propKey, ctx.AttributePaths)
 	default:
@@ -477,7 +480,7 @@ func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.W
 			if err != nil {
 				return nil, mdlerrors.NewBackend("build datasource", err)
 			}
-			ctx.DataSource = dataSource
+			ctx.DataSource = e.backend.SerializeDataSourceToOpaque(dataSource)
 			ctx.EntityName = entityName
 			if entityName != "" {
 				e.pageBuilder.entityContext = entityName
@@ -517,7 +520,7 @@ func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.W
 			if err != nil {
 				return nil, mdlerrors.NewBackend("build action", err)
 			}
-			ctx.Action = act
+			ctx.Action = e.backend.SerializeClientActionToOpaque(act)
 		}
 
 	default:
@@ -542,8 +545,8 @@ func (e *PluggableWidgetEngine) applyChildSlots(builder backend.WidgetObjectBuil
 		slotContainers[slots[i].MDLContainer] = &slots[i]
 	}
 
-	slotWidgets := make(map[string][]pages.Widget)
-	var defaultWidgets []pages.Widget
+	slotWidgets := make(map[string][]backend.OpaqueWidget)
+	var defaultWidgets []backend.OpaqueWidget
 
 	for _, child := range w.Children {
 		lowerType := strings.ToLower(child.Type)
@@ -554,7 +557,9 @@ func (e *PluggableWidgetEngine) applyChildSlots(builder backend.WidgetObjectBuil
 					return err
 				}
 				if widget != nil {
-					slotWidgets[slot.PropertyKey] = append(slotWidgets[slot.PropertyKey], widget)
+					if opaque := e.backend.SerializeWidgetToOpaque(widget); opaque != nil {
+						slotWidgets[slot.PropertyKey] = append(slotWidgets[slot.PropertyKey], opaque)
+					}
 				}
 			}
 		} else {
@@ -563,7 +568,9 @@ func (e *PluggableWidgetEngine) applyChildSlots(builder backend.WidgetObjectBuil
 				return err
 			}
 			if widget != nil {
-				defaultWidgets = append(defaultWidgets, widget)
+				if opaque := e.backend.SerializeWidgetToOpaque(widget); opaque != nil {
+					defaultWidgets = append(defaultWidgets, opaque)
+				}
 			}
 		}
 	}
@@ -586,7 +593,7 @@ func (e *PluggableWidgetEngine) applyChildSlots(builder backend.WidgetObjectBuil
 			return err
 		}
 		// SetChildWidgets directly — applyOperation skips "widgets" since ctx doesn't carry children
-		builder.SetChildWidgets(slot.PropertyKey, children)
+		builder.SetChildWidgetsOpaque(slot.PropertyKey, children)
 	}
 
 	return nil
