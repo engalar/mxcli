@@ -11,6 +11,7 @@ import (
 	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
@@ -394,6 +395,23 @@ func TestGrantEntityAccess_XPathConstraint_PreservesRights(t *testing.T) {
 		ContainerID: mod.ID,
 		Entities:    []*domainmodel.Entity{entityAfter},
 	}
+	entityAfterGen := mkEntityGen("Order")
+	entityAfterGen.SetID(element.ID(entityBefore.ID))
+	attrAfterGen := genDm.NewAttribute()
+	attrAfterGen.SetID(element.ID(statusAttr.ID))
+	attrAfterGen.SetName("Status")
+	attrAfterGen.SetType(genDm.NewStringAttributeType())
+	entityAfterGen.AddAttributes(attrAfterGen)
+	ruleAfterGen := genDm.NewAccessRule()
+	ruleAfterGen.SetModuleRolesQualifiedNames([]string{"MyModule.User"})
+	ruleAfterGen.SetDefaultMemberAccessRights(genDm.MemberAccessRightsReadWrite)
+	ruleAfterGen.SetXPathConstraint("[Status = 'Open']")
+	memberAfterGen := genDm.NewMemberAccess()
+	memberAfterGen.SetAttributeQualifiedName("MyModule.Order.Status")
+	memberAfterGen.SetAccessRights(genDm.MemberAccessRightsReadWrite)
+	ruleAfterGen.AddMemberAccesses(memberAfterGen)
+	entityAfterGen.AddAccessRules(ruleAfterGen)
+	dmAfterGen := mkDomainModelGen(mod.ID, entityAfterGen)
 
 	callCount := 0
 
@@ -430,7 +448,9 @@ func TestGrantEntityAccess_XPathConstraint_PreservesRights(t *testing.T) {
 		},
 	}
 
-	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h), withDomainModelsRepo(makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{
+		mod.ID: {dmAfterGen},
+	})))
 	stmt := &ast.GrantEntityAccessStmt{
 		Entity: ast.QualifiedName{Module: "MyModule", Name: "Order"},
 		Roles:  []ast.QualifiedName{{Module: "MyModule", Name: "User"}},
@@ -449,41 +469,34 @@ func TestGrantEntityAccess_XPathConstraint_PreservesRights(t *testing.T) {
 }
 
 // TestOutputEntityAccessGrants_XPathConstraint_EscapedQuotes verifies that
-// outputEntityAccessGrants escapes single quotes inside the XPath constraint
+// outputEntityAccessGrantsGen escapes single quotes inside the XPath constraint
 // so the DESCRIBE ENTITY output is valid re-parseable MDL (issue #431).
 func TestOutputEntityAccessGrants_XPathConstraint_EscapedQuotes(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
 
-	entity := &domainmodel.Entity{
-		BaseElement: model.BaseElement{ID: nextID("ent")},
-		ContainerID: mod.ID,
-		Name:        "Order",
-		Persistable: true,
-		Attributes: []*domainmodel.Attribute{
-			{BaseElement: model.BaseElement{ID: nextID("attr")}, Name: "Status"},
-		},
-		AccessRules: []*domainmodel.AccessRule{
-			{
-				ModuleRoleNames:           []string{"MyModule.User"},
-				DefaultMemberAccessRights: domainmodel.MemberAccessRightsReadWrite,
-				XPathConstraint:           "[Status = 'Open']",
-				MemberAccesses: []*domainmodel.MemberAccess{
-					{
-						AttributeName: "MyModule.Order.Status",
-						AccessRights:  domainmodel.MemberAccessRightsReadWrite,
-					},
-				},
-			},
-		},
-	}
+	entity := mkEntityGen("Order")
+	attr := genDm.NewAttribute()
+	attr.SetID(element.ID(nextID("attr")))
+	attr.SetName("Status")
+	attr.SetType(genDm.NewStringAttributeType())
+	entity.AddAttributes(attr)
+	rule := genDm.NewAccessRule()
+	rule.SetModuleRolesQualifiedNames([]string{"MyModule.User"})
+	rule.SetDefaultMemberAccessRights(genDm.MemberAccessRightsReadWrite)
+	rule.SetXPathConstraint("[Status = 'Open']")
+	memberAccess := genDm.NewMemberAccess()
+	memberAccess.SetAttributeQualifiedName("MyModule.Order.Status")
+	memberAccess.SetAccessRights(genDm.MemberAccessRightsReadWrite)
+	rule.AddMemberAccesses(memberAccess)
+	entity.AddAccessRules(rule)
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 
-	outputEntityAccessGrants(ctx, entity, "MyModule", "Order")
+	outputEntityAccessGrantsGen(ctx, entity, "MyModule", "Order")
 
 	out := buf.String()
 	// Single quotes inside the XPath must be doubled for valid MDL

@@ -26,10 +26,11 @@ func newSecurityTestContext(t *testing.T) *ExecContext {
 	be := mprbackend.Wrap(sdkW, path)
 
 	ctx := &ExecContext{
-		Backend:  be,
-		Security: repoCtx.Security,
-		Pages:    repoCtx.Pages,
-		Output:   io.Discard,
+		Backend:      be,
+		Security:     repoCtx.Security,
+		DomainModels: repoCtx.DomainModels,
+		Pages:        repoCtx.Pages,
+		Output:       io.Discard,
 	}
 	ctx.ensureCache()
 	return ctx
