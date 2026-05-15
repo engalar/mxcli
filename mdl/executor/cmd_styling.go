@@ -5,15 +5,27 @@ package executor
 import (
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
+
+// styledWidget is implemented by all gen-typed page widget types that support
+// Class, Style, and Appearance (DesignProperties) mutations.
+type styledWidget interface {
+	Name() string
+	Class() string
+	SetClass(string)
+	Style() string
+	SetStyle(string)
+	Appearance() element.Element
+	SetAppearance(element.Element)
+}
 
 // ============================================================================
 // SHOW DESIGN PROPERTIES
@@ -254,18 +266,21 @@ func execAlterStyling(ctx *ExecContext, s *ast.AlterStylingStmt) error {
 
 func alterStylingOnPage(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerHierarchy) error {
 
-	// Find page
-	allPages, err := ctx.Backend.ListPages()
+	// Find page via gen-typed listing
+	pairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
 
-	var page *pages.Page
-	for _, p := range allPages {
-		modID := h.FindModuleID(p.ContainerID)
+	var page *genPg.Page
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
-		if p.Name == s.ContainerName.Name && (s.ContainerName.Module == "" || modName == s.ContainerName.Module) {
-			page = p
+		if p.Elem.Name() == s.ContainerName.Name && (s.ContainerName.Module == "" || modName == s.ContainerName.Module) {
+			page = p.Elem
 			break
 		}
 	}
@@ -275,7 +290,7 @@ func alterStylingOnPage(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerH
 
 	// Walk the page to find the widget by name
 	found := false
-	err = walkPageWidgets(page, func(widget any) error {
+	err = walkPageWidgetsGen(page, func(widget element.Element) error {
 		name := getWidgetName(widget)
 		if name != s.WidgetName {
 			return nil
@@ -291,8 +306,8 @@ func alterStylingOnPage(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerH
 		return mdlerrors.NewNotFoundMsg("widget", s.WidgetName, fmt.Sprintf("widget %q not found in page %s", s.WidgetName, s.ContainerName.String()))
 	}
 
-	// Save the page
-	if err := ctx.Backend.UpdatePage(page); err != nil {
+	// Save the page via gen path
+	if err := ctx.Backend.UpdatePageGen(page); err != nil {
 		return mdlerrors.NewBackend("save page", err)
 	}
 
@@ -302,18 +317,21 @@ func alterStylingOnPage(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerH
 
 func alterStylingOnSnippet(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerHierarchy) error {
 
-	// Find snippet
-	allSnippets, err := ctx.Backend.ListSnippets()
+	// Find snippet via gen-typed listing
+	pairs, err := listSnippetsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list snippets", err)
 	}
 
-	var snippet *pages.Snippet
-	for _, sn := range allSnippets {
-		modID := h.FindModuleID(sn.ContainerID)
+	var snippet *genPg.Snippet
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
-		if sn.Name == s.ContainerName.Name && (s.ContainerName.Module == "" || modName == s.ContainerName.Module) {
-			snippet = sn
+		if p.Elem.Name() == s.ContainerName.Name && (s.ContainerName.Module == "" || modName == s.ContainerName.Module) {
+			snippet = p.Elem
 			break
 		}
 	}
@@ -323,7 +341,7 @@ func alterStylingOnSnippet(ctx *ExecContext, s *ast.AlterStylingStmt, h *Contain
 
 	// Walk the snippet to find the widget by name
 	found := false
-	err = walkSnippetWidgets(snippet, func(widget any) error {
+	err = walkSnippetWidgetsGen(snippet, func(widget element.Element) error {
 		name := getWidgetName(widget)
 		if name != s.WidgetName {
 			return nil
@@ -339,8 +357,8 @@ func alterStylingOnSnippet(ctx *ExecContext, s *ast.AlterStylingStmt, h *Contain
 		return mdlerrors.NewNotFoundMsg("widget", s.WidgetName, fmt.Sprintf("widget %q not found in snippet %s", s.WidgetName, s.ContainerName.String()))
 	}
 
-	// Save the snippet
-	if err := ctx.Backend.UpdateSnippet(snippet); err != nil {
+	// Save the snippet via gen path
+	if err := ctx.Backend.UpdateSnippetGen(snippet); err != nil {
 		return mdlerrors.NewBackend("save snippet", err)
 	}
 
@@ -348,80 +366,41 @@ func alterStylingOnSnippet(ctx *ExecContext, s *ast.AlterStylingStmt, h *Contain
 	return nil
 }
 
-// getWidgetName extracts the Name from a widget using reflection.
-func getWidgetName(widget any) string {
+// getWidgetName extracts the Name from a gen-typed widget element.
+func getWidgetName(widget element.Element) string {
 	if widget == nil {
 		return ""
 	}
-
-	// Try Widget interface first
-	if w, ok := widget.(pages.Widget); ok {
-		return w.GetName()
+	if w, ok := widget.(interface{ Name() string }); ok {
+		return w.Name()
 	}
-
-	// Fall back to reflection
-	v := reflect.ValueOf(widget)
-	if v.Kind() == reflect.Pointer {
-		v = v.Elem()
-	}
-	if v.Kind() != reflect.Struct {
-		return ""
-	}
-
-	// Try BaseWidget.Name
-	if baseWidget := v.FieldByName("BaseWidget"); baseWidget.IsValid() {
-		if nameField := baseWidget.FieldByName("Name"); nameField.IsValid() {
-			return nameField.String()
-		}
-	}
-
-	// Direct Name field
-	if nameField := v.FieldByName("Name"); nameField.IsValid() {
-		return nameField.String()
-	}
-
 	return ""
 }
 
-// applyStylingAssignments applies styling changes to a widget.
-func applyStylingAssignments(widget any, assignments []ast.StylingAssignment, clearDesignProps bool) error {
-	v := reflect.ValueOf(widget)
-	if v.Kind() == reflect.Pointer {
-		v = v.Elem()
-	}
-	if v.Kind() != reflect.Struct {
-		return mdlerrors.NewValidation("widget is not a struct")
-	}
-
-	// Get BaseWidget
-	baseWidget := v.FieldByName("BaseWidget")
-	if !baseWidget.IsValid() {
-		return mdlerrors.NewValidation("widget has no BaseWidget field")
+// applyStylingAssignments applies styling changes to a gen-typed widget element.
+func applyStylingAssignments(widget element.Element, assignments []ast.StylingAssignment, clearDesignProps bool) error {
+	sw, ok := widget.(styledWidget)
+	if !ok {
+		return mdlerrors.NewUnsupported("widget type does not support styling")
 	}
 
 	// Clear design properties if requested
 	if clearDesignProps {
-		dpField := baseWidget.FieldByName("DesignProperties")
-		if dpField.IsValid() && dpField.CanSet() {
-			dpField.Set(reflect.Zero(dpField.Type()))
+		if app, ok := sw.Appearance().(*genPg.Appearance); ok && app != nil {
+			for i := len(app.DesignPropertiesItems()) - 1; i >= 0; i-- {
+				app.RemoveDesignProperties(i)
+			}
 		}
 	}
 
 	for _, a := range assignments {
 		switch a.Property {
 		case "Class":
-			classField := baseWidget.FieldByName("Class")
-			if classField.IsValid() && classField.CanSet() {
-				classField.SetString(a.Value)
-			}
+			sw.SetClass(a.Value)
 		case "Style":
-			styleField := baseWidget.FieldByName("Style")
-			if styleField.IsValid() && styleField.CanSet() {
-				styleField.SetString(a.Value)
-			}
+			sw.SetStyle(a.Value)
 		default:
-			// Design property assignment
-			if err := setDesignProperty(baseWidget, a); err != nil {
+			if err := setDesignPropertyGen(sw, a); err != nil {
 				return err
 			}
 		}
@@ -430,201 +409,60 @@ func applyStylingAssignments(widget any, assignments []ast.StylingAssignment, cl
 	return nil
 }
 
-// setDesignProperty sets or updates a design property on the widget's BaseWidget.
-func setDesignProperty(baseWidget reflect.Value, a ast.StylingAssignment) error {
-	dpField := baseWidget.FieldByName("DesignProperties")
-	if !dpField.IsValid() || !dpField.CanSet() {
-		return mdlerrors.NewUnsupported("widget does not support design properties")
+// setDesignPropertyGen sets or updates a design property on a gen-typed widget via its Appearance.
+func setDesignPropertyGen(sw styledWidget, a ast.StylingAssignment) error {
+	// Ensure Appearance exists
+	var app *genPg.Appearance
+	if existing := sw.Appearance(); existing != nil {
+		if ap, ok := existing.(*genPg.Appearance); ok {
+			app = ap
+		}
+	}
+	if app == nil {
+		app = genPg.NewAppearance()
+		sw.SetAppearance(app)
 	}
 
-	// Get existing design properties
-	var existing []pages.DesignPropertyValue
-	if !dpField.IsNil() {
-		existing = dpField.Interface().([]pages.DesignPropertyValue)
-	}
+	items := app.DesignPropertiesItems()
 
 	if a.IsToggle && !a.ToggleOn {
-		// OFF: remove the design property
-		var updated []pages.DesignPropertyValue
-		for _, dp := range existing {
-			if dp.Key != a.Property {
-				updated = append(updated, dp)
+		// OFF: remove the matching design property value
+		for i, item := range items {
+			dpv, ok := item.(*genPg.DesignPropertyValue)
+			if ok && dpv.Key() == a.Property {
+				app.RemoveDesignProperties(i)
+				return nil
 			}
 		}
-		dpField.Set(reflect.ValueOf(updated))
 		return nil
 	}
 
 	// Update existing or append new
-	found := false
-	for i, dp := range existing {
-		if dp.Key == a.Property {
-			if a.IsToggle {
-				existing[i].ValueType = "toggle"
-				existing[i].Option = ""
-			} else {
-				existing[i].ValueType = "option"
-				existing[i].Option = a.Value
-			}
-			found = true
-			break
+	for _, item := range items {
+		dpv, ok := item.(*genPg.DesignPropertyValue)
+		if !ok || dpv.Key() != a.Property {
+			continue
 		}
-	}
-
-	if !found {
-		newProp := pages.DesignPropertyValue{
-			Key: a.Property,
-		}
-		if a.IsToggle {
-			newProp.ValueType = "toggle"
-		} else {
-			newProp.ValueType = "option"
-			newProp.Option = a.Value
-		}
-		existing = append(existing, newProp)
-	}
-
-	dpField.Set(reflect.ValueOf(existing))
-	return nil
-}
-
-// findPageByName looks up a page by qualified name.
-func findPageByName(ctx *ExecContext, name ast.QualifiedName, h *ContainerHierarchy) (*pages.Page, error) {
-
-	allPages, err := ctx.Backend.ListPages()
-	if err != nil {
-		return nil, mdlerrors.NewBackend("list pages", err)
-	}
-	for _, p := range allPages {
-		modID := h.FindModuleID(p.ContainerID)
-		modName := h.GetModuleName(modID)
-		if p.Name == name.Name && (name.Module == "" || modName == name.Module) {
-			return p, nil
-		}
-	}
-	return nil, mdlerrors.NewNotFound("page", name.String())
-}
-
-// findSnippetByName looks up a snippet by qualified name.
-func findSnippetByName(ctx *ExecContext, name ast.QualifiedName, h *ContainerHierarchy) (*pages.Snippet, model.ID, error) {
-
-	allSnippets, err := ctx.Backend.ListSnippets()
-	if err != nil {
-		return nil, "", mdlerrors.NewBackend("list snippets", err)
-	}
-	for _, s := range allSnippets {
-		modID := h.FindModuleID(s.ContainerID)
-		modName := h.GetModuleName(modID)
-		if s.Name == name.Name && (name.Module == "" || modName == name.Module) {
-			return s, modID, nil
-		}
-	}
-	return nil, "", mdlerrors.NewNotFound("snippet", name.String())
-}
-
-// walkPageWidgets walks all sdk-typed widgets in a page for styling operations.
-// Uses sdk/pages types because applyStylingAssignments relies on BaseWidget reflection.
-func walkPageWidgets(page *pages.Page, visitor func(widget any) error) error {
-	if page == nil || page.LayoutCall == nil {
+		// Replace the Value sub-element with updated type
+		dpv.SetValue(buildDesignPropertySubValue(a))
 		return nil
 	}
-	for _, arg := range page.LayoutCall.Arguments {
-		if arg.Widget != nil {
-			if err := walkWidget(arg.Widget, visitor); err != nil {
-				return err
-			}
-		}
-	}
+
+	// Not found — append new DesignPropertyValue
+	dpv := genPg.NewDesignPropertyValue()
+	dpv.SetKey(a.Property)
+	dpv.SetValue(buildDesignPropertySubValue(a))
+	app.AddDesignProperties(dpv)
 	return nil
 }
 
-// walkSnippetWidgets walks all sdk-typed widgets in a snippet for styling operations.
-func walkSnippetWidgets(snippet *pages.Snippet, visitor func(widget any) error) error {
-	if snippet == nil {
-		return nil
+// buildDesignPropertySubValue constructs the nested Value element for a design property assignment.
+func buildDesignPropertySubValue(a ast.StylingAssignment) element.Element {
+	if a.IsToggle {
+		return genPg.NewToggleDesignPropertyValue()
 	}
-	for _, widget := range snippet.Widgets {
-		if err := walkWidget(widget, visitor); err != nil {
-			return err
-		}
-	}
-	return nil
+	opt := genPg.NewOptionDesignPropertyValue()
+	opt.SetOption(a.Value)
+	return opt
 }
 
-// walkWidget recursively walks an sdk-typed widget and its children.
-func walkWidget(widget pages.Widget, visitor func(widget any) error) error {
-	if widget == nil {
-		return nil
-	}
-	if err := visitor(widget); err != nil {
-		return err
-	}
-	switch w := widget.(type) {
-	case *pages.LayoutGrid:
-		for _, row := range w.Rows {
-			for _, col := range row.Columns {
-				for _, child := range col.Widgets {
-					if err := walkWidget(child, visitor); err != nil {
-						return err
-					}
-				}
-			}
-		}
-	case *pages.DataView:
-		for _, child := range w.Widgets {
-			if err := walkWidget(child, visitor); err != nil {
-				return err
-			}
-		}
-		for _, child := range w.FooterWidgets {
-			if err := walkWidget(child, visitor); err != nil {
-				return err
-			}
-		}
-	case *pages.ListView:
-		for _, child := range w.Widgets {
-			if err := walkWidget(child, visitor); err != nil {
-				return err
-			}
-		}
-	case *pages.Container:
-		for _, child := range w.Widgets {
-			if err := walkWidget(child, visitor); err != nil {
-				return err
-			}
-		}
-	case *pages.GroupBox:
-		for _, child := range w.Widgets {
-			if err := walkWidget(child, visitor); err != nil {
-				return err
-			}
-		}
-	case *pages.TabContainer:
-		for _, pg := range w.TabPages {
-			for _, child := range pg.Widgets {
-				if err := walkWidget(child, visitor); err != nil {
-					return err
-				}
-			}
-		}
-	case *pages.ScrollContainer:
-		for _, child := range w.Widgets {
-			if err := walkWidget(child, visitor); err != nil {
-				return err
-			}
-		}
-	case *pages.CustomWidget:
-		if w.WidgetObject != nil {
-			for _, prop := range w.WidgetObject.Properties {
-				if prop.Value != nil {
-					for _, child := range prop.Value.Widgets {
-						if err := walkWidget(child, visitor); err != nil {
-							return err
-						}
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
