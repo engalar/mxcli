@@ -9,30 +9,26 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 func TestShowAssociations_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
-	ent1 := mkEntity(mod.ID, "Order")
-	ent2 := mkEntity(mod.ID, "Customer")
-	assoc := mkAssociation(mod.ID, "Order_Customer", ent1.ID, ent2.ID)
-
-	dm := &domainmodel.DomainModel{
-		BaseElement:  model.BaseElement{ID: nextID("dm")},
-		ContainerID:  mod.ID,
-		Entities:     []*domainmodel.Entity{ent1, ent2},
-		Associations: []*domainmodel.Association{assoc},
-	}
+	ent1 := mkEntityGen("Order")
+	ent2 := mkEntityGen("Customer")
+	assoc := mkAssociationGen("Order_Customer", model.ID(ent1.ID()), model.ID(ent2.ID()))
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
+	dm.AddAssociations(assoc)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return []*domainmodel.DomainModel{dm}, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 	}
 
-	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, listAssociations(ctx, ""))
+	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	assertNoError(t, listAssociationsGen(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.Order_Customer")
@@ -45,32 +41,27 @@ func TestShowAssociations_Mock(t *testing.T) {
 func TestShowAssociations_Mock_FilterByModule(t *testing.T) {
 	mod1 := mkModule("Sales")
 	mod2 := mkModule("HR")
-	ent1 := mkEntity(mod1.ID, "Order")
-	ent2 := mkEntity(mod1.ID, "Product")
-	ent3 := mkEntity(mod2.ID, "Employee")
-	ent4 := mkEntity(mod2.ID, "Department")
+	ent1 := mkEntityGen("Order")
+	ent2 := mkEntityGen("Product")
+	ent3 := mkEntityGen("Employee")
+	ent4 := mkEntityGen("Department")
 
-	dm1 := &domainmodel.DomainModel{
-		BaseElement:  model.BaseElement{ID: nextID("dm")},
-		ContainerID:  mod1.ID,
-		Entities:     []*domainmodel.Entity{ent1, ent2},
-		Associations: []*domainmodel.Association{mkAssociation(mod1.ID, "Order_Product", ent1.ID, ent2.ID)},
-	}
-	dm2 := &domainmodel.DomainModel{
-		BaseElement:  model.BaseElement{ID: nextID("dm")},
-		ContainerID:  mod2.ID,
-		Entities:     []*domainmodel.Entity{ent3, ent4},
-		Associations: []*domainmodel.Association{mkAssociation(mod2.ID, "Employee_Dept", ent3.ID, ent4.ID)},
-	}
+	dm1 := mkDomainModelGen(mod1.ID, ent1, ent2)
+	dm1.AddAssociations(mkAssociationGen("Order_Product", model.ID(ent1.ID()), model.ID(ent2.ID())))
+	dm2 := mkDomainModelGen(mod2.ID, ent3, ent4)
+	dm2.AddAssociations(mkAssociationGen("Employee_Dept", model.ID(ent3.ID()), model.ID(ent4.ID())))
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{
+		mod1.ID: {dm1},
+		mod2.ID: {dm2},
+	})
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod1, mod2}, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return []*domainmodel.DomainModel{dm1, dm2}, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod1, mod2}, nil },
 	}
 
-	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, listAssociations(ctx, "HR"))
+	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	assertNoError(t, listAssociationsGen(ctx, "HR"))
 
 	out := buf.String()
 	assertNotContainsStr(t, out, "Sales.Order_Product")
@@ -92,25 +83,20 @@ func TestShowAssociations_BackendError(t *testing.T) {
 
 func TestShowAssociations_JSON(t *testing.T) {
 	mod := mkModule("App")
-	ent1 := mkEntity(mod.ID, "A")
-	ent2 := mkEntity(mod.ID, "B")
-	assoc := mkAssociation(mod.ID, "A_B", ent1.ID, ent2.ID)
-
-	dm := &domainmodel.DomainModel{
-		BaseElement:  model.BaseElement{ID: nextID("dm")},
-		ContainerID:  mod.ID,
-		Entities:     []*domainmodel.Entity{ent1, ent2},
-		Associations: []*domainmodel.Association{assoc},
-	}
+	ent1 := mkEntityGen("A")
+	ent2 := mkEntityGen("B")
+	assoc := mkAssociationGen("A_B", model.ID(ent1.ID()), model.ID(ent2.ID()))
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
+	dm.AddAssociations(assoc)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return []*domainmodel.DomainModel{dm}, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 	}
 
-	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON))
-	assertNoError(t, listAssociations(ctx, ""))
+	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withDomainModelsRepo(dmRepo))
+	assertNoError(t, listAssociationsGen(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "A_B")
 }

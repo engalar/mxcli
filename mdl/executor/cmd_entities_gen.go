@@ -568,11 +568,7 @@ func describeEntityGen(ctx *ExecContext, name ast.QualifiedName) error {
 
 	fmt.Fprintln(ctx.Output, ";")
 
-	// Access-rule GRANT statements still flow through the legacy sdk-typed
-	// helper; Phase C3 will add the gen-typed counterpart. Until then,
-	// describeEntityGen omits access-rule output (the dispatcher in A6
-	// can fall back to legacy describeEntity for entities whose access
-	// rules need rendering, or callers can post-process via SHOW ACCESS).
+	outputEntityAccessGrantsGen(ctx, entity, name.Module, name.Name)
 
 	fmt.Fprintln(ctx.Output, "/")
 	return nil
