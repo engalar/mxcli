@@ -7,11 +7,6 @@
 // shared constants (elkCharWidth, elkHeaderHeight, etc.) live in
 // cmd_domainmodel_elk.go and are used here unchanged so the wire shape
 // stays byte-identical.
-//
-// entityFocusELK (focused single-entity view) is intentionally not
-// migrated in B1 — the dispatcher (B3) keeps focused renders on the
-// legacy path until a follow-up commit.
-
 package executor
 
 import (
@@ -31,10 +26,8 @@ func domainModelELKGen(ctx *ExecContext, name string) error {
 		return mdlerrors.NewNotConnected()
 	}
 
-	// Focused single-entity view stays on the legacy path until its
-	// gen-typed sibling lands.
 	if strings.Contains(name, ".") {
-		return entityFocusELK(ctx, name)
+		return entityFocusELKGen(ctx, name)
 	}
 
 	moduleName := name
@@ -105,6 +98,178 @@ func domainModelELKGen(ctx *ExecContext, name string) error {
 		Format:          "elk",
 		Type:            "domainmodel",
 		ModuleName:      moduleName,
+		Entities:        elkEntities,
+		Associations:    elkAssocs,
+		Generalizations: generalizations,
+		MdlSource:       mdlSource,
+		SourceMap:       sourceMap,
+	})
+}
+
+// entityFocusELKGen generates a focused ELK diagram showing only the selected
+// entity and directly connected entities via associations or generalization.
+func entityFocusELKGen(ctx *ExecContext, qualifiedName string) error {
+	if !ctx.Connected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	parts := strings.SplitN(qualifiedName, ".", 2)
+	if len(parts) != 2 {
+		return mdlerrors.NewValidationf("expected qualified name Module.Entity, got: %s", qualifiedName)
+	}
+	moduleName, entityName := parts[0], parts[1]
+
+	focusEntity, _, err := findEntityGen(ctx, ast.QualifiedName{Module: moduleName, Name: entityName})
+	if err != nil {
+		return mdlerrors.NewBackend("get entity", err)
+	}
+	if focusEntity == nil {
+		return mdlerrors.NewNotFound("entity", qualifiedName)
+	}
+
+	if classifyEntityGen(focusEntity) == "view" {
+		if src, ok := focusEntity.Source().(*genDm.OqlViewEntitySource); ok && src.Oql() != "" {
+			return OqlQueryPlanELK(ctx, qualifiedName, src.Oql())
+		}
+	}
+
+	allEntityNames, _ := buildAllEntityNamesGen(ctx)
+	entities, err := listEntitiesForModuleGen(ctx, moduleName)
+	if err != nil {
+		return mdlerrors.NewBackend("list module entities", err)
+	}
+
+	moduleEntitiesByID := make(map[model.ID]*genDm.Entity, len(entities))
+	for _, entity := range entities {
+		moduleEntitiesByID[model.ID(entity.ID())] = entity
+	}
+
+	includedIDs := make(map[model.ID]bool)
+	focusID := model.ID(focusEntity.ID())
+	includedIDs[focusID] = true
+
+	assocs, err := listAssociationsForModuleGen(ctx, moduleName)
+	if err != nil {
+		return mdlerrors.NewBackend("list module associations", err)
+	}
+
+	var relevantAssocs []*genDm.Association
+	for _, assoc := range assocs {
+		parentID := model.ID(assoc.ParentRefID())
+		childID := model.ID(assoc.ChildRefID())
+		if parentID == focusID || childID == focusID {
+			relevantAssocs = append(relevantAssocs, assoc)
+			includedIDs[parentID] = true
+			includedIDs[childID] = true
+		}
+	}
+
+	allPairs, err := listDomainModelsWithContainerGen(ctx)
+	if err == nil {
+		moduleNames := map[model.ID]string{}
+		if mods, modsErr := ctx.Backend.ListModules(); modsErr == nil {
+			for _, m := range mods {
+				moduleNames[m.ID] = m.Name
+			}
+		}
+		for _, pair := range allPairs {
+			if pair.DM == nil {
+				continue
+			}
+			if moduleNames[pair.ContainerID] == moduleName {
+				continue
+			}
+			for _, a := range pair.DM.AssociationsItems() {
+				assoc, ok := a.(*genDm.Association)
+				if !ok {
+					continue
+				}
+				parentID := model.ID(assoc.ParentRefID())
+				childID := model.ID(assoc.ChildRefID())
+				if parentID == focusID || childID == focusID {
+					relevantAssocs = append(relevantAssocs, assoc)
+					includedIDs[parentID] = true
+					includedIDs[childID] = true
+				}
+			}
+		}
+	}
+
+	if ref := entityGeneralizationQNGen(focusEntity); ref != "" {
+		for id, qn := range allEntityNames {
+			if qn == ref {
+				includedIDs[id] = true
+				break
+			}
+		}
+	}
+
+	for _, entity := range entities {
+		if entityGeneralizationQNGen(entity) == qualifiedName && model.ID(entity.ID()) != focusID {
+			includedIDs[model.ID(entity.ID())] = true
+		}
+	}
+
+	ghostEntities := make(map[string]*domainModelELKEntity)
+	var elkEntities []domainModelELKEntity
+	for id := range includedIDs {
+		if ent, ok := moduleEntitiesByID[id]; ok {
+			elkEnt := buildELKEntityGen(ent)
+			if id == focusID {
+				elkEnt.IsFocus = true
+			}
+			elkEntities = append(elkEntities, elkEnt)
+			continue
+		}
+		ghostID := "entity-" + string(id)
+		if _, exists := ghostEntities[ghostID]; exists {
+			continue
+		}
+		name := "Unknown"
+		if qn, ok := allEntityNames[id]; ok {
+			name = qn
+		}
+		ghost := makeGhostEntity(ghostID, name)
+		ghostEntities[ghostID] = &ghost
+	}
+
+	var elkAssocs []domainModelELKAssoc
+	for i, assoc := range relevantAssocs {
+		elkAssocs = append(elkAssocs, domainModelELKAssoc{
+			ID:       fmt.Sprintf("assoc-%d", i),
+			SourceID: "entity-" + string(assoc.ChildRefID()),
+			TargetID: "entity-" + string(assoc.ParentRefID()),
+			Name:     assoc.Name(),
+			Type:     assocTypeStrFromGen(assoc.Type()),
+		})
+	}
+
+	var generalizations []domainModelELKGeneralization
+	if ref := entityGeneralizationQNGen(focusEntity); ref != "" {
+		gen, _ := buildGeneralizationGen(focusEntity, ref, includedIDs, allEntityNames, ghostEntities)
+		generalizations = append(generalizations, gen)
+	}
+	for _, entity := range entities {
+		if entityGeneralizationQNGen(entity) == qualifiedName && model.ID(entity.ID()) != focusID {
+			gen, _ := buildGeneralizationGen(entity, qualifiedName, includedIDs, allEntityNames, ghostEntities)
+			generalizations = append(generalizations, gen)
+		}
+	}
+
+	for _, ghost := range ghostEntities {
+		if ghost.Width < elkMinWidth {
+			ghost.Width = elkMinWidth
+		}
+		elkEntities = append(elkEntities, *ghost)
+	}
+
+	mdlSource, sourceMap := buildDomainModelMdlSourceGen(ctx, []*genDm.Entity{focusEntity}, moduleName)
+
+	return emitDomainModelELK(ctx, domainModelELKData{
+		Format:          "elk",
+		Type:            "domainmodel",
+		ModuleName:      moduleName,
+		FocusEntity:     entityName,
 		Entities:        elkEntities,
 		Associations:    elkAssocs,
 		Generalizations: generalizations,
