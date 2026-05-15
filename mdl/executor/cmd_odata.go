@@ -18,7 +18,9 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
@@ -460,7 +462,7 @@ func outputPublishedODataServiceMDL(ctx *ExecContext, svc *model.PublishedODataS
 // listExternalEntities handles SHOW EXTERNAL ENTITIES [IN module] command.
 func listExternalEntities(ctx *ExecContext, moduleName string) error {
 
-	domainModels, err := ctx.Backend.ListDomainModels()
+	domainModels, err := listDomainModelsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list domain models", err)
 	}
@@ -480,25 +482,33 @@ func listExternalEntities(ctx *ExecContext, moduleName string) error {
 	}
 	var rows []row
 
-	for _, dm := range domainModels {
-		modID := h.FindModuleID(dm.ContainerID)
+	for _, pair := range domainModels {
+		if pair.DM == nil {
+			continue
+		}
+		modID := h.FindModuleID(pair.ContainerID)
 		modName := h.GetModuleName(modID)
 		if moduleName != "" && !strings.EqualFold(modName, moduleName) {
 			continue
 		}
 
-		for _, entity := range dm.Entities {
-			if entity.Source != "Rest$ODataRemoteEntitySource" {
+		for _, item := range pair.DM.EntitiesItems() {
+			entity, ok := item.(*genDm.Entity)
+			if !ok || entity == nil {
+				continue
+			}
+			src, ok := entity.Source().(*genRest.ODataRemoteEntitySource)
+			if !ok || src == nil {
 				continue
 			}
 
 			countable := "No"
-			if entity.Countable {
+			if src.Countable() {
 				countable = "Yes"
 			}
 
-			qn := modName + "." + entity.Name
-			rows = append(rows, row{modName, qn, entity.RemoteServiceName, entity.RemoteEntitySet, entity.RemoteEntityName, countable})
+			qn := modName + "." + entity.Name()
+			rows = append(rows, row{modName, qn, src.SourceDocumentQualifiedName(), src.EntitySet(), src.RemoteName(), countable})
 		}
 	}
 
@@ -672,7 +682,7 @@ func listExternalActions(ctx *ExecContext, moduleName string) error {
 // describeExternalEntity handles DESCRIBE EXTERNAL ENTITY command.
 func describeExternalEntity(ctx *ExecContext, name ast.QualifiedName) error {
 
-	domainModels, err := ctx.Backend.ListDomainModels()
+	domainModels, err := listDomainModelsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list domain models", err)
 	}
@@ -682,20 +692,27 @@ func describeExternalEntity(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	for _, dm := range domainModels {
-		modID := h.FindModuleID(dm.ContainerID)
+	for _, pair := range domainModels {
+		if pair.DM == nil {
+			continue
+		}
+		modID := h.FindModuleID(pair.ContainerID)
 		modName := h.GetModuleName(modID)
 		if !strings.EqualFold(modName, name.Module) {
 			continue
 		}
 
-		for _, entity := range dm.Entities {
-			if !strings.EqualFold(entity.Name, name.Name) {
+		for _, item := range pair.DM.EntitiesItems() {
+			entity, ok := item.(*genDm.Entity)
+			if !ok || entity == nil || !strings.EqualFold(entity.Name(), name.Name) {
 				continue
 			}
 
-			if entity.Source != "Rest$ODataRemoteEntitySource" {
-				return mdlerrors.NewValidationf("%s.%s is not an external entity (source: %s)", modName, entity.Name, entity.Source)
+			if entity.Source() == nil {
+				return mdlerrors.NewValidationf("%s.%s is not an external entity (source: none)", modName, entity.Name())
+			}
+			if entity.Source().TypeName() != "Rest$ODataRemoteEntitySource" {
+				return mdlerrors.NewValidationf("%s.%s is not an external entity (source: %s)", modName, entity.Name(), entity.Source().TypeName())
 			}
 
 			return outputExternalEntityMDL(ctx, entity, modName)
@@ -706,21 +723,25 @@ func describeExternalEntity(ctx *ExecContext, name ast.QualifiedName) error {
 }
 
 // outputExternalEntityMDL outputs an external entity in MDL format.
-func outputExternalEntityMDL(ctx *ExecContext, entity *domainmodel.Entity, moduleName string) error {
-	if entity.Documentation != "" {
-		outputJavadoc(ctx.Output, entity.Documentation)
+func outputExternalEntityMDL(ctx *ExecContext, entity *genDm.Entity, moduleName string) error {
+	if entity.Documentation() != "" {
+		outputJavadoc(ctx.Output, entity.Documentation())
+	}
+	src, _ := entity.Source().(*genRest.ODataRemoteEntitySource)
+	if src == nil {
+		return mdlerrors.NewValidationf("%s.%s is not backed by an OData remote source", moduleName, entity.Name())
 	}
 
-	fmt.Fprintf(ctx.Output, "create external entity %s.%s\n", moduleName, entity.Name)
-	fmt.Fprintf(ctx.Output, "from odata client %s\n", entity.RemoteServiceName)
+	fmt.Fprintf(ctx.Output, "create external entity %s.%s\n", moduleName, entity.Name())
+	fmt.Fprintf(ctx.Output, "from odata client %s\n", src.SourceDocumentQualifiedName())
 	fmt.Fprintln(ctx.Output, "(")
 
 	var props []string
-	if entity.RemoteEntitySet != "" {
-		props = append(props, fmt.Sprintf("  EntitySet: '%s'", entity.RemoteEntitySet))
+	if src.EntitySet() != "" {
+		props = append(props, fmt.Sprintf("  EntitySet: '%s'", src.EntitySet()))
 	}
-	if entity.RemoteEntityName != "" {
-		props = append(props, fmt.Sprintf("  RemoteName: '%s'", entity.RemoteEntityName))
+	if src.RemoteName() != "" {
+		props = append(props, fmt.Sprintf("  RemoteName: '%s'", src.RemoteName()))
 	}
 	boolStr := func(b bool) string {
 		if b {
@@ -728,28 +749,32 @@ func outputExternalEntityMDL(ctx *ExecContext, entity *domainmodel.Entity, modul
 		}
 		return "No"
 	}
-	props = append(props, fmt.Sprintf("  Countable: %s", boolStr(entity.Countable)))
-	props = append(props, fmt.Sprintf("  Creatable: %s", boolStr(entity.Creatable)))
-	props = append(props, fmt.Sprintf("  Deletable: %s", boolStr(entity.Deletable)))
-	props = append(props, fmt.Sprintf("  Updatable: %s", boolStr(entity.Updatable)))
-	props = append(props, fmt.Sprintf("  AllowCreateChangeLocally: %s", boolStr(entity.CreateChangeLocally)))
+	props = append(props, fmt.Sprintf("  Countable: %s", boolStr(src.Countable())))
+	props = append(props, fmt.Sprintf("  Creatable: %s", boolStr(src.Creatable())))
+	props = append(props, fmt.Sprintf("  Deletable: %s", boolStr(src.Deletable())))
+	// Gen rest source currently exposes Countable/Creatable/Deletable/CreateChangeLocally
+	// but not Updatable; mirror the existing write-path default until that field lands.
+	props = append(props, "  Updatable: No")
+	props = append(props, fmt.Sprintf("  AllowCreateChangeLocally: %s", boolStr(src.CreateChangeLocally())))
 	fmt.Fprintln(ctx.Output, strings.Join(props, ",\n"))
 
 	fmt.Fprintln(ctx.Output, ")")
 
 	// Output attributes
-	if len(entity.Attributes) > 0 {
+	attrs := entity.AttributesItems()
+	if len(attrs) > 0 {
 		fmt.Fprintln(ctx.Output, "(")
-		for i, attr := range entity.Attributes {
-			typeName := "Unknown"
-			if attr.Type != nil {
-				typeName = attr.Type.GetTypeName()
+		for i, item := range attrs {
+			attr, ok := item.(*genDm.Attribute)
+			if !ok || attr == nil {
+				continue
 			}
+			typeName := formatAttributeTypeGen(attr.Type())
 			comma := ","
-			if i == len(entity.Attributes)-1 {
+			if i == len(attrs)-1 {
 				comma = ""
 			}
-			fmt.Fprintf(ctx.Output, "  %s: %s%s\n", attr.Name, typeName, comma)
+			fmt.Fprintf(ctx.Output, "  %s: %s%s\n", attr.Name(), typeName, comma)
 		}
 		fmt.Fprintln(ctx.Output, ");")
 	}

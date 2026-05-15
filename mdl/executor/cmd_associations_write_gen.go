@@ -6,9 +6,12 @@
 package executor
 
 import (
+	"fmt"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // astToEntityGen builds a gen-typed *Entity from a CREATE ENTITY AST.
@@ -24,12 +27,16 @@ func astToEntityGen(s *ast.CreateEntityStmt) *genDm.Entity {
 	entity := genDm.NewEntity()
 	entity.SetName(s.Name.Name)
 	entity.SetDocumentation(s.Documentation)
+	if s.Position != nil {
+		entity.SetLocation(fmt.Sprintf("%d,%d", s.Position.X, s.Position.Y))
+	}
 
 	persistable := s.Kind != ast.EntityNonPersistent
 	gen := astToGeneralizationGen(s, persistable)
 	entity.SetGeneralization(gen)
 
 	noGen, hasNoGen := gen.(*genDm.NoGeneralization)
+	attrNameToID := make(map[string]model.ID)
 	for _, a := range s.Attributes {
 		if hasNoGen {
 			switch a.Type.Kind {
@@ -55,6 +62,20 @@ func astToEntityGen(s *ast.CreateEntityStmt) *genDm.Entity {
 		attr := astToAttributeGen(&ac)
 		if attr != nil {
 			entity.AddAttributes(attr)
+			attrNameToID[ac.Name] = model.ID(attr.ID())
+			for _, vr := range astToValidationRulesGen(&ac, s.Name.String()) {
+				entity.AddValidationRules(vr)
+			}
+		}
+	}
+	for _, idx := range s.Indexes {
+		if genIdx := astToIndexGen(&idx, attrNameToID); genIdx != nil && len(genIdx.AttributesItems()) > 0 {
+			entity.AddIndexes(genIdx)
+		}
+	}
+	for _, eh := range s.EventHandlers {
+		if genEh := astToEventHandlerGen(&eh); genEh != nil {
+			entity.AddEventHandlers(genEh)
 		}
 	}
 	return entity
@@ -90,6 +111,7 @@ func astToAssociationGen(s *ast.CreateAssociationStmt, fromID, toID element.ID) 
 	a.SetType(astAssociationTypeStringGen(s))
 	a.SetOwner(astAssociationOwnerStringGen(s))
 	a.SetStorageFormat(astAssociationStorageStringGen(s))
+	a.SetDeleteBehavior(astAssociationDeleteBehaviorGen(s))
 	if s.Documentation != "" {
 		a.SetDocumentation(s.Documentation)
 	}
@@ -124,4 +146,20 @@ func astAssociationStorageStringGen(s *ast.CreateAssociationStmt) string {
 		return "Column"
 	}
 	return "Table"
+}
+
+func astAssociationDeleteBehaviorGen(s *ast.CreateAssociationStmt) element.Element {
+	dbe := genDm.NewAssociationDeleteBehavior()
+	dbe.SetParentDeleteBehavior("DeleteMeButKeepReferences")
+	switch {
+	case s == nil:
+		dbe.SetChildDeleteBehavior("DeleteMeButKeepReferences")
+	case s.DeleteBehavior == ast.DeleteCascade:
+		dbe.SetChildDeleteBehavior("DeleteMeAndReferences")
+	case s.DeleteBehavior == ast.DeleteIfNoReferences:
+		dbe.SetChildDeleteBehavior("DeleteMeIfNoReferences")
+	default:
+		dbe.SetChildDeleteBehavior("DeleteMeButKeepReferences")
+	}
+	return dbe
 }

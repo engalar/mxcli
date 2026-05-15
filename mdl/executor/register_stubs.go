@@ -62,6 +62,9 @@ func registerDatabaseConnectionHandlers(r *Registry) {
 
 func registerEntityHandlers(r *Registry) {
 	r.Register(&ast.CreateEntityStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
+		if canExecCreateEntityGen(ctx, stmt.(*ast.CreateEntityStmt)) {
+			return execCreateEntityGen(ctx, stmt.(*ast.CreateEntityStmt))
+		}
 		return execCreateEntity(ctx, stmt.(*ast.CreateEntityStmt))
 	})
 	r.Register(&ast.CreateViewEntityStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
@@ -84,12 +87,21 @@ func registerEntityHandlers(r *Registry) {
 
 func registerAssociationHandlers(r *Registry) {
 	r.Register(&ast.CreateAssociationStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
+		if ctx.DomainModels != nil {
+			return execCreateAssociationGen(ctx, stmt.(*ast.CreateAssociationStmt))
+		}
 		return execCreateAssociation(ctx, stmt.(*ast.CreateAssociationStmt))
 	})
 	r.Register(&ast.AlterAssociationStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
+		if ctx.DomainModels != nil {
+			return execAlterAssociationGen(ctx, stmt.(*ast.AlterAssociationStmt))
+		}
 		return execAlterAssociation(ctx, stmt.(*ast.AlterAssociationStmt))
 	})
 	r.Register(&ast.DropAssociationStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
+		if ctx.DomainModels != nil {
+			return execDropAssociationGen(ctx, stmt.(*ast.DropAssociationStmt))
+		}
 		return execDropAssociation(ctx, stmt.(*ast.DropAssociationStmt))
 	})
 }

@@ -84,6 +84,10 @@ type executorCache struct {
 	// container ID is the owning module's UUID.
 	domainModelsWithContainerGen []DomainModelGenWithContainer
 
+	// Legacy sdk-typed DomainModel listing retained until the final
+	// backend-interface retirement removes the old surface.
+	domainModels []*genDm.DomainModel
+
 	// Flat gen-typed DomainModel list (Stage 3.3.4.C9). Populated lazily
 	// by cachedDomainModelsGen via ctx.Backend.ListDomainModelsGen.
 	// Used by cmd_pages_builder getDomainModels migration (C7).

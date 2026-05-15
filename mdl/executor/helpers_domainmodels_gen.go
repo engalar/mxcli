@@ -125,5 +125,6 @@ func invalidateDomainModelsGenCache(ctx *ExecContext) {
 		return
 	}
 	ctx.Cache.domainModelsWithContainerGen = nil
+	ctx.Cache.domainModels = nil
 	ctx.Cache.domainModelsGen = nil
 }
