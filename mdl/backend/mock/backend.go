@@ -310,8 +310,6 @@ type MockBackend struct {
 	// WidgetBuilderBackend
 	LoadWidgetTemplateFunc         func(widgetID string, projectPath string) (backend.WidgetObjectBuilder, error)
 	BuildCreateAttributeObjectFunc func(attributePath string, objectTypeID, propertyTypeID, valueTypeID string) (any, error)
-	BuildDataGrid2WidgetFunc          func(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.CustomWidget, error)
-	BuildFilterWidgetFunc             func(spec backend.FilterWidgetSpec, projectPath string) (backend.Widget, error)
 	BuildDataGrid2WidgetGenFunc       func(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.GenCustomWidgetElem, error)
 	BuildFilterWidgetGenFunc          func(spec backend.FilterWidgetSpec, projectPath string) (*backend.GenCustomWidgetElem, error)
 	SerializeGenElemToOpaqueFunc      func(elem element.Element) backend.OpaqueWidget
