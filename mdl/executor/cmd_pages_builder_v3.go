@@ -11,7 +11,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
@@ -1103,7 +1103,7 @@ func (pb *pageBuilder) extractName(qualifiedName string) string {
 }
 
 func (pb *pageBuilder) getEntityNameByID(entityID model.ID) (string, error) {
-	domainModels, err := pb.getDomainModels()
+	pairs, err := pb.getDomainModelsWithContainer()
 	if err != nil {
 		return "", err
 	}
@@ -1114,11 +1114,15 @@ func (pb *pageBuilder) getEntityNameByID(entityID model.ID) (string, error) {
 		moduleNames[m.ID] = m.Name
 	}
 
-	for _, dm := range domainModels {
-		for _, e := range dm.Entities {
-			if e.ID == entityID {
-				moduleName := moduleNames[dm.ContainerID]
-				return moduleName + "." + e.Name, nil
+	for _, pair := range pairs {
+		for _, elem := range pair.DM.EntitiesItems() {
+			e, ok := elem.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			if model.ID(e.ID()) == entityID {
+				moduleName := moduleNames[pair.ContainerID]
+				return moduleName + "." + e.Name(), nil
 			}
 		}
 	}
@@ -1346,7 +1350,7 @@ func (pb *pageBuilder) isNonStringAttribute(attrPath string) bool {
 	if attrType == nil {
 		return false // can't determine type, assume String
 	}
-	_, isString := attrType.(*domainmodel.StringAttributeType)
+	_, isString := attrType.(*genDm.StringAttributeType)
 	return !isString
 }
 
