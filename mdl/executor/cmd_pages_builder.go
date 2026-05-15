@@ -17,7 +17,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
 
 // ============================================================================
@@ -44,15 +44,16 @@ type pageBuilder struct {
 	pluggableEngineErr error // stores init failure reason for better error messages
 
 	// Per-operation caches (may change during execution)
-	layoutsCache    []*pages.Layout
-	pagesCache      []*pages.Page
+	layoutsCache    []*genPg.Layout
+	pagesCache      []*genPg.Page
 	microflowsCache []*genMf.Microflow
 	foldersCache    []*types.FolderInfo
 
-	// Microflow / nanoflow / snippet repositories (populated from ctx.*).
+	// Microflow / nanoflow / layout / snippet repositories (populated from ctx.*).
 	// Optional — when nil the legacy backend.List* fallback is used.
 	microflowsRepo repos.MicroflowRepository
 	nanoflowsRepo  repos.NanoflowRepository
+	layoutsRepo    repos.LayoutRepository
 	snippetsRepo   repos.SnippetRepository
 
 	// Entity context for resolving short attribute names inside DataViews
@@ -131,11 +132,11 @@ func (pb *pageBuilder) getHierarchy() (*ContainerHierarchy, error) {
 	return h, nil
 }
 
-// getLayouts returns cached layouts or loads them.
-func (pb *pageBuilder) getLayouts() ([]*pages.Layout, error) {
+// getLayouts returns cached gen layouts or loads them via the backend.
+func (pb *pageBuilder) getLayouts() ([]*genPg.Layout, error) {
 	if pb.layoutsCache == nil {
 		var err error
-		pb.layoutsCache, err = pb.backend.ListLayouts()
+		pb.layoutsCache, err = pb.backend.ListLayoutsGen()
 		if err != nil {
 			return nil, err
 		}
@@ -166,11 +167,11 @@ func (pb *pageBuilder) getDomainModelsWithContainer() ([]DomainModelGenWithConta
 	return out, nil
 }
 
-// getPages returns cached pages or loads them.
-func (pb *pageBuilder) getPages() ([]*pages.Page, error) {
+// getPages returns cached gen pages or loads them via the backend.
+func (pb *pageBuilder) getPages() ([]*genPg.Page, error) {
 	if pb.pagesCache == nil {
 		var err error
-		pb.pagesCache, err = pb.backend.ListPages()
+		pb.pagesCache, err = pb.backend.ListPagesGen()
 		if err != nil {
 			return nil, err
 		}
@@ -199,7 +200,21 @@ func (pb *pageBuilder) getMicroflows() ([]*genMf.Microflow, error) {
 }
 
 // resolveLayout finds a layout by qualified name.
+// Gen path (preferred): uses layoutsRepo.FindByQualifiedName when available.
+// Legacy fallback: iterates ListLayoutsGen() + hierarchy module resolution.
 func (pb *pageBuilder) resolveLayout(layoutName string) (model.ID, error) {
+	if pb.layoutsRepo != nil {
+		l, err := pb.layoutsRepo.FindByQualifiedName(layoutName)
+		if err != nil {
+			return "", mdlerrors.NewBackend("find layout "+layoutName, err)
+		}
+		if l != nil {
+			return model.ID(l.ID()), nil
+		}
+		return "", mdlerrors.NewNotFound("layout", layoutName)
+	}
+
+	// Legacy fallback: list + hierarchy module resolution.
 	layouts, err := pb.getLayouts()
 	if err != nil {
 		return "", mdlerrors.NewBackend("list layouts", err)
@@ -210,7 +225,6 @@ func (pb *pageBuilder) resolveLayout(layoutName string) (model.ID, error) {
 		return "", mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	// Parse qualified name
 	parts := strings.Split(layoutName, ".")
 	var moduleName, name string
 	if len(parts) >= 2 {
@@ -220,12 +234,12 @@ func (pb *pageBuilder) resolveLayout(layoutName string) (model.ID, error) {
 		name = layoutName
 	}
 
-	// Find matching layout
 	for _, l := range layouts {
-		modID := h.FindModuleID(l.ContainerID)
+		containerID, _ := pb.backend.GetPageContainerUUID(model.ID(l.ID()))
+		modID := h.FindModuleID(containerID)
 		modName := h.GetModuleName(modID)
-		if l.Name == name && (moduleName == "" || modName == moduleName) {
-			return l.ID, nil
+		if l.Name() == name && (moduleName == "" || modName == moduleName) {
+			return model.ID(l.ID()), nil
 		}
 	}
 
