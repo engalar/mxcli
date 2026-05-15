@@ -5,6 +5,17 @@ package backend
 import (
 	"github.com/mendixlabs/mxcli/model"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
+	"github.com/mendixlabs/mxcli/sdk/pages"
+)
+
+// Re-export sdk/pages types still used by the legacy PageBackend surface.
+// Stage 3.3.5.E1 will retire these once all callers switch to the gen surface.
+type (
+	Page          = pages.Page
+	Layout        = pages.Layout
+	Snippet       = pages.Snippet
+	BuildingBlock = pages.BuildingBlock
+	PageTemplate  = pages.PageTemplate
 )
 
 // PageBackend provides page, layout, and snippet operations.
