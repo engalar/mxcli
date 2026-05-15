@@ -960,13 +960,13 @@ func (pb *pageBuilder) buildDynamicImageV3(w *ast.WidgetV3) (*pages.DynamicImage
 func dataGridFilterWidgetID(widgetType string) string {
 	switch strings.ToLower(widgetType) {
 	case "textfilter":
-		return pages.WidgetIDDataGridTextFilter
+		return widgetIDDataGridTextFilter
 	case "numberfilter":
-		return pages.WidgetIDDataGridNumberFilter
+		return widgetIDDataGridNumberFilter
 	case "datefilter":
-		return pages.WidgetIDDataGridDateFilter
+		return widgetIDDataGridDateFilter
 	case "dropdownfilter":
-		return pages.WidgetIDDataGridDropdownFilter
+		return widgetIDDataGridDropdownFilter
 	}
 	return ""
 }
