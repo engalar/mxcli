@@ -11,6 +11,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // execRename handles RENAME statements for all document types.
@@ -53,17 +54,24 @@ func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
+	}
+	if dm == nil {
+		return mdlerrors.NewNotFound("entity", s.Name.String())
 	}
 
 	found := false
 	collision := false
-	for _, ent := range dm.Entities {
-		if ent.Name == s.Name.Name {
+	for _, entityElem := range dm.EntitiesItems() {
+		ent, ok := entityElem.(*genDm.Entity)
+		if !ok {
+			continue
+		}
+		if ent.Name() == s.Name.Name {
 			found = true
-		} else if ent.Name == s.NewName {
+		} else if ent.Name() == s.NewName {
 			collision = true
 		}
 	}
@@ -89,13 +97,17 @@ func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
 	}
 
 	// Update the entity name in the domain model
-	for _, ent := range dm.Entities {
-		if ent.Name == s.Name.Name {
-			ent.Name = s.NewName
+	for _, entityElem := range dm.EntitiesItems() {
+		ent, ok := entityElem.(*genDm.Entity)
+		if !ok {
+			continue
+		}
+		if ent.Name() == s.Name.Name {
+			ent.SetName(s.NewName)
 			break
 		}
 	}
-	if err := ctx.Backend.UpdateDomainModel(dm); err != nil {
+	if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
 		return mdlerrors.NewBackend("update entity name", err)
 	}
 
@@ -365,17 +377,24 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
+	}
+	if dm == nil {
+		return mdlerrors.NewNotFound("association", oldQualifiedName)
 	}
 
 	found := false
 	collision := false
-	for _, assoc := range dm.Associations {
-		if assoc.Name == s.Name.Name {
+	for _, assocElem := range dm.AssociationsItems() {
+		assoc, ok := assocElem.(*genDm.Association)
+		if !ok {
+			continue
+		}
+		if assoc.Name() == s.Name.Name {
 			found = true
-		} else if assoc.Name == s.NewName {
+		} else if assoc.Name() == s.NewName {
 			collision = true
 		}
 	}
@@ -397,13 +416,17 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 	}
 
 	// Update association name in domain model
-	for _, assoc := range dm.Associations {
-		if assoc.Name == s.Name.Name {
-			assoc.Name = s.NewName
+	for _, assocElem := range dm.AssociationsItems() {
+		assoc, ok := assocElem.(*genDm.Association)
+		if !ok {
+			continue
+		}
+		if assoc.Name() == s.Name.Name {
+			assoc.SetName(s.NewName)
 			break
 		}
 	}
-	if err := ctx.Backend.UpdateDomainModel(dm); err != nil {
+	if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
 		return mdlerrors.NewBackend("update association name", err)
 	}
 

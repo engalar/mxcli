@@ -19,6 +19,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/catalog"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // syncWriter wraps an io.Writer with a mutex so concurrent goroutines
@@ -777,11 +778,18 @@ func preWarmCache(ctx *ExecContext) {
 
 	// Build entity name lookup
 	ctx.Cache.entityNames = make(map[model.ID]string)
-	dms, _ := ctx.Backend.ListDomainModels()
+	dms, _ := cachedDomainModelsGen(ctx)
 	for _, dm := range dms {
-		modName := h.GetModuleName(dm.ContainerID)
-		for _, ent := range dm.Entities {
-			ctx.Cache.entityNames[ent.ID] = modName + "." + ent.Name
+		if dm == nil {
+			continue
+		}
+		modName := h.GetModuleName(h.FindModuleID(model.ID(dm.ID())))
+		for _, entityElem := range dm.EntitiesItems() {
+			ent, ok := entityElem.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			ctx.Cache.entityNames[model.ID(ent.ID())] = modName + "." + ent.Name()
 		}
 	}
 

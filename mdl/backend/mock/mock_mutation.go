@@ -116,3 +116,17 @@ func (m *MockBackend) BuildFilterWidget(spec backend.FilterWidgetSpec, projectPa
 	}
 	return nil, fmt.Errorf("MockBackend.BuildFilterWidget not configured")
 }
+
+func (m *MockBackend) BuildDataGrid2WidgetGen(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.GenCustomWidgetElem, error) {
+	if m.BuildDataGrid2WidgetGenFunc != nil {
+		return m.BuildDataGrid2WidgetGenFunc(id, name, spec, projectPath)
+	}
+	return nil, fmt.Errorf("MockBackend.BuildDataGrid2WidgetGen not configured")
+}
+
+func (m *MockBackend) BuildFilterWidgetGen(spec backend.FilterWidgetSpec, projectPath string) (*backend.GenCustomWidgetElem, error) {
+	if m.BuildFilterWidgetGenFunc != nil {
+		return m.BuildFilterWidgetGenFunc(spec, projectPath)
+	}
+	return nil, fmt.Errorf("MockBackend.BuildFilterWidgetGen not configured")
+}

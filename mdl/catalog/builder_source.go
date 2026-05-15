@@ -38,13 +38,20 @@ func (b *Builder) buildSource() error {
 	var items []sourceItem
 
 	// Entities
-	dms, err := b.cachedDomainModels()
+	dms, err := b.cachedDomainModelsGen()
 	if err == nil {
 		for _, dm := range dms {
-			moduleID := b.hierarchy.findModuleID(dm.ContainerID)
+			if dm == nil {
+				continue
+			}
+			moduleID := b.hierarchy.findModuleID(model.ID(dm.ID()))
 			moduleName := b.hierarchy.getModuleName(moduleID)
-			for _, ent := range dm.Entities {
-				items = append(items, sourceItem{"ENTITY", moduleName + "." + ent.Name, moduleName})
+			for _, entityElem := range dm.EntitiesItems() {
+				ent, ok := entityElem.(interface{ Name() string })
+				if !ok {
+					continue
+				}
+				items = append(items, sourceItem{"ENTITY", moduleName + "." + ent.Name(), moduleName})
 			}
 		}
 	}

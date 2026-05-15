@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
@@ -204,8 +205,8 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 
 	// Reconcile MemberAccesses immediately — existing access rules on entities
 	// in this DM need MemberAccess entries for the new association (CE0066).
-	if freshDM, err := ctx.Backend.GetDomainModel(module.ID); err == nil {
-		if count, err := ctx.Backend.ReconcileMemberAccesses(freshDM.ID, module.Name); err == nil && count > 0 {
+	if freshDM, err := ctx.Backend.GetDomainModelGen(module.ID); err == nil && freshDM != nil {
+		if count, err := ctx.Backend.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil && count > 0 {
 			fmt.Fprintf(ctx.Output, "Reconciled %d access rule(s) for new association\n", count)
 		}
 	}
@@ -226,55 +227,58 @@ func execAlterAssociation(ctx *ExecContext, s *ast.AlterAssociationStmt) error {
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
+	if dm == nil {
+		return mdlerrors.NewNotFound("association", s.Name.String())
+	}
 
 	// Try intra-module associations first
-	for _, assoc := range dm.Associations {
-		if assoc.Name == s.Name.Name {
-			switch s.Operation {
-			case ast.AlterAssociationSetDeleteBehavior:
-				assoc.ChildDeleteBehavior = &domainmodel.DeleteBehavior{
-					Type: domainmodel.DeleteBehaviorType(s.DeleteBehavior.String()),
-				}
-			case ast.AlterAssociationSetOwner:
-				assoc.Owner = domainmodel.AssociationOwner(s.Owner.String())
-			case ast.AlterAssociationSetStorage:
-				assoc.StorageFormat = domainmodel.AssociationStorageFormat(s.Storage.String())
-			case ast.AlterAssociationSetComment:
-				assoc.Documentation = s.Comment
-			}
-			if err := ctx.Backend.UpdateDomainModel(dm); err != nil {
-				return mdlerrors.NewBackend("update association", err)
-			}
-			fmt.Fprintf(ctx.Output, "Altered association: %s\n", s.Name)
-			return nil
+	for _, assocElem := range dm.AssociationsItems() {
+		assoc, ok := assocElem.(*genDm.Association)
+		if !ok || assoc.Name() != s.Name.Name {
+			continue
 		}
+		switch s.Operation {
+		case ast.AlterAssociationSetDeleteBehavior:
+			assoc.SetDeleteBehavior(newAssociationDeleteBehaviorGen(s.DeleteBehavior))
+		case ast.AlterAssociationSetOwner:
+			assoc.SetOwner(s.Owner.String())
+		case ast.AlterAssociationSetStorage:
+			assoc.SetStorageFormat(s.Storage.String())
+		case ast.AlterAssociationSetComment:
+			assoc.SetDocumentation(s.Comment)
+		}
+		if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
+			return mdlerrors.NewBackend("update association", err)
+		}
+		fmt.Fprintf(ctx.Output, "Altered association: %s\n", s.Name)
+		return nil
 	}
 
 	// Try cross-module associations
-	for _, ca := range dm.CrossAssociations {
-		if ca.Name == s.Name.Name {
-			switch s.Operation {
-			case ast.AlterAssociationSetDeleteBehavior:
-				ca.ChildDeleteBehavior = &domainmodel.DeleteBehavior{
-					Type: domainmodel.DeleteBehaviorType(s.DeleteBehavior.String()),
-				}
-			case ast.AlterAssociationSetOwner:
-				ca.Owner = domainmodel.AssociationOwner(s.Owner.String())
-			case ast.AlterAssociationSetStorage:
-				ca.StorageFormat = domainmodel.AssociationStorageFormat(s.Storage.String())
-			case ast.AlterAssociationSetComment:
-				ca.Documentation = s.Comment
-			}
-			if err := ctx.Backend.UpdateDomainModel(dm); err != nil {
-				return mdlerrors.NewBackend("update cross-module association", err)
-			}
-			fmt.Fprintf(ctx.Output, "Altered association: %s\n", s.Name)
-			return nil
+	for _, crossElem := range dm.CrossAssociationsItems() {
+		ca, ok := crossElem.(*genDm.CrossAssociation)
+		if !ok || ca.Name() != s.Name.Name {
+			continue
 		}
+		switch s.Operation {
+		case ast.AlterAssociationSetDeleteBehavior:
+			ca.SetDeleteBehavior(newAssociationDeleteBehaviorGen(s.DeleteBehavior))
+		case ast.AlterAssociationSetOwner:
+			ca.SetOwner(s.Owner.String())
+		case ast.AlterAssociationSetStorage:
+			ca.SetStorageFormat(s.Storage.String())
+		case ast.AlterAssociationSetComment:
+			ca.SetDocumentation(s.Comment)
+		}
+		if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
+			return mdlerrors.NewBackend("update cross-module association", err)
+		}
+		fmt.Fprintf(ctx.Output, "Altered association: %s\n", s.Name)
+		return nil
 	}
 
 	return mdlerrors.NewNotFound("association", s.Name.String())
@@ -292,28 +296,35 @@ func execDropAssociation(ctx *ExecContext, s *ast.DropAssociationStmt) error {
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
-
-	for _, assoc := range dm.Associations {
-		if assoc.Name == s.Name.Name {
-			if err := ctx.Backend.DeleteAssociation(dm.ID, assoc.ID); err != nil {
-				return mdlerrors.NewBackend("delete association", err)
-			}
-			fmt.Fprintf(ctx.Output, "Dropped association: %s\n", s.Name)
-			return nil
-		}
+	if dm == nil {
+		return mdlerrors.NewNotFound("association", s.Name.String())
 	}
-	for _, ca := range dm.CrossAssociations {
-		if ca.Name == s.Name.Name {
-			if err := ctx.Backend.DeleteCrossAssociation(dm.ID, ca.ID); err != nil {
-				return mdlerrors.NewBackend("delete cross-module association", err)
-			}
-			fmt.Fprintf(ctx.Output, "Dropped cross-module association: %s\n", s.Name)
-			return nil
+
+	for _, assocElem := range dm.AssociationsItems() {
+		assoc, ok := assocElem.(*genDm.Association)
+		if !ok || assoc.Name() != s.Name.Name {
+			continue
 		}
+		if err := ctx.Backend.DeleteAssociation(model.ID(dm.ID()), model.ID(assoc.ID())); err != nil {
+			return mdlerrors.NewBackend("delete association", err)
+		}
+		fmt.Fprintf(ctx.Output, "Dropped association: %s\n", s.Name)
+		return nil
+	}
+	for _, crossElem := range dm.CrossAssociationsItems() {
+		ca, ok := crossElem.(*genDm.CrossAssociation)
+		if !ok || ca.Name() != s.Name.Name {
+			continue
+		}
+		if err := ctx.Backend.DeleteCrossAssociation(model.ID(dm.ID()), model.ID(ca.ID())); err != nil {
+			return mdlerrors.NewBackend("delete cross-module association", err)
+		}
+		fmt.Fprintf(ctx.Output, "Dropped cross-module association: %s\n", s.Name)
+		return nil
 	}
 
 	return mdlerrors.NewNotFound("association", s.Name.String())
@@ -332,7 +343,7 @@ func listAssociations(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Get all domain models in a single query (avoids O(n²) behavior)
-	domainModels, err := ctx.Backend.ListDomainModels()
+	domainModels, err := cachedDomainModelsGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list domain models", err)
 	}
@@ -340,9 +351,21 @@ func listAssociations(ctx *ExecContext, moduleName string) error {
 	// Build entity ID -> qualified name map
 	entityNames := make(map[model.ID]string)
 	for _, dm := range domainModels {
-		modName := moduleNames[dm.ContainerID]
-		for _, entity := range dm.Entities {
-			entityNames[entity.ID] = modName + "." + entity.Name
+		if dm == nil {
+			continue
+		}
+		h, herr := getHierarchy(ctx)
+		if herr != nil {
+			return mdlerrors.NewBackend("build hierarchy", herr)
+		}
+		modID := h.FindModuleID(model.ID(dm.ID()))
+		modName := moduleNames[modID]
+		for _, entityElem := range dm.EntitiesItems() {
+			entity, ok := entityElem.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			entityNames[model.ID(entity.ID())] = modName + "." + entity.Name()
 		}
 	}
 
@@ -360,32 +383,48 @@ func listAssociations(ctx *ExecContext, moduleName string) error {
 	var rows []row
 
 	for _, dm := range domainModels {
-		modName := moduleNames[dm.ContainerID]
+		if dm == nil {
+			continue
+		}
+		h, herr := getHierarchy(ctx)
+		if herr != nil {
+			return mdlerrors.NewBackend("build hierarchy", herr)
+		}
+		modID := h.FindModuleID(model.ID(dm.ID()))
+		modName := moduleNames[modID]
 		// Filter by module name if specified
 		if moduleName != "" && modName != moduleName {
 			continue
 		}
 		// Intra-module associations
-		for _, assoc := range dm.Associations {
-			qualifiedName := modName + "." + assoc.Name
-			parent := entityNames[assoc.ParentID]
-			child := entityNames[assoc.ChildID]
+		for _, assocElem := range dm.AssociationsItems() {
+			assoc, ok := assocElem.(*genDm.Association)
+			if !ok {
+				continue
+			}
+			qualifiedName := modName + "." + assoc.Name()
+			parent := entityNames[model.ID(assoc.ParentRefID())]
+			child := entityNames[model.ID(assoc.ChildRefID())]
 			if parent == "" {
-				parent = string(assoc.ParentID)
+				parent = string(assoc.ParentRefID())
 			}
 			if child == "" {
-				child = string(assoc.ChildID)
+				child = string(assoc.ChildRefID())
 			}
-			rows = append(rows, row{qualifiedName, modName, assoc.Name, parent, child, string(assoc.Type), string(assoc.Owner), string(assoc.StorageFormat)})
+			rows = append(rows, row{qualifiedName, modName, assoc.Name(), parent, child, assoc.Type(), assoc.Owner(), assoc.StorageFormat()})
 		}
 		// Cross-module associations
-		for _, ca := range dm.CrossAssociations {
-			qualifiedName := modName + "." + ca.Name
-			parent := entityNames[ca.ParentID]
-			if parent == "" {
-				parent = string(ca.ParentID)
+		for _, crossElem := range dm.CrossAssociationsItems() {
+			ca, ok := crossElem.(*genDm.CrossAssociation)
+			if !ok {
+				continue
 			}
-			rows = append(rows, row{qualifiedName, modName, ca.Name, parent, ca.ChildRef, string(ca.Type), string(ca.Owner), string(ca.StorageFormat)})
+			qualifiedName := modName + "." + ca.Name()
+			parent := entityNames[model.ID(ca.ParentRefID())]
+			if parent == "" {
+				parent = string(ca.ParentRefID())
+			}
+			rows = append(rows, row{qualifiedName, modName, ca.Name(), parent, ca.ChildQualifiedName(), ca.Type(), ca.Owner(), ca.StorageFormat()})
 		}
 	}
 
@@ -416,29 +455,36 @@ func listAssociation(ctx *ExecContext, name *ast.QualifiedName) error {
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
-
-	for _, assoc := range dm.Associations {
-		if assoc.Name == name.Name {
-			fmt.Fprintf(ctx.Output, "Association: %s.%s\n", module.Name, assoc.Name)
-			fmt.Fprintf(ctx.Output, "  Type: %s\n", assoc.Type)
-			fmt.Fprintf(ctx.Output, "  Owner: %s\n", assoc.Owner)
-			fmt.Fprintf(ctx.Output, "  Storage: %s\n", assoc.StorageFormat)
-			return nil
-		}
+	if dm == nil {
+		return mdlerrors.NewNotFound("association", name.String())
 	}
-	for _, ca := range dm.CrossAssociations {
-		if ca.Name == name.Name {
-			fmt.Fprintf(ctx.Output, "Association: %s.%s (cross-module)\n", module.Name, ca.Name)
-			fmt.Fprintf(ctx.Output, "  Type: %s\n", ca.Type)
-			fmt.Fprintf(ctx.Output, "  Owner: %s\n", ca.Owner)
-			fmt.Fprintf(ctx.Output, "  Storage: %s\n", ca.StorageFormat)
-			fmt.Fprintf(ctx.Output, "  Child: %s\n", ca.ChildRef)
-			return nil
+
+	for _, assocElem := range dm.AssociationsItems() {
+		assoc, ok := assocElem.(*genDm.Association)
+		if !ok || assoc.Name() != name.Name {
+			continue
 		}
+		fmt.Fprintf(ctx.Output, "Association: %s.%s\n", module.Name, assoc.Name())
+		fmt.Fprintf(ctx.Output, "  Type: %s\n", assoc.Type())
+		fmt.Fprintf(ctx.Output, "  Owner: %s\n", assoc.Owner())
+		fmt.Fprintf(ctx.Output, "  Storage: %s\n", assoc.StorageFormat())
+		return nil
+	}
+	for _, crossElem := range dm.CrossAssociationsItems() {
+		ca, ok := crossElem.(*genDm.CrossAssociation)
+		if !ok || ca.Name() != name.Name {
+			continue
+		}
+		fmt.Fprintf(ctx.Output, "Association: %s.%s (cross-module)\n", module.Name, ca.Name())
+		fmt.Fprintf(ctx.Output, "  Type: %s\n", ca.Type())
+		fmt.Fprintf(ctx.Output, "  Owner: %s\n", ca.Owner())
+		fmt.Fprintf(ctx.Output, "  Storage: %s\n", ca.StorageFormat())
+		fmt.Fprintf(ctx.Output, "  Child: %s\n", ca.ChildQualifiedName())
+		return nil
 	}
 
 	return mdlerrors.NewNotFound("association", name.String())
@@ -451,14 +497,17 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
+	}
+	if dm == nil {
+		return mdlerrors.NewNotFound("association", name.String())
 	}
 
 	// Build entity ID -> qualified name map across all modules
 	entityNames := make(map[model.ID]string)
-	allDomainModels, err := ctx.Backend.ListDomainModels()
+	allDomainModels, err := cachedDomainModelsGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list domain models", err)
 	}
@@ -467,81 +516,114 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 	for _, otherDM := range allDomainModels {
-		modName := h.GetModuleName(otherDM.ContainerID)
-		for _, entity := range otherDM.Entities {
-			entityNames[entity.ID] = modName + "." + entity.Name
+		if otherDM == nil {
+			continue
+		}
+		modName := h.GetModuleName(h.FindModuleID(model.ID(otherDM.ID())))
+		for _, entityElem := range otherDM.EntitiesItems() {
+			entity, ok := entityElem.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			entityNames[model.ID(entity.ID())] = modName + "." + entity.Name()
 		}
 	}
 
 	// Helper to format association type, owner, storage, and delete behavior
-	formatAssocDetails := func(assocType domainmodel.AssociationType, assocOwner domainmodel.AssociationOwner, storageFormat domainmodel.AssociationStorageFormat, childDeleteBehavior *domainmodel.DeleteBehavior) {
+	formatAssocDetails := func(assocType, assocOwner, storageFormat string, childDeleteBehavior elementLikeDeleteBehavior) {
 		typeName := "Reference"
-		if assocType == domainmodel.AssociationTypeReferenceSet {
+		if assocType == genDm.AssociationTypeReferenceSet {
 			typeName = "ReferenceSet"
 		}
 		fmt.Fprintf(ctx.Output, "type %s\n", typeName)
 
 		owner := "Default"
-		if assocOwner == domainmodel.AssociationOwnerBoth {
+		if assocOwner == genDm.AssociationOwnerBoth {
 			owner = "Both"
 		}
 		fmt.Fprintf(ctx.Output, "owner %s\n", owner)
 
 		// Only output STORAGE when it's not the default (Table)
-		if storageFormat == domainmodel.StorageFormatColumn {
+		if storageFormat == genDm.AssociationStorageColumn {
 			fmt.Fprintf(ctx.Output, "storage column\n")
 		}
 
 		deleteBehavior := "DELETE_BUT_KEEP_REFERENCES"
 		if childDeleteBehavior != nil {
-			switch childDeleteBehavior.Type {
-			case domainmodel.DeleteBehaviorTypeDeleteMeAndReferences:
+			switch childDeleteBehavior.ChildDeleteBehavior() {
+			case genDm.DeletingBehaviorDeleteMeAndReferences:
 				deleteBehavior = "DELETE_CASCADE"
-			case domainmodel.DeleteBehaviorTypeDeleteMeIfNoReferences:
+			case genDm.DeletingBehaviorDeleteMeIfNoReferences:
 				deleteBehavior = "DELETE_IF_NO_REFERENCES"
-			case domainmodel.DeleteBehaviorTypeDeleteMeButKeepReferences:
+			case genDm.DeletingBehaviorDeleteMeButKeepReferences:
 				deleteBehavior = "DELETE_BUT_KEEP_REFERENCES"
 			}
 		}
 		fmt.Fprintf(ctx.Output, "delete_behavior %s;\n", deleteBehavior)
 	}
 
-	for _, assoc := range dm.Associations {
-		if assoc.Name == name.Name {
-			fromEntity := entityNames[assoc.ParentID]
-			toEntity := entityNames[assoc.ChildID]
-
-			if assoc.Documentation != "" {
-				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", assoc.Documentation)
-			}
-
-			fmt.Fprintf(ctx.Output, "create association %s.%s\n", module.Name, assoc.Name)
-			fmt.Fprintf(ctx.Output, "from %s to %s\n", fromEntity, toEntity)
-			formatAssocDetails(assoc.Type, assoc.Owner, assoc.StorageFormat, assoc.ChildDeleteBehavior)
-			fmt.Fprintln(ctx.Output, "/")
-			return nil
+	for _, assocElem := range dm.AssociationsItems() {
+		assoc, ok := assocElem.(*genDm.Association)
+		if !ok || assoc.Name() != name.Name {
+			continue
 		}
+		fromEntity := entityNames[model.ID(assoc.ParentRefID())]
+		toEntity := entityNames[model.ID(assoc.ChildRefID())]
+
+		if assoc.Documentation() != "" {
+			fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", assoc.Documentation())
+		}
+
+		fmt.Fprintf(ctx.Output, "create association %s.%s\n", module.Name, assoc.Name())
+		fmt.Fprintf(ctx.Output, "from %s to %s\n", fromEntity, toEntity)
+		formatAssocDetails(assoc.Type(), assoc.Owner(), assoc.StorageFormat(), associationDeleteBehaviorGen(assoc.DeleteBehavior()))
+		fmt.Fprintln(ctx.Output, "/")
+		return nil
 	}
-	for _, ca := range dm.CrossAssociations {
-		if ca.Name == name.Name {
-			fromEntity := entityNames[ca.ParentID]
-			if fromEntity == "" {
-				fromEntity = string(ca.ParentID)
-			}
-
-			if ca.Documentation != "" {
-				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", ca.Documentation)
-			}
-
-			fmt.Fprintf(ctx.Output, "create association %s.%s\n", module.Name, ca.Name)
-			fmt.Fprintf(ctx.Output, "from %s to %s\n", fromEntity, ca.ChildRef)
-			formatAssocDetails(ca.Type, ca.Owner, ca.StorageFormat, ca.ChildDeleteBehavior)
-			fmt.Fprintln(ctx.Output, "/")
-			return nil
+	for _, crossElem := range dm.CrossAssociationsItems() {
+		ca, ok := crossElem.(*genDm.CrossAssociation)
+		if !ok || ca.Name() != name.Name {
+			continue
 		}
+		fromEntity := entityNames[model.ID(ca.ParentRefID())]
+		if fromEntity == "" {
+			fromEntity = string(ca.ParentRefID())
+		}
+
+		if ca.Documentation() != "" {
+			fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", ca.Documentation())
+		}
+
+		fmt.Fprintf(ctx.Output, "create association %s.%s\n", module.Name, ca.Name())
+		fmt.Fprintf(ctx.Output, "from %s to %s\n", fromEntity, ca.ChildQualifiedName())
+		formatAssocDetails(ca.Type(), ca.Owner(), ca.StorageFormat(), associationDeleteBehaviorGen(ca.DeleteBehavior()))
+		fmt.Fprintln(ctx.Output, "/")
+		return nil
 	}
 
 	return mdlerrors.NewNotFound("association", name.String())
+}
+
+type elementLikeDeleteBehavior interface {
+	ChildDeleteBehavior() string
+}
+
+func associationDeleteBehaviorGen(elem interface{}) elementLikeDeleteBehavior {
+	db, _ := elem.(*genDm.AssociationDeleteBehavior)
+	return db
+}
+
+func newAssociationDeleteBehaviorGen(db ast.DeleteBehavior) *genDm.AssociationDeleteBehavior {
+	out := genDm.NewAssociationDeleteBehavior()
+	switch db {
+	case ast.DeleteCascade:
+		out.SetChildDeleteBehavior(genDm.DeletingBehaviorDeleteMeAndReferences)
+	case ast.DeleteIfNoReferences:
+		out.SetChildDeleteBehavior(genDm.DeletingBehaviorDeleteMeIfNoReferences)
+	default:
+		out.SetChildDeleteBehavior(genDm.DeletingBehaviorDeleteMeButKeepReferences)
+	}
+	return out
 }
 
 // --- Executor method wrappers for callers not yet migrated ---

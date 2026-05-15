@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 // execUpdateSecurityGen handles UPDATE SECURITY [IN Module].
@@ -27,12 +28,12 @@ func execUpdateSecurityGen(ctx *ExecContext, s *ast.UpdateSecurityStmt) error {
 			continue
 		}
 
-		dm, err := ctx.Backend.GetDomainModel(mod.ID)
-		if err != nil {
+		dm, err := ctx.Backend.GetDomainModelGen(mod.ID)
+		if err != nil || dm == nil {
 			continue // module may not have a domain model
 		}
 
-		count, err := ctx.Backend.ReconcileMemberAccesses(dm.ID, mod.Name)
+		count, err := ctx.Backend.ReconcileMemberAccesses(model.ID(dm.ID()), mod.Name)
 		if err != nil {
 			return mdlerrors.NewBackend(fmt.Sprintf("reconcile security for module %s", mod.Name), err)
 		}

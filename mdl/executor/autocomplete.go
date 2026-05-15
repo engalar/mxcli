@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // getModuleNames returns a list of all module names for autocomplete.
@@ -59,17 +60,24 @@ func getEntityNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	dms, err := ctx.Backend.ListDomainModels()
+	dms, err := cachedDomainModelsGen(ctx)
 	if err != nil {
 		return nil
 	}
 	names := make([]string, 0)
 	for _, dm := range dms {
-		modID := h.FindModuleID(dm.ContainerID)
+		if dm == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(dm.ID()))
 		modName := h.GetModuleName(modID)
 		if moduleFilter == "" || modName == moduleFilter {
-			for _, ent := range dm.Entities {
-				names = append(names, modName+"."+ent.Name)
+			for _, entityElem := range dm.EntitiesItems() {
+				ent, ok := entityElem.(*genDm.Entity)
+				if !ok {
+					continue
+				}
+				names = append(names, modName+"."+ent.Name())
 			}
 		}
 	}
@@ -133,17 +141,24 @@ func getAssociationNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	dms, err := ctx.Backend.ListDomainModels()
+	dms, err := cachedDomainModelsGen(ctx)
 	if err != nil {
 		return nil
 	}
 	names := make([]string, 0)
 	for _, dm := range dms {
-		modID := h.FindModuleID(dm.ContainerID)
+		if dm == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(dm.ID()))
 		modName := h.GetModuleName(modID)
 		if moduleFilter == "" || modName == moduleFilter {
-			for _, assoc := range dm.Associations {
-				names = append(names, modName+"."+assoc.Name)
+			for _, assocElem := range dm.AssociationsItems() {
+				assoc, ok := assocElem.(*genDm.Association)
+				if !ok {
+					continue
+				}
+				names = append(names, modName+"."+assoc.Name())
 			}
 		}
 	}

@@ -152,19 +152,12 @@ func getEntityNames(ctx *ExecContext, h *ContainerHierarchy) map[model.ID]string
 	if ctx.Cache != nil && len(ctx.Cache.entityNames) > 0 {
 		return ctx.Cache.entityNames
 	}
-	entityNames := make(map[model.ID]string)
-	dms, err := ctx.Backend.ListDomainModels()
+	entityNames, err := buildAllEntityNamesGen(ctx)
 	if err != nil {
 		if ctx.Logger != nil {
-			ctx.Logger.Warn("getEntityNames: ListDomainModels failed", "error", err)
+			ctx.Logger.Warn("getEntityNames: buildAllEntityNamesGen failed", "error", err)
 		}
-		return entityNames
-	}
-	for _, dm := range dms {
-		modName := h.GetModuleName(dm.ContainerID)
-		for _, ent := range dm.Entities {
-			entityNames[ent.ID] = modName + "." + ent.Name
-		}
+		return map[model.ID]string{}
 	}
 	if ctx.Cache != nil {
 		ctx.Cache.entityNames = entityNames
@@ -357,12 +350,15 @@ func (e *Executor) finalizeProgramExecution() error {
 	}
 
 	for moduleID, moduleName := range e.cache.modifiedDomainModels {
-		dm, err := e.backend.GetDomainModel(moduleID)
+		dm, err := e.backend.GetDomainModelGen(moduleID)
 		if err != nil {
 			continue // module may not have a domain model
 		}
+		if dm == nil {
+			continue
+		}
 
-		count, err := e.backend.ReconcileMemberAccesses(dm.ID, moduleName)
+		count, err := e.backend.ReconcileMemberAccesses(model.ID(dm.ID()), moduleName)
 		if err != nil {
 			return mdlerrors.NewBackend(fmt.Sprintf("reconcile security for module %s", moduleName), err)
 		}

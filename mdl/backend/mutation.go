@@ -390,4 +390,13 @@ type WidgetBuilderBackend interface {
 	// BuildFilterWidget builds a filter widget (text, number, date, or dropdown filter)
 	// for use inside DataGrid2 filtersPlaceholder or CONTROLBAR sections.
 	BuildFilterWidget(spec FilterWidgetSpec, projectPath string) (Widget, error)
+
+	// BuildDataGrid2WidgetGen is the Stage 3.3.5.D1 gen-native sibling of
+	// BuildDataGrid2Widget. Returns *GenCustomWidgetElem (satisfies both
+	// backend.Widget and element.Element). Replaces BuildDataGrid2Widget once
+	// cmd_pages_builder_v3.go's Cat-B migration is complete.
+	BuildDataGrid2WidgetGen(id model.ID, name string, spec DataGridSpec, projectPath string) (*GenCustomWidgetElem, error)
+
+	// BuildFilterWidgetGen is the Stage 3.3.5.D1 gen-native sibling of BuildFilterWidget.
+	BuildFilterWidgetGen(spec FilterWidgetSpec, projectPath string) (*GenCustomWidgetElem, error)
 }

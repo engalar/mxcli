@@ -19,6 +19,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // isBuiltinModuleEntity returns true for module names that are
@@ -206,18 +207,26 @@ func databaseRetrieveMatchesAssociationTarget(ctx *ExecContext, entityName, asso
 	if err != nil || mod == nil {
 		return false
 	}
-	dm, err := ctx.Backend.GetDomainModel(mod.ID)
+	dm, err := ctx.Backend.GetDomainModelGen(mod.ID)
 	if err != nil || dm == nil {
 		return false
 	}
 
-	entityNames := make(map[model.ID]string, len(dm.Entities))
-	for _, entity := range dm.Entities {
-		entityNames[entity.ID] = moduleName + "." + entity.Name
+	entityNames := make(map[model.ID]string)
+	for _, entityElem := range dm.EntitiesItems() {
+		entity, ok := entityElem.(*genDm.Entity)
+		if !ok {
+			continue
+		}
+		entityNames[model.ID(entity.ID())] = moduleName + "." + entity.Name()
 	}
-	for _, assoc := range dm.Associations {
-		if assoc.Name == assocName {
-			return entityNames[assoc.ParentID] == entityName
+	for _, assocElem := range dm.AssociationsItems() {
+		assoc, ok := assocElem.(*genDm.Association)
+		if !ok {
+			continue
+		}
+		if assoc.Name() == assocName {
+			return entityNames[model.ID(assoc.ParentRefID())] == entityName
 		}
 	}
 	return false

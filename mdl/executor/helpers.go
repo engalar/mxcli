@@ -12,6 +12,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
@@ -413,25 +414,28 @@ func buildSnippetQualifiedNames(ctx *ExecContext) map[string]bool {
 // buildEntityQualifiedNames returns a set of all entity qualified names in the project.
 func buildEntityQualifiedNames(ctx *ExecContext) map[string]bool {
 	result := make(map[string]bool)
-	modules, err := getModulesFromCache(ctx)
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return result
 	}
-	moduleNames := make(map[model.ID]string)
-	for _, m := range modules {
-		moduleNames[m.ID] = m.Name
-	}
-	dms, err := ctx.Backend.ListDomainModels()
+	dms, err := cachedDomainModelsGen(ctx)
 	if err != nil {
 		return result
 	}
 	for _, dm := range dms {
-		modName := moduleNames[dm.ContainerID]
+		if dm == nil {
+			continue
+		}
+		modName := h.GetModuleName(h.FindModuleID(model.ID(dm.ID())))
 		if modName == "" {
 			continue
 		}
-		for _, ent := range dm.Entities {
-			result[modName+"."+ent.Name] = true
+		for _, entityElem := range dm.EntitiesItems() {
+			ent, ok := entityElem.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			result[modName+"."+ent.Name()] = true
 		}
 	}
 	return result
@@ -449,25 +453,34 @@ func buildEntityEnumAttrMap(ctx *ExecContext, entityQN string) map[string]string
 	if len(parts) != 2 {
 		return result
 	}
-	mod, err := findModule(ctx, parts[0])
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return result
 	}
-	dms, err := ctx.Backend.ListDomainModels()
+	dms, err := cachedDomainModelsGen(ctx)
 	if err != nil {
 		return result
 	}
 	for _, dm := range dms {
-		if dm.ContainerID != mod.ID {
+		if dm == nil {
 			continue
 		}
-		for _, ent := range dm.Entities {
-			if ent.Name != parts[1] {
+		modName := h.GetModuleName(h.FindModuleID(model.ID(dm.ID())))
+		if modName != parts[0] {
+			continue
+		}
+		for _, entityElem := range dm.EntitiesItems() {
+			ent, ok := entityElem.(*genDm.Entity)
+			if !ok || ent.Name() != parts[1] {
 				continue
 			}
-			for _, attr := range ent.Attributes {
-				if enumType, ok := attr.Type.(*domainmodel.EnumerationAttributeType); ok {
-					result[attr.Name] = enumType.EnumerationRef
+			for _, attrElem := range ent.AttributesItems() {
+				attr, ok := attrElem.(*genDm.Attribute)
+				if !ok {
+					continue
+				}
+				if enumType, ok := attr.Type().(*genDm.EnumerationAttributeType); ok {
+					result[attr.Name()] = enumType.EnumerationQualifiedName()
 				}
 			}
 			return result

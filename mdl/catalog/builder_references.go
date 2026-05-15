@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPages "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
@@ -159,18 +160,25 @@ func (b *Builder) buildReferences() error {
 	}
 
 	// Extract entity references (generalization) — using cached list
-	dms, err := b.cachedDomainModels()
+	dms, err := b.cachedDomainModelsGen()
 	if err == nil {
 		for _, dm := range dms {
-			moduleID := b.hierarchy.findModuleID(dm.ContainerID)
+			if dm == nil {
+				continue
+			}
+			moduleID := b.hierarchy.findModuleID(model.ID(dm.ID()))
 			moduleName := b.hierarchy.getModuleName(moduleID)
 
-			for _, ent := range dm.Entities {
-				sourceQN := moduleName + "." + ent.Name
+			for _, entityElem := range dm.EntitiesItems() {
+				ent, ok := entityElem.(*genDm.Entity)
+				if !ok {
+					continue
+				}
+				sourceQN := moduleName + "." + ent.Name()
 				// Check generalization
-				if ent.GeneralizationRef != "" {
-					_, err = stmt.Exec("ENTITY", string(ent.ID), sourceQN,
-						"ENTITY", "", ent.GeneralizationRef,
+				if gen := catalogGeneralizationQNGen(ent); gen != "" {
+					_, err = stmt.Exec("ENTITY", string(ent.ID()), sourceQN,
+						"ENTITY", "", gen,
 						RefKindGeneralize, moduleName, projectID, snapshotID)
 					if err == nil {
 						refCount++

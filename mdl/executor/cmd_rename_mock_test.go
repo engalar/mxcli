@@ -11,10 +11,10 @@ import (
 	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // ---------------------------------------------------------------------------
@@ -55,17 +55,17 @@ func TestRename_UnsupportedType(t *testing.T) {
 
 func TestRename_Entity_Success(t *testing.T) {
 	mod := mkModule("MyModule")
-	ent := mkEntity(mod.ID, "OldEntity")
-	dm := mkDomainModel(mod.ID, ent)
+	ent := mkEntityGen("OldEntity")
+	dm := mkDomainModelGen(mod.ID, ent)
 	dmUpdated := false
 	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
+		IsConnectedFunc:       func() bool { return true },
+		ListModulesFunc:       func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
 		RenameReferencesFunc: func(old, new string, dryRun bool) ([]types.RenameHit, error) {
 			return []types.RenameHit{{UnitID: "u1", Name: "SomeDoc", Count: 2}}, nil
 		},
-		UpdateDomainModelFunc: func(d *domainmodel.DomainModel) error { dmUpdated = true; return nil },
+		UpdateDomainModelGenFunc: func(d *genDm.DomainModel) error { dmUpdated = true; return nil },
 	}
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -89,11 +89,11 @@ func TestRename_Entity_Success(t *testing.T) {
 
 func TestRename_Entity_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
-	dm := mkDomainModel(mod.ID) // no entities
+	dm := mkDomainModelGen(mod.ID) // no entities
 	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
+		IsConnectedFunc:       func() bool { return true },
+		ListModulesFunc:       func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -112,12 +112,12 @@ func TestRename_Entity_NotFound(t *testing.T) {
 
 func TestRename_Entity_DryRun(t *testing.T) {
 	mod := mkModule("MyModule")
-	ent := mkEntity(mod.ID, "OldEntity")
-	dm := mkDomainModel(mod.ID, ent)
+	ent := mkEntityGen("OldEntity")
+	dm := mkDomainModelGen(mod.ID, ent)
 	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
+		IsConnectedFunc:       func() bool { return true },
+		ListModulesFunc:       func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
 		RenameReferencesFunc: func(old, new string, dryRun bool) ([]types.RenameHit, error) {
 			if !dryRun {
 				t.Error("Expected dryRun=true")
@@ -252,20 +252,20 @@ func TestRename_Module_Success(t *testing.T) {
 
 func TestRename_Association_Success(t *testing.T) {
 	mod := mkModule("MyModule")
-	ent1 := mkEntity(mod.ID, "Parent")
-	ent2 := mkEntity(mod.ID, "Child")
-	assoc := mkAssociation(mod.ID, "OldAssoc", ent1.ID, ent2.ID)
-	dm := mkDomainModel(mod.ID, ent1, ent2)
-	dm.Associations = []*domainmodel.Association{assoc}
+	ent1 := mkEntityGen("Parent")
+	ent2 := mkEntityGen("Child")
+	assoc := mkAssociationGen("OldAssoc", model.ID(ent1.ID()), model.ID(ent2.ID()))
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
+	dm.AddAssociations(assoc)
 	dmUpdated := false
 	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
+		IsConnectedFunc:       func() bool { return true },
+		ListModulesFunc:       func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
 		RenameReferencesFunc: func(old, new string, dryRun bool) ([]types.RenameHit, error) {
 			return nil, nil
 		},
-		UpdateDomainModelFunc: func(d *domainmodel.DomainModel) error { dmUpdated = true; return nil },
+		UpdateDomainModelGenFunc: func(d *genDm.DomainModel) error { dmUpdated = true; return nil },
 	}
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -286,11 +286,11 @@ func TestRename_Association_Success(t *testing.T) {
 
 func TestRename_Association_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
-	dm := mkDomainModel(mod.ID) // no associations
+	dm := mkDomainModelGen(mod.ID) // no associations
 	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
+		IsConnectedFunc:       func() bool { return true },
+		ListModulesFunc:       func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -309,12 +309,12 @@ func TestRename_Association_NotFound(t *testing.T) {
 
 func TestRename_Entity_BackendError(t *testing.T) {
 	mod := mkModule("MyModule")
-	ent := mkEntity(mod.ID, "Ent")
-	dm := mkDomainModel(mod.ID, ent)
+	ent := mkEntityGen("Ent")
+	dm := mkDomainModelGen(mod.ID, ent)
 	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
+		IsConnectedFunc:       func() bool { return true },
+		ListModulesFunc:       func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
 		RenameReferencesFunc: func(old, new string, dryRun bool) ([]types.RenameHit, error) {
 			return nil, fmt.Errorf("scan error")
 		},
@@ -530,13 +530,13 @@ func TestRename_Microflow_CollisionError(t *testing.T) {
 
 func TestRename_Entity_CollisionError(t *testing.T) {
 	mod := mkModule("MyModule")
-	ent1 := mkEntity(mod.ID, "EntityA")
-	ent2 := mkEntity(mod.ID, "EntityB")
-	dm := mkDomainModel(mod.ID, ent1, ent2)
+	ent1 := mkEntityGen("EntityA")
+	ent2 := mkEntityGen("EntityB")
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
 	mb := &mock.MockBackend{
-		IsConnectedFunc:    func() bool { return true },
-		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
+		IsConnectedFunc:       func() bool { return true },
+		ListModulesFunc:       func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
