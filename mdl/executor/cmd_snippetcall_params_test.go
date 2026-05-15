@@ -8,23 +8,38 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
 
-// mkSnippetWithParam creates a snippet that declares one entity-typed parameter.
-func mkSnippetWithParam(containerID model.ID, snippetName, paramName string) *pages.Snippet {
-	snp := mkSnippet(containerID, snippetName)
-	snp.Parameters = []*pages.SnippetParameter{
-		{
-			BaseElement: model.BaseElement{ID: nextID("sp")},
-			ContainerID: snp.ID,
-			Name:        paramName,
-			EntityName:  "Mod.Asset",
+// mkSnippetWithParam creates a gen-typed snippet with one declared parameter.
+func mkSnippetWithParam(id, snippetName, paramName string) *genPg.Snippet {
+	snp := mkSnippetGen(id, snippetName)
+	sp := genPg.NewSnippetParameter()
+	sp.SetName(paramName)
+	snp.AddParameters(sp)
+	return snp
+}
+
+// makeSnippetRepoWithQN builds a snippet repo that supports both ListAll and
+// FindByQualifiedName for the given snippets. moduleName is used to construct
+// qualified names for FindByQualifiedName lookups.
+func makeSnippetRepoWithQN(snps []*genPg.Snippet, moduleName string, containerID model.ID) *repostesting.RecordingSnippetRepository {
+	byQN := make(map[string]*genPg.Snippet, len(snps))
+	for _, s := range snps {
+		if s != nil {
+			byQN[moduleName+"."+s.Name()] = s
+		}
+	}
+	return &repostesting.RecordingSnippetRepository{
+		ListAllFunc:          func() ([]*genPg.Snippet, error) { return snps, nil },
+		GetContainerUUIDFunc: func(_ model.ID) (model.ID, error) { return containerID, nil },
+		FindByQualifiedNameFunc: func(qn string) (*genPg.Snippet, error) {
+			return byQN[qn], nil
 		},
 	}
-	return snp
 }
 
 // newPageBuilder returns a pageBuilder wired to the given mock backend and hierarchy.
@@ -53,19 +68,19 @@ func newPageBuilder(mb *mock.MockBackend, h *ContainerHierarchy, moduleName stri
 // without the required Params yields a validation error (issue #291 — guard).
 func TestSnippetCall_MissingParam_ReturnsError(t *testing.T) {
 	mod := mkModule("Mod")
-	snp := mkSnippetWithParam(mod.ID, "MySnippet", "Asset")
+	snp := mkSnippetWithParam(string(nextID("snp")), "MySnippet", "Asset")
 
 	h := mkHierarchy(mod)
-	withContainer(h, snp.ContainerID, mod.ID)
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:  func() bool { return true },
-		ListModulesFunc:  func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc:  func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return []*pages.Snippet{snp}, nil },
+		IsConnectedFunc:     func() bool { return true },
+		ListModulesFunc:     func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc:     func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListSnippetsGenFunc: func() ([]*genPg.Snippet, error) { return []*genPg.Snippet{snp}, nil },
 	}
 
 	pb := newPageBuilder(mb, h, "Mod")
+	pb.snippetsRepo = makeSnippetRepoWithQN([]*genPg.Snippet{snp}, "Mod", mod.ID)
 	w := &ast.WidgetV3{
 		Type:       "SNIPPETCALL",
 		Name:       "sc1",
@@ -85,19 +100,19 @@ func TestSnippetCall_MissingParam_ReturnsError(t *testing.T) {
 // Params mapping passes validation and produces a SnippetCallWidget with mappings.
 func TestSnippetCall_WithParam_Succeeds(t *testing.T) {
 	mod := mkModule("Mod")
-	snp := mkSnippetWithParam(mod.ID, "MySnippet", "Asset")
+	snp := mkSnippetWithParam(string(nextID("snp")), "MySnippet", "Asset")
 
 	h := mkHierarchy(mod)
-	withContainer(h, snp.ContainerID, mod.ID)
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:  func() bool { return true },
-		ListModulesFunc:  func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc:  func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return []*pages.Snippet{snp}, nil },
+		IsConnectedFunc:     func() bool { return true },
+		ListModulesFunc:     func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc:     func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListSnippetsGenFunc: func() ([]*genPg.Snippet, error) { return []*genPg.Snippet{snp}, nil },
 	}
 
 	pb := newPageBuilder(mb, h, "Mod")
+	pb.snippetsRepo = makeSnippetRepoWithQN([]*genPg.Snippet{snp}, "Mod", mod.ID)
 	w := &ast.WidgetV3{
 		Type: "SNIPPETCALL",
 		Name: "sc1",
@@ -126,19 +141,19 @@ func TestSnippetCall_WithParam_Succeeds(t *testing.T) {
 // snippet call against a snippet with no declared parameters works (no regression).
 func TestSnippetCall_NoParam_NoSnippetParams_Succeeds(t *testing.T) {
 	mod := mkModule("Mod")
-	snp := mkSnippet(mod.ID, "Footer") // no parameters declared
+	snp := mkSnippetGen(string(nextID("snp")), "Footer") // no parameters declared
 
 	h := mkHierarchy(mod)
-	withContainer(h, snp.ContainerID, mod.ID)
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:  func() bool { return true },
-		ListModulesFunc:  func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc:  func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return []*pages.Snippet{snp}, nil },
+		IsConnectedFunc:     func() bool { return true },
+		ListModulesFunc:     func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc:     func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListSnippetsGenFunc: func() ([]*genPg.Snippet, error) { return []*genPg.Snippet{snp}, nil },
 	}
 
 	pb := newPageBuilder(mb, h, "Mod")
+	pb.snippetsRepo = makeSnippetRepoWithQN([]*genPg.Snippet{snp}, "Mod", mod.ID)
 	w := &ast.WidgetV3{
 		Type:       "SNIPPETCALL",
 		Name:       "sc1",
@@ -158,19 +173,19 @@ func TestSnippetCall_NoParam_NoSnippetParams_Succeeds(t *testing.T) {
 // prefix (as the user might write $Asset: $var) are matched correctly.
 func TestSnippetCall_DollarPrefixParam_Succeeds(t *testing.T) {
 	mod := mkModule("Mod")
-	snp := mkSnippetWithParam(mod.ID, "MySnippet", "Asset")
+	snp := mkSnippetWithParam(string(nextID("snp")), "MySnippet", "Asset")
 
 	h := mkHierarchy(mod)
-	withContainer(h, snp.ContainerID, mod.ID)
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:  func() bool { return true },
-		ListModulesFunc:  func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc:  func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return []*pages.Snippet{snp}, nil },
+		IsConnectedFunc:     func() bool { return true },
+		ListModulesFunc:     func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc:     func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListSnippetsGenFunc: func() ([]*genPg.Snippet, error) { return []*genPg.Snippet{snp}, nil },
 	}
 
 	pb := newPageBuilder(mb, h, "Mod")
+	pb.snippetsRepo = makeSnippetRepoWithQN([]*genPg.Snippet{snp}, "Mod", mod.ID)
 	// User writes $Asset: $Asset (dollar-prefixed param name)
 	w := &ast.WidgetV3{
 		Type: "SNIPPETCALL",
