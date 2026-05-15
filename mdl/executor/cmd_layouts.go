@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 // listLayouts handles SHOW LAYOUTS command.
@@ -20,7 +21,7 @@ func listLayouts(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Get all layouts
-	layouts, err := ctx.Backend.ListLayouts()
+	layoutPairs, err := listLayoutsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list layouts", err)
 	}
@@ -35,15 +36,17 @@ func listLayouts(ctx *ExecContext, moduleName string) error {
 	}
 	var rows []row
 
-	for _, l := range layouts {
-		modID := h.FindModuleID(l.ContainerID)
+	for _, pair := range layoutPairs {
+		l := pair.Elem
+		containerID := model.ID(pair.ContainerID)
+		modID := h.FindModuleID(containerID)
 		modName := h.GetModuleName(modID)
 		if moduleName == "" || modName == moduleName {
-			qualifiedName := modName + "." + l.Name
-			folderPath := h.BuildFolderPath(l.ContainerID)
-			layoutType := string(l.LayoutType)
+			qualifiedName := modName + "." + l.Name()
+			folderPath := h.BuildFolderPath(containerID)
+			layoutType := l.LayoutType()
 
-			rows = append(rows, row{qualifiedName, modName, l.Name, folderPath, layoutType})
+			rows = append(rows, row{qualifiedName, modName, l.Name(), folderPath, layoutType})
 		}
 	}
 

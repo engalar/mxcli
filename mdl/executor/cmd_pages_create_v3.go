@@ -137,16 +137,17 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 	moduleID := module.ID
 
 	// Check if snippet already exists - collect ALL duplicates
-	existingSnippets, _ := ctx.Backend.ListSnippets()
+	existingSnippetPairs, _ := listSnippetsWithContainerGen(ctx)
 	var snippetsToDelete []model.ID
-	for _, snip := range existingSnippets {
-		modID := getModuleID(ctx, snip.ContainerID)
+	for _, pair := range existingSnippetPairs {
+		snip := pair.Elem
+		modID := getModuleID(ctx, model.ID(pair.ContainerID))
 		modName := getModuleName(ctx, modID)
-		if modName == s.Name.Module && snip.Name == s.Name.Name {
+		if modName == s.Name.Module && snip.Name() == s.Name.Name {
 			if !s.IsReplace && !s.IsModify && len(snippetsToDelete) == 0 {
 				return mdlerrors.NewAlreadyExists("snippet", s.Name.String())
 			}
-			snippetsToDelete = append(snippetsToDelete, snip.ID)
+			snippetsToDelete = append(snippetsToDelete, model.ID(snip.ID()))
 		}
 	}
 

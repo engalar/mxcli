@@ -172,7 +172,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 		for _, pair := range pagePairs {
 			pg := pair.Elem
 			if moduleContainers[model.ID(pair.ContainerID)] {
-				if err := ctx.Backend.DeletePage(model.ID(pg.ID())); err != nil {
+				if err := ctx.Backend.DeletePageGen(model.ID(pg.ID())); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete page %s: %v\n", pg.Name(), err)
 				} else {
 					nPages++
@@ -182,11 +182,12 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete snippets in this module
-	if snippets, err := ctx.Backend.ListSnippets(); err == nil {
-		for _, snippet := range snippets {
-			if moduleContainers[snippet.ContainerID] {
-				if err := ctx.Backend.DeleteSnippet(snippet.ID); err != nil {
-					fmt.Fprintf(ctx.Output, "Warning: failed to delete snippet %s: %v\n", snippet.Name, err)
+	if snippetPairs, err := listSnippetsWithContainerGen(ctx); err == nil {
+		for _, pair := range snippetPairs {
+			snippet := pair.Elem
+			if moduleContainers[model.ID(pair.ContainerID)] {
+				if err := ctx.Backend.DeleteSnippetGen(model.ID(snippet.ID())); err != nil {
+					fmt.Fprintf(ctx.Output, "Warning: failed to delete snippet %s: %v\n", snippet.Name(), err)
 				} else {
 					nSnippets++
 				}
@@ -208,11 +209,12 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete layouts in this module
-	if layouts, err := ctx.Backend.ListLayouts(); err == nil {
-		for _, l := range layouts {
-			if moduleContainers[l.ContainerID] {
-				if err := ctx.Backend.DeleteLayout(l.ID); err != nil {
-					fmt.Fprintf(ctx.Output, "Warning: failed to delete layout %s: %v\n", l.Name, err)
+	if layoutPairs, err := listLayoutsWithContainerGen(ctx); err == nil {
+		for _, pair := range layoutPairs {
+			l := pair.Elem
+			if moduleContainers[model.ID(pair.ContainerID)] {
+				if err := ctx.Backend.DeleteLayoutGen(model.ID(l.ID())); err != nil {
+					fmt.Fprintf(ctx.Output, "Warning: failed to delete layout %s: %v\n", l.Name(), err)
 				} else {
 					nLayouts++
 				}
@@ -491,9 +493,9 @@ func listModules(ctx *ExecContext) error {
 	}
 
 	// Count snippets
-	if snippets, err := ctx.Backend.ListSnippets(); err == nil {
-		for _, s := range snippets {
-			modID := h.FindModuleID(s.ContainerID)
+	if snippetPairs, err := listSnippetsWithContainerGen(ctx); err == nil {
+		for _, pair := range snippetPairs {
+			modID := h.FindModuleID(model.ID(pair.ContainerID))
 			snippetCounts[modID]++
 		}
 	}
@@ -715,10 +717,11 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Output snippets
-	if snippets, err := ctx.Backend.ListSnippets(); err == nil {
-		for _, s := range snippets {
-			if moduleContainers[s.ContainerID] {
-				if err := describeSnippet(ctx, ast.QualifiedName{Module: moduleName, Name: s.Name}); err == nil {
+	if snippetPairs, err := listSnippetsWithContainerGen(ctx); err == nil {
+		for _, pair := range snippetPairs {
+			s := pair.Elem
+			if moduleContainers[model.ID(pair.ContainerID)] {
+				if err := describeSnippet(ctx, ast.QualifiedName{Module: moduleName, Name: s.Name()}); err == nil {
 					fmt.Fprintln(ctx.Output)
 				}
 			}
@@ -726,10 +729,11 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Output layouts
-	if layouts, err := ctx.Backend.ListLayouts(); err == nil {
-		for _, l := range layouts {
-			if moduleContainers[l.ContainerID] {
-				if err := describeLayout(ctx, ast.QualifiedName{Module: moduleName, Name: l.Name}); err == nil {
+	if layoutPairs, err := listLayoutsWithContainerGen(ctx); err == nil {
+		for _, pair := range layoutPairs {
+			l := pair.Elem
+			if moduleContainers[model.ID(pair.ContainerID)] {
+				if err := describeLayout(ctx, ast.QualifiedName{Module: moduleName, Name: l.Name()}); err == nil {
 					fmt.Fprintln(ctx.Output)
 				}
 			}

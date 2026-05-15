@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 // listSnippets handles SHOW SNIPPETS command.
@@ -20,7 +21,7 @@ func listSnippets(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Get all snippets
-	snippets, err := ctx.Backend.ListSnippets()
+	snippetPairs, err := listSnippetsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list snippets", err)
 	}
@@ -35,14 +36,16 @@ func listSnippets(ctx *ExecContext, moduleName string) error {
 	}
 	var rows []row
 
-	for _, s := range snippets {
-		modID := h.FindModuleID(s.ContainerID)
+	for _, pair := range snippetPairs {
+		s := pair.Elem
+		containerID := model.ID(pair.ContainerID)
+		modID := h.FindModuleID(containerID)
 		modName := h.GetModuleName(modID)
 		if moduleName == "" || modName == moduleName {
-			qualifiedName := modName + "." + s.Name
-			folderPath := h.BuildFolderPath(s.ContainerID)
+			qualifiedName := modName + "." + s.Name()
+			folderPath := h.BuildFolderPath(containerID)
 
-			rows = append(rows, row{qualifiedName, modName, s.Name, folderPath, len(s.Parameters)})
+			rows = append(rows, row{qualifiedName, modName, s.Name(), folderPath, len(s.ParametersItems())})
 		}
 	}
 

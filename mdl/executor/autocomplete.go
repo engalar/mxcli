@@ -118,16 +118,17 @@ func getSnippetNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	snippets, err := ctx.Backend.ListSnippets()
+	snippetPairs, err := listSnippetsWithContainerGen(ctx)
 	if err != nil {
 		return nil
 	}
 	names := make([]string, 0)
-	for _, s := range snippets {
-		modID := h.FindModuleID(s.ContainerID)
+	for _, pair := range snippetPairs {
+		s := pair.Elem
+		modID := h.FindModuleID(model.ID(pair.ContainerID))
 		modName := h.GetModuleName(modID)
 		if moduleFilter == "" || modName == moduleFilter {
-			names = append(names, modName+"."+s.Name)
+			names = append(names, modName+"."+s.Name())
 		}
 	}
 	return names
@@ -199,16 +200,17 @@ func getLayoutNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	layouts, err := ctx.Backend.ListLayouts()
+	layoutPairs, err := listLayoutsWithContainerGen(ctx)
 	if err != nil {
 		return nil
 	}
 	names := make([]string, 0)
-	for _, layout := range layouts {
-		modID := h.FindModuleID(layout.ContainerID)
+	for _, pair := range layoutPairs {
+		layout := pair.Elem
+		modID := h.FindModuleID(model.ID(pair.ContainerID))
 		modName := h.GetModuleName(modID)
 		if moduleFilter == "" || modName == moduleFilter {
-			names = append(names, modName+"."+layout.Name)
+			names = append(names, modName+"."+layout.Name())
 		}
 	}
 	return names

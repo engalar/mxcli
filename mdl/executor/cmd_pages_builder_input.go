@@ -108,8 +108,9 @@ func (pb *pageBuilder) resolveSnippetRef(snippetRef string) (model.ID, error) {
 		return "", mdlerrors.NewNotFound("snippet", snippetRef)
 	}
 
-	// Legacy fallback: sdk-typed backend listing.
-	snippets, err := pb.backend.ListSnippets()
+	// Fallback: gen-typed backend listing without per-call container resolution.
+	// (snippetsRepo is the preferred path; this branch covers the no-repo case.)
+	snippets, err := pb.backend.ListSnippetsGen()
 	if err != nil {
 		return "", err
 	}
@@ -120,10 +121,17 @@ func (pb *pageBuilder) resolveSnippetRef(snippetRef string) (model.ID, error) {
 	}
 
 	for _, s := range snippets {
-		modID := h.FindModuleID(s.ContainerID)
+		if s == nil {
+			continue
+		}
+		containerID, err := pb.backend.GetPageContainerUUID(model.ID(s.ID()))
+		if err != nil {
+			continue
+		}
+		modID := h.FindModuleID(containerID)
 		modName := h.GetModuleName(modID)
-		if s.Name == snippetName && (moduleName == "" || modName == moduleName) {
-			return s.ID, nil
+		if s.Name() == snippetName && (moduleName == "" || modName == moduleName) {
+			return model.ID(s.ID()), nil
 		}
 	}
 
