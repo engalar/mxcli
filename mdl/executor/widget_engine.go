@@ -532,7 +532,7 @@ func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.W
 }
 
 // applyChildSlots processes child slot mappings, building child widgets and embedding them.
-func (e *PluggableWidgetEngine) applyChildSlots(builder backend.WidgetObjectBuilder, slots []ChildSlotMapping, w *ast.WidgetV3, propertyTypeIDs map[string]pages.PropertyTypeIDEntry) error {
+func (e *PluggableWidgetEngine) applyChildSlots(builder backend.WidgetObjectBuilder, slots []ChildSlotMapping, w *ast.WidgetV3, propertyTypeIDs map[string]types.PropertyTypeIDEntry) error {
 	if len(slots) == 0 {
 		return nil
 	}
@@ -594,7 +594,7 @@ func (e *PluggableWidgetEngine) applyChildSlots(builder backend.WidgetObjectBuil
 
 // linkedPropertyKeysFor returns a comma-separated list of property keys whose
 // DataSourceProperty field matches dsKey, drawn from the propertyTypeIDs map.
-func linkedPropertyKeysFor(dsKey string, propertyTypeIDs map[string]pages.PropertyTypeIDEntry) string {
+func linkedPropertyKeysFor(dsKey string, propertyTypeIDs map[string]types.PropertyTypeIDEntry) string {
 	var keys []string
 	for k, e := range propertyTypeIDs {
 		if e.DataSourceProperty == dsKey {
