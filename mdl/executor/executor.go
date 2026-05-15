@@ -22,20 +22,18 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
-	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
 
 // executorCache holds cached data for performance across multiple operations.
 type executorCache struct {
-	modules      []*model.Module
-	units        []*types.UnitInfo
-	folders      []*types.FolderInfo
-	domainModels []*domainmodel.DomainModel
-	hierarchy    *ContainerHierarchy
+	modules   []*model.Module
+	units     []*types.UnitInfo
+	folders   []*types.FolderInfo
+	hierarchy *ContainerHierarchy
 	// pages, layouts are cached separately as they may change during execution
 
 	// Track items created during this session (not yet visible via reader)
