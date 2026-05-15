@@ -23,18 +23,7 @@ These scripts are write-path integration tests, not microflow tests. Run each
 one against a fresh copy of the fixture:
 
 ```bash
-for SCRIPT in mdl-examples/widget-roundtrip/*.test.mdl; do
-  TMPDIR=$(mktemp -d)
-  cp testdata/expr-checker/minimal.mpr "$TMPDIR/test.mpr"
-  cp -r testdata/expr-checker/mprcontents "$TMPDIR/mprcontents"
-  if ./bin/mxcli exec "$SCRIPT" -p "$TMPDIR/test.mpr" > /dev/null 2>&1; then
-    echo "PASS: $(basename $SCRIPT)"
-  else
-    echo "FAIL: $(basename $SCRIPT)"
-    ./bin/mxcli exec "$SCRIPT" -p "$TMPDIR/test.mpr" 2>&1
-  fi
-  rm -rf "$TMPDIR"
-done
+scripts/run-widget-roundtrip.sh
 ```
 
 **Pass criteria:** all three scripts print `PASS` and the overall exit code is 0.
