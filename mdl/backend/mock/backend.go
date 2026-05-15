@@ -146,8 +146,6 @@ type MockBackend struct {
 	MoveSnippetGenFunc   func(id, containerID model.ID) error
 
 	// Stage 3.3.5.E0.create_v3 transitional bridge Func fields.
-	SDKPageToGenFunc    func(page *backend.Page) (*genPg.Page, error)
-	SDKSnippetToGenFunc func(snippet *backend.Snippet) (*genPg.Snippet, error)
 
 	// EnumerationBackend
 	ListEnumerationsFunc  func() ([]*model.Enumeration, error)

@@ -239,16 +239,3 @@ func (m *MockBackend) MoveSnippetGen(id, containerID model.ID) error {
 
 // Stage 3.3.5.E0.create_v3 transitional bridge stubs.
 
-func (m *MockBackend) SDKPageToGen(page *backend.Page) (*genPg.Page, error) {
-	if m.SDKPageToGenFunc != nil {
-		return m.SDKPageToGenFunc(page)
-	}
-	return nil, fmt.Errorf("MockBackend.SDKPageToGen not configured")
-}
-
-func (m *MockBackend) SDKSnippetToGen(snippet *backend.Snippet) (*genPg.Snippet, error) {
-	if m.SDKSnippetToGenFunc != nil {
-		return m.SDKSnippetToGenFunc(snippet)
-	}
-	return nil, fmt.Errorf("MockBackend.SDKSnippetToGen not configured")
-}

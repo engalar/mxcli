@@ -287,16 +287,12 @@ type WidgetObjectBuilder interface {
 	SetPrimitive(propertyKey string, value string)
 	SetSelection(propertyKey string, value string)
 	SetExpression(propertyKey string, value string)
-	SetDataSource(propertyKey string, ds DataSource)
 	// SetDataSourceOpaque sets datasource using backend-opaque serialized value.
 	SetDataSourceOpaque(propertyKey string, ds OpaqueDataSource)
-	SetChildWidgets(propertyKey string, children []Widget)
 	// SetChildWidgetsOpaque sets child widgets using backend-opaque serialized values.
-	// Stage 3.3.5.D1 migration helper to avoid sdk/pages dependency in executor paths.
 	SetChildWidgetsOpaque(propertyKey string, children []OpaqueWidget)
 	SetTextTemplate(propertyKey string, text string)
 	SetTextTemplateWithParams(propertyKey string, text string, entityContext string)
-	SetAction(propertyKey string, action ClientAction)
 	// SetActionOpaque sets action using backend-opaque serialized value.
 	SetActionOpaque(propertyKey string, action OpaqueAction)
 	SetAttributeObjects(propertyKey string, attributePaths []string)
