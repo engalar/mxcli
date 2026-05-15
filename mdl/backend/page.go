@@ -76,4 +76,12 @@ type PageBackend interface {
 	// Building blocks and page templates (read-only)
 	ListBuildingBlocks() ([]*BuildingBlock, error)
 	ListPageTemplates() ([]*PageTemplate, error)
+
+	// Stage 3.3.5.E0.create_v3 transitional bridges — convert sdk-typed
+	// Page / Snippet values produced by the V3 page builder into their
+	// gen-typed counterparts via BSON roundtrip so the gen Create / Update
+	// surface can be used without rewriting the entire builder. Retire
+	// once the V3 builder emits gen types directly.
+	SDKPageToGen(page *Page) (*genPg.Page, error)
+	SDKSnippetToGen(snippet *Snippet) (*genPg.Snippet, error)
 }

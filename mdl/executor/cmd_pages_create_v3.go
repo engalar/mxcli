@@ -8,6 +8,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 )
 
 // ============================================================================
@@ -83,21 +84,30 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 		page.AllowedRoles = defaultDocumentAccessRoles(ctx, module)
 	}
 
+	// Convert sdk-typed builder output to gen Page so persistence goes
+	// through the gen-native CreatePageGen / UpdatePageGen surface
+	// (Stage 3.3.5.E0.create_v3 transitional bridge — see SDKPageToGen).
+	genPage, err := ctx.Backend.SDKPageToGen(page)
+	if err != nil {
+		return mdlerrors.NewBackend("convert page to gen", err)
+	}
+
 	// Replace or create the page in the MPR
 	if len(pagesToDelete) > 0 {
 		// Reuse first existing page's UUID to avoid git delete+add (which crashes Studio Pro RevStatusCache)
 		page.ID = pagesToDelete[0]
-		if err := ctx.Backend.UpdatePage(page); err != nil {
+		genPage.SetID(element.ID(page.ID))
+		if err := ctx.Backend.UpdatePageGen(genPage); err != nil {
 			return mdlerrors.NewBackend("update page", err)
 		}
 		// Delete any additional duplicates
 		for _, id := range pagesToDelete[1:] {
-			if err := ctx.Backend.DeletePage(id); err != nil {
+			if err := ctx.Backend.DeletePageGen(id); err != nil {
 				return mdlerrors.NewBackend("delete duplicate page", err)
 			}
 		}
 	} else {
-		if err := ctx.Backend.CreatePage(page); err != nil {
+		if err := ctx.Backend.CreatePageGen(string(page.ContainerID), "Documents", genPage); err != nil {
 			return mdlerrors.NewBackend("create page", err)
 		}
 	}
@@ -163,13 +173,21 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 
 	// Delete old snippets only after successful build
 	for _, id := range snippetsToDelete {
-		if err := ctx.Backend.DeleteSnippet(id); err != nil {
+		if err := ctx.Backend.DeleteSnippetGen(id); err != nil {
 			return mdlerrors.NewBackend("delete existing snippet", err)
 		}
 	}
 
+	// Convert sdk-typed builder output to gen Snippet so persistence
+	// goes through the gen-native CreateSnippetGen surface
+	// (Stage 3.3.5.E0.create_v3 transitional bridge — see SDKSnippetToGen).
+	genSnippet, err := ctx.Backend.SDKSnippetToGen(snippet)
+	if err != nil {
+		return mdlerrors.NewBackend("convert snippet to gen", err)
+	}
+
 	// Create the snippet in the MPR
-	if err := ctx.Backend.CreateSnippet(snippet); err != nil {
+	if err := ctx.Backend.CreateSnippetGen(string(snippet.ContainerID), "Documents", genSnippet); err != nil {
 		return mdlerrors.NewBackend("create snippet", err)
 	}
 
