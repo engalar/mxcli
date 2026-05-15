@@ -75,27 +75,6 @@ func (m *MockBackend) LoadWidgetTemplate(widgetID string, projectPath string) (b
 	return nil, nil
 }
 
-func (m *MockBackend) SerializeWidgetToOpaque(w backend.Widget) backend.OpaqueWidget {
-	if m.SerializeWidgetToOpaqueFunc != nil {
-		return m.SerializeWidgetToOpaqueFunc(w)
-	}
-	return nil
-}
-
-func (m *MockBackend) SerializeDataSourceToOpaque(ds backend.DataSource) backend.OpaqueDataSource {
-	if m.SerializeDataSourceToOpaqueFunc != nil {
-		return m.SerializeDataSourceToOpaqueFunc(ds)
-	}
-	return nil
-}
-
-func (m *MockBackend) SerializeClientActionToOpaque(a backend.ClientAction) backend.OpaqueAction {
-	if m.SerializeClientActionToOpaqueFunc != nil {
-		return m.SerializeClientActionToOpaqueFunc(a)
-	}
-	return nil
-}
-
 func (m *MockBackend) BuildCreateAttributeObject(attributePath string, objectTypeID, propertyTypeID, valueTypeID string) (any, error) {
 	if m.BuildCreateAttributeObjectFunc != nil {
 		return m.BuildCreateAttributeObjectFunc(attributePath, objectTypeID, propertyTypeID, valueTypeID)

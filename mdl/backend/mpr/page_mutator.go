@@ -89,59 +89,12 @@ func (m *mprPageMutator) SetWidgetProperty(widgetRef string, prop string, value 
 	return setRawWidgetPropertyMut(result.widget, prop, value)
 }
 
-func (m *mprPageMutator) SetWidgetDataSource(widgetRef string, ds backend.DataSource) error {
-	result := m.widgetFinder(m.rawData, widgetRef)
-	if result == nil {
-		return fmt.Errorf("widget %q not found", widgetRef)
-	}
-	serialized := serializeDataSourceBson(ds)
-	if serialized == nil {
-		return fmt.Errorf("unsupported DataSource type %T", ds)
-	}
-	dSet(result.widget, "DataSource", serialized)
-	return nil
-}
-
 func (m *mprPageMutator) SetColumnProperty(gridRef string, columnRef string, prop string, value any) error {
 	result := findBsonColumn(m.rawData, gridRef, columnRef, m.widgetFinder)
 	if result == nil {
 		return fmt.Errorf("column %q on grid %q not found", columnRef, gridRef)
 	}
 	return setColumnPropertyMut(result.widget, result.colPropKeys, prop, value)
-}
-
-func (m *mprPageMutator) InsertWidget(widgetRef string, columnRef string, position backend.InsertPosition, widgets []backend.Widget) error {
-	var result *bsonWidgetResult
-	if columnRef != "" {
-		result = findBsonColumn(m.rawData, widgetRef, columnRef, m.widgetFinder)
-	} else {
-		result = m.widgetFinder(m.rawData, widgetRef)
-	}
-	if result == nil {
-		if columnRef != "" {
-			return fmt.Errorf("column %q on widget %q not found", columnRef, widgetRef)
-		}
-		return fmt.Errorf("widget %q not found", widgetRef)
-	}
-
-	// Serialize widgets
-	newBsonWidgets, err := serializeWidgets(widgets)
-	if err != nil {
-		return fmt.Errorf("serialize widgets: %w", err)
-	}
-
-	insertIdx := result.index
-	if strings.EqualFold(string(position), "after") {
-		insertIdx = result.index + 1
-	}
-
-	newArr := make([]any, 0, len(result.parentArr)+len(newBsonWidgets))
-	newArr = append(newArr, result.parentArr[:insertIdx]...)
-	newArr = append(newArr, newBsonWidgets...)
-	newArr = append(newArr, result.parentArr[insertIdx:]...)
-
-	dSetArray(result.parentDoc, result.parentKey, newArr)
-	return nil
 }
 
 func (m *mprPageMutator) DropWidget(refs []backend.WidgetRef) error {
@@ -161,34 +114,6 @@ func (m *mprPageMutator) DropWidget(refs []backend.WidgetRef) error {
 		newArr = append(newArr, result.parentArr[result.index+1:]...)
 		dSetArray(result.parentDoc, result.parentKey, newArr)
 	}
-	return nil
-}
-
-func (m *mprPageMutator) ReplaceWidget(widgetRef string, columnRef string, widgets []backend.Widget) error {
-	var result *bsonWidgetResult
-	if columnRef != "" {
-		result = findBsonColumn(m.rawData, widgetRef, columnRef, m.widgetFinder)
-	} else {
-		result = m.widgetFinder(m.rawData, widgetRef)
-	}
-	if result == nil {
-		if columnRef != "" {
-			return fmt.Errorf("column %q on widget %q not found", columnRef, widgetRef)
-		}
-		return fmt.Errorf("widget %q not found", widgetRef)
-	}
-
-	newBsonWidgets, err := serializeWidgets(widgets)
-	if err != nil {
-		return fmt.Errorf("serialize widgets: %w", err)
-	}
-
-	newArr := make([]any, 0, len(result.parentArr)-1+len(newBsonWidgets))
-	newArr = append(newArr, result.parentArr[:result.index]...)
-	newArr = append(newArr, newBsonWidgets...)
-	newArr = append(newArr, result.parentArr[result.index+1:]...)
-
-	dSetArray(result.parentDoc, result.parentKey, newArr)
 	return nil
 }
 

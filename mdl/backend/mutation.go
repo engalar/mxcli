@@ -119,25 +119,13 @@ type PageMutator interface {
 	// and value is the string representation.
 	SetWidgetProperty(widgetRef string, prop string, value any) error
 
-	// SetWidgetDataSource sets the DataSource on the named widget.
-	SetWidgetDataSource(widgetRef string, ds DataSource) error
-
 	// SetColumnProperty sets a property on a column within a grid widget.
 	SetColumnProperty(gridRef string, columnRef string, prop string, value any) error
 
 	// --- Widget tree operations ---
 
-	// InsertWidget inserts serialized widgets at the given position
-	// relative to the target widget or column. Position is "before" or "after".
-	// columnRef is "" for widget targeting; non-empty for column targeting.
-	InsertWidget(widgetRef string, columnRef string, position InsertPosition, widgets []Widget) error
-
 	// DropWidget removes widgets by ref from the tree.
 	DropWidget(refs []WidgetRef) error
-
-	// ReplaceWidget replaces the target widget or column with the given widgets.
-	// columnRef is "" for widget targeting.
-	ReplaceWidget(widgetRef string, columnRef string, widgets []Widget) error
 
 	// FindWidget checks if a widget with the given name exists in the tree.
 	FindWidget(name string) bool
@@ -396,19 +384,6 @@ type WidgetBuilderBackend interface {
 	// for applying property operations. projectPath is used for runtime template
 	// augmentation from .mpk files.
 	LoadWidgetTemplate(widgetID string, projectPath string) (WidgetObjectBuilder, error)
-
-	// SerializeWidgetToOpaque converts a domain Widget to an opaque form
-	// suitable for passing to WidgetObjectBuilder.SetChildWidgets.
-	// This replaces the direct mpr.SerializeWidget call.
-	SerializeWidgetToOpaque(w Widget) OpaqueWidget
-
-	// SerializeDataSourceToOpaque converts a domain DataSource to an opaque
-	// form suitable for embedding in widget properties.
-	SerializeDataSourceToOpaque(ds DataSource) OpaqueDataSource
-
-	// SerializeClientActionToOpaque converts a domain ClientAction to opaque
-	// form suitable for embedding in widget properties.
-	SerializeClientActionToOpaque(a ClientAction) OpaqueAction
 
 	// BuildCreateAttributeObject creates an attribute object for filter widgets.
 	// Returns an opaque value to be collected into attribute object lists.

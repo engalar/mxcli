@@ -61,34 +61,6 @@ func (b *MprBackend) LoadWidgetTemplate(widgetID string, projectPath string) (ba
 	}, nil
 }
 
-// SerializeWidgetToOpaque converts a domain Widget to opaque BSON form.
-// Stage 3.3.5.D1: if the widget is a *backend.GenCustomWidgetElem produced by
-// FinalizeGen, the underlying gen element is encoded via the gen codec so the
-// output BSON matches the mpr serializer's output exactly (same roundtrip that
-// SDKPageToGen uses).  All other sdk-typed widgets fall through to the legacy
-// mpr.SerializeWidget path.
-func (b *MprBackend) SerializeWidgetToOpaque(w backend.Widget) backend.OpaqueWidget {
-	if genW, ok := w.(*backend.GenCustomWidgetElem); ok {
-		enc := codec.Encoder{}
-		raw, err := enc.Encode(genW.AsElement())
-		if err == nil {
-			return bson.Raw(raw)
-		}
-		log.Printf("warning: SerializeWidgetToOpaque gen encode failed (%v), falling back to mpr path", err)
-	}
-	return mpr.SerializeWidget(w)
-}
-
-// SerializeDataSourceToOpaque converts a domain DataSource to opaque BSON form.
-func (b *MprBackend) SerializeDataSourceToOpaque(ds backend.DataSource) backend.OpaqueDataSource {
-	return mpr.SerializeCustomWidgetDataSource(ds)
-}
-
-// SerializeClientActionToOpaque converts a domain ClientAction to opaque BSON form.
-func (b *MprBackend) SerializeClientActionToOpaque(a backend.ClientAction) backend.OpaqueAction {
-	return mpr.SerializeClientAction(a)
-}
-
 // SerializeGenElemToOpaque encodes a gen element.Element to opaque BSON form
 // for use as a child widget, datasource, or action in pluggable widget templates.
 // This is the Cat-B complement to SerializeWidgetToOpaque for use when buildWidgetV3
