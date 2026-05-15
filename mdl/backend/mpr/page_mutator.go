@@ -15,6 +15,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/bsonutil"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
@@ -178,6 +180,84 @@ func (m *mprPageMutator) ReplaceWidget(widgetRef string, columnRef string, widge
 	}
 
 	newBsonWidgets, err := serializeWidgets(widgets)
+	if err != nil {
+		return fmt.Errorf("serialize widgets: %w", err)
+	}
+
+	newArr := make([]any, 0, len(result.parentArr)-1+len(newBsonWidgets))
+	newArr = append(newArr, result.parentArr[:result.index]...)
+	newArr = append(newArr, newBsonWidgets...)
+	newArr = append(newArr, result.parentArr[result.index+1:]...)
+
+	dSetArray(result.parentDoc, result.parentKey, newArr)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Stage 3.3.5.D0 — gen-typed additive siblings
+// ---------------------------------------------------------------------------
+
+func (m *mprPageMutator) SetWidgetDataSourceGen(widgetRef string, ds element.Element) error {
+	result := m.widgetFinder(m.rawData, widgetRef)
+	if result == nil {
+		return fmt.Errorf("widget %q not found", widgetRef)
+	}
+	serialized, err := serializeElementToBsonD(ds)
+	if err != nil {
+		return fmt.Errorf("serialize DataSource: %w", err)
+	}
+	dSet(result.widget, "DataSource", serialized)
+	return nil
+}
+
+func (m *mprPageMutator) InsertWidgetGen(widgetRef string, columnRef string, position backend.InsertPosition, widgets []element.Element) error {
+	var result *bsonWidgetResult
+	if columnRef != "" {
+		result = findBsonColumn(m.rawData, widgetRef, columnRef, m.widgetFinder)
+	} else {
+		result = m.widgetFinder(m.rawData, widgetRef)
+	}
+	if result == nil {
+		if columnRef != "" {
+			return fmt.Errorf("column %q on widget %q not found", columnRef, widgetRef)
+		}
+		return fmt.Errorf("widget %q not found", widgetRef)
+	}
+
+	newBsonWidgets, err := serializeWidgetsGen(widgets)
+	if err != nil {
+		return fmt.Errorf("serialize widgets: %w", err)
+	}
+
+	insertIdx := result.index
+	if strings.EqualFold(string(position), "after") {
+		insertIdx = result.index + 1
+	}
+
+	newArr := make([]any, 0, len(result.parentArr)+len(newBsonWidgets))
+	newArr = append(newArr, result.parentArr[:insertIdx]...)
+	newArr = append(newArr, newBsonWidgets...)
+	newArr = append(newArr, result.parentArr[insertIdx:]...)
+
+	dSetArray(result.parentDoc, result.parentKey, newArr)
+	return nil
+}
+
+func (m *mprPageMutator) ReplaceWidgetGen(widgetRef string, columnRef string, widgets []element.Element) error {
+	var result *bsonWidgetResult
+	if columnRef != "" {
+		result = findBsonColumn(m.rawData, widgetRef, columnRef, m.widgetFinder)
+	} else {
+		result = m.widgetFinder(m.rawData, widgetRef)
+	}
+	if result == nil {
+		if columnRef != "" {
+			return fmt.Errorf("column %q on widget %q not found", columnRef, widgetRef)
+		}
+		return fmt.Errorf("widget %q not found", widgetRef)
+	}
+
+	newBsonWidgets, err := serializeWidgetsGen(widgets)
 	if err != nil {
 		return fmt.Errorf("serialize widgets: %w", err)
 	}
@@ -1484,6 +1564,42 @@ func setTranslatableText(parent bson.D, key string, value any) {
 // ---------------------------------------------------------------------------
 // Widget serialization helpers
 // ---------------------------------------------------------------------------
+
+// serializeWidgetsGen encodes each gen element.Element widget via codec (the
+// same codec.Encoder used by the workflow mutator gen path), then unmarshals
+// to bson.D so it can be stitched into the existing raw-BSON widget arrays.
+func serializeWidgetsGen(widgets []element.Element) ([]any, error) {
+	result := make([]any, 0, len(widgets))
+	for _, w := range widgets {
+		if w == nil {
+			continue
+		}
+		doc, err := serializeElementToBsonD(w)
+		if err != nil {
+			return nil, fmt.Errorf("encode %s: %w", w.TypeName(), err)
+		}
+		result = append(result, doc)
+	}
+	return result, nil
+}
+
+// serializeElementToBsonD encodes an element.Element to bson.D via codec.
+// Mirrors SerializeWorkflowActivityGen (Stage 3.3.3.D7) for the pages domain.
+func serializeElementToBsonD(e element.Element) (bson.D, error) {
+	if e == nil {
+		return nil, fmt.Errorf("serializeElementToBsonD: nil element")
+	}
+	enc := &codec.Encoder{}
+	bytes, err := enc.Encode(e)
+	if err != nil {
+		return nil, err
+	}
+	var doc bson.D
+	if err := bson.Unmarshal(bytes, &doc); err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
 
 func serializeWidgets(widgets []pages.Widget) ([]any, error) {
 	var result []any

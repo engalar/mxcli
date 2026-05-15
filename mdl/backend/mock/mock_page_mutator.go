@@ -3,8 +3,11 @@
 package mock
 
 import (
+	"fmt"
+
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
@@ -31,6 +34,11 @@ type MockPageMutator struct {
 	WidgetScopeFunc          func() map[string]model.ID
 	ParamScopeFunc           func() (map[string]model.ID, map[string]string)
 	SaveFunc                 func() error
+
+	// Stage 3.3.5.D0 gen-typed siblings.
+	SetWidgetDataSourceGenFunc func(widgetRef string, ds element.Element) error
+	InsertWidgetGenFunc        func(widgetRef string, columnRef string, position backend.InsertPosition, widgets []element.Element) error
+	ReplaceWidgetGenFunc       func(widgetRef string, columnRef string, widgets []element.Element) error
 }
 
 func (m *MockPageMutator) ContainerType() backend.ContainerKind {
@@ -143,4 +151,25 @@ func (m *MockPageMutator) Save() error {
 		return m.SaveFunc()
 	}
 	return nil
+}
+
+func (m *MockPageMutator) SetWidgetDataSourceGen(widgetRef string, ds element.Element) error {
+	if m.SetWidgetDataSourceGenFunc != nil {
+		return m.SetWidgetDataSourceGenFunc(widgetRef, ds)
+	}
+	return fmt.Errorf("MockPageMutator.SetWidgetDataSourceGen not configured")
+}
+
+func (m *MockPageMutator) InsertWidgetGen(widgetRef string, columnRef string, position backend.InsertPosition, widgets []element.Element) error {
+	if m.InsertWidgetGenFunc != nil {
+		return m.InsertWidgetGenFunc(widgetRef, columnRef, position, widgets)
+	}
+	return fmt.Errorf("MockPageMutator.InsertWidgetGen not configured")
+}
+
+func (m *MockPageMutator) ReplaceWidgetGen(widgetRef string, columnRef string, widgets []element.Element) error {
+	if m.ReplaceWidgetGenFunc != nil {
+		return m.ReplaceWidgetGenFunc(widgetRef, columnRef, widgets)
+	}
+	return fmt.Errorf("MockPageMutator.ReplaceWidgetGen not configured")
 }
