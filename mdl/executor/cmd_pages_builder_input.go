@@ -217,10 +217,10 @@ func (pb *pageBuilder) resolvePageRef(pageRef string) (model.ID, error) {
 	}
 
 	for _, p := range pgs {
-		modID := h.FindModuleID(p.ContainerID)
-		modName := h.GetModuleName(modID)
-		if p.Name == pageName && (moduleName == "" || modName == moduleName) {
-			return p.ID, nil
+		containerID, _ := pb.backend.GetPageContainerUUID(model.ID(p.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if p.Name() == pageName && (moduleName == "" || modName == moduleName) {
+			return model.ID(p.ID()), nil
 		}
 	}
 
