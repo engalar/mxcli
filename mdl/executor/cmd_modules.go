@@ -14,7 +14,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // execCreateModule handles CREATE MODULE statements.
@@ -664,14 +663,14 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	if entities, err := listEntitiesForModuleGen(ctx, moduleName); err == nil {
 		sortedEntities := sortEntitiesByGeneralizationGen(entities, moduleName)
 		for _, entity := range sortedEntities {
-			if err := describeEntity(ctx, ast.QualifiedName{Module: moduleName, Name: entity.Name()}); err == nil {
+			if err := describeEntityGen(ctx, ast.QualifiedName{Module: moduleName, Name: entity.Name()}); err == nil {
 				fmt.Fprintln(ctx.Output)
 			}
 		}
 	}
 	if assocs, err := listAssociationsForModuleGen(ctx, moduleName); err == nil {
 		for _, assoc := range assocs {
-			if err := describeAssociation(ctx, ast.QualifiedName{Module: moduleName, Name: assoc.Name()}); err == nil {
+			if err := describeAssociationGen(ctx, ast.QualifiedName{Module: moduleName, Name: assoc.Name()}); err == nil {
 				fmt.Fprintln(ctx.Output)
 			}
 		}
@@ -833,101 +832,6 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 
 	fmt.Fprintln(ctx.Output, "/")
 	return nil
-}
-
-// sortEntitiesByGeneralization returns entities sorted so base entities come before derived entities.
-// Uses topological sort based on GeneralizationRef (parent entity reference).
-func sortEntitiesByGeneralization(entities []*domainmodel.Entity, moduleName string) []*domainmodel.Entity {
-	if len(entities) <= 1 {
-		return entities
-	}
-
-	// Build map of entity name to entity
-	entityByName := make(map[string]*domainmodel.Entity)
-	for _, ent := range entities {
-		entityByName[ent.Name] = ent
-		// Also index by qualified name
-		entityByName[moduleName+"."+ent.Name] = ent
-	}
-
-	// Build adjacency: child -> parent (for entities within this module)
-	// We need to output parent before child
-	parentOf := make(map[string]string)
-	for _, ent := range entities {
-		if ent.GeneralizationRef != "" {
-			// GeneralizationRef is like "ModuleName.EntityName"
-			parentOf[ent.Name] = ent.GeneralizationRef
-		}
-	}
-
-	// Kahn's algorithm for topological sort
-	// Count incoming edges (how many entities extend this one)
-	inDegree := make(map[string]int)
-	for _, ent := range entities {
-		inDegree[ent.Name] = 0
-	}
-	for child, parent := range parentOf {
-		// Only count if parent is in the same module
-		if _, inModule := entityByName[parent]; inModule {
-			inDegree[child]++
-		}
-	}
-
-	// Start with entities that have no parent in this module
-	var queue []string
-	for _, ent := range entities {
-		if inDegree[ent.Name] == 0 {
-			queue = append(queue, ent.Name)
-		}
-	}
-
-	// Build children map for traversal
-	childrenOf := make(map[string][]string)
-	for child, parent := range parentOf {
-		if _, inModule := entityByName[parent]; inModule {
-			// Extract just the entity name if it's qualified
-			parentName := parent
-			if strings.Contains(parent, ".") {
-				parts := strings.Split(parent, ".")
-				parentName = parts[len(parts)-1]
-			}
-			childrenOf[parentName] = append(childrenOf[parentName], child)
-		}
-	}
-
-	// Process queue
-	var sorted []*domainmodel.Entity
-	visited := make(map[string]bool)
-	for len(queue) > 0 {
-		name := queue[0]
-		queue = queue[1:]
-
-		if visited[name] {
-			continue
-		}
-		visited[name] = true
-
-		if ent, ok := entityByName[name]; ok {
-			sorted = append(sorted, ent)
-		}
-
-		// Add children whose parents are now processed
-		for _, child := range childrenOf[name] {
-			inDegree[child]--
-			if inDegree[child] == 0 {
-				queue = append(queue, child)
-			}
-		}
-	}
-
-	// Add any remaining entities (handles cycles or external parents)
-	for _, ent := range entities {
-		if !visited[ent.Name] {
-			sorted = append(sorted, ent)
-		}
-	}
-
-	return sorted
 }
 
 // =============================================================================

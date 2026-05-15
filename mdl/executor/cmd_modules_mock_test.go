@@ -9,7 +9,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 func TestShowModules_Mock(t *testing.T) {
@@ -22,17 +22,17 @@ func TestShowModules_Mock(t *testing.T) {
 	h := mkHierarchy(mod1, mod2)
 	withContainer(h, unitID, mod1.ID)
 
-	ent := mkEntity(mod1.ID, "Customer")
-	dm := mkDomainModel(mod1.ID, ent)
+	ent := mkEntityGen("Customer")
+	dm := mkDomainModelGen(mod1.ID, ent)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod1.ID: {dm}})
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod1, mod2}, nil },
-		ListUnitsFunc:        func() ([]*types.UnitInfo, error) { return units, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return []*domainmodel.DomainModel{dm}, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod1, mod2}, nil },
+		ListUnitsFunc:   func() ([]*types.UnitInfo, error) { return units, nil },
 	}
 
-	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h), withDomainModelsRepo(dmRepo))
 	assertNoError(t, listModules(ctx))
 
 	out := buf.String()
@@ -57,13 +57,12 @@ func TestShowModules_JSON(t *testing.T) {
 	h := mkHierarchy(mod)
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListUnitsFunc:        func() ([]*types.UnitInfo, error) { return nil, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return nil, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListUnitsFunc:   func() ([]*types.UnitInfo, error) { return nil, nil },
 	}
 
-	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h), withFormat(FormatJSON))
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h), withFormat(FormatJSON), withDomainModelsRepo(makeDomainModelsRepo(nil)))
 	assertNoError(t, listModules(ctx))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "App")
