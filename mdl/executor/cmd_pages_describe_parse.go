@@ -754,23 +754,24 @@ func extractSnippetRef(ctx *ExecContext, w map[string]any) string {
 		// Try binary ID and resolve to name
 		if formID := extractBinaryID(formCall["Form"]); formID != "" {
 			// Try to resolve the snippet name from ID
-			snippets, err := ctx.Backend.ListSnippets()
+			snippetPairs, err := listSnippetsWithContainerGen(ctx)
 			if err == nil {
-				for _, s := range snippets {
-					if string(s.ID) == formID {
+				for _, pair := range snippetPairs {
+					s := pair.Elem
+					if string(s.ID()) == formID {
 						moduleName := ""
 						if modules, err := ctx.Backend.ListModules(); err == nil {
 							for _, m := range modules {
-								if m.ID == s.ContainerID {
+								if m.ID == model.ID(pair.ContainerID) {
 									moduleName = m.Name
 									break
 								}
 							}
 						}
 						if moduleName != "" {
-							return moduleName + "." + s.Name
+							return moduleName + "." + s.Name()
 						}
-						return s.Name
+						return s.Name()
 					}
 				}
 			}
