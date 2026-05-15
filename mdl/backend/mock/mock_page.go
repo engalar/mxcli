@@ -5,24 +5,9 @@ package mock
 import (
 	"fmt"
 
-	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/model"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
-
-func (m *MockBackend) ListBuildingBlocks() ([]*backend.BuildingBlock, error) {
-	if m.ListBuildingBlocksFunc != nil {
-		return m.ListBuildingBlocksFunc()
-	}
-	return nil, nil
-}
-
-func (m *MockBackend) ListPageTemplates() ([]*backend.PageTemplate, error) {
-	if m.ListPageTemplatesFunc != nil {
-		return m.ListPageTemplatesFunc()
-	}
-	return nil, nil
-}
 
 // Stage 3.3.5.C1 gen-typed Page/Layout/Snippet stubs.
 //

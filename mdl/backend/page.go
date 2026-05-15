@@ -5,16 +5,6 @@ package backend
 import (
 	"github.com/mendixlabs/mxcli/model"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
-	"github.com/mendixlabs/mxcli/sdk/pages"
-)
-
-// Re-export sdk/pages types still used by the read-only BuildingBlock /
-// PageTemplate surface. The Page/Layout/Snippet aliases were retired in
-// Stage 3.3.5.E1 alongside the legacy ListPages/ListLayouts/ListSnippets
-// and Delete* PageBackend methods.
-type (
-	BuildingBlock = pages.BuildingBlock
-	PageTemplate  = pages.PageTemplate
 )
 
 // PageBackend provides page, layout, and snippet operations.
@@ -61,7 +51,4 @@ type PageBackend interface {
 	DeleteSnippetGen(id model.ID) error
 	MoveSnippetGen(id, containerID model.ID) error
 
-	// Building blocks and page templates (read-only)
-	ListBuildingBlocks() ([]*BuildingBlock, error)
-	ListPageTemplates() ([]*PageTemplate, error)
 }

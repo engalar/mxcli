@@ -301,13 +301,6 @@ func (b *MprBackend) GetMicroflowGen(id model.ID) (*genMf.Microflow, error) {
 // PageBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListBuildingBlocks() ([]*backend.BuildingBlock, error) {
-	return b.reader.ListBuildingBlocks()
-}
-func (b *MprBackend) ListPageTemplates() ([]*backend.PageTemplate, error) {
-	return b.reader.ListPageTemplates()
-}
-
 // ---------------------------------------------------------------------------
 // Stage 3.3.5.C1 — gen-typed Page / Layout / Snippet surface
 //

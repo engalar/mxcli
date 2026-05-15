@@ -102,14 +102,6 @@ type MockBackend struct {
 	ListNanoflowsGenFunc  func() ([]*genMf.Nanoflow, error)
 	GetMicroflowGenFunc   func(id model.ID) (*genMf.Microflow, error)
 
-	// PageBackend — legacy sdk-typed ListPages/GetPage/DeletePage/
-	// ListLayouts/GetLayout/DeleteLayout/ListSnippets/DeleteSnippet
-	// Func fields retired in Stage 3.3.5.E1; only the read-only
-	// BuildingBlocks / PageTemplates Func fields remain alongside the
-	// gen-typed Func fields below.
-	ListBuildingBlocksFunc func() ([]*backend.BuildingBlock, error)
-	ListPageTemplatesFunc  func() ([]*backend.PageTemplate, error)
-
 	// Stage 3.3.5.C1 gen-typed PageBackend surface — sole supported
 	// page read/write API after the Stage 3.3.5.E1 cutover.
 	ListPagesGenFunc         func() ([]*genPg.Page, error)
