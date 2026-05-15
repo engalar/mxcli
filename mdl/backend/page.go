@@ -5,33 +5,32 @@ package backend
 import (
 	"github.com/mendixlabs/mxcli/model"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // PageBackend provides page, layout, and snippet operations.
 type PageBackend interface {
 	// Pages — legacy sdk-typed surface, retired in Stage 3.3.5.E1.
-	ListPages() ([]*pages.Page, error)
-	GetPage(id model.ID) (*pages.Page, error)
-	CreatePage(page *pages.Page) error
-	UpdatePage(page *pages.Page) error
+	ListPages() ([]*Page, error)
+	GetPage(id model.ID) (*Page, error)
+	CreatePage(page *Page) error
+	UpdatePage(page *Page) error
 	DeletePage(id model.ID) error
-	MovePage(page *pages.Page) error
+	MovePage(page *Page) error
 
 	// Layouts — legacy sdk-typed surface, retired in Stage 3.3.5.E1.
-	ListLayouts() ([]*pages.Layout, error)
-	GetLayout(id model.ID) (*pages.Layout, error)
-	CreateLayout(layout *pages.Layout) error
-	UpdateLayout(layout *pages.Layout) error
+	ListLayouts() ([]*Layout, error)
+	GetLayout(id model.ID) (*Layout, error)
+	CreateLayout(layout *Layout) error
+	UpdateLayout(layout *Layout) error
 	DeleteLayout(id model.ID) error
 
 	// Snippets — legacy sdk-typed surface, retired in Stage 3.3.5.E1.
 	// No GetSnippet: snippets are resolved by qualified name via ListSnippets.
-	ListSnippets() ([]*pages.Snippet, error)
-	CreateSnippet(snippet *pages.Snippet) error
-	UpdateSnippet(snippet *pages.Snippet) error
+	ListSnippets() ([]*Snippet, error)
+	CreateSnippet(snippet *Snippet) error
+	UpdateSnippet(snippet *Snippet) error
 	DeleteSnippet(id model.ID) error
-	MoveSnippet(snippet *pages.Snippet) error
+	MoveSnippet(snippet *Snippet) error
 
 	// Stage 3.3.5.C1 gen-typed Page/Layout/Snippet surface — additive
 	// alongside the legacy sdk-typed methods. Production wiring in
@@ -75,6 +74,6 @@ type PageBackend interface {
 	MoveSnippetGen(id, containerID model.ID) error
 
 	// Building blocks and page templates (read-only)
-	ListBuildingBlocks() ([]*pages.BuildingBlock, error)
-	ListPageTemplates() ([]*pages.PageTemplate, error)
+	ListBuildingBlocks() ([]*BuildingBlock, error)
+	ListPageTemplates() ([]*PageTemplate, error)
 }

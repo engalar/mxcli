@@ -18,7 +18,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/widgets"
 )
 
@@ -61,13 +60,18 @@ func (b *MprBackend) LoadWidgetTemplate(widgetID string, projectPath string) (ba
 }
 
 // SerializeWidgetToOpaque converts a domain Widget to opaque BSON form.
-func (b *MprBackend) SerializeWidgetToOpaque(w pages.Widget) any {
+func (b *MprBackend) SerializeWidgetToOpaque(w backend.Widget) backend.OpaqueWidget {
 	return mpr.SerializeWidget(w)
 }
 
 // SerializeDataSourceToOpaque converts a domain DataSource to opaque BSON form.
-func (b *MprBackend) SerializeDataSourceToOpaque(ds pages.DataSource) any {
+func (b *MprBackend) SerializeDataSourceToOpaque(ds backend.DataSource) backend.OpaqueDataSource {
 	return mpr.SerializeCustomWidgetDataSource(ds)
+}
+
+// SerializeClientActionToOpaque converts a domain ClientAction to opaque BSON form.
+func (b *MprBackend) SerializeClientActionToOpaque(a backend.ClientAction) backend.OpaqueAction {
+	return mpr.SerializeClientAction(a)
 }
 
 // BuildCreateAttributeObject creates an attribute object for filter widgets.
@@ -140,21 +144,39 @@ func (ob *mprWidgetObjectBuilder) SetExpression(propertyKey string, value string
 	})
 }
 
-func (ob *mprWidgetObjectBuilder) SetDataSource(propertyKey string, ds pages.DataSource) {
+func (ob *mprWidgetObjectBuilder) SetDataSource(propertyKey string, ds backend.DataSource) {
+	if ds == nil {
+		return
+	}
+	ob.SetDataSourceOpaque(propertyKey, mpr.SerializeCustomWidgetDataSource(ds))
+}
+
+func (ob *mprWidgetObjectBuilder) SetDataSourceOpaque(propertyKey string, ds backend.OpaqueDataSource) {
 	if ds == nil {
 		return
 	}
 	ob.object = updateWidgetPropertyValue(ob.object, ob.propertyTypeIDs, propertyKey, func(val bson.D) bson.D {
-		return setDataSource(val, ds)
+		return setDataSourceOpaque(val, ds)
 	})
 }
 
-func (ob *mprWidgetObjectBuilder) SetChildWidgets(propertyKey string, children []pages.Widget) {
+func (ob *mprWidgetObjectBuilder) SetChildWidgets(propertyKey string, children []backend.Widget) {
+	if len(children) == 0 {
+		return
+	}
+	opaqueChildren := make([]backend.OpaqueWidget, 0, len(children))
+	for _, child := range children {
+		opaqueChildren = append(opaqueChildren, mpr.SerializeWidget(child))
+	}
+	ob.SetChildWidgetsOpaque(propertyKey, opaqueChildren)
+}
+
+func (ob *mprWidgetObjectBuilder) SetChildWidgetsOpaque(propertyKey string, children []backend.OpaqueWidget) {
 	if len(children) == 0 {
 		return
 	}
 	ob.object = updateWidgetPropertyValue(ob.object, ob.propertyTypeIDs, propertyKey, func(val bson.D) bson.D {
-		return setChildWidgets(val, children)
+		return setChildWidgetsOpaque(val, children)
 	})
 }
 
@@ -185,16 +207,22 @@ func (ob *mprWidgetObjectBuilder) SetTextTemplateWithParams(propertyKey string, 
 	})
 }
 
-func (ob *mprWidgetObjectBuilder) SetAction(propertyKey string, action pages.ClientAction) {
+func (ob *mprWidgetObjectBuilder) SetAction(propertyKey string, action backend.ClientAction) {
 	if action == nil {
 		return
 	}
-	actionBSON := mpr.SerializeClientAction(action)
+	ob.SetActionOpaque(propertyKey, mpr.SerializeClientAction(action))
+}
+
+func (ob *mprWidgetObjectBuilder) SetActionOpaque(propertyKey string, action backend.OpaqueAction) {
+	if action == nil {
+		return
+	}
 	ob.object = updateWidgetPropertyValue(ob.object, ob.propertyTypeIDs, propertyKey, func(val bson.D) bson.D {
 		result := make(bson.D, 0, len(val))
 		for _, elem := range val {
 			if elem.Key == "Action" {
-				result = append(result, bson.E{Key: "Action", Value: actionBSON})
+				result = append(result, bson.E{Key: "Action", Value: action})
 			} else {
 				result = append(result, elem)
 			}
@@ -248,7 +276,7 @@ func (ob *mprWidgetObjectBuilder) SetAttributeObjects(propertyKey string, attrib
 // Template metadata
 // ---------------------------------------------------------------------------
 
-func (ob *mprWidgetObjectBuilder) PropertyTypeIDs() map[string]pages.PropertyTypeIDEntry {
+func (ob *mprWidgetObjectBuilder) PropertyTypeIDs() map[string]backend.PropertyTypeIDEntry {
 	return ob.propertyTypeIDs
 }
 
@@ -301,9 +329,9 @@ func (ob *mprWidgetObjectBuilder) CloneGallerySelectionProperty(propertyKey stri
 // Finalize
 // ---------------------------------------------------------------------------
 
-func (ob *mprWidgetObjectBuilder) Finalize(id model.ID, name string, label string, editable string) *pages.CustomWidget {
-	return &pages.CustomWidget{
-		BaseWidget: pages.BaseWidget{
+func (ob *mprWidgetObjectBuilder) Finalize(id model.ID, name string, label string, editable string) *backend.CustomWidget {
+	return &backend.CustomWidget{
+		BaseWidget: backend.BaseWidget{
 			BaseElement: model.BaseElement{
 				ID:       id,
 				TypeName: "CustomWidgets$CustomWidget",
@@ -425,11 +453,15 @@ func setPrimitiveValue(val bson.D, value string) bson.D {
 	return result
 }
 
-func setDataSource(val bson.D, ds pages.DataSource) bson.D {
+func setDataSource(val bson.D, ds backend.DataSource) bson.D {
+	return setDataSourceOpaque(val, mpr.SerializeCustomWidgetDataSource(ds))
+}
+
+func setDataSourceOpaque(val bson.D, ds backend.OpaqueDataSource) bson.D {
 	result := make(bson.D, 0, len(val))
 	for _, elem := range val {
 		if elem.Key == "DataSource" {
-			result = append(result, bson.E{Key: "DataSource", Value: mpr.SerializeCustomWidgetDataSource(ds)})
+			result = append(result, bson.E{Key: "DataSource", Value: ds})
 		} else {
 			result = append(result, elem)
 		}
@@ -482,10 +514,18 @@ func setAttributeRef(val bson.D, attrPath string) bson.D {
 	return result
 }
 
-func setChildWidgets(val bson.D, children []pages.Widget) bson.D {
+func setChildWidgets(val bson.D, children []backend.Widget) bson.D {
+	opaqueChildren := make([]backend.OpaqueWidget, 0, len(children))
+	for _, w := range children {
+		opaqueChildren = append(opaqueChildren, mpr.SerializeWidget(w))
+	}
+	return setChildWidgetsOpaque(val, opaqueChildren)
+}
+
+func setChildWidgetsOpaque(val bson.D, children []backend.OpaqueWidget) bson.D {
 	widgetsArr := bson.A{int32(2)}
 	for _, w := range children {
-		widgetsArr = append(widgetsArr, mpr.SerializeWidget(w))
+		widgetsArr = append(widgetsArr, w)
 	}
 
 	result := make(bson.D, 0, len(val))

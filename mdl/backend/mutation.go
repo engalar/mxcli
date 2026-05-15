@@ -6,7 +6,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // ContainerKind represents the type of page container (page, layout, or snippet).
@@ -25,6 +24,12 @@ const (
 	InsertBefore InsertPosition = "before"
 	InsertAfter  InsertPosition = "after"
 )
+
+// Opaque* types define backend-owned serialized payloads crossing the
+// executor/backend boundary during Stage 3.3.5 migration.
+type OpaqueWidget = any
+type OpaqueDataSource = any
+type OpaqueAction = any
 
 // PluggablePropertyOp represents the operation type for SetPluggableProperty.
 type PluggablePropertyOp string
@@ -78,7 +83,7 @@ type PageMutator interface {
 	SetWidgetProperty(widgetRef string, prop string, value any) error
 
 	// SetWidgetDataSource sets the DataSource on the named widget.
-	SetWidgetDataSource(widgetRef string, ds pages.DataSource) error
+	SetWidgetDataSource(widgetRef string, ds DataSource) error
 
 	// SetColumnProperty sets a property on a column within a grid widget.
 	SetColumnProperty(gridRef string, columnRef string, prop string, value any) error
@@ -88,14 +93,14 @@ type PageMutator interface {
 	// InsertWidget inserts serialized widgets at the given position
 	// relative to the target widget or column. Position is "before" or "after".
 	// columnRef is "" for widget targeting; non-empty for column targeting.
-	InsertWidget(widgetRef string, columnRef string, position InsertPosition, widgets []pages.Widget) error
+	InsertWidget(widgetRef string, columnRef string, position InsertPosition, widgets []Widget) error
 
 	// DropWidget removes widgets by ref from the tree.
 	DropWidget(refs []WidgetRef) error
 
 	// ReplaceWidget replaces the target widget or column with the given widgets.
 	// columnRef is "" for widget targeting.
-	ReplaceWidget(widgetRef string, columnRef string, widgets []pages.Widget) error
+	ReplaceWidget(widgetRef string, columnRef string, widgets []Widget) error
 
 	// FindWidget checks if a widget with the given name exists in the tree.
 	FindWidget(name string) bool
@@ -155,16 +160,16 @@ type PageMutator interface {
 // PluggablePropertyContext carries operation-specific values for
 // SetPluggableProperty. Only fields relevant to the operation are used.
 type PluggablePropertyContext struct {
-	AttributePath  string             // "attribute", "association"
-	AttributePaths []string           // "attributeObjects"
-	AssocPath      string             // "association"
-	EntityName     string             // "association"
-	PrimitiveVal   string             // "primitive"
-	DataSource     pages.DataSource   // "datasource"
-	ChildWidgets   []pages.Widget     // "widgets"
-	Action         pages.ClientAction // "action"
-	TextTemplate   string             // "texttemplate"
-	Selection      string             // "selection"
+	AttributePath  string       // "attribute", "association"
+	AttributePaths []string     // "attributeObjects"
+	AssocPath      string       // "association"
+	EntityName     string       // "association"
+	PrimitiveVal   string       // "primitive"
+	DataSource     DataSource   // "datasource"
+	ChildWidgets   []Widget     // "widgets"
+	Action         ClientAction // "action"
+	TextTemplate   string       // "texttemplate"
+	Selection      string       // "selection"
 }
 
 // WorkflowMutator provides fine-grained mutation operations on a single
@@ -250,13 +255,13 @@ type WidgetSerializationBackend interface {
 	// SerializeWidget converts a domain Widget to its storage representation.
 	// The returned value is opaque to the caller; it is only used as input
 	// to mutation operations or passed to the backend for persistence.
-	SerializeWidget(w pages.Widget) (any, error)
+	SerializeWidget(w Widget) (any, error)
 
 	// SerializeClientAction converts a domain ClientAction to storage format.
-	SerializeClientAction(a pages.ClientAction) (any, error)
+	SerializeClientAction(a ClientAction) (any, error)
 
 	// SerializeDataSource converts a domain DataSource to storage format.
-	SerializeDataSource(ds pages.DataSource) (any, error)
+	SerializeDataSource(ds DataSource) (any, error)
 
 	// SerializeWorkflowActivityGen converts a gen-typed workflow activity
 	// element to storage format. Routes through codec.Encode +
@@ -282,11 +287,18 @@ type WidgetObjectBuilder interface {
 	SetPrimitive(propertyKey string, value string)
 	SetSelection(propertyKey string, value string)
 	SetExpression(propertyKey string, value string)
-	SetDataSource(propertyKey string, ds pages.DataSource)
-	SetChildWidgets(propertyKey string, children []pages.Widget)
+	SetDataSource(propertyKey string, ds DataSource)
+	// SetDataSourceOpaque sets datasource using backend-opaque serialized value.
+	SetDataSourceOpaque(propertyKey string, ds OpaqueDataSource)
+	SetChildWidgets(propertyKey string, children []Widget)
+	// SetChildWidgetsOpaque sets child widgets using backend-opaque serialized values.
+	// Stage 3.3.5.D1 migration helper to avoid sdk/pages dependency in executor paths.
+	SetChildWidgetsOpaque(propertyKey string, children []OpaqueWidget)
 	SetTextTemplate(propertyKey string, text string)
 	SetTextTemplateWithParams(propertyKey string, text string, entityContext string)
-	SetAction(propertyKey string, action pages.ClientAction)
+	SetAction(propertyKey string, action ClientAction)
+	// SetActionOpaque sets action using backend-opaque serialized value.
+	SetActionOpaque(propertyKey string, action OpaqueAction)
 	SetAttributeObjects(propertyKey string, attributePaths []string)
 
 	// --- Template metadata ---
@@ -308,7 +320,7 @@ type WidgetObjectBuilder interface {
 
 	// Finalize builds the CustomWidget from the mutated template.
 	// Returns the widget with RawType/RawObject populated from internal state.
-	Finalize(id model.ID, name string, label string, editable string) *pages.CustomWidget
+	Finalize(id model.ID, name string, label string, editable string) *CustomWidget
 }
 
 // DataGridColumnSpec carries pre-resolved column data for DataGrid2 construction.
@@ -317,16 +329,16 @@ type WidgetObjectBuilder interface {
 type DataGridColumnSpec struct {
 	Attribute    string         // Fully qualified attribute path (empty for action/custom-content columns)
 	Caption      string         // Column header caption
-	ChildWidgets []pages.Widget // Pre-built child widgets (for custom-content columns)
-	FilterWidget pages.Widget   // Pre-built filter widget for the column's filter slot (optional)
+	ChildWidgets []Widget       // Pre-built child widgets (for custom-content columns)
+	FilterWidget Widget         // Pre-built filter widget for the column's filter slot (optional)
 	Properties   map[string]any // Column properties (Sortable, Resizable, Visible, etc.)
 }
 
 // DataGridSpec carries all inputs needed to build a DataGrid2 widget object.
 type DataGridSpec struct {
-	DataSource    pages.DataSource
+	DataSource    DataSource
 	Columns       []DataGridColumnSpec
-	HeaderWidgets []pages.Widget // Pre-built CONTROLBAR widgets for filtersPlaceholder
+	HeaderWidgets []Widget // Pre-built CONTROLBAR widgets for filtersPlaceholder
 	// Paging overrides (empty string = use template default)
 	PagingOverrides map[string]string // camelCase widget key → string value
 	SelectionMode   string            // empty = no override
@@ -334,7 +346,7 @@ type DataGridSpec struct {
 
 // FilterWidgetSpec carries inputs for building a filter widget.
 type FilterWidgetSpec struct {
-	WidgetID   string // e.g. pages.WidgetIDDataGridTextFilter
+	WidgetID   string // e.g. WidgetIDDataGridTextFilter
 	FilterName string // widget name
 }
 
@@ -348,11 +360,15 @@ type WidgetBuilderBackend interface {
 	// SerializeWidgetToOpaque converts a domain Widget to an opaque form
 	// suitable for passing to WidgetObjectBuilder.SetChildWidgets.
 	// This replaces the direct mpr.SerializeWidget call.
-	SerializeWidgetToOpaque(w pages.Widget) any
+	SerializeWidgetToOpaque(w Widget) OpaqueWidget
 
 	// SerializeDataSourceToOpaque converts a domain DataSource to an opaque
 	// form suitable for embedding in widget properties.
-	SerializeDataSourceToOpaque(ds pages.DataSource) any
+	SerializeDataSourceToOpaque(ds DataSource) OpaqueDataSource
+
+	// SerializeClientActionToOpaque converts a domain ClientAction to opaque
+	// form suitable for embedding in widget properties.
+	SerializeClientActionToOpaque(a ClientAction) OpaqueAction
 
 	// BuildCreateAttributeObject creates an attribute object for filter widgets.
 	// Returns an opaque value to be collected into attribute object lists.
@@ -362,9 +378,9 @@ type WidgetBuilderBackend interface {
 	// The backend loads the template, constructs the storage object with columns,
 	// datasource, header widgets, paging, and selection, and returns a fully
 	// assembled CustomWidget. Returns the widget with an opaque RawType/RawObject.
-	BuildDataGrid2Widget(id model.ID, name string, spec DataGridSpec, projectPath string) (*pages.CustomWidget, error)
+	BuildDataGrid2Widget(id model.ID, name string, spec DataGridSpec, projectPath string) (*CustomWidget, error)
 
 	// BuildFilterWidget builds a filter widget (text, number, date, or dropdown filter)
 	// for use inside DataGrid2 filtersPlaceholder or CONTROLBAR sections.
-	BuildFilterWidget(spec FilterWidgetSpec, projectPath string) (pages.Widget, error)
+	BuildFilterWidget(spec FilterWidgetSpec, projectPath string) (Widget, error)
 }

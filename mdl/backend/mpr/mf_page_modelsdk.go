@@ -5,11 +5,11 @@ package mprbackend
 import (
 	"fmt"
 
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/model"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // All Create*/Update* methods in this file produce canonical BSON via the
@@ -28,7 +28,7 @@ import (
 
 // ── Page ──────────────────────────────────────────────────────────────────
 
-func (b *MprBackend) createPageViaModelsdk(page *pages.Page) error {
+func (b *MprBackend) createPageViaModelsdk(page *backend.Page) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
@@ -49,7 +49,7 @@ func (b *MprBackend) createPageViaModelsdk(page *pages.Page) error {
 	)
 }
 
-func (b *MprBackend) updatePageViaModelsdk(page *pages.Page) error {
+func (b *MprBackend) updatePageViaModelsdk(page *backend.Page) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
@@ -62,7 +62,7 @@ func (b *MprBackend) updatePageViaModelsdk(page *pages.Page) error {
 
 // ── Layout ────────────────────────────────────────────────────────────────
 
-func (b *MprBackend) createLayoutViaModelsdk(layout *pages.Layout) error {
+func (b *MprBackend) createLayoutViaModelsdk(layout *backend.Layout) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
@@ -83,7 +83,7 @@ func (b *MprBackend) createLayoutViaModelsdk(layout *pages.Layout) error {
 	)
 }
 
-func (b *MprBackend) updateLayoutViaModelsdk(layout *pages.Layout) error {
+func (b *MprBackend) updateLayoutViaModelsdk(layout *backend.Layout) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
@@ -96,7 +96,7 @@ func (b *MprBackend) updateLayoutViaModelsdk(layout *pages.Layout) error {
 
 // ── Snippet ───────────────────────────────────────────────────────────────
 
-func (b *MprBackend) createSnippetViaModelsdk(snippet *pages.Snippet) error {
+func (b *MprBackend) createSnippetViaModelsdk(snippet *backend.Snippet) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
@@ -117,7 +117,7 @@ func (b *MprBackend) createSnippetViaModelsdk(snippet *pages.Snippet) error {
 	)
 }
 
-func (b *MprBackend) updateSnippetViaModelsdk(snippet *pages.Snippet) error {
+func (b *MprBackend) updateSnippetViaModelsdk(snippet *backend.Snippet) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}

@@ -18,7 +18,6 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // Compile-time check.
@@ -90,7 +89,7 @@ func (m *mprPageMutator) SetWidgetProperty(widgetRef string, prop string, value 
 	return setRawWidgetPropertyMut(result.widget, prop, value)
 }
 
-func (m *mprPageMutator) SetWidgetDataSource(widgetRef string, ds pages.DataSource) error {
+func (m *mprPageMutator) SetWidgetDataSource(widgetRef string, ds backend.DataSource) error {
 	result := m.widgetFinder(m.rawData, widgetRef)
 	if result == nil {
 		return fmt.Errorf("widget %q not found", widgetRef)
@@ -111,7 +110,7 @@ func (m *mprPageMutator) SetColumnProperty(gridRef string, columnRef string, pro
 	return setColumnPropertyMut(result.widget, result.colPropKeys, prop, value)
 }
 
-func (m *mprPageMutator) InsertWidget(widgetRef string, columnRef string, position backend.InsertPosition, widgets []pages.Widget) error {
+func (m *mprPageMutator) InsertWidget(widgetRef string, columnRef string, position backend.InsertPosition, widgets []backend.Widget) error {
 	var result *bsonWidgetResult
 	if columnRef != "" {
 		result = findBsonColumn(m.rawData, widgetRef, columnRef, m.widgetFinder)
@@ -165,7 +164,7 @@ func (m *mprPageMutator) DropWidget(refs []backend.WidgetRef) error {
 	return nil
 }
 
-func (m *mprPageMutator) ReplaceWidget(widgetRef string, columnRef string, widgets []pages.Widget) error {
+func (m *mprPageMutator) ReplaceWidget(widgetRef string, columnRef string, widgets []backend.Widget) error {
 	var result *bsonWidgetResult
 	if columnRef != "" {
 		result = findBsonColumn(m.rawData, widgetRef, columnRef, m.widgetFinder)
@@ -1601,7 +1600,7 @@ func serializeElementToBsonD(e element.Element) (bson.D, error) {
 	return doc, nil
 }
 
-func serializeWidgets(widgets []pages.Widget) ([]any, error) {
+func serializeWidgets(widgets []backend.Widget) ([]any, error) {
 	var result []any
 	for _, w := range widgets {
 		bsonDoc := mpr.SerializeWidget(w)
@@ -1613,16 +1612,16 @@ func serializeWidgets(widgets []pages.Widget) ([]any, error) {
 	return result, nil
 }
 
-// serializeDataSourceBson converts a pages.DataSource to a BSON document for widget-level DataSource fields.
-func serializeDataSourceBson(ds pages.DataSource) bson.D {
+// serializeDataSourceBson converts a backend.DataSource to a BSON document for widget-level DataSource fields.
+func serializeDataSourceBson(ds backend.DataSource) bson.D {
 	switch d := ds.(type) {
-	case *pages.ListenToWidgetSource:
+	case *backend.ListenToWidgetSource:
 		return bson.D{
 			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 			{Key: "$Type", Value: "Forms$ListenTargetSource"},
 			{Key: "ListenTarget", Value: d.WidgetName},
 		}
-	case *pages.DatabaseSource:
+	case *backend.DatabaseSource:
 		var entityRef any
 		if d.EntityName != "" {
 			entityRef = bson.D{
@@ -1638,7 +1637,7 @@ func serializeDataSourceBson(ds pages.DataSource) bson.D {
 			{Key: "ForceFullObjects", Value: false},
 			{Key: "SourceVariable", Value: nil},
 		}
-	case *pages.MicroflowSource:
+	case *backend.MicroflowSource:
 		return bson.D{
 			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 			{Key: "$Type", Value: "Forms$MicroflowSource"},
@@ -1654,7 +1653,7 @@ func serializeDataSourceBson(ds pages.DataSource) bson.D {
 				{Key: "ProgressMessage", Value: nil},
 			}},
 		}
-	case *pages.NanoflowSource:
+	case *backend.NanoflowSource:
 		return bson.D{
 			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 			{Key: "$Type", Value: "Forms$NanoflowSource"},
