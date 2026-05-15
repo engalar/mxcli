@@ -21,11 +21,21 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/widgets"
 )
 
+// Widget IDs for DataGrid2 and its filter widgets.
+// Mirrored from sdk/pages to avoid adding sdk/pages to internal helper signatures.
+const (
+	widgetIDDataGrid2              = "com.mendix.widget.web.datagrid.Datagrid"
+	widgetIDDataGridTextFilter     = "com.mendix.widget.web.datagridtextfilter.DatagridTextFilter"
+	widgetIDDataGridDateFilter     = "com.mendix.widget.web.datagriddatefilter.DatagridDateFilter"
+	widgetIDDataGridDropdownFilter = "com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter"
+	widgetIDDataGridNumberFilter   = "com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter"
+)
+
 // BuildDataGrid2Widget builds a complete DataGrid2 CustomWidget from domain-typed inputs.
 func (b *MprBackend) BuildDataGrid2Widget(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*pages.CustomWidget, error) {
 	// Load embedded template
 	embeddedType, embeddedObject, embeddedIDs, embeddedObjectTypeID, err :=
-		widgets.GetTemplateFullBSON(pages.WidgetIDDataGrid2, types.GenerateID, projectPath)
+		widgets.GetTemplateFullBSON(widgetIDDataGrid2, types.GenerateID, projectPath)
 	if err != nil {
 		return nil, mdlerrors.NewBackend("load DataGrid2 template", err)
 	}
@@ -95,7 +105,7 @@ func (b *MprBackend) BuildFilterWidget(spec backend.FilterWidgetSpec, projectPat
 // DataGrid2 BSON construction (moved from executor)
 // ===========================================================================
 
-func (b *MprBackend) updateDataGrid2Object(templateObject bson.D, propertyTypeIDs map[string]pages.PropertyTypeIDEntry, spec backend.DataGridSpec) bson.D {
+func (b *MprBackend) updateDataGrid2Object(templateObject bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, spec backend.DataGridSpec) bson.D {
 	result := make(bson.D, 0, len(templateObject))
 
 	for _, elem := range templateObject {
@@ -116,7 +126,7 @@ func (b *MprBackend) updateDataGrid2Object(templateObject bson.D, propertyTypeID
 	return result
 }
 
-func (b *MprBackend) updateDataGrid2Properties(props bson.A, propertyTypeIDs map[string]pages.PropertyTypeIDEntry, spec backend.DataGridSpec) bson.A {
+func (b *MprBackend) updateDataGrid2Properties(props bson.A, propertyTypeIDs map[string]types.PropertyTypeIDEntry, spec backend.DataGridSpec) bson.A {
 	result := bson.A{int32(2)}
 
 	datasourceEntry := propertyTypeIDs["datasource"]
@@ -155,7 +165,7 @@ func (b *MprBackend) updateDataGrid2Properties(props bson.A, propertyTypeIDs map
 	return result
 }
 
-func (b *MprBackend) cloneAndUpdateColumnsProperty(templateProp bson.D, columnsEntry pages.PropertyTypeIDEntry, propertyTypeIDs map[string]pages.PropertyTypeIDEntry, columns []backend.DataGridColumnSpec) bson.D {
+func (b *MprBackend) cloneAndUpdateColumnsProperty(templateProp bson.D, columnsEntry types.PropertyTypeIDEntry, propertyTypeIDs map[string]types.PropertyTypeIDEntry, columns []backend.DataGridColumnSpec) bson.D {
 	// Extract template column object
 	var templateColumnObj bson.D
 	for _, elem := range templateProp {
@@ -221,7 +231,7 @@ func (b *MprBackend) cloneAndUpdateColumnsProperty(templateProp bson.D, columnsE
 	return result
 }
 
-func (b *MprBackend) cloneAndUpdateColumnObject(templateCol bson.D, col *backend.DataGridColumnSpec, columnPropertyIDs map[string]pages.PropertyTypeIDEntry) bson.D {
+func (b *MprBackend) cloneAndUpdateColumnObject(templateCol bson.D, col *backend.DataGridColumnSpec, columnPropertyIDs map[string]types.PropertyTypeIDEntry) bson.D {
 	attrPath := col.Attribute
 	caption := col.Caption
 	if caption == "" {
@@ -251,7 +261,7 @@ func (b *MprBackend) cloneAndUpdateColumnObject(templateCol bson.D, col *backend
 	return result
 }
 
-func (b *MprBackend) cloneAndUpdateColumnProperties(templateProps bson.A, columnPropertyIDs map[string]pages.PropertyTypeIDEntry, col *backend.DataGridColumnSpec, attrPath, caption string, contentWidgets []bson.D) bson.A {
+func (b *MprBackend) cloneAndUpdateColumnProperties(templateProps bson.A, columnPropertyIDs map[string]types.PropertyTypeIDEntry, col *backend.DataGridColumnSpec, attrPath, caption string, contentWidgets []bson.D) bson.A {
 	result := bson.A{int32(2)}
 
 	addedProps := make(map[string]bool)
@@ -434,7 +444,7 @@ func (b *MprBackend) cloneAndUpdateColumnProperties(templateProps bson.A, column
 	return result
 }
 
-func (b *MprBackend) buildDataGrid2ColumnObject(col *backend.DataGridColumnSpec, columnObjectTypeID string, columnPropertyIDs map[string]pages.PropertyTypeIDEntry) bson.D {
+func (b *MprBackend) buildDataGrid2ColumnObject(col *backend.DataGridColumnSpec, columnObjectTypeID string, columnPropertyIDs map[string]types.PropertyTypeIDEntry) bson.D {
 	attrPath := col.Attribute
 
 	// Serialize child widgets to BSON
@@ -594,7 +604,7 @@ func (b *MprBackend) buildDataGrid2ColumnObject(col *backend.DataGridColumnSpec,
 	}
 }
 
-func (b *MprBackend) cloneDataGrid2ObjectWithDatasourceOnly(templateObject bson.D, propertyTypeIDs map[string]pages.PropertyTypeIDEntry, datasource pages.DataSource) bson.D {
+func (b *MprBackend) cloneDataGrid2ObjectWithDatasourceOnly(templateObject bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, datasource pages.DataSource) bson.D {
 	result := make(bson.D, 0, len(templateObject))
 
 	for _, elem := range templateObject {
@@ -615,7 +625,7 @@ func (b *MprBackend) cloneDataGrid2ObjectWithDatasourceOnly(templateObject bson.
 	return result
 }
 
-func (b *MprBackend) updateOnlyDatasource(props bson.A, propertyTypeIDs map[string]pages.PropertyTypeIDEntry, datasource pages.DataSource) bson.A {
+func (b *MprBackend) updateOnlyDatasource(props bson.A, propertyTypeIDs map[string]types.PropertyTypeIDEntry, datasource pages.DataSource) bson.A {
 	result := bson.A{int32(2)}
 	datasourceEntry := propertyTypeIDs["datasource"]
 
@@ -640,7 +650,7 @@ func (b *MprBackend) updateOnlyDatasource(props bson.A, propertyTypeIDs map[stri
 }
 
 // applyDataGridPagingProps applies paging property overrides to a DataGrid2 BSON object.
-func (b *MprBackend) applyDataGridPagingProps(obj bson.D, propertyTypeIDs map[string]pages.PropertyTypeIDEntry, overrides map[string]string) bson.D {
+func (b *MprBackend) applyDataGridPagingProps(obj bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, overrides map[string]string) bson.D {
 	if len(overrides) == 0 {
 		return obj
 	}
@@ -681,7 +691,7 @@ func (b *MprBackend) applyDataGridPagingProps(obj bson.D, propertyTypeIDs map[st
 }
 
 // applyDataGridSelectionProp applies the Selection mode to a DataGrid2 object.
-func (b *MprBackend) applyDataGridSelectionProp(obj bson.D, propertyTypeIDs map[string]pages.PropertyTypeIDEntry, selectionMode string) bson.D {
+func (b *MprBackend) applyDataGridSelectionProp(obj bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, selectionMode string) bson.D {
 	itemSelectionEntry, ok := propertyTypeIDs["itemSelection"]
 	if !ok {
 		return obj
@@ -723,7 +733,7 @@ func (b *MprBackend) applyDataGridSelectionProp(obj bson.D, propertyTypeIDs map[
 // buildDataGrid2Property builds a single property BSON document for a DataGrid2 column.
 // attrRef and primitiveValue are reserved for future column types that require direct
 // attribute references or primitive default values; current callers pass empty strings.
-func buildDataGrid2Property(entry pages.PropertyTypeIDEntry, datasource pages.DataSource, attrRef string, primitiveValue string, _ *MprBackend) bson.D {
+func buildDataGrid2Property(entry types.PropertyTypeIDEntry, datasource pages.DataSource, attrRef string, primitiveValue string, _ *MprBackend) bson.D {
 	var datasourceBSON any
 	if datasource != nil {
 		datasourceBSON = mpr.SerializeCustomWidgetDataSource(datasource)
@@ -747,7 +757,7 @@ func buildDataGrid2Property(entry pages.PropertyTypeIDEntry, datasource pages.Da
 	}
 }
 
-func buildFiltersPlaceholderProperty(entry pages.PropertyTypeIDEntry, widgetsBSON []bson.D) bson.D {
+func buildFiltersPlaceholderProperty(entry types.PropertyTypeIDEntry, widgetsBSON []bson.D) bson.D {
 	widgetsArray := bson.A{int32(2)}
 	for _, w := range widgetsBSON {
 		widgetsArray = append(widgetsArray, w)
@@ -761,7 +771,7 @@ func buildFiltersPlaceholderProperty(entry pages.PropertyTypeIDEntry, widgetsBSO
 	}
 }
 
-func buildColumnPrimitiveProperty(entry pages.PropertyTypeIDEntry, value string) bson.D {
+func buildColumnPrimitiveProperty(entry types.PropertyTypeIDEntry, value string) bson.D {
 	return bson.D{
 		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 		{Key: "$Type", Value: "CustomWidgets$WidgetProperty"},
@@ -770,7 +780,7 @@ func buildColumnPrimitiveProperty(entry pages.PropertyTypeIDEntry, value string)
 	}
 }
 
-func buildColumnExpressionProperty(entry pages.PropertyTypeIDEntry, expression string) bson.D {
+func buildColumnExpressionProperty(entry types.PropertyTypeIDEntry, expression string) bson.D {
 	return bson.D{
 		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 		{Key: "$Type", Value: "CustomWidgets$WidgetProperty"},
@@ -805,7 +815,7 @@ func buildColumnExpressionProperty(entry pages.PropertyTypeIDEntry, expression s
 	}
 }
 
-func buildColumnAttributeProperty(entry pages.PropertyTypeIDEntry, attrPath string) bson.D {
+func buildColumnAttributeProperty(entry types.PropertyTypeIDEntry, attrPath string) bson.D {
 	var attributeRef any
 	if strings.Count(attrPath, ".") >= 2 {
 		attributeRef = bson.D{
@@ -823,7 +833,7 @@ func buildColumnAttributeProperty(entry pages.PropertyTypeIDEntry, attrPath stri
 	}
 }
 
-func buildColumnHeaderProperty(entry pages.PropertyTypeIDEntry, caption string) bson.D {
+func buildColumnHeaderProperty(entry types.PropertyTypeIDEntry, caption string) bson.D {
 	textTemplate := buildClientTemplateWithText(caption)
 
 	return bson.D{
@@ -834,7 +844,7 @@ func buildColumnHeaderProperty(entry pages.PropertyTypeIDEntry, caption string) 
 	}
 }
 
-func buildColumnContentProperty(entry pages.PropertyTypeIDEntry, widgetsList any) bson.D {
+func buildColumnContentProperty(entry types.PropertyTypeIDEntry, widgetsList any) bson.D {
 	widgetsArray := bson.A{int32(2)}
 	switch w := widgetsList.(type) {
 	case bson.D:
@@ -855,7 +865,7 @@ func buildColumnContentProperty(entry pages.PropertyTypeIDEntry, widgetsList any
 	}
 }
 
-func buildColumnDefaultProperty(entry pages.PropertyTypeIDEntry) bson.D {
+func buildColumnDefaultProperty(entry types.PropertyTypeIDEntry) bson.D {
 	var textTemplate any
 	if entry.ValueType == "TextTemplate" {
 		textTemplate = buildEmptyClientTemplate()
@@ -871,7 +881,7 @@ func buildColumnDefaultProperty(entry pages.PropertyTypeIDEntry) bson.D {
 
 // buildDefaultWidgetValueBSON builds a WidgetValue BSON with the given overrides.
 // nil values use defaults.
-func buildDefaultWidgetValueBSON(entry pages.PropertyTypeIDEntry, datasourceBSON any, attrRefBSON any, primitiveValue string, textTemplate any, widgetsArray bson.A) bson.D {
+func buildDefaultWidgetValueBSON(entry types.PropertyTypeIDEntry, datasourceBSON any, attrRefBSON any, primitiveValue string, textTemplate any, widgetsArray bson.A) bson.D {
 	if widgetsArray == nil {
 		widgetsArray = bson.A{int32(2)}
 	}
@@ -1225,13 +1235,13 @@ func (b *MprBackend) buildMinimalFilterWidgetBSON(widgetID, filterName string) b
 
 	var widgetTypeName string
 	switch widgetID {
-	case pages.WidgetIDDataGridTextFilter:
+	case widgetIDDataGridTextFilter:
 		widgetTypeName = "Text filter"
-	case pages.WidgetIDDataGridNumberFilter:
+	case widgetIDDataGridNumberFilter:
 		widgetTypeName = "Number filter"
-	case pages.WidgetIDDataGridDateFilter:
+	case widgetIDDataGridDateFilter:
 		widgetTypeName = "Date filter"
-	case pages.WidgetIDDataGridDropdownFilter:
+	case widgetIDDataGridDropdownFilter:
 		widgetTypeName = "Drop-down filter"
 	default:
 		widgetTypeName = "Text filter"
