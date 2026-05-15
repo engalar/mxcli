@@ -82,20 +82,6 @@ func (m *MockBackend) BuildCreateAttributeObject(attributePath string, objectTyp
 	return nil, nil
 }
 
-func (m *MockBackend) BuildDataGrid2Widget(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.CustomWidget, error) {
-	if m.BuildDataGrid2WidgetFunc != nil {
-		return m.BuildDataGrid2WidgetFunc(id, name, spec, projectPath)
-	}
-	return nil, fmt.Errorf("MockBackend.BuildDataGrid2Widget not configured")
-}
-
-func (m *MockBackend) BuildFilterWidget(spec backend.FilterWidgetSpec, projectPath string) (backend.Widget, error) {
-	if m.BuildFilterWidgetFunc != nil {
-		return m.BuildFilterWidgetFunc(spec, projectPath)
-	}
-	return nil, fmt.Errorf("MockBackend.BuildFilterWidget not configured")
-}
-
 func (m *MockBackend) BuildDataGrid2WidgetGen(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.GenCustomWidgetElem, error) {
 	if m.BuildDataGrid2WidgetGenFunc != nil {
 		return m.BuildDataGrid2WidgetGenFunc(id, name, spec, projectPath)

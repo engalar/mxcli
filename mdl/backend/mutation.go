@@ -389,23 +389,12 @@ type WidgetBuilderBackend interface {
 	// Returns an opaque value to be collected into attribute object lists.
 	BuildCreateAttributeObject(attributePath string, objectTypeID, propertyTypeID, valueTypeID string) (any, error)
 
-	// BuildDataGrid2Widget builds a complete DataGrid2 CustomWidget from domain-typed inputs.
-	// The backend loads the template, constructs the storage object with columns,
-	// datasource, header widgets, paging, and selection, and returns a fully
-	// assembled CustomWidget. Returns the widget with an opaque RawType/RawObject.
-	BuildDataGrid2Widget(id model.ID, name string, spec DataGridSpec, projectPath string) (*CustomWidget, error)
-
-	// BuildFilterWidget builds a filter widget (text, number, date, or dropdown filter)
-	// for use inside DataGrid2 filtersPlaceholder or CONTROLBAR sections.
-	BuildFilterWidget(spec FilterWidgetSpec, projectPath string) (Widget, error)
-
-	// BuildDataGrid2WidgetGen is the Stage 3.3.5.D1 gen-native sibling of
-	// BuildDataGrid2Widget. Returns *GenCustomWidgetElem (satisfies both
-	// backend.Widget and element.Element). Replaces BuildDataGrid2Widget once
-	// cmd_pages_builder_v3.go's Cat-B migration is complete.
+	// BuildDataGrid2WidgetGen builds a gen-native DataGrid2 widget element.
+	// Returns *GenCustomWidgetElem (satisfies both backend.Widget and element.Element).
 	BuildDataGrid2WidgetGen(id model.ID, name string, spec DataGridSpec, projectPath string) (*GenCustomWidgetElem, error)
 
-	// BuildFilterWidgetGen is the Stage 3.3.5.D1 gen-native sibling of BuildFilterWidget.
+	// BuildFilterWidgetGen builds a gen-native filter widget element for DataGrid2.
+	// Returns *GenCustomWidgetElem (satisfies both backend.Widget and element.Element).
 	BuildFilterWidgetGen(spec FilterWidgetSpec, projectPath string) (*GenCustomWidgetElem, error)
 
 	// SerializeGenElemToOpaque encodes a gen element.Element to opaque BSON form

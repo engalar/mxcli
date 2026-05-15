@@ -31,10 +31,12 @@ const (
 	widgetIDDataGridNumberFilter   = "com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter"
 )
 
-// BuildDataGrid2Widget builds a complete DataGrid2 CustomWidget from domain-typed inputs.
-func (b *MprBackend) BuildDataGrid2Widget(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.CustomWidget, error) {
+// buildDataGrid2WidgetDoc is the shared BSON construction core for DataGrid2.
+// It loads the template, applies spec overrides, and returns the serialized
+// CustomWidget BSON document (id, name, editable, type, object).
+func (b *MprBackend) buildDataGrid2WidgetDoc(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (bson.D, error) {
 	// Load embedded template
-	embeddedType, embeddedObject, embeddedIDs, embeddedObjectTypeID, err :=
+	embeddedType, embeddedObject, embeddedIDs, _, err :=
 		widgets.GetTemplateFullBSON(widgetIDDataGrid2, types.GenerateID, projectPath)
 	if err != nil {
 		return nil, mdlerrors.NewBackend("load DataGrid2 template", err)
@@ -63,56 +65,29 @@ func (b *MprBackend) BuildDataGrid2Widget(id model.ID, name string, spec backend
 		updatedObject = b.applyDataGridSelectionProp(updatedObject, propertyTypeIDs, spec.SelectionMode)
 	}
 
-	grid := &backend.CustomWidget{
-		BaseWidget: backend.BaseWidget{
-			BaseElement: model.BaseElement{
-				ID:       id,
-				TypeName: "CustomWidgets$CustomWidget",
-			},
-			Name: name,
-		},
-		Editable:          "Always",
-		RawType:           embeddedType,
-		RawObject:         updatedObject,
-		PropertyTypeIDMap: propertyTypeIDs,
-		ObjectTypeID:      embeddedObjectTypeID,
+	doc := bson.D{
+		{Key: "$ID", Value: bsonutil.IDToBsonBinary(string(id))},
+		{Key: "$Type", Value: "CustomWidgets$CustomWidget"},
+		{Key: "Appearance", Value: nil},
+		{Key: "ConditionalEditabilitySettings", Value: nil},
+		{Key: "ConditionalVisibilitySettings", Value: nil},
+		{Key: "Editable", Value: "Always"},
+		{Key: "LabelTemplate", Value: nil},
+		{Key: "Name", Value: name},
+		{Key: "Object", Value: updatedObject},
+		{Key: "TabIndex", Value: int64(0)},
+		{Key: "Type", Value: embeddedType},
 	}
-
-	return grid, nil
+	return doc, nil
 }
 
-// BuildFilterWidget builds a filter widget for DataGrid2.
-func (b *MprBackend) BuildFilterWidget(spec backend.FilterWidgetSpec, projectPath string) (backend.Widget, error) {
-	bsonD := b.buildFilterWidgetBSON(spec.WidgetID, spec.FilterName, projectPath)
-
-	// Wrap the BSON in a CustomWidget
-	w := &backend.CustomWidget{
-		BaseWidget: backend.BaseWidget{
-			BaseElement: model.BaseElement{
-				ID:       model.ID(types.GenerateID()),
-				TypeName: "CustomWidgets$CustomWidget",
-			},
-			Name: spec.FilterName,
-		},
-		Editable:  "Inherited",
-		RawObject: getBsonField(bsonD, "Object"),
-		RawType:   getBsonField(bsonD, "Type"),
-	}
-	return w, nil
-}
-
-// BuildDataGrid2WidgetGen is the Stage 3.3.5.D1 gen-native sibling of
-// BuildDataGrid2Widget. It delegates to the legacy builder then round-trips
-// the result through the mpr serializer + gen codec, returning a
-// *backend.GenCustomWidgetElem that satisfies both backend.Widget and
-// element.Element. To be the primary call-site once Cat-B migration replaces
-// cmd_pages_builder_v3.go's sdk-typed widget tree.
+// BuildDataGrid2WidgetGen builds a gen-native DataGrid2 widget element.
+// Returns *backend.GenCustomWidgetElem (satisfies both backend.Widget and element.Element).
 func (b *MprBackend) BuildDataGrid2WidgetGen(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.GenCustomWidgetElem, error) {
-	cw, err := b.BuildDataGrid2Widget(id, name, spec, projectPath)
+	doc, err := b.buildDataGrid2WidgetDoc(id, name, spec, projectPath)
 	if err != nil {
 		return nil, err
 	}
-	doc := mpr.SerializeWidget(cw)
 	raw, err := bson.Marshal(doc)
 	if err != nil {
 		return nil, fmt.Errorf("BuildDataGrid2WidgetGen: marshal: %w", err)
@@ -125,13 +100,10 @@ func (b *MprBackend) BuildDataGrid2WidgetGen(id model.ID, name string, spec back
 	return backend.NewGenCustomWidgetElem(elem), nil
 }
 
-// BuildFilterWidgetGen is the Stage 3.3.5.D1 gen-native sibling of BuildFilterWidget.
+// BuildFilterWidgetGen builds a gen-native filter widget element for DataGrid2.
+// Returns *backend.GenCustomWidgetElem (satisfies both backend.Widget and element.Element).
 func (b *MprBackend) BuildFilterWidgetGen(spec backend.FilterWidgetSpec, projectPath string) (*backend.GenCustomWidgetElem, error) {
-	w, err := b.BuildFilterWidget(spec, projectPath)
-	if err != nil {
-		return nil, err
-	}
-	doc := mpr.SerializeWidget(w)
+	doc := b.buildFilterWidgetBSON(spec.WidgetID, spec.FilterName, projectPath)
 	raw, err := bson.Marshal(doc)
 	if err != nil {
 		return nil, fmt.Errorf("BuildFilterWidgetGen: marshal: %w", err)
