@@ -99,27 +99,12 @@ func (b *MprBackend) deleteNanoflowViaModelsdk(id model.ID) error {
 }
 
 // ── Pages / Layouts / Snippets ────────────────────────
-
-func (b *MprBackend) deletePageViaModelsdk(id model.ID) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	return b.msdkWriter.DeleteUnit(string(id))
-}
-
-func (b *MprBackend) deleteLayoutViaModelsdk(id model.ID) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	return b.msdkWriter.DeleteUnit(string(id))
-}
-
-func (b *MprBackend) deleteSnippetViaModelsdk(id model.ID) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	return b.msdkWriter.DeleteUnit(string(id))
-}
+//
+// Stage 3.3.5.E1 retired the deletePageViaModelsdk / deleteLayoutViaModelsdk /
+// deleteSnippetViaModelsdk helpers along with the legacy DeletePage /
+// DeleteLayout / DeleteSnippet PageBackend methods. The Gen-typed
+// DeletePageGen / DeleteLayoutGen / DeleteSnippetGen methods in
+// backend.go call msdkWriter.DeleteUnit directly.
 
 // ── Workflows ────────────────────────────────────────
 

@@ -176,19 +176,6 @@ func (b *MprBackend) MoveFolder(id model.ID, newContainerID model.ID) error {
 // DomainModelBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListDomainModels() ([]*domainmodel.DomainModel, error) {
-	return b.reader.ListDomainModels()
-}
-func (b *MprBackend) GetDomainModel(moduleID model.ID) (*domainmodel.DomainModel, error) {
-	return b.reader.GetDomainModel(moduleID)
-}
-func (b *MprBackend) GetDomainModelByID(id model.ID) (*domainmodel.DomainModel, error) {
-	return b.reader.GetDomainModelByID(id)
-}
-func (b *MprBackend) UpdateDomainModel(dm *domainmodel.DomainModel) error {
-	return b.updateDomainModelViaModelsdk(dm)
-}
-
 func (b *MprBackend) CreateEntity(domainModelID model.ID, entity *domainmodel.Entity) error {
 	return b.createEntityViaModelsdk(domainModelID, entity)
 }
@@ -314,17 +301,6 @@ func (b *MprBackend) GetMicroflowGen(id model.ID) (*genMf.Microflow, error) {
 // PageBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListPages() ([]*backend.Page, error)        { return b.reader.ListPages() }
-func (b *MprBackend) GetPage(id model.ID) (*backend.Page, error) { return b.reader.GetPage(id) }
-func (b *MprBackend) DeletePage(id model.ID) error               { return b.deletePageViaModelsdk(id) }
-
-func (b *MprBackend) ListLayouts() ([]*backend.Layout, error)        { return b.reader.ListLayouts() }
-func (b *MprBackend) GetLayout(id model.ID) (*backend.Layout, error) { return b.reader.GetLayout(id) }
-func (b *MprBackend) DeleteLayout(id model.ID) error                 { return b.deleteLayoutViaModelsdk(id) }
-
-func (b *MprBackend) ListSnippets() ([]*backend.Snippet, error) { return b.reader.ListSnippets() }
-func (b *MprBackend) DeleteSnippet(id model.ID) error           { return b.deleteSnippetViaModelsdk(id) }
-
 func (b *MprBackend) ListBuildingBlocks() ([]*backend.BuildingBlock, error) {
 	return b.reader.ListBuildingBlocks()
 }
@@ -337,8 +313,8 @@ func (b *MprBackend) ListPageTemplates() ([]*backend.PageTemplate, error) {
 //
 // Each method routes through the gen-native repos
 // (mdl/backend/mpr/repos/{pages,layouts,snippets}.go) using
-// `mprrepos.NewPageRepository(w)` etc. Stage 3.3.5.E1 will retire the
-// legacy sdk-typed siblings above once consumers migrate.
+// `mprrepos.NewPageRepository(w)` etc. The legacy sdk-typed siblings
+// were retired in Stage 3.3.5.E1.
 
 func (b *MprBackend) ListPagesGen() ([]*genPg.Page, error) {
 	w, ok := b.concreteWriter()
