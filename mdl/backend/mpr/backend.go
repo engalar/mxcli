@@ -474,6 +474,54 @@ func (b *MprBackend) GetPageContainerUUID(id model.ID) (model.ID, error) {
 	return mprrepos.NewPageRepository(w).GetContainerUUID(id)
 }
 
+// Stage 3.3.5.D5.c gen-typed delete + move surface. All four methods
+// route through the modelsdk writer's DeleteUnit / UpdateUnitContainer
+// directly — there is no per-element BSON shaping, so no separate
+// "ViaModelsdk" helper is needed. Mirrors the workflow / agenteditor
+// equivalents from Stage 3.3.3.E1 / Stage 3.3.4 C7.
+
+func (b *MprBackend) DeletePageGen(id model.ID) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("DeletePageGen: no modelsdk writer")
+	}
+	return b.msdkWriter.DeleteUnit(string(id))
+}
+
+func (b *MprBackend) MovePageGen(id, containerID model.ID) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("MovePageGen: no modelsdk writer")
+	}
+	return b.msdkWriter.UpdateUnitContainer(string(id), string(containerID))
+}
+
+func (b *MprBackend) DeleteLayoutGen(id model.ID) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("DeleteLayoutGen: no modelsdk writer")
+	}
+	return b.msdkWriter.DeleteUnit(string(id))
+}
+
+func (b *MprBackend) MoveLayoutGen(id, containerID model.ID) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("MoveLayoutGen: no modelsdk writer")
+	}
+	return b.msdkWriter.UpdateUnitContainer(string(id), string(containerID))
+}
+
+func (b *MprBackend) DeleteSnippetGen(id model.ID) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("DeleteSnippetGen: no modelsdk writer")
+	}
+	return b.msdkWriter.DeleteUnit(string(id))
+}
+
+func (b *MprBackend) MoveSnippetGen(id, containerID model.ID) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("MoveSnippetGen: no modelsdk writer")
+	}
+	return b.msdkWriter.UpdateUnitContainer(string(id), string(containerID))
+}
+
 // ---------------------------------------------------------------------------
 // EnumerationBackend
 // ---------------------------------------------------------------------------

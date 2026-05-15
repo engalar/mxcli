@@ -234,3 +234,47 @@ func (m *MockBackend) GetPageContainerUUID(id model.ID) (model.ID, error) {
 	}
 	return "", fmt.Errorf("MockBackend.GetPageContainerUUID not configured")
 }
+
+// Stage 3.3.5.D5.c gen-typed delete + move stubs.
+
+func (m *MockBackend) DeletePageGen(id model.ID) error {
+	if m.DeletePageGenFunc != nil {
+		return m.DeletePageGenFunc(id)
+	}
+	return fmt.Errorf("MockBackend.DeletePageGen not configured")
+}
+
+func (m *MockBackend) MovePageGen(id, containerID model.ID) error {
+	if m.MovePageGenFunc != nil {
+		return m.MovePageGenFunc(id, containerID)
+	}
+	return fmt.Errorf("MockBackend.MovePageGen not configured")
+}
+
+func (m *MockBackend) DeleteLayoutGen(id model.ID) error {
+	if m.DeleteLayoutGenFunc != nil {
+		return m.DeleteLayoutGenFunc(id)
+	}
+	return fmt.Errorf("MockBackend.DeleteLayoutGen not configured")
+}
+
+func (m *MockBackend) MoveLayoutGen(id, containerID model.ID) error {
+	if m.MoveLayoutGenFunc != nil {
+		return m.MoveLayoutGenFunc(id, containerID)
+	}
+	return fmt.Errorf("MockBackend.MoveLayoutGen not configured")
+}
+
+func (m *MockBackend) DeleteSnippetGen(id model.ID) error {
+	if m.DeleteSnippetGenFunc != nil {
+		return m.DeleteSnippetGenFunc(id)
+	}
+	return fmt.Errorf("MockBackend.DeleteSnippetGen not configured")
+}
+
+func (m *MockBackend) MoveSnippetGen(id, containerID model.ID) error {
+	if m.MoveSnippetGenFunc != nil {
+		return m.MoveSnippetGenFunc(id, containerID)
+	}
+	return fmt.Errorf("MockBackend.MoveSnippetGen not configured")
+}

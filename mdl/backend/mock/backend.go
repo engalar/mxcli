@@ -142,6 +142,14 @@ type MockBackend struct {
 	UpdateSnippetGenFunc  func(snippet *genPg.Snippet) error
 	GetPageContainerUUIDFunc func(id model.ID) (model.ID, error)
 
+	// Stage 3.3.5.D5.c gen-typed delete + move Func fields.
+	DeletePageGenFunc    func(id model.ID) error
+	MovePageGenFunc      func(id, containerID model.ID) error
+	DeleteLayoutGenFunc  func(id model.ID) error
+	MoveLayoutGenFunc    func(id, containerID model.ID) error
+	DeleteSnippetGenFunc func(id model.ID) error
+	MoveSnippetGenFunc   func(id, containerID model.ID) error
+
 	// EnumerationBackend
 	ListEnumerationsFunc  func() ([]*model.Enumeration, error)
 	GetEnumerationFunc    func(id model.ID) (*model.Enumeration, error)
