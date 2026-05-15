@@ -152,14 +152,34 @@ func (pb *pageBuilder) getDomainModelsWithContainer() ([]DomainModelGenWithConta
 	if pb.execCache != nil && pb.execCache.domainModelsWithContainerGen != nil {
 		return pb.execCache.domainModelsWithContainerGen, nil
 	}
-	modules := pb.getModules()
-	out := make([]DomainModelGenWithContainer, 0, len(modules))
-	for _, m := range modules {
-		dm, err := pb.backend.GetDomainModelGen(m.ID)
-		if err != nil || dm == nil {
+	var dms []*genDm.DomainModel
+	if pb.execCache != nil && pb.execCache.domainModelsGen != nil {
+		dms = pb.execCache.domainModelsGen
+	} else {
+		var err error
+		dms, err = pb.backend.ListDomainModelsGen()
+		if err != nil {
+			return nil, err
+		}
+		if pb.execCache != nil {
+			pb.execCache.domainModelsGen = dms
+		}
+	}
+
+	h, err := pb.getHierarchy()
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]DomainModelGenWithContainer, 0, len(dms))
+	for _, dm := range dms {
+		if dm == nil {
 			continue
 		}
-		out = append(out, DomainModelGenWithContainer{DM: dm, ContainerID: m.ID})
+		out = append(out, DomainModelGenWithContainer{
+			DM:          dm,
+			ContainerID: h.FindModuleID(model.ID(dm.ID())),
+		})
 	}
 	if pb.execCache != nil {
 		pb.execCache.domainModelsWithContainerGen = out

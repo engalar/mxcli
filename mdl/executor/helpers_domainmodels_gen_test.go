@@ -95,12 +95,21 @@ func TestInvalidateDomainModelsGenCache_ClearsField(t *testing.T) {
 	if _, err := listDomainModelsWithContainerGen(ctx); err != nil {
 		t.Fatalf("prime cache: %v", err)
 	}
+	if _, err := cachedDomainModelsGen(ctx); err != nil {
+		t.Fatalf("prime flat cache: %v", err)
+	}
 	if ctx.Cache.domainModelsWithContainerGen == nil {
 		t.Fatal("cache should be populated after first call")
+	}
+	if ctx.Cache.domainModelsGen == nil {
+		t.Fatal("flat cache should be populated after first call")
 	}
 	invalidateDomainModelsGenCache(ctx)
 	if ctx.Cache.domainModelsWithContainerGen != nil {
 		t.Fatal("invalidate should null out cache slice")
+	}
+	if ctx.Cache.domainModelsGen != nil {
+		t.Fatal("invalidate should null out flat cache slice")
 	}
 }
 
@@ -111,12 +120,21 @@ func TestInvalidateDomainModelsCache_ClearsBoth(t *testing.T) {
 	if _, err := listDomainModelsWithContainerGen(ctx); err != nil {
 		t.Fatalf("prime cache: %v", err)
 	}
+	if _, err := cachedDomainModelsGen(ctx); err != nil {
+		t.Fatalf("prime flat cache: %v", err)
+	}
 	if ctx.Cache.domainModelsWithContainerGen == nil {
 		t.Fatal("cache should be populated after first call")
+	}
+	if ctx.Cache.domainModelsGen == nil {
+		t.Fatal("flat cache should be populated after first call")
 	}
 	invalidateDomainModelsCache(ctx)
 	if ctx.Cache.domainModelsWithContainerGen != nil {
 		t.Fatal("legacy invalidate should also null out gen cache slice")
+	}
+	if ctx.Cache.domainModelsGen != nil {
+		t.Fatal("legacy invalidate should also null out flat gen cache slice")
 	}
 }
 

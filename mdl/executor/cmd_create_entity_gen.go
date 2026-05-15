@@ -10,6 +10,8 @@
 package executor
 
 import (
+	"fmt"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
@@ -60,11 +62,17 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 			return mdlerrors.NewAlreadyExistsMsg("entity", s.Name.Module+"."+s.Name.Name,
 				"entity already exists: "+s.Name.Module+"."+s.Name.Name+" (use create or modify to update)")
 		}
+		if ent.Name() == s.Name.Name && s.CreateOrModify {
+			return execCreateEntity(ctx, s)
+		}
 	}
 
 	entity := astToEntityGen(s)
 	if entity == nil {
 		return mdlerrors.NewValidation("failed to build gen entity from AST")
+	}
+	if entity.Location() == "" {
+		entity.SetLocation(fmt.Sprintf("%d,%d", 100+len(dm.EntitiesItems())*150, 100))
 	}
 
 	if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), entity); err != nil {
@@ -72,5 +80,26 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 	}
 
 	invalidateDomainModelsCache(ctx)
+	invalidateHierarchy(ctx)
+	fmt.Fprintf(ctx.Output, "Created entity: %s\n", s.Name)
+	ctx.trackModifiedDomainModel(module.ID, module.Name)
 	return nil
+}
+
+func canExecCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) bool {
+	if ctx == nil || ctx.DomainModels == nil || s == nil || s.CreateOrModify {
+		return false
+	}
+	for _, a := range s.Attributes {
+		if a.NotNullError != "" || a.UniqueError != "" {
+			return false
+		}
+		if a.Type.Kind == ast.TypeEnumeration {
+			// The parser currently uses TypeEnumeration for both enum refs
+			// and entity refs in some ambiguous cases. Keep those on the
+			// legacy path until the gen create path handles both shapes.
+			return false
+		}
+	}
+	return true
 }
