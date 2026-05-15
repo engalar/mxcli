@@ -7,23 +7,23 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/mdl/ast"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
-// outputEntityAccessGrants outputs GRANT statements for entity access rules.
+// outputEntityAccessGrants is kept for the legacy sdk-typed describeEntity path.
 func outputEntityAccessGrants(ctx *ExecContext, entity *domainmodel.Entity, moduleName, entityName string) {
 	if len(entity.AccessRules) == 0 {
 		return
 	}
 
-	// Build attribute name map for resolving member accesses
 	attrNames := make(map[string]string)
 	for _, attr := range entity.Attributes {
 		attrNames[string(attr.ID)] = attr.Name
 	}
 
 	for _, rule := range entity.AccessRules {
-		// Get role names
 		var roleStrs []string
 		for _, rn := range rule.ModuleRoleNames {
 			roleStrs = append(roleStrs, rn)
@@ -37,7 +37,7 @@ func outputEntityAccessGrants(ctx *ExecContext, entity *domainmodel.Entity, modu
 			continue
 		}
 
-		rightsStr := formatAccessRuleRights(ctx, rule, attrNames)
+		rightsStr := formatAccessRuleRights(rule, attrNames)
 		if rightsStr == "" {
 			continue
 		}
@@ -55,15 +55,54 @@ func outputEntityAccessGrants(ctx *ExecContext, entity *domainmodel.Entity, modu
 	}
 }
 
-// resolveEntityMemberAccess determines per-member READ/WRITE access.
-// Returns nil slices for "all members" (*), or specific member name lists.
-func resolveEntityMemberAccess(_ *ExecContext, rule *domainmodel.AccessRule, attrNames map[string]string) (readMembers []string, writeMembers []string) {
-	if len(rule.MemberAccesses) == 0 {
-		// No per-member overrides: use default
-		return nil, nil
+// outputEntityAccessGrantsGen outputs GRANT statements for entity access rules.
+func outputEntityAccessGrantsGen(ctx *ExecContext, entity *genDm.Entity, moduleName, entityName string) {
+	if entity == nil || len(entity.AccessRulesItems()) == 0 {
+		return
 	}
 
-	// Check if all member accesses match the default — if so, treat as "*"
+	attrNames := make(map[string]string)
+	for _, a := range entity.AttributesItems() {
+		attr, ok := a.(*genDm.Attribute)
+		if !ok {
+			continue
+		}
+		attrNames[string(attr.ID())] = attr.Name()
+		attrNames[attr.Name()] = attr.Name()
+	}
+
+	for _, r := range entity.AccessRulesItems() {
+		rule, ok := r.(*genDm.AccessRule)
+		if !ok {
+			continue
+		}
+		roleStrs := entityRuleRoleStringsGen(rule)
+		if len(roleStrs) == 0 {
+			continue
+		}
+
+		rightsStr := formatAccessRuleRightsGen(rule, attrNames)
+		if rightsStr == "" {
+			continue
+		}
+
+		grantLine := fmt.Sprintf("\ngrant %s on %s.%s (%s)",
+			strings.Join(roleStrs, ", "), moduleName, entityName, rightsStr)
+
+		if rule.XPathConstraint() != "" {
+			escaped := strings.ReplaceAll(rule.XPathConstraint(), "'", "''")
+			grantLine += fmt.Sprintf(" where '%s'", escaped)
+		}
+		grantLine += ";"
+
+		fmt.Fprintln(ctx.Output, grantLine)
+	}
+}
+
+func resolveEntityMemberAccess(rule *domainmodel.AccessRule, attrNames map[string]string) (readMembers []string, writeMembers []string) {
+	if len(rule.MemberAccesses) == 0 {
+		return nil, nil
+	}
 	allMatchDefault := true
 	for _, ma := range rule.MemberAccesses {
 		if ma.AccessRights != rule.DefaultMemberAccessRights {
@@ -74,8 +113,6 @@ func resolveEntityMemberAccess(_ *ExecContext, rule *domainmodel.AccessRule, att
 	if allMatchDefault {
 		return nil, nil
 	}
-
-	// Collect members by access level
 	var readOnly, readWrite []string
 	for _, ma := range rule.MemberAccesses {
 		memberName := ma.AttributeName
@@ -89,7 +126,6 @@ func resolveEntityMemberAccess(_ *ExecContext, rule *domainmodel.AccessRule, att
 				memberName = string(ma.AttributeID)
 			}
 		}
-
 		switch ma.AccessRights {
 		case domainmodel.MemberAccessRightsReadWrite:
 			readWrite = append(readWrite, memberName)
@@ -97,18 +133,75 @@ func resolveEntityMemberAccess(_ *ExecContext, rule *domainmodel.AccessRule, att
 			readOnly = append(readOnly, memberName)
 		}
 	}
-
-	// If there are overrides, list specific members for READ and WRITE
-	// READ includes both ReadOnly and ReadWrite members
 	allReadable := append(readOnly, readWrite...)
 	if len(allReadable) == 0 {
-		readMembers = nil // all via default
+		readMembers = nil
+	} else {
+		readMembers = allReadable
+	}
+	if len(readWrite) == 0 {
+		writeMembers = []string{}
+	} else {
+		writeMembers = readWrite
+	}
+	return readMembers, writeMembers
+}
+
+// resolveEntityMemberAccessGen determines per-member READ/WRITE access.
+// Returns nil slices for "all members" (*), or specific member name lists.
+func resolveEntityMemberAccessGen(rule *genDm.AccessRule, attrNames map[string]string) (readMembers []string, writeMembers []string) {
+	if rule == nil || len(rule.MemberAccessesItems()) == 0 {
+		return nil, nil
+	}
+
+	allMatchDefault := true
+	for _, m := range rule.MemberAccessesItems() {
+		ma, ok := m.(*genDm.MemberAccess)
+		if !ok {
+			continue
+		}
+		if ma.AccessRights() != rule.DefaultMemberAccessRights() {
+			allMatchDefault = false
+			break
+		}
+	}
+	if allMatchDefault {
+		return nil, nil
+	}
+
+	var readOnly, readWrite []string
+	for _, m := range rule.MemberAccessesItems() {
+		ma, ok := m.(*genDm.MemberAccess)
+		if !ok {
+			continue
+		}
+		memberName := ma.AttributeQualifiedName()
+		if memberName == "" {
+			memberName = ma.AssociationQualifiedName()
+		}
+		if mapped, ok := attrNames[memberName]; ok {
+			memberName = mapped
+		} else if attrName := extractAttrNameFromQualified(memberName); attrName != "" {
+			memberName = attrName
+		}
+
+		switch ma.AccessRights() {
+		case genDm.MemberAccessRightsReadWrite:
+			readWrite = append(readWrite, memberName)
+		case genDm.MemberAccessRightsReadOnly:
+			readOnly = append(readOnly, memberName)
+		}
+	}
+
+	allReadable := append(readOnly, readWrite...)
+	if len(allReadable) == 0 {
+		readMembers = nil
 	} else {
 		readMembers = allReadable
 	}
 
 	if len(readWrite) == 0 {
-		writeMembers = []string{} // no write members
+		writeMembers = []string{}
 	} else {
 		writeMembers = readWrite
 	}
@@ -116,9 +209,7 @@ func resolveEntityMemberAccess(_ *ExecContext, rule *domainmodel.AccessRule, att
 	return readMembers, writeMembers
 }
 
-// formatAccessRuleRights formats the rights portion of an access rule as a string.
-// Returns a string like "CREATE, DELETE, READ (Name, Price), WRITE (Price)" or empty if no rights.
-func formatAccessRuleRights(ctx *ExecContext, rule *domainmodel.AccessRule, attrNames map[string]string) string {
+func formatAccessRuleRights(rule *domainmodel.AccessRule, attrNames map[string]string) string {
 	var rights []string
 	if rule.AllowCreate {
 		rights = append(rights, "create")
@@ -126,7 +217,6 @@ func formatAccessRuleRights(ctx *ExecContext, rule *domainmodel.AccessRule, attr
 	if rule.AllowDelete {
 		rights = append(rights, "delete")
 	}
-
 	hasRead := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadOnly ||
 		rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
 	hasWrite := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
@@ -141,8 +231,58 @@ func formatAccessRuleRights(ctx *ExecContext, rule *domainmodel.AccessRule, attr
 			}
 		}
 	}
+	readMembers, writeMembers := resolveEntityMemberAccess(rule, attrNames)
+	if hasRead {
+		if readMembers == nil {
+			rights = append(rights, "read *")
+		} else {
+			rights = append(rights, fmt.Sprintf("read (%s)", strings.Join(readMembers, ", ")))
+		}
+	}
+	if hasWrite {
+		if writeMembers == nil {
+			rights = append(rights, "write *")
+		} else if len(writeMembers) > 0 {
+			rights = append(rights, fmt.Sprintf("write (%s)", strings.Join(writeMembers, ", ")))
+		}
+	}
+	return strings.Join(rights, ", ")
+}
 
-	readMembers, writeMembers := resolveEntityMemberAccess(ctx, rule, attrNames)
+// formatAccessRuleRightsGen formats the rights portion of an access rule as a string.
+func formatAccessRuleRightsGen(rule *genDm.AccessRule, attrNames map[string]string) string {
+	if rule == nil {
+		return ""
+	}
+
+	var rights []string
+	if rule.AllowCreate() {
+		rights = append(rights, "create")
+	}
+	if rule.AllowDelete() {
+		rights = append(rights, "delete")
+	}
+
+	hasRead := rule.DefaultMemberAccessRights() == genDm.MemberAccessRightsReadOnly ||
+		rule.DefaultMemberAccessRights() == genDm.MemberAccessRightsReadWrite
+	hasWrite := rule.DefaultMemberAccessRights() == genDm.MemberAccessRightsReadWrite
+	if !hasRead || !hasWrite {
+		for _, m := range rule.MemberAccessesItems() {
+			ma, ok := m.(*genDm.MemberAccess)
+			if !ok {
+				continue
+			}
+			if ma.AccessRights() == genDm.MemberAccessRightsReadOnly ||
+				ma.AccessRights() == genDm.MemberAccessRightsReadWrite {
+				hasRead = true
+			}
+			if ma.AccessRights() == genDm.MemberAccessRightsReadWrite {
+				hasWrite = true
+			}
+		}
+	}
+
+	readMembers, writeMembers := resolveEntityMemberAccessGen(rule, attrNames)
 
 	if hasRead {
 		if readMembers == nil {
@@ -167,36 +307,33 @@ func formatAccessRuleRights(ctx *ExecContext, rule *domainmodel.AccessRule, attr
 func formatAccessRuleResult(ctx *ExecContext, moduleName, entityName string, roleNames []string) string {
 	invalidateDomainModelsCache(ctx)
 
-	module, err := findModule(ctx, moduleName)
-	if err != nil {
-		return ""
-	}
-
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
-	if err != nil {
-		return ""
-	}
-
-	entity := dm.FindEntityByName(entityName)
-	if entity == nil {
+	entity, _, err := findEntityGen(ctx, ast.QualifiedName{Module: moduleName, Name: entityName})
+	if err != nil || entity == nil {
 		return ""
 	}
 
 	attrNames := make(map[string]string)
-	for _, attr := range entity.Attributes {
-		attrNames[string(attr.ID)] = attr.Name
+	for _, a := range entity.AttributesItems() {
+		attr, ok := a.(*genDm.Attribute)
+		if !ok {
+			continue
+		}
+		attrNames[string(attr.ID())] = attr.Name()
+		attrNames[attr.Name()] = attr.Name()
 	}
 
-	// Build role set for matching
 	roleSet := make(map[string]bool)
 	for _, rn := range roleNames {
 		roleSet[rn] = true
 	}
 
-	for _, rule := range entity.AccessRules {
-		// Check if this rule matches the given roles
+	for _, r := range entity.AccessRulesItems() {
+		rule, ok := r.(*genDm.AccessRule)
+		if !ok {
+			continue
+		}
 		matchCount := 0
-		for _, rn := range rule.ModuleRoleNames {
+		for _, rn := range rule.ModuleRolesQualifiedNames() {
 			if roleSet[rn] {
 				matchCount++
 			}
@@ -204,8 +341,7 @@ func formatAccessRuleResult(ctx *ExecContext, moduleName, entityName string, rol
 		if matchCount == 0 {
 			continue
 		}
-		// Found a matching rule
-		rightsStr := formatAccessRuleRights(ctx, rule, attrNames)
+		rightsStr := formatAccessRuleRightsGen(rule, attrNames)
 		if rightsStr == "" {
 			return "  Result: (no access)\n"
 		}
@@ -214,5 +350,3 @@ func formatAccessRuleResult(ctx *ExecContext, moduleName, entityName string, rol
 
 	return "  Result: (no access)\n"
 }
-
-// --- Executor method wrappers for callers not yet migrated ---

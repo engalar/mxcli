@@ -9,24 +9,24 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 func TestShowEntities_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
-	ent1 := mkEntity(mod.ID, "Customer")
-	ent2 := mkEntity(mod.ID, "Order")
-
-	dm := mkDomainModel(mod.ID, ent1, ent2)
+	ent1 := mkEntityGen("Customer")
+	ent2 := mkEntityGen("Order")
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return []*domainmodel.DomainModel{dm}, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 	}
 
-	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, listEntities(ctx, ""))
+	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	assertNoError(t, listEntitiesGen(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.Customer")
@@ -38,20 +38,23 @@ func TestShowEntities_Mock(t *testing.T) {
 func TestShowEntities_Mock_FilterByModule(t *testing.T) {
 	mod1 := mkModule("Sales")
 	mod2 := mkModule("HR")
-	ent1 := mkEntity(mod1.ID, "Product")
-	ent2 := mkEntity(mod2.ID, "Employee")
+	ent1 := mkEntityGen("Product")
+	ent2 := mkEntityGen("Employee")
 
-	dm1 := mkDomainModel(mod1.ID, ent1)
-	dm2 := mkDomainModel(mod2.ID, ent2)
+	dm1 := mkDomainModelGen(mod1.ID, ent1)
+	dm2 := mkDomainModelGen(mod2.ID, ent2)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{
+		mod1.ID: {dm1},
+		mod2.ID: {dm2},
+	})
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod1, mod2}, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return []*domainmodel.DomainModel{dm1, dm2}, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod1, mod2}, nil },
 	}
 
-	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, listEntities(ctx, "HR"))
+	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	assertNoError(t, listEntitiesGen(ctx, "HR"))
 
 	out := buf.String()
 	assertNotContainsStr(t, out, "Sales.Product")
@@ -70,17 +73,19 @@ func TestShowEntities_BackendError_Modules(t *testing.T) {
 	assertError(t, listEntities(ctx, ""))
 }
 
-func TestShowEntities_BackendError(t *testing.T) {
+func TestShowEntities_DomainModelRepoErrorIgnored(t *testing.T) {
 	mod := mkModule("Sales")
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) {
-			return nil, fmt.Errorf("backend down")
-		},
 	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listEntities(ctx, ""))
+	dmRepo := makeDomainModelsRepo(nil)
+	dmRepo.ListFunc = func(moduleID model.ID) ([]*genDm.DomainModel, error) {
+		return nil, fmt.Errorf("backend down")
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	assertNoError(t, listEntitiesGen(ctx, ""))
+	assertContainsStr(t, buf.String(), "(0 entities)")
 }
 
 // Issue #392 — CREATE ENTITY must reject attribute types that don't resolve
@@ -152,17 +157,17 @@ func TestAlterEntity_AllowCreateChangeLocally_Issue534(t *testing.T) {
 
 func TestShowEntities_JSON(t *testing.T) {
 	mod := mkModule("App")
-	ent := mkEntity(mod.ID, "Item")
-	dm := mkDomainModel(mod.ID, ent)
+	ent := mkEntityGen("Item")
+	dm := mkDomainModelGen(mod.ID, ent)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return []*domainmodel.DomainModel{dm}, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 	}
 
-	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON))
-	assertNoError(t, listEntities(ctx, ""))
+	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withDomainModelsRepo(dmRepo))
+	assertNoError(t, listEntitiesGen(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Item")
 }
