@@ -1,0 +1,54 @@
+-- ComboBox round-trip baseline for Stage 3.3.5 Phase 1 R3 verification.
+-- Creates a page with the canonical ComboBox widget shape using association
+-- datasource mode, then ALTERs it through several mutations. Each mutation
+-- must round-trip through the mpr without triggering CE0463 in Studio Pro.
+
+create module CbRT;
+
+create persistent entity CbRT.Category (
+  Name: string(200)
+);
+
+create persistent entity CbRT.Task (
+  Title:  string(200),
+  Status: string(50)
+);
+
+create association CbRT.Task_Category
+  from CbRT.Task to CbRT.Category;
+
+-- Edit form with a ComboBox in association mode
+create page CbRT.TaskEdit (
+  params: { $Task: CbRT.Task },
+  title: 'Edit Task',
+  layout: Atlas_Core.PopupLayout
+) {
+  dataview dvTask (datasource: $Task) {
+    textbox txtTitle (label: 'Title', attribute: Title)
+    combobox cmbCategory (
+      label: 'Category',
+      attribute: Task_Category,
+      datasource: database CbRT.Category,
+      CaptionAttribute: Name
+    )
+    footer footer1 {
+      actionbutton btnSave   (caption: 'Save',   action: save_changes close_page, buttonstyle: primary)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+    }
+  }
+};
+
+-- Mutation 1: Change the combobox label
+alter page CbRT.TaskEdit {
+  set Label = 'Select Category' on cmbCategory
+};
+
+-- Mutation 2: Hide the combobox
+alter page CbRT.TaskEdit {
+  set Visible = false on cmbCategory
+};
+
+-- Mutation 3: Restore visibility
+alter page CbRT.TaskEdit {
+  set Visible = true on cmbCategory
+};
