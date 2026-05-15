@@ -40,7 +40,7 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	// Check if page already exists - collect ALL duplicates
 	existingPages, _ := ctx.Backend.ListPages()
 	var pagesToDelete []model.ID
-	var existingAllowedRoles []model.ID
+	var existingAllowedRoles []string
 	preserveAllowedRoles := false
 	for _, p := range existingPages {
 		modID := getModuleID(ctx, p.ContainerID)
@@ -50,7 +50,10 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 				return mdlerrors.NewAlreadyExists("page", s.Name.String())
 			}
 			if len(pagesToDelete) == 0 {
-				existingAllowedRoles = cloneRoleIDs(p.AllowedRoles)
+				// Preserve existing allowed roles (as qualified name strings)
+				for _, r := range p.AllowedRoles {
+					existingAllowedRoles = append(existingAllowedRoles, string(r))
+				}
 				preserveAllowedRoles = true
 			}
 			pagesToDelete = append(pagesToDelete, p.ID)
@@ -74,29 +77,28 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 		snippetsRepo:     ctx.Snippets,
 	}
 
-	page, err := pb.buildPageV3(s)
+	// buildPageV3 now returns *genPg.Page directly (Stage 3.3.5.Cat-B).
+	// The builder sets pb.lastContainerID to the resolved folder/module ID.
+	genPage, err := pb.buildPageV3(s)
 	if err != nil {
 		return mdlerrors.NewBackend("build page", err)
 	}
-	if preserveAllowedRoles {
-		page.AllowedRoles = existingAllowedRoles
-	} else if len(page.AllowedRoles) == 0 {
-		page.AllowedRoles = defaultDocumentAccessRoles(ctx, module)
-	}
+	containerID := pb.lastContainerID
 
-	// Convert sdk-typed builder output to gen Page so persistence goes
-	// through the gen-native CreatePageGen / UpdatePageGen surface
-	// (Stage 3.3.5.E0.create_v3 transitional bridge — see SDKPageToGen).
-	genPage, err := ctx.Backend.SDKPageToGen(page)
-	if err != nil {
-		return mdlerrors.NewBackend("convert page to gen", err)
+	// Set allowed roles on the gen page
+	if preserveAllowedRoles {
+		genPage.SetAllowedRolesQualifiedNames(existingAllowedRoles)
+	} else {
+		defaultRoles := defaultDocumentAccessRoleQNames(ctx, module)
+		if len(defaultRoles) > 0 {
+			genPage.SetAllowedRolesQualifiedNames(defaultRoles)
+		}
 	}
 
 	// Replace or create the page in the MPR
 	if len(pagesToDelete) > 0 {
 		// Reuse first existing page's UUID to avoid git delete+add (which crashes Studio Pro RevStatusCache)
-		page.ID = pagesToDelete[0]
-		genPage.SetID(element.ID(page.ID))
+		genPage.SetID(element.ID(pagesToDelete[0]))
 		if err := ctx.Backend.UpdatePageGen(genPage); err != nil {
 			return mdlerrors.NewBackend("update page", err)
 		}
@@ -107,13 +109,13 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 			}
 		}
 	} else {
-		if err := ctx.Backend.CreatePageGen(string(page.ContainerID), "Documents", genPage); err != nil {
+		if err := ctx.Backend.CreatePageGen(string(containerID), "Documents", genPage); err != nil {
 			return mdlerrors.NewBackend("create page", err)
 		}
 	}
 
 	// Track the created page so it can be resolved by subsequent page references
-	ctx.trackCreatedPage(s.Name.Module, s.Name.Name, page.ID, moduleID)
+	ctx.trackCreatedPage(s.Name.Module, s.Name.Name, model.ID(genPage.ID()), moduleID)
 
 	// Invalidate hierarchy cache so the new page's container is visible
 	invalidateHierarchy(ctx)
@@ -166,10 +168,13 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 		snippetsRepo:     ctx.Snippets,
 	}
 
-	snippet, err := pb.buildSnippetV3(s)
+	// buildSnippetV3 now returns *genPg.Snippet directly (Stage 3.3.5.Cat-B).
+	// The builder sets pb.lastContainerID to the resolved folder/module ID.
+	genSnippet, err := pb.buildSnippetV3(s)
 	if err != nil {
 		return mdlerrors.NewBackend("build snippet", err)
 	}
+	containerID := pb.lastContainerID
 
 	// Delete old snippets only after successful build
 	for _, id := range snippetsToDelete {
@@ -178,21 +183,13 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 		}
 	}
 
-	// Convert sdk-typed builder output to gen Snippet so persistence
-	// goes through the gen-native CreateSnippetGen surface
-	// (Stage 3.3.5.E0.create_v3 transitional bridge — see SDKSnippetToGen).
-	genSnippet, err := ctx.Backend.SDKSnippetToGen(snippet)
-	if err != nil {
-		return mdlerrors.NewBackend("convert snippet to gen", err)
-	}
-
 	// Create the snippet in the MPR
-	if err := ctx.Backend.CreateSnippetGen(string(snippet.ContainerID), "Documents", genSnippet); err != nil {
+	if err := ctx.Backend.CreateSnippetGen(string(containerID), "Documents", genSnippet); err != nil {
 		return mdlerrors.NewBackend("create snippet", err)
 	}
 
 	// Track the created snippet so it can be resolved by subsequent snippet references
-	ctx.trackCreatedSnippet(s.Name.Module, s.Name.Name, snippet.ID, moduleID)
+	ctx.trackCreatedSnippet(s.Name.Module, s.Name.Name, model.ID(genSnippet.ID()), moduleID)
 
 	// Invalidate hierarchy cache so the new snippet's container is visible
 	invalidateHierarchy(ctx)

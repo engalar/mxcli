@@ -399,4 +399,10 @@ type WidgetBuilderBackend interface {
 
 	// BuildFilterWidgetGen is the Stage 3.3.5.D1 gen-native sibling of BuildFilterWidget.
 	BuildFilterWidgetGen(spec FilterWidgetSpec, projectPath string) (*GenCustomWidgetElem, error)
+
+	// SerializeGenElemToOpaque encodes a gen element.Element to opaque BSON form
+	// for use as a child widget, datasource, or action in pluggable widget templates.
+	// This is the Cat-B sibling of SerializeWidgetToOpaque / SerializeDataSourceToOpaque /
+	// SerializeClientActionToOpaque for use once the V3 builder returns gen types.
+	SerializeGenElemToOpaque(elem element.Element) OpaqueWidget
 }

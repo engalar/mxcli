@@ -18,6 +18,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/widgets"
 )
@@ -86,6 +87,23 @@ func (b *MprBackend) SerializeDataSourceToOpaque(ds backend.DataSource) backend.
 // SerializeClientActionToOpaque converts a domain ClientAction to opaque BSON form.
 func (b *MprBackend) SerializeClientActionToOpaque(a backend.ClientAction) backend.OpaqueAction {
 	return mpr.SerializeClientAction(a)
+}
+
+// SerializeGenElemToOpaque encodes a gen element.Element to opaque BSON form
+// for use as a child widget, datasource, or action in pluggable widget templates.
+// This is the Cat-B complement to SerializeWidgetToOpaque for use when buildWidgetV3
+// returns element.Element directly.
+func (b *MprBackend) SerializeGenElemToOpaque(elem element.Element) backend.OpaqueWidget {
+	if elem == nil {
+		return nil
+	}
+	enc := codec.Encoder{}
+	raw, err := enc.Encode(elem)
+	if err != nil {
+		log.Printf("warning: SerializeGenElemToOpaque encode failed (%v)", err)
+		return nil
+	}
+	return bson.Raw(raw)
 }
 
 // BuildCreateAttributeObject creates an attribute object for filter widgets.

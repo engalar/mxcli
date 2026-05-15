@@ -165,7 +165,7 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 					if err != nil {
 						return nil, mdlerrors.NewBackend("auto datasource for "+propKey, err)
 					}
-					builder.SetDataSourceOpaque(propKey, e.backend.SerializeDataSourceToOpaque(dataSource))
+					builder.SetDataSourceOpaque(propKey, e.backend.SerializeGenElemToOpaque(dataSource))
 					if entityName != "" {
 						e.pageBuilder.entityContext = entityName
 					}
@@ -208,7 +208,7 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 						return nil, err
 					}
 					if widget != nil {
-						if opaque := e.backend.SerializeWidgetToOpaque(widget); opaque != nil {
+						if opaque := e.backend.SerializeGenElemToOpaque(widget); opaque != nil {
 							childWidgets = append(childWidgets, opaque)
 						}
 					}
@@ -243,7 +243,7 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 			return nil, err
 		}
 		if widget != nil {
-			if opaque := e.backend.SerializeWidgetToOpaque(widget); opaque != nil {
+			if opaque := e.backend.SerializeGenElemToOpaque(widget); opaque != nil {
 				defaultWidgets = append(defaultWidgets, opaque)
 			}
 		}
@@ -283,7 +283,7 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 				if err != nil {
 					log.Printf("warning: widget %s property %s: %v", w.Name, propName, err)
 				} else {
-					builder.SetActionOpaque(propName, e.backend.SerializeClientActionToOpaque(act))
+					builder.SetActionOpaque(propName, e.backend.SerializeGenElemToOpaque(act))
 				}
 			}
 			continue
@@ -486,7 +486,7 @@ func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.W
 			if err != nil {
 				return nil, mdlerrors.NewBackend("build datasource", err)
 			}
-			ctx.DataSource = e.backend.SerializeDataSourceToOpaque(dataSource)
+			ctx.DataSource = e.backend.SerializeGenElemToOpaque(dataSource)
 			ctx.EntityName = entityName
 			if entityName != "" {
 				e.pageBuilder.entityContext = entityName
@@ -526,7 +526,7 @@ func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.W
 			if err != nil {
 				return nil, mdlerrors.NewBackend("build action", err)
 			}
-			ctx.Action = e.backend.SerializeClientActionToOpaque(act)
+			ctx.Action = e.backend.SerializeGenElemToOpaque(act)
 		}
 
 	default:
@@ -563,7 +563,7 @@ func (e *PluggableWidgetEngine) applyChildSlots(builder backend.WidgetObjectBuil
 					return err
 				}
 				if widget != nil {
-					if opaque := e.backend.SerializeWidgetToOpaque(widget); opaque != nil {
+					if opaque := e.backend.SerializeGenElemToOpaque(widget); opaque != nil {
 						slotWidgets[slot.PropertyKey] = append(slotWidgets[slot.PropertyKey], opaque)
 					}
 				}
@@ -574,7 +574,7 @@ func (e *PluggableWidgetEngine) applyChildSlots(builder backend.WidgetObjectBuil
 				return err
 			}
 			if widget != nil {
-				if opaque := e.backend.SerializeWidgetToOpaque(widget); opaque != nil {
+				if opaque := e.backend.SerializeGenElemToOpaque(widget); opaque != nil {
 					defaultWidgets = append(defaultWidgets, opaque)
 				}
 			}

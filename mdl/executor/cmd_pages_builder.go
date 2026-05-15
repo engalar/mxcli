@@ -58,6 +58,11 @@ type pageBuilder struct {
 
 	// Entity context for resolving short attribute names inside DataViews
 	entityContext string // Qualified entity name (e.g., "Module.Entity")
+
+	// lastContainerID is set by buildPageV3/buildSnippetV3 to the resolved
+	// container (folder or module) so cmd_pages_create_v3.go can use it
+	// when calling CreatePageGen / CreateSnippetGen.
+	lastContainerID model.ID
 }
 
 // initPluggableEngine lazily initializes the pluggable widget engine.

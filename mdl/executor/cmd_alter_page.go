@@ -7,17 +7,13 @@ import (
 	"sort"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
-	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // execAlterPage handles ALTER PAGE/SNIPPET Module.Name { operations }.
@@ -284,6 +280,8 @@ func buildWidgetsFromASTGen(ctx *ExecContext, widgets []*ast.WidgetV3, moduleNam
 
 	var result []element.Element
 	for _, w := range widgets {
+		// buildWidgetV3 now returns element.Element directly (gen-native path,
+		// Stage 3.3.5.Cat-B). No BSON roundtrip needed.
 		widget, err := pb.buildWidgetV3(w)
 		if err != nil {
 			return nil, mdlerrors.NewBackend("build widget "+w.Name, err)
@@ -291,16 +289,7 @@ func buildWidgetsFromASTGen(ctx *ExecContext, widgets []*ast.WidgetV3, moduleNam
 		if widget == nil {
 			continue
 		}
-		raw := sdkmpr.SerializeWidget(widget)
-		rawBSON, err := bson.Marshal(raw)
-		if err != nil {
-			return nil, mdlerrors.NewBackend("marshal widget "+w.Name, err)
-		}
-		elem, err := codec.NewDecoder(codec.DefaultRegistry).Decode(bson.Raw(rawBSON))
-		if err != nil {
-			return nil, mdlerrors.NewBackend("decode widget "+w.Name+" to gen", err)
-		}
-		result = append(result, elem)
+		result = append(result, widget)
 	}
 	return result, nil
 }
