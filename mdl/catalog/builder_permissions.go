@@ -8,7 +8,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // buildPermissions extracts security permissions from all documents.
@@ -101,31 +100,6 @@ func (b *Builder) buildEntityPermissions(stmt *sql.Stmt, projectID, snapshotID s
 	}
 
 	return count
-}
-
-// entityAccessFromMemberRights — legacy sdk-typed helper. Kept until
-// builder_permissions_test.go migrates to fixtures using gen types
-// (Stage 3.3.4 C6 territory).
-func entityAccessFromMemberRights(rule *domainmodel.AccessRule) (hasRead, hasWrite bool) {
-	if len(rule.MemberAccesses) > 0 {
-		for _, ma := range rule.MemberAccesses {
-			if ma.AccessRights == domainmodel.MemberAccessRightsReadOnly || ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
-				hasRead = true
-			}
-			if ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
-				hasWrite = true
-			}
-		}
-	} else {
-		dmr := rule.DefaultMemberAccessRights
-		if dmr == domainmodel.MemberAccessRightsReadOnly || dmr == domainmodel.MemberAccessRightsReadWrite {
-			hasRead = true
-		}
-		if dmr == domainmodel.MemberAccessRightsReadWrite {
-			hasWrite = true
-		}
-	}
-	return
 }
 
 // entityAccessFromMemberRightsGen mirrors the legacy helper but reads

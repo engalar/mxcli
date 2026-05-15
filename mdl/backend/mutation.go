@@ -321,6 +321,13 @@ type WidgetObjectBuilder interface {
 	// Finalize builds the CustomWidget from the mutated template.
 	// Returns the widget with RawType/RawObject populated from internal state.
 	Finalize(id model.ID, name string, label string, editable string) *CustomWidget
+
+	// FinalizeGen is the Stage 3.3.5.D1 gen-native sibling of Finalize.
+	// It serializes the widget template through the mpr serializer and decodes
+	// it via the gen codec, returning a *GenCustomWidgetElem that satisfies both
+	// backend.Widget and element.Element. Replaces Finalize once Cat-B migration
+	// (cmd_pages_builder_v3.go) is complete.
+	FinalizeGen(id model.ID, name string, label string, editable string) (*GenCustomWidgetElem, error)
 }
 
 // DataGridColumnSpec carries pre-resolved column data for DataGrid2 construction.

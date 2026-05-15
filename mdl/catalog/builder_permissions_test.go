@@ -5,98 +5,67 @@ package catalog
 import (
 	"testing"
 
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
-func TestEntityAccessFromMemberRights(t *testing.T) {
+func TestEntityAccessFromMemberRightsGen(t *testing.T) {
 	tests := []struct {
 		name      string
-		rule      *domainmodel.AccessRule
+		rule      *genDm.AccessRule
 		wantRead  bool
 		wantWrite bool
 	}{
 		{
-			name: "no member accesses, default None",
-			rule: &domainmodel.AccessRule{
-				DefaultMemberAccessRights: domainmodel.MemberAccessRightsNone,
-			},
+			name:      "no member accesses, default None",
+			rule:      ruleWithDefault("None"),
 			wantRead:  false,
 			wantWrite: false,
 		},
 		{
-			name: "no member accesses, default ReadOnly",
-			rule: &domainmodel.AccessRule{
-				DefaultMemberAccessRights: domainmodel.MemberAccessRightsReadOnly,
-			},
+			name:      "no member accesses, default ReadOnly",
+			rule:      ruleWithDefault("ReadOnly"),
 			wantRead:  true,
 			wantWrite: false,
 		},
 		{
-			name: "no member accesses, default ReadWrite",
-			rule: &domainmodel.AccessRule{
-				DefaultMemberAccessRights: domainmodel.MemberAccessRightsReadWrite,
-			},
+			name:      "no member accesses, default ReadWrite",
+			rule:      ruleWithDefault("ReadWrite"),
 			wantRead:  true,
 			wantWrite: true,
 		},
 		{
-			name: "explicit member ReadOnly",
-			rule: &domainmodel.AccessRule{
-				MemberAccesses: []*domainmodel.MemberAccess{
-					{AttributeName: "Name", AccessRights: domainmodel.MemberAccessRightsReadOnly},
-				},
-			},
+			name:      "explicit member ReadOnly",
+			rule:      ruleWithMembers("ReadOnly"),
 			wantRead:  true,
 			wantWrite: false,
 		},
 		{
-			name: "explicit member ReadWrite",
-			rule: &domainmodel.AccessRule{
-				MemberAccesses: []*domainmodel.MemberAccess{
-					{AttributeName: "Name", AccessRights: domainmodel.MemberAccessRightsReadWrite},
-				},
-			},
+			name:      "explicit member ReadWrite",
+			rule:      ruleWithMembers("ReadWrite"),
 			wantRead:  true,
 			wantWrite: true,
 		},
 		{
-			name: "mixed members — one ReadOnly one None",
-			rule: &domainmodel.AccessRule{
-				MemberAccesses: []*domainmodel.MemberAccess{
-					{AttributeName: "Name", AccessRights: domainmodel.MemberAccessRightsReadOnly},
-					{AttributeName: "Age", AccessRights: domainmodel.MemberAccessRightsNone},
-				},
-			},
+			name:      "mixed members — one ReadOnly one None",
+			rule:      ruleWithMembers("ReadOnly", "None"),
 			wantRead:  true,
 			wantWrite: false,
 		},
 		{
-			name: "mixed members — one ReadOnly one ReadWrite",
-			rule: &domainmodel.AccessRule{
-				MemberAccesses: []*domainmodel.MemberAccess{
-					{AttributeName: "Name", AccessRights: domainmodel.MemberAccessRightsReadOnly},
-					{AttributeName: "Age", AccessRights: domainmodel.MemberAccessRightsReadWrite},
-				},
-			},
+			name:      "mixed members — one ReadOnly one ReadWrite",
+			rule:      ruleWithMembers("ReadOnly", "ReadWrite"),
 			wantRead:  true,
 			wantWrite: true,
 		},
 		{
-			name: "all members None",
-			rule: &domainmodel.AccessRule{
-				MemberAccesses: []*domainmodel.MemberAccess{
-					{AttributeName: "Name", AccessRights: domainmodel.MemberAccessRightsNone},
-				},
-			},
+			name:      "all members None",
+			rule:      ruleWithMembers("None"),
 			wantRead:  false,
 			wantWrite: false,
 		},
 		{
-			name: "empty member accesses falls through to default",
-			rule: &domainmodel.AccessRule{
-				MemberAccesses:            []*domainmodel.MemberAccess{},
-				DefaultMemberAccessRights: domainmodel.MemberAccessRightsReadOnly,
-			},
+			name:      "empty member accesses falls through to default",
+			rule:      ruleWithDefault("ReadOnly"),
 			wantRead:  true,
 			wantWrite: false,
 		},
@@ -104,7 +73,7 @@ func TestEntityAccessFromMemberRights(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotRead, gotWrite := entityAccessFromMemberRights(tt.rule)
+			gotRead, gotWrite := entityAccessFromMemberRightsGen(tt.rule)
 			if gotRead != tt.wantRead {
 				t.Errorf("hasRead = %v, want %v", gotRead, tt.wantRead)
 			}
@@ -113,4 +82,24 @@ func TestEntityAccessFromMemberRights(t *testing.T) {
 			}
 		})
 	}
+}
+
+func ruleWithDefault(defaultRights string) *genDm.AccessRule {
+	rule := genDm.NewAccessRule()
+	rule.SetDefaultMemberAccessRights(defaultRights)
+	return rule
+}
+
+func ruleWithMembers(rights ...string) *genDm.AccessRule {
+	rule := genDm.NewAccessRule()
+	for i, right := range rights {
+		member := genDm.NewMemberAccess()
+		member.SetAttributeQualifiedName("Module.Entity.Attr")
+		if i > 0 {
+			member.SetAttributeQualifiedName("Module.Entity.Attr" + string(rune('A'+i)))
+		}
+		member.SetAccessRights(right)
+		rule.AddMemberAccesses(member)
+	}
+	return rule
 }

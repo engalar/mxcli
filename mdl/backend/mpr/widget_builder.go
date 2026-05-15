@@ -17,6 +17,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/widgets"
 )
@@ -60,7 +61,20 @@ func (b *MprBackend) LoadWidgetTemplate(widgetID string, projectPath string) (ba
 }
 
 // SerializeWidgetToOpaque converts a domain Widget to opaque BSON form.
+// Stage 3.3.5.D1: if the widget is a *backend.GenCustomWidgetElem produced by
+// FinalizeGen, the underlying gen element is encoded via the gen codec so the
+// output BSON matches the mpr serializer's output exactly (same roundtrip that
+// SDKPageToGen uses).  All other sdk-typed widgets fall through to the legacy
+// mpr.SerializeWidget path.
 func (b *MprBackend) SerializeWidgetToOpaque(w backend.Widget) backend.OpaqueWidget {
+	if genW, ok := w.(*backend.GenCustomWidgetElem); ok {
+		enc := codec.Encoder{}
+		raw, err := enc.Encode(genW.AsElement())
+		if err == nil {
+			return bson.Raw(raw)
+		}
+		log.Printf("warning: SerializeWidgetToOpaque gen encode failed (%v), falling back to mpr path", err)
+	}
 	return mpr.SerializeWidget(w)
 }
 
@@ -345,6 +359,33 @@ func (ob *mprWidgetObjectBuilder) Finalize(id model.ID, name string, label strin
 		PropertyTypeIDMap: ob.propertyTypeIDs,
 		ObjectTypeID:      ob.objectTypeID,
 	}
+}
+
+// FinalizeGen is the Stage 3.3.5.D1 gen-native sibling of Finalize.
+// It builds an sdk CustomWidget via Finalize, serializes it to BSON through
+// the mpr serializer, then decodes the BSON via the gen codec to produce a
+// *backend.GenCustomWidgetElem that satisfies both backend.Widget and
+// element.Element.
+func (ob *mprWidgetObjectBuilder) FinalizeGen(id model.ID, name string, label string, editable string) (*backend.GenCustomWidgetElem, error) {
+	// Build via legacy path so we reuse the tested BSON serialization path.
+	cw := ob.Finalize(id, name, label, editable)
+
+	// Serialize to BSON via mpr serializer (same path as SDKPageToGen bridge).
+	doc := mpr.SerializeWidget(cw)
+
+	raw, err := bson.Marshal(doc)
+	if err != nil {
+		return nil, fmt.Errorf("FinalizeGen: marshal: %w", err)
+	}
+
+	// Decode via gen codec — produces *genCW.CustomWidget (element.Element).
+	dec := codec.NewDecoder(codec.DefaultRegistry)
+	elem, err := dec.Decode(bson.Raw(raw))
+	if err != nil {
+		return nil, fmt.Errorf("FinalizeGen: decode: %w", err)
+	}
+
+	return backend.NewGenCustomWidgetElem(elem), nil
 }
 
 // ===========================================================================
