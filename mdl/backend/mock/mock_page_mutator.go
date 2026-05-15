@@ -19,11 +19,8 @@ var _ backend.PageMutator = (*MockPageMutator)(nil)
 type MockPageMutator struct {
 	ContainerTypeFunc        func() backend.ContainerKind
 	SetWidgetPropertyFunc    func(widgetRef string, prop string, value any) error
-	SetWidgetDataSourceFunc  func(widgetRef string, ds backend.DataSource) error
 	SetColumnPropertyFunc    func(gridRef string, columnRef string, prop string, value any) error
-	InsertWidgetFunc         func(widgetRef string, columnRef string, position backend.InsertPosition, widgets []backend.Widget) error
 	DropWidgetFunc           func(refs []backend.WidgetRef) error
-	ReplaceWidgetFunc        func(widgetRef string, columnRef string, widgets []backend.Widget) error
 	FindWidgetFunc           func(name string) bool
 	AddVariableFunc          func(name, dataType, defaultValue string) error
 	DropVariableFunc         func(name string) error
@@ -54,13 +51,6 @@ func (m *MockPageMutator) SetWidgetProperty(widgetRef string, prop string, value
 	return nil
 }
 
-func (m *MockPageMutator) SetWidgetDataSource(widgetRef string, ds backend.DataSource) error {
-	if m.SetWidgetDataSourceFunc != nil {
-		return m.SetWidgetDataSourceFunc(widgetRef, ds)
-	}
-	return nil
-}
-
 func (m *MockPageMutator) SetColumnProperty(gridRef string, columnRef string, prop string, value any) error {
 	if m.SetColumnPropertyFunc != nil {
 		return m.SetColumnPropertyFunc(gridRef, columnRef, prop, value)
@@ -68,23 +58,9 @@ func (m *MockPageMutator) SetColumnProperty(gridRef string, columnRef string, pr
 	return nil
 }
 
-func (m *MockPageMutator) InsertWidget(widgetRef string, columnRef string, position backend.InsertPosition, widgets []backend.Widget) error {
-	if m.InsertWidgetFunc != nil {
-		return m.InsertWidgetFunc(widgetRef, columnRef, position, widgets)
-	}
-	return nil
-}
-
 func (m *MockPageMutator) DropWidget(refs []backend.WidgetRef) error {
 	if m.DropWidgetFunc != nil {
 		return m.DropWidgetFunc(refs)
-	}
-	return nil
-}
-
-func (m *MockPageMutator) ReplaceWidget(widgetRef string, columnRef string, widgets []backend.Widget) error {
-	if m.ReplaceWidgetFunc != nil {
-		return m.ReplaceWidgetFunc(widgetRef, columnRef, widgets)
 	}
 	return nil
 }

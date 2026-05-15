@@ -57,10 +57,6 @@ type MockBackend struct {
 	MoveFolderFunc   func(id model.ID, newContainerID model.ID) error
 
 	// DomainModelBackend
-	ListDomainModelsFunc                       func() ([]*domainmodel.DomainModel, error)
-	GetDomainModelFunc                         func(moduleID model.ID) (*domainmodel.DomainModel, error)
-	GetDomainModelByIDFunc                     func(id model.ID) (*domainmodel.DomainModel, error)
-	UpdateDomainModelFunc                      func(dm *domainmodel.DomainModel) error
 	CreateEntityFunc                           func(domainModelID model.ID, entity *domainmodel.Entity) error
 	UpdateEntityFunc                           func(domainModelID model.ID, entity *domainmodel.Entity) error
 	DeleteEntityFunc                           func(domainModelID model.ID, entityID model.ID) error
@@ -81,7 +77,7 @@ type MockBackend struct {
 	UpdateOqlQueriesForMovedEntityFunc         func(oldQualifiedName, newQualifiedName string) (int, error)
 	UpdateEnumerationRefsInAllDomainModelsFunc func(oldQualifiedName, newQualifiedName string) error
 
-	// Stage 3.3.4 C1 — gen-typed sibling Func fields (additive)
+	// Stage 3.3.4 C1 — gen-typed domain model Func fields.
 	ListDomainModelsGenFunc   func() ([]*genDm.DomainModel, error)
 	GetDomainModelGenFunc     func(moduleID model.ID) (*genDm.DomainModel, error)
 	GetDomainModelByIDGenFunc func(id model.ID) (*genDm.DomainModel, error)
@@ -312,11 +308,8 @@ type MockBackend struct {
 	SerializeWorkflowActivityGenFunc func(a element.Element) (any, error)
 
 	// WidgetBuilderBackend
-	LoadWidgetTemplateFunc            func(widgetID string, projectPath string) (backend.WidgetObjectBuilder, error)
-	SerializeWidgetToOpaqueFunc       func(w backend.Widget) backend.OpaqueWidget
-	SerializeDataSourceToOpaqueFunc   func(ds backend.DataSource) backend.OpaqueDataSource
-	SerializeClientActionToOpaqueFunc func(a backend.ClientAction) backend.OpaqueAction
-	BuildCreateAttributeObjectFunc    func(attributePath string, objectTypeID, propertyTypeID, valueTypeID string) (any, error)
+	LoadWidgetTemplateFunc         func(widgetID string, projectPath string) (backend.WidgetObjectBuilder, error)
+	BuildCreateAttributeObjectFunc func(attributePath string, objectTypeID, propertyTypeID, valueTypeID string) (any, error)
 	BuildDataGrid2WidgetFunc          func(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.CustomWidget, error)
 	BuildFilterWidgetFunc             func(spec backend.FilterWidgetSpec, projectPath string) (backend.Widget, error)
 	BuildDataGrid2WidgetGenFunc       func(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.GenCustomWidgetElem, error)
