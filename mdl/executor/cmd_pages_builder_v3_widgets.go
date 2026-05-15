@@ -12,6 +12,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
@@ -802,20 +803,24 @@ func (pb *pageBuilder) buildSnippetCallV3(w *ast.WidgetV3) (*pages.SnippetCallWi
 // buildSnippetCallParams validates the supplied param mappings against the
 // snippet's declared parameters and populates sc.ParameterMappings.
 func (pb *pageBuilder) buildSnippetCallParams(sc *pages.SnippetCallWidget, snippetQName string, supplied []ast.SnippetCallParam) error {
-	snippets, err := pb.backend.ListSnippets()
+	snippets, err := pb.backend.ListSnippetsGen()
 	if err != nil {
 		return err
 	}
 
 	// Find the target snippet to read its declared parameters.
-	var targetSnippet *pages.Snippet
+	var targetSnippet *genPg.Snippet
 	for _, s := range snippets {
-		if s.Name != "" && (s.Name == snippetQName || strings.HasSuffix(snippetQName, "."+s.Name)) {
+		if s == nil {
+			continue
+		}
+		name := s.Name()
+		if name != "" && (name == snippetQName || strings.HasSuffix(snippetQName, "."+name)) {
 			targetSnippet = s
 			break
 		}
 	}
-	if targetSnippet == nil || len(targetSnippet.Parameters) == 0 {
+	if targetSnippet == nil || len(targetSnippet.ParametersItems()) == 0 {
 		// Snippet has no declared parameters — nothing to validate or map.
 		return nil
 	}
@@ -828,16 +833,21 @@ func (pb *pageBuilder) buildSnippetCallParams(sc *pages.SnippetCallWidget, snipp
 	}
 
 	// Validate that every declared parameter has a mapping, then build the list.
-	for _, declared := range targetSnippet.Parameters {
-		argument, ok := suppliedByName[declared.Name]
-		if !ok {
+	for _, rawParam := range targetSnippet.ParametersItems() {
+		sp, ok := rawParam.(*genPg.SnippetParameter)
+		if !ok || sp == nil {
+			continue
+		}
+		paramName := sp.Name()
+		argument, found := suppliedByName[paramName]
+		if !found {
 			return mdlerrors.NewValidationf(
 				"snippet %s requires parameter $%s — add Params: {%s: $<variable>} to the SNIPPETCALL",
-				snippetQName, declared.Name, declared.Name,
+				snippetQName, paramName, paramName,
 			)
 		}
 		sc.ParameterMappings = append(sc.ParameterMappings, pages.SnippetParamMapping{
-			ParamName: declared.Name,
+			ParamName: paramName,
 			Argument:  argument,
 		})
 	}

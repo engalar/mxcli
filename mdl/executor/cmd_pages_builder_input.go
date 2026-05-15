@@ -96,6 +96,19 @@ func (pb *pageBuilder) resolveSnippetRef(snippetRef string) (model.ID, error) {
 		}
 	}
 
+	// Gen-typed path via snippetsRepo (preferred when available).
+	if pb.snippetsRepo != nil {
+		s, err := pb.snippetsRepo.FindByQualifiedName(snippetRef)
+		if err != nil {
+			return "", err
+		}
+		if s != nil {
+			return model.ID(s.ID()), nil
+		}
+		return "", mdlerrors.NewNotFound("snippet", snippetRef)
+	}
+
+	// Legacy fallback: sdk-typed backend listing.
 	snippets, err := pb.backend.ListSnippets()
 	if err != nil {
 		return "", err

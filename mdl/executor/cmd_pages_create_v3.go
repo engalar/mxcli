@@ -70,6 +70,7 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 		widgetBackend:    ctx.Backend,
 		microflowsRepo:   ctx.Microflows,
 		nanoflowsRepo:    ctx.Nanoflows,
+		snippetsRepo:     ctx.Snippets,
 	}
 
 	page, err := pb.buildPageV3(s)
@@ -152,6 +153,7 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 		widgetBackend:    ctx.Backend,
 		microflowsRepo:   ctx.Microflows,
 		nanoflowsRepo:    ctx.Nanoflows,
+		snippetsRepo:     ctx.Snippets,
 	}
 
 	snippet, err := pb.buildSnippetV3(s)

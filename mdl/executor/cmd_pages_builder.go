@@ -49,12 +49,11 @@ type pageBuilder struct {
 	microflowsCache []*genMf.Microflow
 	foldersCache    []*types.FolderInfo
 
-	// Microflow / nanoflow repositories for resolveMicroflowRef and
-	// nanoflow return-type lookups (populated by callers from
-	// ctx.Microflows / ctx.Nanoflows). Optional — when nil the
-	// getMicroflows / getNanoflows accessors return an empty slice.
+	// Microflow / nanoflow / snippet repositories (populated from ctx.*).
+	// Optional — when nil the legacy backend.List* fallback is used.
 	microflowsRepo repos.MicroflowRepository
 	nanoflowsRepo  repos.NanoflowRepository
+	snippetsRepo   repos.SnippetRepository
 
 	// Entity context for resolving short attribute names inside DataViews
 	entityContext string // Qualified entity name (e.g., "Module.Entity")

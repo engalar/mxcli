@@ -258,6 +258,7 @@ func buildWidgetsFromAST(ctx *ExecContext, widgets []*ast.WidgetV3, moduleName s
 		fragments:        ctx.Fragments,
 		themeRegistry:    ctx.GetThemeRegistry(),
 		widgetBackend:    ctx.Backend,
+		snippetsRepo:     ctx.Snippets,
 	}
 
 	var result []pages.Widget
