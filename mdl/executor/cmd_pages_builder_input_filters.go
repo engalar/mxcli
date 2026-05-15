@@ -7,27 +7,35 @@ import (
 
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+)
+
+// DataGrid2 filter widget IDs — pluggable widget identifiers used when building
+// DataGrid column header filter widgets.
+const (
+	widgetIDDataGridTextFilter     = "com.mendix.widget.web.datagridtextfilter.DatagridTextFilter"
+	widgetIDDataGridDateFilter     = "com.mendix.widget.web.datagriddatefilter.DatagridDateFilter"
+	widgetIDDataGridDropdownFilter = "com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter"
+	widgetIDDataGridNumberFilter   = "com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter"
 )
 
 func (pb *pageBuilder) getFilterWidgetIDForAttribute(attrPath string) string {
 	attrType := pb.findAttributeType(attrPath)
 	if attrType == nil {
-		return pages.WidgetIDDataGridTextFilter // Default to text filter
+		return widgetIDDataGridTextFilter
 	}
 
 	switch attrType.(type) {
 	case *genDm.StringAttributeType:
-		return pages.WidgetIDDataGridTextFilter
+		return widgetIDDataGridTextFilter
 	case *genDm.IntegerAttributeType, *genDm.LongAttributeType,
 		*genDm.DecimalAttributeType, *genDm.AutoNumberAttributeType:
-		return pages.WidgetIDDataGridNumberFilter
+		return widgetIDDataGridNumberFilter
 	case *genDm.DateTimeAttributeType:
-		return pages.WidgetIDDataGridDateFilter
+		return widgetIDDataGridDateFilter
 	case *genDm.BooleanAttributeType, *genDm.EnumerationAttributeType:
-		return pages.WidgetIDDataGridDropdownFilter
+		return widgetIDDataGridDropdownFilter
 	default:
-		return pages.WidgetIDDataGridTextFilter
+		return widgetIDDataGridTextFilter
 	}
 }
 
