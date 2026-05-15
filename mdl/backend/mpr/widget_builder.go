@@ -19,8 +19,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/widgets"
 )
 
@@ -309,37 +307,60 @@ func (ob *mprWidgetObjectBuilder) CloneGallerySelectionProperty(propertyKey stri
 // Finalize
 // ---------------------------------------------------------------------------
 
-// finalize builds a pages.CustomWidget from the mutated template.
-// It is private to mpr — external callers use FinalizeGen.
-func (ob *mprWidgetObjectBuilder) finalize(id model.ID, name string, label string, editable string) *pages.CustomWidget {
-	return &pages.CustomWidget{
-		BaseWidget: pages.BaseWidget{
-			BaseElement: model.BaseElement{
-				ID:       id,
-				TypeName: "CustomWidgets$CustomWidget",
-			},
-			Name: name,
-		},
-		Label:             label,
-		Editable:          editable,
-		RawType:           ob.embeddedType,
-		RawObject:         ob.object,
-		PropertyTypeIDMap: ob.propertyTypeIDs,
-		ObjectTypeID:      ob.objectTypeID,
-	}
-}
-
-// FinalizeGen is the Stage 3.3.5.D1 gen-native Finalize path.
-// It builds an sdk CustomWidget via finalize, serializes it to BSON through
-// the mpr serializer, then decodes the BSON via the gen codec to produce a
-// *backend.GenCustomWidgetElem that satisfies both backend.Widget and
-// element.Element.
+// FinalizeGen is the Stage 3.3.5 gen-native Finalize path.
+// It constructs the CustomWidget BSON directly without going through sdk/pages
+// types, then decodes via the gen codec to produce a *backend.GenCustomWidgetElem
+// that satisfies both backend.Widget and element.Element.
 func (ob *mprWidgetObjectBuilder) FinalizeGen(id model.ID, name string, label string, editable string) (*backend.GenCustomWidgetElem, error) {
-	// Build via legacy path so we reuse the tested BSON serialization path.
-	cw := ob.finalize(id, name, label, editable)
+	if editable == "" {
+		editable = "Always"
+	}
 
-	// Serialize to BSON via mpr serializer (same path as SDKPageToGen bridge).
-	doc := mpr.SerializeWidget(cw)
+	// Build LabelTemplate BSON only when a label is provided.
+	var labelTemplate any
+	if label != "" {
+		labelTemplate = bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$ClientTemplate"},
+			{Key: "Fallback", Value: bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "Texts$Text"},
+				{Key: "Items", Value: bson.A{int32(3)}},
+			}},
+			{Key: "Parameters", Value: bson.A{int32(3)}},
+			{Key: "Template", Value: bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "Texts$Text"},
+				{Key: "Items", Value: bson.A{int32(3), bson.D{
+					{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+					{Key: "$Type", Value: "Texts$Translation"},
+					{Key: "LanguageCode", Value: "en_US"},
+					{Key: "Text", Value: label},
+				}}},
+			}},
+		}
+	}
+
+	doc := bson.D{
+		{Key: "$ID", Value: bsonutil.IDToBsonBinary(string(id))},
+		{Key: "$Type", Value: "CustomWidgets$CustomWidget"},
+		{Key: "Appearance", Value: bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$Appearance"},
+			{Key: "Class", Value: ""},
+			{Key: "DesignProperties", Value: bson.A{int32(3)}},
+			{Key: "DynamicClasses", Value: ""},
+			{Key: "Style", Value: ""},
+		}},
+		{Key: "ConditionalEditabilitySettings", Value: nil},
+		{Key: "ConditionalVisibilitySettings", Value: nil},
+		{Key: "Editable", Value: editable},
+		{Key: "LabelTemplate", Value: labelTemplate},
+		{Key: "Name", Value: name},
+		{Key: "Object", Value: ob.object},
+		{Key: "TabIndex", Value: int64(0)},
+		{Key: "Type", Value: ob.embeddedType},
+	}
 
 	raw, err := bson.Marshal(doc)
 	if err != nil {
