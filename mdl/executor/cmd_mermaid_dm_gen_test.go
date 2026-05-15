@@ -42,7 +42,7 @@ func TestDomainModelToMermaidGen_RendersFixtureModule(t *testing.T) {
 	}
 }
 
-func TestDomainModelToMermaidGen_ConsistentWithLegacy(t *testing.T) {
+func TestDomainModelToMermaidGen_UsedByDescribeMermaid(t *testing.T) {
 	ctx := newDomainModelsTestContext(t)
 	mods, _ := ctx.Backend.ListModules()
 	var modName string
@@ -59,20 +59,18 @@ func TestDomainModelToMermaidGen_ConsistentWithLegacy(t *testing.T) {
 	if modName == "" {
 		t.Skip("fixture has no module with entities")
 	}
-	var bufGen, bufLegacy bytes.Buffer
+	var bufGen, bufDescribe bytes.Buffer
 	ctx.Output = &bufGen
 	if err := domainModelToMermaidGen(ctx, modName); err != nil {
 		t.Fatalf("gen: %v", err)
 	}
-	ctx.Output = &bufLegacy
-	if err := domainModelToMermaid(ctx, modName); err != nil {
-		t.Fatalf("legacy: %v", err)
+	ctx.Output = &bufDescribe
+	if err := describeMermaid(ctx, "domainmodel", modName); err != nil {
+		t.Fatalf("describeMermaid: %v", err)
 	}
-	// Compare entity count by counting "{" lines (one per entity).
 	genEntities := strings.Count(bufGen.String(), "    {")
-	legacyEntities := strings.Count(bufLegacy.String(), "    {")
-	// Each entity opens with "    {" pattern via "    %s {\n"; both must agree.
-	if genEntities != legacyEntities {
-		t.Errorf("entity-block count mismatch: gen=%d legacy=%d", genEntities, legacyEntities)
+	describeEntities := strings.Count(bufDescribe.String(), "    {")
+	if genEntities != describeEntities {
+		t.Errorf("entity-block count mismatch: gen=%d describe=%d", genEntities, describeEntities)
 	}
 }

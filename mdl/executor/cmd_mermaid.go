@@ -10,7 +10,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // describeMermaid generates a Mermaid diagram for the given object type and name.
@@ -41,14 +40,7 @@ func describeMermaid(ctx *ExecContext, objectType, name string) error {
 
 	switch strings.ToLower(objectType) {
 	case "entity", "domainmodel":
-		// Stage 3.3.4 B3: prefer the gen-typed renderer when the
-		// modelsdk-native DomainModels repo is wired (production
-		// MprBackend path). Mock backends don't carry the repo and
-		// fall back to the legacy renderer until they're updated.
-		if ctx.DomainModels != nil {
-			return domainModelToMermaidGen(ctx, qn.Module)
-		}
-		return domainModelToMermaid(ctx, qn.Module)
+		return domainModelToMermaidGen(ctx, qn.Module)
 	case "microflow":
 		return microflowToMermaidGen(ctx, qn)
 	case "page":
@@ -65,155 +57,12 @@ func (e *Executor) DescribeMermaid(objectType, name string) error {
 	return describeMermaid(e.newExecContext(context.Background()), objectType, name)
 }
 
-// domainModelToMermaid generates a Mermaid erDiagram for a module's domain model.
-func domainModelToMermaid(ctx *ExecContext, moduleName string) error {
-	module, err := findModule(ctx, moduleName)
-	if err != nil {
-		return err
-	}
-
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
-	if err != nil {
-		return mdlerrors.NewBackend("get domain model", err)
-	}
-
-	// Build entity ID-to-name map for this module
-	entityNames := make(map[model.ID]string)
-	for _, entity := range dm.Entities {
-		entityNames[entity.ID] = entity.Name
-	}
-
-	// Also load entities from all modules for cross-module associations
-	allEntityNames := make(map[model.ID]string)
-	h, err := getHierarchy(ctx)
-	if err == nil {
-		domainModels, _ := ctx.Backend.ListDomainModels()
-		for _, otherDM := range domainModels {
-			modName := h.GetModuleName(otherDM.ContainerID)
-			for _, entity := range otherDM.Entities {
-				allEntityNames[entity.ID] = modName + "." + entity.Name
-			}
-		}
-	}
-
-	// Classify entities by type for coloring
-	type entityInfo struct {
-		label    string
-		category string // "persistent", "nonpersistent", "external", "view"
-	}
-	entityInfos := make([]entityInfo, 0, len(dm.Entities))
-	for _, entity := range dm.Entities {
-		label := sanitizeMermaidID(entity.Name)
-		cat := "persistent"
-		if strings.Contains(entity.Source, "OqlView") {
-			cat = "view"
-		} else if strings.Contains(entity.Source, "OData") || entity.RemoteSource != "" || entity.RemoteSourceDocument != "" {
-			cat = "external"
-		} else if !entity.Persistable {
-			cat = "nonpersistent"
-		}
-		entityInfos = append(entityInfos, entityInfo{label: label, category: cat})
-	}
-
-	var sb strings.Builder
-	sb.WriteString("erDiagram\n")
-
-	// Emit entities with their attributes
-	for i, entity := range dm.Entities {
-		entityLabel := entityInfos[i].label
-		sb.WriteString(fmt.Sprintf("    %s {\n", entityLabel))
-		for _, attr := range entity.Attributes {
-			typeName := attr.Type.GetTypeName()
-			attrName := sanitizeMermaidID(attr.Name)
-			sb.WriteString(fmt.Sprintf("        %s %s\n", typeName, attrName))
-		}
-		sb.WriteString("    }\n")
-	}
-
-	// Emit associations as relationships
-	for _, assoc := range dm.Associations {
-		parentName := entityNames[assoc.ParentID]
-		childName := entityNames[assoc.ChildID]
-
-		// For cross-module associations, use full qualified name
-		if parentName == "" {
-			if qn, ok := allEntityNames[assoc.ParentID]; ok {
-				parentName = sanitizeMermaidID(qn)
-			} else {
-				parentName = "Unknown"
-			}
-		} else {
-			parentName = sanitizeMermaidID(parentName)
-		}
-		if childName == "" {
-			if qn, ok := allEntityNames[assoc.ChildID]; ok {
-				childName = sanitizeMermaidID(qn)
-			} else {
-				childName = "Unknown"
-			}
-		} else {
-			childName = sanitizeMermaidID(childName)
-		}
-
-		// Determine relationship cardinality
-		// Parent (FROM) is the owner/many side, Child (TO) is the referenced/one side
-		rel := "}o--||" // Reference: many-to-one (parent=*, child=1)
-		if assoc.Type == domainmodel.AssociationTypeReferenceSet {
-			rel = "}o--o{" // ReferenceSet: many-to-many
-		}
-
-		label := sanitizeMermaidLabel(assoc.Name)
-		sb.WriteString(fmt.Sprintf("    %s %s %s : \"%s\"\n", parentName, rel, childName, label))
-	}
-
-	// Emit generalizations
-	for _, entity := range dm.Entities {
-		if entity.GeneralizationRef != "" {
-			childName := sanitizeMermaidID(entity.Name)
-			// GeneralizationRef is a qualified name like "System.User"
-			parentName := sanitizeMermaidID(entity.GeneralizationRef)
-			sb.WriteString(fmt.Sprintf("    %s ||--|{ %s : \"generalizes\"\n", parentName, childName))
-		}
-	}
-
-	// Emit style classes for entity coloring
-	sb.WriteString("\n")
-
-	// Emit metadata for the webview
-	sb.WriteString("%% @type erDiagram\n")
-
-	// Emit a JSON metadata comment that the webview can parse for coloring
-	sb.WriteString("%% @colors {")
-	first := true
-	for _, info := range entityInfos {
-		if !first {
-			sb.WriteString(",")
-		}
-		sb.WriteString(fmt.Sprintf(`"%s":"%s"`, info.label, info.category))
-		first = false
-	}
-	sb.WriteString("}\n")
-
-	fmt.Fprint(ctx.Output, sb.String())
-	return nil
-}
-
 // buildEntityNames builds a map from entity ID to qualified name (Module.Entity)
 // using the hierarchy for module name resolution. Used by both the entity
 // erDiagram path above and the gen-typed flow visualisation builders
 // (microflowToMermaidGen, nanoflowELKGen, etc.).
 func buildEntityNames(ctx *ExecContext, h *ContainerHierarchy) (map[model.ID]string, error) {
-	entityNames := make(map[model.ID]string)
-	domainModels, err := ctx.Backend.ListDomainModels()
-	if err != nil {
-		return nil, mdlerrors.NewBackend("list domain models", err)
-	}
-	for _, dm := range domainModels {
-		modName := h.GetModuleName(dm.ContainerID)
-		for _, entity := range dm.Entities {
-			entityNames[entity.ID] = modName + "." + entity.Name
-		}
-	}
+	entityNames, _ := buildAllEntityNamesGen(ctx)
 	return entityNames, nil
 }
 
