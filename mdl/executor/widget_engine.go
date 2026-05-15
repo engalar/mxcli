@@ -96,7 +96,7 @@ func NewPluggableWidgetEngine(b backend.WidgetBuilderBackend, pb *pageBuilder) *
 }
 
 // Build constructs a CustomWidget from a definition and AST widget node.
-func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*backend.CustomWidget, error) {
+func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*backend.GenCustomWidgetElem, error) {
 	// Save and restore entity context (DataSource mappings may change it)
 	oldEntityContext := e.pageBuilder.entityContext
 	defer func() { e.pageBuilder.entityContext = oldEntityContext }()
@@ -359,15 +359,21 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 	// 4.9 Auto-populate required empty object lists
 	builder.EnsureRequiredObjectLists()
 
-	// 5. Build CustomWidget
+	// 5. Build CustomWidget — Stage 3.3.5.D1: use gen-native FinalizeGen.
+	// Returns *backend.GenCustomWidgetElem (satisfies backend.Widget via adapter)
+	// so the sdk-typed V3 builder and SerializeWidgetToOpaque continue to work
+	// during the Cat-B transition.
 	widgetID := model.ID(types.GenerateID())
-	cw := builder.Finalize(widgetID, w.Name, w.GetLabel(), def.DefaultEditable)
+	genCW, err := builder.FinalizeGen(widgetID, w.Name, w.GetLabel(), def.DefaultEditable)
+	if err != nil {
+		return nil, fmt.Errorf("build pluggable widget %s: %w", w.Name, err)
+	}
 
-	if err := e.pageBuilder.registerWidgetName(w.Name, cw.ID); err != nil {
+	if err := e.pageBuilder.registerWidgetName(w.Name, genCW.GetID()); err != nil {
 		return nil, err
 	}
 
-	return cw, nil
+	return genCW, nil
 }
 
 // applyOperation dispatches a named operation to the corresponding builder method.

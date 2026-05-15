@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 func (b *Builder) buildModules() error {
@@ -63,7 +64,7 @@ func (b *Builder) buildModules() error {
 
 func (b *Builder) buildEntities() error {
 	// Get all domain models (cached — reused by buildReferences)
-	domainModels, err := b.cachedDomainModels()
+	domainModels, err := b.cachedDomainModelsGen()
 	if err != nil {
 		return err
 	}
@@ -99,50 +100,49 @@ func (b *Builder) buildEntities() error {
 	entityCount := 0
 	attrCount := 0
 	for _, dm := range domainModels {
+		if dm == nil {
+			continue
+		}
 		// Get module name using hierarchy
-		moduleID := b.hierarchy.findModuleID(dm.ContainerID)
+		moduleID := b.hierarchy.findModuleID(model.ID(dm.ID()))
 		moduleName := b.hierarchy.getModuleName(moduleID)
 
-		// ListDomainModels already returns full domain models with entities
-		for _, entity := range dm.Entities {
-			entityType := "PERSISTENT"
-			// Check entity type: view entities have OQL source, non-persistable have Persistable=false
-			if strings.Contains(entity.Source, "OqlView") {
-				entityType = "VIEW"
-			} else if !entity.Persistable {
-				entityType = "NON_PERSISTENT"
+		for _, entityElem := range dm.EntitiesItems() {
+			entity, ok := entityElem.(*genDm.Entity)
+			if !ok {
+				continue
 			}
+			entityType := catalogEntityTypeGen(entity)
 
-			qualifiedName := moduleName + "." + entity.Name
+			qualifiedName := moduleName + "." + entity.Name()
 
-			// Get generalization from GeneralizationRef
-			generalization := entity.GeneralizationRef
+			generalization := catalogGeneralizationQNGen(entity)
 
 			isExternal := 0
 			externalService := ""
-			if entity.Source == "Rest$ODataRemoteEntitySource" {
+			if entity.IsRemote() || entity.RemoteSource() != "" || entity.RemoteSourceDocumentQualifiedName() != "" {
 				isExternal = 1
-				externalService = entity.RemoteServiceName
+				externalService = entity.RemoteSource()
 			}
 
 			hasEventHandlers := 0
-			if len(entity.EventHandlers) > 0 {
+			if len(entity.EventHandlersItems()) > 0 {
 				hasEventHandlers = 1
 			}
 
 			_, err := entityStmt.Exec(
-				string(entity.ID),
-				entity.Name,
+				string(entity.ID()),
+				entity.Name(),
 				qualifiedName,
 				moduleName,
 				"", // Folder - entities don't have folders
 				entityType,
-				entity.Documentation,
+				entity.Documentation(),
 				generalization,
-				len(entity.Attributes),
+				len(entity.AttributesItems()),
 				0, // Association count - would need to count from associations
-				len(entity.AccessRules),
-				len(entity.ValidationRules),
+				len(entity.AccessRulesItems()),
+				len(entity.ValidationRulesItems()),
 				hasEventHandlers,
 				isExternal,
 				externalService,
@@ -160,17 +160,21 @@ func (b *Builder) buildEntities() error {
 			requiredByID := make(map[string]bool)
 			uniqueByName := make(map[string]bool)
 			requiredByName := make(map[string]bool)
-			for _, vr := range entity.ValidationRules {
-				attrID := string(vr.AttributeID)
+			for _, ruleElem := range entity.ValidationRulesItems() {
+				vr, ok := ruleElem.(*genDm.ValidationRule)
+				if !ok {
+					continue
+				}
+				attrID := vr.AttributeQualifiedName()
 				// Extract attribute name from qualified name (e.g., "DmTest.Cars.CarId" -> "CarId")
 				attrName := extractAttrName(attrID)
-				switch vr.Type {
-				case "Unique":
+				switch vr.RuleInfo().TypeName() {
+				case "DomainModels$UniqueRuleInfo":
 					uniqueByID[attrID] = true
 					if attrName != "" {
 						uniqueByName[attrName] = true
 					}
-				case "Required":
+				case "DomainModels$RequiredRuleInfo":
 					requiredByID[attrID] = true
 					if attrName != "" {
 						requiredByName[attrName] = true
@@ -179,40 +183,40 @@ func (b *Builder) buildEntities() error {
 			}
 
 			// Insert attributes
-			for _, attr := range entity.Attributes {
-				dataType := ""
+			for _, attrElem := range entity.AttributesItems() {
+				attr, ok := attrElem.(*genDm.Attribute)
+				if !ok {
+					continue
+				}
+				dataType := catalogAttributeTypeNameGen(attr.Type())
 				length := 0
-				if attr.Type != nil {
-					dataType = attr.Type.GetTypeName()
-					// Try to get length for string types
-					if st, ok := attr.Type.(*domainmodel.StringAttributeType); ok {
-						length = st.Length
-					}
+				if st, ok := attr.Type().(*genDm.StringAttributeType); ok {
+					length = int(st.Length())
 				}
 
 				// Check for unique/required constraints by ID first, then by name
 				isUnique := 0
-				if uniqueByID[string(attr.ID)] || uniqueByName[attr.Name] {
+				if uniqueByID[string(attr.ID())] || uniqueByName[attr.Name()] {
 					isUnique = 1
 				}
 				isRequired := 0
-				if requiredByID[string(attr.ID)] || requiredByName[attr.Name] {
+				if requiredByID[string(attr.ID())] || requiredByName[attr.Name()] {
 					isRequired = 1
 				}
 
 				defaultValue := ""
 				isCalculated := 0
-				if attr.Value != nil {
-					defaultValue = attr.Value.DefaultValue
-					if attr.Value.MicroflowName != "" || attr.Value.MicroflowID != "" {
-						isCalculated = 1
-					}
+				switch v := attr.Value().(type) {
+				case *genDm.StoredValue:
+					defaultValue = v.DefaultValue()
+				case *genDm.CalculatedValue:
+					isCalculated = 1
 				}
 
 				_, err := attrStmt.Exec(
-					string(attr.ID),
-					attr.Name,
-					string(entity.ID),
+					string(attr.ID()),
+					attr.Name(),
+					string(entity.ID()),
 					qualifiedName,
 					moduleName,
 					dataType,
@@ -221,7 +225,7 @@ func (b *Builder) buildEntities() error {
 					isRequired,
 					defaultValue,
 					isCalculated,
-					attr.Documentation,
+					attr.Documentation(),
 					projectID, projectName, snapshotID, snapshotDate, snapshotSource,
 					sourceID, sourceBranch, sourceRevision,
 				)
@@ -246,6 +250,82 @@ func extractAttrName(qualifiedName string) string {
 		return parts[len(parts)-1]
 	}
 	return ""
+}
+
+func catalogEntityTypeGen(entity *genDm.Entity) string {
+	if entity == nil {
+		return "PERSISTENT"
+	}
+	if src := entity.Source(); src != nil {
+		switch src.TypeName() {
+		case "DomainModels$OqlViewEntitySource", "DomainModels$ViewEntitySource":
+			return "VIEW"
+		case "DomainModels$RemoteEntitySource",
+			"DomainModels$MaterializedRemoteEntitySource",
+			"DomainModels$QueryBasedRemoteEntitySource",
+			"Rest$ODataRemoteEntitySource":
+			return "EXTERNAL"
+		}
+	}
+	if entity.IsRemote() || entity.RemoteSource() != "" || entity.RemoteSourceDocumentQualifiedName() != "" {
+		return "EXTERNAL"
+	}
+	if g, ok := entity.Generalization().(*genDm.NoGeneralization); ok && !g.Persistable() {
+		return "NON_PERSISTENT"
+	}
+	return "PERSISTENT"
+}
+
+func catalogGeneralizationQNGen(entity *genDm.Entity) string {
+	if entity == nil {
+		return ""
+	}
+	g, ok := entity.Generalization().(*genDm.Generalization)
+	if !ok {
+		return ""
+	}
+	return g.GeneralizationQualifiedName()
+}
+
+func catalogAttributeTypeNameGen(at element.Element) string {
+	if at == nil {
+		return ""
+	}
+	switch t := at.(type) {
+	case *genDm.StringAttributeType:
+		if l := t.Length(); l > 0 {
+			return fmt.Sprintf("String(%d)", l)
+		}
+		return "String(unlimited)"
+	case *genDm.IntegerAttributeType:
+		return "Integer"
+	case *genDm.LongAttributeType:
+		return "Long"
+	case *genDm.DecimalAttributeType:
+		return "Decimal"
+	case *genDm.FloatAttributeType:
+		return "Float"
+	case *genDm.CurrencyAttributeType:
+		return "Currency"
+	case *genDm.BooleanAttributeType:
+		return "Boolean"
+	case *genDm.DateTimeAttributeType:
+		return "DateTime"
+	case *genDm.AutoNumberAttributeType:
+		return "AutoNumber"
+	case *genDm.BinaryAttributeType:
+		return "Binary"
+	case *genDm.HashedStringAttributeType:
+		return "HashedString"
+	case *genDm.MultiLanguageAttributeType:
+		return "MultiLanguage"
+	case *genDm.EnumerationAttributeType:
+		if qn := t.EnumerationQualifiedName(); qn != "" {
+			return fmt.Sprintf("Enumeration(%s)", qn)
+		}
+		return "Enumeration"
+	}
+	return at.TypeName()
 }
 
 func (b *Builder) buildEnumerations() error {

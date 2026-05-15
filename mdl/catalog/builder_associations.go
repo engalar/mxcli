@@ -2,10 +2,13 @@
 
 package catalog
 
-import "github.com/mendixlabs/mxcli/model"
+import (
+	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+)
 
 func (b *Builder) buildAssociations() error {
-	domainModels, err := b.cachedDomainModels()
+	domainModels, err := b.cachedDomainModelsGen()
 	if err != nil {
 		return err
 	}
@@ -14,11 +17,18 @@ func (b *Builder) buildAssociations() error {
 	moduleNames := make(map[model.ID]string)
 	entityNames := make(map[model.ID]string)
 	for _, dm := range domainModels {
-		modID := b.hierarchy.findModuleID(dm.ContainerID)
+		if dm == nil {
+			continue
+		}
+		modID := b.hierarchy.findModuleID(model.ID(dm.ID()))
 		modName := b.hierarchy.getModuleName(modID)
-		moduleNames[dm.ContainerID] = modName
-		for _, entity := range dm.Entities {
-			entityNames[entity.ID] = modName + "." + entity.Name
+		moduleNames[model.ID(dm.ID())] = modName
+		for _, entityElem := range dm.EntitiesItems() {
+			entity, ok := entityElem.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			entityNames[model.ID(entity.ID())] = modName + "." + entity.Name()
 		}
 	}
 
@@ -38,28 +48,35 @@ func (b *Builder) buildAssociations() error {
 
 	count := 0
 	for _, dm := range domainModels {
-		modName := moduleNames[dm.ContainerID]
+		if dm == nil {
+			continue
+		}
+		modName := moduleNames[model.ID(dm.ID())]
 
-		for _, assoc := range dm.Associations {
-			from := entityNames[assoc.ParentID]
-			if from == "" {
-				from = string(assoc.ParentID)
+		for _, assocElem := range dm.AssociationsItems() {
+			assoc, ok := assocElem.(*genDm.Association)
+			if !ok {
+				continue
 			}
-			to := entityNames[assoc.ChildID]
+			from := entityNames[model.ID(assoc.ParentRefID())]
+			if from == "" {
+				from = string(assoc.ParentRefID())
+			}
+			to := entityNames[model.ID(assoc.ChildRefID())]
 			if to == "" {
-				to = string(assoc.ChildID)
+				to = string(assoc.ChildRefID())
 			}
 			_, err := stmt.Exec(
-				string(assoc.ID),
-				assoc.Name,
-				modName+"."+assoc.Name,
+				string(assoc.ID()),
+				assoc.Name(),
+				modName+"."+assoc.Name(),
 				modName,
 				from,
 				to,
-				string(assoc.Type),
-				string(assoc.Owner),
-				string(assoc.StorageFormat),
-				assoc.Documentation,
+				assoc.Type(),
+				assoc.Owner(),
+				assoc.StorageFormat(),
+				assoc.Documentation(),
 				projectID, projectName, snapshotID, snapshotDate, snapshotSource,
 				sourceID, sourceBranch, sourceRevision,
 			)
@@ -69,22 +86,26 @@ func (b *Builder) buildAssociations() error {
 			count++
 		}
 
-		for _, ca := range dm.CrossAssociations {
-			from := entityNames[ca.ParentID]
+		for _, crossElem := range dm.CrossAssociationsItems() {
+			ca, ok := crossElem.(*genDm.CrossAssociation)
+			if !ok {
+				continue
+			}
+			from := entityNames[model.ID(ca.ParentRefID())]
 			if from == "" {
-				from = string(ca.ParentID)
+				from = string(ca.ParentRefID())
 			}
 			_, err := stmt.Exec(
-				string(ca.ID),
-				ca.Name,
-				modName+"."+ca.Name,
+				string(ca.ID()),
+				ca.Name(),
+				modName+"."+ca.Name(),
 				modName,
 				from,
-				ca.ChildRef,
-				string(ca.Type),
-				string(ca.Owner),
-				string(ca.StorageFormat),
-				ca.Documentation,
+				ca.ChildQualifiedName(),
+				ca.Type(),
+				ca.Owner(),
+				ca.StorageFormat(),
+				ca.Documentation(),
 				projectID, projectName, snapshotID, snapshotDate, snapshotSource,
 				sourceID, sourceBranch, sourceRevision,
 			)
