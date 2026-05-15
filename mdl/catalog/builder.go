@@ -13,6 +13,7 @@ import (
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
@@ -55,6 +56,14 @@ type CatalogReader interface {
 	ListPages() ([]*pages.Page, error)
 	ListLayouts() ([]*pages.Layout, error)
 	ListSnippets() ([]*pages.Snippet, error)
+
+	// Pages, layouts & snippets — gen-typed (Stage 3.3.5.C7e). Sibling
+	// methods serve catalog phases that don't need the legacy widget
+	// trees. Container linkage is resolved via b.hierarchy from the
+	// unit's own UUID, mirroring the workflow / microflow patterns.
+	ListPagesGen() ([]*genPg.Page, error)
+	ListLayoutsGen() ([]*genPg.Layout, error)
+	ListSnippetsGen() ([]*genPg.Snippet, error)
 
 	// Workflows — gen-typed (Stage 3.3.3.C3). Container linkage resolved
 	// via b.hierarchy from the unit's own UUID, mirroring the microflow
@@ -106,6 +115,9 @@ type Builder struct {
 	microflowCache          []*genMf.Microflow
 	nanoflowCache           []*genMf.Nanoflow
 	pageCache               []*pages.Page
+	pageGenCache            []*genPg.Page
+	layoutGenCache          []*genPg.Layout
+	snippetGenCache         []*genPg.Snippet
 	domainModelCache        []*domainmodel.DomainModel
 	domainModelGenCache     []*genDm.DomainModel
 	enumerationCache        []*model.Enumeration
@@ -259,6 +271,47 @@ func (b *Builder) cachedPages() ([]*pages.Page, error) {
 		}
 	}
 	return b.pageCache, nil
+}
+
+// cachedPagesGen is the gen-typed counterpart to cachedPages
+// (Stage 3.3.5.C7e). Read-side phases that don't need the legacy
+// sdk widget trees should prefer this — title/url/parameters/
+// allowed-roles are all available off the gen Page accessors.
+func (b *Builder) cachedPagesGen() ([]*genPg.Page, error) {
+	if b.pageGenCache == nil {
+		var err error
+		b.pageGenCache, err = b.reader.ListPagesGen()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return b.pageGenCache, nil
+}
+
+// cachedLayoutsGen is the gen-typed counterpart to ListLayouts
+// (Stage 3.3.5.C7e).
+func (b *Builder) cachedLayoutsGen() ([]*genPg.Layout, error) {
+	if b.layoutGenCache == nil {
+		var err error
+		b.layoutGenCache, err = b.reader.ListLayoutsGen()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return b.layoutGenCache, nil
+}
+
+// cachedSnippetsGen is the gen-typed counterpart to ListSnippets
+// (Stage 3.3.5.C7e).
+func (b *Builder) cachedSnippetsGen() ([]*genPg.Snippet, error) {
+	if b.snippetGenCache == nil {
+		var err error
+		b.snippetGenCache, err = b.reader.ListSnippetsGen()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return b.snippetGenCache, nil
 }
 
 func (b *Builder) cachedDomainModels() ([]*domainmodel.DomainModel, error) {
