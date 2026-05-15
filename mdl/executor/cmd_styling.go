@@ -521,3 +521,110 @@ func findSnippetByName(ctx *ExecContext, name ast.QualifiedName, h *ContainerHie
 	}
 	return nil, "", mdlerrors.NewNotFound("snippet", name.String())
 }
+
+// walkPageWidgets walks all sdk-typed widgets in a page for styling operations.
+// Uses sdk/pages types because applyStylingAssignments relies on BaseWidget reflection.
+func walkPageWidgets(page *pages.Page, visitor func(widget any) error) error {
+	if page == nil || page.LayoutCall == nil {
+		return nil
+	}
+	for _, arg := range page.LayoutCall.Arguments {
+		if arg.Widget != nil {
+			if err := walkWidget(arg.Widget, visitor); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// walkSnippetWidgets walks all sdk-typed widgets in a snippet for styling operations.
+func walkSnippetWidgets(snippet *pages.Snippet, visitor func(widget any) error) error {
+	if snippet == nil {
+		return nil
+	}
+	for _, widget := range snippet.Widgets {
+		if err := walkWidget(widget, visitor); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// walkWidget recursively walks an sdk-typed widget and its children.
+func walkWidget(widget pages.Widget, visitor func(widget any) error) error {
+	if widget == nil {
+		return nil
+	}
+	if err := visitor(widget); err != nil {
+		return err
+	}
+	switch w := widget.(type) {
+	case *pages.LayoutGrid:
+		for _, row := range w.Rows {
+			for _, col := range row.Columns {
+				for _, child := range col.Widgets {
+					if err := walkWidget(child, visitor); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	case *pages.DataView:
+		for _, child := range w.Widgets {
+			if err := walkWidget(child, visitor); err != nil {
+				return err
+			}
+		}
+		for _, child := range w.FooterWidgets {
+			if err := walkWidget(child, visitor); err != nil {
+				return err
+			}
+		}
+	case *pages.ListView:
+		for _, child := range w.Widgets {
+			if err := walkWidget(child, visitor); err != nil {
+				return err
+			}
+		}
+	case *pages.Container:
+		for _, child := range w.Widgets {
+			if err := walkWidget(child, visitor); err != nil {
+				return err
+			}
+		}
+	case *pages.GroupBox:
+		for _, child := range w.Widgets {
+			if err := walkWidget(child, visitor); err != nil {
+				return err
+			}
+		}
+	case *pages.TabContainer:
+		for _, pg := range w.TabPages {
+			for _, child := range pg.Widgets {
+				if err := walkWidget(child, visitor); err != nil {
+					return err
+				}
+			}
+		}
+	case *pages.ScrollContainer:
+		for _, child := range w.Widgets {
+			if err := walkWidget(child, visitor); err != nil {
+				return err
+			}
+		}
+	case *pages.CustomWidget:
+		if w.WidgetObject != nil {
+			for _, prop := range w.WidgetObject.Properties {
+				if prop.Value != nil {
+					for _, child := range prop.Value.Widgets {
+						if err := walkWidget(child, visitor); err != nil {
+							return err
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
