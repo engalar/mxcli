@@ -110,9 +110,16 @@ func updateQualifiedNameRefs(ctx *ExecContext, name ast.QualifiedName, newModule
 }
 
 // movePage moves a page to a new container.
+//
+// Stage 3.3.5.D5.d: walks gen-typed page listings and routes the
+// container update through ctx.Backend.MovePageGen, mirroring the
+// moveMicroflow shape. Cross-module access remapping reads the gen
+// AllowedRolesQualifiedNames (already []string of "Module.Role"
+// values), routes through remapDocumentAccessRoles, then writes
+// back via the legacy UpdateAllowedRoles backend method (id +
+// []string), which has no gen-specific shape.
 func movePage(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID, targetModule *model.Module, isCrossModuleMove bool) error {
-	// Find the page
-	pages, err := ctx.Backend.ListPages()
+	pairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
@@ -122,24 +129,33 @@ func movePage(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	for _, p := range pages {
-		modID := h.FindModuleID(p.ContainerID)
-		modName := h.GetModuleName(modID)
-		if modName == name.Module && p.Name == name.Name {
-			// Update container ID and move the unit
-			p.ContainerID = targetContainerID
-			if err := ctx.Backend.MovePage(p); err != nil {
-				return mdlerrors.NewBackend("move page", err)
-			}
-			if isCrossModuleMove {
-				p.AllowedRoles = remapDocumentAccessRoles(ctx, targetModule, p.AllowedRoles)
-				if err := ctx.Backend.UpdateAllowedRoles(p.ID, documentRoleStrings(p.AllowedRoles)); err != nil {
-					return mdlerrors.NewBackend("remap page access", err)
-				}
-			}
-			fmt.Fprintf(ctx.Output, "Moved page %s to new location\n", name.String())
-			return nil
+	for _, pair := range pairs {
+		if pair.Elem == nil {
+			continue
 		}
+		modID := h.FindModuleID(model.ID(pair.ContainerID))
+		modName := h.GetModuleName(modID)
+		if modName != name.Module || pair.Elem.Name() != name.Name {
+			continue
+		}
+		pgID := model.ID(pair.Elem.ID())
+		if err := ctx.Backend.MovePageGen(pgID, targetContainerID); err != nil {
+			return mdlerrors.NewBackend("move page", err)
+		}
+		if isCrossModuleMove {
+			currentRoles := pair.Elem.AllowedRolesQualifiedNames()
+			currentRoleIDs := make([]model.ID, len(currentRoles))
+			for i, qn := range currentRoles {
+				currentRoleIDs[i] = model.ID(qn)
+			}
+			remappedIDs := remapDocumentAccessRoles(ctx, targetModule, currentRoleIDs)
+			if err := ctx.Backend.UpdateAllowedRoles(pgID, documentRoleStrings(remappedIDs)); err != nil {
+				return mdlerrors.NewBackend("remap page access", err)
+			}
+		}
+		invalidatePagesGenCache(ctx)
+		fmt.Fprintf(ctx.Output, "Moved page %s to new location\n", name.String())
+		return nil
 	}
 
 	return mdlerrors.NewNotFound("page", name.String())
@@ -200,10 +216,10 @@ func moveMicroflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID m
 	return mdlerrors.NewNotFound("microflow", name.String())
 }
 
-// moveSnippet moves a snippet to a new container.
+// moveSnippet moves a snippet to a new container. Stage 3.3.5.D5.d:
+// gen-typed listing + MoveSnippetGen on the backend.
 func moveSnippet(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID) error {
-	// Find the snippet
-	snippets, err := ctx.Backend.ListSnippets()
+	pairs, err := listSnippetsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list snippets", err)
 	}
@@ -213,18 +229,22 @@ func moveSnippet(ctx *ExecContext, name ast.QualifiedName, targetContainerID mod
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	for _, s := range snippets {
-		modID := h.FindModuleID(s.ContainerID)
-		modName := h.GetModuleName(modID)
-		if modName == name.Module && s.Name == name.Name {
-			// Update container ID and move the unit
-			s.ContainerID = targetContainerID
-			if err := ctx.Backend.MoveSnippet(s); err != nil {
-				return mdlerrors.NewBackend("move snippet", err)
-			}
-			fmt.Fprintf(ctx.Output, "Moved snippet %s to new location\n", name.String())
-			return nil
+	for _, pair := range pairs {
+		if pair.Elem == nil {
+			continue
 		}
+		modID := h.FindModuleID(model.ID(pair.ContainerID))
+		modName := h.GetModuleName(modID)
+		if modName != name.Module || pair.Elem.Name() != name.Name {
+			continue
+		}
+		snipID := model.ID(pair.Elem.ID())
+		if err := ctx.Backend.MoveSnippetGen(snipID, targetContainerID); err != nil {
+			return mdlerrors.NewBackend("move snippet", err)
+		}
+		invalidatePagesGenCache(ctx)
+		fmt.Fprintf(ctx.Output, "Moved snippet %s to new location\n", name.String())
+		return nil
 	}
 
 	return mdlerrors.NewNotFound("snippet", name.String())

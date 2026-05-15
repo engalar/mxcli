@@ -10,7 +10,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
 
 // ---------------------------------------------------------------------------
@@ -34,32 +34,36 @@ func TestMove_NotConnected(t *testing.T) {
 
 func TestMove_Page_ToFolder(t *testing.T) {
 	mod := mkModule("MyModule")
-	pg := mkPage(mod.ID, "MyPage")
+	pg := mkPageGen(string(nextID("pg")), "MyPage")
 	folderID := nextID("folder")
 	folders := []*types.FolderInfo{
 		{ID: folderID, ContainerID: mod.ID, Name: "Admin"},
 	}
-	var movedPage *pages.Page
+	var movedID model.ID
+	var movedContainerID model.ID
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return folders, nil },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return []*pages.Page{pg}, nil },
-		MovePageFunc:    func(p *pages.Page) error { movedPage = p; return nil },
+		MovePageGenFunc: func(id, containerID model.ID) error {
+			movedID = id
+			movedContainerID = containerID
+			return nil
+		},
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, pg.ContainerID, mod.ID)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
 	assertNoError(t, execMove(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "MyPage"},
 		Folder:       "Admin",
 	}))
-	if movedPage == nil {
-		t.Fatal("Expected MovePage to be called")
+	if movedID == "" {
+		t.Fatal("Expected MovePageGen to be called")
 	}
-	if movedPage.ContainerID != folderID {
-		t.Errorf("Expected container %s, got %s", folderID, movedPage.ContainerID)
+	if movedContainerID != folderID {
+		t.Errorf("Expected container %s, got %s", folderID, movedContainerID)
 	}
 	assertContainsStr(t, buf.String(), "Moved page")
 }
@@ -74,10 +78,10 @@ func TestMove_Page_NotFound(t *testing.T) {
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return nil, nil },
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Pages = makePagesRepo(nil, mod.ID)
 	err := execMove(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
@@ -94,30 +98,29 @@ func TestMove_Page_NotFound(t *testing.T) {
 func TestMove_Page_CrossModule(t *testing.T) {
 	srcMod := mkModule("SrcModule")
 	dstMod := mkModule("DstModule")
-	pg := mkPage(srcMod.ID, "MyPage")
-	var movedPage *pages.Page
+	pg := mkPageGen(string(nextID("pg")), "MyPage")
+	moved := false
 	refUpdated := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{srcMod, dstMod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return []*pages.Page{pg}, nil },
-		MovePageFunc:    func(p *pages.Page) error { movedPage = p; return nil },
+		MovePageGenFunc: func(id, containerID model.ID) error { moved = true; return nil },
 		UpdateQualifiedNameInAllUnitsFunc: func(old, new string) (int, error) {
 			refUpdated = true
 			return 3, nil
 		},
 	}
 	h := mkHierarchy(srcMod, dstMod)
-	withContainer(h, pg.ContainerID, srcMod.ID)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, srcMod.ID)
 	assertNoError(t, execMove(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "SrcModule", Name: "MyPage"},
 		TargetModule: "DstModule",
 	}))
-	if movedPage == nil {
-		t.Fatal("Expected MovePage to be called")
+	if !moved {
+		t.Fatal("Expected MovePageGen to be called")
 	}
 	if !refUpdated {
 		t.Error("Expected reference update for cross-module move")
@@ -153,17 +156,16 @@ func TestMove_UnsupportedType(t *testing.T) {
 
 func TestMove_Page_BackendError(t *testing.T) {
 	mod := mkModule("MyModule")
-	pg := mkPage(mod.ID, "MyPage")
+	pg := mkPageGen(string(nextID("pg")), "MyPage")
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return []*pages.Page{pg}, nil },
-		MovePageFunc:    func(p *pages.Page) error { return fmt.Errorf("disk full") },
+		MovePageGenFunc: func(id, containerID model.ID) error { return fmt.Errorf("disk full") },
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, pg.ContainerID, mod.ID)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
 	err := execMove(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "MyPage"},
