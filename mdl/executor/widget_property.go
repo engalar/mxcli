@@ -1,125 +1,145 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Package executor - Widget tree walking for styling and introspection commands.
+// Package executor - Gen-typed widget tree walking for page introspection.
 package executor
 
 import (
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
 
-// walkPageWidgets walks all widgets in a page and calls the visitor function.
-func walkPageWidgets(page *pages.Page, visitor func(widget any) error) error {
-	if page == nil || page.LayoutCall == nil {
+// walkPageWidgetsGen walks all widgets in a gen-typed Page via the visitor function.
+// The visitor receives each widget as element.Element; use type assertions for concrete types.
+func walkPageWidgetsGen(page *genPg.Page, visitor func(widget element.Element) error) error {
+	if page == nil {
 		return nil
 	}
-
-	// Walk through layout call arguments (each argument has a single widget)
-	for _, arg := range page.LayoutCall.Arguments {
-		if arg.Widget != nil {
-			if err := walkWidget(arg.Widget, visitor); err != nil {
+	lcElem := page.LayoutCall()
+	if lcElem == nil {
+		return nil
+	}
+	lc, ok := lcElem.(*genPg.LayoutCall)
+	if !ok {
+		return nil
+	}
+	for _, argElem := range lc.ArgumentsItems() {
+		arg, ok := argElem.(*genPg.LayoutCallArgument)
+		if !ok {
+			continue
+		}
+		if w := arg.Widget(); w != nil {
+			if err := walkWidgetGen(w, visitor); err != nil {
+				return err
+			}
+		}
+		for _, w := range arg.WidgetsItems() {
+			if err := walkWidgetGen(w, visitor); err != nil {
 				return err
 			}
 		}
 	}
-
 	return nil
 }
 
-// walkSnippetWidgets walks all widgets in a snippet and calls the visitor function.
-func walkSnippetWidgets(snippet *pages.Snippet, visitor func(widget any) error) error {
+// walkSnippetWidgetsGen walks all widgets in a gen-typed Snippet via the visitor function.
+func walkSnippetWidgetsGen(snippet *genPg.Snippet, visitor func(widget element.Element) error) error {
 	if snippet == nil {
 		return nil
 	}
-
-	for _, widget := range snippet.Widgets {
-		if err := walkWidget(widget, visitor); err != nil {
+	for _, w := range snippet.WidgetsItems() {
+		if err := walkWidgetGen(w, visitor); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-// walkWidget recursively walks a widget and its children.
-func walkWidget(widget pages.Widget, visitor func(widget any) error) error {
+// walkWidgetGen recursively walks a gen-typed widget element and its children.
+func walkWidgetGen(widget element.Element, visitor func(widget element.Element) error) error {
 	if widget == nil {
 		return nil
 	}
-
-	// Visit this widget
 	if err := visitor(widget); err != nil {
 		return err
 	}
-
-	// Recursively walk children based on widget type
 	switch w := widget.(type) {
-	case *pages.LayoutGrid:
-		for _, row := range w.Rows {
-			for _, col := range row.Columns {
-				for _, child := range col.Widgets {
-					if err := walkWidget(child, visitor); err != nil {
+	case *genPg.LayoutGrid:
+		for _, rowElem := range w.RowsItems() {
+			row, ok := rowElem.(*genPg.LayoutGridRow)
+			if !ok {
+				continue
+			}
+			for _, colElem := range row.ColumnsItems() {
+				col, ok := colElem.(*genPg.LayoutGridColumn)
+				if !ok {
+					continue
+				}
+				for _, child := range col.WidgetsItems() {
+					if err := walkWidgetGen(child, visitor); err != nil {
 						return err
 					}
 				}
 			}
 		}
-	case *pages.DataView:
-		for _, child := range w.Widgets {
-			if err := walkWidget(child, visitor); err != nil {
+	case *genPg.DataView:
+		for _, child := range w.WidgetsItems() {
+			if err := walkWidgetGen(child, visitor); err != nil {
 				return err
 			}
 		}
-		for _, child := range w.FooterWidgets {
-			if err := walkWidget(child, visitor); err != nil {
+		for _, child := range w.FooterWidgetsItems() {
+			if err := walkWidgetGen(child, visitor); err != nil {
 				return err
 			}
 		}
-	case *pages.ListView:
-		for _, child := range w.Widgets {
-			if err := walkWidget(child, visitor); err != nil {
+	case *genPg.ListView:
+		for _, child := range w.WidgetsItems() {
+			if err := walkWidgetGen(child, visitor); err != nil {
 				return err
 			}
 		}
-	case *pages.Container:
-		for _, child := range w.Widgets {
-			if err := walkWidget(child, visitor); err != nil {
+	case *genPg.DivContainer:
+		for _, child := range w.WidgetsItems() {
+			if err := walkWidgetGen(child, visitor); err != nil {
 				return err
 			}
 		}
-	case *pages.GroupBox:
-		for _, child := range w.Widgets {
-			if err := walkWidget(child, visitor); err != nil {
+	case *genPg.GroupBox:
+		for _, child := range w.WidgetsItems() {
+			if err := walkWidgetGen(child, visitor); err != nil {
 				return err
 			}
 		}
-	case *pages.TabContainer:
-		for _, pg := range w.TabPages {
-			for _, child := range pg.Widgets {
-				if err := walkWidget(child, visitor); err != nil {
+	case *genPg.TabContainer:
+		for _, tabElem := range w.TabPagesItems() {
+			tab, ok := tabElem.(*genPg.TabPage)
+			if !ok {
+				continue
+			}
+			for _, child := range tab.WidgetsItems() {
+				if err := walkWidgetGen(child, visitor); err != nil {
 					return err
 				}
 			}
 		}
-	case *pages.ScrollContainer:
-		for _, child := range w.Widgets {
-			if err := walkWidget(child, visitor); err != nil {
-				return err
+	case *genPg.ScrollContainer:
+		// ScrollContainer uses named regions (Center, Left, Right, Top, Bottom).
+		for _, regionElem := range []element.Element{w.Center(), w.Left(), w.Right(), w.Top(), w.Bottom()} {
+			if regionElem == nil {
+				continue
 			}
-		}
-	case *pages.CustomWidget:
-		// Custom widgets may have nested widgets in their value properties
-		if w.WidgetObject != nil {
-			for _, prop := range w.WidgetObject.Properties {
-				if prop.Value != nil {
-					for _, child := range prop.Value.Widgets {
-						if err := walkWidget(child, visitor); err != nil {
-							return err
-						}
-					}
+			region, ok := regionElem.(*genPg.ScrollContainerRegion)
+			if !ok {
+				continue
+			}
+			for _, child := range region.WidgetsItems() {
+				if err := walkWidgetGen(child, visitor); err != nil {
+					return err
 				}
 			}
 		}
 	}
-
+	// gen/pages has no CustomWidget type (codegen gap).
+	// Pluggable widget child traversal deferred to Phase 4.3 E3.
 	return nil
 }
