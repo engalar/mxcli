@@ -17,7 +17,6 @@ import (
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 var _ backend.FullBackend = (*MockBackend)(nil)
@@ -57,15 +56,8 @@ type MockBackend struct {
 	MoveFolderFunc   func(id model.ID, newContainerID model.ID) error
 
 	// DomainModelBackend
-	CreateEntityFunc                           func(domainModelID model.ID, entity *domainmodel.Entity) error
-	UpdateEntityFunc                           func(domainModelID model.ID, entity *domainmodel.Entity) error
 	DeleteEntityFunc                           func(domainModelID model.ID, entityID model.ID) error
-	MoveEntityFunc                             func(entity *domainmodel.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error)
-	AddAttributeFunc                           func(domainModelID model.ID, entityID model.ID, attr *domainmodel.Attribute) error
-	UpdateAttributeFunc                        func(domainModelID model.ID, entityID model.ID, attr *domainmodel.Attribute) error
 	DeleteAttributeFunc                        func(domainModelID model.ID, entityID model.ID, attrID model.ID) error
-	CreateAssociationFunc                      func(domainModelID model.ID, assoc *domainmodel.Association) error
-	CreateCrossAssociationFunc                 func(domainModelID model.ID, ca *domainmodel.CrossModuleAssociation) error
 	DeleteAssociationFunc                      func(domainModelID model.ID, assocID model.ID) error
 	DeleteCrossAssociationFunc                 func(domainModelID model.ID, assocID model.ID) error
 	CreateViewEntitySourceDocumentFunc         func(moduleID model.ID, moduleName, docName, oqlQuery, documentation string) (model.ID, error)
@@ -294,17 +286,14 @@ type MockBackend struct {
 	OpenWorkflowForMutationFunc func(unitID model.ID) (backend.WorkflowMutator, error)
 
 	// WidgetSerializationBackend
-	SerializeWidgetFunc              func(w backend.Widget) (any, error)
-	SerializeClientActionFunc        func(a backend.ClientAction) (any, error)
-	SerializeDataSourceFunc          func(ds backend.DataSource) (any, error)
 	SerializeWorkflowActivityGenFunc func(a element.Element) (any, error)
 
 	// WidgetBuilderBackend
 	LoadWidgetTemplateFunc         func(widgetID string, projectPath string) (backend.WidgetObjectBuilder, error)
 	BuildCreateAttributeObjectFunc func(attributePath string, objectTypeID, propertyTypeID, valueTypeID string) (any, error)
-	BuildDataGrid2WidgetGenFunc       func(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.GenCustomWidgetElem, error)
-	BuildFilterWidgetGenFunc          func(spec backend.FilterWidgetSpec, projectPath string) (*backend.GenCustomWidgetElem, error)
-	SerializeGenElemToOpaqueFunc      func(elem element.Element) backend.OpaqueWidget
+	BuildDataGrid2WidgetGenFunc    func(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (*backend.GenCustomWidgetElem, error)
+	BuildFilterWidgetGenFunc       func(spec backend.FilterWidgetSpec, projectPath string) (*backend.GenCustomWidgetElem, error)
+	SerializeGenElemToOpaqueFunc   func(elem element.Element) backend.OpaqueWidget
 
 	// AgentEditorBackend
 	ListAgentEditorModelsFunc               func() ([]*types.Model, error)

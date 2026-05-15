@@ -20,6 +20,7 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/widgets"
 )
 
@@ -148,13 +149,6 @@ func (ob *mprWidgetObjectBuilder) SetExpression(propertyKey string, value string
 	})
 }
 
-func (ob *mprWidgetObjectBuilder) SetDataSource(propertyKey string, ds backend.DataSource) {
-	if ds == nil {
-		return
-	}
-	ob.SetDataSourceOpaque(propertyKey, mpr.SerializeCustomWidgetDataSource(ds))
-}
-
 func (ob *mprWidgetObjectBuilder) SetDataSourceOpaque(propertyKey string, ds backend.OpaqueDataSource) {
 	if ds == nil {
 		return
@@ -162,17 +156,6 @@ func (ob *mprWidgetObjectBuilder) SetDataSourceOpaque(propertyKey string, ds bac
 	ob.object = updateWidgetPropertyValue(ob.object, ob.propertyTypeIDs, propertyKey, func(val bson.D) bson.D {
 		return setDataSourceOpaque(val, ds)
 	})
-}
-
-func (ob *mprWidgetObjectBuilder) SetChildWidgets(propertyKey string, children []backend.Widget) {
-	if len(children) == 0 {
-		return
-	}
-	opaqueChildren := make([]backend.OpaqueWidget, 0, len(children))
-	for _, child := range children {
-		opaqueChildren = append(opaqueChildren, mpr.SerializeWidget(child))
-	}
-	ob.SetChildWidgetsOpaque(propertyKey, opaqueChildren)
 }
 
 func (ob *mprWidgetObjectBuilder) SetChildWidgetsOpaque(propertyKey string, children []backend.OpaqueWidget) {
@@ -209,13 +192,6 @@ func (ob *mprWidgetObjectBuilder) SetTextTemplateWithParams(propertyKey string, 
 		}
 		return result
 	})
-}
-
-func (ob *mprWidgetObjectBuilder) SetAction(propertyKey string, action backend.ClientAction) {
-	if action == nil {
-		return
-	}
-	ob.SetActionOpaque(propertyKey, mpr.SerializeClientAction(action))
 }
 
 func (ob *mprWidgetObjectBuilder) SetActionOpaque(propertyKey string, action backend.OpaqueAction) {
@@ -280,7 +256,7 @@ func (ob *mprWidgetObjectBuilder) SetAttributeObjects(propertyKey string, attrib
 // Template metadata
 // ---------------------------------------------------------------------------
 
-func (ob *mprWidgetObjectBuilder) PropertyTypeIDs() map[string]backend.PropertyTypeIDEntry {
+func (ob *mprWidgetObjectBuilder) PropertyTypeIDs() map[string]types.PropertyTypeIDEntry {
 	return ob.propertyTypeIDs
 }
 
@@ -333,9 +309,11 @@ func (ob *mprWidgetObjectBuilder) CloneGallerySelectionProperty(propertyKey stri
 // Finalize
 // ---------------------------------------------------------------------------
 
-func (ob *mprWidgetObjectBuilder) Finalize(id model.ID, name string, label string, editable string) *backend.CustomWidget {
-	return &backend.CustomWidget{
-		BaseWidget: backend.BaseWidget{
+// finalize builds a pages.CustomWidget from the mutated template.
+// It is private to mpr — external callers use FinalizeGen.
+func (ob *mprWidgetObjectBuilder) finalize(id model.ID, name string, label string, editable string) *pages.CustomWidget {
+	return &pages.CustomWidget{
+		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
 				ID:       id,
 				TypeName: "CustomWidgets$CustomWidget",
@@ -351,14 +329,14 @@ func (ob *mprWidgetObjectBuilder) Finalize(id model.ID, name string, label strin
 	}
 }
 
-// FinalizeGen is the Stage 3.3.5.D1 gen-native sibling of Finalize.
-// It builds an sdk CustomWidget via Finalize, serializes it to BSON through
+// FinalizeGen is the Stage 3.3.5.D1 gen-native Finalize path.
+// It builds an sdk CustomWidget via finalize, serializes it to BSON through
 // the mpr serializer, then decodes the BSON via the gen codec to produce a
 // *backend.GenCustomWidgetElem that satisfies both backend.Widget and
 // element.Element.
 func (ob *mprWidgetObjectBuilder) FinalizeGen(id model.ID, name string, label string, editable string) (*backend.GenCustomWidgetElem, error) {
 	// Build via legacy path so we reuse the tested BSON serialization path.
-	cw := ob.Finalize(id, name, label, editable)
+	cw := ob.finalize(id, name, label, editable)
 
 	// Serialize to BSON via mpr serializer (same path as SDKPageToGen bridge).
 	doc := mpr.SerializeWidget(cw)
@@ -484,10 +462,6 @@ func setPrimitiveValue(val bson.D, value string) bson.D {
 	return result
 }
 
-func setDataSource(val bson.D, ds backend.DataSource) bson.D {
-	return setDataSourceOpaque(val, mpr.SerializeCustomWidgetDataSource(ds))
-}
-
 func setDataSourceOpaque(val bson.D, ds backend.OpaqueDataSource) bson.D {
 	result := make(bson.D, 0, len(val))
 	for _, elem := range val {
@@ -543,14 +517,6 @@ func setAttributeRef(val bson.D, attrPath string) bson.D {
 		}
 	}
 	return result
-}
-
-func setChildWidgets(val bson.D, children []backend.Widget) bson.D {
-	opaqueChildren := make([]backend.OpaqueWidget, 0, len(children))
-	for _, w := range children {
-		opaqueChildren = append(opaqueChildren, mpr.SerializeWidget(w))
-	}
-	return setChildWidgetsOpaque(val, opaqueChildren)
 }
 
 func setChildWidgetsOpaque(val bson.D, children []backend.OpaqueWidget) bson.D {

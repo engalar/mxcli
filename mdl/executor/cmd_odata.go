@@ -1265,18 +1265,19 @@ func dropODataClient(ctx *ExecContext, stmt *ast.DropODataClientStmt) error {
 			if findErr != nil {
 				return findErr
 			}
-			dm, dmErr := ctx.Backend.GetDomainModel(module.ID)
+			dm, dmErr := ctx.Backend.GetDomainModelGen(module.ID)
 			if dmErr != nil {
 				return mdlerrors.NewBackend("get domain model for cascade", dmErr)
 			}
 			var externalEntityIDs []model.ID
-			for _, entity := range dm.Entities {
-				if strings.EqualFold(entity.RemoteServiceName, serviceRef) {
-					externalEntityIDs = append(externalEntityIDs, entity.ID)
+			for _, entityElem := range dm.EntitiesItems() {
+				entity, ok := entityElem.(*genDm.Entity)
+				if ok && strings.EqualFold(entity.RemoteSourceDocumentQualifiedName(), serviceRef) {
+					externalEntityIDs = append(externalEntityIDs, model.ID(entity.ID()))
 				}
 			}
 			for _, entityID := range externalEntityIDs {
-				if err := ctx.Backend.DeleteEntity(dm.ID, entityID); err != nil {
+				if err := ctx.Backend.DeleteEntity(model.ID(dm.ID()), entityID); err != nil {
 					return mdlerrors.NewBackend("cascade delete external entity", err)
 				}
 			}

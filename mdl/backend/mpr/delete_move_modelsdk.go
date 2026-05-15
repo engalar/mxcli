@@ -5,74 +5,100 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // ── Domain Model ──────────────────────────────────────
 //
 // Entity、Attribute、Association 是 DomainModel BSON 内的嵌入对象，
-// 不是 Unit 表的独立行。删除操作必须通过 writeDomainModel 读取-修改-
-// 回写整个 DomainModel 单元，不能直接调用 msdkWriter.DeleteUnit(entityID)。
+// 不是 Unit 表的独立行。删除操作必须通过读取-修改-回写整个
+// DomainModel 单元，不能直接调用 msdkWriter.DeleteUnit(entityID)。
 
 func (b *MprBackend) deleteEntityViaModelsdk(domainModelID, entityID model.ID) error {
-	return b.writeDomainModel(domainModelID, func(dm *domainmodel.DomainModel) error {
-		for i, e := range dm.Entities {
-			if e.ID == entityID {
-				dm.Entities = append(dm.Entities[:i], dm.Entities[i+1:]...)
-				// 同步清理同 DM 内引用该实体的关联（防止悬空指针）
-				var kept []*domainmodel.Association
-				for _, a := range dm.Associations {
-					if a.ParentID != entityID && a.ChildID != entityID {
-						kept = append(kept, a)
-					}
+	dm, err := b.GetDomainModelByIDGen(domainModelID)
+	if err != nil {
+		return fmt.Errorf("read domain model: %w", err)
+	}
+	for i, e := range dm.EntitiesItems() {
+		entity, ok := e.(*genDm.Entity)
+		if ok && model.ID(entity.ID()) == entityID {
+			dm.RemoveEntities(i)
+			// Keep same semantics as the legacy path: clean same-DM
+			// associations that reference the deleted entity.
+			for j := len(dm.AssociationsItems()) - 1; j >= 0; j-- {
+				assoc, ok := dm.AssociationsItems()[j].(*genDm.Association)
+				if ok && (model.ID(assoc.ParentRefID()) == entityID || model.ID(assoc.ChildRefID()) == entityID) {
+					dm.RemoveAssociations(j)
 				}
-				dm.Associations = kept
-				return nil
 			}
+			if err := b.UpdateDomainModelGen(dm); err != nil {
+				return fmt.Errorf("update domain model: %w", err)
+			}
+			return nil
 		}
-		return fmt.Errorf("entity not found: %s", entityID)
-	})
+	}
+	return fmt.Errorf("entity not found: %s", entityID)
 }
 
 func (b *MprBackend) deleteAttributeViaModelsdk(domainModelID, entityID, attrID model.ID) error {
-	return b.writeDomainModel(domainModelID, func(dm *domainmodel.DomainModel) error {
-		for _, e := range dm.Entities {
-			if e.ID == entityID {
-				for i, a := range e.Attributes {
-					if a.ID == attrID {
-						e.Attributes = append(e.Attributes[:i], e.Attributes[i+1:]...)
-						return nil
-					}
+	dm, err := b.GetDomainModelByIDGen(domainModelID)
+	if err != nil {
+		return fmt.Errorf("read domain model: %w", err)
+	}
+	for _, e := range dm.EntitiesItems() {
+		entity, ok := e.(*genDm.Entity)
+		if !ok || model.ID(entity.ID()) != entityID {
+			continue
+		}
+		for i, a := range entity.AttributesItems() {
+			attr, ok := a.(*genDm.Attribute)
+			if ok && model.ID(attr.ID()) == attrID {
+				entity.RemoveAttributes(i)
+				if err := b.UpdateDomainModelGen(dm); err != nil {
+					return fmt.Errorf("update domain model: %w", err)
 				}
-				return fmt.Errorf("attribute not found: %s", attrID)
+				return nil
 			}
 		}
-		return fmt.Errorf("entity not found: %s", entityID)
-	})
+		return fmt.Errorf("attribute not found: %s", attrID)
+	}
+	return fmt.Errorf("entity not found: %s", entityID)
 }
 
 func (b *MprBackend) deleteAssociationViaModelsdk(domainModelID, assocID model.ID) error {
-	return b.writeDomainModel(domainModelID, func(dm *domainmodel.DomainModel) error {
-		for i, a := range dm.Associations {
-			if a.ID == assocID {
-				dm.Associations = append(dm.Associations[:i], dm.Associations[i+1:]...)
-				return nil
+	dm, err := b.GetDomainModelByIDGen(domainModelID)
+	if err != nil {
+		return fmt.Errorf("read domain model: %w", err)
+	}
+	for i, a := range dm.AssociationsItems() {
+		assoc, ok := a.(*genDm.Association)
+		if ok && model.ID(assoc.ID()) == assocID {
+			dm.RemoveAssociations(i)
+			if err := b.UpdateDomainModelGen(dm); err != nil {
+				return fmt.Errorf("update domain model: %w", err)
 			}
+			return nil
 		}
-		return fmt.Errorf("association not found: %s", assocID)
-	})
+	}
+	return fmt.Errorf("association not found: %s", assocID)
 }
 
 func (b *MprBackend) deleteCrossAssociationViaModelsdk(domainModelID, assocID model.ID) error {
-	return b.writeDomainModel(domainModelID, func(dm *domainmodel.DomainModel) error {
-		for i, ca := range dm.CrossAssociations {
-			if ca.ID == assocID {
-				dm.CrossAssociations = append(dm.CrossAssociations[:i], dm.CrossAssociations[i+1:]...)
-				return nil
+	dm, err := b.GetDomainModelByIDGen(domainModelID)
+	if err != nil {
+		return fmt.Errorf("read domain model: %w", err)
+	}
+	for i, ca := range dm.CrossAssociationsItems() {
+		crossAssoc, ok := ca.(*genDm.CrossAssociation)
+		if ok && model.ID(crossAssoc.ID()) == assocID {
+			dm.RemoveCrossAssociations(i)
+			if err := b.UpdateDomainModelGen(dm); err != nil {
+				return fmt.Errorf("update domain model: %w", err)
 			}
+			return nil
 		}
-		return fmt.Errorf("cross-module association not found: %s", assocID)
-	})
+	}
+	return fmt.Errorf("cross-module association not found: %s", assocID)
 }
 
 // ── Microflow / Nanoflow ───────────────────────────────

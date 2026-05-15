@@ -26,7 +26,6 @@ import (
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
@@ -176,38 +175,17 @@ func (b *MprBackend) MoveFolder(id model.ID, newContainerID model.ID) error {
 // DomainModelBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) CreateEntity(domainModelID model.ID, entity *domainmodel.Entity) error {
-	return b.createEntityViaModelsdk(domainModelID, entity)
-}
-func (b *MprBackend) UpdateEntity(domainModelID model.ID, entity *domainmodel.Entity) error {
-	return b.updateEntityViaModelsdk(domainModelID, entity)
-}
 func (b *MprBackend) DeleteEntity(domainModelID model.ID, entityID model.ID) error {
 	return b.deleteEntityViaModelsdk(domainModelID, entityID)
-}
-func (b *MprBackend) MoveEntity(entity *domainmodel.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error) {
-	return b.moveEntityViaModelsdk(entity, sourceDMID, targetDMID, sourceModuleName, targetModuleName)
 }
 func (b *MprBackend) MoveEntityGen(entity *genDm.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error) {
 	return b.moveEntityGen(sourceDMID, targetDMID, sourceModuleName, targetModuleName, entity)
 }
 
-func (b *MprBackend) AddAttribute(domainModelID model.ID, entityID model.ID, attr *domainmodel.Attribute) error {
-	return b.addAttributeViaModelsdk(domainModelID, entityID, attr)
-}
-func (b *MprBackend) UpdateAttribute(domainModelID model.ID, entityID model.ID, attr *domainmodel.Attribute) error {
-	return b.updateAttributeViaModelsdk(domainModelID, entityID, attr)
-}
 func (b *MprBackend) DeleteAttribute(domainModelID model.ID, entityID model.ID, attrID model.ID) error {
 	return b.deleteAttributeViaModelsdk(domainModelID, entityID, attrID)
 }
 
-func (b *MprBackend) CreateAssociation(domainModelID model.ID, assoc *domainmodel.Association) error {
-	return b.createAssociationViaModelsdk(domainModelID, assoc)
-}
-func (b *MprBackend) CreateCrossAssociation(domainModelID model.ID, ca *domainmodel.CrossModuleAssociation) error {
-	return b.createCrossAssociationViaModelsdk(domainModelID, ca)
-}
 func (b *MprBackend) DeleteAssociation(domainModelID model.ID, assocID model.ID) error {
 	return b.deleteAssociationViaModelsdk(domainModelID, assocID)
 }
@@ -1116,18 +1094,6 @@ func (b *MprBackend) OpenWorkflowForMutation(unitID model.ID) (backend.WorkflowM
 
 // ---------------------------------------------------------------------------
 // WidgetSerializationBackend
-
-func (b *MprBackend) SerializeWidget(w backend.Widget) (any, error) {
-	return mpr.SerializeWidget(w), nil
-}
-
-func (b *MprBackend) SerializeClientAction(a backend.ClientAction) (any, error) {
-	return mpr.SerializeClientAction(a), nil
-}
-
-func (b *MprBackend) SerializeDataSource(ds backend.DataSource) (any, error) {
-	return mpr.SerializeCustomWidgetDataSource(ds), nil
-}
 
 // SerializeWorkflowActivityGen routes through codec.Encode + bson.Unmarshal
 // (Stage 3.3.3.D7). Returns a bson.D that the mutator's raw-bson

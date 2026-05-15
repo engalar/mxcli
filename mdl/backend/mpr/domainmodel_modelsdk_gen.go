@@ -42,22 +42,23 @@ func (b *MprBackend) UpdateEntityGen(domainModelID model.ID, entity *genDm.Entit
 }
 
 // moveEntityGen bridges a gen-typed entity move onto the existing
-// sdk-backed moveEntityViaModelsdk implementation. To avoid a lossy
-// gen→sdk structural conversion for the full entity graph, it reloads
-// the sdk entity from the source DomainModel by UUID and delegates the
+// sdk-backed moveEntityViaModelsdk implementation. It reloads the
+// source DomainModel through the gen-native repo, finds the matching
+// entity by UUID, converts just that entity to sdk, and delegates the
 // actual move to the legacy writer.
 func (b *MprBackend) moveEntityGen(sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string, entity *genDm.Entity) ([]string, error) {
 	if entity == nil {
 		return nil, fmt.Errorf("MoveEntityGen: nil entity")
 	}
-	sourceDM, err := b.reader.GetDomainModelByID(sourceDMID)
+	sourceDM, err := b.GetDomainModelByIDGen(sourceDMID)
 	if err != nil {
 		return nil, fmt.Errorf("MoveEntityGen: load source domain model: %w", err)
 	}
 	var sdkEntity *domainmodel.Entity
-	for _, candidate := range sourceDM.Entities {
-		if candidate != nil && candidate.ID == model.ID(entity.ID()) {
-			sdkEntity = candidate
+	for _, candidateElem := range sourceDM.EntitiesItems() {
+		candidate, ok := candidateElem.(*genDm.Entity)
+		if ok && candidate != nil && candidate.ID() == entity.ID() {
+			sdkEntity = genEntityToSdk(candidate)
 			break
 		}
 	}
