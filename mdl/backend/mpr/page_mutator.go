@@ -17,7 +17,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // Compile-time check.
@@ -410,16 +409,13 @@ func (m *mprPageMutator) SetPluggableProperty(widgetRef string, propKey string, 
 				})
 			}
 		case "datasource":
-			serialized := mpr.SerializeCustomWidgetDataSource(ctx.DataSource)
-			dSet(valDoc, "DataSource", serialized)
+			// ctx.DataSource is a pre-serialized OpaqueDataSource (bson.D) from Stage 3.3.5.E1.
+			dSet(valDoc, "DataSource", ctx.DataSource)
 		case "widgets":
-			serialized, err := serializeWidgets(ctx.ChildWidgets)
-			if err != nil {
-				return fmt.Errorf("serialize child widgets: %w", err)
-			}
+			// ctx.ChildWidgets are pre-serialized OpaqueWidget elements from Stage 3.3.5.E1.
 			var bsonArr bson.A
 			bsonArr = append(bsonArr, int32(2))
-			for _, w := range serialized {
+			for _, w := range ctx.ChildWidgets {
 				bsonArr = append(bsonArr, w)
 			}
 			dSet(valDoc, "Widgets", bsonArr)
@@ -433,8 +429,8 @@ func (m *mprPageMutator) SetPluggableProperty(widgetRef string, propKey string, 
 				}
 			}
 		case "action":
-			serialized := mpr.SerializeClientAction(ctx.Action)
-			dSet(valDoc, "Action", serialized)
+			// ctx.Action is a pre-serialized OpaqueAction (bson.D) from Stage 3.3.5.E1.
+			dSet(valDoc, "Action", ctx.Action)
 		case "selection":
 			dSet(valDoc, "PrimitiveValue", ctx.Selection)
 		case "attributeObjects":
@@ -1548,75 +1544,6 @@ func serializeElementToBsonD(e element.Element) (bson.D, error) {
 		return nil, err
 	}
 	return doc, nil
-}
-
-func serializeWidgets(widgets []backend.Widget) ([]any, error) {
-	var result []any
-	for _, w := range widgets {
-		bsonDoc := mpr.SerializeWidget(w)
-		if bsonDoc == nil {
-			continue
-		}
-		result = append(result, bsonDoc)
-	}
-	return result, nil
-}
-
-// serializeDataSourceBson converts a backend.DataSource to a BSON document for widget-level DataSource fields.
-func serializeDataSourceBson(ds backend.DataSource) bson.D {
-	switch d := ds.(type) {
-	case *backend.ListenToWidgetSource:
-		return bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Forms$ListenTargetSource"},
-			{Key: "ListenTarget", Value: d.WidgetName},
-		}
-	case *backend.DatabaseSource:
-		var entityRef any
-		if d.EntityName != "" {
-			entityRef = bson.D{
-				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-				{Key: "$Type", Value: "DomainModels$DirectEntityRef"},
-				{Key: "Entity", Value: d.EntityName},
-			}
-		}
-		return bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Forms$DataViewSource"},
-			{Key: "EntityRef", Value: entityRef},
-			{Key: "ForceFullObjects", Value: false},
-			{Key: "SourceVariable", Value: nil},
-		}
-	case *backend.MicroflowSource:
-		return bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Forms$MicroflowSource"},
-			{Key: "MicroflowSettings", Value: bson.D{
-				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-				{Key: "$Type", Value: "Forms$MicroflowSettings"},
-				{Key: "Asynchronous", Value: false},
-				{Key: "ConfirmationInfo", Value: nil},
-				{Key: "FormValidations", Value: "All"},
-				{Key: "Microflow", Value: d.Microflow},
-				{Key: "ParameterMappings", Value: bson.A{int32(3)}},
-				{Key: "ProgressBar", Value: "None"},
-				{Key: "ProgressMessage", Value: nil},
-			}},
-		}
-	case *backend.NanoflowSource:
-		return bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Forms$NanoflowSource"},
-			{Key: "NanoflowSettings", Value: bson.D{
-				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-				{Key: "$Type", Value: "Forms$NanoflowSettings"},
-				{Key: "Nanoflow", Value: d.Nanoflow},
-				{Key: "ParameterMappings", Value: bson.A{int32(3)}},
-			}},
-		}
-	default:
-		return nil
-	}
 }
 
 // mdlTypeToBsonType converts an MDL type name to a BSON DataTypes$* type string.

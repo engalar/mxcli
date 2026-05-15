@@ -36,27 +36,6 @@ func (m *MockBackend) OpenWorkflowForMutation(unitID model.ID) (backend.Workflow
 // WidgetSerializationBackend
 // ---------------------------------------------------------------------------
 
-func (m *MockBackend) SerializeWidget(w backend.Widget) (any, error) {
-	if m.SerializeWidgetFunc != nil {
-		return m.SerializeWidgetFunc(w)
-	}
-	return nil, nil
-}
-
-func (m *MockBackend) SerializeClientAction(a backend.ClientAction) (any, error) {
-	if m.SerializeClientActionFunc != nil {
-		return m.SerializeClientActionFunc(a)
-	}
-	return nil, nil
-}
-
-func (m *MockBackend) SerializeDataSource(ds backend.DataSource) (any, error) {
-	if m.SerializeDataSourceFunc != nil {
-		return m.SerializeDataSourceFunc(ds)
-	}
-	return nil, nil
-}
-
 func (m *MockBackend) SerializeWorkflowActivityGen(a element.Element) (any, error) {
 	if m.SerializeWorkflowActivityGenFunc != nil {
 		return m.SerializeWorkflowActivityGenFunc(a)

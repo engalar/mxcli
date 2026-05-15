@@ -9,8 +9,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/modelsdk/mpr"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // ── ViewEntitySourceDocument ──────────────────────────
@@ -71,13 +73,13 @@ func (b *MprBackend) writeDomainModel(domainModelID model.ID, mutateFn func(dm *
 func (b *MprBackend) createEntityViaModelsdk(domainModelID model.ID, entity *domainmodel.Entity) error {
 	return b.writeDomainModel(domainModelID, func(dm *domainmodel.DomainModel) error {
 		if entity.ID == "" {
-			entity.ID = model.ID(mpr.GenerateID())
+			entity.ID = model.ID(modelsdkmpr.GenerateID())
 		}
 		entity.TypeName = "DomainModels$Entity"
 		entity.ContainerID = domainModelID
 		for _, attr := range entity.Attributes {
 			if attr.ID == "" {
-				attr.ID = model.ID(mpr.GenerateID())
+				attr.ID = model.ID(modelsdkmpr.GenerateID())
 			}
 			attr.TypeName = "DomainModels$Attribute"
 			attr.ContainerID = entity.ID
@@ -108,7 +110,7 @@ func (b *MprBackend) addAttributeViaModelsdk(domainModelID, entityID model.ID, a
 		for _, e := range dm.Entities {
 			if e.ID == entityID {
 				if attr.ID == "" {
-					attr.ID = model.ID(mpr.GenerateID())
+					attr.ID = model.ID(modelsdkmpr.GenerateID())
 				}
 				attr.TypeName = "DomainModels$Attribute"
 				attr.ContainerID = entityID
@@ -144,7 +146,7 @@ func (b *MprBackend) updateAttributeViaModelsdk(domainModelID, entityID model.ID
 func (b *MprBackend) createAssociationViaModelsdk(domainModelID model.ID, assoc *domainmodel.Association) error {
 	return b.writeDomainModel(domainModelID, func(dm *domainmodel.DomainModel) error {
 		if assoc.ID == "" {
-			assoc.ID = model.ID(mpr.GenerateID())
+			assoc.ID = model.ID(modelsdkmpr.GenerateID())
 		}
 		assoc.TypeName = "DomainModels$Association"
 		assoc.ContainerID = domainModelID
@@ -158,7 +160,7 @@ func (b *MprBackend) createAssociationViaModelsdk(domainModelID model.ID, assoc 
 func (b *MprBackend) createCrossAssociationViaModelsdk(domainModelID model.ID, ca *domainmodel.CrossModuleAssociation) error {
 	return b.writeDomainModel(domainModelID, func(dm *domainmodel.DomainModel) error {
 		if ca.ID == "" {
-			ca.ID = model.ID(mpr.GenerateID())
+			ca.ID = model.ID(modelsdkmpr.GenerateID())
 		}
 		ca.TypeName = "DomainModels$CrossAssociation"
 		ca.ContainerID = domainModelID
@@ -173,9 +175,9 @@ func (b *MprBackend) createViewEntitySourceDocumentViaModelsdk(moduleID model.ID
 	if b.msdkWriter == nil {
 		return "", fmt.Errorf("modelsdk writer not initialized")
 	}
-	docID := model.ID(mpr.GenerateID())
+	docID := model.ID(modelsdkmpr.GenerateID())
 	doc := bson.D{
-		{Key: "$ID", Value: mpr.IDToBsonBinary(string(docID))},
+		{Key: "$ID", Value: modelsdkmpr.IDToBsonBinary(string(docID))},
 		{Key: "$Type", Value: "DomainModels$ViewEntitySourceDocument"},
 		{Key: "Documentation", Value: documentation},
 		{Key: "Excluded", Value: false},
@@ -315,31 +317,68 @@ func (b *MprBackend) updateOqlQueriesForMovedEntityViaModelsdk(oldQualifiedName,
 // ── UpdateEnumerationRefsInAllDomainModels ────────────
 
 func (b *MprBackend) updateEnumerationRefsInAllDomainModelsViaModelsdk(oldQualifiedName, newQualifiedName string) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	dms, err := b.reader.ListDomainModels()
+	dms, err := b.ListDomainModelsGen()
 	if err != nil {
 		return fmt.Errorf("list domain models: %w", err)
 	}
 	for _, dm := range dms {
 		changed := false
-		for _, entity := range dm.Entities {
-			for _, attr := range entity.Attributes {
-				if enumType, ok := attr.Type.(*domainmodel.EnumerationAttributeType); ok {
-					if enumType.EnumerationRef == oldQualifiedName {
-						enumType.EnumerationRef = newQualifiedName
-						enumType.EnumerationID = model.ID(newQualifiedName)
+		for _, entityElem := range dm.EntitiesItems() {
+			entity, ok := entityElem.(*genDm.Entity)
+			if !ok || entity == nil {
+				continue
+			}
+			for _, attrElem := range entity.AttributesItems() {
+				attr, ok := attrElem.(*genDm.Attribute)
+				if !ok || attr == nil {
+					continue
+				}
+				if enumType, ok := attr.Type().(*genDm.EnumerationAttributeType); ok && enumType != nil {
+					if enumType.EnumerationQualifiedName() == oldQualifiedName {
+						enumType.SetEnumerationQualifiedName(newQualifiedName)
 						changed = true
 					}
 				}
 			}
 		}
 		if changed {
-			if err := b.updateDomainModelViaModelsdk(dm); err != nil {
-				return fmt.Errorf("update domain model %s: %w", dm.ID, err)
+			if err := b.UpdateDomainModelGen(dm); err != nil {
+				return fmt.Errorf("update domain model %s: %w", dm.ID(), err)
 			}
 		}
 	}
+	return nil
+}
+
+// updateDomainModelViaModelsdk produces canonical BSON via sdk/mpr's
+// SerializeDomainModel, then commits the bytes through the modelsdk
+// write path. This bypasses sdk/mpr's updateTransactionID(), which fails
+// on hard-linked MPR files (SQLITE_READONLY_DBMOVED 1544).
+func (b *MprBackend) updateDomainModelViaModelsdk(dm *domainmodel.DomainModel) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	moduleName := ""
+	if dm.ContainerID != "" {
+		if module, mErr := b.reader.GetModule(dm.ContainerID); mErr == nil && module != nil {
+			moduleName = module.Name
+		}
+	}
+	contents, err := sdkmpr.SerializeDomainModel(dm, moduleName, b.reader.ProjectVersion())
+	if err != nil {
+		return fmt.Errorf("serialize domain model: %w", err)
+	}
+	wtx, err := b.msdkWriter.BeginWriteTransaction()
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	if err := wtx.WriteUnit(string(dm.ID), contents); err != nil {
+		_ = wtx.Rollback()
+		return fmt.Errorf("write unit: %w", err)
+	}
+	if err := wtx.Commit(); err != nil {
+		return err
+	}
+	b.reader.InvalidateCache()
 	return nil
 }

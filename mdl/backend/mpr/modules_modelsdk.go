@@ -8,12 +8,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	msdkprojects "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
@@ -182,17 +183,13 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 		return fmt.Errorf("failed to insert module unit: %w", err)
 	}
 
-	dmID := modelsdkmpr.GenerateID()
-	dm := &domainmodel.DomainModel{
-		ContainerID: module.ID,
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	dm.ID = model.ID(dmID)
-	dm.TypeName = "DomainModels$DomainModel"
-	dmContents, err := mpr.SerializeDomainModel(dm, module.Name, b.reader.ProjectVersion())
-	if err != nil {
-		return fmt.Errorf("failed to serialize domain model: %w", err)
-	}
-	if err := b.msdkWriter.InsertUnit(dmID, string(module.ID), "DomainModel", "DomainModels$DomainModel", dmContents); err != nil {
+	dm := genDm.NewDomainModel()
+	dm.SetID(element.ID(modelsdkmpr.GenerateID()))
+	if err := mprrepos.NewDomainModelRepository(w).Create(string(module.ID), "DomainModel", dm); err != nil {
 		return fmt.Errorf("failed to insert domain model unit: %w", err)
 	}
 

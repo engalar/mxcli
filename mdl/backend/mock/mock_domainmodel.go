@@ -7,55 +7,12 @@ import (
 
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
-// Stage 3.3.4 C5: read accessors return descriptive errors when no
-// Func is configured (mirrors Stage 3.3.2 javaactions / Stage 3.3.1
-// security audit). Write accessors keep the silent-success default
-// since many tests pre-flight a write without caring about the result.
-
-func (m *MockBackend) ListDomainModels() ([]*domainmodel.DomainModel, error) {
-	if m.ListDomainModelsFunc != nil {
-		return m.ListDomainModelsFunc()
-	}
-	return nil, fmt.Errorf("MockBackend.ListDomainModels not configured")
-}
-
-func (m *MockBackend) GetDomainModel(moduleID model.ID) (*domainmodel.DomainModel, error) {
-	if m.GetDomainModelFunc != nil {
-		return m.GetDomainModelFunc(moduleID)
-	}
-	return nil, fmt.Errorf("MockBackend.GetDomainModel not configured")
-}
-
-func (m *MockBackend) GetDomainModelByID(id model.ID) (*domainmodel.DomainModel, error) {
-	if m.GetDomainModelByIDFunc != nil {
-		return m.GetDomainModelByIDFunc(id)
-	}
-	return nil, fmt.Errorf("MockBackend.GetDomainModelByID not configured")
-}
-
-func (m *MockBackend) UpdateDomainModel(dm *domainmodel.DomainModel) error {
-	if m.UpdateDomainModelFunc != nil {
-		return m.UpdateDomainModelFunc(dm)
-	}
-	return nil
-}
-
-func (m *MockBackend) CreateEntity(domainModelID model.ID, entity *domainmodel.Entity) error {
-	if m.CreateEntityFunc != nil {
-		return m.CreateEntityFunc(domainModelID, entity)
-	}
-	return nil
-}
-
-func (m *MockBackend) UpdateEntity(domainModelID model.ID, entity *domainmodel.Entity) error {
-	if m.UpdateEntityFunc != nil {
-		return m.UpdateEntityFunc(domainModelID, entity)
-	}
-	return nil
-}
+// Stage 3.3.4 C1/D8: gen-typed domain model reads return descriptive
+// errors when no Func is configured. The remaining sdk-typed delete
+// methods keep the silent-success default since many tests pre-flight a
+// write without caring about the result.
 
 func (m *MockBackend) DeleteEntity(domainModelID model.ID, entityID model.ID) error {
 	if m.DeleteEntityFunc != nil {
@@ -64,44 +21,9 @@ func (m *MockBackend) DeleteEntity(domainModelID model.ID, entityID model.ID) er
 	return nil
 }
 
-func (m *MockBackend) MoveEntity(entity *domainmodel.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error) {
-	if m.MoveEntityFunc != nil {
-		return m.MoveEntityFunc(entity, sourceDMID, targetDMID, sourceModuleName, targetModuleName)
-	}
-	return nil, fmt.Errorf("MockBackend.MoveEntity not configured")
-}
-
-func (m *MockBackend) AddAttribute(domainModelID model.ID, entityID model.ID, attr *domainmodel.Attribute) error {
-	if m.AddAttributeFunc != nil {
-		return m.AddAttributeFunc(domainModelID, entityID, attr)
-	}
-	return nil
-}
-
-func (m *MockBackend) UpdateAttribute(domainModelID model.ID, entityID model.ID, attr *domainmodel.Attribute) error {
-	if m.UpdateAttributeFunc != nil {
-		return m.UpdateAttributeFunc(domainModelID, entityID, attr)
-	}
-	return nil
-}
-
 func (m *MockBackend) DeleteAttribute(domainModelID model.ID, entityID model.ID, attrID model.ID) error {
 	if m.DeleteAttributeFunc != nil {
 		return m.DeleteAttributeFunc(domainModelID, entityID, attrID)
-	}
-	return nil
-}
-
-func (m *MockBackend) CreateAssociation(domainModelID model.ID, assoc *domainmodel.Association) error {
-	if m.CreateAssociationFunc != nil {
-		return m.CreateAssociationFunc(domainModelID, assoc)
-	}
-	return nil
-}
-
-func (m *MockBackend) CreateCrossAssociation(domainModelID model.ID, ca *domainmodel.CrossModuleAssociation) error {
-	if m.CreateCrossAssociationFunc != nil {
-		return m.CreateCrossAssociationFunc(domainModelID, ca)
 	}
 	return nil
 }

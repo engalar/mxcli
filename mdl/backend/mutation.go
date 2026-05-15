@@ -8,23 +8,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
-	"github.com/mendixlabs/mxcli/sdk/pages"
-)
-
-// Re-export sdk/pages types still used by the legacy mutation surface.
-// DataGridSpec fields have been migrated to pre-serialized bson.D in Stage 3.3.5.E1.b;
-// the aliases below cover the remaining PageMutator / WidgetBuilder / PluggableProperty paths.
-type (
-	Widget              = pages.Widget
-	DataSource          = pages.DataSource
-	ClientAction        = pages.ClientAction
-	CustomWidget        = pages.CustomWidget
-	PropertyTypeIDEntry = pages.PropertyTypeIDEntry
-	BaseWidget          = pages.BaseWidget
-	DatabaseSource      = pages.DatabaseSource
-	MicroflowSource     = pages.MicroflowSource
-	NanoflowSource      = pages.NanoflowSource
-	ListenToWidgetSource = pages.ListenToWidgetSource
 )
 
 // ContainerKind represents the type of page container (page, layout, or snippet).
@@ -149,9 +132,7 @@ type PageMutator interface {
 	Save() error
 
 	// ── Stage 3.3.5.D0 gen-typed additive siblings ──────────────────────────
-	// These accept modelsdk element.Element inputs (codec-encoded to BSON) instead
-	// of sdk/pages struct types. Legacy methods above are unchanged — D1+ will
-	// migrate callers, E1 will retire the legacy surface.
+	// These accept modelsdk element.Element inputs (codec-encoded to BSON).
 
 	// SetWidgetDataSourceGen sets the DataSource on the named widget using a
 	// gen-typed DataSource element (codec-encoded to BSON).
@@ -166,17 +147,19 @@ type PageMutator interface {
 
 // PluggablePropertyContext carries operation-specific values for
 // SetPluggableProperty. Only fields relevant to the operation are used.
+// DataSource, ChildWidgets, and Action are backend-opaque serialized payloads
+// (Stage 3.3.5.E1 migration: former sdk/pages-typed fields replaced with Opaque* aliases).
 type PluggablePropertyContext struct {
-	AttributePath  string       // "attribute", "association"
-	AttributePaths []string     // "attributeObjects"
-	AssocPath      string       // "association"
-	EntityName     string       // "association"
-	PrimitiveVal   string       // "primitive"
-	DataSource     DataSource   // "datasource"
-	ChildWidgets   []Widget     // "widgets"
-	Action         ClientAction // "action"
-	TextTemplate   string       // "texttemplate"
-	Selection      string       // "selection"
+	AttributePath  string           // "attribute", "association"
+	AttributePaths []string         // "attributeObjects"
+	AssocPath      string           // "association"
+	EntityName     string           // "association"
+	PrimitiveVal   string           // "primitive"
+	DataSource     OpaqueDataSource // "datasource" — pre-serialized BSON
+	ChildWidgets   []OpaqueWidget   // "widgets" — pre-serialized BSON elements
+	Action         OpaqueAction     // "action" — pre-serialized BSON
+	TextTemplate   string           // "texttemplate"
+	Selection      string           // "selection"
 }
 
 // WorkflowMutator provides fine-grained mutation operations on a single
@@ -259,17 +242,6 @@ type WorkflowMutationBackend interface {
 // for CREATE paths where the executor builds domain objects that need
 // to be converted to the storage format.
 type WidgetSerializationBackend interface {
-	// SerializeWidget converts a domain Widget to its storage representation.
-	// The returned value is opaque to the caller; it is only used as input
-	// to mutation operations or passed to the backend for persistence.
-	SerializeWidget(w Widget) (any, error)
-
-	// SerializeClientAction converts a domain ClientAction to storage format.
-	SerializeClientAction(a ClientAction) (any, error)
-
-	// SerializeDataSource converts a domain DataSource to storage format.
-	SerializeDataSource(ds DataSource) (any, error)
-
 	// SerializeWorkflowActivityGen converts a gen-typed workflow activity
 	// element to storage format. Routes through codec.Encode +
 	// bson.Unmarshal so the BSON shape matches the codec round-trip
@@ -321,15 +293,10 @@ type WidgetObjectBuilder interface {
 
 	// --- Finalize ---
 
-	// Finalize builds the CustomWidget from the mutated template.
-	// Returns the widget with RawType/RawObject populated from internal state.
-	Finalize(id model.ID, name string, label string, editable string) *CustomWidget
-
-	// FinalizeGen is the Stage 3.3.5.D1 gen-native sibling of Finalize.
+	// FinalizeGen is the Stage 3.3.5.D1 gen-native Finalize path.
 	// It serializes the widget template through the mpr serializer and decodes
 	// it via the gen codec, returning a *GenCustomWidgetElem that satisfies both
-	// backend.Widget and element.Element. Replaces Finalize once Cat-B migration
-	// (cmd_pages_builder_v3.go) is complete.
+	// backend.Widget and element.Element.
 	FinalizeGen(id model.ID, name string, label string, editable string) (*GenCustomWidgetElem, error)
 }
 

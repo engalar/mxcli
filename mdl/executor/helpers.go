@@ -13,7 +13,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // ----------------------------------------------------------------------------
@@ -97,17 +96,18 @@ func findModuleByID(ctx *ExecContext, id model.ID) (*model.Module, error) {
 	return nil, mdlerrors.NewNotFoundMsg("module", string(id), "module not found with ID: "+string(id))
 }
 
-func findEntity(ctx *ExecContext, moduleName, entityName string) (*domainmodel.Entity, error) {
+func findEntity(ctx *ExecContext, moduleName, entityName string) (*genDm.Entity, error) {
 	module, err := findModule(ctx, moduleName)
 	if err != nil {
 		return nil, err
 	}
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
 	if err != nil {
 		return nil, mdlerrors.NewBackend("get domain model", err)
 	}
-	for _, entity := range dm.Entities {
-		if entity != nil && entity.Name == entityName {
+	for _, entityElem := range dm.EntitiesItems() {
+		entity, ok := entityElem.(*genDm.Entity)
+		if ok && entity != nil && entity.Name() == entityName {
 			return entity, nil
 		}
 	}
@@ -537,82 +537,3 @@ func buildJavaScriptActionQualifiedNames(ctx *ExecContext) map[string]bool {
 // ----------------------------------------------------------------------------
 // Executor method wrappers (for callers in unmigrated files)
 // ----------------------------------------------------------------------------
-
-// ----------------------------------------------------------------------------
-// Data Type Conversion
-// ----------------------------------------------------------------------------
-
-func convertDataType(dt ast.DataType) domainmodel.AttributeType {
-	switch dt.Kind {
-	case ast.TypeString:
-		return &domainmodel.StringAttributeType{Length: dt.Length}
-	case ast.TypeInteger:
-		return &domainmodel.IntegerAttributeType{}
-	case ast.TypeLong:
-		return &domainmodel.LongAttributeType{}
-	case ast.TypeDecimal:
-		return &domainmodel.DecimalAttributeType{}
-	case ast.TypeBoolean:
-		return &domainmodel.BooleanAttributeType{}
-	case ast.TypeDateTime:
-		return &domainmodel.DateTimeAttributeType{LocalizeDate: true}
-	case ast.TypeDate:
-		return &domainmodel.DateAttributeType{}
-	case ast.TypeAutoNumber:
-		return &domainmodel.AutoNumberAttributeType{}
-	case ast.TypeBinary:
-		return &domainmodel.BinaryAttributeType{}
-	case ast.TypeEnumeration:
-		enumRef := ""
-		if dt.EnumRef != nil {
-			enumRef = dt.EnumRef.String()
-		}
-		return &domainmodel.EnumerationAttributeType{EnumerationRef: enumRef}
-	default:
-		return &domainmodel.StringAttributeType{Length: 200}
-	}
-}
-
-func getAttributeTypeName(at domainmodel.AttributeType) string {
-	if at == nil {
-		return "Unknown"
-	}
-	switch t := at.(type) {
-	case *domainmodel.StringAttributeType:
-		if t.Length > 0 {
-			return fmt.Sprintf("String(%d)", t.Length)
-		}
-		return "String(unlimited)"
-	case *domainmodel.IntegerAttributeType:
-		return "Integer"
-	case *domainmodel.LongAttributeType:
-		return "Long"
-	case *domainmodel.DecimalAttributeType:
-		return "Decimal"
-	case *domainmodel.BooleanAttributeType:
-		return "Boolean"
-	case *domainmodel.DateTimeAttributeType:
-		return "DateTime"
-	case *domainmodel.DateAttributeType:
-		return "Date"
-	case *domainmodel.AutoNumberAttributeType:
-		return "AutoNumber"
-	case *domainmodel.BinaryAttributeType:
-		return "Binary"
-	case *domainmodel.EnumerationAttributeType:
-		// Prefer EnumerationRef (qualified name), fall back to EnumerationID
-		if t.EnumerationRef != "" {
-			return fmt.Sprintf("Enumeration(%s)", t.EnumerationRef)
-		}
-		if t.EnumerationID != "" {
-			return fmt.Sprintf("Enumeration(%s)", t.EnumerationID)
-		}
-		return "Enumeration"
-	default:
-		return "Unknown"
-	}
-}
-
-func formatAttributeType(at domainmodel.AttributeType) string {
-	return getAttributeTypeName(at)
-}
