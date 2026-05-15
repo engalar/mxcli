@@ -11,7 +11,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 func TestShowEntities_Mock(t *testing.T) {
@@ -93,17 +92,17 @@ func TestShowEntities_DomainModelRepoErrorIgnored(t *testing.T) {
 // to a known primitive, enumeration, or entity.
 func TestCreateEntity_UnknownAttributeType_Issue392(t *testing.T) {
 	mod := mkModule("M")
-	dm := mkDomainModel(mod.ID)
+	dm := mkDomainModelGen(mod.ID)
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return []*domainmodel.DomainModel{dm}, nil },
-		GetDomainModelFunc:   func(id model.ID) (*domainmodel.DomainModel, error) { return dm, nil },
-		ListEnumerationsFunc: func() ([]*model.Enumeration, error) { return nil, nil },
+		IsConnectedFunc:           func() bool { return true },
+		ListModulesFunc:           func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListDomainModelsGenFunc:   func() ([]*genDm.DomainModel, error) { return []*genDm.DomainModel{dm}, nil },
+		GetDomainModelGenFunc:     func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
+		ListEnumerationsFunc:      func() ([]*model.Enumeration, error) { return nil, nil },
 	}
 	h := mkHierarchy(mod)
-	withContainer(h, dm.ID, mod.ID)
+	withContainer(h, model.ID(dm.ID()), mod.ID)
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	err := execCreateEntity(ctx, &ast.CreateEntityStmt{

@@ -16,7 +16,6 @@ import (
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 func TestExecCreateModule_Mock(t *testing.T) {
@@ -378,14 +377,14 @@ func TestExecDropEnumeration_Mock_NotFound(t *testing.T) {
 
 func TestExecDropEntity_Mock_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
-	dm := mkDomainModel(mod.ID)
+	dm := mkDomainModelGen(mod.ID)
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
 		},
-		GetDomainModelFunc: func(moduleID model.ID) (*domainmodel.DomainModel, error) {
+		GetDomainModelGenFunc: func(moduleID model.ID) (*genDm.DomainModel, error) {
 			return dm, nil
 		},
 	}
@@ -437,14 +436,14 @@ func TestExecDropSnippet_Mock_NotFound(t *testing.T) {
 
 func TestExecDropAssociation_Mock_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
-	dm := mkDomainModel(mod.ID)
+	dm := mkDomainModelGen(mod.ID)
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
 		},
-		GetDomainModelFunc: func(moduleID model.ID) (*domainmodel.DomainModel, error) {
+		GetDomainModelGenFunc: func(moduleID model.ID) (*genDm.DomainModel, error) {
 			return dm, nil
 		},
 	}
@@ -514,7 +513,7 @@ func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
 		AddModuleRoleFunc: func(moduleSecurityID model.ID, name, description string) error {
 			return nil
 		},
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) {
+		ListDomainModelsGenFunc: func() ([]*genDm.DomainModel, error) {
 			return nil, nil
 		},
 		ListConsumedRestServicesFunc: func() ([]*model.ConsumedRestService, error) {
@@ -597,7 +596,7 @@ func TestCreateOrModifyMicroflowPreservesAllowedRoles(t *testing.T) {
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
 		},
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) {
+		ListDomainModelsGenFunc: func() ([]*genDm.DomainModel, error) {
 			return nil, nil
 		},
 		ListConsumedRestServicesFunc: func() ([]*model.ConsumedRestService, error) {

@@ -12,9 +12,9 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // ---------------------------------------------------------------------------
@@ -272,7 +272,7 @@ func setupProjectConflictCtx(t *testing.T) (*ExecContext, *model.Module) {
 		},
 		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return nil, nil },
 		ListImageCollectionsFunc:  func() ([]*types.ImageCollection, error) { return nil, nil },
-		ListDomainModelsFunc:      func() ([]*domainmodel.DomainModel, error) { return nil, nil },
+		ListDomainModelsGenFunc:   func() ([]*genDm.DomainModel, error) { return nil, nil },
 		// Stage 3.3.5.C6: ListPagesFunc / ListSnippetsFunc no longer
 		// needed — MockBackend returns (nil, nil) by default.
 	}
