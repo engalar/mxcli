@@ -7,7 +7,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // TestResolveSnippetRef_FromCache verifies that resolveSnippetRef finds snippets
@@ -18,8 +17,7 @@ func TestResolveSnippetRef_FromCache(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		// Backend returns nothing — snippet only exists in session cache
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return nil, nil },
+		// ListSnippets default returns nil,nil — snippet only exists in session cache
 	}
 
 	snpID := model.ID("snp-session-1")
@@ -56,9 +54,9 @@ func TestResolveSnippetRef_FromCache(t *testing.T) {
 // from both cache and backend, a "not found" error is returned.
 func TestResolveSnippetRef_NotFoundInCache(t *testing.T) {
 	mb := &mock.MockBackend{
-		IsConnectedFunc:  func() bool { return true },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return nil, nil },
-		ListModulesFunc:  func() ([]*model.Module, error) { return nil, nil },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return nil, nil },
+		// ListSnippets default returns nil,nil
 	}
 
 	cache := &executorCache{
