@@ -29,7 +29,7 @@ import (
 type mprWidgetObjectBuilder struct {
 	embeddedType    bson.D
 	object          bson.D // the mutable widget object BSON
-	propertyTypeIDs map[string]pages.PropertyTypeIDEntry
+	propertyTypeIDs map[string]types.PropertyTypeIDEntry
 	objectTypeID    string
 }
 
@@ -328,7 +328,7 @@ func (ob *mprWidgetObjectBuilder) Finalize(id model.ID, name string, label strin
 // ---------------------------------------------------------------------------
 
 // updateWidgetPropertyValue finds and updates a specific property value in a WidgetObject.
-func updateWidgetPropertyValue(obj bson.D, propTypeIDs map[string]pages.PropertyTypeIDEntry, propertyKey string, updateFn func(bson.D) bson.D) bson.D {
+func updateWidgetPropertyValue(obj bson.D, propTypeIDs map[string]types.PropertyTypeIDEntry, propertyKey string, updateFn func(bson.D) bson.D) bson.D {
 	propEntry, ok := propTypeIDs[propertyKey]
 	if !ok {
 		return obj
@@ -662,10 +662,10 @@ func createDefaultClientTemplateBSON(text string) bson.D {
 // Property type ID conversion
 // ---------------------------------------------------------------------------
 
-func convertPropertyTypeIDs(src map[string]widgets.PropertyTypeIDEntry) map[string]pages.PropertyTypeIDEntry {
-	result := make(map[string]pages.PropertyTypeIDEntry)
+func convertPropertyTypeIDs(src map[string]widgets.PropertyTypeIDEntry) map[string]types.PropertyTypeIDEntry {
+	result := make(map[string]types.PropertyTypeIDEntry)
 	for k, v := range src {
-		entry := pages.PropertyTypeIDEntry{
+		entry := types.PropertyTypeIDEntry{
 			PropertyTypeID:     v.PropertyTypeID,
 			ValueTypeID:        v.ValueTypeID,
 			DefaultValue:       v.DefaultValue,
@@ -686,7 +686,7 @@ func convertPropertyTypeIDs(src map[string]widgets.PropertyTypeIDEntry) map[stri
 // Default object lists
 // ---------------------------------------------------------------------------
 
-func ensureRequiredObjectLists(obj bson.D, propertyTypeIDs map[string]pages.PropertyTypeIDEntry) bson.D {
+func ensureRequiredObjectLists(obj bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry) bson.D {
 	// Sort keys for deterministic BSON output.
 	keys := make([]string, 0, len(propertyTypeIDs))
 	for k := range propertyTypeIDs {
@@ -745,7 +745,7 @@ func ensureRequiredObjectLists(obj bson.D, propertyTypeIDs map[string]pages.Prop
 	return obj
 }
 
-func createDefaultWidgetObject(objectTypeID string, nestedProps map[string]pages.PropertyTypeIDEntry) bson.D {
+func createDefaultWidgetObject(objectTypeID string, nestedProps map[string]types.PropertyTypeIDEntry) bson.D {
 	propsArr := bson.A{int32(2)}
 	// Sort keys for deterministic BSON output.
 	nestedKeys := make([]string, 0, len(nestedProps))
@@ -766,7 +766,7 @@ func createDefaultWidgetObject(objectTypeID string, nestedProps map[string]pages
 	}
 }
 
-func createDefaultWidgetProperty(entry pages.PropertyTypeIDEntry) bson.D {
+func createDefaultWidgetProperty(entry types.PropertyTypeIDEntry) bson.D {
 	return bson.D{
 		{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
 		{Key: "$Type", Value: "CustomWidgets$WidgetProperty"},
@@ -775,7 +775,7 @@ func createDefaultWidgetProperty(entry pages.PropertyTypeIDEntry) bson.D {
 	}
 }
 
-func createDefaultWidgetValue(entry pages.PropertyTypeIDEntry) bson.D {
+func createDefaultWidgetValue(entry types.PropertyTypeIDEntry) bson.D {
 	primitiveVal := entry.DefaultValue
 	expressionVal := ""
 	var textTemplate any
