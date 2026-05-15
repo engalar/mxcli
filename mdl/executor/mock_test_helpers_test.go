@@ -13,8 +13,10 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/mdl/repos"
+	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
@@ -224,6 +226,13 @@ func withSecurityRepo(r repos.SecurityRepository) mockCtxOption {
 	return func(ctx *ExecContext) { ctx.Security = r }
 }
 
+// withDomainModelsRepo wires a modelsdk-native DomainModelRepository into the
+// ExecContext. Tests typically pass a RecordingDomainModelRepository so the
+// gen helpers can enumerate module-owned domain models.
+func withDomainModelsRepo(r repos.DomainModelRepository) mockCtxOption {
+	return func(ctx *ExecContext) { ctx.DomainModels = r }
+}
+
 // mkPageGen builds a gen-typed Page fixture for the Stage 3.3.5 mock
 // test migration. Stage 3.3.5.A0 introduced ctx.Pages + the
 // listPagesWithContainerGen helper; tests now wire fixtures through
@@ -261,6 +270,59 @@ func mkWorkflowGen(id, name string) *genWf.Workflow {
 	wf.SetID(element.ID(id))
 	wf.SetName(name)
 	return wf
+}
+
+func mkNoGeneralizationGen(persistable bool) *genDm.NoGeneralization {
+	g := genDm.NewNoGeneralization()
+	g.SetPersistable(persistable)
+	return g
+}
+
+func mkEntityGen(name string) *genDm.Entity {
+	ent := genDm.NewEntity()
+	ent.SetID(element.ID(nextID("ent")))
+	ent.SetName(name)
+	ent.SetGeneralization(mkNoGeneralizationGen(true))
+	return ent
+}
+
+func mkDomainModelGen(containerID model.ID, entities ...*genDm.Entity) *genDm.DomainModel {
+	dm := genDm.NewDomainModel()
+	dm.SetID(element.ID(nextID("dm")))
+	for _, ent := range entities {
+		dm.AddEntities(ent)
+	}
+	_ = containerID
+	return dm
+}
+
+func mkAssociationGen(name string, parentID, childID model.ID) *genDm.Association {
+	assoc := genDm.NewAssociation()
+	assoc.SetID(element.ID(nextID("assoc")))
+	assoc.SetName(name)
+	assoc.SetParentID(element.ID(parentID))
+	assoc.SetChildID(element.ID(childID))
+	assoc.SetType(genDm.AssociationTypeReference)
+	assoc.SetOwner(genDm.AssociationOwnerDefault)
+	return assoc
+}
+
+func makeDomainModelsRepo(domainModelsByModule map[model.ID][]*genDm.DomainModel) *repostesting.RecordingDomainModelRepository {
+	return &repostesting.RecordingDomainModelRepository{
+		ListFunc: func(moduleID model.ID) ([]*genDm.DomainModel, error) {
+			return domainModelsByModule[moduleID], nil
+		},
+		GetFunc: func(id model.ID) (*genDm.DomainModel, error) {
+			for _, list := range domainModelsByModule {
+				for _, dm := range list {
+					if dm != nil && model.ID(dm.ID()) == id {
+						return dm, nil
+					}
+				}
+			}
+			return nil, nil
+		},
+	}
 }
 
 // --- Assertion helpers ---
