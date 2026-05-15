@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/model"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -134,8 +135,10 @@ func (b *Builder) buildPages() error {
 }
 
 func (b *Builder) buildSnippets() error {
-	// Get all snippets
-	snippetList, err := b.reader.ListSnippets()
+	// Stage 3.3.5.C7e: walks gen-typed Snippet units. Container linkage
+	// resolved via the unit hierarchy. ParameterCount uses gen
+	// ParametersItems(); the legacy code hard-coded 0.
+	snippetGenList, err := b.cachedSnippetsGen()
 	if err != nil {
 		return err
 	}
@@ -155,22 +158,26 @@ func (b *Builder) buildSnippets() error {
 	projectID, projectName, snapshotID, snapshotDate, snapshotSource, sourceID, sourceBranch, sourceRevision := b.snapshotMeta()
 
 	count := 0
-	for _, sn := range snippetList {
-		// Get module name
-		moduleID := b.hierarchy.findModuleID(sn.ContainerID)
+	for _, sn := range snippetGenList {
+		if sn == nil {
+			continue
+		}
+		snID := model.ID(sn.ID())
+		containerID := b.hierarchy.containerParent[snID]
+		moduleID := b.hierarchy.findModuleID(containerID)
 		moduleName := b.hierarchy.getModuleName(moduleID)
-		qualifiedName := moduleName + "." + sn.Name
-		folder := b.hierarchy.buildFolderPath(sn.ContainerID)
+		qualifiedName := moduleName + "." + sn.Name()
+		folder := b.hierarchy.buildFolderPath(containerID)
 
 		_, err := snippetStmt.Exec(
-			string(sn.ID),
-			sn.Name,
+			string(snID),
+			sn.Name(),
 			qualifiedName,
 			moduleName,
 			folder,
-			sn.Documentation,
-			0, // ParameterCount
-			0, // WidgetCount
+			sn.Documentation(),
+			len(sn.ParametersItems()),
+			0, // WidgetCount — gen widget walking deferred to D-phase
 			projectID, projectName, snapshotID, snapshotDate, snapshotSource,
 			sourceID, sourceBranch, sourceRevision,
 		)
@@ -498,8 +505,9 @@ func bytesToHex(data []byte) string {
 }
 
 func (b *Builder) buildLayouts() error {
-	// Get all layouts
-	layoutList, err := b.reader.ListLayouts()
+	// Stage 3.3.5.C7e: walks gen-typed Layout units. Container linkage
+	// resolved via the unit hierarchy.
+	layoutGenList, err := b.cachedLayoutsGen()
 	if err != nil {
 		return err
 	}
@@ -518,21 +526,25 @@ func (b *Builder) buildLayouts() error {
 	projectID, projectName, snapshotID, snapshotDate, snapshotSource, sourceID, sourceBranch, sourceRevision := b.snapshotMeta()
 
 	count := 0
-	for _, l := range layoutList {
-		// Get module name
-		moduleID := b.hierarchy.findModuleID(l.ContainerID)
+	for _, l := range layoutGenList {
+		if l == nil {
+			continue
+		}
+		lID := model.ID(l.ID())
+		containerID := b.hierarchy.containerParent[lID]
+		moduleID := b.hierarchy.findModuleID(containerID)
 		moduleName := b.hierarchy.getModuleName(moduleID)
-		qualifiedName := moduleName + "." + l.Name
-		folder := b.hierarchy.buildFolderPath(l.ContainerID)
+		qualifiedName := moduleName + "." + l.Name()
+		folder := b.hierarchy.buildFolderPath(containerID)
 
 		_, err := layoutStmt.Exec(
-			string(l.ID),
-			l.Name,
+			string(lID),
+			l.Name(),
 			qualifiedName,
 			moduleName,
 			folder,
-			string(l.LayoutType),
-			l.Documentation,
+			l.LayoutType(),
+			l.Documentation(),
 			projectID, projectName, snapshotID, snapshotDate, snapshotSource,
 			sourceID, sourceBranch, sourceRevision,
 		)
