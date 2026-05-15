@@ -168,11 +168,12 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete pages in this module
-	if pages, err := ctx.Backend.ListPages(); err == nil {
-		for _, page := range pages {
-			if moduleContainers[page.ContainerID] {
-				if err := ctx.Backend.DeletePage(page.ID); err != nil {
-					fmt.Fprintf(ctx.Output, "Warning: failed to delete page %s: %v\n", page.Name, err)
+	if pagePairs, err := listPagesWithContainerGen(ctx); err == nil {
+		for _, pair := range pagePairs {
+			pg := pair.Elem
+			if moduleContainers[model.ID(pair.ContainerID)] {
+				if err := ctx.Backend.DeletePage(model.ID(pg.ID())); err != nil {
+					fmt.Fprintf(ctx.Output, "Warning: failed to delete page %s: %v\n", pg.Name(), err)
 				} else {
 					nPages++
 				}
@@ -482,9 +483,9 @@ func listModules(ctx *ExecContext) error {
 	}
 
 	// Count pages
-	if pages, err := ctx.Backend.ListPages(); err == nil {
-		for _, p := range pages {
-			modID := h.FindModuleID(p.ContainerID)
+	if pagePairs, err := listPagesWithContainerGen(ctx); err == nil {
+		for _, pair := range pagePairs {
+			modID := h.FindModuleID(model.ID(pair.ContainerID))
 			pageCounts[modID]++
 		}
 	}
@@ -702,10 +703,11 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Output pages
-	if pageList, err := ctx.Backend.ListPages(); err == nil {
-		for _, p := range pageList {
-			if moduleContainers[p.ContainerID] {
-				if err := describePage(ctx, ast.QualifiedName{Module: moduleName, Name: p.Name}); err == nil {
+	if pagePairs, err := listPagesWithContainerGen(ctx); err == nil {
+		for _, pair := range pagePairs {
+			pg := pair.Elem
+			if moduleContainers[model.ID(pair.ContainerID)] {
+				if err := describePage(ctx, ast.QualifiedName{Module: moduleName, Name: pg.Name()}); err == nil {
 					fmt.Fprintln(ctx.Output)
 				}
 			}

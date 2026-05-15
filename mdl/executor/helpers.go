@@ -382,12 +382,13 @@ func buildPageQualifiedNames(ctx *ExecContext) map[string]bool {
 	if err != nil {
 		return result
 	}
-	pgs, err := ctx.Backend.ListPages()
+	pgPairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return result
 	}
-	for _, p := range pgs {
-		qn := h.GetQualifiedName(p.ContainerID, p.Name)
+	for _, pair := range pgPairs {
+		pg := pair.Elem
+		qn := h.GetQualifiedName(model.ID(pair.ContainerID), pg.Name())
 		result[qn] = true
 	}
 	return result

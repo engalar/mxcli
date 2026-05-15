@@ -142,14 +142,15 @@ func execDropModuleRoleGen(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
 	h, err := getHierarchy(ctx)
 	if err == nil {
 		// Cascade: pages
-		if pgs, err := ctx.Backend.ListPages(); err == nil {
-			for _, pg := range pgs {
-				modID := h.FindModuleID(pg.ContainerID)
+		if pgPairs, err := listPagesWithContainerGen(ctx); err == nil {
+			for _, pair := range pgPairs {
+				pg := pair.Elem
+				modID := h.FindModuleID(model.ID(pair.ContainerID))
 				if modID != module.ID {
 					continue
 				}
-				if removed, err := ctx.Backend.RemoveFromAllowedRoles(pg.ID, qualifiedRole); err == nil && removed {
-					fmt.Fprintf(ctx.Output, "Removed %s from page %s allowed roles\n", qualifiedRole, pg.Name)
+				if removed, err := ctx.Backend.RemoveFromAllowedRoles(model.ID(pg.ID()), qualifiedRole); err == nil && removed {
+					fmt.Fprintf(ctx.Output, "Removed %s from page %s allowed roles\n", qualifiedRole, pg.Name())
 				}
 			}
 		}

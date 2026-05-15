@@ -261,32 +261,29 @@ func listSecurityMatrixGen(ctx *ExecContext, moduleName string) error {
 	}
 	fmt.Fprintln(ctx.Output)
 
-	// Page section — no microflow involvement; reuse Backend list as in
-	// the legacy path. (Page-side migration is outside 3.2.5a.)
+	// Page section — gen-typed listing via listPagesWithContainerGen.
 	fmt.Fprintln(ctx.Output, "## Page Access")
 	fmt.Fprintln(ctx.Output)
 
-	pages, err := ctx.Backend.ListPages()
+	pgPairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
 
 	pgFound := false
-	for _, pg := range pages {
-		if len(pg.AllowedRoles) == 0 {
+	for _, pair := range pgPairs {
+		pg := pair.Elem
+		roles := pg.AllowedRolesQualifiedNames()
+		if len(roles) == 0 {
 			continue
 		}
-		modID := h.FindModuleID(pg.ContainerID)
+		modID := h.FindModuleID(model.ID(pair.ContainerID))
 		modName := h.GetModuleName(modID)
 		if moduleName != "" && modName != moduleName {
 			continue
 		}
 		pgFound = true
-		var roleStrs []string
-		for _, r := range pg.AllowedRoles {
-			roleStrs = append(roleStrs, string(r))
-		}
-		fmt.Fprintf(ctx.Output, "  %s.%s: %s\n", modName, pg.Name, strings.Join(roleStrs, ", "))
+		fmt.Fprintf(ctx.Output, "  %s.%s: %s\n", modName, pg.Name(), strings.Join(roles, ", "))
 	}
 	if !pgFound {
 		fmt.Fprintln(ctx.Output, "(no page access rules configured)")
@@ -370,25 +367,23 @@ func listSecurityMatrixJSONGen(ctx *ExecContext, moduleName string) error {
 		})
 	}
 
-	// Pages — no microflow involvement; reuse Backend as in legacy path.
-	pages, _ := ctx.Backend.ListPages()
-	for _, pg := range pages {
-		if len(pg.AllowedRoles) == 0 {
+	// Pages — gen-typed listing via listPagesWithContainerGen.
+	pgPairs2, _ := listPagesWithContainerGen(ctx)
+	for _, pair := range pgPairs2 {
+		pg := pair.Elem
+		roles := pg.AllowedRolesQualifiedNames()
+		if len(roles) == 0 {
 			continue
 		}
-		modID := h.FindModuleID(pg.ContainerID)
+		modID := h.FindModuleID(model.ID(pair.ContainerID))
 		modName := h.GetModuleName(modID)
 		if moduleName != "" && modName != moduleName {
 			continue
 		}
-		var roleStrs []string
-		for _, r := range pg.AllowedRoles {
-			roleStrs = append(roleStrs, string(r))
-		}
 		tr.Rows = append(tr.Rows, []any{
 			"Page",
-			modName + "." + pg.Name,
-			strings.Join(roleStrs, ", "),
+			modName + "." + pg.Name(),
+			strings.Join(roles, ", "),
 			"X",
 		})
 	}

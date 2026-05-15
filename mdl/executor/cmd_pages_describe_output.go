@@ -1019,7 +1019,7 @@ func getPageQualifiedName(ctx *ExecContext, pageID model.ID) string {
 	if pageID == "" {
 		return ""
 	}
-	allPages, err := ctx.Backend.ListPages()
+	pgPairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return ""
 	}
@@ -1027,10 +1027,11 @@ func getPageQualifiedName(ctx *ExecContext, pageID model.ID) string {
 	if err != nil {
 		return ""
 	}
-	for _, p := range allPages {
-		if p.ID == pageID {
-			modName := h.GetModuleName(h.FindModuleID(p.ContainerID))
-			return modName + "." + p.Name
+	for _, pair := range pgPairs {
+		p := pair.Elem
+		if model.ID(p.ID()) == pageID {
+			modName := h.GetModuleName(h.FindModuleID(model.ID(pair.ContainerID)))
+			return modName + "." + p.Name()
 		}
 	}
 	return ""

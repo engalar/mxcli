@@ -186,15 +186,16 @@ func getPageNames(ctx *ExecContext, h *ContainerHierarchy) map[model.ID]string {
 		return ctx.Cache.pageNames
 	}
 	pageNames := make(map[model.ID]string)
-	pgs, err := ctx.Backend.ListPages()
+	pgPairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		if ctx.Logger != nil {
-			ctx.Logger.Warn("getPageNames: ListPages failed", "error", err)
+			ctx.Logger.Warn("getPageNames: ListPagesGen failed", "error", err)
 		}
 		return pageNames
 	}
-	for _, pg := range pgs {
-		pageNames[pg.ID] = h.GetQualifiedName(pg.ContainerID, pg.Name)
+	for _, pair := range pgPairs {
+		pg := pair.Elem
+		pageNames[model.ID(pg.ID())] = h.GetQualifiedName(model.ID(pair.ContainerID), pg.Name())
 	}
 	if ctx.Cache != nil {
 		ctx.Cache.pageNames = pageNames

@@ -802,9 +802,10 @@ func preWarmCache(ctx *ExecContext) {
 
 	// Build page name lookup
 	ctx.Cache.pageNames = make(map[model.ID]string)
-	pgs, _ := ctx.Backend.ListPages()
-	for _, pg := range pgs {
-		ctx.Cache.pageNames[pg.ID] = h.GetQualifiedName(pg.ContainerID, pg.Name)
+	pgPairs, _ := listPagesWithContainerGen(ctx)
+	for _, pair := range pgPairs {
+		pg := pair.Elem
+		ctx.Cache.pageNames[model.ID(pg.ID())] = h.GetQualifiedName(model.ID(pair.ContainerID), pg.Name())
 	}
 }
 
