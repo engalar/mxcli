@@ -93,16 +93,17 @@ func getPageNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	pages, err := ctx.Backend.ListPages()
+	pairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return nil
 	}
 	names := make([]string, 0)
-	for _, p := range pages {
-		modID := h.FindModuleID(p.ContainerID)
+	for _, pair := range pairs {
+		p := pair.Elem
+		modID := h.FindModuleID(model.ID(pair.ContainerID))
 		modName := h.GetModuleName(modID)
 		if moduleFilter == "" || modName == moduleFilter {
-			names = append(names, modName+"."+p.Name)
+			names = append(names, modName+"."+p.Name())
 		}
 	}
 	return names

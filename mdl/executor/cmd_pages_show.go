@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/model"
+	genTx "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 )
 
 // listPages handles SHOW PAGES command.
@@ -18,8 +20,8 @@ func listPages(ctx *ExecContext, moduleName string) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	// Get all pages
-	pages, err := ctx.Backend.ListPages()
+	// Get all pages via gen-typed listing
+	pairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
@@ -37,26 +39,22 @@ func listPages(ctx *ExecContext, moduleName string) error {
 	}
 	var rows []row
 
-	for _, p := range pages {
-		modID := h.FindModuleID(p.ContainerID)
+	for _, pair := range pairs {
+		p := pair.Elem
+		modID := h.FindModuleID(model.ID(pair.ContainerID))
 		modName := h.GetModuleName(modID)
 		if moduleName == "" || modName == moduleName {
-			qualifiedName := modName + "." + p.Name
-			folderPath := h.BuildFolderPath(p.ContainerID)
+			qualifiedName := modName + "." + p.Name()
+			folderPath := h.BuildFolderPath(model.ID(pair.ContainerID))
 			title := ""
-			if p.Title != nil {
-				// Try to get English title first, then any available translation
-				title = p.Title.GetTranslation("en_US")
-				if title == "" {
-					for _, t := range p.Title.Translations {
-						title = t
-						break
-					}
+			if titleElem := p.Title(); titleElem != nil {
+				if tx, ok := titleElem.(*genTx.Text); ok && tx != nil {
+					title, _ = pickTextTranslationGen(tx)
 				}
 			}
-			url := p.URL
+			url := p.Url()
 
-			rows = append(rows, row{qualifiedName, modName, p.Name, p.Excluded, folderPath, title, url, len(p.Parameters)})
+			rows = append(rows, row{qualifiedName, modName, p.Name(), p.Excluded(), folderPath, title, url, len(p.ParametersItems())})
 		}
 	}
 

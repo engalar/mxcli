@@ -38,25 +38,24 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	moduleID := module.ID
 
 	// Check if page already exists - collect ALL duplicates
-	existingPages, _ := ctx.Backend.ListPages()
+	existingPgPairs, _ := listPagesWithContainerGen(ctx)
 	var pagesToDelete []model.ID
 	var existingAllowedRoles []string
 	preserveAllowedRoles := false
-	for _, p := range existingPages {
-		modID := getModuleID(ctx, p.ContainerID)
+	for _, pair := range existingPgPairs {
+		p := pair.Elem
+		modID := getModuleID(ctx, model.ID(pair.ContainerID))
 		modName := getModuleName(ctx, modID)
-		if modName == s.Name.Module && p.Name == s.Name.Name {
+		if modName == s.Name.Module && p.Name() == s.Name.Name {
 			if !s.IsReplace && !s.IsModify && len(pagesToDelete) == 0 {
 				return mdlerrors.NewAlreadyExists("page", s.Name.String())
 			}
 			if len(pagesToDelete) == 0 {
 				// Preserve existing allowed roles (as qualified name strings)
-				for _, r := range p.AllowedRoles {
-					existingAllowedRoles = append(existingAllowedRoles, string(r))
-				}
+				existingAllowedRoles = append(existingAllowedRoles, p.AllowedRolesQualifiedNames()...)
 				preserveAllowedRoles = true
 			}
-			pagesToDelete = append(pagesToDelete, p.ID)
+			pagesToDelete = append(pagesToDelete, model.ID(p.ID()))
 		}
 	}
 

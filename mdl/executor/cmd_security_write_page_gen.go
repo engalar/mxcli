@@ -22,6 +22,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 // execGrantPageAccessGen handles GRANT VIEW ON PAGE Module.Page TO roles.
@@ -37,15 +38,16 @@ func execGrantPageAccessGen(ctx *ExecContext, s *ast.GrantPageAccessStmt) error 
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	pages, err := ctx.Backend.ListPages()
+	pgPairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
 
-	for _, pg := range pages {
-		modID := h.FindModuleID(pg.ContainerID)
+	for _, pair := range pgPairs {
+		pg := pair.Elem
+		modID := h.FindModuleID(model.ID(pair.ContainerID))
 		modName := h.GetModuleName(modID)
-		if modName != s.Page.Module || pg.Name != s.Page.Name {
+		if modName != s.Page.Module || pg.Name() != s.Page.Name {
 			continue
 		}
 
@@ -55,22 +57,17 @@ func execGrantPageAccessGen(ctx *ExecContext, s *ast.GrantPageAccessStmt) error 
 			}
 		}
 
-		// Convert []model.ID to []string for the helper.
-		existing := make([]string, 0, len(pg.AllowedRoles))
-		for _, r := range pg.AllowedRoles {
-			existing = append(existing, string(r))
-		}
-
+		existing := pg.AllowedRolesQualifiedNames()
 		merged, added := mergeAllowedRoles(existing, s.Roles)
 
-		if err := ctx.Backend.UpdateAllowedRoles(pg.ID, merged); err != nil {
+		if err := ctx.Backend.UpdateAllowedRoles(model.ID(pg.ID()), merged); err != nil {
 			return mdlerrors.NewBackend("update page access", err)
 		}
 
 		if len(added) == 0 {
-			fmt.Fprintf(ctx.Output, "All specified roles already have view access on %s.%s\n", modName, pg.Name)
+			fmt.Fprintf(ctx.Output, "All specified roles already have view access on %s.%s\n", modName, pg.Name())
 		} else {
-			fmt.Fprintf(ctx.Output, "Granted view access on %s.%s to %s\n", modName, pg.Name, strings.Join(added, ", "))
+			fmt.Fprintf(ctx.Output, "Granted view access on %s.%s to %s\n", modName, pg.Name(), strings.Join(added, ", "))
 		}
 		return nil
 	}
@@ -90,34 +87,30 @@ func execRevokePageAccessGen(ctx *ExecContext, s *ast.RevokePageAccessStmt) erro
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	pages, err := ctx.Backend.ListPages()
+	pgPairs2, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
 
-	for _, pg := range pages {
-		modID := h.FindModuleID(pg.ContainerID)
+	for _, pair := range pgPairs2 {
+		pg := pair.Elem
+		modID := h.FindModuleID(model.ID(pair.ContainerID))
 		modName := h.GetModuleName(modID)
-		if modName != s.Page.Module || pg.Name != s.Page.Name {
+		if modName != s.Page.Module || pg.Name() != s.Page.Name {
 			continue
 		}
 
-		// Convert []model.ID to []string for the helper.
-		existing := make([]string, 0, len(pg.AllowedRoles))
-		for _, r := range pg.AllowedRoles {
-			existing = append(existing, string(r))
-		}
-
+		existing := pg.AllowedRolesQualifiedNames()
 		remaining, removed := filterAllowedRoles(existing, s.Roles)
 
-		if err := ctx.Backend.UpdateAllowedRoles(pg.ID, remaining); err != nil {
+		if err := ctx.Backend.UpdateAllowedRoles(model.ID(pg.ID()), remaining); err != nil {
 			return mdlerrors.NewBackend("update page access", err)
 		}
 
 		if len(removed) == 0 {
-			fmt.Fprintf(ctx.Output, "None of the specified roles had view access on %s.%s\n", modName, pg.Name)
+			fmt.Fprintf(ctx.Output, "None of the specified roles had view access on %s.%s\n", modName, pg.Name())
 		} else {
-			fmt.Fprintf(ctx.Output, "Revoked view access on %s.%s from %s\n", modName, pg.Name, strings.Join(removed, ", "))
+			fmt.Fprintf(ctx.Output, "Revoked view access on %s.%s from %s\n", modName, pg.Name(), strings.Join(removed, ", "))
 		}
 		return nil
 	}
