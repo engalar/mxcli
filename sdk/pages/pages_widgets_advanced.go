@@ -3,6 +3,7 @@
 package pages
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -169,18 +170,9 @@ type CustomWidget struct {
 	ObjectTypeID string `json:"-"`
 }
 
-// PropertyTypeIDEntry holds the IDs for a property type from a cloned widget.
-type PropertyTypeIDEntry struct {
-	PropertyTypeID     string
-	ValueTypeID        string
-	DefaultValue       string // Default value from the template's ValueType
-	ValueType          string // Type of value (Boolean, Integer, String, DataSource, etc.)
-	Required           bool   // Whether this property is required
-	DataSourceProperty string // Non-empty when this attribute is linked to another DataSource property
-	// For object list properties (IsList=true with ObjectType), these hold nested IDs
-	ObjectTypeID      string                         // ID of the nested ObjectType (for object lists like columns)
-	NestedPropertyIDs map[string]PropertyTypeIDEntry // Property IDs within the nested ObjectType
-}
+// PropertyTypeIDEntry is the canonical type for pluggable widget property metadata.
+// Defined in mdl/types; re-exported here as an alias for backwards compatibility.
+type PropertyTypeIDEntry = types.PropertyTypeIDEntry
 
 // CustomWidgetType defines the pluggable widget type (CustomWidgets$CustomWidgetType).
 type CustomWidgetType struct {

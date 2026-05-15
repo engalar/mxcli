@@ -3,6 +3,7 @@
 package backend
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/sdk/pages"
@@ -291,7 +292,7 @@ type WidgetObjectBuilder interface {
 	// --- Template metadata ---
 
 	// PropertyTypeIDs returns the property type metadata for the loaded template.
-	PropertyTypeIDs() map[string]pages.PropertyTypeIDEntry
+	PropertyTypeIDs() map[string]types.PropertyTypeIDEntry
 
 	// --- Object list defaults ---
 
