@@ -13,6 +13,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // listImportMappings prints a table of all import mapping documents.
@@ -372,22 +373,63 @@ func resolveAttributeType(entityQN, attrName string, b backend.DomainModelBacken
 	if len(parts) != 2 {
 		return "String"
 	}
-	dms, err := b.ListDomainModels()
+	dms, err := b.ListDomainModelsGen()
 	if err != nil {
 		return "String"
 	}
 	for _, dm := range dms {
-		for _, e := range dm.Entities {
-			if e.Name == parts[1] {
-				for _, a := range e.Attributes {
-					if a.Name == attrName && a.Type != nil {
-						return a.Type.GetTypeName()
-					}
+		if dm == nil {
+			continue
+		}
+		for _, item := range dm.EntitiesItems() {
+			e, ok := item.(*genDm.Entity)
+			if !ok || e.Name() != parts[1] {
+				continue
+			}
+			for _, attrItem := range e.AttributesItems() {
+				a, ok := attrItem.(*genDm.Attribute)
+				if !ok || a.Name() != attrName || a.Type() == nil {
+					continue
 				}
+				return importMappingAttributeTypeNameGen(a.Type())
 			}
 		}
 	}
 	return "String"
+}
+
+func importMappingAttributeTypeNameGen(t any) string {
+	switch t := t.(type) {
+	case *genDm.StringAttributeType:
+		return "String"
+	case *genDm.IntegerAttributeType:
+		return "Integer"
+	case *genDm.LongAttributeType:
+		return "Long"
+	case *genDm.DecimalAttributeType:
+		return "Decimal"
+	case *genDm.FloatAttributeType:
+		return "Float"
+	case *genDm.CurrencyAttributeType:
+		return "Currency"
+	case *genDm.BooleanAttributeType:
+		return "Boolean"
+	case *genDm.DateTimeAttributeType:
+		return "DateTime"
+	case *genDm.AutoNumberAttributeType:
+		return "AutoNumber"
+	case *genDm.BinaryAttributeType:
+		return "Binary"
+	case *genDm.HashedStringAttributeType:
+		return "HashedString"
+	case *genDm.MultiLanguageAttributeType:
+		return "MultiLanguage"
+	case *genDm.EnumerationAttributeType:
+		return "Enumeration"
+	default:
+		_ = t
+		return "String"
+	}
 }
 
 // execDropImportMapping deletes an import mapping.

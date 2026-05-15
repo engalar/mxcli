@@ -201,6 +201,9 @@ func (b *MprBackend) DeleteEntity(domainModelID model.ID, entityID model.ID) err
 func (b *MprBackend) MoveEntity(entity *domainmodel.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error) {
 	return b.moveEntityViaModelsdk(entity, sourceDMID, targetDMID, sourceModuleName, targetModuleName)
 }
+func (b *MprBackend) MoveEntityGen(entity *genDm.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error) {
+	return b.moveEntityGen(sourceDMID, targetDMID, sourceModuleName, targetModuleName, entity)
+}
 
 func (b *MprBackend) AddAttribute(domainModelID model.ID, entityID model.ID, attr *domainmodel.Attribute) error {
 	return b.addAttributeViaModelsdk(domainModelID, entityID, attr)

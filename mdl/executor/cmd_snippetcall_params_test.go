@@ -122,18 +122,31 @@ func TestSnippetCall_WithParam_Succeeds(t *testing.T) {
 		},
 	}
 
-	sc, err := pb.buildSnippetCallV3(w)
+	scwElem, err := pb.buildSnippetCallV3(w)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(sc.ParameterMappings) != 1 {
-		t.Fatalf("ParameterMappings: want 1, got %d", len(sc.ParameterMappings))
+	scw, ok := scwElem.(*genPg.SnippetCallWidget)
+	if !ok {
+		t.Fatalf("expected *genPg.SnippetCallWidget, got %T", scwElem)
 	}
-	if sc.ParameterMappings[0].ParamName != "Asset" {
-		t.Errorf("ParamName: want Asset, got %q", sc.ParameterMappings[0].ParamName)
+	sc, ok := scw.SnippetCall().(*genPg.SnippetCall)
+	if !ok {
+		t.Fatalf("expected *genPg.SnippetCall inner, got %T", scw.SnippetCall())
 	}
-	if sc.ParameterMappings[0].Argument != "$Asset" {
-		t.Errorf("Argument: want $Asset, got %q", sc.ParameterMappings[0].Argument)
+	mappings := sc.ParameterMappingsItems()
+	if len(mappings) != 1 {
+		t.Fatalf("ParameterMappings: want 1, got %d", len(mappings))
+	}
+	m0, ok := mappings[0].(*genPg.SnippetParameterMapping)
+	if !ok {
+		t.Fatalf("expected *genPg.SnippetParameterMapping, got %T", mappings[0])
+	}
+	if m0.ParameterQualifiedName() != "Asset" {
+		t.Errorf("ParamName: want Asset, got %q", m0.ParameterQualifiedName())
+	}
+	if m0.Argument() != "$Asset" {
+		t.Errorf("Argument: want $Asset, got %q", m0.Argument())
 	}
 }
 
@@ -160,12 +173,21 @@ func TestSnippetCall_NoParam_NoSnippetParams_Succeeds(t *testing.T) {
 		Properties: map[string]any{"Snippet": "Mod.Footer"},
 	}
 
-	sc, err := pb.buildSnippetCallV3(w)
+	scwElem, err := pb.buildSnippetCallV3(w)
 	if err != nil {
 		t.Fatalf("unexpected error for parameterless snippet: %v", err)
 	}
-	if len(sc.ParameterMappings) != 0 {
-		t.Errorf("expected empty ParameterMappings, got %d", len(sc.ParameterMappings))
+	scw, ok := scwElem.(*genPg.SnippetCallWidget)
+	if !ok {
+		t.Fatalf("expected *genPg.SnippetCallWidget, got %T", scwElem)
+	}
+	// Parameterless snippet: SnippetCall should have no parameter mappings
+	if inner := scw.SnippetCall(); inner != nil {
+		if sc, ok := inner.(*genPg.SnippetCall); ok {
+			if len(sc.ParameterMappingsItems()) != 0 {
+				t.Errorf("expected empty ParameterMappings, got %d", len(sc.ParameterMappingsItems()))
+			}
+		}
 	}
 }
 
@@ -196,14 +218,27 @@ func TestSnippetCall_DollarPrefixParam_Succeeds(t *testing.T) {
 		},
 	}
 
-	sc, err := pb.buildSnippetCallV3(w)
+	scwElem, err := pb.buildSnippetCallV3(w)
 	if err != nil {
 		t.Fatalf("unexpected error with $-prefixed param name: %v", err)
 	}
-	if len(sc.ParameterMappings) != 1 {
-		t.Fatalf("ParameterMappings: want 1, got %d", len(sc.ParameterMappings))
+	scw, ok := scwElem.(*genPg.SnippetCallWidget)
+	if !ok {
+		t.Fatalf("expected *genPg.SnippetCallWidget, got %T", scwElem)
 	}
-	if sc.ParameterMappings[0].ParamName != "Asset" {
-		t.Errorf("ParamName: want Asset (stripped), got %q", sc.ParameterMappings[0].ParamName)
+	sc, ok := scw.SnippetCall().(*genPg.SnippetCall)
+	if !ok {
+		t.Fatalf("expected *genPg.SnippetCall inner, got %T", scw.SnippetCall())
+	}
+	mappings := sc.ParameterMappingsItems()
+	if len(mappings) != 1 {
+		t.Fatalf("ParameterMappings: want 1, got %d", len(mappings))
+	}
+	m0, ok := mappings[0].(*genPg.SnippetParameterMapping)
+	if !ok {
+		t.Fatalf("expected *genPg.SnippetParameterMapping, got %T", mappings[0])
+	}
+	if m0.ParameterQualifiedName() != "Asset" {
+		t.Errorf("ParamName: want Asset (stripped), got %q", m0.ParameterQualifiedName())
 	}
 }

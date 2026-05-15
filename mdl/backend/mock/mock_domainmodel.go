@@ -222,6 +222,13 @@ func (m *MockBackend) UpdateEntityGen(domainModelID model.ID, entity *genDm.Enti
 	return nil
 }
 
+func (m *MockBackend) MoveEntityGen(entity *genDm.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error) {
+	if m.MoveEntityGenFunc != nil {
+		return m.MoveEntityGenFunc(entity, sourceDMID, targetDMID, sourceModuleName, targetModuleName)
+	}
+	return nil, fmt.Errorf("MockBackend.MoveEntityGen not configured")
+}
+
 func (m *MockBackend) CreateAssociationGen(domainModelID model.ID, assoc *genDm.Association) error {
 	if m.CreateAssociationGenFunc != nil {
 		return m.CreateAssociationGenFunc(domainModelID, assoc)

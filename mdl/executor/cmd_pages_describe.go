@@ -69,14 +69,23 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	// Get title
 	title := pickPageTitleGen(foundPage)
 
-	// Get layout from raw data
+	// Get layout from raw data.
+	// Gen-encoded pages (Stage 3.3.5.Cat-B) write "LayoutCall" as the BSON key;
+	// legacy pages use "FormCall" (the Mendix storage alias). Try both.
 	layoutName := ""
 	rawData, _ := ctx.Backend.GetRawUnit(pageID)
 	if rawData != nil {
-		if formCall, ok := rawData["FormCall"].(map[string]any); ok {
+		formCall, _ := rawData["FormCall"].(map[string]any)
+		if formCall == nil {
+			formCall, _ = rawData["LayoutCall"].(map[string]any)
+		}
+		if formCall != nil {
 			if layoutID := extractBinaryID(formCall["Layout"]); layoutID != "" {
 				layoutName = resolveLayoutName(ctx, model.ID(layoutID))
 			} else if formName, ok := formCall["Form"].(string); ok && formName != "" {
+				layoutName = formName
+			} else if formName, ok := formCall["Layout"].(string); ok && formName != "" {
+				// Gen encoder writes the qualified name directly as "Layout"
 				layoutName = formName
 			}
 		}
@@ -606,9 +615,13 @@ func getPageWidgetsFromRaw(ctx *ExecContext, pageID model.ID) []rawWidget {
 		return nil
 	}
 
-	// Parse FormCall.Arguments to get widgets
-	formCall, ok := rawData["FormCall"].(map[string]any)
-	if !ok {
+	// Parse FormCall/LayoutCall.Arguments to get widgets.
+	// Gen-encoded pages (Cat-B) write "LayoutCall"; legacy pages write "FormCall".
+	formCall, _ := rawData["FormCall"].(map[string]any)
+	if formCall == nil {
+		formCall, _ = rawData["LayoutCall"].(map[string]any)
+	}
+	if formCall == nil {
 		return nil
 	}
 
@@ -624,7 +637,14 @@ func getPageWidgetsFromRaw(ctx *ExecContext, pageID model.ID) []rawWidget {
 		if !ok {
 			continue
 		}
+		// Gen-encoded pages write a singular "Widget" (the root DivContainer);
+		// legacy pages write a "Widgets" array. Try both.
 		argWidgets := getBsonArrayElements(argMap["Widgets"])
+		if argWidgets == nil {
+			if widgetDoc, ok := argMap["Widget"].(map[string]any); ok {
+				argWidgets = []any{widgetDoc}
+			}
+		}
 		for _, w := range argWidgets {
 			if wMap, ok := w.(map[string]any); ok {
 				parsed := parseRawWidget(ctx, wMap)

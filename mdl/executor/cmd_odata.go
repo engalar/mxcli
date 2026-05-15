@@ -18,10 +18,10 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // outputJavadoc writes a javadoc-style comment block.
@@ -811,15 +811,19 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 	}
 
 	// Get domain model
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
+	if dm == nil {
+		return mdlerrors.NewBackend("get domain model", nil)
+	}
 
 	// Check if entity already exists
-	var existingEntity *domainmodel.Entity
-	for _, entity := range dm.Entities {
-		if entity.Name == s.Name.Name {
+	var existingEntity *genDm.Entity
+	for _, item := range dm.EntitiesItems() {
+		entity, ok := item.(*genDm.Entity)
+		if ok && entity.Name() == s.Name.Name {
 			existingEntity = entity
 			break
 		}
@@ -829,70 +833,89 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 		return mdlerrors.NewAlreadyExistsMsg("entity", s.Name.Module+"."+s.Name.Name, fmt.Sprintf("entity already exists: %s.%s (use create or modify to update)", s.Name.Module, s.Name.Name))
 	}
 
-	// Build attributes
-	var attrs []*domainmodel.Attribute
-	for _, a := range s.Attributes {
-		attr := &domainmodel.Attribute{
-			Name: a.Name,
-			Type: convertDataType(a.Type),
-		}
-		attr.ID = model.ID(types.GenerateID())
-		attrs = append(attrs, attr)
-	}
+	attrs := buildExternalEntityAttributesGen(s.Attributes)
 
 	// Service reference as qualified name
 	serviceRef := s.ServiceRef.String()
 
 	if existingEntity != nil {
-		// Update existing entity
-		existingEntity.Source = "Rest$ODataRemoteEntitySource"
-		existingEntity.RemoteServiceName = serviceRef
-		existingEntity.RemoteEntitySet = s.EntitySet
-		existingEntity.RemoteEntityName = s.RemoteName
-		existingEntity.Countable = s.Countable
-		existingEntity.Creatable = s.Creatable
-		existingEntity.Deletable = s.Deletable
-		existingEntity.Updatable = s.Updatable
-		existingEntity.CreateChangeLocally = s.AllowCreateChangeLocally
+		applyExternalEntityStmtToGen(existingEntity, s, serviceRef)
 		if len(attrs) > 0 {
-			existingEntity.Attributes = attrs
+			replaceExternalEntityAttributesGen(existingEntity, attrs)
 		}
-		if s.Documentation != "" {
-			existingEntity.Documentation = s.Documentation
-		}
-		if err := ctx.Backend.UpdateEntity(dm.ID, existingEntity); err != nil {
+		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), existingEntity); err != nil {
 			return mdlerrors.NewBackend("update external entity", err)
 		}
 		fmt.Fprintf(ctx.Output, "Modified external entity: %s.%s\n", s.Name.Module, s.Name.Name)
 		return nil
 	}
 
-	// Auto-position based on existing entities
-	location := model.Point{X: 100 + len(dm.Entities)*150, Y: 100}
-
-	newEntity := &domainmodel.Entity{
-		Name:                s.Name.Name,
-		Documentation:       s.Documentation,
-		Persistable:         false, // External entities are not persistable
-		Location:            location,
-		Attributes:          attrs,
-		Source:              "Rest$ODataRemoteEntitySource",
-		RemoteServiceName:   serviceRef,
-		RemoteEntitySet:     s.EntitySet,
-		RemoteEntityName:    s.RemoteName,
-		Countable:           s.Countable,
-		Creatable:           s.Creatable,
-		Deletable:           s.Deletable,
-		Updatable:           s.Updatable,
-		CreateChangeLocally: s.AllowCreateChangeLocally,
+	newEntity := genDm.NewEntity()
+	newEntity.SetID(element.ID(types.GenerateID()))
+	newEntity.SetName(s.Name.Name)
+	newEntity.SetLocation(fmt.Sprintf("%d,%d", 100+len(dm.EntitiesItems())*150, 100))
+	applyExternalEntityStmtToGen(newEntity, s, serviceRef)
+	for _, attr := range attrs {
+		newEntity.AddAttributes(attr)
 	}
-	newEntity.ID = model.ID(types.GenerateID())
 
-	if err := ctx.Backend.CreateEntity(dm.ID, newEntity); err != nil {
+	if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), newEntity); err != nil {
 		return mdlerrors.NewBackend("create external entity", err)
 	}
 	fmt.Fprintf(ctx.Output, "Created external entity: %s.%s\n", s.Name.Module, s.Name.Name)
 	return nil
+}
+
+func buildExternalEntityAttributesGen(attrs []ast.Attribute) []*genDm.Attribute {
+	out := make([]*genDm.Attribute, 0, len(attrs))
+	for _, a := range attrs {
+		attr := genDm.NewAttribute()
+		attr.SetID(element.ID(types.GenerateID()))
+		attr.SetName(a.Name)
+		attr.SetType(astToAttributeTypeGen(a.Type))
+		out = append(out, attr)
+	}
+	return out
+}
+
+func replaceExternalEntityAttributesGen(entity *genDm.Entity, attrs []*genDm.Attribute) {
+	if entity == nil {
+		return
+	}
+	for i := len(entity.AttributesItems()) - 1; i >= 0; i-- {
+		entity.RemoveAttributes(i)
+	}
+	for _, attr := range attrs {
+		if attr != nil {
+			entity.AddAttributes(attr)
+		}
+	}
+}
+
+func applyExternalEntityStmtToGen(entity *genDm.Entity, s *ast.CreateExternalEntityStmt, serviceRef string) {
+	if entity == nil || s == nil {
+		return
+	}
+	entity.SetDocumentation(s.Documentation)
+	noGen, ok := entity.Generalization().(*genDm.NoGeneralization)
+	if !ok || noGen == nil {
+		noGen = genDm.NewNoGeneralization()
+		entity.SetGeneralization(noGen)
+	}
+	noGen.SetPersistable(false)
+
+	src, ok := entity.Source().(*genRest.ODataRemoteEntitySource)
+	if !ok || src == nil {
+		src = genRest.NewODataRemoteEntitySource()
+		entity.SetSource(src)
+	}
+	src.SetSourceDocumentQualifiedName(serviceRef)
+	src.SetEntitySet(s.EntitySet)
+	src.SetRemoteName(s.RemoteName)
+	src.SetCountable(s.Countable)
+	src.SetCreatable(s.Creatable)
+	src.SetDeletable(s.Deletable)
+	src.SetCreateChangeLocally(s.AllowCreateChangeLocally)
 }
 
 // ============================================================================

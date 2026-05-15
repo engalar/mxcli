@@ -9,7 +9,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // execMove handles MOVE PAGE/MICROFLOW/SNIPPET/NANOFLOW/ENTITY/ENUMERATION statements.
@@ -294,15 +294,19 @@ func moveNanoflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID mo
 // ViewEntitySourceDocuments for view entities are also moved.
 func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetModule *model.Module) error {
 	// Get source domain model
-	sourceDM, err := ctx.Backend.GetDomainModel(sourceModule.ID)
+	sourceDM, err := ctx.Backend.GetDomainModelGen(sourceModule.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get source domain model", err)
 	}
+	if sourceDM == nil {
+		return mdlerrors.NewBackend("get source domain model", nil)
+	}
 
 	// Find the entity in the source domain model
-	var entity *domainmodel.Entity
-	for _, ent := range sourceDM.Entities {
-		if ent.Name == name.Name {
+	var entity *genDm.Entity
+	for _, entElem := range sourceDM.EntitiesItems() {
+		ent, ok := entElem.(*genDm.Entity)
+		if ok && ent.Name() == name.Name {
 			entity = ent
 			break
 		}
@@ -312,19 +316,22 @@ func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetMo
 	}
 
 	// Get target domain model
-	targetDM, err := ctx.Backend.GetDomainModel(targetModule.ID)
+	targetDM, err := ctx.Backend.GetDomainModelGen(targetModule.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get target domain model", err)
 	}
+	if targetDM == nil {
+		return mdlerrors.NewBackend("get target domain model", nil)
+	}
 
 	// Move entity via writer (converts associations to CrossAssociations, updates validation rule refs)
-	convertedAssocs, err := ctx.Backend.MoveEntity(entity, sourceDM.ID, targetDM.ID, sourceModule.Name, targetModule.Name)
+	convertedAssocs, err := ctx.Backend.MoveEntityGen(entity, model.ID(sourceDM.ID()), model.ID(targetDM.ID()), sourceModule.Name, targetModule.Name)
 	if err != nil {
 		return mdlerrors.NewBackend("move entity", err)
 	}
 
 	// Move ViewEntitySourceDocument for view entities
-	if entity.Source == "DomainModels$OqlViewEntitySource" && entity.SourceDocumentRef != "" {
+	if source, ok := entity.Source().(*genDm.OqlViewEntitySource); ok && source != nil && source.SourceDocumentQualifiedName() != "" {
 		// The SourceDocumentRef was already updated by MoveEntity to use the new module name.
 		// Extract the original doc name (before the module prefix was changed).
 		docName := name.Name // ViewEntitySourceDocument name matches the entity name

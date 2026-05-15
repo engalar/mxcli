@@ -130,32 +130,32 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		if !ok || model.ID(assoc.ParentRefID()) != model.ID(entity.ID()) {
 			continue
 		}
-			rights := defaultMemberAccess
-			if writeMemberSet[assoc.Name()] {
-				rights = "ReadWrite"
-			} else if readMemberSet[assoc.Name()] {
-				rights = "ReadOnly"
-			}
-			memberAccesses = append(memberAccesses, types.EntityMemberAccess{
-				AssociationRef: module.Name + "." + assoc.Name(),
-				AccessRights:   rights,
-			})
+		rights := defaultMemberAccess
+		if writeMemberSet[assoc.Name()] {
+			rights = "ReadWrite"
+		} else if readMemberSet[assoc.Name()] {
+			rights = "ReadOnly"
+		}
+		memberAccesses = append(memberAccesses, types.EntityMemberAccess{
+			AssociationRef: module.Name + "." + assoc.Name(),
+			AccessRights:   rights,
+		})
 	}
 	for _, crossElem := range dm.CrossAssociationsItems() {
 		ca, ok := crossElem.(*genDm.CrossAssociation)
 		if !ok || model.ID(ca.ParentRefID()) != model.ID(entity.ID()) {
 			continue
 		}
-			rights := defaultMemberAccess
-			if writeMemberSet[ca.Name()] {
-				rights = "ReadWrite"
-			} else if readMemberSet[ca.Name()] {
-				rights = "ReadOnly"
-			}
-			memberAccesses = append(memberAccesses, types.EntityMemberAccess{
-				AssociationRef: module.Name + "." + ca.Name(),
-				AccessRights:   rights,
-			})
+		rights := defaultMemberAccess
+		if writeMemberSet[ca.Name()] {
+			rights = "ReadWrite"
+		} else if readMemberSet[ca.Name()] {
+			rights = "ReadOnly"
+		}
+		memberAccesses = append(memberAccesses, types.EntityMemberAccess{
+			AssociationRef: module.Name + "." + ca.Name(),
+			AccessRights:   rights,
+		})
 	}
 
 	if ng, ok := entity.Generalization().(*genDm.NoGeneralization); ok && ng.HasOwner() {

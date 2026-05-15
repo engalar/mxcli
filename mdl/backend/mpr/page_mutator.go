@@ -696,7 +696,11 @@ type widgetFinder func(rawData bson.D, widgetName string) *bsonWidgetResult
 
 // findBsonWidget searches the raw BSON page tree for a widget by name.
 func findBsonWidget(rawData bson.D, widgetName string) *bsonWidgetResult {
+	// Gen-encoded pages (Stage 3.3.5.Cat-B) write "LayoutCall"; legacy pages write "FormCall".
 	formCall := dGetDoc(rawData, "FormCall")
+	if formCall == nil {
+		formCall = dGetDoc(rawData, "LayoutCall")
+	}
 	if formCall == nil {
 		return nil
 	}
@@ -706,8 +710,14 @@ func findBsonWidget(rawData bson.D, widgetName string) *bsonWidgetResult {
 		if !ok {
 			continue
 		}
+		// Gen encoder writes "Widget" (singular DivContainer); legacy uses "Widgets" (array).
 		if result := findInWidgetArray(argDoc, "Widgets", widgetName); result != nil {
 			return result
+		}
+		if widgetContainer := dGetDoc(argDoc, "Widget"); widgetContainer != nil {
+			if result := findInWidgetDoc(widgetContainer, widgetName); result != nil {
+				return result
+			}
 		}
 	}
 	return nil
@@ -724,6 +734,21 @@ func findBsonWidgetInSnippet(rawData bson.D, widgetName string) *bsonWidgetResul
 		}
 	}
 	return nil
+}
+
+// findInWidgetDoc searches a single widget document (e.g. a DivContainer written by
+// the gen encoder under the "Widget" key) for a named widget. It first checks the
+// document itself, then descends into its "Widgets" child array.
+func findInWidgetDoc(wDoc bson.D, widgetName string) *bsonWidgetResult {
+	if dGetString(wDoc, "Name") == widgetName {
+		// The container itself is the target — unusual, but handle it.
+		return &bsonWidgetResult{widget: wDoc}
+	}
+	// Descend into children
+	if result := findInWidgetArray(wDoc, "Widgets", widgetName); result != nil {
+		return result
+	}
+	return findInWidgetChildren(wDoc, widgetName)
 }
 
 // findInWidgetArray searches a widget array for a named widget.

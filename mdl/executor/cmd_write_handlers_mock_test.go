@@ -105,8 +105,8 @@ func TestExecCreateEnumeration_Mock(t *testing.T) {
 
 func TestExecDropEntity_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
-	ent := mkEntity(mod.ID, "Customer")
-	dm := mkDomainModel(mod.ID, ent)
+	entGen := mkEntityGen("Customer")
+	dmGen := mkDomainModelGen(mod.ID, entGen)
 
 	called := false
 	mb := &mock.MockBackend{
@@ -114,8 +114,8 @@ func TestExecDropEntity_Mock(t *testing.T) {
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
 		},
-		GetDomainModelFunc: func(moduleID model.ID) (*domainmodel.DomainModel, error) {
-			return dm, nil
+		GetDomainModelGenFunc: func(moduleID model.ID) (*genDm.DomainModel, error) {
+			return dmGen, nil
 		},
 		DeleteEntityFunc: func(domainModelID model.ID, entityID model.ID) error {
 			called = true
