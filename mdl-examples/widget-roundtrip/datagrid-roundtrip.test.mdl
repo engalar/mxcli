@@ -1,0 +1,38 @@
+-- DataGrid2 round-trip baseline for Stage 3.3.5 Phase 1 R3 verification.
+-- Creates a page with the canonical DataGrid2 widget shape, then ALTERs
+-- it through several mutations. Each mutation must round-trip through
+-- the mpr without triggering CE0463 in Studio Pro.
+
+create module DgRT;
+
+create persistent entity DgRT.Item (
+  Name:   string(200),
+  Status: string(50),
+  Notes:  string(500)
+);
+
+create page DgRT.ItemList (
+  title: 'Items',
+  layout: Atlas_Core.Atlas_Default
+) {
+  datagrid dgItems (datasource: database DgRT.Item) {
+    column colName   (attribute: Name,   caption: 'Name')
+    column colStatus (attribute: Status, caption: 'Status')
+    column colNotes  (attribute: Notes,  caption: 'Notes')
+  }
+};
+
+-- Mutation 1: Hide a column (SET Visible on dotted widgetRef)
+alter page DgRT.ItemList {
+  set Visible = false on dgItems.Status
+};
+
+-- Mutation 2: Change a column caption
+alter page DgRT.ItemList {
+  set Caption = 'Remarks' on dgItems.Notes
+};
+
+-- Mutation 3: Drop a column (attribute-bound column derives name from attribute short name)
+alter page DgRT.ItemList {
+  drop widget dgItems.Notes
+};

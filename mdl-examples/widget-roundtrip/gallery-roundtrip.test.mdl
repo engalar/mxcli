@@ -1,0 +1,47 @@
+-- Gallery round-trip baseline for Stage 3.3.5 Phase 1 R3 verification.
+-- Creates a page with the canonical Gallery widget shape using database
+-- datasource mode, then ALTERs it through several mutations. Each mutation
+-- must round-trip through the mpr without triggering CE0463 in Studio Pro.
+--
+-- NOTE: Gallery with FILTER (textfilter) is intentionally excluded here —
+-- it has a known CE0463 issue (template property count mismatch) tracked
+-- separately. This baseline tests the core gallery + template shape only.
+
+create module GalRT;
+
+create persistent entity GalRT.Product (
+  Name:        string(200),
+  Description: string(500),
+  Price:       decimal
+);
+
+-- Gallery page with template
+create page GalRT.ProductGallery (
+  title: 'Product Gallery',
+  layout: Atlas_Core.Atlas_Default
+) {
+  gallery galProducts (
+    datasource: database GalRT.Product sort by Name asc
+  ) {
+    template tpl1 {
+      dynamictext dtName  (content: '{1}', contentparams: [{1} = Name],        rendermode: H4)
+      dynamictext dtDesc  (content: '{1}', contentparams: [{1} = Description])
+      dynamictext dtPrice (content: '{1}', contentparams: [{1} = Price])
+    }
+  }
+};
+
+-- Mutation 1: Add a class to the gallery container
+alter page GalRT.ProductGallery {
+  set Class = 'gallery-card' on galProducts
+};
+
+-- Mutation 2: Hide the gallery
+alter page GalRT.ProductGallery {
+  set Visible = false on galProducts
+};
+
+-- Mutation 3: Restore visibility
+alter page GalRT.ProductGallery {
+  set Visible = true on galProducts
+};
