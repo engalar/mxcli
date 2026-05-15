@@ -317,7 +317,6 @@ func (b *MprBackend) GetMicroflowGen(id model.ID) (*genMf.Microflow, error) {
 func (b *MprBackend) ListPages() ([]*backend.Page, error)        { return b.reader.ListPages() }
 func (b *MprBackend) GetPage(id model.ID) (*backend.Page, error) { return b.reader.GetPage(id) }
 func (b *MprBackend) DeletePage(id model.ID) error               { return b.deletePageViaModelsdk(id) }
-func (b *MprBackend) MovePage(page *backend.Page) error          { return b.movePageViaModelsdk(page) }
 
 func (b *MprBackend) ListLayouts() ([]*backend.Layout, error)        { return b.reader.ListLayouts() }
 func (b *MprBackend) GetLayout(id model.ID) (*backend.Layout, error) { return b.reader.GetLayout(id) }
@@ -325,9 +324,6 @@ func (b *MprBackend) DeleteLayout(id model.ID) error                 { return b.
 
 func (b *MprBackend) ListSnippets() ([]*backend.Snippet, error) { return b.reader.ListSnippets() }
 func (b *MprBackend) DeleteSnippet(id model.ID) error           { return b.deleteSnippetViaModelsdk(id) }
-func (b *MprBackend) MoveSnippet(snippet *backend.Snippet) error {
-	return b.moveSnippetViaModelsdk(snippet)
-}
 
 func (b *MprBackend) ListBuildingBlocks() ([]*backend.BuildingBlock, error) {
 	return b.reader.ListBuildingBlocks()

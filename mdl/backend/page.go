@@ -26,7 +26,6 @@ type PageBackend interface {
 	ListPages() ([]*Page, error)
 	GetPage(id model.ID) (*Page, error)
 	DeletePage(id model.ID) error
-	MovePage(page *Page) error
 
 	// Layouts — legacy sdk-typed read + delete surface. The
 	// Create/Update writers were retired in Stage 3.3.5.E1.
@@ -39,7 +38,6 @@ type PageBackend interface {
 	// No GetSnippet: snippets are resolved by qualified name via ListSnippets.
 	ListSnippets() ([]*Snippet, error)
 	DeleteSnippet(id model.ID) error
-	MoveSnippet(snippet *Snippet) error
 
 	// Stage 3.3.5.C1 gen-typed Page/Layout/Snippet surface — additive
 	// alongside the legacy sdk-typed methods. Production wiring in
