@@ -17,7 +17,9 @@ func canExecAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) bool {
 		return false
 	}
 	switch s.Operation {
-	case ast.AlterEntityRenameAttribute,
+	case ast.AlterEntityAddAttribute,
+		ast.AlterEntityDropAttribute,
+		ast.AlterEntityRenameAttribute,
 		ast.AlterEntityModifyAttribute,
 		ast.AlterEntitySetDocumentation,
 		ast.AlterEntitySetComment,
@@ -50,6 +52,95 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 	}
 
 	switch s.Operation {
+	case ast.AlterEntityAddAttribute:
+		a := s.Attribute
+		if a == nil {
+			return mdlerrors.NewValidation("no attribute definition provided")
+		}
+		if handled, err := applyPseudoAttributeAddGen(entity, a); handled {
+			if err != nil {
+				return err
+			}
+			if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+				return mdlerrors.NewBackend("add attribute", err)
+			}
+			invalidateHierarchy(ctx)
+			invalidateDomainModelsCache(ctx)
+			fmt.Fprintf(ctx.Output, "Added attribute '%s' to entity %s\n", a.Name, s.Name)
+			ctx.trackModifiedDomainModel(module.ID, module.Name)
+			return nil
+		}
+		if a.Calculated && !entityPersistableGen(entity) {
+			return mdlerrors.NewValidationf("attribute '%s': calculated attributes are only supported on persistent entities", a.Name)
+		}
+		if findAttributeGenByName(entity, a.Name) != nil {
+			return mdlerrors.NewAlreadyExistsMsg("attribute", a.Name, fmt.Sprintf("attribute '%s' already exists on entity %s", a.Name, s.Name))
+		}
+		ac := *a
+		if ac.Type.Kind == ast.TypeBoolean && !ac.HasDefault {
+			ac.HasDefault = true
+			ac.DefaultValue = false
+		}
+		attr := astToAttributeGen(&ac)
+		if attr == nil {
+			return mdlerrors.NewValidation("failed to build attribute")
+		}
+		entity.AddAttributes(attr)
+		for _, vr := range astToValidationRulesGen(&ac, s.Name.String()) {
+			entity.AddValidationRules(vr)
+		}
+		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+			return mdlerrors.NewBackend("add attribute", err)
+		}
+		invalidateHierarchy(ctx)
+		invalidateDomainModelsCache(ctx)
+		fmt.Fprintf(ctx.Output, "Added attribute '%s' to entity %s\n", a.Name, s.Name)
+
+	case ast.AlterEntityDropAttribute:
+		if handled, err := applyPseudoAttributeDropGen(entity, s.AttributeName); handled {
+			if err != nil {
+				return err
+			}
+			if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+				return mdlerrors.NewBackend("drop attribute", err)
+			}
+			invalidateHierarchy(ctx)
+			invalidateDomainModelsCache(ctx)
+			fmt.Fprintf(ctx.Output, "Dropped attribute '%s' from entity %s\n", s.AttributeName, s.Name)
+			ctx.trackModifiedDomainModel(module.ID, module.Name)
+			return nil
+		}
+		attr, attrIdx := findAttributeGenWithIndexByName(entity, s.AttributeName)
+		if attr == nil || attrIdx < 0 {
+			return mdlerrors.NewNotFoundMsg("attribute", s.AttributeName, fmt.Sprintf("attribute '%s' not found on entity %s", s.AttributeName, s.Name))
+		}
+		droppedID := model.ID(attr.ID())
+		attrQN := s.Name.String() + "." + s.AttributeName
+
+		origValidationCount := len(entity.ValidationRulesItems())
+		origIndexCount := len(entity.IndexesItems())
+		removedMemberAccess := cleanupDroppedAttributeReferencesGen(entity, droppedID, attrQN)
+
+		entity.RemoveAttributes(attrIdx)
+		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+			return mdlerrors.NewBackend("drop attribute", err)
+		}
+		invalidateHierarchy(ctx)
+		invalidateDomainModelsCache(ctx)
+		fmt.Fprintf(ctx.Output, "Dropped attribute '%s' from entity %s\n", s.AttributeName, s.Name)
+		if n := origValidationCount - len(entity.ValidationRulesItems()); n > 0 {
+			fmt.Fprintf(ctx.Output, "  Removed %d validation rule(s)\n", n)
+		}
+		if removedMemberAccess > 0 {
+			fmt.Fprintf(ctx.Output, "  Removed %d access rule member reference(s)\n", removedMemberAccess)
+		}
+		if n := origIndexCount - len(entity.IndexesItems()); n > 0 {
+			fmt.Fprintf(ctx.Output, "  Removed %d index(es)\n", n)
+		}
+		entityQName := s.Name.String()
+		fmt.Fprintf(ctx.Output, "  Warning: pages, microflows, and other documents may still reference '%s'. Update them manually.\n", s.AttributeName)
+		fmt.Fprintf(ctx.Output, "  Use show references to %s to find usages (requires refresh catalog full).\n", entityQName)
+
 	case ast.AlterEntityRenameAttribute:
 		attr := findAttributeGenByName(entity, s.AttributeName)
 		if attr == nil {
@@ -270,14 +361,136 @@ func loadAlterEntityGenTarget(ctx *ExecContext, s *ast.AlterEntityStmt) (*genDm.
 }
 
 func findAttributeGenByName(entity *genDm.Entity, name string) *genDm.Attribute {
+	attr, _ := findAttributeGenWithIndexByName(entity, name)
+	return attr
+}
+
+func findAttributeGenWithIndexByName(entity *genDm.Entity, name string) (*genDm.Attribute, int) {
 	if entity == nil {
-		return nil
+		return nil, -1
 	}
-	for _, attrElem := range entity.AttributesItems() {
+	for i, attrElem := range entity.AttributesItems() {
 		attr, ok := attrElem.(*genDm.Attribute)
 		if ok && attr.Name() == name {
-			return attr
+			return attr, i
 		}
 	}
-	return nil
+	return nil, -1
+}
+
+func applyPseudoAttributeAddGen(entity *genDm.Entity, a *ast.Attribute) (bool, error) {
+	if entity == nil || a == nil {
+		return false, nil
+	}
+	noGen, ok := entity.Generalization().(*genDm.NoGeneralization)
+	if !ok {
+		return false, nil
+	}
+	switch a.Type.Kind {
+	case ast.TypeAutoOwner:
+		noGen.SetHasOwner(true)
+		return true, nil
+	case ast.TypeAutoChangedBy:
+		noGen.SetHasChangedBy(true)
+		return true, nil
+	case ast.TypeAutoCreatedDate:
+		noGen.SetHasCreatedDate(true)
+		return true, nil
+	case ast.TypeAutoChangedDate:
+		noGen.SetHasChangedDate(true)
+		return true, nil
+	default:
+		return false, nil
+	}
+}
+
+func applyPseudoAttributeDropGen(entity *genDm.Entity, attrName string) (bool, error) {
+	if entity == nil {
+		return false, nil
+	}
+	noGen, ok := entity.Generalization().(*genDm.NoGeneralization)
+	if !ok {
+		return false, nil
+	}
+	switch lowerASCII(attrName) {
+	case "owner":
+		if noGen.HasOwner() {
+			noGen.SetHasOwner(false)
+			return true, nil
+		}
+	case "changedby":
+		if noGen.HasChangedBy() {
+			noGen.SetHasChangedBy(false)
+			return true, nil
+		}
+	case "createddate":
+		if noGen.HasCreatedDate() {
+			noGen.SetHasCreatedDate(false)
+			return true, nil
+		}
+	case "changeddate":
+		if noGen.HasChangedDate() {
+			noGen.SetHasChangedDate(false)
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func cleanupDroppedAttributeReferencesGen(entity *genDm.Entity, droppedID model.ID, attrQN string) int {
+	if entity == nil {
+		return 0
+	}
+	for i := len(entity.ValidationRulesItems()) - 1; i >= 0; i-- {
+		vr, ok := entity.ValidationRulesItems()[i].(*genDm.ValidationRule)
+		if ok && vr.AttributeQualifiedName() == attrQN {
+			entity.RemoveValidationRules(i)
+		}
+	}
+
+	removedMemberAccess := 0
+	for _, ruleElem := range entity.AccessRulesItems() {
+		rule, ok := ruleElem.(*genDm.AccessRule)
+		if !ok {
+			continue
+		}
+		for i := len(rule.MemberAccessesItems()) - 1; i >= 0; i-- {
+			ma, ok := rule.MemberAccessesItems()[i].(*genDm.MemberAccess)
+			if ok && ma.AttributeQualifiedName() == attrQN {
+				rule.RemoveMemberAccesses(i)
+				removedMemberAccess++
+			}
+		}
+	}
+
+	for i := len(entity.IndexesItems()) - 1; i >= 0; i-- {
+		idx, ok := entity.IndexesItems()[i].(*genDm.Index)
+		if !ok {
+			continue
+		}
+		for j := len(idx.AttributesItems()) - 1; j >= 0; j-- {
+			ia, ok := idx.AttributesItems()[j].(*genDm.IndexedAttribute)
+			if ok && model.ID(ia.AttributeRefID()) == droppedID {
+				idx.RemoveAttributes(j)
+			}
+		}
+		if len(idx.AttributesItems()) == 0 {
+			entity.RemoveIndexes(i)
+		}
+	}
+
+	return removedMemberAccess
+}
+
+func lowerASCII(s string) string {
+	if s == "" {
+		return ""
+	}
+	b := []byte(s)
+	for i := range b {
+		if 'A' <= b[i] && b[i] <= 'Z' {
+			b[i] = b[i] - 'A' + 'a'
+		}
+	}
+	return string(b)
 }
