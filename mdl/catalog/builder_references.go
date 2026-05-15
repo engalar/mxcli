@@ -10,10 +10,10 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPages "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // Reference kinds for the refs table
@@ -183,36 +183,54 @@ func (b *Builder) buildReferences() error {
 		}
 	}
 
-	// Extract page references (layout, datasources, parameters) — using cached list
-	pageList, err := b.cachedPages()
+	// Extract page references (layout, datasources, parameters) — using cached gen list
+	pageGenList, err := b.cachedPagesGen()
 	if err == nil {
-		for _, pg := range pageList {
-			moduleID := b.hierarchy.findModuleID(pg.ContainerID)
+		for _, pg := range pageGenList {
+			if pg == nil {
+				continue
+			}
+			pgID := model.ID(pg.ID())
+			moduleID := b.hierarchy.findModuleID(pgID)
 			moduleName := b.hierarchy.getModuleName(moduleID)
-			sourceQN := moduleName + "." + pg.Name
+			sourceQN := moduleName + "." + pg.Name()
 
-			// Layout reference (ListPages() returns fully-parsed pages)
-			if pg.LayoutCall != nil && pg.LayoutCall.LayoutName != "" {
-				_, err = stmt.Exec("PAGE", string(pg.ID), sourceQN,
-					"LAYOUT", "", pg.LayoutCall.LayoutName,
-					RefKindLayout, moduleName, projectID, snapshotID)
-				if err == nil {
-					refCount++
-				}
+			// Layout reference
+			if lcElem := pg.LayoutCall(); lcElem != nil {
+				if lc, ok := lcElem.(*genPages.LayoutCall); ok && lc.LayoutQualifiedName() != "" {
+					_, err = stmt.Exec("PAGE", string(pgID), sourceQN,
+						"LAYOUT", "", lc.LayoutQualifiedName(),
+						RefKindLayout, moduleName, projectID, snapshotID)
+					if err == nil {
+						refCount++
+					}
 
-				// Extract refs from widgets in layout arguments
-				for _, arg := range pg.LayoutCall.Arguments {
-					if arg.Widget != nil {
-						refCount += b.extractWidgetRefs(stmt, arg.Widget, "PAGE", string(pg.ID), sourceQN, moduleName, projectID, snapshotID)
+					// Extract refs from widgets in layout arguments
+					for _, argElem := range lc.ArgumentsItems() {
+						arg, ok := argElem.(*genPages.LayoutCallArgument)
+						if !ok {
+							continue
+						}
+						if w := arg.Widget(); w != nil {
+							refCount += b.extractWidgetRefs(stmt, w, "PAGE", string(pgID), sourceQN, moduleName, projectID, snapshotID)
+						}
+						for _, w := range arg.WidgetsItems() {
+							refCount += b.extractWidgetRefs(stmt, w, "PAGE", string(pgID), sourceQN, moduleName, projectID, snapshotID)
+						}
 					}
 				}
 			}
 
 			// Page parameter entity types
-			for _, param := range pg.Parameters {
-				if param.EntityName != "" {
-					_, err = stmt.Exec("PAGE", string(pg.ID), sourceQN,
-						"ENTITY", "", param.EntityName,
+			for _, paramElem := range pg.ParametersItems() {
+				param, ok := paramElem.(*genPages.PageParameter)
+				if !ok {
+					continue
+				}
+				entityName := pageParamEntityName(param)
+				if entityName != "" {
+					_, err = stmt.Exec("PAGE", string(pgID), sourceQN,
+						"ENTITY", "", entityName,
 						RefKindParameter, moduleName, projectID, snapshotID)
 					if err == nil {
 						refCount++
@@ -352,147 +370,138 @@ func (b *Builder) extractMenuItemRefs(stmt *sql.Stmt, items []*types.NavMenuItem
 	return refCount
 }
 
-// extractWidgetRefs extracts entity and microflow references from a widget and its children.
-func (b *Builder) extractWidgetRefs(stmt *sql.Stmt, w pages.Widget, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID string) int {
+// extractWidgetRefs extracts entity and microflow references from a gen widget element and its children.
+func (b *Builder) extractWidgetRefs(stmt *sql.Stmt, w element.Element, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID string) int {
 	if w == nil {
 		return 0
 	}
 
 	refCount := 0
 
-	// Extract datasource refs based on widget type
 	switch widget := w.(type) {
-	case *pages.DataView:
-		refCount += b.extractDataSourceRefs(stmt, widget.DataSource, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
-		// Recurse into children
-		for _, child := range widget.Widgets {
+	case *genPages.DataView:
+		refCount += b.extractDataSourceRefs(stmt, widget.DataSource(), sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
+		for _, child := range widget.WidgetsItems() {
 			refCount += b.extractWidgetRefs(stmt, child, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
 		}
-		for _, child := range widget.FooterWidgets {
-			refCount += b.extractWidgetRefs(stmt, child, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
-		}
-
-	case *pages.ListView:
-		refCount += b.extractDataSourceRefs(stmt, widget.DataSource, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
-		for _, child := range widget.Widgets {
+		for _, child := range widget.FooterWidgetsItems() {
 			refCount += b.extractWidgetRefs(stmt, child, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
 		}
 
-	case *pages.DataGrid:
-		refCount += b.extractDataSourceRefs(stmt, widget.DataSource, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
-		for _, child := range widget.ControlBarWidgets {
+	case *genPages.ListView:
+		refCount += b.extractDataSourceRefs(stmt, widget.DataSource(), sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
+		for _, child := range widget.WidgetsItems() {
 			refCount += b.extractWidgetRefs(stmt, child, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
 		}
 
-	case *pages.TemplateGrid:
-		refCount += b.extractDataSourceRefs(stmt, widget.DataSource, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
-		for _, child := range widget.Widgets {
-			refCount += b.extractWidgetRefs(stmt, child, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
+	case *genPages.DataGrid:
+		refCount += b.extractDataSourceRefs(stmt, widget.DataSource(), sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
+
+	case *genPages.TemplateGrid:
+		refCount += b.extractDataSourceRefs(stmt, widget.DataSource(), sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
+		// TemplateGrid.Contents() holds a TemplateGridContents which has WidgetsItems
+		if contents, ok := widget.Contents().(*genPages.TemplateGridContents); ok && contents != nil {
+			for _, child := range contents.WidgetsItems() {
+				refCount += b.extractWidgetRefs(stmt, child, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
+			}
 		}
-		for _, child := range widget.ControlBarWidgets {
+
+	case *genPages.DivContainer:
+		for _, child := range widget.WidgetsItems() {
 			refCount += b.extractWidgetRefs(stmt, child, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
 		}
 
-	case *pages.Gallery:
-		refCount += b.extractDataSourceRefs(stmt, widget.DataSource, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
-		if widget.ContentWidget != nil {
-			refCount += b.extractWidgetRefs(stmt, widget.ContentWidget, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
-		}
-		for _, child := range widget.FilterWidgets {
+	case *genPages.GroupBox:
+		for _, child := range widget.WidgetsItems() {
 			refCount += b.extractWidgetRefs(stmt, child, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
 		}
 
-	case *pages.Container:
-		for _, child := range widget.Widgets {
-			refCount += b.extractWidgetRefs(stmt, child, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
-		}
-
-	case *pages.LayoutGrid:
-		for _, row := range widget.Rows {
-			for _, col := range row.Columns {
-				for _, child := range col.Widgets {
+	case *genPages.LayoutGrid:
+		for _, rowElem := range widget.RowsItems() {
+			row, ok := rowElem.(*genPages.LayoutGridRow)
+			if !ok {
+				continue
+			}
+			for _, colElem := range row.ColumnsItems() {
+				col, ok := colElem.(*genPages.LayoutGridColumn)
+				if !ok {
+					continue
+				}
+				for _, child := range col.WidgetsItems() {
 					refCount += b.extractWidgetRefs(stmt, child, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
 				}
 			}
 		}
 
-	case *pages.CustomWidget:
-		// Pluggable widget - extract refs from WidgetObject properties
-		if widget.WidgetObject != nil {
-			refCount += b.extractWidgetObjectRefs(stmt, widget.WidgetObject, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
+	case *genPages.TabContainer:
+		for _, tabElem := range widget.TabPagesItems() {
+			tab, ok := tabElem.(*genPages.TabPage)
+			if !ok {
+				continue
+			}
+			for _, child := range tab.WidgetsItems() {
+				refCount += b.extractWidgetRefs(stmt, child, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
+			}
 		}
+
+	case *genPages.ScrollContainer:
+		for _, regionElem := range []element.Element{widget.Center(), widget.Left(), widget.Right(), widget.Top(), widget.Bottom()} {
+			if regionElem == nil {
+				continue
+			}
+			region, ok := regionElem.(*genPages.ScrollContainerRegion)
+			if !ok {
+				continue
+			}
+			for _, child := range region.WidgetsItems() {
+				refCount += b.extractWidgetRefs(stmt, child, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
+			}
+		}
+
+	default:
+		// gen/pages has no CustomWidget type (codegen gap) and no Gallery type.
+		// For pluggable widgets, extract entity/microflow refs from raw BSON via
+		// well-known property keys. This covers CustomWidgets$CustomWidget and
+		// Forms$Gallery which lack narrow gen types.
+		refCount += b.extractWidgetRefsFromRaw(stmt, w, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
 	}
 
 	return refCount
 }
 
-// extractWidgetObjectRefs extracts refs from a pluggable widget's WidgetObject.
-func (b *Builder) extractWidgetObjectRefs(stmt *sql.Stmt, obj *pages.WidgetObject, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID string) int {
-	if obj == nil {
+// extractWidgetRefsFromRaw extracts entity/microflow refs from a widget element that
+// has no narrow gen type (CustomWidget, Gallery). It uses raw-BSON string extraction
+// for well-known property keys: EntityRef, Microflow, Nanoflow, Form (page).
+func (b *Builder) extractWidgetRefsFromRaw(stmt *sql.Stmt, w element.Element, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID string) int {
+	if w == nil {
 		return 0
 	}
-
 	refCount := 0
-
-	for _, prop := range obj.Properties {
-		if prop.Value == nil {
-			continue
-		}
-		val := prop.Value
-
-		// Extract datasource refs
-		if val.DataSource != nil {
-			refCount += b.extractDataSourceRefs(stmt, val.DataSource, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
-		}
-
-		// Extract entity ref
-		if val.EntityRef != "" {
-			stmt.Exec(sourceType, sourceID, sourceQN,
-				"ENTITY", "", val.EntityRef,
-				RefKindDatasource, moduleName, projectID, snapshotID)
-			refCount++
-		}
-
-		// Extract microflow ref
-		if val.Microflow != "" {
-			stmt.Exec(sourceType, sourceID, sourceQN,
-				"MICROFLOW", "", val.Microflow,
-				RefKindAction, moduleName, projectID, snapshotID)
-			refCount++
-		}
-
-		// Extract nanoflow ref
-		if val.Nanoflow != "" {
-			stmt.Exec(sourceType, sourceID, sourceQN,
-				"NANOFLOW", "", val.Nanoflow,
-				RefKindAction, moduleName, projectID, snapshotID)
-			refCount++
-		}
-
-		// Extract form (page) ref
-		if val.Form != "" {
-			stmt.Exec(sourceType, sourceID, sourceQN,
-				"PAGE", "", val.Form,
-				RefKindShowPage, moduleName, projectID, snapshotID)
-			refCount++
-		}
-
-		// Recurse into nested widgets
-		for _, child := range val.Widgets {
-			refCount += b.extractWidgetRefs(stmt, child, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
-		}
-
-		// Recurse into nested objects
-		for _, childObj := range val.Objects {
-			refCount += b.extractWidgetObjectRefs(stmt, childObj, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID)
-		}
+	raw := w.Raw()
+	if raw == nil {
+		return 0
 	}
-
+	if v, _ := codec.ReadBSONFieldString(raw, "EntityRef"); v != "" {
+		stmt.Exec(sourceType, sourceID, sourceQN, "ENTITY", "", v, RefKindDatasource, moduleName, projectID, snapshotID)
+		refCount++
+	}
+	if v, _ := codec.ReadBSONFieldString(raw, "Microflow"); v != "" {
+		stmt.Exec(sourceType, sourceID, sourceQN, "MICROFLOW", "", v, RefKindAction, moduleName, projectID, snapshotID)
+		refCount++
+	}
+	if v, _ := codec.ReadBSONFieldString(raw, "Nanoflow"); v != "" {
+		stmt.Exec(sourceType, sourceID, sourceQN, "NANOFLOW", "", v, RefKindAction, moduleName, projectID, snapshotID)
+		refCount++
+	}
+	if v, _ := codec.ReadBSONFieldString(raw, "Form"); v != "" {
+		stmt.Exec(sourceType, sourceID, sourceQN, "PAGE", "", v, RefKindShowPage, moduleName, projectID, snapshotID)
+		refCount++
+	}
 	return refCount
 }
 
-// extractDataSourceRefs extracts entity and microflow references from a datasource.
-func (b *Builder) extractDataSourceRefs(stmt *sql.Stmt, ds pages.DataSource, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID string) int {
+// extractDataSourceRefs extracts entity and microflow references from a gen datasource element.
+func (b *Builder) extractDataSourceRefs(stmt *sql.Stmt, ds element.Element, sourceType, sourceID, sourceQN, moduleName, projectID, snapshotID string) int {
 	if ds == nil {
 		return 0
 	}
@@ -500,84 +509,83 @@ func (b *Builder) extractDataSourceRefs(stmt *sql.Stmt, ds pages.DataSource, sou
 	refCount := 0
 
 	switch src := ds.(type) {
-	case *pages.DatabaseSource:
-		// Resolve entity ID to qualified name
-		if src.EntityID != "" {
-			entityQN := b.resolveEntityID(src.EntityID)
-			if entityQN != "" {
-				stmt.Exec(sourceType, sourceID, sourceQN,
-					"ENTITY", string(src.EntityID), entityQN,
-					RefKindDatasource, moduleName, projectID, snapshotID)
-				refCount++
-			}
-		}
-
-	case *pages.DataViewSource:
-		// Has either EntityID or EntityName
-		entityQN := ""
-		if src.EntityName != "" {
-			entityQN = src.EntityName
-		} else if src.EntityID != "" {
-			entityQN = b.resolveEntityID(src.EntityID)
-		}
-		if entityQN != "" {
-			stmt.Exec(sourceType, sourceID, sourceQN,
-				"ENTITY", "", entityQN,
-				RefKindDatasource, moduleName, projectID, snapshotID)
-			refCount++
-		}
-
-	case *pages.EntityPathSource:
-		// Parse entity path to get root entity (e.g., "Customer/Orders" -> get entity for Customer)
-		if src.EntityPath != "" {
-			// Entity path starts with entity name or is an association path
-			// For now, we'll extract what we can - the first segment might be the entity
-			parts := strings.Split(src.EntityPath, "/")
+	case *genPages.DatabaseSourceBase:
+		if ep := src.EntityPath(); ep != "" {
+			parts := strings.Split(ep, "/")
 			if len(parts) > 0 && parts[0] != "" {
-				// This might be a qualified name or just entity name
-				// We store it as-is for now
 				stmt.Exec(sourceType, sourceID, sourceQN,
-					"ENTITY", "", src.EntityPath,
+					"ENTITY", "", ep,
 					RefKindDatasource, moduleName, projectID, snapshotID)
 				refCount++
 			}
 		}
 
-	case *pages.AssociationSource:
-		// Similar to EntityPathSource
-		if src.EntityPath != "" {
+	case *genPages.DataViewSource:
+		if ep := src.EntityPath(); ep != "" {
 			stmt.Exec(sourceType, sourceID, sourceQN,
-				"ENTITY", "", src.EntityPath,
+				"ENTITY", "", ep,
 				RefKindDatasource, moduleName, projectID, snapshotID)
 			refCount++
 		}
 
-	case *pages.MicroflowSource:
-		// Resolve microflow ID to qualified name
-		if src.MicroflowID != "" {
-			mfQN := b.resolveMicroflowID(src.MicroflowID)
-			if mfQN != "" {
+	case *genPages.EntityPathSource:
+		if ep := src.EntityPath(); ep != "" {
+			parts := strings.Split(ep, "/")
+			if len(parts) > 0 && parts[0] != "" {
 				stmt.Exec(sourceType, sourceID, sourceQN,
-					"MICROFLOW", string(src.MicroflowID), mfQN,
+					"ENTITY", "", ep,
 					RefKindDatasource, moduleName, projectID, snapshotID)
 				refCount++
 			}
 		}
 
-	case *pages.NanoflowSource:
-		// Resolve nanoflow ID to qualified name
-		if src.NanoflowID != "" {
-			nfQN := b.resolveMicroflowID(src.NanoflowID) // Uses same table
-			if nfQN != "" {
+	case *genPages.AssociationSource:
+		if ep := src.EntityPath(); ep != "" {
+			stmt.Exec(sourceType, sourceID, sourceQN,
+				"ENTITY", "", ep,
+				RefKindDatasource, moduleName, projectID, snapshotID)
+			refCount++
+		}
+
+	case *genPages.MicroflowSource:
+		if ms, ok := src.MicroflowSettings().(*genPages.MicroflowSettings); ok && ms != nil {
+			if qn := ms.MicroflowQualifiedName(); qn != "" {
 				stmt.Exec(sourceType, sourceID, sourceQN,
-					"NANOFLOW", string(src.NanoflowID), nfQN,
+					"MICROFLOW", "", qn,
 					RefKindDatasource, moduleName, projectID, snapshotID)
 				refCount++
 			}
+		}
+
+	case *genPages.NanoflowSource:
+		if qn := src.NanoflowQualifiedName(); qn != "" {
+			stmt.Exec(sourceType, sourceID, sourceQN,
+				"NANOFLOW", "", qn,
+				RefKindDatasource, moduleName, projectID, snapshotID)
+			refCount++
 		}
 	}
 
 	return refCount
+}
+
+// pageParamEntityName extracts the entity qualified name from a gen PageParameter's
+// ParameterType. Returns "" when the type is not an entity type.
+func pageParamEntityName(param *genPages.PageParameter) string {
+	if param == nil {
+		return ""
+	}
+	pt := param.ParameterType()
+	if pt == nil {
+		return ""
+	}
+	switch t := pt.(type) {
+	case *genDt.ObjectType:
+		return t.EntityQualifiedName()
+	case *genDt.EntityType:
+		return t.EntityQualifiedName()
+	}
+	return ""
 }
 
 // resolveEntityID looks up the qualified name for an entity ID.
