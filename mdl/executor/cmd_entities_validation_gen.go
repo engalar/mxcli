@@ -9,6 +9,7 @@ package executor
 import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 )
 
 // astToValidationRulesGen returns the list of *ValidationRule elements
@@ -32,21 +33,28 @@ func astToValidationRulesGen(a *ast.Attribute, entityQN string) []*genDm.Validat
 		vr := genDm.NewValidationRule()
 		vr.SetAttributeQualifiedName(attrQN)
 		vr.SetRuleInfo(genDm.NewRequiredRuleInfo())
-		// Error message rendering — gen ErrorMessage is a Text element;
-		// modelling that requires the cross-package types.Text gen
-		// equivalent. The AST's NotNullError string passthrough is
-		// deferred until the gen Text builder lands; for now, the rule
-		// emits without a custom error message (Mendix falls back to
-		// the default localized message).
-		_ = a.NotNullError
+		if a.NotNullError != "" {
+			vr.SetErrorMessage(singleENUSTextGen(a.NotNullError))
+		}
 		out = append(out, vr)
 	}
 	if a.Unique {
 		vr := genDm.NewValidationRule()
 		vr.SetAttributeQualifiedName(attrQN)
 		vr.SetRuleInfo(genDm.NewUniqueRuleInfo())
-		_ = a.UniqueError
+		if a.UniqueError != "" {
+			vr.SetErrorMessage(singleENUSTextGen(a.UniqueError))
+		}
 		out = append(out, vr)
 	}
 	return out
+}
+
+func singleENUSTextGen(msg string) *genTexts.Text {
+	t := genTexts.NewText()
+	tr := genTexts.NewTranslation()
+	tr.SetLanguageCode("en_US")
+	tr.SetText(msg)
+	t.AddTranslations(tr)
+	return t
 }
