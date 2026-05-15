@@ -6,6 +6,43 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	"github.com/mendixlabs/mxcli/sdk/pages"
+)
+
+// Re-export sdk/pages types still used by the legacy mutation surface.
+// Stage 3.3.5.E1 will retire these once DataGridSpec and PageMutator are
+// fully migrated to the gen-typed surface.
+type (
+	Widget               = pages.Widget
+	DataSource           = pages.DataSource
+	ClientAction         = pages.ClientAction
+	CustomWidget         = pages.CustomWidget
+	PropertyTypeIDEntry  = pages.PropertyTypeIDEntry
+	BaseWidget           = pages.BaseWidget
+	DataViewSource       = pages.DataViewSource
+	DatabaseSource       = pages.DatabaseSource
+	MicroflowSource      = pages.MicroflowSource
+	NanoflowSource       = pages.NanoflowSource
+	AssociationSource    = pages.AssociationSource
+	ListenToWidgetSource = pages.ListenToWidgetSource
+	GridSort             = pages.GridSort
+	SortDirection              = pages.SortDirection
+	DataGridColumn             = pages.DataGridColumn
+	ActionButton               = pages.ActionButton
+	Container                  = pages.Container
+	ButtonStyle                = pages.ButtonStyle
+	ClientTemplate             = pages.ClientTemplate
+	SaveChangesClientAction    = pages.SaveChangesClientAction
+	CancelChangesClientAction  = pages.CancelChangesClientAction
+	ClosePageClientAction      = pages.ClosePageClientAction
+	PageClientAction           = pages.PageClientAction
+	MicroflowClientAction      = pages.MicroflowClientAction
+)
+
+const (
+	SortDirectionAscending  = pages.SortDirectionAscending
+	SortDirectionDescending = pages.SortDirectionDescending
+	ButtonStyleDefault      = pages.ButtonStyleDefault
 )
 
 // ContainerKind represents the type of page container (page, layout, or snippet).
