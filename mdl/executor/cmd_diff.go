@@ -11,6 +11,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // DiffFormat represents the output format for diff results
@@ -173,22 +174,24 @@ func diffEntity(ctx *ExecContext, s *ast.CreateEntityStmt) (*DiffResult, error) 
 	}
 
 	// Try to find existing entity
-	module, err := findModule(ctx, s.Name.Module)
+	dm, err := findDomainModelGenByModule(ctx, s.Name.Module)
 	if err != nil {
 		result.IsNew = true
 		return result, nil
 	}
-
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
-	if err != nil {
+	if dm == nil {
 		result.IsNew = true
 		return result, nil
 	}
 
-	for _, entity := range dm.Entities {
-		if entity.Name == s.Name.Name {
+	for _, item := range dm.EntitiesItems() {
+		entity, ok := item.(*genDm.Entity)
+		if !ok {
+			continue
+		}
+		if entity.Name() == s.Name.Name {
 			// Found existing entity - get its MDL representation
-			result.Current = entityToMDL(ctx, module.Name, entity, dm)
+			result.Current = entityToMDLGen(ctx, s.Name.Module, entity)
 			result.Changes = compareEntities(ctx, result.Current, result.Proposed)
 			return result, nil
 		}
@@ -206,21 +209,23 @@ func diffViewEntity(ctx *ExecContext, s *ast.CreateViewEntityStmt) (*DiffResult,
 		Proposed:   viewEntityStmtToMDL(ctx, s),
 	}
 
-	module, err := findModule(ctx, s.Name.Module)
+	dm, err := findDomainModelGenByModule(ctx, s.Name.Module)
 	if err != nil {
 		result.IsNew = true
 		return result, nil
 	}
-
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
-	if err != nil {
+	if dm == nil {
 		result.IsNew = true
 		return result, nil
 	}
 
-	for _, entity := range dm.Entities {
-		if entity.Name == s.Name.Name {
-			result.Current = viewEntityFromProjectToMDL(ctx, module.Name, entity, dm)
+	for _, item := range dm.EntitiesItems() {
+		entity, ok := item.(*genDm.Entity)
+		if !ok {
+			continue
+		}
+		if entity.Name() == s.Name.Name {
+			result.Current = viewEntityFromProjectToMDLGen(ctx, s.Name.Module, entity)
 			return result, nil
 		}
 	}
@@ -260,22 +265,42 @@ func diffAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) (*DiffResul
 		Proposed:   associationStmtToMDL(ctx, s),
 	}
 
-	module, err := findModule(ctx, s.Name.Module)
+	pairs, err := listDomainModelsWithContainerGen(ctx)
 	if err != nil {
 		result.IsNew = true
 		return result, nil
 	}
 
-	dm, err := ctx.Backend.GetDomainModel(module.ID)
-	if err != nil {
-		result.IsNew = true
-		return result, nil
-	}
-
-	for _, assoc := range dm.Associations {
-		if assoc.Name == s.Name.Name {
-			result.Current = associationToMDL(ctx, module.Name, assoc, dm)
-			return result, nil
+	for _, pair := range pairs {
+		if pair.DM == nil {
+			continue
+		}
+		modName := ""
+		if mod, modErr := findModuleByID(ctx, pair.ContainerID); modErr == nil && mod != nil {
+			modName = mod.Name
+		}
+		if modName != s.Name.Module {
+			continue
+		}
+		for _, item := range pair.DM.AssociationsItems() {
+			assoc, ok := item.(*genDm.Association)
+			if !ok {
+				continue
+			}
+			if assoc.Name() == s.Name.Name {
+				result.Current = associationToMDLGen(ctx, modName, assoc, pair.DM)
+				return result, nil
+			}
+		}
+		for _, item := range pair.DM.CrossAssociationsItems() {
+			assoc, ok := item.(*genDm.CrossAssociation)
+			if !ok {
+				continue
+			}
+			if assoc.Name() == s.Name.Name {
+				result.Current = crossAssociationToMDLGen(ctx, modName, assoc, pairs)
+				return result, nil
+			}
 		}
 	}
 
