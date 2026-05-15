@@ -15,7 +15,6 @@ import (
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 // errBackend is a sentinel used in backend-error tests.
@@ -450,24 +449,9 @@ func TestExecCreateEnumeration_Mock_BackendError(t *testing.T) {
 // error coverage will land alongside a mock repo surface for
 // gen flows.
 
-func TestExecDropPage_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListPagesFunc:   func() ([]*pages.Page, error) { return nil, errBackend },
-	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, execDropPage(ctx, &ast.DropPageStmt{
-		Name: ast.QualifiedName{Module: "M", Name: "P"},
-	}))
-}
-
-func TestExecDropSnippet_Mock_BackendError(t *testing.T) {
-	mb := &mock.MockBackend{
-		IsConnectedFunc:  func() bool { return true },
-		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return nil, errBackend },
-	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, execDropSnippet(ctx, &ast.DropSnippetStmt{
-		Name: ast.QualifiedName{Module: "M", Name: "S"},
-	}))
-}
+// Stage 3.3.5.E0.error: TestExecDropPage_Mock_BackendError and
+// TestExecDropSnippet_Mock_BackendError removed — execDropPage /
+// execDropSnippet now read from ctx.Pages / ctx.Snippets repos (gen
+// path) instead of ctx.Backend.ListPages / ListSnippets, so the
+// simulated sdk-typed backend error never reaches the dispatch path.
+// Error coverage for the gen path lives in the repo-level tests.
