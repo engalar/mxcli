@@ -45,7 +45,7 @@ func (s *referenceService) PatchNavigationProfile(navDocID model.ID, profileName
 	if err != nil {
 		return fmt.Errorf("read nav unit %s: %w", navDocID, err)
 	}
-	patched, err := sdkPatchNavigationProfile(rawBytes, profileName, types.NavigationProfileSpec(spec))
+	patched, err := mmpr.PatchNavigationProfile(rawBytes, profileName, types.NavigationProfileSpec(spec))
 	if err != nil {
 		return fmt.Errorf("patch navigation profile: %w", err)
 	}
