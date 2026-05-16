@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/spf13/cobra"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -52,7 +51,7 @@ func runExtractTemplates(cmd *cobra.Command, args []string) error {
 	projectPath, _ := cmd.Flags().GetString("project")
 	outputDir, _ := cmd.Flags().GetString("output")
 
-	reader, err := mpr.Open(projectPath)
+	reader, err := openWidgetReader(projectPath)
 	if err != nil {
 		return fmt.Errorf("failed to open project: %w", err)
 	}
