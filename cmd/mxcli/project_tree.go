@@ -290,26 +290,42 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		md.documents = append(md.documents, treeElement{Name: c.Name, ContainerID: c.ContainerID, Type: "constant"})
 	}
 
-	// Collect workflows
-	wfs, _ := reader.ListWorkflows()
+	// Collect workflows (gen-typed path; ContainerID resolved via unit index join).
+	wfRefs, _ := mreader.ListUnitsByType("Workflows$Workflow")
+	wfContainerByID := make(map[string]model.ID, len(wfRefs))
+	for _, ref := range wfRefs {
+		if ref.Type == "Workflows$Workflow" {
+			wfContainerByID[ref.ID] = model.ID(ref.ContainerID)
+		}
+	}
+	wfs, _ := reader.ListWorkflowsGen()
 	for _, wf := range wfs {
-		modID := h.FindModuleID(wf.ContainerID)
+		containerID := wfContainerByID[string(wf.ID())]
+		modID := h.FindModuleID(containerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: wf.Name, ContainerID: wf.ContainerID, Type: "workflow"})
+		md.documents = append(md.documents, treeElement{Name: wf.Name(), ContainerID: containerID, Type: "workflow"})
 	}
 
-	// Collect java actions
-	jas, _ := reader.ListJavaActions()
+	// Collect java actions (gen-typed path; ContainerID resolved via unit index join).
+	jaRefs, _ := mreader.ListUnitsByType("JavaActions$JavaAction")
+	jaContainerByID := make(map[string]model.ID, len(jaRefs))
+	for _, ref := range jaRefs {
+		if ref.Type == "JavaActions$JavaAction" {
+			jaContainerByID[ref.ID] = model.ID(ref.ContainerID)
+		}
+	}
+	jas, _ := reader.ListJavaActionsGen()
 	for _, ja := range jas {
-		modID := h.FindModuleID(ja.ContainerID)
+		containerID := jaContainerByID[string(ja.ID())]
+		modID := h.FindModuleID(containerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: ja.Name, ContainerID: ja.ContainerID, Type: "javaaction"})
+		md.documents = append(md.documents, treeElement{Name: ja.Name(), ContainerID: containerID, Type: "javaaction"})
 	}
 
 	// Collect scheduled events
