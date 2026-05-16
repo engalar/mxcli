@@ -10,76 +10,9 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
-
-// CreateModule creates a new module in the project.
-// This also creates the associated domain model for the module.
-func (w *Writer) CreateModule(module *model.Module) error {
-	if module.ID == "" {
-		module.ID = model.ID(generateUUID())
-	}
-	module.TypeName = "Projects$ModuleImpl"
-
-	// Get project root ID - modules are contained in the project root
-	projectRootID, err := w.reader.GetProjectRootID()
-	if err != nil {
-		return fmt.Errorf("failed to get project root: %w", err)
-	}
-
-	// Serialize and insert module
-	contents, err := serializeModule(module)
-	if err != nil {
-		return fmt.Errorf("failed to serialize module: %w", err)
-	}
-
-	if err := w.insertUnit(string(module.ID), projectRootID, "Modules", "Projects$ModuleImpl", contents); err != nil {
-		return fmt.Errorf("failed to insert module unit: %w", err)
-	}
-
-	// Create empty domain model for the module
-	dmID := generateUUID()
-	dm := &domainmodel.DomainModel{
-		ContainerID: module.ID,
-	}
-	dm.ID = model.ID(dmID)
-	dm.TypeName = "DomainModels$DomainModel"
-
-	dmContents, err := w.serializeDomainModel(dm)
-	if err != nil {
-		return fmt.Errorf("failed to serialize domain model: %w", err)
-	}
-
-	if err := w.insertUnit(dmID, string(module.ID), "DomainModel", "DomainModels$DomainModel", dmContents); err != nil {
-		return fmt.Errorf("failed to insert domain model unit: %w", err)
-	}
-
-	// Create empty module security for the module
-	msID := generateUUID()
-	msContents, err := serializeModuleSecurity(msID)
-	if err != nil {
-		return fmt.Errorf("failed to serialize module security: %w", err)
-	}
-
-	if err := w.insertUnit(msID, string(module.ID), "ModuleSecurity", "Security$ModuleSecurity", msContents); err != nil {
-		return fmt.Errorf("failed to insert module security unit: %w", err)
-	}
-
-	// Create module settings for the module
-	settingsID := generateUUID()
-	settingsContents, err := serializeModuleSettings(settingsID)
-	if err != nil {
-		return fmt.Errorf("failed to serialize module settings: %w", err)
-	}
-
-	if err := w.insertUnit(settingsID, string(module.ID), "ModuleSettings", "Projects$ModuleSettings", settingsContents); err != nil {
-		return fmt.Errorf("failed to insert module settings unit: %w", err)
-	}
-
-	return nil
-}
 
 // UpdateModule updates an existing module.
 func (w *Writer) UpdateModule(module *model.Module) error {
