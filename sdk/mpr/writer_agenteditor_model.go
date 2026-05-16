@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // CreateAgentEditorModel writes a Model document to the project. The
@@ -16,7 +16,7 @@ import (
 //
 // The Contents JSON shape mirrors what Studio Pro's agent-editor
 // extension produces — see PROPOSAL_agent_document_support.md.
-func (w *Writer) CreateAgentEditorModel(m *agenteditor.Model) error {
+func (w *Writer) CreateAgentEditorModel(m *types.Model) error {
 	if m == nil {
 		return fmt.Errorf("model is nil")
 	}
@@ -46,14 +46,14 @@ func (w *Writer) CreateAgentEditorModel(m *agenteditor.Model) error {
 		Documentation:      m.Documentation,
 		Excluded:           m.Excluded,
 		ExportLevel:        m.ExportLevel,
-		CustomDocumentType: agenteditor.CustomTypeModel,
-		ReadableTypeName:   agenteditor.ReadableModel,
+		CustomDocumentType: types.CustomTypeModel,
+		ReadableTypeName:   types.ReadableModel,
 		ContentsJSON:       contentsJSON,
 	})
 }
 
 // UpdateAgentEditorModel replaces an existing Model document, preserving its UUID.
-func (w *Writer) UpdateAgentEditorModel(m *agenteditor.Model) error {
+func (w *Writer) UpdateAgentEditorModel(m *types.Model) error {
 	if m == nil {
 		return fmt.Errorf("model is nil")
 	}
@@ -73,8 +73,8 @@ func (w *Writer) UpdateAgentEditorModel(m *agenteditor.Model) error {
 		Documentation:      m.Documentation,
 		Excluded:           m.Excluded,
 		ExportLevel:        m.ExportLevel,
-		CustomDocumentType: agenteditor.CustomTypeModel,
-		ReadableTypeName:   agenteditor.ReadableModel,
+		CustomDocumentType: types.CustomTypeModel,
+		ReadableTypeName:   types.ReadableModel,
 		ContentsJSON:       contentsJSON,
 	})
 }
@@ -86,16 +86,16 @@ func (w *Writer) DeleteAgentEditorModel(id string) error {
 
 // encodeAgentEditorModelContents produces the JSON payload stored in
 // the Contents field of a Model CustomBlobDocument.
-func encodeAgentEditorModelContents(m *agenteditor.Model) (string, error) {
+func encodeAgentEditorModelContents(m *types.Model) (string, error) {
 	// Provider-specific fields are nested under providerFields. Keys are
 	// emitted in the same order Studio Pro uses.
 	type providerFields struct {
-		Environment  string                   `json:"environment"`
-		DeepLinkURL  string                   `json:"deepLinkURL"`
-		KeyID        string                   `json:"keyId"`
-		KeyName      string                   `json:"keyName"`
-		ResourceName string                   `json:"resourceName"`
-		Key          *agenteditor.ConstantRef `json:"key,omitempty"`
+		Environment  string             `json:"environment"`
+		DeepLinkURL  string             `json:"deepLinkURL"`
+		KeyID        string             `json:"keyId"`
+		KeyName      string             `json:"keyName"`
+		ResourceName string             `json:"resourceName"`
+		Key          *types.ConstantRef `json:"key,omitempty"`
 	}
 	type contentsShape struct {
 		Type           string         `json:"type"`

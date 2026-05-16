@@ -7,11 +7,11 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // CreateAgentEditorConsumedMCPService writes a Consumed MCP Service document.
-func (w *Writer) CreateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error {
+func (w *Writer) CreateAgentEditorConsumedMCPService(c *types.ConsumedMCPService) error {
 	if c == nil {
 		return fmt.Errorf("consumed MCP service is nil")
 	}
@@ -37,14 +37,14 @@ func (w *Writer) CreateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPS
 		Documentation:      c.Documentation,
 		Excluded:           c.Excluded,
 		ExportLevel:        c.ExportLevel,
-		CustomDocumentType: agenteditor.CustomTypeConsumedMCPService,
-		ReadableTypeName:   agenteditor.ReadableConsumedMCPService,
+		CustomDocumentType: types.CustomTypeConsumedMCPService,
+		ReadableTypeName:   types.ReadableConsumedMCPService,
 		ContentsJSON:       contentsJSON,
 	})
 }
 
 // UpdateAgentEditorConsumedMCPService replaces an existing Consumed MCP Service document, preserving its UUID.
-func (w *Writer) UpdateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) error {
+func (w *Writer) UpdateAgentEditorConsumedMCPService(c *types.ConsumedMCPService) error {
 	if c == nil {
 		return fmt.Errorf("consumed MCP service is nil")
 	}
@@ -61,8 +61,8 @@ func (w *Writer) UpdateAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPS
 		Documentation:      c.Documentation,
 		Excluded:           c.Excluded,
 		ExportLevel:        c.ExportLevel,
-		CustomDocumentType: agenteditor.CustomTypeConsumedMCPService,
-		ReadableTypeName:   agenteditor.ReadableConsumedMCPService,
+		CustomDocumentType: types.CustomTypeConsumedMCPService,
+		ReadableTypeName:   types.ReadableConsumedMCPService,
 		ContentsJSON:       contentsJSON,
 	})
 }
@@ -72,7 +72,7 @@ func (w *Writer) DeleteAgentEditorConsumedMCPService(id string) error {
 	return w.deleteUnit(id)
 }
 
-func encodeConsumedMCPServiceContents(c *agenteditor.ConsumedMCPService) (string, error) {
+func encodeConsumedMCPServiceContents(c *types.ConsumedMCPService) (string, error) {
 	type contentsShape struct {
 		ProtocolVersion          string `json:"protocolVersion"`
 		Documentation            string `json:"documentation"`
