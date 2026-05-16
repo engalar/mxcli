@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	_ "modernc.org/sqlite"
 )
 
@@ -124,8 +124,7 @@ func makeEnumRefMPR(t *testing.T, oldRef string) (mprPath string, dmID model.ID)
 }
 
 // makeDomainModelTestMPR creates a minimal MPR with one Module unit and one
-// empty DomainModel unit owned by it. Used by TestCreateEntityViaModelsdk as a
-// regression guard for writeDomainModel's transport tail.
+// empty DomainModel unit owned by it.
 func makeDomainModelTestMPR(t *testing.T) (mprPath string, dmID model.ID) {
 	t.Helper()
 	dir := t.TempDir()
@@ -191,10 +190,8 @@ func makeDomainModelTestMPR(t *testing.T) (mprPath string, dmID model.ID) {
 	return mprPath, dmID
 }
 
-// TestCreateEntityViaModelsdk verifies createEntityViaModelsdk persists a new
-// entity through writeDomainModel. Regression guard for the transport-level
-// switch from msdkWriteRaw to BeginWriteTransaction/WriteUnit/Commit.
-func TestCreateEntityViaModelsdk(t *testing.T) {
+// TestCreateEntityGen verifies CreateEntityGen persists a new entity.
+func TestCreateEntityGen(t *testing.T) {
 	mprPath, dmID := makeDomainModelTestMPR(t)
 
 	b := New()
@@ -203,25 +200,30 @@ func TestCreateEntityViaModelsdk(t *testing.T) {
 	}
 	defer b.Disconnect()
 
-	entity := &domainmodel.Entity{
-		Name:        "Customer",
-		Persistable: true,
-	}
-	if err := b.createEntityViaModelsdk(dmID, entity); err != nil {
-		t.Fatalf("createEntityViaModelsdk: %v", err)
+	entity := genDm.NewEntity()
+	entity.SetName("Customer")
+	ng := genDm.NewNoGeneralization()
+	ng.SetPersistable(true)
+	entity.SetGeneralization(ng)
+	if err := b.CreateEntityGen(dmID, entity); err != nil {
+		t.Fatalf("CreateEntityGen: %v", err)
 	}
 
-	dm, err := b.reader.GetDomainModelByID(dmID)
+	dm, err := b.GetDomainModelByIDGen(dmID)
 	if err != nil {
-		t.Fatalf("GetDomainModelByID after create: %v", err)
+		t.Fatalf("GetDomainModelByIDGen after create: %v", err)
 	}
-	if got, want := len(dm.Entities), 1; got != want {
+	if got, want := len(dm.EntitiesItems()), 1; got != want {
 		t.Fatalf("Entities count = %d, want %d", got, want)
 	}
-	if got := dm.Entities[0].Name; got != "Customer" {
+	ent, ok := dm.EntitiesItems()[0].(*genDm.Entity)
+	if !ok {
+		t.Fatalf("entity type = %T, want *genDm.Entity", dm.EntitiesItems()[0])
+	}
+	if got := ent.Name(); got != "Customer" {
 		t.Errorf("Entities[0].Name = %q, want %q", got, "Customer")
 	}
-	if dm.Entities[0].ID == "" {
+	if ent.ID() == "" {
 		t.Error("Entities[0].ID was not auto-generated")
 	}
 }
@@ -260,20 +262,27 @@ func TestUpdateEnumerationRefsInAllDomainModels_UpdatesRef(t *testing.T) {
 		t.Fatalf("GetRawUnitBytes: %v", err)
 	}
 
-	dm, err := b.reader.GetDomainModelByID(dmID)
+	dm, err := b.GetDomainModelByIDGen(dmID)
 	if err != nil {
-		t.Fatalf("GetDomainModelByID after update: %v (raw len=%d)", err, len(rawBytes))
+		t.Fatalf("GetDomainModelByIDGen after update: %v (raw len=%d)", err, len(rawBytes))
 	}
-	if len(dm.Entities) == 0 {
+	if len(dm.EntitiesItems()) == 0 {
 		t.Fatal("expected at least one entity")
 	}
-	attr := dm.Entities[0].Attributes[0]
-	enumType, ok := attr.Type.(*domainmodel.EnumerationAttributeType)
-	if !ok {
-		t.Fatalf("expected EnumerationAttributeType, got %T", attr.Type)
+	entity, ok := dm.EntitiesItems()[0].(*genDm.Entity)
+	if !ok || len(entity.AttributesItems()) == 0 {
+		t.Fatal("expected gen entity with at least one attribute")
 	}
-	if enumType.EnumerationRef != "NewModule.StatusEnum" {
-		t.Fatalf("EnumerationRef = %q, want %q", enumType.EnumerationRef, "NewModule.StatusEnum")
+	attr, ok := entity.AttributesItems()[0].(*genDm.Attribute)
+	if !ok {
+		t.Fatalf("expected *genDm.Attribute, got %T", entity.AttributesItems()[0])
+	}
+	enumType, ok := attr.Type().(*genDm.EnumerationAttributeType)
+	if !ok {
+		t.Fatalf("expected EnumerationAttributeType, got %T", attr.Type())
+	}
+	if enumType.EnumerationQualifiedName() != "NewModule.StatusEnum" {
+		t.Fatalf("EnumerationQualifiedName = %q, want %q", enumType.EnumerationQualifiedName(), "NewModule.StatusEnum")
 	}
 }
 

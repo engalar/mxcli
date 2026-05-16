@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
@@ -19,7 +19,7 @@ import (
 // pre-built DomainModel and returns the path + dmID. Reuses
 // makeDomainModelTestMPR (defined in domainmodel_modelsdk_test.go) for the
 // SQLite + Module + DomainModel skeleton, then adds a Customer entity through
-// the production createEntityViaModelsdk helper so the test exercises the same
+// the production CreateEntityGen helper so the test exercises the same
 // gen-native write path the access-rule funcs target.
 func seedEntityForAccessTest(t *testing.T) (b *MprBackend, dmID model.ID) {
 	t.Helper()
@@ -31,11 +31,13 @@ func seedEntityForAccessTest(t *testing.T) (b *MprBackend, dmID model.ID) {
 	}
 	t.Cleanup(func() { _ = b.Disconnect() })
 
-	if err := b.createEntityViaModelsdk(dmID, &domainmodel.Entity{
-		Name:        "Customer",
-		Persistable: true,
-	}); err != nil {
-		t.Fatalf("createEntityViaModelsdk: %v", err)
+	entity := genDm.NewEntity()
+	entity.SetName("Customer")
+	ng := genDm.NewNoGeneralization()
+	ng.SetPersistable(true)
+	entity.SetGeneralization(ng)
+	if err := b.CreateEntityGen(dmID, entity); err != nil {
+		t.Fatalf("CreateEntityGen: %v", err)
 	}
 	return b, dmID
 }

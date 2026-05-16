@@ -13,14 +13,6 @@ import (
 
 // RawCustomWidgetType holds the raw BSON data for a CustomWidgetType
 // extracted from an existing widget in the project.
-type RawCustomWidgetType struct {
-	WidgetID   string // e.g., "com.mendix.widget.web.combobox.Combobox"
-	RawType    bson.D // The full Type field as bson.D
-	RawObject  bson.D // The full Object field as bson.D (WidgetObject with all properties)
-	UnitID     string // ID of the unit where this was found
-	UnitName   string // Name of the page/snippet (for identification)
-	WidgetName string // Name of the widget (from Name field)
-}
 
 // FindCustomWidgetType searches for an existing CustomWidget with the given
 // widgetID and returns its full Type definition as raw BSON. This can be used
@@ -288,92 +280,6 @@ func findAllCustomWidgetsInArray(arr bson.A, widgetID string) []widgetInfo {
 		}
 	}
 	return results
-}
-
-// GetPropertyValue extracts a property value from a RawObject by property key.
-func (r *RawCustomWidgetType) GetPropertyValue(propertyKey string) string {
-	if r.RawObject == nil {
-		return ""
-	}
-	for _, elem := range r.RawObject {
-		if elem.Key == "Properties" {
-			if arr, ok := elem.Value.(bson.A); ok {
-				for _, item := range arr {
-					if prop, ok := item.(bson.D); ok {
-						propKey := getPropertyKey(prop)
-						if propKey == propertyKey {
-							return getPrimitiveValue(prop)
-						}
-					}
-				}
-			}
-		}
-	}
-	return ""
-}
-
-// getPropertyKey extracts the property key from a WidgetProperty.
-func getPropertyKey(prop bson.D) string {
-	for _, elem := range prop {
-		if elem.Key == "TypePointer" {
-			// We can't easily map TypePointer to PropertyKey without the Type
-			// So let's look for it differently
-		}
-	}
-	// Check Value for the property type info
-	for _, elem := range prop {
-		if elem.Key == "Value" {
-			if val, ok := elem.Value.(bson.D); ok {
-				for _, ve := range val {
-					if ve.Key == "$Type" {
-						// The type hints at what property this is
-						return ve.Value.(string)
-					}
-				}
-			}
-		}
-	}
-	return ""
-}
-
-// getPrimitiveValue extracts the PrimitiveValue from a WidgetProperty.
-func getPrimitiveValue(prop bson.D) string {
-	for _, elem := range prop {
-		if elem.Key == "Value" {
-			if val, ok := elem.Value.(bson.D); ok {
-				for _, ve := range val {
-					if ve.Key == "PrimitiveValue" {
-						if pv, ok := ve.Value.(string); ok {
-							return pv
-						}
-					}
-				}
-			}
-		}
-	}
-	return ""
-}
-
-// GetAllPrimitiveValues returns all non-empty PrimitiveValue fields from the RawObject.
-func (r *RawCustomWidgetType) GetAllPrimitiveValues() []string {
-	if r.RawObject == nil {
-		return nil
-	}
-	var values []string
-	for _, elem := range r.RawObject {
-		if elem.Key == "Properties" {
-			if arr, ok := elem.Value.(bson.A); ok {
-				for _, item := range arr {
-					if prop, ok := item.(bson.D); ok {
-						if pv := getPrimitiveValue(prop); pv != "" {
-							values = append(values, pv)
-						}
-					}
-				}
-			}
-		}
-	}
-	return values
 }
 
 // containsWidgetID does a quick string check to see if the BSON might contain the widget.

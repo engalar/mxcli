@@ -78,6 +78,20 @@ type RenameHit struct {
 	Count    int
 }
 
+// UnitPatch holds a unit ID plus its patched BSON bytes. Returned by scan
+// helpers that compute updates without writing them to disk.
+type UnitPatch struct {
+	ID       string
+	Contents []byte
+}
+
+// BSONScanner exposes the unit-scanning methods of sdk/mpr.Reader that
+// reference and rename services need, without requiring a concrete Reader.
+type BSONScanner interface {
+	ScanRenameReferences(oldName, newName string) ([]UnitPatch, []RenameHit, error)
+	ScanQualifiedNameUpdates(oldName, newName string) ([]UnitPatch, error)
+}
+
 // RawUnit holds a unit's raw BSON contents.
 type RawUnit struct {
 	ID          model.ID

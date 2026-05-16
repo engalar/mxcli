@@ -550,13 +550,6 @@ func (w *Writer) RemoveDemoUser(unitID model.ID, userName string) error {
 // Entity Access: GRANT/REVOKE on DomainModels$DomainModel
 // ============================================================================
 
-// EntityMemberAccess describes per-member access rights for an access rule.
-type EntityMemberAccess struct {
-	AttributeRef   string // "Module.Entity.AttrName" or ""
-	AssociationRef string // "Module.AssocName" or ""
-	AccessRights   string // "None", "ReadOnly", "ReadWrite"
-}
-
 // AddEntityAccessRule adds or updates an access rule for the given roles on an entity.
 // If an existing rule with the same AllowedModuleRoles is found, it is updated in place.
 // If memberAccesses is non-nil, explicit per-member access entries are created;
@@ -982,19 +975,6 @@ func removeRolesFromAccessRule(ruleDoc bson.D, removeRoles map[string]bool) (boo
 		return true, true // keep rule with fewer roles
 	}
 	return true, false
-}
-
-// EntityAccessRevocation describes what to revoke from an entity access rule.
-type EntityAccessRevocation struct {
-	RevokeCreate bool
-	RevokeDelete bool
-	// Members to fully revoke (set to None)
-	RevokeReadMembers []string // attribute/association refs to set to None
-	// Members to downgrade from ReadWrite to ReadOnly
-	RevokeWriteMembers []string // attribute/association refs to downgrade
-	// Revoke all read/write access
-	RevokeReadAll  bool
-	RevokeWriteAll bool
 }
 
 // RevokeEntityMemberAccess performs a partial revoke on an existing access rule.
@@ -2467,7 +2447,8 @@ func patchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, int
 }
 
 // PatchReconcileMemberAccesses is the BSON-only version of ReconcileMemberAccesses.
-func (w *Writer) PatchReconcileMemberAccesses(rawBytes []byte, moduleName string) ([]byte, int, error) {
+// Pure BSON manipulation — no database access required.
+func PatchReconcileMemberAccesses(rawBytes []byte, moduleName string) ([]byte, int, error) {
 	var doc bson.D
 	if err := bson.Unmarshal(rawBytes, &doc); err != nil {
 		return nil, 0, fmt.Errorf("unmarshal: %w", err)
@@ -2478,4 +2459,10 @@ func (w *Writer) PatchReconcileMemberAccesses(rawBytes []byte, moduleName string
 		return nil, 0, fmt.Errorf("marshal: %w", err)
 	}
 	return out, modified, nil
+}
+
+// PatchReconcileMemberAccesses is the Writer method form; delegates to the
+// standalone function of the same name.
+func (w *Writer) PatchReconcileMemberAccesses(rawBytes []byte, moduleName string) ([]byte, int, error) {
+	return PatchReconcileMemberAccesses(rawBytes, moduleName)
 }

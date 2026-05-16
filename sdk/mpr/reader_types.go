@@ -16,23 +16,38 @@ import (
 
 // Type aliases for backward compatibility — these types are now defined in mdl/types.
 type (
-	JavaAction         = types.JavaAction
-	JavaScriptAction   = types.JavaScriptAction
-	NavigationDocument = types.NavigationDocument
-	NavigationProfile  = types.NavigationProfile
-	NavHomePage        = types.NavHomePage
-	NavRoleBasedHome   = types.NavRoleBasedHome
-	NavMenuItem        = types.NavMenuItem
-	NavOfflineEntity   = types.NavOfflineEntity
-	JsonStructure      = types.JsonStructure
-	JsonElement        = types.JsonElement
-	ImageCollection    = types.ImageCollection
-	Image              = types.Image
-	FolderInfo         = types.FolderInfo
-	UnitInfo           = types.UnitInfo
-	RawUnit            = types.RawUnit
-	ProjectVersion     = types.ProjectVersion
+	JavaAction              = types.JavaAction
+	JavaScriptAction        = types.JavaScriptAction
+	NavigationDocument      = types.NavigationDocument
+	NavigationProfile       = types.NavigationProfile
+	NavHomePage             = types.NavHomePage
+	NavRoleBasedHome        = types.NavRoleBasedHome
+	NavMenuItem             = types.NavMenuItem
+	NavOfflineEntity        = types.NavOfflineEntity
+	JsonStructure           = types.JsonStructure
+	JsonElement             = types.JsonElement
+	ImageCollection         = types.ImageCollection
+	Image                   = types.Image
+	FolderInfo              = types.FolderInfo
+	UnitInfo                = types.UnitInfo
+	RawUnit                 = types.RawUnit
+	ProjectVersion          = types.ProjectVersion
+	RenameHit              = types.RenameHit
+	EntityMemberAccess     = types.EntityMemberAccess
+	EntityAccessRevocation = types.EntityAccessRevocation
+	RawUnitInfo            = types.RawUnitInfo
+	UnitPatch              = types.UnitPatch
+	RawCustomWidgetType = types.RawCustomWidgetType
+	MPRVersion          = types.MPRVersion
 )
+
+const (
+	MPRVersionV1 = types.MPRVersionV1
+	MPRVersionV2 = types.MPRVersionV2
+)
+
+// Compile-time check: sdk/mpr.Reader implements types.BSONScanner.
+var _ types.BSONScanner = (*Reader)(nil)
 
 // ListJavaActions returns all Java actions in the project, including virtual System module actions.
 func (r *Reader) ListJavaActions() ([]*types.JavaAction, error) {

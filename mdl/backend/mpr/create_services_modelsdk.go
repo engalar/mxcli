@@ -22,20 +22,7 @@ import (
 // ── DatabaseConnection ────────────────────────────────────────────────────
 
 func (b *MprBackend) createDatabaseConnectionViaModelsdk(conn *model.DatabaseConnection) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	contents, err := mpr.SerializeDatabaseConnection(conn)
-	if err != nil {
-		return fmt.Errorf("serialize database connection: %w", err)
-	}
-	return b.msdkWriter.InsertUnit(
-		string(conn.ID),
-		string(conn.ContainerID),
-		"Documents",
-		"DatabaseConnector$DatabaseConnection",
-		contents,
-	)
+	return b.createDatabaseConnectionGen(conn)
 }
 
 // ── DataTransformer ───────────────────────────────────────────────────────
@@ -98,39 +85,13 @@ func (b *MprBackend) createExportMappingViaModelsdk(em *model.ExportMapping) err
 // ── JsonStructure ─────────────────────────────────────────────────────────
 
 func (b *MprBackend) createJsonStructureViaModelsdk(js *types.JsonStructure) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	contents, err := mpr.SerializeJsonStructure(unconvertJsonStructure(js))
-	if err != nil {
-		return fmt.Errorf("serialize json structure: %w", err)
-	}
-	return b.msdkWriter.InsertUnit(
-		string(js.ID),
-		string(js.ContainerID),
-		"Documents",
-		"JsonStructures$JsonStructure",
-		contents,
-	)
+	return b.createJsonStructureGen(js)
 }
 
 // ── BusinessEventService ──────────────────────────────────────────────────
 
 func (b *MprBackend) createBusinessEventServiceViaModelsdk(svc *model.BusinessEventService) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	contents, err := mpr.SerializeBusinessEventService(svc)
-	if err != nil {
-		return fmt.Errorf("serialize business event service: %w", err)
-	}
-	return b.msdkWriter.InsertUnit(
-		string(svc.ID),
-		string(svc.ContainerID),
-		"Documents",
-		"BusinessEvents$BusinessEventService",
-		contents,
-	)
+	return b.createBusinessEventServiceGen(svc)
 }
 
 // ── OData services ────────────────────────────────────────────────────────
@@ -211,7 +172,7 @@ func (b *MprBackend) createImageCollectionViaModelsdk(ic *types.ImageCollection)
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := mpr.SerializeImageCollection(unconvertImageCollection(ic))
+	contents, err := mpr.SerializeImageCollection(ic)
 	if err != nil {
 		return fmt.Errorf("serialize image collection: %w", err)
 	}
@@ -227,37 +188,11 @@ func (b *MprBackend) createImageCollectionViaModelsdk(ic *types.ImageCollection)
 // ── Enumeration ───────────────────────────────────────────────────────────
 
 func (b *MprBackend) createEnumerationViaModelsdk(enum *model.Enumeration) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	contents, err := mpr.SerializeEnumeration(enum)
-	if err != nil {
-		return fmt.Errorf("serialize enumeration: %w", err)
-	}
-	return b.msdkWriter.InsertUnit(
-		string(enum.ID),
-		string(enum.ContainerID),
-		"Documents",
-		"Enumerations$Enumeration",
-		contents,
-	)
+	return b.createEnumerationGen(enum)
 }
 
 // ── Constant ──────────────────────────────────────────────────────────────
 
 func (b *MprBackend) createConstantViaModelsdk(constant *model.Constant) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	contents, err := mpr.SerializeConstant(constant)
-	if err != nil {
-		return fmt.Errorf("serialize constant: %w", err)
-	}
-	return b.msdkWriter.InsertUnit(
-		string(constant.ID),
-		string(constant.ContainerID),
-		"Documents",
-		"Constants$Constant",
-		contents,
-	)
+	return b.createConstantGen(constant)
 }

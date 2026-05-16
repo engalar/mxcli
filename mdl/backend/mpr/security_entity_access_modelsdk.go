@@ -5,10 +5,11 @@ package mprbackend
 import (
 	"fmt"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDM "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // rolesMatch reports whether the two role-name slices contain the same set of
@@ -35,7 +36,7 @@ func rolesMatch(a, b []string) bool {
 // AllowedModuleRoles BSON key (verified against Studio Pro behaviour).
 func (b *MprBackend) addEntityAccessRuleViaModelsdk(unitID model.ID, entityName string, roleNames []string,
 	allowCreate, allowDelete bool, defaultMemberAccess, xpathConstraint string,
-	memberAccesses []mpr.EntityMemberAccess) error {
+	memberAccesses []types.EntityMemberAccess) error {
 	return b.msdkWrite(unitID, func(elem element.Element) error {
 		dm, ok := elem.(*genDM.DomainModel)
 		if !ok {
@@ -145,7 +146,7 @@ func (b *MprBackend) removeRoleFromAllEntitiesViaModelsdk(unitID model.ID, roleN
 // boolean flags downgrade AllowCreate/AllowDelete; RevokeReadAll forces
 // DefaultMemberAccessRights to "NoAccess"; RevokeWriteAll forces "ReadOnly";
 // per-member revokes downgrade matching MemberAccess entries.
-func (b *MprBackend) revokeEntityMemberAccessViaModelsdk(unitID model.ID, entityName string, roleNames []string, revocation mpr.EntityAccessRevocation) (int, error) {
+func (b *MprBackend) revokeEntityMemberAccessViaModelsdk(unitID model.ID, entityName string, roleNames []string, revocation types.EntityAccessRevocation) (int, error) {
 	revoked := 0
 	err := b.msdkWrite(unitID, func(elem element.Element) error {
 		dm, ok := elem.(*genDM.DomainModel)
@@ -232,7 +233,7 @@ func (b *MprBackend) reconcileMemberAccessesViaModelsdk(unitID model.ID, moduleN
 	if err != nil {
 		return 0, fmt.Errorf("read unit: %w", err)
 	}
-	patched, modified, err := b.writer.PatchReconcileMemberAccesses(rawBytes, moduleName)
+	patched, modified, err := sdkmpr.PatchReconcileMemberAccesses(rawBytes, moduleName)
 	if err != nil {
 		return 0, err
 	}

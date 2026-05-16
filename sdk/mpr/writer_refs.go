@@ -9,14 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// UnitPatch represents a single unit ID + patched BSON contents that should
-// be persisted by the caller. Returned by Scan* helpers that compute updates
-// without writing them to disk.
-type UnitPatch struct {
-	ID       string
-	Contents []byte
-}
-
 // UpdateQualifiedNameInAllUnits replaces all occurrences of oldName with newName
 // in string values across all BSON documents in the project. Handles both exact
 // matches and prefix matches (e.g., "Module.Name.Param" when renaming "Module.Name").
@@ -53,8 +45,8 @@ func (w *Writer) UpdateQualifiedNameInAllUnits(oldName, newName string) (int, er
 // of patches needed to replace oldName with newName (exact or "oldName." prefix
 // match). It performs no writes — callers persist the returned patches via the
 // modelsdk write transaction.
-func (w *Writer) ScanQualifiedNameUpdates(oldName, newName string) ([]UnitPatch, error) {
-	units, err := w.reader.listUnitsByType("")
+func (r *Reader) ScanQualifiedNameUpdates(oldName, newName string) ([]UnitPatch, error) {
+	units, err := r.listUnitsByType("")
 	if err != nil {
 		return nil, err
 	}
@@ -76,6 +68,11 @@ func (w *Writer) ScanQualifiedNameUpdates(oldName, newName string) ([]UnitPatch,
 	}
 
 	return patches, nil
+}
+
+// ScanQualifiedNameUpdates is the Writer method form; delegates to the Reader.
+func (w *Writer) ScanQualifiedNameUpdates(oldName, newName string) ([]UnitPatch, error) {
+	return w.reader.ScanQualifiedNameUpdates(oldName, newName)
 }
 
 // replaceStringsInMap recursively walks a map and replaces string values that

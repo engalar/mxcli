@@ -12,8 +12,7 @@ import (
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 )
 
-// javaSourceDir returns the javasource/actions directory for the given module,
-// derived from b.path (the .mpr file path) without touching b.writer.
+// javaSourceDir returns the javasource/actions directory for the given module.
 func (b *MprBackend) javaSourceDir(moduleName string) string {
 	projectRoot := filepath.Dir(b.path)
 	return filepath.Join(projectRoot, "javasource", strings.ToLower(moduleName), "actions")

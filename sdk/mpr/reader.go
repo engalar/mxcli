@@ -17,15 +17,6 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// MPRVersion represents the MPR file format version.
-type MPRVersion int
-
-const (
-	// MPRVersionV1 is the original single-file format.
-	MPRVersionV1 MPRVersion = 1
-	// MPRVersionV2 uses mprcontents folder (Mendix 10.18+).
-	MPRVersionV2 MPRVersion = 2
-)
 
 // Reader provides methods to read Mendix project files.
 type Reader struct {

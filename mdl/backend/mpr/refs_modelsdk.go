@@ -5,18 +5,18 @@ package mprbackend
 import (
 	"fmt"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
-// updateQualifiedNameInAllUnitsViaModelsdk computes patches via sdk/mpr.Writer
-// and persists each one through the modelsdk WriteTransaction, avoiding the
-// SQLITE_READONLY_DBMOVED 1544 path triggered by Writer.updateUnit.
+// updateQualifiedNameInAllUnitsViaModelsdk computes patches via the sdk/mpr
+// Reader and persists each one through the modelsdk WriteTransaction, avoiding
+// the SQLITE_READONLY_DBMOVED 1544 path triggered by Writer.updateUnit.
 func (b *MprBackend) updateQualifiedNameInAllUnitsViaModelsdk(oldName, newName string) (int, error) {
 	if b.msdkWriter == nil {
 		return 0, fmt.Errorf("modelsdk writer not initialized")
 	}
-	patches, err := b.writer.ScanQualifiedNameUpdates(oldName, newName)
+	patches, err := b.reader.ScanQualifiedNameUpdates(oldName, newName)
 	if err != nil {
 		return 0, err
 	}
@@ -30,13 +30,13 @@ func (b *MprBackend) updateQualifiedNameInAllUnitsViaModelsdk(oldName, newName s
 	return updated, nil
 }
 
-// renameReferencesViaModelsdk computes patches + hits via sdk/mpr.Writer and,
-// when dryRun is false, persists each patch through the modelsdk write path.
-func (b *MprBackend) renameReferencesViaModelsdk(oldName, newName string, dryRun bool) ([]sdkmpr.RenameHit, error) {
+// renameReferencesViaModelsdk computes patches + hits via the sdk/mpr Reader
+// and, when dryRun is false, persists each patch through the modelsdk write path.
+func (b *MprBackend) renameReferencesViaModelsdk(oldName, newName string, dryRun bool) ([]types.RenameHit, error) {
 	if b.msdkWriter == nil {
 		return nil, fmt.Errorf("modelsdk writer not initialized")
 	}
-	patches, hits, err := b.writer.ScanRenameReferences(oldName, newName)
+	patches, hits, err := b.reader.ScanRenameReferences(oldName, newName)
 	if err != nil {
 		return nil, err
 	}

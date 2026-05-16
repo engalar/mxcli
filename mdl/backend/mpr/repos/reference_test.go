@@ -31,7 +31,7 @@ func openSDKWriterAt(t *testing.T) (*mmpr.Writer, *sdkmpr.Writer) {
 
 func TestReferenceService_ScanRename_NoMatches(t *testing.T) {
 	mw, sdkW := openSDKWriterAt(t)
-	svc := NewReferenceService(mw, sdkW)
+	svc := NewReferenceService(mw, sdkW.Reader())
 
 	hits, err := svc.ScanRename("Module.Definitely_Not_Here_xyz", "Module.New_xyz")
 	if err != nil {
@@ -44,7 +44,7 @@ func TestReferenceService_ScanRename_NoMatches(t *testing.T) {
 
 func TestReferenceService_UpdateEnumerationRefs_NoMatches(t *testing.T) {
 	mw, sdkW := openSDKWriterAt(t)
-	svc := NewReferenceService(mw, sdkW)
+	svc := NewReferenceService(mw, sdkW.Reader())
 
 	if err := svc.UpdateEnumerationRefsInAllDomainModels("Mod.NoSuchEnum_xyz", "Mod.NewEnum_xyz"); err != nil {
 		t.Fatalf("UpdateEnumerationRefs: %v", err)

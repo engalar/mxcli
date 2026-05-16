@@ -1,51 +1,54 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Stage 3.3.4 D8: gen→sdk bridge for the domainmodel write path.
-// CreateEntityGen / UpdateEntityGen accept gen *Entity, convert to the
-// sdk Entity that the existing *ViaModelsdk write helpers consume, then
-// delegate. Once Stage 4 rewrites sdk/mpr to consume gen directly,
-// these bridge helpers retire.
+// Stage 3.3.4 D8: gen-native domainmodel write path.
+// Create/Update/Move entity and CreateAssociation now mutate the
+// modelsdk/gen DomainModel directly and persist via UpdateDomainModelGen.
 
 package mprbackend
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
-	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
-// CreateEntityGen creates a new entity in the given domain model from a
-// gen-typed *Entity. Uses the existing createEntityViaModelsdk write
-// helper after a structural conversion (genEntityToSdk).
 func (b *MprBackend) CreateEntityGen(domainModelID model.ID, entity *genDm.Entity) error {
 	if entity == nil {
 		return fmt.Errorf("CreateEntityGen: nil entity")
 	}
-	sdkEntity := genEntityToSdk(entity)
-	return b.createEntityViaModelsdk(domainModelID, sdkEntity)
+	dm, err := b.GetDomainModelByIDGen(domainModelID)
+	if err != nil {
+		return fmt.Errorf("CreateEntityGen: load domain model: %w", err)
+	}
+	assignEntityIDsGen(entity)
+	dm.AddEntities(entity)
+	return b.UpdateDomainModelGen(dm)
 }
 
-// UpdateEntityGen updates an entity in the given domain model from a
-// gen-typed *Entity.
 func (b *MprBackend) UpdateEntityGen(domainModelID model.ID, entity *genDm.Entity) error {
 	if entity == nil {
 		return fmt.Errorf("UpdateEntityGen: nil entity")
 	}
-	sdkEntity := genEntityToSdk(entity)
-	return b.updateEntityViaModelsdk(domainModelID, sdkEntity)
+	dm, err := b.GetDomainModelByIDGen(domainModelID)
+	if err != nil {
+		return fmt.Errorf("UpdateEntityGen: load domain model: %w", err)
+	}
+	assignEntityIDsGen(entity)
+	for i, candidateElem := range dm.EntitiesItems() {
+		candidate, ok := candidateElem.(*genDm.Entity)
+		if ok && candidate != nil && candidate.ID() == entity.ID() {
+			dm.RemoveEntities(i)
+			dm.AddEntities(entity)
+			return b.UpdateDomainModelGen(dm)
+		}
+	}
+	return fmt.Errorf("entity not found: %s", entity.ID())
 }
 
-// moveEntityGen bridges a gen-typed entity move onto the existing
-// sdk-backed moveEntityViaModelsdk implementation. It reloads the
-// source DomainModel through the gen-native repo, finds the matching
-// entity by UUID, converts just that entity to sdk, and delegates the
-// actual move to the legacy writer.
 func (b *MprBackend) moveEntityGen(sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string, entity *genDm.Entity) ([]string, error) {
 	if entity == nil {
 		return nil, fmt.Errorf("MoveEntityGen: nil entity")
@@ -54,461 +57,191 @@ func (b *MprBackend) moveEntityGen(sourceDMID, targetDMID model.ID, sourceModule
 	if err != nil {
 		return nil, fmt.Errorf("MoveEntityGen: load source domain model: %w", err)
 	}
-	var sdkEntity *domainmodel.Entity
-	for _, candidateElem := range sourceDM.EntitiesItems() {
+	targetDM, err := b.GetDomainModelByIDGen(targetDMID)
+	if err != nil {
+		return nil, fmt.Errorf("MoveEntityGen: load target domain model: %w", err)
+	}
+
+	entityID := model.ID(entity.ID())
+	var moved *genDm.Entity
+	for i, candidateElem := range sourceDM.EntitiesItems() {
 		candidate, ok := candidateElem.(*genDm.Entity)
-		if ok && candidate != nil && candidate.ID() == entity.ID() {
-			sdkEntity = genEntityToSdk(candidate)
+		if ok && candidate != nil && model.ID(candidate.ID()) == entityID {
+			moved = candidate
+			sourceDM.RemoveEntities(i)
 			break
 		}
 	}
-	if sdkEntity == nil {
+	if moved == nil {
 		return nil, fmt.Errorf("MoveEntityGen: entity %s not found in source domain model %s", entity.ID(), sourceDMID)
 	}
-	return b.moveEntityViaModelsdk(sdkEntity, sourceDMID, targetDMID, sourceModuleName, targetModuleName)
-}
 
-// genEntityToSdk performs a gen → sdk conversion preserving the entity
-// structure the existing sdk-backed write helpers consume:
-//   - base entity fields / flags / location / source metadata
-//   - attributes including typed metadata and value kinds
-//   - validation rules, indexes, and event handlers
-//
-// This keeps the current write path compatible while executors migrate
-// off sdk/domainmodel one operation at a time.
-func genEntityToSdk(g *genDm.Entity) *domainmodel.Entity {
-	if g == nil {
-		return nil
-	}
-	out := &domainmodel.Entity{
-		Name:          g.Name(),
-		Documentation: g.Documentation(),
-	}
-	out.ID = model.ID(g.ID())
-	out.TypeName = "DomainModels$Entity"
-
-	switch gen := g.Generalization().(type) {
-	case *genDm.NoGeneralization:
-		out.Persistable = gen.Persistable()
-		out.HasOwner = gen.HasOwner()
-		out.HasChangedBy = gen.HasChangedBy()
-		out.HasChangedDate = gen.HasChangedDate()
-		out.HasCreatedDate = gen.HasCreatedDate()
-	case *genDm.Generalization:
-		out.GeneralizationRef = gen.GeneralizationQualifiedName()
-		// Persistable is inherited from the parent — leave at zero/false
-		// for the sdk struct; the write helper does not re-validate.
-	}
-	if x, y, ok := parseLocationXY(g.Location()); ok {
-		out.Location = model.Point{X: x, Y: y}
-	}
-	if src := g.Source(); src != nil {
-		out.SourceObjectID = model.ID(src.ID())
-	}
-
-	attrNameToID := make(map[string]model.ID)
-	for _, a := range g.AttributesItems() {
-		attr, ok := a.(*genDm.Attribute)
-		if !ok {
+	var convertedAssocs []string
+	for i := len(sourceDM.AssociationsItems()) - 1; i >= 0; i-- {
+		assoc, ok := sourceDM.AssociationsItems()[i].(*genDm.Association)
+		if !ok || assoc == nil {
 			continue
 		}
-		sdkAttr := &domainmodel.Attribute{
-			Name:          attr.Name(),
-			Documentation: attr.Documentation(),
-		}
-		sdkAttr.ID = model.ID(attr.ID())
-		sdkAttr.TypeName = "DomainModels$Attribute"
-		if t := attr.Type(); t != nil {
-			sdkAttr.Type = sdkAttrTypeFromGen(t)
-		}
-		if v := attr.Value(); v != nil {
-			sdkAttr.Value = sdkAttrValueFromGen(v)
-		}
-		switch v := attr.Value().(type) {
-		case *genRest.ODataMappedValue:
-			sdkAttr.RemoteName = v.RemoteName()
-			sdkAttr.RemoteType = v.RemoteType()
-			sdkAttr.Filterable = v.Filterable()
-			sdkAttr.Sortable = v.Sortable()
-			sdkAttr.Creatable = v.Creatable()
-			sdkAttr.Updatable = v.Updatable()
-		case *genRest.ODataMappedPrimitiveCollectionValue:
-			sdkAttr.RemoteName = v.RemoteName()
-			sdkAttr.RemoteType = v.RemoteType()
-			sdkAttr.IsPrimitiveCollection = true
-		}
-		out.Attributes = append(out.Attributes, sdkAttr)
-		attrNameToID[attr.Name()] = sdkAttr.ID
-	}
-	for _, vrElem := range g.ValidationRulesItems() {
-		vr, ok := vrElem.(*genDm.ValidationRule)
-		if !ok {
-			continue
-		}
-		sdkRule := sdkValidationRuleFromGen(vr, attrNameToID)
-		if sdkRule != nil {
-			out.ValidationRules = append(out.ValidationRules, sdkRule)
+		switch {
+		case model.ID(assoc.ChildRefID()) == entityID:
+			sourceDM.RemoveAssociations(i)
+			sourceDM.AddCrossAssociations(crossAssociationFromAssociationGen(
+				assoc,
+				assoc.ParentRefID(),
+				targetModuleName+"."+moved.Name(),
+			))
+			convertedAssocs = append(convertedAssocs, assoc.Name())
+		case model.ID(assoc.ParentRefID()) == entityID:
+			childEntityName := findEntityNameInDomainModelGen(sourceDM, model.ID(assoc.ChildRefID()))
+			sourceDM.RemoveAssociations(i)
+			targetDM.AddCrossAssociations(crossAssociationFromAssociationGen(
+				assoc,
+				element.ID(entityID),
+				sourceModuleName+"."+childEntityName,
+			))
+			convertedAssocs = append(convertedAssocs, assoc.Name())
 		}
 	}
-	for _, idxElem := range g.IndexesItems() {
-		idx, ok := idxElem.(*genDm.Index)
-		if !ok {
-			continue
-		}
-		sdkIndex := sdkIndexFromGen(idx)
-		if sdkIndex != nil {
-			out.Indexes = append(out.Indexes, sdkIndex)
-		}
+
+	rewriteEntityQualifiedNamesForMoveGen(moved, sourceModuleName, targetModuleName)
+	targetDM.AddEntities(moved)
+
+	if err := b.UpdateDomainModelGen(sourceDM); err != nil {
+		return nil, fmt.Errorf("update source domain model: %w", err)
 	}
-	for _, ehElem := range g.EventHandlersItems() {
-		eh, ok := ehElem.(*genDm.EventHandler)
-		if !ok {
-			continue
-		}
-		sdkEH := sdkEventHandlerFromGen(eh)
-		if sdkEH != nil {
-			out.EventHandlers = append(out.EventHandlers, sdkEH)
-		}
+	if err := b.UpdateDomainModelGen(targetDM); err != nil {
+		return nil, fmt.Errorf("update target domain model: %w", err)
 	}
-	switch src := g.Source().(type) {
-	case *genRest.ODataRemoteEntitySource:
-		out.Source = src.TypeName()
-		out.RemoteServiceName = src.SourceDocumentQualifiedName()
-		out.RemoteEntitySet = src.EntitySet()
-		out.RemoteEntityName = src.RemoteName()
-		out.Countable = src.Countable()
-		out.Creatable = src.Creatable()
-		out.Deletable = src.Deletable()
-		out.SkipSupported = src.SkipSupported()
-		out.TopSupported = src.TopSupported()
-		out.CreateChangeLocally = src.CreateChangeLocally()
-		if key, ok := src.Key().(*genRest.ODataKey); ok && key != nil {
-			for _, partElem := range key.PartsItems() {
-				part, ok := partElem.(*genRest.ODataKeyPart)
-				if !ok {
-					continue
-				}
-				out.RemoteKeyParts = append(out.RemoteKeyParts, &domainmodel.RemoteKeyPart{
-					Name:       part.EntityKeyPartName(),
-					RemoteName: part.Name(),
-					RemoteType: part.RemoteType(),
-					Type:       stubAttrTypeFromGen(typeNameForKeyPart(part.Type())),
-				})
-			}
-		}
-	case *genRest.ODataEntityTypeSource:
-		out.Source = src.TypeName()
-		out.RemoteServiceName = src.SourceDocumentQualifiedName()
-		out.RemoteEntityName = src.EntityTypeName()
-		out.IsOpen = src.IsOpen()
-		if key, ok := src.Key().(*genRest.ODataKey); ok && key != nil {
-			for _, partElem := range key.PartsItems() {
-				part, ok := partElem.(*genRest.ODataKeyPart)
-				if !ok {
-					continue
-				}
-				out.RemoteKeyParts = append(out.RemoteKeyParts, &domainmodel.RemoteKeyPart{
-					Name:       part.EntityKeyPartName(),
-					RemoteName: part.Name(),
-					RemoteType: part.RemoteType(),
-					Type:       stubAttrTypeFromGen(typeNameForKeyPart(part.Type())),
-				})
-			}
-		}
-	case *genRest.ODataPrimitiveCollectionEntitySource:
-		out.Source = src.TypeName()
-		out.RemoteServiceName = src.SourceDocumentQualifiedName()
-	case *genDm.OqlViewEntitySource:
-		out.Source = src.TypeName()
-		out.SourceDocumentRef = src.SourceDocumentQualifiedName()
-		out.OqlQuery = src.Oql()
-	}
-	return out
+	return convertedAssocs, nil
 }
 
-func sdkAttrTypeFromGen(t interface{ TypeName() string }) domainmodel.AttributeType {
-	if t == nil {
-		return &domainmodel.StringAttributeType{Length: 200}
-	}
-	switch typed := t.(type) {
-	case *genDm.StringAttributeType:
-		return &domainmodel.StringAttributeType{Length: int(typed.Length())}
-	case *genDm.IntegerAttributeType:
-		return &domainmodel.IntegerAttributeType{}
-	case *genDm.LongAttributeType:
-		return &domainmodel.LongAttributeType{}
-	case *genDm.DecimalAttributeType:
-		return &domainmodel.DecimalAttributeType{}
-	case *genDm.BooleanAttributeType:
-		return &domainmodel.BooleanAttributeType{}
-	case *genDm.DateTimeAttributeType:
-		return &domainmodel.DateTimeAttributeType{LocalizeDate: typed.LocalizeDate()}
-	case *genDm.AutoNumberAttributeType:
-		return &domainmodel.AutoNumberAttributeType{}
-	case *genDm.BinaryAttributeType:
-		return &domainmodel.BinaryAttributeType{}
-	case *genDm.EnumerationAttributeType:
-		return &domainmodel.EnumerationAttributeType{
-			EnumerationRef: typed.EnumerationQualifiedName(),
-		}
-	default:
-		return stubAttrTypeFromGen(t.TypeName())
-	}
-}
-
-func sdkAttrValueFromGen(v any) *domainmodel.AttributeValue {
-	switch typed := v.(type) {
-	case *genDm.StoredValue:
-		out := &domainmodel.AttributeValue{
-			DefaultValue: typed.DefaultValue(),
-		}
-		out.ID = model.ID(typed.ID())
-		return out
-	case *genDm.CalculatedValue:
-		out := &domainmodel.AttributeValue{
-			Type:          "CalculatedValue",
-			MicroflowName: typed.MicroflowQualifiedName(),
-		}
-		out.ID = model.ID(typed.ID())
-		return out
-	case *genDm.OqlViewValue:
-		out := &domainmodel.AttributeValue{
-			ViewReference: typed.Reference(),
-		}
-		out.ID = model.ID(typed.ID())
-		return out
-	case *genRest.ODataMappedValue:
-		out := &domainmodel.AttributeValue{
-			DefaultValue: typed.DefaultValueDesignTime(),
-		}
-		out.ID = model.ID(typed.ID())
-		return out
-	case *genRest.ODataMappedPrimitiveCollectionValue:
-		out := &domainmodel.AttributeValue{
-			DefaultValue: typed.DefaultValueDesignTime(),
-		}
-		out.ID = model.ID(typed.ID())
-		return out
-	default:
-		return nil
-	}
-}
-
-func sdkValidationRuleFromGen(vr *genDm.ValidationRule, attrNameToID map[string]model.ID) *domainmodel.ValidationRule {
-	if vr == nil {
-		return nil
-	}
-	attrName := lastQualifiedSegment(vr.AttributeQualifiedName())
-	attrID := attrNameToID[attrName]
-	if attrID == "" {
-		return nil
-	}
-	out := &domainmodel.ValidationRule{
-		AttributeID: attrID,
-	}
-	out.ID = model.ID(vr.ID())
-	switch vr.RuleInfo().(type) {
-	case *genDm.RequiredRuleInfo:
-		out.Type = "Required"
-		out.Rule = &domainmodel.RequiredValidationRuleInfo{}
-	case *genDm.UniqueRuleInfo:
-		out.Type = "Unique"
-		out.Rule = &domainmodel.UniqueValidationRuleInfo{}
-	default:
-		return nil
-	}
-	if txt := modelTextFromGen(vr.ErrorMessage()); txt != nil {
-		out.ErrorMessage = txt
-	}
-	return out
-}
-
-func modelTextFromGen(elem any) *model.Text {
-	txt, ok := elem.(*genTexts.Text)
-	if !ok || txt == nil {
-		return nil
-	}
-	out := &model.Text{Translations: map[string]string{}}
-	for _, trElem := range txt.TranslationsItems() {
-		tr, ok := trElem.(*genTexts.Translation)
-		if !ok {
-			continue
-		}
-		out.Translations[tr.LanguageCode()] = tr.Text()
-	}
-	if len(out.Translations) == 0 {
-		return nil
-	}
-	return out
-}
-
-func sdkIndexFromGen(idx *genDm.Index) *domainmodel.Index {
-	if idx == nil {
-		return nil
-	}
-	out := &domainmodel.Index{}
-	out.ID = model.ID(idx.ID())
-	for _, attrElem := range idx.AttributesItems() {
-		ia, ok := attrElem.(*genDm.IndexedAttribute)
-		if !ok {
-			continue
-		}
-		sdkIA := &domainmodel.IndexAttribute{
-			AttributeID: model.ID(ia.AttributeRefID()),
-			Ascending:   ia.Ascending(),
-		}
-		sdkIA.ID = model.ID(ia.ID())
-		out.Attributes = append(out.Attributes, sdkIA)
-	}
-	if len(out.Attributes) == 0 {
-		return nil
-	}
-	return out
-}
-
-func sdkEventHandlerFromGen(eh *genDm.EventHandler) *domainmodel.EventHandler {
-	if eh == nil {
-		return nil
-	}
-	out := &domainmodel.EventHandler{
-		Moment:            domainmodel.EventMoment(eh.Moment()),
-		Event:             domainmodel.EventType(eh.Event()),
-		MicroflowName:     eh.MicroflowQualifiedName(),
-		RaiseErrorOnFalse: eh.RaiseErrorOnFalse(),
-		PassEventObject:   eh.PassEventObject(),
-	}
-	out.ID = model.ID(eh.ID())
-	return out
-}
-
-func lastQualifiedSegment(qn string) string {
-	if qn == "" {
-		return ""
-	}
-	if i := strings.LastIndex(qn, "."); i >= 0 && i < len(qn)-1 {
-		return qn[i+1:]
-	}
-	return qn
-}
-
-func typeNameForKeyPart(elem any) string {
-	typeNamer, ok := elem.(interface{ TypeName() string })
-	if !ok || typeNamer == nil {
-		return ""
-	}
-	typeName := typeNamer.TypeName()
-	if strings.HasPrefix(typeName, "Rest$") {
-		typeName = strings.TrimPrefix(typeName, "Rest$")
-	}
-	return typeName
-}
-
-func parseLocationXY(loc string) (int, int, bool) {
-	if loc == "" {
-		return 0, 0, false
-	}
-	parts := strings.Split(loc, ",")
-	if len(parts) != 2 {
-		return 0, 0, false
-	}
-	x, errX := strconv.Atoi(strings.TrimSpace(parts[0]))
-	y, errY := strconv.Atoi(strings.TrimSpace(parts[1]))
-	if errX != nil || errY != nil {
-		return 0, 0, false
-	}
-	return x, y, true
-}
-
-// CreateAssociationGen creates a new association in the given domain
-// model from a gen-typed *Association. Bridges to the existing
-// createAssociationViaModelsdk write helper.
 func (b *MprBackend) CreateAssociationGen(domainModelID model.ID, assoc *genDm.Association) error {
 	if assoc == nil {
 		return fmt.Errorf("CreateAssociationGen: nil association")
 	}
-	sdkAssoc := genAssociationToSdk(assoc)
-	return b.createAssociationViaModelsdk(domainModelID, sdkAssoc)
+	dm, err := b.GetDomainModelByIDGen(domainModelID)
+	if err != nil {
+		return fmt.Errorf("CreateAssociationGen: load domain model: %w", err)
+	}
+	assignElementIDGen(assoc)
+	assignElementIDGen(assoc.DeleteBehavior())
+	assignElementIDGen(assoc.Source())
+	assignElementIDGen(assoc.Capabilities())
+	dm.AddAssociations(assoc)
+	return b.UpdateDomainModelGen(dm)
 }
 
-// genAssociationToSdk performs a shallow gen → sdk conversion preserving
-// the fields the *ViaModelsdk write helper consumes:
-//   - Name / ID / Documentation
-//   - ParentID (FROM entity, FK owner per CLAUDE.md "Association Parent/Child Pointer Semantics")
-//   - ChildID (TO entity)
-//   - Type / Owner / StorageFormat strings → sdk enums via the small
-//     converter functions inline below.
-func genAssociationToSdk(g *genDm.Association) *domainmodel.Association {
-	if g == nil {
-		return nil
+func assignEntityIDsGen(entity *genDm.Entity) {
+	if entity == nil {
+		return
 	}
-	out := &domainmodel.Association{
-		Name:          g.Name(),
-		Documentation: g.Documentation(),
+	assignElementIDGen(entity)
+	assignElementIDGen(entity.Generalization())
+	assignElementIDGen(entity.Source())
+	for _, attrElem := range entity.AttributesItems() {
+		attr, ok := attrElem.(*genDm.Attribute)
+		if !ok || attr == nil {
+			continue
+		}
+		assignElementIDGen(attr)
+		assignElementIDGen(attr.Type())
+		assignElementIDGen(attr.Value())
 	}
-	out.ID = model.ID(g.ID())
-	out.TypeName = "DomainModels$Association"
-	out.ParentID = model.ID(g.ParentRefID())
-	out.ChildID = model.ID(g.ChildRefID())
+	for _, vrElem := range entity.ValidationRulesItems() {
+		vr, ok := vrElem.(*genDm.ValidationRule)
+		if !ok || vr == nil {
+			continue
+		}
+		assignElementIDGen(vr)
+		assignElementIDGen(vr.ErrorMessage())
+		assignElementIDGen(vr.RuleInfo())
+	}
+	for _, ehElem := range entity.EventHandlersItems() {
+		assignElementIDGen(ehElem)
+	}
+	for _, idxElem := range entity.IndexesItems() {
+		idx, ok := idxElem.(*genDm.Index)
+		if !ok || idx == nil {
+			continue
+		}
+		assignElementIDGen(idx)
+		for _, attrElem := range idx.AttributesItems() {
+			assignElementIDGen(attrElem)
+		}
+	}
+}
 
-	switch g.Type() {
-	case "ReferenceSet":
-		out.Type = domainmodel.AssociationTypeReferenceSet
-	default:
-		out.Type = domainmodel.AssociationTypeReference
+func assignElementIDGen(elem any) {
+	idElem, ok := elem.(interface {
+		ID() element.ID
+		SetID(element.ID)
+	})
+	if !ok || idElem == nil || idElem.ID() != "" {
+		return
 	}
-	switch g.Owner() {
-	case "Both":
-		out.Owner = domainmodel.AssociationOwnerBoth
-	default:
-		out.Owner = domainmodel.AssociationOwnerDefault
+	idElem.SetID(element.ID(modelsdkmpr.GenerateID()))
+}
+
+func crossAssociationFromAssociationGen(assoc *genDm.Association, parentID element.ID, childQualifiedName string) *genDm.CrossAssociation {
+	out := genDm.NewCrossAssociation()
+	if assoc != nil {
+		if assoc.ID() != "" {
+			out.SetID(assoc.ID())
+		}
+		out.SetName(assoc.Name())
+		out.SetDocumentation(assoc.Documentation())
+		out.SetType(assoc.Type())
+		out.SetOwner(assoc.Owner())
+		out.SetStorageFormat(assoc.StorageFormat())
+		out.SetDataStorageGuid(assoc.DataStorageGuid())
+		out.SetDeleteBehavior(assoc.DeleteBehavior())
+		out.SetRemoteSourceDocumentQualifiedName(assoc.RemoteSourceDocumentQualifiedName())
+		out.SetSource(assoc.Source())
+		out.SetCapabilities(assoc.Capabilities())
+		out.SetExportLevel(assoc.ExportLevel())
 	}
-	switch g.StorageFormat() {
-	case "Column":
-		out.StorageFormat = domainmodel.StorageFormatColumn
-	default:
-		out.StorageFormat = domainmodel.StorageFormatTable
+	if out.ID() == "" {
+		assignElementIDGen(out)
 	}
-	switch src := g.Source().(type) {
-	case *genRest.ODataRemoteAssociationSource:
-		out.Source = src.TypeName()
-		out.RemoteParentNavigationProperty = src.RemoteParentNavigationProperty()
-		out.RemoteChildNavigationProperty = src.RemoteChildNavigationProperty()
-		out.CreatableFromParent = src.CreatableFromParent()
-		out.CreatableFromChild = src.CreatableFromChild()
-		out.UpdatableFromParent = src.UpdatableFromParent()
-		out.UpdatableFromChild = src.UpdatableFromChild()
-		out.Navigability2 = src.Navigability2()
-	case *genRest.ODataPrimitiveCollectionAssociationSource:
-		out.Source = src.TypeName()
-	}
+	out.SetParentID(parentID)
+	out.SetChildQualifiedName(childQualifiedName)
 	return out
 }
 
-// stubAttrTypeFromGen returns the matching sdk AttributeType subtype for
-// a given gen storage TypeName, wired with default values. Round-trip
-// from gen to sdk loses parameter values (length, enum ref, etc.); D8.attr
-// extends this to read the gen element's typed accessors and copy them
-// onto the sdk subtype.
-func stubAttrTypeFromGen(typeName string) domainmodel.AttributeType {
-	switch typeName {
-	case "DomainModels$StringAttributeType":
-		return &domainmodel.StringAttributeType{}
-	case "DomainModels$IntegerAttributeType":
-		return &domainmodel.IntegerAttributeType{}
-	case "DomainModels$LongAttributeType":
-		return &domainmodel.LongAttributeType{}
-	case "DomainModels$DecimalAttributeType":
-		return &domainmodel.DecimalAttributeType{}
-	case "DomainModels$BooleanAttributeType":
-		return &domainmodel.BooleanAttributeType{}
-	case "DomainModels$DateTimeAttributeType":
-		return &domainmodel.DateTimeAttributeType{LocalizeDate: true}
-	case "DomainModels$AutoNumberAttributeType":
-		return &domainmodel.AutoNumberAttributeType{}
-	case "DomainModels$BinaryAttributeType":
-		return &domainmodel.BinaryAttributeType{}
-	case "DomainModels$EnumerationAttributeType":
-		return &domainmodel.EnumerationAttributeType{}
+func findEntityNameInDomainModelGen(dm *genDm.DomainModel, entityID model.ID) string {
+	if dm == nil || entityID == "" {
+		return ""
 	}
-	return &domainmodel.StringAttributeType{Length: 200}
+	for _, entityElem := range dm.EntitiesItems() {
+		entity, ok := entityElem.(*genDm.Entity)
+		if ok && entity != nil && model.ID(entity.ID()) == entityID {
+			return entity.Name()
+		}
+	}
+	return ""
+}
+
+func rewriteEntityQualifiedNamesForMoveGen(entity *genDm.Entity, sourceModuleName, targetModuleName string) {
+	if entity == nil || sourceModuleName == "" || targetModuleName == "" || sourceModuleName == targetModuleName {
+		return
+	}
+	oldPrefix := sourceModuleName + "."
+	newPrefix := targetModuleName + "."
+
+	for _, vrElem := range entity.ValidationRulesItems() {
+		vr, ok := vrElem.(*genDm.ValidationRule)
+		if ok && vr != nil {
+			vr.SetAttributeQualifiedName(rewriteQualifiedPrefixGen(vr.AttributeQualifiedName(), oldPrefix, newPrefix))
+		}
+	}
+	if src, ok := entity.Source().(*genDm.OqlViewEntitySource); ok && src != nil {
+		src.SetSourceDocumentQualifiedName(rewriteQualifiedPrefixGen(src.SourceDocumentQualifiedName(), oldPrefix, newPrefix))
+	}
+}
+
+func rewriteQualifiedPrefixGen(qn, oldPrefix, newPrefix string) string {
+	if strings.HasPrefix(qn, oldPrefix) {
+		return newPrefix + qn[len(oldPrefix):]
+	}
+	return qn
 }
