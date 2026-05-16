@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	gendomainmodels "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"go.mongodb.org/mongo-driver/bson"
 	_ "modernc.org/sqlite"
 )
@@ -246,12 +246,11 @@ func seedDomainModelUnit(t *testing.T, w *Writer, db *sql.DB) (unitID model.ID, 
 }
 
 // TestAddEntityAccessRule_XPathConstraint_FullRoundtrip verifies the complete
-// flow for issue #431: AddEntityAccessRule + ReconcileMemberAccesses + parseDomainModel.
+// flow for issue #431: AddEntityAccessRule + ReconcileMemberAccesses + parseDomainModelGen.
 // Ensures that XPath and read/write rights survive the full write-then-read cycle.
 func TestAddEntityAccessRule_XPathConstraint_FullRoundtrip(t *testing.T) {
 	w, db := newTestWriterSecurity(t)
 	unitID, _ := seedDomainModelUnit(t, w, db)
-	containerIDStr := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 
 	err := w.AddEntityAccessRule(
 		unitID, "Order",
@@ -274,20 +273,25 @@ func TestAddEntityAccessRule_XPathConstraint_FullRoundtrip(t *testing.T) {
 	}
 	_ = count
 
-	// Read back via parseDomainModel (same path as GetDomainModel)
-	dm, err := w.reader.GetDomainModel(model.ID(containerIDStr))
+	// Read back via parseDomainModelGen (gen-typed path)
+	dm, err := w.reader.GetDomainModelByIDGen(model.ID(unitID))
 	if err != nil {
-		t.Fatalf("GetDomainModel: %v", err)
+		t.Fatalf("GetDomainModelByIDGen: %v", err)
 	}
 
-	if len(dm.Entities) == 0 {
+	entities := dm.EntitiesItems()
+	if len(entities) == 0 {
 		t.Fatal("no entities found in domain model")
 	}
 
-	var order *domainmodel.Entity
-	for _, e := range dm.Entities {
-		if e.Name == "Order" {
-			order = e
+	var order *gendomainmodels.Entity
+	for _, e := range entities {
+		ent, ok := e.(*gendomainmodels.Entity)
+		if !ok {
+			continue
+		}
+		if ent.Name() == "Order" {
+			order = ent
 			break
 		}
 	}
@@ -295,21 +299,26 @@ func TestAddEntityAccessRule_XPathConstraint_FullRoundtrip(t *testing.T) {
 		t.Fatal("Order entity not found")
 	}
 
-	if len(order.AccessRules) == 0 {
+	accessRules := order.AccessRulesItems()
+	if len(accessRules) == 0 {
 		t.Fatal("AccessRules empty after AddEntityAccessRule + ReconcileMemberAccesses (issue #431)")
 	}
 
-	rule := order.AccessRules[0]
-	if rule.XPathConstraint != "[Status = 'Open']" {
-		t.Errorf("XPathConstraint = %q, want %q", rule.XPathConstraint, "[Status = 'Open']")
+	rule, ok := accessRules[0].(*gendomainmodels.AccessRule)
+	if !ok {
+		t.Fatalf("accessRules[0] is %T, want *gendomainmodels.AccessRule", accessRules[0])
 	}
-	if rule.DefaultMemberAccessRights != domainmodel.MemberAccessRightsReadWrite {
-		t.Errorf("DefaultMemberAccessRights = %q, want ReadWrite", rule.DefaultMemberAccessRights)
+	if rule.XPathConstraint() != "[Status = 'Open']" {
+		t.Errorf("XPathConstraint = %q, want %q", rule.XPathConstraint(), "[Status = 'Open']")
 	}
-	if len(rule.ModuleRoleNames) == 0 || rule.ModuleRoleNames[0] != "MyModule.User" {
-		t.Errorf("ModuleRoleNames = %v, want [MyModule.User]", rule.ModuleRoleNames)
+	if rule.DefaultMemberAccessRights() != gendomainmodels.MemberAccessRightsReadWrite {
+		t.Errorf("DefaultMemberAccessRights = %q, want ReadWrite", rule.DefaultMemberAccessRights())
 	}
-	if len(rule.MemberAccesses) == 0 {
+	roleNames := rule.ModuleRolesQualifiedNames()
+	if len(roleNames) == 0 || roleNames[0] != "MyModule.User" {
+		t.Errorf("ModuleRolesQualifiedNames = %v, want [MyModule.User]", roleNames)
+	}
+	if len(rule.MemberAccessesItems()) == 0 {
 		t.Error("MemberAccesses empty after reconciliation")
 	}
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	gendomainmodels "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 
@@ -70,116 +69,6 @@ func (r *Reader) GetModuleByName(name string) (*model.Module, error) {
 	}
 
 	return nil, fmt.Errorf("module not found: %s", name)
-}
-
-// ListDomainModels returns all domain models in the project.
-func (r *Reader) ListDomainModels() ([]*domainmodel.DomainModel, error) {
-	units, err := r.listUnitsByType("DomainModels$DomainModel")
-	if err != nil {
-		return nil, err
-	}
-
-	var domainModels []*domainmodel.DomainModel
-	for _, u := range units {
-		dm, err := r.parseDomainModel(u.ID, u.ContainerID, u.Contents)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse domain model %s: %w", u.ID, err)
-		}
-		domainModels = append(domainModels, dm)
-	}
-
-	// Load OQL queries for view entities
-	oqlMap, err := r.loadViewEntityOqlQueries()
-	if err != nil {
-		// Non-fatal error, just skip OQL population
-		return domainModels, nil
-	}
-
-	// Populate OQL queries for view entities
-	for _, dm := range domainModels {
-		for _, entity := range dm.Entities {
-			if entity.SourceDocumentRef != "" {
-				if oql, ok := oqlMap[entity.SourceDocumentRef]; ok {
-					entity.OqlQuery = oql
-				}
-			}
-		}
-	}
-
-	// Append virtual System module domain model
-	domainModels = append(domainModels, BuildSystemDomainModel())
-
-	return domainModels, nil
-}
-
-// loadViewEntityOqlQueries loads all ViewEntitySourceDocuments and returns a map of qualified name -> OQL query.
-func (r *Reader) loadViewEntityOqlQueries() (map[string]string, error) {
-	units, err := r.listUnitsByType("DomainModels$ViewEntitySourceDocument")
-	if err != nil {
-		return nil, err
-	}
-
-	// Build module ID -> name map once (for efficiency)
-	modules, err := r.ListModules()
-	if err != nil {
-		return nil, err
-	}
-	moduleNames := make(map[string]string)
-	for _, m := range modules {
-		moduleNames[string(m.ID)] = m.Name
-	}
-
-	result := make(map[string]string)
-	for _, u := range units {
-		var raw map[string]any
-		if err := bson.Unmarshal(u.Contents, &raw); err != nil {
-			continue
-		}
-
-		name, _ := raw["Name"].(string)
-		oql, _ := raw["Oql"].(string)
-
-		if name != "" {
-			// Build qualified name from module + name
-			moduleName := moduleNames[u.ContainerID]
-			qualifiedName := moduleName + "." + name
-			result[qualifiedName] = oql
-		}
-	}
-
-	return result, nil
-}
-
-// GetDomainModel retrieves a domain model by module ID.
-func (r *Reader) GetDomainModel(moduleID model.ID) (*domainmodel.DomainModel, error) {
-	domainModels, err := r.ListDomainModels()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, dm := range domainModels {
-		if dm.ContainerID == moduleID {
-			return dm, nil
-		}
-	}
-
-	return nil, fmt.Errorf("domain model not found for module: %s", moduleID)
-}
-
-// GetDomainModelByID retrieves a domain model by its own ID.
-func (r *Reader) GetDomainModelByID(id model.ID) (*domainmodel.DomainModel, error) {
-	domainModels, err := r.ListDomainModels()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, dm := range domainModels {
-		if dm.ID == id {
-			return dm, nil
-		}
-	}
-
-	return nil, fmt.Errorf("domain model not found: %s", id)
 }
 
 // ListDomainModelsGen returns all domain models as gen-typed DomainModel values.

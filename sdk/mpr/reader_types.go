@@ -4,7 +4,6 @@
 package mpr
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
@@ -291,50 +290,6 @@ func (r *Reader) ListFolders() ([]*types.FolderInfo, error) {
 	}
 
 	return result, nil
-}
-
-// ExportJSON exports the entire model as JSON.
-func (r *Reader) ExportJSON() ([]byte, error) {
-	modules, err := r.ListModules()
-	if err != nil {
-		modules = nil // Continue even if modules fail
-	}
-
-	domainModels, err := r.ListDomainModels()
-	if err != nil {
-		domainModels = nil
-	}
-
-	pagesList, err := r.ListPages()
-	if err != nil {
-		pagesList = nil
-	}
-
-	layouts, err := r.ListLayouts()
-	if err != nil {
-		layouts = nil
-	}
-
-	enumerations, err := r.ListEnumerations()
-	if err != nil {
-		enumerations = nil
-	}
-
-	constants, err := r.ListConstants()
-	if err != nil {
-		constants = nil
-	}
-
-	export := map[string]any{
-		"modules":      modules,
-		"domainModels": domainModels,
-		"pages":        pagesList,
-		"layouts":      layouts,
-		"enumerations": enumerations,
-		"constants":    constants,
-	}
-
-	return json.MarshalIndent(export, "", "  ")
 }
 
 // GetUnitTypes returns a count of units by type.
