@@ -15,6 +15,7 @@ import (
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
+	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/spf13/cobra"
 )
 
@@ -71,7 +72,11 @@ Example:
 }
 
 func buildProjectTree(projectPath string) ([]*TreeNode, error) {
-	reader, err := openProjectTreeReader(projectPath)
+	// project-tree consumes ~30 sdk/mpr.Reader methods (ListEnumerations,
+	// ListConstants, GetProjectSettings, ListBusinessEventServices, ...) that
+	// have no modelsdk/mpr.Reader equivalent today. Read-path migration is
+	// deferred to Phase 4; keep the sdk/mpr reader here until then.
+	reader, err := sdkmpr.Open(projectPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open project: %w", err)
 	}
