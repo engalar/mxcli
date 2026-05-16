@@ -8,8 +8,8 @@ package mprbackend
 import (
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
 	"github.com/mendixlabs/mxcli/mdl/repos"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
-	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // NewExecutorContext wires a single *mmpr.Writer through every Stage 2/2.6
@@ -25,20 +25,13 @@ func NewExecutorContext(w *mmpr.Writer) *repos.ExecutorContext {
 	return ctx
 }
 
-// NewExecutorContextWithReferences wires Cascade + References. The
-// References service requires a *sdk/mpr.Writer for the BSON scanners
-// (ScanRenameReferences, PatchNavigationProfile, ScanQualifiedNameUpdates);
-// the modelsdk Writer handles all persistence. Both writers MUST share
-// the same SQLite *sql.DB connection — see mprbackend.Wrap for the
-// canonical pattern.
-//
-// Stage 4 cleanup will port the scanners themselves into mprrepos and
-// drop the sdk/mpr dependency, collapsing this constructor back into
-// NewExecutorContext.
-func NewExecutorContextWithReferences(mw *mmpr.Writer, sdkW *sdkmpr.Writer) *repos.ExecutorContext {
+// NewExecutorContextWithReferences wires Cascade + References. scanner must
+// implement types.BSONScanner (sdk/mpr.Reader satisfies this) and share
+// the same SQLite *sql.DB connection as mw.
+func NewExecutorContextWithReferences(mw *mmpr.Writer, scanner types.BSONScanner) *repos.ExecutorContext {
 	ctx := newExecutorContextCommon(mw)
 	ctx.Cascade = mprrepos.NewCascadeService(mw)
-	ctx.References = mprrepos.NewReferenceService(mw, sdkW)
+	ctx.References = mprrepos.NewReferenceService(mw, scanner)
 	return ctx
 }
 

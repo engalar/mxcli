@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.mongodb.org/mongo-driver/bson"
+
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
@@ -15,7 +17,6 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	msdkprojects "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // ────────────────────────────────────────────────────────
@@ -168,33 +169,43 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 	if module.ID == "" {
 		module.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	module.TypeName = "Projects$ModuleImpl"
 
 	projectRootID, err := b.reader.GetProjectRootID()
 	if err != nil {
 		return fmt.Errorf("failed to get project root: %w", err)
 	}
 
-	moduleContents, err := mpr.SerializeModule(module)
-	if err != nil {
-		return fmt.Errorf("failed to serialize module: %w", err)
-	}
-	if err := b.msdkWriter.InsertUnit(string(module.ID), projectRootID, "Modules", "Projects$ModuleImpl", moduleContents); err != nil {
-		return fmt.Errorf("failed to insert module unit: %w", err)
-	}
-
 	w, ok := b.concreteWriter()
 	if !ok {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
+
+	// Module unit — gen-native via codec encoder
+	genModule := msdkprojects.NewModule()
+	genModule.SetID(element.ID(module.ID))
+	genModule.SetName(module.Name)
+	genModule.SetFromAppStore(module.FromAppStore)
+	genModule.SetAppStoreGuid(module.AppStoreGuid)
+	genModule.SetAppStoreVersion(module.AppStoreVersion)
+	genModule.SetIsReusableComponent(module.IsReusableComponent)
+	if err := mprrepos.NewModuleRepository(w).Create(projectRootID, "Modules", genModule); err != nil {
+		return fmt.Errorf("failed to insert module unit: %w", err)
+	}
+
+	// DomainModel unit — gen-native
 	dm := genDm.NewDomainModel()
 	dm.SetID(element.ID(modelsdkmpr.GenerateID()))
 	if err := mprrepos.NewDomainModelRepository(w).Create(string(module.ID), "DomainModel", dm); err != nil {
 		return fmt.Errorf("failed to insert domain model unit: %w", err)
 	}
 
+	// ModuleSecurity unit — inline BSON (static 3-field document)
 	msID := modelsdkmpr.GenerateID()
-	msContents, err := mpr.SerializeModuleSecurity(msID)
+	msContents, err := bson.Marshal(bson.M{
+		"$ID":         modelsdkmpr.IDToBsonBinary(msID),
+		"$Type":       "Security$ModuleSecurity",
+		"ModuleRoles": bson.A{int32(1)},
+	})
 	if err != nil {
 		return fmt.Errorf("failed to serialize module security: %w", err)
 	}
@@ -202,8 +213,19 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 		return fmt.Errorf("failed to insert module security unit: %w", err)
 	}
 
+	// ModuleSettings unit — inline BSON (static default document)
 	settingsID := modelsdkmpr.GenerateID()
-	settingsContents, err := mpr.SerializeModuleSettings(settingsID)
+	settingsContents, err := bson.Marshal(bson.M{
+		"$ID":                 modelsdkmpr.IDToBsonBinary(settingsID),
+		"$Type":               "Projects$ModuleSettings",
+		"BasedOnVersion":      "",
+		"ExportLevel":         "Source",
+		"ExtensionName":       "",
+		"JarDependencies":     bson.A{int32(2)},
+		"ProtectedModuleType": "AddOn",
+		"SolutionIdentifier":  "",
+		"Version":             "1.0.0",
+	})
 	if err != nil {
 		return fmt.Errorf("failed to serialize module settings: %w", err)
 	}
@@ -226,13 +248,17 @@ func (b *MprBackend) createFolderViaModelsdk(folder *model.Folder) error {
 	if folder.ID == "" {
 		folder.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	folder.TypeName = "Projects$Folder"
 
-	contents, err := mpr.SerializeFolder(folder)
-	if err != nil {
-		return fmt.Errorf("failed to serialize folder: %w", err)
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	if err := b.msdkWriter.InsertUnit(string(folder.ID), string(folder.ContainerID), "Folders", "Projects$Folder", contents); err != nil {
+
+	// Folder unit — gen-native via codec encoder
+	genFolder := msdkprojects.NewFolder()
+	genFolder.SetID(element.ID(folder.ID))
+	genFolder.SetName(folder.Name)
+	if err := mprrepos.NewFolderRepository(w).Create(string(folder.ContainerID), "Folders", genFolder); err != nil {
 		return fmt.Errorf("failed to insert folder unit: %w", err)
 	}
 

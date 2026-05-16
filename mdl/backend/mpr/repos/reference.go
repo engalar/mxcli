@@ -12,31 +12,23 @@ import (
 	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
-// referenceService implements repos.ReferenceService. It delegates the
-// BSON-walking heavy lift (ScanRenameReferences, PatchNavigationProfile,
-// ScanQualifiedNameUpdates) to sdk/mpr.Writer's mature scanners, then
-// persists each computed patch through the modelsdk WriteTransaction to
-// avoid the SQLITE_READONLY_DBMOVED 1544 bug in the legacy update path.
-//
-// Future cleanup (Stage 4): port the scanners themselves to mdl/repos so
-// the sdk/mpr import here disappears. Tracked separately.
+// referenceService implements repos.ReferenceService using the types.BSONScanner
+// interface for BSON scanning and the modelsdk Writer for persistence.
 type referenceService struct {
 	mw   *mmpr.Writer
-	sdkW *sdkmpr.Writer
+	sdkR types.BSONScanner
 }
 
-// NewReferenceService constructs a ReferenceService that uses the modelsdk
-// Writer for persistence and the sdk/mpr Writer for BSON scanning. Both
-// MUST share the same underlying SQLite connection (see mprbackend.Wrap
-// for the canonical pattern).
-func NewReferenceService(mw *mmpr.Writer, sdkW *sdkmpr.Writer) repos.ReferenceService {
-	return &referenceService{mw: mw, sdkW: sdkW}
+// NewReferenceService constructs a ReferenceService. scanner must share the
+// same underlying SQLite connection as mw.
+func NewReferenceService(mw *mmpr.Writer, scanner types.BSONScanner) repos.ReferenceService {
+	return &referenceService{mw: mw, sdkR: scanner}
 }
 
 var _ repos.ReferenceService = (*referenceService)(nil)
 
 func (s *referenceService) ScanRename(oldQN, newQN string) ([]repos.RenameHit, error) {
-	patches, hits, err := s.sdkW.ScanRenameReferences(oldQN, newQN)
+	patches, hits, err := s.sdkR.ScanRenameReferences(oldQN, newQN)
 	if err != nil {
 		return nil, fmt.Errorf("scan rename references: %w", err)
 	}
@@ -54,7 +46,7 @@ func (s *referenceService) PatchNavigationProfile(navDocID model.ID, profileName
 	if err != nil {
 		return fmt.Errorf("read nav unit %s: %w", navDocID, err)
 	}
-	patched, err := s.sdkW.PatchNavigationProfile(rawBytes, profileName, spec)
+	patched, err := sdkmpr.PatchNavigationProfile(rawBytes, profileName, types.NavigationProfileSpec(spec))
 	if err != nil {
 		return fmt.Errorf("patch navigation profile: %w", err)
 	}
@@ -65,7 +57,7 @@ func (s *referenceService) UpdateEnumerationRefsInAllDomainModels(oldQN, newQN s
 	// Reuse the sdk/mpr qualified-name scanner — it walks every BSON string
 	// regardless of domain, which is exactly what we want for the
 	// EnumerationRef field embedded in Attribute.Type.
-	patches, err := s.sdkW.ScanQualifiedNameUpdates(oldQN, newQN)
+	patches, err := s.sdkR.ScanQualifiedNameUpdates(oldQN, newQN)
 	if err != nil {
 		return fmt.Errorf("scan qualified-name updates: %w", err)
 	}
@@ -94,7 +86,7 @@ func (s *referenceService) writeUnit(unitID string, contents []byte) error {
 	return nil
 }
 
-func convertHits(in []sdkmpr.RenameHit) []repos.RenameHit {
+func convertHits(in []types.RenameHit) []repos.RenameHit {
 	out := make([]repos.RenameHit, len(in))
 	for i, h := range in {
 		out[i] = repos.RenameHit{

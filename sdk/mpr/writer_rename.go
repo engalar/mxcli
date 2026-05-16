@@ -10,13 +10,6 @@ import (
 )
 
 // RenameHit describes a document that contains references to a renamed element.
-type RenameHit struct {
-	UnitID   string // Document UUID
-	UnitType string // e.g., "Microflows$Microflow"
-	Name     string // Document name (if found)
-	Count    int    // Number of string replacements in this document
-}
-
 // RenameReferences scans all documents in the project and replaces qualified name
 // strings matching oldName with newName. Returns the list of affected documents.
 //
@@ -87,8 +80,8 @@ func (w *Writer) RenameReferences(oldName, newName string, dryRun bool) ([]Renam
 // ScanRenameReferences scans every unit and returns the patches + hit list
 // produced by replacing oldName with newName (exact or prefix). It performs
 // no writes — callers persist patches via the modelsdk write transaction.
-func (w *Writer) ScanRenameReferences(oldName, newName string) ([]UnitPatch, []RenameHit, error) {
-	units, err := w.reader.listUnitsByType("")
+func (r *Reader) ScanRenameReferences(oldName, newName string) ([]UnitPatch, []RenameHit, error) {
+	units, err := r.listUnitsByType("")
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to list units: %w", err)
 	}
@@ -99,7 +92,7 @@ func (w *Writer) ScanRenameReferences(oldName, newName string) ([]UnitPatch, []R
 	)
 
 	for _, unit := range units {
-		contents, err := w.reader.resolveContents(unit.ID, unit.Contents)
+		contents, err := r.resolveContents(unit.ID, unit.Contents)
 		if err != nil {
 			continue
 		}
@@ -144,14 +137,19 @@ func (w *Writer) ScanRenameReferences(oldName, newName string) ([]UnitPatch, []R
 	return patches, hits, nil
 }
 
+// ScanRenameReferences is the Writer method form; delegates to the Reader.
+func (w *Writer) ScanRenameReferences(oldName, newName string) ([]UnitPatch, []RenameHit, error) {
+	return w.reader.ScanRenameReferences(oldName, newName)
+}
+
 // FindRenameTarget locates the document Name==oldName within moduleName and
 // returns its unit ID together with patched BSON contents that have the Name
 // field rewritten to newName. It performs no writes — callers are expected to
 // persist the returned bytes (e.g. via the modelsdk write path).
 //
 // Returns an error if the module or document cannot be found.
-func (w *Writer) FindRenameTarget(moduleName, oldName, newName string) (string, []byte, error) {
-	modules, err := w.reader.ListModules()
+func (r *Reader) FindRenameTarget(moduleName, oldName, newName string) (string, []byte, error) {
+	modules, err := r.ListModules()
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to list modules: %w", err)
 	}
@@ -167,9 +165,9 @@ func (w *Writer) FindRenameTarget(moduleName, oldName, newName string) (string, 
 		return "", nil, fmt.Errorf("module not found: %s", moduleName)
 	}
 
-	hierarchy := buildContainerSet(w.reader, moduleID)
+	hierarchy := buildContainerSet(r, moduleID)
 
-	units, err := w.reader.listUnitsByType("")
+	units, err := r.listUnitsByType("")
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to list units: %w", err)
 	}
@@ -179,7 +177,7 @@ func (w *Writer) FindRenameTarget(moduleName, oldName, newName string) (string, 
 			continue
 		}
 
-		contents, err := w.reader.resolveContents(unit.ID, unit.Contents)
+		contents, err := r.resolveContents(unit.ID, unit.Contents)
 		if err != nil || len(contents) == 0 {
 			continue
 		}
@@ -204,6 +202,11 @@ func (w *Writer) FindRenameTarget(moduleName, oldName, newName string) (string, 
 	}
 
 	return "", nil, fmt.Errorf("document '%s.%s' not found", moduleName, oldName)
+}
+
+// FindRenameTarget is the Writer method form; delegates to the Reader.
+func (w *Writer) FindRenameTarget(moduleName, oldName, newName string) (string, []byte, error) {
+	return w.reader.FindRenameTarget(moduleName, oldName, newName)
 }
 
 // RenameDocumentByName finds a document by module and name, then updates its Name field.

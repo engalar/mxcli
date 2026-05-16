@@ -311,7 +311,7 @@ func TestNewExecutorContextWithReferences_BothServicesWired(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = sdkW.Close() })
 
-	ctx := NewExecutorContextWithReferences(mw, sdkW)
+	ctx := NewExecutorContextWithReferences(mw, sdkW.Reader())
 	if ctx == nil {
 		t.Fatal("NewExecutorContextWithReferences returned nil")
 	}

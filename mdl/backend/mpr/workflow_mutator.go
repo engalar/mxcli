@@ -537,7 +537,7 @@ func (m *mprWorkflowMutator) Save() error {
 	if err != nil {
 		return fmt.Errorf("marshal modified workflow: %w", err)
 	}
-	return m.backend.writer.UpdateRawUnit(string(m.unitID), outBytes)
+	return m.backend.msdkWriter.UpdateRawUnit(string(m.unitID), outBytes)
 }
 
 // ---------------------------------------------------------------------------

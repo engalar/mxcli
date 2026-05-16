@@ -30,10 +30,8 @@ func (w *Writer) UpdateNavigationProfile(navDocID model.ID, profileName string, 
 }
 
 // PatchNavigationProfile applies a navigation profile patch to raw BSON bytes,
-// returning the new bytes. This is the BSON-level helper used by the modelsdk
-// write path; it shares the same in-memory transform as UpdateNavigationProfile
-// but does not touch the sdk/mpr writer's underlying SQLite connection.
-func (w *Writer) PatchNavigationProfile(rawBytes []byte, profileName string, spec NavigationProfileSpec) ([]byte, error) {
+// returning the new bytes. Pure BSON manipulation — no database access required.
+func PatchNavigationProfile(rawBytes []byte, profileName string, spec NavigationProfileSpec) ([]byte, error) {
 	var doc bson.D
 	if err := bson.Unmarshal(rawBytes, &doc); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal BSON: %w", err)
@@ -47,6 +45,12 @@ func (w *Writer) PatchNavigationProfile(rawBytes []byte, profileName string, spe
 		return nil, fmt.Errorf("failed to marshal BSON: %w", err)
 	}
 	return newBytes, nil
+}
+
+// PatchNavigationProfile is the Writer method form; delegates to the
+// standalone function of the same name.
+func (w *Writer) PatchNavigationProfile(rawBytes []byte, profileName string, spec NavigationProfileSpec) ([]byte, error) {
+	return PatchNavigationProfile(rawBytes, profileName, spec)
 }
 
 // patchNavigationProfileDoc applies the navigation profile patch to a parsed BSON document.

@@ -267,8 +267,8 @@ func (w *Writer) MoveViewEntitySourceDocument(sourceModuleName string, targetMod
 // ScanOqlQueryUpdates scans all ViewEntitySourceDocuments and returns patches
 // for those whose OQL contains oldQualifiedName replaced with newQualifiedName.
 // The returned count equals len(patches). No writes are performed.
-func (w *Writer) ScanOqlQueryUpdates(oldQualifiedName, newQualifiedName string) ([]UnitPatch, int, error) {
-	units, err := w.reader.listUnitsByType("DomainModels$ViewEntitySourceDocument")
+func (r *Reader) ScanOqlQueryUpdates(oldQualifiedName, newQualifiedName string) ([]UnitPatch, int, error) {
+	units, err := r.listUnitsByType("DomainModels$ViewEntitySourceDocument")
 	if err != nil {
 		return nil, 0, err
 	}
@@ -291,6 +291,11 @@ func (w *Writer) ScanOqlQueryUpdates(oldQualifiedName, newQualifiedName string) 
 		patches = append(patches, UnitPatch{ID: u.ID, Contents: contents})
 	}
 	return patches, len(patches), nil
+}
+
+// ScanOqlQueryUpdates is the Writer method form; delegates to the Reader.
+func (w *Writer) ScanOqlQueryUpdates(oldQualifiedName, newQualifiedName string) ([]UnitPatch, int, error) {
+	return w.reader.ScanOqlQueryUpdates(oldQualifiedName, newQualifiedName)
 }
 
 // moveUnitByID changes a unit's ContainerID without modifying its contents.

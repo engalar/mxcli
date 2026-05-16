@@ -310,22 +310,34 @@ v2 格式（Mendix ≥ 10.18）的实际数据在 `mprcontents/XX/YY/UUID.mxunit
 
 ## 当前迁移状态
 
-已完成（✅）：
+**`MprBackend.writer *mpr.Writer` 字段已完全退役（2025-05）。** 所有写路径已走 modelsdk WriteTransaction。
+
+### 写路径：已完成（✅）
 
 - ✅ 安全：ProjectSecurity / ModuleSecurity / ModuleRoles / AllowedRoles
-- ✅ 模块与文件夹：UpdateModule / UpdateModuleSettings / DeleteModule / MoveFolder
+- ✅ 模块与文件夹：CreateModule（gen repo）/ CreateFolder（gen repo）/ UpdateModule / UpdateModuleSettings / DeleteModule / MoveFolder
 - ✅ 枚举与常量：Enumeration / Constant CRUD
 - ✅ 微流 / 纳流 / 页面 / 布局 / 片段 / 工作流：Create + Update + Delete + Move
-- ✅ 域模型：Entity / Attribute / Association / CrossAssociation CRUD
+- ✅ 域模型：Entity / Attribute / Association / CrossAssociation CRUD（gen-native）
 - ✅ 服务文档：JavaAction / DBConn / DataTransformer / Mappings / JsonStructure / BusinessEvent / OData / REST / ImageCollection / AgentEditor 系列
+- ✅ BSON scan 函数迁到 Reader 方法：ScanQualifiedNameUpdates / ScanRenameReferences / FindRenameTarget / ScanOqlQueryUpdates
+- ✅ BSON patch 函数变 standalone：PatchNavigationProfile / PatchReconcileMemberAccesses
+- ✅ ReferenceService → 用 `*sdkmpr.Reader` 替代 `*sdkmpr.Writer`
 
-尚未迁移（仍用 `b.writer.*`）：
+### 剩余 `sdk/mpr` import（不含 b.writer 业务逻辑）
 
-- `MoveEntity`（跨模块移动，涉及多 DM 级联）
-- 实体访问规则（`AddEntityAccessRule` / `ReconcileMemberAccesses`）
-- 导航配置（`UpdateNavigationProfile`）
-- Java 源文件（`WriteJavaSourceFile` / `DeleteJavaSourceFile`）
-- 项目设置（`UpdateProjectSettings`）
-- 批量重命名（`UpdateQualifiedNameInAllUnits` / `RenameReferences`）
+| 文件 | 原因 | 退役条件 |
+|------|------|---------|
+| `backend.go` | `mpr.Reader`（主读路径）、`Wrap(writer *mpr.Writer)` | Reader 方法全迁移后可考虑 |
+| `navigation_modelsdk.go` | `mpr.NavigationProfileSpec` 类型、`mpr.PatchNavigationProfile` 函数 | 移到 types 包 |
+| `security_entity_access_modelsdk.go` | `mpr.EntityMemberAccess`、`mpr.EntityAccessRevocation` 类型 | 移到 types 包 |
+| `refs_modelsdk.go` | `mpr.RenameHit` 类型（return type） | 移到 types 包 |
+| `create_services_modelsdk.go` | Serialize* 系列（DBConn、DataTransformer、Mappings 等复杂序列化器） | 逐域 gen-native 重写 |
+| `update_services_modelsdk.go` | `SerializeImageCollection` | gen-native 重写 |
+| `settings_modelsdk.go` | `SerializeProjectSettings`（复杂 RawParts 合并逻辑） | gen-native 重写 |
+| `agenteditor_modelsdk.go` | `SerializeAgentEditor*`（CustomBlobDocument + JSON 编码） | gen-native 重写 |
+| `modules_modelsdk.go` | 已删除（✅ Module → gen repo；ModuleSecurity/ModuleSettings → inline BSON） | — |
+| `datagrid_builder.go` | `sdk/widgets`（pluggable widget 模板引擎） | widget engine 迁移 |
+| `widget_builder.go` | `sdk/widgets`（widget tree 构建） | widget engine 迁移 |
 
-长期目标：`MprBackend.writer`（`sdk/mpr.Writer`）字段完全退出，所有写操作走 modelsdk WriteTransaction。
+长期目标：全部 `sdk/mpr` import 退出 `mdl/backend/mpr/`，只保留 `sdk/mpr.Reader` 作为主读路径。

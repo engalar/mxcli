@@ -256,14 +256,6 @@ func (r *Reader) GetRawMicroflowByName(qualifiedName string) ([]byte, error) {
 	return nil, fmt.Errorf("microflow not found: %s", qualifiedName)
 }
 
-// RawUnitInfo contains information about a raw unit for BSON debugging.
-type RawUnitInfo struct {
-	ID            string
-	QualifiedName string
-	Type          string
-	ModuleName    string
-	Contents      []byte
-}
 
 // GetRawUnitByName returns the raw BSON contents for a unit by qualified name.
 // Supported types: page, entity, microflow, nanoflow, enumeration, association, snippet, constant.

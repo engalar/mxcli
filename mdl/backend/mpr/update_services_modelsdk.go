@@ -251,7 +251,7 @@ func (b *MprBackend) updatePublishedRestServiceViaModelsdk(svc *model.PublishedR
 // ── ImageCollection ───────────────────────────────────────────────────────
 
 func (b *MprBackend) updateImageCollectionViaModelsdk(ic *types.ImageCollection) error {
-	contents, err := mpr.SerializeImageCollection(unconvertImageCollection(ic))
+	contents, err := mpr.SerializeImageCollection(ic)
 	if err != nil {
 		return fmt.Errorf("serialize image collection: %w", err)
 	}

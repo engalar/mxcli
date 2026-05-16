@@ -17,7 +17,7 @@ func (b *MprBackend) renameDocumentByNameViaModelsdk(moduleName, oldName, newNam
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	unitID, newContents, err := b.writer.FindRenameTarget(moduleName, oldName, newName)
+	unitID, newContents, err := b.reader.FindRenameTarget(moduleName, oldName, newName)
 	if err != nil {
 		return err
 	}

@@ -77,7 +77,12 @@ func runExtractTemplates(cmd *cobra.Command, args []string) error {
 
 	extracted := 0
 	for _, w := range widgets {
-		typeMap, err := bsonDToMap(w.RawType)
+		rawTypeD, ok := w.RawType.(bson.D)
+		if !ok {
+			fmt.Printf("  [SKIP] %s: RawType is not bson.D\n", w.WidgetID)
+			continue
+		}
+		typeMap, err := bsonDToMap(rawTypeD)
 		if err != nil {
 			fmt.Printf("  [SKIP] %s: failed to convert type BSON: %v\n", w.WidgetID, err)
 			continue
@@ -85,7 +90,12 @@ func runExtractTemplates(cmd *cobra.Command, args []string) error {
 
 		var objectMap map[string]any
 		if w.RawObject != nil {
-			objectMap, err = bsonDToMap(w.RawObject)
+			rawObjectD, ok := w.RawObject.(bson.D)
+			if !ok {
+				fmt.Printf("  [SKIP] %s: RawObject is not bson.D\n", w.WidgetID)
+				continue
+			}
+			objectMap, err = bsonDToMap(rawObjectD)
 			if err != nil {
 				fmt.Printf("  [SKIP] %s: failed to convert object BSON: %v\n", w.WidgetID, err)
 				continue

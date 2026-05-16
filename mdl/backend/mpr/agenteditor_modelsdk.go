@@ -5,24 +5,16 @@ package mprbackend
 import (
 	"fmt"
 
+	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // All Create / Update methods for the four agent-editor document types
-// (Model, KnowledgeBase, ConsumedMCPService, Agent) build the canonical
-// CustomBlobDocument BSON via sdk/mpr.SerializeAgentEditor* helpers, then
-// route writes through msdkWriter.InsertUnit / writeUnitContents — bypassing
-// sdk/mpr's updateTransactionID() that fails on hard-linked MPR files
-// (SQLITE_READONLY_DBMOVED 1544). The unit type for all four is
-// "CustomBlobDocuments$CustomBlobDocument", containment "Documents".
-//
-// Stage 3.3.6.C2: helpers now take *mdl/types.* inputs (the relocated
-// inner JSON types). The toSdk* converters in agenteditor_convert.go
-// bridge to the still-sdk-typed mpr.SerializeAgentEditor* writers,
-// which live in sdk/mpr (Stage 4 territory; not touched here).
+// (Model, KnowledgeBase, ConsumedMCPService, Agent) use gen-native
+// CustomBlobDocument + the agent repo — no sdk/mpr import needed.
+// JSON content encoding is in agenteditor_serialize.go.
 
 const (
 	customBlobUnitType        = "CustomBlobDocuments$CustomBlobDocument"
@@ -32,9 +24,6 @@ const (
 // ── Agent Editor Model ────────────────────────────────────────────────────
 
 func (b *MprBackend) createAgentEditorModelViaModelsdk(m *types.Model) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
 	if m == nil {
 		return fmt.Errorf("model is nil")
 	}
@@ -44,39 +33,45 @@ func (b *MprBackend) createAgentEditorModelViaModelsdk(m *types.Model) error {
 	if m.ContainerID == "" {
 		return fmt.Errorf("model container ID is required")
 	}
+	if m.Provider == "" {
+		m.Provider = "MxCloudGenAI"
+	}
 	if m.ID == "" {
 		m.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	contents, err := mpr.SerializeAgentEditorModel(toSdkModel(m))
+	contentsJSON, err := encodeModelContentsJSON(m)
 	if err != nil {
-		return fmt.Errorf("serialize agent editor model: %w", err)
+		return err
 	}
-	return b.msdkWriter.InsertUnit(
-		string(m.ID),
-		string(m.ContainerID),
-		customBlobContainmentName,
-		customBlobUnitType,
-		contents,
-	)
+	doc := newAgentBlobDoc(string(m.ID), m.Name, m.Documentation, m.Excluded, m.ExportLevel,
+		types.CustomTypeModel, types.ReadableModel, contentsJSON)
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	return mprrepos.NewAgentRepository(w).Create(string(m.ContainerID), customBlobContainmentName, doc)
 }
 
 func (b *MprBackend) updateAgentEditorModelViaModelsdk(m *types.Model) error {
 	if m == nil {
 		return fmt.Errorf("model is nil")
 	}
-	contents, err := mpr.SerializeAgentEditorModel(toSdkModel(m))
+	contentsJSON, err := encodeModelContentsJSON(m)
 	if err != nil {
-		return fmt.Errorf("serialize agent editor model: %w", err)
+		return err
 	}
-	return b.writeUnitContents(m.ID, contents)
+	doc := newAgentBlobDoc(string(m.ID), m.Name, m.Documentation, m.Excluded, m.ExportLevel,
+		types.CustomTypeModel, types.ReadableModel, contentsJSON)
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	return mprrepos.NewAgentRepository(w).Update(doc)
 }
 
 // ── Agent Editor Knowledge Base ───────────────────────────────────────────
 
 func (b *MprBackend) createAgentEditorKnowledgeBaseViaModelsdk(k *types.KnowledgeBase) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
 	if k == nil {
 		return fmt.Errorf("knowledge base is nil")
 	}
@@ -86,39 +81,45 @@ func (b *MprBackend) createAgentEditorKnowledgeBaseViaModelsdk(k *types.Knowledg
 	if k.ContainerID == "" {
 		return fmt.Errorf("knowledge base container ID is required")
 	}
+	if k.Provider == "" {
+		k.Provider = "MxCloudGenAI"
+	}
 	if k.ID == "" {
 		k.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	contents, err := mpr.SerializeAgentEditorKnowledgeBase(toSdkKnowledgeBase(k))
+	contentsJSON, err := encodeKnowledgeBaseContentsJSON(k)
 	if err != nil {
-		return fmt.Errorf("serialize agent editor knowledge base: %w", err)
+		return err
 	}
-	return b.msdkWriter.InsertUnit(
-		string(k.ID),
-		string(k.ContainerID),
-		customBlobContainmentName,
-		customBlobUnitType,
-		contents,
-	)
+	doc := newAgentBlobDoc(string(k.ID), k.Name, k.Documentation, k.Excluded, k.ExportLevel,
+		types.CustomTypeKnowledgeBase, types.ReadableKnowledgeBase, contentsJSON)
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	return mprrepos.NewAgentRepository(w).Create(string(k.ContainerID), customBlobContainmentName, doc)
 }
 
 func (b *MprBackend) updateAgentEditorKnowledgeBaseViaModelsdk(k *types.KnowledgeBase) error {
 	if k == nil {
 		return fmt.Errorf("knowledge base is nil")
 	}
-	contents, err := mpr.SerializeAgentEditorKnowledgeBase(toSdkKnowledgeBase(k))
+	contentsJSON, err := encodeKnowledgeBaseContentsJSON(k)
 	if err != nil {
-		return fmt.Errorf("serialize agent editor knowledge base: %w", err)
+		return err
 	}
-	return b.writeUnitContents(k.ID, contents)
+	doc := newAgentBlobDoc(string(k.ID), k.Name, k.Documentation, k.Excluded, k.ExportLevel,
+		types.CustomTypeKnowledgeBase, types.ReadableKnowledgeBase, contentsJSON)
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	return mprrepos.NewAgentRepository(w).Update(doc)
 }
 
 // ── Agent Editor Consumed MCP Service ─────────────────────────────────────
 
 func (b *MprBackend) createAgentEditorConsumedMCPServiceViaModelsdk(c *types.ConsumedMCPService) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
 	if c == nil {
 		return fmt.Errorf("consumed MCP service is nil")
 	}
@@ -131,36 +132,39 @@ func (b *MprBackend) createAgentEditorConsumedMCPServiceViaModelsdk(c *types.Con
 	if c.ID == "" {
 		c.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	contents, err := mpr.SerializeAgentEditorConsumedMCPService(toSdkConsumedMCPService(c))
+	contentsJSON, err := encodeMCPServiceContentsJSON(c)
 	if err != nil {
-		return fmt.Errorf("serialize agent editor consumed MCP service: %w", err)
+		return err
 	}
-	return b.msdkWriter.InsertUnit(
-		string(c.ID),
-		string(c.ContainerID),
-		customBlobContainmentName,
-		customBlobUnitType,
-		contents,
-	)
+	doc := newAgentBlobDoc(string(c.ID), c.Name, c.Documentation, c.Excluded, c.ExportLevel,
+		types.CustomTypeConsumedMCPService, types.ReadableConsumedMCPService, contentsJSON)
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	return mprrepos.NewAgentRepository(w).Create(string(c.ContainerID), customBlobContainmentName, doc)
 }
 
 func (b *MprBackend) updateAgentEditorConsumedMCPServiceViaModelsdk(c *types.ConsumedMCPService) error {
 	if c == nil {
 		return fmt.Errorf("consumed MCP service is nil")
 	}
-	contents, err := mpr.SerializeAgentEditorConsumedMCPService(toSdkConsumedMCPService(c))
+	contentsJSON, err := encodeMCPServiceContentsJSON(c)
 	if err != nil {
-		return fmt.Errorf("serialize agent editor consumed MCP service: %w", err)
+		return err
 	}
-	return b.writeUnitContents(c.ID, contents)
+	doc := newAgentBlobDoc(string(c.ID), c.Name, c.Documentation, c.Excluded, c.ExportLevel,
+		types.CustomTypeConsumedMCPService, types.ReadableConsumedMCPService, contentsJSON)
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	return mprrepos.NewAgentRepository(w).Update(doc)
 }
 
 // ── Agent Editor Agent ────────────────────────────────────────────────────
 
 func (b *MprBackend) createAgentEditorAgentViaModelsdk(a *types.Agent) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
 	if a == nil {
 		return fmt.Errorf("agent is nil")
 	}
@@ -173,26 +177,32 @@ func (b *MprBackend) createAgentEditorAgentViaModelsdk(a *types.Agent) error {
 	if a.ID == "" {
 		a.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	contents, err := mpr.SerializeAgentEditorAgent(toSdkAgent(a))
+	contentsJSON, err := encodeAgentContentsJSON(a)
 	if err != nil {
-		return fmt.Errorf("serialize agent editor agent: %w", err)
+		return err
 	}
-	return b.msdkWriter.InsertUnit(
-		string(a.ID),
-		string(a.ContainerID),
-		customBlobContainmentName,
-		customBlobUnitType,
-		contents,
-	)
+	doc := newAgentBlobDoc(string(a.ID), a.Name, a.Documentation, a.Excluded, a.ExportLevel,
+		types.CustomTypeAgent, types.ReadableAgent, contentsJSON)
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	return mprrepos.NewAgentRepository(w).Create(string(a.ContainerID), customBlobContainmentName, doc)
 }
 
 func (b *MprBackend) updateAgentEditorAgentViaModelsdk(a *types.Agent) error {
 	if a == nil {
 		return fmt.Errorf("agent is nil")
 	}
-	contents, err := mpr.SerializeAgentEditorAgent(toSdkAgent(a))
+	contentsJSON, err := encodeAgentContentsJSON(a)
 	if err != nil {
-		return fmt.Errorf("serialize agent editor agent: %w", err)
+		return err
 	}
-	return b.writeUnitContents(a.ID, contents)
+	doc := newAgentBlobDoc(string(a.ID), a.Name, a.Documentation, a.Excluded, a.ExportLevel,
+		types.CustomTypeAgent, types.ReadableAgent, contentsJSON)
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	return mprrepos.NewAgentRepository(w).Update(doc)
 }

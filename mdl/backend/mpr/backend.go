@@ -33,15 +33,12 @@ var _ backend.FullBackend = (*MprBackend)(nil)
 var _ linter.LintReader = (*MprBackend)(nil)
 
 // MprBackend implements backend.FullBackend by delegating to mpr.Reader
-// and mpr.Writer.
-//
-// Methods that access reader or writer assume Connect() has been called.
+// Methods that access reader or msdkWriter assume Connect() has been called.
 // Calling read/write methods before Connect() will panic with a nil
 // pointer dereference. The executor enforces connection state via
 // ConnectionBackend.IsConnected() before dispatching handlers.
 type MprBackend struct {
 	reader     *mpr.Reader
-	writer     *mpr.Writer
 	msdkWriter modelsdkmpr.UnitWriter
 	path       string
 }
@@ -51,10 +48,10 @@ func New() *MprBackend {
 	return &MprBackend{}
 }
 
-// Wrap creates an MprBackend that wraps an existing Writer (and its Reader).
-// This is used during migration when the Executor already owns the Writer
-// and we want to expose it through the Backend interface without opening
-// a second connection.
+// Wrap creates an MprBackend that reuses an existing sdk/mpr.Writer's connection.
+// Used in tests and migration shims where the caller already owns a Writer.
+// The returned backend shares the Writer's underlying db; Close() on the
+// returned backend closes that shared connection.
 func Wrap(writer *mpr.Writer, path string) *MprBackend {
 	db := writer.Reader().DB()
 	contentsDir := writer.Reader().ContentsDir()
@@ -64,7 +61,6 @@ func Wrap(writer *mpr.Writer, path string) *MprBackend {
 	}
 	return &MprBackend{
 		reader:     writer.Reader(),
-		writer:     writer,
 		msdkWriter: mw,
 		path:       path,
 	}
@@ -75,37 +71,33 @@ func Wrap(writer *mpr.Writer, path string) *MprBackend {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) Connect(path string) error {
-	w, err := mpr.NewWriter(path)
+	r, err := mpr.OpenWithOptions(path, mpr.OpenOptions{ReadOnly: false})
 	if err != nil {
 		return err
 	}
-	db := w.Reader().DB()
-	contentsDir := w.Reader().ContentsDir()
-	mw, err := modelsdkmpr.NewWriterFromDB(db, path, contentsDir)
+	mw, err := modelsdkmpr.NewWriterFromDB(r.DB(), path, r.ContentsDir())
 	if err != nil {
-		_ = w.Close()
+		_ = r.Close()
 		return err
 	}
-	b.writer = w
-	b.reader = w.Reader()
+	b.reader = r
 	b.msdkWriter = mw
 	b.path = path
 	return nil
 }
 
 func (b *MprBackend) Disconnect() error {
-	if b.writer == nil {
+	if b.reader == nil {
 		return nil
 	}
-	err := b.writer.Close()
-	b.writer = nil
+	err := b.reader.Close()
 	b.reader = nil
 	b.msdkWriter = nil
 	b.path = ""
 	return err
 }
 
-func (b *MprBackend) IsConnected() bool { return b.writer != nil }
+func (b *MprBackend) IsConnected() bool { return b.reader != nil }
 func (b *MprBackend) Path() string      { return b.path }
 
 // MprReader returns the underlying *mpr.Reader for callers that still
@@ -161,7 +153,7 @@ func (b *MprBackend) UpdateModuleSettings(ms *types.ModuleSettings) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListFolders() ([]*types.FolderInfo, error) {
-	return convertFolderInfoSlice(b.reader.ListFolders())
+	return b.reader.ListFolders()
 }
 func (b *MprBackend) CreateFolder(folder *model.Folder) error {
 	return b.createFolderViaModelsdk(folder)
@@ -573,13 +565,13 @@ func (b *MprBackend) RemoveFromAllowedRoles(unitID model.ID, roleName string) (b
 	return b.removeFromAllowedRolesViaModelsdk(unitID, roleName)
 }
 func (b *MprBackend) AddEntityAccessRule(params backend.EntityAccessRuleParams) error {
-	return b.addEntityAccessRuleViaModelsdk(params.UnitID, params.EntityName, params.RoleNames, params.AllowCreate, params.AllowDelete, params.DefaultMemberAccess, params.XPathConstraint, unconvertEntityMemberAccessSlice(params.MemberAccesses))
+	return b.addEntityAccessRuleViaModelsdk(params.UnitID, params.EntityName, params.RoleNames, params.AllowCreate, params.AllowDelete, params.DefaultMemberAccess, params.XPathConstraint, params.MemberAccesses)
 }
 func (b *MprBackend) RemoveEntityAccessRule(unitID model.ID, entityName string, roleNames []string) (int, error) {
 	return b.removeEntityAccessRuleViaModelsdk(unitID, entityName, roleNames)
 }
 func (b *MprBackend) RevokeEntityMemberAccess(unitID model.ID, entityName string, roleNames []string, revocation types.EntityAccessRevocation) (int, error) {
-	return b.revokeEntityMemberAccessViaModelsdk(unitID, entityName, roleNames, unconvertEntityAccessRevocation(revocation))
+	return b.revokeEntityMemberAccessViaModelsdk(unitID, entityName, roleNames, revocation)
 }
 func (b *MprBackend) RemoveRoleFromAllEntities(unitID model.ID, roleName string) (int, error) {
 	return b.removeRoleFromAllEntitiesViaModelsdk(unitID, roleName)
@@ -593,13 +585,13 @@ func (b *MprBackend) ReconcileMemberAccesses(unitID model.ID, moduleName string)
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListNavigationDocuments() ([]*types.NavigationDocument, error) {
-	return convertNavDocSlice(b.reader.ListNavigationDocuments())
+	return b.reader.ListNavigationDocuments()
 }
 func (b *MprBackend) GetNavigation() (*types.NavigationDocument, error) {
-	return convertNavDocPtr(b.reader.GetNavigation())
+	return b.reader.GetNavigation()
 }
 func (b *MprBackend) UpdateNavigationProfile(navDocID model.ID, profileName string, spec types.NavigationProfileSpec) error {
-	return b.updateNavigationProfileViaModelsdk(navDocID, profileName, unconvertNavProfileSpec(spec))
+	return b.updateNavigationProfileViaModelsdk(navDocID, profileName, spec)
 }
 
 // ---------------------------------------------------------------------------
@@ -741,10 +733,10 @@ func (b *MprBackend) MoveExportMapping(em *model.ExportMapping) error {
 }
 
 func (b *MprBackend) ListJsonStructures() ([]*types.JsonStructure, error) {
-	return convertJsonStructureSlice(b.reader.ListJsonStructures())
+	return b.reader.ListJsonStructures()
 }
 func (b *MprBackend) GetJsonStructureByQualifiedName(moduleName, name string) (*types.JsonStructure, error) {
-	return convertJsonStructurePtr(b.reader.GetJsonStructureByQualifiedName(moduleName, name))
+	return b.reader.GetJsonStructureByQualifiedName(moduleName, name)
 }
 func (b *MprBackend) CreateJsonStructure(js *types.JsonStructure) error {
 	return b.createJsonStructureViaModelsdk(js)
@@ -912,7 +904,7 @@ func (b *MprBackend) UpdateProjectSettings(ps *model.ProjectSettings) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListImageCollections() ([]*types.ImageCollection, error) {
-	return convertImageCollectionSlice(b.reader.ListImageCollections())
+	return b.reader.ListImageCollections()
 }
 func (b *MprBackend) CreateImageCollection(ic *types.ImageCollection) error {
 	return b.createImageCollectionViaModelsdk(ic)
@@ -943,7 +935,7 @@ func (b *MprBackend) UpdateQualifiedNameInAllUnits(oldName, newName string) (int
 	return b.updateQualifiedNameInAllUnitsViaModelsdk(oldName, newName)
 }
 func (b *MprBackend) RenameReferences(oldName, newName string, dryRun bool) ([]types.RenameHit, error) {
-	return convertRenameHitSlice(b.renameReferencesViaModelsdk(oldName, newName, dryRun))
+	return b.renameReferencesViaModelsdk(oldName, newName, dryRun)
 }
 func (b *MprBackend) RenameDocumentByName(moduleName, oldName, newName string) error {
 	return b.renameDocumentByNameViaModelsdk(moduleName, oldName, newName)
@@ -960,13 +952,13 @@ func (b *MprBackend) GetRawUnitBytes(id model.ID) ([]byte, error) {
 	return b.reader.GetRawUnitBytes(id)
 }
 func (b *MprBackend) ListRawUnitsByType(typePrefix string) ([]*types.RawUnit, error) {
-	return convertRawUnitSlice(b.reader.ListRawUnitsByType(typePrefix))
+	return b.reader.ListRawUnitsByType(typePrefix)
 }
 func (b *MprBackend) ListRawUnits(objectType string) ([]*types.RawUnitInfo, error) {
-	return convertRawUnitInfoSlice(b.reader.ListRawUnits(objectType))
+	return b.reader.ListRawUnits(objectType)
 }
 func (b *MprBackend) GetRawUnitByName(objectType, qualifiedName string) (*types.RawUnitInfo, error) {
-	return convertRawUnitInfoPtr(b.reader.GetRawUnitByName(objectType, qualifiedName))
+	return b.reader.GetRawUnitByName(objectType, qualifiedName)
 }
 func (b *MprBackend) GetRawMicroflowByName(qualifiedName string) ([]byte, error) {
 	return b.reader.GetRawMicroflowByName(qualifiedName)
@@ -984,7 +976,7 @@ func (b *MprBackend) UpdateRawUnit(unitID string, contents []byte) error {
 
 func (b *MprBackend) ListAllUnitIDs() ([]string, error) { return b.reader.ListAllUnitIDs() }
 func (b *MprBackend) ListUnits() ([]*types.UnitInfo, error) {
-	return convertUnitInfoSlice(b.reader.ListUnits())
+	return b.reader.ListUnits()
 }
 func (b *MprBackend) GetUnitTypes() (map[string]int, error) { return b.reader.GetUnitTypes() }
 func (b *MprBackend) GetProjectRootID() (string, error)     { return b.reader.GetProjectRootID() }
@@ -1007,39 +999,20 @@ func (b *MprBackend) FindAllCustomWidgetTypes(widgetID string) ([]*types.RawCust
 // AgentEditorBackend
 // ---------------------------------------------------------------------------
 
-// Stage 3.3.6.C1+C2: AgentEditorBackend interface uses mdl/types. Reader
-// still returns sdk/agenteditor (Stage 4 territory; not touched here),
-// so List* shims convert via toTypes*. Write helpers in
-// agenteditor_modelsdk.go now take *mdl/types inputs and convert
-// internally (toSdk*) to feed sdk/mpr.SerializeAgentEditor*.
+// sdk/agenteditor types are now aliases to types.*, so reader List* methods
+// return []*types.* directly — no conversion shim needed.
 
 func (b *MprBackend) ListAgentEditorModels() ([]*types.Model, error) {
-	in, err := b.reader.ListAgentEditorModels()
-	if err != nil {
-		return nil, err
-	}
-	return toTypesModels(in), nil
+	return b.reader.ListAgentEditorModels()
 }
 func (b *MprBackend) ListAgentEditorKnowledgeBases() ([]*types.KnowledgeBase, error) {
-	in, err := b.reader.ListAgentEditorKnowledgeBases()
-	if err != nil {
-		return nil, err
-	}
-	return toTypesKnowledgeBases(in), nil
+	return b.reader.ListAgentEditorKnowledgeBases()
 }
 func (b *MprBackend) ListAgentEditorConsumedMCPServices() ([]*types.ConsumedMCPService, error) {
-	in, err := b.reader.ListAgentEditorConsumedMCPServices()
-	if err != nil {
-		return nil, err
-	}
-	return toTypesConsumedMCPServices(in), nil
+	return b.reader.ListAgentEditorConsumedMCPServices()
 }
 func (b *MprBackend) ListAgentEditorAgents() ([]*types.Agent, error) {
-	in, err := b.reader.ListAgentEditorAgents()
-	if err != nil {
-		return nil, err
-	}
-	return toTypesAgents(in), nil
+	return b.reader.ListAgentEditorAgents()
 }
 func (b *MprBackend) CreateAgentEditorModel(m *types.Model) error {
 	return b.createAgentEditorModelViaModelsdk(m)
