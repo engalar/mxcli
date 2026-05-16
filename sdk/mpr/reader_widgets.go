@@ -6,7 +6,7 @@ package mpr
 import (
 	"strings"
 
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -381,24 +381,24 @@ func matchesWidgetID(doc bson.D, widgetID string) bool {
 // IDMapping tracks the mapping from old IDs to new IDs during cloning.
 type IDMapping struct {
 	OldToNewID      map[string]string                    // Maps old ID -> new ID for all elements
-	PropertyTypeIDs map[string]pages.PropertyTypeIDEntry // Maps PropertyKey -> PropertyTypeID/ValueTypeID
+	PropertyTypeIDs map[string]types.PropertyTypeIDEntry // Maps PropertyKey -> PropertyTypeID/ValueTypeID
 	ObjectTypeID    string                               // The cloned ObjectType ID
 }
 
 // CloneWidgetType creates a deep copy of the widget type with all IDs regenerated.
 // It returns a mapping from old PropertyType keys to new PropertyType IDs and ValueType IDs,
 // as well as the ObjectType ID which is needed for the WidgetObject's TypePointer.
-func CloneWidgetType(rawType bson.D) (cloned bson.D, propertyTypeIDs map[string]pages.PropertyTypeIDEntry, objectTypeID string) {
+func CloneWidgetType(rawType bson.D) (cloned bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, objectTypeID string) {
 	mapping := &IDMapping{
 		OldToNewID:      make(map[string]string),
-		PropertyTypeIDs: make(map[string]pages.PropertyTypeIDEntry),
+		PropertyTypeIDs: make(map[string]types.PropertyTypeIDEntry),
 	}
 	cloned = cloneDocWithNewIDs(rawType, mapping)
 	return cloned, mapping.PropertyTypeIDs, mapping.ObjectTypeID
 }
 
 // CloneCustomWidgetType is an alias for CloneWidgetType for clarity.
-func CloneCustomWidgetType(rawType bson.D) (cloned bson.D, propertyTypeIDs map[string]pages.PropertyTypeIDEntry, objectTypeID string) {
+func CloneCustomWidgetType(rawType bson.D) (cloned bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, objectTypeID string) {
 	return CloneWidgetType(rawType)
 }
 
@@ -413,10 +413,10 @@ func CloneWidgetObject(rawObject bson.D, idMapping map[string]string) bson.D {
 
 // CloneCustomWidget clones both the Type and Object of a CustomWidget.
 // Returns the cloned Type, cloned Object, PropertyType IDs map, and ObjectType ID.
-func CloneCustomWidget(rawType, rawObject bson.D) (clonedType, clonedObject bson.D, propertyTypeIDs map[string]pages.PropertyTypeIDEntry, objectTypeID string) {
+func CloneCustomWidget(rawType, rawObject bson.D) (clonedType, clonedObject bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, objectTypeID string) {
 	mapping := &IDMapping{
 		OldToNewID:      make(map[string]string),
-		PropertyTypeIDs: make(map[string]pages.PropertyTypeIDEntry),
+		PropertyTypeIDs: make(map[string]types.PropertyTypeIDEntry),
 	}
 
 	// Clone the Type first to build the ID mapping
@@ -433,21 +433,21 @@ func CloneCustomWidget(rawType, rawObject bson.D) (clonedType, clonedObject bson
 // ExtractPropertyTypeIDs extracts PropertyType IDs from a widget type WITHOUT regenerating IDs.
 // This is used when creating new widget instances that reference an EXISTING widget type in the project.
 // The TypePointers in the new instance must use the ORIGINAL IDs from the project's widget type.
-func ExtractPropertyTypeIDs(rawType bson.D) (propertyTypeIDs map[string]pages.PropertyTypeIDEntry, objectTypeID string) {
-	propertyTypeIDs = make(map[string]pages.PropertyTypeIDEntry)
+func ExtractPropertyTypeIDs(rawType bson.D) (propertyTypeIDs map[string]types.PropertyTypeIDEntry, objectTypeID string) {
+	propertyTypeIDs = make(map[string]types.PropertyTypeIDEntry)
 	extractPropertyTypeIDsFromDoc(rawType, propertyTypeIDs, &objectTypeID)
 	return propertyTypeIDs, objectTypeID
 }
 
 // extractPropertyTypeIDsFromDoc recursively extracts PropertyType/ValueType IDs without regenerating them.
-func extractPropertyTypeIDsFromDoc(doc bson.D, propertyTypeIDs map[string]pages.PropertyTypeIDEntry, objectTypeID *string) {
+func extractPropertyTypeIDsFromDoc(doc bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, objectTypeID *string) {
 	var currentPropertyKey string
 	var currentID string
 	var currentValueTypeID string
 	var currentDefaultValue string
 	var currentValueType string
 	var currentObjectTypeID string
-	var currentNestedPropertyIDs map[string]pages.PropertyTypeIDEntry
+	var currentNestedPropertyIDs map[string]types.PropertyTypeIDEntry
 	var docType string
 
 	// First pass: collect all values from this document
@@ -467,7 +467,7 @@ func extractPropertyTypeIDsFromDoc(doc bson.D, propertyTypeIDs map[string]pages.
 			}
 		case "ValueType":
 			if nested, ok := elem.Value.(bson.D); ok {
-				currentNestedPropertyIDs = make(map[string]pages.PropertyTypeIDEntry)
+				currentNestedPropertyIDs = make(map[string]types.PropertyTypeIDEntry)
 				extractValueTypeInfo(nested, &currentValueTypeID, &currentDefaultValue, &currentValueType, &currentObjectTypeID, currentNestedPropertyIDs)
 			}
 		}
@@ -483,7 +483,7 @@ func extractPropertyTypeIDsFromDoc(doc bson.D, propertyTypeIDs map[string]pages.
 
 	// Record PropertyType entry
 	if isPropertyType && currentPropertyKey != "" {
-		propertyTypeIDs[currentPropertyKey] = pages.PropertyTypeIDEntry{
+		propertyTypeIDs[currentPropertyKey] = types.PropertyTypeIDEntry{
 			PropertyTypeID:    currentID, // Use the ID we collected
 			ValueTypeID:       currentValueTypeID,
 			DefaultValue:      currentDefaultValue,
@@ -512,7 +512,7 @@ func extractPropertyTypeIDsFromDoc(doc bson.D, propertyTypeIDs map[string]pages.
 }
 
 // extractValueTypeInfo extracts ValueType ID, default value, value type, and nested ObjectType info.
-func extractValueTypeInfo(doc bson.D, valueTypeID, defaultValue, valueType *string, objectTypeID *string, nestedPropertyIDs map[string]pages.PropertyTypeIDEntry) {
+func extractValueTypeInfo(doc bson.D, valueTypeID, defaultValue, valueType *string, objectTypeID *string, nestedPropertyIDs map[string]types.PropertyTypeIDEntry) {
 	for _, elem := range doc {
 		if elem.Key == "$ID" {
 			if binID, ok := elem.Value.(primitive.Binary); ok {
@@ -538,7 +538,7 @@ func extractValueTypeInfo(doc bson.D, valueTypeID, defaultValue, valueType *stri
 }
 
 // extractObjectTypeInfo extracts ObjectType ID and its nested PropertyType IDs.
-func extractObjectTypeInfo(doc bson.D, objectTypeID *string, nestedPropertyIDs map[string]pages.PropertyTypeIDEntry) {
+func extractObjectTypeInfo(doc bson.D, objectTypeID *string, nestedPropertyIDs map[string]types.PropertyTypeIDEntry) {
 	var dummyObjectTypeID string
 	for _, elem := range doc {
 		if elem.Key == "$ID" {
@@ -651,7 +651,7 @@ func cloneDocWithNewIDs(doc bson.D, mapping *IDMapping) bson.D {
 
 	// Record PropertyType IDs
 	if isPropertyType && currentPropertyKey != "" {
-		mapping.PropertyTypeIDs[currentPropertyKey] = pages.PropertyTypeIDEntry{
+		mapping.PropertyTypeIDs[currentPropertyKey] = types.PropertyTypeIDEntry{
 			PropertyTypeID: currentPropertyTypeID,
 			ValueTypeID:    currentValueTypeID,
 		}

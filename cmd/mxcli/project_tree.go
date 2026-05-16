@@ -226,37 +226,57 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		md.documents = append(md.documents, treeElement{Name: nf.Name(), ContainerID: containerID, Type: "nanoflow"})
 	}
 
-	// Collect pages
-	pgs, _ := reader.ListPages()
+	// Collect pages (gen-typed path; ContainerID resolved via unit index join).
+	pgRefs, _ := mreader.ListUnitsByType("Forms$Page")
+	pgContainerByID := make(map[string]model.ID, len(pgRefs))
+	for _, ref := range pgRefs {
+		if ref.Type == "Forms$Page" {
+			pgContainerByID[ref.ID] = model.ID(ref.ContainerID)
+		}
+	}
+	pgs, _ := reader.ListPagesGen()
 	for _, pg := range pgs {
-		modID := h.FindModuleID(pg.ContainerID)
+		containerID := pgContainerByID[string(pg.ID())]
+		modID := h.FindModuleID(containerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: pg.Name, ContainerID: pg.ContainerID, Type: "page"})
+		md.documents = append(md.documents, treeElement{Name: pg.Name(), ContainerID: containerID, Type: "page"})
 	}
 
-	// Collect snippets
-	sns, _ := reader.ListSnippets()
+	// Collect snippets (gen-typed path; ContainerID resolved via unit index join).
+	snRefs, _ := mreader.ListUnitsByType("Forms$Snippet")
+	snContainerByID := make(map[string]model.ID, len(snRefs))
+	for _, ref := range snRefs {
+		snContainerByID[ref.ID] = model.ID(ref.ContainerID)
+	}
+	sns, _ := reader.ListSnippetsGen()
 	for _, sn := range sns {
-		modID := h.FindModuleID(sn.ContainerID)
+		containerID := snContainerByID[string(sn.ID())]
+		modID := h.FindModuleID(containerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: sn.Name, ContainerID: sn.ContainerID, Type: "snippet"})
+		md.documents = append(md.documents, treeElement{Name: sn.Name(), ContainerID: containerID, Type: "snippet"})
 	}
 
-	// Collect layouts
-	lys, _ := reader.ListLayouts()
+	// Collect layouts (gen-typed path; ContainerID resolved via unit index join).
+	lyRefs, _ := mreader.ListUnitsByType("Forms$Layout")
+	lyContainerByID := make(map[string]model.ID, len(lyRefs))
+	for _, ref := range lyRefs {
+		lyContainerByID[ref.ID] = model.ID(ref.ContainerID)
+	}
+	lys, _ := reader.ListLayoutsGen()
 	for _, ly := range lys {
-		modID := h.FindModuleID(ly.ContainerID)
+		containerID := lyContainerByID[string(ly.ID())]
+		modID := h.FindModuleID(containerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: ly.Name, ContainerID: ly.ContainerID, Type: "layout"})
+		md.documents = append(md.documents, treeElement{Name: ly.Name(), ContainerID: containerID, Type: "layout"})
 	}
 
 	// Collect constants
@@ -314,26 +334,38 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		md.documents = append(md.documents, treeElement{Name: jsa.Name, ContainerID: jsa.ContainerID, Type: "javascriptaction"})
 	}
 
-	// Collect building blocks
-	bbs, _ := reader.ListBuildingBlocks()
+	// Collect building blocks (gen-typed path; ContainerID resolved via unit index join).
+	bbRefs, _ := mreader.ListUnitsByType("Forms$BuildingBlock")
+	bbContainerByID := make(map[string]model.ID, len(bbRefs))
+	for _, ref := range bbRefs {
+		bbContainerByID[ref.ID] = model.ID(ref.ContainerID)
+	}
+	bbs, _ := reader.ListBuildingBlocksGen()
 	for _, bb := range bbs {
-		modID := h.FindModuleID(bb.ContainerID)
+		containerID := bbContainerByID[string(bb.ID())]
+		modID := h.FindModuleID(containerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: bb.Name, ContainerID: bb.ContainerID, Type: "buildingblock"})
+		md.documents = append(md.documents, treeElement{Name: bb.Name(), ContainerID: containerID, Type: "buildingblock"})
 	}
 
-	// Collect page templates
-	pts, _ := reader.ListPageTemplates()
+	// Collect page templates (gen-typed path; ContainerID resolved via unit index join).
+	ptRefs, _ := mreader.ListUnitsByType("Forms$PageTemplate")
+	ptContainerByID := make(map[string]model.ID, len(ptRefs))
+	for _, ref := range ptRefs {
+		ptContainerByID[ref.ID] = model.ID(ref.ContainerID)
+	}
+	pts, _ := reader.ListPageTemplatesGen()
 	for _, pt := range pts {
-		modID := h.FindModuleID(pt.ContainerID)
+		containerID := ptContainerByID[string(pt.ID())]
+		modID := h.FindModuleID(containerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: pt.Name, ContainerID: pt.ContainerID, Type: "pagetemplate"})
+		md.documents = append(md.documents, treeElement{Name: pt.Name(), ContainerID: containerID, Type: "pagetemplate"})
 	}
 
 	// Collect image collections

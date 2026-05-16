@@ -8,7 +8,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/pages"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -89,41 +89,43 @@ func (r *Reader) ListJavaScriptActions() ([]*types.JavaScriptAction, error) {
 	return result, nil
 }
 
-// ListBuildingBlocks returns all building blocks in the project.
-func (r *Reader) ListBuildingBlocks() ([]*pages.BuildingBlock, error) {
+// ListBuildingBlocksGen returns all building blocks as gen-typed BuildingBlock values.
+// ContainerID is NOT set on the returned values; callers that need it should join
+// against Reader.ListUnitsByType("Forms$BuildingBlock") to get the ContainerID column
+// from the SQLite unit index (same pattern as DomainModel in project_tree.go).
+func (r *Reader) ListBuildingBlocksGen() ([]*genPg.BuildingBlock, error) {
 	units, err := r.listUnitsByType("Forms$BuildingBlock")
 	if err != nil {
 		return nil, err
 	}
-
-	var result []*pages.BuildingBlock
+	var result []*genPg.BuildingBlock
 	for _, u := range units {
-		bb, err := r.parseBuildingBlock(u.ID, u.ContainerID, u.Contents)
+		bb, err := r.parseBuildingBlockGen(u.ID, u.ContainerID, u.Contents)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse building block %s: %w", u.ID, err)
 		}
 		result = append(result, bb)
 	}
-
 	return result, nil
 }
 
-// ListPageTemplates returns all page templates in the project.
-func (r *Reader) ListPageTemplates() ([]*pages.PageTemplate, error) {
+// ListPageTemplatesGen returns all page templates as gen-typed PageTemplate values.
+// ContainerID is NOT set on the returned values; callers that need it should join
+// against Reader.ListUnitsByType("Forms$PageTemplate") to get the ContainerID column
+// from the SQLite unit index (same pattern as DomainModel in project_tree.go).
+func (r *Reader) ListPageTemplatesGen() ([]*genPg.PageTemplate, error) {
 	units, err := r.listUnitsByType("Forms$PageTemplate")
 	if err != nil {
 		return nil, err
 	}
-
-	var result []*pages.PageTemplate
+	var result []*genPg.PageTemplate
 	for _, u := range units {
-		pt, err := r.parsePageTemplate(u.ID, u.ContainerID, u.Contents)
+		pt, err := r.parsePageTemplateGen(u.ID, u.ContainerID, u.Contents)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse page template %s: %w", u.ID, err)
 		}
 		result = append(result, pt)
 	}
-
 	return result, nil
 }
 

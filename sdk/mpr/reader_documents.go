@@ -9,8 +9,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	gendomainmodels "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -113,88 +113,69 @@ func (r *Reader) GetDomainModelByIDGen(id model.ID) (*gendomainmodels.DomainMode
 	return r.GetDomainModelGen(id)
 }
 
-// ListPages returns all pages in the project.
-func (r *Reader) ListPages() ([]*pages.Page, error) {
-	// Try Forms$Page first (Mendix 10+), then Pages$Page (older versions)
+// ListPagesGen returns all pages as gen-typed Page values.
+// ContainerID is NOT set on the returned values; callers that need it should join
+// against Reader.ListUnitsByType("Forms$Page") to get the ContainerID column
+// from the SQLite unit index (same pattern as DomainModel in project_tree.go).
+func (r *Reader) ListPagesGen() ([]*genPg.Page, error) {
 	units, err := r.listUnitsByType("Forms$Page")
 	if err != nil {
 		return nil, err
 	}
-	if len(units) == 0 {
-		units, err = r.listUnitsByType("Pages$Page")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	var result []*pages.Page
+	var result []*genPg.Page
 	for _, u := range units {
-		page, err := r.parsePage(u.ID, u.ContainerID, u.Contents)
+		// ListUnitsByType is prefix-matched; Forms$Page is also a prefix of
+		// Forms$PageTemplate. Filter to exact match.
+		if u.Type != "Forms$Page" {
+			continue
+		}
+		pg, err := r.parsePageGen(u.ID, u.ContainerID, u.Contents)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse page %s: %w", u.ID, err)
 		}
-		result = append(result, page)
+		result = append(result, pg)
 	}
-
 	return result, nil
 }
 
-// GetPage retrieves a page by ID.
-func (r *Reader) GetPage(id model.ID) (*pages.Page, error) {
-	pagesList, err := r.ListPages()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, p := range pagesList {
-		if p.ID == id {
-			return p, nil
-		}
-	}
-
-	return nil, fmt.Errorf("page not found: %s", id)
-}
-
-// ListLayouts returns all layouts in the project.
-func (r *Reader) ListLayouts() ([]*pages.Layout, error) {
-	// Try Forms$Layout first (Mendix 10+), then Pages$Layout (older versions)
+// ListLayoutsGen returns all layouts as gen-typed Layout values.
+// ContainerID is NOT set on the returned values; callers that need it should join
+// against Reader.ListUnitsByType("Forms$Layout") to get the ContainerID column
+// from the SQLite unit index (same pattern as DomainModel in project_tree.go).
+func (r *Reader) ListLayoutsGen() ([]*genPg.Layout, error) {
 	units, err := r.listUnitsByType("Forms$Layout")
 	if err != nil {
 		return nil, err
 	}
-	if len(units) == 0 {
-		units, err = r.listUnitsByType("Pages$Layout")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	var result []*pages.Layout
+	var result []*genPg.Layout
 	for _, u := range units {
-		layout, err := r.parseLayout(u.ID, u.ContainerID, u.Contents)
+		ly, err := r.parseLayoutGen(u.ID, u.ContainerID, u.Contents)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse layout %s: %w", u.ID, err)
 		}
-		result = append(result, layout)
+		result = append(result, ly)
 	}
-
 	return result, nil
 }
 
-// GetLayout retrieves a layout by ID.
-func (r *Reader) GetLayout(id model.ID) (*pages.Layout, error) {
-	layouts, err := r.ListLayouts()
+// ListSnippetsGen returns all snippets as gen-typed Snippet values.
+// ContainerID is NOT set on the returned values; callers that need it should join
+// against Reader.ListUnitsByType("Forms$Snippet") to get the ContainerID column
+// from the SQLite unit index (same pattern as DomainModel in project_tree.go).
+func (r *Reader) ListSnippetsGen() ([]*genPg.Snippet, error) {
+	units, err := r.listUnitsByType("Forms$Snippet")
 	if err != nil {
 		return nil, err
 	}
-
-	for _, l := range layouts {
-		if l.ID == id {
-			return l, nil
+	var result []*genPg.Snippet
+	for _, u := range units {
+		sn, err := r.parseSnippetGen(u.ID, u.ContainerID, u.Contents)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse snippet %s: %w", u.ID, err)
 		}
+		result = append(result, sn)
 	}
-
-	return nil, fmt.Errorf("layout not found: %s", id)
+	return result, nil
 }
 
 // ListEnumerations returns all enumerations in the project.
@@ -334,32 +315,6 @@ func (r *Reader) GetScheduledEvent(id model.ID) (*model.ScheduledEvent, error) {
 	}
 
 	return nil, fmt.Errorf("scheduled event not found: %s", id)
-}
-
-// ListSnippets returns all snippets in the project.
-func (r *Reader) ListSnippets() ([]*pages.Snippet, error) {
-	// Try Forms$Snippet first (Mendix 10+), then Pages$Snippet (older versions)
-	units, err := r.listUnitsByType("Forms$Snippet")
-	if err != nil {
-		return nil, err
-	}
-	if len(units) == 0 {
-		units, err = r.listUnitsByType("Pages$Snippet")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	var result []*pages.Snippet
-	for _, u := range units {
-		snippet, err := r.parseSnippet(u.ID, u.ContainerID, u.Contents)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse snippet %s: %w", u.ID, err)
-		}
-		result = append(result, snippet)
-	}
-
-	return result, nil
 }
 
 // GetProjectSecurity returns the project security configuration.
