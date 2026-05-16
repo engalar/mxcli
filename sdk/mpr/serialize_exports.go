@@ -3,8 +3,8 @@
 package mpr
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -137,7 +137,7 @@ func SerializeModuleSettings(id string) ([]byte, error) {
 // SerializeAgentEditorModel returns canonical CustomBlobDocument BSON bytes for
 // an agent-editor Model unit. The Provider defaults to "MxCloudGenAI" when
 // unset, mirroring the validation in CreateAgentEditorModel.
-func SerializeAgentEditorModel(m *agenteditor.Model) ([]byte, error) {
+func SerializeAgentEditorModel(m *types.Model) ([]byte, error) {
 	if m.Provider == "" {
 		m.Provider = "MxCloudGenAI"
 	}
@@ -152,15 +152,15 @@ func SerializeAgentEditorModel(m *agenteditor.Model) ([]byte, error) {
 		Documentation:      m.Documentation,
 		Excluded:           m.Excluded,
 		ExportLevel:        m.ExportLevel,
-		CustomDocumentType: agenteditor.CustomTypeModel,
-		ReadableTypeName:   agenteditor.ReadableModel,
+		CustomDocumentType: types.CustomTypeModel,
+		ReadableTypeName:   types.ReadableModel,
 		ContentsJSON:       contentsJSON,
 	})
 }
 
 // SerializeAgentEditorKnowledgeBase returns canonical CustomBlobDocument BSON
 // bytes for an agent-editor KnowledgeBase unit.
-func SerializeAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) ([]byte, error) {
+func SerializeAgentEditorKnowledgeBase(k *types.KnowledgeBase) ([]byte, error) {
 	if k.Provider == "" {
 		k.Provider = "MxCloudGenAI"
 	}
@@ -175,15 +175,15 @@ func SerializeAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) ([]byte, er
 		Documentation:      k.Documentation,
 		Excluded:           k.Excluded,
 		ExportLevel:        k.ExportLevel,
-		CustomDocumentType: agenteditor.CustomTypeKnowledgeBase,
-		ReadableTypeName:   agenteditor.ReadableKnowledgeBase,
+		CustomDocumentType: types.CustomTypeKnowledgeBase,
+		ReadableTypeName:   types.ReadableKnowledgeBase,
 		ContentsJSON:       contentsJSON,
 	})
 }
 
 // SerializeAgentEditorConsumedMCPService returns canonical CustomBlobDocument
 // BSON bytes for an agent-editor Consumed MCP Service unit.
-func SerializeAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) ([]byte, error) {
+func SerializeAgentEditorConsumedMCPService(c *types.ConsumedMCPService) ([]byte, error) {
 	contentsJSON, err := encodeConsumedMCPServiceContents(c)
 	if err != nil {
 		return nil, err
@@ -195,8 +195,8 @@ func SerializeAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) (
 		Documentation:      c.Documentation,
 		Excluded:           c.Excluded,
 		ExportLevel:        c.ExportLevel,
-		CustomDocumentType: agenteditor.CustomTypeConsumedMCPService,
-		ReadableTypeName:   agenteditor.ReadableConsumedMCPService,
+		CustomDocumentType: types.CustomTypeConsumedMCPService,
+		ReadableTypeName:   types.ReadableConsumedMCPService,
 		ContentsJSON:       contentsJSON,
 	})
 }
@@ -204,7 +204,7 @@ func SerializeAgentEditorConsumedMCPService(c *agenteditor.ConsumedMCPService) (
 // SerializeAgentEditorAgent returns canonical CustomBlobDocument BSON bytes
 // for an agent-editor Agent unit. Tool / KB-tool entries without IDs are
 // assigned fresh stable IDs, mirroring CreateAgentEditorAgent.
-func SerializeAgentEditorAgent(a *agenteditor.Agent) ([]byte, error) {
+func SerializeAgentEditorAgent(a *types.Agent) ([]byte, error) {
 	for i := range a.Tools {
 		if a.Tools[i].ID == "" {
 			a.Tools[i].ID = generateUUID()
@@ -226,8 +226,8 @@ func SerializeAgentEditorAgent(a *agenteditor.Agent) ([]byte, error) {
 		Documentation:      a.Documentation,
 		Excluded:           a.Excluded,
 		ExportLevel:        a.ExportLevel,
-		CustomDocumentType: agenteditor.CustomTypeAgent,
-		ReadableTypeName:   agenteditor.ReadableAgent,
+		CustomDocumentType: types.CustomTypeAgent,
+		ReadableTypeName:   types.ReadableAgent,
 		ContentsJSON:       contentsJSON,
 	})
 }

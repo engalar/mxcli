@@ -6,12 +6,12 @@ package mpr
 import (
 	"fmt"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 )
 
 // CreateAgentEditorAgent writes an Agent document.
-func (w *Writer) CreateAgentEditorAgent(a *agenteditor.Agent) error {
+func (w *Writer) CreateAgentEditorAgent(a *types.Agent) error {
 	if a == nil {
 		return fmt.Errorf("agent is nil")
 	}
@@ -49,15 +49,15 @@ func (w *Writer) CreateAgentEditorAgent(a *agenteditor.Agent) error {
 		Documentation:      a.Documentation,
 		Excluded:           a.Excluded,
 		ExportLevel:        a.ExportLevel,
-		CustomDocumentType: agenteditor.CustomTypeAgent,
-		ReadableTypeName:   agenteditor.ReadableAgent,
+		CustomDocumentType: types.CustomTypeAgent,
+		ReadableTypeName:   types.ReadableAgent,
 		ContentsJSON:       contentsJSON,
 	})
 }
 
 // UpdateAgentEditorAgent replaces an existing Agent document, preserving its UUID.
 // Tool and KB entries without IDs get fresh stable IDs assigned.
-func (w *Writer) UpdateAgentEditorAgent(a *agenteditor.Agent) error {
+func (w *Writer) UpdateAgentEditorAgent(a *types.Agent) error {
 	if a == nil {
 		return fmt.Errorf("agent is nil")
 	}
@@ -85,8 +85,8 @@ func (w *Writer) UpdateAgentEditorAgent(a *agenteditor.Agent) error {
 		Documentation:      a.Documentation,
 		Excluded:           a.Excluded,
 		ExportLevel:        a.ExportLevel,
-		CustomDocumentType: agenteditor.CustomTypeAgent,
-		ReadableTypeName:   agenteditor.ReadableAgent,
+		CustomDocumentType: types.CustomTypeAgent,
+		ReadableTypeName:   types.ReadableAgent,
 		ContentsJSON:       contentsJSON,
 	})
 }
@@ -96,7 +96,7 @@ func (w *Writer) DeleteAgentEditorAgent(id string) error {
 	return w.deleteUnit(id)
 }
 
-func encodeAgentContents(a *agenteditor.Agent) (string, error) {
+func encodeAgentContents(a *types.Agent) (string, error) {
 	// Build the JSON shape matching what the agent editor extension produces.
 	// Optional fields are omitted when empty/nil (omitempty).
 	type toolEntry struct {
@@ -105,7 +105,7 @@ func encodeAgentContents(a *agenteditor.Agent) (string, error) {
 		Description string              `json:"description"`
 		Enabled     bool                `json:"enabled"`
 		ToolType    string              `json:"toolType"`
-		Document    *agenteditor.DocRef `json:"document,omitempty"`
+		Document    *types.DocRef `json:"document,omitempty"`
 	}
 	type kbToolEntry struct {
 		ID                   string              `json:"id"`
@@ -113,7 +113,7 @@ func encodeAgentContents(a *agenteditor.Agent) (string, error) {
 		Description          string              `json:"description"`
 		Enabled              bool                `json:"enabled"`
 		ToolType             string              `json:"toolType"`
-		Document             *agenteditor.DocRef `json:"document,omitempty"`
+		Document             *types.DocRef `json:"document,omitempty"`
 		CollectionIdentifier string              `json:"collectionIdentifier,omitempty"`
 		MaxResults           int                 `json:"maxResults,omitempty"`
 	}
@@ -122,11 +122,11 @@ func encodeAgentContents(a *agenteditor.Agent) (string, error) {
 		SystemPrompt       string                 `json:"systemPrompt"`
 		UserPrompt         string                 `json:"userPrompt"`
 		UsageType          string                 `json:"usageType"`
-		Variables          []agenteditor.AgentVar `json:"variables"`
+		Variables          []types.AgentVar `json:"variables"`
 		Tools              []toolEntry            `json:"tools"`
 		KnowledgebaseTools []kbToolEntry          `json:"knowledgebaseTools"`
-		Model              *agenteditor.DocRef    `json:"model,omitempty"`
-		Entity             *agenteditor.DocRef    `json:"entity,omitempty"`
+		Model              *types.DocRef    `json:"model,omitempty"`
+		Entity             *types.DocRef    `json:"entity,omitempty"`
 		MaxTokens          *int                   `json:"maxTokens,omitempty"`
 		ToolChoice         string                 `json:"toolChoice,omitempty"`
 		Temperature        *float64               `json:"temperature,omitempty"`
@@ -161,7 +161,7 @@ func encodeAgentContents(a *agenteditor.Agent) (string, error) {
 
 	vars := a.Variables
 	if vars == nil {
-		vars = []agenteditor.AgentVar{}
+		vars = []types.AgentVar{}
 	}
 
 	payload := contentsShape{

@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
+	"github.com/mendixlabs/mxcli/mdl/types"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -54,7 +54,7 @@ func serializeCustomBlobDocument(in *customBlobInput) ([]byte, error) {
 	metadata := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(in.MetadataID)},
 		{Key: "$Type", Value: "CustomBlobDocuments$CustomBlobDocumentMetadata"},
-		{Key: "CreatedByExtension", Value: agenteditor.CreatedByExtensionID},
+		{Key: "CreatedByExtension", Value: types.CreatedByExtensionID},
 		{Key: "ReadableTypeName", Value: in.ReadableTypeName},
 	}
 

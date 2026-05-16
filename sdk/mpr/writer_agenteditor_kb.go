@@ -7,11 +7,11 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // CreateAgentEditorKnowledgeBase writes a Knowledge Base document.
-func (w *Writer) CreateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error {
+func (w *Writer) CreateAgentEditorKnowledgeBase(k *types.KnowledgeBase) error {
 	if k == nil {
 		return fmt.Errorf("knowledge base is nil")
 	}
@@ -40,14 +40,14 @@ func (w *Writer) CreateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) er
 		Documentation:      k.Documentation,
 		Excluded:           k.Excluded,
 		ExportLevel:        k.ExportLevel,
-		CustomDocumentType: agenteditor.CustomTypeKnowledgeBase,
-		ReadableTypeName:   agenteditor.ReadableKnowledgeBase,
+		CustomDocumentType: types.CustomTypeKnowledgeBase,
+		ReadableTypeName:   types.ReadableKnowledgeBase,
 		ContentsJSON:       contentsJSON,
 	})
 }
 
 // UpdateAgentEditorKnowledgeBase replaces an existing Knowledge Base document, preserving its UUID.
-func (w *Writer) UpdateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) error {
+func (w *Writer) UpdateAgentEditorKnowledgeBase(k *types.KnowledgeBase) error {
 	if k == nil {
 		return fmt.Errorf("knowledge base is nil")
 	}
@@ -67,8 +67,8 @@ func (w *Writer) UpdateAgentEditorKnowledgeBase(k *agenteditor.KnowledgeBase) er
 		Documentation:      k.Documentation,
 		Excluded:           k.Excluded,
 		ExportLevel:        k.ExportLevel,
-		CustomDocumentType: agenteditor.CustomTypeKnowledgeBase,
-		ReadableTypeName:   agenteditor.ReadableKnowledgeBase,
+		CustomDocumentType: types.CustomTypeKnowledgeBase,
+		ReadableTypeName:   types.ReadableKnowledgeBase,
 		ContentsJSON:       contentsJSON,
 	})
 }
@@ -78,15 +78,15 @@ func (w *Writer) DeleteAgentEditorKnowledgeBase(id string) error {
 	return w.deleteUnit(id)
 }
 
-func encodeKnowledgeBaseContents(k *agenteditor.KnowledgeBase) (string, error) {
+func encodeKnowledgeBaseContents(k *types.KnowledgeBase) (string, error) {
 	type providerFields struct {
-		Environment      string                   `json:"environment"`
-		DeepLinkURL      string                   `json:"deepLinkURL"`
-		KeyID            string                   `json:"keyId"`
-		KeyName          string                   `json:"keyName"`
-		ModelDisplayName string                   `json:"modelDisplayName"`
-		ModelName        string                   `json:"modelName"`
-		Key              *agenteditor.ConstantRef `json:"key,omitempty"`
+		Environment      string               `json:"environment"`
+		DeepLinkURL      string               `json:"deepLinkURL"`
+		KeyID            string               `json:"keyId"`
+		KeyName          string               `json:"keyName"`
+		ModelDisplayName string               `json:"modelDisplayName"`
+		ModelName        string               `json:"modelName"`
+		Key              *types.ConstantRef   `json:"key,omitempty"`
 	}
 	type contentsShape struct {
 		Name           string         `json:"name"`
