@@ -83,7 +83,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
 // Version is the library version.
@@ -127,21 +127,21 @@ type (
 	// Snippet represents a page snippet.
 	Snippet = genPg.Snippet
 
-	// Reader provides methods to read Mendix project files.
-	Reader = mpr.Reader
+	// Reader provides read-only access to Mendix project files.
+	Reader = mmpr.Reader
 
-	// Writer provides methods to write Mendix project files.
-	Writer = mpr.Writer
+	// Writer provides read-write access to Mendix project files.
+	Writer = mmpr.Writer
 )
 
 // Open opens an MPR file for reading.
 func Open(path string) (*Reader, error) {
-	return mpr.Open(path)
+	return mmpr.Open(path)
 }
 
 // OpenForWriting opens an MPR file for reading and writing.
 func OpenForWriting(path string) (*Writer, error) {
-	return mpr.NewWriter(path)
+	return mmpr.NewWriter(path)
 }
 
 // NewPage creates a new page.
@@ -153,5 +153,5 @@ func NewPage(name string) *Page {
 
 // GenerateID generates a new unique ID for model elements.
 func GenerateID() ID {
-	return ID(mpr.GenerateID())
+	return ID(mmpr.GenerateID())
 }

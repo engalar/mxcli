@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/spf13/cobra"
 )
 
@@ -61,7 +61,7 @@ Examples:
 
 		if versionStr == "" {
 			// Detect from project
-			reader, err := mpr.Open(projectPath)
+			reader, err := mmpr.Open(projectPath)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error opening project: %v\n", err)
 				os.Exit(1)
@@ -127,7 +127,7 @@ Examples:
 
 		if versionStr == "" {
 			// Detect from project
-			reader, err := mpr.Open(projectPath)
+			reader, err := mmpr.Open(projectPath)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error opening project: %v\n", err)
 				os.Exit(1)

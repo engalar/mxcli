@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/spf13/cobra"
 )
 
@@ -271,7 +271,7 @@ func formatBytes(b int64) string {
 // runCheckUnits checks for orphan units (Unit table entry without mxunit file)
 // and stale mxunit files (file exists but no Unit table entry). MPR v2 only.
 func runCheckUnits(mprPath string, fix bool) {
-	reader, err := mpr.Open(mprPath)
+	reader, err := mmpr.Open(mprPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
