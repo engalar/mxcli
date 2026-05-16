@@ -13,7 +13,6 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // mkGenProjectSecurity builds a gen-typed ProjectSecurity for use with
@@ -351,22 +350,12 @@ func TestGrantEntityAccess_XPathConstraint_PreservesRights(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
 
-	statusAttr := &domainmodel.Attribute{
-		BaseElement: model.BaseElement{ID: nextID("attr")},
-		Name:        "Status",
-	}
-	entityBefore := &domainmodel.Entity{
-		BaseElement: model.BaseElement{ID: nextID("ent")},
-		ContainerID: mod.ID,
-		Name:        "Order",
-		Persistable: true,
-		Attributes:  []*domainmodel.Attribute{statusAttr},
-		AccessRules: nil, // no rules yet
-	}
+	entityID := nextID("ent")
+	attrID := nextID("attr")
 	entityAfterGen := mkEntityGen("Order")
-	entityAfterGen.SetID(element.ID(entityBefore.ID))
+	entityAfterGen.SetID(element.ID(entityID))
 	attrAfterGen := genDm.NewAttribute()
-	attrAfterGen.SetID(element.ID(statusAttr.ID))
+	attrAfterGen.SetID(element.ID(attrID))
 	attrAfterGen.SetName("Status")
 	attrAfterGen.SetType(genDm.NewStringAttributeType())
 	entityAfterGen.AddAttributes(attrAfterGen)

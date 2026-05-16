@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	gendomainmodels "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
@@ -179,6 +180,48 @@ func (r *Reader) GetDomainModelByID(id model.ID) (*domainmodel.DomainModel, erro
 	}
 
 	return nil, fmt.Errorf("domain model not found: %s", id)
+}
+
+// ListDomainModelsGen returns all domain models as gen-typed DomainModel values.
+// ContainerID is NOT set on the returned values; callers that need it should join
+// against Reader.ListUnitsByType("DomainModels$DomainModel") to get the ContainerID
+// column from the SQLite unit index (same pattern as ModuleSecurity in project_tree.go).
+func (r *Reader) ListDomainModelsGen() ([]*gendomainmodels.DomainModel, error) {
+	units, err := r.listUnitsByType("DomainModels$DomainModel")
+	if err != nil {
+		return nil, err
+	}
+
+	var result []*gendomainmodels.DomainModel
+	for _, u := range units {
+		dm, err := r.parseDomainModelGen(u.ID, u.ContainerID, u.Contents)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse domain model %s: %w", u.ID, err)
+		}
+		result = append(result, dm)
+	}
+	return result, nil
+}
+
+// GetDomainModelGen retrieves a gen-typed domain model by its own ID.
+func (r *Reader) GetDomainModelGen(id model.ID) (*gendomainmodels.DomainModel, error) {
+	units, err := r.listUnitsByType("DomainModels$DomainModel")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, u := range units {
+		if u.ID == string(id) {
+			return r.parseDomainModelGen(u.ID, u.ContainerID, u.Contents)
+		}
+	}
+	return nil, fmt.Errorf("domain model not found: %s", id)
+}
+
+// GetDomainModelByIDGen retrieves a gen-typed domain model by its own ID.
+// This is an alias for GetDomainModelGen with an ID-suffix convention matching the backend.
+func (r *Reader) GetDomainModelByIDGen(id model.ID) (*gendomainmodels.DomainModel, error) {
+	return r.GetDomainModelGen(id)
 }
 
 // ListPages returns all pages in the project.

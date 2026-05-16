@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	gendomainmodels "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
@@ -117,19 +118,35 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		modData[m.ID] = &moduleData{}
 	}
 
-	// Collect entities and associations from domain models
-	dms, _ := reader.ListDomainModels()
+	// Collect entities and associations from domain models (gen-typed path).
+	// gen-typed DomainModel loses Container() linkage on codec roundtrip,
+	// so resolve ContainerID by joining against the raw unit index.
+	dmRefs, _ := mreader.ListUnitsByType("DomainModels$DomainModel")
+	dmContainerByID := make(map[string]model.ID, len(dmRefs))
+	for _, ref := range dmRefs {
+		dmContainerByID[ref.ID] = model.ID(ref.ContainerID)
+	}
+	dms, _ := reader.ListDomainModelsGen()
 	for _, dm := range dms {
-		modID := h.FindModuleID(dm.ContainerID)
+		containerID := dmContainerByID[string(dm.ID())]
+		modID := h.FindModuleID(containerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		for _, ent := range dm.Entities {
-			md.entities = append(md.entities, treeElement{Name: ent.Name, ContainerID: dm.ContainerID})
+		for _, entElem := range dm.EntitiesItems() {
+			ent, ok := entElem.(*gendomainmodels.Entity)
+			if !ok {
+				continue
+			}
+			md.entities = append(md.entities, treeElement{Name: ent.Name(), ContainerID: containerID})
 		}
-		for _, assoc := range dm.Associations {
-			md.associations = append(md.associations, treeElement{Name: assoc.Name, ContainerID: dm.ContainerID})
+		for _, assocElem := range dm.AssociationsItems() {
+			assoc, ok := assocElem.(*gendomainmodels.Association)
+			if !ok {
+				continue
+			}
+			md.associations = append(md.associations, treeElement{Name: assoc.Name(), ContainerID: containerID})
 		}
 	}
 
@@ -500,19 +517,32 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		md.documents = append(md.documents, treeElement{Name: a.Name, ContainerID: a.ContainerID, Type: "agent"})
 	}
 
-	// Mark external entities in domain model
-	// External entities have Source == "Rest$ODataRemoteEntitySource"
+	// Mark external entities in domain model.
+	// External entities have a source of type Rest$ODataRemoteEntitySource.
 	for _, dm := range dms {
-		modID := h.FindModuleID(dm.ContainerID)
+		containerID := dmContainerByID[string(dm.ID())]
+		modID := h.FindModuleID(containerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		for i, ent := range dm.Entities {
-			if ent.Source == "Rest$ODataRemoteEntitySource" {
-				// Update the entity element to use externalentity type
+		for _, entElem := range dm.EntitiesItems() {
+			ent, ok := entElem.(*gendomainmodels.Entity)
+			if !ok {
+				continue
+			}
+			// Source() returns the raw BSON source object; check type via IsRemote
+			// or inspect the source part's type name. We use the entity's Name()
+			// to locate the tree element and set it to externalentity.
+			// The gen Entity has a source part — check via Source() != nil
+			// and check the source element's TypeName.
+			src := ent.Source()
+			if src == nil {
+				continue
+			}
+			if src.TypeName() == "Rest$ODataRemoteEntitySource" {
 				for j := range md.entities {
-					if md.entities[j].Name == dm.Entities[i].Name {
+					if md.entities[j].Name == ent.Name() {
 						md.entities[j].Type = "externalentity"
 						break
 					}
