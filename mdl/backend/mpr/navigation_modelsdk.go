@@ -7,7 +7,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // updateNavigationProfileViaModelsdk patches a navigation profile through the
@@ -21,7 +20,7 @@ func (b *MprBackend) updateNavigationProfileViaModelsdk(navDocID model.ID, profi
 	if err != nil {
 		return fmt.Errorf("read unit: %w", err)
 	}
-	patched, err := sdkmpr.PatchNavigationProfile(rawBytes, profileName, spec)
+	patched, err := sdkPatchNavigationProfile(rawBytes, profileName, spec)
 	if err != nil {
 		return err
 	}

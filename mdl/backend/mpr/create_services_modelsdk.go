@@ -7,7 +7,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // All Create* methods in this file produce canonical BSON via the existing
@@ -31,7 +30,7 @@ func (b *MprBackend) createDataTransformerViaModelsdk(dt *model.DataTransformer)
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := mpr.SerializeDataTransformer(dt)
+	contents, err := sdkSerializeDataTransformer(dt)
 	if err != nil {
 		return fmt.Errorf("serialize data transformer: %w", err)
 	}
@@ -50,7 +49,7 @@ func (b *MprBackend) createImportMappingViaModelsdk(im *model.ImportMapping) err
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := mpr.SerializeImportMapping(im)
+	contents, err := sdkSerializeImportMapping(im)
 	if err != nil {
 		return fmt.Errorf("serialize import mapping: %w", err)
 	}
@@ -69,7 +68,7 @@ func (b *MprBackend) createExportMappingViaModelsdk(em *model.ExportMapping) err
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := mpr.SerializeExportMapping(em)
+	contents, err := sdkSerializeExportMapping(em)
 	if err != nil {
 		return fmt.Errorf("serialize export mapping: %w", err)
 	}
@@ -100,7 +99,7 @@ func (b *MprBackend) createConsumedODataServiceViaModelsdk(svc *model.ConsumedOD
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := mpr.SerializeConsumedODataService(svc)
+	contents, err := sdkSerializeConsumedODataService(svc)
 	if err != nil {
 		return fmt.Errorf("serialize consumed odata service: %w", err)
 	}
@@ -117,7 +116,7 @@ func (b *MprBackend) createPublishedODataServiceViaModelsdk(svc *model.Published
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := mpr.SerializePublishedODataService(svc)
+	contents, err := sdkSerializePublishedODataService(svc)
 	if err != nil {
 		return fmt.Errorf("serialize published odata service: %w", err)
 	}
@@ -136,7 +135,7 @@ func (b *MprBackend) createConsumedRestServiceViaModelsdk(svc *model.ConsumedRes
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := mpr.SerializeConsumedRestService(svc)
+	contents, err := sdkSerializeConsumedRestService(svc)
 	if err != nil {
 		return fmt.Errorf("serialize consumed rest service: %w", err)
 	}
@@ -153,7 +152,7 @@ func (b *MprBackend) createPublishedRestServiceViaModelsdk(svc *model.PublishedR
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := mpr.SerializePublishedRestService(svc)
+	contents, err := sdkSerializePublishedRestService(svc)
 	if err != nil {
 		return fmt.Errorf("serialize published rest service: %w", err)
 	}
@@ -172,7 +171,7 @@ func (b *MprBackend) createImageCollectionViaModelsdk(ic *types.ImageCollection)
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	contents, err := mpr.SerializeImageCollection(ic)
+	contents, err := sdkSerializeImageCollection(ic)
 	if err != nil {
 		return fmt.Errorf("serialize image collection: %w", err)
 	}
