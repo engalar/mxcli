@@ -17,7 +17,6 @@ import (
 	"testing"
 
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
-	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // newGenVizContext builds an ExecContext usable by the gen viz
@@ -30,12 +29,11 @@ func newGenVizContext(t *testing.T, out *bytes.Buffer) *ExecContext {
 	repoCtx := mprbackend.NewExecutorContext(w)
 
 	path := w.ConcreteReader().Path()
-	sdkW, err := sdkmpr.NewWriter(path)
+	be, err := mprbackend.NewFromPath(path)
 	if err != nil {
-		t.Fatalf("sdkmpr.NewWriter(%s): %v", path, err)
+		t.Fatalf("mprbackend.NewFromPath(%s): %v", path, err)
 	}
-	t.Cleanup(func() { _ = sdkW.Close() })
-	be := mprbackend.Wrap(sdkW, path)
+	t.Cleanup(func() { _ = be.Disconnect() })
 
 	return &ExecContext{
 		Backend:    be,

@@ -66,6 +66,16 @@ func Wrap(writer *mpr.Writer, path string) *MprBackend {
 	}
 }
 
+// NewFromPath opens path for read-write and returns a fully-wired MprBackend.
+// Equivalent to Connect on a zero-value backend; useful in tests.
+func NewFromPath(path string) (*MprBackend, error) {
+	b := &MprBackend{}
+	if err := b.Connect(path); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
 // ---------------------------------------------------------------------------
 // ConnectionBackend
 // ---------------------------------------------------------------------------
