@@ -26,11 +26,39 @@ import (
 	genImg "github.com/mendixlabs/mxcli/modelsdk/gen/images"
 	genImpMap "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
 	genJson "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
+	genNav "github.com/mendixlabs/mxcli/modelsdk/gen/navigation"
 	genODataPub "github.com/mendixlabs/mxcli/modelsdk/gen/odatapublish"
+	genProj "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
 	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
 	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
+	genSet "github.com/mendixlabs/mxcli/modelsdk/gen/settings"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
+
+	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 )
+
+// decodeOne fetches and decodes a single unit by ID into the requested gen type.
+// Returns nil if the bytes cannot be read or do not decode into T.
+func decodeOne[T element.Element](r *mmpr.Reader, unitID string) (T, error) {
+	var zero T
+	raw, err := r.GetRawUnitBytes(unitID)
+	if err != nil {
+		return zero, fmt.Errorf("read unit %s: %w", unitID, err)
+	}
+	dec := codec.NewDecoder(codec.DefaultRegistry)
+	elem, err := dec.Decode(bson.Raw(raw))
+	if err != nil {
+		return zero, fmt.Errorf("decode unit %s: %w", unitID, err)
+	}
+	typed, ok := elem.(T)
+	if !ok {
+		return zero, fmt.Errorf("unit %s decoded as %T, want %T", unitID, elem, zero)
+	}
+	return typed, nil
+}
 
 // matchesQualified reports whether `qualified` (either a bare local name or a
 // fully qualified Module.Name) targets an element whose local name is `local`.
@@ -231,4 +259,88 @@ func ListConsumedRestServices(r *mmpr.Reader) ([]*genRest.ConsumedRestService, e
 // ListPublishedRestServices decodes every Rest$PublishedRestService unit.
 func ListPublishedRestServices(r *mmpr.Reader) ([]*genRest.PublishedRestService, error) {
 	return ListUnitsByType[*genRest.PublishedRestService](r, "Rest$PublishedRestService")
+}
+
+// ---------------------------------------------------------------------------
+// Navigation
+// ---------------------------------------------------------------------------
+
+// ListNavigationDocuments decodes every Navigation$NavigationDocument unit.
+func ListNavigationDocuments(r *mmpr.Reader) ([]*genNav.NavigationDocument, error) {
+	return ListUnitsByType[*genNav.NavigationDocument](r, "Navigation$NavigationDocument")
+}
+
+// GetNavigation returns the first NavigationDocument in the project, which is
+// the singleton navigation root that every Mendix project carries.
+func GetNavigation(r *mmpr.Reader) (*genNav.NavigationDocument, error) {
+	docs, err := ListNavigationDocuments(r)
+	if err != nil {
+		return nil, err
+	}
+	if len(docs) == 0 {
+		return nil, fmt.Errorf("navigation document not found")
+	}
+	return docs[0], nil
+}
+
+// ---------------------------------------------------------------------------
+// Settings
+// ---------------------------------------------------------------------------
+
+// GetProjectSettings returns the project-level Settings$ProjectSettings doc.
+// There is at most one per project.
+func GetProjectSettings(r *mmpr.Reader) (*genSet.ProjectSettings, error) {
+	settings, err := ListUnitsByType[*genSet.ProjectSettings](r, "Settings$ProjectSettings")
+	if err != nil {
+		return nil, err
+	}
+	if len(settings) == 0 {
+		return nil, fmt.Errorf("project settings not found")
+	}
+	return settings[0], nil
+}
+
+// ListModuleSettings decodes every Projects$ModuleSettings unit. ModuleSettings
+// lives in the `projects` gen package even though its BSON $Type is namespaced
+// under `Projects` — the gen layer preserves the historical type name.
+func ListModuleSettings(r *mmpr.Reader) ([]*genProj.ModuleSettings, error) {
+	return ListUnitsByType[*genProj.ModuleSettings](r, "Projects$ModuleSettings")
+}
+
+// GetModuleSettings returns the ModuleSettings whose container is the given
+// module ID. Uses the raw unit ContainerID for matching because the decoded
+// element drops container linkage by default.
+func GetModuleSettings(r *mmpr.Reader, moduleID model.ID) (*genProj.ModuleSettings, error) {
+	refs, err := r.ListUnitsByType("Projects$ModuleSettings")
+	if err != nil {
+		return nil, err
+	}
+	for _, ref := range refs {
+		if ref.ContainerID != string(moduleID) {
+			continue
+		}
+		return decodeOne[*genProj.ModuleSettings](r, ref.ID)
+	}
+	return nil, fmt.Errorf("module settings not found for module: %s", moduleID)
+}
+
+// ---------------------------------------------------------------------------
+// Security
+// ---------------------------------------------------------------------------
+
+// GetProjectSecurity returns the project-level Security$ProjectSecurity doc.
+func GetProjectSecurity(r *mmpr.Reader) (*genSec.ProjectSecurity, error) {
+	secs, err := ListUnitsByType[*genSec.ProjectSecurity](r, "Security$ProjectSecurity")
+	if err != nil {
+		return nil, err
+	}
+	if len(secs) == 0 {
+		return nil, fmt.Errorf("project security not found")
+	}
+	return secs[0], nil
+}
+
+// ListModuleSecurity decodes every Security$ModuleSecurity unit.
+func ListModuleSecurity(r *mmpr.Reader) ([]*genSec.ModuleSecurity, error) {
+	return ListUnitsByType[*genSec.ModuleSecurity](r, "Security$ModuleSecurity")
 }
