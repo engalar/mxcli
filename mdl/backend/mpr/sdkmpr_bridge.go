@@ -65,7 +65,7 @@ func sdkOpenBSONScanner(path string) (types.BSONScanner, func(), error) {
 // ── Patch wrappers ────────────────────────────────────────────────────────────
 
 func sdkPatchNavigationProfile(rawBytes []byte, profileName string, spec types.NavigationProfileSpec) ([]byte, error) {
-	return sdkmpr.PatchNavigationProfile(rawBytes, profileName, spec)
+	return modelsdkmpr.PatchNavigationProfile(rawBytes, profileName, spec)
 }
 
 func sdkPatchReconcileMemberAccesses(rawBytes []byte, moduleName string) ([]byte, int, error) {
