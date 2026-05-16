@@ -17,7 +17,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
-	"github.com/mendixlabs/mxcli/sdk/widgets"
+	"github.com/mendixlabs/mxcli/modelsdk/widgets"
 )
 
 // Widget IDs for DataGrid2 and its filter widgets.
