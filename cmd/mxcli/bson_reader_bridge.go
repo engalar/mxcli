@@ -22,3 +22,16 @@ type bsonReader interface {
 func openBSONReader(path string) (bsonReader, error) {
 	return sdkmpr.Open(path)
 }
+
+// widgetReader exposes the widget inspection methods needed by cmd_extract_templates.go.
+// Satisfied by *sdkmpr.Reader.
+type widgetReader interface {
+	GetMendixVersion() (string, error)
+	ListAllCustomWidgetTypes() ([]*types.RawCustomWidgetType, error)
+	Close() error
+}
+
+// openWidgetReader opens a project at path and returns a widgetReader.
+func openWidgetReader(path string) (widgetReader, error) {
+	return sdkmpr.Open(path)
+}
