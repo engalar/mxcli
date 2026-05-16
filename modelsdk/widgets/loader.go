@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package widgets provides embedded widget templates for pluggable widgets.
-//
-// NOTE: This package is a fork of sdk/widgets/ with import paths changed to
-// reference modelsdk/widgets/mpk. The two must be kept in sync until the
-// migration to modelsdk/ is complete and sdk/widgets/ can be removed.
 package widgets
 
 import (
