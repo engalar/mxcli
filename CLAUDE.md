@@ -494,12 +494,14 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - Delta/change tracking system
 - Runtime type reflection
 - **Phase 4 read-path migration** — `MprBackend.reader` and `cmd/mxcli/project_tree.go` still
-  open `sdk/mpr.Reader`. Switching to `modelsdk/mpr.Reader` requires implementing ~30 missing
-  lister/getter methods (or gen→model converters layered on top of `modelsdk/mprread`) for
-  Enumeration, Constant, Navigation, ProjectSettings, ImportMapping, ExportMapping,
-  JsonStructure, BusinessEventService, OData/REST services, ScheduledEvent, ImageCollection,
-  AgentEditor types, etc. Write-path migration is 77% complete (see memory
-  `project_modelsdk_migration_pattern`); read-path is a separate spec.
+  open `sdk/mpr.Reader` because ~30 lister/getter calls have no equivalent **method** on
+  `modelsdk/mpr.Reader` (even though `modelsdk/mprread/` already exposes same-named free
+  functions like `mprread.ListEnumerations(r *mmpr.Reader)`). Switching requires writing a
+  full gen→model converter for each domain (downstream executor code consumes deep fields,
+  not just ID+Name) across ~15 domains: Enumeration, Constant, Navigation, ProjectSettings,
+  ImportMapping, ExportMapping, JsonStructure, BusinessEventService, OData/REST services,
+  ScheduledEvent, ImageCollection, AgentEditor types, etc. Write-path migration is 77%
+  complete (see memory `project_modelsdk_migration_pattern`); read-path is a separate spec.
 
 ## Useful Files for Context
 
