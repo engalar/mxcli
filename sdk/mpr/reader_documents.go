@@ -8,9 +8,9 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/pages"
-	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -431,7 +431,7 @@ func (r *Reader) ListSnippets() ([]*pages.Snippet, error) {
 }
 
 // GetProjectSecurity returns the project security configuration.
-func (r *Reader) GetProjectSecurity() (*security.ProjectSecurity, error) {
+func (r *Reader) GetProjectSecurity() (*gensecurity.ProjectSecurity, error) {
 	units, err := r.listUnitsByType("Security$ProjectSecurity")
 	if err != nil {
 		return nil, err
@@ -445,13 +445,13 @@ func (r *Reader) GetProjectSecurity() (*security.ProjectSecurity, error) {
 }
 
 // ListModuleSecurity returns all module security configurations.
-func (r *Reader) ListModuleSecurity() ([]*security.ModuleSecurity, error) {
+func (r *Reader) ListModuleSecurity() ([]*gensecurity.ModuleSecurity, error) {
 	units, err := r.listUnitsByType("Security$ModuleSecurity")
 	if err != nil {
 		return nil, err
 	}
 
-	var result []*security.ModuleSecurity
+	var result []*gensecurity.ModuleSecurity
 	for _, u := range units {
 		ms, err := r.parseModuleSecurity(u.ID, u.ContainerID, u.Contents)
 		if err != nil {
@@ -646,15 +646,15 @@ func (r *Reader) GetProjectSettings() (*model.ProjectSettings, error) {
 }
 
 // GetModuleSecurity returns the module security for a given module ID.
-func (r *Reader) GetModuleSecurity(moduleID model.ID) (*security.ModuleSecurity, error) {
-	allMS, err := r.ListModuleSecurity()
+func (r *Reader) GetModuleSecurity(moduleID model.ID) (*gensecurity.ModuleSecurity, error) {
+	units, err := r.listUnitsByType("Security$ModuleSecurity")
 	if err != nil {
 		return nil, err
 	}
 
-	for _, ms := range allMS {
-		if ms.ContainerID == moduleID {
-			return ms, nil
+	for _, u := range units {
+		if u.ContainerID == string(moduleID) {
+			return r.parseModuleSecurity(u.ID, u.ContainerID, u.Contents)
 		}
 	}
 

@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
@@ -143,15 +144,27 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		md.enumerations = append(md.enumerations, treeElement{Name: en.Name, ContainerID: en.ContainerID})
 	}
 
-	// Collect module security (module roles)
+	// Collect module security (module roles).
+	// gen-typed ModuleSecurity has no ContainerID field; resolve it from
+	// the raw unit index which carries the SQLite ContainerID column.
+	msRefs, _ := mreader.ListUnitsByType("Security$ModuleSecurity")
+	msContainerByID := make(map[string]model.ID, len(msRefs))
+	for _, ref := range msRefs {
+		msContainerByID[ref.ID] = model.ID(ref.ContainerID)
+	}
 	allMS, _ := reader.ListModuleSecurity()
 	for _, ms := range allMS {
-		md, ok := modData[ms.ContainerID]
+		containerID := msContainerByID[string(ms.ID())]
+		md, ok := modData[containerID]
 		if !ok {
 			continue
 		}
-		for _, mr := range ms.ModuleRoles {
-			md.moduleRoles = append(md.moduleRoles, treeElement{Name: mr.Name, ContainerID: ms.ContainerID})
+		for _, item := range ms.ModuleRolesItems() {
+			mr, ok := item.(*gensecurity.ModuleRole)
+			if !ok {
+				continue
+			}
+			md.moduleRoles = append(md.moduleRoles, treeElement{Name: mr.Name(), ContainerID: containerID})
 		}
 	}
 
@@ -596,13 +609,17 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		psNode := &TreeNode{Label: "Project Security", Type: "projectsecurity", QualifiedName: "ProjectSecurity"}
 
 		// User Roles category
-		if len(ps.UserRoles) > 0 {
+		if urItems := ps.UserRolesItems(); len(urItems) > 0 {
 			urNode := &TreeNode{Label: "User Roles", Type: "category"}
-			for _, ur := range ps.UserRoles {
+			for _, item := range urItems {
+				ur, ok := item.(*gensecurity.UserRole)
+				if !ok {
+					continue
+				}
 				urNode.Children = append(urNode.Children, &TreeNode{
-					Label:         ur.Name,
+					Label:         ur.Name(),
 					Type:          "userrole",
-					QualifiedName: ur.Name,
+					QualifiedName: ur.Name(),
 				})
 			}
 			sort.Slice(urNode.Children, func(i, j int) bool {
@@ -612,19 +629,25 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		}
 
 		// Demo Users category
-		if ps.EnableDemoUsers && len(ps.DemoUsers) > 0 {
-			duNode := &TreeNode{Label: "Demo Users", Type: "category"}
-			for _, du := range ps.DemoUsers {
-				duNode.Children = append(duNode.Children, &TreeNode{
-					Label:         du.UserName,
-					Type:          "demouser",
-					QualifiedName: du.UserName,
+		if ps.EnableDemoUsers() {
+			if duItems := ps.DemoUsersItems(); len(duItems) > 0 {
+				duNode := &TreeNode{Label: "Demo Users", Type: "category"}
+				for _, item := range duItems {
+					du, ok := item.(*gensecurity.DemoUser)
+					if !ok {
+						continue
+					}
+					duNode.Children = append(duNode.Children, &TreeNode{
+						Label:         du.UserName(),
+						Type:          "demouser",
+						QualifiedName: du.UserName(),
+					})
+				}
+				sort.Slice(duNode.Children, func(i, j int) bool {
+					return duNode.Children[i].Label < duNode.Children[j].Label
 				})
+				psNode.Children = append(psNode.Children, duNode)
 			}
-			sort.Slice(duNode.Children, func(i, j int) bool {
-				return duNode.Children[i].Label < duNode.Children[j].Label
-			})
-			psNode.Children = append(psNode.Children, duNode)
 		}
 
 		tree = append([]*TreeNode{psNode}, tree...)
