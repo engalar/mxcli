@@ -37,6 +37,7 @@ var _ linter.LintReader = (*MprBackend)(nil)
 // ConnectionBackend.IsConnected() before dispatching handlers.
 type MprBackend struct {
 	reader     *sdkReader
+	msdkReader *modelsdkmpr.Reader
 	msdkWriter modelsdkmpr.UnitWriter
 	path       string
 }
@@ -70,7 +71,13 @@ func (b *MprBackend) Connect(path string) error {
 		_ = r.Close()
 		return err
 	}
+	mr, err := modelsdkmpr.OpenWithDB(r.DB(), path, r.ContentsDir())
+	if err != nil {
+		_ = r.Close()
+		return err
+	}
 	b.reader = r
+	b.msdkReader = mr
 	b.msdkWriter = mw
 	b.path = path
 	return nil
@@ -82,6 +89,7 @@ func (b *MprBackend) Disconnect() error {
 	}
 	err := b.reader.Close()
 	b.reader = nil
+	b.msdkReader = nil
 	b.msdkWriter = nil
 	b.path = ""
 	return err
