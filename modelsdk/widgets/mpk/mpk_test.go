@@ -188,3 +188,30 @@ func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
+
+func TestWidgetDefinitionHasFullFields(t *testing.T) {
+	// Compile-time check: if fields are missing the struct literal will fail
+	_ = WidgetDefinition{
+		ID:                 "test",
+		Name:               "Test",
+		Description:        "desc",
+		Version:            "1.0",
+		IsPluggable:        true,
+		OfflineCapable:     false,
+		NeedsEntityContext: false,
+		SupportedPlatform:  "Web",
+		HelpURL:            "",
+		StudioCategory:     "",
+		StudioProCategory:  "",
+		Properties:         nil,
+		SystemProps:        nil,
+	}
+}
+
+func TestPropertyDefHasAllowedTypes(t *testing.T) {
+	_ = PropertyDef{
+		Key:          "attr",
+		Type:         "Attribute",
+		AllowedTypes: []string{"String", "Integer"},
+	}
+}
