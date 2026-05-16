@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
-	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 const fixturePath = "../../../testdata/expr-checker/minimal.mpr"
@@ -305,13 +304,13 @@ func TestNewExecutorContextWithReferences_BothServicesWired(t *testing.T) {
 		t.Fatalf("mmpr.NewWriter: %v", err)
 	}
 	t.Cleanup(func() { _ = mw.Close() })
-	sdkW, err := sdkmpr.NewWriter(dst)
+	scanner, closeScanner, err := sdkOpenBSONScanner(dst)
 	if err != nil {
-		t.Fatalf("sdkmpr.NewWriter: %v", err)
+		t.Fatalf("sdkOpenBSONScanner: %v", err)
 	}
-	t.Cleanup(func() { _ = sdkW.Close() })
+	t.Cleanup(closeScanner)
 
-	ctx := NewExecutorContextWithReferences(mw, sdkW.Reader())
+	ctx := NewExecutorContextWithReferences(mw, scanner)
 	if ctx == nil {
 		t.Fatal("NewExecutorContextWithReferences returned nil")
 	}

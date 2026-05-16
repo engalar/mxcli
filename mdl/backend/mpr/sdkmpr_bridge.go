@@ -49,6 +49,19 @@ func sdkSerializeImageCollection(ic *types.ImageCollection) ([]byte, error) {
 	return sdkmpr.SerializeImageCollection(ic)
 }
 
+// ── Scanner helper ────────────────────────────────────────────────────────────
+
+// sdkOpenBSONScanner opens an sdk/mpr reader at path and returns it as a
+// types.BSONScanner. The caller must call the returned close function when done.
+// Used by tests to obtain a BSONScanner without importing sdk/mpr directly.
+func sdkOpenBSONScanner(path string) (types.BSONScanner, func(), error) {
+	r, err := sdkmpr.Open(path)
+	if err != nil {
+		return nil, func() {}, err
+	}
+	return r, func() { _ = r.Close() }, nil
+}
+
 // ── Patch wrappers ────────────────────────────────────────────────────────────
 
 func sdkPatchNavigationProfile(rawBytes []byte, profileName string, spec types.NavigationProfileSpec) ([]byte, error) {
