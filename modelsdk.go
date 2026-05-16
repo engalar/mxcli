@@ -22,12 +22,11 @@
 //	import (
 //	    "fmt"
 //	    "github.com/mendixlabs/mxcli"
-//	    "github.com/mendixlabs/mxcli/sdk/mpr"
 //	)
 //
 //	func main() {
-//	    // Open a Mendix project
-//	    reader, err := mpr.Open("/path/to/MyApp.mpr")
+//	    // Open a Mendix project via the public modelsdk API.
+//	    reader, err := modelsdk.Open("/path/to/MyApp.mpr")
 //	    if err != nil {
 //	        panic(err)
 //	    }

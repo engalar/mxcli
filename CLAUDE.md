@@ -73,18 +73,24 @@ ModelSDKGo/
 ├── modelsdk.go              # Main public api (open, OpenForWriting, helpers)
 ├── model/                   # Core types: ID, QualifiedName, module, Element interface
 │
-├── sdk/                     # SDK implementation packages (hand-written, ~480 types, 5-10 domains)
+├── sdk/                     # Legacy SDK implementation packages (hand-written, ~480 types, 5-10 domains)
 │   ├── domainmodel/         # entity, attribute, association, DomainModel
 │   ├── microflows/          # microflow, nanoflow, activities (60+ types)
 │   ├── pages/               # page, layout, widget types (50+ widgets)
 │   ├── widgets/             # Embedded widget templates for pluggable widgets
 │   │   ├── loader.go        # template loading with go:embed
 │   │   └── templates/       # json widget type definitions by Mendix version
-│   └── mpr/                 # MPR file format handling
-│       ├── reader.go        # read-only MPR access
-│       ├── writer.go        # read-write MPR modification
-│       ├── parser.go        # BSON parsing and deserialization
+│   └── mpr/                 # Legacy MPR reader (Phase 4 read-path migration pending)
+│       ├── reader.go        # read-only MPR access — still primary read path
+│       ├── writer.go        # read-write MPR modification (writes routed through modelsdk/mpr)
+│       ├── parser.go        # BSON parsing and deserialization (model.* shape)
 │       └── utils.go         # UUID generation utilities
+│   # NOTE: All bridge files (sdkmpr_bridge.go, repos/sdk_bridge.go, cmd/mxcli/bson_reader_bridge.go)
+│   # have been deleted; consumers call modelsdk/mpr directly where possible.
+│   # project_tree.go + MprBackend.reader still open sdk/mpr.Reader because ~30 lister/getter
+│   # methods (ListEnumerations, GetNavigation, GetProjectSettings, ListBusinessEventServices …)
+│   # have no modelsdk/mpr equivalent yet. Migrating them is Phase 4 work — see
+│   # memory `project_modelsdk_migration_pattern` and `Not Yet Implemented` below.
 │
 ├── modelsdk/                # Next-gen SDK: auto-generated types with dirty tracking + BSON roundtrip
 │   ├── codec/               # BSON encoder/decoder with type registry
@@ -487,6 +493,13 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - 47 of 52 metamodel domains (REST, etc.)
 - Delta/change tracking system
 - Runtime type reflection
+- **Phase 4 read-path migration** — `MprBackend.reader` and `cmd/mxcli/project_tree.go` still
+  open `sdk/mpr.Reader`. Switching to `modelsdk/mpr.Reader` requires implementing ~30 missing
+  lister/getter methods (or gen→model converters layered on top of `modelsdk/mprread`) for
+  Enumeration, Constant, Navigation, ProjectSettings, ImportMapping, ExportMapping,
+  JsonStructure, BusinessEventService, OData/REST services, ScheduledEvent, ImageCollection,
+  AgentEditor types, etc. Write-path migration is 77% complete (see memory
+  `project_modelsdk_migration_pattern`); read-path is a separate spec.
 
 ## Useful Files for Context
 
