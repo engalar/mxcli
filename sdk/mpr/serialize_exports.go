@@ -5,8 +5,6 @@ package mpr
 import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/javaactions"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // Public Serialize* package-level functions produce canonical BSON bytes for
@@ -73,11 +71,6 @@ func SerializePublishedRestService(svc *model.PublishedRestService) ([]byte, err
 	return serializePublishedRestService(svc)
 }
 
-// SerializeJavaAction returns BSON bytes for a Java action unit.
-func SerializeJavaAction(ja *javaactions.JavaAction) ([]byte, error) {
-	return serializeJavaAction(ja)
-}
-
 // SerializeEnumeration returns BSON bytes for an enumeration unit.
 func SerializeEnumeration(enum *model.Enumeration) ([]byte, error) {
 	return serializeEnumeration(enum)
@@ -86,11 +79,6 @@ func SerializeEnumeration(enum *model.Enumeration) ([]byte, error) {
 // SerializeConstant returns BSON bytes for a constant unit.
 func SerializeConstant(constant *model.Constant) ([]byte, error) {
 	return serializeConstant(constant)
-}
-
-// SerializeWorkflow returns BSON bytes for a workflow unit.
-func SerializeWorkflow(wf *workflows.Workflow) ([]byte, error) {
-	return serializeWorkflow(wf)
 }
 
 // SerializeProjectSettings returns BSON bytes for the project settings unit.
@@ -216,9 +204,3 @@ func SerializeAgentEditorAgent(a *types.Agent) ([]byte, error) {
 	})
 }
 
-// GenerateJavaSource generates Java source code for a Java action.
-// Exported so that callers outside sdk/mpr can produce Java source
-// without going through the Writer (e.g., path-based file operations).
-func GenerateJavaSource(moduleName, actionName string, userCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType, extraImports []string, extraCode string) string {
-	return generateJavaSource(moduleName, actionName, userCode, params, returnType, extraImports, extraCode)
-}

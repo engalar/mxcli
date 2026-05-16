@@ -11,8 +11,6 @@ import (
 	gendomainmodels "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"github.com/mendixlabs/mxcli/sdk/workflows"
-
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -443,41 +441,6 @@ func (r *Reader) ListConsumedRestServices() ([]*model.ConsumedRestService, error
 	}
 
 	return result, nil
-}
-
-// ListWorkflows returns all workflows in the project.
-func (r *Reader) ListWorkflows() ([]*workflows.Workflow, error) {
-	units, err := r.listUnitsByType("Workflows$Workflow")
-	if err != nil {
-		return nil, err
-	}
-
-	var result []*workflows.Workflow
-	for _, u := range units {
-		wf, err := r.parseWorkflow(u.ID, u.ContainerID, u.Contents)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse workflow %s: %w", u.ID, err)
-		}
-		result = append(result, wf)
-	}
-
-	return result, nil
-}
-
-// GetWorkflow retrieves a workflow by ID.
-func (r *Reader) GetWorkflow(id model.ID) (*workflows.Workflow, error) {
-	wfs, err := r.ListWorkflows()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, wf := range wfs {
-		if wf.ID == id {
-			return wf, nil
-		}
-	}
-
-	return nil, fmt.Errorf("workflow not found: %s", id)
 }
 
 // ListBusinessEventServices returns all business event services in the project.
