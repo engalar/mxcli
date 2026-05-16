@@ -218,7 +218,7 @@ func TestPropertyDefHasAllowedTypes(t *testing.T) {
 
 func TestFindMPK_MultiWidget(t *testing.T) {
 	ClearCache()
-	projectDir := filepath.Join("..", "..", "..", "sdk", "widgets", "testdata", "crushertestproject")
+	projectDir := filepath.Join("..", "testdata", "crushertestproject")
 	if _, err := os.Stat(projectDir); err != nil {
 		t.Skip("crusher test fixture not available")
 	}
@@ -243,7 +243,7 @@ func TestFindMPK_MultiWidget(t *testing.T) {
 
 func TestParseMPKForWidget_MultiWidget(t *testing.T) {
 	ClearCache()
-	mpkPath := filepath.Join("..", "..", "..", "sdk", "widgets", "testdata", "crushertestproject", "widgets", "CrusherWidgets.mpk")
+	mpkPath := filepath.Join("..", "testdata", "crushertestproject", "widgets", "CrusherWidgets.mpk")
 	if _, err := os.Stat(mpkPath); err != nil {
 		t.Skip("crusher test fixture not available")
 	}
