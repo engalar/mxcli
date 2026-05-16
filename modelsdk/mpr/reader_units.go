@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // ResolveModuleName walks the container hierarchy upward until it finds a module.
@@ -241,10 +243,6 @@ func getTypeFromContents(contents []byte) string {
 }
 
 // RawUnitInfo contains information about a raw unit for BSON debugging.
-type RawUnitInfo struct {
-	ID            string
-	QualifiedName string
-	Type          string
-	ModuleName    string
-	Contents      []byte
-}
+// Aliased to mdl/types.RawUnitInfo so reader_raw.go methods and modelsdk/codec
+// consumers share a single concrete struct.
+type RawUnitInfo = types.RawUnitInfo
