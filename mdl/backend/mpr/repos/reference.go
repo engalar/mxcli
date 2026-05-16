@@ -9,7 +9,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
-	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // referenceService implements repos.ReferenceService using the types.BSONScanner
@@ -46,7 +45,7 @@ func (s *referenceService) PatchNavigationProfile(navDocID model.ID, profileName
 	if err != nil {
 		return fmt.Errorf("read nav unit %s: %w", navDocID, err)
 	}
-	patched, err := sdkmpr.PatchNavigationProfile(rawBytes, profileName, types.NavigationProfileSpec(spec))
+	patched, err := sdkPatchNavigationProfile(rawBytes, profileName, types.NavigationProfileSpec(spec))
 	if err != nil {
 		return fmt.Errorf("patch navigation profile: %w", err)
 	}
