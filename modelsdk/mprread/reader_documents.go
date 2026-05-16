@@ -13,14 +13,29 @@ package mprread
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
 	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
+	genExpMap "github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings"
+	genImpMap "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
+	genJson "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
 	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
+
+// matchesQualified reports whether `qualified` (either a bare local name or a
+// fully qualified Module.Name) targets an element whose local name is `local`.
+// The plan-defined matching scheme accepts both forms uniformly across the
+// GetXByQualifiedName helpers.
+func matchesQualified(qualified, local string) bool {
+	if local == "" {
+		return false
+	}
+	return qualified == local || strings.HasSuffix(qualified, "."+local)
+}
 
 // ---------------------------------------------------------------------------
 // Enumerations
@@ -89,4 +104,74 @@ func GetScheduledEvent(r *mmpr.Reader, id model.ID) (*genSched.ScheduledEvent, e
 		}
 	}
 	return nil, fmt.Errorf("scheduled event not found: %s", id)
+}
+
+// ---------------------------------------------------------------------------
+// Import mappings
+// ---------------------------------------------------------------------------
+
+// ListImportMappings decodes every ImportMappings$ImportMapping unit.
+func ListImportMappings(r *mmpr.Reader) ([]*genImpMap.ImportMapping, error) {
+	return ListUnitsByType[*genImpMap.ImportMapping](r, "ImportMappings$ImportMapping")
+}
+
+// GetImportMappingByQualifiedName retrieves an import mapping by its qualified
+// name (Module.Name) or by its local name alone.
+func GetImportMappingByQualifiedName(r *mmpr.Reader, qualifiedName string) (*genImpMap.ImportMapping, error) {
+	all, err := ListImportMappings(r)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range all {
+		if matchesQualified(qualifiedName, m.Name()) {
+			return m, nil
+		}
+	}
+	return nil, fmt.Errorf("import mapping not found: %s", qualifiedName)
+}
+
+// ---------------------------------------------------------------------------
+// Export mappings
+// ---------------------------------------------------------------------------
+
+// ListExportMappings decodes every ExportMappings$ExportMapping unit.
+func ListExportMappings(r *mmpr.Reader) ([]*genExpMap.ExportMapping, error) {
+	return ListUnitsByType[*genExpMap.ExportMapping](r, "ExportMappings$ExportMapping")
+}
+
+// GetExportMappingByQualifiedName retrieves an export mapping by qualified name.
+func GetExportMappingByQualifiedName(r *mmpr.Reader, qualifiedName string) (*genExpMap.ExportMapping, error) {
+	all, err := ListExportMappings(r)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range all {
+		if matchesQualified(qualifiedName, m.Name()) {
+			return m, nil
+		}
+	}
+	return nil, fmt.Errorf("export mapping not found: %s", qualifiedName)
+}
+
+// ---------------------------------------------------------------------------
+// JSON structures
+// ---------------------------------------------------------------------------
+
+// ListJsonStructures decodes every JsonStructures$JsonStructure unit.
+func ListJsonStructures(r *mmpr.Reader) ([]*genJson.JsonStructure, error) {
+	return ListUnitsByType[*genJson.JsonStructure](r, "JsonStructures$JsonStructure")
+}
+
+// GetJsonStructureByQualifiedName retrieves a JSON structure by qualified name.
+func GetJsonStructureByQualifiedName(r *mmpr.Reader, qualifiedName string) (*genJson.JsonStructure, error) {
+	all, err := ListJsonStructures(r)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range all {
+		if matchesQualified(qualifiedName, m.Name()) {
+			return m, nil
+		}
+	}
+	return nil, fmt.Errorf("json structure not found: %s", qualifiedName)
 }
