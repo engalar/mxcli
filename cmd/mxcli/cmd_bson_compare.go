@@ -5,6 +5,7 @@ import (
 	"os"
 
 	bsondebug "github.com/mendixlabs/mxcli/cmd/mxcli/bson"
+	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/spf13/cobra"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -50,7 +51,7 @@ func runBsonCompare(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	reader1, err := openBSONReader(projectPath)
+	reader1, err := mmpr.Open(projectPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening project: %v\n", err)
 		os.Exit(1)
@@ -58,7 +59,7 @@ func runBsonCompare(cmd *cobra.Command, args []string) {
 	defer reader1.Close()
 
 	var leftName, rightName string
-	var reader2 bsonReader
+	var reader2 *mmpr.Reader
 
 	switch len(args) {
 	case 2:
@@ -66,7 +67,7 @@ func runBsonCompare(cmd *cobra.Command, args []string) {
 		leftName = args[0]
 		rightName = args[1]
 		if secondProject != "" {
-			reader2, err = openBSONReader(secondProject)
+			reader2, err = mmpr.Open(secondProject)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error opening second project: %v\n", err)
 				os.Exit(1)
@@ -81,7 +82,7 @@ func runBsonCompare(cmd *cobra.Command, args []string) {
 		}
 		leftName = args[0]
 		rightName = args[0]
-		reader2, err = openBSONReader(secondProject)
+		reader2, err = mmpr.Open(secondProject)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error opening second project: %v\n", err)
 			os.Exit(1)
