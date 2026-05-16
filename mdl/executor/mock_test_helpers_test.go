@@ -20,7 +20,6 @@ import (
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // --- Context construction ---
@@ -151,35 +150,6 @@ func mkConstant(containerID model.ID, name string, typ string, defaultVal string
 		Name:         name,
 		Type:         model.ConstantDataType{Kind: typ},
 		DefaultValue: defaultVal,
-	}
-}
-
-func mkEntity(containerID model.ID, name string) *domainmodel.Entity {
-	return &domainmodel.Entity{
-		BaseElement: model.BaseElement{ID: nextID("ent")},
-		ContainerID: containerID,
-		Name:        name,
-		Persistable: true,
-	}
-}
-
-func mkDomainModel(containerID model.ID, entities ...*domainmodel.Entity) *domainmodel.DomainModel {
-	return &domainmodel.DomainModel{
-		BaseElement: model.BaseElement{ID: nextID("dm")},
-		ContainerID: containerID,
-		Entities:    entities,
-	}
-}
-
-func mkAssociation(containerID model.ID, name string, parentID, childID model.ID) *domainmodel.Association {
-	return &domainmodel.Association{
-		BaseElement: model.BaseElement{ID: nextID("assoc")},
-		ContainerID: containerID,
-		Name:        name,
-		ParentID:    parentID,
-		ChildID:     childID,
-		Type:        "Reference",
-		Owner:       "Default",
 	}
 }
 

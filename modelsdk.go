@@ -63,42 +63,6 @@
 //
 // Each element has a unique ID and belongs to a container element.
 //
-// # Reading Models
-//
-// Use the mpr.Reader to read model elements:
-//
-//	reader, _ := mpr.Open("MyApp.mpr")
-//
-//	// Get all domain models
-//	domainModels, _ := reader.ListDomainModels()
-//
-//	// Get a specific module
-//	module, _ := reader.GetModuleByName("MyModule")
-//
-//	// Get the domain model for a module
-//	dm, _ := reader.GetDomainModel(module.ID)
-//
-// # Modifying Models
-//
-// Use the mpr.Writer to modify model elements:
-//
-//	writer, _ := mpr.NewWriter("MyApp.mpr")
-//	defer writer.Close()
-//
-//	// Create a new entity
-//	entity := &domainmodel.Entity{
-//	    Name: "Customer",
-//	    Persistable: true,
-//	}
-//	writer.CreateEntity(domainModelID, entity)
-//
-//	// Add an attribute
-//	attr := &domainmodel.Attribute{
-//	    Name: "CustomerName",
-//	    Type: &domainmodel.StringAttributeType{Length: 200},
-//	}
-//	writer.AddAttribute(domainModelID, entity.ID, attr)
-//
 // # Thread Safety
 //
 // The Reader is safe for concurrent read access. The Writer should only be used
@@ -119,7 +83,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
@@ -148,18 +111,6 @@ type (
 
 	// ScheduledEvent represents a scheduled event.
 	ScheduledEvent = model.ScheduledEvent
-
-	// DomainModel represents a module's domain model.
-	DomainModel = domainmodel.DomainModel
-
-	// Entity represents an entity in a domain model.
-	Entity = domainmodel.Entity
-
-	// Attribute represents an attribute of an entity.
-	Attribute = domainmodel.Attribute
-
-	// Association represents an association between entities.
-	Association = domainmodel.Association
 
 	// Microflow represents a microflow (modelsdk gen-typed).
 	Microflow = genMf.Microflow
@@ -191,92 +142,6 @@ func Open(path string) (*Reader, error) {
 // OpenForWriting opens an MPR file for reading and writing.
 func OpenForWriting(path string) (*Writer, error) {
 	return mpr.NewWriter(path)
-}
-
-// NewStringAttribute creates a new string attribute.
-func NewStringAttribute(name string, length int) *Attribute {
-	return &Attribute{
-		Name: name,
-		Type: &domainmodel.StringAttributeType{Length: length},
-	}
-}
-
-// NewIntegerAttribute creates a new integer attribute.
-func NewIntegerAttribute(name string) *Attribute {
-	return &Attribute{
-		Name: name,
-		Type: &domainmodel.IntegerAttributeType{},
-	}
-}
-
-// NewDecimalAttribute creates a new decimal attribute.
-func NewDecimalAttribute(name string) *Attribute {
-	return &Attribute{
-		Name: name,
-		Type: &domainmodel.DecimalAttributeType{},
-	}
-}
-
-// NewBooleanAttribute creates a new boolean attribute.
-func NewBooleanAttribute(name string) *Attribute {
-	return &Attribute{
-		Name: name,
-		Type: &domainmodel.BooleanAttributeType{},
-	}
-}
-
-// NewDateTimeAttribute creates a new date/time attribute.
-func NewDateTimeAttribute(name string, localize bool) *Attribute {
-	return &Attribute{
-		Name: name,
-		Type: &domainmodel.DateTimeAttributeType{LocalizeDate: localize},
-	}
-}
-
-// NewEnumerationAttribute creates a new enumeration attribute.
-func NewEnumerationAttribute(name string, enumerationID ID) *Attribute {
-	return &Attribute{
-		Name: name,
-		Type: &domainmodel.EnumerationAttributeType{EnumerationID: enumerationID},
-	}
-}
-
-// NewEntity creates a new persistable entity.
-func NewEntity(name string) *Entity {
-	return &Entity{
-		Name:        name,
-		Persistable: true,
-	}
-}
-
-// NewNonPersistableEntity creates a new non-persistable entity.
-func NewNonPersistableEntity(name string) *Entity {
-	return &Entity{
-		Name:        name,
-		Persistable: false,
-	}
-}
-
-// NewAssociation creates a new reference association.
-func NewAssociation(name string, parentID, childID ID) *Association {
-	return &Association{
-		Name:     name,
-		ParentID: parentID,
-		ChildID:  childID,
-		Type:     domainmodel.AssociationTypeReference,
-		Owner:    domainmodel.AssociationOwnerDefault,
-	}
-}
-
-// NewReferenceSetAssociation creates a new reference set association.
-func NewReferenceSetAssociation(name string, parentID, childID ID) *Association {
-	return &Association{
-		Name:     name,
-		ParentID: parentID,
-		ChildID:  childID,
-		Type:     domainmodel.AssociationTypeReferenceSet,
-		Owner:    domainmodel.AssociationOwnerDefault,
-	}
 }
 
 // NewPage creates a new page.
