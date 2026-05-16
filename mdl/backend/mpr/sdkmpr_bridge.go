@@ -15,11 +15,11 @@ import (
 // ── Serialize wrappers ────────────────────────────────────────────────────────
 
 func sdkSerializeProjectSettings(ps *model.ProjectSettings) ([]byte, error) {
-	return sdkmpr.SerializeProjectSettings(ps)
+	return modelsdkmpr.SerializeProjectSettings(ps)
 }
 
 func sdkSerializeDataTransformer(dt *model.DataTransformer) ([]byte, error) {
-	return sdkmpr.SerializeDataTransformer(dt)
+	return modelsdkmpr.SerializeDataTransformer(dt)
 }
 
 func sdkSerializeImportMapping(im *model.ImportMapping) ([]byte, error) {
@@ -47,7 +47,7 @@ func sdkSerializePublishedRestService(svc *model.PublishedRestService) ([]byte, 
 }
 
 func sdkSerializeImageCollection(ic *types.ImageCollection) ([]byte, error) {
-	return sdkmpr.SerializeImageCollection(ic)
+	return modelsdkmpr.SerializeImageCollection(ic)
 }
 
 // ── Scanner helper ────────────────────────────────────────────────────────────
