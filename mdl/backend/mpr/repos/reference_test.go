@@ -10,7 +10,7 @@ import (
 )
 
 // openWriterAt opens an mmpr.Writer and a BSONScanner on the same fixture path.
-// The scanner is backed by an sdk/mpr reader (via sdkOpenBSONScanner bridge).
+// The scanner is backed by a modelsdk/mpr reader.
 func openWriterAt(t *testing.T) (*mmpr.Writer, types.BSONScanner) {
 	t.Helper()
 	dst := copyFixture(t, fixturePath, t.TempDir())
@@ -19,11 +19,11 @@ func openWriterAt(t *testing.T) (*mmpr.Writer, types.BSONScanner) {
 		t.Fatalf("mmpr.NewWriter: %v", err)
 	}
 	t.Cleanup(func() { _ = mw.Close() })
-	scanner, closeScanner, err := sdkOpenBSONScanner(dst)
+	scanner, err := mmpr.Open(dst)
 	if err != nil {
-		t.Fatalf("sdkOpenBSONScanner: %v", err)
+		t.Fatalf("mmpr.Open: %v", err)
 	}
-	t.Cleanup(closeScanner)
+	t.Cleanup(func() { _ = scanner.Close() })
 	return mw, scanner
 }
 
