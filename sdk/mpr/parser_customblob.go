@@ -16,8 +16,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -66,8 +66,8 @@ func parseCustomBlobWrapper(contents []byte) (*rawCustomBlobDoc, error) {
 }
 
 // parseAgentEditorModel parses a CustomBlobDocument with
-// CustomDocumentType == "agenteditor.model" into an agenteditor.Model.
-func (r *Reader) parseAgentEditorModel(unitID, containerID string, contents []byte) (*agenteditor.Model, error) {
+// CustomDocumentType == "agenteditor.model" into a types.Model.
+func (r *Reader) parseAgentEditorModel(unitID, containerID string, contents []byte) (*types.Model, error) {
 	contents, err := r.resolveContents(unitID, contents)
 	if err != nil {
 		return nil, err
@@ -77,12 +77,12 @@ func (r *Reader) parseAgentEditorModel(unitID, containerID string, contents []by
 	if err != nil {
 		return nil, err
 	}
-	if wrap.CustomDocumentType != agenteditor.CustomTypeModel {
+	if wrap.CustomDocumentType != types.CustomTypeModel {
 		return nil, fmt.Errorf("unit %s is not an agent-editor model (CustomDocumentType=%q)",
 			unitID, wrap.CustomDocumentType)
 	}
 
-	m := &agenteditor.Model{}
+	m := &types.Model{}
 	m.ID = model.ID(unitID)
 	m.TypeName = customBlobDocType
 	m.ContainerID = model.ID(containerID)
@@ -104,7 +104,7 @@ func (r *Reader) parseAgentEditorModel(unitID, containerID string, contents []by
 				KeyID        string                   `json:"keyId"`
 				KeyName      string                   `json:"keyName"`
 				ResourceName string                   `json:"resourceName"`
-				Key          *agenteditor.ConstantRef `json:"key"`
+				Key          *types.ConstantRef `json:"key"`
 			} `json:"providerFields"`
 		}
 		if err := json.Unmarshal([]byte(wrap.Contents), &payload); err != nil {
@@ -127,9 +127,9 @@ func (r *Reader) parseAgentEditorModel(unitID, containerID string, contents []by
 }
 
 // parseAgentEditorKnowledgeBase parses a CustomBlobDocument with
-// CustomDocumentType == "agenteditor.knowledgebase" into an
-// agenteditor.KnowledgeBase.
-func (r *Reader) parseAgentEditorKnowledgeBase(unitID, containerID string, contents []byte) (*agenteditor.KnowledgeBase, error) {
+// CustomDocumentType == "agenteditor.knowledgebase" into a
+// types.KnowledgeBase.
+func (r *Reader) parseAgentEditorKnowledgeBase(unitID, containerID string, contents []byte) (*types.KnowledgeBase, error) {
 	contents, err := r.resolveContents(unitID, contents)
 	if err != nil {
 		return nil, err
@@ -139,12 +139,12 @@ func (r *Reader) parseAgentEditorKnowledgeBase(unitID, containerID string, conte
 	if err != nil {
 		return nil, err
 	}
-	if wrap.CustomDocumentType != agenteditor.CustomTypeKnowledgeBase {
+	if wrap.CustomDocumentType != types.CustomTypeKnowledgeBase {
 		return nil, fmt.Errorf("unit %s is not an agent-editor knowledge base (CustomDocumentType=%q)",
 			unitID, wrap.CustomDocumentType)
 	}
 
-	k := &agenteditor.KnowledgeBase{}
+	k := &types.KnowledgeBase{}
 	k.ID = model.ID(unitID)
 	k.TypeName = customBlobDocType
 	k.ContainerID = model.ID(containerID)
@@ -164,7 +164,7 @@ func (r *Reader) parseAgentEditorKnowledgeBase(unitID, containerID string, conte
 				KeyName          string                   `json:"keyName"`
 				ModelDisplayName string                   `json:"modelDisplayName"`
 				ModelName        string                   `json:"modelName"`
-				Key              *agenteditor.ConstantRef `json:"key"`
+				Key              *types.ConstantRef `json:"key"`
 			} `json:"providerFields"`
 		}
 		if err := json.Unmarshal([]byte(wrap.Contents), &payload); err != nil {
@@ -184,9 +184,9 @@ func (r *Reader) parseAgentEditorKnowledgeBase(unitID, containerID string, conte
 }
 
 // parseAgentEditorConsumedMCPService parses a CustomBlobDocument with
-// CustomDocumentType == "agenteditor.consumedMCPService" into an
-// agenteditor.ConsumedMCPService.
-func (r *Reader) parseAgentEditorConsumedMCPService(unitID, containerID string, contents []byte) (*agenteditor.ConsumedMCPService, error) {
+// CustomDocumentType == "agenteditor.consumedMCPService" into a
+// types.ConsumedMCPService.
+func (r *Reader) parseAgentEditorConsumedMCPService(unitID, containerID string, contents []byte) (*types.ConsumedMCPService, error) {
 	contents, err := r.resolveContents(unitID, contents)
 	if err != nil {
 		return nil, err
@@ -196,12 +196,12 @@ func (r *Reader) parseAgentEditorConsumedMCPService(unitID, containerID string, 
 	if err != nil {
 		return nil, err
 	}
-	if wrap.CustomDocumentType != agenteditor.CustomTypeConsumedMCPService {
+	if wrap.CustomDocumentType != types.CustomTypeConsumedMCPService {
 		return nil, fmt.Errorf("unit %s is not an agent-editor consumed MCP service (CustomDocumentType=%q)",
 			unitID, wrap.CustomDocumentType)
 	}
 
-	c := &agenteditor.ConsumedMCPService{}
+	c := &types.ConsumedMCPService{}
 	c.ID = model.ID(unitID)
 	c.TypeName = customBlobDocType
 	c.ContainerID = model.ID(containerID)
@@ -230,8 +230,8 @@ func (r *Reader) parseAgentEditorConsumedMCPService(unitID, containerID string, 
 }
 
 // parseAgentEditorAgent parses a CustomBlobDocument with
-// CustomDocumentType == "agenteditor.agent" into an agenteditor.Agent.
-func (r *Reader) parseAgentEditorAgent(unitID, containerID string, contents []byte) (*agenteditor.Agent, error) {
+// CustomDocumentType == "agenteditor.agent" into a types.Agent.
+func (r *Reader) parseAgentEditorAgent(unitID, containerID string, contents []byte) (*types.Agent, error) {
 	contents, err := r.resolveContents(unitID, contents)
 	if err != nil {
 		return nil, err
@@ -241,12 +241,12 @@ func (r *Reader) parseAgentEditorAgent(unitID, containerID string, contents []by
 	if err != nil {
 		return nil, err
 	}
-	if wrap.CustomDocumentType != agenteditor.CustomTypeAgent {
+	if wrap.CustomDocumentType != types.CustomTypeAgent {
 		return nil, fmt.Errorf("unit %s is not an agent-editor agent (CustomDocumentType=%q)",
 			unitID, wrap.CustomDocumentType)
 	}
 
-	a := &agenteditor.Agent{}
+	a := &types.Agent{}
 	a.ID = model.ID(unitID)
 	a.TypeName = customBlobDocType
 	a.ContainerID = model.ID(containerID)
@@ -263,11 +263,11 @@ func (r *Reader) parseAgentEditorAgent(unitID, containerID string, contents []by
 			SystemPrompt       string                    `json:"systemPrompt"`
 			UserPrompt         string                    `json:"userPrompt"`
 			UsageType          string                    `json:"usageType"`
-			Variables          []agenteditor.AgentVar    `json:"variables"`
-			Tools              []agenteditor.AgentTool   `json:"tools"`
-			KnowledgebaseTools []agenteditor.AgentKBTool `json:"knowledgebaseTools"`
-			Model              *agenteditor.DocRef       `json:"model"`
-			Entity             *agenteditor.DocRef       `json:"entity"`
+			Variables          []types.AgentVar    `json:"variables"`
+			Tools              []types.AgentTool   `json:"tools"`
+			KnowledgebaseTools []types.AgentKBTool `json:"knowledgebaseTools"`
+			Model              *types.DocRef       `json:"model"`
+			Entity             *types.DocRef       `json:"entity"`
 			MaxTokens          *int                      `json:"maxTokens"`
 			ToolChoice         string                    `json:"toolChoice"`
 			Temperature        *float64                  `json:"temperature"`

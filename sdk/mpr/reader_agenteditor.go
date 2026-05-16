@@ -12,25 +12,25 @@ package mpr
 import (
 	"fmt"
 
-	"github.com/mendixlabs/mxcli/sdk/agenteditor"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // ListAgentEditorModels returns all agent-editor Model documents in the
-// project (CustomDocumentType == "agenteditor.model").
-func (r *Reader) ListAgentEditorModels() ([]*agenteditor.Model, error) {
+// project (CustomDocumentType == "types.model").
+func (r *Reader) ListAgentEditorModels() ([]*types.Model, error) {
 	units, err := r.listUnitsByType(customBlobDocType)
 	if err != nil {
 		return nil, err
 	}
 
-	var result []*agenteditor.Model
+	var result []*types.Model
 	for _, u := range units {
 		wrap, err := parseCustomBlobWrapper(u.Contents)
 		if err != nil {
 			// Skip units we can't decode; log to error list if useful later.
 			continue
 		}
-		if wrap.CustomDocumentType != agenteditor.CustomTypeModel {
+		if wrap.CustomDocumentType != types.CustomTypeModel {
 			continue
 		}
 		m, err := r.parseAgentEditorModel(u.ID, u.ContainerID, u.Contents)
@@ -43,20 +43,20 @@ func (r *Reader) ListAgentEditorModels() ([]*agenteditor.Model, error) {
 }
 
 // ListAgentEditorKnowledgeBases returns all agent-editor Knowledge Base
-// documents in the project (CustomDocumentType == "agenteditor.knowledgebase").
-func (r *Reader) ListAgentEditorKnowledgeBases() ([]*agenteditor.KnowledgeBase, error) {
+// documents in the project (CustomDocumentType == "types.knowledgebase").
+func (r *Reader) ListAgentEditorKnowledgeBases() ([]*types.KnowledgeBase, error) {
 	units, err := r.listUnitsByType(customBlobDocType)
 	if err != nil {
 		return nil, err
 	}
 
-	var result []*agenteditor.KnowledgeBase
+	var result []*types.KnowledgeBase
 	for _, u := range units {
 		wrap, err := parseCustomBlobWrapper(u.Contents)
 		if err != nil {
 			continue
 		}
-		if wrap.CustomDocumentType != agenteditor.CustomTypeKnowledgeBase {
+		if wrap.CustomDocumentType != types.CustomTypeKnowledgeBase {
 			continue
 		}
 		kb, err := r.parseAgentEditorKnowledgeBase(u.ID, u.ContainerID, u.Contents)
@@ -70,20 +70,20 @@ func (r *Reader) ListAgentEditorKnowledgeBases() ([]*agenteditor.KnowledgeBase, 
 
 // ListAgentEditorConsumedMCPServices returns all agent-editor Consumed MCP
 // Service documents in the project (CustomDocumentType ==
-// "agenteditor.consumedMCPService").
-func (r *Reader) ListAgentEditorConsumedMCPServices() ([]*agenteditor.ConsumedMCPService, error) {
+// "types.consumedMCPService").
+func (r *Reader) ListAgentEditorConsumedMCPServices() ([]*types.ConsumedMCPService, error) {
 	units, err := r.listUnitsByType(customBlobDocType)
 	if err != nil {
 		return nil, err
 	}
 
-	var result []*agenteditor.ConsumedMCPService
+	var result []*types.ConsumedMCPService
 	for _, u := range units {
 		wrap, err := parseCustomBlobWrapper(u.Contents)
 		if err != nil {
 			continue
 		}
-		if wrap.CustomDocumentType != agenteditor.CustomTypeConsumedMCPService {
+		if wrap.CustomDocumentType != types.CustomTypeConsumedMCPService {
 			continue
 		}
 		c, err := r.parseAgentEditorConsumedMCPService(u.ID, u.ContainerID, u.Contents)
@@ -96,20 +96,20 @@ func (r *Reader) ListAgentEditorConsumedMCPServices() ([]*agenteditor.ConsumedMC
 }
 
 // ListAgentEditorAgents returns all agent-editor Agent documents in the
-// project (CustomDocumentType == "agenteditor.agent").
-func (r *Reader) ListAgentEditorAgents() ([]*agenteditor.Agent, error) {
+// project (CustomDocumentType == "types.agent").
+func (r *Reader) ListAgentEditorAgents() ([]*types.Agent, error) {
 	units, err := r.listUnitsByType(customBlobDocType)
 	if err != nil {
 		return nil, err
 	}
 
-	var result []*agenteditor.Agent
+	var result []*types.Agent
 	for _, u := range units {
 		wrap, err := parseCustomBlobWrapper(u.Contents)
 		if err != nil {
 			continue
 		}
-		if wrap.CustomDocumentType != agenteditor.CustomTypeAgent {
+		if wrap.CustomDocumentType != types.CustomTypeAgent {
 			continue
 		}
 		a, err := r.parseAgentEditorAgent(u.ID, u.ContainerID, u.Contents)
