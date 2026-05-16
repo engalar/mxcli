@@ -22,6 +22,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/modelsdk/widgets/mpk"
 )
 
@@ -768,18 +769,8 @@ func jsonValueToBSONObjectWithMapping(val any, idMapping map[string]string) any 
 	}
 }
 
-// PropertyTypeIDEntry holds the IDs for a property type.
-type PropertyTypeIDEntry struct {
-	PropertyTypeID     string
-	ValueTypeID        string
-	DefaultValue       string // Default value from the template's ValueType
-	ValueType          string // Type of value (Boolean, Integer, String, DataSource, etc.)
-	Required           bool   // Whether this property is required
-	DataSourceProperty string // Non-empty when this attribute is linked to another DataSource property
-	// For object list properties (IsList=true with ObjectType), these hold nested IDs
-	ObjectTypeID      string                         // ID of the nested ObjectType (for object lists)
-	NestedPropertyIDs map[string]PropertyTypeIDEntry // Property IDs within the nested ObjectType
-}
+// PropertyTypeIDEntry is now defined in mdl/types; re-exported here for compatibility.
+type PropertyTypeIDEntry = types.PropertyTypeIDEntry
 
 // collectIDs recursively collects all $ID values and creates old->new mappings.
 func collectIDs(data map[string]any, idGenerator func() string, idMapping map[string]string) {

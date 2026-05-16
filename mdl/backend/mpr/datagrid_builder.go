@@ -44,7 +44,7 @@ func (b *MprBackend) buildDataGrid2WidgetDoc(id model.ID, name string, spec back
 		return nil, mdlerrors.NewNotFound("widget template", "DataGrid2")
 	}
 
-	propertyTypeIDs := convertPropertyTypeIDs(embeddedIDs)
+	propertyTypeIDs := embeddedIDs
 
 	// Build the object
 	var updatedObject bson.D

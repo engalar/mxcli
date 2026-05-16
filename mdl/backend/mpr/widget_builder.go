@@ -50,7 +50,7 @@ func (b *MprBackend) LoadWidgetTemplate(widgetID string, projectPath string) (ba
 		return nil, nil
 	}
 
-	propertyTypeIDs := convertPropertyTypeIDs(embeddedIDs)
+	propertyTypeIDs := embeddedIDs
 
 	return &mprWidgetObjectBuilder{
 		embeddedType:    embeddedType,
@@ -714,30 +714,6 @@ func createDefaultClientTemplateBSON(text string) bson.D {
 		{Key: "Parameters", Value: bson.A{int32(2)}},
 		{Key: "Template", Value: makeText(text)},
 	}
-}
-
-// ---------------------------------------------------------------------------
-// Property type ID conversion
-// ---------------------------------------------------------------------------
-
-func convertPropertyTypeIDs(src map[string]widgets.PropertyTypeIDEntry) map[string]types.PropertyTypeIDEntry {
-	result := make(map[string]types.PropertyTypeIDEntry)
-	for k, v := range src {
-		entry := types.PropertyTypeIDEntry{
-			PropertyTypeID:     v.PropertyTypeID,
-			ValueTypeID:        v.ValueTypeID,
-			DefaultValue:       v.DefaultValue,
-			ValueType:          v.ValueType,
-			Required:           v.Required,
-			DataSourceProperty: v.DataSourceProperty,
-			ObjectTypeID:       v.ObjectTypeID,
-		}
-		if len(v.NestedPropertyIDs) > 0 {
-			entry.NestedPropertyIDs = convertPropertyTypeIDs(v.NestedPropertyIDs)
-		}
-		result[k] = entry
-	}
-	return result
 }
 
 // ---------------------------------------------------------------------------
