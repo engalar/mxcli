@@ -7,11 +7,10 @@ package mprrepos
 import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
-	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 func sdkPatchNavigationProfile(rawBytes []byte, profileName string, spec types.NavigationProfileSpec) ([]byte, error) {
-	return sdkmpr.PatchNavigationProfile(rawBytes, profileName, types.NavigationProfileSpec(spec))
+	return modelsdkmpr.PatchNavigationProfile(rawBytes, profileName, spec)
 }
 
 // sdkOpenBSONScanner opens a modelsdk/mpr reader at path and returns it as a
