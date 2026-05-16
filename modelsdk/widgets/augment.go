@@ -628,6 +628,7 @@ func deepCloneTemplate(tmpl *WidgetTemplate) (*WidgetTemplate, error) {
 		Name:          tmpl.Name,
 		Version:       tmpl.Version,
 		ExtractedFrom: tmpl.ExtractedFrom,
+		Generated:     tmpl.Generated,
 	}
 
 	if tmpl.Type != nil {
