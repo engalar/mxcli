@@ -111,6 +111,7 @@ type WidgetTemplate struct {
 	Name          string         `json:"name"`
 	Version       string         `json:"version"`
 	ExtractedFrom string         `json:"extractedFrom"`
+	Generated     bool           `json:"-"` // true if derived from MPK, not from embedded template
 	Type          map[string]any `json:"type"`
 	Object        map[string]any `json:"object"` // WidgetObject with all property values
 }
@@ -120,6 +121,10 @@ var (
 	templateCache     = make(map[string]*WidgetTemplate)
 	templateCacheLock sync.RWMutex
 )
+
+// generatedCache stores MPK-derived templates for the session lifetime.
+// Key: widgetID string. Value: *WidgetTemplate (placeholder IDs, not yet remapped).
+var generatedCache sync.Map
 
 // widgetTemplateIndex maps widget IDs to template filenames.
 // Built lazily by scanning embedded template JSON files.
@@ -206,12 +211,58 @@ func GetTemplate(widgetID string) (*WidgetTemplate, error) {
 	return &tmpl, nil
 }
 
+// getOrGenerateTemplate returns a WidgetTemplate for widgetID. It checks the embedded
+// template cache first, then falls back to deriving a template from the project's .mpk
+// widget file. Returns nil, nil when the widget is unknown and no MPK is available.
+func getOrGenerateTemplate(widgetID, projectPath string) (*WidgetTemplate, error) {
+	// 1. Embedded templates (existing path)
+	if tmpl, err := GetTemplate(widgetID); err != nil || tmpl != nil {
+		return tmpl, err
+	}
+
+	// 2. Session cache of previously generated templates
+	if cached, ok := generatedCache.Load(widgetID); ok {
+		return cached.(*WidgetTemplate), nil
+	}
+
+	// 3. Derive from MPK in project/widgets/
+	if projectPath == "" {
+		return nil, nil
+	}
+	projectDir := filepath.Dir(projectPath)
+	mpkPath, err := mpk.FindMPK(projectDir, widgetID)
+	if err != nil {
+		return nil, fmt.Errorf("widget %q: scan MPK directory: %w", widgetID, err)
+	}
+	if mpkPath == "" {
+		return nil, nil // no MPK found — caller treats nil as "widget unknown"
+	}
+	def, err := mpk.ParseMPKForWidget(mpkPath, widgetID)
+	if err != nil {
+		return nil, fmt.Errorf("widget %q: parse MPK: %w", widgetID, err)
+	}
+	if def == nil {
+		return nil, nil
+	}
+	tmpl := GenerateFromMPK(def)
+	generatedCache.Store(widgetID, tmpl)
+	return tmpl, nil
+}
+
+// ResetGeneratedCache clears the MPK-derived template cache (for testing).
+func ResetGeneratedCache() {
+	generatedCache.Range(func(k, _ any) bool {
+		generatedCache.Delete(k)
+		return true
+	})
+}
+
 // GetTemplateBSON loads a widget template and converts its type definition to BSON.
 // The returned bson.D can be used directly in widget creation.
 // IDs in the template are regenerated with new UUIDs while preserving internal references.
 // If projectPath is non-empty, the template is augmented from the project's .mpk widget file.
 func GetTemplateBSON(widgetID string, idGenerator func() string, projectPath string) (bson.D, map[string]PropertyTypeIDEntry, error) {
-	tmpl, err := GetTemplate(widgetID)
+	tmpl, err := getOrGenerateTemplate(widgetID, projectPath)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -219,8 +270,10 @@ func GetTemplateBSON(widgetID string, idGenerator func() string, projectPath str
 		return nil, nil, nil
 	}
 
-	// Deep-clone and augment from .mpk
-	tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
+	// Deep-clone and augment from .mpk (skip for generated templates — already complete)
+	if !tmpl.Generated {
+		tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
+	}
 
 	// Phase 1: Collect all $ID values and create old->new ID mappings
 	idMapping := make(map[string]string)
@@ -243,7 +296,7 @@ func GetTemplateBSON(widgetID string, idGenerator func() string, projectPath str
 // If projectPath is non-empty, the template is augmented from the project's .mpk widget file.
 // Returns: (clonedType, clonedObject, propertyTypeIDs, objectTypeID, error)
 func GetTemplateFullBSON(widgetID string, idGenerator func() string, projectPath string) (bson.D, bson.D, map[string]PropertyTypeIDEntry, string, error) {
-	tmpl, err := GetTemplate(widgetID)
+	tmpl, err := getOrGenerateTemplate(widgetID, projectPath)
 	if err != nil {
 		return nil, nil, nil, "", err
 	}
@@ -251,8 +304,10 @@ func GetTemplateFullBSON(widgetID string, idGenerator func() string, projectPath
 		return nil, nil, nil, "", nil
 	}
 
-	// Deep-clone and augment from .mpk
-	tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
+	// Deep-clone and augment from .mpk (skip for generated templates — already complete)
+	if !tmpl.Generated {
+		tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
+	}
 
 	// Phase 1: Collect all $ID values from Type and create old->new ID mappings
 	idMapping := make(map[string]string)
@@ -297,6 +352,7 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 	var defaultValue string
 	var valueType string
 	var required bool
+	var dataSourceProp string
 	var nestedObjectTypeID string
 	var nestedPropertyIDs map[string]PropertyTypeIDEntry
 
@@ -340,7 +396,7 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 		} else if key == "ValueType" && isPropertyType {
 			// For PropertyTypes, extract ValueType info including nested ObjectType, DefaultValue, Type, Required
 			nestedPropertyIDs = make(map[string]PropertyTypeIDEntry)
-			elem.Value = jsonValueToBSONWithNestedObjectType(val, idMapping, &valueTypeID, &nestedObjectTypeID, nestedPropertyIDs, &defaultValue, &valueType, &required)
+			elem.Value = jsonValueToBSONWithNestedObjectType(val, idMapping, &valueTypeID, &nestedObjectTypeID, nestedPropertyIDs, &defaultValue, &valueType, &required, &dataSourceProp)
 		} else {
 			elem.Value = jsonValueToBSONWithMappingAndObjectType(val, idMapping, propertyTypeIDs, &valueTypeID, key == "ValueType", objectTypeID)
 		}
@@ -351,11 +407,12 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 	// Record PropertyType IDs
 	if isPropertyType && propertyKey != "" {
 		entry := PropertyTypeIDEntry{
-			PropertyTypeID: propertyTypeIDVal,
-			ValueTypeID:    valueTypeID,
-			DefaultValue:   defaultValue,
-			ValueType:      valueType,
-			Required:       required,
+			PropertyTypeID:     propertyTypeIDVal,
+			ValueTypeID:        valueTypeID,
+			DefaultValue:       defaultValue,
+			ValueType:          valueType,
+			Required:           required,
+			DataSourceProperty: dataSourceProp,
 		}
 		if nestedObjectTypeID != "" {
 			entry.ObjectTypeID = nestedObjectTypeID
@@ -368,7 +425,7 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 }
 
 // jsonValueToBSONWithNestedObjectType extracts ValueType info including nested ObjectType, DefaultValue, and Type.
-func jsonValueToBSONWithNestedObjectType(val any, idMapping map[string]string, valueTypeID *string, nestedObjectTypeID *string, nestedPropertyIDs map[string]PropertyTypeIDEntry, defaultValue *string, valueType *string, required *bool) any {
+func jsonValueToBSONWithNestedObjectType(val any, idMapping map[string]string, valueTypeID *string, nestedObjectTypeID *string, nestedPropertyIDs map[string]PropertyTypeIDEntry, defaultValue *string, valueType *string, required *bool, dataSourceProperty ...*string) any {
 	switch v := val.(type) {
 	case map[string]any:
 		result := make(bson.D, 0, len(v))
@@ -406,6 +463,12 @@ func jsonValueToBSONWithNestedObjectType(val any, idMapping map[string]string, v
 				// Extract required flag
 				if r, ok := fieldVal.(bool); ok {
 					*required = r
+				}
+				elem.Value = jsonValueToBSONSimple(fieldVal, idMapping)
+			} else if key == "DataSourceProperty" && len(dataSourceProperty) > 0 && dataSourceProperty[0] != nil {
+				// Extract datasource linkage: non-empty when this attribute draws from a sibling datasource property
+				if dsp, ok := fieldVal.(string); ok {
+					*dataSourceProperty[0] = dsp
 				}
 				elem.Value = jsonValueToBSONSimple(fieldVal, idMapping)
 			} else {
@@ -707,11 +770,12 @@ func jsonValueToBSONObjectWithMapping(val any, idMapping map[string]string) any 
 
 // PropertyTypeIDEntry holds the IDs for a property type.
 type PropertyTypeIDEntry struct {
-	PropertyTypeID string
-	ValueTypeID    string
-	DefaultValue   string // Default value from the template's ValueType
-	ValueType      string // Type of value (Boolean, Integer, String, DataSource, etc.)
-	Required       bool   // Whether this property is required
+	PropertyTypeID     string
+	ValueTypeID        string
+	DefaultValue       string // Default value from the template's ValueType
+	ValueType          string // Type of value (Boolean, Integer, String, DataSource, etc.)
+	Required           bool   // Whether this property is required
+	DataSourceProperty string // Non-empty when this attribute is linked to another DataSource property
 	// For object list properties (IsList=true with ObjectType), these hold nested IDs
 	ObjectTypeID      string                         // ID of the nested ObjectType (for object lists)
 	NestedPropertyIDs map[string]PropertyTypeIDEntry // Property IDs within the nested ObjectType
@@ -912,19 +976,22 @@ func augmentFromMPK(tmpl *WidgetTemplate, widgetID string, projectPath string) *
 		return tmpl
 	}
 
-	def, err := mpk.ParseMPK(mpkPath)
+	def, err := mpk.ParseMPKForWidget(mpkPath, widgetID)
 	if err != nil {
+		return tmpl
+	}
+	if def == nil {
 		return tmpl
 	}
 
 	// Deep-clone so we don't mutate the cached template
 	clone, err := deepCloneTemplate(tmpl)
 	if err != nil {
-		log.Printf("widget.clone_failed: widget_id=%s error=%s", widgetID, err.Error())
+		log.Printf("warning: failed to clone template for %s: %v", widgetID, err)
 		return tmpl
 	}
 	if err := AugmentTemplate(clone, def); err != nil {
-		log.Printf("widget.augment_failed: widget_id=%s error=%s", widgetID, err.Error())
+		log.Printf("warning: failed to augment template for %s from MPK: %v", widgetID, err)
 		return tmpl
 	}
 
