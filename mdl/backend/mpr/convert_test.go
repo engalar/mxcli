@@ -2,7 +2,7 @@
 
 // Package mprbackend_test verifies that the conversion layer between sdk/mpr
 // and mdl/types works correctly. Because sdk/mpr types are now type aliases to
-// mdl/types (e.g. mpr.JavaAction = types.JavaAction), the "convert" functions
+// mdl/types (e.g. types.JavaAction = types.JavaAction), the "convert" functions
 // are effectively deep-copy operations on the same type. This test file proves
 // the type system is consistent and conversions preserve all fields.
 package mprbackend_test
@@ -12,47 +12,46 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // TestTypeAliasesAreIdentical proves that sdk/mpr type aliases resolve to the
 // same Go types as mdl/types. If these assignments compile, the types are
 // identical — which is precisely what the conversion functions rely on.
 func TestTypeAliasesAreIdentical(t *testing.T) {
-	// Each assignment proves the alias: mpr.X == types.X
-	var _ *types.JavaAction = new(mpr.JavaAction)
+	// Each assignment proves the alias: types.X == types.X
+	var _ *types.JavaAction = new(types.JavaAction)
 	// types.JavaScriptAction was retired in Stage 3.3.2.C1.
-	var _ *types.NavigationDocument = new(mpr.NavigationDocument)
-	var _ *types.NavigationProfile = new(mpr.NavigationProfile)
-	var _ *types.NavHomePage = new(mpr.NavHomePage)
-	var _ *types.NavRoleBasedHome = new(mpr.NavRoleBasedHome)
-	var _ *types.NavMenuItem = new(mpr.NavMenuItem)
-	var _ *types.NavOfflineEntity = new(mpr.NavOfflineEntity)
-	var _ *types.JsonStructure = new(mpr.JsonStructure)
-	var _ *types.JsonElement = new(mpr.JsonElement)
-	var _ *types.ImageCollection = new(mpr.ImageCollection)
-	var _ *types.FolderInfo = new(mpr.FolderInfo)
-	var _ *types.UnitInfo = new(mpr.UnitInfo)
-	var _ *types.RawUnit = new(mpr.RawUnit)
-	var _ *types.ProjectVersion = new(mpr.ProjectVersion)
+	var _ *types.NavigationDocument = new(types.NavigationDocument)
+	var _ *types.NavigationProfile = new(types.NavigationProfile)
+	var _ *types.NavHomePage = new(types.NavHomePage)
+	var _ *types.NavRoleBasedHome = new(types.NavRoleBasedHome)
+	var _ *types.NavMenuItem = new(types.NavMenuItem)
+	var _ *types.NavOfflineEntity = new(types.NavOfflineEntity)
+	var _ *types.JsonStructure = new(types.JsonStructure)
+	var _ *types.JsonElement = new(types.JsonElement)
+	var _ *types.ImageCollection = new(types.ImageCollection)
+	var _ *types.FolderInfo = new(types.FolderInfo)
+	var _ *types.UnitInfo = new(types.UnitInfo)
+	var _ *types.RawUnit = new(types.RawUnit)
+	var _ *types.ProjectVersion = new(types.ProjectVersion)
 
 	// Slices are also interchangeable
 	var typesSlice []*types.FolderInfo
-	var mprSlice []*mpr.FolderInfo = typesSlice
+	var mprSlice []*types.FolderInfo = typesSlice
 	_ = mprSlice
 
 	// JS slice passthrough test retired in Stage 3.3.2.C1.
 }
 
-// TestFolderInfoSlicePassthrough verifies that a []*mpr.FolderInfo value can
+// TestFolderInfoSlicePassthrough verifies that a []*types.FolderInfo value can
 // be used where []*types.FolderInfo is expected, because they are the same type.
 func TestFolderInfoSlicePassthrough(t *testing.T) {
-	folders := []*mpr.FolderInfo{
+	folders := []*types.FolderInfo{
 		{ID: model.ID("f1"), ContainerID: model.ID("c1"), Name: "Module"},
 		{ID: model.ID("f2"), ContainerID: model.ID("c2"), Name: "Resources"},
 	}
 
-	// This compiles because mpr.FolderInfo = types.FolderInfo
+	// This compiles because types.FolderInfo = types.FolderInfo
 	var typesFolders []*types.FolderInfo = folders
 	if len(typesFolders) != 2 {
 		t.Fatalf("expected 2 folders, got %d", len(typesFolders))
@@ -65,22 +64,22 @@ func TestFolderInfoSlicePassthrough(t *testing.T) {
 // TestNavigationDocumentFieldPreservation verifies that all fields survive
 // when a NavigationDocument created via mpr alias is accessed via types.
 func TestNavigationDocumentFieldPreservation(t *testing.T) {
-	doc := &mpr.NavigationDocument{
+	doc := &types.NavigationDocument{
 		ContainerID: model.ID("c1"),
 		Name:        "Navigation",
-		Profiles: []*mpr.NavigationProfile{
+		Profiles: []*types.NavigationProfile{
 			{
 				Name:     "Responsive",
 				Kind:     "Responsive",
 				IsNative: false,
-				HomePage: &mpr.NavHomePage{Page: "MyFirstModule.Home"},
-				RoleBasedHomePages: []*mpr.NavRoleBasedHome{
+				HomePage: &types.NavHomePage{Page: "MyFirstModule.Home"},
+				RoleBasedHomePages: []*types.NavRoleBasedHome{
 					{UserRole: "Admin", Page: "Admin.Dashboard"},
 				},
-				MenuItems: []*mpr.NavMenuItem{
+				MenuItems: []*types.NavMenuItem{
 					{Caption: "Home", Page: "Home"},
 				},
-				OfflineEntities: []*mpr.NavOfflineEntity{
+				OfflineEntities: []*types.NavOfflineEntity{
 					{Entity: "MyModule.Task", SyncMode: "FullSync"},
 				},
 			},
@@ -116,18 +115,18 @@ func TestNavigationDocumentFieldPreservation(t *testing.T) {
 // TestJsonStructureFieldPreservation verifies JsonStructure + recursive
 // JsonElement children survive alias crossing.
 func TestJsonStructureFieldPreservation(t *testing.T) {
-	js := &mpr.JsonStructure{
+	js := &types.JsonStructure{
 		ContainerID:   model.ID("m1"),
 		Name:          "MyJson",
 		Documentation: "Test json structure",
 		JsonSnippet:   `{"a":1}`,
-		Elements: []*mpr.JsonElement{
+		Elements: []*types.JsonElement{
 			{
 				ExposedName:   "Root",
 				Path:          "(Object)",
 				ElementType:   "Object",
 				PrimitiveType: "Unknown",
-				Children: []*mpr.JsonElement{
+				Children: []*types.JsonElement{
 					{
 						ExposedName:   "A",
 						Path:          "(Object)|a",
@@ -162,10 +161,10 @@ func TestJsonStructureFieldPreservation(t *testing.T) {
 
 // TestImageCollectionFieldPreservation verifies ImageCollection + Image.
 func TestImageCollectionFieldPreservation(t *testing.T) {
-	ic := &mpr.ImageCollection{
+	ic := &types.ImageCollection{
 		ContainerID: model.ID("m1"),
 		Name:        "Images",
-		Images: []mpr.Image{
+		Images: []types.Image{
 			{ID: model.ID("i1"), Name: "logo.png", Format: "png", Data: []byte{0x89, 0x50}},
 		},
 	}

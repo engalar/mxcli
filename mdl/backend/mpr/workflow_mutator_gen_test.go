@@ -18,7 +18,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -33,7 +33,7 @@ func TestSerializeWorkflowActivityGen_NilInput(t *testing.T) {
 func TestSerializeWorkflowActivityGen_JumpToShape(t *testing.T) {
 	b := &MprBackend{}
 	jt := genWf.NewJumpToActivity()
-	jt.SetID(element.ID(mpr.GenerateID()))
+	jt.SetID(element.ID(mmpr.GenerateID()))
 	jt.SetName("J1")
 	jt.SetCaption("back")
 	// Codec encodes targetActivity via the BSON key "TargetActivity"
@@ -72,7 +72,7 @@ func TestSerializeWorkflowActivityGen_JumpToShape(t *testing.T) {
 func TestSerializeWorkflowActivityGen_CallMicroflowShape(t *testing.T) {
 	b := &MprBackend{}
 	cm := genWf.NewCallMicroflowActivity()
-	cm.SetID(element.ID(mpr.GenerateID()))
+	cm.SetID(element.ID(mmpr.GenerateID()))
 	cm.SetName("Step")
 	cm.SetCaption("step caption")
 	cm.SetMicroflowQualifiedName("Demo.Action")
@@ -100,10 +100,10 @@ func TestSerializeWorkflowActivityGen_CallMicroflowShape(t *testing.T) {
 func TestSerializeWorkflowActivityGen_RoundTripIsStable(t *testing.T) {
 	// Encoding a fresh gen activity twice (same ID) must yield byte-
 	// identical output — the codec is deterministic, the BSON shape
-	// is stable. We use mpr.GenerateID() so the ID encodes to the same
+	// is stable. We use mmpr.GenerateID() so the ID encodes to the same
 	// 16-byte BSON Binary on both calls (raw bytes carry the original).
 	b := &MprBackend{}
-	id := element.ID(mpr.GenerateID())
+	id := element.ID(mmpr.GenerateID())
 	jt := genWf.NewJumpToActivity()
 	jt.SetID(id)
 	jt.SetName("J")

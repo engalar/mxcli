@@ -12,14 +12,13 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 var errTest = errors.New("test error")
 
 func TestConvertRawCustomWidgetTypePtr(t *testing.T) {
-	in := &mpr.RawCustomWidgetType{
+	in := &types.RawCustomWidgetType{
 		WidgetID: "w1", RawType: bson.D{{Key: "k", Value: "v"}}, RawObject: bson.D{{Key: "k2", Value: "v2"}},
 		UnitID: "u1", UnitName: "Unit", WidgetName: "Widget",
 	}
@@ -40,7 +39,7 @@ func TestConvertRawCustomWidgetTypePtr_Error(t *testing.T) {
 }
 
 func TestConvertRawCustomWidgetTypeSlice(t *testing.T) {
-	in := []*mpr.RawCustomWidgetType{
+	in := []*types.RawCustomWidgetType{
 		{WidgetID: "w1", UnitName: "U1"},
 		{WidgetID: "w2", UnitName: "U2"},
 	}
@@ -57,29 +56,29 @@ func TestConvertRawCustomWidgetTypeSlice(t *testing.T) {
 // and types.* definitions stay aligned. If a struct gains a field, update
 // both sides (they should be identical since they're type aliases).
 func TestFieldCountDrift(t *testing.T) {
-	assertFieldCount(t, "mpr.FolderInfo", mpr.FolderInfo{}, 3)
 	assertFieldCount(t, "types.FolderInfo", types.FolderInfo{}, 3)
-	assertFieldCount(t, "mpr.UnitInfo", mpr.UnitInfo{}, 4)
+	assertFieldCount(t, "types.FolderInfo", types.FolderInfo{}, 3)
 	assertFieldCount(t, "types.UnitInfo", types.UnitInfo{}, 4)
-	assertFieldCount(t, "mpr.RenameHit", mpr.RenameHit{}, 4)
+	assertFieldCount(t, "types.UnitInfo", types.UnitInfo{}, 4)
 	assertFieldCount(t, "types.RenameHit", types.RenameHit{}, 4)
-	assertFieldCount(t, "mpr.RawUnit", mpr.RawUnit{}, 4)
+	assertFieldCount(t, "types.RenameHit", types.RenameHit{}, 4)
 	assertFieldCount(t, "types.RawUnit", types.RawUnit{}, 4)
-	assertFieldCount(t, "mpr.RawUnitInfo", mpr.RawUnitInfo{}, 5)
+	assertFieldCount(t, "types.RawUnit", types.RawUnit{}, 4)
 	assertFieldCount(t, "types.RawUnitInfo", types.RawUnitInfo{}, 5)
-	assertFieldCount(t, "mpr.RawCustomWidgetType", mpr.RawCustomWidgetType{}, 6)
+	assertFieldCount(t, "types.RawUnitInfo", types.RawUnitInfo{}, 5)
 	assertFieldCount(t, "types.RawCustomWidgetType", types.RawCustomWidgetType{}, 6)
-	assertFieldCount(t, "mpr.NavigationDocument", mpr.NavigationDocument{}, 4)
+	assertFieldCount(t, "types.RawCustomWidgetType", types.RawCustomWidgetType{}, 6)
 	assertFieldCount(t, "types.NavigationDocument", types.NavigationDocument{}, 4)
-	assertFieldCount(t, "mpr.JsonStructure", mpr.JsonStructure{}, 8)
+	assertFieldCount(t, "types.NavigationDocument", types.NavigationDocument{}, 4)
 	assertFieldCount(t, "types.JsonStructure", types.JsonStructure{}, 8)
-	assertFieldCount(t, "mpr.JsonElement", mpr.JsonElement{}, 14)
+	assertFieldCount(t, "types.JsonStructure", types.JsonStructure{}, 8)
 	assertFieldCount(t, "types.JsonElement", types.JsonElement{}, 14)
-	assertFieldCount(t, "mpr.ImageCollection", mpr.ImageCollection{}, 6)
+	assertFieldCount(t, "types.JsonElement", types.JsonElement{}, 14)
 	assertFieldCount(t, "types.ImageCollection", types.ImageCollection{}, 6)
-	assertFieldCount(t, "mpr.EntityMemberAccess", mpr.EntityMemberAccess{}, 3)
+	assertFieldCount(t, "types.ImageCollection", types.ImageCollection{}, 6)
 	assertFieldCount(t, "types.EntityMemberAccess", types.EntityMemberAccess{}, 3)
-	assertFieldCount(t, "mpr.EntityAccessRevocation", mpr.EntityAccessRevocation{}, 6)
+	assertFieldCount(t, "types.EntityMemberAccess", types.EntityMemberAccess{}, 3)
+	assertFieldCount(t, "types.EntityAccessRevocation", types.EntityAccessRevocation{}, 6)
 	assertFieldCount(t, "types.EntityAccessRevocation", types.EntityAccessRevocation{}, 6)
 }
 

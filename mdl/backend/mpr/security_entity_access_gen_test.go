@@ -3,6 +3,7 @@
 package mprbackend
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"fmt"
 	"strings"
 	"testing"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // seedEntityForAccessTest creates an MPR with one Customer entity inside the
@@ -122,7 +122,7 @@ func ruleField(t *testing.T, rule bson.D, key string) interface{} {
 func TestAddEntityAccessRuleViaModelsdk_GenNative(t *testing.T) {
 	b, dmID := seedEntityForAccessTest(t)
 
-	memberAccesses := []mpr.EntityMemberAccess{
+	memberAccesses := []types.EntityMemberAccess{
 		{AttributeRef: "TestModule.Customer.Name", AccessRights: "ReadOnly"},
 	}
 	if err := b.addEntityAccessRuleViaModelsdk(
@@ -220,7 +220,7 @@ func TestAddEntityAccessRuleViaModelsdk_BinaryID(t *testing.T) {
 		[]string{"TestModule.UserRole"},
 		true, false,
 		"ReadWrite", "",
-		[]mpr.EntityMemberAccess{
+		[]types.EntityMemberAccess{
 			{AttributeRef: "TestModule.Customer.Name", AccessRights: "ReadWrite"},
 		},
 	); err != nil {
@@ -346,7 +346,7 @@ func TestRevokeEntityMemberAccessViaModelsdk_GenNative(t *testing.T) {
 	revoked, err := b.revokeEntityMemberAccessViaModelsdk(
 		dmID, "Customer",
 		[]string{"TestModule.UserRole"},
-		mpr.EntityAccessRevocation{
+		types.EntityAccessRevocation{
 			RevokeCreate:   true,
 			RevokeDelete:   true,
 			RevokeWriteAll: true,

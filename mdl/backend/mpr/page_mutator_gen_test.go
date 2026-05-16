@@ -28,7 +28,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genPages "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
 // ---------------------------------------------------------------------------
@@ -37,7 +37,7 @@ import (
 
 func TestSerializeElementToBsonD_TextBoxShape(t *testing.T) {
 	tb := genPages.NewTextBox()
-	tb.SetID(element.ID(mpr.GenerateID()))
+	tb.SetID(element.ID(mmpr.GenerateID()))
 	tb.SetName("txtFoo")
 
 	doc, err := serializeElementToBsonD(tb)
@@ -81,7 +81,7 @@ func TestPageMutator_InsertWidgetGen_StitchesIntoTree(t *testing.T) {
 
 	// Create a gen TextBox to insert after "txtExisting".
 	tb := genPages.NewTextBox()
-	tb.SetID(element.ID(mpr.GenerateID()))
+	tb.SetID(element.ID(mmpr.GenerateID()))
 	tb.SetName("txtInserted")
 
 	err := m.InsertWidgetGen("txtExisting", "", backend.InsertAfter, []element.Element{tb})
@@ -126,7 +126,7 @@ func TestPageMutator_ReplaceWidgetGen_ReplacesTarget(t *testing.T) {
 	}
 
 	replacement := genPages.NewTextBox()
-	replacement.SetID(element.ID(mpr.GenerateID()))
+	replacement.SetID(element.ID(mmpr.GenerateID()))
 	replacement.SetName("txtNew")
 
 	err := m.ReplaceWidgetGen("txtOld", "", []element.Element{replacement})
@@ -167,7 +167,7 @@ func TestPageMutator_SetWidgetDataSourceGen_SetsDataSource(t *testing.T) {
 	}
 
 	ds := genPages.NewDataViewSource()
-	ds.SetID(element.ID(mpr.GenerateID()))
+	ds.SetID(element.ID(mmpr.GenerateID()))
 
 	err := m.SetWidgetDataSourceGen("dvMain", ds)
 	if err != nil {
