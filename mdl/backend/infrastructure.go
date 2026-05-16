@@ -35,7 +35,6 @@ type MetadataBackend interface {
 	GetUnitTypes() (map[string]int, error)
 	GetProjectRootID() (string, error)
 	ContentsDir() string
-	ExportJSON() ([]byte, error)
 	InvalidateCache()
 }
 

@@ -126,13 +126,6 @@ func (m *MockBackend) ContentsDir() string {
 	return ""
 }
 
-func (m *MockBackend) ExportJSON() ([]byte, error) {
-	if m.ExportJSONFunc != nil {
-		return m.ExportJSONFunc()
-	}
-	return nil, nil
-}
-
 func (m *MockBackend) InvalidateCache() {
 	if m.InvalidateCacheFunc != nil {
 		m.InvalidateCacheFunc()

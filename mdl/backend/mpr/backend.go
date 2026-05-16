@@ -980,9 +980,8 @@ func (b *MprBackend) ListUnits() ([]*types.UnitInfo, error) {
 }
 func (b *MprBackend) GetUnitTypes() (map[string]int, error) { return b.reader.GetUnitTypes() }
 func (b *MprBackend) GetProjectRootID() (string, error)     { return b.reader.GetProjectRootID() }
-func (b *MprBackend) ContentsDir() string                   { return b.reader.ContentsDir() }
-func (b *MprBackend) ExportJSON() ([]byte, error)           { return b.reader.ExportJSON() }
-func (b *MprBackend) InvalidateCache()                      { b.reader.InvalidateCache() }
+func (b *MprBackend) ContentsDir() string { return b.reader.ContentsDir() }
+func (b *MprBackend) InvalidateCache()   { b.reader.InvalidateCache() }
 
 // ---------------------------------------------------------------------------
 // WidgetBackend
