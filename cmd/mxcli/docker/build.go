@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mendixlabs/mxcli/model"
+	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/mpr/version"
 )
@@ -729,8 +731,8 @@ func ensureDemoUsers(projectPath string, w io.Writer) error {
 	}
 
 	// If demo users already exist, nothing to do
-	if len(ps.DemoUsers) > 0 {
-		fmt.Fprintf(w, "  Found %d demo user(s), skipping.\n", len(ps.DemoUsers))
+	if len(ps.DemoUsersItems()) > 0 {
+		fmt.Fprintf(w, "  Found %d demo user(s), skipping.\n", len(ps.DemoUsersItems()))
 		return nil
 	}
 
@@ -749,8 +751,8 @@ func ensureDemoUsers(projectPath string, w io.Writer) error {
 	}
 
 	// Enable demo users if not already enabled
-	if !ps.EnableDemoUsers {
-		if err := writer.SetProjectDemoUsersEnabled(ps.ID, true); err != nil {
+	if !ps.EnableDemoUsers() {
+		if err := writer.SetProjectDemoUsersEnabled(model.ID(ps.ID()), true); err != nil {
 			return fmt.Errorf("enabling demo users: %w", err)
 		}
 		fmt.Fprintln(w, "  Enabled demo users.")
@@ -758,17 +760,23 @@ func ensureDemoUsers(projectPath string, w io.Writer) error {
 
 	// Pick the first user role that looks like an admin, or fall back to the first role
 	roleName := "Administrator"
-	if len(ps.UserRoles) > 0 {
-		roleName = ps.UserRoles[0].Name
-		for _, ur := range ps.UserRoles {
-			if ur.Name == "Administrator" || ur.Name == "Admin" {
-				roleName = ur.Name
+	if urItems := ps.UserRolesItems(); len(urItems) > 0 {
+		if ur, ok := urItems[0].(*gensecurity.UserRole); ok {
+			roleName = ur.Name()
+		}
+		for _, item := range urItems {
+			ur, ok := item.(*gensecurity.UserRole)
+			if !ok {
+				continue
+			}
+			if ur.Name() == "Administrator" || ur.Name() == "Admin" {
+				roleName = ur.Name()
 				break
 			}
 		}
 	}
 
-	if err := writer.AddDemoUser(ps.ID, "admin", "Admin123!", "", []string{roleName}); err != nil {
+	if err := writer.AddDemoUser(model.ID(ps.ID()), "admin", "Admin123!", "", []string{roleName}); err != nil {
 		return fmt.Errorf("creating demo user: %w", err)
 	}
 
