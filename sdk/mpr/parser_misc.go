@@ -11,7 +11,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -47,85 +46,6 @@ func (r *Reader) resolveContents(unitID string, contents []byte) ([]byte, error)
 	}
 
 	return contents, nil
-}
-
-// parseSnippet parses snippet contents from BSON.
-func (r *Reader) parseSnippet(unitID, containerID string, contents []byte) (*pages.Snippet, error) {
-	contents, err := r.resolveContents(unitID, contents)
-	if err != nil {
-		return nil, err
-	}
-
-	var raw map[string]any
-	if err := bson.Unmarshal(contents, &raw); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal BSON: %w", err)
-	}
-
-	snippet := &pages.Snippet{}
-	snippet.ID = model.ID(unitID)
-	snippet.TypeName = "Pages$Snippet"
-	snippet.ContainerID = model.ID(containerID)
-
-	if name, ok := raw["Name"].(string); ok {
-		snippet.Name = name
-	}
-	if doc, ok := raw["Documentation"].(string); ok {
-		snippet.Documentation = doc
-	}
-	if entityID := extractID(raw["Entity"]); entityID != "" {
-		snippet.EntityID = model.ID(entityID)
-	}
-
-	// Parse snippet parameters so callers can validate SNIPPETCALL param mappings.
-	if params, ok := raw["Parameters"].(bson.A); ok {
-		for i := 1; i < len(params); i++ {
-			var paramMap map[string]any
-			switch v := params[i].(type) {
-			case bson.D:
-				paramMap = make(map[string]any, len(v))
-				for _, elem := range v {
-					paramMap[elem.Key] = elem.Value
-				}
-			case map[string]any:
-				paramMap = v
-			}
-			if paramMap == nil {
-				continue
-			}
-			sp := &pages.SnippetParameter{}
-			if id := extractID(paramMap["$ID"]); id != "" {
-				sp.ID = model.ID(id)
-			}
-			if n, ok := paramMap["Name"].(string); ok {
-				sp.Name = n
-			}
-			if sp.Name == "" {
-				continue
-			}
-			// ParameterType: either bson.D or map[string]any
-			extractParamType := func(m map[string]any) {
-				if t, ok := m["$Type"].(string); ok {
-					sp.Type = t
-				}
-				if e, ok := m["Entity"].(string); ok {
-					sp.EntityName = e
-				}
-			}
-			switch pt := paramMap["ParameterType"].(type) {
-			case bson.D:
-				m := make(map[string]any, len(pt))
-				for _, e := range pt {
-					m[e.Key] = e.Value
-				}
-				extractParamType(m)
-			case map[string]any:
-				extractParamType(pt)
-			}
-			snippet.Parameters = append(snippet.Parameters, sp)
-		}
-	}
-
-	return snippet, nil
 }
 
 // parseJavaAction parses Java action contents from BSON.
@@ -355,60 +275,6 @@ func (r *Reader) ReadJavaScriptActionByName(qualifiedName string) (*JavaScriptAc
 	}
 
 	return nil, fmt.Errorf("javascript action not found: %s", qualifiedName)
-}
-
-// parseBuildingBlock parses building block contents from BSON.
-func (r *Reader) parseBuildingBlock(unitID, containerID string, contents []byte) (*pages.BuildingBlock, error) {
-	contents, err := r.resolveContents(unitID, contents)
-	if err != nil {
-		return nil, err
-	}
-
-	var raw map[string]any
-	if err := bson.Unmarshal(contents, &raw); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal BSON: %w", err)
-	}
-
-	bb := &pages.BuildingBlock{}
-	bb.ID = model.ID(unitID)
-	bb.TypeName = "Forms$BuildingBlock"
-	bb.ContainerID = model.ID(containerID)
-
-	if name, ok := raw["Name"].(string); ok {
-		bb.Name = name
-	}
-	if doc, ok := raw["Documentation"].(string); ok {
-		bb.Documentation = doc
-	}
-
-	return bb, nil
-}
-
-// parsePageTemplate parses page template contents from BSON.
-func (r *Reader) parsePageTemplate(unitID, containerID string, contents []byte) (*pages.PageTemplate, error) {
-	contents, err := r.resolveContents(unitID, contents)
-	if err != nil {
-		return nil, err
-	}
-
-	var raw map[string]any
-	if err := bson.Unmarshal(contents, &raw); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal BSON: %w", err)
-	}
-
-	pt := &pages.PageTemplate{}
-	pt.ID = model.ID(unitID)
-	pt.TypeName = "Forms$PageTemplate"
-	pt.ContainerID = model.ID(containerID)
-
-	if name, ok := raw["Name"].(string); ok {
-		pt.Name = name
-	}
-	if doc, ok := raw["Documentation"].(string); ok {
-		pt.Documentation = doc
-	}
-
-	return pt, nil
 }
 
 // parseNavigationDocument parses navigation document contents from BSON.

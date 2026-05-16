@@ -6,7 +6,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
-	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -87,21 +86,6 @@ func SerializeEnumeration(enum *model.Enumeration) ([]byte, error) {
 // SerializeConstant returns BSON bytes for a constant unit.
 func SerializeConstant(constant *model.Constant) ([]byte, error) {
 	return serializeConstant(constant)
-}
-
-// SerializePage returns BSON bytes for a page unit.
-func SerializePage(page *pages.Page) ([]byte, error) {
-	return serializePage(page)
-}
-
-// SerializeLayout returns BSON bytes for a layout unit.
-func SerializeLayout(layout *pages.Layout) ([]byte, error) {
-	return serializeLayout(layout)
-}
-
-// SerializeSnippet returns BSON bytes for a snippet unit.
-func SerializeSnippet(snippet *pages.Snippet) ([]byte, error) {
-	return serializeSnippet(snippet)
 }
 
 // SerializeWorkflow returns BSON bytes for a workflow unit.
