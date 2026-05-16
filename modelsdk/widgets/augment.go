@@ -316,12 +316,18 @@ func createPropertyPair(p mpk.PropertyDef, bsonType string) (map[string]any, map
 
 // createDefaultValueType creates a default ValueType structure for a given BSON type.
 func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map[string]any {
+	// Build AllowedTypes: version marker 1 followed by allowed Mendix type names.
+	allowedTypes := []any{float64(1)}
+	for _, t := range p.AllowedTypes {
+		allowedTypes = append(allowedTypes, t)
+	}
+
 	vt := map[string]any{
 		"$ID":                         vtID,
 		"$Type":                       "CustomWidgets$WidgetValueType",
 		"ActionVariables":             []any{float64(2)},
 		"AllowNonPersistableEntities": false,
-		"AllowedTypes":                []any{float64(1)},
+		"AllowedTypes":                allowedTypes,
 		"AssociationTypes":            []any{float64(1)},
 		"DataSourceProperty":          "",
 		"DefaultType":                 "None",
