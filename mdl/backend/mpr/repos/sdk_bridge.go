@@ -6,6 +6,7 @@ package mprrepos
 
 import (
 	"github.com/mendixlabs/mxcli/mdl/types"
+	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
@@ -13,11 +14,10 @@ func sdkPatchNavigationProfile(rawBytes []byte, profileName string, spec types.N
 	return sdkmpr.PatchNavigationProfile(rawBytes, profileName, types.NavigationProfileSpec(spec))
 }
 
-// sdkOpenBSONScanner opens an sdk/mpr reader at path and returns it as a
+// sdkOpenBSONScanner opens a modelsdk/mpr reader at path and returns it as a
 // types.BSONScanner. The caller must call the returned close function when done.
-// Used by tests that need a BSONScanner without importing sdk/mpr directly.
 func sdkOpenBSONScanner(path string) (types.BSONScanner, func(), error) {
-	r, err := sdkmpr.Open(path)
+	r, err := modelsdkmpr.Open(path)
 	if err != nil {
 		return nil, func() {}, err
 	}
