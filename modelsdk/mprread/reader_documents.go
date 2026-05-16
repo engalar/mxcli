@@ -17,11 +17,17 @@ import (
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
 	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
+	genDBC "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
+	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
 	genExpMap "github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings"
+	genImg "github.com/mendixlabs/mxcli/modelsdk/gen/images"
 	genImpMap "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
 	genJson "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
+	genODataPub "github.com/mendixlabs/mxcli/modelsdk/gen/odatapublish"
+	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
 	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
@@ -174,4 +180,55 @@ func GetJsonStructureByQualifiedName(r *mmpr.Reader, qualifiedName string) (*gen
 		}
 	}
 	return nil, fmt.Errorf("json structure not found: %s", qualifiedName)
+}
+
+// ---------------------------------------------------------------------------
+// Web services & related document types
+// ---------------------------------------------------------------------------
+
+// ListBusinessEventServices decodes every BusinessEvents$BusinessEventService unit.
+func ListBusinessEventServices(r *mmpr.Reader) ([]*genBE.BusinessEventService, error) {
+	return ListUnitsByType[*genBE.BusinessEventService](r, "BusinessEvents$BusinessEventService")
+}
+
+// ListDatabaseConnections decodes every DatabaseConnector$DatabaseConnection unit.
+func ListDatabaseConnections(r *mmpr.Reader) ([]*genDBC.DatabaseConnection, error) {
+	return ListUnitsByType[*genDBC.DatabaseConnection](r, "DatabaseConnector$DatabaseConnection")
+}
+
+// ListDataTransformers decodes every DataTransformers$DataTransformer unit.
+func ListDataTransformers(r *mmpr.Reader) ([]*genDT.DataTransformer, error) {
+	return ListUnitsByType[*genDT.DataTransformer](r, "DataTransformers$DataTransformer")
+}
+
+// ListImageCollections decodes every Images$ImageCollection unit.
+func ListImageCollections(r *mmpr.Reader) ([]*genImg.ImageCollection, error) {
+	return ListUnitsByType[*genImg.ImageCollection](r, "Images$ImageCollection")
+}
+
+// ListConsumedODataServices decodes every Rest$ConsumedODataService unit.
+//
+// Both ConsumedOData and PublishedRest services live under the `Rest` BSON
+// namespace; only PublishedOData uses the legacy `ODataPublish$...Service2`
+// type name (see ListPublishedODataServices).
+func ListConsumedODataServices(r *mmpr.Reader) ([]*genRest.ConsumedODataService, error) {
+	return ListUnitsByType[*genRest.ConsumedODataService](r, "Rest$ConsumedODataService")
+}
+
+// ListPublishedODataServices decodes every ODataPublish$PublishedODataService2
+// unit. The trailing `2` is part of the BSON $Type, matching the v2 schema
+// generation; the Go type drops it from the documentation but keeps it in the
+// struct name (PublishedODataService2).
+func ListPublishedODataServices(r *mmpr.Reader) ([]*genODataPub.PublishedODataService2, error) {
+	return ListUnitsByType[*genODataPub.PublishedODataService2](r, "ODataPublish$PublishedODataService2")
+}
+
+// ListConsumedRestServices decodes every Rest$ConsumedRestService unit.
+func ListConsumedRestServices(r *mmpr.Reader) ([]*genRest.ConsumedRestService, error) {
+	return ListUnitsByType[*genRest.ConsumedRestService](r, "Rest$ConsumedRestService")
+}
+
+// ListPublishedRestServices decodes every Rest$PublishedRestService unit.
+func ListPublishedRestServices(r *mmpr.Reader) ([]*genRest.PublishedRestService, error) {
+	return ListUnitsByType[*genRest.PublishedRestService](r, "Rest$PublishedRestService")
 }
