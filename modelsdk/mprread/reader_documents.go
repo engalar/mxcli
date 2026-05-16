@@ -12,9 +12,11 @@
 package mprread
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
@@ -343,4 +345,268 @@ func GetProjectSecurity(r *mmpr.Reader) (*genSec.ProjectSecurity, error) {
 // ListModuleSecurity decodes every Security$ModuleSecurity unit.
 func ListModuleSecurity(r *mmpr.Reader) ([]*genSec.ModuleSecurity, error) {
 	return ListUnitsByType[*genSec.ModuleSecurity](r, "Security$ModuleSecurity")
+}
+
+// ---------------------------------------------------------------------------
+// Agent-editor documents (CustomBlobDocument wrapper)
+// ---------------------------------------------------------------------------
+//
+// All four document types created by the Studio Pro Agent Editor extension
+// (Agent, Model, Knowledge Base, Consumed MCP Service) share the same outer
+// CustomBlobDocument BSON wrapper and are discriminated by the
+// CustomDocumentType field. The wrapper's Contents field is a JSON string
+// containing the actual payload.
+//
+// This mirrors the structure in sdk/mpr/parser_customblob.go — kept in sync
+// by hand since neither side is generated. If you add a new payload field to
+// mdl/types.{Model,KnowledgeBase,ConsumedMCPService,Agent}, update the JSON
+// struct here and in sdk/mpr/parser_customblob.go.
+
+const customBlobDocBsonType = "CustomBlobDocuments$CustomBlobDocument"
+
+// customBlobWrapper holds the fields shared by every agent-editor document.
+type customBlobWrapper struct {
+	Name               string
+	Documentation      string
+	Excluded           bool
+	ExportLevel        string
+	CustomDocumentType string
+	Contents           string // JSON payload
+}
+
+// parseCustomBlobWrapper decodes the outer CustomBlobDocument BSON.
+func parseCustomBlobWrapper(contents []byte) (*customBlobWrapper, error) {
+	var raw map[string]any
+	if err := bson.Unmarshal(contents, &raw); err != nil {
+		return nil, fmt.Errorf("unmarshal CustomBlobDocument BSON: %w", err)
+	}
+	out := &customBlobWrapper{}
+	if v, ok := raw["Name"].(string); ok {
+		out.Name = v
+	}
+	if v, ok := raw["Documentation"].(string); ok {
+		out.Documentation = v
+	}
+	if v, ok := raw["Excluded"].(bool); ok {
+		out.Excluded = v
+	}
+	if v, ok := raw["ExportLevel"].(string); ok {
+		out.ExportLevel = v
+	}
+	if v, ok := raw["CustomDocumentType"].(string); ok {
+		out.CustomDocumentType = v
+	}
+	if v, ok := raw["Contents"].(string); ok {
+		out.Contents = v
+	}
+	return out, nil
+}
+
+// listAgentEditorDocsByType filters CustomBlobDocument units by their
+// CustomDocumentType discriminator and hands each matching unit to `decode`.
+// `decode` returns the typed document or an error.
+func listAgentEditorDocsByType[T any](r *mmpr.Reader, customType string, decode func(unitID, containerID string, wrap *customBlobWrapper) (*T, error)) ([]*T, error) {
+	refs, err := r.ListUnitsByType(customBlobDocBsonType)
+	if err != nil {
+		return nil, err
+	}
+	var result []*T
+	for _, ref := range refs {
+		wrap, err := parseCustomBlobWrapper(ref.Contents)
+		if err != nil {
+			continue
+		}
+		if wrap.CustomDocumentType != customType {
+			continue
+		}
+		doc, err := decode(ref.ID, ref.ContainerID, wrap)
+		if err != nil {
+			return nil, fmt.Errorf("decode agent-editor %s %s: %w", customType, ref.ID, err)
+		}
+		result = append(result, doc)
+	}
+	return result, nil
+}
+
+// ListAgentEditorModels decodes every CustomBlobDocument whose
+// CustomDocumentType == "agenteditor.model" into a *types.Model.
+func ListAgentEditorModels(r *mmpr.Reader) ([]*types.Model, error) {
+	return listAgentEditorDocsByType(r, types.CustomTypeModel, decodeAgentEditorModel)
+}
+
+func decodeAgentEditorModel(unitID, containerID string, wrap *customBlobWrapper) (*types.Model, error) {
+	m := &types.Model{}
+	m.ID = model.ID(unitID)
+	m.TypeName = customBlobDocBsonType
+	m.ContainerID = model.ID(containerID)
+	m.Name = wrap.Name
+	m.Documentation = wrap.Documentation
+	m.Excluded = wrap.Excluded
+	m.ExportLevel = wrap.ExportLevel
+
+	if wrap.Contents == "" {
+		return m, nil
+	}
+	var payload struct {
+		Type           string `json:"type"`
+		Name           string `json:"name"`
+		DisplayName    string `json:"displayName"`
+		Provider       string `json:"provider"`
+		ProviderFields struct {
+			Environment  string             `json:"environment"`
+			DeepLinkURL  string             `json:"deepLinkURL"`
+			KeyID        string             `json:"keyId"`
+			KeyName      string             `json:"keyName"`
+			ResourceName string             `json:"resourceName"`
+			Key          *types.ConstantRef `json:"key"`
+		} `json:"providerFields"`
+	}
+	if err := json.Unmarshal([]byte(wrap.Contents), &payload); err != nil {
+		return nil, fmt.Errorf("unmarshal Model Contents JSON: %w", err)
+	}
+	m.Type = payload.Type
+	m.InnerName = payload.Name
+	m.DisplayName = payload.DisplayName
+	m.Provider = payload.Provider
+	m.Environment = payload.ProviderFields.Environment
+	m.DeepLinkURL = payload.ProviderFields.DeepLinkURL
+	m.KeyID = payload.ProviderFields.KeyID
+	m.KeyName = payload.ProviderFields.KeyName
+	m.ResourceName = payload.ProviderFields.ResourceName
+	m.Key = payload.ProviderFields.Key
+	return m, nil
+}
+
+// ListAgentEditorKnowledgeBases decodes CustomDocumentType ==
+// "agenteditor.knowledgebase" entries into *types.KnowledgeBase.
+func ListAgentEditorKnowledgeBases(r *mmpr.Reader) ([]*types.KnowledgeBase, error) {
+	return listAgentEditorDocsByType(r, types.CustomTypeKnowledgeBase, decodeAgentEditorKnowledgeBase)
+}
+
+func decodeAgentEditorKnowledgeBase(unitID, containerID string, wrap *customBlobWrapper) (*types.KnowledgeBase, error) {
+	k := &types.KnowledgeBase{}
+	k.ID = model.ID(unitID)
+	k.TypeName = customBlobDocBsonType
+	k.ContainerID = model.ID(containerID)
+	k.Name = wrap.Name
+	k.Documentation = wrap.Documentation
+	k.Excluded = wrap.Excluded
+	k.ExportLevel = wrap.ExportLevel
+
+	if wrap.Contents == "" {
+		return k, nil
+	}
+	var payload struct {
+		Name           string `json:"name"`
+		Provider       string `json:"provider"`
+		ProviderFields struct {
+			Environment      string             `json:"environment"`
+			DeepLinkURL      string             `json:"deepLinkURL"`
+			KeyID            string             `json:"keyId"`
+			KeyName          string             `json:"keyName"`
+			ModelDisplayName string             `json:"modelDisplayName"`
+			ModelName        string             `json:"modelName"`
+			Key              *types.ConstantRef `json:"key"`
+		} `json:"providerFields"`
+	}
+	if err := json.Unmarshal([]byte(wrap.Contents), &payload); err != nil {
+		return nil, fmt.Errorf("unmarshal KnowledgeBase Contents JSON: %w", err)
+	}
+	k.Provider = payload.Provider
+	k.Environment = payload.ProviderFields.Environment
+	k.DeepLinkURL = payload.ProviderFields.DeepLinkURL
+	k.KeyID = payload.ProviderFields.KeyID
+	k.KeyName = payload.ProviderFields.KeyName
+	k.ModelDisplayName = payload.ProviderFields.ModelDisplayName
+	k.ModelName = payload.ProviderFields.ModelName
+	k.Key = payload.ProviderFields.Key
+	return k, nil
+}
+
+// ListAgentEditorConsumedMCPServices decodes CustomDocumentType ==
+// "agenteditor.consumedMCPService" entries into *types.ConsumedMCPService.
+func ListAgentEditorConsumedMCPServices(r *mmpr.Reader) ([]*types.ConsumedMCPService, error) {
+	return listAgentEditorDocsByType(r, types.CustomTypeConsumedMCPService, decodeAgentEditorConsumedMCPService)
+}
+
+func decodeAgentEditorConsumedMCPService(unitID, containerID string, wrap *customBlobWrapper) (*types.ConsumedMCPService, error) {
+	c := &types.ConsumedMCPService{}
+	c.ID = model.ID(unitID)
+	c.TypeName = customBlobDocBsonType
+	c.ContainerID = model.ID(containerID)
+	c.Name = wrap.Name
+	c.Documentation = wrap.Documentation
+	c.Excluded = wrap.Excluded
+	c.ExportLevel = wrap.ExportLevel
+
+	if wrap.Contents == "" {
+		return c, nil
+	}
+	var payload struct {
+		ProtocolVersion          string `json:"protocolVersion"`
+		Documentation            string `json:"documentation"`
+		Version                  string `json:"version"`
+		ConnectionTimeoutSeconds int    `json:"connectionTimeoutSeconds"`
+	}
+	if err := json.Unmarshal([]byte(wrap.Contents), &payload); err != nil {
+		return nil, fmt.Errorf("unmarshal ConsumedMCPService Contents JSON: %w", err)
+	}
+	c.ProtocolVersion = payload.ProtocolVersion
+	c.InnerDocumentation = payload.Documentation
+	c.Version = payload.Version
+	c.ConnectionTimeoutSeconds = payload.ConnectionTimeoutSeconds
+	return c, nil
+}
+
+// ListAgentEditorAgents decodes CustomDocumentType == "agenteditor.agent"
+// entries into *types.Agent.
+func ListAgentEditorAgents(r *mmpr.Reader) ([]*types.Agent, error) {
+	return listAgentEditorDocsByType(r, types.CustomTypeAgent, decodeAgentEditorAgent)
+}
+
+func decodeAgentEditorAgent(unitID, containerID string, wrap *customBlobWrapper) (*types.Agent, error) {
+	a := &types.Agent{}
+	a.ID = model.ID(unitID)
+	a.TypeName = customBlobDocBsonType
+	a.ContainerID = model.ID(containerID)
+	a.Name = wrap.Name
+	a.Documentation = wrap.Documentation
+	a.Excluded = wrap.Excluded
+	a.ExportLevel = wrap.ExportLevel
+
+	if wrap.Contents == "" {
+		return a, nil
+	}
+	var payload struct {
+		Description        string              `json:"description"`
+		SystemPrompt       string              `json:"systemPrompt"`
+		UserPrompt         string              `json:"userPrompt"`
+		UsageType          string              `json:"usageType"`
+		Variables          []types.AgentVar    `json:"variables"`
+		Tools              []types.AgentTool   `json:"tools"`
+		KnowledgebaseTools []types.AgentKBTool `json:"knowledgebaseTools"`
+		Model              *types.DocRef       `json:"model"`
+		Entity             *types.DocRef       `json:"entity"`
+		MaxTokens          *int                `json:"maxTokens"`
+		ToolChoice         string              `json:"toolChoice"`
+		Temperature        *float64            `json:"temperature"`
+		TopP               *float64            `json:"topP"`
+	}
+	if err := json.Unmarshal([]byte(wrap.Contents), &payload); err != nil {
+		return nil, fmt.Errorf("unmarshal Agent Contents JSON: %w", err)
+	}
+	a.Description = payload.Description
+	a.SystemPrompt = payload.SystemPrompt
+	a.UserPrompt = payload.UserPrompt
+	a.UsageType = payload.UsageType
+	a.Variables = payload.Variables
+	a.Tools = payload.Tools
+	a.KBTools = payload.KnowledgebaseTools
+	a.Model = payload.Model
+	a.Entity = payload.Entity
+	a.MaxTokens = payload.MaxTokens
+	a.ToolChoice = payload.ToolChoice
+	a.Temperature = payload.Temperature
+	a.TopP = payload.TopP
+	return a, nil
 }
