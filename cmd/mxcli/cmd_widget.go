@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/executor"
-	"github.com/mendixlabs/mxcli/sdk/widgets/mpk"
+	"github.com/mendixlabs/mxcli/modelsdk/widgets/mpk"
 	"github.com/spf13/cobra"
 )
 

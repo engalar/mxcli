@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/executor"
-	"github.com/mendixlabs/mxcli/sdk/widgets/mpk"
+	"github.com/mendixlabs/mxcli/modelsdk/widgets/mpk"
 )
 
 func TestDeriveMDLName(t *testing.T) {

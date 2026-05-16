@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/widgets/definitions"
-	"github.com/mendixlabs/mxcli/sdk/widgets/mpk"
+	"github.com/mendixlabs/mxcli/modelsdk/widgets/definitions"
+	"github.com/mendixlabs/mxcli/modelsdk/widgets/mpk"
 )
 
 // WidgetRegistry holds loaded widget definitions keyed by uppercase MDL name.

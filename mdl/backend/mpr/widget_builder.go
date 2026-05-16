@@ -19,7 +19,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
-	"github.com/mendixlabs/mxcli/sdk/widgets"
+	"github.com/mendixlabs/mxcli/modelsdk/widgets"
 )
 
 // ---------------------------------------------------------------------------

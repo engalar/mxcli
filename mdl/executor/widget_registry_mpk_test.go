@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendixlabs/mxcli/sdk/widgets/mpk"
+	"github.com/mendixlabs/mxcli/modelsdk/widgets/mpk"
 )
 
 // writeMiniMPK creates a minimal .mpk ZIP in widgetsDir with the given widget ID.
