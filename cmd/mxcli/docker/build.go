@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/mendixlabs/mxcli/model"
+	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/mpr/version"
 )
 
@@ -52,12 +52,12 @@ func Build(opts BuildOptions) error {
 
 	// Step 1: Detect version
 	fmt.Fprintln(w, "Detecting project version...")
-	reader, err := mpr.Open(opts.ProjectPath)
+	be, err := mprbackend.NewFromPath(opts.ProjectPath)
 	if err != nil {
 		return fmt.Errorf("opening project: %w", err)
 	}
-	pv := reader.ProjectVersion()
-	reader.Close()
+	pv := be.ProjectVersion()
+	be.Disconnect()
 
 	fmt.Fprintf(w, "  Mendix version: %s\n", pv.ProductVersion)
 
@@ -275,12 +275,12 @@ func Run(opts RunOptions) error {
 
 	// Step 1: Detect version
 	fmt.Fprintln(w, "Detecting project version...")
-	reader, err := mpr.Open(opts.ProjectPath)
+	be, err := mprbackend.NewFromPath(opts.ProjectPath)
 	if err != nil {
 		return fmt.Errorf("opening project: %w", err)
 	}
-	pv := reader.ProjectVersion()
-	reader.Close()
+	pv := be.ProjectVersion()
+	be.Disconnect()
 	fmt.Fprintf(w, "  Mendix version: %s\n", pv.ProductVersion)
 
 	// Step 2 & 3: Ensure MxBuild and runtime are available.
@@ -719,13 +719,13 @@ func ensurePADFiles(productVersion string, w io.Writer) error {
 func ensureDemoUsers(projectPath string, w io.Writer) error {
 	fmt.Fprintln(w, "Checking demo users...")
 
-	reader, err := mpr.Open(projectPath)
+	be, err := mprbackend.NewFromPath(projectPath)
 	if err != nil {
 		return fmt.Errorf("opening project: %w", err)
 	}
+	defer be.Disconnect()
 
-	ps, err := reader.GetProjectSecurity()
-	reader.Close()
+	ps, err := be.GetProjectSecurityGen()
 	if err != nil {
 		return fmt.Errorf("reading project security: %w", err)
 	}
@@ -738,21 +738,9 @@ func ensureDemoUsers(projectPath string, w io.Writer) error {
 
 	fmt.Fprintln(w, "  No demo users found, creating default admin...")
 
-	writer, err := mpr.NewWriter(projectPath)
-	if err != nil {
-		return fmt.Errorf("opening project for writing: %w", err)
-	}
-	defer writer.Close()
-
-	// Re-read security through writer's reader
-	ps, err = writer.Reader().GetProjectSecurity()
-	if err != nil {
-		return fmt.Errorf("reading project security: %w", err)
-	}
-
 	// Enable demo users if not already enabled
 	if !ps.EnableDemoUsers() {
-		if err := writer.SetProjectDemoUsersEnabled(model.ID(ps.ID()), true); err != nil {
+		if err := be.SetProjectDemoUsersEnabled(model.ID(ps.ID()), true); err != nil {
 			return fmt.Errorf("enabling demo users: %w", err)
 		}
 		fmt.Fprintln(w, "  Enabled demo users.")
@@ -776,7 +764,7 @@ func ensureDemoUsers(projectPath string, w io.Writer) error {
 		}
 	}
 
-	if err := writer.AddDemoUser(model.ID(ps.ID()), "admin", "Admin123!", "", []string{roleName}); err != nil {
+	if err := be.AddDemoUser(model.ID(ps.ID()), "admin", "Admin123!", "", []string{roleName}); err != nil {
 		return fmt.Errorf("creating demo user: %w", err)
 	}
 
