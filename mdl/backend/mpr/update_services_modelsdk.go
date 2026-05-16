@@ -16,6 +16,7 @@ import (
 	genJsonStructures "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
 	genODP "github.com/mendixlabs/mxcli/modelsdk/gen/odatapublish"
 	genREST "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
+	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
 // All Update* methods in this file decode the existing unit BSON, mutate
@@ -250,7 +251,7 @@ func (b *MprBackend) updatePublishedRestServiceViaModelsdk(svc *model.PublishedR
 // ── ImageCollection ───────────────────────────────────────────────────────
 
 func (b *MprBackend) updateImageCollectionViaModelsdk(ic *types.ImageCollection) error {
-	contents, err := sdkSerializeImageCollection(ic)
+	contents, err := modelsdkmpr.SerializeImageCollection(ic)
 	if err != nil {
 		return fmt.Errorf("serialize image collection: %w", err)
 	}

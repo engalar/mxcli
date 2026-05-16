@@ -25,7 +25,17 @@ import (
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
+	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
+
+// sdkReader is the sdk/mpr reader used for the read path.
+// NOTE: Read-path migration to modelsdk/mpr is deferred to Phase 4.
+type sdkReader = sdkmpr.Reader
+
+// sdkOpenReader opens a project MPR file for read-write access via sdk/mpr.
+func sdkOpenReader(path string) (*sdkReader, error) {
+	return sdkmpr.OpenWithOptions(path, sdkmpr.OpenOptions{ReadOnly: false})
+}
 
 var _ backend.FullBackend = (*MprBackend)(nil)
 var _ linter.LintReader = (*MprBackend)(nil)

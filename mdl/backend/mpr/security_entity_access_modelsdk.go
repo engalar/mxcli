@@ -9,6 +9,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDM "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
 // rolesMatch reports whether the two role-name slices contain the same set of
@@ -232,7 +233,7 @@ func (b *MprBackend) reconcileMemberAccessesViaModelsdk(unitID model.ID, moduleN
 	if err != nil {
 		return 0, fmt.Errorf("read unit: %w", err)
 	}
-	patched, modified, err := sdkPatchReconcileMemberAccesses(rawBytes, moduleName)
+	patched, modified, err := modelsdkmpr.PatchReconcileMemberAccesses(rawBytes, moduleName)
 	if err != nil {
 		return 0, err
 	}
