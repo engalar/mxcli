@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	bsondebug "github.com/mendixlabs/mxcli/cmd/mxcli/bson"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/spf13/cobra"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -61,7 +60,7 @@ Examples:
 		}
 
 		// Open the project
-		reader, err := mpr.Open(projectPath)
+		reader, err := openBSONReader(projectPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error opening project: %v\n", err)
 			os.Exit(1)
