@@ -23,27 +23,27 @@ func sdkSerializeDataTransformer(dt *model.DataTransformer) ([]byte, error) {
 }
 
 func sdkSerializeImportMapping(im *model.ImportMapping) ([]byte, error) {
-	return sdkmpr.SerializeImportMapping(im)
+	return modelsdkmpr.SerializeImportMapping(im)
 }
 
 func sdkSerializeExportMapping(em *model.ExportMapping) ([]byte, error) {
-	return sdkmpr.SerializeExportMapping(em)
+	return modelsdkmpr.SerializeExportMapping(em)
 }
 
 func sdkSerializeConsumedODataService(svc *model.ConsumedODataService) ([]byte, error) {
-	return sdkmpr.SerializeConsumedODataService(svc)
+	return modelsdkmpr.SerializeConsumedODataService(svc)
 }
 
 func sdkSerializePublishedODataService(svc *model.PublishedODataService) ([]byte, error) {
-	return sdkmpr.SerializePublishedODataService(svc)
+	return modelsdkmpr.SerializePublishedODataService(svc)
 }
 
 func sdkSerializeConsumedRestService(svc *model.ConsumedRestService) ([]byte, error) {
-	return sdkmpr.SerializeConsumedRestService(svc)
+	return modelsdkmpr.SerializeConsumedRestService(svc)
 }
 
 func sdkSerializePublishedRestService(svc *model.PublishedRestService) ([]byte, error) {
-	return sdkmpr.SerializePublishedRestService(svc)
+	return modelsdkmpr.SerializePublishedRestService(svc)
 }
 
 func sdkSerializeImageCollection(ic *types.ImageCollection) ([]byte, error) {
