@@ -10,8 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 // isContentsHashSchemaError returns true when the error looks like SQLite complaining
@@ -232,16 +230,3 @@ func (w *Writer) deleteUnit(unitID string) error {
 	return nil
 }
 
-func (w *Writer) updateDomainModel(dm *domainmodel.DomainModel) error {
-	contents, err := w.serializeDomainModel(dm)
-	if err != nil {
-		return fmt.Errorf("failed to serialize domain model: %w", err)
-	}
-
-	return w.updateUnit(string(dm.ID), contents)
-}
-
-// UpdateDomainModel serializes and saves a domain model back to the MPR file.
-func (w *Writer) UpdateDomainModel(dm *domainmodel.DomainModel) error {
-	return w.updateDomainModel(dm)
-}
