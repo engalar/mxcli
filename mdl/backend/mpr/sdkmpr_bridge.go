@@ -69,7 +69,7 @@ func sdkPatchNavigationProfile(rawBytes []byte, profileName string, spec types.N
 }
 
 func sdkPatchReconcileMemberAccesses(rawBytes []byte, moduleName string) ([]byte, int, error) {
-	return sdkmpr.PatchReconcileMemberAccesses(rawBytes, moduleName)
+	return modelsdkmpr.PatchReconcileMemberAccesses(rawBytes, moduleName)
 }
 
 // ── Reader bridge ─────────────────────────────────────────────────────────────
