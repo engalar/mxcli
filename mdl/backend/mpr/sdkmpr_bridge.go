@@ -71,3 +71,15 @@ func sdkPatchNavigationProfile(rawBytes []byte, profileName string, spec types.N
 func sdkPatchReconcileMemberAccesses(rawBytes []byte, moduleName string) ([]byte, int, error) {
 	return sdkmpr.PatchReconcileMemberAccesses(rawBytes, moduleName)
 }
+
+// ── Reader bridge ─────────────────────────────────────────────────────────────
+
+// sdkReader is a type alias for sdk/mpr.Reader, making it accessible in files
+// that import sdkmpr_bridge but not sdk/mpr directly.
+type sdkReader = sdkmpr.Reader
+
+// sdkOpenReader opens a project MPR file for read-write access and returns an
+// sdk/mpr Reader. Used by Connect() in backend.go.
+func sdkOpenReader(path string) (*sdkReader, error) {
+	return sdkmpr.OpenWithOptions(path, sdkmpr.OpenOptions{ReadOnly: false})
+}

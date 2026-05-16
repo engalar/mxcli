@@ -7,7 +7,6 @@ package mprbackend
 
 import (
 	"fmt"
-	"log"
 
 	"go.mongodb.org/mongo-driver/bson"
 
@@ -26,7 +25,6 @@ import (
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 var _ backend.FullBackend = (*MprBackend)(nil)
@@ -38,7 +36,7 @@ var _ linter.LintReader = (*MprBackend)(nil)
 // pointer dereference. The executor enforces connection state via
 // ConnectionBackend.IsConnected() before dispatching handlers.
 type MprBackend struct {
-	reader     *mpr.Reader
+	reader     *sdkReader
 	msdkWriter modelsdkmpr.UnitWriter
 	path       string
 }
@@ -46,24 +44,6 @@ type MprBackend struct {
 // New creates a new unconnected MprBackend. Call Connect(path) to open a project.
 func New() *MprBackend {
 	return &MprBackend{}
-}
-
-// Wrap creates an MprBackend that reuses an existing sdk/mpr.Writer's connection.
-// Used in tests and migration shims where the caller already owns a Writer.
-// The returned backend shares the Writer's underlying db; Close() on the
-// returned backend closes that shared connection.
-func Wrap(writer *mpr.Writer, path string) *MprBackend {
-	db := writer.Reader().DB()
-	contentsDir := writer.Reader().ContentsDir()
-	mw, err := modelsdkmpr.NewWriterFromDB(db, path, contentsDir)
-	if err != nil {
-		log.Printf("mprbackend: Wrap: failed to create modelsdk writer for %s: %v", path, err)
-	}
-	return &MprBackend{
-		reader:     writer.Reader(),
-		msdkWriter: mw,
-		path:       path,
-	}
 }
 
 // NewFromPath opens path for read-write and returns a fully-wired MprBackend.
@@ -81,7 +61,7 @@ func NewFromPath(path string) (*MprBackend, error) {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) Connect(path string) error {
-	r, err := mpr.OpenWithOptions(path, mpr.OpenOptions{ReadOnly: false})
+	r, err := sdkOpenReader(path)
 	if err != nil {
 		return err
 	}
@@ -109,11 +89,6 @@ func (b *MprBackend) Disconnect() error {
 
 func (b *MprBackend) IsConnected() bool { return b.reader != nil }
 func (b *MprBackend) Path() string      { return b.path }
-
-// MprReader returns the underlying *mpr.Reader for callers that still
-// require direct SDK access (e.g. linter rules). Prefer Backend methods
-// for new code.
-func (b *MprBackend) MprReader() *mpr.Reader { return b.reader }
 
 func (b *MprBackend) Version() types.MPRVersion { return convertMPRVersion(b.reader.Version()) }
 func (b *MprBackend) ProjectVersion() *types.ProjectVersion {
