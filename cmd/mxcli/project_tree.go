@@ -15,7 +15,6 @@ import (
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/spf13/cobra"
 )
 
@@ -72,7 +71,7 @@ Example:
 }
 
 func buildProjectTree(projectPath string) ([]*TreeNode, error) {
-	reader, err := mpr.Open(projectPath)
+	reader, err := openProjectTreeReader(projectPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open project: %w", err)
 	}
