@@ -4,7 +4,6 @@ package types
 
 import (
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/javaactions"
 )
 
 // JavaAction is a lightweight Java action descriptor.
@@ -34,10 +33,10 @@ type JavaScriptAction struct {
 	Excluded                bool                               `json:"excluded"`
 	ExportLevel             string                             `json:"exportLevel,omitempty"`
 	ActionDefaultReturnName string                             `json:"actionDefaultReturnName,omitempty"`
-	ReturnType              javaactions.CodeActionReturnType   `json:"returnType,omitempty"`
-	Parameters              []*javaactions.JavaActionParameter `json:"parameters,omitempty"`
-	TypeParameters          []*javaactions.TypeParameterDef    `json:"typeParameters,omitempty"`
-	MicroflowActionInfo     *javaactions.MicroflowActionInfo   `json:"microflowActionInfo,omitempty"`
+	ReturnType              CodeActionReturnType   `json:"returnType,omitempty"`
+	Parameters              []*JavaActionParameter `json:"parameters,omitempty"`
+	TypeParameters          []*TypeParameterDef    `json:"typeParameters,omitempty"`
+	MicroflowActionInfo     *MicroflowActionInfo   `json:"microflowActionInfo,omitempty"`
 }
 
 // GetName returns the JavaScript action's name.

@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/javaactions"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -164,7 +164,7 @@ func (r *Reader) parseJavaScriptAction(unitID, containerID string, contents []by
 		for _, tp := range typeParams {
 			if tpMap := toMap(tp); tpMap != nil {
 				if name := extractString(tpMap["Name"]); name != "" {
-					jsa.TypeParameters = append(jsa.TypeParameters, &javaactions.TypeParameterDef{
+					jsa.TypeParameters = append(jsa.TypeParameters, &types.TypeParameterDef{
 						BaseElement: model.BaseElement{ID: model.ID(extractBsonID(tpMap["$ID"]))},
 						Name:        name,
 					})
@@ -175,7 +175,7 @@ func (r *Reader) parseJavaScriptAction(unitID, containerID string, contents []by
 		for _, tp := range typeParams {
 			if tpMap := toMap(tp); tpMap != nil {
 				if name := extractString(tpMap["Name"]); name != "" {
-					jsa.TypeParameters = append(jsa.TypeParameters, &javaactions.TypeParameterDef{
+					jsa.TypeParameters = append(jsa.TypeParameters, &types.TypeParameterDef{
 						BaseElement: model.BaseElement{ID: model.ID(extractBsonID(tpMap["$ID"]))},
 						Name:        name,
 					})
@@ -186,7 +186,7 @@ func (r *Reader) parseJavaScriptAction(unitID, containerID string, contents []by
 
 	// Parse MicroflowActionInfo
 	if mai := toMap(raw["MicroflowActionInfo"]); mai != nil {
-		jsa.MicroflowActionInfo = &javaactions.MicroflowActionInfo{
+		jsa.MicroflowActionInfo = &types.MicroflowActionInfo{
 			BaseElement: model.BaseElement{ID: model.ID(extractBsonID(mai["$ID"]))},
 			Caption:     extractString(mai["Caption"]),
 			Category:    extractString(mai["Category"]),
@@ -198,9 +198,9 @@ func (r *Reader) parseJavaScriptAction(unitID, containerID string, contents []by
 	// Resolve type parameter names for EntityTypeParameterType and TypeParameter
 	for _, param := range jsa.Parameters {
 		switch pt := param.ParameterType.(type) {
-		case *javaactions.EntityTypeParameterType:
+		case *types.EntityTypeParameterType:
 			pt.TypeParameterName = jsa.FindTypeParameterName(pt.TypeParameterID)
-		case *javaactions.TypeParameter:
+		case *types.TypeParameter:
 			if pt.TypeParameterID != "" && pt.TypeParameter == "" {
 				pt.TypeParameter = jsa.FindTypeParameterName(pt.TypeParameterID)
 			}
@@ -208,7 +208,7 @@ func (r *Reader) parseJavaScriptAction(unitID, containerID string, contents []by
 	}
 
 	// Resolve type parameter name for return type
-	if tp, ok := jsa.ReturnType.(*javaactions.TypeParameter); ok {
+	if tp, ok := jsa.ReturnType.(*types.TypeParameter); ok {
 		if tp.TypeParameterID != "" && tp.TypeParameter == "" {
 			tp.TypeParameter = jsa.FindTypeParameterName(tp.TypeParameterID)
 		}
