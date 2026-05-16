@@ -304,11 +304,11 @@ func TestNewExecutorContextWithReferences_BothServicesWired(t *testing.T) {
 		t.Fatalf("mmpr.NewWriter: %v", err)
 	}
 	t.Cleanup(func() { _ = mw.Close() })
-	scanner, closeScanner, err := sdkOpenBSONScanner(dst)
+	scanner, err := mmpr.Open(dst)
 	if err != nil {
-		t.Fatalf("sdkOpenBSONScanner: %v", err)
+		t.Fatalf("mmpr.Open: %v", err)
 	}
-	t.Cleanup(closeScanner)
+	t.Cleanup(func() { _ = scanner.Close() })
 
 	ctx := NewExecutorContextWithReferences(mw, scanner)
 	if ctx == nil {
