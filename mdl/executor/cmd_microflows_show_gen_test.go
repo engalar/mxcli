@@ -19,7 +19,6 @@ import (
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
-	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 const fixtureMprPath = "../../testdata/expr-checker/minimal.mpr"
@@ -59,16 +58,15 @@ func newGenDescribeContext(t *testing.T, w *mmpr.Writer) *ExecContext {
 	// Wire up a backend so getHierarchy(ctx) can resolve module names
 	// from the SQL-backed container chain (the canonical path used by
 	// genMicroflowQualifiedName after BSON roundtrip strips Container()).
-	// We open a second sdk/mpr.Writer on the same MPR file (already
-	// copied into a tempdir by the helper) and Wrap it; modernc/sqlite
-	// supports multiple opens of the same file.
+	// We open a second MprBackend on the same MPR file (already copied
+	// into a tempdir by the helper); modernc/sqlite supports multiple
+	// opens of the same file.
 	path := w.ConcreteReader().Path()
-	sdkW, err := sdkmpr.NewWriter(path)
+	be, err := mprbackend.NewFromPath(path)
 	if err != nil {
-		t.Fatalf("sdkmpr.NewWriter(%s): %v", path, err)
+		t.Fatalf("mprbackend.NewFromPath(%s): %v", path, err)
 	}
-	t.Cleanup(func() { _ = sdkW.Close() })
-	be := mprbackend.Wrap(sdkW, path)
+	t.Cleanup(func() { _ = be.Disconnect() })
 
 	return &ExecContext{
 		Backend:    be,
