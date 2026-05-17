@@ -16,6 +16,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
+	genDTrans "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
 	genProj "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
@@ -249,6 +250,44 @@ func moduleSettingsUnitsToTypes(units []mprread.Unit[*genProj.ModuleSettings]) [
 	out := make([]*types.ModuleSettings, len(units))
 	for i, u := range units {
 		out[i] = moduleSettingsToTypes(u)
+	}
+	return out
+}
+
+// ---------------------------------------------------------------------------
+// DataTransformer
+// ---------------------------------------------------------------------------
+
+func dataTransformerToModel(u mprread.Unit[*genDTrans.DataTransformer]) *model.DataTransformer {
+	t := u.Element
+	out := &model.DataTransformer{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(t.ID()),
+			TypeName: "DataTransformers$DataTransformer",
+		},
+		ContainerID: u.ContainerID,
+		Name:        t.Name(),
+		SourceType:  t.SourceType(),
+		SourceJSON:  t.SourceJson(),
+		Excluded:    t.Excluded(),
+	}
+	for _, item := range t.StepsItems() {
+		st, ok := item.(*genDTrans.Step)
+		if !ok {
+			continue
+		}
+		out.Steps = append(out.Steps, &model.DataTransformerStep{
+			Technology: st.Technology(),
+			Expression: st.Expression(),
+		})
+	}
+	return out
+}
+
+func dataTransformerUnitsToModel(units []mprread.Unit[*genDTrans.DataTransformer]) []*model.DataTransformer {
+	out := make([]*model.DataTransformer, len(units))
+	for i, u := range units {
+		out[i] = dataTransformerToModel(u)
 	}
 	return out
 }

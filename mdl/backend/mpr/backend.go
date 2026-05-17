@@ -18,6 +18,7 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
+	genDTrans "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
@@ -727,7 +728,11 @@ func (b *MprBackend) DeleteDatabaseConnection(id model.ID) error {
 }
 
 func (b *MprBackend) ListDataTransformers() ([]*model.DataTransformer, error) {
-	return b.reader.ListDataTransformers()
+	units, err := mprread.ListUnitsWithContainer[*genDTrans.DataTransformer](b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	return dataTransformerUnitsToModel(units), nil
 }
 func (b *MprBackend) CreateDataTransformer(dt *model.DataTransformer) error {
 	return b.createDataTransformerViaModelsdk(dt)
