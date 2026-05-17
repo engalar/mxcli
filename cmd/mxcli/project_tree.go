@@ -11,7 +11,17 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
+	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	gendomainmodels "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
+	genExpMap "github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings"
+	genImg "github.com/mendixlabs/mxcli/modelsdk/gen/images"
+	genImpMap "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
+	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
+	genJson "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
+	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
+	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
@@ -155,14 +165,14 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	}
 
 	// Collect enumerations (part of Domain Model)
-	enums, _ := reader.ListEnumerations()
-	for _, en := range enums {
-		modID := h.FindModuleID(en.ContainerID)
+	enumUnits, _ := mprread.ListUnitsWithContainer[*genEnum.Enumeration](mreader)
+	for _, u := range enumUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.enumerations = append(md.enumerations, treeElement{Name: en.Name, ContainerID: en.ContainerID})
+		md.enumerations = append(md.enumerations, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID})
 	}
 
 	// Collect module security (module roles).
@@ -284,14 +294,14 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	}
 
 	// Collect constants
-	consts, _ := reader.ListConstants()
-	for _, c := range consts {
-		modID := h.FindModuleID(c.ContainerID)
+	constUnits, _ := mprread.ListUnitsWithContainer[*genConst.Constant](mreader)
+	for _, u := range constUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: c.Name, ContainerID: c.ContainerID, Type: "constant"})
+		md.documents = append(md.documents, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID, Type: "constant"})
 	}
 
 	// Collect workflows (gen-typed path; ContainerID resolved via unit index join).
@@ -333,25 +343,25 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	}
 
 	// Collect scheduled events
-	ses, _ := reader.ListScheduledEvents()
-	for _, se := range ses {
-		modID := h.FindModuleID(se.ContainerID)
+	seUnits, _ := mprread.ListUnitsWithContainer[*genSched.ScheduledEvent](mreader)
+	for _, u := range seUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: se.Name, ContainerID: se.ContainerID, Type: "scheduledevent"})
+		md.documents = append(md.documents, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID, Type: "scheduledevent"})
 	}
 
 	// Collect JavaScript actions
-	jsas, _ := reader.ListJavaScriptActions()
-	for _, jsa := range jsas {
-		modID := h.FindModuleID(jsa.ContainerID)
+	jsaUnits, _ := mprread.ListUnitsWithContainer[*genJSA.JavaScriptAction](mreader)
+	for _, u := range jsaUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: jsa.Name, ContainerID: jsa.ContainerID, Type: "javascriptaction"})
+		md.documents = append(md.documents, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID, Type: "javascriptaction"})
 	}
 
 	// Collect building blocks (gen-typed path; ContainerID resolved via unit index join).
@@ -389,25 +399,25 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	}
 
 	// Collect image collections
-	ics, _ := reader.ListImageCollections()
-	for _, ic := range ics {
-		modID := h.FindModuleID(ic.ContainerID)
+	icUnits, _ := mprread.ListUnitsWithContainer[*genImg.ImageCollection](mreader)
+	for _, u := range icUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: ic.Name, ContainerID: ic.ContainerID, Type: "imagecollection"})
+		md.documents = append(md.documents, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID, Type: "imagecollection"})
 	}
 
 	// Collect consumed OData services (clients)
-	odataClients, _ := reader.ListConsumedODataServices()
-	for _, oc := range odataClients {
-		modID := h.FindModuleID(oc.ContainerID)
+	odataClientUnits, _ := mprread.ListUnitsWithContainer[*genRest.ConsumedODataService](mreader)
+	for _, u := range odataClientUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: oc.Name, ContainerID: oc.ContainerID, Type: "odataclient"})
+		md.documents = append(md.documents, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID, Type: "odataclient"})
 	}
 
 	// Collect published OData services (with entity sets as children)
@@ -447,36 +457,36 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	}
 
 	// Collect JSON structures
-	jss, _ := reader.ListJsonStructures()
-	for _, js := range jss {
-		modID := h.FindModuleID(js.ContainerID)
+	jsUnits, _ := mprread.ListUnitsWithContainer[*genJson.JsonStructure](mreader)
+	for _, u := range jsUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: js.Name, ContainerID: js.ContainerID, Type: "jsonstructure"})
+		md.documents = append(md.documents, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID, Type: "jsonstructure"})
 	}
 
 	// Collect import mappings
-	ims, _ := reader.ListImportMappings()
-	for _, im := range ims {
-		modID := h.FindModuleID(im.ContainerID)
+	imUnits, _ := mprread.ListUnitsWithContainer[*genImpMap.ImportMapping](mreader)
+	for _, u := range imUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: im.Name, ContainerID: im.ContainerID, Type: "importmapping"})
+		md.documents = append(md.documents, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID, Type: "importmapping"})
 	}
 
 	// Collect export mappings
-	ems, _ := reader.ListExportMappings()
-	for _, em := range ems {
-		modID := h.FindModuleID(em.ContainerID)
+	emUnits, _ := mprread.ListUnitsWithContainer[*genExpMap.ExportMapping](mreader)
+	for _, u := range emUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: em.Name, ContainerID: em.ContainerID, Type: "exportmapping"})
+		md.documents = append(md.documents, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID, Type: "exportmapping"})
 	}
 
 	// Collect consumed REST services (with operations as children)
@@ -518,18 +528,18 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	}
 
 	// Collect data transformers
-	dts, _ := reader.ListDataTransformers()
-	for _, dt := range dts {
-		modID := h.FindModuleID(dt.ContainerID)
+	dtUnits, _ := mprread.ListUnitsWithContainer[*genDT.DataTransformer](mreader)
+	for _, u := range dtUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		md.documents = append(md.documents, treeElement{Name: dt.Name, ContainerID: dt.ContainerID, Type: "datatransformer"})
+		md.documents = append(md.documents, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID, Type: "datatransformer"})
 	}
 
 	// Collect agent-editor documents (Mendix 11.9+; empty on older projects)
-	agentModels, _ := reader.ListAgentEditorModels()
+	agentModels, _ := mprread.ListAgentEditorModels(mreader)
 	for _, m := range agentModels {
 		modID := h.FindModuleID(m.ContainerID)
 		md, ok := modData[modID]
@@ -539,7 +549,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		md.documents = append(md.documents, treeElement{Name: m.Name, ContainerID: m.ContainerID, Type: "aimodel"})
 	}
 
-	kbs, _ := reader.ListAgentEditorKnowledgeBases()
+	kbs, _ := mprread.ListAgentEditorKnowledgeBases(mreader)
 	for _, kb := range kbs {
 		modID := h.FindModuleID(kb.ContainerID)
 		md, ok := modData[modID]
@@ -549,7 +559,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		md.documents = append(md.documents, treeElement{Name: kb.Name, ContainerID: kb.ContainerID, Type: "knowledgebase"})
 	}
 
-	mcpServices, _ := reader.ListAgentEditorConsumedMCPServices()
+	mcpServices, _ := mprread.ListAgentEditorConsumedMCPServices(mreader)
 	for _, svc := range mcpServices {
 		modID := h.FindModuleID(svc.ContainerID)
 		md, ok := modData[modID]
@@ -559,7 +569,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		md.documents = append(md.documents, treeElement{Name: svc.Name, ContainerID: svc.ContainerID, Type: "consumedmcpservice"})
 	}
 
-	agents, _ := reader.ListAgentEditorAgents()
+	agents, _ := mprread.ListAgentEditorAgents(mreader)
 	for _, a := range agents {
 		modID := h.FindModuleID(a.ContainerID)
 		md, ok := modData[modID]
