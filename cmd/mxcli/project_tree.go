@@ -11,7 +11,10 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
 	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
+	genDBC "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
 	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	gendomainmodels "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
@@ -20,6 +23,7 @@ import (
 	genImpMap "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genJson "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
+	genODataPub "github.com/mendixlabs/mxcli/modelsdk/gen/odatapublish"
 	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
 	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
@@ -421,39 +425,39 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	}
 
 	// Collect published OData services (with entity sets as children)
-	odataServices, _ := reader.ListPublishedODataServices()
-	for _, svc := range odataServices {
-		modID := h.FindModuleID(svc.ContainerID)
+	odataServiceUnits, _ := mprread.ListUnitsWithContainer[*genODataPub.PublishedODataService2](mreader)
+	for _, u := range odataServiceUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		children := buildPublishedODataChildren(svc, modules, modID)
-		md.documents = append(md.documents, treeElement{Name: svc.Name, ContainerID: svc.ContainerID, Type: "odataservice", Children: children})
+		children := buildPublishedODataChildren(u.Element)
+		md.documents = append(md.documents, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID, Type: "odataservice", Children: children})
 	}
 
 	// Collect published REST services (with resources/operations as children)
-	restServices, _ := reader.ListPublishedRestServices()
-	for _, svc := range restServices {
-		modID := h.FindModuleID(svc.ContainerID)
+	restServiceUnits, _ := mprread.ListUnitsWithContainer[*genRest.PublishedRestService](mreader)
+	for _, u := range restServiceUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		children := buildPublishedRestChildren(svc)
-		md.documents = append(md.documents, treeElement{Name: svc.Name, ContainerID: svc.ContainerID, Type: "publishedrestservice", Children: children})
+		children := buildPublishedRestChildren(u.Element)
+		md.documents = append(md.documents, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID, Type: "publishedrestservice", Children: children})
 	}
 
 	// Collect business event services (with channels/messages as children)
-	bess, _ := reader.ListBusinessEventServices()
-	for _, bes := range bess {
-		modID := h.FindModuleID(bes.ContainerID)
+	besUnits, _ := mprread.ListUnitsWithContainer[*genBE.BusinessEventService](mreader)
+	for _, u := range besUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		children := buildBusinessEventChildren(bes)
-		md.documents = append(md.documents, treeElement{Name: bes.Name, ContainerID: bes.ContainerID, Type: "businesseventservice", Children: children})
+		children := buildBusinessEventChildren(u.Element)
+		md.documents = append(md.documents, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID, Type: "businesseventservice", Children: children})
 	}
 
 	// Collect JSON structures
@@ -490,41 +494,28 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	}
 
 	// Collect consumed REST services (with operations as children)
-	restClients, _ := reader.ListConsumedRestServices()
-	for _, rc := range restClients {
-		modID := h.FindModuleID(rc.ContainerID)
+	restClientUnits, _ := mprread.ListUnitsWithContainer[*genRest.ConsumedRestService](mreader)
+	for _, u := range restClientUnits {
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
-		var children []*TreeNode
-		for _, op := range rc.Operations {
-			method := op.HttpMethod
-			if method == "" {
-				method = "GET"
-			}
-			label := method
-			if op.Path != "" {
-				label += " " + op.Path
-			}
-			children = append(children, &TreeNode{
-				Label: label,
-				Type:  "restoperation",
-			})
-		}
-		md.documents = append(md.documents, treeElement{Name: rc.Name, ContainerID: rc.ContainerID, Type: "restclient", Children: children})
+		children := buildConsumedRestChildren(u.Element)
+		md.documents = append(md.documents, treeElement{Name: u.Element.Name(), ContainerID: u.ContainerID, Type: "restclient", Children: children})
 	}
 
 	// Collect database connections (with queries as children)
-	dbcs, _ := reader.ListDatabaseConnections()
-	for _, dbc := range dbcs {
-		modID := h.FindModuleID(dbc.ContainerID)
+	dbcUnits, _ := mprread.ListUnitsWithContainer[*genDBC.DatabaseConnection](mreader)
+	for _, u := range dbcUnits {
+		dbc := u.Element
+		modID := h.FindModuleID(u.ContainerID)
 		md, ok := modData[modID]
 		if !ok {
 			continue
 		}
 		children := buildDatabaseConnectionChildren(dbc)
-		md.documents = append(md.documents, treeElement{Name: dbc.Name, ContainerID: dbc.ContainerID, Type: "databaseconnection", Children: children})
+		md.documents = append(md.documents, treeElement{Name: dbc.Name(), ContainerID: u.ContainerID, Type: "databaseconnection", Children: children})
 	}
 
 	// Collect data transformers
@@ -960,136 +951,231 @@ func getOrCreateFolder(root *TreeNode, cache map[string]*TreeNode, path string) 
 
 // buildPublishedODataChildren builds child tree nodes for a published OData service.
 // Shows entity sets with their exposed entities.
-func buildPublishedODataChildren(svc *model.PublishedODataService, modules []*model.Module, modID model.ID) []*TreeNode {
+func buildPublishedODataChildren(svc *genODataPub.PublishedODataService2) []*TreeNode {
 	var children []*TreeNode
 
-	// Find module name for qualified names
-	moduleName := ""
-	for _, m := range modules {
-		if m.ID == modID {
-			moduleName = m.Name
-			break
+	// Index entity types by their element ID for O(1) lookup from EntitySet.EntityTypeRefID().
+	etByID := map[element.ID]*genODataPub.EntityType{}
+	var etItems []*genODataPub.EntityType
+	for _, item := range svc.EntityTypesItems() {
+		if et, ok := item.(*genODataPub.EntityType); ok {
+			etByID[et.ID()] = et
+			etItems = append(etItems, et)
 		}
 	}
 
-	for _, es := range svc.EntitySets {
-		label := es.ExposedName
-		if es.EntityTypeName != "" {
-			// Find the entity type to show the source entity
-			for _, et := range svc.EntityTypes {
-				if string(et.ID) == es.EntityTypeName {
-					if et.Entity != "" {
-						label += " → " + et.Entity
-					}
-					break
-				}
+	esItems := svc.EntitySetsItems()
+	for _, esItem := range esItems {
+		es, ok := esItem.(*genODataPub.EntitySet)
+		if !ok {
+			continue
+		}
+		label := es.ExposedName()
+		var et *genODataPub.EntityType
+		if refID := es.EntityTypeRefID(); refID != "" {
+			et = etByID[refID]
+			if et != nil && et.EntityQualifiedName() != "" {
+				label += " → " + et.EntityQualifiedName()
 			}
 		}
 		esNode := &TreeNode{
 			Label: label,
 			Type:  "odataentityset",
 		}
-
-		// Show members of the entity type
-		for _, et := range svc.EntityTypes {
-			if string(et.ID) == es.EntityTypeName {
-				for _, mem := range et.Members {
-					memLabel := mem.ExposedName
-					if mem.Kind != "" {
-						memLabel += " (" + mem.Kind + ")"
-					}
-					esNode.Children = append(esNode.Children, &TreeNode{
-						Label: memLabel,
-						Type:  "odatamember",
-					})
+		if et != nil {
+			for _, memItem := range et.ChildMembersItems() {
+				memLabel, kind := publishedMemberLabel(memItem)
+				if memLabel == "" {
+					continue
 				}
-				break
+				if kind != "" {
+					memLabel += " (" + kind + ")"
+				}
+				esNode.Children = append(esNode.Children, &TreeNode{
+					Label: memLabel,
+					Type:  "odatamember",
+				})
 			}
 		}
-
 		children = append(children, esNode)
 	}
 
 	// If no entity sets but entity types exist, show entity types directly
-	if len(svc.EntitySets) == 0 {
-		for _, et := range svc.EntityTypes {
-			label := et.ExposedName
-			if et.Entity != "" {
-				label += " → " + et.Entity
+	if len(esItems) == 0 {
+		for _, et := range etItems {
+			label := et.ExposedName()
+			if et.EntityQualifiedName() != "" {
+				label += " → " + et.EntityQualifiedName()
 			}
-			etNode := &TreeNode{
+			children = append(children, &TreeNode{
 				Label: label,
 				Type:  "odataentityset",
-			}
-			children = append(children, etNode)
+			})
 		}
 	}
 
-	_ = moduleName // reserved for future use
 	return children
+}
+
+// publishedMemberLabel extracts the exposed name and kind from a published OData
+// member. The "kind" string mirrors what sdk/mpr.parser inferred from the BSON
+// $Type: "attribute", "association", "id", or "microflow".
+func publishedMemberLabel(item element.Element) (label, kind string) {
+	switch m := item.(type) {
+	case *genODataPub.PublishedAttribute:
+		return m.ExposedName(), "attribute"
+	case *genODataPub.PublishedAssociationEnd:
+		return m.ExposedName(), "association"
+	case *genODataPub.PublishedId:
+		return m.ExposedName(), "id"
+	case *genODataPub.PublishedMicroflow:
+		return m.ExposedName(), "microflow"
+	case *genODataPub.PublishedMember:
+		return m.ExposedName(), ""
+	}
+	return "", ""
 }
 
 // buildPublishedRestChildren builds child tree nodes for a published REST service.
 // Shows resources with their operations (like an OpenAPI contract).
-func buildPublishedRestChildren(svc *model.PublishedRestService) []*TreeNode {
+func buildPublishedRestChildren(svc *genRest.PublishedRestService) []*TreeNode {
 	var children []*TreeNode
-	for _, res := range svc.Resources {
+	for _, resItem := range svc.ResourcesItems() {
+		res, ok := resItem.(*genRest.PublishedRestServiceResource)
+		if !ok {
+			continue
+		}
 		resNode := &TreeNode{
-			Label: res.Name,
+			Label: res.Name(),
 			Type:  "restresource",
 		}
-		for _, op := range res.Operations {
-			method := op.HTTPMethod
+		for _, opItem := range res.OperationsItems() {
+			op, ok := opItem.(*genRest.PublishedRestServiceOperation)
+			if !ok {
+				continue
+			}
+			method := op.HttpMethod()
 			if method == "" {
 				method = "GET"
 			}
 			label := method
-			if op.Path != "" {
-				label += " " + op.Path
+			if op.Path() != "" {
+				label += " " + op.Path()
 			}
-			if op.Summary != "" {
-				label += " — " + op.Summary
+			if op.Summary() != "" {
+				label += " — " + op.Summary()
 			}
-			opNode := &TreeNode{
+			resNode.Children = append(resNode.Children, &TreeNode{
 				Label: label,
 				Type:  "restoperation",
-			}
-			resNode.Children = append(resNode.Children, opNode)
+			})
 		}
 		children = append(children, resNode)
 	}
 	return children
 }
 
+// buildConsumedRestChildren builds child tree nodes for a consumed REST service
+// (REST client). Shows each operation with method and path.
+func buildConsumedRestChildren(svc *genRest.ConsumedRestService) []*TreeNode {
+	var children []*TreeNode
+	for _, opItem := range svc.OperationsItems() {
+		op, ok := opItem.(*genRest.RestOperation)
+		if !ok {
+			continue
+		}
+		method := restOperationMethod(op.Method())
+		if method == "" {
+			method = "GET"
+		}
+		label := method
+		if path := restOperationPath(op.Path()); path != "" {
+			label += " " + path
+		}
+		children = append(children, &TreeNode{
+			Label: label,
+			Type:  "restoperation",
+		})
+	}
+	return children
+}
+
+// restOperationMethod extracts the HTTP method string from any of the
+// RestOperationMethod variants (with/without body).
+func restOperationMethod(m element.Element) string {
+	type httpMethoder interface {
+		HttpMethod() string
+	}
+	if hm, ok := m.(httpMethoder); ok {
+		return hm.HttpMethod()
+	}
+	return ""
+}
+
+// restOperationPath extracts the URL path string from a RestOperation.Path()
+// element. The most common variant is ValueTemplate (literal path with
+// {placeholders}). ConstantValue points to a Constant document — its name is
+// stored in ValueQualifiedName but resolving to the runtime string would
+// require a Constants$Constant lookup, so we surface the reference inline.
+func restOperationPath(p element.Element) string {
+	switch v := p.(type) {
+	case *genRest.ValueTemplate:
+		return v.Value()
+	case *genRest.ConstantValue:
+		if name := v.ValueQualifiedName(); name != "" {
+			return "$" + name
+		}
+		return ""
+	}
+	return ""
+}
+
 // buildBusinessEventChildren builds child tree nodes for a business event service.
 // Shows channels with their messages.
-func buildBusinessEventChildren(svc *model.BusinessEventService) []*TreeNode {
+func buildBusinessEventChildren(svc *genBE.BusinessEventService) []*TreeNode {
 	var children []*TreeNode
-	if svc.Definition == nil {
+	defItem := svc.Definition()
+	if defItem == nil {
 		return children
 	}
-	for _, ch := range svc.Definition.Channels {
+	def, ok := defItem.(*genBE.BusinessEventDefinition)
+	if !ok {
+		return children
+	}
+	for _, chItem := range def.ChannelsItems() {
+		ch, ok := chItem.(*genBE.Channel)
+		if !ok {
+			continue
+		}
 		chNode := &TreeNode{
-			Label: ch.ChannelName,
+			Label: ch.ChannelName(),
 			Type:  "bechannel",
 		}
-		for _, msg := range ch.Messages {
+		for _, msgItem := range ch.MessagesItems() {
+			msg, ok := msgItem.(*genBE.Message)
+			if !ok {
+				continue
+			}
 			direction := ""
-			if msg.CanPublish && msg.CanSubscribe {
+			if msg.CanPublish() && msg.CanSubscribe() {
 				direction = " (pub/sub)"
-			} else if msg.CanPublish {
+			} else if msg.CanPublish() {
 				direction = " (publish)"
-			} else if msg.CanSubscribe {
+			} else if msg.CanSubscribe() {
 				direction = " (subscribe)"
 			}
 			msgNode := &TreeNode{
-				Label: msg.MessageName + direction,
+				Label: msg.MessageName() + direction,
 				Type:  "bemessage",
 			}
-			for _, attr := range msg.Attributes {
-				attrLabel := attr.AttributeName
-				if attr.AttributeType != "" {
-					attrLabel += " : " + attr.AttributeType
+			for _, attrItem := range msg.AttributesItems() {
+				attr, ok := attrItem.(*genBE.MessageAttribute)
+				if !ok {
+					continue
+				}
+				attrLabel := attr.AttributeName()
+				if typeName := attributeTypeName(attr.AttributeType()); typeName != "" {
+					attrLabel += " : " + typeName
 				}
 				msgNode.Children = append(msgNode.Children, &TreeNode{
 					Label: attrLabel,
@@ -1103,20 +1189,54 @@ func buildBusinessEventChildren(svc *model.BusinessEventService) []*TreeNode {
 	return children
 }
 
+// attributeTypeName resolves a BusinessEvent message attribute's nested type
+// element to its short BSON-type name suffix (e.g. "String" from
+// "DataTypes$StringType"). Returns "" if the element is nil.
+func attributeTypeName(t element.Element) string {
+	if t == nil {
+		return ""
+	}
+	tn := t.TypeName()
+	// e.g. "DataTypes$StringType" → "StringType"
+	if i := indexByte(tn, '$'); i >= 0 {
+		return tn[i+1:]
+	}
+	return tn
+}
+
+// indexByte is a tiny inline strings.IndexByte (avoid importing strings just
+// for this single helper). Returns -1 if not found.
+func indexByte(s string, b byte) int {
+	for i := 0; i < len(s); i++ {
+		if s[i] == b {
+			return i
+		}
+	}
+	return -1
+}
+
 // buildDatabaseConnectionChildren builds child tree nodes for a database connection.
 // Shows queries with their parameters and table mappings.
-func buildDatabaseConnectionChildren(dbc *model.DatabaseConnection) []*TreeNode {
+func buildDatabaseConnectionChildren(dbc *genDBC.DatabaseConnection) []*TreeNode {
 	var children []*TreeNode
-	for _, q := range dbc.Queries {
+	for _, qItem := range dbc.QueriesItems() {
+		q, ok := qItem.(*genDBC.DatabaseQuery)
+		if !ok {
+			continue
+		}
 		qNode := &TreeNode{
-			Label: q.Name,
+			Label: q.Name(),
 			Type:  "dbquery",
 		}
 		// Show parameters
-		for _, p := range q.Parameters {
-			pLabel := p.ParameterName
-			if p.DataType != "" {
-				pLabel += " : " + p.DataType
+		for _, pItem := range q.ParametersItems() {
+			p, ok := pItem.(*genDBC.QueryParameter)
+			if !ok {
+				continue
+			}
+			pLabel := p.ParameterName()
+			if typeName := sqlDataTypeName(p.SqlDataType()); typeName != "" {
+				pLabel += " : " + typeName
 			}
 			qNode.Children = append(qNode.Children, &TreeNode{
 				Label: pLabel,
@@ -1124,19 +1244,27 @@ func buildDatabaseConnectionChildren(dbc *model.DatabaseConnection) []*TreeNode 
 			})
 		}
 		// Show table mappings
-		for _, tm := range q.TableMappings {
-			tmLabel := tm.TableName
-			if tm.Entity != "" {
-				tmLabel += " → " + tm.Entity
+		for _, tmItem := range q.TableMappingsItems() {
+			tm, ok := tmItem.(*genDBC.TableMapping)
+			if !ok {
+				continue
+			}
+			tmLabel := tm.TableName()
+			if tm.EntityQualifiedName() != "" {
+				tmLabel += " → " + tm.EntityQualifiedName()
 			}
 			tmNode := &TreeNode{
 				Label: tmLabel,
 				Type:  "dbtablemapping",
 			}
-			for _, col := range tm.Columns {
-				colLabel := col.ColumnName
-				if col.Attribute != "" {
-					colLabel += " → " + col.Attribute
+			for _, colItem := range tm.ColumnsItems() {
+				col, ok := colItem.(*genDBC.ColumnMapping)
+				if !ok {
+					continue
+				}
+				colLabel := col.ColumnName()
+				if col.AttributeQualifiedName() != "" {
+					colLabel += " → " + col.AttributeQualifiedName()
 				}
 				tmNode.Children = append(tmNode.Children, &TreeNode{
 					Label: colLabel,
@@ -1148,6 +1276,18 @@ func buildDatabaseConnectionChildren(dbc *model.DatabaseConnection) []*TreeNode 
 		children = append(children, qNode)
 	}
 	return children
+}
+
+// sqlDataTypeName extracts the SQL data type name (e.g. "VARCHAR", "INTEGER")
+// from any of the SqlDataType variants.
+func sqlDataTypeName(t element.Element) string {
+	type dataTypeNamer interface {
+		DataTypeName() string
+	}
+	if dn, ok := t.(dataTypeNamer); ok {
+		return dn.DataTypeName()
+	}
+	return ""
 }
 
 // buildMenuTreeNodes recursively builds tree nodes from navigation menu items.
