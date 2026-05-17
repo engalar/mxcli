@@ -671,19 +671,31 @@ All sdk/mpr functionality has been migrated:
 | 任务 | 描述 | 文件 | 方法数 | 状态 | Commit |
 |------|------|------|--------|------|--------|
 | P0 | 修复 generic.go double IO | generic.go | — | ✅ 完成 | 6f5efb6c |
-| A1 | mprread 新增 9 个 Gen 函数 | reader_documents.go | 9 | ⬜ 待做 | — |
-| A2 | 薄型方法迁移（15 个） | project_tree.go | 15 | ⬜ 待做 | — |
-| A3 | Gen 变体方法迁移（8 个） | project_tree.go | 8 | ⬜ 待做 | — |
-| A4 | 富型 helper 改 gen 类型（5 个） | project_tree.go | 5 | ⬜ 待做 | — |
-| A5 | 删除 project_tree.go 的 sdk/mpr import | project_tree.go | — | ⬜ 待做 | — |
-| B1 | α 类：AgentEditor passthrough（4 个） | reader_model.go | 4 | ⬜ 待做 | — |
-| B2 | β 类：薄 converter（Enum/Const/Sched/Image/Nav/ModSet） | reader_model.go | 12 | ⬜ 待做 | — |
-| B3 | γ 类：中等 converter（DT/Json/ImpMap/ExpMap/DBC） | reader_model.go | 10 | ⬜ 待做 | — |
-| B4 | δ 类：富字段 converter（OData/REST/BE/Settings） | reader_model.go | 9 | ⬜ 待做 | — |
-| B5 | backend.go 合并双 reader | backend.go | — | ⬜ 待做 | — |
-| C1 | 删除 sdk/mpr 整目录 | sdk/mpr/ | — | ⬜ 待做 | — |
+| A1 | mprread 新增 9 个 Gen 函数 | reader_documents.go | 9 | ✅ 完成 | 3f4b9662 |
+| A2 | 薄型方法迁移（11 个）| project_tree.go | 11 | ✅ 完成 | 3d6ddd4d |
+| A3 | Gen 变体方法迁移（8 个） | project_tree.go | 8 | ✅ 完成 | cda23832 |
+| A4 | 富型 helper 改 gen 类型（5 个） | project_tree.go | 5 | ✅ 完成 | 529a2fbb |
+| A5 | 删除 project_tree.go 的 sdk/mpr import | project_tree.go | — | ✅ 完成 | 297b656b |
+| B1 | α 类：AgentEditor（4 个）→ backend.go | backend.go | 4 | ✅ 完成 | bc0c73ca |
+| B2 | β 类：Enum/Const/Sched/ModSet（4 个，Image/Nav TODO） | backend.go + convert_reader.go | 4/6 | ✅ 完成 | 3ad82dc4, 4b3114c1 |
+| B3 | γ 类：DT/DBC/Json（3 个，ImpMap/ExpMap TODO gen bug） | backend.go + convert_reader.go | 3/5 | ✅ 完成 | 4a23ca8b, 3f362886, f43a16f9, f7bfc788 |
+| B4 | δ 类：BE（1 个，OData/REST/Settings TODO） | backend.go + convert_reader.go | 1/6 | ✅ 完成 | 23653604, 516d7e3c |
+| B5 | backend.go 双 reader 文档化 + 退出条件记录 | backend.go | — | ✅ 完成 | 05837c40 |
+| C1 | 删除 sdk/mpr 整目录 | sdk/mpr/ | — | ❌ 阻塞 | — |
 
 **状态说明：** ✅ 完成 / 🔄 进行中 / ⬜ 待做 / ❌ 阻塞
+
+**Phase 5 阻塞原因（需 follow-up PR）：**
+1. **gen schema bug**：Import/ExportMapping ("RootMappingElements" vs "Elements")，ProjectSettings.RawParts polymorphic
+2. **缺 converter**：NavigationDocument（深度多态嵌套），ImageCollection（"ImageData" vs "Image" BSON key）
+3. **OData/REST**（4 类，28+ 字段 + 多层嵌套，deferred）
+4. **sdk/mpr 独有方法**：ScanOqlQueryUpdates, FindRenameTarget（modelsdk/mpr 无等价）
+5. **类型不兼容**：modelsdk/mpr.MPRVersion ≠ types.MPRVersion，\[]\*ModuleInfo ≠ \[]\*model.Module
+
+**架构变更（实际执行 vs 原 plan）：**
+- reader_model.go 方案因 import cycle 放弃（mpr→mprread→codec→mpr）
+- 转换层统一放在 mdl/backend/mpr/（convert_reader.go 扩展）
+- Track B 的 converter 在 backend.go 内联调用 mprread.ListUnitsWithContainer[T]
 
 **总 sdk/mpr 方法迁移：**
 - modelsdk/mpr.Reader 已有：24 个（无需迁移）
