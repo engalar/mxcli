@@ -652,9 +652,15 @@ func (b *MprBackend) UpdateNavigationProfile(navDocID model.ID, profileName stri
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListConsumedODataServices() ([]*model.ConsumedODataService, error) {
+	// TODO(phase4): migrate to mprread. ConsumedODataService has 28 scalar fields plus
+	// HttpConfiguration + HttpHeaderEntry nested parts; full converter ~80 lines.
+	// gen package: modelsdk/gen/rest (Rest$ConsumedODataService).
 	return b.reader.ListConsumedODataServices()
 }
 func (b *MprBackend) ListPublishedODataServices() ([]*model.PublishedODataService, error) {
+	// TODO(phase4): migrate to mprread. PublishedODataService has nested EntityTypes
+	// (with Members) + EntitySets + AuthenticationTypes + AllowedModuleRoles.
+	// gen package: modelsdk/gen/odatapublish (ODataPublish$PublishedODataService2).
 	return b.reader.ListPublishedODataServices()
 }
 func (b *MprBackend) CreateConsumedODataService(svc *model.ConsumedODataService) error {
@@ -677,9 +683,14 @@ func (b *MprBackend) DeletePublishedODataService(id model.ID) error {
 }
 
 func (b *MprBackend) ListConsumedRestServices() ([]*model.ConsumedRestService, error) {
+	// TODO(phase4): migrate to mprread. Same shape class as ConsumedODataService —
+	// scalar transport config + Operations nested list.
+	// gen package: modelsdk/gen/rest (Rest$ConsumedRestService).
 	return b.reader.ListConsumedRestServices()
 }
 func (b *MprBackend) ListPublishedRestServices() ([]*model.PublishedRestService, error) {
+	// TODO(phase4): migrate to mprread. Has Resources → Operations → PathParams tree.
+	// gen package: modelsdk/gen/rest (Rest$PublishedRestService).
 	return b.reader.ListPublishedRestServices()
 }
 func (b *MprBackend) CreateConsumedRestService(svc *model.ConsumedRestService) error {
@@ -1031,6 +1042,12 @@ func (b *MprBackend) UpdateWorkflowGen(wf *genWf.Workflow) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) GetProjectSettings() (*model.ProjectSettings, error) {
+	// TODO(phase4): migrate to mprread. Settings$ProjectSettings holds a polymorphic
+	// Settings array (10+ Part subtypes: WebUI, Integration, Configuration, Model,
+	// Convention, Language, Certificate, Workflows, JarDeployment, Distribution).
+	// model.ProjectSettings.RawParts []map[string]any is critical for round-trip
+	// fidelity of unrecognized part types — gen-typed read drops this.
+	// gen package: modelsdk/gen/settings (Settings$ProjectSettings).
 	return b.reader.GetProjectSettings()
 }
 func (b *MprBackend) UpdateProjectSettings(ps *model.ProjectSettings) error {
