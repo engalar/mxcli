@@ -151,11 +151,11 @@ func (b *MprBackend) Disconnect() error {
 func (b *MprBackend) IsConnected() bool { return b.reader != nil }
 func (b *MprBackend) Path() string      { return b.path }
 
-func (b *MprBackend) Version() types.MPRVersion { return convertMPRVersion(b.reader.Version()) }
+func (b *MprBackend) Version() types.MPRVersion { return types.MPRVersion(b.msdkReader.Version()) }
 func (b *MprBackend) ProjectVersion() *types.ProjectVersion {
-	return b.reader.ProjectVersion()
+	return convertProjectVersionFromMsdk(b.msdkReader.ProjectVersion())
 }
-func (b *MprBackend) GetMendixVersion() (string, error) { return b.reader.GetMendixVersion() }
+func (b *MprBackend) GetMendixVersion() (string, error) { return b.msdkReader.GetMendixVersion() }
 
 // Commit is a no-op — the MPR writer auto-commits on each write operation.
 func (b *MprBackend) Commit() error { return nil }
@@ -254,10 +254,10 @@ func (b *MprBackend) DeleteViewEntitySourceDocumentByName(moduleName, docName st
 	return b.deleteViewEntitySourceDocumentByNameViaModelsdk(moduleName, docName)
 }
 func (b *MprBackend) FindViewEntitySourceDocumentID(moduleName, docName string) (model.ID, error) {
-	return b.reader.FindViewEntitySourceDocumentID(moduleName, docName)
+	return b.msdkReader.FindViewEntitySourceDocumentID(moduleName, docName)
 }
 func (b *MprBackend) FindAllViewEntitySourceDocumentIDs(moduleName, docName string) ([]model.ID, error) {
-	return b.reader.FindAllViewEntitySourceDocumentIDs(moduleName, docName)
+	return b.msdkReader.FindAllViewEntitySourceDocumentIDs(moduleName, docName)
 }
 func (b *MprBackend) MoveViewEntitySourceDocument(sourceModuleName string, targetModuleID model.ID, docName string) error {
 	return b.moveViewEntitySourceDocumentViaModelsdk(sourceModuleName, targetModuleID, docName)
@@ -901,7 +901,7 @@ func (b *MprBackend) GetJsonStructureByQualifiedName(moduleName, name string) (*
 // hierarchy walker. Used by GetXxxByQualifiedName methods until the helper
 // is ported to mprread.
 func (b *MprBackend) buildContainerModuleNameMapViaSdk() (map[model.ID]string, error) {
-	modules, err := b.reader.ListModules()
+	modules, err := b.ListModules()
 	if err != nil {
 		return nil, err
 	}
@@ -909,7 +909,7 @@ func (b *MprBackend) buildContainerModuleNameMapViaSdk() (map[model.ID]string, e
 	for _, m := range modules {
 		moduleNames[m.ID] = m.Name
 	}
-	units, err := b.reader.ListUnits()
+	units, err := b.ListUnits()
 	if err != nil {
 		return nil, err
 	}
@@ -1168,22 +1168,22 @@ func (b *MprBackend) RenameDocumentByName(moduleName, oldName, newName string) e
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) GetRawUnit(id model.ID) (map[string]any, error) {
-	return b.reader.GetRawUnit(id)
+	return b.msdkReader.GetRawUnit(id)
 }
 func (b *MprBackend) GetRawUnitBytes(id model.ID) ([]byte, error) {
-	return b.reader.GetRawUnitBytes(id)
+	return b.msdkReader.GetRawUnitBytes(string(id))
 }
 func (b *MprBackend) ListRawUnitsByType(typePrefix string) ([]*types.RawUnit, error) {
-	return b.reader.ListRawUnitsByType(typePrefix)
+	return b.msdkReader.ListRawUnitsByType(typePrefix)
 }
 func (b *MprBackend) ListRawUnits(objectType string) ([]*types.RawUnitInfo, error) {
-	return b.reader.ListRawUnits(objectType)
+	return b.msdkReader.ListRawUnits(objectType)
 }
 func (b *MprBackend) GetRawUnitByName(objectType, qualifiedName string) (*types.RawUnitInfo, error) {
-	return b.reader.GetRawUnitByName(objectType, qualifiedName)
+	return b.msdkReader.GetRawUnitByName(objectType, qualifiedName)
 }
 func (b *MprBackend) GetRawMicroflowByName(qualifiedName string) ([]byte, error) {
-	return b.reader.GetRawMicroflowByName(qualifiedName)
+	return b.msdkReader.GetRawMicroflowByName(qualifiedName)
 }
 func (b *MprBackend) UpdateRawUnit(unitID string, contents []byte) error {
 	if b.msdkWriter == nil {
@@ -1196,24 +1196,28 @@ func (b *MprBackend) UpdateRawUnit(unitID string, contents []byte) error {
 // MetadataBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListAllUnitIDs() ([]string, error) { return b.reader.ListAllUnitIDs() }
+func (b *MprBackend) ListAllUnitIDs() ([]string, error) { return b.msdkReader.ListAllUnitIDs() }
 func (b *MprBackend) ListUnits() ([]*types.UnitInfo, error) {
-	return b.reader.ListUnits()
+	units, err := b.msdkReader.ListUnits()
+	if err != nil {
+		return nil, err
+	}
+	return msdkUnitInfoSliceToTypes(units), nil
 }
-func (b *MprBackend) GetUnitTypes() (map[string]int, error) { return b.reader.GetUnitTypes() }
-func (b *MprBackend) GetProjectRootID() (string, error)     { return b.reader.GetProjectRootID() }
-func (b *MprBackend) ContentsDir() string { return b.reader.ContentsDir() }
-func (b *MprBackend) InvalidateCache()   { b.reader.InvalidateCache() }
+func (b *MprBackend) GetUnitTypes() (map[string]int, error) { return b.msdkReader.GetUnitTypes() }
+func (b *MprBackend) GetProjectRootID() (string, error)     { return b.msdkReader.GetProjectRootID() }
+func (b *MprBackend) ContentsDir() string                   { return b.msdkReader.ContentsDir() }
+func (b *MprBackend) InvalidateCache()                      { b.msdkReader.InvalidateCache() }
 
 // ---------------------------------------------------------------------------
 // WidgetBackend
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) FindCustomWidgetType(widgetID string) (*types.RawCustomWidgetType, error) {
-	return convertRawCustomWidgetTypePtr(b.reader.FindCustomWidgetType(widgetID))
+	return convertRawCustomWidgetTypePtr(b.msdkReader.FindCustomWidgetType(widgetID))
 }
 func (b *MprBackend) FindAllCustomWidgetTypes(widgetID string) ([]*types.RawCustomWidgetType, error) {
-	return convertRawCustomWidgetTypeSlice(b.reader.FindAllCustomWidgetTypes(widgetID))
+	return convertRawCustomWidgetTypeSlice(b.msdkReader.FindAllCustomWidgetTypes(widgetID))
 }
 
 // ---------------------------------------------------------------------------
