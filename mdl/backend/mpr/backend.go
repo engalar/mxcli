@@ -18,6 +18,7 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
+	genDBC "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
 	genDTrans "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
@@ -712,7 +713,11 @@ func (b *MprBackend) DeleteBusinessEventService(id model.ID) error {
 }
 
 func (b *MprBackend) ListDatabaseConnections() ([]*model.DatabaseConnection, error) {
-	return b.reader.ListDatabaseConnections()
+	units, err := mprread.ListUnitsWithContainer[*genDBC.DatabaseConnection](b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	return databaseConnectionUnitsToModel(units), nil
 }
 func (b *MprBackend) CreateDatabaseConnection(conn *model.DatabaseConnection) error {
 	return b.createDatabaseConnectionViaModelsdk(conn)
