@@ -4,6 +4,7 @@ package mprread
 
 import (
 	"fmt"
+	"reflect"
 
 	"go.mongodb.org/mongo-driver/bson"
 
@@ -22,15 +23,27 @@ type Unit[T element.Element] struct {
 	ContainerID model.ID
 }
 
-// ListUnitsByType decodes every unit whose $Type exactly matches typeName and
-// returns them as []T. It is the shared implementation behind per-type helpers
-// like ListMicroflows; domain marathon tasks (Stage 3.3) use this directly so
-// they don't repeat the codec + raw-bytes pattern.
+// bsonTypeName returns the canonical BSON $Type name for the type parameter T
+// by looking up the Go concrete type in the codec DefaultRegistry reverse map.
+// It panics at startup if T is not registered, which catches configuration
+// errors at init time rather than silently returning empty results at runtime.
+func bsonTypeName[T element.Element]() string {
+	var zero T
+	goType := reflect.TypeOf(&zero).Elem()
+	name, ok := codec.DefaultRegistry.TypeNameOf(goType)
+	if !ok {
+		panic(fmt.Sprintf("mprread: type %v not registered in codec.DefaultRegistry — import the gen package", goType))
+	}
+	return name
+}
+
+// ListUnitsByType decodes every unit of type T and returns them as []T.
+// The BSON $Type name is inferred from T via the codec registry — no magic
+// string needed. Import the relevant gen/* package to trigger registration.
 //
-// ContainerID is not included in the result; use ListUnitsWithContainer if you
-// need it.
-func ListUnitsByType[T element.Element](r *mmpr.Reader, typeName string) ([]T, error) {
-	units, err := ListUnitsWithContainer[T](r, typeName)
+// ContainerID is not included; use ListUnitsWithContainer if you need it.
+func ListUnitsByType[T element.Element](r *mmpr.Reader) ([]T, error) {
+	units, err := ListUnitsWithContainer[T](r)
 	if err != nil {
 		return nil, err
 	}
@@ -41,11 +54,12 @@ func ListUnitsByType[T element.Element](r *mmpr.Reader, typeName string) ([]T, e
 	return out, nil
 }
 
-// ListUnitsWithContainer decodes every unit whose $Type exactly matches
-// typeName and returns each element paired with its ContainerID.
-// It uses ref.Contents from the unit index (already loaded by ListUnitsByType)
-// instead of issuing a second GetRawUnitBytes query per unit.
-func ListUnitsWithContainer[T element.Element](r *mmpr.Reader, typeName string) ([]Unit[T], error) {
+// ListUnitsWithContainer decodes every unit of type T and returns each element
+// paired with its ContainerID. Uses ref.Contents from the unit index (already
+// loaded by ListUnitsByType on the Reader) to avoid a second per-unit read.
+// The BSON $Type name is inferred from T via the codec registry.
+func ListUnitsWithContainer[T element.Element](r *mmpr.Reader) ([]Unit[T], error) {
+	typeName := bsonTypeName[T]()
 	refs, err := r.ListUnitsByType(typeName)
 	if err != nil {
 		return nil, err
