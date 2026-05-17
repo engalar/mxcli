@@ -17,11 +17,14 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
+	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
@@ -462,10 +465,23 @@ func (b *MprBackend) MoveSnippetGen(id, containerID model.ID) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListEnumerations() ([]*model.Enumeration, error) {
-	return b.reader.ListEnumerations()
+	units, err := mprread.ListUnitsWithContainer[*genEnum.Enumeration](b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	return enumUnitsToModel(units), nil
 }
 func (b *MprBackend) GetEnumeration(id model.ID) (*model.Enumeration, error) {
-	return b.reader.GetEnumeration(id)
+	enums, err := b.ListEnumerations()
+	if err != nil {
+		return nil, err
+	}
+	for _, e := range enums {
+		if e.ID == id {
+			return e, nil
+		}
+	}
+	return nil, fmt.Errorf("enumeration not found: %s", id)
 }
 func (b *MprBackend) CreateEnumeration(enum *model.Enumeration) error {
 	return b.createEnumerationViaModelsdk(enum)
@@ -484,9 +500,24 @@ func (b *MprBackend) DeleteEnumeration(id model.ID) error {
 // ConstantBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListConstants() ([]*model.Constant, error) { return b.reader.ListConstants() }
+func (b *MprBackend) ListConstants() ([]*model.Constant, error) {
+	units, err := mprread.ListUnitsWithContainer[*genConst.Constant](b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	return constUnitsToModel(units), nil
+}
 func (b *MprBackend) GetConstant(id model.ID) (*model.Constant, error) {
-	return b.reader.GetConstant(id)
+	consts, err := b.ListConstants()
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range consts {
+		if c.ID == id {
+			return c, nil
+		}
+	}
+	return nil, fmt.Errorf("constant not found: %s", id)
 }
 func (b *MprBackend) CreateConstant(constant *model.Constant) error {
 	return b.createConstantViaModelsdk(constant)
@@ -925,10 +956,23 @@ func (b *MprBackend) DeleteImageCollection(id string) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListScheduledEvents() ([]*model.ScheduledEvent, error) {
-	return b.reader.ListScheduledEvents()
+	units, err := mprread.ListUnitsWithContainer[*genSched.ScheduledEvent](b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	return schedEventUnitsToModel(units), nil
 }
 func (b *MprBackend) GetScheduledEvent(id model.ID) (*model.ScheduledEvent, error) {
-	return b.reader.GetScheduledEvent(id)
+	events, err := b.ListScheduledEvents()
+	if err != nil {
+		return nil, err
+	}
+	for _, s := range events {
+		if s.ID == id {
+			return s, nil
+		}
+	}
+	return nil, fmt.Errorf("scheduled event not found: %s", id)
 }
 
 // ---------------------------------------------------------------------------
