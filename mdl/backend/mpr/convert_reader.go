@@ -16,6 +16,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
+	genDBC "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
 	genDTrans "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
@@ -288,6 +289,127 @@ func dataTransformerUnitsToModel(units []mprread.Unit[*genDTrans.DataTransformer
 	out := make([]*model.DataTransformer, len(units))
 	for i, u := range units {
 		out[i] = dataTransformerToModel(u)
+	}
+	return out
+}
+
+// ---------------------------------------------------------------------------
+// DatabaseConnection
+// ---------------------------------------------------------------------------
+
+func databaseConnectionToModel(u mprread.Unit[*genDBC.DatabaseConnection]) *model.DatabaseConnection {
+	c := u.Element
+	out := &model.DatabaseConnection{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(c.ID()),
+			TypeName: "DatabaseConnector$DatabaseConnection",
+		},
+		ContainerID:      u.ContainerID,
+		Name:             c.Name(),
+		Documentation:    c.Documentation(),
+		DatabaseType:     c.DatabaseType(),
+		ConnectionString: c.ConnectionStringQualifiedName(),
+		UserName:         c.UserNameQualifiedName(),
+		Password:         c.PasswordQualifiedName(),
+		Excluded:         c.Excluded(),
+		ExportLevel:      c.ExportLevel(),
+	}
+	if ci := c.ConnectionInput(); ci != nil {
+		if cs, ok := ci.(*genDBC.ConnectionString); ok {
+			out.ConnectionInputValue = cs.Value()
+		}
+	}
+	for _, item := range c.QueriesItems() {
+		q, ok := item.(*genDBC.DatabaseQuery)
+		if !ok {
+			continue
+		}
+		out.Queries = append(out.Queries, databaseQueryToModel(q))
+	}
+	return out
+}
+
+func databaseQueryToModel(q *genDBC.DatabaseQuery) *model.DatabaseQuery {
+	out := &model.DatabaseQuery{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(q.ID()),
+			TypeName: q.TypeName(),
+		},
+		Name:      q.Name(),
+		SQL:       q.Query(),
+		QueryType: int(q.QueryType()),
+	}
+	for _, item := range q.TableMappingsItems() {
+		tm, ok := item.(*genDBC.TableMapping)
+		if !ok {
+			continue
+		}
+		out.TableMappings = append(out.TableMappings, databaseTableMappingToModel(tm))
+	}
+	for _, item := range q.ParametersItems() {
+		p, ok := item.(*genDBC.QueryParameter)
+		if !ok {
+			continue
+		}
+		out.Parameters = append(out.Parameters, databaseQueryParameterToModel(p))
+	}
+	return out
+}
+
+func databaseQueryParameterToModel(p *genDBC.QueryParameter) *model.DatabaseQueryParameter {
+	out := &model.DatabaseQueryParameter{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(p.ID()),
+			TypeName: p.TypeName(),
+		},
+		ParameterName:         p.ParameterName(),
+		DefaultValue:          p.DefaultValue(),
+		EmptyValueBecomesNull: p.EmptyValueBecomesNull(),
+	}
+	if dt := p.DataType(); dt != nil {
+		out.DataType = dt.TypeName()
+	}
+	return out
+}
+
+func databaseTableMappingToModel(m *genDBC.TableMapping) *model.DatabaseTableMapping {
+	out := &model.DatabaseTableMapping{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(m.ID()),
+			TypeName: m.TypeName(),
+		},
+		Entity:    m.EntityQualifiedName(),
+		TableName: m.TableName(),
+	}
+	for _, item := range m.ColumnsItems() {
+		c, ok := item.(*genDBC.ColumnMapping)
+		if !ok {
+			continue
+		}
+		out.Columns = append(out.Columns, databaseColumnMappingToModel(c))
+	}
+	return out
+}
+
+func databaseColumnMappingToModel(c *genDBC.ColumnMapping) *model.DatabaseColumnMapping {
+	out := &model.DatabaseColumnMapping{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(c.ID()),
+			TypeName: c.TypeName(),
+		},
+		Attribute:  c.AttributeQualifiedName(),
+		ColumnName: c.ColumnName(),
+	}
+	if dt := c.SqlDataType(); dt != nil {
+		out.SqlDataType = dt.TypeName()
+	}
+	return out
+}
+
+func databaseConnectionUnitsToModel(units []mprread.Unit[*genDBC.DatabaseConnection]) []*model.DatabaseConnection {
+	out := make([]*model.DatabaseConnection, len(units))
+	for i, u := range units {
+		out[i] = databaseConnectionToModel(u)
 	}
 	return out
 }
