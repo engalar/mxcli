@@ -36,61 +36,24 @@ import (
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
-	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
-
-// sdkReader is the sdk/mpr reader used for the read path.
-// NOTE: Read-path migration to modelsdk/mpr is deferred to Phase 4.
-type sdkReader = sdkmpr.Reader
-
-// sdkOpenReader opens a project MPR file for read-write access via sdk/mpr.
-func sdkOpenReader(path string) (*sdkReader, error) {
-	return sdkmpr.OpenWithOptions(path, sdkmpr.OpenOptions{ReadOnly: false})
-}
 
 var _ backend.FullBackend = (*MprBackend)(nil)
 var _ linter.LintReader = (*MprBackend)(nil)
 
-// MprBackend implements backend.FullBackend by delegating to MPR readers/writer.
-// Methods that access reader/msdkReader/msdkWriter assume Connect() has been
-// called. Calling read/write methods before Connect() will panic with a nil
-// pointer dereference. The executor enforces connection state via
-// ConnectionBackend.IsConnected() before dispatching handlers.
+// MprBackend implements backend.FullBackend by delegating to a single
+// modelsdk/mpr Reader/Writer pair. Read methods either route through
+// mprread free functions (which take a *modelsdkmpr.Reader) or through
+// the hand-decoded *_compat.go helpers that pull raw bytes from the same
+// Reader. Write methods route through the modelsdkmpr.UnitWriter / the
+// gen-typed repositories.
 //
-// Phase 4B status: this backend currently holds TWO reader handles sharing one
-// SQLite *sql.DB connection (msdkReader is opened with OpenWithDB(r.DB(), ...)
-// in Connect, so neither owns the DB exclusively). Both must stay alive until
-// Disconnect() because:
-//
-//   - msdkReader / msdkWriter handle all writes (modelsdk codec, BSON-native
-//     round-trip) plus the bulk of typed reads via mprread free functions.
-//   - reader (legacy sdk/mpr.Reader) is still required for the following
-//     surface areas which have no gen-typed equivalent:
-//
-//     1. Polymorphic-tree document reads where the gen schema is broken
-//        (ImportMapping / ExportMapping — wrong BSON key binding) or where
-//        the converter would lose fidelity (ProjectSettings.RawParts);
-//
-//     2. Deep service-document reads pending migration (OData/REST Consumed
-//        + Published — large converters deferred to a follow-up PR);
-//
-//     3. Documents that simply require a hand-written converter not yet
-//        written (NavigationDocument, ImageCollection);
-//
-//     4. ScanOqlQueryUpdates / FindRenameTarget which only exist on
-//        sdk/mpr.Reader (see callsites in domainmodel_modelsdk.go +
-//        rename_modelsdk.go);
-//
-//     5. The shared module/folder/unit listers that the rest of the package
-//        (modules_modelsdk.go, workflow_mutator.go, page_mutator.go, etc.)
-//        depend on through b.reader.
-//
-// TODO(phase4): once 1–3 are migrated and 4 is ported to modelsdk/mpr, the
-// `reader` field plus the sdk/mpr import can be removed and msdkReader can be
-// renamed to `reader`. Tracking issue: Phase 4B follow-up.
+// All read/write methods assume Connect() has been called; calling them
+// before Connect() panics with a nil pointer dereference. The executor
+// enforces connection state via ConnectionBackend.IsConnected().
 type MprBackend struct {
-	reader     *sdkReader            // legacy sdk/mpr.Reader — see Phase 4B notes above
-	msdkReader *modelsdkmpr.Reader   // primary read path (mprread free functions delegate here)
+	reader     *modelsdkmpr.Reader
+	msdkReader *modelsdkmpr.Reader // alias of reader; kept for *_compat.go ergonomics
 	msdkWriter modelsdkmpr.UnitWriter
 	path       string
 }
@@ -115,7 +78,7 @@ func NewFromPath(path string) (*MprBackend, error) {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) Connect(path string) error {
-	r, err := sdkOpenReader(path)
+	r, err := modelsdkmpr.OpenWithOptions(path, modelsdkmpr.OpenOptions{ReadOnly: false})
 	if err != nil {
 		return err
 	}
@@ -124,13 +87,8 @@ func (b *MprBackend) Connect(path string) error {
 		_ = r.Close()
 		return err
 	}
-	mr, err := modelsdkmpr.OpenWithDB(r.DB(), path, r.ContentsDir())
-	if err != nil {
-		_ = r.Close()
-		return err
-	}
 	b.reader = r
-	b.msdkReader = mr
+	b.msdkReader = r // single reader; alias kept for *_compat.go ergonomics
 	b.msdkWriter = mw
 	b.path = path
 	return nil
