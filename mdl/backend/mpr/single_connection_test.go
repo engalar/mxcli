@@ -38,10 +38,14 @@ func TestSingleConnection_SharedDB(t *testing.T) {
 	}
 	defer b.Disconnect()
 
-	sdkDB := b.reader.DB()
+	legacyDB := b.reader.DB()
 	msdkDB := b.msdkWriter.Reader().DB()
+	msdkReaderDB := b.msdkReader.DB()
 
-	if sdkDB != msdkDB {
-		t.Errorf("db pointers differ: sdk=%p msdk=%p — two connections open", sdkDB, msdkDB)
+	if legacyDB != msdkDB {
+		t.Errorf("db pointers differ: legacy=%p msdkWriter=%p — two connections open", legacyDB, msdkDB)
+	}
+	if msdkReaderDB != msdkDB {
+		t.Errorf("msdkReader.DB() %p differs from msdkWriter.Reader().DB() %p", msdkReaderDB, msdkDB)
 	}
 }

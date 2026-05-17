@@ -16,7 +16,7 @@ func (b *MprBackend) updateQualifiedNameInAllUnitsViaModelsdk(oldName, newName s
 	if b.msdkWriter == nil {
 		return 0, fmt.Errorf("modelsdk writer not initialized")
 	}
-	patches, err := b.reader.ScanQualifiedNameUpdates(oldName, newName)
+	patches, err := b.msdkReader.ScanQualifiedNameUpdates(oldName, newName)
 	if err != nil {
 		return 0, err
 	}
@@ -36,7 +36,7 @@ func (b *MprBackend) renameReferencesViaModelsdk(oldName, newName string, dryRun
 	if b.msdkWriter == nil {
 		return nil, fmt.Errorf("modelsdk writer not initialized")
 	}
-	patches, hits, err := b.reader.ScanRenameReferences(oldName, newName)
+	patches, hits, err := b.msdkReader.ScanRenameReferences(oldName, newName)
 	if err != nil {
 		return nil, err
 	}

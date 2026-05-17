@@ -170,7 +170,7 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 		module.ID = model.ID(modelsdkmpr.GenerateID())
 	}
 
-	projectRootID, err := b.reader.GetProjectRootID()
+	projectRootID, err := b.msdkReader.GetProjectRootID()
 	if err != nil {
 		return fmt.Errorf("failed to get project root: %w", err)
 	}
@@ -233,7 +233,7 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 		return fmt.Errorf("failed to insert module settings unit: %w", err)
 	}
 
-	b.reader.InvalidateCache()
+	b.msdkReader.InvalidateCache()
 	return nil
 }
 
@@ -262,6 +262,6 @@ func (b *MprBackend) createFolderViaModelsdk(folder *model.Folder) error {
 		return fmt.Errorf("failed to insert folder unit: %w", err)
 	}
 
-	b.reader.InvalidateCache()
+	b.msdkReader.InvalidateCache()
 	return nil
 }
