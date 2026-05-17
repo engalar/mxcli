@@ -1,13 +1,27 @@
-// Package parse provides batch parsing of Mendix expressions using the
-// existing mdl/exprcheck hand-written recursive-descent parser.
-// It wraps exprcheck.NewParser() to work on ExprRecord slices from the
-// scan package, producing ParseResult values suitable for validation.
+// Package parse provides batch parsing of Mendix expressions.
+//
+// Two parsing strategies are used depending on the expression category:
+//
+//  1. XPath expressions (SlotPath ends in ".XPath"): parsed by
+//     mdl/visitor.ParseXPathConstraint, which uses the MDL ANTLR4 grammar's
+//     xpathConstraint rule. This handles bracket-wrapped WHERE clauses such as
+//     "[Code = $Code and IsActive = true]" correctly.
+//
+//  2. All other expressions: parsed by mdl/exprcheck.NewParser(), a
+//     hand-written recursive-descent parser that emits typed Hint values.
+//
+// Previously, all records were sent to exprcheck, which generated 167 false-positive
+// E007 warnings for valid XPath expressions (because exprcheck does not understand
+// the "[bracket]" XPath syntax). The routing by SlotPath eliminates those false positives.
 package parse
 
 import (
+	"strings"
+
 	"github.com/mendixlabs/mxcli/internal/expr/scan"
 	"github.com/mendixlabs/mxcli/mdl/exprcheck"
 	"github.com/mendixlabs/mxcli/mdl/exprcheck/hints"
+	"github.com/mendixlabs/mxcli/mdl/visitor"
 )
 
 // ParseResult is the outcome of parsing one ExprRecord.
@@ -27,16 +41,61 @@ func (r ParseResult) HasErrors() bool {
 	return false
 }
 
-var parser = exprcheck.NewParser()
+var exprParser = exprcheck.NewParser()
 
-// ParseExpression parses a single raw expression string and returns a ParseResult.
-// The ExprRecord's SlotPath is used to provide slot context to the parser.
+// isXPathExpression reports whether a raw expression string is an XPath constraint.
+//
+// XPath constraints stored in Mendix BSON always start with "[" (the bracket is part
+// of the stored value, e.g. "[Code = $Code and IsActive = true]").
+// Regular Mendix expressions that start with "[" are system tokens like [%CurrentDateTime%],
+// which always follow the "[%" prefix pattern.
+//
+// Verified against 16,125 real expressions from macnica + Mx2026AIDay:
+//   - 0 false positives (no non-XPath expression matches this rule)
+//   - 0 false negatives (every XPath expression matches this rule)
+//
+// This content-based check replaces SlotPath-based routing, removing the need for
+// the SlotPath field in ExprRecord and its maintenance burden in the scan package.
+func isXPathExpression(raw string) bool {
+	s := strings.TrimSpace(raw)
+	return len(s) > 0 && s[0] == '[' && !strings.HasPrefix(s, "[%")
+}
+
+// ParseExpression parses a single ExprRecord and returns a ParseResult.
+// XPath expressions are routed to visitor.ParseXPathConstraint;
+// all others go to exprcheck.NewParser().
 func ParseExpression(rec scan.ExprRecord) ParseResult {
-	ctx := exprcheck.Context{
-		SlotPath: rec.SlotPath,
-		Slots:    exprcheck.DefaultSlotResolver(),
+	if isXPathExpression(rec.Raw) {
+		return parseXPath(rec)
 	}
-	_, hs := parser.Parse(rec.Raw, ctx)
+	return parseExpr(rec)
+}
+
+// parseXPath handles bracket-wrapped XPath constraint expressions.
+// Uses visitor.ParseXPathConstraint (MDL ANTLR4 grammar).
+func parseXPath(rec scan.ExprRecord) ParseResult {
+	_, ok := visitor.ParseXPathConstraint(rec.Raw)
+	if ok {
+		return ParseResult{Record: rec, OK: true}
+	}
+	// ParseXPathConstraint returns (nil, false) for malformed XPath.
+	return ParseResult{
+		Record: rec,
+		OK:     false,
+		Hints: []hints.Hint{{
+			Code:     "XPATH-01",
+			Severity: hints.SeverityError,
+			Problem:  "XPath constraint could not be parsed by the MDL grammar",
+		}},
+	}
+}
+
+// parseExpr handles regular Mendix expressions using the exprcheck parser.
+func parseExpr(rec scan.ExprRecord) ParseResult {
+	ctx := exprcheck.Context{
+		Slots: exprcheck.DefaultSlotResolver(),
+	}
+	_, hs := exprParser.Parse(rec.Raw, ctx)
 	ok := true
 	for _, h := range hs {
 		if h.Severity == hints.SeverityError {

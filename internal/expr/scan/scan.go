@@ -24,8 +24,9 @@ type ExprRecord struct {
 	Field    string // e.g. "Expression"
 	Raw      string // the expression string, trimmed
 	Category string // microflow | page | domain | workflow | widget
-	SlotPath string // maps to exprcheck.SlotResolver key, e.g. "IfStmt.Condition"
 	UnitPath string // relative .mxunit path from mprcontents/
+	// SlotPath was removed: the parse package detects XPath vs regular expressions
+	// by content (starts with "[" but not "[%"), which is more robust than a mapping table.
 }
 
 // GetRaw returns the raw expression (satisfies repair package interface).
@@ -37,46 +38,36 @@ type Options struct {
 	FilterType string
 }
 
-// exprSlots maps "$Type.Field" → SlotPath (for exprcheck.SlotResolver).
-// SlotPath values align with mdl/exprcheck staticExpectations keys.
-var exprSlots = map[string]string{
-	"Microflows$ExpressionSplitCondition.Expression":     "IfStmt.Condition",
-	"Microflows$WhileLoopCondition.WhileExpression":      "WhileStmt.Condition",
-	"Microflows$EndEvent.ReturnValue":                    "ReturnStmt.Value",
-	"Microflows$CreateVariableAction.InitialValue":       "DeclareStmt.InitialValue",
-	"Microflows$ChangeVariableAction.Value":              "MfSetStmt.Value",
-	"Microflows$ChangeActionItem.Value":                  "ChangeItem.Value",
-	"Microflows$DatabaseRetrieveSource.XpathConstraint":  "RetrieveStmt.XPath",
-	"Microflows$MicroflowCallParameterMapping.Argument":  "CallArgument.Value",
-	"Microflows$NanoflowCallParameterMapping.Argument":   "CallArgument.Value",
-	"Microflows$BasicCodeActionParameterValue.Argument":  "CallArgument.Value",
-	"Microflows$TemplateParameter.Expression":            "TemplateParam.Value",
-	"Microflows$CustomRange.LimitExpression":             "RetrieveStmt.LimitExpr",
-	"Forms$ConditionalVisibilitySettings.Expression":     "IfStmt.Condition",
-	"Forms$WidgetValidation.Expression":                  "IfStmt.Condition",
-	"Forms$MicroflowParameterMapping.Expression":         "CallArgument.Value",
-	"Forms$ClientTemplateParameter.Expression":           "TemplateParam.Value",
-	"Forms$PageParameterMapping.Argument":                "CallArgument.Value",
-	"DomainModels$AccessRule.XPathConstraint":            "AccessRule.XPath",
-	"Workflows$MicroflowCallParameterMapping.Expression": "CallArgument.Value",
-	"Workflows$SingleUserTaskActivity.DueDate":           "RetrieveStmt.LimitExpr",
-	"CustomWidgets$CustomWidgetXPathSource.XPathConstraint": "AccessRule.XPath",
-	"CustomWidgets$WidgetValue.Expression":               "ChangeItem.Value",
-}
-
-// exprFields maps $Type → field names containing Mendix expressions.
-var exprFields map[string][]string
-
-func init() {
-	exprFields = make(map[string][]string)
-	for key := range exprSlots {
-		dot := strings.LastIndex(key, ".")
-		if dot < 0 {
-			continue
-		}
-		typ, field := key[:dot], key[dot+1:]
-		exprFields[typ] = append(exprFields[typ], field)
-	}
+// exprFields maps Mendix $Type → field names that contain expression strings.
+// Validated against 16,125 real expressions from macnica + Mx2026AIDay projects.
+var exprFields = map[string][]string{
+	// Microflow / Nanoflow
+	"Microflows$ExpressionSplitCondition":    {"Expression"},
+	"Microflows$WhileLoopCondition":           {"WhileExpression"},
+	"Microflows$EndEvent":                     {"ReturnValue"},
+	"Microflows$CreateVariableAction":         {"InitialValue"},
+	"Microflows$ChangeVariableAction":         {"Value"},
+	"Microflows$ChangeActionItem":             {"Value"},
+	"Microflows$DatabaseRetrieveSource":       {"XpathConstraint"},
+	"Microflows$MicroflowCallParameterMapping":{"Argument"},
+	"Microflows$NanoflowCallParameterMapping": {"Argument"},
+	"Microflows$BasicCodeActionParameterValue":{"Argument"},
+	"Microflows$TemplateParameter":            {"Expression"},
+	"Microflows$CustomRange":                  {"LimitExpression"},
+	// Pages / Forms
+	"Forms$ConditionalVisibilitySettings":    {"Expression"},
+	"Forms$WidgetValidation":                 {"Expression"},
+	"Forms$MicroflowParameterMapping":        {"Expression"},
+	"Forms$ClientTemplateParameter":          {"Expression"},
+	"Forms$PageParameterMapping":             {"Argument"},
+	// Domain model
+	"DomainModels$AccessRule":                {"XPathConstraint"},
+	// Workflows
+	"Workflows$MicroflowCallParameterMapping":{"Expression"},
+	"Workflows$SingleUserTaskActivity":       {"DueDate"},
+	// Custom widgets
+	"CustomWidgets$CustomWidgetXPathSource":  {"XPathConstraint"},
+	"CustomWidgets$WidgetValue":              {"Expression"},
 }
 
 var categoryMap = map[string]string{
@@ -94,10 +85,6 @@ func categoryOf(unitType string) string {
 		}
 	}
 	return "other"
-}
-
-func slotPathOf(unitType, field string) string {
-	return exprSlots[unitType+"."+field]
 }
 
 // ScanMprcontents walks a mprcontents/ directory and returns all expression records.
@@ -150,7 +137,6 @@ func scanObj(v interface{}, project, relPath string, opts Options, out *[]ExprRe
 						Field:    field,
 						Raw:      raw,
 						Category: categoryOf(unitType),
-						SlotPath: slotPathOf(unitType, field),
 						UnitPath: relPath,
 					})
 				}

@@ -14,7 +14,7 @@ import (
 )
 
 func rec(raw, slot string) scan.ExprRecord {
-	return scan.ExprRecord{Raw: raw, SlotPath: slot, UnitType: "Microflows$ExpressionSplitCondition", Category: "microflow"}
+	return scan.ExprRecord{Raw: raw, UnitType: "Microflows$ExpressionSplitCondition", Category: "microflow"}
 }
 
 func issuesFor(raw, slot string) []validate.ValidationResult {
