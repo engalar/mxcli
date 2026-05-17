@@ -21,6 +21,8 @@ import (
 	genDTrans "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
+	genExpMap "github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings"
+	genImpMap "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
 	genJson "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
 	genProj "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
 	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
@@ -478,11 +480,138 @@ func jsonStructureUnitsToTypes(units []mprread.Unit[*genJson.JsonStructure]) []*
 	return out
 }
 
-// ImportMapping / ExportMapping converters are intentionally not implemented
-// yet — gen.ImportMapping binds the wrong BSON key ("RootMappingElements" vs
-// real on-disk "Elements"), so RootMappingElementsItems() returns empty and
-// the mapping tree is invisible to gen. Until gen schema is fixed, backend.go
-// keeps these on the b.reader path. See TODO(phase4) markers there.
+// ---------------------------------------------------------------------------
+// ImportMapping / ExportMapping
+// ---------------------------------------------------------------------------
+
+func importMappingToModel(u mprread.Unit[*genImpMap.ImportMapping]) *model.ImportMapping {
+	m := u.Element
+	out := &model.ImportMapping{
+		BaseElement:       model.BaseElement{ID: model.ID(m.ID()), TypeName: "ImportMappings$ImportMapping"},
+		ContainerID:       u.ContainerID,
+		Name:              m.Name(),
+		Documentation:     m.Documentation(),
+		Excluded:          m.Excluded(),
+		ExportLevel:       m.ExportLevel(),
+		JsonStructure:     m.JsonStructureQualifiedName(),
+		XmlSchema:         m.XmlSchemaQualifiedName(),
+		MessageDefinition: m.MessageDefinitionQualifiedName(),
+	}
+	for _, raw := range m.RootMappingElementsItems() {
+		if elem := convertImportElement(raw); elem != nil {
+			out.Elements = append(out.Elements, elem)
+		}
+	}
+	return out
+}
+
+func convertImportElement(raw element.Element) *model.ImportMappingElement {
+	switch e := raw.(type) {
+	case *genImpMap.ImportObjectMappingElement:
+		out := &model.ImportMappingElement{
+			BaseElement:    model.BaseElement{ID: model.ID(e.ID())},
+			Kind:           "Object",
+			Entity:         e.EntityQualifiedName(),
+			Association:    e.AssociationQualifiedName(),
+			ObjectHandling: e.ObjectHandling(),
+			ExposedName:    e.ExposedName(),
+			JsonPath:       e.JsonPath(),
+			MinOccurs:      int(e.MinOccurs()),
+			MaxOccurs:      int(e.MaxOccurs()),
+			Nillable:       e.Nillable(),
+		}
+		for _, child := range e.ChildrenItems() {
+			if c := convertImportElement(child); c != nil {
+				out.Children = append(out.Children, c)
+			}
+		}
+		return out
+	case *genImpMap.ImportValueMappingElement:
+		return &model.ImportMappingElement{
+			BaseElement: model.BaseElement{ID: model.ID(e.ID())},
+			Kind:        "Value",
+			Attribute:   e.AttributeQualifiedName(),
+			IsKey:       e.IsKey(),
+			ExposedName: e.ExposedName(),
+			JsonPath:    e.JsonPath(),
+			MinOccurs:   int(e.MinOccurs()),
+			MaxOccurs:   int(e.MaxOccurs()),
+			Nillable:    e.Nillable(),
+		}
+	default:
+		return nil
+	}
+}
+
+func importMappingUnitsToModel(units []mprread.Unit[*genImpMap.ImportMapping]) []*model.ImportMapping {
+	out := make([]*model.ImportMapping, len(units))
+	for i, u := range units {
+		out[i] = importMappingToModel(u)
+	}
+	return out
+}
+
+func exportMappingToModel(u mprread.Unit[*genExpMap.ExportMapping]) *model.ExportMapping {
+	m := u.Element
+	out := &model.ExportMapping{
+		BaseElement:       model.BaseElement{ID: model.ID(m.ID()), TypeName: "ExportMappings$ExportMapping"},
+		ContainerID:       u.ContainerID,
+		Name:              m.Name(),
+		Documentation:     m.Documentation(),
+		Excluded:          m.Excluded(),
+		ExportLevel:       m.ExportLevel(),
+		JsonStructure:     m.JsonStructureQualifiedName(),
+		XmlSchema:         m.XmlSchemaQualifiedName(),
+		MessageDefinition: m.MessageDefinitionQualifiedName(),
+	}
+	for _, raw := range m.RootMappingElementsItems() {
+		if elem := convertExportElement(raw); elem != nil {
+			out.Elements = append(out.Elements, elem)
+		}
+	}
+	return out
+}
+
+func convertExportElement(raw element.Element) *model.ExportMappingElement {
+	switch e := raw.(type) {
+	case *genExpMap.ExportObjectMappingElement:
+		out := &model.ExportMappingElement{
+			BaseElement:    model.BaseElement{ID: model.ID(e.ID())},
+			Kind:           "Object",
+			Entity:         e.EntityQualifiedName(),
+			Association:    e.AssociationQualifiedName(),
+			ObjectHandling: e.ObjectHandling(),
+			ExposedName:    e.ExposedName(),
+			JsonPath:       e.JsonPath(),
+			MaxOccurs:      int(e.MaxOccurs()),
+		}
+		for _, child := range e.ChildrenItems() {
+			if c := convertExportElement(child); c != nil {
+				out.Children = append(out.Children, c)
+			}
+		}
+		return out
+	case *genExpMap.ExportValueMappingElement:
+		return &model.ExportMappingElement{
+			BaseElement: model.BaseElement{ID: model.ID(e.ID())},
+			Kind:        "Value",
+			Attribute:   e.AttributeQualifiedName(),
+			ExposedName: e.ExposedName(),
+			JsonPath:    e.JsonPath(),
+			MaxOccurs:   int(e.MaxOccurs()),
+		}
+	default:
+		return nil
+	}
+}
+
+func exportMappingUnitsToModel(units []mprread.Unit[*genExpMap.ExportMapping]) []*model.ExportMapping {
+	out := make([]*model.ExportMapping, len(units))
+	for i, u := range units {
+		out[i] = exportMappingToModel(u)
+	}
+	return out
+}
 
 // ---------------------------------------------------------------------------
 // BusinessEventService
