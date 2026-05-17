@@ -24,6 +24,7 @@ import (
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
+	genProj "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
 	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
@@ -146,10 +147,23 @@ func (b *MprBackend) DeleteModuleWithCleanup(id model.ID, moduleName string) err
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListModuleSettings() ([]*types.ModuleSettings, error) {
-	return b.reader.ListModuleSettings()
+	units, err := mprread.ListUnitsWithContainer[*genProj.ModuleSettings](b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	return moduleSettingsUnitsToTypes(units), nil
 }
 func (b *MprBackend) GetModuleSettings(moduleID model.ID) (*types.ModuleSettings, error) {
-	return b.reader.GetModuleSettings(moduleID)
+	all, err := b.ListModuleSettings()
+	if err != nil {
+		return nil, err
+	}
+	for _, ms := range all {
+		if ms.ContainerID == moduleID {
+			return ms, nil
+		}
+	}
+	return nil, nil
 }
 func (b *MprBackend) UpdateModuleSettings(ms *types.ModuleSettings) error {
 	return b.updateModuleSettingsViaModelsdk(ms)
