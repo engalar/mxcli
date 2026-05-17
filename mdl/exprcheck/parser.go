@@ -108,14 +108,21 @@ func parseAdd(s *Stream, ctx Context) (RobustExpr, []Hint) {
 		if opTok.Kind == TokPlus {
 			lk := inferKind(left, ctx)
 			rk := inferKind(right, ctx)
+			other := otherKind(lk, rk)
+			// E004 fires only when one operand is String and the other is a type
+			// that Mendix cannot auto-convert in a + context.
+			// Decimal and Integer are auto-converted by the Mendix runtime (verified:
+			// mx check accepts "'label' + round(x)" and "'T14' + integer" without CE0117).
+			// Only flag truly incompatible types: Boolean, Object, List, Enumeration.
+			numericKind := other == KindDecimal || other == KindInteger || other == KindLong
 			if (lk == KindString || rk == KindString) && lk != rk &&
-				lk != KindUnknown && rk != KindUnknown {
+				lk != KindUnknown && rk != KindUnknown && !numericKind {
 				hs = append(hs, Hint{
 					Code: "E004", Slug: "concat-type", Severity: hints.SeverityError,
 					Where:    hintsLocation(ctx, opTok.Pos),
 					YouWrote: "<left> + <right>",
 					Problem: "The '+' operator concatenates Strings. The other operand is " +
-						typeKindName(otherKind(lk, rk)) +
+						typeKindName(other) +
 						", which cannot be concatenated with a String directly.",
 					Fix: "Wrap the non-String operand in toString().",
 				})

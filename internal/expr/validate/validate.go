@@ -42,13 +42,25 @@ func ValidateSyntax(pr parse.ParseResult) []ValidationResult {
 		return out
 	}
 
-	// SYN-03: if-then without else (heuristic on raw text)
-	lower := strings.ToLower(rec.Raw)
-	if strings.Contains(lower, "if ") && strings.Contains(lower, " then ") &&
-		!strings.Contains(lower, " else ") {
+	// SYN-03: if-then without else (heuristic on raw text).
+	// Normalize all whitespace to single space before checking: Mendix developers
+	// write else on new lines with tabs (e.g. "if X then Y\n\telse Z"), which
+	// would otherwise defeat a simple " else " substring check.
+	wsNorm := strings.NewReplacer("\n", " ", "\t", " ", "\r", " ")
+	normalized := strings.ToLower(wsNorm.Replace(rec.Raw))
+	// Collapse runs of spaces to avoid " else " being split by double-spaces
+	for strings.Contains(normalized, "  ") {
+		normalized = strings.ReplaceAll(normalized, "  ", " ")
+	}
+	// Skip SYN-03 for plain string literals: English text inside quotes often
+	// contains "if ... then ..." as natural language, not Mendix keywords.
+	isStringLiteral := strings.HasPrefix(strings.TrimSpace(normalized), "'")
+	if !isStringLiteral &&
+		strings.Contains(normalized, "if ") && strings.Contains(normalized, " then ") &&
+		!strings.Contains(normalized, " else ") {
 		out = append(out, ValidationResult{
 			UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType,
-			Field: rec.Field, Raw: rec.Raw, 
+			Field: rec.Field, Raw: rec.Raw,
 			RuleID: "SYN-03", Severity: "WARNING",
 			Message: "if-then expression is missing else branch (Mendix requires else)",
 			Fix:     "Add 'else <value>' after the then branch",

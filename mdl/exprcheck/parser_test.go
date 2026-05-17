@@ -209,10 +209,13 @@ func (c lookupCatalog) MicroflowReturn(string) (TypeKind, bool)        { return 
 func (c lookupCatalog) MicroflowParam(string, string) (TypeKind, bool) { return KindUnknown, false }
 
 func TestParser_E004_ConcatLiteralIntWithString(t *testing.T) {
+	// Mendix auto-converts Integer/Decimal in '+' string-concatenation context.
+	// Verified: mx check shows 0 CE0117 for "'T14' + round(x)" and similar patterns.
+	// E004 must NOT fire for numeric types (Integer, Decimal, Long).
 	p := NewParser()
 	_, hs := p.Parse("'count=' + 5", Context{Microflow: "M.F"})
-	if !hasCode(hs, "E004") {
-		t.Fatalf("expected E004, got %+v", hs)
+	if hasCode(hs, "E004") {
+		t.Fatalf("E004 must not fire for String+Integer (Mendix auto-converts numeric types): %+v", hs)
 	}
 }
 
