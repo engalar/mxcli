@@ -83,7 +83,9 @@
     "EntityType.childMembers":                           "Members",
     "VetoCompletionCriteria.vetoOutcome":                "VetoOutcomePointer",
     "SnippetCallWidget.snippetCall":                     "FormCall",
-    "SnippetCall.snippet":                               "Form"
+    "SnippetCall.snippet":                               "Form",
+    "ImportMapping.rootMappingElements":                 "Elements",
+    "ExportMapping.rootMappingElements":                 "Elements"
   },
 
   "force_concrete_types": [
