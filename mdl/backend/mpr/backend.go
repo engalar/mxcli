@@ -25,6 +25,7 @@ import (
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
+	"github.com/mendixlabs/mxcli/modelsdk/mprread"
 	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
@@ -1005,16 +1006,16 @@ func (b *MprBackend) FindAllCustomWidgetTypes(widgetID string) ([]*types.RawCust
 // return []*types.* directly — no conversion shim needed.
 
 func (b *MprBackend) ListAgentEditorModels() ([]*types.Model, error) {
-	return b.reader.ListAgentEditorModels()
+	return mprread.ListAgentEditorModels(b.msdkReader)
 }
 func (b *MprBackend) ListAgentEditorKnowledgeBases() ([]*types.KnowledgeBase, error) {
-	return b.reader.ListAgentEditorKnowledgeBases()
+	return mprread.ListAgentEditorKnowledgeBases(b.msdkReader)
 }
 func (b *MprBackend) ListAgentEditorConsumedMCPServices() ([]*types.ConsumedMCPService, error) {
-	return b.reader.ListAgentEditorConsumedMCPServices()
+	return mprread.ListAgentEditorConsumedMCPServices(b.msdkReader)
 }
 func (b *MprBackend) ListAgentEditorAgents() ([]*types.Agent, error) {
-	return b.reader.ListAgentEditorAgents()
+	return mprread.ListAgentEditorAgents(b.msdkReader)
 }
 func (b *MprBackend) CreateAgentEditorModel(m *types.Model) error {
 	return b.createAgentEditorModelViaModelsdk(m)
