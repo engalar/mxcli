@@ -476,3 +476,9 @@ func jsonStructureUnitsToTypes(units []mprread.Unit[*genJson.JsonStructure]) []*
 	}
 	return out
 }
+
+// ImportMapping / ExportMapping converters are intentionally not implemented
+// yet — gen.ImportMapping binds the wrong BSON key ("RootMappingElements" vs
+// real on-disk "Elements"), so RootMappingElementsItems() returns empty and
+// the mapping tree is invisible to gen. Until gen schema is fixed, backend.go
+// keeps these on the b.reader path. See TODO(phase4) markers there.
