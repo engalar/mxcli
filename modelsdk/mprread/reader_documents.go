@@ -675,3 +675,50 @@ func ListJavaActions(r *mmpr.Reader) ([]*genJA.JavaAction, error) {
 func ListJavaScriptActions(r *mmpr.Reader) ([]*genJSA.JavaScriptAction, error) {
 	return ListUnitsByType[*genJSA.JavaScriptAction](r)
 }
+
+// ---------------------------------------------------------------------------
+// Modules and Folders
+// ---------------------------------------------------------------------------
+//
+// Modules are stored as Projects$ModuleImpl units. The codec registers
+// *genProj.Module under the canonical "Projects$Module" name plus
+// "Projects$ModuleImpl" as an alias, so the generic ListUnitsByType[T] type
+// resolver cannot disambiguate (it returns the canonical name, which then
+// fails the strict ref.Type match against the actual ModuleImpl rows). These
+// helpers therefore call r.ListUnitsByType("Projects$ModuleImpl") directly
+// and decode via the codec.
+
+// ListModules decodes every Projects$ModuleImpl unit in the project.
+// Returns each module paired with its container (project root) ID.
+func ListModules(r *mmpr.Reader) ([]Unit[*genProj.Module], error) {
+	const typeName = "Projects$ModuleImpl"
+	refs, err := r.ListUnitsByType(typeName)
+	if err != nil {
+		return nil, err
+	}
+	dec := codec.NewDecoder(codec.DefaultRegistry)
+	out := make([]Unit[*genProj.Module], 0, len(refs))
+	for _, ref := range refs {
+		if ref.Type != typeName {
+			continue
+		}
+		elem, err := dec.Decode(bson.Raw(ref.Contents))
+		if err != nil {
+			return nil, fmt.Errorf("decode module %s: %w", ref.ID, err)
+		}
+		typed, ok := elem.(*genProj.Module)
+		if !ok {
+			return nil, fmt.Errorf("module %s decoded as %T, want *genProj.Module", ref.ID, elem)
+		}
+		typed.SetID(element.ID(ref.ID))
+		out = append(out, Unit[*genProj.Module]{Element: typed, ContainerID: model.ID(ref.ContainerID)})
+	}
+	return out, nil
+}
+
+// ListFolders decodes every Projects$Folder unit in the project.
+// Folders are container-scoped: ContainerID identifies the parent Module or
+// parent Folder.
+func ListFolders(r *mmpr.Reader) ([]Unit[*genProj.Folder], error) {
+	return ListUnitsWithContainer[*genProj.Folder](r)
+}

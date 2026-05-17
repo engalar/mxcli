@@ -164,10 +164,38 @@ func (b *MprBackend) Commit() error { return nil }
 // ModuleBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListModules() ([]*model.Module, error)        { return b.reader.ListModules() }
-func (b *MprBackend) GetModule(id model.ID) (*model.Module, error) { return b.reader.GetModule(id) }
+func (b *MprBackend) ListModules() ([]*model.Module, error) {
+	units, err := mprread.ListModules(b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	mods := moduleUnitsToModel(units)
+	mods = append(mods, buildSystemModuleForBackend())
+	return mods, nil
+}
+func (b *MprBackend) GetModule(id model.ID) (*model.Module, error) {
+	mods, err := b.ListModules()
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range mods {
+		if m.ID == id {
+			return m, nil
+		}
+	}
+	return nil, fmt.Errorf("module not found: %s", id)
+}
 func (b *MprBackend) GetModuleByName(name string) (*model.Module, error) {
-	return b.reader.GetModuleByName(name)
+	mods, err := b.ListModules()
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range mods {
+		if m.Name == name {
+			return m, nil
+		}
+	}
+	return nil, fmt.Errorf("module not found: %s", name)
 }
 func (b *MprBackend) CreateModule(module *model.Module) error {
 	return b.createModuleViaModelsdk(module)
@@ -212,7 +240,11 @@ func (b *MprBackend) UpdateModuleSettings(ms *types.ModuleSettings) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListFolders() ([]*types.FolderInfo, error) {
-	return b.reader.ListFolders()
+	units, err := mprread.ListFolders(b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	return folderUnitsToTypes(units), nil
 }
 func (b *MprBackend) CreateFolder(folder *model.Folder) error {
 	return b.createFolderViaModelsdk(folder)
