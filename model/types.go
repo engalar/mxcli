@@ -278,27 +278,11 @@ func (e *BaseElement) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// DocumentType represents the type of a document.
-type DocumentType string
-
-const (
-	DocumentTypeDomainModel           DocumentType = "DomainModels$DomainModel"
-	DocumentTypeMicroflow             DocumentType = "Microflows$Microflow"
-	DocumentTypeNanoflow              DocumentType = "Microflows$Nanoflow"
-	DocumentTypePage                  DocumentType = "Pages$Page"
-	DocumentTypeLayout                DocumentType = "Pages$Layout"
-	DocumentTypeSnippet               DocumentType = "Pages$Snippet"
-	DocumentTypeConstant              DocumentType = "Constants$Constant"
-	DocumentTypeEnumeration           DocumentType = "Enumerations$Enumeration"
-	DocumentTypeScheduledEvent        DocumentType = "ScheduledEvents$ScheduledEvent"
-	DocumentTypeJavaAction            DocumentType = "JavaActions$JavaAction"
-	DocumentTypeRule                  DocumentType = "Rules$Rule"
-	DocumentTypeConsumedODataService  DocumentType = "Rest$ConsumedODataService"
-	DocumentTypePublishedODataService DocumentType = "ODataPublish$PublishedODataService2"
-	DocumentTypeJsonStructure         DocumentType = "JsonStructures$JsonStructure"
-	DocumentTypeImportMapping         DocumentType = "ImportMappings$ImportMapping"
-	DocumentTypeExportMapping         DocumentType = "ExportMappings$ExportMapping"
-)
+// DocumentType is intentionally not defined here.
+// Use codec.DefaultRegistry.TypeNameOf(reflect.TypeOf(gen.Type{})) to obtain
+// the canonical BSON $Type name for a given gen/* type at compile time.
+// The former DocumentType constants had wrong values (e.g. "Pages$Page" instead
+// of the actual "Forms$Page") and no external callers — deleted to prevent misuse.
 
 // ConsumedODataService represents a consumed OData service (OData client).
 type ConsumedODataService struct {

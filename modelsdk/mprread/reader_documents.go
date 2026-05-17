@@ -313,15 +313,14 @@ func ListModuleSettings(r *mmpr.Reader) ([]*genProj.ModuleSettings, error) {
 // module ID. Uses the raw unit ContainerID for matching because the decoded
 // element drops container linkage by default.
 func GetModuleSettings(r *mmpr.Reader, moduleID model.ID) (*genProj.ModuleSettings, error) {
-	refs, err := r.ListUnitsByType("Projects$ModuleSettings")
+	units, err := ListUnitsWithContainer[*genProj.ModuleSettings](r)
 	if err != nil {
 		return nil, err
 	}
-	for _, ref := range refs {
-		if ref.ContainerID != string(moduleID) {
-			continue
+	for _, u := range units {
+		if u.ContainerID == moduleID {
+			return u.Element, nil
 		}
-		return decodeOne[*genProj.ModuleSettings](r, ref.ID)
 	}
 	return nil, fmt.Errorf("module settings not found for module: %s", moduleID)
 }
