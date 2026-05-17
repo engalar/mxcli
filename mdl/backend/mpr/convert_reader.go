@@ -20,6 +20,7 @@ import (
 	genDTrans "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
+	genJson "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
 	genProj "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
 	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
@@ -410,6 +411,68 @@ func databaseConnectionUnitsToModel(units []mprread.Unit[*genDBC.DatabaseConnect
 	out := make([]*model.DatabaseConnection, len(units))
 	for i, u := range units {
 		out[i] = databaseConnectionToModel(u)
+	}
+	return out
+}
+
+// ---------------------------------------------------------------------------
+// JsonStructure
+// ---------------------------------------------------------------------------
+
+func jsonStructureToTypes(u mprread.Unit[*genJson.JsonStructure]) *types.JsonStructure {
+	js := u.Element
+	out := &types.JsonStructure{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(js.ID()),
+			TypeName: "JsonStructures$JsonStructure",
+		},
+		ContainerID:   u.ContainerID,
+		Name:          js.Name(),
+		Documentation: js.Documentation(),
+		JsonSnippet:   js.JsonSnippet(),
+		Excluded:      js.Excluded(),
+		ExportLevel:   js.ExportLevel(),
+	}
+	for _, item := range js.ElementsItems() {
+		je, ok := item.(*genJson.JsonElement)
+		if !ok {
+			continue
+		}
+		out.Elements = append(out.Elements, jsonElementToTypes(je))
+	}
+	return out
+}
+
+func jsonElementToTypes(e *genJson.JsonElement) *types.JsonElement {
+	out := &types.JsonElement{
+		ExposedName:     e.ExposedName(),
+		ExposedItemName: e.ExposedItemName(),
+		Path:            e.Path(),
+		ElementType:     e.ElementType(),
+		PrimitiveType:   e.PrimitiveType(),
+		MinOccurs:       int(e.MinOccurs()),
+		MaxOccurs:       int(e.MaxOccurs()),
+		Nillable:        e.Nillable(),
+		IsDefaultType:   e.IsDefaultType(),
+		MaxLength:       int(e.MaxLength()),
+		FractionDigits:  int(e.FractionDigits()),
+		TotalDigits:     int(e.TotalDigits()),
+		OriginalValue:   e.OriginalValue(),
+	}
+	for _, item := range e.ChildrenItems() {
+		child, ok := item.(*genJson.JsonElement)
+		if !ok {
+			continue
+		}
+		out.Children = append(out.Children, jsonElementToTypes(child))
+	}
+	return out
+}
+
+func jsonStructureUnitsToTypes(units []mprread.Unit[*genJson.JsonStructure]) []*types.JsonStructure {
+	out := make([]*types.JsonStructure, len(units))
+	for i, u := range units {
+		out[i] = jsonStructureToTypes(u)
 	}
 	return out
 }

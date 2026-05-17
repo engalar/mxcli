@@ -24,6 +24,7 @@ import (
 	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
+	genJson "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genProj "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
@@ -792,10 +793,76 @@ func (b *MprBackend) MoveExportMapping(em *model.ExportMapping) error {
 }
 
 func (b *MprBackend) ListJsonStructures() ([]*types.JsonStructure, error) {
-	return b.reader.ListJsonStructures()
+	units, err := mprread.ListUnitsWithContainer[*genJson.JsonStructure](b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	return jsonStructureUnitsToTypes(units), nil
 }
 func (b *MprBackend) GetJsonStructureByQualifiedName(moduleName, name string) (*types.JsonStructure, error) {
-	return b.reader.GetJsonStructureByQualifiedName(moduleName, name)
+	all, err := b.ListJsonStructures()
+	if err != nil {
+		return nil, err
+	}
+	// js.ContainerID may be a folder (MPR v2) rather than the module itself,
+	// so walk the container hierarchy via the sdk/mpr helper to resolve the
+	// enclosing module name. TODO(phase4): port buildContainerModuleNameMap
+	// to use mprread once Folder lister exists there.
+	containerToModule, err := b.buildContainerModuleNameMapViaSdk()
+	if err != nil {
+		return nil, err
+	}
+	for _, js := range all {
+		if js.Name == name && containerToModule[js.ContainerID] == moduleName {
+			return js, nil
+		}
+	}
+	return nil, fmt.Errorf("json structure %s.%s not found", moduleName, name)
+}
+
+// buildContainerModuleNameMapViaSdk delegates to the legacy sdk/mpr reader's
+// hierarchy walker. Used by GetXxxByQualifiedName methods until the helper
+// is ported to mprread.
+func (b *MprBackend) buildContainerModuleNameMapViaSdk() (map[model.ID]string, error) {
+	modules, err := b.reader.ListModules()
+	if err != nil {
+		return nil, err
+	}
+	moduleNames := make(map[model.ID]string, len(modules))
+	for _, m := range modules {
+		moduleNames[m.ID] = m.Name
+	}
+	units, err := b.reader.ListUnits()
+	if err != nil {
+		return nil, err
+	}
+	parentOf := make(map[model.ID]model.ID, len(units))
+	for _, u := range units {
+		parentOf[u.ID] = u.ContainerID
+	}
+	result := make(map[model.ID]string)
+	var find func(id model.ID) string
+	find = func(id model.ID) string {
+		if cached, ok := result[id]; ok {
+			return cached
+		}
+		if name, ok := moduleNames[id]; ok {
+			result[id] = name
+			return name
+		}
+		parent, ok := parentOf[id]
+		if !ok || parent == id || parent == "" {
+			result[id] = ""
+			return ""
+		}
+		name := find(parent)
+		result[id] = name
+		return name
+	}
+	for id := range parentOf {
+		find(id)
+	}
+	return result, nil
 }
 func (b *MprBackend) CreateJsonStructure(js *types.JsonStructure) error {
 	return b.createJsonStructureViaModelsdk(js)
