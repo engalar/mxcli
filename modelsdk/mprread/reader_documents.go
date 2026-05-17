@@ -29,12 +29,17 @@ import (
 	genImpMap "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
 	genJson "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
 	genNav "github.com/mendixlabs/mxcli/modelsdk/gen/navigation"
+	genDM "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
+	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genODataPub "github.com/mendixlabs/mxcli/modelsdk/gen/odatapublish"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genProj "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
 	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
 	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genSet "github.com/mendixlabs/mxcli/modelsdk/gen/settings"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -608,4 +613,65 @@ func decodeAgentEditorAgent(unitID, containerID string, wrap *customBlobWrapper)
 	a.Temperature = payload.Temperature
 	a.TopP = payload.TopP
 	return a, nil
+}
+
+// ---------------------------------------------------------------------------
+// Pages, Snippets, Layouts, BuildingBlocks, PageTemplates (Forms domain)
+// ---------------------------------------------------------------------------
+
+// ListPages decodes every Forms$Page unit in the project.
+func ListPages(r *mmpr.Reader) ([]*genPg.Page, error) {
+	return ListUnitsByType[*genPg.Page](r)
+}
+
+// ListSnippets decodes every Forms$Snippet unit in the project.
+func ListSnippets(r *mmpr.Reader) ([]*genPg.Snippet, error) {
+	return ListUnitsByType[*genPg.Snippet](r)
+}
+
+// ListLayouts decodes every Forms$Layout unit in the project.
+func ListLayouts(r *mmpr.Reader) ([]*genPg.Layout, error) {
+	return ListUnitsByType[*genPg.Layout](r)
+}
+
+// ListBuildingBlocks decodes every Forms$BuildingBlock unit in the project.
+func ListBuildingBlocks(r *mmpr.Reader) ([]*genPg.BuildingBlock, error) {
+	return ListUnitsByType[*genPg.BuildingBlock](r)
+}
+
+// ListPageTemplates decodes every Forms$PageTemplate unit in the project.
+func ListPageTemplates(r *mmpr.Reader) ([]*genPg.PageTemplate, error) {
+	return ListUnitsByType[*genPg.PageTemplate](r)
+}
+
+// ---------------------------------------------------------------------------
+// Domain models
+// ---------------------------------------------------------------------------
+
+// ListDomainModels decodes every DomainModels$DomainModel unit in the project.
+func ListDomainModels(r *mmpr.Reader) ([]*genDM.DomainModel, error) {
+	return ListUnitsByType[*genDM.DomainModel](r)
+}
+
+// ---------------------------------------------------------------------------
+// Workflows
+// ---------------------------------------------------------------------------
+
+// ListWorkflows decodes every Workflows$Workflow unit in the project.
+func ListWorkflows(r *mmpr.Reader) ([]*genWf.Workflow, error) {
+	return ListUnitsByType[*genWf.Workflow](r)
+}
+
+// ---------------------------------------------------------------------------
+// Java and JavaScript actions
+// ---------------------------------------------------------------------------
+
+// ListJavaActions decodes every JavaActions$JavaAction unit in the project.
+func ListJavaActions(r *mmpr.Reader) ([]*genJA.JavaAction, error) {
+	return ListUnitsByType[*genJA.JavaAction](r)
+}
+
+// ListJavaScriptActions decodes every JavaScriptActions$JavaScriptAction unit.
+func ListJavaScriptActions(r *mmpr.Reader) ([]*genJSA.JavaScriptAction, error) {
+	return ListUnitsByType[*genJSA.JavaScriptAction](r)
 }
