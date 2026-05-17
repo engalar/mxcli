@@ -17,6 +17,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
 	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
 	genDBC "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
 	genDTrans "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
@@ -701,7 +702,11 @@ func (b *MprBackend) DeletePublishedRestService(id model.ID) error {
 }
 
 func (b *MprBackend) ListBusinessEventServices() ([]*model.BusinessEventService, error) {
-	return b.reader.ListBusinessEventServices()
+	units, err := mprread.ListUnitsWithContainer[*genBE.BusinessEventService](b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	return businessEventServiceUnitsToModel(units), nil
 }
 func (b *MprBackend) CreateBusinessEventService(svc *model.BusinessEventService) error {
 	return b.createBusinessEventServiceViaModelsdk(svc)

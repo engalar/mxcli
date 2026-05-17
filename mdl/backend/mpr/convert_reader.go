@@ -15,6 +15,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
 	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
 	genDBC "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
 	genDTrans "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
@@ -482,3 +483,155 @@ func jsonStructureUnitsToTypes(units []mprread.Unit[*genJson.JsonStructure]) []*
 // real on-disk "Elements"), so RootMappingElementsItems() returns empty and
 // the mapping tree is invisible to gen. Until gen schema is fixed, backend.go
 // keeps these on the b.reader path. See TODO(phase4) markers there.
+
+// ---------------------------------------------------------------------------
+// BusinessEventService
+// ---------------------------------------------------------------------------
+
+func businessEventServiceToModel(u mprread.Unit[*genBE.BusinessEventService]) *model.BusinessEventService {
+	s := u.Element
+	out := &model.BusinessEventService{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(s.ID()),
+			TypeName: "BusinessEvents$BusinessEventService",
+		},
+		ContainerID:   u.ContainerID,
+		Name:          s.Name(),
+		Documentation: s.Documentation(),
+		Excluded:      s.Excluded(),
+		ExportLevel:   s.ExportLevel(),
+		Document:      s.Document(),
+	}
+	if def := s.Definition(); def != nil {
+		if d, ok := def.(*genBE.BusinessEventDefinition); ok {
+			out.Definition = businessEventDefinitionToModel(d)
+		}
+	}
+	for _, item := range s.OperationImplementationsItems() {
+		op, ok := item.(*genBE.ServiceOperation)
+		if !ok {
+			continue
+		}
+		out.OperationImplementations = append(out.OperationImplementations, serviceOperationToModel(op))
+	}
+	return out
+}
+
+func businessEventDefinitionToModel(d *genBE.BusinessEventDefinition) *model.BusinessEventDefinition {
+	out := &model.BusinessEventDefinition{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(d.ID()),
+			TypeName: "BusinessEvents$BusinessEventDefinition",
+		},
+		ServiceName:     d.ServiceName(),
+		EventNamePrefix: d.EventNamePrefix(),
+		Description:     d.Description(),
+		Summary:         d.Summary(),
+	}
+	for _, item := range d.ChannelsItems() {
+		ch, ok := item.(*genBE.Channel)
+		if !ok {
+			continue
+		}
+		out.Channels = append(out.Channels, businessEventChannelToModel(ch))
+	}
+	return out
+}
+
+func businessEventChannelToModel(ch *genBE.Channel) *model.BusinessEventChannel {
+	out := &model.BusinessEventChannel{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(ch.ID()),
+			TypeName: "BusinessEvents$Channel",
+		},
+		ChannelName: ch.ChannelName(),
+		Description: ch.Description(),
+	}
+	for _, item := range ch.MessagesItems() {
+		msg, ok := item.(*genBE.Message)
+		if !ok {
+			continue
+		}
+		out.Messages = append(out.Messages, businessEventMessageToModel(msg))
+	}
+	return out
+}
+
+func businessEventMessageToModel(m *genBE.Message) *model.BusinessEventMessage {
+	out := &model.BusinessEventMessage{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(m.ID()),
+			TypeName: "BusinessEvents$Message",
+		},
+		MessageName:  m.MessageName(),
+		Description:  m.Description(),
+		CanPublish:   m.CanPublish(),
+		CanSubscribe: m.CanSubscribe(),
+	}
+	for _, item := range m.AttributesItems() {
+		a, ok := item.(*genBE.MessageAttribute)
+		if !ok {
+			continue
+		}
+		out.Attributes = append(out.Attributes, businessEventAttributeToModel(a))
+	}
+	return out
+}
+
+func businessEventAttributeToModel(a *genBE.MessageAttribute) *model.BusinessEventAttribute {
+	out := &model.BusinessEventAttribute{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(a.ID()),
+			TypeName: "BusinessEvents$MessageAttribute",
+		},
+		AttributeName: a.AttributeName(),
+		Description:   a.Description(),
+	}
+	if at := a.AttributeType(); at != nil {
+		out.AttributeType = attributeTypeFromBsonType(at.TypeName())
+	}
+	return out
+}
+
+func attributeTypeFromBsonType(bsonType string) string {
+	switch bsonType {
+	case "DomainModels$LongAttributeType":
+		return "Long"
+	case "DomainModels$StringAttributeType":
+		return "String"
+	case "DomainModels$IntegerAttributeType":
+		return "Integer"
+	case "DomainModels$BooleanAttributeType":
+		return "Boolean"
+	case "DomainModels$DateTimeAttributeType":
+		return "DateTime"
+	case "DomainModels$DecimalAttributeType":
+		return "Decimal"
+	case "DomainModels$AutoNumberAttributeType":
+		return "AutoNumber"
+	case "DomainModels$BinaryAttributeType":
+		return "Binary"
+	}
+	return bsonType
+}
+
+func serviceOperationToModel(op *genBE.ServiceOperation) *model.ServiceOperation {
+	return &model.ServiceOperation{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(op.ID()),
+			TypeName: "BusinessEvents$ServiceOperation",
+		},
+		MessageName: op.MessageName(),
+		Operation:   op.Operation(),
+		Entity:      op.EntityQualifiedName(),
+		Microflow:   op.MicroflowQualifiedName(),
+	}
+}
+
+func businessEventServiceUnitsToModel(units []mprread.Unit[*genBE.BusinessEventService]) []*model.BusinessEventService {
+	out := make([]*model.BusinessEventService, len(units))
+	for i, u := range units {
+		out[i] = businessEventServiceToModel(u)
+	}
+	return out
+}
