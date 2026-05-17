@@ -23,6 +23,8 @@ import (
 	genDTrans "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
+	genExpMap "github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings"
+	genImpMap "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genJson "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
@@ -803,14 +805,24 @@ func (b *MprBackend) DeleteDataTransformer(id model.ID) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListImportMappings() ([]*model.ImportMapping, error) {
-	// TODO(phase4): migrate to mprread once gen.ImportMapping binds the "Elements"
-	// BSON key instead of "RootMappingElements" (the latter has no real data on disk,
-	// so RootMappingElementsItems() returns empty and downstream `describe import
-	// mapping` output loses the entire mapping tree).
-	return b.reader.ListImportMappings()
+	units, err := mprread.ListUnitsWithContainer[*genImpMap.ImportMapping](b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	return importMappingUnitsToModel(units), nil
 }
 func (b *MprBackend) GetImportMappingByQualifiedName(moduleName, name string) (*model.ImportMapping, error) {
-	return b.reader.GetImportMappingByQualifiedName(moduleName, name)
+	units, err := mprread.ListUnitsWithContainer[*genImpMap.ImportMapping](b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	for _, u := range units {
+		if u.Element.Name() == name {
+			im := importMappingToModel(u)
+			return im, nil
+		}
+	}
+	return nil, nil
 }
 func (b *MprBackend) CreateImportMapping(im *model.ImportMapping) error {
 	return b.createImportMappingViaModelsdk(im)
@@ -826,13 +838,23 @@ func (b *MprBackend) MoveImportMapping(im *model.ImportMapping) error {
 }
 
 func (b *MprBackend) ListExportMappings() ([]*model.ExportMapping, error) {
-	// TODO(phase4): migrate to mprread once gen.ExportMapping binds the "Elements"
-	// BSON key instead of "RootMappingElements" — same gen schema bug as
-	// ImportMapping above.
-	return b.reader.ListExportMappings()
+	units, err := mprread.ListUnitsWithContainer[*genExpMap.ExportMapping](b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	return exportMappingUnitsToModel(units), nil
 }
 func (b *MprBackend) GetExportMappingByQualifiedName(moduleName, name string) (*model.ExportMapping, error) {
-	return b.reader.GetExportMappingByQualifiedName(moduleName, name)
+	units, err := mprread.ListUnitsWithContainer[*genExpMap.ExportMapping](b.msdkReader)
+	if err != nil {
+		return nil, err
+	}
+	for _, u := range units {
+		if u.Element.Name() == name {
+			return exportMappingToModel(u), nil
+		}
+	}
+	return nil, nil
 }
 func (b *MprBackend) CreateExportMapping(em *model.ExportMapping) error {
 	return b.createExportMappingViaModelsdk(em)
