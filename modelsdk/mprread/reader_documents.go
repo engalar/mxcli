@@ -79,7 +79,7 @@ func matchesQualified(qualified, local string) bool {
 
 // ListEnumerations decodes every Enumerations$Enumeration unit in the project.
 func ListEnumerations(r *mmpr.Reader) ([]*genEnum.Enumeration, error) {
-	return ListUnitsByType[*genEnum.Enumeration](r, "Enumerations$Enumeration")
+	return ListUnitsByType[*genEnum.Enumeration](r)
 }
 
 // GetEnumeration retrieves a single enumeration by unit ID.
@@ -102,7 +102,7 @@ func GetEnumeration(r *mmpr.Reader, id model.ID) (*genEnum.Enumeration, error) {
 
 // ListConstants decodes every Constants$Constant unit in the project.
 func ListConstants(r *mmpr.Reader) ([]*genConst.Constant, error) {
-	return ListUnitsByType[*genConst.Constant](r, "Constants$Constant")
+	return ListUnitsByType[*genConst.Constant](r)
 }
 
 // GetConstant retrieves a single constant by unit ID.
@@ -125,7 +125,7 @@ func GetConstant(r *mmpr.Reader, id model.ID) (*genConst.Constant, error) {
 
 // ListScheduledEvents decodes every ScheduledEvents$ScheduledEvent unit.
 func ListScheduledEvents(r *mmpr.Reader) ([]*genSched.ScheduledEvent, error) {
-	return ListUnitsByType[*genSched.ScheduledEvent](r, "ScheduledEvents$ScheduledEvent")
+	return ListUnitsByType[*genSched.ScheduledEvent](r)
 }
 
 // GetScheduledEvent retrieves a single scheduled event by unit ID.
@@ -148,7 +148,7 @@ func GetScheduledEvent(r *mmpr.Reader, id model.ID) (*genSched.ScheduledEvent, e
 
 // ListImportMappings decodes every ImportMappings$ImportMapping unit.
 func ListImportMappings(r *mmpr.Reader) ([]*genImpMap.ImportMapping, error) {
-	return ListUnitsByType[*genImpMap.ImportMapping](r, "ImportMappings$ImportMapping")
+	return ListUnitsByType[*genImpMap.ImportMapping](r)
 }
 
 // GetImportMappingByQualifiedName retrieves an import mapping by its qualified
@@ -172,7 +172,7 @@ func GetImportMappingByQualifiedName(r *mmpr.Reader, qualifiedName string) (*gen
 
 // ListExportMappings decodes every ExportMappings$ExportMapping unit.
 func ListExportMappings(r *mmpr.Reader) ([]*genExpMap.ExportMapping, error) {
-	return ListUnitsByType[*genExpMap.ExportMapping](r, "ExportMappings$ExportMapping")
+	return ListUnitsByType[*genExpMap.ExportMapping](r)
 }
 
 // GetExportMappingByQualifiedName retrieves an export mapping by qualified name.
@@ -195,7 +195,7 @@ func GetExportMappingByQualifiedName(r *mmpr.Reader, qualifiedName string) (*gen
 
 // ListJsonStructures decodes every JsonStructures$JsonStructure unit.
 func ListJsonStructures(r *mmpr.Reader) ([]*genJson.JsonStructure, error) {
-	return ListUnitsByType[*genJson.JsonStructure](r, "JsonStructures$JsonStructure")
+	return ListUnitsByType[*genJson.JsonStructure](r)
 }
 
 // GetJsonStructureByQualifiedName retrieves a JSON structure by qualified name.
@@ -218,22 +218,22 @@ func GetJsonStructureByQualifiedName(r *mmpr.Reader, qualifiedName string) (*gen
 
 // ListBusinessEventServices decodes every BusinessEvents$BusinessEventService unit.
 func ListBusinessEventServices(r *mmpr.Reader) ([]*genBE.BusinessEventService, error) {
-	return ListUnitsByType[*genBE.BusinessEventService](r, "BusinessEvents$BusinessEventService")
+	return ListUnitsByType[*genBE.BusinessEventService](r)
 }
 
 // ListDatabaseConnections decodes every DatabaseConnector$DatabaseConnection unit.
 func ListDatabaseConnections(r *mmpr.Reader) ([]*genDBC.DatabaseConnection, error) {
-	return ListUnitsByType[*genDBC.DatabaseConnection](r, "DatabaseConnector$DatabaseConnection")
+	return ListUnitsByType[*genDBC.DatabaseConnection](r)
 }
 
 // ListDataTransformers decodes every DataTransformers$DataTransformer unit.
 func ListDataTransformers(r *mmpr.Reader) ([]*genDT.DataTransformer, error) {
-	return ListUnitsByType[*genDT.DataTransformer](r, "DataTransformers$DataTransformer")
+	return ListUnitsByType[*genDT.DataTransformer](r)
 }
 
 // ListImageCollections decodes every Images$ImageCollection unit.
 func ListImageCollections(r *mmpr.Reader) ([]*genImg.ImageCollection, error) {
-	return ListUnitsByType[*genImg.ImageCollection](r, "Images$ImageCollection")
+	return ListUnitsByType[*genImg.ImageCollection](r)
 }
 
 // ListConsumedODataServices decodes every Rest$ConsumedODataService unit.
@@ -242,7 +242,7 @@ func ListImageCollections(r *mmpr.Reader) ([]*genImg.ImageCollection, error) {
 // namespace; only PublishedOData uses the legacy `ODataPublish$...Service2`
 // type name (see ListPublishedODataServices).
 func ListConsumedODataServices(r *mmpr.Reader) ([]*genRest.ConsumedODataService, error) {
-	return ListUnitsByType[*genRest.ConsumedODataService](r, "Rest$ConsumedODataService")
+	return ListUnitsByType[*genRest.ConsumedODataService](r)
 }
 
 // ListPublishedODataServices decodes every ODataPublish$PublishedODataService2
@@ -250,17 +250,17 @@ func ListConsumedODataServices(r *mmpr.Reader) ([]*genRest.ConsumedODataService,
 // generation; the Go type drops it from the documentation but keeps it in the
 // struct name (PublishedODataService2).
 func ListPublishedODataServices(r *mmpr.Reader) ([]*genODataPub.PublishedODataService2, error) {
-	return ListUnitsByType[*genODataPub.PublishedODataService2](r, "ODataPublish$PublishedODataService2")
+	return ListUnitsByType[*genODataPub.PublishedODataService2](r)
 }
 
 // ListConsumedRestServices decodes every Rest$ConsumedRestService unit.
 func ListConsumedRestServices(r *mmpr.Reader) ([]*genRest.ConsumedRestService, error) {
-	return ListUnitsByType[*genRest.ConsumedRestService](r, "Rest$ConsumedRestService")
+	return ListUnitsByType[*genRest.ConsumedRestService](r)
 }
 
 // ListPublishedRestServices decodes every Rest$PublishedRestService unit.
 func ListPublishedRestServices(r *mmpr.Reader) ([]*genRest.PublishedRestService, error) {
-	return ListUnitsByType[*genRest.PublishedRestService](r, "Rest$PublishedRestService")
+	return ListUnitsByType[*genRest.PublishedRestService](r)
 }
 
 // ---------------------------------------------------------------------------
@@ -269,7 +269,7 @@ func ListPublishedRestServices(r *mmpr.Reader) ([]*genRest.PublishedRestService,
 
 // ListNavigationDocuments decodes every Navigation$NavigationDocument unit.
 func ListNavigationDocuments(r *mmpr.Reader) ([]*genNav.NavigationDocument, error) {
-	return ListUnitsByType[*genNav.NavigationDocument](r, "Navigation$NavigationDocument")
+	return ListUnitsByType[*genNav.NavigationDocument](r)
 }
 
 // GetNavigation returns the first NavigationDocument in the project, which is
@@ -292,7 +292,7 @@ func GetNavigation(r *mmpr.Reader) (*genNav.NavigationDocument, error) {
 // GetProjectSettings returns the project-level Settings$ProjectSettings doc.
 // There is at most one per project.
 func GetProjectSettings(r *mmpr.Reader) (*genSet.ProjectSettings, error) {
-	settings, err := ListUnitsByType[*genSet.ProjectSettings](r, "Settings$ProjectSettings")
+	settings, err := ListUnitsByType[*genSet.ProjectSettings](r)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +306,7 @@ func GetProjectSettings(r *mmpr.Reader) (*genSet.ProjectSettings, error) {
 // lives in the `projects` gen package even though its BSON $Type is namespaced
 // under `Projects` — the gen layer preserves the historical type name.
 func ListModuleSettings(r *mmpr.Reader) ([]*genProj.ModuleSettings, error) {
-	return ListUnitsByType[*genProj.ModuleSettings](r, "Projects$ModuleSettings")
+	return ListUnitsByType[*genProj.ModuleSettings](r)
 }
 
 // GetModuleSettings returns the ModuleSettings whose container is the given
@@ -332,7 +332,7 @@ func GetModuleSettings(r *mmpr.Reader, moduleID model.ID) (*genProj.ModuleSettin
 
 // GetProjectSecurity returns the project-level Security$ProjectSecurity doc.
 func GetProjectSecurity(r *mmpr.Reader) (*genSec.ProjectSecurity, error) {
-	secs, err := ListUnitsByType[*genSec.ProjectSecurity](r, "Security$ProjectSecurity")
+	secs, err := ListUnitsByType[*genSec.ProjectSecurity](r)
 	if err != nil {
 		return nil, err
 	}
@@ -344,7 +344,7 @@ func GetProjectSecurity(r *mmpr.Reader) (*genSec.ProjectSecurity, error) {
 
 // ListModuleSecurity decodes every Security$ModuleSecurity unit.
 func ListModuleSecurity(r *mmpr.Reader) ([]*genSec.ModuleSecurity, error) {
-	return ListUnitsByType[*genSec.ModuleSecurity](r, "Security$ModuleSecurity")
+	return ListUnitsByType[*genSec.ModuleSecurity](r)
 }
 
 // ---------------------------------------------------------------------------

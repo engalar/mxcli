@@ -15,7 +15,7 @@ import (
 // correct $Type name.
 func TestListUnitsByType_Microflows(t *testing.T) {
 	r := openTestReader(t)
-	mfs, err := mprread.ListUnitsByType[*genMf.Microflow](r, "Microflows$Microflow")
+	mfs, err := mprread.ListUnitsByType[*genMf.Microflow](r)
 	if err != nil {
 		t.Fatalf("ListUnitsByType[Microflow]: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestListUnitsByType_Microflows(t *testing.T) {
 // entries when present.
 func TestListUnitsByType_Nanoflows(t *testing.T) {
 	r := openTestReader(t)
-	nfs, err := mprread.ListUnitsByType[*genMf.Nanoflow](r, "Microflows$Nanoflow")
+	nfs, err := mprread.ListUnitsByType[*genMf.Nanoflow](r)
 	if err != nil {
 		t.Fatalf("ListUnitsByType[Nanoflow]: %v", err)
 	}

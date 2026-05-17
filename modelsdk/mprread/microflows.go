@@ -13,11 +13,11 @@ import (
 // Microflows$Rule is a sibling type, not a Microflow alias — it gets
 // its own lister (TODO: ListRules) once a caller needs it.
 func ListMicroflows(r *mmpr.Reader) ([]*genMf.Microflow, error) {
-	return ListUnitsByType[*genMf.Microflow](r, "Microflows$Microflow")
+	return ListUnitsByType[*genMf.Microflow](r)
 }
 
 // ListNanoflows decodes every Microflows$Nanoflow unit in the project
 // into the gen-typed *microflows.Nanoflow form.
 func ListNanoflows(r *mmpr.Reader) ([]*genMf.Nanoflow, error) {
-	return ListUnitsByType[*genMf.Nanoflow](r, "Microflows$Nanoflow")
+	return ListUnitsByType[*genMf.Nanoflow](r)
 }
