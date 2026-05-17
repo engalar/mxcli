@@ -15,8 +15,8 @@ import (
 
 	"github.com/mendixlabs/mxcli/model"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	"github.com/mendixlabs/mxcli/sdk/mpr/version"
 )
 
 // BuildOptions configures the docker build command.
@@ -773,7 +773,7 @@ func ensureDemoUsers(projectPath string, w io.Writer) error {
 }
 
 // DescribePatches returns the list of patches that would be applied for a given version.
-func DescribePatches(pv *version.ProjectVersion) []string {
+func DescribePatches(pv *types.ProjectVersion) []string {
 	var patches []string
 	is116x := pv.MajorVersion == 11 && pv.MinorVersion == 6
 	patches = append(patches, "Set bin/start execute permission")

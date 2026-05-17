@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Widget Generation · 模板生成可视化</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #060d12;
+  --bg2:     #0b1620;
+  --bg3:     #101e2c;
+  --border:  #153040;
+  --teal:    #2dd4bf;
+  --teal-d:  #0e5a52;
+  --cyan:    #67e8f9;
+  --cyan-d:  #164e63;
+  --amber:   #fbbf24;
+  --amber-d: #78440a;
+  --red:     #f87171;
+  --red-d:   #7f1d1d;
+  --green:   #4ade80;
+  --green-d: #14532d;
+  --text:    #b8d8e8;
+  --text-d:  #3a5a70;
+  --bright:  #e8f8ff;
+  --mono: 'IBM Plex Mono', monospace;
+  --disp: 'Playfair Display', Georgia, serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(45,212,191,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 100%, rgba(103,232,249,0.04) 0%, transparent 55%),
+    linear-gradient(rgba(21,48,64,0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21,48,64,0.5) 1px, transparent 1px);
+  background-size:auto,auto,32px 32px,32px 32px;
+  color:var(--text);
+  font-family:var(--mono);
+  min-height:100vh;
+}
+header{
+  padding:48px 40px 36px;
+  border-bottom:1px solid var(--border);
+  position:relative;
+  overflow:hidden;
+}
+header::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--teal) 30%,var(--cyan) 70%,transparent);
+}
+.htag{font-size:10px;letter-spacing:3px;color:var(--teal);text-transform:uppercase;margin-bottom:14px;}
+h1{font-family:var(--disp);font-size:44px;font-weight:400;font-style:italic;color:var(--bright);line-height:1.15;margin-bottom:10px;}
+h1 em{color:var(--teal);font-style:normal;font-weight:700;}
+.hsub{font-size:12px;color:var(--text-d);}
+
+nav{display:flex;padding:0 40px;border-bottom:1px solid var(--border);background:var(--bg2);}
+.nb{background:none;border:none;border-bottom:2px solid transparent;color:var(--text-d);
+    font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+    padding:14px 18px;cursor:pointer;transition:all .2s;}
+.nb:hover{color:var(--text);}
+.nb.on{color:var(--teal);border-bottom-color:var(--teal);}
+
+main{padding:36px 40px;max-width:1200px;margin:0 auto;}
+.sec{display:none;animation:fi .3s ease;}
+.sec.on{display:block;}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.stitle{font-family:var(--disp);font-size:26px;font-weight:400;font-style:italic;color:var(--bright);margin-bottom:6px;}
+.sdesc{font-size:12px;color:var(--text-d);margin-bottom:32px;}
+
+/* ── TEMPLATE ANATOMY ── */
+.tmpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.tmpl-card{background:var(--bg2);border:1px solid var(--border);padding:20px;}
+.card-head{font-size:10px;letter-spacing:2px;color:var(--teal);margin-bottom:12px;text-transform:uppercase;}
+.tmpl-field{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;
+}
+.tmpl-field:last-child{border-bottom:none;}
+.tf-key{color:var(--amber);min-width:120px;font-weight:500;}
+.tf-val{color:var(--text);line-height:1.6;}
+.tf-badge{display:inline-block;padding:1px 6px;font-size:10px;border-radius:1px;margin-left:6px;}
+.b-req{background:rgba(248,113,113,.15);color:var(--red);border:1px solid var(--red-d);}
+.b-opt{background:rgba(45,212,191,.1);color:var(--teal);border:1px solid var(--teal-d);}
+
+.link-viz{background:var(--bg3);border:1px solid var(--border);padding:20px;margin-top:20px;}
+.lv-title{font-size:11px;color:var(--text-d);letter-spacing:1px;margin-bottom:16px;text-transform:uppercase;}
+.lv-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.lv-box{
+  background:var(--bg);border:1px solid var(--border);
+  padding:8px 14px;font-size:11px;font-weight:500;
+}
+.lv-box.type{border-color:var(--cyan-d);color:var(--cyan);}
+.lv-box.obj{border-color:var(--teal-d);color:var(--teal);}
+.lv-arr{color:var(--text-d);font-size:13px;}
+.lv-note{font-size:11px;color:var(--text-d);font-style:italic;}
+
+/* ── THREE-PHASE PIPELINE ── */
+.phases{display:flex;flex-direction:column;gap:0;}
+.phase{
+  background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--border);
+  padding:20px 24px;cursor:pointer;transition:all .2s;
+}
+.phase:hover,.phase.on{border-left-color:var(--teal);background:var(--bg3);}
+.phase-hd{display:flex;align-items:baseline;gap:14px;}
+.phase-num{font-size:11px;color:var(--teal);letter-spacing:2px;font-weight:600;}
+.phase-name{font-size:14px;font-weight:500;color:var(--bright);}
+.phase-fn{font-size:11px;color:var(--text-d);margin-top:2px;}
+.phase-body{display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+.phase.on .phase-body{display:block;}
+.phase-connector{
+  display:flex;align-items:center;gap:0;padding:6px 0 6px 28px;
+  font-size:11px;color:var(--text-d);
+}
+.phase-connector::before{content:'↓';color:var(--teal);margin-right:8px;}
+
+.detail-list{list-style:none;}
+.detail-list li{
+  padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;
+  display:flex;gap:10px;align-items:flex-start;
+}
+.detail-list li:last-child{border-bottom:none;}
+.dl-icon{color:var(--teal);min-width:16px;}
+.dl-text{color:var(--text);line-height:1.6;}
+.dl-code{color:var(--green);font-size:11px;}
+
+/* ── ID REMAP ── */
+.remap-canvas{background:var(--bg2);border:1px solid var(--border);padding:28px;}
+.remap-flow{display:flex;flex-direction:column;gap:0;max-width:700px;margin:0 auto;}
+.remap-step{
+  background:var(--bg3);border:1px solid var(--border);
+  padding:14px 18px;position:relative;
+}
+.remap-step.highlight{border-color:var(--teal);background:rgba(45,212,191,.04);}
+.rs-label{font-size:10px;letter-spacing:1.5px;color:var(--text-d);text-transform:uppercase;margin-bottom:6px;}
+.rs-value{font-size:13px;font-weight:500;}
+.rs-note{font-size:11px;color:var(--text-d);margin-top:4px;}
+.remap-arrow{
+  text-align:center;padding:10px 0;
+  font-size:12px;color:var(--teal);letter-spacing:2px;
+}
+.remap-btn-row{display:flex;gap:12px;margin-bottom:20px;}
+
+.id-animate{
+  transition:color .4s,background .4s;padding:2px 6px;border-radius:2px;
+}
+.id-ph{color:#6b7280;background:rgba(107,114,128,.1);}
+.id-uuid{color:var(--teal);background:rgba(45,212,191,.1);}
+.id-bson{color:var(--cyan);background:rgba(103,232,249,.1);}
+
+/* ── TYPEPOINTER ── */
+.tp-container{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.tp-card{background:var(--bg2);border:1px solid var(--border);padding:20px;}
+.tp-title{font-size:11px;letter-spacing:2px;color:var(--text-d);text-transform:uppercase;margin-bottom:14px;}
+.tp-row{
+  display:flex;align-items:center;gap:8px;padding:6px 0;
+  border-bottom:1px solid var(--border);font-size:11px;
+}
+.tp-row:last-child{border-bottom:none;}
+.tp-field{color:var(--amber);min-width:130px;}
+.tp-val{color:var(--text);}
+.tp-link{color:var(--cyan);font-style:italic;}
+.tp-arrow-area{
+  grid-column:1/-1;background:var(--bg3);border:1px solid var(--border);
+  padding:20px;text-align:center;font-size:12px;
+}
+
+/* ── CODE ── */
+.code-tabs{display:flex;border-bottom:1px solid var(--border);}
+.ct{background:none;border:none;border-bottom:2px solid transparent;
+    color:var(--text-d);font-family:var(--mono);font-size:11px;
+    padding:9px 15px;cursor:pointer;transition:all .2s;}
+.ct:hover{color:var(--text);}
+.ct.on{color:var(--teal);border-bottom-color:var(--teal);}
+.cp{display:none;}
+.cp.on{display:block;}
+pre{
+  background:#040a10;border:1px solid var(--border);border-top:none;
+  padding:22px;overflow-x:auto;font-size:12px;line-height:1.75;
+}
+.kw{color:#7dd3fc;} .fn{color:#c084fc;} .str{color:#86efac;}
+.num{color:var(--amber);} .cmt{color:var(--text-d);font-style:italic;}
+.typ{color:var(--teal);} .field{color:#fb923c;} .op{color:var(--text-d);}
+
+.btn{
+  background:rgba(45,212,191,.1);border:1px solid var(--teal-d);
+  color:var(--teal);font-family:var(--mono);font-size:11px;
+  letter-spacing:1px;padding:9px 18px;cursor:pointer;transition:all .2s;
+}
+.btn:hover{background:rgba(45,212,191,.2);border-color:var(--teal);}
+
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg2);}
+::-webkit-scrollbar-thumb{background:var(--border);}
+
+footer{
+  border-top:1px solid var(--border);padding:18px 40px;
+  display:flex;justify-content:space-between;font-size:11px;color:var(--text-d);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="htag">ModelSDK · Widget Generation · Template Pipeline</div>
+  <h1>Widget <em>生成</em>可视化</h1>
+  <div class="hsub">模板加载 · 三阶段 ID 重映射 · Type/Object BSON 转换</div>
+</header>
+
+<nav>
+  <button class="nb on" onclick="show('tmpl')">模板结构</button>
+  <button class="nb" onclick="show('phases')">三阶段流水线</button>
+  <button class="nb" onclick="show('remap')">ID 重映射</button>
+  <button class="nb" onclick="show('typeptr')">TypePointer 交叉引用</button>
+  <button class="nb" onclick="show('code')">代码模式</button>
+</nav>
+
+<main>
+
+<!-- ═══ TEMPLATE STRUCTURE ═══ -->
+<section id="tmpl" class="sec on">
+  <div class="stitle">Widget 模板结构</div>
+  <div class="sdesc">每个 widget 有一个 JSON 模板文件，包含 Type（属性类型定义）和 Object（属性值实例）两部分</div>
+
+  <div class="tmpl-grid">
+    <div class="tmpl-card">
+      <div class="card-head">模板元数据 (*.json 顶层)</div>
+      <div class="tmpl-field"><span class="tf-key">widgetId</span><span class="tf-val">com.mendix.widget.web.combobox.Combobox<span class="tf-badge b-req">必须</span></span></div>
+      <div class="tmpl-field"><span class="tf-key">name</span><span class="tf-val">Combo box<span class="tf-badge b-opt">显示名</span></span></div>
+      <div class="tmpl-field"><span class="tf-key">version</span><span class="tf-val">11.6.0</span></div>
+      <div class="tmpl-field"><span class="tf-key">extractedFrom</span><span class="tf-val">Studio Pro 生成的 .mpr 文件路径</span></div>
+      <div class="tmpl-field"><span class="tf-key">type</span><span class="tf-val">CustomWidgetType 对象<br><span style="color:var(--text-d);font-size:11px;">含 PropertyTypes[] 数组，定义每个属性的类型、ID、约束</span></span></div>
+      <div class="tmpl-field"><span class="tf-key">object</span><span class="tf-val">WidgetObject 对象<br><span style="color:var(--text-d);font-size:11px;">含 WidgetProperty[] 数组，所有属性的默认值</span></span></div>
+    </div>
+
+    <div class="tmpl-card">
+      <div class="card-head">Type 内部 — PropertyType 单项</div>
+      <div class="tmpl-field"><span class="tf-key">$ID</span><span class="tf-val"><span class="id-animate id-ph">aa000000...0001</span><span class="tf-badge b-req">占位符</span></span></div>
+      <div class="tmpl-field"><span class="tf-key">$Type</span><span class="tf-val">CustomWidgets$PropertyType</span></div>
+      <div class="tmpl-field"><span class="tf-key">Name</span><span class="tf-val">attributeAssociation<span class="tf-badge b-opt">属性 key</span></span></div>
+      <div class="tmpl-field"><span class="tf-key">PropertyType</span><span class="tf-val">Attribute / Association / Expression / DataSource / Widgets…</span></div>
+      <div class="tmpl-field"><span class="tf-key">ValueType</span><span class="tf-val">指向值类型对象的 $ID 引用<br><span style="color:var(--text-d);font-size:11px;">用于构建 PropertyTypeIDEntry</span></span></div>
+      <div class="tmpl-field"><span class="tf-key">ObjectType</span><span class="tf-val">嵌套 object 列表的类型<span class="tf-badge b-opt">可选</span></span></div>
+    </div>
+
+    <div class="tmpl-card">
+      <div class="card-head">Object 内部 — WidgetProperty 单项</div>
+      <div class="tmpl-field"><span class="tf-key">$ID</span><span class="tf-val"><span class="id-animate id-ph">aa000000...0042</span><span class="tf-badge b-req">占位符</span></span></div>
+      <div class="tmpl-field"><span class="tf-key">$Type</span><span class="tf-val">CustomWidgets$WidgetProperty</span></div>
+      <div class="tmpl-field"><span class="tf-key">TypePointer</span><span class="tf-val">→ 引用对应 PropertyType 的 $ID<span class="tf-badge b-req">必须</span></span></div>
+      <div class="tmpl-field"><span class="tf-key">Value</span><span class="tf-val">默认属性值（内嵌文档或标量）</span></div>
+    </div>
+
+    <div class="tmpl-card">
+      <div class="card-head">磁盘文件对应关系</div>
+      <div class="tmpl-field"><span class="tf-key">模板 JSON</span><span class="tf-val">modelsdk/widgets/templates/mendix-11.6/combobox.json<br><span style="color:var(--text-d);font-size:11px;">go:embed 嵌入到二进制</span></span></div>
+      <div class="tmpl-field"><span class="tf-key">定义 JSON</span><span class="tf-val">modelsdk/widgets/definitions/combobox.def.json<br><span style="color:var(--text-d);font-size:11px;">WidgetDefinition：MDL 名称、模式、属性映射</span></span></div>
+      <div class="tmpl-field"><span class="tf-key">MPK 兜底</span><span class="tf-val">project/widgets/*.mpk<br><span style="color:var(--text-d);font-size:11px;">版本漂移时从 MPK 提取并 augment</span></span></div>
+      <div class="tmpl-field"><span class="tf-key">缓存</span><span class="tf-val">templateCache (RWMutex) + generatedCache (sync.Map)</span></div>
+    </div>
+  </div>
+
+  <div class="link-viz">
+    <div class="lv-title">Type ↔ Object 内部引用关系</div>
+    <div class="lv-row">
+      <div class="lv-box type">CustomWidgetType.$ID = <span style="color:var(--amber)">T001</span></div>
+      <div class="lv-arr">←──────────────────────────</div>
+      <div class="lv-box obj">WidgetObject.TypePointer = <span style="color:var(--amber)">T001</span></div>
+    </div>
+    <div class="lv-row">
+      <div class="lv-box type">PropertyType["name"].$ID = <span style="color:var(--cyan)">P042</span></div>
+      <div class="lv-arr">←──────</div>
+      <div class="lv-box obj">WidgetProperty.TypePointer = <span style="color:var(--cyan)">P042</span></div>
+    </div>
+    <div class="lv-note" style="margin-top:8px;">CE0463 "widget definition changed" 错误的根因：Object 的 TypePointer 引用了不存在或已变更的 PropertyType $ID</div>
+  </div>
+</section>
+
+<!-- ═══ THREE-PHASE PIPELINE ═══ -->
+<section id="phases" class="sec">
+  <div class="stitle">三阶段生成流水线</div>
+  <div class="sdesc">GetTemplateFullBSON() 的内部流程 · 点击各阶段展开详情</div>
+
+  <div class="phases">
+    <div class="phase on" id="ph0" onclick="togglePhase(0)">
+      <div class="phase-hd">
+        <span class="phase-num">PHASE 0 · LOAD</span>
+        <span class="phase-name">模板加载与缓存</span>
+      </div>
+      <div class="phase-fn">getOrGenerateTemplate(widgetID, projectPath) · augmentFromMPK()</div>
+      <div class="phase-body">
+        <ul class="detail-list">
+          <li><span class="dl-icon">1</span><span class="dl-text">查 <span class="dl-code">templateCache</span>（RWMutex 读锁）：命中则直接返回</span></li>
+          <li><span class="dl-icon">2</span><span class="dl-text">未命中：扫描 <span class="dl-code">templateFS</span>（go:embed）构建 widgetID→filename 索引（sync.Once）</span></li>
+          <li><span class="dl-icon">3</span><span class="dl-text">加载 JSON 文件 → <span class="dl-code">WidgetTemplate</span>（含 Type/Object map[string]any）</span></li>
+          <li><span class="dl-icon">4</span><span class="dl-text"><span class="dl-code">augmentFromMPK()</span>：若项目中有 .mpk 文件且版本更新，深克隆并合并差异属性</span></li>
+          <li><span class="dl-icon">5</span><span class="dl-text">写入 <span class="dl-code">templateCache</span>（写锁），MPK 派生品写入 <span class="dl-code">generatedCache</span>（sync.Map）</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-connector">Phase 0 完成 → 进入 ID 收集</div>
+
+    <div class="phase" id="ph1" onclick="togglePhase(1)">
+      <div class="phase-hd">
+        <span class="phase-num">PHASE 1 · COLLECT IDs</span>
+        <span class="phase-name">递归收集所有 $ID，建立重映射表</span>
+      </div>
+      <div class="phase-fn">collectIDs(tmpl.Type, idGenerator, idMapping) + collectIDs(tmpl.Object, ...)</div>
+      <div class="phase-body">
+        <ul class="detail-list">
+          <li><span class="dl-icon">1</span><span class="dl-text">深度优先遍历 Type 的 map[string]any 树</span></li>
+          <li><span class="dl-icon">2</span><span class="dl-text">遇到 key == "$ID"：旧值（aa000000 占位符）→ <span class="dl-code">idGenerator()</span> 生成新 UUID → 存入 <span class="dl-code">idMapping</span></span></li>
+          <li><span class="dl-icon">3</span><span class="dl-text">同样遍历 Object，共享同一 idMapping（Type/Object 内部 TypePointer 引用必须一致）</span></li>
+          <li><span class="dl-icon">4</span><span class="dl-text">结果：idMapping = { "aa000000...001": "550e8400-e29b...", "aa000000...042": "f47ac10b..." }</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-connector">Phase 1 完成 → 进入 Type 转换</div>
+
+    <div class="phase" id="ph2" onclick="togglePhase(2)">
+      <div class="phase-hd">
+        <span class="phase-num">PHASE 2 · CONVERT TYPE</span>
+        <span class="phase-name">Type JSON → BSON，提取 PropertyTypeIDEntry</span>
+      </div>
+      <div class="phase-fn">jsonToBSONWithMappingAndObjectType(tmpl.Type, idMapping, propertyTypeIDs, &objectTypeID)</div>
+      <div class="phase-body">
+        <ul class="detail-list">
+          <li><span class="dl-icon">1</span><span class="dl-text">递归遍历 Type map，按 <span class="dl-code">sortedMapKeys()</span> 保证 $ID→$Type→其他 的确定性顺序</span></li>
+          <li><span class="dl-icon">2</span><span class="dl-text">所有 $ID 值通过 <span class="dl-code">idMapping</span> 替换 + <span class="dl-code">hexToIDBlob()</span> 转为 BSON Binary（16字节 GUID-swapped）</span></li>
+          <li><span class="dl-icon">3</span><span class="dl-text">遇到 PropertyType 节点（$Type = CustomWidgets$PropertyType）：提取 Name/PropertyType/ValueType 填入 <span class="dl-code">propertyTypeIDs[name]</span></span></li>
+          <li><span class="dl-icon">4</span><span class="dl-text">遇到 ObjectType 节点：提取顶层 objectTypeID（供 WidgetObject.TypePointer 使用）</span></li>
+          <li><span class="dl-icon">5</span><span class="dl-text">输出：bson.D（完整 CustomWidgetType 文档）+ propertyTypeIDs map</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-connector">Phase 2 完成 → 进入 Object 转换</div>
+
+    <div class="phase" id="ph3" onclick="togglePhase(3)">
+      <div class="phase-hd">
+        <span class="phase-num">PHASE 3 · CONVERT OBJECT</span>
+        <span class="phase-name">Object JSON → BSON，TypePointer 自动更新</span>
+      </div>
+      <div class="phase-fn">jsonToBSONObjectWithMapping(tmpl.Object, idMapping)</div>
+      <div class="phase-body">
+        <ul class="detail-list">
+          <li><span class="dl-icon">1</span><span class="dl-text">使用与 Phase 2 <b>相同的 idMapping</b>——确保 TypePointer 指向的 PropertyType $ID 已被正确替换</span></li>
+          <li><span class="dl-icon">2</span><span class="dl-text">递归替换所有 $ID / TypePointer，其余字段保持原样</span></li>
+          <li><span class="dl-icon">3</span><span class="dl-text">输出：bson.D（完整 WidgetObject 文档）</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-connector">Phase 3 完成 → 校验</div>
+
+    <div class="phase" id="ph4" onclick="togglePhase(4)">
+      <div class="phase-hd">
+        <span class="phase-num">PHASE 4 · VALIDATE</span>
+        <span class="phase-name">占位符泄漏检测</span>
+      </div>
+      <div class="phase-fn">containsPlaceholderID(bsonType) + containsPlaceholderID(bsonObject)</div>
+      <div class="phase-body">
+        <ul class="detail-list">
+          <li><span class="dl-icon">✓</span><span class="dl-text">递归检查 bson.D 中所有 Binary 值：前 13 字节是否匹配 <span class="dl-code">placeholderBinaryPrefix</span></span></li>
+          <li><span class="dl-icon">✓</span><span class="dl-text">检查字符串值：是否以 <span class="dl-code">"aa000000000000000000000000"</span> 开头</span></li>
+          <li><span class="dl-icon">✗</span><span class="dl-text">发现泄漏 → 返回 error，阻止写入 MPR（CE0463 的预防关卡）</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ID REMAP ═══ -->
+<section id="remap" class="sec">
+  <div class="stitle">ID 重映射详解</div>
+  <div class="sdesc">每次生成 widget 都会为所有占位符分配全新 UUID · 内部引用同步更新</div>
+
+  <div class="remap-btn-row">
+    <button class="btn" onclick="animateRemap()">▶ 模拟 GetTemplateFullBSON()</button>
+    <button class="btn" onclick="resetRemap()" style="font-size:10px;padding:7px 13px;">重置</button>
+    <span id="remap-status" style="font-size:11px;color:var(--text-d);margin-left:10px;"></span>
+  </div>
+
+  <div class="remap-canvas">
+    <div style="display:grid;grid-template-columns:1fr 80px 1fr;gap:16px;align-items:start;">
+      <div>
+        <div style="font-size:10px;letter-spacing:2px;color:var(--text-d);margin-bottom:12px;">INPUT · 原始模板（占位符 ID）</div>
+        <div class="remap-step" id="rs-type-orig">
+          <div class="rs-label">Type · PropertyType.$ID</div>
+          <div class="rs-value"><span class="id-animate id-ph" id="id-type-1">aa000000000000000000000000000001</span></div>
+          <div class="rs-note">16进制 → hexToIDBlob → GUID 字节序交换</div>
+        </div>
+        <div class="remap-arrow">↕ TypePointer 引用</div>
+        <div class="remap-step" id="rs-obj-orig">
+          <div class="rs-label">Object · WidgetProperty.TypePointer</div>
+          <div class="rs-value"><span class="id-animate id-ph" id="id-obj-tp">aa000000000000000000000000000001</span></div>
+          <div class="rs-note">必须与 PropertyType.$ID 完全相同</div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;padding-top:60px;gap:8px;">
+        <div style="width:1px;height:40px;background:var(--teal);"></div>
+        <div style="font-size:10px;color:var(--teal);writing-mode:vertical-rl;letter-spacing:2px;">idMapping</div>
+        <div style="width:1px;height:40px;background:var(--teal);"></div>
+      </div>
+
+      <div>
+        <div style="font-size:10px;letter-spacing:2px;color:var(--teal);margin-bottom:12px;">OUTPUT · BSON（新 UUID）</div>
+        <div class="remap-step highlight" id="rs-type-new">
+          <div class="rs-label">Type · PropertyType.$ID</div>
+          <div class="rs-value"><span class="id-animate id-uuid" id="id-type-new">—</span></div>
+          <div class="rs-note">BSON Binary (16 bytes, subtype 0)</div>
+        </div>
+        <div class="remap-arrow">↕ TypePointer 已同步更新</div>
+        <div class="remap-step highlight" id="rs-obj-new">
+          <div class="rs-label">Object · WidgetProperty.TypePointer</div>
+          <div class="rs-value"><span class="id-animate id-uuid" id="id-obj-new">—</span></div>
+          <div class="rs-note">与 PropertyType.$ID 字节完全相同 ✓</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;background:var(--bg3);border:1px solid var(--border);padding:16px;">
+      <div style="font-size:10px;color:var(--text-d);letter-spacing:1px;margin-bottom:8px;">GUID BYTE-SWAP 规则（Mendix 内部约定）</div>
+      <div style="font-size:12px;color:var(--text);">
+        UUID hex: <span style="color:var(--amber);">550e8400-e29b-41d4-a716-446655440000</span><br>
+        BSON binary: bytes 0-3 倒序 · bytes 4-5 倒序 · bytes 6-7 倒序 · bytes 8-15 不变
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TYPEPOINTER ═══ -->
+<section id="typeptr" class="sec">
+  <div class="stitle">TypePointer 交叉引用</div>
+  <div class="sdesc">CustomWidgetType 和 WidgetObject 通过 $ID / TypePointer 形成跨文档引用 · 任何不一致导致 CE0463</div>
+
+  <div class="tp-container">
+    <div class="tp-card">
+      <div class="tp-title">CustomWidgetType (type bson.D)</div>
+      <div class="tp-row"><span class="tp-field">$ID</span><span class="tp-val"><span style="color:var(--amber)">T-UUID-001</span></span></div>
+      <div class="tp-row"><span class="tp-field">$Type</span><span class="tp-val">CustomWidgets$CustomWidgetType</span></div>
+      <div class="tp-row"><span class="tp-field">PropertyTypes[0]</span><span class="tp-val"><span style="color:var(--cyan)">P-UUID-010</span> · Name:"attributeEnumeration"</span></div>
+      <div class="tp-row"><span class="tp-field">PropertyTypes[1]</span><span class="tp-val"><span style="color:var(--cyan)">P-UUID-011</span> · Name:"optionsSourceType"</span></div>
+      <div class="tp-row"><span class="tp-field">PropertyTypes[2]</span><span class="tp-val"><span style="color:var(--cyan)">P-UUID-012</span> · Name:"attributeAssociation"</span></div>
+      <div class="tp-row"><span class="tp-field">ObjectType.$ID</span><span class="tp-val"><span style="color:var(--green)">OT-UUID-999</span></span></div>
+    </div>
+
+    <div class="tp-card">
+      <div class="tp-title">WidgetObject (object bson.D)</div>
+      <div class="tp-row"><span class="tp-field">$ID</span><span class="tp-val"><span style="color:var(--amber)">O-UUID-050</span></span></div>
+      <div class="tp-row"><span class="tp-field">$Type</span><span class="tp-val">CustomWidgets$WidgetObject</span></div>
+      <div class="tp-row"><span class="tp-field">TypePointer</span><span class="tp-val tp-link">→ <span style="color:var(--green)">OT-UUID-999</span> (ObjectType)</span></div>
+      <div class="tp-row"><span class="tp-field">Properties[0].TypePointer</span><span class="tp-val tp-link">→ <span style="color:var(--cyan)">P-UUID-010</span></span></div>
+      <div class="tp-row"><span class="tp-field">Properties[1].TypePointer</span><span class="tp-val tp-link">→ <span style="color:var(--cyan)">P-UUID-011</span></span></div>
+      <div class="tp-row"><span class="tp-field">Properties[2].TypePointer</span><span class="tp-val tp-link">→ <span style="color:var(--cyan)">P-UUID-012</span></span></div>
+    </div>
+
+    <div class="tp-arrow-area">
+      <div style="font-size:11px;color:var(--text-d);margin-bottom:10px;">一致性约束（任一违反 → Studio Pro CE0463）</div>
+      <div style="display:flex;justify-content:center;gap:40px;flex-wrap:wrap;font-size:12px;">
+        <div><span style="color:var(--green)">OT-UUID-999</span> — WidgetObject.TypePointer 必须等于 CustomWidgetType 内 ObjectType 节点的 $ID</div>
+        <div><span style="color:var(--cyan)">P-UUID-01x</span> — WidgetProperty.TypePointer 必须等于对应 PropertyType 的 $ID</div>
+      </div>
+      <div style="margin-top:12px;color:var(--teal);font-size:11px;">collectIDs() 共享同一 idMapping 是保证一致性的核心机制</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CODE ═══ -->
+<section id="code" class="sec">
+  <div class="stitle">代码模式采样</div>
+  <div class="sdesc">Widget 生成的四个关键函数</div>
+
+  <div class="code-tabs">
+    <button class="ct on" onclick="showC('c1')">GetTemplateFullBSON</button>
+    <button class="ct" onclick="showC('c2')">collectIDs</button>
+    <button class="ct" onclick="showC('c3')">jsonToBSONWithMapping</button>
+    <button class="ct" onclick="showC('c4')">containsPlaceholderID</button>
+  </div>
+
+  <div id="cp-c1" class="cp on">
+<pre><span class="cmt">// modelsdk/widgets/loader.go</span>
+<span class="cmt">// 完整生成流水线：加载模板 → 三阶段转换 → 校验</span>
+<span class="kw">func</span> <span class="fn">GetTemplateFullBSON</span>(
+    widgetID <span class="typ">string</span>,
+    idGenerator <span class="kw">func</span>() <span class="typ">string</span>,
+    projectPath <span class="typ">string</span>,
+) (<span class="typ">bson.D</span>, <span class="typ">bson.D</span>, <span class="kw">map</span>[<span class="typ">string</span>]<span class="typ">PropertyTypeIDEntry</span>, <span class="typ">string</span>, <span class="typ">error</span>) {
+
+    <span class="cmt">// Phase 0: 加载（优先缓存，其次 go:embed，最后 .mpk）</span>
+    tmpl, err := <span class="fn">getOrGenerateTemplate</span>(widgetID, projectPath)
+    <span class="kw">if</span> !tmpl.Generated {
+        tmpl = <span class="fn">augmentFromMPK</span>(tmpl, widgetID, projectPath)
+    }
+
+    <span class="cmt">// Phase 1: 收集所有 $ID，建立 占位符→UUID 映射表</span>
+    idMapping := <span class="fn">make</span>(<span class="kw">map</span>[<span class="typ">string</span>]<span class="typ">string</span>)
+    <span class="fn">collectIDs</span>(tmpl.Type, idGenerator, idMapping)
+    <span class="kw">if</span> tmpl.Object != <span class="kw">nil</span> {
+        <span class="fn">collectIDs</span>(tmpl.Object, idGenerator, idMapping)  <span class="cmt">// 共享同一 map！</span>
+    }
+
+    <span class="cmt">// Phase 2: Type JSON → BSON（顺带提取 PropertyTypeIDEntry）</span>
+    propertyTypeIDs := <span class="fn">make</span>(<span class="kw">map</span>[<span class="typ">string</span>]<span class="typ">PropertyTypeIDEntry</span>)
+    <span class="kw">var</span> objectTypeID <span class="typ">string</span>
+    bsonType := <span class="fn">jsonToBSONWithMappingAndObjectType</span>(
+        tmpl.Type, idMapping, propertyTypeIDs, &amp;objectTypeID,
+    )
+
+    <span class="cmt">// Phase 3: Object JSON → BSON（TypePointer 引用自动同步）</span>
+    <span class="kw">var</span> bsonObject <span class="typ">bson.D</span>
+    <span class="kw">if</span> tmpl.Object != <span class="kw">nil</span> {
+        bsonObject = <span class="fn">jsonToBSONObjectWithMapping</span>(tmpl.Object, idMapping)
+    }
+
+    <span class="cmt">// Phase 4: 校验占位符是否全部替换</span>
+    <span class="kw">if</span> <span class="fn">containsPlaceholderID</span>(bsonType) {
+        <span class="kw">return</span> <span class="kw">nil</span>, <span class="kw">nil</span>, <span class="kw">nil</span>, <span class="str">""</span>, fmt.<span class="fn">Errorf</span>(<span class="str">"placeholder ID leak in type for %s"</span>, widgetID)
+    }
+    <span class="kw">if</span> bsonObject != <span class="kw">nil</span> &amp;&amp; <span class="fn">containsPlaceholderID</span>(bsonObject) {
+        <span class="kw">return</span> <span class="kw">nil</span>, <span class="kw">nil</span>, <span class="kw">nil</span>, <span class="str">""</span>, fmt.<span class="fn">Errorf</span>(<span class="str">"placeholder ID leak in object for %s"</span>, widgetID)
+    }
+
+    <span class="kw">return</span> bsonType, bsonObject, propertyTypeIDs, objectTypeID, <span class="kw">nil</span>
+}</pre>
+  </div>
+
+  <div id="cp-c2" class="cp">
+<pre><span class="cmt">// collectIDs 深度优先遍历 JSON map，对所有 $ID 建立重映射</span>
+<span class="kw">func</span> <span class="fn">collectIDs</span>(data <span class="kw">map</span>[<span class="typ">string</span>]<span class="kw">any</span>, idGenerator <span class="kw">func</span>() <span class="typ">string</span>, idMapping <span class="kw">map</span>[<span class="typ">string</span>]<span class="typ">string</span>) {
+    <span class="kw">for</span> k, v := <span class="kw">range</span> data {
+        <span class="kw">if</span> k == <span class="str">"$ID"</span> {
+            <span class="kw">if</span> oldID, ok := v.(<span class="typ">string</span>); ok {
+                <span class="kw">if</span> _, exists := idMapping[oldID]; !exists {
+                    idMapping[oldID] = <span class="fn">idGenerator</span>()  <span class="cmt">// 每个旧 ID 只映射一次</span>
+                }
+            }
+            <span class="kw">continue</span>
+        }
+        <span class="kw">switch</span> child := v.(<span class="kw">type</span>) {
+        <span class="kw">case</span> <span class="kw">map</span>[<span class="typ">string</span>]<span class="kw">any</span>:
+            <span class="fn">collectIDs</span>(child, idGenerator, idMapping)  <span class="cmt">// 递归子文档</span>
+        <span class="kw">case</span> []<span class="kw">any</span>:
+            <span class="fn">collectIDsInArray</span>(child, idGenerator, idMapping)
+        }
+    }
+}
+
+<span class="kw">func</span> <span class="fn">collectIDsInArray</span>(arr []<span class="kw">any</span>, idGenerator <span class="kw">func</span>() <span class="typ">string</span>, idMapping <span class="kw">map</span>[<span class="typ">string</span>]<span class="typ">string</span>) {
+    <span class="kw">for</span> _, item := <span class="kw">range</span> arr {
+        <span class="kw">if</span> m, ok := item.(<span class="kw">map</span>[<span class="typ">string</span>]<span class="kw">any</span>); ok {
+            <span class="fn">collectIDs</span>(m, idGenerator, idMapping)
+        }
+    }
+}</pre>
+  </div>
+
+  <div id="cp-c3" class="cp">
+<pre><span class="cmt">// jsonToBSONWithMapping — JSON map → bson.D，替换所有 ID</span>
+<span class="cmt">// sortedMapKeys 保证 $ID→$Type→$ 前缀→其他 的确定性顺序</span>
+<span class="kw">func</span> <span class="fn">jsonToBSONWithMapping</span>(
+    data <span class="kw">map</span>[<span class="typ">string</span>]<span class="kw">any</span>,
+    idMapping <span class="kw">map</span>[<span class="typ">string</span>]<span class="typ">string</span>,
+    propertyTypeIDs <span class="kw">map</span>[<span class="typ">string</span>]<span class="typ">PropertyTypeIDEntry</span>,
+) <span class="typ">bson.D</span> {
+    result := <span class="fn">make</span>(<span class="typ">bson.D</span>, <span class="num">0</span>, <span class="fn">len</span>(data))
+
+    <span class="kw">for</span> _, k := <span class="kw">range</span> <span class="fn">sortedMapKeys</span>(data) {
+        v := data[k]
+        <span class="kw">switch</span> k {
+        <span class="kw">case</span> <span class="str">"$ID"</span>, <span class="str">"TypePointer"</span>, <span class="str">"ValueType"</span>:
+            <span class="cmt">// 替换为新 UUID 的 BSON Binary</span>
+            <span class="kw">if</span> oldID, ok := v.(<span class="typ">string</span>); ok {
+                <span class="kw">if</span> newID, found := idMapping[oldID]; found {
+                    result = <span class="fn">append</span>(result, <span class="typ">bson.E</span>{Key: k, Value: <span class="fn">hexToIDBlob</span>(newID)})
+                    <span class="kw">continue</span>
+                }
+            }
+        }
+        <span class="cmt">// 递归处理嵌套文档和数组</span>
+        <span class="kw">switch</span> child := v.(<span class="kw">type</span>) {
+        <span class="kw">case</span> <span class="kw">map</span>[<span class="typ">string</span>]<span class="kw">any</span>:
+            result = <span class="fn">append</span>(result, <span class="typ">bson.E</span>{Key: k, Value: <span class="fn">jsonToBSONWithMapping</span>(child, idMapping, propertyTypeIDs)})
+        <span class="kw">case</span> []<span class="kw">any</span>:
+            result = <span class="fn">append</span>(result, <span class="typ">bson.E</span>{Key: k, Value: <span class="fn">arrayToMendixBSONArray</span>(child, idMapping)})
+        <span class="kw">default</span>:
+            result = <span class="fn">append</span>(result, <span class="typ">bson.E</span>{Key: k, Value: v})
+        }
+    }
+    <span class="kw">return</span> result
+}</pre>
+  </div>
+
+  <div id="cp-c4" class="cp">
+<pre><span class="cmt">// containsPlaceholderID — 递归检测 aa000000 占位符是否残留</span>
+<span class="kw">var</span> placeholderBinaryPrefix = []<span class="typ">byte</span>{
+    <span class="num">0x00</span>, <span class="num">0x00</span>, <span class="num">0x00</span>, <span class="num">0xaa</span>,  <span class="cmt">// GUID-swapped 后的 aa000000 前缀</span>
+    <span class="num">0x00</span>, <span class="num">0x00</span>, <span class="num">0x00</span>, <span class="num">0x00</span>,
+    <span class="num">0x00</span>, <span class="num">0x00</span>, <span class="num">0x00</span>, <span class="num">0x00</span>, <span class="num">0x00</span>,
+}
+
+<span class="kw">func</span> <span class="fn">containsPlaceholderID</span>(doc <span class="typ">bson.D</span>) <span class="typ">bool</span> {
+    <span class="kw">for</span> _, elem := <span class="kw">range</span> doc {
+        <span class="kw">if</span> <span class="fn">containsPlaceholderValue</span>(elem.Value) {
+            <span class="kw">return</span> <span class="kw">true</span>
+        }
+    }
+    <span class="kw">return</span> <span class="kw">false</span>
+}
+
+<span class="kw">func</span> <span class="fn">containsPlaceholderValue</span>(val <span class="kw">any</span>) <span class="typ">bool</span> {
+    <span class="kw">switch</span> v := val.(<span class="kw">type</span>) {
+    <span class="kw">case</span> []<span class="typ">byte</span>:
+        <span class="cmt">// Binary blob：检查前 13 字节</span>
+        <span class="kw">return</span> <span class="fn">len</span>(v) == <span class="num">16</span> &amp;&amp; bytes.<span class="fn">HasPrefix</span>(v, placeholderBinaryPrefix)
+    <span class="kw">case</span> <span class="typ">bson.D</span>:
+        <span class="kw">return</span> <span class="fn">containsPlaceholderID</span>(v)
+    <span class="kw">case</span> <span class="typ">bson.A</span>:
+        <span class="kw">for</span> _, item := <span class="kw">range</span> v {
+            <span class="kw">if</span> <span class="fn">containsPlaceholderValue</span>(item) { <span class="kw">return</span> <span class="kw">true</span> }
+        }
+    <span class="kw">case</span> <span class="typ">string</span>:
+        <span class="cmt">// 字符串形式泄漏</span>
+        <span class="kw">return</span> <span class="fn">len</span>(v) == <span class="num">32</span> &amp;&amp; strings.<span class="fn">HasPrefix</span>(v, <span class="str">"aa000000000000000000000000"</span>)
+    }
+    <span class="kw">return</span> <span class="kw">false</span>
+}</pre>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div>Widget Generation · modelsdk/widgets/</div>
+  <div style="color:var(--teal);">● Template Pipeline</div>
+  <div>30+ embedded templates · mendix-11.6</div>
+</footer>
+
+<script>
+function show(id){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  event.target.classList.add('on');
+}
+function togglePhase(i){
+  const ph=document.getElementById('ph'+i);
+  const wasOn=ph.classList.contains('on');
+  document.querySelectorAll('.phase').forEach(p=>p.classList.remove('on'));
+  if(!wasOn) ph.classList.add('on');
+}
+function showC(id){
+  document.querySelectorAll('.cp').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.ct').forEach(t=>t.classList.remove('on'));
+  document.getElementById('cp-'+id).classList.add('on');
+  event.target.classList.add('on');
+}
+
+let remapRunning=false;
+function animateRemap(){
+  if(remapRunning)return;
+  remapRunning=true;
+  const status=document.getElementById('remap-status');
+  const uuid1='550e8400-e29b-41d4-a716-446655440001';
+
+  status.textContent='Phase 1: collectIDs()...';
+  setTimeout(()=>{
+    status.textContent='Phase 1 완료 → idMapping 构建完成';
+  },600);
+  setTimeout(()=>{
+    status.textContent='Phase 2: Type JSON → BSON...';
+    document.getElementById('id-type-new').textContent=uuid1;
+    document.getElementById('id-type-new').className='id-animate id-uuid';
+  },1200);
+  setTimeout(()=>{
+    status.textContent='Phase 3: Object JSON → BSON (TypePointer 同步)...';
+    document.getElementById('id-obj-new').textContent=uuid1;
+    document.getElementById('id-obj-new').className='id-animate id-uuid';
+  },1800);
+  setTimeout(()=>{
+    status.textContent='Phase 4: containsPlaceholderID() → 通过 ✓';
+    remapRunning=false;
+  },2400);
+}
+function resetRemap(){
+  document.getElementById('id-type-new').textContent='—';
+  document.getElementById('id-obj-new').textContent='—';
+  document.getElementById('remap-status').textContent='';
+  remapRunning=false;
+}
+</script>
+</body>
+</html>
