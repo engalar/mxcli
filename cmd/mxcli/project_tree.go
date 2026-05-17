@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 
+	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
@@ -29,7 +30,6 @@ import (
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
-	sdkmpr "github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/spf13/cobra"
 )
 
@@ -86,33 +86,35 @@ Example:
 }
 
 func buildProjectTree(projectPath string) ([]*TreeNode, error) {
-	// project-tree consumes ~30 sdk/mpr.Reader methods (ListEnumerations,
-	// ListConstants, GetProjectSettings, ListBusinessEventServices, ...) that
-	// have no modelsdk/mpr.Reader equivalent today. Read-path migration is
-	// deferred to Phase 4; keep the sdk/mpr reader here until then.
-	reader, err := sdkmpr.Open(projectPath)
+	// Open the project via MprBackend, which owns the full read/write
+	// machinery. We borrow the embedded modelsdk/mpr.Reader for gen-typed
+	// reads via mprread.* and ask the backend itself for the few
+	// model.*/types.* values (ListModules, GetProjectSettings,
+	// GetNavigation) whose gen→model converters live there. The backend's
+	// internal sdk/mpr.Reader is an implementation detail that will go away
+	// once Track B finishes wiring those four converters through mprread.
+	b, err := mprbackend.NewFromPath(projectPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open project: %w", err)
 	}
-	defer reader.Close()
+	defer b.Disconnect()
 
-	// Open a parallel modelsdk/mpr reader for microflow/nanoflow listing.
-	// Both readers open the same .mpr in read-only mode; their SQLite
-	// connections are independent. mprread.List* returns gen-typed
-	// elements that callers can later iterate using modelsdk semantics
-	// (Stage 4 Task A migration off sdk/mpr microflow APIs).
+	// Separate read-only modelsdk reader for gen-typed mprread.* helpers.
+	// MprBackend owns its own (read-write) modelsdk reader internally, but
+	// it isn't exported, so we open a second one here. This is the same
+	// "parallel readers" pattern in use everywhere project-tree iterates.
 	mreader, err := mmpr.Open(projectPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open project (modelsdk reader): %w", err)
 	}
 	defer mreader.Close()
 
-	h, err := executor.NewContainerHierarchy(reader)
+	h, err := executor.NewContainerHierarchyFromBackend(b)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build hierarchy: %w", err)
 	}
 
-	modules, err := reader.ListModules()
+	modules, err := b.ListModules()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list modules: %w", err)
 	}
@@ -187,7 +189,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	for _, ref := range msRefs {
 		msContainerByID[ref.ID] = model.ID(ref.ContainerID)
 	}
-	allMS, _ := reader.ListModuleSecurity()
+	allMS, _ := mprread.ListModuleSecurity(mreader)
 	for _, ms := range allMS {
 		containerID := msContainerByID[string(ms.ID())]
 		md, ok := modData[containerID]
@@ -687,7 +689,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	}
 
 	// Project Security top-level node
-	ps, err := reader.GetProjectSecurity()
+	ps, err := mprread.GetProjectSecurity(mreader)
 	if err == nil {
 		psNode := &TreeNode{Label: "Project Security", Type: "projectsecurity", QualifiedName: "ProjectSecurity"}
 
@@ -737,7 +739,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	}
 
 	// Project Settings top-level node
-	settings, settingsErr := reader.GetProjectSettings()
+	settings, settingsErr := b.GetProjectSettings()
 	if settingsErr == nil {
 		settingsNode := &TreeNode{Label: "Settings", Type: "settings", QualifiedName: "Settings"}
 		if settings.Model != nil {
@@ -768,7 +770,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	}
 
 	// Navigation top-level node
-	nav, navErr := reader.GetNavigation()
+	nav, navErr := b.GetNavigation()
 	if navErr == nil && len(nav.Profiles) > 0 {
 		navNode := &TreeNode{Label: "Navigation", Type: "navigation", QualifiedName: "Navigation"}
 		for _, profile := range nav.Profiles {
