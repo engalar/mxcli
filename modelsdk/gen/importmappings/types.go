@@ -229,7 +229,7 @@ func (o *ImportMapping) InitFromRaw(raw bson.Raw) {
 			o.exportLevel.SetFromDecode(s)
 		}
 	}
-	if children, err := codec.DecodeChildren(raw, "Elements"); err == nil {
+	if children, err := codec.DecodeChildren(raw, "RootMappingElements"); err == nil {
 		for _, child := range children {
 			o.rootMappingElements.AppendFromDecode(child)
 		}
@@ -831,7 +831,7 @@ func initImportMapping() *ImportMapping {
 	o.excluded.Bind(&o.Base, 2)
 	o.exportLevel = property.NewEnum[string]("ExportLevel")
 	o.exportLevel.Bind(&o.Base, 3)
-	o.rootMappingElements = property.NewPartList[element.Element]("Elements")
+	o.rootMappingElements = property.NewPartList[element.Element]("RootMappingElements")
 	o.rootMappingElements.Bind(&o.Base, 4)
 	o.xmlSchema = property.NewByNameRef[element.Element]("XmlSchema", "XmlSchemas$XmlSchema")
 	o.xmlSchema.Bind(&o.Base, 5)
