@@ -37,7 +37,7 @@ type mprPageMutator struct {
 
 // OpenPageForMutation loads a page/snippet/layout unit and returns a PageMutator.
 func (b *MprBackend) OpenPageForMutation(unitID model.ID) (backend.PageMutator, error) {
-	rawBytes, err := b.reader.GetRawUnitBytes(unitID)
+	rawBytes, err := b.msdkReader.GetRawUnitBytes(string(unitID))
 	if err != nil {
 		return nil, fmt.Errorf("load raw unit bytes: %w", err)
 	}

@@ -34,6 +34,6 @@ func (b *MprBackend) writeUnitContents(unitID model.ID, contents []byte) error {
 	if err := wtx.Commit(); err != nil {
 		return err
 	}
-	b.reader.InvalidateCache()
+	b.msdkReader.InvalidateCache()
 	return nil
 }

@@ -47,7 +47,7 @@ func (b *MprBackend) msdkWrite(unitID model.ID, mutateFn func(elem element.Eleme
 	if err := wtx.Commit(); err != nil {
 		return err
 	}
-	b.reader.InvalidateCache()
+	b.msdkReader.InvalidateCache()
 	return nil
 }
 

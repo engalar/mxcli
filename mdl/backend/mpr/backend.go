@@ -704,10 +704,10 @@ func (b *MprBackend) ReconcileMemberAccesses(unitID model.ID, moduleName string)
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListNavigationDocuments() ([]*types.NavigationDocument, error) {
-	return b.reader.ListNavigationDocuments()
+	return b.listNavigationDocumentsFromRaw()
 }
 func (b *MprBackend) GetNavigation() (*types.NavigationDocument, error) {
-	return b.reader.GetNavigation()
+	return b.getNavigationFromRaw()
 }
 func (b *MprBackend) UpdateNavigationProfile(navDocID model.ID, profileName string, spec types.NavigationProfileSpec) error {
 	return b.updateNavigationProfileViaModelsdk(navDocID, profileName, spec)
@@ -721,13 +721,13 @@ func (b *MprBackend) ListConsumedODataServices() ([]*model.ConsumedODataService,
 	// TODO(phase4): migrate to mprread. ConsumedODataService has 28 scalar fields plus
 	// HttpConfiguration + HttpHeaderEntry nested parts; full converter ~80 lines.
 	// gen package: modelsdk/gen/rest (Rest$ConsumedODataService).
-	return b.reader.ListConsumedODataServices()
+	return b.listConsumedODataServicesFromRaw()
 }
 func (b *MprBackend) ListPublishedODataServices() ([]*model.PublishedODataService, error) {
 	// TODO(phase4): migrate to mprread. PublishedODataService has nested EntityTypes
 	// (with Members) + EntitySets + AuthenticationTypes + AllowedModuleRoles.
 	// gen package: modelsdk/gen/odatapublish (ODataPublish$PublishedODataService2).
-	return b.reader.ListPublishedODataServices()
+	return b.listPublishedODataServicesFromRaw()
 }
 func (b *MprBackend) CreateConsumedODataService(svc *model.ConsumedODataService) error {
 	return b.createConsumedODataServiceViaModelsdk(svc)
@@ -752,12 +752,12 @@ func (b *MprBackend) ListConsumedRestServices() ([]*model.ConsumedRestService, e
 	// TODO(phase4): migrate to mprread. Same shape class as ConsumedODataService —
 	// scalar transport config + Operations nested list.
 	// gen package: modelsdk/gen/rest (Rest$ConsumedRestService).
-	return b.reader.ListConsumedRestServices()
+	return b.listConsumedRestServicesFromRaw()
 }
 func (b *MprBackend) ListPublishedRestServices() ([]*model.PublishedRestService, error) {
 	// TODO(phase4): migrate to mprread. Has Resources → Operations → PathParams tree.
 	// gen package: modelsdk/gen/rest (Rest$PublishedRestService).
-	return b.reader.ListPublishedRestServices()
+	return b.listPublishedRestServicesFromRaw()
 }
 func (b *MprBackend) CreateConsumedRestService(svc *model.ConsumedRestService) error {
 	return b.createConsumedRestServiceViaModelsdk(svc)
@@ -1134,7 +1134,7 @@ func (b *MprBackend) GetProjectSettings() (*model.ProjectSettings, error) {
 	// model.ProjectSettings.RawParts []map[string]any is critical for round-trip
 	// fidelity of unrecognized part types — gen-typed read drops this.
 	// gen package: modelsdk/gen/settings (Settings$ProjectSettings).
-	return b.reader.GetProjectSettings()
+	return b.getProjectSettingsFromRaw()
 }
 func (b *MprBackend) UpdateProjectSettings(ps *model.ProjectSettings) error {
 	return b.updateProjectSettingsViaModelsdk(ps)
@@ -1145,7 +1145,7 @@ func (b *MprBackend) UpdateProjectSettings(ps *model.ProjectSettings) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListImageCollections() ([]*types.ImageCollection, error) {
-	return b.reader.ListImageCollections()
+	return b.listImageCollectionsFromRaw()
 }
 func (b *MprBackend) CreateImageCollection(ic *types.ImageCollection) error {
 	return b.createImageCollectionViaModelsdk(ic)

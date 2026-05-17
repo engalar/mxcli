@@ -34,7 +34,7 @@ type mprWorkflowMutator struct {
 
 // OpenWorkflowForMutation loads a workflow unit and returns a WorkflowMutator.
 func (b *MprBackend) openWorkflowForMutation(unitID model.ID) (backend.WorkflowMutator, error) {
-	rawBytes, err := b.reader.GetRawUnitBytes(unitID)
+	rawBytes, err := b.msdkReader.GetRawUnitBytes(string(unitID))
 	if err != nil {
 		return nil, fmt.Errorf("load raw unit bytes: %w", err)
 	}

@@ -25,7 +25,7 @@ func (b *MprBackend) deleteViewEntitySourceDocumentByNameViaModelsdk(moduleName,
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	docID, err := b.reader.FindViewEntitySourceDocumentID(moduleName, docName)
+	docID, err := b.msdkReader.FindViewEntitySourceDocumentID(moduleName, docName)
 	if err != nil {
 		return fmt.Errorf("find view entity source document: %w", err)
 	}
@@ -39,7 +39,7 @@ func (b *MprBackend) moveViewEntitySourceDocumentViaModelsdk(sourceModuleName st
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	docID, err := b.reader.FindViewEntitySourceDocumentID(sourceModuleName, docName)
+	docID, err := b.msdkReader.FindViewEntitySourceDocumentID(sourceModuleName, docName)
 	if err != nil {
 		return fmt.Errorf("find view entity source document: %w", err)
 	}
@@ -82,7 +82,7 @@ func (b *MprBackend) updateOqlQueriesForMovedEntityViaModelsdk(oldQualifiedName,
 	if b.msdkWriter == nil {
 		return 0, fmt.Errorf("modelsdk writer not initialized")
 	}
-	patches, count, err := b.reader.ScanOqlQueryUpdates(oldQualifiedName, newQualifiedName)
+	patches, count, err := b.scanOqlQueryUpdatesCompat(oldQualifiedName, newQualifiedName)
 	if err != nil {
 		return 0, err
 	}
