@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mxcli Architecture — sdk/mpr Migration</title>
+<style>
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+    --border: #30363d; --text: #c9d1d9; --muted: #8b949e;
+    --blue: #58a6ff; --green: #3fb950; --yellow: #d29922;
+    --red: #f85149; --purple: #bc8cff; --orange: #ffa657;
+    --cyan: #79c0ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.6; }
+  h1 { font-size: 22px; font-weight: 700; color: #fff; }
+  h2 { font-size: 16px; font-weight: 600; color: var(--cyan); border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 16px; }
+  h3 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+  .header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+  .badge-red { background: rgba(248,81,73,.15); color: var(--red); border: 1px solid rgba(248,81,73,.4); }
+  .badge-green { background: rgba(63,185,80,.15); color: var(--green); border: 1px solid rgba(63,185,80,.4); }
+  .badge-yellow { background: rgba(210,153,34,.15); color: var(--yellow); border: 1px solid rgba(210,153,34,.4); }
+  .badge-blue { background: rgba(88,166,255,.15); color: var(--blue); border: 1px solid rgba(88,166,255,.4); }
+  .tabs { display: flex; background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 24px; gap: 0; }
+  .tab { padding: 10px 18px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; transition: all .15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .panel { display: none; padding: 24px; max-width: 1100px; margin: 0 auto; }
+  .panel.active { display: block; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+  code { font-family: 'SF Mono', Consolas, monospace; font-size: 12px; background: var(--bg3); padding: 1px 5px; border-radius: 4px; color: var(--cyan); }
+  pre { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; overflow-x: auto; line-height: 1.7; }
+  .kw { color: var(--purple); } .fn { color: var(--blue); } .str { color: var(--orange); }
+  .cm { color: var(--muted); font-style: italic; } .ty { color: var(--green); }
+  /* progress */
+  .prog-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .prog-label { width: 180px; font-size: 12px; color: var(--text); flex-shrink: 0; }
+  .prog-bar { flex: 1; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 4px; transition: width .5s; }
+  .prog-pct { width: 36px; text-align: right; font-size: 12px; font-weight: 600; }
+  /* flow diagram */
+  .flow { display: flex; align-items: center; gap: 0; flex-wrap: nowrap; margin: 8px 0; }
+  .flow-box { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; white-space: nowrap; border: 1px solid; }
+  .flow-arrow { color: var(--muted); padding: 0 6px; font-size: 16px; }
+  .box-sdk { background: rgba(248,81,73,.1); border-color: rgba(248,81,73,.4); color: var(--red); }
+  .box-msdk { background: rgba(63,185,80,.1); border-color: rgba(63,185,80,.4); color: var(--green); }
+  .box-mprread { background: rgba(88,166,255,.1); border-color: rgba(88,166,255,.4); color: var(--blue); }
+  .box-gen { background: rgba(188,140,255,.1); border-color: rgba(188,140,255,.4); color: var(--purple); }
+  .box-model { background: rgba(255,166,87,.1); border-color: rgba(255,166,87,.4); color: var(--orange); }
+  .box-db { background: rgba(121,192,255,.1); border-color: rgba(121,192,255,.4); color: var(--cyan); }
+  .box-dead { background: rgba(139,148,158,.1); border-color: rgba(139,148,158,.3); color: var(--muted); text-decoration: line-through; }
+  /* table */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: var(--bg3); color: var(--muted); font-weight: 600; text-align: left; padding: 8px 12px; border: 1px solid var(--border); text-transform: uppercase; font-size: 11px; letter-spacing: .4px; }
+  td { padding: 7px 12px; border: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+  .tick { color: var(--green); font-weight: 700; }
+  .cross { color: var(--red); font-weight: 700; }
+  .warn { color: var(--yellow); font-weight: 700; }
+  /* bug callout */
+  .callout { border-radius: 6px; padding: 12px 16px; margin: 12px 0; border-left: 3px solid; font-size: 12px; }
+  .callout-red { background: rgba(248,81,73,.07); border-color: var(--red); }
+  .callout-green { background: rgba(63,185,80,.07); border-color: var(--green); }
+  .callout-yellow { background: rgba(210,153,34,.07); border-color: var(--yellow); }
+  .callout-blue { background: rgba(88,166,255,.07); border-color: var(--blue); }
+  .callout-title { font-weight: 700; margin-bottom: 4px; }
+  /* step diagram */
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step { display: flex; gap: 12px; }
+  .step-line { display: flex; flex-direction: column; align-items: center; }
+  .step-dot { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .step-conn { width: 2px; flex: 1; min-height: 16px; }
+  .step-content { padding: 2px 0 16px 0; flex: 1; }
+  .step-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .step-desc { font-size: 12px; color: var(--muted); }
+  .dot-done { background: var(--green); color: #fff; }
+  .dot-warn { background: var(--yellow); color: #000; }
+  .dot-todo { background: var(--bg3); color: var(--muted); border: 1px solid var(--border); }
+  .dot-bug { background: var(--red); color: #fff; }
+  .conn-done { background: var(--green); opacity: .4; }
+  .conn-todo { background: var(--border); }
+  /* method list */
+  .method-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
+  .method-item { background: var(--bg3); border: 1px solid var(--border); border-radius: 4px; padding: 5px 10px; font-size: 11px; display: flex; align-items: center; gap: 6px; }
+  .method-item .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .dot-green { background: var(--green); }
+  .dot-orange { background: var(--orange); }
+  .dot-red { background: var(--red); }
+  /* comparison */
+  .vs { display: grid; grid-template-columns: 1fr 40px 1fr; gap: 0; align-items: start; }
+  .vs-mid { display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--muted); font-size: 16px; padding-top: 8px; }
+  .chip { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .chip-bad { background: rgba(248,81,73,.2); color: var(--red); }
+  .chip-good { background: rgba(63,185,80,.2); color: var(--green); }
+  .io-step { display: flex; align-items: flex-start; gap: 10px; margin: 6px 0; }
+  .io-num { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .io-num-bad { background: rgba(248,81,73,.3); color: var(--red); }
+  .io-num-good { background: rgba(63,185,80,.3); color: var(--green); }
+  .io-text { font-size: 12px; }
+  .io-label { color: var(--muted); font-size: 10px; }
+  .highlight-red { color: var(--red); font-weight: 600; }
+  .highlight-green { color: var(--green); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>mxcli · sdk/mpr Migration</h1>
+    <div style="color:var(--muted);font-size:12px;margin-top:2px;">架构哲学 · 关键算法 · 迁移进度</div>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+    <span class="badge badge-green">Write path ~77%</span>
+    <span class="badge badge-yellow">Read path Phase 4</span>
+    <span class="badge badge-green">P0 generic.go bug 已修复</span>
+    <span class="badge badge-red">sdk/mpr: 2 imports remain</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="show('overview')">总览</div>
+  <div class="tab" onclick="show('algorithm')">关键算法</div>
+  <div class="tab" onclick="show('progress')">迁移进度</div>
+  <div class="tab" onclick="show('layers')">架构层次</div>
+  <div class="tab" onclick="show('phase4')">Phase 4 设计</div>
+</div>
+
+<!-- ═══════════════════ TAB: OVERVIEW ═══════════════════ -->
+<div id="overview" class="panel active">
+
+  <div class="grid2" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">架构哲学</div>
+      <p style="font-size:13px;margin-bottom:12px;">mxcli 的核心思路：<strong>单一强类型 SDK</strong>，用自动生成的 gen/* 类型替代手写 BSON 解析器，读写路径统一到 modelsdk/mpr。</p>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
+        <div style="display:flex;gap:8px;align-items:flex-start;">
+          <span style="color:var(--purple);font-size:16px;line-height:1;">⬡</span>
+          <span><strong style="color:var(--cyan);">gen/* 类型</strong>：codegen 从 Mendix reflection data 自动生成，53 个域，1500+ 类型。字段变更时 regenerate 即可，零手工维护。</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start;">
+          <span style="color:var(--blue);font-size:16px;line-height:1;">⬡</span>
+          <span><strong style="color:var(--cyan);">modelsdk/mpr.Reader</strong>：唯一的读路径入口，封装所有 BSON 解码细节。消费者只 import 一个包。</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start;">
+          <span style="color:var(--green);font-size:16px;line-height:1;">⬡</span>
+          <span><strong style="color:var(--cyan);">mprread 自由函数</strong>：gen-typed 列表器，按域独立，绕开 codec→mpr 循环 import。不对外暴露，是 Reader 的实现细节。</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start;">
+          <span style="color:var(--red);font-size:16px;line-height:1;">⬡</span>
+          <span><strong style="color:var(--cyan);">sdk/mpr（退役中）</strong>：手写 BSON parser，~2500 行，目标是完全删除。写路径已迁走 77%，读路径是 Phase 4。</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">当前状态快照</div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:12px;">整体迁移完成度</span>
+            <span style="font-size:12px;font-weight:700;color:var(--yellow);">~40%</span>
+          </div>
+          <div class="prog-bar"><div class="prog-fill" style="width:40%;background:var(--yellow);"></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
+          <div class="flow">
+            <div class="flow-box box-msdk">Write Path</div>
+            <div class="flow-arrow">→</div>
+            <span style="color:var(--green);font-weight:600;">77% 完成</span>
+            <span style="color:var(--muted);margin-left:8px;">modelsdk/mpr</span>
+          </div>
+          <div class="flow">
+            <div class="flow-box box-dead">Bridge Files</div>
+            <div class="flow-arrow">→</div>
+            <span style="color:var(--green);font-weight:600;">3/3 已删除</span>
+            <span style="color:var(--muted);margin-left:8px;">PR5 Phase 2</span>
+          </div>
+          <div class="flow">
+            <div class="flow-box box-sdk">Read Path</div>
+            <div class="flow-arrow">→</div>
+            <span style="color:var(--red);font-weight:600;">0% 完成</span>
+            <span style="color:var(--muted);margin-left:8px;">Phase 4 目标</span>
+          </div>
+          <div class="flow">
+            <div class="flow-box box-sdk">sdk/mpr imports</div>
+            <div class="flow-arrow">→</div>
+            <span style="color:var(--red);font-weight:600;">2 处残留</span>
+            <span style="color:var(--muted);margin-left:8px;">backend.go + project_tree.go</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">数据流全景：现在 vs 目标</div>
+    <div class="vs">
+      <div>
+        <div style="color:var(--red);font-weight:700;margin-bottom:12px;">现在（读路径仍走 sdk/mpr）</div>
+        <div class="flow" style="flex-wrap:wrap;gap:4px;">
+          <div class="flow-box box-db">SQLite</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box box-sdk">sdk/mpr<br><small>parser_*.go</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box box-model">model.*</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box" style="background:rgba(139,148,158,.1);border-color:var(--border);color:var(--muted);">backend → executor</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">backend.go: b.reader = *sdkmpr.Reader（125个方法）<br>project_tree.go: sdkmpr.Open(path)</div>
+        <div class="callout callout-red" style="margin-top:8px;">
+          <div class="callout-title">⚠ 维护负担</div>
+          ~2500 行手写 BSON parser，每次格式变更双处维护
+        </div>
+      </div>
+      <div class="vs-mid">⟶</div>
+      <div>
+        <div style="color:var(--green);font-weight:700;margin-bottom:12px;">目标（Phase 4 完成后）</div>
+        <div class="flow" style="flex-wrap:wrap;gap:4px;">
+          <div class="flow-box box-db">SQLite</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box box-msdk">modelsdk/mpr<br><small>Reader</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box box-mprread">mprread<br><small>free funcs</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box box-gen">gen/*</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box box-model">model.*</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">backend.go: b.reader = *modelsdkmpr.Reader（统一）<br>sdk/mpr 整目录删除</div>
+        <div class="callout callout-green" style="margin-top:8px;">
+          <div class="callout-title">✓ 目标收益</div>
+          gen/* 自动生成，编译期类型安全，消除 parser_*.go
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════ TAB: ALGORITHM ═══════════════════ -->
+<div id="algorithm" class="panel">
+
+  <div class="card" style="margin-bottom:20px;">
+    <h2>关键算法：Unit Index Join 模式</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">ContainerID 是 SQLite 行级元数据，不在 BSON 内容中。所有需要 ContainerID 的调用必须做两次查询并 join。</p>
+    <div class="grid2">
+      <div>
+        <div class="card-title"><span class="chip chip-bad" style="text-decoration:line-through;">BUG</span> <span class="chip chip-good">✓ 已修复</span> 修复前 generic.go（3次IO，commit 6f5efb6c 前）</div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-line"><div class="step-dot dot-done">1</div><div class="step-conn conn-done"></div></div>
+            <div class="step-content">
+              <div class="step-title"><code>r.ListUnitsByType(typeName)</code></div>
+              <div class="step-desc">SQL: SELECT UnitID, <strong style="color:var(--green);">ContainerID</strong>, Contents FROM Unit<br>→ <code>[]UnitRef{ID, ContainerID, Type, Contents}</code><br><span style="color:var(--green);">✓ Contents 已在此！ContainerID 已在此！</span></div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-line"><div class="step-dot" style="background:rgba(248,81,73,.3);color:var(--red);border:1px solid var(--red);">!</div><div class="step-conn conn-done"></div></div>
+            <div class="step-content">
+              <div class="step-title" style="text-decoration:line-through;color:var(--muted);"><code>r.GetRawUnitBytes(ref.ID)</code> 重复IO</div>
+              <div class="step-desc" style="color:var(--muted);">已删除：忽略了 ref.Contents，再次读 BSON</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-line"><div class="step-dot" style="background:rgba(248,81,73,.3);color:var(--red);border:1px solid var(--red);">!</div><div class="step-conn conn-done"></div></div>
+            <div class="step-content">
+              <div class="step-title" style="text-decoration:line-through;color:var(--muted);">返回 <code>[]T</code> — 丢失ContainerID</div>
+              <div class="step-desc" style="color:var(--muted);">已修复：现在返回 <code>[]Unit[T]{Element, ContainerID}</code></div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-line"><div class="step-dot" style="background:rgba(248,81,73,.3);color:var(--red);border:1px solid var(--red);">!</div></div>
+            <div class="step-content">
+              <div class="step-title" style="text-decoration:line-through;color:var(--muted);">调用方手动 join（每处 5-6 行样板）</div>
+              <div class="step-desc" style="color:var(--muted);">已消除：ContainerID 随结果返回，无需 join</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card-title"><span class="chip chip-good">✓ 已落地</span> 修复后实现（1次IO，commit 6f5efb6c）</div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-line"><div class="step-dot dot-done">1</div><div class="step-conn conn-done"></div></div>
+            <div class="step-content">
+              <div class="step-title"><code>r.ListUnitsByType(typeName)</code></div>
+              <div class="step-desc">同一次 SQL 查询，拿到所有需要的数据</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-line"><div class="step-dot dot-done">2</div><div class="step-conn conn-done"></div></div>
+            <div class="step-content">
+              <div class="step-title"><code>codec.Decode(ref.Contents)</code> <span class="chip chip-good">直接用</span></div>
+              <div class="step-desc"><span class="highlight-green">用 ref.Contents，避免第二次读</span></div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-line"><div class="step-dot dot-done">3</div></div>
+            <div class="step-content">
+              <div class="step-title">返回 <code>[]Unit[T]{Element, ContainerID}</code></div>
+              <div class="step-desc"><span class="highlight-green">ContainerID 随结果返回</span>，调用方无需 join<br>消除 30 处重复样板代码</div>
+            </div>
+          </div>
+        </div>
+        <div class="callout callout-green" style="margin-top:8px;">
+          <div class="callout-title">✓ 已落地：新泛型结构（modelsdk/mprread/generic.go）</div>
+          <pre style="margin-top:8px;"><span class="cm">// ListUnitsWithContainer — 1次IO，ContainerID随返回</span>
+<span class="kw">type</span> <span class="ty">Unit</span>[T element.Element] <span class="kw">struct</span> {
+    Element     T
+    ContainerID model.ID
+}
+<span class="kw">func</span> <span class="fn">ListUnitsWithContainer</span>[T element.Element](r *mmpr.Reader, typeName <span class="ty">string</span>) ([]<span class="ty">Unit</span>[T], <span class="ty">error</span>)
+<span class="cm">// ListUnitsByType 向后兼容，委托给 ListUnitsWithContainer</span>
+<span class="kw">func</span> <span class="fn">ListUnitsByType</span>[T element.Element](r *mmpr.Reader, typeName <span class="ty">string</span>) ([]T, <span class="ty">error</span>)</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <h2>算法示例：ListDataTransformers</h2>
+    <div class="grid2">
+      <div>
+        <div class="card-title">Track A — project_tree.go（只需 Name + ContainerID）</div>
+        <pre><span class="cm">// 旧：sdk/mpr，1次SQL + BSON手工解析</span>
+dts, _ := reader.ListDataTransformers()
+<span class="kw">for</span> _, dt := <span class="kw">range</span> dts {
+    h.FindModuleID(dt.ContainerID)
+    treeElement{Name: dt.Name, ...}
+}
+
+<span class="cm">// 新：mprread + unit index join（0 converter）</span>
+dtRefs, _ := mreader.<span class="fn">ListUnitsByType</span>(<span class="str">"DataTransformers$DataTransformer"</span>)
+byID := <span class="kw">make</span>(<span class="kw">map</span>[<span class="ty">string</span>]model.ID, <span class="kw">len</span>(dtRefs))
+<span class="kw">for</span> _, ref := <span class="kw">range</span> dtRefs {
+    byID[ref.ID] = model.ID(ref.ContainerID)  <span class="cm">// UnitRef有ContainerID</span>
+}
+dts, _ := mprread.<span class="fn">ListDataTransformers</span>(mreader)
+<span class="kw">for</span> _, dt := <span class="kw">range</span> dts {
+    cID := byID[<span class="ty">string</span>(dt.<span class="fn">ID</span>())]  <span class="cm">// join</span>
+    treeElement{Name: dt.<span class="fn">Name</span>(), ContainerID: cID}
+}</pre>
+      </div>
+      <div>
+        <div class="card-title">Track B — reader_model.go（需要 Steps 深度字段）</div>
+        <pre><span class="kw">func</span> (r *<span class="ty">Reader</span>) <span class="fn">ListDataTransformers</span>() ([]*model.<span class="ty">DataTransformer</span>, <span class="ty">error</span>) {
+    <span class="cm">// Step 1: 拿 ContainerID</span>
+    refs, _ := r.<span class="fn">ListUnitsByType</span>(<span class="str">"DataTransformers$DataTransformer"</span>)
+    byID := <span class="kw">make</span>(<span class="kw">map</span>[<span class="ty">string</span>]model.ID)
+    <span class="kw">for</span> _, ref := <span class="kw">range</span> refs {
+        byID[ref.ID] = model.ID(ref.ContainerID)
+    }
+    <span class="cm">// Step 2: 解码 gen 类型</span>
+    gs, _ := mprread.<span class="fn">ListDataTransformers</span>(r)
+    <span class="cm">// Step 3: gen → model（含 Steps）</span>
+    out := <span class="kw">make</span>([]*model.<span class="ty">DataTransformer</span>, 0, <span class="kw">len</span>(gs))
+    <span class="kw">for</span> _, g := <span class="kw">range</span> gs {
+        dt := &model.<span class="ty">DataTransformer</span>{
+            BaseElement: model.<span class="ty">BaseElement</span>{ID: model.ID(g.<span class="fn">ID</span>())},
+            ContainerID: byID[<span class="ty">string</span>(g.<span class="fn">ID</span>())],
+            Name:        g.<span class="fn">Name</span>(),
+            SourceType:  g.<span class="fn">SourceType</span>(),
+        }
+        <span class="kw">for</span> _, s := <span class="kw">range</span> g.<span class="fn">StepsItems</span>() {
+            step, _ := s.(*genDT.<span class="ty">Step</span>)
+            dt.Steps = <span class="kw">append</span>(dt.Steps, &model.<span class="ty">DataTransformerStep</span>{
+                Technology: step.<span class="fn">Technology</span>(),
+            })
+        }
+        out = <span class="kw">append</span>(out, dt)
+    }
+    <span class="kw">return</span> out, <span class="kw">nil</span>
+}</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>架构优缺点对比</h2>
+    <table>
+      <tr>
+        <th>维度</th>
+        <th>sdk/mpr（旧）</th>
+        <th>modelsdk/mprread（新）</th>
+        <th>评分</th>
+      </tr>
+      <tr>
+        <td><strong>SQL查询次数</strong></td>
+        <td>1次（listUnitsByType 同时拿 ContainerID + Contents）</td>
+        <td><span style="text-decoration:line-through;color:var(--muted);">旧 2次（bug）</span> → <span class="highlight-green">已修复 1次</span></td>
+        <td><span class="tick">✓</span> 现在等价</td>
+      </tr>
+      <tr>
+        <td><strong>类型安全</strong></td>
+        <td>BSON map[string]any，运行时类型断言</td>
+        <td>gen/* 强类型，编译期检查</td>
+        <td><span class="tick">✓</span> 新更好</td>
+      </tr>
+      <tr>
+        <td><strong>维护成本</strong></td>
+        <td>20+ parser_*.go 手写，~2500行</td>
+        <td>codegen 自动生成，人工只写 converter</td>
+        <td><span class="tick">✓</span> 新更好</td>
+      </tr>
+      <tr>
+        <td><strong>ContainerID获取</strong></td>
+        <td>透明（parser直接拿 u.ContainerID）</td>
+        <td><span style="text-decoration:line-through;color:var(--muted);">旧：需 join 样板 5-6行</span> → <span class="highlight-green">已修复：Unit[T] 携带 ContainerID</span></td>
+        <td><span class="tick">✓</span> 现在等价</td>
+      </tr>
+      <tr>
+        <td><strong>代码复杂度</strong></td>
+        <td>parser 逻辑集中，但不可测</td>
+        <td><span style="text-decoration:line-through;color:var(--muted);">旧：join 样板分散</span> → 修复后无样板，单元可测</td>
+        <td><span class="tick">✓</span> 新更好</td>
+      </tr>
+      <tr>
+        <td><strong>格式变更响应</strong></td>
+        <td>手改 parser，易遗漏</td>
+        <td>regenerate gen/，converter 仅补增量</td>
+        <td><span class="tick">✓</span> 新更好</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB: PROGRESS ═══════════════════ -->
+<div id="progress" class="panel">
+
+  <div class="grid2" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">整体进度</div>
+      <div class="prog-row"><span class="prog-label">Write path 迁移</span><div class="prog-bar"><div class="prog-fill" style="width:77%;background:linear-gradient(90deg,var(--green),#2ea043);"></div></div><span class="prog-pct" style="color:var(--green);">77%</span></div>
+      <div class="prog-row"><span class="prog-label">Bridge 文件删除</span><div class="prog-bar"><div class="prog-fill" style="width:100%;background:var(--green);"></div></div><span class="prog-pct" style="color:var(--green);">3/3</span></div>
+      <div class="prog-row"><span class="prog-label">Read path 迁移</span><div class="prog-bar"><div class="prog-fill" style="width:0%;background:var(--red);"></div></div><span class="prog-pct" style="color:var(--red);">0%</span></div>
+      <div class="prog-row"><span class="prog-label">sdk/mpr import 清零</span><div class="prog-bar"><div class="prog-fill" style="width:0%;background:var(--red);"></div></div><span class="prog-pct" style="color:var(--red);">0%</span></div>
+      <div class="prog-row"><span class="prog-label">sdk/mpr 目录删除</span><div class="prog-bar"><div class="prog-fill" style="width:0%;background:var(--red);"></div></div><span class="prog-pct" style="color:var(--red);">0%</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">PR 历史</div>
+      <div class="steps">
+        <div class="step"><div class="step-line"><div class="step-dot dot-done">✓</div><div class="step-conn conn-done"></div></div><div class="step-content"><div class="step-title">PR5 Phase 1：modelsdk/mprread 完成</div><div class="step-desc">31 个自由函数，覆盖所有域 lister/getter</div></div></div>
+        <div class="step"><div class="step-line"><div class="step-dot dot-done">✓</div><div class="step-conn conn-done"></div></div><div class="step-content"><div class="step-title">PR5 Phase 2：Bridge 文件删除</div><div class="step-desc">sdkmpr_bridge.go / repos/sdk_bridge.go / bson_reader_bridge.go<br>5 commits，全量测试通过</div></div></div>
+        <div class="step"><div class="step-line"><div class="step-dot dot-done">✓</div><div class="step-conn conn-done"></div></div><div class="step-content"><div class="step-title">P0 bugfix：generic.go double IO 修复</div><div class="step-desc"><code>ListUnitsWithContainer[T]</code> + <code>Unit[T]{Element, ContainerID}</code>，1次IO，向后兼容</div></div></div>
+        <div class="step"><div class="step-line"><div class="step-dot dot-todo">4</div><div class="step-conn conn-todo"></div></div><div class="step-content"><div class="step-title">Phase 4：Read path 迁移</div><div class="step-desc">Track A（project_tree.go）+ Track B（reader_model.go）</div></div></div>
+        <div class="step"><div class="step-line"><div class="step-dot dot-todo">5</div></div><div class="step-content"><div class="step-title">Phase 5：删除 sdk/mpr</div><div class="step-desc">前置：Phase 4 全部完成，0 import 残留</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">读路径方法迁移清单（51 个方法）</div>
+    <div class="grid2" style="margin-bottom:12px;">
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">modelsdk/mpr.Reader 已有（无需迁移）</div>
+        <div class="method-grid">
+          <div class="method-item"><div class="dot dot-green"></div>Close</div>
+          <div class="method-item"><div class="dot dot-green"></div>ContentsDir</div>
+          <div class="method-item"><div class="dot dot-green"></div>Version</div>
+          <div class="method-item"><div class="dot dot-green"></div>ProjectVersion</div>
+          <div class="method-item"><div class="dot dot-green"></div>GetMendixVersion</div>
+          <div class="method-item"><div class="dot dot-green"></div>GetProjectRootID</div>
+          <div class="method-item"><div class="dot dot-green"></div>ListModules</div>
+          <div class="method-item"><div class="dot dot-green"></div>GetModule</div>
+          <div class="method-item"><div class="dot dot-green"></div>GetModuleByName</div>
+          <div class="method-item"><div class="dot dot-green"></div>ListFolders</div>
+          <div class="method-item"><div class="dot dot-green"></div>ListUnits</div>
+          <div class="method-item"><div class="dot dot-green"></div>ListAllUnitIDs</div>
+          <div class="method-item"><div class="dot dot-green"></div>GetRawUnit</div>
+          <div class="method-item"><div class="dot dot-green"></div>GetRawUnitBytes</div>
+          <div class="method-item"><div class="dot dot-green"></div>ListRawUnits</div>
+          <div class="method-item"><div class="dot dot-green"></div>ListRawUnitsByType</div>
+          <div class="method-item"><div class="dot dot-green"></div>GetRawUnitByName</div>
+          <div class="method-item"><div class="dot dot-green"></div>GetRawMicroflowByName</div>
+          <div class="method-item"><div class="dot dot-green"></div>FindCustomWidgetType</div>
+          <div class="method-item"><div class="dot dot-green"></div>FindAllCustomWidgetTypes</div>
+          <div class="method-item"><div class="dot dot-green"></div>GetUnitTypes</div>
+          <div class="method-item"><div class="dot dot-green"></div>InvalidateCache</div>
+          <div class="method-item"><div class="dot dot-green"></div>FindViewEntitySource...</div>
+          <div class="method-item"><div class="dot dot-green"></div>FindAllViewEntity...</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">需加到 reader_model.go（via mprread）</div>
+        <div class="method-grid">
+          <div class="method-item"><div class="dot dot-orange"></div>ListEnumerations</div>
+          <div class="method-item"><div class="dot dot-orange"></div>GetEnumeration</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListConstants</div>
+          <div class="method-item"><div class="dot dot-orange"></div>GetConstant</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListScheduledEvents</div>
+          <div class="method-item"><div class="dot dot-orange"></div>GetScheduledEvent</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListNavigationDocs</div>
+          <div class="method-item"><div class="dot dot-orange"></div>GetNavigation</div>
+          <div class="method-item"><div class="dot dot-orange"></div>GetProjectSettings</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListModuleSettings</div>
+          <div class="method-item"><div class="dot dot-orange"></div>GetModuleSettings</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListImageCollections</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListImportMappings</div>
+          <div class="method-item"><div class="dot dot-orange"></div>GetImportMapping...</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListExportMappings</div>
+          <div class="method-item"><div class="dot dot-orange"></div>GetExportMapping...</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListJsonStructures</div>
+          <div class="method-item"><div class="dot dot-orange"></div>GetJsonStructure...</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListBusinessEvents</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListDatabaseConns</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListDataTransformers</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListConsumedOData</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListPublishedOData</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListConsumedRest</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListPublishedRest</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListAgentEditorModels</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListAgentEditorKBs</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListAgentEditorMCPs</div>
+          <div class="method-item"><div class="dot dot-orange"></div>ListAgentEditorAgents</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">
+          <span style="color:var(--green);">● 已有</span> &nbsp;
+          <span style="color:var(--orange);">● 待加（via mprread）</span> &nbsp;
+          <span style="color:var(--red);">● 无对应（需新增 mprread 函数）</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════ TAB: LAYERS ═══════════════════ -->
+<div id="layers" class="panel">
+  <div class="card" style="margin-bottom:20px;">
+    <h2>架构层次图</h2>
+    <div style="display:flex;flex-direction:column;gap:3px;align-items:stretch;max-width:700px;margin:0 auto;">
+      <div style="background:rgba(139,148,158,.08);border:1px solid var(--border);border-radius:6px;padding:12px 20px;text-align:center;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">消费层</div>
+        <div style="display:flex;gap:12px;justify-content:center;">
+          <div class="flow-box" style="background:rgba(139,148,158,.1);border-color:var(--border);color:var(--text);">mdl/executor</div>
+          <div class="flow-box" style="background:rgba(139,148,158,.1);border-color:var(--border);color:var(--text);">cmd/mxcli</div>
+          <div class="flow-box" style="background:rgba(139,148,158,.1);border-color:var(--border);color:var(--text);">linter / catalog</div>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--muted);font-size:18px;line-height:1;">↕</div>
+      <div style="background:rgba(255,166,87,.06);border:1px solid rgba(255,166,87,.3);border-radius:6px;padding:12px 20px;text-align:center;">
+        <div style="font-size:11px;color:var(--orange);margin-bottom:4px;">Backend 抽象层（model.* 类型）</div>
+        <div style="display:flex;gap:12px;justify-content:center;">
+          <div class="flow-box box-model">mdl/backend interface</div>
+          <div class="flow-box box-model">mdl/types.*</div>
+          <div class="flow-box box-model">model.*</div>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--muted);font-size:18px;line-height:1;">↕</div>
+      <div style="background:rgba(63,185,80,.06);border:1px solid rgba(63,185,80,.3);border-radius:6px;padding:12px 20px;text-align:center;">
+        <div style="font-size:11px;color:var(--green);margin-bottom:4px;">modelsdk/mpr — 读写统一入口（目标）</div>
+        <div style="display:flex;gap:12px;justify-content:center;">
+          <div class="flow-box box-msdk">Reader（41方法 → 72方法）</div>
+          <div class="flow-box box-msdk">UnitWriter（写路径）</div>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--muted);font-size:18px;line-height:1;">↕</div>
+      <div style="background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.3);border-radius:6px;padding:12px 20px;text-align:center;">
+        <div style="font-size:11px;color:var(--blue);margin-bottom:4px;">modelsdk/mprread — gen-typed 自由函数（实现细节，不对外）</div>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          <div class="flow-box box-mprread">ListMicroflows</div>
+          <div class="flow-box box-mprread">ListEnumerations</div>
+          <div class="flow-box box-mprread">ListDataTransformers</div>
+          <div style="color:var(--muted);align-self:center;">... 31个</div>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--muted);font-size:18px;line-height:1;">↕</div>
+      <div style="background:rgba(188,140,255,.06);border:1px solid rgba(188,140,255,.3);border-radius:6px;padding:12px 20px;text-align:center;">
+        <div style="font-size:11px;color:var(--purple);margin-bottom:4px;">modelsdk/gen — 自动生成类型（53 域，1500+ 类型）</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <div class="flow-box box-gen">gen/microflows</div>
+          <div class="flow-box box-gen">gen/enumerations</div>
+          <div class="flow-box box-gen">gen/pages</div>
+          <div class="flow-box box-gen">gen/security</div>
+          <div style="color:var(--muted);align-self:center;">... 53个</div>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--muted);font-size:18px;line-height:1;">↕</div>
+      <div style="background:rgba(121,192,255,.06);border:1px solid rgba(121,192,255,.3);border-radius:6px;padding:12px 20px;text-align:center;">
+        <div style="font-size:11px;color:var(--cyan);margin-bottom:4px;">存储层</div>
+        <div style="display:flex;gap:12px;justify-content:center;">
+          <div class="flow-box box-db">SQLite（MPR v1）</div>
+          <div class="flow-box box-db">mprcontents/（MPR v2）</div>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--muted);font-size:18px;line-height:1;">↕</div>
+      <div style="background:rgba(248,81,73,.06);border:1px dashed rgba(248,81,73,.4);border-radius:6px;padding:12px 20px;text-align:center;">
+        <div style="font-size:11px;color:var(--red);margin-bottom:4px;">sdk/mpr — 退役中（目标：删除）</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <div class="flow-box box-dead">parser_*.go ×20</div>
+          <div class="flow-box box-dead">reader.go</div>
+          <div class="flow-box box-dead">writer.go（死代码）</div>
+          <div style="color:var(--muted);align-self:center;">~2500行</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB: PHASE 4 ═══════════════════ -->
+<div id="phase4" class="panel">
+
+  <div class="grid2" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">Track A — project_tree.go</div>
+      <div class="steps">
+        <div class="step"><div class="step-line"><div class="step-dot dot-todo">A1</div><div class="step-conn conn-todo"></div></div><div class="step-content"><div class="step-title">mprread 新增 8 个 Gen 函数</div><div class="step-desc">ListPages/Snippets/Layouts/DomainModels/Workflows/JavaActions/BuildingBlocks/PageTemplates<br>每个 = <code>ListUnitsByType[T](r, "Forms$Page")</code>，1行</div></div></div>
+        <div class="step"><div class="step-line"><div class="step-dot dot-todo">A2</div><div class="step-conn conn-todo"></div></div><div class="step-content"><div class="step-title">薄型：11 个方法用 mprread + join</div><div class="step-desc">ListDataTransformers/ImageCollections/JsonStructures/... 只要 ContainerID+Name，零 converter</div></div></div>
+        <div class="step"><div class="step-line"><div class="step-dot dot-todo">A3</div><div class="step-conn conn-todo"></div></div><div class="step-content"><div class="step-title">Gen 变体：8 个方法换 mprread</div><div class="step-desc">reader.ListPagesGen() → mprread.ListPages(mreader)，ContainerID 已有 join map</div></div></div>
+        <div class="step"><div class="step-line"><div class="step-dot dot-todo">A4</div><div class="step-conn conn-todo"></div></div><div class="step-content"><div class="step-title">富型：5 个 buildXxxChildren 改 gen 类型参数</div><div class="step-desc">PublishedOData/Rest/BusinessEvents/ConsumedRest/DatabaseConnection 的 helper 函数改接 gen 类型</div></div></div>
+        <div class="step"><div class="step-line"><div class="step-dot dot-todo">A5</div></div><div class="step-content"><div class="step-title">去除 sdkmpr import</div><div class="step-desc">删 reader *sdkReader，仅保留 mreader *mmpr.Reader</div></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Track B — reader_model.go</div>
+      <div class="steps">
+        <div class="step"><div class="step-line"><div class="step-dot dot-done">✓</div><div class="step-conn conn-done"></div></div><div class="step-content"><div class="step-title">B0 ✓ 已完成：修复 generic.go double IO <span style="font-size:10px;color:var(--muted);">6f5efb6c</span></div><div class="step-desc">用 ref.Contents 替代 GetRawUnitBytes，新增 <code>ListUnitsWithContainer[T]</code> 返回 <code>Unit[T]{Element, ContainerID}</code>，向后兼容 <code>ListUnitsByType[T]</code></div></div></div>
+        <div class="step"><div class="step-line"><div class="step-dot dot-todo">B1</div><div class="step-conn conn-todo"></div></div><div class="step-content"><div class="step-title">新建 reader_model.go，按域分批加方法</div><div class="step-desc">α 类（AgentEditor 4个，passthrough）→ β 类（薄 converter 12个）→ γ 类（富字段 15个）<br>每域独立 commit，立刻验证</div></div></div>
+        <div class="step"><div class="step-line"><div class="step-dot dot-todo">B2</div><div class="step-conn conn-todo"></div></div><div class="step-content"><div class="step-title">backend.go 合并双 reader</div><div class="step-desc">去掉 b.msdkReader 字段，b.reader 改为 *modelsdkmpr.Reader，Connect() 简化</div></div></div>
+        <div class="step"><div class="step-line"><div class="step-dot dot-todo">B3</div></div><div class="step-content"><div class="step-title">删除 convert_reader.go</div><div class="step-desc">3个旧 converter 迁移进 reader_model.go</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <h2>Converter 复杂度分级</h2>
+    <table>
+      <tr><th>类别</th><th>域</th><th>深度字段</th><th>Converter 难度</th><th>project_tree 需要</th><th>backend 需要</th></tr>
+      <tr><td><strong style="color:var(--green);">α passthrough</strong></td><td>AgentEditor ×4</td><td>mprread 已返回 types.*，直接用</td><td><span class="tick">零</span></td><td><span class="tick">✓ 直接</span></td><td><span class="tick">✓ 直接</span></td></tr>
+      <tr><td><strong style="color:var(--blue);">β 薄</strong></td><td>Enumeration, Constant, ScheduledEvent, ImageCollection, NavigationDoc, ModuleSettings ×6</td><td>ContainerID + Name（+ Values 对 enum）</td><td><span class="warn">~5行/域</span></td><td><span class="warn">join only</span></td><td><span class="warn">converter</span></td></tr>
+      <tr><td><strong style="color:var(--yellow);">γ 中等</strong></td><td>ImportMapping, ExportMapping, JsonStructure, DataTransformer, DatabaseConnection ×5</td><td>嵌套结构（Steps、Elements）</td><td><span class="warn">~20行/域</span></td><td><span class="warn">join only</span></td><td><span class="cross">完整 converter</span></td></tr>
+      <tr><td><strong style="color:var(--red);">δ 富</strong></td><td>PublishedOData, PublishedRest, BusinessEvents, ConsumedRest, ProjectSettings, Navigation ×6</td><td>深度嵌套（EntitySets, Channels, Profiles）</td><td><span class="cross">~50-100行/域</span></td><td><span class="cross">改 helper 函数</span></td><td><span class="cross">完整 converter</span></td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>改进建议优先级</h2>
+    <div class="grid3">
+      <div class="callout callout-green">
+        <div class="callout-title">✅ P0 已完成：generic.go 双重IO 已修复（6f5efb6c）</div>
+        <p><code>ListUnitsWithContainer[T]</code> 用 ref.Contents 直接解码，返回 <code>Unit[T]{Element, ContainerID}</code>。向后兼容，所有现有调用方零修改。</p>
+      </div>
+      <div class="callout callout-yellow">
+        <div class="callout-title">🟡 P1：A1 + A2 + A3（project_tree.go 薄型）</div>
+        <p>零 converter，快速消除 sdk/mpr 大部分调用。可在 B1 前并行进行。</p>
+      </div>
+      <div class="callout callout-blue">
+        <div class="callout-title">🔵 P2：B1 按域分批（α→β→γ→δ）</div>
+        <p>每域端到端验证后提交。α 最快（passthrough），δ 最复杂（需理解 gen 类型深度字段）。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
