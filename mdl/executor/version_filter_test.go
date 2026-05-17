@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendixlabs/mxcli/sdk/mpr/version"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 func TestParseVersionDirective(t *testing.T) {
@@ -48,13 +48,13 @@ func TestParseVersionDirective(t *testing.T) {
 }
 
 func TestVersionConstraintMatches(t *testing.T) {
-	mx1024 := &version.ProjectVersion{MajorVersion: 10, MinorVersion: 24}
-	mx110 := &version.ProjectVersion{MajorVersion: 11, MinorVersion: 0}
-	mx116 := &version.ProjectVersion{MajorVersion: 11, MinorVersion: 6}
+	mx1024 := &types.ProjectVersion{MajorVersion: 10, MinorVersion: 24}
+	mx110 := &types.ProjectVersion{MajorVersion: 11, MinorVersion: 0}
+	mx116 := &types.ProjectVersion{MajorVersion: 11, MinorVersion: 6}
 
 	tests := []struct {
 		constraint string
-		pv         *version.ProjectVersion
+		pv         *types.ProjectVersion
 		want       bool
 	}{
 		// min only: 11.0+
@@ -95,8 +95,8 @@ create view entity Test.MyView (...);
 create entity Test.Universal (...);
 `
 
-	mx1024 := &version.ProjectVersion{MajorVersion: 10, MinorVersion: 24, ProductVersion: "10.24.0"}
-	mx116 := &version.ProjectVersion{MajorVersion: 11, MinorVersion: 6, ProductVersion: "11.6.0"}
+	mx1024 := &types.ProjectVersion{MajorVersion: 10, MinorVersion: 24, ProductVersion: "10.24.0"}
+	mx116 := &types.ProjectVersion{MajorVersion: 11, MinorVersion: 6, ProductVersion: "11.6.0"}
 
 	// On 10.24: VIEW ENTITY line should be stripped
 	filtered1024, skipped1024 := filterByVersion(content, mx1024)

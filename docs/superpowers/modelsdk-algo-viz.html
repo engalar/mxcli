@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ModelSDK · 强类型读写算法图解</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #070b14;
+  --bg2: #0d1525;
+  --bg3: #131d2e;
+  --grid: #1a2540;
+  --border: #1e2d48;
+  --amber: #f59e0b;
+  --amber-dim: #92600a;
+  --green: #10b981;
+  --green-dim: #065f46;
+  --blue: #3b82f6;
+  --blue-dim: #1d4ed8;
+  --red: #f43f5e;
+  --red-dim: #9f1239;
+  --purple: #a78bfa;
+  --text: #c8d8f0;
+  --text-dim: #4a6080;
+  --text-bright: #e8f4ff;
+  --mono: 'IBM Plex Mono', monospace;
+  --serif: 'Crimson Pro', Georgia, serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  background-image:
+    radial-gradient(circle at 25% 10%, rgba(59,130,246,0.04) 0%, transparent 50%),
+    radial-gradient(circle at 75% 90%, rgba(245,158,11,0.04) 0%, transparent 50%),
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: auto, auto, 40px 40px, 40px 40px;
+  color: var(--text);
+  font-family: var(--mono);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+header {
+  padding: 56px 40px 40px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+header::before {
+  content: '';
+  position: absolute;
+  top: -60px; left: -60px; right: -60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--amber), transparent);
+  animation: scanline 4s ease-in-out infinite;
+}
+@keyframes scanline {
+  0%,100% { top: -60px; opacity: 0; }
+  50% { top: 200px; opacity: 1; }
+}
+.header-tag {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+h1 {
+  font-family: var(--serif);
+  font-size: 48px;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--text-bright);
+  line-height: 1.15;
+  margin-bottom: 12px;
+}
+h1 span { color: var(--amber); font-style: normal; font-weight: 600; }
+.header-sub {
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+/* ── NAV ── */
+nav {
+  display: flex;
+  gap: 0;
+  padding: 0 40px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+.nav-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.nav-btn:hover { color: var(--text); }
+.nav-btn.active { color: var(--amber); border-bottom-color: var(--amber); }
+
+/* ── MAIN ── */
+main { padding: 40px; max-width: 1200px; margin: 0 auto; }
+
+.section { display: none; animation: fadeIn 0.3s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.section-title {
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--text-bright);
+  margin-bottom: 8px;
+}
+.section-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 36px;
+  letter-spacing: 0.3px;
+}
+
+/* ── ARCHITECTURE STACK ── */
+.arch-container {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+  align-items: start;
+}
+.layers { display: flex; flex-direction: column; gap: 6px; }
+.layer {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  background: var(--bg2);
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.layer:hover, .layer.selected {
+  background: var(--bg3);
+  border-left-color: var(--amber);
+  transform: translateX(4px);
+}
+.layer-num {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+.layer-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-bright);
+  margin-bottom: 4px;
+}
+.layer-pkg {
+  font-size: 11px;
+  color: var(--amber-dim);
+}
+.layer-arrow {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 14px;
+  padding: 2px 0;
+  letter-spacing: 2px;
+}
+
+.detail-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--amber);
+  padding: 24px;
+  min-height: 400px;
+  position: sticky;
+  top: 20px;
+}
+.detail-panel h3 {
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--text-bright);
+  margin-bottom: 16px;
+}
+.detail-empty {
+  color: var(--text-dim);
+  font-size: 12px;
+  text-align: center;
+  padding-top: 60px;
+  line-height: 2;
+}
+.prop-list { list-style: none; }
+.prop-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  display: flex;
+  gap: 12px;
+}
+.prop-key { color: var(--amber); min-width: 90px; font-weight: 500; }
+.prop-val { color: var(--text); }
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  margin-top: 12px;
+  margin-right: 6px;
+}
+.badge-amber { background: rgba(245,158,11,0.15); color: var(--amber); border: 1px solid var(--amber-dim); }
+.badge-green { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid var(--green-dim); }
+.badge-blue { background: rgba(59,130,246,0.15); color: var(--blue); border: 1px solid var(--blue-dim); }
+
+/* ── READ PATH ── */
+.read-canvas {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 32px;
+  margin-bottom: 20px;
+}
+.flow-nodes {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+.flow-node {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  position: relative;
+  transition: all 0.3s;
+}
+.flow-node.lit {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(16,185,129,0.08);
+  box-shadow: 0 0 12px rgba(16,185,129,0.2);
+}
+.flow-node.lazy {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: rgba(59,130,246,0.08);
+}
+.flow-arrow {
+  color: var(--text-dim);
+  font-size: 16px;
+  padding: 0 6px;
+  transition: color 0.3s;
+}
+.flow-arrow.lit { color: var(--green); }
+
+.read-stages {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+}
+.stage-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 16px;
+}
+.stage-num {
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+.stage-title { font-size: 13px; color: var(--text-bright); font-weight: 500; margin-bottom: 8px; }
+.stage-desc { font-size: 11px; color: var(--text-dim); line-height: 1.7; }
+
+.btn {
+  background: rgba(245,158,11,0.12);
+  border: 1px solid var(--amber-dim);
+  color: var(--amber);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn:hover {
+  background: rgba(245,158,11,0.22);
+  border-color: var(--amber);
+}
+.btn:active { transform: scale(0.97); }
+
+/* ── LAZY DETAIL ── */
+.lazy-viz {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 24px;
+  margin-top: 20px;
+}
+.lazy-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.lazy-state {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 16px;
+}
+.state-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.state-label.before { color: var(--text-dim); }
+.state-label.after { color: var(--green); }
+.prop-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.prop-row:last-child { border-bottom: none; }
+.prop-name { color: var(--amber); width: 100px; }
+.prop-status {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+.status-cold { background: rgba(74,96,128,0.3); color: var(--text-dim); }
+.status-warm { background: rgba(16,185,129,0.2); color: var(--green); }
+.status-skip { background: rgba(74,96,128,0.1); color: var(--text-dim); font-style: italic; }
+
+/* ── DIRTY TRACKING ── */
+.dirty-container {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+}
+.tree-canvas {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 32px;
+}
+.tree-node {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.4s;
+  position: relative;
+}
+.tree-node.dirty {
+  border-left-color: var(--red);
+  background: rgba(244,63,94,0.06);
+}
+.tree-node.child-dirty {
+  border-left-color: var(--amber);
+  background: rgba(245,158,11,0.04);
+}
+.tree-label { font-size: 13px; font-weight: 500; color: var(--text-bright); }
+.tree-type { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.dirty-bits {
+  margin-top: 8px;
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+.bit {
+  width: 16px; height: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 9px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim);
+  transition: all 0.3s;
+}
+.bit.set {
+  background: rgba(244,63,94,0.25);
+  border-color: var(--red);
+  color: var(--red);
+}
+.tree-connector {
+  width: 2px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 0 0 24px;
+  transition: background 0.4s;
+}
+.tree-connector.active { background: var(--red); }
+.tree-indent { padding-left: 24px; }
+
+.dirty-info {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--red);
+  padding: 24px;
+  position: sticky;
+  top: 20px;
+}
+.dirty-info h3 {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--text-bright);
+  margin-bottom: 16px;
+}
+.event-log {
+  list-style: none;
+  font-size: 11px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.event-log li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.event-log li.new-event {
+  animation: eventFlash 0.5s ease;
+}
+@keyframes eventFlash {
+  from { color: var(--amber); }
+  to { color: var(--text-dim); }
+}
+.log-fn { color: var(--green); }
+.log-num { color: var(--amber); }
+.log-err { color: var(--red); }
+
+/* ── ENCODER TREE ── */
+.encoder-grid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+}
+.decision-tree {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 32px;
+}
+.dt-root {
+  background: rgba(59,130,246,0.1);
+  border: 1px solid var(--blue);
+  padding: 12px 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--blue);
+  display: inline-block;
+  margin-bottom: 20px;
+}
+.dt-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.dt-cond {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-dim);
+  padding: 10px 14px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+}
+.dt-cond:hover { border-left-color: var(--amber); }
+.dt-cond.selected { border-left-color: var(--amber); background: rgba(245,158,11,0.06); }
+.dt-label { color: var(--text-dim); margin-bottom: 4px; font-size: 10px; letter-spacing: 1px; }
+.dt-text { color: var(--text); font-size: 11px; }
+.dt-outcome {
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 500;
+  min-width: 120px;
+  text-align: center;
+}
+.outcome-passthrough { background: rgba(16,185,129,0.12); color: var(--green); border: 1px solid var(--green-dim); }
+.outcome-full { background: rgba(244,63,94,0.12); color: var(--red); border: 1px solid var(--red-dim); }
+.outcome-selective { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid var(--amber-dim); }
+.outcome-skip { background: rgba(74,96,128,0.1); color: var(--text-dim); border: 1px solid var(--border); }
+
+.dt-indent {
+  border-left: 1px dashed var(--border);
+  margin-left: 16px;
+  padding-left: 16px;
+}
+.dt-branch-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  padding: 4px 0;
+}
+
+.encoder-explain {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--amber);
+  padding: 24px;
+  position: sticky;
+  top: 20px;
+}
+.encoder-explain h3 {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--text-bright);
+  margin-bottom: 16px;
+}
+.explain-empty { color: var(--text-dim); font-size: 12px; line-height: 2; }
+.explain-content { font-size: 12px; line-height: 1.8; color: var(--text); }
+.explain-content .highlight { color: var(--amber); }
+.explain-content .code { color: var(--green); font-size: 11px; }
+.explain-content .perf { color: var(--purple); }
+
+/* ── CODE PATTERNS ── */
+.code-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+.code-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.code-tab:hover { color: var(--text); }
+.code-tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+
+.code-pane { display: none; }
+.code-pane.active { display: block; }
+
+pre {
+  background: #050810;
+  border: 1px solid var(--border);
+  border-top: none;
+  padding: 24px;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.75;
+  font-family: var(--mono);
+}
+.kw { color: #79c0ff; }
+.fn { color: #d2a8ff; }
+.str { color: #a5d6ff; }
+.num { color: var(--amber); }
+.cmt { color: var(--text-dim); font-style: italic; }
+.typ { color: var(--green); }
+.op { color: var(--text-dim); }
+.field { color: #ffa657; }
+pre.annotated { counter-reset: line; }
+.annotation {
+  background: rgba(245,158,11,0.08);
+  border-left: 2px solid var(--amber);
+  padding: 2px 8px;
+  margin: 2px -24px;
+  display: block;
+  color: var(--amber);
+  font-style: italic;
+  font-size: 11px;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border); }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.footer-status { color: var(--green); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-tag">ModelSDK · Algorithm Visualization · v2026</div>
+  <h1>强类型 SDK<br><span>读写算法</span>图解</h1>
+  <div class="header-sub">五层架构 · 懒解码 · 位图脏跟踪 · 三路合并编码</div>
+</header>
+
+<nav>
+  <button class="nav-btn active" onclick="showSection('arch')">架构分层</button>
+  <button class="nav-btn" onclick="showSection('read')">读路径</button>
+  <button class="nav-btn" onclick="showSection('dirty')">脏跟踪</button>
+  <button class="nav-btn" onclick="showSection('encoder')">编码决策</button>
+  <button class="nav-btn" onclick="showSection('code')">代码模式</button>
+</nav>
+
+<main>
+
+<!-- ═══════════════════════════════════════════════════════ ARCH -->
+<section id="arch" class="section active">
+  <div class="section-title">五层架构</div>
+  <div class="section-desc">点击任意层查看详情 · 每层职责严格隔离</div>
+
+  <div class="arch-container">
+    <div class="layers">
+      <div class="layer" onclick="selectLayer(0)" id="l0">
+        <div class="layer-num">LAYER 5 · PUBLIC API</div>
+        <div class="layer-name">modelsdk.Open / OpenForWriting</div>
+        <div class="layer-pkg">modelsdk.go</div>
+      </div>
+      <div class="layer-arrow">↕</div>
+      <div class="layer" onclick="selectLayer(1)" id="l1">
+        <div class="layer-num">LAYER 4 · STORE</div>
+        <div class="layer-name">codec.Store · Unit 级 BSON 读写</div>
+        <div class="layer-pkg">modelsdk/codec/store.go</div>
+      </div>
+      <div class="layer-arrow">↕</div>
+      <div class="layer" onclick="selectLayer(2)" id="l2">
+        <div class="layer-num">LAYER 3 · CODEC</div>
+        <div class="layer-name">Decoder · Encoder · TypeRegistry</div>
+        <div class="layer-pkg">modelsdk/codec/decoder.go · encoder.go</div>
+      </div>
+      <div class="layer-arrow">↕</div>
+      <div class="layer" onclick="selectLayer(3)" id="l3">
+        <div class="layer-num">LAYER 2 · ELEMENT</div>
+        <div class="layer-name">element.Base · property.Primitive[T]</div>
+        <div class="layer-pkg">modelsdk/element/ · modelsdk/property/</div>
+      </div>
+      <div class="layer-arrow">↕</div>
+      <div class="layer" onclick="selectLayer(4)" id="l4">
+        <div class="layer-num">LAYER 1 · MPR</div>
+        <div class="layer-name">mpr.Reader · mpr.Writer</div>
+        <div class="layer-pkg">modelsdk/mpr/ · SQLite (modernc.org/sqlite)</div>
+      </div>
+    </div>
+
+    <div class="detail-panel" id="detail-panel">
+      <div class="detail-empty">← 点击左侧任意层<br>查看该层的职责、接口与约束</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ READ -->
+<section id="read" class="section">
+  <div class="section-title">读路径 · 懒解码</div>
+  <div class="section-desc">从 SQLite 到强类型 Go 对象 · 字段在首次 .Get() 时才真正解码</div>
+
+  <div class="read-canvas">
+    <div style="font-size:11px; color:var(--text-dim); margin-bottom:16px; letter-spacing:1px;">DATA FLOW</div>
+    <div class="flow-nodes" id="flow-nodes">
+      <div class="flow-node" id="fn0">.mpr 文件</div>
+      <div class="flow-arrow" id="fa0">→</div>
+      <div class="flow-node" id="fn1">SQLite SELECT</div>
+      <div class="flow-arrow" id="fa1">→</div>
+      <div class="flow-node" id="fn2">[]byte</div>
+      <div class="flow-arrow" id="fa2">→</div>
+      <div class="flow-node" id="fn3">bson.Raw <span style="font-size:10px;color:var(--text-dim)">(冻结快照)</span></div>
+      <div class="flow-arrow" id="fa3">→</div>
+      <div class="flow-node" id="fn4">Decoder ($Type)</div>
+      <div class="flow-arrow" id="fa4">→</div>
+      <div class="flow-node" id="fn5">gen 类型实例</div>
+      <div class="flow-arrow" id="fa5">→</div>
+      <div class="flow-node lazy" id="fn6">懒 .Get() ⚡</div>
+    </div>
+    <div style="margin-top:20px; display:flex; gap:12px; align-items:center;">
+      <button class="btn" onclick="animateReadPath()">▶ 模拟 Open + Get()</button>
+      <button class="btn" onclick="resetReadPath()" style="font-size:10px; padding:8px 14px;">重置</button>
+      <span id="read-status" style="font-size:11px; color:var(--text-dim); margin-left:8px;"></span>
+    </div>
+  </div>
+
+  <div class="read-stages">
+    <div class="stage-card">
+      <div class="stage-num">STAGE 01 · OPEN</div>
+      <div class="stage-title">Store.LoadUnit(id)</div>
+      <div class="stage-desc">从 SQLite 取裸字节<br>存为 bson.Raw（不 Unmarshal）<br>保留原始字节序</div>
+    </div>
+    <div class="stage-card">
+      <div class="stage-num">STAGE 02 · DECODE</div>
+      <div class="stage-title">Decoder.Decode(raw)</div>
+      <div class="stage-desc">读 $Type → 查 TypeRegistry<br>调 factory() → SetID/SetRaw<br>调 InitFromRaw (绑定但不解码)</div>
+    </div>
+    <div class="stage-card">
+      <div class="stage-num">STAGE 03 · LAZY ACCESS</div>
+      <div class="stage-title">Primitive[T].Get()</div>
+      <div class="stage-desc">首次调用才真正解码<br>结果缓存在 val 字段<br>后续访问 O(1) 直接返回</div>
+    </div>
+  </div>
+
+  <div class="lazy-viz" style="margin-top:20px;">
+    <div style="font-size:11px; color:var(--text-dim); letter-spacing:1px; margin-bottom:16px;">ENTITY 属性懒加载状态对比</div>
+    <div class="lazy-grid">
+      <div class="lazy-state">
+        <div class="state-label before">AFTER InitFromRaw() — 尚未访问</div>
+        <div class="prop-row"><span class="prop-name">Name</span><span class="prop-status status-cold">cold · raw 绑定，未解码</span></div>
+        <div class="prop-row"><span class="prop-name">Documentation</span><span class="prop-status status-cold">cold · raw 绑定，未解码</span></div>
+        <div class="prop-row"><span class="prop-name">Attributes</span><span class="prop-status status-cold">cold · 子列表未展开</span></div>
+        <div class="prop-row"><span class="prop-name">IsRemote</span><span class="prop-status status-cold">cold · raw 绑定，未解码</span></div>
+        <div class="prop-row"><span class="prop-name">ExportLevel</span><span class="prop-status status-warm">warm · 枚举在 Init 时直接读</span></div>
+      </div>
+      <div class="lazy-state">
+        <div class="state-label after">AFTER entity.Name() 被调用</div>
+        <div class="prop-row"><span class="prop-name">Name</span><span class="prop-status status-warm">warm · loaded=true, val 已缓存</span></div>
+        <div class="prop-row"><span class="prop-name">Documentation</span><span class="prop-status status-skip">仍 cold（未被访问，跳过解码）</span></div>
+        <div class="prop-row"><span class="prop-name">Attributes</span><span class="prop-status status-skip">仍 cold（按需展开）</span></div>
+        <div class="prop-row"><span class="prop-name">IsRemote</span><span class="prop-status status-skip">仍 cold（未被访问）</span></div>
+        <div class="prop-row"><span class="prop-name">ExportLevel</span><span class="prop-status status-warm">warm · 枚举在 Init 时直接读</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ DIRTY -->
+<section id="dirty" class="section">
+  <div class="section-title">脏跟踪 · 位图传播</div>
+  <div class="section-desc">点击叶子节点 Attribute 触发 SetName()，观察脏位图向上冒泡</div>
+
+  <div class="dirty-container">
+    <div class="tree-canvas">
+      <!-- Unit -->
+      <div class="tree-node" id="tn-unit">
+        <div class="tree-label">Unit (DomainModel Unit)</div>
+        <div class="tree-type">element.Unit · 根节点</div>
+        <div class="dirty-bits" id="bits-unit">
+          <div class="bit" title="childDirty">C</div>
+        </div>
+      </div>
+      <div class="tree-connector" id="conn-0"></div>
+
+      <!-- DomainModel -->
+      <div class="tree-indent">
+        <div class="tree-node" id="tn-dm">
+          <div class="tree-label">DomainModel</div>
+          <div class="tree-type">gen/domainmodels · entities, associations</div>
+          <div class="dirty-bits" id="bits-dm">
+            <div class="bit" title="childDirty">C</div>
+            <div class="bit" title="bit 0: entities list">0</div>
+          </div>
+        </div>
+        <div class="tree-connector" id="conn-1"></div>
+
+        <!-- Entity -->
+        <div class="tree-indent">
+          <div class="tree-node" id="tn-entity">
+            <div class="tree-label">Entity · MyModule$Customer</div>
+            <div class="tree-type">gen/domainmodels.Entity</div>
+            <div class="dirty-bits" id="bits-entity">
+              <div class="bit" title="childDirty">C</div>
+              <div class="bit" title="bit 0: name">0</div>
+              <div class="bit" title="bit 5: attributes">5</div>
+              <div class="bit" title="bit 9: accessRules">9</div>
+            </div>
+          </div>
+          <div class="tree-connector" id="conn-2"></div>
+
+          <!-- Attribute -->
+          <div class="tree-indent">
+            <div class="tree-node" id="tn-attr" style="cursor:pointer;" onclick="triggerDirty()">
+              <div class="tree-label">Attribute · Email <span style="font-size:10px; color:var(--amber); margin-left:8px;">← 点击触发 SetName()</span></div>
+              <div class="tree-type">gen/domainmodels.Attribute</div>
+              <div class="dirty-bits" id="bits-attr">
+                <div class="bit" title="bit 0: name">0</div>
+                <div class="bit" title="bit 1: dataStorageGuid">1</div>
+                <div class="bit" title="bit 3: documentation">3</div>
+                <div class="bit" title="bit 6: exportLevel">6</div>
+                <div class="bit" title="bit 63: new element flag">63</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dirty-info">
+      <h3>调用链事件日志</h3>
+      <ul class="event-log" id="event-log">
+        <li style="color:var(--text-dim); font-style:italic;">点击 Attribute 节点开始模拟...</li>
+      </ul>
+      <div style="margin-top:16px;">
+        <button class="btn" onclick="resetDirty()" style="font-size:10px; padding:8px 14px;">重置状态</button>
+      </div>
+      <div style="margin-top:20px; font-size:11px; color:var(--text-dim); line-height:1.8; border-top:1px solid var(--border); padding-top:16px;">
+        <div style="color:var(--text); margin-bottom:6px; font-weight:500;">位图说明</div>
+        <div><span style="color:var(--amber)">C</span> = childDirty 标志（bool）</div>
+        <div><span style="color:var(--amber)">0..n</span> = 属性 bit 槽</div>
+        <div><span style="color:var(--amber)">63</span> = 新建元素标志</div>
+        <div style="margin-top:8px;"><span style="color:var(--red)">■</span> = bit 已置位 (dirty)</div>
+        <div><span style="color:var(--amber)">■</span> = childDirty=true</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ ENCODER -->
+<section id="encoder" class="section">
+  <div class="section-title">编码器决策树</div>
+  <div class="section-desc">点击场景节点查看 Encoder.buildDoc() 的执行路径与性能特征</div>
+
+  <div class="encoder-grid">
+    <div class="decision-tree">
+      <div class="dt-root">Encoder.Encode(elem)</div>
+
+      <!-- Branch A -->
+      <div class="dt-row">
+        <div class="dt-cond" onclick="selectScenario('A')" id="sc-A">
+          <div class="dt-label">CONDITION A</div>
+          <div class="dt-text">raw != nil <span style="color:var(--text-dim)">&&</span> !elem.IsDirty()</div>
+        </div>
+        <div class="dt-outcome outcome-passthrough">→ 透传 raw<br><span style="font-size:10px;">O(1) 零拷贝</span></div>
+      </div>
+
+      <div style="height:8px;"></div>
+      <div class="dt-branch-label">否则 → buildDoc(elem):</div>
+
+      <!-- Branch Scalar -->
+      <div class="dt-indent">
+        <div class="dt-branch-label">标量/枚举属性:</div>
+        <div class="dt-row">
+          <div class="dt-cond" onclick="selectScenario('S1')" id="sc-S1">
+            <div class="dt-label">SCALAR · DIRTY</div>
+            <div class="dt-text">wp.Dirty() == true</div>
+          </div>
+          <div class="dt-outcome outcome-full">→ setField(doc, key, BSONValue())</div>
+        </div>
+        <div class="dt-row">
+          <div class="dt-cond" onclick="selectScenario('S2')" id="sc-S2">
+            <div class="dt-label">SCALAR · CLEAN</div>
+            <div class="dt-text">!wp.Dirty()</div>
+          </div>
+          <div class="dt-outcome outcome-skip">→ continue (保留 raw 字段)</div>
+        </div>
+
+        <div style="height:8px;"></div>
+        <div class="dt-branch-label">Part (单子元素):</div>
+        <div class="dt-row">
+          <div class="dt-cond" onclick="selectScenario('B1')" id="sc-B1">
+            <div class="dt-label">PART · B1</div>
+            <div class="dt-text">wp.Dirty() — Part.Set() 被调用</div>
+          </div>
+          <div class="dt-outcome outcome-full">→ 递归 buildDoc(child)</div>
+        </div>
+        <div class="dt-row">
+          <div class="dt-cond" onclick="selectScenario('B2')" id="sc-B2">
+            <div class="dt-label">PART · B2</div>
+            <div class="dt-text">child.IsDirty() — 子孙被修改</div>
+          </div>
+          <div class="dt-outcome outcome-selective">→ 递归 buildDoc(child)</div>
+        </div>
+        <div class="dt-row">
+          <div class="dt-cond" onclick="selectScenario('B3')" id="sc-B3">
+            <div class="dt-label">PART · B3</div>
+            <div class="dt-text">完全干净</div>
+          </div>
+          <div class="dt-outcome outcome-skip">→ continue</div>
+        </div>
+
+        <div style="height:8px;"></div>
+        <div class="dt-branch-label">PartList (子列表):</div>
+        <div class="dt-row">
+          <div class="dt-cond" onclick="selectScenario('C1')" id="sc-C1">
+            <div class="dt-label">LIST · C1</div>
+            <div class="dt-text">wp.Dirty() — Append/Remove</div>
+          </div>
+          <div class="dt-outcome outcome-full">→ 全量重建 bson.A{v3,...}</div>
+        </div>
+        <div class="dt-row">
+          <div class="dt-cond" onclick="selectScenario('C2')" id="sc-C2">
+            <div class="dt-label">LIST · C2</div>
+            <div class="dt-text">anyChildDirty() — 某子项改变</div>
+          </div>
+          <div class="dt-outcome outcome-selective">→ 选择性重建<br><span style="font-size:10px;">脏子→buildDoc, 净子→raw</span></div>
+        </div>
+        <div class="dt-row">
+          <div class="dt-cond" onclick="selectScenario('C3')" id="sc-C3">
+            <div class="dt-label">LIST · C3</div>
+            <div class="dt-text">完全干净</div>
+          </div>
+          <div class="dt-outcome outcome-skip">→ continue</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="encoder-explain">
+      <h3>场景详解</h3>
+      <div id="explain-body" class="explain-empty">← 点击左侧任意场景节点<br>查看详细说明与性能分析</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ CODE -->
+<section id="code" class="section">
+  <div class="section-title">代码模式采样</div>
+  <div class="section-desc">六个核心模式 · 直接来自代码生成模板</div>
+
+  <div class="code-tabs">
+    <button class="code-tab active" onclick="showCode('p1')">Property 绑定</button>
+    <button class="code-tab" onclick="showCode('p2')">init / New 双构造</button>
+    <button class="code-tab" onclick="showCode('p3')">InitFromRaw</button>
+    <button class="code-tab" onclick="showCode('p4')">脏位图传播</button>
+    <button class="code-tab" onclick="showCode('p5')">三路编码</button>
+    <button class="code-tab" onclick="showCode('p6')">Registry 注册</button>
+  </div>
+
+  <div id="pane-p1" class="code-pane active">
+<pre><span class="cmt">// property/base.go — 所有 property 的公共底座</span>
+<span class="kw">type</span> <span class="typ">propertyBase</span> <span class="kw">struct</span> {
+    <span class="field">name</span>  <span class="typ">string</span>
+    <span class="field">dirty</span> <span class="typ">bool</span>
+    <span class="field">owner</span> *<span class="typ">element.Base</span>
+    <span class="field">bit</span>   <span class="typ">uint</span>  <span class="cmt">// 在父元素位图中的 bit 索引，全局唯一</span>
+}
+
+<span class="kw">func</span> (<span class="field">b</span> *<span class="typ">propertyBase</span>) <span class="fn">Bind</span>(owner *<span class="typ">element.Base</span>, bit <span class="typ">uint</span>) {
+    <span class="field">b</span>.owner = owner
+    <span class="field">b</span>.bit = bit
+}
+
+<span class="kw">func</span> (<span class="field">b</span> *<span class="typ">propertyBase</span>) <span class="fn">markDirty</span>() {
+    <span class="field">b</span>.dirty = <span class="kw">true</span>
+    <span class="kw">if</span> <span class="field">b</span>.owner != <span class="kw">nil</span> {
+        <span class="field">b</span>.owner.<span class="fn">MarkDirty</span>(<span class="field">b</span>.bit)  <span class="cmt">// 向上传播到元素位图</span>
+    }
+}
+
+<span class="cmt">// property/primitive.go — 泛型懒解码标量</span>
+<span class="kw">type</span> <span class="typ">Primitive</span>[T <span class="kw">any</span>] <span class="kw">struct</span> {
+    <span class="typ">propertyBase</span>
+    <span class="field">decode</span> <span class="typ">DecodeFunc</span>[T]  <span class="cmt">// BSON 解码函数，由 codegen 选择</span>
+    <span class="field">raw</span>    <span class="typ">bson.Raw</span>       <span class="cmt">// 借用引用，不拥有</span>
+    <span class="field">val</span>    T
+    <span class="field">loaded</span> <span class="typ">bool</span>
+}
+
+<span class="kw">func</span> (<span class="field">p</span> *<span class="typ">Primitive</span>[T]) <span class="fn">Init</span>(raw <span class="typ">bson.Raw</span>) { <span class="field">p</span>.raw = raw }  <span class="cmt">// 绑定不解码</span>
+
+<span class="kw">func</span> (<span class="field">p</span> *<span class="typ">Primitive</span>[T]) <span class="fn">Get</span>() T {
+    <span class="kw">if</span> !<span class="field">p</span>.loaded {
+        <span class="kw">if</span> <span class="field">p</span>.raw != <span class="kw">nil</span> {
+            <span class="field">p</span>.val = <span class="field">p</span>.<span class="fn">decode</span>(<span class="field">p</span>.raw, <span class="field">p</span>.name)  <span class="cmt">// 首次访问才解码</span>
+        }
+        <span class="field">p</span>.loaded = <span class="kw">true</span>
+    }
+    <span class="kw">return</span> <span class="field">p</span>.val
+}
+
+<span class="kw">func</span> (<span class="field">p</span> *<span class="typ">Primitive</span>[T]) <span class="fn">Set</span>(v T) {
+    <span class="field">p</span>.val = v
+    <span class="field">p</span>.loaded = <span class="kw">true</span>
+    <span class="field">p</span>.<span class="fn">markDirty</span>()  <span class="cmt">// → owner.MarkDirty(bit) → 向上冒泡</span>
+}</pre>
+  </div>
+
+  <div id="pane-p2" class="code-pane">
+<pre><span class="cmt">// gen/domainmodels/types.go (代码生成产物)</span>
+
+<span class="cmt">// initAttribute — 解码器专用，属性已绑定但不标 dirty</span>
+<span class="kw">func</span> <span class="fn">initAttribute</span>() *<span class="typ">Attribute</span> {
+    o := &amp;<span class="typ">Attribute</span>{}
+    o.<span class="fn">SetTypeName</span>(<span class="str">"DomainModels$Attribute"</span>)
+
+    o.name = property.<span class="fn">NewPrimitive</span>[<span class="typ">string</span>](<span class="str">"Name"</span>, property.DecodeString)
+    o.name.<span class="fn">Bind</span>(&amp;o.Base, <span class="num">0</span>)  <span class="cmt">// bit 0</span>
+
+    o.dataStorageGuid = property.<span class="fn">NewPrimitive</span>[<span class="typ">string</span>](<span class="str">"DataStorageGuid"</span>, property.DecodeString)
+    o.dataStorageGuid.<span class="fn">Bind</span>(&amp;o.Base, <span class="num">1</span>)  <span class="cmt">// bit 1</span>
+
+    o.propType = property.<span class="fn">NewPart</span>[<span class="typ">element.Element</span>](<span class="str">"Type"</span>)
+    o.propType.<span class="fn">Bind</span>(&amp;o.Base, <span class="num">2</span>)  <span class="cmt">// bit 2 (子元素)</span>
+
+    o.exportLevel = property.<span class="fn">NewEnum</span>[<span class="typ">string</span>](<span class="str">"ExportLevel"</span>)
+    o.exportLevel.<span class="fn">Bind</span>(&amp;o.Base, <span class="num">6</span>)
+
+    o.<span class="fn">SetProperties</span>([]<span class="typ">element.Property</span>{
+        o.name, o.dataStorageGuid, o.propType, o.exportLevel,
+    })
+    <span class="kw">return</span> o
+}
+
+<span class="cmt">// NewAttribute — 用户创建新元素，标 bit 63 = "全新元素"</span>
+<span class="kw">func</span> <span class="fn">NewAttribute</span>() *<span class="typ">Attribute</span> {
+    o := <span class="fn">initAttribute</span>()
+    o.<span class="fn">MarkDirty</span>(<span class="num">63</span>)  <span class="cmt">// 强制 Encoder 做完整序列化（无 raw 可透传）</span>
+    <span class="kw">return</span> o
+}
+
+<span class="cmt">// ──────────────────────────────────────────────────</span>
+<span class="cmt">// 关键区别:</span>
+<span class="cmt">//   init*()  → 解码路径，dirty=false，保留 raw passthrough</span>
+<span class="cmt">//   New*()   → 创建路径，dirty=true，触发完整 buildDoc</span></pre>
+  </div>
+
+  <div id="pane-p3" class="code-pane">
+<pre><span class="cmt">// InitFromRaw — 在 Decoder.Decode() 调用 factory() 后立即执行</span>
+<span class="kw">func</span> (<span class="field">o</span> *<span class="typ">Attribute</span>) <span class="fn">InitFromRaw</span>(raw <span class="typ">bson.Raw</span>) {
+    <span class="cmt">// 标量：只绑定 raw，不做任何解码（懒加载）</span>
+    <span class="field">o</span>.name.<span class="fn">Init</span>(raw)
+    <span class="field">o</span>.dataStorageGuid.<span class="fn">Init</span>(raw)
+    <span class="field">o</span>.documentation.<span class="fn">Init</span>(raw)
+
+    <span class="cmt">// 子元素 (Part)：递归解码，子元素内部同样懒加载</span>
+    <span class="kw">if</span> child, err := codec.<span class="fn">DecodeChild</span>(raw, <span class="str">"Type"</span>); err == <span class="kw">nil</span> {
+        <span class="field">o</span>.propType.<span class="fn">SetFromDecode</span>(child)  <span class="cmt">// SetFromDecode 不触发 markDirty</span>
+    }
+
+    <span class="cmt">// 枚举：直接读取（字符串，无需懒加载）</span>
+    <span class="kw">if</span> val, err := raw.<span class="fn">LookupErr</span>(<span class="str">"ExportLevel"</span>); err == <span class="kw">nil</span> {
+        <span class="kw">if</span> s, ok := val.<span class="fn">StringValueOK</span>(); ok {
+            <span class="field">o</span>.exportLevel.<span class="fn">SetFromDecode</span>(s)  <span class="cmt">// 同样不 dirty</span>
+        }
+    }
+}
+
+<span class="cmt">// SetFromDecode vs Set 的区别:</span>
+<span class="cmt">//   Set(v)          → 标记 dirty，用于用户修改</span>
+<span class="cmt">//   SetFromDecode(v) → 不标 dirty，用于初始化（保留 raw passthrough）</span>
+
+<span class="cmt">// DecodeChild 内部实现</span>
+<span class="kw">func</span> <span class="fn">DecodeChild</span>(raw <span class="typ">bson.Raw</span>, key <span class="typ">string</span>) (<span class="typ">element.Element</span>, <span class="typ">error</span>) {
+    val, err := raw.<span class="fn">LookupErr</span>(key)
+    <span class="kw">if</span> err != <span class="kw">nil</span> { <span class="kw">return</span> <span class="kw">nil</span>, err }
+    childRaw, ok := val.<span class="fn">DocumentOK</span>()
+    <span class="kw">if</span> !ok { <span class="kw">return</span> <span class="kw">nil</span>, fmt.<span class="fn">Errorf</span>(<span class="str">"not a document"</span>) }
+    dec := <span class="fn">NewDecoder</span>(DefaultRegistry)
+    <span class="kw">return</span> dec.<span class="fn">Decode</span>(childRaw)  <span class="cmt">// 递归，同样调 InitFromRaw</span>
+}</pre>
+  </div>
+
+  <div id="pane-p4" class="code-pane">
+<pre><span class="cmt">// element/element.go — 位图传播核心</span>
+<span class="kw">type</span> <span class="typ">Base</span> <span class="kw">struct</span> {
+    <span class="field">dirty</span>      []<span class="typ">uint64</span>  <span class="cmt">// 每个 uint64 容纳 64 个 bit</span>
+    <span class="field">childDirty</span> <span class="typ">bool</span>     <span class="cmt">// 任意子孙被修改时为 true</span>
+    <span class="field">container</span>  <span class="typ">Element</span>
+}
+
+<span class="kw">func</span> (<span class="field">b</span> *<span class="typ">Base</span>) <span class="fn">MarkDirty</span>(bit <span class="typ">uint</span>) {
+    word := bit / <span class="num">64</span>
+    <span class="kw">for</span> len(<span class="field">b</span>.dirty) &lt;= <span class="typ">int</span>(word) {
+        <span class="field">b</span>.dirty = <span class="fn">append</span>(<span class="field">b</span>.dirty, <span class="num">0</span>)
+    }
+    <span class="field">b</span>.dirty[word] |= <span class="num">1</span> &lt;&lt; (bit % <span class="num">64</span>)
+
+    <span class="cmt">// 向上传播：通知父元素有子孙变化</span>
+    <span class="kw">if</span> <span class="field">b</span>.container != <span class="kw">nil</span> {
+        <span class="kw">if</span> mc, ok := <span class="field">b</span>.container.(interface{ <span class="fn">MarkChildDirty</span>() }); ok {
+            mc.<span class="fn">MarkChildDirty</span>()
+        }
+    }
+}
+
+<span class="kw">func</span> (<span class="field">b</span> *<span class="typ">Base</span>) <span class="fn">MarkChildDirty</span>() {
+    <span class="kw">if</span> <span class="field">b</span>.childDirty { <span class="kw">return</span> }  <span class="cmt">// 截断重复传播</span>
+    <span class="field">b</span>.childDirty = <span class="kw">true</span>
+    <span class="kw">if</span> <span class="field">b</span>.container != <span class="kw">nil</span> {
+        <span class="kw">if</span> mc, ok := <span class="field">b</span>.container.(interface{ <span class="fn">MarkChildDirty</span>() }); ok {
+            mc.<span class="fn">MarkChildDirty</span>()
+        }
+    }
+}
+
+<span class="kw">func</span> (<span class="field">b</span> *<span class="typ">Base</span>) <span class="fn">IsDirty</span>() <span class="typ">bool</span> {
+    <span class="kw">if</span> <span class="field">b</span>.childDirty { <span class="kw">return</span> <span class="kw">true</span> }
+    <span class="kw">for</span> _, w := <span class="kw">range</span> <span class="field">b</span>.dirty {
+        <span class="kw">if</span> w != <span class="num">0</span> { <span class="kw">return</span> <span class="kw">true</span> }
+    }
+    <span class="kw">return</span> <span class="kw">false</span>
+}
+
+<span class="cmt">// 传播路径示意:</span>
+<span class="cmt">// attr.SetName("x")</span>
+<span class="cmt">//   → Primitive.Set → markDirty → attr.MarkDirty(0)</span>
+<span class="cmt">//     → entity.MarkChildDirty() → unit.MarkChildDirty()</span></pre>
+  </div>
+
+  <div id="pane-p5" class="code-pane">
+<pre><span class="kw">func</span> (<span class="field">e</span> *<span class="typ">Encoder</span>) <span class="fn">Encode</span>(elem <span class="typ">element.Element</span>) ([]<span class="typ">byte</span>, <span class="typ">error</span>) {
+    <span class="cmt">// 路径 A: 完全干净 → 零拷贝透传</span>
+    <span class="kw">if</span> elem.<span class="fn">Raw</span>() != <span class="kw">nil</span> &amp;&amp; !elem.<span class="fn">IsDirty</span>() {
+        <span class="kw">return</span> []<span class="typ">byte</span>(elem.<span class="fn">Raw</span>()), <span class="kw">nil</span>  <span class="cmt">// O(1)</span>
+    }
+    doc, err := <span class="field">e</span>.<span class="fn">buildDoc</span>(elem)
+    <span class="kw">if</span> err != <span class="kw">nil</span> { <span class="kw">return</span> <span class="kw">nil</span>, err }
+    <span class="kw">return</span> bson.<span class="fn">Marshal</span>(doc)
+}
+
+<span class="kw">func</span> (<span class="field">e</span> *<span class="typ">Encoder</span>) <span class="fn">buildDoc</span>(elem <span class="typ">element.Element</span>) (<span class="typ">bson.D</span>, <span class="typ">error</span>) {
+    <span class="kw">var</span> doc <span class="typ">bson.D</span>
+    <span class="kw">if</span> raw := elem.<span class="fn">Raw</span>(); raw != <span class="kw">nil</span> {
+        bson.<span class="fn">Unmarshal</span>(raw, &amp;doc)  <span class="cmt">// 起点：保留所有未知字段</span>
+    } <span class="kw">else</span> {
+        doc = <span class="typ">bson.D</span>{{<span class="str">"$ID"</span>, <span class="fn">newID</span>()}, {<span class="str">"$Type"</span>, elem.<span class="fn">TypeName</span>()}}
+    }
+
+    <span class="kw">for</span> _, prop := <span class="kw">range</span> elem.<span class="fn">Properties</span>() {
+        wp := prop.(<span class="typ">element.WritableProperty</span>)
+
+        <span class="cmt">// Part (单子元素) — 三路分支</span>
+        <span class="kw">if</span> cp, ok := prop.(<span class="typ">element.ChildProperty</span>); ok {
+            child := cp.<span class="fn">ChildElement</span>()
+            <span class="kw">if</span> wp.<span class="fn">Dirty</span>() || (child != <span class="kw">nil</span> &amp;&amp; child.<span class="fn">IsDirty</span>()) {
+                doc = <span class="fn">setField</span>(doc, prop.<span class="fn">Name</span>(), must(<span class="field">e</span>.<span class="fn">buildDoc</span>(child)))
+            }
+            <span class="kw">continue</span>  <span class="cmt">// B3: 干净 → 保留 raw 字段</span>
+        }
+
+        <span class="cmt">// PartList (子列表) — 三路分支</span>
+        <span class="kw">if</span> clp, ok := prop.(<span class="typ">element.ChildListProperty</span>); ok {
+            <span class="kw">if</span> wp.<span class="fn">Dirty</span>() {
+                arr := <span class="typ">bson.A</span>{<span class="typ">int32</span>(<span class="num">3</span>)}  <span class="cmt">// C1: 结构变化 → 全量重建</span>
+                <span class="kw">for</span> _, c := <span class="kw">range</span> clp.<span class="fn">ChildElements</span>() {
+                    arr = <span class="fn">append</span>(arr, must(<span class="field">e</span>.<span class="fn">buildDoc</span>(c)))
+                }
+                doc = <span class="fn">setField</span>(doc, prop.<span class="fn">Name</span>(), arr)
+            } <span class="kw">else if</span> <span class="fn">anyChildDirty</span>(clp) {
+                arr := <span class="typ">bson.A</span>{<span class="typ">int32</span>(<span class="num">3</span>)}  <span class="cmt">// C2: 选择性重建</span>
+                <span class="kw">for</span> _, c := <span class="kw">range</span> clp.<span class="fn">ChildElements</span>() {
+                    <span class="kw">if</span> c.<span class="fn">IsDirty</span>() {
+                        arr = <span class="fn">append</span>(arr, must(<span class="field">e</span>.<span class="fn">buildDoc</span>(c)))
+                    } <span class="kw">else</span> {
+                        arr = <span class="fn">append</span>(arr, <span class="typ">bson.Raw</span>(c.<span class="fn">Raw</span>()))  <span class="cmt">// 干净子项透传</span>
+                    }
+                }
+                doc = <span class="fn">setField</span>(doc, prop.<span class="fn">Name</span>(), arr)
+            }
+            <span class="kw">continue</span>  <span class="cmt">// C3: 干净 → 保留 raw 字段</span>
+        }
+
+        <span class="cmt">// 标量 — 只有 dirty 才覆写</span>
+        <span class="kw">if</span> !wp.<span class="fn">Dirty</span>() { <span class="kw">continue</span> }
+        doc = <span class="fn">setField</span>(doc, prop.<span class="fn">Name</span>(), wp.<span class="fn">BSONValue</span>())
+    }
+    <span class="kw">return</span> doc, <span class="kw">nil</span>
+}</pre>
+  </div>
+
+  <div id="pane-p6" class="code-pane">
+<pre><span class="cmt">// gen/domainmodels/types.go — package init() 注册所有类型</span>
+<span class="kw">func</span> <span class="fn">init</span>() {
+    <span class="cmt">// 标准注册：qualified name == storage name</span>
+    codec.DefaultRegistry.<span class="fn">Register</span>(<span class="str">"DomainModels$Attribute"</span>, <span class="kw">func</span>() <span class="typ">element.Element</span> {
+        <span class="kw">return</span> <span class="fn">initAttribute</span>()
+    })
+
+    <span class="cmt">// 双注册处理历史别名：EntityImpl 是 BSON 存储名，Entity 是 SDK 公开名</span>
+    codec.DefaultRegistry.<span class="fn">Register</span>(<span class="str">"DomainModels$EntityImpl"</span>, <span class="kw">func</span>() <span class="typ">element.Element</span> {
+        <span class="kw">return</span> <span class="fn">initEntity</span>()
+    })
+
+    <span class="cmt">// 存储别名：DeleteBehavior → AssociationDeleteBehavior</span>
+    codec.DefaultRegistry.<span class="fn">Register</span>(<span class="str">"DomainModels$DeleteBehavior"</span>, <span class="kw">func</span>() <span class="typ">element.Element</span> {
+        <span class="kw">return</span> <span class="fn">initAssociationDeleteBehavior</span>()
+    })
+}
+
+<span class="cmt">// TypeRegistry — 并发安全的工厂映射</span>
+<span class="kw">type</span> <span class="typ">TypeRegistry</span> <span class="kw">struct</span> {
+    <span class="field">mu</span>        <span class="typ">sync.RWMutex</span>
+    <span class="field">factories</span> <span class="kw">map</span>[<span class="typ">string</span>]<span class="kw">func</span>() <span class="typ">element.Element</span>
+}
+
+<span class="kw">func</span> (<span class="field">r</span> *<span class="typ">TypeRegistry</span>) <span class="fn">Lookup</span>(typeName <span class="typ">string</span>) (<span class="kw">func</span>() <span class="typ">element.Element</span>, <span class="typ">bool</span>) {
+    <span class="field">r</span>.mu.<span class="fn">RLock</span>()
+    f, ok := <span class="field">r</span>.factories[typeName]
+    <span class="field">r</span>.mu.<span class="fn">RUnlock</span>()
+    <span class="kw">return</span> f, ok
+}
+
+<span class="cmt">// 测试：标准 Roundtrip 验证三个不变式</span>
+<span class="kw">func</span> <span class="fn">TestRoundtrip</span>(t *<span class="typ">testing.T</span>) {
+    dec := codec.<span class="fn">NewDecoder</span>(codec.DefaultRegistry)
+    elem, _ := dec.<span class="fn">Decode</span>(original)
+
+    <span class="cmt">// 不变式 1: 解码后必须 clean</span>
+    assert(!elem.<span class="fn">IsDirty</span>())
+
+    enc := &amp;<span class="typ">codec.Encoder</span>{}
+    out, _ := enc.<span class="fn">Encode</span>(elem)
+
+    <span class="cmt">// 不变式 2: clean → byte-identical</span>
+    assert(bytes.<span class="fn">Equal</span>(out, []<span class="typ">byte</span>(original)))
+
+    attr := elem.(*<span class="typ">domainmodels.Attribute</span>)
+    attr.<span class="fn">SetName</span>(<span class="str">"Renamed"</span>)
+    out2, _ := enc.<span class="fn">Encode</span>(attr)
+
+    <span class="cmt">// 不变式 3: 未知字段必须保留</span>
+    assert(doc[<span class="str">"Unknown"</span>] == <span class="str">"preserved"</span>)
+}</pre>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div>ModelSDK · Algorithm Visualization</div>
+  <div class="footer-status">● modelsdk/codec · element · property · gen</div>
+  <div>53 domains · 1500+ types</div>
+</footer>
+
+<script>
+// ── SECTION NAV ──
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ── ARCHITECTURE LAYER DATA ──
+const layerData = [
+  {
+    title: 'Public API',
+    pkg: 'modelsdk.go',
+    desc: '用户唯一入口，屏蔽所有内部细节。',
+    props: [
+      ['func', 'Open(path) (*Reader, error)'],
+      ['func', 'OpenForWriting(path) (*Writer, error)'],
+      ['返回', 'codec.Store + TypeRegistry 的组合体'],
+    ],
+    badges: ['amber:只读/读写 一致接口', 'green:自动检测 v1/v2 格式'],
+  },
+  {
+    title: 'codec.Store',
+    pkg: 'modelsdk/codec/store.go',
+    desc: 'Unit 级 BSON 读写。封装 mpr.Reader/Writer，暴露 UnitReader / UnitWriter 接口。',
+    props: [
+      ['接口', 'UnitReader: ListUnits, LoadUnit'],
+      ['接口', 'UnitWriter: SaveUnit, FlushUnits, InsertUnit'],
+      ['事务', 'FlushUnits 在单 SQLite COMMIT 内写入所有脏 unit'],
+    ],
+    badges: ['blue:批量原子写入', 'amber:编译期接口检查 var _ UnitReader = (*Store)(nil)'],
+  },
+  {
+    title: 'Decoder / Encoder / TypeRegistry',
+    pkg: 'modelsdk/codec/',
+    desc: '$Type 分发解码 + 三路合并编码。TypeRegistry 在 gen 包的 init() 中自动填充。',
+    props: [
+      ['Decoder', '$Type → Lookup → factory() → InitFromRaw'],
+      ['Encoder', '路径 A: raw passthrough · B/C: 三路合并'],
+      ['Registry', 'map[string]func() Element · sync.RWMutex'],
+    ],
+    badges: ['green:未知类型降级为 element.Base（不丢失数据）', 'amber:Encoder 不删除未知字段'],
+  },
+  {
+    title: 'element.Base + property.*[T]',
+    pkg: 'modelsdk/element/ · modelsdk/property/',
+    desc: '所有 gen 类型的基础底座。位图脏跟踪 + 懒解码泛型属性。',
+    props: [
+      ['Base', 'ID, TypeName, Raw, dirty[]uint64, childDirty'],
+      ['Primitive[T]', '懒解码标量，首次 Get() 时解码'],
+      ['Part[T]', '单子元素，SetFromDecode 不 dirty'],
+      ['PartList[T]', '子列表，Append/Remove 触发 dirty'],
+    ],
+    badges: ['amber:bit 63 = 新建元素标志', 'blue:childDirty 截断重复传播'],
+  },
+  {
+    title: 'mpr.Reader / mpr.Writer',
+    pkg: 'modelsdk/mpr/ · modernc.org/sqlite',
+    desc: '裸 SQLite 访问层。自动检测 v1 (单文件) / v2 (mprcontents/ 目录) 格式。',
+    props: [
+      ['Reader', 'GetRawUnitBytes, ListUnitsByType'],
+      ['Writer', 'BeginWriteTransaction, WriteUnit, Commit'],
+      ['v1/v2', '格式检测自动，上层透明'],
+    ],
+    badges: ['green:纯 Go · 无 CGO', 'amber:v2 按需读取单个文件，大项目显著加速'],
+  },
+];
+
+function selectLayer(idx) {
+  document.querySelectorAll('.layer').forEach((l, i) => {
+    l.classList.toggle('selected', i === idx);
+  });
+  const d = layerData[idx];
+  const panel = document.getElementById('detail-panel');
+  const badges = d.badges.map(b => {
+    const [color, text] = b.split(':');
+    return `<span class="badge badge-${color}">${text}</span>`;
+  }).join('');
+  panel.innerHTML = `
+    <h3>${d.title}</h3>
+    <div style="font-size:11px; color:var(--amber-dim); margin-bottom:12px;">${d.pkg}</div>
+    <div style="font-size:12px; color:var(--text); line-height:1.7; margin-bottom:16px;">${d.desc}</div>
+    <ul class="prop-list">
+      ${d.props.map(([k,v]) => `<li><span class="prop-key">${k}</span><span class="prop-val">${v}</span></li>`).join('')}
+    </ul>
+    <div style="margin-top:16px;">${badges}</div>
+  `;
+}
+
+// ── READ PATH ANIMATION ──
+let readAnimating = false;
+function animateReadPath() {
+  if (readAnimating) return;
+  readAnimating = true;
+  const nodes = [0,1,2,3,4,5,6];
+  const arrows = [0,1,2,3,4,5];
+  const messages = [
+    'Open: 找到 .mpr 文件...',
+    'SQLite: SELECT contents FROM units...',
+    '接收原始字节 ([]byte)...',
+    'bson.Raw 冻结快照（不 Unmarshal）',
+    'Decoder: 查 $Type → 调 factory()...',
+    'gen 类型实例就绪 (未解码)',
+    '用户调用 .Name() → 首次懒解码 ⚡',
+  ];
+  const status = document.getElementById('read-status');
+
+  let i = 0;
+  function step() {
+    if (i < nodes.length) {
+      document.getElementById('fn' + nodes[i]).classList.add('lit');
+      if (i < arrows.length) document.getElementById('fa' + arrows[i]).classList.add('lit');
+      status.textContent = messages[i];
+      i++;
+      setTimeout(step, 600);
+    } else {
+      readAnimating = false;
+    }
+  }
+  step();
+}
+
+function resetReadPath() {
+  for(let i=0;i<7;i++) document.getElementById('fn'+i).classList.remove('lit');
+  for(let i=0;i<6;i++) document.getElementById('fa'+i).classList.remove('lit');
+  document.getElementById('read-status').textContent = '';
+  readAnimating = false;
+}
+
+// ── DIRTY TRACKING ──
+let dirtyTriggered = false;
+const eventLog = document.getElementById('event-log');
+
+function logEvent(html) {
+  const li = document.createElement('li');
+  li.className = 'new-event';
+  li.innerHTML = html;
+  eventLog.insertBefore(li, eventLog.firstChild);
+}
+
+function setBit(containerId, bitLabel, color) {
+  const container = document.getElementById(containerId);
+  const bits = container.querySelectorAll('.bit');
+  bits.forEach(b => {
+    if (b.textContent === String(bitLabel) || (bitLabel === 'C' && b.textContent === 'C')) {
+      b.classList.add('set');
+    }
+  });
+}
+
+function setNodeDirty(nodeId, type) {
+  const node = document.getElementById(nodeId);
+  node.classList.add(type);
+}
+
+function setConnector(id) {
+  const conn = document.getElementById(id);
+  if (conn) conn.classList.add('active');
+}
+
+function triggerDirty() {
+  if (dirtyTriggered) return;
+  dirtyTriggered = true;
+
+  eventLog.innerHTML = '';
+
+  setTimeout(() => {
+    logEvent('<span class="log-fn">attr.SetName("EmailAddress")</span> 被调用');
+  }, 0);
+  setTimeout(() => {
+    logEvent('→ <span class="log-fn">Primitive[string].Set("EmailAddress")</span>');
+    logEvent('&nbsp;&nbsp;val = "EmailAddress", loaded = true');
+  }, 400);
+  setTimeout(() => {
+    logEvent('→ <span class="log-fn">propertyBase.markDirty()</span>');
+    logEvent('&nbsp;&nbsp;dirty = true');
+    setNodeDirty('tn-attr', 'dirty');
+    setBit('bits-attr', '0', 'red');
+  }, 800);
+  setTimeout(() => {
+    logEvent('→ <span class="log-fn">attr.Base.MarkDirty(bit=<span class="log-num">0</span>)</span>');
+    logEvent('&nbsp;&nbsp;dirty[0] |= <span class="log-num">1</span> &lt;&lt; 0');
+  }, 1200);
+  setTimeout(() => {
+    logEvent('→ <span class="log-fn">entity.Base.MarkChildDirty()</span>');
+    logEvent('&nbsp;&nbsp;childDirty = true');
+    setConnector('conn-2');
+    setNodeDirty('tn-entity', 'child-dirty');
+    setBit('bits-entity', 'C', 'amber');
+  }, 1600);
+  setTimeout(() => {
+    logEvent('→ <span class="log-fn">domainModel.Base.MarkChildDirty()</span>');
+    logEvent('&nbsp;&nbsp;childDirty = true');
+    setConnector('conn-1');
+    setNodeDirty('tn-dm', 'child-dirty');
+    setBit('bits-dm', 'C', 'amber');
+  }, 2000);
+  setTimeout(() => {
+    logEvent('→ <span class="log-fn">unit.Base.MarkChildDirty()</span>');
+    logEvent('&nbsp;&nbsp;childDirty = true ← <span style="color:var(--amber)">Flush 触发器</span>');
+    setConnector('conn-0');
+    setNodeDirty('tn-unit', 'child-dirty');
+    setBit('bits-unit', 'C', 'amber');
+  }, 2400);
+  setTimeout(() => {
+    logEvent('<span style="color:var(--green)">✓ unit.IsDirty() == true → 加入 Flush 队列</span>');
+  }, 2800);
+}
+
+function resetDirty() {
+  dirtyTriggered = false;
+  ['tn-unit','tn-dm','tn-entity','tn-attr'].forEach(id => {
+    const n = document.getElementById(id);
+    n.classList.remove('dirty','child-dirty');
+  });
+  ['conn-0','conn-1','conn-2'].forEach(id => {
+    const c = document.getElementById(id);
+    if(c) c.classList.remove('active');
+  });
+  document.querySelectorAll('.bit').forEach(b => b.classList.remove('set'));
+  eventLog.innerHTML = '<li style="color:var(--text-dim); font-style:italic;">点击 Attribute 节点开始模拟...</li>';
+}
+
+// ── ENCODER SCENARIOS ──
+const scenarios = {
+  A: {
+    title: '路径 A · raw 透传',
+    color: 'var(--green)',
+    body: `
+      <p><span class="highlight">触发条件：</span>元素有 raw（从 BSON 解码），且 IsDirty() == false</p>
+      <p style="margin-top:12px;"><span class="highlight">执行逻辑：</span></p>
+      <p class="code">return []byte(elem.Raw()), nil</p>
+      <p style="margin-top:12px;"><span class="perf">性能特征：</span>O(1)，零内存分配，零拷贝。只读场景或未修改的单元均命中此路径。</p>
+      <p style="margin-top:12px;"><span class="highlight">不变式保证：</span>输出与输入字节完全相同，Studio Pro 打开不报任何警告。</p>
+    `
+  },
+  S1: {
+    title: '标量 · 脏字段覆写',
+    color: 'var(--red)',
+    body: `
+      <p><span class="highlight">触发条件：</span>Primitive/Enum 属性，wp.Dirty() == true</p>
+      <p style="margin-top:12px;"><span class="highlight">执行逻辑：</span></p>
+      <p class="code">doc = setField(doc, key, wp.BSONValue())</p>
+      <p style="margin-top:12px;"><span class="highlight">setField 实现：</span>扫描 bson.D 找已有 key 则原地替换，否则追加。<span class="highlight">从不删除字段</span>，确保未知字段保留。</p>
+      <p style="margin-top:12px;"><span class="perf">成本：</span>一次 bson.D 线性扫描 + 值替换</p>
+    `
+  },
+  S2: {
+    title: '标量 · 干净跳过',
+    color: 'var(--text-dim)',
+    body: `
+      <p><span class="highlight">触发条件：</span>!wp.Dirty()</p>
+      <p style="margin-top:12px;"><span class="highlight">执行逻辑：</span>continue — 跳过，raw 字段保持不变</p>
+      <p style="margin-top:12px;"><span class="perf">成本：</span>O(1)，仅一次 bool 检查</p>
+      <p style="margin-top:12px;"><span class="highlight">关键：</span>这是"最小化重编码"的核心。只有真正修改过的字段才会被重写，其余字段保持原始 BSON 值。</p>
+    `
+  },
+  B1: {
+    title: 'Part · B1 自身替换',
+    color: 'var(--red)',
+    body: `
+      <p><span class="highlight">触发条件：</span>Part.Set(newChild) 被调用，wp.Dirty() == true</p>
+      <p style="margin-top:12px;"><span class="highlight">语义：</span>子元素本身被替换（新对象）</p>
+      <p style="margin-top:12px;"><span class="highlight">执行逻辑：</span></p>
+      <p class="code">childDoc, _ := e.buildDoc(child)</p>
+      <p class="code">doc = setField(doc, key, childDoc)</p>
+      <p style="margin-top:12px;"><span class="perf">成本：</span>递归 buildDoc，代价取决于子树深度</p>
+    `
+  },
+  B2: {
+    title: 'Part · B2 子孙被修改',
+    color: 'var(--amber)',
+    body: `
+      <p><span class="highlight">触发条件：</span>Part 本身没有被替换（wp.Dirty() == false），但 child.IsDirty() == true</p>
+      <p style="margin-top:12px;"><span class="highlight">语义：</span>子元素的某个属性被修改了（深层修改）</p>
+      <p style="margin-top:12px; font-style:italic; color:var(--amber)">这个分支是最关键的设计：</p>
+      <p style="font-size:11px;">若没有此分支，父元素干净时会透传 raw——深层修改将静默丢失！</p>
+      <p style="margin-top:12px;"><span class="highlight">执行逻辑：</span>与 B1 相同，递归 buildDoc(child)</p>
+    `
+  },
+  B3: {
+    title: 'Part · B3 完全干净',
+    color: 'var(--text-dim)',
+    body: `
+      <p><span class="highlight">触发条件：</span>!wp.Dirty() && !child.IsDirty()</p>
+      <p style="margin-top:12px;"><span class="highlight">执行逻辑：</span>continue — 保留 raw 字段中的内嵌文档</p>
+      <p style="margin-top:12px;"><span class="perf">成本：</span>O(1)</p>
+    `
+  },
+  C1: {
+    title: 'PartList · C1 列表结构变化',
+    color: 'var(--red)',
+    body: `
+      <p><span class="highlight">触发条件：</span>Append() 或 Remove() 被调用，wp.Dirty() == true</p>
+      <p style="margin-top:12px;"><span class="highlight">执行逻辑：</span>全量重建</p>
+      <p class="code">arr := bson.A{int32(3)}  // Mendix 版本前缀</p>
+      <p class="code">for _, child := range children {</p>
+      <p class="code">&nbsp;&nbsp;arr = append(arr, buildDoc(child))</p>
+      <p class="code">}</p>
+      <p style="margin-top:12px;"><span class="highlight">int32(3) 前缀：</span>Mendix BSON 数组格式，索引 0 是版本号，真实元素从索引 1 开始。</p>
+    `
+  },
+  C2: {
+    title: 'PartList · C2 选择性重建',
+    color: 'var(--amber)',
+    body: `
+      <p><span class="highlight">触发条件：</span>列表结构未变，但某个子项被修改（anyChildDirty == true）</p>
+      <p style="margin-top:12px;"><span class="highlight">执行逻辑：混合策略</span></p>
+      <p class="code">for _, child := range children {</p>
+      <p class="code">&nbsp;&nbsp;if child.IsDirty() {</p>
+      <p class="code">&nbsp;&nbsp;&nbsp;&nbsp;arr += buildDoc(child)  // 重建脏子项</p>
+      <p class="code">&nbsp;&nbsp;} else {</p>
+      <p class="code">&nbsp;&nbsp;&nbsp;&nbsp;arr += bson.Raw(child.Raw())  // 透传干净子项</p>
+      <p class="code">&nbsp;&nbsp;}</p>
+      <p class="code">}</p>
+      <p style="margin-top:12px;"><span class="perf">性能：</span>只有脏子项付出 buildDoc 代价，其余全部零拷贝</p>
+    `
+  },
+  C3: {
+    title: 'PartList · C3 完全干净',
+    color: 'var(--text-dim)',
+    body: `
+      <p><span class="highlight">触发条件：</span>!wp.Dirty() && !anyChildDirty()</p>
+      <p style="margin-top:12px;"><span class="highlight">执行逻辑：</span>continue — 保留 raw 中的原始数组</p>
+      <p style="margin-top:12px;"><span class="perf">成本：</span>O(1)</p>
+      <p style="margin-top:12px;">一个包含 100 个属性的 Entity，若只修改了其中 1 个，其余 99 个均走 C3 路径，零开销。</p>
+    `
+  },
+};
+
+function selectScenario(id) {
+  document.querySelectorAll('.dt-cond').forEach(c => c.classList.remove('selected'));
+  document.getElementById('sc-' + id).classList.add('selected');
+  const s = scenarios[id];
+  document.getElementById('explain-body').innerHTML = `
+    <div style="color:${s.color}; font-weight:500; margin-bottom:12px;">${s.title}</div>
+    <div class="explain-content">${s.body}</div>
+  `;
+}
+
+// ── CODE TABS ──
+function showCode(id) {
+  document.querySelectorAll('.code-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('pane-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendixlabs/mxcli/sdk/mpr/version"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // newTestZipWriter wraps zip.NewWriter for test helpers.
@@ -310,7 +310,7 @@ CMD ["./bin/start.sh", "etc/Default"]
 	os.MkdirAll(etcDir, 0755)
 	os.WriteFile(filepath.Join(etcDir, "Default"), []byte("# config\n"), 0644)
 
-	pv := &version.ProjectVersion{
+	pv := &types.ProjectVersion{
 		ProductVersion: "11.6.1",
 		MajorVersion:   11,
 		MinorVersion:   6,
@@ -353,7 +353,7 @@ CMD ["./bin/start", "etc/Default"]
 	os.MkdirAll(etcDir, 0755)
 	os.WriteFile(filepath.Join(etcDir, "Default"), []byte("# config\n"), 0644)
 
-	pv := &version.ProjectVersion{
+	pv := &types.ProjectVersion{
 		ProductVersion: "12.0.0",
 		MajorVersion:   12,
 		MinorVersion:   0,
@@ -737,7 +737,7 @@ func TestFlattenPADDir_OverwritesOldContents(t *testing.T) {
 }
 
 func TestDescribePatches_116x(t *testing.T) {
-	pv := &version.ProjectVersion{MajorVersion: 11, MinorVersion: 6, PatchVersion: 1}
+	pv := &types.ProjectVersion{MajorVersion: 11, MinorVersion: 6, PatchVersion: 1}
 	patches := DescribePatches(pv)
 	if len(patches) != 6 {
 		t.Errorf("expected 6 patches for 11.6.x, got %d", len(patches))
@@ -745,7 +745,7 @@ func TestDescribePatches_116x(t *testing.T) {
 }
 
 func TestDescribePatches_12x(t *testing.T) {
-	pv := &version.ProjectVersion{MajorVersion: 12, MinorVersion: 0, PatchVersion: 0}
+	pv := &types.ProjectVersion{MajorVersion: 12, MinorVersion: 0, PatchVersion: 0}
 	patches := DescribePatches(pv)
 	if len(patches) != 5 {
 		t.Errorf("expected 5 patches for 12.x, got %d", len(patches))

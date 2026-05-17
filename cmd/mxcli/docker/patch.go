@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mendixlabs/mxcli/sdk/mpr/version"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // PatchResult describes the outcome of applying a single patch.
@@ -21,7 +21,7 @@ type PatchResult struct {
 
 // ApplyPatches applies version-aware patches to the PAD output directory.
 // Returns results for each patch attempted.
-func ApplyPatches(padDir string, pv *version.ProjectVersion) []PatchResult {
+func ApplyPatches(padDir string, pv *types.ProjectVersion) []PatchResult {
 	var results []PatchResult
 
 	is116x := pv.MajorVersion == 11 && pv.MinorVersion == 6
