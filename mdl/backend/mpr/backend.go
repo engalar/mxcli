@@ -755,6 +755,10 @@ func (b *MprBackend) DeleteDataTransformer(id model.ID) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListImportMappings() ([]*model.ImportMapping, error) {
+	// TODO(phase4): migrate to mprread once gen.ImportMapping binds the "Elements"
+	// BSON key instead of "RootMappingElements" (the latter has no real data on disk,
+	// so RootMappingElementsItems() returns empty and downstream `describe import
+	// mapping` output loses the entire mapping tree).
 	return b.reader.ListImportMappings()
 }
 func (b *MprBackend) GetImportMappingByQualifiedName(moduleName, name string) (*model.ImportMapping, error) {
@@ -774,6 +778,9 @@ func (b *MprBackend) MoveImportMapping(im *model.ImportMapping) error {
 }
 
 func (b *MprBackend) ListExportMappings() ([]*model.ExportMapping, error) {
+	// TODO(phase4): migrate to mprread once gen.ExportMapping binds the "Elements"
+	// BSON key instead of "RootMappingElements" — same gen schema bug as
+	// ImportMapping above.
 	return b.reader.ListExportMappings()
 }
 func (b *MprBackend) GetExportMappingByQualifiedName(moduleName, name string) (*model.ExportMapping, error) {
