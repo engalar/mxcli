@@ -12,11 +12,13 @@
 package mprbackend
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
 	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
+	genProj "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
 	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
 )
@@ -191,6 +193,62 @@ func schedEventUnitsToModel(units []mprread.Unit[*genSched.ScheduledEvent]) []*m
 	out := make([]*model.ScheduledEvent, len(units))
 	for i, u := range units {
 		out[i] = schedEventToModel(u)
+	}
+	return out
+}
+
+// ---------------------------------------------------------------------------
+// ModuleSettings
+// ---------------------------------------------------------------------------
+
+func moduleSettingsToTypes(u mprread.Unit[*genProj.ModuleSettings]) *types.ModuleSettings {
+	ms := u.Element
+	out := &types.ModuleSettings{
+		ID:                  model.ID(ms.ID()),
+		ContainerID:         u.ContainerID,
+		ExportLevel:         ms.ExportLevel(),
+		ProtectedModuleType: ms.ProtectedModuleType(),
+		Version:             ms.Version(),
+		BasedOnVersion:      ms.BasedOnVersion(),
+		ExtensionName:       ms.ExtensionName(),
+		SolutionIdentifier:  ms.SolutionIdentifier(),
+	}
+	for _, item := range ms.JarDependenciesItems() {
+		jd, ok := item.(*genProj.JarDependency)
+		if !ok {
+			continue
+		}
+		out.JarDependencies = append(out.JarDependencies, jarDepToTypes(jd))
+	}
+	return out
+}
+
+func jarDepToTypes(jd *genProj.JarDependency) *types.JarDependency {
+	out := &types.JarDependency{
+		ID:         model.ID(jd.ID()),
+		GroupID:    jd.GroupId(),
+		ArtifactID: jd.ArtifactId(),
+		Version:    jd.Version(),
+		IsIncluded: jd.IsIncluded(),
+	}
+	for _, item := range jd.ExclusionsItems() {
+		ex, ok := item.(*genProj.JarDependencyExclusion)
+		if !ok {
+			continue
+		}
+		out.Exclusions = append(out.Exclusions, &types.JarDependencyExclusion{
+			ID:         model.ID(ex.ID()),
+			GroupID:    ex.GroupId(),
+			ArtifactID: ex.ArtifactId(),
+		})
+	}
+	return out
+}
+
+func moduleSettingsUnitsToTypes(units []mprread.Unit[*genProj.ModuleSettings]) []*types.ModuleSettings {
+	out := make([]*types.ModuleSettings, len(units))
+	for i, u := range units {
+		out[i] = moduleSettingsToTypes(u)
 	}
 	return out
 }
