@@ -17,7 +17,7 @@ import (
 func sampleIssues() []validate.ValidationResult {
 	r := scan.ExprRecord{
 		Raw: "not $IsValid", UnitType: "Microflows$ExpressionSplitCondition",
-		SlotPath: "IfStmt.Condition", Project: "test", Category: "microflow",
+		Project: "test", Category: "microflow",
 	}
 	return validate.ValidateSyntax(parse.ParseExpression(r))
 }
@@ -49,7 +49,7 @@ func TestRenderText(t *testing.T) {
 func TestRenderFilter_ErrorOnly(t *testing.T) {
 	r := scan.ExprRecord{
 		Raw: "if $X then $Y", UnitType: "Microflows$ExpressionSplitCondition",
-		SlotPath: "IfStmt.Condition", Project: "test",
+		Project: "test",
 	}
 	issues := validate.ValidateSyntax(parse.ParseExpression(r))
 	out, err := report.Render(issues, report.Options{Format: "json", Severity: "ERROR"})

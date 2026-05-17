@@ -12,7 +12,7 @@ import (
 )
 
 func makeRec(raw, unitType, slot string) scan.ExprRecord {
-	return scan.ExprRecord{Raw: raw, UnitType: unitType, SlotPath: slot, Category: "microflow"}
+	return scan.ExprRecord{Raw: raw, UnitType: unitType, Category: "microflow"}
 }
 
 func TestValidate_CleanExpression_NoIssues(t *testing.T) {

@@ -17,7 +17,7 @@ type ValidationResult struct {
 	UnitType string
 	Field    string
 	Raw      string
-	SlotPath string
+	// SlotPath removed
 	RuleID   string // SYN-01, SYN-02, SYN-03, or hint Code (e.g. E011)
 	Severity string // ERROR | WARNING | INFO
 	Message  string
@@ -35,7 +35,7 @@ func ValidateSyntax(pr parse.ParseResult) []ValidationResult {
 	if strings.HasPrefix(rec.Raw, "https://") || strings.HasPrefix(rec.Raw, "http://") {
 		out = append(out, ValidationResult{
 			UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType,
-			Field: rec.Field, Raw: rec.Raw, SlotPath: rec.SlotPath,
+			Field: rec.Field, Raw: rec.Raw, 
 			RuleID: "SYN-02", Severity: "INFO",
 			Message: "Field contains a URL, not a Mendix expression",
 		})
@@ -48,7 +48,7 @@ func ValidateSyntax(pr parse.ParseResult) []ValidationResult {
 		!strings.Contains(lower, " else ") {
 		out = append(out, ValidationResult{
 			UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType,
-			Field: rec.Field, Raw: rec.Raw, SlotPath: rec.SlotPath,
+			Field: rec.Field, Raw: rec.Raw, 
 			RuleID: "SYN-03", Severity: "WARNING",
 			Message: "if-then expression is missing else branch (Mendix requires else)",
 			Fix:     "Add 'else <value>' after the then branch",
@@ -64,7 +64,7 @@ func ValidateSyntax(pr parse.ParseResult) []ValidationResult {
 		}
 		out = append(out, ValidationResult{
 			UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType,
-			Field: rec.Field, Raw: rec.Raw, SlotPath: rec.SlotPath,
+			Field: rec.Field, Raw: rec.Raw, 
 			RuleID:   ruleID,
 			Severity: sev,
 			Message:  h.Problem,

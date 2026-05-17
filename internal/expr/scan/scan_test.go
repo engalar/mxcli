@@ -39,7 +39,6 @@ func TestScanMprcontents_RequiredFields(t *testing.T) {
 		assert.NotEmpty(t, r.Raw)
 		assert.Contains(t, []string{"microflow", "page", "domain", "workflow", "widget"},
 			r.Category, "category must be known")
-		assert.NotEmpty(t, r.SlotPath, "SlotPath must be set for %s.%s", r.UnitType, r.Field)
 	}
 }
 
@@ -52,13 +51,17 @@ func TestScanMprcontents_ExcludesURLs(t *testing.T) {
 	}
 }
 
-func TestScanMprcontents_SlotPathsKnown(t *testing.T) {
+func TestScanMprcontents_NoSlotPath(t *testing.T) {
+	// SlotPath was removed — parse package now detects XPath by content.
+	// This test verifies the struct compiles correctly without SlotPath.
 	records, err := scan.ScanMprcontents(macnicaMpr, scan.Options{})
 	require.NoError(t, err)
-	for _, r := range records {
-		assert.NotEmpty(t, r.SlotPath,
-			"every record needs a SlotPath, missing for %s.%s", r.UnitType, r.Field)
-	}
+	require.NotEmpty(t, records)
+	// Just verify the record has the fields we do care about.
+	r := records[0]
+	assert.NotEmpty(t, r.UnitType)
+	assert.NotEmpty(t, r.Raw)
+	assert.NotEmpty(t, r.Category)
 }
 
 func min(a, b int) int {
