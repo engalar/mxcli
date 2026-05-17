@@ -140,7 +140,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	for _, ref := range dmRefs {
 		dmContainerByID[ref.ID] = model.ID(ref.ContainerID)
 	}
-	dms, _ := reader.ListDomainModelsGen()
+	dms, _ := mprread.ListDomainModels(mreader)
 	for _, dm := range dms {
 		containerID := dmContainerByID[string(dm.ID())]
 		modID := h.FindModuleID(containerID)
@@ -248,7 +248,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 			pgContainerByID[ref.ID] = model.ID(ref.ContainerID)
 		}
 	}
-	pgs, _ := reader.ListPagesGen()
+	pgs, _ := mprread.ListPages(mreader)
 	for _, pg := range pgs {
 		containerID := pgContainerByID[string(pg.ID())]
 		modID := h.FindModuleID(containerID)
@@ -265,7 +265,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	for _, ref := range snRefs {
 		snContainerByID[ref.ID] = model.ID(ref.ContainerID)
 	}
-	sns, _ := reader.ListSnippetsGen()
+	sns, _ := mprread.ListSnippets(mreader)
 	for _, sn := range sns {
 		containerID := snContainerByID[string(sn.ID())]
 		modID := h.FindModuleID(containerID)
@@ -282,7 +282,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	for _, ref := range lyRefs {
 		lyContainerByID[ref.ID] = model.ID(ref.ContainerID)
 	}
-	lys, _ := reader.ListLayoutsGen()
+	lys, _ := mprread.ListLayouts(mreader)
 	for _, ly := range lys {
 		containerID := lyContainerByID[string(ly.ID())]
 		modID := h.FindModuleID(containerID)
@@ -312,7 +312,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 			wfContainerByID[ref.ID] = model.ID(ref.ContainerID)
 		}
 	}
-	wfs, _ := reader.ListWorkflowsGen()
+	wfs, _ := mprread.ListWorkflows(mreader)
 	for _, wf := range wfs {
 		containerID := wfContainerByID[string(wf.ID())]
 		modID := h.FindModuleID(containerID)
@@ -331,7 +331,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 			jaContainerByID[ref.ID] = model.ID(ref.ContainerID)
 		}
 	}
-	jas, _ := reader.ListJavaActionsGen()
+	jas, _ := mprread.ListJavaActions(mreader)
 	for _, ja := range jas {
 		containerID := jaContainerByID[string(ja.ID())]
 		modID := h.FindModuleID(containerID)
@@ -370,7 +370,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	for _, ref := range bbRefs {
 		bbContainerByID[ref.ID] = model.ID(ref.ContainerID)
 	}
-	bbs, _ := reader.ListBuildingBlocksGen()
+	bbs, _ := mprread.ListBuildingBlocks(mreader)
 	for _, bb := range bbs {
 		containerID := bbContainerByID[string(bb.ID())]
 		modID := h.FindModuleID(containerID)
@@ -387,7 +387,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	for _, ref := range ptRefs {
 		ptContainerByID[ref.ID] = model.ID(ref.ContainerID)
 	}
-	pts, _ := reader.ListPageTemplatesGen()
+	pts, _ := mprread.ListPageTemplates(mreader)
 	for _, pt := range pts {
 		containerID := ptContainerByID[string(pt.ID())]
 		modID := h.FindModuleID(containerID)
