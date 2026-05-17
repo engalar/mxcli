@@ -9,9 +9,19 @@ package mprbackend
 import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/meta"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	msdkversion "github.com/mendixlabs/mxcli/modelsdk/mpr/version"
 )
+
+// buildSystemModuleForBackend returns the virtual System module appended
+// to every ListModules result. Mirrors sdk/mpr.BuildSystemModule but uses
+// the modelsdk-native meta.SystemModuleID constant.
+func buildSystemModuleForBackend() *model.Module {
+	m := &model.Module{Name: "System"}
+	m.ID = model.ID(meta.SystemModuleID)
+	return m
+}
 
 func convertMPRVersion(v types.MPRVersion) types.MPRVersion { return v }
 

@@ -764,3 +764,54 @@ func businessEventServiceUnitsToModel(units []mprread.Unit[*genBE.BusinessEventS
 	}
 	return out
 }
+
+// ---------------------------------------------------------------------------
+// Module and Folder
+// ---------------------------------------------------------------------------
+//
+// gen/projects.Module does not expose Documentation / Excluded fields
+// (the underlying BSON schema does not declare them on Projects$Module),
+// so those fields are left zero on the resulting model.Module. All other
+// fields consumed by the executor (Name, FromAppStore, AppStoreVersion,
+// AppStoreGuid, IsReusableComponent) round-trip correctly.
+
+func moduleToModel(u mprread.Unit[*genProj.Module]) *model.Module {
+	m := u.Element
+	out := &model.Module{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(m.ID()),
+			TypeName: "Projects$Module",
+		},
+		Name:                m.Name(),
+		FromAppStore:        m.FromAppStore(),
+		AppStoreVersion:     m.AppStoreVersion(),
+		AppStoreGuid:        m.AppStoreGuid(),
+		IsReusableComponent: m.IsReusableComponent(),
+	}
+	return out
+}
+
+func moduleUnitsToModel(units []mprread.Unit[*genProj.Module]) []*model.Module {
+	out := make([]*model.Module, 0, len(units)+1)
+	for _, u := range units {
+		out = append(out, moduleToModel(u))
+	}
+	return out
+}
+
+func folderToTypes(u mprread.Unit[*genProj.Folder]) *types.FolderInfo {
+	f := u.Element
+	return &types.FolderInfo{
+		ID:          model.ID(f.ID()),
+		ContainerID: u.ContainerID,
+		Name:        f.Name(),
+	}
+}
+
+func folderUnitsToTypes(units []mprread.Unit[*genProj.Folder]) []*types.FolderInfo {
+	out := make([]*types.FolderInfo, 0, len(units))
+	for _, u := range units {
+		out = append(out, folderToTypes(u))
+	}
+	return out
+}
