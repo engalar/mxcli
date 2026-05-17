@@ -49,14 +49,46 @@ func sdkOpenReader(path string) (*sdkReader, error) {
 var _ backend.FullBackend = (*MprBackend)(nil)
 var _ linter.LintReader = (*MprBackend)(nil)
 
-// MprBackend implements backend.FullBackend by delegating to mpr.Reader
-// Methods that access reader or msdkWriter assume Connect() has been called.
-// Calling read/write methods before Connect() will panic with a nil
+// MprBackend implements backend.FullBackend by delegating to MPR readers/writer.
+// Methods that access reader/msdkReader/msdkWriter assume Connect() has been
+// called. Calling read/write methods before Connect() will panic with a nil
 // pointer dereference. The executor enforces connection state via
 // ConnectionBackend.IsConnected() before dispatching handlers.
+//
+// Phase 4B status: this backend currently holds TWO reader handles sharing one
+// SQLite *sql.DB connection (msdkReader is opened with OpenWithDB(r.DB(), ...)
+// in Connect, so neither owns the DB exclusively). Both must stay alive until
+// Disconnect() because:
+//
+//   - msdkReader / msdkWriter handle all writes (modelsdk codec, BSON-native
+//     round-trip) plus the bulk of typed reads via mprread free functions.
+//   - reader (legacy sdk/mpr.Reader) is still required for the following
+//     surface areas which have no gen-typed equivalent:
+//
+//     1. Polymorphic-tree document reads where the gen schema is broken
+//        (ImportMapping / ExportMapping — wrong BSON key binding) or where
+//        the converter would lose fidelity (ProjectSettings.RawParts);
+//
+//     2. Deep service-document reads pending migration (OData/REST Consumed
+//        + Published — large converters deferred to a follow-up PR);
+//
+//     3. Documents that simply require a hand-written converter not yet
+//        written (NavigationDocument, ImageCollection);
+//
+//     4. ScanOqlQueryUpdates / FindRenameTarget which only exist on
+//        sdk/mpr.Reader (see callsites in domainmodel_modelsdk.go +
+//        rename_modelsdk.go);
+//
+//     5. The shared module/folder/unit listers that the rest of the package
+//        (modules_modelsdk.go, workflow_mutator.go, page_mutator.go, etc.)
+//        depend on through b.reader.
+//
+// TODO(phase4): once 1–3 are migrated and 4 is ported to modelsdk/mpr, the
+// `reader` field plus the sdk/mpr import can be removed and msdkReader can be
+// renamed to `reader`. Tracking issue: Phase 4B follow-up.
 type MprBackend struct {
-	reader     *sdkReader
-	msdkReader *modelsdkmpr.Reader
+	reader     *sdkReader            // legacy sdk/mpr.Reader — see Phase 4B notes above
+	msdkReader *modelsdkmpr.Reader   // primary read path (mprread free functions delegate here)
 	msdkWriter modelsdkmpr.UnitWriter
 	path       string
 }
