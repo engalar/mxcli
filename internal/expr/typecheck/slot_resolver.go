@@ -71,9 +71,15 @@ func resolveAttrTarget(rec scan.ExprRecord, cat AttrCatalog, _ IndexReader) (exp
 	return cat.AttributeKind(entityQN, attrName)
 }
 
-func resolveVarTarget(_ scan.ExprRecord, _ AttrCatalog, _ IndexReader) (exprcheck.TypeKind, bool) {
-	// TODO(SEM-03.1): capture ChangeVariableName/VariableName in ExprRecord.
-	return exprcheck.KindUnknown, false
+func resolveVarTarget(rec scan.ExprRecord, _ AttrCatalog, idx IndexReader) (exprcheck.TypeKind, bool) {
+	if rec.TargetVarName == "" {
+		return exprcheck.KindUnknown, false
+	}
+	kind := idx.VarTypeKind(rec.UnitPath, rec.TargetVarName)
+	if kind == exprcheck.KindUnknown {
+		return exprcheck.KindUnknown, false
+	}
+	return kind, true
 }
 
 func resolveCallArgTarget(rec scan.ExprRecord, _ AttrCatalog, idx IndexReader) (exprcheck.TypeKind, bool) {
