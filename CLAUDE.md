@@ -492,22 +492,19 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - 47 of 52 metamodel domains (REST, etc.)
 - Delta/change tracking system
 - Runtime type reflection
-- **Phase 4 read-path migration** — `MprBackend.reader` and `cmd/mxcli/project_tree.go` still
-  open `sdk/mpr.Reader` because ~30 lister/getter calls have no equivalent **method** on
-  `modelsdk/mpr.Reader` (even though `modelsdk/mprread/` already exposes same-named free
-  functions like `mprread.ListEnumerations(r *mmpr.Reader)`). Switching requires writing a
-  full gen→model converter for each domain (downstream executor code consumes deep fields,
-  not just ID+Name) across ~15 domains: Enumeration, Constant, Navigation, ProjectSettings,
-  ImportMapping, ExportMapping, JsonStructure, BusinessEventService, OData/REST services,
-  ScheduledEvent, ImageCollection, AgentEditor types, etc. Write-path migration is 77%
-  complete (see memory `project_modelsdk_migration_pattern`); read-path is a separate spec.
+- **Phase 4 read-path migration** — `MprBackend` and `cmd/mxcli/project_tree.go` still call
+  ~30 lister/getter functions from `modelsdk/mprread/` that lack a gen→model deep-field
+  converter. Switching requires writing a full converter per domain (executor code consumes
+  deep fields, not just ID+Name) across ~15 domains: Enumeration, Constant, Navigation,
+  ProjectSettings, ImportMapping, ExportMapping, JsonStructure, BusinessEventService,
+  OData/REST services, ScheduledEvent, ImageCollection, AgentEditor types, etc.
+  Phase 5 (sdk/mpr retirement) is complete; Phase 4 is a separate spec.
 
 ## Useful Files for Context
 
 - `README.md` - User documentation and API reference
 - `docs/SDK_EQUIVALENCE.md` - Detailed comparison with TypeScript SDK, gap analysis
-- `sdk/mpr/parser.go` - BSON parsing logic (complex, handles polymorphic types)
-- `sdk/mpr/writer_widgets.go` - Widget BSON serialization
+- `mdl/backend/mpr/` - BSON parsing and mutation logic (replaced sdk/mpr post Phase 5)
 - `sdk/widgets/templates/` - Embedded widget templates for pluggable widgets (ComboBox, DataGrid2, etc.)
 - `sdk/widgets/templates/README.md` - **Critical**: Template extraction requirements (must include both `type` AND `object`)
 - `generated/metamodel/enums.go` - All Mendix enumeration types
