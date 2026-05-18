@@ -19,6 +19,7 @@ import (
 	"github.com/mendixlabs/mxcli/internal/expr/meta"
 	"github.com/mendixlabs/mxcli/internal/expr/parse"
 	"github.com/mendixlabs/mxcli/internal/expr/scan"
+	"github.com/mendixlabs/mxcli/internal/expr/typecheck"
 	"github.com/mendixlabs/mxcli/internal/expr/validate"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 )
@@ -272,9 +273,11 @@ func (d *Daemon) validate(req ValidateRequest) ([]ValidationItem, error) {
 			})
 		}
 	}
+	checker := typecheck.NewChecker(d.index)
 	for _, pr := range parseResults {
 		emit(validate.ValidateSyntax(pr))
 		emit(validate.ValidateSemantic(pr, d.index))
+		emit(checker.Check(pr))
 	}
 	if items == nil {
 		items = []ValidationItem{}

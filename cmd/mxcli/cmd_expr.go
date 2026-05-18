@@ -12,6 +12,7 @@ import (
 	"github.com/mendixlabs/mxcli/internal/expr/repair"
 	"github.com/mendixlabs/mxcli/internal/expr/report"
 	"github.com/mendixlabs/mxcli/internal/expr/scan"
+	"github.com/mendixlabs/mxcli/internal/expr/typecheck"
 	"github.com/mendixlabs/mxcli/internal/expr/validate"
 	"github.com/spf13/cobra"
 )
@@ -120,9 +121,11 @@ func runExprValidateNoDaemon(mprContentsPath string) error {
 		return err
 	}
 	parsed := parse.BatchParse(records)
+	checker := typecheck.NewChecker(nil) // nil index: type checking skipped in no-daemon mode
 	var issues []validate.ValidationResult
 	for _, pr := range parsed {
 		issues = append(issues, validate.ValidateSyntax(pr)...)
+		issues = append(issues, checker.Check(pr)...)
 	}
 	out, err := report.Render(issues, report.Options{Format: exprFormat, Severity: exprSeverity})
 	if err != nil {
