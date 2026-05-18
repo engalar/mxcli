@@ -28,24 +28,29 @@ func TestCompatible_UnknownSkips(t *testing.T) {
 	}
 }
 
-func TestCompatible_NumericWidening(t *testing.T) {
+func TestCompatible_NumericCompat(t *testing.T) {
+	// All numeric types are mutually compatible — Mendix runtime handles conversions.
 	if !typecheck.Compatible(exprcheck.KindInteger, exprcheck.KindLong) {
-		t.Error("Integer should widen to Long")
+		t.Error("Integer should be compatible with Long")
 	}
 	if !typecheck.Compatible(exprcheck.KindInteger, exprcheck.KindDecimal) {
-		t.Error("Integer should widen to Decimal")
+		t.Error("Integer should be compatible with Decimal")
 	}
-	if typecheck.Compatible(exprcheck.KindDecimal, exprcheck.KindInteger) {
-		t.Error("Decimal should NOT narrow to Integer")
+	if !typecheck.Compatible(exprcheck.KindDecimal, exprcheck.KindInteger) {
+		t.Error("Decimal should be compatible with Integer (Mendix narrows at runtime)")
 	}
 }
 
-func TestCompatible_EmptyToObject(t *testing.T) {
+func TestCompatible_EmptyIsNull(t *testing.T) {
+	// KindEmpty is Mendix null — compatible with any slot type.
 	if !typecheck.Compatible(exprcheck.KindEmpty, exprcheck.KindObject) {
 		t.Error("Empty should be compatible with Object slot")
 	}
-	if typecheck.Compatible(exprcheck.KindEmpty, exprcheck.KindString) {
-		t.Error("Empty should NOT be compatible with String slot")
+	if !typecheck.Compatible(exprcheck.KindEmpty, exprcheck.KindString) {
+		t.Error("Empty (null) should be compatible with String slot")
+	}
+	if !typecheck.Compatible(exprcheck.KindEmpty, exprcheck.KindEnumeration) {
+		t.Error("Empty (null) should be compatible with Enumeration slot")
 	}
 }
 
@@ -160,7 +165,7 @@ func TestSlotResolver_StaticSlots(t *testing.T) {
 		field    string
 		want     exprcheck.TypeKind
 	}{
-		{"Microflows$ExpressionSplitCondition", "Expression", exprcheck.KindBoolean},
+		// ExpressionSplitCondition intentionally removed: can be Boolean or Enumeration.
 		{"Microflows$WhileLoopCondition", "WhileExpression", exprcheck.KindBoolean},
 		{"Microflows$TemplateParameter", "Expression", exprcheck.KindString},
 		{"Microflows$CustomRange", "LimitExpression", exprcheck.KindInteger},

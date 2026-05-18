@@ -14,8 +14,9 @@ func slotKey(rec scan.ExprRecord) string {
 }
 
 // staticSlots maps UnitType/Field → expected TypeKind for slots with fixed expectations.
+// Note: ExpressionSplitCondition is intentionally absent — it can hold a Boolean expression
+// OR an enumeration attribute for enum-based splits, so we cannot safely require Boolean.
 var staticSlots = map[string]exprcheck.TypeKind{
-	"Microflows$ExpressionSplitCondition/Expression": exprcheck.KindBoolean,
 	"Microflows$WhileLoopCondition/WhileExpression":  exprcheck.KindBoolean,
 	"DomainModels$AccessRule/XPathConstraint":        exprcheck.KindBoolean,
 	"Microflows$CustomRange/LimitExpression":         exprcheck.KindInteger,
