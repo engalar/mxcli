@@ -360,3 +360,25 @@ func TestFuncChecker_FormatDecimal_CorrectArity_OK(t *testing.T) {
 		t.Errorf("formatDecimal(x, mask) must not fire E006: %+v", hs)
 	}
 }
+
+func TestFuncReturnKind_DateTimeExtraction(t *testing.T) {
+	intFuncs := []string{"year", "month", "dayOfYear", "dayOfMonth",
+		"weekOfYear", "dayOfWeek", "hour", "minute", "second", "millisecond"}
+	for _, name := range intFuncs {
+		k, ok := FuncReturnKind(name)
+		if !ok {
+			t.Errorf("FuncReturnKind(%q): not found", name)
+			continue
+		}
+		if k != KindInteger {
+			t.Errorf("FuncReturnKind(%q) = %v, want KindInteger", name, k)
+		}
+	}
+}
+
+func TestFuncReturnKind_Unknown(t *testing.T) {
+	_, ok := FuncReturnKind("nonExistentFunction")
+	if ok {
+		t.Error("expected false for unknown function")
+	}
+}
