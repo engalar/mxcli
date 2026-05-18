@@ -106,7 +106,8 @@ func TestFuncReg_Unknown(t *testing.T) {
 // ── SlotResolver tests ────────────────────────────────────────────────────────
 
 type mockCat struct {
-	attrs map[string]exprcheck.TypeKind
+	attrs     map[string]exprcheck.TypeKind
+	entityQNs map[string]string // varName → entityQN; nil means always ""
 }
 
 func (m *mockCat) AttributeKind(entityQN, attrName string) (exprcheck.TypeKind, bool) {
@@ -117,7 +118,12 @@ func (m *mockCat) AttributeKind(entityQN, attrName string) (exprcheck.TypeKind, 
 	return exprcheck.KindUnknown, false
 }
 
-func (m *mockCat) EntityQNOf(_ string) string { return "" }
+func (m *mockCat) EntityQNOf(varName string) string {
+	if m.entityQNs == nil {
+		return ""
+	}
+	return m.entityQNs[varName]
+}
 
 type mockIdx struct {
 	paramKinds map[string]map[string]exprcheck.TypeKind
@@ -231,5 +237,127 @@ func TestSlotResolver_UnknownSlot(t *testing.T) {
 	_, ok := resolver.Expect(rec, cat)
 	if ok {
 		t.Error("expected ok=false for unknown slot")
+	}
+}
+
+// ── Inferrer tests ────────────────────────────────────────────────────────────
+
+type mockScope struct{ kinds map[string]exprcheck.TypeKind }
+
+func (m *mockScope) TypeOf(name string) exprcheck.TypeKind {
+	if k, ok := m.kinds[name]; ok {
+		return k
+	}
+	return exprcheck.KindUnknown
+}
+
+func TestInferrer_Literals(t *testing.T) {
+	inf := typecheck.NewInferrer()
+	scope := &mockScope{}
+	cat := &mockCat{}
+	funcs := typecheck.NewFuncReg()
+
+	parser := exprcheck.NewParser()
+	tests := []struct {
+		raw  string
+		want exprcheck.TypeKind
+	}{
+		{"'hello'", exprcheck.KindString},
+		{"42", exprcheck.KindInteger},
+		{"3.14", exprcheck.KindDecimal},
+		{"true", exprcheck.KindBoolean},
+		{"false", exprcheck.KindBoolean},
+		{"empty", exprcheck.KindEmpty},
+	}
+
+	for _, tt := range tests {
+		ast, _ := parser.Parse(tt.raw, exprcheck.Context{})
+		got := inf.Infer(ast, scope, cat, funcs)
+		if got != tt.want {
+			t.Errorf("Infer(%q) = %v, want %v", tt.raw, got, tt.want)
+		}
+	}
+}
+
+func TestInferrer_VariableExpr(t *testing.T) {
+	inf := typecheck.NewInferrer()
+	scope := &mockScope{kinds: map[string]exprcheck.TypeKind{"MyVar": exprcheck.KindString}}
+	cat := &mockCat{}
+	funcs := typecheck.NewFuncReg()
+
+	parser := exprcheck.NewParser()
+	ast, _ := parser.Parse("$MyVar", exprcheck.Context{})
+	got := inf.Infer(ast, scope, cat, funcs)
+	if got != exprcheck.KindString {
+		t.Errorf("Infer($MyVar) = %v, want KindString", got)
+	}
+}
+
+func TestInferrer_FunctionCall(t *testing.T) {
+	inf := typecheck.NewInferrer()
+	scope := &mockScope{}
+	cat := &mockCat{}
+	funcs := typecheck.NewFuncReg()
+
+	parser := exprcheck.NewParser()
+	tests := []struct {
+		raw  string
+		want exprcheck.TypeKind
+	}{
+		{"year($d)", exprcheck.KindInteger},
+		{"toString(42)", exprcheck.KindString},
+		{"length('abc')", exprcheck.KindInteger},
+		{"contains('abc', 'a')", exprcheck.KindBoolean},
+	}
+	for _, tt := range tests {
+		ast, _ := parser.Parse(tt.raw, exprcheck.Context{})
+		got := inf.Infer(ast, scope, cat, funcs)
+		if got != tt.want {
+			t.Errorf("Infer(%q) = %v, want %v", tt.raw, got, tt.want)
+		}
+	}
+}
+
+func TestInferrer_AttrPath_SingleHop(t *testing.T) {
+	inf := typecheck.NewInferrer()
+	scope := &mockScope{}
+	cat := &mockCat{
+		entityQNs: map[string]string{"Entity": "Mod.Entity"},
+		attrs:     map[string]exprcheck.TypeKind{"Mod.Entity.Name": exprcheck.KindString},
+	}
+	funcs := typecheck.NewFuncReg()
+
+	parser := exprcheck.NewParser()
+	ast, _ := parser.Parse("$Entity/Name", exprcheck.Context{})
+	got := inf.Infer(ast, scope, cat, funcs)
+	if got != exprcheck.KindString {
+		t.Errorf("Infer($Entity/Name) = %v, want KindString", got)
+	}
+}
+
+func TestInferrer_BooleanComparison(t *testing.T) {
+	inf := typecheck.NewInferrer()
+	scope := &mockScope{}
+	cat := &mockCat{}
+	funcs := typecheck.NewFuncReg()
+
+	parser := exprcheck.NewParser()
+	ast, _ := parser.Parse("1 = 2", exprcheck.Context{})
+	got := inf.Infer(ast, scope, cat, funcs)
+	if got != exprcheck.KindBoolean {
+		t.Errorf("Infer(1 = 2) = %v, want KindBoolean", got)
+	}
+}
+
+func TestInferrer_RecoveredExprIsUnknown(t *testing.T) {
+	inf := typecheck.NewInferrer()
+	scope := &mockScope{}
+	cat := &mockCat{}
+	funcs := typecheck.NewFuncReg()
+
+	recovered := &exprcheck.RecoveredExpr{}
+	got := inf.Infer(recovered, scope, cat, funcs)
+	if got != exprcheck.KindUnknown {
+		t.Errorf("Infer(RecoveredExpr) = %v, want KindUnknown", got)
 	}
 }
