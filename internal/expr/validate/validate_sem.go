@@ -10,6 +10,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/internal/expr/parse"
 	"github.com/mendixlabs/mxcli/internal/expr/scan"
+	"github.com/mendixlabs/mxcli/mdl/exprcheck"
 )
 
 // IndexReader is the minimal metadata surface required by semantic rules.
@@ -31,6 +32,12 @@ type IndexReader interface {
 	// unitPath is scan.ExprRecord.UnitPath; varName has no leading $.
 	// Returns "" when the variable type is unknown (non-entity type, or not tracked).
 	VarEntityQN(unitPath, varName string) string
+	// VarTypeKind returns the TypeKind of a microflow variable (for SEM-03).
+	VarTypeKind(unitPath, varName string) exprcheck.TypeKind
+	// MicroflowParamKind returns the TypeKind of a named parameter of a microflow.
+	MicroflowParamKind(calleeQN, paramName string) (exprcheck.TypeKind, bool)
+	// MicroflowReturnKind returns the TypeKind of a microflow's return value.
+	MicroflowReturnKind(mfName string) (exprcheck.TypeKind, bool)
 }
 
 // ValidateSemantic applies SEM-04/05/07 rules to a parse result.
