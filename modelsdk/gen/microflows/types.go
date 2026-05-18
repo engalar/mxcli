@@ -8052,7 +8052,7 @@ func (o *MicroflowParameter) SetParameterType(v element.Element) {
 func (o *MicroflowParameter) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.propType.Init(raw)
-	if child, err := codec.DecodeChild(raw, "ParameterType"); err == nil {
+	if child, err := codec.DecodeChild(raw, "VariableType"); err == nil {
 		o.parameterType.SetFromDecode(child)
 	}
 }
@@ -15120,7 +15120,7 @@ func initMicroflowParameter() *MicroflowParameter {
 	o.name.Bind(&o.Base, 0)
 	o.propType = property.NewPrimitive[string]("Type", property.DecodeString)
 	o.propType.Bind(&o.Base, 1)
-	o.parameterType = property.NewPart[element.Element]("ParameterType")
+	o.parameterType = property.NewPart[element.Element]("VariableType")
 	o.parameterType.Bind(&o.Base, 2)
 	o.SetProperties([]element.Property{o.name, o.propType, o.parameterType})
 	return o
@@ -15877,7 +15877,7 @@ func initRetrieveAction() *RetrieveAction {
 	o.errorHandlingType.Bind(&o.Base, 0)
 	o.retrieveSource = property.NewPart[element.Element]("RetrieveSource")
 	o.retrieveSource.Bind(&o.Base, 1)
-	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
+	o.outputVariableName = property.NewPrimitive[string]("ResultVariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 2)
 	o.SetProperties([]element.Property{o.errorHandlingType, o.retrieveSource, o.outputVariableName})
 	return o

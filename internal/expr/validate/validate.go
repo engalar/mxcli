@@ -12,17 +12,16 @@ import (
 
 // ValidationResult is one validation finding for an expression.
 type ValidationResult struct {
-	UnitID   string // from ExprRecord
-	Project  string
-	UnitType string
-	Field    string
-	Raw      string
-	// SlotPath removed
-	RuleID   string // SYN-01, SYN-02, SYN-03, or hint Code (e.g. E011)
-	Severity string // ERROR | WARNING | INFO
-	Message  string
-	YouWrote string // from Hint.YouWrote (may be empty)
-	Fix      string // from Hint.Fix (may be empty)
+	UnitID   string `json:"UnitID"`
+	Project  string `json:"Project,omitempty"`
+	UnitType string `json:"UnitType"`
+	Field    string `json:"Field"`
+	Raw      string `json:"Raw"`
+	RuleID   string `json:"RuleID"`
+	Severity string `json:"Severity"`
+	Message  string `json:"Message"`
+	YouWrote string `json:"YouWrote,omitempty"`
+	Fix      string `json:"Fix,omitempty"`
 }
 
 // ValidateSyntax applies SYN rules to a ParseResult.

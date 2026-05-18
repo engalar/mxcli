@@ -64,6 +64,8 @@
     "PageSettings.page":                                 "Form",
     "PageForSpecialization.page":                        "Form",
     "*.outputVariableName":                              "VariableName",
+    "RetrieveAction.outputVariableName":                 "ResultVariableName",
+    "MicroflowParameter.parameterType":                  "VariableType",
     "EntityTypeParameterType.typeParameter":             "TypeParameterPointer",
     "ParameterizedEntityType.typeParameter":             "TypeParameterPointer",
     "GridControlBar.defaultButton":                      "DefaultButtonPointer",
