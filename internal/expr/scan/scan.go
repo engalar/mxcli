@@ -27,6 +27,11 @@ type ExprRecord struct {
 	UnitPath string // relative .mxunit path from mprcontents/
 	// SlotPath was removed: the parse package detects XPath vs regular expressions
 	// by content (starts with "[" but not "[%"), which is more robust than a mapping table.
+
+	// Type-checking context — populated only for specific UnitTypes; empty otherwise.
+	TargetAttrQN string // Microflows$ChangeActionItem: target attribute "Module.Entity.AttrName"
+	CalleeQN     string // *MicroflowCallParameterMapping: called microflow "Module.MFName"
+	ParamName    string // *MicroflowCallParameterMapping: parameter name
 }
 
 // GetRaw returns the raw expression (satisfies repair package interface).
@@ -130,7 +135,7 @@ func scanObj(v interface{}, project, relPath string, opts Options, out *[]ExprRe
 					if raw == "" || strings.HasPrefix(raw, "https://") || strings.HasPrefix(raw, "http://") {
 						continue
 					}
-					*out = append(*out, ExprRecord{
+					rec := ExprRecord{
 						UnitID:   uid,
 						Project:  project,
 						UnitType: unitType,
@@ -138,7 +143,18 @@ func scanObj(v interface{}, project, relPath string, opts Options, out *[]ExprRe
 						Raw:      raw,
 						Category: categoryOf(unitType),
 						UnitPath: relPath,
-					})
+					}
+					// Populate type-checking context fields.
+					switch unitType {
+					case "Microflows$ChangeActionItem":
+						rec.TargetAttrQN, _ = val["Attribute"].(string)
+					case "Microflows$MicroflowCallParameterMapping",
+						"Mappings$MicroflowCallParameterMappingImpl",
+						"Workflows$MicroflowCallParameterMapping":
+						rec.CalleeQN, _ = val["Microflow"].(string)
+						rec.ParamName, _ = val["Parameter"].(string)
+					}
+					*out = append(*out, rec)
 				}
 			}
 		}
