@@ -27,20 +27,13 @@ var exprDaemonStartCmd = &cobra.Command{
 			return fmt.Errorf("requires -p project.mpr")
 		}
 
-		// --socket override is currently not supported by daemon.New (the socket
-		// path is derived deterministically from mprPath). Fail loudly rather
-		// than silently using the default.
-		if exprDaemonStartSocket != "" && exprDaemonStartSocket != daemon.SocketPath(mprPath) {
-			return fmt.Errorf("--socket override not yet supported (daemon.New derives socket path from -p)")
-		}
-
 		idleTimeout := 5 * time.Minute
 		if s := os.Getenv("MXCLI_DAEMON_TIMEOUT"); s != "" {
 			if d, err := time.ParseDuration(s); err == nil {
 				idleTimeout = d
 			}
 		}
-		d, err := daemon.New(mprPath, idleTimeout)
+		d, err := daemon.NewWithSocket(mprPath, exprDaemonStartSocket, idleTimeout)
 		if err != nil {
 			return fmt.Errorf("init daemon: %w", err)
 		}
