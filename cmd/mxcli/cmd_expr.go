@@ -121,11 +121,12 @@ func runExprValidateNoDaemon(mprContentsPath string) error {
 		return err
 	}
 	parsed := parse.BatchParse(records)
-	checker := typecheck.NewChecker(nil) // nil index: type checking skipped in no-daemon mode
+	checker := typecheck.NewChecker(nil) // nil index: structural checks also skipped without index
 	var issues []validate.ValidationResult
 	for _, pr := range parsed {
 		issues = append(issues, validate.ValidateSyntax(pr)...)
 		issues = append(issues, checker.Check(pr)...)
+		issues = append(issues, checker.CheckStructural(pr)...)
 	}
 	out, err := report.Render(issues, report.Options{Format: exprFormat, Severity: exprSeverity})
 	if err != nil {

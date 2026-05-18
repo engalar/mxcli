@@ -280,6 +280,7 @@ func (d *Daemon) validate(req ValidateRequest) ([]ValidationItem, error) {
 		emit(validate.ValidateSyntax(pr))
 		emit(validate.ValidateSemantic(pr, d.index))
 		emit(checker.Check(pr))
+		emit(checker.CheckStructural(pr))
 	}
 	if items == nil {
 		items = []ValidationItem{}
