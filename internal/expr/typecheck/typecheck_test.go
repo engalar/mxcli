@@ -3,8 +3,10 @@
 package typecheck_test
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/internal/expr/scan"
 	"github.com/mendixlabs/mxcli/internal/expr/typecheck"
 	"github.com/mendixlabs/mxcli/mdl/exprcheck"
 )
@@ -98,5 +100,136 @@ func TestFuncReg_Unknown(t *testing.T) {
 	_, ok := reg.ReturnType("notAFunction")
 	if ok {
 		t.Error("expected false for unknown function")
+	}
+}
+
+// ── SlotResolver tests ────────────────────────────────────────────────────────
+
+type mockCat struct {
+	attrs map[string]exprcheck.TypeKind
+}
+
+func (m *mockCat) AttributeKind(entityQN, attrName string) (exprcheck.TypeKind, bool) {
+	key := entityQN + "." + attrName
+	if k, ok := m.attrs[key]; ok {
+		return k, true
+	}
+	return exprcheck.KindUnknown, false
+}
+
+func (m *mockCat) EntityQNOf(_ string) string { return "" }
+
+type mockIdx struct {
+	paramKinds map[string]map[string]exprcheck.TypeKind
+}
+
+func (m *mockIdx) AttributeKind(entityQN, attrName string) (exprcheck.TypeKind, bool) {
+	return exprcheck.KindUnknown, false
+}
+func (m *mockIdx) VarTypeKind(_, _ string) exprcheck.TypeKind { return exprcheck.KindUnknown }
+func (m *mockIdx) VarEntityQN(_, _ string) string             { return "" }
+func (m *mockIdx) MicroflowParamKind(calleeQN, paramName string) (exprcheck.TypeKind, bool) {
+	name := calleeQN
+	if i := strings.LastIndex(calleeQN, "."); i >= 0 {
+		name = calleeQN[i+1:]
+	}
+	if params, ok := m.paramKinds[name]; ok {
+		if k, ok2 := params[paramName]; ok2 {
+			return k, true
+		}
+	}
+	return exprcheck.KindUnknown, false
+}
+func (m *mockIdx) MicroflowReturnKind(_ string) (exprcheck.TypeKind, bool) {
+	return exprcheck.KindUnknown, false
+}
+
+func TestSlotResolver_StaticSlots(t *testing.T) {
+	idx := &mockIdx{}
+	cat := &mockCat{}
+	resolver := typecheck.NewSlotResolver(idx)
+
+	tests := []struct {
+		unitType string
+		field    string
+		want     exprcheck.TypeKind
+	}{
+		{"Microflows$ExpressionSplitCondition", "Expression", exprcheck.KindBoolean},
+		{"Microflows$WhileLoopCondition", "WhileExpression", exprcheck.KindBoolean},
+		{"Microflows$TemplateParameter", "Expression", exprcheck.KindString},
+		{"Microflows$CustomRange", "LimitExpression", exprcheck.KindInteger},
+	}
+
+	for _, tt := range tests {
+		rec := scan.ExprRecord{UnitType: tt.unitType, Field: tt.field}
+		got, ok := resolver.Expect(rec, cat)
+		if !ok {
+			t.Errorf("Expect(%s/%s): got !ok", tt.unitType, tt.field)
+			continue
+		}
+		if got != tt.want {
+			t.Errorf("Expect(%s/%s) = %v, want %v", tt.unitType, tt.field, got, tt.want)
+		}
+	}
+}
+
+func TestSlotResolver_AttrTarget(t *testing.T) {
+	idx := &mockIdx{}
+	cat := &mockCat{
+		attrs: map[string]exprcheck.TypeKind{
+			"WF_Engine.WFInstance.Wf_No": exprcheck.KindString,
+		},
+	}
+	resolver := typecheck.NewSlotResolver(idx)
+
+	rec := scan.ExprRecord{
+		UnitType:     "Microflows$ChangeActionItem",
+		Field:        "Value",
+		TargetAttrQN: "WF_Engine.WFInstance.Wf_No",
+	}
+	got, ok := resolver.Expect(rec, cat)
+	if !ok {
+		t.Fatal("expected ok=true for ChangeActionItem with TargetAttrQN")
+	}
+	if got != exprcheck.KindString {
+		t.Errorf("got %v, want KindString", got)
+	}
+}
+
+func TestSlotResolver_CallArgTarget(t *testing.T) {
+	idx := &mockIdx{
+		paramKinds: map[string]map[string]exprcheck.TypeKind{
+			"SUB_AdvanceStepStatus": {
+				"WFInstanceId": exprcheck.KindLong,
+			},
+		},
+	}
+	cat := &mockCat{}
+	resolver := typecheck.NewSlotResolver(idx)
+
+	rec := scan.ExprRecord{
+		UnitType:  "Microflows$MicroflowCallParameterMapping",
+		Field:     "Argument",
+		CalleeQN:  "WF_Engine.SUB_AdvanceStepStatus",
+		ParamName: "WFInstanceId",
+	}
+	got, ok := resolver.Expect(rec, cat)
+	if !ok {
+		t.Fatal("expected ok=true for call arg target")
+	}
+	if got != exprcheck.KindLong {
+		t.Errorf("got %v, want KindLong", got)
+	}
+}
+
+func TestSlotResolver_UnknownSlot(t *testing.T) {
+	idx := &mockIdx{}
+	cat := &mockCat{}
+	resolver := typecheck.NewSlotResolver(idx)
+
+	rec := scan.ExprRecord{UnitType: "SomeUnknown$Type", Field: "Value"}
+	_, ok := resolver.Expect(rec, cat)
+	if ok {
+		t.Error("expected ok=false for unknown slot")
 	}
 }
