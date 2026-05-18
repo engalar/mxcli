@@ -85,10 +85,10 @@
   <tbody>
     <tr>
       <td><a href="ISSUE-001.html">001</a></td>
-      <td>$Entity/id 系统属性未被索引 → 表达式推断返回 KindUnknown</td>
-      <td><span class="badge open">Open</span></td>
+      <td>$ListVar/id 非法访问模式 → 需新规则（非 SEM-03）<br><small style="color:#8b949e">原假设已证伪：id 是保留字，$Var 是 List，不是类型不匹配</small></td>
+      <td><span class="badge open">Open — 重新分类</span></td>
       <td class="p1">P1</td>
-      <td class="impact">≥10 个漏报 (Change variable ID类变量)</td>
+      <td class="impact">≥13 个漏报（属于新规则范畴）</td>
       <td>✓ 必须</td>
     </tr>
     <tr>
