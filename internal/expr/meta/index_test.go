@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/internal/expr/meta"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
+	"github.com/mendixlabs/mxcli/mdl/exprcheck"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -68,6 +69,38 @@ func TestBuildFromBackend_MissingEnum(t *testing.T) {
 
 	_, ok := idx.EnumCases("NonExistent.Module.FakeEnum")
 	assert.False(t, ok, "不存在的枚举应返回 false")
+}
+
+func TestIndex_ImplementsCatalogReader(t *testing.T) {
+	b := openBackend(t, macnicaMPR)
+	idx, err := meta.BuildFromBackend(b)
+	require.NoError(t, err)
+
+	var _ exprcheck.CatalogReader = idx
+	t.Logf("Index implements CatalogReader: entities=%d enums=%d constants=%d",
+		idx.EntityCount(), idx.EnumCount(), idx.ConstantsCount())
+}
+
+func TestMockIndex_Basics(t *testing.T) {
+	m := meta.NewMockIndex(map[string][]string{
+		"M.E": {"A", "B"},
+	})
+	m.AddConstant("@M.K")
+	m.AddEntityAttr("M.Ent", "Field1", exprcheck.KindString)
+
+	vals, ok := m.EnumCases("M.E")
+	assert.True(t, ok)
+	assert.Equal(t, []string{"A", "B"}, vals)
+
+	assert.True(t, m.HasConstant("@M.K"))
+	assert.False(t, m.HasConstant("@X.Y"))
+
+	k, ok := m.AttributeKind("M.Ent", "Field1")
+	assert.True(t, ok)
+	assert.Equal(t, exprcheck.KindString, k)
+
+	assert.True(t, m.HasEntity("M.Ent"))
+	assert.False(t, m.HasEntity("X.Y"))
 }
 
 func TestBuildFromBackend_SystemEntity(t *testing.T) {
