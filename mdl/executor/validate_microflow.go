@@ -18,8 +18,20 @@ func ValidateMicroflow(stmt *ast.CreateMicroflowStmt) []linter.Violation {
 		mfName:     stmt.Name.String(),
 		returnType: stmt.ReturnType,
 	}
-	// Validate parameter entity references — reject bare names without module prefix
+	// Validate parameter names and entity references.
 	for _, p := range stmt.Parameters {
+		// Reject parameter names that include the '$' prefix in the declaration.
+		// The '$' is reference-site syntax only; including it in the declaration
+		// produces a parameter literally named "$Foo" and breaks every later
+		// reference like $Foo, while masking the real problem with cryptic
+		// "unknown variable" errors deep in microflow validation.
+		if strings.HasPrefix(p.Name, "$") {
+			bare := strings.TrimPrefix(p.Name, "$")
+			v.addViolation("MDL012", linter.SeverityError,
+				fmt.Sprintf("parameter %q must not include '$' prefix in declaration", p.Name),
+				fmt.Sprintf("declare as %q; reference it inside the microflow body as $%s", bare, bare))
+		}
+		// Reject bare entity names without module prefix.
 		if p.Type.EntityRef != nil && p.Type.EntityRef.Module == "" {
 			v.addViolation("MDL008", linter.SeverityError,
 				fmt.Sprintf("parameter '$%s': entity type '%s' is missing module prefix",
