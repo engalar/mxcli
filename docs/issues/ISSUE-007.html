@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ISSUE-007: CE0117 全分类 — 原始规格假设错误</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #0d1117; color: #c9d1d9; min-height: 100vh; padding: 24px; max-width: 1000px; margin: 0 auto; }
+  .back { color: #58a6ff; font-size: 13px; text-decoration: none; display: inline-block; margin-bottom: 16px; }
+  .back:hover { text-decoration: underline; }
+  .header { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  .issue-id { font-size: 12px; color: #8b949e; margin-bottom: 6px; }
+  .issue-title { font-size: 20px; font-weight: 700; color: #f0f6fc; margin-bottom: 12px; }
+  .meta { display: flex; gap: 20px; flex-wrap: wrap; font-size: 12px; }
+  .meta-item { display: flex; flex-direction: column; gap: 2px; }
+  .meta-label { color: #6e7681; text-transform: uppercase; letter-spacing: .06em; font-size: 10px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .open    { background: rgba(248,81,73,.15); color: #f85149; border: 1px solid rgba(248,81,73,.3); }
+  .p1-badge{ background: rgba(248,81,73,.2); color: #f85149; border: 1px solid rgba(248,81,73,.4); font-weight: 700; }
+  .section { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 18px 22px; margin-bottom: 16px; }
+  .section-title { font-size: 13px; font-weight: 700; color: #f0f6fc; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
+  p { font-size: 13px; line-height: 1.65; margin-bottom: 8px; }
+  code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px;
+         background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 1px 5px; color: #f0f6fc; }
+  pre { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px;
+        background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+        padding: 14px 16px; overflow-x: auto; line-height: 1.7; color: #c9d1d9; margin: 8px 0; }
+  .ok { color: #3fb950; } .bad { color: #f85149; } .warn { color: #d29922; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th { background: #0d1117; color: #8b949e; padding: 8px 10px;
+                   text-align: left; border-bottom: 1px solid #30363d; }
+  .data-table td { padding: 8px 10px; border-bottom: 1px solid #21262d; vertical-align: top; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .error-box { background: #0d1117; border: 1px solid #f85149; border-radius: 6px;
+               padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #f85149; }
+  .rule-box  { background: #0d1117; border: 1px solid #d29922; border-radius: 6px;
+               padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #d29922; }
+  .info-box  { background: #0d1117; border: 1px solid #58a6ff; border-radius: 6px;
+               padding: 12px 16px; margin: 8px 0; font-size: 13px; color: #58a6ff; }
+  .ok-box    { background: #0d1117; border: 1px solid #3fb950; border-radius: 6px;
+               padding: 12px 16px; margin: 8px 0; font-size: 13px; color: #3fb950; }
+  ul, ol { padding-left: 18px; }
+  li { font-size: 13px; line-height: 1.7; margin-bottom: 3px; }
+  .tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px;
+         font-weight: 700; margin-right: 4px; }
+  .tag-new  { background: rgba(248,81,73,.2); color: #f85149; }
+  .tag-sem07{ background: rgba(88,166,255,.2); color: #58a6ff; }
+  .tag-e006 { background: rgba(210,153,34,.2); color: #d29922; }
+  .tag-sem03{ background: rgba(63,185,80,.2); color: #3fb950; }
+</style>
+</head>
+<body>
+<a href="index.html" class="back">← 返回 Issue 列表</a>
+
+<div class="header">
+  <div class="issue-id">ISSUE-007 — 综合分析</div>
+  <div class="issue-title">macnica 44 个 CE0117 完整分类：原始规格假设错误</div>
+  <div class="meta">
+    <div class="meta-item"><div class="meta-label">状态</div><span class="badge open">Open — 需重新规划</span></div>
+    <div class="meta-item"><div class="meta-label">优先级</div><span class="badge p1-badge">P1 — 影响整体方向</span></div>
+    <div class="meta-item"><div class="meta-label">分析日期</div><div style="font-size:13px">2026-05-18</div></div>
+    <div class="meta-item"><div class="meta-label">验证方法</div><div style="font-size:13px">BSON 直接检查 + 推断器分析</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">核心结论</div>
+  <div class="error-box">
+    原始规格声称"SEM-03 应覆盖 macnica 中 41 个剩余 CE0117 错误"——这个假设是错误的。<br><br>
+    经过系统分析，macnica 44 个 CE0117 <strong>几乎全部不是类型不匹配（SEM-03 范畴）</strong>。
+    它们是完全不同类型的表达式错误，需要新的检测规则。
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">CE0117 完整分类（基于 BSON 数据分析）</div>
+  <table class="data-table">
+    <tr>
+      <th>错误类型</th>
+      <th>数量</th>
+      <th>代表性案例</th>
+      <th>检测规则归属</th>
+    </tr>
+    <tr>
+      <td><strong>在 List 变量上访问属性</strong><br><small>+ id 是保留字不可读</small></td>
+      <td class="bad" style="font-weight:700">≥21</td>
+      <td>
+        <code>$PayerSalesAreaData/id</code>（$Var 是 List）<br>
+        <code>$Instance/id</code>（$Var 是 List）<br>
+        <code>$WFNotificationOutbox.WFInstanceId ← $WFInstance/id</code>
+      </td>
+      <td><span class="tag tag-new">新规则</span>SEM-L01：List上访问属性<br><span class="tag tag-new">新规则</span>SEM-L02：id是保留字</td>
+    </tr>
+    <tr>
+      <td><strong>Log message 模板参数引用不存在的变量</strong><br><small>推断为 String 但变量本身无效</small></td>
+      <td class="bad" style="font-weight:700">7</td>
+      <td>
+        全部 94 个 TemplateParameter 推断为 String(正确)<br>
+        CE0117 来自：<code>$SomeDeletedVar</code> 引用已删除变量<br>
+        <small>注：TemplateParameter 推断 100% 正确，问题不在类型</small>
+      </td>
+      <td><span class="tag tag-new">新规则</span>SEM-08：变量存在性检查<br>或增强 <span class="tag tag-sem07">SEM-07</span></td>
+    </tr>
+    <tr>
+      <td><strong>函数参数类型错误</strong><br><small>如 year($Date) 中 $Date 非 DateTime</small></td>
+      <td class="warn" style="font-weight:700">~6</td>
+      <td>
+        <code>year($Date)</code> — $Date 的变量类型可能不是 DateTime<br>
+        <code>$WFApplication/DocumentControlNo</code> — $WFApplication 是 List<br>
+        当前 inferrer 只检查返回类型，不验证参数类型
+      </td>
+      <td><span class="tag tag-e006">E006</span>参数类型验证<br>（当前 E006 只检查数量，不检类型）</td>
+    </tr>
+    <tr>
+      <td><strong>Decision 中含 /id 保留字</strong></td>
+      <td class="warn" style="font-weight:700">~2</td>
+      <td>
+        <code>$MatchItem/id = $Dto/CustomerBaseId</code><br>
+        比较本身推断为 Boolean（正确），但 <code>id</code> 访问非法
+      </td>
+      <td><span class="tag tag-new">新规则</span>SEM-L02：id保留字</td>
+    </tr>
+    <tr>
+      <td><strong>已兼容 / 无法归类</strong><br><small>所有已分析的都显示 compat=true</small></td>
+      <td>~8</td>
+      <td>
+        所有 ChangeVariable 非/id 案例：<code>compat=true</code><br>
+        所有 CreateObject 非/id 案例：<code>compat=true</code><br>
+        CE0117 原因待进一步调查（可能是BSON中其他属性出错）
+      </td>
+      <td>待分析</td>
+    </tr>
+    <tr>
+      <td><strong>已被 SEM-03 检测到</strong></td>
+      <td class="ok" style="font-weight:700">1</td>
+      <td>
+        <code>Org_Master.SUB_GetCurrentEmployee</code>:<br>
+        <code>[%CurrentUser%] / System.User / Name</code> → Object 赋给 String 变量
+      </td>
+      <td><span class="tag tag-sem03">SEM-03 ✓</span></td>
+    </tr>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">关键发现：CE0117 ≠ 类型不匹配</div>
+  <p>Mendix CE0117 是通用错误代码 "Error(s) in expression"，包含多种子类型：</p>
+  <ul>
+    <li>✗ 类型不匹配 → SEM-03（我们已实现，但仅覆盖 1 个）</li>
+    <li>✗ 在 List 变量上访问属性 → 需新规则</li>
+    <li>✗ 访问保留属性 <code>id</code> → 需新规则</li>
+    <li>✗ 引用不存在的变量 → 需新规则（SEM-08）</li>
+    <li>✗ 函数参数类型错误 → E006 增强</li>
+  </ul>
+
+  <div class="rule-box">
+    原规格"SEM-03 覆盖 41 个 CE0117"的假设来自于对 CE0117 的误解。
+    CE0117 是 Mendix 编译器的通用错误码，不等于"类型不匹配"。
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">SEM-03 的实际定位（重新确认）</div>
+  <div class="ok-box">
+    SEM-03 实现是正确的，它能检测真正的表达式类型不匹配。macnica 中确实存在 1 个真实的类型不匹配
+    （Object → String），已被正确检测。<br><br>
+    SEM-03 的价值在于防止类型错误，而不是覆盖所有 CE0117。
+    CE0117 中的大多数问题需要其他规则来检测。
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">需讨论的新规则</div>
+  <table class="data-table">
+    <tr><th>规则 ID（建议）</th><th>检测内容</th><th>影响 CE0117 数</th><th>优先级</th></tr>
+    <tr>
+      <td><strong>SEM-L01</strong></td>
+      <td>在 List（KindList）变量上访问属性：<code>$ListVar/attribute</code> 应报错，需先 FirstItem</td>
+      <td class="bad">≥15</td>
+      <td class="bad">P1</td>
+    </tr>
+    <tr>
+      <td><strong>SEM-L02</strong></td>
+      <td>访问 <code>id</code>（Mendix 保留字）属性，无论变量是 Object 还是 List</td>
+      <td class="bad">≥6</td>
+      <td class="bad">P1（可与 SEM-L01 合并）</td>
+    </tr>
+    <tr>
+      <td><strong>SEM-08</strong></td>
+      <td>引用未声明（不在当前 mfVarKinds）的变量</td>
+      <td class="warn">~7</td>
+      <td class="warn">P2（误报风险高，需谨慎）</td>
+    </tr>
+    <tr>
+      <td><strong>E006 增强</strong></td>
+      <td>函数参数类型验证（当前只检数量，不检类型）</td>
+      <td class="warn">~6</td>
+      <td class="warn">P2</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">下一步（需批准）</div>
+  <ol>
+    <li style="margin-bottom:6px">讨论是否实现 SEM-L01（List上访问属性）—— 影响最大，≥15 个 CE0117</li>
+    <li style="margin-bottom:6px">SEM-L01 的实现位置：在 <code>inferAttrPath</code> 或独立的 ValidateSemantic 检查中</li>
+    <li style="margin-bottom:6px">每个新规则实施后，用 <code>mx check</code> 双向验证（macnica 新增检出 + Mx2026AIDay 仍为 0）</li>
+    <li>更新 ISSUES 001-004 以反映本次分析的新认识</li>
+  </ol>
+</div>
+</body>
+</html>
