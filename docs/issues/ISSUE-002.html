@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>ISSUE-002: TemplateParameter 推断失败</title>
+<title>ISSUE-002: Log message CE0117 漏报</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -18,6 +18,7 @@
   .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
   .open    { background: rgba(248,81,73,.15); color: #f85149; border: 1px solid rgba(248,81,73,.3); }
   .p2-badge{ background: rgba(210,153,34,.2); color: #d29922; border: 1px solid rgba(210,153,34,.4); font-weight: 700; }
+  .blocked { background: rgba(110,118,129,.15); color: #8b949e; border: 1px solid rgba(110,118,129,.3); }
   .section { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 18px 22px; margin-bottom: 16px; }
   .section-title { font-size: 13px; font-weight: 700; color: #f0f6fc; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
   p { font-size: 13px; line-height: 1.65; margin-bottom: 8px; }
@@ -32,8 +33,15 @@
   .data-table td { padding: 8px 10px; border-bottom: 1px solid #21262d; }
   .data-table tr:last-child td { border-bottom: none; }
   .rule-box { background: #0d1117; border: 1px solid #d29922; border-radius: 6px; padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #d29922; }
+  .info-box { background: #0d1117; border: 1px solid #58a6ff; border-radius: 6px; padding: 12px 16px; margin: 8px 0; font-size: 13px; color: #58a6ff; }
+  .ok-box { background: #0d1117; border: 1px solid #3fb950; border-radius: 6px; padding: 12px 16px; margin: 8px 0; font-size: 13px; color: #3fb950; }
   ul, ol { padding-left: 18px; }
   li { font-size: 13px; line-height: 1.7; }
+  .trace-step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 6px; }
+  .step-num { background: #21262d; color: #8b949e; border-radius: 50%; width: 20px; height: 20px;
+              display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
+              flex-shrink: 0; margin-top: 1px; }
+  .step-text { font-size: 13px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -41,68 +49,91 @@
 
 <div class="header">
   <div class="issue-id">ISSUE-002</div>
-  <div class="issue-title">TemplateParameter 表达式推断失败 → Log message CE0117 漏报</div>
+  <div class="issue-title">Log message CE0117 漏报 — 根因：非 TemplateParameter 推断失败</div>
   <div class="meta">
-    <div class="meta-item"><div class="meta-label">状态</div><span class="badge open">Open</span></div>
+    <div class="meta-item"><div class="meta-label">状态</div><span class="badge open">Open — 阻塞于 ISSUE-001</span></div>
     <div class="meta-item"><div class="meta-label">优先级</div><span class="badge p2-badge">P2</span></div>
     <div class="meta-item"><div class="meta-label">CE0117 影响</div><div style="font-size:13px;color:#f85149;font-weight:600">7 个漏报</div></div>
-    <div class="meta-item"><div class="meta-label">槽位</div><div style="font-size:13px">Microflows$TemplateParameter/Expression</div></div>
-    <div class="meta-item"><div class="meta-label">验证状态</div><div style="font-size:13px;color:#d29922">⚠ 待 mx check 验证</div></div>
+    <div class="meta-item"><div class="meta-label">调查时间</div><div style="font-size:13px">2026-05-18</div></div>
   </div>
 </div>
 
 <div class="section">
-  <div class="section-title">症状</div>
-  <p>mx check 报告 7 个 <code>Log message</code> 活动的 CE0117。mxcli 对 <code>TemplateParameter/Expression</code> 槽的检测数为 0。</p>
-  <p>静态槽注册正确：<code>Microflows$TemplateParameter/Expression → KindString</code>，且审计显示 macnica 共有 94 个 TemplateParameter 表达式，其中 93 个推断为 KindString，1 个推断为 KindUnknown。</p>
-  <p><strong>矛盾</strong>：按理说应该能检测到非 String 表达式。但 7 个 CE0117 对应的表达式推断全部失败（KindUnknown）。</p>
+  <div class="section-title">调查结论摘要（Phase 1 完成）</div>
+  <div class="ok-box">✓ <strong>关键发现</strong>：7 个 Log message CE0117 <em>不在</em> <code>TemplateParameter/Expression</code> 槽中，因此 SEM-03 的槽位类型检查方法无法直接检测它们。</div>
+  <p style="margin-top:12px">调查了以下所有路径：</p>
+  <table class="data-table">
+    <tr><th>调查项目</th><th>数量</th><th>结论</th></tr>
+    <tr><td>TemplateParameter/Expression 全量推断</td><td>96 个</td><td class="ok">全部 KindString，无类型不匹配</td></tr>
+    <tr><td>SYN/SEM 语法语义错误</td><td>96 个</td><td class="ok">0 个错误</td></tr>
+    <tr><td>String + 不兼容类型(Enum/Object)的连接</td><td>全量</td><td class="ok">0 个</td></tr>
+    <tr><td>未知类型变量引用（KindUnknown）</td><td>全量</td><td class="warn">1 个（$Result，已用 toString(length()) 包裹，安全）</td></tr>
+    <tr><td>LogMessageAction.Node 非字面量表达式</td><td>全量</td><td class="warn">2 个（getKey(FeedbackModule.LogNodes.FeedbackModule)）</td></tr>
+    <tr><td>上述 getKey() 的枚举值存在性</td><td>—</td><td class="ok">存在，表达式合法</td></tr>
+  </table>
 </div>
 
 <div class="section">
-  <div class="section-title">根因分析</div>
-  <p>TemplateParameter 的表达式槽期望 <code>KindString</code>。当我们推断出 <code>KindUnknown</code> 时，<code>Compatible(KindUnknown, KindString) = true</code>（保守跳过），因此漏报。</p>
+  <div class="section-title">mx check 报告的 7 个 Log message 活动</div>
+  <pre>[CE0117] at Log message activity 'Log message (info)'    × 6
+[CE0117] at Log message activity 'Log message (warning)' × 1</pre>
+  <p>mx check 将 CE0117 归属于 <strong>特定活动</strong>（Log message），但该活动内的表达式（TemplateParameter）经过完整验证，全部正确。</p>
+</div>
 
-  <p style="margin-top:10px">7 个失败推断的可能原因：</p>
-  <ol style="margin-top:6px">
-    <li style="margin-bottom:6px"><strong>变量类型未索引</strong>：表达式包含 <code>$Variable</code>，但该变量的 <code>VarTypeKind</code> 返回 Unknown（如来自 Java Action 输出、或类型为 Enumeration 等未追踪类型）</li>
-    <li style="margin-bottom:6px"><strong>多跳属性路径</strong>：<code>$Entity/assoc/attr</code> 形式，inferrer 对 2+ 跳路径始终返回 Unknown</li>
-    <li style="margin-bottom:6px"><strong>复杂函数链</strong>：中间某步推断失败导致整体为 Unknown</li>
-    <li><strong>Enumeration 引用</strong>：<code>Module.Enum.Value</code> 形式（QNameExpr）返回 Unknown</li>
+<div class="section">
+  <div class="section-title">根因分析 — 最可能的解释</div>
+
+  <p><strong>假说 A（最可能）：Cascade 错误</strong></p>
+  <p>macnica 中有 19 个 <code>Change variable</code> CE0117（ISSUE-001 的对象）。如果这些 ChangeVariable 错误导致某个变量的类型在 Mendix 编译器内部被标记为"无效"，那么同一微流中后续使用该变量的 Log message 活动也会被标记 CE0117。</p>
+
+  <div class="info-box">
+    ℹ Mendix 的 CE0117 是传播式的：上游表达式错误会导致下游使用该变量的所有活动也产生 CE0117。<br>
+    一旦 ISSUE-001 修复后 ChangeVariable 错误消失，这 7 个 Log message CE0117 可能会一并消失。
+  </div>
+
+  <p style="margin-top:12px"><strong>假说 B（次要）：LogMessageAction/Node 字段未扫描</strong></p>
+  <p>我们未扫描 <code>LogMessageAction/Node</code> 字段。该字段有 2 个非字面量表达式（<code>getKey()</code>），经确认合法。但可能还有其他 Node 表达式未被发现。</p>
+  <p>此假说最多解释 2 个 CE0117，不能解释全部 7 个。</p>
+
+  <p style="margin-top:12px"><strong>假说 C（已排除）：TemplateParameter 类型推断失败</strong></p>
+  <p>最初的 ISSUE-002 描述认为是"推断失败导致 KindUnknown"。调查发现这不正确：全部 96 个表达式成功推断为 KindString，没有类型不匹配。</p>
+</div>
+
+<div class="section">
+  <div class="section-title">行动计划</div>
+
+  <div class="rule-box">
+    ⚠ <strong>阻塞</strong>：先完成 ISSUE-001（$Entity/id 系统属性索引），然后运行 mx check。<br>
+    如果修复后 Log message CE0117 数量减少，确认 Cascade 假说。如果仍有剩余，再独立调查。
+  </div>
+
+  <ol style="margin-top:12px">
+    <li style="margin-bottom:8px">
+      <strong>ISSUE-001 修复后</strong>：运行 mx check MacnicaApp.mpr，观察 Log message CE0117 是否减少
+    </li>
+    <li style="margin-bottom:8px">
+      <strong>如有剩余 Log message CE0117</strong>：将 <code>"Microflows$LogMessageAction": {"Node"}</code> 加入 exprFields，检查 Node 表达式（此时需要 mx check 验证）
+    </li>
+    <li>
+      <strong>如仍有剩余</strong>：调查是否有其他未扫描的表达式字段（如 TextTemplate.Parameters）
+    </li>
   </ol>
-
-  <p style="margin-top:12px">问题的本质是：如果一个 Log message 表达式返回 Integer 或 Object（非 String），Mendix 会报 CE0117。但当该非 String 表达式本身无法被我们推断时，我们就无法检测。</p>
 </div>
 
 <div class="section">
-  <div class="section-title">需要验证的问题</div>
-  <ul>
-    <li>macnica 中这 7 个 Log message CE0117 的具体表达式是什么？</li>
-    <li>这些表达式属于哪种推断失败类型（变量未知 / 多跳路径 / 其他）？</li>
-    <li>如果改进变量类型索引（如 ISSUE-001 修复 <code>id</code> 属性），是否能解锁这 7 个推断？</li>
-  </ul>
-</div>
+  <div class="section-title">调查记录：BSON 结构</div>
+  <p>LogMessageAction 的 BSON 字段：</p>
+  <pre>Microflows$LogMessageAction:
+  Level:           Info / Warning / Error (enum)
+  Node:            'LiteralString' 或 expression (我们未扫描)
+  MessageTemplate: Microflows$StringTemplate
+    Text:           '{1}' (模板文本，含占位符)
+    Parameters:     [versioned array]
+      [1]:          Microflows$TemplateParameter
+        Expression: &lt;这是我们扫描的字段&gt;</pre>
 
-<div class="section">
-  <div class="section-title">修复方向（待批准）</div>
-  <p>此 issue 的修复依赖于根因诊断。可能的方向：</p>
-  <ul>
-    <li><strong>如果是变量类型问题</strong>：改进 <code>mfVarKinds</code> 索引覆盖（依赖 ISSUE-001 的基础）</li>
-    <li><strong>如果是多跳路径</strong>：扩展 <code>inferAttrPath</code> 支持有限的 2 跳推断（通过关联端点信息）</li>
-    <li><strong>如果是 Enumeration</strong>：让 QNameExpr 返回 <code>KindEnumeration</code>，然后 <code>Compatible(Enumeration, String) = false</code> 即可检测</li>
-  </ul>
-
-  <div class="rule-box">⚠ 必须先找到这 7 个具体表达式并分类，才能选择正确的修复方向。</div>
-</div>
-
-<div class="section">
-  <div class="section-title">验证计划</div>
-  <ol>
-    <li style="margin-bottom:6px">BSON 检查：找 macnica 中被 mx check 标记的 Log message 活动，提取表达式</li>
-    <li style="margin-bottom:6px">分析失败原因（哪种 AST 节点类型，为什么 KindUnknown）</li>
-    <li style="margin-bottom:6px">实施针对性修复（批准后）</li>
-    <li style="margin-bottom:6px">运行 <code>mx check MacnicaApp.mpr</code> — 确认新增检出</li>
-    <li>运行 <code>mx check "Factory Management.mpr"</code> — 确认仍为 0 errors</li>
-  </ol>
+  <p style="margin-top:10px">唯一未扫描的表达式字段：<code>LogMessageAction/Node</code>（假说 B 的对象）。</p>
+  <p>扫描后需要验证：这些 Node 表达式是否有类型错误。理论上 Node 期望 KindString（log node 名称），如果 Node 表达式返回 Integer/Object 等，应报 SEM-03。</p>
 </div>
 </body>
 </html>
