@@ -603,7 +603,14 @@ func addActionVar(action element.Element, varMap map[string]string, mfReturnType
 		if src, ok := a.RetrieveSource().(*genMf.DatabaseRetrieveSource); ok {
 			if q := src.EntityQualifiedName(); q != "" {
 				varMap[n] = q
-				idx.setVarKind(unitPath, n, exprcheck.KindObject)
+				// Determine single-object vs list by checking the Range type.
+				// ConstantRange.SingleObject() == true means "retrieve first object" → KindObject.
+				// All other ranges (no range, CustomRange, ListRange) → KindList.
+				kind := exprcheck.KindList
+				if cr, ok := src.Range().(*genMf.ConstantRange); ok && cr.SingleObject() {
+					kind = exprcheck.KindObject
+				}
+				idx.setVarKind(unitPath, n, kind)
 			}
 		}
 	case *genMf.MicroflowCallAction:
@@ -631,7 +638,11 @@ func addActionVar(action element.Element, varMap map[string]string, mfReturnType
 		if n == "" {
 			return
 		}
-		kind := dataTypeStringToKind(a.VariableDataType())
+		// Prefer VariableType (element, used in Mendix ≥ 9) over VariableDataType (string, legacy).
+		kind := elementToKind(a.VariableType())
+		if kind == exprcheck.KindUnknown {
+			kind = dataTypeStringToKind(a.VariableDataType())
+		}
 		if kind != exprcheck.KindUnknown {
 			idx.setVarKind(unitPath, n, kind)
 		}

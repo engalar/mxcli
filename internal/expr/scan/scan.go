@@ -32,6 +32,7 @@ type ExprRecord struct {
 	TargetAttrQN string // Microflows$ChangeActionItem: target attribute "Module.Entity.AttrName"
 	CalleeQN     string // *MicroflowCallParameterMapping: called microflow "Module.MFName"
 	ParamName    string // *MicroflowCallParameterMapping: parameter name
+	TargetVarName string // ChangeVariableAction/CreateVariableAction: target variable name (no $)
 }
 
 // GetRaw returns the raw expression (satisfies repair package interface).
@@ -151,8 +152,18 @@ func scanObj(v interface{}, project, relPath string, opts Options, out *[]ExprRe
 					case "Microflows$MicroflowCallParameterMapping",
 						"Mappings$MicroflowCallParameterMappingImpl",
 						"Workflows$MicroflowCallParameterMapping":
-						rec.CalleeQN, _ = val["Microflow"].(string)
-						rec.ParamName, _ = val["Parameter"].(string)
+						// "Parameter" field contains "Module.MFName.ParamName" (3-part).
+						// There is no separate "Microflow" BSON field.
+						if paramQN, _ := val["Parameter"].(string); paramQN != "" {
+							if last := strings.LastIndex(paramQN, "."); last > 0 {
+								rec.CalleeQN = paramQN[:last]   // "Module.MFName"
+								rec.ParamName = paramQN[last+1:] // "ParamName"
+							}
+						}
+					case "Microflows$ChangeVariableAction":
+						rec.TargetVarName, _ = val["ChangeVariableName"].(string)
+					case "Microflows$CreateVariableAction":
+						rec.TargetVarName, _ = val["VariableName"].(string)
 					}
 					*out = append(*out, rec)
 				}
