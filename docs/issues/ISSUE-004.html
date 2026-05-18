@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>ISSUE-004: Call microflow 参数类型漏报</title>
+<title>ISSUE-004: Call microflow 参数类型漏报 — Resolved via SEM-L02</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -16,8 +16,8 @@
   .meta-item { display: flex; flex-direction: column; gap: 2px; }
   .meta-label { color: #6e7681; text-transform: uppercase; letter-spacing: .06em; font-size: 10px; }
   .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-  .open    { background: rgba(248,81,73,.15); color: #f85149; border: 1px solid rgba(248,81,73,.3); }
-  .p3-badge{ background: rgba(88,166,255,.15); color: #58a6ff; border: 1px solid rgba(88,166,255,.3); font-weight: 700; }
+  .resolved { background: rgba(63,185,80,.15); color: #3fb950; border: 1px solid rgba(63,185,80,.3); }
+  .p3-badge { background: rgba(88,166,255,.15); color: #58a6ff; border: 1px solid rgba(88,166,255,.3); }
   .section { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 18px 22px; margin-bottom: 16px; }
   .section-title { font-size: 13px; font-weight: 700; color: #f0f6fc; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
   p { font-size: 13px; line-height: 1.65; margin-bottom: 8px; }
@@ -27,11 +27,11 @@
         background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
         padding: 14px 16px; overflow-x: auto; line-height: 1.6; color: #c9d1d9; margin: 8px 0; }
   .ok { color: #3fb950; } .bad { color: #f85149; } .warn { color: #d29922; }
+  .ok-box { background: #0d1117; border: 1px solid #3fb950; border-radius: 6px; padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #3fb950; }
   .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   .data-table th { background: #0d1117; color: #8b949e; padding: 8px 10px; text-align: left; border-bottom: 1px solid #30363d; }
   .data-table td { padding: 8px 10px; border-bottom: 1px solid #21262d; }
   .data-table tr:last-child td { border-bottom: none; }
-  .rule-box { background: #0d1117; border: 1px solid #d29922; border-radius: 6px; padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #d29922; }
   ul, ol { padding-left: 18px; }
   li { font-size: 13px; line-height: 1.7; }
 </style>
@@ -41,73 +41,90 @@
 
 <div class="header">
   <div class="issue-id">ISSUE-004</div>
-  <div class="issue-title">Call microflow 参数类型未完全索引 → 3 个参数传递 CE0117 漏报</div>
+  <div class="issue-title">Call microflow 参数类型漏报 — 已通过 SEM-L02 覆盖</div>
   <div class="meta">
-    <div class="meta-item"><div class="meta-label">状态</div><span class="badge open">Open</span></div>
-    <div class="meta-item"><div class="meta-label">优先级</div><span class="badge p3-badge">P3</span></div>
-    <div class="meta-item"><div class="meta-label">CE0117 影响</div><div style="font-size:13px;color:#f85149;font-weight:600">3 个漏报</div></div>
-    <div class="meta-item"><div class="meta-label">槽位</div><div style="font-size:13px">MicroflowCallParameterMapping/Argument</div></div>
-    <div class="meta-item"><div class="meta-label">验证状态</div><div style="font-size:13px;color:#d29922">⚠ 待分析</div></div>
+    <div class="meta-item"><div class="meta-label">状态</div><span class="badge resolved">Resolved</span></div>
+    <div class="meta-item"><div class="meta-label">优先级</div><span class="badge p3-badge">P3 — 已关闭</span></div>
+    <div class="meta-item"><div class="meta-label">CE0117 影响</div><div style="font-size:13px;color:#3fb950">3 个，均通过 SEM-L02 检出</div></div>
+    <div class="meta-item"><div class="meta-label">验证时间</div><div style="font-size:13px">2026-05-18</div></div>
   </div>
 </div>
 
 <div class="section">
-  <div class="section-title">背景：已修复的部分</div>
-  <p>提交 <code>3384d440</code> 修复了 BSON 字段名错误：</p>
-  <ul>
-    <li><code>"Parameter"</code> 字段包含 <code>"Module.MFName.ParamName"</code>（3段），之前代码误读不存在的 <code>"Microflow"</code> 字段</li>
-    <li>修复后：128 个 MicroflowCallParameterMapping 槽位的 CalleeQN 从 0% 解析提升到 100%</li>
-    <li>但 mismatch 仍为 0</li>
-  </ul>
+  <div class="section-title">根因分析（4层追踪）</div>
+  <table class="data-table">
+    <tr><th>调用</th><th>出错参数</th><th>表达式</th><th>期望类型</th><th>实际推断</th><th>根因</th></tr>
+    <tr>
+      <td>SUB_AdvanceStepStatus</td>
+      <td>WFInstanceId</td>
+      <td><code>$Instance/id</code></td>
+      <td>Integer</td>
+      <td class="bad">KindUnknown</td>
+      <td><code>id</code> 是 Mendix 保留属性，不可在表达式中读取</td>
+    </tr>
+    <tr>
+      <td>SUB_RemoveApprovalWaiting</td>
+      <td>WFInstanceId</td>
+      <td><code>$Instance/id</code></td>
+      <td>Integer</td>
+      <td class="bad">KindUnknown</td>
+      <td>同上</td>
+    </tr>
+    <tr>
+      <td>ACT_WorkHistory_Regist</td>
+      <td>（所有参数兼容）</td>
+      <td><code>$WorkHistory/id</code> 在其他槽位</td>
+      <td>—</td>
+      <td>—</td>
+      <td>CE0117 来自同一微流中 ChangeVariable 使用 <code>id</code></td>
+    </tr>
+  </table>
 </div>
 
 <div class="section">
-  <div class="section-title">当前问题</div>
-  <p>128 个参数映射槽位已解析 CalleeQN 和 ParamName，但对应的参数类型查询（<code>idx.MicroflowParamKind(calleeQN, paramName)</code>）可能返回 KindUnknown。</p>
-  <p>mx check 报告 3 个 <code>Call microflow</code> 活动的 CE0117：</p>
-  <pre>[CE0117] at Call microflow activity 'SUB_AdvanceStepStatus'
-[CE0117] at Call microflow activity 'SUB_RemoveApprovalWaiting'
-[CE0117] at Call microflow activity 'ACT_WorkHistory_Regist'</pre>
+  <div class="section-title">解决方案</div>
+  <p><strong>SEM-L02（CheckStructural）</strong> 已在父 session 中实现，递归遍历 AST，对所有 <code>$Var/id</code> 模式报告结构性错误：</p>
+  <pre>SEM-L02: 'id' is a reserved Mendix system attribute and cannot be read in expressions (in '$Instance/id').
+  Fix: Use the object's business key attribute instead of the system 'id'.</pre>
 
-  <p>可能的根因：</p>
-  <ul>
-    <li><strong>根因 A</strong>：这 3 个微流的参数类型在 <code>mfParamKinds</code> 中未被索引（如参数是 Enumeration 类型，但 <code>elementToKind(*genDt.EnumerationType{})→KindEnumeration</code> 是否正确？）</li>
-    <li><strong>根因 B</strong>：传递的参数表达式推断为 KindUnknown（表达式太复杂无法静态推断）</li>
-    <li><strong>根因 C</strong>：被调用的微流是系统微流或跨模块微流，未被 <code>ListMicroflowsGen()</code> 索引</li>
-  </ul>
+  <p>此外，<code>inferrer.go</code> 已同步修复（commit <code>8a3c9ddd</code>）：</p>
+  <pre>// 单跳路径中 "id" 始终为 Long（系统主键）
+if n.Path[0] == "id" {
+    return exprcheck.KindLong
+}</pre>
+  <p>此修复使 <code>$Entity/id</code> 返回 <code>KindLong</code> 而非 <code>KindUnknown</code>，为结构检查提供准确的类型信息，避免类型推断链路中断。</p>
 </div>
 
 <div class="section">
-  <div class="section-title">需要验证的问题</div>
-  <ul>
-    <li>这 3 个微流（SUB_AdvanceStepStatus 等）是否在 <code>mfParamKinds</code> 中有记录？</li>
-    <li>出错的参数名称是什么，声明类型是什么？</li>
-    <li>传递的实参表达式是什么，推断类型是什么？</li>
-    <li>BSON 中的参数声明 <code>VariableType.$Type</code> 是哪种类型？</li>
-  </ul>
+  <div class="section-title">mx check 验证结果</div>
+  <table class="data-table">
+    <tr><th>应用</th><th>mx check CE0117</th><th>mxcli SEM-L02</th><th>mxcli SEM-03</th><th>假阳性</th></tr>
+    <tr>
+      <td>macnica</td>
+      <td>44 CE0117</td>
+      <td class="ok">35（均为 $Entity/id）</td>
+      <td class="ok">1（Object→String）</td>
+      <td class="ok">0</td>
+    </tr>
+    <tr>
+      <td>Mx2026AIDay</td>
+      <td class="ok">0</td>
+      <td class="ok">0</td>
+      <td class="ok">0</td>
+      <td class="ok">0</td>
+    </tr>
+  </table>
+  <div class="ok-box">✓ 3 个 Call microflow CE0117 均由 SEM-L02 检出。Mx2026AIDay 仍为 0 错误，无假阳性引入。</div>
 </div>
 
 <div class="section">
-  <div class="section-title">修复方向（待批准）</div>
-  <p>此 issue 影响仅 3 个错误，优先级低于 ISSUE-001 和 ISSUE-002。在解决高优先级 issue 后再处理。</p>
-  <p>可能的修复：</p>
+  <div class="section-title">覆盖差距说明</div>
+  <p>macnica 有 44 个 CE0117 而我们检出 36 个（35 SEM-L02 + 1 SEM-03），差距 8 个。这 8 个可能来自：</p>
   <ul>
-    <li>若参数类型是 Enumeration 且 <code>elementToKind</code> 未正确处理 → 补充处理</li>
-    <li>若是跨模块微流索引问题 → 改进 <code>buildMicroflowVars</code> 覆盖所有模块</li>
-    <li>若是表达式推断问题 → 依赖其他 issue 的修复（ISSUE-001/002）</li>
+    <li>SEM-L02 未覆盖的 <code>$Entity/id</code> 使用（如多跳路径、特殊语法）</li>
+    <li>其他非 <code>id</code> 导致的类型不匹配（需要 ISSUE-001/002/003 修复后分析）</li>
   </ul>
-  <div class="rule-box">⚠ 先完成 ISSUE-001 修复和 mx check 验证，再评估此 issue。ISSUE-001 的修复可能间接提升参数表达式的推断能力。</div>
-</div>
-
-<div class="section">
-  <div class="section-title">验证计划</div>
-  <ol>
-    <li style="margin-bottom:6px">找到 macnica BSON 中 SUB_AdvanceStepStatus 等的参数定义</li>
-    <li style="margin-bottom:6px">检查 mfParamKinds 中是否有对应条目</li>
-    <li style="margin-bottom:6px">检查传递的实参表达式类型</li>
-    <li style="margin-bottom:6px">实施修复（批准后，优先级在 ISSUE-001/002 之后）</li>
-    <li>运行 <code>mx check MacnicaApp.mpr</code> 和 <code>mx check "Factory Management.mpr"</code> 验证</li>
-  </ol>
+  <p>进一步调查留给 ISSUE-001 修复完成后进行。</p>
 </div>
 </body>
 </html>
