@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>SEM-03 Issue Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #0d1117; color: #c9d1d9; min-height: 100vh; padding: 24px; }
+  h1 { color: #f0f6fc; font-size: 22px; margin-bottom: 6px; }
+  .subtitle { color: #8b949e; font-size: 13px; margin-bottom: 24px; }
+  .stats { display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+  .stat { background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+          padding: 14px 20px; flex: 1; min-width: 140px; }
+  .stat-label { font-size: 11px; color: #8b949e; text-transform: uppercase;
+                letter-spacing: .06em; margin-bottom: 4px; }
+  .stat-value { font-size: 26px; font-weight: 700; }
+  .stat-open .stat-value { color: #f85149; }
+  .stat-inprogress .stat-value { color: #d29922; }
+  .stat-resolved .stat-value { color: #3fb950; }
+  .stat-wontfix .stat-value { color: #6e7681; }
+  table { width: 100%; border-collapse: collapse; background: #161b22;
+          border: 1px solid #30363d; border-radius: 8px; overflow: hidden; }
+  th { background: #0d1117; color: #8b949e; font-size: 11px; text-transform: uppercase;
+       letter-spacing: .06em; padding: 10px 14px; text-align: left; border-bottom: 1px solid #30363d; }
+  td { padding: 12px 14px; border-bottom: 1px solid #21262d; font-size: 13px; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #1c2128; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px;
+           font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .open    { background: rgba(248,81,73,.15); color: #f85149; border: 1px solid rgba(248,81,73,.3); }
+  .inprog  { background: rgba(210,153,34,.15); color: #d29922; border: 1px solid rgba(210,153,34,.3); }
+  .resolved{ background: rgba(63,185,80,.15); color: #3fb950; border: 1px solid rgba(63,185,80,.3); }
+  .wontfix { background: rgba(110,118,129,.15); color: #8b949e; border: 1px solid rgba(110,118,129,.3); }
+  .p1 { color: #f85149; font-weight: 700; }
+  .p2 { color: #d29922; font-weight: 600; }
+  .p3 { color: #58a6ff; }
+  .p4 { color: #8b949e; }
+  a { color: #58a6ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .impact { font-size: 12px; color: #8b949e; }
+  .ground-truth { background: #1c2128; border: 1px solid #30363d; border-radius: 6px;
+                  padding: 12px 16px; margin-bottom: 20px; font-size: 13px; }
+  .ground-truth strong { color: #f0f6fc; }
+  .gt-row { display: flex; gap: 40px; flex-wrap: wrap; margin-top: 8px; }
+  .gt-item { display: flex; flex-direction: column; gap: 2px; }
+  .gt-num { font-size: 20px; font-weight: 700; color: #f0f6fc; }
+  .gt-label { font-size: 11px; color: #8b949e; }
+  .gt-num.bad { color: #f85149; }
+  .gt-num.ok  { color: #3fb950; }
+</style>
+</head>
+<body>
+<h1>SEM-03 表达式类型检查 — Issue Tracker</h1>
+<p class="subtitle">branch: feature/expression-checker &nbsp;·&nbsp; 验证方法: mx check (ground truth)</p>
+
+<div class="ground-truth">
+  <strong>基准验证 (2026-05-18)</strong>
+  <div class="gt-row">
+    <div class="gt-item"><span class="gt-num bad">44</span><span class="gt-label">mx check CE0117 (macnica)</span></div>
+    <div class="gt-item"><span class="gt-num bad">1</span><span class="gt-label">mxcli SEM-03 (macnica)</span></div>
+    <div class="gt-item"><span class="gt-num ok">0</span><span class="gt-label">mxcli 假阳性 (Mx2026AIDay)</span></div>
+    <div class="gt-item"><span class="gt-num ok">0</span><span class="gt-label">mx check errors (Mx2026AIDay)</span></div>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat stat-open"><div class="stat-label">Open</div><div class="stat-value">4</div></div>
+  <div class="stat stat-inprogress"><div class="stat-label">In Progress</div><div class="stat-value">0</div></div>
+  <div class="stat stat-resolved"><div class="stat-label">Resolved</div><div class="stat-value">1</div></div>
+  <div class="stat stat-wontfix"><div class="stat-label">Won't Fix</div><div class="stat-value">1</div></div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>标题</th>
+      <th>状态</th>
+      <th>优先级</th>
+      <th>CE0117影响</th>
+      <th>需要mx check验证</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="ISSUE-001.html">001</a></td>
+      <td>$Entity/id 系统属性未被索引 → 表达式推断返回 KindUnknown</td>
+      <td><span class="badge open">Open</span></td>
+      <td class="p1">P1</td>
+      <td class="impact">≥10 个漏报 (Change variable ID类变量)</td>
+      <td>✓ 必须</td>
+    </tr>
+    <tr>
+      <td><a href="ISSUE-002.html">002</a></td>
+      <td>TemplateParameter 表达式推断失败 → 7 个 Log message 漏报</td>
+      <td><span class="badge open">Open</span></td>
+      <td class="p2">P2</td>
+      <td class="impact">7 个漏报</td>
+      <td>✓ 必须</td>
+    </tr>
+    <tr>
+      <td><a href="ISSUE-003.html">003</a></td>
+      <td>ExpressionSplitCondition 未检查 → 4 个 Decision 漏报</td>
+      <td><span class="badge open">Open</span></td>
+      <td class="p2">P2</td>
+      <td class="impact">4 个漏报</td>
+      <td>✓ 必须</td>
+    </tr>
+    <tr>
+      <td><a href="ISSUE-004.html">004</a></td>
+      <td>Call microflow 参数种类未完全索引 → 3 个参数传递漏报</td>
+      <td><span class="badge open">Open</span></td>
+      <td class="p3">P3</td>
+      <td class="impact">3 个漏报</td>
+      <td>✓ 必须</td>
+    </tr>
+    <tr>
+      <td><a href="ISSUE-005.html">005</a></td>
+      <td>numericCompat vs numericWiden — 验证完成</td>
+      <td><span class="badge resolved">Resolved</span></td>
+      <td class="p4">P4</td>
+      <td class="impact">0 (Mx2026AIDay mx check=0 errors → numericCompat 正确)</td>
+      <td>✓ 已验证</td>
+    </tr>
+    <tr>
+      <td><a href="ISSUE-006.html">006</a></td>
+      <td>多次过度修复 / 反复调试 — 流程问题</td>
+      <td><span class="badge wontfix">Won't Fix</span></td>
+      <td class="p4">P4</td>
+      <td class="impact">流程改进，不影响检测率</td>
+      <td>N/A</td>
+    </tr>
+  </tbody>
+</table>
+
+<p style="margin-top:16px;font-size:12px;color:#6e7681">
+  规则：每次代码修改前须获得批准 · 修改后必须运行 mx check 验证 · 不得用调试测试替代 mx check
+</p>
+</body>
+</html>

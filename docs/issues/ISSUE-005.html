@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ISSUE-005: numericCompat 验证 — Resolved</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #0d1117; color: #c9d1d9; min-height: 100vh; padding: 24px; max-width: 900px; margin: 0 auto; }
+  .back { color: #58a6ff; font-size: 13px; text-decoration: none; display: inline-block; margin-bottom: 16px; }
+  .back:hover { text-decoration: underline; }
+  .header { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  .issue-id { font-size: 12px; color: #8b949e; margin-bottom: 6px; }
+  .issue-title { font-size: 20px; font-weight: 700; color: #f0f6fc; margin-bottom: 12px; }
+  .meta { display: flex; gap: 20px; flex-wrap: wrap; font-size: 12px; }
+  .meta-item { display: flex; flex-direction: column; gap: 2px; }
+  .meta-label { color: #6e7681; text-transform: uppercase; letter-spacing: .06em; font-size: 10px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .resolved { background: rgba(63,185,80,.15); color: #3fb950; border: 1px solid rgba(63,185,80,.3); }
+  .p4-badge { background: rgba(110,118,129,.15); color: #8b949e; border: 1px solid rgba(110,118,129,.3); }
+  .section { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 18px 22px; margin-bottom: 16px; }
+  .section-title { font-size: 13px; font-weight: 700; color: #f0f6fc; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
+  p { font-size: 13px; line-height: 1.65; margin-bottom: 8px; }
+  code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px;
+         background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 1px 5px; color: #f0f6fc; }
+  pre { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px;
+        background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+        padding: 14px 16px; overflow-x: auto; line-height: 1.6; color: #c9d1d9; margin: 8px 0; }
+  .ok { color: #3fb950; } .bad { color: #f85149; } .warn { color: #d29922; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th { background: #0d1117; color: #8b949e; padding: 8px 10px; text-align: left; border-bottom: 1px solid #30363d; }
+  .data-table td { padding: 8px 10px; border-bottom: 1px solid #21262d; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .ok-box { background: #0d1117; border: 1px solid #3fb950; border-radius: 6px; padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #3fb950; }
+  ul, ol { padding-left: 18px; }
+  li { font-size: 13px; line-height: 1.7; }
+  .verdict { font-size: 16px; font-weight: 700; color: #3fb950; margin: 12px 0; }
+</style>
+</head>
+<body>
+<a href="index.html" class="back">← 返回 Issue 列表</a>
+
+<div class="header">
+  <div class="issue-id">ISSUE-005</div>
+  <div class="issue-title">numericCompat() 是否过于宽松 — 已验证，结论：正确</div>
+  <div class="meta">
+    <div class="meta-item"><div class="meta-label">状态</div><span class="badge resolved">Resolved</span></div>
+    <div class="meta-item"><div class="meta-label">优先级</div><span class="badge p4-badge">P4 — 已关闭</span></div>
+    <div class="meta-item"><div class="meta-label">CE0117 影响</div><div style="font-size:13px;color:#3fb950">0（不影响检测率）</div></div>
+    <div class="meta-item"><div class="meta-label">验证时间</div><div style="font-size:13px">2026-05-18</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">问题描述</div>
+  <p>在消除假阳性时（commit <code>396431bb</code>），将 <code>numericWiden()</code>（单向拓宽）改为 <code>numericCompat()</code>（所有数值类型双向兼容），以消除 Mx2026AIDay 中 28 个 <code>round()/ceil()→Integer</code> 的假阳性。</p>
+  <p>疑问：这是否让 <code>Decimal→Integer</code> 等本应报错的赋值也被放行？</p>
+</div>
+
+<div class="section">
+  <div class="section-title">验证方法</div>
+  <p>运行 <code>mx check</code>（Mendix 官方编译器）对两个应用进行权威检查：</p>
+  <pre>~/.mxcli/mxbuild/11.6.6/modeler/mx check "Factory Management.mpr"
+→ The app contains: 0 errors.  ✓
+
+~/.mxcli/mxbuild/11.6.6/modeler/mx check MacnicaApp.mpr
+→ 44 CE0117（无 Decimal→Integer 相关）</pre>
+</div>
+
+<div class="section">
+  <div class="section-title">验证结论</div>
+  <div class="verdict">✓ numericCompat() 是正确的</div>
+
+  <table class="data-table">
+    <tr><th>场景</th><th>numericCompat 放行</th><th>mx check 结果</th><th>结论</th></tr>
+    <tr>
+      <td><code>round($x) → Integer 属性</code><br><small>Mx2026AIDay 中 28 例</small></td>
+      <td class="ok">✓ 兼容</td>
+      <td class="ok">0 errors（mx check 接受）</td>
+      <td class="ok">正确放行，非错误</td>
+    </tr>
+    <tr>
+      <td><code>Decimal → Integer 变量</code><br><small>运行时截断</small></td>
+      <td class="ok">✓ 兼容</td>
+      <td class="ok">mx check 接受</td>
+      <td class="ok">Mendix 允许此类转换</td>
+    </tr>
+    <tr>
+      <td><code>Long → Integer 变量</code><br><small>可能溢出</small></td>
+      <td class="ok">✓ 兼容</td>
+      <td class="ok">mx check 接受（运行时截断）</td>
+      <td class="ok">与 mx check 一致</td>
+    </tr>
+  </table>
+
+  <p style="margin-top:12px">Mendix 在编译时不检查数值类型精度丢失，允许所有数值类型之间的隐式转换。<code>numericCompat()</code> 与 Mendix 的行为一致。</p>
+
+  <div class="ok-box">✓ numericCompat() 无需修改。macnica 的 44 个 CE0117 漏报原因不在此处，而在 ISSUE-001（$id 未索引）等其他根因。</div>
+</div>
+
+<div class="section">
+  <div class="section-title">历史记录</div>
+  <table class="data-table">
+    <tr><th>提交</th><th>变更</th><th>评估</th></tr>
+    <tr><td><code>18ca84ea</code></td><td>初始 numericWiden（单向）</td><td class="warn">过于保守，导致 28 个假阳性</td></tr>
+    <tr><td><code>396431bb</code></td><td>改为 numericCompat（双向）</td><td class="ok">经 mx check 验证为正确</td></tr>
+  </table>
+</div>
+</body>
+</html>
