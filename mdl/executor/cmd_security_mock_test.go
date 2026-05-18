@@ -3,15 +3,18 @@
 package executor
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
@@ -464,8 +467,12 @@ func TestOutputEntityAccessGrants_XPathConstraint_EscapedQuotes(t *testing.T) {
 	assertContainsStr(t, out, "where '")
 }
 
-// TestGrantEntityAccess_FakeRole_Issue399 verifies that GRANT ON ENTITY rejects
-// a non-existent module role instead of silently creating a phantom access rule.
+// TestGrantEntityAccess_FakeRole_Issue399 originally verified that GRANT ON
+// ENTITY rejected a non-existent module role with a fatal error. BUG-04
+// downgraded "role not found" to a WARNING so long batch scripts can
+// continue past typos; the test now verifies the new contract — no error
+// is returned, but the WARNING surfaces the typo on stderr so the user
+// is not silently misled.
 func TestGrantEntityAccess_FakeRole_Issue399(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
@@ -482,7 +489,7 @@ func TestGrantEntityAccess_FakeRole_Issue399(t *testing.T) {
 		},
 	}
 
-	ctx, _ := newMockCtx(t,
+	ctx, buf := newMockCtx(t,
 		withBackend(mb),
 		withHierarchy(h),
 		withDomainModelsRepo(makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{
@@ -494,13 +501,19 @@ func TestGrantEntityAccess_FakeRole_Issue399(t *testing.T) {
 		Roles:  []ast.QualifiedName{{Module: "MyModule", Name: "FakeRole"}},
 		Rights: []ast.EntityAccessRight{{Type: ast.EntityAccessReadAll}},
 	})
-	assertError(t, err)
-	assertContainsStr(t, err.Error(), "module role")
-	assertContainsStr(t, err.Error(), "FakeRole")
+	// BUG-04: missing role is now a warning, not a fatal error.
+	if err != nil {
+		var nfe *mdlerrors.NotFoundError
+		if errors.As(err, &nfe) && nfe.Kind == "module role" {
+			t.Fatalf("expected missing role to be a warning, got fatal NotFound: %v", err)
+		}
+	}
+	assertContainsStr(t, buf.String(), "WARNING")
+	assertContainsStr(t, buf.String(), "FakeRole")
 }
 
-// TestRevokeEntityAccess_FakeRole_Issue399 verifies that REVOKE ON ENTITY also
-// rejects non-existent module roles.
+// TestRevokeEntityAccess_FakeRole_Issue399 — see the BUG-04 note on the
+// GRANT counterpart above. REVOKE also downgrades missing-role to WARNING.
 func TestRevokeEntityAccess_FakeRole_Issue399(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
@@ -516,7 +529,7 @@ func TestRevokeEntityAccess_FakeRole_Issue399(t *testing.T) {
 		},
 	}
 
-	ctx, _ := newMockCtx(t,
+	ctx, buf := newMockCtx(t,
 		withBackend(mb),
 		withHierarchy(h),
 		withDomainModelsRepo(makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{
@@ -527,7 +540,123 @@ func TestRevokeEntityAccess_FakeRole_Issue399(t *testing.T) {
 		Entity: ast.QualifiedName{Module: "MyModule", Name: "Customer"},
 		Roles:  []ast.QualifiedName{{Module: "MyModule", Name: "GhostRole"}},
 	})
+	if err != nil {
+		var nfe *mdlerrors.NotFoundError
+		if errors.As(err, &nfe) && nfe.Kind == "module role" {
+			t.Fatalf("expected missing role to be a warning, got fatal NotFound: %v", err)
+		}
+	}
+	assertContainsStr(t, buf.String(), "WARNING")
+	assertContainsStr(t, buf.String(), "GhostRole")
+}
+
+// BUG-04: validateModuleRole must downgrade "role not found" from a fatal
+// NotFoundError to a WARNING printed to ctx.Output, returning nil so that
+// scripts continue past the missing role. Other failure modes (module
+// missing, backend read error) must still return errors.
+
+func TestValidateModuleRole_MissingRole_IsWarningNotError(t *testing.T) {
+	mod := mkModule("TestModule")
+	h := mkHierarchy(mod)
+
+	// Module security with no roles defined — any role lookup misses.
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetModuleSecurityGenFunc: func(moduleID model.ID) (*genSec.ModuleSecurity, error) {
+			return genSec.NewModuleSecurity(), nil
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+
+	err := validateModuleRole(ctx, ast.QualifiedName{Module: "TestModule", Name: "NonExistentRole"})
+	if err != nil {
+		t.Fatalf("expected nil error for missing module role, got: %v", err)
+	}
+	out := buf.String()
+	assertContainsStr(t, out, "WARNING")
+	assertContainsStr(t, out, "NonExistentRole")
+	assertContainsStr(t, out, "TestModule")
+}
+
+func TestValidateModuleRole_ModuleMissing_StillErrors(t *testing.T) {
+	// No modules in the project — findModule returns NotFound, which must
+	// surface as a backend error (not a silent WARNING).
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+
+	err := validateModuleRole(ctx, ast.QualifiedName{Module: "GhostModule", Name: "Admin"})
 	assertError(t, err)
-	assertContainsStr(t, err.Error(), "module role")
-	assertContainsStr(t, err.Error(), "GhostRole")
+}
+
+func TestValidateModuleRole_BackendError_StillErrors(t *testing.T) {
+	mod := mkModule("TestModule")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetModuleSecurityGenFunc: func(moduleID model.ID) (*genSec.ModuleSecurity, error) {
+			return nil, errors.New("disk read failure")
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+
+	err := validateModuleRole(ctx, ast.QualifiedName{Module: "TestModule", Name: "Admin"})
+	assertError(t, err)
+	// The error must NOT be a NotFoundError — backend failures stay fatal.
+	var nfe *mdlerrors.NotFoundError
+	if errors.As(err, &nfe) {
+		t.Errorf("backend read failure should not be reported as NotFoundError, got: %v", err)
+	}
+}
+
+func TestGrantMicroflow_MissingRole_IsWarningNotError(t *testing.T) {
+	mod := mkModule("TestModule")
+	h := mkHierarchy(mod)
+
+	mfID := nextID("mf")
+	mf := mkMicroflowGen("MyFlow")
+	mf.SetID(element.ID(mfID))
+
+	mfRepo := &repostesting.RecordingMicroflowRepository{
+		ListAllFunc: func() ([]*genMf.Microflow, error) { return []*genMf.Microflow{mf}, nil },
+		GetContainerUUIDFunc: func(id model.ID) (model.ID, error) {
+			if id == mfID {
+				return mod.ID, nil
+			}
+			return "", nil
+		},
+	}
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		// No module roles defined — any role grant validates against an empty list.
+		GetModuleSecurityGenFunc: func(moduleID model.ID) (*genSec.ModuleSecurity, error) {
+			return genSec.NewModuleSecurity(), nil
+		},
+	}
+	ctx, buf := newMockCtx(t,
+		withBackend(mb),
+		withHierarchy(h),
+		withMicroflowsRepo(mfRepo),
+	)
+
+	stmt := &ast.GrantMicroflowAccessStmt{
+		Microflow: ast.QualifiedName{Module: "TestModule", Name: "MyFlow"},
+		Roles: []ast.QualifiedName{
+			{Module: "TestModule", Name: "NonExistentRole"},
+		},
+	}
+	err := execGrantMicroflowAccessGen(ctx, stmt)
+	if err != nil {
+		t.Fatalf("expected nil error for missing module role, got: %v", err)
+	}
+	out := buf.String()
+	assertContainsStr(t, out, "WARNING")
+	assertContainsStr(t, out, "NonExistentRole")
 }

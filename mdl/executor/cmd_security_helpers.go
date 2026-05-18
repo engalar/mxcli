@@ -17,7 +17,12 @@ import (
 )
 
 // validateModuleRole checks that a module role exists in the project using
-// the gen-typed ModuleSecurity reader. Returns NotFound if absent.
+// the gen-typed ModuleSecurity reader.
+//
+// BUG-04: a missing role is no longer fatal. The function prints a WARNING
+// to ctx.Output and returns nil so that scripts continue past the missing
+// role (a typo in a long batch script should not abort the whole run).
+// Module-not-found and backend read failures remain fatal.
 func validateModuleRole(ctx *ExecContext, role ast.QualifiedName) error {
 	module, err := findModule(ctx, role.Module)
 	if err != nil {
@@ -37,7 +42,9 @@ func validateModuleRole(ctx *ExecContext, role ast.QualifiedName) error {
 		}
 	}
 
-	return mdlerrors.NewNotFound("module role", role.Module+"."+role.Name)
+	fmt.Fprintf(ctx.Output, "WARNING: module role '%s.%s' not found — grant skipped\n",
+		role.Module, role.Name)
+	return nil
 }
 
 // listAccessOnWorkflow handles SHOW ACCESS ON WORKFLOW. Workflows do not
