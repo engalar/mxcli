@@ -955,3 +955,55 @@ func TestMxCheck_DropModuleCleansUserRoles(t *testing.T) {
 		t.Logf("mx check passed:\n%s", output)
 	}
 }
+
+// TestDropAttribute_WithAccessRules_NoCorruption verifies that dropping an
+// attribute with active access rules (read *, write *) does not corrupt the
+// MPR. Regression test for BUG-01.
+func TestDropAttribute_WithAccessRules_NoCorruption(t *testing.T) {
+	if !mxCheckAvailable() {
+		t.Skip("mx binary not available")
+	}
+
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	entityQN := testModule + ".BUG01Entity"
+	env.registerCleanup("entity", entityQN)
+
+	// 1. Create entity with an attribute and a module role, then grant access.
+	setup := `create or modify persistent entity ` + testModule + `.BUG01Entity (
+    KeepMe: String(100),
+    DropMe: String(50)
+);
+create module role ` + testModule + `.BUG01User;
+grant ` + testModule + `.BUG01User on ` + testModule + `.BUG01Entity (read *, write *);`
+	if err := env.executeMDL(setup); err != nil {
+		t.Fatalf("setup failed: %v", err)
+	}
+
+	// 2. Drop one attribute. executeMDL resets env.output before running,
+	// so env.output captures only the drop statement's output.
+	dropMDL := `alter entity ` + testModule + `.BUG01Entity drop attribute DropMe;`
+	if err := env.executeMDL(dropMDL); err != nil {
+		t.Fatalf("drop attribute failed: %v", err)
+	}
+
+	// 3. Confirm cleanup output is present.
+	if got := env.output.String(); !strings.Contains(got, "access rule member reference") {
+		t.Errorf("expected cleanup message about access rule member references, got: %s", got)
+	}
+
+	// 4. Disconnect and run mx check — the BUG-01 signature is a dangling
+	// UUID reference manifesting as KeyNotFoundException. Other unrelated
+	// pre-existing errors (e.g. Location point parsing) are out of scope
+	// for this regression test and consistent with other mxcheck tests
+	// in this file that tolerate them.
+	env.executor.Execute(&ast.DisconnectStmt{})
+	output, _ := runMxCheck(t, env.projectPath)
+	if strings.Contains(output, "KeyNotFoundException") ||
+		strings.Contains(output, "not present in the dictionary") {
+		t.Errorf("BUG-01 regression: dangling UUID reference after drop attribute.\nOutput:\n%s", output)
+	} else {
+		t.Logf("mx check output (BUG-01 cleanup verified):\n%s", output)
+	}
+}
