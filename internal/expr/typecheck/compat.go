@@ -16,13 +16,25 @@ func Compatible(actual, expected exprcheck.TypeKind) bool {
 	if actual == expected {
 		return true
 	}
-	if actual == exprcheck.KindEmpty &&
-		(expected == exprcheck.KindObject || expected == exprcheck.KindList) {
+	// KindEmpty is Mendix's null — assignable to any non-primitive slot
+	// (String, Enumeration, Object, List, etc.).
+	if actual == exprcheck.KindEmpty {
 		return true
 	}
-	return numericWiden(actual, expected)
+	return numericCompat(actual, expected)
 }
 
+// numericCompat reports true if actual and expected are both numeric types.
+// Mendix runtime handles all numeric conversions (widening and narrowing),
+// so we treat the numeric family as mutually compatible to avoid false positives.
+func numericCompat(actual, expected exprcheck.TypeKind) bool {
+	isNumeric := func(k exprcheck.TypeKind) bool {
+		return k == exprcheck.KindInteger || k == exprcheck.KindLong || k == exprcheck.KindDecimal
+	}
+	return isNumeric(actual) && isNumeric(expected)
+}
+
+// numericWiden is kept for internal use in the inferrer.
 func numericWiden(actual, expected exprcheck.TypeKind) bool {
 	rank := map[exprcheck.TypeKind]int{
 		exprcheck.KindInteger: 1,

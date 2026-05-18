@@ -135,7 +135,12 @@ func parseAdd(s *Stream, ctx Context) (RobustExpr, []Hint) {
 
 func parseMul(s *Stream, ctx Context) (RobustExpr, []Hint) {
 	left, hints := parseUnary(s, ctx)
-	for s.Peek().Kind == TokStar {
+	for {
+		t := s.Peek()
+		isDivMod := t.Kind == TokIdent && (t.Text == "div" || t.Text == "mod")
+		if t.Kind != TokStar && !isDivMod {
+			break
+		}
 		op := s.Consume().Text
 		right, h := parseUnary(s, ctx)
 		left = &BinExpr{Op: op, L: left, R: right}

@@ -108,10 +108,8 @@ func (d *defaultInferrer) inferBinExpr(
 	switch op {
 	case "+":
 		if lk == exprcheck.KindString || rk == exprcheck.KindString {
-			if lk == exprcheck.KindString && rk == exprcheck.KindString {
-				return exprcheck.KindString
-			}
-			return exprcheck.KindUnknown
+			// Mendix auto-converts numeric types in string concatenation.
+			return exprcheck.KindString
 		}
 		return widenNumeric(lk, rk)
 	case "-", "*", "/", "div", "mod":
