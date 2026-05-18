@@ -68,3 +68,21 @@ type FolderBackend interface {
 	// MoveFolder moves a folder to a new container.
 	MoveFolder(id model.ID, newContainerID model.ID) error
 }
+
+// ScriptTransaction represents an open write transaction held for the
+// duration of an EXECUTE SCRIPT block. The executor begins one at the
+// root script invocation, commits it after the last statement succeeds,
+// and rolls it back on any error so a failed script never leaves the
+// project in a half-written state.
+type ScriptTransaction interface {
+	Commit() error
+	Rollback() error
+}
+
+// ScriptTransactionBackend is implemented by backends that support
+// atomic multi-statement script execution. Backends that cannot honour
+// script-level atomicity (e.g. read-only or mock backends) may return a
+// no-op ScriptTransaction.
+type ScriptTransactionBackend interface {
+	BeginScriptTransaction() (ScriptTransaction, error)
+}

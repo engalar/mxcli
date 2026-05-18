@@ -23,6 +23,14 @@ func (b *MprBackend) writeUnitContents(unitID model.ID, contents []byte) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
+	// If a script-level transaction is active, reuse it so the whole
+	// EXECUTE SCRIPT block commits or rolls back as one unit.
+	if b.activeScriptTx != nil {
+		if err := b.activeScriptTx.WriteUnit(string(unitID), contents); err != nil {
+			return fmt.Errorf("write unit (in script tx): %w", err)
+		}
+		return nil
+	}
 	wtx, err := b.msdkWriter.BeginWriteTransaction()
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
