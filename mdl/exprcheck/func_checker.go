@@ -162,6 +162,18 @@ var funcTable = map[string]funcSig{
 	"dateTimeToEpoch": {args: []TypeKind{KindDateTime}, ret: KindLong},
 	"epochToDateTime": {args: []TypeKind{KindLong}, ret: KindDateTime},
 
+	// DateTime — extraction → Integer
+	"year":        {args: []TypeKind{KindDateTime}, ret: KindInteger},
+	"month":       {args: []TypeKind{KindDateTime}, ret: KindInteger},
+	"dayOfYear":   {args: []TypeKind{KindDateTime}, ret: KindInteger},
+	"dayOfMonth":  {args: []TypeKind{KindDateTime}, ret: KindInteger},
+	"weekOfYear":  {args: []TypeKind{KindDateTime}, ret: KindInteger},
+	"dayOfWeek":   {args: []TypeKind{KindDateTime}, ret: KindInteger},
+	"hour":        {args: []TypeKind{KindDateTime}, ret: KindInteger},
+	"minute":      {args: []TypeKind{KindDateTime}, ret: KindInteger},
+	"second":      {args: []TypeKind{KindDateTime}, ret: KindInteger},
+	"millisecond": {args: []TypeKind{KindDateTime}, ret: KindInteger},
+
 	// DateTime — extraction (legacy alias)
 	"dateTimeToDate": {args: []TypeKind{KindDateTime}, ret: KindDateTime},
 }
@@ -269,4 +281,14 @@ func PublicFuncTable() map[string]PublicFuncSig {
 		}
 	}
 	return out
+}
+
+// FuncReturnKind returns the TypeKind of the return value of a named built-in
+// function. Returns (KindUnknown, false) for unknown functions.
+func FuncReturnKind(name string) (TypeKind, bool) {
+	sig, ok := funcTable[name]
+	if !ok {
+		return KindUnknown, false
+	}
+	return sig.ret, true
 }
