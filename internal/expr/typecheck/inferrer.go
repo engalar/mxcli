@@ -78,6 +78,10 @@ func inferAttrPath(n *exprcheck.AttributePathExpr, scope VarScope, cat AttrCatal
 		return exprcheck.KindUnknown
 	}
 	if len(n.Path) == 1 {
+		// Mendix system read-only primary key — every entity has it, type is always Long.
+		if n.Path[0] == "id" {
+			return exprcheck.KindLong
+		}
 		entityQN := cat.EntityQNOf(n.Variable)
 		if entityQN == "" {
 			return exprcheck.KindUnknown
