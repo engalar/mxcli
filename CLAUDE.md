@@ -80,17 +80,8 @@ ModelSDKGo/
 │   ├── widgets/             # Embedded widget templates for pluggable widgets
 │   │   ├── loader.go        # template loading with go:embed
 │   │   └── templates/       # json widget type definitions by Mendix version
-│   └── mpr/                 # Legacy MPR reader (Phase 4 read-path migration pending)
-│       ├── reader.go        # read-only MPR access — still primary read path
-│       ├── writer.go        # read-write MPR modification (writes routed through modelsdk/mpr)
-│       ├── parser.go        # BSON parsing and deserialization (model.* shape)
-│       └── utils.go         # UUID generation utilities
-│   # NOTE: All bridge files (sdkmpr_bridge.go, repos/sdk_bridge.go, cmd/mxcli/bson_reader_bridge.go)
-│   # have been deleted; consumers call modelsdk/mpr directly where possible.
-│   # project_tree.go + MprBackend.reader still open sdk/mpr.Reader because ~30 lister/getter
-│   # methods (ListEnumerations, GetNavigation, GetProjectSettings, ListBusinessEventServices …)
-│   # have no modelsdk/mpr equivalent yet. Migrating them is Phase 4 work — see
-│   # memory `project_modelsdk_migration_pattern` and `Not Yet Implemented` below.
+│   # sdk/mpr/ retired in Phase 5 (2026-05-17) — all BSON parsing moved to mdl/backend/mpr/*_compat.go
+│   # backend now uses a single *modelsdkmpr.Reader; sdk/ only contains versions/
 │
 ├── modelsdk/                # Next-gen SDK: auto-generated types with dirty tracking + BSON roundtrip
 │   ├── codec/               # BSON encoder/decoder with type registry
@@ -130,10 +121,18 @@ ModelSDKGo/
 │   └── codegen/             # Code generator CLI
 │
 ├── internal/                # Internal packages (not exported)
-│   └── codegen/             # Metamodel code generation system
-│       ├── schema/          # json reflection data loading
-│       ├── transform/       # transform to Go types
-│       └── emit/            # Go source code generation
+│   ├── codegen/             # Metamodel code generation system
+│   │   ├── schema/          # json reflection data loading
+│   │   ├── transform/       # transform to Go types
+│   │   └── emit/            # Go source code generation
+│   └── expr/                # Mendix expression checker subsystem
+│       ├── scan/            # BSON walker — extracts expression strings from .mxunit files
+│       ├── parse/           # exprcheck parser wrapper — tokenises + detects syntax errors
+│       ├── validate/        # SYN-01/02/03 + SEM-04/05/07 validation rules
+│       ├── repair/          # ranked repair suggestions for fixable issues
+│       ├── report/          # HTML/JSON/text report generator (full pipeline)
+│       ├── meta/            # Index interface + CatalogReader (entity attrs, enums, constants)
+│       └── daemon/          # Background daemon — JIT index, socket protocol, idle watcher
 │
 ├── generated/metamodel/     # Auto-generated type definitions
 ├── examples/                # Usage examples
