@@ -115,3 +115,42 @@ func BatchParse(records []scan.ExprRecord) []ParseResult {
 	}
 	return results
 }
+
+// parseExprWithCatalog parses a regular expression with a CatalogReader injected
+// into the exprcheck.Context. This enables semantic hints that require entity /
+// enumeration / microflow lookup. XPath expressions still bypass exprcheck.
+func parseExprWithCatalog(rec scan.ExprRecord, cat exprcheck.CatalogReader) ParseResult {
+	ctx := exprcheck.Context{
+		Slots:   exprcheck.DefaultSlotResolver(),
+		Catalog: cat,
+	}
+	_, hs := exprParser.Parse(rec.Raw, ctx)
+	ok := true
+	for _, h := range hs {
+		if h.Severity == hints.SeverityError {
+			ok = false
+			break
+		}
+	}
+	return ParseResult{Record: rec, OK: ok, Hints: hs}
+}
+
+// ParseExpressionWithCatalog parses one ExprRecord, routing XPath records through
+// the MDL grammar and regular expressions through exprcheck with the catalog wired in.
+func ParseExpressionWithCatalog(rec scan.ExprRecord, cat exprcheck.CatalogReader) ParseResult {
+	if isXPathExpression(rec.Raw) {
+		return parseXPath(rec)
+	}
+	return parseExprWithCatalog(rec, cat)
+}
+
+// BatchParseWithCatalog parses a slice of ExprRecords sequentially with the
+// supplied catalog injected. cat may be nil — in which case results are
+// equivalent to BatchParse.
+func BatchParseWithCatalog(records []scan.ExprRecord, cat exprcheck.CatalogReader) []ParseResult {
+	results := make([]ParseResult, len(records))
+	for i, rec := range records {
+		results[i] = ParseExpressionWithCatalog(rec, cat)
+	}
+	return results
+}
