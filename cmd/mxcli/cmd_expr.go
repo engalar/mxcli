@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/mendixlabs/mxcli/internal/expr/daemon"
 	"github.com/mendixlabs/mxcli/internal/expr/parse"
 	"github.com/mendixlabs/mxcli/internal/expr/repair"
 	"github.com/mendixlabs/mxcli/internal/expr/report"
@@ -21,6 +22,7 @@ var exprFilterType string
 var exprFormat string
 var exprSeverity string
 var exprSummary bool
+var exprNoDaemon bool
 
 // ── root: mxcli expr ─────────────────────────────────────────────────────────
 
@@ -92,26 +94,81 @@ var exprParseCmd = &cobra.Command{
 // ── mxcli expr validate ───────────────────────────────────────────────────────
 
 var exprValidateCmd = &cobra.Command{
-	Use:   "validate <mprcontents>...",
-	Short: "Apply SYN validation rules and surface exprcheck hints",
-	Args:  cobra.MinimumNArgs(1),
+	Use:   "validate",
+	Short: "Apply SYN/SEM validation rules (daemon mode: + semantic; --no-daemon: syntax only)",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		records, err := collectRecords(args)
-		if err != nil {
-			return err
+		mprPath, _ := cmd.Root().PersistentFlags().GetString("project")
+
+		if exprNoDaemon || os.Getenv("MXCLI_NO_DAEMON") == "1" {
+			if mprPath == "" {
+				return fmt.Errorf("--no-daemon mode requires -p project.mpr")
+			}
+			return runExprValidateNoDaemon(scan.MprContentsPath(mprPath))
 		}
-		parsed := parse.BatchParse(records)
-		var issues []validate.ValidationResult
-		for _, pr := range parsed {
-			issues = append(issues, validate.ValidateSyntax(pr)...)
+
+		if mprPath == "" {
+			return fmt.Errorf("requires -p project.mpr")
 		}
-		out, err := report.Render(issues, report.Options{Format: exprFormat, Severity: exprSeverity})
-		if err != nil {
-			return err
-		}
-		_, err = os.Stdout.Write(out)
-		return err
+		return runExprValidateWithDaemon(mprPath)
 	},
+}
+
+func runExprValidateNoDaemon(mprContentsPath string) error {
+	records, err := scan.ScanMprcontents(mprContentsPath, scan.Options{FilterType: exprFilterType})
+	if err != nil {
+		return err
+	}
+	parsed := parse.BatchParse(records)
+	var issues []validate.ValidationResult
+	for _, pr := range parsed {
+		issues = append(issues, validate.ValidateSyntax(pr)...)
+	}
+	out, err := report.Render(issues, report.Options{Format: exprFormat, Severity: exprSeverity})
+	if err != nil {
+		return err
+	}
+	_, err = os.Stdout.Write(out)
+	return err
+}
+
+func runExprValidateWithDaemon(mprPath string) error {
+	client := daemon.NewClient(daemon.ClientOptions{MprPath: mprPath})
+	if err := client.StartIfNeeded(); err != nil {
+		return fmt.Errorf("daemon: %w", err)
+	}
+
+	resp, err := client.Validate(daemon.ValidateRequest{
+		MprPath:  mprPath,
+		Filter:   exprFilterType,
+		Severity: exprSeverity,
+	})
+	if err != nil {
+		return err
+	}
+	if resp.Error != "" {
+		return fmt.Errorf("daemon error: %s", resp.Error)
+	}
+
+	issues := make([]validate.ValidationResult, 0, len(resp.Results))
+	for _, item := range resp.Results {
+		issues = append(issues, validate.ValidationResult{
+			UnitID:   item.UnitID,
+			UnitType: item.UnitType,
+			Field:    item.Field,
+			Raw:      item.Raw,
+			RuleID:   item.RuleID,
+			Severity: item.Severity,
+			Message:  item.Message,
+			Fix:      item.Fix,
+		})
+	}
+	out, err := report.Render(issues, report.Options{Format: exprFormat, Severity: exprSeverity})
+	if err != nil {
+		return err
+	}
+	_, err = os.Stdout.Write(out)
+	return err
 }
 
 // ── mxcli expr repair ────────────────────────────────────────────────────────
@@ -218,6 +275,8 @@ func init() {
 		cmd.Flags().StringVar(&exprFormat, "format", "json", "Output format: json | html | text")
 	}
 	exprScanCmd.Flags().BoolVar(&exprSummary, "summary", false, "Print human-readable stats instead of JSONL")
+	exprValidateCmd.Flags().BoolVar(&exprNoDaemon, "no-daemon", false,
+		"Skip daemon, syntax validation only (no MPR loading, faster)")
 
 	exprCmd.AddCommand(exprScanCmd)
 	exprCmd.AddCommand(exprParseCmd)
