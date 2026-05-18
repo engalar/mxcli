@@ -27,8 +27,9 @@ import (
 // ParseResult is the outcome of parsing one ExprRecord.
 type ParseResult struct {
 	Record scan.ExprRecord
-	OK     bool         // true if zero hints with SeverityError
-	Hints  []hints.Hint // all hints emitted by the parser
+	OK     bool               // true if zero hints with SeverityError
+	Hints  []hints.Hint       // all hints emitted by the parser
+	AST    exprcheck.RobustExpr // nil for XPath expressions; non-nil for all others
 }
 
 // HasErrors reports whether any hint is SeverityError.
@@ -95,7 +96,7 @@ func parseExpr(rec scan.ExprRecord) ParseResult {
 	ctx := exprcheck.Context{
 		Slots: exprcheck.DefaultSlotResolver(),
 	}
-	_, hs := exprParser.Parse(rec.Raw, ctx)
+	ast, hs := exprParser.Parse(rec.Raw, ctx)
 	ok := true
 	for _, h := range hs {
 		if h.Severity == hints.SeverityError {
@@ -103,7 +104,7 @@ func parseExpr(rec scan.ExprRecord) ParseResult {
 			break
 		}
 	}
-	return ParseResult{Record: rec, OK: ok, Hints: hs}
+	return ParseResult{Record: rec, OK: ok, Hints: hs, AST: ast}
 }
 
 // BatchParse parses a slice of ExprRecords sequentially.
@@ -124,7 +125,7 @@ func parseExprWithCatalog(rec scan.ExprRecord, cat exprcheck.CatalogReader) Pars
 		Slots:   exprcheck.DefaultSlotResolver(),
 		Catalog: cat,
 	}
-	_, hs := exprParser.Parse(rec.Raw, ctx)
+	ast, hs := exprParser.Parse(rec.Raw, ctx)
 	ok := true
 	for _, h := range hs {
 		if h.Severity == hints.SeverityError {
@@ -132,7 +133,7 @@ func parseExprWithCatalog(rec scan.ExprRecord, cat exprcheck.CatalogReader) Pars
 			break
 		}
 	}
-	return ParseResult{Record: rec, OK: ok, Hints: hs}
+	return ParseResult{Record: rec, OK: ok, Hints: hs, AST: ast}
 }
 
 // ParseExpressionWithCatalog parses one ExprRecord, routing XPath records through
