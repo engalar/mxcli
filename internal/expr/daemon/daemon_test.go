@@ -100,3 +100,52 @@ func TestDaemon_SocketDirExists(t *testing.T) {
 	_, err = os.Stat(filepath.Dir(sockPath))
 	assert.NoError(t, err, "socket parent dir must exist after New()")
 }
+
+func TestDaemon_NewWithSocket_HonoursOverride(t *testing.T) {
+	if _, err := os.Stat(macnicaMPR); err != nil {
+		t.Skipf("MPR fixture not available: %v", err)
+	}
+	custom := filepath.Join(t.TempDir(), "custom.sock")
+	d, err := daemon.NewWithSocket(macnicaMPR, custom, 5*time.Minute)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = d.Stop() })
+
+	assert.Equal(t, custom, d.SocketPath(), "SocketPath() must reflect the override")
+	assert.NotEqual(t, daemon.SocketPath(macnicaMPR), d.SocketPath(),
+		"override should differ from default SocketPath(mprPath)")
+}
+
+func TestDaemon_NewWithSocket_EmptyFallsBackToDefault(t *testing.T) {
+	if _, err := os.Stat(macnicaMPR); err != nil {
+		t.Skipf("MPR fixture not available: %v", err)
+	}
+	d, err := daemon.NewWithSocket(macnicaMPR, "", 5*time.Minute)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = d.Stop() })
+
+	assert.Equal(t, daemon.SocketPath(macnicaMPR), d.SocketPath(),
+		"empty socketPath should fall back to SocketPath(mprPath)")
+}
+
+func TestDaemon_NewWithSocket_ServeBindsCustom(t *testing.T) {
+	if _, err := os.Stat(macnicaMPR); err != nil {
+		t.Skipf("MPR fixture not available: %v", err)
+	}
+	custom := filepath.Join(t.TempDir(), "bind.sock")
+	d, err := daemon.NewWithSocket(macnicaMPR, custom, 5*time.Minute)
+	require.NoError(t, err)
+	go func() { _ = d.Serve() }()
+	t.Cleanup(func() { _ = d.Stop() })
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if daemon.IsAlive(custom) {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	assert.True(t, daemon.IsAlive(custom),
+		"Serve() must bind the override socket path")
+	assert.False(t, daemon.IsAlive(daemon.SocketPath(macnicaMPR)),
+		"default SocketPath must NOT be bound when override is given")
+}

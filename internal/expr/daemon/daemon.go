@@ -40,10 +40,17 @@ type Daemon struct {
 	stopCh   chan struct{}
 }
 
-// New constructs a Daemon for mprPath, opens the backend, and builds the
-// in-memory index. The socket file is not yet bound — call Serve() to bind
-// and accept connections.
+// New constructs a Daemon for mprPath using the default SocketPath(mprPath).
+// The socket file is not yet bound — call Serve() to bind and accept connections.
 func New(mprPath string, idleTimeout time.Duration) (*Daemon, error) {
+	return NewWithSocket(mprPath, "", idleTimeout)
+}
+
+// NewWithSocket constructs a Daemon for mprPath bound to the given socket path.
+// An empty socketPath falls back to SocketPath(mprPath). Intended for the
+// `mxcli expr daemon start --socket <path>` CLI flag so DaemonClient and the
+// spawned daemon agree on a non-default socket location.
+func NewWithSocket(mprPath, socketPath string, idleTimeout time.Duration) (*Daemon, error) {
 	if mprPath == "" {
 		return nil, errors.New("daemon: mprPath is required")
 	}
@@ -57,9 +64,13 @@ func New(mprPath string, idleTimeout time.Duration) (*Daemon, error) {
 	if err := EnsureDaemonDir(); err != nil {
 		return nil, fmt.Errorf("daemon: create socket dir: %w", err)
 	}
+	sock := socketPath
+	if sock == "" {
+		sock = SocketPath(abs)
+	}
 	d := &Daemon{
 		mprPath:     abs,
-		sockPath:    SocketPath(abs),
+		sockPath:    sock,
 		idleTimeout: idleTimeout,
 		lastReq:     time.Now(),
 		stopCh:      make(chan struct{}),
