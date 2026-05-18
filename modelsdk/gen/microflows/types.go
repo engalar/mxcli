@@ -15028,7 +15028,7 @@ func initMicroflowCallAction() *MicroflowCallAction {
 	o.microflowCall.Bind(&o.Base, 1)
 	o.useReturnVariable = property.NewPrimitive[bool]("UseReturnVariable", property.DecodeBool)
 	o.useReturnVariable.Bind(&o.Base, 2)
-	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
+	o.outputVariableName = property.NewPrimitive[string]("ResultVariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 3)
 	o.SetProperties([]element.Property{o.errorHandlingType, o.microflowCall, o.useReturnVariable, o.outputVariableName})
 	return o

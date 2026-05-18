@@ -427,14 +427,29 @@ func (idx *Index) buildMicroflowVars(b backend.FullBackend) error {
 	if err != nil {
 		return err
 	}
+
+	// Pass 1: build microflow return-type index (bare name → entityQN).
+	// MicroflowCall.MicroflowQualifiedName() gives "Module.MFName"; we index
+	// by bare "MFName" for simplicity. Name collisions across modules are rare
+	// in practice and the worst case is a missed validation, not a false positive.
+	mfReturnType := make(map[string]string) // bare MF name → returned entityQN
+	for _, mf := range mfs {
+		rt := mf.MicroflowReturnType()
+		if rt == nil {
+			continue
+		}
+		if qn := entityQNFromElement(rt); qn != "" {
+			mfReturnType[mf.Name()] = qn
+		}
+	}
+
+	// Pass 2: per-microflow variable type maps.
 	for _, mf := range mfs {
 		unitPath := unitPathFromID(string(mf.ID()))
 		varMap := make(map[string]string)
 
 		if oc, ok := mf.ObjectCollection().(*genMf.MicroflowObjectCollection); ok {
-			// Pass 1: build variable type map
-			walkOC(oc, varMap)
-			// Pass 2: discover implicit inherited attributes via MemberChange
+			walkOC(oc, varMap, mfReturnType)
 			idx.applyImplicitAttrs(oc, varMap)
 		}
 
@@ -507,7 +522,7 @@ func (idx *Index) applyImplicitFromAction(action element.Element, varMap map[str
 }
 
 // walkOC 递归遍历 MicroflowObjectCollection，将变量声明写入 varMap。
-func walkOC(oc *genMf.MicroflowObjectCollection, varMap map[string]string) {
+func walkOC(oc *genMf.MicroflowObjectCollection, varMap map[string]string, mfReturnType map[string]string) {
 	for _, obj := range oc.ObjectsItems() {
 		switch o := obj.(type) {
 		case *genMf.MicroflowParameter:
@@ -515,10 +530,8 @@ func walkOC(oc *genMf.MicroflowObjectCollection, varMap map[string]string) {
 				varMap[o.Name()] = qn
 			}
 		case *genMf.ActionActivity:
-			addActionVar(o.Action(), varMap)
+			addActionVar(o.Action(), varMap, mfReturnType)
 		case *genMf.LoopedActivity:
-			// 迭代变量类型 = 被迭代列表变量的实体类型。
-			// 列表变量在外层 scope 中，已在 varMap 中。
 			loopVar := o.LoopVariableName()
 			listVar := o.IteratedListVariableName()
 			if loopVar != "" && listVar != "" {
@@ -526,16 +539,15 @@ func walkOC(oc *genMf.MicroflowObjectCollection, varMap map[string]string) {
 					varMap[loopVar] = entityQN
 				}
 			}
-			// 变量名全局唯一，循环体内的声明也写入同一 varMap。
 			if innerOC, ok := o.ObjectCollection().(*genMf.MicroflowObjectCollection); ok {
-				walkOC(innerOC, varMap)
+				walkOC(innerOC, varMap, mfReturnType)
 			}
 		}
 	}
 }
 
 // addActionVar 从 ActionActivity 的具体 Action 中提取输出变量及其实体类型。
-func addActionVar(action element.Element, varMap map[string]string) {
+func addActionVar(action element.Element, varMap map[string]string, mfReturnType map[string]string) {
 	switch a := action.(type) {
 	case *genMf.CreateObjectAction:
 		n, q := a.OutputVariableName(), a.EntityQualifiedName()
@@ -552,7 +564,23 @@ func addActionVar(action element.Element, varMap map[string]string) {
 				varMap[n] = q
 			}
 		}
-		// AssociationRetrieveSource: 需要关联方向推断，Phase 3.1 补充。
+	case *genMf.MicroflowCallAction:
+		n := a.OutputVariableName()
+		if n == "" || !a.UseReturnVariable() {
+			return
+		}
+		mc, ok := a.MicroflowCall().(*genMf.MicroflowCall)
+		if !ok {
+			return
+		}
+		callee := mc.MicroflowQualifiedName()
+		// Extract bare name: "Module.MFName" → "MFName"
+		if i := strings.LastIndex(callee, "."); i >= 0 {
+			callee = callee[i+1:]
+		}
+		if entityQN, ok := mfReturnType[callee]; ok {
+			varMap[n] = entityQN
+		}
 	}
 }
 
