@@ -311,4 +311,7 @@ type MockBackend struct {
 	CreateAgentEditorAgentFunc              func(a *types.Agent) error
 	UpdateAgentEditorAgentFunc              func(a *types.Agent) error
 	DeleteAgentEditorAgentFunc              func(id string) error
+
+	// ScriptTransactionBackend
+	BeginScriptTransactionFunc func() (backend.ScriptTransaction, error)
 }

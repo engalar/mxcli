@@ -36,4 +36,5 @@ type FullBackend interface {
 	WorkflowMutationBackend
 	WidgetSerializationBackend
 	WidgetBuilderBackend
+	ScriptTransactionBackend
 }

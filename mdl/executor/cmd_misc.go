@@ -12,6 +12,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/syntax"
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 )
@@ -444,17 +445,57 @@ func execExecuteScript(ctx *ExecContext, s *ast.ExecuteScriptStmt) error {
 	if ctx.ExecuteFn == nil {
 		return mdlerrors.NewBackend("execute script", errors.New("ExecuteFn not set — ExecContext was not created via Executor dispatch"))
 	}
+
+	// Open a script-level transaction at the root invocation only, so the
+	// whole script commits or rolls back atomically. Nested EXECUTE SCRIPT
+	// calls inherit the outer transaction.
+	isRoot := ctx.ScriptDepth == 0
+	var scriptTx backend.ScriptTransaction
+	if isRoot && ctx.Backend != nil && ctx.Backend.IsConnected() {
+		var err error
+		scriptTx, err = ctx.Backend.BeginScriptTransaction()
+		if err != nil {
+			return fmt.Errorf("begin transaction for script '%s': %w", s.Path, err)
+		}
+		defer func() {
+			if scriptTx != nil {
+				_ = scriptTx.Rollback()
+			}
+		}()
+	}
+
 	ctx.ScriptDepth++
 	defer func() { ctx.ScriptDepth-- }()
 	for _, stmt := range prog.Statements {
 		if err := ctx.ExecuteFn(stmt); err != nil {
-			// Exit within a script just stops the script, doesn't exit mxcli
+			// Exit within a script just stops the script, doesn't exit mxcli.
+			// EXIT signals a clean stop, so commit work done so far.
 			if errors.Is(err, ErrExit) {
+				if scriptTx != nil {
+					if cerr := scriptTx.Commit(); cerr != nil {
+						scriptTx = nil
+						return fmt.Errorf("commit script '%s' on exit: %w", s.Path, cerr)
+					}
+					scriptTx = nil
+				}
 				fmt.Fprintf(ctx.Output, "Script exited: %s\n", s.Path)
 				return nil
 			}
+			if scriptTx != nil {
+				_ = scriptTx.Rollback()
+				scriptTx = nil
+				fmt.Fprintf(ctx.Output, "Script '%s' rolled back due to error\n", s.Path)
+			}
 			return fmt.Errorf("error in script '%s': %w", s.Path, err)
 		}
+	}
+
+	if scriptTx != nil {
+		if err := scriptTx.Commit(); err != nil {
+			scriptTx = nil
+			return fmt.Errorf("commit script '%s': %w", s.Path, err)
+		}
+		scriptTx = nil
 	}
 	fmt.Fprintf(ctx.Output, "Script completed: %s\n", s.Path)
 

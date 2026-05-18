@@ -56,6 +56,11 @@ type MprBackend struct {
 	msdkReader *modelsdkmpr.Reader // alias of reader; kept for *_compat.go ergonomics
 	msdkWriter modelsdkmpr.UnitWriter
 	path       string
+	// activeScriptTx is non-nil while an EXECUTE SCRIPT block is open.
+	// writeUnitContents and other write helpers must reuse it instead of
+	// opening a fresh per-statement transaction so the whole script is
+	// atomic — see backend.ScriptTransaction.
+	activeScriptTx *modelsdkmpr.WriteTransaction
 }
 
 // New creates a new unconnected MprBackend. Call Connect(path) to open a project.
