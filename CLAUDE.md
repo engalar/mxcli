@@ -169,7 +169,7 @@ ModelSDKGo/
 When adding new types, always verify the storage name by:
 1. Examining existing MPR files with the `mx` tool or SQLite browser
 2. Checking the reflection data in `reference/mendixmodellib/reflection-data/`
-3. Looking at the parser cases in `sdk/mpr/parser_microflow.go`
+3. Checking the generated types in `modelsdk/gen/` and reflection data in `reference/mendixmodellib/reflection-data/`
 
 **IMPORTANT**: When unsure about the correct BSON structure for a new feature, **ask the user to create a working example in Mendix Studio Pro** so you can compare the generated BSON against a known-good reference.
 
