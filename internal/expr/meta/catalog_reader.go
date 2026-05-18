@@ -104,5 +104,12 @@ func (idx *Index) EntityCount() int { return len(idx.entityAttrs) }
 // AssocCount 返回已索引关联数。
 func (idx *Index) AssocCount() int { return len(idx.assocEndpoints) }
 
+// UnitQN returns the human-readable qualified name ("Module.MFName") for a
+// unit identified by its unitPath (relative path from mprcontents/).
+// Returns "" when the name is not known.
+func (idx *Index) UnitQN(unitPath string) string {
+	return idx.unitToQN[unitPath]
+}
+
 // 编译期检查：Index 必须满足 exprcheck.CatalogReader。
 var _ exprcheck.CatalogReader = (*Index)(nil)

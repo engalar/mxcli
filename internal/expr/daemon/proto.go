@@ -13,6 +13,8 @@ type ValidateRequest struct {
 type ValidationItem struct {
 	UnitID   string `json:"unitID"`
 	UnitType string `json:"unitType"`
+	UnitPath string `json:"unitPath,omitempty"` // relative path from mprcontents/
+	Location string `json:"location,omitempty"` // human-readable "Module.MicroflowName"
 	Field    string `json:"field"`
 	Raw      string `json:"raw"`
 	RuleID   string `json:"ruleID"`

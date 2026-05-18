@@ -158,6 +158,8 @@ func runExprValidateWithDaemon(mprPath string) error {
 		issues = append(issues, validate.ValidationResult{
 			UnitID:   item.UnitID,
 			UnitType: item.UnitType,
+			UnitPath: item.UnitPath,
+			Location: item.Location,
 			Field:    item.Field,
 			Raw:      item.Raw,
 			RuleID:   item.RuleID,

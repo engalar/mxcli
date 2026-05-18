@@ -46,9 +46,16 @@ func renderText(issues []validate.ValidationResult) string {
 	counts := map[string]int{}
 	for _, i := range issues {
 		counts[i.Severity]++
-		fmt.Fprintf(&sb, "[%s] %s: %s\n", i.Severity, i.RuleID, i.Message)
+		loc := i.Location
+		if loc == "" {
+			loc = i.UnitType
+		}
+		fmt.Fprintf(&sb, "[%s] %s in %s/%s: %s\n", i.Severity, i.RuleID, loc, i.Field, i.Message)
+		if i.Raw != "" {
+			fmt.Fprintf(&sb, "  Expr: %s\n", i.Raw)
+		}
 		if i.Fix != "" {
-			fmt.Fprintf(&sb, "  Fix: %s\n", i.Fix)
+			fmt.Fprintf(&sb, "  Fix:  %s\n", i.Fix)
 		}
 	}
 	fmt.Fprintf(&sb, "\nTotal: %d issues  ERROR:%d  WARNING:%d  INFO:%d\n",

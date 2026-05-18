@@ -79,7 +79,7 @@ func checkEnumRefs(raw string, rec scan.ExprRecord, idx IndexReader) []Validatio
 		}
 		if !found {
 			out = append(out, ValidationResult{
-				UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType,
+				UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType, UnitPath: rec.UnitPath,
 				Field: rec.Field, Raw: raw,
 				RuleID:   "SEM-04",
 				Severity: "ERROR",
@@ -103,7 +103,7 @@ func checkConstantRefs(raw string, rec scan.ExprRecord, idx IndexReader) []Valid
 	for _, m := range constantRefPattern.FindAllString(raw, -1) {
 		if !idx.HasConstant(m) {
 			out = append(out, ValidationResult{
-				UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType,
+				UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType, UnitPath: rec.UnitPath,
 				Field: rec.Field, Raw: raw,
 				RuleID:   "SEM-05",
 				Severity: "ERROR",
@@ -301,7 +301,7 @@ func walkPath(segs []pathSeg, raw string, rec scan.ExprRecord, idx IndexReader, 
 					if !seen[key] {
 						seen[key] = true
 						out = append(out, ValidationResult{
-							UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType,
+							UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType, UnitPath: rec.UnitPath,
 							Field: rec.Field, Raw: raw,
 							RuleID:   "SEM-07",
 							Severity: "WARNING",
@@ -340,7 +340,7 @@ func walkPath(segs []pathSeg, raw string, rec scan.ExprRecord, idx IndexReader, 
 				if !seen[key] {
 					seen[key] = true
 					out = append(out, ValidationResult{
-						UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType,
+						UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType, UnitPath: rec.UnitPath,
 						Field: rec.Field, Raw: raw,
 						RuleID:   "SEM-07",
 						Severity: "WARNING",
@@ -381,7 +381,7 @@ func walkPath(segs []pathSeg, raw string, rec scan.ExprRecord, idx IndexReader, 
 		if !seen[key] {
 			seen[key] = true
 			out = append(out, ValidationResult{
-				UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType,
+				UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType, UnitPath: rec.UnitPath,
 				Field: rec.Field, Raw: raw,
 				RuleID:   "SEM-07",
 				Severity: "WARNING",
