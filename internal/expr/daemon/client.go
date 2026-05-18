@@ -62,6 +62,9 @@ func (c *DaemonClient) StartIfNeeded() error {
 		return errors.New("daemon client: cannot start daemon without MprPath")
 	}
 
+	// Remove stale socket files from previous binary versions of the same MPR.
+	CleanupStaleSocketsForMPR(c.mprPath)
+
 	exe, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("daemon client: find executable: %w", err)

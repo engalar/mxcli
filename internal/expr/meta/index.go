@@ -5,10 +5,22 @@
 package meta
 
 import (
+	"strings"
+
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/exprcheck"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
+
+// AssocMeta holds the two entity QNs that an association connects.
+// Parent is the owning side; Child is the other side.
+type AssocMeta struct {
+	Parent string // e.g. "Common_Utils.PortalDispSetting"
+	Child  string // e.g. "Administration.Account"
+}
 
 // Index 持有从 MPR 提取的语义元数据，常驻内存。
 type Index struct {
@@ -16,17 +28,27 @@ type Index struct {
 	entityAttrEnumQN map[string]string
 	enumValues       map[string][]string
 	constants        map[string]exprcheck.TypeKind
-	assocQNs         map[string]bool
+	assocEndpoints   map[string]AssocMeta    // assocQN → {Parent, Child}
+	entityByID       map[string]string       // element.ID → entityQN (for assoc resolution)
+	microflowVars    map[string]map[string]string // unitPath → (varName → entityQN)
+	// incompleteEntities 记录属性集合不完整的实体：
+	//   1. 继承链包含不可解析父类（父实体不在索引中）
+	//   2. 来自 AppStore 市场模块（FromAppStore=true），其父类属性存储在受保护部分
+	// 对这些实体的属性验证会跳过，以避免因无法读取父类属性而产生误报。
+	incompleteEntities map[string]bool
 }
 
 // BuildFromBackend 从已连接的 MPR 后端构建 Index。
 func BuildFromBackend(b backend.FullBackend) (*Index, error) {
 	idx := &Index{
-		entityAttrs:      make(map[string]map[string]exprcheck.TypeKind),
-		entityAttrEnumQN: make(map[string]string),
-		enumValues:       make(map[string][]string),
-		constants:        make(map[string]exprcheck.TypeKind),
-		assocQNs:         make(map[string]bool),
+		entityAttrs:        make(map[string]map[string]exprcheck.TypeKind),
+		entityAttrEnumQN:   make(map[string]string),
+		enumValues:         make(map[string][]string),
+		constants:          make(map[string]exprcheck.TypeKind),
+		assocEndpoints:     make(map[string]AssocMeta),
+		entityByID:         make(map[string]string),
+		microflowVars:      make(map[string]map[string]string),
+		incompleteEntities: make(map[string]bool),
 	}
 
 	if err := idx.buildEntityAttrs(b); err != nil {
@@ -39,6 +61,9 @@ func BuildFromBackend(b backend.FullBackend) (*Index, error) {
 		return nil, err
 	}
 	if err := idx.buildAssociations(b); err != nil {
+		return nil, err
+	}
+	if err := idx.buildMicroflowVars(b); err != nil {
 		return nil, err
 	}
 	return idx, nil
@@ -72,6 +97,10 @@ func (idx *Index) buildEntityAttrs(b backend.FullBackend) error {
 			}
 			qn := moduleName + "." + entity.Name()
 
+			// ID → QN mapping for association resolution
+			idx.entityByID[string(entity.ID())] = qn
+
+
 			info := &entityInfo{
 				qn:         qn,
 				attrs:      make(map[string]exprcheck.TypeKind),
@@ -97,6 +126,53 @@ func (idx *Index) buildEntityAttrs(b backend.FullBackend) error {
 					}
 				}
 			}
+
+			// Access rules list ALL accessible attributes (including those inherited
+			// from protected marketplace base classes whose Generalization is not
+			// readable from BSON). Scanning them discovers attributes that are not
+			// directly on the entity but accessible through hidden specialization.
+			// Scan access rules to discover inherited attributes from protected
+			// base classes. Access rule MemberAccess QNs use the form
+			// "Module.Entity.AttrName" and include ALL accessible attributes,
+			// even those whose Generalization link isn't readable from BSON.
+			accessRulesItems := entity.AccessRulesItems()
+			seenAR := map[string]bool{}
+			for _, arElem := range accessRulesItems {
+				ar, ok := arElem.(*genDm.AccessRule)
+				if !ok {
+					continue
+				}
+				for _, maElem := range ar.MemberAccessesItems() {
+					ma, ok := maElem.(*genDm.MemberAccess)
+					if !ok {
+						continue
+					}
+					attrQN := ma.AttributeQualifiedName()
+					if attrQN == "" {
+						continue
+					}
+					// Format: "Module.Entity.AttrName" → take after last dot.
+					attrName := attrQN
+					if i := strings.LastIndex(attrQN, "."); i >= 0 {
+						attrName = attrQN[i+1:]
+					}
+					if attrName == "" || seenAR[attrName] {
+						continue
+					}
+					seenAR[attrName] = true
+					if _, exists := info.attrs[attrName]; !exists {
+						info.attrs[attrName] = exprcheck.KindUnknown
+					}
+				}
+			}
+
+			// Marketplace module entities with no access rules have a hidden
+			// generalization in the protected base — no path to discover
+			// inherited attributes. Mark incomplete to suppress false positives.
+			if m.FromAppStore && len(accessRulesItems) == 0 {
+				idx.incompleteEntities[qn] = true
+			}
+
 			entities[qn] = info
 		}
 	}
@@ -120,6 +196,9 @@ func (idx *Index) buildEntityAttrs(b backend.FullBackend) error {
 			seen[parentQN] = true
 			parent, ok := entities[parentQN]
 			if !ok {
+				// Parent entity is not in our index (protected marketplace module).
+				// Mark this entity as incomplete so attribute validation is skipped.
+				idx.incompleteEntities[qn] = true
 				break
 			}
 			for k, v := range parent.attrs {
@@ -138,6 +217,25 @@ func (idx *Index) buildEntityAttrs(b backend.FullBackend) error {
 		idx.entityAttrs[qn] = attrs
 		for attrName, enumQN := range enumQNs {
 			idx.entityAttrEnumQN[qn+"."+attrName] = enumQN
+		}
+	}
+
+	// Propagate incompleteEntities through the inheritance chain.
+	// An entity is incomplete if any ancestor in its chain is incomplete.
+	// Multiple passes handle chains of arbitrary depth (converges when no new
+	// entities are added to the incomplete set).
+	changed := true
+	for changed {
+		changed = false
+		for qn, info := range entities {
+			if idx.incompleteEntities[qn] {
+				continue // already marked
+			}
+			parentQN := info.generalizationQN
+			if parentQN != "" && idx.incompleteEntities[parentQN] {
+				idx.incompleteEntities[qn] = true
+				changed = true
+			}
 		}
 	}
 
@@ -168,8 +266,6 @@ func attrTypeToKind(t interface{}) exprcheck.TypeKind {
 }
 
 // resolveModule 根据 unit 的 ContainerID 沿 folder 链回溯到 module 名。
-// 如果 containerID 直接是 module，立即返回；否则跳跃 folderParent 直到命中
-// module，或超过深度限制返回空串。
 func resolveModule(containerID string, modByID map[string]string, folderParent map[string]string) string {
 	current := containerID
 	for range 20 {
@@ -286,17 +382,196 @@ func (idx *Index) buildAssociations(b backend.FullBackend) error {
 			if !ok {
 				continue
 			}
-			idx.assocQNs[m.Name+"."+assoc.Name()] = true
+			parentQN := idx.entityByID[string(assoc.ParentRefID())]
+			childQN := idx.entityByID[string(assoc.ChildRefID())]
+			if parentQN == "" || childQN == "" {
+				continue
+			}
+			idx.assocEndpoints[m.Name+"."+assoc.Name()] = AssocMeta{Parent: parentQN, Child: childQN}
 		}
 		for _, elem := range dm.CrossAssociationsItems() {
 			assoc, ok := elem.(*genDm.CrossAssociation)
 			if !ok {
 				continue
 			}
-			idx.assocQNs[m.Name+"."+assoc.Name()] = true
+			parentQN := idx.entityByID[string(assoc.ParentRefID())]
+			childQN := assoc.ChildQualifiedName()
+			if parentQN == "" || childQN == "" {
+				continue
+			}
+			idx.assocEndpoints[m.Name+"."+assoc.Name()] = AssocMeta{Parent: parentQN, Child: childQN}
 		}
 	}
 	return nil
+}
+
+// buildMicroflowVars 遍历项目中的所有微流，完成两件事：
+//
+//  1. 为每个微流建立 varName → entityQN 映射（供 $var/attr 验证）。
+//  2. 扫描 ChangeObjectAction / CreateObjectAction 中的 MemberChange，
+//     发现隐式继承属性（三段式 AttributeQN = "Module.Entity.Attr"），
+//     将 Attr 补录到操作对象所属实体的属性集合中。
+//     这解决受保护市场模块 Generalization 无法通过 BSON 读取的问题。
+// varName → entityQN 映射，存储在 idx.microflowVars[unitPath] 中。
+//
+// 变量来源（按 Mendix 规则）：
+//   - MicroflowParameter — 实体类型参数
+//   - CreateObjectAction — Create Object 活动的输出变量
+//   - RetrieveAction（DatabaseRetrieveSource）— Retrieve 活动的输出变量
+//   - LoopedActivity — LOOP 迭代变量（类型继承自被迭代列表的实体类型）
+//
+// 变量名在微流内全局唯一；LOOP 是唯一 scope 边界，迭代变量加入同一张 flat map，
+// 递归处理 LoopedActivity.ObjectCollection() 内的嵌套活动。
+func (idx *Index) buildMicroflowVars(b backend.FullBackend) error {
+	mfs, err := b.ListMicroflowsGen()
+	if err != nil {
+		return err
+	}
+	for _, mf := range mfs {
+		unitPath := unitPathFromID(string(mf.ID()))
+		varMap := make(map[string]string)
+
+		if oc, ok := mf.ObjectCollection().(*genMf.MicroflowObjectCollection); ok {
+			// Pass 1: build variable type map
+			walkOC(oc, varMap)
+			// Pass 2: discover implicit inherited attributes via MemberChange
+			idx.applyImplicitAttrs(oc, varMap)
+		}
+
+		if len(varMap) > 0 {
+			idx.microflowVars[unitPath] = varMap
+		}
+	}
+	return nil
+}
+
+// applyImplicitAttrs scans ChangeObjectAction/CreateObjectAction items for
+// three-part attribute QNs (Module.Entity.Attr), indicating an inherited
+// attribute from a protected marketplace module generalization that is not
+// readable from BSON. The attribute is added to the OPERATING entity's
+// attribute set (looked up via varMap), not to the parent entity.
+func (idx *Index) applyImplicitAttrs(oc *genMf.MicroflowObjectCollection, varMap map[string]string) {
+	for _, obj := range oc.ObjectsItems() {
+		switch o := obj.(type) {
+		case *genMf.ActionActivity:
+			idx.applyImplicitFromAction(o.Action(), varMap)
+		case *genMf.LoopedActivity:
+			if inner, ok := o.ObjectCollection().(*genMf.MicroflowObjectCollection); ok {
+				idx.applyImplicitAttrs(inner, varMap)
+			}
+		}
+	}
+}
+
+func (idx *Index) applyImplicitFromAction(action element.Element, varMap map[string]string) {
+	var changeVarName string
+	var items []element.Element
+
+	switch a := action.(type) {
+	case *genMf.ChangeObjectAction:
+		changeVarName = a.ChangeVariableName()
+		items = a.ItemsItems()
+	case *genMf.CreateObjectAction:
+		changeVarName = a.OutputVariableName()
+		items = a.ItemsItems()
+	default:
+		return
+	}
+
+	entityQN, ok := varMap[changeVarName]
+	if !ok || entityQN == "" {
+		return
+	}
+
+	for _, item := range items {
+		mc, ok := item.(*genMf.MemberChange)
+		if !ok {
+			continue
+		}
+		attrQN := mc.AttributeQualifiedName()
+		// "Module.Entity.AttrName" = attribute from a protected generalization.
+		parts := strings.SplitN(attrQN, ".", 3)
+		if len(parts) != 3 {
+			continue
+		}
+		attrName := parts[2]
+		attrs, exists := idx.entityAttrs[entityQN]
+		if !exists {
+			attrs = make(map[string]exprcheck.TypeKind)
+			idx.entityAttrs[entityQN] = attrs
+		}
+		if _, has := attrs[attrName]; !has {
+			attrs[attrName] = exprcheck.KindUnknown
+		}
+	}
+}
+
+// walkOC 递归遍历 MicroflowObjectCollection，将变量声明写入 varMap。
+func walkOC(oc *genMf.MicroflowObjectCollection, varMap map[string]string) {
+	for _, obj := range oc.ObjectsItems() {
+		switch o := obj.(type) {
+		case *genMf.MicroflowParameter:
+			if qn := entityQNFromElement(o.ParameterType()); qn != "" {
+				varMap[o.Name()] = qn
+			}
+		case *genMf.ActionActivity:
+			addActionVar(o.Action(), varMap)
+		case *genMf.LoopedActivity:
+			// 迭代变量类型 = 被迭代列表变量的实体类型。
+			// 列表变量在外层 scope 中，已在 varMap 中。
+			loopVar := o.LoopVariableName()
+			listVar := o.IteratedListVariableName()
+			if loopVar != "" && listVar != "" {
+				if entityQN, ok := varMap[listVar]; ok {
+					varMap[loopVar] = entityQN
+				}
+			}
+			// 变量名全局唯一，循环体内的声明也写入同一 varMap。
+			if innerOC, ok := o.ObjectCollection().(*genMf.MicroflowObjectCollection); ok {
+				walkOC(innerOC, varMap)
+			}
+		}
+	}
+}
+
+// addActionVar 从 ActionActivity 的具体 Action 中提取输出变量及其实体类型。
+func addActionVar(action element.Element, varMap map[string]string) {
+	switch a := action.(type) {
+	case *genMf.CreateObjectAction:
+		n, q := a.OutputVariableName(), a.EntityQualifiedName()
+		if n != "" && q != "" {
+			varMap[n] = q
+		}
+	case *genMf.RetrieveAction:
+		n := a.OutputVariableName()
+		if n == "" {
+			return
+		}
+		if src, ok := a.RetrieveSource().(*genMf.DatabaseRetrieveSource); ok {
+			if q := src.EntityQualifiedName(); q != "" {
+				varMap[n] = q
+			}
+		}
+		// AssociationRetrieveSource: 需要关联方向推断，Phase 3.1 补充。
+	}
+}
+
+// entityQNFromElement 从 DataTypes 元素中提取实体 QN（仅 ObjectType）。
+func entityQNFromElement(e element.Element) string {
+	if t, ok := e.(*genDt.ObjectType); ok {
+		return t.EntityQualifiedName()
+	}
+	return ""
+}
+
+// unitPathFromID 将微流的 element.ID（标准 UUID 字符串）转换为
+// mprcontents/ 中的相对路径，格式：ab/cd/abcd1234-...-....mxunit
+func unitPathFromID(id string) string {
+	clean := strings.ReplaceAll(id, "-", "")
+	if len(clean) < 4 {
+		return id + ".mxunit"
+	}
+	return clean[0:2] + "/" + clean[2:4] + "/" + id + ".mxunit"
 }
 
 // EnumCases 返回某枚举的所有 value 名；找不到返回 (nil, false)。

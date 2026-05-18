@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
@@ -242,6 +243,22 @@ func init() {
 		rootCmd.Version = version + " (" + BuildTime + ")"
 	} else {
 		rootCmd.Version = version
+	}
+
+	// Normalise -p to an absolute path before any subcommand runs, so that
+	// daemon socket paths (which are derived from the MPR path) are stable
+	// regardless of the caller's working directory.
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		if p, _ := cmd.Root().PersistentFlags().GetString("project"); p != "" {
+			abs, err := filepath.Abs(p)
+			if err != nil {
+				return fmt.Errorf("resolving -p path: %w", err)
+			}
+			if err := cmd.Root().PersistentFlags().Set("project", abs); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
 	// Global flags
