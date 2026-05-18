@@ -64,6 +64,25 @@ func TestScanMprcontents_NoSlotPath(t *testing.T) {
 	assert.NotEmpty(t, r.Category)
 }
 
+func TestScanMprcontents_TypeCheckFields(t *testing.T) {
+	// Verify TargetAttrQN is populated for ChangeActionItem expressions.
+	path := macnicaMpr
+	recs, err := scan.ScanMprcontents(path, scan.Options{FilterType: "ChangeActionItem"})
+	if err != nil {
+		t.Skip("macnica mprcontents not accessible:", err)
+	}
+	// At least some ChangeActionItem records should have TargetAttrQN set.
+	withAttr := 0
+	for _, r := range recs {
+		if r.TargetAttrQN != "" {
+			withAttr++
+		}
+	}
+	if withAttr == 0 {
+		t.Error("expected at least one ChangeActionItem with TargetAttrQN populated")
+	}
+}
+
 func min(a, b int) int {
 	if a < b {
 		return a
