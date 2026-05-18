@@ -17,6 +17,7 @@ type IndexReader interface {
 	EnumCases(enumQN string) ([]string, bool)
 	HasConstant(ref string) bool
 	HasEntity(entityQN string) bool
+	HasAssociation(assocQN string) bool
 }
 
 // ValidateSemantic applies SEM-04/05/07 rules to a parse result.
@@ -75,7 +76,9 @@ func checkEnumRefs(raw string, rec scan.ExprRecord, idx IndexReader) []Validatio
 }
 
 // constantRefPattern matches @Module.Name references.
-var constantRefPattern = regexp.MustCompile(`@([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)`)
+// Mendix module names are PascalCase (uppercase first char); requiring uppercase
+// avoids false positives on email addresses like @mendix.com.
+var constantRefPattern = regexp.MustCompile(`@([A-Z][A-Za-z0-9_]*)\.([A-Z][A-Za-z0-9_]*)`)
 
 func checkConstantRefs(raw string, rec scan.ExprRecord, idx IndexReader) []ValidationResult {
 	var out []ValidationResult
@@ -113,10 +116,11 @@ func checkXPathEntities(raw string, rec scan.ExprRecord, idx IndexReader) []Vali
 		if _, isEnum := idx.EnumCases(candidate); isEnum {
 			continue
 		}
-		if !idx.HasEntity(candidate) {
-			// Be conservative: only flag heuristically entity-shaped names.
-			// Short identifiers like "X.Y" are more likely typos than entities.
-			if len(candidate) > 10 || strings.Contains(candidate, "_") {
+		if !idx.HasEntity(candidate) && !idx.HasAssociation(candidate) {
+			// Be conservative: only flag names long enough to look like real entities.
+			// Association names (which may or may not contain "_") are excluded via
+			// HasAssociation; short names are likely false positives.
+			if len(candidate) > 10 {
 				out = append(out, ValidationResult{
 					UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType,
 					Field: rec.Field, Raw: raw,

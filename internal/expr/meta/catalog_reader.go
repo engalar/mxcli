@@ -29,6 +29,11 @@ func (idx *Index) HasEntity(entityQN string) bool {
 	return ok
 }
 
+// HasAssociation 检查项目中是否存在某关联（key 形如 "Module.AssocName"）。
+func (idx *Index) HasAssociation(assocQN string) bool {
+	return idx.assocQNs[assocQN]
+}
+
 // EntityCount 返回已索引实体数。
 func (idx *Index) EntityCount() int { return len(idx.entityAttrs) }
 

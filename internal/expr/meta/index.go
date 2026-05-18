@@ -16,6 +16,7 @@ type Index struct {
 	entityAttrEnumQN map[string]string
 	enumValues       map[string][]string
 	constants        map[string]exprcheck.TypeKind
+	assocQNs         map[string]bool
 }
 
 // BuildFromBackend 从已连接的 MPR 后端构建 Index。
@@ -25,6 +26,7 @@ func BuildFromBackend(b backend.FullBackend) (*Index, error) {
 		entityAttrEnumQN: make(map[string]string),
 		enumValues:       make(map[string][]string),
 		constants:        make(map[string]exprcheck.TypeKind),
+		assocQNs:         make(map[string]bool),
 	}
 
 	if err := idx.buildEntityAttrs(b); err != nil {
@@ -34,6 +36,9 @@ func BuildFromBackend(b backend.FullBackend) (*Index, error) {
 		return nil, err
 	}
 	if err := idx.buildConstants(b); err != nil {
+		return nil, err
+	}
+	if err := idx.buildAssociations(b); err != nil {
 		return nil, err
 	}
 	return idx, nil
@@ -264,6 +269,34 @@ func constantKindToExprKind(kind string) exprcheck.TypeKind {
 	default:
 		return exprcheck.KindUnknown
 	}
+}
+
+func (idx *Index) buildAssociations(b backend.FullBackend) error {
+	modules, err := b.ListModules()
+	if err != nil {
+		return err
+	}
+	for _, m := range modules {
+		dm, err := b.GetDomainModelGen(m.ID)
+		if err != nil || dm == nil {
+			continue
+		}
+		for _, elem := range dm.AssociationsItems() {
+			assoc, ok := elem.(*genDm.Association)
+			if !ok {
+				continue
+			}
+			idx.assocQNs[m.Name+"."+assoc.Name()] = true
+		}
+		for _, elem := range dm.CrossAssociationsItems() {
+			assoc, ok := elem.(*genDm.CrossAssociation)
+			if !ok {
+				continue
+			}
+			idx.assocQNs[m.Name+"."+assoc.Name()] = true
+		}
+	}
+	return nil
 }
 
 // EnumCases 返回某枚举的所有 value 名；找不到返回 (nil, false)。

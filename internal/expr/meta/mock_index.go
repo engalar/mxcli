@@ -68,6 +68,8 @@ func (m *MockIndex) HasEntity(qn string) bool {
 	return ok
 }
 
+func (m *MockIndex) HasAssociation(_ string) bool { return false }
+
 func (m *MockIndex) EntityCount() int { return len(m.entityAttrs) }
 func (m *MockIndex) EnumCount() int   { return len(m.enumValues) }
 
