@@ -65,6 +65,7 @@ func (tc *TypeChecker) Check(pr parse.ParseResult) []validate.ValidationResult {
 		UnitID:   rec.UnitID,
 		Project:  rec.Project,
 		UnitType: rec.UnitType,
+		UnitPath: rec.UnitPath,
 		Field:    rec.Field,
 		Raw:      rec.Raw,
 		RuleID:   "SEM-03",

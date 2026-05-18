@@ -264,6 +264,8 @@ func (d *Daemon) validate(req ValidateRequest) ([]ValidationItem, error) {
 			items = append(items, ValidationItem{
 				UnitID:   vr.UnitID,
 				UnitType: vr.UnitType,
+				UnitPath: vr.UnitPath,
+				Location: d.index.UnitQN(vr.UnitPath),
 				Field:    vr.Field,
 				Raw:      vr.Raw,
 				RuleID:   vr.RuleID,

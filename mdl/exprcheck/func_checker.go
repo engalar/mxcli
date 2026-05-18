@@ -51,8 +51,8 @@ var funcTable = map[string]funcSig{
 	"parseInteger": {args: []TypeKind{KindString}, ret: KindInteger},
 	"parseDecimal": {args: []TypeKind{KindString}, ret: KindDecimal},
 	"parseBoolean": {args: []TypeKind{KindString}, ret: KindBoolean},
-	// formatDecimal(value, format [, languageTag])
-	"formatDecimal": {args: []TypeKind{KindDecimal, KindString, KindString}, minArgs: 2, ret: KindString},
+	// formatDecimal(value [, format [, languageTag]])  — format is optional
+	"formatDecimal": {args: []TypeKind{KindDecimal, KindString, KindString}, minArgs: 1, ret: KindString},
 
 	// Math
 	"abs":    {args: []TypeKind{KindDecimal}, ret: KindDecimal},
@@ -71,8 +71,9 @@ var funcTable = map[string]funcSig{
 
 	// DateTime — construction
 	"currentDateTime": {args: []TypeKind{}, ret: KindDateTime},
-	"dateTime":        {args: []TypeKind{KindInteger, KindInteger, KindInteger, KindInteger, KindInteger, KindInteger}, ret: KindDateTime},
-	"dateTimeUTC":     {args: []TypeKind{KindInteger, KindInteger, KindInteger, KindInteger, KindInteger, KindInteger}, ret: KindDateTime},
+	// dateTime/dateTimeUTC(year, month, day [, hour, minute, second]) — 3 or 6 args
+	"dateTime":    {args: []TypeKind{KindInteger, KindInteger, KindInteger, KindInteger, KindInteger, KindInteger}, minArgs: 3, ret: KindDateTime},
+	"dateTimeUTC": {args: []TypeKind{KindInteger, KindInteger, KindInteger, KindInteger, KindInteger, KindInteger}, minArgs: 3, ret: KindDateTime},
 
 	// DateTime — add (local calendar)
 	"addMilliseconds": {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},

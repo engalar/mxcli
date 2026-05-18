@@ -9,6 +9,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/exprcheck"
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -35,6 +36,8 @@ type Index struct {
 	mfVarKinds    map[string]map[string]exprcheck.TypeKind // unitPath → varName → TypeKind
 	mfParamKinds  map[string]map[string]exprcheck.TypeKind // bare MF name → paramName → TypeKind
 	mfReturnKinds map[string]exprcheck.TypeKind            // bare MF name → return TypeKind
+	// unitToQN maps unitPath → "Module.MFName" for human-readable error locations.
+	unitToQN      map[string]string
 	// incompleteEntities 记录属性集合不完整的实体：
 	//   1. 继承链包含不可解析父类（父实体不在索引中）
 	//   2. 来自 AppStore 市场模块（FromAppStore=true），其父类属性存储在受保护部分
@@ -56,6 +59,7 @@ func BuildFromBackend(b backend.FullBackend) (*Index, error) {
 		mfVarKinds:         make(map[string]map[string]exprcheck.TypeKind),
 		mfParamKinds:       make(map[string]map[string]exprcheck.TypeKind),
 		mfReturnKinds:      make(map[string]exprcheck.TypeKind),
+		unitToQN:           make(map[string]string),
 	}
 
 	if err := idx.buildEntityAttrs(b); err != nil {
@@ -435,6 +439,9 @@ func (idx *Index) buildMicroflowVars(b backend.FullBackend) error {
 		return err
 	}
 
+	// Build unitID → moduleName map by walking the container chain.
+	findModuleName := idx.buildUnitModuleMap(b)
+
 	// Pass 1: build microflow return-type index (bare name → entityQN).
 	// MicroflowCall.MicroflowQualifiedName() gives "Module.MFName"; we index
 	// by bare "MFName" for simplicity. Name collisions across modules are rare
@@ -454,9 +461,12 @@ func (idx *Index) buildMicroflowVars(b backend.FullBackend) error {
 		}
 	}
 
-	// Pass 2: per-microflow variable type maps.
+	// Pass 2: per-microflow variable type maps + unit QN for error locations.
 	for _, mf := range mfs {
 		unitPath := unitPathFromID(string(mf.ID()))
+		if moduleName := findModuleName(model.ID(string(mf.ID()))); moduleName != "" {
+			idx.unitToQN[unitPath] = moduleName + "." + mf.Name()
+		}
 		varMap := make(map[string]string)
 		paramKinds := make(map[string]exprcheck.TypeKind)
 
@@ -749,4 +759,45 @@ func (idx *Index) AttributeKind(entityQN, attrName string) (exprcheck.TypeKind, 
 	}
 	kind, ok := attrs[attrName]
 	return kind, ok
+}
+
+// buildUnitModuleMap builds a function that resolves a unit ID to its module name
+// by walking the container chain (unit → folder → ... → module).
+func (idx *Index) buildUnitModuleMap(b backend.FullBackend) func(model.ID) string {
+	modules, err := b.ListModules()
+	if err != nil {
+		return func(model.ID) string { return "" }
+	}
+	moduleNameOf := make(map[model.ID]string, len(modules))
+	for _, m := range modules {
+		moduleNameOf[m.ID] = m.Name
+	}
+	units, err := b.ListUnits()
+	if err != nil {
+		return func(model.ID) string { return "" }
+	}
+	parentOf := make(map[model.ID]model.ID, len(units))
+	for _, u := range units {
+		parentOf[u.ID] = u.ContainerID
+	}
+	cache := make(map[model.ID]string)
+	var find func(model.ID) string
+	find = func(id model.ID) string {
+		if n, ok := cache[id]; ok {
+			return n
+		}
+		if n, ok := moduleNameOf[id]; ok {
+			cache[id] = n
+			return n
+		}
+		parent, ok := parentOf[id]
+		if !ok || parent == "" || parent == id {
+			cache[id] = ""
+			return ""
+		}
+		n := find(parent)
+		cache[id] = n
+		return n
+	}
+	return find
 }
