@@ -101,11 +101,11 @@
     </tr>
     <tr>
       <td><a href="ISSUE-003.html">003</a></td>
-      <td>ExpressionSplitCondition 未检查 → 4 个 Decision 漏报</td>
-      <td><span class="badge open">Open</span></td>
-      <td class="p2">P2</td>
-      <td class="impact">4 个漏报</td>
-      <td>✓ 必须</td>
+      <td>ExpressionSplitCondition — 验证后关闭：移除槽位是正确的<br><small style="color:#8b949e">Decision 合法类型有 Boolean/Enumeration/Integer，4 个 CE0117 均为变量作用域错误非类型错误</small></td>
+      <td><span class="badge wontfix">Won't Fix — 已验证</span></td>
+      <td class="p4">P4</td>
+      <td class="impact">0（2 个已被 SEM-07 捕获，2 个是作用域错误超出 SEM-03 范围）</td>
+      <td>✓ 已验证（integration test + mx check）</td>
     </tr>
     <tr>
       <td><a href="ISSUE-004.html">004</a></td>
