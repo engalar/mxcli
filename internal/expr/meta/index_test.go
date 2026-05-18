@@ -37,6 +37,39 @@ func TestBuildFromBackend_EntityAttrs(t *testing.T) {
 	assert.NotZero(t, kind2)
 }
 
+func TestBuildFromBackend_EnumValues(t *testing.T) {
+	b := openBackend(t, macnicaMPR)
+	idx, err := meta.BuildFromBackend(b)
+	require.NoError(t, err)
+
+	assert.Greater(t, idx.EnumCount(), 0, "应该索引到至少一个枚举")
+
+	// ENUM_MailStatus 是已知枚举 (见诊断输出)
+	vals, ok := idx.EnumCases("MailInquiry.ENUM_MailStatus")
+	assert.True(t, ok, "MailInquiry.ENUM_MailStatus 应存在")
+	assert.NotEmpty(t, vals, "枚举值列表不应为空")
+}
+
+func TestBuildFromBackend_Constants(t *testing.T) {
+	b := openBackend(t, macnicaMPR)
+	idx, err := meta.BuildFromBackend(b)
+	require.NoError(t, err)
+
+	assert.Greater(t, idx.ConstantsCount(), 0, "应有常量记录")
+	// FeedbackModule.LocalStorageKey 是已知常量 (见诊断输出)
+	assert.True(t, idx.HasConstant("@FeedbackModule.LocalStorageKey"),
+		"FeedbackModule.LocalStorageKey 应被索引")
+}
+
+func TestBuildFromBackend_MissingEnum(t *testing.T) {
+	b := openBackend(t, macnicaMPR)
+	idx, err := meta.BuildFromBackend(b)
+	require.NoError(t, err)
+
+	_, ok := idx.EnumCases("NonExistent.Module.FakeEnum")
+	assert.False(t, ok, "不存在的枚举应返回 false")
+}
+
 func TestBuildFromBackend_SystemEntity(t *testing.T) {
 	b := openBackend(t, macnicaMPR)
 	idx, err := meta.BuildFromBackend(b)

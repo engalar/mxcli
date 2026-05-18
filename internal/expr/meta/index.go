@@ -162,10 +162,127 @@ func attrTypeToKind(t interface{}) exprcheck.TypeKind {
 	}
 }
 
-// buildEnumValues 与 buildConstants 在后续 commit 中扩展，
-// 目前留空使 Index 构建成功并支持实体测试。
-func (idx *Index) buildEnumValues(b backend.FullBackend) error { return nil }
-func (idx *Index) buildConstants(b backend.FullBackend) error  { return nil }
+// resolveModule 根据 unit 的 ContainerID 沿 folder 链回溯到 module 名。
+// 如果 containerID 直接是 module，立即返回；否则跳跃 folderParent 直到命中
+// module，或超过深度限制返回空串。
+func resolveModule(containerID string, modByID map[string]string, folderParent map[string]string) string {
+	current := containerID
+	for range 20 {
+		if name, ok := modByID[current]; ok {
+			return name
+		}
+		parent, ok := folderParent[current]
+		if !ok || parent == current {
+			break
+		}
+		current = parent
+	}
+	return ""
+}
+
+func (idx *Index) buildEnumValues(b backend.FullBackend) error {
+	enums, err := b.ListEnumerations()
+	if err != nil {
+		return err
+	}
+	modByID, folderParent, err := loadModuleMap(b)
+	if err != nil {
+		return err
+	}
+
+	for _, enum := range enums {
+		moduleName := resolveModule(string(enum.ContainerID), modByID, folderParent)
+		if moduleName == "" {
+			continue
+		}
+		qn := moduleName + "." + enum.Name
+		vals := make([]string, 0, len(enum.Values))
+		for _, v := range enum.Values {
+			vals = append(vals, v.Name)
+		}
+		idx.enumValues[qn] = vals
+	}
+	return nil
+}
+
+func (idx *Index) buildConstants(b backend.FullBackend) error {
+	constants, err := b.ListConstants()
+	if err != nil {
+		return err
+	}
+	modByID, folderParent, err := loadModuleMap(b)
+	if err != nil {
+		return err
+	}
+
+	for _, c := range constants {
+		moduleName := resolveModule(string(c.ContainerID), modByID, folderParent)
+		if moduleName == "" {
+			continue
+		}
+		key := "@" + moduleName + "." + c.Name
+		idx.constants[key] = constantKindToExprKind(c.Type.Kind)
+	}
+	return nil
+}
+
+func loadModuleMap(b backend.FullBackend) (map[string]string, map[string]string, error) {
+	modules, err := b.ListModules()
+	if err != nil {
+		return nil, nil, err
+	}
+	modByID := make(map[string]string, len(modules))
+	for _, m := range modules {
+		modByID[string(m.ID)] = m.Name
+	}
+
+	folders, err := b.ListFolders()
+	if err != nil {
+		return nil, nil, err
+	}
+	folderParent := make(map[string]string, len(folders))
+	for _, f := range folders {
+		folderParent[string(f.ID)] = string(f.ContainerID)
+	}
+	return modByID, folderParent, nil
+}
+
+func constantKindToExprKind(kind string) exprcheck.TypeKind {
+	switch kind {
+	case "String":
+		return exprcheck.KindString
+	case "Integer":
+		return exprcheck.KindInteger
+	case "Long":
+		return exprcheck.KindLong
+	case "Decimal":
+		return exprcheck.KindDecimal
+	case "Boolean":
+		return exprcheck.KindBoolean
+	case "DateTime":
+		return exprcheck.KindDateTime
+	default:
+		return exprcheck.KindUnknown
+	}
+}
+
+// EnumCases 返回某枚举的所有 value 名；找不到返回 (nil, false)。
+func (idx *Index) EnumCases(enumQN string) ([]string, bool) {
+	vals, ok := idx.enumValues[enumQN]
+	return vals, ok
+}
+
+// HasConstant 检查给定常量引用是否存在（key 形如 "@Module.Name"）。
+func (idx *Index) HasConstant(ref string) bool {
+	_, ok := idx.constants[ref]
+	return ok
+}
+
+// EnumCount 返回已索引枚举数。
+func (idx *Index) EnumCount() int { return len(idx.enumValues) }
+
+// ConstantsCount 返回已索引常量数。
+func (idx *Index) ConstantsCount() int { return len(idx.constants) }
 
 // AllEntityQNs 返回所有已索引实体的 qualified name 列表（诊断用）。
 func (idx *Index) AllEntityQNs() []string {
