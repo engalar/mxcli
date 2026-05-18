@@ -57,13 +57,21 @@ func execGrantODataServiceAccessGen(ctx *ExecContext, s *ast.GrantODataServiceAc
 			continue
 		}
 
+		var validRoles []ast.QualifiedName
 		for _, role := range s.Roles {
-			if err := validateModuleRole(ctx, role); err != nil {
+			found, err := validateModuleRole(ctx, role)
+			if err != nil {
 				return err
 			}
+			if found {
+				validRoles = append(validRoles, role)
+			}
+		}
+		if len(validRoles) == 0 {
+			return nil
 		}
 
-		merged, added := mergeAllowedRoles(svc.AllowedModuleRoles, s.Roles)
+		merged, added := mergeAllowedRoles(svc.AllowedModuleRoles, validRoles)
 
 		if err := ctx.Backend.UpdateAllowedRoles(svc.ID, merged); err != nil {
 			return mdlerrors.NewBackend("update OData service access", err)
@@ -155,13 +163,21 @@ func execGrantPublishedRestServiceAccessGen(ctx *ExecContext, s *ast.GrantPublis
 			continue
 		}
 
+		var validRoles []ast.QualifiedName
 		for _, role := range s.Roles {
-			if err := validateModuleRole(ctx, role); err != nil {
+			found, err := validateModuleRole(ctx, role)
+			if err != nil {
 				return err
 			}
+			if found {
+				validRoles = append(validRoles, role)
+			}
+		}
+		if len(validRoles) == 0 {
+			return nil
 		}
 
-		merged, added := mergeAllowedRoles(svc.AllowedRoles, s.Roles)
+		merged, added := mergeAllowedRoles(svc.AllowedRoles, validRoles)
 
 		if err := ctx.Backend.UpdatePublishedRestServiceRoles(svc.ID, merged); err != nil {
 			return mdlerrors.NewBackend("update published rest service access", err)

@@ -51,14 +51,22 @@ func execGrantPageAccessGen(ctx *ExecContext, s *ast.GrantPageAccessStmt) error 
 			continue
 		}
 
+		var validRoles []ast.QualifiedName
 		for _, role := range s.Roles {
-			if err := validateModuleRole(ctx, role); err != nil {
+			found, err := validateModuleRole(ctx, role)
+			if err != nil {
 				return err
 			}
+			if found {
+				validRoles = append(validRoles, role)
+			}
+		}
+		if len(validRoles) == 0 {
+			return nil
 		}
 
 		existing := pg.AllowedRolesQualifiedNames()
-		merged, added := mergeAllowedRoles(existing, s.Roles)
+		merged, added := mergeAllowedRoles(existing, validRoles)
 
 		if err := ctx.Backend.UpdateAllowedRoles(model.ID(pg.ID()), merged); err != nil {
 			return mdlerrors.NewBackend("update page access", err)

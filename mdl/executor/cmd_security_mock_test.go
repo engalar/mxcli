@@ -569,9 +569,12 @@ func TestValidateModuleRole_MissingRole_IsWarningNotError(t *testing.T) {
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 
-	err := validateModuleRole(ctx, ast.QualifiedName{Module: "TestModule", Name: "NonExistentRole"})
+	found, err := validateModuleRole(ctx, ast.QualifiedName{Module: "TestModule", Name: "NonExistentRole"})
 	if err != nil {
 		t.Fatalf("expected nil error for missing module role, got: %v", err)
+	}
+	if found {
+		t.Error("expected found=false for missing module role")
 	}
 	out := buf.String()
 	assertContainsStr(t, out, "WARNING")
@@ -588,7 +591,7 @@ func TestValidateModuleRole_ModuleMissing_StillErrors(t *testing.T) {
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 
-	err := validateModuleRole(ctx, ast.QualifiedName{Module: "GhostModule", Name: "Admin"})
+	_, err := validateModuleRole(ctx, ast.QualifiedName{Module: "GhostModule", Name: "Admin"})
 	assertError(t, err)
 }
 
@@ -605,7 +608,7 @@ func TestValidateModuleRole_BackendError_StillErrors(t *testing.T) {
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 
-	err := validateModuleRole(ctx, ast.QualifiedName{Module: "TestModule", Name: "Admin"})
+	_, err := validateModuleRole(ctx, ast.QualifiedName{Module: "TestModule", Name: "Admin"})
 	assertError(t, err)
 	// The error must NOT be a NotFoundError — backend failures stay fatal.
 	var nfe *mdlerrors.NotFoundError
@@ -659,4 +662,69 @@ func TestGrantMicroflow_MissingRole_IsWarningNotError(t *testing.T) {
 	out := buf.String()
 	assertContainsStr(t, out, "WARNING")
 	assertContainsStr(t, out, "NonExistentRole")
+
+	// Phantom role must NOT be written to the microflow's AllowedModuleRoles.
+	roles := mf.AllowedModuleRolesQualifiedNames()
+	if len(roles) != 0 {
+		t.Errorf("phantom role must not be written to microflow AllowedModuleRoles, got: %v", roles)
+	}
+}
+
+func TestGrantMicroflow_OneValidOnePhantomRole_OnlyValidWritten(t *testing.T) {
+	mod := mkModule("TestModule")
+	h := mkHierarchy(mod)
+
+	mfID := nextID("mf")
+	mf := mkMicroflowGen("MyFlow")
+	mf.SetID(element.ID(mfID))
+
+	mfRepo := &repostesting.RecordingMicroflowRepository{
+		ListAllFunc: func() ([]*genMf.Microflow, error) { return []*genMf.Microflow{mf}, nil },
+		GetContainerUUIDFunc: func(id model.ID) (model.ID, error) {
+			if id == mfID {
+				return mod.ID, nil
+			}
+			return "", nil
+		},
+	}
+
+	// Module security has "Admin" but not "Ghost".
+	ms := mkGenModuleSecurity()
+	ms.AddModuleRoles(mkGenModuleRole("Admin", ""))
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetModuleSecurityGenFunc: func(moduleID model.ID) (*genSec.ModuleSecurity, error) {
+			return ms, nil
+		},
+	}
+	ctx, buf := newMockCtx(t,
+		withBackend(mb),
+		withHierarchy(h),
+		withMicroflowsRepo(mfRepo),
+	)
+
+	stmt := &ast.GrantMicroflowAccessStmt{
+		Microflow: ast.QualifiedName{Module: "TestModule", Name: "MyFlow"},
+		Roles: []ast.QualifiedName{
+			{Module: "TestModule", Name: "Admin"},
+			{Module: "TestModule", Name: "Ghost"},
+		},
+	}
+	err := execGrantMicroflowAccessGen(ctx, stmt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// WARNING only for Ghost.
+	out := buf.String()
+	assertContainsStr(t, out, "WARNING")
+	assertContainsStr(t, out, "Ghost")
+
+	// Only Admin must be written.
+	roles := mf.AllowedModuleRolesQualifiedNames()
+	if len(roles) != 1 || roles[0] != "TestModule.Admin" {
+		t.Errorf("expected only TestModule.Admin in AllowedModuleRoles, got: %v", roles)
+	}
 }
