@@ -487,6 +487,7 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - Contract catalog tables (contract_entities, contract_actions, contract_messages — parsed from cached $metadata and AsyncAPI)
 - Platform authentication (`mxcli auth login/logout/status/list`) with PAT scheme for marketplace-api.mendix.com and catalog.mendix.com; credentials stored at ~/.mxcli/auth.json (mode 0600), MENDIX_PAT env override
 - Marketplace browsing (`mxcli marketplace search/info/versions`) with --min-mendix compatibility filtering; install blocked upstream (API does not expose download URLs)
+- Expression checker (`mxcli expr`) — scan/parse/validate/repair/report pipeline for Mendix expressions in MPR files; SYN-01/02/03 syntax rules + SEM-04/05/07 semantic rules (enum values, constants, entity/association paths); background daemon with JIT index for fast repeated validation; `--no-daemon` flag for CI/syntax-only mode
 
 **Not Yet Implemented:**
 - 47 of 52 metamodel domains (REST, etc.)
