@@ -31,6 +31,10 @@ type Index struct {
 	assocEndpoints   map[string]AssocMeta    // assocQN → {Parent, Child}
 	entityByID       map[string]string       // element.ID → entityQN (for assoc resolution)
 	microflowVars    map[string]map[string]string // unitPath → (varName → entityQN)
+	// NEW — for SEM-03 type checking
+	mfVarKinds    map[string]map[string]exprcheck.TypeKind // unitPath → varName → TypeKind
+	mfParamKinds  map[string]map[string]exprcheck.TypeKind // bare MF name → paramName → TypeKind
+	mfReturnKinds map[string]exprcheck.TypeKind            // bare MF name → return TypeKind
 	// incompleteEntities 记录属性集合不完整的实体：
 	//   1. 继承链包含不可解析父类（父实体不在索引中）
 	//   2. 来自 AppStore 市场模块（FromAppStore=true），其父类属性存储在受保护部分
@@ -49,6 +53,9 @@ func BuildFromBackend(b backend.FullBackend) (*Index, error) {
 		entityByID:         make(map[string]string),
 		microflowVars:      make(map[string]map[string]string),
 		incompleteEntities: make(map[string]bool),
+		mfVarKinds:         make(map[string]map[string]exprcheck.TypeKind),
+		mfParamKinds:       make(map[string]map[string]exprcheck.TypeKind),
+		mfReturnKinds:      make(map[string]exprcheck.TypeKind),
 	}
 
 	if err := idx.buildEntityAttrs(b); err != nil {
@@ -441,18 +448,35 @@ func (idx *Index) buildMicroflowVars(b backend.FullBackend) error {
 		if qn := entityQNFromElement(rt); qn != "" {
 			mfReturnType[mf.Name()] = qn
 		}
+		kind := elementToKind(rt)
+		if kind != exprcheck.KindUnknown {
+			idx.mfReturnKinds[mf.Name()] = kind
+		}
 	}
 
 	// Pass 2: per-microflow variable type maps.
 	for _, mf := range mfs {
 		unitPath := unitPathFromID(string(mf.ID()))
 		varMap := make(map[string]string)
+		paramKinds := make(map[string]exprcheck.TypeKind)
 
 		if oc, ok := mf.ObjectCollection().(*genMf.MicroflowObjectCollection); ok {
-			walkOC(oc, varMap, mfReturnType)
+			// Collect param kinds for mfParamKinds
+			for _, obj := range oc.ObjectsItems() {
+				if param, ok := obj.(*genMf.MicroflowParameter); ok {
+					kind := elementToKind(param.ParameterType())
+					if kind != exprcheck.KindUnknown {
+						paramKinds[param.Name()] = kind
+					}
+				}
+			}
+			walkOC(oc, varMap, mfReturnType, unitPath, idx)
 			idx.applyImplicitAttrs(oc, varMap)
 		}
 
+		if len(paramKinds) > 0 {
+			idx.mfParamKinds[mf.Name()] = paramKinds
+		}
 		if len(varMap) > 0 {
 			idx.microflowVars[unitPath] = varMap
 		}
@@ -522,37 +546,44 @@ func (idx *Index) applyImplicitFromAction(action element.Element, varMap map[str
 }
 
 // walkOC 递归遍历 MicroflowObjectCollection，将变量声明写入 varMap。
-func walkOC(oc *genMf.MicroflowObjectCollection, varMap map[string]string, mfReturnType map[string]string) {
+func walkOC(oc *genMf.MicroflowObjectCollection, varMap map[string]string, mfReturnType map[string]string, unitPath string, idx *Index) {
 	for _, obj := range oc.ObjectsItems() {
 		switch o := obj.(type) {
 		case *genMf.MicroflowParameter:
 			if qn := entityQNFromElement(o.ParameterType()); qn != "" {
 				varMap[o.Name()] = qn
 			}
+			// NEW: TypeKind for SEM-03
+			kind := elementToKind(o.ParameterType())
+			if kind != exprcheck.KindUnknown {
+				idx.setVarKind(unitPath, o.Name(), kind)
+			}
 		case *genMf.ActionActivity:
-			addActionVar(o.Action(), varMap, mfReturnType)
+			addActionVar(o.Action(), varMap, mfReturnType, unitPath, idx)
 		case *genMf.LoopedActivity:
 			loopVar := o.LoopVariableName()
 			listVar := o.IteratedListVariableName()
 			if loopVar != "" && listVar != "" {
 				if entityQN, ok := varMap[listVar]; ok {
 					varMap[loopVar] = entityQN
+					idx.setVarKind(unitPath, loopVar, exprcheck.KindObject)
 				}
 			}
 			if innerOC, ok := o.ObjectCollection().(*genMf.MicroflowObjectCollection); ok {
-				walkOC(innerOC, varMap, mfReturnType)
+				walkOC(innerOC, varMap, mfReturnType, unitPath, idx)
 			}
 		}
 	}
 }
 
 // addActionVar 从 ActionActivity 的具体 Action 中提取输出变量及其实体类型。
-func addActionVar(action element.Element, varMap map[string]string, mfReturnType map[string]string) {
+func addActionVar(action element.Element, varMap map[string]string, mfReturnType map[string]string, unitPath string, idx *Index) {
 	switch a := action.(type) {
 	case *genMf.CreateObjectAction:
 		n, q := a.OutputVariableName(), a.EntityQualifiedName()
 		if n != "" && q != "" {
 			varMap[n] = q
+			idx.setVarKind(unitPath, n, exprcheck.KindObject)
 		}
 	case *genMf.RetrieveAction:
 		n := a.OutputVariableName()
@@ -562,6 +593,7 @@ func addActionVar(action element.Element, varMap map[string]string, mfReturnType
 		if src, ok := a.RetrieveSource().(*genMf.DatabaseRetrieveSource); ok {
 			if q := src.EntityQualifiedName(); q != "" {
 				varMap[n] = q
+				idx.setVarKind(unitPath, n, exprcheck.KindObject)
 			}
 		}
 	case *genMf.MicroflowCallAction:
@@ -580,6 +612,18 @@ func addActionVar(action element.Element, varMap map[string]string, mfReturnType
 		}
 		if entityQN, ok := mfReturnType[callee]; ok {
 			varMap[n] = entityQN
+			idx.setVarKind(unitPath, n, exprcheck.KindObject)
+		} else if kind, ok := idx.mfReturnKinds[callee]; ok {
+			idx.setVarKind(unitPath, n, kind)
+		}
+	case *genMf.CreateVariableAction:
+		n := a.VariableName()
+		if n == "" {
+			return
+		}
+		kind := dataTypeStringToKind(a.VariableDataType())
+		if kind != exprcheck.KindUnknown {
+			idx.setVarKind(unitPath, n, kind)
 		}
 	}
 }
@@ -590,6 +634,61 @@ func entityQNFromElement(e element.Element) string {
 		return t.EntityQualifiedName()
 	}
 	return ""
+}
+
+// elementToKind converts a DataTypes element to its TypeKind.
+// Note: genDt does not have a separate LongType; Long return types are
+// represented as IntegerType in the reflection data at this schema version.
+func elementToKind(e element.Element) exprcheck.TypeKind {
+	switch e.(type) {
+	case *genDt.BooleanType:
+		return exprcheck.KindBoolean
+	case *genDt.StringType:
+		return exprcheck.KindString
+	case *genDt.IntegerType:
+		return exprcheck.KindInteger
+	case *genDt.DecimalType:
+		return exprcheck.KindDecimal
+	case *genDt.DateTimeType:
+		return exprcheck.KindDateTime
+	case *genDt.BinaryType:
+		return exprcheck.KindBinary
+	case *genDt.ObjectType:
+		return exprcheck.KindObject
+	case *genDt.ListType:
+		return exprcheck.KindList
+	case *genDt.EnumerationType:
+		return exprcheck.KindEnumeration
+	}
+	return exprcheck.KindUnknown
+}
+
+// dataTypeStringToKind converts CreateVariableAction.VariableDataType() string → TypeKind.
+func dataTypeStringToKind(s string) exprcheck.TypeKind {
+	switch s {
+	case "String":
+		return exprcheck.KindString
+	case "Integer":
+		return exprcheck.KindInteger
+	case "Long":
+		return exprcheck.KindLong
+	case "Decimal":
+		return exprcheck.KindDecimal
+	case "Boolean":
+		return exprcheck.KindBoolean
+	case "DateTime":
+		return exprcheck.KindDateTime
+	case "Binary":
+		return exprcheck.KindBinary
+	}
+	return exprcheck.KindUnknown
+}
+
+func (idx *Index) setVarKind(unitPath, varName string, kind exprcheck.TypeKind) {
+	if idx.mfVarKinds[unitPath] == nil {
+		idx.mfVarKinds[unitPath] = make(map[string]exprcheck.TypeKind)
+	}
+	idx.mfVarKinds[unitPath][varName] = kind
 }
 
 // unitPathFromID 将微流的 element.ID（标准 UUID 字符串）转换为

@@ -78,6 +78,16 @@ func (m *MockIndex) MicroflowParam(_, _ string) (exprcheck.TypeKind, bool) {
 	return exprcheck.KindUnknown, false
 }
 
+func (m *MockIndex) VarTypeKind(_, _ string) exprcheck.TypeKind { return exprcheck.KindUnknown }
+
+func (m *MockIndex) MicroflowParamKind(_, _ string) (exprcheck.TypeKind, bool) {
+	return exprcheck.KindUnknown, false
+}
+
+func (m *MockIndex) MicroflowReturnKind(_ string) (exprcheck.TypeKind, bool) {
+	return exprcheck.KindUnknown, false
+}
+
 func (m *MockIndex) HasConstant(ref string) bool { return m.constants[ref] }
 
 func (m *MockIndex) HasEntity(qn string) bool {

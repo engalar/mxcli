@@ -2,7 +2,11 @@
 
 package meta
 
-import "github.com/mendixlabs/mxcli/mdl/exprcheck"
+import (
+	"strings"
+
+	"github.com/mendixlabs/mxcli/mdl/exprcheck"
+)
 
 // AttributeEnumQN 返回某实体属性对应的枚举 qualified name（仅枚举属性有）。
 func (idx *Index) AttributeEnumQN(entityQN, attrName string) (string, bool) {
@@ -11,16 +15,48 @@ func (idx *Index) AttributeEnumQN(entityQN, attrName string) (string, bool) {
 	return qn, ok
 }
 
-// MicroflowReturn 返回 microflow 的返回类型。当前未索引 microflow 元数据，
-// 始终返回 KindUnknown/false；后续接入 microflow 索引时填充。
-func (idx *Index) MicroflowReturn(_ string) (exprcheck.TypeKind, bool) {
-	return exprcheck.KindUnknown, false
+// MicroflowReturn 返回 microflow 的返回类型。
+func (idx *Index) MicroflowReturn(mfName string) (exprcheck.TypeKind, bool) {
+	return idx.MicroflowReturnKind(mfName)
 }
 
-// MicroflowParam 返回 microflow 的某参数类型。当前未索引 microflow，
-// 始终返回 KindUnknown/false。
-func (idx *Index) MicroflowParam(_, _ string) (exprcheck.TypeKind, bool) {
-	return exprcheck.KindUnknown, false
+// MicroflowParam 返回 microflow 的某参数类型。
+func (idx *Index) MicroflowParam(calleeQN, paramName string) (exprcheck.TypeKind, bool) {
+	return idx.MicroflowParamKind(calleeQN, paramName)
+}
+
+// VarTypeKind returns the TypeKind of a microflow variable.
+func (idx *Index) VarTypeKind(unitPath, varName string) exprcheck.TypeKind {
+	if m, ok := idx.mfVarKinds[unitPath]; ok {
+		if k, ok := m[varName]; ok {
+			return k
+		}
+	}
+	return exprcheck.KindUnknown
+}
+
+// MicroflowParamKind returns the TypeKind of a named parameter of a microflow.
+func (idx *Index) MicroflowParamKind(calleeQN, paramName string) (exprcheck.TypeKind, bool) {
+	name := calleeQN
+	if i := strings.LastIndex(calleeQN, "."); i >= 0 {
+		name = calleeQN[i+1:]
+	}
+	params, ok := idx.mfParamKinds[name]
+	if !ok {
+		return exprcheck.KindUnknown, false
+	}
+	k, ok := params[paramName]
+	return k, ok
+}
+
+// MicroflowReturnKind returns the TypeKind of a microflow's return value.
+func (idx *Index) MicroflowReturnKind(mfName string) (exprcheck.TypeKind, bool) {
+	name := mfName
+	if i := strings.LastIndex(mfName, "."); i >= 0 {
+		name = mfName[i+1:]
+	}
+	k, ok := idx.mfReturnKinds[name]
+	return k, ok
 }
 
 // HasEntity 检查项目中是否存在某实体。
