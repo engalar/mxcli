@@ -244,8 +244,8 @@ func (d *Daemon) validate(req ValidateRequest) ([]ValidationItem, error) {
 
 	wantSev := strings.ToUpper(strings.TrimSpace(req.Severity))
 	var items []ValidationItem
-	for _, pr := range parseResults {
-		for _, vr := range validate.ValidateSemantic(pr, d.index) {
+	emit := func(vrs []validate.ValidationResult) {
+		for _, vr := range vrs {
 			if wantSev != "" && vr.Severity != wantSev {
 				continue
 			}
@@ -260,6 +260,10 @@ func (d *Daemon) validate(req ValidateRequest) ([]ValidationItem, error) {
 				Fix:      vr.Fix,
 			})
 		}
+	}
+	for _, pr := range parseResults {
+		emit(validate.ValidateSyntax(pr))
+		emit(validate.ValidateSemantic(pr, d.index))
 	}
 	if items == nil {
 		items = []ValidationItem{}
