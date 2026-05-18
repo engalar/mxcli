@@ -33,65 +33,136 @@ var funcTable = map[string]funcSig{
 	"isMatch":    {args: []TypeKind{KindString, KindString}, ret: KindBoolean},
 
 	// String — transforms
-	"length":     {args: []TypeKind{KindString}, ret: KindInteger},
-	"find":       {args: []TypeKind{KindString, KindString}, ret: KindInteger},
-	// substring(string, startPos)         → from startPos to end
-	// substring(string, startPos, length) → length chars from startPos (optional 3rd arg)
-	"substring": {args: []TypeKind{KindString, KindInteger, KindInteger}, minArgs: 2, ret: KindString},
-	"trim":       {args: []TypeKind{KindString}, ret: KindString},
+	"length":      {args: []TypeKind{KindString}, ret: KindInteger},
+	"find":        {args: []TypeKind{KindString, KindString}, ret: KindInteger},
+	"findLast":    {args: []TypeKind{KindString, KindString}, ret: KindInteger},
+	"substring":   {args: []TypeKind{KindString, KindInteger, KindInteger}, minArgs: 2, ret: KindString},
+	"trim":        {args: []TypeKind{KindString}, ret: KindString},
 	"toUpperCase": {args: []TypeKind{KindString}, ret: KindString},
 	"toLowerCase": {args: []TypeKind{KindString}, ret: KindString},
-	"replaceAll": {args: []TypeKind{KindString, KindString, KindString}, ret: KindString},
-	"replace":    {args: []TypeKind{KindString, KindString, KindString}, ret: KindString},
-	"urlEncode":  {args: []TypeKind{KindString}, ret: KindString},
-	"urlDecode":  {args: []TypeKind{KindString}, ret: KindString},
+	"replaceAll":  {args: []TypeKind{KindString, KindString, KindString}, ret: KindString},
+	"replaceFirst":{args: []TypeKind{KindString, KindString, KindString}, ret: KindString},
+	"replace":     {args: []TypeKind{KindString, KindString, KindString}, ret: KindString},
+	"urlEncode":   {args: []TypeKind{KindString}, ret: KindString},
+	"urlDecode":   {args: []TypeKind{KindString}, ret: KindString},
 
 	// Type conversion
 	"toString":     {args: []TypeKind{KindAny}, ret: KindString},
 	"parseInteger": {args: []TypeKind{KindString}, ret: KindInteger},
 	"parseDecimal": {args: []TypeKind{KindString}, ret: KindDecimal},
 	"parseBoolean": {args: []TypeKind{KindString}, ret: KindBoolean},
+	// formatDecimal(value, format [, languageTag])
+	"formatDecimal": {args: []TypeKind{KindDecimal, KindString, KindString}, minArgs: 2, ret: KindString},
 
 	// Math
-	"abs":   {args: []TypeKind{KindDecimal}, ret: KindDecimal},
-	// round(number)              → rounds to 0 decimal places
-	// round(number, decimals)    → rounds to specified decimal places (optional 2nd arg)
-	"round": {args: []TypeKind{KindDecimal, KindInteger}, minArgs: 1, ret: KindDecimal},
-	"floor": {args: []TypeKind{KindDecimal}, ret: KindDecimal},
-	"ceil":  {args: []TypeKind{KindDecimal}, ret: KindDecimal},
-	"pow":   {args: []TypeKind{KindDecimal, KindDecimal}, ret: KindDecimal},
-	"sqrt":  {args: []TypeKind{KindDecimal}, ret: KindDecimal},
-	"max":   {args: []TypeKind{KindDecimal, KindDecimal}, ret: KindDecimal},
-	"min":   {args: []TypeKind{KindDecimal, KindDecimal}, ret: KindDecimal},
+	"abs":    {args: []TypeKind{KindDecimal}, ret: KindDecimal},
+	"round":  {args: []TypeKind{KindDecimal, KindInteger}, minArgs: 1, ret: KindDecimal},
+	"floor":  {args: []TypeKind{KindDecimal}, ret: KindDecimal},
+	"ceil":   {args: []TypeKind{KindDecimal}, ret: KindDecimal},
+	"pow":    {args: []TypeKind{KindDecimal, KindDecimal}, ret: KindDecimal},
+	"sqrt":   {args: []TypeKind{KindDecimal}, ret: KindDecimal},
+	"max":    {args: []TypeKind{KindDecimal, KindDecimal}, ret: KindDecimal},
+	"min":    {args: []TypeKind{KindDecimal, KindDecimal}, ret: KindDecimal},
 	"random": {args: []TypeKind{}, ret: KindDecimal},
 
-	// DateTime — construction / current
-	"currentDateTime":   {args: []TypeKind{}, ret: KindDateTime},
-	"dateTime":          {args: []TypeKind{KindInteger, KindInteger, KindInteger, KindInteger, KindInteger, KindInteger}, ret: KindDateTime},
+	// Enumerations
+	"getCaption": {args: []TypeKind{KindAny}, ret: KindString},
+	"getKey":     {args: []TypeKind{KindAny}, ret: KindString},
 
-	// DateTime — arithmetic
-	"addSeconds": {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
-	"addMinutes": {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
-	"addHours":   {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
-	"addDays":    {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
-	"addWeeks":   {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
-	"addMonths":  {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
-	"addYears":   {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	// DateTime — construction
+	"currentDateTime": {args: []TypeKind{}, ret: KindDateTime},
+	"dateTime":        {args: []TypeKind{KindInteger, KindInteger, KindInteger, KindInteger, KindInteger, KindInteger}, ret: KindDateTime},
+	"dateTimeUTC":     {args: []TypeKind{KindInteger, KindInteger, KindInteger, KindInteger, KindInteger, KindInteger}, ret: KindDateTime},
 
-	// DateTime — difference
-	"secondsBetween": {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
-	"minutesBetween": {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
-	"hoursBetween":   {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
-	"daysBetween":    {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
-	"weeksBetween":   {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
-	"monthsBetween":  {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
-	"yearsBetween":   {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+	// DateTime — add (local calendar)
+	"addMilliseconds": {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addSeconds":      {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addMinutes":      {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addHours":        {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addDays":         {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addWeeks":        {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addMonths":       {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addQuarters":     {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addYears":        {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
 
-	// DateTime — formatting / parsing
-	"formatDateTime": {args: []TypeKind{KindDateTime, KindString}, ret: KindString},
-	"parseDateTime":  {args: []TypeKind{KindString, KindString}, ret: KindDateTime},
+	// DateTime — add (UTC calendar)
+	"addDaysUTC":     {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addWeeksUTC":    {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addMonthsUTC":   {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addQuartersUTC": {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"addYearsUTC":    {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
 
-	// DateTime — extraction
+	// DateTime — subtract (local calendar)
+	"subtractMilliseconds": {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"subtractSeconds":      {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"subtractMinutes":      {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"subtractHours":        {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"subtractDays":         {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"subtractWeeks":        {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"subtractMonths":       {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"subtractQuarters":     {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"subtractYears":        {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+
+	// DateTime — subtract (UTC calendar)
+	"subtractDaysUTC":     {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"subtractWeeksUTC":    {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"subtractMonthsUTC":   {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"subtractQuartersUTC": {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+	"subtractYearsUTC":    {args: []TypeKind{KindDateTime, KindInteger}, ret: KindDateTime},
+
+	// DateTime — between
+	"millisecondsBetween":   {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindLong},
+	"secondsBetween":        {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+	"minutesBetween":        {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+	"hoursBetween":          {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+	"daysBetween":           {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+	"weeksBetween":          {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+	"calendarMonthsBetween": {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+	"calendarYearsBetween":  {args: []TypeKind{KindDateTime, KindDateTime}, ret: KindInteger},
+
+	// DateTime — begin-of
+	"beginOfDay":   {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"beginOfWeek":  {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"beginOfMonth": {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"beginOfYear":  {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+
+	// DateTime — end-of
+	"endOfDay":   {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"endOfWeek":  {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"endOfMonth": {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"endOfYear":  {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+
+	// DateTime — trim-to (local calendar)
+	"trimToSeconds": {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"trimToMinutes": {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"trimToHours":   {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"trimToDays":    {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"trimToMonths":  {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"trimToYears":   {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+
+	// DateTime — trim-to (UTC calendar)
+	"trimToHoursUTC":  {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"trimToDaysUTC":   {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"trimToMonthsUTC": {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+	"trimToYearsUTC":  {args: []TypeKind{KindDateTime}, ret: KindDateTime},
+
+	// DateTime — formatting / parsing (local calendar)
+	"formatDateTime":  {args: []TypeKind{KindDateTime, KindString}, ret: KindString},
+	"formatTime":      {args: []TypeKind{KindDateTime, KindString}, minArgs: 1, ret: KindString},
+	"formatDate":      {args: []TypeKind{KindDateTime, KindString}, minArgs: 1, ret: KindString},
+	"parseDateTime":   {args: []TypeKind{KindString, KindString}, ret: KindDateTime},
+
+	// DateTime — formatting / parsing (UTC calendar)
+	"formatDateTimeUTC": {args: []TypeKind{KindDateTime, KindString}, ret: KindString},
+	"formatTimeUTC":     {args: []TypeKind{KindDateTime, KindString}, minArgs: 1, ret: KindString},
+	"formatDateUTC":     {args: []TypeKind{KindDateTime, KindString}, minArgs: 1, ret: KindString},
+	"parseDateTimeUTC":  {args: []TypeKind{KindString, KindString}, ret: KindDateTime},
+
+	// DateTime — epoch conversion
+	"dateTimeToEpoch": {args: []TypeKind{KindDateTime}, ret: KindLong},
+	"epochToDateTime": {args: []TypeKind{KindLong}, ret: KindDateTime},
+
+	// DateTime — extraction (legacy alias)
 	"dateTimeToDate": {args: []TypeKind{KindDateTime}, ret: KindDateTime},
 }
 

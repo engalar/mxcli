@@ -152,3 +152,147 @@ func TestValidate_ExprcheckHints_Surfaced(t *testing.T) {
 	}
 	assert.True(t, found, "E011 hint should be surfaced for 'not x' without parens")
 }
+
+// ── False-positive regression tests ──────────────────────────────────────────
+// Every entry below is a *valid* Mendix expression that the checker must not flag
+// with any E006 (wrong arity) or parse error. These guard against the func table
+// incorrectly rejecting official functions or accepting wrong-arity calls silently.
+//
+// The table covers every function family documented at:
+//   https://docs.mendix.com/refguide/expressions/
+
+func noE006(t *testing.T, expr string) {
+	t.Helper()
+	r := makeRec(expr, "Microflows$Expression", "")
+	pr := parse.ParseExpression(r)
+	for _, i := range validate.ValidateSyntax(pr) {
+		if i.RuleID == "E006" {
+			t.Errorf("expression %q produced unexpected E006: %s", expr, i.Message)
+		}
+	}
+}
+
+func TestNoFalsePositive_SubtractDateFunctions(t *testing.T) {
+	cases := []string{
+		"subtractMilliseconds($d, 500)",
+		"subtractSeconds($d, 30)",
+		"subtractMinutes($d, 15)",
+		"subtractHours($d, 2)",
+		"subtractDays($d, 7)",
+		"subtractDaysUTC($d, 7)",
+		"subtractWeeks($d, 2)",
+		"subtractWeeksUTC($d, 2)",
+		"subtractMonths($d, 3)",
+		"subtractMonthsUTC($d, 3)",
+		"subtractQuarters($d, 1)",
+		"subtractQuartersUTC($d, 1)",
+		"subtractYears($d, 1)",
+		"subtractYearsUTC($d, 1)",
+	}
+	for _, expr := range cases {
+		t.Run(expr, func(t *testing.T) { noE006(t, expr) })
+	}
+}
+
+func TestNoFalsePositive_AddDateUTCVariants(t *testing.T) {
+	cases := []string{
+		"addMilliseconds($d, 100)",
+		"addDaysUTC($d, 3)",
+		"addWeeksUTC($d, 1)",
+		"addMonthsUTC($d, 2)",
+		"addQuarters($d, 1)",
+		"addQuartersUTC($d, 1)",
+		"addYearsUTC($d, 5)",
+	}
+	for _, expr := range cases {
+		t.Run(expr, func(t *testing.T) { noE006(t, expr) })
+	}
+}
+
+func TestNoFalsePositive_BetweenDateFunctions(t *testing.T) {
+	cases := []string{
+		"millisecondsBetween($d1, $d2)",
+		"calendarMonthsBetween($d1, $d2)",
+		"calendarYearsBetween($d1, $d2)",
+	}
+	for _, expr := range cases {
+		t.Run(expr, func(t *testing.T) { noE006(t, expr) })
+	}
+}
+
+func TestNoFalsePositive_BeginEndOfDate(t *testing.T) {
+	cases := []string{
+		"beginOfDay($d)", "beginOfWeek($d)", "beginOfMonth($d)", "beginOfYear($d)",
+		"endOfDay($d)", "endOfWeek($d)", "endOfMonth($d)", "endOfYear($d)",
+	}
+	for _, expr := range cases {
+		t.Run(expr, func(t *testing.T) { noE006(t, expr) })
+	}
+}
+
+func TestNoFalsePositive_TrimToDate(t *testing.T) {
+	cases := []string{
+		"trimToSeconds($d)", "trimToMinutes($d)",
+		"trimToHours($d)", "trimToHoursUTC($d)",
+		"trimToDays($d)", "trimToDaysUTC($d)",
+		"trimToMonths($d)", "trimToMonthsUTC($d)",
+		"trimToYears($d)", "trimToYearsUTC($d)",
+	}
+	for _, expr := range cases {
+		t.Run(expr, func(t *testing.T) { noE006(t, expr) })
+	}
+}
+
+func TestNoFalsePositive_DateCreationAndFormatting(t *testing.T) {
+	cases := []string{
+		"dateTimeUTC(2024, 1, 1, 0, 0, 0)",
+		"formatDate($d)",
+		"formatDateUTC($d)",
+		"formatTime($d)",
+		"formatTimeUTC($d)",
+		"formatDate($d, 'dd/MM/yyyy')",
+		"formatDateUTC($d, 'yyyy-MM-dd')",
+		"dateTimeToEpoch($d)",
+	}
+	for _, expr := range cases {
+		t.Run(expr, func(t *testing.T) { noE006(t, expr) })
+	}
+}
+
+func TestNoFalsePositive_StringFunctions(t *testing.T) {
+	cases := []string{
+		"findLast('hello world', 'o')",
+		"replaceFirst('hello world', 'o', 'a')",
+		"formatDecimal($x, '#,###.00')",
+	}
+	for _, expr := range cases {
+		t.Run(expr, func(t *testing.T) { noE006(t, expr) })
+	}
+}
+
+func TestNoFalsePositive_EnumerationFunctions(t *testing.T) {
+	cases := []string{
+		"getCaption(MyMod.Status.Active)",
+		"getKey(MyMod.Status.Active)",
+	}
+	for _, expr := range cases {
+		t.Run(expr, func(t *testing.T) { noE006(t, expr) })
+	}
+}
+
+// TestNoFalsePositive_CalendarNamesMustNotAcceptOldNames verifies that the
+// historically wrong names monthsBetween / yearsBetween are NOT registered,
+// so callers using them get zero arity-check coverage (i.e., the function is
+// treated as user-defined and ignored). This is the conservative safe default:
+// we do not produce false E006 errors for unknown function names.
+func TestNoFalsePositive_CalendarNamesMustNotAcceptOldNames(t *testing.T) {
+	// These are NOT official Mendix functions and must not appear in the table.
+	// Calling them with wrong arity must NOT fire E006 (because they're unknown).
+	p := parse.ParseExpression(makeRec("monthsBetween($d1)", "Microflows$Expression", ""))
+	for _, i := range validate.ValidateSyntax(p) {
+		if i.RuleID == "E006" {
+			// monthsBetween is unknown → no E006 expected (would be wrong signal)
+			t.Errorf("monthsBetween must not fire E006 (it is unknown, not a registered function)")
+		}
+	}
+}

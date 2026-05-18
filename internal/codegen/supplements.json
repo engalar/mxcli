@@ -66,6 +66,7 @@
     "*.outputVariableName":                              "VariableName",
     "RetrieveAction.outputVariableName":                 "ResultVariableName",
     "MicroflowParameter.parameterType":                  "VariableType",
+    "MicroflowCallAction.outputVariableName":             "ResultVariableName",
     "EntityTypeParameterType.typeParameter":             "TypeParameterPointer",
     "ParameterizedEntityType.typeParameter":             "TypeParameterPointer",
     "GridControlBar.defaultButton":                      "DefaultButtonPointer",
