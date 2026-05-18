@@ -152,6 +152,15 @@ func scanObj(v interface{}, project, relPath string, opts Options, out *[]ExprRe
 	}
 }
 
+// MprContentsPath converts a .mpr file path to its sibling mprcontents/ directory.
+// Returns the input path unchanged if it does not end in ".mpr".
+func MprContentsPath(mprPath string) string {
+	if !strings.HasSuffix(mprPath, ".mpr") {
+		return mprPath
+	}
+	return filepath.Join(filepath.Dir(mprPath), "mprcontents")
+}
+
 func extractID(raw interface{}) string {
 	switch v := raw.(type) {
 	case primitive.Binary:
