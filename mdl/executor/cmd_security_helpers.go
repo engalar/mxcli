@@ -19,32 +19,34 @@ import (
 // validateModuleRole checks that a module role exists in the project using
 // the gen-typed ModuleSecurity reader.
 //
-// BUG-04: a missing role is no longer fatal. The function prints a WARNING
-// to ctx.Output and returns nil so that scripts continue past the missing
-// role (a typo in a long batch script should not abort the whole run).
-// Module-not-found and backend read failures remain fatal.
-func validateModuleRole(ctx *ExecContext, role ast.QualifiedName) error {
+// Returns (true, nil) when the role exists, (false, nil) when it is missing
+// (a WARNING is printed so the user is informed), and (false, err) for backend
+// failures (module not found, read error) which remain fatal.
+//
+// Callers must skip phantom roles (found == false) rather than forwarding them
+// to the BSON merge — otherwise ghost role names end up in the MPR.
+func validateModuleRole(ctx *ExecContext, role ast.QualifiedName) (bool, error) {
 	module, err := findModule(ctx, role.Module)
 	if err != nil {
-		return mdlerrors.NewBackend(fmt.Sprintf("module not found for role %s.%s", role.Module, role.Name), err)
+		return false, mdlerrors.NewBackend(fmt.Sprintf("module not found for role %s.%s", role.Module, role.Name), err)
 	}
 
 	ms, err := ctx.Backend.GetModuleSecurityGen(module.ID)
 	if err != nil {
-		return mdlerrors.NewBackend(fmt.Sprintf("read module security for %s", role.Module), err)
+		return false, mdlerrors.NewBackend(fmt.Sprintf("read module security for %s", role.Module), err)
 	}
 
 	if ms != nil {
 		for _, item := range ms.ModuleRolesItems() {
 			if mr, ok := item.(*genSec.ModuleRole); ok && mr.Name() == role.Name {
-				return nil
+				return true, nil
 			}
 		}
 	}
 
 	fmt.Fprintf(ctx.Output, "WARNING: module role '%s.%s' not found — grant skipped\n",
 		role.Module, role.Name)
-	return nil
+	return false, nil
 }
 
 // listAccessOnWorkflow handles SHOW ACCESS ON WORKFLOW. Workflows do not

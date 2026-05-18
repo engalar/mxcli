@@ -70,13 +70,21 @@ func execGrantMicroflowAccessGen(ctx *ExecContext, s *ast.GrantMicroflowAccessSt
 			continue
 		}
 
+		var validRoles []ast.QualifiedName
 		for _, role := range s.Roles {
-			if err := validateModuleRole(ctx, role); err != nil {
+			found, err := validateModuleRole(ctx, role)
+			if err != nil {
 				return err
 			}
+			if found {
+				validRoles = append(validRoles, role)
+			}
+		}
+		if len(validRoles) == 0 {
+			return nil
 		}
 
-		merged, added := mergeAllowedRoles(mf.AllowedModuleRolesQualifiedNames(), s.Roles)
+		merged, added := mergeAllowedRoles(mf.AllowedModuleRolesQualifiedNames(), validRoles)
 		mf.SetAllowedModuleRolesQualifiedNames(merged)
 
 		if err := ctx.Microflows.Update(mf); err != nil {
@@ -172,13 +180,21 @@ func execGrantNanoflowAccessGen(ctx *ExecContext, s *ast.GrantNanoflowAccessStmt
 			continue
 		}
 
+		var validRoles []ast.QualifiedName
 		for _, role := range s.Roles {
-			if err := validateModuleRole(ctx, role); err != nil {
+			found, err := validateModuleRole(ctx, role)
+			if err != nil {
 				return err
 			}
+			if found {
+				validRoles = append(validRoles, role)
+			}
+		}
+		if len(validRoles) == 0 {
+			return nil
 		}
 
-		merged, added := mergeAllowedRoles(nf.AllowedModuleRolesQualifiedNames(), s.Roles)
+		merged, added := mergeAllowedRoles(nf.AllowedModuleRolesQualifiedNames(), validRoles)
 		nf.SetAllowedModuleRolesQualifiedNames(merged)
 
 		if err := ctx.Nanoflows.Update(nf); err != nil {

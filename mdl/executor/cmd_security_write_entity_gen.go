@@ -53,16 +53,18 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		return mdlerrors.NewNotFound("entity", s.Entity.Module+"."+s.Entity.Name)
 	}
 
-	// validateModuleRole already uses GetModuleSecurityGen internally.
-	for _, role := range s.Roles {
-		if err := validateModuleRole(ctx, role); err != nil {
-			return err
-		}
-	}
-
 	var roleNames []string
 	for _, role := range s.Roles {
-		roleNames = append(roleNames, role.Module+"."+role.Name)
+		found, err := validateModuleRole(ctx, role)
+		if err != nil {
+			return err
+		}
+		if found {
+			roleNames = append(roleNames, role.Module+"."+role.Name)
+		}
+	}
+	if len(roleNames) == 0 {
+		return nil
 	}
 
 	allowCreate, allowDelete := false, false
@@ -226,16 +228,18 @@ func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) 
 		return mdlerrors.NewNotFound("entity", s.Entity.Module+"."+s.Entity.Name)
 	}
 
-	// validateModuleRole already uses GetModuleSecurityGen internally.
-	for _, role := range s.Roles {
-		if err := validateModuleRole(ctx, role); err != nil {
-			return err
-		}
-	}
-
 	var roleNames []string
 	for _, role := range s.Roles {
-		roleNames = append(roleNames, role.Module+"."+role.Name)
+		found, err := validateModuleRole(ctx, role)
+		if err != nil {
+			return err
+		}
+		if found {
+			roleNames = append(roleNames, role.Module+"."+role.Name)
+		}
+	}
+	if len(roleNames) == 0 {
+		return nil
 	}
 
 	if len(s.Rights) > 0 {
