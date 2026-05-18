@@ -3,12 +3,60 @@
 package visitor
 
 import (
+	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/grammar/parser"
 )
+
+// xpathQuotedQualifiedNameRe matches a STRING_LITERAL containing what looks
+// like a Module.Name qualified reference — the canonical shape of the
+// quoted-identifier mistake (e.g. "Mod.Assoc" inside [...]). Plain string
+// values like 'John' or "Active" do not contain a dot followed by an
+// identifier-style segment and are therefore not matched.
+var xpathQuotedQualifiedNameRe = regexp.MustCompile(
+	`["'][A-Z][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*["']`,
+)
+
+// ExitXpathConstraint validates the source text of an XPath constraint and
+// rejects quoted qualified names like ["Mod.Assoc" = $x]. Mendix XPath
+// requires association and entity references to be unquoted; quoting them
+// silently turns them into string literals that compare unequal at runtime
+// and trigger unhelpful CE errors when the project is opened in Studio Pro.
+func (b *Builder) ExitXpathConstraint(ctx *parser.XpathConstraintContext) {
+	if ctx == nil {
+		return
+	}
+	source := extractOriginalText(ctx)
+	if source == "" {
+		return
+	}
+	if err := validateXPathConstraint(source); err != nil {
+		tok := ctx.GetStart()
+		b.addError(fmt.Errorf("line %d:%d: %s", tok.GetLine(), tok.GetColumn(), err.Error()))
+	}
+}
+
+// validateXPathConstraint scans the raw text of an XPath constraint for
+// quoted qualified-name patterns (the common user mistake of writing
+// ["Module.Assoc" = $x] instead of [Module.Assoc = $x]) and returns a
+// descriptive error if one is found. Returns nil for well-formed input.
+func validateXPathConstraint(xpath string) error {
+	if loc := xpathQuotedQualifiedNameRe.FindStringIndex(xpath); loc != nil {
+		quoted := xpath[loc[0]:loc[1]]
+		bare := quoted[1 : len(quoted)-1]
+		return fmt.Errorf(
+			"association or entity reference %s in XPath constraint must be unquoted — "+
+				"use %s instead of %s",
+			quoted, bare, quoted,
+		)
+	}
+	return nil
+}
+
 
 func (b *Builder) ExitCreateMicroflowStatement(ctx *parser.CreateMicroflowStatementContext) {
 	stmt := &ast.CreateMicroflowStmt{
