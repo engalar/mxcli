@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ISSUE-006: 开发流程 — 过度修复和验证缺失</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #0d1117; color: #c9d1d9; min-height: 100vh; padding: 24px; max-width: 900px; margin: 0 auto; }
+  .back { color: #58a6ff; font-size: 13px; text-decoration: none; display: inline-block; margin-bottom: 16px; }
+  .back:hover { text-decoration: underline; }
+  .header { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  .issue-id { font-size: 12px; color: #8b949e; margin-bottom: 6px; }
+  .issue-title { font-size: 20px; font-weight: 700; color: #f0f6fc; margin-bottom: 12px; }
+  .meta { display: flex; gap: 20px; flex-wrap: wrap; font-size: 12px; }
+  .meta-item { display: flex; flex-direction: column; gap: 2px; }
+  .meta-label { color: #6e7681; text-transform: uppercase; letter-spacing: .06em; font-size: 10px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .wontfix { background: rgba(110,118,129,.15); color: #8b949e; border: 1px solid rgba(110,118,129,.3); }
+  .section { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 18px 22px; margin-bottom: 16px; }
+  .section-title { font-size: 13px; font-weight: 700; color: #f0f6fc; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
+  p { font-size: 13px; line-height: 1.65; margin-bottom: 8px; }
+  code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px;
+         background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 1px 5px; color: #f0f6fc; }
+  .ok { color: #3fb950; } .bad { color: #f85149; } .warn { color: #d29922; }
+  .timeline { position: relative; padding-left: 20px; }
+  .timeline::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+                       width: 2px; background: #30363d; }
+  .tl-item { position: relative; margin-bottom: 16px; }
+  .tl-item::before { content: ''; position: absolute; left: -24px; top: 4px;
+                      width: 8px; height: 8px; border-radius: 50%; background: #30363d; }
+  .tl-item.bad::before { background: #f85149; }
+  .tl-item.warn::before { background: #d29922; }
+  .tl-item.ok::before { background: #3fb950; }
+  .tl-commit { font-size: 11px; color: #8b949e; font-family: monospace; margin-bottom: 2px; }
+  .tl-desc { font-size: 13px; }
+  .rule-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .rule-table td { padding: 10px 12px; border-bottom: 1px solid #21262d; vertical-align: top; }
+  .rule-table td:first-child { width: 30%; color: #f0f6fc; font-weight: 600; }
+  .rule-table tr:last-child td { border-bottom: none; }
+  ul, ol { padding-left: 18px; }
+  li { font-size: 13px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<a href="index.html" class="back">← 返回 Issue 列表</a>
+
+<div class="header">
+  <div class="issue-id">ISSUE-006</div>
+  <div class="issue-title">开发流程问题：多轮过度修复、未用 mx check 验证</div>
+  <div class="meta">
+    <div class="meta-item"><div class="meta-label">状态</div><span class="badge wontfix">Won't Fix（流程改进）</span></div>
+    <div class="meta-item"><div class="meta-label">性质</div><div style="font-size:13px">流程 / 技术债务记录</div></div>
+    <div class="meta-item"><div class="meta-label">发现时间</div><div style="font-size:13px">2026-05-18</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">问题描述</div>
+  <p>SEM-03 实现过程中经过多轮修复，但多次没有使用 <code>mx check</code> 作为权威验证，导致：</p>
+  <ul>
+    <li>某次修复（消假阳）引入了另一个假阳性问题，又要再修</li>
+    <li>使用自建调试测试替代 mx check，误判了正常行为</li>
+    <li>过度修复（如 numericCompat）实际上恰好是正确的，但需要 mx check 才能确认</li>
+    <li>总体导致多轮反复，影响了代码质量的信心</li>
+  </ul>
+</div>
+
+<div class="section">
+  <div class="section-title">时间线回顾</div>
+  <div class="timeline">
+    <div class="tl-item ok">
+      <div class="tl-commit">18ca84ea / 68560023 / 1fdbb60b / d3b63e3e</div>
+      <div class="tl-desc">核心实现（Task 1-8）：接口、推断器、槽位解析、编排器 ✓</div>
+    </div>
+    <div class="tl-item warn">
+      <div class="tl-commit">1047d404 — 集成测试</div>
+      <div class="tl-desc">集成测试通过，但 <strong>未运行 mx check</strong>，Mx2026AIDay 有 144 个假阳性未被发现</div>
+    </div>
+    <div class="tl-item bad">
+      <div class="tl-commit">396431bb — "eliminate false positives"</div>
+      <div class="tl-desc">
+        发现假阳性后：(1) KindEmpty 兼容一切 (2) numericCompat 双向 (3) 移除 ExpressionSplitCondition。
+        问题：这三个改动捆绑在一个 commit，无法单独回滚某一项。<strong>未运行 mx check 验证</strong>
+      </div>
+    </div>
+    <div class="tl-item bad">
+      <div class="tl-commit">15784df3 — 位置信息 + minArgs 修复</div>
+      <div class="tl-desc">formatDecimal 等 E006 假阳性修复，引入了位置信息。<strong>未运行 mx check</strong></div>
+    </div>
+    <div class="tl-item bad">
+      <div class="tl-commit">3384d440 — "false negatives from scan/meta"</div>
+      <div class="tl-desc">
+        修复 BSON 字段名、VariableType 读取、RetrieveAction List/Object 区分、TargetVarName 捕获。
+        引入了 22 个新假阳性（Object→List），又修复了一次。<strong>未运行 mx check 验证最终结果</strong>
+      </div>
+    </div>
+    <div class="tl-item ok">
+      <div class="tl-commit">2026-05-18 — 分析报告 + mx check 验证</div>
+      <div class="tl-desc">
+        首次正式运行 mx check：macnica = 44 CE0117，Mx2026AIDay = 0 errors。
+        确认 numericCompat 正确。建立了 Issue 追踪体系。
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">根本原因</div>
+  <ul>
+    <li>SEM-03 使用自建集成测试（TestSEM03_Macnica_HasDetections）作为验证——但"有检出"不等于"检出正确"</li>
+    <li>基线测试只检查了"有无 SEM-03 结果"，没有检查"结果是否正确"（即是否与 mx check 一致）</li>
+    <li>假阳性的发现依赖于手工运行 bin/mxcli，而不是系统化的 mx check 对比</li>
+    <li>多次修复没有先分析根因，而是直接尝试修改代码</li>
+  </ul>
+</div>
+
+<div class="section">
+  <div class="section-title">已建立的工作流程规则</div>
+  <table class="rule-table">
+    <tr>
+      <td>分析优先</td>
+      <td>任何修复前，先与用户一起分析根因并获得批准，再写代码</td>
+    </tr>
+    <tr>
+      <td>mx check 为权威</td>
+      <td>每次代码修改后，必须运行 <code>mx check</code> 对 macnica 和 Mx2026AIDay 两个应用进行验证</td>
+    </tr>
+    <tr>
+      <td>原子性提交</td>
+      <td>每次只修改一个根因，独立 commit，便于问题定位和回滚</td>
+    </tr>
+    <tr>
+      <td>双向验证</td>
+      <td>修复需同时满足：macnica 新增真阳性 AND Mx2026AIDay 仍为 0 errors</td>
+    </tr>
+    <tr>
+      <td>Issue 先行</td>
+      <td>新发现的问题先记录在 docs/issues/，确认理解后再修复</td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ISSUE-003: ExpressionSplitCondition 未检查</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #0d1117; color: #c9d1d9; min-height: 100vh; padding: 24px; max-width: 900px; margin: 0 auto; }
+  .back { color: #58a6ff; font-size: 13px; text-decoration: none; display: inline-block; margin-bottom: 16px; }
+  .back:hover { text-decoration: underline; }
+  .header { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  .issue-id { font-size: 12px; color: #8b949e; margin-bottom: 6px; }
+  .issue-title { font-size: 20px; font-weight: 700; color: #f0f6fc; margin-bottom: 12px; }
+  .meta { display: flex; gap: 20px; flex-wrap: wrap; font-size: 12px; }
+  .meta-item { display: flex; flex-direction: column; gap: 2px; }
+  .meta-label { color: #6e7681; text-transform: uppercase; letter-spacing: .06em; font-size: 10px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .open    { background: rgba(248,81,73,.15); color: #f85149; border: 1px solid rgba(248,81,73,.3); }
+  .p2-badge{ background: rgba(210,153,34,.2); color: #d29922; border: 1px solid rgba(210,153,34,.4); font-weight: 700; }
+  .section { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 18px 22px; margin-bottom: 16px; }
+  .section-title { font-size: 13px; font-weight: 700; color: #f0f6fc; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
+  p { font-size: 13px; line-height: 1.65; margin-bottom: 8px; }
+  code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px;
+         background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 1px 5px; color: #f0f6fc; }
+  pre { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px;
+        background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+        padding: 14px 16px; overflow-x: auto; line-height: 1.6; color: #c9d1d9; margin: 8px 0; }
+  .ok { color: #3fb950; } .bad { color: #f85149; } .warn { color: #d29922; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th { background: #0d1117; color: #8b949e; padding: 8px 10px; text-align: left; border-bottom: 1px solid #30363d; }
+  .data-table td { padding: 8px 10px; border-bottom: 1px solid #21262d; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .rule-box { background: #0d1117; border: 1px solid #d29922; border-radius: 6px; padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #d29922; }
+  .info-box { background: #0d1117; border: 1px solid #58a6ff; border-radius: 6px; padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #58a6ff; }
+  ul, ol { padding-left: 18px; }
+  li { font-size: 13px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<a href="index.html" class="back">← 返回 Issue 列表</a>
+
+<div class="header">
+  <div class="issue-id">ISSUE-003</div>
+  <div class="issue-title">ExpressionSplitCondition 槽位未检查 → Decision CE0117 漏报</div>
+  <div class="meta">
+    <div class="meta-item"><div class="meta-label">状态</div><span class="badge open">Open</span></div>
+    <div class="meta-item"><div class="meta-label">优先级</div><span class="badge p2-badge">P2</span></div>
+    <div class="meta-item"><div class="meta-label">CE0117 影响</div><div style="font-size:13px;color:#f85149;font-weight:600">4 个漏报</div></div>
+    <div class="meta-item"><div class="meta-label">槽位</div><div style="font-size:13px">Microflows$ExpressionSplitCondition/Expression</div></div>
+    <div class="meta-item"><div class="meta-label">验证状态</div><div style="font-size:13px;color:#d29922">⚠ 待分析和批准</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">背景：为什么此槽被移除</div>
+  <p>原计划将 <code>ExpressionSplitCondition/Expression</code> 注册为期望 <code>KindBoolean</code>，但在对 Mx2026AIDay 的基线测试中出现 39 个假阳性（枚举分支的表达式被误报为非 Boolean）。</p>
+  <p>原因：Mendix Decision 活动有两种模式：</p>
+  <ul>
+    <li><strong>Boolean 模式</strong>：条件表达式 = Boolean（如 <code>$Count &gt; 0</code>），分支为 true/false</li>
+    <li><strong>Enumeration 模式</strong>：条件表达式 = 枚举属性（如 <code>$Status</code>），每个分支对应一个枚举值</li>
+  </ul>
+  <p>因无法区分这两种模式，为避免假阳性，此槽被从 staticSlots 移除。</p>
+</div>
+
+<div class="section">
+  <div class="section-title">问题：4 个 Decision CE0117 仍漏报</div>
+  <p>mx check 对 macnica 报告 4 个 Decision 相关 CE0117，包括：</p>
+  <pre>[CE0117] at Decision '$MatchItem/id = $Dto/CustomerBaseId'
+[CE0117] at Decision '$Dto = empty or $ExistingCustomerCode = '''</pre>
+  <p>这些 Decision 使用的是错误类型的表达式。注意：<code>$MatchItem/id = $Dto/CustomerBaseId</code> 这种比较表达式在 Mendix 中可能因为 <code>id</code> 属性未索引（见 ISSUE-001）导致推断失败，而非因为 ExpressionSplitCondition 未注册。</p>
+
+  <div class="info-box">ℹ 可能已部分被其他 issue 覆盖：如果 ISSUE-001 修复后 <code>$MatchItem/id</code> 能推断为 KindLong，且 <code>$Dto/CustomerBaseId</code> 也能推断，则这个比较表达式 <code>Long = Long</code> → KindBoolean（比较运算），就可以通过 WhileLoopCondition 类的检查发现。但前提是此槽要重新注册。</div>
+</div>
+
+<div class="section">
+  <div class="section-title">核心矛盾</div>
+  <table class="data-table">
+    <tr><th>方案</th><th>对 macnica 的效果</th><th>对 Mx2026AIDay 的风险</th></tr>
+    <tr><td>移除（当前状态）</td><td class="bad">漏报 4 个 CE0117</td><td class="ok">0 假阳性</td></tr>
+    <tr><td>注册为 KindBoolean</td><td class="ok">可能检出部分</td><td class="bad">枚举分支产生假阳性</td></tr>
+    <tr><td>注册，但 Compatible(Enumeration, Boolean) = true</td><td class="warn">只检出非 Boolean/Enum 的错误</td><td class="ok">枚举分支不假阳</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">需要验证的问题</div>
+  <ul>
+    <li>macnica 4 个 Decision CE0117 的具体表达式是什么？表达式返回的类型是什么？</li>
+    <li>Mx2026AIDay 的枚举分支中，推断类型是 KindEnumeration 还是 KindUnknown？</li>
+    <li>如果用方案 3（只排除 Enumeration），Mx2026AIDay 的 39 个枚举分支还会假阳吗？</li>
+  </ul>
+</div>
+
+<div class="section">
+  <div class="section-title">修复方向（待批准）</div>
+  <p><strong>方案（推荐）</strong>：重新注册此槽为 KindBoolean，但在 <code>Compatible()</code> 中允许 KindEnumeration 兼容 KindBoolean（因为枚举分支是合法用法）。</p>
+  <pre>// In Compatible():
+if actual == exprcheck.KindEnumeration && expected == exprcheck.KindBoolean {
+    return true  // 枚举分支是合法的 Mendix Decision 用法
+}</pre>
+  <p>同时，对 KindObject、KindList、KindString、KindInteger 等非 Boolean/Enumeration 返回 false → 检出真正的错误。</p>
+  <div class="rule-box">⚠ 修复前必须确认：Mx2026AIDay 中被标记为枚举分支的那 39 个表达式，推断类型是 KindEnumeration 还是 KindUnknown。如果是 KindUnknown，上述方案不够（还需让 QNameExpr 返回 KindEnumeration）。</div>
+</div>
+
+<div class="section">
+  <div class="section-title">验证计划</div>
+  <ol>
+    <li style="margin-bottom:6px">找 Mx2026AIDay 和 macnica 中 ExpressionSplitCondition 的具体表达式和推断类型</li>
+    <li style="margin-bottom:6px">确认方案可行后，批准实施</li>
+    <li style="margin-bottom:6px">运行 <code>mx check MacnicaApp.mpr</code> — 4 个 Decision CE0117 应新增检出</li>
+    <li>运行 <code>mx check "Factory Management.mpr"</code> — 仍为 0 errors</li>
+  </ol>
+</div>
+</body>
+</html>

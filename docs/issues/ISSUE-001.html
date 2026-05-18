@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ISSUE-001: $Entity/id 系统属性未索引</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #0d1117; color: #c9d1d9; min-height: 100vh; padding: 24px; max-width: 900px; margin: 0 auto; }
+  .back { color: #58a6ff; font-size: 13px; text-decoration: none; display: inline-block; margin-bottom: 16px; }
+  .back:hover { text-decoration: underline; }
+  .header { background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+             padding: 20px 24px; margin-bottom: 20px; }
+  .issue-id { font-size: 12px; color: #8b949e; margin-bottom: 6px; }
+  .issue-title { font-size: 20px; font-weight: 700; color: #f0f6fc; margin-bottom: 12px; }
+  .meta { display: flex; gap: 20px; flex-wrap: wrap; font-size: 12px; }
+  .meta-item { display: flex; flex-direction: column; gap: 2px; }
+  .meta-label { color: #6e7681; text-transform: uppercase; letter-spacing: .06em; font-size: 10px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px;
+           font-size: 11px; font-weight: 600; }
+  .open    { background: rgba(248,81,73,.15); color: #f85149; border: 1px solid rgba(248,81,73,.3); }
+  .p1-badge{ background: rgba(248,81,73,.2); color: #f85149; border: 1px solid rgba(248,81,73,.4); font-weight: 700; }
+  .section { background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+             padding: 18px 22px; margin-bottom: 16px; }
+  .section-title { font-size: 13px; font-weight: 700; color: #f0f6fc;
+                   text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
+  p { font-size: 13px; line-height: 1.65; margin-bottom: 8px; }
+  code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px;
+         background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 1px 5px; color: #f0f6fc; }
+  pre { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px;
+        background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+        padding: 14px 16px; overflow-x: auto; line-height: 1.6; color: #c9d1d9; margin: 8px 0; }
+  .trace-step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 6px; }
+  .step-num { background: #21262d; color: #8b949e; border-radius: 50%;
+              width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+              font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .step-text { font-size: 13px; line-height: 1.5; }
+  .ok { color: #3fb950; }
+  .bad { color: #f85149; }
+  .warn { color: #d29922; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th { background: #0d1117; color: #8b949e; padding: 8px 10px;
+                   text-align: left; border-bottom: 1px solid #30363d; }
+  .data-table td { padding: 8px 10px; border-bottom: 1px solid #21262d; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .rule-box { background: #0d1117; border: 1px solid #d29922; border-radius: 6px;
+              padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #d29922; }
+  ul { padding-left: 18px; }
+  li { font-size: 13px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<a href="index.html" class="back">← 返回 Issue 列表</a>
+
+<div class="header">
+  <div class="issue-id">ISSUE-001</div>
+  <div class="issue-title">$Entity/id 系统属性未被索引 → 表达式推断返回 KindUnknown</div>
+  <div class="meta">
+    <div class="meta-item"><div class="meta-label">状态</div><span class="badge open">Open</span></div>
+    <div class="meta-item"><div class="meta-label">优先级</div><span class="badge p1-badge">P1 — 影响最大</span></div>
+    <div class="meta-item"><div class="meta-label">CE0117 影响估计</div><div style="font-size:13px;color:#f85149;font-weight:600">≥10 个漏报</div></div>
+    <div class="meta-item"><div class="meta-label">主要槽位</div><div style="font-size:13px">ChangeVariableAction · ChangeActionItem</div></div>
+    <div class="meta-item"><div class="meta-label">验证状态</div><div style="font-size:13px;color:#d29922">⚠ 待 mx check 验证</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">症状</div>
+  <p>mx check 报告 19 个 <code>Change variable</code> CE0117（如 <code>Change variable HeaderId</code>、<code>Change variable WFInstanceId</code>、<code>Change variable PayerSalesAreaDataId</code>），但 mxcli 全部漏报。</p>
+  <p>审计数据显示：ChangeVariableAction 有 344 个槽位已解析、327 个表达式类型已推断，但 <strong class="bad">mismatch = 0</strong>。</p>
+</div>
+
+<div class="section">
+  <div class="section-title">根因分析</div>
+  <p>Mendix 实体有一个特殊系统属性 <code>id</code>（类型 Long），是数据库主键。这个属性<strong>不出现在域模型的属性列表</strong>中，因此未被 <code>buildEntityAttrs</code> 索引。</p>
+
+  <p style="margin-top:10px">当代码写 <code>$Header/id</code>、<code>$Instance/id</code> 等路径时，推断链路：</p>
+
+  <div style="margin-top:8px">
+    <div class="trace-step"><div class="step-num">1</div><div class="step-text">
+      <code>AttributePathExpr</code>: Variable=<code>"Header"</code>, Path=[<code>"id"</code>]
+    </div></div>
+    <div class="trace-step"><div class="step-num">2</div><div class="step-text">
+      <span class="ok">✓</span> <code>cat.EntityQNOf("Header")</code> = <code>"WF_Engine.WFApplicationDataRequest"</code>
+    </div></div>
+    <div class="trace-step"><div class="step-num">3</div><div class="step-text">
+      <span class="bad">✗</span> <code>cat.AttributeKind("WF_Engine.WFApplicationDataRequest", "id")</code>
+      → <code>(KindUnknown, false)</code> — <code>id</code> 不在 entityAttrs 中
+    </div></div>
+    <div class="trace-step"><div class="step-num">4</div><div class="step-text">
+      <span class="bad">✗</span> 推断返回 <code>KindUnknown</code> → 跳过检查 → <strong class="bad">漏报</strong>
+    </div></div>
+  </div>
+
+  <p style="margin-top:12px">目标变量（如 <code>HeaderId</code>）声明为 <code>Long</code> 类型，期望接收 Long 值。但 <code>$Header/id</code> 的推断失败，导致无法检测类型不匹配。</p>
+</div>
+
+<div class="section">
+  <div class="section-title">证据数据</div>
+  <table class="data-table">
+    <tr><th>mx check 活动名</th><th>推测表达式模式</th><th>期望类型</th><th>实际推断</th><th>后果</th></tr>
+    <tr><td>Change variable HeaderId</td><td><code>$Header/id</code></td><td>Long</td><td class="bad">KindUnknown</td><td class="bad">漏报</td></tr>
+    <tr><td>Change variable WFInstanceId</td><td><code>$Instance/id</code></td><td>Long</td><td class="bad">KindUnknown</td><td class="bad">漏报</td></tr>
+    <tr><td>Change variable PayerSalesAreaDataId</td><td><code>$PayerData/id</code></td><td>Long</td><td class="bad">KindUnknown</td><td class="bad">漏报</td></tr>
+    <tr><td>Change variable NewId (×2)</td><td><code>$X/id</code></td><td>Long</td><td class="bad">KindUnknown</td><td class="bad">漏报</td></tr>
+    <tr><td>Change variable WfNo</td><td><code>$Wf/id</code> 或其他</td><td>Integer/Long</td><td class="bad">KindUnknown</td><td class="bad">漏报</td></tr>
+  </table>
+  <p style="margin-top:8px;color:#8b949e;font-size:12px">注：表达式模式为推测，需通过 BSON 检查确认</p>
+</div>
+
+<div class="section">
+  <div class="section-title">待验证问题（批准前回答）</div>
+  <ul>
+    <li>BSON 中这些 ChangeVariableAction 的具体 <code>Value</code> 表达式是什么？</li>
+    <li>目标变量的声明类型（<code>VariableType.$Type</code>）是什么？</li>
+    <li>macnica CE0117 中 Change variable 错误的比例中有多少是 <code>$Entity/id</code> 模式？</li>
+  </ul>
+</div>
+
+<div class="section">
+  <div class="section-title">修复方向（待批准）</div>
+  <p><strong>方案 A（推荐）</strong>：在 <code>buildEntityAttrs</code> 中为每个已索引实体自动添加 <code>id</code> 属性，类型 = <code>KindLong</code>。这是 Mendix 系统保证的属性，所有实体都有。</p>
+
+  <pre>// 在 buildEntityAttrs 处理每个 entity 后：
+idx.entityAttrs[qn]["id"] = exprcheck.KindLong  // Mendix 系统主键，始终为 Long</pre>
+
+  <p><strong>方案 B</strong>：在 <code>inferAttrPath</code> 中对 <code>path[0] == "id"</code> 做特殊处理，直接返回 <code>KindLong</code>（不依赖索引）。更脆弱，不推荐。</p>
+
+  <div class="rule-box">⚠ 修复前须验证：在 macnica BSON 中找到具体案例，确认 Change variable 的实际表达式确实是 $Entity/id 模式。修复后须运行 mx check 对比确认新增检出。</div>
+</div>
+
+<div class="section">
+  <div class="section-title">验证计划</div>
+  <ol style="padding-left:18px">
+    <li style="margin-bottom:6px">BSON 检查：找 macnica 中 ChangeVariableName 为 "HeaderId" 等的记录，确认 Value 表达式</li>
+    <li style="margin-bottom:6px">实施修复（批准后）</li>
+    <li style="margin-bottom:6px">运行 <code>mx check MacnicaApp.mpr</code> — 确认新增 SEM-03 检出，且总 CE0117 与 mx check 对应</li>
+    <li>运行 <code>mx check "Factory Management.mpr"</code> — 确认仍为 0 errors（无假阳性）</li>
+  </ol>
+</div>
+</body>
+</html>
