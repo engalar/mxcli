@@ -5,6 +5,7 @@ package typecheck
 import (
 	"strings"
 
+	"github.com/mendixlabs/mxcli/internal/expr/tokens"
 	"github.com/mendixlabs/mxcli/mdl/exprcheck"
 )
 
@@ -140,18 +141,27 @@ func widenNumeric(a, b exprcheck.TypeKind) exprcheck.TypeKind {
 }
 
 func inferToken(token string) exprcheck.TypeKind {
-	switch token {
-	case "CurrentDateTime",
-		"CurrentBeginOfDay", "CurrentBeginOfWeek",
-		"CurrentBeginOfMonth", "CurrentBeginOfYear",
-		"CurrentEndOfDay", "CurrentEndOfWeek",
-		"CurrentEndOfMonth", "CurrentEndOfYear":
-		return exprcheck.KindDateTime
-	case "CurrentUser", "CurrentObject":
+	if t, ok := tokens.Lookup(token); ok {
+		return kindToTypeKind(t.Kind)
+	}
+	if _, ok := tokens.LookupUserRole(token); ok {
 		return exprcheck.KindObject
-	case "True", "False":
+	}
+	return exprcheck.KindUnknown
+}
+
+func kindToTypeKind(k tokens.Kind) exprcheck.TypeKind {
+	switch k {
+	case tokens.KindDateTime:
+		return exprcheck.KindDateTime
+	case tokens.KindDuration:
+		// Duration tokens are millisecond integer values at runtime.
+		return exprcheck.KindInteger
+	case tokens.KindObjectRef:
+		return exprcheck.KindObject
+	case tokens.KindBoolean:
 		return exprcheck.KindBoolean
-	case "Null":
+	case tokens.KindEmpty:
 		return exprcheck.KindEmpty
 	}
 	return exprcheck.KindUnknown

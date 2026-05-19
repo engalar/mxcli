@@ -366,3 +366,52 @@ func TestInferrer_RecoveredExprIsUnknown(t *testing.T) {
 		t.Errorf("Infer(RecoveredExpr) = %v, want KindUnknown", got)
 	}
 }
+
+func TestInferToken_NewTokens(t *testing.T) {
+	inf := typecheck.NewInferrer()
+	scope := &mockScope{}
+	cat := &mockCat{}
+	funcs := typecheck.NewFuncReg()
+
+	// helper: build TokenExpr AST node
+	tokenNode := func(name string) exprcheck.RobustExpr {
+		return &exprcheck.TokenExpr{Token: name}
+	}
+
+	cases := []struct {
+		token string
+		want  exprcheck.TypeKind
+	}{
+		// Time-point tokens that were missing before
+		{"BeginOfCurrentMinute", exprcheck.KindDateTime},
+		{"EndOfCurrentMinute", exprcheck.KindDateTime},
+		{"BeginOfCurrentHour", exprcheck.KindDateTime},
+		{"EndOfCurrentHour", exprcheck.KindDateTime},
+		{"BeginOfYesterday", exprcheck.KindDateTime},
+		{"EndOfYesterday", exprcheck.KindDateTime},
+		{"BeginOfTomorrow", exprcheck.KindDateTime},
+		{"EndOfTomorrow", exprcheck.KindDateTime},
+		// UTC variants
+		{"BeginOfCurrentDayUTC", exprcheck.KindDateTime},
+		{"BeginOfCurrentWeekUTC", exprcheck.KindDateTime},
+		{"BeginOfCurrentMinuteUTC", exprcheck.KindDateTime},
+		// Duration tokens (value = integer milliseconds)
+		{"SecondLength", exprcheck.KindInteger},
+		{"MinuteLength", exprcheck.KindInteger},
+		{"HourLength", exprcheck.KindInteger},
+		{"DayLength", exprcheck.KindInteger},
+		{"WeekLength", exprcheck.KindInteger},
+		{"MonthLength", exprcheck.KindInteger},
+		{"YearLength", exprcheck.KindInteger},
+		// UserRole_* → KindObject (type always correct; name validated by SEM-08)
+		{"UserRole_Administrator", exprcheck.KindObject},
+		{"UserRole_AnyName", exprcheck.KindObject},
+	}
+
+	for _, tc := range cases {
+		got := inf.Infer(tokenNode(tc.token), scope, cat, funcs)
+		if got != tc.want {
+			t.Errorf("Infer(TokenExpr{%q}) = %v, want %v", tc.token, got, tc.want)
+		}
+	}
+}
