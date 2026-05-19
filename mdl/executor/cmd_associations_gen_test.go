@@ -17,8 +17,8 @@ func runListAssociationsGen(t *testing.T, moduleName string) string {
 	var buf bytes.Buffer
 	ctx.Output = &buf
 	ctx.Format = FormatTable
-	if err := listAssociationsGen(ctx, moduleName); err != nil {
-		t.Fatalf("listAssociationsGen(%q): %v", moduleName, err)
+	if err := listAssociations(ctx, moduleName); err != nil {
+		t.Fatalf("listAssociations(%q): %v", moduleName, err)
 	}
 	return buf.String()
 }
@@ -26,7 +26,7 @@ func runListAssociationsGen(t *testing.T, moduleName string) string {
 func TestListAssociationsGen_RendersFixture(t *testing.T) {
 	out := runListAssociationsGen(t, "")
 	if out == "" {
-		t.Fatal("listAssociationsGen produced no output")
+		t.Fatal("listAssociations produced no output")
 	}
 	for _, want := range []string{"Qualified Name", "Type", "Owner", "Storage", "associations)"} {
 		if !strings.Contains(out, want) {
@@ -39,12 +39,12 @@ func TestListAssociationsGen_DeterministicOutput(t *testing.T) {
 	a := runListAssociationsGen(t, "")
 	b := runListAssociationsGen(t, "")
 	if a != b {
-		t.Fatalf("listAssociationsGen output is not deterministic")
+		t.Fatalf("listAssociations output is not deterministic")
 	}
 }
 
 // TestDescribeAssociationGen_FixtureAssoc finds any association in the
-// fixture and exercises describeAssociationGen on it.
+// fixture and exercises describeAssociation on it.
 func TestDescribeAssociationGen_FixtureAssoc(t *testing.T) {
 	ctx := newDomainModelsTestContext(t)
 	pairs, err := listDomainModelsWithContainerGen(ctx)
@@ -80,8 +80,8 @@ func TestDescribeAssociationGen_FixtureAssoc(t *testing.T) {
 	}
 	var buf bytes.Buffer
 	ctx.Output = &buf
-	if err := describeAssociationGen(ctx, ast.QualifiedName{Module: modName, Name: assocName}); err != nil {
-		t.Fatalf("describeAssociationGen(%s.%s): %v", modName, assocName, err)
+	if err := describeAssociation(ctx, ast.QualifiedName{Module: modName, Name: assocName}); err != nil {
+		t.Fatalf("describeAssociation(%s.%s): %v", modName, assocName, err)
 	}
 	out := buf.String()
 	for _, want := range []string{"create association", modName + "." + assocName, "from ", " to ", "type ", "owner ", "delete_behavior "} {
@@ -95,8 +95,8 @@ func TestDescribeAssociationGen_NotFound(t *testing.T) {
 	ctx := newDomainModelsTestContext(t)
 	var buf bytes.Buffer
 	ctx.Output = &buf
-	err := describeAssociationGen(ctx, ast.QualifiedName{Module: "NoMod", Name: "NoAssoc"})
+	err := describeAssociation(ctx, ast.QualifiedName{Module: "NoMod", Name: "NoAssoc"})
 	if err == nil {
-		t.Error("describeAssociationGen with unknown association: expected error, got nil")
+		t.Error("describeAssociation with unknown association: expected error, got nil")
 	}
 }

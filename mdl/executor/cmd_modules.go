@@ -673,7 +673,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 	if assocs, err := listAssociationsForModuleGen(ctx, moduleName); err == nil {
 		for _, assoc := range assocs {
-			if err := describeAssociationGen(ctx, ast.QualifiedName{Module: moduleName, Name: assoc.Name()}); err == nil {
+			if err := describeAssociation(ctx, ast.QualifiedName{Module: moduleName, Name: assoc.Name()}); err == nil {
 				fmt.Fprintln(ctx.Output)
 			}
 		}

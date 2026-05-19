@@ -4,6 +4,7 @@ package executor
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -28,7 +29,7 @@ func TestShowAssociations_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
-	assertNoError(t, listAssociationsGen(ctx, ""))
+	assertNoError(t, listAssociations(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.Order_Customer")
@@ -61,7 +62,7 @@ func TestShowAssociations_Mock_FilterByModule(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
-	assertNoError(t, listAssociationsGen(ctx, "HR"))
+	assertNoError(t, listAssociations(ctx, "HR"))
 
 	out := buf.String()
 	assertNotContainsStr(t, out, "Sales.Order_Product")
@@ -96,7 +97,7 @@ func TestShowAssociations_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withDomainModelsRepo(dmRepo))
-	assertNoError(t, listAssociationsGen(ctx, ""))
+	assertNoError(t, listAssociations(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "A_B")
 }
@@ -218,4 +219,242 @@ func TestCreateAssociation_AlreadyExists_NoOrModify(t *testing.T) {
 		Child:  ast.QualifiedName{Module: "MyModule", Name: "Customer"},
 	})
 	assertError(t, err)
+}
+
+// --- Improvement 1: Multiplicity column in listAssociations ---
+
+func TestShowAssociations_Multiplicity_OneToMany(t *testing.T) {
+	mod := mkModule("Sales")
+	ent1 := mkEntityGen("Order")
+	ent2 := mkEntityGen("Customer")
+	assoc := mkAssociationGen("Order_Customer", model.ID(ent1.ID()), model.ID(ent2.ID()))
+	// Reference + Default = one-to-many (defaults from mkAssociationGen)
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
+	dm.AddAssociations(assoc)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	assertNoError(t, listAssociations(ctx, ""))
+	out := buf.String()
+	assertContainsStr(t, out, "Multiplicity")
+	assertContainsStr(t, out, "*-->1")
+	assertContainsStr(t, out, "FROM (owner)")
+	assertContainsStr(t, out, "TO (referenced)")
+}
+
+func TestShowAssociations_Multiplicity_OneToOne(t *testing.T) {
+	mod := mkModule("Sales")
+	ent1 := mkEntityGen("Customer")
+	ent2 := mkEntityGen("Profile")
+	assoc := mkAssociationGen("Customer_Profile", model.ID(ent1.ID()), model.ID(ent2.ID()))
+	assoc.SetOwner(genDm.AssociationOwnerBoth) // Reference + Both = 1-1
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
+	dm.AddAssociations(assoc)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	assertNoError(t, listAssociations(ctx, ""))
+	assertContainsStr(t, buf.String(), "1--1")
+}
+
+func TestShowAssociations_Multiplicity_ManyToMany_Default(t *testing.T) {
+	mod := mkModule("Sales")
+	ent1 := mkEntityGen("Customer")
+	ent2 := mkEntityGen("Group")
+	assoc := mkAssociationGen("Customer_Group", model.ID(ent1.ID()), model.ID(ent2.ID()))
+	assoc.SetType(genDm.AssociationTypeReferenceSet)
+	assoc.SetOwner(genDm.AssociationOwnerDefault)
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
+	dm.AddAssociations(assoc)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	assertNoError(t, listAssociations(ctx, ""))
+	assertContainsStr(t, buf.String(), "*-->*")
+}
+
+func TestShowAssociations_Multiplicity_ManyToMany_Both(t *testing.T) {
+	mod := mkModule("Sales")
+	ent1 := mkEntityGen("Accountant")
+	ent2 := mkEntityGen("Group")
+	assoc := mkAssociationGen("Accountant_Group", model.ID(ent1.ID()), model.ID(ent2.ID()))
+	assoc.SetType(genDm.AssociationTypeReferenceSet)
+	assoc.SetOwner(genDm.AssociationOwnerBoth)
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
+	dm.AddAssociations(assoc)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	assertNoError(t, listAssociations(ctx, ""))
+	assertContainsStr(t, buf.String(), "*--*")
+}
+
+// --- Improvement 2: SHOW ASSOCIATION (single) shows Parent/Child entity names ---
+
+func TestShowAssociation_Single_ShowsParentAndChild(t *testing.T) {
+	mod := mkModule("Sales")
+	ent1 := mkEntityGen("Order")
+	ent2 := mkEntityGen("Customer")
+	assoc := mkAssociationGen("Order_Customer", model.ID(ent1.ID()), model.ID(ent2.ID()))
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
+	dm.SetID(element.ID(nextID("dm")))
+	dm.AddAssociations(assoc)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
+	mb := &mock.MockBackend{
+		IsConnectedFunc:       func() bool { return true },
+		ListModulesFunc:       func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
+	}
+	name := ast.QualifiedName{Module: "Sales", Name: "Order_Customer"}
+	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	assertNoError(t, listAssociation(ctx, &name))
+	out := buf.String()
+	assertContainsStr(t, out, "FROM (owner)")
+	assertContainsStr(t, out, "TO (referenced)")
+	assertContainsStr(t, out, "Sales.Order")
+	assertContainsStr(t, out, "Sales.Customer")
+	assertContainsStr(t, out, "*-->1")
+}
+
+// --- Improvement 3: DESCRIBE ASSOCIATION emits a human-readable comment ---
+
+func TestDescribeAssociation_Comment_OneToMany(t *testing.T) {
+	mod := mkModule("Sales")
+	ent1 := mkEntityGen("Order")
+	ent2 := mkEntityGen("Customer")
+	assoc := mkAssociationGen("Order_Customer", model.ID(ent1.ID()), model.ID(ent2.ID()))
+	// Reference + Default = one-to-many
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
+	dm.AddAssociations(assoc)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	assertNoError(t, describeAssociation(ctx, ast.QualifiedName{Module: "Sales", Name: "Order_Customer"}))
+	out := buf.String()
+	if !strings.Contains(out, "-- one-to-many") {
+		t.Errorf("expected '-- one-to-many' comment in describe output, got:\n%s", out)
+	}
+}
+
+func TestDescribeAssociation_Comment_OneToOne(t *testing.T) {
+	mod := mkModule("Sales")
+	ent1 := mkEntityGen("Customer")
+	ent2 := mkEntityGen("Profile")
+	assoc := mkAssociationGen("Customer_Profile", model.ID(ent1.ID()), model.ID(ent2.ID()))
+	assoc.SetOwner(genDm.AssociationOwnerBoth)
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
+	dm.AddAssociations(assoc)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	assertNoError(t, describeAssociation(ctx, ast.QualifiedName{Module: "Sales", Name: "Customer_Profile"}))
+	if !strings.Contains(buf.String(), "-- one-to-one") {
+		t.Errorf("expected '-- one-to-one' comment, got:\n%s", buf.String())
+	}
+}
+
+func TestDescribeAssociation_Comment_ManyToMany(t *testing.T) {
+	mod := mkModule("Sales")
+	ent1 := mkEntityGen("Customer")
+	ent2 := mkEntityGen("Group")
+	assoc := mkAssociationGen("Customer_Group", model.ID(ent1.ID()), model.ID(ent2.ID()))
+	assoc.SetType(genDm.AssociationTypeReferenceSet)
+	dm := mkDomainModelGen(mod.ID, ent1, ent2)
+	dm.AddAssociations(assoc)
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	assertNoError(t, describeAssociation(ctx, ast.QualifiedName{Module: "Sales", Name: "Customer_Group"}))
+	if !strings.Contains(buf.String(), "-- many-to-many") {
+		t.Errorf("expected '-- many-to-many' comment, got:\n%s", buf.String())
+	}
+}
+
+// --- Improvement 4: CREATE ASSOCIATION rejects persistable entity as owner when paired with non-persistable ---
+
+func mkNonPersistableEntityGen(name string) *genDm.Entity {
+	ent := genDm.NewEntity()
+	ent.SetID(element.ID(nextID("ent")))
+	ent.SetName(name)
+	ent.SetGeneralization(mkNoGeneralizationGen(false)) // false = non-persistable
+	return ent
+}
+
+func TestCreateAssociation_PersistableOwner_NonPersistableChild_Rejected(t *testing.T) {
+	mod := mkModule("MyModule")
+	persistEnt := mkEntityGen("Order")           // persistable (FROM side = owner)
+	nonPersistEnt := mkNonPersistableEntityGen("Filter") // non-persistable (TO side)
+	dm := mkDomainModelGen(mod.ID, persistEnt, nonPersistEnt)
+	dm.SetID(element.ID(nextID("dm")))
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
+	mb := &mock.MockBackend{
+		IsConnectedFunc:       func() bool { return true },
+		ListModulesFunc:       func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	err := execCreateAssociation(ctx, &ast.CreateAssociationStmt{
+		Name:   ast.QualifiedName{Module: "MyModule", Name: "Order_Filter"},
+		Parent: ast.QualifiedName{Module: "MyModule", Name: "Order"},   // persistable = FROM
+		Child:  ast.QualifiedName{Module: "MyModule", Name: "Filter"},  // non-persistable = TO
+	})
+	if err == nil {
+		t.Fatal("expected error: persistable entity cannot be owner when paired with non-persistable")
+	}
+	if !strings.Contains(err.Error(), "non-persistent") && !strings.Contains(err.Error(), "owner") {
+		t.Errorf("expected error to mention non-persistent/owner, got: %v", err)
+	}
+}
+
+func TestCreateAssociation_NonPersistableOwner_PersistableChild_Accepted(t *testing.T) {
+	mod := mkModule("MyModule")
+	nonPersistEnt := mkNonPersistableEntityGen("Filter") // non-persistable (FROM side = owner ✓)
+	persistEnt := mkEntityGen("Result")                  // persistable (TO side)
+	dm := mkDomainModelGen(mod.ID, nonPersistEnt, persistEnt)
+	dm.SetID(element.ID(nextID("dm")))
+	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
+	created := false
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
+		CreateAssociationGenFunc: func(dmID model.ID, a *genDm.Association) error {
+			created = true
+			return nil
+		},
+		ReconcileMemberAccessesFunc: func(dmID model.ID, moduleName string) (int, error) { return 0, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
+	err := execCreateAssociation(ctx, &ast.CreateAssociationStmt{
+		Name:   ast.QualifiedName{Module: "MyModule", Name: "Filter_Result"},
+		Parent: ast.QualifiedName{Module: "MyModule", Name: "Filter"}, // non-persistable = FROM ✓
+		Child:  ast.QualifiedName{Module: "MyModule", Name: "Result"}, // persistable = TO ✓
+	})
+	if err != nil {
+		t.Fatalf("expected no error for valid non-persistable→persistable association, got: %v", err)
+	}
+	if !created {
+		t.Fatal("CreateAssociationGen was not called")
+	}
 }

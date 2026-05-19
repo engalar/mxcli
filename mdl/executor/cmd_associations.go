@@ -62,6 +62,17 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 	}
 	childID := element.ID(childEntity.ID())
 
+	// Validate persistability constraint: when one entity is non-persistent,
+	// the non-persistent entity must be the FROM (owner) side.
+	parentPersistable := entityPersistableGen(parentEntity)
+	childPersistable := entityPersistableGen(childEntity)
+	if parentPersistable && !childPersistable {
+		return mdlerrors.NewValidationf(
+			"association owner must be the non-persistent entity: %q is persistable but %q is non-persistent — reverse the direction: from %s to %s",
+			s.Parent.String(), s.Child.String(), s.Child.String(), s.Parent.String(),
+		)
+	}
+
 	// Create association
 	// ParentID = FROM entity (the one with the FK)
 	// ChildID = TO entity (the one being referenced)
@@ -318,119 +329,6 @@ func execDropAssociation(ctx *ExecContext, s *ast.DropAssociationStmt) error {
 	return mdlerrors.NewNotFound("association", s.Name.String())
 }
 
-// listAssociations handles SHOW ASSOCIATIONS command.
-func listAssociations(ctx *ExecContext, moduleName string) error {
-	// Build module ID -> name map (single query)
-	modules, err := ctx.Backend.ListModules()
-	if err != nil {
-		return mdlerrors.NewBackend("list modules", err)
-	}
-	moduleNames := make(map[model.ID]string)
-	for _, m := range modules {
-		moduleNames[m.ID] = m.Name
-	}
-
-	// Get all domain models in a single query (avoids O(n²) behavior)
-	domainModels, err := cachedDomainModelsGen(ctx)
-	if err != nil {
-		return mdlerrors.NewBackend("list domain models", err)
-	}
-
-	// Build entity ID -> qualified name map
-	entityNames := make(map[model.ID]string)
-	for _, dm := range domainModels {
-		if dm == nil {
-			continue
-		}
-		h, herr := getHierarchy(ctx)
-		if herr != nil {
-			return mdlerrors.NewBackend("build hierarchy", herr)
-		}
-		modID := h.FindModuleID(model.ID(dm.ID()))
-		modName := moduleNames[modID]
-		for _, entityElem := range dm.EntitiesItems() {
-			entity, ok := entityElem.(*genDm.Entity)
-			if !ok {
-				continue
-			}
-			entityNames[model.ID(entity.ID())] = modName + "." + entity.Name()
-		}
-	}
-
-	// Collect rows
-	type row struct {
-		qualifiedName string
-		module        string
-		name          string
-		parent        string
-		child         string
-		assocType     string
-		owner         string
-		storage       string
-	}
-	var rows []row
-
-	for _, dm := range domainModels {
-		if dm == nil {
-			continue
-		}
-		h, herr := getHierarchy(ctx)
-		if herr != nil {
-			return mdlerrors.NewBackend("build hierarchy", herr)
-		}
-		modID := h.FindModuleID(model.ID(dm.ID()))
-		modName := moduleNames[modID]
-		// Filter by module name if specified
-		if moduleName != "" && modName != moduleName {
-			continue
-		}
-		// Intra-module associations
-		for _, assocElem := range dm.AssociationsItems() {
-			assoc, ok := assocElem.(*genDm.Association)
-			if !ok {
-				continue
-			}
-			qualifiedName := modName + "." + assoc.Name()
-			parent := entityNames[model.ID(assoc.ParentRefID())]
-			child := entityNames[model.ID(assoc.ChildRefID())]
-			if parent == "" {
-				parent = string(assoc.ParentRefID())
-			}
-			if child == "" {
-				child = string(assoc.ChildRefID())
-			}
-			rows = append(rows, row{qualifiedName, modName, assoc.Name(), parent, child, assoc.Type(), assoc.Owner(), assoc.StorageFormat()})
-		}
-		// Cross-module associations
-		for _, crossElem := range dm.CrossAssociationsItems() {
-			ca, ok := crossElem.(*genDm.CrossAssociation)
-			if !ok {
-				continue
-			}
-			qualifiedName := modName + "." + ca.Name()
-			parent := entityNames[model.ID(ca.ParentRefID())]
-			if parent == "" {
-				parent = string(ca.ParentRefID())
-			}
-			rows = append(rows, row{qualifiedName, modName, ca.Name(), parent, ca.ChildQualifiedName(), ca.Type(), ca.Owner(), ca.StorageFormat()})
-		}
-	}
-
-	// Sort by qualified name
-	sort.Slice(rows, func(i, j int) bool {
-		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
-	})
-
-	// Build TableResult
-	result := &TableResult{
-		Columns: []string{"Qualified Name", "Module", "Name", "Parent", "Child", "Type", "Owner", "Storage"},
-		Summary: fmt.Sprintf("(%d associations)", len(rows)),
-	}
-	for _, r := range rows {
-		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.parent, r.child, r.assocType, r.owner, r.storage})
-	}
-	return writeResult(ctx, result)
-}
 
 // listAssociation handles SHOW ASSOCIATION command.
 func listAssociation(ctx *ExecContext, name *ast.QualifiedName) error {
@@ -451,12 +349,27 @@ func listAssociation(ctx *ExecContext, name *ast.QualifiedName) error {
 		return mdlerrors.NewNotFound("association", name.String())
 	}
 
+	// Build entity ID → qualified name map for this domain model.
+	entityNames := make(map[model.ID]string)
+	for _, e := range dm.EntitiesItems() {
+		entity, ok := e.(*genDm.Entity)
+		if !ok {
+			continue
+		}
+		entityNames[model.ID(entity.ID())] = module.Name + "." + entity.Name()
+	}
+
 	for _, assocElem := range dm.AssociationsItems() {
 		assoc, ok := assocElem.(*genDm.Association)
 		if !ok || assoc.Name() != name.Name {
 			continue
 		}
+		parent := entityNames[model.ID(assoc.ParentRefID())]
+		child := entityNames[model.ID(assoc.ChildRefID())]
 		fmt.Fprintf(ctx.Output, "Association: %s.%s\n", module.Name, assoc.Name())
+		fmt.Fprintf(ctx.Output, "  Multiplicity: %s\n", associationMultiplicity(assoc.Type(), assoc.Owner()))
+		fmt.Fprintf(ctx.Output, "  FROM (owner): %s\n", parent)
+		fmt.Fprintf(ctx.Output, "  TO (referenced): %s\n", child)
 		fmt.Fprintf(ctx.Output, "  Type: %s\n", assoc.Type())
 		fmt.Fprintf(ctx.Output, "  Owner: %s\n", assoc.Owner())
 		fmt.Fprintf(ctx.Output, "  Storage: %s\n", assoc.StorageFormat())
@@ -467,125 +380,14 @@ func listAssociation(ctx *ExecContext, name *ast.QualifiedName) error {
 		if !ok || ca.Name() != name.Name {
 			continue
 		}
+		parent := entityNames[model.ID(ca.ParentRefID())]
 		fmt.Fprintf(ctx.Output, "Association: %s.%s (cross-module)\n", module.Name, ca.Name())
+		fmt.Fprintf(ctx.Output, "  Multiplicity: %s\n", associationMultiplicity(ca.Type(), ca.Owner()))
+		fmt.Fprintf(ctx.Output, "  FROM (owner): %s\n", parent)
+		fmt.Fprintf(ctx.Output, "  TO (referenced): %s\n", ca.ChildQualifiedName())
 		fmt.Fprintf(ctx.Output, "  Type: %s\n", ca.Type())
 		fmt.Fprintf(ctx.Output, "  Owner: %s\n", ca.Owner())
 		fmt.Fprintf(ctx.Output, "  Storage: %s\n", ca.StorageFormat())
-		fmt.Fprintf(ctx.Output, "  Child: %s\n", ca.ChildQualifiedName())
-		return nil
-	}
-
-	return mdlerrors.NewNotFound("association", name.String())
-}
-
-// describeAssociation handles DESCRIBE ASSOCIATION command.
-func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
-	module, err := findModule(ctx, name.Module)
-	if err != nil {
-		return err
-	}
-
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
-	if err != nil {
-		return mdlerrors.NewBackend("get domain model", err)
-	}
-	if dm == nil {
-		return mdlerrors.NewNotFound("association", name.String())
-	}
-
-	// Build entity ID -> qualified name map across all modules
-	entityNames := make(map[model.ID]string)
-	allDomainModels, err := cachedDomainModelsGen(ctx)
-	if err != nil {
-		return mdlerrors.NewBackend("list domain models", err)
-	}
-	h, err := getHierarchy(ctx)
-	if err != nil {
-		return mdlerrors.NewBackend("build hierarchy", err)
-	}
-	for _, otherDM := range allDomainModels {
-		if otherDM == nil {
-			continue
-		}
-		modName := h.GetModuleName(h.FindModuleID(model.ID(otherDM.ID())))
-		for _, entityElem := range otherDM.EntitiesItems() {
-			entity, ok := entityElem.(*genDm.Entity)
-			if !ok {
-				continue
-			}
-			entityNames[model.ID(entity.ID())] = modName + "." + entity.Name()
-		}
-	}
-
-	// Helper to format association type, owner, storage, and delete behavior
-	formatAssocDetails := func(assocType, assocOwner, storageFormat string, childDeleteBehavior elementLikeDeleteBehavior) {
-		typeName := "Reference"
-		if assocType == genDm.AssociationTypeReferenceSet {
-			typeName = "ReferenceSet"
-		}
-		fmt.Fprintf(ctx.Output, "type %s\n", typeName)
-
-		owner := "Default"
-		if assocOwner == genDm.AssociationOwnerBoth {
-			owner = "Both"
-		}
-		fmt.Fprintf(ctx.Output, "owner %s\n", owner)
-
-		// Only output STORAGE when it's not the default (Table)
-		if storageFormat == genDm.AssociationStorageColumn {
-			fmt.Fprintf(ctx.Output, "storage column\n")
-		}
-
-		deleteBehavior := "DELETE_BUT_KEEP_REFERENCES"
-		if childDeleteBehavior != nil {
-			switch childDeleteBehavior.ChildDeleteBehavior() {
-			case genDm.DeletingBehaviorDeleteMeAndReferences:
-				deleteBehavior = "DELETE_CASCADE"
-			case genDm.DeletingBehaviorDeleteMeIfNoReferences:
-				deleteBehavior = "DELETE_IF_NO_REFERENCES"
-			case genDm.DeletingBehaviorDeleteMeButKeepReferences:
-				deleteBehavior = "DELETE_BUT_KEEP_REFERENCES"
-			}
-		}
-		fmt.Fprintf(ctx.Output, "delete_behavior %s;\n", deleteBehavior)
-	}
-
-	for _, assocElem := range dm.AssociationsItems() {
-		assoc, ok := assocElem.(*genDm.Association)
-		if !ok || assoc.Name() != name.Name {
-			continue
-		}
-		fromEntity := entityNames[model.ID(assoc.ParentRefID())]
-		toEntity := entityNames[model.ID(assoc.ChildRefID())]
-
-		if assoc.Documentation() != "" {
-			fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", assoc.Documentation())
-		}
-
-		fmt.Fprintf(ctx.Output, "create association %s.%s\n", module.Name, assoc.Name())
-		fmt.Fprintf(ctx.Output, "from %s to %s\n", fromEntity, toEntity)
-		formatAssocDetails(assoc.Type(), assoc.Owner(), assoc.StorageFormat(), associationDeleteBehaviorGen(assoc.DeleteBehavior()))
-		fmt.Fprintln(ctx.Output, "/")
-		return nil
-	}
-	for _, crossElem := range dm.CrossAssociationsItems() {
-		ca, ok := crossElem.(*genDm.CrossAssociation)
-		if !ok || ca.Name() != name.Name {
-			continue
-		}
-		fromEntity := entityNames[model.ID(ca.ParentRefID())]
-		if fromEntity == "" {
-			fromEntity = string(ca.ParentRefID())
-		}
-
-		if ca.Documentation() != "" {
-			fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", ca.Documentation())
-		}
-
-		fmt.Fprintf(ctx.Output, "create association %s.%s\n", module.Name, ca.Name())
-		fmt.Fprintf(ctx.Output, "from %s to %s\n", fromEntity, ca.ChildQualifiedName())
-		formatAssocDetails(ca.Type(), ca.Owner(), ca.StorageFormat(), associationDeleteBehaviorGen(ca.DeleteBehavior()))
-		fmt.Fprintln(ctx.Output, "/")
 		return nil
 	}
 
@@ -612,6 +414,267 @@ func newAssociationDeleteBehaviorGen(db ast.DeleteBehavior) *genDm.AssociationDe
 		out.SetChildDeleteBehavior(genDm.DeletingBehaviorDeleteMeButKeepReferences)
 	}
 	return out
+}
+
+// describeAssociationComment returns a single-line MDL comment that describes
+// the association in plain English, e.g. "-- one-to-many: Order *-->1 Customer".
+func describeAssociationComment(assocType, owner, fromQN, toQN string) string {
+	switch associationMultiplicity(assocType, owner) {
+	case "1--1":
+		return fmt.Sprintf("-- one-to-one: %s -- %s (both own)", fromQN, toQN)
+	case "*-->1":
+		return fmt.Sprintf("-- one-to-many: %s *-->1 %s (each %s belongs to one %s)", fromQN, toQN, fromQN, toQN)
+	case "*--*":
+		return fmt.Sprintf("-- many-to-many: %s *--* %s (both own)", fromQN, toQN)
+	default:
+		return fmt.Sprintf("-- many-to-many: %s *-->* %s (only %s owns)", fromQN, toQN, fromQN)
+	}
+}
+
+// associationMultiplicity returns a directional multiplicity label.
+//
+// The `>` marker always appears on the TO (non-owning) side.
+// When both sides own (owner=Both), no `>` appears — just `--`.
+//
+//	*-->1   Reference + Default  one-to-many  (FROM owns, TO does not)
+//	1--1    Reference + Both     one-to-one   (both own)
+//	*-->*   ReferenceSet + Default  many-to-many, only FROM owns
+//	*--*    ReferenceSet + Both     many-to-many, both own
+func associationMultiplicity(assocType, owner string) string {
+	isRefSet := assocType == genDm.AssociationTypeReferenceSet
+	isBoth := owner == genDm.AssociationOwnerBoth
+	switch {
+	case !isRefSet && isBoth:
+		return "1--1"
+	case !isRefSet:
+		return "*-->1"
+	case isBoth:
+		return "*--*"
+	default:
+		return "*-->*"
+	}
+}
+
+// listAssociations handles SHOW ASSOCIATIONS command.
+func listAssociations(ctx *ExecContext, moduleName string) error {
+	pairs, err := listDomainModelsWithContainerGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("list domain models", err)
+	}
+
+	mods, err := ctx.Backend.ListModules()
+	if err != nil {
+		return mdlerrors.NewBackend("list modules", err)
+	}
+	moduleNames := make(map[model.ID]string, len(mods))
+	for _, m := range mods {
+		moduleNames[m.ID] = m.Name
+	}
+
+	entityNames := make(map[model.ID]string)
+	for _, p := range pairs {
+		if p.DM == nil {
+			continue
+		}
+		modName := moduleNames[p.ContainerID]
+		for _, e := range p.DM.EntitiesItems() {
+			entity, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			entityNames[model.ID(entity.ID())] = modName + "." + entity.Name()
+		}
+	}
+
+	type row struct {
+		qualifiedName string
+		module        string
+		name          string
+		parent        string
+		child         string
+		multiplicity  string
+		assocType     string
+		owner         string
+		storage       string
+	}
+	var rows []row
+
+	for _, p := range pairs {
+		if p.DM == nil {
+			continue
+		}
+		modName := moduleNames[p.ContainerID]
+		if moduleName != "" && modName != moduleName {
+			continue
+		}
+		for _, a := range p.DM.AssociationsItems() {
+			assoc, ok := a.(*genDm.Association)
+			if !ok {
+				continue
+			}
+			parentID := model.ID(assoc.ParentRefID())
+			childID := model.ID(assoc.ChildRefID())
+			parent := entityNames[parentID]
+			if parent == "" {
+				parent = string(parentID)
+			}
+			child := entityNames[childID]
+			if child == "" {
+				child = string(childID)
+			}
+			rows = append(rows, row{
+				qualifiedName: modName + "." + assoc.Name(),
+				module:        modName,
+				name:          assoc.Name(),
+				parent:        parent,
+				child:         child,
+				multiplicity:  associationMultiplicity(assoc.Type(), assoc.Owner()),
+				assocType:     assoc.Type(),
+				owner:         assoc.Owner(),
+				storage:       assoc.StorageFormat(),
+			})
+		}
+		for _, c := range p.DM.CrossAssociationsItems() {
+			ca, ok := c.(*genDm.CrossAssociation)
+			if !ok {
+				continue
+			}
+			parentID := model.ID(ca.ParentRefID())
+			parent := entityNames[parentID]
+			if parent == "" {
+				parent = string(parentID)
+			}
+			rows = append(rows, row{
+				qualifiedName: modName + "." + ca.Name(),
+				module:        modName,
+				name:          ca.Name(),
+				parent:        parent,
+				child:         ca.ChildQualifiedName(),
+				multiplicity:  associationMultiplicity(ca.Type(), ca.Owner()),
+				assocType:     ca.Type(),
+				owner:         ca.Owner(),
+				storage:       ca.StorageFormat(),
+			})
+		}
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "FROM (owner)", "TO (referenced)", "Multiplicity", "Type", "Owner", "Storage"},
+		Summary: fmt.Sprintf("(%d associations)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.parent, r.child, r.multiplicity, r.assocType, r.owner, r.storage})
+	}
+	return writeResult(ctx, result)
+}
+
+// describeAssociation handles DESCRIBE ASSOCIATION command.
+func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
+	pairs, err := listDomainModelsWithContainerGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("list domain models", err)
+	}
+	mods, err := ctx.Backend.ListModules()
+	if err != nil {
+		return mdlerrors.NewBackend("list modules", err)
+	}
+	moduleNames := make(map[model.ID]string, len(mods))
+	for _, m := range mods {
+		moduleNames[m.ID] = m.Name
+	}
+	entityNames := make(map[model.ID]string)
+	for _, p := range pairs {
+		if p.DM == nil {
+			continue
+		}
+		modName := moduleNames[p.ContainerID]
+		for _, e := range p.DM.EntitiesItems() {
+			entity, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			entityNames[model.ID(entity.ID())] = modName + "." + entity.Name()
+		}
+	}
+
+	formatAssocDetails := func(assocType, owner, storage string, deleteBehavior interface{}) {
+		typeName := "Reference"
+		if assocType == "ReferenceSet" {
+			typeName = "ReferenceSet"
+		}
+		fmt.Fprintf(ctx.Output, "type %s\n", typeName)
+		ownerStr := "Default"
+		if owner == "Both" {
+			ownerStr = "Both"
+		}
+		fmt.Fprintf(ctx.Output, "owner %s\n", ownerStr)
+		if storage == "Column" {
+			fmt.Fprintln(ctx.Output, "storage column")
+		}
+		childDel := "DELETE_BUT_KEEP_REFERENCES"
+		if dbe, ok := deleteBehavior.(*genDm.AssociationDeleteBehavior); ok && dbe != nil {
+			switch dbe.ChildDeleteBehavior() {
+			case "DeleteMeAndReferences":
+				childDel = "DELETE_CASCADE"
+			case "DeleteMeIfNoReferences":
+				childDel = "DELETE_IF_NO_REFERENCES"
+			case "DeleteMeButKeepReferences", "":
+				childDel = "DELETE_BUT_KEEP_REFERENCES"
+			}
+		}
+		fmt.Fprintf(ctx.Output, "delete_behavior %s;\n", childDel)
+	}
+
+	for _, p := range pairs {
+		if p.DM == nil {
+			continue
+		}
+		modName := moduleNames[p.ContainerID]
+		if modName != name.Module {
+			continue
+		}
+		for _, a := range p.DM.AssociationsItems() {
+			assoc, ok := a.(*genDm.Association)
+			if !ok || assoc.Name() != name.Name {
+				continue
+			}
+			fromQN := entityNames[model.ID(assoc.ParentRefID())]
+			toQN := entityNames[model.ID(assoc.ChildRefID())]
+			fmt.Fprintf(ctx.Output, "%s\n", describeAssociationComment(assoc.Type(), assoc.Owner(), fromQN, toQN))
+			if doc := assoc.Documentation(); doc != "" {
+				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", doc)
+			}
+			fmt.Fprintf(ctx.Output, "create association %s.%s\n", modName, assoc.Name())
+			fmt.Fprintf(ctx.Output, "from %s to %s\n", fromQN, toQN)
+			formatAssocDetails(assoc.Type(), assoc.Owner(), assoc.StorageFormat(), assoc.DeleteBehavior())
+			fmt.Fprintln(ctx.Output, "/")
+			return nil
+		}
+		for _, c := range p.DM.CrossAssociationsItems() {
+			ca, ok := c.(*genDm.CrossAssociation)
+			if !ok || ca.Name() != name.Name {
+				continue
+			}
+			fromQN := entityNames[model.ID(ca.ParentRefID())]
+			if fromQN == "" {
+				fromQN = string(ca.ParentRefID())
+			}
+			fmt.Fprintf(ctx.Output, "%s\n", describeAssociationComment(ca.Type(), ca.Owner(), fromQN, ca.ChildQualifiedName()))
+			if doc := ca.Documentation(); doc != "" {
+				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", doc)
+			}
+			fmt.Fprintf(ctx.Output, "create association %s.%s\n", modName, ca.Name())
+			fmt.Fprintf(ctx.Output, "from %s to %s\n", fromQN, ca.ChildQualifiedName())
+			formatAssocDetails(ca.Type(), ca.Owner(), ca.StorageFormat(), ca.DeleteBehavior())
+			fmt.Fprintln(ctx.Output, "/")
+			return nil
+		}
+	}
+	return mdlerrors.NewNotFound("association", name.String())
 }
 
 // --- Executor method wrappers for callers not yet migrated ---

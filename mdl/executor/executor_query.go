@@ -26,7 +26,7 @@ func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
 	case ast.ShowEntity:
 		return listEntity(ctx, s.Name)
 	case ast.ShowAssociations:
-		return listAssociationsGen(ctx, s.InModule)
+		return listAssociations(ctx, s.InModule)
 	case ast.ShowAssociation:
 		return listAssociation(ctx, s.Name)
 	case ast.ShowMicroflows:
@@ -164,7 +164,7 @@ func execDescribe(ctx *ExecContext, s *ast.DescribeStmt) error {
 		case ast.DescribeEntity:
 			return describeEntityGen(ctx, s.Name)
 		case ast.DescribeAssociation:
-			return describeAssociationGen(ctx, s.Name)
+			return describeAssociation(ctx, s.Name)
 		case ast.DescribeMicroflow:
 			return describeMicroflowGen(ctx, s.Name)
 		case ast.DescribeNanoflow:

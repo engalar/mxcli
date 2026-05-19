@@ -421,6 +421,7 @@ Regenerate after modifying `MDLLexer.g4`, `MDLParser.g4`, or any `domains/*.g4` 
 - `.claude/skills/alter-page.md` - ALTER PAGE/SNIPPET in-place modifications (SET, INSERT, DROP, REPLACE, SET Layout)
 - `.claude/skills/overview-pages.md` - CRUD page patterns
 - `.claude/skills/master-detail-pages.md` - Master-detail page patterns
+- `.claude/skills/mendix/associations.md` - **READ when creating or interpreting associations** - ownership, direction, Parent/Child naming paradox, 4 multiplicity patterns, 1-1 limitations
 - `.claude/skills/generate-domain-model.md` - Entity/Association syntax
 - `.claude/skills/check-syntax.md` - Pre-flight validation checklist
 - `.claude/skills/organize-project.md` - Folders, MOVE command, project structure conventions
