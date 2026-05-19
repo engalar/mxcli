@@ -32,6 +32,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
@@ -269,16 +270,61 @@ func genMicroflowParameters(mf *genMf.Microflow) []genParamSummary {
 		}
 		s := genParamSummary{declType: "Object"}
 		if nv, ok := obj.(interface{ NameValue() string }); ok {
-			s.name = nv.NameValue()
+			if n := nv.NameValue(); n != "" {
+				s.name = n
+			}
 		}
-		if pt, ok := obj.(interface{ Type() string }); ok {
-			if t := pt.Type(); t != "" {
-				s.declType = t
+		if s.name == "" {
+			if nv, ok := obj.(interface{ Name() string }); ok {
+				s.name = nv.Name()
+			}
+		}
+		// Read VariableType (the DataTypes child element) to determine the
+		// concrete type. This is the only type descriptor Studio Pro writes —
+		// the legacy Type() string is never set for any parameter kind.
+		if pt, ok := obj.(interface{ ParameterType() element.Element }); ok {
+			if vt := pt.ParameterType(); vt != nil {
+				s.declType = genVariableTypeToDeclType(vt)
 			}
 		}
 		out = append(out, s)
 	}
 	return out
+}
+
+// genVariableTypeToDeclType converts a DataTypes element (VariableType)
+// to its MDL declaration type string. Returns "Object" as the fallback.
+func genVariableTypeToDeclType(vt element.Element) string {
+	switch t := vt.(type) {
+	case *genDt.ObjectType:
+		if qn := t.EntityQualifiedName(); qn != "" {
+			return qn
+		}
+		return "Object"
+	case *genDt.ListType:
+		if qn := t.EntityQualifiedName(); qn != "" {
+			return "List of " + qn
+		}
+		return "List of Object"
+	case *genDt.EnumerationType:
+		if qn := t.EnumerationQualifiedName(); qn != "" {
+			return "Enum " + qn
+		}
+		return "Enumeration"
+	case *genDt.BooleanType:
+		return "Boolean"
+	case *genDt.IntegerType:
+		return "Integer"
+	case *genDt.DecimalType:
+		return "Decimal"
+	case *genDt.StringType:
+		return "String"
+	case *genDt.DateTimeType:
+		return "DateTime"
+	case *genDt.BinaryType:
+		return "Binary"
+	}
+	return "Object"
 }
 
 // lastDotSegment returns the substring after the last '.' (or s itself).

@@ -158,9 +158,12 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 	paramElements := make([]*genMf.MicroflowParameter, 0, len(s.Parameters))
 	for _, p := range s.Parameters {
 		param := genMf.NewMicroflowParameter()
+		assignFreshID(param)
 		param.SetName(p.Name)
-		if t := paramASTToShortType(p.Type); t != "" {
-			param.SetType(t)
+		// Studio Pro stores the type exclusively in VariableType (a
+		// DataTypes child element). The Type() string field is never set.
+		if dt := convertASTToGenDataType(p.Type); dt != nil {
+			param.SetParameterType(dt)
 		}
 		paramElements = append(paramElements, param)
 	}
@@ -191,10 +194,7 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		oc.AddObjects(start)
 		oc.AddObjects(end)
 
-		flow := genMf.NewSequenceFlow()
-		assignFreshID(flow)
-		flow.SetOriginID(start.ID())
-		flow.SetDestinationID(end.ID())
+		flow := newHorizontalFlowGen(start.ID(), end.ID())
 		nf.AddFlows(flow)
 	} else {
 		hierarchy, _ := getHierarchy(ctx)

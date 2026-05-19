@@ -243,13 +243,20 @@ func genNanoflowParameters(nf *genMf.Nanoflow) []genParamSummary {
 		}
 		s := genParamSummary{declType: "Object"}
 		if nv, ok := obj.(interface{ NameValue() string }); ok {
-			s.name = nv.NameValue()
-		} else if nv, ok := obj.(interface{ Name() string }); ok {
-			s.name = nv.Name()
+			if n := nv.NameValue(); n != "" {
+				s.name = n
+			}
 		}
-		if pt, ok := obj.(interface{ Type() string }); ok {
-			if t := pt.Type(); t != "" {
-				s.declType = t
+		if s.name == "" {
+			if nv, ok := obj.(interface{ Name() string }); ok {
+				s.name = nv.Name()
+			}
+		}
+		// Read VariableType child element for the concrete type, same as
+		// genMicroflowParameters. The deprecated Type() string is never set.
+		if pt, ok := obj.(interface{ ParameterType() element.Element }); ok {
+			if vt := pt.ParameterType(); vt != nil {
+				s.declType = genVariableTypeToDeclType(vt)
 			}
 		}
 		out = append(out, s)

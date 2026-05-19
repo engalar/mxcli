@@ -213,8 +213,10 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		param := genMf.NewMicroflowParameter()
 		assignFreshID(param)
 		param.SetName(p.Name)
-		if t := paramASTToShortType(p.Type); t != "" {
-			param.SetType(t)
+		// Studio Pro stores the type exclusively in VariableType (a
+		// DataTypes child element). The Type() string field is never set.
+		if dt := convertASTToGenDataType(p.Type); dt != nil {
+			param.SetParameterType(dt)
 		}
 		oc.AddObjects(param)
 	}

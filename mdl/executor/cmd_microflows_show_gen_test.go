@@ -17,6 +17,7 @@ import (
 
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
+	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
@@ -260,6 +261,86 @@ func TestDescribeMicroflowGenToString_ReturnTypeDisplay(t *testing.T) {
 			t.Errorf("entity-returning microflow should emit a returns clause; got:\n%s", out)
 		}
 	})
+}
+
+// TestGenMicroflowParameters_EntityType guards the Bug-1 fix: when a
+// MicroflowParameter carries a VariableType (DataTypes$ObjectType) child
+// element the describer must return the entity qualified name, not the
+// plain "Object" fallback that surfaces when VariableType is absent or
+// the describer only reads the deprecated Type() string.
+func TestGenMicroflowParameters_EntityType(t *testing.T) {
+	// Build an ObjectType child pointing at a specific entity.
+	ot := genDt.NewObjectType()
+	ot.SetEntityQualifiedName("Mod.MyEntity")
+
+	// Wire the ObjectType as the VariableType of a fresh MicroflowParameter.
+	param := genMf.NewMicroflowParameter()
+	param.SetName("Dto")
+	param.SetParameterType(ot)
+
+	// Wrap in a MicroflowObjectCollection so genMicroflowParameters can find it.
+	oc := genMf.NewMicroflowObjectCollection()
+	oc.AddObjects(param)
+
+	mf := genMf.NewMicroflow()
+	mf.SetObjectCollection(oc)
+
+	got := genMicroflowParameters(mf)
+	if len(got) != 1 {
+		t.Fatalf("params = %d, want 1", len(got))
+	}
+	// Core assertion: entity QN must be surfaced, not the "Object" fallback.
+	if got[0].declType != "Mod.MyEntity" {
+		t.Errorf("declType = %q, want Mod.MyEntity (entity QN from VariableType)", got[0].declType)
+	}
+}
+
+// TestGenMicroflowParameters_PrimitiveVariableType checks that a
+// MicroflowParameter with a DataTypes$StringType VariableType surfaces
+// "String" — not "Object".
+func TestGenMicroflowParameters_PrimitiveVariableType(t *testing.T) {
+	st := genDt.NewStringType()
+
+	param := genMf.NewMicroflowParameter()
+	param.SetName("Name")
+	param.SetParameterType(st)
+
+	oc := genMf.NewMicroflowObjectCollection()
+	oc.AddObjects(param)
+
+	mf := genMf.NewMicroflow()
+	mf.SetObjectCollection(oc)
+
+	got := genMicroflowParameters(mf)
+	if len(got) != 1 {
+		t.Fatalf("params = %d, want 1", len(got))
+	}
+	if got[0].declType != "String" {
+		t.Errorf("declType = %q, want String", got[0].declType)
+	}
+}
+
+// TestGenMicroflowParameters_FixtureEntityParam verifies that entity
+// parameters stored in a real MPR (fixture has Administration.Account
+// in ShowPasswordForm) surface their entity QN through the full decode
+// path, not just the in-memory construction used by the unit tests above.
+func TestGenMicroflowParameters_FixtureEntityParam(t *testing.T) {
+	w := openMprWriterForTest(t)
+	mf := findMicroflowByQN(t, w, "Administration.ShowPasswordForm")
+
+	params := genMicroflowParameters(mf)
+	found := false
+	for _, p := range params {
+		if p.name == "Account" {
+			found = true
+			if p.declType != "Administration.Account" {
+				t.Errorf("Account param declType = %q, want Administration.Account", p.declType)
+			}
+		}
+	}
+	if !found {
+		t.Error("Account parameter not found in ShowPasswordForm")
+	}
 }
 
 // mustContain reports a test failure listing every needle that's not in
