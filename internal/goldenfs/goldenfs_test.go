@@ -209,3 +209,53 @@ func TestSnapshot_Close_DoesNotCommit(t *testing.T) {
 		t.Fatal("Close without Commit must not write to base")
 	}
 }
+
+func TestSnapshot_Rename_EmptyFile_NotTombstone(t *testing.T) {
+	base := baseFixture(t)
+	snap, err := Open(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snap.Close()
+
+	// Create an empty file and rename it.
+	if err := os.WriteFile(filepath.Join(snap.MountDir(), "empty.txt"), []byte{}, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(
+		filepath.Join(snap.MountDir(), "empty.txt"),
+		filepath.Join(snap.MountDir(), "renamed.txt"),
+	); err != nil {
+		t.Fatalf("rename: %v", err)
+	}
+
+	// Renamed destination must exist (not be a tombstone).
+	if _, err := os.Stat(filepath.Join(snap.MountDir(), "renamed.txt")); err != nil {
+		t.Fatalf("renamed empty file must be visible: %v", err)
+	}
+	// Source must not exist.
+	if _, err := os.Stat(filepath.Join(snap.MountDir(), "empty.txt")); !os.IsNotExist(err) {
+		t.Fatal("source of rename must be gone")
+	}
+}
+
+func TestSnapshot_Commit_AfterRollback_IsNoop(t *testing.T) {
+	base := baseFixture(t)
+	snap, err := Open(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snap.Close()
+
+	if err := os.WriteFile(filepath.Join(snap.MountDir(), "gone.txt"), []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	snap.Rollback()
+	// Commit after Rollback must be a no-op — nothing written to base.
+	if err := snap.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(base, "gone.txt")); !os.IsNotExist(err) {
+		t.Fatal("Commit after Rollback must not write to base")
+	}
+}
