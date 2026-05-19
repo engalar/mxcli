@@ -278,8 +278,39 @@ func (h *overlayWriteHandle) Write(_ context.Context, data []byte, off int64) (u
 	return uint32(len(data)), 0
 }
 
+// Read services reads through a write-capable handle. SQLite opens O_RDWR
+// and then immediately reads the file header before any write; without this
+// method the kernel returns ENOSYS and SQLite reports "disk I/O error (10)".
+// Returns current dirty-layer content, falling back to the base file.
+func (h *overlayWriteHandle) Read(_ context.Context, dest []byte, off int64) (fuse.ReadResult, syscall.Errno) {
+	if off < 0 {
+		return fuse.ReadResultData(nil), syscall.EINVAL
+	}
+	content := h.node.layer.read(h.node.relPath)
+	if content == nil {
+		var err error
+		content, err = os.ReadFile(h.node.absBase())
+		if err != nil {
+			return nil, syscall.EIO
+		}
+	}
+	if off >= int64(len(content)) {
+		return fuse.ReadResultData(nil), 0
+	}
+	end := off + int64(len(dest))
+	if end > int64(len(content)) {
+		end = int64(len(content))
+	}
+	return fuse.ReadResultData(content[off:end]), 0
+}
+
 func (h *overlayWriteHandle) Flush(_ context.Context, flags uint32) syscall.Errno   { return 0 }
 func (h *overlayWriteHandle) Release(_ context.Context, flags uint32) syscall.Errno { return 0 }
+
+// Fsync no-op — the dirty layer is in-memory, so durability semantics don't
+// apply. SQLite calls fsync after WAL writes; without a handler the kernel
+// returns EINVAL which SQLite reports as SQLITE_IOERR.
+func (h *overlayWriteHandle) Fsync(_ context.Context, flags uint32) syscall.Errno { return 0 }
 
 // --- NodeCreater ---
 
