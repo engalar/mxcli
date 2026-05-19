@@ -176,3 +176,53 @@ $Customer/EmialAddress   -- wrong
 $Customer/EmailAddress   -- right
 ```
 
+## E011 — not-missing-parens (error)
+
+**When this appears:** The 'not' keyword is used without parentheses around its operand.
+
+**Why it's wrong:** Mendix expression syntax requires not(expr) — 'not expr' without parentheses is rejected by Studio Pro with CE0117.
+
+**How to fix:** Wrap the operand in parentheses: not(expr).
+
+**Examples:**
+
+```mdl
+not $Validation/IsValid   -- wrong
+not($Validation/IsValid)   -- right
+```
+
+```mdl
+not isMatch($Value, '^[0-9]+$')   -- wrong
+not(isMatch($Value, '^[0-9]+$'))   -- right
+```
+
+```mdl
+$x != empty and not contains($s, '@')   -- wrong
+$x != empty and not(contains($s, '@'))   -- right
+```
+
+## E012 — id-attribute-illegal (error)
+
+**When this appears:** The path '$Object/id' is used in a microflow expression or MDL SET statement.
+
+**Why it's wrong:** Mendix reserves 'id' as a system attribute name — it cannot be accessed via '$Object/id' in microflow expressions. It is only valid in XPath constraints (e.g. '[id = $Variable]'), not in expressions.
+
+**How to fix:** Option A (preferred): change the microflow return type to the entity object itself instead of Long, and let callers use the object directly.
+Option B: add an AutoNumber attribute to the entity (e.g. 'WorkHistoryNo') and return '$Object/WorkHistoryNo' instead.
+
+**Examples:**
+
+*Option A — return the object:*
+
+```mdl
+SET $Id = $WorkHistory/id;   -- wrong
+RETURN $WorkHistory;  -- change RETURNS type to the entity   -- right
+```
+
+*Option B — use a dedicated AutoNumber attribute:*
+
+```mdl
+SET $Id = $WorkHistory/id;   -- wrong
+SET $Id = $WorkHistory/WorkHistoryNo;  -- WorkHistoryNo is AutoNumber   -- right
+```
+

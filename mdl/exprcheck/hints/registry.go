@@ -175,4 +175,27 @@ var Registry = &registry{byCode: map[string]Entry{
 			},
 		},
 	},
+	"E012": {
+		Code:     "E012",
+		Slug:     "id-attribute-illegal",
+		Severity: SeverityError,
+		Trigger:  "The path '$Object/id' is used in a microflow expression or MDL SET statement.",
+		WhyWrong: "Mendix reserves 'id' as a system attribute name — it cannot be accessed via '$Object/id' in microflow expressions. " +
+			"It is only valid in XPath constraints (e.g. '[id = $Variable]'), not in expressions.",
+		HowToFix: "Option A (preferred): change the microflow return type to the entity object itself instead of Long, " +
+			"and let callers use the object directly.\n" +
+			"Option B: add an AutoNumber attribute to the entity (e.g. 'WorkHistoryNo') and return '$Object/WorkHistoryNo' instead.",
+		Examples: []ExampleFix{
+			{
+				Wrong: "SET $Id = $WorkHistory/id;",
+				Right: "RETURN $WorkHistory;  -- change RETURNS type to the entity",
+				Note:  "Option A — return the object",
+			},
+			{
+				Wrong: "SET $Id = $WorkHistory/id;",
+				Right: "SET $Id = $WorkHistory/WorkHistoryNo;  -- WorkHistoryNo is AutoNumber",
+				Note:  "Option B — use a dedicated AutoNumber attribute",
+			},
+		},
+	},
 }}

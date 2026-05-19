@@ -101,6 +101,7 @@ func (v *microflowValidator) walkBody(body []ast.MicroflowStatement) {
 			}
 		case *ast.ReturnStmt:
 			v.checkReturn(stmt)
+			v.checkIdAccess(stmt.Value)
 		case *ast.IfStmt:
 			v.walkBody(stmt.ThenBody)
 			v.walkBody(stmt.ElseBody)
@@ -132,7 +133,10 @@ func (v *microflowValidator) walkBody(body []ast.MicroflowStatement) {
 				v.walkBody(c.Body)
 			}
 			v.walkBody(stmt.ElseBody)
+		case *ast.MfSetStmt:
+			v.checkIdAccess(stmt.Value)
 		case *ast.DeclareStmt:
+			v.checkIdAccess(stmt.InitialValue)
 			// Track list variables declared as empty (candidates for the empty-list-in-loop anti-pattern)
 			if stmt.Type.Kind == ast.TypeListOf {
 				if isEmptyInit(stmt.InitialValue) {
@@ -639,6 +643,67 @@ func isEmptyInit(expr ast.Expression) bool {
 	}
 	return false
 }
+
+// checkIdAccess walks an expression and reports MDL013 if $Var/id is found.
+// $Object/id is illegal in Mendix microflow expressions; use an AutoNumber
+// attribute or return the object directly. See hint E012 for fix options.
+func (v *microflowValidator) checkIdAccess(expr ast.Expression) {
+	if expr == nil {
+		return
+	}
+	switch e := expr.(type) {
+	case *ast.SourceExpr:
+		// Expressions in SET/RETURN/DECLARE are wrapped as SourceExpr; check both
+		// the inner parsed tree and the raw source string for $Var/id patterns.
+		v.checkIdAccess(e.Expression)
+		if containsIdPath(e.Source) {
+			v.addViolation("MDL013", linter.SeverityError,
+				fmt.Sprintf("expression contains '/id' which is illegal in Mendix microflow expressions — 'id' is a reserved system attribute (only valid in XPath constraints). Found in: %q", e.Source),
+				"Run 'mxcli hint E012' for fix options (return the object, or add an AutoNumber attribute).")
+		}
+	case *ast.AttributePathExpr:
+		for _, seg := range e.Path {
+			if seg == "id" {
+				v.addViolation("MDL013", linter.SeverityError,
+					fmt.Sprintf("'$%s/id' is illegal in Mendix microflow expressions — 'id' is a reserved system attribute (only valid in XPath constraints).", e.Variable),
+					"Run 'mxcli hint E012' for fix options (return the object, or add an AutoNumber attribute).")
+				return
+			}
+		}
+	case *ast.BinaryExpr:
+		v.checkIdAccess(e.Left)
+		v.checkIdAccess(e.Right)
+	case *ast.UnaryExpr:
+		v.checkIdAccess(e.Operand)
+	case *ast.FunctionCallExpr:
+		for _, arg := range e.Arguments {
+			v.checkIdAccess(arg)
+		}
+	case *ast.ParenExpr:
+		v.checkIdAccess(e.Inner)
+	case *ast.IfThenElseExpr:
+		v.checkIdAccess(e.Condition)
+		v.checkIdAccess(e.ThenExpr)
+		v.checkIdAccess(e.ElseExpr)
+	}
+}
+
+// containsIdPath reports whether a raw expression string accesses /id.
+// Matches $Var/id, $Var/Assoc/id, etc. Avoids false positives on attribute
+// names that contain "id" as a substring (e.g. $Obj/UserId).
+func containsIdPath(src string) bool {
+	for i := 0; i+2 < len(src); i++ {
+		if src[i] == '/' && src[i+1] == 'i' && src[i+2] == 'd' {
+			// must be end-of-string or followed by non-identifier char
+			end := i + 3
+			if end >= len(src) || !isIdentChar(src[end]) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 
 // isEmptyMessage checks if a message expression is empty or nil.
 func isEmptyMessage(expr ast.Expression) bool {

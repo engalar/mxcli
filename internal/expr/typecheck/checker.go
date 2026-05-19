@@ -116,7 +116,7 @@ func structuralWalk(node exprcheck.RobustExpr, unitID, project, unitType, unitPa
 						RuleID:   "SEM-L02",
 						Severity: "ERROR",
 						Message:  fmt.Sprintf("'id' is a reserved Mendix system attribute and cannot be read in expressions (in '$%s/id').", n.Variable),
-						Fix:      "Use the object's business key attribute instead of the system 'id'.",
+						Fix:      "Run 'mxcli hint E012' for fix options (return the object, or add an AutoNumber attribute).",
 					})
 					break
 				}
