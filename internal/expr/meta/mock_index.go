@@ -12,6 +12,7 @@ type MockIndex struct {
 	entityAttrs    map[string]map[string]exprcheck.TypeKind
 	assocEndpoints map[string]AssocMeta
 	microflowVars  map[string]map[string]string // unitPath → (varName → entityQN)
+	userRoles      map[string]bool
 }
 
 // NewMockIndex 构造空的 MockIndex；可选地传入预填充的枚举映射。
@@ -25,6 +26,7 @@ func NewMockIndex(enumValues map[string][]string) *MockIndex {
 		entityAttrs:    map[string]map[string]exprcheck.TypeKind{},
 		assocEndpoints: map[string]AssocMeta{},
 		microflowVars:  map[string]map[string]string{},
+		userRoles:      map[string]bool{},
 	}
 }
 
@@ -53,6 +55,12 @@ func (m *MockIndex) AddMicroflowVar(unitPath, varName, entityQN string) {
 	}
 	m.microflowVars[unitPath][varName] = entityQN
 }
+
+// AddUserRole registers a user role name for testing.
+func (m *MockIndex) AddUserRole(name string) { m.userRoles[name] = true }
+
+// HasUserRole implements IndexReader.
+func (m *MockIndex) HasUserRole(name string) bool { return m.userRoles[name] }
 
 func (m *MockIndex) AttributeKind(entityQN, attrName string) (exprcheck.TypeKind, bool) {
 	attrs, ok := m.entityAttrs[entityQN]

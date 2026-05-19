@@ -38,6 +38,9 @@ type IndexReader interface {
 	MicroflowParamKind(calleeQN, paramName string) (exprcheck.TypeKind, bool)
 	// MicroflowReturnKind returns the TypeKind of a microflow's return value.
 	MicroflowReturnKind(mfName string) (exprcheck.TypeKind, bool)
+	// HasUserRole reports whether a user role with the given name exists in the project.
+	// Used by SEM-08 to validate [%UserRole_Name%] token references.
+	HasUserRole(name string) bool
 }
 
 // ValidateSemantic applies SEM-04/05/07 rules to a parse result.
@@ -52,6 +55,7 @@ func ValidateSemantic(pr parse.ParseResult, idx IndexReader) []ValidationResult 
 	out = append(out, checkEnumRefs(rec.Raw, rec, idx)...)
 	out = append(out, checkConstantRefs(rec.Raw, rec, idx)...)
 	out = append(out, checkPaths(rec.Raw, rec, idx)...)
+	out = append(out, checkUserRoleTokens(rec.Raw, rec, idx)...)
 
 	return out
 }
@@ -447,4 +451,27 @@ func isMendixSystemAttr(name string) bool {
 		return true
 	}
 	return false
+}
+
+// ── SEM-08: UserRole token validation ────────────────────────────────────────
+
+// userRoleTokenRe matches [%UserRole_Name%] patterns and captures the role name.
+var userRoleTokenRe = regexp.MustCompile(`\[%UserRole_(\w+)%\]`)
+
+func checkUserRoleTokens(raw string, rec scan.ExprRecord, idx IndexReader) []ValidationResult {
+	var out []ValidationResult
+	for _, m := range userRoleTokenRe.FindAllStringSubmatch(raw, -1) {
+		roleName := m[1]
+		if !idx.HasUserRole(roleName) {
+			out = append(out, ValidationResult{
+				UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType, UnitPath: rec.UnitPath,
+				Field: rec.Field, Raw: raw,
+				RuleID:   "SEM-08",
+				Severity: "ERROR",
+				Message:  fmt.Sprintf("User role '%s' does not exist in this project.", roleName),
+				Fix:      "Check the role name — it may have been renamed or removed in project security settings.",
+			})
+		}
+	}
+	return out
 }

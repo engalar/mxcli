@@ -111,5 +111,10 @@ func (idx *Index) UnitQN(unitPath string) string {
 	return idx.unitToQN[unitPath]
 }
 
+// HasUserRole reports whether a user role with the given name exists in the project.
+func (idx *Index) HasUserRole(name string) bool {
+	return idx.userRoles[name]
+}
+
 // 编译期检查：Index 必须满足 exprcheck.CatalogReader。
 var _ exprcheck.CatalogReader = (*Index)(nil)

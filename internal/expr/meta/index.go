@@ -14,6 +14,7 @@ import (
 	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
 // AssocMeta holds the two entity QNs that an association connects.
@@ -43,6 +44,8 @@ type Index struct {
 	//   2. 来自 AppStore 市场模块（FromAppStore=true），其父类属性存储在受保护部分
 	// 对这些实体的属性验证会跳过，以避免因无法读取父类属性而产生误报。
 	incompleteEntities map[string]bool
+	// userRoles 项目安全设置中定义的用户角色名集合（供 SEM-08 校验）。
+	userRoles map[string]bool
 }
 
 // BuildFromBackend 从已连接的 MPR 后端构建 Index。
@@ -60,6 +63,7 @@ func BuildFromBackend(b backend.FullBackend) (*Index, error) {
 		mfParamKinds:       make(map[string]map[string]exprcheck.TypeKind),
 		mfReturnKinds:      make(map[string]exprcheck.TypeKind),
 		unitToQN:           make(map[string]string),
+		userRoles:          make(map[string]bool),
 	}
 
 	if err := idx.buildEntityAttrs(b); err != nil {
@@ -77,7 +81,27 @@ func BuildFromBackend(b backend.FullBackend) (*Index, error) {
 	if err := idx.buildMicroflowVars(b); err != nil {
 		return nil, err
 	}
+	if err := idx.buildUserRoles(b); err != nil {
+		return nil, err
+	}
 	return idx, nil
+}
+
+func (idx *Index) buildUserRoles(b backend.FullBackend) error {
+	ps, err := b.GetProjectSecurityGen()
+	if err != nil || ps == nil {
+		return nil // project security not accessible — skip without error
+	}
+	for _, elem := range ps.UserRolesItems() {
+		ur, ok := elem.(*genSec.UserRole)
+		if !ok {
+			continue
+		}
+		if name := ur.Name(); name != "" {
+			idx.userRoles[name] = true
+		}
+	}
+	return nil
 }
 
 func (idx *Index) buildEntityAttrs(b backend.FullBackend) error {

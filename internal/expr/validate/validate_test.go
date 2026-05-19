@@ -296,3 +296,35 @@ func TestNoFalsePositive_CalendarNamesMustNotAcceptOldNames(t *testing.T) {
 		}
 	}
 }
+
+func TestSEM08_UnknownUserRole(t *testing.T) {
+	idx := meta.NewMockIndex(nil)
+	idx.AddUserRole("Administrator")
+	// expression with valid role
+	prValid := parse.ParseExpression(makeRec("[%UserRole_Administrator%]", "Microflows$ExpressionSplitCondition", ""))
+	issues := validate.ValidateSemantic(prValid, idx)
+	for _, i := range issues {
+		if i.RuleID == "SEM-08" {
+			t.Errorf("valid role should not trigger SEM-08, got: %s", i.Message)
+		}
+	}
+
+	// expression with unknown role
+	prBad := parse.ParseExpression(makeRec("[%UserRole_NonExistent%]", "Microflows$ExpressionSplitCondition", ""))
+	issues = validate.ValidateSemantic(prBad, idx)
+	found := false
+	for _, i := range issues {
+		if i.RuleID == "SEM-08" {
+			assert.Equal(t, "ERROR", i.Severity)
+			assert.Contains(t, i.Message, "NonExistent")
+			found = true
+		}
+	}
+	assert.True(t, found, "unknown user role must trigger SEM-08")
+}
+
+func TestSEM08_NilIdx_NoError(t *testing.T) {
+	pr := parse.ParseExpression(makeRec("[%UserRole_X%]", "Microflows$ExpressionSplitCondition", ""))
+	issues := validate.ValidateSemantic(pr, nil)
+	assert.Empty(t, issues, "nil idx must not trigger SEM-08")
+}
