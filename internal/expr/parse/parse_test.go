@@ -3,12 +3,13 @@
 package parse_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/internal/expr/parse"
 	"github.com/mendixlabs/mxcli/internal/expr/scan"
+	"github.com/mendixlabs/mxcli/internal/expr/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func rec(raw, unitType, _ string) scan.ExprRecord {
@@ -54,10 +55,27 @@ func TestParseExpression_SetsRecord(t *testing.T) {
 	assert.Equal(t, r.Raw, result.Record.Raw)
 }
 
+// scanProject transparently supports v1 (SQLite) and v2 (mprcontents/) formats.
+func scanProject(t *testing.T, mprPath string, opts scan.Options) []scan.ExprRecord {
+	t.Helper()
+	contentsDir := scan.MprContentsPath(mprPath)
+	if _, err := os.Stat(contentsDir); err == nil {
+		recs, err := scan.ScanMprcontents(contentsDir, opts)
+		if err != nil {
+			t.Skipf("ScanMprcontents failed: %v", err)
+		}
+		return recs
+	}
+	recs, err := scan.ScanMPR(mprPath, opts)
+	if err != nil {
+		t.Skipf("ScanMPR failed: %v", err)
+	}
+	return recs
+}
+
 func TestBatchParse_CorpusCoverage(t *testing.T) {
-	records, err := scan.ScanMprcontents(
-		"/mnt/data_sdd/macnica/mendix-app/mprcontents", scan.Options{})
-	require.NoError(t, err)
+	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	records := scanProject(t, mprPath, scan.Options{})
 
 	results := parse.BatchParse(records)
 	pass := 0

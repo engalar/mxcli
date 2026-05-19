@@ -11,16 +11,13 @@ import (
 	"time"
 
 	"github.com/mendixlabs/mxcli/internal/expr/daemon"
+	"github.com/mendixlabs/mxcli/internal/expr/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const macnicaMPR = "/mnt/data_sdd/macnica/mendix-app/MacnicaApp.mpr"
-
 func TestDaemon_ServeAndPing(t *testing.T) {
-	if _, err := os.Stat(macnicaMPR); err != nil {
-		t.Skipf("MPR fixture not available: %v", err)
-	}
+	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
 
 	d, err := daemon.New(macnicaMPR, 5*time.Minute)
 	require.NoError(t, err)
@@ -54,9 +51,7 @@ func TestDaemon_ServeAndPing(t *testing.T) {
 }
 
 func TestDaemon_ValidateReturnsResults(t *testing.T) {
-	if _, err := os.Stat(macnicaMPR); err != nil {
-		t.Skipf("MPR fixture not available: %v", err)
-	}
+	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
 
 	d, err := daemon.New(macnicaMPR, 5*time.Minute)
 	require.NoError(t, err)
@@ -89,9 +84,7 @@ func TestDaemon_ValidateReturnsResults(t *testing.T) {
 }
 
 func TestDaemon_SocketDirExists(t *testing.T) {
-	if _, err := os.Stat(macnicaMPR); err != nil {
-		t.Skipf("MPR fixture not available: %v", err)
-	}
+	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
 	d, err := daemon.New(macnicaMPR, 5*time.Minute)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = d.Stop() })
@@ -102,9 +95,7 @@ func TestDaemon_SocketDirExists(t *testing.T) {
 }
 
 func TestDaemon_NewWithSocket_HonoursOverride(t *testing.T) {
-	if _, err := os.Stat(macnicaMPR); err != nil {
-		t.Skipf("MPR fixture not available: %v", err)
-	}
+	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
 	custom := filepath.Join(t.TempDir(), "custom.sock")
 	d, err := daemon.NewWithSocket(macnicaMPR, custom, 5*time.Minute)
 	require.NoError(t, err)
@@ -116,9 +107,7 @@ func TestDaemon_NewWithSocket_HonoursOverride(t *testing.T) {
 }
 
 func TestDaemon_NewWithSocket_EmptyFallsBackToDefault(t *testing.T) {
-	if _, err := os.Stat(macnicaMPR); err != nil {
-		t.Skipf("MPR fixture not available: %v", err)
-	}
+	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
 	d, err := daemon.NewWithSocket(macnicaMPR, "", 5*time.Minute)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = d.Stop() })
@@ -128,9 +117,7 @@ func TestDaemon_NewWithSocket_EmptyFallsBackToDefault(t *testing.T) {
 }
 
 func TestDaemon_NewWithSocket_ServeBindsCustom(t *testing.T) {
-	if _, err := os.Stat(macnicaMPR); err != nil {
-		t.Skipf("MPR fixture not available: %v", err)
-	}
+	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
 	custom := filepath.Join(t.TempDir(), "bind.sock")
 	d, err := daemon.NewWithSocket(macnicaMPR, custom, 5*time.Minute)
 	require.NoError(t, err)

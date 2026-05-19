@@ -3,11 +3,11 @@
 package daemon_test
 
 import (
-	"os"
 	"testing"
 	"time"
 
 	"github.com/mendixlabs/mxcli/internal/expr/daemon"
+	"github.com/mendixlabs/mxcli/internal/expr/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -27,9 +27,7 @@ func TestNewClient_ExplicitSocketPath(t *testing.T) {
 }
 
 func TestClient_PingAndValidate(t *testing.T) {
-	if _, err := os.Stat(macnicaMPR); err != nil {
-		t.Skipf("MPR fixture not available: %v", err)
-	}
+	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
 
 	// 直接启动 in-process daemon（无需走 StartIfNeeded → exec.Command 子进程路径），
 	// 这样 client.go 的 Ping/Validate 可以独立验证而不依赖 Task 8 的 CLI。
@@ -66,9 +64,7 @@ func TestClient_PingAndValidate(t *testing.T) {
 }
 
 func TestClient_StartIfNeeded_NoOpWhenAlive(t *testing.T) {
-	if _, err := os.Stat(macnicaMPR); err != nil {
-		t.Skipf("MPR fixture not available: %v", err)
-	}
+	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
 
 	d, err := daemon.New(macnicaMPR, 5*time.Minute)
 	require.NoError(t, err)

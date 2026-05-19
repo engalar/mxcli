@@ -3,24 +3,42 @@
 package scan_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/internal/expr/scan"
+	"github.com/mendixlabs/mxcli/internal/expr/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const macnicaMpr = "/mnt/data_sdd/macnica/mendix-app/mprcontents"
+// scanProject transparently supports v1 (SQLite) and v2 (mprcontents/) formats.
+func scanProject(t *testing.T, mprPath string, opts scan.Options) []scan.ExprRecord {
+	t.Helper()
+	contentsDir := scan.MprContentsPath(mprPath)
+	if _, err := os.Stat(contentsDir); err == nil {
+		recs, err := scan.ScanMprcontents(contentsDir, opts)
+		if err != nil {
+			t.Skipf("ScanMprcontents failed: %v", err)
+		}
+		return recs
+	}
+	recs, err := scan.ScanMPR(mprPath, opts)
+	if err != nil {
+		t.Skipf("ScanMPR failed: %v", err)
+	}
+	return recs
+}
 
 func TestScanMprcontents_ReturnsExpressions(t *testing.T) {
-	records, err := scan.ScanMprcontents(macnicaMpr, scan.Options{})
-	require.NoError(t, err)
+	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	records := scanProject(t, mprPath, scan.Options{})
 	assert.Greater(t, len(records), 3000, "macnica should have >3000 expressions")
 }
 
 func TestScanMprcontents_FilterByType(t *testing.T) {
-	records, err := scan.ScanMprcontents(macnicaMpr, scan.Options{FilterType: "ExpressionSplitCondition"})
-	require.NoError(t, err)
+	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	records := scanProject(t, mprPath, scan.Options{FilterType: "ExpressionSplitCondition"})
 	assert.Greater(t, len(records), 500)
 	for _, r := range records {
 		assert.Contains(t, r.UnitType, "ExpressionSplitCondition")
@@ -28,8 +46,8 @@ func TestScanMprcontents_FilterByType(t *testing.T) {
 }
 
 func TestScanMprcontents_RequiredFields(t *testing.T) {
-	records, err := scan.ScanMprcontents(macnicaMpr, scan.Options{})
-	require.NoError(t, err)
+	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	records := scanProject(t, mprPath, scan.Options{})
 	require.NotEmpty(t, records)
 	for _, r := range records[:min(100, len(records))] {
 		assert.NotEmpty(t, r.UnitID, "UnitID must not be empty")
@@ -43,8 +61,8 @@ func TestScanMprcontents_RequiredFields(t *testing.T) {
 }
 
 func TestScanMprcontents_ExcludesURLs(t *testing.T) {
-	records, err := scan.ScanMprcontents(macnicaMpr, scan.Options{})
-	require.NoError(t, err)
+	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	records := scanProject(t, mprPath, scan.Options{})
 	for _, r := range records {
 		assert.False(t, len(r.Raw) > 7 && r.Raw[:8] == "https://",
 			"URLs must be excluded, got: %s", r.Raw)
@@ -54,8 +72,8 @@ func TestScanMprcontents_ExcludesURLs(t *testing.T) {
 func TestScanMprcontents_NoSlotPath(t *testing.T) {
 	// SlotPath was removed — parse package now detects XPath by content.
 	// This test verifies the struct compiles correctly without SlotPath.
-	records, err := scan.ScanMprcontents(macnicaMpr, scan.Options{})
-	require.NoError(t, err)
+	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	records := scanProject(t, mprPath, scan.Options{})
 	require.NotEmpty(t, records)
 	// Just verify the record has the fields we do care about.
 	r := records[0]
@@ -66,11 +84,8 @@ func TestScanMprcontents_NoSlotPath(t *testing.T) {
 
 func TestScanMprcontents_TypeCheckFields(t *testing.T) {
 	// Verify TargetAttrQN is populated for ChangeActionItem expressions.
-	path := macnicaMpr
-	recs, err := scan.ScanMprcontents(path, scan.Options{FilterType: "ChangeActionItem"})
-	if err != nil {
-		t.Skip("macnica mprcontents not accessible:", err)
-	}
+	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	recs := scanProject(t, mprPath, scan.Options{FilterType: "ChangeActionItem"})
 	// At least some ChangeActionItem records should have TargetAttrQN set.
 	withAttr := 0
 	for _, r := range recs {

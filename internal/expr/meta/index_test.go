@@ -6,13 +6,12 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/internal/expr/meta"
+	"github.com/mendixlabs/mxcli/internal/expr/testutil"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/mendixlabs/mxcli/mdl/exprcheck"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-const macnicaMPR = "/mnt/data_sdd/macnica/mendix-app/MacnicaApp.mpr"
 
 func openBackend(t *testing.T, mprPath string) *mprbackend.MprBackend {
 	t.Helper()
@@ -23,7 +22,7 @@ func openBackend(t *testing.T, mprPath string) *mprbackend.MprBackend {
 }
 
 func TestBuildFromBackend_EntityAttrs(t *testing.T) {
-	b := openBackend(t, macnicaMPR)
+	b := openBackend(t, testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr"))
 	idx, err := meta.BuildFromBackend(b)
 	require.NoError(t, err)
 	require.NotNil(t, idx)
@@ -39,7 +38,7 @@ func TestBuildFromBackend_EntityAttrs(t *testing.T) {
 }
 
 func TestBuildFromBackend_EnumValues(t *testing.T) {
-	b := openBackend(t, macnicaMPR)
+	b := openBackend(t, testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr"))
 	idx, err := meta.BuildFromBackend(b)
 	require.NoError(t, err)
 
@@ -52,7 +51,7 @@ func TestBuildFromBackend_EnumValues(t *testing.T) {
 }
 
 func TestBuildFromBackend_Constants(t *testing.T) {
-	b := openBackend(t, macnicaMPR)
+	b := openBackend(t, testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr"))
 	idx, err := meta.BuildFromBackend(b)
 	require.NoError(t, err)
 
@@ -63,7 +62,7 @@ func TestBuildFromBackend_Constants(t *testing.T) {
 }
 
 func TestBuildFromBackend_MissingEnum(t *testing.T) {
-	b := openBackend(t, macnicaMPR)
+	b := openBackend(t, testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr"))
 	idx, err := meta.BuildFromBackend(b)
 	require.NoError(t, err)
 
@@ -72,7 +71,7 @@ func TestBuildFromBackend_MissingEnum(t *testing.T) {
 }
 
 func TestIndex_ImplementsCatalogReader(t *testing.T) {
-	b := openBackend(t, macnicaMPR)
+	b := openBackend(t, testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr"))
 	idx, err := meta.BuildFromBackend(b)
 	require.NoError(t, err)
 
@@ -104,7 +103,7 @@ func TestMockIndex_Basics(t *testing.T) {
 }
 
 func TestBuildFromBackend_SystemEntity(t *testing.T) {
-	b := openBackend(t, macnicaMPR)
+	b := openBackend(t, testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr"))
 	idx, err := meta.BuildFromBackend(b)
 	require.NoError(t, err)
 

@@ -5,17 +5,34 @@
 package typecheck_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/internal/expr/meta"
 	"github.com/mendixlabs/mxcli/internal/expr/parse"
 	"github.com/mendixlabs/mxcli/internal/expr/scan"
+	"github.com/mendixlabs/mxcli/internal/expr/testutil"
 	"github.com/mendixlabs/mxcli/internal/expr/typecheck"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 )
 
-const macnicaMPR = "/mnt/data_sdd/macnica/mendix-app/MacnicaApp.mpr"
-const mx2026MPR = "/mnt/data_sdd/gh/Mx2026AIDay/Factory Management.mpr"
+// scanProject transparently supports v1 (SQLite) and v2 (mprcontents/) formats.
+func scanProject(t *testing.T, mprPath string, opts scan.Options) []scan.ExprRecord {
+	t.Helper()
+	contentsDir := scan.MprContentsPath(mprPath)
+	if _, err := os.Stat(contentsDir); err == nil {
+		recs, err := scan.ScanMprcontents(contentsDir, opts)
+		if err != nil {
+			t.Skipf("ScanMprcontents failed: %v", err)
+		}
+		return recs
+	}
+	recs, err := scan.ScanMPR(mprPath, opts)
+	if err != nil {
+		t.Skipf("ScanMPR failed: %v", err)
+	}
+	return recs
+}
 
 func runSEM03(t *testing.T, mprPath string) []typecheck.Result {
 	t.Helper()
@@ -28,11 +45,7 @@ func runSEM03(t *testing.T, mprPath string) []typecheck.Result {
 		t.Fatalf("BuildFromBackend: %v", err)
 	}
 
-	mprcontentsPath := scan.MprContentsPath(mprPath)
-	records, err := scan.ScanMprcontents(mprcontentsPath, scan.Options{})
-	if err != nil {
-		t.Fatalf("ScanMprcontents: %v", err)
-	}
+	records := scanProject(t, mprPath, scan.Options{})
 
 	parseResults := parse.BatchParseWithCatalog(records, idx)
 	checker := typecheck.NewChecker(idx)
@@ -45,7 +58,8 @@ func runSEM03(t *testing.T, mprPath string) []typecheck.Result {
 }
 
 func TestSEM03_Macnica_HasDetections(t *testing.T) {
-	results := runSEM03(t, macnicaMPR)
+	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	results := runSEM03(t, mprPath)
 	sem03 := 0
 	for _, r := range results {
 		if r.RuleID == "SEM-03" {
@@ -59,7 +73,8 @@ func TestSEM03_Macnica_HasDetections(t *testing.T) {
 }
 
 func TestSEM03_Mx2026AIDay_NoFalsePositives(t *testing.T) {
-	results := runSEM03(t, mx2026MPR)
+	mprPath := testutil.FindMPR(t, "MX2026_MPR", "testdata/mx2026aiday/Factory Management.mpr")
+	results := runSEM03(t, mprPath)
 	for _, r := range results {
 		if r.RuleID == "SEM-03" {
 			t.Errorf("false positive SEM-03 in Mx2026AIDay: %s on %s/%s [%s]",

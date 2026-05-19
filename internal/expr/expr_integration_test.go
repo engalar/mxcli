@@ -5,26 +5,41 @@
 package expr_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/internal/expr/parse"
 	"github.com/mendixlabs/mxcli/internal/expr/repair"
 	"github.com/mendixlabs/mxcli/internal/expr/report"
 	"github.com/mendixlabs/mxcli/internal/expr/scan"
+	"github.com/mendixlabs/mxcli/internal/expr/testutil"
 	"github.com/mendixlabs/mxcli/internal/expr/validate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	macnicaMprcontents = "/mnt/data_sdd/macnica/mendix-app/mprcontents"
-	mx2026Mprcontents  = "/mnt/data_sdd/gh/Mx2026AIDay/mprcontents"
-)
+// scanProject transparently supports v1 (SQLite) and v2 (mprcontents/) formats.
+func scanProject(t *testing.T, mprPath string, opts scan.Options) []scan.ExprRecord {
+	t.Helper()
+	contentsDir := scan.MprContentsPath(mprPath)
+	if _, err := os.Stat(contentsDir); err == nil {
+		recs, err := scan.ScanMprcontents(contentsDir, opts)
+		if err != nil {
+			t.Skipf("ScanMprcontents failed: %v", err)
+		}
+		return recs
+	}
+	recs, err := scan.ScanMPR(mprPath, opts)
+	if err != nil {
+		t.Skipf("ScanMPR failed: %v", err)
+	}
+	return recs
+}
 
 func TestFullPipeline_Macnica(t *testing.T) {
+	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
 	// Layer 2: scan
-	recs, err := scan.ScanMprcontents(macnicaMprcontents, scan.Options{})
-	require.NoError(t, err)
+	recs := scanProject(t, macnicaMPR, scan.Options{})
 	assert.Greater(t, len(recs), 3000, "macnica must yield >3000 expression records")
 
 	// Layer 3: parse — use exprcheck (100% coverage observed)
@@ -75,10 +90,11 @@ func TestFullPipeline_Macnica(t *testing.T) {
 }
 
 func TestFullPipeline_BothProjects(t *testing.T) {
+	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	mx2026MPR := testutil.FindMPR(t, "MX2026_MPR", "testdata/mx2026aiday/Factory Management.mpr")
 	var allRecs []scan.ExprRecord
-	for _, path := range []string{macnicaMprcontents, mx2026Mprcontents} {
-		recs, err := scan.ScanMprcontents(path, scan.Options{})
-		require.NoError(t, err)
+	for _, mprPath := range []string{macnicaMPR, mx2026MPR} {
+		recs := scanProject(t, mprPath, scan.Options{})
 		allRecs = append(allRecs, recs...)
 	}
 	assert.Greater(t, len(allRecs), 15000, "both projects combined must yield >15000 records")

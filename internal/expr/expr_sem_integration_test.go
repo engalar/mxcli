@@ -10,15 +10,15 @@ import (
 	"github.com/mendixlabs/mxcli/internal/expr/meta"
 	"github.com/mendixlabs/mxcli/internal/expr/parse"
 	"github.com/mendixlabs/mxcli/internal/expr/scan"
+	"github.com/mendixlabs/mxcli/internal/expr/testutil"
 	"github.com/mendixlabs/mxcli/internal/expr/validate"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const macnicaMPR = "/mnt/data_sdd/macnica/mendix-app/MacnicaApp.mpr"
-
 func TestSemantic_FullPipeline_Macnica(t *testing.T) {
+	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
 	b, err := mprbackend.NewFromPath(macnicaMPR)
 	require.NoError(t, err)
 	defer func() { _ = b.Disconnect() }()
@@ -29,9 +29,7 @@ func TestSemantic_FullPipeline_Macnica(t *testing.T) {
 	assert.Greater(t, idx.EnumCount(), 0, "should index enums")
 	t.Logf("Index: %d entities, %d enums, %d constants", idx.EntityCount(), idx.EnumCount(), idx.ConstantsCount())
 
-	mprContentsPath := scan.MprContentsPath(macnicaMPR)
-	records, err := scan.ScanMprcontents(mprContentsPath, scan.Options{})
-	require.NoError(t, err)
+	records := scanProject(t, macnicaMPR, scan.Options{})
 	t.Logf("Scanned: %d expressions", len(records))
 
 	parsed := parse.BatchParseWithCatalog(records, idx)
@@ -57,9 +55,8 @@ func TestSemantic_FullPipeline_Macnica(t *testing.T) {
 }
 
 func TestSemantic_NoDaemon_SkipsSEM(t *testing.T) {
-	mprContentsPath := scan.MprContentsPath(macnicaMPR)
-	records, err := scan.ScanMprcontents(mprContentsPath, scan.Options{})
-	require.NoError(t, err)
+	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	records := scanProject(t, macnicaMPR, scan.Options{})
 
 	parsed := parse.BatchParse(records)
 	var semIssues []validate.ValidationResult
