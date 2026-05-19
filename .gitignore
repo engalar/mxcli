@@ -65,3 +65,4 @@ snap-bson
 
 # VS Code extension leftovers (node_modules/dist owned by other user — tracked files removed via git rm)
 vscode-mdl/
+.worktrees/
