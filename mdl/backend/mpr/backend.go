@@ -658,8 +658,16 @@ func (b *MprBackend) RevokeEntityMemberAccess(unitID model.ID, entityName string
 func (b *MprBackend) RemoveRoleFromAllEntities(unitID model.ID, roleName string) (int, error) {
 	return b.removeRoleFromAllEntitiesViaModelsdk(unitID, roleName)
 }
-func (b *MprBackend) ReconcileMemberAccesses(unitID model.ID, moduleName string) (int, error) {
-	return b.reconcileMemberAccessesViaModelsdk(unitID, moduleName)
+func (b *MprBackend) ReconcileMemberAccesses(unitID model.ID, moduleName string) ([]string, error) {
+	changes, err := b.reconcileMemberAccessesViaModelsdk(unitID, moduleName)
+	if err != nil {
+		return nil, err
+	}
+	msgs := make([]string, len(changes))
+	for i, ch := range changes {
+		msgs[i] = ch.String()
+	}
+	return msgs, nil
 }
 
 // ---------------------------------------------------------------------------

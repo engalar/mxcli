@@ -151,9 +151,9 @@ func (m *MockBackend) RemoveRoleFromAllEntities(unitID model.ID, roleName string
 	return 0, nil
 }
 
-func (m *MockBackend) ReconcileMemberAccesses(unitID model.ID, moduleName string) (int, error) {
+func (m *MockBackend) ReconcileMemberAccesses(unitID model.ID, moduleName string) ([]string, error) {
 	if m.ReconcileMemberAccessesFunc != nil {
 		return m.ReconcileMemberAccessesFunc(unitID, moduleName)
 	}
-	return 0, nil
+	return nil, nil
 }

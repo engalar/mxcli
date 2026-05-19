@@ -157,7 +157,7 @@ type MockBackend struct {
 	RemoveEntityAccessRuleFunc           func(unitID model.ID, entityName string, roleNames []string) (int, error)
 	RevokeEntityMemberAccessFunc         func(unitID model.ID, entityName string, roleNames []string, revocation types.EntityAccessRevocation) (int, error)
 	RemoveRoleFromAllEntitiesFunc        func(unitID model.ID, roleName string) (int, error)
-	ReconcileMemberAccessesFunc          func(unitID model.ID, moduleName string) (int, error)
+	ReconcileMemberAccessesFunc          func(unitID model.ID, moduleName string) ([]string, error)
 
 	// NavigationBackend
 	ListNavigationDocumentsFunc func() ([]*types.NavigationDocument, error)

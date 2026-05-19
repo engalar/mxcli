@@ -186,10 +186,12 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		return mdlerrors.NewBackend("grant entity access", err)
 	}
 
-	if count, err := ctx.Backend.ReconcileMemberAccesses(model.ID(dm.ID()), module.Name); err != nil {
+	if msgs, err := ctx.Backend.ReconcileMemberAccesses(model.ID(dm.ID()), module.Name); err != nil {
 		return mdlerrors.NewBackend("reconcile member accesses", err)
-	} else if count > 0 && !ctx.Quiet {
-		fmt.Fprintf(ctx.Output, "Reconciled %d access rule(s) in module %s\n", count, module.Name)
+	} else if len(msgs) > 0 && !ctx.Quiet {
+		for _, msg := range msgs {
+			fmt.Fprintf(ctx.Output, "  reconciled: %s\n", msg)
+		}
 	}
 
 	ctx.trackModifiedDomainModel(module.ID, module.Name)

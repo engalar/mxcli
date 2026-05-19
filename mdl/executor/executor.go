@@ -359,12 +359,14 @@ func (e *Executor) finalizeProgramExecution() error {
 			continue
 		}
 
-		count, err := e.backend.ReconcileMemberAccesses(model.ID(dm.ID()), moduleName)
+		msgs, err := e.backend.ReconcileMemberAccesses(model.ID(dm.ID()), moduleName)
 		if err != nil {
 			return mdlerrors.NewBackend(fmt.Sprintf("reconcile security for module %s", moduleName), err)
 		}
-		if count > 0 && !e.quiet {
-			fmt.Fprintf(e.output, "Reconciled %d access rule(s) in module %s\n", count, moduleName)
+		if len(msgs) > 0 && !e.quiet {
+			for _, msg := range msgs {
+				fmt.Fprintf(e.output, "  [%s] reconciled: %s\n", moduleName, msg)
+			}
 		}
 	}
 

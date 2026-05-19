@@ -192,8 +192,10 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 	// Reconcile MemberAccesses immediately — existing access rules on entities
 	// in this DM need MemberAccess entries for the new association (CE0066).
 	if freshDM, err := ctx.Backend.GetDomainModelGen(module.ID); err == nil && freshDM != nil {
-		if count, err := ctx.Backend.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil && count > 0 {
-			fmt.Fprintf(ctx.Output, "Reconciled %d access rule(s) for new association\n", count)
+		if msgs, err := ctx.Backend.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil {
+			for _, msg := range msgs {
+				fmt.Fprintf(ctx.Output, "  reconciled: %s\n", msg)
+			}
 		}
 	}
 

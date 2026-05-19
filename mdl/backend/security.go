@@ -65,5 +65,9 @@ type EntityAccessBackend interface {
 	RemoveEntityAccessRule(unitID model.ID, entityName string, roleNames []string) (int, error)
 	RevokeEntityMemberAccess(unitID model.ID, entityName string, roleNames []string, revocation types.EntityAccessRevocation) (int, error)
 	RemoveRoleFromAllEntities(unitID model.ID, roleName string) (int, error)
-	ReconcileMemberAccesses(unitID model.ID, moduleName string) (int, error)
+	// ReconcileMemberAccesses ensures every entity's access rules in the given
+	// DomainModel have MemberAccess entries for all current attributes and
+	// associations.  Returns a human-readable description of each entry that was
+	// added so callers can surface the detail to users (LLMs included).
+	ReconcileMemberAccesses(unitID model.ID, moduleName string) ([]string, error)
 }

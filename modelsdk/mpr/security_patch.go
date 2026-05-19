@@ -9,32 +9,52 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// ReconcileChange records a single member-access change made during
+// reconciliation.  Action is either "added" (new entry written) or "stripped"
+// (stale entry removed, e.g. a CrossAssociation reference that Studio Pro
+// rejects with CE0066).  The String() format is the per-entity log line
+// printed by UPDATE SECURITY.
+type ReconcileChange struct {
+	Entity string // entity short name
+	Member string // association or attribute short name
+	Action string // "added" | "stripped"
+}
+
+func (c ReconcileChange) String() string {
+	if c.Action == "stripped" {
+		return fmt.Sprintf("%s: stripped stale MemberAccess for %s", c.Entity, c.Member)
+	}
+	return fmt.Sprintf("%s: added MemberAccess for %s", c.Entity, c.Member)
+}
+
 // PatchReconcileMemberAccesses reconciles entity member accesses in a raw
 // DomainModel BSON document for the given module. Pure BSON manipulation —
 // no database access required.
-// Returns patched bytes, count of modifications, and error.
-func PatchReconcileMemberAccesses(rawBytes []byte, moduleName string) ([]byte, int, error) {
+// Returns patched bytes, a list of every MemberAccess entry that was added,
+// and error.  A non-empty changes list means the caller must write back the
+// patched bytes.
+func PatchReconcileMemberAccesses(rawBytes []byte, moduleName string) ([]byte, []ReconcileChange, error) {
 	var doc bson.D
 	if err := bson.Unmarshal(rawBytes, &doc); err != nil {
-		return nil, 0, fmt.Errorf("unmarshal: %w", err)
+		return nil, nil, fmt.Errorf("unmarshal: %w", err)
 	}
-	doc, modified := secPatchReconcileMemberAccessesDoc(doc, moduleName)
+	doc, changes := secPatchReconcileMemberAccessesDoc(doc, moduleName)
 	out, err := bson.Marshal(doc)
 	if err != nil {
-		return nil, 0, fmt.Errorf("marshal: %w", err)
+		return nil, nil, fmt.Errorf("marshal: %w", err)
 	}
-	return out, modified, nil
+	return out, changes, nil
 }
 
 // secPatchReconcileMemberAccessesDoc performs reconciliation on a parsed BSON
 // DomainModel document: ensures each entity's access rules have correct
 // MemberAccess entries for all current attributes and associations.
-func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, int) {
-	modified := 0
+func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, []ReconcileChange) {
+	var changes []ReconcileChange
 
 	entitiesArr := secGetBsonArray(doc, "Entities")
 	if entitiesArr == nil {
-		return doc, 0
+		return doc, nil
 	}
 
 	assocNames := map[string]bool{}
@@ -212,7 +232,7 @@ func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, 
 				ruleDoc, stripped := secStripInvalidAccessRuleProps(ruleDoc)
 				if stripped {
 					rulesArr[k] = ruleDoc
-					modified++
+					// stripped is counted implicitly via changed below
 				}
 
 				for m, rf := range ruleDoc {
@@ -223,10 +243,9 @@ func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, 
 					if !ok {
 						break
 					}
-
-					if len(maArr) <= 1 {
-						break
-					}
+					// NOTE: do NOT skip when len(maArr) <= 1 (only version prefix).
+					// Entities with empty MemberAccesses still need association
+					// entries added — the previous guard caused silent CE0066.
 
 					defaultRights := "ReadWrite"
 					for _, drf := range ruleDoc {
@@ -240,10 +259,13 @@ func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, 
 
 					coveredAttrs := map[string]bool{}
 					coveredAssocs := map[string]bool{}
-					changed := false
+					changed := stripped // propagate stripped-props change
+					// Preserve version prefix; fall back to int32(3) if absent.
 					var filtered bson.A
 					if len(maArr) > 0 {
 						filtered = bson.A{maArr[0]}
+					} else {
+						filtered = bson.A{int32(3)}
 					}
 
 					coveredSystemAssocs := map[string]bool{}
@@ -272,6 +294,8 @@ func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, 
 								}
 								filtered = append(filtered, maDoc)
 							} else {
+								// Stale attribute ref (attribute was deleted or renamed).
+								changes = append(changes, ReconcileChange{Entity: entityName, Member: parts, Action: "stripped"})
 								changed = true
 							}
 						} else if assocRef != "" {
@@ -284,6 +308,14 @@ func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, 
 									coveredAssocs[parts] = true
 									filtered = append(filtered, maItem)
 								} else {
+									// Stale or cross-module association ref — strip it.
+									// Critically: CrossAssociation names are not in entityAssocNames,
+									// so they fall here and are removed (CE0066 fix).
+									changes = append(changes, ReconcileChange{
+										Entity: entityName,
+										Member: parts,
+										Action: "stripped",
+									})
 									changed = true
 								}
 							}
@@ -305,6 +337,7 @@ func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, 
 								{Key: "Attribute", Value: moduleName + "." + entityName + "." + attrName},
 							}
 							filtered = append(filtered, newMA)
+							changes = append(changes, ReconcileChange{Entity: entityName, Member: attrName})
 							changed = true
 						}
 					}
@@ -318,6 +351,7 @@ func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, 
 								{Key: "Association", Value: moduleName + "." + aName},
 							}
 							filtered = append(filtered, newMA)
+							changes = append(changes, ReconcileChange{Entity: entityName, Member: aName})
 							changed = true
 						}
 					}
@@ -331,6 +365,7 @@ func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, 
 								{Key: "Association", Value: sysRef},
 							}
 							filtered = append(filtered, newMA)
+							changes = append(changes, ReconcileChange{Entity: entityName, Member: sysRef})
 							changed = true
 						}
 					}
@@ -338,7 +373,6 @@ func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, 
 					if changed {
 						ruleDoc[m].Value = filtered
 						rulesArr[k] = ruleDoc
-						modified++
 					}
 
 					break
@@ -352,7 +386,7 @@ func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, 
 		entitiesArr[i] = entityDoc
 	}
 
-	return secSetBsonField(doc, "Entities", entitiesArr), modified
+	return secSetBsonField(doc, "Entities", entitiesArr), changes
 }
 
 // ── Private helpers (sec* prefix to avoid collisions) ────────────────────────

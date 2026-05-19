@@ -126,7 +126,7 @@ func TestCreateAssociation_OrModify_UpdatesInPlace(t *testing.T) {
 			updateCalled = true
 			return nil
 		},
-		ReconcileMemberAccessesFunc: func(dmID model.ID, moduleName string) (int, error) { return 0, nil },
+		ReconcileMemberAccessesFunc: func(dmID model.ID, moduleName string) ([]string, error) { return nil, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
@@ -443,7 +443,7 @@ func TestCreateAssociation_NonPersistableOwner_PersistableChild_Accepted(t *test
 			created = true
 			return nil
 		},
-		ReconcileMemberAccessesFunc: func(dmID model.ID, moduleName string) (int, error) { return 0, nil },
+		ReconcileMemberAccessesFunc: func(dmID model.ID, moduleName string) ([]string, error) { return nil, nil },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
 	err := execCreateAssociation(ctx, &ast.CreateAssociationStmt{

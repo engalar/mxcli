@@ -403,8 +403,8 @@ func TestGrantEntityAccess_XPathConstraint_PreservesRights(t *testing.T) {
 			}
 			return nil
 		},
-		ReconcileMemberAccessesFunc: func(unitID model.ID, moduleName string) (int, error) {
-			return 0, nil
+		ReconcileMemberAccessesFunc: func(unitID model.ID, moduleName string) ([]string, error) {
+			return nil, nil
 		},
 	}
 

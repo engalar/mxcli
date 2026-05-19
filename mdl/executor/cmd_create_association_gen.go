@@ -91,8 +91,10 @@ func execCreateAssociationGen(ctx *ExecContext, s *ast.CreateAssociationStmt) er
 	invalidateDomainModelsCache(ctx)
 
 	if freshDM, err := ctx.Backend.GetDomainModelGen(module.ID); err == nil && freshDM != nil {
-		if count, err := ctx.Backend.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil && count > 0 {
-			fmt.Fprintf(ctx.Output, "Reconciled %d access rule(s) for new association\n", count)
+		if msgs, err := ctx.Backend.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil {
+			for _, msg := range msgs {
+				fmt.Fprintf(ctx.Output, "  reconciled: %s\n", msg)
+			}
 		}
 	}
 

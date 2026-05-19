@@ -52,6 +52,10 @@ func (b *MprBackend) addEntityAccessRuleViaModelsdk(unitID model.ID, entityName 
 			rule.SetAllowDelete(allowDelete)
 			rule.SetDefaultMemberAccessRights(defaultMemberAccess)
 			rule.SetXPathConstraint(xpathConstraint)
+			// Documentation and XPathConstraintCaption must always be present (even
+			// as empty strings) — Studio Pro's CE0066 checker requires these fields.
+			rule.SetDocumentation("")
+			rule.SetXPathConstraintCaption("")
 			rule.SetModuleRolesQualifiedNames(roleNames)
 			for _, ma := range memberAccesses {
 				genMA := genDM.NewMemberAccess()
@@ -225,20 +229,22 @@ func (b *MprBackend) revokeEntityMemberAccessViaModelsdk(unitID model.ID, entity
 // reconcileMemberAccessesViaModelsdk stays on Patch* + writeUnitContents: the
 // 200-LOC orphan-detection logic in sdk/mpr.Writer.ReconcileMemberAccesses is
 // not yet ported to gen. Kept here so all entity-access funcs sit together.
-func (b *MprBackend) reconcileMemberAccessesViaModelsdk(unitID model.ID, moduleName string) (int, error) {
+func (b *MprBackend) reconcileMemberAccessesViaModelsdk(unitID model.ID, moduleName string) ([]modelsdkmpr.ReconcileChange, error) {
 	if b.msdkWriter == nil {
-		return 0, fmt.Errorf("modelsdk writer not initialized")
+		return nil, fmt.Errorf("modelsdk writer not initialized")
 	}
 	rawBytes, err := b.msdkWriter.Reader().GetRawUnitBytes(string(unitID))
 	if err != nil {
-		return 0, fmt.Errorf("read unit: %w", err)
+		return nil, fmt.Errorf("read unit: %w", err)
 	}
-	patched, modified, err := modelsdkmpr.PatchReconcileMemberAccesses(rawBytes, moduleName)
+	patched, changes, err := modelsdkmpr.PatchReconcileMemberAccesses(rawBytes, moduleName)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	if err := b.writeUnitContents(unitID, patched); err != nil {
-		return 0, err
+	if len(changes) > 0 {
+		if err := b.writeUnitContents(unitID, patched); err != nil {
+			return nil, err
+		}
 	}
-	return modified, nil
+	return changes, nil
 }
