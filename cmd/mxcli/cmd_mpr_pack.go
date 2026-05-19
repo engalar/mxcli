@@ -64,6 +64,9 @@ func convertV2ToV1(inputMPR, outputMPR string) error {
 	if err != nil {
 		return fmt.Errorf("resolving output path: %w", err)
 	}
+	if inputMPR == outputMPR {
+		return fmt.Errorf("input and output paths must differ: %s", inputMPR)
+	}
 
 	contentsDir := filepath.Join(filepath.Dir(inputMPR), "mprcontents")
 	if _, err := os.Stat(contentsDir); err != nil {
@@ -78,12 +81,15 @@ func convertV2ToV1(inputMPR, outputMPR string) error {
 	defer srcDB.Close()
 
 	// Remove existing output if present, then create fresh.
-	_ = os.Remove(outputMPR)
+	if err := os.Remove(outputMPR); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("removing existing output: %w", err)
+	}
 	dstDB, err := sql.Open("sqlite", outputMPR)
 	if err != nil {
 		return fmt.Errorf("creating output MPR: %w", err)
 	}
 	defer dstDB.Close()
+	dstDB.SetMaxOpenConns(1)
 
 	// Create v1 schema.
 	v1Schema := []string{
@@ -105,7 +111,11 @@ func convertV2ToV1(inputMPR, outputMPR string) error {
 	}
 	for _, stmt := range v1Schema {
 		if _, err := dstDB.Exec(stmt); err != nil {
-			return fmt.Errorf("creating v1 schema (%s...): %w", stmt[:30], err)
+			n := 30
+			if n > len(stmt) {
+				n = len(stmt)
+			}
+			return fmt.Errorf("creating v1 schema (%s...): %w", stmt[:n], err)
 		}
 	}
 
@@ -117,7 +127,7 @@ func convertV2ToV1(inputMPR, outputMPR string) error {
 		return fmt.Errorf("reading _MetaData from source: %w", err)
 	}
 	if _, err := dstDB.Exec(
-		"INSERT INTO _MetaData (_ProductVersion, _BuildVersion, _SchemaHash, _DisableAutoMprV2Upgrade) VALUES (?, ?, ?, 0)",
+		"INSERT INTO _MetaData (_ProductVersion, _BuildVersion, _SchemaHash, _DisableAutoMprV2Upgrade) VALUES (?, ?, ?, 1)",
 		productVersion, buildVersion, schemaHash,
 	); err != nil {
 		return fmt.Errorf("writing _MetaData: %w", err)
@@ -172,7 +182,7 @@ func convertV2ToV1(inputMPR, outputMPR string) error {
 
 		count++
 		if count%100 == 0 {
-			fmt.Printf("  converted %d units...\n", count)
+			fmt.Fprintf(os.Stderr, "  converted %d units...\n", count)
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -183,7 +193,7 @@ func convertV2ToV1(inputMPR, outputMPR string) error {
 		return fmt.Errorf("committing transaction: %w", err)
 	}
 
-	fmt.Printf("Done. Converted %d units from v2 → v1: %s\n", count, outputMPR)
+	fmt.Fprintf(os.Stderr, "Done. Converted %d units from v2 → v1: %s\n", count, outputMPR)
 	return nil
 }
 
@@ -197,6 +207,9 @@ func convertV1ToV2(inputMPR, outputMPR string) error {
 	if err != nil {
 		return fmt.Errorf("resolving output path: %w", err)
 	}
+	if inputMPR == outputMPR {
+		return fmt.Errorf("input and output paths must differ: %s", inputMPR)
+	}
 
 	outputContentsDir := filepath.Join(filepath.Dir(outputMPR), "mprcontents")
 
@@ -208,13 +221,16 @@ func convertV1ToV2(inputMPR, outputMPR string) error {
 	defer srcDB.Close()
 
 	// Remove existing output if present, then create fresh.
-	_ = os.Remove(outputMPR)
+	if err := os.Remove(outputMPR); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("removing existing output: %w", err)
+	}
 	_ = os.RemoveAll(outputContentsDir)
 	dstDB, err := sql.Open("sqlite", outputMPR)
 	if err != nil {
 		return fmt.Errorf("creating output MPR: %w", err)
 	}
 	defer dstDB.Close()
+	dstDB.SetMaxOpenConns(1)
 
 	// Create v2 schema.
 	v2Schema := []string{
@@ -225,7 +241,7 @@ func convertV1ToV2(inputMPR, outputMPR string) error {
 			_SchemaHash TEXT
 		)`,
 		`CREATE TABLE Unit (
-			UnitID BLOB NOT NULL,
+			UnitID BLOB PRIMARY KEY NOT NULL,
 			ContainerID BLOB NOT NULL,
 			ContainmentName TEXT NOT NULL,
 			TreeConflict INTEGER NOT NULL DEFAULT 0,
@@ -322,7 +338,7 @@ func convertV1ToV2(inputMPR, outputMPR string) error {
 
 		count++
 		if count%100 == 0 {
-			fmt.Printf("  converted %d units...\n", count)
+			fmt.Fprintf(os.Stderr, "  converted %d units...\n", count)
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -333,6 +349,6 @@ func convertV1ToV2(inputMPR, outputMPR string) error {
 		return fmt.Errorf("committing transaction: %w", err)
 	}
 
-	fmt.Printf("Done. Converted %d units from v1 → v2: %s\n", count, outputMPR)
+	fmt.Fprintf(os.Stderr, "Done. Converted %d units from v1 → v2: %s\n", count, outputMPR)
 	return nil
 }
