@@ -47,6 +47,10 @@ func TestDirtyLayer_Tombstone(t *testing.T) {
 	if !l.isDeleted("f.txt") {
 		t.Fatal("expected tombstone")
 	}
+	// read() must return nil for tombstoned file, not []byte{}
+	if got := l.read("f.txt"); got != nil {
+		t.Fatalf("read of tombstoned file must return nil, got %v", got)
+	}
 }
 
 func TestDirtyLayer_Rollback_ClearsAll(t *testing.T) {

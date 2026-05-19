@@ -23,12 +23,13 @@ func newDirtyLayer() *dirtyLayer {
 	return &dirtyLayer{files: make(map[string][]byte)}
 }
 
-// read returns a copy of the file bytes, or nil if not in the dirty layer.
+// read returns a copy of the file bytes, or nil if not in the dirty layer
+// or tombstoned (deleted).
 func (l *dirtyLayer) read(relPath string) []byte {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	b, ok := l.files[relPath]
-	if !ok {
+	if !ok || b == nil {
 		return nil
 	}
 	out := make([]byte, len(b))
@@ -76,7 +77,10 @@ func (l *dirtyLayer) writeWithBase(relPath, baseDir string, offset int64, data [
 	defer l.mu.Unlock()
 	if _, ok := l.files[relPath]; !ok {
 		// copy-up
-		if b, err := os.ReadFile(filepath.Join(baseDir, relPath)); err == nil {
+		// NOTE: disk read happens under write lock. This is intentional: for a
+		// single-writer SQLite session through one FUSE mount, the I/O is bounded
+		// and the simpler locking model avoids a double-check pattern.
+		if b, err := os.ReadFile(filepath.Join(baseDir, filepath.FromSlash(relPath))); err == nil {
 			l.files[relPath] = b
 		}
 	}
