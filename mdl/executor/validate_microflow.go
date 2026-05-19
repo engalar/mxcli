@@ -4,11 +4,18 @@ package executor
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/exprcheck/adapters"
 	"github.com/mendixlabs/mxcli/mdl/linter"
+)
+
+var (
+	reUppercaseAND    = regexp.MustCompile(`\bAND\b`)
+	reQuotedAssocName = regexp.MustCompile(`"[^"]+"[.]"[^"]+"`)
+	reCurrentUserPath = regexp.MustCompile(`\[%CurrentUser%\]/[A-Za-z][A-Za-z0-9_]*\.[A-Za-z]`)
 )
 
 // ValidateMicroflow checks a microflow for common issues that don't require a project connection.
@@ -84,6 +91,15 @@ func (v *microflowValidator) validate(body []ast.MicroflowStatement) {
 		}
 	}
 
+	// MDL017: RETURNS Integer + /id in body → return type should be Long
+	if v.returnType != nil && v.returnType.Type.Kind == ast.TypeInteger {
+		if bodyContainsIdPath(body) {
+			v.addViolation("MDL017", linter.SeverityError,
+				fmt.Sprintf("microflow returns Integer but body accesses '/id' which returns Long — this causes CE0117 at runtime."),
+				"Change RETURNS Integer to RETURNS Long (Mendix object IDs are Long). Alternatively use a Java Action like GetObjectId.")
+		}
+	}
+
 	// Check 3: variable scope — detect variables declared inside branches but used after
 	v.checkBranchScoping(body)
 }
@@ -102,6 +118,7 @@ func (v *microflowValidator) walkBody(body []ast.MicroflowStatement) {
 		case *ast.ReturnStmt:
 			v.checkReturn(stmt)
 			v.checkIdAccess(stmt.Value)
+			v.checkCurrentUserPath(stmt.Value)
 		case *ast.IfStmt:
 			v.walkBody(stmt.ThenBody)
 			v.walkBody(stmt.ElseBody)
@@ -135,8 +152,10 @@ func (v *microflowValidator) walkBody(body []ast.MicroflowStatement) {
 			v.walkBody(stmt.ElseBody)
 		case *ast.MfSetStmt:
 			v.checkIdAccess(stmt.Value)
+			v.checkCurrentUserPath(stmt.Value)
 		case *ast.DeclareStmt:
 			v.checkIdAccess(stmt.InitialValue)
+			v.checkCurrentUserPath(stmt.InitialValue)
 			// Track list variables declared as empty (candidates for the empty-list-in-loop anti-pattern)
 			if stmt.Type.Kind == ast.TypeListOf {
 				if isEmptyInit(stmt.InitialValue) {
@@ -144,6 +163,7 @@ func (v *microflowValidator) walkBody(body []ast.MicroflowStatement) {
 				}
 			}
 		case *ast.RetrieveStmt:
+			v.checkWhereClause(stmt.Where)
 			// RETRIEVE populates a list variable — remove from empty tracking
 			delete(v.emptyListVars, stmt.Variable)
 		case *ast.LoopStmt:
@@ -640,6 +660,83 @@ func isEmptyInit(expr ast.Expression) bool {
 	}
 	if lit, ok := expr.(*ast.LiteralExpr); ok {
 		return lit.Kind == ast.LiteralEmpty || lit.Kind == ast.LiteralNull
+	}
+	return false
+}
+
+// checkWhereClause applies MDL014 and MDL015 to a RETRIEVE WHERE expression.
+func (v *microflowValidator) checkWhereClause(where ast.Expression) {
+	if where == nil {
+		return
+	}
+	src := sourceOf(where)
+	if src == "" {
+		return
+	}
+	if reUppercaseAND.MatchString(src) {
+		v.addViolation("MDL014", linter.SeverityError,
+			"WHERE clause uses uppercase 'AND' — Mendix requires lowercase 'and' (CE0109).",
+			"Replace 'AND' with 'and'. Prefer: WHERE (Condition1) and (Condition2).")
+	}
+	if reQuotedAssocName.MatchString(src) {
+		v.addViolation("MDL015", linter.SeverityError,
+			"WHERE clause uses a quoted association name (e.g. \"Module\".\"AssocName\") — Mendix requires dotted notation without quotes (CE0109).",
+			"Replace \"Module\".\"AssocName\" with Module.AssocName.")
+	}
+}
+
+// checkCurrentUserPath reports MDL016 when [%CurrentUser%]/Module.Type/attr
+// is used instead of the direct [%CurrentUser%]/attr path.
+func (v *microflowValidator) checkCurrentUserPath(expr ast.Expression) {
+	if expr == nil {
+		return
+	}
+	src := sourceOf(expr)
+	if reCurrentUserPath.MatchString(src) {
+		v.addViolation("MDL016", linter.SeverityError,
+			"'[%CurrentUser%]/Module.Type/attr' traverses an intermediate entity type — Mendix resolves CurrentUser directly to System.User, so the intermediate step is invalid (CE0117).",
+			"Use '[%CurrentUser%]/attr' directly, e.g. [%CurrentUser%]/Name.")
+	}
+}
+
+// sourceOf returns the Source string of a SourceExpr, or empty string otherwise.
+func sourceOf(expr ast.Expression) string {
+	if se, ok := expr.(*ast.SourceExpr); ok {
+		return se.Source
+	}
+	return ""
+}
+
+// bodyContainsIdPath reports whether any statement in the body (recursively)
+// accesses /id through a SourceExpr — used to detect MDL017.
+func bodyContainsIdPath(body []ast.MicroflowStatement) bool {
+	for _, s := range body {
+		if stmtSourceContainsIdPath(s) {
+			return true
+		}
+	}
+	return false
+}
+
+func stmtSourceContainsIdPath(stmt ast.MicroflowStatement) bool {
+	switch s := stmt.(type) {
+	case *ast.MfSetStmt:
+		return containsIdPath(sourceOf(s.Value))
+	case *ast.ReturnStmt:
+		return containsIdPath(sourceOf(s.Value))
+	case *ast.DeclareStmt:
+		return containsIdPath(sourceOf(s.InitialValue))
+	case *ast.IfStmt:
+		return bodyContainsIdPath(s.ThenBody) || bodyContainsIdPath(s.ElseBody)
+	case *ast.LoopStmt:
+		return bodyContainsIdPath(s.Body)
+	case *ast.EnumSplitStmt:
+		for _, c := range s.Cases {
+			if bodyContainsIdPath(c.Body) {
+				return true
+			}
+		}
+		return bodyContainsIdPath(s.ElseBody)
 	}
 	return false
 }
