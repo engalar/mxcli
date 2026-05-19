@@ -57,6 +57,7 @@ func (l *dirtyLayer) isDeleted(relPath string) bool {
 // of relPath, i.e. relPath looks like a directory created in (or under) the
 // dirty layer. Used so Lookup/Getattr/Readdir can recognise Mkdir-created
 // directories that aren't on disk yet.
+// O(N) scan acceptable for mpr trees up to ~2000 files.
 func (l *dirtyLayer) hasDirtyDir(relPath string) bool {
 	if relPath == "" {
 		return false
@@ -128,6 +129,9 @@ func (l *dirtyLayer) delete(relPath string) {
 // in the dirty layer yet, it copies up from `baseDir` first. Result is always
 // a non-nil byte slice (never a tombstone), even at size 0.
 func (l *dirtyLayer) truncate(relPath, baseDir string, size int64) {
+	if relPath == "" {
+		return // cannot truncate root directory
+	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	cur, ok := l.files[relPath]
@@ -161,7 +165,7 @@ func (l *dirtyLayer) commit(baseDir string) error {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	for rel, content := range l.files {
-		if isSQLiteAux(rel) {
+		if isSQLiteAux(rel) || isSentinel(rel) {
 			continue
 		}
 		dest := filepath.Join(baseDir, filepath.FromSlash(rel))
@@ -182,4 +186,11 @@ func (l *dirtyLayer) commit(baseDir string) error {
 // isSQLiteAux returns true for SQLite WAL and SHM auxiliary files.
 func isSQLiteAux(relPath string) bool {
 	return strings.HasSuffix(relPath, "-wal") || strings.HasSuffix(relPath, "-shm")
+}
+
+// isSentinel returns true for dirty-layer internal sentinels that must not
+// be written to the real filesystem (e.g. the `.keep` files Mkdir uses to
+// mark directories that exist only in the dirty layer).
+func isSentinel(relPath string) bool {
+	return strings.HasSuffix(relPath, "/.keep")
 }

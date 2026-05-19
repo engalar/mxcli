@@ -150,8 +150,8 @@ func (n *overlayNode) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.A
 func (n *overlayNode) Setattr(ctx context.Context, fh fs.FileHandle, in *fuse.SetAttrIn, out *fuse.AttrOut) syscall.Errno {
 	if size, ok := in.GetSize(); ok {
 		n.layer.truncate(n.relPath, n.baseDir, int64(size))
-		out.Size = size
 	}
+	// Getattr re-populates out (Size, Mode, Ino) for the kernel's attr cache.
 	return n.Getattr(ctx, fh, out)
 }
 
@@ -211,6 +211,9 @@ func (n *overlayNode) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno)
 		if idx := strings.IndexByte(rest, '/'); idx >= 0 {
 			name = rest[:idx]
 			mode = fuse.S_IFDIR
+		}
+		if name == ".keep" {
+			continue // dirty-layer internal sentinel; don't surface to userspace
 		}
 		if seen[name] {
 			continue
@@ -321,6 +324,15 @@ func (n *overlayNode) Unlink(ctx context.Context, name string) syscall.Errno {
 	return 0
 }
 
+// --- NodeRmdirer ---
+
+func (n *overlayNode) Rmdir(ctx context.Context, name string) syscall.Errno {
+	rel := n.childRel(name)
+	// Remove the Mkdir sentinel; if the dir was Mkdir-only, hasDirtyDir() now returns false.
+	n.layer.delete(rel + "/.keep")
+	return 0
+}
+
 // --- NodeRenamer ---
 
 func (n *overlayNode) Rename(ctx context.Context, name string, newParent fs.InodeEmbedder, newName string, flags uint32) syscall.Errno {
@@ -341,6 +353,9 @@ func (n *overlayNode) Rename(ctx context.Context, name string, newParent fs.Inod
 			return syscall.ENOENT
 		}
 	}
+	// Tombstone destination before writing to avoid stale trailing bytes when
+	// the destination already exists in the dirty layer with a longer payload.
+	n.layer.delete(dstRel)
 	n.layer.write(dstRel, 0, content)
 	n.layer.delete(srcRel)
 	return 0
