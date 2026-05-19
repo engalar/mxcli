@@ -30,7 +30,7 @@ LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 # Clean version for VS Code extension (must be valid semver: major.minor.patch)
 VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$$' || echo "0.0.0")
 
-.PHONY: build build-debug release clean test test-mdl grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation docs-site docs-serve vscode-ext vscode-install source-tree sbom sbom-report lint lint-go lint-ts fmt vet
+.PHONY: build build-debug release clean test test-mdl grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
 # Usage: $(call copy-if-changed,src,dst)
@@ -71,25 +71,12 @@ sync-lint-rules:
 	done; \
 	if [ $$changed -gt 0 ]; then echo "Synced $$changed lint rule file(s)"; fi
 
-# Sync VS Code extension (.vsix) for embedding — picks newest .vsix by mtime
-sync-vsix:
-	@src=$$(ls -t vscode-mdl/vscode-mdl-*.vsix 2>/dev/null | head -1); \
-	if [ -n "$$src" ]; then \
-		if [ ! -f cmd/mxcli/vscode-mdl.vsix ] || ! cmp -s "$$src" cmd/mxcli/vscode-mdl.vsix; then \
-			cp "$$src" cmd/mxcli/vscode-mdl.vsix; \
-			echo "Synced vscode-mdl.vsix ($$src)"; \
-		fi; \
-	elif [ ! -f cmd/mxcli/vscode-mdl.vsix ]; then \
-		echo "Warning: No .vsix found. Creating empty placeholder."; \
-		touch cmd/mxcli/vscode-mdl.vsix; \
-	fi
-
 # Sync changelog to cmd/mxcli for embedding
 sync-changelog:
 	$(call copy-if-changed,CHANGELOG.md,cmd/mxcli/changelog.md)
 
 # Sync skills, commands, lint rules, and changelog
-sync-all: sync-skills sync-commands sync-lint-rules sync-vsix sync-changelog
+sync-all: sync-skills sync-commands sync-lint-rules sync-changelog
 
 # Generate LSP completion items from grammar (only rewrites file if content changed)
 completions:
@@ -115,7 +102,7 @@ build-debug: sync-all completions
 	@echo "Built $(BUILD_DIR)/$(BINARY_NAME)-debug (debug build with bson tools)"
 
 # Build for all platforms (CGO_ENABLED=0 for cross-compilation)
-release: clean vscode-ext sync-all
+release: clean sync-all
 	@mkdir -p $(BUILD_DIR)
 	@echo "Building release binaries..."
 
@@ -187,11 +174,6 @@ vet:
 	@CGO_ENABLED=0 go vet ./... 2>&1 | grep -v 'grammar/parser/' | grep -v 'mdl-grammar/parser/' || true
 	@! CGO_ENABLED=0 go vet ./... 2>&1 | grep -v 'grammar/parser/' | grep -v 'mdl-grammar/parser/' | grep -q 'vet:'
 
-# Lint TypeScript code (VS Code extension)
-lint-ts:
-	cd vscode-mdl && bun install --silent && bun run lint
-	@echo "TypeScript lint passed"
-
 # Regenerate ANTLR parser from MDLLexer.g4 and MDLParser.g4
 grammar:
 	$(MAKE) -C mdl/grammar generate
@@ -201,24 +183,6 @@ clean:
 	rm -rf $(BUILD_DIR)
 	go clean
 
-# Build VS Code extension (.vsix) with build-time version info
-vscode-ext:
-	@echo "Building VS Code extension (version $(VSCE_VERSION))..."
-	cd vscode-mdl && bun install && \
-		cp package.json package.json.bak && \
-		sed 's/"version": "[^"]*"/"version": "$(VSCE_VERSION)"/' package.json.bak > package.json && \
-		bunx esbuild src/extension.ts --bundle --outfile=dist/extension.js \
-			--external:vscode --format=cjs --platform=node \
-			--define:__BUILD_TIME__="'$(BUILD_TIME)'" \
-			--define:__GIT_COMMIT__="'$(VERSION)'" && \
-		bunx @vscode/vsce package --no-dependencies; \
-		status=$$?; mv package.json.bak package.json; exit $$status
-	@echo "Built vscode-mdl/$$(ls vscode-mdl/*.vsix)"
-
-# Install VS Code extension
-vscode-install: vscode-ext
-	code --install-extension vscode-mdl/vscode-mdl-*.vsix
-	@echo "Extension installed. Reload VS Code to activate."
 
 # Generate documentation from ANTLR4 grammar
 docs: documentation

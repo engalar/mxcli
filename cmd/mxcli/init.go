@@ -531,11 +531,6 @@ Container Runtime:
 			}
 		}
 
-		// Install VS Code extension if Claude or OpenCode is selected
-		if slices.Contains(tools, "claude") || slices.Contains(tools, "opencode") {
-			installVSCodeExtension(absDir)
-		}
-
 		fmt.Println("\n✓ Initialization complete!")
 		fmt.Println("\nWhat was created:")
 		fmt.Println("  • .gitignore - Mendix project ignore patterns")

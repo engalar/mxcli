@@ -70,11 +70,6 @@ func collectFiles(root string) []fileInfo {
 
 		if ext == ".go" {
 			include = true
-		} else if ext == ".ts" {
-			// Only .ts files under vscode-mdl/
-			if strings.HasPrefix(rel, "vscode-mdl/") {
-				include = true
-			}
 		}
 
 		if !include {

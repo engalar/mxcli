@@ -31,11 +31,6 @@ var commandsFS embed.FS
 //go:embed lint-rules/*.star
 var lintRulesFS embed.FS
 
-// Embed the VS Code extension package (optional — file may not exist during dev builds)
-//
-//go:embed vscode-mdl.vsix
-var vsixData []byte
-
 // settingsJSON is the Claude Code settings for mxcli permissions
 const settingsJSON = `{
   "permissions": {
