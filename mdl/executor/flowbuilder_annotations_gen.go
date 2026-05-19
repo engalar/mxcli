@@ -22,6 +22,7 @@ package executor
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
@@ -227,15 +228,18 @@ type genLayoutPoint struct {
 	x, y int
 }
 
-// parseLayoutPos parses a string of the form "<x> <y>" produced by
-// layoutPos. Returns ok=false on any parse error so callers can fall
-// back to a default.
+// parseLayoutPos parses a RelativeMiddlePoint string. Accepts both the
+// canonical semicolon format written by Mendix Studio Pro and by mxcli
+// ("200;200") and the legacy space-separated format written by older
+// mxcli versions ("200 200"). Returns ok=false on any parse error.
 func parseLayoutPos(s string) (genLayoutPoint, bool) {
 	if s == "" {
 		return genLayoutPoint{}, false
 	}
+	// Normalise: treat semicolons as spaces so Sscanf handles both formats.
+	normalized := strings.ReplaceAll(s, ";", " ")
 	var p genLayoutPoint
-	n, err := fmt.Sscanf(s, "%d %d", &p.x, &p.y)
+	n, err := fmt.Sscanf(normalized, "%d %d", &p.x, &p.y)
 	if err != nil || n != 2 {
 		return genLayoutPoint{}, false
 	}

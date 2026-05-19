@@ -224,20 +224,16 @@ func (fb *flowBuilderGen) isVariableDeclared(varName string) bool {
 	return false
 }
 
-// layoutPos formats an (x, y) pair as the single space-separated string
-// that gen activities store under their RelativeMiddlePoint field. The
-// gen codec serializes layout coordinates as text, not as nested {X,Y}
-// documents — this helper is the single source of truth for that
-// format so the per-statement adders never hand-roll it.
+// layoutPos formats an (x, y) pair as the semicolon-separated string
+// that Mendix Studio Pro and MPR v2 expect for RelativeMiddlePoint.
 func layoutPos(x, y int) string {
-	return fmt.Sprintf("%d %d", x, y)
+	return fmt.Sprintf("%d;%d", x, y)
 }
 
-// layoutSize formats a (width, height) pair as the single
-// space-separated string that gen activities store under their Size
-// field. Companion to layoutPos.
+// layoutSize formats a (width, height) pair as the semicolon-separated
+// string that Mendix Studio Pro and MPR v2 expect for the Size field.
 func layoutSize(width, height int) string {
-	return fmt.Sprintf("%d %d", width, height)
+	return fmt.Sprintf("%d;%d", width, height)
 }
 
 // genElementWithID is the minimal interface every gen element exposes

@@ -39,27 +39,37 @@ func TestNewHorizontalFlowGenAnchors(t *testing.T) {
 
 func TestNewHorizontalFlowWithCaseGenBoolean(t *testing.T) {
 	f := newHorizontalFlowWithCaseGen("o", "d", "true")
-	cv, ok := f.CaseValue().(*genMf.EnumerationCase)
+	items := f.CaseValuesItems()
+	if len(items) != 1 {
+		t.Fatalf("CaseValues len = %d, want 1", len(items))
+	}
+	cv, ok := items[0].(*genMf.EnumerationCase)
 	if !ok || cv == nil {
-		t.Fatalf("CaseValue should be *EnumerationCase, got %T", f.CaseValue())
+		t.Fatalf("CaseValues[0] should be *EnumerationCase, got %T", items[0])
 	}
 	if cv.Value() != "true" {
 		t.Fatalf("case value = %q, want true", cv.Value())
 	}
 }
 
-func TestNewHorizontalFlowWithCaseGenEmptyOmits(t *testing.T) {
+func TestNewHorizontalFlowWithCaseGenEmptyProducesNoCase(t *testing.T) {
+	// Empty case string → flow is unconditional → must carry NoCase.
 	f := newHorizontalFlowWithCaseGen("o", "d", "")
-	if f.CaseValue() != nil {
-		t.Fatalf("empty case value should leave CaseValue nil, got %T", f.CaseValue())
+	items := f.CaseValuesItems()
+	if len(items) != 0 {
+		t.Fatalf("empty case value should produce 0 CaseValues items, got %d", len(items))
 	}
 }
 
 func TestNewHorizontalFlowWithEnumCaseGenAttachesEnum(t *testing.T) {
 	f := newHorizontalFlowWithEnumCaseGen("o", "d", "RED")
-	cv, ok := f.CaseValue().(*genMf.EnumerationCase)
+	items := f.CaseValuesItems()
+	if len(items) != 1 {
+		t.Fatalf("CaseValues len = %d, want 1", len(items))
+	}
+	cv, ok := items[0].(*genMf.EnumerationCase)
 	if !ok {
-		t.Fatalf("want *EnumerationCase, got %T", f.CaseValue())
+		t.Fatalf("want *EnumerationCase, got %T", items[0])
 	}
 	if cv.Value() != "RED" {
 		t.Fatalf("value = %q, want RED", cv.Value())
@@ -68,9 +78,13 @@ func TestNewHorizontalFlowWithEnumCaseGenAttachesEnum(t *testing.T) {
 
 func TestNewHorizontalFlowWithInheritanceCaseGenAttachesInheritance(t *testing.T) {
 	f := newHorizontalFlowWithInheritanceCaseGen("o", "d", "Sales.PremiumCustomer")
-	cv, ok := f.CaseValue().(*genMf.InheritanceCase)
+	items := f.CaseValuesItems()
+	if len(items) != 1 {
+		t.Fatalf("CaseValues len = %d, want 1", len(items))
+	}
+	cv, ok := items[0].(*genMf.InheritanceCase)
 	if !ok {
-		t.Fatalf("want *InheritanceCase, got %T", f.CaseValue())
+		t.Fatalf("want *InheritanceCase, got %T", items[0])
 	}
 	if cv.ValueQualifiedName() != "Sales.PremiumCustomer" {
 		t.Fatalf("entity = %q, want Sales.PremiumCustomer", cv.ValueQualifiedName())
@@ -85,9 +99,13 @@ func TestNewDownwardFlowWithCaseGenAnchorsAndCase(t *testing.T) {
 	if f.DestinationConnectionIndex() != int32(AnchorLeft) {
 		t.Fatalf("dest anchor = %d, want left", f.DestinationConnectionIndex())
 	}
-	cv, ok := f.CaseValue().(*genMf.EnumerationCase)
+	items := f.CaseValuesItems()
+	if len(items) != 1 {
+		t.Fatalf("CaseValues len = %d, want 1", len(items))
+	}
+	cv, ok := items[0].(*genMf.EnumerationCase)
 	if !ok || cv.Value() != "true" {
-		t.Fatalf("case = %v / %T", cv, f.CaseValue())
+		t.Fatalf("CaseValues[0] = %T / %q, want EnumerationCase / true", items[0], cv.Value())
 	}
 }
 
@@ -96,9 +114,13 @@ func TestNewDownwardFlowWithInheritanceCaseGenAnchorsAndCase(t *testing.T) {
 	if f.OriginConnectionIndex() != int32(AnchorBottom) {
 		t.Fatalf("origin anchor = %d, want bottom", f.OriginConnectionIndex())
 	}
-	cv, ok := f.CaseValue().(*genMf.InheritanceCase)
+	items := f.CaseValuesItems()
+	if len(items) != 1 {
+		t.Fatalf("CaseValues len = %d, want 1", len(items))
+	}
+	cv, ok := items[0].(*genMf.InheritanceCase)
 	if !ok || cv.ValueQualifiedName() != "Mod.Sub" {
-		t.Fatalf("case = %v / %T", cv, f.CaseValue())
+		t.Fatalf("CaseValues[0] = %T / %q, want InheritanceCase / Mod.Sub", items[0], cv.ValueQualifiedName())
 	}
 }
 
@@ -248,4 +270,52 @@ func TestApplyUserAnchorsGenAnchorSideUnsetIsNoOp(t *testing.T) {
 func TestApplyUserAnchorsGenNilFlowIsSafe(t *testing.T) {
 	// Must not panic on nil flow input.
 	applyUserAnchorsGen(nil, &ast.FlowAnchors{From: ast.AnchorSide(AnchorTop)}, nil)
+}
+
+// TestNewHorizontalFlowGenHasCaseValuesNoCase guards against the CE0108
+// "Variable not in scope" bug: Studio Pro uses CaseValues (plural
+// PartList) with a NoCase element for unconditional flows. Without it,
+// Mendix cannot traverse the SequenceFlow graph and reports CE0108.
+func TestNewHorizontalFlowGenHasCaseValuesNoCase(t *testing.T) {
+	f := newHorizontalFlowGen("origin", "dest")
+	items := f.CaseValuesItems()
+	if len(items) != 1 {
+		t.Fatalf("CaseValues len = %d, want 1 (NoCase element)", len(items))
+	}
+	if _, ok := items[0].(*genMf.NoCase); !ok {
+		t.Fatalf("CaseValues[0] = %T, want *genMf.NoCase", items[0])
+	}
+}
+
+// TestNewHorizontalFlowWithCaseGenUsesCaseValues guards that branching
+// flows store the case value in CaseValues (plural PartList) not the
+// defunct CaseValue (singular Part). Studio Pro 11 only reads
+// CaseValues; using CaseValue causes silent loss of branch wiring.
+func TestNewHorizontalFlowWithCaseGenUsesCaseValues(t *testing.T) {
+	f := newHorizontalFlowWithCaseGen("o", "d", "true")
+	items := f.CaseValuesItems()
+	if len(items) != 1 {
+		t.Fatalf("CaseValues len = %d, want 1", len(items))
+	}
+	ec, ok := items[0].(*genMf.EnumerationCase)
+	if !ok {
+		t.Fatalf("CaseValues[0] = %T, want *EnumerationCase", items[0])
+	}
+	if ec.Value() != "true" {
+		t.Fatalf("EnumerationCase.Value = %q, want true", ec.Value())
+	}
+}
+
+// TestNewDownwardFlowWithCaseGenUsesCaseValues mirrors the check above
+// for the vertically-oriented branching flow variant.
+func TestNewDownwardFlowWithCaseGenUsesCaseValues(t *testing.T) {
+	f := newDownwardFlowWithCaseGen("o", "d", "false")
+	items := f.CaseValuesItems()
+	if len(items) != 1 {
+		t.Fatalf("CaseValues len = %d, want 1", len(items))
+	}
+	ec, ok := items[0].(*genMf.EnumerationCase)
+	if !ok || ec.Value() != "false" {
+		t.Fatalf("CaseValues[0] = %T / %q, want EnumerationCase / false", items[0], ec.Value())
+	}
 }

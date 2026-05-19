@@ -45,6 +45,10 @@ import (
 // newHorizontalFlowGen creates a SequenceFlow whose visual line runs
 // left-to-right (origin's right anchor → destination's left anchor).
 // The default for ordinary main-flow connections.
+//
+// Every unconditional flow carries a NoCase in CaseValues to match the
+// BSON Studio Pro writes. Without it Mendix cannot traverse the flow
+// graph and reports CE0108 "Variable not in scope".
 func newHorizontalFlowGen(originID, destinationID element.ID) *genMf.SequenceFlow {
 	flow := genMf.NewSequenceFlow()
 	assignFreshID(flow)
@@ -52,6 +56,7 @@ func newHorizontalFlowGen(originID, destinationID element.ID) *genMf.SequenceFlo
 	flow.SetDestinationID(destinationID)
 	flow.SetOriginConnectionIndex(int32(AnchorRight))
 	flow.SetDestinationConnectionIndex(int32(AnchorLeft))
+	addNoCaseToFlow(flow)
 	return flow
 }
 
@@ -60,34 +65,49 @@ func newHorizontalFlowGen(originID, destinationID element.ID) *genMf.SequenceFlo
 // "false"; anything else is treated as an enum-style raw value via
 // caseValueForFlowGen.
 func newHorizontalFlowWithCaseGen(originID, destinationID element.ID, caseValue string) *genMf.SequenceFlow {
-	flow := newHorizontalFlowGen(originID, destinationID)
+	flow := genMf.NewSequenceFlow()
+	assignFreshID(flow)
+	flow.SetOriginID(originID)
+	flow.SetDestinationID(destinationID)
+	flow.SetOriginConnectionIndex(int32(AnchorRight))
+	flow.SetDestinationConnectionIndex(int32(AnchorLeft))
 	if cv := caseValueForFlowGen(caseValue); cv != nil {
-		flow.SetCaseValue(cv)
+		flow.AddCaseValues(cv)
 	}
 	return flow
 }
 
 // newHorizontalFlowWithEnumCaseGen creates a horizontal flow whose
-// CaseValue is an explicit EnumerationCase with the given raw value.
-// Used by enum-split branch wiring.
+// CaseValues entry is an explicit EnumerationCase with the given raw
+// value. Used by enum-split branch wiring.
 func newHorizontalFlowWithEnumCaseGen(originID, destinationID element.ID, caseValue string) *genMf.SequenceFlow {
-	flow := newHorizontalFlowGen(originID, destinationID)
+	flow := genMf.NewSequenceFlow()
+	assignFreshID(flow)
+	flow.SetOriginID(originID)
+	flow.SetDestinationID(destinationID)
+	flow.SetOriginConnectionIndex(int32(AnchorRight))
+	flow.SetDestinationConnectionIndex(int32(AnchorLeft))
 	ec := genMf.NewEnumerationCase()
 	assignFreshID(ec)
 	ec.SetValue(caseValue)
-	flow.SetCaseValue(ec)
+	flow.AddCaseValues(ec)
 	return flow
 }
 
 // newHorizontalFlowWithInheritanceCaseGen creates a horizontal flow
-// whose CaseValue is an InheritanceCase pointing at the given entity
-// qualified name. Used by inheritance-split branch wiring.
+// whose CaseValues entry is an InheritanceCase pointing at the given
+// entity qualified name. Used by inheritance-split branch wiring.
 func newHorizontalFlowWithInheritanceCaseGen(originID, destinationID element.ID, entityQN string) *genMf.SequenceFlow {
-	flow := newHorizontalFlowGen(originID, destinationID)
+	flow := genMf.NewSequenceFlow()
+	assignFreshID(flow)
+	flow.SetOriginID(originID)
+	flow.SetDestinationID(destinationID)
+	flow.SetOriginConnectionIndex(int32(AnchorRight))
+	flow.SetDestinationConnectionIndex(int32(AnchorLeft))
 	ic := genMf.NewInheritanceCase()
 	assignFreshID(ic)
 	ic.SetValueQualifiedName(entityQN)
-	flow.SetCaseValue(ic)
+	flow.AddCaseValues(ic)
 	return flow
 }
 
@@ -102,7 +122,7 @@ func newDownwardFlowWithCaseGen(originID, destinationID element.ID, caseValue st
 	flow.SetOriginConnectionIndex(int32(AnchorBottom))
 	flow.SetDestinationConnectionIndex(int32(AnchorLeft))
 	if cv := caseValueForFlowGen(caseValue); cv != nil {
-		flow.SetCaseValue(cv)
+		flow.AddCaseValues(cv)
 	}
 	return flow
 }
@@ -120,7 +140,7 @@ func newDownwardFlowWithInheritanceCaseGen(originID, destinationID element.ID, e
 	ic := genMf.NewInheritanceCase()
 	assignFreshID(ic)
 	ic.SetValueQualifiedName(entityQN)
-	flow.SetCaseValue(ic)
+	flow.AddCaseValues(ic)
 	return flow
 }
 
@@ -134,6 +154,7 @@ func newUpwardFlowGen(originID, destinationID element.ID) *genMf.SequenceFlow {
 	flow.SetDestinationID(destinationID)
 	flow.SetOriginConnectionIndex(int32(AnchorRight))
 	flow.SetDestinationConnectionIndex(int32(AnchorBottom))
+	addNoCaseToFlow(flow)
 	return flow
 }
 
@@ -150,18 +171,24 @@ func newErrorHandlerFlowGen(originID, destinationID element.ID) *genMf.SequenceF
 	flow.SetOriginConnectionIndex(int32(AnchorBottom))
 	flow.SetDestinationConnectionIndex(int32(AnchorTop))
 	flow.SetIsErrorHandler(true)
+	addNoCaseToFlow(flow)
 	return flow
 }
 
+// addNoCaseToFlow appends a NoCase element to the CaseValues list of a
+// SequenceFlow. Studio Pro always writes a NoCase on unconditional flows
+// so Mendix can traverse the flow graph; omitting it causes CE0108.
+func addNoCaseToFlow(flow *genMf.SequenceFlow) {
+	nc := genMf.NewNoCase()
+	assignFreshID(nc)
+	flow.AddCaseValues(nc)
+}
+
 // caseValueForFlowGen translates an MDL-level case literal into a gen
-// CaseValue element. The legacy builder produced an ExpressionCase for
-// "true" / "false" and an EnumerationCase otherwise; the gen schema
-// has no ExpressionCase, and the gen describer treats true/false
-// EnumerationCase entries as boolean branches — so we collapse all
-// three forms onto EnumerationCase here.
+// EnumerationCase element for use in CaseValues (plural).
 //
-// Returns nil for an empty caseValue so the caller can leave the flow
-// without a CaseValue (the unlabelled main-line flow).
+// Returns nil for an empty caseValue — the caller must then use
+// addNoCaseToFlow for unconditional flows.
 func caseValueForFlowGen(caseValue string) element.Element {
 	if caseValue == "" {
 		return nil

@@ -99,9 +99,9 @@ func TestLayoutPosFormat(t *testing.T) {
 		x, y int
 		want string
 	}{
-		{0, 0, "0 0"},
-		{200, 200, "200 200"},
-		{-10, 25, "-10 25"},
+		{0, 0, "0;0"},
+		{200, 200, "200;200"},
+		{-10, 25, "-10;25"},
 	}
 	for _, tc := range cases {
 		if got := layoutPos(tc.x, tc.y); got != tc.want {
@@ -111,8 +111,8 @@ func TestLayoutPosFormat(t *testing.T) {
 }
 
 func TestLayoutSizeFormat(t *testing.T) {
-	if got := layoutSize(120, 60); got != "120 60" {
-		t.Fatalf("layoutSize(120,60) = %q want %q", got, "120 60")
+	if got := layoutSize(120, 60); got != "120;60" {
+		t.Fatalf("layoutSize(120,60) = %q want %q", got, "120;60")
 	}
 }
 

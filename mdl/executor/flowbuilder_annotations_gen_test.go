@@ -22,6 +22,11 @@ func TestParseLayoutPos(t *testing.T) {
 		ok    bool
 		x, y  int
 	}{
+		// semicolon format (canonical — Mendix Studio Pro and new mxcli output)
+		{"100;200", true, 100, 200},
+		{"0;0", true, 0, 0},
+		{"-15;25", true, -15, 25},
+		// space format (backward compat — old mxcli-generated files)
 		{"100 200", true, 100, 200},
 		{"0 0", true, 0, 0},
 		{"-15 25", true, -15, 25},
@@ -65,11 +70,11 @@ func TestFlowBuilderGenAddEndEventWithReturnNoValue(t *testing.T) {
 	if !ok {
 		t.Fatalf("want *genMf.EndEvent, got %T", fb.objects[0])
 	}
-	if end.RelativeMiddlePoint() != "200 200" {
-		t.Fatalf("position = %q, want %q", end.RelativeMiddlePoint(), "200 200")
+	if end.RelativeMiddlePoint() != "200;200" {
+		t.Fatalf("position = %q, want %q", end.RelativeMiddlePoint(), "200;200")
 	}
-	if end.Size() != "20 20" {
-		t.Fatalf("size = %q, want %q", end.Size(), "20 20")
+	if end.Size() != "20;20" {
+		t.Fatalf("size = %q, want %q", end.Size(), "20;20")
 	}
 	if end.ReturnValue() != "" {
 		t.Fatalf("ReturnValue = %q, want empty", end.ReturnValue())
@@ -109,8 +114,8 @@ func TestFlowBuilderGenAddErrorEvent(t *testing.T) {
 	if !ok {
 		t.Fatalf("want *genMf.ErrorEvent, got %T", fb.objects[0])
 	}
-	if ev.RelativeMiddlePoint() != "50 60" {
-		t.Fatalf("position = %q, want %q", ev.RelativeMiddlePoint(), "50 60")
+	if ev.RelativeMiddlePoint() != "50;60" {
+		t.Fatalf("position = %q, want %q", ev.RelativeMiddlePoint(), "50;60")
 	}
 }
 
@@ -119,7 +124,7 @@ func TestFlowBuilderGenAttachAnnotationFindsActivityPosition(t *testing.T) {
 	// Pre-seed a fake action activity at a known position.
 	act := genMf.NewActionActivity()
 	assignFreshID(act)
-	act.SetRelativeMiddlePoint("400 300")
+	act.SetRelativeMiddlePoint("400;300")
 	fb.objects = append(fb.objects, act)
 
 	fb.attachAnnotation("explanation", act.ID())
@@ -135,8 +140,8 @@ func TestFlowBuilderGenAttachAnnotationFindsActivityPosition(t *testing.T) {
 		t.Fatalf("caption = %q, want %q", annot.Caption(), "explanation")
 	}
 	// Annotation positioned 100px above the activity.
-	if annot.RelativeMiddlePoint() != "400 200" {
-		t.Fatalf("annotation position = %q, want %q", annot.RelativeMiddlePoint(), "400 200")
+	if annot.RelativeMiddlePoint() != "400;200" {
+		t.Fatalf("annotation position = %q, want %q", annot.RelativeMiddlePoint(), "400;200")
 	}
 
 	if len(fb.annotationFlows) != 1 {
@@ -161,8 +166,8 @@ func TestFlowBuilderGenAttachAnnotationMissingActivityFallsBackToOrigin(t *testi
 		t.Fatalf("want 1 object (annotation only), got %d", len(fb.objects))
 	}
 	annot := fb.objects[0].(*genMf.Annotation)
-	if annot.RelativeMiddlePoint() != "0 -100" {
-		t.Fatalf("position = %q, want %q", annot.RelativeMiddlePoint(), "0 -100")
+	if annot.RelativeMiddlePoint() != "0;-100" {
+		t.Fatalf("position = %q, want %q", annot.RelativeMiddlePoint(), "0;-100")
 	}
 }
 
@@ -177,8 +182,8 @@ func TestFlowBuilderGenAttachFreeAnnotation(t *testing.T) {
 		t.Fatalf("caption = %q, want %q", annot.Caption(), "free")
 	}
 	// Free annotation positioned 100px above current cursor.
-	if annot.RelativeMiddlePoint() != "300 100" {
-		t.Fatalf("position = %q, want %q", annot.RelativeMiddlePoint(), "300 100")
+	if annot.RelativeMiddlePoint() != "300;100" {
+		t.Fatalf("position = %q, want %q", annot.RelativeMiddlePoint(), "300;100")
 	}
 	// No annotation flow created for free annotations.
 	if len(fb.annotationFlows) != 0 {
@@ -230,7 +235,7 @@ func TestFlowBuilderGenApplyAnnotationsAttachesAnnotationText(t *testing.T) {
 	fb := &flowBuilderGen{}
 	act := genMf.NewActionActivity()
 	assignFreshID(act)
-	act.SetRelativeMiddlePoint("100 100")
+	act.SetRelativeMiddlePoint("100;100")
 	fb.objects = append(fb.objects, act)
 
 	fb.applyAnnotations(act.ID(), &ast.ActivityAnnotations{AnnotationText: "explains"})

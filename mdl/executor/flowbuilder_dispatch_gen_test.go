@@ -182,8 +182,8 @@ func TestAddStatementGenAppliesPendingPositionAnnotation(t *testing.T) {
 	}
 	fb.addStatementGen(stmt)
 	act := fb.objects[0].(*genMf.ActionActivity)
-	if act.RelativeMiddlePoint() != "999 888" {
-		t.Fatalf("position = %q, want 999 888", act.RelativeMiddlePoint())
+	if act.RelativeMiddlePoint() != "999;888" {
+		t.Fatalf("position = %q, want 999;888", act.RelativeMiddlePoint())
 	}
 }
 
