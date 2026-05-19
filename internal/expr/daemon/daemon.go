@@ -247,7 +247,13 @@ func (d *Daemon) pingResponse() PingResponse {
 // items filtered by req.Filter / req.Severity.
 func (d *Daemon) validate(req ValidateRequest) ([]ValidationItem, error) {
 	mprcontents := scan.MprContentsPath(d.mprPath)
-	records, err := scan.ScanMprcontents(mprcontents, scan.Options{FilterType: req.Filter})
+	var records []scan.ExprRecord
+	var err error
+	if fi, statErr := os.Stat(mprcontents); statErr == nil && fi.IsDir() {
+		records, err = scan.ScanMprcontents(mprcontents, scan.Options{FilterType: req.Filter})
+	} else {
+		records, err = scan.ScanMPR(d.mprPath, scan.Options{FilterType: req.Filter})
+	}
 	if err != nil {
 		return nil, fmt.Errorf("scan: %w", err)
 	}
