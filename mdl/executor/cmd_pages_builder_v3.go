@@ -90,9 +90,11 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*genPg.Page, error)
 		page.SetUrl(s.URL)
 	}
 
-	// Set title
+	// Set title: Mendix stores page Title as Texts$Text (not Forms$ClientTemplate).
+	// Using genSimpleLabel (which wraps in ClientTemplate) would cause a
+	// StorageLoadException in Studio Pro 11 ("ClientTemplate cannot be converted to Text").
 	if s.Title != "" {
-		page.SetTitle(genSimpleLabel(s.Title))
+		page.SetTitle(genSimpleText(s.Title))
 	}
 
 	// Build parameters FIRST so paramScope/paramEntityNames are populated

@@ -88,7 +88,8 @@
     "SnippetCallWidget.snippetCall":                     "FormCall",
     "SnippetCall.snippet":                               "Form",
     "ImportMapping.rootMappingElements":                 "Elements",
-    "ExportMapping.rootMappingElements":                 "Elements"
+    "ExportMapping.rootMappingElements":                 "Elements",
+    "Text.translations":                                 "Items"
   },
 
   "force_concrete_types": [
