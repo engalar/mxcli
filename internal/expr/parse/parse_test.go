@@ -74,7 +74,7 @@ func scanProject(t *testing.T, mprPath string, opts scan.Options) []scan.ExprRec
 }
 
 func TestBatchParse_CorpusCoverage(t *testing.T) {
-	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	mprPath := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	records := scanProject(t, mprPath, scan.Options{})
 
 	results := parse.BatchParse(records)
@@ -85,7 +85,7 @@ func TestBatchParse_CorpusCoverage(t *testing.T) {
 		}
 	}
 	coverage := float64(pass) / float64(len(results)) * 100
-	t.Logf("macnica coverage: %.1f%% (%d/%d)", coverage, pass, len(results))
+	t.Logf("corpus-a coverage: %.1f%% (%d/%d)", coverage, pass, len(results))
 	assert.Greater(t, coverage, 85.0, "coverage must be >85%% (hand-written parser may differ from ANTLR4)")
 }
 

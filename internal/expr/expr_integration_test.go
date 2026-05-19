@@ -37,10 +37,10 @@ func scanProject(t *testing.T, mprPath string, opts scan.Options) []scan.ExprRec
 }
 
 func TestFullPipeline_Macnica(t *testing.T) {
-	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	// Layer 2: scan
-	recs := scanProject(t, macnicaMPR, scan.Options{})
-	assert.Greater(t, len(recs), 3000, "macnica must yield >3000 expression records")
+	recs := scanProject(t, corpusAMPR, scan.Options{})
+	assert.Greater(t, len(recs), 3000, "corpus-a must yield >3000 expression records")
 
 	// Layer 3: parse — use exprcheck (100% coverage observed)
 	parsed := parse.BatchParse(recs)
@@ -52,7 +52,7 @@ func TestFullPipeline_Macnica(t *testing.T) {
 	}
 	coverage := float64(pass) / float64(len(parsed)) * 100
 	t.Logf("Parse coverage: %.1f%% (%d/%d)", coverage, pass, len(parsed))
-	assert.Greater(t, coverage, 95.0, "macnica parse coverage must be >95%%")
+	assert.Greater(t, coverage, 95.0, "corpus-a parse coverage must be >95%%")
 
 	// Layer 4: validate
 	var issues []validate.ValidationResult
@@ -90,10 +90,10 @@ func TestFullPipeline_Macnica(t *testing.T) {
 }
 
 func TestFullPipeline_BothProjects(t *testing.T) {
-	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
-	mx2026MPR := testutil.FindMPR(t, "MX2026_MPR", "testdata/mx2026aiday/Factory Management.mpr")
+	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
+	corpusBMPR := testutil.FindMPR(t, "CORPUS_B_MPR", "testdata/corpus-b/app.mpr")
 	var allRecs []scan.ExprRecord
-	for _, mprPath := range []string{macnicaMPR, mx2026MPR} {
+	for _, mprPath := range []string{corpusAMPR, corpusBMPR} {
 		recs := scanProject(t, mprPath, scan.Options{})
 		allRecs = append(allRecs, recs...)
 	}

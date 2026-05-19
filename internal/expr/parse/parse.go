@@ -51,7 +51,7 @@ var exprParser = exprcheck.NewParser()
 // Regular Mendix expressions that start with "[" are system tokens like [%CurrentDateTime%],
 // which always follow the "[%" prefix pattern.
 //
-// Verified against 16,125 real expressions from macnica + Mx2026AIDay:
+// Verified against 16,125 real expressions from corpus-a + corpus-b:
 //   - 0 false positives (no non-XPath expression matches this rule)
 //   - 0 false negatives (every XPath expression matches this rule)
 //

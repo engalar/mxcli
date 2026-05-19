@@ -1,7 +1,7 @@
 // Package scan walks Mendix V2 mprcontents/ directories and extracts
 // expression strings from BSON .mxunit files.
 //
-// Validated against: macnica (3,715) + Mx2026AIDay (12,447) expressions.
+// Validated against: corpus-a (3,715) + corpus-b (12,447) expressions.
 // Coverage: 98.5% parse success rate with mdl/exprcheck parser.
 package scan
 
@@ -48,7 +48,7 @@ type Options struct {
 }
 
 // exprFields maps Mendix $Type → field names that contain expression strings.
-// Validated against 16,125 real expressions from macnica + Mx2026AIDay projects.
+// Validated against 16,125 real expressions from corpus-a + corpus-b projects.
 var exprFields = map[string][]string{
 	// Microflow / Nanoflow
 	"Microflows$ExpressionSplitCondition":    {"Expression"},

@@ -22,7 +22,7 @@ func openBackend(t *testing.T, mprPath string) *mprbackend.MprBackend {
 }
 
 func TestBuildFromBackend_EntityAttrs(t *testing.T) {
-	b := openBackend(t, testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr"))
+	b := openBackend(t, testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr"))
 	idx, err := meta.BuildFromBackend(b)
 	require.NoError(t, err)
 	require.NotNil(t, idx)
@@ -38,7 +38,7 @@ func TestBuildFromBackend_EntityAttrs(t *testing.T) {
 }
 
 func TestBuildFromBackend_EnumValues(t *testing.T) {
-	b := openBackend(t, testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr"))
+	b := openBackend(t, testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr"))
 	idx, err := meta.BuildFromBackend(b)
 	require.NoError(t, err)
 
@@ -51,7 +51,7 @@ func TestBuildFromBackend_EnumValues(t *testing.T) {
 }
 
 func TestBuildFromBackend_Constants(t *testing.T) {
-	b := openBackend(t, testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr"))
+	b := openBackend(t, testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr"))
 	idx, err := meta.BuildFromBackend(b)
 	require.NoError(t, err)
 
@@ -62,7 +62,7 @@ func TestBuildFromBackend_Constants(t *testing.T) {
 }
 
 func TestBuildFromBackend_MissingEnum(t *testing.T) {
-	b := openBackend(t, testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr"))
+	b := openBackend(t, testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr"))
 	idx, err := meta.BuildFromBackend(b)
 	require.NoError(t, err)
 
@@ -71,7 +71,7 @@ func TestBuildFromBackend_MissingEnum(t *testing.T) {
 }
 
 func TestIndex_ImplementsCatalogReader(t *testing.T) {
-	b := openBackend(t, testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr"))
+	b := openBackend(t, testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr"))
 	idx, err := meta.BuildFromBackend(b)
 	require.NoError(t, err)
 
@@ -103,7 +103,7 @@ func TestMockIndex_Basics(t *testing.T) {
 }
 
 func TestBuildFromBackend_SystemEntity(t *testing.T) {
-	b := openBackend(t, testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr"))
+	b := openBackend(t, testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr"))
 	idx, err := meta.BuildFromBackend(b)
 	require.NoError(t, err)
 

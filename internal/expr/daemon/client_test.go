@@ -27,11 +27,11 @@ func TestNewClient_ExplicitSocketPath(t *testing.T) {
 }
 
 func TestClient_PingAndValidate(t *testing.T) {
-	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 
 	// 直接启动 in-process daemon（无需走 StartIfNeeded → exec.Command 子进程路径），
 	// 这样 client.go 的 Ping/Validate 可以独立验证而不依赖 Task 8 的 CLI。
-	d, err := daemon.New(macnicaMPR, 5*time.Minute)
+	d, err := daemon.New(corpusAMPR, 5*time.Minute)
 	require.NoError(t, err)
 	go func() { _ = d.Serve() }()
 	t.Cleanup(func() { _ = d.Stop() })
@@ -45,18 +45,18 @@ func TestClient_PingAndValidate(t *testing.T) {
 	}
 	require.True(t, daemon.IsAlive(d.SocketPath()))
 
-	c := daemon.NewClient(daemon.ClientOptions{MprPath: macnicaMPR})
+	c := daemon.NewClient(daemon.ClientOptions{MprPath: corpusAMPR})
 
 	// Ping
 	pr, err := c.Ping()
 	require.NoError(t, err)
 	require.NotNil(t, pr)
 	assert.True(t, pr.OK)
-	assert.Equal(t, macnicaMPR, pr.MprPath)
+	assert.Equal(t, corpusAMPR, pr.MprPath)
 	assert.Greater(t, pr.EntityCount, 0)
 
 	// Validate
-	vr, err := c.Validate(daemon.ValidateRequest{MprPath: macnicaMPR})
+	vr, err := c.Validate(daemon.ValidateRequest{MprPath: corpusAMPR})
 	require.NoError(t, err)
 	require.NotNil(t, vr)
 	assert.Empty(t, vr.Error)
@@ -64,9 +64,9 @@ func TestClient_PingAndValidate(t *testing.T) {
 }
 
 func TestClient_StartIfNeeded_NoOpWhenAlive(t *testing.T) {
-	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 
-	d, err := daemon.New(macnicaMPR, 5*time.Minute)
+	d, err := daemon.New(corpusAMPR, 5*time.Minute)
 	require.NoError(t, err)
 	go func() { _ = d.Serve() }()
 	t.Cleanup(func() { _ = d.Stop() })
@@ -80,7 +80,7 @@ func TestClient_StartIfNeeded_NoOpWhenAlive(t *testing.T) {
 	}
 	require.True(t, daemon.IsAlive(d.SocketPath()))
 
-	c := daemon.NewClient(daemon.ClientOptions{MprPath: macnicaMPR})
+	c := daemon.NewClient(daemon.ClientOptions{MprPath: corpusAMPR})
 	// daemon 已活：StartIfNeeded 必须立即返回 nil，不尝试 exec.Command
 	require.NoError(t, c.StartIfNeeded())
 }

@@ -18,8 +18,8 @@ import (
 )
 
 func TestSemantic_FullPipeline_Macnica(t *testing.T) {
-	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
-	b, err := mprbackend.NewFromPath(macnicaMPR)
+	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
+	b, err := mprbackend.NewFromPath(corpusAMPR)
 	require.NoError(t, err)
 	defer func() { _ = b.Disconnect() }()
 
@@ -29,7 +29,7 @@ func TestSemantic_FullPipeline_Macnica(t *testing.T) {
 	assert.Greater(t, idx.EnumCount(), 0, "should index enums")
 	t.Logf("Index: %d entities, %d enums, %d constants", idx.EntityCount(), idx.EnumCount(), idx.ConstantsCount())
 
-	records := scanProject(t, macnicaMPR, scan.Options{})
+	records := scanProject(t, corpusAMPR, scan.Options{})
 	t.Logf("Scanned: %d expressions", len(records))
 
 	parsed := parse.BatchParseWithCatalog(records, idx)
@@ -50,13 +50,13 @@ func TestSemantic_FullPipeline_Macnica(t *testing.T) {
 			break
 		}
 	}
-	assert.True(t, foundE006, "macnica known E006 must be detected")
+	assert.True(t, foundE006, "corpus-a known E006 must be detected")
 	assert.GreaterOrEqual(t, len(semIssues), 0)
 }
 
 func TestSemantic_NoDaemon_SkipsSEM(t *testing.T) {
-	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
-	records := scanProject(t, macnicaMPR, scan.Options{})
+	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
+	records := scanProject(t, corpusAMPR, scan.Options{})
 
 	parsed := parse.BatchParse(records)
 	var semIssues []validate.ValidationResult

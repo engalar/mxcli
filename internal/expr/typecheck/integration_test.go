@@ -58,7 +58,7 @@ func runSEM03(t *testing.T, mprPath string) []typecheck.Result {
 }
 
 func TestSEM03_Macnica_HasDetections(t *testing.T) {
-	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	mprPath := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	results := runSEM03(t, mprPath)
 	sem03 := 0
 	for _, r := range results {
@@ -68,16 +68,16 @@ func TestSEM03_Macnica_HasDetections(t *testing.T) {
 	}
 	t.Logf("SEM-03 detections: %d", sem03)
 	if sem03 == 0 {
-		t.Error("expected at least 1 SEM-03 detection in macnica")
+		t.Error("expected at least 1 SEM-03 detection in corpus-a")
 	}
 }
 
-func TestSEM03_Mx2026AIDay_NoFalsePositives(t *testing.T) {
-	mprPath := testutil.FindMPR(t, "MX2026_MPR", "testdata/mx2026aiday/Factory Management.mpr")
+func TestSEM03_CorpusB_NoFalsePositives(t *testing.T) {
+	mprPath := testutil.FindMPR(t, "CORPUS_B_MPR", "testdata/corpus-b/app.mpr")
 	results := runSEM03(t, mprPath)
 	for _, r := range results {
 		if r.RuleID == "SEM-03" {
-			t.Errorf("false positive SEM-03 in Mx2026AIDay: %s on %s/%s [%s]",
+			t.Errorf("false positive SEM-03 in corpus-b: %s on %s/%s [%s]",
 				r.Message, r.UnitType, r.Field, r.Raw)
 		}
 	}

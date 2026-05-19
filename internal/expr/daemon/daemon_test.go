@@ -17,16 +17,16 @@ import (
 )
 
 func TestDaemon_ServeAndPing(t *testing.T) {
-	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 
-	d, err := daemon.New(macnicaMPR, 5*time.Minute)
+	d, err := daemon.New(corpusAMPR, 5*time.Minute)
 	require.NoError(t, err)
 
 	go func() { _ = d.Serve() }()
 	t.Cleanup(func() { _ = d.Stop() })
 
 	// 等待 socket 出现 (最多 2s)
-	sockPath := daemon.SocketPath(macnicaMPR)
+	sockPath := daemon.SocketPath(corpusAMPR)
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		if daemon.IsAlive(sockPath) {
@@ -45,20 +45,20 @@ func TestDaemon_ServeAndPing(t *testing.T) {
 	require.NoError(t, json.NewDecoder(conn).Decode(&resp))
 
 	assert.True(t, resp.OK)
-	assert.Equal(t, macnicaMPR, resp.MprPath)
+	assert.Equal(t, corpusAMPR, resp.MprPath)
 	assert.Greater(t, resp.EntityCount, 0, "EntityCount > 0")
 	assert.Greater(t, resp.EnumCount, 0, "EnumCount > 0")
 }
 
 func TestDaemon_ValidateReturnsResults(t *testing.T) {
-	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 
-	d, err := daemon.New(macnicaMPR, 5*time.Minute)
+	d, err := daemon.New(corpusAMPR, 5*time.Minute)
 	require.NoError(t, err)
 	go func() { _ = d.Serve() }()
 	t.Cleanup(func() { _ = d.Stop() })
 
-	sockPath := daemon.SocketPath(macnicaMPR)
+	sockPath := daemon.SocketPath(corpusAMPR)
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		if daemon.IsAlive(sockPath) {
@@ -72,54 +72,54 @@ func TestDaemon_ValidateReturnsResults(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 	require.NoError(t, json.NewEncoder(conn).Encode(daemon.ValidateRequest{
-		MprPath: macnicaMPR,
+		MprPath: corpusAMPR,
 	}))
 	var resp daemon.ValidateResponse
 	require.NoError(t, json.NewDecoder(conn).Decode(&resp))
 
 	assert.Empty(t, resp.Error, "no daemon-side error expected")
-	// macnica 项目期望至少有少量 SEM 命中（不强求精确数字）
+	// corpus-a 项目期望至少有少量 SEM 命中（不强求精确数字）
 	// 仅验证 daemon pipeline 跑通；results 可能为 0 也可能 >0。
 	assert.NotNil(t, resp.Results)
 }
 
 func TestDaemon_SocketDirExists(t *testing.T) {
-	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
-	d, err := daemon.New(macnicaMPR, 5*time.Minute)
+	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
+	d, err := daemon.New(corpusAMPR, 5*time.Minute)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = d.Stop() })
 
-	sockPath := daemon.SocketPath(macnicaMPR)
+	sockPath := daemon.SocketPath(corpusAMPR)
 	_, err = os.Stat(filepath.Dir(sockPath))
 	assert.NoError(t, err, "socket parent dir must exist after New()")
 }
 
 func TestDaemon_NewWithSocket_HonoursOverride(t *testing.T) {
-	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	custom := filepath.Join(t.TempDir(), "custom.sock")
-	d, err := daemon.NewWithSocket(macnicaMPR, custom, 5*time.Minute)
+	d, err := daemon.NewWithSocket(corpusAMPR, custom, 5*time.Minute)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = d.Stop() })
 
 	assert.Equal(t, custom, d.SocketPath(), "SocketPath() must reflect the override")
-	assert.NotEqual(t, daemon.SocketPath(macnicaMPR), d.SocketPath(),
+	assert.NotEqual(t, daemon.SocketPath(corpusAMPR), d.SocketPath(),
 		"override should differ from default SocketPath(mprPath)")
 }
 
 func TestDaemon_NewWithSocket_EmptyFallsBackToDefault(t *testing.T) {
-	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
-	d, err := daemon.NewWithSocket(macnicaMPR, "", 5*time.Minute)
+	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
+	d, err := daemon.NewWithSocket(corpusAMPR, "", 5*time.Minute)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = d.Stop() })
 
-	assert.Equal(t, daemon.SocketPath(macnicaMPR), d.SocketPath(),
+	assert.Equal(t, daemon.SocketPath(corpusAMPR), d.SocketPath(),
 		"empty socketPath should fall back to SocketPath(mprPath)")
 }
 
 func TestDaemon_NewWithSocket_ServeBindsCustom(t *testing.T) {
-	macnicaMPR := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	custom := filepath.Join(t.TempDir(), "bind.sock")
-	d, err := daemon.NewWithSocket(macnicaMPR, custom, 5*time.Minute)
+	d, err := daemon.NewWithSocket(corpusAMPR, custom, 5*time.Minute)
 	require.NoError(t, err)
 	go func() { _ = d.Serve() }()
 	t.Cleanup(func() { _ = d.Stop() })
@@ -133,6 +133,6 @@ func TestDaemon_NewWithSocket_ServeBindsCustom(t *testing.T) {
 	}
 	assert.True(t, daemon.IsAlive(custom),
 		"Serve() must bind the override socket path")
-	assert.False(t, daemon.IsAlive(daemon.SocketPath(macnicaMPR)),
+	assert.False(t, daemon.IsAlive(daemon.SocketPath(corpusAMPR)),
 		"default SocketPath must NOT be bound when override is given")
 }

@@ -31,13 +31,13 @@ func scanProject(t *testing.T, mprPath string, opts scan.Options) []scan.ExprRec
 }
 
 func TestScanMprcontents_ReturnsExpressions(t *testing.T) {
-	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	mprPath := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	records := scanProject(t, mprPath, scan.Options{})
-	assert.Greater(t, len(records), 3000, "macnica should have >3000 expressions")
+	assert.Greater(t, len(records), 3000, "corpus-a should have >3000 expressions")
 }
 
 func TestScanMprcontents_FilterByType(t *testing.T) {
-	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	mprPath := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	records := scanProject(t, mprPath, scan.Options{FilterType: "ExpressionSplitCondition"})
 	assert.Greater(t, len(records), 500)
 	for _, r := range records {
@@ -46,7 +46,7 @@ func TestScanMprcontents_FilterByType(t *testing.T) {
 }
 
 func TestScanMprcontents_RequiredFields(t *testing.T) {
-	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	mprPath := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	records := scanProject(t, mprPath, scan.Options{})
 	require.NotEmpty(t, records)
 	for _, r := range records[:min(100, len(records))] {
@@ -61,7 +61,7 @@ func TestScanMprcontents_RequiredFields(t *testing.T) {
 }
 
 func TestScanMprcontents_ExcludesURLs(t *testing.T) {
-	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	mprPath := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	records := scanProject(t, mprPath, scan.Options{})
 	for _, r := range records {
 		assert.False(t, len(r.Raw) > 7 && r.Raw[:8] == "https://",
@@ -72,7 +72,7 @@ func TestScanMprcontents_ExcludesURLs(t *testing.T) {
 func TestScanMprcontents_NoSlotPath(t *testing.T) {
 	// SlotPath was removed — parse package now detects XPath by content.
 	// This test verifies the struct compiles correctly without SlotPath.
-	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	mprPath := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	records := scanProject(t, mprPath, scan.Options{})
 	require.NotEmpty(t, records)
 	// Just verify the record has the fields we do care about.
@@ -84,7 +84,7 @@ func TestScanMprcontents_NoSlotPath(t *testing.T) {
 
 func TestScanMprcontents_TypeCheckFields(t *testing.T) {
 	// Verify TargetAttrQN is populated for ChangeActionItem expressions.
-	mprPath := testutil.FindMPR(t, "MACNICA_MPR", "testdata/macnica/MacnicaApp.mpr")
+	mprPath := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	recs := scanProject(t, mprPath, scan.Options{FilterType: "ChangeActionItem"})
 	// At least some ChangeActionItem records should have TargetAttrQN set.
 	withAttr := 0
