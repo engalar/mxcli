@@ -161,7 +161,9 @@ func (n *overlayNode) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno)
 		entries = append(entries, fuse.DirEntry{Name: e.Name(), Mode: mode, Ino: pathIno(rel)})
 	}
 
-	// Dirty-layer additions in this directory
+	// Dirty-layer additions in this directory.
+	// Direct mu access is safe: overlay and dirtyLayer are in the same package,
+	// and we need atomic iteration over files without a per-entry method call.
 	n.layer.mu.RLock()
 	defer n.layer.mu.RUnlock()
 	for rel, content := range n.layer.files {
@@ -200,6 +202,9 @@ type overlayReadHandle struct {
 }
 
 func (h *overlayReadHandle) Read(_ context.Context, dest []byte, off int64) (fuse.ReadResult, syscall.Errno) {
+	if off < 0 {
+		return fuse.ReadResultData(nil), syscall.EINVAL
+	}
 	if off >= int64(len(h.content)) {
 		return fuse.ReadResultData(nil), 0
 	}
@@ -211,6 +216,7 @@ func (h *overlayReadHandle) Read(_ context.Context, dest []byte, off int64) (fus
 }
 
 func (n *overlayNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
+	// TODO(Task 4): handle flags&(syscall.O_WRONLY|syscall.O_RDWR) != 0 — return write handle.
 	// Write-capable open handled by Create / separate write handle.
 	content := n.layer.read(n.relPath)
 	if content == nil {
