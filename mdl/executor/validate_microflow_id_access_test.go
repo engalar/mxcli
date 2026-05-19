@@ -155,6 +155,33 @@ func TestValidateMicroflow_IdAccess_SourceExpr_NoFalsePositive(t *testing.T) {
 	}
 }
 
+// TestValidateMicroflow_IdAccess_NoDuplicateViolation verifies that $Var/id
+// inside a SourceExpr produces exactly ONE MDL013, not two (one from the inner
+// AttributePathExpr and one from the Source string).
+func TestValidateMicroflow_IdAccess_NoDuplicateViolation(t *testing.T) {
+	stmt := &ast.CreateMicroflowStmt{
+		Name: ast.QualifiedName{Module: "WF_Engine", Name: "ACT_Test"},
+		Body: []ast.MicroflowStatement{
+			&ast.MfSetStmt{
+				Target: "X",
+				Value: &ast.SourceExpr{
+					Source:     "$Area/id",
+					Expression: &ast.AttributePathExpr{Variable: "Area", Path: []string{"id"}},
+				},
+			},
+		},
+	}
+	count := 0
+	for _, v := range executor.ValidateMicroflow(stmt) {
+		if v.RuleID == "MDL013" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("expected exactly 1 MDL013 violation, got %d", count)
+	}
+}
+
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || len(sub) == 0 ||
 		func() bool {

@@ -653,9 +653,9 @@ func (v *microflowValidator) checkIdAccess(expr ast.Expression) {
 	}
 	switch e := expr.(type) {
 	case *ast.SourceExpr:
-		// Expressions in SET/RETURN/DECLARE are wrapped as SourceExpr; check both
-		// the inner parsed tree and the raw source string for $Var/id patterns.
-		v.checkIdAccess(e.Expression)
+		// Source is the canonical string form; Expression is its parsed representation.
+		// Check the Source string only — recursing into Expression would double-report
+		// the same issue (both paths detect the same /id access).
 		if containsIdPath(e.Source) {
 			v.addViolation("MDL013", linter.SeverityError,
 				fmt.Sprintf("expression contains '/id' which is illegal in Mendix microflow expressions — 'id' is a reserved system attribute (only valid in XPath constraints). Found in: %q", e.Source),

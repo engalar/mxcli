@@ -90,9 +90,7 @@ Examples:
 			}
 			os.Exit(1)
 		}
-		if !isStructured {
-			fmt.Printf("✓ Syntax OK (%d statements)\n", len(prog.Statements))
-		}
+		stmtCount := len(prog.Statements)
 
 		// Validate statements (doesn't require project connection)
 		var violations []linter.Violation
@@ -192,7 +190,7 @@ Examples:
 		}
 
 		if !isStructured {
-			fmt.Println("\nCheck passed!")
+			fmt.Printf("✓ Check passed! (%d statements)\n", stmtCount)
 		}
 	},
 }
