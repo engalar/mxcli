@@ -144,12 +144,15 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		mf.SetAllowedModuleRolesQualifiedNames(defaultDocumentAccessRoleQNames(ctx, module))
 	}
 
-	// Return type — primitive shorthand only at this stage. Entity
-	// / list-of-entity returns wire onto MicroflowReturnType element
-	// and need their own follow-up commit.
+	// Return type — set both the shorthand string (ReturnType) and the
+	// nested DataType element (MicroflowReturnType) that mx check requires
+	// for caller return-variable type resolution.
 	if s.ReturnType != nil {
 		if t := paramASTToShortType(s.ReturnType.Type); t != "" {
 			mf.SetReturnType(t)
+		}
+		if dt := convertASTToGenDataType(s.ReturnType.Type); dt != nil {
+			mf.SetMicroflowReturnType(dt)
 		}
 		if s.ReturnType.Variable != "" {
 			mf.SetReturnVariableName(s.ReturnType.Variable)

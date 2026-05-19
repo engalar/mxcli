@@ -10763,7 +10763,7 @@ func (o *StringTemplate) SetText(v string) {
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *StringTemplate) InitFromRaw(raw bson.Raw) {
-	if children, err := codec.DecodeChildren(raw, "Arguments"); err == nil {
+	if children, err := codec.DecodeChildren(raw, "Parameters"); err == nil {
 		for _, child := range children {
 			o.arguments.AppendFromDecode(child)
 		}
@@ -14166,7 +14166,7 @@ func initJavaActionCallAction() *JavaActionCallAction {
 	o.parameterMappings.Bind(&o.Base, 4)
 	o.useReturnVariable = property.NewPrimitive[bool]("UseReturnVariable", property.DecodeBool)
 	o.useReturnVariable.Bind(&o.Base, 5)
-	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
+	o.outputVariableName = property.NewPrimitive[string]("ResultVariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 6)
 	o.SetProperties([]element.Property{o.errorHandlingType, o.javaAction, o.queueSettings, o.queue, o.parameterMappings, o.useReturnVariable, o.outputVariableName, })
 	return o
@@ -14700,7 +14700,7 @@ func NewMicroflowCallAction() *MicroflowCallAction {
 // When a storage alias exists, init uses the STORAGE name (what Mendix uses in BSON).
 func initMicroflowCallParameterMapping() *MicroflowCallParameterMapping {
 	o := &MicroflowCallParameterMapping{}
-	o.SetTypeName("Mappings$MicroflowCallParameterMappingImpl")
+	o.SetTypeName("Microflows$MicroflowCallParameterMapping")
 	o.parameter = property.NewByNameRef[element.Element]("Parameter", "Microflows$MicroflowParameter")
 	o.parameter.Bind(&o.Base, 0)
 	o.argument = property.NewPrimitive[string]("Argument", property.DecodeString)
@@ -16016,7 +16016,7 @@ func NewStartEvent() *StartEvent {
 func initStringTemplate() *StringTemplate {
 	o := &StringTemplate{}
 	o.SetTypeName("Microflows$StringTemplate")
-	o.arguments = property.NewPartList[element.Element]("Arguments")
+	o.arguments = property.NewPartList[element.Element]("Parameters")
 	o.arguments.Bind(&o.Base, 0)
 	o.text = property.NewPrimitive[string]("Text", property.DecodeString)
 	o.text.Bind(&o.Base, 1)
