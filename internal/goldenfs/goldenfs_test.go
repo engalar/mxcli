@@ -259,3 +259,43 @@ func TestSnapshot_Commit_AfterRollback_IsNoop(t *testing.T) {
 		t.Fatal("Commit after Rollback must not write to base")
 	}
 }
+
+func TestSnapshot_Parallel_Independent(t *testing.T) {
+	base := baseFixture(t)
+
+	snap1, err := Open(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snap1.Close()
+
+	snap2, err := Open(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snap2.Close()
+
+	// Write different content to the same path in each snapshot.
+	if err := os.WriteFile(filepath.Join(snap1.MountDir(), "hello.txt"), []byte("snap1"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(snap2.MountDir(), "hello.txt"), []byte("snap2"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got1, _ := os.ReadFile(filepath.Join(snap1.MountDir(), "hello.txt"))
+	got2, _ := os.ReadFile(filepath.Join(snap2.MountDir(), "hello.txt"))
+
+	if string(got1) != "snap1" {
+		t.Errorf("snap1: want snap1, got %q", got1)
+	}
+	if string(got2) != "snap2" {
+		t.Errorf("snap2: want snap2, got %q", got2)
+	}
+
+	// Base untouched.
+	orig, _ := os.ReadFile(filepath.Join(base, "hello.txt"))
+	if string(orig) != "world" {
+		t.Errorf("base must remain world, got %q", orig)
+	}
+}
