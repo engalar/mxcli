@@ -31,7 +31,9 @@ No changes to production code.
 
 ## MDL Execution Plan
 
-The test executes 5 sequential `ExecuteProgram()` calls. Each is a separate step; failure messages name the step. After all steps succeed, `mx check` is invoked on the FUSE-mounted project path.
+The test executes 6 sequential `ExecuteProgram()` calls. Each is a separate step; failure messages name the step. After all steps succeed, `mx check` is invoked on the FUSE-mounted project path.
+
+**Why pages are required:** Mendix `mx check` validates that every User Task and Multi-User Task references a valid page. Without page references, `mx check` produces a structural error (not a CE warning) and may panic. Pages must be created before the workflow is written.
 
 ### Step 1 — Infrastructure (module role + stub microflows)
 
@@ -53,6 +55,21 @@ create or modify microflow MyFirstModule.ACT_BoundaryHandler ()
 ```
 
 **Why separate step:** Security and microflow objects must exist before the entity grant and workflow can reference them.
+
+### Step 1b — Workflow task pages
+
+Four minimal pages using `Atlas_Core.Atlas_TopBar` (the layout exists in `testdata/expr-checker/minimal.mpr` — confirmed via `select QualifiedName from CATALOG.layouts where name = 'Atlas_TopBar'`):
+
+```sql
+create page MyFirstModule.Page_WF_InitialReview    layout Atlas_Core.Atlas_TopBar ();
+create page MyFirstModule.Page_WF_StandardApproval layout Atlas_Core.Atlas_TopBar ();
+create page MyFirstModule.Page_WF_SeniorApproval   layout Atlas_Core.Atlas_TopBar ();
+create page MyFirstModule.Page_WF_FinalSignOff     layout Atlas_Core.Atlas_TopBar ();
+```
+
+Each page is intentionally minimal (empty widget tree). `mx check` requires the page to exist and reference a valid layout, but does not require widgets for structural validation.
+
+**Why separate from Step 1:** Pages can be created in the same script segment as microflows; they are split into a named step for clarity.
 
 ### Step 2 — Data model (enumeration + entity)
 
@@ -96,6 +113,7 @@ create or modify workflow MyFirstModule.WF_ComplexApproval
   description 'Comprehensive workflow integration test covering all major activity types'
 begin
   user task InitialReview 'Initial Review'
+    page MyFirstModule.Page_WF_InitialReview
     targeting users xpath '[Status = ''Draft'']'
     outcomes
       'Submit' {
@@ -103,6 +121,7 @@ begin
           outcomes
             true -> {
               multi user task SeniorApproval 'Senior Approval'
+                page MyFirstModule.Page_WF_SeniorApproval
                 targeting groups xpath '[id != 0]'
                 outcomes
                   'Approve' { }
@@ -110,6 +129,7 @@ begin
             }
             false -> {
               user task StandardApproval 'Standard Approval'
+                page MyFirstModule.Page_WF_StandardApproval
                 targeting users xpath '[id != 0]'
                 outcomes
                   'Approve' { }
@@ -122,6 +142,7 @@ begin
           path 2 { }
         ;
         user task FinalSignOff 'Final Sign-off'
+          page MyFirstModule.Page_WF_FinalSignOff
           outcomes
             'Sign'              { }
             'ReturnForRevision' { jump to InitialReview; }
@@ -188,11 +209,12 @@ func TestGoldenFS_WorkflowIntegration(t *testing.T) {
         }
     }
 
-    run("step1-infra",     step1InfraScript)
-    run("step2-datamodel", step2DataModelScript)
-    run("step3-grant",     step3GrantScript)
-    run("step4-workflow",  step4WorkflowScript)
-    run("step5-alter",     step5AlterScript)
+    run("step1a-infra",     step1InfraScript)   // module role + microflows
+    run("step1b-pages",     step1PagesScript)   // 4 workflow task pages
+    run("step2-datamodel",  step2DataModelScript)
+    run("step3-grant",      step3GrantScript)
+    run("step4-workflow",   step4WorkflowScript)
+    run("step5-alter",      step5AlterScript)
 
     if err := e.Close(); err != nil {
         t.Logf("executor close: %v", err)
@@ -247,7 +269,7 @@ The `run` helper is defined inline; `assertNoFUSECorruption` reuses the same log
 
 ## Out of Scope
 
-- Creating Workflow pages (requires page BSON which adds significant complexity)
+- Widget content inside pages (minimal empty-layout pages are sufficient for `mx check`)
 - User role + demo user creation (not required for `mx check` structural validation)
 - GRANT WORKFLOW ACCESS (no dedicated MDL syntax — workflow access is controlled via entity/microflow/page grants, which Step 3 covers)
 - Testing Rollback/Commit of workflow objects (covered by existing `TestSnapshot_Rollback_BaseUnchanged`)
@@ -259,9 +281,11 @@ The `run` helper is defined inline; `assertNoFUSECorruption` reuses the same log
 **Placeholder scan:** None found.
 
 **Internal consistency:**
-- Step 1 creates `ACT_Notify` and `ACT_BoundaryHandler` before they are referenced in Steps 4–5. ✅
+- Step 1a creates `ACT_Notify` and `ACT_BoundaryHandler` before they are referenced in Steps 4–5. ✅
+- Step 1b creates the 4 task pages before they are referenced in Step 4. ✅
 - Step 2 creates `WF_Status` before it is used as attribute type in `WF_Item`. ✅
 - Step 3 grants on `WF_Item` which exists after Step 2. ✅
+- `Atlas_Core.Atlas_TopBar` layout exists in testdata — confirmed via catalog query. ✅
 - `assertNoFUSECorruption` is marked for extraction — this is a concrete refactor, not a placeholder. ✅
 
 **Scope:** Single file, no production code changes, reuses existing test infrastructure. Appropriately scoped. ✅
