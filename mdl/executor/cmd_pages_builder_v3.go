@@ -17,6 +17,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
@@ -105,10 +106,11 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*genPg.Page, error)
 		pp.SetName(param.Name)
 		pp.SetIsRequired(true)
 
-		if bsonType := pageParamBSONType(param.Type); bsonType != "" {
-			// Primitive type — inject via raw BSON (no standalone gen DataType nodes yet)
-			setRawBSONField(pp, "ParameterType_type", bsonType)
-		} else if param.EntityType.Name != "" {
+		if param.EntityType.Name != "" {
+			// Entity-typed parameter: build a proper DataTypes$ObjectType nested element.
+			// Previously used setRawBSONField("ParameterType_type/entity") which wrote flat
+			// keys instead of a nested ParameterType document, causing DataTypes$UnknownType
+			// on read-back (CE0170 / CE0566).
 			entityID, err := pb.resolveEntity(param.EntityType)
 			if err != nil {
 				return nil, mdlerrors.NewBackend("resolve entity "+param.EntityType.String(), err)
@@ -116,8 +118,19 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*genPg.Page, error)
 			entityName := param.EntityType.String()
 			pb.paramScope[param.Name] = entityID
 			pb.paramEntityNames[param.Name] = entityName
-			setRawBSONField(pp, "ParameterType_type", bsonTypeObjectType)
-			setRawBSONField(pp, "ParameterType_entity", entityName)
+			objType := genDt.NewObjectType()
+			assignFreshID(objType)
+			objType.SetEntityQualifiedName(entityName)
+			pp.SetParameterType(objType)
+		} else if bsonType := pageParamBSONType(param.Type); bsonType != "" {
+			// Primitive type: build the corresponding gen DataType element.
+			primType := newPrimPageParamType(bsonType)
+			if primType != nil {
+				if withID, ok := primType.(genElementWithID); ok {
+					assignFreshID(withID)
+				}
+				pp.SetParameterType(primType)
+			}
 		}
 
 		page.AddParameters(pp)
@@ -145,12 +158,18 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*genPg.Page, error)
 
 			lc := genPg.NewLayoutCall()
 			assignFreshID(lc)
-			lc.SetLayoutQualifiedName(s.Layout)
+			// The gen type uses "Layout" as the BSON key but Mendix stores the layout
+			// qualified name under "Form" (historic naming). Use setRawBSONField to emit
+			// the correct key; do NOT call SetLayoutQualifiedName which would write "Layout".
+			setRawBSONField(lc, "Form", s.Layout)
 
 			mainPlaceholderRef := pb.getMainPlaceholderRef(s.Layout)
 
 			arg := genPg.NewLayoutCallArgument()
 			assignFreshID(arg)
+			// The gen type is "Forms$LayoutCallArgument" but Mendix uses "Forms$FormCallArgument"
+			// as the storage type. Override so Studio Pro can parse the argument correctly.
+			arg.SetTypeName("Forms$FormCallArgument")
 			arg.SetParameterQualifiedName(mainPlaceholderRef)
 
 			if len(s.Widgets) > 0 {
@@ -180,17 +199,25 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*genPg.Page, error)
 	return page, nil
 }
 
-// bsonTypeObjectType is the BSON type string for entity-typed page parameters.
-const bsonTypeObjectType = "DataTypes$ObjectType"
-
-// genPrimDataType creates a gen element for a primitive MDL data type kind.
-// Returns nil for entity/enum kinds (those are handled separately).
-func genPrimDataType(kind ast.DataTypeKind) element.Element {
-	// We use genPg raw nodes since there are no separate DataTypes package constructors
-	// that produce the right TypeNames. Instead we inject via setRawBSONField on the
-	// PageParameter itself. This function is kept for documentation purposes.
-	_ = kind
-	return nil
+// newPrimPageParamType returns a fresh gen DataType element for a primitive page
+// parameter type (e.g. "DataTypes$StringType"). Returns nil for unknown type strings.
+// Callers must call assignFreshID on the returned element before use.
+func newPrimPageParamType(bsonTypeName string) element.Element {
+	switch bsonTypeName {
+	case "DataTypes$StringType":
+		return genDt.NewStringType()
+	case "DataTypes$IntegerType":
+		return genDt.NewIntegerType()
+	case "DataTypes$DecimalType":
+		return genDt.NewDecimalType()
+	case "DataTypes$BooleanType":
+		return genDt.NewBooleanType()
+	case "DataTypes$DateTimeType":
+		return genDt.NewDateTimeType()
+	default:
+		// DataTypes$LongType and others: fall back to nil (caller skips SetParameterType).
+		return nil
+	}
 }
 
 // buildSnippetV3 creates a *genPg.Snippet from a CreateSnippetStmtV3.
@@ -226,9 +253,11 @@ func (pb *pageBuilder) buildSnippetV3(s *ast.CreateSnippetStmtV3) (*genPg.Snippe
 			entityName := param.EntityType.String()
 			pb.paramScope[param.Name] = entityID
 			pb.paramEntityNames[param.Name] = entityName
-			// Set entity type via raw BSON injection
-			setRawBSONField(sp, "ParameterType_type", bsonTypeObjectType)
-			setRawBSONField(sp, "ParameterType_entity", entityName)
+			// Build a proper DataTypes$ObjectType nested element (same fix as page params).
+			objType := genDt.NewObjectType()
+			assignFreshID(objType)
+			objType.SetEntityQualifiedName(entityName)
+			sp.SetParameterType(objType)
 		}
 
 		snippet.AddParameters(sp)

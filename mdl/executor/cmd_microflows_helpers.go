@@ -338,10 +338,15 @@ func expressionToXPath(expr ast.Expression) string {
 	case *ast.QualifiedNameExpr:
 		return qualifiedNameToXPath(e)
 	case *ast.SourceExpr:
-		if e.Source != "" {
-			return e.Source
+		// Always rebuild from the parsed AST rather than using the raw Source text.
+		// The ANTLR token concatenation in extractOriginalText() strips whitespace
+		// between tokens, so raw Source produces strings like
+		// "UserId=$UserNameANDIsActive=trueANDIsInvalid=false" (missing spaces).
+		// This mirrors the fix already applied in expressionToString's SourceExpr case.
+		if e.Expression != nil {
+			return expressionToXPath(e.Expression)
 		}
-		return expressionToXPath(e.Expression)
+		return e.Source
 	default:
 		// For all other expression types, the standard serialization is correct
 		return expressionToString(expr)
