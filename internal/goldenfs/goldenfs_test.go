@@ -149,3 +149,63 @@ func TestSnapshot_MkdirAndWriteDeep(t *testing.T) {
 		t.Fatalf("want hi, got %q err %v", got, err)
 	}
 }
+
+func TestSnapshot_Commit_PersistsToBase(t *testing.T) {
+	base := baseFixture(t)
+	snap, err := Open(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snap.Close()
+
+	if err := os.WriteFile(filepath.Join(snap.MountDir(), "committed.txt"), []byte("saved"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := snap.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := os.ReadFile(filepath.Join(base, "committed.txt"))
+	if err != nil || string(got) != "saved" {
+		t.Fatalf("want saved, got %q err %v", got, err)
+	}
+}
+
+func TestSnapshot_Rollback_BaseUnchanged(t *testing.T) {
+	base := baseFixture(t)
+	snap, err := Open(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snap.Close()
+
+	if err := os.WriteFile(filepath.Join(snap.MountDir(), "temp.txt"), []byte("gone"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	snap.Rollback()
+
+	// After rollback the file should disappear from the mount view.
+	if _, err := os.Stat(filepath.Join(snap.MountDir(), "temp.txt")); !os.IsNotExist(err) {
+		t.Fatal("rolled-back file must not be visible in mount")
+	}
+	// Base must be untouched.
+	if _, err := os.Stat(filepath.Join(base, "temp.txt")); !os.IsNotExist(err) {
+		t.Fatal("base dir must not have the file")
+	}
+}
+
+func TestSnapshot_Close_DoesNotCommit(t *testing.T) {
+	base := baseFixture(t)
+	snap, err := Open(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(snap.MountDir(), "volatile.txt"), []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	snap.Close()
+
+	if _, err := os.Stat(filepath.Join(base, "volatile.txt")); !os.IsNotExist(err) {
+		t.Fatal("Close without Commit must not write to base")
+	}
+}
