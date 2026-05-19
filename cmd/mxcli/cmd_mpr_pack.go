@@ -213,12 +213,25 @@ func convertV1ToV2(inputMPR, outputMPR string) error {
 
 	outputContentsDir := filepath.Join(filepath.Dir(outputMPR), "mprcontents")
 
+	// Guard: if the output directory is the same as the input directory, outputContentsDir
+	// would point to the existing v2 project's mprcontents/ — deleting it would corrupt it.
+	inputContentsDir := filepath.Join(filepath.Dir(inputMPR), "mprcontents")
+	if outputContentsDir == inputContentsDir {
+		return fmt.Errorf("output file must be in a different directory than the input: both resolve to mprcontents at %s", outputContentsDir)
+	}
+
 	// Open input (read-only).
 	srcDB, err := sql.Open("sqlite", fmt.Sprintf("file:%s?mode=ro", inputMPR))
 	if err != nil {
 		return fmt.Errorf("opening input MPR: %w", err)
 	}
 	defer srcDB.Close()
+
+	// Validate that the input is actually v1 format (has a Contents column in Unit).
+	// Do this BEFORE any destructive operations so we never corrupt the caller's directory.
+	if !sqliteTableHasColumn(srcDB, "Unit", "Contents") {
+		return fmt.Errorf("input MPR %q appears to be v2 format (no Contents column in Unit table); to-v2 requires a v1 input", inputMPR)
+	}
 
 	// Remove existing output if present, then create fresh.
 	if err := os.Remove(outputMPR); err != nil && !os.IsNotExist(err) {
@@ -351,4 +364,26 @@ func convertV1ToV2(inputMPR, outputMPR string) error {
 
 	fmt.Fprintf(os.Stderr, "Done. Converted %d units from v1 → v2: %s\n", count, outputMPR)
 	return nil
+}
+
+// sqliteTableHasColumn reports whether the given table in db has a column with the given name.
+func sqliteTableHasColumn(db *sql.DB, table, column string) bool {
+	rows, err := db.Query("PRAGMA table_info(" + table + ")")
+	if err != nil {
+		return false
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, colType string
+		var notNull, pk int
+		var dfltValue *string
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &dfltValue, &pk); err != nil {
+			continue
+		}
+		if name == column {
+			return true
+		}
+	}
+	return false
 }

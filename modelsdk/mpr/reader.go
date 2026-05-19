@@ -122,6 +122,24 @@ func OpenWithOptions(path string, opts OpenOptions) (*Reader, error) {
 		contentsDir := filepath.Join(dir, "mprcontents")
 		r.version = MPRVersionV2
 		r.contentsDir = contentsDir
+
+		// The mprcontents/ directory is missing even though the schema is v2.
+		// This means the project was opened without its unit files — any write
+		// operation would produce an inconsistent project where existing SQLite
+		// unit rows have no corresponding .mxunit files on disk.
+		// Refuse write access to prevent silent corruption.
+		if !opts.ReadOnly {
+			var unitCount int
+			_ = db.QueryRow("SELECT COUNT(*) FROM Unit").Scan(&unitCount)
+			if unitCount > 0 {
+				r.Close()
+				return nil, fmt.Errorf(
+					"mpr: project %q has v2 schema (%d units registered) but mprcontents/ directory is missing at %s; "+
+						"restore mprcontents/ before opening for writing, or use mxcli mpr-pack to-v1 to convert to a self-contained file",
+					path, unitCount, contentsDir,
+				)
+			}
+		}
 	}
 
 	// Verify it's a valid MPR file
