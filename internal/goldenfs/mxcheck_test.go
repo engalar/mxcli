@@ -30,7 +30,8 @@ func findMxBinaryForTest() string {
 	if home, err := os.UserHomeDir(); err == nil {
 		pattern := filepath.Join(home, ".mxcli", "mxbuild", "*", "modeler", "mx")
 		if matches, _ := filepath.Glob(pattern); len(matches) > 0 {
-			// Last match = highest sort order (e.g. 11.6.6 after 11.6.4).
+			// Last in lexicographic order — set MX_BINARY to override when version
+			// layout causes incorrect selection (e.g. 11.10.x < 11.9.x lexicographically).
 			return matches[len(matches)-1]
 		}
 	}
