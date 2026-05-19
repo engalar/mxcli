@@ -98,13 +98,19 @@ func Check(opts CheckOptions) error {
 	runUpdateWidgets := !opts.SkipUpdateWidgets
 
 	if runUpdateWidgets && !opts.ForceUpdateWidgets && isMPRv2(opts.ProjectPath) {
-		fmt.Fprintf(stderr, "Warning: MPR v2 format detected. Skipping widget definition update to preserve format.\n")
-		fmt.Fprintf(stderr, "         Use --update-widgets to force update (will convert MPR to v1 format).\n")
+		fmt.Fprintf(stderr, "Warning: MPR v2 format detected (mprcontents/ layout).\n")
+		fmt.Fprintf(stderr, "         Widget definition update is SKIPPED by default to prevent Mendix mx from\n")
+		fmt.Fprintf(stderr, "         silently converting your project from v2 (mxunit files) to v1 (monolithic MPR).\n")
+		fmt.Fprintf(stderr, "         This conversion is irreversible without git restore.\n")
+		fmt.Fprintf(stderr, "         Pluggable widget CE0463 errors (if any) may be false positives.\n")
+		fmt.Fprintf(stderr, "         Use --update-widgets to run widget update anyway (will convert MPR to v1).\n")
 		runUpdateWidgets = false
 	}
 
 	if opts.ForceUpdateWidgets && isMPRv2(opts.ProjectPath) {
-		fmt.Fprintf(stderr, "Warning: --update-widgets specified. MPR v2 may be converted to v1 format by mx check.\n")
+		fmt.Fprintf(stderr, "Warning: --update-widgets specified on a v2 MPR.\n")
+		fmt.Fprintf(stderr, "         Mendix mx will convert mprcontents/ (v2) to monolithic MPR (v1).\n")
+		fmt.Fprintf(stderr, "         This is IRREVERSIBLE without git restore. Proceeding...\n")
 	}
 
 	// Run mx update-widgets to normalize pluggable widget definitions.
