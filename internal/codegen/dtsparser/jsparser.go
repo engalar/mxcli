@@ -145,6 +145,11 @@ type DomainMeta struct {
 	// where the BSON storage key differs from PascalCase(JS property name).
 	PropertyKeyOverrides map[string]string
 
+	// RefListVersion3Fields is a set of "ClassName.propertyName" pairs whose
+	// ByNameRefList fields require BSON version marker int32(3) instead of the
+	// default int32(1). Mendix uses version 3 for AllowedRoles on Forms$Page.
+	RefListVersion3Fields map[string]bool
+
 	EdgeKindOverrides map[string]string // TargetType → edge kind hint
 	IdRefScope        map[string]string // "ClassName.propName" → "cross-unit" or "intra-unit"
 

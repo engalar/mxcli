@@ -182,6 +182,17 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 						"\""+override+"\"", 1)
 				}
 			}
+			// Apply RefList version3 override: switch NewByNameRefList → NewByNameRefListV3
+			// for fields that require BSON version marker int32(3) instead of int32(1).
+			if td.Fields[fi].IsRefList && meta.RefListVersion3Fields != nil {
+				v3key := cls.Name + "." + td.Fields[fi].PropName
+				if meta.RefListVersion3Fields[v3key] {
+					td.Fields[fi].Constructor = strings.Replace(
+						td.Fields[fi].Constructor,
+						"property.NewByNameRefList[",
+						"property.NewByNameRefListV3[", 1)
+				}
+			}
 		}
 		types = append(types, td)
 	}

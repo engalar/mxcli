@@ -121,8 +121,9 @@ func main() {
 			}
 		}
 
-		// Apply property-level BSON key overrides.
+		// Apply property-level BSON key overrides and other supplements.
 		meta.PropertyKeyOverrides = suppl.PropertyKeyOverrides
+		meta.RefListVersion3Fields = suppl.refListVersion3Fields
 		meta.EdgeKindOverrides = suppl.EdgeKindOverrides
 		meta.IdRefScope = suppl.IdRefScope
 		meta.CrossDomainProps = crossDomainProps
@@ -142,6 +143,7 @@ func main() {
 type supplements struct {
 	StorageAliases       map[string]string          `json:"storage_aliases"`
 	PropertyKeyOverrides map[string]string          `json:"property_key_overrides"`
+	RefListVersion3List  []string                   `json:"ref_list_version3_fields"`
 	ForceConcreteTypes   []string                   `json:"force_concrete_types"`
 	EdgeKindOverrides    map[string]string          `json:"edge_kind_overrides"`
 	IdRefScope           map[string]string          `json:"id_ref_scope"`
@@ -149,9 +151,10 @@ type supplements struct {
 	ExtraTypes           map[string]json.RawMessage `json:"extra_types"`
 
 	// Derived after loading.
-	forceConcreteSet map[string]bool // built from ForceConcreteTypes slice
-	parsedExtraProps map[string][]supplementProp
-	parsedExtraTypes map[string][]supplementTypeDef
+	forceConcreteSet      map[string]bool // built from ForceConcreteTypes slice
+	refListVersion3Fields map[string]bool // built from RefListVersion3List
+	parsedExtraProps      map[string][]supplementProp
+	parsedExtraTypes      map[string][]supplementTypeDef
 }
 
 type supplementProp struct {
@@ -189,6 +192,12 @@ func loadSupplements() supplements {
 	s.forceConcreteSet = map[string]bool{}
 	for _, t := range s.ForceConcreteTypes {
 		s.forceConcreteSet[t] = true
+	}
+
+	// Build ref_list_version3 lookup set from slice.
+	s.refListVersion3Fields = map[string]bool{}
+	for _, f := range s.RefListVersion3List {
+		s.refListVersion3Fields[f] = true
 	}
 
 	// Parse extra_properties, skipping _doc string entries.

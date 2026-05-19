@@ -59,6 +59,12 @@ func (fb *flowBuilderGen) addShowPageActionGen(s *ast.ShowPageStmt) element.ID {
 	for _, arg := range s.Arguments {
 		mapping := genPg.NewPageParameterMapping()
 		assignFreshID(mapping)
+		// Mendix uses "Forms$PageParameterMapping" as the BSON $Type for show-page
+		// parameter mappings inside ShowFormAction.FormSettings.ParameterMappings.
+		// The default initPageParameterMapping() uses "Forms$FormCallArgument" which
+		// Studio Pro interprets as LayoutCallArgument (for layout slot arguments), causing
+		// a deserialization error. Override to the correct storage type here.
+		mapping.SetTypeName("Forms$PageParameterMapping")
 		mapping.SetParameterQualifiedName(pageQN + "." + arg.ParamName)
 		mapping.SetArgument(fb.exprToString(arg.Value))
 		settings.AddParameterMappings(mapping)

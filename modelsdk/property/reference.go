@@ -31,24 +31,41 @@ func (r *ByNameRef[T]) SetFromDecode(qn string) {
 // ByNameRefList is a property that holds a list of qualified-name references.
 type ByNameRefList[T element.Element] struct {
 	propertyBase
-	targetType string
-	qnames     []string
+	targetType    string
+	qnames        []string
+	versionMarker int32 // BSON array version prefix: 1 (default) or 3 (for AllowedRoles on pages)
 }
 
+// NewByNameRefList creates a ByNameRefList with BSON version marker int32(1).
+// Used for AllowedModuleRoles, ModuleRoles, and similar role lists on microflows/nanoflows.
 func NewByNameRefList[T element.Element](name, targetType string) *ByNameRefList[T] {
-	return &ByNameRefList[T]{propertyBase: propertyBase{name: name}, targetType: targetType}
+	return &ByNameRefList[T]{propertyBase: propertyBase{name: name}, targetType: targetType, versionMarker: 1}
+}
+
+// NewByNameRefListV3 creates a ByNameRefList with BSON version marker int32(3).
+// Required for AllowedRoles on Forms$Page (document-level access control).
+// Mendix Studio Pro uses version 3 for page AllowedRoles; using version 1 causes
+// CE0557 ("At least one allowed role must be selected") even when roles are set.
+func NewByNameRefListV3[T element.Element](name, targetType string) *ByNameRefList[T] {
+	return &ByNameRefList[T]{propertyBase: propertyBase{name: name}, targetType: targetType, versionMarker: 3}
 }
 
 func (r *ByNameRefList[T]) TargetType() string       { return r.targetType }
 func (r *ByNameRefList[T]) QualifiedNames() []string { return r.qnames }
 
-// BSONValue returns a versioned BSON array ([]any) with int32(1) as the
-// first element followed by the qualified-name strings. Mendix requires this
-// version prefix for string-only reference lists (AllowedModuleRoles, ModuleRoles,
-// etc.); omitting it causes CE0003 ("entity access is out of date") in Studio Pro.
+// BSONValue returns a versioned BSON array ([]any) with the version marker
+// as the first element followed by the qualified-name strings. Mendix requires
+// this version prefix for string-only reference lists; omitting it causes
+// CE0003 ("entity access is out of date") in Studio Pro.
+// Version 1 is used for AllowedModuleRoles on microflows; version 3 for
+// AllowedRoles on pages.
 func (r *ByNameRefList[T]) BSONValue() any {
+	vm := r.versionMarker
+	if vm == 0 {
+		vm = 1
+	}
 	out := make([]any, 0, len(r.qnames)+1)
-	out = append(out, int32(1))
+	out = append(out, vm)
 	for _, qn := range r.qnames {
 		out = append(out, qn)
 	}

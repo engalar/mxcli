@@ -31087,7 +31087,7 @@ func initPage() *Page {
 	o.style.Bind(&o.Base, 10)
 	o.appearance = property.NewPart[element.Element]("Appearance")
 	o.appearance.Bind(&o.Base, 11)
-	o.allowedRoles = property.NewByNameRefList[element.Element]("AllowedRoles", "Security$ModuleRole")
+	o.allowedRoles = property.NewByNameRefListV3[element.Element]("AllowedRoles", "Security$ModuleRole")
 	o.allowedRoles.Bind(&o.Base, 12)
 	o.popupCloseAction = property.NewPrimitive[string]("PopupCloseAction", property.DecodeString)
 	o.popupCloseAction.Bind(&o.Base, 13)

@@ -10480,7 +10480,7 @@ func (o *ShowPageAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
 		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
 	}
-	if child, err := codec.DecodeChild(raw, "PageSettings"); err == nil {
+	if child, err := codec.DecodeChild(raw, "FormSettings"); err == nil {
 		o.pageSettings.SetFromDecode(child)
 	}
 	o.passedObjectVariableName.Init(raw)
@@ -15876,7 +15876,7 @@ func initShowPageAction() *ShowPageAction {
 	o.SetTypeName("Microflows$ShowFormAction")
 	o.errorHandlingType = property.NewEnum[string]("ErrorHandlingType")
 	o.errorHandlingType.Bind(&o.Base, 0)
-	o.pageSettings = property.NewPart[element.Element]("PageSettings")
+	o.pageSettings = property.NewPart[element.Element]("FormSettings")
 	o.pageSettings.Bind(&o.Base, 1)
 	o.passedObjectVariableName = property.NewPrimitive[string]("PassedObjectVariableName", property.DecodeString)
 	o.passedObjectVariableName.Bind(&o.Base, 2)

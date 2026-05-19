@@ -61,6 +61,7 @@
     "CrossAssociation.parent":                           "ParentPointer",
     "IndexedAttribute.attribute":                        "AttributePointer",
     "PageClientAction.pageSettings":                     "FormSettings",
+    "ShowPageAction.pageSettings":                       "FormSettings",
     "PageSettings.page":                                 "Form",
     "PageForSpecialization.page":                        "Form",
     "*.outputVariableName":                              "VariableName",
@@ -96,6 +97,10 @@
     "ExportMapping.rootMappingElements":                 "Elements",
     "Text.translations":                                 "Items"
   },
+
+  "ref_list_version3_fields": [
+    "Page.allowedRoles"
+  ],
 
   "force_concrete_types": [
     "Microflows$MicroflowParameter",
