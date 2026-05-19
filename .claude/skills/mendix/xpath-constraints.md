@@ -132,7 +132,73 @@ where [System.owner = [%CurrentUser%]]
 where [System.owner = '[%CurrentUser%]']
 ```
 
-Common tokens: `[%CurrentUser%]`, `[%CurrentDateTime%]`, `[%CurrentObject%]`, `[%UserRole_RoleName%]`, `[%DayLength%]`
+完整的 token 列表见下方 **System Variables** 小节。
+
+## System Variables（[% ... %]）
+
+在 XPath 约束中使用时必须加单引号：`'[%CurrentUser%]'`  
+在微流表达式中使用时**不加**引号：`[%CurrentDateTime%]`
+
+> ⚠️ **不支持括号分组**：system variable 是字符串形式，不能用括号组合子表达式。  
+> ⚠️ **时间长度 token 必须在同一字符串内**：`'[%BeginOfCurrentDay%] - 3 * [%YearLength%]'`  
+> ⚠️ **UTC 变体警告**：客户端表达式中，若属性 `Localize=false`，不要用 UTC 变体（时区转换会执行两次）。
+
+### 对象相关
+
+| Token | 描述 |
+|---|---|
+| `[%CurrentUser%]` | 当前登录用户的 GUID（System.User） |
+| `[%CurrentObject%]` | 当前上下文对象的 GUID |
+
+### 用户角色
+
+每个 UserRole 对应一个动态 token，格式为 `[%UserRole_<RoleName>%]`：
+
+```xpath
+[System.UserRoles = '[%UserRole_Administrator%]']
+```
+
+### 时间点（Time-Point）
+
+| Token | UTC 变体 | 描述 |
+|---|---|---|
+| `[%CurrentDateTime%]` | — | 当前日期时间 |
+| `[%BeginOfCurrentMinute%]` | `[%BeginOfCurrentMinuteUTC%]` | 当前分钟开始 |
+| `[%EndOfCurrentMinute%]` | `[%EndOfCurrentMinuteUTC%]` | 当前分钟结束 |
+| `[%BeginOfCurrentHour%]` | `[%BeginOfCurrentHourUTC%]` | 当前小时开始 |
+| `[%EndOfCurrentHour%]` | `[%EndOfCurrentHourUTC%]` | 当前小时结束 |
+| `[%BeginOfCurrentDay%]` | `[%BeginOfCurrentDayUTC%]` | 今天开始 |
+| `[%EndOfCurrentDay%]` | `[%EndOfCurrentDayUTC%]` | 今天结束 |
+| `[%BeginOfYesterday%]` | `[%BeginOfYesterdayUTC%]` | 昨天开始 |
+| `[%EndOfYesterday%]` | `[%EndOfYesterdayUTC%]` | 昨天结束 |
+| `[%BeginOfTomorrow%]` | `[%BeginOfTomorrowUTC%]` | 明天开始 |
+| `[%EndOfTomorrow%]` | `[%EndOfTomorrowUTC%]` | 明天结束 |
+| `[%BeginOfCurrentWeek%]` | `[%BeginOfCurrentWeekUTC%]` | 本周开始 |
+| `[%EndOfCurrentWeek%]` | `[%EndOfCurrentWeekUTC%]` | 本周结束 |
+| `[%BeginOfCurrentMonth%]` | `[%BeginOfCurrentMonthUTC%]` | 本月开始 |
+| `[%EndOfCurrentMonth%]` | `[%EndOfCurrentMonthUTC%]` | 本月结束 |
+| `[%BeginOfCurrentYear%]` | `[%BeginOfCurrentYearUTC%]` | 本年开始 |
+| `[%EndOfCurrentYear%]` | `[%EndOfCurrentYearUTC%]` | 本年结束 |
+
+### 时间长度（Time-Length，用于加减运算）
+
+| Token | 描述 |
+|---|---|
+| `[%SecondLength%]` | 一秒（毫秒数） |
+| `[%MinuteLength%]` | 一分钟（毫秒数） |
+| `[%HourLength%]` | 一小时（毫秒数） |
+| `[%DayLength%]` | 一天 24 小时（毫秒数） |
+| `[%WeekLength%]` | 一周（毫秒数） |
+| `[%MonthLength%]` | 一个月（毫秒数） |
+| `[%YearLength%]` | 一年（毫秒数） |
+
+```xpath
+-- 过去三年内注册的客户
+[DateRegistered > '[%BeginOfCurrentDay%] - 3 * [%YearLength%]']
+
+-- 过去一小时内的事件
+[Timestamp >= '[%CurrentDateTime%] - 1 * [%HourLength%]']
+```
 
 ### ID Pseudo-Attribute
 

@@ -1,0 +1,49 @@
+-- time-tokens.mdl
+-- 演示时间点和时间长度 token 在 XPath 约束和微流表达式中的用法。
+-- 语法检查：mxcli check time-tokens.mdl
+
+-- ── XPath 约束示例 ──────────────────────────────────────────────────────────
+
+-- 本周注册的客户
+-- retrieve $ThisWeekCustomers from Sales.Customer
+--   where [DateRegistered >= '[%BeginOfCurrentWeek%]'
+--      and DateRegistered <  '[%EndOfCurrentWeek%]'];
+
+-- 本月的订单
+-- retrieve $MonthOrders from Sales.Order
+--   where [OrderDate >= '[%BeginOfCurrentMonth%]'
+--      and OrderDate <= '[%EndOfCurrentMonth%]'];
+
+-- 今年至今的订单
+-- retrieve $YearOrders from Sales.Order
+--   where [OrderDate >= '[%BeginOfCurrentYear%]'];
+
+-- 最近三年注册的客户（时间运算：时间点 + 长度计算，必须在同一字符串内）
+-- retrieve $RecentCustomers from Sales.Customer
+--   where [DateRegistered > '[%BeginOfCurrentDay%] - 3 * [%YearLength%]'];
+
+-- 过去一小时内的日志事件
+-- retrieve $RecentLogs from Logging.Event
+--   where [Timestamp >= '[%CurrentDateTime%] - 1 * [%HourLength%]'];
+
+-- 过去30分钟的活动（MinuteLength）
+-- retrieve $Recent30Min from Logging.Event
+--   where [Timestamp >= '[%CurrentDateTime%] - 30 * [%MinuteLength%]'];
+
+-- ── 微流表达式示例 ───────────────────────────────────────────────────────────
+
+-- 将当前时间戳写入字段
+-- microflow UpdateTimestamp($Order: Sales.Order): void
+-- change $Order set (
+--   LastModified = [%CurrentDateTime%]
+-- );
+
+-- 在条件表达式中使用当前时间
+-- if $Order/DueDate < [%CurrentDateTime%] then 'Overdue' else 'OnTime'
+
+-- ── 注意事项 ─────────────────────────────────────────────────────────────────
+-- 1. XPath 约束中 token 必须加单引号：'[%BeginOfCurrentWeek%]'
+-- 2. 微流表达式中不加引号：[%CurrentDateTime%]
+-- 3. 时间长度 token 必须和时间点 token 在同一字符串内
+-- 4. UTC 变体（BeginOfCurrentDayUTC 等）：若属性 Localize=false，
+--    客户端表达式不要用 UTC 变体（时区转换会执行两次）

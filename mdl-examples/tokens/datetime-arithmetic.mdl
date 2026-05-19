@@ -1,0 +1,47 @@
+-- datetime-arithmetic.mdl
+-- 演示时间运算的综合用法：时间点 + 时间长度 token 组合。
+-- 语法检查：mxcli check datetime-arithmetic.mdl
+
+-- ── 常见时间区间查询 ─────────────────────────────────────────────────────────
+
+-- 昨天全天（BeginOfYesterday / BeginOfCurrentDay）
+-- retrieve $YesterdayEvents from Logging.Event
+--   where [Timestamp >= '[%BeginOfYesterday%]'
+--      and Timestamp <  '[%BeginOfCurrentDay%]'];
+
+-- 明天全天
+-- retrieve $TomorrowTasks from HR.Task
+--   where [DueDate >= '[%BeginOfTomorrow%]'
+--      and DueDate <  '[%EndOfTomorrow%]'];
+
+-- 本月开始到现在
+-- retrieve $MonthOrders from Sales.Order
+--   where [OrderDate >= '[%BeginOfCurrentMonth%]'
+--      and OrderDate <= '[%CurrentDateTime%]'];
+
+-- 过去 7 天（WeekLength）
+-- retrieve $Last7Days from Logging.Event
+--   where [Timestamp >= '[%CurrentDateTime%] - 1 * [%WeekLength%]'];
+
+-- 过去 90 天（DayLength × 90）
+-- retrieve $Last90Days from Sales.Order
+--   where [OrderDate >= '[%CurrentDateTime%] - 90 * [%DayLength%]'];
+
+-- ── 工作流 Timer 示例 ────────────────────────────────────────────────────────
+
+-- 3 天后到期的提醒（工作流 WAIT FOR TIMER）
+-- WAIT FOR TIMER 'addDays([%CurrentDateTime%], 3)';
+
+-- ── 微流中的时间判断 ─────────────────────────────────────────────────────────
+
+-- 判断一个日期是否在过去一周内
+-- if $Record/CreatedDate >= '[%BeginOfCurrentWeek%]'
+--    and $Record/CreatedDate <= '[%CurrentDateTime%]'
+-- then true else false
+
+-- ── 规则汇总 ─────────────────────────────────────────────────────────────────
+-- ✓ 时间点 + 时间长度必须在同一字符串内
+-- ✓ XPath 约束中整个表达式加引号
+-- ✓ 算术运算用 * 乘以 token：N * [%DayLength%]
+-- ✓ 支持加减：[%CurrentDateTime%] - 7 * [%DayLength%]
+-- ✓ 括号分组不支持（system variable 是字符串，不能用括号）

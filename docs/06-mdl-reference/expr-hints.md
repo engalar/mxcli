@@ -131,6 +131,8 @@ SET $msg = 'count=' + length(@@@broken@@@) + ' items';   -- wrong
 SET $msg = 'count=' + toString(length($list)) + ' items';   -- right
 ```
 
+完整的有效 token 列表参见 `.claude/skills/mendix/xpath-constraints.md` 的 System Variables 小节。
+
 ## E008 — enum-missing-module (error)
 
 **When this appears:** An enum value was written without its module prefix.
@@ -226,3 +228,15 @@ SET $Id = $WorkHistory/id;   -- wrong
 SET $Id = $WorkHistory/WorkHistoryNo;  -- WorkHistoryNo is AutoNumber   -- right
 ```
 
+## SEM-08 — unknown-user-role (error)
+
+**触发条件**：表达式中包含 `[%UserRole_Name%]` token，但该角色名在项目安全设置中不存在。
+
+**示例**：
+```
+[%UserRole_Manger%]  -- 拼写错误，应为 Manager
+```
+
+**修复**：检查角色名拼写，或在 Studio Pro 项目安全设置中添加该用户角色。
+
+**注意**：此规则仅在连接了 MPR 文件的情况下生效（需要项目元数据）。语法检查模式（`--no-daemon`）不会触发此规则。

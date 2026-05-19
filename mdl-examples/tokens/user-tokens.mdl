@@ -1,0 +1,41 @@
+-- user-tokens.mdl
+-- 演示 CurrentUser 和 UserRole_* token 的用法。
+-- 语法检查：mxcli check user-tokens.mdl
+
+-- ── CurrentUser：过滤当前用户的数据 ─────────────────────────────────────────
+
+-- 检索当前用户的所有订单（通过关联过滤）
+-- retrieve $MyOrders from Sales.Order
+--   where [Sales.Order_Customer = '[%CurrentUser%]'];
+
+-- 检索当前用户创建的记录（CreatedBy 关联）
+-- retrieve $MyRecords from MyModule.Record
+--   where [MyModule.Record_CreatedBy = '[%CurrentUser%]'];
+
+-- 检索当前用户拥有的对象（System.owner）
+-- retrieve $OwnedDocs from MyModule.Document
+--   where [System.owner = '[%CurrentUser%]'];
+
+-- ── UserRole_*：基于角色的实体访问控制 ──────────────────────────────────────
+
+-- 只有 Administrator 角色可以读写所有字段
+-- grant Administrator on Sales.Product (read *, write *)
+--   where '[System.UserRoles = ''[%UserRole_Administrator%]'']';
+
+-- 只有 Manager 和 Administrator 角色可以访问薪资数据
+-- grant Manager on HR.Employee (read (Salary))
+--   where '[System.UserRoles = ''[%UserRole_Manager%]'']';
+
+-- ── 微流表达式中使用 CurrentUser ─────────────────────────────────────────────
+
+-- 在创建对象时关联当前用户
+-- create Sales.Order $NewOrder set (
+--   OrderDate = [%CurrentDateTime%]
+-- );
+-- 注：关联当前用户需通过 Association，不直接写在 SET 表达式中
+
+-- ── 注意事项 ─────────────────────────────────────────────────────────────────
+-- 1. XPath 中 [%CurrentUser%] 必须加引号：'[%CurrentUser%]'
+-- 2. [%UserRole_Name%] 中的 Name 必须与项目安全设置中的用户角色名完全一致
+-- 3. 实体访问规则中的 XPath 嵌套在字符串内，单引号需双写转义：
+--    where '[System.UserRoles = ''[%UserRole_Administrator%]'']'
