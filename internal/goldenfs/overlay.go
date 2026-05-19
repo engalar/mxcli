@@ -353,10 +353,15 @@ func (n *overlayNode) Rename(ctx context.Context, name string, newParent fs.Inod
 			return syscall.ENOENT
 		}
 	}
-	// Tombstone destination before writing to avoid stale trailing bytes when
-	// the destination already exists in the dirty layer with a longer payload.
-	n.layer.delete(dstRel)
-	n.layer.write(dstRel, 0, content)
+	// Replace the destination atomically: truncate to the new length (this also
+	// stores a non-nil byte slice — never a tombstone, even for empty content),
+	// then overwrite with the new bytes. write() short-circuits on len(data)==0,
+	// so the truncate() pass is what guarantees a 0-byte file lands as a real
+	// (empty) file rather than a tombstone left over from `delete()`.
+	n.layer.truncate(dstRel, n.baseDir, int64(len(content)))
+	if len(content) > 0 {
+		n.layer.write(dstRel, 0, content)
+	}
 	n.layer.delete(srcRel)
 	return 0
 }
