@@ -6,7 +6,9 @@
 package scan
 
 import (
+	"database/sql"
 	"encoding/hex"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -14,6 +16,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	_ "modernc.org/sqlite"
 )
 
 // ExprRecord is one expression extracted from a BSON unit file.
@@ -186,6 +189,37 @@ func MprContentsPath(mprPath string) string {
 		return mprPath
 	}
 	return filepath.Join(filepath.Dir(mprPath), "mprcontents")
+}
+
+// ScanMPR reads expression records from a v1 MPR file (contents stored in SQLite).
+// For v2 projects, use ScanMprcontents with the mprcontents/ directory instead.
+func ScanMPR(mprPath string, opts Options) ([]ExprRecord, error) {
+	db, err := sql.Open("sqlite", "file:"+mprPath+"?mode=ro")
+	if err != nil {
+		return nil, fmt.Errorf("open MPR: %w", err)
+	}
+	defer db.Close()
+
+	rows, err := db.Query("SELECT Contents FROM Unit WHERE Contents IS NOT NULL")
+	if err != nil {
+		return nil, fmt.Errorf("query units: %w", err)
+	}
+	defer rows.Close()
+
+	project := strings.TrimSuffix(filepath.Base(mprPath), filepath.Ext(mprPath))
+	var results []ExprRecord
+	for rows.Next() {
+		var contents []byte
+		if err := rows.Scan(&contents); err != nil {
+			continue
+		}
+		var doc bson.M
+		if bsonErr := bson.Unmarshal(contents, &doc); bsonErr != nil {
+			continue
+		}
+		scanObj(doc, project, "", opts, &results)
+	}
+	return results, rows.Err()
 }
 
 func extractID(raw interface{}) string {
