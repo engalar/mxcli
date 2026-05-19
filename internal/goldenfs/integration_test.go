@@ -35,6 +35,14 @@ func exprCheckerDir(t *testing.T) string {
 // TestMprWriterThroughFUSE verifies that mpr.Writer writing through the FUSE
 // overlay leaves testdata/expr-checker untouched.
 func TestMprWriterThroughFUSE(t *testing.T) {
+	// Capture baseline BEFORE Open() — otherwise both stats are post-write
+	// and the comparison is trivially true.
+	realMpr := filepath.Join(exprCheckerDir(t), "minimal.mpr")
+	origStat, err := os.Stat(realMpr)
+	if err != nil {
+		t.Fatalf("stat real mpr: %v", err)
+	}
+
 	snap, err := Open(exprCheckerDir(t))
 	if err != nil {
 		t.Fatal(err)
@@ -52,19 +60,20 @@ func TestMprWriterThroughFUSE(t *testing.T) {
 		t.Fatalf("close mpr: %v", err)
 	}
 
-	// The SQLite WAL may have been created in the overlay.
-	// Confirm the real minimal.mpr has not been modified.
-	realMpr := filepath.Join(exprCheckerDir(t), "minimal.mpr")
-	origStat, _ := os.Stat(realMpr)
-
-	// The snapshot's dirty layer may contain the WAL; base must not.
-	walPath := filepath.Join(exprCheckerDir(t), "minimal.mpr-wal")
-	if _, err := os.Stat(walPath); err == nil {
-		t.Fatal("WAL file must not exist in base dir after FUSE write")
+	// Neither WAL, SHM, nor rollback journal must appear in the real base dir.
+	// minimal.mpr uses DELETE journal mode (not WAL), so the rollback journal
+	// is the most likely leak from a write+rollback.
+	for _, suffix := range []string{"-wal", "-shm", "-journal"} {
+		if _, err := os.Stat(realMpr + suffix); err == nil {
+			t.Fatalf("%s file must not exist in base dir after FUSE write", suffix)
+		}
 	}
 
 	// mtime of the real file must be unchanged.
-	newStat, _ := os.Stat(realMpr)
+	newStat, err := os.Stat(realMpr)
+	if err != nil {
+		t.Fatalf("stat real mpr after: %v", err)
+	}
 	if !origStat.ModTime().Equal(newStat.ModTime()) {
 		t.Fatal("real minimal.mpr mtime changed — base was modified")
 	}

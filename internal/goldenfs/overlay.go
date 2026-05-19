@@ -307,9 +307,8 @@ func (h *overlayWriteHandle) Read(_ context.Context, dest []byte, off int64) (fu
 func (h *overlayWriteHandle) Flush(_ context.Context, flags uint32) syscall.Errno   { return 0 }
 func (h *overlayWriteHandle) Release(_ context.Context, flags uint32) syscall.Errno { return 0 }
 
-// Fsync no-op — the dirty layer is in-memory, so durability semantics don't
-// apply. SQLite calls fsync after WAL writes; without a handler the kernel
-// returns EINVAL which SQLite reports as SQLITE_IOERR.
+// Fsync is a no-op: the dirty layer is in-memory. Without this handler
+// go-fuse returns EOPNOTSUPP, which SQLite maps to a fatal I/O error.
 func (h *overlayWriteHandle) Fsync(_ context.Context, flags uint32) syscall.Errno { return 0 }
 
 // --- NodeCreater ---
