@@ -77,3 +77,75 @@ func TestSnapshot_ReaddirRootContainsBase(t *testing.T) {
 		t.Fatalf("missing expected entries: got %v", names)
 	}
 }
+
+func TestSnapshot_WriteNewFile_InDirtyNotBase(t *testing.T) {
+	base := baseFixture(t)
+	snap, err := Open(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snap.Close()
+
+	// Write via FUSE mount
+	dest := filepath.Join(snap.MountDir(), "new.txt")
+	if err := os.WriteFile(dest, []byte("new content"), 0644); err != nil {
+		t.Fatalf("write through FUSE: %v", err)
+	}
+
+	// Readable through mount
+	got, err := os.ReadFile(dest)
+	if err != nil || string(got) != "new content" {
+		t.Fatalf("want new content, got %q err %v", got, err)
+	}
+
+	// Base dir untouched
+	if _, err := os.Stat(filepath.Join(base, "new.txt")); !os.IsNotExist(err) {
+		t.Fatal("base dir must not be modified")
+	}
+}
+
+func TestSnapshot_OverwriteExistingFile(t *testing.T) {
+	base := baseFixture(t)
+	snap, err := Open(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snap.Close()
+
+	dest := filepath.Join(snap.MountDir(), "hello.txt")
+	if err := os.WriteFile(dest, []byte("overwritten"), 0644); err != nil {
+		t.Fatalf("overwrite through FUSE: %v", err)
+	}
+
+	got, err := os.ReadFile(dest)
+	if err != nil || string(got) != "overwritten" {
+		t.Fatalf("want overwritten, got %q err %v", got, err)
+	}
+
+	// Base still has original
+	orig, _ := os.ReadFile(filepath.Join(base, "hello.txt"))
+	if string(orig) != "world" {
+		t.Fatalf("base must be unmodified, got %q", orig)
+	}
+}
+
+func TestSnapshot_MkdirAndWriteDeep(t *testing.T) {
+	base := baseFixture(t)
+	snap, err := Open(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snap.Close()
+
+	newDir := filepath.Join(snap.MountDir(), "newdir")
+	if err := os.Mkdir(newDir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(newDir, "child.txt"), []byte("hi"), 0644); err != nil {
+		t.Fatalf("write in new dir: %v", err)
+	}
+	got, err := os.ReadFile(filepath.Join(snap.MountDir(), "newdir", "child.txt"))
+	if err != nil || string(got) != "hi" {
+		t.Fatalf("want hi, got %q err %v", got, err)
+	}
+}

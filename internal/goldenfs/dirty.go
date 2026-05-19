@@ -53,6 +53,28 @@ func (l *dirtyLayer) isDeleted(relPath string) bool {
 	return ok && b == nil
 }
 
+// hasDirtyDir returns true if any non-tombstone dirty file key is a descendant
+// of relPath, i.e. relPath looks like a directory created in (or under) the
+// dirty layer. Used so Lookup/Getattr/Readdir can recognise Mkdir-created
+// directories that aren't on disk yet.
+func (l *dirtyLayer) hasDirtyDir(relPath string) bool {
+	if relPath == "" {
+		return false
+	}
+	prefix := relPath + "/"
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	for k, v := range l.files {
+		if v == nil {
+			continue // tombstone
+		}
+		if strings.HasPrefix(k, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 // write stores data at offset into the dirty layer for relPath.
 // If relPath is not yet in the layer the existing bytes are set to the written
 // data (no copy-up; caller has already loaded the content when needed).
@@ -100,6 +122,31 @@ func (l *dirtyLayer) delete(relPath string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.files[relPath] = nil
+}
+
+// truncate resizes the dirty-layer entry to `size` bytes. If the entry isn't
+// in the dirty layer yet, it copies up from `baseDir` first. Result is always
+// a non-nil byte slice (never a tombstone), even at size 0.
+func (l *dirtyLayer) truncate(relPath, baseDir string, size int64) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	cur, ok := l.files[relPath]
+	if !ok || cur == nil {
+		// copy-up if base file exists; otherwise treat as empty.
+		if b, err := os.ReadFile(filepath.Join(baseDir, filepath.FromSlash(relPath))); err == nil {
+			cur = b
+		} else {
+			cur = nil
+		}
+	}
+	resized := make([]byte, size)
+	if n := int64(len(cur)); n > 0 {
+		if size < n {
+			n = size
+		}
+		copy(resized, cur[:n])
+	}
+	l.files[relPath] = resized
 }
 
 // rollback discards all dirty state.

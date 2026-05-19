@@ -63,6 +63,10 @@ func (n *overlayNode) Lookup(ctx context.Context, name string, out *fuse.EntryOu
 	if content := n.layer.read(rel); content != nil {
 		mode = syscall.S_IFREG | 0644
 		out.Size = uint64(len(content))
+	} else if n.layer.hasDirtyDir(rel) {
+		// Directory created in the dirty layer (e.g. by Mkdir) — not on disk yet.
+		mode = syscall.S_IFDIR | 0755
+		out.Size = 0
 	} else {
 		info, err := os.Lstat(filepath.Join(n.baseDir, filepath.FromSlash(rel)))
 		if err != nil {
@@ -119,6 +123,13 @@ func (n *overlayNode) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.A
 		return 0
 	}
 
+	if n.layer.hasDirtyDir(n.relPath) {
+		out.Mode = syscall.S_IFDIR | 0755
+		out.Size = 0
+		out.Ino = pathIno(n.relPath)
+		return 0
+	}
+
 	info, err := os.Lstat(n.absBase())
 	if err != nil {
 		return syscall.ENOENT
@@ -127,6 +138,21 @@ func (n *overlayNode) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.A
 	out.Size = uint64(info.Size())
 	out.Ino = pathIno(n.relPath)
 	return 0
+}
+
+// --- NodeSetattrer ---
+//
+// Required so that O_TRUNC on open() — which the kernel turns into a SETATTR
+// with FATTR_SIZE — does not fail with EOPNOTSUPP. We only honour the size
+// field; mode/owner/timestamps are accepted but ignored (the dirty layer has
+// no permission model and rolls back on Close).
+
+func (n *overlayNode) Setattr(ctx context.Context, fh fs.FileHandle, in *fuse.SetAttrIn, out *fuse.AttrOut) syscall.Errno {
+	if size, ok := in.GetSize(); ok {
+		n.layer.truncate(n.relPath, n.baseDir, int64(size))
+		out.Size = size
+	}
+	return n.Getattr(ctx, fh, out)
 }
 
 // --- NodeReaddirer ---
@@ -161,7 +187,10 @@ func (n *overlayNode) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno)
 		entries = append(entries, fuse.DirEntry{Name: e.Name(), Mode: mode, Ino: pathIno(rel)})
 	}
 
-	// Dirty-layer additions in this directory.
+	// Dirty-layer additions in this directory. We want both direct child files
+	// (key == prefix+name) and synthesised direct child directories (key has
+	// the form prefix+name+"/..."). prefix is "" at the root.
+	//
 	// Direct mu access is safe: overlay and dirtyLayer are in the same package,
 	// and we need atomic iteration over files without a per-entry method call.
 	n.layer.mu.RLock()
@@ -170,29 +199,27 @@ func (n *overlayNode) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno)
 		if content == nil {
 			continue // tombstone
 		}
-		if !isDirectChild(rel, n.relPath) {
+		if prefix != "" && !strings.HasPrefix(rel, prefix) {
 			continue
 		}
-		name := filepath.Base(rel)
+		rest := rel[len(prefix):]
+		if rest == "" {
+			continue
+		}
+		name := rest
+		mode := uint32(fuse.S_IFREG)
+		if idx := strings.IndexByte(rest, '/'); idx >= 0 {
+			name = rest[:idx]
+			mode = fuse.S_IFDIR
+		}
 		if seen[name] {
 			continue
 		}
-		entries = append(entries, fuse.DirEntry{Name: name, Mode: fuse.S_IFREG, Ino: pathIno(rel)})
+		seen[name] = true
+		entries = append(entries, fuse.DirEntry{Name: name, Mode: mode, Ino: pathIno(prefix + name)})
 	}
 
 	return fs.NewListDirStream(entries), 0
-}
-
-// isDirectChild returns true if rel is a direct child of parentRel.
-func isDirectChild(rel, parentRel string) bool {
-	if parentRel == "" {
-		return !strings.Contains(rel, "/")
-	}
-	if !strings.HasPrefix(rel, parentRel+"/") {
-		return false
-	}
-	rest := rel[len(parentRel)+1:]
-	return !strings.Contains(rest, "/")
 }
 
 // --- NodeOpener + file handle (read) ---
@@ -216,8 +243,15 @@ func (h *overlayReadHandle) Read(_ context.Context, dest []byte, off int64) (fus
 }
 
 func (n *overlayNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
-	// TODO(Task 4): handle flags&(syscall.O_WRONLY|syscall.O_RDWR) != 0 — return write handle.
-	// Write-capable open handled by Create / separate write handle.
+	if flags&(syscall.O_WRONLY|syscall.O_RDWR) != 0 {
+		// Seed dirty map via copy-up, then return write handle.
+		if !n.layer.has(n.relPath) {
+			if b, err := os.ReadFile(n.absBase()); err == nil {
+				n.layer.write(n.relPath, 0, b)
+			}
+		}
+		return &overlayWriteHandle{node: n, baseDir: n.baseDir}, fuse.FOPEN_DIRECT_IO, 0
+	}
 	content := n.layer.read(n.relPath)
 	if content == nil {
 		var err error
@@ -227,4 +261,87 @@ func (n *overlayNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle,
 		}
 	}
 	return &overlayReadHandle{content: content}, fuse.FOPEN_DIRECT_IO, 0
+}
+
+// --- Write file handle ---
+
+type overlayWriteHandle struct {
+	node    *overlayNode
+	baseDir string
+}
+
+func (h *overlayWriteHandle) Write(_ context.Context, data []byte, off int64) (uint32, syscall.Errno) {
+	h.node.layer.writeWithBase(h.node.relPath, h.baseDir, off, data)
+	return uint32(len(data)), 0
+}
+
+func (h *overlayWriteHandle) Flush(_ context.Context, flags uint32) syscall.Errno   { return 0 }
+func (h *overlayWriteHandle) Release(_ context.Context, flags uint32) syscall.Errno { return 0 }
+
+// --- NodeCreater ---
+
+func (n *overlayNode) Create(ctx context.Context, name string, flags uint32, mode uint32, out *fuse.EntryOut) (*fs.Inode, fs.FileHandle, uint32, syscall.Errno) {
+	rel := n.childRel(name)
+	// Seed the dirty map with an empty file (non-nil empty byte slice).
+	n.layer.truncate(rel, n.baseDir, 0)
+
+	child := &overlayNode{baseDir: n.baseDir, relPath: rel, layer: n.layer}
+	stable := fs.StableAttr{Mode: syscall.S_IFREG, Ino: pathIno(rel)}
+	inode := n.NewInode(ctx, child, stable)
+
+	out.Mode = syscall.S_IFREG | 0644
+	out.Size = 0
+	out.Ino = pathIno(rel)
+	fh := &overlayWriteHandle{node: child, baseDir: n.baseDir}
+	return inode, fh, fuse.FOPEN_DIRECT_IO, 0
+}
+
+// --- NodeMkdirer ---
+
+func (n *overlayNode) Mkdir(ctx context.Context, name string, mode uint32, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
+	rel := n.childRel(name)
+	// Store a non-nil sentinel under the new directory so Readdir/Lookup recognise it
+	// as a dirty-layer dir even before any real files are written into it.
+	// (Must be non-nil — a nil entry would be interpreted as a tombstone.)
+	n.layer.truncate(rel+"/.keep", n.baseDir, 0)
+
+	child := &overlayNode{baseDir: n.baseDir, relPath: rel, layer: n.layer}
+	stable := fs.StableAttr{Mode: syscall.S_IFDIR, Ino: pathIno(rel)}
+	out.Mode = syscall.S_IFDIR | 0755
+	out.Size = 0
+	out.Ino = pathIno(rel)
+	return n.NewInode(ctx, child, stable), 0
+}
+
+// --- NodeUnlinker ---
+
+func (n *overlayNode) Unlink(ctx context.Context, name string) syscall.Errno {
+	rel := n.childRel(name)
+	n.layer.delete(rel)
+	return 0
+}
+
+// --- NodeRenamer ---
+
+func (n *overlayNode) Rename(ctx context.Context, name string, newParent fs.InodeEmbedder, newName string, flags uint32) syscall.Errno {
+	srcRel := n.childRel(name)
+
+	newParentNode, ok := newParent.(*overlayNode)
+	if !ok {
+		return syscall.EINVAL
+	}
+	dstRel := newParentNode.childRel(newName)
+
+	// Copy content from dirty or base.
+	content := n.layer.read(srcRel)
+	if content == nil {
+		var err error
+		content, err = os.ReadFile(filepath.Join(n.baseDir, filepath.FromSlash(srcRel)))
+		if err != nil {
+			return syscall.ENOENT
+		}
+	}
+	n.layer.write(dstRel, 0, content)
+	n.layer.delete(srcRel)
+	return 0
 }

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
@@ -40,8 +41,16 @@ func Open(baseDir string) (*Snapshot, error) {
 	layer := newDirtyLayer()
 	root := &overlayNode{baseDir: abs, relPath: "", layer: layer}
 
+	// EntryTimeout/AttrTimeout = 0 disables kernel dentry+attr caching, so the
+	// dirty layer is always consulted. Without this, a Mkdir/Create followed
+	// by an immediate Stat through the same mount can race the kernel's
+	// 1-second default cache and return stale ENOENT.
+	zero := time.Duration(0)
 	server, err := fs.Mount(mountDir, root, &fs.Options{
-		MountOptions: fuse.MountOptions{AllowOther: false},
+		MountOptions:    fuse.MountOptions{AllowOther: false},
+		EntryTimeout:    &zero,
+		AttrTimeout:     &zero,
+		NegativeTimeout: &zero,
 	})
 	if err != nil {
 		os.Remove(mountDir)
