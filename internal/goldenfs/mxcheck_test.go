@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
@@ -18,25 +17,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 )
-
-// findMxBinaryForTest returns the path to an `mx` binary, preferring
-// MX_BINARY if set, otherwise the highest-version mxbuild under ~/.mxcli.
-func findMxBinaryForTest() string {
-	if p := os.Getenv("MX_BINARY"); p != "" {
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
-	}
-	if home, err := os.UserHomeDir(); err == nil {
-		pattern := filepath.Join(home, ".mxcli", "mxbuild", "*", "modeler", "mx")
-		if matches, _ := filepath.Glob(pattern); len(matches) > 0 {
-			// Last in lexicographic order — set MX_BINARY to override when version
-			// layout causes incorrect selection (e.g. 11.10.x < 11.9.x lexicographically).
-			return matches[len(matches)-1]
-		}
-	}
-	return ""
-}
 
 // TestGoldenFS_ExecAndMxCheck is the full pipeline: MDL → executor →
 // MprBackend → FUSE overlay → SQLite write → mx check verification.
@@ -96,50 +76,12 @@ create or modify microflow MyFirstModule.ACT_GoldenTest () returns Nothing begin
 		t.Fatalf("close executor: %v", err)
 	}
 
-	// mx check on the FUSE mount. The testdata project has many pre-existing
-	// CE6083 design-property errors that have nothing to do with our write;
-	// we only assert that no FUSE-corruption signatures appear and that our
-	// new microflow is not flagged as broken.
 	cmd := exec.Command(mxBin, "check", mprPath)
 	output, err := cmd.CombinedOutput()
 	t.Logf("mx check output (%d bytes, err=%v):\n%s", len(output), err, output)
 
-	// Fatal signatures that would indicate the FUSE overlay corrupted the file
-	// or the .NET runtime couldn't parse what we wrote.
-	fatalSignatures := []string{
-		"StorageLoadException",   // SQLite file corruption / mprcontents desync
-		"TypeCacheUnknownType",   // BSON $Type written that Mendix doesn't recognise
-		"CE0066",                 // Entity access out of date
-		"CE0463",                 // Widget definition changed (BSON shape mismatch)
-		"CE1613",                 // Layout no longer exists
-		"Invalid file format",    // SQLite header damage
-	}
-	outStr := string(output)
-	for _, sig := range fatalSignatures {
-		if strings.Contains(outStr, sig) {
-			t.Fatalf("mx check reported FUSE-corruption signature %q in output", sig)
-		}
-	}
-	if strings.Contains(outStr, "ACT_GoldenTest") {
-		// If the microflow appears in errors, the executor wrote bad BSON.
-		t.Fatalf("our newly-created microflow ACT_GoldenTest is flagged by mx check")
-	}
+	assertNoFUSECorruption(t, string(output), "ACT_GoldenTest")
+	checkFUSEIsolation(t, realMpr, origMprStat)
 
-	// Base verification — overlay must have absorbed the write completely.
-	newMprStat, err := os.Stat(realMpr)
-	if err != nil {
-		t.Fatalf("stat real mpr after: %v", err)
-	}
-	if !origMprStat.ModTime().Equal(newMprStat.ModTime()) {
-		t.Fatalf("real minimal.mpr mtime changed (%v → %v) — overlay leaked",
-			origMprStat.ModTime(), newMprStat.ModTime())
-	}
-	for _, suffix := range []string{"-wal", "-shm", "-journal"} {
-		if _, err := os.Stat(realMpr + suffix); err == nil {
-			t.Fatalf("%s file must not exist in base dir after FUSE write", suffix)
-		}
-	}
-
-	// Explicit rollback for clarity. Snapshot is closed by the defer anyway.
 	snap.Rollback()
 }
