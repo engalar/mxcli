@@ -167,9 +167,12 @@ This catches project errors (broken references, missing attributes, etc.)
 early, before the slower MxBuild step. The 'docker build' command runs
 this automatically unless --skip-check is used.
 
-By default, 'mx update-widgets' runs before 'mx check' to normalize
-pluggable widget definitions and prevent false CE0463 errors. Use
---no-update-widgets to skip this step.
+For MPR v1 projects, 'mx update-widgets' runs before 'mx check' by default
+to normalize pluggable widget definitions and prevent false CE0463 errors.
+
+For MPR v2 projects (mprcontents/ folder format, Mendix 10.18+), widget
+update is skipped by default to preserve the v2 format. Use --update-widgets
+to force the update (note: this may convert the project to v1 format).
 
 The mx binary is located from the same directory as mxbuild.
 
@@ -177,6 +180,7 @@ Examples:
   mxcli docker check -p app.mpr
   mxcli docker check -p app.mpr --mxbuild-path /path/to/mendix
   mxcli docker check -p app.mpr --no-update-widgets
+  mxcli docker check -p app.mpr --update-widgets
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath, _ := cmd.Flags().GetString("project")
@@ -187,13 +191,15 @@ Examples:
 
 		mxbuildPath, _ := cmd.Flags().GetString("mxbuild-path")
 		noUpdateWidgets, _ := cmd.Flags().GetBool("no-update-widgets")
+		updateWidgets, _ := cmd.Flags().GetBool("update-widgets")
 
 		opts := docker.CheckOptions{
-			ProjectPath:       projectPath,
-			MxBuildPath:       mxbuildPath,
-			SkipUpdateWidgets: noUpdateWidgets,
-			Stdout:            os.Stdout,
-			Stderr:            os.Stderr,
+			ProjectPath:        projectPath,
+			MxBuildPath:        mxbuildPath,
+			SkipUpdateWidgets:  noUpdateWidgets,
+			ForceUpdateWidgets: updateWidgets,
+			Stdout:             os.Stdout,
+			Stderr:             os.Stderr,
 		}
 
 		if err := docker.Check(opts); err != nil {
@@ -500,7 +506,8 @@ func init() {
 
 	// Check command flags
 	dockerCheckCmd.Flags().String("mxbuild-path", "", "Path to MxBuild/Mendix installation (used to find mx)")
-	dockerCheckCmd.Flags().Bool("no-update-widgets", false, "Skip 'mx update-widgets' before check")
+	dockerCheckCmd.Flags().Bool("no-update-widgets", false, "Skip 'mx update-widgets' before check (v1 MPR)")
+	dockerCheckCmd.Flags().Bool("update-widgets", false, "Force 'mx update-widgets' even for MPR v2 (may convert to v1 format)")
 
 	// Init command flags
 	dockerInitCmd.Flags().StringP("output", "o", "", "Output directory (default: .docker/ next to MPR)")

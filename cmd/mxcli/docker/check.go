@@ -27,11 +27,39 @@ type CheckOptions struct {
 	// definitions and prevent false CE0463 errors.
 	SkipUpdateWidgets bool
 
+	// ForceUpdateWidgets explicitly requests widget update even for MPR v2 format.
+	// When set, update-widgets runs regardless of the MPR format version.
+	// Warning: this may convert an MPR v2 project to v1 format.
+	ForceUpdateWidgets bool
+
 	// Stdout for output messages.
 	Stdout io.Writer
 
 	// Stderr for error output.
 	Stderr io.Writer
+}
+
+// isMPRv2 returns true if the MPR file at the given path is in v2 format.
+// Detection uses the same two-step approach as the MPR reader:
+//  1. Check whether mprcontents/ directory exists next to the .mpr file.
+//  2. Fall back to opening the MPR and checking whether the Unit table has a
+//     Contents column (covers the case where mprcontents/ was not copied along).
+func isMPRv2(mprPath string) bool {
+	if mprPath == "" {
+		return false
+	}
+	dir := filepath.Dir(mprPath)
+	contentsDir := filepath.Join(dir, "mprcontents")
+	if stat, err := os.Stat(contentsDir); err == nil && stat.IsDir() {
+		return true
+	}
+	// Fallback: open the MPR and inspect the reader's detected version.
+	if reader, err := mmpr.Open(mprPath); err == nil {
+		isV2 := reader.Version() == mmpr.MPRVersionV2
+		reader.Close()
+		return isV2
+	}
+	return false
 }
 
 // Check runs 'mx check' on the project to validate it before building.
@@ -60,10 +88,29 @@ func Check(opts CheckOptions) error {
 	}
 	fmt.Fprintf(w, "Using mx: %s\n", mxPath)
 
+	// Determine whether to run mx update-widgets.
+	//
+	// For MPR v2 projects (mprcontents/ folder format), update-widgets modifies
+	// widget definitions in a way that may convert the project from v2 to v1
+	// format — breaking the on-disk structure that Studio Pro and mxcli expect.
+	// Therefore we skip update-widgets by default for v2 and only run it when
+	// the caller explicitly opts in via ForceUpdateWidgets.
+	runUpdateWidgets := !opts.SkipUpdateWidgets
+
+	if runUpdateWidgets && !opts.ForceUpdateWidgets && isMPRv2(opts.ProjectPath) {
+		fmt.Fprintf(stderr, "Warning: MPR v2 format detected. Skipping widget definition update to preserve format.\n")
+		fmt.Fprintf(stderr, "         Use --update-widgets to force update (will convert MPR to v1 format).\n")
+		runUpdateWidgets = false
+	}
+
+	if opts.ForceUpdateWidgets && isMPRv2(opts.ProjectPath) {
+		fmt.Fprintf(stderr, "Warning: --update-widgets specified. MPR v2 may be converted to v1 format by mx check.\n")
+	}
+
 	// Run mx update-widgets to normalize pluggable widget definitions.
 	// This prevents false CE0463 ("widget definition changed") errors caused
 	// by mismatch between widget Object properties and Type PropertyTypes.
-	if !opts.SkipUpdateWidgets {
+	if runUpdateWidgets {
 		fmt.Fprintf(w, "Updating widget definitions in %s...\n", opts.ProjectPath)
 		uwCmd := exec.Command(mxPath, "update-widgets", opts.ProjectPath)
 		uwCmd.Stdout = w

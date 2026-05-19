@@ -50,6 +50,27 @@ echo "$1" >> ` + logFile + "\n"
 	return dir, logFile
 }
 
+// fakeMPRPath creates a temp directory with a fake .mpr filename (the file
+// itself does not need to exist for tests that only test mx invocation order).
+// Using t.TempDir() avoids pollution from ambient mprcontents/ directories
+// (e.g. /tmp/mprcontents/) that would confuse the MPR v2 detection logic.
+func fakeMPRPath(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(t.TempDir(), "fake.mpr")
+}
+
+// fakeMPRPathV2 creates a temp directory that looks like an MPR v2 project:
+// the directory contains an mprcontents/ sub-directory so that isMPRv2 returns
+// true.  The .mpr file itself is not created (not needed for invocation tests).
+func fakeMPRPathV2(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "mprcontents"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	return filepath.Join(dir, "fake.mpr")
+}
+
 func TestCheck_UpdateWidgetsBeforeCheck(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("shell script test not supported on Windows")
@@ -59,7 +80,7 @@ func TestCheck_UpdateWidgetsBeforeCheck(t *testing.T) {
 
 	var stdout, stderr bytes.Buffer
 	opts := CheckOptions{
-		ProjectPath: "/tmp/fake.mpr",
+		ProjectPath: fakeMPRPath(t), // v1: no mprcontents/ sibling
 		MxBuildPath: mxDir,
 		Stdout:      &stdout,
 		Stderr:      &stderr,
@@ -97,7 +118,7 @@ func TestCheck_SkipUpdateWidgetsFlag(t *testing.T) {
 
 	var stdout, stderr bytes.Buffer
 	opts := CheckOptions{
-		ProjectPath:       "/tmp/fake.mpr",
+		ProjectPath:       fakeMPRPath(t), // v1: no mprcontents/ sibling
 		MxBuildPath:       mxDir,
 		SkipUpdateWidgets: true,
 		Stdout:            &stdout,
@@ -116,6 +137,79 @@ func TestCheck_SkipUpdateWidgetsFlag(t *testing.T) {
 	}
 	if !bytes.Contains(logBytes, []byte("check")) {
 		t.Error("check should still be called")
+	}
+}
+
+func TestCheck_V2SkipsUpdateWidgetsByDefault(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script test not supported on Windows")
+	}
+
+	mxDir, logFile := createFakeMxDir(t)
+
+	var stdout, stderr bytes.Buffer
+	opts := CheckOptions{
+		ProjectPath: fakeMPRPathV2(t), // v2: has mprcontents/ sibling
+		MxBuildPath: mxDir,
+		Stdout:      &stdout,
+		Stderr:      &stderr,
+	}
+
+	Check(opts)
+
+	logBytes, err := os.ReadFile(logFile)
+	if err != nil {
+		t.Fatalf("failed to read command log: %v", err)
+	}
+
+	log := string(logBytes)
+	if bytes.Contains(logBytes, []byte("update-widgets")) {
+		t.Errorf("update-widgets should NOT be called for MPR v2 by default, got log:\n%s", log)
+	}
+	if !bytes.Contains(logBytes, []byte("check")) {
+		t.Errorf("check should still be called, got log:\n%s", log)
+	}
+
+	// Warning should appear in stderr
+	if !bytes.Contains(stderr.Bytes(), []byte("MPR v2 format detected")) {
+		t.Errorf("expected MPR v2 warning in stderr, got: %s", stderr.String())
+	}
+}
+
+func TestCheck_V2ForceUpdateWidgets(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script test not supported on Windows")
+	}
+
+	mxDir, logFile := createFakeMxDir(t)
+
+	var stdout, stderr bytes.Buffer
+	opts := CheckOptions{
+		ProjectPath:        fakeMPRPathV2(t), // v2: has mprcontents/ sibling
+		MxBuildPath:        mxDir,
+		ForceUpdateWidgets: true,
+		Stdout:             &stdout,
+		Stderr:             &stderr,
+	}
+
+	Check(opts)
+
+	logBytes, err := os.ReadFile(logFile)
+	if err != nil {
+		t.Fatalf("failed to read command log: %v", err)
+	}
+
+	log := string(logBytes)
+	if !bytes.Contains(logBytes, []byte("update-widgets\n")) {
+		t.Errorf("update-widgets should be called when ForceUpdateWidgets=true, got log:\n%s", log)
+	}
+	if !bytes.Contains(logBytes, []byte("check\n")) {
+		t.Errorf("check should still be called, got log:\n%s", log)
+	}
+
+	// Warning about v1 conversion should appear in stderr
+	if !bytes.Contains(stderr.Bytes(), []byte("--update-widgets specified")) {
+		t.Errorf("expected --update-widgets warning in stderr, got: %s", stderr.String())
 	}
 }
 
