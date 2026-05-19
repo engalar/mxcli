@@ -46,6 +46,9 @@
 package executor
 
 import (
+	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	msdkprop "github.com/mendixlabs/mxcli/modelsdk/property"
 )
@@ -118,3 +121,34 @@ func (p adhocAnyProperty) Init(b []byte)                    {}
 func (p adhocAnyProperty) BSONValue() any                   { return p.value }
 func (p adhocAnyProperty) Dirty() bool                      { return true }
 func (p adhocAnyProperty) Bind(owner *element.Base, _ uint) {}
+
+// setRawBSONChildElement encodes a child element and injects it under a custom
+// BSON key on the parent element. This is needed when the gen-codegen writes a
+// child under the wrong BSON key (e.g. "LayoutCall" instead of Mendix's historic
+// "FormCall"). The encoded child BSON document is injected as an adhocAnyProperty
+// so the codec writes it verbatim under the given key.
+//
+// Typical use: page.SetLayoutCall would write "LayoutCall"; use this instead to
+// write under "FormCall" which is the key Mendix Studio Pro uses and expects.
+func setRawBSONChildElement(parent element.Element, key string, child element.Element) {
+	if parent == nil || child == nil {
+		return
+	}
+	holder, ok := parent.(genBaseHolder)
+	if !ok {
+		return
+	}
+
+	enc := codec.Encoder{}
+	childBytes, err := enc.Encode(child)
+	if err != nil {
+		return
+	}
+
+	var childDoc bson.D
+	if err := bson.Unmarshal(childBytes, &childDoc); err != nil {
+		return
+	}
+
+	holder.AddProperty(adhocAnyProperty{key: key, value: childDoc}, rawSetterAdhocBit)
+}

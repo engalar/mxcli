@@ -3,3 +3,18 @@
 // then run: go run ./cmd/modelsdk-codegen
 
 package changedatacapture
+
+// PropertyType enumerates the possible values for the PropertyType type.
+type PropertyType = string
+
+const (
+	PropertyTypeArrayOfInt64 PropertyType = "ArrayOfInt64"
+	PropertyTypeBinary       PropertyType = "Binary"
+	PropertyTypeBoolean      PropertyType = "Boolean"
+	PropertyTypeDateTime     PropertyType = "DateTime"
+	PropertyTypeDecimal      PropertyType = "Decimal"
+	PropertyTypeEnumeration  PropertyType = "Enumeration"
+	PropertyTypeInt32        PropertyType = "Int32"
+	PropertyTypeInt64        PropertyType = "Int64"
+	PropertyTypeString       PropertyType = "String"
+)

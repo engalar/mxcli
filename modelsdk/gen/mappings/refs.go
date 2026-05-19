@@ -12,6 +12,7 @@ func init() {
 		{Prop: "JsonStructure", Kind: codec.RefByName, Target: "JsonStructures$JsonStructure"},
 		{Prop: "ImportedWebService", Kind: codec.RefByName, Target: "WebServices$ImportedWebService"},
 		{Prop: "MessageDefinition", Kind: codec.RefByName, Target: "MessageDefinitions$MessageDefinition"},
+		{Prop: "MessageDefinition2", Kind: codec.RefByName, Target: "MessageDefinitions$MessageDefinition2"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Mappings$MappingMicroflowCall", []codec.RefMeta{
 		{Prop: "Microflow", Kind: codec.RefByName, Target: "Microflows$Microflow"},

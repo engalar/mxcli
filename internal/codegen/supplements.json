@@ -87,6 +87,11 @@
     "VetoCompletionCriteria.vetoOutcome":                "VetoOutcomePointer",
     "SnippetCallWidget.snippetCall":                     "FormCall",
     "SnippetCall.snippet":                               "Form",
+    "Page.layoutCall":                                   "FormCall",
+    "Layout.layoutCall":                                 "FormCall",
+    "PageTemplate.layoutCall":                           "FormCall",
+    "WebLayoutContent.layoutCall":                       "FormCall",
+    "LayoutCall.layout":                                 "Form",
     "ImportMapping.rootMappingElements":                 "Elements",
     "ExportMapping.rootMappingElements":                 "Elements",
     "Text.translations":                                 "Items"

@@ -61,4 +61,5 @@ const (
 	WorkflowEventTypeNonInterruptingTimerEventExecuted                       WorkflowEventType = "NonInterruptingTimerEventExecuted"
 	WorkflowEventTypeInterruptingTimerEventExecuted                          WorkflowEventType = "InterruptingTimerEventExecuted"
 	WorkflowEventTypeNonInterruptingNotificationEventSubProcessStartExecuted WorkflowEventType = "NonInterruptingNotificationEventSubProcessStartExecuted"
+	WorkflowEventTypeInterruptingNotificationEventSubProcessStartExecuted    WorkflowEventType = "InterruptingNotificationEventSubProcessStartExecuted"
 )

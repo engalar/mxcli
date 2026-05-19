@@ -64,10 +64,11 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 	},
 	"Navigation$OfflineEntityConfig": {
 		Properties: map[string]version.PropertyVersionInfo{
-			"downloadMode":   {Introduced: "8.9.0", Deleted: "9.24.0"},
-			"entity":         {Required: true},
-			"shouldDownload": {Deleted: "8.9.0"},
-			"syncMode":       {Introduced: "9.24.0"},
+			"compatibilityMode": {Introduced: "11.10.0"},
+			"downloadMode":      {Introduced: "8.9.0", Deleted: "9.24.0"},
+			"entity":            {Required: true},
+			"shouldDownload":    {Deleted: "8.9.0"},
+			"syncMode":          {Introduced: "9.24.0"},
 		},
 	},
 	"Navigation$RoleBasedNativeHomePage": {

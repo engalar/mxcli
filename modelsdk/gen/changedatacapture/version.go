@@ -20,6 +20,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 	},
 	"ChangeDataCapture$EntityChangeDataCaptureService": {
 		Properties: map[string]version.PropertyVersionInfo{
+			"baseline":    {Introduced: "11.10.0"},
 			"serviceName": {Introduced: "11.8.0"},
 		},
 	},
@@ -28,6 +29,16 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"entity":      {Required: true},
 			"exposedName": {Introduced: "11.9.0"},
 			"properties":  {Introduced: "11.9.0"},
+		},
+	},
+	"ChangeDataCapture$VersionedEntityChangeDataCaptureService": {
+		Properties: map[string]version.PropertyVersionInfo{
+			"version": {Required: true},
+		},
+	},
+	"ChangeDataCapture$VersionedEntityChangeSource": {
+		Properties: map[string]version.PropertyVersionInfo{
+			"version": {Required: true},
 		},
 	},
 }

@@ -922,11 +922,12 @@ func (o *NotFoundHomePage) InitFromRaw(raw bson.Raw) {
 
 type OfflineEntityConfig struct {
 	element.Base
-	entity         *property.ByNameRef[element.Element]
-	downloadMode   *property.Enum[string]
-	shouldDownload *property.Primitive[bool]
-	syncMode       *property.Enum[string]
-	constraint     *property.Primitive[string]
+	entity            *property.ByNameRef[element.Element]
+	downloadMode      *property.Enum[string]
+	shouldDownload    *property.Primitive[bool]
+	syncMode          *property.Enum[string]
+	constraint        *property.Primitive[string]
+	compatibilityMode *property.Primitive[bool]
 }
 
 // EntityQualifiedName returns the value of the entity property.
@@ -979,6 +980,16 @@ func (o *OfflineEntityConfig) SetConstraint(v string) {
 	o.constraint.Set(v)
 }
 
+// CompatibilityMode returns the value of the compatibilityMode property.
+func (o *OfflineEntityConfig) CompatibilityMode() bool {
+	return o.compatibilityMode.Get()
+}
+
+// SetCompatibilityMode sets the value of the compatibilityMode property.
+func (o *OfflineEntityConfig) SetCompatibilityMode(v bool) {
+	o.compatibilityMode.Set(v)
+}
+
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *OfflineEntityConfig) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Entity"); err == nil {
@@ -998,6 +1009,7 @@ func (o *OfflineEntityConfig) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	o.constraint.Init(raw)
+	o.compatibilityMode.Init(raw)
 }
 
 // ────────────────────────────────────────────────────────
@@ -1428,7 +1440,9 @@ func initOfflineEntityConfig() *OfflineEntityConfig {
 	o.syncMode.Bind(&o.Base, 3)
 	o.constraint = property.NewPrimitive[string]("Constraint", property.DecodeString)
 	o.constraint.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.entity, o.downloadMode, o.shouldDownload, o.syncMode, o.constraint})
+	o.compatibilityMode = property.NewPrimitive[bool]("CompatibilityMode", property.DecodeBool)
+	o.compatibilityMode.Bind(&o.Base, 5)
+	o.SetProperties([]element.Property{o.entity, o.downloadMode, o.shouldDownload, o.syncMode, o.constraint, o.compatibilityMode})
 	return o
 }
 

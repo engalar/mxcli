@@ -2038,6 +2038,84 @@ func (o *ExposedEntity) InitFromRaw(raw bson.Raw) {
 }
 
 // ────────────────────────────────────────────────────────
+// MessageDefinition2
+// ────────────────────────────────────────────────────────
+
+type MessageDefinition2 struct {
+	element.Base
+	name          *property.Primitive[string]
+	documentation *property.Primitive[string]
+	excluded      *property.Primitive[bool]
+	exportLevel   *property.Enum[string]
+	exposedEntity *property.Part[element.Element]
+}
+
+// Name returns the value of the name property.
+func (o *MessageDefinition2) Name() string {
+	return o.name.Get()
+}
+
+// SetName sets the value of the name property.
+func (o *MessageDefinition2) SetName(v string) {
+	o.name.Set(v)
+}
+
+// Documentation returns the value of the documentation property.
+func (o *MessageDefinition2) Documentation() string {
+	return o.documentation.Get()
+}
+
+// SetDocumentation sets the value of the documentation property.
+func (o *MessageDefinition2) SetDocumentation(v string) {
+	o.documentation.Set(v)
+}
+
+// Excluded returns the value of the excluded property.
+func (o *MessageDefinition2) Excluded() bool {
+	return o.excluded.Get()
+}
+
+// SetExcluded sets the value of the excluded property.
+func (o *MessageDefinition2) SetExcluded(v bool) {
+	o.excluded.Set(v)
+}
+
+// ExportLevel returns the value of the exportLevel property.
+func (o *MessageDefinition2) ExportLevel() string {
+	return o.exportLevel.Get()
+}
+
+// SetExportLevel sets the value of the exportLevel property.
+func (o *MessageDefinition2) SetExportLevel(v string) {
+	o.exportLevel.Set(v)
+}
+
+// ExposedEntity returns the value of the exposedEntity property.
+func (o *MessageDefinition2) ExposedEntity() element.Element {
+	return o.exposedEntity.Get()
+}
+
+// SetExposedEntity sets the value of the exposedEntity property.
+func (o *MessageDefinition2) SetExposedEntity(v element.Element) {
+	o.exposedEntity.Set(v)
+}
+
+// InitFromRaw populates lazy-decoded property holders from raw BSON.
+func (o *MessageDefinition2) InitFromRaw(raw bson.Raw) {
+	o.name.Init(raw)
+	o.documentation.Init(raw)
+	o.excluded.Init(raw)
+	if val, err := raw.LookupErr("ExportLevel"); err == nil {
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
+	}
+	if child, err := codec.DecodeChild(raw, "ExposedEntity"); err == nil {
+		o.exposedEntity.SetFromDecode(child)
+	}
+}
+
+// ────────────────────────────────────────────────────────
 // MessageDefinitionCollection
 // ────────────────────────────────────────────────────────
 
@@ -2471,6 +2549,35 @@ func NewExposedEntity() *ExposedEntity {
 	return o
 }
 
+// initMessageDefinition2 creates a MessageDefinition2 with properties wired but NOT marked dirty.
+// Used by the registry for decoding existing elements from BSON.
+// When a storage alias exists, init uses the STORAGE name (what Mendix uses in BSON).
+func initMessageDefinition2() *MessageDefinition2 {
+	o := &MessageDefinition2{}
+	o.SetTypeName("MessageDefinitions$MessageDefinition2")
+	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
+	o.name.Bind(&o.Base, 0)
+	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
+	o.documentation.Bind(&o.Base, 1)
+	o.excluded = property.NewPrimitive[bool]("Excluded", property.DecodeBool)
+	o.excluded.Bind(&o.Base, 2)
+	o.exportLevel = property.NewEnum[string]("ExportLevel")
+	o.exportLevel.Bind(&o.Base, 3)
+	o.exposedEntity = property.NewPart[element.Element]("ExposedEntity")
+	o.exposedEntity.Bind(&o.Base, 4)
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.exposedEntity})
+	return o
+}
+
+// NewMessageDefinition2 creates a new MessageDefinition2 for user code. Marked dirty (bit 63 = new element).
+func NewMessageDefinition2() *MessageDefinition2 {
+	o := initMessageDefinition2()
+	// TODO: applyDefaults(o) — populate mandatory fields from reflection-data
+	// See docs/superpowers/specs/2026-04-22-modelsdk-tech-debt-design.md Fix 4
+	o.MarkDirty(63)
+	return o
+}
+
 // initMessageDefinitionCollection creates a MessageDefinitionCollection with properties wired but NOT marked dirty.
 // Used by the registry for decoding existing elements from BSON.
 // When a storage alias exists, init uses the STORAGE name (what Mendix uses in BSON).
@@ -2521,6 +2628,9 @@ func init() {
 	})
 	codec.DefaultRegistry.Register("MessageDefinitions$ExposedEntity", func() element.Element {
 		return initExposedEntity()
+	})
+	codec.DefaultRegistry.Register("MessageDefinitions$MessageDefinition2", func() element.Element {
+		return initMessageDefinition2()
 	})
 	codec.DefaultRegistry.Register("MessageDefinitions$MessageDefinitionCollection", func() element.Element {
 		return initMessageDefinitionCollection()

@@ -18,6 +18,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"jsonStructure":          {Introduced: "6.4.0"},
 			"mappingSourceReference": {Introduced: "10.16.0", Public: true},
 			"messageDefinition":      {Introduced: "7.6.0"},
+			"messageDefinition2":     {Introduced: "11.10.0"},
 			"publicName":             {Introduced: "7.14.0"},
 		},
 	},

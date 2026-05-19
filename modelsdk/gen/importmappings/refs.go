@@ -12,6 +12,7 @@ func init() {
 		{Prop: "JsonStructure", Kind: codec.RefByName, Target: "JsonStructures$JsonStructure"},
 		{Prop: "ImportedWebService", Kind: codec.RefByName, Target: "WebServices$ImportedWebService"},
 		{Prop: "MessageDefinition", Kind: codec.RefByName, Target: "MessageDefinitions$MessageDefinition"},
+		{Prop: "MessageDefinition2", Kind: codec.RefByName, Target: "MessageDefinitions$MessageDefinition2"},
 		{Prop: "Parameter", Kind: codec.RefByName, Target: "DomainModels$Entity"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("ImportMappings$ImportObjectMappingElement", []codec.RefMeta{

@@ -69,7 +69,7 @@ func init() {
 		{Prop: "CancelButtonPlaceholder", Kind: codec.RefByName, Target: "Forms$LayoutParameter"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Forms$LayoutCall", []codec.RefMeta{
-		{Prop: "Layout", Kind: codec.RefByName, Target: "Forms$Layout"},
+		{Prop: "Form", Kind: codec.RefByName, Target: "Forms$Layout"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Forms$LayoutCallArgument", []codec.RefMeta{
 		{Prop: "Parameter", Kind: codec.RefByName, Target: "Forms$LayoutParameter"},
@@ -164,7 +164,7 @@ func init() {
 		{Prop: "Entity", Kind: codec.RefByName, Target: "DomainModels$Entity"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Forms$SnippetCall", []codec.RefMeta{
-		{Prop: "Snippet", Kind: codec.RefByName, Target: "Forms$Snippet"},
+		{Prop: "Form", Kind: codec.RefByName, Target: "Forms$Snippet"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Forms$SnippetParameterMapping", []codec.RefMeta{
 		{Prop: "Parameter", Kind: codec.RefByName, Target: "Forms$SnippetParameter"},

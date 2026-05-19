@@ -246,6 +246,7 @@ type MappingDocument struct {
 	serviceName            *property.Primitive[string]
 	operationName          *property.Primitive[string]
 	messageDefinition      *property.ByNameRef[element.Element]
+	messageDefinition2     *property.ByNameRef[element.Element]
 	mappingSourceReference *property.Part[element.Element]
 	publicName             *property.Primitive[string]
 }
@@ -375,6 +376,16 @@ func (o *MappingDocument) SetMessageDefinitionQualifiedName(v string) {
 	o.messageDefinition.SetQualifiedName(v)
 }
 
+// MessageDefinition2QualifiedName returns the value of the messageDefinition2 property.
+func (o *MappingDocument) MessageDefinition2QualifiedName() string {
+	return o.messageDefinition2.QualifiedName()
+}
+
+// SetMessageDefinition2QualifiedName sets the value of the messageDefinition2 property.
+func (o *MappingDocument) SetMessageDefinition2QualifiedName(v string) {
+	o.messageDefinition2.SetQualifiedName(v)
+}
+
 // MappingSourceReference returns the value of the mappingSourceReference property.
 func (o *MappingDocument) MappingSourceReference() element.Element {
 	return o.mappingSourceReference.Get()
@@ -431,6 +442,11 @@ func (o *MappingDocument) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("MessageDefinition"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
 			o.messageDefinition.SetFromDecode(s)
+		}
+	}
+	if val, err := raw.LookupErr("MessageDefinition2"); err == nil {
+		if s, ok := val.StringValueOK(); ok {
+			o.messageDefinition2.SetFromDecode(s)
 		}
 	}
 	if child, err := codec.DecodeChild(raw, "MappingSourceReference"); err == nil {

@@ -37,6 +37,7 @@ type ExportMapping struct {
 	serviceName            *property.Primitive[string]
 	operationName          *property.Primitive[string]
 	messageDefinition      *property.ByNameRef[element.Element]
+	messageDefinition2     *property.ByNameRef[element.Element]
 	mappingSourceReference *property.Part[element.Element]
 	publicName             *property.Primitive[string]
 	parameterName          *property.Primitive[string]
@@ -170,6 +171,16 @@ func (o *ExportMapping) SetMessageDefinitionQualifiedName(v string) {
 	o.messageDefinition.SetQualifiedName(v)
 }
 
+// MessageDefinition2QualifiedName returns the value of the messageDefinition2 property.
+func (o *ExportMapping) MessageDefinition2QualifiedName() string {
+	return o.messageDefinition2.QualifiedName()
+}
+
+// SetMessageDefinition2QualifiedName sets the value of the messageDefinition2 property.
+func (o *ExportMapping) SetMessageDefinition2QualifiedName(v string) {
+	o.messageDefinition2.SetQualifiedName(v)
+}
+
 // MappingSourceReference returns the value of the mappingSourceReference property.
 func (o *ExportMapping) MappingSourceReference() element.Element {
 	return o.mappingSourceReference.Get()
@@ -240,7 +251,7 @@ func (o *ExportMapping) InitFromRaw(raw bson.Raw) {
 			o.exportLevel.SetFromDecode(s)
 		}
 	}
-	if children, err := codec.DecodeChildren(raw, "Elements"); err == nil { // supplements: ExportMapping.rootMappingElements→Elements
+	if children, err := codec.DecodeChildren(raw, "Elements"); err == nil {
 		for _, child := range children {
 			o.rootMappingElements.AppendFromDecode(child)
 		}
@@ -266,6 +277,11 @@ func (o *ExportMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("MessageDefinition"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
 			o.messageDefinition.SetFromDecode(s)
+		}
+	}
+	if val, err := raw.LookupErr("MessageDefinition2"); err == nil {
+		if s, ok := val.StringValueOK(); ok {
+			o.messageDefinition2.SetFromDecode(s)
 		}
 	}
 	if child, err := codec.DecodeChild(raw, "MappingSourceReference"); err == nil {
@@ -841,7 +857,7 @@ func initExportMapping() *ExportMapping {
 	o.excluded.Bind(&o.Base, 2)
 	o.exportLevel = property.NewEnum[string]("ExportLevel")
 	o.exportLevel.Bind(&o.Base, 3)
-	o.rootMappingElements = property.NewPartList[element.Element]("Elements") // supplements: ExportMapping.rootMappingElements→Elements
+	o.rootMappingElements = property.NewPartList[element.Element]("Elements")
 	o.rootMappingElements.Bind(&o.Base, 4)
 	o.xmlSchema = property.NewByNameRef[element.Element]("XmlSchema", "XmlSchemas$XmlSchema")
 	o.xmlSchema.Bind(&o.Base, 5)
@@ -857,19 +873,21 @@ func initExportMapping() *ExportMapping {
 	o.operationName.Bind(&o.Base, 10)
 	o.messageDefinition = property.NewByNameRef[element.Element]("MessageDefinition", "MessageDefinitions$MessageDefinition")
 	o.messageDefinition.Bind(&o.Base, 11)
+	o.messageDefinition2 = property.NewByNameRef[element.Element]("MessageDefinition2", "MessageDefinitions$MessageDefinition2")
+	o.messageDefinition2.Bind(&o.Base, 12)
 	o.mappingSourceReference = property.NewPart[element.Element]("MappingSourceReference")
-	o.mappingSourceReference.Bind(&o.Base, 12)
+	o.mappingSourceReference.Bind(&o.Base, 13)
 	o.publicName = property.NewPrimitive[string]("PublicName", property.DecodeString)
-	o.publicName.Bind(&o.Base, 13)
+	o.publicName.Bind(&o.Base, 14)
 	o.parameterName = property.NewPrimitive[string]("ParameterName", property.DecodeString)
-	o.parameterName.Bind(&o.Base, 14)
+	o.parameterName.Bind(&o.Base, 15)
 	o.parameterTypeName = property.NewPrimitive[string]("ParameterTypeName", property.DecodeString)
-	o.parameterTypeName.Bind(&o.Base, 15)
+	o.parameterTypeName.Bind(&o.Base, 16)
 	o.isHeader = property.NewPrimitive[bool]("IsHeader", property.DecodeBool)
-	o.isHeader.Bind(&o.Base, 16)
+	o.isHeader.Bind(&o.Base, 17)
 	o.nullValueOption = property.NewEnum[string]("NullValueOption")
-	o.nullValueOption.Bind(&o.Base, 17)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.rootMappingElements, o.xmlSchema, o.jsonStructure, o.rootElementName, o.importedWebService, o.serviceName, o.operationName, o.messageDefinition, o.mappingSourceReference, o.publicName, o.parameterName, o.parameterTypeName, o.isHeader, o.nullValueOption})
+	o.nullValueOption.Bind(&o.Base, 18)
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.rootMappingElements, o.xmlSchema, o.jsonStructure, o.rootElementName, o.importedWebService, o.serviceName, o.operationName, o.messageDefinition, o.messageDefinition2, o.mappingSourceReference, o.publicName, o.parameterName, o.parameterTypeName, o.isHeader, o.nullValueOption})
 	return o
 }
 

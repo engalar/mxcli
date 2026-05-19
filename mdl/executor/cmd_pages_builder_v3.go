@@ -158,10 +158,10 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*genPg.Page, error)
 
 			lc := genPg.NewLayoutCall()
 			assignFreshID(lc)
-			// The gen type uses "Layout" as the BSON key but Mendix stores the layout
-			// qualified name under "Form" (historic naming). Use setRawBSONField to emit
-			// the correct key; do NOT call SetLayoutQualifiedName which would write "Layout".
-			setRawBSONField(lc, "Form", s.Layout)
+			// Mendix stores the layout name under the "Form" BSON key (historic naming).
+			// After the types.go fix, initLayoutCall() uses "Form" as the property name,
+			// so SetLayoutQualifiedName now writes "Form" directly.
+			lc.SetLayoutQualifiedName(s.Layout)
 
 			mainPlaceholderRef := pb.getMainPlaceholderRef(s.Layout)
 
@@ -1011,11 +1011,12 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (element.Elemen
 		return act, nil
 
 	case "microflow":
-		mfID, err := pb.resolveMicroflow(action.Target)
-		if err != nil {
-			return nil, mdlerrors.NewBackend("resolve microflow", err)
+		// Resolution is for validation only — the BSON action stores the qualified
+		// name string, not a UUID. Log a warning for missing microflows but continue
+		// so that pages can reference microflows defined later in the same script.
+		if _, err := pb.resolveMicroflow(action.Target); err != nil {
+			log.Printf("warning: action microflow %s not found (will still create action by name)", action.Target)
 		}
-		_ = mfID
 
 		act := genPg.NewMicroflowClientAction()
 		assignFreshID(act)
@@ -2210,11 +2211,11 @@ func (pb *pageBuilder) buildClientActionBSON(action *ast.ActionV3) (bson.D, erro
 			}},
 		}, nil
 	case "microflow":
-		mfID, err := pb.resolveMicroflow(action.Target)
-		if err != nil {
-			return nil, mdlerrors.NewBackend("resolve microflow", err)
+		// Resolution is for validation only — BSON stores the qualified name string.
+		// Log a warning for missing microflows but continue building the action.
+		if _, err := pb.resolveMicroflow(action.Target); err != nil {
+			log.Printf("warning: action microflow %s not found (will still create action by name)", action.Target)
 		}
-		_ = mfID
 		return bson.D{
 			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 			{Key: "$Type", Value: "Forms$MicroflowAction"},

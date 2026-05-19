@@ -32,6 +32,9 @@ func init() {
 		{Prop: "OriginPointer", Kind: codec.RefById, Target: ""},
 		{Prop: "DestinationPointer", Kind: codec.RefById, Target: ""},
 	})
+	codec.DefaultRefRegistry.RegisterRefs("Workflows$InterruptingNotificationEventSubProcessStartActivityTarget", []codec.RefMeta{
+		{Prop: "Activity", Kind: codec.RefByName, Target: "Workflows$InterruptingNotificationEventSubProcessStartActivity"},
+	})
 	codec.DefaultRefRegistry.RegisterRefs("Workflows$JumpToActivity", []codec.RefMeta{
 		{Prop: "TargetActivity", Kind: codec.RefByName, Target: "Workflows$WorkflowActivity"},
 	})

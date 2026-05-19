@@ -23,6 +23,8 @@ func init() {
 		{Prop: "ProxyPassword", Kind: codec.RefByName, Target: "Constants$Constant"},
 		{Prop: "HeadersMicroflow", Kind: codec.RefByName, Target: "Microflows$Microflow"},
 		{Prop: "ConfigurationMicroflow", Kind: codec.RefByName, Target: "Microflows$Microflow"},
+		{Prop: "HeaderListMicroflow", Kind: codec.RefByName, Target: "Microflows$Microflow"},
+		{Prop: "ConfigurationEntityMicroflow", Kind: codec.RefByName, Target: "Microflows$Microflow"},
 		{Prop: "ErrorHandlingMicroflow", Kind: codec.RefByName, Target: "Microflows$Microflow"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Rest$CorsConfiguration", []codec.RefMeta{

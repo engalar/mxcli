@@ -135,6 +135,7 @@ type EntityChangeDataCaptureService struct {
 	exportLevel   *property.Enum[string]
 	sources       *property.PartList[element.Element]
 	serviceName   *property.Primitive[string]
+	baseline      *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -202,6 +203,16 @@ func (o *EntityChangeDataCaptureService) SetServiceName(v string) {
 	o.serviceName.Set(v)
 }
 
+// Baseline returns the value of the baseline property.
+func (o *EntityChangeDataCaptureService) Baseline() element.Element {
+	return o.baseline.Get()
+}
+
+// SetBaseline sets the value of the baseline property.
+func (o *EntityChangeDataCaptureService) SetBaseline(v element.Element) {
+	o.baseline.Set(v)
+}
+
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *EntityChangeDataCaptureService) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
@@ -218,6 +229,9 @@ func (o *EntityChangeDataCaptureService) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	o.serviceName.Init(raw)
+	if child, err := codec.DecodeChild(raw, "Baseline"); err == nil {
+		o.baseline.SetFromDecode(child)
+	}
 }
 
 // ────────────────────────────────────────────────────────
@@ -277,6 +291,212 @@ func (o *EntityChangeSource) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Properties"); err == nil {
 		for _, child := range children {
 			o.properties.AppendFromDecode(child)
+		}
+	}
+}
+
+// ────────────────────────────────────────────────────────
+// Version
+// ────────────────────────────────────────────────────────
+
+type Version struct {
+	element.Base
+	major *property.Primitive[int32]
+	minor *property.Primitive[int32]
+}
+
+// Major returns the value of the major property.
+func (o *Version) Major() int32 {
+	return o.major.Get()
+}
+
+// SetMajor sets the value of the major property.
+func (o *Version) SetMajor(v int32) {
+	o.major.Set(v)
+}
+
+// Minor returns the value of the minor property.
+func (o *Version) Minor() int32 {
+	return o.minor.Get()
+}
+
+// SetMinor sets the value of the minor property.
+func (o *Version) SetMinor(v int32) {
+	o.minor.Set(v)
+}
+
+// InitFromRaw populates lazy-decoded property holders from raw BSON.
+func (o *Version) InitFromRaw(raw bson.Raw) {
+	o.major.Init(raw)
+	o.minor.Init(raw)
+}
+
+// ────────────────────────────────────────────────────────
+// VersionedEntityChangeDataCaptureService
+// ────────────────────────────────────────────────────────
+
+type VersionedEntityChangeDataCaptureService struct {
+	element.Base
+	version *property.Part[element.Element]
+	sources *property.PartList[element.Element]
+}
+
+// Version returns the value of the version property.
+func (o *VersionedEntityChangeDataCaptureService) Version() element.Element {
+	return o.version.Get()
+}
+
+// SetVersion sets the value of the version property.
+func (o *VersionedEntityChangeDataCaptureService) SetVersion(v element.Element) {
+	o.version.Set(v)
+}
+
+// SourcesItems returns the value of the sources property.
+func (o *VersionedEntityChangeDataCaptureService) SourcesItems() []element.Element {
+	return o.sources.Items()
+}
+
+// AddSources appends a child element to the sources list.
+func (o *VersionedEntityChangeDataCaptureService) AddSources(v element.Element) {
+	o.sources.Append(v)
+}
+
+// RemoveSources removes the element at the given index from the sources list.
+func (o *VersionedEntityChangeDataCaptureService) RemoveSources(index int) {
+	o.sources.Remove(index)
+}
+
+// InitFromRaw populates lazy-decoded property holders from raw BSON.
+func (o *VersionedEntityChangeDataCaptureService) InitFromRaw(raw bson.Raw) {
+	if child, err := codec.DecodeChild(raw, "Version"); err == nil {
+		o.version.SetFromDecode(child)
+	}
+	if children, err := codec.DecodeChildren(raw, "Sources"); err == nil {
+		for _, child := range children {
+			o.sources.AppendFromDecode(child)
+		}
+	}
+}
+
+// ────────────────────────────────────────────────────────
+// VersionedEntityChangeSource
+// ────────────────────────────────────────────────────────
+
+type VersionedEntityChangeSource struct {
+	element.Base
+	version     *property.Part[element.Element]
+	entityGuid  *property.Primitive[string]
+	exposedName *property.Primitive[string]
+	properties  *property.PartList[element.Element]
+}
+
+// Version returns the value of the version property.
+func (o *VersionedEntityChangeSource) Version() element.Element {
+	return o.version.Get()
+}
+
+// SetVersion sets the value of the version property.
+func (o *VersionedEntityChangeSource) SetVersion(v element.Element) {
+	o.version.Set(v)
+}
+
+// EntityGuid returns the value of the entityGuid property.
+func (o *VersionedEntityChangeSource) EntityGuid() string {
+	return o.entityGuid.Get()
+}
+
+// SetEntityGuid sets the value of the entityGuid property.
+func (o *VersionedEntityChangeSource) SetEntityGuid(v string) {
+	o.entityGuid.Set(v)
+}
+
+// ExposedName returns the value of the exposedName property.
+func (o *VersionedEntityChangeSource) ExposedName() string {
+	return o.exposedName.Get()
+}
+
+// SetExposedName sets the value of the exposedName property.
+func (o *VersionedEntityChangeSource) SetExposedName(v string) {
+	o.exposedName.Set(v)
+}
+
+// PropertiesItems returns the value of the properties property.
+func (o *VersionedEntityChangeSource) PropertiesItems() []element.Element {
+	return o.properties.Items()
+}
+
+// AddProperties appends a child element to the properties list.
+func (o *VersionedEntityChangeSource) AddProperties(v element.Element) {
+	o.properties.Append(v)
+}
+
+// RemoveProperties removes the element at the given index from the properties list.
+func (o *VersionedEntityChangeSource) RemoveProperties(index int) {
+	o.properties.Remove(index)
+}
+
+// InitFromRaw populates lazy-decoded property holders from raw BSON.
+func (o *VersionedEntityChangeSource) InitFromRaw(raw bson.Raw) {
+	if child, err := codec.DecodeChild(raw, "Version"); err == nil {
+		o.version.SetFromDecode(child)
+	}
+	o.entityGuid.Init(raw)
+	o.exposedName.Init(raw)
+	if children, err := codec.DecodeChildren(raw, "Properties"); err == nil {
+		for _, child := range children {
+			o.properties.AppendFromDecode(child)
+		}
+	}
+}
+
+// ────────────────────────────────────────────────────────
+// VersionedProperty
+// ────────────────────────────────────────────────────────
+
+type VersionedProperty struct {
+	element.Base
+	propertyGuid *property.Primitive[string]
+	exposedName  *property.Primitive[string]
+	propType     *property.Enum[string]
+}
+
+// PropertyGuid returns the value of the propertyGuid property.
+func (o *VersionedProperty) PropertyGuid() string {
+	return o.propertyGuid.Get()
+}
+
+// SetPropertyGuid sets the value of the propertyGuid property.
+func (o *VersionedProperty) SetPropertyGuid(v string) {
+	o.propertyGuid.Set(v)
+}
+
+// ExposedName returns the value of the exposedName property.
+func (o *VersionedProperty) ExposedName() string {
+	return o.exposedName.Get()
+}
+
+// SetExposedName sets the value of the exposedName property.
+func (o *VersionedProperty) SetExposedName(v string) {
+	o.exposedName.Set(v)
+}
+
+// Type returns the value of the type property.
+func (o *VersionedProperty) Type() string {
+	return o.propType.Get()
+}
+
+// SetType sets the value of the type property.
+func (o *VersionedProperty) SetType(v string) {
+	o.propType.Set(v)
+}
+
+// InitFromRaw populates lazy-decoded property holders from raw BSON.
+func (o *VersionedProperty) InitFromRaw(raw bson.Raw) {
+	o.propertyGuid.Init(raw)
+	o.exposedName.Init(raw)
+	if val, err := raw.LookupErr("Type"); err == nil {
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
 		}
 	}
 }
@@ -349,7 +569,9 @@ func initEntityChangeDataCaptureService() *EntityChangeDataCaptureService {
 	o.sources.Bind(&o.Base, 4)
 	o.serviceName = property.NewPrimitive[string]("ServiceName", property.DecodeString)
 	o.serviceName.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.sources, o.serviceName})
+	o.baseline = property.NewPart[element.Element]("Baseline")
+	o.baseline.Bind(&o.Base, 6)
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.sources, o.serviceName, o.baseline})
 	return o
 }
 
@@ -387,6 +609,104 @@ func NewEntityChangeSource() *EntityChangeSource {
 	return o
 }
 
+// initVersion creates a Version with properties wired but NOT marked dirty.
+// Used by the registry for decoding existing elements from BSON.
+// When a storage alias exists, init uses the STORAGE name (what Mendix uses in BSON).
+func initVersion() *Version {
+	o := &Version{}
+	o.SetTypeName("ChangeDataCapture$Version")
+	o.major = property.NewPrimitive[int32]("Major", property.DecodeInt32)
+	o.major.Bind(&o.Base, 0)
+	o.minor = property.NewPrimitive[int32]("Minor", property.DecodeInt32)
+	o.minor.Bind(&o.Base, 1)
+	o.SetProperties([]element.Property{o.major, o.minor})
+	return o
+}
+
+// NewVersion creates a new Version for user code. Marked dirty (bit 63 = new element).
+func NewVersion() *Version {
+	o := initVersion()
+	// TODO: applyDefaults(o) — populate mandatory fields from reflection-data
+	// See docs/superpowers/specs/2026-04-22-modelsdk-tech-debt-design.md Fix 4
+	o.MarkDirty(63)
+	return o
+}
+
+// initVersionedEntityChangeDataCaptureService creates a VersionedEntityChangeDataCaptureService with properties wired but NOT marked dirty.
+// Used by the registry for decoding existing elements from BSON.
+// When a storage alias exists, init uses the STORAGE name (what Mendix uses in BSON).
+func initVersionedEntityChangeDataCaptureService() *VersionedEntityChangeDataCaptureService {
+	o := &VersionedEntityChangeDataCaptureService{}
+	o.SetTypeName("ChangeDataCapture$VersionedEntityChangeDataCaptureService")
+	o.version = property.NewPart[element.Element]("Version")
+	o.version.Bind(&o.Base, 0)
+	o.sources = property.NewPartList[element.Element]("Sources")
+	o.sources.Bind(&o.Base, 1)
+	o.SetProperties([]element.Property{o.version, o.sources})
+	return o
+}
+
+// NewVersionedEntityChangeDataCaptureService creates a new VersionedEntityChangeDataCaptureService for user code. Marked dirty (bit 63 = new element).
+func NewVersionedEntityChangeDataCaptureService() *VersionedEntityChangeDataCaptureService {
+	o := initVersionedEntityChangeDataCaptureService()
+	// TODO: applyDefaults(o) — populate mandatory fields from reflection-data
+	// See docs/superpowers/specs/2026-04-22-modelsdk-tech-debt-design.md Fix 4
+	o.MarkDirty(63)
+	return o
+}
+
+// initVersionedEntityChangeSource creates a VersionedEntityChangeSource with properties wired but NOT marked dirty.
+// Used by the registry for decoding existing elements from BSON.
+// When a storage alias exists, init uses the STORAGE name (what Mendix uses in BSON).
+func initVersionedEntityChangeSource() *VersionedEntityChangeSource {
+	o := &VersionedEntityChangeSource{}
+	o.SetTypeName("ChangeDataCapture$VersionedEntityChangeSource")
+	o.version = property.NewPart[element.Element]("Version")
+	o.version.Bind(&o.Base, 0)
+	o.entityGuid = property.NewPrimitive[string]("EntityGuid", property.DecodeString)
+	o.entityGuid.Bind(&o.Base, 1)
+	o.exposedName = property.NewPrimitive[string]("ExposedName", property.DecodeString)
+	o.exposedName.Bind(&o.Base, 2)
+	o.properties = property.NewPartList[element.Element]("Properties")
+	o.properties.Bind(&o.Base, 3)
+	o.SetProperties([]element.Property{o.version, o.entityGuid, o.exposedName, o.properties})
+	return o
+}
+
+// NewVersionedEntityChangeSource creates a new VersionedEntityChangeSource for user code. Marked dirty (bit 63 = new element).
+func NewVersionedEntityChangeSource() *VersionedEntityChangeSource {
+	o := initVersionedEntityChangeSource()
+	// TODO: applyDefaults(o) — populate mandatory fields from reflection-data
+	// See docs/superpowers/specs/2026-04-22-modelsdk-tech-debt-design.md Fix 4
+	o.MarkDirty(63)
+	return o
+}
+
+// initVersionedProperty creates a VersionedProperty with properties wired but NOT marked dirty.
+// Used by the registry for decoding existing elements from BSON.
+// When a storage alias exists, init uses the STORAGE name (what Mendix uses in BSON).
+func initVersionedProperty() *VersionedProperty {
+	o := &VersionedProperty{}
+	o.SetTypeName("ChangeDataCapture$VersionedProperty")
+	o.propertyGuid = property.NewPrimitive[string]("PropertyGuid", property.DecodeString)
+	o.propertyGuid.Bind(&o.Base, 0)
+	o.exposedName = property.NewPrimitive[string]("ExposedName", property.DecodeString)
+	o.exposedName.Bind(&o.Base, 1)
+	o.propType = property.NewEnum[string]("Type")
+	o.propType.Bind(&o.Base, 2)
+	o.SetProperties([]element.Property{o.propertyGuid, o.exposedName, o.propType})
+	return o
+}
+
+// NewVersionedProperty creates a new VersionedProperty for user code. Marked dirty (bit 63 = new element).
+func NewVersionedProperty() *VersionedProperty {
+	o := initVersionedProperty()
+	// TODO: applyDefaults(o) — populate mandatory fields from reflection-data
+	// See docs/superpowers/specs/2026-04-22-modelsdk-tech-debt-design.md Fix 4
+	o.MarkDirty(63)
+	return o
+}
+
 func init() {
 	codec.DefaultRegistry.Register("ChangeDataCapture$AssociationProperty", func() element.Element {
 		return initAssociationProperty()
@@ -399,5 +719,17 @@ func init() {
 	})
 	codec.DefaultRegistry.Register("ChangeDataCapture$EntityChangeSource", func() element.Element {
 		return initEntityChangeSource()
+	})
+	codec.DefaultRegistry.Register("ChangeDataCapture$Version", func() element.Element {
+		return initVersion()
+	})
+	codec.DefaultRegistry.Register("ChangeDataCapture$VersionedEntityChangeDataCaptureService", func() element.Element {
+		return initVersionedEntityChangeDataCaptureService()
+	})
+	codec.DefaultRegistry.Register("ChangeDataCapture$VersionedEntityChangeSource", func() element.Element {
+		return initVersionedEntityChangeSource()
+	})
+	codec.DefaultRegistry.Register("ChangeDataCapture$VersionedProperty", func() element.Element {
+		return initVersionedProperty()
 	})
 }

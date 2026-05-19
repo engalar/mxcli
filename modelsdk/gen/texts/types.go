@@ -116,7 +116,6 @@ func (o *Text) RemoveTranslations(index int) {
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *Text) InitFromRaw(raw bson.Raw) {
-	// Mendix stores translations under "Items" (supplements.json: "Text.translations" → "Items").
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {
 			o.translations.AppendFromDecode(child)
@@ -214,8 +213,6 @@ func NewSystemTextCollection() *SystemTextCollection {
 func initText() *Text {
 	o := &Text{}
 	o.SetTypeName("Texts$Text")
-	// supplements.json: "Text.translations": "Items"
-	// Mendix stores Texts$Text translations under "Items", not "Translations".
 	o.translations = property.NewPartList[element.Element]("Items")
 	o.translations.Bind(&o.Base, 0)
 	o.SetProperties([]element.Property{o.translations})

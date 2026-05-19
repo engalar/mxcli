@@ -94,6 +94,11 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"origin":      {Required: true},
 		},
 	},
+	"Workflows$InterruptingNotificationEventSubProcessStartActivityTarget": {
+		Properties: map[string]version.PropertyVersionInfo{
+			"activity": {Required: true},
+		},
+	},
 	"Workflows$LinearRecurrence": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"interval":      {Public: true},
