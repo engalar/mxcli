@@ -4,6 +4,7 @@ package rules
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/model"
@@ -152,16 +153,16 @@ func (r *OverlappingActivitiesRule) Check(ctx *linter.LintContext) []linter.Viol
 	return violations
 }
 
-// parseActivityPos parses gen's "<x> <y>" RelativeMiddlePoint string
-// (space-separated integers). Returns ok=false for an empty or
-// malformed value so the caller can skip the activity rather than
-// emit a false-positive overlap at (0, 0).
+// parseActivityPos parses a RelativeMiddlePoint string. Accepts both the
+// canonical semicolon format ("200;200") written by Studio Pro / new mxcli
+// and the legacy space-separated format ("200 200") from older mxcli.
 func parseActivityPos(s string) (int, int, bool) {
 	if s == "" {
 		return 0, 0, false
 	}
+	normalized := strings.ReplaceAll(s, ";", " ")
 	var x, y int
-	n, err := fmt.Sscanf(s, "%d %d", &x, &y)
+	n, err := fmt.Sscanf(normalized, "%d %d", &x, &y)
 	if err != nil || n != 2 {
 		return 0, 0, false
 	}

@@ -66,6 +66,35 @@ mxcli setup mxbuild -p app.mpr
 mxcli docker check -p app.mpr
 ```
 
+### Using testdata projects for mx check validation
+
+`testdata/` contains two MPR v2 projects for local `mx check` verification:
+
+| Path | Mendix version |
+|------|---------------|
+| `testdata/corpus-b/app.mpr` | 11.6.4 |
+| `testdata/expr-checker/minimal.mpr` | 11.6.6 |
+
+**Note**: Mendix `mx check` requires the `.mpr` filename to match `mprcontents/mprname`.
+The project name recorded in each testdata project already matches its filename.
+If you ever hit `StorageMprNameDiscrepancyException`, edit `mprcontents/mprname` to match.
+Work in-place and use `git restore testdata/...` to clean up.
+
+Standard validation workflow for BSON fixes:
+```bash
+# 1. Baseline check
+~/.mxcli/mxbuild/11.6.6/modeler/mx check testdata/expr-checker/minimal.mpr 2>&1 | grep -i "StorageLoadException\|Invalid"
+
+# 2. Apply change via mxcli exec
+./bin/mxcli -p testdata/expr-checker/minimal.mpr -c "create or modify microflow MyFirstModule.ACT_Test () returns Nothing begin return; end;"
+
+# 3. Re-check — must not introduce new StorageLoadException
+~/.mxcli/mxbuild/11.6.6/modeler/mx check testdata/expr-checker/minimal.mpr 2>&1 | grep -i "StorageLoadException\|Invalid"
+
+# 4. Restore
+git restore testdata/expr-checker/
+```
+
 ## Project Architecture
 
 ```
