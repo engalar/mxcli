@@ -2,8 +2,6 @@ package mpr
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -125,22 +123,17 @@ func (r *Reader) ListFolders() ([]*FolderInfo, error) {
 }
 
 // resolveContents resolves unit contents, loading from external file for MPR v2.
+// For v2 format, contents are stored in mprcontents/XX/YY/UUID.mxunit files;
+// the inline contents parameter is empty (the Unit table has no Contents column).
 func (r *Reader) resolveContents(unitID string, contents []byte) ([]byte, error) {
 	if r.version == MPRVersionV1 {
 		return contents, nil
 	}
+	// Already loaded (e.g. by readMprContents in listUnitsByTypeV2).
 	if len(contents) >= 4 {
 		return contents, nil
 	}
-	externalPath := filepath.Join(r.contentsDir, unitID)
-	if _, err := os.Stat(externalPath); err == nil {
-		return os.ReadFile(externalPath)
-	}
-	for _, ext := range []string{".mxunit", ".json", ""} {
-		path := filepath.Join(r.contentsDir, unitID+ext)
-		if data, err := os.ReadFile(path); err == nil {
-			return data, nil
-		}
-	}
-	return contents, nil
+	// V2: load from mprcontents/<XX>/<YY>/<UUID>.mxunit
+	// unitID is in the swapped-UUID format used by blobToUUID / blobToUUIDSwapped.
+	return r.readMprContents(unitID)
 }
