@@ -1,1 +1,3 @@
 .mxcli/
+.mendix-cache
+*.mpr.lock
