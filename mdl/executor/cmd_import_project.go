@@ -3,9 +3,15 @@
 package executor
 
 import (
+	"context"
+	"fmt"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/mendixlabs/mxcli/mdl/visitor"
 )
 
 // ImportOptions controls the behaviour of ImportProject.
@@ -66,4 +72,103 @@ func sortMDLFiles(paths []string) []string {
 		return out[i] < out[j]
 	})
 	return out
+}
+
+// ImportProject scans inputDir for .mdl files, sorts them in dependency
+// order, and executes each against the connected project. _marketplace.mdl
+// is always skipped (it is informational only).
+func (e *Executor) ImportProject(inputDir string, opts ImportOptions) error {
+	ctx := e.newExecContext(context.Background())
+	if !ctx.Connected() {
+		return fmt.Errorf("not connected to a project")
+	}
+
+	progress := opts.Progress
+	if progress == nil {
+		progress = func(string) {}
+	}
+
+	var allFiles []string
+	if err := filepath.WalkDir(inputDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && strings.HasSuffix(path, ".mdl") {
+			rel, _ := filepath.Rel(inputDir, path)
+			allFiles = append(allFiles, rel)
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("scan %s: %w", inputDir, err)
+	}
+
+	if opts.Module != "" {
+		filtered := allFiles[:0]
+		for _, f := range allFiles {
+			norm := filepath.ToSlash(f)
+			if strings.HasPrefix(norm, opts.Module+"/") || strings.HasPrefix(norm, "_project/") {
+				filtered = append(filtered, f)
+			}
+		}
+		allFiles = filtered
+	}
+
+	filtered := allFiles[:0]
+	for _, f := range allFiles {
+		if filepath.Base(f) != "_marketplace.mdl" {
+			filtered = append(filtered, f)
+		}
+	}
+	allFiles = filtered
+
+	sorted := sortMDLFiles(allFiles)
+
+	var errs []string
+	for _, rel := range sorted {
+		fullPath := filepath.Join(inputDir, rel)
+		content, err := os.ReadFile(fullPath)
+		if err != nil {
+			msg := fmt.Sprintf("read %s: %v", rel, err)
+			if !opts.SkipErrors {
+				return fmt.Errorf("%s", msg)
+			}
+			errs = append(errs, msg)
+			continue
+		}
+
+		prog, parseErrs := visitor.Build(string(content))
+		if len(parseErrs) > 0 {
+			for _, pe := range parseErrs {
+				msg := fmt.Sprintf("parse %s: %v", rel, pe)
+				if !opts.SkipErrors {
+					return fmt.Errorf("%s", msg)
+				}
+				errs = append(errs, msg)
+			}
+			continue
+		}
+
+		if opts.DryRun {
+			progress(fmt.Sprintf("  [dry-run]  %s", rel))
+			continue
+		}
+
+		progress(fmt.Sprintf("  [exec]     %s", rel))
+		if err := e.ExecuteProgram(prog); err != nil {
+			msg := fmt.Sprintf("exec %s: %v", rel, err)
+			if !opts.SkipErrors {
+				return fmt.Errorf("%s", msg)
+			}
+			errs = append(errs, msg)
+		}
+	}
+
+	if len(errs) > 0 {
+		progress(fmt.Sprintf("  [warn]     %d file(s) had errors:", len(errs)))
+		for _, e := range errs {
+			progress(fmt.Sprintf("    - %s", e))
+		}
+	}
+
+	return nil
 }

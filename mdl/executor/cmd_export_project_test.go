@@ -205,3 +205,39 @@ func indexOfSuffix(slice []string, suffix string) int {
 	}
 	return -1
 }
+
+func TestImportProject_ExecutesFiles(t *testing.T) {
+	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	be, err := mprbackend.NewFromPath(dst)
+	if err != nil {
+		t.Fatalf("NewFromPath: %v", err)
+	}
+	t.Cleanup(func() { _ = be.Disconnect() })
+
+	exportDir := t.TempDir()
+	exportExec := New(os.Stderr)
+	exportExec.backend = be
+	exportExec.cache = &executorCache{}
+	if err := exportExec.ExportProject(exportDir, ExportOptions{Progress: func(l string) { t.Log("export:", l) }}); err != nil {
+		t.Fatalf("ExportProject: %v", err)
+	}
+	_ = be.Disconnect()
+
+	dst2 := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	be2, err := mprbackend.NewFromPath(dst2)
+	if err != nil {
+		t.Fatalf("NewFromPath dst2: %v", err)
+	}
+	t.Cleanup(func() { _ = be2.Disconnect() })
+
+	importExec := New(os.Stderr)
+	importExec.backend = be2
+	importExec.cache = &executorCache{}
+	err = importExec.ImportProject(exportDir, ImportOptions{
+		SkipErrors: true,
+		Progress:   func(l string) { t.Log("import:", l) },
+	})
+	if err != nil {
+		t.Fatalf("ImportProject: %v", err)
+	}
+}
