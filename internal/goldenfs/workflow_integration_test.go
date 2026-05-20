@@ -18,7 +18,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 )
 
-// step scripts are package-level vars so each const stays readable.
+// step scripts are package-level consts so each declaration stays readable.
 
 const wfStep1aInfra = `
 create module role MyFirstModule.Reviewer
