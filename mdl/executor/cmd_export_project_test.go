@@ -5,6 +5,7 @@ package executor
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -106,5 +107,52 @@ func TestExportProject_ProjectLevelFiles(t *testing.T) {
 	projDir := filepath.Join(outDir, "_project")
 	if _, err := os.Stat(projDir); err != nil {
 		t.Errorf("_project/ dir missing: %v", err)
+	}
+}
+
+func TestExportProject_ModuleDocuments(t *testing.T) {
+	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	be, err := mprbackend.NewFromPath(dst)
+	if err != nil {
+		t.Fatalf("NewFromPath: %v", err)
+	}
+	t.Cleanup(func() { _ = be.Disconnect() })
+
+	outDir := t.TempDir()
+	exec := New(os.Stderr)
+	exec.backend = be
+	exec.cache = &executorCache{}
+
+	if err := exec.ExportProject(outDir, ExportOptions{Progress: func(l string) { t.Log(l) }}); err != nil {
+		t.Fatalf("ExportProject: %v", err)
+	}
+
+	var mdlFiles []string
+	_ = filepath.WalkDir(outDir, func(p string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() && strings.HasSuffix(p, ".mdl") {
+			mdlFiles = append(mdlFiles, p)
+		}
+		return nil
+	})
+	if len(mdlFiles) == 0 {
+		t.Errorf("no .mdl files exported under %s", outDir)
+	}
+	hasModuleFile := false
+	hasPerDocumentFile := false
+	for _, f := range mdlFiles {
+		rel, _ := filepath.Rel(outDir, f)
+		if !strings.HasPrefix(rel, "_") {
+			hasModuleFile = true
+		}
+		base := filepath.Base(rel)
+		if base != "_module.mdl" && base != "_associations.mdl" && base != "_module_roles.mdl" && !strings.HasPrefix(rel, "_") {
+			hasPerDocumentFile = true
+		}
+	}
+	if !hasModuleFile {
+		t.Errorf("no module-level .mdl files found in %v", mdlFiles)
+	}
+	if !hasPerDocumentFile {
+		t.Errorf("no per-document .mdl files (entities/microflows/pages) found in %v", mdlFiles)
 	}
 }
