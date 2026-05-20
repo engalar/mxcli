@@ -31,18 +31,25 @@ func findMxBinaryForTest() string {
 	return ""
 }
 
-// assertNoFUSECorruption fails the test if output contains any FUSE-corruption
-// signature, or if any of ourObjects appears in a flagged error line.
+// assertNoFUSECorruption fails the test if mx check output contains any
+// load-time crash signature, or if any of ourObjects appears in the output.
 // Pre-existing CE6083 design-property errors are allowed through.
+//
+// A non-zero exit code alone is not sufficient — mx check exits non-zero for
+// ordinary model errors (CE*) too. We specifically look for signatures that
+// indicate the FUSE overlay corrupted the file OR our BSON writes produced
+// data Mendix cannot deserialise.
 func assertNoFUSECorruption(t *testing.T, output string, ourObjects ...string) {
 	t.Helper()
 	fatalSignatures := []string{
-		"StorageLoadException",  // SQLite file corruption / mprcontents desync
-		"TypeCacheUnknownType",  // BSON $Type written that Mendix doesn't recognise
-		"CE0066",                // Entity access out of date
-		"CE0463",                // Widget definition changed (BSON shape mismatch)
-		"CE1613",                // Layout no longer exists
-		"Invalid file format",   // SQLite header damage
+		"StorageLoadException",       // SQLite file corruption / mprcontents desync
+		"TypeCacheUnknownType",       // BSON $Type written that Mendix doesn't recognise
+		"InvalidOperationException",  // type mismatch when setting a BSON field (e.g. wrong wrapper type)
+		"ArgumentException",          // inner cause of many InvalidOperationException crashes
+		"CE0066",                     // Entity access out of date
+		"CE0463",                     // Widget definition changed (BSON shape mismatch)
+		"CE1613",                     // Layout no longer exists
+		"Invalid file format",        // SQLite header damage
 	}
 	for _, sig := range fatalSignatures {
 		if strings.Contains(output, sig) {

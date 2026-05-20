@@ -130,7 +130,7 @@ func astToViewEntityGen(s *ast.CreateViewEntityStmt, sourceDocRef string, locati
 	entity := genDm.NewEntity()
 	entity.SetName(s.Name.Name)
 	entity.SetDocumentation(s.Documentation)
-	entity.SetLocation(fmt.Sprintf("%d,%d", location.X, location.Y))
+	entity.SetLocation(fmt.Sprintf("%d;%d", location.X, location.Y))
 
 	noGen := genDm.NewNoGeneralization()
 	noGen.SetPersistable(true)

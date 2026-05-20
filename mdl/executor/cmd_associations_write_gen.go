@@ -28,7 +28,7 @@ func astToEntityGen(s *ast.CreateEntityStmt) *genDm.Entity {
 	entity.SetName(s.Name.Name)
 	entity.SetDocumentation(s.Documentation)
 	if s.Position != nil {
-		entity.SetLocation(fmt.Sprintf("%d,%d", s.Position.X, s.Position.Y))
+		entity.SetLocation(fmt.Sprintf("%d;%d", s.Position.X, s.Position.Y))
 	}
 
 	persistable := s.Kind != ast.EntityNonPersistent

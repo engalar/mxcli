@@ -248,7 +248,7 @@ func buildSingleUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.SingleUs
 	task.SetCaption(n.Caption)
 	task.SetDueDate(n.DueDate)
 	if n.TaskDescription != "" {
-		task.SetTaskDescription(newTextWrapperGen(n.TaskDescription))
+		task.SetTaskDescription(newStringTemplateGen(n.TaskDescription))
 	}
 	if tgt := buildUserTargetingGen(n.Targeting); tgt != nil {
 		task.SetUserTargeting(tgt)
@@ -269,7 +269,7 @@ func buildMultiUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.MultiUser
 	task.SetCaption(n.Caption)
 	task.SetDueDate(n.DueDate)
 	if n.TaskDescription != "" {
-		task.SetTaskDescription(newTextWrapperGen(n.TaskDescription))
+		task.SetTaskDescription(newStringTemplateGen(n.TaskDescription))
 	}
 	if tgt := buildUserTargetingGen(n.Targeting); tgt != nil {
 		task.SetUserTargeting(tgt)
@@ -589,12 +589,12 @@ func execCreateWorkflowGen(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 	// Display metadata. WorkflowName / WorkflowDescription are Texts$Text
 	// wrappers in the gen schema (per Phase A R1 dual-storage finding).
 	if s.DisplayName != "" {
-		wf.SetWorkflowName(newTextWrapperGen(s.DisplayName))
+		wf.SetWorkflowName(newStringTemplateGen(s.DisplayName))
 		// Mirror Title for legacy decode round-trip.
 		wf.SetTitle(s.DisplayName)
 	}
 	if s.Description != "" {
-		wf.SetWorkflowDescription(newTextWrapperGen(s.Description))
+		wf.SetWorkflowDescription(newStringTemplateGen(s.Description))
 	}
 	if s.ExportLevel != "" {
 		wf.SetExportLevel(s.ExportLevel)
@@ -986,14 +986,20 @@ func uniqueName(name string, nameCount map[string]int) string {
 	return fmt.Sprintf("%s%d", name, count)
 }
 
-// newTextWrapperGen wraps a plain string in a Texts$Text element with
-// a single English Translation (LanguageCode="en_US"). Mirrors the
-// shape Studio Pro emits for default-language workflow text fields
-// (TaskName, TaskDescription, WorkflowName, WorkflowDescription).
-//
-// The describe-side reader (readTextElementGen) accepts Text /
-// Translation / Value field names with raw-BSON fallback so the
-// round-trip is symmetrical even with this minimal payload.
+// newStringTemplateGen wraps a plain string in a Microflows$StringTemplate
+// element (empty Parameters list, Text set to s). This is the correct BSON
+// shape for workflow text fields: WorkflowName, WorkflowDescription,
+// TaskName, TaskDescription — all use StringTemplate, not Texts$Text.
+func newStringTemplateGen(s string) element.Element {
+	tpl := genMf.NewStringTemplate()
+	tpl.SetID(element.ID(types.GenerateID()))
+	tpl.SetText(s)
+	return tpl
+}
+
+// newTextWrapperGen is kept for callers outside the workflow context that
+// genuinely need Texts$Text (page labels, etc.). Workflow text fields must
+// use newStringTemplateGen instead.
 func newTextWrapperGen(s string) element.Element {
 	tx := texts.NewText()
 	tx.SetID(element.ID(types.GenerateID()))
