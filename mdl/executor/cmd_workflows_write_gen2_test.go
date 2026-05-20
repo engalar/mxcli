@@ -210,7 +210,7 @@ func TestBuildSingleUserTaskGenActivity_FieldsPropagate(t *testing.T) {
 	}
 }
 
-func TestBuildUserSourceGen_AllKinds(t *testing.T) {
+func TestBuildUserTargetingGen_AllKinds(t *testing.T) {
 	cases := []struct {
 		name   string
 		t      ast.WorkflowTargetingNode
@@ -219,12 +219,12 @@ func TestBuildUserSourceGen_AllKinds(t *testing.T) {
 		{
 			name:   "microflow",
 			t:      ast.WorkflowTargetingNode{Kind: "microflow", Microflow: ast.QualifiedName{Module: "M", Name: "Pick"}},
-			expect: "Workflows$MicroflowBasedUserSource",
+			expect: "Workflows$MicroflowUserTargeting",
 		},
 		{
 			name:   "xpath",
 			t:      ast.WorkflowTargetingNode{Kind: "xpath", XPath: "//User"},
-			expect: "Workflows$XPathBasedUserSource",
+			expect: "Workflows$XPathUserTargeting",
 		},
 		{
 			name:   "group_microflow",
@@ -239,21 +239,21 @@ func TestBuildUserSourceGen_AllKinds(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			src := buildUserSourceGen(tc.t)
-			if src == nil {
-				t.Fatal("nil source")
+			tgt := buildUserTargetingGen(tc.t)
+			if tgt == nil {
+				t.Fatal("nil targeting")
 			}
-			if src.TypeName() != tc.expect {
-				t.Errorf("TypeName = %q, want %q", src.TypeName(), tc.expect)
+			if tgt.TypeName() != tc.expect {
+				t.Errorf("TypeName = %q, want %q", tgt.TypeName(), tc.expect)
 			}
 		})
 	}
 }
 
-func TestBuildUserSourceGen_EmptyKindReturnsNil(t *testing.T) {
-	src := buildUserSourceGen(ast.WorkflowTargetingNode{Kind: ""})
-	if src != nil {
-		t.Errorf("expected nil for empty kind, got %v", src)
+func TestBuildUserTargetingGen_EmptyKindReturnsNil(t *testing.T) {
+	tgt := buildUserTargetingGen(ast.WorkflowTargetingNode{Kind: ""})
+	if tgt != nil {
+		t.Errorf("expected nil for empty kind, got %v", tgt)
 	}
 }
 
@@ -290,8 +290,8 @@ func TestBuildCallMicroflowGenActivity_FullyQualifiedMappings(t *testing.T) {
 		},
 	}
 	got := buildCallMicroflowGenActivity(n)
-	if got.TypeName() != "Workflows$CallMicroflowActivity" {
-		t.Errorf("TypeName = %q, want CallMicroflowActivity", got.TypeName())
+	if got.TypeName() != "Workflows$CallMicroflowTask" {
+		t.Errorf("TypeName = %q, want CallMicroflowTask", got.TypeName())
 	}
 	if got.Name() != "Action" {
 		t.Errorf("Name = %q", got.Name())
@@ -521,7 +521,7 @@ func TestBuildWorkflowActivityGen_DispatchesAllTypes(t *testing.T) {
 		{"anno", &ast.WorkflowAnnotationActivityNode{Text: "n"}, "Workflows$FloatingAnnotation"},
 		{"singleut", &ast.WorkflowUserTaskNode{Name: "U"}, "Workflows$SingleUserTaskActivity"},
 		{"multiut", &ast.WorkflowUserTaskNode{Name: "U", IsMultiUser: true}, "Workflows$MultiUserTaskActivity"},
-		{"callmf", &ast.WorkflowCallMicroflowNode{Microflow: ast.QualifiedName{Module: "M", Name: "F"}}, "Workflows$CallMicroflowActivity"},
+		{"callmf", &ast.WorkflowCallMicroflowNode{Microflow: ast.QualifiedName{Module: "M", Name: "F"}}, "Workflows$CallMicroflowTask"},
 		{"callwf", &ast.WorkflowCallWorkflowNode{Workflow: ast.QualifiedName{Module: "M", Name: "W"}}, "Workflows$CallWorkflowActivity"},
 		{"decision", &ast.WorkflowDecisionNode{}, "Workflows$ExclusiveSplitActivity"},
 		{"parallel", &ast.WorkflowParallelSplitNode{}, "Workflows$ParallelSplitActivity"},

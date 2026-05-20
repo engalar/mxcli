@@ -250,8 +250,8 @@ func buildSingleUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.SingleUs
 	if n.TaskDescription != "" {
 		task.SetTaskDescription(newTextWrapperGen(n.TaskDescription))
 	}
-	if src := buildUserSourceGen(n.Targeting); src != nil {
-		task.SetUserSource(src)
+	if tgt := buildUserTargetingGen(n.Targeting); tgt != nil {
+		task.SetUserTargeting(tgt)
 	}
 	for _, oc := range buildUserTaskOutcomesGen(n.Outcomes) {
 		task.AddOutcomes(oc)
@@ -271,8 +271,8 @@ func buildMultiUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.MultiUser
 	if n.TaskDescription != "" {
 		task.SetTaskDescription(newTextWrapperGen(n.TaskDescription))
 	}
-	if src := buildUserSourceGen(n.Targeting); src != nil {
-		task.SetUserSource(src)
+	if tgt := buildUserTargetingGen(n.Targeting); tgt != nil {
+		task.SetUserTargeting(tgt)
 	}
 	for _, oc := range buildUserTaskOutcomesGen(n.Outcomes) {
 		task.AddOutcomes(oc)
@@ -283,27 +283,29 @@ func buildMultiUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.MultiUser
 	return task
 }
 
-// buildUserSourceGen builds a gen UserSource element from the AST
-// targeting node. gen rename: MicroflowGroupSource → MicroflowGroupTargeting,
-// XPathGroupSource → XPathGroupTargeting (per Phase A R5 finding).
-func buildUserSourceGen(t ast.WorkflowTargetingNode) element.Element {
+// buildUserTargetingGen builds a gen UserTargeting element from the AST targeting node.
+// Mendix 11.2+ replaced the userSource field (OldUserSource subtypes) with
+// userTargeting (UserTargeting subtypes). Single-user targeting uses
+// XPathUserTargeting / MicroflowUserTargeting; group targeting uses
+// XPathGroupTargeting / MicroflowGroupTargeting.
+func buildUserTargetingGen(t ast.WorkflowTargetingNode) element.Element {
 	switch t.Kind {
 	case "microflow":
-		src := genWf.NewMicroflowBasedUserSource()
-		src.SetMicroflowQualifiedName(t.Microflow.Module + "." + t.Microflow.Name)
-		return src
+		tgt := genWf.NewMicroflowUserTargeting()
+		tgt.SetMicroflowQualifiedName(t.Microflow.Module + "." + t.Microflow.Name)
+		return tgt
 	case "xpath":
-		src := genWf.NewXPathBasedUserSource()
-		src.SetXPathConstraint(t.XPath)
-		return src
+		tgt := genWf.NewXPathUserTargeting()
+		tgt.SetXPathConstraint(t.XPath)
+		return tgt
 	case "group_microflow":
-		src := genWf.NewMicroflowGroupTargeting()
-		src.SetMicroflowQualifiedName(t.Microflow.Module + "." + t.Microflow.Name)
-		return src
+		tgt := genWf.NewMicroflowGroupTargeting()
+		tgt.SetMicroflowQualifiedName(t.Microflow.Module + "." + t.Microflow.Name)
+		return tgt
 	case "group_xpath":
-		src := genWf.NewXPathGroupTargeting()
-		src.SetXPathConstraint(t.XPath)
-		return src
+		tgt := genWf.NewXPathGroupTargeting()
+		tgt.SetXPathConstraint(t.XPath)
+		return tgt
 	}
 	return nil
 }

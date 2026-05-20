@@ -48,6 +48,7 @@
     "Settings$Language":                      "Texts$Language",
     "Settings$WebUIProjectSettingsPart":      "Forms$WebUIProjectSettingsPart",
     "Workflows$Annotation":                   "Workflows$AnnotationActivity",
+    "Workflows$CallMicroflowActivity":         "Workflows$CallMicroflowTask",
     "Rest$BasicAuthenticationScheme":         "Rest$BasicAuthentication"
   },
 
