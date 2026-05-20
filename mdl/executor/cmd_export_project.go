@@ -86,6 +86,20 @@ func (ec *exportCache) containmentHash(containmentName string, h *ContainerHiera
 	return ""
 }
 
+// typeHash returns the ContentsHash of the first unit whose Type matches typeName.
+// Used for project-level singleton units (Settings$ProjectSettings, etc.).
+func (ec *exportCache) typeHash(typeName string) string {
+	if ec == nil || ec.unitHashes == nil || ec.allUnits == nil {
+		return ""
+	}
+	for _, u := range ec.allUnits {
+		if u.Type == typeName {
+			return ec.unitHashes[string(u.ID)]
+		}
+	}
+	return ""
+}
+
 // readCacheMarker reads the first line of path and returns the hash value
 // after the cache comment prefix, or "" if absent/unreadable.
 func readCacheMarker(path string) string {
@@ -222,16 +236,14 @@ func (e *Executor) ExportProject(outputDir string, opts ExportOptions) error {
 
 	marketContent := marketplaceFileContent(marketplace)
 	marketPath := filepath.Join(outputDir, "_marketplace.mdl")
-	if opts.DryRun {
-		progress(fmt.Sprintf("  [dry-run]  %s", marketPath))
-	} else {
-		if err := writeFile(marketPath, marketContent); err != nil {
-			return fmt.Errorf("write _marketplace.mdl: %w", err)
-		}
-		progress(fmt.Sprintf("  [write]    %s", marketPath))
+	// No unit backs _marketplace.mdl; derive the cache key from the content itself.
+	marketSum := sha256.Sum256([]byte(marketContent))
+	marketHash := base64.RawURLEncoding.EncodeToString(marketSum[:])[:12]
+	if err := writeOrLog(marketPath, marketHash, marketContent, opts, progress); err != nil {
+		return fmt.Errorf("write _marketplace.mdl: %w", err)
 	}
 
-	if err := exportProjectLevel(ctx, outputDir, opts, progress); err != nil {
+	if err := exportProjectLevel(ctx, outputDir, opts, ec, progress); err != nil {
 		return fmt.Errorf("export project-level: %w", err)
 	}
 
@@ -256,52 +268,51 @@ func (e *Executor) ExportProject(outputDir string, opts ExportOptions) error {
 
 // exportProjectLevel writes _project/settings.mdl, _project/navigation.mdl,
 // and _project/security.mdl.
-func exportProjectLevel(ctx *ExecContext, outputDir string, opts ExportOptions, progress func(string)) error {
+func exportProjectLevel(ctx *ExecContext, outputDir string, opts ExportOptions, ec *exportCache, progress func(string)) error {
 	projDir := filepath.Join(outputDir, "_project")
 
-	settings, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
-		return describeSettings(c)
-	})
-	if err != nil {
-		settings = fmt.Sprintf("-- describe settings failed: %v\n", err)
-	}
+	settingsHash := ec.typeHash("Settings$ProjectSettings")
 	settingsPath := filepath.Join(projDir, "settings.mdl")
-	if opts.DryRun {
-		progress(fmt.Sprintf("  [dry-run]  %s", settingsPath))
+	if !opts.Force && cacheHit(settingsPath, settingsHash) {
+		progress(fmt.Sprintf("  [cached]   %s", settingsPath))
 	} else {
-		if err := writeFile(settingsPath, settings); err != nil {
+		settings, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
+			return describeSettings(c)
+		})
+		if err != nil {
+			settings = fmt.Sprintf("-- describe settings failed: %v\n", err)
+		}
+		if err := writeOrLog(settingsPath, settingsHash, settings, opts, progress); err != nil {
 			return err
 		}
-		progress(fmt.Sprintf("  [write]    %s", settingsPath))
 	}
 
-	nav, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
-		return describeNavigation(c, ast.QualifiedName{})
-	})
-	if err != nil {
-		nav = fmt.Sprintf("-- describe navigation failed: %v\n", err)
-	}
+	navHash := ec.typeHash("Navigation$NavigationDocument")
 	navPath := filepath.Join(projDir, "navigation.mdl")
-	if opts.DryRun {
-		progress(fmt.Sprintf("  [dry-run]  %s", navPath))
+	if !opts.Force && cacheHit(navPath, navHash) {
+		progress(fmt.Sprintf("  [cached]   %s", navPath))
 	} else {
-		if err := writeFile(navPath, nav); err != nil {
+		nav, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
+			return describeNavigation(c, ast.QualifiedName{})
+		})
+		if err != nil {
+			nav = fmt.Sprintf("-- describe navigation failed: %v\n", err)
+		}
+		if err := writeOrLog(navPath, navHash, nav, opts, progress); err != nil {
 			return err
 		}
-		progress(fmt.Sprintf("  [write]    %s", navPath))
 	}
 
-	// Export user roles as executable MDL (create user role ... ;)
-	sec, serr := exportUserRoles(ctx)
-	if serr == nil && sec != "" {
-		secPath := filepath.Join(projDir, "security.mdl")
-		if opts.DryRun {
-			progress(fmt.Sprintf("  [dry-run]  %s", secPath))
-		} else {
-			if err := writeFile(secPath, sec); err != nil {
+	secHash := ec.typeHash("Security$ProjectSecurity")
+	secPath := filepath.Join(projDir, "security.mdl")
+	if !opts.Force && cacheHit(secPath, secHash) {
+		progress(fmt.Sprintf("  [cached]   %s", secPath))
+	} else {
+		sec, serr := exportUserRoles(ctx)
+		if serr == nil && sec != "" {
+			if err := writeOrLog(secPath, secHash, sec, opts, progress); err != nil {
 				return err
 			}
-			progress(fmt.Sprintf("  [write]    %s", secPath))
 		}
 	}
 
