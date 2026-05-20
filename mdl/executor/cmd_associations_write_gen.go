@@ -10,6 +10,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
 // astToEntityGen builds a gen-typed *Entity from a CREATE ENTITY AST.
@@ -59,6 +60,12 @@ func astToEntityGen(s *ast.CreateEntityStmt) *genDm.Entity {
 		}
 		attr := astToAttributeGen(&ac)
 		if attr != nil {
+			// Pre-assign a UUID so IndexedAttribute.AttributePointer gets a
+			// real binary ID when astToIndexGen runs below. Without this,
+			// attr.ID() is "" and the index stores an empty string, which
+			// Mendix rejects with InvalidCastException (String→Byte[]).
+			// assignEntityIDsGen later skips elements with non-empty IDs.
+			attr.SetID(element.ID(modelsdkmpr.GenerateID()))
 			entity.AddAttributes(attr)
 			attrNameToID[ac.Name] = model.ID(attr.ID())
 			for _, vr := range astToValidationRulesGen(&ac, s.Name.String()) {

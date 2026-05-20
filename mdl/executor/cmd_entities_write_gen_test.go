@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
@@ -188,5 +189,110 @@ func TestAstToAttributeTypeGen_DefaultFallback(t *testing.T) {
 	}
 	if s.Length() != 200 {
 		t.Errorf("default fallback Length = %d, want 200", s.Length())
+	}
+}
+
+// TestAstToEntityGen_IndexAttributePointerNonEmpty verifies that each
+// IndexedAttribute produced by astToEntityGen references a real attribute
+// ID, not an empty string.
+//
+// Regression: without pre-assigning UUIDs to attributes before building
+// attrNameToID, IndexedAttribute.AttributePointer was serialised as BSON
+// string "", causing mx check to throw InvalidCastException (String→Byte[]).
+func TestAstToEntityGen_IndexAttributePointerNonEmpty(t *testing.T) {
+	s := &ast.CreateEntityStmt{
+		Name: ast.QualifiedName{Module: "Mod", Name: "Saiban"},
+		Attributes: []ast.Attribute{
+			{Name: "Id_Shubetu", Type: ast.DataType{Kind: ast.TypeString, Length: 10}},
+			{Name: "Sub_Key", Type: ast.DataType{Kind: ast.TypeString, Length: 20}},
+		},
+		Indexes: []ast.Index{
+			{Columns: []ast.IndexColumn{{Name: "Id_Shubetu"}, {Name: "Sub_Key"}}},
+		},
+	}
+	entity := astToEntityGen(s)
+	if entity == nil {
+		t.Fatal("astToEntityGen returned nil")
+	}
+	if len(entity.IndexesItems()) != 1 {
+		t.Fatalf("Indexes count = %d, want 1", len(entity.IndexesItems()))
+	}
+	idx, ok := entity.IndexesItems()[0].(*genDm.Index)
+	if !ok {
+		t.Fatalf("Indexes[0] type = %T, want *genDm.Index", entity.IndexesItems()[0])
+	}
+	if len(idx.AttributesItems()) != 2 {
+		t.Fatalf("IndexedAttribute count = %d, want 2", len(idx.AttributesItems()))
+	}
+	for i, ia := range idx.AttributesItems() {
+		indexed, ok := ia.(*genDm.IndexedAttribute)
+		if !ok {
+			t.Fatalf("Attributes[%d] type = %T, want *genDm.IndexedAttribute", i, ia)
+		}
+		if indexed.AttributeRefID() == "" {
+			t.Errorf("Attributes[%d].AttributePointer is empty — serialised as BSON string, Mendix expects binary UUID", i)
+		}
+	}
+}
+
+// TestAstToEntityGen_IndexAttributePointerMatchesAttrID verifies that each
+// IndexedAttribute.AttributePointer matches exactly the $ID of the
+// corresponding attribute — so the cross-reference resolves correctly in
+// Studio Pro.
+func TestAstToEntityGen_IndexAttributePointerMatchesAttrID(t *testing.T) {
+	s := &ast.CreateEntityStmt{
+		Name: ast.QualifiedName{Module: "Mod", Name: "Order"},
+		Attributes: []ast.Attribute{
+			{Name: "Code", Type: ast.DataType{Kind: ast.TypeString, Length: 10}},
+			{Name: "Status", Type: ast.DataType{Kind: ast.TypeString, Length: 10}},
+		},
+		Indexes: []ast.Index{
+			{Columns: []ast.IndexColumn{{Name: "Code"}}},
+			{Columns: []ast.IndexColumn{{Name: "Status"}, {Name: "Code"}}},
+		},
+	}
+	entity := astToEntityGen(s)
+	if entity == nil {
+		t.Fatal("astToEntityGen returned nil")
+	}
+
+	// Build attr name→ID map from the constructed entity.
+	attrIDs := make(map[string]element.ID)
+	for _, a := range entity.AttributesItems() {
+		type namer interface{ Name() string }
+		type ider interface{ ID() element.ID }
+		n, hasN := a.(namer)
+		id, hasID := a.(ider)
+		if hasN && hasID {
+			attrIDs[n.Name()] = id.ID()
+		}
+	}
+	// Precondition: attributes must have non-empty IDs — otherwise the
+	// cross-reference check below would trivially pass (empty==empty).
+	for name, id := range attrIDs {
+		if id == "" {
+			t.Fatalf("attribute %q has empty ID — UUID pre-assignment is missing", name)
+		}
+	}
+
+	wantPointers := [][]element.ID{
+		{attrIDs["Code"]},
+		{attrIDs["Status"], attrIDs["Code"]},
+	}
+	for i, idxElem := range entity.IndexesItems() {
+		idx, ok := idxElem.(*genDm.Index)
+		if !ok {
+			t.Fatalf("Indexes[%d] type = %T", i, idxElem)
+		}
+		for j, ia := range idx.AttributesItems() {
+			indexed, ok := ia.(*genDm.IndexedAttribute)
+			if !ok {
+				t.Fatalf("Indexes[%d].Attributes[%d] type = %T", i, j, ia)
+			}
+			want := wantPointers[i][j]
+			if indexed.AttributeRefID() != want {
+				t.Errorf("Indexes[%d].Attributes[%d]: AttributePointer = %q, want %q (attr ID)", i, j, indexed.AttributeRefID(), want)
+			}
+		}
 	}
 }

@@ -488,3 +488,125 @@ func bsonFieldBool(doc bson.D, key string) (bool, bool) {
 	}
 	return false, false
 }
+
+// TestCreateEntityGen_WithIndex_AttributePointerIsBinary verifies that when
+// CreateEntityGen persists an entity with an index, the serialised BSON for
+// each IndexedAttribute stores AttributePointer as binary (primitive.Binary),
+// not as a plain string.
+//
+// Regression: astToEntityGen used to capture attribute IDs before they were
+// assigned (all IDs were ""), so IndexedAttribute.AttributePointer was written
+// as BSON string "" — Mendix's GetGuidFromBson then threw InvalidCastException
+// (String→Byte[]).
+func TestCreateEntityGen_WithIndex_AttributePointerIsBinary(t *testing.T) {
+	mprPath, dmID := makeDomainModelTestMPR(t)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	// Build entity with two attributes and one composite index.
+	entity := genDm.NewEntity()
+	entity.SetName("Saiban")
+	ng := genDm.NewNoGeneralization()
+	ng.SetPersistable(true)
+	entity.SetGeneralization(ng)
+
+	attr1 := genDm.NewAttribute()
+	attr1.SetName("Id_Shubetu")
+	st1 := genDm.NewStringAttributeType()
+	st1.SetLength(10)
+	attr1.SetType(st1)
+	entity.AddAttributes(attr1)
+
+	attr2 := genDm.NewAttribute()
+	attr2.SetName("Sub_Key")
+	st2 := genDm.NewStringAttributeType()
+	st2.SetLength(20)
+	attr2.SetType(st2)
+	entity.AddAttributes(attr2)
+
+	// Attach an index referencing both attributes by their pre-assigned IDs.
+	// This mirrors what astToEntityGen does after the fix.
+	attr1.SetID("aaaaaaaa-0001-0001-0001-000000000001")
+	attr2.SetID("aaaaaaaa-0002-0002-0002-000000000002")
+
+	idx := genDm.NewIndex()
+	ia1 := genDm.NewIndexedAttribute()
+	ia1.SetAttributeID(attr1.ID())
+	ia1.SetAscending(true)
+	ia2 := genDm.NewIndexedAttribute()
+	ia2.SetAttributeID(attr2.ID())
+	ia2.SetAscending(true)
+	idx.AddAttributes(ia1)
+	idx.AddAttributes(ia2)
+	entity.AddIndexes(idx)
+
+	if err := b.CreateEntityGen(dmID, entity); err != nil {
+		t.Fatalf("CreateEntityGen: %v", err)
+	}
+
+	// Read back raw BSON and verify AttributePointer is binary.
+	raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(dmID))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	var dm bson.M
+	if err := bson.Unmarshal(raw, &dm); err != nil {
+		t.Fatalf("Unmarshal domain model: %v", err)
+	}
+
+	entities, _ := dm["Entities"].(bson.A)
+	if len(entities) == 0 {
+		t.Fatal("no entities in BSON")
+	}
+	// Skip the version prefix (int32) at index 0.
+	var entityDoc bson.M
+	for _, item := range entities {
+		if m, ok := item.(bson.M); ok {
+			entityDoc = m
+			break
+		}
+	}
+	if entityDoc == nil {
+		t.Fatal("no entity document found in BSON array")
+	}
+
+	indexes, _ := entityDoc["Indexes"].(bson.A)
+	var indexDoc bson.M
+	for _, item := range indexes {
+		if m, ok := item.(bson.M); ok {
+			indexDoc = m
+			break
+		}
+	}
+	if indexDoc == nil {
+		t.Fatal("no index document found in entity BSON")
+	}
+
+	attrs, _ := indexDoc["Attributes"].(bson.A)
+	found := 0
+	for _, item := range attrs {
+		ia, ok := item.(bson.M)
+		if !ok {
+			continue
+		}
+		ptr := ia["AttributePointer"]
+		if ptr == nil {
+			t.Error("IndexedAttribute missing AttributePointer field")
+			continue
+		}
+		if _, isString := ptr.(string); isString {
+			t.Errorf("IndexedAttribute.AttributePointer is BSON string %q — must be binary UUID", ptr)
+		}
+		if _, isBinary := ptr.(primitive.Binary); !isBinary {
+			t.Errorf("IndexedAttribute.AttributePointer type = %T, want primitive.Binary", ptr)
+		}
+		found++
+	}
+	if found == 0 {
+		t.Error("no IndexedAttribute entries found in index BSON")
+	}
+}
