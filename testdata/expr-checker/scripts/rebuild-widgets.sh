@@ -45,8 +45,9 @@ echo "Using mx: $MX_BIN"
 # --- 获取 Mendix 版本 ---
 MX_VERSION="${2:-}"
 if [ -z "$MX_VERSION" ]; then
-  # 从 mx check 输出读取版本
-  MX_VERSION=$("$MX_BIN" check "$DEST_DIR/minimal.mpr" 2>&1 | grep -o "version is '.*'" | grep -o '[0-9][0-9.]*' | head -1)
+  # mx check exits non-zero when model has errors; capture output regardless
+  MX_CHECK_OUT=$("$MX_BIN" check "$DEST_DIR/minimal.mpr" 2>&1) || true
+  MX_VERSION=$(echo "$MX_CHECK_OUT" | grep -o "version is '.*'" | grep -o '[0-9][0-9.]*' | head -1)
 fi
 if [ -z "$MX_VERSION" ]; then
   echo "ERROR: Could not determine Mendix version from minimal.mpr" >&2
@@ -110,7 +111,7 @@ echo "Done: $FINAL_COUNT widgets, $FINAL_SIZE total"
 
 # --- 验证 mx check ---
 echo "Running mx check validation..."
-RESULT=$("$MX_BIN" check "$DEST_DIR/minimal.mpr" 2>&1)
+RESULT=$("$MX_BIN" check "$DEST_DIR/minimal.mpr" 2>&1) || true
 CE0462=$(echo "$RESULT" | grep -c "CE0462" || true)
 CE0463=$(echo "$RESULT" | grep -c "CE0463" || true)
 
