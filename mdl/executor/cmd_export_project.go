@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"bytes"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -34,6 +35,18 @@ func classifyModules(mods []*model.Module) (regular, marketplace []*model.Module
 		}
 	}
 	return
+}
+
+// captureDescribe temporarily redirects ctx.Output to a buffer while fn runs
+// and returns the captured text. ctx.Output is restored before returning,
+// even when fn returns an error.
+func captureDescribe(ctx *ExecContext, fn func(*ExecContext) error) (string, error) {
+	var buf bytes.Buffer
+	saved := ctx.Output
+	ctx.Output = &buf
+	err := fn(ctx)
+	ctx.Output = saved
+	return buf.String(), err
 }
 
 func marketplaceFileContent(mods []*model.Module) string {

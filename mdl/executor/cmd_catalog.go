@@ -672,50 +672,7 @@ func formatValue(val any) string {
 	return s
 }
 
-// captureDescribe generates MDL source for a given object type and qualified name.
-// It temporarily redirects ctx.Output to capture the describe output.
-// NOT safe for concurrent use — use captureDescribeParallel instead.
-func captureDescribe(ctx *ExecContext, objectType string, qualifiedName string) (string, error) {
-	// Parse qualified name into ast.QualifiedName
-	parts := strings.SplitN(qualifiedName, ".", 2)
-	if len(parts) != 2 {
-		return "", mdlerrors.NewValidationf("invalid qualified name: %s", qualifiedName)
-	}
-	qn := ast.QualifiedName{Module: parts[0], Name: parts[1]}
-
-	// Save original output and redirect to buffer
-	origOutput := ctx.Output
-	var buf bytes.Buffer
-	ctx.Output = &buf
-	defer func() { ctx.Output = origOutput }()
-
-	var err error
-	switch strings.ToLower(objectType) {
-	case "entity":
-		err = describeEntity(ctx, qn)
-	case "microflow":
-		err = describeMicroflowGen(ctx, qn)
-	case "nanoflow":
-		err = describeNanoflowGen(ctx, qn)
-	case "page":
-		err = describePage(ctx, qn)
-	case "snippet":
-		err = describeSnippet(ctx, qn)
-	case "enumeration":
-		err = describeEnumeration(ctx, qn)
-	case "workflow":
-		err = describeWorkflowGen(ctx, qn)
-	default:
-		return "", mdlerrors.NewUnsupported("object type for describe: " + objectType)
-	}
-
-	if err != nil {
-		return "", err
-	}
-	return buf.String(), nil
-}
-
-// captureDescribeParallel is a goroutine-safe version of captureDescribe.
+// captureDescribeParallel is a goroutine-safe describe-by-objectType helper.
 // It creates a lightweight ExecContext clone per call with its own output buffer,
 // sharing the backend and pre-warmed cache. Call preWarmCache() before using
 // this from multiple goroutines.

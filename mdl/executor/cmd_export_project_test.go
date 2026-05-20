@@ -3,6 +3,8 @@
 package executor
 
 import (
+	"bytes"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -52,5 +54,24 @@ func TestMarketplaceFileContent(t *testing.T) {
 	}
 	if !strings.Contains(got, "AtlasCore") {
 		t.Errorf("missing AtlasCore: %q", got)
+	}
+}
+
+func TestCaptureDescribe_WritesToBuffer(t *testing.T) {
+	var buf bytes.Buffer
+	ctx := &ExecContext{Output: &buf}
+
+	result, err := captureDescribe(ctx, func(c *ExecContext) error {
+		fmt.Fprintln(c.Output, "hello world")
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != "hello world\n" {
+		t.Errorf("got %q, want %q", result, "hello world\n")
+	}
+	if buf.String() != "" {
+		t.Errorf("original output was written to: %q", buf.String())
 	}
 }
