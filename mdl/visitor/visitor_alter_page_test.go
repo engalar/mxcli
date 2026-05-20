@@ -3,6 +3,7 @@
 package visitor
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -505,5 +506,45 @@ func TestAlterPageContainerType(t *testing.T) {
 	stmt := prog.Statements[0].(*ast.AlterPageStmt)
 	if stmt.ContainerType != "PAGE" {
 		t.Errorf("Expected ContainerType 'PAGE', got %q", stmt.ContainerType)
+	}
+}
+
+func TestAlterPageSetPropertyOnLayoutGridColumn(t *testing.T) {
+	input := `ALTER PAGE Module.Home_Web {
+		SET (DesktopWidth = 12) ON layoutGrid1.row1.col1
+	};`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+	if len(prog.Statements) != 1 {
+		t.Fatalf("expected 1 statement, got %d", len(prog.Statements))
+	}
+	stmt, ok := prog.Statements[0].(*ast.AlterPageStmt)
+	if !ok {
+		t.Fatalf("expected AlterPageStmt, got %T", prog.Statements[0])
+	}
+	if len(stmt.Operations) != 1 {
+		t.Fatalf("expected 1 op, got %d", len(stmt.Operations))
+	}
+	setOp, ok := stmt.Operations[0].(*ast.SetPropertyOp)
+	if !ok {
+		t.Fatalf("expected SetPropertyOp, got %T", stmt.Operations[0])
+	}
+	if setOp.Target.Widget != "layoutGrid1" {
+		t.Errorf("Target.Widget = %q, want layoutGrid1", setOp.Target.Widget)
+	}
+	if setOp.Target.Row != "row1" {
+		t.Errorf("Target.Row = %q, want row1", setOp.Target.Row)
+	}
+	if setOp.Target.Column != "col1" {
+		t.Errorf("Target.Column = %q, want col1", setOp.Target.Column)
+	}
+	if v, ok := setOp.Properties["DesktopWidth"]; !ok || fmt.Sprintf("%v", v) != "12" {
+		t.Errorf("Properties[DesktopWidth] = %v, want '12'", v)
 	}
 }

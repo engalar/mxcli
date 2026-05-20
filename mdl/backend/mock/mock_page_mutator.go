@@ -32,9 +32,10 @@ type MockPageMutator struct {
 	SaveFunc                 func() error
 
 	// Stage 3.3.5.D0 gen-typed siblings.
-	SetWidgetDataSourceGenFunc func(widgetRef string, ds element.Element) error
-	InsertWidgetGenFunc        func(widgetRef string, columnRef string, position backend.InsertPosition, widgets []element.Element) error
-	ReplaceWidgetGenFunc       func(widgetRef string, columnRef string, widgets []element.Element) error
+	SetWidgetDataSourceGenFunc    func(widgetRef string, ds element.Element) error
+	InsertWidgetGenFunc           func(widgetRef string, columnRef string, position backend.InsertPosition, widgets []element.Element) error
+	ReplaceWidgetGenFunc          func(widgetRef string, columnRef string, widgets []element.Element) error
+	SetLayoutGridColumnWidthFunc  func(gridRef, rowRef, colRef string, width int) error
 }
 
 func (m *MockPageMutator) ContainerType() backend.ContainerKind {
@@ -147,4 +148,11 @@ func (m *MockPageMutator) ReplaceWidgetGen(widgetRef string, columnRef string, w
 		return m.ReplaceWidgetGenFunc(widgetRef, columnRef, widgets)
 	}
 	return fmt.Errorf("MockPageMutator.ReplaceWidgetGen not configured")
+}
+
+func (m *MockPageMutator) SetLayoutGridColumnWidth(gridRef, rowRef, colRef string, width int) error {
+	if m.SetLayoutGridColumnWidthFunc != nil {
+		return m.SetLayoutGridColumnWidthFunc(gridRef, rowRef, colRef, width)
+	}
+	return fmt.Errorf("MockPageMutator.SetLayoutGridColumnWidth not configured")
 }

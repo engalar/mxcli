@@ -21,15 +21,20 @@ type AlterPageOperation interface {
 }
 
 // WidgetRef represents a widget reference, optionally with a sub-element path.
-// Plain: "btnSave" (Widget="btnSave", Column="")
-// Dotted: "dgProducts.Name" (Widget="dgProducts", Column="Name")
+// Plain:    "btnSave"                (Widget="btnSave", Row="", Column="")
+// 2-level:  "dgProducts.Name"       (Widget="dgProducts", Row="", Column="Name")
+// 3-level:  "layoutGrid1.row1.col1" (Widget="layoutGrid1", Row="row1", Column="col1")
 type WidgetRef struct {
 	Widget string // widget name (always set)
+	Row    string // intermediate row name (set only for 3-level layout grid column refs)
 	Column string // column name within widget (empty for plain widget refs)
 }
 
 // Name returns the full reference string for error messages.
 func (r WidgetRef) Name() string {
+	if r.Row != "" {
+		return r.Widget + "." + r.Row + "." + r.Column
+	}
 	if r.Column != "" {
 		return r.Widget + "." + r.Column
 	}
@@ -39,6 +44,11 @@ func (r WidgetRef) Name() string {
 // IsColumn returns true if this is a column reference (dotted path).
 func (r WidgetRef) IsColumn() bool {
 	return r.Column != ""
+}
+
+// IsLayoutGridColumn returns true if this is a 3-level layout grid column reference.
+func (r WidgetRef) IsLayoutGridColumn() bool {
+	return r.Row != "" && r.Column != ""
 }
 
 // SetPropertyOp represents: SET prop = value ON widgetRef

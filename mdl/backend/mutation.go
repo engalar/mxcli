@@ -87,6 +87,11 @@ type PageMutator interface {
 	// SetColumnProperty sets a property on a column within a grid widget.
 	SetColumnProperty(gridRef string, columnRef string, prop string, value any) error
 
+	// SetLayoutGridColumnWidth sets the DesktopWidth (Weight) of a column inside
+	// a layout grid row. gridRef is the layout grid widget name, rowRef is the row
+	// name within the grid, colRef is the column name within the row.
+	SetLayoutGridColumnWidth(gridRef, rowRef, colRef string, width int) error
+
 	// --- Widget tree operations ---
 
 	// DropWidget removes widgets by ref from the tree.

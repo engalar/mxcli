@@ -96,6 +96,16 @@ func (m *mprPageMutator) SetColumnProperty(gridRef string, columnRef string, pro
 	return setColumnPropertyMut(result.widget, result.colPropKeys, prop, value)
 }
 
+func (m *mprPageMutator) SetLayoutGridColumnWidth(gridRef, rowRef, colRef string, width int) error {
+	col := findLayoutGridColumn(m.rawData, gridRef, rowRef, colRef)
+	if col == nil {
+		return fmt.Errorf("layout grid column %q.%q.%q not found", gridRef, rowRef, colRef)
+	}
+	// Weight is stored as int64 in the LayoutGridColumn document.
+	dSet(col, "Weight", int64(width))
+	return nil
+}
+
 func (m *mprPageMutator) DropWidget(refs []backend.WidgetRef) error {
 	for _, ref := range refs {
 		// Re-find widget each iteration because previous drops mutate the tree.
@@ -771,6 +781,62 @@ func findInWidgetChildren(wDoc bson.D, widgetName string) *bsonWidgetResult {
 // ---------------------------------------------------------------------------
 // DataGrid2 column finder
 // ---------------------------------------------------------------------------
+
+// findLayoutGridColumn locates a LayoutGridColumn BSON document by navigating
+// gridName → rowRef → colRef inside the widget tree. rowRef and colRef are
+// 1-indexed positional names as produced by DESCRIBE (e.g. "row1", "col2").
+// LayoutGridRow and LayoutGridColumn have no stored Name in BSON; positions
+// are derived at describe time as "row{n}" / "col{n}".
+func findLayoutGridColumn(rawData bson.D, gridName, rowRef, colRef string) bson.D {
+	grid := findBsonWidget(rawData, gridName)
+	if grid == nil {
+		return nil
+	}
+
+	rowIdx := parsePositionalIndex(rowRef, "row")
+	colIdx := parsePositionalIndex(colRef, "col")
+	if rowIdx < 0 || colIdx < 0 {
+		return nil
+	}
+
+	rows := dGetArrayElements(dGet(grid.widget, "Rows"))
+	if rowIdx >= len(rows) {
+		return nil
+	}
+	row, ok := rows[rowIdx].(bson.D)
+	if !ok {
+		return nil
+	}
+
+	cols := dGetArrayElements(dGet(row, "Columns"))
+	if colIdx >= len(cols) {
+		return nil
+	}
+	col, ok := cols[colIdx].(bson.D)
+	if !ok {
+		return nil
+	}
+	return col
+}
+
+// parsePositionalIndex converts a positional name like "row3" or "col1" to a
+// 0-based index. prefix is "row" or "col". Returns -1 for invalid input.
+func parsePositionalIndex(name, prefix string) int {
+	if len(name) <= len(prefix) || name[:len(prefix)] != prefix {
+		return -1
+	}
+	n := 0
+	for _, c := range name[len(prefix):] {
+		if c < '0' || c > '9' {
+			return -1
+		}
+		n = n*10 + int(c-'0')
+	}
+	if n <= 0 {
+		return -1
+	}
+	return n - 1 // convert 1-indexed to 0-indexed
+}
 
 // findBsonColumn finds a column inside a DataGrid2 widget by derived name.
 func findBsonColumn(rawData bson.D, gridName, columnName string, find widgetFinder) *bsonWidgetResult {

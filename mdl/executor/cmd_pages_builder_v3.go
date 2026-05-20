@@ -1476,7 +1476,7 @@ func (pb *pageBuilder) buildLayoutGridColumnV3(w *ast.WidgetV3) (element.Element
 		case int:
 			col.SetWeight(int32(v))
 		case string:
-			if strings.ToUpper(v) == "autofill" {
+			if strings.EqualFold(v, "AutoFill") {
 				col.SetWeight(-1)
 			}
 		}
@@ -1488,7 +1488,7 @@ func (pb *pageBuilder) buildLayoutGridColumnV3(w *ast.WidgetV3) (element.Element
 		case int:
 			col.SetTabletWeight(int32(v))
 		case string:
-			if strings.ToUpper(v) == "autofill" {
+			if strings.EqualFold(v, "AutoFill") {
 				col.SetTabletWeight(-1)
 			}
 		}
@@ -1500,7 +1500,7 @@ func (pb *pageBuilder) buildLayoutGridColumnV3(w *ast.WidgetV3) (element.Element
 		case int:
 			col.SetPhoneWeight(int32(v))
 		case string:
-			if strings.ToUpper(v) == "autofill" {
+			if strings.EqualFold(v, "AutoFill") {
 				col.SetPhoneWeight(-1)
 			}
 		}

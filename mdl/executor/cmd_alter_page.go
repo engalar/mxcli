@@ -135,7 +135,16 @@ func applySetPropertyMutator(mutator backend.PageMutator, op *ast.SetPropertyOp)
 
 	for _, propName := range propNames {
 		value := op.Properties[propName]
-		if op.Target.IsColumn() {
+		if op.Target.IsLayoutGridColumn() {
+			// 3-level ref: grid.row.col — only DesktopWidth is supported here.
+			width, err := parseDesktopWidth(propName, value)
+			if err != nil {
+				return mdlerrors.NewBackend("set "+propName+" on "+op.Target.Name(), err)
+			}
+			if err := mutator.SetLayoutGridColumnWidth(op.Target.Widget, op.Target.Row, op.Target.Column, width); err != nil {
+				return mdlerrors.NewBackend("set "+propName+" on "+op.Target.Name(), err)
+			}
+		} else if op.Target.IsColumn() {
 			if err := mutator.SetColumnProperty(op.Target.Widget, op.Target.Column, propName, value); err != nil {
 				return mdlerrors.NewBackend("set "+propName+" on "+op.Target.Name(), err)
 			}
@@ -292,4 +301,33 @@ func buildWidgetsFromASTGen(ctx *ExecContext, widgets []*ast.WidgetV3, moduleNam
 		result = append(result, widget)
 	}
 	return result, nil
+}
+
+// parseDesktopWidth converts a DesktopWidth property value to an integer column
+// weight in the range 1–12 (Mendix's grid system). Accepts numeric values or
+// the string "AutoFill" (stored as Weight=-1 in BSON).
+func parseDesktopWidth(propName string, value any) (int, error) {
+	if propName != "DesktopWidth" {
+		return 0, fmt.Errorf("only DesktopWidth is supported for layout grid column refs (got %q)", propName)
+	}
+	switch v := value.(type) {
+	case int:
+		return v, nil
+	case int32:
+		return int(v), nil
+	case int64:
+		return int(v), nil
+	case float64:
+		return int(v), nil
+	case string:
+		if strings.EqualFold(v, "AutoFill") {
+			return -1, nil
+		}
+		var n int
+		if _, err := fmt.Sscanf(v, "%d", &n); err != nil {
+			return 0, fmt.Errorf("invalid DesktopWidth value %q: must be 1-12 or AutoFill", v)
+		}
+		return n, nil
+	}
+	return 0, fmt.Errorf("unsupported DesktopWidth value type %T", value)
 }

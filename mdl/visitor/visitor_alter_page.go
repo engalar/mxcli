@@ -172,17 +172,24 @@ func (b *Builder) buildAlterPageReplace(ctx *parser.AlterPageReplaceContext) *as
 }
 
 // buildWidgetRef extracts a WidgetRef from a widgetRef grammar context.
-// Supports both plain "btnSave" and dotted "dgProducts.Name" references.
+// Supports plain "btnSave", dotted "dgProducts.Name", and three-level
+// "layoutGrid1.row1.col1" (layout grid column) references.
 func buildWidgetRef(ctx parser.IWidgetRefContext) ast.WidgetRef {
 	wrCtx := ctx.(*parser.WidgetRefContext)
 	ids := wrCtx.AllIdentifierOrKeyword()
-	if len(ids) == 2 {
+	switch len(ids) {
+	case 3:
+		return ast.WidgetRef{
+			Widget: identifierOrKeywordText(ids[0]),
+			Row:    identifierOrKeywordText(ids[1]),
+			Column: identifierOrKeywordText(ids[2]),
+		}
+	case 2:
 		return ast.WidgetRef{
 			Widget: identifierOrKeywordText(ids[0]),
 			Column: identifierOrKeywordText(ids[1]),
 		}
-	}
-	if len(ids) == 1 {
+	case 1:
 		return ast.WidgetRef{Widget: identifierOrKeywordText(ids[0])}
 	}
 	return ast.WidgetRef{}

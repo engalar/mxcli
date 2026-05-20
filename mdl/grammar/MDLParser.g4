@@ -258,10 +258,11 @@ alterPageReplace
     : REPLACE widgetRef WITH LBRACE pageBodyV3 RBRACE
     ;
 
-// Widget reference: plain name (btnSave) or dotted path (dgProducts.Name)
+// Widget reference: plain name, two-level (widget.col), or three-level (grid.row.col).
 widgetRef
-    : identifierOrKeyword DOT identifierOrKeyword    // dgProducts.Name (column ref)
-    | identifierOrKeyword                            // btnSave (widget ref)
+    : identifierOrKeyword DOT identifierOrKeyword DOT identifierOrKeyword  // layoutGrid1.row1.col1 (layout grid column)
+    | identifierOrKeyword DOT identifierOrKeyword                           // dgProducts.Name (data grid column)
+    | identifierOrKeyword                                                    // btnSave (widget)
     ;
 
 alterPageAddVariable
