@@ -1046,8 +1046,18 @@ func findEnclosingEntityContext(rawData bson.D, widgetName string) string {
 			if !ok {
 				continue
 			}
+			// Standard layout: argument has "Widgets" (plural) — direct list of widgets.
 			if ctx := findEntityContextInWidgets(argDoc, "Widgets", widgetName, ""); ctx != "" {
 				return ctx
+			}
+			// Atlas layout with conditional visibility wrapping: argument has "Widget"
+			// (singular) — a single DivContainer that contains the real content tree.
+			// Without this branch, EnclosingEntity always returns "" for Atlas pages,
+			// causing attribute names to be stored as short unqualified names.
+			if rootWidget := dGetDoc(argDoc, "Widget"); rootWidget != nil {
+				if ctx := findEntityContextInChildren(rootWidget, widgetName, ""); ctx != "" {
+					return ctx
+				}
 			}
 		}
 	}
