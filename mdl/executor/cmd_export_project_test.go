@@ -156,3 +156,52 @@ func TestExportProject_ModuleDocuments(t *testing.T) {
 		t.Errorf("no per-document .mdl files (entities/microflows/pages) found in %v", mdlFiles)
 	}
 }
+
+func TestSortMDLFiles_OrderedByType(t *testing.T) {
+	files := []string{
+		"MyModule/Pages/MyModule.Home.mdl",
+		"MyModule/Domain/MyModule.Customer.mdl",
+		"MyModule/_module.mdl",
+		"MyModule/_associations.mdl",
+		"MyModule/Microflows/ACT/MyModule.ACT_Create.mdl",
+		"_project/settings.mdl",
+		"_project/security.mdl",
+		"_project/navigation.mdl",
+		"_marketplace.mdl",
+	}
+	sorted := sortMDLFiles(files)
+
+	moduleIdx := indexOfSuffix(sorted, "_module.mdl")
+	domainIdx := indexOfSuffix(sorted, "MyModule.Customer.mdl")
+	if moduleIdx < 0 || domainIdx < 0 {
+		t.Fatal("missing expected files")
+	}
+	if moduleIdx > domainIdx {
+		t.Errorf("_module.mdl (idx %d) should come before Domain/ (idx %d)", moduleIdx, domainIdx)
+	}
+
+	assocIdx := indexOfSuffix(sorted, "_associations.mdl")
+	if assocIdx < domainIdx {
+		t.Errorf("_associations.mdl (idx %d) should come after Domain/ (idx %d)", assocIdx, domainIdx)
+	}
+
+	mfIdx := indexOfSuffix(sorted, "ACT_Create.mdl")
+	pgIdx := indexOfSuffix(sorted, "Home.mdl")
+	if mfIdx > pgIdx {
+		t.Errorf("microflow (idx %d) should come before page (idx %d)", mfIdx, pgIdx)
+	}
+
+	settingsIdx := indexOfSuffix(sorted, "settings.mdl")
+	if settingsIdx < pgIdx {
+		t.Errorf("settings.mdl (idx %d) should come after pages (idx %d)", settingsIdx, pgIdx)
+	}
+}
+
+func indexOfSuffix(slice []string, suffix string) int {
+	for i, s := range slice {
+		if strings.HasSuffix(filepath.ToSlash(s), suffix) {
+			return i
+		}
+	}
+	return -1
+}
