@@ -199,3 +199,30 @@ func TestBuildFlowGraphGenInitialisesMeasurerWhenNil(t *testing.T) {
 		t.Fatal("measurer should be initialised by buildFlowGraphGen")
 	}
 }
+
+// TestResetLayoutProducesValidCoordinates verifies that RESET LAYOUT does not
+// clear RelativeMiddlePoint to "". buildFlowGraphGen computes valid "x;y"
+// coordinates for every activity; the RESET LAYOUT option just means
+// "recompute from scratch" (which buildFlowGraphGen already does). Clearing
+// positions to "" caused Studio Pro to overlap all activities at the origin.
+func TestResetLayoutProducesValidCoordinates(t *testing.T) {
+	fb := newGraphTestFb()
+	body := []ast.MicroflowStatement{
+		&ast.DeclareStmt{Variable: "X", Type: ast.DataType{Kind: ast.TypeBoolean}},
+	}
+	oc := fb.buildFlowGraphGen(body, nil)
+
+	// resetLayoutGen was the bug — it has been deleted. Positions from
+	// buildFlowGraphGen must be non-empty "x;y" strings.
+	type posGetter interface {
+		RelativeMiddlePoint() string
+	}
+	for _, obj := range oc.ObjectsItems() {
+		if pg, ok := obj.(posGetter); ok {
+			pos := pg.RelativeMiddlePoint()
+			if pos == "" {
+				t.Errorf("RelativeMiddlePoint is empty for %T — buildFlowGraphGen must assign valid coordinates", obj)
+			}
+		}
+	}
+}

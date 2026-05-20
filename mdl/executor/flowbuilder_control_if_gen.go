@@ -106,25 +106,37 @@ func (fb *flowBuilderGen) addIfStatementGen(s *ast.IfStmt) element.ID {
 	allBranchesReturn := bothReturn || (!hasElseBody && false)
 
 	// ── THEN branch ──
+	//
+	// IF with ELSE:    TRUE  path = horizontal (main line at centerY)
+	// IF without ELSE: TRUE  path = below main line (centerY + VerticalSpacing)
+	//                  FALSE path = straight to merge (main line)
 	fb.posX = splitX + SplitWidth + HorizontalSpacing/2
-	fb.posY = centerY
-	thenLast := fb.emitBranchBodyGen(s.ThenBody, splitID, "true")
+	if hasElseBody {
+		fb.posY = centerY
+	} else {
+		fb.posY = centerY + VerticalSpacing
+	}
+	thenLast := fb.emitBranchBodyGen(s.ThenBody, splitID, "true", !hasElseBody)
 	if !thenReturns {
 		// Connect last-emitted activity to merge.
 		if thenLast != "" {
 			fb.flows = append(fb.flows, newHorizontalFlowGen(thenLast, ensureMerge()))
 		} else {
 			// Empty THEN body — split flows directly to merge.
-			fb.flows = append(fb.flows, newHorizontalFlowWithCaseGen(splitID, ensureMerge(), "true"))
+			if hasElseBody {
+				fb.flows = append(fb.flows, newHorizontalFlowWithCaseGen(splitID, ensureMerge(), "true"))
+			} else {
+				fb.flows = append(fb.flows, newDownwardFlowWithCaseGen(splitID, ensureMerge(), "true"))
+			}
 		}
 	}
 
 	// ── ELSE branch ──
 	if hasElseBody {
-		// Place else branch below the main line.
+		// Place else branch below the main line (false path goes down).
 		fb.posX = splitX + SplitWidth + HorizontalSpacing/2
 		fb.posY = centerY + VerticalSpacing
-		elseLast := fb.emitBranchBodyGen(s.ElseBody, splitID, "false")
+		elseLast := fb.emitBranchBodyGen(s.ElseBody, splitID, "false", true)
 		if !elseReturns {
 			if elseLast != "" {
 				fb.flows = append(fb.flows, newHorizontalFlowGen(elseLast, ensureMerge()))
@@ -133,8 +145,8 @@ func (fb *flowBuilderGen) addIfStatementGen(s *ast.IfStmt) element.ID {
 			}
 		}
 	} else {
-		// No else — split's "false" branch flows straight to merge.
-		fb.flows = append(fb.flows, newDownwardFlowWithCaseGen(splitID, ensureMerge(), "false"))
+		// No else — split's "false" branch flows straight to merge on main line.
+		fb.flows = append(fb.flows, newHorizontalFlowWithCaseGen(splitID, ensureMerge(), "false"))
 	}
 
 	// ── Restore main cursor for next statement ──
@@ -156,9 +168,14 @@ func (fb *flowBuilderGen) addIfStatementGen(s *ast.IfStmt) element.ID {
 // first activity gets a labelled flow from the split (case "true" or
 // "false"); subsequent activities get plain horizontal flows.
 //
+// isBelow must be true when the branch is placed below the split's Y
+// position — this causes the split→first-activity flow to use a
+// downward anchor (AnchorBottom→AnchorLeft) instead of a horizontal
+// one (AnchorRight→AnchorLeft).
+//
 // Returns the ID of the last emitted activity, or "" when the body
 // is empty (caller decides whether to wire split→merge directly).
-func (fb *flowBuilderGen) emitBranchBodyGen(body []ast.MicroflowStatement, splitID element.ID, caseValue string) element.ID {
+func (fb *flowBuilderGen) emitBranchBodyGen(body []ast.MicroflowStatement, splitID element.ID, caseValue string, isBelow bool) element.ID {
 	var lastID element.ID
 	for _, stmt := range body {
 		actID := fb.addStatementGen(stmt)
@@ -167,7 +184,11 @@ func (fb *flowBuilderGen) emitBranchBodyGen(body []ast.MicroflowStatement, split
 		}
 		if lastID == "" {
 			// First activity in branch — connect from split with case label.
-			fb.flows = append(fb.flows, newHorizontalFlowWithCaseGen(splitID, actID, caseValue))
+			if isBelow {
+				fb.flows = append(fb.flows, newDownwardFlowWithCaseGen(splitID, actID, caseValue))
+			} else {
+				fb.flows = append(fb.flows, newHorizontalFlowWithCaseGen(splitID, actID, caseValue))
+			}
 		} else {
 			// Subsequent activities — plain horizontal chain.
 			fb.flows = append(fb.flows, newHorizontalFlowGen(lastID, actID))

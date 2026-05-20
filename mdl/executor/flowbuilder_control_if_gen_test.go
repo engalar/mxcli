@@ -24,6 +24,7 @@
 package executor
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -207,5 +208,94 @@ func TestAddIfStatementGenRoutesViaDispatcher(t *testing.T) {
 	id := fb.addStatementGen(stmt)
 	if id == "" {
 		t.Fatal("dispatcher should now route IfStmt to addIfStatementGen, got empty ID")
+	}
+}
+
+// parseLayoutY extracts the Y component from a "x;y" RelativeMiddlePoint string.
+func parseLayoutY(pos string) int {
+	var x, y int
+	fmt.Sscanf(pos, "%d;%d", &x, &y)
+	return y
+}
+
+// TestIfWithoutElseThenBranchBelowMainLine verifies that for an IF without
+// ELSE, the THEN branch activities are placed BELOW the main line (higher Y
+// than the ExclusiveSplit). The false path goes straight to merge on the main
+// line; the true path dives below. Without this, all activities collapse to
+// Y=200 when microflows contain only IF-without-ELSE statements.
+func TestIfWithoutElseThenBranchBelowMainLine(t *testing.T) {
+	fb := newIfTestFb()
+	stmt := &ast.IfStmt{
+		Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+		ThenBody: []ast.MicroflowStatement{
+			&ast.DeclareStmt{Variable: "X", Type: ast.DataType{Kind: ast.TypeBoolean}},
+		},
+		// No HasElse / ElseBody — IF without ELSE.
+	}
+	fb.addIfStatementGen(stmt)
+
+	var split *genMf.ExclusiveSplit
+	var thenActivity *genMf.ActionActivity
+	for _, obj := range fb.objects {
+		switch o := obj.(type) {
+		case *genMf.ExclusiveSplit:
+			split = o
+		case *genMf.ActionActivity:
+			thenActivity = o
+		}
+	}
+	if split == nil {
+		t.Fatal("ExclusiveSplit must be emitted")
+	}
+	if thenActivity == nil {
+		t.Fatal("THEN branch ActionActivity must be emitted")
+	}
+
+	splitY := parseLayoutY(split.RelativeMiddlePoint())
+	thenY := parseLayoutY(thenActivity.RelativeMiddlePoint())
+	if thenY <= splitY {
+		t.Fatalf("IF without ELSE: THEN branch Y (%d) must be > split Y (%d) — true path must be below main line", thenY, splitY)
+	}
+}
+
+// TestIfWithoutElseThenBranchFlowIsDownward verifies that the SequenceFlow
+// connecting the ExclusiveSplit to the first THEN-branch activity uses a
+// downward anchor (OriginConnectionIndex = AnchorBottom) when the THEN branch
+// is placed below the main line.
+func TestIfWithoutElseThenBranchFlowIsDownward(t *testing.T) {
+	fb := newIfTestFb()
+	stmt := &ast.IfStmt{
+		Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+		ThenBody: []ast.MicroflowStatement{
+			&ast.DeclareStmt{Variable: "X", Type: ast.DataType{Kind: ast.TypeBoolean}},
+		},
+	}
+	splitID := fb.addIfStatementGen(stmt)
+
+	// Find the flow from split→THEN (case "true"). It must use AnchorBottom
+	// because the THEN branch is placed below the split's Y position.
+	// Note: there is also a split→merge (case "false") flow that correctly
+	// uses AnchorRight — skip that one.
+	found := false
+	for _, flow := range fb.flows {
+		if flow.OriginRefID() != splitID {
+			continue
+		}
+		if len(flow.CaseValuesItems()) == 0 {
+			continue
+		}
+		ec, ok := flow.CaseValuesItems()[0].(*genMf.EnumerationCase)
+		if !ok || ec.Value() != "true" {
+			continue
+		}
+		// true-case flow from split into THEN must exit from the bottom anchor.
+		if int(flow.OriginConnectionIndex()) != AnchorBottom {
+			t.Fatalf("split→THEN (case=true) flow OriginConnectionIndex = %d, want %d (AnchorBottom)",
+				flow.OriginConnectionIndex(), AnchorBottom)
+		}
+		found = true
+	}
+	if !found {
+		t.Fatal("no flow with case 'true' found originating from split")
 	}
 }

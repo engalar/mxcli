@@ -97,11 +97,13 @@ func (fb *flowBuilderGen) addEnumSplitGen(s *ast.EnumSplitStmt) element.ID {
 	allBranchesReturn := len(s.Cases) > 0 || hasElse
 	branchY := centerY
 
-	// Emit each case branch.
+	// Emit each case branch. First case (i=0) is on the main line
+	// (horizontal flow from split); subsequent cases fan out below
+	// (downward flow from split).
 	for i, c := range s.Cases {
 		fb.posX = splitX + SplitWidth + HorizontalSpacing/2
 		fb.posY = branchY + i*VerticalSpacing
-		caseLast := fb.emitBranchBodyGen(c.Body, splitID, c.Value)
+		caseLast := fb.emitBranchBodyGen(c.Body, splitID, c.Value, i > 0)
 		caseReturns := lastStmtIsReturn(c.Body)
 		if !caseReturns {
 			allBranchesReturn = false
@@ -113,12 +115,13 @@ func (fb *flowBuilderGen) addEnumSplitGen(s *ast.EnumSplitStmt) element.ID {
 		}
 	}
 
-	// Emit else branch.
+	// Emit else branch. It sits below all named cases so isBelow=true
+	// whenever there is at least one named case above it.
 	if hasElse {
 		fb.posX = splitX + SplitWidth + HorizontalSpacing/2
 		fb.posY = branchY + len(s.Cases)*VerticalSpacing
 		// Else uses an empty case label — gen describer treats unlabelled as default.
-		elseLast := fb.emitBranchBodyGen(s.ElseBody, splitID, "")
+		elseLast := fb.emitBranchBodyGen(s.ElseBody, splitID, "", len(s.Cases) > 0)
 		elseReturns := lastStmtIsReturn(s.ElseBody)
 		if !elseReturns {
 			allBranchesReturn = false
@@ -237,7 +240,7 @@ func (fb *flowBuilderGen) addStructuredInheritanceSplitGen(s *ast.InheritanceSpl
 	if hasElse {
 		fb.posX = splitX + SplitWidth + HorizontalSpacing/2
 		fb.posY = branchY + len(s.Cases)*VerticalSpacing
-		elseLast := fb.emitBranchBodyGen(s.ElseBody, splitID, "")
+		elseLast := fb.emitBranchBodyGen(s.ElseBody, splitID, "", len(s.Cases) > 0)
 		elseReturns := lastStmtIsReturn(s.ElseBody)
 		if !elseReturns {
 			allBranchesReturn = false
