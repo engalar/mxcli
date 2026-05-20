@@ -5,10 +5,12 @@ package executor
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/mendixlabs/mxcli/model"
 )
 
@@ -73,5 +75,36 @@ func TestCaptureDescribe_WritesToBuffer(t *testing.T) {
 	}
 	if buf.String() != "" {
 		t.Errorf("original output was written to: %q", buf.String())
+	}
+}
+
+func TestExportProject_ProjectLevelFiles(t *testing.T) {
+	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	be, err := mprbackend.NewFromPath(dst)
+	if err != nil {
+		t.Fatalf("NewFromPath: %v", err)
+	}
+	t.Cleanup(func() { _ = be.Disconnect() })
+
+	outDir := t.TempDir()
+	exec := New(os.Stderr)
+	exec.backend = be
+	exec.cache = &executorCache{}
+
+	opts := ExportOptions{
+		Progress: func(line string) { t.Log(line) },
+	}
+	if err := exec.ExportProject(outDir, opts); err != nil {
+		t.Fatalf("ExportProject: %v", err)
+	}
+
+	marketFile := filepath.Join(outDir, "_marketplace.mdl")
+	if _, err := os.Stat(marketFile); err != nil {
+		t.Errorf("_marketplace.mdl missing: %v", err)
+	}
+
+	projDir := filepath.Join(outDir, "_project")
+	if _, err := os.Stat(projDir); err != nil {
+		t.Errorf("_project/ dir missing: %v", err)
 	}
 }
