@@ -273,6 +273,17 @@ func (e *Executor) SetBackendFactory(f BackendFactory) {
 	e.backendFactory = f
 }
 
+// SetBackend installs an already-connected backend on the executor and
+// ensures the executor cache is initialized. Used by callers (e.g.
+// `mxcli export`) that own the backend lifecycle outside the normal
+// Connect/Disconnect MDL flow.
+func (e *Executor) SetBackend(b backend.FullBackend) {
+	e.backend = b
+	if e.cache == nil {
+		e.cache = &executorCache{}
+	}
+}
+
 // SetQuiet enables or disables quiet mode (suppresses connection/status messages).
 func (e *Executor) SetQuiet(quiet bool) {
 	e.quiet = quiet
