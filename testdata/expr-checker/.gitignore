@@ -1,5 +1,1 @@
-# mx check extracts these asset directories at runtime; do not commit.
-theme/
-themesource/
-widgets/
 .mxcli/
