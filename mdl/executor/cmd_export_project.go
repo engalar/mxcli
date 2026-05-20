@@ -29,8 +29,17 @@ func documentFilePath(outputDir, moduleName, folderPath, qname string) string {
 	return filepath.Join(outputDir, moduleName, qname+".mdl")
 }
 
+// builtinModuleNames lists Mendix built-in read-only modules that must not
+// be exported or imported (they are always present in every project).
+var builtinModuleNames = map[string]bool{
+	"System": true,
+}
+
 func classifyModules(mods []*model.Module) (regular, marketplace []*model.Module) {
 	for _, m := range mods {
+		if builtinModuleNames[m.Name] {
+			continue // skip built-in read-only modules
+		}
 		if m.FromAppStore {
 			marketplace = append(marketplace, m)
 		} else {
@@ -183,20 +192,18 @@ func exportProjectLevel(ctx *ExecContext, outputDir string, opts ExportOptions, 
 		progress(fmt.Sprintf("  [write]    %s", navPath))
 	}
 
-	sec, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
-		return listProjectSecurityGen(c)
-	})
-	if err != nil {
-		sec = fmt.Sprintf("-- describe project security failed: %v\n", err)
-	}
-	secPath := filepath.Join(projDir, "security.mdl")
-	if opts.DryRun {
-		progress(fmt.Sprintf("  [dry-run]  %s", secPath))
-	} else {
-		if err := writeFile(secPath, sec); err != nil {
-			return err
+	// Export user roles as executable MDL (create user role ... ;)
+	sec, serr := exportUserRoles(ctx)
+	if serr == nil && sec != "" {
+		secPath := filepath.Join(projDir, "security.mdl")
+		if opts.DryRun {
+			progress(fmt.Sprintf("  [dry-run]  %s", secPath))
+		} else {
+			if err := writeFile(secPath, sec); err != nil {
+				return err
+			}
+			progress(fmt.Sprintf("  [write]    %s", secPath))
 		}
-		progress(fmt.Sprintf("  [write]    %s", secPath))
 	}
 
 	return nil
@@ -310,7 +317,7 @@ func exportEnumerations(ctx *ExecContext, outputDir string, m *model.Module, h *
 			content = fmt.Sprintf("-- describe enumeration %s failed: %v\n", qname, derr)
 		}
 		folder := h.BuildFolderPath(e.ContainerID)
-		path := documentFilePath(outputDir, m.Name, joinSection("Domain", folder), qname)
+		path := documentFilePath(outputDir, m.Name, joinSection("Enumerations", folder), qname)
 		if err := writeOrLog(path, content, opts, progress); err != nil {
 			return err
 		}
@@ -396,14 +403,40 @@ func exportConstants(ctx *ExecContext, outputDir string, m *model.Module, opts E
 }
 
 func exportModuleRoles(ctx *ExecContext, outputDir string, m *model.Module, opts ExportOptions, progress func(string)) error {
-	rolesContent, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
-		return listModuleRolesGen(c, m.Name)
-	})
-	if err != nil || strings.TrimSpace(rolesContent) == "" {
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return nil
+	}
+	pairs, err := listModuleSecurityWithContainerGen(ctx)
+	if err != nil {
+		return nil
+	}
+
+	var sb strings.Builder
+	for _, p := range pairs {
+		if h.GetModuleName(p.ContainerID) != m.Name {
+			continue
+		}
+		for _, mr := range p.MS.ModuleRolesItems() {
+			named, ok := mr.(interface{ Name() string })
+			if !ok {
+				continue
+			}
+			content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
+				return describeModuleRoleGen(c, ast.QualifiedName{Module: m.Name, Name: named.Name()})
+			})
+			if derr != nil {
+				continue
+			}
+			sb.WriteString(content)
+		}
+	}
+
+	if sb.Len() == 0 {
 		return nil
 	}
 	path := filepath.Join(outputDir, m.Name, "_module_roles.mdl")
-	return writeOrLog(path, rolesContent, opts, progress)
+	return writeOrLog(path, sb.String(), opts, progress)
 }
 
 func exportMicroflows(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, progress func(string)) error {
@@ -618,6 +651,30 @@ func exportWorkflows(ctx *ExecContext, outputDir string, m *model.Module, h *Con
 		}
 	}
 	return nil
+}
+
+// exportUserRoles returns executable MDL for every user role in the project.
+// Each role becomes a "create user role ..." statement, which is importable.
+func exportUserRoles(ctx *ExecContext) (string, error) {
+	ps, err := getProjectSecurityGen(ctx)
+	if err != nil || ps == nil {
+		return "", err
+	}
+	var sb strings.Builder
+	for _, ur := range ps.UserRolesItems() {
+		named, ok := ur.(interface{ Name() string })
+		if !ok {
+			continue
+		}
+		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
+			return describeUserRoleGen(c, ast.QualifiedName{Name: named.Name()})
+		})
+		if derr != nil {
+			continue
+		}
+		sb.WriteString(content)
+	}
+	return sb.String(), nil
 }
 
 // joinSection joins a section name ("Microflows", "Domain", ...) with an

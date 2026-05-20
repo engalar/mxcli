@@ -28,23 +28,24 @@ var importDocumentOrder = []struct {
 	pattern  string
 	priority int
 }{
-	{"_marketplace.mdl", 0},
-	{"_module.mdl", 1},
-	{"Domain/", 2},
-	{"_associations.mdl", 3},
-	{"Constants/", 4},
-	{"_module_roles.mdl", 5},
-	{"JavaActions/", 6},
-	{"JavaScriptActions/", 7},
-	{"Microflows/", 8},
-	{"Nanoflows/", 9},
-	{"Layouts/", 10},
-	{"Snippets/", 11},
-	{"Pages/", 12},
-	{"Workflows/", 13},
-	{"_project/navigation", 14},
-	{"_project/security", 15},
-	{"_project/settings", 16},
+	{"_marketplace.mdl", 0},  // informational only — skipped
+	{"_module.mdl", 1},        // CREATE MODULE must come first
+	{"Enumerations/", 2},      // enumerations before entities (entity attrs reference them)
+	{"Domain/", 3},            // entities (within-module order preserved by export)
+	{"_associations.mdl", 4},  // associations after all entities
+	{"Constants/", 5},         // constants
+	{"_module_roles.mdl", 6},  // module roles before user roles
+	{"JavaActions/", 7},
+	{"JavaScriptActions/", 8},
+	{"Microflows/", 9},
+	{"Nanoflows/", 10},
+	{"Layouts/", 11},          // layouts before pages
+	{"Snippets/", 12},         // snippets before pages
+	{"Pages/", 13},
+	{"Workflows/", 14},
+	{"_project/navigation", 15}, // navigation references pages
+	{"_project/security", 16},   // user roles reference module roles
+	{"_project/settings", 17},
 }
 
 func fileImportPriority(path string) int {
