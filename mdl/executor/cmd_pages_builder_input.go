@@ -89,7 +89,7 @@ func newEmptyText() element.Element {
 func applyFormWidgetDefaults(w formInputDefaults) {
 	w.SetEditable("Always")
 	w.SetOnChangeAction(newNoAction())
-	w.SetAppearance(genPg.NewAppearance())
+	w.SetAppearance(newDefaultAppearance())
 	w.SetValidation(newWidgetValidation())
 	w.SetScreenReaderLabel(nil)
 	w.SetSourceVariable(nil)
@@ -110,6 +110,21 @@ func applyFormWidgetDefaults(w formInputDefaults) {
 		tl.SetConditionalVisibilitySettings(nil)
 		tl.SetConditionalEditabilitySettings(nil)
 	}
+}
+
+// newDefaultAppearance returns a Forms$Appearance with the mandatory default fields
+// (Class, DynamicClasses, Style as empty strings; DesignProperties as an empty list).
+// Studio Pro 11.6.6 requires these fields on every widget — an Appearance created with
+// genPg.NewAppearance() alone omits them, causing the widget to be invisible.
+func newDefaultAppearance() *genPg.Appearance {
+	app := genPg.NewAppearance()
+	assignFreshID(app)
+	app.SetClass("")
+	app.SetDynamicClasses("")
+	app.SetStyle("")
+	// DesignProperties: leave the empty PartList as-is — the list serialises as []
+	// with the BSON discriminator added automatically by the codec. No items needed.
+	return app
 }
 
 // newWidgetValidation returns a Forms$WidgetValidation with empty expression.

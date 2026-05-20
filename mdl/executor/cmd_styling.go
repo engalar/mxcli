@@ -419,7 +419,7 @@ func setDesignPropertyGen(sw styledWidget, a ast.StylingAssignment) error {
 		}
 	}
 	if app == nil {
-		app = genPg.NewAppearance()
+		app = newDefaultAppearance()
 		sw.SetAppearance(app)
 	}
 

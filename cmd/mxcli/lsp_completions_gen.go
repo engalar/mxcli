@@ -40,6 +40,7 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "PAGE", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
 	{Label: "SNIPPET", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
 	{Label: "LAYOUT", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
+	{Label: "RESET", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
 	{Label: "NOTEBOOK", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
 	{Label: "CONSTANT", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},
 	{Label: "ATTRIBUTE", Kind: protocol.CompletionItemKindKeyword, Detail: "DDL keyword"},

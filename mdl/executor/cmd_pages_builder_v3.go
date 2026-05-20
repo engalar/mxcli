@@ -173,10 +173,10 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*genPg.Page, error)
 			arg.SetParameterQualifiedName(mainPlaceholderRef)
 
 			if len(s.Widgets) > 0 {
-				containerWidget := genPg.NewDivContainer()
-				assignFreshID(containerWidget)
-				containerWidget.SetName("conditionalVisibilityWidget1")
-
+				// SP11.6.6 reads FormCallArgument.Widgets (plural flat list).
+				// The old pattern wrapped content in a DivContainer and stored it via
+				// SetWidget (singular) — SP11.6.6 cannot find this content.
+				// Use AddWidgets to write a flat Widgets list instead.
 				expanded, err := pb.expandFragments(s.Widgets)
 				if err != nil {
 					return nil, err
@@ -186,9 +186,8 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*genPg.Page, error)
 					if err != nil {
 						return nil, mdlerrors.NewBackend("build widget", err)
 					}
-					containerWidget.AddWidgets(w)
+					arg.AddWidgets(w)
 				}
-				arg.SetWidget(containerWidget)
 			}
 
 			lc.AddArguments(arg)
@@ -492,8 +491,7 @@ func applyWidgetAppearanceGen(widget element.Element, w *ast.WidgetV3, theme *Th
 
 	// Apply design properties via Appearance element
 	if len(astProps) > 0 {
-		appearance := genPg.NewAppearance()
-		assignFreshID(appearance)
+		appearance := newDefaultAppearance()
 		if class != "" {
 			appearance.SetClass(class)
 		}
