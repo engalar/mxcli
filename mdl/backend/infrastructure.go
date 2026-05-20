@@ -32,6 +32,10 @@ type RawUnitBackend interface {
 type MetadataBackend interface {
 	ListAllUnitIDs() ([]string, error)
 	ListUnits() ([]*types.UnitInfo, error)
+	// ListUnitHashes returns a map from unit UUID string to its ContentsHash.
+	// Units with empty ContentsHash are omitted. Returns nil map (not error)
+	// when the backend does not support hash queries.
+	ListUnitHashes() (map[string]string, error)
 	GetUnitTypes() (map[string]int, error)
 	GetProjectRootID() (string, error)
 	ContentsDir() string

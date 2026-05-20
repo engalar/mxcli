@@ -105,6 +105,13 @@ func (m *MockBackend) ListUnits() ([]*types.UnitInfo, error) {
 	return nil, nil
 }
 
+func (m *MockBackend) ListUnitHashes() (map[string]string, error) {
+	if m.ListUnitHashesFunc != nil {
+		return m.ListUnitHashesFunc()
+	}
+	return nil, nil // nil = cache not available, caller falls back to always-write
+}
+
 func (m *MockBackend) GetUnitTypes() (map[string]int, error) {
 	if m.GetUnitTypesFunc != nil {
 		return m.GetUnitTypesFunc()

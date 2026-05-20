@@ -151,6 +151,29 @@ func OpenWithOptions(path string, opts OpenOptions) (*Reader, error) {
 	return r, nil
 }
 
+// ListUnitHashes returns a map from unit UUID string to its ContentsHash for
+// every unit that has a non-empty ContentsHash in the Unit table.
+// The key format matches what gen-typed elements return from .ID().
+func (r *Reader) ListUnitHashes() (map[string]string, error) {
+	rows, err := r.db.Query(`SELECT UnitID, ContentsHash FROM Unit WHERE ContentsHash != ''`)
+	if err != nil {
+		return nil, fmt.Errorf("query unit hashes: %w", err)
+	}
+	defer rows.Close()
+	result := make(map[string]string)
+	for rows.Next() {
+		var blob []byte
+		var hash string
+		if err := rows.Scan(&blob, &hash); err != nil {
+			continue
+		}
+		if len(blob) == 16 {
+			result[blobToUUID(blob)] = hash
+		}
+	}
+	return result, nil
+}
+
 // Close closes the reader and releases resources.
 func (r *Reader) Close() error {
 	if r.db != nil && r.ownsDB {

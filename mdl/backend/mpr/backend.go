@@ -1207,6 +1207,9 @@ func (b *MprBackend) ListUnits() ([]*types.UnitInfo, error) {
 	}
 	return msdkUnitInfoSliceToTypes(units), nil
 }
+func (b *MprBackend) ListUnitHashes() (map[string]string, error) {
+	return b.msdkReader.ListUnitHashes()
+}
 func (b *MprBackend) GetUnitTypes() (map[string]int, error) { return b.msdkReader.GetUnitTypes() }
 func (b *MprBackend) GetProjectRootID() (string, error)     { return b.msdkReader.GetProjectRootID() }
 func (b *MprBackend) ContentsDir() string                   { return b.msdkReader.ContentsDir() }

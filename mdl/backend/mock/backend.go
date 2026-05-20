@@ -269,6 +269,7 @@ type MockBackend struct {
 	// MetadataBackend
 	ListAllUnitIDsFunc   func() ([]string, error)
 	ListUnitsFunc        func() ([]*types.UnitInfo, error)
+	ListUnitHashesFunc   func() (map[string]string, error)
 	GetUnitTypesFunc     func() (map[string]int, error)
 	GetProjectRootIDFunc func() (string, error)
 	ContentsDirFunc     func() string

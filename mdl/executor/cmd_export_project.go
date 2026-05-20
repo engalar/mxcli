@@ -3,14 +3,19 @@
 package executor
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 )
 
@@ -18,7 +23,67 @@ import (
 type ExportOptions struct {
 	Module   string
 	DryRun   bool
+	// Force bypasses the cache check and always re-exports every document.
+	Force    bool
 	Progress func(line string)
+}
+
+// exportCache holds pre-loaded unit hash data for cache-based skip logic.
+type exportCache struct {
+	unitHashes map[string]string  // unit UUID → ContentsHash (nil = unavailable)
+	allUnits   []*types.UnitInfo  // all project units with ContainerID (nil = unavailable)
+}
+
+const cacheCommentPrefix = "-- @cache: "
+
+// moduleHash computes a stable combined hash covering every unit that belongs
+// to the given module. Returns "" when hash data is unavailable.
+func (ec *exportCache) moduleHash(h *ContainerHierarchy, moduleID model.ID) string {
+	if ec == nil || ec.unitHashes == nil || ec.allUnits == nil {
+		return ""
+	}
+	var hashes []string
+	for _, u := range ec.allUnits {
+		if h.FindModuleID(u.ContainerID) != moduleID {
+			continue
+		}
+		if hash, ok := ec.unitHashes[string(u.ID)]; ok && hash != "" {
+			hashes = append(hashes, hash)
+		}
+	}
+	if len(hashes) == 0 {
+		return ""
+	}
+	sort.Strings(hashes)
+	sum := sha256.Sum256([]byte(strings.Join(hashes, ",")))
+	return base64.RawURLEncoding.EncodeToString(sum[:])[:12]
+}
+
+// readCacheMarker reads the first line of path and returns the hash value
+// after the cache comment prefix, or "" if absent/unreadable.
+func readCacheMarker(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	if sc.Scan() {
+		line := sc.Text()
+		if strings.HasPrefix(line, cacheCommentPrefix) {
+			return strings.TrimPrefix(line, cacheCommentPrefix)
+		}
+	}
+	return ""
+}
+
+// cacheHit returns true when the existing file at path has a matching cache
+// marker, meaning the underlying model hasn't changed.
+func cacheHit(path, hash string) bool {
+	if hash == "" {
+		return false
+	}
+	return readCacheMarker(path) == hash
 }
 
 // documentFilePath returns the output file path for a single document.
@@ -121,6 +186,13 @@ func (e *Executor) ExportProject(outputDir string, opts ExportOptions) error {
 	}
 	regular, marketplace := classifyModules(mods)
 
+	// Pre-load unit hash data once for the whole export run.
+	ec := &exportCache{}
+	if !opts.Force {
+		ec.unitHashes, _ = ctx.Backend.ListUnitHashes()
+		ec.allUnits, _ = ctx.Backend.ListUnits()
+	}
+
 	marketContent := marketplaceFileContent(marketplace)
 	marketPath := filepath.Join(outputDir, "_marketplace.mdl")
 	if opts.DryRun {
@@ -147,7 +219,7 @@ func (e *Executor) ExportProject(outputDir string, opts ExportOptions) error {
 	}
 
 	for _, m := range regular {
-		if err := exportModule(ctx, outputDir, m, opts, progress); err != nil {
+		if err := exportModule(ctx, outputDir, m, opts, ec, progress); err != nil {
 			return fmt.Errorf("export module %s: %w", m.Name, err)
 		}
 	}
@@ -230,20 +302,32 @@ func exportProjectLevel(ctx *ExecContext, outputDir string, opts ExportOptions, 
 // <folder> is the document's container path inside the module
 // (BuildFolderPath); root-level documents land directly under the
 // section directory.
-func exportModule(ctx *ExecContext, outputDir string, m *model.Module, opts ExportOptions, progress func(string)) error {
+func exportModule(ctx *ExecContext, outputDir string, m *model.Module, opts ExportOptions, ec *exportCache, progress func(string)) error {
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return fmt.Errorf("hierarchy: %w", err)
+	}
+
+	// Module-level cache check: if all units in this module are unchanged, skip.
+	moduleMDLPath := filepath.Join(outputDir, m.Name, "_module.mdl")
+	modHash := ec.moduleHash(h, m.ID)
+	if !opts.Force && modHash != "" && cacheHit(moduleMDLPath, modHash) {
+		progress(fmt.Sprintf("  [cached]   %s (unchanged)", m.Name))
+		return nil
+	}
+
 	moduleContent, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
 		return describeModule(c, m.Name, false)
 	})
 	if err != nil {
 		moduleContent = fmt.Sprintf("create module %s;\n", m.Name)
 	}
-	if err := writeOrLog(filepath.Join(outputDir, m.Name, "_module.mdl"), moduleContent, opts, progress); err != nil {
-		return err
+	// Prepend cache marker to _module.mdl so future runs can detect module-level no-ops.
+	if modHash != "" {
+		moduleContent = cacheCommentPrefix + modHash + "\n" + moduleContent
 	}
-
-	h, err := getHierarchy(ctx)
-	if err != nil {
-		return fmt.Errorf("hierarchy: %w", err)
+	if err := writeOrLog(moduleMDLPath, moduleContent, opts, progress); err != nil {
+		return err
 	}
 
 	if err := exportEnumerations(ctx, outputDir, m, h, opts, progress); err != nil {
