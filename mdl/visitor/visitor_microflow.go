@@ -84,6 +84,9 @@ func (b *Builder) ExitCreateMicroflowStatement(ctx *parser.CreateMicroflowStatem
 			if optCtx.FOLDER() != nil && optCtx.STRING_LITERAL() != nil {
 				stmt.Folder = unquoteString(optCtx.STRING_LITERAL().GetText())
 			}
+			if optCtx.RESET() != nil {
+				stmt.ResetLayout = true
+			}
 		}
 	}
 
@@ -125,7 +128,7 @@ func (b *Builder) ExitCreateNanoflowStatement(ctx *parser.CreateNanoflowStatemen
 		stmt.ReturnType = buildMicroflowReturnType(retType)
 	}
 
-	// Parse options (FOLDER, COMMENT)
+	// Parse options (FOLDER, COMMENT, RESET LAYOUT)
 	if opts := ctx.MicroflowOptions(); opts != nil {
 		optsCtx := opts.(*parser.MicroflowOptionsContext)
 		for _, opt := range optsCtx.AllMicroflowOption() {
@@ -135,6 +138,9 @@ func (b *Builder) ExitCreateNanoflowStatement(ctx *parser.CreateNanoflowStatemen
 			}
 			if optCtx.FOLDER() != nil && optCtx.STRING_LITERAL() != nil {
 				stmt.Folder = unquoteString(optCtx.STRING_LITERAL().GetText())
+			}
+			if optCtx.RESET() != nil {
+				stmt.ResetLayout = true
 			}
 		}
 	}

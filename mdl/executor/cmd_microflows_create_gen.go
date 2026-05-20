@@ -224,6 +224,9 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		oc.AddObjects(param)
 	}
 
+	if s.ResetLayout {
+		resetLayoutGen(oc)
+	}
 	mf.SetObjectCollection(oc)
 
 	// Append all sequence flows onto the microflow's Flows array.

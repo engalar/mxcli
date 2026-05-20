@@ -128,3 +128,29 @@ func (fb *flowBuilderGen) buildFlowGraphGen(stmts []ast.MicroflowStatement, retu
 func (fb *flowBuilderGen) flowBuilderGenObjects() []element.Element {
 	return fb.objects
 }
+
+// resetLayoutGen clears RelativeMiddlePoint on every activity in oc so that
+// Studio Pro re-computes the canvas layout on next open. This is used by the
+// RESET LAYOUT microflow/nanoflow option to delegate positioning to Studio Pro
+// instead of the flowbuilder's linear algorithm. Recurses into LoopedActivity.
+func resetLayoutGen(oc *genMf.MicroflowObjectCollection) {
+	if oc == nil {
+		return
+	}
+	type posResetter interface {
+		SetRelativeMiddlePoint(string)
+	}
+	for _, obj := range oc.ObjectsItems() {
+		if obj == nil {
+			continue
+		}
+		if r, ok := obj.(posResetter); ok {
+			r.SetRelativeMiddlePoint("")
+		}
+		if looped, ok := obj.(*genMf.LoopedActivity); ok {
+			if inner, ok2 := looped.ObjectCollection().(*genMf.MicroflowObjectCollection); ok2 {
+				resetLayoutGen(inner)
+			}
+		}
+	}
+}

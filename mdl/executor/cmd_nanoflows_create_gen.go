@@ -257,6 +257,9 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		}
 	}
 
+	if s.ResetLayout {
+		resetLayoutGen(oc)
+	}
 	nf.SetObjectCollection(oc)
 
 	// Return type — primitive shorthand only at this stage; entity /

@@ -85,6 +85,7 @@ microflowOptions
 microflowOption
     : FOLDER STRING_LITERAL
     | COMMENT STRING_LITERAL
+    | RESET LAYOUT
     ;
 
 microflowBody

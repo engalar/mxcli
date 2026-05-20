@@ -54,6 +54,7 @@ type CreateMicroflowStmt struct {
 	Folder         string // Folder path within module (e.g., "Resources/Images")
 	CreateOrModify bool
 	Excluded       bool // @excluded — document excluded from project
+	ResetLayout    bool // reset layout — clears activity positions so Studio Pro re-layouts
 }
 
 func (s *CreateMicroflowStmt) isStatement() {}
@@ -76,6 +77,7 @@ type CreateNanoflowStmt struct {
 	Folder         string // Folder path within module
 	CreateOrModify bool
 	Excluded       bool // @excluded — document excluded from project
+	ResetLayout    bool // reset layout — clears activity positions so Studio Pro re-layouts
 }
 
 func (s *CreateNanoflowStmt) isStatement() {}
