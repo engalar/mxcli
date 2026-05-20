@@ -59,6 +59,33 @@ func (ec *exportCache) moduleHash(h *ContainerHierarchy, moduleID model.ID) stri
 	return base64.RawURLEncoding.EncodeToString(sum[:])[:12]
 }
 
+// docHash returns the ContentsHash for a top-level document unit using its
+// gen element ID string (e.g. string(mf.ID())). Returns "" when unavailable.
+func (ec *exportCache) docHash(elemID string) string {
+	if ec == nil || ec.unitHashes == nil {
+		return ""
+	}
+	return ec.unitHashes[elemID]
+}
+
+// containmentHash returns the ContentsHash of the first unit with the given
+// ContainmentName belonging to moduleID. Used for embedded units like
+// DomainModel (entities/enums/assocs) and ModuleSecurity (module roles).
+func (ec *exportCache) containmentHash(containmentName string, h *ContainerHierarchy, moduleID model.ID) string {
+	if ec == nil || ec.unitHashes == nil || ec.allUnits == nil {
+		return ""
+	}
+	for _, u := range ec.allUnits {
+		if u.ContainmentName != containmentName {
+			continue
+		}
+		if h.FindModuleID(u.ContainerID) == moduleID {
+			return ec.unitHashes[string(u.ID)]
+		}
+	}
+	return ""
+}
+
 // readCacheMarker reads the first line of path and returns the hash value
 // after the cache comment prefix, or "" if absent/unreadable.
 func readCacheMarker(path string) string {
@@ -322,60 +349,71 @@ func exportModule(ctx *ExecContext, outputDir string, m *model.Module, opts Expo
 	if err != nil {
 		moduleContent = fmt.Sprintf("create module %s;\n", m.Name)
 	}
-	// Prepend cache marker to _module.mdl so future runs can detect module-level no-ops.
-	if modHash != "" {
-		moduleContent = cacheCommentPrefix + modHash + "\n" + moduleContent
-	}
-	if err := writeOrLog(moduleMDLPath, moduleContent, opts, progress); err != nil {
+	if err := writeOrLog(moduleMDLPath, modHash, moduleContent, opts, progress); err != nil {
 		return err
 	}
 
-	if err := exportEnumerations(ctx, outputDir, m, h, opts, progress); err != nil {
+	// domHash covers all entities, enumerations, associations (embedded in DomainModel unit).
+	// secHash covers module roles (embedded in ModuleSecurity unit).
+	domHash := ec.containmentHash("DomainModel", h, m.ID)
+	secHash := ec.containmentHash("ModuleSecurity", h, m.ID)
+
+	if err := exportEnumerations(ctx, outputDir, m, h, opts, ec, domHash, progress); err != nil {
 		return err
 	}
-	if err := exportEntities(ctx, outputDir, m, h, opts, progress); err != nil {
+	if err := exportEntities(ctx, outputDir, m, h, opts, ec, domHash, progress); err != nil {
 		return err
 	}
-	if err := exportAssociations(ctx, outputDir, m, opts, progress); err != nil {
+	if err := exportAssociations(ctx, outputDir, m, opts, ec, domHash, progress); err != nil {
 		return err
 	}
-	if err := exportConstants(ctx, outputDir, m, opts, progress); err != nil {
+	if err := exportConstants(ctx, outputDir, m, opts, ec, progress); err != nil {
 		return err
 	}
-	if err := exportModuleRoles(ctx, outputDir, m, opts, progress); err != nil {
+	if err := exportModuleRoles(ctx, outputDir, m, opts, ec, secHash, progress); err != nil {
 		return err
 	}
-	if err := exportJavaActions(ctx, outputDir, m, h, opts, progress); err != nil {
+	if err := exportJavaActions(ctx, outputDir, m, h, opts, ec, progress); err != nil {
 		return err
 	}
-	if err := exportJavaScriptActions(ctx, outputDir, m, h, opts, progress); err != nil {
+	if err := exportJavaScriptActions(ctx, outputDir, m, h, opts, ec, progress); err != nil {
 		return err
 	}
-	if err := exportMicroflows(ctx, outputDir, m, h, opts, progress); err != nil {
+	if err := exportMicroflows(ctx, outputDir, m, h, opts, ec, progress); err != nil {
 		return err
 	}
-	if err := exportNanoflows(ctx, outputDir, m, h, opts, progress); err != nil {
+	if err := exportNanoflows(ctx, outputDir, m, h, opts, ec, progress); err != nil {
 		return err
 	}
-	if err := exportLayouts(ctx, outputDir, m, h, opts, progress); err != nil {
+	if err := exportLayouts(ctx, outputDir, m, h, opts, ec, progress); err != nil {
 		return err
 	}
-	if err := exportSnippets(ctx, outputDir, m, h, opts, progress); err != nil {
+	if err := exportSnippets(ctx, outputDir, m, h, opts, ec, progress); err != nil {
 		return err
 	}
-	if err := exportPages(ctx, outputDir, m, h, opts, progress); err != nil {
+	if err := exportPages(ctx, outputDir, m, h, opts, ec, progress); err != nil {
 		return err
 	}
-	if err := exportWorkflows(ctx, outputDir, m, h, opts, progress); err != nil {
+	if err := exportWorkflows(ctx, outputDir, m, h, opts, ec, progress); err != nil {
 		return err
 	}
 	return nil
 }
 
-func writeOrLog(path, content string, opts ExportOptions, progress func(string)) error {
+// writeOrLog writes content to path with an optional cache marker.
+// hash is the ContentsHash of the source unit; "" means no caching.
+// If the existing file already has a matching marker, the write is skipped.
+func writeOrLog(path, hash, content string, opts ExportOptions, progress func(string)) error {
+	if !opts.Force && cacheHit(path, hash) {
+		progress(fmt.Sprintf("  [cached]   %s", path))
+		return nil
+	}
 	if opts.DryRun {
 		progress(fmt.Sprintf("  [dry-run]  %s", path))
 		return nil
+	}
+	if hash != "" {
+		content = cacheCommentPrefix + hash + "\n" + content
 	}
 	if err := writeFile(path, content); err != nil {
 		return err
@@ -384,7 +422,7 @@ func writeOrLog(path, content string, opts ExportOptions, progress func(string))
 	return nil
 }
 
-func exportEnumerations(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, progress func(string)) error {
+func exportEnumerations(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, ec *exportCache, domHash string, progress func(string)) error {
 	enums, err := ctx.Backend.ListEnumerations()
 	if err != nil {
 		return nil
@@ -402,14 +440,14 @@ func exportEnumerations(ctx *ExecContext, outputDir string, m *model.Module, h *
 		}
 		folder := h.BuildFolderPath(e.ContainerID)
 		path := documentFilePath(outputDir, m.Name, joinSection("Enumerations", folder), qname)
-		if err := writeOrLog(path, content, opts, progress); err != nil {
+		if err := writeOrLog(path, domHash, content, opts, progress); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func exportEntities(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, progress func(string)) error {
+func exportEntities(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, ec *exportCache, domHash string, progress func(string)) error {
 	entities, err := listEntitiesForModuleGen(ctx, m.Name)
 	if err != nil || len(entities) == 0 {
 		return nil
@@ -424,17 +462,16 @@ func exportEntities(ctx *ExecContext, outputDir string, m *model.Module, h *Cont
 		if derr != nil {
 			content = fmt.Sprintf("-- describe entity %s failed: %v\n", qname, derr)
 		}
-		// Entities live inside the DomainModel; use the DM's folder path.
 		folder := h.BuildFolderPath(model.ID(e.ID()))
 		path := documentFilePath(outputDir, m.Name, joinSection("Domain", folder), qname)
-		if err := writeOrLog(path, content, opts, progress); err != nil {
+		if err := writeOrLog(path, domHash, content, opts, progress); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func exportAssociations(ctx *ExecContext, outputDir string, m *model.Module, opts ExportOptions, progress func(string)) error {
+func exportAssociations(ctx *ExecContext, outputDir string, m *model.Module, opts ExportOptions, ec *exportCache, domHash string, progress func(string)) error {
 	assocs, err := listAssociationsForModuleGen(ctx, m.Name)
 	if err != nil || len(assocs) == 0 {
 		return nil
@@ -457,10 +494,10 @@ func exportAssociations(ctx *ExecContext, outputDir string, m *model.Module, opt
 		sb.WriteString("\n")
 	}
 	path := filepath.Join(outputDir, m.Name, "_associations.mdl")
-	return writeOrLog(path, sb.String(), opts, progress)
+	return writeOrLog(path, domHash, sb.String(), opts, progress)
 }
 
-func exportConstants(ctx *ExecContext, outputDir string, m *model.Module, opts ExportOptions, progress func(string)) error {
+func exportConstants(ctx *ExecContext, outputDir string, m *model.Module, opts ExportOptions, ec *exportCache, progress func(string)) error {
 	consts, err := ctx.Backend.ListConstants()
 	if err != nil {
 		return nil
@@ -471,22 +508,23 @@ func exportConstants(ctx *ExecContext, outputDir string, m *model.Module, opts E
 			continue
 		}
 		qname := m.Name + "." + c.Name
-		content, derr := captureDescribeFunc(ctx, func(ec *ExecContext) error {
-			return outputConstantMDL(ec, c, m.Name)
+		content, derr := captureDescribeFunc(ctx, func(inner *ExecContext) error {
+			return outputConstantMDL(inner, c, m.Name)
 		})
 		if derr != nil {
 			content = fmt.Sprintf("-- describe constant %s failed: %v\n", qname, derr)
 		}
 		folder := h.BuildFolderPath(c.ContainerID)
 		path := documentFilePath(outputDir, m.Name, joinSection("Constants", folder), qname)
-		if err := writeOrLog(path, content, opts, progress); err != nil {
+		// Constants have no separate unit in v1; use "" (always rewrite).
+		if err := writeOrLog(path, "", content, opts, progress); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func exportModuleRoles(ctx *ExecContext, outputDir string, m *model.Module, opts ExportOptions, progress func(string)) error {
+func exportModuleRoles(ctx *ExecContext, outputDir string, m *model.Module, opts ExportOptions, ec *exportCache, secHash string, progress func(string)) error {
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
@@ -520,10 +558,10 @@ func exportModuleRoles(ctx *ExecContext, outputDir string, m *model.Module, opts
 		return nil
 	}
 	path := filepath.Join(outputDir, m.Name, "_module_roles.mdl")
-	return writeOrLog(path, sb.String(), opts, progress)
+	return writeOrLog(path, secHash, sb.String(), opts, progress)
 }
 
-func exportMicroflows(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, progress func(string)) error {
+func exportMicroflows(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, ec *exportCache, progress func(string)) error {
 	items, err := listMicroflowsWithContainerGen(ctx)
 	if err != nil {
 		return nil
@@ -537,22 +575,27 @@ func exportMicroflows(ctx *ExecContext, outputDir string, m *model.Module, h *Co
 		}
 		name := it.MF.Name()
 		qname := m.Name + "." + name
+		hash := ec.docHash(string(it.MF.ID()))
+		folder := h.BuildFolderPath(model.ID(it.ContainerUUID))
+		path := documentFilePath(outputDir, m.Name, joinSection("Microflows", folder), qname)
+		if !opts.Force && cacheHit(path, hash) {
+			progress(fmt.Sprintf("  [cached]   %s", path))
+			continue
+		}
 		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeMicroflowGen(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
 			content = fmt.Sprintf("-- describe microflow %s failed: %v\n", qname, derr)
 		}
-		folder := h.BuildFolderPath(model.ID(it.ContainerUUID))
-		path := documentFilePath(outputDir, m.Name, joinSection("Microflows", folder), qname)
-		if err := writeOrLog(path, content, opts, progress); err != nil {
+		if err := writeOrLog(path, hash, content, opts, progress); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func exportNanoflows(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, progress func(string)) error {
+func exportNanoflows(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, ec *exportCache, progress func(string)) error {
 	items, err := listNanoflowsWithContainerGen(ctx)
 	if err != nil {
 		return nil
@@ -566,22 +609,27 @@ func exportNanoflows(ctx *ExecContext, outputDir string, m *model.Module, h *Con
 		}
 		name := it.NF.Name()
 		qname := m.Name + "." + name
+		hash := ec.docHash(string(it.NF.ID()))
+		folder := h.BuildFolderPath(model.ID(it.ContainerUUID))
+		path := documentFilePath(outputDir, m.Name, joinSection("Nanoflows", folder), qname)
+		if !opts.Force && cacheHit(path, hash) {
+			progress(fmt.Sprintf("  [cached]   %s", path))
+			continue
+		}
 		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeNanoflowGen(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
 			content = fmt.Sprintf("-- describe nanoflow %s failed: %v\n", qname, derr)
 		}
-		folder := h.BuildFolderPath(model.ID(it.ContainerUUID))
-		path := documentFilePath(outputDir, m.Name, joinSection("Nanoflows", folder), qname)
-		if err := writeOrLog(path, content, opts, progress); err != nil {
+		if err := writeOrLog(path, hash, content, opts, progress); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func exportJavaActions(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, progress func(string)) error {
+func exportJavaActions(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, ec *exportCache, progress func(string)) error {
 	items, err := listJavaActionsWithContainerGen(ctx)
 	if err != nil {
 		return nil
@@ -592,22 +640,27 @@ func exportJavaActions(ctx *ExecContext, outputDir string, m *model.Module, h *C
 		}
 		name := it.Elem.Name()
 		qname := m.Name + "." + name
+		hash := ec.docHash(string(it.Elem.ID()))
+		folder := h.BuildFolderPath(model.ID(it.ContainerID))
+		path := documentFilePath(outputDir, m.Name, joinSection("JavaActions", folder), qname)
+		if !opts.Force && cacheHit(path, hash) {
+			progress(fmt.Sprintf("  [cached]   %s", path))
+			continue
+		}
 		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeJavaActionGen(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
 			content = fmt.Sprintf("-- describe java action %s failed: %v\n", qname, derr)
 		}
-		folder := h.BuildFolderPath(model.ID(it.ContainerID))
-		path := documentFilePath(outputDir, m.Name, joinSection("JavaActions", folder), qname)
-		if err := writeOrLog(path, content, opts, progress); err != nil {
+		if err := writeOrLog(path, hash, content, opts, progress); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func exportJavaScriptActions(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, progress func(string)) error {
+func exportJavaScriptActions(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, ec *exportCache, progress func(string)) error {
 	items, err := listJavaScriptActionsWithContainerGen(ctx)
 	if err != nil {
 		return nil
@@ -618,22 +671,27 @@ func exportJavaScriptActions(ctx *ExecContext, outputDir string, m *model.Module
 		}
 		name := it.Elem.Name()
 		qname := m.Name + "." + name
+		hash := ec.docHash(string(it.Elem.ID()))
+		folder := h.BuildFolderPath(model.ID(it.ContainerID))
+		path := documentFilePath(outputDir, m.Name, joinSection("JavaScriptActions", folder), qname)
+		if !opts.Force && cacheHit(path, hash) {
+			progress(fmt.Sprintf("  [cached]   %s", path))
+			continue
+		}
 		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeJavaScriptActionGen(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
 			content = fmt.Sprintf("-- describe javascript action %s failed: %v\n", qname, derr)
 		}
-		folder := h.BuildFolderPath(model.ID(it.ContainerID))
-		path := documentFilePath(outputDir, m.Name, joinSection("JavaScriptActions", folder), qname)
-		if err := writeOrLog(path, content, opts, progress); err != nil {
+		if err := writeOrLog(path, hash, content, opts, progress); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func exportPages(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, progress func(string)) error {
+func exportPages(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, ec *exportCache, progress func(string)) error {
 	items, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return nil
@@ -644,22 +702,27 @@ func exportPages(ctx *ExecContext, outputDir string, m *model.Module, h *Contain
 		}
 		name := it.Elem.Name()
 		qname := m.Name + "." + name
+		hash := ec.docHash(string(it.Elem.ID()))
+		folder := h.BuildFolderPath(model.ID(it.ContainerID))
+		path := documentFilePath(outputDir, m.Name, joinSection("Pages", folder), qname)
+		if !opts.Force && cacheHit(path, hash) {
+			progress(fmt.Sprintf("  [cached]   %s", path))
+			continue
+		}
 		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describePage(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
 			content = fmt.Sprintf("-- describe page %s failed: %v\n", qname, derr)
 		}
-		folder := h.BuildFolderPath(model.ID(it.ContainerID))
-		path := documentFilePath(outputDir, m.Name, joinSection("Pages", folder), qname)
-		if err := writeOrLog(path, content, opts, progress); err != nil {
+		if err := writeOrLog(path, hash, content, opts, progress); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func exportLayouts(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, progress func(string)) error {
+func exportLayouts(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, ec *exportCache, progress func(string)) error {
 	items, err := listLayoutsWithContainerGen(ctx)
 	if err != nil {
 		return nil
@@ -670,22 +733,27 @@ func exportLayouts(ctx *ExecContext, outputDir string, m *model.Module, h *Conta
 		}
 		name := it.Elem.Name()
 		qname := m.Name + "." + name
+		hash := ec.docHash(string(it.Elem.ID()))
+		folder := h.BuildFolderPath(model.ID(it.ContainerID))
+		path := documentFilePath(outputDir, m.Name, joinSection("Layouts", folder), qname)
+		if !opts.Force && cacheHit(path, hash) {
+			progress(fmt.Sprintf("  [cached]   %s", path))
+			continue
+		}
 		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeLayout(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
 			content = fmt.Sprintf("-- describe layout %s failed: %v\n", qname, derr)
 		}
-		folder := h.BuildFolderPath(model.ID(it.ContainerID))
-		path := documentFilePath(outputDir, m.Name, joinSection("Layouts", folder), qname)
-		if err := writeOrLog(path, content, opts, progress); err != nil {
+		if err := writeOrLog(path, hash, content, opts, progress); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func exportSnippets(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, progress func(string)) error {
+func exportSnippets(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, ec *exportCache, progress func(string)) error {
 	items, err := listSnippetsWithContainerGen(ctx)
 	if err != nil {
 		return nil
@@ -696,22 +764,27 @@ func exportSnippets(ctx *ExecContext, outputDir string, m *model.Module, h *Cont
 		}
 		name := it.Elem.Name()
 		qname := m.Name + "." + name
+		hash := ec.docHash(string(it.Elem.ID()))
+		folder := h.BuildFolderPath(model.ID(it.ContainerID))
+		path := documentFilePath(outputDir, m.Name, joinSection("Snippets", folder), qname)
+		if !opts.Force && cacheHit(path, hash) {
+			progress(fmt.Sprintf("  [cached]   %s", path))
+			continue
+		}
 		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeSnippet(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
 			content = fmt.Sprintf("-- describe snippet %s failed: %v\n", qname, derr)
 		}
-		folder := h.BuildFolderPath(model.ID(it.ContainerID))
-		path := documentFilePath(outputDir, m.Name, joinSection("Snippets", folder), qname)
-		if err := writeOrLog(path, content, opts, progress); err != nil {
+		if err := writeOrLog(path, hash, content, opts, progress); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func exportWorkflows(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, progress func(string)) error {
+func exportWorkflows(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, ec *exportCache, progress func(string)) error {
 	items, err := listWorkflowsWithContainerGen(ctx)
 	if err != nil {
 		return nil
@@ -722,15 +795,20 @@ func exportWorkflows(ctx *ExecContext, outputDir string, m *model.Module, h *Con
 		}
 		name := it.Elem.Name()
 		qname := m.Name + "." + name
+		hash := ec.docHash(string(it.Elem.ID()))
+		folder := h.BuildFolderPath(model.ID(it.ContainerID))
+		path := documentFilePath(outputDir, m.Name, joinSection("Workflows", folder), qname)
+		if !opts.Force && cacheHit(path, hash) {
+			progress(fmt.Sprintf("  [cached]   %s", path))
+			continue
+		}
 		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeWorkflowGen(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
 			content = fmt.Sprintf("-- describe workflow %s failed: %v\n", qname, derr)
 		}
-		folder := h.BuildFolderPath(model.ID(it.ContainerID))
-		path := documentFilePath(outputDir, m.Name, joinSection("Workflows", folder), qname)
-		if err := writeOrLog(path, content, opts, progress); err != nil {
+		if err := writeOrLog(path, hash, content, opts, progress); err != nil {
 			return err
 		}
 	}
