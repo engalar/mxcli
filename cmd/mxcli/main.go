@@ -355,4 +355,5 @@ func init() {
 	rootCmd.AddCommand(fmtCmd)
 	rootCmd.AddCommand(mprPackCmd)
 	rootCmd.AddCommand(exportCmd)
+	rootCmd.AddCommand(importCmd)
 }
