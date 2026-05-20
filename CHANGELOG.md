@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`mxcli export`** — batch-exports a Mendix project to a directory of structured `.mdl` files; one file per document, folder hierarchy preserved, marketplace modules listed in `_marketplace.mdl`; `--module` limits export to one module; `--dry-run` previews writes without touching disk; `--force` bypasses cache
+- **`mxcli import`** — executes exported `.mdl` files against a target project in dependency order (enumerations before entities, entities before associations, microflows before pages, module roles before user roles); `--skip-errors` continues past individual failures; `--dry-run` validates without writing
+- **Incremental export** — every exported file starts with `-- @cache: <hash>` derived from the SQLite `ContentsHash`; unchanged modules skip with zero describe calls; unchanged microflows and pages skip individually; a re-export of an unmodified project takes under 10ms
+- **`RESET LAYOUT` microflow/nanoflow option** — `create or modify microflow M.F () reset layout begin ... end;` clears all `relativeMiddlePoint` positions so Studio Pro re-runs auto-layout on next open; useful after ALTER operations that leave activity positions stale; also works in nanoflows and recurses into `LoopedActivity` sub-collections
+
 ## [0.9.0] - 2026-05-08
 
 ### Added

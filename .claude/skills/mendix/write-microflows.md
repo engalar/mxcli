@@ -53,6 +53,36 @@ begin
 end;
 ```
 
+### RESET LAYOUT Option
+
+After importing or alter-ing a microflow, Studio Pro may show activities in awkward positions because it already saved positions from a previous auto-layout pass and won't re-layout unless all positions are cleared. Use `reset layout` to clear all activity coordinates so Studio Pro re-runs its auto-layout algorithm when the project is opened:
+
+```mdl
+create or modify microflow MyModule.ACT_ProcessOrder ($Order: MyModule.Order)
+returns boolean as $success
+reset layout
+begin
+  -- activities will be auto-positioned by Studio Pro on next open
+  return true;
+end;
+```
+
+Options can be combined in any order:
+
+```mdl
+create or modify microflow MyModule.ACT_ProcessOrder () folder 'Orders' reset layout
+begin
+  return;
+end;
+```
+
+This also works for nanoflows: `create or modify nanoflow MyModule.NF_Validate () reset layout begin ... end;`
+
+**When to use:**
+- After importing a microflow via `mxcli import` that had positions saved from a different project
+- After ALTER operations that add/remove activities, leaving the canvas looking misaligned
+- When the flowbuilder's linear layout doesn't match what Studio Pro would produce
+
 **Key Rules:**
 - Parameters start with `$` prefix
 - Return variable must be declared or used

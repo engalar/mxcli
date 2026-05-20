@@ -397,6 +397,8 @@ go build -o bin/mxcli ./cmd/mxcli
 | **Data import** | `import from <alias> query '...' into Module.Entity map (...)` | Import from external DB into Mendix app PostgreSQL (batch insert with ID generation) |
 | **Connector gen** | `sql <alias> generate connector into <module> [tables (...)] [views (...)] [exec]` | Auto-generate Database Connector MDL from discovered schema |
 | **Diagnostics** | `mxcli diag [--bundle]` | Session logs, version info, bug report bundles |
+| **Export project** | `mxcli export -p app.mpr --output ./export-dir [--module M] [--dry-run] [--force]` | Export all documents to structured MDL files; incremental (skips unchanged modules/documents via `-- @cache:` markers) |
+| **Import project** | `mxcli import -p app.mpr --input ./export-dir [--module M] [--dry-run] [--skip-errors]` | Execute exported MDL files in dependency order (enumerations → entities → microflows → pages → navigation) |
 | **New project** | `mxcli new <name> --version X.Y.Z [--output-dir dir]` | Downloads mxbuild, creates blank project, runs init, installs Linux mxcli for devcontainer |
 | **Setup mxcli** | `mxcli setup mxcli [--os linux] [--arch amd64] [--output ./mxcli]` | Download platform-specific mxcli binary from GitHub releases |
 
@@ -518,6 +520,9 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - Platform authentication (`mxcli auth login/logout/status/list`) with PAT scheme for marketplace-api.mendix.com and catalog.mendix.com; credentials stored at ~/.mxcli/auth.json (mode 0600), MENDIX_PAT env override
 - Marketplace browsing (`mxcli marketplace search/info/versions`) with --min-mendix compatibility filtering; install blocked upstream (API does not expose download URLs)
 - Expression checker (`mxcli expr`) — scan/parse/validate/repair/report pipeline for Mendix expressions in MPR files; SYN-01/02/03 syntax rules + SEM-04/05/07 semantic rules (enum values, constants, entity/association paths); background daemon with JIT index for fast repeated validation; `--no-daemon` flag for CI/syntax-only mode
+- Project export (`mxcli export -p app.mpr --output ./dir`) — batch-exports every module and document type to structured `.mdl` files; incremental via `-- @cache:` hash markers (module-level and per-document); `--force` bypasses cache; built-in/marketplace modules excluded; System module skipped
+- Project import (`mxcli import -p app.mpr --input ./dir`) — executes exported `.mdl` files in topological dependency order (enumerations → entities → associations → microflows → pages → navigation); `--skip-errors` continues past individual failures; `--dry-run` parses without writing
+- `RESET LAYOUT` microflow/nanoflow option — `create or modify microflow M.F () reset layout begin ... end;` clears all `relativeMiddlePoint` activity positions so Studio Pro re-runs its auto-layout algorithm on next open; applies to nested LoopedActivity sub-collections; nanoflows supported too
 
 **Not Yet Implemented:**
 - 47 of 52 metamodel domains (REST, etc.)
@@ -548,6 +553,10 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - `.claude/skills/debug-bson.md` - Workflow for debugging BSON serialization issues with `mx` tool
 - `cmd/mxcli/lsp.go` - LSP server implementation (hover, definition, diagnostics, completion, symbols)
 - `cmd/mxcli/init.go` - `mxcli init` command (project initialization + VS Code extension install)
+- `cmd/mxcli/cmd_export.go` - `mxcli export` Cobra command (batch project export to MDL files)
+- `cmd/mxcli/cmd_import.go` - `mxcli import` Cobra command (batch MDL import in dependency order)
+- `mdl/executor/cmd_export_project.go` - `ExportProject()` orchestration; per-document and module-level `-- @cache:` markers; `resetLayoutGen()` helper
+- `mdl/executor/cmd_import_project.go` - `ImportProject()` orchestration; `sortMDLFiles()` topological sort
 - `cmd/mxcli/docker/oql.go` - OQL query execution against running Mendix runtime via M2EE admin API
 - `sql/connection.go` - External SQL connection manager (credential isolation)
 - `sql/config.go` - DSN resolution (env vars, YAML config)

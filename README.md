@@ -336,6 +336,52 @@ mxcli check script.mdl -p app.mpr --references
 mxcli diff -p app.mpr changes.mdl
 ```
 
+### Export and Import
+
+Export an entire project to a directory of editable MDL files, then import them back into any project:
+
+```bash
+# Export all modules and documents
+mxcli export -p app.mpr --output ./export-dir
+
+# Export a single module
+mxcli export -p app.mpr --output ./export-dir --module MyFirstModule
+
+# Preview what would be written without touching files
+mxcli export -p app.mpr --output ./export-dir --dry-run
+
+# Import back into a target project
+mxcli import -p target.mpr --input ./export-dir
+
+# Import and continue past errors (useful for partial imports)
+mxcli import -p target.mpr --input ./export-dir --skip-errors
+
+# Dry run — parse and validate without modifying the project
+mxcli import -p target.mpr --input ./export-dir --dry-run --skip-errors
+```
+
+The export directory mirrors the Studio Pro folder hierarchy. Each document gets its own `.mdl` file, grouped by module:
+
+```
+export-dir/
+  _marketplace.mdl           # Marketplace module list (informational)
+  _project/
+    settings.mdl             # Project settings
+    navigation.mdl           # Navigation profiles
+    security.mdl             # User roles
+  MyFirstModule/
+    _module.mdl              # Module declaration
+    _module_roles.mdl        # Module roles
+    Enumerations/            # Enumerations (before entities in import order)
+    Domain/                  # Entities
+    _associations.mdl        # Associations
+    Microflows/              # Microflows (per-file, folder structure preserved)
+    Pages/                   # Pages
+    Layouts/                 # Layouts
+```
+
+Re-export is incremental. Each file starts with `-- @cache: <hash>` — if the underlying model unit hasn't changed, the file is skipped entirely. A typical re-export of an unchanged project takes under 10ms regardless of project size.
+
 ## MDL Language
 
 MDL (Mendix Definition Language) is a SQL-like syntax for working with Mendix models:
@@ -403,6 +449,14 @@ show context of MyModule.ProcessOrder depth 3;
 -- Widget discovery and bulk updates
 show widgets where widgettype like '%combobox%';
 update widgets set 'showLabel' = false where widgettype like '%DataGrid%' dry run;
+
+-- Microflows: reset layout so Studio Pro auto-positions activities on next open
+create or modify microflow MyModule.ProcessOrder () reset layout
+begin
+  declare $Count integer = 0;
+  -- ... activities ...
+  return $Count;
+end;
 ```
 
 Run `mxcli syntax` for MDL syntax reference, or `mxcli syntax <topic>` for specific topics:
