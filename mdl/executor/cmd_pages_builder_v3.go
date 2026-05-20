@@ -2348,6 +2348,7 @@ func (pb *pageBuilder) buildTextBoxV3(w *ast.WidgetV3) (element.Element, error) 
 	tb := genPg.NewTextBox()
 	assignFreshID(tb)
 	tb.SetName(w.Name)
+	applyFormWidgetDefaults(tb)
 
 	if attr := w.GetAttribute(); attr != "" {
 		tb.SetAttributeRef(newAttributeRef(pb.resolveAttributePath(attr)))
@@ -2368,6 +2369,7 @@ func (pb *pageBuilder) buildTextAreaV3(w *ast.WidgetV3) (element.Element, error)
 	ta := genPg.NewTextArea()
 	assignFreshID(ta)
 	ta.SetName(w.Name)
+	applyFormWidgetDefaults(ta)
 
 	if attr := w.GetAttribute(); attr != "" {
 		ta.SetAttributeRef(newAttributeRef(pb.resolveAttributePath(attr)))
@@ -2388,6 +2390,7 @@ func (pb *pageBuilder) buildDatePickerV3(w *ast.WidgetV3) (element.Element, erro
 	dp := genPg.NewDatePicker()
 	assignFreshID(dp)
 	dp.SetName(w.Name)
+	applyFormWidgetDefaults(dp)
 
 	if attr := w.GetAttribute(); attr != "" {
 		dp.SetAttributeRef(newAttributeRef(pb.resolveAttributePath(attr)))
@@ -2408,6 +2411,7 @@ func (pb *pageBuilder) buildDropdownV3(w *ast.WidgetV3) (element.Element, error)
 	dd := genPg.NewDropDown()
 	assignFreshID(dd)
 	dd.SetName(w.Name)
+	applyFormWidgetDefaults(dd)
 
 	if attr := w.GetAttribute(); attr != "" {
 		dd.SetAttributeRef(newAttributeRef(pb.resolveAttributePath(attr)))
@@ -2428,6 +2432,7 @@ func (pb *pageBuilder) buildCheckBoxV3(w *ast.WidgetV3) (element.Element, error)
 	cb := genPg.NewCheckBox()
 	assignFreshID(cb)
 	cb.SetName(w.Name)
+	applyFormWidgetDefaults(cb)
 
 	if attr := w.GetAttribute(); attr != "" {
 		cb.SetAttributeRef(newAttributeRef(pb.resolveAttributePath(attr)))
@@ -2449,6 +2454,7 @@ func (pb *pageBuilder) buildRadioButtonsV3(w *ast.WidgetV3) (element.Element, er
 	rb := genPg.NewRadioButtonGroup()
 	assignFreshID(rb)
 	rb.SetName(w.Name)
+	applyFormWidgetDefaults(rb)
 
 	if attr := w.GetAttribute(); attr != "" {
 		rb.SetAttributeRef(newAttributeRef(pb.resolveAttributePath(attr)))

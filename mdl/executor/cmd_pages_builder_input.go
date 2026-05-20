@@ -9,6 +9,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
+	genTx "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 )
 
 // unquoteIdentifier strips surrounding double-quotes or backticks from a quoted identifier.
@@ -38,6 +40,84 @@ func newAttributeRef(qualifiedAttr string) element.Element {
 	ar := genDm.NewAttributeRef()
 	ar.SetAttributeQualifiedName(qualifiedAttr)
 	return ar
+}
+
+// formInputDefaults is the minimal interface implemented by all Mendix standard
+// form input widgets (TextBox, TextArea, DatePicker, CheckBox, RadioButtonGroup,
+// DropDown). It covers only the mandatory fields that every input widget requires
+// for Studio Pro to render it correctly when using the modern AttributeRef format.
+// Only methods present on ALL six widget types are included here; widget-specific
+// extras (AutoFocus, ConditionalVisibilitySettings, etc.) are set via type assertion
+// inside applyFormWidgetDefaults.
+type formInputDefaults interface {
+	SetEditable(v string)
+	SetOnChangeAction(v element.Element)
+	SetAppearance(v element.Element)
+	SetValidation(v element.Element)
+	SetScreenReaderLabel(v element.Element)
+	SetSourceVariable(v element.Element)
+	SetAriaRequired(v bool)
+	SetTabIndex(v int32)
+	SetReadOnlyStyle(v string)
+}
+
+// newNoAction returns a Forms$NoAction element with DisabledDuringExecution=true.
+// All form input widgets require action handlers on change/enter/leave events;
+// without them Studio Pro treats the widget as incompletely initialised and may
+// refuse to render the DataView that contains it.
+func newNoAction() element.Element {
+	a := genPg.NewNoClientAction()
+	a.SetDisabledDuringExecution(true)
+	return a
+}
+
+// newEmptyText returns an empty Texts$Text element (zero translations).
+func newEmptyText() element.Element {
+	return genTx.NewText()
+}
+
+// applyFormWidgetDefaults sets the mandatory default fields that every Mendix
+// standard input widget must carry when using the modern AttributeRef binding.
+//
+// Background: widgets originally created in Studio Pro with the legacy
+// AttributePath format can work with a minimal 5-field BSON because Studio Pro
+// uses a legacy rendering path for that format. Once AttributeRef is present,
+// Studio Pro switches to the modern path and expects all mandatory widget fields
+// (Editable, OnChangeAction, Validation, Appearance, etc.) to be populated.
+// mxcli's NewTextBox/NewCheckBox/… do not call applyDefaults (pending Fix 4 in
+// modelsdk tech-debt spec), so this helper fills the gap explicitly.
+func applyFormWidgetDefaults(w formInputDefaults) {
+	w.SetEditable("Always")
+	w.SetOnChangeAction(newNoAction())
+	w.SetAppearance(genPg.NewAppearance())
+	w.SetValidation(newWidgetValidation())
+	w.SetScreenReaderLabel(nil)
+	w.SetSourceVariable(nil)
+	w.SetAriaRequired(false)
+	w.SetTabIndex(0)
+	w.SetReadOnlyStyle("Inherit")
+
+	// TextBox and TextArea have additional fields not present on other widget types.
+	type textLike interface {
+		SetAutoFocus(v bool)
+		SetNativeAccessibilitySettings(v element.Element)
+		SetConditionalVisibilitySettings(v element.Element)
+		SetConditionalEditabilitySettings(v element.Element)
+	}
+	if tl, ok := w.(textLike); ok {
+		tl.SetAutoFocus(false)
+		tl.SetNativeAccessibilitySettings(nil)
+		tl.SetConditionalVisibilitySettings(nil)
+		tl.SetConditionalEditabilitySettings(nil)
+	}
+}
+
+// newWidgetValidation returns a Forms$WidgetValidation with empty expression.
+func newWidgetValidation() element.Element {
+	v := genPg.NewWidgetValidation()
+	v.SetExpression("")
+	v.SetMessage(newEmptyText())
+	return v
 }
 
 // resolveAttributePath resolves a short attribute name to a fully qualified name
