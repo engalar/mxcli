@@ -206,6 +206,72 @@ func indexOfSuffix(slice []string, suffix string) int {
 	return -1
 }
 
+func TestRoundTrip_ExportThenImport(t *testing.T) {
+	exportDst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	exportBe, err := mprbackend.NewFromPath(exportDst)
+	if err != nil {
+		t.Fatalf("NewFromPath (export): %v", err)
+	}
+
+	exportDir := t.TempDir()
+	exportExec := New(os.Stderr)
+	exportExec.backend = exportBe
+	exportExec.cache = &executorCache{}
+	if err := exportExec.ExportProject(exportDir, ExportOptions{Progress: func(l string) { t.Log("export:", l) }}); err != nil {
+		t.Fatalf("ExportProject: %v", err)
+	}
+	_ = exportBe.Disconnect()
+
+	origDst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	origBe, err := mprbackend.NewFromPath(origDst)
+	if err != nil {
+		t.Fatalf("NewFromPath (orig): %v", err)
+	}
+	origMods, _ := origBe.ListModules()
+	origCtx := &ExecContext{Backend: origBe, Cache: &executorCache{}}
+	origEntityCount := 0
+	for _, m := range origMods {
+		if m.FromAppStore {
+			continue
+		}
+		ents, _ := listEntitiesForModuleGen(origCtx, m.Name)
+		origEntityCount += len(ents)
+	}
+	_ = origBe.Disconnect()
+
+	importDst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	importBe, err := mprbackend.NewFromPath(importDst)
+	if err != nil {
+		t.Fatalf("NewFromPath (import): %v", err)
+	}
+	t.Cleanup(func() { _ = importBe.Disconnect() })
+
+	importExec := New(os.Stderr)
+	importExec.backend = importBe
+	importExec.cache = &executorCache{}
+	if err := importExec.ImportProject(exportDir, ImportOptions{
+		SkipErrors: true,
+		Progress:   func(l string) { t.Log("import:", l) },
+	}); err != nil {
+		t.Fatalf("ImportProject: %v", err)
+	}
+
+	importMods, _ := importBe.ListModules()
+	importCtx := &ExecContext{Backend: importBe, Cache: &executorCache{}}
+	importEntityCount := 0
+	for _, m := range importMods {
+		if m.FromAppStore {
+			continue
+		}
+		ents, _ := listEntitiesForModuleGen(importCtx, m.Name)
+		importEntityCount += len(ents)
+	}
+
+	if importEntityCount < origEntityCount {
+		t.Errorf("entity count after import (%d) is less than original (%d)", importEntityCount, origEntityCount)
+	}
+}
+
 func TestImportProject_ExecutesFiles(t *testing.T) {
 	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
 	be, err := mprbackend.NewFromPath(dst)
