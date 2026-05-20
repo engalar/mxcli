@@ -3,7 +3,11 @@
 package executor
 
 import (
+	"fmt"
 	"path/filepath"
+	"strings"
+
+	"github.com/mendixlabs/mxcli/model"
 )
 
 // ExportOptions controls the behaviour of ExportProject.
@@ -19,4 +23,30 @@ func documentFilePath(outputDir, moduleName, folderPath, qname string) string {
 		return filepath.Join(outputDir, moduleName, filepath.FromSlash(folderPath), qname+".mdl")
 	}
 	return filepath.Join(outputDir, moduleName, qname+".mdl")
+}
+
+func classifyModules(mods []*model.Module) (regular, marketplace []*model.Module) {
+	for _, m := range mods {
+		if m.FromAppStore {
+			marketplace = append(marketplace, m)
+		} else {
+			regular = append(regular, m)
+		}
+	}
+	return
+}
+
+func marketplaceFileContent(mods []*model.Module) string {
+	var sb strings.Builder
+	sb.WriteString("-- Marketplace modules detected in this project.\n")
+	sb.WriteString("-- Reinstall these before running mxcli import.\n")
+	sb.WriteString("--\n")
+	for _, m := range mods {
+		version := m.AppStoreVersion
+		if version == "" {
+			version = "unknown"
+		}
+		fmt.Fprintf(&sb, "-- Module: %-30s (version: %s)\n", m.Name, version)
+	}
+	return sb.String()
 }
