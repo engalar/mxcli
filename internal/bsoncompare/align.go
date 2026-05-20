@@ -45,11 +45,15 @@ func hasMapsWithName(arr []any) bool {
 func diffSetRefs(path string, golden, actual []any, out *[]FieldDiff) {
 	gs := make(map[string]bool, len(golden))
 	for _, v := range golden {
-		gs[v.(string)] = true
+		if s, ok := v.(string); ok {
+			gs[s] = true
+		}
 	}
 	as := make(map[string]bool, len(actual))
 	for _, v := range actual {
-		as[v.(string)] = true
+		if s, ok := v.(string); ok {
+			as[s] = true
+		}
 	}
 	removed := sortedDiff(gs, as)
 	added := sortedDiff(as, gs)
@@ -105,7 +109,7 @@ func diffByName(path string, golden, actual []any, out *[]FieldDiff) {
 		case !gok && aok:
 			*out = append(*out, FieldDiff{Path: elemPath, Actual: fmt.Sprintf("%v", av), Kind: DiffAdded})
 		default:
-			diffMaps(elemPath, gv, av, out)
+			diffMaps(elemPath, gv, av, true, out)
 		}
 	}
 }
@@ -133,7 +137,9 @@ func diffByPosition(path string, golden, actual []any, out *[]FieldDiff) {
 	}
 }
 
-func diffMaps(path string, golden, actual map[string]any, out *[]FieldDiff) {
+// diffMaps recursively compares two map[string]any values.
+// skipName=true skips the "Name" key (used when elements are aligned by Name).
+func diffMaps(path string, golden, actual map[string]any, skipName bool, out *[]FieldDiff) {
 	allKeys := make(map[string]bool)
 	for k := range golden {
 		allKeys[k] = true
@@ -149,7 +155,7 @@ func diffMaps(path string, golden, actual map[string]any, out *[]FieldDiff) {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		if k == "Name" {
+		if skipName && k == "Name" {
 			continue
 		}
 		gv, gok := golden[k]
@@ -170,7 +176,7 @@ func diffValues(path string, g, a any, out *[]FieldDiff) {
 	gm, gok := g.(map[string]any)
 	am, aok := a.(map[string]any)
 	if gok && aok {
-		diffMaps(path, gm, am, out)
+		diffMaps(path, gm, am, false, out)
 		return
 	}
 	ga, gaok := g.([]any)

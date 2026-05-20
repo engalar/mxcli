@@ -48,7 +48,7 @@ func Compare(aPath, bPath string, opts Options) ([]UnitDiff, error) {
 			aN := Normalize(au.Doc, idMap, opts)
 			bN := Normalize(bu.Doc, idMap, opts)
 			var fields []FieldDiff
-			diffDoc("", aN, bN, &fields)
+			diffMaps("", aN, bN, false, &fields)
 			if len(fields) > 0 {
 				result = append(result, UnitDiff{
 					QualifiedName: name,
@@ -68,34 +68,4 @@ func indexUnits(units []UnitDoc) map[string]UnitDoc {
 		m[u.QualifiedName] = u
 	}
 	return m
-}
-
-func diffDoc(path string, golden, actual map[string]any, out *[]FieldDiff) {
-	allKeys := make(map[string]bool)
-	for k := range golden {
-		allKeys[k] = true
-	}
-	for k := range actual {
-		allKeys[k] = true
-	}
-
-	keys := make([]string, 0, len(allKeys))
-	for k := range allKeys {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	for _, k := range keys {
-		gv, gok := golden[k]
-		av, aok := actual[k]
-		fp := path + "." + k
-		switch {
-		case gok && !aok:
-			*out = append(*out, FieldDiff{Path: fp, Golden: fmt.Sprintf("%v", gv), Kind: DiffRemoved})
-		case !gok && aok:
-			*out = append(*out, FieldDiff{Path: fp, Actual: fmt.Sprintf("%v", av), Kind: DiffAdded})
-		default:
-			diffValues(fp, gv, av, out)
-		}
-	}
 }

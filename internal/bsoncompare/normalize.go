@@ -49,7 +49,11 @@ func normalizeArray(arr bson.A, m IDMap, opts Options) []any {
 			start = 1
 		}
 	}
-	out := make([]any, 0, len(arr)-start)
+	cap := len(arr) - start
+	if cap < 0 {
+		cap = 0
+	}
+	out := make([]any, 0, cap)
 	for i := start; i < len(arr); i++ {
 		out = append(out, normalizeVal(arr[i], m, opts))
 	}

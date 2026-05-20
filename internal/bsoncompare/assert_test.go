@@ -35,16 +35,18 @@ func TestExpectAdded_Matches(t *testing.T) {
 	diffs := []bsoncompare.UnitDiff{
 		{QualifiedName: "MyFirstModule.ACT_New", Kind: bsoncompare.DiffAdded},
 	}
+	claimed := map[string]bool{}
 	matcher := bsoncompare.ExpectAdded("MyFirstModule.ACT_New")
-	if err := matcher.Match(diffs); err != nil {
+	if err := matcher.Match(diffs, claimed); err != nil {
 		t.Errorf("ExpectAdded should match: %v", err)
 	}
 }
 
 func TestExpectAdded_NotFound(t *testing.T) {
 	diffs := []bsoncompare.UnitDiff{}
+	claimed := map[string]bool{}
 	matcher := bsoncompare.ExpectAdded("MyFirstModule.ACT_New")
-	if err := matcher.Match(diffs); err == nil {
+	if err := matcher.Match(diffs, claimed); err == nil {
 		t.Error("ExpectAdded should fail when unit not in diffs")
 	}
 }
@@ -54,10 +56,11 @@ func TestExpectNoOtherChanges_ExtraUnit(t *testing.T) {
 		{QualifiedName: "MyFirstModule.ACT_New", Kind: bsoncompare.DiffAdded},
 		{QualifiedName: "MyFirstModule.ACT_Unexpected", Kind: bsoncompare.DiffChanged},
 	}
+	claimed := map[string]bool{}
 	// Claim ACT_New via ExpectAdded
-	bsoncompare.ExpectAdded("MyFirstModule.ACT_New").Match(diffs)
-	// Now ExpectNoOtherChanges should fail (ACT_Unexpected is unclaimed)
-	err := bsoncompare.ExpectNoOtherChanges().Match(diffs)
+	bsoncompare.ExpectAdded("MyFirstModule.ACT_New").Match(diffs, claimed)
+	// ExpectNoOtherChanges should fail (ACT_Unexpected is unclaimed)
+	err := bsoncompare.ExpectNoOtherChanges().Match(diffs, claimed)
 	if err == nil {
 		t.Error("ExpectNoOtherChanges should fail when unexpected diffs remain")
 	}
