@@ -40,10 +40,13 @@ func classifyModules(mods []*model.Module) (regular, marketplace []*model.Module
 	return
 }
 
-// captureDescribe temporarily redirects ctx.Output to a buffer while fn runs
-// and returns the captured text. ctx.Output is restored before returning,
+// captureDescribeFunc temporarily redirects ctx.Output to a buffer while fn
+// runs and returns the captured text. ctx.Output is restored before returning,
 // even when fn returns an error.
-func captureDescribe(ctx *ExecContext, fn func(*ExecContext) error) (string, error) {
+//
+// Distinct from captureDescribe (cmd_catalog.go), which is a string-dispatch
+// helper for SHOW CATALOG paths.
+func captureDescribeFunc(ctx *ExecContext, fn func(*ExecContext) error) (string, error) {
 	var buf bytes.Buffer
 	saved := ctx.Output
 	ctx.Output = &buf
@@ -148,7 +151,7 @@ func (e *Executor) ExportProject(outputDir string, opts ExportOptions) error {
 func exportProjectLevel(ctx *ExecContext, outputDir string, opts ExportOptions, progress func(string)) error {
 	projDir := filepath.Join(outputDir, "_project")
 
-	settings, err := captureDescribe(ctx, func(c *ExecContext) error {
+	settings, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
 		return describeSettings(c)
 	})
 	if err != nil {
@@ -164,7 +167,7 @@ func exportProjectLevel(ctx *ExecContext, outputDir string, opts ExportOptions, 
 		progress(fmt.Sprintf("  [write]    %s", settingsPath))
 	}
 
-	nav, err := captureDescribe(ctx, func(c *ExecContext) error {
+	nav, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
 		return describeNavigation(c, ast.QualifiedName{})
 	})
 	if err != nil {
@@ -180,7 +183,7 @@ func exportProjectLevel(ctx *ExecContext, outputDir string, opts ExportOptions, 
 		progress(fmt.Sprintf("  [write]    %s", navPath))
 	}
 
-	sec, err := captureDescribe(ctx, func(c *ExecContext) error {
+	sec, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
 		return listProjectSecurityGen(c)
 	})
 	if err != nil {
@@ -221,7 +224,7 @@ func exportProjectLevel(ctx *ExecContext, outputDir string, opts ExportOptions, 
 // (BuildFolderPath); root-level documents land directly under the
 // section directory.
 func exportModule(ctx *ExecContext, outputDir string, m *model.Module, opts ExportOptions, progress func(string)) error {
-	moduleContent, err := captureDescribe(ctx, func(c *ExecContext) error {
+	moduleContent, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
 		return describeModule(c, m.Name, false)
 	})
 	if err != nil {
@@ -300,7 +303,7 @@ func exportEnumerations(ctx *ExecContext, outputDir string, m *model.Module, h *
 			continue
 		}
 		qname := m.Name + "." + e.Name
-		content, derr := captureDescribe(ctx, func(c *ExecContext) error {
+		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeEnumeration(c, ast.QualifiedName{Module: m.Name, Name: e.Name})
 		})
 		if derr != nil {
@@ -324,7 +327,7 @@ func exportEntities(ctx *ExecContext, outputDir string, m *model.Module, h *Cont
 	for _, e := range sorted {
 		name := e.Name()
 		qname := m.Name + "." + name
-		content, derr := captureDescribe(ctx, func(c *ExecContext) error {
+		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeEntity(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
@@ -349,7 +352,7 @@ func exportAssociations(ctx *ExecContext, outputDir string, m *model.Module, opt
 	for _, a := range assocs {
 		name := a.Name()
 		qname := m.Name + "." + name
-		text, derr := captureDescribe(ctx, func(c *ExecContext) error {
+		text, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeAssociation(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
@@ -377,7 +380,7 @@ func exportConstants(ctx *ExecContext, outputDir string, m *model.Module, opts E
 			continue
 		}
 		qname := m.Name + "." + c.Name
-		content, derr := captureDescribe(ctx, func(ec *ExecContext) error {
+		content, derr := captureDescribeFunc(ctx, func(ec *ExecContext) error {
 			return outputConstantMDL(ec, c, m.Name)
 		})
 		if derr != nil {
@@ -393,7 +396,7 @@ func exportConstants(ctx *ExecContext, outputDir string, m *model.Module, opts E
 }
 
 func exportModuleRoles(ctx *ExecContext, outputDir string, m *model.Module, opts ExportOptions, progress func(string)) error {
-	rolesContent, err := captureDescribe(ctx, func(c *ExecContext) error {
+	rolesContent, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
 		return listModuleRolesGen(c, m.Name)
 	})
 	if err != nil || strings.TrimSpace(rolesContent) == "" {
@@ -417,7 +420,7 @@ func exportMicroflows(ctx *ExecContext, outputDir string, m *model.Module, h *Co
 		}
 		name := it.MF.Name()
 		qname := m.Name + "." + name
-		content, derr := captureDescribe(ctx, func(c *ExecContext) error {
+		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeMicroflowGen(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
@@ -446,7 +449,7 @@ func exportNanoflows(ctx *ExecContext, outputDir string, m *model.Module, h *Con
 		}
 		name := it.NF.Name()
 		qname := m.Name + "." + name
-		content, derr := captureDescribe(ctx, func(c *ExecContext) error {
+		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeNanoflowGen(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
@@ -472,7 +475,7 @@ func exportJavaActions(ctx *ExecContext, outputDir string, m *model.Module, h *C
 		}
 		name := it.Elem.Name()
 		qname := m.Name + "." + name
-		content, derr := captureDescribe(ctx, func(c *ExecContext) error {
+		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeJavaActionGen(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
@@ -498,7 +501,7 @@ func exportJavaScriptActions(ctx *ExecContext, outputDir string, m *model.Module
 		}
 		name := it.Elem.Name()
 		qname := m.Name + "." + name
-		content, derr := captureDescribe(ctx, func(c *ExecContext) error {
+		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeJavaScriptActionGen(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
@@ -524,7 +527,7 @@ func exportPages(ctx *ExecContext, outputDir string, m *model.Module, h *Contain
 		}
 		name := it.Elem.Name()
 		qname := m.Name + "." + name
-		content, derr := captureDescribe(ctx, func(c *ExecContext) error {
+		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describePage(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
@@ -550,7 +553,7 @@ func exportLayouts(ctx *ExecContext, outputDir string, m *model.Module, h *Conta
 		}
 		name := it.Elem.Name()
 		qname := m.Name + "." + name
-		content, derr := captureDescribe(ctx, func(c *ExecContext) error {
+		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeLayout(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
@@ -576,7 +579,7 @@ func exportSnippets(ctx *ExecContext, outputDir string, m *model.Module, h *Cont
 		}
 		name := it.Elem.Name()
 		qname := m.Name + "." + name
-		content, derr := captureDescribe(ctx, func(c *ExecContext) error {
+		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeSnippet(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {
@@ -602,7 +605,7 @@ func exportWorkflows(ctx *ExecContext, outputDir string, m *model.Module, h *Con
 		}
 		name := it.Elem.Name()
 		qname := m.Name + "." + name
-		content, derr := captureDescribe(ctx, func(c *ExecContext) error {
+		content, derr := captureDescribeFunc(ctx, func(c *ExecContext) error {
 			return describeWorkflowGen(c, ast.QualifiedName{Module: m.Name, Name: name})
 		})
 		if derr != nil {

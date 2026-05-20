@@ -60,11 +60,11 @@ func TestMarketplaceFileContent(t *testing.T) {
 	}
 }
 
-func TestCaptureDescribe_WritesToBuffer(t *testing.T) {
+func TestCaptureDescribeFunc_WritesToBuffer(t *testing.T) {
 	var buf bytes.Buffer
 	ctx := &ExecContext{Output: &buf}
 
-	result, err := captureDescribe(ctx, func(c *ExecContext) error {
+	result, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
 		fmt.Fprintln(c.Output, "hello world")
 		return nil
 	})
