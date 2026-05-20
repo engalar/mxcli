@@ -77,7 +77,7 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 		return mdlerrors.NewValidation("failed to build gen entity from AST")
 	}
 	if entity.Location() == "" {
-		entity.SetLocation(fmt.Sprintf("%d;%d", 100+len(dm.EntitiesItems())*150, 100))
+		entity.SetLocation(layoutPos(100+len(dm.EntitiesItems())*150, 100))
 	}
 
 	if existingEntity != nil {

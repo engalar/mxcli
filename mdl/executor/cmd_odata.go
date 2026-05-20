@@ -853,7 +853,7 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 	newEntity := genDm.NewEntity()
 	newEntity.SetID(element.ID(types.GenerateID()))
 	newEntity.SetName(s.Name.Name)
-	newEntity.SetLocation(fmt.Sprintf("%d;%d", 100+len(dm.EntitiesItems())*150, 100))
+	newEntity.SetLocation(layoutPos(100+len(dm.EntitiesItems())*150, 100))
 	applyExternalEntityStmtToGen(newEntity, s, serviceRef)
 	for _, attr := range attrs {
 		newEntity.AddAttributes(attr)

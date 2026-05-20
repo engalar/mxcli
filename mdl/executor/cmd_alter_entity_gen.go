@@ -197,7 +197,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		if s.Position == nil {
 			return mdlerrors.NewValidation("no position provided")
 		}
-		entity.SetLocation(fmt.Sprintf("%d;%d", s.Position.X, s.Position.Y))
+		entity.SetLocation(layoutPos(s.Position.X, s.Position.Y))
 		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set position", err)
 		}

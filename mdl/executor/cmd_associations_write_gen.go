@@ -6,8 +6,6 @@
 package executor
 
 import (
-	"fmt"
-
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
@@ -28,7 +26,7 @@ func astToEntityGen(s *ast.CreateEntityStmt) *genDm.Entity {
 	entity.SetName(s.Name.Name)
 	entity.SetDocumentation(s.Documentation)
 	if s.Position != nil {
-		entity.SetLocation(fmt.Sprintf("%d;%d", s.Position.X, s.Position.Y))
+		entity.SetLocation(layoutPos(s.Position.X, s.Position.Y))
 	}
 
 	persistable := s.Kind != ast.EntityNonPersistent
