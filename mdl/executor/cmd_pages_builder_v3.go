@@ -2350,7 +2350,7 @@ func (pb *pageBuilder) buildTextBoxV3(w *ast.WidgetV3) (element.Element, error) 
 	tb.SetName(w.Name)
 
 	if attr := w.GetAttribute(); attr != "" {
-		tb.SetAttributePath(pb.resolveAttributePath(attr))
+		tb.SetAttributeRef(newAttributeRef(pb.resolveAttributePath(attr)))
 	}
 
 	if label := w.GetLabel(); label != "" {
@@ -2370,7 +2370,7 @@ func (pb *pageBuilder) buildTextAreaV3(w *ast.WidgetV3) (element.Element, error)
 	ta.SetName(w.Name)
 
 	if attr := w.GetAttribute(); attr != "" {
-		ta.SetAttributePath(pb.resolveAttributePath(attr))
+		ta.SetAttributeRef(newAttributeRef(pb.resolveAttributePath(attr)))
 	}
 
 	if label := w.GetLabel(); label != "" {
@@ -2390,7 +2390,7 @@ func (pb *pageBuilder) buildDatePickerV3(w *ast.WidgetV3) (element.Element, erro
 	dp.SetName(w.Name)
 
 	if attr := w.GetAttribute(); attr != "" {
-		dp.SetAttributePath(pb.resolveAttributePath(attr))
+		dp.SetAttributeRef(newAttributeRef(pb.resolveAttributePath(attr)))
 	}
 
 	if label := w.GetLabel(); label != "" {
@@ -2410,7 +2410,7 @@ func (pb *pageBuilder) buildDropdownV3(w *ast.WidgetV3) (element.Element, error)
 	dd.SetName(w.Name)
 
 	if attr := w.GetAttribute(); attr != "" {
-		dd.SetAttributePath(pb.resolveAttributePath(attr))
+		dd.SetAttributeRef(newAttributeRef(pb.resolveAttributePath(attr)))
 	}
 
 	if label := w.GetLabel(); label != "" {
@@ -2430,7 +2430,7 @@ func (pb *pageBuilder) buildCheckBoxV3(w *ast.WidgetV3) (element.Element, error)
 	cb.SetName(w.Name)
 
 	if attr := w.GetAttribute(); attr != "" {
-		cb.SetAttributePath(pb.resolveAttributePath(attr))
+		cb.SetAttributeRef(newAttributeRef(pb.resolveAttributePath(attr)))
 	}
 
 	if label := w.GetLabel(); label != "" {
@@ -2451,7 +2451,7 @@ func (pb *pageBuilder) buildRadioButtonsV3(w *ast.WidgetV3) (element.Element, er
 	rb.SetName(w.Name)
 
 	if attr := w.GetAttribute(); attr != "" {
-		rb.SetAttributePath(pb.resolveAttributePath(attr))
+		rb.SetAttributeRef(newAttributeRef(pb.resolveAttributePath(attr)))
 	}
 
 	if label := w.GetLabel(); label != "" {

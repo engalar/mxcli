@@ -7,6 +7,8 @@ import (
 
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // unquoteIdentifier strips surrounding double-quotes or backticks from a quoted identifier.
@@ -26,6 +28,16 @@ func unquoteQualifiedName(s string) string {
 		parts[i] = unquoteIdentifier(p)
 	}
 	return strings.Join(parts, ".")
+}
+
+// newAttributeRef creates a DomainModels$AttributeRef element for a fully qualified
+// attribute name (e.g. "Module.Entity.Attribute"). This is the modern Mendix format
+// for binding form input widgets to entity attributes; the legacy AttributePath string
+// field is left nil so both old and new readers see a consistent state.
+func newAttributeRef(qualifiedAttr string) element.Element {
+	ar := genDm.NewAttributeRef()
+	ar.SetAttributeQualifiedName(qualifiedAttr)
+	return ar
 }
 
 // resolveAttributePath resolves a short attribute name to a fully qualified name
