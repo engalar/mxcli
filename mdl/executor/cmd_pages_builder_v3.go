@@ -575,10 +575,15 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (element.Element,
 
 		dvs := genPg.NewDataViewSource()
 		assignFreshID(dvs)
+		dvs.SetForceFullObjects(false)
 		if pb.isSnippet {
 			dvs.SetSnippetParameterQualifiedName(paramName)
 		} else {
-			dvs.SetPageParameterQualifiedName(paramName)
+			// SP11.6.6: use SourceVariable (nested PageVariable) instead of flat PageParameter
+			sv := genPg.NewPageVariable()
+			assignFreshID(sv)
+			sv.SetPageParameterQualifiedName(paramName)
+			dvs.SetSourceVariable(sv)
 		}
 		if entityName != "" {
 			// Set entity ref for type awareness
@@ -1025,17 +1030,12 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (element.Elemen
 		for _, arg := range action.Args {
 			mm := genPg.NewMicroflowParameterMapping()
 			assignFreshID(mm)
-			mm.SetParameterQualifiedName(arg.Name)
+			// SP11.6.6: fully-qualified "Module.MicroflowName.ParamName"
+			mm.SetParameterQualifiedName(action.Target + "." + arg.Name)
 
 			if strVal, ok := arg.Value.(string); ok {
-				if strings.HasPrefix(strVal, "$") {
-					pv := genPg.NewPageVariable()
-					assignFreshID(pv)
-					pv.SetPageParameterQualifiedName(strVal)
-					mm.SetVariable(pv)
-				} else {
-					mm.SetExpression(strVal)
-				}
+				// SP11.6.6: use Expression for all values (not Variable sub-object)
+				mm.SetExpression(strVal)
 			}
 			settings.AddParameterMappings(mm)
 		}
