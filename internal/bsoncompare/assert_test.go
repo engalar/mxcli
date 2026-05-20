@@ -51,6 +51,42 @@ func TestExpectAdded_NotFound(t *testing.T) {
 	}
 }
 
+func TestExpectRemoved_Matches(t *testing.T) {
+	diffs := []bsoncompare.UnitDiff{
+		{QualifiedName: "MyFirstModule.ACT_Old", Kind: bsoncompare.DiffRemoved},
+	}
+	claimed := map[string]bool{}
+	if err := bsoncompare.ExpectRemoved("MyFirstModule.ACT_Old").Match(diffs, claimed); err != nil {
+		t.Errorf("ExpectRemoved should match: %v", err)
+	}
+}
+
+func TestExpectRemoved_NotFound(t *testing.T) {
+	diffs := []bsoncompare.UnitDiff{}
+	claimed := map[string]bool{}
+	if err := bsoncompare.ExpectRemoved("MyFirstModule.ACT_Old").Match(diffs, claimed); err == nil {
+		t.Error("ExpectRemoved should fail when unit not in diffs")
+	}
+}
+
+func TestExpectChanged_Matches(t *testing.T) {
+	diffs := []bsoncompare.UnitDiff{
+		{QualifiedName: "MyFirstModule.SomeUnit", Kind: bsoncompare.DiffChanged},
+	}
+	claimed := map[string]bool{}
+	if err := bsoncompare.ExpectChanged("MyFirstModule.SomeUnit").Match(diffs, claimed); err != nil {
+		t.Errorf("ExpectChanged should match: %v", err)
+	}
+}
+
+func TestExpectChanged_NotFound(t *testing.T) {
+	diffs := []bsoncompare.UnitDiff{}
+	claimed := map[string]bool{}
+	if err := bsoncompare.ExpectChanged("MyFirstModule.SomeUnit").Match(diffs, claimed); err == nil {
+		t.Error("ExpectChanged should fail when unit not in diffs")
+	}
+}
+
 func TestExpectNoOtherChanges_ExtraUnit(t *testing.T) {
 	diffs := []bsoncompare.UnitDiff{
 		{QualifiedName: "MyFirstModule.ACT_New", Kind: bsoncompare.DiffAdded},

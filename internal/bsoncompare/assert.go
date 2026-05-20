@@ -35,6 +35,40 @@ func (e expectAdded) Match(diffs []UnitDiff, claimed map[string]bool) error {
 	return fmt.Errorf("expected unit %q to be added, but it was not found in diffs", e.name)
 }
 
+// ExpectRemoved returns a Matcher that passes when the named unit appears as DiffRemoved.
+func ExpectRemoved(qualifiedName string) Matcher {
+	return expectRemoved{name: qualifiedName}
+}
+
+type expectRemoved struct{ name string }
+
+func (e expectRemoved) Match(diffs []UnitDiff, claimed map[string]bool) error {
+	for _, d := range diffs {
+		if d.QualifiedName == e.name && d.Kind == DiffRemoved {
+			claimed[e.name] = true
+			return nil
+		}
+	}
+	return fmt.Errorf("expected unit %q to be removed, but it was not found in diffs", e.name)
+}
+
+// ExpectChanged returns a Matcher that passes when the named unit appears as DiffChanged.
+func ExpectChanged(qualifiedName string) Matcher {
+	return expectChanged{name: qualifiedName}
+}
+
+type expectChanged struct{ name string }
+
+func (e expectChanged) Match(diffs []UnitDiff, claimed map[string]bool) error {
+	for _, d := range diffs {
+		if d.QualifiedName == e.name && d.Kind == DiffChanged {
+			claimed[e.name] = true
+			return nil
+		}
+	}
+	return fmt.Errorf("expected unit %q to be changed, but it was not found in diffs", e.name)
+}
+
 // ExpectNoOtherChanges returns a Matcher that passes only when all remaining
 // unclaimed UnitDiff entries are empty. Must be the last matcher.
 func ExpectNoOtherChanges() Matcher { return expectNoOtherChanges{} }

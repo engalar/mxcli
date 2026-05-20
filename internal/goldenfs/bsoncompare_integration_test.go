@@ -21,6 +21,12 @@ import (
 // `connect local '<mprPath>';` so the backend wires to the FUSE-mounted file.
 // A fresh executor + backend is used per call to avoid stale list-cache issues
 // (matches workflow_integration_test.go pattern).
+//
+// The executor is closed before runMDL returns so that the SQLite connection is
+// fully released before bsoncompare opens the same file. A close failure is
+// reported as a test error (not just a warning) because an unreleased handle
+// could cause the subsequent ReadAllUnits call to see a locked or inconsistent
+// file.
 func runMDL(t *testing.T, mprPath, script string) {
 	t.Helper()
 	e := executor.New(io.Discard)
@@ -28,7 +34,7 @@ func runMDL(t *testing.T, mprPath, script string) {
 	e.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
 	defer func() {
 		if err := e.Close(); err != nil {
-			t.Logf("executor close warning: %v", err)
+			t.Errorf("runMDL: executor close: %v", err)
 		}
 	}()
 
@@ -58,7 +64,11 @@ func TestBsonCompare_CreateMicroflow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer snap.Close()
+	defer func() {
+		if err := snap.Close(); err != nil {
+			t.Logf("snap.Close warning: %v", err)
+		}
+	}()
 
 	mountMpr := filepath.Join(snap.MountDir(), "minimal.mpr")
 
@@ -80,6 +90,122 @@ func TestBsonCompare_CreateMicroflow(t *testing.T) {
 	snap.Rollback()
 }
 
+// TestBsonCompare_CreateEnumeration verifies that creating an enumeration adds
+// exactly one new unit (the enumeration itself) and nothing else.
+func TestBsonCompare_CreateEnumeration(t *testing.T) {
+	realDir := exprCheckerDir(t)
+	realMpr := filepath.Join(realDir, "minimal.mpr")
+	origStat, err := os.Stat(realMpr)
+	if err != nil {
+		t.Fatalf("stat real mpr: %v", err)
+	}
+
+	snap, err := Open(realDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := snap.Close(); err != nil {
+			t.Logf("snap.Close warning: %v", err)
+		}
+	}()
+
+	mountMpr := filepath.Join(snap.MountDir(), "minimal.mpr")
+
+	runMDL(t, mountMpr, `create or modify enumeration MyFirstModule.BsonTest_Status (
+  Active   'Active',
+  Inactive 'Inactive'
+);`)
+
+	bsoncompare.AssertEqual(t, realMpr, mountMpr, bsoncompare.DefaultOptions(),
+		bsoncompare.ExpectAdded("MyFirstModule.BsonTest_Status"),
+		bsoncompare.ExpectNoOtherChanges(),
+	)
+
+	checkFUSEIsolation(t, realMpr, origStat)
+	snap.Rollback()
+}
+
+// TestBsonCompare_CreatePage verifies that creating a minimal page adds exactly
+// one new Forms$Page unit and no other changes.
+func TestBsonCompare_CreatePage(t *testing.T) {
+	realDir := exprCheckerDir(t)
+	realMpr := filepath.Join(realDir, "minimal.mpr")
+	origStat, err := os.Stat(realMpr)
+	if err != nil {
+		t.Fatalf("stat real mpr: %v", err)
+	}
+
+	snap, err := Open(realDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := snap.Close(); err != nil {
+			t.Logf("snap.Close warning: %v", err)
+		}
+	}()
+
+	mountMpr := filepath.Join(snap.MountDir(), "minimal.mpr")
+
+	runMDL(t, mountMpr, `create page MyFirstModule.BsonTest_Page
+  (title: 'BsonTest Page', layout: Atlas_Core.Atlas_TopBar) { }`)
+
+	bsoncompare.AssertEqual(t, realMpr, mountMpr, bsoncompare.DefaultOptions(),
+		bsoncompare.ExpectAdded("MyFirstModule.BsonTest_Page"),
+		bsoncompare.ExpectNoOtherChanges(),
+	)
+
+	checkFUSEIsolation(t, realMpr, origStat)
+	snap.Rollback()
+}
+
+// TestBsonCompare_DropMicroflow verifies the full create-then-drop roundtrip:
+// after dropping a microflow that was created in the same session, bsoncompare
+// must see zero net changes relative to the pristine baseline.
+func TestBsonCompare_DropMicroflow(t *testing.T) {
+	realDir := exprCheckerDir(t)
+	realMpr := filepath.Join(realDir, "minimal.mpr")
+	origStat, err := os.Stat(realMpr)
+	if err != nil {
+		t.Fatalf("stat real mpr: %v", err)
+	}
+
+	snap, err := Open(realDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := snap.Close(); err != nil {
+			t.Logf("snap.Close warning: %v", err)
+		}
+	}()
+
+	mountMpr := filepath.Join(snap.MountDir(), "minimal.mpr")
+
+	// Step 1: create the microflow and verify it appears as added.
+	runMDL(t, mountMpr, `create or modify microflow MyFirstModule.ACT_BsonDropTest ()
+  returns Nothing
+  begin
+    return;
+  end;`)
+
+	bsoncompare.AssertEqual(t, realMpr, mountMpr, bsoncompare.DefaultOptions(),
+		bsoncompare.ExpectAdded("MyFirstModule.ACT_BsonDropTest"),
+		bsoncompare.ExpectNoOtherChanges(),
+	)
+
+	// Step 2: drop it and verify the unit disappears — net diff from baseline is zero.
+	runMDL(t, mountMpr, `drop microflow MyFirstModule.ACT_BsonDropTest;`)
+
+	bsoncompare.AssertEqual(t, realMpr, mountMpr, bsoncompare.DefaultOptions(),
+		bsoncompare.ExpectNoOtherChanges(),
+	)
+
+	checkFUSEIsolation(t, realMpr, origStat)
+	snap.Rollback()
+}
+
 // TestBsonCompare_NoOpScript verifies that connecting + disconnecting without
 // any mutating statements produces zero BSON diffs between the baseline and
 // the overlay snapshot. Detects spurious writes from the executor / backend
@@ -96,11 +222,17 @@ func TestBsonCompare_NoOpScript(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer snap.Close()
+	defer func() {
+		if err := snap.Close(); err != nil {
+			t.Logf("snap.Close warning: %v", err)
+		}
+	}()
 
 	mountMpr := filepath.Join(snap.MountDir(), "minimal.mpr")
 
-	// connect-only script; no create/alter/drop.
+	// show modules; is a pure read: the backend opens the MPR in read-write
+	// mode but commits no write transaction, so bsoncompare must see zero diffs.
+	// Any spurious write from the connect path would be caught here.
 	runMDL(t, mountMpr, `show modules;`)
 
 	bsoncompare.AssertEqual(t, realMpr, mountMpr, bsoncompare.DefaultOptions(),
