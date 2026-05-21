@@ -650,7 +650,7 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 			if doc := assoc.Documentation(); doc != "" {
 				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", doc)
 			}
-			fmt.Fprintf(ctx.Output, "create association %s.%s\n", modName, assoc.Name())
+			fmt.Fprintf(ctx.Output, "create or modify association %s.%s\n", modName, assoc.Name())
 			fmt.Fprintf(ctx.Output, "from %s to %s\n", fromQN, toQN)
 			formatAssocDetails(assoc.Type(), assoc.Owner(), assoc.StorageFormat(), assoc.DeleteBehavior())
 			fmt.Fprintln(ctx.Output, "/")
@@ -669,7 +669,7 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 			if doc := ca.Documentation(); doc != "" {
 				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", doc)
 			}
-			fmt.Fprintf(ctx.Output, "create association %s.%s\n", modName, ca.Name())
+			fmt.Fprintf(ctx.Output, "create or modify association %s.%s\n", modName, ca.Name())
 			fmt.Fprintf(ctx.Output, "from %s to %s\n", fromQN, ca.ChildQualifiedName())
 			formatAssocDetails(ca.Type(), ca.Owner(), ca.StorageFormat(), ca.DeleteBehavior())
 			fmt.Fprintln(ctx.Output, "/")
