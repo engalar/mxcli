@@ -40,7 +40,17 @@ createJavaActionStatement
       LPAREN javaActionParameterList? RPAREN
       javaActionReturnType?
       javaActionExposedClause?
-      AS DOLLAR_STRING SEMICOLON?
+      javaActionSourceClause?
+      SEMICOLON?
+    ;
+
+javaActionSourceClause
+    : javaActionSourceBlock+
+    ;
+
+javaActionSourceBlock
+    : IDENTIFIER DOLLAR_STRING
+    | AS DOLLAR_STRING
     ;
 
 javaActionParameterList
