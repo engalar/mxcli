@@ -236,21 +236,95 @@ func init() {
 			"java action", "java", "call java",
 			"type parameter", "exposed as", "javaaction",
 		},
-		Syntax:  "SHOW JAVA ACTIONS [IN Module];\nDESCRIBE JAVA ACTION Module.Name;\nCREATE [OR MODIFY] JAVA ACTION Module.Name(...) RETURNS Type AS $$ ... $$;\nDROP JAVA ACTION Module.Name;\n\nNOTE: AS $$ ... $$ is mandatory — omitting the body causes a parse error.",
+		Syntax: "SHOW JAVA ACTIONS [IN Module];\n" +
+			"DESCRIBE JAVA ACTION Module.Name;\n" +
+			"CREATE [OR MODIFY] JAVA ACTION Module.Name(...) RETURNS Type\n" +
+			"  [imports $$ ... $$]\n" +
+			"  [code $$ ... $$]\n" +
+			"  [extra $$ ... $$];\n" +
+			"DROP JAVA ACTION Module.Name;\n\n" +
+			"All source blocks are optional. Omitting all blocks updates BSON metadata only.",
 		Example: "SHOW JAVA ACTIONS;\nDESCRIBE JAVA ACTION Utils.FormatCurrency;",
-		SeeAlso: []string{"java-action.create"},
+		SeeAlso: []string{"java-action.create", "java-action.source"},
 	})
 
 	Register(SyntaxFeature{
 		Path:    "java-action.create",
-		Summary: "Create Java actions with type parameters, EXPOSED AS, and inline code",
+		Summary: "Create or modify Java actions with parameters and inline source blocks",
 		Keywords: []string{
 			"create java action", "or modify java action", "type parameter", "entity parameter",
 			"exposed as", "returns", "generics", "drop java action",
 		},
-		Syntax:  "CREATE [OR MODIFY] JAVA ACTION Module.Name(\n  Param: Type [NOT NULL],\n  EntityType: ENTITY <pEntity> NOT NULL,\n  Obj: pEntity\n) RETURNS ReturnType\n[EXPOSED AS 'Label' IN 'Category']\nAS $$\n// Java code — AS $$ ... $$ is mandatory, cannot be omitted\n$$;\n\nOR MODIFY: updates signature/body in-place, preserves UUID.",
-		Example: "CREATE JAVA ACTION Utils.FormatCurrency(\n  Amount: Decimal NOT NULL\n) RETURNS String\nEXPOSED AS 'Format Currency' IN 'Formatting'\nAS $$\nreturn String.format(\"%.2f\", Amount);\n$$;\n\n-- Generic entity validator with type parameter\nCREATE JAVA ACTION Utils.IsValid(\n  EntityType: ENTITY <pEntity> NOT NULL,\n  Obj: pEntity NOT NULL\n) RETURNS Boolean\nAS $$\nreturn Obj != null;\n$$;\n\n-- Idempotent update (preserves UUID)\nCREATE OR MODIFY JAVA ACTION Utils.FormatCurrency(\n  Amount: Decimal NOT NULL,\n  Decimals: Integer NOT NULL\n) RETURNS String\nAS $$\nreturn String.format(\"%.\" + Decimals + \"f\", Amount);\n$$;",
-		SeeAlso: []string{"java-action"},
+		Syntax: "CREATE [OR MODIFY] JAVA ACTION Module.Name(\n" +
+			"  Param: Type [NOT NULL],\n" +
+			"  EntityType: ENTITY <pEntity> NOT NULL,\n" +
+			"  Obj: pEntity\n" +
+			") RETURNS ReturnType\n" +
+			"[EXPOSED AS 'Label' IN 'Category']\n" +
+			"[imports $$ import java.util.List; $$]\n" +
+			"[code $$ /* executeAction() body */ $$]\n" +
+			"[extra $$ /* helper fields/methods */ $$];\n\n" +
+			"OR MODIFY: updates signature/body in-place, preserves UUID.\n" +
+			"Legacy: AS $$ ... $$ still accepted (treated as code block).",
+		Example: "CREATE OR MODIFY JAVA ACTION Encryption.EncryptString(\n" +
+			"  value: string not null,\n" +
+			"  key: string not null\n" +
+			") RETURNS string\n" +
+			"imports $$\n" +
+			"    import javax.crypto.Cipher;\n" +
+			"    import javax.crypto.spec.SecretKeySpec;\n" +
+			"$$\n" +
+			"code $$\n" +
+			"    Cipher c = Cipher.getInstance(\"AES/GCM/NoPadding\");\n" +
+			"    c.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key.getBytes(), \"AES\"));\n" +
+			"    return Base64.getEncoder().encodeToString(c.doFinal(value.getBytes()));\n" +
+			"$$\n" +
+			"extra $$\n" +
+			"    private static final String PREFIX = \"{AES3}\";\n" +
+			"$$;",
+		SeeAlso: []string{"java-action", "java-action.source"},
+	})
+
+	Register(SyntaxFeature{
+		Path:    "java-action.source",
+		Summary: "Java source sections: imports/code/extra — all optional, merge semantics",
+		Keywords: []string{
+			"imports", "code", "extra", "user code", "extra code",
+			"java source", "merge imports", "javasource",
+		},
+		Syntax: "imports $$ ... $$  → merged into import block (idempotent, no duplicates)\n" +
+			"code $$ ... $$     → replaces BEGIN/END USER CODE section\n" +
+			"extra $$ ... $$    → replaces BEGIN/END EXTRA CODE section\n\n" +
+			"Rules:\n" +
+			"  • All three blocks are optional\n" +
+			"  • Omitting all blocks: only BSON metadata updated, .java file untouched\n" +
+			"  • If .java does not exist: a skeleton is generated with the provided content\n" +
+			"  • If .java exists: sections updated in-place (existing code preserved)\n" +
+			"  • imports block: add-only — existing imports are never removed\n" +
+			"  • code block: write only the method body (no executeAction() signature)\n" +
+			"  • AS $$ ... $$ still accepted for backward compatibility (= code block)",
+		Example: "-- Only update BSON (no Java file change)\n" +
+			"CREATE OR MODIFY JAVA ACTION Utils.Parse(Input: string) RETURNS string;\n\n" +
+			"-- Add imports and update code\n" +
+			"CREATE OR MODIFY JAVA ACTION Utils.Parse(Input: string) RETURNS string\n" +
+			"imports $$\n" +
+			"    import java.util.regex.Pattern;\n" +
+			"$$\n" +
+			"code $$\n" +
+			"    return Input.trim();\n" +
+			"$$;\n\n" +
+			"-- All three sections\n" +
+			"CREATE OR MODIFY JAVA ACTION Utils.Parse(Input: string) RETURNS string\n" +
+			"imports $$\n" +
+			"    import java.util.regex.Pattern;\n" +
+			"$$\n" +
+			"code $$\n" +
+			"    return Pattern.compile(\"\\\\s+\").matcher(Input).replaceAll(\" \").trim();\n" +
+			"$$\n" +
+			"extra $$\n" +
+			"    private static final Pattern WS = Pattern.compile(\"\\\\s+\");\n" +
+			"$$;",
+		SeeAlso: []string{"java-action.create"},
 	})
 
 	// ── JSON Structures ───────────────────────────────────────────────
