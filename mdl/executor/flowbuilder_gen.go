@@ -145,6 +145,10 @@ type flowBuilderGen struct {
 	errorHandlerTailIsSource bool
 	errorHandlerReturnValue  string
 	pendingErrorHandlers     []pendingErrorHandlerStateGen
+
+	// nonPersistentEntities is lazily loaded on first isNonPersistentEntity call.
+	// nil means not yet loaded; empty map means loaded but all entities are persistent.
+	nonPersistentEntities map[string]bool
 }
 
 // pendingErrorHandlerStateGen is the gen-typed equivalent of

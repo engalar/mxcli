@@ -157,6 +157,12 @@ func (fb *flowBuilderGen) addCreateListActionGen(s *ast.CreateListStmt) element.
 	if s.EntityType.Module != "" && s.EntityType.Name != "" {
 		entityQN = s.EntityType.Module + "." + s.EntityType.Name
 	}
+	if entityQN != "" && fb.isNonPersistentEntity(entityQN) {
+		fb.addError("cannot create list of non-persistent entity '%s' (CE0053): "+
+			"Mendix does not allow list variables for non-persistent entities; "+
+			"pass the list as a microflow parameter instead", entityQN)
+		return ""
+	}
 	if fb.varTypes != nil && entityQN != "" {
 		fb.varTypes[s.Variable] = "List of " + entityQN
 	}

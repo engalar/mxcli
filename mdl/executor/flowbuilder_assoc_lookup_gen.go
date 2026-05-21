@@ -343,3 +343,45 @@ func findEntityInDomainModelGen(dm *genDm.DomainModel, name string) *genDm.Entit
 	}
 	return nil
 }
+
+// isNonPersistentEntity reports whether qualifiedName refers to a non-persistent entity.
+// If fb.nonPersistentEntities is already populated (e.g. by tests), it is used directly.
+// Otherwise it is lazily loaded from fb.backend; returns false when backend is nil.
+func (fb *flowBuilderGen) isNonPersistentEntity(qualifiedName string) bool {
+	if fb.nonPersistentEntities == nil {
+		if fb.backend == nil {
+			return false
+		}
+		fb.nonPersistentEntities = loadNonPersistentEntitySet(fb.backend, fb.hierarchy)
+	}
+	return fb.nonPersistentEntities[qualifiedName]
+}
+
+// loadNonPersistentEntitySet builds the set of non-persistent entity qualified names
+// by walking all domain models via the backend.
+func loadNonPersistentEntitySet(b backend.FullBackend, h *ContainerHierarchy) map[string]bool {
+	result := make(map[string]bool)
+	dms, err := b.ListDomainModelsGen()
+	if err != nil || h == nil {
+		return result
+	}
+	for _, dm := range dms {
+		if dm == nil {
+			continue
+		}
+		modName := h.GetModuleName(h.FindModuleID(model.ID(dm.ID())))
+		if modName == "" {
+			continue
+		}
+		for _, entityElem := range dm.EntitiesItems() {
+			ent, ok := entityElem.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			if !entityPersistableGen(ent) {
+				result[modName+"."+ent.Name()] = true
+			}
+		}
+	}
+	return result
+}

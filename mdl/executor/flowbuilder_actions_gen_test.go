@@ -195,6 +195,43 @@ func TestAddCreateListActionGenRegistersListType(t *testing.T) {
 	}
 }
 
+func TestAddCreateListActionGen_NonPersistentEntity_ReportsError(t *testing.T) {
+	fb := newActionTestFb()
+	// Directly preset nonPersistentEntities, bypassing backend call (backend=nil returns false)
+	fb.nonPersistentEntities = map[string]bool{"M.NonPersistDto": true}
+
+	stmt := &ast.CreateListStmt{
+		Variable:   "Items",
+		EntityType: ast.QualifiedName{Module: "M", Name: "NonPersistDto"},
+	}
+	fb.addCreateListActionGen(stmt)
+
+	if len(fb.errors) == 0 {
+		t.Error("expected CE0053 error for non-persistent entity in create list, got none")
+	}
+	if len(fb.objects) != 0 {
+		t.Error("expected no action created for non-persistent entity (should return early)")
+	}
+}
+
+func TestAddCreateListActionGen_PersistentEntity_NoError(t *testing.T) {
+	fb := newActionTestFb()
+	fb.nonPersistentEntities = map[string]bool{"M.NonPersistDto": true}
+
+	stmt := &ast.CreateListStmt{
+		Variable:   "Items",
+		EntityType: ast.QualifiedName{Module: "M", Name: "PersistDto"},
+	}
+	fb.addCreateListActionGen(stmt)
+
+	if len(fb.errors) != 0 {
+		t.Errorf("expected no error for persistent entity, got: %v", fb.errors)
+	}
+	if len(fb.objects) == 0 {
+		t.Error("expected action to be created for persistent entity")
+	}
+}
+
 func TestAddAddToListActionGenWithVariable(t *testing.T) {
 	fb := newActionTestFb()
 	stmt := &ast.AddToListStmt{List: "Items", Item: "Order"}
