@@ -210,6 +210,46 @@ func TestBuildSingleUserTaskGenActivity_FieldsPropagate(t *testing.T) {
 	}
 }
 
+func TestBuildSingleUserTaskGenActivity_PagePropagates(t *testing.T) {
+	n := &ast.WorkflowUserTaskNode{
+		Name:    "Step",
+		Caption: "step caption",
+		Page:    ast.QualifiedName{Module: "MyMod", Name: "MyPage"},
+	}
+	got := buildSingleUserTaskGenActivity(n)
+	tp := got.TaskPage()
+	if tp == nil {
+		t.Fatal("TaskPage is nil — CE1834 bug")
+	}
+	pr, ok := tp.(*genWf.PageReference)
+	if !ok {
+		t.Fatalf("TaskPage type = %T, want *PageReference", tp)
+	}
+	if pr.PageQualifiedName() != "MyMod.MyPage" {
+		t.Errorf("PageQualifiedName = %q, want %q", pr.PageQualifiedName(), "MyMod.MyPage")
+	}
+}
+
+func TestBuildMultiUserTaskGenActivity_PagePropagates(t *testing.T) {
+	n := &ast.WorkflowUserTaskNode{
+		Name:        "Vote",
+		IsMultiUser: true,
+		Page:        ast.QualifiedName{Module: "MyMod", Name: "MyPage"},
+	}
+	got := buildMultiUserTaskGenActivity(n)
+	tp := got.TaskPage()
+	if tp == nil {
+		t.Fatal("TaskPage is nil for multi user task — CE1834 bug")
+	}
+	pr, ok := tp.(*genWf.PageReference)
+	if !ok {
+		t.Fatalf("TaskPage type = %T, want *PageReference", tp)
+	}
+	if pr.PageQualifiedName() != "MyMod.MyPage" {
+		t.Errorf("PageQualifiedName = %q, want %q", pr.PageQualifiedName(), "MyMod.MyPage")
+	}
+}
+
 func TestBuildUserTargetingGen_AllKinds(t *testing.T) {
 	cases := []struct {
 		name   string
