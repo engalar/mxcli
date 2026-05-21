@@ -151,6 +151,8 @@ end workflow;`
 		{"call workflow", "call workflow " + mod + ".SubApprovalFlow"},
 		{"wait for notification", "wait for notification"},
 		{"trailing annotation", "annotation 'End of flow'"},
+		{"user task page", "page " + mod + ".ReviewPage"},
+		{"user task targeting", "targeting"},
 		{"parameter", "parameter $WorkflowContext: " + mod + ".WfCtxEntity"},
 	}
 

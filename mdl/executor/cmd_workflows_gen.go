@@ -652,11 +652,16 @@ func userTaskShapeGenFor(elem element.Element) (userTaskShapeGen, bool) {
 			IsMulti:        false,
 		}, true
 	case *genWf.SingleUserTaskActivity:
+		pageQN := ""
+		if tp, ok2 := v.TaskPage().(*genWf.PageReference); ok2 {
+			pageQN = tp.PageQualifiedName()
+		}
 		return userTaskShapeGen{
 			Name:           v.Name(),
 			Caption:        v.Caption(),
 			Annotation:     v.Annotation(),
-			UserSource:     v.UserSource(),
+			Page:           pageQN,
+			UserSource:     v.UserTargeting(),
 			DueDate:        v.DueDate(),
 			Description:    readTextElementGen(v.TaskDescription()),
 			Outcomes:       v.OutcomesItems(),
@@ -664,11 +669,16 @@ func userTaskShapeGenFor(elem element.Element) (userTaskShapeGen, bool) {
 			IsMulti:        false,
 		}, true
 	case *genWf.MultiUserTaskActivity:
+		pageQN := ""
+		if tp, ok2 := v.TaskPage().(*genWf.PageReference); ok2 {
+			pageQN = tp.PageQualifiedName()
+		}
 		return userTaskShapeGen{
 			Name:           v.Name(),
 			Caption:        v.Caption(),
 			Annotation:     v.Annotation(),
-			UserSource:     v.UserSource(),
+			Page:           pageQN,
+			UserSource:     v.UserTargeting(),
 			DueDate:        v.DueDate(),
 			Description:    readTextElementGen(v.TaskDescription()),
 			Outcomes:       v.OutcomesItems(),
@@ -741,6 +751,14 @@ func formatUserSourceGen(src element.Element, indent string) []string {
 	case *genWf.XPathBasedUserSource:
 		if xp := v.XPathConstraint(); xp != "" {
 			return []string{fmt.Sprintf("%stargeting users xpath '%s'", indent, xp)}
+		}
+	case *genWf.XPathUserTargeting:
+		if xp := v.XPathConstraint(); xp != "" {
+			return []string{fmt.Sprintf("%stargeting xpath '%s'", indent, xp)}
+		}
+	case *genWf.MicroflowUserTargeting:
+		if mf := v.MicroflowQualifiedName(); mf != "" {
+			return []string{fmt.Sprintf("%stargeting microflow %s", indent, mf)}
 		}
 	case *genWf.MicroflowGroupTargeting:
 		if mf := v.MicroflowQualifiedName(); mf != "" {
