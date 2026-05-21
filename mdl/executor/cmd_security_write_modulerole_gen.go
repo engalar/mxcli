@@ -72,7 +72,12 @@ func execCreateModuleRoleGen(ctx *ExecContext, s *ast.CreateModuleRoleStmt) erro
 			}
 			return nil
 		}
-		return mdlerrors.NewAlreadyExists("module role", s.Name.Module+"."+s.Name.Name)
+		// Custom role already exists — create or modify is idempotent: skip.
+		if !ctx.Quiet {
+			fmt.Fprintf(ctx.Output, "Module role %s.%s already exists\n",
+				s.Name.Module, s.Name.Name)
+		}
+		return nil
 	}
 
 	if err := ctx.Backend.AddModuleRole(model.ID(ms.ID()), s.Name.Name, s.Description); err != nil {
