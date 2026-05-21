@@ -358,7 +358,7 @@ func (ob *mprWidgetObjectBuilder) FinalizeGen(id model.ID, name string, label st
 		{Key: "LabelTemplate", Value: labelTemplate},
 		{Key: "Name", Value: name},
 		{Key: "Object", Value: ob.object},
-		{Key: "TabIndex", Value: int64(0)},
+		{Key: "TabIndex", Value: int32(0)},
 		{Key: "Type", Value: ob.embeddedType},
 	}
 

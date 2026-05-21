@@ -83,7 +83,13 @@ func buildTemplateParams(ctx parser.ITemplateParamsContext) []ast.TemplateParam 
 	allParams := paramsCtx.AllTemplateParam()
 	for i, param := range allParams {
 		paramCtx := param.(*parser.TemplateParamContext)
-		indexStr := paramCtx.NUMBER_LITERAL().GetText()
+		// NUMBER_LITERAL is nil when the grammar matches an empty `with ()`
+		// clause — skip to avoid a nil-pointer dereference.
+		numLit := paramCtx.NUMBER_LITERAL()
+		if numLit == nil {
+			continue
+		}
+		indexStr := numLit.GetText()
 		index, _ := strconv.Atoi(indexStr)
 
 		var tp ast.TemplateParam

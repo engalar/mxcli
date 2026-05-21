@@ -74,7 +74,7 @@ func (b *MprBackend) buildDataGrid2WidgetDoc(id model.ID, name string, spec back
 		{Key: "LabelTemplate", Value: nil},
 		{Key: "Name", Value: name},
 		{Key: "Object", Value: updatedObject},
-		{Key: "TabIndex", Value: int64(0)},
+		{Key: "TabIndex", Value: int32(0)},
 		{Key: "Type", Value: embeddedType},
 	}
 	return doc, nil
