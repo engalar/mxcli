@@ -1,0 +1,13 @@
+-- Bug regression: CE0053 — create list of non-persistent entity must be rejected
+-- After fix: mxcli reports CE0053 error at write time and does not write BSON.
+-- To test: run this script with mxcli and confirm the error message contains CE0053.
+
+create non-persistent entity BugTest0053.VendorDto (VendorId: String(20));
+
+-- This should fail with CE0053 at write time:
+create microflow BugTest0053.ACT_CE0053_Trigger ()
+returns Nothing
+begin
+  $Items = create list of BugTest0053.VendorDto;
+  return;
+end
