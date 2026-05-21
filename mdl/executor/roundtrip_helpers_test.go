@@ -608,3 +608,137 @@ func (e *testEnv) requireMinVersion(t *testing.T, major, minor int) {
 func containsProperty(mdl, property string) bool {
 	return strings.Contains(mdl, property)
 }
+
+// ── Roundtrip-MPR helpers ─────────────────────────────────────────────────
+
+const roundtripProjectDir = "../../testdata/roundtrip"
+const roundtripProjectMPR = "roundtrip.mpr"
+
+// copyRoundtripProject 将 testdata/roundtrip/roundtrip.mpr 复制到临时目录并返回路径。
+func copyRoundtripProject(t *testing.T) string {
+	t.Helper()
+	src := filepath.Join(roundtripProjectDir, roundtripProjectMPR)
+	if _, err := os.Stat(src); err != nil {
+		t.Skipf("roundtrip testdata not found at %s — run testdata/roundtrip/recreate.sh", src)
+	}
+	destDir := t.TempDir()
+	destMPR := filepath.Join(destDir, roundtripProjectMPR)
+	if err := copyFile(src, destMPR); err != nil {
+		t.Fatalf("copy roundtrip MPR: %v", err)
+	}
+	for _, sub := range []string{"mprcontents", "widgets"} {
+		srcSub := filepath.Join(roundtripProjectDir, sub)
+		if _, err := os.Stat(srcSub); err == nil {
+			if err := copyDir(srcSub, filepath.Join(destDir, sub)); err != nil {
+				t.Fatalf("copy %s: %v", sub, err)
+			}
+		}
+	}
+	return destMPR
+}
+
+// setupRoundtripEnv 创建基于 roundtrip.mpr 的测试环境。
+func setupRoundtripEnv(t *testing.T) *testEnv {
+	t.Helper()
+	projectPath := copyRoundtripProject(t)
+
+	output := &bytes.Buffer{}
+	exec := New(output)
+	exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+
+	connectStmt := &ast.ConnectStmt{
+		Path: projectPath,
+	}
+	if err := exec.Execute(connectStmt); err != nil {
+		t.Fatalf("connect to roundtrip MPR: %v", err)
+	}
+
+	return &testEnv{
+		t:           t,
+		executor:    exec,
+		output:      output,
+		projectPath: projectPath,
+	}
+}
+
+// snapshotMPR 将当前 MPR 文件复制为 .snap 文件，用于 bsoncompare L3 测试。
+func snapshotMPR(t *testing.T, mprPath string) string {
+	t.Helper()
+	snap := mprPath + ".snap"
+	if err := copyFile(mprPath, snap); err != nil {
+		t.Fatalf("snapshot MPR: %v", err)
+	}
+	return snap
+}
+
+// rtDescribe 执行 DESCRIBE 命令并返回输出字符串。
+// describeStmt 是完整的 MDL 语句，例如 "describe association RoundtripModule.Item_Category"
+func (e *testEnv) rtDescribe(describeStmt string) string {
+	e.t.Helper()
+	out, err := e.describeMDL(describeStmt)
+	if err != nil {
+		e.t.Fatalf("rtDescribe(%q): %v", describeStmt, err)
+	}
+	return out
+}
+
+// rtAssertParseOK 验证 MDL 字符串无语法错误（不需要连接项目）。
+// 使用 visitor.Build，与 mxcli check 使用相同的解析器入口。
+func rtAssertParseOK(t *testing.T, mdl string) {
+	t.Helper()
+	if strings.TrimSpace(mdl) == "" {
+		t.Error("rtAssertParseOK: empty MDL output")
+		return
+	}
+	_, errs := visitor.Build(mdl)
+	if len(errs) > 0 {
+		msgs := make([]string, len(errs))
+		for i, e := range errs {
+			msgs[i] = e.Error()
+		}
+		t.Errorf("rtAssertParseOK: parse errors:\n%s\nMDL:\n%s",
+			strings.Join(msgs, "\n"), mdl)
+	}
+}
+
+// rtAssertSemantic 验证语义往返：describe → re-import → re-describe 输出等价。
+func (e *testEnv) rtAssertSemantic(describeStmt string) {
+	e.t.Helper()
+	mdl1 := e.rtDescribe(describeStmt)
+	rtAssertParseOK(e.t, mdl1)
+
+	if err := e.executeMDL(mdl1); err != nil {
+		e.t.Fatalf("rtAssertSemantic re-import failed for %q: %v\nMDL:\n%s",
+			describeStmt, err, mdl1)
+	}
+
+	mdl2 := e.rtDescribe(describeStmt)
+	n1 := normalizeRoundtrip(mdl1)
+	n2 := normalizeRoundtrip(mdl2)
+	if n1 != n2 {
+		diff := diffStrings(n1, n2)
+		e.t.Errorf("rtAssertSemantic: round-trip not idempotent for %q:\n%s",
+			describeStmt, diff)
+	}
+}
+
+// diffStrings 返回两个字符串之间的 unified diff 字符串。
+func diffStrings(a, b string) string {
+	diff := difflib.UnifiedDiff{
+		A:        difflib.SplitLines(a),
+		B:        difflib.SplitLines(b),
+		FromFile: "before",
+		ToFile:   "after",
+		Context:  3,
+	}
+	result, _ := difflib.GetUnifiedDiffString(diff)
+	return result
+}
+
+// normalizeRoundtrip 去除 @Position 注解和末尾分号以进行语义等价性比较。
+func normalizeRoundtrip(mdl string) string {
+	cfg := &roundtripConfig{
+		ignorePatterns: []string{"@Position"},
+	}
+	return normalizeMDL(mdl, cfg)
+}
