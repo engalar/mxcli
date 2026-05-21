@@ -625,6 +625,17 @@ func traverseFlowGen(
 		return
 	}
 
+	// BreakEvent / ContinueEvent: terminal flow-control events inside loops.
+	// They have no outgoing normal flows — traversal ends here.
+	if _, isBreak := obj.(*genMf.BreakEvent); isBreak {
+		*lines = append(*lines, indentStr+"break;")
+		return
+	}
+	if _, isCont := obj.(*genMf.ContinueEvent); isCont {
+		*lines = append(*lines, indentStr+"continue;")
+		return
+	}
+
 	// Any other node: try the gen-typed activity formatter first; fall
 	// back to a TODO placeholder for unsupported kinds.
 	if rendered := formatActivityGen(ctx, obj); rendered != "" {
@@ -754,9 +765,8 @@ func emitInheritanceSplitGen(
 	}
 	*lines = append(*lines, indentStr+"case $"+varName+" inheritance")
 	for _, f := range findNormalFlowsGen(flowsByOrigin[currentID]) {
-		// CaseValueLabel is filled in 3.2.2 — for now the branch tag
-		// is the placeholder so the structural framing is testable.
-		*lines = append(*lines, indentStr+"  when // TODO Stage 3.2.2: format inheritance case label then")
+		label := inheritanceCaseLabelGen(f)
+		*lines = append(*lines, indentStr+"  when "+label+" then")
 		traverseFlowGenUntilMerge(ctx, f.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+2)
 	}
 	*lines = append(*lines, indentStr+"end case;")
@@ -887,11 +897,38 @@ func enumCaseValueGen(f *genMf.SequenceFlow) (string, bool) {
 	return "", false
 }
 
-// caseValueLabelGen returns a placeholder label for a CaseValue branch.
-// 3.2.2 will resolve enum/literal values; the skeleton emits a stable
-// TODO marker so the framing is structurally complete.
-func caseValueLabelGen(_ *genMf.SequenceFlow) string {
-	return "// TODO Stage 3.2.2: format case value"
+// caseValueLabelGen returns the enum value for a case branch.
+// EnumerationCase.Value() stores the fully-qualified value string
+// (e.g. "MyModule.MyEnum.Active") used directly in MDL case syntax.
+func caseValueLabelGen(f *genMf.SequenceFlow) string {
+	if v, ok := enumCaseValueGen(f); ok && v != "" {
+		return v
+	}
+	return "_"
+}
+
+// inheritanceCaseLabelGen extracts the entity qualified name from an
+// InheritanceSplit branch flow. InheritanceCase.ValueQualifiedName()
+// returns the fully-qualified entity name (e.g. "Administration.User").
+func inheritanceCaseLabelGen(f *genMf.SequenceFlow) string {
+	if f == nil {
+		return "_"
+	}
+	// InheritanceSplit uses CaseValues list, not single CaseValue.
+	for _, cv := range f.CaseValuesItems() {
+		if ic, ok := cv.(*genMf.InheritanceCase); ok && ic != nil {
+			if qn := strings.TrimSpace(ic.ValueQualifiedName()); qn != "" {
+				return qn
+			}
+		}
+	}
+	// Fallback: single CaseValue field.
+	if ic, ok := f.CaseValue().(*genMf.InheritanceCase); ok && ic != nil {
+		if qn := strings.TrimSpace(ic.ValueQualifiedName()); qn != "" {
+			return qn
+		}
+	}
+	return "_"
 }
 
 // pickBooleanBranchesGen splits the outgoing flows of a boolean

@@ -17,6 +17,7 @@ import (
 
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
+	"github.com/mendixlabs/mxcli/mdl/visitor"
 	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
@@ -340,6 +341,110 @@ func TestGenMicroflowParameters_FixtureEntityParam(t *testing.T) {
 	}
 	if !found {
 		t.Error("Account parameter not found in ShowPasswordForm")
+	}
+}
+
+// TestDescribeMicroflowGen_BreakEvent verifies that a BreakEvent inside a
+// while-true loop renders as `break;` instead of the TODO Stage 3.2.2 placeholder.
+// Uses `while true` so no entity type is needed (avoids fixture dependency).
+func TestDescribeMicroflowGen_BreakEvent(t *testing.T) {
+	w := openMprWriterForTest(t)
+	ctx := newGenDescribeContext(t, w)
+
+	be, err := mprbackend.NewFromPath(w.ConcreteReader().Path())
+	if err != nil {
+		t.Fatalf("open backend: %v", err)
+	}
+	t.Cleanup(func() { _ = be.Disconnect() })
+	exec := New(io.Discard)
+	exec.backend = be
+
+	mdl := `create or modify microflow MyFirstModule.TestBreak () returns Nothing
+begin
+  while true begin
+    break;
+  end while;
+  return;
+end;`
+	prog, errs := visitor.Build(mdl)
+	if len(errs) > 0 {
+		t.Fatalf("parse error: %v", errs[0])
+	}
+	if err := exec.ExecuteProgram(prog); err != nil {
+		t.Fatalf("create microflow failed: %v", err)
+	}
+
+	mf := findMicroflowByQN(t, w, "MyFirstModule.TestBreak")
+	out, err := DescribeMicroflowGenToString(ctx, mf)
+	if err != nil {
+		t.Fatalf("DescribeMicroflowGenToString: %v", err)
+	}
+	if strings.Contains(out, "TODO Stage 3.2.2:") {
+		t.Errorf("BreakEvent rendered as TODO placeholder:\n%s", out)
+	}
+	if !strings.Contains(out, "break;") {
+		t.Errorf("expected `break;` in output; got:\n%s", out)
+	}
+}
+
+// TestDescribeMicroflowGen_ContinueEvent verifies that a ContinueEvent inside
+// a while-true loop renders as `continue;`.
+func TestDescribeMicroflowGen_ContinueEvent(t *testing.T) {
+	w := openMprWriterForTest(t)
+	ctx := newGenDescribeContext(t, w)
+
+	be, err := mprbackend.NewFromPath(w.ConcreteReader().Path())
+	if err != nil {
+		t.Fatalf("open backend: %v", err)
+	}
+	t.Cleanup(func() { _ = be.Disconnect() })
+	exec := New(io.Discard)
+	exec.backend = be
+
+	mdl := `create or modify microflow MyFirstModule.TestContinue () returns Nothing
+begin
+  while true begin
+    continue;
+  end while;
+  return;
+end;`
+	prog, errs := visitor.Build(mdl)
+	if len(errs) > 0 {
+		t.Fatalf("parse error: %v", errs[0])
+	}
+	if err := exec.ExecuteProgram(prog); err != nil {
+		t.Fatalf("create microflow failed: %v", err)
+	}
+
+	mf := findMicroflowByQN(t, w, "MyFirstModule.TestContinue")
+	out, err := DescribeMicroflowGenToString(ctx, mf)
+	if err != nil {
+		t.Fatalf("DescribeMicroflowGenToString: %v", err)
+	}
+	if strings.Contains(out, "TODO Stage 3.2.2:") {
+		t.Errorf("ContinueEvent rendered as TODO placeholder:\n%s", out)
+	}
+	if !strings.Contains(out, "continue;") {
+		t.Errorf("expected `continue;` in output; got:\n%s", out)
+	}
+}
+
+// TestDescribeMicroflowGen_InheritanceCaseLabel verifies that inheritance-split
+// `when` arms show the entity qualified name, not the TODO placeholder.
+func TestDescribeMicroflowGen_InheritanceCaseLabel(t *testing.T) {
+	w := openMprWriterForTest(t)
+	mf := findMicroflowByQN(t, w, "Administration.ManageMyAccount")
+
+	out, err := DescribeMicroflowGenToString(newGenDescribeContext(t, w), mf)
+	if err != nil {
+		t.Fatalf("DescribeMicroflowGenToString: %v", err)
+	}
+	if strings.Contains(out, "TODO Stage 3.2.2:") {
+		t.Errorf("inheritance case label still a TODO placeholder:\n%s", out)
+	}
+	// The when arms must reference real entity names (Module.Entity pattern).
+	if !strings.Contains(out, "when Administration.") {
+		t.Errorf("expected `when Administration.<Entity> then` in output; got:\n%s", out)
 	}
 }
 
