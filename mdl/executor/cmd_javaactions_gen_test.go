@@ -365,6 +365,48 @@ func TestAstDataTypeToJavaActionParamTypeGen_TypeParamRef(t *testing.T) {
 	}
 }
 
+// TestAstDataTypeToJavaActionParamTypeGen_BareEnumRefAsTypeParam verifies that
+// a bare unqualified TypeEnumeration whose name matches a declared type parameter
+// is emitted as ParameterizedEntityType (not ConcreteEntityType).
+// This covers the pattern: InputObject: T  where T is a type parameter.
+func TestAstDataTypeToJavaActionParamTypeGen_BareEnumRefAsTypeParam(t *testing.T) {
+	typeParamIDs := map[string]element.ID{"T": element.ID("tp-T-uuid")}
+	dt := ast.DataType{
+		Kind:    ast.TypeEnumeration,
+		EnumRef: &ast.QualifiedName{Module: "", Name: "T"},
+	}
+	elem := astDataTypeToJavaActionParamTypeGen(dt, typeParamIDs)
+	pe, ok := elem.(*genJA.ParameterizedEntityType)
+	if !ok {
+		t.Fatalf("got %T, want *ParameterizedEntityType", elem)
+	}
+	if pe.TypeParameterRefID() != element.ID("tp-T-uuid") {
+		t.Errorf("TypeParameterRefID = %q, want tp-T-uuid", pe.TypeParameterRefID())
+	}
+}
+
+// TestAstDataTypeToJavaActionParamTypeGen_QualifiedEnumRefNotTypeParam verifies
+// that a qualified TypeEnumeration (Module.Name) is NOT treated as a type param
+// even if the Name segment happens to match a type param key.
+func TestAstDataTypeToJavaActionParamTypeGen_QualifiedEnumRefNotTypeParam(t *testing.T) {
+	typeParamIDs := map[string]element.ID{"Customer": element.ID("tp-uuid")}
+	dt := ast.DataType{
+		Kind:    ast.TypeEnumeration,
+		EnumRef: &ast.QualifiedName{Module: "MyModule", Name: "Customer"},
+	}
+	elem := astDataTypeToJavaActionParamTypeGen(dt, typeParamIDs)
+	if _, ok := elem.(*genJA.ParameterizedEntityType); ok {
+		t.Fatal("got ParameterizedEntityType for qualified enum ref, want ConcreteEntityType")
+	}
+	et, ok := elem.(*genJA.ConcreteEntityType)
+	if !ok {
+		t.Fatalf("got %T, want *ConcreteEntityType", elem)
+	}
+	if et.EntityQualifiedName() != "MyModule.Customer" {
+		t.Errorf("EntityQualifiedName = %q, want MyModule.Customer", et.EntityQualifiedName())
+	}
+}
+
 func TestAstDataTypeToJavaActionReturnTypeGen_VoidAndPrimitives(t *testing.T) {
 	cases := []struct {
 		name     string

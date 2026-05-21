@@ -668,3 +668,57 @@ $$;`)
 		t.Errorf("JavaCode should be empty, got %q", s.JavaCode)
 	}
 }
+
+// TestJavaAction_AnonymousTypeParam tests ENTITY <> syntax where the parameter
+// name itself becomes the type parameter name (e.g. Community Commons pattern).
+func TestJavaAction_AnonymousTypeParam(t *testing.T) {
+	input := `create java action Common_Utils.GetObjectId(EntityType: entity <> not null, InputObject: T not null) returns Integer;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, e := range errs {
+			t.Errorf("parse error: %v", e)
+		}
+		return
+	}
+
+	stmt, ok := prog.Statements[0].(*ast.CreateJavaActionStmt)
+	if !ok {
+		t.Fatalf("expected *CreateJavaActionStmt, got %T", prog.Statements[0])
+	}
+
+	// EntityType: entity <> → TypeParamName derived from parameter name
+	if len(stmt.TypeParameters) != 1 || stmt.TypeParameters[0] != "EntityType" {
+		t.Fatalf("TypeParameters = %v, want [EntityType]", stmt.TypeParameters)
+	}
+
+	if len(stmt.Parameters) != 2 {
+		t.Fatalf("len(Parameters) = %d, want 2", len(stmt.Parameters))
+	}
+
+	p0 := stmt.Parameters[0]
+	if p0.Type.Kind != ast.TypeEntityTypeParam {
+		t.Errorf("param[0] Kind = %v, want TypeEntityTypeParam", p0.Type.Kind)
+	}
+	if p0.Type.TypeParamName != "EntityType" {
+		t.Errorf("param[0] TypeParamName = %q, want EntityType", p0.Type.TypeParamName)
+	}
+	if !p0.IsRequired {
+		t.Error("param[0] IsRequired = false, want true")
+	}
+
+	p1 := stmt.Parameters[1]
+	if p1.Name != "InputObject" {
+		t.Errorf("param[1] Name = %q, want InputObject", p1.Name)
+	}
+	if p1.Type.EnumRef == nil || p1.Type.EnumRef.Name != "T" {
+		t.Errorf("param[1] EnumRef = %+v, want {Name:T}", p1.Type.EnumRef)
+	}
+	if !p1.IsRequired {
+		t.Error("param[1] IsRequired = false, want true")
+	}
+
+	if stmt.ReturnType.Kind != ast.TypeInteger {
+		t.Errorf("ReturnType = %v, want TypeInteger", stmt.ReturnType.Kind)
+	}
+}
