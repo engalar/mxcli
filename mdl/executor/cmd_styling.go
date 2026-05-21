@@ -448,15 +448,36 @@ func setDesignPropertyGen(sw styledWidget, a ast.StylingAssignment) error {
 		return nil
 	}
 
-	// Not found — append new DesignPropertyValue
-	dpv := genPg.NewDesignPropertyValue()
-	dpv.SetKey(a.Property)
-	dpv.SetValue(buildDesignPropertySubValue(a))
-	app.AddDesignProperties(dpv)
+	// Not found — append a new wrapped entry.
+	app.AddDesignProperties(newDesignPropertyEntry(a.Property, buildDesignPropertySubValue(a)))
 	return nil
 }
 
-// buildDesignPropertySubValue constructs the nested Value element for a design property assignment.
+// newDesignPropertyEntry creates the correct BSON structure for a design
+// property entry:
+//
+//	Appearance.DesignProperties[]
+//	  └── DesignPropertyValue          ← this wrapper is required by Studio Pro
+//	        ├── Key: "spacing"
+//	        └── Value: OptionDesignPropertyValue | ToggleDesignPropertyValue
+//
+// Always use this constructor — never add OptionDesignPropertyValue or
+// ToggleDesignPropertyValue directly to AddDesignProperties(). Studio Pro
+// requires DesignPropertyValue as the parent; omitting it causes a load crash:
+//
+//	"OptionDesignPropertyValue does not contain a constructor with a
+//	 parameter of type Appearance"
+func newDesignPropertyEntry(key string, value element.Element) *genPg.DesignPropertyValue {
+	dpv := genPg.NewDesignPropertyValue()
+	assignFreshID(dpv)
+	dpv.SetKey(key)
+	dpv.SetValue(value)
+	return dpv
+}
+
+// buildDesignPropertySubValue constructs the inner Value element for a design
+// property. The returned element must be wrapped in newDesignPropertyEntry
+// before being added to Appearance.DesignProperties.
 func buildDesignPropertySubValue(a ast.StylingAssignment) element.Element {
 	if a.IsToggle {
 		return genPg.NewToggleDesignPropertyValue()
