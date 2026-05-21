@@ -23,6 +23,18 @@ func (b *MprBackend) writeUnitContents(unitID model.ID, contents []byte) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
+
+	// Import buffer path: write to memory and set reader overlay so subsequent
+	// reads within the same file see the new bytes without a SQLite round-trip.
+	// Flush() will batch-commit all pending units at file end.
+	if b.unitBuf != nil {
+		if err := b.unitBuf.Write(unitID, contents); err != nil {
+			return fmt.Errorf("write unit to import buffer: %w", err)
+		}
+		b.msdkReader.SetOverlay(string(unitID), contents)
+		return nil
+	}
+
 	// If a script-level transaction is active, reuse it so the whole
 	// EXECUTE SCRIPT block commits or rolls back as one unit.
 	if b.activeScriptTx != nil {
@@ -31,6 +43,8 @@ func (b *MprBackend) writeUnitContents(unitID model.ID, contents []byte) error {
 		}
 		return nil
 	}
+
+	// Default path: one transaction per write (interactive REPL / single exec).
 	wtx, err := b.msdkWriter.BeginWriteTransaction()
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
