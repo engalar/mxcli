@@ -28,13 +28,13 @@ var importDocumentOrder = []struct {
 	pattern  string
 	priority int
 }{
-	{"_marketplace.mdl", 0},  // informational only — skipped
-	{"_module.mdl", 1},        // CREATE MODULE must come first
-	{"Enumerations/", 2},      // enumerations before entities (entity attrs reference them)
-	{"Domain/", 3},            // entities (within-module order preserved by export)
-	{"_associations.mdl", 4},  // associations after all entities
-	{"Constants/", 5},         // constants
-	{"_module_roles.mdl", 6},  // module roles before user roles
+	{"_marketplace.mdl", 0},    // informational only — skipped
+	{"_module.mdl", 1},          // CREATE MODULE must come first
+	{"Enumerations/", 2},        // enumerations before entities (attrs ref enums)
+	{"_module_roles.mdl", 3},    // module roles BEFORE entities so GRANTs resolve
+	{"Domain/", 4},              // entities (within-module order preserved by export)
+	{"_associations.mdl", 5},    // associations after all entities
+	{"Constants/", 6},           // constants
 	{"JavaActions/", 7},
 	{"JavaScriptActions/", 8},
 	{"Microflows/", 9},
