@@ -111,6 +111,11 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		}
 	}
 
+	var existingParamNames []string
+	if existing != nil {
+		existingParamNames = microflowParamNamesFromOC(existing)
+	}
+
 	// Folder-omission preserves the existing container on replace.
 	if existing != nil && s.Folder == "" && existingContainerID != "" {
 		containerID = existingContainerID
@@ -232,6 +237,21 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 	}
 	for _, af := range fb.annotationFlows {
 		mf.AddFlows(af)
+	}
+
+	// 检测参数签名变更，警告可能受影响的调用方。
+	if existing != nil && len(existingParamNames) > 0 {
+		newParamSet := make(map[string]bool, len(s.Parameters))
+		for _, p := range s.Parameters {
+			newParamSet[p.Name] = true
+		}
+		var removed []string
+		for _, old := range existingParamNames {
+			if !newParamSet[old] {
+				removed = append(removed, old)
+			}
+		}
+		warnBrokenCallerRefs(ctx, qualifiedName, removed)
 	}
 
 	// ── Persist ──────────────────────────────────────────────
