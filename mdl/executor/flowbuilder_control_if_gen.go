@@ -108,13 +108,13 @@ func (fb *flowBuilderGen) addIfStatementGen(s *ast.IfStmt) element.ID {
 	// ── THEN branch ──
 	//
 	// IF with ELSE:    TRUE  path = horizontal (main line at centerY)
-	// IF without ELSE: TRUE  path = below main line (centerY + VerticalSpacing)
+	// IF without ELSE: TRUE  path = below main line (centerY + ActivityHeight + BranchGap)
 	//                  FALSE path = straight to merge (main line)
 	fb.posX = splitX + SplitWidth + HorizontalSpacing/2
 	if hasElseBody {
 		fb.posY = centerY
 	} else {
-		fb.posY = centerY + VerticalSpacing
+		fb.posY = centerY + ActivityHeight + BranchGap
 	}
 	thenLast := fb.emitBranchBodyGen(s.ThenBody, splitID, "true", !hasElseBody)
 	if !thenReturns {
@@ -132,10 +132,16 @@ func (fb *flowBuilderGen) addIfStatementGen(s *ast.IfStmt) element.ID {
 	}
 
 	// ── ELSE branch ──
+	// Place ELSE below the THEN body's measured height so nested IFs
+	// inside THEN don't overlap with the ELSE branch.
 	if hasElseBody {
-		// Place else branch below the main line (false path goes down).
+		thenBoundsForElse := fb.measurer.measureStatements(s.ThenBody)
+		thenHeightForElse := thenBoundsForElse.Height
+		if thenHeightForElse < ActivityHeight {
+			thenHeightForElse = ActivityHeight
+		}
 		fb.posX = splitX + SplitWidth + HorizontalSpacing/2
-		fb.posY = centerY + VerticalSpacing
+		fb.posY = centerY + thenHeightForElse + BranchGap
 		elseLast := fb.emitBranchBodyGen(s.ElseBody, splitID, "false", true)
 		if !elseReturns {
 			if elseLast != "" {
@@ -150,8 +156,10 @@ func (fb *flowBuilderGen) addIfStatementGen(s *ast.IfStmt) element.ID {
 	}
 
 	// ── Restore main cursor for next statement ──
+	// Use MergeSize/2 + ActivityWidth/2 + BranchGap so the first activity
+	// after the merge has a BranchGap edge-to-edge gap from the merge node.
 	if merge != nil {
-		fb.posX = mergeX + HorizontalSpacing/2
+		fb.posX = mergeX + MergeSize/2 + ActivityWidth/2 + BranchGap
 		fb.posY = centerY
 		fb.nextConnectionPoint = mergeID
 	}

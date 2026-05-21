@@ -72,12 +72,13 @@ func execGrantMicroflowAccessGen(ctx *ExecContext, s *ast.GrantMicroflowAccessSt
 
 		var validRoles []ast.QualifiedName
 		for _, role := range s.Roles {
-			found, err := validateModuleRole(ctx, role)
+			resolved := expandRoleModule(role, modName)
+			found, err := validateModuleRole(ctx, resolved)
 			if err != nil {
 				return err
 			}
 			if found {
-				validRoles = append(validRoles, role)
+				validRoles = append(validRoles, resolved)
 			}
 		}
 		if len(validRoles) == 0 {
@@ -130,7 +131,11 @@ func execRevokeMicroflowAccessGen(ctx *ExecContext, s *ast.RevokeMicroflowAccess
 			continue
 		}
 
-		remaining, removed := filterAllowedRoles(mf.AllowedModuleRolesQualifiedNames(), s.Roles)
+		expandedRoles := make([]ast.QualifiedName, len(s.Roles))
+		for i, r := range s.Roles {
+			expandedRoles[i] = expandRoleModule(r, modName)
+		}
+		remaining, removed := filterAllowedRoles(mf.AllowedModuleRolesQualifiedNames(), expandedRoles)
 		mf.SetAllowedModuleRolesQualifiedNames(remaining)
 
 		if err := ctx.Microflows.Update(mf); err != nil {
@@ -182,12 +187,13 @@ func execGrantNanoflowAccessGen(ctx *ExecContext, s *ast.GrantNanoflowAccessStmt
 
 		var validRoles []ast.QualifiedName
 		for _, role := range s.Roles {
-			found, err := validateModuleRole(ctx, role)
+			resolved := expandRoleModule(role, modName)
+			found, err := validateModuleRole(ctx, resolved)
 			if err != nil {
 				return err
 			}
 			if found {
-				validRoles = append(validRoles, role)
+				validRoles = append(validRoles, resolved)
 			}
 		}
 		if len(validRoles) == 0 {
@@ -240,7 +246,11 @@ func execRevokeNanoflowAccessGen(ctx *ExecContext, s *ast.RevokeNanoflowAccessSt
 			continue
 		}
 
-		remaining, removed := filterAllowedRoles(nf.AllowedModuleRolesQualifiedNames(), s.Roles)
+		expandedRoles := make([]ast.QualifiedName, len(s.Roles))
+		for i, r := range s.Roles {
+			expandedRoles[i] = expandRoleModule(r, modName)
+		}
+		remaining, removed := filterAllowedRoles(nf.AllowedModuleRolesQualifiedNames(), expandedRoles)
 		nf.SetAllowedModuleRolesQualifiedNames(remaining)
 
 		if err := ctx.Nanoflows.Update(nf); err != nil {
@@ -411,6 +421,17 @@ func removeRoleFromList(existing []string, qualifiedRole string) (remaining []st
 		remaining = append(remaining, r)
 	}
 	return remaining, removed
+}
+
+// expandRoleModule returns role with Module set to defaultModule when
+// the parsed role has no module prefix. This allows users to write
+// `grant execute on microflow Mod.MF to RoleName;` (omitting the module
+// prefix) when the role lives in the same module as the target document.
+func expandRoleModule(role ast.QualifiedName, defaultModule string) ast.QualifiedName {
+	if role.Module == "" {
+		return ast.QualifiedName{Module: defaultModule, Name: role.Name}
+	}
+	return role
 }
 
 // genMicroflowAllowedRoles is a thin re-export of the gen accessor so

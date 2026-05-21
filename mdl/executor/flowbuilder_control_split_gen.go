@@ -134,7 +134,7 @@ func (fb *flowBuilderGen) addEnumSplitGen(s *ast.EnumSplitStmt) element.ID {
 	}
 
 	if merge != nil {
-		fb.posX = mergeX + HorizontalSpacing/2
+		fb.posX = mergeX + MergeSize/2 + ActivityWidth/2 + BranchGap
 		fb.posY = centerY
 		fb.nextConnectionPoint = mergeID
 	}
@@ -253,7 +253,7 @@ func (fb *flowBuilderGen) addStructuredInheritanceSplitGen(s *ast.InheritanceSpl
 	}
 
 	if merge != nil {
-		fb.posX = mergeX + HorizontalSpacing/2
+		fb.posX = mergeX + MergeSize/2 + ActivityWidth/2 + BranchGap
 		fb.posY = centerY
 		fb.nextConnectionPoint = mergeID
 	}

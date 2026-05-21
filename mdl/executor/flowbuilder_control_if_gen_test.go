@@ -299,3 +299,141 @@ func TestIfWithoutElseThenBranchFlowIsDownward(t *testing.T) {
 		t.Fatal("no flow with case 'true' found originating from split")
 	}
 }
+
+// parseLayoutX extracts the X component from a "x;y" RelativeMiddlePoint string.
+func parseLayoutX(pos string) int {
+	var x, y int
+	fmt.Sscanf(pos, "%d;%d", &x, &y)
+	return y // intentionally returns y for parseLayoutX — callers use parseLayoutY for Y
+}
+
+// parsePos parses both X and Y from "x;y".
+func parsePos(pos string) (x, y int) {
+	fmt.Sscanf(pos, "%d;%d", &x, &y)
+	return
+}
+
+// TestIfWithElseElsePlacedBelowThenBodyHeight verifies that when the THEN body
+// contains content that expands vertically (e.g. a nested IF), the ELSE branch
+// is placed below the THEN body's measured height rather than a fixed offset.
+// Without this fix, nested IFs inside THEN and the outer ELSE all land at the
+// same Y causing visual overlap.
+func TestIfWithElseElsePlacedBelowThenBodyHeight(t *testing.T) {
+	fb := newIfTestFb()
+
+	// THEN body contains a nested IF (adds BranchGap+ActivityHeight to height).
+	nestedIf := &ast.IfStmt{
+		Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+		HasElse:   true,
+		ThenBody:  []ast.MicroflowStatement{&ast.DeclareStmt{Variable: "T", Type: ast.DataType{Kind: ast.TypeBoolean}}},
+		ElseBody:  []ast.MicroflowStatement{&ast.DeclareStmt{Variable: "E", Type: ast.DataType{Kind: ast.TypeBoolean}}},
+	}
+	stmt := &ast.IfStmt{
+		Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+		HasElse:   true,
+		ThenBody:  []ast.MicroflowStatement{nestedIf},
+		ElseBody: []ast.MicroflowStatement{
+			&ast.DeclareStmt{Variable: "Else", Type: ast.DataType{Kind: ast.TypeBoolean}},
+		},
+	}
+	fb.addIfStatementGen(stmt)
+
+	// Compute expected minimum Y for the ELSE branch.
+	// measureStatements([nestedIf]) gives the height of the THEN body.
+	m := &layoutMeasurer{varTypes: map[string]string{}}
+	thenBounds := m.measureStatements(stmt.ThenBody)
+	thenHeight := thenBounds.Height
+	if thenHeight < ActivityHeight {
+		thenHeight = ActivityHeight
+	}
+	minElseY := fb.baseY + thenHeight + BranchGap // baseY = 200
+
+	// Find all ActionActivity objects. Those placed for the ELSE body
+	// must have Y >= minElseY.
+	var elseActivities []*genMf.ActionActivity
+	for _, obj := range fb.objects {
+		if act, ok := obj.(*genMf.ActionActivity); ok {
+			_, y := parsePos(act.RelativeMiddlePoint())
+			// Collect only activities placed below the THEN body level.
+			if y > 200 { // above 200 is THEN body level; below is ELSE/nested territory
+				elseActivities = append(elseActivities, act)
+			}
+		}
+	}
+
+	// At least one ELSE-body activity must be at or below minElseY.
+	// Currently (bug): all are at centerY+VerticalSpacing=290, even if
+	// nested IF inside THEN already occupies that Y range.
+	foundBelowThreshold := false
+	for _, act := range elseActivities {
+		_, y := parsePos(act.RelativeMiddlePoint())
+		if y >= minElseY {
+			foundBelowThreshold = true
+		}
+	}
+	if !foundBelowThreshold && len(elseActivities) > 0 {
+		_, y := parsePos(elseActivities[0].RelativeMiddlePoint())
+		t.Fatalf("ELSE branch activity Y=%d but minElseY=%d (THEN body height=%d); ELSE must be below THEN body",
+			y, minElseY, thenHeight)
+	}
+}
+
+// TestMergeToNextActivityHasHorizontalGap verifies that the activity placed
+// immediately after an ExclusiveMerge has a non-zero edge-to-edge gap from
+// the merge. Without this fix, the merge's right edge touches the next
+// activity's left edge (zero gap), causing them to appear merged in Studio Pro.
+func TestMergeToNextActivityHasHorizontalGap(t *testing.T) {
+	// Build a minimal IF (with ELSE) followed by one activity.
+	fb := newGraphTestFb()
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			HasElse:   true,
+			ThenBody:  []ast.MicroflowStatement{&ast.DeclareStmt{Variable: "T", Type: ast.DataType{Kind: ast.TypeBoolean}}},
+			ElseBody:  []ast.MicroflowStatement{&ast.DeclareStmt{Variable: "E", Type: ast.DataType{Kind: ast.TypeBoolean}}},
+		},
+		// Activity placed immediately after the IF merge.
+		&ast.DeclareStmt{Variable: "After", Type: ast.DataType{Kind: ast.TypeBoolean}},
+	}
+	oc := fb.buildFlowGraphGen(body, nil)
+
+	// Find the merge and the "After" activity.
+	var merge *genMf.ExclusiveMerge
+	var afterActs []*genMf.ActionActivity
+	for _, obj := range oc.ObjectsItems() {
+		switch o := obj.(type) {
+		case *genMf.ExclusiveMerge:
+			merge = o
+		case *genMf.ActionActivity:
+			afterActs = append(afterActs, o)
+		}
+	}
+	if merge == nil {
+		t.Fatal("ExclusiveMerge must be emitted")
+	}
+	if len(afterActs) == 0 {
+		t.Fatal("ActionActivity after merge must be emitted")
+	}
+
+	mergeX, _ := parsePos(merge.RelativeMiddlePoint())
+	mergeRightEdge := mergeX + MergeSize/2
+
+	// The last ActionActivity (highest X) is the "After" activity.
+	var lastAct *genMf.ActionActivity
+	lastX := -1
+	for _, act := range afterActs {
+		x, _ := parsePos(act.RelativeMiddlePoint())
+		if x > lastX {
+			lastX = x
+			lastAct = act
+		}
+	}
+	afterX, _ := parsePos(lastAct.RelativeMiddlePoint())
+	afterLeftEdge := afterX - ActivityWidth/2
+
+	gap := afterLeftEdge - mergeRightEdge
+	if gap <= 0 {
+		t.Fatalf("merge right edge=%d, after-activity left edge=%d, gap=%d — must be > 0 (merge and next activity overlap)",
+			mergeRightEdge, afterLeftEdge, gap)
+	}
+}

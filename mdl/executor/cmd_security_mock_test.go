@@ -728,3 +728,64 @@ func TestGrantMicroflow_OneValidOnePhantomRole_OnlyValidWritten(t *testing.T) {
 		t.Errorf("expected only TestModule.Admin in AllowedModuleRoles, got: %v", roles)
 	}
 }
+
+// TestGrantMicroflow_BareRoleName_InfersModuleFromMicroflow verifies that
+// `grant execute on microflow Mod.MF to User;` (role without module prefix)
+// resolves to `Mod.User` — the module is inferred from the microflow's module.
+// Previously, role.Module=="" caused findModule("") to fail.
+func TestGrantMicroflow_BareRoleName_InfersModuleFromMicroflow(t *testing.T) {
+	mod := mkModule("PayerRegistration")
+	h := mkHierarchy(mod)
+
+	mfID := nextID("mf")
+	mf := mkMicroflowGen("ACT_Payer_Save")
+	mf.SetID(element.ID(mfID))
+
+	var updatedMF *genMf.Microflow
+	mfRepo := &repostesting.RecordingMicroflowRepository{
+		ListAllFunc: func() ([]*genMf.Microflow, error) { return []*genMf.Microflow{mf}, nil },
+		GetContainerUUIDFunc: func(id model.ID) (model.ID, error) {
+			if id == mfID {
+				return mod.ID, nil
+			}
+			return "", nil
+		},
+		UpdateFunc: func(mf *genMf.Microflow) error {
+			updatedMF = mf
+			return nil
+		},
+	}
+
+	// Module security has role "User" in PayerRegistration.
+	ms := mkGenModuleSecurity()
+	ms.AddModuleRoles(mkGenModuleRole("User", ""))
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		GetModuleSecurityGenFunc: func(moduleID model.ID) (*genSec.ModuleSecurity, error) {
+			return ms, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h), withMicroflowsRepo(mfRepo))
+
+	// Bare role name — module omitted. Should infer "PayerRegistration" from microflow.
+	stmt := &ast.GrantMicroflowAccessStmt{
+		Microflow: ast.QualifiedName{Module: "PayerRegistration", Name: "ACT_Payer_Save"},
+		Roles: []ast.QualifiedName{
+			{Module: "", Name: "User"}, // bare name: no module prefix
+		},
+	}
+	err := execGrantMicroflowAccessGen(ctx, stmt)
+	if err != nil {
+		t.Fatalf("bare role name should not error; got: %v", err)
+	}
+
+	if updatedMF == nil {
+		t.Fatal("microflow must be updated when role is granted")
+	}
+	roles := updatedMF.AllowedModuleRolesQualifiedNames()
+	if len(roles) != 1 || roles[0] != "PayerRegistration.User" {
+		t.Errorf("expected [PayerRegistration.User] in AllowedModuleRoles, got: %v", roles)
+	}
+}
