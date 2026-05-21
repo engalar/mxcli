@@ -487,8 +487,8 @@ func parseEntityAccessRight(ctx parser.IEntityAccessRightContext) ast.EntityAcce
 			return ast.EntityAccessRight{Type: ast.EntityAccessReadAll}
 		}
 		right := ast.EntityAccessRight{Type: ast.EntityAccessReadMembers}
-		for _, id := range earCtx.AllIDENTIFIER() {
-			right.Members = append(right.Members, id.GetText())
+		for _, m := range earCtx.AllGrantMember() {
+			right.Members = append(right.Members, grantMemberText(m))
 		}
 		return right
 	}
@@ -497,11 +497,27 @@ func parseEntityAccessRight(ctx parser.IEntityAccessRightContext) ast.EntityAcce
 			return ast.EntityAccessRight{Type: ast.EntityAccessWriteAll}
 		}
 		right := ast.EntityAccessRight{Type: ast.EntityAccessWriteMembers}
-		for _, id := range earCtx.AllIDENTIFIER() {
-			right.Members = append(right.Members, id.GetText())
+		for _, m := range earCtx.AllGrantMember() {
+			right.Members = append(right.Members, grantMemberText(m))
 		}
 		return right
 	}
 
 	return ast.EntityAccessRight{}
+}
+
+// grantMemberText extracts the plain identifier text from a grantMember parse
+// node. Handles both bare IDENTIFIER tokens and QUOTED_IDENTIFIER tokens
+// (e.g. "Token"), stripping the surrounding quotes for the latter.
+func grantMemberText(ctx parser.IGrantMemberContext) string {
+	if ctx == nil {
+		return ""
+	}
+	if qi := ctx.(*parser.GrantMemberContext).QUOTED_IDENTIFIER(); qi != nil {
+		return unquoteIdentifier(qi.GetText())
+	}
+	if id := ctx.(*parser.GrantMemberContext).IDENTIFIER(); id != nil {
+		return id.GetText()
+	}
+	return ""
 }

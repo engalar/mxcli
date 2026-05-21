@@ -11,6 +11,37 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
+// memberAccessLocalName resolves a MemberAccess BSON entry to the plain local
+// name used in MDL GRANT statements.
+//
+// Mendix stores member references in two distinct formats depending on the
+// member kind:
+//   - Attributes: "Module.Entity.AttributeName"  (3-part, entity-scoped)
+//   - Associations: "Module.AssociationName"     (2-part, module-scoped)
+//
+// When a BSON ID is stored instead, attrNames maps it to the plain name.
+func memberAccessLocalName(ma *genDm.MemberAccess, attrNames map[string]string) string {
+	if attrQN := ma.AttributeQualifiedName(); attrQN != "" {
+		// Attribute: prefer the ID/name lookup built from the entity's own
+		// attribute list; fall back to extracting the last segment of the
+		// 3-part qualified name.
+		if mapped, ok := attrNames[attrQN]; ok {
+			return mapped
+		}
+		if parts := strings.Split(attrQN, "."); len(parts) == 3 {
+			return parts[2]
+		}
+		return attrQN
+	}
+
+	// Association: module-scoped, always stored as "Module.AssociationName".
+	assocQN := ma.AssociationQualifiedName()
+	if parts := strings.Split(assocQN, "."); len(parts) == 2 {
+		return parts[1]
+	}
+	return assocQN
+}
+
 // outputEntityAccessGrantsGen outputs GRANT statements for entity access rules.
 func outputEntityAccessGrantsGen(ctx *ExecContext, entity *genDm.Entity, moduleName, entityName string) {
 	if entity == nil || len(entity.AccessRulesItems()) == 0 {
@@ -83,16 +114,7 @@ func resolveEntityMemberAccessGen(rule *genDm.AccessRule, attrNames map[string]s
 		if !ok {
 			continue
 		}
-		memberName := ma.AttributeQualifiedName()
-		if memberName == "" {
-			memberName = ma.AssociationQualifiedName()
-		}
-		if mapped, ok := attrNames[memberName]; ok {
-			memberName = mapped
-		} else if attrName := extractAttrNameFromQualified(memberName); attrName != "" {
-			memberName = attrName
-		}
-
+		memberName := memberAccessLocalName(ma, attrNames)
 		switch ma.AccessRights() {
 		case genDm.MemberAccessRightsReadWrite:
 			readWrite = append(readWrite, memberName)

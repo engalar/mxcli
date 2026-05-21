@@ -4,7 +4,6 @@ package executor
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -59,7 +58,7 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 
 	if existingEntity != nil && s.CreateOrReplace {
 		if s.Position == nil {
-			x, y, ok := parseLocationXY(existingEntity.Location())
+			x, y, ok := parseLocationBSON(existingEntity.Location())
 			if ok {
 				s.Position = &ast.Position{X: x, Y: y}
 			}
@@ -195,7 +194,7 @@ func autoLayoutLocationGen(pos *ast.Position, existing *genDm.Entity, dm *genDm.
 		return model.Point{X: pos.X, Y: pos.Y}
 	}
 	if existing != nil {
-		if x, y, ok := parseLocationXY(existing.Location()); ok {
+		if x, y, ok := parseLocationBSON(existing.Location()); ok {
 			return model.Point{X: x, Y: y}
 		}
 	}
@@ -219,18 +218,3 @@ func findEntityInDMGenByName(dm *genDm.DomainModel, name string) *genDm.Entity {
 	return nil
 }
 
-func parseLocationXY(loc string) (int, int, bool) {
-	if loc == "" {
-		return 0, 0, false
-	}
-	parts := strings.Split(loc, ",")
-	if len(parts) != 2 {
-		return 0, 0, false
-	}
-	px, errX := strconv.Atoi(strings.TrimSpace(parts[0]))
-	py, errY := strconv.Atoi(strings.TrimSpace(parts[1]))
-	if errX != nil || errY != nil {
-		return 0, 0, false
-	}
-	return px, py, true
-}

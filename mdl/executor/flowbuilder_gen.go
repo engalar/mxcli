@@ -42,6 +42,7 @@ package executor
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -234,6 +235,25 @@ func layoutPos(x, y int) string {
 // string that Mendix Studio Pro and MPR v2 expect for the Size field.
 func layoutSize(width, height int) string {
 	return fmt.Sprintf("%d;%d", width, height)
+}
+
+// parseLocationBSON is the read-side complement of layoutPos: it parses the
+// semicolon-separated "X;Y" string that Mendix stores in the Location BSON
+// field and returns the integer coordinates.
+func parseLocationBSON(loc string) (x, y int, ok bool) {
+	if loc == "" {
+		return 0, 0, false
+	}
+	parts := strings.SplitN(loc, ";", 2)
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+	px, errX := strconv.Atoi(strings.TrimSpace(parts[0]))
+	py, errY := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if errX != nil || errY != nil {
+		return 0, 0, false
+	}
+	return px, py, true
 }
 
 // genElementWithID is the minimal interface every gen element exposes

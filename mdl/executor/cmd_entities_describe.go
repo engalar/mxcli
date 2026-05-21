@@ -92,10 +92,11 @@ func describeEntityToString(ctx *ExecContext, name ast.QualifiedName) (string, e
 	return buf.String(), nil
 }
 
-// extractAttrNameFromQualified extracts the attribute name from a qualified name.
-// e.g., "DmTest.Cars.CarId" -> "CarId"
+// extractAttrNameFromQualified extracts the attribute name from a 3-part
+// qualified name ("Module.Entity.Attribute" → "Attribute").
+// Returns "" for shorter names so callers can use the raw value as-is.
+// For association names (2-part "Module.Assoc"), use memberAccessLocalName.
 func extractAttrNameFromQualified(qualifiedName string) string {
-	// Split by "." and return the last part
 	parts := strings.Split(qualifiedName, ".")
 	if len(parts) >= 3 {
 		return parts[len(parts)-1]

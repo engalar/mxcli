@@ -122,7 +122,14 @@ entityAccessRight
     : CREATE
     | DELETE
     | READ STAR
-    | READ LPAREN IDENTIFIER (COMMA IDENTIFIER)* RPAREN
+    | READ LPAREN grantMember (COMMA grantMember)* RPAREN
     | WRITE STAR
-    | WRITE LPAREN IDENTIFIER (COMMA IDENTIFIER)* RPAREN
+    | WRITE LPAREN grantMember (COMMA grantMember)* RPAREN
+    ;
+
+// A member name in a GRANT attribute list: plain identifier or quoted
+// identifier (e.g. "Token") for names that clash with MDL reserved words.
+grantMember
+    : IDENTIFIER
+    | QUOTED_IDENTIFIER
     ;

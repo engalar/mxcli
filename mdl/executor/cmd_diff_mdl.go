@@ -544,7 +544,9 @@ func entityToMDLGen(ctx *ExecContext, moduleName string, entity *genDm.Entity) s
 
 	// Position
 	if loc := entity.Location(); loc != "" {
-		lines = append(lines, fmt.Sprintf("@Position(%s)", loc))
+		if x, y, ok := parseLocationBSON(loc); ok {
+			lines = append(lines, fmt.Sprintf("@Position(%d, %d)", x, y))
+		}
 	}
 
 	// Entity type
@@ -668,7 +670,9 @@ func viewEntityFromProjectToMDLGen(ctx *ExecContext, moduleName string, entity *
 	}
 
 	if loc := entity.Location(); loc != "" {
-		lines = append(lines, fmt.Sprintf("@Position(%s)", loc))
+		if x, y, ok := parseLocationBSON(loc); ok {
+			lines = append(lines, fmt.Sprintf("@Position(%d, %d)", x, y))
+		}
 	}
 	lines = append(lines, fmt.Sprintf("create view entity %s.%s (", moduleName, entity.Name()))
 

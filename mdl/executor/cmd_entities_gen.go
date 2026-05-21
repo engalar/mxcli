@@ -371,11 +371,10 @@ func describeEntityGen(ctx *ExecContext, name ast.QualifiedName) error {
 		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", doc)
 	}
 
-	// Position annotation. Gen stores Location as a string ("X Y" or
-	// similar); legacy path used struct fields. We pass the raw value
-	// through so MDL re-execute can round-trip it.
 	if loc := entity.Location(); loc != "" {
-		fmt.Fprintf(ctx.Output, "@Position(%s)\n", loc)
+		if x, y, ok := parseLocationBSON(loc); ok {
+			fmt.Fprintf(ctx.Output, "@Position(%d, %d)\n", x, y)
+		}
 	}
 
 	entityType := strings.ToLower(entityKindForGen(entity))

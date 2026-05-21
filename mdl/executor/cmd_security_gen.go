@@ -830,16 +830,7 @@ func listAccessOnEntityGen(ctx *ExecContext, name *ast.QualifiedName) error {
 				if !ok {
 					continue
 				}
-				memberName := ma.AttributeQualifiedName()
-				if memberName == "" {
-					memberName = ma.AssociationQualifiedName()
-				}
-				if mapped, ok := attrNames[memberName]; ok {
-					memberName = mapped
-				} else if attrName := extractAttrNameFromQualified(memberName); attrName != "" {
-					memberName = attrName
-				}
-				memberParts = append(memberParts, memberName+":"+ma.AccessRights())
+				memberParts = append(memberParts, memberAccessLocalName(ma, attrNames)+":"+ma.AccessRights())
 			}
 			result.Rows = append(result.Rows, []any{
 				ruleNum,
@@ -883,16 +874,7 @@ func listAccessOnEntityGen(ctx *ExecContext, name *ast.QualifiedName) error {
 			if !ok {
 				continue
 			}
-			memberName := ma.AttributeQualifiedName()
-			if memberName == "" {
-				memberName = ma.AssociationQualifiedName()
-			}
-			if mapped, ok := attrNames[memberName]; ok {
-				memberName = mapped
-			} else if attrName := extractAttrNameFromQualified(memberName); attrName != "" {
-				memberName = attrName
-			}
-			fmt.Fprintf(ctx.Output, "  %s: %s\n", memberName, ma.AccessRights())
+			fmt.Fprintf(ctx.Output, "  %s: %s\n", memberAccessLocalName(ma, attrNames), ma.AccessRights())
 		}
 
 		if rule.XPathConstraint() != "" {
