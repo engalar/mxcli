@@ -145,6 +145,34 @@ func TestPageMutator_ReplaceWidgetGen_ReplacesTarget(t *testing.T) {
 	}
 }
 
+// BUG-08: REPLACE must allow the replacement widget to reuse the target's
+// name. The mpr layer itself imposes no duplicate-name check (that lives in
+// the executor's pageBuilder.registerWidgetName via widgetScope), but pin
+// the behaviour here so a future tightening doesn't regress the fix.
+func TestPageMutator_ReplaceWidgetGen_SameName(t *testing.T) {
+	existing := makeWidget("txtLabel", "Forms$TextBox")
+	rawPage := makeRawPage(existing)
+
+	m := &mprPageMutator{
+		rawData:       rawPage,
+		containerType: backend.ContainerPage,
+		widgetFinder:  findBsonWidget,
+	}
+
+	replacement := genPages.NewTextBox()
+	replacement.SetID(element.ID(mmpr.GenerateID()))
+	replacement.SetName("txtLabel")
+
+	if err := m.ReplaceWidgetGen("txtLabel", "", []element.Element{replacement}); err != nil {
+		t.Fatalf("ReplaceWidgetGen same-name: %v", err)
+	}
+
+	result := findBsonWidget(m.rawData, "txtLabel")
+	if result == nil {
+		t.Fatal("expected txtLabel to remain after same-name REPLACE")
+	}
+}
+
 // ---------------------------------------------------------------------------
 // SetWidgetDataSourceGen test
 // ---------------------------------------------------------------------------

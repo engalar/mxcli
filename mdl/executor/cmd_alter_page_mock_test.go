@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
 
@@ -325,4 +326,63 @@ func TestAlterPage_SetLayout_Snippet_Unsupported(t *testing.T) {
 	})
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not supported")
+}
+
+// ---------------------------------------------------------------------------
+// REPLACE widget — BUG-08: replacement may reuse the target widget's name
+// ---------------------------------------------------------------------------
+
+func TestAlterPage_ReplaceWidget_SameName_Allowed(t *testing.T) {
+	mod := mkModule("MyModule")
+	pg := mkPageGen(string(nextID("pg")), "TestPage")
+	replaceCalled := false
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+		OpenPageForMutationFunc: func(unitID model.ID) (backend.PageMutator, error) {
+			return &mock.MockPageMutator{
+				// Inherited scope contains the widget being replaced. Without
+				// the excludeFromScope fix, the duplicate-name check in
+				// pageBuilder.registerWidgetName would reject the same-name
+				// replacement.
+				WidgetScopeFunc: func() map[string]model.ID {
+					return map[string]model.ID{"lblHeading": model.ID(nextID("lbl"))}
+				},
+				ParamScopeFunc: func() (map[string]model.ID, map[string]string) {
+					return map[string]model.ID{}, map[string]string{}
+				},
+				EnclosingEntityFunc: func(widgetRef string) string { return "" },
+				FindWidgetFunc:      func(name string) bool { return name == "lblHeading" },
+				ReplaceWidgetGenFunc: func(widgetRef string, columnRef string, widgets []element.Element) error {
+					replaceCalled = true
+					if widgetRef != "lblHeading" {
+						t.Errorf("expected widgetRef lblHeading, got %s", widgetRef)
+					}
+					if len(widgets) != 1 {
+						t.Fatalf("expected 1 replacement widget, got %d", len(widgets))
+					}
+					return nil
+				},
+				SaveFunc: func() error { return nil },
+			}, nil
+		},
+	}
+	h := mkHierarchy(mod)
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
+	assertNoError(t, execAlterPage(ctx, &ast.AlterPageStmt{
+		PageName: ast.QualifiedName{Module: "MyModule", Name: "TestPage"},
+		Operations: []ast.AlterPageOperation{
+			&ast.ReplaceWidgetOp{
+				Target: ast.WidgetRef{Widget: "lblHeading"},
+				NewWidgets: []*ast.WidgetV3{
+					{Type: "text", Name: "lblHeading", Properties: map[string]any{"Content": "New label"}},
+				},
+			},
+		},
+	}))
+	if !replaceCalled {
+		t.Error("expected ReplaceWidgetGen to be called")
+	}
 }
