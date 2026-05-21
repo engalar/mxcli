@@ -583,10 +583,33 @@ func describeJavaActionGen(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 	}
 
-	if javaCode := readJavaActionUserCode(ctx.MprPath, name.Module, name.Name); javaCode != "" {
-		sb.WriteString("\nas $$\n")
-		sb.WriteString(javaCode)
-		sb.WriteString("\n$$")
+	userCode, allImports, extraCode := readJavaActionSource(ctx.MprPath, name.Module, name.Name)
+	if len(allImports) > 0 {
+		sb.WriteString("\nimports $$\n")
+		for _, imp := range allImports {
+			sb.WriteString("    ")
+			sb.WriteString(imp)
+			sb.WriteString("\n")
+		}
+		sb.WriteString("$$")
+	}
+	if userCode != "" {
+		sb.WriteString("\ncode $$\n")
+		for _, line := range strings.Split(userCode, "\n") {
+			sb.WriteString("    ")
+			sb.WriteString(line)
+			sb.WriteString("\n")
+		}
+		sb.WriteString("$$")
+	}
+	if extraCode != "" {
+		sb.WriteString("\nextra $$\n")
+		for _, line := range strings.Split(extraCode, "\n") {
+			sb.WriteString("    ")
+			sb.WriteString(line)
+			sb.WriteString("\n")
+		}
+		sb.WriteString("$$")
 	}
 
 	sb.WriteString(";")
@@ -1174,7 +1197,18 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 	//
 	// TODO(Stage 3.3.2.D6): drop the "not implemented" fallback once
 	// writeJavaSourceFileViaPathGen lands a real generator.
-	if s.JavaCode != "" {
+	if s.JavaCode != "" || len(s.Imports) > 0 || s.ExtraCode != "" {
+		// Guard: code block must contain only the method body, not the
+		// executeAction signature. The skeleton already wraps the body
+		// in `public X executeAction() throws Exception { ... }`.
+		if strings.Contains(s.JavaCode, "executeAction") {
+			return mdlerrors.NewValidationf(
+				"code block must contain only the method body, not the method signature\n" +
+					"  hint: write only the statements inside executeAction(), e.g.:\n" +
+					"    code $$\n" +
+					"      return this.Input.trim();\n" +
+					"    $$")
+		}
 		params := make([]*genJA.JavaActionParameter, 0, len(ja.ActionParametersItems()))
 		for _, p := range ja.ActionParametersItems() {
 			if pp, ok := p.(*genJA.JavaActionParameter); ok {
@@ -1187,6 +1221,8 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 			}
 			// Fall through: BSON unit still created; source file
 			// writer is Phase D6's responsibility.
+		} else if len(s.Imports) > 0 {
+			fmt.Fprintf(ctx.Output, "note: %d import(s) merged into %s.java\n", len(s.Imports), s.Name.Name)
 		}
 	}
 
@@ -1232,6 +1268,52 @@ func readJavaActionUserCode(mprPath, moduleName, actionName string) string {
 	userCode = strings.TrimSuffix(userCode, "\n")
 	userCode = strings.TrimRight(userCode, " \t")
 	return userCode
+}
+
+// readJavaActionSource reads all three user-editable sections from a .java file:
+// userCode (BEGIN/END USER CODE), imports (all import lines), extraCode
+// (BEGIN/END EXTRA CODE). Returns empty values when the file is absent or
+// markers are not found. Uses uppercase markers that match what
+// generateJavaSourceGen writes.
+func readJavaActionSource(mprPath, moduleName, actionName string) (userCode string, imports []string, extraCode string) {
+	if mprPath == "" {
+		return
+	}
+	projectRoot := filepath.Dir(mprPath)
+	moduleNameLower := strings.ToLower(moduleName)
+	javaPath := filepath.Join(projectRoot, "javasource", moduleNameLower, "actions", actionName+".java")
+	content, err := os.ReadFile(javaPath)
+	if err != nil {
+		return
+	}
+	src := string(content)
+
+	if bi := strings.Index(src, "// BEGIN USER CODE"); bi != -1 {
+		if ei := strings.Index(src, "// END USER CODE"); ei != -1 && ei > bi {
+			uc := src[bi+len("// BEGIN USER CODE") : ei]
+			uc = strings.TrimPrefix(uc, "\n")
+			uc = strings.TrimSuffix(uc, "\n")
+			userCode = strings.TrimRight(uc, " \t")
+		}
+	}
+
+	for _, line := range strings.Split(src, "\n") {
+		t := strings.TrimSpace(line)
+		if strings.HasPrefix(t, "import ") && strings.HasSuffix(t, ";") {
+			imports = append(imports, t)
+		}
+	}
+
+	if bi := strings.Index(src, "// BEGIN EXTRA CODE"); bi != -1 {
+		if ei := strings.Index(src, "// END EXTRA CODE"); ei != -1 && ei > bi {
+			ec := src[bi+len("// BEGIN EXTRA CODE") : ei]
+			ec = strings.TrimSpace(ec)
+			if ec != "" {
+				extraCode = ec
+			}
+		}
+	}
+	return
 }
 
 // isTypeParamRef checks whether an ast.DataType refers to a type
