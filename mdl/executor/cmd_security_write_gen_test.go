@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 // ─────────────────────────────────────────────────────────────────
@@ -239,5 +241,33 @@ func TestExecRevokeMicroflowAccessGen_NoMatch(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "None of the specified roles") {
 		t.Errorf("expected 'None of the specified roles' message; got %q", buf.String())
+	}
+}
+
+// TestValidateModuleRole_ModuleNotFound_IsWarning asserts that when the
+// referenced module does not exist, validateModuleRole prints a WARNING
+// and returns (false, nil) instead of propagating a fatal BackendError.
+// Regression for BUG-04 (M-0022 POC): a GRANT against a missing module
+// previously aborted the entire script.
+func TestValidateModuleRole_ModuleNotFound_IsWarning(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{}, nil // no modules
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb))
+
+	role := ast.QualifiedName{Module: "Customer_Lookups", Name: "User"}
+	found, err := validateModuleRole(ctx, role)
+
+	if err != nil {
+		t.Fatalf("validateModuleRole returned error for missing module: %v (should be non-fatal warning)", err)
+	}
+	if found {
+		t.Fatal("validateModuleRole returned found=true for missing module")
+	}
+	if !strings.Contains(buf.String(), "WARNING") {
+		t.Errorf("expected WARNING in output, got: %q", buf.String())
 	}
 }

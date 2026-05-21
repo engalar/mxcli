@@ -9,6 +9,7 @@
 package executor
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -28,7 +29,14 @@ import (
 func validateModuleRole(ctx *ExecContext, role ast.QualifiedName) (bool, error) {
 	module, err := findModule(ctx, role.Module)
 	if err != nil {
-		return false, mdlerrors.NewBackend(fmt.Sprintf("module not found for role %s.%s", role.Module, role.Name), err)
+		// Module not found is a non-fatal warning — skip the grant for this role.
+		// Only real backend failures (I/O errors, DB errors) remain fatal.
+		var nfe *mdlerrors.NotFoundError
+		if errors.As(err, &nfe) {
+			fmt.Fprintf(ctx.Output, "WARNING: module '%s' not found — grant skipped\n", role.Module)
+			return false, nil
+		}
+		return false, mdlerrors.NewBackend(fmt.Sprintf("read module for role %s.%s", role.Module, role.Name), err)
 	}
 
 	ms, err := ctx.Backend.GetModuleSecurityGen(module.ID)
