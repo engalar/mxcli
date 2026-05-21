@@ -59,6 +59,7 @@ func TestRoundtripWorkflow_Comprehensive(t *testing.T) {
 begin
   user task SubTask 'Sub-Approval'
     page ` + mod + `.SubPage
+    targeting xpath '[%CurrentUser%]'
     outcomes 'Done' { };
 end workflow;`); err != nil {
 		t.Fatalf("create SubApprovalFlow: %v", err)
@@ -103,6 +104,7 @@ begin
     path 1 {
       user task FinalApprove 'Final Approval'
         page ` + mod + `.ApprovePage
+        targeting xpath '[%CurrentUser%]'
         outcomes 'Approved' { };
     }
     path 2 {
@@ -173,6 +175,7 @@ func TestRoundtripWorkflow_BoundaryEventInterrupting(t *testing.T) {
 begin
   user task act1 'Review'
     page ` + testModule + `.ReviewPage
+    targeting xpath '[%CurrentUser%]'
     outcomes 'Approve' { }
     boundary event interrupting timer '${PT1H}'
     ;
@@ -205,6 +208,7 @@ func TestRoundtripWorkflow_BoundaryEventNonInterrupting(t *testing.T) {
 begin
   user task act1 'Review'
     page ` + testModule + `.ReviewPage
+    targeting xpath '[%CurrentUser%]'
     outcomes 'Approve' { }
     boundary event non interrupting timer '${PT2H}'
     ;
@@ -237,6 +241,7 @@ func TestRoundtripWorkflow_MultiUserTask(t *testing.T) {
 begin
   multi user task act1 'Caption'
     page ` + testModule + `.ReviewPage
+    targeting xpath '[%CurrentUser%]'
     outcomes 'Approve' { }
     ;
 end workflow;`

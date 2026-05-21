@@ -1,0 +1,17 @@
+-- Bug regression: CE1859 — user task without targeting clause must be rejected at write time
+-- After fix: CREATE WORKFLOW without 'targeting' clause should produce a mxcli error,
+-- preventing Studio Pro CE1859 ("XPath constraint is required").
+--
+-- Expected behavior: mxcli reports error at write time, does not write BSON.
+-- To test: run this script with mxcli and confirm it fails with CE1859 mention.
+
+create or modify persistent entity BugTest1859.WfCtx (Id: Integer);
+
+-- This should fail: no targeting clause
+create workflow BugTest1859.WF_CE1859_Test
+  parameter $WfCtx: BugTest1859.WfCtx
+begin
+  user task ApproveStep 'Approve'
+    outcomes
+      'Done' { };
+end workflow

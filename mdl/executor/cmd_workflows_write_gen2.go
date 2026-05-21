@@ -446,6 +446,9 @@ func validateWorkflowActivity(act ast.WorkflowActivityNode) error {
 	case *ast.WorkflowCallMicroflowNode:
 		return validateConditionOutcomeNodes(v.Outcomes)
 	case *ast.WorkflowUserTaskNode:
+		if err := validateUserTaskTargeting(v); err != nil {
+			return err
+		}
 		for _, oc := range v.Outcomes {
 			if err := validateWorkflowActivities(oc.Activities); err != nil {
 				return err
@@ -1088,6 +1091,25 @@ func newTextWrapperGen(s string) element.Element {
 	tr.SetText(s)
 	tx.AddTranslations(tr)
 	return tx
+}
+
+// validateUserTaskTargeting checks that a user task has a targeting clause.
+// Missing or empty targeting produces CE1859 in Studio Pro
+// (userTargeting is Required=true for Mendix 11.2+).
+func validateUserTaskTargeting(n *ast.WorkflowUserTaskNode) error {
+	if n.Targeting.Kind == "" {
+		return fmt.Errorf(
+			"user task '%s' is missing a targeting clause (CE1859): add 'targeting xpath ...' or 'targeting microflow ...'",
+			n.Name,
+		)
+	}
+	if (n.Targeting.Kind == "xpath" || n.Targeting.Kind == "group_xpath") && n.Targeting.XPath == "" {
+		return fmt.Errorf(
+			"user task '%s' has empty xpath constraint (CE1859): xpath targeting requires a non-empty expression",
+			n.Name,
+		)
+	}
+	return nil
 }
 
 // genMicroflowParameterNames returns the parameter names of a gen

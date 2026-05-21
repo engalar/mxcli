@@ -617,7 +617,11 @@ func TestExecCreateWorkflowGen_NewUnit_RoutesThroughCreate(t *testing.T) {
 		DueDate:         "[%CurrentDateTime%]",
 		OverviewPage:    ast.QualifiedName{Module: "BPModule", Name: "Overview"},
 		Activities: []ast.WorkflowActivityNode{
-			&ast.WorkflowUserTaskNode{Name: "Step1", Caption: "first step"},
+			&ast.WorkflowUserTaskNode{
+				Name:      "Step1",
+				Caption:   "first step",
+				Targeting: ast.WorkflowTargetingNode{Kind: "xpath", XPath: "[%CurrentUser%]"},
+			},
 		},
 	}
 	if err := execCreateWorkflowGen(ctx, stmt); err != nil {
@@ -873,6 +877,47 @@ func TestValidateWorkflowActivities_QualifiedEnumPasses(t *testing.T) {
 	}
 	if err := validateWorkflowActivities(acts); err != nil {
 		t.Errorf("unexpected error for qualified name: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// validateUserTaskTargeting — CE1859 guard
+// (Fix: user task without targeting clause must be rejected at write time)
+// ---------------------------------------------------------------------------
+
+func TestValidateUserTaskTargeting_NoTargeting_ReturnsError(t *testing.T) {
+	n := &ast.WorkflowUserTaskNode{
+		Name:    "Step",
+		Caption: "no targeting",
+		// Targeting.Kind == "" — no targeting clause
+	}
+	err := validateUserTaskTargeting(n)
+	if err == nil {
+		t.Error("expected error for missing targeting (CE1859), got nil")
+	}
+}
+
+func TestValidateUserTaskTargeting_EmptyXPath_ReturnsError(t *testing.T) {
+	n := &ast.WorkflowUserTaskNode{
+		Name:    "Step",
+		Caption: "empty xpath",
+		Targeting: ast.WorkflowTargetingNode{Kind: "xpath", XPath: ""},
+	}
+	err := validateUserTaskTargeting(n)
+	if err == nil {
+		t.Error("expected error for empty xpath constraint (CE1859), got nil")
+	}
+}
+
+func TestValidateUserTaskTargeting_ValidXPath_NoError(t *testing.T) {
+	n := &ast.WorkflowUserTaskNode{
+		Name:    "Step",
+		Caption: "valid xpath",
+		Targeting: ast.WorkflowTargetingNode{Kind: "xpath", XPath: "[%CurrentUser%]"},
+	}
+	err := validateUserTaskTargeting(n)
+	if err != nil {
+		t.Errorf("expected no error for valid targeting, got: %v", err)
 	}
 }
 
