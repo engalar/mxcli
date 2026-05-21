@@ -234,13 +234,19 @@ func resolveMemberChangeGenStandalone(b backend.FullBackend, memberName, entityQ
 						return resolvedMemberChange{associationQN: qualifiedName}
 					}
 				}
-				if strings.Contains(memberName, ".") {
+				// Two-or-more dots means Module.Entity.Attr — preserve as
+				// attribute even when entity metadata is missing.
+				if strings.Count(memberName, ".") >= 2 {
 					return resolvedMemberChange{attributeQN: memberName}
 				}
 				if attrQN, ok := resolveAttributeInEntityHierarchyGen(b, entityQN, memberName); ok {
 					return resolvedMemberChange{attributeQN: attrQN}
 				}
-				return resolvedMemberChange{attributeQN: entityQN + "." + memberName}
+				// Neither attribute nor association found in the domain model
+				// (common when the reader cache is stale after a write). Fall
+				// back to the dot-count heuristic: a 1-dot name is a
+				// Module.Association, a 0-dot name is a bare attribute.
+				return memberChangeFallback(memberName, entityQN)
 			}
 		}
 	}
