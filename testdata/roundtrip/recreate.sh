@@ -97,6 +97,11 @@ mx "create or modify constant RoundtripModule.MaxRetries
 type integer
 default 3;"
 
+# User roles (after module roles)
+mx "create user role BasicUser (RoundtripModule.Viewer);"
+
+mx "create user role PowerUser (RoundtripModule.Editor);"
+
 # Copy result to testdata/roundtrip/
 cp "${CREATED_MPR}" "${OUT_MPR}"
 MPR_DIR="$(dirname "${CREATED_MPR}")"

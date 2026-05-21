@@ -54,3 +54,10 @@ create or modify constant RoundtripModule.MaxRetries
 type integer
 default 3;
 /
+
+-- User roles (must be after module roles)
+create user role BasicUser (RoundtripModule.Viewer);
+/
+
+create user role PowerUser (RoundtripModule.Editor);
+/
