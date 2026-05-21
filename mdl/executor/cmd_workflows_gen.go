@@ -625,7 +625,7 @@ type userTaskShapeGen struct {
 	Name           string
 	Caption        string
 	Annotation     element.Element
-	Page           string // PageQualifiedName (UserTask only)
+	Page           string // PageQualifiedName
 	UserSource     element.Element
 	UserTaskEntity string
 	DueDate        string
