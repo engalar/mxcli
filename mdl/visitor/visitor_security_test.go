@@ -625,3 +625,25 @@ func TestUpdateSecurity_InModule(t *testing.T) {
 		t.Errorf("Expected MyModule, got %q", stmt.Module)
 	}
 }
+
+// TestGrantMember_ReservedKeyword verifies that MDL reserved keywords used as
+// Mendix attribute names (e.g. Token, Select) are accepted unquoted in GRANT
+// attribute lists.  Previously these required "Token" quoting; now grantMember
+// delegates to identifierOrKeyword which accepts keyword tokens directly.
+func TestGrantMember_ReservedKeyword(t *testing.T) {
+	cases := []string{
+		// Token is reserved (used in CONNECT ... TOKEN statements)
+		"grant MyModule.User on MyModule.Ent (read (Token, Name), write (Token));",
+		// Bare keyword Token must parse without error or quoting
+		"grant MyModule.User on MyModule.Ent (create, read *, write (Token));",
+	}
+	for _, mdl := range cases {
+		src := "create module role MyModule.User;\n" +
+			"create or modify persistent entity MyModule.Ent (Token: String(200));\n" +
+			mdl
+		_, errs := Build(src)
+		for _, e := range errs {
+			t.Errorf("unexpected parse error for %q: %v", mdl, e)
+		}
+	}
+}

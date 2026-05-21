@@ -127,9 +127,11 @@ entityAccessRight
     | WRITE LPAREN grantMember (COMMA grantMember)* RPAREN
     ;
 
-// A member name in a GRANT attribute list: plain identifier or quoted
-// identifier (e.g. "Token") for names that clash with MDL reserved words.
+// A member name in a GRANT attribute list.  Uses identifierOrKeyword so that
+// Mendix attribute names that happen to match MDL reserved words (e.g. Token,
+// Select, From) are accepted without quoting in both the generated export and
+// hand-written MDL.  QUOTED_IDENTIFIER support (e.g. "Token") is included via
+// identifierOrKeyword and kept for backwards-compatibility with existing exports.
 grantMember
-    : IDENTIFIER
-    | QUOTED_IDENTIFIER
+    : identifierOrKeyword
     ;

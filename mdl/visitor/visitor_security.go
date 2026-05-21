@@ -507,17 +507,14 @@ func parseEntityAccessRight(ctx parser.IEntityAccessRightContext) ast.EntityAcce
 }
 
 // grantMemberText extracts the plain identifier text from a grantMember parse
-// node. Handles both bare IDENTIFIER tokens and QUOTED_IDENTIFIER tokens
-// (e.g. "Token"), stripping the surrounding quotes for the latter.
+// node. grantMember delegates to identifierOrKeyword, which accepts plain
+// identifiers, quoted identifiers, and keyword tokens — so Mendix attribute
+// names that clash with MDL reserved words (e.g. Token, Select) work without
+// quoting in both exported and hand-written MDL.
 func grantMemberText(ctx parser.IGrantMemberContext) string {
 	if ctx == nil {
 		return ""
 	}
-	if qi := ctx.(*parser.GrantMemberContext).QUOTED_IDENTIFIER(); qi != nil {
-		return unquoteIdentifier(qi.GetText())
-	}
-	if id := ctx.(*parser.GrantMemberContext).IDENTIFIER(); id != nil {
-		return id.GetText()
-	}
-	return ""
+	iok := ctx.(*parser.GrantMemberContext).IdentifierOrKeyword()
+	return identifierOrKeywordText(iok)
 }
