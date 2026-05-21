@@ -49,6 +49,7 @@ func execDropEntityGen(ctx *ExecContext, s *ast.DropEntityStmt) error {
 			continue
 		}
 		warnEntityReferences(ctx, s.Name.String())
+		warnMicroflowEntityParamRefs(ctx, s.Name.String())
 
 		if src := ent.Source(); src != nil && src.TypeName() == "DomainModels$OqlViewEntitySource" {
 			if err := ctx.Backend.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
