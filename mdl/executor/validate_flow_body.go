@@ -70,15 +70,17 @@ func validateFlowBody(params []ast.MicroflowParam, body []ast.MicroflowStatement
 // struct's validator-relevant fields, minus the backend / hierarchy /
 // ID-generation state.
 type flowValidator struct {
-	varTypes     map[string]string
-	declaredVars map[string]string
-	errors       []string
+	varTypes           map[string]string
+	declaredVars       map[string]string
+	flatOutputVarNames map[string]bool // shared across all scoped copies — not cloned
+	errors             []string
 }
 
 func newFlowValidator() *flowValidator {
 	return &flowValidator{
-		varTypes:     make(map[string]string),
-		declaredVars: make(map[string]string),
+		varTypes:           make(map[string]string),
+		declaredVars:       make(map[string]string),
+		flatOutputVarNames: make(map[string]bool),
 	}
 }
 
@@ -114,9 +116,12 @@ func (v *flowValidator) validateOutputVariable(varName, statement string) {
 	if varName == "" {
 		return
 	}
-	if v.isVariableDeclared(varName) {
-		v.addError("duplicate variable name '$%s' — %s output variable is already declared in this scope (CE0111)", varName, statement)
+	name := strippedVarName(varName)
+	if v.flatOutputVarNames[name] {
+		v.addError("duplicate variable name '$%s' — %s output variable is already declared in this microflow (CE0111)", name, statement)
+		return
 	}
+	v.flatOutputVarNames[name] = true
 }
 
 func (v *flowValidator) validateScopedStatements(stmts []ast.MicroflowStatement) {
@@ -136,8 +141,11 @@ func (v *flowValidator) validateStatements(stmts []ast.MicroflowStatement) {
 func (v *flowValidator) validateStatement(stmt ast.MicroflowStatement) {
 	switch s := stmt.(type) {
 	case *ast.DeclareStmt:
-		if v.isVariableDeclared(s.Variable) {
-			v.addError("duplicate variable name '$%s' — variable is already declared (CE0111)", s.Variable)
+		name := s.Variable
+		if v.flatOutputVarNames[name] {
+			v.addError("duplicate variable name '$%s' — variable is already declared in this microflow (CE0111)", name)
+		} else {
+			v.flatOutputVarNames[name] = true
 		}
 		if s.Type.EntityRef != nil {
 			v.varTypes[s.Variable] = s.Type.EntityRef.Module + "." + s.Type.EntityRef.Name

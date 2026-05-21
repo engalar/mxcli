@@ -35,6 +35,41 @@ func TestValidateCE7247_SetOnListVariable(t *testing.T) {
 	}
 }
 
+func TestValidateCE0111_BothBranches(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Value: "true"},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.CreateObjectStmt{
+					Variable:   "Result",
+					EntityType: ast.QualifiedName{Module: "M", Name: "CustomerBasicDto"},
+				},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.CreateObjectStmt{
+					Variable:   "Result",
+					EntityType: ast.QualifiedName{Module: "M", Name: "CustomerBasicDto"},
+				},
+			},
+		},
+	}
+	errs := validateFlowBody(nil, body)
+	if len(errs) == 0 {
+		t.Error("expected CE0111 for duplicate $Result in if/else branches, got none")
+	}
+}
+
+func TestValidateCE0111_FlatScope_StillCaught(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CreateObjectStmt{Variable: "Result", EntityType: ast.QualifiedName{Module: "M", Name: "Dto"}},
+		&ast.CreateObjectStmt{Variable: "Result", EntityType: ast.QualifiedName{Module: "M", Name: "Dto"}},
+	}
+	errs := validateFlowBody(nil, body)
+	if len(errs) == 0 {
+		t.Error("flat-scope CE0111 regression: duplicate $Result not detected")
+	}
+}
+
 func TestValidateCE7247_SetOnPrimitiveVariable_NoError(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.DeclareStmt{
