@@ -443,6 +443,39 @@ func buildEntityQualifiedNames(ctx *ExecContext) map[string]bool {
 	return result
 }
 
+// buildNonPersistentEntityQualifiedNames returns the set of non-persistent entity
+// qualified names in the project. Used for CE0053 detection in validateFlowBodyReferences.
+func buildNonPersistentEntityQualifiedNames(ctx *ExecContext) map[string]bool {
+	result := make(map[string]bool)
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return result
+	}
+	dms, err := cachedDomainModelsGen(ctx)
+	if err != nil {
+		return result
+	}
+	for _, dm := range dms {
+		if dm == nil {
+			continue
+		}
+		modName := h.GetModuleName(h.FindModuleID(model.ID(dm.ID())))
+		if modName == "" {
+			continue
+		}
+		for _, entityElem := range dm.EntitiesItems() {
+			ent, ok := entityElem.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			if !entityPersistableGen(ent) {
+				result[modName+"."+ent.Name()] = true
+			}
+		}
+	}
+	return result
+}
+
 // buildEntityEnumAttrMap returns a map of bare attribute name → enumeration qualified name
 // for all enum-typed attributes on the given entity (e.g. "Status" → "Module.OrderStatus").
 // Returns an empty map if the entity is not found or has no enum attributes.

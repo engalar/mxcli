@@ -514,9 +514,13 @@ func validateFlowBodyReferences(ctx *ExecContext, body []ast.MicroflowStatement,
 
 	if len(refs.entities) > 0 {
 		known := buildEntityQualifiedNames(ctx)
+		nonPersistent := buildNonPersistentEntityQualifiedNames(ctx)
 		for _, ref := range refs.entities {
 			if !known[ref.name] && !sc.entities[ref.name] {
 				errors = append(errors, fmt.Sprintf("entity not found: %s (referenced by %s)", ref.name, ref.source))
+			} else if ref.source == "create list of" && nonPersistent[ref.name] {
+				errors = append(errors, fmt.Sprintf(
+					"entity '%s' is non-persistent: cannot create list of non-persistent entity (CE0053)", ref.name))
 			}
 		}
 	}
