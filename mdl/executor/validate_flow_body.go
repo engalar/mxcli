@@ -53,8 +53,10 @@ func validateFlowBody(params []ast.MicroflowParam, body []ast.MicroflowStatement
 			} else {
 				v.varTypes[p.Name] = entityQN
 			}
+			v.flatOutputVarNames[p.Name] = true
 		} else {
 			v.declaredVars[p.Name] = p.Type.Kind.String()
+			v.flatOutputVarNames[p.Name] = true
 		}
 	}
 	if len(v.errors) > 0 {

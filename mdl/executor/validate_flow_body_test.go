@@ -70,6 +70,22 @@ func TestValidateCE0111_FlatScope_StillCaught(t *testing.T) {
 	}
 }
 
+func TestValidateCE0111_ParameterAndBodyVariable_SameName(t *testing.T) {
+	params := []ast.MicroflowParam{
+		{Name: "Result", Type: ast.DataType{EntityRef: &ast.QualifiedName{Module: "M", Name: "Dto"}}},
+	}
+	body := []ast.MicroflowStatement{
+		&ast.CreateObjectStmt{
+			Variable:   "Result",
+			EntityType: ast.QualifiedName{Module: "M", Name: "Dto"},
+		},
+	}
+	errs := validateFlowBody(params, body)
+	if len(errs) == 0 {
+		t.Error("expected CE0111 when body variable shadows parameter name, got none")
+	}
+}
+
 func TestValidateCE7247_SetOnPrimitiveVariable_NoError(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.DeclareStmt{
