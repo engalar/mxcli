@@ -1418,3 +1418,99 @@ func TestWorkflowMutator_SetPropertyWithEntity_Unsupported(t *testing.T) {
 		t.Fatal("Expected error for unsupported property")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// InsertBranchGen — enum value validation (Fix 3)
+// ---------------------------------------------------------------------------
+
+func TestInsertBranchGen_BareEnumName_ReturnsError(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Decision", "dec1")
+	m := newMutator(makeWorkflowDoc(act))
+
+	err := m.InsertBranchGen("Decision", 0, "Overseas", nil)
+	if err == nil {
+		t.Fatal("expected error for bare enum condition value")
+	}
+	if !strings.Contains(err.Error(), "fully-qualified") {
+		t.Errorf("error should mention fully-qualified name: %v", err)
+	}
+}
+
+func TestInsertBranchGen_TwoPartEnumName_ReturnsError(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Decision", "dec1")
+	m := newMutator(makeWorkflowDoc(act))
+
+	err := m.InsertBranchGen("Decision", 0, "Enum.Value", nil)
+	if err == nil {
+		t.Fatal("expected error for 2-part enum condition value")
+	}
+}
+
+func TestInsertBranchGen_FullyQualifiedEnum_Succeeds(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Decision", "dec1")
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.InsertBranchGen("Decision", 0, "WF_Engine.ENUM_Region.Overseas", nil); err != nil {
+		t.Fatalf("unexpected error for fully-qualified enum value: %v", err)
+	}
+	actDoc, _ := m.findActivityByCaption("Decision", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	if len(outcomes) != 1 {
+		t.Fatalf("expected 1 outcome, got %d", len(outcomes))
+	}
+	oDoc := outcomes[0].(bson.D)
+	if got := dGetString(oDoc, "$Type"); got != "Workflows$EnumerationValueConditionOutcome" {
+		t.Errorf("$Type = %q", got)
+	}
+	if got := dGetString(oDoc, "Value"); got != "WF_Engine.ENUM_Region.Overseas" {
+		t.Errorf("Value = %q, want fully-qualified name", got)
+	}
+}
+
+func TestInsertBranchGen_TrueAndFalseAndDefault_NotValidated(t *testing.T) {
+	for _, cond := range []string{"true", "false", "default"} {
+		act := makeWfActivityWithOutcomes("Decision", "dec1")
+		m := newMutator(makeWorkflowDoc(act))
+		if err := m.InsertBranchGen("Decision", 0, cond, nil); err != nil {
+			t.Errorf("cond %q should not require qualified name: %v", cond, err)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// DropBranch — suffix matching for existing bare-name data (Fix 4)
+// ---------------------------------------------------------------------------
+
+func TestDropBranch_BareNameMatchesBareInBSON(t *testing.T) {
+	// Existing broken MPR: BSON has bare name "Overseas"
+	enumOutcome := makeOutcome("Workflows$EnumerationValueConditionOutcome", "Overseas")
+	act := makeWfActivityWithOutcomes("Decision", "dec1", enumOutcome)
+	m := newMutator(makeWorkflowDoc(act))
+
+	// Should still be droppable by the bare name for backward compat.
+	if err := m.DropBranch("Decision", 0, "Overseas"); err != nil {
+		t.Fatalf("DropBranch bare name failed: %v", err)
+	}
+}
+
+func TestDropBranch_BareNameMatchesQualifiedInBSON(t *testing.T) {
+	// Correctly stored MPR: BSON has "WF_Engine.ENUM_Region.Overseas"
+	enumOutcome := makeOutcome("Workflows$EnumerationValueConditionOutcome", "WF_Engine.ENUM_Region.Overseas")
+	act := makeWfActivityWithOutcomes("Decision", "dec1", enumOutcome)
+	m := newMutator(makeWorkflowDoc(act))
+
+	// User provides bare name (from old describe output or convenience) — should match.
+	if err := m.DropBranch("Decision", 0, "Overseas"); err != nil {
+		t.Fatalf("DropBranch bare suffix failed: %v", err)
+	}
+}
+
+func TestDropBranch_QualifiedNameMatchesQualifiedInBSON(t *testing.T) {
+	enumOutcome := makeOutcome("Workflows$EnumerationValueConditionOutcome", "WF_Engine.ENUM_Region.Overseas")
+	act := makeWfActivityWithOutcomes("Decision", "dec1", enumOutcome)
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.DropBranch("Decision", 0, "WF_Engine.ENUM_Region.Overseas"); err != nil {
+		t.Fatalf("DropBranch full qualified failed: %v", err)
+	}
+}

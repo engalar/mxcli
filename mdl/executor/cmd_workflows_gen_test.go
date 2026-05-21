@@ -12,6 +12,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
 
@@ -388,5 +389,69 @@ func TestCountWorkflowActivitiesGen_UserTaskAndDecision(t *testing.T) {
 	}
 	if decisions != 1 {
 		t.Errorf("decisions = %d, want 1", decisions)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// conditionOutcomeNameFlowGen — enum outcome format (Fix for Studio Pro
+// 11.10.0 EnumerationValueIdentifier rejection)
+// ---------------------------------------------------------------------------
+
+func TestConditionOutcomeNameFlowGen_BooleanTrue(t *testing.T) {
+	o := genWf.NewBooleanConditionOutcome()
+	o.SetValue(true)
+	name, _ := conditionOutcomeNameFlowGen(o)
+	if name != "true" {
+		t.Errorf("got %q, want %q", name, "true")
+	}
+}
+
+func TestConditionOutcomeNameFlowGen_BooleanFalse(t *testing.T) {
+	o := genWf.NewBooleanConditionOutcome()
+	o.SetValue(false)
+	name, _ := conditionOutcomeNameFlowGen(o)
+	if name != "false" {
+		t.Errorf("got %q, want %q", name, "false")
+	}
+}
+
+func TestConditionOutcomeNameFlowGen_Void(t *testing.T) {
+	o := genWf.NewVoidConditionOutcome()
+	name, _ := conditionOutcomeNameFlowGen(o)
+	if name != "default" {
+		t.Errorf("got %q, want %q", name, "default")
+	}
+}
+
+// Enum outcomes must be output as single-quoted fully-qualified names so that
+// the MDL round-trip is valid and BSON stores the correct format.
+func TestConditionOutcomeNameFlowGen_EnumFullQualifiedWithQuotes(t *testing.T) {
+	o := genWf.NewEnumerationValueConditionOutcome()
+	o.SetValueQualifiedName("Module.MyEnum.MyValue")
+	name, _ := conditionOutcomeNameFlowGen(o)
+	if name != "'Module.MyEnum.MyValue'" {
+		t.Errorf("got %q, want %q", name, "'Module.MyEnum.MyValue'")
+	}
+}
+
+func TestConditionOutcomeNameFlowGen_EnumBareNamePreservedInQuotes(t *testing.T) {
+	// Even if BSON has a bare name (existing broken data), describe must still
+	// quote it so the output is at least parseable MDL.
+	o := genWf.NewEnumerationValueConditionOutcome()
+	o.SetValueQualifiedName("Overseas")
+	name, _ := conditionOutcomeNameFlowGen(o)
+	if name != "'Overseas'" {
+		t.Errorf("got %q, want %q", name, "'Overseas'")
+	}
+}
+
+func TestFormatConditionOutcomesGen_EnumIncludesQuotedFullName(t *testing.T) {
+	o := genWf.NewEnumerationValueConditionOutcome()
+	o.SetValueQualifiedName("WF_Engine.ENUM_Region.Overseas")
+
+	lines := formatConditionOutcomesGen([]element.Element{o}, "")
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "'WF_Engine.ENUM_Region.Overseas' -> { }") {
+		t.Errorf("expected quoted full qualified name in output, got:\n%s", joined)
 	}
 }

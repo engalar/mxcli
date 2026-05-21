@@ -993,10 +993,10 @@ func conditionOutcomeNameFlowGen(oc element.Element) (string, *genWf.Flow) {
 		f, _ := v.Flow().(*genWf.Flow)
 		return name, f
 	case *genWf.EnumerationValueConditionOutcome:
-		name := v.ValueQualifiedName()
-		if idx := strings.LastIndex(name, "."); idx >= 0 {
-			name = name[idx+1:]
-		}
+		// Output the full qualified name (Module.EnumName.ValueName) wrapped in
+		// single quotes so the MDL round-trip produces a valid STRING_LITERAL
+		// and BSON stores the format Studio Pro 11.10.0 requires.
+		name := "'" + v.ValueQualifiedName() + "'"
 		f, _ := v.Flow().(*genWf.Flow)
 		return name, f
 	case *genWf.VoidConditionOutcome:

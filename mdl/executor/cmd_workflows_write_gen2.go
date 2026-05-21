@@ -399,6 +399,70 @@ func buildCallWorkflowGenActivity(n *ast.WorkflowCallWorkflowNode) *genWf.CallWo
 	return act
 }
 
+// validateEnumConditionValue returns an error if s is an enum condition value
+// that does not follow the required Module.EnumerationName.ValueName format.
+// Studio Pro 11.10.0 rejects bare names like "Overseas" — they must be stored
+// as fully-qualified identifiers.
+func validateEnumConditionValue(s string) error {
+	switch s {
+	case "True", "False", "Default":
+		return nil
+	}
+	if strings.Count(s, ".") < 2 {
+		return fmt.Errorf(
+			"workflow enum condition value %q must be a fully-qualified name in "+
+				"'Module.EnumerationName.ValueName' format (got %d segment(s), need 3)",
+			s, strings.Count(s, ".")+1,
+		)
+	}
+	return nil
+}
+
+// validateWorkflowActivities recursively checks that all EnumerationValue
+// condition outcomes use fully-qualified names.
+func validateWorkflowActivities(activities []ast.WorkflowActivityNode) error {
+	for _, act := range activities {
+		if err := validateWorkflowActivity(act); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateWorkflowActivity(act ast.WorkflowActivityNode) error {
+	switch v := act.(type) {
+	case *ast.WorkflowDecisionNode:
+		return validateConditionOutcomeNodes(v.Outcomes)
+	case *ast.WorkflowCallMicroflowNode:
+		return validateConditionOutcomeNodes(v.Outcomes)
+	case *ast.WorkflowUserTaskNode:
+		for _, oc := range v.Outcomes {
+			if err := validateWorkflowActivities(oc.Activities); err != nil {
+				return err
+			}
+		}
+	case *ast.WorkflowParallelSplitNode:
+		for _, path := range v.Paths {
+			if err := validateWorkflowActivities(path.Activities); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func validateConditionOutcomeNodes(outcomes []ast.WorkflowConditionOutcomeNode) error {
+	for _, oc := range outcomes {
+		if err := validateEnumConditionValue(oc.Value); err != nil {
+			return err
+		}
+		if err := validateWorkflowActivities(oc.Activities); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // buildConditionOutcomesGen mirrors the outcomes loop in
 // buildCallMicroflowTask (cmd_workflows_write.go:302). Dispatches on
 // AST Value to BooleanConditionOutcome / VoidConditionOutcome /
@@ -600,6 +664,11 @@ func execCreateWorkflowGen(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 		wf.SetExportLevel(s.ExportLevel)
 	}
 	wf.SetDueDate(s.DueDate)
+
+	// Validate enum condition outcome values before building BSON.
+	if err := validateWorkflowActivities(s.Activities); err != nil {
+		return err
+	}
 
 	// Build flow with implicit Start + user activities + End.
 	startAct := genWf.NewStartWorkflowActivity()

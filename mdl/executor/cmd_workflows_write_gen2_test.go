@@ -768,3 +768,93 @@ func TestBuildWorkflowActivitiesGen_DispatchesLeafTypes(t *testing.T) {
 		}
 	}
 }
+
+// ---------------------------------------------------------------------------
+// validateEnumConditionValue + validateWorkflowActivities
+// (Fix for Studio Pro 11.10.0 EnumerationValueIdentifier rejection)
+// ---------------------------------------------------------------------------
+
+func TestValidateEnumConditionValue_FullyQualifiedPasses(t *testing.T) {
+	if err := validateEnumConditionValue("Module.MyEnum.MyValue"); err != nil {
+		t.Errorf("unexpected error for 3-part name: %v", err)
+	}
+}
+
+func TestValidateEnumConditionValue_BareNameReturnsError(t *testing.T) {
+	err := validateEnumConditionValue("Overseas")
+	if err == nil {
+		t.Fatal("expected error for bare enum name")
+	}
+	if !strings.Contains(err.Error(), "fully-qualified") {
+		t.Errorf("error message should mention fully-qualified: %v", err)
+	}
+}
+
+func TestValidateEnumConditionValue_TwoPartReturnsError(t *testing.T) {
+	err := validateEnumConditionValue("Enum.Value")
+	if err == nil {
+		t.Fatal("expected error for 2-part name")
+	}
+}
+
+func TestValidateEnumConditionValue_KeywordsPass(t *testing.T) {
+	for _, kw := range []string{"True", "False", "Default"} {
+		if err := validateEnumConditionValue(kw); err != nil {
+			t.Errorf("keyword %q should not error: %v", kw, err)
+		}
+	}
+}
+
+func TestValidateWorkflowActivities_BareEnumInDecision_ReturnsError(t *testing.T) {
+	acts := []ast.WorkflowActivityNode{
+		&ast.WorkflowDecisionNode{
+			Outcomes: []ast.WorkflowConditionOutcomeNode{
+				{Value: "Overseas"},
+			},
+		},
+	}
+	err := validateWorkflowActivities(acts)
+	if err == nil {
+		t.Fatal("expected error for bare enum value in decision")
+	}
+	if !strings.Contains(err.Error(), "Overseas") {
+		t.Errorf("error should mention the bad value: %v", err)
+	}
+}
+
+func TestValidateWorkflowActivities_QualifiedEnumPasses(t *testing.T) {
+	acts := []ast.WorkflowActivityNode{
+		&ast.WorkflowDecisionNode{
+			Outcomes: []ast.WorkflowConditionOutcomeNode{
+				{Value: "WF_Engine.ENUM_Region.Overseas"},
+				{Value: "Default"},
+			},
+		},
+	}
+	if err := validateWorkflowActivities(acts); err != nil {
+		t.Errorf("unexpected error for qualified name: %v", err)
+	}
+}
+
+func TestValidateWorkflowActivities_NestedBareEnumReturnsError(t *testing.T) {
+	acts := []ast.WorkflowActivityNode{
+		&ast.WorkflowDecisionNode{
+			Outcomes: []ast.WorkflowConditionOutcomeNode{
+				{
+					Value: "True",
+					Activities: []ast.WorkflowActivityNode{
+						&ast.WorkflowDecisionNode{
+							Outcomes: []ast.WorkflowConditionOutcomeNode{
+								{Value: "Domestic"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	err := validateWorkflowActivities(acts)
+	if err == nil {
+		t.Fatal("expected error for nested bare enum value")
+	}
+}

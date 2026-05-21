@@ -341,7 +341,7 @@ func (m *mprWorkflowMutator) DropBranch(activityRef string, atPos int, branchNam
 				}
 			default:
 				value := dGetString(oDoc, "Value")
-				if value == branchName {
+				if enumConditionMatches(value, branchName) {
 					found = true
 					continue
 				}
@@ -455,6 +455,37 @@ func (m *mprWorkflowMutator) InsertPathGen(activityRef string, atPos int, pathCa
 	return nil
 }
 
+// requireQualifiedEnumConditionValue returns an error if condition is an
+// enumeration value that is not in the required Module.EnumName.ValueName format.
+// Studio Pro 11.10.0 enforces this format via EnumerationValueIdentifier validation.
+func requireQualifiedEnumConditionValue(condition string) error {
+	switch strings.ToLower(condition) {
+	case "true", "false", "default":
+		return nil
+	}
+	if strings.Count(condition, ".") < 2 {
+		return fmt.Errorf(
+			"workflow enum condition value %q must be a fully-qualified name in "+
+				"'Module.EnumerationName.ValueName' format (got %d segment(s), need 3)",
+			condition, strings.Count(condition, ".")+1,
+		)
+	}
+	return nil
+}
+
+// enumConditionMatches returns true if the BSON Value field of an
+// EnumerationValueConditionOutcome matches branchName. It first tries an exact
+// match, then a bare-name suffix match so users can drop outcomes by their short
+// name even if the BSON stores the fully-qualified form (or vice versa for
+// existing projects that stored bare names).
+func enumConditionMatches(bsonValue, branchName string) bool {
+	if bsonValue == branchName {
+		return true
+	}
+	// Suffix match: "Overseas" matches "WF_Engine.ENUM_Region.Overseas"
+	return strings.HasSuffix(bsonValue, "."+branchName)
+}
+
 func (m *mprWorkflowMutator) InsertBranchGen(activityRef string, atPos int, condition string, activities []element.Element) error {
 	actDoc, err := m.findActivityByCaption(activityRef, atPos)
 	if err != nil {
@@ -480,6 +511,9 @@ func (m *mprWorkflowMutator) InsertBranchGen(activityRef string, atPos int, cond
 			{Key: "$Type", Value: "Workflows$VoidConditionOutcome"},
 		}
 	default:
+		if err := requireQualifiedEnumConditionValue(condition); err != nil {
+			return err
+		}
 		outcomeDoc = bson.D{
 			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 			{Key: "$Type", Value: "Workflows$EnumerationValueConditionOutcome"},
