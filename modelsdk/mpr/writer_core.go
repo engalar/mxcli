@@ -36,6 +36,26 @@ func idToBsonBinary(id string) primitive.Binary {
 // Writer provides methods to write Mendix project files.
 type Writer struct {
 	reader *Reader
+	// sessionBuf, when non-nil, diverts updateUnit calls to a buffering
+	// callback instead of going to disk. Used by import-style flows that
+	// want to batch many unit updates into a single transaction.
+	sessionBuf func(unitID string, contents []byte) error
+}
+
+// SetSessionBuf installs a callback that intercepts every updateUnit call.
+// While set, updateUnit short-circuits to fn and skips all disk/SQLite work.
+// Callers (typically batch-import flows) are responsible for flushing the
+// buffered bytes back to disk before calling ClearSessionBuf.
+//
+// Pass nil to disable; ClearSessionBuf is the preferred way to do that.
+func (w *Writer) SetSessionBuf(fn func(unitID string, contents []byte) error) {
+	w.sessionBuf = fn
+}
+
+// ClearSessionBuf removes any installed sessionBuf callback so subsequent
+// updateUnit calls resume normal disk-backed writes.
+func (w *Writer) ClearSessionBuf() {
+	w.sessionBuf = nil
 }
 
 // NewWriter creates a new writer from a reader opened in read-write mode.
@@ -426,6 +446,12 @@ func (w *Writer) insertUnit(unitID, containerID, containmentName, unitType strin
 func (w *Writer) updateUnit(unitID string, contents []byte) error {
 	if err := validateNoPlaceholderIDs(unitID, contents); err != nil {
 		return err
+	}
+
+	// Session mode: divert to in-memory buffer and skip all disk/SQLite work.
+	// The caller (e.g. ImportProject) is responsible for flushing later.
+	if w.sessionBuf != nil {
+		return w.sessionBuf(unitID, contents)
 	}
 
 	// Convert UUID string to 16-byte blob
