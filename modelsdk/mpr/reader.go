@@ -39,6 +39,11 @@ type Reader struct {
 	// Cache for unit metadata to avoid repeated file reads
 	unitCache      []cachedUnit
 	unitCacheValid bool
+
+	// overlay holds unit bytes injected by BufferedUnitStore so that reads
+	// within the same import file see buffered (uncommitted) writes.
+	// nil means no overlay is active — zero cost on the normal path.
+	overlay map[string][]byte
 }
 
 // cachedUnit stores metadata about a unit for fast filtering.
@@ -316,8 +321,33 @@ func (r *Reader) GetMendixVersion() (string, error) {
 	return version, nil
 }
 
+// SetOverlay registers in-memory bytes for unitID so that GetRawUnitBytes
+// returns them without hitting disk. Called by BufferedUnitStore.Write.
+func (r *Reader) SetOverlay(unitID string, data []byte) {
+	if r.overlay == nil {
+		r.overlay = make(map[string][]byte)
+	}
+	r.overlay[unitID] = data
+}
+
+// ClearOverlay removes a single unitID from the overlay.
+func (r *Reader) ClearOverlay(unitID string) {
+	delete(r.overlay, unitID)
+}
+
+// ClearAllOverlays removes all overlay entries. Called on DisableImportBuffer.
+func (r *Reader) ClearAllOverlays() {
+	r.overlay = nil
+}
+
 // GetRawUnitBytes returns the raw BSON bytes for a unit identified by its UUID string.
 func (r *Reader) GetRawUnitBytes(unitID string) ([]byte, error) {
+	// Fast path: return buffered bytes injected by BufferedUnitStore if present.
+	if len(r.overlay) > 0 {
+		if data, ok := r.overlay[unitID]; ok {
+			return data, nil
+		}
+	}
 	if r.version == MPRVersionV2 {
 		// For v2, we need the swapped UUID to build the file path.
 		// The unitID is in standard UUID format; readMprContents expects

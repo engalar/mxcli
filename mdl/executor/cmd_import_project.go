@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 
+	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
+	"github.com/mendixlabs/mxcli/mdl/backend/unitstore"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 )
 
@@ -89,6 +91,15 @@ func (e *Executor) ImportProject(inputDir string, opts ImportOptions) error {
 		progress = func(string) {}
 	}
 
+	// Activate the import buffer: all updateUnit calls are buffered in memory
+	// and flushed to disk as a single SQLite transaction per .mdl file.
+	// This eliminates ~50 per-statement transactions per file (5-10x fewer I/O ops).
+	var importBuf *unitstore.BufferedUnitStore
+	if mprBE, ok := ctx.Backend.(*mprbackend.MprBackend); ok {
+		importBuf = mprBE.EnableImportBuffer()
+		defer mprBE.DisableImportBuffer()
+	}
+
 	var allFiles []string
 	if err := filepath.WalkDir(inputDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -156,11 +167,27 @@ func (e *Executor) ImportProject(inputDir string, opts ImportOptions) error {
 
 		progress(fmt.Sprintf("  [exec]     %s", rel))
 		if err := e.ExecuteProgram(prog); err != nil {
+			// Discard buffered writes for this file — they are invalid.
+			if importBuf != nil {
+				importBuf.Discard()
+			}
 			msg := fmt.Sprintf("exec %s: %v", rel, err)
 			if !opts.SkipErrors {
 				return fmt.Errorf("%s", msg)
 			}
 			errs = append(errs, msg)
+			continue
+		}
+
+		// Flush buffered writes for this file to disk as a single transaction.
+		if importBuf != nil {
+			if flushErr := importBuf.Flush(); flushErr != nil {
+				msg := fmt.Sprintf("flush %s: %v", rel, flushErr)
+				if !opts.SkipErrors {
+					return fmt.Errorf("%s", msg)
+				}
+				errs = append(errs, msg)
+			}
 		}
 	}
 

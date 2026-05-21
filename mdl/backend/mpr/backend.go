@@ -12,6 +12,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
+	"github.com/mendixlabs/mxcli/mdl/backend/unitstore"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
@@ -61,6 +62,11 @@ type MprBackend struct {
 	// opening a fresh per-statement transaction so the whole script is
 	// atomic — see backend.ScriptTransaction.
 	activeScriptTx *modelsdkmpr.WriteTransaction
+
+	// unitBuf is non-nil when an ImportSession is active.
+	// writeUnitContents routes writes through the buffer instead of opening
+	// individual SQLite transactions. Reads are satisfied from the overlay.
+	unitBuf *unitstore.BufferedUnitStore
 }
 
 // New creates a new unconnected MprBackend. Call Connect(path) to open a project.
@@ -1375,3 +1381,77 @@ func (b *MprBackend) UpdateDomainModelGen(dm *genDm.DomainModel) error {
 	}
 	return mprrepos.NewDomainModelRepository(w).Update(dm)
 }
+
+// ---------------------------------------------------------------------------
+// Import performance: BufferedUnitStore
+// ---------------------------------------------------------------------------
+
+// MprUnitPersistence implements unitstore.UnitPersistence for MprBackend.
+type MprUnitPersistence struct {
+	b *MprBackend
+}
+
+// NewUnitPersistence returns a UnitPersistence backed by this MprBackend.
+func (b *MprBackend) NewUnitPersistence() *MprUnitPersistence {
+	return &MprUnitPersistence{b: b}
+}
+
+// Load reads raw BSON bytes for a single unit. Satisfies unitstore.UnitPersistence.
+func (p *MprUnitPersistence) Load(id model.ID) ([]byte, error) {
+	data, err := p.b.msdkReader.GetRawUnitBytes(string(id))
+	if err != nil {
+		return nil, fmt.Errorf("load unit %s: %w", id, err)
+	}
+	return data, nil
+}
+
+// BatchStore writes all units in a single SQLite transaction. Satisfies unitstore.UnitPersistence.
+func (p *MprUnitPersistence) BatchStore(units map[model.ID][]byte) error {
+	if p.b.msdkWriter == nil {
+		return fmt.Errorf("BatchStore: modelsdk writer not initialized")
+	}
+	wtx, err := p.b.msdkWriter.BeginWriteTransaction()
+	if err != nil {
+		return fmt.Errorf("BatchStore: begin tx: %w", err)
+	}
+	for id, data := range units {
+		if err := wtx.WriteUnit(string(id), data); err != nil {
+			_ = wtx.Rollback()
+			return fmt.Errorf("BatchStore: write unit %s: %w", id, err)
+		}
+	}
+	if err := wtx.Commit(); err != nil {
+		return fmt.Errorf("BatchStore: commit: %w", err)
+	}
+	p.b.msdkReader.InvalidateCache()
+	return nil
+}
+
+// BatchHash computes SHA-256 hex for each unit. Satisfies unitstore.UnitPersistence.
+func (p *MprUnitPersistence) BatchHash(units map[model.ID][]byte) (map[model.ID]string, error) {
+	out := make(map[model.ID]string, len(units))
+	for id, data := range units {
+		h := mprUnitSHA256Hex(data)
+		out[id] = h
+	}
+	return out, nil
+}
+
+// EnableImportBuffer activates the BufferedUnitStore for an import session.
+// All writeUnitContents calls will be buffered in memory.
+func (b *MprBackend) EnableImportBuffer() *unitstore.BufferedUnitStore {
+	buf := unitstore.New(b.NewUnitPersistence())
+	b.unitBuf = buf
+	return buf
+}
+
+// DisableImportBuffer deactivates the buffer and discards any pending writes.
+func (b *MprBackend) DisableImportBuffer() {
+	if b.unitBuf != nil {
+		b.unitBuf.Discard()
+		b.unitBuf = nil
+		b.msdkReader.ClearAllOverlays()
+	}
+}
+
+var _ unitstore.UnitPersistence = (*MprUnitPersistence)(nil)
