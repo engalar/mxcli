@@ -102,6 +102,12 @@ mx "create user role BasicUser (RoundtripModule.Viewer);"
 
 mx "create user role PowerUser (RoundtripModule.Editor);"
 
+# Java Action (stub — body is ignored by Studio Pro at load time)
+mx "create java action RoundtripModule.ExternalCall (InputText: String) returns String
+as \$\$
+// stub
+\$\$;"
+
 # Copy result to testdata/roundtrip/
 cp "${CREATED_MPR}" "${OUT_MPR}"
 MPR_DIR="$(dirname "${CREATED_MPR}")"

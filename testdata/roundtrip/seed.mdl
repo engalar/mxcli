@@ -61,3 +61,10 @@ create user role BasicUser (RoundtripModule.Viewer);
 
 create user role PowerUser (RoundtripModule.Editor);
 /
+
+-- Java Action (stub — body is ignored by Studio Pro at load time)
+create java action RoundtripModule.ExternalCall (InputText: String) returns String
+as $$
+// stub
+$$;
+/
