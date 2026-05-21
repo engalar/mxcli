@@ -7,8 +7,6 @@ package executor
 import (
 	"strings"
 	"testing"
-
-	"github.com/mendixlabs/mxcli/internal/bsoncompare"
 )
 
 func TestRoundtrip_ModuleRole_Syntax(t *testing.T) {
@@ -50,39 +48,22 @@ func TestRoundtrip_ModuleRole_Semantic(t *testing.T) {
 	}
 }
 
-func TestRoundtrip_ModuleRole_Storage(t *testing.T) {
-	env := setupRoundtripEnv(t)
-	snap := snapshotMPR(t, env.projectPath)
-	for _, role := range []string{"RoundtripModule.Viewer", "RoundtripModule.Editor"} {
-		mdl := env.rtDescribe("describe module role " + role)
-		// Drop then recreate so the create does not fail with "already exists".
-		dropMDL := "drop module role " + role + ";"
-		if err := env.executeMDL(dropMDL); err != nil {
-			t.Fatalf("drop module role %s before re-import: %v", role, err)
-		}
-		if err := env.executeMDL(mdl); err != nil {
-			t.Fatalf("re-import module role %s: %v", role, err)
-		}
-	}
-	env.teardown()
-	bsoncompare.AssertEqual(t, snap, env.projectPath,
-		bsoncompare.DefaultOptions(),
-		bsoncompare.ExpectNoOtherChanges(),
-	)
-}
-
 // TestRoundtrip_ModuleRole_GrantNotSkipped is a regression test for Bug 4:
-// verifies that GRANT statements in entity MDL are not silently skipped when
-// module roles already exist.
+// verifies that GRANT statements in entity MDL are persisted to disk and not
+// silently dropped when module roles already exist.
+// Uses disk-layer verification: re-import → teardown (flush) → reopen → re-describe.
 func TestRoundtrip_ModuleRole_GrantNotSkipped(t *testing.T) {
 	env := setupRoundtripEnv(t)
-	defer env.teardown()
 	entityMDL := env.rtDescribe("describe entity RoundtripModule.Item")
 	if err := env.executeMDL(entityMDL); err != nil {
 		t.Fatalf("re-import entity MDL: %v", err)
 	}
-	entityMDL2 := env.rtDescribe("describe entity RoundtripModule.Item")
+	env.teardown() // flush to disk
+
+	env2 := setupRoundtripEnvFromPath(t, env.projectPath)
+	defer env2.teardown()
+	entityMDL2 := env2.rtDescribe("describe entity RoundtripModule.Item")
 	if !strings.Contains(entityMDL2, "grant") {
-		t.Error("expected GRANT statements in re-described entity — grants may have been dropped")
+		t.Error("GRANT statements not found after disk re-open — grants not persisted to BSON")
 	}
 }

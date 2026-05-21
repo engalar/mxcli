@@ -742,3 +742,21 @@ func normalizeRoundtrip(mdl string) string {
 	}
 	return normalizeMDL(mdl, cfg)
 }
+
+// setupRoundtripEnvFromPath 连接到已有的 MPR 文件路径（不复制）。
+// 用于在 teardown 强制写盘后重新打开同一文件做磁盘层验证。
+func setupRoundtripEnvFromPath(t *testing.T, mprPath string) *testEnv {
+	t.Helper()
+	output := &bytes.Buffer{}
+	exec := New(output)
+	exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	if err := exec.Execute(&ast.ConnectStmt{Path: mprPath}); err != nil {
+		t.Fatalf("setupRoundtripEnvFromPath: connect to %s: %v", mprPath, err)
+	}
+	return &testEnv{
+		t:           t,
+		executor:    exec,
+		output:      output,
+		projectPath: mprPath,
+	}
+}
