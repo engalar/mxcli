@@ -1,0 +1,17 @@
+-- Bug regression: CE1834 — user task must have TaskPage in BSON
+-- After fix: CREATE WORKFLOW with 'page Module.PageName' should write TaskPage to BSON.
+-- Verify: open in Mendix Studio Pro → should show 0 CE1834 errors for this workflow.
+
+create or modify persistent entity BugTest1834.WfCtx (Id: Integer);
+
+create page BugTest1834.ApprovalPage (layout: PopupLayout) { };
+
+create workflow BugTest1834.WF_CE1834_Test
+  parameter $WfCtx: BugTest1834.WfCtx
+begin
+  user task ApproveStep 'Approve'
+    page BugTest1834.ApprovalPage
+    targeting xpath '[%CurrentUser%]'
+    outcomes
+      'Done' { };
+end workflow

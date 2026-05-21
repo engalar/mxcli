@@ -250,13 +250,11 @@ func buildSingleUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.SingleUs
 	if n.TaskDescription != "" {
 		task.SetTaskDescription(newStringTemplateGen(n.TaskDescription))
 	}
-	// ▼ CE1834 fix
 	if n.Page.Module != "" && n.Page.Name != "" {
 		pr := genWf.NewPageReference()
 		pr.SetPageQualifiedName(n.Page.Module + "." + n.Page.Name)
 		task.SetTaskPage(pr)
 	}
-	// ▲ CE1834 fix
 	if tgt := buildUserTargetingGen(n.Targeting); tgt != nil {
 		task.SetUserTargeting(tgt)
 	}
@@ -278,13 +276,11 @@ func buildMultiUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.MultiUser
 	if n.TaskDescription != "" {
 		task.SetTaskDescription(newStringTemplateGen(n.TaskDescription))
 	}
-	// ▼ CE1834 fix
 	if n.Page.Module != "" && n.Page.Name != "" {
 		pr := genWf.NewPageReference()
 		pr.SetPageQualifiedName(n.Page.Module + "." + n.Page.Name)
 		task.SetTaskPage(pr)
 	}
-	// ▲ CE1834 fix
 	if tgt := buildUserTargetingGen(n.Targeting); tgt != nil {
 		task.SetUserTargeting(tgt)
 	}
