@@ -978,3 +978,73 @@ func TestSanitizeColumnName(t *testing.T) {
 		}
 	}
 }
+
+func TestSetWidgetProperty_LowercasePropName(t *testing.T) {
+	captionDoc := bson.D{
+		{Key: "Items", Value: bson.A{int32(2), bson.D{{Key: "Text", Value: "Old"}}}},
+	}
+	page := makeRawPage(bson.D{
+		{Key: "$Type", Value: "Pages$DynamicText"},
+		{Key: "Name", Value: "txtFoo"},
+		{Key: "Caption", Value: captionDoc},
+	})
+	m := &mprPageMutator{rawData: page, widgetFinder: findBsonWidget}
+	if err := m.SetWidgetProperty("txtFoo", "caption", "New Caption"); err != nil {
+		t.Fatalf("SetWidgetProperty lowercase 'caption' failed: %v", err)
+	}
+}
+
+func TestSetWidgetProperty_ContentClearsContentParams(t *testing.T) {
+	templateDoc := bson.D{
+		{Key: "Items", Value: bson.A{int32(2), bson.D{{Key: "Text", Value: "{1}"}}}},
+	}
+	contentDoc := bson.D{
+		{Key: "Template", Value: templateDoc},
+		{Key: "Parameters", Value: bson.A{int32(2), bson.D{{Key: "AttributePath", Value: "Module.Entity/Attr"}}}},
+	}
+	page := makeRawPage(bson.D{
+		{Key: "$Type", Value: "Pages$DynamicText"},
+		{Key: "Name", Value: "txtLabel"},
+		{Key: "Content", Value: contentDoc},
+	})
+	m := &mprPageMutator{rawData: page, widgetFinder: findBsonWidget}
+
+	if err := m.SetWidgetProperty("txtLabel", "content", "Fixed Heading"); err != nil {
+		t.Fatalf("SetWidgetProperty content with ContentParams: %v", err)
+	}
+
+	result := findBsonWidget(page, "txtLabel")
+	if result == nil {
+		t.Fatal("widget not found after SET")
+	}
+	content := dGetDoc(result.widget, "Content")
+	if content == nil {
+		t.Fatal("Content field gone")
+	}
+	tmpl := dGetDoc(content, "Template")
+	if tmpl == nil {
+		t.Fatal("Template field gone")
+	}
+	items := dGetArrayElements(dGet(tmpl, "Items"))
+	if len(items) == 0 {
+		t.Fatal("Items array empty")
+	}
+	item0, ok := items[0].(bson.D)
+	if !ok {
+		t.Fatalf("items[0] not bson.D: %T", items[0])
+	}
+	var textVal string
+	for _, e := range item0 {
+		if e.Key == "Text" {
+			textVal, _ = e.Value.(string)
+		}
+	}
+	if textVal != "Fixed Heading" {
+		t.Errorf("Text = %q, want %q", textVal, "Fixed Heading")
+	}
+
+	params := dGetArrayElements(dGet(content, "Parameters"))
+	if len(params) > 0 {
+		t.Errorf("Parameters not cleared: still has %d entries", len(params))
+	}
+}

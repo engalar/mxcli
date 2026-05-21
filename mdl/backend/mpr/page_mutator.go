@@ -1368,7 +1368,15 @@ func applyPageLevelSetMut(rawData bson.D, prop string, value any) error {
 }
 
 func setRawWidgetPropertyMut(widget bson.D, propName string, value any) error {
-	switch propName {
+	// Normalise first character to upper-case for the built-in PascalCase
+	// switch below: MDL docs use lowercase (content, caption, label) but
+	// pluggable widget PropertyKeys remain camelCase, so we keep propName
+	// untouched for the default branch.
+	switchName := propName
+	if len(switchName) > 0 {
+		switchName = strings.ToUpper(switchName[:1]) + switchName[1:]
+	}
+	switch switchName {
 	case "Caption":
 		return setWidgetCaptionMut(widget, value)
 	case "Content":
@@ -1449,6 +1457,8 @@ func setWidgetContentMut(widget bson.D, value any) error {
 	if len(items) > 0 {
 		if itemDoc, ok := items[0].(bson.D); ok {
 			dSet(itemDoc, "Text", strVal)
+			// Clear ContentParams so the template is self-contained plain text.
+			dSet(content, "Parameters", bson.A{int32(1)})
 			return nil
 		}
 	}
