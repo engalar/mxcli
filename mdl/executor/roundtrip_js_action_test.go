@@ -10,8 +10,11 @@ import (
 // returns a well-formed output for an existing JS action in the roundtrip project (L1).
 //
 // MDL has no `create javascript action` syntax, so JS actions cannot be provisioned
-// via seed.mdl. This test targets FeedbackModule.JS_isStrictMode, which is imported
-// as a marketplace module and is always present in the roundtrip.mpr.
+// via seed.mdl. This test targets FeedbackModule.JS_isStrictMode, which is part of the
+// default mx create-project template for Mendix 11.6.6 and is present in
+// the committed testdata/roundtrip/mprcontents/. If recreate.sh is rerun
+// with a Mendix version that no longer includes FeedbackModule by default,
+// a self-hosted JS action in RoundtripModule should be added to seed.mdl instead.
 //
 // L2/L3 are skipped: the describe output is not valid re-importable MDL
 // (no `create javascript action` grammar rule exists).
