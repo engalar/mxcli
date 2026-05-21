@@ -16,6 +16,7 @@ package executor
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 )
@@ -145,10 +146,13 @@ func (v *flowValidator) validateStatement(stmt ast.MicroflowStatement) {
 		}
 
 	case *ast.MfSetStmt:
+		name := strippedVarName(s.Target)
 		if !v.isVariableDeclared(s.Target) {
 			v.addErrorWithExample(
 				fmt.Sprintf("variable '%s' is not declared", s.Target),
 				errorExampleDeclareVariable(s.Target))
+		} else if listType, ok := v.varTypes[name]; ok && strings.HasPrefix(listType, "List of ") {
+			v.addError("cannot use 'set' on list variable '$%s' — use 'add ... to $%s' or re-assign via create list (CE7247)", name, name)
 		}
 
 	case *ast.IfStmt:
