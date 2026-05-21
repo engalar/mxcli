@@ -502,18 +502,24 @@ func applyWidgetAppearanceGen(widget element.Element, w *ast.WidgetV3, theme *Th
 		for _, p := range astProps {
 			switch strings.ToLower(p.Value) {
 			case "on":
+				dpv := genPg.NewDesignPropertyValue()
+				assignFreshID(dpv)
+				dpv.SetKey(p.Key)
 				t := genPg.NewToggleDesignPropertyValue()
 				assignFreshID(t)
-				setRawBSONField(t, "Key", p.Key)
-				appearance.AddDesignProperties(t)
+				dpv.SetValue(t)
+				appearance.AddDesignProperties(dpv)
 			case "off":
 				// OFF means toggle absence — skip
 			default:
+				dpv := genPg.NewDesignPropertyValue()
+				assignFreshID(dpv)
+				dpv.SetKey(p.Key)
 				o := genPg.NewOptionDesignPropertyValue()
 				assignFreshID(o)
-				setRawBSONField(o, "Key", p.Key)
 				o.SetOption(p.Value)
-				appearance.AddDesignProperties(o)
+				dpv.SetValue(o)
+				appearance.AddDesignProperties(dpv)
 			}
 		}
 
