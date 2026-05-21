@@ -103,6 +103,7 @@ dataType
     | CURRENCY_TYPE
     | FLOAT_TYPE
     | STRINGTEMPLATE_TYPE LPAREN templateContext RPAREN  // StringTemplate(Sql) etc.
+    | ENTITY NOT_EQUALS                                // ENTITY <> anonymous type parameter (param name used)
     | ENTITY LESS_THAN IDENTIFIER GREATER_THAN         // ENTITY <pEntity> type parameter declaration
     | ENUM_TYPE qualifiedName
     | ENUMERATION LPAREN qualifiedName RPAREN  // Enumeration(Module.Enum) syntax

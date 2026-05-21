@@ -338,7 +338,13 @@ func buildDataType(ctx parser.IDataTypeContext) ast.DataType {
 		return ast.DataType{Kind: ast.TypeStringTemplate, TemplateContext: templateContext}
 	}
 
-	// Handle ENTITY <pEntity> — type parameter declaration for Java actions
+	// Handle ENTITY <> — anonymous type parameter; caller fills in the name from parameter name
+	// (<> is lexed as NOT_EQUALS token, not LESS_THAN+GREATER_THAN)
+	if dtCtx.ENTITY() != nil && dtCtx.NOT_EQUALS() != nil {
+		return ast.DataType{Kind: ast.TypeEntityTypeParam, TypeParamName: ""}
+	}
+
+	// Handle ENTITY <pEntity> — named type parameter declaration for Java actions
 	if dtCtx.ENTITY() != nil && dtCtx.LESS_THAN() != nil && dtCtx.IDENTIFIER() != nil {
 		return ast.DataType{
 			Kind:          ast.TypeEntityTypeParam,

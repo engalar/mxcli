@@ -962,6 +962,15 @@ func astDataTypeToJavaActionParamTypeGen(dt ast.DataType, typeParamIDs map[strin
 		}
 		return etp
 	case ast.TypeEntity, ast.TypeEnumeration:
+		// Check first if this is a bare unqualified name that matches a type parameter
+		// (e.g. InputObject: T where T is a declared type parameter).
+		if dt.EnumRef != nil && dt.EnumRef.Module == "" {
+			if id, ok := typeParamIDs[dt.EnumRef.Name]; ok {
+				pe := genJA.NewParameterizedEntityType()
+				pe.SetTypeParameterID(id)
+				return pe
+			}
+		}
 		// TypeEnumeration with a qualified name is treated as entity
 		// type here; the visitor cannot distinguish entity from
 		// enumeration types for bare qualified names like

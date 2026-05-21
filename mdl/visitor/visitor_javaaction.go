@@ -27,6 +27,10 @@ func (b *Builder) ExitCreateJavaActionStatement(ctx *parser.CreateJavaActionStat
 			}
 			if dt := paramCtx.DataType(); dt != nil {
 				param.Type = buildDataType(dt)
+				// ENTITY <> anonymous type param: use the parameter name as type param name
+				if param.Type.Kind == ast.TypeEntityTypeParam && param.Type.TypeParamName == "" {
+					param.Type.TypeParamName = param.Name
+				}
 			}
 			// Check for NOT NULL constraint
 			if paramCtx.NOT_NULL() != nil {
