@@ -68,18 +68,32 @@ func (b *Builder) ExitCreateJavaActionStatement(ctx *parser.CreateJavaActionStat
 		}
 	}
 
-	// Get Java code from dollar-quoted string
-	if dollarStr := ctx.DOLLAR_STRING(); dollarStr != nil {
-		code := dollarStr.GetText()
-		// Remove the $$ delimiters
-		if len(code) >= 4 && strings.HasPrefix(code, "$$") && strings.HasSuffix(code, "$$") {
-			code = code[2 : len(code)-2]
+	// Parse source blocks: imports / code / extra (or legacy AS $$ ... $$)
+	if sc := ctx.JavaActionSourceClause(); sc != nil {
+		for _, block := range sc.AllJavaActionSourceBlock() {
+			raw := block.DOLLAR_STRING().GetText()
+			// Strip $$ delimiters and trim
+			content := strings.TrimSpace(raw[2 : len(raw)-2])
+
+			if block.AS() != nil {
+				// Backward compat: AS $$ ... $$ → code block with import extraction
+				stmt.JavaCode, stmt.Imports = extractJavaImports(content)
+				continue
+			}
+			switch strings.ToLower(block.IDENTIFIER().GetText()) {
+			case "imports":
+				for _, line := range strings.Split(content, "\n") {
+					line = strings.TrimSpace(line)
+					if line != "" {
+						stmt.Imports = append(stmt.Imports, line)
+					}
+				}
+			case "code":
+				stmt.JavaCode = content
+			case "extra":
+				stmt.ExtraCode = content
+			}
 		}
-		// Trim leading/trailing whitespace but preserve internal formatting
-		code = strings.TrimSpace(code)
-		// Extract import lines so they go into the file-level import section,
-		// not into the executeAction() method body (a common AI agent mistake).
-		stmt.JavaCode, stmt.Imports = extractJavaImports(code)
 	}
 
 	// Check for documentation comment and OR MODIFY/REPLACE from parent createStatement

@@ -566,3 +566,105 @@ func TestJavaAction_OrModify(t *testing.T) {
 		t.Error("Expected CreateOrModify=true")
 	}
 }
+
+// =============================================================================
+// Named source blocks: imports / code / extra (new syntax)
+// =============================================================================
+
+func parseSingleJavaAction(t *testing.T, mdl string) *ast.CreateJavaActionStmt {
+	t.Helper()
+	prog, errs := Build(mdl)
+	if len(errs) > 0 {
+		t.Fatalf("parse error: %v", errs)
+	}
+	if prog == nil || len(prog.Statements) != 1 {
+		got := 0
+		if prog != nil {
+			got = len(prog.Statements)
+		}
+		t.Fatalf("expected 1 statement, got %d", got)
+	}
+	s, ok := prog.Statements[0].(*ast.CreateJavaActionStmt)
+	if !ok {
+		t.Fatalf("expected *ast.CreateJavaActionStmt, got %T", prog.Statements[0])
+	}
+	return s
+}
+
+func TestJavaAction_ThreeBlocks(t *testing.T) {
+	s := parseSingleJavaAction(t, `create java action Mod.Act(Input: string) returns string
+imports $$
+import java.util.List;
+$$
+code $$
+return Input.trim();
+$$
+extra $$
+private String h() { return ""; }
+$$;`)
+
+	if s.JavaCode != "return Input.trim();" {
+		t.Errorf("JavaCode = %q, want %q", s.JavaCode, "return Input.trim();")
+	}
+	if len(s.Imports) != 1 || s.Imports[0] != "import java.util.List;" {
+		t.Errorf("Imports = %v, want [import java.util.List;]", s.Imports)
+	}
+	want := `private String h() { return ""; }`
+	if s.ExtraCode != want {
+		t.Errorf("ExtraCode = %q, want %q", s.ExtraCode, want)
+	}
+}
+
+func TestJavaAction_BackwardCompatAS(t *testing.T) {
+	s := parseSingleJavaAction(t, `create java action Mod.Act() returns string
+as $$
+return "hello";
+$$;`)
+
+	if s.JavaCode != `return "hello";` {
+		t.Errorf("JavaCode = %q", s.JavaCode)
+	}
+}
+
+func TestJavaAction_BackwardCompatAS_WithImportsInBlock(t *testing.T) {
+	s := parseSingleJavaAction(t, `create java action Mod.Act() returns string
+as $$
+import java.util.List;
+return null;
+$$;`)
+
+	if s.JavaCode != "return null;" {
+		t.Errorf("JavaCode = %q, want %q", s.JavaCode, "return null;")
+	}
+	if len(s.Imports) != 1 || s.Imports[0] != "import java.util.List;" {
+		t.Errorf("Imports = %v", s.Imports)
+	}
+}
+
+func TestJavaAction_NoSourceClause(t *testing.T) {
+	s := parseSingleJavaAction(t, `create java action Mod.Act(Input: string) returns string;`)
+
+	if s.JavaCode != "" {
+		t.Errorf("JavaCode = %q, want empty", s.JavaCode)
+	}
+	if s.ExtraCode != "" {
+		t.Errorf("ExtraCode = %q, want empty", s.ExtraCode)
+	}
+	if len(s.Imports) != 0 {
+		t.Errorf("Imports = %v, want empty", s.Imports)
+	}
+}
+
+func TestJavaAction_ImportsOnly(t *testing.T) {
+	s := parseSingleJavaAction(t, `create java action Mod.Act() returns string
+imports $$
+import javax.crypto.Cipher;
+$$;`)
+
+	if len(s.Imports) != 1 || s.Imports[0] != "import javax.crypto.Cipher;" {
+		t.Errorf("Imports = %v", s.Imports)
+	}
+	if s.JavaCode != "" {
+		t.Errorf("JavaCode should be empty, got %q", s.JavaCode)
+	}
+}
