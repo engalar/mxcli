@@ -1,0 +1,56 @@
+-- Module roles FIRST (before entities that grant them)
+create module role RoundtripModule.Viewer;
+/
+
+create module role RoundtripModule.Editor;
+/
+
+-- Enumerations
+create or modify enumeration RoundtripModule.Status (
+    Active caption 'Active',
+    Inactive caption 'Inactive',
+    Pending caption 'Pending'
+);
+/
+
+-- Entities
+create or modify persistent entity RoundtripModule.Category (
+    Label: String(100) not null
+);
+/
+
+create or modify persistent entity RoundtripModule.Item (
+    Name: String(200) not null,
+    Price: Decimal,
+    Status: enumeration(RoundtripModule.Status)
+);
+/
+
+-- Grant access (after module roles exist)
+grant RoundtripModule.Viewer on RoundtripModule.Category (read *);
+/
+
+grant RoundtripModule.Editor on RoundtripModule.Category (create, read *, write *);
+/
+
+grant RoundtripModule.Viewer on RoundtripModule.Item (read *);
+/
+
+grant RoundtripModule.Editor on RoundtripModule.Item (create, read *, write *);
+/
+
+-- Association
+create or modify association RoundtripModule.Item_Category
+    from RoundtripModule.Item to RoundtripModule.Category;
+/
+
+-- Constants
+create or modify constant RoundtripModule.ApiBaseUrl
+type string
+default 'https://example.com';
+/
+
+create or modify constant RoundtripModule.MaxRetries
+type integer
+default 3;
+/
