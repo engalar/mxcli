@@ -5,6 +5,7 @@ package mprbackend
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -123,5 +124,92 @@ func TestUpdateRawUnit_ReturnsErrorWhenMsdkWriterNil(t *testing.T) {
 	err := b.UpdateRawUnit("some-unit-id", []byte("data"))
 	if err == nil {
 		t.Fatal("expected error when msdkWriter is nil, got nil")
+	}
+}
+
+func TestUpdateJavaSourceSections_CodeOnly(t *testing.T) {
+	b, projectRoot := makeJavaFilesBackend(t)
+
+	dir := filepath.Join(projectRoot, "javasource", "mymodule", "actions")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	existing := "package mymodule.actions;\n\nimport com.mendix.systemwideinterfaces.core.IContext;\nimport java.util.List;\n\npublic class MyAction extends UserAction<java.lang.String> {\n\tpublic java.lang.String executeAction() throws Exception {\n\t\t// BEGIN USER CODE\n\t\treturn \"old\";\n\t\t// END USER CODE\n\t}\n\t// BEGIN EXTRA CODE\n\t// END EXTRA CODE\n}\n"
+	if err := os.WriteFile(filepath.Join(dir, "MyAction.java"), []byte(existing), 0644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	if err := b.updateJavaSourceSections("MyModule", "MyAction", "return \"new\";", nil, ""); err != nil {
+		t.Fatalf("updateJavaSourceSections: %v", err)
+	}
+
+	got, _ := os.ReadFile(filepath.Join(dir, "MyAction.java"))
+	content := string(got)
+	if !strings.Contains(content, `return "new";`) {
+		t.Error("expected new code in user code section")
+	}
+	if strings.Contains(content, `return "old";`) {
+		t.Error("old code should be replaced")
+	}
+	if !strings.Contains(content, "import java.util.List;") {
+		t.Error("existing import must be preserved")
+	}
+}
+
+func TestUpdateJavaSourceSections_ImportsMerge(t *testing.T) {
+	b, projectRoot := makeJavaFilesBackend(t)
+
+	dir := filepath.Join(projectRoot, "javasource", "mymodule", "actions")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	existing := "package mymodule.actions;\n\nimport com.mendix.systemwideinterfaces.core.IContext;\nimport java.util.List;\n\npublic class MyAction extends UserAction<java.lang.String> {\n\tpublic java.lang.String executeAction() throws Exception {\n\t\t// BEGIN USER CODE\n\t\t// END USER CODE\n\t}\n\t// BEGIN EXTRA CODE\n\t// END EXTRA CODE\n}\n"
+	if err := os.WriteFile(filepath.Join(dir, "MyAction.java"), []byte(existing), 0644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	newImports := []string{
+		"import java.util.List;",
+		"import javax.crypto.Cipher;",
+	}
+	if err := b.updateJavaSourceSections("MyModule", "MyAction", "", newImports, ""); err != nil {
+		t.Fatalf("updateJavaSourceSections: %v", err)
+	}
+
+	got, _ := os.ReadFile(filepath.Join(dir, "MyAction.java"))
+	content := string(got)
+
+	count := strings.Count(content, "import java.util.List;")
+	if count != 1 {
+		t.Errorf("import java.util.List; appears %d times, want 1", count)
+	}
+	if !strings.Contains(content, "import javax.crypto.Cipher;") {
+		t.Error("new import must be added")
+	}
+}
+
+func TestUpdateJavaSourceSections_ExtraReplace(t *testing.T) {
+	b, projectRoot := makeJavaFilesBackend(t)
+
+	dir := filepath.Join(projectRoot, "javasource", "mymodule", "actions")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	existing := "package mymodule.actions;\nimport com.mendix.systemwideinterfaces.core.IContext;\npublic class MyAction extends UserAction<java.lang.String> {\n\tpublic java.lang.String executeAction() throws Exception {\n\t\t// BEGIN USER CODE\n\t\t// END USER CODE\n\t}\n\t// BEGIN EXTRA CODE\n\tprivate String OLD = \"old\";\n\t// END EXTRA CODE\n}\n"
+	if err := os.WriteFile(filepath.Join(dir, "MyAction.java"), []byte(existing), 0644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	if err := b.updateJavaSourceSections("MyModule", "MyAction", "", nil, "private String NEW = \"new\";"); err != nil {
+		t.Fatalf("updateJavaSourceSections: %v", err)
+	}
+
+	got, _ := os.ReadFile(filepath.Join(dir, "MyAction.java"))
+	content := string(got)
+	if strings.Contains(content, "OLD") {
+		t.Error("old extra code should be replaced")
+	}
+	if !strings.Contains(content, "NEW") {
+		t.Error("new extra code must appear")
 	}
 }
