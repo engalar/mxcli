@@ -126,6 +126,7 @@ func listLintRules(ctx *ExecContext) error {
 	lint.AddRule(rules.NewImageSourceRule())
 	lint.AddRule(rules.NewMissingTranslationsRule())
 	lint.AddRule(rules.NewDataGrid2ColumnRule())
+	lint.AddRule(rules.NewBrokenMFParamRefRule())
 
 	for _, rule := range lint.Rules() {
 		fmt.Fprintf(ctx.Output, "  %s (%s)\n", rule.ID(), rule.Name())

@@ -71,6 +71,16 @@ func NewLintContextFromDB(db catalog.CatalogDB) *LintContext {
 	}
 }
 
+// NewLintContextFromDBAndReader creates a LintContext with both a CatalogDB and a reader.
+// Used in tests that need reader-backed lint rules.
+func NewLintContextFromDBAndReader(db catalog.CatalogDB, reader LintReader) *LintContext {
+	return &LintContext{
+		db:       db,
+		reader:   reader,
+		excluded: make(map[string]bool),
+	}
+}
+
 // SetExcludedModules sets the list of modules to exclude from linting.
 func (ctx *LintContext) SetExcludedModules(modules []string) {
 	ctx.excluded = make(map[string]bool)

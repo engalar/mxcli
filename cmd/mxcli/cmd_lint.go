@@ -139,6 +139,9 @@ Examples:
 		// MPR008 - requires BSON inspection
 		lint.AddRule(rules.NewOverlappingActivitiesRule())
 
+		// MPR015 - detect broken MicroflowCallParameterMapping refs (CE1613 prevention)
+		lint.AddRule(rules.NewBrokenMFParamRefRule())
+
 		// Convention rules (CONV011-CONV014) - require BSON inspection
 		lint.AddRule(rules.NewNoCommitInLoopRule())
 		lint.AddRule(rules.NewExclusiveSplitCaptionRule())
