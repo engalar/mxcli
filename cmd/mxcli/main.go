@@ -101,16 +101,6 @@ Examples:
   mxcli -p app.mpr -c "SHOW ENTITIES"
 `,
 	Version: version,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		projectPath, _ := cmd.Flags().GetString("project")
-		if projectPath == "" {
-			if discovered := discoverProjectPath(); discovered != "" {
-				_ = cmd.Flags().Set("project", discovered)
-				fmt.Fprintf(os.Stderr, "Using project: %s\n", discovered)
-			}
-		}
-		globalJSONFlag, _ = cmd.Flags().GetBool("json")
-	},
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get flags
 		commands, _ := cmd.Flags().GetString("command")
@@ -257,6 +247,19 @@ func init() {
 		if v, err := cmd.Root().PersistentFlags().GetCount("verbose"); err == nil {
 			globalVerboseLevel = v
 		}
+
+		// Auto-discover project if -p not specified
+		if p, _ := cmd.Root().PersistentFlags().GetString("project"); p == "" {
+			if discovered := discoverProjectPath(); discovered != "" {
+				_ = cmd.Root().PersistentFlags().Set("project", discovered)
+				fmt.Fprintf(os.Stderr, "Using project: %s\n", discovered)
+			}
+		}
+
+		// Set global JSON flag
+		globalJSONFlag, _ = cmd.Root().PersistentFlags().GetBool("json")
+
+		// Normalise -p to an absolute path
 		if p, _ := cmd.Root().PersistentFlags().GetString("project"); p != "" {
 			abs, err := filepath.Abs(p)
 			if err != nil {
