@@ -217,10 +217,14 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 	// Inject parameters into the ObjectCollection so they round-trip
 	// alongside the body activities (gen describer walks the collection
 	// looking for MicroflowParameter elements).
-	for _, p := range s.Parameters {
+	// Each parameter gets a staggered Y position so they don't overlap
+	// when opened in Studio Pro.
+	for i, p := range s.Parameters {
 		param := genMf.NewMicroflowParameter()
 		assignFreshID(param)
 		param.SetName(p.Name)
+		param.SetRelativeMiddlePoint(layoutPos(ParameterX, ParameterStartY+i*ParameterSpacingY))
+		param.SetSize(layoutSize(ParameterWidth, ParameterHeight))
 		// Studio Pro stores the type exclusively in VariableType (a
 		// DataTypes child element). The Type() string field is never set.
 		if dt := convertASTToGenDataType(p.Type); dt != nil {

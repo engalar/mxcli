@@ -156,9 +156,6 @@ func init() {
 	codec.DefaultRefRegistry.RegisterRefs("Microflows$MicroflowCallParameterMapping", []codec.RefMeta{
 		{Prop: "Parameter", Kind: codec.RefByName, Target: "Microflows$MicroflowParameter"},
 	})
-	codec.DefaultRefRegistry.RegisterRefs("Mappings$MicroflowCallParameterMappingImpl", []codec.RefMeta{
-		{Prop: "Parameter", Kind: codec.RefByName, Target: "Microflows$MicroflowParameter"},
-	})
 	codec.DefaultRefRegistry.RegisterRefs("Microflows$MicroflowJavaActionParameterValue", []codec.RefMeta{
 		{Prop: "Microflow", Kind: codec.RefByName, Target: "Microflows$Microflow"},
 	})

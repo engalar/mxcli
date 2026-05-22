@@ -7788,6 +7788,8 @@ type MicroflowParameter struct {
 	name *property.Primitive[string]
 	propType *property.Primitive[string]
 	parameterType *property.Part[element.Element]
+	relativeMiddlePoint *property.Primitive[string]
+	size *property.Primitive[string]
 }
 
 // Name returns the value of the name property.
@@ -7820,6 +7822,26 @@ func (o *MicroflowParameter) SetParameterType(v element.Element) {
 	o.parameterType.Set(v)
 }
 
+// RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
+func (o *MicroflowParameter) RelativeMiddlePoint() string {
+	return o.relativeMiddlePoint.Get()
+}
+
+// SetRelativeMiddlePoint sets the value of the relativeMiddlePoint property.
+func (o *MicroflowParameter) SetRelativeMiddlePoint(v string) {
+	o.relativeMiddlePoint.Set(v)
+}
+
+// Size returns the value of the size property.
+func (o *MicroflowParameter) Size() string {
+	return o.size.Get()
+}
+
+// SetSize sets the value of the size property.
+func (o *MicroflowParameter) SetSize(v string) {
+	o.size.Set(v)
+}
+
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowParameter) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
@@ -7827,6 +7849,8 @@ func (o *MicroflowParameter) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "VariableType"); err == nil {
 		o.parameterType.SetFromDecode(child)
 	}
+	o.relativeMiddlePoint.Init(raw)
+	o.size.Init(raw)
 }
 
 // ────────────────────────────────────────────────────────
@@ -14774,7 +14798,11 @@ func initMicroflowParameter() *MicroflowParameter {
 	o.propType.Bind(&o.Base, 1)
 	o.parameterType = property.NewPart[element.Element]("VariableType")
 	o.parameterType.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.name, o.propType, o.parameterType, })
+	o.relativeMiddlePoint = property.NewPrimitive[string]("RelativeMiddlePoint", property.DecodeString)
+	o.relativeMiddlePoint.Bind(&o.Base, 3)
+	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
+	o.size.Bind(&o.Base, 4)
+	o.SetProperties([]element.Property{o.name, o.propType, o.parameterType, o.relativeMiddlePoint, o.size, })
 	return o
 }
 
@@ -16870,11 +16898,6 @@ func init() {
 		return initMicroflowCallAction()
 	})
 	codec.DefaultRegistry.Register("Microflows$MicroflowCallParameterMapping", func() element.Element {
-		o := initMicroflowCallParameterMapping()
-		o.SetTypeName("Microflows$MicroflowCallParameterMapping")
-		return o
-	})
-	codec.DefaultRegistry.Register("Mappings$MicroflowCallParameterMappingImpl", func() element.Element {
 		return initMicroflowCallParameterMapping()
 	})
 	codec.DefaultRegistry.Register("Microflows$MicroflowJavaActionParameterValue", func() element.Element {

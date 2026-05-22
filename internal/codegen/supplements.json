@@ -43,7 +43,6 @@
     "Microflows$VariableExport":              "ExportXmlAction$StringExport",
     "XmlSchemas$XmlElement":                  "XmlSchemas$XmlSchemaContents",
     "Microflows$TemplateArgument":            "Microflows$TemplateParameter",
-    "Microflows$MicroflowCallParameterMapping": "Mappings$MicroflowCallParameterMappingImpl",
     "DocumentTemplates$DataGridColumn":       "Forms$DataGridColumn",
     "Settings$Language":                      "Texts$Language",
     "Settings$WebUIProjectSettingsPart":      "Forms$WebUIProjectSettingsPart",
@@ -69,6 +68,8 @@
     "RetrieveAction.outputVariableName":                 "ResultVariableName",
     "MicroflowParameter.parameterType":                  "VariableType",
     "MicroflowCallAction.outputVariableName":             "ResultVariableName",
+    "JavaActionCallAction.outputVariableName":            "ResultVariableName",
+    "StringTemplate.arguments":                          "Parameters",
     "EntityTypeParameterType.typeParameter":             "TypeParameterPointer",
     "ParameterizedEntityType.typeParameter":             "TypeParameterPointer",
     "GridControlBar.defaultButton":                      "DefaultButtonPointer",
@@ -177,6 +178,10 @@
     "BoundaryEvent": [
       {"name": "eventType", "kind": "Primitive", "primitive_type": "String"},
       {"name": "delay", "kind": "Primitive", "primitive_type": "String"}
+    ],
+    "MicroflowParameter": [
+      {"name": "relativeMiddlePoint", "kind": "Primitive", "primitive_type": "String"},
+      {"name": "size", "kind": "Primitive", "primitive_type": "String"}
     ],
     "JumpToActivity": [],
     "PublishedODataMember": [],

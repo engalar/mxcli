@@ -6368,7 +6368,7 @@ func NewBoundaryEvent() *BoundaryEvent {
 // When a storage alias exists, init uses the STORAGE name (what Mendix uses in BSON).
 func initCallMicroflowActivity() *CallMicroflowActivity {
 	o := &CallMicroflowActivity{}
-	o.SetTypeName("Workflows$CallMicroflowTask") // storage alias: supplements.json Workflows$CallMicroflowActivity → Workflows$CallMicroflowTask
+	o.SetTypeName("Workflows$CallMicroflowTask")
 	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
@@ -8250,6 +8250,11 @@ func init() {
 		return initBoundaryEvent()
 	})
 	codec.DefaultRegistry.Register("Workflows$CallMicroflowActivity", func() element.Element {
+		o := initCallMicroflowActivity()
+		o.SetTypeName("Workflows$CallMicroflowActivity")
+		return o
+	})
+	codec.DefaultRegistry.Register("Workflows$CallMicroflowTask", func() element.Element {
 		return initCallMicroflowActivity()
 	})
 	codec.DefaultRegistry.Register("Workflows$CallMicroflowTask", func() element.Element {

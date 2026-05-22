@@ -1,0 +1,12 @@
+{
+  "name": "mxcli",
+  "version": "1.0.0",
+  "description": "Mendix project tooling — SDK reference for modelsdk codegen",
+  "private": true,
+  "scripts": {
+    "codegen": "go run ./cmd/modelsdk-codegen -gen-dir node_modules/mendixmodelsdk/src/gen"
+  },
+  "dependencies": {
+    "mendixmodelsdk": "4.111.0"
+  }
+}

@@ -28,6 +28,87 @@ import (
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
+// TestMultipleParametersHaveDistinctPositions verifies that when a microflow
+// is created with multiple parameters, each MicroflowParameter in the
+// ObjectCollection gets a unique, non-empty RelativeMiddlePoint.
+// Without this, all parameters overlap at the same coordinates in Studio Pro.
+func TestMultipleParametersHaveDistinctPositions(t *testing.T) {
+	mod := mkModule("MyModule")
+
+	var capturedMF *genMf.Microflow
+	repo := &repostesting.RecordingMicroflowRepository{
+		ListAllFunc: func() ([]*genMf.Microflow, error) { return nil, nil },
+		CreateFunc: func(call repostesting.MicroflowCreateCall) error {
+			capturedMF = call.Microflow
+			return nil
+		},
+	}
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(mkHierarchy(mod)))
+	ctx.Microflows = repo
+
+	stmt := &ast.CreateMicroflowStmt{
+		Name: ast.QualifiedName{Module: "MyModule", Name: "DoWork"},
+		Parameters: []ast.MicroflowParam{
+			{Name: "Param1", Type: ast.DataType{Kind: ast.TypeString}},
+			{Name: "Param2", Type: ast.DataType{Kind: ast.TypeBoolean}},
+			{Name: "Param3", Type: ast.DataType{Kind: ast.TypeInteger}},
+		},
+	}
+
+	if err := execCreateMicroflowGen(ctx, stmt); err != nil {
+		t.Fatalf("execCreateMicroflowGen failed: %v", err)
+	}
+	if capturedMF == nil {
+		t.Fatal("Create was not called — no microflow captured")
+	}
+
+	oc, ok := capturedMF.ObjectCollection().(*genMf.MicroflowObjectCollection)
+	if !ok || oc == nil {
+		t.Fatal("expected non-nil MicroflowObjectCollection")
+	}
+
+	type posGetter interface {
+		element.Element
+		RelativeMiddlePoint() string
+	}
+
+	var paramPositions []string
+	for _, obj := range oc.ObjectsItems() {
+		if obj == nil || obj.TypeName() != "Microflows$MicroflowParameter" {
+			continue
+		}
+		pg, ok := obj.(posGetter)
+		if !ok {
+			t.Errorf("MicroflowParameter does not implement RelativeMiddlePoint()")
+			continue
+		}
+		pos := pg.RelativeMiddlePoint()
+		if pos == "" {
+			t.Errorf("MicroflowParameter %q has empty RelativeMiddlePoint", obj.TypeName())
+		}
+		paramPositions = append(paramPositions, pos)
+	}
+
+	if len(paramPositions) != 3 {
+		t.Fatalf("expected 3 parameters with positions, got %d", len(paramPositions))
+	}
+
+	seen := make(map[string]bool)
+	for _, pos := range paramPositions {
+		if seen[pos] {
+			t.Errorf("duplicate parameter position %q — parameters must not overlap", pos)
+		}
+		seen[pos] = true
+	}
+}
+
 func TestExecCreateMicroflowGenRejectsEmptyName(t *testing.T) {
 	ctx := &ExecContext{}
 	stmt := &ast.CreateMicroflowStmt{

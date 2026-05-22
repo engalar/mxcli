@@ -34,6 +34,15 @@ const (
 	LoopPadding       = 50  // Padding inside loop boxes
 	MinLoopWidth      = 200
 	MinLoopHeight     = 100
+
+	// Parameter layout — MicroflowParameter boxes are placed in a column
+	// above the main flow line (baseY=200), staggered vertically.
+	// Values match what Studio Pro emits for single-parameter microflows.
+	ParameterX        = 200 // X coordinate for all parameter boxes
+	ParameterStartY   = 75  // Y coordinate for the first parameter
+	ParameterSpacingY = 100 // Vertical gap between consecutive parameters
+	ParameterWidth    = 30  // Parameter box width
+	ParameterHeight   = 30  // Parameter box height
 )
 
 // Bounds represents the bounding box of a layout element

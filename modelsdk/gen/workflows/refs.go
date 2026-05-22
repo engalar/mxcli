@@ -19,6 +19,9 @@ func init() {
 	codec.DefaultRefRegistry.RegisterRefs("Workflows$CallMicroflowTask", []codec.RefMeta{
 		{Prop: "Microflow", Kind: codec.RefByName, Target: "Microflows$Microflow"},
 	})
+	codec.DefaultRefRegistry.RegisterRefs("Workflows$CallMicroflowTask", []codec.RefMeta{
+		{Prop: "Microflow", Kind: codec.RefByName, Target: "Microflows$Microflow"},
+	})
 	codec.DefaultRefRegistry.RegisterRefs("Workflows$CallWorkflowActivity", []codec.RefMeta{
 		{Prop: "Workflow", Kind: codec.RefByName, Target: "Workflows$Workflow"},
 	})

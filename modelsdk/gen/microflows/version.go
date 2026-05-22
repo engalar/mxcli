@@ -371,12 +371,6 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"parameter":     {Required: true},
 		},
 	},
-	"Mappings$MicroflowCallParameterMappingImpl": {
-		Properties: map[string]version.PropertyVersionInfo{
-			"argumentModel": {Introduced: "7.9.0", Deleted: "9.8.0", Required: true},
-			"parameter":     {Required: true},
-		},
-	},
 	"Microflows$MicroflowParameterBase": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"name":          {Public: true},
