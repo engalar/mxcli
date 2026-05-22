@@ -30,6 +30,9 @@ LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 # Clean version for VS Code extension (must be valid semver: major.minor.patch)
 VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$$' || echo "0.0.0")
 
+# Max parallel test packages (lower = less memory; override with: make report TEST_P=8)
+TEST_P ?= 4
+
 .PHONY: build build-debug release clean test test-mdl report report-bench report-reset-baseline grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
@@ -38,13 +41,25 @@ define copy-if-changed
 	@if [ ! -f $(2) ] || ! cmp -s $(1) $(2); then cp $(1) $(2); fi
 endef
 
-# Sync skills from .claude/skills/mendix to cmd/mxcli/skills for embedding
+# Sync skills from .claude/skills/mendix to cmd/mxcli/skills for embedding.
+# Supports two layouts:
+#   flat:      .claude/skills/mendix/<name>.md      → cmd/mxcli/skills/<name>.md
+#   directory: .claude/skills/mendix/<name>/SKILL.md → cmd/mxcli/skills/<name>.md (flattened)
 sync-skills:
 	@mkdir -p cmd/mxcli/skills
-	@changed=0; for f in .claude/skills/mendix/*.md; do \
+	@changed=0; \
+	for f in .claude/skills/mendix/*.md; do \
 		dst="cmd/mxcli/skills/$$(basename $$f)"; \
 		if [ ! -f "$$dst" ] || ! cmp -s "$$f" "$$dst"; then \
 			cp "$$f" "$$dst"; changed=$$((changed + 1)); \
+		fi; \
+	done; \
+	for skill_md in .claude/skills/mendix/*/SKILL.md; do \
+		dir=$$(dirname "$$skill_md"); \
+		name=$$(basename "$$dir"); \
+		dst="cmd/mxcli/skills/$${name}.md"; \
+		if [ ! -f "$$dst" ] || ! cmp -s "$$skill_md" "$$dst"; then \
+			cp "$$skill_md" "$$dst"; changed=$$((changed + 1)); \
 		fi; \
 	done; \
 	if [ $$changed -gt 0 ]; then echo "Synced $$changed skill file(s)"; fi
@@ -136,10 +151,10 @@ test:
 # Output: coverage/report.html, coverage/bench-baseline.json
 report:
 	@mkdir -p coverage
-	CGO_ENABLED=0 go test -v -json -coverprofile=coverage/coverage.out ./... > coverage/test-results.json 2>&1 || true
+	CGO_ENABLED=0 go test -v -json -p $(TEST_P) -coverprofile=coverage/coverage.out ./... > coverage/test-results.json 2>&1 || true
 	go tool cover -html=coverage/coverage.out -o coverage/coverage.html 2>/dev/null || true
 	@if command -v benchstat >/dev/null 2>&1; then \
-		CGO_ENABLED=0 go test -bench=. -benchmem -count=3 ./... > coverage/bench-results.txt 2>/dev/null || true; \
+		CGO_ENABLED=0 go test -bench=. -benchmem -count=3 -p $(TEST_P) ./... > coverage/bench-results.txt 2>/dev/null || true; \
 		benchstat coverage/bench-baseline.json coverage/bench-results.txt > coverage/bench-diff.txt 2>/dev/null || true; \
 	fi
 	@if ! command -v benchstat >/dev/null 2>&1; then \
