@@ -67,7 +67,14 @@ func (b *MprBackend) buildDataGrid2WidgetDoc(id model.ID, name string, spec back
 	doc := bson.D{
 		{Key: "$ID", Value: bsonutil.IDToBsonBinary(string(id))},
 		{Key: "$Type", Value: "CustomWidgets$CustomWidget"},
-		{Key: "Appearance", Value: nil},
+		{Key: "Appearance", Value: bson.D{
+			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+			{Key: "$Type", Value: "Forms$Appearance"},
+			{Key: "Class", Value: ""},
+			{Key: "DesignProperties", Value: bson.A{int32(3)}},
+			{Key: "DynamicClasses", Value: ""},
+			{Key: "Style", Value: ""},
+		}},
 		{Key: "ConditionalEditabilitySettings", Value: nil},
 		{Key: "ConditionalVisibilitySettings", Value: nil},
 		{Key: "Editable", Value: "Always"},

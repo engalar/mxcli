@@ -9,7 +9,10 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -979,20 +982,12 @@ func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 			}
 		}
 		return "show_page"
-	case "Forms$MicroflowAction", "Pages$MicroflowClientAction":
-		// Extract microflow reference from MicroflowSettings
-		if settings, ok := action["MicroflowSettings"].(map[string]any); ok {
-			if mfName, ok := settings["Microflow"].(string); ok && mfName != "" {
-				result := "call_microflow " + mfName
-				// Extract parameter mappings
-				params := extractMicroflowParameters(ctx, settings)
-				if params != "" {
-					result += "(" + params + ")"
-				}
-				return result
-			}
+	case "Forms$MicroflowAction", "Forms$MicroflowClientAction", "Pages$MicroflowClientAction":
+		// Decode using gen types — no raw map field access.
+		if mf := decodeMicroflowClientAction(action); mf != nil {
+			return formatPageMicroflowActionGen(mf)
 		}
-		return "call_microflow"
+		return "microflow"
 	case "Forms$CallNanoflowClientAction", "Pages$CallNanoflowClientAction":
 		if nfName, ok := action["Nanoflow"].(string); ok && nfName != "" {
 			result := "call_nanoflow " + nfName
@@ -1296,4 +1291,60 @@ func extractClientTemplateParameters(ctx *ExecContext, w map[string]any, fieldNa
 
 func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 	outputWidgetMDLV3(e.newExecContext(context.Background()), w, indent)
+}
+
+// decodeMicroflowClientAction marshals a raw BSON map back to bytes and
+// decodes it via the gen-type registry, returning the typed value or nil.
+func decodeMicroflowClientAction(action map[string]any) *genPg.MicroflowClientAction {
+	raw, err := bson.Marshal(action)
+	if err != nil {
+		return nil
+	}
+	dec := codec.NewDecoder(codec.DefaultRegistry)
+	elem, err := dec.Decode(bson.Raw(raw))
+	if err != nil {
+		return nil
+	}
+	mca, _ := elem.(*genPg.MicroflowClientAction)
+	return mca
+}
+
+// formatPageMicroflowActionGen formats a MicroflowClientAction using the gen
+// typed API. Output: `microflow Module.Name (Param: $Value)` — the canonical
+// MDLPage.g4 page-action syntax (MICROFLOW keyword, colon-separated args).
+func formatPageMicroflowActionGen(mca *genPg.MicroflowClientAction) string {
+	settings, ok := mca.MicroflowSettings().(*genPg.MicroflowSettings)
+	if !ok || settings == nil {
+		return "microflow"
+	}
+	mfQN := settings.MicroflowQualifiedName()
+	if mfQN == "" {
+		return "microflow"
+	}
+
+	var params []string
+	for _, item := range settings.ParameterMappingsItems() {
+		pm, ok := item.(*genPg.MicroflowParameterMapping)
+		if !ok || pm == nil {
+			continue
+		}
+		paramRef := pm.ParameterQualifiedName()
+		if paramRef == "" {
+			continue
+		}
+		parts := strings.Split(paramRef, ".")
+		paramName := parts[len(parts)-1]
+
+		value := pm.Expression()
+		if value == "" {
+			continue
+		}
+		params = append(params, paramName+": "+value)
+	}
+
+	result := "microflow " + mfQN
+	if len(params) > 0 {
+		result += "(" + strings.Join(params, ", ") + ")"
+	}
+	return result
 }

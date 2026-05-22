@@ -779,15 +779,18 @@ func emitLoopedActivityGen(
 	indentStr string,
 	indent int,
 ) {
-	// Header line: `loop` / `loop $var in $list` / `while <cond>`. The
-	// detailed source-rendering of the LoopSource expression is 3.2.2's
-	// job — emit a placeholder header and let the structural keywords
-	// be exercised by tests.
+	// Header line: `loop $var in $list` / `while <cond>`.
 	header := "loop"
 	endKw := "end loop;"
 	if _, isWhile := loop.LoopSource().(*genMf.WhileLoopCondition); isWhile {
 		header = "while true"
 		endKw = "end while;"
+	} else if il, ok := loop.LoopSource().(*genMf.IterableList); ok && il != nil {
+		iterVar := il.VariableName()
+		listVar := il.ListVariableName()
+		if iterVar != "" && listVar != "" {
+			header = fmt.Sprintf("loop $%s in $%s", iterVar, listVar)
+		}
 	}
 	*lines = append(*lines, indentStr+header)
 	*lines = append(*lines, indentStr+"begin")

@@ -116,8 +116,11 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	// Track the created page so it can be resolved by subsequent page references
 	ctx.trackCreatedPage(s.Name.Module, s.Name.Name, model.ID(genPage.ID()), moduleID)
 
-	// Invalidate hierarchy cache so the new page's container is visible
+	// Invalidate hierarchy cache so the new page's container is visible,
+	// and invalidate the gen page cache so subsequent grant/revoke statements
+	// in the same ExecuteProgram call see this newly created page.
 	invalidateHierarchy(ctx)
+	invalidatePagesGenCache(ctx)
 
 	fmt.Fprintf(ctx.Output, "Created page %s\n", s.Name.String())
 	return nil

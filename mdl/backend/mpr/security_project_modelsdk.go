@@ -36,18 +36,12 @@ func (b *MprBackend) msdkWrite(unitID model.ID, mutateFn func(elem element.Eleme
 	if err != nil {
 		return fmt.Errorf("encode unit: %w", err)
 	}
-	wtx, err := b.msdkWriter.BeginWriteTransaction()
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	if err := wtx.WriteUnit(string(unitID), newBytes); err != nil {
-		_ = wtx.Rollback()
+	// UpdateRawUnit routes through updateUnit(), which checks sessionBuf first.
+	// When EnableImportBuffer is active this keeps the write in the buffer so
+	// importBuf.Flush() can atomically commit entity+grant together.
+	if err := b.msdkWriter.UpdateRawUnit(string(unitID), newBytes); err != nil {
 		return fmt.Errorf("write unit: %w", err)
 	}
-	if err := wtx.Commit(); err != nil {
-		return err
-	}
-	b.msdkReader.InvalidateCache()
 	return nil
 }
 

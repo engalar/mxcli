@@ -101,18 +101,9 @@ func (b *MprBackend) msdkWritePage(unitID model.ID, roles []string, mutateFn fun
 		}
 	}
 
-	wtx, err := b.msdkWriter.BeginWriteTransaction()
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	if err := wtx.WriteUnit(string(unitID), newBytes); err != nil {
-		_ = wtx.Rollback()
+	if err := b.msdkWriter.UpdateRawUnit(string(unitID), newBytes); err != nil {
 		return fmt.Errorf("write unit: %w", err)
 	}
-	if err := wtx.Commit(); err != nil {
-		return err
-	}
-	b.msdkReader.InvalidateCache()
 	return nil
 }
 

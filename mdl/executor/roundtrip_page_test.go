@@ -549,15 +549,13 @@ func TestRoundtripPage_MicroflowButtonWithParams(t *testing.T) {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
 
-	// Verify that the microflow call with parameter is in the output
-	if !strings.Contains(output, "call_microflow") {
-		t.Errorf("Expected call_microflow in describe output.\nOutput:\n%s", output)
+	// Verify that the microflow call with parameter is in the output.
+	// DESCRIBE uses `microflow` keyword (not `call_microflow`) and colon param syntax.
+	if !strings.Contains(output, "microflow "+mfName) {
+		t.Errorf("Expected `microflow %s` in describe output.\nOutput:\n%s", mfName, output)
 	}
-	if !strings.Contains(output, mfName) {
-		t.Errorf("Expected microflow name '%s' in describe output.\nOutput:\n%s", mfName, output)
-	}
-	if !strings.Contains(output, "Product = $Product") {
-		t.Errorf("Expected 'Product = $Product' parameter mapping in describe output.\nOutput:\n%s", output)
+	if !strings.Contains(output, "Product: $Product") {
+		t.Errorf("Expected 'Product: $Product' parameter mapping in describe output.\nOutput:\n%s", output)
 	}
 
 	t.Logf("Microflow button with params roundtrip successful:\n%s", output)

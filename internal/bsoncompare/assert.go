@@ -4,6 +4,8 @@ package bsoncompare
 import (
 	"fmt"
 	"strings"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // TB is the subset of *testing.T used by AssertEqual.
@@ -67,6 +69,36 @@ func (e expectChanged) Match(diffs []UnitDiff, claimed map[string]bool) error {
 		}
 	}
 	return fmt.Errorf("expected unit %q to be changed, but it was not found in diffs", e.name)
+}
+
+// WithUnitCheck returns a Matcher that finds the unit with the given
+// qualified name in the diff list and runs check against its actual BSON
+// document (the bPath / post-mutation side). The unit is claimed on success.
+// Fails if the unit is not found in the diffs or check returns an error.
+func WithUnitCheck(qualifiedName string, check func(bson.D) error) Matcher {
+	return withUnitCheck{name: qualifiedName, check: check}
+}
+
+type withUnitCheck struct {
+	name  string
+	check func(bson.D) error
+}
+
+func (w withUnitCheck) Match(diffs []UnitDiff, claimed map[string]bool) error {
+	for _, d := range diffs {
+		if d.QualifiedName != w.name {
+			continue
+		}
+		if d.ActualDoc == nil {
+			return fmt.Errorf("WithUnitCheck %q: unit was removed (no actual doc)", w.name)
+		}
+		if err := w.check(d.ActualDoc); err != nil {
+			return fmt.Errorf("WithUnitCheck %q: %w", w.name, err)
+		}
+		claimed[w.name] = true
+		return nil
+	}
+	return fmt.Errorf("WithUnitCheck %q: unit not found in diffs", w.name)
 }
 
 // ExpectNoOtherChanges returns a Matcher that passes only when all remaining

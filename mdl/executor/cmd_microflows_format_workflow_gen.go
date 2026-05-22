@@ -102,13 +102,25 @@ func formatGetWorkflowDataActionGen(a *genMf.GetWorkflowDataAction) string {
 // `UseReturnVariable` is true and `OutputVariableName` is set.
 func formatWorkflowCallActionGen(a *genMf.WorkflowCallAction) string {
 	wfQN := a.WorkflowQualifiedName()
-	ctx := a.WorkflowContextVariable()
+	ctxVar := a.WorkflowContextVariable()
+
+	// Grammar: callArgument : (VARIABLE | parameterName) EQUALS expression
+	// The write path stores only the variable name, not the formal parameter name.
+	// Use ctxVar as both the parameter name and the variable to ensure roundtrip
+	// stability: re-executing the output restores the same ctxVar value.
+	var argStr string
+	if ctxVar != "" {
+		argStr = fmt.Sprintf("(%s = $%s)", ctxVar, ctxVar)
+	} else {
+		argStr = "()"
+	}
+
 	if a.UseReturnVariable() {
 		if outVar := a.OutputVariableName(); outVar != "" {
-			return fmt.Sprintf("$%s = call workflow %s ($%s);", outVar, wfQN, ctx)
+			return fmt.Sprintf("$%s = call workflow %s %s;", outVar, wfQN, argStr)
 		}
 	}
-	return fmt.Sprintf("call workflow %s ($%s);", wfQN, ctx)
+	return fmt.Sprintf("call workflow %s %s;", wfQN, argStr)
 }
 
 // ────────────────────────────────────────────────────────

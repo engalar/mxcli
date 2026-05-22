@@ -43,7 +43,12 @@ func Compare(aPath, bPath string, opts Options) ([]UnitDiff, error) {
 		case aok && !bok:
 			result = append(result, UnitDiff{QualifiedName: name, UnitType: au.UnitType, Kind: DiffRemoved})
 		case !aok && bok:
-			result = append(result, UnitDiff{QualifiedName: name, UnitType: bu.UnitType, Kind: DiffAdded})
+			result = append(result, UnitDiff{
+				QualifiedName: name,
+				UnitType:      bu.UnitType,
+				Kind:          DiffAdded,
+				ActualDoc:     bu.Doc,
+			})
 		default:
 			aN := Normalize(au.Doc, idMap, opts)
 			bN := Normalize(bu.Doc, idMap, opts)
@@ -55,6 +60,7 @@ func Compare(aPath, bPath string, opts Options) ([]UnitDiff, error) {
 					UnitType:      au.UnitType,
 					Kind:          DiffChanged,
 					Fields:        fields,
+					ActualDoc:     bu.Doc,
 				})
 			}
 		}

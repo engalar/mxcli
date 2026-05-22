@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/hanwen/go-fuse/v2/fs"
@@ -84,4 +85,26 @@ func (s *Snapshot) Close() error {
 	}
 	s.server.Wait()
 	return os.Remove(s.mountDir)
+}
+
+// DirtyPaths returns the relative paths of all files written or deleted
+// through the overlay since Open, sorted lexicographically. Sentinel files
+// (e.g. Mkdir markers) are excluded. Useful for test write-path audits.
+func (s *Snapshot) DirtyPaths() []string {
+	s.layer.mu.RLock()
+	defer s.layer.mu.RUnlock()
+	paths := make([]string, 0, len(s.layer.files))
+	for k := range s.layer.files {
+		if !isSentinel(k) {
+			paths = append(paths, k)
+		}
+	}
+	sort.Strings(paths)
+	return paths
+}
+
+// ReadDirtyFile returns the current in-memory bytes for a file written
+// through the overlay. Returns nil if the path was not written or was deleted.
+func (s *Snapshot) ReadDirtyFile(relPath string) []byte {
+	return s.layer.read(relPath)
 }

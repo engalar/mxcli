@@ -65,7 +65,9 @@ func TestFormatActionGen_WorkflowCallAction(t *testing.T) {
 		a.SetUseReturnVariable(true)
 		a.SetOutputVariableName("Wf")
 		got := formatActionGen(nil, a)
-		want := "$Wf = call workflow Mod.Process ($Order);"
+		// Grammar requires callArgument: (VARIABLE | parameterName) EQUALS expression.
+		// Write path stores only the variable name; use it as both param name and value.
+		want := "$Wf = call workflow Mod.Process (Order = $Order);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
@@ -78,7 +80,7 @@ func TestFormatActionGen_WorkflowCallAction(t *testing.T) {
 		a.SetUseReturnVariable(false)
 		a.SetOutputVariableName("Wf") // ignored when UseReturnVariable is false
 		got := formatActionGen(nil, a)
-		want := "call workflow Mod.Process ($Order);"
+		want := "call workflow Mod.Process (Order = $Order);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
@@ -90,7 +92,17 @@ func TestFormatActionGen_WorkflowCallAction(t *testing.T) {
 		a.SetWorkflowContextVariable("Order")
 		a.SetUseReturnVariable(true)
 		got := formatActionGen(nil, a)
-		want := "call workflow Mod.Process ($Order);"
+		want := "call workflow Mod.Process (Order = $Order);"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("empty context variable emits empty arg list", func(t *testing.T) {
+		a := genMf.NewWorkflowCallAction()
+		a.SetWorkflowQualifiedName("Mod.Process")
+		got := formatActionGen(nil, a)
+		want := "call workflow Mod.Process ();"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}

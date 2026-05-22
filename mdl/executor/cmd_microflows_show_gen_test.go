@@ -516,3 +516,68 @@ func copyDirForTest(src, dst string) error {
 		return copyOneFileForTest(p, target)
 	})
 }
+
+// TestDescribeMicroflowGen_ListReturnAndLoop is a regression test that
+// ensures the DESCRIBE output for a microflow with a List return type and
+// a foreach loop produces valid MDL that passes the parser without errors.
+//
+// Before the fix:
+//   - ListType was rendered as `List<ShortName>` (invalid syntax)
+//   - LoopedActivity header was rendered as bare `loop` (missing $var IN $list)
+func TestDescribeMicroflowGen_ListReturnAndLoop(t *testing.T) {
+	w := openMprWriterForTest(t)
+	ctx := newGenDescribeContext(t, w)
+
+	be, err := mprbackend.NewFromPath(w.ConcreteReader().Path())
+	if err != nil {
+		t.Fatalf("open backend: %v", err)
+	}
+	t.Cleanup(func() { _ = be.Disconnect() })
+	ex := New(io.Discard)
+	ex.backend = be
+
+	// Create a microflow that exercises both the List return type and a
+	// foreach loop. Administration.Account exists in the fixture MPR.
+	mdl := `create or modify microflow MyFirstModule.TestListLoop (
+  $Accs: List of Administration.Account
+)
+returns List of Administration.Account as $Result
+begin
+  $Result = CREATE LIST OF Administration.Account;
+  LOOP $Acc IN $Accs BEGIN
+    ADD $Acc TO $Result;
+  END LOOP;
+  RETURN $Result;
+end;`
+
+	prog, errs := visitor.Build(mdl)
+	if len(errs) > 0 {
+		t.Fatalf("test MDL parse error: %v", errs[0])
+	}
+	if err := ex.ExecuteProgram(prog); err != nil {
+		t.Fatalf("create microflow failed: %v", err)
+	}
+
+	mf := findMicroflowByQN(t, w, "MyFirstModule.TestListLoop")
+	out, err := DescribeMicroflowGenToString(ctx, mf)
+	if err != nil {
+		t.Fatalf("DescribeMicroflowGenToString: %v", err)
+	}
+
+	// The DESCRIBE output must be re-parseable without errors.
+	_, parseErrs := visitor.Build(out)
+	if len(parseErrs) > 0 {
+		t.Errorf("DESCRIBE output failed to parse (%d error(s)); output:\n%s\nfirst error: %v",
+			len(parseErrs), out, parseErrs[0])
+	}
+
+	// Spot-check: correct list return syntax (not List<...>).
+	if !strings.Contains(out, "returns List of Administration.Account") {
+		t.Errorf("expected `returns List of Administration.Account` in output; got:\n%s", out)
+	}
+
+	// Spot-check: correct loop header with variable names.
+	if !strings.Contains(out, "loop $Acc in $Accs") {
+		t.Errorf("expected `loop $Acc in $Accs` in output; got:\n%s", out)
+	}
+}

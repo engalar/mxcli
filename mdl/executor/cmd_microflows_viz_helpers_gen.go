@@ -644,7 +644,7 @@ func formatDataTypeDisplayGen(dt element.Element) string {
 	case *genDT.ObjectType:
 		return shortName(t.EntityQualifiedName())
 	case *genDT.ListType:
-		return "List<" + shortName(t.EntityQualifiedName()) + ">"
+		return "List of " + t.EntityQualifiedName()
 	case *genDT.EnumerationType:
 		return shortName(t.EnumerationQualifiedName())
 	case *genDT.VoidType:
