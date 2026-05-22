@@ -29,6 +29,10 @@ Thumbs.db
 # Test artifacts
 coverage.out
 coverage.html
+# Test reports (generated, do not commit)
+coverage/*
+# Exception: benchmark baseline IS committed
+!coverage/bench-baseline.json
 reference/mendix-repl/
 reference/mxbuild/
 reference/mendixmodellib/
