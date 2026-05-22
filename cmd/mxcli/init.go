@@ -173,11 +173,12 @@ Container Runtime:
 		}
 
 		// Create .claude directory for Claude-specific content (if Claude is selected)
-		var claudeDir, commandsDir, lintRulesDir string
+		var claudeDir, commandsDir, lintRulesDir, claudeSkillsDir string
 		if slices.Contains(tools, "claude") {
 			claudeDir = filepath.Join(absDir, ".claude")
 			commandsDir = filepath.Join(claudeDir, "commands")
 			lintRulesDir = filepath.Join(claudeDir, "lint-rules")
+			claudeSkillsDir = filepath.Join(claudeDir, "skills")
 
 			if err := os.MkdirAll(commandsDir, 0755); err != nil {
 				fmt.Fprintf(os.Stderr, "Error creating .claude/commands directory: %v\n", err)
@@ -185,6 +186,10 @@ Container Runtime:
 			}
 			if err := os.MkdirAll(lintRulesDir, 0755); err != nil {
 				fmt.Fprintf(os.Stderr, "Error creating .claude/lint-rules directory: %v\n", err)
+				os.Exit(1)
+			}
+			if err := os.MkdirAll(claudeSkillsDir, 0755); err != nil {
+				fmt.Fprintf(os.Stderr, "Error creating .claude/skills directory: %v\n", err)
 				os.Exit(1)
 			}
 		}
@@ -277,7 +282,7 @@ Container Runtime:
 				fmt.Printf("  Created %s\n", file.Path)
 			}
 
-			// Claude-specific: write commands and lint rules
+			// Claude-specific: write commands, lint rules, and skills
 			if toolName == "claude" && commandsDir != "" {
 				cmdCount := 0
 				err = fs.WalkDir(commandsFS, "commands", func(path string, d fs.DirEntry, err error) error {
@@ -327,6 +332,38 @@ Container Runtime:
 					fmt.Fprintf(os.Stderr, "  Error writing lint rules: %v\n", err)
 				} else {
 					fmt.Printf("  Created %d lint rule files in .claude/lint-rules/\n", lintRuleCount)
+				}
+
+				// Write skills to .claude/skills/<name>/SKILL.md
+				claudeSkillCount := 0
+				err = fs.WalkDir(skillsFS, "skills", func(path string, d fs.DirEntry, err error) error {
+					if err != nil {
+						return err
+					}
+					if d.IsDir() {
+						return nil
+					}
+					content, err := skillsFS.ReadFile(path)
+					if err != nil {
+						return err
+					}
+					// Derive skill name from filename (strip .md extension)
+					skillName := strings.TrimSuffix(d.Name(), ".md")
+					skillDir := filepath.Join(claudeSkillsDir, skillName)
+					if err := os.MkdirAll(skillDir, 0755); err != nil {
+						return err
+					}
+					targetPath := filepath.Join(skillDir, "SKILL.md")
+					if err := os.WriteFile(targetPath, content, 0644); err != nil {
+						return err
+					}
+					claudeSkillCount++
+					return nil
+				})
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "  Error writing Claude skills: %v\n", err)
+				} else {
+					fmt.Printf("  Created %d skill files in .claude/skills/\n", claudeSkillCount)
 				}
 			}
 
