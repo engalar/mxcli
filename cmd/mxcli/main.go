@@ -150,7 +150,7 @@ Examples:
 			}
 		} else {
 			// Start interactive REPL
-			logger := diaglog.Init(version, "repl")
+			logger := diaglog.Init(version, "repl", 0)
 			defer logger.Close()
 
 			r := repl.New(os.Stdin, os.Stdout)
@@ -201,7 +201,7 @@ func resolveFormat(cmd *cobra.Command, defaultFormat string) string {
 // newLoggedExecutor creates an executor with diagnostics logging attached.
 // The caller must call logger.Close() when done (safe on nil).
 func newLoggedExecutor(mode string) (*executor.Executor, *diaglog.Logger) {
-	logger := diaglog.Init(version, mode)
+	logger := diaglog.Init(version, mode, 0)
 	exec := executor.New(os.Stdout)
 	exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
 	exec.SetLogger(logger)

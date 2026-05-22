@@ -20,6 +20,8 @@ import (
 // A nil Logger is safe to use — all methods are no-ops on nil receivers.
 type Logger struct {
 	slog      *slog.Logger
+	stderrLog *slog.Logger // non-nil when verbose > 0
+	verbose   int          // 0=off, 1=trace (text), 2=debug (json)
 	file      *os.File
 	cmdCount  int
 	errCount  int
@@ -28,7 +30,8 @@ type Logger struct {
 
 // Init creates the daily log file and writes a session header.
 // Returns nil if logging is disabled (MXCLI_LOG=0) or the log file cannot be created.
-func Init(version, mode string) *Logger {
+// verboseLevel controls stderr mirroring: 0=off, 1=text (INFO+), 2=JSON (DEBUG+).
+func Init(version, mode string, verboseLevel int) *Logger {
 	if isDisabled() {
 		return nil
 	}
@@ -52,8 +55,19 @@ func Init(version, mode string) *Logger {
 	handler := slog.NewJSONHandler(f, &slog.HandlerOptions{Level: slog.LevelInfo})
 	l := &Logger{
 		slog:      slog.New(handler),
+		verbose:   verboseLevel,
 		file:      f,
 		startTime: time.Now(),
+	}
+
+	// Set up stderr mirroring if requested
+	switch verboseLevel {
+	case 1:
+		h := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
+		l.stderrLog = slog.New(h)
+	case 2:
+		h := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})
+		l.stderrLog = slog.New(h)
 	}
 
 	// Write session header
@@ -66,6 +80,17 @@ func Init(version, mode string) *Logger {
 		"args", os.Args,
 		"pid", os.Getpid(),
 	)
+	if l.stderrLog != nil {
+		l.stderrLog.Info("session_start",
+			"version", version,
+			"go", runtime.Version(),
+			"os", runtime.GOOS,
+			"arch", runtime.GOARCH,
+			"mode", mode,
+			"args", os.Args,
+			"pid", os.Getpid(),
+		)
+	}
 
 	return l
 }
@@ -91,18 +116,26 @@ func (l *Logger) Command(stmtType, summary string, duration time.Duration, err e
 	l.cmdCount++
 	if err != nil {
 		l.errCount++
-		l.slog.Error("execute_error",
+		args := []any{
 			"stmt_type", stmtType,
 			"stmt_summary", summary,
 			"error", err.Error(),
 			"duration_ms", duration.Milliseconds(),
-		)
+		}
+		l.slog.Error("execute_error", args...)
+		if l.stderrLog != nil {
+			l.stderrLog.Error("execute_error", args...)
+		}
 	} else {
-		l.slog.Info("execute",
+		args := []any{
 			"stmt_type", stmtType,
 			"stmt_summary", summary,
 			"duration_ms", duration.Milliseconds(),
-		)
+		}
+		l.slog.Info("execute", args...)
+		if l.stderrLog != nil {
+			l.stderrLog.Info("execute", args...)
+		}
 	}
 }
 
@@ -111,11 +144,15 @@ func (l *Logger) Connect(mprPath, mendixVersion string, formatVersion int) {
 	if l == nil {
 		return
 	}
-	l.slog.Info("connect",
+	args := []any{
 		"mpr_path", mprPath,
 		"mendix_version", mendixVersion,
 		"mpr_format", formatVersion,
-	)
+	}
+	l.slog.Info("connect", args...)
+	if l.stderrLog != nil {
+		l.stderrLog.Info("connect", args...)
+	}
 }
 
 // ParseError logs parse failures with a truncated input preview.
@@ -128,10 +165,14 @@ func (l *Logger) ParseError(inputPreview string, errs []error) {
 	for i, e := range errs {
 		errStrings[i] = e.Error()
 	}
-	l.slog.Warn("parse_error",
+	args := []any{
 		"input_preview", truncate(inputPreview, 200),
 		"errors", errStrings,
-	)
+	}
+	l.slog.Warn("parse_error", args...)
+	if l.stderrLog != nil {
+		l.stderrLog.Warn("parse_error", args...)
+	}
 }
 
 // Info logs a general informational message.
@@ -140,6 +181,9 @@ func (l *Logger) Info(msg string, args ...any) {
 		return
 	}
 	l.slog.Info(msg, args...)
+	if l.stderrLog != nil {
+		l.stderrLog.Info(msg, args...)
+	}
 }
 
 // Warn logs a warning message.
@@ -148,6 +192,9 @@ func (l *Logger) Warn(msg string, args ...any) {
 		return
 	}
 	l.slog.Warn(msg, args...)
+	if l.stderrLog != nil {
+		l.stderrLog.Warn(msg, args...)
+	}
 }
 
 // Error logs an error message.
@@ -157,6 +204,9 @@ func (l *Logger) Error(msg string, args ...any) {
 	}
 	l.errCount++
 	l.slog.Error(msg, args...)
+	if l.stderrLog != nil {
+		l.stderrLog.Error(msg, args...)
+	}
 }
 
 // LogDir returns the log directory path.

@@ -3,6 +3,8 @@
 package diaglog
 
 import (
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -38,7 +40,7 @@ func TestInitAndClose(t *testing.T) {
 	tmpDir := t.TempDir()
 	setHomeDir(t, tmpDir)
 
-	l := Init("test-version", "test")
+	l := Init("test-version", "test", 0)
 	if l == nil {
 		t.Fatal("expected non-nil logger")
 	}
@@ -64,7 +66,7 @@ func TestCommandLogging(t *testing.T) {
 	tmpDir := t.TempDir()
 	setHomeDir(t, tmpDir)
 
-	l := Init("test", "batch")
+	l := Init("test", "batch", 0)
 	if l == nil {
 		t.Fatal("expected non-nil logger")
 	}
@@ -101,7 +103,7 @@ func TestDisabledViaEnv(t *testing.T) {
 	setHomeDir(t, tmpDir)
 	t.Setenv("MXCLI_LOG", "0")
 
-	l := Init("test", "batch")
+	l := Init("test", "batch", 0)
 	if l != nil {
 		t.Error("expected nil logger when MXCLI_LOG=0")
 	}
@@ -149,5 +151,118 @@ func TestTruncate(t *testing.T) {
 	}
 	if got := truncate("this is a long string", 10); got != "this is a ..." {
 		t.Errorf("expected truncated, got %q", got)
+	}
+}
+
+func TestVerboseLevel0_NoStderr(t *testing.T) {
+	tmpDir := t.TempDir()
+	setHomeDir(t, tmpDir)
+
+	old := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	l := Init("test", "batch", 0)
+	if l == nil {
+		t.Fatal("expected non-nil logger")
+	}
+	l.Info("should not appear on stderr")
+	l.Close()
+
+	w.Close()
+	os.Stderr = old
+	var buf strings.Builder
+	io.Copy(&buf, r)
+
+	if buf.Len() != 0 {
+		t.Errorf("verboseLevel=0 should produce no stderr, got: %q", buf.String())
+	}
+}
+
+func TestVerboseLevel1_TextOnStderr(t *testing.T) {
+	tmpDir := t.TempDir()
+	setHomeDir(t, tmpDir)
+
+	old := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	l := Init("test", "batch", 1)
+	if l == nil {
+		t.Fatal("expected non-nil logger")
+	}
+	l.Info("hello from trace")
+	l.Close()
+
+	w.Close()
+	os.Stderr = old
+	var buf strings.Builder
+	io.Copy(&buf, r)
+
+	output := buf.String()
+	if !strings.Contains(output, "hello from trace") {
+		t.Errorf("verboseLevel=1 should write info to stderr, got: %q", output)
+	}
+	if strings.Contains(output, `{"level"`) {
+		t.Errorf("verboseLevel=1 should use text format, not JSON, got: %q", output)
+	}
+}
+
+func TestVerboseLevel2_JSONOnStderr(t *testing.T) {
+	tmpDir := t.TempDir()
+	setHomeDir(t, tmpDir)
+
+	old := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	l := Init("test", "batch", 2)
+	if l == nil {
+		t.Fatal("expected non-nil logger")
+	}
+	l.Info("hello from debug")
+	l.Close()
+
+	w.Close()
+	os.Stderr = old
+	var buf strings.Builder
+	io.Copy(&buf, r)
+
+	output := buf.String()
+	if !strings.Contains(output, "hello from debug") {
+		t.Errorf("verboseLevel=2 should write info to stderr, got: %q", output)
+	}
+	if !strings.Contains(output, `"msg"`) {
+		t.Errorf("verboseLevel=2 should use JSON format, got: %q", output)
+	}
+}
+
+func TestVerboseCommandMirror(t *testing.T) {
+	tmpDir := t.TempDir()
+	setHomeDir(t, tmpDir)
+
+	old := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	l := Init("test", "batch", 1)
+	if l == nil {
+		t.Fatal("expected non-nil logger")
+	}
+	l.Command("ShowStmt", "SHOW ENTITIES", 42*time.Millisecond, nil)
+	l.Command("BadStmt", "BAD", time.Millisecond, errors.New("something went wrong"))
+	l.Close()
+
+	w.Close()
+	os.Stderr = old
+	var buf strings.Builder
+	io.Copy(&buf, r)
+
+	output := buf.String()
+	if !strings.Contains(output, "SHOW ENTITIES") {
+		t.Errorf("expected SHOW ENTITIES in stderr output, got: %q", output)
+	}
+	if !strings.Contains(output, "something went wrong") {
+		t.Errorf("expected error message in stderr output, got: %q", output)
 	}
 }
