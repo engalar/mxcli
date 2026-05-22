@@ -14,7 +14,6 @@ import (
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	"github.com/mendixlabs/mxcli/mdl/executor"
-	"github.com/mendixlabs/mxcli/mdl/repl"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/spf13/cobra"
 )
@@ -139,34 +138,8 @@ Examples:
 				os.Exit(1)
 			}
 		} else {
-			// Start interactive REPL
-			logger := diaglog.Init(version, "repl", 0)
-			defer logger.Close()
-
-			r := repl.New(os.Stdin, os.Stdout)
-			r.SetLogger(logger)
-			defer r.Close()
-
-			// Auto-connect if project specified
-			if projectPath != "" {
-				if err := r.ExecuteString(fmt.Sprintf("CONNECT LOCAL '%s';", projectPath)); err != nil {
-					fmt.Fprintf(os.Stderr, "Error connecting: %v\n", err)
-				}
-			}
-
-			// Detect if stdin is a terminal or a pipe
-			var err error
-			if fi, statErr := os.Stdin.Stat(); statErr == nil && (fi.Mode()&os.ModeCharDevice) == 0 {
-				// Piped input: use quiet mode (no banner, no prompts)
-				err = r.Run()
-			} else {
-				// Terminal: use readline with history, autocomplete
-				err = r.RunWithReadline()
-			}
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
+			fmt.Fprintf(os.Stderr, "Error: no command specified. Use -c to pass an MDL command or exec to run a script.\n")
+			os.Exit(1)
 		}
 	},
 }

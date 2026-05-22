@@ -36,12 +36,6 @@ Mxcli command line tool allows you to run commands against your project to inves
 
 ![Mxcli](docs/images/mxcli-cli.png)
 
-### A REPL to work with Mendix projects
-
-In repl mode mxcli allows you to interactively work with a Mendix project. This is similar to psql or sqlplus when working with databases. You can list the available Mendix documents, view the MDL source, and make changes.
-
-![Mxcli repl](docs/images/mxcli-repl.png)
-
 ### Skills and configuration to enable Agentic Coding on Mendix projects
 
 Running *mxcli init* will install configuration files for agentic coding tools like AGENTS.md, CLAUDE.md, and Mendix specific skills. It will also configure a devcontainer that you can use when opening the project in Vscode, so you limit what your agentic coder can impact and see. 

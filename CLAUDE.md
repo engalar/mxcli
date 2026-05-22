@@ -131,9 +131,8 @@ ModelSDKGo/
 │   ├── visitor/             # ANTLR listener to build AST
 │   ├── executor/            # Executes AST against modelsdk-go
 │   ├── catalog/             # SQLite-based catalog for querying project metadata
-│   ├── linter/              # Extensible linting framework
-│   │   └── rules/           # Built-in lint rules (MPR001, MPR002, etc.)
-│   └── repl/                # Interactive REPL interface
+│   └── linter/              # Extensible linting framework
+│       └── rules/           # Built-in lint rules (MPR001, MPR002, etc.)
 │
 ├── sql/                     # external database connectivity (PostgreSQL, Oracle, sql Server)
 │   ├── driver.go            # DriverName type, ParseDriver()
@@ -333,7 +332,7 @@ New MDL commands or language features must be wired through the full pipeline:
 ### Documentation
 - [ ] **Skills** — new features documented in `.claude/skills/` (syntax, examples, gotchas)
 - [ ] **CLI help (Cobra)** — `mxcli` subcommand help text updated (Cobra `Short`/`Long`/`Example` fields)
-- [ ] **CLI help (syntax topics)** — `cmd/mxcli/syntax/features_*.go` updated with new/changed MDL syntax; new `SyntaxFeature` entries added for new document types; `OR MODIFY` / `OR REPLACE` variants reflected in existing `Syntax` fields; accessible via `mxcli syntax <topic>` and REPL `help`
+- [ ] **CLI help (syntax topics)** — `cmd/mxcli/syntax/features_*.go` updated with new/changed MDL syntax; new `SyntaxFeature` entries added for new document types; `OR MODIFY` / `OR REPLACE` variants reflected in existing `Syntax` fields; accessible via `mxcli syntax <topic>`
 - [ ] **Syntax reference** — `docs/01-project/MDL_QUICK_REFERENCE.md` updated with new statement syntax
 - [ ] **MDL examples** — working examples added to `mdl-examples/` for new commands
 - [ ] **Site docs** — `docs-site/src/` pages added or updated for user-facing features
@@ -360,9 +359,6 @@ The `mxcli` command-line tool allows reading and modifying Mendix projects using
 ```bash
 # build the CLI
 go build -o bin/mxcli ./cmd/mxcli
-
-# run interactive REPL
-./bin/mxcli
 
 # execute commands directly
 ./bin/mxcli -p /path/to/app.mpr -c "show entities"
@@ -427,7 +423,7 @@ Both namespaces are discoverable by typing `/mxcli` in Claude Code. Add new cont
 ### mxcli init
 
 `mxcli init` creates a `.claude/` folder with skills, commands, CLAUDE.md, and VS Code MDL extension in a target Mendix project. Source of truth for synced assets:
-- Skills: `reference/mendix-repl/templates/.claude/skills/`
+- Skills: `.claude/skills/mendix/`
 - Commands: `.claude/commands/mendix/` (the `mxcli-dev/` folder is **not** synced)
 - VS Code extension: `vscode-mdl/vscode-mdl-*.vsix`
 
