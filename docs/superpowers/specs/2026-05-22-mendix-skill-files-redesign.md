@@ -201,25 +201,115 @@ Is the object already available as a page parameter?
 
 ## File 3: `create-page.md` (REWRITE)
 
-**Additions to existing content:**
+> **Research basis:** Full audit of current file, grammar (`MDLPage.g4`), all doctype tests
+> (`29-datagrid-examples.mdl`, `30-datagrid-filter-examples.mdl`, `03-page-examples.mdl`),
+> and overlap analysis with `overview-pages.md` and `master-detail-pages.md`.
 
-### DataGrid2 section (new, comprehensive)
-Subsections:
-- Datasource types (database / microflow / nanoflow / association / $param / selection)
-- Column properties reference table (all 13 properties)
-- Column-level filter widgets (4 types, auto-selection table)
-- Page variables for column visibility (`variables: { $showCol: boolean = 'true' }`)
-- Selection modes (none / single / multiple)
-- Paging modes (buttons / virtualScrolling / loadMore) + position + showPagingButtons
-- Design properties (Compact / Striped / Hover / Borders)
-- DynamicCellClass + DynamicRowClass expressions
-- CRUD pattern (controlbar New + column Edit/Delete)
+### Audit findings: coverage gaps
 
-### NPE datasource section (new)
-- `datasource: microflow Module.DSO_GetNPEList` pattern
-- `datasource: nanoflow Module.NANO_GetNPEList` pattern  
-- `datasource: $pageParam` for NPE passed in
-- Cross-reference to `mendix:page-data-design`
+**Undocumented widgets (8 total):**
+
+| Widget | Priority | Action |
+|--------|----------|--------|
+| `LISTVIEW` | HIGH | Full section — used in examples (`03-page-examples.mdl:1874`), only 1 brief mention currently |
+| `GROUPBOX` | HIGH | Full section — examples exist (`03-page-examples.mdl:2204`), collapsible form sections |
+| `TABCONTAINER` / `TABPAGE` | HIGH | Full section — grammar-defined, organizes complex forms into tabs |
+| `STATICTEXT` | MEDIUM | Brief section — static labels; distinguish from DYNAMICTEXT |
+| `DROPDOWNSORT` | MEDIUM | Brief section — column sort selector widget |
+| `REFERENCESELECTOR` | LOW | Note only — grammar-defined, unclear if fully implemented |
+| `TITLE` | LOW | Note only — vs DYNAMICTEXT with H1/H2 rendermode |
+
+**Under-documented datasources:**
+- `nanoflow` as datasource — mentioned in action table only; needs dedicated example showing when to prefer over microflow
+- Complex multi-hop association paths — only one example; `$var/Assoc1/Entity1/Assoc2/Entity2` pattern not shown
+- XPath filter combined with sort — separate examples exist but no combined pattern
+
+**Filter widget gaps:**
+- `filtertype:` — listed but no explicit warning that it is NOT currently forwarded to BSON (workaround: PLUGGABLEWIDGET with `defaultFilter:`)
+- `ShowContentAs: url` and `ShowContentAs: email` — listed in properties table but no code example
+
+### Sections to add or expand (HIGH priority)
+
+#### 1. LISTVIEW Widget (new full section)
+```sql
+listview lvName (
+  datasource: database from Module.Entity sort by Name asc,
+  PageSize: 20
+) {
+  dynamictext txtName (content: '{1}', contentparams: [{1} = Name], rendermode: H4)
+  actionbutton btnView (caption: 'View', action: show_page Module.Detail (Entity: $currentObject))
+}
+```
+Cover: database / microflow / association datasources, template children, paging, `$currentObject` in children.
+
+#### 2. GROUPBOX Widget (new full section)
+```sql
+groupbox gbSection (
+  caption: 'Section Title',
+  HeaderMode: H3,
+  Collapsible: YesExpanded
+) {
+  textbox txtField (label: 'Field', attribute: FieldName)
+}
+```
+Cover: `HeaderMode` (H3/H4/Div), `Collapsible` (No/YesExpanded/YesCollapsed), nesting inside DataView.
+
+#### 3. TABCONTAINER / TABPAGE (new full section)
+```sql
+tabcontainer tcMain {
+  tabpage tpDetails (caption: 'Details') {
+    textbox txtName (label: 'Name', attribute: Name)
+  }
+  tabpage tpHistory (caption: 'History') {
+    datagrid dgHistory (datasource: database Module.HistoryItem) {
+      column col1 (attribute: Date, caption: 'Date')
+    }
+  }
+}
+```
+Cover: nested widgets per tab, when to use (complex forms), ordering tabs.
+
+#### 4. DataGrid2 — expanded subsection
+
+Add to existing DATAGRID section:
+- **Column-level filter widgets** — auto-type selection table (String→textfilter, Decimal→numberfilter, DateTime→datefilter, Enum/Boolean→dropdownfilter)
+- **`filtertype:` limitation** — ⚠️ parsed but NOT forwarded to BSON; use `PLUGGABLEWIDGET` with `defaultFilter:` until fixed
+- **`ShowContentAs: url` / `email`** — code examples for clickable links in cells
+- **DynamicCellClass** — per-row CSS expression using `$currentObject`
+- **Page variables for column visibility** — `variables: { $showCol: boolean = 'true' }` + `visible: '$showCol'` on column
+
+#### 5. Datasource Patterns (new subsection)
+
+- **Nanoflow vs microflow datasource:** nanoflow = client-side (no server round-trip, suitable for in-memory NPE); microflow = server-side (DB retrieve, complex logic)
+- **NPE datasource constraints:** cannot use `database`, must use microflow/nanoflow; cross-reference `mendix:page-data-design`
+- **Association paths:** `$pageParam/Module.AssocName/Module.TargetEntity`; multi-hop with intermediate entities
+
+#### 6. Known Limitations (expand existing section)
+
+Add:
+- ⚠️ DataGrid2 filter bar (`controlbar {} { textfilter }`) produces DivContainers — use column-level filters instead
+- ⚠️ `filtertype:` parsed but not written to BSON — workaround: `PLUGGABLEWIDGET` with `defaultFilter:`
+- ⚠️ NPE page parameters cannot have `url:` (no deeplink)
+- ⚠️ `Keep Selection` on DataGrid2 breaks with NPE (IDs change on refresh)
+
+### Sections to keep as-is (no change needed)
+
+- Syntax template (page metadata block)
+- DYNAMICTEXT, ACTIONBUTTON, LINKBUTTON, LAYOUTGRID — comprehensive, no gaps
+- Input widgets (TEXTBOX, TEXTAREA, CHECKBOX, RADIOBUTTONS, DATEPICKER, COMBOBOX) — complete
+- GALLERY (with filter and template) — complete
+- CONTAINER / CUSTOMCONTAINER — complete
+- SNIPPETCALL — complete
+- IMAGE / STATICIMAGE / DYNAMICIMAGE — complete
+- Conditional visibility / editability — complete
+- PLUGGABLEWIDGET escape hatch — complete
+- Bulk widget updates, ALTER PAGE reference — keep
+
+### Overlap management (no duplication)
+
+- GALLERY selection pattern → `mendix:master-detail-pages` owns the deep dive; `create-page.md` keeps syntax reference only
+- CRUD DataGrid pattern → `mendix:overview-pages` owns the full pattern; `create-page.md` keeps widget reference
+- Filter widgets → `mendix:datagrid2-filters` owns the full guide; `create-page.md` keeps brief syntax table + cross-reference
 
 ---
 
