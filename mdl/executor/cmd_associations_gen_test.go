@@ -84,7 +84,7 @@ func TestDescribeAssociationGen_FixtureAssoc(t *testing.T) {
 		t.Fatalf("describeAssociation(%s.%s): %v", modName, assocName, err)
 	}
 	out := buf.String()
-	for _, want := range []string{"create association", modName + "." + assocName, "from ", " to ", "type ", "owner ", "delete_behavior "} {
+	for _, want := range []string{"create or modify association", modName + "." + assocName, "from ", " to ", "type ", "owner ", "delete_behavior "} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q; got:\n%s", want, out)
 		}

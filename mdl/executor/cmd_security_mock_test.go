@@ -583,16 +583,25 @@ func TestValidateModuleRole_MissingRole_IsWarningNotError(t *testing.T) {
 }
 
 func TestValidateModuleRole_ModuleMissing_StillErrors(t *testing.T) {
-	// No modules in the project — findModule returns NotFound, which must
-	// surface as a backend error (not a silent WARNING).
+	// No modules in the project — findModule returns NotFound.
+	// Since commit 0a90910a (fix BUG-04), module-not-found is a non-fatal
+	// WARNING: the grant is skipped and the script continues. Only real
+	// backend I/O errors remain fatal.
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return nil, nil },
 	}
-	ctx, _ := newMockCtx(t, withBackend(mb))
+	ctx, buf := newMockCtx(t, withBackend(mb))
 
-	_, err := validateModuleRole(ctx, ast.QualifiedName{Module: "GhostModule", Name: "Admin"})
-	assertError(t, err)
+	found, err := validateModuleRole(ctx, ast.QualifiedName{Module: "GhostModule", Name: "Admin"})
+	if err != nil {
+		t.Fatalf("expected nil error for missing module (WARNING path), got: %v", err)
+	}
+	if found {
+		t.Error("expected found=false for missing module")
+	}
+	assertContainsStr(t, buf.String(), "WARNING")
+	assertContainsStr(t, buf.String(), "GhostModule")
 }
 
 func TestValidateModuleRole_BackendError_StillErrors(t *testing.T) {
