@@ -110,7 +110,7 @@ Examples:
 func init() {
 	playwrightVerifyCmd.Flags().BoolP("list", "l", false, "List test scripts without executing")
 	playwrightVerifyCmd.Flags().StringP("junit", "j", "", "Write JUnit XML results to file")
-	playwrightVerifyCmd.Flags().BoolP("verbose", "v", false, "Show script stdout/stderr")
+	playwrightVerifyCmd.Flags().Bool("verbose", false, "Show script stdout/stderr")
 	playwrightVerifyCmd.Flags().BoolP("color", "", false, "Use colored output")
 	playwrightVerifyCmd.Flags().StringP("timeout", "t", "2m", "Timeout per script execution")
 	playwrightVerifyCmd.Flags().StringP("base-url", "", "http://localhost:8080", "Mendix app base URL")

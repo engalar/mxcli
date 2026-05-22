@@ -48,7 +48,7 @@ func shouldSuppressWarning() bool {
 
 	for _, arg := range os.Args[1:] {
 		switch arg {
-		case "-q", "--quiet", "-h", "--help", "--version", "-v":
+		case "-q", "--quiet", "-h", "--help", "--version":
 			return true
 		case "help", "version", "changelog":
 			return true
@@ -184,6 +184,10 @@ Examples:
 // globalJSONFlag is set by PersistentPreRun when --json is passed.
 var globalJSONFlag bool
 
+// globalVerboseLevel is set by PersistentPreRunE when -v or -vv is passed.
+// 0 = off, 1 = trace (human-readable text), 2 = debug (JSON).
+var globalVerboseLevel int
+
 // resolveFormat returns the effective output format for a command.
 // If the global --json flag is set and the command has a --format flag, it returns "json".
 // Otherwise it returns the command's --format flag value (or the provided default).
@@ -201,7 +205,7 @@ func resolveFormat(cmd *cobra.Command, defaultFormat string) string {
 // newLoggedExecutor creates an executor with diagnostics logging attached.
 // The caller must call logger.Close() when done (safe on nil).
 func newLoggedExecutor(mode string) (*executor.Executor, *diaglog.Logger) {
-	logger := diaglog.Init(version, mode, 0)
+	logger := diaglog.Init(version, mode, globalVerboseLevel)
 	exec := executor.New(os.Stdout)
 	exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
 	exec.SetLogger(logger)
@@ -249,6 +253,10 @@ func init() {
 	// daemon socket paths (which are derived from the MPR path) are stable
 	// regardless of the caller's working directory.
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		// Read verbose level (CountP: -v=1, -vv=2)
+		if v, err := cmd.Root().PersistentFlags().GetCount("verbose"); err == nil {
+			globalVerboseLevel = v
+		}
 		if p, _ := cmd.Root().PersistentFlags().GetString("project"); p != "" {
 			abs, err := filepath.Abs(p)
 			if err != nil {
@@ -264,6 +272,7 @@ func init() {
 	// Global flags
 	rootCmd.PersistentFlags().StringP("project", "p", "", "Path to Mendix project (.mpr file)")
 	rootCmd.PersistentFlags().Bool("json", false, "Output in JSON format")
+	rootCmd.PersistentFlags().CountP("verbose", "v", "Enable verbose output (-v trace, -vv debug)")
 	rootCmd.Flags().StringP("command", "c", "", "Execute MDL command(s) and exit")
 
 	// Check command flags
@@ -315,7 +324,7 @@ func init() {
 	testRunCmd.Flags().BoolP("list", "l", false, "List tests without executing")
 	testRunCmd.Flags().StringP("junit", "j", "", "Write JUnit XML results to file")
 	testRunCmd.Flags().BoolP("skip-build", "s", false, "Skip build step (reuse existing deployment)")
-	testRunCmd.Flags().BoolP("verbose", "v", false, "Show all runtime log output")
+	testRunCmd.Flags().Bool("verbose", false, "Show all runtime log output")
 	testRunCmd.Flags().BoolP("color", "", false, "Use colored output")
 	testRunCmd.Flags().StringP("timeout", "t", "5m", "Timeout for runtime startup and test execution")
 
