@@ -1823,9 +1823,11 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (element.Element, error)
 			}
 			for _, grandchild := range child.Children {
 				if filterWidgetID := dataGridFilterWidgetID(grandchild.Type); filterWidgetID != "" {
+					// Attributes left empty: column-level filters are auto-bound by DataGrid2 to the column attribute.
 					fw, err := pb.widgetBackend.BuildFilterWidgetGen(backend.FilterWidgetSpec{
 						WidgetID:   filterWidgetID,
 						FilterName: grandchild.Name,
+						FilterType: grandchild.GetFilterType(),
 					}, pb.backend.Path())
 					if err != nil {
 						return nil, mdlerrors.NewBackend("build column filter widget", err)
@@ -2145,6 +2147,23 @@ func (pb *pageBuilder) buildWidgetBSON(w *ast.WidgetV3) (bson.D, error) {
 			}},
 		}
 		return doc, nil
+	case "textfilter", "numberfilter", "datefilter", "dropdownfilter":
+		filterWidgetID := dataGridFilterWidgetID(w.Type)
+		rawAttrs := w.GetAttributes()
+		resolvedAttrs := make([]string, 0, len(rawAttrs))
+		for _, a := range rawAttrs {
+			resolvedAttrs = append(resolvedAttrs, pb.resolveAttributePath(a))
+		}
+		fw, err := pb.widgetBackend.BuildFilterWidgetGen(backend.FilterWidgetSpec{
+			WidgetID:   filterWidgetID,
+			FilterName: w.Name,
+			FilterType: w.GetFilterType(),
+			Attributes: resolvedAttrs,
+		}, pb.backend.Path())
+		if err != nil {
+			return nil, mdlerrors.NewBackend("build controlbar filter widget", err)
+		}
+		return pb.serializeGenWidgetToBsonD(fw)
 	default:
 		// For other widget types in DataGrid context, create a minimal DivContainer
 		doc := bson.D{

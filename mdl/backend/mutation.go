@@ -328,8 +328,11 @@ type DataGridSpec struct {
 
 // FilterWidgetSpec carries inputs for building a filter widget.
 type FilterWidgetSpec struct {
-	WidgetID   string // e.g. WidgetIDDataGridTextFilter
-	FilterName string // widget name
+	WidgetID   string   // e.g. widgetIDDataGridTextFilter
+	FilterName string   // widget name in BSON
+	FilterType string   // "contains"|"startsWith"|"equal"|etc. → BSON "defaultFilter"; "" = template default
+	Attributes []string // fully-qualified attribute paths, e.g. ["MyMod.Order.Name"];
+	// empty = auto-wired by DataGrid2 (column-level)
 }
 
 // WidgetBuilderBackend provides pluggable widget construction capabilities.

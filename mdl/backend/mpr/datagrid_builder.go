@@ -109,7 +109,7 @@ func (b *MprBackend) BuildDataGrid2WidgetGen(id model.ID, name string, spec back
 // BuildFilterWidgetGen builds a gen-native filter widget element for DataGrid2.
 // Returns *backend.GenCustomWidgetElem (satisfies both backend.Widget and element.Element).
 func (b *MprBackend) BuildFilterWidgetGen(spec backend.FilterWidgetSpec, projectPath string) (*backend.GenCustomWidgetElem, error) {
-	doc := b.buildFilterWidgetBSON(spec.WidgetID, spec.FilterName, projectPath)
+	doc := b.buildFilterWidgetBSON(spec, projectPath)
 	raw, err := bson.Marshal(doc)
 	if err != nil {
 		return nil, fmt.Errorf("BuildFilterWidgetGen: marshal: %w", err)
@@ -1204,24 +1204,84 @@ func colPropInt(props map[string]any, key string, defaultVal string) string {
 // Filter widget BSON construction
 // ===========================================================================
 
-func (b *MprBackend) buildFilterWidgetBSON(widgetID, filterName string, projectPath string) bson.D {
-	rawType, rawObject, _, _, err := widgets.GetTemplateFullBSON(widgetID, types.GenerateID, projectPath)
+func (b *MprBackend) buildFilterWidgetBSON(spec backend.FilterWidgetSpec, projectPath string) bson.D {
+	rawType, rawObject, propertyTypeIDs, _, err := widgets.GetTemplateFullBSON(spec.WidgetID, types.GenerateID, projectPath)
 	if err != nil || rawType == nil {
 		if err != nil {
-			log.Printf("warning: failed to load template for widget %s: %v; using minimal fallback", widgetID, err)
+			log.Printf("warning: failed to load template for widget %s: %v; using minimal fallback", spec.WidgetID, err)
 		}
-		return b.buildMinimalFilterWidgetBSON(widgetID, filterName)
+		return b.buildMinimalFilterWidgetBSON(spec.WidgetID, spec.FilterName)
+	}
+
+	// Apply FilterType override if specified.
+	if spec.FilterType != "" {
+		rawObject = applyFilterTypeToBSON(rawObject, propertyTypeIDs, spec.FilterType)
 	}
 
 	return bson.D{
 		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 		{Key: "$Type", Value: "CustomWidgets$CustomWidget"},
 		{Key: "Editable", Value: "Inherited"},
-		{Key: "Name", Value: filterName},
+		{Key: "Name", Value: spec.FilterName},
 		{Key: "Object", Value: rawObject},
 		{Key: "TabIndex", Value: int32(0)},
 		{Key: "Type", Value: rawType},
 	}
+}
+
+// applyFilterTypeToBSON overrides the "defaultFilter" primitive property in a filter
+// widget's Object BSON when filterType is non-empty. Locates the target property by
+// matching each Object property's TypePointer (16-byte Microsoft-GUID blob) against the
+// PropertyTypeID recorded in propertyTypeIDs["defaultFilter"]; both forms reduce to the
+// same lowercase 32-char hex via types.BlobToUUID + dash stripping.
+func applyFilterTypeToBSON(rawObject bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, filterType string) bson.D {
+	if filterType == "" {
+		return rawObject
+	}
+	entry, ok := propertyTypeIDs["defaultFilter"]
+	if !ok || entry.PropertyTypeID == "" {
+		return rawObject
+	}
+	targetID := normalizeHexID(entry.PropertyTypeID)
+
+	result := make(bson.D, 0, len(rawObject))
+	for _, elem := range rawObject {
+		if elem.Key != "Properties" {
+			result = append(result, elem)
+			continue
+		}
+		propsArr, ok := elem.Value.(bson.A)
+		if !ok {
+			result = append(result, elem)
+			continue
+		}
+		updated := make(bson.A, 0, len(propsArr))
+		for _, pv := range propsArr {
+			if _, ok := pv.(int32); ok {
+				updated = append(updated, pv)
+				continue
+			}
+			propD, ok := pv.(bson.D)
+			if !ok {
+				updated = append(updated, pv)
+				continue
+			}
+			typePointer := getTypePointerFromProperty(propD)
+			if normalizeHexID(typePointer) == targetID {
+				updated = append(updated, clonePropertyWithPrimitiveValue(propD, filterType))
+			} else {
+				updated = append(updated, pv)
+			}
+		}
+		result = append(result, bson.E{Key: "Properties", Value: updated})
+	}
+	return result
+}
+
+// normalizeHexID lower-cases and strips dashes from an ID string so that
+// PropertyTypeIDEntry hex (no dashes) and BlobToUUID output (with dashes) can be compared.
+func normalizeHexID(s string) string {
+	return strings.ToLower(strings.ReplaceAll(s, "-", ""))
 }
 
 func (b *MprBackend) buildMinimalFilterWidgetBSON(widgetID, filterName string) bson.D {

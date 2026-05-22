@@ -755,3 +755,113 @@ func TestRoundtripPage_DataGridAttributeShortNames(t *testing.T) {
 
 	t.Logf("DataGrid short attribute names roundtrip successful:\n%s", output)
 }
+
+// TestRoundtripPage_V3DataGridColumnFilter tests DataGrid columns with per-column
+// filter widgets (textfilter, numberfilter, datefilter, dropdownfilter) inside columns.
+// Regression coverage for Gap 2: filtertype property forwarding.
+func TestRoundtripPage_V3DataGridColumnFilter(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	entityName := testModule + ".V3FilterEntity"
+	env.registerCleanup("entity", entityName)
+
+	if err := env.executeMDL(`create or modify persistent entity ` + entityName + ` (
+		Name: String(100),
+		Price: Decimal,
+		OrderDate: DateTime,
+		Status: Boolean default true
+	);`); err != nil {
+		t.Fatalf("create entity: %v", err)
+	}
+
+	pageName := testModule + ".V3ColumnFilterPage"
+	env.registerCleanup("page", pageName)
+
+	if err := env.executeMDL(`create page ` + pageName + ` (
+		Title: 'Filter Test',
+		Layout: Atlas_Core.Atlas_Default
+	) {
+		datagrid dg1 (DataSource: database ` + entityName + `) {
+			column colName   (Attribute: Name,      Caption: 'Name')   { textfilter     fName   (FilterType: startsWith) }
+			column colPrice  (Attribute: Price,     Caption: 'Price')  { numberfilter   fPrice  (FilterType: greater) }
+			column colDate   (Attribute: OrderDate, Caption: 'Date')   { datefilter     fDate   (FilterType: between) }
+			column colStatus (Attribute: Status,    Caption: 'Active') { dropdownfilter fStatus }
+		}
+	}`); err != nil {
+		t.Fatalf("create page: %v", err)
+	}
+
+	out, err := env.describeMDL(`describe page ` + pageName + `;`)
+	if err != nil {
+		t.Fatalf("describe: %v", err)
+	}
+	for _, col := range []string{"Name", "Price", "Date", "Active"} {
+		if !strings.Contains(out, col) {
+			t.Errorf("expected column %q in describe output", col)
+		}
+	}
+	// FilterType must roundtrip back into describe output (Gap 2).
+	for _, ft := range []string{"FilterType: startsWith", "FilterType: greater", "FilterType: between"} {
+		if !strings.Contains(out, ft) {
+			t.Errorf("expected %q in describe output (FilterType forwarding broken)", ft)
+		}
+	}
+	t.Logf("column filter roundtrip:\n%s", out)
+}
+
+// TestRoundtripPage_V3DataGridControlBarFilter tests DataGrid controlbar with filter
+// widgets (textfilter, dropdownfilter). Regression coverage for Gap 1: buildWidgetBSON()
+// must emit real filter widgets, not DivContainer placeholders.
+func TestRoundtripPage_V3DataGridControlBarFilter(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	entityName := testModule + ".V3CtrlBarFilterEntity"
+	env.registerCleanup("entity", entityName)
+
+	if err := env.executeMDL(`create or modify persistent entity ` + entityName + ` (
+		Name: String(100),
+		Status: Boolean default true
+	);`); err != nil {
+		t.Fatalf("create entity: %v", err)
+	}
+
+	pageName := testModule + ".V3CtrlBarFilterPage"
+	env.registerCleanup("page", pageName)
+
+	if err := env.executeMDL(`create page ` + pageName + ` (
+		Title: 'ControlBar Filter Test',
+		Layout: Atlas_Core.Atlas_Default
+	) {
+		datagrid dg1 (DataSource: database ` + entityName + `) {
+			controlbar cb1 {
+				textfilter     fName   (Attributes: [` + entityName + `.Name])
+				dropdownfilter fStatus (Attributes: [` + entityName + `.Status])
+			}
+			column colName   (Attribute: Name,   Caption: 'Name')
+			column colStatus (Attribute: Status, Caption: 'Active')
+		}
+	}`); err != nil {
+		t.Fatalf("create page: %v", err)
+	}
+
+	out, err := env.describeMDL(`describe page ` + pageName + `;`)
+	if err != nil {
+		t.Fatalf("describe: %v", err)
+	}
+	if !strings.Contains(out, "Name") {
+		t.Errorf("expected column Name in describe output")
+	}
+	// Gap 1: controlbar must emit real filter widgets, not container placeholders.
+	if !strings.Contains(out, "textfilter") {
+		t.Errorf("expected real textfilter widget in controlbar (Gap 1: buildWidgetBSON emits DivContainer)")
+	}
+	if !strings.Contains(out, "dropdownfilter") {
+		t.Errorf("expected real dropdownfilter widget in controlbar (Gap 1: buildWidgetBSON emits DivContainer)")
+	}
+	if strings.Contains(out, "container fName") || strings.Contains(out, "container fStatus") {
+		t.Errorf("controlbar widgets serialized as plain container — Gap 1 not fixed")
+	}
+	t.Logf("controlbar filter roundtrip:\n%s", out)
+}
