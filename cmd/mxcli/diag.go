@@ -6,6 +6,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -45,7 +46,8 @@ Examples:
 		}
 
 		if bundle {
-			runDiagBundle(logDir)
+			projectPath, _ := cmd.Root().PersistentFlags().GetString("project")
+			runDiagBundle(logDir, projectPath)
 			return
 		}
 
@@ -131,7 +133,7 @@ func runDiagTail(logDir string, n int) {
 }
 
 // runDiagBundle creates a tar.gz archive of logs.
-func runDiagBundle(logDir string) {
+func runDiagBundle(logDir, mprPath string) {
 	timestamp := time.Now().Format("20060102-150405")
 	outFile := fmt.Sprintf("mxcli-diag-%s.tar.gz", timestamp)
 
@@ -158,6 +160,11 @@ func runDiagBundle(logDir string) {
 	// error-stacks.txt（新增）
 	addTarEntry(tw, "error-stacks.txt", []byte(collectErrorStacks(logDir, 20)))
 
+	// project-meta.txt（新增，仅当 mprPath 非空）
+	if meta := collectProjectMeta(mprPath); meta != "" {
+		addTarEntry(tw, "project-meta.txt", []byte(meta))
+	}
+
 	// logs/ 目录（原有）
 	files, _ := listLogFiles(logDir)
 	for _, entry := range files {
@@ -170,7 +177,11 @@ func runDiagBundle(logDir string) {
 	}
 
 	fmt.Printf("Created: %s\n", outFile)
-	fmt.Printf("Contents: system-info.txt, env-dump.txt, error-stacks.txt, %d log file(s)\n", len(files))
+	extras := []string{"system-info.txt", "env-dump.txt", "error-stacks.txt"}
+	if mprPath != "" {
+		extras = append(extras, "project-meta.txt")
+	}
+	fmt.Printf("Contents: %s, %d log file(s)\n", strings.Join(extras, ", "), len(files))
 }
 
 // collectEnvDump collects Go runtime memory stats and filtered environment variables.
@@ -351,6 +362,53 @@ func formatBytes(b int64) string {
 		return fmt.Sprintf("%d B", b)
 	}
 	return fmt.Sprintf("%d KB", b/1024)
+}
+
+// collectProjectMeta returns a human-readable summary of MPR project metadata.
+// Returns empty string if mprPath is empty or the project cannot be opened.
+func collectProjectMeta(mprPath string) string {
+	if mprPath == "" {
+		return ""
+	}
+
+	reader, err := mmpr.Open(mprPath)
+	if err != nil {
+		return fmt.Sprintf("project-meta: failed to open %s: %v\n", mprPath, err)
+	}
+	defer reader.Close()
+
+	var sb strings.Builder
+
+	mendixVersion, err := reader.GetMendixVersion()
+	if err != nil {
+		mendixVersion = "(unknown)"
+	}
+	fmt.Fprintf(&sb, "MPRPath:       %s\n", mprPath)
+	fmt.Fprintf(&sb, "MendixVersion: %s\n", mendixVersion)
+
+	mprFormat := "v1"
+	if reader.ContentsDir() != "" {
+		mprFormat = "v2"
+	}
+	fmt.Fprintf(&sb, "MPRFormat:     %s\n", mprFormat)
+
+	modules, err := reader.ListModules()
+	if err == nil {
+		fmt.Fprintf(&sb, "ModuleCount:   %d\n", len(modules))
+	}
+
+	unitIDs, err := reader.ListAllUnitIDs()
+	if err == nil {
+		fmt.Fprintf(&sb, "DocumentCount: %d\n", len(unitIDs))
+	}
+
+	if data, err := os.ReadFile(mprPath); err == nil {
+		h := sha256.New()
+		h.Write(data)
+		fmt.Fprintf(&sb, "MPRFileHash:   sha256:%x\n", h.Sum(nil))
+	}
+
+	return sb.String()
 }
 
 // runCheckUnits checks for orphan units (Unit table entry without mxunit file)

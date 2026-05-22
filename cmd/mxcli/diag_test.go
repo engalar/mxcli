@@ -82,3 +82,20 @@ func TestCollectErrorStacks_RespectsMaxErrors(t *testing.T) {
 		t.Errorf("expected 20 error entries, got %d", count)
 	}
 }
+
+func TestCollectProjectMeta_SkipsOnEmptyPath(t *testing.T) {
+	result := collectProjectMeta("")
+	if result != "" {
+		t.Errorf("empty path should return empty string, got %q", result)
+	}
+}
+
+func TestCollectProjectMeta_ReturnsErrorOnBadPath(t *testing.T) {
+	result := collectProjectMeta("/nonexistent/path/to/app.mpr")
+	if result == "" {
+		t.Error("bad path should return non-empty error string")
+	}
+	if !strings.Contains(result, "failed to open") {
+		t.Errorf("expected 'failed to open' in result, got %q", result)
+	}
+}
