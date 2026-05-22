@@ -13,6 +13,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
 
@@ -273,4 +274,35 @@ func (ctx *ExecContext) ensureSqlMgr() *sqllib.Manager {
 
 func GetHierarchyForMining(ctx *ExecContext) (*ContainerHierarchy, error) {
 	return getHierarchy(ctx)
+}
+
+// getDomainModelGenCached returns the DomainModel for moduleID using
+// executorCache.domainModelByModule as a write-through cache.
+// On miss it calls ctx.Backend.GetDomainModelGen and stores the result.
+func getDomainModelGenCached(ctx *ExecContext, moduleID model.ID) (*genDm.DomainModel, error) {
+	ctx.ensureCache()
+	if ctx.Cache.domainModelByModule != nil {
+		if dm, ok := ctx.Cache.domainModelByModule[moduleID]; ok {
+			return dm, nil
+		}
+	}
+	dm, err := ctx.Backend.GetDomainModelGen(moduleID)
+	if err != nil {
+		return nil, err
+	}
+	if ctx.Cache.domainModelByModule == nil {
+		ctx.Cache.domainModelByModule = make(map[model.ID]*genDm.DomainModel)
+	}
+	ctx.Cache.domainModelByModule[moduleID] = dm
+	return dm, nil
+}
+
+// setDomainModelGenCached updates the cached DomainModel for moduleID.
+// Call immediately after ctx.Backend.UpdateDomainModelGen(dm) for write-through.
+func setDomainModelGenCached(ctx *ExecContext, moduleID model.ID, dm *genDm.DomainModel) {
+	ctx.ensureCache()
+	if ctx.Cache.domainModelByModule == nil {
+		ctx.Cache.domainModelByModule = make(map[model.ID]*genDm.DomainModel)
+	}
+	ctx.Cache.domainModelByModule[moduleID] = dm
 }

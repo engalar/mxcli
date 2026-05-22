@@ -102,6 +102,12 @@ type executorCache struct {
 	pagesWithContainerGen    []ContainerWithGen[*genPg.Page]
 	layoutsWithContainerGen  []ContainerWithGen[*genPg.Layout]
 	snippetsWithContainerGen []ContainerWithGen[*genPg.Snippet]
+
+	// domainModelByModule caches moduleID → *genDm.DomainModel.
+	// Populated lazily by getDomainModelGenCached; updated write-through
+	// by setDomainModelGenCached after every UpdateDomainModelGen call.
+	// Single-goroutine lifetime — no lock needed.
+	domainModelByModule map[model.ID]*genDm.DomainModel
 }
 
 // createdMicroflowInfo tracks a microflow created during this session.
