@@ -71,7 +71,7 @@ func Init(version, mode string, verboseLevel int) *Logger {
 	}
 
 	// Write session header
-	l.slog.Info("session_start",
+	sessionArgs := []any{
 		"version", version,
 		"go", runtime.Version(),
 		"os", runtime.GOOS,
@@ -79,17 +79,10 @@ func Init(version, mode string, verboseLevel int) *Logger {
 		"mode", mode,
 		"args", os.Args,
 		"pid", os.Getpid(),
-	)
+	}
+	l.slog.Info("session_start", sessionArgs...)
 	if l.stderrLog != nil {
-		l.stderrLog.Info("session_start",
-			"version", version,
-			"go", runtime.Version(),
-			"os", runtime.GOOS,
-			"arch", runtime.GOARCH,
-			"mode", mode,
-			"args", os.Args,
-			"pid", os.Getpid(),
-		)
+		l.stderrLog.Info("session_start", sessionArgs...)
 	}
 
 	return l

@@ -159,8 +159,15 @@ func TestVerboseLevel0_NoStderr(t *testing.T) {
 	setHomeDir(t, tmpDir)
 
 	old := os.Stderr
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
 	os.Stderr = w
+	t.Cleanup(func() {
+		w.Close()
+		os.Stderr = old
+	})
 
 	l := Init("test", "batch", 0)
 	if l == nil {
@@ -184,8 +191,15 @@ func TestVerboseLevel1_TextOnStderr(t *testing.T) {
 	setHomeDir(t, tmpDir)
 
 	old := os.Stderr
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
 	os.Stderr = w
+	t.Cleanup(func() {
+		w.Close()
+		os.Stderr = old
+	})
 
 	l := Init("test", "batch", 1)
 	if l == nil {
@@ -213,8 +227,15 @@ func TestVerboseLevel2_JSONOnStderr(t *testing.T) {
 	setHomeDir(t, tmpDir)
 
 	old := os.Stderr
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
 	os.Stderr = w
+	t.Cleanup(func() {
+		w.Close()
+		os.Stderr = old
+	})
 
 	l := Init("test", "batch", 2)
 	if l == nil {
@@ -242,8 +263,15 @@ func TestVerboseCommandMirror(t *testing.T) {
 	setHomeDir(t, tmpDir)
 
 	old := os.Stderr
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
 	os.Stderr = w
+	t.Cleanup(func() {
+		w.Close()
+		os.Stderr = old
+	})
 
 	l := Init("test", "batch", 1)
 	if l == nil {
