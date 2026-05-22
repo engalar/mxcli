@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -19,7 +20,20 @@ func main() {
 	benchDiffFile := flag.String("bench-diff", "coverage/bench-diff.txt", "path to benchstat diff output")
 	gitHash := flag.String("git-hash", "", "git commit hash to embed in report")
 	outHTML := flag.String("out-html", "coverage/report.html", "path for HTML report output")
+	repoRoot := flag.String("repo-root", "", "repository root (defaults to git rev-parse --show-toplevel)")
 	flag.Parse()
+
+	// resolve repo root for test index scanning
+	root := *repoRoot
+	if root == "" {
+		if out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output(); err == nil {
+			root = strings.TrimSpace(string(out))
+		} else {
+			// fallback: two levels up from this binary's directory
+			exe, _ := os.Executable()
+			root = filepath.Join(filepath.Dir(exe), "..", "..")
+		}
+	}
 
 	// resolve git hash
 	hash := *gitHash
@@ -43,7 +57,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	layerMap := aggregateLayers(events)
+	// build test index by scanning source files
+	idx := scanTestIndex(root)
+
+	layerMap := aggregateLayers(events, idx)
 
 	// load bench diff
 	benchDiff := ""

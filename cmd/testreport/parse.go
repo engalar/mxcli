@@ -56,9 +56,9 @@ type FailureDetail struct {
 }
 
 // aggregateLayers groups test events into LayerSummary by layer classification.
-// fileMap maps "package/TestName" → source file name (populated from build info
-// when available; empty string falls back to package-only classification).
-func aggregateLayers(events []TestEvent) map[string]*LayerSummary {
+// idx is a pre-built TestIndex mapping "pkg/TestName" → layerID; falls back to
+// classifyTest(pkg, "") for any test not in the index.
+func aggregateLayers(events []TestEvent, idx TestIndex) map[string]*LayerSummary {
 	out := map[string]*LayerSummary{}
 	// accumulate output per test for failure details
 	outputBuf := map[string]string{}
@@ -79,7 +79,7 @@ func aggregateLayers(events []TestEvent) map[string]*LayerSummary {
 				l.Elapsed += ev.Elapsed
 				continue
 			}
-			layerID, layerName := classifyTest(ev.Package, "")
+			layerID, layerName := classify(ev.Package, ev.Test, idx)
 			l := ensureLayer(out, layerID, layerName)
 			if ev.Action == "pass" {
 				l.Pass++
@@ -94,6 +94,19 @@ func aggregateLayers(events []TestEvent) map[string]*LayerSummary {
 		}
 	}
 	return out
+}
+
+// classify returns the layer for a specific test, using the index first and
+// falling back to package-level heuristics.
+func classify(pkg, testName string, idx TestIndex) (id, name string) {
+	if layerID, ok := idx[pkg+"/"+testName]; ok {
+		for _, ld := range layers {
+			if ld.ID == layerID {
+				return ld.ID, ld.Name
+			}
+		}
+	}
+	return classifyTest(pkg, "")
 }
 
 func ensureLayer(m map[string]*LayerSummary, id, name string) *LayerSummary {
