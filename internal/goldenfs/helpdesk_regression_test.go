@@ -14,6 +14,11 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/internal/bsoncompare"
+	"github.com/mendixlabs/mxcli/mdl/backend"
+	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
+	"github.com/mendixlabs/mxcli/mdl/executor"
+	"github.com/mendixlabs/mxcli/mdl/visitor"
+	"github.com/pmezard/go-difflib/difflib"
 )
 
 // updateGolden: go test ... -update-golden -run TestHelpdeskGolden_Update
@@ -200,4 +205,87 @@ func TestHelpdeskGolden_Regression_BSON(t *testing.T) {
 		bsoncompare.DefaultOptions(),
 		bsoncompare.ExpectNoOtherChanges(),
 	)
+}
+
+// describeMDL 对 mprPath 执行一组 describe/show 命令，返回合并的文本输出。
+func describeMDL(t *testing.T, mprPath string) string {
+	t.Helper()
+	var buf strings.Builder
+	e := executor.New(&buf)
+	e.SetQuiet(true)
+	e.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	defer func() {
+		if err := e.Close(); err != nil {
+			t.Logf("executor close: %v", err)
+		}
+	}()
+
+	script := fmt.Sprintf(`connect local '%s';
+describe entity HD.Ticket;
+describe entity HD.Customer;
+describe entity HD.EscalationRequest;
+describe entity KB.Article;
+describe entity KB.Category;
+describe enumeration HD.TicketStatus;
+describe enumeration HD.TicketPriority;
+describe enumeration KB.ArticleStatus;
+describe microflow HD.ACT_Ticket_Submit;
+describe microflow HD.ACT_Ticket_Resolve;
+describe microflow KB.ACT_Article_Publish;
+show module roles in HD;
+show module roles in KB;
+`, mprPath)
+
+	prog, errs := visitor.Build(script)
+	if len(errs) > 0 {
+		t.Fatalf("describeMDL parse: %v", errs)
+	}
+	if err := e.ExecuteProgram(prog); err != nil {
+		t.Logf("describeMDL partial output:\n%s", buf.String())
+		t.Fatalf("describeMDL exec: %v", err)
+	}
+	return buf.String()
+}
+
+// TestHelpdeskGolden_Regression_DescribeMDL 对比 B1 golden 和 B2 current
+// 的 describe 输出文本，捕获 describe 层可见的语义退化。
+func TestHelpdeskGolden_Regression_DescribeMDL(t *testing.T) {
+	goldenMPR := helpdeskGoldenMPR(t)
+	if _, err := os.Stat(goldenMPR); err != nil {
+		t.Fatalf("B1 golden not found at %s — run: make update-helpdesk-golden", goldenMPR)
+	}
+
+	snap, err := Open(helpdeskBlankDir(t))
+	if err != nil {
+		t.Fatalf("goldenfs.Open: %v", err)
+	}
+	defer func() {
+		snap.Rollback()
+		if err := snap.Close(); err != nil {
+			t.Logf("snap.Close: %v", err)
+		}
+	}()
+
+	mountMPR := filepath.Join(snap.MountDir(), "minimal.mpr")
+	runHelpdeskMDL(t, mountMPR)
+
+	b1Desc := describeMDL(t, goldenMPR)
+	b2Desc := describeMDL(t, mountMPR)
+
+	if b1Desc == b2Desc {
+		return
+	}
+
+	diff := difflib.UnifiedDiff{
+		A:        difflib.SplitLines(b1Desc),
+		B:        difflib.SplitLines(b2Desc),
+		FromFile: "golden (B1)",
+		ToFile:   "current (B2)",
+		Context:  3,
+	}
+	text, err := difflib.GetUnifiedDiffString(diff)
+	if err != nil {
+		t.Fatalf("diff: %v", err)
+	}
+	t.Errorf("describe MDL roundtrip mismatch:\n%s", text)
 }
