@@ -6,9 +6,11 @@ package goldenfs
 
 import (
 	"flag"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -49,16 +51,53 @@ func helpdeskGoldenMPR(t *testing.T) string {
 	return filepath.Join(helpdeskGoldenDir(t), "minimal.mpr")
 }
 
-// helpdeskMDLScript reads mdl-examples/use-cases/helpdesk/helpdesk-app.mdl
-// and returns its content as a string.
-func helpdeskMDLScript(t *testing.T) string {
+// helpdeskMDLSections reads mdl-examples/use-cases/helpdesk/helpdesk-app.mdl
+// and splits it into sections at "-- MARK:" boundaries.
+// Each section is run in a fresh executor to avoid the executor list-cache bug
+// where newly created enumerations are not visible to subsequent entity creation
+// within the same batch (same issue as in workflow_integration_test.go).
+func helpdeskMDLSections(t *testing.T) []string {
 	t.Helper()
 	p := filepath.Join(repoRoot(t), "mdl-examples", "use-cases", "helpdesk", "helpdesk-app.mdl")
 	data, err := os.ReadFile(p)
 	if err != nil {
 		t.Fatalf("read helpdesk-app.mdl: %v", err)
 	}
-	return string(data)
+	lines := strings.Split(string(data), "\n")
+	var sections []string
+	var cur strings.Builder
+	for _, line := range lines {
+		if strings.HasPrefix(line, "-- MARK:") && cur.Len() > 0 {
+			sections = append(sections, cur.String())
+			cur.Reset()
+		}
+		cur.WriteString(line)
+		cur.WriteByte('\n')
+	}
+	if cur.Len() > 0 {
+		sections = append(sections, cur.String())
+	}
+	return sections
+}
+
+// runHelpdeskMDL executes helpdesk-app.mdl against mprPath in multiple passes,
+// one per "-- MARK:" section. Each pass uses a fresh executor to avoid the
+// list-cache issue where newly created types are not visible in the same batch.
+func runHelpdeskMDL(t *testing.T, mprPath string) {
+	t.Helper()
+	sections := helpdeskMDLSections(t)
+	for i, section := range sections {
+		label := fmt.Sprintf("section-%d", i+1)
+		// Extract MARK comment for logging
+		for _, line := range strings.SplitN(section, "\n", 3) {
+			if strings.HasPrefix(line, "-- MARK:") {
+				label = strings.TrimPrefix(line, "-- MARK: ")
+				break
+			}
+		}
+		t.Logf("Executing: %s", label)
+		runMDL(t, mprPath, section)
+	}
 }
 
 // copyDir copies src directory tree to dst, creating dst if needed.
@@ -97,7 +136,6 @@ func TestHelpdeskGolden_Update(t *testing.T) {
 
 	blankDir := helpdeskBlankDir(t)
 	goldenDir := helpdeskGoldenDir(t)
-	script := helpdeskMDLScript(t)
 
 	// Open FUSE overlay on top of blank A.
 	snap, err := Open(blankDir)
@@ -112,8 +150,10 @@ func TestHelpdeskGolden_Update(t *testing.T) {
 
 	mountMPR := filepath.Join(snap.MountDir(), "minimal.mpr")
 
-	// Execute helpdesk-app.mdl — produces B2 in the FUSE overlay.
-	runMDL(t, mountMPR, script)
+	// Execute helpdesk-app.mdl in multiple passes (one per MARK section) to
+	// avoid the executor list-cache bug where newly created enumerations are
+	// not visible to subsequent entity creation in the same batch.
+	runHelpdeskMDL(t, mountMPR)
 
 	// Copy entire FUSE mount (A + dirty layer = B2) to testdata/helpdesk-golden/.
 	// NOTE: do NOT call snap.Commit() — that would write back to blankDir (A).

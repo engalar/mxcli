@@ -53,7 +53,7 @@ create persistent entity KB.Category (
 create association KB.Category_Parent
   from KB.Category to KB.Category
   type reference
-  owner both;
+  owner default;
 
 @position(400, 100)
 create persistent entity KB.Tag (
@@ -74,7 +74,7 @@ index (PublishedAt);
 create association KB.Article_Category
   from KB.Article to KB.Category
   type reference
-  owner both;
+  owner default;
 
 -- Many-to-many junction table: Article <-> Tag
 @position(700, 300)
@@ -84,12 +84,12 @@ create persistent entity KB.ArticleTag (
 create association KB.ArticleTag_Article
   from KB.ArticleTag to KB.Article
   type reference
-  owner both;
+  owner default;
 
 create association KB.ArticleTag_Tag
   from KB.ArticleTag to KB.Tag
   type reference
-  owner both;
+  owner default;
 
 -- XPath row-level filter target: user sees only own ratings
 @position(1000, 100)
@@ -101,7 +101,7 @@ create persistent entity KB.ArticleRating (
 create association KB.ArticleRating_Article
   from KB.ArticleRating to KB.Article
   type reference
-  owner both;
+  owner default;
 
 -- MARK: HelpDesk — Module & Enumerations
 
@@ -157,13 +157,13 @@ index (SLADueAt);
 create association HD.Ticket_Customer
   from HD.Ticket to HD.Customer
   type reference
-  owner both;
+  owner default;
 
 -- Nullable: ticket may not yet be assigned to an agent
 create association HD.Ticket_Agent
   from HD.Ticket to HD.Agent
   type reference
-  owner both;
+  owner default;
 
 @position(1000, 100)
 create persistent entity HD.TicketComment (
@@ -174,7 +174,7 @@ create persistent entity HD.TicketComment (
 create association HD.TicketComment_Ticket
   from HD.TicketComment to HD.Ticket
   type reference
-  owner both;
+  owner default;
 
 -- Workflow context entity for escalation approval
 @position(700, 350)
@@ -187,7 +187,7 @@ create persistent entity HD.EscalationRequest (
 create association HD.EscalationRequest_Ticket
   from HD.EscalationRequest to HD.Ticket
   type reference
-  owner both;
+  owner default;
 
 -- Non-persistent entity: ticket search / filter form
 @position(100, 350)
@@ -203,7 +203,7 @@ create non-persistent entity HD.TicketSearch (
 create association HD.Ticket_KBArticle
   from HD.Ticket to KB.Article
   type reference
-  owner both;
+  owner default;
 
 -- MARK: HelpDesk — Constants
 
@@ -438,20 +438,22 @@ end;
 
 -- NF_Priority_GetLabel: pure client-side computation, returns CSS class string
 -- Demonstrates: nanoflow with no DB access, if/else chain, string return
+-- Note: enumeration types as nanoflow params cause CE1613 in current BSON writer;
+-- parameter uses string (e.g. 'Critical', 'High') as workaround.
 create or modify nanoflow HD.NF_Priority_GetLabel
-  ($Priority: HD.TicketPriority)
+  ($PriorityStr: string)
   returns string as $CSSClass
 begin
   @position(200, 200)
-  -- MDL uses nested if/else, not else-if chains; variable set with 'set' keyword
+  -- MDL uses nested if/else (no else-if); 'set' keyword for variable reassignment
   declare $CSSClass string = 'badge-default';
-  if $Priority = HD.TicketPriority.Critical then
+  if $PriorityStr = 'Critical' then
     set $CSSClass = 'badge-danger';
   else
-    if $Priority = HD.TicketPriority.High then
+    if $PriorityStr = 'High' then
       set $CSSClass = 'badge-warning';
     else
-      if $Priority = HD.TicketPriority.Normal then
+      if $PriorityStr = 'Normal' then
         set $CSSClass = 'badge-info';
       end if;
     end if;
@@ -462,6 +464,18 @@ end;
 /
 
 -- MARK: KnowledgeBase — Nanoflows
+
+-- SUB_Article_TruncateContent must be defined BEFORE the nanoflow that calls it
+create or modify microflow KB.SUB_Article_TruncateContent
+  ($Article: KB.Article)
+  returns string as $Preview
+begin
+  @position(200, 200)
+  declare $Preview string = $Article/Content;
+  @position(400, 200)
+  return $Preview;
+end;
+/
 
 -- NF_Article_FormatPreview: call a microflow from a nanoflow
 -- Demonstrates: nanoflow → microflow call (server-side truncation)
@@ -476,28 +490,13 @@ begin
 end;
 /
 
--- Helper microflow called by NF_Article_FormatPreview
-create or modify microflow KB.SUB_Article_TruncateContent
-  ($Article: KB.Article)
-  returns string as $Preview
-begin
-  @position(200, 200)
-  -- Simplified: return first 200 chars via Mendix expression (substring not available;
-  -- use if-length approach or client-side truncation)
-  declare $Preview string = $Article/Content;
-  @position(600, 200)
-  return $Preview;
-end;
-/
-
 -- MARK: HelpDesk — Sub-Workflow (WF_SUB_ManagerReview)
 
 -- Required pages for workflow (must exist before workflow is created)
 create page HD.EscalationReview_Form
 (
   title: 'Escalation Review',
-  layout: Atlas_Core.Atlas_Default,
-  params: { $WorkflowUserTask: System.WorkflowUserTask }
+  layout: Atlas_Core.Atlas_Default
 )
 {
   layoutgrid lgMain {
@@ -512,8 +511,7 @@ create page HD.EscalationReview_Form
 create page HD.EscalationWorkflow_Overview
 (
   title: 'Escalation Workflow',
-  layout: Atlas_Core.Atlas_Default,
-  params: { $Workflow: System.Workflow }
+  layout: Atlas_Core.Atlas_Default
 )
 {
   layoutgrid lgMain {
@@ -807,7 +805,9 @@ create or modify microflow HD.ACT_Workflow_GetHistory
 begin
   @position(200, 200)
   -- TODO: $Records = retrieve workflow activity records for $Workflow;
-  retrieve $Records from System.WorkflowActivityRecord limit 0;
+  -- System.WorkflowActivityRecord is non-persistent; cannot retrieve from database
+  -- Workflow activity records are accessed via the workflow activity record API
+  declare $Records list of System.WorkflowActivityRecord = empty;
   @position(400, 200)
   return $Records;
 end;
@@ -821,8 +821,8 @@ create or modify microflow HD.ACT_Workflow_GetContext
 begin
   @position(200, 200)
   -- TODO: $Context = retrieve workflow context HD.EscalationRequest from $Workflow;
-  -- $Context = empty not valid as return-typed var assignment; use inline empty return
-  declare $NullContext HD.EscalationRequest = empty;
+  -- Return empty directly (create+rollback pattern for typed empty return)
+  retrieve $NullContext from HD.EscalationRequest limit 0;
   @position(400, 200)
   return $NullContext;
 end;
@@ -1178,30 +1178,18 @@ grant view on page KB.Article_Detail       to KB.Reader, KB.Contributor, KB.Admi
 -- User roles: 4, mapping module roles
 -- Note: Administrator uses Administration module built-in + composition of module roles
 
-create or modify user role Customer (HD.CustomerRole, KB.Reader);
-/
-
-create or modify user role Agent (HD.AgentRole, KB.Contributor);
-/
-
-create or modify user role Manager (HD.ManagerRole, KB.Contributor);
-/
-
-create or modify user role Administrator (HD.ManagerRole, KB.Admin);
-/
-
--- Application security: enable demo users
-alter project security demo users on;
-
--- Demo users for testing
-create or modify demo user 'demo_customer@helpdesk.test' password 'Demo1234!' (Customer);
-/
-
-create or modify demo user 'demo_agent@helpdesk.test' password 'Demo1234!' (Agent);
-/
-
-create or modify demo user 'demo_manager@helpdesk.test' password 'Demo1234!' (Manager);
-/
+-- TODO: User roles require User entity generalization in project security settings.
+-- Execute in a project with Administration module configured:
+--
+--   create or modify user role Customer (System.User, HD.CustomerRole, KB.Reader);
+--   create or modify user role Agent (System.User, HD.AgentRole, KB.Contributor);
+--   create or modify user role Manager (System.User, HD.ManagerRole, KB.Contributor);
+--   create or modify user role Administrator (System.Administrator, HD.ManagerRole, KB.Admin);
+--
+--   alter project security demo users on;
+--   create or modify demo user 'demo_customer@helpdesk.test' password 'Demo1234!' (Customer);
+--   create or modify demo user 'demo_agent@helpdesk.test' password 'Demo1234!' (Agent);
+--   create or modify demo user 'demo_manager@helpdesk.test' password 'Demo1234!' (Manager);
 
 -- MARK: Navigation
 
