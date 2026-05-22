@@ -30,7 +30,7 @@ LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 # Clean version for VS Code extension (must be valid semver: major.minor.patch)
 VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$$' || echo "0.0.0")
 
-.PHONY: build build-debug release clean test test-mdl grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet
+.PHONY: build build-debug release clean test test-mdl report report-bench report-reset-baseline grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
 # Usage: $(call copy-if-changed,src,dst)
@@ -131,6 +131,39 @@ release: clean sync-all
 # Run tests
 test:
 	CGO_ENABLED=0 go test ./...
+
+# Run full test suite and generate layered report (terminal + HTML)
+# Output: coverage/report.html, coverage/bench-baseline.json
+report:
+	@mkdir -p coverage
+	CGO_ENABLED=0 go test -v -json -coverprofile=coverage/coverage.out ./... > coverage/test-results.json 2>&1 || true
+	go tool cover -html=coverage/coverage.out -o coverage/coverage.html 2>/dev/null || true
+	@if command -v benchstat >/dev/null 2>&1; then \
+		CGO_ENABLED=0 go test -bench=. -benchmem -count=3 ./... > coverage/bench-results.txt 2>/dev/null || true; \
+		benchstat coverage/bench-baseline.json coverage/bench-results.txt > coverage/bench-diff.txt 2>/dev/null || true; \
+	fi
+	@if ! command -v benchstat >/dev/null 2>&1; then \
+		echo "  (benchstat not installed — skipping benchmark comparison)"; \
+		echo "  Install: go install golang.org/x/perf/cmd/benchstat@latest"; \
+	fi
+	go run ./cmd/testreport \
+		--json-file coverage/test-results.json \
+		--bench-diff coverage/bench-diff.txt \
+		--out-html coverage/report.html
+
+# Run only benchmarks and update the baseline
+report-bench:
+	@mkdir -p coverage
+	CGO_ENABLED=0 go test -bench=. -benchmem -count=3 ./... > coverage/bench-results.txt
+	@if command -v benchstat >/dev/null 2>&1; then \
+		benchstat coverage/bench-baseline.json coverage/bench-results.txt > coverage/bench-diff.txt || true; \
+		cat coverage/bench-diff.txt; \
+	fi
+
+# Reset benchmark baseline (use after major refactors)
+report-reset-baseline:
+	echo '[]' > coverage/bench-baseline.json
+	@echo "Baseline reset."
 
 # Check MDL syntax for all doctype example scripts
 check-mdl: build
