@@ -1,123 +1,70 @@
-# Master-Detail Pages
+---
+name: master-detail-pages
+description: Use when building master-detail layouts — gallery selection dataview
+             listen to widget selection binding datasource association filter bar
+             attributes multi-attribute search master detail split layout
+---
 
-## Overview
+## When to Use This Skill
 
-Master-Detail is a common UI pattern showing:
-- **Master list** (left): Selectable list of items (Gallery widget)
-- **Detail form** (right): Form showing selected item details (DataView with SELECTION source)
+- Building a side-by-side list + detail panel (master-detail layout)
+- Using `datasource: selection widgetName` to sync a DataView with a Gallery or DataGrid row
+- Adding a Gallery filter bar with multi-attribute text search
+- Nesting a DataGrid inside a DataView via association path
+- Displaying related objects when a parent object is selected
 
-## MDL Syntax
+## Checklist
 
-### Basic Structure
+- [ ] Enable `selection: single` (or `multiple`) on the source widget (Gallery/DataGrid)
+- [ ] Set the detail DataView datasource to `selection sourceWidgetName`
+- [ ] Both master and detail widgets must be on the same page (selection binding is page-scoped)
+- [ ] For Gallery filter bar: use `filter filterBarName { textfilter ... }` inside the gallery
+- [ ] Run `./bin/mxcli check script.mdl` to validate
 
-```sql
-create page Module.Entity_MasterDetail
-(
-  title: 'Entity Master-Detail',
-  layout: Atlas_Core.Atlas_Default
-)
-{
-  layoutgrid mainGrid {
-    row row1 {
-      -- Master list (4 columns)
-      column colMaster (desktopwidth: 4) {
-        gallery entityList (datasource: database Module.Entity, selection: single) {
-          template template1 {
-            dynamictext name (content: '{1}', contentparams: [{1} = Name], rendermode: H4)
-          }
-        }
-      }
+## Quick Syntax Reference
 
-      -- Detail form (8 columns)
-      column colDetail (desktopwidth: 8) {
-        dataview entityDetail (datasource: selection entityList) {
-          textbox txtName (label: 'Name', attribute: Name)
+| Element | Syntax | Notes |
+|---------|--------|-------|
+| Enable selection | `selection: single` or `selection: multiple` on Gallery/DataGrid | Required for `datasource: selection` |
+| Listen to selection | `dataview dv (datasource: selection masterWidgetName)` | Widget names must match exactly |
+| Association datasource | `datagrid dg (datasource: $Param/Module.Assoc/Module.Entity)` | Path from page param through association |
+| Gallery filter bar | `gallery g1 (...) { filter fb { textfilter f1 (attributes: [...]) } template t1 { ... } }` | `attributes:` required for gallery filter bar |
+| Multi-attribute OR search | `textfilter f1 (attributes: [Mod.Entity.A1, Mod.Entity.A2])` | Matches if ANY attribute contains text |
 
-          footer footer1 {
-            actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: success)
-          }
-        }
-      }
-    }
-  }
-}
-```
+## Core Patterns
 
-### Key Components
+### Pattern 1: Gallery (left) + DataView detail (right)
 
-#### 1. GALLERY Widget (Master List)
+Classic side-by-side master-detail:
 
 ```sql
-gallery widgetName (
-  datasource: database from Module.Entity sort by Name asc,
-  selection: single|multiple|none
+create page MyMod.Customer_MasterDetail (
+  title: 'Customers',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'customers'
 ) {
-  template template1 {
-    -- Widgets for each item
-    dynamictext name (content: '{1}', contentparams: [{1} = AttrName], rendermode: H4)
-  }
-}
-```
-
-**Properties:**
-- `datasource: database from entity sort by attr asc|desc` - Entity data source with optional sorting
-- `selection: single` - Selection mode (Single for master-detail)
-- Template content inside TEMPLATE widget (requires name)
-
-#### 2. DataView with SELECTION Source
-
-```sql
-dataview widgetName (datasource: selection sourceWidgetName) {
-  -- Form widgets
-}
-```
-
-The `selection` source creates a binding to another widget's selection. When the user selects an item in the Gallery, the DataView displays that item.
-
-#### 3. LISTVIEW Widget (Nested Data)
-
-```sql
-listview widgetName (datasource: database Module.Entity, PageSize: 10) {
-  template template1 {
-    -- Widgets for each associated item
-  }
-}
-```
-
-Used inside the detail form to show related/associated data.
-
-**Nested list by association:** Use `datasource: $currentObject/Module.Assoc` (or the explicit `datasource: association path` form) inside a parent DATAVIEW. Both forms produce the same BSON (ByAssociation data source). Example: `datagrid lines (datasource: $currentObject/Order_OrderLine)` inside a `dataview dv (datasource: database Order)`.
-
-## Complete Example
-
-```sql
-create page CRM.Customer_MasterDetail
-(
-  title: 'Customer Management',
-  layout: Atlas_Core.Atlas_Default
-)
-{
-  layoutgrid mainGrid {
+  layoutgrid lg1 {
     row row1 {
+      -- LEFT: master list with selection enabled
       column colMaster (desktopwidth: 4) {
-        dynamictext heading (content: 'Customers', rendermode: H3)
-        gallery customerList (datasource: database from CRM.Customer sort by Name asc, selection: single) {
+        gallery custList (
+          datasource: database from MyMod.Customer sort by Name asc,
+          selection: single
+        ) {
           template template1 {
-            dynamictext name (content: '{1}', contentparams: [{1} = Name], rendermode: H4)
-            dynamictext email (content: '{1}', contentparams: [{1} = Email])
+            dynamictext txtName  (content: '{1}', contentparams: [{1} = Name],  rendermode: H4)
+            dynamictext txtEmail (content: '{1}', contentparams: [{1} = Email])
           }
         }
       }
-
+      -- RIGHT: detail panel listens to Gallery selection
       column colDetail (desktopwidth: 8) {
-        dataview customerDetail (datasource: selection customerList) {
-          dynamictext detailHeading (content: 'Customer Details', rendermode: H3)
-          textbox txtName (label: 'Name', attribute: Name)
-          textbox txtEmail (label: 'Email', attribute: Email)
-          textbox txtPhone (label: 'Phone', attribute: Phone)
-
+        dataview dvDetail (datasource: selection custList) {
+          textbox txtName    (label: 'Name',    attribute: Name)
+          textbox txtEmail   (label: 'Email',   attribute: Email)
+          textbox txtPhone   (label: 'Phone',   attribute: Phone)
           footer footer1 {
-            actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: success)
+            actionbutton btnSave   (caption: 'Save',   action: save_changes, buttonstyle: primary)
             actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
           }
         }
@@ -127,58 +74,128 @@ create page CRM.Customer_MasterDetail
 }
 ```
 
-## Key Patterns
+### Pattern 2: DataGrid (top) + DataView detail (bottom)
 
-### Selection Binding
+Use when the list is tabular and the detail form sits below:
 
-The core of master-detail is the selection binding:
-1. Gallery has `selection: single` - enables single item selection
-2. DataView uses `datasource: selection galleryName` - listens to Gallery selection
-3. When user clicks an item in Gallery, DataView automatically updates
-
-### Widget Names
-
-The selection binding uses widget names to connect:
-- Gallery widget name: `customerList`
-- DataView references: `datasource: selection customerList`
-
-### Template Content with ContentParams
-
-Inside Gallery templates, use `contentparams` to reference current item attributes:
 ```sql
-template template1 {
-  dynamictext name (content: '{1}', contentparams: [{1} = Name], rendermode: H4)
-  dynamictext email (content: '{1}', contentparams: [{1} = Email])
+create page MyMod.Order_Split (
+  title: 'Order Management',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'order-management'
+) {
+  layoutgrid lg1 {
+    row rowGrid {
+      column colGrid (desktopwidth: 12) {
+        datagrid dgOrders (
+          datasource: database from MyMod.Order sort by OrderDate desc,
+          selection: single,
+          PageSize: 15
+        ) {
+          column colNum    (attribute: OrderNumber, caption: 'Order #')
+          column colDate   (attribute: OrderDate,   caption: 'Date')
+          column colStatus (attribute: Status,      caption: 'Status')
+        }
+      }
+    }
+    row rowDetail {
+      column colDetail (desktopwidth: 12) {
+        dataview dvOrder (datasource: selection dgOrders) {
+          textbox txtNumber (label: 'Order #', attribute: OrderNumber)
+          textbox txtAmount (label: 'Amount',  attribute: TotalAmount)
+          combobox cmbStatus (label: 'Status', attribute: Status)
+          footer footer1 {
+            actionbutton btnSave   (caption: 'Save',   action: save_changes, buttonstyle: primary)
+            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
+          }
+        }
+      }
+    }
+  }
 }
 ```
 
-## Syntax Summary
+### Pattern 3: Gallery filter bar with multi-attribute search
 
-| Element | Syntax |
-|---------|-----------|
-| Page properties | `(title: 'title', layout: Module.Layout)` |
-| Widget name | Required after type: `gallery myGallery (...)` |
-| Database source | `datasource: database from Module.Entity` |
-| Selection binding | `datasource: selection widgetName` |
-| Sort by | `datasource: database from entity sort by Name asc` |
-| Where filter | `datasource: database from entity where [IsActive = true]` |
-| Selection mode | `selection: single` |
-| Attribute binding | `attribute: attributename` |
-| Action binding | `action: save_changes` |
-| Button style | `buttonstyle: success` |
-| Text content | `content: 'text'` with `contentparams: [{1} = attr]` |
-| Render mode | `rendermode: H4` |
-| Template content | `template template1 { ... }` |
+The `filter {}` container inside a Gallery enables a search bar above the cards.
+`attributes: [A, B]` means the filter shows cards where ANY listed attribute contains the text (OR match).
+Multiple filter widgets combine with AND logic.
 
-## Related Skills
+```sql
+create page MyMod.Product_Gallery (
+  title: 'Products',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'product-gallery'
+) {
+  gallery productGallery (
+    datasource: database from MyMod.Product sort by Name asc,
+    selection: single,
+    DesktopColumns: 3,
+    TabletColumns: 2,
+    PhoneColumns: 1
+  ) {
+    filter filterBar {
+      -- Single input searches Name, Code, AND Category (OR match within this widget)
+      textfilter fSearch (
+        attributes: [MyMod.Product.Name, MyMod.Product.Code, MyMod.Product.Category]
+      )
+      -- Additional AND filters
+      dropdownfilter fActive   (attributes: [MyMod.Product.IsActive])
+      numberfilter   fMinPrice (attributes: [MyMod.Product.Price])
+    }
+    template template1 {
+      dynamictext txtName  (content: '{1}', contentparams: [{1} = Name],  rendermode: H4)
+      dynamictext txtCode  (content: 'SKU: {1}', contentparams: [{1} = Code])
+      dynamictext txtPrice (content: '${1}',     contentparams: [{1} = Price])
+    }
+  }
+}
+```
 
-- [Overview Pages](./overview-pages.md) - CRUD page patterns
-- [Create Page](./create-page.md) - Basic page syntax
-- [ALTER PAGE/SNIPPET](./alter-page.md) - Modify existing pages in-place (SET, INSERT, DROP, REPLACE)
+### Pattern 4: DataView (page param) + nested DataGrid via association
 
-## Implementation Notes
+Parent page receives an entity; child DataGrid shows related objects via association path:
 
-- Gallery is a pluggable widget (similar to DataGrid2)
-- Selection binding uses `ListenTargetSource` in the Model SDK
-- ListView is a built-in Mendix widget
-- All widget properties use explicit `(key: value)` syntax
+```sql
+create page MyMod.Customer_Detail (
+  params: { $Customer: MyMod.Customer },
+  title: 'Customer Detail',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'customer/{Customer/Name}'
+) {
+  dataview dvCustomer (datasource: $Customer, editable: false) {
+    dynamictext dtName (content: '{1}', contentparams: [{1} = Name], rendermode: H2)
+
+    datagrid dgOrders (
+      datasource: $Customer/MyMod.Order_Customer/MyMod.Order,
+      PageSize: 10
+    ) {
+      column colNum    (attribute: OrderNumber, caption: 'Order #') { textfilter fNum }
+      column colDate   (attribute: OrderDate,   caption: 'Date')    { datefilter fDate }
+      column colStatus (attribute: Status,      caption: 'Status')  { dropdownfilter fStat }
+    }
+  }
+}
+```
+
+## Known Limitations
+
+- ⚠️ **`datasource: selection` requires selection enabled** — source widget must have `selection: single` or `selection: multiple`; DataView shows nothing otherwise
+- ⚠️ **Selection binding is page-scoped** — master and detail must be on the same page; cross-page selection is not supported
+- ⚠️ **NPE lists + `Keep Selection`** — DataGrid2 `Keep Selection` does not work with NPE datasources; selection is lost on filter or refresh
+- ✅ **Gallery `filter {}` with `attributes:[...]`** — multi-attribute text search (OR within the filter widget) works correctly
+- ✅ **DataGrid2 filter bar** (`controlbar {} { textfilter (attributes:[...]) }`) — fixed in commit fc1b6ee3; now emits real filter BSON
+
+## Validation
+
+```bash
+./bin/mxcli check script.mdl
+./bin/mxcli check script.mdl -p path/to/app.mpr --references
+```
+
+## See Also
+
+- `mendix:create-page` — Full widget syntax reference
+- `mendix:overview-pages` — CRUD overview + DataGrid CRUD patterns
+- `mendix:datagrid2-filters` — Column and filter bar filter widgets
+- `mendix:page-data-design` — Datasource strategy
