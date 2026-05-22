@@ -244,8 +244,8 @@ func collectErrorStacks(logDir string, maxErrors int) string {
 	}
 
 	var sb strings.Builder
-	for _, e := range entries {
-		fmt.Fprintf(&sb, "=== %s ===\n%s\n\n", e.ts, e.raw)
+	for i := len(entries) - 1; i >= 0; i-- {
+		fmt.Fprintf(&sb, "=== %s ===\n%s\n\n", entries[i].ts, entries[i].raw)
 	}
 	return sb.String()
 }

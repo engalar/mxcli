@@ -2,6 +2,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -59,5 +60,25 @@ func TestCollectErrorStacks_Empty(t *testing.T) {
 	result := collectErrorStacks(tmpDir, 20)
 	if result == "" {
 		t.Error("expected non-empty result even with no logs")
+	}
+}
+
+func TestCollectErrorStacks_RespectsMaxErrors(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	var sb strings.Builder
+	for i := 0; i < 25; i++ {
+		fmt.Fprintf(&sb, "{\"time\":\"2026-05-21T10:00:%02dZ\",\"level\":\"ERROR\",\"error\":\"err%d\"}\n", i, i)
+	}
+	if err := os.WriteFile(tmpDir+"/mxcli-2026-05-21.log", []byte(sb.String()), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result := collectErrorStacks(tmpDir, 20)
+
+	// 每个 entry 输出一行 "=== ... ==="，数一下有多少个分隔行
+	count := strings.Count(result, "=== ")
+	if count != 20 {
+		t.Errorf("expected 20 error entries, got %d", count)
 	}
 }
