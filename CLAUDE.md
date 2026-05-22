@@ -316,6 +316,8 @@ New MDL commands or language features must be wired through the full pipeline:
 - [ ] **Bug fixes** — every bug fix should include an MDL test script in `mdl-examples/bug-tests/` that reproduces the issue, so the fix can be verified in Studio Pro if applicable
 - [ ] Integration paths (not just helpers) are tested
 - [ ] Tests don't rely on `time.Sleep` for synchronization — use channels or polling with timeout
+- [ ] **测试层要求** — 按 `docs/03-development/TESTING_GUIDE.md` 的 PR 清单逐项检查（L1/L2 合法+非法、L3 happy+error、L4 shape 断言、L6b 批量列表更新）
+- [ ] **make report 通过** — 运行 `make report` 无新增 FAIL，覆盖率无明显下降
 
 ### Security & robustness
 - [ ] Unix sockets use restrictive permissions (`os.Chmod(path, 0600)`)
