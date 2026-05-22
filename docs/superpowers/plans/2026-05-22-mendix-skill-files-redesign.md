@@ -2,11 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Convert 8 Mendix skill files from plain-Markdown reference docs to Superpowers-format Claude Code skills with YAML frontmatter, When-to-Use, Checklists, Known Limitations, and new content for DataGrid2 filters, NPE datasource patterns, and page data container design.
+**Goal:** (1) Fix DataGrid2 complete MDL support — wire filter bar and `filtertype:` into real BSON. (2) Convert 8 Mendix skill files to Superpowers-format Claude Code skills with new content based on the now-correct implementation.
 
-**Architecture:** Each skill file gets: (1) YAML frontmatter with `name:` + `description:` trigger keywords, (2) `## When to Use This Skill` bullet list, (3) `## Checklist` of ordered executable steps, (4) `## Quick Syntax Reference` table, (5) `## Core Patterns` with MDL code blocks, (6) `## Known Limitations` with ✅/⚠️/❌ status markers, (7) `## Validation` bash block. Files are created in dependency order so cross-references are valid.
+**Architecture:**
+- **Task 0 (Go code):** Extend `FilterWidgetSpec`, fix `buildWidgetBSON()` to emit real filter widgets instead of DivContainers (Gap 1), forward `FilterType` + `Attributes` through the BSON pipeline (Gap 2). Three files touched: `mdl/backend/mutation.go`, `mdl/backend/mpr/datagrid_builder.go`, `mdl/executor/cmd_pages_builder_v3.go`.
+- **Tasks 1–9 (docs):** Skill files rewritten in Superpowers format. Task 0 must complete first so skill Known Limitations can accurately reflect ✅ instead of ⚠️.
 
-**Tech Stack:** Markdown, MDL (Mendix Definition Language), `./bin/mxcli check` for code block validation, `make sync-skills` for deployment.
+**Tech Stack:** Go, BSON (`go.mongodb.org/mongo-driver/bson`), Markdown, MDL, `./bin/mxcli check`.
 
 ---
 
@@ -14,6 +16,7 @@
 
 | Task | File | Operation | Target path |
 |------|------|-----------|-------------|
+| **0** | DataGrid2 filter fixes | **Go implementation** | `mdl/backend/mutation.go`, `mdl/backend/mpr/datagrid_builder.go`, `mdl/executor/cmd_pages_builder_v3.go`, `mdl/executor/roundtrip_page_test.go` |
 | 1 | `datagrid2-filters.md` | CREATE | `cmd/mxcli/skills/datagrid2-filters.md` |
 | 2 | `data-containers.md` | CREATE | `cmd/mxcli/skills/data-containers.md` |
 | 3 | `create-page.md` | REWRITE | `cmd/mxcli/skills/create-page.md` |
@@ -25,6 +28,452 @@
 | 9 | Sync + validate | — | `make sync-skills` |
 
 **Validation approach:** Skill files contain MDL code blocks. After each file is written, extract and run the MDL examples through `./bin/mxcli check` using a scratch `.mdl` file. If the code block creates entities or modules that don't exist in `testdata/`, use `--no-references` (syntax-only check).
+
+---
+
+## Task 0: Fix DataGrid2 Complete MDL Filter Support (Go)
+
+**Files:**
+- Modify: `mdl/backend/mutation.go` — extend `FilterWidgetSpec`
+- Modify: `mdl/backend/mpr/datagrid_builder.go` — wire FilterType + Attributes into BSON
+- Modify: `mdl/executor/cmd_pages_builder_v3.go` — fix `buildWidgetBSON()` + forward FilterType
+- Modify: `mdl/executor/roundtrip_page_test.go` — add tests (TDD: write first)
+
+### Background
+
+Two gaps identified in architecture audit:
+
+**Gap 1 — filter bar (highest value):** `textfilter`/`numberfilter`/`datefilter`/`dropdownfilter`
+inside `controlbar {}` of a DataGrid2 call `buildWidgetBSON()`, which falls back to `DivContainer`
+for unknown widget types (line 2148, `cmd_pages_builder_v3.go`). Fix: add filter-type cases that
+call `BuildFilterWidgetGen()` and serialize the result.
+
+**Gap 2 — filtertype forwarding:** `filtertype:` is parsed by the visitor and stored as
+`widget.Properties["FilterType"]` in the AST, but `BuildFilterWidgetGen()` is called with
+`FilterWidgetSpec{WidgetID, FilterName}` only — `FilterType` is never passed. Fix: extend
+`FilterWidgetSpec`, forward from both the column-level and controlbar paths, and apply in
+`buildFilterWidgetBSON()` by scanning the template Object's Properties for "defaultFilter".
+
+**Attributes wiring (for filter bar `attributes:[...]`):** Grid-level filter widgets need their
+`attributes:` list wired into BSON so Studio Pro knows which columns they filter. This uses the
+`BuildCreateAttributeObject` interface already present in `WidgetBuilderBackend`.
+
+---
+
+- [ ] **Step 0.1: Write failing test — column-level filter with filtertype**
+
+Add to `mdl/executor/roundtrip_page_test.go`:
+
+```go
+// TestRoundtripPage_V3DataGridColumnFilter tests that column-level filter widgets
+// are created and describe back with the correct filter widget type.
+func TestRoundtripPage_V3DataGridColumnFilter(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	entityName := testModule + ".V3FilterEntity"
+	env.registerCleanup("entity", entityName)
+
+	if err := env.executeMDL(`create or modify persistent entity ` + entityName + ` (
+		Name: String(100),
+		Price: Decimal,
+		OrderDate: DateTime,
+		Status: Boolean default true
+	);`); err != nil {
+		t.Fatalf("create entity: %v", err)
+	}
+
+	pageName := testModule + ".V3ColumnFilterPage"
+	env.registerCleanup("page", pageName)
+
+	if err := env.executeMDL(`create page ` + pageName + ` (
+		Title: 'Filter Test',
+		Layout: Atlas_Core.Atlas_Default
+	) {
+		datagrid dg1 (DataSource: database ` + entityName + `) {
+			column colName   (Attribute: Name,      Caption: 'Name')    { textfilter     fName  }
+			column colPrice  (Attribute: Price,     Caption: 'Price')   { numberfilter   fPrice }
+			column colDate   (Attribute: OrderDate, Caption: 'Date')    { datefilter     fDate  }
+			column colStatus (Attribute: Status,    Caption: 'Active')  { dropdownfilter fStatus}
+		}
+	}`); err != nil {
+		t.Fatalf("create page: %v", err)
+	}
+
+	out, err := env.describeMDL(`describe page ` + pageName + `;`)
+	if err != nil {
+		t.Fatalf("describe: %v", err)
+	}
+	// Columns are present
+	for _, col := range []string{"Name", "Price", "Date", "Active"} {
+		if !strings.Contains(out, col) {
+			t.Errorf("expected column %q in describe output", col)
+		}
+	}
+	t.Logf("column filter roundtrip:\n%s", out)
+}
+
+// TestRoundtripPage_V3DataGridControlBarFilter tests that filter widgets in
+// controlbar produce real filter BSON (not DivContainers).
+func TestRoundtripPage_V3DataGridControlBarFilter(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	entityName := testModule + ".V3CtrlBarFilterEntity"
+	env.registerCleanup("entity", entityName)
+
+	if err := env.executeMDL(`create or modify persistent entity ` + entityName + ` (
+		Name: String(100),
+		Status: Boolean default true
+	);`); err != nil {
+		t.Fatalf("create entity: %v", err)
+	}
+
+	pageName := testModule + ".V3CtrlBarFilterPage"
+	env.registerCleanup("page", pageName)
+
+	if err := env.executeMDL(`create page ` + pageName + ` (
+		Title: 'ControlBar Filter Test',
+		Layout: Atlas_Core.Atlas_Default
+	) {
+		datagrid dg1 (DataSource: database ` + entityName + `) {
+			controlbar cb1 {
+				textfilter     fName   (Attributes: [` + entityName + `.Name])
+				dropdownfilter fStatus (Attributes: [` + entityName + `.Status])
+			}
+			column colName   (Attribute: Name,   Caption: 'Name')
+			column colStatus (Attribute: Status, Caption: 'Active')
+		}
+	}`); err != nil {
+		t.Fatalf("create page: %v", err)
+	}
+
+	out, err := env.describeMDL(`describe page ` + pageName + `;`)
+	if err != nil {
+		t.Fatalf("describe: %v", err)
+	}
+	// Page roundtrips without error — filter widgets in filtersPlaceholder
+	if !strings.Contains(out, "Name") {
+		t.Errorf("expected column Name in describe output")
+	}
+	t.Logf("controlbar filter roundtrip:\n%s", out)
+}
+```
+
+- [ ] **Step 0.2: Run tests to confirm they fail**
+
+```bash
+cd /mnt/data_sdd/gh/mxcli-wt-02
+go test ./mdl/executor/... -run "TestRoundtripPage_V3DataGridColumnFilter|TestRoundtripPage_V3DataGridControlBarFilter" -v -count=1 2>&1 | tail -20
+```
+
+Expected: tests compile and run but `TestRoundtripPage_V3DataGridControlBarFilter` either errors or produces DivContainer in describe output.
+
+- [ ] **Step 0.3: Extend `FilterWidgetSpec` in `mdl/backend/mutation.go`**
+
+Find the `FilterWidgetSpec` struct (line 329) and replace it:
+
+```go
+// FilterWidgetSpec carries inputs for building a filter widget.
+type FilterWidgetSpec struct {
+	WidgetID   string   // e.g. widgetIDDataGridTextFilter
+	FilterName string   // widget name used in BSON
+	FilterType string   // default comparison: "contains" | "startsWith" | "equal" | etc.
+	             	    // maps to BSON property "defaultFilter"; empty = use template default
+	Attributes []string // fully-qualified attribute paths to filter on (grid-level filter bar)
+	             	    // e.g. ["MyMod.Order.OrderNumber", "MyMod.Order.CustomerName"]
+	             	    // empty = auto-wired by DataGrid2 (column-level filters)
+}
+```
+
+- [ ] **Step 0.4: Add `applyFilterTypeToBSON` helper in `mdl/backend/mpr/datagrid_builder.go`**
+
+Add this function after `buildMinimalFilterWidgetBSON` (after line ~1275):
+
+```go
+// applyFilterTypeToBSON overrides the "defaultFilter" property in a filter widget's
+// Object BSON when spec.FilterType is non-empty.
+// It scans rawType's ObjectType.PropertyTypes to build a TypePointer→key map,
+// then finds the "defaultFilter" property in rawObject.Properties and clones it
+// with the new PrimitiveValue.
+func applyFilterTypeToBSON(rawObject, rawType bson.D, filterType string) bson.D {
+	if filterType == "" {
+		return rawObject
+	}
+
+	// Build TypePointer-ID → property-key map from the widget Type definition.
+	typePointerToKey := make(map[string]string)
+	for _, elem := range rawType {
+		if elem.Key != "ObjectType" {
+			continue
+		}
+		objType, ok := elem.Value.(bson.D)
+		if !ok {
+			break
+		}
+		for _, ot := range objType {
+			if ot.Key != "PropertyTypes" {
+				continue
+			}
+			pts, _ := ot.Value.(bson.A)
+			for _, pt := range pts {
+				ptD, ok := pt.(bson.D)
+				if !ok {
+					continue
+				}
+				var id, key string
+				for _, e := range ptD {
+					switch e.Key {
+					case "$ID":
+						if b, ok := e.Value.(primitive.Binary); ok {
+							id = bsonutil.BinaryToHex(b)
+						}
+					case "PropertyKey":
+						key, _ = e.Value.(string)
+					}
+				}
+				if id != "" && key != "" {
+					typePointerToKey[id] = key
+				}
+			}
+		}
+	}
+
+	// Scan rawObject.Properties and update the "defaultFilter" entry.
+	result := make(bson.D, 0, len(rawObject))
+	for _, elem := range rawObject {
+		if elem.Key != "Properties" {
+			result = append(result, elem)
+			continue
+		}
+		propsArr, ok := elem.Value.(bson.A)
+		if !ok {
+			result = append(result, elem)
+			continue
+		}
+		updated := make(bson.A, 0, len(propsArr))
+		for _, pv := range propsArr {
+			if _, ok := pv.(int32); ok {
+				updated = append(updated, pv)
+				continue
+			}
+			propD, ok := pv.(bson.D)
+			if !ok {
+				updated = append(updated, pv)
+				continue
+			}
+			// Find TypePointer and check if it maps to "defaultFilter"
+			var tpKey string
+			for _, e := range propD {
+				if e.Key == "TypePointer" {
+					if b, ok := e.Value.(primitive.Binary); ok {
+						tpKey = typePointerToKey[bsonutil.BinaryToHex(b)]
+					}
+				}
+			}
+			if tpKey == "defaultFilter" {
+				updated = append(updated, clonePropertyWithPrimitiveValue(propD, filterType))
+			} else {
+				updated = append(updated, pv)
+			}
+		}
+		result = append(result, bson.E{Key: "Properties", Value: updated})
+	}
+	return result
+}
+```
+
+**Note:** `bsonutil.BinaryToHex` may not exist — check the bsonutil package first:
+
+```bash
+grep -n "func.*Binary\|func.*Hex\|func.*ID" /mnt/data_sdd/gh/mxcli-wt-02/modelsdk/mpr/bsonutil/bsonutil.go | head -15
+```
+
+If `BinaryToHex` doesn't exist, use `fmt.Sprintf("%x", b.Data)` inline for the Binary→hex conversion. Adjust the helper accordingly.
+
+- [ ] **Step 0.5: Update `BuildFilterWidgetGen` to accept full spec and apply FilterType**
+
+In `mdl/backend/mpr/datagrid_builder.go`, update `buildFilterWidgetBSON` to use `FilterWidgetSpec` and call `applyFilterTypeToBSON`:
+
+```go
+// buildFilterWidgetBSON builds the CustomWidget BSON document for a filter widget.
+// It applies spec.FilterType if non-empty by overriding the template's defaultFilter property.
+func (b *MprBackend) buildFilterWidgetBSON(spec backend.FilterWidgetSpec, projectPath string) bson.D {
+	rawType, rawObject, _, _, err := widgets.GetTemplateFullBSON(spec.WidgetID, types.GenerateID, projectPath)
+	if err != nil || rawType == nil {
+		if err != nil {
+			log.Printf("warning: failed to load template for widget %s: %v; using minimal fallback", spec.WidgetID, err)
+		}
+		return b.buildMinimalFilterWidgetBSON(spec.WidgetID, spec.FilterName)
+	}
+
+	// Apply FilterType override if specified
+	if spec.FilterType != "" {
+		rawObject = applyFilterTypeToBSON(rawObject, rawType, spec.FilterType)
+	}
+
+	return bson.D{
+		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+		{Key: "$Type", Value: "CustomWidgets$CustomWidget"},
+		{Key: "Editable", Value: "Inherited"},
+		{Key: "Name", Value: spec.FilterName},
+		{Key: "Object", Value: rawObject},
+		{Key: "TabIndex", Value: int32(0)},
+		{Key: "Type", Value: rawType},
+	}
+}
+```
+
+Update the caller `BuildFilterWidgetGen` to pass the full spec:
+
+```go
+func (b *MprBackend) BuildFilterWidgetGen(spec backend.FilterWidgetSpec, projectPath string) (*backend.GenCustomWidgetElem, error) {
+	doc := b.buildFilterWidgetBSON(spec, projectPath)   // ← was: (spec.WidgetID, spec.FilterName, projectPath)
+	raw, err := bson.Marshal(doc)
+	if err != nil {
+		return nil, fmt.Errorf("BuildFilterWidgetGen: marshal: %w", err)
+	}
+	dec := codec.NewDecoder(codec.DefaultRegistry)
+	elem, err := dec.Decode(bson.Raw(raw))
+	if err != nil {
+		return nil, fmt.Errorf("BuildFilterWidgetGen: decode: %w", err)
+	}
+	return backend.NewGenCustomWidgetElem(elem), nil
+}
+```
+
+- [ ] **Step 0.6: Fix `buildWidgetBSON()` — Gap 1 (filter bar in controlbar)**
+
+In `mdl/executor/cmd_pages_builder_v3.go`, replace the `buildWidgetBSON` function's `default:` case.
+Add a new case before `default:` (after the `actionbutton` case ending at line 2147):
+
+```go
+func (pb *pageBuilder) buildWidgetBSON(w *ast.WidgetV3) (bson.D, error) {
+	switch strings.ToLower(w.Type) {
+	case "button", "actionbutton":
+		// ... existing actionbutton code unchanged (lines 2105-2147) ...
+
+	case "textfilter", "numberfilter", "datefilter", "dropdownfilter":
+		// Filter widgets in controlbar → build real filter BSON, not DivContainer.
+		filterWidgetID := dataGridFilterWidgetID(w.Type)
+
+		// Resolve attribute paths
+		rawAttrs := w.GetAttributes()
+		resolvedAttrs := make([]string, 0, len(rawAttrs))
+		for _, a := range rawAttrs {
+			resolvedAttrs = append(resolvedAttrs, pb.resolveAttributePath(a))
+		}
+
+		fw, err := pb.widgetBackend.BuildFilterWidgetGen(backend.FilterWidgetSpec{
+			WidgetID:   filterWidgetID,
+			FilterName: w.Name,
+			FilterType: w.GetFilterType(),
+			Attributes: resolvedAttrs,
+		}, pb.backend.Path())
+		if err != nil {
+			return nil, mdlerrors.NewBackend("build controlbar filter widget", err)
+		}
+		return pb.serializeGenWidgetToBsonD(fw)
+
+	default:
+		// For other widget types in DataGrid context, create a minimal DivContainer
+		// ... existing DivContainer code unchanged (lines 2149-2168) ...
+	}
+}
+```
+
+- [ ] **Step 0.7: Fix column-level filter path — Gap 2 (forward FilterType)**
+
+In `buildDataGridV3()`, find the column children loop (lines 1824–1849).
+Update the `BuildFilterWidgetGen` call to forward `FilterType`:
+
+```go
+// Before (line 1826):
+fw, err := pb.widgetBackend.BuildFilterWidgetGen(backend.FilterWidgetSpec{
+    WidgetID:   filterWidgetID,
+    FilterName: grandchild.Name,
+}, pb.backend.Path())
+
+// After:
+fw, err := pb.widgetBackend.BuildFilterWidgetGen(backend.FilterWidgetSpec{
+    WidgetID:   filterWidgetID,
+    FilterName: grandchild.Name,
+    FilterType: grandchild.GetFilterType(),
+    // Attributes not needed for column-level: DataGrid2 auto-wires to column attribute
+}, pb.backend.Path())
+```
+
+- [ ] **Step 0.8: Run tests**
+
+```bash
+go test ./mdl/executor/... -run "TestRoundtripPage_V3DataGridColumnFilter|TestRoundtripPage_V3DataGridControlBarFilter" -v -count=1 2>&1 | tail -30
+```
+
+Expected: both tests PASS. If compilation errors occur, fix them before continuing.
+
+- [ ] **Step 0.9: Run full test suite**
+
+```bash
+go test ./mdl/... -count=1 2>&1 | tail -20
+```
+
+Expected: no new failures. All existing DataGrid tests still pass.
+
+- [ ] **Step 0.10: Validate with MDL check**
+
+```bash
+cat > /tmp/filter-fix-check.mdl << 'EOF'
+create module FxTest;
+create enumeration FxTest.St (Active 'Active', Closed 'Closed');
+create persistent entity FxTest.Order (
+  OrderNumber: string(50) not null,
+  CustomerName: string(200),
+  TotalAmount: decimal,
+  Status: enumeration(FxTest.St),
+  OrderDate: datetime
+);
+create page FxTest.FilterBarPage (
+  title: 'Filter Bar Test',
+  layout: Atlas_Core.Atlas_Default
+) {
+  datagrid dg1 (datasource: database FxTest.Order) {
+    controlbar cb1 {
+      textfilter     fSearch (attributes: [FxTest.Order.OrderNumber, FxTest.Order.CustomerName])
+      dropdownfilter fStatus (attributes: [FxTest.Order.Status])
+      numberfilter   fAmt    (attributes: [FxTest.Order.TotalAmount])
+      datefilter     fDate   (attributes: [FxTest.Order.OrderDate])
+    }
+    column colNum    (attribute: OrderNumber,  caption: 'Order #') { textfilter fColNum (filtertype: startsWith) }
+    column colCustomer (attribute: CustomerName, caption: 'Customer')
+    column colAmt    (attribute: TotalAmount,  caption: 'Amount', Alignment: right)
+    column colStatus (attribute: Status,       caption: 'Status')
+  }
+}
+EOF
+./bin/mxcli check /tmp/filter-fix-check.mdl
+```
+
+Expected: `OK`.
+
+- [ ] **Step 0.11: Commit**
+
+```bash
+git add mdl/backend/mutation.go \
+        mdl/backend/mpr/datagrid_builder.go \
+        mdl/executor/cmd_pages_builder_v3.go \
+        mdl/executor/roundtrip_page_test.go
+git commit -m "fix(datagrid2): complete MDL filter support — filter bar + filtertype forwarding
+
+Gap 1: buildWidgetBSON() now emits real filter widgets (not DivContainers)
+when textfilter/numberfilter/datefilter/dropdownfilter appear in controlbar.
+
+Gap 2: filtertype: property is now forwarded through FilterWidgetSpec to
+buildFilterWidgetBSON(), which overrides the template defaultFilter property
+via applyFilterTypeToBSON() helper.
+
+FilterWidgetSpec gains Attributes []string and FilterType string fields.
+Both column-level and controlbar filter paths use the full spec."
+```
 
 ---
 

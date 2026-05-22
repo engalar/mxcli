@@ -124,12 +124,16 @@ One-sentence description. MDL code block follows.
 
 ### Implementation Status Table (in Known Limitations)
 
-| Pattern | Status | Root cause / workaround |
-|---------|--------|------------------------|
+> **Note:** Gaps below are fixed by Task 0 of the implementation plan.
+> After Task 0 lands, update ⚠️ rows to ✅.
+
+| Pattern | Status | Detail |
+|---------|--------|--------|
 | Column-level filter (`column {} { textfilter }`) | ✅ Works | Auto-wired to column attribute |
 | Gallery filter bar (`filter {} { textfilter }`) | ✅ Works | Routes through pluggable widget engine |
-| DataGrid2 filter bar (`controlbar {} { textfilter }`) | ⚠️ Gap | `buildWidgetBSON()` produces DivContainer for unknown widget types; fix: add filter-widget case to `buildWidgetBSON()` and extend `FilterWidgetSpec` with `Attributes []string` + `FilterType string` |
-| `filtertype:` property | ⚠️ Gap | Parsed by visitor, stored in AST, not forwarded to `BuildFilterWidgetGen()`; workaround: `PLUGGABLEWIDGET` with `defaultFilter:` |
+| DataGrid2 filter bar (`controlbar {} { textfilter }`) | ✅ Fixed in Task 0 | Was: DivContainer fallback. Fix: `buildWidgetBSON()` gains filter-widget cases → calls `BuildFilterWidgetGen()` |
+| `filtertype:` property | ✅ Fixed in Task 0 | Was: parsed but not forwarded. Fix: `FilterWidgetSpec` gains `FilterType string`; `applyFilterTypeToBSON()` overrides template defaultFilter |
+| `attributes:` on filter bar widgets | ✅ Fixed in Task 0 | `FilterWidgetSpec.Attributes []string` wired from AST |
 | PLUGGABLEWIDGET advanced props | ✅ Works | Full widget property access |
 
 ### Auto-type Selection (column-level)
