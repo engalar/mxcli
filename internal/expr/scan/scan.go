@@ -74,6 +74,8 @@ var exprFields = map[string][]string{
 	// Workflows
 	"Workflows$MicroflowCallParameterMapping":{"Expression"},
 	"Workflows$SingleUserTaskActivity":       {"DueDate"},
+	"Workflows$XPathUserTargeting":           {"XPathConstraint"},
+	"Workflows$XPathGroupTargeting":          {"XPathConstraint"},
 	// Custom widgets
 	"CustomWidgets$CustomWidgetXPathSource":  {"XPathConstraint"},
 	"CustomWidgets$WidgetValue":              {"Expression"},
