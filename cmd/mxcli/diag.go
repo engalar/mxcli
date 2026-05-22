@@ -31,7 +31,8 @@ Examples:
   mxcli diag              # Show version, platform, log dir, recent errors
   mxcli diag --log-path   # Print log directory path
   mxcli diag --tail 20    # Show last 20 log entries
-  mxcli diag --bundle     # Create tar.gz with logs for bug reports
+  mxcli diag --bundle     # Create tar.gz with logs + env dump + error stacks
+  mxcli diag --bundle -p app.mpr  # Also include project metadata
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		logPath, _ := cmd.Flags().GetBool("log-path")

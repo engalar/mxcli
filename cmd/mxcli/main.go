@@ -88,17 +88,17 @@ Examples:
   # Get started with Claude Code in a Mendix project
   mxcli init /path/to/mendix-project; claude
 
-  # Start interactive REPL
-  mxcli
-
-  # Execute MDL file
-  mxcli exec script.mdl
-
   # Execute MDL commands directly
   mxcli -c "CONNECT LOCAL 'app.mpr'; SHOW ENTITIES;"
 
   # Connect to project and show entities
   mxcli -p app.mpr -c "SHOW ENTITIES"
+
+  # Enable trace output for debugging (-v)
+  mxcli -v -p app.mpr -c "SHOW ENTITIES"
+
+  # Enable full debug output to stderr (-vv)
+  mxcli -vv -p app.mpr -c "SHOW ENTITIES"
 `,
 	Version: version,
 	Run: func(cmd *cobra.Command, args []string) {
