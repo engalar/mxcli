@@ -1,3 +1,10 @@
+---
+name: write-microflows
+description: Use when writing CREATE MICROFLOW MDL statements — microflow syntax
+             create change commit retrieve loop if return DSO datasource nanoflow
+             NPE non-persistent list return type parameter variable flow
+---
+
 # Mendix Microflow Skill
 
 This skill provides comprehensive guidance for writing Mendix microflows in MDL (Mendix Definition Language) syntax.
@@ -9,6 +16,63 @@ Use this skill when:
 - Debugging microflow syntax errors
 - Converting Studio Pro microflows to MDL
 - Understanding microflow control flow and structure
+
+## Page Datasource Microflows (DSO_ Pattern)
+
+Microflows used as page widget datasources follow the `DSO_` prefix convention.
+DSO = DataSource Object. These microflows return a list or single object for direct widget consumption.
+
+```sql
+-- Returns a list (for DataGrid / ListView / Gallery datasource)
+create microflow MyMod.DSO_GetActiveOrders ()
+  returns list of MyMod.Order
+begin
+  retrieve $Orders from MyMod.Order
+    where [IsActive = true()] sort by OrderDate desc;
+  return $Orders;
+end;
+/
+
+-- Returns a single object (for DataView datasource)
+create microflow MyMod.DSO_GetCurrentUserProfile ()
+  returns MyMod.UserProfile as $Profile
+begin
+  retrieve $Profile from MyMod.UserProfile
+    where [UserId = '[%CurrentUser%]'] limit 1;
+  return $Profile;
+end;
+/
+
+-- Returns a list of NPEs (no commit; objects live in memory only)
+create microflow MyMod.DSO_BuildDashboardStats ()
+  returns list of MyMod.DashboardStat as $Stats
+begin
+  $s1 = create MyMod.DashboardStat (Label = 'Open Orders', Count = 42);
+  $s2 = create MyMod.DashboardStat (Label = 'Pending Items', Count = 17);
+  return list($s1, $s2);
+end;
+/
+```
+
+**DSO_ rules:**
+- No parameters (or minimal: search query only) — called by the runtime when the page opens
+- Must return the exact type the widget expects: `list of Entity` for list widgets, `Entity` for DataView
+- For NPEs: no `commit` — just build and return; objects live in session memory only
+- Name: `DSO_GetXxx` (for retrieves) or `DSO_BuildXxx` / `DSO_ComputeXxx` (for NPE construction)
+
+## Nanoflow vs Microflow as Datasource
+
+| Criteria | Microflow | Nanoflow |
+|----------|-----------|----------|
+| Runs on | Server | Client (browser) |
+| Can access DB | Yes | No |
+| Network round-trip | Yes (slower) | No (faster) |
+| Java action calls | Yes | No |
+| Best for NPE construction | From server data | From client-side state only |
+| Best for DB retrieves | Use microflow | Cannot |
+
+Use `nanoflow` as datasource when: pure client-side calculation, no DB access, reducing server load.
+Use `microflow` when: DB retrieve is needed, complex server logic, Java action calls required.
 
 ## Microflow Structure
 
