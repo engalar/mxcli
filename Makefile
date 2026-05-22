@@ -30,7 +30,7 @@ LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 # Clean version for VS Code extension (must be valid semver: major.minor.patch)
 VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$$' || echo "0.0.0")
 
-.PHONY: build build-debug release clean test test-mdl report report-bench report-reset-baseline grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet
+.PHONY: build build-debug release clean test test-mdl report report-bench report-reset-baseline grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
 # Usage: $(call copy-if-changed,src,dst)
@@ -184,6 +184,23 @@ check-mdl: build
 # Run integration tests (requires mx binary / mxbuild)
 test-integration:
 	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m ./...
+
+# Regenerate testdata/helpdesk-golden/ from helpdesk-app.mdl.
+# Run after intentional changes to helpdesk-app.mdl; then commit the result.
+update-helpdesk-golden:
+	CGO_ENABLED=0 go test ./internal/goldenfs/ \
+		-tags linux,integration \
+		-run TestHelpdeskGolden_Update \
+		-update-golden \
+		-v -timeout 10m
+
+# Run both helpdesk regression layers (BSON + describe MDL).
+# Requires testdata/helpdesk-golden/ to exist (run update-helpdesk-golden first).
+test-helpdesk-regression:
+	CGO_ENABLED=0 go test ./internal/goldenfs/ \
+		-tags linux,integration \
+		-run 'TestHelpdeskGolden_Regression' \
+		-v -timeout 15m
 
 # Run MDL integration tests (requires Docker and a Mendix project)
 # Usage: make test-mdl MPR=path/to/app.mpr
