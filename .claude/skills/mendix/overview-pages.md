@@ -1,572 +1,234 @@
-# Overview Pages - CRUD Page Pattern
+---
+name: overview-pages
+description: Use when creating CRUD overview pages in Mendix — overview page
+             datagrid crud new edit delete controlbar actionbutton column
+             filter create_object show_page delete_object currentObject
+---
 
-## Overview
+## When to Use This Skill
 
-Standard pattern for creating CRUD (Create, Read, Update, Delete) pages in Mendix using MDL syntax. This pattern consists of:
+- Creating an overview page that lists entities in a DataGrid2
+- Adding New / Edit / Delete buttons (full CRUD flow)
+- Adding a navigation snippet (reusable menu across overview pages)
+- Creating the companion edit page opened from the DataGrid
+- Adding column-level filters to searchable columns
 
-1. **Navigation Snippet** - Reusable menu for consistent navigation
-2. **Overview Page** - Lists all objects with a DataGrid and navigation snippet
-3. **NewEdit Page** - Form for creating/editing a single object
+## Checklist
 
-## Pattern Summary
+- [ ] Ensure the entity and its enumerations exist (`create persistent entity ...`)
+- [ ] Create the edit/popup page first (it's referenced by the overview)
+- [ ] Create the overview page with DataGrid2 and `controlbar` New button
+- [ ] Add `column colActions` with `ShowContentAs: customContent` for Edit and Delete
+- [ ] Add column-level filters on searchable columns (optional — see `mendix:datagrid2-filters`)
+- [ ] Run `./bin/mxcli check script.mdl` to validate
+- [ ] Confirm `Atlas_Core.PopupLayout` is available in the project (`show pages in Atlas_Core`)
 
-| Component | Type | Purpose | Key Widgets |
-|-----------|------|---------|-------------|
-| `Entity_Menu` | Snippet | Vertical sidebar navigation | NAVIGATIONLIST with ITEM actions |
-| `Entity_Overview` | Page | List all records | SNIPPETCALL (sidebar), DATAGRID, Heading |
-| `Entity_NewEdit` | Page | Create/Edit form | DataView, Input widgets, Save/Cancel |
+## Quick Syntax Reference
 
-## Navigation Menu Snippet
+| Element | Syntax |
+|---------|--------|
+| New object + open edit page | `action: create_object Module.Entity then show_page Module.EditPage` |
+| Edit row | `action: show_page Module.EditPage (Entity: $currentObject)` |
+| Delete row | `action: delete_object` |
+| Current row object | `$currentObject` (inside `column {}` or `controlbar {}`) |
+| Custom content column | `column colName (caption: 'X', ShowContentAs: customContent) { ... }` |
 
-Create a reusable navigation snippet using NAVIGATIONLIST for vertical sidebar menus:
+## Core Patterns
 
-```sql
-create snippet Module.Entity_Menu
-{
-  navigationlist navMenu {
-    item itemCustomers (caption: 'Customers', action: show_page Module.Customer_Overview)
-    item itemOrders (caption: 'Orders', action: show_page Module.Order_Overview)
-    item itemProducts (caption: 'Products', action: show_page Module.Product_Overview)
-  }
-}
-```
-
-### Snippet Syntax
-
-```sql
-create [or replace] snippet Module.SnippetName
-[(
-  params: { $ParamName: Module.EntityType }
-)]
-[folder 'path']
-{
-  -- Widget definitions (same as pages)
-}
-```
-
-### NAVIGATIONLIST Syntax
-
-The NAVIGATIONLIST widget creates a vertical menu with navigation items:
+### Pattern 1: Minimal CRUD Overview
 
 ```sql
-navigationlist widgetName {
-  item itemName (caption: 'Caption', action: show_page Module.PageName)
-  item itemName (caption: 'Caption', action: microflow Module.MicroflowName)
-  item itemName (caption: 'Caption', action: close_page)
-}
-```
-
-## Overview Page Template
-
-Lists all objects of an entity type with a data grid and navigation menu in a sidebar layout.
-
-**Layout Structure:**
-```
-┌─────────────────────────────────────────────┐
-│ layoutgrid                                  │
-│ ┌────────┬──────────────────────────────────┤
-│ │ COL 2  │ COL 10                           │
-│ │ menu   │ Heading + datagrid               │
-│ │snippet │                                  │
-│ └────────┴──────────────────────────────────┤
-└─────────────────────────────────────────────┘
-```
-
-```sql
-create page Module.Entity_Overview
-(
-  title: 'Entity Overview',
-  layout: Atlas_Core.Atlas_Default,
-  folder: 'OverviewPages'
-)
-{
-  layoutgrid mainGrid {
-    row row1 {
-      column colNav (desktopwidth: 2) {
-        snippetcall navMenu (snippet: Module.Entity_Menu)
-      }
-      column colContent (desktopwidth: 10) {
-        dynamictext heading (content: 'Entities', rendermode: H2)
-        datagrid EntityGrid (datasource: database Module.Entity) {
-          column colName (attribute: Name, caption: 'Name')
-          column colDescription (attribute: description, caption: 'Description')
-        }
-      }
-    }
-  }
-}
-```
-
-### SNIPPETCALL Syntax
-
-Include a snippet in a page using SNIPPETCALL:
-
-```sql
--- Simple snippet call
-snippetcall widgetName (snippet: Module.SnippetName)
-
--- With parameters (for parameterized snippets):
-snippetcall widgetName (snippet: Module.SnippetName, params: {Customer: $Customer})
-```
-
-### Overview Page Components
-
-1. **Navigation Snippet**: `snippetcall` referencing `Module.NavigationMenu`
-2. **Layout**: `Atlas_Core.Atlas_Default` - Full page with header/footer
-3. **Heading**: `dynamictext` with `rendermode: H2`
-4. **Data Grid**: `datagrid` with `datasource: database` binding
-
-### DATAGRID Syntax
-
-```sql
-datagrid GridName (
-  datasource: database from Module.Entity where [IsActive = true] sort by Name asc,
-  selection: single|multiple|none
+-- Step 1: Edit page (popup, receives entity as parameter)
+create page MyMod.Product_Edit (
+  params: { $Product: MyMod.Product },
+  title: 'Edit Product',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Products'
 ) {
-  column colName (attribute: attributename, caption: 'Label')
-  column colCustom (caption: 'Custom') {
-    -- Nested widgets (ACTIONBUTTON, LINKBUTTON, DYNAMICTEXT)
-  }
-}
-```
-
-**Properties:**
-- `datasource: database from Module.Entity` - Entity data source (required)
-- `where [condition]` - Optional XPath filter (inline after entity in DataSource)
-- `sort by attr asc|desc` - Optional sorting (inline after WHERE: `sort by Name asc, Price desc`)
-- `selection: single|multiple|none` - Optional selection mode
-
-**Column Types:**
-- `column colName (attribute: attribute, caption: 'label')` - Attribute column with binding
-- `column colName (caption: 'label') { ... }` - Custom column with nested widgets
-
-**Column Properties (non-default only in DESCRIBE output):**
-
-| Property | Values | Default |
-|----------|--------|---------|
-| `Sortable` | `true`/`false` | `true` (with attribute) |
-| `Resizable` | `true`/`false` | `true` |
-| `Draggable` | `true`/`false` | `true` |
-| `Hidable` | `yes`/`hidden`/`no` | `yes` |
-| `ColumnWidth` | `autofill`/`autoFit`/`manual` | `autofill` |
-| `Size` | integer (px) | `1` (when manual) |
-| `visible` | expression | `true` |
-| `DynamicCellClass` | expression | (empty) |
-| `tooltip` | text | (empty) |
-
-## NewEdit Page Template
-
-Form for creating or editing a single entity. **Requires a page parameter** to receive the object.
-
-```sql
-create page Module.Entity_NewEdit
-(
-  params: { $entity: Module.Entity },
-  title: 'Edit Entity',
-  layout: Atlas_Core.PopupLayout,
-  folder: 'OverviewPages'
-)
-{
-  layoutgrid mainGrid {
-    row row1 {
-      column col1 (desktopwidth: autofill) {
-        dataview dataView1 (datasource: $entity) {
-          -- Input fields for each attribute
-          textbox txtName (label: 'Name', attribute: Name)
-          textbox txtDescription (label: 'Description', attribute: description)
-          datepicker dpDueDate (label: 'Due Date', attribute: DueDate)
-          combobox cbStatus (label: 'Status', attribute: status)
-
-          footer footer1 {
-            actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: success)
-            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
-          }
-        }
-      }
+  dataview dvProduct (datasource: $Product) {
+    textbox txtName  (label: 'Name',  attribute: Name)
+    textbox txtPrice (label: 'Price', attribute: Price)
+    footer footer1 {
+      actionbutton btnSave   (caption: 'Save',   action: save_changes close_page,   buttonstyle: primary)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
     }
   }
 }
-```
 
-### Page Parameter Syntax
-
-```sql
-create page Module.PageName
-(
-  params: { $ParamName: Module.EntityName },
-  title: '...',
-  layout: ...
-)
-```
-
-- Parameter name conventionally matches the entity name (e.g., `$store`, `$Customer`)
-- The DataView's binding references this parameter (`datasource: $ParamName`)
-- When calling the page via SHOW_PAGE, pass an object of this entity type
-
-### NewEdit Page Components
-
-1. **Page Parameter**: `params: { $entity: Module.Entity }` - Receives the object to edit
-2. **Layout**: `Atlas_Core.PopupLayout` - Popup/modal style
-3. **DataView**: Container bound to page parameter (`datasource: $entity`)
-4. **Input Widgets**: Match entity attributes with `attribute:` property
-5. **Footer**: Save and Cancel buttons
-
-## Complete Example: Store Entity
-
-### Step 1: Create the Navigation Snippet
-
-First, create a navigation menu snippet that will be shared across all overview pages:
-
-```sql
-create snippet MdlTemplates.NavigationMenu
-{
-  layoutgrid navGrid {
-    row row1 {
-      column col1 (desktopwidth: 12) {
-        actionbutton btnStores (caption: 'Stores', action: show_page MdlTemplates.Store_Overview)
-        actionbutton btnCars (caption: 'Cars', action: show_page MdlTemplates.Car_Overview)
-      }
-    }
-  }
-}
-```
-
-### Step 2: Create the Entity
-
-```sql
-create persistent entity MdlTemplates.Store (
-  Name: string(200) not null,
-  Location: string(200)
-);
-```
-
-### Step 3: Create the Overview Page
-
-```sql
-create page MdlTemplates.Store_Overview
-(
-  title: 'Store Overview',
+-- Step 2: Overview page with DataGrid2 CRUD
+create page MyMod.Product_Overview (
+  title: 'Products',
   layout: Atlas_Core.Atlas_Default,
-  folder: 'OverviewPages'
-)
-{
-  layoutgrid mainGrid {
-    row row1 {
-      column col1 (desktopwidth: 12) {
-        snippetcall navMenu (snippet: MdlTemplates.NavigationMenu)
-      }
+  url: 'products',
+  folder: 'Products'
+) {
+  datagrid dgProducts (
+    datasource: database from MyMod.Product sort by Name asc,
+    PageSize: 25,
+    PagingPosition: both
+  ) {
+    controlbar cb1 {
+      actionbutton btnNew (
+        caption: 'New Product',
+        action: create_object MyMod.Product then show_page MyMod.Product_Edit,
+        buttonstyle: primary
+      )
     }
-    row row2 {
-      column col2 (desktopwidth: 12) {
-        dynamictext heading (content: 'Stores', rendermode: H2)
-      }
-    }
-    row row3 {
-      column col3 (desktopwidth: 12) {
-        datagrid StoreGrid (datasource: database MdlTemplates.Store) {
-          column colName (attribute: Name, caption: 'Name')
-          column colLocation (attribute: Location, caption: 'Location')
-        }
-      }
-    }
-  }
-}
-```
-
-### Store NewEdit Page
-
-```sql
-create page MdlTemplates.Store_NewEdit
-(
-  params: { $store: MdlTemplates.Store },
-  title: 'Edit Store',
-  layout: Atlas_Core.PopupLayout,
-  folder: 'OverviewPages'
-)
-{
-  layoutgrid mainGrid {
-    row row1 {
-      column col1 (desktopwidth: autofill) {
-        dataview dataView1 (datasource: $store) {
-          textbox txtName (label: 'Name', attribute: Name)
-          textbox txtLocation (label: 'Location', attribute: Location)
-
-          footer footer1 {
-            actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: success)
-            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
-          }
-        }
-      }
+    column colName     (attribute: Name,     caption: 'Name')
+    column colPrice    (attribute: Price,    caption: 'Price', Alignment: right)
+    column colIsActive (attribute: IsActive, caption: 'Active')
+    column colActions (caption: 'Actions', ShowContentAs: customContent) {
+      actionbutton btnEdit (
+        caption: 'Edit',
+        action: show_page MyMod.Product_Edit (Product: $currentObject),
+        buttonstyle: default
+      )
+      actionbutton btnDelete (
+        caption: 'Delete',
+        action: delete_object,
+        buttonstyle: danger
+      )
     }
   }
 }
 ```
 
-## Complete Example: Car Entity
-
-### Entity Definition
+### Pattern 2: Overview with column filters and sorting
 
 ```sql
-create persistent entity MdlTemplates.Car (
-  Brand: string(200) not null,
-  model: string(200),
-  Price: decimal,
-  PurchaseYear: integer,
-  PurchaseDate: datetime,
-  CarType: enumeration(MdlTemplates.CarType)
-);
-
-create enumeration MdlTemplates.CarType (
-  Sedan 'Sedan',
-  SUV 'SUV',
-  Truck 'Truck',
-  Sports 'Sports Car'
-);
-```
-
-### Car NewEdit Page
-
-Shows various input widget types:
-
-```sql
-create page MdlTemplates.Car_NewEdit
-(
-  params: { $Car: MdlTemplates.Car },
-  title: 'Edit Car',
-  layout: Atlas_Core.PopupLayout,
-  folder: 'OverviewPages'
-)
-{
-  layoutgrid mainGrid {
-    row row1 {
-      column col1 (desktopwidth: autofill) {
-        dataview dataView1 (datasource: $Car) {
-          textbox txtBrand (label: 'Brand', attribute: Brand)
-          textbox txtModel (label: 'Model', attribute: model)
-          textbox txtPrice (label: 'Price', attribute: Price)
-          textbox txtYear (label: 'Purchase year', attribute: PurchaseYear)
-          datepicker dpDate (label: 'Purchase date', attribute: PurchaseDate)
-          radiobuttons rbType (label: 'Car type', attribute: CarType)
-
-          footer footer1 {
-            actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: success)
-            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
-          }
-        }
-      }
+create page MyMod.Order_Overview (
+  title: 'Orders',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'orders',
+  folder: 'Orders'
+) {
+  datagrid dgOrders (
+    datasource: database from MyMod.Order sort by OrderDate desc,
+    PageSize: 20,
+    PagingPosition: both
+  ) {
+    controlbar cb1 {
+      actionbutton btnNew (
+        caption: 'New Order',
+        action: create_object MyMod.Order then show_page MyMod.Order_Edit,
+        buttonstyle: primary
+      )
+    }
+    -- Column-level filters
+    column colNumber (attribute: OrderNumber, caption: 'Order #',
+                      ColumnWidth: manual, Size: 130) {
+      textfilter fNum (filtertype: startsWith)
+    }
+    column colCustomer (attribute: CustomerName, caption: 'Customer') {
+      textfilter fCust
+    }
+    column colAmount (attribute: TotalAmount, caption: 'Amount',
+                      Alignment: right, ColumnWidth: manual, Size: 110) {
+      numberfilter fAmt
+    }
+    column colDate (attribute: OrderDate, caption: 'Date',
+                    ColumnWidth: manual, Size: 130) {
+      datefilter fDate
+    }
+    column colStatus (attribute: Status, caption: 'Status',
+                      ColumnWidth: manual, Size: 100) {
+      dropdownfilter fStatus
+    }
+    column colActions (caption: 'Actions', ShowContentAs: customContent,
+                       ColumnWidth: manual, Size: 120) {
+      actionbutton btnEdit (
+        caption: 'Edit',
+        action: show_page MyMod.Order_Edit (Order: $currentObject),
+        buttonstyle: default
+      )
+      actionbutton btnDelete (caption: 'Delete', action: delete_object, buttonstyle: danger)
     }
   }
 }
 ```
 
-## Widget Selection Guide
-
-Choose input widgets based on attribute type:
-
-| Attribute Type | Widget | Example |
-|----------------|--------|---------|
-| String | `textbox` | Name, Description |
-| String (long) | `textarea` | Comments, Notes |
-| Integer, Long, Decimal | `textbox` | Price, Quantity |
-| Boolean | `checkbox` or `radiobuttons` | IsActive, IsPublished |
-| DateTime | `datepicker` | DueDate, OrderDate |
-| Enumeration | `combobox` or `radiobuttons` | Status, Type |
-| Association (reference) | `combobox` with DataSource | Category, Owner |
-
-**Note:** `dropdown` is deprecated. Use `combobox` for enumeration attributes.
-
-**ComboBox modes:**
-- Enum mode: `combobox cb (label: 'status', attribute: status)`
-- Association mode: `combobox cb (label: 'Customer', attribute: Order_Customer, datasource: database MyModule.Customer, CaptionAttribute: Name)`
-
-**Reserved Attribute Names:** Do not use `CreatedDate`, `ChangedDate`, `owner`, `ChangedBy` as attribute names - these are system attributes automatically added to all entities.
-
-## Naming Conventions
-
-| Item | Convention | Example |
-|------|------------|---------|
-| Navigation Snippet | `NavigationMenu` | `MdlTemplates.NavigationMenu` |
-| Overview Page | `Entity_Overview` | `Customer_Overview` |
-| NewEdit Page | `Entity_NewEdit` | `Customer_NewEdit` |
-| Folder | `OverviewPages` | — |
-| DataView | `dataView1` or `dv{entity}` | `dvCustomer` |
-| DataGrid | `dataGrid1` or `dg{entity}` | `dgCustomer` |
-| SnippetCall | `navMenu` or descriptive name | `navMenu`, `headerSnippet` |
-
-## Button Styles
-
-| Style | Use Case | Color |
-|-------|----------|-------|
-| `success` | Save, Confirm | Green |
-| `default` | Cancel, Back | Gray |
-| `primary` | Primary action | Blue |
-| `danger` | Delete | Red |
-| `warning` | Caution actions | Yellow |
-
-## Folder Organization
-
-```
-module/
-├── snippets/
-│   └── NavigationMenu
-├── OverviewPages/
-│   ├── Customer_Overview
-│   ├── Customer_NewEdit
-│   ├── Order_Overview
-│   ├── Order_NewEdit
-│   └── ...
-├── microflows/
-└── entities/
-```
-
-## Parameterized Snippets
-
-Snippets can accept parameters to display context-specific data:
+### Pattern 3: Overview with microflow datasource
 
 ```sql
--- Create a snippet with a parameter
-create snippet Module.CustomerDetails
-(
-  params: { $Customer: Module.Customer }
-)
-{
-  layoutgrid detailsGrid {
-    row row1 {
-      column col1 (desktopwidth: 12) {
-        dynamictext heading (content: 'Customer Details', rendermode: H3)
-      }
-    }
-  }
-}
-
--- Use the snippet with parameter passing
-snippetcall customerDetails (snippet: Module.CustomerDetails, params: {Customer: $Customer})
-```
-
-## Entity Menu Snippets with NavigationList
-
-For entity-specific action menus (Edit, Delete, etc.), use the `navigationlist` widget:
-
-```sql
-create snippet Module.Entity_Menu
-(
-  params: { $EntityParameter: Module.Entity }
-)
-{
-  navigationlist EntityMenuNav {
-    item itemEdit (caption: 'Edit', action: show_page Module.Entity_NewEdit(entity: $EntityParameter))
-    item itemDelete (caption: 'Delete', action: delete)
-    item itemBack (caption: 'Back', action: close_page)
-  }
-}
-```
-
-### NavigationList Syntax
-
-```sql
-navigationlist widgetName {
-  item itemName (caption: 'Caption', action: ACTION_TYPE)
-}
-```
-
-**Supported Actions:**
-- `action: save_changes` - Save changes
-- `action: cancel_changes` - Cancel changes
-- `action: close_page` - Close current page
-- `action: delete` - Delete object
-- `action: microflow Module.MicroflowName` - Call microflow
-- `action: microflow Module.MicroflowName(Param: $value)` - Call microflow with parameters
-- `action: show_page Module.PageName` - Navigate to page
-- `action: show_page Module.PageName(Param: $value)` - Navigate with parameters
-
-## Handling Circular Dependencies
-
-When a navigation snippet references pages (via `show_page`) and those pages reference the snippet (via `snippetcall`), you have a circular dependency. Use the **placeholder pattern**:
-
-### Creation Order
-
-1. **Create placeholder snippet first** (before pages)
-2. **Create all pages** (which reference the snippet via SNIPPETCALL)
-3. **Replace snippet with full content** (which can now reference existing pages)
-
-### Example Pattern
-
-```sql
--- Step 1: Create placeholder snippet (pages can reference this)
-create snippet Module.NavigationMenu
-{
-  layoutgrid navGrid {
-    row row1 {
-      column col1 (desktopwidth: 12) {
-        dynamictext loading (content: 'Loading...')
-      }
-    }
-  }
-}
+create microflow MyMod.DSO_GetPendingOrders ()
+  returns list of MyMod.Order
+begin
+  retrieve $Orders from MyMod.Order
+    where [Status = MyMod.OrderStatus.Pending and DueDate < addDays('[%CurrentDateTime%]', 7)]
+    sort by DueDate asc;
+  return $Orders;
+end;
 /
 
--- Step 2: Create all pages (they reference the snippet via SNIPPETCALL)
-create page Module.Customer_NewEdit
-(
-  params: { $Customer: Module.Customer },
-  title: 'Edit Customer',
-  layout: Atlas_Core.PopupLayout
-)
-{
-  -- ... page content with SNIPPETCALL navMenu (Snippet: Module.NavigationMenu)
-}
-/
-
-create page Module.Customer_Overview
-(
-  title: 'Customer Overview',
-  layout: Atlas_Core.Atlas_Default
-)
-{
-  -- ... page content with SNIPPETCALL navMenu (Snippet: Module.NavigationMenu)
-}
-/
-
--- Step 3: Fill in the snippet with real content (pages now exist)
--- Use CREATE OR MODIFY (preserves the snippet's ID → page bindings stay valid)
--- Do NOT use CREATE OR REPLACE — that would assign a new ID and break existing page references
-create or modify snippet Module.NavigationMenu
-{
-  layoutgrid navGrid {
-    row row1 {
-      column col1 (desktopwidth: 12) {
-        actionbutton btnCustomers (caption: 'Customers', action: show_page Module.Customer_Overview)
-      }
+create page MyMod.PendingOrders_Overview (
+  title: 'Pending Orders',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'pending-orders'
+) {
+  datagrid dgOrders (
+    datasource: microflow MyMod.DSO_GetPendingOrders,
+    PageSize: 25
+  ) {
+    column colNumber  (attribute: OrderNumber, caption: 'Order #')
+    column colDue     (attribute: DueDate,     caption: 'Due Date')
+    column colActions (caption: 'Actions', ShowContentAs: customContent) {
+      actionbutton btnEdit (
+        caption: 'Edit',
+        action: show_page MyMod.Order_Edit (Order: $currentObject),
+        buttonstyle: default
+      )
     }
   }
 }
-/
 ```
 
-### Key Points
+### Pattern 4: Navigation snippet (reusable menu)
 
-- The placeholder snippet must exist before pages are created (for `snippetcall` to resolve)
-- Use `create or modify snippet` for the fill-in step — it preserves the snippet's UUID so pages that already reference it remain valid
-- **Do not use `create or replace snippet`** — that deletes the placeholder and creates a fresh UUID, silently breaking every page that references the old one
-- Page references in the final snippet resolve correctly because pages already exist
+```sql
+create snippet MyMod.NavMenu (folder: 'Navigation') {
+  navigationlist navMenu {
+    item itemProducts (action: show_page MyMod.Product_Overview) {
+      dynamictext txtProducts (content: 'Products')
+    }
+    item itemOrders (action: show_page MyMod.Order_Overview) {
+      dynamictext txtOrders (content: 'Orders')
+    }
+  }
+}
 
-See [Resolve Forward References](./resolve-forward-references.md) for the full pattern including page→page and microflow→page cases, declaration ordering rules, and the choice between `CREATE OR MODIFY` and `ALTER SNIPPET`.
+-- Use in any overview page
+create page MyMod.Dashboard (
+  title: 'Dashboard',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dashboard'
+) {
+  layoutgrid lg1 {
+    row row1 {
+      column colNav  (desktopwidth: 3) { snippetcall navSnippet (snippet: MyMod.NavMenu) }
+      column colMain (desktopwidth: 9) { dynamictext dtWelcome (content: 'Welcome', rendermode: H2) }
+    }
+  }
+}
+```
 
-## Related Skills
+## Known Limitations
 
-- [Create Page](./create-page.md) - Basic page creation syntax
-- [ALTER PAGE/SNIPPET](./alter-page.md) - Modify existing pages/snippets in-place (SET, INSERT, DROP, REPLACE)
-- [Master-Detail Pages](./master-detail-pages.md) - Selection binding pattern
-- [Resolve Forward References](./resolve-forward-references.md) - Placeholder pattern, declaration ordering
+- Column-level filter widgets (`textfilter`, `dropdownfilter`, etc. in `column {}`) — work correctly
+- Filter bar in controlbar (`textfilter (attributes:[...])` in `controlbar {}`) — fixed in commit fc1b6ee3
+- `filtertype:` property on column filters — fixed in commit fc1b6ee3
+- `ShowContentAs: customContent` action buttons and column filter widgets must be in **separate** columns
+- Page parameters (`params:`) require Mendix 11.0+; use `-- @version: 11.0+` guard in MDL scripts
 
-## Snippet Commands Reference
+## Validation
 
-| Command | Description |
-|---------|-------------|
-| `show snippets [in module]` | List all snippets |
-| `show snippet Module.Name` | Show snippet summary |
-| `describe snippet Module.Name` | Show snippet MDL source |
-| `create snippet Module.Name { ... }` | Create a new snippet |
-| `create or replace snippet Module.Name { ... }` | Create or update snippet |
-| `alter snippet Module.Name { ... }` | Modify snippet widgets in-place |
-| `drop snippet Module.Name` | Delete a snippet |
+```bash
+./bin/mxcli check script.mdl
+./bin/mxcli check script.mdl -p path/to/app.mpr --references
+```
+
+## See Also
+
+- `mendix:create-page` — Full widget syntax reference
+- `mendix:datagrid2-filters` — Column filter patterns
+- `mendix:page-data-design` — Datasource strategy
+- `mendix:master-detail-pages` — Selection binding and master-detail layouts
