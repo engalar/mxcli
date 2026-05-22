@@ -205,19 +205,55 @@ Is the object already available as a page parameter?
 > (`29-datagrid-examples.mdl`, `30-datagrid-filter-examples.mdl`, `03-page-examples.mdl`),
 > and overlap analysis with `overview-pages.md` and `master-detail-pages.md`.
 
-### Audit findings: coverage gaps
+### Widget implementation ground truth
 
-**Undocumented widgets (8 total):**
+**Architecture:** `buildWidgetV3()` dispatch (`cmd_pages_builder_v3.go:308`) is the authoritative source.  
+34 native widgets + 9 pluggable widgets. Research findings correct the original assumptions.
 
-| Widget | Priority | Action |
-|--------|----------|--------|
-| `LISTVIEW` | HIGH | Full section — used in examples (`03-page-examples.mdl:1874`), only 1 brief mention currently |
-| `GROUPBOX` | HIGH | Full section — examples exist (`03-page-examples.mdl:2204`), collapsible form sections |
-| `TABCONTAINER` / `TABPAGE` | HIGH | Full section — grammar-defined, organizes complex forms into tabs |
-| `STATICTEXT` | MEDIUM | Brief section — static labels; distinguish from DYNAMICTEXT |
-| `DROPDOWNSORT` | MEDIUM | Brief section — column sort selector widget |
-| `REFERENCESELECTOR` | LOW | Note only — grammar-defined, unclear if fully implemented |
-| `TITLE` | LOW | Note only — vs DYNAMICTEXT with H1/H2 rendermode |
+**Complete widget status table (from architecture audit):**
+
+| Widget | Builder | Status | Doc priority |
+|--------|---------|--------|--------------|
+| DATAVIEW | `buildDataViewV3` | ✅ FULLY_IMPLEMENTED | documented |
+| DATAGRID | `buildDataGridV3` | ✅ FULLY_IMPLEMENTED | documented — expand filters |
+| LISTVIEW | `buildListViewV3` | ⚠️ PARTIAL — PageSize hardcoded 20, not configurable | HIGH — add full section + limitation note |
+| LAYOUTGRID | `buildLayoutGridV3` | ✅ FULLY_IMPLEMENTED | documented |
+| CONTAINER | `buildContainerV3` | ✅ FULLY_IMPLEMENTED | documented |
+| TABCONTAINER | `buildTabContainerV3` | ✅ FULLY_IMPLEMENTED | HIGH — add full section (was incorrectly assumed unimplemented) |
+| TABPAGE | `buildTabPageV3` | ✅ FULLY_IMPLEMENTED (Caption + Children) | HIGH — document alongside TABCONTAINER |
+| GROUPBOX | `buildGroupBoxV3` | ✅ FULLY_IMPLEMENTED (Caption, Collapsible, HeaderMode) | HIGH — add full section |
+| TEXTBOX | `buildTextBoxV3` | ✅ FULLY_IMPLEMENTED | documented |
+| TEXTAREA | `buildTextAreaV3` | ✅ FULLY_IMPLEMENTED | documented |
+| DATEPICKER | `buildDatePickerV3` | ✅ FULLY_IMPLEMENTED | documented |
+| DROPDOWN | `buildDropdownV3` | ✅ FULLY_IMPLEMENTED | documented (deprecated, prefer COMBOBOX) |
+| CHECKBOX | `buildCheckBoxV3` | ✅ FULLY_IMPLEMENTED | documented |
+| RADIOBUTTONS | `buildRadioButtonsV3` | ✅ FULLY_IMPLEMENTED | documented |
+| STATICTEXT | `buildTextWidgetV3` | ✅ FULLY_IMPLEMENTED | MEDIUM — add brief section |
+| DYNAMICTEXT | `buildDynamicTextV3` | ✅ FULLY_IMPLEMENTED | documented |
+| TITLE | `buildTitleV3` | ✅ FULLY_IMPLEMENTED | MEDIUM — add brief section |
+| STATICIMAGE | `buildStaticImageV3` | ⚠️ PARTIAL (Width/Height only, no URL) | documented |
+| DYNAMICIMAGE | `buildDynamicImageV3` | ⚠️ PARTIAL (Width/Height only) | documented |
+| BUTTON/ACTIONBUTTON | `buildButtonV3` | ✅ FULLY_IMPLEMENTED | documented |
+| NAVIGATIONLIST | `buildNavigationListV3` | ✅ FULLY_IMPLEMENTED | documented |
+| SNIPPETCALL | `buildSnippetCallV3` | ✅ FULLY_IMPLEMENTED | documented |
+| FOOTER | `buildFooterV3` | ✅ FULLY_IMPLEMENTED | documented |
+| HEADER | `buildHeaderV3` | ⚠️ GRAMMAR_ONLY (DivContainer, no describe output) | LOW — note only |
+| COMBOBOX | Pluggable engine | ✅ FULLY_IMPLEMENTED | documented |
+| GALLERY | Pluggable engine + native | ✅ FULLY_IMPLEMENTED | documented |
+| IMAGE | Pluggable engine | ✅ FULLY_IMPLEMENTED | documented |
+| BARCODESCANNER | Pluggable engine | ⚠️ PARTIAL | LOW — note only |
+| TEXTFILTER | DataGrid filter path | ✅ FULLY_IMPLEMENTED (column-level) | covered in datagrid2-filters.md |
+| NUMBERFILTER | DataGrid filter path | ✅ FULLY_IMPLEMENTED (column-level) | covered in datagrid2-filters.md |
+| DATEFILTER | DataGrid filter path | ✅ FULLY_IMPLEMENTED (column-level) | covered in datagrid2-filters.md |
+| DROPDOWNFILTER | DataGrid filter path | ✅ FULLY_IMPLEMENTED (column-level) | covered in datagrid2-filters.md |
+| DROPDOWNSORT | Pluggable engine | ❌ NOT_IMPLEMENTED (no builder) | do not document |
+| REFERENCESELECTOR | — | ❌ NOT_IMPLEMENTED (no case in dispatch) | do not document |
+| LEGACYDATAGRID | — | ❌ UNSUPPORTED (explicit error) | do not document |
+
+**Universal properties** (applied to ALL widgets after widget-specific build):
+- `class:` / `style:` / `designproperties:` → Appearance
+- `visible: [expr]` → ConditionalVisibilitySettings
+- `editable: [expr]` → ConditionalEditableSettings (input widgets only)
 
 **Under-documented datasources:**
 - `nanoflow` as datasource — mentioned in action table only; needs dedicated example showing when to prefer over microflow
@@ -233,14 +269,19 @@ Is the object already available as a page parameter?
 #### 1. LISTVIEW Widget (new full section)
 ```sql
 listview lvName (
-  datasource: database from Module.Entity sort by Name asc,
-  PageSize: 20
+  datasource: database from Module.Entity sort by Name asc
 ) {
   dynamictext txtName (content: '{1}', contentparams: [{1} = Name], rendermode: H4)
-  actionbutton btnView (caption: 'View', action: show_page Module.Detail (Entity: $currentObject))
+  actionbutton btnView (
+    caption: 'View',
+    action: show_page Module.Detail (Entity: $currentObject)
+  )
 }
 ```
-Cover: database / microflow / association datasources, template children, paging, `$currentObject` in children.
+Cover: database / microflow / nanoflow / association datasources, `$currentObject` in children.  
+**Known limitation:** `PageSize` is hardcoded to 20 in `buildListViewV3()`; the property is parsed
+by the visitor but NOT wired into the builder. Do not document `PageSize:` as configurable — document it as
+a limitation ("always 20; configure paging in Studio Pro if needed").
 
 #### 2. GROUPBOX Widget (new full section)
 ```sql
@@ -252,7 +293,9 @@ groupbox gbSection (
   textbox txtField (label: 'Field', attribute: FieldName)
 }
 ```
-Cover: `HeaderMode` (H3/H4/Div), `Collapsible` (No/YesExpanded/YesCollapsed), nesting inside DataView.
+`Collapsible` values: `No` | `YesExpanded` (open by default) | `YesCollapsed` (closed by default).  
+`HeaderMode` values: `Div` (default) | `H3` | `H4`.  
+Can be nested inside DataView; cover common form-organization pattern.
 
 #### 3. TABCONTAINER / TABPAGE (new full section)
 ```sql
@@ -267,7 +310,21 @@ tabcontainer tcMain {
   }
 }
 ```
-Cover: nested widgets per tab, when to use (complex forms), ordering tabs.
+**Fully implemented** (`buildTabContainerV3` + `buildTabPageV3`). Cover: nested widgets per tab,
+`caption:` on each TABPAGE, when to use vs GROUPBOX (tabs = parallel sections of equal weight;
+groupbox = collapsible sub-section within a form).
+
+#### 4. STATICTEXT and TITLE (brief sections — MEDIUM priority)
+```sql
+-- STATICTEXT: plain static label (no binding, no template params)
+statictext sLabel (content: 'Fixed label text')
+
+-- TITLE: page/section heading (stored as caption, not ClientTemplate)
+title tHeading (content: 'Section Heading')
+```
+Both fully implemented. TITLE is similar to `dynamictext` with `rendermode: H1` but without
+ContentParams support — it is a simpler, static heading widget.  
+Note: `dynamictext` with `rendermode:` is preferred for parameterized headings.
 
 #### 4. DataGrid2 — expanded subsection
 
