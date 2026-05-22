@@ -1,3 +1,10 @@
+---
+name: alter-page
+description: Use when modifying existing pages or snippets in-place — alter page
+             snippet set drop insert replace widget datagrid column variable
+             layout filter conditional visibility actionbutton textbox
+---
+
 # ALTER PAGE / ALTER SNIPPET - Modify Existing Pages and Snippets
 
 ## Overview
@@ -157,6 +164,42 @@ If an ALTER targeting a DataGrid column completes without error but makes no cha
 - Caption with only special chars (e.g. `"---"`) → falls back to `col1`, `col2`, … (1-based index)
 
 If the column name you copied from DESCRIBE still doesn't work, check whether the column has an attribute binding — attribute names take priority over captions.
+
+#### Adding and removing column filter widgets
+
+Column-level filter widgets (inside `column {}`) are children of the DataGrid2 column BSON and cannot be addressed by dotted notation (`dgName.colName.filterName`). To add or remove a filter, replace the entire column:
+
+```sql
+-- Add a filter to an existing column (REPLACE the whole column)
+alter page MyMod.Order_Overview {
+  replace colStatus with {
+    column colStatus (attribute: Status, caption: 'Status') {
+      dropdownfilter fStatus
+    }
+  }
+};
+
+-- Remove a filter from a column (REPLACE without filter body)
+alter page MyMod.Order_Overview {
+  replace colStatus with {
+    column colStatus (attribute: Status, caption: 'Status')
+  }
+};
+
+-- Add a text filter with explicit filtertype
+alter page MyMod.Order_Overview {
+  replace colNumber with {
+    column colNumber (attribute: OrderNumber, caption: 'Order #', ColumnWidth: manual, Size: 130) {
+      textfilter fNum (filtertype: startsWith)
+    }
+  }
+};
+```
+
+**Notes:**
+- Use `DESCRIBE PAGE Module.PageName` first to see exact column names before writing ALTER
+- Column names in DataGrid2 are derived from the attribute or caption — verify with describe before replacing
+- If a column dotted reference (`dgName.colName`) resolves to the wrong widget, use `REPLACE` on the containing DataView section instead
 
 ### ADD Variables - Add a Page Variable
 
