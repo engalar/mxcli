@@ -1450,7 +1450,13 @@ func (b *MprBackend) EnableImportBuffer() *unitstore.BufferedUnitStore {
 			if err := buf.Write(model.ID(unitID), data); err != nil {
 				return err
 			}
+			// Set overlay on both readers: b.msdkReader (Reader A, used by
+			// GetRawUnitBytes / low-level paths) and w.ConcreteReader() (Reader B,
+			// the writer's internal reader used by mprrepos.DomainModelRepository
+			// and other gen-type repos). Connect() opens them separately from the
+			// same DB, so overlays are not shared between the two instances.
 			b.msdkReader.SetOverlay(unitID, data)
+			w.ConcreteReader().SetOverlay(unitID, data)
 			return nil
 		})
 	}
@@ -1463,6 +1469,7 @@ func (b *MprBackend) DisableImportBuffer() {
 	// a buf that is about to be discarded.
 	if w, ok := b.concreteWriter(); ok {
 		w.ClearSessionBuf()
+		w.ConcreteReader().ClearAllOverlays()
 	}
 	if b.unitBuf != nil {
 		b.unitBuf.Discard()

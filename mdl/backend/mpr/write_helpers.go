@@ -32,6 +32,9 @@ func (b *MprBackend) writeUnitContents(unitID model.ID, contents []byte) error {
 			return fmt.Errorf("write unit to import buffer: %w", err)
 		}
 		b.msdkReader.SetOverlay(string(unitID), contents)
+		if w, ok := b.concreteWriter(); ok {
+			w.ConcreteReader().SetOverlay(string(unitID), contents)
+		}
 		return nil
 	}
 
