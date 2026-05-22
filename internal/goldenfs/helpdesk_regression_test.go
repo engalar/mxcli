@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mendixlabs/mxcli/internal/bsoncompare"
 )
 
 // updateGolden: go test ... -update-golden -run TestHelpdeskGolden_Update
@@ -166,4 +168,36 @@ func TestHelpdeskGolden_Update(t *testing.T) {
 
 	t.Logf("Golden updated: %s", goldenDir)
 	t.Logf("Next step: git add testdata/helpdesk-golden/ && git commit")
+}
+
+// TestHelpdeskGolden_Regression_BSON 是主 BSON 层回归测试。
+// 从空白 A（expr-checker）出发，通过 FUSE 执行 helpdesk-app.mdl 得到 B2,
+// 然后与 B1 golden 做字段级 BSON 对比。
+// 任何字段缺失、字段值变化、单元增减都会导致测试失败。
+func TestHelpdeskGolden_Regression_BSON(t *testing.T) {
+	goldenMPR := helpdeskGoldenMPR(t)
+	if _, err := os.Stat(goldenMPR); err != nil {
+		t.Fatalf("B1 golden not found at %s — run: make update-helpdesk-golden", goldenMPR)
+	}
+
+	snap, err := Open(helpdeskBlankDir(t))
+	if err != nil {
+		t.Fatalf("goldenfs.Open: %v", err)
+	}
+	defer func() {
+		snap.Rollback()
+		if err := snap.Close(); err != nil {
+			t.Logf("snap.Close: %v", err)
+		}
+	}()
+
+	mountMPR := filepath.Join(snap.MountDir(), "minimal.mpr")
+	runHelpdeskMDL(t, mountMPR)
+
+	bsoncompare.AssertEqual(t,
+		goldenMPR, // A = B1 golden
+		mountMPR,  // B = B2 current
+		bsoncompare.DefaultOptions(),
+		bsoncompare.ExpectNoOtherChanges(),
+	)
 }
