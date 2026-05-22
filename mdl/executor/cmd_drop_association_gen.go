@@ -23,7 +23,7 @@ func execDropAssociationGen(ctx *ExecContext, s *ast.DropAssociationStmt) error 
 	if err != nil {
 		return err
 	}
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -39,6 +39,7 @@ func execDropAssociationGen(ctx *ExecContext, s *ast.DropAssociationStmt) error 
 		if err := ctx.Backend.DeleteAssociation(model.ID(dm.ID()), model.ID(assoc.ID())); err != nil {
 			return mdlerrors.NewBackend("delete association", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateHierarchy(ctx)
 		invalidateDomainModelsCache(ctx)
 		ctx.trackModifiedDomainModel(module.ID, module.Name)
@@ -53,6 +54,7 @@ func execDropAssociationGen(ctx *ExecContext, s *ast.DropAssociationStmt) error 
 		if err := ctx.Backend.DeleteCrossAssociation(model.ID(dm.ID()), model.ID(assoc.ID())); err != nil {
 			return mdlerrors.NewBackend("delete cross-module association", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateHierarchy(ctx)
 		invalidateDomainModelsCache(ctx)
 		ctx.trackModifiedDomainModel(module.ID, module.Name)

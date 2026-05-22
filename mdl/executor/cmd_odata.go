@@ -811,7 +811,7 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 	}
 
 	// Get domain model
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -846,6 +846,7 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), existingEntity); err != nil {
 			return mdlerrors.NewBackend("update external entity", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		fmt.Fprintf(ctx.Output, "Modified external entity: %s.%s\n", s.Name.Module, s.Name.Name)
 		return nil
 	}
@@ -862,6 +863,7 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 	if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), newEntity); err != nil {
 		return mdlerrors.NewBackend("create external entity", err)
 	}
+	invalidateDomainModelGenForModule(ctx, module.ID)
 	fmt.Fprintf(ctx.Output, "Created external entity: %s.%s\n", s.Name.Module, s.Name.Name)
 	return nil
 }
@@ -1265,7 +1267,7 @@ func dropODataClient(ctx *ExecContext, stmt *ast.DropODataClientStmt) error {
 			if findErr != nil {
 				return findErr
 			}
-			dm, dmErr := ctx.Backend.GetDomainModelGen(module.ID)
+			dm, dmErr := getDomainModelGenCached(ctx, module.ID)
 			if dmErr != nil {
 				return mdlerrors.NewBackend("get domain model for cascade", dmErr)
 			}
@@ -1280,6 +1282,9 @@ func dropODataClient(ctx *ExecContext, stmt *ast.DropODataClientStmt) error {
 				if err := ctx.Backend.DeleteEntity(model.ID(dm.ID()), entityID); err != nil {
 					return mdlerrors.NewBackend("cascade delete external entity", err)
 				}
+			}
+			if len(externalEntityIDs) > 0 {
+				invalidateDomainModelGenForModule(ctx, module.ID)
 			}
 
 			if err := ctx.Backend.DeleteConsumedODataService(svc.ID); err != nil {

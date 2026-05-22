@@ -48,7 +48,7 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -85,6 +85,7 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("update entity (gen)", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		invalidateHierarchy(ctx)
 		fmt.Fprintf(ctx.Output, "Modified entity: %s\n", s.Name)
@@ -96,6 +97,7 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 		return mdlerrors.NewBackend("create entity (gen)", err)
 	}
 
+	invalidateDomainModelGenForModule(ctx, module.ID)
 	invalidateDomainModelsCache(ctx)
 	invalidateHierarchy(ctx)
 	fmt.Fprintf(ctx.Output, "Created entity: %s\n", s.Name)

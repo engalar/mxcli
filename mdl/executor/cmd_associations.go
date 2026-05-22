@@ -27,7 +27,7 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -97,6 +97,7 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 				if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
 					return mdlerrors.NewBackend("update association", err)
 				}
+				setDomainModelGenCached(ctx, module.ID, dm)
 				invalidateHierarchy(ctx)
 				invalidateDomainModelsCache(ctx)
 				ctx.trackModifiedDomainModel(module.ID, module.Name)
@@ -121,6 +122,7 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 				if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
 					return mdlerrors.NewBackend("update cross-module association", err)
 				}
+				setDomainModelGenCached(ctx, module.ID, dm)
 				invalidateHierarchy(ctx)
 				invalidateDomainModelsCache(ctx)
 				ctx.trackModifiedDomainModel(module.ID, module.Name)
@@ -161,6 +163,7 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 		if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
 			return mdlerrors.NewBackend("create cross-module association", err)
 		}
+		setDomainModelGenCached(ctx, module.ID, dm)
 	} else {
 		if !s.CreateOrModify {
 			for _, assocElem := range dm.AssociationsItems() {
@@ -183,6 +186,7 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 		if err := ctx.Backend.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
 			return mdlerrors.NewBackend("create association", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 	}
 
 	// Invalidate hierarchy cache so the new association's container is visible
@@ -191,7 +195,7 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 
 	// Reconcile MemberAccesses immediately — existing access rules on entities
 	// in this DM need MemberAccess entries for the new association (CE0066).
-	if freshDM, err := ctx.Backend.GetDomainModelGen(module.ID); err == nil && freshDM != nil {
+	if freshDM, err := getDomainModelGenCached(ctx, module.ID); err == nil && freshDM != nil {
 		if msgs, err := ctx.Backend.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil {
 			for _, msg := range msgs {
 				fmt.Fprintf(ctx.Output, "  reconciled: %s\n", msg)
@@ -228,7 +232,7 @@ func execAlterAssociation(ctx *ExecContext, s *ast.AlterAssociationStmt) error {
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -255,6 +259,7 @@ func execAlterAssociation(ctx *ExecContext, s *ast.AlterAssociationStmt) error {
 		if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
 			return mdlerrors.NewBackend("update association", err)
 		}
+		setDomainModelGenCached(ctx, module.ID, dm)
 		fmt.Fprintf(ctx.Output, "Altered association: %s\n", s.Name)
 		return nil
 	}
@@ -278,6 +283,7 @@ func execAlterAssociation(ctx *ExecContext, s *ast.AlterAssociationStmt) error {
 		if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
 			return mdlerrors.NewBackend("update cross-module association", err)
 		}
+		setDomainModelGenCached(ctx, module.ID, dm)
 		fmt.Fprintf(ctx.Output, "Altered association: %s\n", s.Name)
 		return nil
 	}
@@ -297,7 +303,7 @@ func execDropAssociation(ctx *ExecContext, s *ast.DropAssociationStmt) error {
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -343,7 +349,7 @@ func listAssociation(ctx *ExecContext, name *ast.QualifiedName) error {
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}

@@ -127,4 +127,22 @@ func invalidateDomainModelsGenCache(ctx *ExecContext) {
 	ctx.Cache.domainModelsWithContainerGen = nil
 	ctx.Cache.domainModels = nil
 	ctx.Cache.domainModelsGen = nil
+	// Per-module cache (Fix 1) is NOT cleared here. Mutator paths must
+	// either:
+	//   - call setDomainModelGenCached(ctx, moduleID, dm) for write-through
+	//     when they hold the updated *DomainModel pointer; OR
+	//   - call invalidateDomainModelGenForModule(ctx, moduleID) when they
+	//     mutate via the backend without an updated pointer (CreateEntityGen,
+	//     UpdateEntityGen, etc.).
+}
+
+// invalidateDomainModelGenForModule drops the cached DomainModel for a
+// single module. Use this after backend mutations that update the SQLite
+// state without producing a new in-memory *DomainModel pointer (e.g.
+// CreateEntityGen, UpdateEntityGen, CreateAssociationGen).
+func invalidateDomainModelGenForModule(ctx *ExecContext, moduleID model.ID) {
+	if ctx == nil || ctx.Cache == nil || ctx.Cache.domainModelByModule == nil {
+		return
+	}
+	delete(ctx.Cache.domainModelByModule, moduleID)
 }

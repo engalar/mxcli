@@ -294,7 +294,7 @@ func moveNanoflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID mo
 // ViewEntitySourceDocuments for view entities are also moved.
 func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetModule *model.Module) error {
 	// Get source domain model
-	sourceDM, err := ctx.Backend.GetDomainModelGen(sourceModule.ID)
+	sourceDM, err := getDomainModelGenCached(ctx, sourceModule.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get source domain model", err)
 	}
@@ -316,7 +316,7 @@ func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetMo
 	}
 
 	// Get target domain model
-	targetDM, err := ctx.Backend.GetDomainModelGen(targetModule.ID)
+	targetDM, err := getDomainModelGenCached(ctx, targetModule.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get target domain model", err)
 	}
@@ -329,6 +329,8 @@ func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetMo
 	if err != nil {
 		return mdlerrors.NewBackend("move entity", err)
 	}
+	invalidateDomainModelGenForModule(ctx, sourceModule.ID)
+	invalidateDomainModelGenForModule(ctx, targetModule.ID)
 
 	// Move ViewEntitySourceDocument for view entities
 	if source, ok := entity.Source().(*genDm.OqlViewEntitySource); ok && source != nil && source.SourceDocumentQualifiedName() != "" {

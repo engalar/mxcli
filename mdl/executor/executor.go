@@ -368,9 +368,16 @@ func (e *Executor) finalizeProgramExecution() error {
 	}
 
 	for moduleID, moduleName := range e.cache.modifiedDomainModels {
-		dm, err := e.backend.GetDomainModelGen(moduleID)
-		if err != nil {
-			continue // module may not have a domain model
+		var dm *genDm.DomainModel
+		if e.cache.domainModelByModule != nil {
+			dm = e.cache.domainModelByModule[moduleID]
+		}
+		if dm == nil {
+			var err error
+			dm, err = e.backend.GetDomainModelGen(moduleID)
+			if err != nil {
+				continue // module may not have a domain model
+			}
 		}
 		if dm == nil {
 			continue

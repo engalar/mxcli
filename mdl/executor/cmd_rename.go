@@ -54,7 +54,7 @@ func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -110,6 +110,7 @@ func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
 	if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
 		return mdlerrors.NewBackend("update entity name", err)
 	}
+	setDomainModelGenCached(ctx, module.ID, dm)
 
 	invalidateHierarchy(ctx)
 	invalidateDomainModelsCache(ctx)
@@ -377,7 +378,7 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -429,6 +430,7 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 	if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
 		return mdlerrors.NewBackend("update association name", err)
 	}
+	setDomainModelGenCached(ctx, module.ID, dm)
 
 	invalidateHierarchy(ctx)
 	invalidateDomainModelsCache(ctx)

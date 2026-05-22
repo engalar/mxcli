@@ -37,7 +37,7 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -214,7 +214,7 @@ func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) 
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}

@@ -42,7 +42,7 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -69,7 +69,7 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 		if err := ctx.Backend.DeleteEntity(model.ID(dm.ID()), model.ID(existingEntity.ID())); err != nil {
 			return mdlerrors.NewBackend("delete existing entity for replace", err)
 		}
-		dm, err = ctx.Backend.GetDomainModelGen(module.ID)
+		dm, err = getDomainModelGenCached(ctx, module.ID)
 		if err != nil {
 			return mdlerrors.NewBackend("get domain model after delete", err)
 		}
@@ -105,6 +105,7 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("update view entity", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateHierarchy(ctx)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Modified view entity: %s\n", s.Name)
@@ -115,6 +116,7 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 	if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), entity); err != nil {
 		return mdlerrors.NewBackend("create view entity", err)
 	}
+	invalidateDomainModelGenForModule(ctx, module.ID)
 	invalidateHierarchy(ctx)
 	invalidateDomainModelsCache(ctx)
 	fmt.Fprintf(ctx.Output, "Created view entity: %s\n", s.Name)

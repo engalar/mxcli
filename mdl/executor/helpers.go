@@ -101,7 +101,7 @@ func findEntity(ctx *ExecContext, moduleName, entityName string) (*genDm.Entity,
 	if err != nil {
 		return nil, err
 	}
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return nil, mdlerrors.NewBackend("get domain model", err)
 	}

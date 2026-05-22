@@ -504,7 +504,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 	if err != nil {
 		return err
 	}
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -691,7 +691,9 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 	// Second pass: create primitive-collection NPEs (e.g. TripTag for
 	// Trip.Tags = Collection(Edm.String)) and the association from the
 	// parent entity to each NPE.
-	dm, err = ctx.Backend.GetDomainModelGen(module.ID)
+	// Invalidate cache so we re-read the latest dm after first-pass mutations.
+	invalidateDomainModelGenForModule(ctx, module.ID)
+	dm, err = getDomainModelGenCached(ctx, module.ID)
 	if err == nil {
 		npesCreated := createPrimitiveCollectionNPEs(ctx, dm, doc, typeByQualified, esMap, serviceRef)
 		if npesCreated > 0 {
@@ -702,7 +704,8 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 	// Third pass: walk navigation properties and create associations between
 	// the entities we just created. Re-read the domain model so the NPEs
 	// from the previous pass are visible.
-	dm, err = ctx.Backend.GetDomainModelGen(module.ID)
+	invalidateDomainModelGenForModule(ctx, module.ID)
+	dm, err = getDomainModelGenCached(ctx, module.ID)
 	if err == nil {
 		assocsCreated := createNavigationAssociations(ctx, dm, doc, typeByQualified, esMap, serviceRef)
 		if assocsCreated > 0 {

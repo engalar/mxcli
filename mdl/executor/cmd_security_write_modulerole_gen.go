@@ -127,12 +127,13 @@ func execDropModuleRoleGen(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
 	qualifiedRole := s.Name.Module + "." + s.Name.Name
 
 	// Cascade: remove role from entity access rules.
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err == nil && dm != nil {
 		if n, err := ctx.Backend.RemoveRoleFromAllEntities(model.ID(dm.ID()), qualifiedRole); err != nil {
 			return mdlerrors.NewBackend("cascade-remove entity access rules", err)
 		} else if n > 0 {
 			fmt.Fprintf(ctx.Output, "Removed %s from %d entity access rule(s)\n", qualifiedRole, n)
+			invalidateDomainModelGenForModule(ctx, module.ID)
 		}
 	}
 

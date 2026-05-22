@@ -42,7 +42,7 @@ func execCreateAssociationGen(ctx *ExecContext, s *ast.CreateAssociationStmt) er
 	if err != nil {
 		return err
 	}
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -87,10 +87,11 @@ func execCreateAssociationGen(ctx *ExecContext, s *ast.CreateAssociationStmt) er
 		return mdlerrors.NewBackend("create association (gen)", err)
 	}
 
+	invalidateDomainModelGenForModule(ctx, module.ID)
 	invalidateHierarchy(ctx)
 	invalidateDomainModelsCache(ctx)
 
-	if freshDM, err := ctx.Backend.GetDomainModelGen(module.ID); err == nil && freshDM != nil {
+	if freshDM, err := getDomainModelGenCached(ctx, module.ID); err == nil && freshDM != nil {
 		if msgs, err := ctx.Backend.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil {
 			for _, msg := range msgs {
 				fmt.Fprintf(ctx.Output, "  reconciled: %s\n", msg)

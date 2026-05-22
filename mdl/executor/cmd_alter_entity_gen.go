@@ -65,6 +65,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 				return mdlerrors.NewBackend("add attribute", err)
 			}
 			invalidateHierarchy(ctx)
+			invalidateDomainModelGenForModule(ctx, module.ID)
 			invalidateDomainModelsCache(ctx)
 			fmt.Fprintf(ctx.Output, "Added attribute '%s' to entity %s\n", a.Name, s.Name)
 			ctx.trackModifiedDomainModel(module.ID, module.Name)
@@ -93,6 +94,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewBackend("add attribute", err)
 		}
 		invalidateHierarchy(ctx)
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Added attribute '%s' to entity %s\n", a.Name, s.Name)
 
@@ -105,6 +107,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 				return mdlerrors.NewBackend("drop attribute", err)
 			}
 			invalidateHierarchy(ctx)
+			invalidateDomainModelGenForModule(ctx, module.ID)
 			invalidateDomainModelsCache(ctx)
 			fmt.Fprintf(ctx.Output, "Dropped attribute '%s' from entity %s\n", s.AttributeName, s.Name)
 			ctx.trackModifiedDomainModel(module.ID, module.Name)
@@ -126,6 +129,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewBackend("drop attribute", err)
 		}
 		invalidateHierarchy(ctx)
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Dropped attribute '%s' from entity %s\n", s.AttributeName, s.Name)
 		if n := origValidationCount - len(entity.ValidationRulesItems()); n > 0 {
@@ -151,6 +155,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewBackend("rename attribute", err)
 		}
 		invalidateHierarchy(ctx)
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Renamed attribute '%s' to '%s' on entity %s\n", s.AttributeName, s.NewName, s.Name)
 
@@ -174,6 +179,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewBackend("modify attribute", err)
 		}
 		invalidateHierarchy(ctx)
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Modified attribute '%s' on entity %s\n", s.AttributeName, s.Name)
 
@@ -182,6 +188,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set documentation", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Set documentation on entity %s\n", s.Name)
 
@@ -190,6 +197,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set comment", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Set comment on entity %s\n", s.Name)
 
@@ -201,6 +209,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set position", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Set position of entity %s to (%d, %d)\n", s.Name, s.Position.X, s.Position.Y)
 
@@ -229,6 +238,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("add index", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Added index to entity %s\n", s.Name)
 
@@ -251,6 +261,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("drop index", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Dropped index '%s' from entity %s\n", s.IndexName, s.Name)
 
@@ -274,6 +285,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("add event handler", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Added event handler %s %s on %s\n",
 			s.EventHandler.Moment, s.EventHandler.Event, s.Name)
@@ -304,6 +316,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("drop event handler", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Dropped event handler %s %s from %s\n",
 			s.EventHandler.Moment, s.EventHandler.Event, s.Name)
@@ -317,6 +330,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set allow create change locally", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Set AllowCreateChangeLocally = %v on entity %s\n", s.BoolValue, s.Name)
 
@@ -349,7 +363,7 @@ func loadAlterEntityGenTarget(ctx *ExecContext, s *ast.AlterEntityStmt) (*genDm.
 	if err != nil {
 		return nil, nil, nil, false
 	}
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil || dm == nil {
 		return nil, nil, nil, false
 	}

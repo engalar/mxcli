@@ -28,7 +28,7 @@ func execUpdateSecurityGen(ctx *ExecContext, s *ast.UpdateSecurityStmt) error {
 			continue
 		}
 
-		dm, err := ctx.Backend.GetDomainModelGen(mod.ID)
+		dm, err := getDomainModelGenCached(ctx, mod.ID)
 		if err != nil || dm == nil {
 			continue // module may not have a domain model
 		}
@@ -36,6 +36,9 @@ func execUpdateSecurityGen(ctx *ExecContext, s *ast.UpdateSecurityStmt) error {
 		msgs, err := ctx.Backend.ReconcileMemberAccesses(model.ID(dm.ID()), mod.Name)
 		if err != nil {
 			return mdlerrors.NewBackend(fmt.Sprintf("reconcile security for module %s", mod.Name), err)
+		}
+		if len(msgs) > 0 {
+			invalidateDomainModelGenForModule(ctx, mod.ID)
 		}
 		for _, msg := range msgs {
 			fmt.Fprintf(ctx.Output, "  [%s] %s\n", mod.Name, msg)

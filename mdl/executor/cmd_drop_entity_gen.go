@@ -32,7 +32,7 @@ func execDropEntityGen(ctx *ExecContext, s *ast.DropEntityStmt) error {
 		return err
 	}
 
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -59,6 +59,7 @@ func execDropEntityGen(ctx *ExecContext, s *ast.DropEntityStmt) error {
 		if err := ctx.Backend.DeleteEntity(model.ID(dm.ID()), model.ID(ent.ID())); err != nil {
 			return mdlerrors.NewBackend("delete entity", err)
 		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Dropped entity: %s\n", s.Name)
 		return nil

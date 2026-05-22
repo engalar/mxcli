@@ -207,7 +207,7 @@ func databaseRetrieveMatchesAssociationTarget(ctx *ExecContext, entityName, asso
 	if err != nil || mod == nil {
 		return false
 	}
-	dm, err := ctx.Backend.GetDomainModelGen(mod.ID)
+	dm, err := getDomainModelGenCached(ctx, mod.ID)
 	if err != nil || dm == nil {
 		return false
 	}

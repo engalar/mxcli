@@ -23,7 +23,7 @@ func execAlterAssociationGen(ctx *ExecContext, s *ast.AlterAssociationStmt) erro
 	if err != nil {
 		return err
 	}
-	dm, err := ctx.Backend.GetDomainModelGen(module.ID)
+	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -71,6 +71,7 @@ func execAlterAssociationGen(ctx *ExecContext, s *ast.AlterAssociationStmt) erro
 		if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
 			return mdlerrors.NewBackend("update association", err)
 		}
+		setDomainModelGenCached(ctx, module.ID, dm)
 		invalidateHierarchy(ctx)
 		invalidateDomainModelsCache(ctx)
 		ctx.trackModifiedDomainModel(module.ID, module.Name)
@@ -87,6 +88,7 @@ func execAlterAssociationGen(ctx *ExecContext, s *ast.AlterAssociationStmt) erro
 		if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
 			return mdlerrors.NewBackend("update cross-module association", err)
 		}
+		setDomainModelGenCached(ctx, module.ID, dm)
 		invalidateHierarchy(ctx)
 		invalidateDomainModelsCache(ctx)
 		ctx.trackModifiedDomainModel(module.ID, module.Name)
