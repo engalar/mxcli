@@ -1442,11 +1442,28 @@ func (p *MprUnitPersistence) BatchHash(units map[model.ID][]byte) (map[model.ID]
 func (b *MprBackend) EnableImportBuffer() *unitstore.BufferedUnitStore {
 	buf := unitstore.New(b.NewUnitPersistence())
 	b.unitBuf = buf
+	// Wire the gen-type write path (UpdateDomainModelGen → repo.Update →
+	// concreteWriter().WriteUnit → updateUnit) to route through the buffer.
+	// The low-level path (writeUnitContents) checks b.unitBuf separately.
+	if w, ok := b.concreteWriter(); ok {
+		w.SetSessionBuf(func(unitID string, data []byte) error {
+			if err := buf.Write(model.ID(unitID), data); err != nil {
+				return err
+			}
+			b.msdkReader.SetOverlay(unitID, data)
+			return nil
+		})
+	}
 	return buf
 }
 
 // DisableImportBuffer deactivates the buffer and discards any pending writes.
 func (b *MprBackend) DisableImportBuffer() {
+	// ClearSessionBuf first: prevents any in-flight write from reaching
+	// a buf that is about to be discarded.
+	if w, ok := b.concreteWriter(); ok {
+		w.ClearSessionBuf()
+	}
 	if b.unitBuf != nil {
 		b.unitBuf.Discard()
 		b.unitBuf = nil
