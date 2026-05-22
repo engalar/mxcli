@@ -1,3 +1,30 @@
+---
+name: create-page
+description: Use when writing CREATE PAGE or CREATE SNIPPET MDL statements —
+             widget syntax dataview datagrid gallery listview groupbox tabcontainer
+             textbox combobox dynamictext actionbutton layoutgrid snippetcall
+             datasource params variables filter filtertype nanoflow microflow NPE
+---
+
+## When to Use This Skill
+
+- Writing `create page` or `create or replace page` statements
+- Adding widgets to a page: DataView, DataGrid2, ListView, Gallery, GroupBox, TabContainer
+- Configuring datasources (database, microflow, nanoflow, page param, selection, association)
+- Using page parameters (`params:`) or page variables (`variables:`)
+- Applying conditional visibility (`visible:`), editability (`editable:`), styling (`class:`, `style:`)
+- Displaying or editing non-persistent entities (NPE)
+
+## Checklist
+
+- [ ] Choose layout: `Atlas_Core.Atlas_Default` (full page) or `Atlas_Core.PopupLayout` (dialog)
+- [ ] Declare `params:` if the page receives objects from the caller
+- [ ] Choose data container: DataView (1 object) / DataGrid2 (list table) / ListView (simple list) / Gallery (card grid) — see `mendix:page-data-design`
+- [ ] Select datasource: `$param` → `database` → `microflow` → `nanoflow` → `selection` (preference order for persistent); NPE must use `microflow` or `nanoflow`
+- [ ] For DataGrid2 filters: add filter widgets inside `column {}` — see `mendix:datagrid2-filters`
+- [ ] Add `url:` only for pages with persistent entity params or no params (NPE params cannot deeplink)
+- [ ] Run `./bin/mxcli check script.mdl` (syntax), then `mx check app.mpr` (BSON)
+
 # CREATE PAGE - MDL Syntax Guide
 
 ## Overview
@@ -177,6 +204,26 @@ dynamictext email (content: 'Email: {1}', contentparams: [{1} = Email])
 | `$ParamName.Attr` | Page parameter attribute | `$Product.Name` |
 | `AttrName` | Current DataView/Gallery entity | `Name`, `Email` |
 | `'literal'` | String literal expression | `'Hello'` |
+
+### STATICTEXT Widget
+
+Plain static label. No attribute binding, no ContentParams. Use for fixed instructional text.
+
+```sql
+statictext sLabel (content: 'All fields marked * are required')
+```
+
+Prefer `dynamictext` when the content might need ContentParams or attribute binding in the future.
+
+### TITLE Widget
+
+Section heading stored as a static caption (not a ClientTemplate). Use for guaranteed-static headings.
+
+```sql
+title tHeading (content: 'Customer Information')
+```
+
+`dynamictext` with `rendermode: H1` / `H2` / `H3` is preferred for headings that might later need ContentParams.
 
 ### ACTIONBUTTON Widget
 
@@ -400,6 +447,68 @@ datagrid dgLargeList (
 
 Only non-default paging properties appear in `describe page` output.
 
+#### Column-Level Filter Widgets
+
+Filter widgets auto-select by column attribute type. Place inside `column {}` body:
+
+| Attribute type | Filter widget |
+|---|---|
+| String | `textfilter` |
+| Integer / Long / Decimal / AutoNumber | `numberfilter` |
+| DateTime | `datefilter` |
+| Enumeration / Boolean | `dropdownfilter` |
+
+```sql
+datagrid dgOrders (datasource: database from Module.Order sort by Date desc) {
+  column colNum  (attribute: OrderNumber, caption: 'Order #') { textfilter     fNum  }
+  column colAmt  (attribute: Amount,      caption: 'Amount',
+                  Alignment: right)                          { numberfilter   fAmt  }
+  column colDate (attribute: OrderDate,   caption: 'Date')   { datefilter     fDate }
+  column colStat (attribute: Status,      caption: 'Status') { dropdownfilter fStat }
+}
+```
+
+Filter bar in `controlbar {}` also works — place filter widgets alongside action buttons:
+```sql
+datagrid dg1 (datasource: database Module.Order) {
+  controlbar cb1 {
+    actionbutton btnNew (caption: 'New', action: create_object Module.Order then show_page Module.Order_Edit, buttonstyle: primary)
+    textfilter     fCust   (attributes: [Module.Order.CustomerName])
+    dropdownfilter fStatus (attributes: [Module.Order.Status])
+  }
+  column colNum  (attribute: OrderNumber,  caption: 'Order #')
+  column colStat (attribute: Status,       caption: 'Status')
+}
+```
+
+See `mendix:datagrid2-filters` for full filter widget reference.
+
+#### Page Variables for Column Visibility
+
+```sql
+create page Module.ProductList (
+  title: 'Products',
+  layout: Atlas_Core.Atlas_Default,
+  variables: { $showStock: boolean = 'true' }
+) {
+  datagrid dgProducts (datasource: database Module.Product) {
+    column colName  (attribute: Name,  caption: 'Name')
+    column colPrice (attribute: Price, caption: 'Price')
+    column colStock (attribute: Stock, caption: 'Stock', visible: '$showStock')
+  }
+}
+```
+
+#### ShowContentAs: url and email
+
+```sql
+datagrid dgContacts (datasource: database Module.Contact) {
+  column colName  (attribute: Name,    caption: 'Name',    ShowContentAs: text)
+  column colWeb   (attribute: Website, caption: 'Website', ShowContentAs: url)
+  column colEmail (attribute: Email,   caption: 'Email',   ShowContentAs: email)
+}
+```
+
 ### DATAVIEW Widget
 
 Display single object with nested input widgets:
@@ -472,6 +581,30 @@ dataview dataView1 (datasource: $Customer) {
   }
 }
 ```
+
+### LISTVIEW Widget
+
+Simple vertical list. Use when rows need custom template content and the table layout of DataGrid2 is too rigid.
+
+```sql
+listview lvItems (
+  datasource: database from Module.Entity sort by Name asc
+) {
+  dynamictext txtName (content: '{1}', contentparams: [{1} = Name], rendermode: H4)
+  dynamictext txtDesc (content: '{1}', contentparams: [{1} = Description])
+  actionbutton btnView (
+    caption: 'View',
+    action: show_page Module.Detail (Entity: $currentObject),
+    buttonstyle: default
+  )
+}
+```
+
+Supported datasources: `database`, `microflow`, `nanoflow`, `association path`, `$pageParam`.
+Use `$currentObject` inside the listview body to reference the current row's entity.
+
+**Known limitation:** `PageSize:` is parsed but NOT wired to the builder — page size is always 20.
+Configure paging in Studio Pro if a different size is needed.
 
 ### GALLERY Widget
 
@@ -639,6 +772,72 @@ customcontainer outer1 (class: 'section') {
   }
 }
 ```
+
+### GROUPBOX Widget
+
+Collapsible section with a captioned header. Use inside DataView to organize related fields into expandable groups.
+
+```sql
+dataview dvCustomer (datasource: $Customer) {
+  groupbox gbPersonal (
+    caption: 'Personal Info',
+    HeaderMode: H3,
+    Collapsible: YesExpanded
+  ) {
+    textbox txtName  (label: 'Name',  attribute: Name)
+    textbox txtEmail (label: 'Email', attribute: Email)
+  }
+
+  groupbox gbAddress (
+    caption: 'Address',
+    HeaderMode: H4,
+    Collapsible: YesCollapsed
+  ) {
+    textbox txtCity    (label: 'City',    attribute: City)
+    textbox txtCountry (label: 'Country', attribute: Country)
+  }
+
+  footer footer1 {
+    actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+  }
+}
+```
+
+**`Collapsible` values:** `No` | `YesExpanded` (open by default) | `YesCollapsed` (closed by default)
+**`HeaderMode` values:** `Div` (default, no heading tag) | `H3` | `H4`
+
+### TABCONTAINER / TABPAGE Widgets
+
+Horizontal tabs for organizing parallel sections. Use when a form has multiple equal-weight sections (use GROUPBOX for collapsible sub-sections instead).
+
+```sql
+dataview dvOrder (datasource: $Order) {
+  tabcontainer tcMain {
+    tabpage tpDetails (caption: 'Details') {
+      textbox txtNumber (label: 'Order #', attribute: OrderNumber)
+      textbox txtAmount (label: 'Amount',  attribute: TotalAmount)
+      combobox cmbStatus (label: 'Status', attribute: Status)
+    }
+    tabpage tpItems (caption: 'Line Items') {
+      datagrid dgItems (
+        datasource: $Order/MyMod.Order_OrderItem/MyMod.OrderItem,
+        PageSize: 10
+      ) {
+        column colProduct (attribute: ProductName, caption: 'Product')
+        column colQty     (attribute: Quantity,    caption: 'Qty', Alignment: center)
+      }
+    }
+  }
+  footer footer1 {
+    actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+  }
+}
+```
+
+Rules:
+- `tabcontainer` must contain at least one `tabpage` child
+- Each `tabpage` requires a `caption:` property (shown as tab label)
+- `tabpage` as a top-level widget (outside `tabcontainer`) produces a validation error
 
 ### FOOTER Widget
 
@@ -812,6 +1011,13 @@ The following features are NOT implemented in mxcli and require manual configura
 | Nested dataviews filtering by parent | Use microflow datasource or configure in Studio Pro |
 | Complex conditional visibility | Configure visibility rules in Studio Pro |
 | Widget-level security | Configure access rules in Studio Pro |
+
+- ⚠️ **ListView `PageSize:`** — parsed but NOT wired to builder; always renders 20 rows regardless
+- ⚠️ **`TABPAGE` outside `TABCONTAINER`** — produces runtime validation error; always nest inside tabcontainer
+- ⚠️ **NPE + `url:`** — pages with non-persistent entity parameters cannot have `url:` (no deeplink)
+- ⚠️ **NPE + `Keep Selection`** — DataGrid2 `Keep Selection` does not work with NPE datasources; IDs change on refresh
+- ✅ **DataGrid2 filter bar** — `textfilter`/`numberfilter`/etc. in `controlbar {}` now emit real filter BSON (fixed in commit fc1b6ee3)
+- ✅ **`filtertype:` property** — now forwarded to BSON; `applyFilterTypeToBSON()` applies `defaultFilter` override (fixed in commit fc1b6ee3)
 
 ### Runtime Pitfalls
 
