@@ -1,3 +1,10 @@
+---
+name: generate-domain-model
+description: Use when creating entities attributes associations enumerations
+             or non-persistent entities in MDL — create entity persistent
+             non-persistent NPE enumeration association domain model attribute
+---
+
 # Creating Mendix Domain Model MDL Scripts
 
 Use this skill to generate Mendix domain model scripts in MDL (Mendix Definition Language) format and validate them with the linter.
@@ -292,6 +299,50 @@ create enumeration Module.OrderStatus (
 where e.Status != 'CANCELLED'   -- Correct: uses enum value
 where e.Status != 'Cancelled'   -- Wrong: this is the caption
 ```
+
+### Non-Persistent Entities (NPE)
+
+Non-persistent entities are stored in runtime memory only — no database table is created. Use for:
+- Intermediate calculation results (validation output, search results)
+- Data Transfer Objects (DTOs) between service calls
+- Aggregation views that combine data from multiple sources
+
+```sql
+create non-persistent entity MyMod.SearchResult (
+  Title:    String(200),
+  Score:    Decimal,
+  Category: String(100),
+  IsValid:  Boolean default false
+);
+
+create non-persistent entity MyMod.ValidationResult (
+  IsValid:  Boolean default false,
+  Errors:   String(2000),
+  Warnings: String(2000)
+);
+```
+
+**Critical rules:**
+- `datasource: database` on a page widget causes a runtime error for NPEs — they have no DB table
+- `create list of NPE` in a microflow is blocked (CE0053) — build objects individually
+- NPE objects do NOT need `commit` — they exist only in memory for the current request/session
+- Pages with NPE parameters cannot have a `url:` field (no deeplink support)
+- Return NPE objects from a microflow/nanoflow to display them in a page widget
+
+```sql
+-- Microflow returning a list of NPEs for a DataGrid datasource
+create microflow MyMod.DSO_SearchProducts ($Query: String)
+  returns list of MyMod.SearchResult as $Results
+begin
+  -- Build NPE objects individually (no commit required)
+  $r1 = create MyMod.SearchResult (Title = 'Product A', Score = 0.95, Category = 'Electronics');
+  $r2 = create MyMod.SearchResult (Title = 'Product B', Score = 0.80, Category = 'Books');
+  return list($r1, $r2);
+end;
+/
+```
+
+See `mendix:page-data-design` for datasource patterns when displaying NPEs on pages.
 
 ### Entity Event Handlers
 
