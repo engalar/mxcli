@@ -1,0 +1,887 @@
+-- ============================================================================
+-- DataGrid2 Filter Widget — Comprehensive Configuration Demo
+-- ============================================================================
+--
+-- IMPLEMENTATION STATUS (as of current codebase)
+-- ───────────────────────────────────────────────
+--
+-- ✅ WORKS:  Column-level filters (inside column {} body)
+--              textfilter / numberfilter / datefilter / dropdownfilter
+--              placed as a direct child of a column definition.
+--              The filter is auto-wired to the column's attribute; no
+--              `attributes:` property is required.
+--              `filtertype:` is parsed by the visitor and stored in the
+--              AST, but NOT yet forwarded to the BSON builder (gap below).
+--
+-- ⚠️  GAP:   Grid-level filter bar (inside controlbar {} of datagrid)
+--              Filter widget keywords inside controlbar go through
+--              buildWidgetBSON(), which only handles actionbutton and
+--              falls back to a DivContainer for everything else.
+--              → textfilter / numberfilter / datefilter / dropdownfilter
+--                in controlbar silently produce DivContainers, not real
+--                filter widgets.
+--
+--              ROOT CAUSE: buildWidgetBSON() (cmd_pages_builder_v3.go:2148)
+--              lacks a case for filter widget types; it needs to call
+--              BuildFilterWidgetGen() (same as the column-level path).
+--              FilterWidgetSpec also needs Attributes []string and
+--              FilterType string added so the properties are forwarded.
+--
+-- ✅ WORKS:  Gallery filter bar (inside filter {} inside gallery)
+--              textfilter / numberfilter / datefilter / dropdownfilter
+--              inside a gallery filter container route through
+--              buildWidgetV3() → pluggable widget engine, which does
+--              handle `attributes: [...]` and `filtertype:`.
+--              Use this pattern as the working reference for "filter bar".
+--
+-- ARCHITECTURE: Filter placement modes
+-- ──────────────────────────────────────
+--
+--   Column-level (✅ works today):
+--     column colName (attribute: Attr) {
+--       textfilter     filtName              -- rendered in column header
+--       numberfilter   filtName
+--       datefilter     filtName
+--       dropdownfilter filtName
+--     }
+--
+--   Grid-level filter bar (⚠️ enhancement needed in buildWidgetBSON):
+--     datagrid dg1 (...) {
+--       controlbar filterBar {
+--         textfilter fSearch (attributes: [Module.Entity.Name])
+--         ...
+--       }
+--       column ...
+--     }
+--
+-- AUTO FILTER TYPE SELECTION (column-level, by attribute data type):
+--   String                          → textfilter
+--   Integer / Long / Decimal / Auto → numberfilter
+--   DateTime                        → datefilter
+--   Enumeration / Boolean           → dropdownfilter
+--
+-- ============================================================================
+
+
+-- ============================================================================
+-- DF01: Setup — module, entities, enumerations
+-- ============================================================================
+
+create module DfTest;
+
+create enumeration DfTest.OrderStatus (
+  Draft     'Draft',
+  Pending   'Pending',
+  Active    'Active',
+  Closed    'Closed',
+  Cancelled 'Cancelled'
+);
+
+create enumeration DfTest.Priority (
+  Low    'Low',
+  Medium 'Medium',
+  High   'High'
+);
+
+create enumeration DfTest.Region (
+  North 'North',
+  South 'South',
+  East  'East',
+  West  'West'
+);
+
+@position(100, 100)
+create persistent entity DfTest.Order (
+  OrderNumber:  string(50)  not null,
+  CustomerName: string(200) not null,
+  Description:  string(1000),
+  TotalAmount:  decimal,
+  Quantity:     integer default 0,
+  IsActive:     boolean default true,
+  Status:       enumeration(DfTest.OrderStatus) default DfTest.OrderStatus.Draft,
+  Priority:     enumeration(DfTest.Priority) default DfTest.Priority.Medium,
+  Region:       enumeration(DfTest.Region),
+  OrderDate:    datetime,
+  DeliveryDate: datetime
+);
+
+@position(400, 100)
+create persistent entity DfTest.Customer (
+  Name:   string(200) not null,
+  Email:  string(200),
+  Region: enumeration(DfTest.Region),
+  Rating: integer default 0
+);
+
+create association DfTest.Order_Customer
+  from DfTest.Order to DfTest.Customer;
+
+-- Helper microflow
+create microflow DfTest.DSO_GetActiveOrders ()
+  returns list of DfTest.Order
+  folder 'Filters'
+begin
+  retrieve $Orders from DfTest.Order
+    where [IsActive = true()]
+    sort by OrderDate desc;
+  return $Orders;
+end;
+/
+
+-- @version: 11.0+
+create page DfTest.Order_Edit (
+  params: { $Order: DfTest.Order },
+  title: 'Edit Order',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Filters'
+) {
+  dataview dvOrder (datasource: $Order) {
+    textbox     txtNumber   (label: 'Order #',     attribute: OrderNumber)
+    textbox     txtCustomer (label: 'Customer',    attribute: CustomerName)
+    combobox    cmbStatus   (label: 'Status',      attribute: Status)
+    combobox    cmbPriority (label: 'Priority',    attribute: Priority)
+    textbox     txtAmount   (label: 'Amount',      attribute: TotalAmount)
+    datepicker  dpOrder     (label: 'Order Date',  attribute: OrderDate)
+    footer footer1 {
+      actionbutton btnSave   (caption: 'Save',   action: save_changes close_page,   buttonstyle: primary)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+    }
+  }
+};
+-- @version: any
+
+
+-- ============================================================================
+-- DF02: Column-level filters — all four types ✅
+-- ============================================================================
+--
+-- One filter widget per column, placed as the column's child.
+-- MDL auto-selects filter widget ID based on attribute type.
+-- Filter appears in the column header row below the column caption.
+--
+-- AUTO-DETECTION RULES:
+--   String                          → textfilter
+--   Integer / Long / Decimal / Auto → numberfilter
+--   DateTime                        → datefilter
+--   Enumeration / Boolean           → dropdownfilter
+
+/**
+ * DF02: Column-level filter widgets — auto-wired to each column's attribute.
+ */
+create page DfTest.DF02_ColumnFilters (
+  title: 'Orders — Column Filters',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'df02_column_filters',
+  folder: 'Filters'
+) {
+  datagrid dgOrders (
+    datasource: database from DfTest.Order sort by OrderDate desc
+  ) {
+    -- String → textfilter
+    column colNumber   (attribute: OrderNumber,  caption: 'Order #')        { textfilter     fNum      }
+    column colCustomer (attribute: CustomerName, caption: 'Customer')        { textfilter     fCust     }
+
+    -- Decimal → numberfilter
+    column colAmount   (attribute: TotalAmount,  caption: 'Amount',
+                        Alignment: right)                                    { numberfilter   fAmount   }
+
+    -- Integer → numberfilter
+    column colQty      (attribute: Quantity,     caption: 'Qty',
+                        Alignment: center)                                   { numberfilter   fQty      }
+
+    -- DateTime → datefilter
+    column colDate     (attribute: OrderDate,    caption: 'Order Date')      { datefilter     fDate     }
+    column colDelivery (attribute: DeliveryDate, caption: 'Delivery Date')   { datefilter     fDelivery }
+
+    -- Enumeration → dropdownfilter (auto-populates enum values)
+    column colStatus   (attribute: Status,       caption: 'Status')          { dropdownfilter fStatus   }
+    column colPriority (attribute: Priority,     caption: 'Priority')        { dropdownfilter fPriority }
+
+    -- Boolean → dropdownfilter (Yes / No choices)
+    column colActive   (attribute: IsActive,     caption: 'Active')          { dropdownfilter fActive   }
+  }
+};
+
+
+-- ============================================================================
+-- DF03: filtertype variants — default comparison for column text filters ✅
+-- ============================================================================
+--
+-- `filtertype:` sets the DEFAULT comparison for a column-level text filter.
+-- The user can still change it in Studio Pro if "Adjustable by user" = Yes.
+-- Currently: parsed by visitor, stored in AST, but NOT forwarded to
+-- BuildFilterWidgetGen. Enhancement needed in FilterWidgetSpec and
+-- buildDataGridV3 column-filter path to forward this property.
+--
+-- Valid values: contains (default) | startsWith | endsWith | equal |
+--               notEqual | empty | notEmpty | greater | greaterEqual |
+--               smaller | smallerEqual
+
+/**
+ * DF03: filtertype variants on column-level text filters.
+ * NOTE: filtertype: is parsed but not yet wired to BSON — all behave as
+ * "contains" until FilterWidgetSpec.FilterType is forwarded.
+ */
+create page DfTest.DF03_FilterType (
+  title: 'Orders — Filter Types',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'df03_filter_type',
+  folder: 'Filters'
+) {
+  datagrid dgOrders (datasource: database DfTest.Order) {
+    column colNumber (attribute: OrderNumber, caption: 'Order # (startsWith)') {
+      textfilter fNum (filtertype: startsWith)
+    }
+    column colCustomer (attribute: CustomerName, caption: 'Customer (contains)') {
+      textfilter fCust (filtertype: contains)
+    }
+    column colDesc (attribute: Description, caption: 'Description (equal)') {
+      textfilter fDesc (filtertype: equal)
+    }
+    column colAmount   (attribute: TotalAmount,  caption: 'Amount') { numberfilter   fAmt    }
+    column colDate     (attribute: OrderDate,    caption: 'Date')   { datefilter     fDate   }
+    column colStatus   (attribute: Status,       caption: 'Status') { dropdownfilter fStatus }
+  }
+};
+
+
+-- ============================================================================
+-- DF04: Column-level filters + CRUD actions ✅
+-- ============================================================================
+--
+-- Column filters and inline row actions (Edit / Delete) work together.
+-- New button goes in controlbar as an actionbutton (not a filter).
+
+-- @version: 11.0+
+/**
+ * DF04: Full CRUD grid with column-level filters.
+ */
+create page DfTest.DF04_FiltersWithCRUD (
+  title: 'Orders — Column Filters + CRUD',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'df04_filters_crud',
+  folder: 'Filters'
+) {
+  datagrid dgOrders (
+    datasource: database from DfTest.Order sort by OrderDate desc,
+    PageSize: 25,
+    PagingPosition: both
+  ) {
+    -- Action buttons only in controlbar (no filter widgets here)
+    controlbar cb1 {
+      actionbutton btnNew (
+        caption: 'New Order',
+        action: create_object DfTest.Order then show_page DfTest.Order_Edit,
+        buttonstyle: primary
+      )
+    }
+
+    column colNumber (attribute: OrderNumber, caption: 'Order #',
+                      ColumnWidth: manual, Size: 120) {
+      textfilter fNum (filtertype: startsWith)
+    }
+    column colCustomer (attribute: CustomerName, caption: 'Customer') {
+      textfilter fCust
+    }
+    column colAmount (attribute: TotalAmount, caption: 'Amount',
+                      Alignment: right, ColumnWidth: manual, Size: 110) {
+      numberfilter fAmt
+    }
+    column colDate (attribute: OrderDate, caption: 'Date',
+                    ColumnWidth: manual, Size: 130) {
+      datefilter fDate
+    }
+    column colStatus (attribute: Status, caption: 'Status',
+                      ColumnWidth: manual, Size: 100) {
+      dropdownfilter fStatus
+    }
+    column colPriority (attribute: Priority, caption: 'Priority',
+                        ColumnWidth: manual, Size: 90) {
+      dropdownfilter fPriority
+    }
+
+    column colActions (caption: 'Actions', ShowContentAs: customContent,
+                       ColumnWidth: manual, Size: 120) {
+      actionbutton btnEdit (
+        caption: 'Edit',
+        action: show_page DfTest.Order_Edit (Order: $currentObject),
+        buttonstyle: default
+      )
+      actionbutton btnDelete (
+        caption: 'Delete',
+        action: delete_object,
+        buttonstyle: danger
+      )
+    }
+  }
+};
+-- @version: any
+
+
+-- ============================================================================
+-- DF05: Selection mode + column filters ✅
+-- ============================================================================
+
+create microflow DfTest.ACT_ProcessOrder ($Order: DfTest.Order)
+  folder 'Filters'
+begin
+  change $Order (Status = DfTest.OrderStatus.Active);
+  commit $Order;
+end;
+/
+
+/**
+ * DF05a: Single-row selection with column filters.
+ */
+create page DfTest.DF05a_SingleSelectFilters (
+  title: 'Orders — Single Select + Column Filters',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'df05a_single_select_filters',
+  folder: 'Filters'
+) {
+  datagrid dgOrders (
+    datasource: database from DfTest.Order sort by OrderDate desc,
+    selection: single,
+    PageSize: 20
+  ) {
+    column colNumber   (attribute: OrderNumber,  caption: 'Order #')  { textfilter     fNum    }
+    column colCustomer (attribute: CustomerName, caption: 'Customer') { textfilter     fCust   }
+    column colDate     (attribute: OrderDate,    caption: 'Date')     { datefilter     fDate   }
+    column colStatus   (attribute: Status,       caption: 'Status')   { dropdownfilter fStatus }
+    column colAmount   (attribute: TotalAmount,  caption: 'Amount',
+                        Alignment: right)                             { numberfilter   fAmt    }
+  }
+};
+
+/**
+ * DF05b: Multi-row selection with column filters + per-row action.
+ */
+create page DfTest.DF05b_MultiSelectFilters (
+  title: 'Orders — Multi Select + Column Filters',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'df05b_multi_select_filters',
+  folder: 'Filters'
+) {
+  datagrid dgOrders (
+    datasource: database from DfTest.Order sort by OrderDate desc,
+    selection: multiple,
+    PageSize: 25,
+    PagingPosition: both
+  ) {
+    column colNumber   (attribute: OrderNumber,  caption: 'Order #')  { textfilter     fNum      }
+    column colCustomer (attribute: CustomerName, caption: 'Customer') { textfilter     fCust     }
+    column colAmount   (attribute: TotalAmount,  caption: 'Amount',
+                        Alignment: right)                             { numberfilter   fAmt      }
+    column colStatus   (attribute: Status,       caption: 'Status')   { dropdownfilter fStatus   }
+    column colPriority (attribute: Priority,     caption: 'Priority') { dropdownfilter fPriority }
+    column colActions (caption: 'Action', ShowContentAs: customContent) {
+      actionbutton btnActivate (
+        caption: 'Activate',
+        action: microflow DfTest.ACT_ProcessOrder (Order: $currentObject),
+        buttonstyle: success
+      )
+    }
+  }
+};
+
+
+-- ============================================================================
+-- DF06: Paging modes + column filters ✅
+-- ============================================================================
+
+/**
+ * DF06a: Virtual scrolling + column filters.
+ */
+create page DfTest.DF06a_VirtualScrollFilters (
+  title: 'Orders — Virtual Scroll + Column Filters',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'df06a_virtualscroll_filters',
+  folder: 'Filters'
+) {
+  datagrid dgOrders (
+    datasource: database from DfTest.Order sort by OrderDate desc,
+    PageSize: 50,
+    Pagination: virtualScrolling
+  ) {
+    column colNumber   (attribute: OrderNumber,  caption: 'Order #')  { textfilter     fNum    }
+    column colCustomer (attribute: CustomerName, caption: 'Customer') { textfilter     fCust   }
+    column colDate     (attribute: OrderDate,    caption: 'Date')     { datefilter     fDate   }
+    column colStatus   (attribute: Status,       caption: 'Status')   { dropdownfilter fStatus }
+    column colAmount   (attribute: TotalAmount,  caption: 'Amount',
+                        Alignment: right)                             { numberfilter   fAmt    }
+  }
+};
+
+
+-- ============================================================================
+-- DF07: Design properties + column filters ✅
+-- ============================================================================
+--
+-- DynamicCellClass is a per-row CSS class expression using $currentObject.
+-- It coexists with column-level filters.
+
+/**
+ * DF07: Compact + striped DataGrid with column filters and cell class expressions.
+ */
+create page DfTest.DF07_StyledWithFilters (
+  title: 'Orders — Styled + Column Filters',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'df07_styled_filters',
+  folder: 'Filters'
+) {
+  datagrid dgOrders (
+    datasource: database from DfTest.Order sort by OrderDate desc,
+    PageSize: 20,
+    PagingPosition: both,
+    designproperties: ['Compact': on, 'Striped': on, 'Hover': on, 'Borders': 'Horizontal']
+  ) {
+    column colNumber (
+      attribute: OrderNumber, caption: 'Order #',
+      ColumnWidth: manual, Size: 130
+    ) {
+      textfilter fNum (filtertype: startsWith)
+    }
+
+    column colCustomer (
+      attribute: CustomerName, caption: 'Customer',
+      ColumnWidth: autofill
+    ) {
+      textfilter fCust
+    }
+
+    column colAmount (
+      attribute: TotalAmount, caption: 'Amount',
+      Alignment: right, ColumnWidth: manual, Size: 110
+    ) {
+      numberfilter fAmt
+    }
+
+    column colDate (
+      attribute: OrderDate, caption: 'Order Date',
+      ColumnWidth: manual, Size: 140
+    ) {
+      datefilter fDate
+    }
+
+    column colStatus (
+      attribute: Status, caption: 'Status',
+      ColumnWidth: manual, Size: 100,
+      DynamicCellClass: 'if ($currentObject/Status = DfTest.OrderStatus.Active) then ''text-success'' else if ($currentObject/Status = DfTest.OrderStatus.Cancelled) then ''text-danger'' else '''' '
+    ) {
+      dropdownfilter fStatus
+    }
+
+    column colPriority (
+      attribute: Priority, caption: 'Priority',
+      Alignment: center, ColumnWidth: manual, Size: 90,
+      DynamicCellClass: 'if ($currentObject/Priority = DfTest.Priority.High) then ''text-warning'' else '''' '
+    ) {
+      dropdownfilter fPriority
+    }
+  }
+};
+
+
+-- ============================================================================
+-- DF08: Microflow datasource + column filters ✅
+-- ============================================================================
+
+/**
+ * DF08: Microflow datasource with column-level filters.
+ */
+create page DfTest.DF08_MicroflowWithFilters (
+  title: 'Active Orders (via MF) + Column Filters',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'df08_mf_filters',
+  folder: 'Filters'
+) {
+  datagrid dgOrders (
+    datasource: microflow DfTest.DSO_GetActiveOrders,
+    PageSize: 20,
+    PagingPosition: both
+  ) {
+    column colNumber   (attribute: OrderNumber,  caption: 'Order #')  { textfilter     fNum    }
+    column colCustomer (attribute: CustomerName, caption: 'Customer') { textfilter     fCust   }
+    column colDate     (attribute: OrderDate,    caption: 'Date')     { datefilter     fDate   }
+    column colStatus   (attribute: Status,       caption: 'Status')   { dropdownfilter fStatus }
+    column colAmount   (attribute: TotalAmount,  caption: 'Amount',
+                        Alignment: right)                             { numberfilter   fAmt    }
+  }
+};
+
+
+-- ============================================================================
+-- DF09: Page variable visibility + column filters ✅
+-- ============================================================================
+--
+-- `visible:` on a column takes a page variable expression.
+-- Column visibility is independent of filter state.
+
+/**
+ * DF09: Page variable toggles column visibility while filters stay active.
+ */
+create page DfTest.DF09_VariableWithFilters (
+  title: 'Orders — Variable Column + Column Filters',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'df09_variable_filters',
+  folder: 'Filters',
+  variables: {
+    $showDetails: boolean = 'false',
+    $showAmount:  boolean = 'true'
+  }
+) {
+  datagrid dgOrders (
+    datasource: database from DfTest.Order sort by OrderDate desc,
+    PageSize: 20,
+    PagingPosition: both
+  ) {
+    column colNumber   (attribute: OrderNumber,  caption: 'Order #')  { textfilter     fNum    }
+    column colCustomer (attribute: CustomerName, caption: 'Customer') { textfilter     fCust   }
+
+    -- Amount: visible when $showAmount = true; still filtered when shown
+    column colAmount (
+      attribute: TotalAmount, caption: 'Amount',
+      Alignment: right, visible: '$showAmount'
+    ) {
+      numberfilter fAmt
+    }
+
+    column colDate   (attribute: OrderDate, caption: 'Date')   { datefilter     fDate   }
+    column colStatus (attribute: Status,    caption: 'Status') { dropdownfilter fStatus }
+
+    -- Detail columns — visible only when $showDetails = true
+    column colPriority (
+      attribute: Priority, caption: 'Priority',
+      visible: '$showDetails'
+    ) {
+      dropdownfilter fPriority
+    }
+    column colRegion (
+      attribute: Region, caption: 'Region',
+      visible: '$showDetails'
+    ) {
+      dropdownfilter fRegion
+    }
+    column colDesc (
+      attribute: Description, caption: 'Description',
+      WrapText: true, visible: '$showDetails'
+    )
+  }
+};
+
+
+-- ============================================================================
+-- DF10: Association datasource inside DataView + column filters ✅
+-- ============================================================================
+
+-- @version: 11.0+
+/**
+ * DF10: Orders nested inside a Customer DataView, filtered per column.
+ */
+create page DfTest.DF10_AssocWithFilters (
+  params: { $Customer: DfTest.Customer },
+  title: 'Customer Orders',
+  layout: Atlas_Core.PopupLayout,
+  url: 'df10_assoc_filters/{Customer/Name}',
+  folder: 'Filters'
+) {
+  dataview dvCustomer (datasource: $Customer, editable: false) {
+    dynamictext dtName  (content: '{1}', contentparams: [{1} = Name],  rendermode: H3)
+    dynamictext dtEmail (content: 'Email: {1}', contentparams: [{1} = Email])
+
+    datagrid dgOrders (
+      datasource: $Customer/DfTest.Order_Customer/DfTest.Order,
+      PageSize: 10
+    ) {
+      column colNumber (attribute: OrderNumber, caption: 'Order #') {
+        textfilter fNum (filtertype: startsWith)
+      }
+      column colAmount (attribute: TotalAmount, caption: 'Amount', Alignment: right) {
+        numberfilter fAmt
+      }
+      column colDate (attribute: OrderDate, caption: 'Date') {
+        datefilter fDate
+      }
+      column colStatus (attribute: Status, caption: 'Status') {
+        dropdownfilter fStatus
+      }
+    }
+  }
+};
+-- @version: any
+
+
+-- ============================================================================
+-- DF11: Gallery filter bar — WORKING reference for multi-attribute search ✅
+-- ============================================================================
+--
+-- Gallery `filter {}` → textfilter with `attributes: [...]` works via the
+-- pluggable widget engine path.  Use this as the reference implementation
+-- for "filter bar" patterns until DataGrid2 controlbar filter bar is fixed.
+--
+-- `attributes: [A, B]` → OR match: row shown when ANY attribute contains text.
+-- Multiple filter widgets → AND logic across widgets.
+
+@position(100, 300)
+create persistent entity DfTest.Product (
+  Name:     string(200) not null,
+  Code:     string(50),
+  Category: string(100),
+  Price:    decimal,
+  Stock:    integer,
+  IsActive: boolean default true,
+  Tags:     string(500)
+);
+
+/**
+ * DF11: Gallery with multi-attribute text filter + number + dropdown filters.
+ */
+create page DfTest.DF11_GalleryFilterBar (
+  title: 'Products — Gallery Filter Bar',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'df11_gallery_filter_bar',
+  folder: 'Filters'
+) {
+  gallery productGallery (
+    datasource: database from DfTest.Product sort by Name asc,
+    selection: single,
+    DesktopColumns: 3,
+    TabletColumns: 2,
+    PhoneColumns: 1
+  ) {
+    filter filterBar {
+      -- Multi-attribute text filter: OR match on Name, Code, Category, Tags
+      textfilter fSearch (
+        attributes: [DfTest.Product.Name, DfTest.Product.Code,
+                     DfTest.Product.Category, DfTest.Product.Tags]
+      )
+
+      -- Number filter on Price
+      numberfilter fPrice (attributes: [DfTest.Product.Price])
+
+      -- Dropdown filter on boolean attribute
+      dropdownfilter fActive (attributes: [DfTest.Product.IsActive])
+    }
+
+    template template1 {
+      dynamictext txtName     (content: '{1}',       contentparams: [{1} = Name],     rendermode: H4)
+      dynamictext txtCode     (content: 'SKU: {1}',  contentparams: [{1} = Code])
+      dynamictext txtPrice    (content: '${1}',      contentparams: [{1} = Price])
+      dynamictext txtCategory (content: '{1}',       contentparams: [{1} = Category])
+    }
+  }
+};
+
+
+-- ============================================================================
+-- DF12: DataGrid2 filter bar — DESIGN SPEC ⚠️ (enhancement needed)
+-- ============================================================================
+--
+-- GOAL: Put filter widgets in the DataGrid2 "Filters" placeholder
+-- (the dedicated filter row above the data rows) for a cleaner UX than
+-- column-level filters.
+--
+-- CURRENT STATE: Filter widgets placed in controlbar go through
+-- buildWidgetBSON() which produces a DivContainer for unknown widget
+-- types. The filters are silently broken — they render as empty divs,
+-- not as interactive filter inputs.
+--
+-- REQUIRED ENHANCEMENT:
+--   1. Add case to buildWidgetBSON() for filter widget types:
+--        case "textfilter", "numberfilter", "datefilter", "dropdownfilter":
+--            fw, _ := pb.widgetBackend.BuildFilterWidgetGen(
+--                backend.FilterWidgetSpec{WidgetID: ..., FilterName: ...,
+--                    Attributes: w.GetAttributes(),
+--                    FilterType: w.GetFilterType()}, path)
+--            return pb.serializeGenWidgetToBsonD(fw)
+--
+--   2. Extend FilterWidgetSpec to carry Attributes []string, FilterType string.
+--
+--   3. Extend buildFilterWidgetBSON() to wire attributes and filtertype into
+--      the BSON properties instead of using template defaults.
+--
+-- This example shows the INTENDED SYNTAX for future use once the fix lands.
+
+/**
+ * DF12: DataGrid2 filter bar (intended syntax — not yet working).
+ * Once buildWidgetBSON handles filter types, this becomes the preferred
+ * pattern for grids that need both a filter bar AND column-level filters.
+ */
+create page DfTest.DF12_DataGridFilterBar (
+  title: 'Orders — DataGrid Filter Bar (spec)',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'df12_dg_filter_bar',
+  folder: 'Filters'
+) {
+  datagrid dgOrders (
+    datasource: database from DfTest.Order sort by OrderDate desc,
+    PageSize: 20,
+    PagingPosition: both
+  ) {
+    -- ⚠️  ENHANCEMENT NEEDED: filter widgets here produce DivContainers today.
+    -- Once buildWidgetBSON gains filter-widget awareness, the below becomes real.
+    controlbar filterBar {
+      -- Multi-attribute search
+      textfilter fSearch (
+        attributes: [DfTest.Order.OrderNumber, DfTest.Order.CustomerName]
+      )
+      dropdownfilter fStatus   (attributes: [DfTest.Order.Status])
+      dropdownfilter fPriority (attributes: [DfTest.Order.Priority])
+      numberfilter   fAmount   (attributes: [DfTest.Order.TotalAmount])
+      datefilter     fDate     (attributes: [DfTest.Order.OrderDate])
+    }
+
+    -- Use column-level filters as the working workaround in the meantime:
+    column colNumber   (attribute: OrderNumber,  caption: 'Order #')  { textfilter     fNum      }
+    column colCustomer (attribute: CustomerName, caption: 'Customer') { textfilter     fCust     }
+    column colAmount   (attribute: TotalAmount,  caption: 'Amount',
+                        Alignment: right)                             { numberfilter   fAmt      }
+    column colDate     (attribute: OrderDate,    caption: 'Date')     { datefilter     fDate2    }
+    column colStatus   (attribute: Status,       caption: 'Status')   { dropdownfilter fStatus2  }
+    column colPriority (attribute: Priority,     caption: 'Priority') { dropdownfilter fPriority2}
+  }
+};
+
+
+-- ============================================================================
+-- DF13: PLUGGABLEWIDGET escape hatch — advanced filter properties ✅
+-- ============================================================================
+--
+-- MDL shorthand only creates filter widgets with template defaults.
+-- For advanced properties (placeholder, adjustable, multiselect, clearable,
+-- applyAfterMs), use PLUGGABLEWIDGET inside controlbar.
+--
+-- Unlike textfilter/numberfilter/dropdownfilter shorthand (which produce
+-- DivContainers in controlbar), PLUGGABLEWIDGET goes through the full
+-- pluggable engine which properly serializes all properties.
+--
+-- NOTE: PLUGGABLEWIDGET in controlbar still has the same "Filters
+-- placeholder" mapping as shorthand filters once the BSON wiring is fixed.
+-- For now, advanced properties + column placement is the safe choice:
+-- put PLUGGABLEWIDGET inside a column {} for guaranteed correctness.
+
+/**
+ * DF13: Advanced filter properties via PLUGGABLEWIDGET — inside columns.
+ */
+create page DfTest.DF13_AdvancedFilterProps (
+  title: 'Orders — Advanced Filter Properties',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'df13_advanced_filter_props',
+  folder: 'Filters'
+) {
+  datagrid dgOrders (
+    datasource: database from DfTest.Order sort by OrderDate desc,
+    PageSize: 20
+  ) {
+    -- TextFilter with placeholder label + user-adjustable comparison type
+    column colNumber (attribute: OrderNumber, caption: 'Order #') {
+      pluggablewidget 'com.mendix.widget.web.datagridtextfilter.DatagridTextFilter' fNum (
+        defaultFilter: 'startsWith',
+        placeholder: 'ORD-…',
+        adjustable: 'yes',
+        applyAfterMs: '300'
+      )
+    }
+
+    -- TextFilter with 200ms debounce
+    column colCustomer (attribute: CustomerName, caption: 'Customer') {
+      pluggablewidget 'com.mendix.widget.web.datagridtextfilter.DatagridTextFilter' fCust (
+        defaultFilter: 'contains',
+        placeholder: 'Customer name…',
+        adjustable: 'no',
+        applyAfterMs: '200'
+      )
+    }
+
+    -- NumberFilter with placeholder + user-switchable comparison
+    column colAmount (attribute: TotalAmount, caption: 'Amount', Alignment: right) {
+      pluggablewidget 'com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter' fAmt (
+        defaultFilter: 'greaterEqual',
+        placeholder: 'Min amount',
+        adjustable: 'yes'
+      )
+    }
+
+    -- DateFilter with between (range) mode + user-adjustable
+    column colDate (attribute: OrderDate, caption: 'Date') {
+      pluggablewidget 'com.mendix.widget.web.datagriddatefilter.DatagridDateFilter' fDate (
+        defaultFilter: 'between',
+        adjustable: 'yes'
+      )
+    }
+
+    -- DropdownFilter: searchable + multi-select + clearable + label for empty
+    column colStatus (attribute: Status, caption: 'Status') {
+      pluggablewidget 'com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter' fStatus (
+        filterable: 'yes',
+        multiselect: 'yes',
+        clearable: 'yes',
+        emptyCaption: 'All'
+      )
+    }
+
+    -- DropdownFilter: multi-select with labels display + checkbox selection
+    column colPriority (attribute: Priority, caption: 'Priority') {
+      pluggablewidget 'com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter' fPriority (
+        multiselect: 'yes',
+        clearable: 'yes',
+        showSelectedItemsAs: 'labels',
+        selectionMethod: 'checkbox'
+      )
+    }
+  }
+};
+
+
+-- ============================================================================
+-- SUMMARY — DataGrid2 filter syntax quick reference
+-- ============================================================================
+--
+-- ✅ COLUMN-LEVEL FILTER (works today):
+--
+--   column colName (attribute: Attr, caption: '...') {
+--     textfilter     filtName                         -- string attrs
+--     numberfilter   filtName                         -- numeric attrs
+--     datefilter     filtName                         -- datetime attrs
+--     dropdownfilter filtName                         -- enum/boolean attrs
+--   }
+--
+--   With filtertype (parsed but not yet forwarded to BSON):
+--   column colName (attribute: Attr) {
+--     textfilter filtName (filtertype: startsWith)
+--   }
+--
+--   With advanced properties (full control via PLUGGABLEWIDGET):
+--   column colName (attribute: Attr) {
+--     pluggablewidget 'com.mendix.widget.web.datagridtextfilter.DatagridTextFilter' fName (
+--       defaultFilter: 'startsWith', placeholder: '…', adjustable: 'yes',
+--       applyAfterMs: '300'
+--     )
+--   }
+--
+-- ✅ GALLERY FILTER BAR (works today):
+--
+--   gallery g1 (datasource: ...) {
+--     filter filterBar {
+--       textfilter  f1 (attributes: [Module.Entity.A1, Module.Entity.A2])
+--       numberfilter f2 (attributes: [Module.Entity.Price])
+--       dropdownfilter f3 (attributes: [Module.Entity.Status])
+--       datefilter f4 (attributes: [Module.Entity.Date])
+--     }
+--     template template1 { ... }
+--   }
+--
+-- ⚠️  DATAGRID2 FILTER BAR (design intent, enhancement needed):
+--
+--   datagrid dg1 (...) {
+--     controlbar filterBar {
+--       textfilter f1 (attributes: [Module.Entity.Name])    -- ⚠️ DivContainer today
+--       dropdownfilter f2 (attributes: [Module.Entity.Status])
+--     }
+--     column ...
+--   }
+--
+--   FIX: buildWidgetBSON() needs filter-widget cases that call
+--   BuildFilterWidgetGen() with Attributes and FilterType from the AST.
+--
+-- ============================================================================
