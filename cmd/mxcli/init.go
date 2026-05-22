@@ -20,6 +20,11 @@ var (
 	initAllTools         bool
 	initListTools        bool
 	initContainerRuntime string
+
+	// vsixData holds the VS Code extension binary. It was previously populated
+	// by a go:embed directive; it remains as a var so tests can nil it out to
+	// disable extension installation without import-cycle issues.
+	vsixData []byte
 )
 
 const mendixGitignore = `# Mendix project

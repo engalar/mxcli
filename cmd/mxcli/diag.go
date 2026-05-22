@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -146,12 +147,18 @@ func runDiagBundle(logDir string) {
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	// Add system info
+	// system-info.txt（原有）
 	info := fmt.Sprintf("Version: %s\nGo: %s %s/%s\nTime: %s\n",
 		version, runtime.Version(), runtime.GOOS, runtime.GOARCH, time.Now().Format(time.RFC3339))
 	addTarEntry(tw, "system-info.txt", []byte(info))
 
-	// Add all log files
+	// env-dump.txt（新增）
+	addTarEntry(tw, "env-dump.txt", []byte(collectEnvDump()))
+
+	// error-stacks.txt（新增）
+	addTarEntry(tw, "error-stacks.txt", []byte(collectErrorStacks(logDir, 20)))
+
+	// logs/ 目录（原有）
 	files, _ := listLogFiles(logDir)
 	for _, entry := range files {
 		path := filepath.Join(logDir, entry.Name())
@@ -163,6 +170,84 @@ func runDiagBundle(logDir string) {
 	}
 
 	fmt.Printf("Created: %s\n", outFile)
+	fmt.Printf("Contents: system-info.txt, env-dump.txt, error-stacks.txt, %d log file(s)\n", len(files))
+}
+
+// collectEnvDump collects Go runtime memory stats and filtered environment variables.
+func collectEnvDump() string {
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+
+	var sb strings.Builder
+	sb.WriteString("=== Go Runtime ===\n")
+	fmt.Fprintf(&sb, "MemSys:       %d MB\n", ms.Sys/1024/1024)
+	fmt.Fprintf(&sb, "HeapAlloc:    %d MB\n", ms.HeapAlloc/1024/1024)
+	fmt.Fprintf(&sb, "NumGC:        %d\n", ms.NumGC)
+	fmt.Fprintf(&sb, "NumCPU:       %d\n", runtime.NumCPU())
+	fmt.Fprintf(&sb, "NumGoroutine: %d\n", runtime.NumGoroutine())
+	sb.WriteString("\n=== Environment Variables ===\n")
+
+	environ := os.Environ()
+	sort.Strings(environ)
+	for _, kv := range environ {
+		eq := strings.IndexByte(kv, '=')
+		if eq < 0 {
+			fmt.Fprintf(&sb, "%s\n", kv)
+			continue
+		}
+		key := kv[:eq]
+		val := kv[eq+1:]
+		upper := strings.ToUpper(key)
+		if strings.HasSuffix(upper, "_TOKEN") ||
+			strings.HasSuffix(upper, "_KEY") ||
+			strings.HasSuffix(upper, "_SECRET") ||
+			strings.HasSuffix(upper, "_PASSWORD") ||
+			strings.HasSuffix(upper, "_PASS") {
+			val = "[REDACTED]"
+		}
+		fmt.Fprintf(&sb, "%s=%s\n", key, val)
+	}
+	return sb.String()
+}
+
+// collectErrorStacks extracts the most recent N ERROR log entries from log files.
+func collectErrorStacks(logDir string, maxErrors int) string {
+	files, _ := listLogFiles(logDir)
+	if len(files) == 0 {
+		return "(no log files found)\n"
+	}
+
+	type errorEntry struct {
+		ts  string
+		raw string
+	}
+	var entries []errorEntry
+
+	for i := len(files) - 1; i >= 0 && len(entries) < maxErrors; i-- {
+		lines := readFileLines(filepath.Join(logDir, files[i].Name()))
+		for j := len(lines) - 1; j >= 0 && len(entries) < maxErrors; j-- {
+			line := lines[j]
+			if !strings.Contains(line, `"ERROR"`) {
+				continue
+			}
+			var rec map[string]any
+			if json.Unmarshal([]byte(line), &rec) != nil {
+				continue
+			}
+			ts, _ := rec["time"].(string)
+			entries = append(entries, errorEntry{ts: ts, raw: line})
+		}
+	}
+
+	if len(entries) == 0 {
+		return "(no errors found in recent logs)\n"
+	}
+
+	var sb strings.Builder
+	for _, e := range entries {
+		fmt.Fprintf(&sb, "=== %s ===\n%s\n\n", e.ts, e.raw)
+	}
+	return sb.String()
 }
 
 // listLogFiles returns log file entries and total size, sorted by name (oldest first).
