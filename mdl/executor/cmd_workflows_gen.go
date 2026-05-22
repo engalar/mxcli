@@ -750,11 +750,11 @@ func formatUserSourceGen(src element.Element, indent string) []string {
 		}
 	case *genWf.XPathBasedUserSource:
 		if xp := v.XPathConstraint(); xp != "" {
-			return []string{fmt.Sprintf("%stargeting users xpath '%s'", indent, xp)}
+			return []string{fmt.Sprintf("%stargeting users xpath '%s'", indent, strings.ReplaceAll(xp, "'", "''"))}
 		}
 	case *genWf.XPathUserTargeting:
 		if xp := v.XPathConstraint(); xp != "" {
-			return []string{fmt.Sprintf("%stargeting xpath '%s'", indent, xp)}
+			return []string{fmt.Sprintf("%stargeting xpath '%s'", indent, strings.ReplaceAll(xp, "'", "''"))}
 		}
 	case *genWf.MicroflowUserTargeting:
 		if mf := v.MicroflowQualifiedName(); mf != "" {
@@ -766,7 +766,7 @@ func formatUserSourceGen(src element.Element, indent string) []string {
 		}
 	case *genWf.XPathGroupTargeting:
 		if xp := v.XPathConstraint(); xp != "" {
-			return []string{fmt.Sprintf("%stargeting groups xpath '%s'", indent, xp)}
+			return []string{fmt.Sprintf("%stargeting groups xpath '%s'", indent, strings.ReplaceAll(xp, "'", "''"))}
 		}
 	}
 	return nil
