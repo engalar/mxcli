@@ -83,3 +83,47 @@ func copyDir(src, dst string) error {
 		return os.WriteFile(dstPath, data, 0o644)
 	})
 }
+
+// TestHelpdeskGolden_Update 生成或更新 testdata/helpdesk-golden/。
+// 只在 -update-golden flag 存在时有效；否则直接 Skip。
+// 运行方式：
+//
+//	go test ./internal/goldenfs/ -tags linux,integration \
+//	       -run TestHelpdeskGolden_Update -update-golden -v
+func TestHelpdeskGolden_Update(t *testing.T) {
+	if !*updateGolden {
+		t.Skip("pass -update-golden to regenerate testdata/helpdesk-golden/")
+	}
+
+	blankDir := helpdeskBlankDir(t)
+	goldenDir := helpdeskGoldenDir(t)
+	script := helpdeskMDLScript(t)
+
+	// Open FUSE overlay on top of blank A.
+	snap, err := Open(blankDir)
+	if err != nil {
+		t.Fatalf("goldenfs.Open: %v", err)
+	}
+	defer func() {
+		if err := snap.Close(); err != nil {
+			t.Logf("snap.Close: %v", err)
+		}
+	}()
+
+	mountMPR := filepath.Join(snap.MountDir(), "minimal.mpr")
+
+	// Execute helpdesk-app.mdl — produces B2 in the FUSE overlay.
+	runMDL(t, mountMPR, script)
+
+	// Copy entire FUSE mount (A + dirty layer = B2) to testdata/helpdesk-golden/.
+	// NOTE: do NOT call snap.Commit() — that would write back to blankDir (A).
+	if err := os.RemoveAll(goldenDir); err != nil {
+		t.Fatalf("remove old golden: %v", err)
+	}
+	if err := copyDir(snap.MountDir(), goldenDir); err != nil {
+		t.Fatalf("copy to golden: %v", err)
+	}
+
+	t.Logf("Golden updated: %s", goldenDir)
+	t.Logf("Next step: git add testdata/helpdesk-golden/ && git commit")
+}
