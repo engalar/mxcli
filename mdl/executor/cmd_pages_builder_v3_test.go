@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/model"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
+	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 )
 
 // buildTestWidgetV3WithDesignProp creates a WidgetV3 with a single design property.
@@ -91,5 +93,50 @@ func TestApplyWidgetAppearanceGenToggleOnWrappedInDesignPropertyValue(t *testing
 	}
 	if _, ok := dpv.Value().(*genPg.ToggleDesignPropertyValue); !ok {
 		t.Fatalf("DesignPropertyValue.Value = %T, want *ToggleDesignPropertyValue", dpv.Value())
+	}
+}
+
+// TestBuildDynamicTextV3_EmptyContentUsesSafeDefault verifies CE0720 fix:
+// when a DYNAMICTEXT widget has an empty content string, buildDynamicTextV3
+// must NOT produce a template with text "{1}" and zero parameters — that
+// combination causes Studio Pro to raise CE0720. A single space " " is the
+// safe fallback (documented in CLAUDE.md).
+func TestBuildDynamicTextV3_EmptyContentUsesSafeDefault(t *testing.T) {
+	pb := &pageBuilder{
+		widgetScope:      map[string]model.ID{},
+		paramEntityNames: map[string]string{},
+	}
+	w := &ast.WidgetV3{
+		Type:       "dynamictext",
+		Name:       "txt1",
+		Properties: map[string]interface{}{
+			// no Content property → GetContent() returns ""
+		},
+	}
+	result, err := pb.buildDynamicTextV3(w)
+	if err != nil {
+		t.Fatalf("buildDynamicTextV3 failed: %v", err)
+	}
+	dt, ok := result.(*genPg.DynamicText)
+	if !ok {
+		t.Fatalf("result = %T, want *DynamicText", result)
+	}
+	ct, ok := dt.Content().(*genPg.ClientTemplate)
+	if !ok {
+		t.Fatalf("Content = %T, want *ClientTemplate", dt.Content())
+	}
+	// CE0720 fix: template text must NOT be "{1}" when there are no parameters.
+	if tmpl, ok := ct.Template().(*genTexts.Text); ok {
+		for _, item := range tmpl.TranslationsItems() {
+			if tr, ok := item.(*genTexts.Translation); ok {
+				if tr.Text() == "{1}" && len(ct.ParametersItems()) == 0 {
+					t.Fatalf("CE0720: template text is {1} but there are 0 parameters — Studio Pro will raise CE0720")
+				}
+			}
+		}
+	}
+	// Parameters list must be empty (no auto-generated params for empty content).
+	if len(ct.ParametersItems()) != 0 {
+		t.Fatalf("expected 0 parameters for empty content, got %d", len(ct.ParametersItems()))
 	}
 }

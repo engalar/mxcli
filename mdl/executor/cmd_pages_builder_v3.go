@@ -2524,7 +2524,10 @@ func (pb *pageBuilder) buildDynamicTextV3(w *ast.WidgetV3) (element.Element, err
 	}
 
 	if content == "" {
-		content = "{1}"
+		// Empty content would produce a {1} template with 0 parameters,
+		// causing Studio Pro CE0720 "Place holder index 1 is greater than 0".
+		// Use a single space as a safe placeholder (CLAUDE.md note).
+		content = " "
 	}
 
 	ct := genPg.NewClientTemplate()
