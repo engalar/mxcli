@@ -1164,18 +1164,19 @@ grant view on page KB.Article_Detail       to KB.Reader, KB.Contributor, KB.Admi
 -- User roles: 4, mapping module roles
 -- Note: Administrator uses Administration module built-in + composition of module roles
 
--- TODO: User roles require User entity generalization in project security settings.
--- Execute in a project with Administration module configured:
---
---   create or modify user role Customer (System.User, HD.CustomerRole, KB.Reader);
---   create or modify user role Agent (System.User, HD.AgentRole, KB.Contributor);
---   create or modify user role Manager (System.User, HD.ManagerRole, KB.Contributor);
---   create or modify user role Administrator (System.Administrator, HD.ManagerRole, KB.Admin);
---
---   alter project security demo users on;
---   create or modify demo user 'demo_customer@helpdesk.test' password 'Demo1234!' (Customer);
---   create or modify demo user 'demo_agent@helpdesk.test' password 'Demo1234!' (Agent);
---   create or modify demo user 'demo_manager@helpdesk.test' password 'Demo1234!' (Manager);
+-- MARK: Security — User Roles
+
+create or modify user role Customer (System.User, HD.CustomerRole, KB.Reader);
+create or modify user role Agent (System.User, HD.AgentRole, KB.Contributor);
+create or modify user role Manager (System.User, HD.ManagerRole, KB.Contributor);
+
+-- MARK: Security — Demo Users
+
+alter project security demo users on;
+
+create or modify demo user 'demo_customer@helpdesk.test' password 'Demo1234!' (Customer);
+create or modify demo user 'demo_agent@helpdesk.test'    password 'Demo1234!' (Agent);
+create or modify demo user 'demo_manager@helpdesk.test'  password 'Demo1234!' (Manager);
 
 -- MARK: Navigation
 
