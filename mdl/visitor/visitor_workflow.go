@@ -458,9 +458,12 @@ func buildWorkflowUserTask(ctx parser.IWorkflowUserTaskStmtContext) *ast.Workflo
 		taskName = unquoteIdentifier(qid.GetText())
 	}
 
+	cmCtx := utCtx.WorkflowCompletionMethod()
 	node := &ast.WorkflowUserTaskNode{
-		Name:        taskName,
-		IsMultiUser: utCtx.MULTI() != nil,
+		Name:              taskName,
+		IsMultiUser:       utCtx.MULTI() != nil,
+		CompletionMethod:  buildWorkflowCompletionMethod(cmCtx),
+		RequiredThreshold: buildWorkflowCompletionThreshold(cmCtx),
 	}
 
 	// Caption is the first STRING_LITERAL
@@ -774,6 +777,38 @@ func buildWorkflowAnnotation(ctx parser.IWorkflowAnnotationStmtContext) *ast.Wor
 		node.Text = unquoteString(annCtx.STRING_LITERAL().GetText())
 	}
 	return node
+}
+
+// buildWorkflowCompletionMethod maps the parsed workflowCompletionMethod clause
+// to the canonical string stored in the AST.
+// Returns "" for the default (majority when not specified).
+func buildWorkflowCompletionMethod(ctx parser.IWorkflowCompletionMethodContext) string {
+	if ctx == nil {
+		return ""
+	}
+	if ctx.MAJORITY() != nil {
+		return "majority"
+	}
+	if ctx.THRESHOLD() != nil {
+		return "threshold"
+	}
+	if ctx.CONSENSUS() != nil {
+		return "consensus"
+	}
+	return ""
+}
+
+// buildWorkflowCompletionThreshold extracts the integer percentage from
+// a THRESHOLD completion method clause (e.g. "threshold 75 %").
+// Returns 0 for non-threshold methods.
+func buildWorkflowCompletionThreshold(ctx parser.IWorkflowCompletionMethodContext) int {
+	if ctx == nil || ctx.THRESHOLD() == nil {
+		return 0
+	}
+	if lit := ctx.NUMBER_LITERAL(); lit != nil {
+		return parseInt(lit.GetText())
+	}
+	return 0
 }
 
 // parseInt parses a string as an integer, returning 0 on failure.
