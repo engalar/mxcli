@@ -855,6 +855,220 @@ begin
 
 end workflow
 /
+create or modify page KB.Article_Overview (
+  Title: 'Knowledge Base',
+  Layout: Atlas_Core.Atlas_Default,
+  Folder: 'Article'
+) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
+        datagrid dgArticles (DataSource: database from KB.Article) {
+          -- Context: $currentObject (KB.Article), $dgArticles (selection)
+          column Title (Attribute: Title, Caption: 'Title')
+          column Status (Attribute: Status, Caption: 'Status')
+        }
+        actionbutton btnNewArticle (Caption: 'New Article')
+      }
+    }
+  }
+}
+
+grant view on page KB.Article_Overview to KB.User, KB.Reader, KB.Contributor, KB.Admin;
+create or modify page KB.Article_Detail (
+  Title: 'Article',
+  Layout: Atlas_Core.Atlas_Default,
+  Folder: 'Article',
+  Params: { $Article: KB.Article }
+) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 9) {
+        dataview dvArticle (DataSource: $Article) {
+          -- Context: $currentObject (Article)
+          dynamictext txtTitle (Content: 'Article Title', RenderMode: H1)
+          dynamictext txtContent_ (Content: 'Article Body Text')
+        }
+      }
+      column col2 (DesktopWidth: 3) {
+        datagrid dgRatings (DataSource: database from KB.ArticleRating) {
+          -- Context: $currentObject (KB.ArticleRating), $dgRatings (selection)
+          column Score (Attribute: Score, Caption: 'Score')
+          column Comment (Attribute: Comment, Caption: 'Comment')
+        }
+      }
+    }
+  }
+}
+
+grant view on page KB.Article_Detail to KB.User, KB.Reader, KB.Contributor, KB.Admin;
+create or modify page KB.Article_NewEdit (
+  Title: 'New / Edit Article',
+  Layout: Atlas_Core.Atlas_Default,
+  Folder: 'Article',
+  Params: { $Article: KB.Article }
+) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
+        dataview dvArticleForm (DataSource: $Article) {
+          -- Context: $currentObject (Article)
+          textbox tbTitle (Attribute: Title)
+          textarea taContent (Attribute: Content)
+          textbox tbStatus (Attribute: Title)
+          textbox tbPublishedAt (Attribute: Title)
+          footer footer1 {
+            actionbutton btnSave (Caption: 'Save', Action: save_changes close_page, ButtonStyle: primary)
+            actionbutton btnCancel (Caption: 'Cancel', Action: cancel_changes close_page)
+          }
+        }
+      }
+    }
+  }
+}
+
+grant view on page KB.Article_NewEdit to KB.User;
+create or modify page HD.Ticket_Overview (Title: 'Tickets', Layout: Atlas_Core.Atlas_Default, Folder: 'Ticket') {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
+        datagrid dgTickets (DataSource: database from HD.Ticket) {
+          -- Context: $currentObject (HD.Ticket), $dgTickets (selection)
+          column Subject (Attribute: Subject, Caption: 'Subject')
+          column Status (Attribute: Status, Caption: 'Status')
+          column Priority (Attribute: Priority, Caption: 'Priority')
+          column SLADueAt (Attribute: SLADueAt, Caption: 'SLA Due')
+          column IsOverSLA (Attribute: IsOverSLA, Caption: 'Overdue')
+        }
+        actionbutton btnNewTicket (Caption: 'New Ticket')
+      }
+    }
+  }
+}
+
+grant view on page HD.Ticket_Overview to HD.User, HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+create or modify page HD.Ticket_Detail (
+  Title: 'Ticket',
+  Layout: Atlas_Core.Atlas_Default,
+  Folder: 'Ticket',
+  Params: { $Ticket: HD.Ticket }
+) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
+        dataview dvTicket (DataSource: $Ticket) {
+          -- Context: $currentObject (Ticket)
+          dynamictext txtSubject (Content: 'Ticket Subject', RenderMode: H2)
+          dynamictext txtStatus (Content: 'Ticket Status')
+          dynamictext txtPriority (Content: 'Ticket Priority')
+          actionbutton btnSubmit (Caption: 'Submit')
+          actionbutton btnResolve (Caption: 'Resolve')
+          actionbutton btnReopen (Caption: 'Reopen')
+        }
+      }
+    }
+    row row2 {
+      column col1 (DesktopWidth: 12) {
+        datagrid dgComments (DataSource: database from HD.TicketComment) {
+          -- Context: $currentObject (HD.TicketComment), $dgComments (selection)
+          column Content (Attribute: Content, Caption: 'Comment')
+          column IsInternal (Attribute: IsInternal, Caption: 'Internal')
+        }
+      }
+    }
+  }
+}
+
+grant view on page HD.Ticket_Detail to HD.User, HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+create or modify page HD.Ticket_NewEdit (
+  Title: 'New / Edit Ticket',
+  Layout: Atlas_Core.Atlas_Default,
+  Folder: 'Ticket',
+  Params: { $Ticket: HD.Ticket }
+) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
+        dataview dvTicketForm (DataSource: $Ticket) {
+          -- Context: $currentObject (Ticket)
+          textbox tbSubject (Attribute: Subject)
+          textarea taDescription (Attribute: Description)
+          textbox tbStatus (Attribute: Subject)
+          textbox tbPriority (Attribute: Subject)
+          textbox tbSLADueAt (Attribute: Subject)
+          footer footer1 {
+            actionbutton btnSave (Caption: 'Save', Action: save_changes close_page, ButtonStyle: primary)
+            actionbutton btnCancel (Caption: 'Cancel', Action: cancel_changes close_page)
+          }
+        }
+      }
+    }
+  }
+}
+
+grant view on page HD.Ticket_NewEdit to HD.User;
+create or modify page HD.TicketSearch_Form (
+  Title: 'Search Tickets',
+  Layout: Atlas_Core.PopupLayout,
+  Folder: 'Ticket/Search',
+  Params: { $Search: HD.TicketSearch }
+) {
+  dataview dvSearch (DataSource: $Search) {
+    -- Context: $currentObject (Search)
+    textbox tbKeyword (Attribute: SubjectKeyword)
+    textbox tbStatus (Attribute: SubjectKeyword)
+    textbox tbPriority (Attribute: SubjectKeyword)
+  }
+  actionbutton btnClose (Caption: 'Close')
+}
+
+grant view on page HD.TicketSearch_Form to HD.User, HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+create or modify page HD.EscalationReview_Form (
+  Title: 'Escalation Review',
+  Layout: Atlas_Core.Atlas_Default,
+  Folder: 'Escalation',
+  Params: { $WorkflowUserTask: System.WorkflowUserTask }
+) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
+        dynamictext txtTitle (Content: 'Manager Review', RenderMode: H2)
+      }
+    }
+  }
+}
+
+grant view on page HD.EscalationReview_Form to HD.User, HD.ManagerRole;
+create or modify page HD.EscalationWorkflow_Overview (
+  Title: 'Escalation Workflow',
+  Layout: Atlas_Core.Atlas_Default,
+  Folder: 'Escalation'
+) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
+        dynamictext txtTitle (Content: 'Escalation Overview', RenderMode: H2)
+      }
+    }
+  }
+}
+
+grant view on page HD.EscalationWorkflow_Overview to HD.User, HD.ManagerRole;
+create or modify page HD.EscalationStart_Form (
+  Title: 'Request Escalation',
+  Layout: Atlas_Core.PopupLayout,
+  Folder: 'Escalation'
+) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
+        dynamictext txtPlaceholder (Content: 'Escalation reason form.')
+      }
+    }
+  }
+}
+
+grant view on page HD.EscalationStart_Form to HD.User;
 | Qualified Name | Module | Role        | Description                                         |
 |----------------|--------|-------------|-----------------------------------------------------|
 | KB.User        | KB     | User        | Auto-created default role for mxcli document access |

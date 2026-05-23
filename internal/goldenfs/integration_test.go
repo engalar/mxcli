@@ -23,6 +23,22 @@ func repoRoot(t *testing.T) string {
 	return abs
 }
 
+// findMxcliBinaryForTest returns the path to a built mxcli binary, or "" if
+// unavailable. Prefers MXCLI_BINARY env; falls back to bin/mxcli at the repo root.
+func findMxcliBinaryForTest(t *testing.T) string {
+	t.Helper()
+	if p := os.Getenv("MXCLI_BINARY"); p != "" {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	p := filepath.Join(repoRoot(t), "bin", "mxcli")
+	if _, err := os.Stat(p); err == nil {
+		return p
+	}
+	return ""
+}
+
 func exprCheckerDir(t *testing.T) string {
 	t.Helper()
 	dir := filepath.Join(repoRoot(t), "testdata", "expr-checker")

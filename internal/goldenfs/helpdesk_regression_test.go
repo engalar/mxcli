@@ -315,6 +315,18 @@ describe microflow HD.ACT_Workflow_Notify;
 -- Workflows
 describe workflow HD.WF_SUB_ManagerReview;
 describe workflow HD.WF_TicketEscalation;
+-- KB pages
+describe page KB.Article_Overview;
+describe page KB.Article_Detail;
+describe page KB.Article_NewEdit;
+-- HD pages
+describe page HD.Ticket_Overview;
+describe page HD.Ticket_Detail;
+describe page HD.Ticket_NewEdit;
+describe page HD.TicketSearch_Form;
+describe page HD.EscalationReview_Form;
+describe page HD.EscalationWorkflow_Overview;
+describe page HD.EscalationStart_Form;
 `, mprPath)
 }
 
@@ -355,7 +367,7 @@ func describeMDL(t *testing.T, mprPath string) string {
 
 // TestHelpdeskGolden_DescribeSnapshot opens the committed B1 golden MPR
 // (no MDL execution) and verifies that the full describe output matches
-// the committed snapshot at testdata/helpdesk-golden/describe-snapshot.txt.
+// the committed snapshot at testdata/helpdesk-golden/describe-snapshot.mdl.
 // Run with -update-golden to regenerate the snapshot.
 func TestHelpdeskGolden_DescribeSnapshot(t *testing.T) {
 	goldenMPR := helpdeskGoldenMPR(t)
@@ -363,7 +375,7 @@ func TestHelpdeskGolden_DescribeSnapshot(t *testing.T) {
 		t.Fatalf("B1 golden not found at %s — run: make update-helpdesk-golden", goldenMPR)
 	}
 
-	snapshotPath := filepath.Join(helpdeskGoldenDir(t), "describe-snapshot.txt")
+	snapshotPath := filepath.Join(helpdeskGoldenDir(t), "describe-snapshot.mdl")
 
 	got := describeMDL(t, goldenMPR)
 
