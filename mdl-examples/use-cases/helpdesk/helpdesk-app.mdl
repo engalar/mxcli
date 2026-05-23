@@ -43,7 +43,6 @@ create enumeration KB.ArticleStatus (
 
 
 
-@position(100, 100)
 create persistent entity KB.Category (
   Name:        string(200) not null,
   Description: string(500)
@@ -55,12 +54,10 @@ create association KB.Category_Parent
   type reference
   owner default;
 
-@position(400, 100)
 create persistent entity KB.Tag (
   Name: string(100) not null unique
 );
 
-@position(700, 100)
 create persistent entity KB.Article (
   Title:       string(500) not null,
   Content:     string,
@@ -77,7 +74,6 @@ create association KB.Article_Category
   owner default;
 
 -- Many-to-many junction table: Article <-> Tag
-@position(700, 300)
 create persistent entity KB.ArticleTag (
 );
 
@@ -92,10 +88,10 @@ create association KB.ArticleTag_Tag
   owner default;
 
 -- XPath row-level filter target: user sees only own ratings
-@position(1000, 100)
 create persistent entity KB.ArticleRating (
   Score:   integer not null,
-  Comment: string(1000)
+  Comment: string(1000),
+  owner:   autoowner
 );
 
 create association KB.ArticleRating_Article
@@ -125,7 +121,6 @@ create enumeration HD.TicketPriority (
 
 -- MARK: HelpDesk — Entities & Non-persistent
 
-@position(100, 100)
 create persistent entity HD.Customer (
   Name:    string(200) not null,
   Email:   string(200) not null,
@@ -133,14 +128,12 @@ create persistent entity HD.Customer (
 )
 index (Email);
 
-@position(400, 100)
 create persistent entity HD.Agent (
   Name:     string(200) not null,
   Email:    string(200) not null,
   IsActive: boolean default true
 );
 
-@position(700, 100)
 create persistent entity HD.Ticket (
   Subject:     string(500) not null,
   Description: string,
@@ -148,7 +141,8 @@ create persistent entity HD.Ticket (
   Priority:    HD.TicketPriority default Normal,
   SLADueAt:   datetime,
   ResolvedAt:  datetime,
-  IsOverSLA:   boolean default false
+  IsOverSLA:   boolean default false,
+  owner:       autoowner
 )
 index (Status)
 index (Priority)
@@ -165,7 +159,6 @@ create association HD.Ticket_Agent
   type reference
   owner default;
 
-@position(1000, 100)
 create persistent entity HD.TicketComment (
   Content:    string not null,
   IsInternal: boolean default false
@@ -177,7 +170,6 @@ create association HD.TicketComment_Ticket
   owner default;
 
 -- Workflow context entity for escalation approval
-@position(700, 350)
 create persistent entity HD.EscalationRequest (
   Reason:          string(1000) not null,
   RequestedAt:     datetime,
@@ -190,7 +182,6 @@ create association HD.EscalationRequest_Ticket
   owner default;
 
 -- Non-persistent entity: ticket search / filter form
-@position(100, 350)
 create non-persistent entity HD.TicketSearch (
   SubjectKeyword: string(200),
   StatusFilter:   HD.TicketStatus,
@@ -221,18 +212,14 @@ create or modify microflow HD.ACT_Ticket_Submit
   returns boolean as $Success
   folder 'Ticket'
 begin
-  @position(200, 200)
   if $Ticket/Subject = '' then
-    @position(400, 200)
-    validation feedback $Ticket/Subject message 'Subject is required';
-    @position(400, 400)
-    return false;
+      validation feedback $Ticket/Subject message 'Subject is required';
+      return false;
   end if;
 
   -- Compute SLA due date based on priority.
   -- Hours: Critical=2, High=8, default=24.
   -- MDL has no else-if; use nested if/else.
-  @position(600, 200)
   if $Ticket/Priority = HD.TicketPriority.Critical then
     change $Ticket (
       Status   = HD.TicketStatus.Open,
@@ -251,9 +238,7 @@ begin
       );
     end if;
   end if;
-  @position(1000, 200)
   commit $Ticket;
-  @position(1200, 200)
   return true;
 end;
 /
@@ -265,21 +250,15 @@ create or modify microflow HD.ACT_Ticket_Assign
   returns boolean as $Success
   folder 'Ticket'
 begin
-  @position(200, 200)
   if $Ticket/Status != HD.TicketStatus.Open then
-    @position(400, 200)
-    show message 'Only Open tickets can be assigned.' type warning;
-    @position(400, 400)
-    return false;
+      show message 'Only Open tickets can be assigned.' type warning;
+      return false;
   end if;
-  @position(600, 200)
   change $Ticket (
     Status = HD.TicketStatus.InProgress,
     HD.Ticket_Agent = $Agent
   );
-  @position(800, 200)
   commit $Ticket;
-  @position(1000, 200)
   return true;
 end;
 /
@@ -291,23 +270,17 @@ create or modify microflow HD.ACT_Ticket_Resolve
   returns boolean as $Success
   folder 'Ticket'
 begin
-  @position(200, 200)
   if $Ticket/Status != HD.TicketStatus.InProgress then
-    @position(400, 200)
-    return false;
+      return false;
   end if;
-  @position(600, 200)
   declare $Now datetime = '[%CurrentDateTime%]';
   declare $IsOver boolean = $Now > $Ticket/SLADueAt and $Ticket/SLADueAt != empty;
-  @position(800, 200)
   change $Ticket (
     Status     = HD.TicketStatus.Resolved,
     ResolvedAt = $Now,
     IsOverSLA  = $IsOver
   );
-  @position(1000, 200)
   commit $Ticket;
-  @position(1200, 200)
   return true;
 end;
 /
@@ -319,20 +292,15 @@ create or modify microflow HD.ACT_Ticket_Reopen
   returns boolean as $Success
   folder 'Ticket'
 begin
-  @position(200, 200)
   if $Ticket/Status != HD.TicketStatus.Resolved
      and $Ticket/Status != HD.TicketStatus.Closed then
-    @position(400, 200)
-    return false;
+      return false;
   end if;
-  @position(600, 200)
   change $Ticket (
     Status     = HD.TicketStatus.Open,
     ResolvedAt = empty
   );
-  @position(800, 200)
   commit $Ticket;
-  @position(1000, 200)
   return true;
 end;
 /
@@ -343,16 +311,11 @@ create or modify microflow HD.ACT_Ticket_Close
   returns boolean as $Success
   folder 'Ticket'
 begin
-  @position(200, 200)
   if $Ticket/Status != HD.TicketStatus.Resolved then
-    @position(400, 200)
-    return false;
+      return false;
   end if;
-  @position(600, 200)
   change $Ticket (Status = HD.TicketStatus.Closed);
-  @position(800, 200)
   commit $Ticket;
-  @position(1000, 200)
   return true;
 end;
 /
@@ -365,21 +328,15 @@ create or modify microflow KB.ACT_Article_Publish
   returns boolean as $Success
   folder 'Article'
 begin
-  @position(200, 200)
   if $Article/Content = '' or $Article/Content = empty then
-    @position(400, 200)
-    validation feedback $Article/Content message 'Content cannot be empty before publishing.';
-    @position(400, 400)
-    return false;
+      validation feedback $Article/Content message 'Content cannot be empty before publishing.';
+      return false;
   end if;
-  @position(600, 200)
   change $Article (
     Status      = KB.ArticleStatus.Published,
     PublishedAt = '[%CurrentDateTime%]'
   );
-  @position(800, 200)
   commit $Article;
-  @position(1000, 200)
   return true;
 end;
 /
@@ -390,11 +347,8 @@ create or modify microflow KB.ACT_Article_Archive
   returns boolean as $Success
   folder 'Article'
 begin
-  @position(200, 200)
   change $Article (Status = KB.ArticleStatus.Archived);
-  @position(400, 200)
   commit $Article;
-  @position(600, 200)
   return true;
 end;
 /
@@ -405,17 +359,14 @@ create or modify microflow HD.ACT_Ticket_MarkCommentsRead
   ($Ticket: HD.Ticket)
   folder 'Ticket'
 begin
-  @position(200, 200)
   retrieve $Comments from HD.TicketComment
     where [HD.TicketComment_Ticket/HD.Ticket = $Ticket and IsInternal = true]
     limit 100;
-  @position(400, 200)
   loop $Comment in $Comments
   begin
     change $Comment (IsInternal = false);
     commit $Comment;
   end loop;
-  @position(800, 200)
   return;
 end;
 /
@@ -426,16 +377,13 @@ create or modify microflow HD.ACT_EscalationRequest_Cleanup
   ($Ticket: HD.Ticket)
   folder 'Ticket'
 begin
-  @position(200, 200)
   retrieve $Requests from HD.EscalationRequest
     where [HD.EscalationRequest_Ticket/HD.Ticket = $Ticket]
     limit 50;
-  @position(400, 200)
   loop $Req in $Requests
   begin
     delete $Req;
   end loop;
-  @position(800, 200)
   return;
 end;
 /
@@ -447,13 +395,9 @@ create or modify microflow HD.ACT_Ticket_SafeCommit
   returns boolean as $Success
   folder 'Ticket'
 begin
-  @position(200, 200)
   declare $Success boolean = false;
-  @position(400, 200)
   commit $Ticket on error rollback;
-  @position(600, 200)
   set $Success = true;
-  @position(800, 200)
   return $Success;
 end;
 /
@@ -465,13 +409,10 @@ create or modify microflow HD.DS_OverdueTicketCount
   returns integer as $Count
   folder 'Ticket'
 begin
-  @position(200, 200)
   retrieve $Overdue from HD.Ticket
     where [IsOverSLA = true]
     limit 0;
-  @position(400, 200)
   $Count = COUNT($Overdue);
-  @position(600, 200)
   return $Count;
 end;
 /
@@ -485,16 +426,13 @@ create or modify nanoflow HD.NF_Ticket_QuickCreate
   returns HD.Ticket as $Ticket
   folder 'Ticket'
 begin
-  @position(200, 200)
   $Ticket = create HD.Ticket (
     Subject  = $Subject,
     Status   = HD.TicketStatus.Draft,
     Priority = HD.TicketPriority.Normal,
     HD.Ticket_Customer = $Customer
   );
-  @position(400, 200)
   commit $Ticket;
-  @position(600, 200)
   return $Ticket;
 end;
 /
@@ -506,12 +444,10 @@ create or modify nanoflow HD.NF_TicketSearch_Apply
   returns list of HD.Ticket as $Tickets
   folder 'Ticket/Search'
 begin
-  @position(200, 200)
   -- Simplified: full retrieve (XPath cross-object reference to non-persistent
   -- entity not supported in this context; filtering done client-side or via
   -- separate microflow call). Demonstrates nanoflow DB retrieve capability.
   retrieve $Tickets from HD.Ticket limit 100;
-  @position(600, 200)
   return $Tickets;
 end;
 /
@@ -525,7 +461,6 @@ create or modify nanoflow HD.NF_Priority_GetLabel
   returns string as $CSSClass
   folder 'Ticket'
 begin
-  @position(200, 200)
   -- MDL uses nested if/else (no else-if); 'set' keyword for variable reassignment
   declare $CSSClass string = 'badge-default';
   if $PriorityStr = 'Critical' then
@@ -539,7 +474,6 @@ begin
       end if;
     end if;
   end if;
-  @position(800, 200)
   return $CSSClass;
 end;
 /
@@ -552,9 +486,7 @@ create or modify microflow KB.SUB_Article_TruncateContent
   returns string as $Preview
   folder 'Article'
 begin
-  @position(200, 200)
   declare $Preview string = $Article/Content;
-  @position(400, 200)
   return $Preview;
 end;
 /
@@ -566,9 +498,7 @@ create or modify nanoflow KB.NF_Article_FormatPreview
   returns string as $Preview
   folder 'Article'
 begin
-  @position(200, 200)
   $Preview = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
-  @position(400, 200)
   return $Preview;
 end;
 /
@@ -616,11 +546,9 @@ create or modify microflow HD.WFA_GetManagerAssignees
   returns list of System.User as $Users
   folder 'Escalation'
 begin
-  @position(200, 200)
   -- Simplified: full user retrieve (role-based XPath on System.UserRoles
   -- requires specific association path; use admin configuration in production)
   retrieve $Users from System.User limit 10;
-  @position(400, 200)
   return $Users;
 end;
 /
@@ -630,9 +558,7 @@ create or modify microflow HD.WFS_SendReminder
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
 begin
-  @position(200, 200)
   log info 'Escalation reminder sent for request ' + toString($EscalationRequest/Reason);
-  @position(400, 200)
   return;
 end;
 /
@@ -641,16 +567,13 @@ create or modify microflow HD.WFS_Approve
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
 begin
-  @position(200, 200)
   retrieve $Ticket from HD.Ticket
     where [HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest]
     limit 1;
-  @position(400, 200)
   if $Ticket != empty then
     change $Ticket (Priority = HD.TicketPriority.Critical);
     commit $Ticket;
   end if;
-  @position(800, 200)
   return;
 end;
 /
@@ -659,11 +582,8 @@ create or modify microflow HD.WFS_Reject
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
 begin
-  @position(200, 200)
   change $EscalationRequest (RejectionReason = 'Rejected by manager review board.');
-  @position(400, 200)
   commit $EscalationRequest;
-  @position(600, 200)
   return;
 end;
 /
@@ -717,11 +637,8 @@ create or modify microflow HD.WFS_Escalation_Initialize
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
 begin
-  @position(200, 200)
   change $EscalationRequest (RequestedAt = '[%CurrentDateTime%]');
-  @position(400, 200)
   commit $EscalationRequest;
-  @position(600, 200)
   return;
 end;
 /
@@ -730,11 +647,8 @@ create or modify microflow HD.WFS_AutoReject
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
 begin
-  @position(200, 200)
   change $EscalationRequest (RejectionReason = 'Auto-rejected: no manager response within 48 hours.');
-  @position(400, 200)
   commit $EscalationRequest;
-  @position(600, 200)
   return;
 end;
 /
@@ -743,16 +657,13 @@ create or modify microflow HD.WFS_UpdateTicketPriority
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
 begin
-  @position(200, 200)
   retrieve $Ticket from HD.Ticket
     where [HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest]
     limit 1;
-  @position(400, 200)
   if $Ticket != empty then
     change $Ticket (Priority = HD.TicketPriority.Critical, Status = HD.TicketStatus.InProgress);
     commit $Ticket;
   end if;
-  @position(800, 200)
   return;
 end;
 /
@@ -761,9 +672,7 @@ create or modify microflow HD.WFS_NotifyAgent
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
 begin
-  @position(200, 200)
   log info 'Agent notified: escalation approved for request ' + toString($EscalationRequest/Reason);
-  @position(400, 200)
   return;
 end;
 /
@@ -822,24 +731,19 @@ create or modify microflow HD.ACT_StartEscalation
   returns boolean as $Success
   folder 'Escalation'
 begin
-  @position(200, 200)
   if $Ticket/Status != HD.TicketStatus.InProgress then
     return false;
   end if;
-  @position(400, 200)
   $EscalationRequest = create HD.EscalationRequest (
     Reason          = $Reason,
     RequestedAt     = '[%CurrentDateTime%]',
     HD.EscalationRequest_Ticket = $Ticket
   );
-  @position(600, 200)
   commit $EscalationRequest;
-  @position(800, 200)
   -- Activity: Call workflow (start workflow with context entity)
   -- TODO: verify exact syntax for starting a workflow from microflow;
   -- standard form is: call workflow Module.WFName($ContextParam)
   call workflow HD.WF_TicketEscalation (EscalationRequest = $EscalationRequest);
-  @position(1000, 200)
   return true;
 end;
 /
@@ -849,9 +753,7 @@ create or modify microflow HD.WFC_EscalationRequest_OnCreate
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
 begin
-  @position(200, 200)
   log info 'EscalationRequest created: ' + toString($EscalationRequest/Reason);
-  @position(400, 200)
   return;
 end;
 /
@@ -861,7 +763,6 @@ create or modify microflow HD.ACT_Workflow_ChangeState
   ($Workflow: System.Workflow, $Operation: string)
   folder 'Escalation/WorkflowAdmin'
 begin
-  @position(200, 200)
   if $Operation = 'Pause' then
     workflow operation pause $Workflow;
   else
@@ -871,7 +772,6 @@ begin
       workflow operation abort $Workflow reason 'Administratively aborted';
     end if;
   end if;
-  @position(800, 200)
   return;
 end;
 /
@@ -881,29 +781,21 @@ create or modify microflow HD.ACT_Workflow_CompleteTask
   ($UserTask: System.WorkflowUserTask, $Outcome: string)
   folder 'Escalation/WorkflowAdmin'
 begin
-  @position(200, 200)
   set task outcome $UserTask 'Approve';
   -- Note: SET TASK OUTCOME requires a string literal, not a variable.
   -- The $Outcome parameter is accepted for dispatch logic but the outcome value
   -- must be specified at design time. Use if/else to dispatch on $Outcome.
-  @position(400, 200)
   return;
 end;
 /
 
--- 5. Generate jump-to options and return them for caller to pass to ACT_Workflow_ApplyJumpTo.
--- $JumpOptions is a System.WorkflowJumpToDetails object; the output variable IS visible
--- to downstream activities in sequential context. CE0109 only occurs inside parallel split
--- paths where variable scope is isolated per path.
+-- 5. Generate jump-to options (no return value — CE0109 fix).
 create or modify microflow HD.ACT_Workflow_GenerateJumpTo
   ($Workflow: System.Workflow)
-  returns System.WorkflowJumpToDetails as $JumpOptions
   folder 'Escalation/WorkflowAdmin'
 begin
-  @position(200, 200)
-  $JumpOptions = generate jump to options for $Workflow as HD.WF_TicketEscalation;
-  @position(400, 200)
-  return $JumpOptions;
+  generate jump to options for $Workflow as HD.WF_TicketEscalation;
+  return;
 end;
 /
 
@@ -914,9 +806,7 @@ create or modify microflow HD.ACT_Workflow_ApplyJumpTo
   ($JumpOption: System.WorkflowJumpToDetails)
   folder 'Escalation/WorkflowAdmin'
 begin
-  @position(200, 200)
   apply jump to option $JumpOption;
-  @position(400, 200)
   return;
 end;
 /
@@ -928,9 +818,7 @@ create or modify microflow HD.ACT_Workflow_GetHistory
   ($Workflow: System.Workflow)
   folder 'Escalation/WorkflowAdmin'
 begin
-  @position(200, 200)
   get workflow activity records $Workflow;
-  @position(400, 200)
   return;
 end;
 /
@@ -940,9 +828,7 @@ create or modify microflow HD.ACT_Workflow_GetContext
   ($Workflow: System.Workflow)
   folder 'Escalation/WorkflowAdmin'
 begin
-  @position(200, 200)
   get workflow data $Workflow as HD.WF_TicketEscalation;
-  @position(400, 200)
   return;
 end;
 /
@@ -952,9 +838,7 @@ create or modify microflow HD.DS_WorkflowInstances
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation/WorkflowAdmin'
 begin
-  @position(200, 200)
   get workflows for $EscalationRequest;
-  @position(400, 200)
   return;
 end;
 /
@@ -964,9 +848,7 @@ create or modify microflow HD.ACT_Workflow_ShowTaskPage
   ($UserTask: System.WorkflowUserTask)
   folder 'Escalation/WorkflowAdmin'
 begin
-  @position(200, 200)
   open user task $UserTask;
-  @position(400, 200)
   return;
 end;
 /
@@ -976,9 +858,7 @@ create or modify microflow HD.ACT_Workflow_ShowAdminPage
   ($Workflow: System.Workflow)
   folder 'Escalation/WorkflowAdmin'
 begin
-  @position(200, 200)
   open workflow $Workflow;
-  @position(400, 200)
   return;
 end;
 /
@@ -988,9 +868,7 @@ create or modify microflow HD.ACT_Workflow_Lock
   ($Workflow: System.WorkflowDefinition)
   folder 'Escalation/WorkflowAdmin'
 begin
-  @position(200, 200)
   lock workflow $Workflow;
-  @position(400, 200)
   return;
 end;
 /
@@ -1000,26 +878,19 @@ create or modify microflow HD.ACT_Workflow_Unlock
   ($Workflow: System.WorkflowDefinition)
   folder 'Escalation/WorkflowAdmin'
 begin
-  @position(200, 200)
   unlock workflow $Workflow;
-  @position(400, 200)
   return;
 end;
 /
 
 -- Notify the WaitForManagerAvailable activity in WF_TicketEscalation.
--- Returns a Boolean: true when the notification was sent, false otherwise.
--- The 'activity' clause targets a specific WaitForNotification step by its 3-part QN.
+-- CE0109 fix: notify workflow output variable cannot be used as return value.
 create or modify microflow HD.ACT_Workflow_Notify
   ($Workflow: System.Workflow)
-  returns boolean as $IsNotificationReceived
   folder 'Escalation/WorkflowAdmin'
 begin
-  @position(200, 200)
-  $IsNotificationReceived = notify workflow $Workflow
-    activity HD.WF_TicketEscalation.WaitForManagerAvailable;
-  @position(400, 200)
-  return $IsNotificationReceived;
+  notify workflow $Workflow activity HD.WF_TicketEscalation.WaitForManagerAvailable;
+  return;
 end;
 /
 
@@ -1285,9 +1156,9 @@ grant execute on nanoflow KB.NF_Article_FormatPreview to KB.Reader, KB.Contribut
 
 -- Entity access — HelpDesk
 
--- CustomerRole: own tickets only (XPath on Ticket_Customer association)
+-- CustomerRole: own tickets only (direct System.owner — CE0161 fix)
 grant HD.CustomerRole on HD.Ticket (create, read *, write *)
-  where '[HD.Ticket_Customer/HD.Customer/System.owner = ''[%CurrentUser%]'']';
+  where '[System.owner = ''[%CurrentUser%]'']';
 grant HD.CustomerRole on HD.TicketComment (create, read *)
   where '[IsInternal = false]';
 grant HD.CustomerRole on HD.Customer (read *, write *);
