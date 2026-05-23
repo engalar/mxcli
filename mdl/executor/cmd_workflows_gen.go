@@ -630,9 +630,10 @@ type userTaskShapeGen struct {
 	UserTaskEntity string
 	DueDate        string
 	Description    string // task-level Description
-	Outcomes       []element.Element
-	BoundaryEvents []element.Element
-	IsMulti        bool
+	Outcomes            []element.Element
+	BoundaryEvents      []element.Element
+	IsMulti             bool
+	CompletionCriteria  element.Element // nil for single-user tasks
 }
 
 func userTaskShapeGenFor(elem element.Element) (userTaskShapeGen, bool) {
@@ -674,16 +675,17 @@ func userTaskShapeGenFor(elem element.Element) (userTaskShapeGen, bool) {
 			pageQN = tp.PageQualifiedName()
 		}
 		return userTaskShapeGen{
-			Name:           v.Name(),
-			Caption:        v.Caption(),
-			Annotation:     v.Annotation(),
-			Page:           pageQN,
-			UserSource:     v.UserTargeting(),
-			DueDate:        v.DueDate(),
-			Description:    readTextElementGen(v.TaskDescription()),
-			Outcomes:       v.OutcomesItems(),
-			BoundaryEvents: v.BoundaryEventsItems(),
-			IsMulti:        true,
+			Name:               v.Name(),
+			Caption:            v.Caption(),
+			Annotation:         v.Annotation(),
+			Page:               pageQN,
+			UserSource:         v.UserTargeting(),
+			DueDate:            v.DueDate(),
+			Description:        readTextElementGen(v.TaskDescription()),
+			Outcomes:           v.OutcomesItems(),
+			BoundaryEvents:     v.BoundaryEventsItems(),
+			IsMulti:            true,
+			CompletionCriteria: v.CompletionCriteria(),
 		}, true
 	}
 	return userTaskShapeGen{}, false
@@ -727,6 +729,19 @@ func formatUserTaskGen(elem element.Element, indent string) []string {
 	if shape.Description != "" {
 		escaped := strings.ReplaceAll(shape.Description, "'", "''")
 		lines = append(lines, fmt.Sprintf("%s  description '%s'", indent, escaped))
+	}
+	// Emit completion method for multi-user tasks.
+	// MajorityCompletionCriteria is the default — omit for cleaner output.
+	if shape.IsMulti && shape.CompletionCriteria != nil {
+		switch crit := shape.CompletionCriteria.(type) {
+		case *genWf.ThresholdCompletionCriteria:
+			pct := crit.Threshold()
+			lines = append(lines, fmt.Sprintf("%s  completion method threshold %d %%", indent, pct))
+		case *genWf.ConsensusCompletionCriteria:
+			_ = crit
+			lines = append(lines, fmt.Sprintf("%s  completion method consensus", indent))
+		// MajorityCompletionCriteria: no output (is default)
+		}
 	}
 	if len(shape.Outcomes) > 0 {
 		lines = append(lines, fmt.Sprintf("%s  outcomes", indent))
