@@ -41,7 +41,7 @@ create enumeration KB.ArticleStatus (
   Archived   'Archived'
 );
 
--- MARK: KnowledgeBase — Entities
+
 
 @position(100, 100)
 create persistent entity KB.Category (
@@ -197,15 +197,11 @@ create non-persistent entity HD.TicketSearch (
   PriorityFilter: HD.TicketPriority
 );
 
--- MARK: HelpDesk — Cross-Module Associations
-
 -- Cross-module: ticket may link to a KB article (nullable)
 create association HD.Ticket_KBArticle
   from HD.Ticket to KB.Article
   type reference
   owner default;
-
--- MARK: HelpDesk — Constants
 
 -- SLA time limits per priority, configurable per environment
 create constant HD.SLA_HIGH_HOURS
@@ -217,8 +213,6 @@ create constant HD.SLA_CRITICAL_HOURS
   type integer
   default 2
   comment 'SLA deadline in hours for Critical-priority tickets. Configure shorter per environment.';
-
--- MARK: HelpDesk — Microflows (Status Machine)
 
 -- ACT_Ticket_Submit: Draft → Open
 -- Edge cases: Subject validation (rollback branch), SLA computed from constant
