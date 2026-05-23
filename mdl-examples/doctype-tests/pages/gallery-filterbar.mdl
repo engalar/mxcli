@@ -1,0 +1,26 @@
+-- @title: Gallery filter bar with dropdownfilter
+-- @expect: no error
+
+create module GalTest;
+create enumeration GalTest.ArticleStatus (Published 'Published', Draft 'Draft');
+create persistent entity GalTest.Article (
+  Title: string(500) not null,
+  Status: GalTest.ArticleStatus
+);
+
+create page GalTest.Article_Gallery (
+  title: 'Articles',
+  layout: Atlas_Core.Atlas_Default
+) {
+  gallery artGallery (
+    datasource: database from GalTest.Article sort by Title asc,
+    selection: single
+  ) {
+    filter filterBar {
+      dropdownfilter fStatus (attributes: [GalTest.Article.Status])
+    }
+    template template1 {
+      dynamictext txtTitle (content: '{1}', contentparams: [{1} = Title], rendermode: H4)
+    }
+  }
+};
