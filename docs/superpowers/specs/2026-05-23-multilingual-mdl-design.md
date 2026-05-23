@@ -173,7 +173,8 @@ ALTER SETTINGS LANGUAGE DROP 'fr_FR';
 -- Change default language (existing)
 ALTER SETTINGS LANGUAGE DefaultLanguageCode = 'zh_CN';
 
--- List registered languages (shows code, default flag, completeness, string count)
+-- List registered languages (reads Settings$LanguageSettings directly, no catalog required)
+-- Output: Code | Default | CheckCompleteness | DateFormat | DateTimeFormat
 SHOW LANGUAGES;
 
 -- List all valid Mendix language codes
@@ -210,9 +211,20 @@ Stored as a Go map constant in `mdl/executor/cmd_languages.go`.
 | DROP the defaultLanguageCode | Error: `Cannot drop the default language 'en_US'. Change DefaultLanguageCode first.` |
 | DROP language with existing translations | Warning + proceed: `Warning: zh_CN has N translated strings. Language registration removed; existing BSON translations are not deleted.` |
 
-### Grammar change (`MDLSettings.g4`)
+### Grammar change (`MDLLexer.g4` + `MDLSettings.g4`)
 
-Extend `alterSettingsClause`:
+New tokens required in `MDLLexer.g4`:
+
+```antlr
+TRANSLATE   : 'translate' ;
+TRANSLATIONS: 'translations' ;
+SUPPORTED   : 'supported' ;
+```
+
+Also add `TRANSLATE`, `TRANSLATIONS`, `SUPPORTED` to the `keyword` rule in `MDLSettings.g4`
+so they can appear as identifiers where needed.
+
+Extend `alterSettingsClause` in `MDLSettings.g4`:
 
 ```antlr
 alterSettingsClause
@@ -470,13 +482,13 @@ Each new feature must be wired through the full pipeline per the PR checklist:
 
 | Layer | Files to change |
 |---|---|
-| **Grammar** | `MDLSettings.g4` (ADD/DROP language, languageOptions), `MDLDomainModel.g4` (translateStatement, textLiteral, DESCRIBE TRANSLATIONS) |
+| **Grammar** | `MDLLexer.g4` (new tokens: TRANSLATE, TRANSLATIONS, SUPPORTED), `MDLSettings.g4` (ADD/DROP language, languageOptions, keyword additions), `MDLDomainModel.g4` (translateStatement, textLiteral, DESCRIBE TRANSLATIONS) |
 | **Regenerate parser** | `make grammar` — do NOT commit generated files |
 | **AST** | `mdl/ast/ast_translate.go` (new), `mdl/ast/ast_microflow.go` (TextLiteral), `mdl/ast/ast_query.go` (DescribeTranslations variant) |
 | **Visitor** | `mdl/visitor/visitor_settings.go` (ADD/DROP), `mdl/visitor/visitor_entity.go` or new file (TRANSLATE, DESCRIBE TRANSLATIONS), `mdl/visitor/visitor_helpers.go` (textLiteral parsing) |
 | **Executor** | `mdl/executor/cmd_languages.go` (ADD/DROP/SHOW SUPPORTED), `mdl/executor/cmd_translate.go` (new), `mdl/executor/cmd_describe_translations.go` (new); update all action builders for TextLiteral |
 | **Backend interface** | `mdl/backend/language.go` (new), `mdl/backend/translation.go` (new) |
-| **Backend MPR impl** | `mdl/backend/mpr/language_compat.go` (new, ADD/DROP writes Settings BSON), `mdl/backend/mpr/translation_writer.go` (new, `setTranslationForLang`), `mdl/backend/mpr/page_mutator.go` (replace `setTranslatableText` calls), `mdl/backend/mpr/enum_constant_gen.go` (translation-aware writes) |
+| **Backend MPR impl** | `mdl/backend/mpr/language_compat.go` (new, ADD/DROP writes Settings BSON; also update `listLanguages` to read from Settings rather than catalog strings table), `mdl/backend/mpr/translation_writer.go` (new, `setTranslationForLang`), `mdl/backend/mpr/page_mutator.go` (replace `setTranslatableText` calls), `mdl/backend/mpr/enum_constant_gen.go` (translation-aware writes) |
 | **Backend mock** | `mdl/backend/mock/` — stub all new interface methods |
 | **Tests** | `mdl/executor/cmd_languages_mock_test.go` (extend), new `cmd_translate_mock_test.go`, `cmd_describe_translations_mock_test.go`; MDL examples in `mdl-examples/doctype-tests/` |
 | **Syntax reference** | `docs/01-project/MDL_QUICK_REFERENCE.md` |
