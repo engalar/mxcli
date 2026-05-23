@@ -241,13 +241,13 @@ begin
   if $Ticket/Priority = HD.TicketPriority.Critical then
     change $Ticket (
       Status   = HD.TicketStatus.Open,
-      SLADueAt = addHours('[%CurrentDateTime%]', 2)
+      SLADueAt = addHours('[%CurrentDateTime%]', @HD.SLA_CRITICAL_HOURS)
     );
   else
     if $Ticket/Priority = HD.TicketPriority.High then
       change $Ticket (
         Status   = HD.TicketStatus.Open,
-        SLADueAt = addHours('[%CurrentDateTime%]', 8)
+        SLADueAt = addHours('[%CurrentDateTime%]', @HD.SLA_HIGH_HOURS)
       );
     else
       change $Ticket (
