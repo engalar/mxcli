@@ -398,6 +398,79 @@ begin
 end;
 /
 
+-- ACT_Ticket_MarkCommentsRead: loop over internal comments, un-flag them
+-- Demonstrates: retrieve list + loop activity
+create or modify microflow HD.ACT_Ticket_MarkCommentsRead
+  ($Ticket: HD.Ticket)
+begin
+  @position(200, 200)
+  retrieve $Comments from HD.TicketComment
+    where [HD.TicketComment_Ticket/HD.Ticket = $Ticket and IsInternal = true]
+    limit 100;
+  @position(400, 200)
+  loop $Comment in $Comments
+  begin
+    change $Comment (IsInternal = false);
+    commit $Comment;
+  end loop;
+  @position(800, 200)
+  return;
+end;
+/
+
+-- ACT_EscalationRequest_Cleanup: delete escalation records for a ticket
+-- Demonstrates: loop + delete activity
+create or modify microflow HD.ACT_EscalationRequest_Cleanup
+  ($Ticket: HD.Ticket)
+begin
+  @position(200, 200)
+  retrieve $Requests from HD.EscalationRequest
+    where [HD.EscalationRequest_Ticket/HD.Ticket = $Ticket]
+    limit 50;
+  @position(400, 200)
+  loop $Req in $Requests
+  begin
+    delete $Req;
+  end loop;
+  @position(800, 200)
+  return;
+end;
+/
+
+-- ACT_Ticket_SafeCommit: commit ticket with error rollback
+-- Demonstrates: on error rollback pattern
+create or modify microflow HD.ACT_Ticket_SafeCommit
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+begin
+  @position(200, 200)
+  declare $Success boolean = false;
+  @position(400, 200)
+  commit $Ticket on error rollback;
+  @position(600, 200)
+  set $Success = true;
+  @position(800, 200)
+  return $Success;
+end;
+/
+
+-- DS_OverdueTicketCount: count overdue tickets
+-- Demonstrates: retrieve + count expression
+create or modify microflow HD.DS_OverdueTicketCount
+  ()
+  returns integer as $Count
+begin
+  @position(200, 200)
+  retrieve $Overdue from HD.Ticket
+    where [IsOverSLA = true]
+    limit 0;
+  @position(400, 200)
+  declare $Count integer = count($Overdue);
+  @position(600, 200)
+  return $Count;
+end;
+/
+
 -- MARK: HelpDesk — Nanoflows
 
 -- NF_Ticket_QuickCreate: create + commit a Draft ticket from the client
@@ -989,6 +1062,12 @@ create page HD.Ticket_Detail
           actionbutton btnSubmit  (caption: 'Submit')
           actionbutton btnResolve (caption: 'Resolve')
           actionbutton btnReopen  (caption: 'Reopen')
+          -- Demonstrates: referenceselector for association-based lookup
+          referenceselector rsAgent (
+            label: 'Assigned Agent',
+            attribute: HD.Ticket_Agent,
+            datasource: database System.User
+          )
         }
       }
     }
@@ -1022,31 +1101,56 @@ create page HD.TicketSearch_Form
 };
 
 -- Placeholder pages for workflow forms
+-- HD.Ticket_NewEdit: real edit form
+-- Demonstrates: textbox, textarea, datepicker, combobox in a dataview
 create page HD.Ticket_NewEdit
 (
-  title: 'New Ticket',
-  layout: Atlas_Core.Atlas_Default
+  title: 'New / Edit Ticket',
+  layout: Atlas_Core.Atlas_Default,
+  params: { $Ticket: HD.Ticket }
 )
 {
   layoutgrid lgMain {
     row rMain {
       column cMain (desktopwidth: 12) {
-        dynamictext txtPlaceholder (content: 'New/Edit ticket form.')
+        dataview dvTicketForm (datasource: $Ticket) {
+          textbox    tbSubject     (label: 'Subject',      attribute: Subject)
+          textarea   taDescription (label: 'Description',  attribute: Description)
+          combobox   cbStatus      (label: 'Status',       attribute: Status)
+          combobox   cbPriority    (label: 'Priority',     attribute: Priority)
+          datepicker dpSLADueAt    (label: 'SLA Due At',   attribute: SLADueAt)
+          footer ftrButtons {
+            actionbutton btnSave   (caption: 'Save',   action: save_changes close_page, buttonstyle: primary)
+            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+          }
+        }
       }
     }
   }
 };
 
+-- KB.Article_NewEdit: real article edit form
+-- Demonstrates: textbox, textarea, datepicker in a dataview
 create page KB.Article_NewEdit
 (
-  title: 'New Article',
-  layout: Atlas_Core.Atlas_Default
+  title: 'New / Edit Article',
+  layout: Atlas_Core.Atlas_Default,
+  params: { $Article: KB.Article }
 )
 {
   layoutgrid lgMain {
     row rMain {
       column cMain (desktopwidth: 12) {
-        dynamictext txtPlaceholder (content: 'New/Edit article form.')
+        dataview dvArticleForm (datasource: $Article) {
+          textbox    tbTitle       (label: 'Title',        attribute: Title)
+          textarea   taContent     (label: 'Content',      attribute: Content)
+          combobox   cbStatus      (label: 'Status',       attribute: Status)
+          datepicker dpPublishedAt (label: 'Published At', attribute: PublishedAt)
+          footer ftrButtons {
+            actionbutton btnSave   (caption: 'Save',   action: save_changes close_page, buttonstyle: primary)
+            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+          }
+        }
       }
     }
   }
