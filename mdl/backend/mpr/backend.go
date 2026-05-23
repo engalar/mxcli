@@ -523,7 +523,10 @@ func (b *MprBackend) ListEnumerations() ([]*model.Enumeration, error) {
 	if err != nil {
 		return nil, err
 	}
-	return enumUnitsToModel(units), nil
+	enums := enumUnitsToModel(units)
+	// Append built-in System enumerations (WorkflowState, WorkflowUserTaskState,
+	// etc.) which are baked into the Mendix runtime and not stored in the MPR.
+	return append(enums, builtinSystemEnumerations()...), nil
 }
 func (b *MprBackend) GetEnumeration(id model.ID) (*model.Enumeration, error) {
 	enums, err := b.ListEnumerations()
