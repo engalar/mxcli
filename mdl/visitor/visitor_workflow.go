@@ -3,6 +3,8 @@
 package visitor
 
 import (
+	"strconv"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/grammar/parser"
 )
@@ -384,7 +386,7 @@ func parseAlterActivityRef(ctx *parser.AlterActivityRefContext) (string, int) {
 
 	atPos := 0
 	if ctx.AT() != nil && ctx.NUMBER_LITERAL() != nil {
-		atPos = parseInt(ctx.NUMBER_LITERAL().GetText())
+		atPos, _ = strconv.Atoi(ctx.NUMBER_LITERAL().GetText())
 	}
 
 	return name, atPos
@@ -682,7 +684,7 @@ func buildWorkflowParallelPath(ctx parser.IWorkflowParallelPathContext) ast.Work
 	path := ast.WorkflowParallelPathNode{}
 
 	if ppCtx.NUMBER_LITERAL() != nil {
-		path.PathNumber = parseInt(ppCtx.NUMBER_LITERAL().GetText())
+		path.PathNumber, _ = strconv.Atoi(ppCtx.NUMBER_LITERAL().GetText())
 	}
 
 	if body := ppCtx.WorkflowBody(); body != nil {
@@ -806,18 +808,8 @@ func buildWorkflowCompletionThreshold(ctx parser.IWorkflowCompletionMethodContex
 		return 0
 	}
 	if lit := ctx.NUMBER_LITERAL(); lit != nil {
-		return parseInt(lit.GetText())
+		n, _ := strconv.Atoi(lit.GetText())
+		return n
 	}
 	return 0
-}
-
-// parseInt parses a string as an integer, returning 0 on failure.
-func parseInt(s string) int {
-	n := 0
-	for _, c := range s {
-		if c >= '0' && c <= '9' {
-			n = n*10 + int(c-'0')
-		}
-	}
-	return n
 }

@@ -338,14 +338,25 @@ Nested folders use `/` separator: `'Parent/Child/Grandchild'`. Missing folders a
 
 **Workflow Activity Types:**
 - `user task <name> '<caption>' [page Mod.Page] [targeting [users|groups] microflow Mod.MF] [targeting [users|groups] xpath '<expr>'] [outcomes '<out>' { } ...];`
+- `multi user task <name> '<caption>' [page Mod.Page] [targeting [users|groups] microflow Mod.MF] [targeting [users|groups] xpath '<expr>'] [completion method majority|threshold <N>] [outcomes '<out>' { } ...];`
 - `call microflow Mod.MF [comment '<text>'] [outcomes '<out>' { } ...];`
 - `call workflow Mod.WF [comment '<text>'];`
 - `decision ['<caption>'] outcomes '<out>' { } ...;`
 - `parallel split path 1 { } path 2 { };`
 - `jump to <activity-name>;`
+- `generate jump to options for $var as Mod.WF;`
+- `apply jump to option $jumpOptions;`
 - `wait for timer ['<expr>'];`
 - `wait for notification;`
 - `end;`
+
+**Multi-user task completion method:**
+- `majority` — Activity completes when >50% of assigned users approve the same outcome
+- `threshold <N>` — Activity completes when N users (by count, not percentage) approve the same outcome
+
+**Jump-to activity support:**
+- `generate jump to options` — Creates a list of valid activity targets in a workflow
+- `apply jump to option` — Jumps execution to a selected activity
 
 **Example:**
 ```sql
@@ -355,6 +366,12 @@ create workflow Module.ApprovalFlow
 begin
   user task ReviewTask 'Review the request'
     page Module.ReviewPage
+    outcomes 'Approve' { } 'Reject' { };
+  
+  multi user task SeniorReview 'Senior Review'
+    page Module.ReviewPage
+    targeting users microflow Module.GetReviewers
+    completion method majority
     outcomes 'Approve' { } 'Reject' { };
 end workflow;
 ```
