@@ -759,31 +759,30 @@ end;
 /
 
 -- 3. Change workflow state — Pause / Unpause / Abort / Retry
--- TODO: 'pause workflow', 'abort workflow', 'retry workflow' MDL syntax verification needed.
--- 下列语法已在 24-workflow-examples.mdl 中记录但 MDL 实现状态需确认；暂以 stub 占位。
 create or modify microflow HD.ACT_Workflow_ChangeState
   ($Workflow: System.Workflow, $Operation: string)
 begin
   @position(200, 200)
-  -- TODO: replace stub with actual workflow state change activities when MDL executor supports:
-  --   pause workflow $Workflow;
-  --   unpause workflow $Workflow;
-  --   abort workflow $Workflow reason '...';
-  --   retry workflow $Workflow;
-  log info 'ChangeState called: ' + $Operation;
-  @position(400, 200)
+  if $Operation = 'Pause' then
+    workflow operation pause $Workflow;
+  else
+    if $Operation = 'Unpause' then
+      workflow operation unpause $Workflow;
+    else
+      workflow operation abort $Workflow reason 'Administratively aborted';
+    end if;
+  end if;
+  @position(800, 200)
   return;
 end;
 /
 
 -- 4. Complete user task (system-side completion)
--- TODO: 'complete user task $UserTask outcome $Outcome;' MDL syntax verification needed.
 create or modify microflow HD.ACT_Workflow_CompleteTask
   ($UserTask: System.WorkflowUserTask, $Outcome: string)
 begin
   @position(200, 200)
-  -- TODO: complete user task $UserTask outcome $Outcome;
-  log info 'CompleteTask called for outcome: ' + $Outcome;
+  set task outcome $UserTask 'Approve';
   @position(400, 200)
   return;
 end;
@@ -804,109 +803,92 @@ end;
 /
 
 -- 7. Retrieve workflow activity records
--- TODO: 'retrieve workflow activity records for $Workflow' MDL syntax needed.
 create or modify microflow HD.ACT_Workflow_GetHistory
   ($Workflow: System.Workflow)
   returns list of System.WorkflowActivityRecord as $Records
 begin
   @position(200, 200)
-  -- TODO: retrieve workflow activity records for $Workflow;
-  -- System.WorkflowActivityRecord is non-persistent; cannot use 'list of' declare.
-  -- Return empty until executor supports 'retrieve workflow activity records for'.
-  return empty;
+  $Records = get workflow activity records $Workflow;
+  @position(400, 200)
+  return $Records;
 end;
 /
 
 -- 8. Retrieve workflow context
--- TODO: 'retrieve workflow context Entity from $Workflow' MDL syntax needed.
 create or modify microflow HD.ACT_Workflow_GetContext
   ($Workflow: System.Workflow)
   returns HD.EscalationRequest as $Context
 begin
   @position(200, 200)
-  -- TODO: $Context = retrieve workflow context HD.EscalationRequest from $Workflow;
-  -- Return empty directly (create+rollback pattern for typed empty return)
-  retrieve $NullContext from HD.EscalationRequest limit 0;
+  $Context = get workflow data $Workflow as HD.WF_TicketEscalation;
   @position(400, 200)
-  return $NullContext;
+  return $Context;
 end;
 /
 
 -- 9. Retrieve workflows (data source microflow, DS_ prefix)
--- TODO: 'retrieve workflows for $ContextObj' MDL syntax needed.
 create or modify microflow HD.DS_WorkflowInstances
   ($EscalationRequest: HD.EscalationRequest)
   returns list of System.Workflow as $Workflows
 begin
   @position(200, 200)
-  -- TODO: $Workflows = retrieve workflows for $EscalationRequest;
-  retrieve $Workflows from System.Workflow limit 0;
+  $Workflows = get workflows for $EscalationRequest;
   @position(400, 200)
   return $Workflows;
 end;
 /
 
 -- 10. Show user task page
--- TODO: 'show user task page $UserTask' MDL syntax needed.
 create or modify microflow HD.ACT_Workflow_ShowTaskPage
   ($UserTask: System.WorkflowUserTask)
 begin
   @position(200, 200)
-  -- TODO: show user task page $UserTask;
-  log info 'ShowTaskPage called';
+  open user task $UserTask;
   @position(400, 200)
   return;
 end;
 /
 
 -- 11. Show workflow admin page
--- TODO: 'show workflow page $Workflow' MDL syntax needed.
 create or modify microflow HD.ACT_Workflow_ShowAdminPage
   ($Workflow: System.Workflow)
 begin
   @position(200, 200)
-  -- TODO: show workflow page $Workflow;
-  log info 'ShowAdminPage called';
+  open workflow $Workflow;
   @position(400, 200)
   return;
 end;
 /
 
 -- 12. Lock workflow
--- TODO: 'lock workflow HD.WF_TicketEscalation pause instances true' MDL syntax needed.
 create or modify microflow HD.ACT_Workflow_Lock
   ($Workflow: System.Workflow)
 begin
   @position(200, 200)
-  -- TODO: lock workflow HD.WF_TicketEscalation pause instances true;
-  log info 'Lock workflow called';
+  lock workflow $Workflow;
   @position(400, 200)
   return;
 end;
 /
 
 -- 13. Unlock workflow
--- TODO: 'unlock workflow ... unpause instances true' MDL syntax needed.
 create or modify microflow HD.ACT_Workflow_Unlock
   ()
 begin
   @position(200, 200)
-  -- TODO: unlock workflow HD.WF_TicketEscalation unpause instances true;
-  log info 'Unlock workflow called';
+  unlock workflow all;
   @position(400, 200)
   return;
 end;
 /
 
 -- Notify workflow (triggers Wait for notification in WF_TicketEscalation)
--- TODO: 'notify workflow $Workflow activity ...' MDL syntax needed.
 create or modify microflow HD.ACT_Workflow_Notify
   ($Workflow: System.Workflow)
   returns boolean as $Notified
 begin
   @position(200, 200)
-  -- TODO: $Notified = notify workflow $Workflow activity 'WaitForManagerAvailable';
-  declare $Notified boolean = false;
+  $Notified = notify workflow $Workflow;
   @position(400, 200)
   return $Notified;
 end;
