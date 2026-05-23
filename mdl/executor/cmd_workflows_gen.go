@@ -954,7 +954,11 @@ func formatExclusiveSplitGen(elem element.Element, indent string) []string {
 		caption = es.Name()
 	}
 	if expr := es.Expression(); expr != "" {
-		escapedExpr := strings.ReplaceAll(expr, "'", "''")
+		// Normalize embedded newlines/CR so the string literal stays on one line.
+		normExpr := strings.ReplaceAll(expr, "\r\n", " ")
+		normExpr = strings.ReplaceAll(normExpr, "\n", " ")
+		normExpr = strings.ReplaceAll(normExpr, "\r", " ")
+		escapedExpr := strings.ReplaceAll(normExpr, "'", "''")
 		lines = append(lines, fmt.Sprintf("%sdecision '%s' -- %s", indent, escapedExpr, caption))
 	} else {
 		lines = append(lines, fmt.Sprintf("%sdecision -- %s", indent, caption))
