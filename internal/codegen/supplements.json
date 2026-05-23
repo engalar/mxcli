@@ -100,7 +100,11 @@
     "Text.translations":                                 "Items",
     "AggregateListAction.inputListVariableName":         "AggregateVariableName",
     "ValidationFeedbackAction.objectVariableName":       "ValidationVariableName",
-    "Attribute.type":                                    "NewType"
+    "Attribute.type":                                    "NewType",
+    "NoGeneralization.hasChangedBy":                     "HasChangedByAttr",
+    "NoGeneralization.hasChangedDate":                   "HasChangedDateAttr",
+    "NoGeneralization.hasCreatedDate":                   "HasCreatedDateAttr",
+    "NoGeneralization.hasOwner":                         "HasOwnerAttr"
   },
 
   "ref_list_version3_fields": [

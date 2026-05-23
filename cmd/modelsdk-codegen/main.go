@@ -20,7 +20,7 @@ import (
 // See loadSupplements() for parsing.
 
 func main() {
-	genDir := flag.String("gen-dir", "reference/mendixmodelsdk/src/gen", "TS SDK gen/ directory")
+	genDir := flag.String("gen-dir", "node_modules/mendixmodelsdk/src/gen", "TS SDK gen/ directory")
 	outBase := flag.String("output", "modelsdk/gen", "output base directory")
 	domains := flag.String("domains", "", "comma-separated domain names (empty = auto-discover all)")
 	audit := flag.Bool("audit", false, "scan MPR files/dirs (positional args) for unregistered $Type values")

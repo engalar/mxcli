@@ -11333,7 +11333,7 @@ func (o *ValidationFeedbackAction) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "FeedbackTemplate"); err == nil {
 		o.feedbackTemplate.SetFromDecode(child)
 	}
-	o.objectVariableName.Init(raw) // key: "ValidationVariableName" (Mendix BSON field name)
+	o.objectVariableName.Init(raw)
 	if val, err := raw.LookupErr("Attribute"); err == nil {
 		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
 	}

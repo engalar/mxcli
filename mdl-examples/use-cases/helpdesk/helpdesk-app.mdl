@@ -135,6 +135,9 @@ create persistent entity HD.Agent (
   IsActive: boolean default true
 );
 
+-- System members (all 4): owner tracks creator, createdDate/changedDate/changedBy for audit.
+-- Note: child entities (generalization) inherit system members from their parent;
+-- these pseudo-attributes are only declared on root (NoGeneralization) entities.
 create persistent entity HD.Ticket (
   Subject:     string(500) not null,
   Description: string,
@@ -142,7 +145,11 @@ create persistent entity HD.Ticket (
   Priority:    HD.TicketPriority default Normal,
   SLADueAt:   datetime,
   ResolvedAt:  datetime,
-  IsOverSLA:   boolean default false
+  IsOverSLA:   boolean default false,
+  owner:        autoowner,
+  createdDate:  autocreateddate,
+  changedDate:  autochangeddate,
+  changedBy:    autochangedby
 )
 index (Status)
 index (Priority)
