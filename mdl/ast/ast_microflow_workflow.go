@@ -112,3 +112,28 @@ type UnlockWorkflowStmt struct {
 }
 
 func (*UnlockWorkflowStmt) isMicroflowStatement() {}
+
+// GenerateJumpToStmt represents:
+//
+//	[$Options =] GENERATE JUMP TO OPTIONS FOR $workflowVar AS Module.WF_Name
+type GenerateJumpToStmt struct {
+	OutputVariable   string
+	WorkflowVariable string
+	WorkflowQN       QualifiedName
+	ErrorHandling    *ErrorHandlingClause
+	Annotations      *ActivityAnnotations
+}
+
+func (*GenerateJumpToStmt) isMicroflowStatement() {}
+
+// ApplyJumpToStmt represents:
+//
+//	[$Result =] APPLY JUMP TO OPTION $optionsVar
+type ApplyJumpToStmt struct {
+	OutputVariable      string
+	JumpOptionsVariable string
+	ErrorHandling       *ErrorHandlingClause
+	Annotations         *ActivityAnnotations
+}
+
+func (*ApplyJumpToStmt) isMicroflowStatement() {}
