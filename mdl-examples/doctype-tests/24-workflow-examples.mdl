@@ -428,7 +428,7 @@ end workflow;
 
 
 -- ############################################################################
--- PART D: WORKFLOW ACTION TYPES IN MICROFLOWS — all 11 types
+-- PART D: WORKFLOW ACTION TYPES IN MICROFLOWS — all 13 types
 -- ############################################################################
 
 create persistent entity TestModule.DeliveryContext (
@@ -485,4 +485,10 @@ begin
 
   -- Open workflow admin page
   open workflow $workflow;
+
+  -- Generate jump-to options
+  $JumpOptions = generate jump to options for $workflow as TestModule.WF_DeliveryDelay;
+
+  -- Apply jump-to option
+  apply jump to option $JumpOptions;
 end;
