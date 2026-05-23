@@ -113,7 +113,14 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*genPg.Page, error)
 			// on read-back (CE0170 / CE0566).
 			entityID, err := pb.resolveEntity(param.EntityType)
 			if err != nil {
-				return nil, mdlerrors.NewBackend("resolve entity "+param.EntityType.String(), err)
+				// System module entities (e.g. System.WorkflowUserTask, System.Workflow)
+				// are not present in minimal test projects but are always available in
+				// real Mendix runtimes. Allow the page to be built with the qualified
+				// name alone — Studio Pro resolves system entities by name.
+				if param.EntityType.Module != "System" {
+					return nil, mdlerrors.NewBackend("resolve entity "+param.EntityType.String(), err)
+				}
+				entityID = ""
 			}
 			entityName := param.EntityType.String()
 			pb.paramScope[param.Name] = entityID
@@ -247,7 +254,10 @@ func (pb *pageBuilder) buildSnippetV3(s *ast.CreateSnippetStmtV3) (*genPg.Snippe
 		if param.EntityType.Name != "" {
 			entityID, err := pb.resolveEntity(param.EntityType)
 			if err != nil {
-				return nil, mdlerrors.NewBackend("resolve entity "+param.EntityType.String(), err)
+				if param.EntityType.Module != "System" {
+					return nil, mdlerrors.NewBackend("resolve entity "+param.EntityType.String(), err)
+				}
+				entityID = ""
 			}
 			entityName := param.EntityType.String()
 			pb.paramScope[param.Name] = entityID
