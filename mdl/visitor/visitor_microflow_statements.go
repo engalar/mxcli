@@ -148,6 +148,10 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 		stmt = buildLockWorkflowStatement(lockWf)
 	} else if unlockWf := mfCtx.UnlockWorkflowStatement(); unlockWf != nil {
 		stmt = buildUnlockWorkflowStatement(unlockWf)
+	} else if genJump := mfCtx.GenerateJumpToStatement(); genJump != nil {
+		stmt = buildGenerateJumpToStatement(genJump)
+	} else if applyJump := mfCtx.ApplyJumpToStatement(); applyJump != nil {
+		stmt = buildApplyJumpToStatement(applyJump)
 	}
 
 	// Attach annotations to the statement

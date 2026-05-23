@@ -238,3 +238,46 @@ func buildUnlockWorkflowStatement(ctx parser.IUnlockWorkflowStatementContext) *a
 	}
 	return stmt
 }
+
+func buildGenerateJumpToStatement(ctx parser.IGenerateJumpToStatementContext) *ast.GenerateJumpToStmt {
+	if ctx == nil {
+		return nil
+	}
+	c := ctx.(*parser.GenerateJumpToStatementContext)
+	stmt := &ast.GenerateJumpToStmt{}
+
+	vars := c.AllVARIABLE()
+	if c.EQUALS() != nil && len(vars) >= 2 {
+		stmt.OutputVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+		stmt.WorkflowVariable = strings.TrimPrefix(vars[1].GetText(), "$")
+	} else if len(vars) >= 1 {
+		stmt.WorkflowVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+	}
+	if qnCtx := c.QualifiedName(); qnCtx != nil {
+		stmt.WorkflowQN = buildQualifiedName(qnCtx)
+	}
+	if errClause := c.OnErrorClause(); errClause != nil {
+		stmt.ErrorHandling = buildOnErrorClause(errClause)
+	}
+	return stmt
+}
+
+func buildApplyJumpToStatement(ctx parser.IApplyJumpToStatementContext) *ast.ApplyJumpToStmt {
+	if ctx == nil {
+		return nil
+	}
+	c := ctx.(*parser.ApplyJumpToStatementContext)
+	stmt := &ast.ApplyJumpToStmt{}
+
+	vars := c.AllVARIABLE()
+	if c.EQUALS() != nil && len(vars) >= 2 {
+		stmt.OutputVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+		stmt.JumpOptionsVariable = strings.TrimPrefix(vars[1].GetText(), "$")
+	} else if len(vars) >= 1 {
+		stmt.JumpOptionsVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+	}
+	if errClause := c.OnErrorClause(); errClause != nil {
+		stmt.ErrorHandling = buildOnErrorClause(errClause)
+	}
+	return stmt
+}
