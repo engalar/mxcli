@@ -62,15 +62,15 @@ func TestExpressionToXPath_StringLiteralPreserved(t *testing.T) {
 	}
 }
 
-func TestExpressionToString_QualifiedName3Part_QuotedString(t *testing.T) {
-	// 3-part qualified names (Module.EnumName.Value) must be stored as quoted
-	// string literals in microflow expressions. The qualified-name form causes
-	// CE0117 when the microflow is created in a separate executor session.
+func TestExpressionToString_QualifiedName3Part_FullRef(t *testing.T) {
+	// 3-part qualified names (Module.EnumName.Value) are stored as full references
+	// in microflow expressions. With the NewType BSON fix, Mendix correctly resolves
+	// attribute types so the 3-part form is valid and no longer causes CE0117.
 	expr := &ast.QualifiedNameExpr{
 		QualifiedName: ast.QualifiedName{Module: "MyModule", Name: "ENUM_Status.Processing"},
 	}
 	got := expressionToString(expr)
-	want := "'Processing'"
+	want := "MyModule.ENUM_Status.Processing"
 	if got != want {
 		t.Errorf("expressionToString = %q, want %q", got, want)
 	}

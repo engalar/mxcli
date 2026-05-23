@@ -35,7 +35,7 @@ const (
 // CustomWidget BSON document (id, name, editable, type, object).
 func (b *MprBackend) buildDataGrid2WidgetDoc(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (bson.D, error) {
 	// Load embedded template
-	embeddedType, embeddedObject, embeddedIDs, _, err :=
+	embeddedType, embeddedObject, embeddedIDs, _, _, err :=
 		widgets.GetTemplateFullBSON(widgetIDDataGrid2, types.GenerateID, projectPath)
 	if err != nil {
 		return nil, mdlerrors.NewBackend("load DataGrid2 template", err)
@@ -1205,7 +1205,7 @@ func colPropInt(props map[string]any, key string, defaultVal string) string {
 // ===========================================================================
 
 func (b *MprBackend) buildFilterWidgetBSON(spec backend.FilterWidgetSpec, projectPath string) bson.D {
-	rawType, rawObject, propertyTypeIDs, _, err := widgets.GetTemplateFullBSON(spec.WidgetID, types.GenerateID, projectPath)
+	rawType, rawObject, propertyTypeIDs, _, _, err := widgets.GetTemplateFullBSON(spec.WidgetID, types.GenerateID, projectPath)
 	if err != nil || rawType == nil {
 		if err != nil {
 			log.Printf("warning: failed to load template for widget %s: %v; using minimal fallback", spec.WidgetID, err)

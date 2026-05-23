@@ -31,6 +31,7 @@ type mprWidgetObjectBuilder struct {
 	object          bson.D // the mutable widget object BSON
 	propertyTypeIDs map[string]types.PropertyTypeIDEntry
 	objectTypeID    string
+	stableIds       bool // true = template uses stable IDs; skip EnsureRequiredObjectLists
 }
 
 var _ backend.WidgetObjectBuilder = (*mprWidgetObjectBuilder)(nil)
@@ -41,7 +42,7 @@ var _ backend.WidgetObjectBuilder = (*mprWidgetObjectBuilder)(nil)
 
 // LoadWidgetTemplate loads a widget template by ID and returns a builder.
 func (b *MprBackend) LoadWidgetTemplate(widgetID string, projectPath string) (backend.WidgetObjectBuilder, error) {
-	embeddedType, embeddedObject, embeddedIDs, objectTypeID, err :=
+	embeddedType, embeddedObject, embeddedIDs, objectTypeID, stableIds, err :=
 		widgets.GetTemplateFullBSON(widgetID, types.GenerateID, projectPath)
 	if err != nil {
 		return nil, err
@@ -57,6 +58,7 @@ func (b *MprBackend) LoadWidgetTemplate(widgetID string, projectPath string) (ba
 		object:          embeddedObject,
 		propertyTypeIDs: propertyTypeIDs,
 		objectTypeID:    objectTypeID,
+		stableIds:       stableIds,
 	}, nil
 }
 

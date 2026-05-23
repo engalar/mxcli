@@ -71,14 +71,26 @@ func (fb *flowBuilderGen) buildFlowGraphGen(stmts []ast.MicroflowStatement, retu
 
 	// Iterate body statements via the dispatcher (h1).
 	for _, stmt := range stmts {
+		// Consume any pending case label set by the previous statement
+		// (e.g. a pass-through if-without-else whose false branch flows
+		// directly from the split to the next activity).
+		pendingCase := fb.nextConnectionCase
+		fb.nextConnectionCase = ""
+
 		activityID := fb.addStatementGen(stmt)
 		if activityID == "" {
 			continue
 		}
 		fb.applyPendingAnnotations(activityID)
 
-		// Connect previous to current.
-		flow := newHorizontalFlowGen(lastID, activityID)
+		// Connect previous to current, using a case-labelled flow when
+		// the previous statement left a pending case (pass-through split).
+		var flow *genMf.SequenceFlow
+		if pendingCase != "" {
+			flow = newHorizontalFlowWithCaseGen(lastID, activityID, pendingCase)
+		} else {
+			flow = newHorizontalFlowGen(lastID, activityID)
+		}
 		fb.flows = append(fb.flows, flow)
 
 		// Compound statements (IF/loop/split) advertise their merge via
@@ -106,8 +118,14 @@ func (fb *flowBuilderGen) buildFlowGraphGen(stmts []ast.MicroflowStatement, retu
 		}
 		fb.objects = append(fb.objects, endEvent)
 
-		// Connect last activity (or StartEvent for empty body) to EndEvent.
-		fb.flows = append(fb.flows, newHorizontalFlowGen(lastID, endID))
+		// Connect last activity to EndEvent. If a pending case is still
+		// set (pass-through if as the last statement), use a case flow.
+		if fb.nextConnectionCase != "" {
+			fb.flows = append(fb.flows, newHorizontalFlowWithCaseGen(lastID, endID, fb.nextConnectionCase))
+			fb.nextConnectionCase = ""
+		} else {
+			fb.flows = append(fb.flows, newHorizontalFlowGen(lastID, endID))
+		}
 	}
 
 	// Wrap all emitted objects into the MicroflowObjectCollection

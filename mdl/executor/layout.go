@@ -35,12 +35,12 @@ const (
 	MinLoopWidth      = 200
 	MinLoopHeight     = 100
 
-	// Parameter layout — MicroflowParameter boxes are placed in a column
-	// above the main flow line (baseY=200), staggered vertically.
-	// Values match what Studio Pro emits for single-parameter microflows.
-	ParameterX        = 200 // X coordinate for all parameter boxes
-	ParameterStartY   = 75  // Y coordinate for the first parameter
-	ParameterSpacingY = 100 // Vertical gap between consecutive parameters
+	// Parameter layout — MicroflowParameter boxes are placed in a row
+	// above the main flow line (baseY=200), staggered horizontally.
+	// Horizontal layout avoids column overflow for microflows with many params.
+	ParameterStartX   = 200 // X coordinate for the first parameter box
+	ParameterStartY   = 75  // Y coordinate for all parameter boxes (fixed)
+	ParameterSpacingX = 160 // Horizontal gap between consecutive parameters (center-to-center)
 	ParameterWidth    = 30  // Parameter box width
 	ParameterHeight   = 30  // Parameter box height
 )

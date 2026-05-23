@@ -300,6 +300,98 @@ func TestIfWithoutElseThenBranchFlowIsDownward(t *testing.T) {
 	}
 }
 
+// TestAddIfStatementGenThenReturnsNoElseSkipsMerge verifies that when the THEN
+// branch terminates (return) and there is no ELSE body, no ExclusiveMerge is
+// emitted. The false path flows directly from the split to the next activity.
+func TestAddIfStatementGenThenReturnsNoElseSkipsMerge(t *testing.T) {
+	fb := newIfTestFb()
+	stmt := &ast.IfStmt{
+		Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+		ThenBody:  []ast.MicroflowStatement{&ast.ReturnStmt{}},
+		// No HasElse / ElseBody — pass-through pattern.
+	}
+	fb.addIfStatementGen(stmt)
+	mergeCount := 0
+	for _, obj := range fb.objects {
+		if _, ok := obj.(*genMf.ExclusiveMerge); ok {
+			mergeCount++
+		}
+	}
+	if mergeCount != 0 {
+		t.Fatalf("merge count = %d, want 0 (then returns, no else → no merge needed)", mergeCount)
+	}
+}
+
+// TestAddIfStatementGenThenReturnsNoElseSetsPassthrough verifies that
+// nextConnectionPoint is set to the split ID and nextConnectionCase is "false"
+// so the main loop wires the split→next-activity flow with the correct label.
+func TestAddIfStatementGenThenReturnsNoElseSetsPassthrough(t *testing.T) {
+	fb := newIfTestFb()
+	stmt := &ast.IfStmt{
+		Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+		ThenBody:  []ast.MicroflowStatement{&ast.ReturnStmt{}},
+	}
+	splitID := fb.addIfStatementGen(stmt)
+	if fb.nextConnectionPoint != splitID {
+		t.Fatalf("nextConnectionPoint = %v, want splitID %v", fb.nextConnectionPoint, splitID)
+	}
+	if fb.nextConnectionCase != "false" {
+		t.Fatalf("nextConnectionCase = %q, want %q", fb.nextConnectionCase, "false")
+	}
+}
+
+// TestPassthroughIfFlowHasFalseCase verifies that buildFlowGraphGen wires a
+// "false"-labelled flow from the split to the next activity when the then
+// branch returns and there is no else body.
+func TestPassthroughIfFlowHasFalseCase(t *testing.T) {
+	fb := newGraphTestFb()
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody:  []ast.MicroflowStatement{&ast.ReturnStmt{}},
+			// No else — pass-through.
+		},
+		&ast.DeclareStmt{Variable: "After", Type: ast.DataType{Kind: ast.TypeBoolean}},
+	}
+	fb.buildFlowGraphGen(body, nil)
+
+	// Find the ExclusiveSplit and the "After" ActionActivity.
+	var splitID string
+	var afterID string
+	for _, obj := range fb.objects {
+		switch o := obj.(type) {
+		case *genMf.ExclusiveSplit:
+			splitID = string(o.ID())
+		case *genMf.ActionActivity:
+			afterID = string(o.ID())
+		}
+	}
+	if splitID == "" {
+		t.Fatal("ExclusiveSplit must be emitted")
+	}
+	if afterID == "" {
+		t.Fatal("ActionActivity after pass-through if must be emitted")
+	}
+
+	// Find the flow from split → afterActivity with "false" case.
+	found := false
+	for _, flow := range fb.flows {
+		if string(flow.OriginRefID()) != splitID || string(flow.DestinationRefID()) != afterID {
+			continue
+		}
+		if len(flow.CaseValuesItems()) == 0 {
+			continue
+		}
+		ec, ok := flow.CaseValuesItems()[0].(*genMf.EnumerationCase)
+		if ok && ec.Value() == "false" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected a flow from split → after-activity with case 'false'")
+	}
+}
+
 // parseLayoutX extracts the X component from a "x;y" RelativeMiddlePoint string.
 func parseLayoutX(pos string) int {
 	var x, y int

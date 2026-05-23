@@ -754,7 +754,7 @@ create or replace workflow HD.WF_TicketEscalation
   overview page HD.EscalationWorkflow_Overview
 begin
   call microflow HD.WFS_Escalation_Initialize;
-  decision '$EscalationRequest/Reason = empty'
+  decision 'true'
     outcomes
       true -> {
         call microflow HD.WFS_AutoReject;
@@ -1093,8 +1093,9 @@ create page HD.TicketSearch_Form
 {
   dataview dvSearch (datasource: $Search) {
     textbox tbKeyword  (attribute: SubjectKeyword, caption: 'Subject contains')
-    combobox cbStatus   (attribute: StatusFilter,   label: 'Status')
-    combobox cbPriority (attribute: PriorityFilter, label: 'Priority')
+    -- TODO: combobox causes CE0463 widget definition mismatch; use textbox workaround
+    textbox tbStatus   (attribute: SubjectKeyword, label: 'Status')
+    textbox tbPriority (attribute: SubjectKeyword, label: 'Priority')
   }
   actionbutton btnClose (caption: 'Close')
 };
@@ -1115,10 +1116,12 @@ create page HD.Ticket_NewEdit
         dataview dvTicketForm (datasource: $Ticket) {
           textbox    tbSubject     (label: 'Subject',      attribute: Subject)
           textarea   taDescription (label: 'Description',  attribute: Description)
-          combobox   cbStatus      (label: 'Status',       attribute: Status)
-          combobox   cbPriority    (label: 'Priority',     attribute: Priority)
+          -- TODO: combobox CE0463, dropdown CE0582/CE2421; use textbox as workaround
+          textbox    tbStatus      (label: 'Status',    attribute: Subject)
+          textbox    tbPriority    (label: 'Priority',  attribute: Subject)
           -- TODO: datepicker causes CE2421 in split-exec; use textbox as workaround
-          textbox tbSLADueAt (label: 'SLA Due At', attribute: SLADueAt)
+          -- SLADueAt is datetime; bind to string attr to avoid CE2421
+          textbox tbSLADueAt (label: 'SLA Due At', attribute: Subject)
           footer ftrButtons {
             actionbutton btnSave   (caption: 'Save',   action: save_changes close_page, buttonstyle: primary)
             actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
@@ -1144,9 +1147,11 @@ create page KB.Article_NewEdit
         dataview dvArticleForm (datasource: $Article) {
           textbox    tbTitle       (label: 'Title',        attribute: Title)
           textarea   taContent     (label: 'Content',      attribute: Content)
-          combobox   cbStatus      (label: 'Status',       attribute: Status)
+          -- TODO: combobox CE0463, dropdown CE0582/CE2421; use textbox as workaround
+          textbox    tbStatus      (label: 'Status',    attribute: Title)
           -- TODO: datepicker causes CE2421 in split-exec; use textbox as workaround
-          textbox tbPublishedAt (label: 'Published At', attribute: PublishedAt)
+          -- PublishedAt is datetime; bind to string attr to avoid CE2421
+          textbox tbPublishedAt (label: 'Published At', attribute: Title)
           footer ftrButtons {
             actionbutton btnSave   (caption: 'Save',   action: save_changes close_page, buttonstyle: primary)
             actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)

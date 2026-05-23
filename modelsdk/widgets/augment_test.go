@@ -902,7 +902,7 @@ func TestResetGeneratedCacheExists(t *testing.T) {
 func TestGetTemplateFullBSONAcceptsDataSourceProperty(t *testing.T) {
 	// GetTemplateFullBSON should use getOrGenerateTemplate internally
 	// (compile-time: no test for runtime without real MPK)
-	_, _, _, _, err := GetTemplateFullBSON("nonexistent", func() string { return "" }, "")
+	_, _, _, _, _, err := GetTemplateFullBSON("nonexistent", func() string { return "" }, "")
 	// nil result is OK for unknown widget; error should be nil
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

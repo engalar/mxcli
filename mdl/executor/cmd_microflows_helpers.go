@@ -276,18 +276,10 @@ func expressionToString(expr ast.Expression) string {
 		// Unquoted identifier (attribute name in XPath)
 		return e.Name
 	case *ast.QualifiedNameExpr:
-		// 3-part qualified names (Module.EnumName.Value) must be stored as
-		// quoted string literals ('Value') in BSON expressions. The qualified-
-		// name form causes CE0117 when the microflow is created in a separate
-		// executor session from the entity/enum — a common MDL pattern.
-		// QualifiedName.Name is the part after the module (e.g. "S.Closed" for
-		// the full name "FT.S.Closed"). A dot in Name means it is 3-part.
-		if name := e.QualifiedName.Name; strings.Contains(name, ".") {
-			if lastDot := strings.LastIndex(name, "."); lastDot >= 0 {
-				return "'" + name[lastDot+1:] + "'"
-			}
-		}
-		// 2-part name (Module.Name) — association or entity reference, unquoted
+		// Use full 3-part qualified name (Module.EnumName.Value) — with the
+		// NewType fix in place, Mendix correctly resolves attribute types so
+		// 3-part enum refs are valid. Previously quoted strings caused CE0117
+		// after the attribute type resolution was fixed.
 		return e.QualifiedName.String()
 	case *ast.ConstantRefExpr:
 		return "@" + e.QualifiedName.String()

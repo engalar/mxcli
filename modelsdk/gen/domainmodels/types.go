@@ -907,7 +907,10 @@ func (o *Attribute) SetExportLevel(v string) {
 func (o *Attribute) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.dataStorageGuid.Init(raw)
-	if child, err := codec.DecodeChild(raw, "Type"); err == nil {
+	// Mendix 11+ stores attribute type as "NewType" (legacy path used "Type").
+	if child, err := codec.DecodeChild(raw, "NewType"); err == nil {
+		o.propType.SetFromDecode(child)
+	} else if child, err := codec.DecodeChild(raw, "Type"); err == nil {
 		o.propType.SetFromDecode(child)
 	}
 	o.documentation.Init(raw)
@@ -3547,7 +3550,7 @@ func initAttribute() *Attribute {
 	o.name.Bind(&o.Base, 0)
 	o.dataStorageGuid = property.NewPrimitive[string]("DataStorageGuid", property.DecodeString)
 	o.dataStorageGuid.Bind(&o.Base, 1)
-	o.propType = property.NewPart[element.Element]("Type")
+	o.propType = property.NewPart[element.Element]("NewType")
 	o.propType.Bind(&o.Base, 2)
 	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
 	o.documentation.Bind(&o.Base, 3)

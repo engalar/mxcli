@@ -252,7 +252,7 @@ func TestGenerateFromMPK_PlaceholderIDsRemapped(t *testing.T) {
 		templateCacheLock.Unlock()
 	}()
 
-	bsonType, bsonObj, _, _, err := GetTemplateFullBSON("com.example.Widget", idGen, "")
+	bsonType, bsonObj, _, _, _, err := GetTemplateFullBSON("com.example.Widget", idGen, "")
 	if err != nil {
 		t.Fatalf("GetTemplateFullBSON: %v", err)
 	}

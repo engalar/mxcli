@@ -21,8 +21,6 @@
 package executor
 
 import (
-	"strings"
-
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
@@ -56,7 +54,7 @@ func (fb *flowBuilderGen) addCreateObjectActionGen(s *ast.CreateObjectStmt) elem
 		mc := genMf.NewMemberChange()
 		assignFreshID(mc)
 		mc.SetType("Set")
-		mc.SetValue(fb.memberExpressionToStringGen(change.Value, entityQN, change.Attribute))
+		mc.SetValue(mendixExprValue(fb.memberExpressionToStringGen(change.Value, entityQN, change.Attribute)))
 		applyResolvedMemberChangeGen(mc, fb.resolveMemberChangeGen(change.Attribute, entityQN))
 		action.AddItems(mc)
 	}
@@ -86,7 +84,7 @@ func (fb *flowBuilderGen) addChangeObjectActionGen(s *ast.ChangeObjectStmt) elem
 		mc := genMf.NewMemberChange()
 		assignFreshID(mc)
 		mc.SetType("Set")
-		mc.SetValue(fb.memberExpressionToStringGen(change.Value, entityQN, change.Attribute))
+		mc.SetValue(mendixExprValue(fb.memberExpressionToStringGen(change.Value, entityQN, change.Attribute)))
 		applyResolvedMemberChangeGen(mc, fb.resolveMemberChangeGen(change.Attribute, entityQN))
 		action.AddItems(mc)
 	}
@@ -142,22 +140,19 @@ func applyResolvedMemberChangeGen(mc *genMf.MemberChange, r resolvedMemberChange
 //
 // String literals (MDL: 'Value') are passed through fb.exprToString unchanged
 // because expressionToString already formats them correctly.
+// mendixExprValue wraps a Mendix expression string with the mandatory
+// trailing newline that Studio Pro always appends to expression values
+// stored in BSON. Without this newline, Mendix raises CE0117 "Error(s) in
+// expression" because its expression parser expects the newline terminator.
+func mendixExprValue(s string) string {
+	if s == "" || s == "empty" {
+		return s
+	}
+	return s + "\n"
+}
+
 func (fb *flowBuilderGen) memberExpressionToStringGen(expr ast.Expression, entityQN, attrName string) string {
-	// 3-part qualified name (Module.EnumName.Value) → quoted string 'Value'.
-	// Member-assignment values are often wrapped in SourceExpr; unwrap first.
-	// QualifiedName.Name is the part after the module prefix (e.g. "S.Closed"
-	// for the full name "FT.S.Closed"). A dot in Name means the full form is
-	// 3-part: Module.Part1.Part2 → strip to last segment and quote it.
-	inner := expr
-	if src, ok := inner.(*ast.SourceExpr); ok && src.Expression != nil {
-		inner = src.Expression
-	}
-	if qn, ok := inner.(*ast.QualifiedNameExpr); ok {
-		name := qn.QualifiedName.Name // e.g. "S.Closed" when full name is "FT.S.Closed"
-		if lastDot := strings.LastIndex(name, "."); lastDot >= 0 {
-			// Name contains a dot → this is a 3-part enum value: Module.Part.Value
-			return "'" + name[lastDot+1:] + "'"
-		}
-	}
+	// Use standard expression rendering — with NewType fix in place, Mendix
+	// correctly resolves attribute types so 3-part enum refs are valid.
 	return fb.exprToString(expr)
 }

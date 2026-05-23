@@ -231,7 +231,7 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		param := genMf.NewMicroflowParameter()
 		assignFreshID(param)
 		param.SetName(p.Name)
-		param.SetRelativeMiddlePoint(layoutPos(ParameterX, ParameterStartY+i*ParameterSpacingY))
+		param.SetRelativeMiddlePoint(layoutPos(ParameterStartX+i*ParameterSpacingX, ParameterStartY))
 		param.SetSize(layoutSize(ParameterWidth, ParameterHeight))
 		// Studio Pro stores the type exclusively in VariableType (a
 		// DataTypes child element). The Type() string field is never set.

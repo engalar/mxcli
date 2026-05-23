@@ -151,8 +151,19 @@ func (fb *flowBuilderGen) addIfStatementGen(s *ast.IfStmt) element.ID {
 			}
 		}
 	} else {
-		// No else — split's "false" branch flows straight to merge on main line.
-		fb.flows = append(fb.flows, newHorizontalFlowWithCaseGen(splitID, ensureMerge(), "false"))
+		if thenReturns {
+			// Then terminates, no else: skip the merge entirely.
+			// The false branch flows directly from split to the next activity.
+			// Set nextConnectionPoint/Case so buildFlowGraphGen wires the
+			// split→nextActivity flow with the correct "false" case label.
+			fb.posX = mergeX
+			fb.posY = centerY
+			fb.nextConnectionPoint = splitID
+			fb.nextConnectionCase = "false"
+		} else {
+			// No else, then continues — split's "false" branch flows to merge.
+			fb.flows = append(fb.flows, newHorizontalFlowWithCaseGen(splitID, ensureMerge(), "false"))
+		}
 	}
 
 	// ── Restore main cursor for next statement ──

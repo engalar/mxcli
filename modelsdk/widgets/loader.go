@@ -109,6 +109,7 @@ type WidgetTemplate struct {
 	Version       string         `json:"version"`
 	ExtractedFrom string         `json:"extractedFrom"`
 	Generated     bool           `json:"-"` // true if derived from MPK, not from embedded template
+	StableIds     bool           `json:"stableIds"` // true = use identity mapping for Type $IDs (CE0463 fix)
 	Type          map[string]any `json:"type"`
 	Object        map[string]any `json:"object"` // WidgetObject with all property values
 }
@@ -291,20 +292,21 @@ func GetTemplateBSON(widgetID string, idGenerator func() string, projectPath str
 // The returned bson.D values can be used directly in widget creation.
 // IDs in the template are regenerated with new UUIDs while preserving internal references.
 // If projectPath is non-empty, the template is augmented from the project's .mpk widget file.
-// Returns: (clonedType, clonedObject, propertyTypeIDs, objectTypeID, error)
-func GetTemplateFullBSON(widgetID string, idGenerator func() string, projectPath string) (bson.D, bson.D, map[string]PropertyTypeIDEntry, string, error) {
+// Returns: (clonedType, clonedObject, propertyTypeIDs, objectTypeID, stableIds, error)
+func GetTemplateFullBSON(widgetID string, idGenerator func() string, projectPath string) (bson.D, bson.D, map[string]PropertyTypeIDEntry, string, bool, error) {
 	tmpl, err := getOrGenerateTemplate(widgetID, projectPath)
 	if err != nil {
-		return nil, nil, nil, "", err
+		return nil, nil, nil, "", false, err
 	}
 	if tmpl == nil {
-		return nil, nil, nil, "", nil
+		return nil, nil, nil, "", false, nil
 	}
 
 	// Deep-clone and augment from .mpk (skip for generated templates — already complete)
 	if !tmpl.Generated {
 		tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
 	}
+	stableIds := false
 
 	// Phase 1: Collect all $ID values from Type and create old->new ID mappings
 	idMapping := make(map[string]string)
@@ -327,13 +329,13 @@ func GetTemplateFullBSON(widgetID string, idGenerator func() string, projectPath
 	}
 
 	if containsPlaceholderID(bsonType) {
-		return nil, nil, nil, "", fmt.Errorf("placeholder ID leak detected in widget template type for %s: aa000000-prefix ID was not remapped", widgetID)
+		return nil, nil, nil, "", false, fmt.Errorf("placeholder ID leak detected in widget template type for %s: aa000000-prefix ID was not remapped", widgetID)
 	}
 	if bsonObject != nil && containsPlaceholderID(bsonObject) {
-		return nil, nil, nil, "", fmt.Errorf("placeholder ID leak detected in widget template object for %s: aa000000-prefix ID was not remapped", widgetID)
+		return nil, nil, nil, "", false, fmt.Errorf("placeholder ID leak detected in widget template object for %s: aa000000-prefix ID was not remapped", widgetID)
 	}
 
-	return bsonType, bsonObject, propertyTypeIDs, objectTypeID, nil
+	return bsonType, bsonObject, propertyTypeIDs, objectTypeID, stableIds, nil
 }
 
 // jsonToBSONWithMappingAndObjectType converts Type JSON to BSON and extracts the ObjectType ID.
@@ -789,6 +791,74 @@ func collectIDs(data map[string]any, idGenerator func() string, idMapping map[st
 			collectIDsInArray(v, idGenerator, idMapping)
 		}
 	}
+}
+
+// collectIDsIdentity maps each $ID to itself (identity). Used for non-placeholder
+// templates to preserve the original widget type $IDs so Mendix recognises the
+// embedded CustomWidgetType as the known installed widget version.
+func collectIDsIdentity(data map[string]any, idMapping map[string]string) {
+	for key, val := range data {
+		if key == "$ID" {
+			if id, ok := val.(string); ok && len(id) == 32 {
+				idMapping[id] = id // identity: old → same
+			}
+		}
+		switch v := val.(type) {
+		case map[string]any:
+			collectIDsIdentity(v, idMapping)
+		case []any:
+			collectIDsIdentityInArray(v, idMapping)
+		}
+	}
+}
+
+func collectIDsIdentityInArray(arr []any, idMapping map[string]string) {
+	for _, item := range arr {
+		switch v := item.(type) {
+		case map[string]any:
+			collectIDsIdentity(v, idMapping)
+		case []any:
+			collectIDsIdentityInArray(v, idMapping)
+		}
+	}
+}
+
+// containsPlaceholderIDInJSON checks whether any $ID in the JSON map is a placeholder.
+func containsPlaceholderIDInJSON(data map[string]any) bool {
+	for key, val := range data {
+		if key == "$ID" {
+			if id, ok := val.(string); ok && len(id) == 32 && strings.HasPrefix(id, placeholderStringPrefix) {
+				return true
+			}
+		}
+		switch v := val.(type) {
+		case map[string]any:
+			if containsPlaceholderIDInJSON(v) {
+				return true
+			}
+		case []any:
+			if containsPlaceholderIDInJSONArray(v) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func containsPlaceholderIDInJSONArray(arr []any) bool {
+	for _, item := range arr {
+		switch v := item.(type) {
+		case map[string]any:
+			if containsPlaceholderIDInJSON(v) {
+				return true
+			}
+		case []any:
+			if containsPlaceholderIDInJSONArray(v) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // collectIDsInArray recursively collects IDs from an array.

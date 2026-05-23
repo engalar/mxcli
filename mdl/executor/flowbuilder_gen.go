@@ -100,6 +100,12 @@ type flowBuilderGen struct {
 	// should originate from (used for compound statements where the
 	// entry and exit IDs differ).
 	nextConnectionPoint element.ID
+	// nextConnectionCase is the case label for the flow connecting
+	// nextConnectionPoint to the next activity. Non-empty only when a
+	// pass-through if-without-else (then returns, no else) skips the
+	// merge: the false branch flows directly from the split to the
+	// next activity with "false" as the case value.
+	nextConnectionCase string
 	// incomingRedirect — see legacy flowBuilder.incomingRedirect.
 	incomingRedirect element.ID
 	nextFlowCase     string

@@ -573,7 +573,7 @@ func buildConditionOutcomeGen(n ast.WorkflowConditionOutcomeNode) element.Elemen
 func buildExclusiveSplitGenActivity(n *ast.WorkflowDecisionNode) *genWf.ExclusiveSplitActivity {
 	act := genWf.NewExclusiveSplitActivity()
 	act.SetID(element.ID(types.GenerateID()))
-	act.SetExpression(n.Expression)
+	act.SetExpression(mendixExprValue(n.Expression))
 	caption := n.Caption
 	if caption == "" {
 		caption = "Decision"

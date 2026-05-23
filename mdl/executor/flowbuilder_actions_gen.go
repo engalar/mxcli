@@ -88,7 +88,7 @@ func (fb *flowBuilderGen) addCreateVariableActionGen(s *ast.DeclareStmt) element
 	if dt := convertASTToGenDataType(declType); dt != nil {
 		action.SetVariableType(dt)
 	}
-	action.SetInitialValue(fb.exprToString(s.InitialValue))
+	action.SetInitialValue(mendixExprValue(fb.exprToString(s.InitialValue)))
 
 	return fb.genActivityWrap(action, nil, "")
 }
@@ -106,7 +106,7 @@ func (fb *flowBuilderGen) addChangeVariableActionGen(s *ast.MfSetStmt) element.I
 	assignFreshID(action)
 	action.SetErrorHandlingType(fb.ehTypeGen(nil))
 	action.SetChangeVariableName(s.Target)
-	action.SetValue(fb.exprToString(s.Value))
+	action.SetValue(mendixExprValue(fb.exprToString(s.Value)))
 
 	return fb.genActivityWrap(action, nil, "")
 }
@@ -243,7 +243,7 @@ func (fb *flowBuilderGen) addAggregateListActionGen(s *ast.AggregateListStmt) el
 
 	if s.IsExpression && s.Expression != nil {
 		action.SetUseExpression(true)
-		action.SetExpression(expressionToString(s.Expression))
+		action.SetExpression(mendixExprValue(expressionToString(s.Expression)))
 	} else if s.Attribute != "" && fb.varTypes != nil {
 		listType := fb.varTypes[s.InputVariable]
 		if after, ok := strings.CutPrefix(listType, "List of "); ok {
