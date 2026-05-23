@@ -330,7 +330,6 @@ func init() {
 	rootCmd.AddCommand(lintCmd)
 	rootCmd.AddCommand(reportCmd)
 	rootCmd.AddCommand(serveCmd)
-	rootCmd.AddCommand(lspCmd)
 	rootCmd.AddCommand(projectTreeCmd)
 	rootCmd.AddCommand(diagCmd)
 	rootCmd.AddCommand(testRunCmd)
