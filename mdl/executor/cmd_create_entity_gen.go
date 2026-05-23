@@ -14,8 +14,10 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	canonicalmodel "github.com/mendixlabs/mxcli/mdl/model"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // execCreateEntityGen handles CREATE ENTITY on the gen-typed write path.
@@ -72,6 +74,18 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 		}
 	}
 
+	// Canonical path: applicable when no event handlers and the codec
+	// registry is wired. Event handlers are not modelled by EntityModel
+	// yet — fall back to the legacy gen builder for entities that use
+	// them, so behaviour is preserved end-to-end.
+	if ctx.ModelCodecs != nil && len(s.EventHandlers) == 0 {
+		if err := persistEntityCanonical(ctx, s, dm, existingEntity, module); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// Legacy path (event handlers, or absent codec registry).
 	entity := astToEntityGen(s)
 	if entity == nil {
 		return mdlerrors.NewValidation("failed to build gen entity from AST")
@@ -101,6 +115,62 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 	invalidateDomainModelsCache(ctx)
 	invalidateHierarchy(ctx)
 	fmt.Fprintf(ctx.Output, "Created entity: %s\n", s.Name)
+	ctx.trackModifiedDomainModel(module.ID, module.Name)
+	return nil
+}
+
+// persistEntityCanonical routes CREATE ENTITY through the canonical model
+// pipeline: Lift the AST -> EntityModel -> Persist. Pre-injects two
+// Mendix-specific invariants the parser doesn't carry: a Boolean attribute
+// without an explicit default gets `default false`, and an entity without
+// an explicit @Position gets stacked auto-layout based on the current DM
+// entity count.
+func persistEntityCanonical(ctx *ExecContext, s *ast.CreateEntityStmt, dm *genDm.DomainModel, existing element.Element, module *model.Module) error {
+	stmt := *s
+	if stmt.Position == nil {
+		stmt.Position = &ast.Position{X: 100 + len(dm.EntitiesItems())*150, Y: 100}
+	}
+	if len(stmt.Attributes) > 0 {
+		attrs := make([]ast.Attribute, len(stmt.Attributes))
+		copy(attrs, stmt.Attributes)
+		for i := range attrs {
+			if attrs[i].Type.Kind == ast.TypeBoolean && !attrs[i].HasDefault {
+				attrs[i].HasDefault = true
+				attrs[i].DefaultValue = false
+			}
+		}
+		stmt.Attributes = attrs
+	}
+
+	doc, err := ctx.ModelCodecs.LiftFrom(&stmt)
+	if err != nil {
+		return mdlerrors.NewBackend("CREATE ENTITY: lift", err)
+	}
+
+	var existingID model.ID
+	if existing != nil {
+		if elem, ok := existing.(interface{ ID() element.ID }); ok {
+			existingID = model.ID(elem.ID())
+		}
+	}
+
+	pCtx := canonicalmodel.PersistContext{
+		DomainModelID:    model.ID(dm.ID()),
+		ExistingEntityID: existingID,
+		Backend:          ctx.Backend,
+	}
+	if err := doc.Persist(pCtx); err != nil {
+		return mdlerrors.NewBackend("CREATE ENTITY: persist", err)
+	}
+
+	invalidateDomainModelGenForModule(ctx, module.ID)
+	invalidateDomainModelsCache(ctx)
+	invalidateHierarchy(ctx)
+	if existing != nil {
+		fmt.Fprintf(ctx.Output, "Modified entity: %s\n", s.Name)
+	} else {
+		fmt.Fprintf(ctx.Output, "Created entity: %s\n", s.Name)
+	}
 	ctx.trackModifiedDomainModel(module.ID, module.Name)
 	return nil
 }

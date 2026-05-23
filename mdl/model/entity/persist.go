@@ -10,7 +10,17 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 )
+
+func singleENUSText(msg string) *genTexts.Text {
+	t := genTexts.NewText()
+	tr := genTexts.NewTranslation()
+	tr.SetLanguageCode("en_US")
+	tr.SetText(msg)
+	t.AddTranslations(tr)
+	return t
+}
 
 // Persist serialises the canonical EntityModel to gen-typed BSON structures
 // and writes them to the project via ctx.Backend. A zero ExistingEntityID
@@ -76,19 +86,27 @@ func buildGenEntity(m *EntityModel) (*genDm.Entity, error) {
 		e.AddAttributes(genAttr)
 	}
 
-	// ValidationRules from NotNull / Unique flags.
+	// ValidationRules from NotNull / Unique flags, with optional custom
+	// error messages (single en_US translation, matching Studio Pro's
+	// default for unilingual projects).
 	entityQN := m.Name.String()
 	for _, am := range m.Attributes {
 		if am.NotNull {
 			vr := genDm.NewValidationRule()
 			vr.SetAttributeQualifiedName(entityQN + "." + am.Name)
 			vr.SetRuleInfo(genDm.NewRequiredRuleInfo())
+			if am.NotNullError != "" {
+				vr.SetErrorMessage(singleENUSText(am.NotNullError))
+			}
 			e.AddValidationRules(vr)
 		}
 		if am.Unique {
 			vr := genDm.NewValidationRule()
 			vr.SetAttributeQualifiedName(entityQN + "." + am.Name)
 			vr.SetRuleInfo(genDm.NewUniqueRuleInfo())
+			if am.UniqueError != "" {
+				vr.SetErrorMessage(singleENUSText(am.UniqueError))
+			}
 			e.AddValidationRules(vr)
 		}
 	}
@@ -168,22 +186,20 @@ func buildGenAttributeType(dt model.DataType) (element.Element, error) {
 }
 
 // applySystemMembers wires the four System.* presence bits on a
-// NoGeneralization from the SystemMembers string list. Names are matched
-// case-insensitively against the standard owner/createddate/changeddate/
-// changedby vocabulary; unknown names are silently ignored.
+// NoGeneralization. All four flags are always explicitly Set (true or
+// false) — Mendix expects every flag present in BSON; absent fields
+// trigger CE0161 for XPath constraints on the entity. Names are matched
+// case-insensitively against the standard owner/createdDate/changedDate/
+// changedBy vocabulary; unknown names are silently ignored.
 func applySystemMembers(ng *genDm.NoGeneralization, members []string) {
+	enabled := make(map[string]bool, len(members))
 	for _, name := range members {
-		switch strings.ToLower(strings.TrimSpace(name)) {
-		case "owner":
-			ng.SetHasOwner(true)
-		case "changedby":
-			ng.SetHasChangedBy(true)
-		case "createddate":
-			ng.SetHasCreatedDate(true)
-		case "changeddate":
-			ng.SetHasChangedDate(true)
-		}
+		enabled[strings.ToLower(strings.TrimSpace(name))] = true
 	}
+	ng.SetHasOwner(enabled["owner"])
+	ng.SetHasChangedBy(enabled["changedby"])
+	ng.SetHasCreatedDate(enabled["createddate"])
+	ng.SetHasChangedDate(enabled["changeddate"])
 }
 
 // stripStringLiteralQuotes removes surrounding single quotes from string
