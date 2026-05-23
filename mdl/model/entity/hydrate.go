@@ -7,8 +7,34 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 )
+
+// extractEnUSText returns the en_US translation text from a *genTexts.Text,
+// or "" when the message has no translations / is nil / is not a Text. We
+// fall back to the first translation if no en_US entry exists.
+func extractEnUSText(msg element.Element) string {
+	t, ok := msg.(*genTexts.Text)
+	if !ok || t == nil {
+		return ""
+	}
+	var first string
+	for _, item := range t.TranslationsItems() {
+		tr, ok := item.(*genTexts.Translation)
+		if !ok {
+			continue
+		}
+		if first == "" {
+			first = tr.Text()
+		}
+		if tr.LanguageCode() == "en_US" {
+			return tr.Text()
+		}
+	}
+	return first
+}
 
 // Hydrate builds a canonical EntityModel from a gen-typed *genDm.Entity.
 // moduleName supplies the owning module (gen Entity stores only the bare name).
@@ -39,6 +65,8 @@ func Hydrate(moduleName string, e *genDm.Entity) (*EntityModel, []model.Warning,
 
 	notNullAttrs := make(map[string]bool)
 	uniqueAttrs := make(map[string]bool)
+	notNullErrors := make(map[string]string)
+	uniqueErrors := make(map[string]string)
 	for _, item := range e.ValidationRulesItems() {
 		vr, ok := item.(*genDm.ValidationRule)
 		if !ok {
@@ -50,11 +78,18 @@ func Hydrate(moduleName string, e *genDm.Entity) (*EntityModel, []model.Warning,
 		if ri := vr.RuleInfo(); ri != nil {
 			ruleType = ri.TypeName()
 		}
+		msg := extractEnUSText(vr.ErrorMessage())
 		switch ruleType {
 		case "DomainModels$RequiredRuleInfo":
 			notNullAttrs[attrName] = true
+			if msg != "" {
+				notNullErrors[attrName] = msg
+			}
 		case "DomainModels$UniqueRuleInfo":
 			uniqueAttrs[attrName] = true
+			if msg != "" {
+				uniqueErrors[attrName] = msg
+			}
 		}
 	}
 
@@ -64,7 +99,14 @@ func Hydrate(moduleName string, e *genDm.Entity) (*EntityModel, []model.Warning,
 			warns = append(warns, model.Warning{Field: "Attributes", Message: fmt.Sprintf("unexpected type %T", item)})
 			continue
 		}
-		m.Attributes = append(m.Attributes, hydrateAttribute(attr, notNullAttrs, uniqueAttrs))
+		am := hydrateAttribute(attr, notNullAttrs, uniqueAttrs)
+		if msg, ok := notNullErrors[attr.Name()]; ok {
+			am.NotNullError = msg
+		}
+		if msg, ok := uniqueErrors[attr.Name()]; ok {
+			am.UniqueError = msg
+		}
+		m.Attributes = append(m.Attributes, am)
 	}
 
 	for _, item := range e.IndexesItems() {
