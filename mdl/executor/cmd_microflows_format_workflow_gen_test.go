@@ -540,3 +540,81 @@ func TestFormatActionGen_UnlockWorkflowAction(t *testing.T) {
 		}
 	})
 }
+
+// ────────────────────────────────────────────────────────
+// GenerateJumpToOptionsAction
+// ────────────────────────────────────────────────────────
+
+func TestFormatGenerateJumpToOptionsActionGen(t *testing.T) {
+	tests := []struct {
+		name     string
+		setup    func(*genMf.GenerateJumpToOptionsAction)
+		expected string
+	}{
+		{
+			name: "with output variable",
+			setup: func(a *genMf.GenerateJumpToOptionsAction) {
+				a.SetWorkflowVariable("Workflow")
+				a.SetWorkflowQualifiedName("HD.WF_TicketEscalation")
+				a.SetOutputVariableName("JumpOptions")
+			},
+			expected: "$JumpOptions = generate jump to options for $Workflow as HD.WF_TicketEscalation;",
+		},
+		{
+			name: "without output variable",
+			setup: func(a *genMf.GenerateJumpToOptionsAction) {
+				a.SetWorkflowVariable("Workflow")
+				a.SetWorkflowQualifiedName("HD.WF_TicketEscalation")
+			},
+			expected: "generate jump to options for $Workflow as HD.WF_TicketEscalation;",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := genMf.NewGenerateJumpToOptionsAction()
+			tt.setup(a)
+			got := formatGenerateJumpToOptionsActionGen(a)
+			if got != tt.expected {
+				t.Errorf("got %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+// ────────────────────────────────────────────────────────
+// ApplyJumpToOptionAction
+// ────────────────────────────────────────────────────────
+
+func TestFormatApplyJumpToOptionActionGen(t *testing.T) {
+	tests := []struct {
+		name     string
+		setup    func(*genMf.ApplyJumpToOptionAction)
+		expected string
+	}{
+		{
+			name: "with output variable",
+			setup: func(a *genMf.ApplyJumpToOptionAction) {
+				a.SetWorkflowJumpToDetailsVariable("JumpOptions")
+				a.SetOutputVariableName("Result")
+			},
+			expected: "$Result = apply jump to option $JumpOptions;",
+		},
+		{
+			name: "without output variable",
+			setup: func(a *genMf.ApplyJumpToOptionAction) {
+				a.SetWorkflowJumpToDetailsVariable("JumpOptions")
+			},
+			expected: "apply jump to option $JumpOptions;",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := genMf.NewApplyJumpToOptionAction()
+			tt.setup(a)
+			got := formatApplyJumpToOptionActionGen(a)
+			if got != tt.expected {
+				t.Errorf("got %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
