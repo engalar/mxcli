@@ -97,7 +97,9 @@
     "LayoutCall.layout":                                 "Form",
     "ImportMapping.rootMappingElements":                 "Elements",
     "ExportMapping.rootMappingElements":                 "Elements",
-    "Text.translations":                                 "Items"
+    "Text.translations":                                 "Items",
+    "AggregateListAction.inputListVariableName":         "AggregateVariableName",
+    "ValidationFeedbackAction.objectVariableName":       "ValidationVariableName"
   },
 
   "ref_list_version3_fields": [
