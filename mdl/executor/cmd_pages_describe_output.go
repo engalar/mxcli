@@ -31,16 +31,16 @@ func mdlQuote(s string) string {
 // appendDataGridPagingProps appends non-default paging properties for DataGrid2.
 func appendDataGridPagingProps(props []string, w rawWidget) []string {
 	if w.PageSize != "" && w.PageSize != "20" {
-		props = append(props, fmt.Sprintf("PageSize: %s", w.PageSize))
+		props = append(props, fmt.Sprintf("pagesize: %s", w.PageSize))
 	}
 	if w.Pagination != "" && w.Pagination != "buttons" {
-		props = append(props, fmt.Sprintf("Pagination: %s", w.Pagination))
+		props = append(props, fmt.Sprintf("pagination: %s", w.Pagination))
 	}
 	if w.PagingPosition != "" && w.PagingPosition != "bottom" {
-		props = append(props, fmt.Sprintf("PagingPosition: %s", w.PagingPosition))
+		props = append(props, fmt.Sprintf("pagingposition: %s", w.PagingPosition))
 	}
 	if w.ShowPagingButtons != "" && w.ShowPagingButtons != "always" {
-		props = append(props, fmt.Sprintf("ShowPagingButtons: %s", w.ShowPagingButtons))
+		props = append(props, fmt.Sprintf("showpagingbuttons: %s", w.ShowPagingButtons))
 	}
 	// showNumberOfRows: not yet fully supported in DataGrid2, skip to avoid CE0463
 	return props
@@ -49,10 +49,10 @@ func appendDataGridPagingProps(props []string, w rawWidget) []string {
 // appendConditionalProps appends VISIBLE IF and EDITABLE IF if present.
 func appendConditionalProps(props []string, w rawWidget) []string {
 	if w.VisibleIf != "" {
-		props = append(props, fmt.Sprintf("Visible: [%s]", w.VisibleIf))
+		props = append(props, fmt.Sprintf("visible: [%s]", w.VisibleIf))
 	}
 	if w.EditableIf != "" {
-		props = append(props, fmt.Sprintf("Editable: [%s]", w.EditableIf))
+		props = append(props, fmt.Sprintf("editable: [%s]", w.EditableIf))
 	}
 	return props
 }
@@ -60,19 +60,19 @@ func appendConditionalProps(props []string, w rawWidget) []string {
 // appendAppearanceProps appends Class, Style, DesignProperties, and conditional settings if present.
 func appendAppearanceProps(props []string, w rawWidget) []string {
 	if w.Class != "" {
-		props = append(props, fmt.Sprintf("Class: %s", mdlQuote(w.Class)))
+		props = append(props, fmt.Sprintf("class: %s", mdlQuote(w.Class)))
 	}
 	if w.Style != "" {
-		props = append(props, fmt.Sprintf("Style: %s", mdlQuote(w.Style)))
+		props = append(props, fmt.Sprintf("style: %s", mdlQuote(w.Style)))
 	}
 	if len(w.DesignProperties) > 0 {
 		props = append(props, formatDesignPropertiesMDL(w.DesignProperties))
 	}
 	if w.VisibleIf != "" {
-		props = append(props, fmt.Sprintf("Visible: [%s]", w.VisibleIf))
+		props = append(props, fmt.Sprintf("visible: [%s]", w.VisibleIf))
 	}
 	if w.EditableIf != "" {
-		props = append(props, fmt.Sprintf("Editable: [%s]", w.EditableIf))
+		props = append(props, fmt.Sprintf("editable: [%s]", w.EditableIf))
 	}
 	return props
 }
@@ -89,7 +89,7 @@ func formatDesignPropertiesMDL(dps []rawDesignProp) string {
 			entries = append(entries, fmt.Sprintf("%s: %s", mdlQuote(dp.Key), mdlQuote(dp.Option)))
 		}
 	}
-	return fmt.Sprintf("DesignProperties: [%s]", strings.Join(entries, ", "))
+	return fmt.Sprintf("designproperties: [%s]", strings.Join(entries, ", "))
 }
 
 // formatWidgetProps writes a widget line with automatic multi-line wrapping.
@@ -168,7 +168,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		header := fmt.Sprintf("tabpage %s", w.Name)
 		var props []string
 		if w.TabCaption != "" {
-			props = append(props, fmt.Sprintf("Caption: %s", mdlQuote(w.TabCaption)))
+			props = append(props, fmt.Sprintf("caption: %s", mdlQuote(w.TabCaption)))
 		}
 		if len(w.Children) > 0 {
 			formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
@@ -197,19 +197,19 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		header := fmt.Sprintf("groupbox %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
-			props = append(props, fmt.Sprintf("Caption: %s", mdlQuote(w.Caption)))
+			props = append(props, fmt.Sprintf("caption: %s", mdlQuote(w.Caption)))
 		}
 		if w.HeaderMode != "" && w.HeaderMode != "Div" {
-			props = append(props, fmt.Sprintf("HeaderMode: %s", w.HeaderMode))
+			props = append(props, fmt.Sprintf("headermode: %s", w.HeaderMode))
 		}
 		if w.Collapsible != "" && w.Collapsible != "No" {
 			switch w.Collapsible {
 			case "YesInitiallyExpanded":
-				props = append(props, "Collapsible: YesExpanded")
+				props = append(props, "collapsible: YesExpanded")
 			case "YesInitiallyCollapsed":
-				props = append(props, "Collapsible: YesCollapsed")
+				props = append(props, "collapsible: YesCollapsed")
 			default:
-				props = append(props, fmt.Sprintf("Collapsible: %s", w.Collapsible))
+				props = append(props, fmt.Sprintf("collapsible: %s", w.Collapsible))
 			}
 		}
 		props = appendAppearanceProps(props, w)
@@ -238,12 +238,12 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 				if col.Width > 0 && col.Width <= 12 {
 					widthStr = fmt.Sprintf("%d", col.Width)
 				}
-				colProps = append(colProps, "DesktopWidth: "+widthStr)
+				colProps = append(colProps, "desktopwidth: "+widthStr)
 				if col.TabletWidth > 0 && col.TabletWidth <= 12 {
-					colProps = append(colProps, fmt.Sprintf("TabletWidth: %d", col.TabletWidth))
+					colProps = append(colProps, fmt.Sprintf("tabletwidth: %d", col.TabletWidth))
 				}
 				if col.PhoneWidth > 0 && col.PhoneWidth <= 12 {
-					colProps = append(colProps, fmt.Sprintf("PhoneWidth: %d", col.PhoneWidth))
+					colProps = append(colProps, fmt.Sprintf("phonewidth: %d", col.PhoneWidth))
 				}
 				fmt.Fprintf(ctx.Output, "%s    column col%d (%s) {\n", prefix, colIdx+1, strings.Join(colProps, ", "))
 				for _, cw := range col.Widgets {
@@ -259,13 +259,13 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		header := fmt.Sprintf("dynamictext %s", w.Name)
 		props := []string{}
 		if w.Content != "" {
-			props = append(props, fmt.Sprintf("Content: %s", mdlQuote(w.Content)))
+			props = append(props, fmt.Sprintf("content: %s", mdlQuote(w.Content)))
 		}
 		if w.RenderMode != "" && w.RenderMode != "Text" {
-			props = append(props, fmt.Sprintf("RenderMode: %s", w.RenderMode))
+			props = append(props, fmt.Sprintf("rendermode: %s", w.RenderMode))
 		}
 		if len(w.Parameters) > 0 {
-			props = append(props, fmt.Sprintf("ContentParams: [%s]", strings.Join(formatParametersV3(w.Parameters), ", ")))
+			props = append(props, fmt.Sprintf("contentparams: [%s]", strings.Join(formatParametersV3(w.Parameters), ", ")))
 		}
 		props = appendAppearanceProps(props, w)
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
@@ -274,16 +274,16 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		header := fmt.Sprintf("actionbutton %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
-			props = append(props, fmt.Sprintf("Caption: %s", mdlQuote(w.Caption)))
+			props = append(props, fmt.Sprintf("caption: %s", mdlQuote(w.Caption)))
 		}
 		if len(w.Parameters) > 0 {
-			props = append(props, fmt.Sprintf("ContentParams: [%s]", strings.Join(formatParametersV3(w.Parameters), ", ")))
+			props = append(props, fmt.Sprintf("contentparams: [%s]", strings.Join(formatParametersV3(w.Parameters), ", ")))
 		}
 		if w.Action != "" {
-			props = append(props, fmt.Sprintf("Action: %s", w.Action))
+			props = append(props, fmt.Sprintf("action: %s", w.Action))
 		}
 		if w.ButtonStyle != "" && w.ButtonStyle != "Default" {
-			props = append(props, fmt.Sprintf("ButtonStyle: %s", w.ButtonStyle))
+			props = append(props, fmt.Sprintf("buttonstyle: %s", w.ButtonStyle))
 		}
 		props = appendAppearanceProps(props, w)
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
@@ -291,7 +291,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 	case "Forms$Text", "Pages$Text":
 		props := []string{}
 		if w.Content != "" {
-			props = append(props, fmt.Sprintf("Content: %s", mdlQuote(w.Content)))
+			props = append(props, fmt.Sprintf("content: %s", mdlQuote(w.Content)))
 		}
 		props = appendAppearanceProps(props, w)
 		formatWidgetProps(ctx.Output, prefix, "statictext", props, "\n")
@@ -300,7 +300,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		header := fmt.Sprintf("title %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
-			props = append(props, fmt.Sprintf("Content: %s", mdlQuote(w.Caption)))
+			props = append(props, fmt.Sprintf("content: %s", mdlQuote(w.Caption)))
 		}
 		props = appendAppearanceProps(props, w)
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
@@ -311,11 +311,11 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		if w.DataSource != nil {
 			switch w.DataSource.Type {
 			case "microflow":
-				props = append(props, fmt.Sprintf("DataSource: microflow %s", w.DataSource.Reference))
+				props = append(props, fmt.Sprintf("datasource: microflow %s", w.DataSource.Reference))
 			case "nanoflow":
-				props = append(props, fmt.Sprintf("DataSource: nanoflow %s", w.DataSource.Reference))
+				props = append(props, fmt.Sprintf("datasource: nanoflow %s", w.DataSource.Reference))
 			case "parameter":
-				props = append(props, fmt.Sprintf("DataSource: $%s", w.DataSource.Reference))
+				props = append(props, fmt.Sprintf("datasource: $%s", w.DataSource.Reference))
 			}
 		}
 		props = appendAppearanceProps(props, w)
@@ -330,10 +330,10 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		header := fmt.Sprintf("textbox %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
-			props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
+			props = append(props, fmt.Sprintf("label: %s", mdlQuote(w.Caption)))
 		}
 		if w.Content != "" {
-			props = append(props, fmt.Sprintf("Attribute: %s", w.Content))
+			props = append(props, fmt.Sprintf("attribute: %s", w.Content))
 		}
 		props = appendAppearanceProps(props, w)
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
@@ -342,10 +342,10 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		header := fmt.Sprintf("textarea %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
-			props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
+			props = append(props, fmt.Sprintf("label: %s", mdlQuote(w.Caption)))
 		}
 		if w.Content != "" {
-			props = append(props, fmt.Sprintf("Attribute: %s", w.Content))
+			props = append(props, fmt.Sprintf("attribute: %s", w.Content))
 		}
 		props = appendAppearanceProps(props, w)
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
@@ -354,10 +354,10 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		header := fmt.Sprintf("datepicker %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
-			props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
+			props = append(props, fmt.Sprintf("label: %s", mdlQuote(w.Caption)))
 		}
 		if w.Content != "" {
-			props = append(props, fmt.Sprintf("Attribute: %s", w.Content))
+			props = append(props, fmt.Sprintf("attribute: %s", w.Content))
 		}
 		props = appendAppearanceProps(props, w)
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
@@ -366,10 +366,10 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		header := fmt.Sprintf("radiobuttons %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
-			props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
+			props = append(props, fmt.Sprintf("label: %s", mdlQuote(w.Caption)))
 		}
 		if w.Content != "" {
-			props = append(props, fmt.Sprintf("Attribute: %s", w.Content))
+			props = append(props, fmt.Sprintf("attribute: %s", w.Content))
 		}
 		props = appendAppearanceProps(props, w)
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
@@ -378,22 +378,22 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		header := fmt.Sprintf("checkbox %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
-			props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
+			props = append(props, fmt.Sprintf("label: %s", mdlQuote(w.Caption)))
 		}
 		if w.Content != "" {
-			props = append(props, fmt.Sprintf("Attribute: %s", w.Content))
+			props = append(props, fmt.Sprintf("attribute: %s", w.Content))
 		}
 		// Show Editable if not default "Always"
 		if w.Editable != "" && w.Editable != "Always" {
-			props = append(props, fmt.Sprintf("Editable: %s", w.Editable))
+			props = append(props, fmt.Sprintf("editable: %s", w.Editable))
 		}
 		// Show ReadOnlyStyle if not default "Inherit"
 		if w.ReadOnlyStyle != "" && w.ReadOnlyStyle != "Inherit" {
-			props = append(props, fmt.Sprintf("ReadOnlyStyle: %s", w.ReadOnlyStyle))
+			props = append(props, fmt.Sprintf("readonlystyle: %s", w.ReadOnlyStyle))
 		}
 		// Show ShowLabel if false (not showing label)
 		if !w.ShowLabel {
-			props = append(props, "ShowLabel: No")
+			props = append(props, "showlabel: No")
 		}
 		props = appendAppearanceProps(props, w)
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
@@ -425,16 +425,16 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 						}
 						dsVal += fmt.Sprintf(" sort by %s", strings.Join(sortParts, ", "))
 					}
-					props = append(props, fmt.Sprintf("DataSource: %s", dsVal))
+					props = append(props, fmt.Sprintf("datasource: %s", dsVal))
 				case "microflow":
-					props = append(props, fmt.Sprintf("DataSource: microflow %s", w.DataSource.Reference))
+					props = append(props, fmt.Sprintf("datasource: microflow %s", w.DataSource.Reference))
 				case "parameter":
-					props = append(props, fmt.Sprintf("DataSource: %s", w.DataSource.Reference))
+					props = append(props, fmt.Sprintf("datasource: %s", w.DataSource.Reference))
 				}
 			}
 			// Add selection mode if specified
 			if w.Selection != "" {
-				props = append(props, fmt.Sprintf("Selection: %s", w.Selection))
+				props = append(props, fmt.Sprintf("selection: %s", w.Selection))
 			}
 			// Add paging properties if non-default
 			props = appendDataGridPagingProps(props, w)
@@ -484,24 +484,24 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 						}
 						dsVal += fmt.Sprintf(" sort by %s", strings.Join(sortParts, ", "))
 					}
-					props = append(props, fmt.Sprintf("DataSource: %s", dsVal))
+					props = append(props, fmt.Sprintf("datasource: %s", dsVal))
 				case "microflow":
-					props = append(props, fmt.Sprintf("DataSource: microflow %s", w.DataSource.Reference))
+					props = append(props, fmt.Sprintf("datasource: microflow %s", w.DataSource.Reference))
 				}
 			}
 			// Add column counts if non-default
 			if w.DesktopColumns != "" && w.DesktopColumns != "1" {
-				props = append(props, fmt.Sprintf("DesktopColumns: %s", w.DesktopColumns))
+				props = append(props, fmt.Sprintf("desktopcolumns: %s", w.DesktopColumns))
 			}
 			if w.TabletColumns != "" && w.TabletColumns != "1" {
-				props = append(props, fmt.Sprintf("TabletColumns: %s", w.TabletColumns))
+				props = append(props, fmt.Sprintf("tabletcolumns: %s", w.TabletColumns))
 			}
 			if w.PhoneColumns != "" && w.PhoneColumns != "1" {
-				props = append(props, fmt.Sprintf("PhoneColumns: %s", w.PhoneColumns))
+				props = append(props, fmt.Sprintf("phonecolumns: %s", w.PhoneColumns))
 			}
 			// Add Selection mode if specified
 			if w.Selection != "" {
-				props = append(props, fmt.Sprintf("Selection: %s", w.Selection))
+				props = append(props, fmt.Sprintf("selection: %s", w.Selection))
 			}
 			props = appendAppearanceProps(props, w)
 			// Output filter and content widgets
@@ -533,37 +533,37 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 			header := fmt.Sprintf("image %s", w.Name)
 			props := []string{}
 			if w.ImageType != "" && w.ImageType != "image" {
-				props = append(props, fmt.Sprintf("ImageType: %s", w.ImageType))
+				props = append(props, fmt.Sprintf("imagetype: %s", w.ImageType))
 			}
 			if w.ImageUrl != "" {
-				props = append(props, fmt.Sprintf("ImageUrl: %s", mdlQuote(w.ImageUrl)))
+				props = append(props, fmt.Sprintf("imageurl: %s", mdlQuote(w.ImageUrl)))
 			}
 			if w.AlternativeText != "" {
-				props = append(props, fmt.Sprintf("AlternativeText: %s", mdlQuote(w.AlternativeText)))
+				props = append(props, fmt.Sprintf("alternativetext: %s", mdlQuote(w.AlternativeText)))
 			}
 			if w.WidthUnit != "" && w.WidthUnit != "auto" {
-				props = append(props, fmt.Sprintf("WidthUnit: %s", w.WidthUnit))
+				props = append(props, fmt.Sprintf("widthunit: %s", w.WidthUnit))
 			}
 			if w.ImageWidth != "" && w.ImageWidth != "100" {
-				props = append(props, fmt.Sprintf("Width: %s", w.ImageWidth))
+				props = append(props, fmt.Sprintf("width: %s", w.ImageWidth))
 			}
 			if w.HeightUnit != "" && w.HeightUnit != "auto" {
-				props = append(props, fmt.Sprintf("HeightUnit: %s", w.HeightUnit))
+				props = append(props, fmt.Sprintf("heightunit: %s", w.HeightUnit))
 			}
 			if w.ImageHeight != "" && w.ImageHeight != "100" {
-				props = append(props, fmt.Sprintf("Height: %s", w.ImageHeight))
+				props = append(props, fmt.Sprintf("height: %s", w.ImageHeight))
 			}
 			if w.DisplayAs != "" && w.DisplayAs != "fullImage" {
-				props = append(props, fmt.Sprintf("DisplayAs: %s", w.DisplayAs))
+				props = append(props, fmt.Sprintf("displayas: %s", w.DisplayAs))
 			}
 			if w.Responsive != "" && w.Responsive != "true" {
-				props = append(props, fmt.Sprintf("Responsive: %s", w.Responsive))
+				props = append(props, fmt.Sprintf("responsive: %s", w.Responsive))
 			}
 			if w.OnClickType == "enlarge" {
-				props = append(props, "OnClickType: enlarge")
+				props = append(props, "onclicktype: enlarge")
 			}
 			if w.Action != "" {
-				props = append(props, fmt.Sprintf("OnClick: %s", w.Action))
+				props = append(props, fmt.Sprintf("onclick: %s", w.Action))
 			}
 			props = appendConditionalProps(props, w)
 			props = appendAppearanceProps(props, w)
@@ -573,7 +573,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 			header := fmt.Sprintf("pluggablewidget '%s' %s", w.WidgetID, w.Name)
 			props := []string{}
 			if w.Caption != "" {
-				props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
+				props = append(props, fmt.Sprintf("label: %s", mdlQuote(w.Caption)))
 			}
 			for _, ep := range w.ExplicitProperties {
 				props = append(props, fmt.Sprintf("%s: %s", ep.Key, ep.Value))
@@ -584,30 +584,30 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 			header := fmt.Sprintf("%s %s", widgetType, w.Name)
 			props := []string{}
 			if w.Caption != "" {
-				props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
+				props = append(props, fmt.Sprintf("label: %s", mdlQuote(w.Caption)))
 			}
 			if w.Content != "" {
-				props = append(props, fmt.Sprintf("Attribute: %s", w.Content))
+				props = append(props, fmt.Sprintf("attribute: %s", w.Content))
 			}
 			// Show DataSource and CaptionAttribute for ComboBox association mode
 			if w.DataSource != nil && widgetType == "combobox" {
 				switch w.DataSource.Type {
 				case "database":
-					props = append(props, fmt.Sprintf("DataSource: database from %s", w.DataSource.Reference))
+					props = append(props, fmt.Sprintf("datasource: database from %s", w.DataSource.Reference))
 				case "microflow":
-					props = append(props, fmt.Sprintf("DataSource: microflow %s", w.DataSource.Reference))
+					props = append(props, fmt.Sprintf("datasource: microflow %s", w.DataSource.Reference))
 				}
 				if w.CaptionAttribute != "" {
-					props = append(props, fmt.Sprintf("CaptionAttribute: %s", w.CaptionAttribute))
+					props = append(props, fmt.Sprintf("captionattribute: %s", w.CaptionAttribute))
 				}
 			}
 			// Show filter attributes for filter widgets
 			if len(w.FilterAttributes) > 0 {
-				props = append(props, fmt.Sprintf("Attributes: [%s]", strings.Join(w.FilterAttributes, ", ")))
+				props = append(props, fmt.Sprintf("attributes: [%s]", strings.Join(w.FilterAttributes, ", ")))
 			}
 			// Show filter expression if not default
 			if w.FilterExpression != "" && w.FilterExpression != "contains" {
-				props = append(props, fmt.Sprintf("FilterType: %s", w.FilterExpression))
+				props = append(props, fmt.Sprintf("filtertype: %s", w.FilterExpression))
 			}
 			props = appendAppearanceProps(props, w)
 			formatWidgetProps(ctx.Output, prefix, header, props, "\n")
@@ -619,10 +619,10 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 			itemHeader := fmt.Sprintf("item %s", child.Name)
 			props := []string{}
 			if child.Action != "" {
-				props = append(props, fmt.Sprintf("Action: %s", child.Action))
+				props = append(props, fmt.Sprintf("action: %s", child.Action))
 			}
 			if child.ButtonStyle != "" && child.ButtonStyle != "Default" {
-				props = append(props, fmt.Sprintf("ButtonStyle: %s", child.ButtonStyle))
+				props = append(props, fmt.Sprintf("buttonstyle: %s", child.ButtonStyle))
 			}
 			formatWidgetProps(ctx.Output, prefix+"  ", itemHeader, props, " {\n")
 			for _, cw := range child.Children {
@@ -656,11 +656,11 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 					}
 					dsVal += fmt.Sprintf(" sort by %s", strings.Join(sortParts, ", "))
 				}
-				props = append(props, fmt.Sprintf("DataSource: %s", dsVal))
+				props = append(props, fmt.Sprintf("datasource: %s", dsVal))
 			case "microflow":
-				props = append(props, fmt.Sprintf("DataSource: microflow %s", w.DataSource.Reference))
+				props = append(props, fmt.Sprintf("datasource: microflow %s", w.DataSource.Reference))
 			case "parameter":
-				props = append(props, fmt.Sprintf("DataSource: %s", w.DataSource.Reference))
+				props = append(props, fmt.Sprintf("datasource: %s", w.DataSource.Reference))
 			}
 		}
 		props = appendAppearanceProps(props, w)
@@ -679,7 +679,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		header := fmt.Sprintf("snippetcall %s", w.Name)
 		props := []string{}
 		if w.Content != "" {
-			props = append(props, fmt.Sprintf("Snippet: %s", w.Content))
+			props = append(props, fmt.Sprintf("snippet: %s", w.Content))
 		}
 		props = appendAppearanceProps(props, w)
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
@@ -706,13 +706,13 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 					}
 					dsVal += fmt.Sprintf(" where %s", xpath)
 				}
-				props = append(props, fmt.Sprintf("DataSource: %s", dsVal))
+				props = append(props, fmt.Sprintf("datasource: %s", dsVal))
 			case "microflow":
-				props = append(props, fmt.Sprintf("DataSource: microflow %s", w.DataSource.Reference))
+				props = append(props, fmt.Sprintf("datasource: microflow %s", w.DataSource.Reference))
 			case "nanoflow":
-				props = append(props, fmt.Sprintf("DataSource: nanoflow %s", w.DataSource.Reference))
+				props = append(props, fmt.Sprintf("datasource: nanoflow %s", w.DataSource.Reference))
 			case "parameter":
-				props = append(props, fmt.Sprintf("DataSource: %s", w.DataSource.Reference))
+				props = append(props, fmt.Sprintf("datasource: %s", w.DataSource.Reference))
 			}
 		}
 		props = appendAppearanceProps(props, w)
@@ -738,12 +738,14 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 }
 
 // deriveColumnName produces a semantic column name from the column's attribute
-// or caption. Falls back to "col%d" when neither is available.
+// or caption. Always prefixes with "col" so the result is never a reserved
+// keyword (e.g. "Status" → "colStatus"). Falls back to "col%d".
 func deriveColumnName(col rawDataGridColumn, index int) string {
 	if col.Attribute != "" {
-		// Use the short attribute name (last segment after dot)
+		// Use the short attribute name (last segment after dot), with "col" prefix
+		// to avoid reserved-keyword collisions (Status, Title, Content, etc.).
 		parts := strings.Split(col.Attribute, ".")
-		return parts[len(parts)-1]
+		return "col" + parts[len(parts)-1]
 	}
 	if col.Caption != "" {
 		// Sanitize caption to a valid identifier: keep alphanumeric, replace rest with underscore
@@ -756,7 +758,7 @@ func deriveColumnName(col rawDataGridColumn, index int) string {
 		// Trim leading/trailing underscores and collapse multiples
 		result := strings.TrimFunc(sanitized, func(r rune) bool { return r == '_' })
 		if result != "" {
-			return result
+			return "col" + result
 		}
 	}
 	return fmt.Sprintf("col%d", index+1)
@@ -767,13 +769,13 @@ func outputDataGrid2ColumnV3(ctx *ExecContext, prefix, colName string, col rawDa
 	// Build the main column properties
 	var props []string
 	if col.Attribute != "" {
-		props = append(props, fmt.Sprintf("Attribute: %s", col.Attribute))
+		props = append(props, fmt.Sprintf("attribute: %s", col.Attribute))
 	}
 	if col.Caption != "" {
-		props = append(props, fmt.Sprintf("Caption: %s", mdlQuote(col.Caption)))
+		props = append(props, fmt.Sprintf("caption: %s", mdlQuote(col.Caption)))
 	}
 	if len(col.CaptionParams) > 0 {
-		props = append(props, fmt.Sprintf("CaptionParams: [%s]", strings.Join(formatParametersV3(col.CaptionParams), ", ")))
+		props = append(props, fmt.Sprintf("captionparams: [%s]", strings.Join(formatParametersV3(col.CaptionParams), ", ")))
 	}
 	// Add ShowContentAs if not default "attribute"
 	if col.ShowContentAs != "" && col.ShowContentAs != "attribute" {
@@ -781,9 +783,9 @@ func outputDataGrid2ColumnV3(ctx *ExecContext, prefix, colName string, col rawDa
 	}
 	// Add DynamicText content when ShowContentAs is dynamicText
 	if col.ShowContentAs == "dynamicText" && col.DynamicText != "" {
-		props = append(props, fmt.Sprintf("Content: %s", mdlQuote(col.DynamicText)))
+		props = append(props, fmt.Sprintf("content: %s", mdlQuote(col.DynamicText)))
 		if len(col.DynamicTextParams) > 0 {
-			props = append(props, fmt.Sprintf("ContentParams: [%s]", strings.Join(formatParametersV3(col.DynamicTextParams), ", ")))
+			props = append(props, fmt.Sprintf("contentparams: [%s]", strings.Join(formatParametersV3(col.DynamicTextParams), ", ")))
 		}
 	}
 	// Add column styling properties if non-default
@@ -819,7 +821,7 @@ func outputDataGrid2ColumnV3(ctx *ExecContext, prefix, colName string, col rawDa
 		props = append(props, fmt.Sprintf("Size: %s", col.Size))
 	}
 	if col.Visible != "" && col.Visible != "true" {
-		props = append(props, fmt.Sprintf("Visible: %s", mdlQuote(col.Visible)))
+		props = append(props, fmt.Sprintf("visible: %s", mdlQuote(col.Visible)))
 	}
 	if col.DynamicCellClass != "" {
 		props = append(props, fmt.Sprintf("DynamicCellClass: %s", mdlQuote(col.DynamicCellClass)))

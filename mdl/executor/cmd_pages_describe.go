@@ -100,16 +100,16 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	header := fmt.Sprintf("create or modify page %s.%s", modName, foundPage.Name())
 	props := []string{}
 	if title != "" {
-		props = append(props, fmt.Sprintf("Title: %s", mdlQuote(title)))
+		props = append(props, fmt.Sprintf("title: %s", mdlQuote(title)))
 	}
 	if layoutName != "" {
-		props = append(props, fmt.Sprintf("Layout: %s", layoutName))
+		props = append(props, fmt.Sprintf("layout: %s", layoutName))
 	}
 	if url := foundPage.Url(); url != "" {
-		props = append(props, fmt.Sprintf("Url: %s", mdlQuote(url)))
+		props = append(props, fmt.Sprintf("url: %s", mdlQuote(url)))
 	}
 	if folderPath := h.BuildFolderPath(foundContainerID); folderPath != "" {
-		props = append(props, fmt.Sprintf("Folder: %s", mdlQuote(folderPath)))
+		props = append(props, fmt.Sprintf("folder: %s", mdlQuote(folderPath)))
 	}
 	pageParamsItems := foundPage.ParametersItems()
 	if len(pageParamsItems) > 0 {
@@ -121,7 +121,7 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 			}
 			params = append(params, fmt.Sprintf("$%s: %s", pp.Name(), pageParamTypeMDLGen(pp.ParameterType())))
 		}
-		props = append(props, fmt.Sprintf("Params: { %s }", strings.Join(params, ", ")))
+		props = append(props, fmt.Sprintf("params: { %s }", strings.Join(params, ", ")))
 	}
 	// Output page variables from raw BSON
 	if rawData != nil {
@@ -139,7 +139,7 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 				}
 				varParts = append(varParts, fmt.Sprintf("$%s: %s = %s", varName, varTypeName, mdlQuote(defaultVal)))
 			}
-			props = append(props, fmt.Sprintf("Variables: { %s }", strings.Join(varParts, ", ")))
+			props = append(props, fmt.Sprintf("variables: { %s }", strings.Join(varParts, ", ")))
 		}
 	}
 
@@ -245,10 +245,10 @@ func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
 				}
 				paramParts = append(paramParts, fmt.Sprintf("$%s: %s", sp.Name(), typeStr))
 			}
-			snippetProps = append(snippetProps, fmt.Sprintf("Params: { %s }", strings.Join(paramParts, ", ")))
+			snippetProps = append(snippetProps, fmt.Sprintf("params: { %s }", strings.Join(paramParts, ", ")))
 		}
 		if folderPath != "" {
-			snippetProps = append(snippetProps, fmt.Sprintf("Folder: %s", mdlQuote(folderPath)))
+			snippetProps = append(snippetProps, fmt.Sprintf("folder: %s", mdlQuote(folderPath)))
 		}
 		fmt.Fprintf(ctx.Output, " (%s)", strings.Join(snippetProps, ", "))
 	}

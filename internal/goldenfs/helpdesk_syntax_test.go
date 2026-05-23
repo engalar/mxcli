@@ -8,13 +8,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
 // TestHelpdeskMDL_SyntaxCheck runs `mxcli check` against both helpdesk MDL
-// source files and expects zero errors from each. The test skips gracefully
-// when the mxcli binary is not yet built (set MXCLI_BINARY or run make build).
+// source files and expects a zero exit code from each. The test skips
+// gracefully when the mxcli binary is not yet built (set MXCLI_BINARY or
+// run make build).
 func TestHelpdeskMDL_SyntaxCheck(t *testing.T) {
 	mxcliBin := findMxcliBinaryForTest(t)
 	if mxcliBin == "" {
@@ -36,17 +36,10 @@ func TestHelpdeskMDL_SyntaxCheck(t *testing.T) {
 			}
 			cmd := exec.Command(mxcliBin, "check", f)
 			output, _ := cmd.CombinedOutput()
-			out := string(output)
-			t.Logf("mxcli check output:\n%s", out)
-			var errLines []string
-			for _, line := range strings.Split(out, "\n") {
-				if strings.Contains(line, "[error]") || strings.HasPrefix(line, "Error") {
-					errLines = append(errLines, line)
-				}
-			}
-			if len(errLines) > 0 {
-				t.Errorf("mxcli check found %d error(s) in %s:\n%s",
-					len(errLines), filepath.Base(f), strings.Join(errLines, "\n"))
+			t.Logf("mxcli check output:\n%s", output)
+			if cmd.ProcessState.ExitCode() != 0 {
+				t.Errorf("mxcli check failed for %s (exit %d) — see output above",
+					filepath.Base(f), cmd.ProcessState.ExitCode())
 			}
 		})
 	}

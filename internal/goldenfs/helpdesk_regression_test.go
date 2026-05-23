@@ -366,9 +366,10 @@ func describeMDL(t *testing.T, mprPath string) string {
 }
 
 // TestHelpdeskGolden_DescribeSnapshot opens the committed B1 golden MPR
-// (no MDL execution) and verifies that the full describe output matches
+// (no MDL execution) and verifies that the parseable describe output matches
 // the committed snapshot at testdata/helpdesk-golden/describe-snapshot.mdl.
-// Run with -update-golden to regenerate the snapshot.
+// The snapshot is pure MDL (no tabular SHOW output) so that mxcli check can
+// validate it. Run with -update-golden to regenerate the snapshot.
 func TestHelpdeskGolden_DescribeSnapshot(t *testing.T) {
 	goldenMPR := helpdeskGoldenMPR(t)
 	if _, err := os.Stat(goldenMPR); err != nil {
@@ -377,7 +378,7 @@ func TestHelpdeskGolden_DescribeSnapshot(t *testing.T) {
 
 	snapshotPath := filepath.Join(helpdeskGoldenDir(t), "describe-snapshot.mdl")
 
-	got := describeMDL(t, goldenMPR)
+	got := describeMDLParseable(t, goldenMPR)
 
 	if *updateGolden {
 		if err := os.WriteFile(snapshotPath, []byte(got), 0o644); err != nil {
