@@ -330,8 +330,13 @@ func formatDeleteActionGen(a *genMf.DeleteAction) string {
 	return fmt.Sprintf("delete $%s;", a.DeleteVariableName())
 }
 
-// formatCommitActionGen emits `commit $Var [with events] [refresh] [on error rollback];`.
+// formatCommitActionGen emits `commit $Var [with events] [refresh];`.
 // Mirrors legacy CommitObjectsAction.
+//
+// Note: ErrorHandlingType is always "Rollback" for commit activities in
+// microflows (it is the BSON default). The MDL "on error rollback" modifier
+// is therefore indistinguishable from a plain commit in stored BSON and is
+// not emitted here.
 func formatCommitActionGen(a *genMf.CommitAction) string {
 	varName := strings.TrimSpace(a.CommitVariableName())
 	if varName == "" {
@@ -343,9 +348,6 @@ func formatCommitActionGen(a *genMf.CommitAction) string {
 	}
 	if a.RefreshInClient() {
 		suffix += " refresh"
-	}
-	if a.ErrorHandlingType() == "Rollback" {
-		suffix += " on error rollback"
 	}
 	return fmt.Sprintf("commit $%s%s;", varName, suffix)
 }

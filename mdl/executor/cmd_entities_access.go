@@ -34,12 +34,9 @@ func memberAccessLocalName(ma *genDm.MemberAccess, attrNames map[string]string) 
 		return attrQN
 	}
 
-	// Association: module-scoped, always stored as "Module.AssociationName".
-	assocQN := ma.AssociationQualifiedName()
-	if parts := strings.Split(assocQN, "."); len(parts) == 2 {
-		return parts[1]
-	}
-	return assocQN
+	// Association: return the full qualified name (Module.AssocName) so the
+	// describe output matches the source MDL and roundtrips cleanly.
+	return ma.AssociationQualifiedName()
 }
 
 // outputEntityAccessGrantsGen outputs GRANT statements for entity access rules.

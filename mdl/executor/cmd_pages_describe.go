@@ -155,8 +155,8 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 		formatWidgetProps(ctx.Output, "", header, props, "")
 	}
 
-	// Add GRANT VIEW if roles are assigned
-	if allowed := foundPage.AllowedRolesQualifiedNames(); len(allowed) > 0 {
+	// Add GRANT VIEW if roles are assigned, excluding the auto-created User placeholder.
+	if allowed := filterAutoDocumentRoles(foundPage.AllowedRolesQualifiedNames()); len(allowed) > 0 {
 		fmt.Fprintf(ctx.Output, "\n\ngrant view on page %s.%s to %s;",
 			modName, foundPage.Name(), strings.Join(allowed, ", "))
 	}

@@ -55,7 +55,7 @@ create or modify persistent entity KB.ArticleRating (
 )
 system members (owner);
 
-grant KB.Reader on KB.ArticleRating (read (Score, Comment), write (Score, Comment)) where '[System.owner=''[%CurrentUser%]'']';
+grant KB.Reader on KB.ArticleRating (read (KB.ArticleRating_Article, Score, Comment), write (Score, Comment)) where '[System.owner=''[%CurrentUser%]'']';
 
 grant KB.Contributor on KB.ArticleRating (create, delete, read *, write *);
 
@@ -102,7 +102,7 @@ index (Status)
 index (Priority)
 index (SLADueAt);
 
-grant HD.CustomerRole on HD.Ticket (create, read (Status, Priority, SLADueAt, ResolvedAt, IsOverSLA, Subject, Description), write (Subject, Description)) where '[HD.Ticket_Customer/HD.Customer/System.owner=''[%CurrentUser%]'']';
+grant HD.CustomerRole on HD.Ticket (create, read (Status, Priority, SLADueAt, ResolvedAt, IsOverSLA, HD.Ticket_Customer, HD.Ticket_Agent, Subject, Description, HD.Ticket_KBArticle), write (Subject, Description, HD.Ticket_KBArticle)) where '[HD.Ticket_Customer/HD.Customer/System.owner=''[%CurrentUser%]'']';
 
 grant HD.AgentRole on HD.Ticket (create, read *, write *);
 
@@ -247,7 +247,7 @@ begin
     change $Article (Status = KB.ArticleStatus.Published
 , PublishedAt = [%CurrentDateTime%]
 );
-    commit $Article on error rollback;
+    commit $Article;
     return true;
   end if;
 end;
@@ -261,7 +261,7 @@ returns Boolean as $Success
 begin
   change $Article (Status = KB.ArticleStatus.Archived
 );
-  commit $Article on error rollback;
+  commit $Article;
   return true;
 end;
 
@@ -311,7 +311,7 @@ begin
 );
       end if;
     end if;
-    commit $Ticket on error rollback;
+    commit $Ticket;
     return true;
   end if;
 end;
@@ -331,7 +331,7 @@ begin
     change $Ticket (Status = HD.TicketStatus.InProgress
 , HD.Ticket_Agent = $Agent
 );
-    commit $Ticket on error rollback;
+    commit $Ticket;
     return true;
   end if;
 end;
@@ -352,7 +352,7 @@ begin
 , ResolvedAt = $Now
 , IsOverSLA = $IsOver
 );
-    commit $Ticket on error rollback;
+    commit $Ticket;
     return true;
   end if;
 end;
@@ -369,7 +369,7 @@ begin
   else
     change $Ticket (Status = HD.TicketStatus.Open
 , ResolvedAt = empty);
-    commit $Ticket on error rollback;
+    commit $Ticket;
     return true;
   end if;
 end;
@@ -386,7 +386,7 @@ begin
   else
     change $Ticket (Status = HD.TicketStatus.Closed
 );
-    commit $Ticket on error rollback;
+    commit $Ticket;
     return true;
   end if;
 end;
@@ -399,7 +399,7 @@ create or modify microflow HD.ACT_Ticket_SafeCommit (
 returns Boolean as $Success
 begin
   declare $Success Boolean = false;
-  commit $Ticket on error rollback;
+  commit $Ticket;
   set $Success = true
 ;
   return $Success;
@@ -527,7 +527,7 @@ begin
   if $Ticket != empty then
     change $Ticket (Priority = HD.TicketPriority.Critical
 );
-    commit $Ticket on error rollback;
+    commit $Ticket;
   end if;
   return;
 end;
@@ -538,7 +538,7 @@ create or modify microflow HD.WFS_Reject (
 begin
   change $EscalationRequest (RejectionReason = 'Rejected by manager review board.'
 );
-  commit $EscalationRequest on error rollback;
+  commit $EscalationRequest;
   return;
 end;
 /
@@ -548,7 +548,7 @@ create or modify microflow HD.WFS_Escalation_Initialize (
 begin
   change $EscalationRequest (RequestedAt = [%CurrentDateTime%]
 );
-  commit $EscalationRequest on error rollback;
+  commit $EscalationRequest;
   return;
 end;
 /
@@ -558,7 +558,7 @@ create or modify microflow HD.WFS_AutoReject (
 begin
   change $EscalationRequest (RejectionReason = 'Auto-rejected: no manager response within 48 hours.'
 );
-  commit $EscalationRequest on error rollback;
+  commit $EscalationRequest;
   return;
 end;
 /
@@ -573,7 +573,7 @@ begin
     change $Ticket (Priority = HD.TicketPriority.Critical
 , Status = HD.TicketStatus.InProgress
 );
-    commit $Ticket on error rollback;
+    commit $Ticket;
   end if;
   return;
 end;
@@ -607,7 +607,7 @@ begin
 , RequestedAt = [%CurrentDateTime%]
 , EscalationRequest_Ticket = $Ticket
 );
-    commit $EscalationRequest on error rollback;
+    commit $EscalationRequest;
     call workflow HD.WF_TicketEscalation (EscalationRequest = $EscalationRequest);
     return true;
   end if;
@@ -779,7 +779,14 @@ begin
 
             };
 
-      };
+      }
+    boundary event non interrupting timer 'addHours([%CurrentDateTime%], 12)'
+    {
+      call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext') -- WFS_SendReminder
+        outcomes
+          default -> { };
+
+    };
 
 end workflow
 /
@@ -804,9 +811,23 @@ begin
 
       }
       false -> {
-        wait for notification; -- WaitForManagerAvailable
+        wait for notification -- WaitForManagerAvailable
+          boundary event non interrupting timer 'addHours([%CurrentDateTime%], 12)'
+          {
+            call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext') -- WFS_SendReminder
+              outcomes
+                default -> { };
 
-        call workflow HD.WF_SUB_ManagerReview comment 'WF_SUB_ManagerReview' with (WorkflowContext = '$WorkflowContext');
+          };
+
+        call workflow HD.WF_SUB_ManagerReview comment 'WF_SUB_ManagerReview' with (WorkflowContext = '$WorkflowContext')
+          boundary event interrupting timer 'addHours([%CurrentDateTime%], 48)'
+          {
+            call microflow HD.WFS_AutoReject with (EscalationRequest = '$WorkflowContext') -- WFS_AutoReject
+              outcomes
+                default -> { };
+
+          };
 
         parallel split -- Parallel split
           path 1 {
@@ -881,7 +902,7 @@ create or modify page KB.Article_Overview (
   }
 }
 
-grant view on page KB.Article_Overview to KB.User, KB.Reader, KB.Contributor, KB.Admin;
+grant view on page KB.Article_Overview to KB.Reader, KB.Contributor, KB.Admin;
 create or modify page KB.Article_Detail (
   title: 'Article',
   layout: Atlas_Core.Atlas_Default,
@@ -908,7 +929,7 @@ create or modify page KB.Article_Detail (
   }
 }
 
-grant view on page KB.Article_Detail to KB.User, KB.Reader, KB.Contributor, KB.Admin;
+grant view on page KB.Article_Detail to KB.Reader, KB.Contributor, KB.Admin;
 create or modify page KB.Article_NewEdit (
   title: 'New / Edit Article',
   layout: Atlas_Core.Atlas_Default,
@@ -933,8 +954,6 @@ create or modify page KB.Article_NewEdit (
     }
   }
 }
-
-grant view on page KB.Article_NewEdit to KB.User;
 create or modify page HD.Ticket_Overview (title: 'Tickets', layout: Atlas_Core.Atlas_Default, folder: 'Ticket') {
   layoutgrid lgMain {
     row row1 {
@@ -953,7 +972,7 @@ create or modify page HD.Ticket_Overview (title: 'Tickets', layout: Atlas_Core.A
   }
 }
 
-grant view on page HD.Ticket_Overview to HD.User, HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Ticket_Overview to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.Ticket_Detail (
   title: 'Ticket',
   layout: Atlas_Core.Atlas_Default,
@@ -986,7 +1005,7 @@ create or modify page HD.Ticket_Detail (
   }
 }
 
-grant view on page HD.Ticket_Detail to HD.User, HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Ticket_Detail to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.Ticket_NewEdit (
   title: 'New / Edit Ticket',
   layout: Atlas_Core.Atlas_Default,
@@ -1012,8 +1031,6 @@ create or modify page HD.Ticket_NewEdit (
     }
   }
 }
-
-grant view on page HD.Ticket_NewEdit to HD.User;
 create or modify page HD.TicketSearch_Form (
   title: 'Search Tickets',
   layout: Atlas_Core.PopupLayout,
@@ -1029,7 +1046,7 @@ create or modify page HD.TicketSearch_Form (
   actionbutton btnClose (caption: 'Close')
 }
 
-grant view on page HD.TicketSearch_Form to HD.User, HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.TicketSearch_Form to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.EscalationReview_Form (
   title: 'Escalation Review',
   layout: Atlas_Core.Atlas_Default,
@@ -1045,7 +1062,7 @@ create or modify page HD.EscalationReview_Form (
   }
 }
 
-grant view on page HD.EscalationReview_Form to HD.User, HD.ManagerRole;
+grant view on page HD.EscalationReview_Form to HD.ManagerRole;
 create or modify page HD.EscalationWorkflow_Overview (
   title: 'Escalation Workflow',
   layout: Atlas_Core.Atlas_Default,
@@ -1060,7 +1077,7 @@ create or modify page HD.EscalationWorkflow_Overview (
   }
 }
 
-grant view on page HD.EscalationWorkflow_Overview to HD.User, HD.ManagerRole;
+grant view on page HD.EscalationWorkflow_Overview to HD.ManagerRole;
 create or modify page HD.EscalationStart_Form (
   title: 'Request Escalation',
   layout: Atlas_Core.PopupLayout,
@@ -1074,5 +1091,3 @@ create or modify page HD.EscalationStart_Form (
     }
   }
 }
-
-grant view on page HD.EscalationStart_Form to HD.User;
