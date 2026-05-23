@@ -1945,3 +1945,68 @@ describe entity DmTest.InternalDocument;
 -- Total: 45+ domain model elements
 --
 -- ############################################################################
+
+-- ############################################################################
+-- PART N: ENTITY CONSTRAINT QUICK-REFERENCE
+-- ############################################################################
+--
+-- Minimal, focused examples for the per-attribute constraint forms.
+-- Useful for verifying DESCRIBE roundtrip and `create or modify` idempotency.
+-- ############################################################################
+
+-- MARK: Constraint Quick-Reference
+
+-- ============================================================================
+-- Level N.1: not null with custom error message
+-- ============================================================================
+
+/**
+ * Customer entity demonstrating not-null with a user-facing error message.
+ * The error string is surfaced in Studio Pro form validation.
+ */
+create or modify persistent entity DmTest.ConstraintCustomer (
+  Name: string(200) not null error 'Customer name is required',
+  Email: string(200) not null error 'Email is required',
+  Age: integer default 0
+);
+
+-- ============================================================================
+-- Level N.2: unique with custom error message
+-- ============================================================================
+
+/**
+ * SKU registry entity demonstrating unique with custom error message.
+ */
+create or modify persistent entity DmTest.ConstraintSku (
+  Code: string(50) unique error 'SKU already in use',
+  Description: string(500)
+);
+
+-- ============================================================================
+-- Level N.3: combined not null + unique + default on a single attribute
+-- ============================================================================
+
+/**
+ * User account demonstrating multiple constraints stacked on one attribute,
+ * plus DEFAULT on a separate column.
+ */
+create or modify persistent entity DmTest.ConstraintAccount (
+  Username: string(50) not null error 'Username is required' unique error 'Username already taken',
+  DisplayName: string(200) not null error 'Display name is required',
+  IsActive: boolean default true,
+  CreatedOn: dateTime
+);
+
+-- ============================================================================
+-- Level N.4: idempotent re-execute via `create or modify`
+-- ============================================================================
+
+-- Re-executing the same statement is a no-op when the entity already matches.
+-- Useful for migration scripts and demo-data setup.
+create or modify persistent entity DmTest.ConstraintAccount (
+  Username: string(50) not null error 'Username is required' unique error 'Username already taken',
+  DisplayName: string(200) not null error 'Display name is required',
+  IsActive: boolean default true,
+  CreatedOn: dateTime
+);
+
