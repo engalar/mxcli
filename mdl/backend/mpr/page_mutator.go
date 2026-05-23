@@ -596,6 +596,15 @@ func dSetArray(doc bson.D, key string, elements []any) {
 	dSet(doc, key, result)
 }
 
+// buildVersionedArray wraps elements in a Mendix-style BSON array with an
+// int32(3) version marker as the first element.
+func buildVersionedArray(elements []any) bson.A {
+	result := make(bson.A, 0, len(elements)+1)
+	result = append(result, int32(3))
+	result = append(result, elements...)
+	return result
+}
+
 // extractBinaryIDFromDoc extracts a binary ID string from a bson.D field.
 func extractBinaryIDFromDoc(val any) string {
 	switch bin := val.(type) {

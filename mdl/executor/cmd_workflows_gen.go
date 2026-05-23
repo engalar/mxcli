@@ -440,23 +440,35 @@ func formatBoundaryEventsGen(events []element.Element, indent string) []string {
 }
 
 // boundaryEventDelayGen extracts the timer delay string from any of the
-// concrete BoundaryEvent gen subtypes. gen exposes the field as
-// `Delay()` while the legacy sdk used `TimerDelay`.
+// concrete BoundaryEvent gen subtypes.
+//
+// Two BSON field names are in use:
+//   - "Delay"               — gen-native write path (create workflow inline)
+//   - "FirstExecutionTime"  — alter workflow InsertBoundaryEventGen write path
+//
+// Both are tried so that snapshots produced by either path round-trip correctly.
 func boundaryEventDelayGen(ev element.Element) string {
 	switch v := ev.(type) {
 	case *genWf.InterruptingTimerBoundaryEvent:
-		return v.Delay()
+		if d := v.Delay(); d != "" {
+			return d
+		}
+		return v.FirstExecutionTime()
 	case *genWf.NonInterruptingTimerBoundaryEvent:
-		return v.Delay()
+		if d := v.Delay(); d != "" {
+			return d
+		}
+		return v.FirstExecutionTime()
 	case *genWf.TimerBoundaryEvent:
 		return v.Delay()
 	}
-	// Fallback: try both legacy and gen field names.
-	if v, _ := codec.ReadBSONFieldString(ev.Raw(), "Delay"); v != "" {
-		return v
+	// Fallback: check all known field names in the raw BSON.
+	for _, key := range []string{"Delay", "FirstExecutionTime", "TimerDelay"} {
+		if v, _ := codec.ReadBSONFieldString(ev.Raw(), key); v != "" {
+			return v
+		}
 	}
-	v, _ := codec.ReadBSONFieldString(ev.Raw(), "TimerDelay")
-	return v
+	return ""
 }
 
 // boundaryEventFlowGen extracts the nested Flow Part from a BoundaryEvent.
@@ -730,8 +742,7 @@ func formatUserTaskGen(elem element.Element, indent string) []string {
 		escaped := strings.ReplaceAll(shape.Description, "'", "''")
 		lines = append(lines, fmt.Sprintf("%s  description '%s'", indent, escaped))
 	}
-	// Emit completion method for multi-user tasks.
-	// MajorityCompletionCriteria is the default — omit for cleaner output.
+	// Emit completion method for multi-user tasks (always, for full roundtrip).
 	if shape.IsMulti && shape.CompletionCriteria != nil {
 		switch crit := shape.CompletionCriteria.(type) {
 		case *genWf.ThresholdCompletionCriteria:
@@ -740,7 +751,9 @@ func formatUserTaskGen(elem element.Element, indent string) []string {
 		case *genWf.ConsensusCompletionCriteria:
 			_ = crit
 			lines = append(lines, fmt.Sprintf("%s  completion method consensus", indent))
-		// MajorityCompletionCriteria: no output (is default)
+		case *genWf.MajorityCompletionCriteria:
+			_ = crit
+			lines = append(lines, fmt.Sprintf("%s  completion method majority", indent))
 		}
 	}
 	if len(shape.Outcomes) > 0 {

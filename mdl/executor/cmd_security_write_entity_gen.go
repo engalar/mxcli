@@ -91,14 +91,21 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 
 	var memberAccesses []types.EntityMemberAccess
 
-	writeMemberSet := make(map[string]bool)
-	for _, m := range writeMembers {
-		writeMemberSet[m] = true
+	// memberSetFrom builds a lookup that accepts both qualified names
+	// ("HD.Ticket_Customer") and local names ("Ticket_Customer") so that
+	// association.Name() matches even when the MDL grant uses a qualified form.
+	memberSetFrom := func(members []string) map[string]bool {
+		s := make(map[string]bool, len(members)*2)
+		for _, m := range members {
+			s[m] = true
+			if idx := strings.LastIndex(m, "."); idx >= 0 {
+				s[m[idx+1:]] = true
+			}
+		}
+		return s
 	}
-	readMemberSet := make(map[string]bool)
-	for _, m := range readMembers {
-		readMemberSet[m] = true
-	}
+	writeMemberSet := memberSetFrom(writeMembers)
+	readMemberSet := memberSetFrom(readMembers)
 
 	for _, attrElem := range entity.AttributesItems() {
 		attr, ok := attrElem.(*genDm.Attribute)

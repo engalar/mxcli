@@ -558,7 +558,14 @@ func (m *mprWorkflowMutator) InsertBoundaryEventGen(activityRef string, atPos in
 	}
 	events := dGetArrayElements(dGet(actDoc, "BoundaryEvents"))
 	events = append(events, eventDoc)
-	dSetArray(actDoc, "BoundaryEvents", events)
+	// dSetArray only updates an existing field. When BoundaryEvents doesn't
+	// exist yet (newly-created activity with no inline boundary events), we
+	// must append the field to actDoc and then replace the activity document
+	// in the workflow BSON tree so the change is visible on Save().
+	if !dSet(actDoc, "BoundaryEvents", buildVersionedArray(events)) {
+		actDoc = append(actDoc, bson.E{Key: "BoundaryEvents", Value: buildVersionedArray(events)})
+		m.replaceActivity(actDoc)
+	}
 	return nil
 }
 

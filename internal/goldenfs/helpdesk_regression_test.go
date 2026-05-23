@@ -315,6 +315,15 @@ describe microflow HD.ACT_Workflow_Notify;
 -- Workflows
 describe workflow HD.WF_SUB_ManagerReview;
 describe workflow HD.WF_TicketEscalation;
+-- Constants
+describe constant HD.SLA_HIGH_HOURS;
+describe constant HD.SLA_CRITICAL_HOURS;
+-- User roles
+describe user role 'Customer';
+describe user role 'Agent';
+describe user role 'Manager';
+-- Navigation
+describe navigation Responsive;
 -- KB pages
 describe page KB.Article_Overview;
 describe page KB.Article_Detail;

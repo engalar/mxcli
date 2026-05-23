@@ -330,7 +330,7 @@ func formatDeleteActionGen(a *genMf.DeleteAction) string {
 	return fmt.Sprintf("delete $%s;", a.DeleteVariableName())
 }
 
-// formatCommitActionGen emits `commit $Var [with events] [refresh];`.
+// formatCommitActionGen emits `commit $Var [with events] [refresh] [on error rollback];`.
 // Mirrors legacy CommitObjectsAction.
 func formatCommitActionGen(a *genMf.CommitAction) string {
 	varName := strings.TrimSpace(a.CommitVariableName())
@@ -343,6 +343,9 @@ func formatCommitActionGen(a *genMf.CommitAction) string {
 	}
 	if a.RefreshInClient() {
 		suffix += " refresh"
+	}
+	if a.ErrorHandlingType() == "Rollback" {
+		suffix += " on error rollback"
 	}
 	return fmt.Sprintf("commit $%s%s;", varName, suffix)
 }

@@ -161,17 +161,14 @@ func DescribeNanoflowGenToString(ctx *ExecContext, nf *genMf.Nanoflow) (string, 
 	}
 	lines = append(lines, "end;")
 
-	// Allowed module roles → grant execute footer.
-	if roles := nf.AllowedModuleRolesQualifiedNames(); len(roles) > 0 {
-		bare := make([]string, 0, len(roles))
-		for _, r := range roles {
-			bare = append(bare, lastDotSegment(r))
-		}
+		// Allowed module roles → grant execute footer.
+	// Keep fully-qualified names and filter out the auto-created "User" placeholder.
+	if roles := filterAutoDocumentRoles(nf.AllowedModuleRolesQualifiedNames()); len(roles) > 0 {
 		simple := strings.SplitN(qualifiedName, ".", 2)
 		if len(simple) == 2 {
 			lines = append(lines,
 				"",
-				fmt.Sprintf("grant execute on nanoflow %s.%s to %s;", moduleName, simple[1], strings.Join(bare, ", ")),
+				fmt.Sprintf("grant execute on nanoflow %s.%s to %s;", moduleName, simple[1], strings.Join(roles, ", ")),
 			)
 		}
 	}

@@ -180,17 +180,14 @@ func DescribeMicroflowGenToString(ctx *ExecContext, mf *genMf.Microflow) (string
 	lines = append(lines, "end;")
 
 	// Allowed module roles → grant execute footer.
-	if roles := mf.AllowedModuleRolesQualifiedNames(); len(roles) > 0 {
-		// Strip module-qualifier; the legacy emitter writes bare role names.
-		bare := make([]string, 0, len(roles))
-		for _, r := range roles {
-			bare = append(bare, lastDotSegment(r))
-		}
+	// Keep fully-qualified names (e.g. "HD.AgentRole") and filter out the
+	// auto-created "User" placeholder role added by mxcli for mx-check compliance.
+	if roles := filterAutoDocumentRoles(mf.AllowedModuleRolesQualifiedNames()); len(roles) > 0 {
 		simple := strings.SplitN(qualifiedName, ".", 2)
 		if len(simple) == 2 {
 			lines = append(lines,
 				"",
-				fmt.Sprintf("grant execute on microflow %s.%s to %s;", moduleName, simple[1], strings.Join(bare, ", ")),
+				fmt.Sprintf("grant execute on microflow %s.%s to %s;", moduleName, simple[1], strings.Join(roles, ", ")),
 			)
 		}
 	}

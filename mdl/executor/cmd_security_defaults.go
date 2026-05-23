@@ -110,6 +110,24 @@ func documentRoleStrings(roles []model.ID) []string {
 	return values
 }
 
+// filterAutoDocumentRoles removes the auto-created "User" placeholder role
+// from a list of qualified role names. The placeholder (Module.User) is added
+// by mxcli for mx-check compliance and should not appear in describe output.
+func filterAutoDocumentRoles(roles []string) []string {
+	out := make([]string, 0, len(roles))
+	for _, r := range roles {
+		local := r
+		if idx := strings.LastIndex(r, "."); idx >= 0 {
+			local = r[idx+1:]
+		}
+		if local == autoDocumentRoleName {
+			continue
+		}
+		out = append(out, r)
+	}
+	return out
+}
+
 func cloneRoleIDs(roles []model.ID) []model.ID {
 	if len(roles) == 0 {
 		return nil

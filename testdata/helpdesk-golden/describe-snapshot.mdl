@@ -247,12 +247,12 @@ begin
     change $Article (Status = KB.ArticleStatus.Published
 , PublishedAt = [%CurrentDateTime%]
 );
-    commit $Article;
+    commit $Article on error rollback;
     return true;
   end if;
 end;
 
-grant execute on microflow KB.ACT_Article_Publish to User, Contributor, Admin;
+grant execute on microflow KB.ACT_Article_Publish to KB.Contributor, KB.Admin;
 /
 create or modify microflow KB.ACT_Article_Archive (
   $Article: KB.Article
@@ -261,11 +261,11 @@ returns Boolean as $Success
 begin
   change $Article (Status = KB.ArticleStatus.Archived
 );
-  commit $Article;
+  commit $Article on error rollback;
   return true;
 end;
 
-grant execute on microflow KB.ACT_Article_Archive to User, Contributor, Admin;
+grant execute on microflow KB.ACT_Article_Archive to KB.Contributor, KB.Admin;
 /
 create or modify microflow KB.SUB_Article_TruncateContent (
   $Article: KB.Article
@@ -275,8 +275,6 @@ begin
   declare $Preview String = $Article/Content;
   return $Preview;
 end;
-
-grant execute on microflow KB.SUB_Article_TruncateContent to User;
 /
 create or modify nanoflow KB.NF_Article_FormatPreview (
   $Article: KB.Article
@@ -287,7 +285,7 @@ begin
   return $Preview;
 end;
 
-grant execute on nanoflow KB.NF_Article_FormatPreview to User, Reader, Contributor, Admin;
+grant execute on nanoflow KB.NF_Article_FormatPreview to KB.Reader, KB.Contributor, KB.Admin;
 /
 create or modify microflow HD.ACT_Ticket_Submit (
   $Ticket: HD.Ticket
@@ -313,12 +311,12 @@ begin
 );
       end if;
     end if;
-    commit $Ticket;
+    commit $Ticket on error rollback;
     return true;
   end if;
 end;
 
-grant execute on microflow HD.ACT_Ticket_Submit to User, CustomerRole, AgentRole, ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Submit to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Ticket_Assign (
   $Ticket: HD.Ticket,
@@ -333,12 +331,12 @@ begin
     change $Ticket (Status = HD.TicketStatus.InProgress
 , HD.Ticket_Agent = $Agent
 );
-    commit $Ticket;
+    commit $Ticket on error rollback;
     return true;
   end if;
 end;
 
-grant execute on microflow HD.ACT_Ticket_Assign to User, AgentRole, ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Assign to HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Ticket_Resolve (
   $Ticket: HD.Ticket
@@ -354,12 +352,12 @@ begin
 , ResolvedAt = $Now
 , IsOverSLA = $IsOver
 );
-    commit $Ticket;
+    commit $Ticket on error rollback;
     return true;
   end if;
 end;
 
-grant execute on microflow HD.ACT_Ticket_Resolve to User, AgentRole, ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Resolve to HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Ticket_Reopen (
   $Ticket: HD.Ticket
@@ -371,12 +369,12 @@ begin
   else
     change $Ticket (Status = HD.TicketStatus.Open
 , ResolvedAt = empty);
-    commit $Ticket;
+    commit $Ticket on error rollback;
     return true;
   end if;
 end;
 
-grant execute on microflow HD.ACT_Ticket_Reopen to User, AgentRole, ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Reopen to HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Ticket_Close (
   $Ticket: HD.Ticket
@@ -388,12 +386,12 @@ begin
   else
     change $Ticket (Status = HD.TicketStatus.Closed
 );
-    commit $Ticket;
+    commit $Ticket on error rollback;
     return true;
   end if;
 end;
 
-grant execute on microflow HD.ACT_Ticket_Close to User, AgentRole, ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Close to HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Ticket_SafeCommit (
   $Ticket: HD.Ticket
@@ -401,13 +399,11 @@ create or modify microflow HD.ACT_Ticket_SafeCommit (
 returns Boolean as $Success
 begin
   declare $Success Boolean = false;
-  commit $Ticket;
+  commit $Ticket on error rollback;
   set $Success = true
 ;
   return $Success;
 end;
-
-grant execute on microflow HD.ACT_Ticket_SafeCommit to User;
 /
 create or modify microflow HD.ACT_Ticket_MarkCommentsRead (
   $Ticket: HD.Ticket
@@ -418,12 +414,11 @@ begin
     limit 100;
   loop $Comment in $Comments
   begin
-    commit $Comment;
+    change $Comment (IsInternal = false
+);
   end loop;
   return;
 end;
-
-grant execute on microflow HD.ACT_Ticket_MarkCommentsRead to User;
 /
 create or modify microflow HD.ACT_EscalationRequest_Cleanup (
   $Ticket: HD.Ticket
@@ -439,7 +434,7 @@ begin
   return;
 end;
 
-grant execute on microflow HD.ACT_EscalationRequest_Cleanup to User, AgentRole, ManagerRole;
+grant execute on microflow HD.ACT_EscalationRequest_Cleanup to HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.DS_OverdueTicketCount ()
 returns Integer as $Count
@@ -450,8 +445,6 @@ begin
   $Count = count($Overdue);
   return $Count;
 end;
-
-grant execute on microflow HD.DS_OverdueTicketCount to User;
 /
 create or modify nanoflow HD.NF_Ticket_QuickCreate (
   $Customer: HD.Customer,
@@ -467,7 +460,7 @@ begin
   return $Ticket;
 end;
 
-grant execute on nanoflow HD.NF_Ticket_QuickCreate to User, CustomerRole, AgentRole;
+grant execute on nanoflow HD.NF_Ticket_QuickCreate to HD.CustomerRole, HD.AgentRole;
 /
 create or modify nanoflow HD.NF_TicketSearch_Apply (
   $Search: HD.TicketSearch
@@ -478,7 +471,7 @@ begin
   return $Tickets;
 end;
 
-grant execute on nanoflow HD.NF_TicketSearch_Apply to User, CustomerRole, AgentRole, ManagerRole;
+grant execute on nanoflow HD.NF_TicketSearch_Apply to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 /
 create or modify nanoflow HD.NF_Priority_GetLabel (
   $PriorityStr: String
@@ -503,7 +496,7 @@ begin
   return $CSSClass;
 end;
 
-grant execute on nanoflow HD.NF_Priority_GetLabel to User, CustomerRole, AgentRole, ManagerRole;
+grant execute on nanoflow HD.NF_Priority_GetLabel to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.WFA_GetManagerAssignees (
   $workflow: System.Workflow,
@@ -515,8 +508,6 @@ begin
     limit 10;
   return $Users;
 end;
-
-grant execute on microflow HD.WFA_GetManagerAssignees to User;
 /
 create or modify microflow HD.WFS_SendReminder (
   $EscalationRequest: HD.EscalationRequest
@@ -525,8 +516,6 @@ begin
   log info node 'Application' '{1}' with ({1} = 'Escalation reminder sent for request ' + toString($EscalationRequest/Reason));
   return;
 end;
-
-grant execute on microflow HD.WFS_SendReminder to User;
 /
 create or modify microflow HD.WFS_Approve (
   $EscalationRequest: HD.EscalationRequest
@@ -538,12 +527,10 @@ begin
   if $Ticket != empty then
     change $Ticket (Priority = HD.TicketPriority.Critical
 );
-    commit $Ticket;
+    commit $Ticket on error rollback;
   end if;
   return;
 end;
-
-grant execute on microflow HD.WFS_Approve to User;
 /
 create or modify microflow HD.WFS_Reject (
   $EscalationRequest: HD.EscalationRequest
@@ -551,11 +538,9 @@ create or modify microflow HD.WFS_Reject (
 begin
   change $EscalationRequest (RejectionReason = 'Rejected by manager review board.'
 );
-  commit $EscalationRequest;
+  commit $EscalationRequest on error rollback;
   return;
 end;
-
-grant execute on microflow HD.WFS_Reject to User;
 /
 create or modify microflow HD.WFS_Escalation_Initialize (
   $EscalationRequest: HD.EscalationRequest
@@ -563,11 +548,9 @@ create or modify microflow HD.WFS_Escalation_Initialize (
 begin
   change $EscalationRequest (RequestedAt = [%CurrentDateTime%]
 );
-  commit $EscalationRequest;
+  commit $EscalationRequest on error rollback;
   return;
 end;
-
-grant execute on microflow HD.WFS_Escalation_Initialize to User;
 /
 create or modify microflow HD.WFS_AutoReject (
   $EscalationRequest: HD.EscalationRequest
@@ -575,11 +558,9 @@ create or modify microflow HD.WFS_AutoReject (
 begin
   change $EscalationRequest (RejectionReason = 'Auto-rejected: no manager response within 48 hours.'
 );
-  commit $EscalationRequest;
+  commit $EscalationRequest on error rollback;
   return;
 end;
-
-grant execute on microflow HD.WFS_AutoReject to User;
 /
 create or modify microflow HD.WFS_UpdateTicketPriority (
   $EscalationRequest: HD.EscalationRequest
@@ -592,12 +573,10 @@ begin
     change $Ticket (Priority = HD.TicketPriority.Critical
 , Status = HD.TicketStatus.InProgress
 );
-    commit $Ticket;
+    commit $Ticket on error rollback;
   end if;
   return;
 end;
-
-grant execute on microflow HD.WFS_UpdateTicketPriority to User;
 /
 create or modify microflow HD.WFS_NotifyAgent (
   $EscalationRequest: HD.EscalationRequest
@@ -606,8 +585,6 @@ begin
   log info node 'Application' '{1}' with ({1} = 'Agent notified: escalation approved for request ' + toString($EscalationRequest/Reason));
   return;
 end;
-
-grant execute on microflow HD.WFS_NotifyAgent to User;
 /
 create or modify microflow HD.WFC_EscalationRequest_OnCreate (
   $EscalationRequest: HD.EscalationRequest
@@ -616,8 +593,6 @@ begin
   log info node 'Application' '{1}' with ({1} = 'EscalationRequest created: ' + toString($EscalationRequest/Reason));
   return;
 end;
-
-grant execute on microflow HD.WFC_EscalationRequest_OnCreate to User;
 /
 create or modify microflow HD.ACT_StartEscalation (
   $Ticket: HD.Ticket,
@@ -632,13 +607,13 @@ begin
 , RequestedAt = [%CurrentDateTime%]
 , EscalationRequest_Ticket = $Ticket
 );
-    commit $EscalationRequest;
+    commit $EscalationRequest on error rollback;
     call workflow HD.WF_TicketEscalation (EscalationRequest = $EscalationRequest);
     return true;
   end if;
 end;
 
-grant execute on microflow HD.ACT_StartEscalation to User, AgentRole, ManagerRole;
+grant execute on microflow HD.ACT_StartEscalation to HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_ChangeState (
   $Workflow: System.Workflow,
@@ -657,7 +632,7 @@ begin
   return;
 end;
 
-grant execute on microflow HD.ACT_Workflow_ChangeState to User, ManagerRole;
+grant execute on microflow HD.ACT_Workflow_ChangeState to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_CompleteTask (
   $UserTask: System.WorkflowUserTask,
@@ -668,7 +643,7 @@ begin
   return;
 end;
 
-grant execute on microflow HD.ACT_Workflow_CompleteTask to User, ManagerRole;
+grant execute on microflow HD.ACT_Workflow_CompleteTask to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_GenerateJumpTo (
   $Workflow: System.Workflow
@@ -678,7 +653,7 @@ begin
   return;
 end;
 
-grant execute on microflow HD.ACT_Workflow_GenerateJumpTo to User, ManagerRole;
+grant execute on microflow HD.ACT_Workflow_GenerateJumpTo to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_ApplyJumpTo (
   $JumpOption: System.WorkflowJumpToDetails
@@ -688,7 +663,7 @@ begin
   return;
 end;
 
-grant execute on microflow HD.ACT_Workflow_ApplyJumpTo to User, ManagerRole;
+grant execute on microflow HD.ACT_Workflow_ApplyJumpTo to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_GetHistory (
   $Workflow: System.Workflow
@@ -698,7 +673,7 @@ begin
   return;
 end;
 
-grant execute on microflow HD.ACT_Workflow_GetHistory to User, ManagerRole;
+grant execute on microflow HD.ACT_Workflow_GetHistory to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_GetContext (
   $Workflow: System.Workflow
@@ -708,7 +683,7 @@ begin
   return;
 end;
 
-grant execute on microflow HD.ACT_Workflow_GetContext to User, ManagerRole;
+grant execute on microflow HD.ACT_Workflow_GetContext to HD.ManagerRole;
 /
 create or modify microflow HD.DS_WorkflowInstances (
   $EscalationRequest: HD.EscalationRequest
@@ -718,7 +693,7 @@ begin
   return;
 end;
 
-grant execute on microflow HD.DS_WorkflowInstances to User, ManagerRole;
+grant execute on microflow HD.DS_WorkflowInstances to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_ShowTaskPage (
   $UserTask: System.WorkflowUserTask
@@ -727,8 +702,6 @@ begin
   open user task $UserTask;
   return;
 end;
-
-grant execute on microflow HD.ACT_Workflow_ShowTaskPage to User;
 /
 create or modify microflow HD.ACT_Workflow_ShowAdminPage (
   $Workflow: System.Workflow
@@ -737,8 +710,6 @@ begin
   open workflow $Workflow;
   return;
 end;
-
-grant execute on microflow HD.ACT_Workflow_ShowAdminPage to User;
 /
 create or modify microflow HD.ACT_Workflow_Lock (
   $Workflow: System.WorkflowDefinition
@@ -748,7 +719,7 @@ begin
   return;
 end;
 
-grant execute on microflow HD.ACT_Workflow_Lock to User, ManagerRole;
+grant execute on microflow HD.ACT_Workflow_Lock to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_Unlock (
   $Workflow: System.WorkflowDefinition
@@ -758,7 +729,7 @@ begin
   return;
 end;
 
-grant execute on microflow HD.ACT_Workflow_Unlock to User, ManagerRole;
+grant execute on microflow HD.ACT_Workflow_Unlock to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_Notify (
   $Workflow: System.Workflow
@@ -768,7 +739,7 @@ begin
   return;
 end;
 
-grant execute on microflow HD.ACT_Workflow_Notify to User, ManagerRole;
+grant execute on microflow HD.ACT_Workflow_Notify to HD.ManagerRole;
 /
 -- Workflow: HD.WF_SUB_ManagerReview
 
@@ -793,6 +764,7 @@ begin
         multi user task UT_SeniorReview 'Senior Board Review'
           page HD.EscalationReview_Form
           targeting microflow HD.WFA_GetManagerAssignees
+          completion method majority
           outcomes
             'Approve' {
               call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext') -- WFS_Approve
@@ -854,6 +826,42 @@ begin
 
 end workflow
 /
+create or modify constant HD.SLA_HIGH_HOURS
+  type Integer
+  default 8
+  comment 'SLA deadline in hours for High-priority tickets.';
+/
+create or modify constant HD.SLA_CRITICAL_HOURS
+  type Integer
+  default 2
+  comment 'SLA deadline in hours for Critical-priority tickets. Configure shorter per environment.';
+/
+create user role Customer (System.User, HD.CustomerRole, KB.Reader);
+/
+create user role Agent (System.User, HD.AgentRole, KB.Contributor);
+/
+create user role Manager (System.User, HD.ManagerRole, KB.Contributor);
+/
+-- navigation PROFILE: Responsive
+--   Kind: Responsive
+create or replace navigation Responsive
+  home page MyFirstModule.Home_Web
+  home page HD.Ticket_Overview for Customer
+  home page HD.Ticket_Overview for Agent
+  home page HD.EscalationWorkflow_Overview for Manager
+  login page Administration.login
+  menu (
+    menu item '我的工单' page HD.Ticket_Overview;
+    menu item '知识库' page KB.Article_Overview;
+    menu '工单管理' (
+      menu item '所有工单' page HD.Ticket_Overview;
+      menu item '升级审批' page HD.EscalationWorkflow_Overview;
+      menu item '工作流管理' page HD.EscalationWorkflow_Overview;
+    );
+    menu item '系统管理' page Administration.Account_Overview;
+  )
+;
+
 create or modify page KB.Article_Overview (
   title: 'Knowledge Base',
   layout: Atlas_Core.Atlas_Default,
