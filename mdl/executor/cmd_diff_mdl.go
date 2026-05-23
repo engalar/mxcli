@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	entityModel "github.com/mendixlabs/mxcli/mdl/model/entity"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
@@ -16,82 +17,15 @@ import (
 // Statement to MDL Converters
 // ============================================================================
 
-// entityStmtToMDL converts a CreateEntityStmt to MDL text
-func entityStmtToMDL(ctx *ExecContext, s *ast.CreateEntityStmt) string {
-	var lines []string
-
-	// Documentation
-	if s.Documentation != "" {
-		lines = append(lines, "/**")
-		lines = append(lines, " * "+s.Documentation)
-		lines = append(lines, " */")
+// entityStmtToMDL converts a CreateEntityStmt to MDL text via the canonical
+// EntityModel pipeline (Lift → ToMDL). Both proposed (stmt) and current (gen)
+// renderings share the same serializer so diff output is byte-stable.
+func entityStmtToMDL(_ *ExecContext, s *ast.CreateEntityStmt) string {
+	m, err := entityModel.Lift(s)
+	if err != nil {
+		return fmt.Sprintf("/* entity lift error: %v */", err)
 	}
-
-	// Position annotation
-	if s.Position != nil {
-		lines = append(lines, fmt.Sprintf("@Position(%d, %d)", s.Position.X, s.Position.Y))
-	}
-
-	// Entity type
-	entityType := s.Kind.String()
-	lines = append(lines, fmt.Sprintf("create %s entity %s (", entityType, s.Name))
-
-	// Attributes
-	for i, attr := range s.Attributes {
-		// Attribute documentation
-		if attr.Documentation != "" {
-			lines = append(lines, fmt.Sprintf("  /** %s */", attr.Documentation))
-		}
-
-		typeStr := dataTypeToString(ctx, attr.Type)
-		constraints := ""
-
-		if attr.NotNull {
-			constraints += " not null"
-			if attr.NotNullError != "" {
-				constraints += fmt.Sprintf(" error '%s'", attr.NotNullError)
-			}
-		}
-		if attr.Unique {
-			constraints += " unique"
-			if attr.UniqueError != "" {
-				constraints += fmt.Sprintf(" error '%s'", attr.UniqueError)
-			}
-		}
-		if attr.HasDefault {
-			defaultVal := fmt.Sprintf("%v", attr.DefaultValue)
-			if attr.Type.Kind == ast.TypeString {
-				defaultVal = fmt.Sprintf("'%s'", attr.DefaultValue)
-			}
-			constraints += fmt.Sprintf(" default %s", defaultVal)
-		}
-
-		comma := ","
-		if i == len(s.Attributes)-1 {
-			comma = ""
-		}
-		lines = append(lines, fmt.Sprintf("  %s: %s%s%s", attr.Name, typeStr, constraints, comma))
-	}
-
-	lines = append(lines, ")")
-
-	// Indexes
-	for _, idx := range s.Indexes {
-		var cols []string
-		for _, col := range idx.Columns {
-			colStr := col.Name
-			if col.Descending {
-				colStr += " desc"
-			}
-			cols = append(cols, colStr)
-		}
-		lines = append(lines, fmt.Sprintf("index (%s)", strings.Join(cols, ", ")))
-	}
-
-	lines = append(lines, ";")
-	lines = append(lines, "/")
-
-	return strings.Join(lines, "\n")
+	return m.ToMDL() + ";\n/"
 }
 
 // viewEntityStmtToMDL converts a CreateViewEntityStmt to MDL text
@@ -531,132 +465,14 @@ func microflowStatementToMDL(ctx *ExecContext, stmt ast.MicroflowStatement, inde
 // Project to MDL Converters
 // ============================================================================
 
-// entityToMDLGen converts a gen-typed project entity to MDL text.
-func entityToMDLGen(ctx *ExecContext, moduleName string, entity *genDm.Entity) string {
-	var lines []string
-
-	// Documentation
-	if entity.Documentation() != "" {
-		lines = append(lines, "/**")
-		lines = append(lines, " * "+entity.Documentation())
-		lines = append(lines, " */")
+// entityToMDLGen converts a gen-typed project entity to MDL text via the
+// canonical EntityModel pipeline (Hydrate → ToMDL).
+func entityToMDLGen(_ *ExecContext, moduleName string, entity *genDm.Entity) string {
+	m, _, err := entityModel.Hydrate(moduleName, entity)
+	if err != nil {
+		return fmt.Sprintf("/* entity hydrate error: %v */", err)
 	}
-
-	// Position
-	if loc := entity.Location(); loc != "" {
-		if x, y, ok := parseLocationBSON(loc); ok {
-			lines = append(lines, fmt.Sprintf("@Position(%d, %d)", x, y))
-		}
-	}
-
-	// Entity type
-	entityType := "persistent"
-	if src := entity.Source(); src != nil && strings.Contains(src.TypeName(), "OqlView") {
-		entityType = "view"
-	} else if g, ok := entity.Generalization().(*genDm.NoGeneralization); ok && !g.Persistable() {
-		entityType = "non-persistent"
-	}
-
-	lines = append(lines, fmt.Sprintf("create %s entity %s.%s (", entityType, moduleName, entity.Name()))
-
-	// Build validation rules map by attribute name.
-	validationsByName := make(map[string][]*genDm.ValidationRule)
-	for _, item := range entity.ValidationRulesItems() {
-		vr, ok := item.(*genDm.ValidationRule)
-		if !ok {
-			continue
-		}
-		attrName := extractAttrNameFromQualified(vr.AttributeQualifiedName())
-		if attrName != "" {
-			validationsByName[attrName] = append(validationsByName[attrName], vr)
-		}
-	}
-
-	// Attributes
-	attrs := entity.AttributesItems()
-	for i, item := range attrs {
-		attr, ok := item.(*genDm.Attribute)
-		if !ok {
-			continue
-		}
-		// Documentation
-		if attr.Documentation() != "" {
-			lines = append(lines, fmt.Sprintf("  /** %s */", attr.Documentation()))
-		}
-
-		typeStr := formatAttributeTypeGen(attr.Type())
-		var constraints strings.Builder
-
-		// Check validation rules.
-		for _, vr := range validationsByName[attr.Name()] {
-			switch vr.RuleInfo().TypeName() {
-			case "DomainModels$RequiredRuleInfo":
-				constraints.WriteString(" not null")
-			case "DomainModels$UniqueRuleInfo":
-				constraints.WriteString(" unique")
-			}
-		}
-
-		// Default value
-		if val, ok := attr.Value().(*genDm.StoredValue); ok && val.DefaultValue() != "" {
-			defaultVal := val.DefaultValue()
-			if _, ok := attr.Type().(*genDm.StringAttributeType); ok {
-				defaultVal = fmt.Sprintf("'%s'", defaultVal)
-			}
-			if enumType, ok := attr.Type().(*genDm.EnumerationAttributeType); ok {
-				if qn := enumType.EnumerationQualifiedName(); qn != "" && !strings.Contains(defaultVal, ".") {
-					defaultVal = qn + "." + defaultVal
-				}
-			}
-			constraints.WriteString(fmt.Sprintf(" default %s", defaultVal))
-		}
-
-		comma := ","
-		if i == len(attrs)-1 {
-			comma = ""
-		}
-		lines = append(lines, fmt.Sprintf("  %s: %s%s%s", attr.Name(), typeStr, constraints.String(), comma))
-	}
-
-	lines = append(lines, ")")
-
-	// Build attr name map for indexes
-	attrNames := make(map[model.ID]string)
-	for _, item := range attrs {
-		attr, ok := item.(*genDm.Attribute)
-		if !ok {
-			continue
-		}
-		attrNames[model.ID(attr.ID())] = attr.Name()
-	}
-
-	// Indexes
-	for _, item := range entity.IndexesItems() {
-		idx, ok := item.(*genDm.Index)
-		if !ok {
-			continue
-		}
-		var cols []string
-		for _, idxItem := range idx.AttributesItems() {
-			ia, ok := idxItem.(*genDm.IndexedAttribute)
-			if !ok {
-				continue
-			}
-			colName := attrNames[model.ID(ia.AttributeRefID())]
-			if !ia.Ascending() {
-				colName += " desc"
-			}
-			cols = append(cols, colName)
-		}
-		if len(cols) > 0 {
-			lines = append(lines, fmt.Sprintf("index (%s)", strings.Join(cols, ", ")))
-		}
-	}
-
-	lines = append(lines, ";")
-	lines = append(lines, "/")
-
-	return strings.Join(lines, "\n")
+	return m.ToMDL() + ";\n/"
 }
 
 // viewEntityFromProjectToMDLGen converts a gen-typed view entity to MDL.
