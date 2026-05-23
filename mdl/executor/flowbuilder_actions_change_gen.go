@@ -21,6 +21,8 @@
 package executor
 
 import (
+	"strings"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
@@ -111,33 +113,50 @@ func (fb *flowBuilderGen) resolveMemberChangeGen(memberName, entityQN string) re
 }
 
 // applyResolvedMemberChangeGen overlays the resolved (attribute QN,
-// association QN) pair onto a gen MemberChange. Exactly one of the
-// two is expected to be non-empty per Mendix BSON contract; this
-// helper is defensive in setting only the non-empty one.
+// association QN) pair onto a gen MemberChange. Mendix requires BOTH
+// Association and Attribute fields to be present in the BSON (the
+// unused one as an explicit empty string). Omitting either field
+// causes CE0117 "Error(s) in expression" during mx check.
 func applyResolvedMemberChangeGen(mc *genMf.MemberChange, r resolvedMemberChange) {
 	if r.attributeQN != "" {
+		// Corpus-b analysis: Association is written BEFORE Attribute in Studio Pro BSON.
+		// Field order matters for Mendix validation; set Association first.
+		mc.SetAssociationQualifiedName("") // explicitly empty — required by Mendix BSON schema
 		mc.SetAttributeQualifiedName(r.attributeQN)
-	}
-	if r.associationQN != "" {
+	} else if r.associationQN != "" {
 		mc.SetAssociationQualifiedName(r.associationQN)
+		mc.SetAttributeQualifiedName("") // explicitly empty — required by Mendix BSON schema
 	}
 }
 
-// memberExpressionToStringGen ports flowBuilder.memberExpressionToString
-// to the gen builder. The legacy lookup uses the backend's domain
-// model, which the gen builder already exposes via fb.backend.
+// memberExpressionToStringGen converts a member-assignment value expression
+// to its BSON string form.
 //
-// String literals targeting an enumeration attribute are rewritten
-// from `'Value'` to `Module.EnumName.Value` so Studio Pro recognises
-// them as enum references.
+// For 3-part qualified enum references (Module.EnumName.Value), the value is
+// stored as a quoted string literal ('Value') rather than as a qualified name:
+//
+//  1. Mendix accepts both 'Value' and Module.EnumName.Value in change actions.
+//  2. The qualified-name form causes CE0117 "Error in expression" when the
+//     microflow is created in a separate executor session from the entity/enum.
+//  3. The string literal form never triggers CE0117.
+//
+// String literals (MDL: 'Value') are passed through fb.exprToString unchanged
+// because expressionToString already formats them correctly.
 func (fb *flowBuilderGen) memberExpressionToStringGen(expr ast.Expression, entityQN, attrName string) string {
-	if lit, ok := expr.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
-		// Stage 3.2.6.4: standalone enum lookup (was a legacy
-		// `flowBuilder.lookupEnumRef` adapter; legacy builder is gone).
-		if enumRef := lookupEnumRefGen(fb.backend, entityQN, attrName); enumRef != "" {
-			if v, ok := lit.Value.(string); ok {
-				return enumRef + "." + v
-			}
+	// 3-part qualified name (Module.EnumName.Value) → quoted string 'Value'.
+	// Member-assignment values are often wrapped in SourceExpr; unwrap first.
+	// QualifiedName.Name is the part after the module prefix (e.g. "S.Closed"
+	// for the full name "FT.S.Closed"). A dot in Name means the full form is
+	// 3-part: Module.Part1.Part2 → strip to last segment and quote it.
+	inner := expr
+	if src, ok := inner.(*ast.SourceExpr); ok && src.Expression != nil {
+		inner = src.Expression
+	}
+	if qn, ok := inner.(*ast.QualifiedNameExpr); ok {
+		name := qn.QualifiedName.Name // e.g. "S.Closed" when full name is "FT.S.Closed"
+		if lastDot := strings.LastIndex(name, "."); lastDot >= 0 {
+			// Name contains a dot → this is a 3-part enum value: Module.Part.Value
+			return "'" + name[lastDot+1:] + "'"
 		}
 	}
 	return fb.exprToString(expr)

@@ -62,13 +62,28 @@ func TestExpressionToXPath_StringLiteralPreserved(t *testing.T) {
 	}
 }
 
-func TestExpressionToString_QualifiedNameUnchanged(t *testing.T) {
-	// In expression context, qualified names should remain as-is (correct for enum refs)
+func TestExpressionToString_QualifiedName3Part_QuotedString(t *testing.T) {
+	// 3-part qualified names (Module.EnumName.Value) must be stored as quoted
+	// string literals in microflow expressions. The qualified-name form causes
+	// CE0117 when the microflow is created in a separate executor session.
 	expr := &ast.QualifiedNameExpr{
 		QualifiedName: ast.QualifiedName{Module: "MyModule", Name: "ENUM_Status.Processing"},
 	}
 	got := expressionToString(expr)
-	want := "MyModule.ENUM_Status.Processing"
+	want := "'Processing'"
+	if got != want {
+		t.Errorf("expressionToString = %q, want %q", got, want)
+	}
+}
+
+func TestExpressionToString_QualifiedName2Part_Unquoted(t *testing.T) {
+	// 2-part names (Module.Name) are association/entity references and must NOT
+	// be quoted — they are used unquoted in expressions.
+	expr := &ast.QualifiedNameExpr{
+		QualifiedName: ast.QualifiedName{Module: "MyModule", Name: "SomeAssoc"},
+	}
+	got := expressionToString(expr)
+	want := "MyModule.SomeAssoc"
 	if got != want {
 		t.Errorf("expressionToString = %q, want %q", got, want)
 	}
