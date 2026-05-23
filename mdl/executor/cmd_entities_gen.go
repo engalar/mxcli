@@ -367,10 +367,10 @@ func describeEntityGen(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewNotFound("entity", name.String())
 	}
 
-	// Canonical-model pipeline: Hydrate → ToMDL renders doc + position +
-	// kind + extends + attributes (incl. validation/default/calculated) +
-	// indexes. ToMDL emits "create ..."; describe uses "create or modify"
-	// so re-execution is idempotent — we rewrite the prefix here.
+	// Canonical-model pipeline: Hydrate → ToMDLStatement(true) renders doc +
+	// position + kind + extends + attributes (incl. validation/default/
+	// calculated) + indexes, with the `create or modify` prefix injected at
+	// the statement line so DESCRIBE output is idempotent on re-execution.
 	m, warns, err := entityModel.Hydrate(modName, entity)
 	if err != nil {
 		return fmt.Errorf("describe entity: hydrate: %w", err)
@@ -380,8 +380,7 @@ func describeEntityGen(ctx *ExecContext, name ast.QualifiedName) error {
 			ctx.Logger.Warn("describe entity hydrate", "entity", name.String(), "field", w.Field, "msg", w.Message)
 		}
 	}
-	body := strings.Replace(m.ToMDL(), "create ", "create or modify ", 1)
-	fmt.Fprint(ctx.Output, body)
+	fmt.Fprint(ctx.Output, m.ToMDLStatement(true))
 
 	// Trailing clauses Hydrate/ToMDL do not (yet) carry on the canonical
 	// model: system members, view OQL bodies, and event handlers.
