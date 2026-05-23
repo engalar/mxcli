@@ -5,6 +5,7 @@
 package executor
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -918,6 +919,97 @@ func TestValidateUserTaskTargeting_ValidXPath_NoError(t *testing.T) {
 	err := validateUserTaskTargeting(n)
 	if err != nil {
 		t.Errorf("expected no error for valid targeting, got: %v", err)
+	}
+}
+
+// TestBuildMultiUserTaskGenActivityHasCompletionCriteriaCE1866 verifies that
+// a multi-user task always gets a CompletionCriteria with a non-empty
+// FallbackOutcomeID. Without this, Studio Pro raises CE1866 "Fallback
+// outcome cannot be empty."
+// The default CompletionMethod (empty string) maps to MajorityCompletionCriteria.
+func TestBuildMultiUserTaskGenActivityHasCompletionCriteriaCE1866(t *testing.T) {
+	n := &ast.WorkflowUserTaskNode{
+		Name:        "UT_Review",
+		Caption:     "Board Review",
+		IsMultiUser: true,
+		Outcomes: []ast.WorkflowUserTaskOutcomeNode{
+			{Caption: "Approve"},
+			{Caption: "Reject"},
+		},
+	}
+	task := buildMultiUserTaskGenActivity(n)
+	if task.CompletionCriteria() == nil {
+		t.Fatal("CE1866: CompletionCriteria must not be nil for multi-user task")
+	}
+	cc, ok := task.CompletionCriteria().(*genWf.MajorityCompletionCriteria)
+	if !ok {
+		t.Fatalf("CE1866: CompletionCriteria type = %T, want *MajorityCompletionCriteria (default)", task.CompletionCriteria())
+	}
+	if cc.FallbackOutcomeRefID() == "" {
+		t.Fatal("CE1866: FallbackOutcomeRefID must not be empty")
+	}
+	// Verify the fallback ID corresponds to one of the built outcomes.
+	outcomes := task.OutcomesItems()
+	found := false
+	for _, oc := range outcomes {
+		if woc, ok := oc.(*genWf.UserTaskOutcome); ok {
+			if woc.ID() == cc.FallbackOutcomeRefID() {
+				found = true
+				break
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("CE1866: FallbackOutcomeRefID %q does not match any outcome ID", cc.FallbackOutcomeRefID())
+	}
+}
+
+// TestBuildMultiUserTaskGenActivity_CompletionMethod verifies that the
+// CompletionMethod parsed from MDL is translated to the correct gen type.
+func TestBuildMultiUserTaskGenActivity_CompletionMethod(t *testing.T) {
+	outcomes := []ast.WorkflowUserTaskOutcomeNode{
+		{Caption: "Approve"},
+		{Caption: "Reject"},
+	}
+	tests := []struct {
+		name             string
+		method           string
+		threshold        int
+		wantType         string
+		wantThreshold    int32
+	}{
+		{"default (empty) → majority", "", 0, "*workflows.MajorityCompletionCriteria", 0},
+		{"explicit majority", "majority", 0, "*workflows.MajorityCompletionCriteria", 0},
+		{"consensus", "consensus", 0, "*workflows.ConsensusCompletionCriteria", 0},
+		{"threshold 75", "threshold", 75, "*workflows.ThresholdCompletionCriteria", 75},
+		{"threshold default 50 when 0", "threshold", 0, "*workflows.ThresholdCompletionCriteria", 50},
+		{"threshold default 50 when >100", "threshold", 200, "*workflows.ThresholdCompletionCriteria", 50},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			n := &ast.WorkflowUserTaskNode{
+				Name:             "UT_Test",
+				Caption:          "Test Task",
+				IsMultiUser:      true,
+				CompletionMethod: tc.method,
+				RequiredThreshold: tc.threshold,
+				Outcomes:         outcomes,
+			}
+			task := buildMultiUserTaskGenActivity(n)
+			if task.CompletionCriteria() == nil {
+				t.Fatal("CompletionCriteria must not be nil")
+			}
+			gotType := fmt.Sprintf("%T", task.CompletionCriteria())
+			if gotType != tc.wantType {
+				t.Errorf("CompletionCriteria type = %s, want %s", gotType, tc.wantType)
+			}
+			if tc.method == "threshold" {
+				cc := task.CompletionCriteria().(*genWf.ThresholdCompletionCriteria)
+				if cc.Threshold() != tc.wantThreshold {
+					t.Errorf("Threshold = %d, want %d", cc.Threshold(), tc.wantThreshold)
+				}
+			}
+		})
 	}
 }
 

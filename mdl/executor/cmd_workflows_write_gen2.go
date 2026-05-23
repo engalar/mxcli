@@ -284,11 +284,38 @@ func buildMultiUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.MultiUser
 	if tgt := buildUserTargetingGen(n.Targeting); tgt != nil {
 		task.SetUserTargeting(tgt)
 	}
-	for _, oc := range buildUserTaskOutcomesGen(n.Outcomes) {
+	outcomes := buildUserTaskOutcomesGen(n.Outcomes)
+	for _, oc := range outcomes {
 		task.AddOutcomes(oc)
 	}
 	for _, ev := range buildBoundaryEventsGen(n.BoundaryEvents) {
 		task.AddBoundaryEvents(ev)
+	}
+	// CE1866: multi-user tasks require a CompletionCriteria with a non-empty
+	// FallbackOutcomeID. Build the appropriate criteria type based on the
+	// CompletionMethod parsed from MDL (majority / threshold N / consensus).
+	// Default (empty string) maps to MajorityCompletionCriteria.
+	if len(outcomes) > 0 {
+		fallbackID := outcomes[len(outcomes)-1].ID()
+		switch n.CompletionMethod {
+		case "", "majority":
+			cc := genWf.NewMajorityCompletionCriteria()
+			cc.SetFallbackOutcomeID(fallbackID)
+			task.SetCompletionCriteria(cc)
+		case "threshold":
+			cc := genWf.NewThresholdCompletionCriteria()
+			cc.SetFallbackOutcomeID(fallbackID)
+			pct := n.RequiredThreshold
+			if pct <= 0 || pct > 100 {
+				pct = 50
+			}
+			cc.SetThreshold(int32(pct))
+			task.SetCompletionCriteria(cc)
+		case "consensus":
+			cc := genWf.NewConsensusCompletionCriteria()
+			cc.SetFallbackOutcomeID(fallbackID)
+			task.SetCompletionCriteria(cc)
+		}
 	}
 	return task
 }
