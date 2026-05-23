@@ -493,10 +493,12 @@ end;
 -- MARK: HelpDesk — Sub-Workflow (WF_SUB_ManagerReview)
 
 -- Required pages for workflow (must exist before workflow is created)
+-- CE7410: workflow user task page must declare a WorkflowUserTask parameter
 create page HD.EscalationReview_Form
 (
   title: 'Escalation Review',
-  layout: Atlas_Core.Atlas_Default
+  layout: Atlas_Core.Atlas_Default,
+  params: { $WorkflowUserTask: System.WorkflowUserTask }
 )
 {
   layoutgrid lgMain {
@@ -552,7 +554,9 @@ create or modify microflow HD.WFS_Approve
   ($EscalationRequest: HD.EscalationRequest)
 begin
   @position(200, 200)
-  retrieve $Ticket from $EscalationRequest/HD.EscalationRequest_Ticket limit 1;
+  retrieve $Ticket from HD.Ticket
+    where [HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest]
+    limit 1;
   @position(400, 200)
   if $Ticket != empty then
     change $Ticket (Priority = HD.TicketPriority.Critical);
@@ -587,7 +591,7 @@ create or replace workflow HD.WF_SUB_ManagerReview
 begin
   user task UT_PrimaryReview 'Primary Review'
     page HD.EscalationReview_Form
-    targeting xpath '[id != 0]'
+    targeting users microflow HD.WFA_GetManagerAssignees
     description 'Review escalation request and decide: Approve or escalate to board'
     outcomes
       'Approve' {
@@ -599,7 +603,7 @@ begin
         -- ALTER WORKFLOW form if inline keyword conflicts arise.
         multi user task UT_SeniorReview 'Senior Board Review'
           page HD.EscalationReview_Form
-          targeting groups xpath '[id != 0]'
+          targeting users microflow HD.WFA_GetManagerAssignees
           -- TODO: 'completion method majority' not in grammar; use ALTER WORKFLOW
           outcomes
             'Approve' { call microflow HD.WFS_Approve; }
@@ -648,7 +652,9 @@ create or modify microflow HD.WFS_UpdateTicketPriority
   ($EscalationRequest: HD.EscalationRequest)
 begin
   @position(200, 200)
-  retrieve $Ticket from $EscalationRequest/HD.EscalationRequest_Ticket limit 1;
+  retrieve $Ticket from HD.Ticket
+    where [HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest]
+    limit 1;
   @position(400, 200)
   if $Ticket != empty then
     change $Ticket (Priority = HD.TicketPriority.Critical, Status = HD.TicketStatus.InProgress);
@@ -804,12 +810,10 @@ create or modify microflow HD.ACT_Workflow_GetHistory
   returns list of System.WorkflowActivityRecord as $Records
 begin
   @position(200, 200)
-  -- TODO: $Records = retrieve workflow activity records for $Workflow;
-  -- System.WorkflowActivityRecord is non-persistent; cannot retrieve from database
-  -- Workflow activity records are accessed via the workflow activity record API
-  declare $Records list of System.WorkflowActivityRecord = empty;
-  @position(400, 200)
-  return $Records;
+  -- TODO: retrieve workflow activity records for $Workflow;
+  -- System.WorkflowActivityRecord is non-persistent; cannot use 'list of' declare.
+  -- Return empty until executor supports 'retrieve workflow activity records for'.
+  return empty;
 end;
 /
 
@@ -1029,8 +1033,8 @@ create page HD.TicketSearch_Form
 {
   dataview dvSearch (datasource: $Search) {
     textbox tbKeyword  (attribute: SubjectKeyword, caption: 'Subject contains')
-    dropdown ddStatus  (attribute: StatusFilter,   caption: 'Status')
-    dropdown ddPriority (attribute: PriorityFilter, caption: 'Priority')
+    combobox cbStatus   (attribute: StatusFilter,   label: 'Status')
+    combobox cbPriority (attribute: PriorityFilter, label: 'Priority')
   }
   actionbutton btnClose (caption: 'Close')
 };
