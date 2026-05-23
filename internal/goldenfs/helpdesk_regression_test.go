@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -205,6 +206,31 @@ func TestHelpdeskGolden_Regression_BSON(t *testing.T) {
 		bsoncompare.DefaultOptions(),
 		bsoncompare.ExpectNoOtherChanges(),
 	)
+
+	// mx check: verify B2 BSON is valid to Studio Pro
+	mxBin := findMxBinaryForTest()
+	if mxBin == "" {
+		t.Log("mx binary not available — skipping mx check (set MX_BINARY or install mxbuild)")
+	} else {
+		cmd := exec.Command(mxBin, "check", mountMPR)
+		output, _ := cmd.CombinedOutput()
+		// Use assertNoFUSECorruption for fatal BSON error signatures
+		assertNoFUSECorruption(t, string(output),
+			"HD.Ticket", "HD.Customer", "KB.Article",
+			"HD.ACT_Ticket_Submit", "HD.WF_TicketEscalation",
+		)
+		// Full CE check: expect 0 [error] lines
+		var ceErrors []string
+		for _, line := range strings.Split(string(output), "\n") {
+			if strings.HasPrefix(line, "[error]") {
+				ceErrors = append(ceErrors, line)
+			}
+		}
+		if len(ceErrors) > 0 {
+			t.Errorf("mx check found %d error(s) — expected 0:\n%s",
+				len(ceErrors), strings.Join(ceErrors, "\n"))
+		}
+	}
 }
 
 // describeMDL 对 mprPath 执行一组 describe/show 命令，返回合并的文本输出。
