@@ -454,8 +454,8 @@ begin
 end;
 /
 
--- DS_OverdueTicketCount: count overdue tickets
--- Demonstrates: retrieve + count expression
+-- DS_OverdueTicketCount: count overdue tickets via aggregate
+-- Demonstrates: retrieve list + aggregate count activity
 create or modify microflow HD.DS_OverdueTicketCount
   ()
   returns integer as $Count
@@ -465,7 +465,7 @@ begin
     where [IsOverSLA = true]
     limit 0;
   @position(400, 200)
-  declare $Count integer = count($Overdue);
+  $Count = COUNT($Overdue);
   @position(600, 200)
   return $Count;
 end;
