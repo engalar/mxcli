@@ -123,6 +123,7 @@ func main() {
 
 		// Apply property-level BSON key overrides and other supplements.
 		meta.PropertyKeyOverrides = suppl.PropertyKeyOverrides
+		meta.PropertyOrderOverrides = suppl.PropertyOrderOverrides
 		meta.RefListVersion3Fields = suppl.refListVersion3Fields
 		meta.EdgeKindOverrides = suppl.EdgeKindOverrides
 		meta.IdRefScope = suppl.IdRefScope
@@ -141,14 +142,15 @@ func main() {
 // ────────────────────────────────────────────────────────────────
 
 type supplements struct {
-	StorageAliases       map[string]string          `json:"storage_aliases"`
-	PropertyKeyOverrides map[string]string          `json:"property_key_overrides"`
-	RefListVersion3List  []string                   `json:"ref_list_version3_fields"`
-	ForceConcreteTypes   []string                   `json:"force_concrete_types"`
-	EdgeKindOverrides    map[string]string          `json:"edge_kind_overrides"`
-	IdRefScope           map[string]string          `json:"id_ref_scope"`
-	ExtraProperties      map[string]json.RawMessage `json:"extra_properties"`
-	ExtraTypes           map[string]json.RawMessage `json:"extra_types"`
+	StorageAliases         map[string]string          `json:"storage_aliases"`
+	PropertyKeyOverrides   map[string]string          `json:"property_key_overrides"`
+	PropertyOrderOverrides map[string][]string        `json:"property_order_overrides"`
+	RefListVersion3List    []string                   `json:"ref_list_version3_fields"`
+	ForceConcreteTypes     []string                   `json:"force_concrete_types"`
+	EdgeKindOverrides      map[string]string          `json:"edge_kind_overrides"`
+	IdRefScope             map[string]string          `json:"id_ref_scope"`
+	ExtraProperties        map[string]json.RawMessage `json:"extra_properties"`
+	ExtraTypes             map[string]json.RawMessage `json:"extra_types"`
 
 	// Derived after loading.
 	forceConcreteSet      map[string]bool // built from ForceConcreteTypes slice

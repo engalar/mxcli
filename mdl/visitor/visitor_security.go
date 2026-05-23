@@ -506,15 +506,14 @@ func parseEntityAccessRight(ctx parser.IEntityAccessRightContext) ast.EntityAcce
 	return ast.EntityAccessRight{}
 }
 
-// grantMemberText extracts the plain identifier text from a grantMember parse
-// node. grantMember delegates to identifierOrKeyword, which accepts plain
-// identifiers, quoted identifiers, and keyword tokens — so Mendix attribute
-// names that clash with MDL reserved words (e.g. Token, Select) work without
-// quoting in both exported and hand-written MDL.
+// grantMemberText extracts the member name from a grantMember parse node.
+// grantMember now delegates to qualifiedName, so both plain attribute names
+// (e.g. Status) and module-qualified association names (e.g. HD.Ticket_Customer)
+// are accepted without quoting.
 func grantMemberText(ctx parser.IGrantMemberContext) string {
 	if ctx == nil {
 		return ""
 	}
-	iok := ctx.(*parser.GrantMemberContext).IdentifierOrKeyword()
-	return identifierOrKeywordText(iok)
+	qn := ctx.(*parser.GrantMemberContext).QualifiedName()
+	return getQualifiedNameText(qn)
 }

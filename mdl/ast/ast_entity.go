@@ -37,6 +37,7 @@ type CreateEntityStmt struct {
 	Kind           EntityKind
 	Generalization *QualifiedName // Parent entity for inheritance (e.g., System.Image)
 	Attributes     []Attribute
+	SystemMembers  []string // SYSTEM MEMBERS clause: subset of ["owner","createdDate","changedDate","changedBy"]
 	Indexes        []Index
 	EventHandlers  []EventHandlerDef // ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK CALL ...
 	Position       *Position
@@ -70,6 +71,7 @@ const (
 	AlterEntityAddEventHandler                                  // ADD EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK CALL Mod.MF
 	AlterEntityDropEventHandler                                 // DROP EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK
 	AlterEntitySetAllowCreateChangeLocally                      // SET ALLOW_CREATE_CHANGE_LOCALLY = true/false
+	AlterEntitySetSystemMembers                                 // SET SYSTEM MEMBERS (owner, createdDate, ...)
 )
 
 // EventHandlerDef represents an event handler in CREATE/ALTER ENTITY syntax.
@@ -98,6 +100,7 @@ type AlterEntityStmt struct {
 	Position            *Position        // For SET POSITION
 	EventHandler        *EventHandlerDef // For ADD/DROP EVENT HANDLER
 	BoolValue           bool             // For SET ALLOW_CREATE_CHANGE_LOCALLY
+	SystemMembers       []string         // For SET SYSTEM MEMBERS (owner, createdDate, ...)
 }
 
 func (s *AlterEntityStmt) isStatement() {}

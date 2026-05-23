@@ -1835,7 +1835,7 @@ func (o *Entity) InitFromRaw(raw bson.Raw) {
 	o.dataStorageGuid.Init(raw)
 	o.location.Init(raw)
 	o.documentation.Init(raw)
-	if child, err := codec.DecodeChild(raw, "Generalization"); err == nil {
+	if child, err := codec.DecodeChild(raw, "MaybeGeneralization"); err == nil {
 		o.generalization.SetFromDecode(child)
 	}
 	if children, err := codec.DecodeChildren(raw, "Attributes"); err == nil {
@@ -2578,11 +2578,21 @@ func (o *MultiLanguageAttributeType) InitFromRaw(raw bson.Raw) {
 
 type NoGeneralization struct {
 	element.Base
+	hasChangedBy   *property.Primitive[bool]
 	hasChangedDate *property.Primitive[bool]
 	hasCreatedDate *property.Primitive[bool]
 	hasOwner       *property.Primitive[bool]
-	hasChangedBy   *property.Primitive[bool]
 	persistable    *property.Primitive[bool]
+}
+
+// HasChangedBy returns the value of the hasChangedBy property.
+func (o *NoGeneralization) HasChangedBy() bool {
+	return o.hasChangedBy.Get()
+}
+
+// SetHasChangedBy sets the value of the hasChangedBy property.
+func (o *NoGeneralization) SetHasChangedBy(v bool) {
+	o.hasChangedBy.Set(v)
 }
 
 // HasChangedDate returns the value of the hasChangedDate property.
@@ -2615,16 +2625,6 @@ func (o *NoGeneralization) SetHasOwner(v bool) {
 	o.hasOwner.Set(v)
 }
 
-// HasChangedBy returns the value of the hasChangedBy property.
-func (o *NoGeneralization) HasChangedBy() bool {
-	return o.hasChangedBy.Get()
-}
-
-// SetHasChangedBy sets the value of the hasChangedBy property.
-func (o *NoGeneralization) SetHasChangedBy(v bool) {
-	o.hasChangedBy.Set(v)
-}
-
 // Persistable returns the value of the persistable property.
 func (o *NoGeneralization) Persistable() bool {
 	return o.persistable.Get()
@@ -2637,10 +2637,10 @@ func (o *NoGeneralization) SetPersistable(v bool) {
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *NoGeneralization) InitFromRaw(raw bson.Raw) {
+	o.hasChangedBy.Init(raw)
 	o.hasChangedDate.Init(raw)
 	o.hasCreatedDate.Init(raw)
 	o.hasOwner.Init(raw)
-	o.hasChangedBy.Init(raw)
 	o.persistable.Init(raw)
 }
 
@@ -3864,7 +3864,7 @@ func initEntity() *Entity {
 	o.location.Bind(&o.Base, 2)
 	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
 	o.documentation.Bind(&o.Base, 3)
-	o.generalization = property.NewPart[element.Element]("Generalization")
+	o.generalization = property.NewPart[element.Element]("MaybeGeneralization")
 	o.generalization.Bind(&o.Base, 4)
 	o.attributes = property.NewPartList[element.Element]("Attributes")
 	o.attributes.Bind(&o.Base, 5)
@@ -4307,17 +4307,17 @@ func NewMultiLanguageAttributeType() *MultiLanguageAttributeType {
 func initNoGeneralization() *NoGeneralization {
 	o := &NoGeneralization{}
 	o.SetTypeName("DomainModels$NoGeneralization")
-	o.hasChangedDate = property.NewPrimitive[bool]("HasChangedDateAttr", property.DecodeBool)
-	o.hasChangedDate.Bind(&o.Base, 0)
-	o.hasCreatedDate = property.NewPrimitive[bool]("HasCreatedDateAttr", property.DecodeBool)
-	o.hasCreatedDate.Bind(&o.Base, 1)
-	o.hasOwner = property.NewPrimitive[bool]("HasOwnerAttr", property.DecodeBool)
-	o.hasOwner.Bind(&o.Base, 2)
 	o.hasChangedBy = property.NewPrimitive[bool]("HasChangedByAttr", property.DecodeBool)
-	o.hasChangedBy.Bind(&o.Base, 3)
+	o.hasChangedBy.Bind(&o.Base, 0)
+	o.hasChangedDate = property.NewPrimitive[bool]("HasChangedDateAttr", property.DecodeBool)
+	o.hasChangedDate.Bind(&o.Base, 1)
+	o.hasCreatedDate = property.NewPrimitive[bool]("HasCreatedDateAttr", property.DecodeBool)
+	o.hasCreatedDate.Bind(&o.Base, 2)
+	o.hasOwner = property.NewPrimitive[bool]("HasOwnerAttr", property.DecodeBool)
+	o.hasOwner.Bind(&o.Base, 3)
 	o.persistable = property.NewPrimitive[bool]("Persistable", property.DecodeBool)
 	o.persistable.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.hasChangedDate, o.hasCreatedDate, o.hasOwner, o.hasChangedBy, o.persistable})
+	o.SetProperties([]element.Property{o.hasChangedBy, o.hasChangedDate, o.hasCreatedDate, o.hasOwner, o.persistable})
 	return o
 }
 

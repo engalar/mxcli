@@ -39,6 +39,9 @@ func TestKeywordRuleCoverage(t *testing.T) {
 		"PLUS": true, "MINUS": true, "STAR": true, "SLASH": true, "PERCENT": true,
 		// Version marker (not an identifier)
 		"V3": true,
+		// Retired system-member pseudo-type tokens (superseded by SYSTEM MEMBERS clause)
+		"AUTOOWNER_TYPE": true, "AUTOCHANGEDBY_TYPE": true,
+		"AUTOCREATEDDATE_TYPE": true, "AUTOCHANGEDDATE_TYPE": true,
 	}
 
 	// Tokens missing from keyword rule (in lexer but not in keyword).

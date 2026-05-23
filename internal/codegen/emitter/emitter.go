@@ -194,6 +194,13 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 				}
 			}
 		}
+		// Apply property order overrides — reorder fields to match Mendix's
+		// BSON serialization order (which may differ from the SDK definition order).
+		if meta.PropertyOrderOverrides != nil {
+			if order, ok := meta.PropertyOrderOverrides[cls.StructureTypeName]; ok {
+				reorderFields(&td, order)
+			}
+		}
 		types = append(types, td)
 	}
 
@@ -639,6 +646,27 @@ func mapConstructorTargetType(ctor string) string {
 		ctor = strings.ReplaceAll(ctor, "\""+from+"$", "\""+to+"$")
 	}
 	return ctor
+}
+
+// reorderFields reorders td.Fields according to propNames (JS property name order).
+// Fields not in propNames are appended after the ordered ones in their original order.
+// Also re-assigns sequential FieldIndex values so Bind bit positions stay contiguous.
+func reorderFields(td *TypeData, propNames []string) {
+	idx := make(map[string]int, len(propNames))
+	for i, n := range propNames {
+		idx[n] = i
+	}
+	sort.SliceStable(td.Fields, func(i, j int) bool {
+		pi, ok1 := idx[td.Fields[i].PropName]
+		pj, ok2 := idx[td.Fields[j].PropName]
+		if ok1 && ok2 {
+			return pi < pj
+		}
+		return ok1 // ordered before unordered
+	})
+	for i := range td.Fields {
+		td.Fields[i].FieldIndex = i
+	}
 }
 
 // init validates that templates parse at startup so errors surface early.

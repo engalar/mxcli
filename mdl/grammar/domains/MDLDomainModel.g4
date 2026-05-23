@@ -40,6 +40,17 @@ entityOption
     : COMMENT STRING_LITERAL
     | INDEX indexDefinition
     | eventHandlerDefinition
+    | systemMembersClause
+    ;
+
+// SYSTEM MEMBERS (owner, createdDate, changedDate, changedBy)
+// Uses identifierOrKeyword for "system" since SYSTEM is not a reserved token.
+systemMembersClause
+    : identifierOrKeyword MEMBERS LPAREN systemMemberName (COMMA systemMemberName)* RPAREN
+    ;
+
+systemMemberName
+    : identifierOrKeyword
     ;
 
 // Entity event handler: ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK CALL Mod.Microflow($currentObject) [RAISE ERROR]
@@ -94,10 +105,6 @@ dataType
     | DATETIME_TYPE
     | DATE_TYPE
     | AUTONUMBER_TYPE
-    | AUTOOWNER_TYPE
-    | AUTOCHANGEDBY_TYPE
-    | AUTOCREATEDDATE_TYPE
-    | AUTOCHANGEDDATE_TYPE
     | BINARY_TYPE
     | HASHEDSTRING_TYPE
     | CURRENCY_TYPE
@@ -127,10 +134,6 @@ nonListDataType
     | DATETIME_TYPE
     | DATE_TYPE
     | AUTONUMBER_TYPE
-    | AUTOOWNER_TYPE
-    | AUTOCHANGEDBY_TYPE
-    | AUTOCREATEDDATE_TYPE
-    | AUTOCHANGEDDATE_TYPE
     | BINARY_TYPE
     | HASHEDSTRING_TYPE
     | CURRENCY_TYPE
@@ -211,6 +214,7 @@ alterEntityAction
     | DROP INDEX IDENTIFIER
     | ADD EVENT HANDLER eventHandlerDefinition
     | DROP EVENT HANDLER ON eventMoment eventType
+    | SET identifierOrKeyword MEMBERS LPAREN systemMemberName (COMMA systemMemberName)* RPAREN
     ;
 
 alterAssociationAction

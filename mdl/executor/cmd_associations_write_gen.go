@@ -35,24 +35,20 @@ func astToEntityGen(s *ast.CreateEntityStmt) *genDm.Entity {
 	entity.SetGeneralization(gen)
 
 	noGen, hasNoGen := gen.(*genDm.NoGeneralization)
+	if hasNoGen {
+		// Explicitly set all 4 system member flags (Mendix requires all 4 present in BSON
+		// even when false; absent fields cause CE0161 for XPath constraints).
+		enabled := make(map[string]bool, len(s.SystemMembers))
+		for _, m := range s.SystemMembers {
+			enabled[m] = true
+		}
+		noGen.SetHasOwner(enabled["owner"])
+		noGen.SetHasCreatedDate(enabled["createdDate"])
+		noGen.SetHasChangedDate(enabled["changedDate"])
+		noGen.SetHasChangedBy(enabled["changedBy"])
+	}
 	attrNameToID := make(map[string]model.ID)
 	for _, a := range s.Attributes {
-		if hasNoGen {
-			switch a.Type.Kind {
-			case ast.TypeAutoOwner:
-				noGen.SetHasOwner(true)
-				continue
-			case ast.TypeAutoChangedBy:
-				noGen.SetHasChangedBy(true)
-				continue
-			case ast.TypeAutoCreatedDate:
-				noGen.SetHasCreatedDate(true)
-				continue
-			case ast.TypeAutoChangedDate:
-				noGen.SetHasChangedDate(true)
-				continue
-			}
-		}
 		ac := a
 		if ac.Type.Kind == ast.TypeBoolean && !ac.HasDefault {
 			ac.HasDefault = true

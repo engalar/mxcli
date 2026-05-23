@@ -127,11 +127,9 @@ entityAccessRight
     | WRITE LPAREN grantMember (COMMA grantMember)* RPAREN
     ;
 
-// A member name in a GRANT attribute list.  Uses identifierOrKeyword so that
-// Mendix attribute names that happen to match MDL reserved words (e.g. Token,
-// Select, From) are accepted without quoting in both the generated export and
-// hand-written MDL.  QUOTED_IDENTIFIER support (e.g. "Token") is included via
-// identifierOrKeyword and kept for backwards-compatibility with existing exports.
+// A member name in a GRANT attribute/association list.  Uses qualifiedName so that
+// module-qualified association names (e.g. HD.Ticket_Customer) are accepted alongside
+// plain attribute names (e.g. Status).  QUOTED_IDENTIFIER supported via identifierOrKeyword.
 grantMember
-    : identifierOrKeyword
+    : qualifiedName
     ;

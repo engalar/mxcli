@@ -145,6 +145,12 @@ type DomainMeta struct {
 	// where the BSON storage key differs from PascalCase(JS property name).
 	PropertyKeyOverrides map[string]string
 
+	// PropertyOrderOverrides maps class StructureTypeName → ordered list of
+	// property names (JS names). When set, the emitter reorders the struct's
+	// fields to match Mendix's serialization order (which may differ from the
+	// TypeScript SDK definition order).
+	PropertyOrderOverrides map[string][]string
+
 	// RefListVersion3Fields is a set of "ClassName.propertyName" pairs whose
 	// ByNameRefList fields require BSON version marker int32(3) instead of the
 	// default int32(1). Mendix uses version 3 for AllowedRoles on Forms$Page.

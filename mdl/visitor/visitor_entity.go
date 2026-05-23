@@ -91,6 +91,10 @@ func (b *Builder) ExitCreateEntityStatement(ctx *parser.CreateEntityStatementCon
 						stmt.EventHandlers = append(stmt.EventHandlers, *eh)
 					}
 				}
+				// Handle SYSTEM MEMBERS (owner, createdDate, changedDate, changedBy)
+				if smCtx := optCtx.SystemMembersClause(); smCtx != nil {
+					stmt.SystemMembers = buildSystemMembers(smCtx)
+				}
 			}
 		}
 	}
@@ -689,6 +693,16 @@ func (b *Builder) ExitAlterEntityAction(ctx *parser.AlterEntityActionContext) {
 				return
 			}
 
+			// SET SYSTEM MEMBERS (owner, createdDate, changedDate, changedBy)
+			if ctx.SET() != nil && ctx.MEMBERS() != nil {
+				b.statements = append(b.statements, &ast.AlterEntityStmt{
+					Name:          name,
+					Operation:     ast.AlterEntitySetSystemMembers,
+					SystemMembers: buildSystemMembersFromNames(ctx.AllSystemMemberName()),
+				})
+				return
+			}
+
 			// SET ALLOW_CREATE_CHANGE_LOCALLY = true/false
 			if ctx.SET() != nil && ctx.ALLOW_CREATE_CHANGE_LOCALLY() != nil {
 				boolVal := false
@@ -969,6 +983,28 @@ func (b *Builder) exitMoveFolderStatement(ctx *parser.MoveStatementContext, name
 	}
 
 	b.statements = append(b.statements, stmt)
+}
+
+// ----------------------------------------------------------------------------
+// System Members Helpers
+// ----------------------------------------------------------------------------
+
+// buildSystemMembers parses a SystemMembersClause and returns the list of member names.
+func buildSystemMembers(ctx parser.ISystemMembersClauseContext) []string {
+	c := ctx.(*parser.SystemMembersClauseContext)
+	return buildSystemMembersFromNames(c.AllSystemMemberName())
+}
+
+// buildSystemMembersFromNames extracts string names from SystemMemberName parse contexts.
+func buildSystemMembersFromNames(nodes []parser.ISystemMemberNameContext) []string {
+	names := make([]string, 0, len(nodes))
+	for _, n := range nodes {
+		nc := n.(*parser.SystemMemberNameContext)
+		if iok := nc.IdentifierOrKeyword(); iok != nil {
+			names = append(names, identifierOrKeywordText(iok))
+		}
+	}
+	return names
 }
 
 // ----------------------------------------------------------------------------

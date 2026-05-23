@@ -27,7 +27,8 @@ func canExecAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) bool {
 		ast.AlterEntityAddIndex,
 		ast.AlterEntityDropIndex,
 		ast.AlterEntityAddEventHandler,
-		ast.AlterEntityDropEventHandler:
+		ast.AlterEntityDropEventHandler,
+		ast.AlterEntitySetSystemMembers:
 		return true
 	case ast.AlterEntitySetAllowCreateChangeLocally:
 		entity, _, _, ok := loadAlterEntityGenTarget(ctx, s)
@@ -56,20 +57,6 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		a := s.Attribute
 		if a == nil {
 			return mdlerrors.NewValidation("no attribute definition provided")
-		}
-		if handled, err := applyPseudoAttributeAddGen(entity, a); handled {
-			if err != nil {
-				return err
-			}
-			if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
-				return mdlerrors.NewBackend("add attribute", err)
-			}
-			invalidateHierarchy(ctx)
-			invalidateDomainModelGenForModule(ctx, module.ID)
-			invalidateDomainModelsCache(ctx)
-			fmt.Fprintf(ctx.Output, "Added attribute '%s' to entity %s\n", a.Name, s.Name)
-			ctx.trackModifiedDomainModel(module.ID, module.Name)
-			return nil
 		}
 		if a.Calculated && !entityPersistableGen(entity) {
 			return mdlerrors.NewValidationf("attribute '%s': calculated attributes are only supported on persistent entities", a.Name)
@@ -334,6 +321,34 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		invalidateDomainModelsCache(ctx)
 		fmt.Fprintf(ctx.Output, "Set AllowCreateChangeLocally = %v on entity %s\n", s.BoolValue, s.Name)
 
+	case ast.AlterEntitySetSystemMembers:
+		noGen, ok := entity.Generalization().(*genDm.NoGeneralization)
+		if !ok {
+			return mdlerrors.NewUnsupported("system members are only supported on root (non-specialization) entities")
+		}
+		noGen.SetHasOwner(false)
+		noGen.SetHasChangedBy(false)
+		noGen.SetHasCreatedDate(false)
+		noGen.SetHasChangedDate(false)
+		for _, m := range s.SystemMembers {
+			switch m {
+			case "owner":
+				noGen.SetHasOwner(true)
+			case "changedBy":
+				noGen.SetHasChangedBy(true)
+			case "createdDate":
+				noGen.SetHasCreatedDate(true)
+			case "changedDate":
+				noGen.SetHasChangedDate(true)
+			}
+		}
+		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+			return mdlerrors.NewBackend("set system members", err)
+		}
+		invalidateDomainModelGenForModule(ctx, module.ID)
+		invalidateDomainModelsCache(ctx)
+		fmt.Fprintf(ctx.Output, "Set system members (%v) on entity %s\n", s.SystemMembers, s.Name)
+
 	default:
 		return mdlerrors.NewUnsupported("unsupported alter entity operation")
 	}
@@ -392,31 +407,6 @@ func findAttributeGenWithIndexByName(entity *genDm.Entity, name string) (*genDm.
 	return nil, -1
 }
 
-func applyPseudoAttributeAddGen(entity *genDm.Entity, a *ast.Attribute) (bool, error) {
-	if entity == nil || a == nil {
-		return false, nil
-	}
-	noGen, ok := entity.Generalization().(*genDm.NoGeneralization)
-	if !ok {
-		return false, nil
-	}
-	switch a.Type.Kind {
-	case ast.TypeAutoOwner:
-		noGen.SetHasOwner(true)
-		return true, nil
-	case ast.TypeAutoChangedBy:
-		noGen.SetHasChangedBy(true)
-		return true, nil
-	case ast.TypeAutoCreatedDate:
-		noGen.SetHasCreatedDate(true)
-		return true, nil
-	case ast.TypeAutoChangedDate:
-		noGen.SetHasChangedDate(true)
-		return true, nil
-	default:
-		return false, nil
-	}
-}
 
 func applyPseudoAttributeDropGen(entity *genDm.Entity, attrName string) (bool, error) {
 	if entity == nil {

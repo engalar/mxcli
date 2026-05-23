@@ -90,9 +90,9 @@ create association KB.ArticleTag_Tag
 -- XPath row-level filter target: user sees only own ratings
 create persistent entity KB.ArticleRating (
   Score:   integer not null,
-  Comment: string(1000),
-  owner:   autoowner
-);
+  Comment: string(1000)
+)
+system members (owner);
 
 create association KB.ArticleRating_Article
   from KB.ArticleRating to KB.Article
@@ -124,9 +124,9 @@ create enumeration HD.TicketPriority (
 create persistent entity HD.Customer (
   Name:    string(200) not null,
   Email:   string(200) not null,
-  Company: string(200),
-  owner:   autoowner
+  Company: string(200)
 )
+system members (owner)
 index (Email);
 
 create persistent entity HD.Agent (
@@ -135,9 +135,9 @@ create persistent entity HD.Agent (
   IsActive: boolean default true
 );
 
--- System members (all 4): owner tracks creator, createdDate/changedDate/changedBy for audit.
--- Note: child entities (generalization) inherit system members from their parent;
--- these pseudo-attributes are only declared on root (NoGeneralization) entities.
+-- system members clause enables the 4 NoGeneralization boolean flags in BSON.
+-- Child entities (generalization) inherit system members from their root ancestor;
+-- only root (NoGeneralization) entities declare this clause.
 create persistent entity HD.Ticket (
   Subject:     string(500) not null,
   Description: string,
@@ -145,12 +145,9 @@ create persistent entity HD.Ticket (
   Priority:    HD.TicketPriority default Normal,
   SLADueAt:   datetime,
   ResolvedAt:  datetime,
-  IsOverSLA:   boolean default false,
-  owner:        autoowner,
-  createdDate:  autocreateddate,
-  changedDate:  autochangeddate,
-  changedBy:    autochangedby
+  IsOverSLA:   boolean default false
 )
+system members (owner, createdDate, changedDate, changedBy)
 index (Status)
 index (Priority)
 index (SLADueAt);
@@ -1138,8 +1135,10 @@ grant KB.Reader on KB.Article (read *)
   where '[Status = ''Published'']';
 grant KB.Reader on KB.Category (read *);
 grant KB.Reader on KB.Tag (read *);
-grant KB.Reader on KB.ArticleRating (read *, write *)
-  where '[System.owner = ''[%CurrentUser%]'']';
+-- Explicit member list: reader sees Score+Comment only; System.owner XPath for row filter.
+-- This demonstrates 'read (A, B)' syntax vs the default 'read *'.
+grant KB.Reader on KB.ArticleRating (read (Score, Comment, KB.ArticleRating_Article), write (Score, Comment))
+  where '[System.owner=''[%CurrentUser%]'']';
 grant KB.Reader on KB.ArticleTag (read *);
 
 -- KB.Contributor: full article lifecycle
@@ -1163,9 +1162,12 @@ grant execute on nanoflow KB.NF_Article_FormatPreview to KB.Reader, KB.Contribut
 
 -- Entity access — HelpDesk
 
--- CustomerRole: own tickets only (multi-hop to HD.Customer.System.owner)
-grant HD.CustomerRole on HD.Ticket (create, read *, write *)
-  where '[HD.Ticket_Customer/HD.Customer/System.owner = ''[%CurrentUser%]'']';
+-- CustomerRole: explicit member list — customer sees/edits own ticket fields only.
+-- Demonstrates explicit 'read (A,B)' alongside System.owner multi-hop XPath.
+grant HD.CustomerRole on HD.Ticket (create,
+  read (Subject, Description, Status, Priority, SLADueAt, ResolvedAt, IsOverSLA, HD.Ticket_Customer, HD.Ticket_Agent, HD.Ticket_KBArticle),
+  write (Subject, Description, HD.Ticket_KBArticle))
+  where '[HD.Ticket_Customer/HD.Customer/System.owner=''[%CurrentUser%]'']';
 grant HD.CustomerRole on HD.TicketComment (create, read *)
   where '[IsInternal = false]';
 grant HD.CustomerRole on HD.Customer (read *, write *);
@@ -1240,7 +1242,10 @@ create or modify demo user 'demo_manager@helpdesk.test'  password 'Demo1234!' (M
 -- Responsive profile: role-derived visibility (no roles() on menu items —
 -- visibility is automatically derived from page access permissions)
 create or replace navigation Responsive
-  home page HD.Ticket_Overview
+  home page HD.Ticket_Overview for Customer
+  home page HD.Ticket_Overview for Agent
+  home page HD.EscalationWorkflow_Overview for Manager
+  home page MyFirstModule.Home_Web
   login page Administration.login
   menu (
     menu item '我的工单'  page HD.Ticket_Overview;

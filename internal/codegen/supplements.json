@@ -101,10 +101,15 @@
     "AggregateListAction.inputListVariableName":         "AggregateVariableName",
     "ValidationFeedbackAction.objectVariableName":       "ValidationVariableName",
     "Attribute.type":                                    "NewType",
+    "Entity.generalization":                             "MaybeGeneralization",
     "NoGeneralization.hasChangedBy":                     "HasChangedByAttr",
     "NoGeneralization.hasChangedDate":                   "HasChangedDateAttr",
     "NoGeneralization.hasCreatedDate":                   "HasCreatedDateAttr",
     "NoGeneralization.hasOwner":                         "HasOwnerAttr"
+  },
+
+  "property_order_overrides": {
+    "DomainModels$NoGeneralization": ["hasChangedBy", "hasChangedDate", "hasCreatedDate", "hasOwner", "persistable"]
   },
 
   "ref_list_version3_fields": [

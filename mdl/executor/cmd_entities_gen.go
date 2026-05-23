@@ -469,21 +469,7 @@ func describeEntityGen(ctx *ExecContext, name ast.QualifiedName) error {
 		attrLines = append(attrLines, attrLine{text: line.String()})
 	}
 
-	// System pseudo-attributes from *NoGeneralization
-	if g, ok := entity.Generalization().(*genDm.NoGeneralization); ok {
-		if g.HasOwner() {
-			attrLines = append(attrLines, attrLine{text: "  Owner: AutoOwner"})
-		}
-		if g.HasChangedBy() {
-			attrLines = append(attrLines, attrLine{text: "  ChangedBy: AutoChangedBy"})
-		}
-		if g.HasCreatedDate() {
-			attrLines = append(attrLines, attrLine{text: "  CreatedDate: AutoCreatedDate"})
-		}
-		if g.HasChangedDate() {
-			attrLines = append(attrLines, attrLine{text: "  ChangedDate: AutoChangedDate"})
-		}
-	}
+	// System members emitted as a separate system members (...) clause after the entity body.
 
 	for i, al := range attrLines {
 		comma := ","
@@ -493,6 +479,26 @@ func describeEntityGen(ctx *ExecContext, name ast.QualifiedName) error {
 		fmt.Fprintf(ctx.Output, "%s%s\n", al.text, comma)
 	}
 	fmt.Fprint(ctx.Output, ")")
+
+	// Emit system members clause for root (NoGeneralization) entities.
+	if g, ok := entity.Generalization().(*genDm.NoGeneralization); ok {
+		var members []string
+		if g.HasOwner() {
+			members = append(members, "owner")
+		}
+		if g.HasCreatedDate() {
+			members = append(members, "createdDate")
+		}
+		if g.HasChangedDate() {
+			members = append(members, "changedDate")
+		}
+		if g.HasChangedBy() {
+			members = append(members, "changedBy")
+		}
+		if len(members) > 0 {
+			fmt.Fprintf(ctx.Output, "\nsystem members (%s)", strings.Join(members, ", "))
+		}
+	}
 
 	// VIEW entities — emit OQL body if present
 	if entityType == "view" {
