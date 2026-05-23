@@ -250,3 +250,28 @@ func (fb *flowBuilderGen) addUnlockWorkflowActionGen(s *ast.UnlockWorkflowStmt) 
 	}
 	return fb.wrapActionGen(action, s.ErrorHandling)
 }
+
+// addGenerateJumpToActionGen emits
+// `[$Options =] generate jump to options for $wf as Module.WF_Name`.
+func (fb *flowBuilderGen) addGenerateJumpToActionGen(s *ast.GenerateJumpToStmt) element.ID {
+	action := genMf.NewGenerateJumpToOptionsAction()
+	assignFreshID(action)
+	action.SetErrorHandlingType(convertErrorHandlingTypeGen(s.ErrorHandling))
+	action.SetWorkflowVariable(s.WorkflowVariable)
+	if s.WorkflowQN.Module != "" && s.WorkflowQN.Name != "" {
+		action.SetWorkflowQualifiedName(s.WorkflowQN.Module + "." + s.WorkflowQN.Name)
+	}
+	action.SetOutputVariableName(s.OutputVariable)
+	return fb.wrapActionGen(action, s.ErrorHandling)
+}
+
+// addApplyJumpToActionGen emits
+// `[$Result =] apply jump to option $options`.
+func (fb *flowBuilderGen) addApplyJumpToActionGen(s *ast.ApplyJumpToStmt) element.ID {
+	action := genMf.NewApplyJumpToOptionAction()
+	assignFreshID(action)
+	action.SetErrorHandlingType(convertErrorHandlingTypeGen(s.ErrorHandling))
+	action.SetWorkflowJumpToDetailsVariable(s.JumpOptionsVariable)
+	action.SetOutputVariableName(s.OutputVariable)
+	return fb.wrapActionGen(action, s.ErrorHandling)
+}

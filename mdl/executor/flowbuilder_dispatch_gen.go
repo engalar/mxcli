@@ -35,7 +35,8 @@
 //     CallWorkflowStmt, GetWorkflowDataStmt, GetWorkflowsStmt,
 //     GetWorkflowActivityRecordsStmt, WorkflowOperationStmt,
 //     SetTaskOutcomeStmt, OpenUserTaskStmt, NotifyWorkflowStmt,
-//     OpenWorkflowStmt, LockWorkflowStmt, UnlockWorkflowStmt
+//     OpenWorkflowStmt, LockWorkflowStmt, UnlockWorkflowStmt,
+//     GenerateJumpToStmt, ApplyJumpToStmt
 //
 //   Returns "" until h2/h3/h4 land:
 //     IfStmt, LoopStmt, WhileStmt, EnumSplitStmt, InheritanceSplitStmt
@@ -216,6 +217,10 @@ func (fb *flowBuilderGen) addStatementGen(stmt ast.MicroflowStatement) element.I
 		return fb.addLockWorkflowActionGen(s)
 	case *ast.UnlockWorkflowStmt:
 		return fb.addUnlockWorkflowActionGen(s)
+	case *ast.GenerateJumpToStmt:
+		return fb.addGenerateJumpToActionGen(s)
+	case *ast.ApplyJumpToStmt:
+		return fb.addApplyJumpToActionGen(s)
 	}
 
 	// Unknown statement type — legacy returns "" silently.

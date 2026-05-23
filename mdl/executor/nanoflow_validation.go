@@ -83,7 +83,9 @@ func checkDisallowedNanoflowAction(stmt ast.MicroflowStatement) string {
 		*ast.NotifyWorkflowStmt,
 		*ast.OpenWorkflowStmt,
 		*ast.LockWorkflowStmt,
-		*ast.UnlockWorkflowStmt:
+		*ast.UnlockWorkflowStmt,
+		*ast.GenerateJumpToStmt,
+		*ast.ApplyJumpToStmt:
 		return "workflow actions are not allowed in nanoflows"
 	case *ast.DownloadFileStmt:
 		return "file downloads are not allowed in nanoflows"
