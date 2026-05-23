@@ -358,6 +358,7 @@ end;
 create or modify microflow KB.ACT_Article_Publish
   ($Article: KB.Article)
   returns boolean as $Success
+  folder 'Article'
 begin
   @position(200, 200)
   if $Article/Content = '' or $Article/Content = empty then
@@ -382,6 +383,7 @@ end;
 create or modify microflow KB.ACT_Article_Archive
   ($Article: KB.Article)
   returns boolean as $Success
+  folder 'Article'
 begin
   @position(200, 200)
   change $Article (Status = KB.ArticleStatus.Archived);
@@ -536,6 +538,7 @@ end;
 create or modify microflow KB.SUB_Article_TruncateContent
   ($Article: KB.Article)
   returns string as $Preview
+  folder 'Article'
 begin
   @position(200, 200)
   declare $Preview string = $Article/Content;
@@ -549,6 +552,7 @@ end;
 create or modify nanoflow KB.NF_Article_FormatPreview
   ($Article: KB.Article)
   returns string as $Preview
+  folder 'Article'
 begin
   @position(200, 200)
   $Preview = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
@@ -976,7 +980,8 @@ end;
 create page KB.Article_Overview
 (
   title: 'Knowledge Base',
-  layout: Atlas_Core.Atlas_Default
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Article'
 )
 {
   layoutgrid lgMain {
@@ -998,6 +1003,7 @@ create page KB.Article_Detail
 (
   title: 'Article',
   layout: Atlas_Core.Atlas_Default,
+  folder: 'Article',
   params: { $Article: KB.Article }
 )
 {
@@ -1138,6 +1144,7 @@ create page KB.Article_NewEdit
 (
   title: 'New / Edit Article',
   layout: Atlas_Core.Atlas_Default,
+  folder: 'Article',
   params: { $Article: KB.Article }
 )
 {
