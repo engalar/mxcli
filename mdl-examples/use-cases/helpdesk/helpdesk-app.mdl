@@ -952,7 +952,8 @@ create page KB.Article_Detail
 
 -- MARK: Pages — HelpDesk
 
--- Ticket overview with DataGrid2 column filters
+-- Ticket overview: DataGrid2 CRUD overview
+-- Pattern A: controlbar New button, column filters, sort, Edit action column
 create page HD.Ticket_Overview
 (
   title: 'Tickets',
@@ -964,15 +965,38 @@ create page HD.Ticket_Overview
     row rMain {
       column cMain (desktopwidth: 12) {
         datagrid dgTickets (
-          datasource: database HD.Ticket
+          datasource: database from HD.Ticket sort by SLADueAt asc,
+          PageSize: 20,
+          PagingPosition: both
         ) {
-          column colSubject  (attribute: Subject,  caption: 'Subject')
-          column colStatus   (attribute: Status,   caption: 'Status')
-          column colPriority (attribute: Priority, caption: 'Priority')
-          column colSLADue   (attribute: SLADueAt, caption: 'SLA Due')
-          column colIsOver   (attribute: IsOverSLA, caption: 'Overdue')
+          controlbar cb1 {
+            actionbutton btnNew (
+              caption: 'New Ticket',
+              action: create_object HD.Ticket then show_page HD.Ticket_NewEdit,
+              buttonstyle: primary
+            )
+          }
+          column colSubject  (attribute: Subject,   caption: 'Subject') {
+            textfilter fSubject
+          }
+          column colStatus   (attribute: Status,    caption: 'Status',   ColumnWidth: manual, Size: 120) {
+            dropdownfilter fStatus
+          }
+          column colPriority (attribute: Priority,  caption: 'Priority', ColumnWidth: manual, Size: 100) {
+            dropdownfilter fPriority
+          }
+          column colSLADue   (attribute: SLADueAt,  caption: 'SLA Due',  ColumnWidth: manual, Size: 140) {
+            datefilter fSLADue
+          }
+          column colIsOver   (attribute: IsOverSLA, caption: 'Overdue',  ColumnWidth: manual, Size: 90)
+          column colActions  (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 80) {
+            actionbutton btnEdit (
+              caption: 'Edit',
+              action: show_page HD.Ticket_Detail (Ticket: $currentObject),
+              buttonstyle: default
+            )
+          }
         }
-        actionbutton btnNewTicket (caption: 'New Ticket')
       }
     }
   }
