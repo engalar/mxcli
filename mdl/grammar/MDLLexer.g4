@@ -706,6 +706,10 @@ UNLOCK: U N L O C K;
 REASON: R E A S O N;
 OPEN: O P E N;
 COMPLETE_TASK: C O M P L E T E '_' T A S K;
+COMPLETION  : C O M P L E T I O N;
+CONSENSUS   : C O N S E N S U S;
+MAJORITY    : M A J O R I T Y;
+THRESHOLD   : T H R E S H O L D;
 
 // =============================================================================
 // COMPARISON OPERATORS (multi-char before single-char)

@@ -56,8 +56,15 @@ workflowUserTaskStmt
       (ENTITY qualifiedName)?
       (DUE DATE_TYPE STRING_LITERAL)?
       (DESCRIPTION STRING_LITERAL)?
+      (COMPLETION METHOD workflowCompletionMethod)?
       (OUTCOMES workflowUserTaskOutcome+)?
       (BOUNDARY EVENT workflowBoundaryEventClause+)?
+    ;
+
+workflowCompletionMethod
+    : MAJORITY
+    | THRESHOLD NUMBER_LITERAL PERCENT?
+    | CONSENSUS
     ;
 
 workflowBoundaryEventClause
