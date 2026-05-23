@@ -1,0 +1,258 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package entity
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+)
+
+// --------------------------------------------------------------------------
+// Lift
+// --------------------------------------------------------------------------
+
+func TestLift_PersistentEntity(t *testing.T) {
+	stmt := &ast.CreateEntityStmt{
+		Name: ast.QualifiedName{Module: "Sales", Name: "Customer"},
+		Kind: ast.EntityPersistent,
+		Attributes: []ast.Attribute{
+			{
+				Name:    "Name",
+				Type:    ast.DataType{Kind: ast.TypeString, Length: 100},
+				NotNull: true,
+			},
+			{
+				Name:         "Active",
+				Type:         ast.DataType{Kind: ast.TypeBoolean},
+				HasDefault:   true,
+				DefaultValue: "true",
+			},
+		},
+		Position: &ast.Position{X: 100, Y: 200},
+	}
+
+	m, err := Lift(stmt)
+	require.NoError(t, err)
+	require.NotNil(t, m)
+	assert.Equal(t, "Sales", m.Name.Module)
+	assert.Equal(t, "Customer", m.Name.Name)
+	assert.Equal(t, EntityPersistent, m.Kind)
+	require.NotNil(t, m.Position)
+	assert.Equal(t, 100, m.Position.X)
+	assert.Equal(t, 200, m.Position.Y)
+	require.Len(t, m.Attributes, 2)
+	assert.Equal(t, "Name", m.Attributes[0].Name)
+	assert.Equal(t, model.KindString, m.Attributes[0].Type.Kind)
+	assert.Equal(t, 100, m.Attributes[0].Type.Length)
+	assert.True(t, m.Attributes[0].NotNull)
+	assert.Equal(t, "Active", m.Attributes[1].Name)
+	assert.True(t, m.Attributes[1].HasDefault)
+	assert.Equal(t, "true", m.Attributes[1].DefaultValue)
+}
+
+func TestLift_NonPersistent(t *testing.T) {
+	stmt := &ast.CreateEntityStmt{
+		Name: ast.QualifiedName{Module: "Tmp", Name: "Buffer"},
+		Kind: ast.EntityNonPersistent,
+	}
+	m, err := Lift(stmt)
+	require.NoError(t, err)
+	assert.Equal(t, EntityNonPersistent, m.Kind)
+}
+
+func TestLift_WithExtends(t *testing.T) {
+	stmt := &ast.CreateEntityStmt{
+		Name:           ast.QualifiedName{Module: "App", Name: "MyImage"},
+		Kind:           ast.EntityPersistent,
+		Generalization: &ast.QualifiedName{Module: "System", Name: "Image"},
+	}
+	m, err := Lift(stmt)
+	require.NoError(t, err)
+	require.NotNil(t, m.Extends)
+	assert.Equal(t, "System", m.Extends.Module)
+	assert.Equal(t, "Image", m.Extends.Name)
+}
+
+func TestLift_EnumAttribute(t *testing.T) {
+	stmt := &ast.CreateEntityStmt{
+		Name: ast.QualifiedName{Module: "App", Name: "Order"},
+		Kind: ast.EntityPersistent,
+		Attributes: []ast.Attribute{
+			{
+				Name: "Status",
+				Type: ast.DataType{
+					Kind:    ast.TypeEnumeration,
+					EnumRef: &ast.QualifiedName{Module: "App", Name: "OrderStatus"},
+				},
+			},
+		},
+	}
+	m, err := Lift(stmt)
+	require.NoError(t, err)
+	require.Len(t, m.Attributes, 1)
+	assert.Equal(t, model.KindUnresolvedRef, m.Attributes[0].Type.Kind)
+	assert.Equal(t, "App.OrderStatus", m.Attributes[0].Type.Ref)
+}
+
+func TestLift_NilStatement(t *testing.T) {
+	_, err := Lift(nil)
+	assert.Error(t, err)
+}
+
+// --------------------------------------------------------------------------
+// ToMDL
+// --------------------------------------------------------------------------
+
+func TestToMDL_MinimalEntity(t *testing.T) {
+	m := &EntityModel{
+		Name: QualifiedName{Module: "Sales", Name: "Customer"},
+		Kind: EntityPersistent,
+	}
+	out := m.ToMDL()
+	assert.Contains(t, out, "create persistent entity Sales.Customer")
+	assert.Contains(t, out, "(")
+	assert.Contains(t, out, ")")
+}
+
+func TestToMDL_WithAttributes(t *testing.T) {
+	m := &EntityModel{
+		Name: QualifiedName{Module: "Sales", Name: "Customer"},
+		Kind: EntityPersistent,
+		Attributes: []AttributeModel{
+			{
+				Name:    "Name",
+				Type:    model.DataType{Kind: model.KindString, Length: 100},
+				NotNull: true,
+			},
+			{
+				Name:         "Active",
+				Type:         model.DataType{Kind: model.KindBoolean},
+				HasDefault:   true,
+				DefaultValue: "true",
+			},
+		},
+	}
+	out := m.ToMDL()
+	assert.Contains(t, out, "Name: String(100) not null")
+	assert.Contains(t, out, "Active: Boolean default true")
+	// Last attribute has no trailing comma.
+	assert.True(t, strings.Contains(out, "Active: Boolean default true\n)"),
+		"expected last attribute to have no comma; got:\n%s", out)
+}
+
+func TestToMDL_NonPersistent(t *testing.T) {
+	m := &EntityModel{
+		Name: QualifiedName{Module: "Tmp", Name: "Buffer"},
+		Kind: EntityNonPersistent,
+	}
+	out := m.ToMDL()
+	assert.Contains(t, out, "create non-persistent entity Tmp.Buffer")
+}
+
+func TestToMDL_LiftRoundTrip(t *testing.T) {
+	stmt := &ast.CreateEntityStmt{
+		Name:           ast.QualifiedName{Module: "Sales", Name: "Customer"},
+		Kind:           ast.EntityPersistent,
+		Generalization: &ast.QualifiedName{Module: "System", Name: "Image"},
+		Attributes: []ast.Attribute{
+			{
+				Name:    "Name",
+				Type:    ast.DataType{Kind: ast.TypeString, Length: 200},
+				NotNull: true,
+			},
+		},
+		Documentation: "A customer.",
+	}
+	m, err := Lift(stmt)
+	require.NoError(t, err)
+	out := m.ToMDL()
+	assert.Contains(t, out, "create persistent entity Sales.Customer extends System.Image")
+	assert.Contains(t, out, "Name: String(200) not null")
+	assert.Contains(t, out, "A customer.")
+}
+
+// --------------------------------------------------------------------------
+// Hydrate
+// --------------------------------------------------------------------------
+
+func TestHydrate_BasicEntity(t *testing.T) {
+	e := genDm.NewEntity()
+	e.SetName("Customer")
+	e.SetDocumentation("A customer.")
+	e.SetLocation("100 200")
+
+	// Make it non-persistent via NoGeneralization with Persistable=false.
+	gen := genDm.NewNoGeneralization()
+	gen.SetPersistable(false)
+	e.SetGeneralization(gen)
+
+	attr := genDm.NewAttribute()
+	attr.SetName("Name")
+	st := genDm.NewStringAttributeType()
+	st.SetLength(100)
+	attr.SetType(st)
+	e.AddAttributes(attr)
+
+	m, warns, err := Hydrate("Sales", e)
+	require.NoError(t, err)
+	assert.Empty(t, warns)
+	assert.Equal(t, "Sales", m.Name.Module)
+	assert.Equal(t, "Customer", m.Name.Name)
+	assert.Equal(t, EntityNonPersistent, m.Kind)
+	assert.Equal(t, "A customer.", m.Documentation)
+	require.NotNil(t, m.Position)
+	assert.Equal(t, 100, m.Position.X)
+	assert.Equal(t, 200, m.Position.Y)
+	require.Len(t, m.Attributes, 1)
+	assert.Equal(t, "Name", m.Attributes[0].Name)
+	assert.Equal(t, model.KindString, m.Attributes[0].Type.Kind)
+	assert.Equal(t, 100, m.Attributes[0].Type.Length)
+}
+
+func TestHydrate_NotNullConstraint(t *testing.T) {
+	e := genDm.NewEntity()
+	e.SetName("Customer")
+
+	attr := genDm.NewAttribute()
+	attr.SetName("Email")
+	attr.SetType(genDm.NewStringAttributeType())
+	e.AddAttributes(attr)
+
+	vr := genDm.NewValidationRule()
+	vr.SetAttributeQualifiedName("Sales.Customer.Email")
+	vr.SetRuleInfo(genDm.NewRequiredRuleInfo())
+	e.AddValidationRules(vr)
+
+	m, warns, err := Hydrate("Sales", e)
+	require.NoError(t, err)
+	assert.Empty(t, warns)
+	require.Len(t, m.Attributes, 1)
+	assert.True(t, m.Attributes[0].NotNull, "expected Email to be NotNull from RequiredRuleInfo")
+}
+
+func TestHydrate_EnumAttribute(t *testing.T) {
+	e := genDm.NewEntity()
+	e.SetName("Order")
+
+	attr := genDm.NewAttribute()
+	attr.SetName("Status")
+	enumType := genDm.NewEnumerationAttributeType()
+	enumType.SetEnumerationQualifiedName("App.OrderStatus")
+	attr.SetType(enumType)
+	e.AddAttributes(attr)
+
+	m, warns, err := Hydrate("App", e)
+	require.NoError(t, err)
+	assert.Empty(t, warns)
+	require.Len(t, m.Attributes, 1)
+	assert.Equal(t, model.KindEnumRef, m.Attributes[0].Type.Kind)
+	assert.Equal(t, "App.OrderStatus", m.Attributes[0].Type.Ref)
+}
+

@@ -1,0 +1,182 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package entity
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/mendixlabs/mxcli/mdl/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+)
+
+// Hydrate builds a canonical EntityModel from a gen-typed *genDm.Entity.
+// moduleName supplies the owning module (gen Entity stores only the bare name).
+// Any unrecognised child types are surfaced as Warning entries — they do not
+// abort the conversion.
+func Hydrate(moduleName string, e *genDm.Entity) (*EntityModel, []model.Warning, error) {
+	if e == nil {
+		return nil, nil, fmt.Errorf("entity.Hydrate: nil entity")
+	}
+	var warns []model.Warning
+	m := &EntityModel{
+		Name:          QualifiedName{Module: moduleName, Name: e.Name()},
+		Documentation: e.Documentation(),
+		Kind:          hydrateKind(e),
+	}
+	if loc := e.Location(); loc != "" {
+		if x, y, ok := parseLocation(loc); ok {
+			m.Position = &Position{X: x, Y: y}
+		}
+	}
+	if ext := generalizationQN(e); ext != "" {
+		parts := strings.SplitN(ext, ".", 2)
+		if len(parts) == 2 {
+			qn := QualifiedName{Module: parts[0], Name: parts[1]}
+			m.Extends = &qn
+		}
+	}
+
+	notNullAttrs := make(map[string]bool)
+	uniqueAttrs := make(map[string]bool)
+	for _, item := range e.ValidationRulesItems() {
+		vr, ok := item.(*genDm.ValidationRule)
+		if !ok {
+			warns = append(warns, model.Warning{Field: "ValidationRules", Message: fmt.Sprintf("unexpected type %T", item)})
+			continue
+		}
+		attrName := lastSegment(vr.AttributeQualifiedName())
+		ruleType := ""
+		if ri := vr.RuleInfo(); ri != nil {
+			ruleType = ri.TypeName()
+		}
+		switch ruleType {
+		case "DomainModels$RequiredRuleInfo":
+			notNullAttrs[attrName] = true
+		case "DomainModels$UniqueRuleInfo":
+			uniqueAttrs[attrName] = true
+		}
+	}
+
+	for _, item := range e.AttributesItems() {
+		attr, ok := item.(*genDm.Attribute)
+		if !ok {
+			warns = append(warns, model.Warning{Field: "Attributes", Message: fmt.Sprintf("unexpected type %T", item)})
+			continue
+		}
+		m.Attributes = append(m.Attributes, hydrateAttribute(attr, notNullAttrs, uniqueAttrs))
+	}
+
+	for _, item := range e.IndexesItems() {
+		idx, ok := item.(*genDm.Index)
+		if !ok {
+			warns = append(warns, model.Warning{Field: "Indexes", Message: fmt.Sprintf("unexpected type %T", item)})
+			continue
+		}
+		m.Indexes = append(m.Indexes, hydrateIndex(idx, e))
+	}
+	return m, warns, nil
+}
+
+func hydrateKind(e *genDm.Entity) EntityKind {
+	if src := e.Source(); src != nil && strings.Contains(src.TypeName(), "OqlView") {
+		return EntityView
+	}
+	if g, ok := e.Generalization().(*genDm.NoGeneralization); ok && !g.Persistable() {
+		return EntityNonPersistent
+	}
+	return EntityPersistent
+}
+
+func hydrateAttribute(attr *genDm.Attribute, notNull, unique map[string]bool) AttributeModel {
+	am := AttributeModel{
+		Name:          attr.Name(),
+		Documentation: attr.Documentation(),
+		Type:          hydrateDataType(attr.Type()),
+		NotNull:       notNull[attr.Name()],
+		Unique:        unique[attr.Name()],
+	}
+	if sv, ok := attr.Value().(*genDm.StoredValue); ok && sv.DefaultValue() != "" {
+		am.HasDefault = true
+		raw := sv.DefaultValue()
+		if _, isStr := attr.Type().(*genDm.StringAttributeType); isStr {
+			am.DefaultValue = "'" + strings.ReplaceAll(raw, "'", "''") + "'"
+		} else {
+			am.DefaultValue = raw
+		}
+	}
+	return am
+}
+
+func hydrateDataType(t any) model.DataType {
+	switch v := t.(type) {
+	case *genDm.StringAttributeType:
+		return model.DataType{Kind: model.KindString, Length: int(v.Length())}
+	case *genDm.IntegerAttributeType:
+		return model.DataType{Kind: model.KindInteger}
+	case *genDm.LongAttributeType:
+		return model.DataType{Kind: model.KindLong}
+	case *genDm.DecimalAttributeType:
+		return model.DataType{Kind: model.KindDecimal}
+	case *genDm.BooleanAttributeType:
+		return model.DataType{Kind: model.KindBoolean}
+	case *genDm.DateTimeAttributeType:
+		return model.DataType{Kind: model.KindDateTime}
+	case *genDm.BinaryAttributeType:
+		return model.DataType{Kind: model.KindBinary}
+	case *genDm.AutoNumberAttributeType:
+		return model.DataType{Kind: model.KindAutoNumber}
+	case *genDm.EnumerationAttributeType:
+		return model.DataType{Kind: model.KindEnumRef, Ref: v.EnumerationQualifiedName()}
+	default:
+		return model.DataType{Kind: model.KindUnknown}
+	}
+}
+
+func hydrateIndex(idx *genDm.Index, e *genDm.Entity) IndexModel {
+	attrNames := make(map[string]string)
+	for _, item := range e.AttributesItems() {
+		if a, ok := item.(*genDm.Attribute); ok {
+			attrNames[string(a.ID())] = a.Name()
+		}
+	}
+	im := IndexModel{Name: idx.DataStorageGuid()}
+	for _, item := range idx.AttributesItems() {
+		ia, ok := item.(*genDm.IndexedAttribute)
+		if !ok {
+			continue
+		}
+		refID := string(ia.AttributeRefID())
+		name := attrNames[refID]
+		if name == "" {
+			name = refID
+		}
+		im.Columns = append(im.Columns, IndexColumn{Name: name, Ascending: ia.Ascending()})
+	}
+	return im
+}
+
+// generalizationQN returns the parent qualified name for entities that have a
+// Generalization (i.e., `extends Module.Parent`); returns "" otherwise.
+func generalizationQN(e *genDm.Entity) string {
+	if g, ok := e.Generalization().(*genDm.Generalization); ok {
+		return g.GeneralizationQualifiedName()
+	}
+	return ""
+}
+
+// parseLocation parses Mendix location strings of the form "X Y".
+func parseLocation(loc string) (x, y int, ok bool) {
+	_, err := fmt.Sscanf(loc, "%d %d", &x, &y)
+	return x, y, err == nil
+}
+
+// lastSegment returns the trailing component of a dotted name
+// ("Mod.Ent.Attr" -> "Attr").
+func lastSegment(qn string) string {
+	parts := strings.Split(qn, ".")
+	if len(parts) == 0 {
+		return qn
+	}
+	return parts[len(parts)-1]
+}
