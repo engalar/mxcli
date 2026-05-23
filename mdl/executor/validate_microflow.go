@@ -39,12 +39,12 @@ func ValidateMicroflow(stmt *ast.CreateMicroflowStmt) []linter.Violation {
 				fmt.Sprintf("declare as %q; reference it inside the microflow body as $%s", bare, bare))
 		}
 		// Reject bare entity names without module prefix.
-		if p.Type.EntityRef != nil && p.Type.EntityRef.Module == "" {
+		if ref := paramEntityRef(p.Type); ref != nil && ref.Module == "" {
 			v.addViolation("MDL008", linter.SeverityError,
 				fmt.Sprintf("parameter '$%s': entity type '%s' is missing module prefix",
-					p.Name, p.Type.EntityRef.Name),
+					p.Name, ref.Name),
 				fmt.Sprintf("Use a qualified name like 'Module.%s' or 'System.%s'",
-					p.Type.EntityRef.Name, p.Type.EntityRef.Name))
+					ref.Name, ref.Name))
 		}
 	}
 	v.validate(stmt.Body)

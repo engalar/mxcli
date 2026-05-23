@@ -147,6 +147,92 @@ func TestExecCreateMicroflowGenRejectsNotConnected(t *testing.T) {
 	}
 }
 
+// TestExecCreateMicroflowGenEntityParamEnumRefPopulatesVarTypes verifies
+// CE0639 fix: when a microflow parameter type is a bare qualified name
+// (e.g. "HD.Ticket"), buildDataType stores it as TypeEnumeration+EnumRef
+// rather than TypeEntity+EntityRef. The varTypes initialisation loop must
+// recognise EnumRef as an entity type so that downstream code like
+// classifyValidationTarget can build fully-qualified attribute names.
+//
+// Without the fix, varTypes["Ticket"] is empty and the ValidationFeedback
+// action gets AttributeQualifiedName = "Subject" (bare), causing Studio
+// Pro CE0639 "No variable selected".
+func TestExecCreateMicroflowGenEntityParamEnumRefPopulatesVarTypes(t *testing.T) {
+	mod := mkModule("HD")
+
+	var capturedMF *genMf.Microflow
+	repo := &repostesting.RecordingMicroflowRepository{
+		ListAllFunc: func() ([]*genMf.Microflow, error) { return nil, nil },
+		CreateFunc: func(call repostesting.MicroflowCreateCall) error {
+			capturedMF = call.Microflow
+			return nil
+		},
+	}
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(mkHierarchy(mod)))
+	ctx.Microflows = repo
+
+	// "HD.Ticket" parsed as TypeEnumeration+EnumRef — the real production case.
+	ticketRef := ast.QualifiedName{Module: "HD", Name: "Ticket"}
+	stmt := &ast.CreateMicroflowStmt{
+		Name: ast.QualifiedName{Module: "HD", Name: "ACT_Validate"},
+		Parameters: []ast.MicroflowParam{
+			{
+				Name: "Ticket",
+				Type: ast.DataType{
+					Kind:    ast.TypeEnumeration, // bare QN produces TypeEnumeration
+					EnumRef: &ticketRef,          // stored in EnumRef, not EntityRef
+				},
+			},
+		},
+		Body: []ast.MicroflowStatement{
+			&ast.ValidationFeedbackStmt{
+				AttributePath: &ast.AttributePathExpr{
+					Variable: "Ticket",
+					Segments: []ast.PathSegment{{Name: "Subject"}},
+				},
+				Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "Subject is required"},
+			},
+		},
+	}
+
+	if err := execCreateMicroflowGen(ctx, stmt); err != nil {
+		t.Fatalf("execCreateMicroflowGen failed: %v", err)
+	}
+	if capturedMF == nil {
+		t.Fatal("Create was not called — no microflow captured")
+	}
+
+	// Find the ValidationFeedbackAction in the ObjectCollection.
+	oc, ok := capturedMF.ObjectCollection().(*genMf.MicroflowObjectCollection)
+	if !ok || oc == nil {
+		t.Fatal("expected non-nil MicroflowObjectCollection")
+	}
+	var vfAct *genMf.ValidationFeedbackAction
+	for _, obj := range oc.ObjectsItems() {
+		if aa, ok := obj.(*genMf.ActionActivity); ok {
+			if vf, ok := aa.Action().(*genMf.ValidationFeedbackAction); ok {
+				vfAct = vf
+				break
+			}
+		}
+	}
+	if vfAct == nil {
+		t.Fatal("ValidationFeedbackAction not found in ObjectCollection")
+	}
+	// CE0639 fix: must be fully qualified "HD.Ticket.Subject", not bare "Subject".
+	want := "HD.Ticket.Subject"
+	if vfAct.AttributeQualifiedName() != want {
+		t.Fatalf("CE0639: AttributeQualifiedName = %q, want %q (bare name causes Studio Pro CE0639)", vfAct.AttributeQualifiedName(), want)
+	}
+}
+
 func TestExecCreateMicroflowGen_WarnsOnRemovedParam(t *testing.T) {
 	// Setup：existing 微流有 OldParam；caller 微流引用了它；
 	// CREATE OR REPLACE 只保留 NewParam → 应该打印 CE1613 警告。

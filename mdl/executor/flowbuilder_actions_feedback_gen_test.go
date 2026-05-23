@@ -223,3 +223,65 @@ func TestBuildTextTemplateGenWithArgs(t *testing.T) {
 		t.Fatalf("arg = %q", args[0].(*genMf.TemplateArgument).Expression())
 	}
 }
+
+// TestClassifyValidationTargetEntityParamAsEnumRef verifies CE0639 fix:
+// when the entity type for a microflow parameter is stored in EnumRef
+// (not EntityRef) — as happens for bare qualified names like "HD.Ticket"
+// parsed by buildDataType — the varTypes map must still be populated so
+// classifyValidationTarget returns a fully-qualified attribute name.
+//
+// Without the fix, varTypes["Ticket"] is empty and the returned attribute
+// QN is the bare segment name "Subject" rather than "HD.Ticket.Subject",
+// causing Studio Pro CE0639 "No variable selected".
+// TestClassifyValidationTargetEntityParamAsEnumRef verifies CE0639 fix:
+// when varTypes["Ticket"] is correctly populated (as happens after the EnumRef
+// fix in execCreateMicroflowGen), classifyValidationTarget returns the fully
+// qualified attribute name "HD.Ticket.Subject" rather than bare "Subject".
+func TestClassifyValidationTargetEntityParamAsEnumRef(t *testing.T) {
+	fb := newActionTestFb()
+	// Simulate the correct varTypes state after the EnumRef fix:
+	// entity params parsed as TypeEnumeration+EnumRef must populate varTypes
+	// exactly like EntityRef params do. Variable is stored WITHOUT $ prefix.
+	fb.varTypes["Ticket"] = "HD.Ticket"
+
+	stmt := &ast.ValidationFeedbackStmt{
+		AttributePath: &ast.AttributePathExpr{
+			Variable: "Ticket", // buildAttributePathFromContext strips the $ prefix
+			Segments: []ast.PathSegment{{Name: "Subject"}},
+		},
+		Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "Subject is required"},
+	}
+	fb.addValidationFeedbackActionGen(stmt)
+	act := actionFromObjects(t, fb).(*genMf.ValidationFeedbackAction)
+	// Must be fully qualified — CE0639 fires when this is bare "Subject".
+	if act.AttributeQualifiedName() != "HD.Ticket.Subject" {
+		t.Fatalf("attribute QN = %q, want HD.Ticket.Subject (CE0639: unqualified name causes Studio Pro error)", act.AttributeQualifiedName())
+	}
+	if act.AssociationQualifiedName() != "" {
+		t.Fatalf("association should be empty, got %q", act.AssociationQualifiedName())
+	}
+}
+
+// TestClassifyValidationTargetMissingVarTypes verifies that when varTypes is
+// not populated for the variable (old broken behaviour from EnumRef params),
+// the returned attribute QN is just the bare segment — demonstrating the
+// CE0639 root cause. The fix in execCreateMicroflowGen/execCreateNanoflowGen
+// ensures this case never occurs in production.
+func TestClassifyValidationTargetMissingVarTypesGivesBareAttr(t *testing.T) {
+	fb := newActionTestFb()
+	// varTypes is empty — simulates the broken state before the EnumRef fix.
+	stmt := &ast.ValidationFeedbackStmt{
+		AttributePath: &ast.AttributePathExpr{
+			Variable: "Ticket", // no $ prefix — matches production code
+			Segments: []ast.PathSegment{{Name: "Subject"}},
+		},
+		Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "Subject is required"},
+	}
+	fb.addValidationFeedbackActionGen(stmt)
+	act := actionFromObjects(t, fb).(*genMf.ValidationFeedbackAction)
+	// Without varTypes populated, the QN is just the bare segment.
+	// This documents the broken behaviour (CE0639) that the fix prevents.
+	if act.AttributeQualifiedName() != "Subject" {
+		t.Fatalf("expected bare 'Subject' from broken path, got %q", act.AttributeQualifiedName())
+	}
+}

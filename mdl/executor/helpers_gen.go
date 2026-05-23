@@ -16,9 +16,35 @@
 package executor
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
+
+// paramEntityRef returns the qualified-name reference for a microflow/nanoflow
+// parameter that carries an entity type, or nil for primitive types.
+//
+// This helper handles the TypeEnumeration vs TypeEntity ambiguity documented in
+// CLAUDE.md: buildDataType stores bare qualified names (e.g. "HD.Ticket") as
+// TypeEnumeration+EnumRef rather than TypeEntity+EntityRef because the MDL
+// grammar cannot distinguish the two at parse time. Both EntityRef and EnumRef
+// must therefore be accepted as entity references when initialising varTypes
+// for parameter resolution (e.g. classifyValidationTarget for CE0639).
+//
+// Callers use the returned *ast.QualifiedName to build the entity QN string
+// ("Module.Name") for varTypes population. A nil return means the parameter
+// is a primitive or list type with no entity component.
+func paramEntityRef(dt ast.DataType) *ast.QualifiedName {
+	if dt.EntityRef != nil {
+		return dt.EntityRef
+	}
+	// EnumRef is set for bare qualified names parsed by buildDataType —
+	// these are entity params in practice (user writes "Module.Entity").
+	if dt.EnumRef != nil && dt.Kind == ast.TypeEnumeration {
+		return dt.EnumRef
+	}
+	return nil
+}
 
 // listMicroflowsGen returns every microflow in the project as gen
 // objects. Resolution order:

@@ -217,10 +217,12 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		}
 
 		// Initialise variable types from parameters so body statements
-		// can resolve member access on entity-typed params.
+		// can resolve member access on entity-typed params. Uses
+		// paramEntityRef to handle the TypeEnumeration+EnumRef case
+		// (bare qualified names like "HD.Ticket" parsed by buildDataType).
 		for _, p := range s.Parameters {
-			if p.Type.EntityRef != nil {
-				entityQN := p.Type.EntityRef.Module + "." + p.Type.EntityRef.Name
+			if ref := paramEntityRef(p.Type); ref != nil {
+				entityQN := ref.Module + "." + ref.Name
 				if p.Type.Kind == ast.TypeListOf {
 					fb.varTypes[p.Name] = "List of " + entityQN
 				} else {

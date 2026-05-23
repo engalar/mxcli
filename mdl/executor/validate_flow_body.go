@@ -40,14 +40,14 @@ func validateFlowBody(params []ast.MicroflowParam, body []ast.MicroflowStatement
 	v := newFlowValidator()
 
 	for _, p := range params {
-		if p.Type.EntityRef != nil {
-			if p.Type.EntityRef.Module == "" {
+		if ref := paramEntityRef(p.Type); ref != nil {
+			if ref.Module == "" {
 				v.errors = append(v.errors, fmt.Sprintf(
 					"parameter '$%s': entity type '%s' is missing module prefix (use 'Module.%s')",
-					p.Name, p.Type.EntityRef.Name, p.Type.EntityRef.Name))
+					p.Name, ref.Name, ref.Name))
 				continue
 			}
-			entityQN := p.Type.EntityRef.Module + "." + p.Type.EntityRef.Name
+			entityQN := ref.Module + "." + ref.Name
 			if p.Type.Kind == ast.TypeListOf {
 				v.varTypes[p.Name] = "List of " + entityQN
 			} else {
@@ -149,8 +149,8 @@ func (v *flowValidator) validateStatement(stmt ast.MicroflowStatement) {
 		} else {
 			v.flatOutputVarNames[name] = true
 		}
-		if s.Type.EntityRef != nil {
-			v.varTypes[s.Variable] = s.Type.EntityRef.Module + "." + s.Type.EntityRef.Name
+		if ref := paramEntityRef(s.Type); ref != nil {
+			v.varTypes[s.Variable] = ref.Module + "." + ref.Name
 		} else {
 			v.declaredVars[s.Variable] = s.Type.Kind.String()
 		}

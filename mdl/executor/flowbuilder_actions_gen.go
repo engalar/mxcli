@@ -69,7 +69,15 @@ func (fb *flowBuilderGen) addCreateVariableActionGen(s *ast.DeclareStmt) element
 		}
 	}
 
-	if fb.declaredVars != nil {
+	// Populate varTypes for entity-typed declared variables so that
+	// downstream helpers (classifyValidationTarget, retrieve, etc.) can
+	// build fully-qualified attribute names (CE0639 prevention).
+	if ref := paramEntityRef(declType); ref != nil && ref.Module != "" {
+		if fb.varTypes != nil {
+			entityQN := ref.Module + "." + ref.Name
+			fb.varTypes[s.Variable] = entityQN
+		}
+	} else if fb.declaredVars != nil {
 		fb.declaredVars[s.Variable] = declType.Kind.String()
 	}
 

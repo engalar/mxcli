@@ -185,9 +185,17 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 
 	// Initialise variable types from parameters so body statements
 	// can resolve member access on entity-typed params.
+	//
+	// Note: buildDataType stores bare qualified names (e.g. "HD.Ticket") as
+	// TypeEnumeration+EnumRef rather than TypeEntity+EntityRef because the
+	// grammar cannot distinguish entity types from enumeration types at parse
+	// time (see CLAUDE.md "TypeEnumeration vs TypeEntity Ambiguity"). We must
+	// therefore treat TypeEnumeration+EnumRef as an entity reference here so
+	// that downstream helpers like classifyValidationTarget build fully-
+	// qualified attribute names. Without this, Studio Pro raises CE0639.
 	for _, p := range s.Parameters {
-		if p.Type.EntityRef != nil {
-			entityQN := p.Type.EntityRef.Module + "." + p.Type.EntityRef.Name
+		if ref := paramEntityRef(p.Type); ref != nil {
+			entityQN := ref.Module + "." + ref.Name
 			if p.Type.Kind == ast.TypeListOf {
 				fb.varTypes[p.Name] = "List of " + entityQN
 			} else {
