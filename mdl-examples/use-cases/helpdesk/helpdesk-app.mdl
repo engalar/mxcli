@@ -504,6 +504,7 @@ end;
 create or modify nanoflow HD.NF_TicketSearch_Apply
   ($Search: HD.TicketSearch)
   returns list of HD.Ticket as $Tickets
+  folder 'Ticket/Search'
 begin
   @position(200, 200)
   -- Simplified: full retrieve (XPath cross-object reference to non-persistent
@@ -580,6 +581,7 @@ create page HD.EscalationReview_Form
 (
   title: 'Escalation Review',
   layout: Atlas_Core.Atlas_Default,
+  folder: 'Escalation',
   params: { $WorkflowUserTask: System.WorkflowUserTask }
 )
 {
@@ -595,7 +597,8 @@ create page HD.EscalationReview_Form
 create page HD.EscalationWorkflow_Overview
 (
   title: 'Escalation Workflow',
-  layout: Atlas_Core.Atlas_Default
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Escalation'
 )
 {
   layoutgrid lgMain {
@@ -611,6 +614,7 @@ create page HD.EscalationWorkflow_Overview
 create or modify microflow HD.WFA_GetManagerAssignees
   ($workflow: System.Workflow, $EscalationRequest: HD.EscalationRequest)
   returns list of System.User as $Users
+  folder 'Escalation'
 begin
   @position(200, 200)
   -- Simplified: full user retrieve (role-based XPath on System.UserRoles
@@ -624,6 +628,7 @@ end;
 -- WFS_ microflows: called directly by workflow activities (WFS_ prefix)
 create or modify microflow HD.WFS_SendReminder
   ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
 begin
   @position(200, 200)
   log info 'Escalation reminder sent for request ' + toString($EscalationRequest/Reason);
@@ -634,6 +639,7 @@ end;
 
 create or modify microflow HD.WFS_Approve
   ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
 begin
   @position(200, 200)
   retrieve $Ticket from HD.Ticket
@@ -651,6 +657,7 @@ end;
 
 create or modify microflow HD.WFS_Reject
   ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
 begin
   @position(200, 200)
   change $EscalationRequest (RejectionReason = 'Rejected by manager review board.');
@@ -708,6 +715,7 @@ alter workflow HD.WF_SUB_ManagerReview
 -- WFS_ microflows used by parent workflow
 create or modify microflow HD.WFS_Escalation_Initialize
   ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
 begin
   @position(200, 200)
   change $EscalationRequest (RequestedAt = '[%CurrentDateTime%]');
@@ -720,6 +728,7 @@ end;
 
 create or modify microflow HD.WFS_AutoReject
   ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
 begin
   @position(200, 200)
   change $EscalationRequest (RejectionReason = 'Auto-rejected: no manager response within 48 hours.');
@@ -732,6 +741,7 @@ end;
 
 create or modify microflow HD.WFS_UpdateTicketPriority
   ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
 begin
   @position(200, 200)
   retrieve $Ticket from HD.Ticket
@@ -749,6 +759,7 @@ end;
 
 create or modify microflow HD.WFS_NotifyAgent
   ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
 begin
   @position(200, 200)
   log info 'Agent notified: escalation approved for request ' + toString($EscalationRequest/Reason);
@@ -806,6 +817,7 @@ alter workflow HD.WF_TicketEscalation
 create or modify microflow HD.ACT_StartEscalation
   ($Ticket: HD.Ticket, $Reason: string)
   returns boolean as $Success
+  folder 'Escalation'
 begin
   @position(200, 200)
   if $Ticket/Status != HD.TicketStatus.InProgress then
@@ -832,6 +844,7 @@ end;
 -- 2. Workflow create event handler (WFC_ prefix)
 create or modify microflow HD.WFC_EscalationRequest_OnCreate
   ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
 begin
   @position(200, 200)
   log info 'EscalationRequest created: ' + toString($EscalationRequest/Reason);
@@ -1107,6 +1120,7 @@ create page HD.TicketSearch_Form
 (
   title: 'Search Tickets',
   layout: Atlas_Core.PopupLayout,
+  folder: 'Ticket/Search',
   params: { $Search: HD.TicketSearch }
 )
 {
@@ -1186,7 +1200,8 @@ create page KB.Article_NewEdit
 create page HD.EscalationStart_Form
 (
   title: 'Request Escalation',
-  layout: Atlas_Core.PopupLayout
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Escalation'
 )
 {
   layoutgrid lgMain {
