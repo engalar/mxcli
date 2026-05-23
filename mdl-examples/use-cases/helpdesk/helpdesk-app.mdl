@@ -674,7 +674,7 @@ end;
 --   Multi-user task (majority, nested in decision false path),
 --   Call microflow, Non-interrupting boundary event (12h reminder)
 create or replace workflow HD.WF_SUB_ManagerReview
-  parameter $EscalationRequest: HD.EscalationRequest
+  parameter $WorkflowContext: HD.EscalationRequest
   display 'Manager Review'
   overview page HD.EscalationWorkflow_Overview
 begin
@@ -775,12 +775,15 @@ end;
 --   Non-interrupting boundary event (12h reminder on wait-for-notification),
 --   Interrupting boundary event (48h timeout on call workflow)
 create or replace workflow HD.WF_TicketEscalation
-  parameter $EscalationRequest: HD.EscalationRequest
+  parameter $WorkflowContext: HD.EscalationRequest
   display 'Ticket Escalation'
   overview page HD.EscalationWorkflow_Overview
 begin
   call microflow HD.WFS_Escalation_Initialize;
-  decision 'true'
+  -- $WorkflowContext accesses the business context entity (HD.EscalationRequest).
+  -- $WorkflowInstance accesses the System.Workflow runtime instance (State, StartTime, etc.).
+  -- Both are always available in workflow expressions.
+  decision '$WorkflowContext/Reason = empty and $WorkflowInstance/State = System.WorkflowState.Completed'
     outcomes
       true -> {
         call microflow HD.WFS_AutoReject;
@@ -888,28 +891,32 @@ begin
 end;
 /
 
--- 5. Generate jump-to options (demonstrates GenerateJumpToOptionsAction)
+-- 5. Generate jump-to options and return them for caller to pass to ACT_Workflow_ApplyJumpTo.
+-- $JumpOptions is a System.WorkflowJumpToDetails object; the output variable IS visible
+-- to downstream activities in sequential context. CE0109 only occurs inside parallel split
+-- paths where variable scope is isolated per path.
 create or modify microflow HD.ACT_Workflow_GenerateJumpTo
   ($Workflow: System.Workflow)
+  returns System.WorkflowJumpToDetails as $JumpOptions
   folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
   $JumpOptions = generate jump to options for $Workflow as HD.WF_TicketEscalation;
   @position(400, 200)
-  return;
+  return $JumpOptions;
 end;
 /
 
--- 6. Apply jump-to option stub
--- Note: GenerateJumpToOptions output variable is not visible to downstream activities
--- (CE0109 in split-exec context). Apply is covered via the dedicated microflow pattern.
+-- 6. Apply a pre-generated jump-to option (System.WorkflowJumpToDetails).
+-- Typical pattern: admin page calls ACT_Workflow_GenerateJumpTo, user selects a target
+-- activity from the displayed WorkflowJumpToDetails, then this microflow applies it.
 create or modify microflow HD.ACT_Workflow_ApplyJumpTo
-  ($Workflow: System.Workflow)
+  ($JumpOption: System.WorkflowJumpToDetails)
   folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
-  $JumpOptions = generate jump to options for $Workflow as HD.WF_TicketEscalation;
-  @position(600, 200)
+  apply jump to option $JumpOption;
+  @position(400, 200)
   return;
 end;
 /
@@ -1353,3 +1360,66 @@ create or replace navigation Responsive
     );
     menu item '系统管理' page Administration.Account_Overview;
   );
+
+-- MARK: Folder Organization — equivalent move commands
+-- These move commands are equivalent to the inline folder declarations above.
+-- Use this pattern to reorganize an existing flat project without modifying
+-- every create statement.
+
+-- KB Module
+move microflow KB.ACT_Article_Publish          to folder 'Article';
+move microflow KB.ACT_Article_Archive          to folder 'Article';
+move microflow KB.SUB_Article_TruncateContent  to folder 'Article';
+move nanoflow  KB.NF_Article_FormatPreview     to folder 'Article';
+move page      KB.Article_Overview             to folder 'Article';
+move page      KB.Article_Detail               to folder 'Article';
+move page      KB.Article_NewEdit              to folder 'Article';
+
+-- HD Module — Ticket
+move microflow HD.ACT_Ticket_Submit            to folder 'Ticket';
+move microflow HD.ACT_Ticket_Assign            to folder 'Ticket';
+move microflow HD.ACT_Ticket_Resolve           to folder 'Ticket';
+move microflow HD.ACT_Ticket_Reopen            to folder 'Ticket';
+move microflow HD.ACT_Ticket_Close             to folder 'Ticket';
+move microflow HD.ACT_Ticket_SafeCommit        to folder 'Ticket';
+move microflow HD.ACT_Ticket_MarkCommentsRead  to folder 'Ticket';
+move microflow HD.ACT_EscalationRequest_Cleanup to folder 'Ticket';
+move microflow HD.DS_OverdueTicketCount        to folder 'Ticket';
+move nanoflow  HD.NF_Ticket_QuickCreate        to folder 'Ticket';
+move nanoflow  HD.NF_Priority_GetLabel         to folder 'Ticket';
+move page      HD.Ticket_Overview              to folder 'Ticket';
+move page      HD.Ticket_Detail                to folder 'Ticket';
+move page      HD.Ticket_NewEdit               to folder 'Ticket';
+
+-- HD Module — Ticket/Search
+move nanoflow  HD.NF_TicketSearch_Apply        to folder 'Ticket/Search';
+move page      HD.TicketSearch_Form            to folder 'Ticket/Search';
+
+-- HD Module — Escalation
+move microflow HD.WFA_GetManagerAssignees          to folder 'Escalation';
+move microflow HD.WFS_SendReminder                 to folder 'Escalation';
+move microflow HD.WFS_Approve                      to folder 'Escalation';
+move microflow HD.WFS_Reject                       to folder 'Escalation';
+move microflow HD.WFS_Escalation_Initialize        to folder 'Escalation';
+move microflow HD.WFS_AutoReject                   to folder 'Escalation';
+move microflow HD.WFS_UpdateTicketPriority         to folder 'Escalation';
+move microflow HD.WFS_NotifyAgent                  to folder 'Escalation';
+move microflow HD.WFC_EscalationRequest_OnCreate   to folder 'Escalation';
+move microflow HD.ACT_StartEscalation              to folder 'Escalation';
+move page      HD.EscalationReview_Form            to folder 'Escalation';
+move page      HD.EscalationWorkflow_Overview      to folder 'Escalation';
+move page      HD.EscalationStart_Form             to folder 'Escalation';
+
+-- HD Module — Escalation/WorkflowAdmin
+move microflow HD.ACT_Workflow_ChangeState       to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_CompleteTask      to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_GenerateJumpTo    to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_ApplyJumpTo       to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_GetHistory        to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_GetContext        to folder 'Escalation/WorkflowAdmin';
+move microflow HD.DS_WorkflowInstances           to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_ShowTaskPage      to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_ShowAdminPage     to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_Lock              to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_Unlock            to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_Notify            to folder 'Escalation/WorkflowAdmin';
