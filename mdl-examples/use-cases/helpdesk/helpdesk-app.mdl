@@ -1029,7 +1029,8 @@ create page HD.Ticket_Overview
   }
 };
 
--- Ticket detail with dataview and nested comments
+-- Ticket detail: DataView (page param) + ActionButtons + nested association DataGrid
+-- Pattern C: datasource: $Ticket/HD.TicketComment_Ticket/HD.TicketComment (no XPath needed)
 create page HD.Ticket_Detail
 (
   title: 'Ticket',
@@ -1042,23 +1043,42 @@ create page HD.Ticket_Detail
     row rHeader {
       column cHeader (desktopwidth: 12) {
         dataview dvTicket (datasource: $Ticket) {
-          dynamictext txtSubject  (content: 'Ticket Subject',   rendermode: H2)
-          dynamictext txtStatus   (content: 'Ticket Status')
-          dynamictext txtPriority (content: 'Ticket Priority')
-          actionbutton btnSubmit  (caption: 'Submit')
-          actionbutton btnResolve (caption: 'Resolve')
-          actionbutton btnReopen  (caption: 'Reopen')
-          -- TODO: referenceselector not yet implemented in mxcli page builder
+          dynamictext txtSubject  (content: '{1}', contentparams: [{1} = Subject],  rendermode: H2)
+          dynamictext txtStatus   (content: '{1}', contentparams: [{1} = Status])
+          dynamictext txtPriority (content: '{1}', contentparams: [{1} = Priority])
+          dynamictext txtSLADue   (content: '{1}', contentparams: [{1} = SLADueAt])
+          footer ftrActions {
+            actionbutton btnSubmit (
+              caption: 'Submit',
+              action: microflow HD.ACT_Ticket_Submit (Ticket: $Ticket),
+              buttonstyle: primary
+            )
+            actionbutton btnResolve (
+              caption: 'Resolve',
+              action: microflow HD.ACT_Ticket_Resolve (Ticket: $Ticket),
+              buttonstyle: default
+            )
+            actionbutton btnReopen (
+              caption: 'Reopen',
+              action: microflow HD.ACT_Ticket_Reopen (Ticket: $Ticket),
+              buttonstyle: default
+            )
+            actionbutton btnAssignAgent (
+              caption: 'Assign Agent',
+              action: show_page HD.Agent_Select (Ticket: $Ticket),
+              buttonstyle: default
+            )
+          }
         }
       }
     }
     row rComments {
       column cComments (desktopwidth: 12) {
         datagrid dgComments (
-          datasource: database HD.TicketComment
+          datasource: $Ticket/HD.TicketComment_Ticket/HD.TicketComment
         ) {
           column colContent_    (attribute: Content,    caption: 'Comment')
-          column colIsInternal (attribute: IsInternal, caption: 'Internal')
+          column colIsInternal (attribute: IsInternal, caption: 'Internal', ColumnWidth: manual, Size: 90)
         }
       }
     }
