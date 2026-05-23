@@ -291,10 +291,11 @@ func TestBuildUserTargetingGen_AllKinds(t *testing.T) {
 	}
 }
 
-func TestBuildUserTargetingGen_EmptyKindReturnsNil(t *testing.T) {
+func TestBuildUserTargetingGen_EmptyKindReturnsNoUserTargeting(t *testing.T) {
+	// Empty kind defaults to NoUserTargeting (Studio Pro default) — not nil.
 	tgt := buildUserTargetingGen(ast.WorkflowTargetingNode{Kind: ""})
-	if tgt != nil {
-		t.Errorf("expected nil for empty kind, got %v", tgt)
+	if tgt == nil {
+		t.Error("expected NoUserTargeting for empty kind, got nil")
 	}
 }
 
@@ -886,15 +887,16 @@ func TestValidateWorkflowActivities_QualifiedEnumPasses(t *testing.T) {
 // (Fix: user task without targeting clause must be rejected at write time)
 // ---------------------------------------------------------------------------
 
-func TestValidateUserTaskTargeting_NoTargeting_ReturnsError(t *testing.T) {
+func TestValidateUserTaskTargeting_NoTargeting_ReturnsNil(t *testing.T) {
+	// Missing targeting clause is accepted — defaults to NoUserTargeting.
 	n := &ast.WorkflowUserTaskNode{
 		Name:    "Step",
 		Caption: "no targeting",
 		// Targeting.Kind == "" — no targeting clause
 	}
 	err := validateUserTaskTargeting(n)
-	if err == nil {
-		t.Error("expected error for missing targeting (CE1859), got nil")
+	if err != nil {
+		t.Errorf("expected nil for missing targeting, got error: %v", err)
 	}
 }
 
