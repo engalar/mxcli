@@ -163,6 +163,8 @@ microflowStatement
     | annotation* openWorkflowStatement SEMICOLON?
     | annotation* lockWorkflowStatement SEMICOLON?
     | annotation* unlockWorkflowStatement SEMICOLON?
+    | annotation* generateJumpToStatement SEMICOLON?
+    | annotation* applyJumpToStatement SEMICOLON?
     ;
 
 declareStatement
@@ -437,6 +439,16 @@ lockWorkflowStatement
 // UNLOCK WORKFLOW $Wf; or UNLOCK WORKFLOW ALL;
 unlockWorkflowStatement
     : UNLOCK WORKFLOW (VARIABLE | ALL) onErrorClause?
+    ;
+
+// [$Options =] GENERATE JUMP TO OPTIONS FOR $wf AS Module.WF_Name;
+generateJumpToStatement
+    : (VARIABLE EQUALS)? GENERATE JUMP TO OPTIONS FOR VARIABLE AS qualifiedName onErrorClause?
+    ;
+
+// [$Result =] APPLY JUMP TO OPTION $options;
+applyJumpToStatement
+    : (VARIABLE EQUALS)? APPLY JUMP TO OPTION VARIABLE onErrorClause?
     ;
 
 callArgumentList
