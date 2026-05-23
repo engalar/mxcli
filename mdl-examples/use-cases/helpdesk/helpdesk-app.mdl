@@ -1085,6 +1085,35 @@ create page HD.Ticket_Detail
   }
 };
 
+-- Agent selection popup: Gallery + per-row microflow with close_page
+-- Pattern D: popup selection — lists HD.Agent, calls ACT_Ticket_Assign, closes popup
+create page HD.Agent_Select
+(
+  title: 'Assign Agent',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Ticket',
+  params: { $Ticket: HD.Ticket }
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        gallery agentGallery (
+          datasource: database from HD.Agent sort by Name asc,
+          selection: single
+        ) {
+          template template1 {
+            dynamictext txtName  (content: '{1}', contentparams: [{1} = Name],  rendermode: H4)
+            dynamictext txtEmail (content: '{1}', contentparams: [{1} = Email])
+            actionbutton btnPick (caption: 'Select', action: microflow HD.ACT_Ticket_Assign ($Ticket = $Ticket, $Agent = $currentObject) close_page, buttonstyle: primary)
+          }
+        }
+        actionbutton btnCancel (caption: 'Cancel', action: close_page, buttonstyle: default)
+      }
+    }
+  }
+};
+
 -- Popup: non-persistent entity search form
 create page HD.TicketSearch_Form
 (
@@ -1286,6 +1315,9 @@ grant execute on nanoflow  HD.NF_Ticket_QuickCreate         to HD.CustomerRole, 
 grant view on page HD.Ticket_Overview      to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 grant view on page HD.Ticket_Detail        to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 grant view on page HD.TicketSearch_Form    to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Agent_Select         to HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Ticket_NewEdit       to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page KB.Article_NewEdit      to KB.Contributor, KB.Admin;
 grant view on page HD.EscalationReview_Form   to HD.ManagerRole;
 grant view on page HD.EscalationWorkflow_Overview to HD.ManagerRole;
 grant view on page KB.Article_Overview     to KB.Reader, KB.Contributor, KB.Admin;
@@ -1358,6 +1390,7 @@ move nanoflow  HD.NF_Priority_GetLabel         to folder 'Ticket';
 move page      HD.Ticket_Overview              to folder 'Ticket';
 move page      HD.Ticket_Detail                to folder 'Ticket';
 move page      HD.Ticket_NewEdit               to folder 'Ticket';
+move page      HD.Agent_Select                 to folder 'Ticket';
 
 -- HD Module — Ticket/Search
 move nanoflow  HD.NF_TicketSearch_Apply        to folder 'Ticket/Search';
