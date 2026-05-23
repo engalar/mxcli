@@ -60,8 +60,8 @@ func TestAddCreateVariableActionGenSetsFieldsAndRegistersDeclared(t *testing.T) 
 	if act.VariableName() != "Counter" {
 		t.Fatalf("variable name = %q", act.VariableName())
 	}
-	if act.InitialValue() != "0" {
-		t.Fatalf("initial value = %q, want 0", act.InitialValue())
+	if act.InitialValue() != "0\n" {
+		t.Fatalf("initial value = %q, want 0\n", act.InitialValue())
 	}
 	if _, ok := act.VariableType().(*genDt.IntegerType); !ok {
 		t.Fatalf("variable type = %T, want *IntegerType", act.VariableType())
@@ -96,8 +96,8 @@ func TestAddChangeVariableActionGenSetsFields(t *testing.T) {
 	if act.ChangeVariableName() != "X" {
 		t.Fatalf("change var = %q", act.ChangeVariableName())
 	}
-	if act.Value() != "true" {
-		t.Fatalf("value = %q, want true", act.Value())
+	if act.Value() != "true\n" {
+		t.Fatalf("value = %q, want true\n", act.Value())
 	}
 }
 
@@ -302,8 +302,8 @@ func TestAddAggregateListActionGenExpressionMode(t *testing.T) {
 		t.Fatal("UseExpression should be true")
 	}
 	// The expression literal renders as `'expr'` (single-quoted string).
-	if act.Expression() != "'expr'" {
-		t.Fatalf("expression = %q, want 'expr'", act.Expression())
+	if act.Expression() != "'expr'\n" {
+		t.Fatalf("expression = %q, want 'expr'\n", act.Expression())
 	}
 }
 

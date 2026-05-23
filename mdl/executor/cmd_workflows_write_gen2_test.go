@@ -470,8 +470,8 @@ func TestBuildExclusiveSplitGenActivity_BasicShape(t *testing.T) {
 	if got.TypeName() != "Workflows$ExclusiveSplitActivity" {
 		t.Errorf("TypeName = %q", got.TypeName())
 	}
-	if got.Expression() != "$ctx/score > 50" {
-		t.Errorf("Expression = %q", got.Expression())
+	if got.Expression() != "$ctx/score > 50\n" {
+		t.Errorf("Expression = %q (want trailing newline)", got.Expression())
 	}
 	if got.Caption() != "score check" {
 		t.Errorf("Caption = %q", got.Caption())

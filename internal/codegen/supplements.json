@@ -99,7 +99,8 @@
     "ExportMapping.rootMappingElements":                 "Elements",
     "Text.translations":                                 "Items",
     "AggregateListAction.inputListVariableName":         "AggregateVariableName",
-    "ValidationFeedbackAction.objectVariableName":       "ValidationVariableName"
+    "ValidationFeedbackAction.objectVariableName":       "ValidationVariableName",
+    "Attribute.type":                                    "NewType"
   },
 
   "ref_list_version3_fields": [

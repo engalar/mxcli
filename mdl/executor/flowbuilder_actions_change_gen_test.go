@@ -66,15 +66,15 @@ func TestAddCreateObjectActionGenEmitsMemberChangeForEachAttr(t *testing.T) {
 	if mc1.AttributeQualifiedName() != "Sales.Order.Status" {
 		t.Fatalf("attribute QN = %q, want Sales.Order.Status (offline fallback)", mc1.AttributeQualifiedName())
 	}
-	if mc1.Value() != "'Open'" {
-		t.Fatalf("value = %q, want 'Open'", mc1.Value())
+	if mc1.Value() != "'Open'\n" {
+		t.Fatalf("value = %q, want 'Open'\n", mc1.Value())
 	}
 	mc2 := items[1].(*genMf.MemberChange)
 	if mc2.AttributeQualifiedName() != "Sales.Order.Amount" {
 		t.Fatalf("attribute 2 QN = %q", mc2.AttributeQualifiedName())
 	}
-	if mc2.Value() != "100" {
-		t.Fatalf("value 2 = %q, want 100", mc2.Value())
+	if mc2.Value() != "100\n" {
+		t.Fatalf("value 2 = %q, want 100\n", mc2.Value())
 	}
 }
 

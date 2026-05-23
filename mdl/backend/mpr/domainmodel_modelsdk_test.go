@@ -81,7 +81,7 @@ func makeEnumRefMPR(t *testing.T, oldRef string) (mprPath string, dmID model.ID)
 		{Key: "Name", Value: "Status"},
 		{Key: "Documentation", Value: ""},
 		{Key: "Exposed", Value: false},
-		{Key: "Type", Value: enumTypeDoc},
+		{Key: "NewType", Value: enumTypeDoc}, // Mendix 11+ uses "NewType" (not "Type")
 		{Key: "Value", Value: valueDoc},
 	}
 	entityDoc := bson.D{
