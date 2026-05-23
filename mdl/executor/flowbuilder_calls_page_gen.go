@@ -153,8 +153,13 @@ func (fb *flowBuilderGen) addShowMessageActionGen(s *ast.ShowMessageStmt) elemen
 // buildShowMessageTemplateText extracts (text, params) from a
 // ShowMessageStmt. Mirrors the legacy template-text logic: a string
 // literal is the template; anything else uses the "{1}" placeholder.
+//
+// ast.Unwrap is required because buildSourceExpression (the visitor's
+// entry point for all expressions) wraps every parsed node in
+// *ast.SourceExpr, so a direct type assertion to *ast.LiteralExpr
+// always fails without unwrapping first.
 func (fb *flowBuilderGen) buildShowMessageTemplateText(s *ast.ShowMessageStmt) (string, []string) {
-	if lit, ok := s.Message.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
+	if lit, ok := ast.Unwrap(s.Message).(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
 		return fmt.Sprintf("%v", lit.Value), nil
 	}
 	return "{1}", []string{fb.exprToString(s.Message)}

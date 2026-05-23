@@ -224,6 +224,36 @@ func TestBuildTextTemplateGenWithArgs(t *testing.T) {
 	}
 }
 
+// TestAddValidationFeedbackActionGenSourceExprMessage verifies that when the
+// message is wrapped in *ast.SourceExpr (as buildSourceExpression always does),
+// the template text is still extracted correctly from the literal (not stored as
+// a {1} placeholder expression).
+func TestAddValidationFeedbackActionGenSourceExprMessage(t *testing.T) {
+	fb := newActionTestFb()
+	fb.varTypes["Ticket"] = "HD.Ticket"
+	stmt := &ast.ValidationFeedbackStmt{
+		AttributePath: &ast.AttributePathExpr{
+			Variable: "Ticket",
+			Segments: []ast.PathSegment{{Name: "Subject"}},
+		},
+		Message: &ast.SourceExpr{
+			Expression: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "Subject is required"},
+			Source:     "'Subject is required'",
+		},
+	}
+	fb.addValidationFeedbackActionGen(stmt)
+	act := actionFromObjects(t, fb).(*genMf.ValidationFeedbackAction)
+	tmpl := act.FeedbackTemplate().(*genMf.TextTemplate)
+	textElem := tmpl.Text().(*genTexts.Text)
+	t1 := textElem.TranslationsItems()[0].(*genTexts.Translation)
+	if t1.Text() != "Subject is required" {
+		t.Fatalf("template text = %q, want literal text (not {1})", t1.Text())
+	}
+	if len(tmpl.ArgumentsItems()) != 0 {
+		t.Fatalf("args = %d, want 0", len(tmpl.ArgumentsItems()))
+	}
+}
+
 // TestClassifyValidationTargetEntityParamAsEnumRef verifies CE0639 fix:
 // when the entity type for a microflow parameter is stored in EnumRef
 // (not EntityRef) — as happens for bare qualified names like "HD.Ticket"

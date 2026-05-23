@@ -191,7 +191,10 @@ func detectUserEntityGen(ctx *ExecContext) (string, error) {
 
 	switch len(candidates) {
 	case 0:
-		return "", mdlerrors.NewValidation("no entity found that generalizes System.User; use entity clause to specify one")
+		// No custom user entity — project uses System.User directly (no
+		// Administration.Account-style extension). Fall back to System.User so
+		// demo users can still be created in minimal projects.
+		return "System.User", nil
 	case 1:
 		return candidates[0], nil
 	default:

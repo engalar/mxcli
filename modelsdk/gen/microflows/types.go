@@ -11333,7 +11333,7 @@ func (o *ValidationFeedbackAction) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "FeedbackTemplate"); err == nil {
 		o.feedbackTemplate.SetFromDecode(child)
 	}
-	o.objectVariableName.Init(raw)
+	o.objectVariableName.Init(raw) // key: "ValidationVariableName" (Mendix BSON field name)
 	if val, err := raw.LookupErr("Attribute"); err == nil {
 		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
 	}
@@ -12088,7 +12088,7 @@ func initAggregateListAction() *AggregateListAction {
 	o.SetTypeName("Microflows$AggregateAction")
 	o.errorHandlingType = property.NewEnum[string]("ErrorHandlingType")
 	o.errorHandlingType.Bind(&o.Base, 0)
-	o.inputListVariableName = property.NewPrimitive[string]("InputListVariableName", property.DecodeString)
+	o.inputListVariableName = property.NewPrimitive[string]("AggregateVariableName", property.DecodeString)
 	o.inputListVariableName.Bind(&o.Base, 1)
 	o.attribute = property.NewByNameRef[element.Element]("Attribute", "DomainModels$Attribute")
 	o.attribute.Bind(&o.Base, 2)
@@ -16330,7 +16330,7 @@ func initValidationFeedbackAction() *ValidationFeedbackAction {
 	o.errorHandlingType.Bind(&o.Base, 0)
 	o.feedbackTemplate = property.NewPart[element.Element]("FeedbackTemplate")
 	o.feedbackTemplate.Bind(&o.Base, 1)
-	o.objectVariableName = property.NewPrimitive[string]("ObjectVariableName", property.DecodeString)
+	o.objectVariableName = property.NewPrimitive[string]("ValidationVariableName", property.DecodeString)
 	o.objectVariableName.Bind(&o.Base, 2)
 	o.attribute = property.NewByNameRef[element.Element]("Attribute", "DomainModels$Attribute")
 	o.attribute.Bind(&o.Base, 3)

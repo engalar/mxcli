@@ -208,6 +208,34 @@ func TestAddShowMessageActionGenTypeOverride(t *testing.T) {
 	}
 }
 
+// TestAddShowMessageActionGenSourceExprWrappedLiteralCE0720 reproduces CE0720.
+// In production, buildSourceExpression wraps ALL expressions (including
+// string literals) in *ast.SourceExpr. Without ast.Unwrap(), the literal
+// check in buildShowMessageTemplateText fails: the template becomes "{1}"
+// and the literal is stored as an argument, causing Studio Pro CE0720
+// "Place holder index 1 is greater than 0, the number of parameter(s)".
+func TestAddShowMessageActionGenSourceExprWrappedLiteralCE0720(t *testing.T) {
+	fb := newActionTestFb()
+	stmt := &ast.ShowMessageStmt{
+		Message: &ast.SourceExpr{
+			Expression: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "Only Open tickets can be assigned."},
+			Source:     "'Only Open tickets can be assigned.'",
+		},
+		Type: "Warning",
+	}
+	fb.addShowMessageActionGen(stmt)
+	act := actionFromObjects(t, fb).(*genMf.ShowMessageAction)
+	tmpl := act.Template().(*genMf.TextTemplate)
+	textElem := tmpl.Text().(*genTexts.Text)
+	t1 := textElem.TranslationsItems()[0].(*genTexts.Translation)
+	if t1.Text() != "Only Open tickets can be assigned." {
+		t.Fatalf("CE0720: text = %q, want literal text (not {1})", t1.Text())
+	}
+	if len(tmpl.ArgumentsItems()) != 0 {
+		t.Fatalf("CE0720: args = %d, want 0 (literal needs no placeholder)", len(tmpl.ArgumentsItems()))
+	}
+}
+
 func TestAddClosePageActionGenDefaultsToOnePage(t *testing.T) {
 	fb := newActionTestFb()
 	fb.addClosePageActionGen(&ast.ClosePageStmt{})

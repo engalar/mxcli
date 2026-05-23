@@ -174,8 +174,12 @@ func (fb *flowBuilderGen) addValidationFeedbackActionGen(s *ast.ValidationFeedba
 // the explicit-template path (validation feedback authored MDL has
 // no `with (...)` clause for positional params; TemplateArgs is the
 // only secondary-param source and the caller appends those).
+//
+// ast.Unwrap is required because buildSourceExpression wraps every
+// parsed node in *ast.SourceExpr, so a direct *ast.LiteralExpr
+// assertion fails without first unwrapping the source wrapper.
 func (fb *flowBuilderGen) buildValidationTemplateText(s *ast.ValidationFeedbackStmt) (string, []string) {
-	if lit, ok := s.Message.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
+	if lit, ok := ast.Unwrap(s.Message).(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
 		return fmt.Sprintf("%v", lit.Value), nil
 	}
 	return "{1}", []string{fb.exprToString(s.Message)}
