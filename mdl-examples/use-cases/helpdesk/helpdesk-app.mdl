@@ -856,6 +856,7 @@ end;
 -- 3. Change workflow state — Pause / Unpause / Abort / Retry
 create or modify microflow HD.ACT_Workflow_ChangeState
   ($Workflow: System.Workflow, $Operation: string)
+  folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
   if $Operation = 'Pause' then
@@ -875,6 +876,7 @@ end;
 -- 4. Complete user task (system-side completion)
 create or modify microflow HD.ACT_Workflow_CompleteTask
   ($UserTask: System.WorkflowUserTask, $Outcome: string)
+  folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
   set task outcome $UserTask 'Approve';
@@ -889,6 +891,7 @@ end;
 -- 5. Generate jump-to options (demonstrates GenerateJumpToOptionsAction)
 create or modify microflow HD.ACT_Workflow_GenerateJumpTo
   ($Workflow: System.Workflow)
+  folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
   $JumpOptions = generate jump to options for $Workflow as HD.WF_TicketEscalation;
@@ -902,6 +905,7 @@ end;
 -- (CE0109 in split-exec context). Apply is covered via the dedicated microflow pattern.
 create or modify microflow HD.ACT_Workflow_ApplyJumpTo
   ($Workflow: System.Workflow)
+  folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
   $JumpOptions = generate jump to options for $Workflow as HD.WF_TicketEscalation;
@@ -915,6 +919,7 @@ end;
 -- not visible to Mendix end event (CE0109 workaround pending fix)
 create or modify microflow HD.ACT_Workflow_GetHistory
   ($Workflow: System.Workflow)
+  folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
   get workflow activity records $Workflow;
@@ -926,6 +931,7 @@ end;
 -- 8. Retrieve workflow context
 create or modify microflow HD.ACT_Workflow_GetContext
   ($Workflow: System.Workflow)
+  folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
   get workflow data $Workflow as HD.WF_TicketEscalation;
@@ -937,6 +943,7 @@ end;
 -- 9. Retrieve workflow instances
 create or modify microflow HD.DS_WorkflowInstances
   ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
   get workflows for $EscalationRequest;
@@ -948,6 +955,7 @@ end;
 -- 10. Show user task page
 create or modify microflow HD.ACT_Workflow_ShowTaskPage
   ($UserTask: System.WorkflowUserTask)
+  folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
   open user task $UserTask;
@@ -959,6 +967,7 @@ end;
 -- 11. Show workflow admin page
 create or modify microflow HD.ACT_Workflow_ShowAdminPage
   ($Workflow: System.Workflow)
+  folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
   open workflow $Workflow;
@@ -970,6 +979,7 @@ end;
 -- 12. Lock workflow (System.WorkflowDefinition = the workflow type/definition object)
 create or modify microflow HD.ACT_Workflow_Lock
   ($Workflow: System.WorkflowDefinition)
+  folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
   lock workflow $Workflow;
@@ -981,6 +991,7 @@ end;
 -- 13. Unlock workflow
 create or modify microflow HD.ACT_Workflow_Unlock
   ($Workflow: System.WorkflowDefinition)
+  folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
   unlock workflow $Workflow;
@@ -993,6 +1004,7 @@ end;
 -- which needs ALTER WORKFLOW activity qualified name; use commit-based approach instead)
 create or modify microflow HD.ACT_Workflow_Notify
   ($Workflow: System.Workflow)
+  folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
   return;
