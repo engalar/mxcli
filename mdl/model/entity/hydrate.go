@@ -138,7 +138,16 @@ func hydrateAttribute(attr *genDm.Attribute, notNull, unique map[string]bool) At
 		NotNull:       notNull[attr.Name()],
 		Unique:        unique[attr.Name()],
 	}
-	if sv, ok := attr.Value().(*genDm.StoredValue); ok && sv.DefaultValue() != "" {
+	if cv, ok := attr.Value().(*genDm.CalculatedValue); ok {
+		am.Calculated = true
+		if mfn := cv.MicroflowQualifiedName(); mfn != "" {
+			parts := strings.SplitN(mfn, ".", 2)
+			if len(parts) == 2 {
+				qn := QualifiedName{Module: parts[0], Name: parts[1]}
+				am.CalculatedMicroflow = &qn
+			}
+		}
+	} else if sv, ok := attr.Value().(*genDm.StoredValue); ok && sv.DefaultValue() != "" {
 		am.HasDefault = true
 		raw := sv.DefaultValue()
 		if _, isStr := attr.Type().(*genDm.StringAttributeType); isStr {

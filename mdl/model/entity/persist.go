@@ -5,6 +5,7 @@ package entity
 import (
 	"crypto/rand"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/model"
@@ -139,7 +140,11 @@ func buildGenAttribute(am AttributeModel) (*genDm.Attribute, error) {
 		return nil, err
 	}
 	attr.SetType(at)
-	if am.HasDefault {
+	if am.Calculated && am.CalculatedMicroflow != nil {
+		cv := genDm.NewCalculatedValue()
+		cv.SetMicroflowQualifiedName(am.CalculatedMicroflow.String())
+		attr.SetValue(cv)
+	} else if am.HasDefault {
 		sv := genDm.NewStoredValue()
 		sv.SetDefaultValue(stripStringLiteralQuotes(am.DefaultValue))
 		attr.SetValue(sv)
@@ -157,7 +162,12 @@ func buildGenAttributeType(dt model.DataType) (element.Element, error) {
 	case model.KindString:
 		st := genDm.NewStringAttributeType()
 		if dt.Length > 0 {
+			if dt.Length > math.MaxInt32 {
+				return nil, fmt.Errorf("String length %d exceeds int32 max", dt.Length)
+			}
 			st.SetLength(int32(dt.Length))
+		} else {
+			st.SetLength(-1)
 		}
 		return st, nil
 	case model.KindInteger:

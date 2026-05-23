@@ -156,6 +156,44 @@ func TestToMDL_NonPersistent(t *testing.T) {
 	assert.Contains(t, out, "create non-persistent entity Tmp.Buffer")
 }
 
+func TestToMDLStatement_CreateOrModifyPreservesDocumentation(t *testing.T) {
+	// Regression: previously executor did `strings.Replace(m.ToMDL(), "create ",
+	// "create or modify ", 1)` which incorrectly rewrote the first `create ` it
+	// found — including inside the `/** ... */` doc block when the doc happened
+	// to contain that token. ToMDLStatement(true) must emit the `create or
+	// modify` prefix at the statement line, not via post-hoc substitution.
+	m := &EntityModel{
+		Name:          QualifiedName{Module: "Sales", Name: "Customer"},
+		Kind:          EntityPersistent,
+		Documentation: "Use create when inserting a new customer.",
+	}
+
+	out := m.ToMDLStatement(true)
+
+	lines := strings.Split(out, "\n")
+	require.GreaterOrEqual(t, len(lines), 4)
+	assert.Equal(t, "/**", lines[0],
+		"documentation block must come first; got:\n%s", out)
+	assert.Contains(t, out, "create or modify persistent entity Sales.Customer",
+		"prefix must be 'create or modify' at the statement line, not via string replace; got:\n%s", out)
+	// Documentation body must be preserved verbatim — no accidental rewrite of
+	// the word 'create' inside the doc.
+	assert.Contains(t, out, "Use create when inserting a new customer.",
+		"documentation body must not be rewritten; got:\n%s", out)
+}
+
+func TestToMDLStatement_DefaultIsCreate(t *testing.T) {
+	m := &EntityModel{
+		Name: QualifiedName{Module: "Sales", Name: "Customer"},
+		Kind: EntityPersistent,
+	}
+	// ToMDL() and ToMDLStatement(false) must produce identical output —
+	// ToMDL() is the back-compat alias.
+	assert.Equal(t, m.ToMDL(), m.ToMDLStatement(false))
+	assert.Contains(t, m.ToMDLStatement(false), "create persistent entity")
+	assert.NotContains(t, m.ToMDLStatement(false), "create or modify")
+}
+
 func TestToMDL_LiftRoundTrip(t *testing.T) {
 	stmt := &ast.CreateEntityStmt{
 		Name:           ast.QualifiedName{Module: "Sales", Name: "Customer"},
@@ -254,5 +292,30 @@ func TestHydrate_EnumAttribute(t *testing.T) {
 	require.Len(t, m.Attributes, 1)
 	assert.Equal(t, model.KindEnumRef, m.Attributes[0].Type.Kind)
 	assert.Equal(t, "App.OrderStatus", m.Attributes[0].Type.Ref)
+}
+
+func TestHydrate_CalculatedAttribute(t *testing.T) {
+	e := genDm.NewEntity()
+	e.SetName("E")
+	noGen := genDm.NewNoGeneralization()
+	noGen.SetPersistable(true)
+	e.SetGeneralization(noGen)
+
+	attr := genDm.NewAttribute()
+	attr.SetName("TotalPrice")
+	attr.SetType(genDm.NewDecimalAttributeType())
+	cv := genDm.NewCalculatedValue()
+	cv.SetMicroflowQualifiedName("MyModule.ComputePrice")
+	attr.SetValue(cv)
+	e.AddAttributes(attr)
+
+	m, warns, err := Hydrate("MyModule", e)
+	require.NoError(t, err)
+	assert.Empty(t, warns)
+	require.Len(t, m.Attributes, 1)
+	assert.True(t, m.Attributes[0].Calculated)
+	assert.False(t, m.Attributes[0].HasDefault)
+	require.NotNil(t, m.Attributes[0].CalculatedMicroflow)
+	assert.Equal(t, "MyModule.ComputePrice", m.Attributes[0].CalculatedMicroflow.String())
 }
 

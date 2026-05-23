@@ -336,8 +336,8 @@ actionExprV3
     | DELETE (CLOSE_PAGE)?                            // DELETE (legacy)
     | CREATE_OBJECT qualifiedName (THEN actionExprV3)? // CREATE_OBJECT Entity THEN SHOW_PAGE ...
     | SHOW_PAGE qualifiedName microflowArgsV3?        // SHOW_PAGE Module.Page (Param: val)
-    | MICROFLOW qualifiedName microflowArgsV3?        // MICROFLOW Module.Flow
-    | NANOFLOW qualifiedName microflowArgsV3?         // NANOFLOW Module.Flow
+    | MICROFLOW qualifiedName microflowArgsV3? (CLOSE_PAGE)?   // MICROFLOW Module.Flow [close_page]
+    | NANOFLOW qualifiedName microflowArgsV3? (CLOSE_PAGE)?    // NANOFLOW Module.Flow [close_page]
     | OPEN_LINK STRING_LITERAL                        // OPEN_LINK 'https://...'
     | SIGN_OUT                                        // SIGN_OUT
     | COMPLETE_TASK STRING_LITERAL                    // COMPLETE_TASK 'OutcomeName'
