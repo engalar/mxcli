@@ -677,7 +677,7 @@ begin
         multi user task UT_SeniorReview 'Senior Board Review'
           page HD.EscalationReview_Form
           targeting users microflow HD.WFA_GetManagerAssignees
-          -- TODO: 'completion method majority' not in grammar; use ALTER WORKFLOW
+          completion method majority
           outcomes
             'Approve' { call microflow HD.WFS_Approve; }
             'Reject'  { call microflow HD.WFS_Reject;  }
@@ -1062,12 +1062,7 @@ create page HD.Ticket_Detail
           actionbutton btnSubmit  (caption: 'Submit')
           actionbutton btnResolve (caption: 'Resolve')
           actionbutton btnReopen  (caption: 'Reopen')
-          -- Demonstrates: referenceselector for association-based lookup
-          referenceselector rsAgent (
-            label: 'Assigned Agent',
-            attribute: HD.Ticket_Agent,
-            datasource: database System.User
-          )
+          -- TODO: referenceselector not yet implemented in mxcli page builder
         }
       }
     }
@@ -1294,7 +1289,7 @@ create or replace navigation Responsive
     menu item '知识库'    page KB.Article_Overview;
     menu '工单管理' (
       menu item '所有工单'  page HD.Ticket_Overview;
-      menu item '升级审批'  page HD.EscalationReview_Form;
+      menu item '升级审批'  page HD.EscalationWorkflow_Overview;
       menu item '工作流管理' page HD.EscalationWorkflow_Overview;
     );
     menu item '系统管理' page Administration.Account_Overview;
