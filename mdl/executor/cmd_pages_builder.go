@@ -16,6 +16,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	"github.com/mendixlabs/mxcli/modelsdk/meta"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
@@ -181,9 +182,15 @@ func (pb *pageBuilder) getDomainModelsWithContainer() ([]DomainModelGenWithConta
 		if dm == nil {
 			continue
 		}
+		containerID := h.FindModuleID(model.ID(dm.ID()))
+		// The built-in System domain model has ID=SystemDomainModelID which is
+		// not in the project hierarchy. Use the well-known SystemModuleID directly.
+		if string(dm.ID()) == meta.SystemDomainModelID {
+			containerID = meta.SystemModuleID
+		}
 		out = append(out, DomainModelGenWithContainer{
 			DM:          dm,
-			ContainerID: h.FindModuleID(model.ID(dm.ID())),
+			ContainerID: model.ID(containerID),
 		})
 	}
 	if pb.execCache != nil {

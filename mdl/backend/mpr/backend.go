@@ -12,6 +12,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
+	"github.com/mendixlabs/mxcli/modelsdk/meta"
 	"github.com/mendixlabs/mxcli/mdl/backend/unitstore"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/types"
@@ -1345,10 +1346,24 @@ func (b *MprBackend) ListDomainModelsGen() ([]*genDm.DomainModel, error) {
 	if !ok {
 		return nil, fmt.Errorf("ListDomainModelsGen: no modelsdk writer")
 	}
-	return mprrepos.NewDomainModelRepository(w).List("")
+	dms, err := mprrepos.NewDomainModelRepository(w).List("")
+	if err != nil {
+		return nil, err
+	}
+	// Append the built-in System module domain model so that resolvers
+	// (resolveEntity, lookupEnumRefGen) can find System.* entities without
+	// any caller-side special casing.
+	return append(dms, builtinSystemDomainModel()), nil
 }
 
 func (b *MprBackend) GetDomainModelGen(moduleID model.ID) (*genDm.DomainModel, error) {
+	// The System module's entities are baked into the Mendix runtime and not
+	// stored in the MPR file. Return the built-in virtual domain model so that
+	// entity lookups (page params, attribute resolution) work for System.* types
+	// without any caller-side special casing.
+	if string(moduleID) == meta.SystemModuleID {
+		return builtinSystemDomainModel(), nil
+	}
 	w, ok := b.concreteWriter()
 	if !ok {
 		return nil, fmt.Errorf("GetDomainModelGen: no modelsdk writer")
