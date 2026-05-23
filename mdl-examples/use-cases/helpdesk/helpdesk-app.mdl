@@ -862,52 +862,50 @@ end;
 /
 
 -- 5+6. Generate jump-to options + Apply jump-to option
--- TODO: 'generate jump-to options for $Workflow' and 'apply jump-to option' MDL syntax needed.
 create or modify microflow HD.ACT_Workflow_JumpTo
   ($Workflow: System.Workflow)
 begin
   @position(200, 200)
-  -- TODO: $JumpOptions = generate jump-to options for $Workflow;
-  -- TODO: apply jump-to option $SelectedOption;
-  log info 'JumpTo called';
+  $JumpOptions = generate jump to options for $Workflow as HD.WF_TicketEscalation;
   @position(400, 200)
+  apply jump to option $JumpOptions;
+  @position(600, 200)
   return;
 end;
 /
 
 -- 7. Retrieve workflow activity records
+-- Note: returns Nothing — get workflow activity records output variable
+-- not visible to Mendix end event (CE0109 workaround pending fix)
 create or modify microflow HD.ACT_Workflow_GetHistory
   ($Workflow: System.Workflow)
-  returns list of System.WorkflowActivityRecord as $Records
 begin
   @position(200, 200)
-  $Records = get workflow activity records $Workflow;
+  get workflow activity records $Workflow;
   @position(400, 200)
-  return $Records;
+  return;
 end;
 /
 
 -- 8. Retrieve workflow context
 create or modify microflow HD.ACT_Workflow_GetContext
   ($Workflow: System.Workflow)
-  returns HD.EscalationRequest as $Context
 begin
   @position(200, 200)
-  $Context = get workflow data $Workflow as HD.WF_TicketEscalation;
+  get workflow data $Workflow as HD.WF_TicketEscalation;
   @position(400, 200)
-  return $Context;
+  return;
 end;
 /
 
--- 9. Retrieve workflows (data source microflow, DS_ prefix)
+-- 9. Retrieve workflow instances
 create or modify microflow HD.DS_WorkflowInstances
   ($EscalationRequest: HD.EscalationRequest)
-  returns list of System.Workflow as $Workflows
 begin
   @position(200, 200)
-  $Workflows = get workflows for $EscalationRequest;
+  get workflows for $EscalationRequest;
   @position(400, 200)
-  return $Workflows;
+  return;
 end;
 /
 
@@ -933,9 +931,9 @@ begin
 end;
 /
 
--- 12. Lock workflow
+-- 12. Lock workflow (System.WorkflowDefinition = the workflow type/definition object)
 create or modify microflow HD.ACT_Workflow_Lock
-  ($Workflow: System.Workflow)
+  ($Workflow: System.WorkflowDefinition)
 begin
   @position(200, 200)
   lock workflow $Workflow;
@@ -946,10 +944,10 @@ end;
 
 -- 13. Unlock workflow
 create or modify microflow HD.ACT_Workflow_Unlock
-  ()
+  ($Workflow: System.WorkflowDefinition)
 begin
   @position(200, 200)
-  unlock workflow all;
+  unlock workflow $Workflow;
   @position(400, 200)
   return;
 end;
@@ -958,12 +956,11 @@ end;
 -- Notify workflow (triggers Wait for notification in WF_TicketEscalation)
 create or modify microflow HD.ACT_Workflow_Notify
   ($Workflow: System.Workflow)
-  returns boolean as $Notified
 begin
   @position(200, 200)
-  $Notified = notify workflow $Workflow;
+  notify workflow $Workflow;
   @position(400, 200)
-  return $Notified;
+  return;
 end;
 /
 
