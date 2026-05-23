@@ -220,6 +220,16 @@ func expressionToString(expr ast.Expression) string {
 	case *ast.LiteralExpr:
 		switch e.Kind {
 		case ast.LiteralString:
+			if s, ok := e.Value.(string); ok {
+				// Mendix datetime/session tokens in MDL are written as '[%Token%]'
+				// (quoted, because the MDL parser treats them as string literals).
+				// In BSON expressions they must be unquoted bare tokens: [%Token%].
+				// CE0117 fires when Mendix sees a string literal where a datetime/
+				// session reference is expected.
+				if strings.HasPrefix(s, "[%") && strings.HasSuffix(s, "%]") {
+					return s
+				}
+			}
 			return quoteExpressionLiteral(fmt.Sprintf("%v", e.Value))
 		case ast.LiteralBoolean:
 			if e.Value.(bool) {
