@@ -1,0 +1,20 @@
+-- @title: action: microflow ... close_page syntax test
+-- @expect: no error
+
+-- Minimal page to verify microflow action with close_page parses correctly.
+create page MyMod.TestPopup_Select (
+  title: 'Select Item',
+  layout: Atlas_Core.PopupLayout,
+  params: { $Parent: MyFirstModule.User }
+) {
+  datagrid dgItems (datasource: database from MyFirstModule.User sort by Name asc) {
+    column colName (attribute: Name, caption: 'Name')
+    controlbar cb1 {
+      actionbutton btnSelect (
+        caption: 'Select',
+        action: microflow MyFirstModule.ACT_Select close_page,
+        buttonstyle: primary
+      )
+    }
+  }
+};

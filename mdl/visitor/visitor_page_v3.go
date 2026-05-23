@@ -745,6 +745,7 @@ func buildActionV3(ctx parser.IActionExprV3Context) *ast.ActionV3 {
 		if argsCtx := actCtx.MicroflowArgsV3(); argsCtx != nil {
 			action.Args = buildMicroflowArgsV3(argsCtx)
 		}
+		action.ClosePage = actCtx.CLOSE_PAGE() != nil
 	} else if actCtx.NANOFLOW() != nil {
 		action.Type = "nanoflow"
 		if qn := actCtx.QualifiedName(); qn != nil {
@@ -753,6 +754,7 @@ func buildActionV3(ctx parser.IActionExprV3Context) *ast.ActionV3 {
 		if argsCtx := actCtx.MicroflowArgsV3(); argsCtx != nil {
 			action.Args = buildMicroflowArgsV3(argsCtx)
 		}
+		action.ClosePage = actCtx.CLOSE_PAGE() != nil
 	} else if actCtx.OPEN_LINK() != nil {
 		action.Type = "openLink"
 		if str := actCtx.STRING_LITERAL(); str != nil {

@@ -140,3 +140,67 @@ func TestBuildDynamicTextV3_EmptyContentUsesSafeDefault(t *testing.T) {
 		t.Fatalf("expected 0 parameters for empty content, got %d", len(ct.ParametersItems()))
 	}
 }
+
+// newPageBuilderWithMicroflowStub returns a pageBuilder primed so that
+// resolveMicroflow finds qualifiedName via execCache.createdMicroflows,
+// avoiding any backend round-trip.
+func newPageBuilderWithMicroflowStub(qualifiedName string) *pageBuilder {
+	return &pageBuilder{
+		execCache: &executorCache{
+			createdMicroflows: map[string]*createdMicroflowInfo{
+				qualifiedName: {ID: model.ID("00000000-0000-0000-0000-000000000001"), Name: "SomeMF", ModuleName: "MyMod"},
+			},
+		},
+	}
+}
+
+// TestBuildClientActionBSON_MicroflowClosePage verifies that an action with
+// Type="microflow" and ClosePage=true emits ClosePage:true in BSON.
+// Regression guard for the `action: microflow M.F (...) close_page` syntax.
+func TestBuildClientActionBSON_MicroflowClosePage(t *testing.T) {
+	pb := newPageBuilderWithMicroflowStub("MyMod.SomeMF")
+	action := &ast.ActionV3{
+		Type:      "microflow",
+		Target:    "MyMod.SomeMF",
+		ClosePage: true,
+	}
+	got, err := pb.buildClientActionBSON(action)
+	if err != nil {
+		t.Fatalf("buildClientActionBSON: %v", err)
+	}
+	for _, kv := range got {
+		if kv.Key == "ClosePage" {
+			if v, ok := kv.Value.(bool); ok && v {
+				return // pass
+			}
+			t.Errorf("ClosePage = %v, want true", kv.Value)
+			return
+		}
+	}
+	t.Error("ClosePage key not found in BSON for microflow action with ClosePage=true")
+}
+
+// TestBuildClientActionBSON_MicroflowNoClosePage verifies that a microflow
+// action without close_page emits ClosePage:false (not missing).
+func TestBuildClientActionBSON_MicroflowNoClosePage(t *testing.T) {
+	pb := newPageBuilderWithMicroflowStub("MyMod.SomeMF")
+	action := &ast.ActionV3{
+		Type:      "microflow",
+		Target:    "MyMod.SomeMF",
+		ClosePage: false,
+	}
+	got, err := pb.buildClientActionBSON(action)
+	if err != nil {
+		t.Fatalf("buildClientActionBSON: %v", err)
+	}
+	for _, kv := range got {
+		if kv.Key == "ClosePage" {
+			if v, ok := kv.Value.(bool); ok && !v {
+				return
+			}
+			t.Errorf("ClosePage = %v, want false", kv.Value)
+			return
+		}
+	}
+	t.Error("ClosePage key not found in BSON for microflow action without close_page")
+}

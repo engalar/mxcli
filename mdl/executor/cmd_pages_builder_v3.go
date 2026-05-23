@@ -1036,6 +1036,9 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (element.Elemen
 		}
 
 		act.SetMicroflowSettings(settings)
+		if action.ClosePage {
+			setRawBSONField(act, "ClosePage", true)
+		}
 		return act, nil
 
 	case "nanoflow":
@@ -2231,6 +2234,7 @@ func (pb *pageBuilder) buildClientActionBSON(action *ast.ActionV3) (bson.D, erro
 		return bson.D{
 			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 			{Key: "$Type", Value: "Forms$MicroflowAction"},
+			{Key: "ClosePage", Value: action.ClosePage},
 			{Key: "DisabledDuringExecution", Value: true},
 			{Key: "MicroflowSettings", Value: bson.D{
 				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
