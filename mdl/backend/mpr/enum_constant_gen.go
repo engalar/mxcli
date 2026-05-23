@@ -61,9 +61,16 @@ func (b *MprBackend) createEnumerationGen(enum *model.Enumeration) error {
 		genEnum.AddValues(val)
 	}
 
-	return mprrepos.NewEnumerationRepository(w).Create(
+	if err := mprrepos.NewEnumerationRepository(w).Create(
 		string(enum.ContainerID), "Documents", genEnum,
-	)
+	); err != nil {
+		return err
+	}
+	// The writer owns a private Reader distinct from b.msdkReader; invalidate
+	// b.msdkReader's unit cache so that subsequent ListEnumerations calls within
+	// the same exec session see the newly created unit.
+	b.msdkReader.InvalidateCache()
+	return nil
 }
 
 func (b *MprBackend) createConstantGen(c *model.Constant) error {
@@ -91,9 +98,13 @@ func (b *MprBackend) createConstantGen(c *model.Constant) error {
 	}
 	genC.SetType(typeElem)
 
-	return mprrepos.NewConstantRepository(w).Create(
+	if err := mprrepos.NewConstantRepository(w).Create(
 		string(c.ContainerID), "Documents", genC,
-	)
+	); err != nil {
+		return err
+	}
+	b.msdkReader.InvalidateCache()
+	return nil
 }
 
 func constantDataTypeToGen(dt model.ConstantDataType) (element.Element, error) {

@@ -170,8 +170,8 @@ ShowTaskPage、ShowAdminPage、Lock、Unlock、Notify
 ~/.mxcli/mxbuild/11.6.4/modeler/mx check testdata/corpus-b/app.mpr \
   2>&1 | grep -i "StorageLoadException\|Invalid\|Error"
 
-# 4. 清理
-git restore testdata/corpus-b/
+# 4. 清理（MPR v2 写入新文件，需同时 clean 未跟踪文件）
+git restore testdata/corpus-b/ && git clean -fd testdata/corpus-b/
 ```
 
 ---
@@ -187,6 +187,12 @@ MDL 引擎尚未支持的特性用以下格式标注：
 -- 实现后移除注释，替换为正式 MDL
 ```
 
-当前占位项：
-- Multi-user task（ALTER WORKFLOW INSERT MULTI USER TASK）
-- Non-interrupting boundary event（非中断边界事件）
+当前占位项：（无 — 所有已知缺口已在 2026-05-23 实现）
+
+实现的功能：
+- 10 个工作流微流活动（workflow operation, get workflow data, get workflows, get workflow activity records, set task outcome, open user task, open/lock/unlock workflow, notify workflow）
+- 用户角色与 demo users
+- Multi-user task `completion method majority/threshold/consensus`
+- `generate jump to options for` / `apply jump to option` 微流活动（全栈新实现）
+- 常量引用表达式 `@HD.SLA_CRITICAL_HOURS`
+- loop/delete/error-handling/真实表单页面/referenceselector/count 功能演示

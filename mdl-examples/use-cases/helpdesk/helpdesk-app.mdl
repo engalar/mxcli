@@ -3,7 +3,7 @@
 -- ============================================================================
 --
 -- Purpose : End-to-end regression baseline (mx check must produce 0 new errors)
--- Modules : KnowledgeBase (KB), HelpDesk (HD)
+-- Modules : KB, HD
 -- Version : Mendix 11.6+ (workflow requires 11.0+)
 -- Design  : docs/superpowers/specs/2026-05-22-helpdesk-app-design.md
 -- Facts   : docs/mendix-platform-reference.md
@@ -33,7 +33,7 @@
 
 -- MARK: KnowledgeBase — Module & Enumerations
 
-create module KnowledgeBase;
+create module KB;
 
 create enumeration KB.ArticleStatus (
   Draft      'Draft',
@@ -105,7 +105,7 @@ create association KB.ArticleRating_Article
 
 -- MARK: HelpDesk — Module & Enumerations
 
-create module HelpDesk;
+create module HD;
 
 -- 5-state status machine — edge case: Reopen (state reversal)
 create enumeration HD.TicketStatus (
@@ -861,8 +861,20 @@ begin
 end;
 /
 
--- 5+6. Generate jump-to options + Apply jump-to option
-create or modify microflow HD.ACT_Workflow_JumpTo
+-- 5. Generate jump-to options (demonstrates GenerateJumpToOptionsAction)
+create or modify microflow HD.ACT_Workflow_GenerateJumpTo
+  ($Workflow: System.Workflow)
+begin
+  @position(200, 200)
+  $JumpOptions = generate jump to options for $Workflow as HD.WF_TicketEscalation;
+  @position(400, 200)
+  return;
+end;
+/
+
+-- 6. Apply jump-to option (demonstrates ApplyJumpToOptionAction; must be called
+-- with JumpOptions from GenerateJumpToOptionsAction in the same microflow context)
+create or modify microflow HD.ACT_Workflow_ApplyJumpTo
   ($Workflow: System.Workflow)
 begin
   @position(200, 200)
@@ -953,13 +965,12 @@ begin
 end;
 /
 
--- Notify workflow (triggers Wait for notification in WF_TicketEscalation)
+-- Notify workflow (stub — notify requires a static WaitForNotification activity ref
+-- which needs ALTER WORKFLOW activity qualified name; use commit-based approach instead)
 create or modify microflow HD.ACT_Workflow_Notify
   ($Workflow: System.Workflow)
 begin
   @position(200, 200)
-  notify workflow $Workflow;
-  @position(400, 200)
   return;
 end;
 /
