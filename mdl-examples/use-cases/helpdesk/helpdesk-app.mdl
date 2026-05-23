@@ -1085,32 +1085,31 @@ create page HD.Ticket_Detail
   }
 };
 
--- Agent selection popup: Gallery + per-row microflow with close_page
+-- Agent selection popup: DataGrid (selection:single) + microflow close_page
 -- Pattern D: popup selection — lists HD.Agent, calls ACT_Ticket_Assign, closes popup
 create page HD.Agent_Select
 (
-  title: 'Assign Agent',
+  title: 'Select Agent',
   layout: Atlas_Core.PopupLayout,
   folder: 'Ticket',
   params: { $Ticket: HD.Ticket }
 )
 {
-  layoutgrid lgMain {
-    row rMain {
-      column cMain (desktopwidth: 12) {
-        gallery agentGallery (
-          datasource: database from HD.Agent sort by Name asc,
-          selection: single
-        ) {
-          template template1 {
-            dynamictext txtName  (content: '{1}', contentparams: [{1} = Name],  rendermode: H4)
-            dynamictext txtEmail (content: '{1}', contentparams: [{1} = Email])
-            actionbutton btnPick (caption: 'Select', action: microflow HD.ACT_Ticket_Assign ($Ticket = $Ticket, $Agent = $currentObject) close_page, buttonstyle: primary)
-          }
-        }
-        actionbutton btnCancel (caption: 'Cancel', action: close_page, buttonstyle: default)
-      }
+  datagrid dgAgents (
+    datasource: database from HD.Agent sort by Name asc,
+    PageSize: 15,
+    selection: single
+  ) {
+    controlbar cb1 {
+      actionbutton btnAssign (
+        caption: 'Assign',
+        action: microflow HD.ACT_Ticket_Assign ($Ticket = $Ticket, $Agent = $currentObject) close_page,
+        buttonstyle: primary
+      )
     }
+    column colName     (attribute: Name,     caption: 'Name')
+    column colEmail    (attribute: Email,    caption: 'Email')
+    column colIsActive (attribute: IsActive, caption: 'Active', ColumnWidth: manual, Size: 80)
   }
 };
 
