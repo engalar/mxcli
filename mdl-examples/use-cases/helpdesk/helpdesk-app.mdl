@@ -124,7 +124,8 @@ create enumeration HD.TicketPriority (
 create persistent entity HD.Customer (
   Name:    string(200) not null,
   Email:   string(200) not null,
-  Company: string(200)
+  Company: string(200),
+  owner:   autoowner
 )
 index (Email);
 
@@ -141,8 +142,7 @@ create persistent entity HD.Ticket (
   Priority:    HD.TicketPriority default Normal,
   SLADueAt:   datetime,
   ResolvedAt:  datetime,
-  IsOverSLA:   boolean default false,
-  owner:       autoowner
+  IsOverSLA:   boolean default false
 )
 index (Status)
 index (Priority)
@@ -1156,9 +1156,9 @@ grant execute on nanoflow KB.NF_Article_FormatPreview to KB.Reader, KB.Contribut
 
 -- Entity access — HelpDesk
 
--- CustomerRole: own tickets only (direct System.owner — CE0161 fix)
+-- CustomerRole: own tickets only (multi-hop to HD.Customer.System.owner)
 grant HD.CustomerRole on HD.Ticket (create, read *, write *)
-  where '[System.owner = ''[%CurrentUser%]'']';
+  where '[HD.Ticket_Customer/HD.Customer/System.owner = ''[%CurrentUser%]'']';
 grant HD.CustomerRole on HD.TicketComment (create, read *)
   where '[IsInternal = false]';
 grant HD.CustomerRole on HD.Customer (read *, write *);
