@@ -18,6 +18,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	entityModel "github.com/mendixlabs/mxcli/mdl/model/entity"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -366,121 +367,24 @@ func describeEntityGen(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewNotFound("entity", name.String())
 	}
 
-	// JavaDoc documentation
-	if doc := entity.Documentation(); doc != "" {
-		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", doc)
+	// Canonical-model pipeline: Hydrate → ToMDL renders doc + position +
+	// kind + extends + attributes (incl. validation/default/calculated) +
+	// indexes. ToMDL emits "create ..."; describe uses "create or modify"
+	// so re-execution is idempotent — we rewrite the prefix here.
+	m, warns, err := entityModel.Hydrate(modName, entity)
+	if err != nil {
+		return fmt.Errorf("describe entity: hydrate: %w", err)
 	}
-
-	if loc := entity.Location(); loc != "" {
-		if x, y, ok := parseLocationBSON(loc); ok {
-			fmt.Fprintf(ctx.Output, "@Position(%d, %d)\n", x, y)
-		}
-	}
-
-	entityType := strings.ToLower(entityKindForGen(entity))
-	if entityType == "" {
-		entityType = "persistent"
-	}
-	if entityType == "non-persistent" {
-		// keep legacy spelling
-	}
-
-	if extends := entityGeneralizationQNGen(entity); extends != "" {
-		fmt.Fprintf(ctx.Output, "create or modify %s entity %s.%s extends %s (\n", entityType, modName, entity.Name(), extends)
-	} else {
-		fmt.Fprintf(ctx.Output, "create or modify %s entity %s.%s (\n", entityType, modName, entity.Name())
-	}
-
-	// Build validation rule index by attribute QN / name. Gen
-	// ValidationRule references attributes by qualified name
-	// ("Module.Entity.AttrName") via ByNameRef.
-	validationsByName := make(map[string][]*genDm.ValidationRule)
-	for _, vr := range entity.ValidationRulesItems() {
-		v, ok := vr.(*genDm.ValidationRule)
-		if !ok {
-			continue
-		}
-		qn := v.AttributeQualifiedName()
-		attrName := extractAttrNameFromQualified(qn)
-		if attrName == "" {
-			// QN is just the simple name in some fixtures.
-			attrName = qn
-		}
-		if attrName != "" {
-			validationsByName[attrName] = append(validationsByName[attrName], v)
+	for _, w := range warns {
+		if ctx.Logger != nil {
+			ctx.Logger.Warn("describe entity hydrate", "entity", name.String(), "field", w.Field, "msg", w.Message)
 		}
 	}
+	body := strings.Replace(m.ToMDL(), "create ", "create or modify ", 1)
+	fmt.Fprint(ctx.Output, body)
 
-	type attrLine struct{ text string }
-	var attrLines []attrLine
-
-	for _, a := range entity.AttributesItems() {
-		attr, ok := a.(*genDm.Attribute)
-		if !ok {
-			continue
-		}
-		var line strings.Builder
-		if doc := attr.Documentation(); doc != "" {
-			line.WriteString(fmt.Sprintf("  /** %s */\n", doc))
-		}
-		typeStr := formatAttributeTypeGen(attr.Type())
-		var constraints strings.Builder
-
-		// Validation rule constraints. Note: gen ValidationRule does not
-		// expose RuleInfo type as a single string today; we render
-		// "not null" / "unique" by inspecting the RuleInfo element type.
-		for _, v := range validationsByName[attr.Name()] {
-			info := v.RuleInfo()
-			if info == nil {
-				continue
-			}
-			switch info.TypeName() {
-			case "DomainModels$RequiredRuleInfo":
-				constraints.WriteString(" not null")
-			case "DomainModels$UniqueRuleInfo":
-				constraints.WriteString(" unique")
-			}
-		}
-
-		// Calculated / Default value rendering.
-		if val := attr.Value(); val != nil {
-			switch v := val.(type) {
-			case *genDm.CalculatedValue:
-				constraints.WriteString(" calculated")
-				if mfn := v.MicroflowQualifiedName(); mfn != "" {
-					constraints.WriteString(" by " + mfn)
-				}
-			case *genDm.StoredValue:
-				if def := v.DefaultValue(); def != "" {
-					if _, ok := attr.Type().(*genDm.StringAttributeType); ok {
-						def = fmt.Sprintf("'%s'", def)
-					}
-					if enumType, ok := attr.Type().(*genDm.EnumerationAttributeType); ok {
-						if qn := enumType.EnumerationQualifiedName(); qn != "" && !strings.Contains(def, ".") {
-							def = qn + "." + def
-						}
-					}
-					constraints.WriteString(" default " + def)
-				}
-			}
-		}
-
-		line.WriteString(fmt.Sprintf("  %s: %s%s", attr.Name(), typeStr, constraints.String()))
-		attrLines = append(attrLines, attrLine{text: line.String()})
-	}
-
-	// System members emitted as a separate system members (...) clause after the entity body.
-
-	for i, al := range attrLines {
-		comma := ","
-		if i == len(attrLines)-1 {
-			comma = ""
-		}
-		fmt.Fprintf(ctx.Output, "%s%s\n", al.text, comma)
-	}
-	fmt.Fprint(ctx.Output, ")")
-
-	// Emit system members clause for root (NoGeneralization) entities.
+	// Trailing clauses Hydrate/ToMDL do not (yet) carry on the canonical
+	// model: system members, view OQL bodies, and event handlers.
 	if g, ok := entity.Generalization().(*genDm.NoGeneralization); ok {
 		var members []string
 		if g.HasOwner() {
@@ -500,52 +404,15 @@ func describeEntityGen(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 	}
 
-	// VIEW entities — emit OQL body if present
-	if entityType == "view" {
+	if strings.ToLower(entityKindForGen(entity)) == "view" {
 		if src, ok := entity.Source().(*genDm.OqlViewEntitySource); ok {
-			oql := src.Oql()
-			if oql != "" {
+			if oql := src.Oql(); oql != "" {
 				fmt.Fprint(ctx.Output, " as (\n")
 				for _, l := range strings.Split(oql, "\n") {
 					fmt.Fprintf(ctx.Output, "  %s\n", l)
 				}
 				fmt.Fprint(ctx.Output, ")")
 			}
-		}
-	}
-
-	// Build attribute ID -> Name lookup for index columns.
-	attrNames := make(map[model.ID]string)
-	for _, a := range entity.AttributesItems() {
-		attr, ok := a.(*genDm.Attribute)
-		if !ok {
-			continue
-		}
-		attrNames[model.ID(attr.ID())] = attr.Name()
-	}
-
-	for _, ix := range entity.IndexesItems() {
-		idx, ok := ix.(*genDm.Index)
-		if !ok {
-			continue
-		}
-		var cols []string
-		for _, ia := range idx.AttributesItems() {
-			ind, ok := ia.(*genDm.IndexedAttribute)
-			if !ok {
-				continue
-			}
-			colName := attrNames[model.ID(ind.AttributeRefID())]
-			if colName == "" {
-				continue
-			}
-			if !ind.Ascending() {
-				colName += " desc"
-			}
-			cols = append(cols, colName)
-		}
-		if len(cols) > 0 {
-			fmt.Fprintf(ctx.Output, "\nindex (%s)", strings.Join(cols, ", "))
 		}
 	}
 
