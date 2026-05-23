@@ -134,14 +134,14 @@ func (m *MockBackend) CreateEntityGen(domainModelID model.ID, entity *genDm.Enti
 	if m.CreateEntityGenFunc != nil {
 		return m.CreateEntityGenFunc(domainModelID, entity)
 	}
-	return nil
+	return fmt.Errorf("MockBackend.CreateEntityGen not configured")
 }
 
 func (m *MockBackend) UpdateEntityGen(domainModelID model.ID, entity *genDm.Entity) error {
 	if m.UpdateEntityGenFunc != nil {
 		return m.UpdateEntityGenFunc(domainModelID, entity)
 	}
-	return nil
+	return fmt.Errorf("MockBackend.UpdateEntityGen not configured")
 }
 
 func (m *MockBackend) MoveEntityGen(entity *genDm.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error) {

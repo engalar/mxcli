@@ -36,6 +36,11 @@ func RegisterCodec(r *model.DefaultRegistry) {
 			}
 			return Lift(s)
 		},
+		// Note: HydrateFn is registered here for future use via
+		// DefaultRegistry.HydrateFrom(). Current callers
+		// (cmd_entities_gen.go, cmd_diff_mdl.go) invoke entity.Hydrate()
+		// directly. This registration enables future unified dispatch
+		// without API changes.
 		HydrateFn: func(el any) (model.Document, []model.Warning, error) {
 			e, ok := el.(*genDm.Entity)
 			if !ok {
@@ -45,5 +50,7 @@ func RegisterCodec(r *model.DefaultRegistry) {
 		},
 	}
 	r.Register((*ast.CreateEntityStmt)(nil), "DomainModels$Entity", codec)
-	r.Register((*ast.CreateEntityStmt)(nil), "DomainModels$EntityImpl", codec)
+	// DomainModels$EntityImpl is the in-memory TypeName for freshly created
+	// NewEntity() objects that have not yet been round-tripped through BSON.
+	r.RegisterGenType("DomainModels$EntityImpl", codec)
 }

@@ -37,6 +37,13 @@ func (r *DefaultRegistry) Register(stmtExample any, genTypeName string, c Codec)
 	r.byGenType[genTypeName] = c
 }
 
+// RegisterGenType binds an additional gen TypeName to an existing Codec.
+// Use when multiple TypeName stamps on disk (e.g. "DomainModels$Entity" and
+// "DomainModels$EntityImpl") should dispatch to the same Hydrate function.
+func (r *DefaultRegistry) RegisterGenType(genTypeName string, c Codec) {
+	r.byGenType[genTypeName] = c
+}
+
 type genTyper interface{ TypeName() string }
 
 // LiftFrom dispatches the AST statement to the registered Lift codec.
