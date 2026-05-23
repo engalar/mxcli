@@ -2412,6 +2412,22 @@ func (pb *pageBuilder) buildDatePickerV3(w *ast.WidgetV3) (element.Element, erro
 		dp.SetLabel(genSimpleLabel(label))
 	}
 
+	// ConditionalVisibility/Editability must be explicit null — DatePicker does not
+	// implement textLike so applyFormWidgetDefaults does not set them, but Mendix
+	// requires these fields to validate attribute type (CE2421 without them).
+	dp.SetConditionalVisibilitySettings(nil)
+	dp.SetConditionalEditabilitySettings(nil)
+	// FormattingInfo is required for DatePicker — without it Mendix cannot validate
+	// the attribute type and raises CE2421. All fields must be set to match Studio Pro.
+	fi := genPg.NewFormattingInfo()
+	assignFreshID(fi)
+	fi.SetDateFormat("DateTime")
+	fi.SetCustomDateFormat("")
+	fi.SetDecimalPrecision(2)
+	fi.SetEnumFormat("Text")
+	fi.SetGroupDigits(false)
+	dp.SetFormattingInfo(fi)
+
 	if err := pb.registerWidgetName(w.Name, model.ID(dp.ID())); err != nil {
 		return nil, err
 	}

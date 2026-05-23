@@ -38,6 +38,7 @@ func unquoteQualifiedName(s string) string {
 // field is left nil so both old and new readers see a consistent state.
 func newAttributeRef(qualifiedAttr string) element.Element {
 	ar := genDm.NewAttributeRef()
+	ar.SetEntityRef(nil) // explicitly null — Mendix DatePicker uses EntityRef=null for simple attrs
 	ar.SetAttributeQualifiedName(qualifiedAttr)
 	return ar
 }
