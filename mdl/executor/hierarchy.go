@@ -8,6 +8,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/meta"
 )
 
 // hierarchySource is the minimal interface needed to build a ContainerHierarchy.
@@ -65,6 +66,11 @@ func newContainerHierarchyImpl(src hierarchySource) (*ContainerHierarchy, error)
 		h.folderNames[f.ID] = f.Name
 		h.containerParent[f.ID] = f.ContainerID
 	}
+
+	// The System domain model is a virtual document not present in ListUnits,
+	// so its parent link would otherwise be missing. Pre-seed it here so that
+	// FindModuleID resolves SystemDomainModelID → SystemModuleID correctly.
+	h.containerParent[model.ID(meta.SystemDomainModelID)] = model.ID(meta.SystemModuleID)
 
 	return h, nil
 }
