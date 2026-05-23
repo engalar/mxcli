@@ -22,7 +22,8 @@
 //                 (incl. Abort/Continue/Pause/Restart/Retry/Unpause/
 //                 Resume sub-ops) / SetTaskOutcome / OpenUserTask /
 //                 NotifyWorkflow / OpenWorkflow / LockWorkflow /
-//                 UnlockWorkflow. Stage 3.2.2 complete.
+//                 UnlockWorkflow / GenerateJumpToOptions /
+//                 ApplyJumpToOption. Stage 3.2.2 complete.
 //
 // This file implements the gen-typed counterpart to legacy
 // `cmd_microflows_format_action.go`. It is invoked from
@@ -212,6 +213,10 @@ func formatActionGen(ctx *ExecContext, action element.Element) string {
 		return formatLockWorkflowActionGen(a)
 	case *genMf.UnlockWorkflowAction:
 		return formatUnlockWorkflowActionGen(a)
+	case *genMf.GenerateJumpToOptionsAction:
+		return formatGenerateJumpToOptionsActionGen(a)
+	case *genMf.ApplyJumpToOptionAction:
+		return formatApplyJumpToOptionActionGen(a)
 	default:
 		return ""
 	}

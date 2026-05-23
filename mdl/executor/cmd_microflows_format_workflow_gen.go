@@ -297,6 +297,27 @@ func formatUnlockWorkflowActionGen(a *genMf.UnlockWorkflowAction) string {
 	return fmt.Sprintf("unlock workflow $%s;", wfVar)
 }
 
+// formatGenerateJumpToOptionsActionGen emits
+// `[$Out =] generate jump to options for $wf as Module.WF_Name;`
+func formatGenerateJumpToOptionsActionGen(a *genMf.GenerateJumpToOptionsAction) string {
+	wfVar := a.WorkflowVariable()
+	wfQN := a.WorkflowQualifiedName()
+	if outVar := a.OutputVariableName(); outVar != "" {
+		return fmt.Sprintf("$%s = generate jump to options for $%s as %s;", outVar, wfVar, wfQN)
+	}
+	return fmt.Sprintf("generate jump to options for $%s as %s;", wfVar, wfQN)
+}
+
+// formatApplyJumpToOptionActionGen emits
+// `[$Out =] apply jump to option $options;`
+func formatApplyJumpToOptionActionGen(a *genMf.ApplyJumpToOptionAction) string {
+	optVar := a.WorkflowJumpToDetailsVariable()
+	if outVar := a.OutputVariableName(); outVar != "" {
+		return fmt.Sprintf("$%s = apply jump to option $%s;", outVar, optVar)
+	}
+	return fmt.Sprintf("apply jump to option $%s;", optVar)
+}
+
 // workflowSelectionGen normalises a Lock/Unlock action's WorkflowSelection
 // element + top-level qualified-name fallback into a (qualifiedName,
 // workflowVariable) pair. Exactly one of the two return values is
