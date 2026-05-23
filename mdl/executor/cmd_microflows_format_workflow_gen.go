@@ -237,16 +237,18 @@ func formatOpenUserTaskActionGen(a *genMf.OpenUserTaskAction) string {
 // NotifyWorkflowAction
 // ────────────────────────────────────────────────────────
 
-// formatNotifyWorkflowActionGen emits `[$Out =] notify workflow $WfVar;`.
-// Mirrors legacy NotifyWorkflowAction. NotifyTarget / ActivityQualifiedName
-// are not surfaced by the legacy MDL form so they are intentionally
-// ignored here for 1:1 parity.
+// formatNotifyWorkflowActionGen emits
+// `[$Out =] notify workflow $WfVar [activity Module.WF.ActivityName];`.
 func formatNotifyWorkflowActionGen(a *genMf.NotifyWorkflowAction) string {
 	wfVar := a.WorkflowVariable()
-	if outVar := a.OutputVariableName(); outVar != "" {
-		return fmt.Sprintf("$%s = notify workflow $%s;", outVar, wfVar)
+	actPart := ""
+	if aqn := a.ActivityQualifiedName(); aqn != "" {
+		actPart = " activity " + aqn
 	}
-	return fmt.Sprintf("notify workflow $%s;", wfVar)
+	if outVar := a.OutputVariableName(); outVar != "" {
+		return fmt.Sprintf("$%s = notify workflow $%s%s;", outVar, wfVar, actPart)
+	}
+	return fmt.Sprintf("notify workflow $%s%s;", wfVar, actPart)
 }
 
 // ────────────────────────────────────────────────────────

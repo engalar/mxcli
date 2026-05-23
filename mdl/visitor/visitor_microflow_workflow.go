@@ -181,6 +181,9 @@ func buildNotifyWorkflowStatement(ctx parser.INotifyWorkflowStatementContext) *a
 	} else if len(vars) >= 1 {
 		stmt.WorkflowVariable = strings.TrimPrefix(vars[0].GetText(), "$")
 	}
+	if qn := c.QualifiedName(); qn != nil {
+		stmt.ActivityQualifiedName = getQualifiedNameText(qn)
+	}
 	if errClause := c.OnErrorClause(); errClause != nil {
 		stmt.ErrorHandling = buildOnErrorClause(errClause)
 	}

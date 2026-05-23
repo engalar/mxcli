@@ -1007,14 +1007,19 @@ begin
 end;
 /
 
--- Notify workflow (stub — notify requires a static WaitForNotification activity ref
--- which needs ALTER WORKFLOW activity qualified name; use commit-based approach instead)
+-- Notify the WaitForManagerAvailable activity in WF_TicketEscalation.
+-- Returns a Boolean: true when the notification was sent, false otherwise.
+-- The 'activity' clause targets a specific WaitForNotification step by its 3-part QN.
 create or modify microflow HD.ACT_Workflow_Notify
   ($Workflow: System.Workflow)
+  returns boolean as $IsNotificationReceived
   folder 'Escalation/WorkflowAdmin'
 begin
   @position(200, 200)
-  return;
+  $IsNotificationReceived = notify workflow $Workflow
+    activity HD.WF_TicketEscalation.WaitForManagerAvailable;
+  @position(400, 200)
+  return $IsNotificationReceived;
 end;
 /
 
@@ -1246,6 +1251,8 @@ create module role HD.ManagerRole;
 
 -- MARK: Security — User Roles & Grants
 
+alter project security level production;
+
 -- Entity access — KnowledgeBase
 
 -- KB.Reader: only Published articles (XPath), own ratings only
@@ -1312,10 +1319,17 @@ grant execute on microflow HD.ACT_StartEscalation to HD.AgentRole, HD.ManagerRol
 grant execute on microflow HD.ACT_Workflow_ChangeState  to HD.ManagerRole;
 grant execute on microflow HD.ACT_Workflow_Lock         to HD.ManagerRole;
 grant execute on microflow HD.ACT_Workflow_Unlock       to HD.ManagerRole;
-grant execute on microflow HD.ACT_Workflow_Notify       to HD.ManagerRole;
-grant execute on nanoflow HD.NF_Priority_GetLabel      to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-grant execute on nanoflow HD.NF_TicketSearch_Apply     to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-grant execute on nanoflow HD.NF_Ticket_QuickCreate     to HD.CustomerRole, HD.AgentRole;
+grant execute on microflow HD.ACT_Workflow_Notify          to HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_CompleteTask     to HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_GenerateJumpTo   to HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_ApplyJumpTo      to HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_GetHistory       to HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_GetContext       to HD.ManagerRole;
+grant execute on microflow HD.DS_WorkflowInstances          to HD.ManagerRole;
+grant execute on microflow HD.ACT_EscalationRequest_Cleanup to HD.AgentRole, HD.ManagerRole;
+grant execute on nanoflow  HD.NF_Priority_GetLabel          to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on nanoflow  HD.NF_TicketSearch_Apply         to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on nanoflow  HD.NF_Ticket_QuickCreate         to HD.CustomerRole, HD.AgentRole;
 
 -- Page grants
 grant view on page HD.Ticket_Overview      to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;

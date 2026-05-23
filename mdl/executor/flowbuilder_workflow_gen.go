@@ -202,6 +202,9 @@ func (fb *flowBuilderGen) addNotifyWorkflowActionGen(s *ast.NotifyWorkflowStmt) 
 	action.SetErrorHandlingType(convertErrorHandlingTypeGen(s.ErrorHandling))
 	action.SetOutputVariableName(s.OutputVariable)
 	action.SetWorkflowVariable(s.WorkflowVariable)
+	if s.ActivityQualifiedName != "" {
+		action.SetActivityQualifiedName(s.ActivityQualifiedName)
+	}
 	return fb.wrapActionGen(action, s.ErrorHandling)
 }
 

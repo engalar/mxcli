@@ -1229,3 +1229,63 @@ func TestAlterWorkflow_SetActivityDueDate(t *testing.T) {
 		t.Errorf("Expected Value 'PT72H', got %q", op.Value)
 	}
 }
+
+func TestNotifyWorkflowStatement_WithActivity(t *testing.T) {
+	input := `create microflow HD.ACT_Notify ($Workflow: System.Workflow)
+returns boolean as $IsReceived
+begin
+  $IsReceived = notify workflow $Workflow activity HD.WF_TicketEscalation.WaitForManagerAvailable;
+  return $IsReceived;
+end;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+
+	mf, ok := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	if !ok {
+		t.Fatalf("expected CreateMicroflowStmt, got %T", prog.Statements[0])
+	}
+
+	notify, ok := mf.Body[0].(*ast.NotifyWorkflowStmt)
+	if !ok {
+		t.Fatalf("expected NotifyWorkflowStmt, got %T", mf.Body[0])
+	}
+
+	if notify.OutputVariable != "IsReceived" {
+		t.Errorf("OutputVariable = %q, want IsReceived", notify.OutputVariable)
+	}
+	if notify.WorkflowVariable != "Workflow" {
+		t.Errorf("WorkflowVariable = %q, want Workflow", notify.WorkflowVariable)
+	}
+	if notify.ActivityQualifiedName != "HD.WF_TicketEscalation.WaitForManagerAvailable" {
+		t.Errorf("ActivityQualifiedName = %q, want HD.WF_TicketEscalation.WaitForManagerAvailable", notify.ActivityQualifiedName)
+	}
+}
+
+func TestNotifyWorkflowStatement_WithoutActivity(t *testing.T) {
+	input := `create microflow M.F ($Wf: System.Workflow)
+begin
+  notify workflow $Wf;
+  return;
+end;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors: %v", errs)
+	}
+
+	mf := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	notify, ok := mf.Body[0].(*ast.NotifyWorkflowStmt)
+	if !ok {
+		t.Fatalf("expected NotifyWorkflowStmt, got %T", mf.Body[0])
+	}
+
+	if notify.ActivityQualifiedName != "" {
+		t.Errorf("ActivityQualifiedName should be empty without ACTIVITY clause, got %q", notify.ActivityQualifiedName)
+	}
+}

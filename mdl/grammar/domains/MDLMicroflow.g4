@@ -421,9 +421,9 @@ openUserTaskStatement
     : OPEN USER TASK VARIABLE onErrorClause?
     ;
 
-// NOTIFY WORKFLOW $Wf;
+// NOTIFY WORKFLOW $Wf [ACTIVITY Module.WF.ActivityName];
 notifyWorkflowStatement
-    : (VARIABLE EQUALS)? NOTIFY WORKFLOW VARIABLE onErrorClause?
+    : (VARIABLE EQUALS)? NOTIFY WORKFLOW VARIABLE (ACTIVITY qualifiedName)? onErrorClause?
     ;
 
 // OPEN WORKFLOW $Wf;

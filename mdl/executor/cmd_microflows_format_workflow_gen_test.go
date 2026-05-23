@@ -410,12 +410,13 @@ func TestFormatActionGen_NotifyWorkflowAction(t *testing.T) {
 		}
 	})
 
-	t.Run("ActivityQualifiedName ignored for legacy parity", func(t *testing.T) {
+	t.Run("with activity qualified name", func(t *testing.T) {
 		a := genMf.NewNotifyWorkflowAction()
+		a.SetOutputVariableName("IsReceived")
 		a.SetWorkflowVariable("Wf")
-		a.SetActivityQualifiedName("Mod.Wf.SomeActivity")
+		a.SetActivityQualifiedName("HD.WF_TicketEscalation.WaitForManagerAvailable")
 		got := formatActionGen(nil, a)
-		want := "notify workflow $Wf;"
+		want := "$IsReceived = notify workflow $Wf activity HD.WF_TicketEscalation.WaitForManagerAvailable;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}

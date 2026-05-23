@@ -237,6 +237,20 @@ func TestAddNotifyWorkflowActionGenSetsFields(t *testing.T) {
 	}
 }
 
+func TestAddNotifyWorkflowActionGenSetsActivityQN(t *testing.T) {
+	fb := newTestFlowBuilderGen()
+	stmt := &ast.NotifyWorkflowStmt{
+		WorkflowVariable:    "WF",
+		OutputVariable:      "IsReceived",
+		ActivityQualifiedName: "HD.WF_TicketEscalation.WaitForManagerAvailable",
+	}
+	fb.addNotifyWorkflowActionGen(stmt)
+	act := fb.objects[0].(*genMf.ActionActivity).Action().(*genMf.NotifyWorkflowAction)
+	if act.ActivityQualifiedName() != "HD.WF_TicketEscalation.WaitForManagerAvailable" {
+		t.Fatalf("activity QN = %q", act.ActivityQualifiedName())
+	}
+}
+
 func TestAddOpenWorkflowActionGenSetsField(t *testing.T) {
 	fb := newTestFlowBuilderGen()
 	stmt := &ast.OpenWorkflowStmt{WorkflowVariable: "WF"}

@@ -74,12 +74,13 @@ type OpenUserTaskStmt struct {
 
 func (*OpenUserTaskStmt) isMicroflowStatement() {}
 
-// NotifyWorkflowStmt represents: [$Result =] NOTIFY WORKFLOW $WorkflowVar
+// NotifyWorkflowStmt represents: [$Result =] NOTIFY WORKFLOW $WorkflowVar [ACTIVITY Module.WF.ActivityName]
 type NotifyWorkflowStmt struct {
-	OutputVariable   string
-	WorkflowVariable string
-	ErrorHandling    *ErrorHandlingClause
-	Annotations      *ActivityAnnotations
+	OutputVariable        string
+	WorkflowVariable      string
+	ActivityQualifiedName string
+	ErrorHandling         *ErrorHandlingClause
+	Annotations           *ActivityAnnotations
 }
 
 func (*NotifyWorkflowStmt) isMicroflowStatement() {}
