@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
+	canonicalmodel "github.com/mendixlabs/mxcli/mdl/model"
 	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -31,6 +32,11 @@ type ExecContext struct {
 	// Backend provides all domain operations (read/write/connect).
 	// Nil when not connected.
 	Backend backend.FullBackend
+
+	// ModelCodecs is the canonical model codec registry for Lift/Hydrate
+	// operations. Populated by newExecContext from the owning Executor;
+	// nil for ad-hoc contexts that did not opt into the canonical pipeline.
+	ModelCodecs *canonicalmodel.DefaultRegistry
 
 	// Microflows / Nanoflows / Security are the Stage 3 modelsdk-native repos.
 	// Populated only when Backend implements the matching repo-provider
