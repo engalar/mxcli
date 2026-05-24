@@ -9,16 +9,12 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	initTools            []string
-	initAllTools         bool
-	initListTools        bool
 	initContainerRuntime string
 
 	// vsixData holds the VS Code extension binary. It was previously populated
@@ -62,69 +58,36 @@ mxcli.exe
 
 var initCmd = &cobra.Command{
 	Use:   "init [project-directory]",
-	Short: "Initialize a Mendix project for AI-assisted development",
-	Long: `Initialize a Mendix project for AI-assisted development using mxcli.
+	Short: "Initialize a Mendix project for Claude Code",
+	Long: `Initialize a Mendix project for Claude Code AI-assisted development.
 
-This command creates configuration for AI coding assistants and MDL development.
-
-Default: Claude Code + universal documentation
+Creates .claude/ configuration with skills, commands, lint rules, and
+CLAUDE.md project guide. Also sets up .devcontainer/ for containerized
+development with the Mendix runtime.
 
 Examples:
-  # Initialize with Claude Code (default)
+  # Initialize current directory
   mxcli init
 
-  # Initialize for Cursor
-  mxcli init --tool cursor
+  # Initialize a specific project directory
+  mxcli init /path/to/my-mendix-project
 
-  # Initialize for multiple tools
-  mxcli init --tool claude --tool cursor --tool continue
-
-  # Initialize for all supported tools
-  mxcli init --all-tools
-
-  # List supported tools
-  mxcli init --list-tools
-
-Supported Tools:
-  - claude      Claude Code with skills and commands
-  - cursor      Cursor AI with MDL rules
-  - continue    Continue.dev with custom commands
-  - windsurf    Windsurf (Codeium) with MDL rules
-  - aider       Aider with project configuration
-  - opencode    OpenCode AI agent with MDL commands and skills
-  - vibe        Mistral Vibe CLI agent with skills
-  - copilot     GitHub Copilot with project-level instructions
-
-All tools receive universal documentation in AGENTS.md and .ai-context/
-
-Container Runtime:
-  --container-runtime docker   Use Docker-in-Docker (default)
-  --container-runtime podman   Use Podman-in-Podman
+  # Use Podman instead of Docker for the devcontainer
+  mxcli init --container-runtime podman
 `,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		// List tools if requested
-		if initListTools {
-			fmt.Println("Supported AI Tools:")
-			fmt.Println()
-			for key, tool := range SupportedTools {
-				fmt.Printf("  %-12s %s\n", key, tool.Description)
-			}
-			return
-		}
 		projectDir := "."
 		if len(args) > 0 {
 			projectDir = args[0]
 		}
 
-		// Make path absolute
 		absDir, err := filepath.Abs(projectDir)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error resolving path: %v\n", err)
 			os.Exit(1)
 		}
 
-		// Check if directory exists
 		info, err := os.Stat(absDir)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: directory does not exist: %s\n", absDir)
@@ -135,95 +98,95 @@ Container Runtime:
 			os.Exit(1)
 		}
 
-		// Find .mpr file
 		mprFile := findMprFile(absDir)
 		if mprFile == "" {
-			mprFile = "project.mpr" // Default if not found
+			mprFile = "project.mpr"
 		}
 		projectName := filepath.Base(absDir)
 
-		// Determine which tools to initialize
-		tools := initTools
-		if initAllTools {
-			tools = []string{}
-			for key := range SupportedTools {
-				tools = append(tools, key)
+		fmt.Printf("Initializing Claude Code for: %s\n", absDir)
+
+		// Create .claude directory structure
+		claudeDir := filepath.Join(absDir, ".claude")
+		commandsDir := filepath.Join(claudeDir, "commands")
+		lintRulesDir := filepath.Join(claudeDir, "lint-rules")
+		claudeSkillsDir := filepath.Join(claudeDir, "skills")
+
+		for _, dir := range []string{commandsDir, lintRulesDir, claudeSkillsDir} {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				fmt.Fprintf(os.Stderr, "Error creating %s: %v\n", dir, err)
+				os.Exit(1)
 			}
 		}
-		if len(tools) == 0 {
-			// Default to Claude + universal
-			tools = []string{"claude"}
-		}
 
-		fmt.Printf("Initializing AI-assisted development for: %s\n", absDir)
-		fmt.Printf("Tools: %v\n", tools)
-
-		// Create .ai-context directory for universal content
-		aiContextDir := filepath.Join(absDir, ".ai-context")
-		skillsDir := filepath.Join(aiContextDir, "skills")
-		examplesDir := filepath.Join(aiContextDir, "examples")
-
-		if err := os.MkdirAll(skillsDir, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating .ai-context/skills directory: %v\n", err)
+		// Write settings.json and CLAUDE.md
+		settingsPath := filepath.Join(claudeDir, "settings.json")
+		if err := os.WriteFile(settingsPath, []byte(generateClaudeSettings(projectName, mprFile)), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing settings.json: %v\n", err)
 			os.Exit(1)
 		}
-		if err := os.MkdirAll(examplesDir, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating .ai-context/examples directory: %v\n", err)
+		fmt.Println("  Created .claude/settings.json")
+
+		claudeMDPath := filepath.Join(absDir, "CLAUDE.md")
+		if err := os.WriteFile(claudeMDPath, []byte(generateClaudeMD(projectName, mprFile)), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing CLAUDE.md: %v\n", err)
 			os.Exit(1)
 		}
+		fmt.Println("  Created CLAUDE.md")
 
-		// Create .claude directory for Claude-specific content (if Claude is selected)
-		var claudeDir, commandsDir, lintRulesDir, claudeSkillsDir string
-		if slices.Contains(tools, "claude") {
-			claudeDir = filepath.Join(absDir, ".claude")
-			commandsDir = filepath.Join(claudeDir, "commands")
-			lintRulesDir = filepath.Join(claudeDir, "lint-rules")
-			claudeSkillsDir = filepath.Join(claudeDir, "skills")
-
-			if err := os.MkdirAll(commandsDir, 0755); err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating .claude/commands directory: %v\n", err)
-				os.Exit(1)
+		// Write commands
+		cmdCount := 0
+		err = fs.WalkDir(commandsFS, "commands", func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
 			}
-			if err := os.MkdirAll(lintRulesDir, 0755); err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating .claude/lint-rules directory: %v\n", err)
-				os.Exit(1)
+			if d.IsDir() {
+				return nil
 			}
-			if err := os.MkdirAll(claudeSkillsDir, 0755); err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating .claude/skills directory: %v\n", err)
-				os.Exit(1)
+			content, err := commandsFS.ReadFile(path)
+			if err != nil {
+				return err
 			}
+			targetPath := filepath.Join(commandsDir, d.Name())
+			if err := os.WriteFile(targetPath, content, 0644); err != nil {
+				return err
+			}
+			cmdCount++
+			return nil
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing commands: %v\n", err)
+		} else {
+			fmt.Printf("  Created %d command files in .claude/commands/\n", cmdCount)
 		}
 
-		// Create .opencode directory for OpenCode-specific content (if OpenCode is selected)
-		var opencodeCommandsDir, opencodeSkillsDir string
-		if slices.Contains(tools, "opencode") {
-			opencodeDir := filepath.Join(absDir, ".opencode")
-			opencodeCommandsDir = filepath.Join(opencodeDir, "commands")
-			opencodeSkillsDir = filepath.Join(opencodeDir, "skills")
-
-			if err := os.MkdirAll(opencodeCommandsDir, 0755); err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating .opencode/commands directory: %v\n", err)
-				os.Exit(1)
+		// Write lint rules
+		lintRuleCount := 0
+		err = fs.WalkDir(lintRulesFS, "lint-rules", func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
 			}
-			if err := os.MkdirAll(opencodeSkillsDir, 0755); err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating .opencode/skills directory: %v\n", err)
-				os.Exit(1)
+			if d.IsDir() {
+				return nil
 			}
-
-			// Lint rules stay in .claude/lint-rules/ (read by mxcli lint).
-			// Ensure that directory exists even when claude tool is not selected.
-			if !slices.Contains(tools, "claude") {
-				if lintRulesDir == "" {
-					lintRulesDir = filepath.Join(absDir, ".claude", "lint-rules")
-				}
-				if err := os.MkdirAll(lintRulesDir, 0755); err != nil {
-					fmt.Fprintf(os.Stderr, "Error creating .claude/lint-rules directory: %v\n", err)
-					os.Exit(1)
-				}
+			content, err := lintRulesFS.ReadFile(path)
+			if err != nil {
+				return err
 			}
+			targetPath := filepath.Join(lintRulesDir, d.Name())
+			if err := os.WriteFile(targetPath, content, 0644); err != nil {
+				return err
+			}
+			lintRuleCount++
+			return nil
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing lint rules: %v\n", err)
+		} else {
+			fmt.Printf("  Created %d lint rule files in .claude/lint-rules/\n", lintRuleCount)
 		}
 
-		// Write universal skills to .ai-context/skills/
+		// Write skills to .claude/skills/<name>/SKILL.md
 		skillCount := 0
 		err = fs.WalkDir(skillsFS, "skills", func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
@@ -232,13 +195,19 @@ Container Runtime:
 			if d.IsDir() {
 				return nil
 			}
-			// Read from embedded FS
+			if d.Name() == "README.md" {
+				return nil
+			}
 			content, err := skillsFS.ReadFile(path)
 			if err != nil {
 				return err
 			}
-			// Write to target directory
-			targetPath := filepath.Join(skillsDir, d.Name())
+			skillName := strings.TrimSuffix(d.Name(), ".md")
+			skillDir := filepath.Join(claudeSkillsDir, skillName)
+			if err := os.MkdirAll(skillDir, 0755); err != nil {
+				return err
+			}
+			targetPath := filepath.Join(skillDir, "SKILL.md")
 			if err := os.WriteFile(targetPath, content, 0644); err != nil {
 				return err
 			}
@@ -247,275 +216,42 @@ Container Runtime:
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing skills: %v\n", err)
-			os.Exit(1)
+		} else {
+			fmt.Printf("  Created %d skill files in .claude/skills/\n", skillCount)
 		}
-		fmt.Printf("  Created %d skill files in .ai-context/skills/\n", skillCount)
 
-		// Write tool-specific configurations
-		for _, toolName := range tools {
-			toolConfig, ok := SupportedTools[toolName]
-			if !ok {
-				fmt.Fprintf(os.Stderr, "Warning: unknown tool '%s', skipping\n", toolName)
-				continue
-			}
-
-			fmt.Printf("\nConfiguring %s:\n", toolConfig.Name)
-
-			for _, file := range toolConfig.Files {
-				filePath := filepath.Join(absDir, file.Path)
-
-				// Create parent directory if needed
-				if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
-					fmt.Fprintf(os.Stderr, "  Error creating directory for %s: %v\n", file.Path, err)
-					continue
+		// Write example MDL files to mdl-examples/
+		examplesDir := filepath.Join(absDir, "mdl-examples")
+		if err := os.MkdirAll(examplesDir, 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating mdl-examples directory: %v\n", err)
+		} else {
+			exampleCount := 0
+			if err := fs.WalkDir(examplesFS, "examples", func(path string, d fs.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
 				}
-
-				// Generate content
-				content := file.Content(projectName, mprFile)
-
-				// Write file
-				if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
-					fmt.Fprintf(os.Stderr, "  Error writing %s: %v\n", file.Path, err)
-					continue
-				}
-
-				fmt.Printf("  Created %s\n", file.Path)
-			}
-
-			// Claude-specific: write commands, lint rules, and skills
-			if toolName == "claude" && commandsDir != "" {
-				cmdCount := 0
-				err = fs.WalkDir(commandsFS, "commands", func(path string, d fs.DirEntry, err error) error {
-					if err != nil {
-						return err
-					}
-					if d.IsDir() {
-						return nil
-					}
-					content, err := commandsFS.ReadFile(path)
-					if err != nil {
-						return err
-					}
-					targetPath := filepath.Join(commandsDir, d.Name())
-					if err := os.WriteFile(targetPath, content, 0644); err != nil {
-						return err
-					}
-					cmdCount++
-					return nil
-				})
+				content, err := examplesFS.ReadFile(path)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "  Error writing commands: %v\n", err)
-				} else {
-					fmt.Printf("  Created %d command files in .claude/commands/\n", cmdCount)
+					return err
 				}
-
-				lintRuleCount := 0
-				err = fs.WalkDir(lintRulesFS, "lint-rules", func(path string, d fs.DirEntry, err error) error {
-					if err != nil {
-						return err
-					}
-					if d.IsDir() {
-						return nil
-					}
-					content, err := lintRulesFS.ReadFile(path)
-					if err != nil {
-						return err
-					}
-					targetPath := filepath.Join(lintRulesDir, d.Name())
-					if err := os.WriteFile(targetPath, content, 0644); err != nil {
-						return err
-					}
-					lintRuleCount++
+				targetPath := filepath.Join(examplesDir, d.Name())
+				// Don't overwrite existing user examples
+				if _, statErr := os.Stat(targetPath); statErr == nil {
 					return nil
-				})
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "  Error writing lint rules: %v\n", err)
-				} else {
-					fmt.Printf("  Created %d lint rule files in .claude/lint-rules/\n", lintRuleCount)
 				}
-
-				// Write skills to .claude/skills/<name>/SKILL.md
-				claudeSkillCount := 0
-				err = fs.WalkDir(skillsFS, "skills", func(path string, d fs.DirEntry, err error) error {
-					if err != nil {
-						return err
-					}
-					if d.IsDir() {
-						return nil
-					}
-					content, err := skillsFS.ReadFile(path)
-					if err != nil {
-						return err
-					}
-					// Derive skill name from filename (strip .md extension)
-					skillName := strings.TrimSuffix(d.Name(), ".md")
-					skillDir := filepath.Join(claudeSkillsDir, skillName)
-					if err := os.MkdirAll(skillDir, 0755); err != nil {
-						return err
-					}
-					targetPath := filepath.Join(skillDir, "SKILL.md")
-					if err := os.WriteFile(targetPath, content, 0644); err != nil {
-						return err
-					}
-					claudeSkillCount++
-					return nil
-				})
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "  Error writing Claude skills: %v\n", err)
-				} else {
-					fmt.Printf("  Created %d skill files in .claude/skills/\n", claudeSkillCount)
+				if err := os.WriteFile(targetPath, content, 0644); err != nil {
+					return err
 				}
-			}
-
-			// OpenCode-specific: write commands, lint rules, and skills
-			if toolName == "opencode" && opencodeCommandsDir != "" {
-				cmdCount := 0
-				err = fs.WalkDir(commandsFS, "commands", func(path string, d fs.DirEntry, err error) error {
-					if err != nil {
-						return err
-					}
-					if d.IsDir() {
-						return nil
-					}
-					content, err := commandsFS.ReadFile(path)
-					if err != nil {
-						return err
-					}
-					targetPath := filepath.Join(opencodeCommandsDir, d.Name())
-					if err := os.WriteFile(targetPath, content, 0644); err != nil {
-						return err
-					}
-					cmdCount++
-					return nil
-				})
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "  Error writing OpenCode commands: %v\n", err)
-				} else {
-					fmt.Printf("  Created %d command files in .opencode/commands/\n", cmdCount)
-				}
-
-				lintRuleCount := 0
-				// Only write lint rules from the OpenCode path when Claude is not also
-				// being initialised — the Claude path already writes the same files to
-				// .claude/lint-rules/ and we don't want duplicate log output or writes.
-				if !slices.Contains(tools, "claude") {
-					err = fs.WalkDir(lintRulesFS, "lint-rules", func(path string, d fs.DirEntry, err error) error {
-						if err != nil {
-							return err
-						}
-						if d.IsDir() {
-							return nil
-						}
-						content, err := lintRulesFS.ReadFile(path)
-						if err != nil {
-							return err
-						}
-						targetPath := filepath.Join(lintRulesDir, d.Name())
-						if err := os.WriteFile(targetPath, content, 0644); err != nil {
-							return err
-						}
-						lintRuleCount++
-						return nil
-					})
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "  Error writing lint rules: %v\n", err)
-					} else {
-						fmt.Printf("  Created %d lint rule files in .claude/lint-rules/\n", lintRuleCount)
-					}
-				}
-
-				skillCount2 := 0
-				err = fs.WalkDir(skillsFS, "skills", func(path string, d fs.DirEntry, err error) error {
-					if err != nil {
-						return err
-					}
-					if d.IsDir() {
-						return nil
-					}
-					// Skip README
-					if d.Name() == "README.md" {
-						return nil
-					}
-					content, err := skillsFS.ReadFile(path)
-					if err != nil {
-						return err
-					}
-					// Derive skill name from filename (strip .md)
-					skillName := strings.TrimSuffix(d.Name(), ".md")
-					// Create per-skill subdirectory
-					skillDir := filepath.Join(opencodeSkillsDir, skillName)
-					if err := os.MkdirAll(skillDir, 0755); err != nil {
-						return err
-					}
-					// Wrap content with OpenCode frontmatter
-					wrapped := wrapSkillContent(skillName, content)
-					targetPath := filepath.Join(skillDir, "SKILL.md")
-					if err := os.WriteFile(targetPath, wrapped, 0644); err != nil {
-						return err
-					}
-					skillCount2++
-					return nil
-				})
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "  Error writing OpenCode skills: %v\n", err)
-				} else {
-					fmt.Printf("  Created %d skill directories in .opencode/skills/\n", skillCount2)
-				}
-			}
-			// Vibe-specific: write all skills as .vibe/skills/<name>/SKILL.md
-			if toolName == "vibe" {
-				vibeSkillsDir := filepath.Join(absDir, ".vibe", "skills")
-				vibeSkillCount := 0
-				err = fs.WalkDir(skillsFS, "skills", func(path string, d fs.DirEntry, err error) error {
-					if err != nil {
-						return err
-					}
-					if d.IsDir() {
-						return nil
-					}
-					if d.Name() == "README.md" {
-						return nil
-					}
-					content, err := skillsFS.ReadFile(path)
-					if err != nil {
-						return err
-					}
-					skillName := strings.TrimSuffix(d.Name(), ".md")
-					skillDir := filepath.Join(vibeSkillsDir, skillName)
-					if err := os.MkdirAll(skillDir, 0755); err != nil {
-						return err
-					}
-					wrapped := wrapSkillForVibe(skillName, content)
-					targetPath := filepath.Join(skillDir, "SKILL.md")
-					if err := os.WriteFile(targetPath, wrapped, 0644); err != nil {
-						return err
-					}
-					vibeSkillCount++
-					return nil
-				})
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "  Error writing Vibe skills: %v\n", err)
-				} else {
-					fmt.Printf("  Created %d skill directories in .vibe/skills/\n", vibeSkillCount)
-				}
+				exampleCount++
+				return nil
+			}); err != nil {
+				fmt.Fprintf(os.Stderr, "Error writing examples: %v\n", err)
+			} else if exampleCount > 0 {
+				fmt.Printf("  Created %d example MDL files in mdl-examples/\n", exampleCount)
 			}
 		}
 
-		// Write universal AGENTS.md
-		fmt.Println("\nCreating universal documentation:")
-		for _, file := range UniversalFiles {
-			filePath := filepath.Join(absDir, file.Path)
-			content := file.Content(projectName, mprFile)
-
-			if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
-				fmt.Fprintf(os.Stderr, "  Error writing %s: %v\n", file.Path, err)
-				os.Exit(1)
-			}
-
-			fmt.Printf("  Created %s\n", file.Path)
-		}
-
-		// Create or update .devcontainer/ configuration
+		// Create .devcontainer/ configuration
 		devcontainerDir := filepath.Join(absDir, ".devcontainer")
 		devcontainerJSON := filepath.Join(devcontainerDir, "devcontainer.json")
 		dcExisted := false
@@ -527,12 +263,12 @@ Container Runtime:
 		} else {
 			dcJSON := generateDevcontainerJSON(projectName, mprFile, initContainerRuntime)
 			if err := os.WriteFile(devcontainerJSON, []byte(dcJSON), 0644); err != nil {
-				fmt.Fprintf(os.Stderr, "  Error writing devcontainer.json: %v\n", err)
+				fmt.Fprintf(os.Stderr, "Error writing devcontainer.json: %v\n", err)
 			}
 			dockerfile := filepath.Join(devcontainerDir, "Dockerfile")
 			dcDockerfile := generateDockerfile(projectName, mprFile)
 			if err := os.WriteFile(dockerfile, []byte(dcDockerfile), 0644); err != nil {
-				fmt.Fprintf(os.Stderr, "  Error writing Dockerfile: %v\n", err)
+				fmt.Fprintf(os.Stderr, "Error writing Dockerfile: %v\n", err)
 			}
 			if dcExisted {
 				fmt.Println("\nUpdated .devcontainer/ configuration")
@@ -551,13 +287,13 @@ Container Runtime:
 		gitignorePath := filepath.Join(absDir, ".gitignore")
 		if _, err := os.Stat(gitignorePath); os.IsNotExist(err) {
 			if err := os.WriteFile(gitignorePath, []byte(mendixGitignore), 0644); err != nil {
-				fmt.Fprintf(os.Stderr, "  Error writing .gitignore: %v\n", err)
+				fmt.Fprintf(os.Stderr, "Error writing .gitignore: %v\n", err)
 			} else {
 				fmt.Println("\nCreated .gitignore")
 			}
 		}
 
-		// Create .playwright/cli.config.json for playwright-cli
+		// Create .playwright/cli.config.json
 		playwrightDir := filepath.Join(absDir, ".playwright")
 		playwrightConfig := filepath.Join(playwrightDir, "cli.config.json")
 		if _, err := os.Stat(playwrightConfig); os.IsNotExist(err) {
@@ -566,7 +302,7 @@ Container Runtime:
 			} else {
 				configContent := generatePlaywrightConfig()
 				if err := os.WriteFile(playwrightConfig, []byte(configContent), 0644); err != nil {
-					fmt.Fprintf(os.Stderr, "  Error writing playwright config: %v\n", err)
+					fmt.Fprintf(os.Stderr, "Error writing playwright config: %v\n", err)
 				} else {
 					fmt.Println("\nCreated .playwright/cli.config.json")
 				}
@@ -575,25 +311,20 @@ Container Runtime:
 
 		fmt.Println("\n✓ Initialization complete!")
 		fmt.Println("\nWhat was created:")
-		fmt.Println("  • .gitignore - Mendix project ignore patterns")
-		fmt.Println("  • AGENTS.md - Universal AI assistant guide")
-		fmt.Println("  • .ai-context/skills/ - MDL pattern guides")
-		fmt.Println("  • .devcontainer/ - Dev container configuration")
-		for _, toolName := range tools {
-			if config, ok := SupportedTools[toolName]; ok {
-				fmt.Printf("  • %s configuration\n", config.Name)
-			}
-		}
+		fmt.Println("  • CLAUDE.md — project guide for Claude Code")
+		fmt.Println("  • .claude/settings.json — permissions and environment")
+		fmt.Println("  • .claude/commands/ — slash commands")
+		fmt.Println("  • .claude/lint-rules/ — Starlark lint rules")
+		fmt.Println("  • .claude/skills/ — MDL pattern guides")
+		fmt.Println("  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)")
+		fmt.Println("  • .devcontainer/ — dev container configuration")
+		fmt.Println("  • .gitignore — Mendix ignore patterns")
 
 		fmt.Println("\nNext steps:")
-		fmt.Println("  1. Open this project in your AI coding assistant")
-		fmt.Println("  2. Read AGENTS.md for command reference")
-		fmt.Println("  3. Use './mxcli -p " + mprFile + "' to work with the project")
-		fmt.Println("\nAvailable commands:")
-		fmt.Println("  ./mxcli check <script>         - Validate MDL")
-		fmt.Println("  ./mxcli exec <script>          - Execute MDL")
-		fmt.Println("  ./mxcli search \"pattern\"       - Search project")
-		fmt.Println("  ./mxcli lint                   - Check for issues")
+		fmt.Println("  1. Open this project in Claude Code")
+		fmt.Println("  2. Ask Claude: 'explore this project'")
+		fmt.Println("  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference")
+		fmt.Println("  4. Use './mxcli -p " + mprFile + "' to work with the project")
 	},
 }
 
@@ -612,10 +343,5 @@ func findMprFile(dir string) string {
 
 func init() {
 	rootCmd.AddCommand(initCmd)
-
-	// Add flags for tool selection
-	initCmd.Flags().StringSliceVar(&initTools, "tool", []string{}, "AI tool(s) to configure (claude, opencode, cursor, continue, windsurf, aider)")
-	initCmd.Flags().BoolVar(&initAllTools, "all-tools", false, "Initialize for all supported AI tools")
-	initCmd.Flags().BoolVar(&initListTools, "list-tools", false, "List supported AI tools and exit")
 	initCmd.Flags().StringVar(&initContainerRuntime, "container-runtime", "docker", "Container runtime for devcontainer (docker or podman)")
 }

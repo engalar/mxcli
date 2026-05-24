@@ -8,41 +8,6 @@ import (
 	"strings"
 )
 
-// yamlSingleQuote wraps s in YAML single quotes and escapes any internal
-// single quotes by doubling them, so the result is safe to embed in a YAML
-// value without further quoting.
-func yamlSingleQuote(s string) string {
-	s = strings.ReplaceAll(s, "\n", " ")
-	s = strings.ReplaceAll(s, "'", "''")
-	return "'" + s + "'"
-}
-
-// wrapSkillContent prepends OpenCode-compatible YAML frontmatter to a skill file.
-// OpenCode requires each skill to live in its own subdirectory as SKILL.md and
-// the file must start with YAML frontmatter containing name, description, and
-// compatibility fields.
-func wrapSkillContent(skillName string, content []byte) []byte {
-	description := extractSkillDescription(content)
-	frontmatter := fmt.Sprintf("---\nname: %s\ndescription: %s\ncompatibility: opencode\n---\n\n", yamlSingleQuote(skillName), yamlSingleQuote(description))
-	return append([]byte(frontmatter), content...)
-}
-
-// extractSkillDescription returns a one-line description for the skill by
-// finding the first top-level markdown heading (# ...) and stripping a leading
-// "Skill: " prefix if present.  Falls back to "MDL skill" if no heading is
-// found.
-func extractSkillDescription(content []byte) string {
-	for _, line := range strings.Split(string(content), "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "# ") {
-			desc := strings.TrimPrefix(line, "# ")
-			desc = strings.TrimPrefix(desc, "Skill: ")
-			return strings.TrimSpace(desc)
-		}
-	}
-	return "MDL skill"
-}
-
 func generateClaudeMD(projectName, mprFile string) string {
 	mprPath := mprFile
 	if mprPath == "" {
@@ -82,6 +47,12 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w(bt3 + "bash\n./mxcli -p " + mprPath + "    # Correct - uses local binary\n" + bt3 + "\n\n")
 	w("**Do NOT use** " + bt + "mxcli" + bt + " directly - it will fail with \"command not found\". Always prefix with " + bt + "./" + bt + " to run the local binary.\n\n")
 
+	// ── Version Check ────────────────────────────────────────────────
+	w("## IMPORTANT: Check Version Before Using Features\n\n")
+	w("Always run this before using any version-gated MDL syntax (AI agents, workflows, business events, etc.):\n\n")
+	w(bt3 + "bash\n./mxcli -p " + mprPath + " -c \"SHOW FEATURES\"\n" + bt3 + "\n\n")
+	w("This shows which features are available for the project's Mendix version. Using version-gated syntax on an older project will fail at write time.\n\n")
+
 	// ── Mendix Validation Tool ─────────────────────────────────────
 	w("## Mendix Validation Tool (mx)\n\n")
 	w("The " + bt + "mx" + bt + " command validates Mendix projects (same checks as Studio Pro). To set it up:\n\n")
@@ -111,21 +82,22 @@ func generateClaudeMD(projectName, mprFile string) string {
 
 	// ── IMPORTANT: Before Writing MDL ───────────────────────────────
 	w("## IMPORTANT: Before Writing MDL Scripts or Working with Data\n\n")
-	w("**Read the relevant skill files FIRST before writing any MDL, seeding data, or doing database/import work:**\n\n")
-	w("| Skill File | When to Read |\n")
-	w("|------------|-------------|\n")
-	w("| " + bt + ".ai-context/skills/write-microflows.md" + bt + " | **Before writing any microflow** - syntax, common mistakes, validation checklist |\n")
-	w("| " + bt + ".ai-context/skills/create-page.md" + bt + " | **Before creating any page** - widget syntax reference |\n")
-	w("| " + bt + ".ai-context/skills/alter-page.md" + bt + " | **Before modifying pages** - ALTER PAGE/SNIPPET SET, INSERT, DROP, REPLACE |\n")
-	w("| " + bt + ".ai-context/skills/overview-pages.md" + bt + " | CRUD page patterns (overview + edit) |\n")
-	w("| " + bt + ".ai-context/skills/master-detail-pages.md" + bt + " | Master-detail page patterns |\n")
-	w("| " + bt + ".ai-context/skills/generate-domain-model.md" + bt + " | Entity, association, enumeration syntax |\n")
-	w("| " + bt + ".ai-context/skills/organize-project.md" + bt + " | Folders, MOVE command, project structure |\n")
-	w("| " + bt + ".ai-context/skills/manage-security.md" + bt + " | Security roles, GRANT/REVOKE, access control |\n")
-	w("| " + bt + ".ai-context/skills/manage-navigation.md" + bt + " | Navigation profiles, menus, home/login pages |\n")
-	w("| " + bt + ".ai-context/skills/check-syntax.md" + bt + " | **Pre-flight** validation checklist |\n")
-	w("| " + bt + ".ai-context/skills/demo-data.md" + bt + " | **READ for any database/import work** - Mendix ID system, demo data |\n")
-	w("| " + bt + ".ai-context/skills/test-microflows.md" + bt + " | **READ for testing** - test annotations, file formats, Docker setup |\n")
+	w("Skills are in `.claude/skills/`. Read the relevant skill FIRST — they contain syntax rules, common mistakes, and validation checklists that prevent errors.\n\n")
+	w("| Skill | When to Use |\n")
+	w("|-------|-------------|\n")
+	w("| `write-microflows` | **Before writing any microflow** — syntax, common mistakes, validation checklist |\n")
+	w("| `write-nanoflows` | **Before writing any nanoflow** — restrictions, disallowed activities |\n")
+	w("| `create-page` | **Before creating any page** — widget syntax reference |\n")
+	w("| `alter-page` | **Before modifying pages** — ALTER PAGE/SNIPPET SET, INSERT, DROP, REPLACE |\n")
+	w("| `overview-pages` | CRUD page patterns (overview + edit) |\n")
+	w("| `master-detail-pages` | Master-detail page patterns |\n")
+	w("| `generate-domain-model` | Entity, association, enumeration syntax |\n")
+	w("| `organize-project` | Folders, MOVE command, project structure |\n")
+	w("| `manage-security` | Security roles, GRANT/REVOKE, access control |\n")
+	w("| `manage-navigation` | Navigation profiles, menus, home/login pages |\n")
+	w("| `check-syntax` | **Pre-flight** validation checklist |\n")
+	w("| `demo-data` | **READ for any database/import work** — Mendix ID system, demo data |\n")
+	w("| `test-microflows` | **READ for testing** — test annotations, file formats, Docker setup |\n")
 	w("\n")
 	w("**Always validate before presenting to user:**\n\n")
 	w(bt3 + "bash\n")
@@ -136,12 +108,11 @@ func generateClaudeMD(projectName, mprFile string) string {
 	// ── MDL Commands by Domain ──────────────────────────────────────
 	w("## MDL Commands by Domain\n\n")
 
-	// Exploration & Structure
 	w("### Exploration & Structure\n\n")
 	w("| Command | Description |\n")
 	w("|---------|-------------|\n")
 	w("| " + bt + "SHOW MODULES" + bt + " | List all modules |\n")
-	w("| " + bt + "SHOW STRUCTURE [DEPTH 1|2|3] [IN Module] [ALL]" + bt + " | Compact project overview at different detail levels |\n")
+	w("| " + bt + "SHOW STRUCTURE [DEPTH 1|2|3] [IN Module] [ALL]" + bt + " | Compact project overview |\n")
 	w("| " + bt + "SHOW CALLERS OF Module.Microflow" + bt + " | Find what calls a microflow |\n")
 	w("| " + bt + "SHOW CALLEES OF Module.Microflow" + bt + " | Find what a microflow calls |\n")
 	w("| " + bt + "SHOW REFERENCES OF Module.Entity" + bt + " | Find all references to an element |\n")
@@ -151,7 +122,6 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("| " + bt + "HELP [topic]" + bt + " | Show all commands or help on a topic |\n")
 	w("\n")
 
-	// Domain Model
 	w("### Domain Model\n\n")
 	w("| Command | Description |\n")
 	w("|---------|-------------|\n")
@@ -173,7 +143,6 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("| " + bt + "DROP ENUMERATION Module.Enum" + bt + " | Delete an enumeration |\n")
 	w("\n")
 
-	// Microflows & Nanoflows
 	w("### Microflows & Nanoflows\n\n")
 	w("| Command | Description |\n")
 	w("|---------|-------------|\n")
@@ -187,7 +156,6 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("| " + bt + "DROP NANOFLOW Module.Flow" + bt + " | Delete a nanoflow |\n")
 	w("\n")
 
-	// Pages & Snippets
 	w("### Pages & Snippets\n\n")
 	w("| Command | Description |\n")
 	w("|---------|-------------|\n")
@@ -203,7 +171,6 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("| " + bt + "DROP SNIPPET Module.Snippet" + bt + " | Delete a snippet |\n")
 	w("\n")
 
-	// Security
 	w("### Security\n\n")
 	w("| Command | Description |\n")
 	w("|---------|-------------|\n")
@@ -221,12 +188,10 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("| " + bt + "GRANT Mod.Role ON Mod.Entity (CREATE, DELETE, READ *, WRITE *)" + bt + " | Grant entity access |\n")
 	w("| " + bt + "REVOKE EXECUTE|VIEW|role ON element FROM role" + bt + " | Revoke access |\n")
 	w("| " + bt + "ALTER PROJECT SECURITY LEVEL OFF|PROTOTYPE|PRODUCTION" + bt + " | Set security level |\n")
-	w("| " + bt + "ALTER PROJECT SECURITY DEMO USERS ON|OFF" + bt + " | Toggle demo users |\n")
 	w("| " + bt + "CREATE DEMO USER 'name' PASSWORD 'pass' (UserRole, ...)" + bt + " | Create demo user |\n")
 	w("| " + bt + "DROP MODULE ROLE|USER ROLE|DEMO USER ..." + bt + " | Delete roles/users |\n")
 	w("\n")
 
-	// Navigation
 	w("### Navigation\n\n")
 	w("| Command | Description |\n")
 	w("|---------|-------------|\n")
@@ -237,7 +202,6 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("| " + bt + "CREATE OR REPLACE NAVIGATION Profile ..." + bt + " | Full replacement of a navigation profile |\n")
 	w("\n")
 
-	// Project Settings
 	w("### Project Settings\n\n")
 	w("| Command | Description |\n")
 	w("|---------|-------------|\n")
@@ -250,7 +214,6 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("| " + bt + "ALTER SETTINGS WORKFLOWS Key = Value" + bt + " | UserEntity, DefaultTaskParallelism |\n")
 	w("\n")
 
-	// Business Events & Java Actions
 	w("### Business Events & Java Actions\n\n")
 	w("| Command | Description |\n")
 	w("|---------|-------------|\n")
@@ -266,7 +229,6 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("| " + bt + "DROP JAVA ACTION Mod.Name" + bt + " | Delete a Java action |\n")
 	w("\n")
 
-	// OData
 	w("### OData\n\n")
 	w("| Command | Description |\n")
 	w("|---------|-------------|\n")
@@ -280,7 +242,6 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("| " + bt + "DROP ODATA CLIENT|SERVICE Mod.Name" + bt + " | Delete an OData service |\n")
 	w("\n")
 
-	// External SQL
 	w("### External SQL\n\n")
 	w("| Command | Description |\n")
 	w("|---------|-------------|\n")
@@ -292,7 +253,6 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("| " + bt + "SQL <alias> <any-sql>" + bt + " | Raw SQL passthrough to external DB |\n")
 	w("\n")
 
-	// Catalog Queries
 	w("### Catalog Queries\n\n")
 	w("| Command | Description |\n")
 	w("|---------|-------------|\n")
@@ -301,10 +261,8 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("| " + bt + "SHOW CATALOG TABLES" + bt + " | List available catalog tables |\n")
 	w("| " + bt + "SELECT ... FROM CATALOG.ENTITIES WHERE ..." + bt + " | SQL queries against project metadata |\n")
 	w("\n")
-
 	w("Available catalog tables: " + bt + "CATALOG.MODULES" + bt + ", " + bt + "CATALOG.ENTITIES" + bt + ", " + bt + "CATALOG.MICROFLOWS" + bt + ", " + bt + "CATALOG.PAGES" + bt + ", " + bt + "CATALOG.WORKFLOWS" + bt + ", " + bt + "CATALOG.ENUMERATIONS" + bt + ", " + bt + "CATALOG.ASSOCIATIONS" + bt + ", " + bt + "CATALOG.SNIPPETS" + bt + ", " + bt + "CATALOG.REFS" + bt + " (requires FULL mode).\n\n")
 
-	// Project Organization
 	w("### Project Organization\n\n")
 	w("| Command | Description |\n")
 	w("|---------|-------------|\n")
@@ -389,7 +347,7 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("# JSON report\n./mxcli report -p " + mprPath + " --format json\n\n")
 	w("# HTML report\n./mxcli report -p " + mprPath + " --format html\n")
 	w(bt3 + "\n\n")
-	w("The report scores 6 categories (Naming, Security, Quality, Architecture, Performance, Design) on a 0-100 scale. See " + bt + "assess-quality" + bt + " skill for the full assessment guide.\n\n")
+	w("The report scores 6 categories (Naming, Security, Quality, Architecture, Performance, Design) on a 0-100 scale. See `assess-quality` skill for the full assessment guide.\n\n")
 
 	// ── Slash Commands ──────────────────────────────────────────────
 	w("## Slash Commands\n\n")
@@ -410,102 +368,102 @@ func generateClaudeMD(projectName, mprFile string) string {
 
 	// ── Skills Reference ────────────────────────────────────────────
 	w("## Skills Reference\n\n")
-	w("Skills are in " + bt + ".ai-context/skills/" + bt + ". Read the relevant skill before starting work.\n\n")
+	w("Skills are in `.claude/skills/`. Read the relevant skill before starting work.\n\n")
 
 	w("### Quick Reference\n\n")
 	w("| Skill | Purpose |\n")
 	w("|-------|--------|\n")
-	w("| cheatsheet-variables | Variable declaration syntax quick lookup |\n")
-	w("| cheatsheet-errors | Common MDL errors and fixes |\n")
+	w("| `cheatsheet-variables` | Variable declaration syntax quick lookup |\n")
+	w("| `cheatsheet-errors` | Common MDL errors and fixes |\n")
 	w("\n")
 
 	w("### Syntax Reference\n\n")
 	w("| Skill | Purpose |\n")
 	w("|-------|--------|\n")
-	w("| mdl-entities | Entity, attribute, association syntax |\n")
-	w("| write-microflows | **Read first** - Microflow syntax, common mistakes |\n")
-	w("| write-oql-queries | OQL query syntax for VIEW entities |\n")
-	w("| create-page | Page and widget syntax |\n")
-	w("| fragments | Reusable widget group syntax |\n")
+	w("| `mdl-entities` | Entity, attribute, association syntax |\n")
+	w("| `write-microflows` | **Read first** — Microflow syntax, common mistakes |\n")
+	w("| `write-nanoflows` | Nanoflow syntax, restrictions, disallowed activities |\n")
+	w("| `write-oql-queries` | OQL query syntax for VIEW entities |\n")
+	w("| `create-page` | Page and widget syntax |\n")
+	w("| `fragments` | Reusable widget group syntax |\n")
 	w("\n")
 
 	w("### Patterns\n\n")
 	w("| Skill | Purpose |\n")
 	w("|-------|--------|\n")
-	w("| patterns-crud | Create/Read/Update/Delete patterns |\n")
-	w("| patterns-data-processing | Loops, aggregates, batch processing |\n")
-	w("| validation-microflows | Validation feedback patterns |\n")
+	w("| `patterns-crud` | Create/Read/Update/Delete patterns |\n")
+	w("| `patterns-data-processing` | Loops, aggregates, batch processing |\n")
+	w("| `validation-microflows` | Validation feedback patterns |\n")
 	w("\n")
 
 	w("### Pages\n\n")
 	w("| Skill | Purpose |\n")
 	w("|-------|--------|\n")
-	w("| overview-pages | List/grid overview page patterns |\n")
-	w("| master-detail-pages | Master-detail layout patterns |\n")
-	w("| alter-page | ALTER PAGE/SNIPPET in-place modifications |\n")
-	w("| bulk-widget-updates | Bulk widget property updates across pages |\n")
+	w("| `overview-pages` | List/grid overview page patterns |\n")
+	w("| `master-detail-pages` | Master-detail layout patterns |\n")
+	w("| `alter-page` | ALTER PAGE/SNIPPET in-place modifications |\n")
+	w("| `bulk-widget-updates` | Bulk widget property updates across pages |\n")
 	w("\n")
 
 	w("### Integration\n\n")
 	w("| Skill | Purpose |\n")
 	w("|-------|--------|\n")
-	w("| database-connections | External database connections (PostgreSQL, Oracle) |\n")
-	w("| rest-client | REST API consumption |\n")
-	w("| java-actions | Custom Java actions |\n")
-	w("| odata-data-sharing | OData services and external entities |\n")
+	w("| `database-connections` | External database connections (PostgreSQL, Oracle) |\n")
+	w("| `rest-client` | REST API consumption |\n")
+	w("| `java-actions` | Custom Java actions |\n")
+	w("| `odata-data-sharing` | OData services and external entities |\n")
+	w("| `business-events` | Business event services |\n")
 	w("\n")
 
 	w("### Operations\n\n")
 	w("| Skill | Purpose |\n")
 	w("|-------|--------|\n")
-	w("| manage-security | Security roles, GRANT/REVOKE, access control |\n")
-	w("| manage-navigation | Navigation profiles, menus, home/login pages |\n")
-	w("| organize-project | Folders, MOVE command, project structure |\n")
-	w("| project-settings | Project configuration (model, runtime, language) |\n")
-	w("| business-events | Business event services |\n")
+	w("| `manage-security` | Security roles, GRANT/REVOKE, access control |\n")
+	w("| `manage-navigation` | Navigation profiles, menus, home/login pages |\n")
+	w("| `organize-project` | Folders, MOVE command, project structure |\n")
+	w("| `project-settings` | Project configuration (model, runtime, language) |\n")
 	w("\n")
 
 	w("### Infrastructure\n\n")
 	w("| Skill | Purpose |\n")
 	w("|-------|--------|\n")
-	w("| docker-workflow | Docker build and deployment |\n")
-	w("| run-app | Running the Mendix app locally |\n")
-	w("| runtime-admin-api | M2EE admin API |\n")
-	w("| system-module | System module entities reference |\n")
-	w("| verify-with-oql | OQL verification queries |\n")
-	w("| demo-data | **Read first for data work** - Demo data insertion |\n")
+	w("| `docker-workflow` | Docker build and deployment |\n")
+	w("| `run-app` | Running the Mendix app locally |\n")
+	w("| `runtime-admin-api` | M2EE admin API |\n")
+	w("| `system-module` | System module entities reference |\n")
+	w("| `verify-with-oql` | OQL verification queries |\n")
+	w("| `demo-data` | **Read first for data work** — Demo data insertion |\n")
 	w("\n")
 
 	w("### Testing & Quality\n\n")
 	w("| Skill | Purpose |\n")
 	w("|-------|--------|\n")
-	w("| test-app | Playwright UI tests + DB assertions |\n")
-	w("| test-microflows | Microflow unit testing (.test.mdl files) |\n")
-	w("| write-lint-rules | Custom Starlark lint rule authoring |\n")
-	w("| assess-quality | **Full project quality assessment** against best practices |\n")
+	w("| `test-app` | Playwright UI tests + DB assertions |\n")
+	w("| `test-microflows` | Microflow unit testing (.test.mdl files) |\n")
+	w("| `write-lint-rules` | Custom Starlark lint rule authoring |\n")
+	w("| `assess-quality` | **Full project quality assessment** against best practices |\n")
 	w("\n")
 
 	w("### Domain Model\n\n")
 	w("| Skill | Purpose |\n")
 	w("|-------|--------|\n")
-	w("| generate-domain-model | Full domain model generation |\n")
+	w("| `generate-domain-model` | Full domain model generation |\n")
 	w("\n")
 
 	w("### Migration\n\n")
 	w("| Skill | Purpose |\n")
 	w("|-------|--------|\n")
-	w("| assess-migration | Migration assessment and planning |\n")
-	w("| migrate-k2-nintex | K2/Nintex workflow migration |\n")
-	w("| migrate-outsystems | OutSystems migration |\n")
-	w("| migrate-oracle-forms | Oracle Forms migration |\n")
-	w("| graph-studio-app | Reverse-engineer/graph Studio Pro app |\n")
+	w("| `assess-migration` | Migration assessment and planning |\n")
+	w("| `migrate-k2-nintex` | K2/Nintex workflow migration |\n")
+	w("| `migrate-outsystems` | OutSystems migration |\n")
+	w("| `migrate-oracle-forms` | Oracle Forms migration |\n")
 	w("\n")
 
 	w("### Debugging & Preflight\n\n")
 	w("| Skill | Purpose |\n")
 	w("|-------|--------|\n")
-	w("| debug-bson | BSON serialization debugging |\n")
-	w("| check-syntax | Pre-flight validation checklist |\n")
+	w("| `debug-bson` | BSON serialization debugging |\n")
+	w("| `check-syntax` | Pre-flight validation checklist |\n")
 	w("\n")
 
 	// ── MDL Syntax Quick Reference ──────────────────────────────────
@@ -567,7 +525,6 @@ func generateClaudeMD(projectName, mprFile string) string {
 
 	w("**Supported Widgets:** LAYOUTGRID, ROW, COLUMN, CONTAINER, TEXTBOX, TEXTAREA, CHECKBOX, RADIOBUTTONS, DATEPICKER, COMBOBOX, DYNAMICTEXT, DATAGRID, GALLERY, LISTVIEW, IMAGE, STATICIMAGE, DYNAMICIMAGE, ACTIONBUTTON, LINKBUTTON, DATAVIEW, HEADER, FOOTER, CONTROLBAR, SNIPPETCALL, NAVIGATIONLIST, CUSTOMCONTAINER.\n\n")
 
-	// ALTER PAGE summary
 	w("### ALTER PAGE / ALTER SNIPPET\n\n")
 	w("Modify existing pages in-place without full " + bt + "CREATE OR REPLACE" + bt + ":\n\n")
 	w("| Operation | Syntax |\n")
@@ -581,7 +538,6 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("| Replace widget | " + bt + "REPLACE widgetName WITH { widgets }" + bt + " |\n")
 	w("\n")
 
-	// Reserved words
 	w("### Quoted Identifiers\n\n")
 	w("**Always quote all identifiers** (entity names, attribute names, parameter names) with double quotes. This eliminates all reserved keyword conflicts and is always safe — quotes are stripped automatically.\n\n")
 	w(bt3 + "sql\nCREATE PERSISTENT ENTITY Module.\"Customer\" (\n  \"Name\": String(200),\n  \"Status\": String(50),\n  \"Create\": DateTime\n);\n" + bt3 + "\n\n")
@@ -590,34 +546,40 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("## MDL Script Files\n\n")
 	w("Store MDL scripts in the " + bt + "mdlsource/" + bt + " directory:\n\n")
 	w(bt3 + "\nmdlsource/\n")
-	w("\u251c\u2500\u2500 domain-model.mdl      # Entity definitions\n")
-	w("\u251c\u2500\u2500 microflows.mdl        # Business logic\n")
-	w("\u2514\u2500\u2500 setup.mdl             # Initial setup script\n")
+	w("├── domain-model.mdl      # Entity definitions\n")
+	w("├── microflows.mdl        # Business logic\n")
+	w("└── setup.mdl             # Initial setup script\n")
 	w(bt3 + "\n\n")
 	w("Execute a script:\n\n")
 	w(bt3 + "sql\nEXECUTE SCRIPT 'mdlsource/domain-model.mdl';\n" + bt3 + "\n\n")
 
-	// ── Example: Entity ─────────────────────────────────────────────
+	// ── Comprehensive Example ────────────────────────────────────────
+	w("## Comprehensive Example\n\n")
+	w("`mdl-examples/helpdesk-app.mdl` is a full-stack reference application covering the complete MDL feature set:\n\n")
+	w("| Area | What it demonstrates |\n")
+	w("|------|---------------------|\n")
+	w("| **Domain model** | Persistent + non-persistent entities, self-ref associations, cross-module associations, many-to-many via junction table |\n")
+	w("| **Microflows** | 5-state status machine, rollback branch, time comparison, constant references (`@Module.Const`) |\n")
+	w("| **Nanoflows** | DB retrieve, call microflow, create+commit persistent, pure-compute return value |\n")
+	w("| **Workflow** | Parent-child, user task, multi-user task, decision (enum), parallel split, jump, wait-for-notification, boundary events |\n")
+	w("| **Security** | XPath row-level filters, module/user role mapping, page/microflow grants, demo users |\n")
+	w("| **Navigation** | Role-derived menu visibility |\n")
+	w("\n")
+	w("Read this file before building complex features — it shows idiomatic MDL patterns for all common Mendix constructs.\n\n")
+
+	// ── Examples ─────────────────────────────────────────────────────
 	w("## Example: Create an Entity\n\n")
 	w(bt3 + "sql\n")
-	w("/**\n * Customer entity\n *\n * Stores customer information.\n */\n")
-	w("@Position(100, 100)\n")
 	w("CREATE PERSISTENT ENTITY Sales.Customer (\n")
-	w("  /** Customer name */\n")
 	w("  Name: String(200) NOT NULL ERROR 'Name is required',\n")
-	w("  /** Email address */\n")
 	w("  Email: String(200) UNIQUE ERROR 'Email must be unique',\n")
-	w("  /** Phone number */\n")
 	w("  Phone: String(50),\n")
-	w("  /** Active status */\n")
 	w("  IsActive: Boolean DEFAULT true\n")
 	w(");\n")
 	w(bt3 + "\n\n")
 
-	// ── Example: Microflow ──────────────────────────────────────────
 	w("## Example: Create a Microflow\n\n")
 	w(bt3 + "sql\n")
-	w("/**\n * Validates a customer before saving\n *\n * @param $Customer The customer to validate\n * @returns Boolean indicating validity\n */\n")
 	w("CREATE MICROFLOW Sales.VAL_Customer (\n")
 	w("  $Customer: Sales.Customer\n)\n")
 	w("RETURNS Boolean AS $IsValid\n")
@@ -632,7 +594,7 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w(bt3 + "\n\n")
 
 	w("## MDL Reference\n\n")
-	w("For detailed MDL syntax, see the skill files in " + bt + ".ai-context/skills/" + bt + ".\n")
+	w(fmt.Sprintf("Skills are in `.claude/skills/`. Run `./mxcli -p %s -c \"HELP\"` for the full command reference.\n", mprPath))
 
 	return sb.String()
 }

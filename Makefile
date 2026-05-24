@@ -33,7 +33,7 @@ VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-
 # Max parallel test packages (lower = less memory; override with: make report TEST_P=8)
 TEST_P ?= 4
 
-.PHONY: build build-debug release clean test test-mdl report report-bench report-reset-baseline grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression
+.PHONY: build build-debug release clean test test-mdl report report-bench report-reset-baseline grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
 # Usage: $(call copy-if-changed,src,dst)
@@ -90,8 +90,13 @@ sync-lint-rules:
 sync-changelog:
 	$(call copy-if-changed,CHANGELOG.md,cmd/mxcli/changelog.md)
 
-# Sync skills, commands, lint rules, and changelog
-sync-all: sync-skills sync-commands sync-lint-rules sync-changelog
+# Sync example MDL files for embedding in mxcli init
+sync-examples:
+	@mkdir -p cmd/mxcli/examples
+	$(call copy-if-changed,mdl-examples/use-cases/helpdesk/helpdesk-app.mdl,cmd/mxcli/examples/helpdesk-app.mdl)
+
+# Sync skills, commands, lint rules, changelog, and examples
+sync-all: sync-skills sync-commands sync-lint-rules sync-changelog sync-examples
 
 # Generate LSP completion items from grammar (only rewrites file if content changed)
 completions:
