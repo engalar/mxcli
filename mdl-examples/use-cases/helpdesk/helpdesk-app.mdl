@@ -1103,7 +1103,7 @@ create page HD.Agent_Select
     controlbar cb1 {
       actionbutton btnAssign (
         caption: 'Assign',
-        action: microflow HD.ACT_Ticket_Assign ($Ticket = $Ticket, $Agent = $currentObject) close_page,
+        action: microflow HD.ACT_Ticket_Assign (Ticket: $Ticket, Agent: $currentObject) close_page,
         buttonstyle: primary
       )
     }

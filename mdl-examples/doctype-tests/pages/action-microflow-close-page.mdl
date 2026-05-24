@@ -1,10 +1,12 @@
 -- @title: action: microflow ... close_page syntax test
 -- @expect: no error
 
--- Minimal page to verify microflow action with close_page parses correctly.
--- Note: multi-arg microflow uses $Param = $value style inside actionbutton (...)
--- because ANTLR4 LL prediction conflates the inner comma with widgetPropertiesV3
--- separators when Key: value style is used. $Param = $value is functionally equivalent.
+-- Verifies that actionbutton can call a microflow with multiple named args AND close_page.
+-- This exercises the grammar fix for ANTLR4 LL(*) prediction ambiguity:
+-- ACTION was previously in `keyword`, causing `action: microflow M.F (A: $x, B: $y)`
+-- to match both `ACTION COLON actionExprV3` AND `keyword COLON propertyValueV3`, which
+-- forced deep ATN simulation that failed on nested COMMA patterns.
+-- Fix: remove ACTION from keyword so case 4 is the unique match.
 create page MyMod.TestPopup_Select (
   title: 'Select Item',
   layout: Atlas_Core.PopupLayout,
@@ -17,7 +19,7 @@ create page MyMod.TestPopup_Select (
     controlbar cb1 {
       actionbutton btnSelect (
         caption: 'Select',
-        action: microflow MyFirstModule.ACT_Select ($Parent = $Parent, $Item = $currentObject) close_page,
+        action: microflow MyFirstModule.ACT_Select (Parent: $Parent, Item: $currentObject) close_page,
         buttonstyle: primary
       )
     }

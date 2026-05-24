@@ -487,7 +487,10 @@ keyword
     | AGENT | AGENTS | KNOWLEDGE | BASES | CONSUMED | MCP | TOOL
 
     // Microflow / Nanoflow
-    | MICROFLOW | MICROFLOWS | NANOFLOW | NANOFLOWS
+    // Note: MICROFLOW and NANOFLOW are intentionally excluded — they are used as literal
+    // keywords in actionExprV3 and must not match as identifiers/qualifiedNames inside
+    // widgetPropertyV3, where they would create ambiguity with propertyValueV3.
+    | MICROFLOWS | NANOFLOWS
     | BEGIN | END | IF | ELSE | ELSIF | ELSEIF | THEN | WHILE | LOOP
     | BREAK | CONTINUE | THROW | RAISE | CASE | WHEN
     | CALL | LOG | TRACE | WITH | FOR | TO | OF | RETURNING | RETURNS
@@ -544,10 +547,14 @@ keyword
     | URL | POSITION | VISIBLE | WIDTH | HEIGHT | WIDGETTYPE
     | VARIABLES_KW
 
-    // Button actions
-    | CALL_MICROFLOW | CALL_NANOFLOW | CANCEL_CHANGES | CLOSE_PAGE
-    | CREATE_OBJECT | DELETE_ACTION | DELETE_OBJECT | OPEN_LINK
-    | SAVECHANGES | SAVE_CHANGES | SHOW_PAGE | SIGN_OUT
+    // Button actions — intentionally excluded from keyword to prevent ambiguity:
+    // these tokens appear as actionExprV3 starters in widgetPropertyV3 context.
+    // If included, `action: microflow M.F(A: $x, B: $y)` becomes ambiguous because
+    // `propertyValueV3[qualifiedName]` would also match `microflow` (or `show_page`, etc.)
+    // causing ANTLR4 LL(*) prediction to fail on multi-arg microflow inside actionbutton.
+    // CALL_MICROFLOW | CALL_NANOFLOW | CANCEL_CHANGES | CLOSE_PAGE
+    // CREATE_OBJECT | DELETE_ACTION | DELETE_OBJECT | OPEN_LINK
+    // SAVECHANGES | SAVE_CHANGES | SHOW_PAGE | SIGN_OUT
 
     // Button styles / headings
     | BUTTON | PRIMARY | DANGER | CANCEL | INFO_STYLE | WARNING_STYLE
@@ -609,7 +616,13 @@ keyword
     | AFTER | BEFORE | DEFINE | FRAGMENT | FRAGMENTS
 
     // General-purpose words (only tokens not already listed above)
-    | ACTION | BOTH | CONTEXT | DATA | FORMAT | ITEM | LIST
+    // Note: ACTION is intentionally excluded — it has an explicit `ACTION COLON actionExprV3`
+    // alternative in widgetPropertyV3. Including ACTION here creates ANTLR4 prediction
+    // ambiguity: `action: microflow M.F (A: $x, B: $y)` matches both that explicit case
+    // AND `keyword COLON actionExprV3`/`keyword COLON propertyValueV3`. The dual match
+    // forces deep ATN simulation that fails on nested COMMA patterns (multi-arg microflow
+    // inside widgetPropertiesV3). With ACTION excluded, `action:` uniquely matches case 4.
+    | BOTH | CONTEXT | DATA | FORMAT | ITEM | LIST
     | MESSAGE | MOD | DIV | MULTIPLE | NONE | OBJECT | OBJECTS
     | SINGLE | SQL | TEMPLATE | TEXT | TYPE | VALUE
 

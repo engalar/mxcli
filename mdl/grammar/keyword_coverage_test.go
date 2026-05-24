@@ -42,6 +42,21 @@ func TestKeywordRuleCoverage(t *testing.T) {
 		// Retired system-member pseudo-type tokens (superseded by SYSTEM MEMBERS clause)
 		"AUTOOWNER_TYPE": true, "AUTOCHANGEDBY_TYPE": true,
 		"AUTOCREATEDDATE_TYPE": true, "AUTOCHANGEDDATE_TYPE": true,
+
+		// Intentionally excluded from keyword to prevent ANTLR4 LL(*) prediction ambiguity
+		// in widgetPropertyV3. ACTION has an explicit `ACTION COLON actionExprV3` alternative;
+		// including it in `keyword` would make `action: microflow M.F (A: $x, B: $y)` match
+		// both that case AND `keyword COLON propertyValueV3`, forcing deep ATN simulation that
+		// fails on nested COMMA patterns (multi-arg microflow inside widgetPropertiesV3).
+		// Similarly, action-expression keywords (MICROFLOW, NANOFLOW, SAVE_CHANGES, etc.) are
+		// excluded so they cannot appear as qualifiedName components inside propertyValueV3,
+		// which would create additional ambiguity with actionExprV3 alternatives.
+		"ACTION": true,
+		"MICROFLOW": true, "NANOFLOW": true,
+		"SAVE_CHANGES": true, "SAVECHANGES": true, "CANCEL_CHANGES": true,
+		"CLOSE_PAGE": true, "SHOW_PAGE": true, "SIGN_OUT": true,
+		"CREATE_OBJECT": true, "DELETE_OBJECT": true, "DELETE_ACTION": true,
+		"CALL_MICROFLOW": true, "CALL_NANOFLOW": true, "OPEN_LINK": true,
 	}
 
 	// Tokens missing from keyword rule (in lexer but not in keyword).

@@ -21,6 +21,7 @@ func ParseXPathConstraint(input string) (ast.Expression, bool) {
 	lexer := parser.NewMDLLexer(is)
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 	p := parser.NewMDLParser(stream)
+	p.GetInterpreter().SetPredictionMode(antlr.PredictionModeLL)
 	p.RemoveErrorListeners()
 
 	ctx := p.XpathConstraint()

@@ -232,9 +232,13 @@ func Build(input string) (*ast.Program, []error) {
 	lexer.RemoveErrorListeners()
 	lexer.AddErrorListener(errListener)
 
-	// Create parser with custom error listener
+	// Create parser with custom error listener.
+	// Force LL(*) prediction mode: SLL mode fails on nested comma separators
+	// (e.g. microflow args inside widgetPropertiesV3) because it lacks call-stack
+	// context to distinguish inner COMMA from outer COMMA.
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 	p := parser.NewMDLParser(stream)
+	p.GetInterpreter().SetPredictionMode(antlr.PredictionModeLL)
 	p.RemoveErrorListeners()
 	p.AddErrorListener(errListener)
 

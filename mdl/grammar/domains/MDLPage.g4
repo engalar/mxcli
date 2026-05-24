@@ -349,7 +349,7 @@ microflowArgsV3
     ;
 
 microflowArgV3
-    : IDENTIFIER COLON expression                    // Param: $value (canonical)
+    : (IDENTIFIER | keyword) COLON expression        // Param: $value (canonical, keyword names allowed)
     | VARIABLE EQUALS expression                     // $Param = $value (microflow-style, also accepted)
     ;
 
