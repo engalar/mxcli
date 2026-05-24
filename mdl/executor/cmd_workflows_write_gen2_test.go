@@ -166,8 +166,111 @@ func TestBuildBoundaryEventGen_WithSubFlow(t *testing.T) {
 	if !ok || flow == nil {
 		t.Fatal("expected non-nil Flow")
 	}
+	// JumpToActivity is already terminal — no EndWorkflowActivity should be added.
 	if len(flow.ActivitiesItems()) != 1 {
 		t.Errorf("expected 1 nested activity, got %d", len(flow.ActivitiesItems()))
+	}
+}
+
+// CE6665: interrupting timer must end with jump or end activity.
+func TestBuildBoundaryEventGen_InterruptingTimer_AutoInjectsEnd(t *testing.T) {
+	be := buildBoundaryEventGen(ast.WorkflowBoundaryEventNode{
+		EventType: "InterruptingTimer",
+		Delay:     "${PT48H}",
+		Activities: []ast.WorkflowActivityNode{
+			&ast.WorkflowCallMicroflowNode{Microflow: ast.QualifiedName{Module: "HD", Name: "ACT_Reject"}},
+		},
+	})
+	v, ok := be.(*genWf.InterruptingTimerBoundaryEvent)
+	if !ok {
+		t.Fatalf("wrong type: %T", be)
+	}
+	flow, ok := v.Flow().(*genWf.Flow)
+	if !ok || flow == nil {
+		t.Fatal("expected non-nil Flow")
+	}
+	acts := flow.ActivitiesItems()
+	// CallMicroflow + auto-injected EndWorkflowActivity.
+	if len(acts) < 2 {
+		t.Fatalf("expected at least 2 activities (call + end), got %d", len(acts))
+	}
+	last := acts[len(acts)-1]
+	if last.TypeName() != "Workflows$EndWorkflowActivity" {
+		t.Errorf("last activity = %q, want Workflows$EndWorkflowActivity", last.TypeName())
+	}
+}
+
+// CE6665: empty interrupting timer must also get an EndWorkflowActivity.
+func TestBuildBoundaryEventGen_InterruptingTimer_Empty_AutoInjectsEnd(t *testing.T) {
+	be := buildBoundaryEventGen(ast.WorkflowBoundaryEventNode{
+		EventType: "InterruptingTimer",
+		Delay:     "${PT1H}",
+	})
+	v, ok := be.(*genWf.InterruptingTimerBoundaryEvent)
+	if !ok {
+		t.Fatalf("wrong type: %T", be)
+	}
+	flow, ok := v.Flow().(*genWf.Flow)
+	if !ok || flow == nil {
+		t.Fatal("interrupting timer with no activities must still get a Flow with EndWorkflowActivity")
+	}
+	acts := flow.ActivitiesItems()
+	if len(acts) != 1 {
+		t.Errorf("expected 1 activity (end), got %d", len(acts))
+	}
+	if acts[0].TypeName() != "Workflows$EndWorkflowActivity" {
+		t.Errorf("activity = %q, want Workflows$EndWorkflowActivity", acts[0].TypeName())
+	}
+}
+
+// CE6665: existing JumpTo must NOT get a double-injected EndWorkflowActivity.
+func TestBuildBoundaryEventGen_InterruptingTimer_NoDoubleInjection(t *testing.T) {
+	be := buildBoundaryEventGen(ast.WorkflowBoundaryEventNode{
+		EventType: "InterruptingTimer",
+		Delay:     "${PT1H}",
+		Activities: []ast.WorkflowActivityNode{
+			&ast.WorkflowCallMicroflowNode{Microflow: ast.QualifiedName{Module: "HD", Name: "ACT_Do"}},
+			&ast.WorkflowJumpToNode{Target: "SomeActivity"},
+		},
+	})
+	v, ok := be.(*genWf.InterruptingTimerBoundaryEvent)
+	if !ok {
+		t.Fatalf("wrong type: %T", be)
+	}
+	flow, ok := v.Flow().(*genWf.Flow)
+	if !ok || flow == nil {
+		t.Fatal("expected non-nil Flow")
+	}
+	acts := flow.ActivitiesItems()
+	if len(acts) != 2 {
+		t.Errorf("expected 2 activities (call + jump), got %d", len(acts))
+	}
+	if acts[1].TypeName() != "Workflows$JumpToActivity" {
+		t.Errorf("last activity = %q, want Workflows$JumpToActivity", acts[1].TypeName())
+	}
+}
+
+// NonInterrupting must NOT get an auto-injected EndWorkflowActivity.
+func TestBuildBoundaryEventGen_NonInterrupting_NoAutoEnd(t *testing.T) {
+	be := buildBoundaryEventGen(ast.WorkflowBoundaryEventNode{
+		EventType: "NonInterruptingTimer",
+		Delay:     "${PT12H}",
+		Activities: []ast.WorkflowActivityNode{
+			&ast.WorkflowCallMicroflowNode{Microflow: ast.QualifiedName{Module: "HD", Name: "ACT_Remind"}},
+		},
+	})
+	v, ok := be.(*genWf.NonInterruptingTimerBoundaryEvent)
+	if !ok {
+		t.Fatalf("wrong type: %T", be)
+	}
+	flow, ok := v.Flow().(*genWf.Flow)
+	if !ok || flow == nil {
+		t.Fatal("expected non-nil Flow")
+	}
+	acts := flow.ActivitiesItems()
+	// Only the CallMicroflow, no EndWorkflowActivity injected.
+	if len(acts) != 1 {
+		t.Errorf("expected 1 activity, got %d", len(acts))
 	}
 }
 

@@ -7,8 +7,10 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
 
 // execAlterWorkflow handles ALTER WORKFLOW Module.Name { operations }.
@@ -159,6 +161,14 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 
 		case *ast.InsertBoundaryEventOp:
 			acts := buildAndBindActivitiesGen(ctx, o.Activities)
+			// CE6665: interrupting timer must end with a jump or end activity.
+			if o.EventType == "InterruptingTimer" && !endsWithTerminalWorkflowActivity(acts) {
+				end := genWf.NewEndWorkflowActivity()
+				end.SetID(element.ID(types.GenerateID()))
+				end.SetCaption("End")
+				end.SetName("End")
+				acts = append(acts, end)
+			}
 			if err := mutator.InsertBoundaryEventGen(o.ActivityRef, o.AtPosition, o.EventType, o.Delay, acts); err != nil {
 				return mdlerrors.NewBackend("insert boundary event", err)
 			}

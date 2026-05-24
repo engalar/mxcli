@@ -175,20 +175,28 @@ func buildBoundaryEventsGen(nodes []ast.WorkflowBoundaryEventNode) []element.Ele
 func buildBoundaryEventGen(be ast.WorkflowBoundaryEventNode) element.Element {
 	id := element.ID(types.GenerateID())
 	subActivities := buildWorkflowActivitiesGen(be.Activities)
-	flow := newGenFlowWithActivities(subActivities)
 
 	switch be.EventType {
 	case "InterruptingTimer":
+		// CE6665: Mendix requires the flow to end with a JumpToActivity or
+		// EndWorkflowActivity. Auto-inject EndWorkflowActivity when missing.
+		if !endsWithTerminalWorkflowActivity(subActivities) {
+			end := genWf.NewEndWorkflowActivity()
+			end.SetID(element.ID(types.GenerateID()))
+			end.SetCaption("End")
+			end.SetName("End")
+			subActivities = append(subActivities, end)
+		}
+		flow := newGenFlowWithActivities(subActivities)
 		ev := genWf.NewInterruptingTimerBoundaryEvent()
 		ev.SetID(id)
 		ev.SetIsInterrupting(true)
 		ev.SetEventType(be.EventType)
 		ev.SetDelay(be.Delay)
-		if flow != nil {
-			ev.SetFlow(flow)
-		}
+		ev.SetFlow(flow)
 		return ev
 	case "NonInterruptingTimer":
+		flow := newGenFlowWithActivities(subActivities)
 		ev := genWf.NewNonInterruptingTimerBoundaryEvent()
 		ev.SetID(id)
 		ev.SetIsInterrupting(false)
@@ -199,6 +207,7 @@ func buildBoundaryEventGen(be ast.WorkflowBoundaryEventNode) element.Element {
 		}
 		return ev
 	default: // "Timer" or anything else falls back to the abstract base
+		flow := newGenFlowWithActivities(subActivities)
 		ev := genWf.NewTimerBoundaryEvent()
 		ev.SetID(id)
 		ev.SetEventType(be.EventType)
@@ -208,6 +217,23 @@ func buildBoundaryEventGen(be ast.WorkflowBoundaryEventNode) element.Element {
 		}
 		return ev
 	}
+}
+
+// endsWithTerminalWorkflowActivity reports whether the last element in acts
+// is a JumpToActivity or EndWorkflowActivity (both satisfy CE6665).
+func endsWithTerminalWorkflowActivity(acts []element.Element) bool {
+	if len(acts) == 0 {
+		return false
+	}
+	last := acts[len(acts)-1]
+	if last == nil {
+		return false
+	}
+	switch last.TypeName() {
+	case "Workflows$JumpToActivity", "Workflows$EndWorkflowActivity":
+		return true
+	}
+	return false
 }
 
 // newGenFlowWithActivities wraps a slice of gen activity elements in a
