@@ -161,11 +161,15 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 		if ds := w.GetDataSource(); ds != nil {
 			for propKey, entry := range propertyTypeIDs {
 				if entry.ValueType == "DataSource" {
-					dataSource, entityName, err := e.pageBuilder.buildDataSourceV3(ds)
+					// Pluggable widgets (Gallery, etc.) require CustomWidgets$CustomWidgetXPathSource
+					// for database datasources, not Forms$DataViewSource that buildDataSourceV3
+					// produces. Use the DataGrid BSON datasource builder which emits the correct type.
+					// Serialisation is delegated to the pageBuilder so widget_engine stays bson-free.
+					opaque, entityName, err := e.pageBuilder.buildPluggableDataSourceOpaque(ds)
 					if err != nil {
 						return nil, mdlerrors.NewBackend("auto datasource for "+propKey, err)
 					}
-					builder.SetDataSourceOpaque(propKey, e.backend.SerializeGenElemToOpaque(dataSource))
+					builder.SetDataSourceOpaque(propKey, opaque)
 					if entityName != "" {
 						e.pageBuilder.entityContext = entityName
 					}
@@ -482,11 +486,14 @@ func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.W
 
 	case "DataSource":
 		if ds := w.GetDataSource(); ds != nil {
-			dataSource, entityName, err := e.pageBuilder.buildDataSourceV3(ds)
+			// Use pluggable datasource builder (CustomWidgets$CustomWidgetXPathSource) so
+			// gallery and other pluggable widgets get the correct datasource type.
+			// buildDataSourceV3 would produce Forms$DataViewSource (CE6705 "context" type).
+			opaque, entityName, err := e.pageBuilder.buildPluggableDataSourceOpaque(ds)
 			if err != nil {
 				return nil, mdlerrors.NewBackend("build datasource", err)
 			}
-			ctx.DataSource = e.backend.SerializeGenElemToOpaque(dataSource)
+			ctx.DataSource = opaque
 			ctx.EntityName = entityName
 			if entityName != "" {
 				e.pageBuilder.entityContext = entityName
@@ -500,6 +507,11 @@ func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.W
 		val := w.GetSelection()
 		if val == "" && mapping.Default != "" {
 			val = mapping.Default
+		}
+		// Mendix widget selection properties use title case ("Single", "Multiple", "None").
+		// The MDL grammar returns lowercase from the lexer ("single", "multiple", "none").
+		if len(val) > 0 {
+			val = strings.ToUpper(val[:1]) + strings.ToLower(val[1:])
 		}
 		ctx.PrimitiveVal = val
 

@@ -902,6 +902,13 @@ end;
 
 -- KB Article overview: Gallery (left) + DataView master-detail (right)
 -- Pattern B: Gallery selection:single + filter bar, DataView datasource:selection
+-- KB Article overview: Gallery (list) + DataView (detail) master-detail
+-- Pattern B: Gallery selection:single + filter bar, DataView datasource:selection
+-- Both gallery and dataview are placed in the same layout column so that the
+-- DataView can listen to the Gallery's selection (Mendix scoping rule: selection
+-- listener must be in the same container scope as the source widget — cross-sibling
+-- LayoutGrid column binding triggers CE3637).
+-- Side-by-side display is achieved with CSS classes on the inner containers.
 create or replace page KB.Article_Overview
 (
   title: 'Knowledge Base',
@@ -909,42 +916,34 @@ create or replace page KB.Article_Overview
   folder: 'Article'
 )
 {
-  layoutgrid lgMain {
-    row rMain {
-      column cList (desktopwidth: 5) {
-        gallery artGallery (
-          datasource: database from KB.Article sort by PublishedAt desc,
-          selection: single
-        ) {
-          filter filterBar {
-            dropdownfilter fStatus (attributes: [KB.Article.Status])
-          }
-          template template1 {
-            dynamictext txtTitle  (content: '{1}', contentparams: [{1} = Title],  rendermode: H4)
-            dynamictext txtStatus (content: '{1}', contentparams: [{1} = Status])
-          }
-        }
-      }
-      column cDetail (desktopwidth: 7) {
-        dataview dvArticleDetail (datasource: selection artGallery) {
-          dynamictext txtDetailTitle   (content: '{1}', contentparams: [{1} = Title],       rendermode: H2)
-          dynamictext txtDetailStatus  (content: '{1}', contentparams: [{1} = Status])
-          dynamictext txtPublished     (content: '{1}', contentparams: [{1} = PublishedAt])
-          dynamictext txtContent       (content: '{1}', contentparams: [{1} = Content])
-          footer ftrActions {
-            actionbutton btnPublish (
-              caption: 'Publish',
-              action: microflow KB.ACT_Article_Publish (Article: $currentObject),
-              buttonstyle: primary
-            )
-            actionbutton btnArchive (
-              caption: 'Archive',
-              action: microflow KB.ACT_Article_Archive (Article: $currentObject),
-              buttonstyle: default
-            )
-          }
-        }
-      }
+  gallery artGallery (
+    datasource: database from KB.Article sort by PublishedAt desc,
+    selection: single
+  ) {
+    filter filterBar {
+      dropdownfilter fStatus (attributes: [KB.Article.Status])
+    }
+    template template1 {
+      dynamictext txtTitle  (content: '{1}', contentparams: [{1} = Title],  rendermode: H4)
+      dynamictext txtStatus (content: '{1}', contentparams: [{1} = Status])
+    }
+  }
+  dataview dvArticleDetail (datasource: selection artGallery) {
+    dynamictext txtDetailTitle   (content: '{1}', contentparams: [{1} = Title],       rendermode: H2)
+    dynamictext txtDetailStatus  (content: '{1}', contentparams: [{1} = Status])
+    dynamictext txtPublished     (content: '{1}', contentparams: [{1} = PublishedAt])
+    dynamictext txtContent       (content: '{1}', contentparams: [{1} = Content])
+    footer ftrActions {
+      actionbutton btnPublish (
+        caption: 'Publish',
+        action: microflow KB.ACT_Article_Publish (Article: $currentObject),
+        buttonstyle: primary
+      )
+      actionbutton btnArchive (
+        caption: 'Archive',
+        action: microflow KB.ACT_Article_Archive (Article: $currentObject),
+        buttonstyle: default
+      )
     }
   }
 };

@@ -220,3 +220,62 @@ func TestGenClientActionToBsonD_MicroflowNoClosePage(t *testing.T) {
 	}
 	// ClosePage absent is also correct — Mendix treats absent as false.
 }
+
+// TestDataViewSelectionDatasource_StoresListenTargetSource verifies that
+// datasource: selection widgetName on a DataView is stored as Forms$ListenTargetSource
+// in BSON, enabling CE3637-free cross-widget selection listening.
+func TestDataViewSelectionDatasource_StoresListenTargetSource(t *testing.T) {
+	pb := newPageBuilderWithMicroflowStub("ignored")
+	pb.widgetScope = map[string]model.ID{}
+	pb.paramEntityNames = map[string]string{}
+	// Register a fake gallery widget so the selection datasource can resolve it
+	pb.widgetScope["artGallery"] = model.ID("00000000-0000-0000-0000-000000000002")
+	pb.paramEntityNames["artGallery"] = "KB.Article"
+
+	ds := &ast.DataSourceV3{
+		Type:      "selection",
+		Reference: "artGallery",
+	}
+
+	elem, entityName, err := pb.buildDataSourceV3(ds)
+	if err != nil {
+		t.Fatalf("buildDataSourceV3 selection: %v", err)
+	}
+	if elem == nil {
+		t.Fatal("buildDataSourceV3 selection: returned nil element")
+	}
+	if entityName != "KB.Article" {
+		t.Errorf("entityName = %q, want KB.Article", entityName)
+	}
+
+	// Serialise to BSON via the codec path (same as when page is written to MPR)
+	enc := codec.Encoder{}
+	raw, err := enc.Encode(elem)
+	if err != nil {
+		t.Fatalf("encode ListenTargetSource: %v", err)
+	}
+	var doc bson.D
+	if err := bson.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	var gotType, gotTarget string
+	for _, kv := range doc {
+		switch kv.Key {
+		case "$Type":
+			if s, ok := kv.Value.(string); ok {
+				gotType = s
+			}
+		case "ListenTarget":
+			if s, ok := kv.Value.(string); ok {
+				gotTarget = s
+			}
+		}
+	}
+	if gotType != "Forms$ListenTargetSource" {
+		t.Errorf("$Type = %q, want Forms$ListenTargetSource", gotType)
+	}
+	if gotTarget != "artGallery" {
+		t.Errorf("ListenTarget = %q, want artGallery", gotTarget)
+	}
+}

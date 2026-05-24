@@ -316,6 +316,8 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 				props = append(props, fmt.Sprintf("datasource: nanoflow %s", w.DataSource.Reference))
 			case "parameter":
 				props = append(props, fmt.Sprintf("datasource: $%s", w.DataSource.Reference))
+			case "selection":
+				props = append(props, fmt.Sprintf("datasource: selection %s", w.DataSource.Reference))
 			}
 		}
 		props = appendAppearanceProps(props, w)

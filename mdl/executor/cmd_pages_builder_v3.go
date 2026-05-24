@@ -16,6 +16,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/bsonutil"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genCW "github.com/mendixlabs/mxcli/modelsdk/gen/customwidgets"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
@@ -962,11 +963,10 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (element.Elemen
 
 		// Handle THEN action (show page)
 		if action.ThenAction != nil && action.ThenAction.Type == "showPage" {
-			pageID, err := pb.resolvePageRef(action.ThenAction.Target)
-			if err != nil {
-				return nil, mdlerrors.NewBackend("resolve page", err)
+			// Resolution is for validation only — warn on forward reference.
+			if _, err := pb.resolvePageRef(action.ThenAction.Target); err != nil {
+				log.Printf("warning: then show_page %s not found (will still create action by name)", action.ThenAction.Target)
 			}
-			_ = pageID
 			ps := genPg.NewPageSettings()
 			assignFreshID(ps)
 			ps.SetPageQualifiedName(action.ThenAction.Target)
@@ -975,9 +975,10 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (element.Elemen
 		return act, nil
 
 	case "showPage":
-		_, err := pb.resolvePageRef(action.Target)
-		if err != nil {
-			return nil, mdlerrors.NewBackend("resolve page", err)
+		// Resolution is for validation only — warn on missing page (forward reference)
+		// but still emit the action so the page name is stored correctly.
+		if _, err := pb.resolvePageRef(action.Target); err != nil {
+			log.Printf("warning: action show_page %s not found (will still create action by name)", action.Target)
 		}
 
 		act := genPg.NewPageClientAction()
@@ -1316,8 +1317,16 @@ func (pb *pageBuilder) resolveTemplateAttributePathFull(attrRef string, param *g
 	}
 
 	resolved := pb.resolveTemplateAttributePath(attrRef)
-	if !strings.HasPrefix(attrRef, "$") && pb.isNonStringAttribute(resolved) {
-		param.SetExpression("toString($currentObject/" + attrRef + ")")
+	if !strings.HasPrefix(attrRef, "$") {
+		if pb.isNonStringAttribute(resolved) {
+			// Non-string attributes (enum, datetime, etc.) need explicit toString().
+			param.SetExpression("toString($currentObject/" + attrRef + ")")
+		} else {
+			// String attributes: use expression format so the describe code and
+			// Mendix validator can read the binding. AttributePath alone is not
+			// checked by the describe and causes CE0402 "No value specified".
+			param.SetExpression("$currentObject/" + attrRef)
+		}
 		return
 	}
 	param.SetAttributePath(resolved)
@@ -2202,6 +2211,69 @@ func (pb *pageBuilder) genClientActionToBsonD(action *ast.ActionV3) (bson.D, err
 		return nil, fmt.Errorf("genClientActionToBsonD: unexpected opaque type %T", opaque)
 	}
 	return doc, nil
+}
+
+// buildPluggableDataSourceOpaque builds the datasource for pluggable widgets (Gallery, etc.)
+// using modelsdk gen types (CustomWidgetXPathSource) serialised via the codec path so no
+// direct bson usage is needed here or in widget_engine.go.
+func (pb *pageBuilder) buildPluggableDataSourceOpaque(ds *ast.DataSourceV3) (backend.OpaqueWidget, string, error) {
+	src := genCW.NewCustomWidgetXPathSource()
+	assignFreshID(src)
+	src.SetForceFullObjects(false)
+
+	entityName := ""
+	switch ds.Type {
+	case "database":
+		_, err := pb.resolveEntity(ast.QualifiedName{
+			Module: pb.extractModule(ds.Reference),
+			Name:   pb.extractName(ds.Reference),
+		})
+		if err != nil {
+			log.Printf("warning: buildPluggableDataSourceOpaque: entity %s not found: %v", ds.Reference, err)
+		}
+		entityName = ds.Reference
+		ref := genDm.NewDirectEntityRef()
+		assignFreshID(ref)
+		ref.SetEntityQualifiedName(ds.Reference)
+		src.SetEntityRef(ref)
+
+		// Build sort bar if sort order is specified.
+		sortBar := genPg.NewGridSortBar()
+		assignFreshID(sortBar)
+		for _, ob := range ds.OrderBy {
+			item := genPg.NewGridSortItem()
+			assignFreshID(item)
+			attrRef := genDm.NewAttributeRef()
+			assignFreshID(attrRef)
+			attrRef.SetAttributeQualifiedName(pb.resolveAttributePathForEntity(ob.Attribute, ds.Reference))
+			item.SetAttributeRef(attrRef)
+			direction := "Ascending"
+			if ob.Direction == "DESC" {
+				direction = "Descending"
+			}
+			item.SetSortDirection(direction)
+			sortBar.AddSortItems(item)
+		}
+		src.SetSortBar(sortBar)
+		if ds.Where != "" {
+			src.SetXPathConstraint(ds.Where)
+		}
+	default:
+		// For non-database types (parameter, microflow, selection) fall back to
+		// the gen DataViewSource path via the standard builder.
+		elem, eName, err := pb.buildDataSourceV3(ds)
+		if err != nil {
+			return nil, "", err
+		}
+		opaque := pb.widgetBackend.SerializeGenElemToOpaque(elem)
+		return opaque, eName, nil
+	}
+
+	opaque := pb.widgetBackend.SerializeGenElemToOpaque(src)
+	if opaque == nil {
+		return nil, "", fmt.Errorf("buildPluggableDataSourceOpaque: serialize returned nil")
+	}
+	return opaque, entityName, nil
 }
 
 // serializeGenWidgetToBsonD encodes a GenCustomWidgetElem to bson.D.

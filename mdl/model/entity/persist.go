@@ -169,7 +169,9 @@ func buildGenAttributeType(dt model.DataType) (element.Element, error) {
 			}
 			st.SetLength(int32(dt.Length))
 		} else {
-			st.SetLength(-1)
+			// Unlimited string: Mendix stores length=0, not -1.
+			// CE0151 "Length should be >= 0" fires when length is negative.
+			st.SetLength(0)
 		}
 		return st, nil
 	case model.KindInteger:
