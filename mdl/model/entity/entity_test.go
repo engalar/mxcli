@@ -319,3 +319,36 @@ func TestHydrate_CalculatedAttribute(t *testing.T) {
 	assert.Equal(t, "MyModule.ComputePrice", m.Attributes[0].CalculatedMicroflow.String())
 }
 
+
+// --------------------------------------------------------------------------
+// Location format regression tests (CE-bug: space format "X Y" rejected by
+// Studio Pro 11.6.6; correct format is semicolon "X;Y").
+// --------------------------------------------------------------------------
+
+func TestParseLocation_SemicolonFormat(t *testing.T) {
+	x, y, ok := parseLocation("280;100")
+	require.True(t, ok)
+	assert.Equal(t, 280, x)
+	assert.Equal(t, 100, y)
+}
+
+func TestParseLocation_SpaceFormat_BackwardCompat(t *testing.T) {
+	x, y, ok := parseLocation("1000 100")
+	require.True(t, ok)
+	assert.Equal(t, 1000, x)
+	assert.Equal(t, 100, y)
+}
+
+func TestBuildGenEntity_LocationUsesSemicolon(t *testing.T) {
+	m := &EntityModel{
+		Name:     QualifiedName{Module: "Test", Name: "Ent"},
+		Kind:     EntityPersistent,
+		Position: &Position{X: 280, Y: 100},
+	}
+	e, err := buildGenEntity(m)
+	require.NoError(t, err)
+	assert.Equal(t, "280;100", e.Location(),
+		"persist must use semicolon format accepted by Studio Pro 11.6.6+")
+	assert.NotContains(t, e.Location(), " ",
+		"space-separated format is rejected by Studio Pro 11.6.6+")
+}

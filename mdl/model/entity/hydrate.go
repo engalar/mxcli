@@ -216,8 +216,13 @@ func generalizationQN(e *genDm.Entity) string {
 	return ""
 }
 
-// parseLocation parses Mendix location strings of the form "X Y".
+// parseLocation parses Mendix location strings. Mendix uses semicolon-separated
+// "X;Y" format in MPR BSON; older mxcli versions incorrectly wrote space-separated
+// "X Y". Both are accepted for backward compatibility.
 func parseLocation(loc string) (x, y int, ok bool) {
+	if _, err := fmt.Sscanf(loc, "%d;%d", &x, &y); err == nil {
+		return x, y, true
+	}
 	_, err := fmt.Sscanf(loc, "%d %d", &x, &y)
 	return x, y, err == nil
 }

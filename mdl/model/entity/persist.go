@@ -60,7 +60,9 @@ func buildGenEntity(m *EntityModel) (*genDm.Entity, error) {
 		e.SetDocumentation(m.Documentation)
 	}
 	if m.Position != nil {
-		e.SetLocation(fmt.Sprintf("%d %d", m.Position.X, m.Position.Y))
+		// Mendix MPR format uses semicolon-separated coordinates ("X;Y").
+		// Space-separated ("X Y") is rejected by Studio Pro 11.6.6+.
+		e.SetLocation(fmt.Sprintf("%d;%d", m.Position.X, m.Position.Y))
 	}
 
 	// Generalization vs NoGeneralization.

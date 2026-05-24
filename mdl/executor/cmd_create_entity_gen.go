@@ -119,6 +119,15 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 	return nil
 }
 
+// parseEntityLocation parses a Mendix entity Location string ("X;Y" or legacy "X Y").
+func parseEntityLocation(loc string) (x, y int, ok bool) {
+	if _, err := fmt.Sscanf(loc, "%d;%d", &x, &y); err == nil {
+		return x, y, true
+	}
+	_, err := fmt.Sscanf(loc, "%d %d", &x, &y)
+	return x, y, err == nil
+}
+
 // persistEntityCanonical routes CREATE ENTITY through the canonical model
 // pipeline: Lift the AST -> EntityModel -> Persist. Pre-injects two
 // Mendix-specific invariants the parser doesn't carry: a Boolean attribute
@@ -128,7 +137,22 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 func persistEntityCanonical(ctx *ExecContext, s *ast.CreateEntityStmt, dm *genDm.DomainModel, existing element.Element, module *model.Module) error {
 	stmt := *s
 	if stmt.Position == nil {
-		stmt.Position = &ast.Position{X: 100 + len(dm.EntitiesItems())*150, Y: 100}
+		if existing != nil {
+			// Modify case: preserve the existing entity's canvas position so we don't
+			// overwrite it with an auto-layout default. Read Location from the gen element.
+			if ent, ok := existing.(interface{ Location() string }); ok {
+				if loc := ent.Location(); loc != "" {
+					// parseLocation handles both "X;Y" and legacy "X Y" formats.
+					if x, y, parsed := parseEntityLocation(loc); parsed {
+						stmt.Position = &ast.Position{X: x, Y: y}
+					}
+				}
+			}
+		}
+		if stmt.Position == nil {
+			// New entity: auto-layout based on current entity count.
+			stmt.Position = &ast.Position{X: 100 + len(dm.EntitiesItems())*150, Y: 100}
+		}
 	}
 	if len(stmt.Attributes) > 0 {
 		attrs := make([]ast.Attribute, len(stmt.Attributes))
