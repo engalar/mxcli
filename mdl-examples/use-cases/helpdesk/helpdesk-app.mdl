@@ -35,7 +35,7 @@
 
 create module KB;
 
-create enumeration KB.ArticleStatus (
+create or modify enumeration KB.ArticleStatus (
   Draft      'Draft',
   Published  'Published',
   Archived   'Archived'
@@ -43,22 +43,22 @@ create enumeration KB.ArticleStatus (
 
 
 
-create persistent entity KB.Category (
+create or modify persistent entity KB.Category (
   Name:        string(200) not null,
   Description: string(500)
 );
 
 -- Self-referencing association: Category tree (parent → child)
-create association KB.Category_Parent
+create or modify association KB.Category_Parent
   from KB.Category to KB.Category
   type reference
   owner default;
 
-create persistent entity KB.Tag (
+create or modify persistent entity KB.Tag (
   Name: string(100) not null unique
 );
 
-create persistent entity KB.Article (
+create or modify persistent entity KB.Article (
   Title:       string(500) not null,
   Content:     string,
   Status:      KB.ArticleStatus default Draft,
@@ -68,33 +68,33 @@ create persistent entity KB.Article (
 index (Status)
 index (PublishedAt);
 
-create association KB.Article_Category
+create or modify association KB.Article_Category
   from KB.Article to KB.Category
   type reference
   owner default;
 
 -- Many-to-many junction table: Article <-> Tag
-create persistent entity KB.ArticleTag (
+create or modify persistent entity KB.ArticleTag (
 );
 
-create association KB.ArticleTag_Article
+create or modify association KB.ArticleTag_Article
   from KB.ArticleTag to KB.Article
   type reference
   owner default;
 
-create association KB.ArticleTag_Tag
+create or modify association KB.ArticleTag_Tag
   from KB.ArticleTag to KB.Tag
   type reference
   owner default;
 
 -- XPath row-level filter target: user sees only own ratings
-create persistent entity KB.ArticleRating (
+create or modify persistent entity KB.ArticleRating (
   Score:   integer not null,
   Comment: string(1000)
 )
 system members (owner);
 
-create association KB.ArticleRating_Article
+create or modify association KB.ArticleRating_Article
   from KB.ArticleRating to KB.Article
   type reference
   owner default;
@@ -104,7 +104,7 @@ create association KB.ArticleRating_Article
 create module HD;
 
 -- 5-state status machine — edge case: Reopen (state reversal)
-create enumeration HD.TicketStatus (
+create or modify enumeration HD.TicketStatus (
   Draft      'Draft',
   Open       'Open',
   InProgress 'In Progress',
@@ -112,7 +112,7 @@ create enumeration HD.TicketStatus (
   Closed     'Closed'
 );
 
-create enumeration HD.TicketPriority (
+create or modify enumeration HD.TicketPriority (
   Low      'Low',
   Normal   'Normal',
   High     'High',
@@ -121,7 +121,7 @@ create enumeration HD.TicketPriority (
 
 -- MARK: HelpDesk — Entities & Non-persistent
 
-create persistent entity HD.Customer (
+create or modify persistent entity HD.Customer (
   Name:    string(200) not null,
   Email:   string(200) not null,
   Company: string(200)
@@ -129,7 +129,7 @@ create persistent entity HD.Customer (
 system members (owner)
 index (Email);
 
-create persistent entity HD.Agent (
+create or modify persistent entity HD.Agent (
   Name:     string(200) not null,
   Email:    string(200) not null,
   IsActive: boolean default true
@@ -138,7 +138,7 @@ create persistent entity HD.Agent (
 -- system members clause enables the 4 NoGeneralization boolean flags in BSON.
 -- Child entities (generalization) inherit system members from their root ancestor;
 -- only root (NoGeneralization) entities declare this clause.
-create persistent entity HD.Ticket (
+create or modify persistent entity HD.Ticket (
   Subject:     string(500) not null,
   Description: string,
   Status:      HD.TicketStatus   default Draft,
@@ -152,59 +152,59 @@ index (Status)
 index (Priority)
 index (SLADueAt);
 
-create association HD.Ticket_Customer
+create or modify association HD.Ticket_Customer
   from HD.Ticket to HD.Customer
   type reference
   owner default;
 
 -- Nullable: ticket may not yet be assigned to an agent
-create association HD.Ticket_Agent
+create or modify association HD.Ticket_Agent
   from HD.Ticket to HD.Agent
   type reference
   owner default;
 
-create persistent entity HD.TicketComment (
+create or modify persistent entity HD.TicketComment (
   Content:    string not null,
   IsInternal: boolean default false
 );
 
-create association HD.TicketComment_Ticket
+create or modify association HD.TicketComment_Ticket
   from HD.TicketComment to HD.Ticket
   type reference
   owner default;
 
 -- Workflow context entity for escalation approval
-create persistent entity HD.EscalationRequest (
+create or modify persistent entity HD.EscalationRequest (
   Reason:          string(1000) not null,
   RequestedAt:     datetime,
   RejectionReason: string(1000)
 );
 
-create association HD.EscalationRequest_Ticket
+create or modify association HD.EscalationRequest_Ticket
   from HD.EscalationRequest to HD.Ticket
   type reference
   owner default;
 
 -- Non-persistent entity: ticket search / filter form
-create non-persistent entity HD.TicketSearch (
+create or modify non-persistent entity HD.TicketSearch (
   SubjectKeyword: string(200),
   StatusFilter:   HD.TicketStatus,
   PriorityFilter: HD.TicketPriority
 );
 
 -- Cross-module: ticket may link to a KB article (nullable)
-create association HD.Ticket_KBArticle
+create or modify association HD.Ticket_KBArticle
   from HD.Ticket to KB.Article
   type reference
   owner default;
 
 -- SLA time limits per priority, configurable per environment
-create constant HD.SLA_HIGH_HOURS
+create or modify constant HD.SLA_HIGH_HOURS
   type integer
   default 8
   comment 'SLA deadline in hours for High-priority tickets.';
 
-create constant HD.SLA_CRITICAL_HOURS
+create or modify constant HD.SLA_CRITICAL_HOURS
   type integer
   default 2
   comment 'SLA deadline in hours for Critical-priority tickets. Configure shorter per environment.';
@@ -511,7 +511,7 @@ end;
 
 -- Required pages for workflow (must exist before workflow is created)
 -- CE7410: workflow user task page must declare a WorkflowUserTask parameter
-create page HD.EscalationReview_Form
+create or replace page HD.EscalationReview_Form
 (
   title: 'Escalation Review',
   layout: Atlas_Core.Atlas_Default,
@@ -528,7 +528,7 @@ create page HD.EscalationReview_Form
   }
 };
 
-create page HD.EscalationWorkflow_Overview
+create or replace page HD.EscalationWorkflow_Overview
 (
   title: 'Escalation Workflow',
   layout: Atlas_Core.Atlas_Default,
@@ -902,7 +902,7 @@ end;
 
 -- KB Article overview: Gallery (left) + DataView master-detail (right)
 -- Pattern B: Gallery selection:single + filter bar, DataView datasource:selection
-create page KB.Article_Overview
+create or replace page KB.Article_Overview
 (
   title: 'Knowledge Base',
   layout: Atlas_Core.Atlas_Default,
@@ -927,10 +927,10 @@ create page KB.Article_Overview
       }
       column cDetail (desktopwidth: 7) {
         dataview dvArticleDetail (datasource: selection artGallery) {
-          dynamictext txtTitle     (content: '{1}', contentparams: [{1} = Title],       rendermode: H2)
-          dynamictext txtStatus    (content: '{1}', contentparams: [{1} = Status])
-          dynamictext txtPublished (content: '{1}', contentparams: [{1} = PublishedAt])
-          dynamictext txtContent   (content: '{1}', contentparams: [{1} = Content])
+          dynamictext txtDetailTitle   (content: '{1}', contentparams: [{1} = Title],       rendermode: H2)
+          dynamictext txtDetailStatus  (content: '{1}', contentparams: [{1} = Status])
+          dynamictext txtPublished     (content: '{1}', contentparams: [{1} = PublishedAt])
+          dynamictext txtContent       (content: '{1}', contentparams: [{1} = Content])
           footer ftrActions {
             actionbutton btnPublish (
               caption: 'Publish',
@@ -949,7 +949,7 @@ create page KB.Article_Overview
   }
 };
 
-create page KB.Article_Detail
+create or replace page KB.Article_Detail
 (
   title: 'Article',
   layout: Atlas_Core.Atlas_Default,
@@ -981,7 +981,7 @@ create page KB.Article_Detail
 
 -- Ticket overview: DataGrid2 CRUD overview
 -- Pattern A: controlbar New button, column filters, sort, Edit action column
-create page HD.Ticket_Overview
+create or replace page HD.Ticket_Overview
 (
   title: 'Tickets',
   layout: Atlas_Core.Atlas_Default,
@@ -1029,9 +1029,38 @@ create page HD.Ticket_Overview
   }
 };
 
+-- Agent selection popup: DataGrid (selection:single) + microflow close_page
+-- Pattern D: popup selection — lists HD.Agent, calls ACT_Ticket_Assign, closes popup
+-- Must be defined before HD.Ticket_Detail which references it via show_page.
+create or replace page HD.Agent_Select
+(
+  title: 'Select Agent',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Ticket',
+  params: { $Ticket: HD.Ticket }
+)
+{
+  datagrid dgAgents (
+    datasource: database from HD.Agent sort by Name asc,
+    PageSize: 15,
+    selection: single
+  ) {
+    controlbar cb1 {
+      actionbutton btnAssign (
+        caption: 'Assign',
+        action: microflow HD.ACT_Ticket_Assign (Ticket: $Ticket, Agent: $currentObject) close_page,
+        buttonstyle: primary
+      )
+    }
+    column colName     (attribute: Name,     caption: 'Name')
+    column colEmail    (attribute: Email,    caption: 'Email')
+    column colIsActive (attribute: IsActive, caption: 'Active', ColumnWidth: manual, Size: 80)
+  }
+};
+
 -- Ticket detail: DataView (page param) + ActionButtons + nested association DataGrid
 -- Pattern C: datasource: $Ticket/HD.TicketComment_Ticket/HD.TicketComment (no XPath needed)
-create page HD.Ticket_Detail
+create or replace page HD.Ticket_Detail
 (
   title: 'Ticket',
   layout: Atlas_Core.Atlas_Default,
@@ -1085,36 +1114,8 @@ create page HD.Ticket_Detail
   }
 };
 
--- Agent selection popup: DataGrid (selection:single) + microflow close_page
--- Pattern D: popup selection — lists HD.Agent, calls ACT_Ticket_Assign, closes popup
-create page HD.Agent_Select
-(
-  title: 'Select Agent',
-  layout: Atlas_Core.PopupLayout,
-  folder: 'Ticket',
-  params: { $Ticket: HD.Ticket }
-)
-{
-  datagrid dgAgents (
-    datasource: database from HD.Agent sort by Name asc,
-    PageSize: 15,
-    selection: single
-  ) {
-    controlbar cb1 {
-      actionbutton btnAssign (
-        caption: 'Assign',
-        action: microflow HD.ACT_Ticket_Assign (Ticket: $Ticket, Agent: $currentObject) close_page,
-        buttonstyle: primary
-      )
-    }
-    column colName     (attribute: Name,     caption: 'Name')
-    column colEmail    (attribute: Email,    caption: 'Email')
-    column colIsActive (attribute: IsActive, caption: 'Active', ColumnWidth: manual, Size: 80)
-  }
-};
-
 -- Popup: non-persistent entity search form
-create page HD.TicketSearch_Form
+create or replace page HD.TicketSearch_Form
 (
   title: 'Search Tickets',
   layout: Atlas_Core.PopupLayout,
@@ -1134,7 +1135,7 @@ create page HD.TicketSearch_Form
 -- Placeholder pages for workflow forms
 -- HD.Ticket_NewEdit: real edit form
 -- Demonstrates: textbox, textarea, datepicker, combobox in a dataview
-create page HD.Ticket_NewEdit
+create or replace page HD.Ticket_NewEdit
 (
   title: 'New / Edit Ticket',
   layout: Atlas_Core.Atlas_Default,
@@ -1166,7 +1167,7 @@ create page HD.Ticket_NewEdit
 
 -- KB.Article_NewEdit: real article edit form
 -- Demonstrates: textbox, textarea, datepicker in a dataview
-create page KB.Article_NewEdit
+create or replace page KB.Article_NewEdit
 (
   title: 'New / Edit Article',
   layout: Atlas_Core.Atlas_Default,
@@ -1195,7 +1196,7 @@ create page KB.Article_NewEdit
   }
 };
 
-create page HD.EscalationStart_Form
+create or replace page HD.EscalationStart_Form
 (
   title: 'Request Escalation',
   layout: Atlas_Core.PopupLayout,
