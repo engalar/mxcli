@@ -985,26 +985,11 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (element.Elemen
 		ps := genPg.NewPageSettings()
 		assignFreshID(ps)
 		ps.SetPageQualifiedName(action.Target)
-
-		// Build parameter mappings from Args
-		for _, arg := range action.Args {
-			pm := genPg.NewPageParameterMapping()
-			assignFreshID(pm)
-			pm.SetParameterQualifiedName(arg.Name)
-
-			if strVal, ok := arg.Value.(string); ok {
-				if strings.HasPrefix(strVal, "$") {
-					pv := genPg.NewPageVariable()
-					assignFreshID(pv)
-					pv.SetPageParameterQualifiedName(strVal)
-					pm.SetVariable(pv)
-				} else {
-					pm.SetArgument(strVal)
-				}
-			}
-			ps.AddParameterMappings(pm)
-		}
-
+		// ParameterMappings intentionally left empty: Mendix propagates the page
+		// parameter from the calling context automatically. Storing PageParameterMapping
+		// (Forms$FormCallArgument) objects inside FormSettings (PageSettings) causes
+		// LayoutCallArgument constructor failures in Studio Pro when the container type
+		// is PageSettings rather than LayoutCall.
 		act.SetPageSettings(ps)
 		return act, nil
 
@@ -2119,7 +2104,7 @@ func (pb *pageBuilder) buildWidgetBSON(w *ast.WidgetV3) (bson.D, error) {
 			{Key: "DisabledDuringExecution", Value: true},
 		}
 		if action := w.GetAction(); action != nil {
-			ab, err := pb.buildClientActionBSON(action)
+			ab, err := pb.genClientActionToBsonD(action)
 			if err != nil {
 				return nil, mdlerrors.NewBackend("build action", err)
 			}
@@ -2190,70 +2175,33 @@ func (pb *pageBuilder) buildWidgetBSON(w *ast.WidgetV3) (bson.D, error) {
 	}
 }
 
-// buildClientActionBSON builds a pre-serialized bson.D client action for DataGrid button widgets.
-func (pb *pageBuilder) buildClientActionBSON(action *ast.ActionV3) (bson.D, error) {
-	switch action.Type {
-	case "save":
-		return bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Forms$SaveChangesClientAction"},
-			{Key: "ClosePage", Value: action.ClosePage},
-			{Key: "SyncAutomatically", Value: true},
-		}, nil
-	case "cancel":
-		return bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Forms$CancelChangesClientAction"},
-			{Key: "ClosePage", Value: action.ClosePage},
-		}, nil
-	case "close":
-		return bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Forms$ClosePageClientAction"},
-		}, nil
-	case "showPage":
-		return bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Forms$PageClientAction"},
-			{Key: "DisabledDuringExecution", Value: true},
-			{Key: "NumberOfPagesToClose2", Value: ""},
-			{Key: "PageSettings", Value: bson.D{
-				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-				{Key: "$Type", Value: "Forms$FormSettings"},
-				{Key: "Form", Value: action.Target},
-				{Key: "ParameterMappings", Value: bson.A{int32(2)}},
-				{Key: "TitleOverride", Value: buildMinimalClientTemplate("")},
-			}},
-		}, nil
-	case "microflow":
-		// Resolution is for validation only — BSON stores the qualified name string.
-		// Log a warning for missing microflows but continue building the action.
-		if _, err := pb.resolveMicroflow(action.Target); err != nil {
-			log.Printf("warning: action microflow %s not found (will still create action by name)", action.Target)
-		}
-		return bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Forms$MicroflowAction"},
-			{Key: "ClosePage", Value: action.ClosePage},
-			{Key: "DisabledDuringExecution", Value: true},
-			{Key: "MicroflowSettings", Value: bson.D{
-				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-				{Key: "$Type", Value: "Forms$MicroflowSettings"},
-				{Key: "Asynchronous", Value: false},
-				{Key: "ConfirmationInfo", Value: nil},
-				{Key: "FormValidations", Value: "All"},
-				{Key: "Microflow", Value: action.Target},
-				{Key: "ParameterMappings", Value: bson.A{int32(3)}},
-				{Key: "ProgressBar", Value: "None"},
-				{Key: "ProgressMessage", Value: nil},
-			}},
-		}, nil
-	default:
-		return bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Forms$ClosePageClientAction"},
-		}, nil
+// genClientActionToBsonD builds a pre-serialized bson.D client action for DataGrid button widgets.
+// It delegates to buildClientActionV3 (the gen path) and serializes the result via the codec,
+// eliminating hand-rolled BSON that was prone to wrong type names and missing fields.
+func (pb *pageBuilder) genClientActionToBsonD(action *ast.ActionV3) (bson.D, error) {
+	elem, err := pb.buildClientActionV3(action)
+	if err != nil {
+		return nil, err
 	}
+	if elem == nil {
+		return nil, nil
+	}
+	opaque := pb.widgetBackend.SerializeGenElemToOpaque(elem)
+	if opaque == nil {
+		return nil, fmt.Errorf("genClientActionToBsonD: serialize returned nil for action type %q", action.Type)
+	}
+	var doc bson.D
+	switch v := opaque.(type) {
+	case bson.Raw:
+		if err := bson.Unmarshal([]byte(v), &doc); err != nil {
+			return nil, fmt.Errorf("genClientActionToBsonD: unmarshal: %w", err)
+		}
+	case bson.D:
+		doc = v
+	default:
+		return nil, fmt.Errorf("genClientActionToBsonD: unexpected opaque type %T", opaque)
+	}
+	return doc, nil
 }
 
 // serializeGenWidgetToBsonD encodes a GenCustomWidgetElem to bson.D.

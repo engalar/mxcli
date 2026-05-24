@@ -6,9 +6,14 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend"
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // buildTestWidgetV3WithDesignProp creates a WidgetV3 with a single design property.
@@ -143,30 +148,41 @@ func TestBuildDynamicTextV3_EmptyContentUsesSafeDefault(t *testing.T) {
 
 // newPageBuilderWithMicroflowStub returns a pageBuilder primed so that
 // resolveMicroflow finds qualifiedName via execCache.createdMicroflows,
-// avoiding any backend round-trip.
+// avoiding any backend round-trip. widgetBackend is wired with a codec-based
+// SerializeGenElemToOpaque so genClientActionToBsonD can round-trip through gen.
 func newPageBuilderWithMicroflowStub(qualifiedName string) *pageBuilder {
+	mb := &mock.MockBackend{}
+	mb.SerializeGenElemToOpaqueFunc = func(elem element.Element) backend.OpaqueWidget {
+		enc := codec.Encoder{}
+		raw, err := enc.Encode(elem)
+		if err != nil {
+			return nil
+		}
+		return bson.Raw(raw)
+	}
 	return &pageBuilder{
 		execCache: &executorCache{
 			createdMicroflows: map[string]*createdMicroflowInfo{
 				qualifiedName: {ID: model.ID("00000000-0000-0000-0000-000000000001"), Name: "SomeMF", ModuleName: "MyMod"},
 			},
 		},
+		widgetBackend: mb,
 	}
 }
 
-// TestBuildClientActionBSON_MicroflowClosePage verifies that an action with
-// Type="microflow" and ClosePage=true emits ClosePage:true in BSON.
+// TestGenClientActionToBsonD_MicroflowClosePage verifies that a microflow action
+// with ClosePage=true emits ClosePage:true in BSON via the gen codec path.
 // Regression guard for the `action: microflow M.F (...) close_page` syntax.
-func TestBuildClientActionBSON_MicroflowClosePage(t *testing.T) {
+func TestGenClientActionToBsonD_MicroflowClosePage(t *testing.T) {
 	pb := newPageBuilderWithMicroflowStub("MyMod.SomeMF")
 	action := &ast.ActionV3{
 		Type:      "microflow",
 		Target:    "MyMod.SomeMF",
 		ClosePage: true,
 	}
-	got, err := pb.buildClientActionBSON(action)
+	got, err := pb.genClientActionToBsonD(action)
 	if err != nil {
-		t.Fatalf("buildClientActionBSON: %v", err)
+		t.Fatalf("genClientActionToBsonD: %v", err)
 	}
 	for _, kv := range got {
 		if kv.Key == "ClosePage" {
@@ -180,27 +196,27 @@ func TestBuildClientActionBSON_MicroflowClosePage(t *testing.T) {
 	t.Error("ClosePage key not found in BSON for microflow action with ClosePage=true")
 }
 
-// TestBuildClientActionBSON_MicroflowNoClosePage verifies that a microflow
-// action without close_page emits ClosePage:false (not missing).
-func TestBuildClientActionBSON_MicroflowNoClosePage(t *testing.T) {
+// TestGenClientActionToBsonD_MicroflowNoClosePage verifies that a microflow
+// action without close_page does not emit ClosePage:true (Mendix defaults to false
+// when the field is absent, so we do not inject it for the false case).
+func TestGenClientActionToBsonD_MicroflowNoClosePage(t *testing.T) {
 	pb := newPageBuilderWithMicroflowStub("MyMod.SomeMF")
 	action := &ast.ActionV3{
 		Type:      "microflow",
 		Target:    "MyMod.SomeMF",
 		ClosePage: false,
 	}
-	got, err := pb.buildClientActionBSON(action)
+	got, err := pb.genClientActionToBsonD(action)
 	if err != nil {
-		t.Fatalf("buildClientActionBSON: %v", err)
+		t.Fatalf("genClientActionToBsonD: %v", err)
 	}
 	for _, kv := range got {
 		if kv.Key == "ClosePage" {
-			if v, ok := kv.Value.(bool); ok && !v {
-				return
+			if v, ok := kv.Value.(bool); ok && v {
+				t.Errorf("ClosePage = true in BSON for action without close_page")
 			}
-			t.Errorf("ClosePage = %v, want false", kv.Value)
 			return
 		}
 	}
-	t.Error("ClosePage key not found in BSON for microflow action without close_page")
+	// ClosePage absent is also correct — Mendix treats absent as false.
 }

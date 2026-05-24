@@ -987,7 +987,12 @@ func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 	case "Forms$MicroflowAction", "Forms$MicroflowClientAction", "Pages$MicroflowClientAction":
 		// Decode using gen types — no raw map field access.
 		if mf := decodeMicroflowClientAction(action); mf != nil {
-			return formatPageMicroflowActionGen(mf)
+			result := formatPageMicroflowActionGen(mf)
+			// ClosePage is not in the gen type (it's raw-injected), so check the raw map.
+			if closePage, ok := action["ClosePage"].(bool); ok && closePage {
+				result += " close_page"
+			}
+			return result
 		}
 		return "microflow"
 	case "Forms$CallNanoflowClientAction", "Pages$CallNanoflowClientAction":
