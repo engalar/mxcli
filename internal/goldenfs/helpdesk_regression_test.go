@@ -175,8 +175,28 @@ func TestHelpdeskGolden_Update(t *testing.T) {
 		t.Fatalf("copy to golden: %v", err)
 	}
 
+	// Regenerate describe-snapshot.mdl for each project so the committed
+	// snapshots always reflect the actual MPR content — not whatever stale
+	// file happened to be in helpdesk-golden-clean/ before the copy.
+	//
+	//  • helpdesk-golden/describe-snapshot.mdl   — post-MDL (full app)
+	//  • helpdesk-golden-clean/describe-snapshot.mdl — pre-MDL (blank base)
+	goldenSnapshotPath := filepath.Join(goldenDir, "describe-snapshot.mdl")
+	goldenSnapshot := describeMDLParseable(t, filepath.Join(goldenDir, "minimal.mpr"))
+	if err := os.WriteFile(goldenSnapshotPath, []byte(goldenSnapshot), 0o644); err != nil {
+		t.Fatalf("write golden describe-snapshot: %v", err)
+	}
+	t.Logf("Snapshot updated: %s", goldenSnapshotPath)
+
+	cleanSnapshotPath := filepath.Join(blankDir, "describe-snapshot.mdl")
+	cleanSnapshot := describeMDLParseableClean(t, filepath.Join(blankDir, "minimal.mpr"))
+	if err := os.WriteFile(cleanSnapshotPath, []byte(cleanSnapshot), 0o644); err != nil {
+		t.Fatalf("write clean describe-snapshot: %v", err)
+	}
+	t.Logf("Snapshot updated: %s", cleanSnapshotPath)
+
 	t.Logf("Golden updated: %s", goldenDir)
-	t.Logf("Next step: git add testdata/helpdesk-golden/ && git commit")
+	t.Logf("Next step: git add testdata/helpdesk-golden/ testdata/helpdesk-golden-clean/describe-snapshot.mdl && git commit")
 }
 
 // TestHelpdeskGolden_Regression_BSON 是主 BSON 层回归测试。
@@ -350,6 +370,43 @@ describe page HD.EscalationReview_Form;
 describe page HD.EscalationWorkflow_Overview;
 describe page HD.EscalationStart_Form;
 `, mprPath)
+}
+
+// helpdeskCleanDescribeScript returns the describe script for the blank
+// base project (helpdesk-golden-clean). It only targets MyFirstModule
+// content that exists in every Mendix 11.6 starter project, never KB/HD
+// which are absent from the blank base.
+func helpdeskCleanDescribeScript(mprPath string) string {
+	return fmt.Sprintf(`connect local '%s';
+describe page MyFirstModule.Home_Web;
+describe microflow MyFirstModule.MyFirstLogic;
+`, mprPath)
+}
+
+// describeMDLParseableClean is like describeMDLParseable but uses the
+// helpdeskCleanDescribeScript intended for the blank base project.
+func describeMDLParseableClean(t *testing.T, mprPath string) string {
+	t.Helper()
+	var buf strings.Builder
+	e := executor.New(&buf)
+	e.SetQuiet(true)
+	e.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	defer func() {
+		if err := e.Close(); err != nil {
+			t.Logf("executor close: %v", err)
+		}
+	}()
+
+	script := helpdeskCleanDescribeScript(mprPath)
+	prog, errs := visitor.Build(script)
+	if len(errs) > 0 {
+		t.Fatalf("describeMDLParseable parse: %v", errs)
+	}
+	if err := e.ExecuteProgram(prog); err != nil {
+		t.Logf("describeMDLParseable partial output:\n%s", buf.String())
+		t.Fatalf("describeMDLParseable exec: %v", err)
+	}
+	return buf.String()
 }
 
 // helpdeskFullDescribeScript extends helpdeskParseableDescribeScript with

@@ -1,1093 +1,175 @@
-@Position(100, 100)
-create or modify persistent entity KB.Category (
-  Name: String(200) not null,
-  Description: String(500)
-);
-
-grant KB.Reader on KB.Category (read *);
-
-grant KB.Contributor on KB.Category (create, read *, write *);
-
-grant KB.Admin on KB.Category (create, delete, read *, write *);
-/
-@Position(250, 100)
-create or modify persistent entity KB.Tag (
-  Name: String(100) not null unique
-);
-
-grant KB.Reader on KB.Tag (read *);
-
-grant KB.Contributor on KB.Tag (create, read *, write *);
-
-grant KB.Admin on KB.Tag (create, delete, read *, write *);
-/
-@Position(400, 100)
-create or modify persistent entity KB.Article (
-  Title: String(500) not null,
-  Content: String(unlimited),
-  Status: Enumeration(KB.ArticleStatus) default KB.ArticleStatus.Draft,
-  PublishedAt: DateTime,
-  ViewCount: Integer default 0
-)
-index (Status)
-index (PublishedAt);
-
-grant KB.Reader on KB.Article (read *) where '[Status = ''Published'']';
-
-grant KB.Contributor on KB.Article (create, delete, read *, write *);
-
-grant KB.Admin on KB.Article (create, delete, read *, write *);
-/
-@Position(550, 100)
-create or modify persistent entity KB.ArticleTag (
-);
-
-grant KB.Reader on KB.ArticleTag (read *);
-
-grant KB.Contributor on KB.ArticleTag (create, delete, read *, write *);
-
-grant KB.Admin on KB.ArticleTag (create, delete, read *, write *);
-/
-@Position(700, 100)
-create or modify persistent entity KB.ArticleRating (
-  Score: Integer not null,
-  Comment: String(1000)
-)
-system members (owner);
-
-grant KB.Reader on KB.ArticleRating (read (KB.ArticleRating_Article, Score, Comment), write (Score, Comment)) where '[System.owner=''[%CurrentUser%]'']';
-
-grant KB.Contributor on KB.ArticleRating (create, delete, read *, write *);
-
-grant KB.Admin on KB.ArticleRating (create, delete, read *, write *);
-/
-@Position(100, 100)
-create or modify persistent entity HD.Customer (
-  Name: String(200) not null,
-  Email: String(200) not null,
-  Company: String(200)
-)
-system members (owner)
-index (Email);
-
-grant HD.CustomerRole on HD.Customer (read *, write *);
-
-grant HD.AgentRole on HD.Customer (read *);
-
-grant HD.ManagerRole on HD.Customer (read *, write *);
-/
-@Position(250, 100)
-create or modify persistent entity HD.Agent (
-  Name: String(200) not null,
-  Email: String(200) not null,
-  IsActive: Boolean default true
-);
-
-grant HD.AgentRole on HD.Agent (read *);
-
-grant HD.ManagerRole on HD.Agent (read *, write *);
-/
-@Position(400, 100)
-create or modify persistent entity HD.Ticket (
-  Subject: String(500) not null,
-  Description: String(unlimited),
-  Status: Enumeration(HD.TicketStatus) default HD.TicketStatus.Draft,
-  Priority: Enumeration(HD.TicketPriority) default HD.TicketPriority.Normal,
-  SLADueAt: DateTime,
-  ResolvedAt: DateTime,
-  IsOverSLA: Boolean default false
-)
-system members (owner, createdDate, changedDate, changedBy)
-index (Status)
-index (Priority)
-index (SLADueAt);
-
-grant HD.CustomerRole on HD.Ticket (create, read (Status, Priority, SLADueAt, ResolvedAt, IsOverSLA, HD.Ticket_Customer, HD.Ticket_Agent, Subject, Description, HD.Ticket_KBArticle), write (Subject, Description, HD.Ticket_KBArticle)) where '[HD.Ticket_Customer/HD.Customer/System.owner=''[%CurrentUser%]'']';
-
-grant HD.AgentRole on HD.Ticket (create, read *, write *);
-
-grant HD.ManagerRole on HD.Ticket (create, delete, read *, write *);
-/
-@Position(550, 100)
-create or modify persistent entity HD.TicketComment (
-  Content: String(unlimited) not null,
-  IsInternal: Boolean default false
-);
-
-grant HD.CustomerRole on HD.TicketComment (create, read *) where '[IsInternal = false]';
-
-grant HD.AgentRole on HD.TicketComment (create, read *, write *);
-
-grant HD.ManagerRole on HD.TicketComment (create, delete, read *, write *);
-/
-@Position(700, 100)
-create or modify persistent entity HD.EscalationRequest (
-  Reason: String(1000) not null,
-  RequestedAt: DateTime,
-  RejectionReason: String(1000)
-);
-
-grant HD.AgentRole on HD.EscalationRequest (create, read *);
-
-grant HD.ManagerRole on HD.EscalationRequest (create, delete, read *, write *);
-/
-@Position(850, 100)
-create or modify non-persistent entity HD.TicketSearch (
-  SubjectKeyword: String(200),
-  StatusFilter: Enumeration(HD.TicketStatus),
-  PriorityFilter: Enumeration(HD.TicketPriority)
-);
-
-grant HD.CustomerRole on HD.TicketSearch (read *, write *);
-
-grant HD.AgentRole on HD.TicketSearch (read *, write *);
-
-grant HD.ManagerRole on HD.TicketSearch (read *, write *);
-/
--- one-to-many: KB.Category *-->1 KB.Category (each KB.Category belongs to one KB.Category)
-create or modify association KB.Category_Parent
-from KB.Category to KB.Category
-type Reference
-owner Default
-delete_behavior DELETE_BUT_KEEP_REFERENCES;
-/
--- one-to-many: KB.Article *-->1 KB.Category (each KB.Article belongs to one KB.Category)
-create or modify association KB.Article_Category
-from KB.Article to KB.Category
-type Reference
-owner Default
-delete_behavior DELETE_BUT_KEEP_REFERENCES;
-/
--- one-to-many: KB.ArticleTag *-->1 KB.Article (each KB.ArticleTag belongs to one KB.Article)
-create or modify association KB.ArticleTag_Article
-from KB.ArticleTag to KB.Article
-type Reference
-owner Default
-delete_behavior DELETE_BUT_KEEP_REFERENCES;
-/
--- one-to-many: KB.ArticleTag *-->1 KB.Tag (each KB.ArticleTag belongs to one KB.Tag)
-create or modify association KB.ArticleTag_Tag
-from KB.ArticleTag to KB.Tag
-type Reference
-owner Default
-delete_behavior DELETE_BUT_KEEP_REFERENCES;
-/
--- one-to-many: KB.ArticleRating *-->1 KB.Article (each KB.ArticleRating belongs to one KB.Article)
-create or modify association KB.ArticleRating_Article
-from KB.ArticleRating to KB.Article
-type Reference
-owner Default
-delete_behavior DELETE_BUT_KEEP_REFERENCES;
-/
--- one-to-many: HD.Ticket *-->1 HD.Customer (each HD.Ticket belongs to one HD.Customer)
-create or modify association HD.Ticket_Customer
-from HD.Ticket to HD.Customer
-type Reference
-owner Default
-delete_behavior DELETE_BUT_KEEP_REFERENCES;
-/
--- one-to-many: HD.Ticket *-->1 HD.Agent (each HD.Ticket belongs to one HD.Agent)
-create or modify association HD.Ticket_Agent
-from HD.Ticket to HD.Agent
-type Reference
-owner Default
-delete_behavior DELETE_BUT_KEEP_REFERENCES;
-/
--- one-to-many: HD.TicketComment *-->1 HD.Ticket (each HD.TicketComment belongs to one HD.Ticket)
-create or modify association HD.TicketComment_Ticket
-from HD.TicketComment to HD.Ticket
-type Reference
-owner Default
-delete_behavior DELETE_BUT_KEEP_REFERENCES;
-/
--- one-to-many: HD.EscalationRequest *-->1 HD.Ticket (each HD.EscalationRequest belongs to one HD.Ticket)
-create or modify association HD.EscalationRequest_Ticket
-from HD.EscalationRequest to HD.Ticket
-type Reference
-owner Default
-delete_behavior DELETE_BUT_KEEP_REFERENCES;
-/
--- one-to-many: HD.Ticket *-->1 KB.Article (each HD.Ticket belongs to one KB.Article)
-create or modify association HD.Ticket_KBArticle
-from HD.Ticket to KB.Article
-type Reference
-owner Default
-delete_behavior DELETE_BUT_KEEP_REFERENCES;
-/
-create or modify enumeration KB.ArticleStatus (
-  Draft 'Draft',
-  Published 'Published',
-  Archived 'Archived'
-);
-/
-create or modify enumeration HD.TicketStatus (
-  Draft 'Draft',
-  Open 'Open',
-  InProgress 'In Progress',
-  Resolved 'Resolved',
-  Closed 'Closed'
-);
-/
-create or modify enumeration HD.TicketPriority (
-  Low 'Low',
-  Normal 'Normal',
-  High 'High',
-  Critical 'Critical'
-);
-/
-create or modify microflow KB.ACT_Article_Publish (
-  $Article: KB.Article
-)
-returns Boolean as $Success
-begin
-  if $Article/Content = '' or $Article/Content = empty then
-    validation feedback $Article/Content message 'Content cannot be empty before publishing.';
-    return false;
-  else
-    change $Article (Status = KB.ArticleStatus.Published
-, PublishedAt = [%CurrentDateTime%]
-);
-    commit $Article;
-    return true;
-  end if;
-end;
-
-grant execute on microflow KB.ACT_Article_Publish to KB.Contributor, KB.Admin;
-/
-create or modify microflow KB.ACT_Article_Archive (
-  $Article: KB.Article
-)
-returns Boolean as $Success
-begin
-  change $Article (Status = KB.ArticleStatus.Archived
-);
-  commit $Article;
-  return true;
-end;
-
-grant execute on microflow KB.ACT_Article_Archive to KB.Contributor, KB.Admin;
-/
-create or modify microflow KB.SUB_Article_TruncateContent (
-  $Article: KB.Article
-)
-returns String as $Preview
-begin
-  declare $Preview String = $Article/Content;
-  return $Preview;
-end;
-/
-create or modify nanoflow KB.NF_Article_FormatPreview (
-  $Article: KB.Article
-)
-returns String
-begin
-  $Preview = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
-  return $Preview;
-end;
-
-grant execute on nanoflow KB.NF_Article_FormatPreview to KB.Reader, KB.Contributor, KB.Admin;
-/
-create or modify microflow HD.ACT_Ticket_Submit (
-  $Ticket: HD.Ticket
-)
-returns Boolean as $Success
-begin
-  if $Ticket/Subject = '' then
-    validation feedback $Ticket/Subject message 'Subject is required';
-    return false;
-  else
-    if $Ticket/Priority = HD.TicketPriority.Critical then
-      change $Ticket (Status = HD.TicketStatus.Open
-, SLADueAt = addHours([%CurrentDateTime%], @HD.SLA_CRITICAL_HOURS)
-);
-    else
-      if $Ticket/Priority = HD.TicketPriority.High then
-        change $Ticket (Status = HD.TicketStatus.Open
-, SLADueAt = addHours([%CurrentDateTime%], @HD.SLA_HIGH_HOURS)
-);
-      else
-        change $Ticket (Status = HD.TicketStatus.Open
-, SLADueAt = addHours([%CurrentDateTime%], 24)
-);
-      end if;
-    end if;
-    commit $Ticket;
-    return true;
-  end if;
-end;
-
-grant execute on microflow HD.ACT_Ticket_Submit to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Ticket_Assign (
-  $Ticket: HD.Ticket,
-  $Agent: HD.Agent
-)
-returns Boolean as $Success
-begin
-  if $Ticket/Status != HD.TicketStatus.Open then
-    show message 'Only Open tickets can be assigned.' type warning;
-    return false;
-  else
-    change $Ticket (Status = HD.TicketStatus.InProgress
-, HD.Ticket_Agent = $Agent
-);
-    commit $Ticket;
-    return true;
-  end if;
-end;
-
-grant execute on microflow HD.ACT_Ticket_Assign to HD.AgentRole, HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Ticket_Resolve (
-  $Ticket: HD.Ticket
-)
-returns Boolean as $Success
-begin
-  if $Ticket/Status != HD.TicketStatus.InProgress then
-    return false;
-  else
-    declare $Now DateTime = [%CurrentDateTime%];
-    declare $IsOver Boolean = $Now > $Ticket/SLADueAt and $Ticket/SLADueAt != empty;
-    change $Ticket (Status = HD.TicketStatus.Resolved
-, ResolvedAt = $Now
-, IsOverSLA = $IsOver
-);
-    commit $Ticket;
-    return true;
-  end if;
-end;
-
-grant execute on microflow HD.ACT_Ticket_Resolve to HD.AgentRole, HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Ticket_Reopen (
-  $Ticket: HD.Ticket
-)
-returns Boolean as $Success
-begin
-  if $Ticket/Status != HD.TicketStatus.Resolved and $Ticket/Status != HD.TicketStatus.Closed then
-    return false;
-  else
-    change $Ticket (Status = HD.TicketStatus.Open
-, ResolvedAt = empty);
-    commit $Ticket;
-    return true;
-  end if;
-end;
-
-grant execute on microflow HD.ACT_Ticket_Reopen to HD.AgentRole, HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Ticket_Close (
-  $Ticket: HD.Ticket
-)
-returns Boolean as $Success
-begin
-  if $Ticket/Status != HD.TicketStatus.Resolved then
-    return false;
-  else
-    change $Ticket (Status = HD.TicketStatus.Closed
-);
-    commit $Ticket;
-    return true;
-  end if;
-end;
-
-grant execute on microflow HD.ACT_Ticket_Close to HD.AgentRole, HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Ticket_SafeCommit (
-  $Ticket: HD.Ticket
-)
-returns Boolean as $Success
-begin
-  declare $Success Boolean = false;
-  commit $Ticket;
-  set $Success = true
-;
-  return $Success;
-end;
-/
-create or modify microflow HD.ACT_Ticket_MarkCommentsRead (
-  $Ticket: HD.Ticket
-)
-begin
-  retrieve $Comments from HD.TicketComment
-    where HD.TicketComment_Ticket/HD.Ticket = $Ticket and IsInternal = true
-    limit 100;
-  loop $Comment in $Comments
-  begin
-    change $Comment (IsInternal = false
-);
-  end loop;
-  return;
-end;
-/
-create or modify microflow HD.ACT_EscalationRequest_Cleanup (
-  $Ticket: HD.Ticket
-)
-begin
-  retrieve $Requests from HD.EscalationRequest
-    where HD.EscalationRequest_Ticket/HD.Ticket = $Ticket
-    limit 50;
-  loop $Req in $Requests
-  begin
-    delete $Req;
-  end loop;
-  return;
-end;
-
-grant execute on microflow HD.ACT_EscalationRequest_Cleanup to HD.AgentRole, HD.ManagerRole;
-/
-create or modify microflow HD.DS_OverdueTicketCount ()
-returns Integer as $Count
-begin
-  retrieve $Overdue from HD.Ticket
-    where IsOverSLA = true
-    limit 0;
-  $Count = count($Overdue);
-  return $Count;
-end;
-/
-create or modify nanoflow HD.NF_Ticket_QuickCreate (
-  $Customer: HD.Customer,
-  $Subject: String
-)
-begin
-  $Ticket = create HD.Ticket (Subject = $Subject
-, Status = HD.TicketStatus.Draft
-, Priority = HD.TicketPriority.Normal
-, Ticket_Customer = $Customer
-);
-  commit $Ticket;
-  return $Ticket;
-end;
-
-grant execute on nanoflow HD.NF_Ticket_QuickCreate to HD.CustomerRole, HD.AgentRole;
-/
-create or modify nanoflow HD.NF_TicketSearch_Apply (
-  $Search: HD.TicketSearch
-)
-begin
-  retrieve $Tickets from HD.Ticket
-    limit 100;
-  return $Tickets;
-end;
-
-grant execute on nanoflow HD.NF_TicketSearch_Apply to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-/
-create or modify nanoflow HD.NF_Priority_GetLabel (
-  $PriorityStr: String
-)
-returns String
-begin
-  declare $CSSClass String = 'badge-default';
-  if $PriorityStr = 'Critical' then
-    set $CSSClass = 'badge-danger'
-;
-  else
-    if $PriorityStr = 'High' then
-      set $CSSClass = 'badge-warning'
-;
-    else
-      if $PriorityStr = 'Normal' then
-        set $CSSClass = 'badge-info'
-;
-      end if;
-    end if;
-  end if;
-  return $CSSClass;
-end;
-
-grant execute on nanoflow HD.NF_Priority_GetLabel to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-/
-create or modify microflow HD.WFA_GetManagerAssignees (
-  $workflow: System.Workflow,
-  $EscalationRequest: HD.EscalationRequest
-)
-returns List of System.User as $Users
-begin
-  retrieve $Users from System.User
-    limit 10;
-  return $Users;
-end;
-/
-create or modify microflow HD.WFS_SendReminder (
-  $EscalationRequest: HD.EscalationRequest
-)
-begin
-  log info node 'Application' '{1}' with ({1} = 'Escalation reminder sent for request ' + toString($EscalationRequest/Reason));
-  return;
-end;
-/
-create or modify microflow HD.WFS_Approve (
-  $EscalationRequest: HD.EscalationRequest
-)
-begin
-  retrieve $Ticket from HD.Ticket
-    where HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest
-    limit 1;
-  if $Ticket != empty then
-    change $Ticket (Priority = HD.TicketPriority.Critical
-);
-    commit $Ticket;
-  end if;
-  return;
-end;
-/
-create or modify microflow HD.WFS_Reject (
-  $EscalationRequest: HD.EscalationRequest
-)
-begin
-  change $EscalationRequest (RejectionReason = 'Rejected by manager review board.'
-);
-  commit $EscalationRequest;
-  return;
-end;
-/
-create or modify microflow HD.WFS_Escalation_Initialize (
-  $EscalationRequest: HD.EscalationRequest
-)
-begin
-  change $EscalationRequest (RequestedAt = [%CurrentDateTime%]
-);
-  commit $EscalationRequest;
-  return;
-end;
-/
-create or modify microflow HD.WFS_AutoReject (
-  $EscalationRequest: HD.EscalationRequest
-)
-begin
-  change $EscalationRequest (RejectionReason = 'Auto-rejected: no manager response within 48 hours.'
-);
-  commit $EscalationRequest;
-  return;
-end;
-/
-create or modify microflow HD.WFS_UpdateTicketPriority (
-  $EscalationRequest: HD.EscalationRequest
-)
-begin
-  retrieve $Ticket from HD.Ticket
-    where HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest
-    limit 1;
-  if $Ticket != empty then
-    change $Ticket (Priority = HD.TicketPriority.Critical
-, Status = HD.TicketStatus.InProgress
-);
-    commit $Ticket;
-  end if;
-  return;
-end;
-/
-create or modify microflow HD.WFS_NotifyAgent (
-  $EscalationRequest: HD.EscalationRequest
-)
-begin
-  log info node 'Application' '{1}' with ({1} = 'Agent notified: escalation approved for request ' + toString($EscalationRequest/Reason));
-  return;
-end;
-/
-create or modify microflow HD.WFC_EscalationRequest_OnCreate (
-  $EscalationRequest: HD.EscalationRequest
-)
-begin
-  log info node 'Application' '{1}' with ({1} = 'EscalationRequest created: ' + toString($EscalationRequest/Reason));
-  return;
-end;
-/
-create or modify microflow HD.ACT_StartEscalation (
-  $Ticket: HD.Ticket,
-  $Reason: String
-)
-returns Boolean as $Success
-begin
-  if $Ticket/Status != HD.TicketStatus.InProgress then
-    return false;
-  else
-    $EscalationRequest = create HD.EscalationRequest (Reason = $Reason
-, RequestedAt = [%CurrentDateTime%]
-, EscalationRequest_Ticket = $Ticket
-);
-    commit $EscalationRequest;
-    call workflow HD.WF_TicketEscalation (EscalationRequest = $EscalationRequest);
-    return true;
-  end if;
-end;
-
-grant execute on microflow HD.ACT_StartEscalation to HD.AgentRole, HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Workflow_ChangeState (
-  $Workflow: System.Workflow,
-  $Operation: String
-)
-begin
-  if $Operation = 'Pause' then
-    workflow operation pause $Workflow;
-  else
-    if $Operation = 'Unpause' then
-      workflow operation unpause $Workflow;
-    else
-      workflow operation abort $Workflow reason '''Administratively aborted''';
-    end if;
-  end if;
-  return;
-end;
-
-grant execute on microflow HD.ACT_Workflow_ChangeState to HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Workflow_CompleteTask (
-  $UserTask: System.WorkflowUserTask,
-  $Outcome: String
-)
-begin
-  set task outcome $UserTask 'Approve';
-  return;
-end;
-
-grant execute on microflow HD.ACT_Workflow_CompleteTask to HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Workflow_GenerateJumpTo (
-  $Workflow: System.Workflow
-)
-begin
-  generate jump to options for $Workflow as HD.WF_TicketEscalation;
-  return;
-end;
-
-grant execute on microflow HD.ACT_Workflow_GenerateJumpTo to HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Workflow_ApplyJumpTo (
-  $JumpOption: System.WorkflowJumpToDetails
-)
-begin
-  apply jump to option $JumpOption;
-  return;
-end;
-
-grant execute on microflow HD.ACT_Workflow_ApplyJumpTo to HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Workflow_GetHistory (
-  $Workflow: System.Workflow
-)
-begin
-  get workflow activity records $Workflow;
-  return;
-end;
-
-grant execute on microflow HD.ACT_Workflow_GetHistory to HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Workflow_GetContext (
-  $Workflow: System.Workflow
-)
-begin
-  get workflow data $Workflow as HD.WF_TicketEscalation;
-  return;
-end;
-
-grant execute on microflow HD.ACT_Workflow_GetContext to HD.ManagerRole;
-/
-create or modify microflow HD.DS_WorkflowInstances (
-  $EscalationRequest: HD.EscalationRequest
-)
-begin
-  get workflows for $EscalationRequest;
-  return;
-end;
-
-grant execute on microflow HD.DS_WorkflowInstances to HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Workflow_ShowTaskPage (
-  $UserTask: System.WorkflowUserTask
-)
-begin
-  open user task $UserTask;
-  return;
-end;
-/
-create or modify microflow HD.ACT_Workflow_ShowAdminPage (
-  $Workflow: System.Workflow
-)
-begin
-  open workflow $Workflow;
-  return;
-end;
-/
-create or modify microflow HD.ACT_Workflow_Lock (
-  $Workflow: System.WorkflowDefinition
-)
-begin
-  lock workflow $Workflow;
-  return;
-end;
-
-grant execute on microflow HD.ACT_Workflow_Lock to HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Workflow_Unlock (
-  $Workflow: System.WorkflowDefinition
-)
-begin
-  unlock workflow $Workflow;
-  return;
-end;
-
-grant execute on microflow HD.ACT_Workflow_Unlock to HD.ManagerRole;
-/
-create or modify microflow HD.ACT_Workflow_Notify (
-  $Workflow: System.Workflow
-)
-begin
-  notify workflow $Workflow activity HD.WF_TicketEscalation.WaitForManagerAvailable;
-  return;
-end;
-
-grant execute on microflow HD.ACT_Workflow_Notify to HD.ManagerRole;
-/
--- Workflow: HD.WF_SUB_ManagerReview
-
-create workflow HD.WF_SUB_ManagerReview
-  parameter $WorkflowContext: HD.EscalationRequest
-  display 'Manager Review'
-  overview page HD.EscalationWorkflow_Overview
-
-begin
-  user task UT_PrimaryReview 'Primary Review'
-    page HD.EscalationReview_Form
-    targeting microflow HD.WFA_GetManagerAssignees
-    description 'Review escalation request and decide: Approve or escalate to board'
-    outcomes
-      'Approve' {
-        call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext') -- WFS_Approve
-          outcomes
-            default -> { };
-
-      }
-      'Escalate' {
-        multi user task UT_SeniorReview 'Senior Board Review'
-          page HD.EscalationReview_Form
-          targeting microflow HD.WFA_GetManagerAssignees
-          completion method majority
-          outcomes
-            'Approve' {
-              call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext') -- WFS_Approve
-                outcomes
-                  default -> { };
-
-            }
-            'Reject' {
-              call microflow HD.WFS_Reject with (EscalationRequest = '$WorkflowContext') -- WFS_Reject
-                outcomes
-                  default -> { };
-
-            };
-
-      }
-    boundary event non interrupting timer 'addHours([%CurrentDateTime%], 12)'
-    {
-      call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext') -- WFS_SendReminder
-        outcomes
-          default -> { };
-
-    };
-
-end workflow
-/
--- Workflow: HD.WF_TicketEscalation
-
-create workflow HD.WF_TicketEscalation
-  parameter $WorkflowContext: HD.EscalationRequest
-  display 'Ticket Escalation'
-  overview page HD.EscalationWorkflow_Overview
-
-begin
-  call microflow HD.WFS_Escalation_Initialize with (EscalationRequest = '$WorkflowContext') -- WFS_Escalation_Initialize
-    outcomes
-      default -> { };
-
-  decision '$WorkflowContext/Reason = empty and $WorkflowInstance/State = System.WorkflowState.Completed ' -- Decision
-    outcomes
-      true -> {
-        call microflow HD.WFS_AutoReject with (EscalationRequest = '$WorkflowContext') -- WFS_AutoReject
-          outcomes
-            default -> { };
-
-      }
-      false -> {
-        wait for notification -- WaitForManagerAvailable
-          boundary event non interrupting timer 'addHours([%CurrentDateTime%], 12)'
-          {
-            call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext') -- WFS_SendReminder
-              outcomes
-                default -> { };
-
-          };
-
-        call workflow HD.WF_SUB_ManagerReview comment 'WF_SUB_ManagerReview' with (WorkflowContext = '$WorkflowContext')
-          boundary event interrupting timer 'addHours([%CurrentDateTime%], 48)'
-          {
-            call microflow HD.WFS_AutoReject with (EscalationRequest = '$WorkflowContext') -- WFS_AutoReject
-              outcomes
-                default -> { };
-
-          };
-
-        parallel split -- Parallel split
-          path 1 {
-            call microflow HD.WFS_UpdateTicketPriority with (EscalationRequest = '$WorkflowContext') -- WFS_UpdateTicketPriority
-              outcomes
-                default -> { };
-
-          }
-          path 2 {
-            call microflow HD.WFS_NotifyAgent with (EscalationRequest = '$WorkflowContext') -- WFS_NotifyAgent
-              outcomes
-                default -> { };
-
-          };
-
-      };
-
-end workflow
-/
-create or modify constant HD.SLA_HIGH_HOURS
-  type Integer
-  default 8
-  comment 'SLA deadline in hours for High-priority tickets.';
-/
-create or modify constant HD.SLA_CRITICAL_HOURS
-  type Integer
-  default 2
-  comment 'SLA deadline in hours for Critical-priority tickets. Configure shorter per environment.';
-/
-create user role Customer (System.User, HD.CustomerRole, KB.Reader);
-/
-create user role Agent (System.User, HD.AgentRole, KB.Contributor);
-/
-create user role Manager (System.User, HD.ManagerRole, KB.Contributor);
-/
--- navigation PROFILE: Responsive
---   Kind: Responsive
-create or replace navigation Responsive
-  home page MyFirstModule.Home_Web
-  home page HD.Ticket_Overview for Customer
-  home page HD.Ticket_Overview for Agent
-  home page HD.EscalationWorkflow_Overview for Manager
-  login page Administration.login
-  menu (
-    menu item '我的工单' page HD.Ticket_Overview;
-    menu item '知识库' page KB.Article_Overview;
-    menu '工单管理' (
-      menu item '所有工单' page HD.Ticket_Overview;
-      menu item '升级审批' page HD.EscalationWorkflow_Overview;
-      menu item '工作流管理' page HD.EscalationWorkflow_Overview;
-    );
-    menu item '系统管理' page Administration.Account_Overview;
-  )
-;
-
-create or modify page KB.Article_Overview (
-  title: 'Knowledge Base',
-  layout: Atlas_Core.Atlas_Default,
-  folder: 'Article'
-) {
-  layoutgrid lgMain {
+create or modify page MyFirstModule.Home_Web (title: 'Homepage', layout: Atlas_Core.Atlas_TopBar) {
+  layoutgrid layoutGrid3 (designproperties: ['Row gap': 'Large']) {
     row row1 {
-      column col1 (desktopwidth: 12) {
-        datagrid dgArticles (datasource: database from KB.Article) {
-          -- Context: $currentObject (KB.Article), $dgArticles (selection)
-          column colTitle (attribute: Title, caption: 'Title')
-          column colStatus (attribute: Status, caption: 'Status')
-        }
-        actionbutton btnNewArticle (caption: 'New Article')
-      }
-    }
-  }
-}
-
-grant view on page KB.Article_Overview to KB.Reader, KB.Contributor, KB.Admin;
-create or modify page KB.Article_Detail (
-  title: 'Article',
-  layout: Atlas_Core.Atlas_Default,
-  folder: 'Article',
-  params: { $Article: KB.Article }
-) {
-  layoutgrid lgMain {
-    row row1 {
-      column col1 (desktopwidth: 9) {
-        dataview dvArticle (datasource: $Article) {
-          -- Context: $currentObject (Article)
-          dynamictext txtTitle (content: 'Article Title', rendermode: H1)
-          dynamictext txtContent_ (content: 'Article Body Text')
-        }
-      }
-      column col2 (desktopwidth: 3) {
-        datagrid dgRatings (datasource: database from KB.ArticleRating) {
-          -- Context: $currentObject (KB.ArticleRating), $dgRatings (selection)
-          column colScore (attribute: Score, caption: 'Score')
-          column colComment (attribute: Comment, caption: 'Comment')
-        }
-      }
-    }
-  }
-}
-
-grant view on page KB.Article_Detail to KB.Reader, KB.Contributor, KB.Admin;
-create or modify page KB.Article_NewEdit (
-  title: 'New / Edit Article',
-  layout: Atlas_Core.Atlas_Default,
-  folder: 'Article',
-  params: { $Article: KB.Article }
-) {
-  layoutgrid lgMain {
-    row row1 {
-      column col1 (desktopwidth: 12) {
-        dataview dvArticleForm (datasource: $Article) {
-          -- Context: $currentObject (Article)
-          textbox tbTitle (attribute: Title)
-          textarea taContent (attribute: Content)
-          textbox tbStatus (attribute: Title)
-          textbox tbPublishedAt (attribute: Title)
-          footer footer1 {
-            actionbutton btnSave (caption: 'Save', action: save_changes close_page, buttonstyle: primary)
-            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
-          }
-        }
-      }
-    }
-  }
-}
-create or modify page HD.Ticket_Overview (title: 'Tickets', layout: Atlas_Core.Atlas_Default, folder: 'Ticket') {
-  layoutgrid lgMain {
-    row row1 {
-      column col1 (desktopwidth: 12) {
-        datagrid dgTickets (datasource: database from HD.Ticket) {
-          -- Context: $currentObject (HD.Ticket), $dgTickets (selection)
-          column colSubject (attribute: Subject, caption: 'Subject')
-          column colStatus (attribute: Status, caption: 'Status')
-          column colPriority (attribute: Priority, caption: 'Priority')
-          column colSLADueAt (attribute: SLADueAt, caption: 'SLA Due')
-          column colIsOverSLA (attribute: IsOverSLA, caption: 'Overdue')
-        }
-        actionbutton btnNewTicket (caption: 'New Ticket')
-      }
-    }
-  }
-}
-
-grant view on page HD.Ticket_Overview to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-create or modify page HD.Ticket_Detail (
-  title: 'Ticket',
-  layout: Atlas_Core.Atlas_Default,
-  folder: 'Ticket',
-  params: { $Ticket: HD.Ticket }
-) {
-  layoutgrid lgMain {
-    row row1 {
-      column col1 (desktopwidth: 12) {
-        dataview dvTicket (datasource: $Ticket) {
-          -- Context: $currentObject (Ticket)
-          dynamictext txtSubject (content: 'Ticket Subject', rendermode: H2)
-          dynamictext txtStatus (content: 'Ticket Status')
-          dynamictext txtPriority (content: 'Ticket Priority')
-          actionbutton btnSubmit (caption: 'Submit')
-          actionbutton btnResolve (caption: 'Resolve')
-          actionbutton btnReopen (caption: 'Reopen')
-        }
+      column col1 (desktopwidth: AutoFill) {
+        dynamictext text1 (content: 'Tekst', rendermode: H1)
       }
     }
     row row2 {
-      column col1 (desktopwidth: 12) {
-        datagrid dgComments (datasource: database from HD.TicketComment) {
-          -- Context: $currentObject (HD.TicketComment), $dgComments (selection)
-          column colContent (attribute: Content, caption: 'Comment')
-          column colIsInternal (attribute: IsInternal, caption: 'Internal')
+      column col1 (desktopwidth: AutoFill) {
+        layoutgrid layoutGrid1 {
+          row row1 {
+            column col1 (desktopwidth: AutoFill) {
+              image image8 (widthunit: pixels, width: 36, heightunit: pixels, height: 36)
+            }
+            column col2 (desktopwidth: AutoFill) {
+              dynamictext text23 (content: 'Define and organize your data', rendermode: H2)
+            }
+          }
+          row row2 {
+            column col1 (desktopwidth: AutoFill) {
+              dynamictext text3 (content: 'Tekst', designproperties: ['Color': 'Detail color'])
+            }
+          }
+          row row3 {
+            column col1 (desktopwidth: AutoFill) {
+              dynamictext text21 (content: 'Domain model', rendermode: H4)
+              image image7
+              dynamictext text22 (
+                content: 'A well-structured Domain Model forms the foundation for the components and pages you''ll build next.',
+                rendermode: Paragraph,
+                designproperties: ['Color': 'Detail color']
+              )
+              actionbutton actionButton4 (caption: 'Learn more')
+            }
+          }
         }
       }
     }
-  }
-}
-
-grant view on page HD.Ticket_Detail to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-create or modify page HD.Ticket_NewEdit (
-  title: 'New / Edit Ticket',
-  layout: Atlas_Core.Atlas_Default,
-  folder: 'Ticket',
-  params: { $Ticket: HD.Ticket }
-) {
-  layoutgrid lgMain {
-    row row1 {
-      column col1 (desktopwidth: 12) {
-        dataview dvTicketForm (datasource: $Ticket) {
-          -- Context: $currentObject (Ticket)
-          textbox tbSubject (attribute: Subject)
-          textarea taDescription (attribute: Description)
-          textbox tbStatus (attribute: Subject)
-          textbox tbPriority (attribute: Subject)
-          textbox tbSLADueAt (attribute: Subject)
-          footer footer1 {
-            actionbutton btnSave (caption: 'Save', action: save_changes close_page, buttonstyle: primary)
-            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+    row row3 {
+      column col1 (desktopwidth: AutoFill) {
+        layoutgrid layoutGrid5 {
+          row row1 {
+            column col1 (desktopwidth: AutoFill) {
+              image image13 (widthunit: pixels, width: 36, heightunit: pixels, height: 36)
+            }
+            column col2 (desktopwidth: AutoFill) {
+              dynamictext text31 (content: 'Add and connect widgets to your page', rendermode: H2)
+            }
+          }
+          row row2 {
+            column col1 (desktopwidth: AutoFill) {
+              dynamictext text5 (content: 'Tekst', rendermode: Paragraph, designproperties: ['Color': 'Detail color'])
+              dynamictext text2 (
+                content: 'Here are a few commonly used widgets:',
+                designproperties: ['Color': 'Detail color']
+              )
+            }
+          }
+          row row3 {
+            column col1 (desktopwidth: AutoFill) {
+              dynamictext text32 (content: 'Combo box', rendermode: H4)
+              image image14
+              dynamictext text33 (
+                content: 'Let users select one or multiple options from a static list, an enumeration, or dynamic data - ideal for input forms.',
+                rendermode: Paragraph,
+                designproperties: ['Color': 'Detail color']
+              )
+              actionbutton actionButton8 (caption: 'Learn more')
+            }
+            column col2 (desktopwidth: AutoFill) {
+              dynamictext text34 (content: 'Data grid 2', rendermode: H4)
+              image image15
+              dynamictext text35 (
+                content: 'A powerful, modern table for displaying data with flexible layouts, sorting, filtering, and styling options.',
+                rendermode: Paragraph,
+                designproperties: ['Color': 'Detail color']
+              )
+              actionbutton actionButton9 (caption: 'Learn more')
+            }
+            column col3 (desktopwidth: AutoFill) {
+              dynamictext text36 (content: 'Gallery', rendermode: H4)
+              image image16
+              dynamictext text37 (
+                content: 'Present a collection of items or  images in a sleep, responsive grid. Great for product overviews, image galleries, or lists.',
+                rendermode: Paragraph,
+                designproperties: ['Color': 'Detail color']
+              )
+              actionbutton actionButton10 (caption: 'Learn more')
+            }
+          }
+        }
+      }
+    }
+    row row4 {
+      column col1 (desktopwidth: AutoFill) {
+        layoutgrid layoutGrid2 {
+          row row1 {
+            column col1 (desktopwidth: AutoFill) {
+              image image9 (widthunit: pixels, width: 36, heightunit: pixels, height: 36)
+            }
+            column col2 (desktopwidth: AutoFill) {
+              dynamictext text24 (content: 'Add logic with Microflows, Nanoflows, and Workflows', rendermode: H2)
+            }
+          }
+          row row2 {
+            column col1 (desktopwidth: AutoFill) {
+              dynamictext text4 (content: 'Tekst', designproperties: ['Color': 'Detail color'])
+            }
+          }
+          row row3 {
+            column col1 (desktopwidth: AutoFill) {
+              layoutgrid layoutGrid4 {
+                row row1 {
+                  column col1 (desktopwidth: AutoFill) {
+                    image image20 (widthunit: pixels, width: 48)
+                  }
+                  column col2 (desktopwidth: AutoFill) {
+                    dynamictext text45 (content: 'Microflows', rendermode: H4)
+                  }
+                }
+              }
+              dynamictext text46 (
+                content: 'Server-side logic used for data processing, validations, integrations, or any action that requires access to the database',
+                rendermode: Paragraph,
+                designproperties: ['Color': 'Detail color']
+              )
+              actionbutton actionButton13 (caption: 'Learn more')
+            }
+            column col2 (desktopwidth: AutoFill) {
+              layoutgrid layoutGrid6 {
+                row row1 {
+                  column col1 (desktopwidth: AutoFill) {
+                    image image11 (widthunit: pixels, width: 48)
+                  }
+                  column col2 (desktopwidth: AutoFill) {
+                    dynamictext text47 (content: 'Nanoflows', rendermode: H4)
+                  }
+                }
+              }
+              dynamictext text28 (
+                content: 'Client-side logic for fast, lightweight actions like toggling visibility, showing messages, or offline behavior on mobile.',
+                rendermode: Paragraph,
+                designproperties: ['Color': 'Detail color']
+              )
+              actionbutton actionButton6 (caption: 'Learn more')
+            }
+            column col3 (desktopwidth: AutoFill) {
+              layoutgrid layoutGrid7 {
+                row row1 {
+                  column col1 (desktopwidth: AutoFill) {
+                    image image18 (widthunit: pixels, width: 48)
+                  }
+                  column col2 (desktopwidth: AutoFill) {
+                    dynamictext text48 (content: 'Workflows', rendermode: H4)
+                  }
+                }
+              }
+              dynamictext text30 (
+                content: 'Ideal for modeling long-running, human-centric processes like approvals or reviews. Design multistep flows that include user tasks, decisions, and automated steps.',
+                rendermode: Paragraph,
+                designproperties: ['Color': 'Detail color']
+              )
+              actionbutton actionButton11 (caption: 'Learn more')
+            }
           }
         }
       }
     }
   }
 }
-create or modify page HD.TicketSearch_Form (
-  title: 'Search Tickets',
-  layout: Atlas_Core.PopupLayout,
-  folder: 'Ticket/Search',
-  params: { $Search: HD.TicketSearch }
-) {
-  dataview dvSearch (datasource: $Search) {
-    -- Context: $currentObject (Search)
-    textbox tbKeyword (attribute: SubjectKeyword)
-    textbox tbStatus (attribute: SubjectKeyword)
-    textbox tbPriority (attribute: SubjectKeyword)
-  }
-  actionbutton btnClose (caption: 'Close')
-}
-
-grant view on page HD.TicketSearch_Form to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-create or modify page HD.EscalationReview_Form (
-  title: 'Escalation Review',
-  layout: Atlas_Core.Atlas_Default,
-  folder: 'Escalation',
-  params: { $WorkflowUserTask: System.WorkflowUserTask }
-) {
-  layoutgrid lgMain {
-    row row1 {
-      column col1 (desktopwidth: 12) {
-        dynamictext txtTitle (content: 'Manager Review', rendermode: H2)
-      }
-    }
-  }
-}
-
-grant view on page HD.EscalationReview_Form to HD.ManagerRole;
-create or modify page HD.EscalationWorkflow_Overview (
-  title: 'Escalation Workflow',
-  layout: Atlas_Core.Atlas_Default,
-  folder: 'Escalation'
-) {
-  layoutgrid lgMain {
-    row row1 {
-      column col1 (desktopwidth: 12) {
-        dynamictext txtTitle (content: 'Escalation Overview', rendermode: H2)
-      }
-    }
-  }
-}
-
-grant view on page HD.EscalationWorkflow_Overview to HD.ManagerRole;
-create or modify page HD.EscalationStart_Form (
-  title: 'Request Escalation',
-  layout: Atlas_Core.PopupLayout,
-  folder: 'Escalation'
-) {
-  layoutgrid lgMain {
-    row row1 {
-      column col1 (desktopwidth: 12) {
-        dynamictext txtPlaceholder (content: 'Escalation reason form.')
-      }
-    }
-  }
-}
+create or modify microflow MyFirstModule.MyFirstLogic ()
+begin
+  return;
+end;
+/

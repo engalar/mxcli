@@ -1,4 +1,4 @@
-@Position(100, 100)
+@Position(1100, 180)
 create or modify persistent entity KB.Category (
   Name: String(200) not null,
   Description: String(500)
@@ -10,7 +10,7 @@ grant KB.Contributor on KB.Category (create, read *, write *);
 
 grant KB.Admin on KB.Category (create, delete, read *, write *);
 /
-@Position(250, 100)
+@Position(50, 50)
 create or modify persistent entity KB.Tag (
   Name: String(100) not null unique
 );
@@ -21,7 +21,7 @@ grant KB.Contributor on KB.Tag (create, read *, write *);
 
 grant KB.Admin on KB.Tag (create, delete, read *, write *);
 /
-@Position(400, 100)
+@Position(750, 50)
 create or modify persistent entity KB.Article (
   Title: String(500) not null,
   Content: String,
@@ -38,7 +38,7 @@ grant KB.Contributor on KB.Article (create, delete, read *, write *);
 
 grant KB.Admin on KB.Article (create, delete, read *, write *);
 /
-@Position(550, 100)
+@Position(400, 50)
 create or modify persistent entity KB.ArticleTag (
 );
 
@@ -48,7 +48,7 @@ grant KB.Contributor on KB.ArticleTag (create, delete, read *, write *);
 
 grant KB.Admin on KB.ArticleTag (create, delete, read *, write *);
 /
-@Position(700, 100)
+@Position(1100, 50)
 create or modify persistent entity KB.ArticleRating (
   Score: Integer not null,
   Comment: String(1000)
@@ -61,7 +61,7 @@ grant KB.Contributor on KB.ArticleRating (create, delete, read *, write *);
 
 grant KB.Admin on KB.ArticleRating (create, delete, read *, write *);
 /
-@Position(100, 100)
+@Position(750, 50)
 create or modify persistent entity HD.Customer (
   Name: String(200) not null,
   Email: String(200) not null,
@@ -76,7 +76,7 @@ grant HD.AgentRole on HD.Customer (read *);
 
 grant HD.ManagerRole on HD.Customer (read *, write *);
 /
-@Position(250, 100)
+@Position(50, 50)
 create or modify persistent entity HD.Agent (
   Name: String(200) not null,
   Email: String(200) not null,
@@ -87,7 +87,7 @@ grant HD.AgentRole on HD.Agent (read *);
 
 grant HD.ManagerRole on HD.Agent (read *, write *);
 /
-@Position(400, 100)
+@Position(400, 50)
 create or modify persistent entity HD.Ticket (
   Subject: String(500) not null,
   Description: String,
@@ -108,7 +108,7 @@ grant HD.AgentRole on HD.Ticket (create, read *, write *);
 
 grant HD.ManagerRole on HD.Ticket (create, delete, read *, write *);
 /
-@Position(550, 100)
+@Position(750, 200)
 create or modify persistent entity HD.TicketComment (
   Content: String not null,
   IsInternal: Boolean default false
@@ -120,7 +120,7 @@ grant HD.AgentRole on HD.TicketComment (create, read *, write *);
 
 grant HD.ManagerRole on HD.TicketComment (create, delete, read *, write *);
 /
-@Position(700, 100)
+@Position(750, 330)
 create or modify persistent entity HD.EscalationRequest (
   Reason: String(1000) not null,
   RequestedAt: DateTime,
@@ -131,7 +131,7 @@ grant HD.AgentRole on HD.EscalationRequest (create, read *);
 
 grant HD.ManagerRole on HD.EscalationRequest (create, delete, read *, write *);
 /
-@Position(850, 100)
+@Position(1300, 50)
 create or modify non-persistent entity HD.TicketSearch (
   SubjectKeyword: String(200),
   StatusFilter: HD.TicketStatus,
@@ -890,7 +890,7 @@ create or modify page KB.Article_Overview (
 ) {
   gallery artGallery (datasource: database from KB.Article sort by PublishedAt asc, selection: Single) {
     filter filter1 {
-      dropdownfilter fStatus
+      dropdownfilter fStatus (attributes: [Status])
     }
     template template1 {
       -- Context: $currentObject (KB.Article)
