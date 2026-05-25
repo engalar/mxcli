@@ -1,4 +1,4 @@
-@Position(1100, 180)
+@Position(750, 160)
 create or modify persistent entity KB.Category (
   Name: String(200) not null,
   Description: String(500)
@@ -10,7 +10,7 @@ grant KB.Contributor on KB.Category (create, read *, write *);
 
 grant KB.Admin on KB.Category (create, delete, read *, write *);
 /
-@Position(50, 50)
+@Position(1100, 50)
 create or modify persistent entity KB.Tag (
   Name: String(100) not null unique
 );
@@ -21,7 +21,7 @@ grant KB.Contributor on KB.Tag (create, read *, write *);
 
 grant KB.Admin on KB.Tag (create, delete, read *, write *);
 /
-@Position(750, 50)
+@Position(400, 50)
 create or modify persistent entity KB.Article (
   Title: String(500) not null,
   Content: String,
@@ -38,7 +38,7 @@ grant KB.Contributor on KB.Article (create, delete, read *, write *);
 
 grant KB.Admin on KB.Article (create, delete, read *, write *);
 /
-@Position(400, 50)
+@Position(750, 50)
 create or modify persistent entity KB.ArticleTag (
 );
 
@@ -48,7 +48,7 @@ grant KB.Contributor on KB.ArticleTag (create, delete, read *, write *);
 
 grant KB.Admin on KB.ArticleTag (create, delete, read *, write *);
 /
-@Position(1100, 50)
+@Position(50, 50)
 create or modify persistent entity KB.ArticleRating (
   Score: Integer not null,
   Comment: String(1000)
@@ -108,7 +108,7 @@ grant HD.AgentRole on HD.Ticket (create, read *, write *);
 
 grant HD.ManagerRole on HD.Ticket (create, delete, read *, write *);
 /
-@Position(750, 200)
+@Position(750, 350)
 create or modify persistent entity HD.TicketComment (
   Content: String not null,
   IsInternal: Boolean default false
@@ -120,7 +120,7 @@ grant HD.AgentRole on HD.TicketComment (create, read *, write *);
 
 grant HD.ManagerRole on HD.TicketComment (create, delete, read *, write *);
 /
-@Position(750, 330)
+@Position(750, 200)
 create or modify persistent entity HD.EscalationRequest (
   Reason: String(1000) not null,
   RequestedAt: DateTime,

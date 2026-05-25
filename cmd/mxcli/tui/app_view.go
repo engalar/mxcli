@@ -118,13 +118,156 @@ func buildDiagramHTML(elkJSON, nodeType, qualifiedName string) string {
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html><head><title>%s %s</title>
 <script src="https://cdn.jsdelivr.net/npm/elkjs@0.9.3/lib/elk.bundled.js"></script>
-<style>body{margin:0;background:#1e1e2e;color:#cdd6f4;font-family:monospace}svg{width:100vw;height:100vh}</style>
+<style>
+body{margin:0;background:#1e1e2e;color:#cdd6f4;font-family:monospace;overflow:hidden}
+svg{width:100vw;height:100vh}
+</style>
 </head><body><div id="diagram"></div><script>
-const elkData = %s;
+const RAW = %s;
+const NS = "http://www.w3.org/2000/svg";
+
+// Colours keyed by entity category
+const CAT_FILL = {persistent:"#313244",nonpersistent:"#2a2a3e",external:"#2d2b3e",view:"#1e2d3e"};
+const CAT_HEAD  = {persistent:"#89b4fa",nonpersistent:"#a6e3a1",external:"#fab387",view:"#94e2d5"};
+const ASSOC_STROKE = "#585b70";
+const GEN_STROKE   = "#f5c2e7";
+const ATTR_H = 18, HDR_H = 28, PAD = 12;
+
+function toELKGraph(d) {
+  const children = (d.entities||[]).map(e=>({
+    id: e.id, width: e.width, height: e.height,
+    layoutOptions:{"elk.portConstraints":"FIXED_SIDE"},
+    ports: [
+      {id:e.id+":L", x:0,          y:e.height/2, width:0,height:0,
+       layoutOptions:{"elk.port.side":"WEST"}},
+      {id:e.id+":R", x:e.width,    y:e.height/2, width:0,height:0,
+       layoutOptions:{"elk.port.side":"EAST"}},
+      {id:e.id+":T", x:e.width/2,  y:0,          width:0,height:0,
+       layoutOptions:{"elk.port.side":"NORTH"}},
+      {id:e.id+":B", x:e.width/2,  y:e.height,   width:0,height:0,
+       layoutOptions:{"elk.port.side":"SOUTH"}},
+    ]
+  }));
+  const edges = [];
+  (d.associations||[]).forEach(a=>{
+    edges.push({id:a.id, sources:[a.sourceId], targets:[a.targetId], _assoc:a});
+  });
+  (d.generalizations||[]).forEach((g,i)=>{
+    edges.push({id:"gen-"+i, sources:[g.childId], targets:[g.parentId], _gen:true});
+  });
+  return {
+    id:"root",
+    layoutOptions:{
+      "elk.algorithm":"layered",
+      "elk.direction":"RIGHT",
+      "elk.spacing.nodeNode":"40",
+      "elk.layered.spacing.nodeNodeBetweenLayers":"80",
+      "elk.edgeRouting":"ORTHOGONAL",
+    },
+    children, edges
+  };
+}
+
+function svgEl(tag, attrs, parent) {
+  const el = document.createElementNS(NS, tag);
+  for (const [k,v] of Object.entries(attrs)) el.setAttribute(k,v);
+  if (parent) parent.appendChild(el);
+  return el;
+}
+
+function renderEdgePath(edge, svg) {
+  if (!edge.sections||!edge.sections.length) return;
+  const isGen = !!edge._gen;
+  edge.sections.forEach(sec=>{
+    const pts = [sec.startPoint, ...(sec.bendPoints||[]), sec.endPoint];
+    const d = pts.map((p,i)=>(i===0?"M":"L")+p.x+" "+p.y).join(" ");
+    svgEl("path",{d, stroke: isGen?GEN_STROKE:ASSOC_STROKE,
+      "stroke-width":"1.5", fill:"none",
+      "marker-end": isGen?"url(#arr-gen)":"url(#arr-assoc)"
+    }, svg);
+  });
+  // Label
+  const a = edge._assoc;
+  if (a&&a.name&&edge.sections[0]) {
+    const mid = edge.sections[0].startPoint;
+    const end = edge.sections[edge.sections.length-1].endPoint;
+    const lx = (mid.x+end.x)/2, ly = (mid.y+end.y)/2;
+    const t = svgEl("text",{x:lx,y:ly-4,"text-anchor":"middle",
+      "font-size":"10","fill":"#a6adc8"}, svg);
+    t.textContent = a.name;
+  }
+}
+
+function renderEntity(node, svg, byID) {
+  const raw = byID[node.id]||{name:node.id,category:"persistent",attributes:[]};
+  const cat = raw.category||"persistent";
+  const fill = CAT_FILL[cat]||"#313244";
+  const hdr  = CAT_HEAD[cat]||"#89b4fa";
+  const g = svgEl("g",{transform:"translate("+node.x+","+node.y+")"}, svg);
+
+  // Shadow
+  svgEl("rect",{x:2,y:2,width:node.width,height:node.height,rx:4,
+    fill:"rgba(0,0,0,.4)"}, g);
+  // Body
+  svgEl("rect",{x:0,y:0,width:node.width,height:node.height,rx:4,
+    fill, stroke: raw.isFocus?"#cba6f7":"#45475a","stroke-width": raw.isFocus?"2":"1"}, g);
+  // Header band
+  svgEl("rect",{x:0,y:0,width:node.width,height:HDR_H,rx:4,fill:hdr,"fill-opacity":"0.25"}, g);
+  svgEl("rect",{x:0,y:HDR_H-2,width:node.width,height:2,fill:hdr,"fill-opacity":"0.3"}, g);
+
+  const nameEl = svgEl("text",{x:node.width/2,y:HDR_H-8,
+    "text-anchor":"middle","font-size":"12","font-weight":"bold",
+    fill:hdr}, g);
+  nameEl.textContent = raw.name;
+
+  (raw.attributes||[]).forEach((attr,i)=>{
+    const y = HDR_H + 4 + i*ATTR_H;
+    const row = svgEl("g",{transform:"translate(0,"+y+")"}, g);
+    const t = svgEl("text",{x:PAD,y:12,"font-size":"10",fill:"#cdd6f4"}, row);
+    t.textContent = attr.name;
+    const tt = svgEl("text",{x:node.width-PAD,y:12,"text-anchor":"end",
+      "font-size":"10",fill:"#6c7086"}, row);
+    tt.textContent = attr.type;
+  });
+}
+
 const ELK = new ELKConstructor();
-ELK.layout(elkData).then(graph=>{
-  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+ELK.layout(toELKGraph(RAW)).then(graph=>{
+  const byID = {};
+  (RAW.entities||[]).forEach(e=>{ byID[e.id]=e; });
+
+  let minX=Infinity,minY=Infinity,maxX=0,maxY=0;
+  (graph.children||[]).forEach(n=>{
+    minX=Math.min(minX,n.x); minY=Math.min(minY,n.y);
+    maxX=Math.max(maxX,n.x+n.width); maxY=Math.max(maxY,n.y+n.height);
+  });
+  const pad=40;
+  const vw=maxX-minX+pad*2, vh=maxY-minY+pad*2;
+
+  const svg=svgEl("svg",{
+    viewBox:(minX-pad)+" "+(minY-pad)+" "+vw+" "+vh,
+    xmlns:NS
+  });
+
+  // Arrowhead markers
+  const defs=svgEl("defs",{},svg);
+  function marker(id,color){
+    const m=svgEl("marker",{id,markerWidth:"8",markerHeight:"8",
+      refX:"6",refY:"3",orient:"auto"},defs);
+    svgEl("path",{d:"M0,0 L0,6 L8,3 z",fill:color},m);
+  }
+  marker("arr-assoc",ASSOC_STROKE);
+  marker("arr-gen",GEN_STROKE);
+
+  // Edges first (drawn behind entities)
+  (graph.edges||[]).forEach(e=>renderEdgePath(e,svg));
+
+  // Entities on top
+  (graph.children||[]).forEach(n=>renderEntity(n,svg,byID));
+
   document.getElementById("diagram").appendChild(svg);
+}).catch(err=>{
+  document.getElementById("diagram").textContent="Layout error: "+err;
 });
 </script></body></html>`, nodeType, qualifiedName, elkJSON)
 }
