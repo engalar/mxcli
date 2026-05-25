@@ -1,45 +1,4 @@
 #!/bin/sh
-# Installed by code-review-graph. Remove this file to disable pre-commit graph checks.
-if command -v code-review-graph >/dev/null 2>&1; then
-    code-review-graph detect-changes --brief || true
-fi
-
-# Validate .claude/skills/ structure: skills must be skill-name/SKILL.md, not loose .md files
-invalid_skills=""
-for f in $(git diff --cached --name-only --diff-filter=ACR | grep '^\.claude/skills/'); do
-    base=$(basename "$f")
-    # Allow README.md at any level
-    if [ "$base" = "README.md" ]; then
-        continue
-    fi
-    # Valid: .claude/skills/<name>/SKILL.md or .claude/skills/<ns>/<name>/SKILL.md
-    if [ "$base" != "SKILL.md" ] && echo "$f" | grep -qE '\.md$'; then
-        invalid_skills="$invalid_skills\n  $f"
-    fi
+for check in "$(dirname "$0")"/checks/*.sh; do
+    sh "$check" || exit 1
 done
-if [ -n "$invalid_skills" ]; then
-    echo "ERROR: Invalid skill file structure detected."
-    echo "Skills must use folder/SKILL.md format, not loose .md files."
-    echo ""
-    echo "Invalid files:"
-    printf "$invalid_skills\n"
-    echo ""
-    echo "Fix: mkdir .claude/skills/<skill-name> && mv <file>.md .claude/skills/<skill-name>/SKILL.md"
-    exit 1
-fi
-
-# Run unit tests (L1: fast, no external deps, no Docker)
-LOG_FILE="$(git rev-parse --show-toplevel)/.test-fail.log"
-rm -f "$LOG_FILE"
-
-echo "pre-commit: running unit tests..."
-if ! CGO_ENABLED=0 go test ./... > "$LOG_FILE" 2>&1; then
-    echo "" >&2
-    echo "COMMIT BLOCKED: unit tests failed." >&2
-    echo "" >&2
-    cat "$LOG_FILE" >&2
-    exit 1
-fi
-
-rm -f "$LOG_FILE"
-echo "pre-commit: unit tests passed."
