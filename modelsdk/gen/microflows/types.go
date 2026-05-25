@@ -11017,7 +11017,7 @@ func (o *TextTemplate) SetText(v element.Element) {
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *TextTemplate) InitFromRaw(raw bson.Raw) {
-	if children, err := codec.DecodeChildren(raw, "Arguments"); err == nil {
+	if children, err := codec.DecodeChildren(raw, "Parameters"); err == nil {
 		for _, child := range children {
 			o.arguments.AppendFromDecode(child)
 		}
@@ -16182,7 +16182,7 @@ func NewTemplateArgument() *TemplateArgument {
 func initTextTemplate() *TextTemplate {
 	o := &TextTemplate{}
 	o.SetTypeName("Microflows$TextTemplate")
-	o.arguments = property.NewPartList[element.Element]("Arguments")
+	o.arguments = property.NewPartList[element.Element]("Parameters")
 	o.arguments.Bind(&o.Base, 0)
 	o.text = property.NewPart[element.Element]("Text")
 	o.text.Bind(&o.Base, 1)

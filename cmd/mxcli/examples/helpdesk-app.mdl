@@ -25,6 +25,7 @@
 --   Security  : XPath row-level filters, module/user role mapping,
 --               page/microflow grants, demo users
 --   Navigation: role-derived menu visibility (no roles() on menu items)
+--   ValidationFeedback: multi-field accumulate pattern, single-field bail-early pattern
 --
 -- Validation:
 --   ./bin/mxcli check mdl-examples/use-cases/helpdesk/helpdesk-app.mdl
@@ -244,6 +245,44 @@ begin
   end if;
   commit $Ticket;
   return true;
+end;
+/
+
+-- ACT_Ticket_Validate: multi-field validation feedback demo
+-- Edge cases:
+--   accumulate pattern — collect ALL field errors before returning false
+--     (shows all red fields at once, unlike bail-early in ACT_Ticket_Submit)
+--   plain attribute path: validation feedback $Obj/Attr message '...';
+--   objects clause: validation feedback $Obj/Attr message '{1}...' objects [$Obj/Attr];
+--     (objects provides template args for {1}/{2}/... placeholders in message)
+create or modify microflow HD.ACT_Ticket_Validate
+  ($Ticket: HD.Ticket)
+  returns boolean as $Valid
+  folder 'Ticket'
+begin
+  declare $Valid boolean = true;
+
+  -- Plain form: no template args, bail-early on empty subject
+  if $Ticket/Subject = '' then
+    validation feedback $Ticket/Subject message 'Subject is required.';
+    set $Valid = false;
+  else
+    -- objects form: {1} placeholder bound to the attribute value via objects clause
+    if length($Ticket/Subject) < 3 then
+      validation feedback $Ticket/Subject message 'Subject ''{1}'' is too short (minimum 3 characters).' objects [$Ticket/Subject];
+      set $Valid = false;
+    end if;
+  end if;
+
+  -- Field: Description — required when Priority is Critical
+  if $Ticket/Priority = HD.TicketPriority.Critical then
+    if $Ticket/Description = '' or $Ticket/Description = empty then
+      validation feedback $Ticket/Description message 'Description is required for Critical tickets.';
+      set $Valid = false;
+    end if;
+  end if;
+
+  return $Valid;
 end;
 /
 
@@ -1289,6 +1328,7 @@ grant HD.ManagerRole on HD.EscalationRequest (create, read *, write *, delete);
 grant HD.ManagerRole on HD.TicketSearch (read *, write *);
 
 -- Microflow / nanoflow grants — HelpDesk
+grant execute on microflow HD.ACT_Ticket_Validate to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 grant execute on microflow HD.ACT_Ticket_Submit  to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 grant execute on microflow HD.ACT_Ticket_Assign  to HD.AgentRole, HD.ManagerRole;
 grant execute on microflow HD.ACT_Ticket_Resolve to HD.AgentRole, HD.ManagerRole;
@@ -1375,6 +1415,7 @@ move page      KB.Article_Detail               to folder 'Article';
 move page      KB.Article_NewEdit              to folder 'Article';
 
 -- HD Module — Ticket
+move microflow HD.ACT_Ticket_Validate          to folder 'Ticket';
 move microflow HD.ACT_Ticket_Submit            to folder 'Ticket';
 move microflow HD.ACT_Ticket_Assign            to folder 'Ticket';
 move microflow HD.ACT_Ticket_Resolve           to folder 'Ticket';

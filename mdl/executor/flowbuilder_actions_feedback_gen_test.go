@@ -5,6 +5,7 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -289,6 +290,134 @@ func TestClassifyValidationTargetEntityParamAsEnumRef(t *testing.T) {
 	}
 	if act.AssociationQualifiedName() != "" {
 		t.Fatalf("association should be empty, got %q", act.AssociationQualifiedName())
+	}
+}
+
+// TestAddValidationFeedbackActionGenObjectsClauseWrittenAsTemplateArgs verifies
+// that TemplateArgs (from the MDL OBJECTS [...] clause) are stored as
+// TemplateArgument children inside FeedbackTemplate.Arguments — the write path
+// that feeds the DESCRIBE roundtrip.
+func TestAddValidationFeedbackActionGenObjectsClauseWrittenAsTemplateArgs(t *testing.T) {
+	fb := newActionTestFb()
+	fb.varTypes["Ticket"] = "HD.Ticket"
+	stmt := &ast.ValidationFeedbackStmt{
+		AttributePath: &ast.AttributePathExpr{
+			Variable: "Ticket",
+			Segments: []ast.PathSegment{{Name: "Subject"}},
+		},
+		Message: &ast.SourceExpr{
+			Expression: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "Value {1} is too short."},
+			Source:     "'Value {1} is too short.'",
+		},
+		// Simulates: objects [$Ticket/Subject]
+		TemplateArgs: []ast.Expression{
+			&ast.SourceExpr{
+				Expression: &ast.AttributePathExpr{
+					Variable: "Ticket",
+					Path:     []string{"Subject"},
+					Segments: []ast.PathSegment{{Name: "Subject"}},
+				},
+				Source: "$Ticket/Subject",
+			},
+		},
+	}
+	fb.addValidationFeedbackActionGen(stmt)
+	act := actionFromObjects(t, fb).(*genMf.ValidationFeedbackAction)
+
+	tmpl, ok := act.FeedbackTemplate().(*genMf.TextTemplate)
+	if !ok {
+		t.Fatalf("template = %T, want *TextTemplate", act.FeedbackTemplate())
+	}
+	textElem := tmpl.Text().(*genTexts.Text)
+	tr := textElem.TranslationsItems()[0].(*genTexts.Translation)
+	if tr.Text() != "Value {1} is too short." {
+		t.Fatalf("template text = %q, want literal text", tr.Text())
+	}
+	args := tmpl.ArgumentsItems()
+	if len(args) != 1 {
+		t.Fatalf("arguments count = %d, want 1", len(args))
+	}
+	arg := args[0].(*genMf.TemplateArgument)
+	if arg.Expression() != "$Ticket/Subject" {
+		t.Fatalf("arg expression = %q, want $Ticket/Subject", arg.Expression())
+	}
+}
+
+// TestValidationFeedbackObjectsClauseFullRoundtrip is the end-to-end evidence:
+//
+//	write path: MDL TemplateArgs → flowbuilder → FeedbackTemplate.Arguments (BSON gen)
+//	read path:  FeedbackTemplate.Arguments → formatValidationFeedbackActionGen → objects [...]
+//
+// Both paths must agree for DESCRIBE to reproduce the original MDL statement.
+func TestValidationFeedbackObjectsClauseFullRoundtrip(t *testing.T) {
+	cases := []struct {
+		name         string
+		message      string
+		templateArgs []ast.Expression
+		wantObjects  string // expected objects [...] substring; empty = no clause
+	}{
+		{
+			name:    "single arg: attribute path roundtrips as objects [...]",
+			message: "Value {1} is too short.",
+			templateArgs: []ast.Expression{
+				&ast.AttributePathExpr{
+					Variable: "Ticket",
+					Path:     []string{"Subject"},
+					Segments: []ast.PathSegment{{Name: "Subject"}},
+				},
+			},
+			wantObjects: "objects [$Ticket/Subject]",
+		},
+		{
+			name:    "multiple args: both expressions appear in order",
+			message: "{1} already exists in {2}.",
+			templateArgs: []ast.Expression{
+				&ast.AttributePathExpr{
+					Variable: "Ticket",
+					Path:     []string{"Subject"},
+					Segments: []ast.PathSegment{{Name: "Subject"}},
+				},
+				&ast.VariableExpr{Name: "ModuleName"},
+			},
+			wantObjects: "objects [$Ticket/Subject, $ModuleName]",
+		},
+		{
+			name:         "no args: objects clause absent",
+			message:      "Field is required.",
+			templateArgs: nil,
+			wantObjects:  "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// --- write path ---
+			fb := newActionTestFb()
+			fb.varTypes["Ticket"] = "HD.Ticket"
+			stmt := &ast.ValidationFeedbackStmt{
+				AttributePath: &ast.AttributePathExpr{
+					Variable: "Ticket",
+					Path:     []string{"Subject"},
+					Segments: []ast.PathSegment{{Name: "Subject"}},
+				},
+				Message:      &ast.LiteralExpr{Kind: ast.LiteralString, Value: tc.message},
+				TemplateArgs: tc.templateArgs,
+			}
+			fb.addValidationFeedbackActionGen(stmt)
+			act := actionFromObjects(t, fb).(*genMf.ValidationFeedbackAction)
+
+			// --- read path ---
+			got := formatActionGen(nil, act)
+
+			if tc.wantObjects == "" {
+				if strings.Contains(got, "objects") {
+					t.Errorf("unexpected objects clause in %q", got)
+				}
+			} else {
+				if !strings.Contains(got, tc.wantObjects) {
+					t.Errorf("got %q\nwant substring %q", got, tc.wantObjects)
+				}
+			}
+		})
 	}
 }
 

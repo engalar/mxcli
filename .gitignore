@@ -72,4 +72,6 @@ vscode-mdl/
 .worktrees/
 
 # npm — node_modules is local-only; package.json + package-lock.json are committed
+# Both forms needed: `node_modules/` matches directories, `node_modules` matches symlinks.
+node_modules
 node_modules/
