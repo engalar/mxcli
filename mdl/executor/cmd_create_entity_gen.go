@@ -164,9 +164,38 @@ func persistEntityCanonical(ctx *ExecContext, s *ast.CreateEntityStmt, dm *genDm
 			stmt.Position = &ast.Position{X: 0, Y: 0}
 		}
 	}
+	// autoTypeToSystemMember maps pseudo-type kinds to their canonical system member name.
+	autoTypeToSystemMember := map[ast.DataTypeKind]string{
+		ast.TypeAutoOwner:       "owner",
+		ast.TypeAutoChangedBy:   "changedBy",
+		ast.TypeAutoCreatedDate: "createdDate",
+		ast.TypeAutoChangedDate: "changedDate",
+	}
+
 	if len(stmt.Attributes) > 0 {
-		attrs := make([]ast.Attribute, len(stmt.Attributes))
-		copy(attrs, stmt.Attributes)
+		// Collect existing SystemMembers into a set to avoid duplicates.
+		existingSystemMembers := make(map[string]bool, len(stmt.SystemMembers))
+		for _, m := range stmt.SystemMembers {
+			existingSystemMembers[m] = true
+		}
+
+		var filteredAttrs []ast.Attribute
+		extraSystemMembers := stmt.SystemMembers
+		for _, attr := range stmt.Attributes {
+			if memberName, isAuto := autoTypeToSystemMember[attr.Type.Kind]; isAuto {
+				// Promote to system member; skip adding to attributes.
+				if !existingSystemMembers[memberName] {
+					extraSystemMembers = append(extraSystemMembers, memberName)
+					existingSystemMembers[memberName] = true
+				}
+				continue
+			}
+			filteredAttrs = append(filteredAttrs, attr)
+		}
+		stmt.SystemMembers = extraSystemMembers
+
+		attrs := make([]ast.Attribute, len(filteredAttrs))
+		copy(attrs, filteredAttrs)
 		for i := range attrs {
 			if attrs[i].Type.Kind == ast.TypeBoolean && !attrs[i].HasDefault {
 				attrs[i].HasDefault = true

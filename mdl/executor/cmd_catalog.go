@@ -344,6 +344,13 @@ func buildCatalog(ctx *ExecContext, full bool, source ...bool) error {
 		full = true // source implies full
 	}
 
+	// Invalidate the backend's unit-list cache before reading so that
+	// documents created via the executor in the same session are visible.
+	// Without this, the reader's unitCacheValid flag stays true and
+	// ListUnits/listUnitsByType returns stale pre-write data, causing
+	// catalog refs (buildReferences) to miss newly-created microflows.
+	ctx.Backend.InvalidateCache()
+
 	if !ctx.Quiet {
 		if isSource {
 			fmt.Fprintln(ctx.Output, "Building catalog (source mode - includes MDL source)...")

@@ -47,7 +47,7 @@ create persistent entity XpathTest.Order (
 );
 
 -- Enable System.owner so XPath can reference it
-alter entity XpathTest.Order add attribute owner: autoowner;
+alter entity XpathTest.Order set system members (owner);
 
 create persistent entity XpathTest.OrderLine (
   Quantity: integer,

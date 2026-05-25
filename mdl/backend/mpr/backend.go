@@ -94,13 +94,14 @@ func (b *MprBackend) Connect(path string) error {
 	if err != nil {
 		return err
 	}
-	mw, err := modelsdkmpr.NewWriterFromDB(r.DB(), path, r.ContentsDir())
-	if err != nil {
-		_ = r.Close()
-		return err
-	}
+	// Reuse r as the writer's internal reader so that w.reader.InvalidateCache()
+	// (called by insertUnit after every write) invalidates the same Reader that
+	// b.msdkReader points to. With separate Reader objects (old behaviour), writes
+	// only invalidated the Writer's private cache while listing methods on b.msdkReader
+	// returned stale data from their own independent unitCacheValid flag.
+	mw := modelsdkmpr.NewWriterWithReader(r)
 	b.reader = r
-	b.msdkReader = r // single reader; alias kept for *_compat.go ergonomics
+	b.msdkReader = r
 	b.msdkWriter = mw
 	b.path = path
 	return nil

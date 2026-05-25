@@ -78,6 +78,14 @@ func NewWriterFromDB(db *sql.DB, path, contentsDir string) (*Writer, error) {
 	return &Writer{reader: reader}, nil
 }
 
+// NewWriterWithReader creates a Writer that reuses an existing Reader instead of
+// opening a second reader. This ensures cache invalidation (called by insertUnit
+// via w.reader.InvalidateCache()) propagates to the same Reader object that callers
+// hold for listing — so writes are immediately visible to reads on the same backend.
+func NewWriterWithReader(r *Reader) *Writer {
+	return &Writer{reader: r}
+}
+
 // Close closes the writer.
 func (w *Writer) Close() error {
 	return w.reader.Close()

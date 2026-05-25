@@ -3,15 +3,12 @@
 -- ============================================================================
 --
 -- Mendix persistent entities support four optional system attributes for
--- built-in auditing. Declare them as pseudo-types (like AutoNumber):
+-- built-in auditing. Enable them with the system members clause:
 --
---   AutoOwner          -> System.owner association (auto-set on create)
---   AutoChangedBy      -> System.changedBy association (auto-set on commit)
---   AutoCreatedDate    -> CreatedDate: DateTime (auto-set on create)
---   AutoChangedDate    -> ChangedDate: DateTime (auto-set on commit)
+--   system members (owner, changedBy, createdDate, changedDate)
 --
--- This file demonstrates enabling these both during CREATE ENTITY
--- (as pseudo-typed attributes) and via ALTER ENTITY ADD/DROP ATTRIBUTE.
+-- This file demonstrates enabling them during CREATE ENTITY (via system
+-- members clause) and via ALTER ENTITY SET SYSTEM MEMBERS.
 --
 -- ============================================================================
 
@@ -26,12 +23,8 @@ create module SysAttrTest;
  */
 create or modify persistent entity SysAttrTest.AuditedRecord (
   title: string(200) not null,
-  Amount: decimal,
-  owner: autoowner,
-  ChangedBy: autochangedby,
-  CreatedDate: autocreateddate,
-  ChangedDate: autochangeddate
-);
+  Amount: decimal
+) system members (owner, changedBy, createdDate, changedDate);
 
 -- ============================================================================
 -- Example 2: Subset of system attributes
@@ -39,9 +32,8 @@ create or modify persistent entity SysAttrTest.AuditedRecord (
 
 create or modify persistent entity SysAttrTest.LogEntry (
   message: string(500),
-  level: string(20),
-  CreatedDate: autocreateddate
-);
+  level: string(20)
+) system members (createdDate);
 
 -- ============================================================================
 -- Example 3: ALTER ENTITY to enable flags after creation
@@ -52,24 +44,18 @@ create or modify persistent entity SysAttrTest.Customer (
   Email: string(200)
 );
 
-alter entity SysAttrTest.Customer add attribute owner: autoowner;
-alter entity SysAttrTest.Customer add attribute ChangedBy: autochangedby;
-alter entity SysAttrTest.Customer add attribute CreatedDate: autocreateddate;
-alter entity SysAttrTest.Customer add attribute ChangedDate: autochangeddate;
+alter entity SysAttrTest.Customer set system members (owner, changedBy, createdDate, changedDate);
 
 -- ============================================================================
 -- Example 4: ALTER ENTITY to disable previously enabled flags
 -- ============================================================================
 
 create or modify persistent entity SysAttrTest.TempRecord (
-  Payload: string(100),
-  owner: autoowner,
-  CreatedDate: autocreateddate
-);
+  Payload: string(100)
+) system members (owner, createdDate);
 
--- Disable both flags (drop by system attribute name)
-alter entity SysAttrTest.TempRecord drop attribute owner;
-alter entity SysAttrTest.TempRecord drop attribute CreatedDate;
+-- Re-enable only changedBy (replaces the prior owner+createdDate set)
+alter entity SysAttrTest.TempRecord set system members (changedBy);
 
 -- ============================================================================
 -- Example 5: Entity with event handlers

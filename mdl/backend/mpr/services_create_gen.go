@@ -17,6 +17,7 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
 	genDB "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
+	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genJS "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
@@ -69,6 +70,40 @@ func (b *MprBackend) createDatabaseConnectionGen(conn *model.DatabaseConnection)
 	connStr.SetValue(conn.ConnectionInputValue)
 	g.SetConnectionInput(connStr)
 
+	// Serialize queries (name + SQL + parameters + return entity + column mappings).
+	for _, q := range conn.Queries {
+		gq := genDB.NewDatabaseQuery()
+		gq.SetName(q.Name)
+		gq.SetQuery(q.SQL)
+		gq.SetQueryType(int32(q.QueryType))
+		// Parameters
+		for _, p := range q.Parameters {
+			gp := genDB.NewQueryParameter()
+			gp.SetParameterName(p.ParameterName)
+			if dt := dbDataTypeElemFromString(p.DataType); dt != nil {
+				gp.SetDataType(dt)
+			}
+			if p.DefaultValue != "" {
+				gp.SetDefaultValue(p.DefaultValue)
+			}
+			gp.SetEmptyValueBecomesNull(p.EmptyValueBecomesNull)
+			gq.AddParameters(gp)
+		}
+		// Table mappings (entity + column map)
+		for _, tm := range q.TableMappings {
+			gtm := genDB.NewTableMapping()
+			gtm.SetEntityQualifiedName(tm.Entity)
+			for _, cm := range tm.Columns {
+				gcm := genDB.NewColumnMapping()
+				gcm.SetColumnName(cm.ColumnName)
+				gcm.SetAttributeQualifiedName(cm.Attribute)
+				gtm.AddColumns(gcm)
+			}
+			gq.AddTableMappings(gtm)
+		}
+		g.AddQueries(gq)
+	}
+
 	return mprrepos.NewServiceRepository(w).Create(string(conn.ContainerID), "Documents", g)
 }
 
@@ -92,4 +127,21 @@ func (b *MprBackend) createBusinessEventServiceGen(svc *model.BusinessEventServi
 	// Definition (Part) and OperationImplementations (PartList) start empty;
 	// the executor sets them via dedicated mutator operations after create.
 	return mprrepos.NewServiceRepository(w).Create(string(svc.ContainerID), "Documents", g)
+}
+
+// dbDataTypeElemFromString converts a DataTypes$* type-name string (as stored in
+// model.DatabaseQueryParameter.DataType) to the matching gen DataType element.
+func dbDataTypeElemFromString(dt string) element.Element {
+	switch dt {
+	case "DataTypes$IntegerType":
+		return genDt.NewIntegerType()
+	case "DataTypes$DecimalType":
+		return genDt.NewDecimalType()
+	case "DataTypes$BooleanType":
+		return genDt.NewBooleanType()
+	case "DataTypes$DateTimeType":
+		return genDt.NewDateTimeType()
+	default: // DataTypes$StringType or unknown
+		return genDt.NewStringType()
+	}
 }
