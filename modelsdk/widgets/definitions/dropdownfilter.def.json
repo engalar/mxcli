@@ -4,8 +4,7 @@
   "templateFile": "datagrid-dropdown-filter.json",
   "defaultEditable": "Always",
   "propertyMappings": [
-    {"propertyKey": "attrChoice", "value": "custom", "operation": "primitive"},
-    {"propertyKey": "attributes", "source": "Attributes", "operation": "attributeObjects"},
-    {"propertyKey": "defaultFilter", "source": "FilterType", "operation": "primitive"}
+    {"propertyKey": "attrChoice", "value": "linked", "operation": "primitive"},
+    {"propertyKey": "attr", "source": "FirstAttribute", "operation": "attribute"}
   ]
 }

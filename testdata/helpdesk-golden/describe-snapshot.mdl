@@ -24,8 +24,8 @@ grant KB.Admin on KB.Tag (create, delete, read *, write *);
 @Position(400, 100)
 create or modify persistent entity KB.Article (
   Title: String(500) not null,
-  Content: String(unlimited),
-  Status: Enumeration(KB.ArticleStatus) default KB.ArticleStatus.Draft,
+  Content: String,
+  Status: KB.ArticleStatus default Draft,
   PublishedAt: DateTime,
   ViewCount: Integer default 0
 )
@@ -67,8 +67,8 @@ create or modify persistent entity HD.Customer (
   Email: String(200) not null,
   Company: String(200)
 )
-system members (owner)
-index (Email);
+index (Email)
+system members (owner);
 
 grant HD.CustomerRole on HD.Customer (read *, write *);
 
@@ -90,17 +90,17 @@ grant HD.ManagerRole on HD.Agent (read *, write *);
 @Position(400, 100)
 create or modify persistent entity HD.Ticket (
   Subject: String(500) not null,
-  Description: String(unlimited),
-  Status: Enumeration(HD.TicketStatus) default HD.TicketStatus.Draft,
-  Priority: Enumeration(HD.TicketPriority) default HD.TicketPriority.Normal,
+  Description: String,
+  Status: HD.TicketStatus default Draft,
+  Priority: HD.TicketPriority default Normal,
   SLADueAt: DateTime,
   ResolvedAt: DateTime,
   IsOverSLA: Boolean default false
 )
-system members (owner, createdDate, changedDate, changedBy)
 index (Status)
 index (Priority)
-index (SLADueAt);
+index (SLADueAt)
+system members (owner, createdDate, changedDate, changedBy);
 
 grant HD.CustomerRole on HD.Ticket (create, read (Status, Priority, SLADueAt, ResolvedAt, IsOverSLA, HD.Ticket_Customer, HD.Ticket_Agent, Subject, Description, HD.Ticket_KBArticle), write (Subject, Description, HD.Ticket_KBArticle)) where '[HD.Ticket_Customer/HD.Customer/System.owner=''[%CurrentUser%]'']';
 
@@ -110,7 +110,7 @@ grant HD.ManagerRole on HD.Ticket (create, delete, read *, write *);
 /
 @Position(550, 100)
 create or modify persistent entity HD.TicketComment (
-  Content: String(unlimited) not null,
+  Content: String not null,
   IsInternal: Boolean default false
 );
 
@@ -134,8 +134,8 @@ grant HD.ManagerRole on HD.EscalationRequest (create, delete, read *, write *);
 @Position(850, 100)
 create or modify non-persistent entity HD.TicketSearch (
   SubjectKeyword: String(200),
-  StatusFilter: Enumeration(HD.TicketStatus),
-  PriorityFilter: Enumeration(HD.TicketPriority)
+  StatusFilter: HD.TicketStatus,
+  PriorityFilter: HD.TicketPriority
 );
 
 grant HD.CustomerRole on HD.TicketSearch (read *, write *);
@@ -888,16 +888,33 @@ create or modify page KB.Article_Overview (
   layout: Atlas_Core.Atlas_Default,
   folder: 'Article'
 ) {
-  layoutgrid lgMain {
-    row row1 {
-      column col1 (desktopwidth: 12) {
-        datagrid dgArticles (datasource: database from KB.Article) {
-          -- Context: $currentObject (KB.Article), $dgArticles (selection)
-          column colTitle (attribute: Title, caption: 'Title')
-          column colStatus (attribute: Status, caption: 'Status')
-        }
-        actionbutton btnNewArticle (caption: 'New Article')
-      }
+  gallery artGallery (datasource: database from KB.Article sort by PublishedAt asc, selection: Single) {
+    filter filter1 {
+      dropdownfilter fStatus
+    }
+    template template1 {
+      -- Context: $currentObject (KB.Article)
+      dynamictext txtTitle (content: '{1}', rendermode: H4, contentparams: [{1} = $currentObject/Title])
+      dynamictext txtStatus (content: '{1}', contentparams: [{1} = toString($currentObject/Status)])
+    }
+  }
+  dataview dvArticleDetail (datasource: selection artGallery) {
+    -- Context: $currentObject (KB.Article), $artGallery (selection)
+    dynamictext txtDetailTitle (content: '{1}', rendermode: H2, contentparams: [{1} = $currentObject/Title])
+    dynamictext txtDetailStatus (content: '{1}', contentparams: [{1} = toString($currentObject/Status)])
+    dynamictext txtPublished (content: '{1}', contentparams: [{1} = toString($currentObject/PublishedAt)])
+    dynamictext txtContent (content: '{1}', contentparams: [{1} = $currentObject/Content])
+    footer footer1 {
+      actionbutton btnPublish (
+        caption: 'Publish',
+        action: microflow KB.ACT_Article_Publish(Article: $currentObject),
+        buttonstyle: primary
+      )
+      actionbutton btnArchive (
+        caption: 'Archive',
+        action: microflow KB.ACT_Article_Archive(Article: $currentObject),
+        buttonstyle: default
+      )
     }
   }
 }
@@ -954,19 +971,38 @@ create or modify page KB.Article_NewEdit (
     }
   }
 }
+
+grant view on page KB.Article_NewEdit to KB.Contributor, KB.Admin;
 create or modify page HD.Ticket_Overview (title: 'Tickets', layout: Atlas_Core.Atlas_Default, folder: 'Ticket') {
   layoutgrid lgMain {
     row row1 {
       column col1 (desktopwidth: 12) {
-        datagrid dgTickets (datasource: database from HD.Ticket) {
+        datagrid dgTickets (datasource: database from HD.Ticket sort by SLADueAt asc, pagingposition: both) {
           -- Context: $currentObject (HD.Ticket), $dgTickets (selection)
-          column colSubject (attribute: Subject, caption: 'Subject')
-          column colStatus (attribute: Status, caption: 'Status')
-          column colPriority (attribute: Priority, caption: 'Priority')
-          column colSLADueAt (attribute: SLADueAt, caption: 'SLA Due')
-          column colIsOverSLA (attribute: IsOverSLA, caption: 'Overdue')
+          controlbar controlBar1 {
+            actionbutton btnNew (
+              caption: 'New Ticket',
+              action: create_object HD.Ticket then show_page HD.Ticket_NewEdit,
+              buttonstyle: primary
+            )
+          }
+          column colSubject (attribute: Subject, caption: 'Subject') {
+            textfilter fSubject
+          }
+          column colStatus (attribute: Status, caption: 'Status', ColumnWidth: manual, Size: 120) {
+            dropdownfilter fStatus
+          }
+          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100) {
+            dropdownfilter fPriority
+          }
+          column colSLADueAt (attribute: SLADueAt, caption: 'SLA Due', ColumnWidth: manual, Size: 140) {
+            datefilter fSLADue (filtertype: equal)
+          }
+          column colIsOverSLA (attribute: IsOverSLA, caption: 'Overdue', ColumnWidth: manual, Size: 90)
+          column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 80) {
+            actionbutton btnEdit (caption: 'Edit', action: show_page HD.Ticket_Detail, buttonstyle: default)
+          }
         }
-        actionbutton btnNewTicket (caption: 'New Ticket')
       }
     }
   }
@@ -984,21 +1020,40 @@ create or modify page HD.Ticket_Detail (
       column col1 (desktopwidth: 12) {
         dataview dvTicket (datasource: $Ticket) {
           -- Context: $currentObject (Ticket)
-          dynamictext txtSubject (content: 'Ticket Subject', rendermode: H2)
-          dynamictext txtStatus (content: 'Ticket Status')
-          dynamictext txtPriority (content: 'Ticket Priority')
-          actionbutton btnSubmit (caption: 'Submit')
-          actionbutton btnResolve (caption: 'Resolve')
-          actionbutton btnReopen (caption: 'Reopen')
+          dynamictext txtSubject (content: '{1}', rendermode: H2, contentparams: [{1} = $currentObject/Subject])
+          dynamictext txtStatus (content: '{1}', contentparams: [{1} = toString($currentObject/Status)])
+          dynamictext txtPriority (content: '{1}', contentparams: [{1} = toString($currentObject/Priority)])
+          dynamictext txtSLADue (content: '{1}', contentparams: [{1} = toString($currentObject/SLADueAt)])
+          footer footer1 {
+            actionbutton btnSubmit (
+              caption: 'Submit',
+              action: microflow HD.ACT_Ticket_Submit(Ticket: $Ticket),
+              buttonstyle: primary
+            )
+            actionbutton btnResolve (
+              caption: 'Resolve',
+              action: microflow HD.ACT_Ticket_Resolve(Ticket: $Ticket),
+              buttonstyle: default
+            )
+            actionbutton btnReopen (
+              caption: 'Reopen',
+              action: microflow HD.ACT_Ticket_Reopen(Ticket: $Ticket),
+              buttonstyle: default
+            )
+            actionbutton btnAssignAgent (
+              caption: 'Assign Agent',
+              action: show_page HD.Agent_Select,
+              buttonstyle: default
+            )
+          }
         }
       }
     }
     row row2 {
       column col1 (desktopwidth: 12) {
-        datagrid dgComments (datasource: database from HD.TicketComment) {
-          -- Context: $currentObject (HD.TicketComment), $dgComments (selection)
+        datagrid dgComments {
           column colContent (attribute: Content, caption: 'Comment')
-          column colIsInternal (attribute: IsInternal, caption: 'Internal')
+          column colIsInternal (attribute: IsInternal, caption: 'Internal', ColumnWidth: manual, Size: 90)
         }
       }
     }
@@ -1031,6 +1086,8 @@ create or modify page HD.Ticket_NewEdit (
     }
   }
 }
+
+grant view on page HD.Ticket_NewEdit to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.TicketSearch_Form (
   title: 'Search Tickets',
   layout: Atlas_Core.PopupLayout,

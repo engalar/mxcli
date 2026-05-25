@@ -156,10 +156,12 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 	// gen describer's walk over the collection finds them
 	// (MicroflowParameter / NanoflowParameter tags).
 	paramElements := make([]*genMf.MicroflowParameter, 0, len(s.Parameters))
-	for _, p := range s.Parameters {
+	for i, p := range s.Parameters {
 		param := genMf.NewMicroflowParameter()
 		assignFreshID(param)
 		param.SetName(p.Name)
+		param.SetRelativeMiddlePoint(layoutPos(ParameterStartX+i*ParameterSpacingX, ParameterStartY))
+		param.SetSize(layoutSize(ParameterWidth, ParameterHeight))
 		// Studio Pro stores the type exclusively in VariableType (a
 		// DataTypes child element). The Type() string field is never set.
 		if dt := convertASTToGenDataType(p.Type); dt != nil {

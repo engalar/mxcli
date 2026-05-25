@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
 // TestExecCreateNanoflowGen_EmptyBodyRoundTrip creates a no-body
@@ -189,6 +190,60 @@ func TestExecCreateNanoflowGen_ValidationFailures(t *testing.T) {
 			t.Error("expected error when ctx.Nanoflows is nil")
 		}
 	})
+}
+
+// TestExecCreateNanoflowGen_MultiParamLayout verifies that each parameter
+// receives a unique RelativeMiddlePoint so they don't overlap in Studio Pro.
+// Regression for: parameters sharing the same default position when a
+// nanoflow has more than one parameter (e.g. HD.NF_Ticket_QuickCreate).
+func TestExecCreateNanoflowGen_MultiParamLayout(t *testing.T) {
+	w := openMprWriterForTest(t)
+	ctx := newGenNanoflowDescribeContext(t, w)
+
+	stmt := &ast.CreateNanoflowStmt{
+		CreateOrModify: true,
+		Name:           ast.QualifiedName{Module: "MyFirstModule", Name: "NF_MultiParam"},
+		Parameters: []ast.MicroflowParam{
+			{Name: "Customer", Type: ast.DataType{Kind: ast.TypeString}},
+			{Name: "Subject", Type: ast.DataType{Kind: ast.TypeString}},
+		},
+	}
+	if err := execCreateNanoflowGen(ctx, stmt); err != nil {
+		t.Fatalf("execCreateNanoflowGen: %v", err)
+	}
+
+	all, err := ctx.Nanoflows.List("")
+	if err != nil {
+		t.Fatalf("list nanoflows: %v", err)
+	}
+
+	var positions []string
+	for _, n := range all {
+		if n.Name() != "NF_MultiParam" {
+			continue
+		}
+		oc, ok := n.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if !ok || oc == nil {
+			t.Fatal("ObjectCollection missing or wrong type")
+		}
+		for _, obj := range oc.ObjectsItems() {
+			if obj == nil || obj.TypeName() != "Microflows$MicroflowParameter" {
+				continue
+			}
+			p, ok := obj.(*genMf.MicroflowParameter)
+			if !ok {
+				continue
+			}
+			positions = append(positions, p.RelativeMiddlePoint())
+		}
+	}
+
+	if len(positions) != 2 {
+		t.Fatalf("expected 2 parameter positions, got %d", len(positions))
+	}
+	if positions[0] == positions[1] {
+		t.Errorf("both parameters share the same RelativeMiddlePoint %q — they will overlap in Studio Pro", positions[0])
+	}
 }
 
 // TestExecCreateNanoflowGen_PrintsCreatedToOutput verifies the user

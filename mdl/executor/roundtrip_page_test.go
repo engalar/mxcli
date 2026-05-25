@@ -865,3 +865,73 @@ func TestRoundtripPage_V3DataGridControlBarFilter(t *testing.T) {
 	}
 	t.Logf("controlbar filter roundtrip:\n%s", out)
 }
+
+// TestRoundtripPage_GalleryDropdownFilterAttrBinding verifies that a dropdownfilter
+// inside a gallery filter bar correctly binds the Attributes list to the widget's
+// attr property (attrChoice = "linked"). Regression for: dropdownfilter.def.json used
+// wrong attrChoice value ("custom") and non-existent property key ("attributes").
+func TestRoundtripPage_GalleryDropdownFilterAttrBinding(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	enumName := testModule + ".DropFilterStatus"
+	env.registerCleanup("enumeration", enumName)
+
+	if err := env.executeMDL(`create or modify enumeration ` + enumName + ` (
+		Active,
+		Inactive
+	);`); err != nil {
+		t.Fatalf("create enumeration: %v", err)
+	}
+
+	entityName := testModule + ".GalleryDropFilterEntity"
+	env.registerCleanup("entity", entityName)
+
+	if err := env.executeMDL(`create or modify persistent entity ` + entityName + ` (
+		Title: String(100),
+		Status: ` + enumName + `
+	);`); err != nil {
+		t.Fatalf("create entity: %v", err)
+	}
+
+	pageName := testModule + ".GalleryDropFilterPage"
+	env.registerCleanup("page", pageName)
+
+	if err := env.executeMDL(`create page ` + pageName + ` (
+		Title: 'Gallery Drop Filter Test',
+		Layout: Atlas_Core.Atlas_Default
+	) {
+		gallery gal1 (DataSource: database ` + entityName + `, Selection: single) {
+			filter filterBar {
+				dropdownfilter fStatus (Attributes: [` + entityName + `.Status])
+			}
+			template tmpl1 {
+				dynamictext txtTitle (content: '{1}', contentparams: [{1} = Title])
+			}
+		}
+	}`); err != nil {
+		t.Fatalf("create page: %v", err)
+	}
+
+	out, err := env.describeMDL(`describe page ` + pageName + `;`)
+	if err != nil {
+		t.Fatalf("describe: %v", err)
+	}
+
+	// The dropdownfilter must appear as a real filter widget, not a DivContainer.
+	if !strings.Contains(out, "dropdownfilter") {
+		t.Errorf("expected dropdownfilter in describe output, got:\n%s", out)
+	}
+	if strings.Contains(out, "container fStatus") {
+		t.Errorf("dropdownfilter was serialized as plain container instead of a filter widget")
+	}
+
+	// The Attributes binding must be preserved in the BSON roundtrip.
+	// describe should emit the attribute path (Attributes: [...]) so the filter is wired.
+	// Bug: dropdownfilter.def.json had wrong propertyKey ("attributes" vs "attr") and
+	// wrong attrChoice value ("custom" vs "linked"), causing the binding to be silently dropped.
+	if !strings.Contains(out, "Attributes:") && !strings.Contains(out, "attributes:") {
+		t.Errorf("Attributes binding lost in roundtrip — dropdownfilter.def.json has wrong propertyKey or attrChoice; got:\n%s", out)
+	}
+	t.Logf("gallery dropdown filter roundtrip:\n%s", out)
+}

@@ -545,9 +545,57 @@ func extractDataViewDataSource(ctx *ExecContext, w map[string]any) *rawDataSourc
 	case "Forms$DatabaseSource":
 		// Database/XPath source - for now just note it's a database source
 		return &rawDataSource{Type: "database", Reference: ""}
+	case "Forms$ListenTargetSource":
+		// DataView listening to another widget's selection ("Listen to widget" in Studio Pro)
+		if target, ok := ds["ListenTarget"].(string); ok && target != "" {
+			return &rawDataSource{Type: "selection", Reference: target}
+		}
 	}
 
 	return nil
+}
+
+// resolveSelectionEntityContexts replaces each DataView's EntityContext (which
+// after parsing equals the referenced widget name) with the actual entity type
+// from that widget's EntityContext. Call once after all page widgets are parsed.
+func resolveSelectionEntityContexts(widgets []rawWidget) {
+	m := make(map[string]string)
+	buildWidgetEntityMap(widgets, m)
+	applySelectionEntityContexts(widgets, m)
+}
+
+func buildWidgetEntityMap(widgets []rawWidget, m map[string]string) {
+	for _, w := range widgets {
+		if w.Name != "" && w.EntityContext != "" {
+			m[w.Name] = w.EntityContext
+		}
+		buildWidgetEntityMap(w.Children, m)
+		buildWidgetEntityMap(w.FilterWidgets, m)
+		buildWidgetEntityMap(w.ControlBar, m)
+		for _, row := range w.Rows {
+			for _, col := range row.Columns {
+				buildWidgetEntityMap(col.Widgets, m)
+			}
+		}
+	}
+}
+
+func applySelectionEntityContexts(widgets []rawWidget, m map[string]string) {
+	for i := range widgets {
+		if widgets[i].DataSource != nil && widgets[i].DataSource.Type == "selection" {
+			if entityCtx, ok := m[widgets[i].DataSource.Reference]; ok {
+				widgets[i].EntityContext = entityCtx
+			}
+		}
+		applySelectionEntityContexts(widgets[i].Children, m)
+		applySelectionEntityContexts(widgets[i].FilterWidgets, m)
+		applySelectionEntityContexts(widgets[i].ControlBar, m)
+		for ri := range widgets[i].Rows {
+			for ci := range widgets[i].Rows[ri].Columns {
+				applySelectionEntityContexts(widgets[i].Rows[ri].Columns[ci].Widgets, m)
+			}
+		}
+	}
 }
 
 // extractLabelText extracts the label text from an input widget.

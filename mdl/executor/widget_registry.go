@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/modelsdk/widgets/definitions"
@@ -279,10 +280,11 @@ func (r *WidgetRegistry) validateDefinitionOperations(def *WidgetDefinition, sou
 
 // sourceOperationCompatible checks that a mapping's Source and Operation are compatible.
 var incompatibleSourceOps = map[string]map[string]bool{
-	"Attribute":   {"association": true, "datasource": true},
-	"Attributes":  {"association": true, "datasource": true, "attribute": true},
-	"Association": {"attribute": true, "datasource": true},
-	"DataSource":  {"attribute": true, "association": true},
+	"Attribute":      {"association": true, "datasource": true},
+	"Attributes":     {"association": true, "datasource": true, "attribute": true},
+	"FirstAttribute": {"association": true, "datasource": true, "attributeObjects": true},
+	"Association":    {"attribute": true, "datasource": true},
+	"DataSource":     {"attribute": true, "association": true},
 }
 
 // validateMappings validates a slice of property mappings for operation existence,
@@ -432,4 +434,35 @@ func buildDefinitionFromMPK(mpkDef *mpk.WidgetDefinition) *WidgetDefinition {
 	}
 	def.PropertyMappings = append(def.PropertyMappings, assocMappings...)
 	return def
+}
+
+// ---------------------------------------------------------------------------
+// Built-in registry singleton
+// ---------------------------------------------------------------------------
+
+var (
+	builtinOnce     sync.Once
+	builtinRegistry *WidgetRegistry
+)
+
+// BuiltinWidgetDef returns the WidgetDefinition for the given widget ID from the
+// embedded built-in registry, or nil if not found. The registry is initialized
+// once on first call and is safe for concurrent use. It is intended for use in
+// describe/read contexts that have no access to the pageBuilder or project path.
+func BuiltinWidgetDef(widgetID string) *WidgetDefinition {
+	builtinOnce.Do(func() {
+		reg, err := NewWidgetRegistry()
+		if err != nil {
+			log.Printf("warning: failed to load built-in widget registry: %v", err)
+			builtinRegistry = &WidgetRegistry{
+				byWidgetID: make(map[string]*WidgetDefinition),
+			}
+			return
+		}
+		builtinRegistry = reg
+	})
+	if def, ok := builtinRegistry.GetByWidgetID(widgetID); ok {
+		return def
+	}
+	return nil
 }

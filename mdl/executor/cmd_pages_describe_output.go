@@ -322,7 +322,13 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		}
 		props = appendAppearanceProps(props, w)
 		formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
-		outputDataContainerContext(ctx.Output, prefix+"  ", w.Name, w.EntityContext, false)
+		// DataView listening to another widget's selection: expose both $currentObject
+		// (the selected item) and $selectionWidget (selection) inside the DataView.
+		if w.DataSource != nil && w.DataSource.Type == "selection" {
+			outputDataContainerContext(ctx.Output, prefix+"  ", w.DataSource.Reference, w.EntityContext, true)
+		} else {
+			outputDataContainerContext(ctx.Output, prefix+"  ", w.Name, w.EntityContext, false)
+		}
 		for _, child := range w.Children {
 			outputWidgetMDLV3(ctx, child, indent+1)
 		}
@@ -510,7 +516,6 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 			hasContent := len(w.Children) > 0 || len(w.FilterWidgets) > 0
 			if hasContent {
 				formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
-				outputDataContainerContext(ctx.Output, prefix+"  ", w.Name, w.EntityContext, true)
 				// Output FILTER section if filter widgets present
 				if len(w.FilterWidgets) > 0 {
 					fmt.Fprintf(ctx.Output, "%s  filter filter1 {\n", prefix)
@@ -519,9 +524,12 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 					}
 					fmt.Fprintf(ctx.Output, "%s  }\n", prefix)
 				}
-				// Output TEMPLATE section if content widgets present
+				// Output TEMPLATE section with context comment inside.
+				// Only $currentObject is in scope inside the template;
+				// $galleryName (selection) is for external listeners, not the template.
 				if len(w.Children) > 0 {
 					fmt.Fprintf(ctx.Output, "%s  template template1 {\n", prefix)
+					outputDataContainerContext(ctx.Output, prefix+"    ", w.Name, w.EntityContext, false)
 					for _, child := range w.Children {
 						outputWidgetMDLV3(ctx, child, indent+2)
 					}
@@ -668,7 +676,9 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		props = appendAppearanceProps(props, w)
 		if len(w.Children) > 0 {
 			formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
-			outputDataContainerContext(ctx.Output, prefix+"  ", w.Name, w.EntityContext, true)
+			// Gallery template only exposes $currentObject; $galleryName (selection)
+			// is for external DataViews that listen to this gallery, not the template.
+			outputDataContainerContext(ctx.Output, prefix+"  ", w.Name, w.EntityContext, false)
 			for _, child := range w.Children {
 				outputWidgetMDLV3(ctx, child, indent+1)
 			}

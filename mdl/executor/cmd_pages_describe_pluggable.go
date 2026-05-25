@@ -825,14 +825,46 @@ func extractGallerySelection(ctx *ExecContext, w map[string]any) string {
 	return ""
 }
 
-// extractFilterAttributes extracts the filter attributes from a TextFilter/NumberFilter widget.
+// extractFilterAttributes extracts filter attributes using the widget's def.json
+// property mapping as the single source of truth. The def.json source field
+// determines the read strategy:
+//   - "Attributes" → object list of AttributeRefs (textfilter, numberfilter, datefilter)
+//   - "FirstAttribute" → single AttributeRef scalar (dropdownfilter)
+//
+// Falls back to the legacy hardcoded "attributes" key for any widget whose def.json
+// is not found in the built-in registry.
 func extractFilterAttributes(ctx *ExecContext, w map[string]any) []string {
-	// Use the generic property extraction helper
+	widgetID := extractCustomWidgetID(ctx, w)
+	if def := BuiltinWidgetDef(widgetID); def != nil {
+		for _, m := range def.PropertyMappings {
+			switch m.Source {
+			case "Attributes":
+				return extractCustomWidgetPropertyAttributes(ctx, w, m.PropertyKey)
+			case "FirstAttribute":
+				if attr := extractCustomWidgetPropertyAttributeRef(ctx, w, m.PropertyKey); attr != "" {
+					return []string{attr}
+				}
+				return nil
+			}
+		}
+		return nil
+	}
 	return extractCustomWidgetPropertyAttributes(ctx, w, "attributes")
 }
 
-// extractFilterExpression extracts the default filter expression from a TextFilter widget.
+// extractFilterExpression extracts the default filter expression using the widget's
+// def.json property mapping as the single source of truth. The mapping with
+// source "FilterType" names the property key. Falls back to "defaultFilter".
 func extractFilterExpression(ctx *ExecContext, w map[string]any) string {
+	widgetID := extractCustomWidgetID(ctx, w)
+	if def := BuiltinWidgetDef(widgetID); def != nil {
+		for _, m := range def.PropertyMappings {
+			if m.Source == "FilterType" {
+				return extractCustomWidgetPropertyString(ctx, w, m.PropertyKey)
+			}
+		}
+		return ""
+	}
 	return extractCustomWidgetPropertyString(ctx, w, "defaultFilter")
 }
 

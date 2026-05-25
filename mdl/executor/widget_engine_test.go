@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/widgets"
 )
 
 func TestWidgetDefinitionJSONRoundTrip(t *testing.T) {
@@ -455,4 +456,61 @@ func TestResolveMapping_Association(t *testing.T) {
 	if ctx.EntityName != "Module.Order" {
 		t.Errorf("expected EntityName='Module.Order', got %q", ctx.EntityName)
 	}
+}
+
+// TestBuiltinDefPropertyKeysExistInTemplate validates that every non-literal property
+// mapping in a built-in def.json names a property key that actually exists in the
+// widget template. A mismatch causes SetAttribute/SetAttributeObjects/etc. to silently
+// return without writing anything — this test catches such mismatches at compile time
+// rather than at runtime. Regression for: dropdownfilter.def.json "attributes" key did
+// not exist in the dropdown filter template (the key is "attr").
+func TestBuiltinDefPropertyKeysExistInTemplate(t *testing.T) {
+	reg, err := NewWidgetRegistry()
+	if err != nil {
+		t.Fatalf("NewWidgetRegistry: %v", err)
+	}
+
+	for mdlName, def := range reg.byMDLName {
+		def := def
+		t.Run(mdlName, func(t *testing.T) {
+			_, _, propertyTypeIDs, _, _, err := widgets.GetTemplateFullBSON(def.WidgetID, func() string { return "00000000000000000000000000000000" }, "")
+			if err != nil {
+				t.Skipf("template not found for %s (%s): %v", mdlName, def.WidgetID, err)
+				return
+			}
+			if len(propertyTypeIDs) == 0 {
+				t.Skipf("no property type IDs loaded for %s", mdlName)
+				return
+			}
+
+			checkMappings := func(mappings []PropertyMapping, context string) {
+				for _, m := range mappings {
+					if m.Value != "" {
+						// Literal mapping — no property key lookup happens at runtime.
+						continue
+					}
+					if m.PropertyKey == "" {
+						continue
+					}
+					if _, ok := propertyTypeIDs[m.PropertyKey]; !ok {
+						t.Errorf("%s: propertyKey %q (source %q, op %q) not found in template %s; valid keys: %v",
+							context, m.PropertyKey, m.Source, m.Operation, def.TemplateFile, propertyKeyNames(propertyTypeIDs))
+					}
+				}
+			}
+
+			checkMappings(def.PropertyMappings, mdlName)
+			for _, mode := range def.Modes {
+				checkMappings(mode.PropertyMappings, mdlName+"/mode:"+mode.Name)
+			}
+		})
+	}
+}
+
+func propertyKeyNames(ids map[string]widgets.PropertyTypeIDEntry) []string {
+	keys := make([]string, 0, len(ids))
+	for k := range ids {
+		keys = append(keys, k)
+	}
+	return keys
 }

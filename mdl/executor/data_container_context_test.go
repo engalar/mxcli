@@ -106,6 +106,110 @@ func TestOutputWidgetMDLV3_DataViewInheritsParentContext(t *testing.T) {
 	}
 }
 
+func TestResolveSelectionEntityContexts(t *testing.T) {
+	// Gallery artGallery knows its entity (KB.Article).
+	// DataView dvDetail listens to artGallery — its EntityContext should be resolved.
+	widgets := []rawWidget{
+		{
+			Type:          "Forms$Gallery",
+			Name:          "artGallery",
+			EntityContext: "KB.Article",
+		},
+		{
+			Type:          "Forms$DataView",
+			Name:          "dvDetail",
+			DataSource:    &rawDataSource{Type: "selection", Reference: "artGallery"},
+			EntityContext: "artGallery", // set from DataSource.Reference before resolve
+		},
+	}
+	resolveSelectionEntityContexts(widgets)
+	if got := widgets[1].EntityContext; got != "KB.Article" {
+		t.Errorf("dvDetail EntityContext = %q, want KB.Article", got)
+	}
+}
+
+func TestExtractDataViewDataSource_ListenTarget(t *testing.T) {
+	w := map[string]any{
+		"DataSource": map[string]any{
+			"$Type":        "Forms$ListenTargetSource",
+			"ListenTarget": "artGallery",
+		},
+	}
+	ctx := &ExecContext{}
+	ds := extractDataViewDataSource(ctx, w)
+	if ds == nil {
+		t.Fatal("expected non-nil datasource for Forms$ListenTargetSource")
+	}
+	if ds.Type != "selection" {
+		t.Errorf("ds.Type = %q, want selection", ds.Type)
+	}
+	if ds.Reference != "artGallery" {
+		t.Errorf("ds.Reference = %q, want artGallery", ds.Reference)
+	}
+}
+
+func TestOutputWidgetMDLV3_DataViewSelectionContext(t *testing.T) {
+	buf := &bytes.Buffer{}
+	e := New(buf)
+	w := rawWidget{
+		Type:          "Forms$DataView",
+		Name:          "dvDetail",
+		EntityContext: "KB.Article",
+		DataSource:    &rawDataSource{Type: "selection", Reference: "artGallery"},
+		Children: []rawWidget{
+			{Type: "Forms$TextBox", Name: "txtTitle", Content: "Title"},
+		},
+	}
+	e.outputWidgetMDLV3(w, 0)
+	got := buf.String()
+	if !strings.Contains(got, "datasource: selection artGallery") {
+		t.Errorf("DataView should show selection datasource, got:\n%s", got)
+	}
+	// DataView listening to a gallery selection sees $currentObject (the selected
+	// item) AND $artGallery (selection) — both are in scope inside the DataView.
+	if !strings.Contains(got, "-- Context: $currentObject (KB.Article), $artGallery (selection)") {
+		t.Errorf("DataView listening to selection should show both context vars, got:\n%s", got)
+	}
+}
+
+func TestOutputWidgetMDLV3_GalleryTemplateOnlyCurrentObject(t *testing.T) {
+	// Real gallery widgets are CustomWidgets$CustomWidget with RenderMode="gallery".
+	// Context comment must appear INSIDE template1 { }, not at the gallery level.
+	buf := &bytes.Buffer{}
+	e := New(buf)
+	w := rawWidget{
+		Type:          "CustomWidgets$CustomWidget",
+		RenderMode:    "gallery",
+		Name:          "artGallery",
+		EntityContext: "KB.Article",
+		Selection:     "Single",
+		DataSource:    &rawDataSource{Type: "database", Reference: "KB.Article"},
+		FilterWidgets: []rawWidget{
+			{Type: "CustomWidgets$CustomWidget", RenderMode: "dropdownfilter", Name: "fStatus"},
+		},
+		Children: []rawWidget{
+			{Type: "Forms$DynamicText", Name: "txtTitle", Content: "Title"},
+		},
+	}
+	e.outputWidgetMDLV3(w, 0)
+	got := buf.String()
+	if strings.Contains(got, "$artGallery (selection)") {
+		t.Errorf("gallery template should NOT show $artGallery (selection), got:\n%s", got)
+	}
+	// Context must be inside "template template1 {", not before it.
+	templateIdx := strings.Index(got, "template template1 {")
+	if templateIdx == -1 {
+		t.Fatalf("expected template template1 block in output, got:\n%s", got)
+	}
+	contextIdx := strings.Index(got, "-- Context: $currentObject (KB.Article)")
+	if contextIdx == -1 {
+		t.Fatalf("gallery template should show $currentObject context, got:\n%s", got)
+	}
+	if contextIdx < templateIdx {
+		t.Errorf("context comment must appear inside template1 block, not before it, got:\n%s", got)
+	}
+}
+
 func TestOutputWidgetMDLV3_DataGridColumnInheritsContext(t *testing.T) {
 	// DataGrid2 column content widgets should inherit DataGrid2's context
 	buf := &bytes.Buffer{}

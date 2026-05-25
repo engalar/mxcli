@@ -484,6 +484,14 @@ func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.W
 			}
 		}
 
+	case "FirstAttribute":
+		// Takes the first element from the Attributes list and resolves it as a
+		// single attribute path. Used by widgets (like dropdownfilter) that bind to
+		// one attribute via a scalar Attribute property rather than an object list.
+		if attrs := w.GetAttributes(); len(attrs) > 0 {
+			ctx.AttributePath = e.pageBuilder.resolveAttributePath(attrs[0])
+		}
+
 	case "DataSource":
 		if ds := w.GetDataSource(); ds != nil {
 			// Use pluggable datasource builder (CustomWidgets$CustomWidgetXPathSource) so

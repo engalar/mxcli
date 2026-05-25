@@ -663,6 +663,7 @@ func getPageWidgetsFromRaw(ctx *ExecContext, pageID model.ID) []rawWidget {
 			}
 		}
 	}
+	resolveSelectionEntityContexts(widgets)
 	return widgets
 }
 
