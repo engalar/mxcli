@@ -400,6 +400,18 @@ func buildDataType(ctx parser.IDataTypeContext) ast.DataType {
 	if strings.HasPrefix(text, "AUTONUMBER") {
 		return ast.DataType{Kind: ast.TypeAutoNumber}
 	}
+	if strings.HasPrefix(text, "AUTOOWNER") {
+		return ast.DataType{Kind: ast.TypeAutoOwner}
+	}
+	if strings.HasPrefix(text, "AUTOCHANGEDBY") {
+		return ast.DataType{Kind: ast.TypeAutoChangedBy}
+	}
+	if strings.HasPrefix(text, "AUTOCREATEDDATE") {
+		return ast.DataType{Kind: ast.TypeAutoCreatedDate}
+	}
+	if strings.HasPrefix(text, "AUTOCHANGEDDATE") {
+		return ast.DataType{Kind: ast.TypeAutoChangedDate}
+	}
 
 	if strings.HasPrefix(text, "BINARY") {
 		return ast.DataType{Kind: ast.TypeBinary}

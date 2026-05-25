@@ -83,7 +83,7 @@ end;
 
 create microflow SysAttrTest.ACT_AfterCommitOrder ($Order: SysAttrTest.AuditedRecord)
 begin
-  return empty;
+  return;
 end;
 
 -- RAISE ERROR: only valid on BEFORE handlers (microflow returns Boolean, false = abort)

@@ -1497,7 +1497,7 @@ end;
 create microflow DmTest.ACT_InitBankAccountDefaults ($BankAccount: DmTest.BankAccount)
 begin
   log info 'Initializing defaults';
-  return empty;
+  return;
 end;
 /
 

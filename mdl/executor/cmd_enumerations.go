@@ -343,8 +343,13 @@ func ValidateEntity(stmt *ast.CreateEntityStmt) []linter.Violation {
 		return violations
 	}
 	for _, attr := range stmt.Attributes {
-		// System member names are reserved (owner, createdDate, etc.) — skip conflicts.
-		if mendixSystemAttributeNames[strings.ToLower(attr.Name)] {
+		// System member names are reserved unless the attribute is explicitly declared
+		// with the matching auto-type (AutoOwner, AutoChangedBy, etc.).
+		if mendixSystemAttributeNames[strings.ToLower(attr.Name)] &&
+			attr.Type.Kind != ast.TypeAutoOwner &&
+			attr.Type.Kind != ast.TypeAutoChangedBy &&
+			attr.Type.Kind != ast.TypeAutoCreatedDate &&
+			attr.Type.Kind != ast.TypeAutoChangedDate {
 			violations = append(violations, linter.Violation{
 				RuleID:   "MDL020",
 				Severity: linter.SeverityError,

@@ -83,12 +83,14 @@ func TestSystemMembersClause_None(t *testing.T) {
 	}
 }
 
-func TestSystemMembersClause_OldSyntaxRemoved(t *testing.T) {
-	// owner: autoowner in attribute list should no longer be valid syntax.
+func TestSystemMembersClause_AutoTypeSyntax(t *testing.T) {
+	// owner: autoowner is valid — it declares the Mendix system audit field using
+	// the AUTOOWNER_TYPE pseudo-type. The grammar now accepts this form so that
+	// explicit attribute declarations can co-exist with the system_members clause.
 	input := `create persistent entity M.E (owner: autoowner);`
 	_, errs := Build(input)
-	if len(errs) == 0 {
-		t.Error("expected parse error for old 'owner: autoowner' syntax, got none")
+	if len(errs) != 0 {
+		t.Errorf("unexpected parse errors for 'owner: autoowner' syntax: %v", errs)
 	}
 }
 
