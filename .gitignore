@@ -1,6 +1,9 @@
 # Reference libraries (too large for git, obtain from npm)
 libs/
 
+# Unit test failure log (written by pre-commit hook, read by Claude Code)
+.test-fail.log
+
 # Go build artifacts
 bin/
 *.exe

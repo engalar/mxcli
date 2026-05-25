@@ -1,6 +1,7 @@
 # Makefile for ModelSDKGo
 #
 # Usage:
+#   make setup     - Configure git hooks (run once after clone)
 #   make build     - Build mxcli for current platform
 #   make release   - Build mxcli for all platforms (macOS, Windows, Linux)
 #   make test      - Run unit tests
@@ -33,7 +34,11 @@ VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-
 # Max parallel test packages (lower = less memory; override with: make report TEST_P=8)
 TEST_P ?= 4
 
-.PHONY: build build-debug release clean test test-mdl report report-bench report-reset-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression
+.PHONY: build build-debug release clean test test-mdl report report-bench report-reset-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup
+
+setup:
+	git config core.hooksPath .githooks
+	@echo "Git hooks configured. Pre-commit unit tests enabled."
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
 # Usage: $(call copy-if-changed,src,dst)
