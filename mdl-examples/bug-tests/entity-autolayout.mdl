@@ -1,0 +1,52 @@
+-- Smoke test: 6 entities with associations — no @position annotations.
+-- After execution, all entities must have distinct, non-overlapping positions.
+
+create module LayoutTest;
+
+create persistent entity LayoutTest.Customer (
+  Name: string(200)
+);
+
+create persistent entity LayoutTest.Order (
+  OrderDate: datetime,
+  TotalAmount: decimal,
+  status: string(50)
+);
+
+create persistent entity LayoutTest.OrderLine (
+  Quantity: integer,
+  UnitPrice: decimal
+);
+
+create persistent entity LayoutTest.Product (
+  ProductName: string(200),
+  Price: decimal,
+  StockQuantity: integer,
+  SKU: string(50),
+  IsActive: boolean
+);
+
+create persistent entity LayoutTest.Category (
+  CategoryName: string(200)
+);
+
+create persistent entity LayoutTest.Address (
+  Street: string(200),
+  City: string(100),
+  PostalCode: string(20)
+);
+
+create association LayoutTest.Order_Customer
+from LayoutTest.Order to LayoutTest.Customer type reference;
+
+create association LayoutTest.OrderLine_Order
+from LayoutTest.OrderLine to LayoutTest.Order type reference;
+
+create association LayoutTest.OrderLine_Product
+from LayoutTest.OrderLine to LayoutTest.Product type reference;
+
+create association LayoutTest.Product_Category
+from LayoutTest.Product to LayoutTest.Category type reference;
+
+create association LayoutTest.Customer_Address
+from LayoutTest.Customer to LayoutTest.Address type reference;
