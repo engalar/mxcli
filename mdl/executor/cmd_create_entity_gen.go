@@ -90,8 +90,9 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 	if entity == nil {
 		return mdlerrors.NewValidation("failed to build gen entity from AST")
 	}
-	if entity.Location() == "" {
-		entity.SetLocation(layoutPos(100+len(dm.EntitiesItems())*150, 100))
+	// Location is set to origin; RelayoutDomainModel assigns the real position.
+	if entity.Location() == "" && s.Position == nil {
+		entity.SetLocation(layoutPos(0, 0))
 	}
 
 	if existingEntity != nil {
@@ -114,6 +115,15 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 	invalidateDomainModelGenForModule(ctx, module.ID)
 	invalidateDomainModelsCache(ctx)
 	invalidateHierarchy(ctx)
+
+	if s.Position == nil {
+		if err := ctx.Backend.RelayoutDomainModel(model.ID(dm.ID())); err != nil {
+			fmt.Fprintf(ctx.Output, "warning: auto-layout failed: %v\n", err)
+		} else {
+			invalidateDomainModelGenForModule(ctx, module.ID)
+		}
+	}
+
 	fmt.Fprintf(ctx.Output, "Created entity: %s\n", s.Name)
 	ctx.trackModifiedDomainModel(module.ID, module.Name)
 	return nil
@@ -150,8 +160,8 @@ func persistEntityCanonical(ctx *ExecContext, s *ast.CreateEntityStmt, dm *genDm
 			}
 		}
 		if stmt.Position == nil {
-			// New entity: auto-layout based on current entity count.
-			stmt.Position = &ast.Position{X: 100 + len(dm.EntitiesItems())*150, Y: 100}
+			// Temporary origin; RelayoutDomainModel below will assign real position.
+			stmt.Position = &ast.Position{X: 0, Y: 0}
 		}
 	}
 	if len(stmt.Attributes) > 0 {
@@ -190,6 +200,15 @@ func persistEntityCanonical(ctx *ExecContext, s *ast.CreateEntityStmt, dm *genDm
 	invalidateDomainModelGenForModule(ctx, module.ID)
 	invalidateDomainModelsCache(ctx)
 	invalidateHierarchy(ctx)
+
+	if s.Position == nil {
+		if err := ctx.Backend.RelayoutDomainModel(model.ID(dm.ID())); err != nil {
+			fmt.Fprintf(ctx.Output, "warning: auto-layout failed: %v\n", err)
+		} else {
+			invalidateDomainModelGenForModule(ctx, module.ID)
+		}
+	}
+
 	if existing != nil {
 		fmt.Fprintf(ctx.Output, "Modified entity: %s\n", s.Name)
 	} else {
