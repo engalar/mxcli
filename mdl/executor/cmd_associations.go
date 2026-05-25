@@ -193,6 +193,14 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 	invalidateHierarchy(ctx)
 	invalidateDomainModelsCache(ctx)
 
+	if freshDM, err := getDomainModelGenCached(ctx, module.ID); err == nil && freshDM != nil {
+		if err := ctx.Backend.RelayoutDomainModel(model.ID(freshDM.ID())); err != nil {
+			fmt.Fprintf(ctx.Output, "warning: auto-layout failed: %v\n", err)
+		} else {
+			invalidateDomainModelGenForModule(ctx, module.ID)
+		}
+	}
+
 	// Reconcile MemberAccesses immediately — existing access rules on entities
 	// in this DM need MemberAccess entries for the new association (CE0066).
 	if freshDM, err := getDomainModelGenCached(ctx, module.ID); err == nil && freshDM != nil {

@@ -91,6 +91,12 @@ func execCreateAssociationGen(ctx *ExecContext, s *ast.CreateAssociationStmt) er
 	invalidateHierarchy(ctx)
 	invalidateDomainModelsCache(ctx)
 
+	if err := ctx.Backend.RelayoutDomainModel(model.ID(dm.ID())); err != nil {
+		fmt.Fprintf(ctx.Output, "warning: auto-layout failed: %v\n", err)
+	} else {
+		invalidateDomainModelGenForModule(ctx, module.ID)
+	}
+
 	if freshDM, err := getDomainModelGenCached(ctx, module.ID); err == nil && freshDM != nil {
 		if msgs, err := ctx.Backend.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil {
 			for _, msg := range msgs {
