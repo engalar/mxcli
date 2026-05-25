@@ -33,7 +33,7 @@ VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-
 # Max parallel test packages (lower = less memory; override with: make report TEST_P=8)
 TEST_P ?= 4
 
-.PHONY: build build-debug release clean test test-mdl report report-bench report-reset-baseline grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression
+.PHONY: build build-debug release clean test test-mdl report report-bench report-reset-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
 # Usage: $(call copy-if-changed,src,dst)
@@ -98,18 +98,8 @@ sync-examples:
 # Sync skills, commands, lint rules, changelog, and examples
 sync-all: sync-skills sync-commands sync-lint-rules sync-changelog sync-examples
 
-# Generate LSP completion items from grammar (only rewrites file if content changed)
-completions:
-	@CGO_ENABLED=0 go run ./cmd/gen-completions -lexer mdl/grammar/MDLLexer.g4 -output cmd/mxcli/lsp_completions_gen.go.tmp
-	@if [ ! -f cmd/mxcli/lsp_completions_gen.go ] || ! cmp -s cmd/mxcli/lsp_completions_gen.go.tmp cmd/mxcli/lsp_completions_gen.go; then \
-		mv cmd/mxcli/lsp_completions_gen.go.tmp cmd/mxcli/lsp_completions_gen.go; \
-		echo "Updated cmd/mxcli/lsp_completions_gen.go"; \
-	else \
-		rm cmd/mxcli/lsp_completions_gen.go.tmp; \
-	fi
-
 # Build for current platform (auto-syncs skills and commands)
-build: sync-all completions
+build: sync-all
 	@mkdir -p $(BUILD_DIR)
 	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_PATH)
 	CGO_ENABLED=0 go build -o $(BUILD_DIR)/source_tree ./cmd/source_tree
