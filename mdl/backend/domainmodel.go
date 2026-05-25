@@ -42,4 +42,9 @@ type DomainModelBackend interface {
 	MoveViewEntitySourceDocument(sourceModuleName string, targetModuleID model.ID, docName string) error
 	UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualifiedName string) (int, error)
 	UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName string) error
+
+	// RelayoutDomainModel recomputes and applies canvas positions for all
+	// entities in the given domain model. Called after CREATE ENTITY when
+	// no explicit @position annotation is provided.
+	RelayoutDomainModel(domainModelID model.ID) error
 }

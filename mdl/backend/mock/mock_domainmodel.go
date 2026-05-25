@@ -157,3 +157,10 @@ func (m *MockBackend) CreateAssociationGen(domainModelID model.ID, assoc *genDm.
 	}
 	return nil
 }
+
+func (m *MockBackend) RelayoutDomainModel(domainModelID model.ID) error {
+	if m.RelayoutDomainModelFunc != nil {
+		return m.RelayoutDomainModelFunc(domainModelID)
+	}
+	return fmt.Errorf("MockBackend.RelayoutDomainModel not configured")
+}

@@ -79,6 +79,7 @@ type MockBackend struct {
 	UpdateEntityGenFunc      func(domainModelID model.ID, entity *genDm.Entity) error
 	MoveEntityGenFunc        func(entity *genDm.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error)
 	CreateAssociationGenFunc func(domainModelID model.ID, assoc *genDm.Association) error
+	RelayoutDomainModelFunc  func(domainModelID model.ID) error
 
 	// MicroflowBackend — Followup E6 retired Get / Create / Update /
 	// Move / Parse; Followup F3 retired the sdk-typed ListMicroflows /
