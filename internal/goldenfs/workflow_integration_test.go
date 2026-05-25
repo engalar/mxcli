@@ -39,16 +39,20 @@ create or modify microflow MyFirstModule.ACT_BoundaryHandler ()
 
 const wfStep1bPages = `
 create page MyFirstModule.Page_WF_InitialReview
-  (title: 'Initial Review', layout: Atlas_Core.Atlas_TopBar) { }
+  (title: 'Initial Review', layout: Atlas_Core.Atlas_TopBar,
+   params: { $WorkflowUserTask: System.WorkflowUserTask }) { }
 
 create page MyFirstModule.Page_WF_StandardApproval
-  (title: 'Standard Approval', layout: Atlas_Core.Atlas_TopBar) { }
+  (title: 'Standard Approval', layout: Atlas_Core.Atlas_TopBar,
+   params: { $WorkflowUserTask: System.WorkflowUserTask }) { }
 
 create page MyFirstModule.Page_WF_SeniorApproval
-  (title: 'Senior Approval', layout: Atlas_Core.Atlas_TopBar) { }
+  (title: 'Senior Approval', layout: Atlas_Core.Atlas_TopBar,
+   params: { $WorkflowUserTask: System.WorkflowUserTask }) { }
 
 create page MyFirstModule.Page_WF_FinalSignOff
-  (title: 'Final Sign-off', layout: Atlas_Core.Atlas_TopBar) { }
+  (title: 'Final Sign-off', layout: Atlas_Core.Atlas_TopBar,
+   params: { $WorkflowUserTask: System.WorkflowUserTask }) { }
 `
 
 const wfStep2aEnum = `
@@ -88,7 +92,7 @@ create or modify workflow MyFirstModule.WF_ComplexApproval
 begin
   user task InitialReview 'Initial Review'
     page MyFirstModule.Page_WF_InitialReview
-    targeting users xpath '[Status = ''Draft'']'
+    targeting users xpath '[id != 0]'
     outcomes
       'Submit' {
         decision '$ctx/Amount > 1000'

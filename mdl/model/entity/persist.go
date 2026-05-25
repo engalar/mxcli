@@ -146,9 +146,25 @@ func buildGenAttribute(am AttributeModel) (*genDm.Attribute, error) {
 		cv := genDm.NewCalculatedValue()
 		cv.SetMicroflowQualifiedName(am.CalculatedMicroflow.String())
 		attr.SetValue(cv)
-	} else if am.HasDefault {
+	} else if am.HasDefault || am.Type.Kind == model.KindAutoNumber {
 		sv := genDm.NewStoredValue()
-		sv.SetDefaultValue(stripStringLiteralQuotes(am.DefaultValue))
+		raw := stripStringLiteralQuotes(am.DefaultValue)
+		// AutoNumber attributes require a StoredValue with seed "1" when no
+		// explicit seed is provided — Mendix enforces CE7247 "Value cannot be
+		// empty" if the StoredValue is absent or has an empty DefaultValue.
+		if am.Type.Kind == model.KindAutoNumber && raw == "" {
+			raw = "1"
+		}
+		// Enum attributes: Mendix stores only the trailing value name in
+		// StoredValue.DefaultValue (e.g. "Draft", not "Module.Enum.Draft").
+		// The runtime constructs the full reference as EnumerationQN + "." +
+		// DefaultValue; storing the full path causes CE1613 (double prefix).
+		if am.Type.Kind == model.KindUnresolvedRef || am.Type.Kind == model.KindEnumRef {
+			if i := strings.LastIndex(raw, "."); i >= 0 {
+				raw = raw[i+1:]
+			}
+		}
+		sv.SetDefaultValue(raw)
 		attr.SetValue(sv)
 	}
 	return attr, nil
