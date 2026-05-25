@@ -764,6 +764,20 @@ func formatValidationFeedbackActionGen(a *genMf.ValidationFeedbackAction) string
 	} else if assocName := a.AssociationQualifiedName(); assocName != "" {
 		attrPath = varName + "/" + assocName
 	}
+	var objExprs []string
+	if tmpl, ok := a.FeedbackTemplate().(*genMf.TextTemplate); ok && tmpl != nil {
+		for _, elem := range tmpl.ArgumentsItems() {
+			if arg, ok := elem.(*genMf.TemplateArgument); ok {
+				if expr := arg.Expression(); expr != "" {
+					objExprs = append(objExprs, expr)
+				}
+			}
+		}
+	}
+	if len(objExprs) > 0 {
+		return fmt.Sprintf("validation feedback %s message %s objects [%s];",
+			attrPath, msgText, strings.Join(objExprs, ", "))
+	}
 	return fmt.Sprintf("validation feedback %s message %s;", attrPath, msgText)
 }
 

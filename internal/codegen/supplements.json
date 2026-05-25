@@ -70,6 +70,7 @@
     "MicroflowCallAction.outputVariableName":             "ResultVariableName",
     "JavaActionCallAction.outputVariableName":            "ResultVariableName",
     "StringTemplate.arguments":                          "Parameters",
+    "TextTemplate.arguments":                            "Parameters",
     "EntityTypeParameterType.typeParameter":             "TypeParameterPointer",
     "ParameterizedEntityType.typeParameter":             "TypeParameterPointer",
     "GridControlBar.defaultButton":                      "DefaultButtonPointer",

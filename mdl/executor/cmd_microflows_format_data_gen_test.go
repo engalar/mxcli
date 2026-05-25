@@ -752,6 +752,57 @@ func TestFormatActionGen_ValidationFeedbackAction(t *testing.T) {
 			t.Errorf("got %q, want %q", got, want)
 		}
 	})
+
+	t.Run("template args: single objects clause emitted", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$ValidationFeedbackAction").(*genMf.ValidationFeedbackAction)
+		a.SetObjectVariableName("Ticket")
+		a.SetAttributeQualifiedName("HD.Ticket.Subject")
+
+		tmpl := newGenAction(t, "Microflows$TextTemplate").(*genMf.TextTemplate)
+		text := newGenAction(t, "Texts$Text").(*genTx.Text)
+		tr := newGenAction(t, "Texts$Translation").(*genTx.Translation)
+		tr.SetLanguageCode("en_US")
+		tr.SetText("Value must be at least {1} characters.")
+		text.AddTranslations(tr)
+		tmpl.SetText(text)
+		arg := newGenAction(t, "Microflows$TemplateArgument").(*genMf.TemplateArgument)
+		arg.SetExpression("3")
+		tmpl.AddArguments(arg)
+		a.SetFeedbackTemplate(tmpl)
+
+		got := formatActionGen(nil, a)
+		want := "validation feedback $Ticket/Subject message 'Value must be at least {1} characters.' objects [3];"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("template args: multiple objects clause emitted", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$ValidationFeedbackAction").(*genMf.ValidationFeedbackAction)
+		a.SetObjectVariableName("Ticket")
+		a.SetAttributeQualifiedName("HD.Ticket.Subject")
+
+		tmpl := newGenAction(t, "Microflows$TextTemplate").(*genMf.TextTemplate)
+		text := newGenAction(t, "Texts$Text").(*genTx.Text)
+		tr := newGenAction(t, "Texts$Translation").(*genTx.Translation)
+		tr.SetLanguageCode("en_US")
+		tr.SetText("{1} is not unique in {2}.")
+		text.AddTranslations(tr)
+		tmpl.SetText(text)
+		arg1 := newGenAction(t, "Microflows$TemplateArgument").(*genMf.TemplateArgument)
+		arg1.SetExpression("$Ticket/Subject")
+		tmpl.AddArguments(arg1)
+		arg2 := newGenAction(t, "Microflows$TemplateArgument").(*genMf.TemplateArgument)
+		arg2.SetExpression("$ModuleName")
+		tmpl.AddArguments(arg2)
+		a.SetFeedbackTemplate(tmpl)
+
+		got := formatActionGen(nil, a)
+		want := "validation feedback $Ticket/Subject message '{1} is not unique in {2}.' objects [$Ticket/Subject, $ModuleName];"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
 }
 
 // ────────────────────────────────────────────────────────
