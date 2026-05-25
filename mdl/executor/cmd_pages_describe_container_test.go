@@ -140,7 +140,7 @@ func TestOutputWidgetMDLV3_TabControlEmitsTabPageStructure(t *testing.T) {
 	for _, want := range []string{
 		"tabcontainer Tabs1",
 		"tabpage GeneralTab",
-		"Caption: 'General'",
+		"caption: 'General'",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q\nfull output:\n%s", want, out)
