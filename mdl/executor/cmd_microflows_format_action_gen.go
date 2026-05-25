@@ -99,17 +99,37 @@ import (
 )
 
 // formatActivityGen formats a single gen activity node as an MDL
-// statement. It returns "" when the activity is an ActionActivity whose
-// inner Action is not yet supported, so the caller can decide whether
-// to emit a placeholder or skip the line entirely. Non-ActionActivity
-// nodes (Annotations, control-flow events) are out of scope and also
-// return "".
+// statement string (possibly multi-line with @position / @caption / @color
+// prefixes). Returns "" when the inner action is not yet supported.
 func formatActivityGen(ctx *ExecContext, obj element.Element) string {
 	aa, ok := obj.(*genMf.ActionActivity)
 	if !ok || aa == nil {
 		return ""
 	}
-	return formatActionGen(ctx, aa.Action())
+	action := formatActionGen(ctx, aa.Action())
+	if action == "" {
+		return ""
+	}
+	var prefixes []string
+	// @position — RelativeMiddlePoint is "x;y" or "x y"
+	if rmp := aa.RelativeMiddlePoint(); rmp != "" {
+		rmp = strings.ReplaceAll(rmp, ";", ",")
+		prefixes = append(prefixes, fmt.Sprintf("@position(%s)", rmp))
+	}
+	// @caption — only when auto-generate is disabled
+	if !aa.AutoGenerateCaption() {
+		if cap := aa.Caption(); cap != "" {
+			prefixes = append(prefixes, fmt.Sprintf("@caption %s", mdlQuote(cap)))
+		}
+	}
+	// @color — only when non-default
+	if color := aa.BackgroundColor(); color != "" && color != "Default" {
+		prefixes = append(prefixes, "@color "+color)
+	}
+	if len(prefixes) == 0 {
+		return action
+	}
+	return strings.Join(prefixes, "\n") + "\n" + action
 }
 
 // formatActionGen dispatches the inner action of an ActionActivity to a
@@ -348,6 +368,9 @@ func formatCommitActionGen(a *genMf.CommitAction) string {
 	}
 	if a.RefreshInClient() {
 		suffix += " refresh"
+	}
+	if a.ErrorHandlingType() == "Continue" {
+		suffix += " on error continue"
 	}
 	return fmt.Sprintf("commit $%s%s;", varName, suffix)
 }

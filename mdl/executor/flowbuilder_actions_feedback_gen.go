@@ -97,7 +97,7 @@ func (fb *flowBuilderGen) addLogMessageActionGen(s *ast.LogStmt) element.ID {
 func (fb *flowBuilderGen) buildLogTemplateText(s *ast.LogStmt) (string, []string) {
 	if len(s.Template) > 0 {
 		var text string
-		if lit, ok := s.Message.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
+		if lit, ok := ast.Unwrap(s.Message).(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
 			text = fmt.Sprintf("%v", lit.Value)
 		} else {
 			text = fb.exprToString(s.Message)
@@ -116,7 +116,7 @@ func (fb *flowBuilderGen) buildLogTemplateText(s *ast.LogStmt) (string, []string
 		}
 		return text, params
 	}
-	if lit, ok := s.Message.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
+	if lit, ok := ast.Unwrap(s.Message).(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
 		return fmt.Sprintf("%v", lit.Value), nil
 	}
 	return "{1}", []string{fb.exprToString(s.Message)}

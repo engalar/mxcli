@@ -84,10 +84,14 @@ func formatMicroflowCallActionGen(a *genMf.MicroflowCallAction) string {
 	}
 	paramStr := strings.Join(params, ", ")
 
-	if a.UseReturnVariable() && a.OutputVariableName() != "" {
-		return fmt.Sprintf("$%s = call microflow %s(%s);", a.OutputVariableName(), mfName, paramStr)
+	errSuffix := ""
+	if a.ErrorHandlingType() == "Continue" {
+		errSuffix = " on error continue"
 	}
-	return fmt.Sprintf("call microflow %s(%s);", mfName, paramStr)
+	if a.UseReturnVariable() && a.OutputVariableName() != "" {
+		return fmt.Sprintf("$%s = call microflow %s(%s)%s;", a.OutputVariableName(), mfName, paramStr, errSuffix)
+	}
+	return fmt.Sprintf("call microflow %s(%s)%s;", mfName, paramStr, errSuffix)
 }
 
 // formatNanoflowCallActionGen emits one of:

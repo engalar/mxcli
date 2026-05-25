@@ -365,6 +365,24 @@ func renderGenMicroflowBody(ctx *ExecContext, mf *genMf.Microflow) []string {
 	visited := make(map[element.ID]bool)
 	var lines []string
 	traverseFlowGen(ctx, startID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, &lines, 0)
+
+	// Emit free-floating Annotations that are not connected by SequenceFlows
+	// and were therefore never visited by traverseFlowGen. Collect and sort
+	// by ID for deterministic output.
+	var annIDs []string
+	for id, obj := range activityMap {
+		if _, isAnn := obj.(*genMf.Annotation); isAnn && !visited[id] {
+			annIDs = append(annIDs, string(id))
+		}
+	}
+	sort.Strings(annIDs)
+	for _, id := range annIDs {
+		ann := activityMap[element.ID(id)].(*genMf.Annotation)
+		if cap := ann.Caption(); cap != "" {
+			lines = append(lines, "@annotation "+mdlQuote(cap))
+		}
+	}
+
 	return lines
 }
 
@@ -633,10 +651,25 @@ func traverseFlowGen(
 		return
 	}
 
+	// Free Annotation: emit @annotation '<text>' before continuing.
+	if ann, isAnn := obj.(*genMf.Annotation); isAnn {
+		if cap := ann.Caption(); cap != "" {
+			*lines = append(*lines, indentStr+"@annotation "+mdlQuote(cap))
+		}
+		for _, f := range findNormalFlowsGen(flowsByOrigin[currentID]) {
+			traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)
+		}
+		return
+	}
+
 	// Any other node: try the gen-typed activity formatter first; fall
 	// back to a TODO placeholder for unsupported kinds.
 	if rendered := formatActivityGen(ctx, obj); rendered != "" {
-		*lines = append(*lines, indentStr+rendered)
+		// formatActivityGen may return multi-line output (@position/@caption/@color
+		// prefixes followed by the action line). Indent each sub-line.
+		for _, subLine := range strings.Split(rendered, "\n") {
+			*lines = append(*lines, indentStr+subLine)
+		}
 	} else {
 		*lines = append(*lines, indentStr+placeholderForGen(obj))
 	}

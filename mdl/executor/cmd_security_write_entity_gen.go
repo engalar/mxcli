@@ -193,6 +193,11 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		return mdlerrors.NewBackend("grant entity access", err)
 	}
 
+	// Invalidate the domain model cache so subsequent reads (e.g. DROP ATTRIBUTE
+	// cleanup) see the access rules just written rather than the pre-grant snapshot.
+	invalidateDomainModelGenForModule(ctx, module.ID)
+	invalidateDomainModelsCache(ctx)
+
 	if msgs, err := ctx.Backend.ReconcileMemberAccesses(model.ID(dm.ID()), module.Name); err != nil {
 		return mdlerrors.NewBackend("reconcile member accesses", err)
 	} else if len(msgs) > 0 && !ctx.Quiet {

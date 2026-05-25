@@ -82,11 +82,16 @@ func decodeTypeName(raw bson.Raw) string {
 // Attribute.Type child element is stored as "NewType" in current MPR BSON
 // (see sdk/mpr/parser_domainmodel.go::parseAttribute — the legacy "Type"
 // remains a fallback for ancient projects).
+//
+// Both directions are needed: Studio Pro writes "NewType" (so looking up "Type"
+// falls back to "NewType"), and the mxcli legacy write path wrote "Type" (so
+// looking up "NewType" must fall back to "Type").
 var fieldAliases = map[string]string{
 	"LayoutCall":   "FormCall",
 	"PageSettings": "FormSettings",
 	"Layout":       "Form",
 	"Type":         "NewType",
+	"NewType":      "Type",
 }
 
 // DecodeChild decodes a single embedded document child from raw BSON by key.

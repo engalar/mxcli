@@ -50,6 +50,9 @@ func (b *MprBackend) createImportMappingViaModelsdk(im *model.ImportMapping) err
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
+	if im.ID == "" {
+		im.ID = model.ID(modelsdkmpr.GenerateID())
+	}
 	contents, err := modelsdkmpr.SerializeImportMapping(im)
 	if err != nil {
 		return fmt.Errorf("serialize import mapping: %w", err)
@@ -68,6 +71,9 @@ func (b *MprBackend) createImportMappingViaModelsdk(im *model.ImportMapping) err
 func (b *MprBackend) createExportMappingViaModelsdk(em *model.ExportMapping) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	if em.ID == "" {
+		em.ID = model.ID(modelsdkmpr.GenerateID())
 	}
 	contents, err := modelsdkmpr.SerializeExportMapping(em)
 	if err != nil {
@@ -135,6 +141,9 @@ func (b *MprBackend) createPublishedODataServiceViaModelsdk(svc *model.Published
 func (b *MprBackend) createConsumedRestServiceViaModelsdk(svc *model.ConsumedRestService) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	if svc.ID == "" {
+		svc.ID = model.ID(modelsdkmpr.GenerateID())
 	}
 	contents, err := modelsdkmpr.SerializeConsumedRestService(svc)
 	if err != nil {
