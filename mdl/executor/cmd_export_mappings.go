@@ -91,6 +91,9 @@ func describeExportMapping(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 		return mdlerrors.NewBackend("get export mapping", err)
 	}
+	if em == nil {
+		return mdlerrors.NewNotFound("export mapping", name.String())
+	}
 
 	if em.Documentation != "" {
 		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", strings.ReplaceAll(em.Documentation, "\n", "\n * "))
@@ -388,6 +391,9 @@ func execDropExportMapping(ctx *ExecContext, s *ast.DropExportMappingStmt) error
 			return mdlerrors.NewNotFound("export mapping", s.Name.String())
 		}
 		return mdlerrors.NewBackend("get export mapping", err)
+	}
+	if em == nil {
+		return mdlerrors.NewNotFound("export mapping", s.Name.String())
 	}
 
 	if err := ctx.Backend.DeleteExportMapping(em.ID); err != nil {

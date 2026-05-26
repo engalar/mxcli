@@ -347,6 +347,13 @@ func expressionToXPath(expr ast.Expression) string {
 		if e.Kind == ast.LiteralEmpty {
 			return "empty"
 		}
+		// In XPath constraints, string literals (including '[%Token%]' values)
+		// must always be quoted. Unlike expressionToString, do NOT strip quotes
+		// from '[%…%]' values — in XPath '[%CurrentUser%]' is a quoted string
+		// literal, not a bare token reference.
+		if e.Kind == ast.LiteralString {
+			return quoteExpressionLiteral(fmt.Sprintf("%v", e.Value))
+		}
 		return expressionToString(expr)
 	case *ast.QualifiedNameExpr:
 		return qualifiedNameToXPath(e)

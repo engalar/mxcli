@@ -101,6 +101,33 @@ func TestDescribeExportMapping_NotFound(t *testing.T) {
 	assertError(t, describeExportMapping(ctx, ast.QualifiedName{Module: "Integration", Name: "NoSuch"}))
 }
 
+func TestDescribeExportMapping_NotFound_NilNil(t *testing.T) {
+	// Real MprBackend returns nil, nil when not found — ensure no nil dereference.
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetExportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ExportMapping, error) {
+			return nil, nil
+		},
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, describeExportMapping(ctx, ast.QualifiedName{Module: "Integration", Name: "NoSuch"}))
+}
+
+func TestDropExportMapping_NotFound_NilNil(t *testing.T) {
+	// Real MprBackend returns nil, nil when not found — ensure no nil dereference.
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetExportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ExportMapping, error) {
+			return nil, nil
+		},
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	stmt := &ast.DropExportMappingStmt{Name: ast.QualifiedName{Module: "Integration", Name: "NoSuch"}}
+	assertError(t, execDropExportMapping(ctx, stmt))
+}
+
 func TestCreateExportMapping_OrModify_PreservesID(t *testing.T) {
 	mod := mkModule("Integration")
 	existingID := nextID("em")
