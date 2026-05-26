@@ -25,7 +25,7 @@ staged_trigger=$(git diff --cached --name-only | grep -E \
   | head -1)
 
 staged_golden=$(git diff --cached --name-only | \
-  grep '^testdata/helpdesk-golden/' | head -1)
+  grep -E '^testdata/helpdesk-golden/(minimal\.mpr|mprcontents/)' | head -1)
 
 staged_mdl=$(git diff --cached --name-only | \
   grep "^${MDL_PATH}\$" | head -1)
