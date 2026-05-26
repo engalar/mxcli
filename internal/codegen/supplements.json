@@ -63,6 +63,7 @@
     "IndexedAttribute.attribute":                        "AttributePointer",
     "PageClientAction.pageSettings":                     "FormSettings",
     "ShowPageAction.pageSettings":                       "FormSettings",
+    "ActionButton.caption":                              "CaptionTemplate",
     "PageSettings.page":                                 "Form",
     "PageForSpecialization.page":                        "Form",
     "*.outputVariableName":                              "VariableName",

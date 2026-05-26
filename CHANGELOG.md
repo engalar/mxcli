@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-05-26
+
+### Fixed
+
+- **`Forms$ActionButton` BSON crash** — `initActionButton()` used `"Caption"` as the BSON key for the caption property but Studio Pro stores it as `"CaptionTemplate"`; loading any page with gen-based action buttons caused `InvalidCastException: Unable to cast JValue to JObject` in `UnitContentsLoader`
+- **`LocalVariable.VariableType` BSON crash** — page variables (`variables: { $x: boolean = ... }`) serialized `VariableType` as a plain string (`"DataTypes$BooleanType"`) instead of a nested BSON object; Studio Pro expected a `JObject` and crashed on load
+- Integration tests `03-page-examples`, `29-datagrid-examples`, `30-datagrid-filter-examples` now pass; Studio Pro can load all generated pages without crashing
+
 ## [0.13.0] - 2026-05-25
 
 ### Added

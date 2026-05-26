@@ -142,7 +142,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*genPg.Page, error)
 		lv := genPg.NewLocalVariable()
 		assignFreshID(lv)
 		lv.SetName(v.Name)
-		setRawBSONField(lv, "VariableType", mdlTypeToBsonType(v.DataType))
+		lv.SetVariableType(mdlTypeToDataTypeElement(v.DataType))
 		if v.DefaultValue != "" {
 			setRawBSONField(lv, "DefaultValue", v.DefaultValue)
 		}
@@ -268,7 +268,7 @@ func (pb *pageBuilder) buildSnippetV3(s *ast.CreateSnippetStmtV3) (*genPg.Snippe
 		lv := genPg.NewLocalVariable()
 		assignFreshID(lv)
 		lv.SetName(v.Name)
-		setRawBSONField(lv, "VariableType", mdlTypeToBsonType(v.DataType))
+		lv.SetVariableType(mdlTypeToDataTypeElement(v.DataType))
 		if v.DefaultValue != "" {
 			setRawBSONField(lv, "DefaultValue", v.DefaultValue)
 		}
@@ -1212,6 +1212,21 @@ func mdlTypeToBsonType(mdlType string) string {
 	default:
 		return "DataTypes$ObjectType"
 	}
+}
+
+// mdlTypeToDataTypeElement creates a gen DataTypes element for use as LocalVariable.VariableType.
+// Studio Pro requires VariableType to be a nested object ($Type + $ID), not a plain string.
+func mdlTypeToDataTypeElement(mdlType string) element.Element {
+	bsonType := mdlTypeToBsonType(mdlType)
+	dt := newPrimPageParamType(bsonType)
+	if dt == nil {
+		// Fallback for types not in newPrimPageParamType (e.g. Long): use ObjectType.
+		dt = genDt.NewObjectType()
+	}
+	if withID, ok := dt.(genElementWithID); ok {
+		assignFreshID(withID)
+	}
+	return dt
 }
 
 // bsonTypeToMDLType converts a BSON DataTypes$* type to an MDL type name.
