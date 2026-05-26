@@ -522,18 +522,12 @@ func extractDataViewDataSource(ctx *ExecContext, w map[string]any) *rawDataSourc
 
 	switch dsType {
 	case "Forms$MicroflowSource":
-		// Extract microflow name from MicroflowSettings
-		if settings, ok := ds["MicroflowSettings"].(map[string]any); ok {
-			if mfName, ok := settings["Microflow"].(string); ok && mfName != "" {
-				return &rawDataSource{Type: "microflow", Reference: mfName}
-			}
+		if mf := decodeMicroflowQNFromSource(ds); mf != "" {
+			return &rawDataSource{Type: "microflow", Reference: mf}
 		}
 	case "Forms$NanoflowSource":
-		// Extract nanoflow name from NanoflowSettings
-		if settings, ok := ds["NanoflowSettings"].(map[string]any); ok {
-			if nfName, ok := settings["Nanoflow"].(string); ok && nfName != "" {
-				return &rawDataSource{Type: "nanoflow", Reference: nfName}
-			}
+		if nf := decodeNanoflowQNFromSource(ds); nf != "" {
+			return &rawDataSource{Type: "nanoflow", Reference: nf}
 		}
 	case "Forms$DataViewSource":
 		// Page parameter source - extract from SourceVariable
@@ -773,20 +767,12 @@ func extractListViewDataSource(ctx *ExecContext, w map[string]any) *rawDataSourc
 			return result
 		}
 	case "Forms$MicroflowSource":
-		microflow := extractString(ds["Microflow"])
-		if mfSettings, ok := ds["MicroflowSettings"].(map[string]any); ok && microflow == "" {
-			microflow = extractString(mfSettings["Microflow"])
-		}
-		if microflow != "" {
-			return &rawDataSource{Type: "microflow", Reference: microflow}
+		if mf := decodeMicroflowQNFromSource(ds); mf != "" {
+			return &rawDataSource{Type: "microflow", Reference: mf}
 		}
 	case "Forms$NanoflowSource":
-		nanoflow := extractString(ds["Nanoflow"])
-		if nfSettings, ok := ds["NanoflowSettings"].(map[string]any); ok && nanoflow == "" {
-			nanoflow = extractString(nfSettings["Nanoflow"])
-		}
-		if nanoflow != "" {
-			return &rawDataSource{Type: "nanoflow", Reference: nanoflow}
+		if nf := decodeNanoflowQNFromSource(ds); nf != "" {
+			return &rawDataSource{Type: "nanoflow", Reference: nf}
 		}
 	}
 	return nil

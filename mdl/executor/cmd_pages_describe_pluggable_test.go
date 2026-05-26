@@ -158,3 +158,132 @@ func TestExtractCustomWidgetPropertyAssociation_DoesNotReturnCaptionAttribute(t 
 		t.Errorf("extractCustomWidgetPropertyAssociation returned CaptionAttribute value %q; this is the original bug (Issue #21)", got)
 	}
 }
+
+// TestDecodeMicroflowQNFromSource_MicroflowSource verifies that the gen-typed helper
+// correctly reads the microflow qualified name via MicroflowSource → MicroflowSettings.
+func TestDecodeMicroflowQNFromSource(t *testing.T) {
+	const mf = "MyModule.DS_Items"
+	ds := map[string]any{
+		"$Type": "Forms$MicroflowSource",
+		"MicroflowSettings": map[string]any{
+			"$Type":     "Forms$MicroflowSettings",
+			"Microflow": mf,
+		},
+	}
+
+	got := decodeMicroflowQNFromSource(ds)
+
+	if got != mf {
+		t.Errorf("decodeMicroflowQNFromSource = %q, want %q", got, mf)
+	}
+}
+
+// TestDecodeNanoflowQNFromSource verifies the gen-typed helper for NanoflowSource.
+func TestDecodeNanoflowQNFromSource(t *testing.T) {
+	const nf = "MyModule.NF_Items"
+	ds := map[string]any{
+		"$Type":    "Forms$NanoflowSource",
+		"Nanoflow": nf,
+	}
+
+	got := decodeNanoflowQNFromSource(ds)
+
+	if got != nf {
+		t.Errorf("decodeNanoflowQNFromSource = %q, want %q", got, nf)
+	}
+}
+
+// buildDataGrid2MicroflowWidget builds a mock DataGrid2 CustomWidget map with a
+// Forms$MicroflowSource datasource. This mirrors the BSON written by buildDataGridDataSourceBSON
+// for the "microflow" case: datasource is stored as Forms$MicroflowSource with the
+// microflow reference nested under MicroflowSettings.Microflow, not at the top level.
+func buildDataGrid2MicroflowWidget(microflowQN string) map[string]any {
+	const datasourceTypeID = "ds-type-id-001"
+
+	widgetType := map[string]any{
+		"WidgetId": "com.mendix.widget.web.datagrid.Datagrid",
+		"ObjectType": map[string]any{
+			"PropertyTypes": []any{
+				map[string]any{"$ID": datasourceTypeID, "PropertyKey": "datasource"},
+			},
+		},
+	}
+
+	properties := []any{
+		map[string]any{
+			"TypePointer": datasourceTypeID,
+			"Value": map[string]any{
+				"DataSource": map[string]any{
+					"$Type": "Forms$MicroflowSource",
+					"MicroflowSettings": map[string]any{
+						"$Type":     "Forms$MicroflowSettings",
+						"Microflow": microflowQN,
+					},
+				},
+			},
+		},
+	}
+
+	return map[string]any{
+		"Type":   widgetType,
+		"Object": map[string]any{"Properties": properties},
+	}
+}
+
+// TestExtractDataGrid2DataSource_MicroflowSource verifies that extractDataGrid2DataSource
+// correctly reads the microflow reference from Forms$MicroflowSource.MicroflowSettings.Microflow.
+// Regression test for: extractDataGrid2DataSource read ds["Microflow"] (top-level, always nil)
+// instead of ds["MicroflowSettings"]["Microflow"] — causing DESCRIBE to show no datasource
+// and column attributes to be unresolvable.
+func TestExtractDataGrid2DataSource_MicroflowSource(t *testing.T) {
+	const mf = "MyModule.DS_Items"
+	w := buildDataGrid2MicroflowWidget(mf)
+
+	got := extractDataGrid2DataSource(nil, w)
+
+	if got == nil {
+		t.Fatal("extractDataGrid2DataSource returned nil; want *rawDataSource with microflow reference")
+	}
+	if got.Type != "microflow" {
+		t.Errorf("got.Type = %q, want %q", got.Type, "microflow")
+	}
+	if got.Reference != mf {
+		t.Errorf("got.Reference = %q, want %q", got.Reference, mf)
+	}
+}
+
+// buildFormsGalleryMicroflowWidget builds a mock Forms$Gallery widget map with a
+// Forms$MicroflowSource datasource at the top level (not inside Object.Properties).
+// This is the legacy built-in gallery format. Microflow is stored under MicroflowSettings.
+func buildFormsGalleryMicroflowWidget(microflowQN string) map[string]any {
+	return map[string]any{
+		"$Type": "Forms$Gallery",
+		"DataSource": map[string]any{
+			"$Type": "Forms$MicroflowSource",
+			"MicroflowSettings": map[string]any{
+				"$Type":     "Forms$MicroflowSettings",
+				"Microflow": microflowQN,
+			},
+		},
+	}
+}
+
+// TestExtractGalleryDataSource_MicroflowSource verifies that extractGalleryDataSource
+// reads the microflow reference from Forms$MicroflowSource.MicroflowSettings.Microflow.
+// Regression guard: the same bug as DataGrid2 existed here — direct ds["Microflow"] access.
+func TestExtractGalleryDataSource_MicroflowSource(t *testing.T) {
+	const mf = "MyModule.DS_GalleryItems"
+	w := buildFormsGalleryMicroflowWidget(mf)
+
+	got := extractGalleryDataSource(nil, w)
+
+	if got == nil {
+		t.Fatal("extractGalleryDataSource returned nil; want *rawDataSource with microflow reference")
+	}
+	if got.Type != "microflow" {
+		t.Errorf("got.Type = %q, want %q", got.Type, "microflow")
+	}
+	if got.Reference != mf {
+		t.Errorf("got.Reference = %q, want %q", got.Reference, mf)
+	}
+}

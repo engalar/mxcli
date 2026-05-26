@@ -5,7 +5,53 @@ package executor
 import (
 	"context"
 	"strings"
+
+	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
+
+// decodeMicroflowQNFromSource decodes a raw Forms$MicroflowSource map to the gen type
+// and returns the microflow qualified name via MicroflowSettings.
+// Returns "" if the map is not a MicroflowSource or has no microflow set.
+func decodeMicroflowQNFromSource(ds map[string]any) string {
+	raw, err := bson.Marshal(ds)
+	if err != nil {
+		return ""
+	}
+	elem, err := codec.NewDecoder(codec.DefaultRegistry).Decode(bson.Raw(raw))
+	if err != nil {
+		return ""
+	}
+	ms, ok := elem.(*genPg.MicroflowSource)
+	if !ok || ms == nil {
+		return ""
+	}
+	settings, ok := ms.MicroflowSettings().(*genPg.MicroflowSettings)
+	if !ok || settings == nil {
+		return ""
+	}
+	return settings.MicroflowQualifiedName()
+}
+
+// decodeNanoflowQNFromSource decodes a raw Forms$NanoflowSource map to the gen type
+// and returns the nanoflow qualified name.
+func decodeNanoflowQNFromSource(ds map[string]any) string {
+	raw, err := bson.Marshal(ds)
+	if err != nil {
+		return ""
+	}
+	elem, err := codec.NewDecoder(codec.DefaultRegistry).Decode(bson.Raw(raw))
+	if err != nil {
+		return ""
+	}
+	ns, ok := elem.(*genPg.NanoflowSource)
+	if !ok || ns == nil {
+		return ""
+	}
+	return ns.NanoflowQualifiedName()
+}
 
 // buildPropertyTypeKeyMap builds a map from PropertyType $ID to PropertyKey for a CustomWidget.
 // This resolves TypePointer references in Object.Properties back to their property names.
@@ -207,9 +253,8 @@ func extractDataGrid2DataSource(ctx *ExecContext, w map[string]any) *rawDataSour
 				return result
 			}
 		case "Forms$MicroflowSource":
-			microflow := extractString(ds["Microflow"])
-			if microflow != "" {
-				return &rawDataSource{Type: "microflow", Reference: microflow}
+			if mf := decodeMicroflowQNFromSource(ds); mf != "" {
+				return &rawDataSource{Type: "microflow", Reference: mf}
 			}
 		case "Forms$EntityPathSource", "Forms$DataViewSource":
 			entityPath := extractString(ds["EntityPath"])
@@ -624,9 +669,8 @@ func extractGalleryDataSource(ctx *ExecContext, w map[string]any) *rawDataSource
 			return result
 		}
 	case "Forms$MicroflowSource":
-		microflow := extractString(ds["Microflow"])
-		if microflow != "" {
-			return &rawDataSource{Type: "microflow", Reference: microflow}
+		if mf := decodeMicroflowQNFromSource(ds); mf != "" {
+			return &rawDataSource{Type: "microflow", Reference: mf}
 		}
 	case "Forms$EntityPathSource", "Forms$DataViewSource":
 		entityPath := extractString(ds["EntityPath"])
@@ -671,20 +715,12 @@ func parseCustomWidgetDataSource(ctx *ExecContext, ds map[string]any) *rawDataSo
 		}
 		return result
 	case "Forms$MicroflowSource":
-		// Pluggable widgets use Forms$MicroflowSource with MicroflowSettings
-		if settings, ok := ds["MicroflowSettings"].(map[string]any); ok {
-			microflow := extractString(settings["Microflow"])
-			if microflow != "" {
-				return &rawDataSource{Type: "microflow", Reference: microflow}
-			}
+		if mf := decodeMicroflowQNFromSource(ds); mf != "" {
+			return &rawDataSource{Type: "microflow", Reference: mf}
 		}
 	case "Forms$NanoflowSource":
-		// Pluggable widgets use Forms$NanoflowSource with NanoflowSettings
-		if settings, ok := ds["NanoflowSettings"].(map[string]any); ok {
-			nanoflow := extractString(settings["Nanoflow"])
-			if nanoflow != "" {
-				return &rawDataSource{Type: "nanoflow", Reference: nanoflow}
-			}
+		if nf := decodeNanoflowQNFromSource(ds); nf != "" {
+			return &rawDataSource{Type: "nanoflow", Reference: nf}
 		}
 	case "CustomWidgets$CustomWidgetNanoflowSource":
 		nanoflow := extractString(ds["Nanoflow"])

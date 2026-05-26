@@ -233,3 +233,61 @@ func TestOutputWidgetMDLV3_DataGridColumnInheritsContext(t *testing.T) {
 		t.Errorf("DataGrid2 should show context comment, got:\n%s", got)
 	}
 }
+
+// TestExtractListViewDataSource_MicroflowSource verifies that extractListViewDataSource
+// reads the microflow reference from Forms$MicroflowSource.MicroflowSettings.Microflow.
+// Regression guard: the direct ds["Microflow"] access must not be the only lookup path.
+func TestExtractListViewDataSource_MicroflowSource(t *testing.T) {
+	const mf = "MyModule.DS_ListItems"
+	w := map[string]any{
+		"DataSource": map[string]any{
+			"$Type": "Forms$MicroflowSource",
+			"MicroflowSettings": map[string]any{
+				"$Type":     "Forms$MicroflowSettings",
+				"Microflow": mf,
+			},
+		},
+	}
+	ctx := &ExecContext{}
+
+	got := extractListViewDataSource(ctx, w)
+
+	if got == nil {
+		t.Fatal("extractListViewDataSource returned nil; want *rawDataSource with microflow reference")
+	}
+	if got.Type != "microflow" {
+		t.Errorf("got.Type = %q, want %q", got.Type, "microflow")
+	}
+	if got.Reference != mf {
+		t.Errorf("got.Reference = %q, want %q", got.Reference, mf)
+	}
+}
+
+// TestExtractDataViewDataSource_MicroflowSource verifies that extractDataViewDataSource
+// reads the microflow reference from Forms$MicroflowSource.MicroflowSettings.Microflow.
+// Regression guard: direct ds["Microflow"] access (without MicroflowSettings) returns nil.
+func TestExtractDataViewDataSource_MicroflowSource(t *testing.T) {
+	const mf = "MyModule.DS_DataViewItems"
+	w := map[string]any{
+		"DataSource": map[string]any{
+			"$Type": "Forms$MicroflowSource",
+			"MicroflowSettings": map[string]any{
+				"$Type":     "Forms$MicroflowSettings",
+				"Microflow": mf,
+			},
+		},
+	}
+	ctx := &ExecContext{}
+
+	got := extractDataViewDataSource(ctx, w)
+
+	if got == nil {
+		t.Fatal("extractDataViewDataSource returned nil; want *rawDataSource with microflow reference")
+	}
+	if got.Type != "microflow" {
+		t.Errorf("got.Type = %q, want %q", got.Type, "microflow")
+	}
+	if got.Reference != mf {
+		t.Errorf("got.Reference = %q, want %q", got.Reference, mf)
+	}
+}
