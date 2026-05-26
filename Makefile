@@ -24,7 +24,7 @@ CMD_PATH = ./cmd/mxcli
 
 # Version info (can be overridden)
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-BUILD_TIME = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+BUILD_TIME = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown")
 LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 
 # Clean version for VS Code extension (must be valid semver: major.minor.patch)
@@ -115,7 +115,9 @@ build-debug: sync-all completions
 	CGO_ENABLED=0 go build -tags debug $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-debug $(CMD_PATH)
 	@echo "Built $(BUILD_DIR)/$(BINARY_NAME)-debug (debug build with bson tools)"
 
-# Build for all platforms (CGO_ENABLED=0 for cross-compilation)
+# Build for all platforms (CGO_ENABLED=0 for cross-compilation).
+# NOTE: requires a Unix shell (Linux, macOS, or Git Bash on Windows).
+# In CI, this runs automatically on ubuntu-latest via release.yml.
 release: clean sync-all
 	@mkdir -p $(BUILD_DIR)
 	@echo "Building release binaries..."
@@ -139,8 +141,7 @@ release: clean sync-all
 	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-arm64.exe $(CMD_PATH)
 
 	@echo ""
-	@echo "Release binaries:"
-	@ls -lh $(BUILD_DIR)/
+	@echo "Release binaries built in $(BUILD_DIR)/."
 
 # Run tests
 test:
