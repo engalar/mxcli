@@ -317,6 +317,9 @@ describe microflow HD.ACT_Ticket_SafeCommit;
 describe microflow HD.ACT_Ticket_MarkCommentsRead;
 describe microflow HD.ACT_EscalationRequest_Cleanup;
 describe microflow HD.DS_OverdueTicketCount;
+describe microflow HD.DS_TicketsByCompany;
+describe microflow HD.DS_MyTickets;
+describe microflow HD.DS_OpenHighTickets;
 -- HD nanoflows
 describe nanoflow HD.NF_Ticket_QuickCreate;
 describe nanoflow HD.NF_TicketSearch_Apply;

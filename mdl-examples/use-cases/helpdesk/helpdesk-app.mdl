@@ -460,6 +460,51 @@ begin
 end;
 /
 
+-- DS_TicketsByCompany: retrieve tickets for a given customer company
+-- Demonstrates: multi-hop association path in XPath
+--   Path: Ticket → HD.Ticket_Customer (assoc) → HD.Customer → Company attribute
+create or modify microflow HD.DS_TicketsByCompany
+  ($Company: String)
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket'
+begin
+  retrieve $Tickets from HD.Ticket
+    where [HD.Ticket_Customer/HD.Customer/Company = $Company]
+    limit 50;
+  return $Tickets;
+end;
+/
+
+-- DS_MyTickets: retrieve all tickets created by the currently logged-in user
+-- Demonstrates: [%CurrentUser%] system token in XPath constraint
+create or modify microflow HD.DS_MyTickets
+  ()
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket'
+begin
+  retrieve $Tickets from HD.Ticket
+    where [System.owner = '[%CurrentUser%]']
+    limit 0;
+  return $Tickets;
+end;
+/
+
+-- DS_OpenHighTickets: retrieve open high-priority tickets
+-- Demonstrates: enum values as string literals in XPath (not qualified names)
+--   'Open' is the database-level string for HD.TicketStatus.Open
+--   'High' is the database-level string for HD.TicketPriority.High
+create or modify microflow HD.DS_OpenHighTickets
+  ()
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket'
+begin
+  retrieve $Tickets from HD.Ticket
+    where [Status = 'Open' and Priority = 'High']
+    limit 0;
+  return $Tickets;
+end;
+/
+
 -- MARK: HelpDesk — Nanoflows
 
 -- NF_Ticket_QuickCreate: create + commit a Draft ticket from the client

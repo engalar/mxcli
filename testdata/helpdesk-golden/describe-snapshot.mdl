@@ -478,6 +478,38 @@ begin
   return $Count;
 end;
 /
+create or modify microflow HD.DS_TicketsByCompany (
+  $Company: String
+)
+returns List of HD.Ticket as $Tickets
+begin
+  @position(360,200)
+  retrieve $Tickets from HD.Ticket
+      where HD.Ticket_Customer/HD.Customer/Company = $Company
+      limit 50;
+  return $Tickets;
+end;
+/
+create or modify microflow HD.DS_MyTickets ()
+returns List of HD.Ticket as $Tickets
+begin
+  @position(360,200)
+  retrieve $Tickets from HD.Ticket
+      where System.owner = '[%CurrentUser%]'
+      limit 0;
+  return $Tickets;
+end;
+/
+create or modify microflow HD.DS_OpenHighTickets ()
+returns List of HD.Ticket as $Tickets
+begin
+  @position(360,200)
+  retrieve $Tickets from HD.Ticket
+      where Status = HD.TicketStatus.Open and Priority = HD.TicketPriority.High
+      limit 0;
+  return $Tickets;
+end;
+/
 create or modify nanoflow HD.NF_Ticket_QuickCreate (
   $Customer: HD.Customer,
   $Subject: String
