@@ -38,6 +38,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
@@ -207,7 +208,10 @@ func buildRetrieveSortItemListGen(columns []ast.SortColumnDef, entityQN string) 
 	assignFreshID(itemList)
 	for _, col := range columns {
 		attrPath := col.Attribute
-		if !strings.Contains(attrPath, ".") {
+		// Qualify bare names and two-part "Module.Attr" names to the full
+		// "Module.Entity.Attribute" form that DomainModels$AttributeRef requires.
+		// Three-part names (already "Module.Entity.Attribute") pass through as-is.
+		if strings.Count(attrPath, ".") < 2 {
 			attrPath = entityQN + "." + col.Attribute
 		}
 		order := genMf.SortOrderEnumAscending
@@ -218,6 +222,11 @@ func buildRetrieveSortItemListGen(columns []ast.SortColumnDef, entityQN string) 
 		assignFreshID(item)
 		item.SetAttributePath(attrPath)
 		item.SetSortOrder(order)
+		// AttributeRef is what Studio Pro reads; AttributePath alone causes CE1613.
+		attrRef := genDm.NewAttributeRef()
+		assignFreshID(attrRef)
+		attrRef.SetAttributeQualifiedName(attrPath)
+		item.SetAttributeRef(attrRef)
 		itemList.AddItems(item)
 	}
 	return itemList

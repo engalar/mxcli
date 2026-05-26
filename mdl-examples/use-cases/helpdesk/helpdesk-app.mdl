@@ -530,6 +530,8 @@ end;
 
 -- DS_RecentCriticalTickets: retrieve most-recently-created critical tickets
 -- Demonstrates: sort by with a single column descending + fixed limit
+-- Note: system member attributes (createdDate, changedDate, owner, changedBy) are
+-- referenced bare (no Module.Entity prefix); the executor qualifies them automatically.
 create or modify microflow HD.DS_RecentCriticalTickets
   ()
   returns list of HD.Ticket as $Tickets
@@ -537,7 +539,7 @@ create or modify microflow HD.DS_RecentCriticalTickets
 begin
   retrieve $Tickets from HD.Ticket
     where [Priority = 'Critical']
-    sort by System.createdDate desc
+    sort by createdDate desc
     limit 10;
   return $Tickets;
 end;

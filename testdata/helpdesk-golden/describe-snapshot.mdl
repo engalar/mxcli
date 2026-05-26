@@ -533,7 +533,7 @@ begin
   @position(360,200)
   retrieve $Tickets from HD.Ticket
       where Priority = HD.TicketPriority.Critical
-      sort by System.createdDate desc
+      sort by HD.Ticket.createdDate desc
       limit 10;
   return $Tickets;
 end;
