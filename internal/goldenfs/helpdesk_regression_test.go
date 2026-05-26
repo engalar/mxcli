@@ -239,8 +239,13 @@ func TestHelpdeskGolden_Regression_BSON(t *testing.T) {
 		output, _ := cmd.CombinedOutput()
 		// Filter out the two known CE0463 lines before calling assertNoFUSECorruption.
 		// CE0463 on dgTickets / fStatus is a pre-existing DataGrid2/DropdownFilter
-		// template version mismatch (MPK v3.4.0 vs mxcli-generated template).
-		// TODO: re-extract templates from Studio Pro with DataGrid2 v3.4.0.
+		// widget-definition mismatch. Root cause: Studio Pro validates widgets against
+		// its platform-internal definition (not the project's local MPK), which differs
+		// from the definition used to generate our Type BSON template.
+		//   - dgTickets: DataGrid2 with custom-content column (ActionButton child)
+		//   - fStatus:   DropdownFilter linked to dgTickets datasource
+		// TODO: identify exact field/version differences between mxcli template BSON and
+		// Studio Pro's internal widget definition; update templates accordingly.
 		var filteredLines []string
 		for _, line := range strings.Split(string(output), "\n") {
 			if strings.Contains(line, "CE0463") &&

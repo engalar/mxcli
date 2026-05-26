@@ -12,7 +12,9 @@
 --   Domain    : self-ref association, cross-module association,
 --               non-persistent entity, many-to-many via junction table
 --   Microflow : 5-state status machine, rollback branch, time comparison,
---               constant reference (@Module.Const)
+--               constant reference (@Module.Const),
+--               retrieve with XPath + sort (XpathConstraint + NewSortings BSON),
+--               retrieve with pagination (offset + limit expressions)
 --   Nanoflow  : DB retrieve, call microflow, create+commit persistent,
 --               pure-compute return value
 --   Workflow  : parent-child, user task, multi-user task, decision (enum),
@@ -501,6 +503,44 @@ begin
   retrieve $Tickets from HD.Ticket
     where [Status = 'Open' and Priority = 'High']
     limit 0;
+  return $Tickets;
+end;
+/
+
+-- DS_TicketPage: retrieve a page of tickets with offset, limit, and sort
+-- Demonstrates:
+--   limit N    — CustomRange with limit expression (max rows)
+--   offset M   — CustomRange with offset expression (skip M rows for pagination)
+--   sort by    — SortItemList with ascending/descending columns
+-- Pagination pattern: page 1 = offset 0 limit 20, page 2 = offset 20 limit 20, etc.
+create or modify microflow HD.DS_TicketPage
+  ($PageIndex: Integer, $PageSize: Integer)
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket'
+begin
+  declare $Offset integer = ($PageIndex - 1) * $PageSize;
+  retrieve $Tickets from HD.Ticket
+    where [Status != 'Closed']
+    sort by SLADueAt asc, Priority desc
+    limit $PageSize
+    offset $Offset;
+  return $Tickets;
+end;
+/
+
+-- DS_RecentCriticalTickets: retrieve most-recently-created critical tickets
+-- Demonstrates: sort by with a single column descending + fixed limit
+-- Note: system member attributes (createdDate, changedDate, owner, changedBy) are
+-- referenced bare (no Module.Entity prefix); the executor qualifies them automatically.
+create or modify microflow HD.DS_RecentCriticalTickets
+  ()
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket'
+begin
+  retrieve $Tickets from HD.Ticket
+    where [Priority = 'Critical']
+    sort by createdDate desc
+    limit 10;
   return $Tickets;
 end;
 /
@@ -1470,6 +1510,8 @@ move microflow HD.ACT_Ticket_SafeCommit        to folder 'Ticket';
 move microflow HD.ACT_Ticket_MarkCommentsRead  to folder 'Ticket';
 move microflow HD.ACT_EscalationRequest_Cleanup to folder 'Ticket';
 move microflow HD.DS_OverdueTicketCount        to folder 'Ticket';
+move microflow HD.DS_TicketPage                to folder 'Ticket';
+move microflow HD.DS_RecentCriticalTickets     to folder 'Ticket';
 move nanoflow  HD.NF_Ticket_QuickCreate        to folder 'Ticket';
 move nanoflow  HD.NF_Priority_GetLabel         to folder 'Ticket';
 move page      HD.Ticket_Overview              to folder 'Ticket';
