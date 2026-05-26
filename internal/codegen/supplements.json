@@ -43,6 +43,8 @@
     "Microflows$VariableExport":              "ExportXmlAction$StringExport",
     "XmlSchemas$XmlElement":                  "XmlSchemas$XmlSchemaContents",
     "Microflows$TemplateArgument":            "Microflows$TemplateParameter",
+    "Microflows$SortItemList":               "Microflows$SortingsList",
+    "Microflows$SortItem":                   "Microflows$RetrieveSorting",
     "DocumentTemplates$DataGridColumn":       "Forms$DataGridColumn",
     "Settings$Language":                      "Texts$Language",
     "Settings$WebUIProjectSettingsPart":      "Forms$WebUIProjectSettingsPart",
@@ -112,7 +114,10 @@
     "NanoflowCallAction.outputVariableName":             "OutputVariableName",
     "GenerateJumpToOptionsAction.outputVariableName":    "OutputVariableName",
     "ResultHandling.outputVariableName":                 "ResultVariableName",
-    "ResultHandling.storeInVariable":                    "Bind"
+    "ResultHandling.storeInVariable":                    "Bind",
+    "DatabaseRetrieveSource.xPathConstraint":            "XpathConstraint",
+    "DatabaseRetrieveSource.sortItemList":               "NewSortings",
+    "SortItemList.items":                                "Sortings"
   },
 
   "property_order_overrides": {

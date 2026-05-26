@@ -2949,7 +2949,7 @@ func (o *DatabaseRetrieveSource) InitFromRaw(raw bson.Raw) {
 		o.propRange.SetFromDecode(child)
 	}
 	o.xPathConstraint.Init(raw)
-	if child, err := codec.DecodeChild(raw, "SortItemList"); err == nil {
+	if child, err := codec.DecodeChild(raw, "NewSortings"); err == nil {
 		o.sortItemList.SetFromDecode(child)
 	}
 }
@@ -13331,9 +13331,9 @@ func initDatabaseRetrieveSource() *DatabaseRetrieveSource {
 	o.entity.Bind(&o.Base, 0)
 	o.propRange = property.NewPart[element.Element]("Range")
 	o.propRange.Bind(&o.Base, 1)
-	o.xPathConstraint = property.NewPrimitive[string]("XPathConstraint", property.DecodeString)
+	o.xPathConstraint = property.NewPrimitive[string]("XpathConstraint", property.DecodeString)
 	o.xPathConstraint.Bind(&o.Base, 2)
-	o.sortItemList = property.NewPart[element.Element]("SortItemList")
+	o.sortItemList = property.NewPart[element.Element]("NewSortings")
 	o.sortItemList.Bind(&o.Base, 3)
 	o.SetProperties([]element.Property{o.entity, o.propRange, o.xPathConstraint, o.sortItemList})
 	return o
@@ -16322,7 +16322,7 @@ func NewSort() *Sort {
 // When a storage alias exists, init uses the STORAGE name (what Mendix uses in BSON).
 func initSortItem() *SortItem {
 	o := &SortItem{}
-	o.SetTypeName("Microflows$SortItem")
+	o.SetTypeName("Microflows$RetrieveSorting")
 	o.attributePath = property.NewPrimitive[string]("AttributePath", property.DecodeString)
 	o.attributePath.Bind(&o.Base, 0)
 	o.attributeRef = property.NewPart[element.Element]("AttributeRef")
@@ -16347,8 +16347,8 @@ func NewSortItem() *SortItem {
 // When a storage alias exists, init uses the STORAGE name (what Mendix uses in BSON).
 func initSortItemList() *SortItemList {
 	o := &SortItemList{}
-	o.SetTypeName("Microflows$SortItemList")
-	o.items = property.NewPartList[element.Element]("Items")
+	o.SetTypeName("Microflows$SortingsList")
+	o.items = property.NewPartList[element.Element]("Sortings")
 	o.items.Bind(&o.Base, 0)
 	o.SetProperties([]element.Property{o.items})
 	return o
@@ -17393,10 +17393,10 @@ func init() {
 	codec.DefaultRegistry.Register("Microflows$Sort", func() element.Element {
 		return initSort()
 	})
-	codec.DefaultRegistry.Register("Microflows$SortItem", func() element.Element {
+	codec.DefaultRegistry.Register("Microflows$RetrieveSorting", func() element.Element {
 		return initSortItem()
 	})
-	codec.DefaultRegistry.Register("Microflows$SortItemList", func() element.Element {
+	codec.DefaultRegistry.Register("Microflows$SortingsList", func() element.Element {
 		return initSortItemList()
 	})
 	codec.DefaultRegistry.Register("Microflows$StartEvent", func() element.Element {

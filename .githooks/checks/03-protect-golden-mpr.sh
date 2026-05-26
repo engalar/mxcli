@@ -20,19 +20,26 @@ if [ -z "$staged_mpr" ]; then
     exit 0
 fi
 
-staged_snapshot=$(git diff --cached --name-only | \
-  grep '^testdata/helpdesk-golden/describe-snapshot\.mdl$' | head -1)
+snapshot_path="testdata/helpdesk-golden/describe-snapshot.mdl"
+staged_snapshot=$(git diff --cached --name-only | grep "^${snapshot_path}$" | head -1)
 
+# Allow when snapshot is staged OR when snapshot is already up-to-date (no pending changes).
+# The latter happens when make update-helpdesk-golden regenerates the same content,
+# e.g. when a gen type BSON field rename changes the MPR binary but not the describe text.
 if [ -z "$staged_snapshot" ]; then
-    echo "" >&2
-    echo "COMMIT BLOCKED: testdata/helpdesk-golden/ MPR staged without describe-snapshot.mdl." >&2
-    echo "" >&2
-    echo "  Golden MPR must ONLY be rebuilt via:" >&2
-    echo "    make update-helpdesk-golden" >&2
-    echo "" >&2
-    echo "  This runs TestHelpdeskGolden_Update (FUSE overlay + helpdesk-app.mdl)" >&2
-    echo "  and regenerates minimal.mpr, mprcontents/, AND describe-snapshot.mdl" >&2
-    echo "  together. Do NOT run mxcli exec against the golden MPR directly." >&2
-    echo "" >&2
-    exit 1
+    snapshot_dirty=$(git status --porcelain "${snapshot_path}" 2>/dev/null | head -1)
+    if [ -n "$snapshot_dirty" ]; then
+        echo "" >&2
+        echo "COMMIT BLOCKED: testdata/helpdesk-golden/ MPR staged without describe-snapshot.mdl." >&2
+        echo "" >&2
+        echo "  Golden MPR must ONLY be rebuilt via:" >&2
+        echo "    make update-helpdesk-golden" >&2
+        echo "" >&2
+        echo "  This runs TestHelpdeskGolden_Update (FUSE overlay + helpdesk-app.mdl)" >&2
+        echo "  and regenerates minimal.mpr, mprcontents/, AND describe-snapshot.mdl" >&2
+        echo "  together. Do NOT run mxcli exec against the golden MPR directly." >&2
+        echo "" >&2
+        exit 1
+    fi
+    # Snapshot is clean (content unchanged) — nothing to stage, allow commit.
 fi
