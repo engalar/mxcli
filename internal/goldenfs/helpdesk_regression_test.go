@@ -320,6 +320,8 @@ describe microflow HD.DS_OverdueTicketCount;
 describe microflow HD.DS_TicketsByCompany;
 describe microflow HD.DS_MyTickets;
 describe microflow HD.DS_OpenHighTickets;
+describe microflow HD.DS_TicketPage;
+describe microflow HD.DS_RecentCriticalTickets;
 -- HD nanoflows
 describe nanoflow HD.NF_Ticket_QuickCreate;
 describe nanoflow HD.NF_TicketSearch_Apply;

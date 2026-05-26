@@ -510,6 +510,34 @@ begin
   return $Tickets;
 end;
 /
+create or modify microflow HD.DS_TicketPage (
+  $PageIndex: Integer,
+  $PageSize: Integer
+)
+returns List of HD.Ticket as $Tickets
+begin
+  @position(360,200)
+  declare $Offset Integer = ($PageIndex - 1) * $PageSize;
+  @position(520,200)
+  retrieve $Tickets from HD.Ticket
+      where Status != HD.TicketStatus.Closed
+      sort by HD.Ticket.SLADueAt asc, HD.Ticket.Priority desc
+      limit $PageSize
+      offset $Offset;
+  return $Tickets;
+end;
+/
+create or modify microflow HD.DS_RecentCriticalTickets ()
+returns List of HD.Ticket as $Tickets
+begin
+  @position(360,200)
+  retrieve $Tickets from HD.Ticket
+      where Priority = HD.TicketPriority.Critical
+      sort by System.createdDate desc
+      limit 10;
+  return $Tickets;
+end;
+/
 create or modify nanoflow HD.NF_Ticket_QuickCreate (
   $Customer: HD.Customer,
   $Subject: String

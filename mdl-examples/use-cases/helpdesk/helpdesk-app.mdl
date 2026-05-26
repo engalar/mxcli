@@ -505,6 +505,42 @@ begin
 end;
 /
 
+-- DS_TicketPage: retrieve a page of tickets with offset, limit, and sort
+-- Demonstrates:
+--   limit N    — CustomRange with limit expression (max rows)
+--   offset M   — CustomRange with offset expression (skip M rows for pagination)
+--   sort by    — SortItemList with ascending/descending columns
+-- Pagination pattern: page 1 = offset 0 limit 20, page 2 = offset 20 limit 20, etc.
+create or modify microflow HD.DS_TicketPage
+  ($PageIndex: Integer, $PageSize: Integer)
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket'
+begin
+  declare $Offset integer = ($PageIndex - 1) * $PageSize;
+  retrieve $Tickets from HD.Ticket
+    where [Status != 'Closed']
+    sort by SLADueAt asc, Priority desc
+    limit $PageSize
+    offset $Offset;
+  return $Tickets;
+end;
+/
+
+-- DS_RecentCriticalTickets: retrieve most-recently-created critical tickets
+-- Demonstrates: sort by with a single column descending + fixed limit
+create or modify microflow HD.DS_RecentCriticalTickets
+  ()
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket'
+begin
+  retrieve $Tickets from HD.Ticket
+    where [Priority = 'Critical']
+    sort by System.createdDate desc
+    limit 10;
+  return $Tickets;
+end;
+/
+
 -- MARK: HelpDesk — Nanoflows
 
 -- NF_Ticket_QuickCreate: create + commit a Draft ticket from the client
@@ -1470,6 +1506,8 @@ move microflow HD.ACT_Ticket_SafeCommit        to folder 'Ticket';
 move microflow HD.ACT_Ticket_MarkCommentsRead  to folder 'Ticket';
 move microflow HD.ACT_EscalationRequest_Cleanup to folder 'Ticket';
 move microflow HD.DS_OverdueTicketCount        to folder 'Ticket';
+move microflow HD.DS_TicketPage                to folder 'Ticket';
+move microflow HD.DS_RecentCriticalTickets     to folder 'Ticket';
 move nanoflow  HD.NF_Ticket_QuickCreate        to folder 'Ticket';
 move nanoflow  HD.NF_Priority_GetLabel         to folder 'Ticket';
 move page      HD.Ticket_Overview              to folder 'Ticket';
