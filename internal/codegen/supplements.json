@@ -48,7 +48,8 @@
     "Settings$WebUIProjectSettingsPart":      "Forms$WebUIProjectSettingsPart",
     "Workflows$Annotation":                   "Workflows$AnnotationActivity",
     "Workflows$CallMicroflowActivity":         "Workflows$CallMicroflowTask",
-    "Rest$BasicAuthenticationScheme":         "Rest$BasicAuthentication"
+    "Rest$BasicAuthenticationScheme":         "Rest$BasicAuthentication",
+    "Microflows$WebServiceCallAction":        "Microflows$CallWebServiceAction"
   },
 
   "property_key_overrides": {
@@ -106,7 +107,11 @@
     "NoGeneralization.hasChangedBy":                     "HasChangedByAttr",
     "NoGeneralization.hasChangedDate":                   "HasChangedDateAttr",
     "NoGeneralization.hasCreatedDate":                   "HasCreatedDateAttr",
-    "NoGeneralization.hasOwner":                         "HasOwnerAttr"
+    "NoGeneralization.hasOwner":                         "HasOwnerAttr",
+    "NanoflowCallAction.outputVariableName":             "OutputVariableName",
+    "GenerateJumpToOptionsAction.outputVariableName":    "OutputVariableName",
+    "ResultHandling.outputVariableName":                 "ResultVariableName",
+    "ResultHandling.storeInVariable":                    "Bind"
   },
 
   "property_order_overrides": {

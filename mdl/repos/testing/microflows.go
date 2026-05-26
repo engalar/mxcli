@@ -27,16 +27,16 @@ type MicroflowMoveCall struct {
 // methods record their args and either invoke the matching Func or
 // return nil (success). All recorded slices are appended in call order.
 type RecordingMicroflowRepository struct {
-	GotIDs           []model.ID
-	ListedModule     []model.ID
-	ListedAll        int
-	FoundQNs         []string
-	IsRuleQNs        []string
-	GetContainerIDs  []model.ID
-	Created          []MicroflowCreateCall
-	Updated          []*genMf.Microflow
-	Deleted          []model.ID
-	Moved            []MicroflowMoveCall
+	GotIDs          []model.ID
+	ListedModule    []model.ID
+	ListedAll       int
+	FoundQNs        []string
+	IsRuleQNs       []string
+	GetContainerIDs []model.ID
+	Created         []MicroflowCreateCall
+	Updated         []*genMf.Microflow
+	Deleted         []model.ID
+	Moved           []MicroflowMoveCall
 
 	GetFunc                 func(model.ID) (*genMf.Microflow, error)
 	ListFunc                func(model.ID) ([]*genMf.Microflow, error)

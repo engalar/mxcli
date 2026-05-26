@@ -57,7 +57,6 @@ func validateXPathConstraint(xpath string) error {
 	return nil
 }
 
-
 func (b *Builder) ExitCreateMicroflowStatement(ctx *parser.CreateMicroflowStatementContext) {
 	stmt := &ast.CreateMicroflowStmt{
 		Name: buildQualifiedName(ctx.QualifiedName()),

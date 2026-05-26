@@ -146,4 +146,3 @@ func (fb *flowBuilderGen) buildFlowGraphGen(stmts []ast.MicroflowStatement, retu
 func (fb *flowBuilderGen) flowBuilderGenObjects() []element.Element {
 	return fb.objects
 }
-

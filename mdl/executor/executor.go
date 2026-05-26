@@ -188,6 +188,24 @@ func invalidateMicroflowsCache(ctx *ExecContext) {
 	}
 }
 
+// invalidateAllDocumentCaches clears all per-document-type caches in one call.
+// Use after any rename/create/drop that might affect multiple listing caches,
+// instead of calling individual invalidateXxxCache functions.
+func invalidateAllDocumentCaches(ctx *ExecContext) {
+	if ctx == nil || ctx.Cache == nil {
+		return
+	}
+	ctx.Cache.microflowNames = nil
+	ctx.Cache.microflowsWithContainerGen = nil
+	ctx.Cache.nanoflowsWithContainerGen = nil
+	ctx.Cache.pagesWithContainerGen = nil
+	ctx.Cache.layoutsWithContainerGen = nil
+	ctx.Cache.snippetsWithContainerGen = nil
+	ctx.Cache.workflowsWithContainerGen = nil
+	ctx.Cache.javaActionsWithContainerGen = nil
+	ctx.Cache.javaScriptActionsWithContainerGen = nil
+}
+
 // getPageNames returns the page name lookup map, using the pre-warmed cache if available.
 func getPageNames(ctx *ExecContext, h *ContainerHierarchy) map[model.ID]string {
 	if ctx.Cache != nil && len(ctx.Cache.pageNames) > 0 {

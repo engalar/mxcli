@@ -233,7 +233,7 @@ func applySystemMembers(ng *genDm.NoGeneralization, members []string) {
 }
 
 // stripStringLiteralQuotes removes surrounding single quotes from string
-// default values and un-doubles internal escapes ("it''s" -> "it's"). Other
+// default values and un-doubles internal escapes ("it”s" -> "it's"). Other
 // scalar default forms pass through unchanged.
 func stripStringLiteralQuotes(v string) string {
 	if len(v) >= 2 && v[0] == '\'' && v[len(v)-1] == '\'' {

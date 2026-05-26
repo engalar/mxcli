@@ -142,11 +142,13 @@ func TestSnippetCall_WithParam_Succeeds(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected *genPg.SnippetParameterMapping, got %T", mappings[0])
 	}
-	if m0.ParameterQualifiedName() != "Asset" {
-		t.Errorf("ParamName: want Asset, got %q", m0.ParameterQualifiedName())
+	// Parameter must use the full qualified name: Module.SnippetName.ParamName
+	if m0.ParameterQualifiedName() != "Mod.MySnippet.Asset" {
+		t.Errorf("ParamName: want Mod.MySnippet.Asset, got %q", m0.ParameterQualifiedName())
 	}
-	if m0.Argument() != "$Asset" {
-		t.Errorf("Argument: want $Asset, got %q", m0.Argument())
+	// Variable element holds the argument reference (not Argument string field)
+	if m0.Variable() == nil {
+		t.Errorf("Variable: want non-nil PageVariable element, got nil")
 	}
 }
 
@@ -238,7 +240,8 @@ func TestSnippetCall_DollarPrefixParam_Succeeds(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected *genPg.SnippetParameterMapping, got %T", mappings[0])
 	}
-	if m0.ParameterQualifiedName() != "Asset" {
-		t.Errorf("ParamName: want Asset (stripped), got %q", m0.ParameterQualifiedName())
+	// Dollar-prefix variant: same full QN expected
+	if m0.ParameterQualifiedName() != "Mod.MySnippet.Asset" {
+		t.Errorf("ParamName: want Mod.MySnippet.Asset (stripped), got %q", m0.ParameterQualifiedName())
 	}
 }

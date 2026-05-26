@@ -41,8 +41,8 @@ func scanTestIndex(repoRoot string) TestIndex {
 
 	dirs := map[string]string{
 		"mdl/visitor":     "L1L2",
-		"mdl/executor":    "",         // classified per-file
-		"mdl/backend/mpr": "",         // classified per-file
+		"mdl/executor":    "", // classified per-file
+		"mdl/backend/mpr": "", // classified per-file
 	}
 
 	for rel, defaultLayer := range dirs {

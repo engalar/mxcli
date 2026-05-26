@@ -319,7 +319,6 @@ func TestHydrate_CalculatedAttribute(t *testing.T) {
 	assert.Equal(t, "MyModule.ComputePrice", m.Attributes[0].CalculatedMicroflow.String())
 }
 
-
 // --------------------------------------------------------------------------
 // Location format regression tests (CE-bug: space format "X Y" rejected by
 // Studio Pro 11.6.6; correct format is semicolon "X;Y").

@@ -27,8 +27,8 @@ import (
 // ParseResult is the outcome of parsing one ExprRecord.
 type ParseResult struct {
 	Record scan.ExprRecord
-	OK     bool               // true if zero hints with SeverityError
-	Hints  []hints.Hint       // all hints emitted by the parser
+	OK     bool                 // true if zero hints with SeverityError
+	Hints  []hints.Hint         // all hints emitted by the parser
 	AST    exprcheck.RobustExpr // nil for XPath expressions; non-nil for all others
 }
 

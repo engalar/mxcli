@@ -23,12 +23,12 @@ type ServiceMoveCall struct {
 
 // RecordingServiceRepository records every call to its methods.
 type RecordingServiceRepository struct {
-	GotIDs       []model.ID
-	ListedTypes  []string
-	Created      []ServiceCreateCall
-	Updated      []element.Element
-	Deleted      []model.ID
-	Moved        []ServiceMoveCall
+	GotIDs      []model.ID
+	ListedTypes []string
+	Created     []ServiceCreateCall
+	Updated     []element.Element
+	Deleted     []model.ID
+	Moved       []ServiceMoveCall
 
 	GetFunc        func(model.ID) (element.Element, error)
 	ListByTypeFunc func(string) ([]element.Element, error)

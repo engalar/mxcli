@@ -21,11 +21,11 @@ import (
 
 func TestMergeAllowedRoles(t *testing.T) {
 	cases := []struct {
-		name        string
-		existing    []string
-		toAdd       []ast.QualifiedName
-		wantMerged  []string
-		wantAdded   []string
+		name       string
+		existing   []string
+		toAdd      []ast.QualifiedName
+		wantMerged []string
+		wantAdded  []string
 	}{
 		{
 			name:       "all new roles added",

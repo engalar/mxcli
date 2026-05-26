@@ -46,11 +46,11 @@ func newAgentBlobDoc(
 
 func encodeModelContentsJSON(m *types.Model) (string, error) {
 	type providerFields struct {
-		Environment  string            `json:"environment"`
-		DeepLinkURL  string            `json:"deepLinkURL"`
-		KeyID        string            `json:"keyId"`
-		KeyName      string            `json:"keyName"`
-		ResourceName string            `json:"resourceName"`
+		Environment  string             `json:"environment"`
+		DeepLinkURL  string             `json:"deepLinkURL"`
+		KeyID        string             `json:"keyId"`
+		KeyName      string             `json:"keyName"`
+		ResourceName string             `json:"resourceName"`
 		Key          *types.ConstantRef `json:"key,omitempty"`
 	}
 	type shape struct {
@@ -71,12 +71,12 @@ func encodeModelContentsJSON(m *types.Model) (string, error) {
 
 func encodeKnowledgeBaseContentsJSON(k *types.KnowledgeBase) (string, error) {
 	type providerFields struct {
-		Environment      string            `json:"environment"`
-		DeepLinkURL      string            `json:"deepLinkURL"`
-		KeyID            string            `json:"keyId"`
-		KeyName          string            `json:"keyName"`
-		ModelDisplayName string            `json:"modelDisplayName"`
-		ModelName        string            `json:"modelName"`
+		Environment      string             `json:"environment"`
+		DeepLinkURL      string             `json:"deepLinkURL"`
+		KeyID            string             `json:"keyId"`
+		KeyName          string             `json:"keyName"`
+		ModelDisplayName string             `json:"modelDisplayName"`
+		ModelName        string             `json:"modelName"`
 		Key              *types.ConstantRef `json:"key,omitempty"`
 	}
 	type shape struct {
@@ -111,12 +111,12 @@ func encodeMCPServiceContentsJSON(c *types.ConsumedMCPService) (string, error) {
 
 func encodeAgentContentsJSON(a *types.Agent) (string, error) {
 	type toolEntry struct {
-		ID          string          `json:"id"`
-		Name        string          `json:"name"`
-		Description string          `json:"description"`
-		Enabled     bool            `json:"enabled"`
-		ToolType    string          `json:"toolType"`
-		Document    *types.DocRef   `json:"document,omitempty"`
+		ID          string        `json:"id"`
+		Name        string        `json:"name"`
+		Description string        `json:"description"`
+		Enabled     bool          `json:"enabled"`
+		ToolType    string        `json:"toolType"`
+		Document    *types.DocRef `json:"document,omitempty"`
 	}
 	type kbToolEntry struct {
 		ID                   string        `json:"id"`

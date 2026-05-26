@@ -21,10 +21,10 @@ type CodeActionParameterType interface {
 // JavaActionParameter represents a parameter of a Java/JavaScript action.
 type JavaActionParameter struct {
 	model.BaseElement
-	Name          string                 `json:"name"`
-	Description   string                 `json:"description,omitempty"`
-	Category      string                 `json:"category,omitempty"`
-	IsRequired    bool                   `json:"isRequired"`
+	Name          string                  `json:"name"`
+	Description   string                  `json:"description,omitempty"`
+	Category      string                  `json:"category,omitempty"`
+	IsRequired    bool                    `json:"isRequired"`
 	ParameterType CodeActionParameterType `json:"parameterType,omitempty"`
 }
 

@@ -491,10 +491,10 @@ func TestFormatActionGen_RetrieveAction(t *testing.T) {
 		// type doesn't expose these, so the formatter reads them from
 		// raw BSON.
 		raw, err := bson.Marshal(bson.M{
-			"$Type":             "Microflows$ConstantRange",
-			"SingleObject":      false,
-			"LimitExpression":   "5",
-			"OffsetExpression":  "10",
+			"$Type":            "Microflows$ConstantRange",
+			"SingleObject":     false,
+			"LimitExpression":  "5",
+			"OffsetExpression": "10",
 		})
 		if err != nil {
 			t.Fatalf("Marshal: %v", err)

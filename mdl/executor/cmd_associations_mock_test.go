@@ -403,7 +403,7 @@ func mkNonPersistableEntityGen(name string) *genDm.Entity {
 
 func TestCreateAssociation_PersistableOwner_NonPersistableChild_Rejected(t *testing.T) {
 	mod := mkModule("MyModule")
-	persistEnt := mkEntityGen("Order")           // persistable (FROM side = owner)
+	persistEnt := mkEntityGen("Order")                   // persistable (FROM side = owner)
 	nonPersistEnt := mkNonPersistableEntityGen("Filter") // non-persistable (TO side)
 	dm := mkDomainModelGen(mod.ID, persistEnt, nonPersistEnt)
 	dm.SetID(element.ID(nextID("dm")))
@@ -416,8 +416,8 @@ func TestCreateAssociation_PersistableOwner_NonPersistableChild_Rejected(t *test
 	ctx, _ := newMockCtx(t, withBackend(mb), withDomainModelsRepo(dmRepo))
 	err := execCreateAssociation(ctx, &ast.CreateAssociationStmt{
 		Name:   ast.QualifiedName{Module: "MyModule", Name: "Order_Filter"},
-		Parent: ast.QualifiedName{Module: "MyModule", Name: "Order"},   // persistable = FROM
-		Child:  ast.QualifiedName{Module: "MyModule", Name: "Filter"},  // non-persistable = TO
+		Parent: ast.QualifiedName{Module: "MyModule", Name: "Order"},  // persistable = FROM
+		Child:  ast.QualifiedName{Module: "MyModule", Name: "Filter"}, // non-persistable = TO
 	})
 	if err == nil {
 		t.Fatal("expected error: persistable entity cannot be owner when paired with non-persistable")
@@ -436,8 +436,8 @@ func TestCreateAssociation_NonPersistableOwner_PersistableChild_Accepted(t *test
 	dmRepo := makeDomainModelsRepo(map[model.ID][]*genDm.DomainModel{mod.ID: {dm}})
 	created := false
 	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		IsConnectedFunc:       func() bool { return true },
+		ListModulesFunc:       func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		GetDomainModelGenFunc: func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
 		CreateAssociationGenFunc: func(dmID model.ID, a *genDm.Association) error {
 			created = true

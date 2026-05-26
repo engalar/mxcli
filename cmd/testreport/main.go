@@ -2,7 +2,8 @@
 // cmd/testreport — generate a layered test report from go test -json output.
 //
 // Usage (via Makefile):
-//   go run ./cmd/testreport [--no-color] [--json-file path] [--bench-diff path] [--git-hash hash] [--out-html path]
+//
+//	go run ./cmd/testreport [--no-color] [--json-file path] [--bench-diff path] [--git-hash hash] [--out-html path]
 package main
 
 import (

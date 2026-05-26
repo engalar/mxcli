@@ -18,10 +18,10 @@ func TestImportOrder_ModuleRolesBeforeEntities(t *testing.T) {
 	sorted := sortMDLFiles(paths)
 
 	idxModule := slices.Index(sorted, "MyModule/_module.mdl")
-	idxEnum   := slices.Index(sorted, "MyModule/Enumerations/MyModule.Status.mdl")
-	idxRoles  := slices.Index(sorted, "MyModule/_module_roles.mdl")
+	idxEnum := slices.Index(sorted, "MyModule/Enumerations/MyModule.Status.mdl")
+	idxRoles := slices.Index(sorted, "MyModule/_module_roles.mdl")
 	idxDomain := slices.Index(sorted, "MyModule/Domain/MyModule.Item.mdl")
-	idxAssoc  := slices.Index(sorted, "MyModule/_associations.mdl")
+	idxAssoc := slices.Index(sorted, "MyModule/_associations.mdl")
 
 	if idxModule >= idxEnum {
 		t.Errorf("_module.mdl (%d) must precede Enumerations (%d)", idxModule, idxEnum)

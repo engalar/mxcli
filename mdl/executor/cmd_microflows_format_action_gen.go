@@ -482,12 +482,12 @@ func formatShowHomePageActionGen(_ *genMf.ShowHomePageAction) string {
 // Mirrors legacy ShowMessageAction.Type/Template/TemplateParameters
 // handling. Two subtle quirks of legacy preserved verbatim:
 //
-//   1. When the action has no Template (or an empty Translations map),
-//      the rendered text is the literal three-character `'...'` —
-//      already wrapped in single quotes. When a Template is present
-//      we wrap the text via `mdlQuote` (escaping internal quotes).
-//   2. The Template's text source prefers the `en_US` translation; any
-//      other available translation is the fallback.
+//  1. When the action has no Template (or an empty Translations map),
+//     the rendered text is the literal three-character `'...'` —
+//     already wrapped in single quotes. When a Template is present
+//     we wrap the text via `mdlQuote` (escaping internal quotes).
+//  2. The Template's text source prefers the `en_US` translation; any
+//     other available translation is the fallback.
 //
 // In gen the translations live inside a Texts$Text element nested under
 // the action's TextTemplate (not the legacy `model.Text.Translations`

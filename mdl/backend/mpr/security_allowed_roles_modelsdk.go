@@ -170,4 +170,3 @@ func (b *MprBackend) updatePublishedRestServiceRolesViaModelsdk(unitID model.ID,
 		return nil
 	})
 }
-

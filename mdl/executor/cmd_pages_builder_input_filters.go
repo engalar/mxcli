@@ -5,8 +5,8 @@ package executor
 import (
 	"strings"
 
-	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // DataGrid2 filter widget IDs — pluggable widget identifiers used when building

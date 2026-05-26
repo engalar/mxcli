@@ -486,4 +486,3 @@ func buildDesignPropertySubValue(a ast.StylingAssignment) element.Element {
 	opt.SetOption(a.Value)
 	return opt
 }
-

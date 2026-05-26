@@ -634,18 +634,18 @@ func formatWaitForNotificationGen(elem element.Element, indent string) []string 
 // (UserTask, SingleUserTaskActivity, MultiUserTaskActivity) into a
 // single shape so formatUserTaskGen can be one function.
 type userTaskShapeGen struct {
-	Name           string
-	Caption        string
-	Annotation     element.Element
-	Page           string // PageQualifiedName
-	UserSource     element.Element
-	UserTaskEntity string
-	DueDate        string
-	Description    string // task-level Description
-	Outcomes            []element.Element
-	BoundaryEvents      []element.Element
-	IsMulti             bool
-	CompletionCriteria  element.Element // nil for single-user tasks
+	Name               string
+	Caption            string
+	Annotation         element.Element
+	Page               string // PageQualifiedName
+	UserSource         element.Element
+	UserTaskEntity     string
+	DueDate            string
+	Description        string // task-level Description
+	Outcomes           []element.Element
+	BoundaryEvents     []element.Element
+	IsMulti            bool
+	CompletionCriteria element.Element // nil for single-user tasks
 }
 
 func userTaskShapeGenFor(elem element.Element) (userTaskShapeGen, bool) {

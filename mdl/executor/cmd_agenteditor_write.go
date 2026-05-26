@@ -5,8 +5,8 @@
 package executor
 
 import (
-	"github.com/mendixlabs/mxcli/mdl/types"
 	"fmt"
+	"github.com/mendixlabs/mxcli/mdl/types"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"

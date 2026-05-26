@@ -288,4 +288,3 @@ func containsContinueForCurrentLoop(stmts []ast.MicroflowStatement) bool {
 	}
 	return false
 }
-

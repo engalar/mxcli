@@ -23,12 +23,12 @@ type MappingMoveCall struct {
 
 // RecordingMappingRepository records every call to its methods.
 type RecordingMappingRepository struct {
-	GotIDs       []model.ID
-	ListedTypes  []string
-	Created      []MappingCreateCall
-	Updated      []element.Element
-	Deleted      []model.ID
-	Moved        []MappingMoveCall
+	GotIDs      []model.ID
+	ListedTypes []string
+	Created     []MappingCreateCall
+	Updated     []element.Element
+	Deleted     []model.ID
+	Moved       []MappingMoveCall
 
 	GetFunc        func(model.ID) (element.Element, error)
 	ListByTypeFunc func(string) ([]element.Element, error)

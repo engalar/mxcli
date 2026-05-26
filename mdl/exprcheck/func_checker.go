@@ -33,18 +33,18 @@ var funcTable = map[string]funcSig{
 	"isMatch":    {args: []TypeKind{KindString, KindString}, ret: KindBoolean},
 
 	// String — transforms
-	"length":      {args: []TypeKind{KindString}, ret: KindInteger},
-	"find":        {args: []TypeKind{KindString, KindString}, ret: KindInteger},
-	"findLast":    {args: []TypeKind{KindString, KindString}, ret: KindInteger},
-	"substring":   {args: []TypeKind{KindString, KindInteger, KindInteger}, minArgs: 2, ret: KindString},
-	"trim":        {args: []TypeKind{KindString}, ret: KindString},
-	"toUpperCase": {args: []TypeKind{KindString}, ret: KindString},
-	"toLowerCase": {args: []TypeKind{KindString}, ret: KindString},
-	"replaceAll":  {args: []TypeKind{KindString, KindString, KindString}, ret: KindString},
-	"replaceFirst":{args: []TypeKind{KindString, KindString, KindString}, ret: KindString},
-	"replace":     {args: []TypeKind{KindString, KindString, KindString}, ret: KindString},
-	"urlEncode":   {args: []TypeKind{KindString}, ret: KindString},
-	"urlDecode":   {args: []TypeKind{KindString}, ret: KindString},
+	"length":       {args: []TypeKind{KindString}, ret: KindInteger},
+	"find":         {args: []TypeKind{KindString, KindString}, ret: KindInteger},
+	"findLast":     {args: []TypeKind{KindString, KindString}, ret: KindInteger},
+	"substring":    {args: []TypeKind{KindString, KindInteger, KindInteger}, minArgs: 2, ret: KindString},
+	"trim":         {args: []TypeKind{KindString}, ret: KindString},
+	"toUpperCase":  {args: []TypeKind{KindString}, ret: KindString},
+	"toLowerCase":  {args: []TypeKind{KindString}, ret: KindString},
+	"replaceAll":   {args: []TypeKind{KindString, KindString, KindString}, ret: KindString},
+	"replaceFirst": {args: []TypeKind{KindString, KindString, KindString}, ret: KindString},
+	"replace":      {args: []TypeKind{KindString, KindString, KindString}, ret: KindString},
+	"urlEncode":    {args: []TypeKind{KindString}, ret: KindString},
+	"urlDecode":    {args: []TypeKind{KindString}, ret: KindString},
 
 	// Type conversion
 	"toString":     {args: []TypeKind{KindAny}, ret: KindString},
@@ -148,10 +148,10 @@ var funcTable = map[string]funcSig{
 	"trimToYearsUTC":  {args: []TypeKind{KindDateTime}, ret: KindDateTime},
 
 	// DateTime — formatting / parsing (local calendar)
-	"formatDateTime":  {args: []TypeKind{KindDateTime, KindString}, ret: KindString},
-	"formatTime":      {args: []TypeKind{KindDateTime, KindString}, minArgs: 1, ret: KindString},
-	"formatDate":      {args: []TypeKind{KindDateTime, KindString}, minArgs: 1, ret: KindString},
-	"parseDateTime":   {args: []TypeKind{KindString, KindString}, ret: KindDateTime},
+	"formatDateTime": {args: []TypeKind{KindDateTime, KindString}, ret: KindString},
+	"formatTime":     {args: []TypeKind{KindDateTime, KindString}, minArgs: 1, ret: KindString},
+	"formatDate":     {args: []TypeKind{KindDateTime, KindString}, minArgs: 1, ret: KindString},
+	"parseDateTime":  {args: []TypeKind{KindString, KindString}, ret: KindDateTime},
 
 	// DateTime — formatting / parsing (UTC calendar)
 	"formatDateTimeUTC": {args: []TypeKind{KindDateTime, KindString}, ret: KindString},

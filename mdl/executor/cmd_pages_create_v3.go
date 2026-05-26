@@ -194,8 +194,9 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 	// Track the created snippet so it can be resolved by subsequent snippet references
 	ctx.trackCreatedSnippet(s.Name.Module, s.Name.Name, model.ID(genSnippet.ID()), moduleID)
 
-	// Invalidate hierarchy cache so the new snippet's container is visible
+	// Invalidate caches so subsequent findSnippetIDGen calls see the new snippet
 	invalidateHierarchy(ctx)
+	invalidatePagesGenCache(ctx)
 
 	fmt.Fprintf(ctx.Output, "Created snippet %s\n", s.Name.String())
 	return nil

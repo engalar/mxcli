@@ -407,7 +407,6 @@ func findAttributeGenWithIndexByName(entity *genDm.Entity, name string) (*genDm.
 	return nil, -1
 }
 
-
 func applyPseudoAttributeDropGen(entity *genDm.Entity, attrName string) (bool, error) {
 	if entity == nil {
 		return false, nil

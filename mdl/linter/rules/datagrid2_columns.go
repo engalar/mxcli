@@ -261,10 +261,10 @@ func checkColumnObjects(widgetName string, columns []any) []datagrid2Issue {
 		colProps := getBsonArray(colMap["Properties"])
 
 		var (
-			caption         string
-			sortable        = true  // DataGrid2 default
-			hasAttribute    = false
-			showContentAs   = "attribute" // DataGrid2 default
+			caption       string
+			sortable      = true // DataGrid2 default
+			hasAttribute  = false
+			showContentAs = "attribute" // DataGrid2 default
 		)
 
 		for _, p := range colProps {

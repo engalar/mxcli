@@ -25,19 +25,34 @@ import (
 // without needing a connected backend. Returns the list of problems as
 // human-readable strings (empty when the body is clean).
 func ValidateMicroflowBody(s *ast.CreateMicroflowStmt) []string {
-	return validateFlowBody(s.Parameters, s.Body)
+	var returnVar string
+	if s.ReturnType != nil {
+		returnVar = s.ReturnType.Variable
+	}
+	return validateFlowBody(s.Parameters, returnVar, s.Body)
 }
 
 // ValidateNanoflowBody is the nanoflow analogue of ValidateMicroflowBody.
 func ValidateNanoflowBody(s *ast.CreateNanoflowStmt) []string {
-	return validateFlowBody(s.Parameters, s.Body)
+	var returnVar string
+	if s.ReturnType != nil {
+		returnVar = s.ReturnType.Variable
+	}
+	return validateFlowBody(s.Parameters, returnVar, s.Body)
 }
 
 // validateFlowBody walks parameters and body statements, returning any
 // validation errors detected. Same algorithm shape as the legacy
 // flowBuilder validator — one error message per problem.
-func validateFlowBody(params []ast.MicroflowParam, body []ast.MicroflowStatement) []string {
+func validateFlowBody(params []ast.MicroflowParam, returnVar string, body []ast.MicroflowStatement) []string {
 	v := newFlowValidator()
+
+	// Register the named return variable (returns Type as $Var) so body
+	// statements that assign or read it pass the declared-variable check.
+	if returnVar != "" {
+		v.declaredVars[returnVar] = "Unknown"
+		v.flatOutputVarNames[returnVar] = true
+	}
 
 	for _, p := range params {
 		if ref := paramEntityRef(p.Type); ref != nil {

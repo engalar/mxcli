@@ -20,7 +20,7 @@ func TestValidateCE7247_SetOnListVariable(t *testing.T) {
 			Value:  &ast.LiteralExpr{Value: "empty"},
 		},
 	}
-	errs := validateFlowBody(nil, body)
+	errs := validateFlowBody(nil, "", body)
 	if len(errs) == 0 {
 		t.Error("expected CE7247 error for set on list variable, got none")
 	}
@@ -53,7 +53,7 @@ func TestValidateCE0111_BothBranches(t *testing.T) {
 			},
 		},
 	}
-	errs := validateFlowBody(nil, body)
+	errs := validateFlowBody(nil, "", body)
 	if len(errs) == 0 {
 		t.Error("expected CE0111 for duplicate $Result in if/else branches, got none")
 	}
@@ -64,7 +64,7 @@ func TestValidateCE0111_FlatScope_StillCaught(t *testing.T) {
 		&ast.CreateObjectStmt{Variable: "Result", EntityType: ast.QualifiedName{Module: "M", Name: "Dto"}},
 		&ast.CreateObjectStmt{Variable: "Result", EntityType: ast.QualifiedName{Module: "M", Name: "Dto"}},
 	}
-	errs := validateFlowBody(nil, body)
+	errs := validateFlowBody(nil, "", body)
 	if len(errs) == 0 {
 		t.Error("flat-scope CE0111 regression: duplicate $Result not detected")
 	}
@@ -80,7 +80,7 @@ func TestValidateCE0111_ParameterAndBodyVariable_SameName(t *testing.T) {
 			EntityType: ast.QualifiedName{Module: "M", Name: "Dto"},
 		},
 	}
-	errs := validateFlowBody(params, body)
+	errs := validateFlowBody(params, "", body)
 	if len(errs) == 0 {
 		t.Error("expected CE0111 when body variable shadows parameter name, got none")
 	}
@@ -97,7 +97,7 @@ func TestValidateCE7247_SetOnPrimitiveVariable_NoError(t *testing.T) {
 			Value:  &ast.LiteralExpr{Kind: ast.LiteralInteger, Value: int64(1)},
 		},
 	}
-	errs := validateFlowBody(nil, body)
+	errs := validateFlowBody(nil, "", body)
 	// no CE7247 expected
 	for _, e := range errs {
 		if strings.Contains(e, "CE7247") {

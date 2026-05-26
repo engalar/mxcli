@@ -80,7 +80,7 @@ func TestCompute_TwoComponents(t *testing.T) {
 func TestCompute_EntityHeight(t *testing.T) {
 	// Two entities in same column; larger one above means more Y gap below it
 	nodes := []layout.Node{
-		{ID: "big", AttrCount: 10}, // height = 40 + 10*20 + 30 = 270
+		{ID: "big", AttrCount: 10},  // height = 40 + 10*20 + 30 = 270
 		{ID: "small", AttrCount: 1}, // height = max(90, 40 + 1*20 + 30) = 90
 	}
 	got := layout.Compute(nodes, nil)

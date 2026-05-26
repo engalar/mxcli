@@ -21,8 +21,8 @@ import (
 
 // ExportOptions controls the behaviour of ExportProject.
 type ExportOptions struct {
-	Module   string
-	DryRun   bool
+	Module string
+	DryRun bool
 	// Force bypasses the cache check and always re-exports every document.
 	Force    bool
 	Progress func(line string)
@@ -30,8 +30,8 @@ type ExportOptions struct {
 
 // exportCache holds pre-loaded unit hash data for cache-based skip logic.
 type exportCache struct {
-	unitHashes map[string]string  // unit UUID → ContentsHash (nil = unavailable)
-	allUnits   []*types.UnitInfo  // all project units with ContainerID (nil = unavailable)
+	unitHashes map[string]string // unit UUID → ContentsHash (nil = unavailable)
+	allUnits   []*types.UnitInfo // all project units with ContainerID (nil = unavailable)
 }
 
 const cacheCommentPrefix = "-- @cache: "

@@ -252,7 +252,10 @@ func printExprSummary(recs []scan.ExprRecord) {
 	}
 	fmt.Printf("Total: %d expressions\n\n", len(recs))
 	// Print in descending order (simple selection sort for small maps)
-	type kv struct{ k string; v int }
+	type kv struct {
+		k string
+		v int
+	}
 	var sorted []kv
 	for k, v := range counts {
 		sorted = append(sorted, kv{k, v})

@@ -30,15 +30,15 @@ type Index struct {
 	entityAttrEnumQN map[string]string
 	enumValues       map[string][]string
 	constants        map[string]exprcheck.TypeKind
-	assocEndpoints   map[string]AssocMeta    // assocQN → {Parent, Child}
-	entityByID       map[string]string       // element.ID → entityQN (for assoc resolution)
+	assocEndpoints   map[string]AssocMeta         // assocQN → {Parent, Child}
+	entityByID       map[string]string            // element.ID → entityQN (for assoc resolution)
 	microflowVars    map[string]map[string]string // unitPath → (varName → entityQN)
 	// NEW — for SEM-03 type checking
 	mfVarKinds    map[string]map[string]exprcheck.TypeKind // unitPath → varName → TypeKind
 	mfParamKinds  map[string]map[string]exprcheck.TypeKind // bare MF name → paramName → TypeKind
 	mfReturnKinds map[string]exprcheck.TypeKind            // bare MF name → return TypeKind
 	// unitToQN maps unitPath → "Module.MFName" for human-readable error locations.
-	unitToQN      map[string]string
+	unitToQN map[string]string
 	// incompleteEntities 记录属性集合不完整的实体：
 	//   1. 继承链包含不可解析父类（父实体不在索引中）
 	//   2. 来自 AppStore 市场模块（FromAppStore=true），其父类属性存储在受保护部分
@@ -134,7 +134,6 @@ func (idx *Index) buildEntityAttrs(b backend.FullBackend) error {
 
 			// ID → QN mapping for association resolution
 			idx.entityByID[string(entity.ID())] = qn
-
 
 			info := &entityInfo{
 				qn:         qn,
@@ -447,6 +446,7 @@ func (idx *Index) buildAssociations(b backend.FullBackend) error {
 //     发现隐式继承属性（三段式 AttributeQN = "Module.Entity.Attr"），
 //     将 Attr 补录到操作对象所属实体的属性集合中。
 //     这解决受保护市场模块 Generalization 无法通过 BSON 读取的问题。
+//
 // varName → entityQN 映射，存储在 idx.microflowVars[unitPath] 中。
 //
 // 变量来源（按 Mendix 规则）：

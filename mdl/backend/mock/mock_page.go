@@ -153,4 +153,3 @@ func (m *MockBackend) MoveSnippetGen(id, containerID model.ID) error {
 }
 
 // Stage 3.3.5.E0.create_v3 transitional bridge stubs.
-

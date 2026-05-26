@@ -14,13 +14,13 @@ import (
 // fakeElem is a minimal test stub satisfying element.Element.
 type fakeElem struct{ id element.ID }
 
-func (f *fakeElem) ID() element.ID            { return f.id }
-func (f *fakeElem) TypeName() string          { return "Test$Fake" }
-func (f *fakeElem) Container() element.Element { return nil }
+func (f *fakeElem) ID() element.ID                 { return f.id }
+func (f *fakeElem) TypeName() string               { return "Test$Fake" }
+func (f *fakeElem) Container() element.Element     { return nil }
 func (f *fakeElem) SetContainer(_ element.Element) {}
-func (f *fakeElem) Unit() element.Unit        { return nil }
-func (f *fakeElem) Raw() bson.Raw             { return nil }
-func (f *fakeElem) IsDirty() bool             { return false }
+func (f *fakeElem) Unit() element.Unit             { return nil }
+func (f *fakeElem) Raw() bson.Raw                  { return nil }
+func (f *fakeElem) IsDirty() bool                  { return false }
 func (f *fakeElem) Properties() []element.Property { return nil }
 
 func TestListUnitsWithContainerGen_CacheHitReturnsCached(t *testing.T) {

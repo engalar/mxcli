@@ -51,7 +51,9 @@ func propertyKeyOverrides(t *testing.T) map[string]any {
 // next codegen run regenerates initAttribute() with "Type", breaking the fix.
 //
 // Direct gen edit: modelsdk/gen/domainmodels/types.go initAttribute() +
-//                  Attribute.InitFromRaw()
+//
+//	Attribute.InitFromRaw()
+//
 // Commit that added direct edit: d6897939
 func TestSupplements_AttributeType_NewType(t *testing.T) {
 	overrides := propertyKeyOverrides(t)

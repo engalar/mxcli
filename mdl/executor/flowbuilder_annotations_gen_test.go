@@ -18,9 +18,9 @@ import (
 
 func TestParseLayoutPos(t *testing.T) {
 	cases := []struct {
-		in    string
-		ok    bool
-		x, y  int
+		in   string
+		ok   bool
+		x, y int
 	}{
 		// semicolon format (canonical — Mendix Studio Pro and new mxcli output)
 		{"100;200", true, 100, 200},

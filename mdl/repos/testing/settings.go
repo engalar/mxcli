@@ -11,10 +11,10 @@ import (
 
 // RecordingProjectSettingsRepository records every call to its methods.
 type RecordingProjectSettingsRepository struct {
-	GetCalls    int
-	Updated     []*genSet.ProjectSettings
-	GetFunc     func() (*genSet.ProjectSettings, error)
-	UpdateFunc  func(*genSet.ProjectSettings) error
+	GetCalls   int
+	Updated    []*genSet.ProjectSettings
+	GetFunc    func() (*genSet.ProjectSettings, error)
+	UpdateFunc func(*genSet.ProjectSettings) error
 }
 
 var _ repos.ProjectSettingsRepository = (*RecordingProjectSettingsRepository)(nil)

@@ -213,4 +213,3 @@ func TestDescribeNanoflowGen_PrintsToOutput(t *testing.T) {
 		t.Errorf("expected header in output; got:\n%s", buf.String())
 	}
 }
-

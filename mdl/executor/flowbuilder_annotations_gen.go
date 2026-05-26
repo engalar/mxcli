@@ -114,11 +114,11 @@ func (fb *flowBuilderGen) applyAnnotations(activityID element.ID, ann *ast.Activ
 				if ann.Caption != "" {
 					a.SetCaption(ann.Caption)
 				}
-			// LoopedActivity has no Caption setter in the gen schema —
-			// the legacy SDK type carried one but the BSON didn't
-			// surface it in any roundtrip fixture, so dropping the
-			// branch here is a no-op for known examples and matches
-			// what the gen describer reads back.
+				// LoopedActivity has no Caption setter in the gen schema —
+				// the legacy SDK type carried one but the BSON didn't
+				// surface it in any roundtrip fixture, so dropping the
+				// branch here is a no-op for known examples and matches
+				// what the gen describer reads back.
 			}
 			break
 		}

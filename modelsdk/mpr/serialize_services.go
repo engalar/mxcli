@@ -272,4 +272,3 @@ func serPSWorkflowsSettings(ws *model.WorkflowsSettings, raw map[string]any) map
 	raw["WorkflowEngineParallelism"] = serPSInt64(ws.WorkflowEngineParallelism)
 	return raw
 }
-

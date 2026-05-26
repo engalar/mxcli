@@ -1005,8 +1005,8 @@ func TestValidateUserTaskTargeting_NoTargeting_ReturnsNil(t *testing.T) {
 
 func TestValidateUserTaskTargeting_EmptyXPath_ReturnsError(t *testing.T) {
 	n := &ast.WorkflowUserTaskNode{
-		Name:    "Step",
-		Caption: "empty xpath",
+		Name:      "Step",
+		Caption:   "empty xpath",
 		Targeting: ast.WorkflowTargetingNode{Kind: "xpath", XPath: ""},
 	}
 	err := validateUserTaskTargeting(n)
@@ -1017,8 +1017,8 @@ func TestValidateUserTaskTargeting_EmptyXPath_ReturnsError(t *testing.T) {
 
 func TestValidateUserTaskTargeting_ValidXPath_NoError(t *testing.T) {
 	n := &ast.WorkflowUserTaskNode{
-		Name:    "Step",
-		Caption: "valid xpath",
+		Name:      "Step",
+		Caption:   "valid xpath",
 		Targeting: ast.WorkflowTargetingNode{Kind: "xpath", XPath: "[%CurrentUser%]"},
 	}
 	err := validateUserTaskTargeting(n)
@@ -1077,11 +1077,11 @@ func TestBuildMultiUserTaskGenActivity_CompletionMethod(t *testing.T) {
 		{Caption: "Reject"},
 	}
 	tests := []struct {
-		name             string
-		method           string
-		threshold        int
-		wantType         string
-		wantThreshold    int32
+		name          string
+		method        string
+		threshold     int
+		wantType      string
+		wantThreshold int32
 	}{
 		{"default (empty) → majority", "", 0, "*workflows.MajorityCompletionCriteria", 0},
 		{"explicit majority", "majority", 0, "*workflows.MajorityCompletionCriteria", 0},
@@ -1093,12 +1093,12 @@ func TestBuildMultiUserTaskGenActivity_CompletionMethod(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			n := &ast.WorkflowUserTaskNode{
-				Name:             "UT_Test",
-				Caption:          "Test Task",
-				IsMultiUser:      true,
-				CompletionMethod: tc.method,
+				Name:              "UT_Test",
+				Caption:           "Test Task",
+				IsMultiUser:       true,
+				CompletionMethod:  tc.method,
 				RequiredThreshold: tc.threshold,
-				Outcomes:         outcomes,
+				Outcomes:          outcomes,
 			}
 			task := buildMultiUserTaskGenActivity(n)
 			if task.CompletionCriteria() == nil {

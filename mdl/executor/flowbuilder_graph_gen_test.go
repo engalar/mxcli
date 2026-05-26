@@ -64,8 +64,8 @@ func TestBuildFlowGraphGenSingleActivity(t *testing.T) {
 	fb := newGraphTestFb()
 	body := []ast.MicroflowStatement{
 		&ast.DeclareStmt{
-			Variable: "X",
-			Type:     ast.DataType{Kind: ast.TypeBoolean},
+			Variable:     "X",
+			Type:         ast.DataType{Kind: ast.TypeBoolean},
 			InitialValue: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
 		},
 	}
@@ -121,8 +121,8 @@ func TestBuildFlowGraphGenReturnValueCarriedOnSynthesisedEndEvent(t *testing.T) 
 	fb := newGraphTestFb()
 	body := []ast.MicroflowStatement{
 		&ast.DeclareStmt{
-			Variable: "X",
-			Type:     ast.DataType{Kind: ast.TypeBoolean},
+			Variable:     "X",
+			Type:         ast.DataType{Kind: ast.TypeBoolean},
 			InitialValue: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
 		},
 	}

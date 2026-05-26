@@ -24,16 +24,16 @@ type WorkflowMoveCall struct {
 
 // RecordingWorkflowRepository records every call to its methods.
 type RecordingWorkflowRepository struct {
-	GotIDs           []model.ID
-	ListedModule     []model.ID
-	ListedAll        int
-	FoundQNs         []string
-	GotContainerIDs  []model.ID
-	OpenedIDs        []model.ID
-	Created          []WorkflowCreateCall
-	Updated          []*genWf.Workflow
-	Deleted          []model.ID
-	Moved            []WorkflowMoveCall
+	GotIDs          []model.ID
+	ListedModule    []model.ID
+	ListedAll       int
+	FoundQNs        []string
+	GotContainerIDs []model.ID
+	OpenedIDs       []model.ID
+	Created         []WorkflowCreateCall
+	Updated         []*genWf.Workflow
+	Deleted         []model.ID
+	Moved           []WorkflowMoveCall
 
 	GetFunc                 func(model.ID) (*genWf.Workflow, error)
 	ListFunc                func(model.ID) ([]*genWf.Workflow, error)

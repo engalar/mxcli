@@ -867,4 +867,3 @@ func setGenActivityName(elem element.Element, name string) {
 		s.SetName(name)
 	}
 }
-

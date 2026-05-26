@@ -125,8 +125,8 @@ func TestPatchReconcile_EmptyMemberAccesses_AddsAssociation(t *testing.T) {
 	// without interference from the CrossAssociation exclusion.
 	raw := buildTestDomainModel(
 		entityName, entityID,
-		[]string{"Theme", "Mode"}, // entity has attributes
-		nil,                        // MemberAccesses is empty (will be [v3])
+		[]string{"Theme", "Mode"},               // entity has attributes
+		nil,                                     // MemberAccesses is empty (will be [v3])
 		[]bson.D{assocDoc(assocName, entityID)}, // regular assoc
 		nil,
 	)

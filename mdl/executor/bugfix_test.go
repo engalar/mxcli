@@ -468,6 +468,7 @@ end;`
 		t.Errorf("expressionToString() = %q, want %q", got, want)
 	}
 }
+
 // TestExprToStringNoSpaces verifies that association navigation expressions
 // produce no extra spaces around separators after parsing.
 // Issue #120: generated $Order / Module.Assoc / Name instead of $Order/Module.Assoc/Name

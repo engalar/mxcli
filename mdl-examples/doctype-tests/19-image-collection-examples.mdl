@@ -75,7 +75,7 @@ create image collection ImgTest.BrandAssets
  */
 create image collection ImgTest.NavigationIcons (
   image cli_screenshot from file '../../docs/images/mxcli-cli.png',
-  image repl_screenshot from file '../../docs/images/mxcli-repl.png'
+  image repl_screenshot from file '../../docs/images/mxcli-vscode-ext.png'
 );
 /
 

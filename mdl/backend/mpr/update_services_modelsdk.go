@@ -232,20 +232,11 @@ func (b *MprBackend) updateConsumedRestServiceViaModelsdk(svc *model.ConsumedRes
 }
 
 func (b *MprBackend) updatePublishedRestServiceViaModelsdk(svc *model.PublishedRestService) error {
-	return b.msdkWrite(svc.ID, func(elem element.Element) error {
-		typed, ok := elem.(*genREST.PublishedRestService)
-		if !ok {
-			return fmt.Errorf("unexpected type %T (want *PublishedRestService)", elem)
-		}
-		typed.SetName(svc.Name)
-		typed.SetExcluded(svc.Excluded)
-		typed.SetServiceName(svc.ServiceName)
-		typed.SetVersion(svc.Version)
-		typed.SetPath(svc.Path)
-		typed.SetAllowedRolesQualifiedNames(svc.AllowedRoles)
-		// Resources (PartList) preserved by LazyDoc.
-		return nil
-	})
+	contents, err := modelsdkmpr.SerializePublishedRestService(svc)
+	if err != nil {
+		return fmt.Errorf("serialize published rest service: %w", err)
+	}
+	return b.writeUnitContents(svc.ID, contents)
 }
 
 // ── ImageCollection ───────────────────────────────────────────────────────

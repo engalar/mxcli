@@ -22,12 +22,3 @@ updates:
       - dependencies
       - ci
 
-  # npm (VS Code extension)
-  - package-ecosystem: npm
-    directory: /vscode-mdl
-    schedule:
-      interval: weekly
-    commit-message:
-      prefix: "deps"
-    labels:
-      - dependencies

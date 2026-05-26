@@ -210,7 +210,7 @@ func (fb *flowBuilderGen) buildRestRequestHandlingGen(body *ast.RestBody) (eleme
 //   - String       → empty ResultHandling, discriminator "String"
 //   - HttpResponse → ResultHandling{OutputVariableName}, discriminator "HttpResponse"
 //   - Mapping      → ResultHandling{OutputVariableName + ImportMappingCall},
-//                    discriminator "Mapping"
+//     discriminator "Mapping"
 //   - None         → empty ResultHandling, discriminator "None"
 func (fb *flowBuilderGen) buildRestResultHandlingGen(s *ast.RestCallStmt) (element.Element, string) {
 	rh := genMf.NewResultHandling()

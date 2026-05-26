@@ -14,7 +14,7 @@ import (
 func newFixerCtx(t *testing.T, mfs []*genMf.Microflow, updateCalled *bool) *ExecContext {
 	t.Helper()
 	repo := &repostesting.RecordingMicroflowRepository{
-		ListAllFunc: func() ([]*genMf.Microflow, error) { return mfs, nil },
+		ListAllFunc:          func() ([]*genMf.Microflow, error) { return mfs, nil },
 		GetContainerUUIDFunc: func(_ model.ID) (model.ID, error) { return "", nil },
 		UpdateFunc: func(mf *genMf.Microflow) error {
 			if updateCalled != nil {
@@ -30,8 +30,8 @@ func newFixerCtx(t *testing.T, mfs []*genMf.Microflow, updateCalled *bool) *Exec
 func TestMFCallerRefFixer_RemoveStaleMappings_RemovesBrokenEntry(t *testing.T) {
 	action := makeCallAction(
 		"Common_Utils.GET_Message_ById",
-		"Common_Utils.GET_Message_ById.OldParam",   // 要删除的
-		"Common_Utils.GET_Message_ById.MessageId",  // 要保留的
+		"Common_Utils.GET_Message_ById.OldParam",  // 要删除的
+		"Common_Utils.GET_Message_ById.MessageId", // 要保留的
 	)
 	caller := makeMFWithActions("M.Caller", action)
 

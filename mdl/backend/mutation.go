@@ -318,9 +318,9 @@ type DataGridColumnSpec struct {
 
 // DataGridSpec carries all inputs needed to build a DataGrid2 widget object.
 type DataGridSpec struct {
-	DataSourceBSON  bson.D             // Pre-serialized datasource BSON
-	Columns         []DataGridColumnSpec
-	HeaderWidgetsBSON []bson.D         // Pre-serialized CONTROLBAR widgets for filtersPlaceholder
+	DataSourceBSON    bson.D // Pre-serialized datasource BSON
+	Columns           []DataGridColumnSpec
+	HeaderWidgetsBSON []bson.D // Pre-serialized CONTROLBAR widgets for filtersPlaceholder
 	// Paging overrides (empty string = use template default)
 	PagingOverrides map[string]string // camelCase widget key → string value
 	SelectionMode   string            // empty = no override

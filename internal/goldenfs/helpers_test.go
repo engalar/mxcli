@@ -42,14 +42,14 @@ func findMxBinaryForTest() string {
 func assertNoFUSECorruption(t *testing.T, output string, ourObjects ...string) {
 	t.Helper()
 	fatalSignatures := []string{
-		"StorageLoadException",       // SQLite file corruption / mprcontents desync
-		"TypeCacheUnknownType",       // BSON $Type written that Mendix doesn't recognise
-		"InvalidOperationException",  // type mismatch when setting a BSON field (e.g. wrong wrapper type)
-		"ArgumentException",          // inner cause of many InvalidOperationException crashes
-		"CE0066",                     // Entity access out of date
-		"CE0463",                     // Widget definition changed (BSON shape mismatch)
-		"CE1613",                     // Layout no longer exists
-		"Invalid file format",        // SQLite header damage
+		"StorageLoadException",      // SQLite file corruption / mprcontents desync
+		"TypeCacheUnknownType",      // BSON $Type written that Mendix doesn't recognise
+		"InvalidOperationException", // type mismatch when setting a BSON field (e.g. wrong wrapper type)
+		"ArgumentException",         // inner cause of many InvalidOperationException crashes
+		"CE0066",                    // Entity access out of date
+		"CE0463",                    // Widget definition changed (BSON shape mismatch)
+		"CE1613",                    // Layout no longer exists
+		"Invalid file format",       // SQLite header damage
 	}
 	for _, sig := range fatalSignatures {
 		if strings.Contains(output, sig) {

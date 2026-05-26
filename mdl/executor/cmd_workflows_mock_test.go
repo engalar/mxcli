@@ -88,4 +88,3 @@ func TestShowWorkflows_FilterByModule(t *testing.T) {
 	assertNoError(t, listWorkflowsGen(ctx, "Sales"))
 	assertContainsStr(t, buf.String(), "Sales.ApproveOrder")
 }
-

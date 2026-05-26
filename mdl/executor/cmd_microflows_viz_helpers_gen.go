@@ -25,12 +25,12 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDC "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
 	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genTx "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
-	"github.com/mendixlabs/mxcli/modelsdk/element"
 )
 
 // ────────────────────────────────────────────────────────

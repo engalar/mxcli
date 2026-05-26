@@ -15,5 +15,5 @@ func NewReaderCache(w *mmpr.Writer) repos.ReaderCache {
 }
 
 // mmpr.Reader has no per-unit cache; full invalidation is correct here.
-func (c *readerCache) Invalidate()                { c.r.InvalidateCache() }
-func (c *readerCache) InvalidateUnit(_ model.ID)  { c.r.InvalidateCache() }
+func (c *readerCache) Invalidate()               { c.r.InvalidateCache() }
+func (c *readerCache) InvalidateUnit(_ model.ID) { c.r.InvalidateCache() }

@@ -273,8 +273,8 @@ type MockBackend struct {
 	ListUnitHashesFunc   func() (map[string]string, error)
 	GetUnitTypesFunc     func() (map[string]int, error)
 	GetProjectRootIDFunc func() (string, error)
-	ContentsDirFunc     func() string
-	InvalidateCacheFunc func()
+	ContentsDirFunc      func() string
+	InvalidateCacheFunc  func()
 
 	// WidgetBackend
 	FindCustomWidgetTypeFunc     func(widgetID string) (*types.RawCustomWidgetType, error)

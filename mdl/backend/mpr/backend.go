@@ -12,7 +12,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
-	"github.com/mendixlabs/mxcli/modelsdk/meta"
 	"github.com/mendixlabs/mxcli/mdl/backend/unitstore"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/types"
@@ -36,6 +35,7 @@ import (
 	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
+	"github.com/mendixlabs/mxcli/modelsdk/meta"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
 )

@@ -146,14 +146,14 @@ func checkConstantRefs(raw string, rec scan.ExprRecord, idx IndexReader) []Valid
 //
 // Two alternatives (joined with |):
 //
-//  Case A — $var-anchored path:   $var / seg1 [/ seg2 ...]
-//    Segments can be Module.Name (association/entity) or bare identifiers
-//    (attributes).  Requires at least one segment after the anchor so that
-//    bare "$var" references (comparisons, assignments) are not matched.
+//	Case A — $var-anchored path:   $var / seg1 [/ seg2 ...]
+//	  Segments can be Module.Name (association/entity) or bare identifiers
+//	  (attributes).  Requires at least one segment after the anchor so that
+//	  bare "$var" references (comparisons, assignments) are not matched.
 //
-//  Case B — unanchored Module.Name path:   Module.Name [/ seg ...]
-//    Used for standalone association filters in XPath ([Module.Assoc = $v])
-//    and mid-path Module.Name references without a leading $var.
+//	Case B — unanchored Module.Name path:   Module.Name [/ seg ...]
+//	  Used for standalone association filters in XPath ([Module.Assoc = $v])
+//	  and mid-path Module.Name references without a leading $var.
 var pathRe = regexp.MustCompile(
 	// Case A: $var / seg+  (any segment type, at least one)
 	`(?:\$[A-Za-z_]\w*|\[%[A-Za-z_]\w*(?:\(\))?\s*%\])` +
@@ -239,21 +239,21 @@ func checkPaths(raw string, rec scan.ExprRecord, idx IndexReader) []ValidationRe
 //
 // Mendix navigation grammar (after optional $var anchor):
 //
-//   Module.Assoc  [/ Module.PeerEntity]  [/ attrName]
-//   └─ position 0 ┘  └─ position 1    ┘   └─ leaf  ┘
-//      Association      Entity qualifier     Attribute
+//	Module.Assoc  [/ Module.PeerEntity]  [/ attrName]
+//	└─ position 0 ┘  └─ position 1    ┘   └─ leaf  ┘
+//	   Association      Entity qualifier     Attribute
 //
 // For multi-hop paths the Assoc→Entity→Assoc→... pattern repeats.
 //
 // Classification priority for each Module.Name segment:
-//   1. Skip if System module.
-//   2. Skip if it's a known enum QN (handled by SEM-04).
-//   3. If it's a known entity AND previous context set currentEntity:
-//      → entity qualifier; validate it matches the expected peer entity.
-//   4. If it's a known association → advance entity context to peer entity.
-//   5. If it's a known entity with no preceding assoc context → skip
-//      (entity reference in non-navigation context, e.g. type argument).
-//   6. If none of the above → flag SEM-07 (unknown reference).
+//  1. Skip if System module.
+//  2. Skip if it's a known enum QN (handled by SEM-04).
+//  3. If it's a known entity AND previous context set currentEntity:
+//     → entity qualifier; validate it matches the expected peer entity.
+//  4. If it's a known association → advance entity context to peer entity.
+//  5. If it's a known entity with no preceding assoc context → skip
+//     (entity reference in non-navigation context, e.g. type argument).
+//  6. If none of the above → flag SEM-07 (unknown reference).
 func walkPath(segs []pathSeg, raw string, rec scan.ExprRecord, idx IndexReader, seen map[string]bool) []ValidationResult {
 	var out []ValidationResult
 

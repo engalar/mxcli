@@ -200,12 +200,12 @@ func DescribeMicroflowGenToString(ctx *ExecContext, mf *genMf.Microflow) (string
 // and returns (moduleName, "Module.Name").
 //
 // Resolution strategy (in order):
-//   1. ctx.Microflows.GetContainerUUID(mf.ID) + ctx.Cache.hierarchy
-//      (FindModuleID + GetModuleName) — the canonical path that works
-//      after a BSON roundtrip strips Container() linkage.
-//   2. Walk Container() chain looking for `Projects$Module` (works for
-//      freshly-built in-memory graphs that still carry container refs).
-//   3. Fallback "<unknown>.Name" — only if no other source resolves it.
+//  1. ctx.Microflows.GetContainerUUID(mf.ID) + ctx.Cache.hierarchy
+//     (FindModuleID + GetModuleName) — the canonical path that works
+//     after a BSON roundtrip strips Container() linkage.
+//  2. Walk Container() chain looking for `Projects$Module` (works for
+//     freshly-built in-memory graphs that still carry container refs).
+//  3. Fallback "<unknown>.Name" — only if no other source resolves it.
 func genMicroflowQualifiedName(ctx *ExecContext, mf *genMf.Microflow) (string, string) {
 	name := mf.Name()
 	module := ""

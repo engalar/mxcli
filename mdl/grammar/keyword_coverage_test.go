@@ -51,7 +51,7 @@ func TestKeywordRuleCoverage(t *testing.T) {
 		// Similarly, action-expression keywords (MICROFLOW, NANOFLOW, SAVE_CHANGES, etc.) are
 		// excluded so they cannot appear as qualifiedName components inside propertyValueV3,
 		// which would create additional ambiguity with actionExprV3 alternatives.
-		"ACTION": true,
+		"ACTION":    true,
 		"MICROFLOW": true, "NANOFLOW": true,
 		"SAVE_CHANGES": true, "SAVECHANGES": true, "CANCEL_CHANGES": true,
 		"CLOSE_PAGE": true, "SHOW_PAGE": true, "SIGN_OUT": true,

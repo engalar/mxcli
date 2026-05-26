@@ -538,10 +538,10 @@ func TestFormatActionGen_ShowMessageAction(t *testing.T) {
 
 func TestFormatActionGen_CreateListAction(t *testing.T) {
 	cases := []struct {
-		name       string
-		entityQN   string
-		outputVar  string
-		want       string
+		name      string
+		entityQN  string
+		outputVar string
+		want      string
 	}{
 		{"basic", "Sales.Order", "Orders", "$Orders = create list of Sales.Order;"},
 		{"empty entity falls back to 'Entity'", "", "L", "$L = create list of Entity;"},

@@ -21,15 +21,20 @@ type ContainerWithGen[T element.Element] struct {
 // per memory `feedback_executor_cache_pattern`.
 //
 // list:             returns the gen-typed elements (typically backed by
-//                   ctx.<Domain>.ListAll()).
+//
+//	ctx.<Domain>.ListAll()).
+//
 // resolveContainer: per-element container UUID lookup. Errors are
-//                   swallowed — ContainerID stays zero — to match the
-//                   existing microflow helper's tolerance for elements
-//                   the backend cannot resolve (e.g. orphaned units).
+//
+//	swallowed — ContainerID stays zero — to match the
+//	existing microflow helper's tolerance for elements
+//	the backend cannot resolve (e.g. orphaned units).
+//
 // cacheGet/cachePut: read/write hooks bound by the caller to the
-//                   appropriate ctx.Cache.<domain>WithContainerGen field.
-//                   cacheGet returns (slice, true) on hit; on miss the
-//                   factory builds, calls cachePut, and returns.
+//
+//	appropriate ctx.Cache.<domain>WithContainerGen field.
+//	cacheGet returns (slice, true) on hit; on miss the
+//	factory builds, calls cachePut, and returns.
 //
 // # ID-type contract for domain authors (element.ID vs model.ID)
 //

@@ -8,9 +8,8 @@
 #   make check-mdl - Check MDL syntax for all doctype example scripts
 #   make test-integration - Run integration tests (requires mx/mxbuild)
 #   make test-mdl  - Run MDL integration tests (requires Docker)
-#   make lint      - Lint all code (Go + TypeScript)
+#   make lint      - Lint Go code (fmt + vet)
 #   make lint-go   - Lint Go code (fmt + vet)
-#   make lint-ts   - Lint TypeScript code (tsc --noEmit)
 #   make grammar   - Regenerate ANTLR parser
 #   make docs-site - Build documentation site (mdbook)
 #   make docs-serve - Serve docs site locally with live reload
@@ -223,10 +222,9 @@ MPR ?= app.mpr
 test-mdl: build
 	./scripts/run-mdl-tests.sh "$(abspath $(MPR))" "$(abspath $(BUILD_DIR)/$(BINARY_NAME))"
 
-# Lint all code (Go + TypeScript)
-lint: lint-go lint-ts
-
 # Lint Go code
+lint: lint-go
+
 lint-go: fmt vet
 	@echo "Go lint passed"
 

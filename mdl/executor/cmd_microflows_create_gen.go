@@ -206,6 +206,12 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		}
 	}
 
+	// Register named return variable (returns Type as $Var) so body
+	// statements that assign or read it pass the declared-variable check.
+	if s.ReturnType != nil && s.ReturnType.Variable != "" {
+		fb.declaredVars[s.ReturnType.Variable] = "Unknown"
+	}
+
 	// Build the flow graph (StartEvent + body activities + EndEvent
 	// + sequence flows). The collection ends up on the microflow's
 	// ObjectCollection; flows go onto the microflow's Flows array

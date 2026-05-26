@@ -345,7 +345,6 @@ func execDropAssociation(ctx *ExecContext, s *ast.DropAssociationStmt) error {
 	return mdlerrors.NewNotFound("association", s.Name.String())
 }
 
-
 // listAssociation handles SHOW ASSOCIATION command.
 func listAssociation(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {

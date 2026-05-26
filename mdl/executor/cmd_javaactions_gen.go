@@ -857,7 +857,6 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 	return nil
 }
 
-
 // ─────────────────────────────────────────────────────────────────────
 // D3 — execDropJavaActionGen
 // ─────────────────────────────────────────────────────────────────────

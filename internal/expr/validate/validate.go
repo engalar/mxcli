@@ -12,18 +12,18 @@ import (
 
 // ValidationResult is one validation finding for an expression.
 type ValidationResult struct {
-	UnitID    string `json:"UnitID"`
-	Project   string `json:"Project,omitempty"`
-	UnitType  string `json:"UnitType"`
-	UnitPath  string `json:"UnitPath,omitempty"`  // relative path from mprcontents/
-	Location  string `json:"Location,omitempty"`  // human-readable "Module.MicroflowName"
-	Field     string `json:"Field"`
-	Raw       string `json:"Raw"`
-	RuleID    string `json:"RuleID"`
-	Severity  string `json:"Severity"`
-	Message   string `json:"Message"`
-	YouWrote  string `json:"YouWrote,omitempty"`
-	Fix       string `json:"Fix,omitempty"`
+	UnitID   string `json:"UnitID"`
+	Project  string `json:"Project,omitempty"`
+	UnitType string `json:"UnitType"`
+	UnitPath string `json:"UnitPath,omitempty"` // relative path from mprcontents/
+	Location string `json:"Location,omitempty"` // human-readable "Module.MicroflowName"
+	Field    string `json:"Field"`
+	Raw      string `json:"Raw"`
+	RuleID   string `json:"RuleID"`
+	Severity string `json:"Severity"`
+	Message  string `json:"Message"`
+	YouWrote string `json:"YouWrote,omitempty"`
+	Fix      string `json:"Fix,omitempty"`
 }
 
 // ValidateSyntax applies SYN rules to a ParseResult.
@@ -36,7 +36,7 @@ func ValidateSyntax(pr parse.ParseResult) []ValidationResult {
 	if strings.HasPrefix(rec.Raw, "https://") || strings.HasPrefix(rec.Raw, "http://") {
 		out = append(out, ValidationResult{
 			UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType, UnitPath: rec.UnitPath,
-			Field: rec.Field, Raw: rec.Raw, 
+			Field: rec.Field, Raw: rec.Raw,
 			RuleID: "SYN-02", Severity: "INFO",
 			Message: "Field contains a URL, not a Mendix expression",
 		})
@@ -77,7 +77,7 @@ func ValidateSyntax(pr parse.ParseResult) []ValidationResult {
 		}
 		out = append(out, ValidationResult{
 			UnitID: rec.UnitID, Project: rec.Project, UnitType: rec.UnitType, UnitPath: rec.UnitPath,
-			Field: rec.Field, Raw: rec.Raw, 
+			Field: rec.Field, Raw: rec.Raw,
 			RuleID:   ruleID,
 			Severity: sev,
 			Message:  h.Problem,

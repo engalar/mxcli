@@ -45,8 +45,8 @@ func TestAddIfStatementGenThenOnlyEmitsSplitAndMerge(t *testing.T) {
 		Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
 		ThenBody: []ast.MicroflowStatement{
 			&ast.DeclareStmt{
-				Variable: "X",
-				Type:     ast.DataType{Kind: ast.TypeBoolean},
+				Variable:     "X",
+				Type:         ast.DataType{Kind: ast.TypeBoolean},
 				InitialValue: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
 			},
 		},

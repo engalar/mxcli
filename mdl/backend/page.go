@@ -50,5 +50,4 @@ type PageBackend interface {
 
 	DeleteSnippetGen(id model.ID) error
 	MoveSnippetGen(id, containerID model.ID) error
-
 }

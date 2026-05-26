@@ -486,9 +486,9 @@ type emptyJavaActionRepo struct {
 	items []*genJA.JavaAction
 }
 
-func (r *emptyJavaActionRepo) Get(id model.ID) (*genJA.JavaAction, error)        { return nil, nil }
+func (r *emptyJavaActionRepo) Get(id model.ID) (*genJA.JavaAction, error)          { return nil, nil }
 func (r *emptyJavaActionRepo) List(moduleID model.ID) ([]*genJA.JavaAction, error) { return nil, nil }
-func (r *emptyJavaActionRepo) ListAll() ([]*genJA.JavaAction, error)              { return r.items, nil }
+func (r *emptyJavaActionRepo) ListAll() ([]*genJA.JavaAction, error)               { return r.items, nil }
 func (r *emptyJavaActionRepo) FindByQualifiedName(qn string) (*genJA.JavaAction, error) {
 	return nil, nil
 }
@@ -611,8 +611,8 @@ func TestExecCreateJavaActionGen_AlreadyExists(t *testing.T) {
 	existing.SetID(element.ID(nextID("ja")))
 	existing.SetName("MyAction")
 	repo := &existingJavaActionRepo{
-		items:        []*genJA.JavaAction{existing},
-		containerOf:  map[model.ID]model.ID{model.ID(existing.ID()): mod.ID},
+		items:       []*genJA.JavaAction{existing},
+		containerOf: map[model.ID]model.ID{model.ID(existing.ID()): mod.ID},
 	}
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },

@@ -55,11 +55,11 @@ func TestMicroflowToMermaidGen_IfElseFlow(t *testing.T) {
 	got := out.String()
 	mustContain(t, got,
 		"flowchart LR\n",
-		"{",          // ExclusiveSplit diamond
-		" --> ",      // at least one connector
+		"{",     // ExclusiveSplit diamond
+		" --> ", // at least one connector
 		"\n%% @type flowchart\n",
 		"%% @direction LR\n",
-		"style ",     // start-node styling
+		"style ", // start-node styling
 	)
 	if !strings.Contains(got, "%% @nodeinfo {") {
 		t.Errorf("expected @nodeinfo block in output; got:\n%s", got)

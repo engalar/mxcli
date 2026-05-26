@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mendixlabs/mxcli/model"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/model"
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 

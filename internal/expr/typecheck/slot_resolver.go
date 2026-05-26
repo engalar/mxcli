@@ -17,23 +17,23 @@ func slotKey(rec scan.ExprRecord) string {
 // Note: ExpressionSplitCondition is intentionally absent — it can hold a Boolean expression
 // OR an enumeration attribute for enum-based splits, so we cannot safely require Boolean.
 var staticSlots = map[string]exprcheck.TypeKind{
-	"Microflows$WhileLoopCondition/WhileExpression":  exprcheck.KindBoolean,
-	"DomainModels$AccessRule/XPathConstraint":        exprcheck.KindBoolean,
-	"Microflows$CustomRange/LimitExpression":         exprcheck.KindInteger,
-	"Microflows$CustomRange/OffsetExpression":        exprcheck.KindInteger,
-	"Microflows$TemplateParameter/Expression":        exprcheck.KindString,
+	"Microflows$WhileLoopCondition/WhileExpression": exprcheck.KindBoolean,
+	"DomainModels$AccessRule/XPathConstraint":       exprcheck.KindBoolean,
+	"Microflows$CustomRange/LimitExpression":        exprcheck.KindInteger,
+	"Microflows$CustomRange/OffsetExpression":       exprcheck.KindInteger,
+	"Microflows$TemplateParameter/Expression":       exprcheck.KindString,
 }
 
 type slotResolverFn func(rec scan.ExprRecord, cat AttrCatalog, idx IndexReader) (exprcheck.TypeKind, bool)
 
 var dynamicSlotKeys = map[string]slotResolverFn{
-	"Microflows$ChangeActionItem/Value":                  resolveAttrTarget,
-	"Microflows$ChangeVariableAction/Value":              resolveVarTarget,
-	"Microflows$CreateVariableAction/InitialValue":       resolveVarTarget,
-	"Microflows$MicroflowCallParameterMapping/Argument":  resolveCallArgTarget,
+	"Microflows$ChangeActionItem/Value":                   resolveAttrTarget,
+	"Microflows$ChangeVariableAction/Value":               resolveVarTarget,
+	"Microflows$CreateVariableAction/InitialValue":        resolveVarTarget,
+	"Microflows$MicroflowCallParameterMapping/Argument":   resolveCallArgTarget,
 	"Mappings$MicroflowCallParameterMappingImpl/Argument": resolveCallArgTarget,
-	"Workflows$MicroflowCallParameterMapping/Expression": resolveCallArgTarget,
-	"Microflows$EndEvent/ReturnValue":                    resolveMicroflowReturn,
+	"Workflows$MicroflowCallParameterMapping/Expression":  resolveCallArgTarget,
+	"Microflows$EndEvent/ReturnValue":                     resolveMicroflowReturn,
 }
 
 type defaultSlotResolver struct{ idx IndexReader }

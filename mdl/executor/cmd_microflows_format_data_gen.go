@@ -780,4 +780,3 @@ func formatValidationFeedbackActionGen(a *genMf.ValidationFeedbackAction) string
 	}
 	return fmt.Sprintf("validation feedback %s message %s;", attrPath, msgText)
 }
-

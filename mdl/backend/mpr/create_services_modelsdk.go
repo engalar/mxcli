@@ -106,6 +106,9 @@ func (b *MprBackend) createConsumedODataServiceViaModelsdk(svc *model.ConsumedOD
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
+	if svc.ID == "" {
+		svc.ID = model.ID(modelsdkmpr.GenerateID())
+	}
 	contents, err := modelsdkmpr.SerializeConsumedODataService(svc)
 	if err != nil {
 		return fmt.Errorf("serialize consumed odata service: %w", err)
@@ -122,6 +125,9 @@ func (b *MprBackend) createConsumedODataServiceViaModelsdk(svc *model.ConsumedOD
 func (b *MprBackend) createPublishedODataServiceViaModelsdk(svc *model.PublishedODataService) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	if svc.ID == "" {
+		svc.ID = model.ID(modelsdkmpr.GenerateID())
 	}
 	contents, err := modelsdkmpr.SerializePublishedODataService(svc)
 	if err != nil {
@@ -161,6 +167,9 @@ func (b *MprBackend) createConsumedRestServiceViaModelsdk(svc *model.ConsumedRes
 func (b *MprBackend) createPublishedRestServiceViaModelsdk(svc *model.PublishedRestService) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	if svc.ID == "" {
+		svc.ID = model.ID(modelsdkmpr.GenerateID())
 	}
 	contents, err := modelsdkmpr.SerializePublishedRestService(svc)
 	if err != nil {

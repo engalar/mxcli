@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	msdkconstants "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
 	msdkdatatypes "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
-	"github.com/mendixlabs/mxcli/modelsdk/element"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 

@@ -237,4 +237,3 @@ func extractMDLFromDescribeOutput(s string) string {
 	raw = strings.ReplaceAll(raw, `\\`, `\`)
 	return strings.TrimSpace(raw)
 }
-

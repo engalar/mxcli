@@ -108,7 +108,7 @@ type WidgetTemplate struct {
 	Name          string         `json:"name"`
 	Version       string         `json:"version"`
 	ExtractedFrom string         `json:"extractedFrom"`
-	Generated     bool           `json:"-"` // true if derived from MPK, not from embedded template
+	Generated     bool           `json:"-"`         // true if derived from MPK, not from embedded template
 	StableIds     bool           `json:"stableIds"` // true = use identity mapping for Type $IDs (CE0463 fix)
 	Type          map[string]any `json:"type"`
 	Object        map[string]any `json:"object"` // WidgetObject with all property values

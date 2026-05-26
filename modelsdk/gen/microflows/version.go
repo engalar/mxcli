@@ -604,7 +604,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"feedbackTemplate": {Required: true},
 		},
 	},
-	"Microflows$WebServiceCallAction": {
+	"Microflows$CallWebServiceAction": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"httpConfiguration":     {Required: true},
 			"proxyConfiguration":    {Introduced: "7.15.0"},

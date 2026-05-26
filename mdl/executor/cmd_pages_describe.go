@@ -737,4 +737,3 @@ func wrapStringLiteralExpression(value string) string {
 	// Otherwise wrap in single quotes as a string literal
 	return "'" + value + "'"
 }
-

@@ -8,8 +8,8 @@
 package executor
 
 import (
-	"github.com/mendixlabs/mxcli/mdl/types"
 	"fmt"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"

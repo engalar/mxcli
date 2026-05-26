@@ -32,10 +32,10 @@ type MockPageMutator struct {
 	SaveFunc                 func() error
 
 	// Stage 3.3.5.D0 gen-typed siblings.
-	SetWidgetDataSourceGenFunc    func(widgetRef string, ds element.Element) error
-	InsertWidgetGenFunc           func(widgetRef string, columnRef string, position backend.InsertPosition, widgets []element.Element) error
-	ReplaceWidgetGenFunc          func(widgetRef string, columnRef string, widgets []element.Element) error
-	SetLayoutGridColumnWidthFunc  func(gridRef, rowRef, colRef string, width int) error
+	SetWidgetDataSourceGenFunc   func(widgetRef string, ds element.Element) error
+	InsertWidgetGenFunc          func(widgetRef string, columnRef string, position backend.InsertPosition, widgets []element.Element) error
+	ReplaceWidgetGenFunc         func(widgetRef string, columnRef string, widgets []element.Element) error
+	SetLayoutGridColumnWidthFunc func(gridRef, rowRef, colRef string, width int) error
 }
 
 func (m *MockPageMutator) ContainerType() backend.ContainerKind {

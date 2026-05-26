@@ -801,7 +801,6 @@ func containsIdPath(src string) bool {
 	return false
 }
 
-
 // isEmptyMessage checks if a message expression is empty or nil.
 func isEmptyMessage(expr ast.Expression) bool {
 	if expr == nil {

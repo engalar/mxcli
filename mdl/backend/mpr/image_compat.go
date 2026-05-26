@@ -98,4 +98,3 @@ func parseImageCollectionRaw(unitID, containerID string, contents []byte) (*type
 	}
 	return ic, nil
 }
-

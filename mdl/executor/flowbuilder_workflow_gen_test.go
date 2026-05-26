@@ -240,8 +240,8 @@ func TestAddNotifyWorkflowActionGenSetsFields(t *testing.T) {
 func TestAddNotifyWorkflowActionGenSetsActivityQN(t *testing.T) {
 	fb := newTestFlowBuilderGen()
 	stmt := &ast.NotifyWorkflowStmt{
-		WorkflowVariable:    "WF",
-		OutputVariable:      "IsReceived",
+		WorkflowVariable:      "WF",
+		OutputVariable:        "IsReceived",
 		ActivityQualifiedName: "HD.WF_TicketEscalation.WaitForManagerAvailable",
 	}
 	fb.addNotifyWorkflowActionGen(stmt)

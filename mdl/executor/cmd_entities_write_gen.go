@@ -12,8 +12,8 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // astToAttributeGen builds a gen-typed *Attribute from an AST

@@ -23,12 +23,12 @@ type AgentMoveCall struct {
 
 // RecordingAgentRepository records every call to its methods.
 type RecordingAgentRepository struct {
-	GotIDs       []model.ID
-	ListedTypes  []string
-	Created      []AgentCreateCall
-	Updated      []element.Element
-	Deleted      []model.ID
-	Moved        []AgentMoveCall
+	GotIDs      []model.ID
+	ListedTypes []string
+	Created     []AgentCreateCall
+	Updated     []element.Element
+	Deleted     []model.ID
+	Moved       []AgentMoveCall
 
 	GetFunc        func(model.ID) (element.Element, error)
 	ListByTypeFunc func(string) ([]element.Element, error)

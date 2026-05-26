@@ -25,7 +25,9 @@ type Token struct {
 // https://docs.mendix.com/refguide/xpath-keywords-and-system-variables/
 //
 // Total: 2 object + 1 CurrentDateTime + 16 base time-point (HasUTC) +
-//        16 UTC variants + 7 duration + 2 boolean + 1 null = 45.
+//
+//	16 UTC variants + 7 duration + 2 boolean + 1 null = 45.
+//
 // Time-points cover 8 buckets (Minute/Hour/Day/Yesterday/Tomorrow/Week/Month/Year)
 // × Begin/End = 16, each with a UTC variant.
 var All = []Token{

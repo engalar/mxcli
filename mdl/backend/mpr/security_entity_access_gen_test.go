@@ -3,8 +3,8 @@
 package mprbackend
 
 import (
-	"github.com/mendixlabs/mxcli/mdl/types"
 	"fmt"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"strings"
 	"testing"
 

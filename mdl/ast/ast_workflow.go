@@ -41,18 +41,18 @@ type WorkflowActivityNode interface {
 
 // WorkflowUserTaskNode represents a USER TASK activity.
 type WorkflowUserTaskNode struct {
-	Name            string // identifier name
-	Caption         string // display caption
-	Page            QualifiedName
-	Targeting       WorkflowTargetingNode
-	Entity          QualifiedName // user task entity
-	DueDate         string        // DUE DATE expression
-	Outcomes        []WorkflowUserTaskOutcomeNode
-	IsMultiUser     bool                        // Issue #8: true if MULTI USER TASK
-	CompletionMethod  string                    // Specifies how multi-user task completion is determined. Values: "" (default = majority), "majority", "threshold", "consensus". Only meaningful when IsMultiUser is true.
-	RequiredThreshold int                       // The percentage (0-100) for "threshold" completion. Ignored for other completion methods.
-	BoundaryEvents  []WorkflowBoundaryEventNode // Issue #7
-	TaskDescription string                      // from DESCRIPTION 'text'
+	Name              string // identifier name
+	Caption           string // display caption
+	Page              QualifiedName
+	Targeting         WorkflowTargetingNode
+	Entity            QualifiedName // user task entity
+	DueDate           string        // DUE DATE expression
+	Outcomes          []WorkflowUserTaskOutcomeNode
+	IsMultiUser       bool                        // Issue #8: true if MULTI USER TASK
+	CompletionMethod  string                      // Specifies how multi-user task completion is determined. Values: "" (default = majority), "majority", "threshold", "consensus". Only meaningful when IsMultiUser is true.
+	RequiredThreshold int                         // The percentage (0-100) for "threshold" completion. Ignored for other completion methods.
+	BoundaryEvents    []WorkflowBoundaryEventNode // Issue #7
+	TaskDescription   string                      // from DESCRIPTION 'text'
 }
 
 func (n *WorkflowUserTaskNode) workflowActivityNode() {}

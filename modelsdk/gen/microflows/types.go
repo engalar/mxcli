@@ -13,10 +13,10 @@ import (
 
 // Ensure imports are used.
 var (
-	_ = codec.DefaultRegistry
+	_                 = codec.DefaultRegistry
 	_ element.Element = nil
-	_ = property.DecodeString
-	_ bson.Raw = nil
+	_                 = property.DecodeString
+	_ bson.Raw        = nil
 )
 
 // ────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ func (o *WorkflowOperation) InitFromRaw(raw bson.Raw) {
 type AbortOperation struct {
 	element.Base
 	workflowVariable *property.Primitive[string]
-	reason *property.Part[element.Element]
+	reason           *property.Part[element.Element]
 }
 
 // WorkflowVariable returns the value of the workflowVariable property.
@@ -76,7 +76,7 @@ func (o *AbortOperation) InitFromRaw(raw bson.Raw) {
 type MicroflowObject struct {
 	element.Base
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -112,7 +112,7 @@ func (o *MicroflowObject) InitFromRaw(raw bson.Raw) {
 type Activity struct {
 	element.Base
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -148,13 +148,13 @@ func (o *Activity) InitFromRaw(raw bson.Raw) {
 type ActionActivity struct {
 	element.Base
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	action *property.Part[element.Element]
-	disabled *property.Primitive[bool]
-	caption *property.Primitive[string]
+	size                *property.Primitive[string]
+	action              *property.Part[element.Element]
+	disabled            *property.Primitive[bool]
+	caption             *property.Primitive[string]
 	autoGenerateCaption *property.Primitive[bool]
-	backgroundColor *property.Enum[string]
-	documentation *property.Primitive[string]
+	backgroundColor     *property.Enum[string]
+	documentation       *property.Primitive[string]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -248,7 +248,9 @@ func (o *ActionActivity) InitFromRaw(raw bson.Raw) {
 	o.caption.Init(raw)
 	o.autoGenerateCaption.Init(raw)
 	if val, err := raw.LookupErr("BackgroundColor"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.backgroundColor.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.backgroundColor.SetFromDecode(s)
+		}
 	}
 	o.documentation.Init(raw)
 }
@@ -259,10 +261,10 @@ func (o *ActionActivity) InitFromRaw(raw bson.Raw) {
 
 type AdditionalAttribute struct {
 	element.Base
-	name *property.Primitive[string]
-	propType *property.Part[element.Element]
-	value *property.Primitive[string]
-	attribute *property.ByNameRef[element.Element]
+	name              *property.Primitive[string]
+	propType          *property.Part[element.Element]
+	value             *property.Primitive[string]
+	attribute         *property.ByNameRef[element.Element]
 	attributeDataType *property.Part[element.Element]
 }
 
@@ -324,7 +326,9 @@ func (o *AdditionalAttribute) InitFromRaw(raw bson.Raw) {
 	}
 	o.value.Init(raw)
 	if val, err := raw.LookupErr("Attribute"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.attribute.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "AttributeDataType"); err == nil {
 		o.attributeDataType.SetFromDecode(child)
@@ -350,7 +354,7 @@ func (o *RequestHandling) InitFromRaw(raw bson.Raw) {
 type AdvancedRequestHandling struct {
 	element.Base
 	parameterMappings *property.PartList[element.Element]
-	nullValueOption *property.Enum[string]
+	nullValueOption   *property.Enum[string]
 }
 
 // ParameterMappingsItems returns the value of the parameterMappings property.
@@ -386,7 +390,9 @@ func (o *AdvancedRequestHandling) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("NullValueOption"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.nullValueOption.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.nullValueOption.SetFromDecode(s)
+		}
 	}
 }
 
@@ -412,7 +418,9 @@ func (o *MicroflowAction) SetErrorHandlingType(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 }
 
@@ -422,14 +430,14 @@ func (o *MicroflowAction) InitFromRaw(raw bson.Raw) {
 
 type AggregateListAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	inputListVariableName *property.Primitive[string]
-	attribute *property.ByNameRef[element.Element]
-	expression *property.Primitive[string]
-	useExpression *property.Primitive[bool]
-	aggregateFunction *property.Enum[string]
-	outputVariableName *property.Primitive[string]
-	reduceReturnDataType *property.Part[element.Element]
+	errorHandlingType            *property.Enum[string]
+	inputListVariableName        *property.Primitive[string]
+	attribute                    *property.ByNameRef[element.Element]
+	expression                   *property.Primitive[string]
+	useExpression                *property.Primitive[bool]
+	aggregateFunction            *property.Enum[string]
+	outputVariableName           *property.Primitive[string]
+	reduceReturnDataType         *property.Part[element.Element]
 	reduceInitialValueExpression *property.Primitive[string]
 }
 
@@ -526,16 +534,22 @@ func (o *AggregateListAction) SetReduceInitialValueExpression(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *AggregateListAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.inputListVariableName.Init(raw)
 	if val, err := raw.LookupErr("Attribute"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.attribute.SetFromDecode(s)
+		}
 	}
 	o.expression.Init(raw)
 	o.useExpression.Init(raw)
 	if val, err := raw.LookupErr("AggregateFunction"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.aggregateFunction.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.aggregateFunction.SetFromDecode(s)
+		}
 	}
 	o.outputVariableName.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ReduceReturnDataType"); err == nil {
@@ -551,8 +565,8 @@ func (o *AggregateListAction) InitFromRaw(raw bson.Raw) {
 type Annotation struct {
 	element.Base
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	caption *property.Primitive[string]
+	size                *property.Primitive[string]
+	caption             *property.Primitive[string]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -598,14 +612,14 @@ func (o *Annotation) InitFromRaw(raw bson.Raw) {
 
 type Flow struct {
 	element.Base
-	origin *property.ByIdRef[element.Element]
-	destination *property.ByIdRef[element.Element]
-	originConnectionIndex *property.Primitive[int32]
+	origin                     *property.ByIdRef[element.Element]
+	destination                *property.ByIdRef[element.Element]
+	originConnectionIndex      *property.Primitive[int32]
 	destinationConnectionIndex *property.Primitive[int32]
-	originBezierVector *property.Primitive[string]
-	destinationBezierVector *property.Primitive[string]
-	lineType *property.Enum[string]
-	line *property.Part[element.Element]
+	originBezierVector         *property.Primitive[string]
+	destinationBezierVector    *property.Primitive[string]
+	lineType                   *property.Enum[string]
+	line                       *property.Part[element.Element]
 }
 
 // OriginRefID returns the value of the origin property.
@@ -709,7 +723,9 @@ func (o *Flow) InitFromRaw(raw bson.Raw) {
 	o.originBezierVector.Init(raw)
 	o.destinationBezierVector.Init(raw)
 	if val, err := raw.LookupErr("LineType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.lineType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.lineType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Line"); err == nil {
 		o.line.SetFromDecode(child)
@@ -722,14 +738,14 @@ func (o *Flow) InitFromRaw(raw bson.Raw) {
 
 type AnnotationFlow struct {
 	element.Base
-	origin *property.ByIdRef[element.Element]
-	destination *property.ByIdRef[element.Element]
-	originConnectionIndex *property.Primitive[int32]
+	origin                     *property.ByIdRef[element.Element]
+	destination                *property.ByIdRef[element.Element]
+	originConnectionIndex      *property.Primitive[int32]
 	destinationConnectionIndex *property.Primitive[int32]
-	originBezierVector *property.Primitive[string]
-	destinationBezierVector *property.Primitive[string]
-	lineType *property.Enum[string]
-	line *property.Part[element.Element]
+	originBezierVector         *property.Primitive[string]
+	destinationBezierVector    *property.Primitive[string]
+	lineType                   *property.Enum[string]
+	line                       *property.Part[element.Element]
 }
 
 // OriginRefID returns the value of the origin property.
@@ -833,7 +849,9 @@ func (o *AnnotationFlow) InitFromRaw(raw bson.Raw) {
 	o.originBezierVector.Init(raw)
 	o.destinationBezierVector.Init(raw)
 	if val, err := raw.LookupErr("LineType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.lineType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.lineType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Line"); err == nil {
 		o.line.SetFromDecode(child)
@@ -846,10 +864,10 @@ func (o *AnnotationFlow) InitFromRaw(raw bson.Raw) {
 
 type AppServiceCallAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	appServiceAction *property.ByNameRef[element.Element]
-	parameterMappings *property.PartList[element.Element]
-	useVariable *property.Primitive[bool]
+	errorHandlingType  *property.Enum[string]
+	appServiceAction   *property.ByNameRef[element.Element]
+	parameterMappings  *property.PartList[element.Element]
+	useVariable        *property.Primitive[bool]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -911,10 +929,14 @@ func (o *AppServiceCallAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *AppServiceCallAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("AppServiceAction"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.appServiceAction.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.appServiceAction.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -931,8 +953,8 @@ func (o *AppServiceCallAction) InitFromRaw(raw bson.Raw) {
 
 type AppServiceCallParameterMapping struct {
 	element.Base
-	parameter *property.ByNameRef[element.Element]
-	argument *property.Primitive[string]
+	parameter     *property.ByNameRef[element.Element]
+	argument      *property.Primitive[string]
 	argumentModel *property.Part[element.Element]
 }
 
@@ -969,7 +991,9 @@ func (o *AppServiceCallParameterMapping) SetArgumentModel(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *AppServiceCallParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	o.argument.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ArgumentModel"); err == nil {
@@ -983,9 +1007,9 @@ func (o *AppServiceCallParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type ApplyJumpToOptionAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType             *property.Enum[string]
 	workflowJumpToDetailsVariable *property.Primitive[string]
-	outputVariableName *property.Primitive[string]
+	outputVariableName            *property.Primitive[string]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -1021,7 +1045,9 @@ func (o *ApplyJumpToOptionAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ApplyJumpToOptionAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.workflowJumpToDetailsVariable.Init(raw)
 	o.outputVariableName.Init(raw)
@@ -1046,7 +1072,7 @@ func (o *RetrieveSource) InitFromRaw(raw bson.Raw) {
 type AssociationRetrieveSource struct {
 	element.Base
 	startVariableName *property.Primitive[string]
-	association *property.ByNameRef[element.Element]
+	association       *property.ByNameRef[element.Element]
 }
 
 // StartVariableName returns the value of the startVariableName property.
@@ -1073,7 +1099,9 @@ func (o *AssociationRetrieveSource) SetAssociationQualifiedName(v string) {
 func (o *AssociationRetrieveSource) InitFromRaw(raw bson.Raw) {
 	o.startVariableName.Init(raw)
 	if val, err := raw.LookupErr("Association"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.association.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.association.SetFromDecode(s)
+		}
 	}
 }
 
@@ -1107,7 +1135,7 @@ func (o *AuthenticationConfig) InitFromRaw(raw bson.Raw) {
 
 type AuthenticationDocumentConfig struct {
 	element.Base
-	optForAuthDocument *property.Primitive[bool]
+	optForAuthDocument     *property.Primitive[bool]
 	authenticationDocument *property.ByNameRef[element.Element]
 }
 
@@ -1135,7 +1163,9 @@ func (o *AuthenticationDocumentConfig) SetAuthenticationDocumentQualifiedName(v 
 func (o *AuthenticationDocumentConfig) InitFromRaw(raw bson.Raw) {
 	o.optForAuthDocument.Init(raw)
 	if val, err := raw.LookupErr("AuthenticationDocument"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.authenticationDocument.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.authenticationDocument.SetFromDecode(s)
+		}
 	}
 }
 
@@ -1146,8 +1176,8 @@ func (o *AuthenticationDocumentConfig) InitFromRaw(raw bson.Raw) {
 type BasicAuthConfig struct {
 	element.Base
 	optForAuthDocument *property.Primitive[bool]
-	username *property.Primitive[string]
-	password *property.Primitive[string]
+	username           *property.Primitive[string]
+	password           *property.Primitive[string]
 }
 
 // OptForAuthDocument returns the value of the optForAuthDocument property.
@@ -1217,7 +1247,7 @@ func (o *ExpressionBasedCodeActionParameterValue) InitFromRaw(raw bson.Raw) {
 
 type BasicCodeActionParameterValue struct {
 	element.Base
-	argument *property.Primitive[string]
+	argument      *property.Primitive[string]
 	argumentModel *property.Part[element.Element]
 }
 
@@ -1267,7 +1297,7 @@ func (o *JavaActionParameterValue) InitFromRaw(raw bson.Raw) {
 
 type BasicJavaActionParameterValue struct {
 	element.Base
-	argument *property.Primitive[string]
+	argument      *property.Primitive[string]
 	argumentModel *property.Part[element.Element]
 }
 
@@ -1317,7 +1347,7 @@ func (o *Line) InitFromRaw(raw bson.Raw) {
 
 type BezierCurve struct {
 	element.Base
-	originControlVector *property.Primitive[string]
+	originControlVector      *property.Primitive[string]
 	destinationControlVector *property.Primitive[string]
 }
 
@@ -1377,7 +1407,7 @@ func (o *ListOperation) InitFromRaw(raw bson.Raw) {
 
 type BinaryListOperation struct {
 	element.Base
-	listVariableName *property.Primitive[string]
+	listVariableName               *property.Primitive[string]
 	secondListOrObjectVariableName *property.Primitive[string]
 }
 
@@ -1413,7 +1443,7 @@ func (o *BinaryListOperation) InitFromRaw(raw bson.Raw) {
 
 type BinaryRequestHandling struct {
 	element.Base
-	expression *property.Primitive[string]
+	expression      *property.Primitive[string]
 	expressionModel *property.Part[element.Element]
 }
 
@@ -1476,7 +1506,7 @@ func (o *BodyVariable) InitFromRaw(raw bson.Raw) {
 type BreakEvent struct {
 	element.Base
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -1511,12 +1541,12 @@ func (o *BreakEvent) InitFromRaw(raw bson.Raw) {
 
 type CallExternalAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType    *property.Enum[string]
 	consumedODataService *property.ByNameRef[element.Element]
-	name *property.Primitive[string]
-	parameterMappings *property.PartList[element.Element]
-	variableName *property.Primitive[string]
-	variableDataType *property.Part[element.Element]
+	name                 *property.Primitive[string]
+	parameterMappings    *property.PartList[element.Element]
+	variableName         *property.Primitive[string]
+	variableDataType     *property.Part[element.Element]
 	includedAssociations *property.PartList[element.Element]
 }
 
@@ -1603,10 +1633,14 @@ func (o *CallExternalAction) RemoveIncludedAssociations(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *CallExternalAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ConsumedODataService"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.consumedODataService.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.consumedODataService.SetFromDecode(s)
+		}
 	}
 	o.name.Init(raw)
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
@@ -1647,7 +1681,9 @@ func (o *CancelSynchronizationAction) SetErrorHandlingType(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *CancelSynchronizationAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 }
 
@@ -1669,7 +1705,7 @@ func (o *CaseValue) InitFromRaw(raw bson.Raw) {
 
 type CastAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType  *property.Enum[string]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -1696,7 +1732,9 @@ func (o *CastAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *CastAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.outputVariableName.Init(raw)
 }
@@ -1707,11 +1745,11 @@ func (o *CastAction) InitFromRaw(raw bson.Raw) {
 
 type ChangeListAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType  *property.Enum[string]
 	changeVariableName *property.Primitive[string]
-	value *property.Primitive[string]
-	valueModel *property.Part[element.Element]
-	propType *property.Enum[string]
+	value              *property.Primitive[string]
+	valueModel         *property.Part[element.Element]
+	propType           *property.Enum[string]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -1767,7 +1805,9 @@ func (o *ChangeListAction) SetType(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ChangeListAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.changeVariableName.Init(raw)
 	o.value.Init(raw)
@@ -1775,7 +1815,9 @@ func (o *ChangeListAction) InitFromRaw(raw bson.Raw) {
 		o.valueModel.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 }
 
@@ -1786,9 +1828,9 @@ func (o *ChangeListAction) InitFromRaw(raw bson.Raw) {
 type ChangeMembersAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	items *property.PartList[element.Element]
-	refreshInClient *property.Primitive[bool]
-	commit *property.Enum[string]
+	items             *property.PartList[element.Element]
+	refreshInClient   *property.Primitive[bool]
+	commit            *property.Enum[string]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -1839,7 +1881,9 @@ func (o *ChangeMembersAction) SetCommit(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ChangeMembersAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {
@@ -1848,7 +1892,9 @@ func (o *ChangeMembersAction) InitFromRaw(raw bson.Raw) {
 	}
 	o.refreshInClient.Init(raw)
 	if val, err := raw.LookupErr("Commit"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.commit.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.commit.SetFromDecode(s)
+		}
 	}
 }
 
@@ -1858,10 +1904,10 @@ func (o *ChangeMembersAction) InitFromRaw(raw bson.Raw) {
 
 type ChangeObjectAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	items *property.PartList[element.Element]
-	refreshInClient *property.Primitive[bool]
-	commit *property.Enum[string]
+	errorHandlingType  *property.Enum[string]
+	items              *property.PartList[element.Element]
+	refreshInClient    *property.Primitive[bool]
+	commit             *property.Enum[string]
 	changeVariableName *property.Primitive[string]
 }
 
@@ -1923,7 +1969,9 @@ func (o *ChangeObjectAction) SetChangeVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ChangeObjectAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {
@@ -1932,7 +1980,9 @@ func (o *ChangeObjectAction) InitFromRaw(raw bson.Raw) {
 	}
 	o.refreshInClient.Init(raw)
 	if val, err := raw.LookupErr("Commit"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.commit.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.commit.SetFromDecode(s)
+		}
 	}
 	o.changeVariableName.Init(raw)
 }
@@ -1943,10 +1993,10 @@ func (o *ChangeObjectAction) InitFromRaw(raw bson.Raw) {
 
 type ChangeVariableAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType  *property.Enum[string]
 	changeVariableName *property.Primitive[string]
-	value *property.Primitive[string]
-	valueModel *property.Part[element.Element]
+	value              *property.Primitive[string]
+	valueModel         *property.Part[element.Element]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -1992,7 +2042,9 @@ func (o *ChangeVariableAction) SetValueModel(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ChangeVariableAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.changeVariableName.Init(raw)
 	o.value.Init(raw)
@@ -2008,7 +2060,7 @@ func (o *ChangeVariableAction) InitFromRaw(raw bson.Raw) {
 type ClearFromClientAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	entity *property.ByNameRef[element.Element]
+	entity            *property.ByNameRef[element.Element]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -2034,10 +2086,14 @@ func (o *ClearFromClientAction) SetEntityQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ClearFromClientAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Entity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.entity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.entity.SetFromDecode(s)
+		}
 	}
 }
 
@@ -2047,8 +2103,8 @@ func (o *ClearFromClientAction) InitFromRaw(raw bson.Raw) {
 
 type CloseFormAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	numberOfPages *property.Primitive[int32]
+	errorHandlingType    *property.Enum[string]
+	numberOfPages        *property.Primitive[int32]
 	numberOfPagesToClose *property.Primitive[string]
 }
 
@@ -2085,7 +2141,9 @@ func (o *CloseFormAction) SetNumberOfPagesToClose(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *CloseFormAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.numberOfPages.Init(raw)
 	o.numberOfPagesToClose.Init(raw)
@@ -2109,10 +2167,10 @@ func (o *CodeActionParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type CommitAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	withEvents *property.Primitive[bool]
+	errorHandlingType  *property.Enum[string]
+	withEvents         *property.Primitive[bool]
 	commitVariableName *property.Primitive[string]
-	refreshInClient *property.Primitive[bool]
+	refreshInClient    *property.Primitive[bool]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -2158,7 +2216,9 @@ func (o *CommitAction) SetRefreshInClient(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *CommitAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.withEvents.Init(raw)
 	o.commitVariableName.Init(raw)
@@ -2207,7 +2267,7 @@ func (o *ConstantRange) InitFromRaw(raw bson.Raw) {
 
 type Contains struct {
 	element.Base
-	listVariableName *property.Primitive[string]
+	listVariableName               *property.Primitive[string]
 	secondListOrObjectVariableName *property.Primitive[string]
 }
 
@@ -2244,7 +2304,7 @@ func (o *Contains) InitFromRaw(raw bson.Raw) {
 type ContinueEvent struct {
 	element.Base
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -2304,9 +2364,9 @@ func (o *ContinueOperation) InitFromRaw(raw bson.Raw) {
 type MeterAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	name *property.Primitive[string]
-	description *property.Primitive[string]
-	tags *property.PartList[element.Element]
+	name              *property.Primitive[string]
+	description       *property.Primitive[string]
+	tags              *property.PartList[element.Element]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -2357,7 +2417,9 @@ func (o *MeterAction) RemoveTags(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MeterAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.name.Init(raw)
 	o.description.Init(raw)
@@ -2375,10 +2437,10 @@ func (o *MeterAction) InitFromRaw(raw bson.Raw) {
 type CounterMeterAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	name *property.Primitive[string]
-	description *property.Primitive[string]
-	tags *property.PartList[element.Element]
-	value *property.Primitive[string]
+	name              *property.Primitive[string]
+	description       *property.Primitive[string]
+	tags              *property.PartList[element.Element]
+	value             *property.Primitive[string]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -2439,7 +2501,9 @@ func (o *CounterMeterAction) SetValue(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *CounterMeterAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.name.Init(raw)
 	o.description.Init(raw)
@@ -2457,8 +2521,8 @@ func (o *CounterMeterAction) InitFromRaw(raw bson.Raw) {
 
 type CreateListAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	entity *property.ByNameRef[element.Element]
+	errorHandlingType  *property.Enum[string]
+	entity             *property.ByNameRef[element.Element]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -2495,10 +2559,14 @@ func (o *CreateListAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *CreateListAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Entity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.entity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.entity.SetFromDecode(s)
+		}
 	}
 	o.outputVariableName.Init(raw)
 }
@@ -2509,11 +2577,11 @@ func (o *CreateListAction) InitFromRaw(raw bson.Raw) {
 
 type CreateObjectAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	items *property.PartList[element.Element]
-	refreshInClient *property.Primitive[bool]
-	commit *property.Enum[string]
-	entity *property.ByNameRef[element.Element]
+	errorHandlingType  *property.Enum[string]
+	items              *property.PartList[element.Element]
+	refreshInClient    *property.Primitive[bool]
+	commit             *property.Enum[string]
+	entity             *property.ByNameRef[element.Element]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -2585,7 +2653,9 @@ func (o *CreateObjectAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *CreateObjectAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {
@@ -2594,10 +2664,14 @@ func (o *CreateObjectAction) InitFromRaw(raw bson.Raw) {
 	}
 	o.refreshInClient.Init(raw)
 	if val, err := raw.LookupErr("Commit"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.commit.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.commit.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Entity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.entity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.entity.SetFromDecode(s)
+		}
 	}
 	o.outputVariableName.Init(raw)
 }
@@ -2609,10 +2683,10 @@ func (o *CreateObjectAction) InitFromRaw(raw bson.Raw) {
 type CreateVariableAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	variableName *property.Primitive[string]
-	variableDataType *property.Primitive[string]
-	variableType *property.Part[element.Element]
-	initialValue *property.Primitive[string]
+	variableName      *property.Primitive[string]
+	variableDataType  *property.Primitive[string]
+	variableType      *property.Part[element.Element]
+	initialValue      *property.Primitive[string]
 	initialValueModel *property.Part[element.Element]
 }
 
@@ -2679,7 +2753,9 @@ func (o *CreateVariableAction) SetInitialValueModel(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *CreateVariableAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.variableName.Init(raw)
 	o.variableDataType.Init(raw)
@@ -2714,7 +2790,9 @@ func (o *CustomBlobDocumentCodeActionParameterValue) SetCustomDocumentQualifiedN
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *CustomBlobDocumentCodeActionParameterValue) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("CustomDocument"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.customDocument.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.customDocument.SetFromDecode(s)
+		}
 	}
 }
 
@@ -2724,9 +2802,9 @@ func (o *CustomBlobDocumentCodeActionParameterValue) InitFromRaw(raw bson.Raw) {
 
 type CustomRange struct {
 	element.Base
-	limitExpression *property.Primitive[string]
-	offsetExpression *property.Primitive[string]
-	limitExpressionModel *property.Part[element.Element]
+	limitExpression       *property.Primitive[string]
+	offsetExpression      *property.Primitive[string]
+	limitExpressionModel  *property.Part[element.Element]
 	offsetExpressionModel *property.Part[element.Element]
 }
 
@@ -2814,10 +2892,10 @@ func (o *CustomRequestHandling) InitFromRaw(raw bson.Raw) {
 
 type DatabaseRetrieveSource struct {
 	element.Base
-	entity *property.ByNameRef[element.Element]
-	propRange *property.Part[element.Element]
+	entity          *property.ByNameRef[element.Element]
+	propRange       *property.Part[element.Element]
 	xPathConstraint *property.Primitive[string]
-	sortItemList *property.Part[element.Element]
+	sortItemList    *property.Part[element.Element]
 }
 
 // EntityQualifiedName returns the value of the entity property.
@@ -2863,7 +2941,9 @@ func (o *DatabaseRetrieveSource) SetSortItemList(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *DatabaseRetrieveSource) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Entity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.entity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.entity.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Range"); err == nil {
 		o.propRange.SetFromDecode(child)
@@ -2880,9 +2960,9 @@ func (o *DatabaseRetrieveSource) InitFromRaw(raw bson.Raw) {
 
 type DeleteAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType  *property.Enum[string]
 	deleteVariableName *property.Primitive[string]
-	refreshInClient *property.Primitive[bool]
+	refreshInClient    *property.Primitive[bool]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -2918,7 +2998,9 @@ func (o *DeleteAction) SetRefreshInClient(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *DeleteAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.deleteVariableName.Init(raw)
 	o.refreshInClient.Init(raw)
@@ -2930,9 +3012,9 @@ func (o *DeleteAction) InitFromRaw(raw bson.Raw) {
 
 type DeleteExternalObject struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType  *property.Enum[string]
 	deleteVariableName *property.Primitive[string]
-	refreshInClient *property.Primitive[bool]
+	refreshInClient    *property.Primitive[bool]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -2968,7 +3050,9 @@ func (o *DeleteExternalObject) SetRefreshInClient(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *DeleteExternalObject) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.deleteVariableName.Init(raw)
 	o.refreshInClient.Init(raw)
@@ -2980,8 +3064,8 @@ func (o *DeleteExternalObject) InitFromRaw(raw bson.Raw) {
 
 type DocumentTemplateParameterMapping struct {
 	element.Base
-	widgetName *property.Primitive[string]
-	argument *property.Primitive[string]
+	widgetName    *property.Primitive[string]
+	argument      *property.Primitive[string]
 	argumentModel *property.Part[element.Element]
 }
 
@@ -3030,9 +3114,9 @@ func (o *DocumentTemplateParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type DownloadFileAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType        *property.Enum[string]
 	fileDocumentVariableName *property.Primitive[string]
-	showFileInBrowser *property.Primitive[bool]
+	showFileInBrowser        *property.Primitive[bool]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -3068,7 +3152,9 @@ func (o *DownloadFileAction) SetShowFileInBrowser(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *DownloadFileAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.fileDocumentVariableName.Init(raw)
 	o.showFileInBrowser.Init(raw)
@@ -3080,13 +3166,13 @@ func (o *DownloadFileAction) InitFromRaw(raw bson.Raw) {
 
 type EmailConnectionConfig struct {
 	element.Base
-	emailId *property.Primitive[string]
-	protocol *property.Enum[string]
-	host *property.Primitive[string]
-	port *property.Primitive[string]
-	securityType *property.Enum[string]
+	emailId             *property.Primitive[string]
+	protocol            *property.Enum[string]
+	host                *property.Primitive[string]
+	port                *property.Primitive[string]
+	securityType        *property.Enum[string]
 	checkServerIdentity *property.Primitive[bool]
-	connectionTimeout *property.Primitive[int32]
+	connectionTimeout   *property.Primitive[int32]
 }
 
 // EmailId returns the value of the emailId property.
@@ -3163,12 +3249,16 @@ func (o *EmailConnectionConfig) SetConnectionTimeout(v int32) {
 func (o *EmailConnectionConfig) InitFromRaw(raw bson.Raw) {
 	o.emailId.Init(raw)
 	if val, err := raw.LookupErr("Protocol"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.protocol.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.protocol.SetFromDecode(s)
+		}
 	}
 	o.host.Init(raw)
 	o.port.Init(raw)
 	if val, err := raw.LookupErr("SecurityType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.securityType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.securityType.SetFromDecode(s)
+		}
 	}
 	o.checkServerIdentity.Init(raw)
 	o.connectionTimeout.Init(raw)
@@ -3180,14 +3270,14 @@ func (o *EmailConnectionConfig) InitFromRaw(raw bson.Raw) {
 
 type EmailMessage struct {
 	element.Base
-	to *property.Primitive[string]
-	cc *property.Primitive[string]
-	bcc *property.Primitive[string]
-	subject *property.Primitive[string]
+	to                   *property.Primitive[string]
+	cc                   *property.Primitive[string]
+	bcc                  *property.Primitive[string]
+	subject              *property.Primitive[string]
 	messageBodyPlainText *property.Primitive[string]
-	messageBodyHtml *property.Primitive[string]
-	attachments *property.ByNameRefList[element.Element]
-	attachment *property.Primitive[string]
+	messageBodyHtml      *property.Primitive[string]
+	attachments          *property.ByNameRefList[element.Element]
+	attachment           *property.Primitive[string]
 }
 
 // To returns the value of the to property.
@@ -3288,7 +3378,9 @@ func (o *EmailMessage) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.attachments.SetFromDecode(qnames)
 		}
@@ -3303,10 +3395,10 @@ func (o *EmailMessage) InitFromRaw(raw bson.Raw) {
 type EndEvent struct {
 	element.Base
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	returnValue *property.Primitive[string]
-	returnValueModel *property.Part[element.Element]
-	documentation *property.Primitive[string]
+	size                *property.Primitive[string]
+	returnValue         *property.Primitive[string]
+	returnValueModel    *property.Part[element.Element]
+	documentation       *property.Primitive[string]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -3392,7 +3484,9 @@ func (o *EntityTypeCodeActionParameterValue) SetEntityQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *EntityTypeCodeActionParameterValue) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Entity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.entity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.entity.SetFromDecode(s)
+		}
 	}
 }
 
@@ -3418,7 +3512,9 @@ func (o *EntityTypeJavaActionParameterValue) SetEntityQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *EntityTypeJavaActionParameterValue) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Entity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.entity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.entity.SetFromDecode(s)
+		}
 	}
 }
 
@@ -3453,7 +3549,7 @@ func (o *EnumerationCase) InitFromRaw(raw bson.Raw) {
 type ErrorEvent struct {
 	element.Base
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -3489,7 +3585,7 @@ func (o *ErrorEvent) InitFromRaw(raw bson.Raw) {
 type ExclusiveMerge struct {
 	element.Base
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -3525,11 +3621,11 @@ func (o *ExclusiveMerge) InitFromRaw(raw bson.Raw) {
 type ExclusiveSplit struct {
 	element.Base
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	splitCondition *property.Part[element.Element]
-	caption *property.Primitive[string]
-	errorHandlingType *property.Enum[string]
-	documentation *property.Primitive[string]
+	size                *property.Primitive[string]
+	splitCondition      *property.Part[element.Element]
+	caption             *property.Primitive[string]
+	errorHandlingType   *property.Enum[string]
+	documentation       *property.Primitive[string]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -3601,7 +3697,9 @@ func (o *ExclusiveSplit) InitFromRaw(raw bson.Raw) {
 	}
 	o.caption.Init(raw)
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.documentation.Init(raw)
 }
@@ -3628,7 +3726,9 @@ func (o *ExportMappingJavaActionParameterValue) SetExportMappingQualifiedName(v 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ExportMappingJavaActionParameterValue) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ExportMapping"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportMapping.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportMapping.SetFromDecode(s)
+		}
 	}
 }
 
@@ -3654,7 +3754,9 @@ func (o *ExportMappingParameterValue) SetExportMappingQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ExportMappingParameterValue) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ExportMapping"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportMapping.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportMapping.SetFromDecode(s)
+		}
 	}
 }
 
@@ -3664,12 +3766,12 @@ func (o *ExportMappingParameterValue) InitFromRaw(raw bson.Raw) {
 
 type ExportXmlAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	mapping *property.ByNameRef[element.Element]
+	errorHandlingType           *property.Enum[string]
+	mapping                     *property.ByNameRef[element.Element]
 	mappingArgumentVariableName *property.Primitive[string]
-	resultHandling *property.Part[element.Element]
-	outputMethod *property.Part[element.Element]
-	isValidationRequired *property.Primitive[bool]
+	resultHandling              *property.Part[element.Element]
+	outputMethod                *property.Part[element.Element]
+	isValidationRequired        *property.Primitive[bool]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -3735,10 +3837,14 @@ func (o *ExportXmlAction) SetIsValidationRequired(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ExportXmlAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Mapping"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.mapping.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.mapping.SetFromDecode(s)
+		}
 	}
 	o.mappingArgumentVariableName.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ResultHandling"); err == nil {
@@ -3757,8 +3863,8 @@ func (o *ExportXmlAction) InitFromRaw(raw bson.Raw) {
 type ExpressionListOperation struct {
 	element.Base
 	listVariableName *property.Primitive[string]
-	expression *property.Primitive[string]
-	expressionModel *property.Part[element.Element]
+	expression       *property.Primitive[string]
+	expressionModel  *property.Part[element.Element]
 }
 
 // ListVariableName returns the value of the listVariableName property.
@@ -3818,7 +3924,7 @@ func (o *SplitCondition) InitFromRaw(raw bson.Raw) {
 
 type ExpressionSplitCondition struct {
 	element.Base
-	expression *property.Primitive[string]
+	expression      *property.Primitive[string]
 	expressionModel *property.Part[element.Element]
 }
 
@@ -3856,10 +3962,10 @@ func (o *ExpressionSplitCondition) InitFromRaw(raw bson.Raw) {
 
 type ExternalActionParameterMapping struct {
 	element.Base
-	parameterName *property.Primitive[string]
-	parameterType *property.Part[element.Element]
-	canBeEmpty *property.Primitive[bool]
-	argument *property.Primitive[string]
+	parameterName        *property.Primitive[string]
+	parameterType        *property.Part[element.Element]
+	canBeEmpty           *property.Primitive[bool]
+	argument             *property.Primitive[string]
 	includedAssociations *property.PartList[element.Element]
 	additionalAttributes *property.PartList[element.Element]
 }
@@ -3997,10 +4103,10 @@ func (o *FileDocumentExport) InitFromRaw(raw bson.Raw) {
 type InspectAttribute struct {
 	element.Base
 	listVariableName *property.Primitive[string]
-	expression *property.Primitive[string]
-	expressionModel *property.Part[element.Element]
-	attribute *property.ByNameRef[element.Element]
-	association *property.ByNameRef[element.Element]
+	expression       *property.Primitive[string]
+	expressionModel  *property.Part[element.Element]
+	attribute        *property.ByNameRef[element.Element]
+	association      *property.ByNameRef[element.Element]
 }
 
 // ListVariableName returns the value of the listVariableName property.
@@ -4061,10 +4167,14 @@ func (o *InspectAttribute) InitFromRaw(raw bson.Raw) {
 		o.expressionModel.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Attribute"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.attribute.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Association"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.association.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.association.SetFromDecode(s)
+		}
 	}
 }
 
@@ -4075,10 +4185,10 @@ func (o *InspectAttribute) InitFromRaw(raw bson.Raw) {
 type Filter struct {
 	element.Base
 	listVariableName *property.Primitive[string]
-	expression *property.Primitive[string]
-	expressionModel *property.Part[element.Element]
-	attribute *property.ByNameRef[element.Element]
-	association *property.ByNameRef[element.Element]
+	expression       *property.Primitive[string]
+	expressionModel  *property.Part[element.Element]
+	attribute        *property.ByNameRef[element.Element]
+	association      *property.ByNameRef[element.Element]
 }
 
 // ListVariableName returns the value of the listVariableName property.
@@ -4139,10 +4249,14 @@ func (o *Filter) InitFromRaw(raw bson.Raw) {
 		o.expressionModel.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Attribute"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.attribute.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Association"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.association.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.association.SetFromDecode(s)
+		}
 	}
 }
 
@@ -4153,8 +4267,8 @@ func (o *Filter) InitFromRaw(raw bson.Raw) {
 type FilterByExpression struct {
 	element.Base
 	listVariableName *property.Primitive[string]
-	expression *property.Primitive[string]
-	expressionModel *property.Part[element.Element]
+	expression       *property.Primitive[string]
+	expressionModel  *property.Part[element.Element]
 }
 
 // ListVariableName returns the value of the listVariableName property.
@@ -4203,10 +4317,10 @@ func (o *FilterByExpression) InitFromRaw(raw bson.Raw) {
 type Find struct {
 	element.Base
 	listVariableName *property.Primitive[string]
-	expression *property.Primitive[string]
-	expressionModel *property.Part[element.Element]
-	attribute *property.ByNameRef[element.Element]
-	association *property.ByNameRef[element.Element]
+	expression       *property.Primitive[string]
+	expressionModel  *property.Part[element.Element]
+	attribute        *property.ByNameRef[element.Element]
+	association      *property.ByNameRef[element.Element]
 }
 
 // ListVariableName returns the value of the listVariableName property.
@@ -4267,10 +4381,14 @@ func (o *Find) InitFromRaw(raw bson.Raw) {
 		o.expressionModel.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Attribute"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.attribute.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Association"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.association.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.association.SetFromDecode(s)
+		}
 	}
 }
 
@@ -4281,8 +4399,8 @@ func (o *Find) InitFromRaw(raw bson.Raw) {
 type FindByExpression struct {
 	element.Base
 	listVariableName *property.Primitive[string]
-	expression *property.Primitive[string]
-	expressionModel *property.Part[element.Element]
+	expression       *property.Primitive[string]
+	expressionModel  *property.Part[element.Element]
 }
 
 // ListVariableName returns the value of the listVariableName property.
@@ -4330,9 +4448,9 @@ func (o *FindByExpression) InitFromRaw(raw bson.Raw) {
 
 type FormDataPart struct {
 	element.Base
-	key *property.Primitive[string]
-	value *property.Primitive[string]
-	valueModel *property.Part[element.Element]
+	key           *property.Primitive[string]
+	value         *property.Primitive[string]
+	valueModel    *property.Part[element.Element]
 	headerEntries *property.PartList[element.Element]
 }
 
@@ -4435,10 +4553,10 @@ func (o *FormDataRequestHandling) InitFromRaw(raw bson.Raw) {
 type GaugeMeterAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	name *property.Primitive[string]
-	description *property.Primitive[string]
-	tags *property.PartList[element.Element]
-	value *property.Primitive[string]
+	name              *property.Primitive[string]
+	description       *property.Primitive[string]
+	tags              *property.PartList[element.Element]
+	value             *property.Primitive[string]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -4499,7 +4617,9 @@ func (o *GaugeMeterAction) SetValue(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *GaugeMeterAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.name.Init(raw)
 	o.description.Init(raw)
@@ -4517,24 +4637,24 @@ func (o *GaugeMeterAction) InitFromRaw(raw bson.Raw) {
 
 type GenerateDocumentAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	fileVariableName *property.Primitive[string]
-	languageVariableName *property.Primitive[string]
-	documentType *property.Enum[string]
-	languageSetting *property.Enum[string]
-	documentTemplate *property.ByNameRef[element.Element]
-	parameterMappings *property.PartList[element.Element]
-	overrideTopMargin *property.Primitive[bool]
-	overrideBottomMargin *property.Primitive[bool]
-	overrideLeftMargin *property.Primitive[bool]
-	overrideRightMargin *property.Primitive[bool]
-	marginLeftInInch *property.Primitive[string]
-	marginLeftInInchModel *property.Part[element.Element]
-	marginRightInInch *property.Primitive[string]
-	marginRightInInchModel *property.Part[element.Element]
-	marginTopInInch *property.Primitive[string]
-	marginTopInInchModel *property.Part[element.Element]
-	marginBottomInInch *property.Primitive[string]
+	errorHandlingType       *property.Enum[string]
+	fileVariableName        *property.Primitive[string]
+	languageVariableName    *property.Primitive[string]
+	documentType            *property.Enum[string]
+	languageSetting         *property.Enum[string]
+	documentTemplate        *property.ByNameRef[element.Element]
+	parameterMappings       *property.PartList[element.Element]
+	overrideTopMargin       *property.Primitive[bool]
+	overrideBottomMargin    *property.Primitive[bool]
+	overrideLeftMargin      *property.Primitive[bool]
+	overrideRightMargin     *property.Primitive[bool]
+	marginLeftInInch        *property.Primitive[string]
+	marginLeftInInchModel   *property.Part[element.Element]
+	marginRightInInch       *property.Primitive[string]
+	marginRightInInchModel  *property.Part[element.Element]
+	marginTopInInch         *property.Primitive[string]
+	marginTopInInchModel    *property.Part[element.Element]
+	marginBottomInInch      *property.Primitive[string]
 	marginBottomInInchModel *property.Part[element.Element]
 }
 
@@ -4736,18 +4856,26 @@ func (o *GenerateDocumentAction) SetMarginBottomInInchModel(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *GenerateDocumentAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.fileVariableName.Init(raw)
 	o.languageVariableName.Init(raw)
 	if val, err := raw.LookupErr("DocumentType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.documentType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.documentType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("LanguageSetting"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.languageSetting.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.languageSetting.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("DocumentTemplate"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.documentTemplate.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.documentTemplate.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -4782,9 +4910,9 @@ func (o *GenerateDocumentAction) InitFromRaw(raw bson.Raw) {
 
 type GenerateJumpToOptionsAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	workflowVariable *property.Primitive[string]
-	workflow *property.ByNameRef[element.Element]
+	errorHandlingType  *property.Enum[string]
+	workflowVariable   *property.Primitive[string]
+	workflow           *property.ByNameRef[element.Element]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -4831,11 +4959,15 @@ func (o *GenerateJumpToOptionsAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *GenerateJumpToOptionsAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.workflowVariable.Init(raw)
 	if val, err := raw.LookupErr("Workflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.workflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.workflow.SetFromDecode(s)
+		}
 	}
 	o.outputVariableName.Init(raw)
 }
@@ -4846,8 +4978,8 @@ func (o *GenerateJumpToOptionsAction) InitFromRaw(raw bson.Raw) {
 
 type GetWorkflowActivityRecordsAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	workflowVariable *property.Primitive[string]
+	errorHandlingType  *property.Enum[string]
+	workflowVariable   *property.Primitive[string]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -4884,7 +5016,9 @@ func (o *GetWorkflowActivityRecordsAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *GetWorkflowActivityRecordsAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.workflowVariable.Init(raw)
 	o.outputVariableName.Init(raw)
@@ -4896,9 +5030,9 @@ func (o *GetWorkflowActivityRecordsAction) InitFromRaw(raw bson.Raw) {
 
 type GetWorkflowDataAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	workflowVariable *property.Primitive[string]
-	workflow *property.ByNameRef[element.Element]
+	errorHandlingType  *property.Enum[string]
+	workflowVariable   *property.Primitive[string]
+	workflow           *property.ByNameRef[element.Element]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -4945,11 +5079,15 @@ func (o *GetWorkflowDataAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *GetWorkflowDataAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.workflowVariable.Init(raw)
 	if val, err := raw.LookupErr("Workflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.workflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.workflow.SetFromDecode(s)
+		}
 	}
 	o.outputVariableName.Init(raw)
 }
@@ -4960,9 +5098,9 @@ func (o *GetWorkflowDataAction) InitFromRaw(raw bson.Raw) {
 
 type GetWorkflowsAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType           *property.Enum[string]
 	workflowContextVariableName *property.Primitive[string]
-	outputVariableName *property.Primitive[string]
+	outputVariableName          *property.Primitive[string]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -4998,7 +5136,9 @@ func (o *GetWorkflowsAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *GetWorkflowsAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.workflowContextVariableName.Init(raw)
 	o.outputVariableName.Init(raw)
@@ -5034,19 +5174,19 @@ func (o *Head) InitFromRaw(raw bson.Raw) {
 
 type HttpConfiguration struct {
 	element.Base
-	overrideLocation *property.Primitive[bool]
-	customLocation *property.Primitive[string]
-	customLocationModel *property.Part[element.Element]
-	customLocationTemplate *property.Part[element.Element]
-	useAuthentication *property.Primitive[bool]
+	overrideLocation           *property.Primitive[bool]
+	customLocation             *property.Primitive[string]
+	customLocationModel        *property.Part[element.Element]
+	customLocationTemplate     *property.Part[element.Element]
+	useAuthentication          *property.Primitive[bool]
 	httpAuthenticationUserName *property.Primitive[string]
-	username *property.Part[element.Element]
-	authenticationPassword *property.Primitive[string]
-	password *property.Part[element.Element]
-	headerEntries *property.PartList[element.Element]
-	httpMethod *property.Enum[string]
-	newHttpMethod *property.Enum[string]
-	clientCertificate *property.Primitive[string]
+	username                   *property.Part[element.Element]
+	authenticationPassword     *property.Primitive[string]
+	password                   *property.Part[element.Element]
+	headerEntries              *property.PartList[element.Element]
+	httpMethod                 *property.Enum[string]
+	newHttpMethod              *property.Enum[string]
+	clientCertificate          *property.Primitive[string]
 }
 
 // OverrideLocation returns the value of the overrideLocation property.
@@ -5209,10 +5349,14 @@ func (o *HttpConfiguration) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("HttpMethod"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.httpMethod.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.httpMethod.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("NewHttpMethod"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.newHttpMethod.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.newHttpMethod.SetFromDecode(s)
+		}
 	}
 	o.clientCertificate.Init(raw)
 }
@@ -5223,8 +5367,8 @@ func (o *HttpConfiguration) InitFromRaw(raw bson.Raw) {
 
 type HttpHeaderEntry struct {
 	element.Base
-	key *property.Primitive[string]
-	value *property.Primitive[string]
+	key        *property.Primitive[string]
+	value      *property.Primitive[string]
 	valueModel *property.Part[element.Element]
 }
 
@@ -5273,13 +5417,13 @@ func (o *HttpHeaderEntry) InitFromRaw(raw bson.Raw) {
 
 type ImportMappingCall struct {
 	element.Base
-	mapping *property.ByNameRef[element.Element]
-	objectHandlingBackup *property.Enum[string]
-	commit *property.Enum[string]
+	mapping                     *property.ByNameRef[element.Element]
+	objectHandlingBackup        *property.Enum[string]
+	commit                      *property.Enum[string]
 	mappingArgumentVariableName *property.Primitive[string]
-	propRange *property.Part[element.Element]
-	contentType *property.Enum[string]
-	forceSingleOccurrence *property.Primitive[bool]
+	propRange                   *property.Part[element.Element]
+	contentType                 *property.Enum[string]
+	forceSingleOccurrence       *property.Primitive[bool]
 }
 
 // MappingQualifiedName returns the value of the mapping property.
@@ -5355,20 +5499,28 @@ func (o *ImportMappingCall) SetForceSingleOccurrence(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ImportMappingCall) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Mapping"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.mapping.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.mapping.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ObjectHandlingBackup"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.objectHandlingBackup.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.objectHandlingBackup.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Commit"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.commit.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.commit.SetFromDecode(s)
+		}
 	}
 	o.mappingArgumentVariableName.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Range"); err == nil {
 		o.propRange.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ContentType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.contentType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.contentType.SetFromDecode(s)
+		}
 	}
 	o.forceSingleOccurrence.Init(raw)
 }
@@ -5395,7 +5547,9 @@ func (o *ImportMappingJavaActionParameterValue) SetImportMappingQualifiedName(v 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ImportMappingJavaActionParameterValue) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ImportMapping"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.importMapping.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.importMapping.SetFromDecode(s)
+		}
 	}
 }
 
@@ -5421,7 +5575,9 @@ func (o *ImportMappingParameterValue) SetImportMappingQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ImportMappingParameterValue) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ImportMapping"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.importMapping.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.importMapping.SetFromDecode(s)
+		}
 	}
 }
 
@@ -5431,10 +5587,10 @@ func (o *ImportMappingParameterValue) InitFromRaw(raw bson.Raw) {
 
 type ImportXmlAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType       *property.Enum[string]
 	xmlDocumentVariableName *property.Primitive[string]
-	resultHandling *property.Part[element.Element]
-	isValidationRequired *property.Primitive[bool]
+	resultHandling          *property.Part[element.Element]
+	isValidationRequired    *property.Primitive[bool]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -5480,7 +5636,9 @@ func (o *ImportXmlAction) SetIsValidationRequired(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ImportXmlAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.xmlDocumentVariableName.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ResultHandling"); err == nil {
@@ -5495,8 +5653,8 @@ func (o *ImportXmlAction) InitFromRaw(raw bson.Raw) {
 
 type IncludedAssociation struct {
 	element.Base
-	association *property.ByNameRef[element.Element]
-	isParent *property.Primitive[bool]
+	association          *property.ByNameRef[element.Element]
+	isParent             *property.Primitive[bool]
 	includedAssociations *property.PartList[element.Element]
 }
 
@@ -5538,7 +5696,9 @@ func (o *IncludedAssociation) RemoveIncludedAssociations(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *IncludedAssociation) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Association"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.association.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.association.SetFromDecode(s)
+		}
 	}
 	o.isParent.Init(raw)
 	if children, err := codec.DecodeChildren(raw, "IncludedAssociations"); err == nil {
@@ -5555,9 +5715,9 @@ func (o *IncludedAssociation) InitFromRaw(raw bson.Raw) {
 type IncrementCounterMeterAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	name *property.Primitive[string]
-	description *property.Primitive[string]
-	tags *property.PartList[element.Element]
+	name              *property.Primitive[string]
+	description       *property.Primitive[string]
+	tags              *property.PartList[element.Element]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -5608,7 +5768,9 @@ func (o *IncrementCounterMeterAction) RemoveTags(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *IncrementCounterMeterAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.name.Init(raw)
 	o.description.Init(raw)
@@ -5641,7 +5803,9 @@ func (o *InheritanceCase) SetValueQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *InheritanceCase) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Value"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.value.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.value.SetFromDecode(s)
+		}
 	}
 }
 
@@ -5652,10 +5816,10 @@ func (o *InheritanceCase) InitFromRaw(raw bson.Raw) {
 type InheritanceSplit struct {
 	element.Base
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	splitVariableName *property.Primitive[string]
-	caption *property.Primitive[string]
-	documentation *property.Primitive[string]
+	size                *property.Primitive[string]
+	splitVariableName   *property.Primitive[string]
+	caption             *property.Primitive[string]
+	documentation       *property.Primitive[string]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -5723,7 +5887,7 @@ func (o *InheritanceSplit) InitFromRaw(raw bson.Raw) {
 
 type Intersect struct {
 	element.Base
-	listVariableName *property.Primitive[string]
+	listVariableName               *property.Primitive[string]
 	secondListOrObjectVariableName *property.Primitive[string]
 }
 
@@ -5772,7 +5936,7 @@ func (o *LoopSource) InitFromRaw(raw bson.Raw) {
 type IterableList struct {
 	element.Base
 	listVariableName *property.Primitive[string]
-	variableName *property.Primitive[string]
+	variableName     *property.Primitive[string]
 }
 
 // ListVariableName returns the value of the listVariableName property.
@@ -5807,12 +5971,12 @@ func (o *IterableList) InitFromRaw(raw bson.Raw) {
 
 type JavaActionCallAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	javaAction *property.ByNameRef[element.Element]
-	queueSettings *property.Part[element.Element]
-	queue *property.ByNameRef[element.Element]
-	parameterMappings *property.PartList[element.Element]
-	useReturnVariable *property.Primitive[bool]
+	errorHandlingType  *property.Enum[string]
+	javaAction         *property.ByNameRef[element.Element]
+	queueSettings      *property.Part[element.Element]
+	queue              *property.ByNameRef[element.Element]
+	parameterMappings  *property.PartList[element.Element]
+	useReturnVariable  *property.Primitive[bool]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -5894,16 +6058,22 @@ func (o *JavaActionCallAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *JavaActionCallAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("JavaAction"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.javaAction.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.javaAction.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "QueueSettings"); err == nil {
 		o.queueSettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Queue"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.queue.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.queue.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -5920,9 +6090,9 @@ func (o *JavaActionCallAction) InitFromRaw(raw bson.Raw) {
 
 type JavaActionParameterMapping struct {
 	element.Base
-	parameter *property.ByNameRef[element.Element]
-	argument *property.Primitive[string]
-	value *property.Part[element.Element]
+	parameter      *property.ByNameRef[element.Element]
+	argument       *property.Primitive[string]
+	value          *property.Part[element.Element]
 	parameterValue *property.Part[element.Element]
 }
 
@@ -5969,7 +6139,9 @@ func (o *JavaActionParameterMapping) SetParameterValue(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *JavaActionParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	o.argument.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Value"); err == nil {
@@ -5986,10 +6158,10 @@ func (o *JavaActionParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type JavaScriptActionCallAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	javaScriptAction *property.ByNameRef[element.Element]
-	parameterMappings *property.PartList[element.Element]
-	useReturnVariable *property.Primitive[bool]
+	errorHandlingType  *property.Enum[string]
+	javaScriptAction   *property.ByNameRef[element.Element]
+	parameterMappings  *property.PartList[element.Element]
+	useReturnVariable  *property.Primitive[bool]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -6051,10 +6223,14 @@ func (o *JavaScriptActionCallAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *JavaScriptActionCallAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("JavaScriptAction"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.javaScriptAction.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.javaScriptAction.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -6071,7 +6247,7 @@ func (o *JavaScriptActionCallAction) InitFromRaw(raw bson.Raw) {
 
 type JavaScriptActionParameterMapping struct {
 	element.Base
-	parameter *property.ByNameRef[element.Element]
+	parameter      *property.ByNameRef[element.Element]
 	parameterValue *property.Part[element.Element]
 }
 
@@ -6098,7 +6274,9 @@ func (o *JavaScriptActionParameterMapping) SetParameterValue(v element.Element) 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *JavaScriptActionParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ParameterValue"); err == nil {
 		o.parameterValue.SetFromDecode(child)
@@ -6111,7 +6289,7 @@ func (o *JavaScriptActionParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type ListEquals struct {
 	element.Base
-	listVariableName *property.Primitive[string]
+	listVariableName               *property.Primitive[string]
 	secondListOrObjectVariableName *property.Primitive[string]
 }
 
@@ -6147,8 +6325,8 @@ func (o *ListEquals) InitFromRaw(raw bson.Raw) {
 
 type ListOperationAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	operation *property.Part[element.Element]
+	errorHandlingType  *property.Enum[string]
+	operation          *property.Part[element.Element]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -6185,7 +6363,9 @@ func (o *ListOperationAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ListOperationAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Operation"); err == nil {
 		o.operation.SetFromDecode(child)
@@ -6200,7 +6380,7 @@ func (o *ListOperationAction) InitFromRaw(raw bson.Raw) {
 type ListRange struct {
 	element.Base
 	listVariableName *property.Primitive[string]
-	customRange *property.Part[element.Element]
+	customRange      *property.Part[element.Element]
 }
 
 // ListVariableName returns the value of the listVariableName property.
@@ -6238,7 +6418,7 @@ func (o *ListRange) InitFromRaw(raw bson.Raw) {
 type LockWorkflowAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	workflow *property.ByNameRef[element.Element]
+	workflow          *property.ByNameRef[element.Element]
 	workflowSelection *property.Part[element.Element]
 	pauseAllWorkflows *property.Primitive[bool]
 }
@@ -6286,10 +6466,14 @@ func (o *LockWorkflowAction) SetPauseAllWorkflows(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *LockWorkflowAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Workflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.workflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.workflow.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "WorkflowSelection"); err == nil {
 		o.workflowSelection.SetFromDecode(child)
@@ -6303,11 +6487,11 @@ func (o *LockWorkflowAction) InitFromRaw(raw bson.Raw) {
 
 type LogMessageAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	level *property.Enum[string]
-	node *property.Primitive[string]
-	nodeModel *property.Part[element.Element]
-	messageTemplate *property.Part[element.Element]
+	errorHandlingType       *property.Enum[string]
+	level                   *property.Enum[string]
+	node                    *property.Primitive[string]
+	nodeModel               *property.Part[element.Element]
+	messageTemplate         *property.Part[element.Element]
 	includeLatestStackTrace *property.Primitive[bool]
 }
 
@@ -6374,10 +6558,14 @@ func (o *LogMessageAction) SetIncludeLatestStackTrace(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *LogMessageAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Level"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.level.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.level.SetFromDecode(s)
+		}
 	}
 	o.node.Init(raw)
 	if child, err := codec.DecodeChild(raw, "NodeModel"); err == nil {
@@ -6395,14 +6583,14 @@ func (o *LogMessageAction) InitFromRaw(raw bson.Raw) {
 
 type LoopedActivity struct {
 	element.Base
-	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	objectCollection *property.Part[element.Element]
+	relativeMiddlePoint      *property.Primitive[string]
+	size                     *property.Primitive[string]
+	objectCollection         *property.Part[element.Element]
 	iteratedListVariableName *property.Primitive[string]
-	loopVariableName *property.Primitive[string]
-	errorHandlingType *property.Enum[string]
-	documentation *property.Primitive[string]
-	loopSource *property.Part[element.Element]
+	loopVariableName         *property.Primitive[string]
+	errorHandlingType        *property.Enum[string]
+	documentation            *property.Primitive[string]
+	loopSource               *property.Part[element.Element]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -6495,7 +6683,9 @@ func (o *LoopedActivity) InitFromRaw(raw bson.Raw) {
 	o.iteratedListVariableName.Init(raw)
 	o.loopVariableName.Init(raw)
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.documentation.Init(raw)
 	if child, err := codec.DecodeChild(raw, "LoopSource"); err == nil {
@@ -6509,7 +6699,7 @@ func (o *LoopedActivity) InitFromRaw(raw bson.Raw) {
 
 type MLModelCall struct {
 	element.Base
-	modelReference *property.Primitive[string]
+	modelReference    *property.Primitive[string]
 	mlMappingDocument *property.ByNameRef[element.Element]
 	parameterMappings *property.PartList[element.Element]
 }
@@ -6553,7 +6743,9 @@ func (o *MLModelCall) RemoveParameterMappings(index int) {
 func (o *MLModelCall) InitFromRaw(raw bson.Raw) {
 	o.modelReference.Init(raw)
 	if val, err := raw.LookupErr("MlMappingDocument"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.mlMappingDocument.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.mlMappingDocument.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -6568,10 +6760,10 @@ func (o *MLModelCall) InitFromRaw(raw bson.Raw) {
 
 type MLModelCallAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	modelCall *property.Part[element.Element]
-	mlMappingDocument *property.ByNameRef[element.Element]
-	inputVariableName *property.Primitive[string]
+	errorHandlingType  *property.Enum[string]
+	modelCall          *property.Part[element.Element]
+	mlMappingDocument  *property.ByNameRef[element.Element]
+	inputVariableName  *property.Primitive[string]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -6628,13 +6820,17 @@ func (o *MLModelCallAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MLModelCallAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ModelCall"); err == nil {
 		o.modelCall.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("MlMappingDocument"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.mlMappingDocument.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.mlMappingDocument.SetFromDecode(s)
+		}
 	}
 	o.inputVariableName.Init(raw)
 	o.outputVariableName.Init(raw)
@@ -6646,9 +6842,9 @@ func (o *MLModelCallAction) InitFromRaw(raw bson.Raw) {
 
 type MLModelCallParameterMapping struct {
 	element.Base
-	parameterName *property.Primitive[string]
-	parameterType *property.Part[element.Element]
-	initialValue *property.Primitive[string]
+	parameterName     *property.Primitive[string]
+	parameterType     *property.Part[element.Element]
+	initialValue      *property.Primitive[string]
 	initialValueModel *property.Primitive[string]
 }
 
@@ -6708,9 +6904,9 @@ func (o *MLModelCallParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type MappingRequestHandling struct {
 	element.Base
-	mapping *property.ByNameRef[element.Element]
+	mapping                     *property.ByNameRef[element.Element]
 	mappingArgumentVariableName *property.Primitive[string]
-	contentType *property.Enum[string]
+	contentType                 *property.Enum[string]
 }
 
 // MappingQualifiedName returns the value of the mapping property.
@@ -6746,11 +6942,15 @@ func (o *MappingRequestHandling) SetContentType(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MappingRequestHandling) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Mapping"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.mapping.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.mapping.SetFromDecode(s)
+		}
 	}
 	o.mappingArgumentVariableName.Init(raw)
 	if val, err := raw.LookupErr("ContentType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.contentType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.contentType.SetFromDecode(s)
+		}
 	}
 }
 
@@ -6760,11 +6960,11 @@ func (o *MappingRequestHandling) InitFromRaw(raw bson.Raw) {
 
 type MemberChange struct {
 	element.Base
-	attribute *property.ByNameRef[element.Element]
+	attribute   *property.ByNameRef[element.Element]
 	association *property.ByNameRef[element.Element]
-	propType *property.Enum[string]
-	value *property.Primitive[string]
-	valueModel *property.Part[element.Element]
+	propType    *property.Enum[string]
+	value       *property.Primitive[string]
+	valueModel  *property.Part[element.Element]
 }
 
 // AttributeQualifiedName returns the value of the attribute property.
@@ -6820,13 +7020,19 @@ func (o *MemberChange) SetValueModel(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MemberChange) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Attribute"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.attribute.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Association"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.association.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.association.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 	o.value.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ValueModel"); err == nil {
@@ -6840,7 +7046,7 @@ func (o *MemberChange) InitFromRaw(raw bson.Raw) {
 
 type MeterTagMapping struct {
 	element.Base
-	key *property.Primitive[string]
+	key   *property.Primitive[string]
 	value *property.Primitive[string]
 }
 
@@ -6876,16 +7082,16 @@ func (o *MeterTagMapping) InitFromRaw(raw bson.Raw) {
 
 type MicroflowBase struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	objectCollection *property.Part[element.Element]
-	flows *property.PartList[element.Element]
-	returnType *property.Primitive[string]
+	name                *property.Primitive[string]
+	documentation       *property.Primitive[string]
+	excluded            *property.Primitive[bool]
+	exportLevel         *property.Enum[string]
+	objectCollection    *property.Part[element.Element]
+	flows               *property.PartList[element.Element]
+	returnType          *property.Primitive[string]
 	microflowReturnType *property.Part[element.Element]
-	markAsUsed *property.Primitive[bool]
-	returnVariableName *property.Primitive[string]
+	markAsUsed          *property.Primitive[bool]
+	returnVariableName  *property.Primitive[string]
 }
 
 // Name returns the value of the name property.
@@ -6999,7 +7205,9 @@ func (o *MicroflowBase) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ObjectCollection"); err == nil {
 		o.objectCollection.SetFromDecode(child)
@@ -7023,17 +7231,17 @@ func (o *MicroflowBase) InitFromRaw(raw bson.Raw) {
 
 type ServerSideMicroflow struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	objectCollection *property.Part[element.Element]
-	flows *property.PartList[element.Element]
-	returnType *property.Primitive[string]
+	name                *property.Primitive[string]
+	documentation       *property.Primitive[string]
+	excluded            *property.Primitive[bool]
+	exportLevel         *property.Enum[string]
+	objectCollection    *property.Part[element.Element]
+	flows               *property.PartList[element.Element]
+	returnType          *property.Primitive[string]
 	microflowReturnType *property.Part[element.Element]
-	markAsUsed *property.Primitive[bool]
-	returnVariableName *property.Primitive[string]
-	applyEntityAccess *property.Primitive[bool]
+	markAsUsed          *property.Primitive[bool]
+	returnVariableName  *property.Primitive[string]
+	applyEntityAccess   *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -7157,7 +7365,9 @@ func (o *ServerSideMicroflow) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ObjectCollection"); err == nil {
 		o.objectCollection.SetFromDecode(child)
@@ -7182,26 +7392,26 @@ func (o *ServerSideMicroflow) InitFromRaw(raw bson.Raw) {
 
 type Microflow struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	objectCollection *property.Part[element.Element]
-	flows *property.PartList[element.Element]
-	returnType *property.Primitive[string]
-	microflowReturnType *property.Part[element.Element]
-	markAsUsed *property.Primitive[bool]
-	returnVariableName *property.Primitive[string]
-	applyEntityAccess *property.Primitive[bool]
-	allowedModuleRoles *property.ByNameRefList[element.Element]
-	microflowActionInfo *property.Part[element.Element]
-	workflowActionInfo *property.Part[element.Element]
-	allowConcurrentExecution *property.Primitive[bool]
-	concurrencyErrorMessage *property.Part[element.Element]
+	name                      *property.Primitive[string]
+	documentation             *property.Primitive[string]
+	excluded                  *property.Primitive[bool]
+	exportLevel               *property.Enum[string]
+	objectCollection          *property.Part[element.Element]
+	flows                     *property.PartList[element.Element]
+	returnType                *property.Primitive[string]
+	microflowReturnType       *property.Part[element.Element]
+	markAsUsed                *property.Primitive[bool]
+	returnVariableName        *property.Primitive[string]
+	applyEntityAccess         *property.Primitive[bool]
+	allowedModuleRoles        *property.ByNameRefList[element.Element]
+	microflowActionInfo       *property.Part[element.Element]
+	workflowActionInfo        *property.Part[element.Element]
+	allowConcurrentExecution  *property.Primitive[bool]
+	concurrencyErrorMessage   *property.Part[element.Element]
 	concurrencyErrorMicroflow *property.ByNameRef[element.Element]
-	url *property.Primitive[string]
-	urlSearchParameters *property.ByNameRefList[element.Element]
-	stableId *property.Primitive[string]
+	url                       *property.Primitive[string]
+	urlSearchParameters       *property.ByNameRefList[element.Element]
+	stableId                  *property.Primitive[string]
 }
 
 // Name returns the value of the name property.
@@ -7425,7 +7635,9 @@ func (o *Microflow) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ObjectCollection"); err == nil {
 		o.objectCollection.SetFromDecode(child)
@@ -7447,7 +7659,9 @@ func (o *Microflow) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.allowedModuleRoles.SetFromDecode(qnames)
 		}
@@ -7463,7 +7677,9 @@ func (o *Microflow) InitFromRaw(raw bson.Raw) {
 		o.concurrencyErrorMessage.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ConcurrencyErrorMicroflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.concurrencyErrorMicroflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.concurrencyErrorMicroflow.SetFromDecode(s)
+		}
 	}
 	o.url.Init(raw)
 	if val, err := raw.LookupErr("UrlSearchParameters"); err == nil {
@@ -7471,7 +7687,9 @@ func (o *Microflow) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.urlSearchParameters.SetFromDecode(qnames)
 		}
@@ -7485,9 +7703,9 @@ func (o *Microflow) InitFromRaw(raw bson.Raw) {
 
 type MicroflowCall struct {
 	element.Base
-	microflow *property.ByNameRef[element.Element]
-	queueSettings *property.Part[element.Element]
-	queue *property.ByNameRef[element.Element]
+	microflow         *property.ByNameRef[element.Element]
+	queueSettings     *property.Part[element.Element]
+	queue             *property.ByNameRef[element.Element]
 	parameterMappings *property.PartList[element.Element]
 }
 
@@ -7539,13 +7757,17 @@ func (o *MicroflowCall) RemoveParameterMappings(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowCall) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "QueueSettings"); err == nil {
 		o.queueSettings.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Queue"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.queue.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.queue.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -7560,9 +7782,9 @@ func (o *MicroflowCall) InitFromRaw(raw bson.Raw) {
 
 type MicroflowCallAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	microflowCall *property.Part[element.Element]
-	useReturnVariable *property.Primitive[bool]
+	errorHandlingType  *property.Enum[string]
+	microflowCall      *property.Part[element.Element]
+	useReturnVariable  *property.Primitive[bool]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -7609,7 +7831,9 @@ func (o *MicroflowCallAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowCallAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "MicroflowCall"); err == nil {
 		o.microflowCall.SetFromDecode(child)
@@ -7624,8 +7848,8 @@ func (o *MicroflowCallAction) InitFromRaw(raw bson.Raw) {
 
 type MicroflowCallParameterMapping struct {
 	element.Base
-	parameter *property.ByNameRef[element.Element]
-	argument *property.Primitive[string]
+	parameter     *property.ByNameRef[element.Element]
+	argument      *property.Primitive[string]
 	argumentModel *property.Part[element.Element]
 }
 
@@ -7662,7 +7886,9 @@ func (o *MicroflowCallParameterMapping) SetArgumentModel(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowCallParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	o.argument.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ArgumentModel"); err == nil {
@@ -7692,7 +7918,9 @@ func (o *MicroflowJavaActionParameterValue) SetMicroflowQualifiedName(v string) 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowJavaActionParameterValue) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 }
 
@@ -7735,8 +7963,8 @@ func (o *MicroflowObjectCollection) InitFromRaw(raw bson.Raw) {
 
 type MicroflowParameterBase struct {
 	element.Base
-	name *property.Primitive[string]
-	propType *property.Primitive[string]
+	name          *property.Primitive[string]
+	propType      *property.Primitive[string]
 	parameterType *property.Part[element.Element]
 }
 
@@ -7785,11 +8013,11 @@ func (o *MicroflowParameterBase) InitFromRaw(raw bson.Raw) {
 
 type MicroflowParameter struct {
 	element.Base
-	name *property.Primitive[string]
-	propType *property.Primitive[string]
-	parameterType *property.Part[element.Element]
+	name                *property.Primitive[string]
+	propType            *property.Primitive[string]
+	parameterType       *property.Part[element.Element]
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // Name returns the value of the name property.
@@ -7860,7 +8088,7 @@ func (o *MicroflowParameter) InitFromRaw(raw bson.Raw) {
 type MicroflowParameterAttributeUrlSegment struct {
 	element.Base
 	microflowParameter *property.ByNameRef[element.Element]
-	attribute *property.ByNameRef[element.Element]
+	attribute          *property.ByNameRef[element.Element]
 }
 
 // MicroflowParameterQualifiedName returns the value of the microflowParameter property.
@@ -7886,10 +8114,14 @@ func (o *MicroflowParameterAttributeUrlSegment) SetAttributeQualifiedName(v stri
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowParameterAttributeUrlSegment) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("MicroflowParameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflowParameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflowParameter.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Attribute"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.attribute.SetFromDecode(s)
+		}
 	}
 }
 
@@ -7899,15 +8131,15 @@ func (o *MicroflowParameterAttributeUrlSegment) InitFromRaw(raw bson.Raw) {
 
 type MicroflowParameterObject struct {
 	element.Base
-	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
-	name *property.Primitive[string]
-	propType *property.Primitive[string]
-	variableType *property.Part[element.Element]
-	documentation *property.Primitive[string]
+	relativeMiddlePoint        *property.Primitive[string]
+	size                       *property.Primitive[string]
+	name                       *property.Primitive[string]
+	propType                   *property.Primitive[string]
+	variableType               *property.Part[element.Element]
+	documentation              *property.Primitive[string]
 	hasVariableNameBeenChanged *property.Primitive[bool]
-	isRequired *property.Primitive[bool]
-	defaultValue *property.Primitive[string]
+	isRequired                 *property.Primitive[bool]
+	defaultValue               *property.Primitive[string]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -8037,7 +8269,9 @@ func (o *MicroflowParameterValue) SetMicroflowQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowParameterValue) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflow.SetFromDecode(s)
+		}
 	}
 }
 
@@ -8063,7 +8297,9 @@ func (o *MicroflowPrimitiveParameterUrlSegment) SetMicroflowParameterQualifiedNa
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *MicroflowPrimitiveParameterUrlSegment) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("MicroflowParameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflowParameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflowParameter.SetFromDecode(s)
+		}
 	}
 }
 
@@ -8073,17 +8309,17 @@ func (o *MicroflowPrimitiveParameterUrlSegment) InitFromRaw(raw bson.Raw) {
 
 type Nanoflow struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	objectCollection *property.Part[element.Element]
-	flows *property.PartList[element.Element]
-	returnType *property.Primitive[string]
-	microflowReturnType *property.Part[element.Element]
-	markAsUsed *property.Primitive[bool]
-	returnVariableName *property.Primitive[string]
-	allowedModuleRoles *property.ByNameRefList[element.Element]
+	name                        *property.Primitive[string]
+	documentation               *property.Primitive[string]
+	excluded                    *property.Primitive[bool]
+	exportLevel                 *property.Enum[string]
+	objectCollection            *property.Part[element.Element]
+	flows                       *property.PartList[element.Element]
+	returnType                  *property.Primitive[string]
+	microflowReturnType         *property.Part[element.Element]
+	markAsUsed                  *property.Primitive[bool]
+	returnVariableName          *property.Primitive[string]
+	allowedModuleRoles          *property.ByNameRefList[element.Element]
 	useListParameterByReference *property.Primitive[bool]
 }
 
@@ -8223,7 +8459,9 @@ func (o *Nanoflow) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ObjectCollection"); err == nil {
 		o.objectCollection.SetFromDecode(child)
@@ -8244,7 +8482,9 @@ func (o *Nanoflow) InitFromRaw(raw bson.Raw) {
 			vals, _ := arr.Values()
 			qnames := make([]string, 0, len(vals))
 			for _, v := range vals {
-				if s, ok := v.StringValueOK(); ok { qnames = append(qnames, s) }
+				if s, ok := v.StringValueOK(); ok {
+					qnames = append(qnames, s)
+				}
 			}
 			o.allowedModuleRoles.SetFromDecode(qnames)
 		}
@@ -8258,7 +8498,7 @@ func (o *Nanoflow) InitFromRaw(raw bson.Raw) {
 
 type NanoflowCall struct {
 	element.Base
-	nanoflow *property.ByNameRef[element.Element]
+	nanoflow          *property.ByNameRef[element.Element]
 	parameterMappings *property.PartList[element.Element]
 }
 
@@ -8290,7 +8530,9 @@ func (o *NanoflowCall) RemoveParameterMappings(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *NanoflowCall) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Nanoflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.nanoflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.nanoflow.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -8305,9 +8547,9 @@ func (o *NanoflowCall) InitFromRaw(raw bson.Raw) {
 
 type NanoflowCallAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	nanoflowCall *property.Part[element.Element]
-	useReturnVariable *property.Primitive[bool]
+	errorHandlingType  *property.Enum[string]
+	nanoflowCall       *property.Part[element.Element]
+	useReturnVariable  *property.Primitive[bool]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -8354,7 +8596,9 @@ func (o *NanoflowCallAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *NanoflowCallAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "NanoflowCall"); err == nil {
 		o.nanoflowCall.SetFromDecode(child)
@@ -8369,8 +8613,8 @@ func (o *NanoflowCallAction) InitFromRaw(raw bson.Raw) {
 
 type NanoflowCallParameterMapping struct {
 	element.Base
-	parameter *property.ByNameRef[element.Element]
-	argument *property.Primitive[string]
+	parameter     *property.ByNameRef[element.Element]
+	argument      *property.Primitive[string]
 	argumentModel *property.Part[element.Element]
 }
 
@@ -8407,7 +8651,9 @@ func (o *NanoflowCallParameterMapping) SetArgumentModel(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *NanoflowCallParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	o.argument.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ArgumentModel"); err == nil {
@@ -8421,8 +8667,8 @@ func (o *NanoflowCallParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type NanoflowParameter struct {
 	element.Base
-	name *property.Primitive[string]
-	propType *property.Primitive[string]
+	name          *property.Primitive[string]
+	propType      *property.Primitive[string]
 	parameterType *property.Part[element.Element]
 }
 
@@ -8483,10 +8729,10 @@ func (o *NoCase) InitFromRaw(raw bson.Raw) {
 
 type NotifyWorkflowAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	workflowVariable *property.Primitive[string]
-	activity *property.ByNameRef[element.Element]
-	notifyTarget *property.Part[element.Element]
+	errorHandlingType  *property.Enum[string]
+	workflowVariable   *property.Primitive[string]
+	activity           *property.ByNameRef[element.Element]
+	notifyTarget       *property.Part[element.Element]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -8543,11 +8789,15 @@ func (o *NotifyWorkflowAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *NotifyWorkflowAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.workflowVariable.Init(raw)
 	if val, err := raw.LookupErr("Activity"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.activity.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.activity.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "NotifyTarget"); err == nil {
 		o.notifyTarget.SetFromDecode(child)
@@ -8562,9 +8812,9 @@ func (o *NotifyWorkflowAction) InitFromRaw(raw bson.Raw) {
 type OpenUserTaskAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	userTaskVariable *property.Primitive[string]
-	assignOnOpen *property.Primitive[bool]
-	openWhenAssigned *property.Primitive[bool]
+	userTaskVariable  *property.Primitive[string]
+	assignOnOpen      *property.Primitive[bool]
+	openWhenAssigned  *property.Primitive[bool]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -8610,7 +8860,9 @@ func (o *OpenUserTaskAction) SetOpenWhenAssigned(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *OpenUserTaskAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.userTaskVariable.Init(raw)
 	o.assignOnOpen.Init(raw)
@@ -8624,7 +8876,7 @@ func (o *OpenUserTaskAction) InitFromRaw(raw bson.Raw) {
 type OpenWorkflowAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	workflowVariable *property.Primitive[string]
+	workflowVariable  *property.Primitive[string]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -8650,7 +8902,9 @@ func (o *OpenWorkflowAction) SetWorkflowVariable(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *OpenWorkflowAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.workflowVariable.Init(raw)
 }
@@ -8720,7 +8974,9 @@ func (o *ParameterIdUrlSegment) SetMicroflowParameterQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ParameterIdUrlSegment) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("MicroflowParameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.microflowParameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.microflowParameter.SetFromDecode(s)
+		}
 	}
 }
 
@@ -8767,7 +9023,7 @@ func (o *TypedTemplateArgument) InitFromRaw(raw bson.Raw) {
 type PrimitiveTypedTemplateArgument struct {
 	element.Base
 	expression *property.Primitive[string]
-	propType *property.Enum[string]
+	propType   *property.Enum[string]
 }
 
 // Expression returns the value of the expression property.
@@ -8794,7 +9050,9 @@ func (o *PrimitiveTypedTemplateArgument) SetType(v string) {
 func (o *PrimitiveTypedTemplateArgument) InitFromRaw(raw bson.Raw) {
 	o.expression.Init(raw)
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 }
 
@@ -8804,15 +9062,15 @@ func (o *PrimitiveTypedTemplateArgument) InitFromRaw(raw bson.Raw) {
 
 type ProxyConfiguration struct {
 	element.Base
-	usernameExpression *property.Primitive[string]
-	usernameExpressionModel *property.Part[element.Element]
-	passwordExpression *property.Primitive[string]
-	passwordExpressionModel *property.Part[element.Element]
-	hostExpression *property.Primitive[string]
-	hostExpressionModel *property.Part[element.Element]
-	portExpression *property.Primitive[string]
-	portExpressionModel *property.Part[element.Element]
-	useConfigurationExpression *property.Primitive[string]
+	usernameExpression              *property.Primitive[string]
+	usernameExpressionModel         *property.Part[element.Element]
+	passwordExpression              *property.Primitive[string]
+	passwordExpressionModel         *property.Part[element.Element]
+	hostExpression                  *property.Primitive[string]
+	hostExpressionModel             *property.Part[element.Element]
+	portExpression                  *property.Primitive[string]
+	portExpressionModel             *property.Part[element.Element]
+	useConfigurationExpression      *property.Primitive[string]
 	useConfigurationExpressionModel *property.Part[element.Element]
 }
 
@@ -8947,7 +9205,7 @@ func (o *ProxyConfiguration) InitFromRaw(raw bson.Raw) {
 type PushToClientAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	dataVariableName *property.Primitive[string]
+	dataVariableName  *property.Primitive[string]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -8973,7 +9231,9 @@ func (o *PushToClientAction) SetDataVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *PushToClientAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.dataVariableName.Init(raw)
 }
@@ -8985,8 +9245,8 @@ func (o *PushToClientAction) InitFromRaw(raw bson.Raw) {
 type QueryParameterMapping struct {
 	element.Base
 	queryParameter *property.ByNameRef[element.Element]
-	value *property.Primitive[string]
-	included *property.Enum[string]
+	value          *property.Primitive[string]
+	included       *property.Enum[string]
 }
 
 // QueryParameterQualifiedName returns the value of the queryParameter property.
@@ -9022,11 +9282,15 @@ func (o *QueryParameterMapping) SetIncluded(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *QueryParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("QueryParameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.queryParameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.queryParameter.SetFromDecode(s)
+		}
 	}
 	o.value.Init(raw)
 	if val, err := raw.LookupErr("Included"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.included.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.included.SetFromDecode(s)
+		}
 	}
 }
 
@@ -9036,19 +9300,19 @@ func (o *QueryParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type RestCallAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	httpConfiguration *property.Part[element.Element]
-	requestHandling *property.Part[element.Element]
-	requestHandlingType *property.Enum[string]
-	resultHandling *property.Part[element.Element]
-	resultHandlingType *property.Enum[string]
+	errorHandlingType       *property.Enum[string]
+	httpConfiguration       *property.Part[element.Element]
+	requestHandling         *property.Part[element.Element]
+	requestHandlingType     *property.Enum[string]
+	resultHandling          *property.Part[element.Element]
+	resultHandlingType      *property.Enum[string]
 	errorResultHandlingType *property.Enum[string]
-	useRequestTimeOut *property.Primitive[bool]
-	timeOut *property.Primitive[int32]
-	timeOutModel *property.Part[element.Element]
-	timeOutExpression *property.Primitive[string]
-	requestProxyType *property.Enum[string]
-	proxyConfiguration *property.Part[element.Element]
+	useRequestTimeOut       *property.Primitive[bool]
+	timeOut                 *property.Primitive[int32]
+	timeOutModel            *property.Part[element.Element]
+	timeOutExpression       *property.Primitive[string]
+	requestProxyType        *property.Enum[string]
+	proxyConfiguration      *property.Part[element.Element]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -9184,7 +9448,9 @@ func (o *RestCallAction) SetProxyConfiguration(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *RestCallAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "HttpConfiguration"); err == nil {
 		o.httpConfiguration.SetFromDecode(child)
@@ -9193,16 +9459,22 @@ func (o *RestCallAction) InitFromRaw(raw bson.Raw) {
 		o.requestHandling.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("RequestHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.requestHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.requestHandlingType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ResultHandling"); err == nil {
 		o.resultHandling.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("ResultHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.resultHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.resultHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ErrorResultHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorResultHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorResultHandlingType.SetFromDecode(s)
+		}
 	}
 	o.useRequestTimeOut.Init(raw)
 	o.timeOut.Init(raw)
@@ -9211,7 +9483,9 @@ func (o *RestCallAction) InitFromRaw(raw bson.Raw) {
 	}
 	o.timeOutExpression.Init(raw)
 	if val, err := raw.LookupErr("RequestProxyType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.requestProxyType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.requestProxyType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ProxyConfiguration"); err == nil {
 		o.proxyConfiguration.SetFromDecode(child)
@@ -9224,13 +9498,13 @@ func (o *RestCallAction) InitFromRaw(raw bson.Raw) {
 
 type RestOperationCallAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	operation *property.ByNameRef[element.Element]
+	errorHandlingType       *property.Enum[string]
+	operation               *property.ByNameRef[element.Element]
 	baseUrlParameterMapping *property.Part[element.Element]
-	bodyVariable *property.Part[element.Element]
-	parameterMappings *property.PartList[element.Element]
-	queryParameterMappings *property.PartList[element.Element]
-	outputVariable *property.Part[element.Element]
+	bodyVariable            *property.Part[element.Element]
+	parameterMappings       *property.PartList[element.Element]
+	queryParameterMappings  *property.PartList[element.Element]
+	outputVariable          *property.Part[element.Element]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -9316,10 +9590,14 @@ func (o *RestOperationCallAction) SetOutputVariable(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *RestOperationCallAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Operation"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.operation.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.operation.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "BaseUrlParameterMapping"); err == nil {
 		o.baseUrlParameterMapping.SetFromDecode(child)
@@ -9349,7 +9627,7 @@ func (o *RestOperationCallAction) InitFromRaw(raw bson.Raw) {
 type RestOperationParameterMapping struct {
 	element.Base
 	parameter *property.ByNameRef[element.Element]
-	value *property.Primitive[string]
+	value     *property.Primitive[string]
 }
 
 // ParameterQualifiedName returns the value of the parameter property.
@@ -9375,7 +9653,9 @@ func (o *RestOperationParameterMapping) SetValue(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *RestOperationParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	o.value.Init(raw)
 }
@@ -9387,7 +9667,7 @@ func (o *RestOperationParameterMapping) InitFromRaw(raw bson.Raw) {
 type RestParameterMapping struct {
 	element.Base
 	parameter *property.ByNameRef[element.Element]
-	value *property.Primitive[string]
+	value     *property.Primitive[string]
 }
 
 // ParameterQualifiedName returns the value of the parameter property.
@@ -9413,7 +9693,9 @@ func (o *RestParameterMapping) SetValue(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *RestParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	o.value.Init(raw)
 }
@@ -9448,11 +9730,11 @@ func (o *RestartOperation) InitFromRaw(raw bson.Raw) {
 
 type ResultHandling struct {
 	element.Base
-	importMappingCall *property.Part[element.Element]
-	storeInVariable *property.Primitive[bool]
+	importMappingCall  *property.Part[element.Element]
+	storeInVariable    *property.Primitive[bool]
 	outputVariableName *property.Primitive[string]
-	variableDataType *property.Primitive[string]
-	variableType *property.Part[element.Element]
+	variableDataType   *property.Primitive[string]
+	variableType       *property.Part[element.Element]
 }
 
 // ImportMappingCall returns the value of the importMappingCall property.
@@ -9548,8 +9830,8 @@ func (o *ResumeOperation) InitFromRaw(raw bson.Raw) {
 
 type RetrieveAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	retrieveSource *property.Part[element.Element]
+	errorHandlingType  *property.Enum[string]
+	retrieveSource     *property.Part[element.Element]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -9586,7 +9868,9 @@ func (o *RetrieveAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *RetrieveAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "RetrieveSource"); err == nil {
 		o.retrieveSource.SetFromDecode(child)
@@ -9624,9 +9908,9 @@ func (o *RetryOperation) InitFromRaw(raw bson.Raw) {
 
 type RollbackAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType    *property.Enum[string]
 	rollbackVariableName *property.Primitive[string]
-	refreshInClient *property.Primitive[bool]
+	refreshInClient      *property.Primitive[bool]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -9662,7 +9946,9 @@ func (o *RollbackAction) SetRefreshInClient(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *RollbackAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.rollbackVariableName.Init(raw)
 	o.refreshInClient.Init(raw)
@@ -9674,17 +9960,17 @@ func (o *RollbackAction) InitFromRaw(raw bson.Raw) {
 
 type Rule struct {
 	element.Base
-	name *property.Primitive[string]
-	documentation *property.Primitive[string]
-	excluded *property.Primitive[bool]
-	exportLevel *property.Enum[string]
-	objectCollection *property.Part[element.Element]
-	flows *property.PartList[element.Element]
-	returnType *property.Primitive[string]
+	name                *property.Primitive[string]
+	documentation       *property.Primitive[string]
+	excluded            *property.Primitive[bool]
+	exportLevel         *property.Enum[string]
+	objectCollection    *property.Part[element.Element]
+	flows               *property.PartList[element.Element]
+	returnType          *property.Primitive[string]
 	microflowReturnType *property.Part[element.Element]
-	markAsUsed *property.Primitive[bool]
-	returnVariableName *property.Primitive[string]
-	applyEntityAccess *property.Primitive[bool]
+	markAsUsed          *property.Primitive[bool]
+	returnVariableName  *property.Primitive[string]
+	applyEntityAccess   *property.Primitive[bool]
 }
 
 // Name returns the value of the name property.
@@ -9808,7 +10094,9 @@ func (o *Rule) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.exportLevel.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ObjectCollection"); err == nil {
 		o.objectCollection.SetFromDecode(child)
@@ -9833,7 +10121,7 @@ func (o *Rule) InitFromRaw(raw bson.Raw) {
 
 type RuleCall struct {
 	element.Base
-	rule *property.ByNameRef[element.Element]
+	rule              *property.ByNameRef[element.Element]
 	parameterMappings *property.PartList[element.Element]
 }
 
@@ -9865,7 +10153,9 @@ func (o *RuleCall) RemoveParameterMappings(index int) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *RuleCall) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Rule"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.rule.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.rule.SetFromDecode(s)
+		}
 	}
 	if children, err := codec.DecodeChildren(raw, "ParameterMappings"); err == nil {
 		for _, child := range children {
@@ -9880,8 +10170,8 @@ func (o *RuleCall) InitFromRaw(raw bson.Raw) {
 
 type RuleCallParameterMapping struct {
 	element.Base
-	parameter *property.ByNameRef[element.Element]
-	argument *property.Primitive[string]
+	parameter     *property.ByNameRef[element.Element]
+	argument      *property.Primitive[string]
 	argumentModel *property.Part[element.Element]
 }
 
@@ -9918,7 +10208,9 @@ func (o *RuleCallParameterMapping) SetArgumentModel(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *RuleCallParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.parameter.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.parameter.SetFromDecode(s)
+		}
 	}
 	o.argument.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ArgumentModel"); err == nil {
@@ -9932,8 +10224,8 @@ func (o *RuleCallParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type RuleParameter struct {
 	element.Base
-	name *property.Primitive[string]
-	propType *property.Primitive[string]
+	name          *property.Primitive[string]
+	propType      *property.Primitive[string]
 	parameterType *property.Part[element.Element]
 }
 
@@ -10008,10 +10300,10 @@ func (o *RuleSplitCondition) InitFromRaw(raw bson.Raw) {
 
 type SendEmailAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType         *property.Enum[string]
 	emailAuthenticationConfig *property.Part[element.Element]
-	emailConnectionConfig *property.Part[element.Element]
-	emailMessage *property.Part[element.Element]
+	emailConnectionConfig     *property.Part[element.Element]
+	emailMessage              *property.Part[element.Element]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -10057,7 +10349,9 @@ func (o *SendEmailAction) SetEmailMessage(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *SendEmailAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "EmailAuthenticationConfig"); err == nil {
 		o.emailAuthenticationConfig.SetFromDecode(child)
@@ -10076,9 +10370,9 @@ func (o *SendEmailAction) InitFromRaw(raw bson.Raw) {
 
 type SendExternalObject struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType    *property.Enum[string]
 	variableNameToBeSent *property.Primitive[string]
-	refreshInClient *property.Primitive[bool]
+	refreshInClient      *property.Primitive[bool]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -10114,7 +10408,9 @@ func (o *SendExternalObject) SetRefreshInClient(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *SendExternalObject) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.variableNameToBeSent.Init(raw)
 	o.refreshInClient.Init(raw)
@@ -10126,17 +10422,17 @@ func (o *SendExternalObject) InitFromRaw(raw bson.Raw) {
 
 type SequenceFlow struct {
 	element.Base
-	origin *property.ByIdRef[element.Element]
-	destination *property.ByIdRef[element.Element]
-	originConnectionIndex *property.Primitive[int32]
+	origin                     *property.ByIdRef[element.Element]
+	destination                *property.ByIdRef[element.Element]
+	originConnectionIndex      *property.Primitive[int32]
 	destinationConnectionIndex *property.Primitive[int32]
-	originBezierVector *property.Primitive[string]
-	destinationBezierVector *property.Primitive[string]
-	lineType *property.Enum[string]
-	line *property.Part[element.Element]
-	caseValue *property.Part[element.Element]
-	caseValues *property.PartList[element.Element]
-	isErrorHandler *property.Primitive[bool]
+	originBezierVector         *property.Primitive[string]
+	destinationBezierVector    *property.Primitive[string]
+	lineType                   *property.Enum[string]
+	line                       *property.Part[element.Element]
+	caseValue                  *property.Part[element.Element]
+	caseValues                 *property.PartList[element.Element]
+	isErrorHandler             *property.Primitive[bool]
 }
 
 // OriginRefID returns the value of the origin property.
@@ -10275,7 +10571,9 @@ func (o *SequenceFlow) InitFromRaw(raw bson.Raw) {
 	o.originBezierVector.Init(raw)
 	o.destinationBezierVector.Init(raw)
 	if val, err := raw.LookupErr("LineType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.lineType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.lineType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Line"); err == nil {
 		o.line.SetFromDecode(child)
@@ -10297,10 +10595,10 @@ func (o *SequenceFlow) InitFromRaw(raw bson.Raw) {
 
 type SetTaskOutcomeAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
+	errorHandlingType    *property.Enum[string]
 	workflowTaskVariable *property.Primitive[string]
-	outcome *property.ByNameRef[element.Element]
-	outcomeValue *property.Primitive[string]
+	outcome              *property.ByNameRef[element.Element]
+	outcomeValue         *property.Primitive[string]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -10346,11 +10644,15 @@ func (o *SetTaskOutcomeAction) SetOutcomeValue(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *SetTaskOutcomeAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	o.workflowTaskVariable.Init(raw)
 	if val, err := raw.LookupErr("Outcome"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.outcome.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.outcome.SetFromDecode(s)
+		}
 	}
 	o.outcomeValue.Init(raw)
 }
@@ -10377,7 +10679,9 @@ func (o *ShowHomePageAction) SetErrorHandlingType(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ShowHomePageAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 }
 
@@ -10388,9 +10692,9 @@ func (o *ShowHomePageAction) InitFromRaw(raw bson.Raw) {
 type ShowMessageAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	template *property.Part[element.Element]
-	propType *property.Enum[string]
-	blocking *property.Primitive[bool]
+	template          *property.Part[element.Element]
+	propType          *property.Enum[string]
+	blocking          *property.Primitive[bool]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -10436,13 +10740,17 @@ func (o *ShowMessageAction) SetBlocking(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ShowMessageAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Template"); err == nil {
 		o.template.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 	o.blocking.Init(raw)
 }
@@ -10453,10 +10761,10 @@ func (o *ShowMessageAction) InitFromRaw(raw bson.Raw) {
 
 type ShowPageAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	pageSettings *property.Part[element.Element]
+	errorHandlingType        *property.Enum[string]
+	pageSettings             *property.Part[element.Element]
 	passedObjectVariableName *property.Primitive[string]
-	numberOfPagesToClose *property.Primitive[string]
+	numberOfPagesToClose     *property.Primitive[string]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -10502,7 +10810,9 @@ func (o *ShowPageAction) SetNumberOfPagesToClose(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ShowPageAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "FormSettings"); err == nil {
 		o.pageSettings.SetFromDecode(child)
@@ -10518,7 +10828,7 @@ func (o *ShowPageAction) InitFromRaw(raw bson.Raw) {
 type SimpleRequestHandling struct {
 	element.Base
 	parameterMappings *property.PartList[element.Element]
-	nullValueOption *property.Enum[string]
+	nullValueOption   *property.Enum[string]
 }
 
 // ParameterMappingsItems returns the value of the parameterMappings property.
@@ -10554,7 +10864,9 @@ func (o *SimpleRequestHandling) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	if val, err := raw.LookupErr("NullValueOption"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.nullValueOption.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.nullValueOption.SetFromDecode(s)
+		}
 	}
 }
 
@@ -10565,7 +10877,7 @@ func (o *SimpleRequestHandling) InitFromRaw(raw bson.Raw) {
 type Sort struct {
 	element.Base
 	listVariableName *property.Primitive[string]
-	sortItemList *property.Part[element.Element]
+	sortItemList     *property.Part[element.Element]
 }
 
 // ListVariableName returns the value of the listVariableName property.
@@ -10603,8 +10915,8 @@ func (o *Sort) InitFromRaw(raw bson.Raw) {
 type SortItem struct {
 	element.Base
 	attributePath *property.Primitive[string]
-	attributeRef *property.Part[element.Element]
-	sortOrder *property.Enum[string]
+	attributeRef  *property.Part[element.Element]
+	sortOrder     *property.Enum[string]
 }
 
 // AttributePath returns the value of the attributePath property.
@@ -10644,7 +10956,9 @@ func (o *SortItem) InitFromRaw(raw bson.Raw) {
 		o.attributeRef.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("SortOrder"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.sortOrder.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.sortOrder.SetFromDecode(s)
+		}
 	}
 }
 
@@ -10688,7 +11002,7 @@ func (o *SortItemList) InitFromRaw(raw bson.Raw) {
 type StartEvent struct {
 	element.Base
 	relativeMiddlePoint *property.Primitive[string]
-	size *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
@@ -10757,7 +11071,7 @@ func (o *Template) InitFromRaw(raw bson.Raw) {
 type StringTemplate struct {
 	element.Base
 	arguments *property.PartList[element.Element]
-	text *property.Primitive[string]
+	text      *property.Primitive[string]
 }
 
 // ArgumentsItems returns the value of the arguments property.
@@ -10801,7 +11115,7 @@ func (o *StringTemplate) InitFromRaw(raw bson.Raw) {
 
 type StringTemplateParameterValue struct {
 	element.Base
-	template *property.Part[element.Element]
+	template      *property.Part[element.Element]
 	typedTemplate *property.Part[element.Element]
 }
 
@@ -10841,7 +11155,7 @@ func (o *StringTemplateParameterValue) InitFromRaw(raw bson.Raw) {
 
 type Subtract struct {
 	element.Base
-	listVariableName *property.Primitive[string]
+	listVariableName               *property.Primitive[string]
 	secondListOrObjectVariableName *property.Primitive[string]
 }
 
@@ -10878,8 +11192,8 @@ func (o *Subtract) InitFromRaw(raw bson.Raw) {
 type SynchronizeAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	propType *property.Enum[string]
-	variableNames *property.Primitive[string]
+	propType          *property.Enum[string]
+	variableNames     *property.Primitive[string]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -10910,10 +11224,14 @@ func (o *SynchronizeAction) VariableNames() string {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *SynchronizeAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Type"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.propType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.propType.SetFromDecode(s)
+		}
 	}
 	o.variableNames.Init(raw)
 }
@@ -10948,7 +11266,7 @@ func (o *Tail) InitFromRaw(raw bson.Raw) {
 
 type TemplateArgument struct {
 	element.Base
-	expression *property.Primitive[string]
+	expression      *property.Primitive[string]
 	expressionModel *property.Part[element.Element]
 }
 
@@ -10987,7 +11305,7 @@ func (o *TemplateArgument) InitFromRaw(raw bson.Raw) {
 type TextTemplate struct {
 	element.Base
 	arguments *property.PartList[element.Element]
-	text *property.Part[element.Element]
+	text      *property.Part[element.Element]
 }
 
 // ArgumentsItems returns the value of the arguments property.
@@ -11033,9 +11351,9 @@ func (o *TextTemplate) InitFromRaw(raw bson.Raw) {
 
 type TransformJsonAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	transformation *property.ByNameRef[element.Element]
-	inputVariableName *property.Primitive[string]
+	errorHandlingType  *property.Enum[string]
+	transformation     *property.ByNameRef[element.Element]
+	inputVariableName  *property.Primitive[string]
 	outputVariableName *property.Primitive[string]
 }
 
@@ -11082,10 +11400,14 @@ func (o *TransformJsonAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *TransformJsonAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Transformation"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.transformation.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.transformation.SetFromDecode(s)
+		}
 	}
 	o.inputVariableName.Init(raw)
 	o.outputVariableName.Init(raw)
@@ -11097,7 +11419,7 @@ func (o *TransformJsonAction) InitFromRaw(raw bson.Raw) {
 
 type TypedTemplate struct {
 	element.Base
-	text *property.Primitive[string]
+	text      *property.Primitive[string]
 	arguments *property.PartList[element.Element]
 }
 
@@ -11142,7 +11464,7 @@ func (o *TypedTemplate) InitFromRaw(raw bson.Raw) {
 
 type Union struct {
 	element.Base
-	listVariableName *property.Primitive[string]
+	listVariableName               *property.Primitive[string]
 	secondListOrObjectVariableName *property.Primitive[string]
 }
 
@@ -11178,9 +11500,9 @@ func (o *Union) InitFromRaw(raw bson.Raw) {
 
 type UnlockWorkflowAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	workflow *property.ByNameRef[element.Element]
-	workflowSelection *property.Part[element.Element]
+	errorHandlingType        *property.Enum[string]
+	workflow                 *property.ByNameRef[element.Element]
+	workflowSelection        *property.Part[element.Element]
 	resumeAllPausedWorkflows *property.Primitive[bool]
 }
 
@@ -11227,10 +11549,14 @@ func (o *UnlockWorkflowAction) SetResumeAllPausedWorkflows(v bool) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *UnlockWorkflowAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Workflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.workflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.workflow.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "WorkflowSelection"); err == nil {
 		o.workflowSelection.SetFromDecode(child)
@@ -11268,11 +11594,11 @@ func (o *UnpauseOperation) InitFromRaw(raw bson.Raw) {
 
 type ValidationFeedbackAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	feedbackTemplate *property.Part[element.Element]
+	errorHandlingType  *property.Enum[string]
+	feedbackTemplate   *property.Part[element.Element]
 	objectVariableName *property.Primitive[string]
-	attribute *property.ByNameRef[element.Element]
-	association *property.ByNameRef[element.Element]
+	attribute          *property.ByNameRef[element.Element]
+	association        *property.ByNameRef[element.Element]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -11328,17 +11654,23 @@ func (o *ValidationFeedbackAction) SetAssociationQualifiedName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *ValidationFeedbackAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "FeedbackTemplate"); err == nil {
 		o.feedbackTemplate.SetFromDecode(child)
 	}
 	o.objectVariableName.Init(raw)
 	if val, err := raw.LookupErr("Attribute"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.attribute.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.attribute.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Association"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.association.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.association.SetFromDecode(s)
+		}
 	}
 }
 
@@ -11372,22 +11704,22 @@ func (o *VariableExport) InitFromRaw(raw bson.Raw) {
 
 type WebServiceCallAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	importedWebService *property.ByNameRef[element.Element]
-	serviceName *property.Primitive[string]
-	operationName *property.Primitive[string]
-	useRequestTimeOut *property.Primitive[bool]
-	timeOut *property.Primitive[int32]
-	timeOutModel *property.Part[element.Element]
-	timeOutExpression *property.Primitive[string]
-	sendNullValueChoice *property.Enum[string]
+	errorHandlingType     *property.Enum[string]
+	importedWebService    *property.ByNameRef[element.Element]
+	serviceName           *property.Primitive[string]
+	operationName         *property.Primitive[string]
+	useRequestTimeOut     *property.Primitive[bool]
+	timeOut               *property.Primitive[int32]
+	timeOutModel          *property.Part[element.Element]
+	timeOutExpression     *property.Primitive[string]
+	sendNullValueChoice   *property.Enum[string]
 	requestHeaderHandling *property.Part[element.Element]
-	requestBodyHandling *property.Part[element.Element]
-	resultHandling *property.Part[element.Element]
-	httpConfiguration *property.Part[element.Element]
-	isValidationRequired *property.Primitive[bool]
-	requestProxyType *property.Enum[string]
-	proxyConfiguration *property.Part[element.Element]
+	requestBodyHandling   *property.Part[element.Element]
+	resultHandling        *property.Part[element.Element]
+	httpConfiguration     *property.Part[element.Element]
+	isValidationRequired  *property.Primitive[bool]
+	requestProxyType      *property.Enum[string]
+	proxyConfiguration    *property.Part[element.Element]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -11553,10 +11885,14 @@ func (o *WebServiceCallAction) SetProxyConfiguration(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *WebServiceCallAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("ImportedWebService"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.importedWebService.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.importedWebService.SetFromDecode(s)
+		}
 	}
 	o.serviceName.Init(raw)
 	o.operationName.Init(raw)
@@ -11567,7 +11903,9 @@ func (o *WebServiceCallAction) InitFromRaw(raw bson.Raw) {
 	}
 	o.timeOutExpression.Init(raw)
 	if val, err := raw.LookupErr("SendNullValueChoice"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.sendNullValueChoice.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.sendNullValueChoice.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "RequestHeaderHandling"); err == nil {
 		o.requestHeaderHandling.SetFromDecode(child)
@@ -11583,7 +11921,9 @@ func (o *WebServiceCallAction) InitFromRaw(raw bson.Raw) {
 	}
 	o.isValidationRequired.Init(raw)
 	if val, err := raw.LookupErr("RequestProxyType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.requestProxyType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.requestProxyType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "ProxyConfiguration"); err == nil {
 		o.proxyConfiguration.SetFromDecode(child)
@@ -11596,9 +11936,9 @@ func (o *WebServiceCallAction) InitFromRaw(raw bson.Raw) {
 
 type WebServiceOperationParameterMapping struct {
 	element.Base
-	isChecked *property.Primitive[bool]
+	isChecked     *property.Primitive[bool]
 	parameterName *property.Primitive[string]
-	argument *property.Primitive[string]
+	argument      *property.Primitive[string]
 	argumentModel *property.Part[element.Element]
 }
 
@@ -11658,11 +11998,11 @@ func (o *WebServiceOperationParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type WebServiceOperationAdvancedParameterMapping struct {
 	element.Base
-	isChecked *property.Primitive[bool]
-	parameterName *property.Primitive[string]
-	argument *property.Primitive[string]
-	argumentModel *property.Part[element.Element]
-	mapping *property.ByNameRef[element.Element]
+	isChecked                   *property.Primitive[bool]
+	parameterName               *property.Primitive[string]
+	argument                    *property.Primitive[string]
+	argumentModel               *property.Part[element.Element]
+	mapping                     *property.ByNameRef[element.Element]
 	mappingArgumentVariableName *property.Primitive[string]
 }
 
@@ -11735,7 +12075,9 @@ func (o *WebServiceOperationAdvancedParameterMapping) InitFromRaw(raw bson.Raw) 
 		o.argumentModel.SetFromDecode(child)
 	}
 	if val, err := raw.LookupErr("Mapping"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.mapping.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.mapping.SetFromDecode(s)
+		}
 	}
 	o.mappingArgumentVariableName.Init(raw)
 }
@@ -11746,9 +12088,9 @@ func (o *WebServiceOperationAdvancedParameterMapping) InitFromRaw(raw bson.Raw) 
 
 type WebServiceOperationSimpleParameterMapping struct {
 	element.Base
-	isChecked *property.Primitive[bool]
+	isChecked     *property.Primitive[bool]
 	parameterName *property.Primitive[string]
-	argument *property.Primitive[string]
+	argument      *property.Primitive[string]
 	argumentModel *property.Part[element.Element]
 	parameterPath *property.Primitive[string]
 }
@@ -11821,7 +12163,7 @@ func (o *WebServiceOperationSimpleParameterMapping) InitFromRaw(raw bson.Raw) {
 type WhileLoopCondition struct {
 	element.Base
 	whileExpression *property.Primitive[string]
-	caption *property.Primitive[string]
+	caption         *property.Primitive[string]
 }
 
 // WhileExpression returns the value of the whileExpression property.
@@ -11856,11 +12198,11 @@ func (o *WhileLoopCondition) InitFromRaw(raw bson.Raw) {
 
 type WorkflowCallAction struct {
 	element.Base
-	errorHandlingType *property.Enum[string]
-	workflow *property.ByNameRef[element.Element]
+	errorHandlingType       *property.Enum[string]
+	workflow                *property.ByNameRef[element.Element]
 	workflowContextVariable *property.Primitive[string]
-	useReturnVariable *property.Primitive[bool]
-	outputVariableName *property.Primitive[string]
+	useReturnVariable       *property.Primitive[bool]
+	outputVariableName      *property.Primitive[string]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -11916,10 +12258,14 @@ func (o *WorkflowCallAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *WorkflowCallAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if val, err := raw.LookupErr("Workflow"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.workflow.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.workflow.SetFromDecode(s)
+		}
 	}
 	o.workflowContextVariable.Init(raw)
 	o.useReturnVariable.Init(raw)
@@ -11933,7 +12279,7 @@ func (o *WorkflowCallAction) InitFromRaw(raw bson.Raw) {
 type WorkflowOperationAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
-	operation *property.Part[element.Element]
+	operation         *property.Part[element.Element]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -11959,7 +12305,9 @@ func (o *WorkflowOperationAction) SetOperation(v element.Element) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *WorkflowOperationAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
-		if s, ok := val.StringValueOK(); ok { o.errorHandlingType.SetFromDecode(s) }
+		if s, ok := val.StringValueOK(); ok {
+			o.errorHandlingType.SetFromDecode(s)
+		}
 	}
 	if child, err := codec.DecodeChild(raw, "Operation"); err == nil {
 		o.operation.SetFromDecode(child)
@@ -11980,7 +12328,7 @@ func initAbortOperation() *AbortOperation {
 	o.workflowVariable.Bind(&o.Base, 0)
 	o.reason = property.NewPart[element.Element]("Reason")
 	o.reason.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.workflowVariable, o.reason, })
+	o.SetProperties([]element.Property{o.workflowVariable, o.reason})
 	return o
 }
 
@@ -12015,7 +12363,7 @@ func initActionActivity() *ActionActivity {
 	o.backgroundColor.Bind(&o.Base, 6)
 	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
 	o.documentation.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.action, o.disabled, o.caption, o.autoGenerateCaption, o.backgroundColor, o.documentation, })
+	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.action, o.disabled, o.caption, o.autoGenerateCaption, o.backgroundColor, o.documentation})
 	return o
 }
 
@@ -12044,7 +12392,7 @@ func initAdditionalAttribute() *AdditionalAttribute {
 	o.attribute.Bind(&o.Base, 3)
 	o.attributeDataType = property.NewPart[element.Element]("AttributeDataType")
 	o.attributeDataType.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.name, o.propType, o.value, o.attribute, o.attributeDataType, })
+	o.SetProperties([]element.Property{o.name, o.propType, o.value, o.attribute, o.attributeDataType})
 	return o
 }
 
@@ -12067,7 +12415,7 @@ func initAdvancedRequestHandling() *AdvancedRequestHandling {
 	o.parameterMappings.Bind(&o.Base, 0)
 	o.nullValueOption = property.NewEnum[string]("NullValueOption")
 	o.nullValueOption.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.parameterMappings, o.nullValueOption, })
+	o.SetProperties([]element.Property{o.parameterMappings, o.nullValueOption})
 	return o
 }
 
@@ -12104,7 +12452,7 @@ func initAggregateListAction() *AggregateListAction {
 	o.reduceReturnDataType.Bind(&o.Base, 7)
 	o.reduceInitialValueExpression = property.NewPrimitive[string]("ReduceInitialValueExpression", property.DecodeString)
 	o.reduceInitialValueExpression.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.inputListVariableName, o.attribute, o.expression, o.useExpression, o.aggregateFunction, o.outputVariableName, o.reduceReturnDataType, o.reduceInitialValueExpression, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.inputListVariableName, o.attribute, o.expression, o.useExpression, o.aggregateFunction, o.outputVariableName, o.reduceReturnDataType, o.reduceInitialValueExpression})
 	return o
 }
 
@@ -12129,7 +12477,7 @@ func initAnnotation() *Annotation {
 	o.size.Bind(&o.Base, 1)
 	o.caption = property.NewPrimitive[string]("Caption", property.DecodeString)
 	o.caption.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.caption, })
+	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.caption})
 	return o
 }
 
@@ -12164,7 +12512,7 @@ func initAnnotationFlow() *AnnotationFlow {
 	o.lineType.Bind(&o.Base, 6)
 	o.line = property.NewPart[element.Element]("Line")
 	o.line.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.origin, o.destination, o.originConnectionIndex, o.destinationConnectionIndex, o.originBezierVector, o.destinationBezierVector, o.lineType, o.line, })
+	o.SetProperties([]element.Property{o.origin, o.destination, o.originConnectionIndex, o.destinationConnectionIndex, o.originBezierVector, o.destinationBezierVector, o.lineType, o.line})
 	return o
 }
 
@@ -12193,7 +12541,7 @@ func initAppServiceCallAction() *AppServiceCallAction {
 	o.useVariable.Bind(&o.Base, 3)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.appServiceAction, o.parameterMappings, o.useVariable, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.appServiceAction, o.parameterMappings, o.useVariable, o.outputVariableName})
 	return o
 }
 
@@ -12218,7 +12566,7 @@ func initAppServiceCallParameterMapping() *AppServiceCallParameterMapping {
 	o.argument.Bind(&o.Base, 1)
 	o.argumentModel = property.NewPart[element.Element]("ArgumentModel")
 	o.argumentModel.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.parameter, o.argument, o.argumentModel, })
+	o.SetProperties([]element.Property{o.parameter, o.argument, o.argumentModel})
 	return o
 }
 
@@ -12243,7 +12591,7 @@ func initApplyJumpToOptionAction() *ApplyJumpToOptionAction {
 	o.workflowJumpToDetailsVariable.Bind(&o.Base, 1)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowJumpToDetailsVariable, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowJumpToDetailsVariable, o.outputVariableName})
 	return o
 }
 
@@ -12266,7 +12614,7 @@ func initAssociationRetrieveSource() *AssociationRetrieveSource {
 	o.startVariableName.Bind(&o.Base, 0)
 	o.association = property.NewByNameRef[element.Element]("Association", "DomainModels$AssociationBase")
 	o.association.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.startVariableName, o.association, })
+	o.SetProperties([]element.Property{o.startVariableName, o.association})
 	return o
 }
 
@@ -12289,7 +12637,7 @@ func initAuthenticationDocumentConfig() *AuthenticationDocumentConfig {
 	o.optForAuthDocument.Bind(&o.Base, 0)
 	o.authenticationDocument = property.NewByNameRef[element.Element]("AuthenticationDocument", "Authentication$Authentication")
 	o.authenticationDocument.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.optForAuthDocument, o.authenticationDocument, })
+	o.SetProperties([]element.Property{o.optForAuthDocument, o.authenticationDocument})
 	return o
 }
 
@@ -12314,7 +12662,7 @@ func initBasicAuthConfig() *BasicAuthConfig {
 	o.username.Bind(&o.Base, 1)
 	o.password = property.NewPrimitive[string]("Password", property.DecodeString)
 	o.password.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.optForAuthDocument, o.username, o.password, })
+	o.SetProperties([]element.Property{o.optForAuthDocument, o.username, o.password})
 	return o
 }
 
@@ -12337,7 +12685,7 @@ func initBasicCodeActionParameterValue() *BasicCodeActionParameterValue {
 	o.argument.Bind(&o.Base, 0)
 	o.argumentModel = property.NewPart[element.Element]("ArgumentModel")
 	o.argumentModel.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.argument, o.argumentModel, })
+	o.SetProperties([]element.Property{o.argument, o.argumentModel})
 	return o
 }
 
@@ -12360,7 +12708,7 @@ func initBasicJavaActionParameterValue() *BasicJavaActionParameterValue {
 	o.argument.Bind(&o.Base, 0)
 	o.argumentModel = property.NewPart[element.Element]("ArgumentModel")
 	o.argumentModel.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.argument, o.argumentModel, })
+	o.SetProperties([]element.Property{o.argument, o.argumentModel})
 	return o
 }
 
@@ -12383,7 +12731,7 @@ func initBezierCurve() *BezierCurve {
 	o.originControlVector.Bind(&o.Base, 0)
 	o.destinationControlVector = property.NewPrimitive[string]("DestinationControlVector", property.DecodeString)
 	o.destinationControlVector.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.originControlVector, o.destinationControlVector, })
+	o.SetProperties([]element.Property{o.originControlVector, o.destinationControlVector})
 	return o
 }
 
@@ -12406,7 +12754,7 @@ func initBinaryRequestHandling() *BinaryRequestHandling {
 	o.expression.Bind(&o.Base, 0)
 	o.expressionModel = property.NewPart[element.Element]("ExpressionModel")
 	o.expressionModel.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.expression, o.expressionModel, })
+	o.SetProperties([]element.Property{o.expression, o.expressionModel})
 	return o
 }
 
@@ -12427,7 +12775,7 @@ func initBodyVariable() *BodyVariable {
 	o.SetTypeName("Microflows$BodyVariable")
 	o.variableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.variableName.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.variableName, })
+	o.SetProperties([]element.Property{o.variableName})
 	return o
 }
 
@@ -12450,7 +12798,7 @@ func initBreakEvent() *BreakEvent {
 	o.relativeMiddlePoint.Bind(&o.Base, 0)
 	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
 	o.size.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, })
+	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -12483,7 +12831,7 @@ func initCallExternalAction() *CallExternalAction {
 	o.variableDataType.Bind(&o.Base, 5)
 	o.includedAssociations = property.NewPartList[element.Element]("IncludedAssociations")
 	o.includedAssociations.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.consumedODataService, o.name, o.parameterMappings, o.variableName, o.variableDataType, o.includedAssociations, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.consumedODataService, o.name, o.parameterMappings, o.variableName, o.variableDataType, o.includedAssociations})
 	return o
 }
 
@@ -12504,7 +12852,7 @@ func initCancelSynchronizationAction() *CancelSynchronizationAction {
 	o.SetTypeName("Microflows$CancelSynchronizationAction")
 	o.errorHandlingType = property.NewEnum[string]("ErrorHandlingType")
 	o.errorHandlingType.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.errorHandlingType, })
+	o.SetProperties([]element.Property{o.errorHandlingType})
 	return o
 }
 
@@ -12527,7 +12875,7 @@ func initCastAction() *CastAction {
 	o.errorHandlingType.Bind(&o.Base, 0)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.outputVariableName})
 	return o
 }
 
@@ -12556,7 +12904,7 @@ func initChangeListAction() *ChangeListAction {
 	o.valueModel.Bind(&o.Base, 3)
 	o.propType = property.NewEnum[string]("Type")
 	o.propType.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.changeVariableName, o.value, o.valueModel, o.propType, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.changeVariableName, o.value, o.valueModel, o.propType})
 	return o
 }
 
@@ -12585,7 +12933,7 @@ func initChangeObjectAction() *ChangeObjectAction {
 	o.commit.Bind(&o.Base, 3)
 	o.changeVariableName = property.NewPrimitive[string]("ChangeVariableName", property.DecodeString)
 	o.changeVariableName.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.items, o.refreshInClient, o.commit, o.changeVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.items, o.refreshInClient, o.commit, o.changeVariableName})
 	return o
 }
 
@@ -12612,7 +12960,7 @@ func initChangeVariableAction() *ChangeVariableAction {
 	o.value.Bind(&o.Base, 2)
 	o.valueModel = property.NewPart[element.Element]("ValueModel")
 	o.valueModel.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.changeVariableName, o.value, o.valueModel, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.changeVariableName, o.value, o.valueModel})
 	return o
 }
 
@@ -12635,7 +12983,7 @@ func initClearFromClientAction() *ClearFromClientAction {
 	o.errorHandlingType.Bind(&o.Base, 0)
 	o.entity = property.NewByNameRef[element.Element]("Entity", "DomainModels$Entity")
 	o.entity.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.entity, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.entity})
 	return o
 }
 
@@ -12660,7 +13008,7 @@ func initCloseFormAction() *CloseFormAction {
 	o.numberOfPages.Bind(&o.Base, 1)
 	o.numberOfPagesToClose = property.NewPrimitive[string]("NumberOfPagesToClose", property.DecodeString)
 	o.numberOfPagesToClose.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.numberOfPages, o.numberOfPagesToClose, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.numberOfPages, o.numberOfPagesToClose})
 	return o
 }
 
@@ -12687,7 +13035,7 @@ func initCommitAction() *CommitAction {
 	o.commitVariableName.Bind(&o.Base, 2)
 	o.refreshInClient = property.NewPrimitive[bool]("RefreshInClient", property.DecodeBool)
 	o.refreshInClient.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.withEvents, o.commitVariableName, o.refreshInClient, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.withEvents, o.commitVariableName, o.refreshInClient})
 	return o
 }
 
@@ -12708,7 +13056,7 @@ func initConstantRange() *ConstantRange {
 	o.SetTypeName("Microflows$ConstantRange")
 	o.singleObject = property.NewPrimitive[bool]("SingleObject", property.DecodeBool)
 	o.singleObject.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.singleObject, })
+	o.SetProperties([]element.Property{o.singleObject})
 	return o
 }
 
@@ -12731,7 +13079,7 @@ func initContains() *Contains {
 	o.listVariableName.Bind(&o.Base, 0)
 	o.secondListOrObjectVariableName = property.NewPrimitive[string]("SecondListOrObjectVariableName", property.DecodeString)
 	o.secondListOrObjectVariableName.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.listVariableName, o.secondListOrObjectVariableName, })
+	o.SetProperties([]element.Property{o.listVariableName, o.secondListOrObjectVariableName})
 	return o
 }
 
@@ -12754,7 +13102,7 @@ func initContinueEvent() *ContinueEvent {
 	o.relativeMiddlePoint.Bind(&o.Base, 0)
 	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
 	o.size.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, })
+	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -12775,7 +13123,7 @@ func initContinueOperation() *ContinueOperation {
 	o.SetTypeName("Microflows$ContinueOperation")
 	o.workflowVariable = property.NewPrimitive[string]("WorkflowVariable", property.DecodeString)
 	o.workflowVariable.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.workflowVariable, })
+	o.SetProperties([]element.Property{o.workflowVariable})
 	return o
 }
 
@@ -12804,7 +13152,7 @@ func initCounterMeterAction() *CounterMeterAction {
 	o.tags.Bind(&o.Base, 3)
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.name, o.description, o.tags, o.value, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.name, o.description, o.tags, o.value})
 	return o
 }
 
@@ -12829,7 +13177,7 @@ func initCreateListAction() *CreateListAction {
 	o.entity.Bind(&o.Base, 1)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.entity, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.entity, o.outputVariableName})
 	return o
 }
 
@@ -12860,7 +13208,7 @@ func initCreateObjectAction() *CreateObjectAction {
 	o.entity.Bind(&o.Base, 4)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.items, o.refreshInClient, o.commit, o.entity, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.items, o.refreshInClient, o.commit, o.entity, o.outputVariableName})
 	return o
 }
 
@@ -12891,7 +13239,7 @@ func initCreateVariableAction() *CreateVariableAction {
 	o.initialValue.Bind(&o.Base, 4)
 	o.initialValueModel = property.NewPart[element.Element]("InitialValueModel")
 	o.initialValueModel.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.variableName, o.variableDataType, o.variableType, o.initialValue, o.initialValueModel, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.variableName, o.variableDataType, o.variableType, o.initialValue, o.initialValueModel})
 	return o
 }
 
@@ -12912,7 +13260,7 @@ func initCustomBlobDocumentCodeActionParameterValue() *CustomBlobDocumentCodeAct
 	o.SetTypeName("Microflows$CustomBlobDocumentCodeActionParameterValue")
 	o.customDocument = property.NewByNameRef[element.Element]("CustomDocument", "CustomBlobDocuments$CustomBlobDocument")
 	o.customDocument.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.customDocument, })
+	o.SetProperties([]element.Property{o.customDocument})
 	return o
 }
 
@@ -12939,7 +13287,7 @@ func initCustomRange() *CustomRange {
 	o.limitExpressionModel.Bind(&o.Base, 2)
 	o.offsetExpressionModel = property.NewPart[element.Element]("OffsetExpressionModel")
 	o.offsetExpressionModel.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.limitExpression, o.offsetExpression, o.limitExpressionModel, o.offsetExpressionModel, })
+	o.SetProperties([]element.Property{o.limitExpression, o.offsetExpression, o.limitExpressionModel, o.offsetExpressionModel})
 	return o
 }
 
@@ -12960,7 +13308,7 @@ func initCustomRequestHandling() *CustomRequestHandling {
 	o.SetTypeName("Microflows$CustomRequestHandling")
 	o.template = property.NewPart[element.Element]("Template")
 	o.template.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.template, })
+	o.SetProperties([]element.Property{o.template})
 	return o
 }
 
@@ -12987,7 +13335,7 @@ func initDatabaseRetrieveSource() *DatabaseRetrieveSource {
 	o.xPathConstraint.Bind(&o.Base, 2)
 	o.sortItemList = property.NewPart[element.Element]("SortItemList")
 	o.sortItemList.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.entity, o.propRange, o.xPathConstraint, o.sortItemList, })
+	o.SetProperties([]element.Property{o.entity, o.propRange, o.xPathConstraint, o.sortItemList})
 	return o
 }
 
@@ -13012,7 +13360,7 @@ func initDeleteAction() *DeleteAction {
 	o.deleteVariableName.Bind(&o.Base, 1)
 	o.refreshInClient = property.NewPrimitive[bool]("RefreshInClient", property.DecodeBool)
 	o.refreshInClient.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.deleteVariableName, o.refreshInClient, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.deleteVariableName, o.refreshInClient})
 	return o
 }
 
@@ -13037,7 +13385,7 @@ func initDeleteExternalObject() *DeleteExternalObject {
 	o.deleteVariableName.Bind(&o.Base, 1)
 	o.refreshInClient = property.NewPrimitive[bool]("RefreshInClient", property.DecodeBool)
 	o.refreshInClient.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.deleteVariableName, o.refreshInClient, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.deleteVariableName, o.refreshInClient})
 	return o
 }
 
@@ -13062,7 +13410,7 @@ func initDocumentTemplateParameterMapping() *DocumentTemplateParameterMapping {
 	o.argument.Bind(&o.Base, 1)
 	o.argumentModel = property.NewPart[element.Element]("ArgumentModel")
 	o.argumentModel.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.widgetName, o.argument, o.argumentModel, })
+	o.SetProperties([]element.Property{o.widgetName, o.argument, o.argumentModel})
 	return o
 }
 
@@ -13087,7 +13435,7 @@ func initDownloadFileAction() *DownloadFileAction {
 	o.fileDocumentVariableName.Bind(&o.Base, 1)
 	o.showFileInBrowser = property.NewPrimitive[bool]("ShowFileInBrowser", property.DecodeBool)
 	o.showFileInBrowser.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.fileDocumentVariableName, o.showFileInBrowser, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.fileDocumentVariableName, o.showFileInBrowser})
 	return o
 }
 
@@ -13120,7 +13468,7 @@ func initEmailConnectionConfig() *EmailConnectionConfig {
 	o.checkServerIdentity.Bind(&o.Base, 5)
 	o.connectionTimeout = property.NewPrimitive[int32]("ConnectionTimeout", property.DecodeInt32)
 	o.connectionTimeout.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.emailId, o.protocol, o.host, o.port, o.securityType, o.checkServerIdentity, o.connectionTimeout, })
+	o.SetProperties([]element.Property{o.emailId, o.protocol, o.host, o.port, o.securityType, o.checkServerIdentity, o.connectionTimeout})
 	return o
 }
 
@@ -13155,7 +13503,7 @@ func initEmailMessage() *EmailMessage {
 	o.attachments.Bind(&o.Base, 6)
 	o.attachment = property.NewPrimitive[string]("Attachment", property.DecodeString)
 	o.attachment.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.to, o.cc, o.bcc, o.subject, o.messageBodyPlainText, o.messageBodyHtml, o.attachments, o.attachment, })
+	o.SetProperties([]element.Property{o.to, o.cc, o.bcc, o.subject, o.messageBodyPlainText, o.messageBodyHtml, o.attachments, o.attachment})
 	return o
 }
 
@@ -13184,7 +13532,7 @@ func initEndEvent() *EndEvent {
 	o.returnValueModel.Bind(&o.Base, 3)
 	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
 	o.documentation.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.returnValue, o.returnValueModel, o.documentation, })
+	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.returnValue, o.returnValueModel, o.documentation})
 	return o
 }
 
@@ -13205,7 +13553,7 @@ func initEntityTypeCodeActionParameterValue() *EntityTypeCodeActionParameterValu
 	o.SetTypeName("Microflows$EntityTypeCodeActionParameterValue")
 	o.entity = property.NewByNameRef[element.Element]("Entity", "DomainModels$Entity")
 	o.entity.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.entity, })
+	o.SetProperties([]element.Property{o.entity})
 	return o
 }
 
@@ -13226,7 +13574,7 @@ func initEntityTypeJavaActionParameterValue() *EntityTypeJavaActionParameterValu
 	o.SetTypeName("Microflows$EntityTypeJavaActionParameterValue")
 	o.entity = property.NewByNameRef[element.Element]("Entity", "DomainModels$Entity")
 	o.entity.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.entity, })
+	o.SetProperties([]element.Property{o.entity})
 	return o
 }
 
@@ -13247,7 +13595,7 @@ func initEnumerationCase() *EnumerationCase {
 	o.SetTypeName("Microflows$EnumerationCase")
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.value, })
+	o.SetProperties([]element.Property{o.value})
 	return o
 }
 
@@ -13270,7 +13618,7 @@ func initErrorEvent() *ErrorEvent {
 	o.relativeMiddlePoint.Bind(&o.Base, 0)
 	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
 	o.size.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, })
+	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -13293,7 +13641,7 @@ func initExclusiveMerge() *ExclusiveMerge {
 	o.relativeMiddlePoint.Bind(&o.Base, 0)
 	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
 	o.size.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, })
+	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -13324,7 +13672,7 @@ func initExclusiveSplit() *ExclusiveSplit {
 	o.errorHandlingType.Bind(&o.Base, 4)
 	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
 	o.documentation.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.splitCondition, o.caption, o.errorHandlingType, o.documentation, })
+	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.splitCondition, o.caption, o.errorHandlingType, o.documentation})
 	return o
 }
 
@@ -13345,7 +13693,7 @@ func initExportMappingJavaActionParameterValue() *ExportMappingJavaActionParamet
 	o.SetTypeName("Microflows$ExportMappingJavaActionParameterValue")
 	o.exportMapping = property.NewByNameRef[element.Element]("ExportMapping", "ExportMappings$ExportMapping")
 	o.exportMapping.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.exportMapping, })
+	o.SetProperties([]element.Property{o.exportMapping})
 	return o
 }
 
@@ -13366,7 +13714,7 @@ func initExportMappingParameterValue() *ExportMappingParameterValue {
 	o.SetTypeName("Microflows$ExportMappingParameterValue")
 	o.exportMapping = property.NewByNameRef[element.Element]("ExportMapping", "ExportMappings$ExportMapping")
 	o.exportMapping.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.exportMapping, })
+	o.SetProperties([]element.Property{o.exportMapping})
 	return o
 }
 
@@ -13397,7 +13745,7 @@ func initExportXmlAction() *ExportXmlAction {
 	o.outputMethod.Bind(&o.Base, 4)
 	o.isValidationRequired = property.NewPrimitive[bool]("IsValidationRequired", property.DecodeBool)
 	o.isValidationRequired.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.mapping, o.mappingArgumentVariableName, o.resultHandling, o.outputMethod, o.isValidationRequired, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.mapping, o.mappingArgumentVariableName, o.resultHandling, o.outputMethod, o.isValidationRequired})
 	return o
 }
 
@@ -13420,7 +13768,7 @@ func initExpressionSplitCondition() *ExpressionSplitCondition {
 	o.expression.Bind(&o.Base, 0)
 	o.expressionModel = property.NewPart[element.Element]("ExpressionModel")
 	o.expressionModel.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.expression, o.expressionModel, })
+	o.SetProperties([]element.Property{o.expression, o.expressionModel})
 	return o
 }
 
@@ -13451,7 +13799,7 @@ func initExternalActionParameterMapping() *ExternalActionParameterMapping {
 	o.includedAssociations.Bind(&o.Base, 4)
 	o.additionalAttributes = property.NewPartList[element.Element]("AdditionalAttributes")
 	o.additionalAttributes.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.parameterName, o.parameterType, o.canBeEmpty, o.argument, o.includedAssociations, o.additionalAttributes, })
+	o.SetProperties([]element.Property{o.parameterName, o.parameterType, o.canBeEmpty, o.argument, o.includedAssociations, o.additionalAttributes})
 	return o
 }
 
@@ -13472,7 +13820,7 @@ func initFileDocumentExport() *FileDocumentExport {
 	o.SetTypeName("ExportXmlAction$FileDocumentExport")
 	o.targetDocumentVariableName = property.NewPrimitive[string]("TargetDocumentVariableName", property.DecodeString)
 	o.targetDocumentVariableName.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.targetDocumentVariableName, })
+	o.SetProperties([]element.Property{o.targetDocumentVariableName})
 	return o
 }
 
@@ -13501,7 +13849,7 @@ func initFilter() *Filter {
 	o.attribute.Bind(&o.Base, 3)
 	o.association = property.NewByNameRef[element.Element]("Association", "DomainModels$AssociationBase")
 	o.association.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.listVariableName, o.expression, o.expressionModel, o.attribute, o.association, })
+	o.SetProperties([]element.Property{o.listVariableName, o.expression, o.expressionModel, o.attribute, o.association})
 	return o
 }
 
@@ -13526,7 +13874,7 @@ func initFilterByExpression() *FilterByExpression {
 	o.expression.Bind(&o.Base, 1)
 	o.expressionModel = property.NewPart[element.Element]("ExpressionModel")
 	o.expressionModel.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.listVariableName, o.expression, o.expressionModel, })
+	o.SetProperties([]element.Property{o.listVariableName, o.expression, o.expressionModel})
 	return o
 }
 
@@ -13555,7 +13903,7 @@ func initFind() *Find {
 	o.attribute.Bind(&o.Base, 3)
 	o.association = property.NewByNameRef[element.Element]("Association", "DomainModels$AssociationBase")
 	o.association.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.listVariableName, o.expression, o.expressionModel, o.attribute, o.association, })
+	o.SetProperties([]element.Property{o.listVariableName, o.expression, o.expressionModel, o.attribute, o.association})
 	return o
 }
 
@@ -13580,7 +13928,7 @@ func initFindByExpression() *FindByExpression {
 	o.expression.Bind(&o.Base, 1)
 	o.expressionModel = property.NewPart[element.Element]("ExpressionModel")
 	o.expressionModel.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.listVariableName, o.expression, o.expressionModel, })
+	o.SetProperties([]element.Property{o.listVariableName, o.expression, o.expressionModel})
 	return o
 }
 
@@ -13607,7 +13955,7 @@ func initFormDataPart() *FormDataPart {
 	o.valueModel.Bind(&o.Base, 2)
 	o.headerEntries = property.NewPartList[element.Element]("HeaderEntries")
 	o.headerEntries.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.key, o.value, o.valueModel, o.headerEntries, })
+	o.SetProperties([]element.Property{o.key, o.value, o.valueModel, o.headerEntries})
 	return o
 }
 
@@ -13628,7 +13976,7 @@ func initFormDataRequestHandling() *FormDataRequestHandling {
 	o.SetTypeName("Microflows$FormDataRequestHandling")
 	o.parts = property.NewPartList[element.Element]("Parts")
 	o.parts.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.parts, })
+	o.SetProperties([]element.Property{o.parts})
 	return o
 }
 
@@ -13657,7 +14005,7 @@ func initGaugeMeterAction() *GaugeMeterAction {
 	o.tags.Bind(&o.Base, 3)
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.name, o.description, o.tags, o.value, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.name, o.description, o.tags, o.value})
 	return o
 }
 
@@ -13714,7 +14062,7 @@ func initGenerateDocumentAction() *GenerateDocumentAction {
 	o.marginBottomInInch.Bind(&o.Base, 17)
 	o.marginBottomInInchModel = property.NewPart[element.Element]("MarginBottomInInchModel")
 	o.marginBottomInInchModel.Bind(&o.Base, 18)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.fileVariableName, o.languageVariableName, o.documentType, o.languageSetting, o.documentTemplate, o.parameterMappings, o.overrideTopMargin, o.overrideBottomMargin, o.overrideLeftMargin, o.overrideRightMargin, o.marginLeftInInch, o.marginLeftInInchModel, o.marginRightInInch, o.marginRightInInchModel, o.marginTopInInch, o.marginTopInInchModel, o.marginBottomInInch, o.marginBottomInInchModel, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.fileVariableName, o.languageVariableName, o.documentType, o.languageSetting, o.documentTemplate, o.parameterMappings, o.overrideTopMargin, o.overrideBottomMargin, o.overrideLeftMargin, o.overrideRightMargin, o.marginLeftInInch, o.marginLeftInInchModel, o.marginRightInInch, o.marginRightInInchModel, o.marginTopInInch, o.marginTopInInchModel, o.marginBottomInInch, o.marginBottomInInchModel})
 	return o
 }
 
@@ -13739,9 +14087,9 @@ func initGenerateJumpToOptionsAction() *GenerateJumpToOptionsAction {
 	o.workflowVariable.Bind(&o.Base, 1)
 	o.workflow = property.NewByNameRef[element.Element]("Workflow", "Workflows$Workflow")
 	o.workflow.Bind(&o.Base, 2)
-	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
+	o.outputVariableName = property.NewPrimitive[string]("OutputVariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowVariable, o.workflow, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowVariable, o.workflow, o.outputVariableName})
 	return o
 }
 
@@ -13766,7 +14114,7 @@ func initGetWorkflowActivityRecordsAction() *GetWorkflowActivityRecordsAction {
 	o.workflowVariable.Bind(&o.Base, 1)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowVariable, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowVariable, o.outputVariableName})
 	return o
 }
 
@@ -13793,7 +14141,7 @@ func initGetWorkflowDataAction() *GetWorkflowDataAction {
 	o.workflow.Bind(&o.Base, 2)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowVariable, o.workflow, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowVariable, o.workflow, o.outputVariableName})
 	return o
 }
 
@@ -13818,7 +14166,7 @@ func initGetWorkflowsAction() *GetWorkflowsAction {
 	o.workflowContextVariableName.Bind(&o.Base, 1)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowContextVariableName, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowContextVariableName, o.outputVariableName})
 	return o
 }
 
@@ -13839,7 +14187,7 @@ func initHead() *Head {
 	o.SetTypeName("Microflows$Head")
 	o.listVariableName = property.NewPrimitive[string]("ListVariableName", property.DecodeString)
 	o.listVariableName.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.listVariableName, })
+	o.SetProperties([]element.Property{o.listVariableName})
 	return o
 }
 
@@ -13884,7 +14232,7 @@ func initHttpConfiguration() *HttpConfiguration {
 	o.newHttpMethod.Bind(&o.Base, 11)
 	o.clientCertificate = property.NewPrimitive[string]("ClientCertificate", property.DecodeString)
 	o.clientCertificate.Bind(&o.Base, 12)
-	o.SetProperties([]element.Property{o.overrideLocation, o.customLocation, o.customLocationModel, o.customLocationTemplate, o.useAuthentication, o.httpAuthenticationUserName, o.username, o.authenticationPassword, o.password, o.headerEntries, o.httpMethod, o.newHttpMethod, o.clientCertificate, })
+	o.SetProperties([]element.Property{o.overrideLocation, o.customLocation, o.customLocationModel, o.customLocationTemplate, o.useAuthentication, o.httpAuthenticationUserName, o.username, o.authenticationPassword, o.password, o.headerEntries, o.httpMethod, o.newHttpMethod, o.clientCertificate})
 	return o
 }
 
@@ -13909,7 +14257,7 @@ func initHttpHeaderEntry() *HttpHeaderEntry {
 	o.value.Bind(&o.Base, 1)
 	o.valueModel = property.NewPart[element.Element]("ValueModel")
 	o.valueModel.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.key, o.value, o.valueModel, })
+	o.SetProperties([]element.Property{o.key, o.value, o.valueModel})
 	return o
 }
 
@@ -13942,7 +14290,7 @@ func initImportMappingCall() *ImportMappingCall {
 	o.contentType.Bind(&o.Base, 5)
 	o.forceSingleOccurrence = property.NewPrimitive[bool]("ForceSingleOccurrence", property.DecodeBool)
 	o.forceSingleOccurrence.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.mapping, o.objectHandlingBackup, o.commit, o.mappingArgumentVariableName, o.propRange, o.contentType, o.forceSingleOccurrence, })
+	o.SetProperties([]element.Property{o.mapping, o.objectHandlingBackup, o.commit, o.mappingArgumentVariableName, o.propRange, o.contentType, o.forceSingleOccurrence})
 	return o
 }
 
@@ -13963,7 +14311,7 @@ func initImportMappingJavaActionParameterValue() *ImportMappingJavaActionParamet
 	o.SetTypeName("Microflows$ImportMappingJavaActionParameterValue")
 	o.importMapping = property.NewByNameRef[element.Element]("ImportMapping", "ImportMappings$ImportMapping")
 	o.importMapping.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.importMapping, })
+	o.SetProperties([]element.Property{o.importMapping})
 	return o
 }
 
@@ -13984,7 +14332,7 @@ func initImportMappingParameterValue() *ImportMappingParameterValue {
 	o.SetTypeName("Microflows$ImportMappingParameterValue")
 	o.importMapping = property.NewByNameRef[element.Element]("ImportMapping", "ImportMappings$ImportMapping")
 	o.importMapping.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.importMapping, })
+	o.SetProperties([]element.Property{o.importMapping})
 	return o
 }
 
@@ -14011,7 +14359,7 @@ func initImportXmlAction() *ImportXmlAction {
 	o.resultHandling.Bind(&o.Base, 2)
 	o.isValidationRequired = property.NewPrimitive[bool]("IsValidationRequired", property.DecodeBool)
 	o.isValidationRequired.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.xmlDocumentVariableName, o.resultHandling, o.isValidationRequired, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.xmlDocumentVariableName, o.resultHandling, o.isValidationRequired})
 	return o
 }
 
@@ -14036,7 +14384,7 @@ func initIncludedAssociation() *IncludedAssociation {
 	o.isParent.Bind(&o.Base, 1)
 	o.includedAssociations = property.NewPartList[element.Element]("IncludedAssociations")
 	o.includedAssociations.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.association, o.isParent, o.includedAssociations, })
+	o.SetProperties([]element.Property{o.association, o.isParent, o.includedAssociations})
 	return o
 }
 
@@ -14063,7 +14411,7 @@ func initIncrementCounterMeterAction() *IncrementCounterMeterAction {
 	o.description.Bind(&o.Base, 2)
 	o.tags = property.NewPartList[element.Element]("Tags")
 	o.tags.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.name, o.description, o.tags, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.name, o.description, o.tags})
 	return o
 }
 
@@ -14084,7 +14432,7 @@ func initInheritanceCase() *InheritanceCase {
 	o.SetTypeName("Microflows$InheritanceCase")
 	o.value = property.NewByNameRef[element.Element]("Value", "DomainModels$Entity")
 	o.value.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.value, })
+	o.SetProperties([]element.Property{o.value})
 	return o
 }
 
@@ -14113,7 +14461,7 @@ func initInheritanceSplit() *InheritanceSplit {
 	o.caption.Bind(&o.Base, 3)
 	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
 	o.documentation.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.splitVariableName, o.caption, o.documentation, })
+	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.splitVariableName, o.caption, o.documentation})
 	return o
 }
 
@@ -14136,7 +14484,7 @@ func initIntersect() *Intersect {
 	o.listVariableName.Bind(&o.Base, 0)
 	o.secondListOrObjectVariableName = property.NewPrimitive[string]("SecondListOrObjectVariableName", property.DecodeString)
 	o.secondListOrObjectVariableName.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.listVariableName, o.secondListOrObjectVariableName, })
+	o.SetProperties([]element.Property{o.listVariableName, o.secondListOrObjectVariableName})
 	return o
 }
 
@@ -14159,7 +14507,7 @@ func initIterableList() *IterableList {
 	o.listVariableName.Bind(&o.Base, 0)
 	o.variableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.variableName.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.listVariableName, o.variableName, })
+	o.SetProperties([]element.Property{o.listVariableName, o.variableName})
 	return o
 }
 
@@ -14192,7 +14540,7 @@ func initJavaActionCallAction() *JavaActionCallAction {
 	o.useReturnVariable.Bind(&o.Base, 5)
 	o.outputVariableName = property.NewPrimitive[string]("ResultVariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.javaAction, o.queueSettings, o.queue, o.parameterMappings, o.useReturnVariable, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.javaAction, o.queueSettings, o.queue, o.parameterMappings, o.useReturnVariable, o.outputVariableName})
 	return o
 }
 
@@ -14219,7 +14567,7 @@ func initJavaActionParameterMapping() *JavaActionParameterMapping {
 	o.value.Bind(&o.Base, 2)
 	o.parameterValue = property.NewPart[element.Element]("ParameterValue")
 	o.parameterValue.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.parameter, o.argument, o.value, o.parameterValue, })
+	o.SetProperties([]element.Property{o.parameter, o.argument, o.value, o.parameterValue})
 	return o
 }
 
@@ -14248,7 +14596,7 @@ func initJavaScriptActionCallAction() *JavaScriptActionCallAction {
 	o.useReturnVariable.Bind(&o.Base, 3)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.javaScriptAction, o.parameterMappings, o.useReturnVariable, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.javaScriptAction, o.parameterMappings, o.useReturnVariable, o.outputVariableName})
 	return o
 }
 
@@ -14271,7 +14619,7 @@ func initJavaScriptActionParameterMapping() *JavaScriptActionParameterMapping {
 	o.parameter.Bind(&o.Base, 0)
 	o.parameterValue = property.NewPart[element.Element]("ParameterValue")
 	o.parameterValue.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.parameter, o.parameterValue, })
+	o.SetProperties([]element.Property{o.parameter, o.parameterValue})
 	return o
 }
 
@@ -14294,7 +14642,7 @@ func initListEquals() *ListEquals {
 	o.listVariableName.Bind(&o.Base, 0)
 	o.secondListOrObjectVariableName = property.NewPrimitive[string]("SecondListOrObjectVariableName", property.DecodeString)
 	o.secondListOrObjectVariableName.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.listVariableName, o.secondListOrObjectVariableName, })
+	o.SetProperties([]element.Property{o.listVariableName, o.secondListOrObjectVariableName})
 	return o
 }
 
@@ -14319,7 +14667,7 @@ func initListOperationAction() *ListOperationAction {
 	o.operation.Bind(&o.Base, 1)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.operation, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.operation, o.outputVariableName})
 	return o
 }
 
@@ -14342,7 +14690,7 @@ func initListRange() *ListRange {
 	o.listVariableName.Bind(&o.Base, 0)
 	o.customRange = property.NewPart[element.Element]("CustomRange")
 	o.customRange.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.listVariableName, o.customRange, })
+	o.SetProperties([]element.Property{o.listVariableName, o.customRange})
 	return o
 }
 
@@ -14369,7 +14717,7 @@ func initLockWorkflowAction() *LockWorkflowAction {
 	o.workflowSelection.Bind(&o.Base, 2)
 	o.pauseAllWorkflows = property.NewPrimitive[bool]("PauseAllWorkflows", property.DecodeBool)
 	o.pauseAllWorkflows.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.workflow, o.workflowSelection, o.pauseAllWorkflows, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.workflow, o.workflowSelection, o.pauseAllWorkflows})
 	return o
 }
 
@@ -14400,7 +14748,7 @@ func initLogMessageAction() *LogMessageAction {
 	o.messageTemplate.Bind(&o.Base, 4)
 	o.includeLatestStackTrace = property.NewPrimitive[bool]("IncludeLatestStackTrace", property.DecodeBool)
 	o.includeLatestStackTrace.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.level, o.node, o.nodeModel, o.messageTemplate, o.includeLatestStackTrace, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.level, o.node, o.nodeModel, o.messageTemplate, o.includeLatestStackTrace})
 	return o
 }
 
@@ -14435,7 +14783,7 @@ func initLoopedActivity() *LoopedActivity {
 	o.documentation.Bind(&o.Base, 6)
 	o.loopSource = property.NewPart[element.Element]("LoopSource")
 	o.loopSource.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.objectCollection, o.iteratedListVariableName, o.loopVariableName, o.errorHandlingType, o.documentation, o.loopSource, })
+	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.objectCollection, o.iteratedListVariableName, o.loopVariableName, o.errorHandlingType, o.documentation, o.loopSource})
 	return o
 }
 
@@ -14460,7 +14808,7 @@ func initMLModelCall() *MLModelCall {
 	o.mlMappingDocument.Bind(&o.Base, 1)
 	o.parameterMappings = property.NewPartList[element.Element]("ParameterMappings")
 	o.parameterMappings.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.modelReference, o.mlMappingDocument, o.parameterMappings, })
+	o.SetProperties([]element.Property{o.modelReference, o.mlMappingDocument, o.parameterMappings})
 	return o
 }
 
@@ -14489,7 +14837,7 @@ func initMLModelCallAction() *MLModelCallAction {
 	o.inputVariableName.Bind(&o.Base, 3)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.modelCall, o.mlMappingDocument, o.inputVariableName, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.modelCall, o.mlMappingDocument, o.inputVariableName, o.outputVariableName})
 	return o
 }
 
@@ -14516,7 +14864,7 @@ func initMLModelCallParameterMapping() *MLModelCallParameterMapping {
 	o.initialValue.Bind(&o.Base, 2)
 	o.initialValueModel = property.NewPrimitive[string]("InitialValueModel", property.DecodeString)
 	o.initialValueModel.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.parameterName, o.parameterType, o.initialValue, o.initialValueModel, })
+	o.SetProperties([]element.Property{o.parameterName, o.parameterType, o.initialValue, o.initialValueModel})
 	return o
 }
 
@@ -14541,7 +14889,7 @@ func initMappingRequestHandling() *MappingRequestHandling {
 	o.mappingArgumentVariableName.Bind(&o.Base, 1)
 	o.contentType = property.NewEnum[string]("ContentType")
 	o.contentType.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.mapping, o.mappingArgumentVariableName, o.contentType, })
+	o.SetProperties([]element.Property{o.mapping, o.mappingArgumentVariableName, o.contentType})
 	return o
 }
 
@@ -14570,7 +14918,7 @@ func initMemberChange() *MemberChange {
 	o.value.Bind(&o.Base, 3)
 	o.valueModel = property.NewPart[element.Element]("ValueModel")
 	o.valueModel.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.attribute, o.association, o.propType, o.value, o.valueModel, })
+	o.SetProperties([]element.Property{o.attribute, o.association, o.propType, o.value, o.valueModel})
 	return o
 }
 
@@ -14593,7 +14941,7 @@ func initMeterTagMapping() *MeterTagMapping {
 	o.key.Bind(&o.Base, 0)
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.key, o.value, })
+	o.SetProperties([]element.Property{o.key, o.value})
 	return o
 }
 
@@ -14652,7 +15000,7 @@ func initMicroflow() *Microflow {
 	o.urlSearchParameters.Bind(&o.Base, 18)
 	o.stableId = property.NewPrimitive[string]("StableId", property.DecodeString)
 	o.stableId.Bind(&o.Base, 19)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.objectCollection, o.flows, o.returnType, o.microflowReturnType, o.markAsUsed, o.returnVariableName, o.applyEntityAccess, o.allowedModuleRoles, o.microflowActionInfo, o.workflowActionInfo, o.allowConcurrentExecution, o.concurrencyErrorMessage, o.concurrencyErrorMicroflow, o.url, o.urlSearchParameters, o.stableId, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.objectCollection, o.flows, o.returnType, o.microflowReturnType, o.markAsUsed, o.returnVariableName, o.applyEntityAccess, o.allowedModuleRoles, o.microflowActionInfo, o.workflowActionInfo, o.allowConcurrentExecution, o.concurrencyErrorMessage, o.concurrencyErrorMicroflow, o.url, o.urlSearchParameters, o.stableId})
 	return o
 }
 
@@ -14679,7 +15027,7 @@ func initMicroflowCall() *MicroflowCall {
 	o.queue.Bind(&o.Base, 2)
 	o.parameterMappings = property.NewPartList[element.Element]("ParameterMappings")
 	o.parameterMappings.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.microflow, o.queueSettings, o.queue, o.parameterMappings, })
+	o.SetProperties([]element.Property{o.microflow, o.queueSettings, o.queue, o.parameterMappings})
 	return o
 }
 
@@ -14706,7 +15054,7 @@ func initMicroflowCallAction() *MicroflowCallAction {
 	o.useReturnVariable.Bind(&o.Base, 2)
 	o.outputVariableName = property.NewPrimitive[string]("ResultVariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.microflowCall, o.useReturnVariable, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.microflowCall, o.useReturnVariable, o.outputVariableName})
 	return o
 }
 
@@ -14731,7 +15079,7 @@ func initMicroflowCallParameterMapping() *MicroflowCallParameterMapping {
 	o.argument.Bind(&o.Base, 1)
 	o.argumentModel = property.NewPart[element.Element]("ArgumentModel")
 	o.argumentModel.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.parameter, o.argument, o.argumentModel, })
+	o.SetProperties([]element.Property{o.parameter, o.argument, o.argumentModel})
 	return o
 }
 
@@ -14752,7 +15100,7 @@ func initMicroflowJavaActionParameterValue() *MicroflowJavaActionParameterValue 
 	o.SetTypeName("Microflows$MicroflowJavaActionParameterValue")
 	o.microflow = property.NewByNameRef[element.Element]("Microflow", "Microflows$Microflow")
 	o.microflow.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.microflow, })
+	o.SetProperties([]element.Property{o.microflow})
 	return o
 }
 
@@ -14773,7 +15121,7 @@ func initMicroflowObjectCollection() *MicroflowObjectCollection {
 	o.SetTypeName("Microflows$MicroflowObjectCollection")
 	o.objects = property.NewPartList[element.Element]("Objects")
 	o.objects.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.objects, })
+	o.SetProperties([]element.Property{o.objects})
 	return o
 }
 
@@ -14802,7 +15150,7 @@ func initMicroflowParameter() *MicroflowParameter {
 	o.relativeMiddlePoint.Bind(&o.Base, 3)
 	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
 	o.size.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.name, o.propType, o.parameterType, o.relativeMiddlePoint, o.size, })
+	o.SetProperties([]element.Property{o.name, o.propType, o.parameterType, o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -14825,7 +15173,7 @@ func initMicroflowParameterAttributeUrlSegment() *MicroflowParameterAttributeUrl
 	o.microflowParameter.Bind(&o.Base, 0)
 	o.attribute = property.NewByNameRef[element.Element]("Attribute", "DomainModels$Attribute")
 	o.attribute.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.microflowParameter, o.attribute, })
+	o.SetProperties([]element.Property{o.microflowParameter, o.attribute})
 	return o
 }
 
@@ -14862,7 +15210,7 @@ func initMicroflowParameterObject() *MicroflowParameterObject {
 	o.isRequired.Bind(&o.Base, 7)
 	o.defaultValue = property.NewPrimitive[string]("DefaultValue", property.DecodeString)
 	o.defaultValue.Bind(&o.Base, 8)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.name, o.propType, o.variableType, o.documentation, o.hasVariableNameBeenChanged, o.isRequired, o.defaultValue, })
+	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.name, o.propType, o.variableType, o.documentation, o.hasVariableNameBeenChanged, o.isRequired, o.defaultValue})
 	return o
 }
 
@@ -14883,7 +15231,7 @@ func initMicroflowParameterValue() *MicroflowParameterValue {
 	o.SetTypeName("Microflows$MicroflowParameterValue")
 	o.microflow = property.NewByNameRef[element.Element]("Microflow", "Microflows$Microflow")
 	o.microflow.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.microflow, })
+	o.SetProperties([]element.Property{o.microflow})
 	return o
 }
 
@@ -14904,7 +15252,7 @@ func initMicroflowPrimitiveParameterUrlSegment() *MicroflowPrimitiveParameterUrl
 	o.SetTypeName("Microflows$MicroflowPrimitiveParameterUrlSegment")
 	o.microflowParameter = property.NewByNameRef[element.Element]("MicroflowParameter", "Microflows$MicroflowParameter")
 	o.microflowParameter.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.microflowParameter, })
+	o.SetProperties([]element.Property{o.microflowParameter})
 	return o
 }
 
@@ -14947,7 +15295,7 @@ func initNanoflow() *Nanoflow {
 	o.allowedModuleRoles.Bind(&o.Base, 10)
 	o.useListParameterByReference = property.NewPrimitive[bool]("UseListParameterByReference", property.DecodeBool)
 	o.useListParameterByReference.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.objectCollection, o.flows, o.returnType, o.microflowReturnType, o.markAsUsed, o.returnVariableName, o.allowedModuleRoles, o.useListParameterByReference, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.objectCollection, o.flows, o.returnType, o.microflowReturnType, o.markAsUsed, o.returnVariableName, o.allowedModuleRoles, o.useListParameterByReference})
 	return o
 }
 
@@ -14970,7 +15318,7 @@ func initNanoflowCall() *NanoflowCall {
 	o.nanoflow.Bind(&o.Base, 0)
 	o.parameterMappings = property.NewPartList[element.Element]("ParameterMappings")
 	o.parameterMappings.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.nanoflow, o.parameterMappings, })
+	o.SetProperties([]element.Property{o.nanoflow, o.parameterMappings})
 	return o
 }
 
@@ -14995,9 +15343,9 @@ func initNanoflowCallAction() *NanoflowCallAction {
 	o.nanoflowCall.Bind(&o.Base, 1)
 	o.useReturnVariable = property.NewPrimitive[bool]("UseReturnVariable", property.DecodeBool)
 	o.useReturnVariable.Bind(&o.Base, 2)
-	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
+	o.outputVariableName = property.NewPrimitive[string]("OutputVariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.nanoflowCall, o.useReturnVariable, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.nanoflowCall, o.useReturnVariable, o.outputVariableName})
 	return o
 }
 
@@ -15022,7 +15370,7 @@ func initNanoflowCallParameterMapping() *NanoflowCallParameterMapping {
 	o.argument.Bind(&o.Base, 1)
 	o.argumentModel = property.NewPart[element.Element]("ArgumentModel")
 	o.argumentModel.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.parameter, o.argument, o.argumentModel, })
+	o.SetProperties([]element.Property{o.parameter, o.argument, o.argumentModel})
 	return o
 }
 
@@ -15047,7 +15395,7 @@ func initNanoflowParameter() *NanoflowParameter {
 	o.propType.Bind(&o.Base, 1)
 	o.parameterType = property.NewPart[element.Element]("ParameterType")
 	o.parameterType.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.name, o.propType, o.parameterType, })
+	o.SetProperties([]element.Property{o.name, o.propType, o.parameterType})
 	return o
 }
 
@@ -15095,7 +15443,7 @@ func initNotifyWorkflowAction() *NotifyWorkflowAction {
 	o.notifyTarget.Bind(&o.Base, 3)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowVariable, o.activity, o.notifyTarget, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowVariable, o.activity, o.notifyTarget, o.outputVariableName})
 	return o
 }
 
@@ -15122,7 +15470,7 @@ func initOpenUserTaskAction() *OpenUserTaskAction {
 	o.assignOnOpen.Bind(&o.Base, 2)
 	o.openWhenAssigned = property.NewPrimitive[bool]("OpenWhenAssigned", property.DecodeBool)
 	o.openWhenAssigned.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.userTaskVariable, o.assignOnOpen, o.openWhenAssigned, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.userTaskVariable, o.assignOnOpen, o.openWhenAssigned})
 	return o
 }
 
@@ -15145,7 +15493,7 @@ func initOpenWorkflowAction() *OpenWorkflowAction {
 	o.errorHandlingType.Bind(&o.Base, 0)
 	o.workflowVariable = property.NewPrimitive[string]("WorkflowVariable", property.DecodeString)
 	o.workflowVariable.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowVariable, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowVariable})
 	return o
 }
 
@@ -15166,7 +15514,7 @@ func initOrthogonalPath() *OrthogonalPath {
 	o.SetTypeName("Microflows$OrthogonalPath")
 	o.segmentPositions = property.NewPrimitive[string]("SegmentPositions", property.DecodeString)
 	o.segmentPositions.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.segmentPositions, })
+	o.SetProperties([]element.Property{o.segmentPositions})
 	return o
 }
 
@@ -15187,7 +15535,7 @@ func initOutputVariable() *OutputVariable {
 	o.SetTypeName("Microflows$OutputVariable")
 	o.variableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.variableName.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.variableName, })
+	o.SetProperties([]element.Property{o.variableName})
 	return o
 }
 
@@ -15208,7 +15556,7 @@ func initParameterIdUrlSegment() *ParameterIdUrlSegment {
 	o.SetTypeName("Microflows$ParameterIdUrlSegment")
 	o.microflowParameter = property.NewByNameRef[element.Element]("MicroflowParameter", "Microflows$MicroflowParameter")
 	o.microflowParameter.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.microflowParameter, })
+	o.SetProperties([]element.Property{o.microflowParameter})
 	return o
 }
 
@@ -15229,7 +15577,7 @@ func initPauseOperation() *PauseOperation {
 	o.SetTypeName("Microflows$PauseOperation")
 	o.workflowVariable = property.NewPrimitive[string]("WorkflowVariable", property.DecodeString)
 	o.workflowVariable.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.workflowVariable, })
+	o.SetProperties([]element.Property{o.workflowVariable})
 	return o
 }
 
@@ -15252,7 +15600,7 @@ func initPrimitiveTypedTemplateArgument() *PrimitiveTypedTemplateArgument {
 	o.expression.Bind(&o.Base, 0)
 	o.propType = property.NewEnum[string]("Type")
 	o.propType.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.expression, o.propType, })
+	o.SetProperties([]element.Property{o.expression, o.propType})
 	return o
 }
 
@@ -15291,7 +15639,7 @@ func initProxyConfiguration() *ProxyConfiguration {
 	o.useConfigurationExpression.Bind(&o.Base, 8)
 	o.useConfigurationExpressionModel = property.NewPart[element.Element]("UseConfigurationExpressionModel")
 	o.useConfigurationExpressionModel.Bind(&o.Base, 9)
-	o.SetProperties([]element.Property{o.usernameExpression, o.usernameExpressionModel, o.passwordExpression, o.passwordExpressionModel, o.hostExpression, o.hostExpressionModel, o.portExpression, o.portExpressionModel, o.useConfigurationExpression, o.useConfigurationExpressionModel, })
+	o.SetProperties([]element.Property{o.usernameExpression, o.usernameExpressionModel, o.passwordExpression, o.passwordExpressionModel, o.hostExpression, o.hostExpressionModel, o.portExpression, o.portExpressionModel, o.useConfigurationExpression, o.useConfigurationExpressionModel})
 	return o
 }
 
@@ -15314,7 +15662,7 @@ func initPushToClientAction() *PushToClientAction {
 	o.errorHandlingType.Bind(&o.Base, 0)
 	o.dataVariableName = property.NewPrimitive[string]("DataVariableName", property.DecodeString)
 	o.dataVariableName.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.dataVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.dataVariableName})
 	return o
 }
 
@@ -15339,7 +15687,7 @@ func initQueryParameterMapping() *QueryParameterMapping {
 	o.value.Bind(&o.Base, 1)
 	o.included = property.NewEnum[string]("Included")
 	o.included.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.queryParameter, o.value, o.included, })
+	o.SetProperties([]element.Property{o.queryParameter, o.value, o.included})
 	return o
 }
 
@@ -15384,7 +15732,7 @@ func initRestCallAction() *RestCallAction {
 	o.requestProxyType.Bind(&o.Base, 11)
 	o.proxyConfiguration = property.NewPart[element.Element]("ProxyConfiguration")
 	o.proxyConfiguration.Bind(&o.Base, 12)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.httpConfiguration, o.requestHandling, o.requestHandlingType, o.resultHandling, o.resultHandlingType, o.errorResultHandlingType, o.useRequestTimeOut, o.timeOut, o.timeOutModel, o.timeOutExpression, o.requestProxyType, o.proxyConfiguration, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.httpConfiguration, o.requestHandling, o.requestHandlingType, o.resultHandling, o.resultHandlingType, o.errorResultHandlingType, o.useRequestTimeOut, o.timeOut, o.timeOutModel, o.timeOutExpression, o.requestProxyType, o.proxyConfiguration})
 	return o
 }
 
@@ -15417,7 +15765,7 @@ func initRestOperationCallAction() *RestOperationCallAction {
 	o.queryParameterMappings.Bind(&o.Base, 5)
 	o.outputVariable = property.NewPart[element.Element]("OutputVariable")
 	o.outputVariable.Bind(&o.Base, 6)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.operation, o.baseUrlParameterMapping, o.bodyVariable, o.parameterMappings, o.queryParameterMappings, o.outputVariable, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.operation, o.baseUrlParameterMapping, o.bodyVariable, o.parameterMappings, o.queryParameterMappings, o.outputVariable})
 	return o
 }
 
@@ -15440,7 +15788,7 @@ func initRestOperationParameterMapping() *RestOperationParameterMapping {
 	o.parameter.Bind(&o.Base, 0)
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.parameter, o.value, })
+	o.SetProperties([]element.Property{o.parameter, o.value})
 	return o
 }
 
@@ -15463,7 +15811,7 @@ func initRestParameterMapping() *RestParameterMapping {
 	o.parameter.Bind(&o.Base, 0)
 	o.value = property.NewPrimitive[string]("Value", property.DecodeString)
 	o.value.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.parameter, o.value, })
+	o.SetProperties([]element.Property{o.parameter, o.value})
 	return o
 }
 
@@ -15484,7 +15832,7 @@ func initRestartOperation() *RestartOperation {
 	o.SetTypeName("Microflows$RestartOperation")
 	o.workflowVariable = property.NewPrimitive[string]("WorkflowVariable", property.DecodeString)
 	o.workflowVariable.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.workflowVariable, })
+	o.SetProperties([]element.Property{o.workflowVariable})
 	return o
 }
 
@@ -15505,15 +15853,15 @@ func initResultHandling() *ResultHandling {
 	o.SetTypeName("Microflows$ResultHandling")
 	o.importMappingCall = property.NewPart[element.Element]("ImportMappingCall")
 	o.importMappingCall.Bind(&o.Base, 0)
-	o.storeInVariable = property.NewPrimitive[bool]("StoreInVariable", property.DecodeBool)
+	o.storeInVariable = property.NewPrimitive[bool]("Bind", property.DecodeBool)
 	o.storeInVariable.Bind(&o.Base, 1)
-	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
+	o.outputVariableName = property.NewPrimitive[string]("ResultVariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 2)
 	o.variableDataType = property.NewPrimitive[string]("VariableDataType", property.DecodeString)
 	o.variableDataType.Bind(&o.Base, 3)
 	o.variableType = property.NewPart[element.Element]("VariableType")
 	o.variableType.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.importMappingCall, o.storeInVariable, o.outputVariableName, o.variableDataType, o.variableType, })
+	o.SetProperties([]element.Property{o.importMappingCall, o.storeInVariable, o.outputVariableName, o.variableDataType, o.variableType})
 	return o
 }
 
@@ -15534,7 +15882,7 @@ func initResumeOperation() *ResumeOperation {
 	o.SetTypeName("Microflows$ResumeOperation")
 	o.workflowVariable = property.NewPrimitive[string]("WorkflowVariable", property.DecodeString)
 	o.workflowVariable.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.workflowVariable, })
+	o.SetProperties([]element.Property{o.workflowVariable})
 	return o
 }
 
@@ -15559,7 +15907,7 @@ func initRetrieveAction() *RetrieveAction {
 	o.retrieveSource.Bind(&o.Base, 1)
 	o.outputVariableName = property.NewPrimitive[string]("ResultVariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.retrieveSource, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.retrieveSource, o.outputVariableName})
 	return o
 }
 
@@ -15580,7 +15928,7 @@ func initRetryOperation() *RetryOperation {
 	o.SetTypeName("Microflows$RetryOperation")
 	o.workflowVariable = property.NewPrimitive[string]("WorkflowVariable", property.DecodeString)
 	o.workflowVariable.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.workflowVariable, })
+	o.SetProperties([]element.Property{o.workflowVariable})
 	return o
 }
 
@@ -15605,7 +15953,7 @@ func initRollbackAction() *RollbackAction {
 	o.rollbackVariableName.Bind(&o.Base, 1)
 	o.refreshInClient = property.NewPrimitive[bool]("RefreshInClient", property.DecodeBool)
 	o.refreshInClient.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.rollbackVariableName, o.refreshInClient, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.rollbackVariableName, o.refreshInClient})
 	return o
 }
 
@@ -15646,7 +15994,7 @@ func initRule() *Rule {
 	o.returnVariableName.Bind(&o.Base, 9)
 	o.applyEntityAccess = property.NewPrimitive[bool]("ApplyEntityAccess", property.DecodeBool)
 	o.applyEntityAccess.Bind(&o.Base, 10)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.objectCollection, o.flows, o.returnType, o.microflowReturnType, o.markAsUsed, o.returnVariableName, o.applyEntityAccess, })
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.objectCollection, o.flows, o.returnType, o.microflowReturnType, o.markAsUsed, o.returnVariableName, o.applyEntityAccess})
 	return o
 }
 
@@ -15669,7 +16017,7 @@ func initRuleCall() *RuleCall {
 	o.rule.Bind(&o.Base, 0)
 	o.parameterMappings = property.NewPartList[element.Element]("ParameterMappings")
 	o.parameterMappings.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.rule, o.parameterMappings, })
+	o.SetProperties([]element.Property{o.rule, o.parameterMappings})
 	return o
 }
 
@@ -15694,7 +16042,7 @@ func initRuleCallParameterMapping() *RuleCallParameterMapping {
 	o.argument.Bind(&o.Base, 1)
 	o.argumentModel = property.NewPart[element.Element]("ArgumentModel")
 	o.argumentModel.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.parameter, o.argument, o.argumentModel, })
+	o.SetProperties([]element.Property{o.parameter, o.argument, o.argumentModel})
 	return o
 }
 
@@ -15715,7 +16063,7 @@ func initRuleSplitCondition() *RuleSplitCondition {
 	o.SetTypeName("Microflows$RuleSplitCondition")
 	o.ruleCall = property.NewPart[element.Element]("RuleCall")
 	o.ruleCall.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.ruleCall, })
+	o.SetProperties([]element.Property{o.ruleCall})
 	return o
 }
 
@@ -15742,7 +16090,7 @@ func initSendEmailAction() *SendEmailAction {
 	o.emailConnectionConfig.Bind(&o.Base, 2)
 	o.emailMessage = property.NewPart[element.Element]("EmailMessage")
 	o.emailMessage.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.emailAuthenticationConfig, o.emailConnectionConfig, o.emailMessage, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.emailAuthenticationConfig, o.emailConnectionConfig, o.emailMessage})
 	return o
 }
 
@@ -15767,7 +16115,7 @@ func initSendExternalObject() *SendExternalObject {
 	o.variableNameToBeSent.Bind(&o.Base, 1)
 	o.refreshInClient = property.NewPrimitive[bool]("RefreshInClient", property.DecodeBool)
 	o.refreshInClient.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.variableNameToBeSent, o.refreshInClient, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.variableNameToBeSent, o.refreshInClient})
 	return o
 }
 
@@ -15808,7 +16156,7 @@ func initSequenceFlow() *SequenceFlow {
 	o.caseValues.Bind(&o.Base, 9)
 	o.isErrorHandler = property.NewPrimitive[bool]("IsErrorHandler", property.DecodeBool)
 	o.isErrorHandler.Bind(&o.Base, 10)
-	o.SetProperties([]element.Property{o.origin, o.destination, o.originConnectionIndex, o.destinationConnectionIndex, o.originBezierVector, o.destinationBezierVector, o.lineType, o.line, o.caseValue, o.caseValues, o.isErrorHandler, })
+	o.SetProperties([]element.Property{o.origin, o.destination, o.originConnectionIndex, o.destinationConnectionIndex, o.originBezierVector, o.destinationBezierVector, o.lineType, o.line, o.caseValue, o.caseValues, o.isErrorHandler})
 	return o
 }
 
@@ -15835,7 +16183,7 @@ func initSetTaskOutcomeAction() *SetTaskOutcomeAction {
 	o.outcome.Bind(&o.Base, 2)
 	o.outcomeValue = property.NewPrimitive[string]("OutcomeValue", property.DecodeString)
 	o.outcomeValue.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowTaskVariable, o.outcome, o.outcomeValue, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.workflowTaskVariable, o.outcome, o.outcomeValue})
 	return o
 }
 
@@ -15856,7 +16204,7 @@ func initShowHomePageAction() *ShowHomePageAction {
 	o.SetTypeName("Microflows$ShowHomePageAction")
 	o.errorHandlingType = property.NewEnum[string]("ErrorHandlingType")
 	o.errorHandlingType.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.errorHandlingType, })
+	o.SetProperties([]element.Property{o.errorHandlingType})
 	return o
 }
 
@@ -15883,7 +16231,7 @@ func initShowMessageAction() *ShowMessageAction {
 	o.propType.Bind(&o.Base, 2)
 	o.blocking = property.NewPrimitive[bool]("Blocking", property.DecodeBool)
 	o.blocking.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.template, o.propType, o.blocking, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.template, o.propType, o.blocking})
 	return o
 }
 
@@ -15910,7 +16258,7 @@ func initShowPageAction() *ShowPageAction {
 	o.passedObjectVariableName.Bind(&o.Base, 2)
 	o.numberOfPagesToClose = property.NewPrimitive[string]("NumberOfPagesToClose", property.DecodeString)
 	o.numberOfPagesToClose.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.pageSettings, o.passedObjectVariableName, o.numberOfPagesToClose, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.pageSettings, o.passedObjectVariableName, o.numberOfPagesToClose})
 	return o
 }
 
@@ -15933,7 +16281,7 @@ func initSimpleRequestHandling() *SimpleRequestHandling {
 	o.parameterMappings.Bind(&o.Base, 0)
 	o.nullValueOption = property.NewEnum[string]("NullValueOption")
 	o.nullValueOption.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.parameterMappings, o.nullValueOption, })
+	o.SetProperties([]element.Property{o.parameterMappings, o.nullValueOption})
 	return o
 }
 
@@ -15956,7 +16304,7 @@ func initSort() *Sort {
 	o.listVariableName.Bind(&o.Base, 0)
 	o.sortItemList = property.NewPart[element.Element]("SortItemList")
 	o.sortItemList.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.listVariableName, o.sortItemList, })
+	o.SetProperties([]element.Property{o.listVariableName, o.sortItemList})
 	return o
 }
 
@@ -15981,7 +16329,7 @@ func initSortItem() *SortItem {
 	o.attributeRef.Bind(&o.Base, 1)
 	o.sortOrder = property.NewEnum[string]("SortOrder")
 	o.sortOrder.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.attributePath, o.attributeRef, o.sortOrder, })
+	o.SetProperties([]element.Property{o.attributePath, o.attributeRef, o.sortOrder})
 	return o
 }
 
@@ -16002,7 +16350,7 @@ func initSortItemList() *SortItemList {
 	o.SetTypeName("Microflows$SortItemList")
 	o.items = property.NewPartList[element.Element]("Items")
 	o.items.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.items, })
+	o.SetProperties([]element.Property{o.items})
 	return o
 }
 
@@ -16025,7 +16373,7 @@ func initStartEvent() *StartEvent {
 	o.relativeMiddlePoint.Bind(&o.Base, 0)
 	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
 	o.size.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, })
+	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -16048,7 +16396,7 @@ func initStringTemplate() *StringTemplate {
 	o.arguments.Bind(&o.Base, 0)
 	o.text = property.NewPrimitive[string]("Text", property.DecodeString)
 	o.text.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.arguments, o.text, })
+	o.SetProperties([]element.Property{o.arguments, o.text})
 	return o
 }
 
@@ -16071,7 +16419,7 @@ func initStringTemplateParameterValue() *StringTemplateParameterValue {
 	o.template.Bind(&o.Base, 0)
 	o.typedTemplate = property.NewPart[element.Element]("TypedTemplate")
 	o.typedTemplate.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.template, o.typedTemplate, })
+	o.SetProperties([]element.Property{o.template, o.typedTemplate})
 	return o
 }
 
@@ -16094,7 +16442,7 @@ func initSubtract() *Subtract {
 	o.listVariableName.Bind(&o.Base, 0)
 	o.secondListOrObjectVariableName = property.NewPrimitive[string]("SecondListOrObjectVariableName", property.DecodeString)
 	o.secondListOrObjectVariableName.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.listVariableName, o.secondListOrObjectVariableName, })
+	o.SetProperties([]element.Property{o.listVariableName, o.secondListOrObjectVariableName})
 	return o
 }
 
@@ -16119,7 +16467,7 @@ func initSynchronizeAction() *SynchronizeAction {
 	o.propType.Bind(&o.Base, 1)
 	o.variableNames = property.NewPrimitive[string]("VariableNames", property.DecodeString)
 	o.variableNames.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.propType, o.variableNames, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.propType, o.variableNames})
 	return o
 }
 
@@ -16140,7 +16488,7 @@ func initTail() *Tail {
 	o.SetTypeName("Microflows$Tail")
 	o.listVariableName = property.NewPrimitive[string]("ListVariableName", property.DecodeString)
 	o.listVariableName.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.listVariableName, })
+	o.SetProperties([]element.Property{o.listVariableName})
 	return o
 }
 
@@ -16163,7 +16511,7 @@ func initTemplateArgument() *TemplateArgument {
 	o.expression.Bind(&o.Base, 0)
 	o.expressionModel = property.NewPart[element.Element]("ExpressionModel")
 	o.expressionModel.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.expression, o.expressionModel, })
+	o.SetProperties([]element.Property{o.expression, o.expressionModel})
 	return o
 }
 
@@ -16186,7 +16534,7 @@ func initTextTemplate() *TextTemplate {
 	o.arguments.Bind(&o.Base, 0)
 	o.text = property.NewPart[element.Element]("Text")
 	o.text.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.arguments, o.text, })
+	o.SetProperties([]element.Property{o.arguments, o.text})
 	return o
 }
 
@@ -16213,7 +16561,7 @@ func initTransformJsonAction() *TransformJsonAction {
 	o.inputVariableName.Bind(&o.Base, 2)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.transformation, o.inputVariableName, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.transformation, o.inputVariableName, o.outputVariableName})
 	return o
 }
 
@@ -16236,7 +16584,7 @@ func initTypedTemplate() *TypedTemplate {
 	o.text.Bind(&o.Base, 0)
 	o.arguments = property.NewPartList[element.Element]("Arguments")
 	o.arguments.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.text, o.arguments, })
+	o.SetProperties([]element.Property{o.text, o.arguments})
 	return o
 }
 
@@ -16259,7 +16607,7 @@ func initUnion() *Union {
 	o.listVariableName.Bind(&o.Base, 0)
 	o.secondListOrObjectVariableName = property.NewPrimitive[string]("SecondListOrObjectVariableName", property.DecodeString)
 	o.secondListOrObjectVariableName.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.listVariableName, o.secondListOrObjectVariableName, })
+	o.SetProperties([]element.Property{o.listVariableName, o.secondListOrObjectVariableName})
 	return o
 }
 
@@ -16286,7 +16634,7 @@ func initUnlockWorkflowAction() *UnlockWorkflowAction {
 	o.workflowSelection.Bind(&o.Base, 2)
 	o.resumeAllPausedWorkflows = property.NewPrimitive[bool]("ResumeAllPausedWorkflows", property.DecodeBool)
 	o.resumeAllPausedWorkflows.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.workflow, o.workflowSelection, o.resumeAllPausedWorkflows, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.workflow, o.workflowSelection, o.resumeAllPausedWorkflows})
 	return o
 }
 
@@ -16307,7 +16655,7 @@ func initUnpauseOperation() *UnpauseOperation {
 	o.SetTypeName("Microflows$UnpauseOperation")
 	o.workflowVariable = property.NewPrimitive[string]("WorkflowVariable", property.DecodeString)
 	o.workflowVariable.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.workflowVariable, })
+	o.SetProperties([]element.Property{o.workflowVariable})
 	return o
 }
 
@@ -16336,7 +16684,7 @@ func initValidationFeedbackAction() *ValidationFeedbackAction {
 	o.attribute.Bind(&o.Base, 3)
 	o.association = property.NewByNameRef[element.Element]("Association", "DomainModels$AssociationBase")
 	o.association.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.feedbackTemplate, o.objectVariableName, o.attribute, o.association, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.feedbackTemplate, o.objectVariableName, o.attribute, o.association})
 	return o
 }
 
@@ -16357,7 +16705,7 @@ func initVariableExport() *VariableExport {
 	o.SetTypeName("ExportXmlAction$StringExport")
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 0)
-	o.SetProperties([]element.Property{o.outputVariableName, })
+	o.SetProperties([]element.Property{o.outputVariableName})
 	return o
 }
 
@@ -16375,7 +16723,7 @@ func NewVariableExport() *VariableExport {
 // When a storage alias exists, init uses the STORAGE name (what Mendix uses in BSON).
 func initWebServiceCallAction() *WebServiceCallAction {
 	o := &WebServiceCallAction{}
-	o.SetTypeName("Microflows$WebServiceCallAction")
+	o.SetTypeName("Microflows$CallWebServiceAction")
 	o.errorHandlingType = property.NewEnum[string]("ErrorHandlingType")
 	o.errorHandlingType.Bind(&o.Base, 0)
 	o.importedWebService = property.NewByNameRef[element.Element]("ImportedWebService", "WebServices$ImportedWebService")
@@ -16408,7 +16756,7 @@ func initWebServiceCallAction() *WebServiceCallAction {
 	o.requestProxyType.Bind(&o.Base, 14)
 	o.proxyConfiguration = property.NewPart[element.Element]("ProxyConfiguration")
 	o.proxyConfiguration.Bind(&o.Base, 15)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.importedWebService, o.serviceName, o.operationName, o.useRequestTimeOut, o.timeOut, o.timeOutModel, o.timeOutExpression, o.sendNullValueChoice, o.requestHeaderHandling, o.requestBodyHandling, o.resultHandling, o.httpConfiguration, o.isValidationRequired, o.requestProxyType, o.proxyConfiguration, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.importedWebService, o.serviceName, o.operationName, o.useRequestTimeOut, o.timeOut, o.timeOutModel, o.timeOutExpression, o.sendNullValueChoice, o.requestHeaderHandling, o.requestBodyHandling, o.resultHandling, o.httpConfiguration, o.isValidationRequired, o.requestProxyType, o.proxyConfiguration})
 	return o
 }
 
@@ -16439,7 +16787,7 @@ func initWebServiceOperationAdvancedParameterMapping() *WebServiceOperationAdvan
 	o.mapping.Bind(&o.Base, 4)
 	o.mappingArgumentVariableName = property.NewPrimitive[string]("MappingArgumentVariableName", property.DecodeString)
 	o.mappingArgumentVariableName.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.isChecked, o.parameterName, o.argument, o.argumentModel, o.mapping, o.mappingArgumentVariableName, })
+	o.SetProperties([]element.Property{o.isChecked, o.parameterName, o.argument, o.argumentModel, o.mapping, o.mappingArgumentVariableName})
 	return o
 }
 
@@ -16468,7 +16816,7 @@ func initWebServiceOperationSimpleParameterMapping() *WebServiceOperationSimpleP
 	o.argumentModel.Bind(&o.Base, 3)
 	o.parameterPath = property.NewPrimitive[string]("ParameterPath", property.DecodeString)
 	o.parameterPath.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.isChecked, o.parameterName, o.argument, o.argumentModel, o.parameterPath, })
+	o.SetProperties([]element.Property{o.isChecked, o.parameterName, o.argument, o.argumentModel, o.parameterPath})
 	return o
 }
 
@@ -16491,7 +16839,7 @@ func initWhileLoopCondition() *WhileLoopCondition {
 	o.whileExpression.Bind(&o.Base, 0)
 	o.caption = property.NewPrimitive[string]("Caption", property.DecodeString)
 	o.caption.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.whileExpression, o.caption, })
+	o.SetProperties([]element.Property{o.whileExpression, o.caption})
 	return o
 }
 
@@ -16520,7 +16868,7 @@ func initWorkflowCallAction() *WorkflowCallAction {
 	o.useReturnVariable.Bind(&o.Base, 3)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.workflow, o.workflowContextVariable, o.useReturnVariable, o.outputVariableName, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.workflow, o.workflowContextVariable, o.useReturnVariable, o.outputVariableName})
 	return o
 }
 
@@ -16543,7 +16891,7 @@ func initWorkflowOperationAction() *WorkflowOperationAction {
 	o.errorHandlingType.Bind(&o.Base, 0)
 	o.operation = property.NewPart[element.Element]("Operation")
 	o.operation.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.operation, })
+	o.SetProperties([]element.Property{o.errorHandlingType, o.operation})
 	return o
 }
 
@@ -16555,7 +16903,6 @@ func NewWorkflowOperationAction() *WorkflowOperationAction {
 	o.MarkDirty(63)
 	return o
 }
-
 
 func init() {
 	codec.DefaultRegistry.Register("Microflows$AbortOperation", func() element.Element {
@@ -17107,7 +17454,7 @@ func init() {
 	codec.DefaultRegistry.Register("ExportXmlAction$StringExport", func() element.Element {
 		return initVariableExport()
 	})
-	codec.DefaultRegistry.Register("Microflows$WebServiceCallAction", func() element.Element {
+	codec.DefaultRegistry.Register("Microflows$CallWebServiceAction", func() element.Element {
 		return initWebServiceCallAction()
 	})
 	codec.DefaultRegistry.Register("Microflows$WebServiceOperationAdvancedParameterMapping", func() element.Element {

@@ -17,9 +17,11 @@ import (
 // SEM-L01 (List attribute access) does not interfere with SEM-L02 tests.
 type stubIndex struct{}
 
-func (s stubIndex) AttributeKind(_, _ string) (exprcheck.TypeKind, bool) { return exprcheck.KindUnknown, false }
-func (s stubIndex) VarTypeKind(_, _ string) exprcheck.TypeKind           { return exprcheck.KindObject }
-func (s stubIndex) VarEntityQN(_, _ string) string                       { return "" }
+func (s stubIndex) AttributeKind(_, _ string) (exprcheck.TypeKind, bool) {
+	return exprcheck.KindUnknown, false
+}
+func (s stubIndex) VarTypeKind(_, _ string) exprcheck.TypeKind { return exprcheck.KindObject }
+func (s stubIndex) VarEntityQN(_, _ string) string             { return "" }
 func (s stubIndex) MicroflowParamKind(_, _ string) (exprcheck.TypeKind, bool) {
 	return exprcheck.KindUnknown, false
 }

@@ -143,11 +143,11 @@ func TestAddChangeObjectActionGenWithItems(t *testing.T) {
 func TestResolveMemberChangeGenOfflineFallback(t *testing.T) {
 	fb := newActionTestFb()
 	cases := []struct {
-		name              string
-		memberName        string
-		entityQN          string
-		wantAttribute     string
-		wantAssociation   string
+		name            string
+		memberName      string
+		entityQN        string
+		wantAttribute   string
+		wantAssociation string
 	}{
 		{"bare attr with entity", "Status", "Sales.Order", "Sales.Order.Status", ""},
 		{"bare attr no entity", "Status", "", "Status", ""},

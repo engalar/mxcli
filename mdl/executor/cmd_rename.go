@@ -296,6 +296,7 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 	}
 
 	invalidateHierarchy(ctx)
+	invalidateAllDocumentCaches(ctx)
 
 	fmt.Fprintf(ctx.Output, "Renamed %s: %s → %s\n", docType, oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {
@@ -511,6 +512,7 @@ func execRenameJavaAction(ctx *ExecContext, s *ast.RenameStmt) error {
 	}
 
 	invalidateHierarchy(ctx)
+	invalidateAllDocumentCaches(ctx)
 
 	fmt.Fprintf(ctx.Output, "Renamed java action: %s → %s\n", oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {

@@ -56,11 +56,13 @@ func (b *MprBackend) RelayoutDomainModel(domainModelID model.ID) error {
 // edge.
 //
 // Connection point format: "X;Y" percentage strings (0–100).
-//   "100;50" = right edge midpoint   "0;50" = left edge midpoint
+//
+//	"100;50" = right edge midpoint   "0;50" = left edge midpoint
 //
 // Naming convention (counter-intuitive — see CLAUDE.md):
-//   ParentRefID → FROM entity (FK owner, MDL "from" keyword)
-//   ChildRefID  → TO entity   (referenced, MDL "to" keyword)
+//
+//	ParentRefID → FROM entity (FK owner, MDL "from" keyword)
+//	ChildRefID  → TO entity   (referenced, MDL "to" keyword)
 //
 // Without this reset, Studio Pro defaults to X=0 (left edge) for empty
 // connection strings, so every line emerges from the left side of both

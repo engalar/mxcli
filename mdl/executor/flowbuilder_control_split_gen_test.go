@@ -195,11 +195,11 @@ func TestAddInheritanceSplitGenWithCasesEmitsBranches(t *testing.T) {
 		Cases: []ast.InheritanceSplitCase{
 			{
 				Entity: ast.QualifiedName{Module: "Sales", Name: "Premium"},
-				Body:       []ast.MicroflowStatement{&ast.ReturnStmt{}},
+				Body:   []ast.MicroflowStatement{&ast.ReturnStmt{}},
 			},
 			{
 				Entity: ast.QualifiedName{Module: "Sales", Name: "Standard"},
-				Body:       []ast.MicroflowStatement{&ast.ReturnStmt{}},
+				Body:   []ast.MicroflowStatement{&ast.ReturnStmt{}},
 			},
 		},
 	}

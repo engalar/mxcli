@@ -95,11 +95,11 @@ func TestCreateEntity_UnknownAttributeType_Issue392(t *testing.T) {
 	dm := mkDomainModelGen(mod.ID)
 
 	mb := &mock.MockBackend{
-		IsConnectedFunc:           func() bool { return true },
-		ListModulesFunc:           func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListDomainModelsGenFunc:   func() ([]*genDm.DomainModel, error) { return []*genDm.DomainModel{dm}, nil },
-		GetDomainModelGenFunc:     func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
-		ListEnumerationsFunc:      func() ([]*model.Enumeration, error) { return nil, nil },
+		IsConnectedFunc:         func() bool { return true },
+		ListModulesFunc:         func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListDomainModelsGenFunc: func() ([]*genDm.DomainModel, error) { return []*genDm.DomainModel{dm}, nil },
+		GetDomainModelGenFunc:   func(id model.ID) (*genDm.DomainModel, error) { return dm, nil },
+		ListEnumerationsFunc:    func() ([]*model.Enumeration, error) { return nil, nil },
 	}
 	h := mkHierarchy(mod)
 	withContainer(h, model.ID(dm.ID()), mod.ID)

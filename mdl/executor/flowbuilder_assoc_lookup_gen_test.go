@@ -95,10 +95,10 @@ func TestResolveMemberChangeGen_TwoDotAttributePreserved(t *testing.T) {
 // TestMemberChangeFallback_OneDotIsAssociation verifies the fallback rules.
 func TestMemberChangeFallback_OneDotIsAssociation(t *testing.T) {
 	cases := []struct {
-		memberName    string
-		entityQN      string
-		wantAssocQN   string
-		wantAttrQN    string
+		memberName  string
+		entityQN    string
+		wantAssocQN string
+		wantAttrQN  string
 	}{
 		{
 			memberName:  "MyMod.MyAssoc",

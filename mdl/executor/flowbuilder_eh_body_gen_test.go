@@ -39,8 +39,8 @@ func TestAddErrorHandlerFlowGenSingleActivityEmitsErrorEdgeAndTail(t *testing.T)
 	fb := newIfTestFb()
 	body := []ast.MicroflowStatement{
 		&ast.DeclareStmt{
-			Variable: "Errored",
-			Type:     ast.DataType{Kind: ast.TypeBoolean},
+			Variable:     "Errored",
+			Type:         ast.DataType{Kind: ast.TypeBoolean},
 			InitialValue: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
 		},
 	}

@@ -219,4 +219,3 @@ func findEntityInDMGenByName(dm *genDm.DomainModel, name string) *genDm.Entity {
 	}
 	return nil
 }
-

@@ -32,9 +32,9 @@ type ExprRecord struct {
 	// by content (starts with "[" but not "[%"), which is more robust than a mapping table.
 
 	// Type-checking context — populated only for specific UnitTypes; empty otherwise.
-	TargetAttrQN string // Microflows$ChangeActionItem: target attribute "Module.Entity.AttrName"
-	CalleeQN     string // *MicroflowCallParameterMapping: called microflow "Module.MFName"
-	ParamName    string // *MicroflowCallParameterMapping: parameter name
+	TargetAttrQN  string // Microflows$ChangeActionItem: target attribute "Module.Entity.AttrName"
+	CalleeQN      string // *MicroflowCallParameterMapping: called microflow "Module.MFName"
+	ParamName     string // *MicroflowCallParameterMapping: parameter name
 	TargetVarName string // ChangeVariableAction/CreateVariableAction: target variable name (no $)
 }
 
@@ -51,34 +51,34 @@ type Options struct {
 // Validated against 16,125 real expressions from corpus-a + corpus-b projects.
 var exprFields = map[string][]string{
 	// Microflow / Nanoflow
-	"Microflows$ExpressionSplitCondition":    {"Expression"},
-	"Microflows$WhileLoopCondition":           {"WhileExpression"},
-	"Microflows$EndEvent":                     {"ReturnValue"},
-	"Microflows$CreateVariableAction":         {"InitialValue"},
-	"Microflows$ChangeVariableAction":         {"Value"},
-	"Microflows$ChangeActionItem":             {"Value"},
-	"Microflows$DatabaseRetrieveSource":       {"XpathConstraint"},
-	"Microflows$MicroflowCallParameterMapping":{"Argument"},
-	"Microflows$NanoflowCallParameterMapping": {"Argument"},
-	"Microflows$BasicCodeActionParameterValue":{"Argument"},
-	"Microflows$TemplateParameter":            {"Expression"},
-	"Microflows$CustomRange":                  {"LimitExpression"},
+	"Microflows$ExpressionSplitCondition":      {"Expression"},
+	"Microflows$WhileLoopCondition":            {"WhileExpression"},
+	"Microflows$EndEvent":                      {"ReturnValue"},
+	"Microflows$CreateVariableAction":          {"InitialValue"},
+	"Microflows$ChangeVariableAction":          {"Value"},
+	"Microflows$ChangeActionItem":              {"Value"},
+	"Microflows$DatabaseRetrieveSource":        {"XpathConstraint"},
+	"Microflows$MicroflowCallParameterMapping": {"Argument"},
+	"Microflows$NanoflowCallParameterMapping":  {"Argument"},
+	"Microflows$BasicCodeActionParameterValue": {"Argument"},
+	"Microflows$TemplateParameter":             {"Expression"},
+	"Microflows$CustomRange":                   {"LimitExpression"},
 	// Pages / Forms
-	"Forms$ConditionalVisibilitySettings":    {"Expression"},
-	"Forms$WidgetValidation":                 {"Expression"},
-	"Forms$MicroflowParameterMapping":        {"Expression"},
-	"Forms$ClientTemplateParameter":          {"Expression"},
-	"Forms$PageParameterMapping":             {"Argument"},
+	"Forms$ConditionalVisibilitySettings": {"Expression"},
+	"Forms$WidgetValidation":              {"Expression"},
+	"Forms$MicroflowParameterMapping":     {"Expression"},
+	"Forms$ClientTemplateParameter":       {"Expression"},
+	"Forms$PageParameterMapping":          {"Argument"},
 	// Domain model
-	"DomainModels$AccessRule":                {"XPathConstraint"},
+	"DomainModels$AccessRule": {"XPathConstraint"},
 	// Workflows
-	"Workflows$MicroflowCallParameterMapping":{"Expression"},
-	"Workflows$SingleUserTaskActivity":       {"DueDate"},
-	"Workflows$XPathUserTargeting":           {"XPathConstraint"},
-	"Workflows$XPathGroupTargeting":          {"XPathConstraint"},
+	"Workflows$MicroflowCallParameterMapping": {"Expression"},
+	"Workflows$SingleUserTaskActivity":        {"DueDate"},
+	"Workflows$XPathUserTargeting":            {"XPathConstraint"},
+	"Workflows$XPathGroupTargeting":           {"XPathConstraint"},
 	// Custom widgets
-	"CustomWidgets$CustomWidgetXPathSource":  {"XPathConstraint"},
-	"CustomWidgets$WidgetValue":              {"Expression"},
+	"CustomWidgets$CustomWidgetXPathSource": {"XPathConstraint"},
+	"CustomWidgets$WidgetValue":             {"Expression"},
 }
 
 var categoryMap = map[string]string{
@@ -161,7 +161,7 @@ func scanObj(v interface{}, project, relPath string, opts Options, out *[]ExprRe
 						// There is no separate "Microflow" BSON field.
 						if paramQN, _ := val["Parameter"].(string); paramQN != "" {
 							if last := strings.LastIndex(paramQN, "."); last > 0 {
-								rec.CalleeQN = paramQN[:last]   // "Module.MFName"
+								rec.CalleeQN = paramQN[:last]    // "Module.MFName"
 								rec.ParamName = paramQN[last+1:] // "ParamName"
 							}
 						}

@@ -12,16 +12,16 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
-	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/bsonutil"
+	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genCW "github.com/mendixlabs/mxcli/modelsdk/gen/customwidgets"
-	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
-	"github.com/mendixlabs/mxcli/modelsdk/element"
 )
 
 // ============================================================================
@@ -2834,8 +2834,19 @@ func (pb *pageBuilder) buildSnippetCallParamsGen(sc *genPg.SnippetCall, snippetQ
 
 		pm := genPg.NewSnippetParameterMapping()
 		assignFreshID(pm)
-		pm.SetParameterQualifiedName(paramName)
-		pm.SetArgument(argument)
+		// Full qualified name: Module.SnippetName.ParamName
+		pm.SetParameterQualifiedName(snippetQName + "." + paramName)
+
+		// Build PageVariable using gen modelsdk to hold the argument reference.
+		varName := strings.TrimPrefix(argument, "$")
+		pv := genPg.NewPageVariable()
+		assignFreshID(pv)
+		if _, isParam := pb.paramEntityNames[varName]; isParam {
+			pv.SetPageParameterQualifiedName(varName)
+		} else {
+			pv.SetLocalVariableQualifiedName(varName)
+		}
+		pm.SetVariable(pv)
 		sc.AddParameterMappings(pm)
 	}
 
