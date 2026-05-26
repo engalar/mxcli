@@ -219,9 +219,35 @@ func ScanMPR(mprPath string, opts Options) ([]ExprRecord, error) {
 		if bsonErr := bson.Unmarshal(contents, &doc); bsonErr != nil {
 			continue
 		}
-		scanObj(doc, project, "", opts, &results)
+		// For v1 MPR (SQLite), derive UnitPath from the $ID so it matches the
+		// mprcontents/ path format that the meta index uses as its lookup key.
+		// Without this, VarTypeKind always returns KindUnknown for v1 projects.
+		relPath := unitPathFromBSON(doc)
+		scanObj(doc, project, relPath, opts, &results)
 	}
 	return results, rows.Err()
+}
+
+// unitPathFromBSON extracts the $ID from a BSON document and converts it to the
+// mprcontents/ relative path format (ab/cd/abcd1234-...-....mxunit).  This
+// mirrors meta.unitPathFromID so that ScanMPR (v1) and ScanMprcontents (v2)
+// produce the same UnitPath key that the meta index uses for VarTypeKind lookup.
+func unitPathFromBSON(doc bson.M) string {
+	raw := doc["$ID"]
+	if raw == nil {
+		return ""
+	}
+	id := extractID(raw)
+	if id == "" {
+		return ""
+	}
+	// Convert raw hex (no dashes) to standard UUID with dashes.
+	clean := strings.ReplaceAll(id, "-", "")
+	if len(clean) != 32 {
+		return id + ".mxunit"
+	}
+	uuid := clean[0:8] + "-" + clean[8:12] + "-" + clean[12:16] + "-" + clean[16:20] + "-" + clean[20:32]
+	return clean[0:2] + "/" + clean[2:4] + "/" + uuid + ".mxunit"
 }
 
 func extractID(raw interface{}) string {

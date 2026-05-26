@@ -563,6 +563,7 @@ func exportMappingToModel(u mprread.Unit[*genExpMap.ExportMapping]) *model.Expor
 		JsonStructure:     m.JsonStructureQualifiedName(),
 		XmlSchema:         m.XmlSchemaQualifiedName(),
 		MessageDefinition: m.MessageDefinitionQualifiedName(),
+		NullValueOption:   m.NullValueOption(),
 	}
 	for _, raw := range m.RootMappingElementsItems() {
 		if elem := convertExportElement(raw); elem != nil {

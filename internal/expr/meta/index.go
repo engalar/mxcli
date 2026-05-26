@@ -738,12 +738,40 @@ func (idx *Index) setVarKind(unitPath, varName string, kind exprcheck.TypeKind) 
 
 // unitPathFromID 将微流的 element.ID（标准 UUID 字符串）转换为
 // mprcontents/ 中的相对路径，格式：ab/cd/abcd1234-...-....mxunit
+//
+// Mendix 在 mprcontents/ 中使用"字节交换"UUID：前三个 UUID 组件（4字节、2字节、2字节）
+// 按小端字节序存储，因此路径中的 UUID 与 element.ID() 返回的标准 UUID 不同。
+// 例如 element.ID = "61d0a310-fae9-4d8b-..." → 路径 = "10/a3/10a3d061-e9fa-8b4d-...mxunit"
 func unitPathFromID(id string) string {
-	clean := strings.ReplaceAll(id, "-", "")
-	if len(clean) < 4 {
-		return id + ".mxunit"
+	parts := strings.Split(id, "-")
+	if len(parts) != 5 {
+		clean := strings.ReplaceAll(id, "-", "")
+		if len(clean) < 4 {
+			return id + ".mxunit"
+		}
+		return clean[0:2] + "/" + clean[2:4] + "/" + id + ".mxunit"
 	}
-	return clean[0:2] + "/" + clean[2:4] + "/" + id + ".mxunit"
+	// Swap bytes within the first three UUID components to match mprcontents/ filenames.
+	p0 := reverseHexBytes(parts[0]) // 4 bytes → stored little-endian
+	p1 := reverseHexBytes(parts[1]) // 2 bytes → stored little-endian
+	p2 := reverseHexBytes(parts[2]) // 2 bytes → stored little-endian
+	swapped := p0 + "-" + p1 + "-" + p2 + "-" + parts[3] + "-" + parts[4]
+	return swapped[0:2] + "/" + swapped[2:4] + "/" + swapped + ".mxunit"
+}
+
+// reverseHexBytes reverses the byte order of a hex-encoded byte string.
+// E.g. "61d0a310" (4 bytes) → "10a3d061".
+func reverseHexBytes(h string) string {
+	if len(h)%2 != 0 {
+		return h
+	}
+	b := make([]byte, len(h))
+	for i := 0; i < len(h); i += 2 {
+		j := len(h) - i - 2
+		b[j] = h[i]
+		b[j+1] = h[i+1]
+	}
+	return string(b)
 }
 
 // EnumCases 返回某枚举的所有 value 名；找不到返回 (nil, false)。
