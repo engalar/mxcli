@@ -12,7 +12,9 @@
 --   Domain    : self-ref association, cross-module association,
 --               non-persistent entity, many-to-many via junction table
 --   Microflow : 5-state status machine, rollback branch, time comparison,
---               constant reference (@Module.Const)
+--               constant reference (@Module.Const),
+--               retrieve with XPath + sort (XpathConstraint + NewSortings BSON),
+--               retrieve with pagination (offset + limit expressions)
 --   Nanoflow  : DB retrieve, call microflow, create+commit persistent,
 --               pure-compute return value
 --   Workflow  : parent-child, user task, multi-user task, decision (enum),
