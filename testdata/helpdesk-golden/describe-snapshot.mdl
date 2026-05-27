@@ -1004,7 +1004,7 @@ create or replace navigation Responsive
   home page HD.EscalationWorkflow_Overview for Manager
   login page Administration.login
   menu (
-    menu item '我的工单' page HD.Ticket_Overview;
+    menu item '我的工单' page HD.MyTickets_Overview;
     menu item '知识库' page KB.Article_Overview;
     menu '工单管理' (
       menu item '所有工单' page HD.Ticket_Overview;

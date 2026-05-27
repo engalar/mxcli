@@ -28,6 +28,13 @@
 --               page/microflow grants, demo users
 --   Navigation: role-derived menu visibility (no roles() on menu items)
 --   ValidationFeedback: multi-field accumulate pattern, single-field bail-early pattern
+--   Datasource types: all 6 MDL types demonstrated —
+--     parameter ($Ticket, $Article)  → DataView context source
+--     association ($Ticket/Assoc/E)  → DataGrid nested list
+--     selection (artGallery)         → DataView listen-to-widget (KB.Article_Overview)
+--     database (from HD.Ticket)      → DataGrid/Gallery database source
+--     microflow (DS_MyTickets, no args → omit parens) → DataGrid microflow source (HD.MyTickets_Overview)
+--     nanoflow (NF_TicketSearch_Apply)→ DataGrid nanoflow source (HD.TicketSearch_Results)
 --   Widget CE0463: known for dgTickets (DataGrid2 + ActionButton in custom column)
 --                  and fStatus (DropdownFilter linked to dgTickets datasource);
 --                  Studio Pro validates against internal platform definition,
@@ -1339,6 +1346,62 @@ create or replace page HD.EscalationStart_Form
   }
 };
 
+-- My Tickets overview: datagrid with MICROFLOW datasource
+-- Pattern E: datasource: microflow — no-arg microflow returns list of HD.Ticket.
+-- Demonstrates datasource type 5/6: list widget driven by a server-side microflow.
+-- DataSource BSON: Forms$MicroflowSource with microflowRef pointing to DS_MyTickets.
+create or replace page HD.MyTickets_Overview
+(
+  title: 'My Tickets',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket'
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        datagrid dgMyTickets (
+          datasource: microflow HD.DS_MyTickets,
+          PageSize: 20
+        ) {
+          column colSubject  (attribute: Subject,  caption: 'Subject')
+          column colStatus   (attribute: Status,   caption: 'Status',   ColumnWidth: manual, Size: 120)
+          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100)
+          column colSLADue   (attribute: SLADueAt, caption: 'SLA Due',  ColumnWidth: manual, Size: 140)
+        }
+      }
+    }
+  }
+};
+
+-- Ticket search results: datagrid with NANOFLOW datasource
+-- Pattern F: datasource: nanoflow — nanoflow receives page-param $Search and returns list.
+-- Demonstrates datasource type 6/6: list widget driven by a client-side nanoflow.
+-- DataSource BSON: Forms$NanoflowSource with nanoflowRef + parameter mapping Search→$Search.
+create or replace page HD.TicketSearch_Results
+(
+  title: 'Search Results',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket/Search',
+  params: { $Search: HD.TicketSearch }
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        datagrid dgResults (
+          datasource: nanoflow HD.NF_TicketSearch_Apply(Search: $Search),
+          PageSize: 20
+        ) {
+          column colSubject  (attribute: Subject,  caption: 'Subject')
+          column colStatus   (attribute: Status,   caption: 'Status',   ColumnWidth: manual, Size: 120)
+          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100)
+        }
+      }
+    }
+  }
+};
+
 -- MARK: Security — Module Roles
 
 -- KnowledgeBase: 3 module roles
@@ -1448,6 +1511,8 @@ grant view on page HD.Ticket_NewEdit       to HD.CustomerRole, HD.AgentRole, HD.
 grant view on page KB.Article_NewEdit      to KB.Contributor, KB.Admin;
 grant view on page HD.EscalationReview_Form   to HD.ManagerRole;
 grant view on page HD.EscalationWorkflow_Overview to HD.ManagerRole;
+grant view on page HD.MyTickets_Overview        to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.TicketSearch_Results      to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 grant view on page KB.Article_Overview     to KB.Reader, KB.Contributor, KB.Admin;
 grant view on page KB.Article_Detail       to KB.Reader, KB.Contributor, KB.Admin;
 
@@ -1479,7 +1544,7 @@ create or replace navigation Responsive
   home page MyFirstModule.Home_Web
   login page Administration.login
   menu (
-    menu item '我的工单'  page HD.Ticket_Overview;
+    menu item '我的工单'  page HD.MyTickets_Overview;
     menu item '知识库'    page KB.Article_Overview;
     menu '工单管理' (
       menu item '所有工单'  page HD.Ticket_Overview;
@@ -1526,6 +1591,8 @@ move page      HD.Agent_Select                 to folder 'Ticket';
 -- HD Module — Ticket/Search
 move nanoflow  HD.NF_TicketSearch_Apply        to folder 'Ticket/Search';
 move page      HD.TicketSearch_Form            to folder 'Ticket/Search';
+move page      HD.TicketSearch_Results         to folder 'Ticket/Search';
+move page      HD.MyTickets_Overview           to folder 'Ticket';
 
 -- HD Module — Escalation
 move microflow HD.WFA_GetManagerAssignees          to folder 'Escalation';
