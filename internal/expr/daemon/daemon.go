@@ -76,9 +76,6 @@ func NewWithSocket(mprPath, socketPath string, idleTimeout time.Duration) (*Daem
 		lastReq:     time.Now(),
 		stopCh:      make(chan struct{}),
 	}
-	if err := d.rebuildIndex(); err != nil {
-		return nil, err
-	}
 	return d, nil
 }
 
@@ -112,7 +109,9 @@ func (d *Daemon) rebuildIndex() error {
 // Serve binds the Unix socket and accepts connections until Stop is called
 // or the idle watcher triggers shutdown. Blocking call; run on a goroutine.
 func (d *Daemon) Serve() error {
-	// Remove any stale socket file from a prior crash before binding.
+	// Bind first so IsAlive() becomes true immediately. The index build that
+	// follows takes several seconds; connections arriving during that window are
+	// queued by the OS and served once we enter the Accept loop.
 	_ = os.Remove(d.sockPath)
 	l, err := net.Listen("unix", d.sockPath)
 	if err != nil {
@@ -125,6 +124,17 @@ func (d *Daemon) Serve() error {
 	d.listener = l
 	d.stopped = false
 	d.mu.Unlock()
+
+	// Build index after binding so New() is instant. On failure, tear down
+	// the socket so callers don't see a dead listener.
+	if err := d.rebuildIndex(); err != nil {
+		d.mu.Lock()
+		d.listener = nil
+		d.mu.Unlock()
+		l.Close()
+		os.Remove(d.sockPath) //nolint:errcheck
+		return fmt.Errorf("daemon: build index: %w", err)
+	}
 
 	go d.idleWatcher()
 

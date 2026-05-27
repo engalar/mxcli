@@ -16,6 +16,7 @@ const fixturePath = "../../../testdata/expr-checker/minimal.mpr"
 
 func openTestWriter(t *testing.T) *mmpr.Writer {
 	t.Helper()
+	t.Parallel()
 	dst := copyFixture(t, fixturePath, t.TempDir())
 	w, err := mmpr.NewWriter(dst)
 	if err != nil {

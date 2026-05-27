@@ -46,6 +46,7 @@ var testdataMPRs = []string{
 // produces parseable MDL for every microflow in testdata. See file
 // header for L6b reporter-mode rationale.
 func TestDescribeSanity_Microflows(t *testing.T) {
+	t.Parallel()
 	var total, passed int
 	for _, mprPath := range testdataMPRs {
 		mprPath := mprPath
@@ -102,6 +103,7 @@ func TestDescribeSanity_Microflows(t *testing.T) {
 // parseable MDL for every entity in testdata. See file header for L6b
 // reporter-mode rationale.
 func TestDescribeSanity_Entities(t *testing.T) {
+	t.Parallel()
 	var total, passed int
 	for _, mprPath := range testdataMPRs {
 		mprPath := mprPath

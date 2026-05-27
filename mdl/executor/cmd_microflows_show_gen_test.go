@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
@@ -23,12 +24,26 @@ import (
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
+// parallelOnceGuard ensures t.Parallel() is called at most once per test,
+// even when openMprWriterForTest is called multiple times (e.g. via helpers).
+var parallelOnceGuard sync.Map
+
+func parallelOnce(t *testing.T) {
+	t.Helper()
+	if _, loaded := parallelOnceGuard.LoadOrStore(t, struct{}{}); !loaded {
+		t.Cleanup(func() { parallelOnceGuard.Delete(t) })
+		t.Parallel()
+	}
+}
+
 const fixtureMprPath = "../../testdata/expr-checker/minimal.mpr"
 
-// openMprWriterForTest copies the fixture into a temp dir (Writer
-// mutates the SQLite file) and returns a Writer rooted at the copy.
+// openMprWriterForTest copies the fixture into a per-test temp dir and
+// returns a Writer. parallelOnce() ensures t.Parallel() is called exactly
+// once per test even if this helper is invoked multiple times.
 func openMprWriterForTest(t *testing.T) *mmpr.Writer {
 	t.Helper()
+	parallelOnce(t)
 	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
 	w, err := mmpr.NewWriter(dst)
 	if err != nil {

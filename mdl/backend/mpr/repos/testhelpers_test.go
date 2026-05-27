@@ -22,9 +22,11 @@ func typedID(s string) model.ID { return model.ID(s) }
 const fixturePath = "../../../../testdata/expr-checker/minimal.mpr"
 
 // openTestWriter copies the canonical Stage 2 fixture into a per-test
-// temp directory and opens it as a *mmpr.Writer.
+// temp directory and opens it as a *mmpr.Writer. It calls t.Parallel()
+// so the 112 independent repo tests run concurrently.
 func openTestWriter(t *testing.T) *mmpr.Writer {
 	t.Helper()
+	t.Parallel()
 	dst := copyFixture(t, fixturePath, t.TempDir())
 	w, err := mmpr.NewWriter(dst)
 	if err != nil {
