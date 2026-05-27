@@ -33,7 +33,6 @@ func TestNoDirectBSONImportInExecutor(t *testing.T) {
 		"cmd_pages_describe_pluggable.go":     true, // Task 7
 		"cmd_pages_describe_output.go":        true, // Task 7
 		"cmd_javaactions_gen.go":              true, // Task 8
-		"cmd_pages_describe.go":               true, // Task 9
 		// Batch 2 – Task 10:
 		"cmd_pages_builder_v3.go":             true, // Task 10
 		// Batch 3 – deferred (investigation pending):

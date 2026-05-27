@@ -11,8 +11,6 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // ============================================================================
@@ -403,26 +401,17 @@ func getBsonArrayMaps(v any) []map[string]any {
 	if v == nil {
 		return nil
 	}
-	switch arr := v.(type) {
-	case []any:
-		var result []map[string]any
-		for _, item := range arr {
-			if m, ok := item.(map[string]any); ok {
-				result = append(result, m)
-			}
-		}
-		return result
-	case primitive.A:
-		var result []map[string]any
-		for _, item := range arr {
-			if m, ok := item.(map[string]any); ok {
-				result = append(result, m)
-			}
-		}
-		return result
-	default:
+	arr, ok := genPg.BSONArrayItems(v)
+	if !ok {
 		return nil
 	}
+	var result []map[string]any
+	for _, item := range arr {
+		if m, ok := item.(map[string]any); ok {
+			result = append(result, m)
+		}
+	}
+	return result
 }
 
 // resolveLayoutName resolves a layout ID to its qualified name.
@@ -579,15 +568,8 @@ type rawWidgetColumn struct {
 
 // toBsonArray converts various BSON array types to []interface{}.
 func toBsonArray(v any) []any {
-	switch arr := v.(type) {
-	case []any:
-		return arr
-	case primitive.A:
-		// primitive.A is already []interface{} under the hood
-		return []any(arr)
-	default:
-		return nil
-	}
+	arr, _ := genPg.BSONArrayItems(v)
+	return arr
 }
 
 // getBsonArrayElements extracts array elements from BSON array format.
@@ -626,7 +608,6 @@ func getPageWidgetsFromRaw(ctx *ExecContext, pageID model.ID) []rawWidget {
 		return nil
 	}
 
-	// Handle both []interface{} and primitive.A types
 	args := getBsonArrayElements(formCall["Arguments"])
 	if args == nil {
 		return nil
@@ -691,11 +672,11 @@ func extractBinaryID(v any) string {
 		return val
 	case []byte:
 		return formatGUID(val)
-	case primitive.Binary:
-		return formatGUID(val.Data)
-	default:
-		return ""
 	}
+	if data, ok := genPg.BSONBinaryData(v); ok {
+		return formatGUID(data)
+	}
+	return ""
 }
 
 // formatGUID converts a 16-byte GUID to its string representation with proper byte ordering.
