@@ -28,6 +28,8 @@ BUILD_TIME = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown"
 LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 # Release builds strip debug info and symbol table (~23% smaller).
 RELEASE_LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -s -w"
+LAUNCHER_LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.LauncherBuild=$(BUILD_TIME) -s -w"
+DAEMON_NAME = mxcli-daemon
 
 # Clean version for VS Code extension (must be valid semver: major.minor.patch)
 VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$$' || echo "0.0.0")
@@ -107,9 +109,16 @@ sync-all: sync-skills sync-commands sync-lint-rules sync-changelog sync-examples
 # Build for current platform (auto-syncs skills and commands)
 build: sync-all
 	@mkdir -p $(BUILD_DIR)
-	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_PATH)
+	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/$(DAEMON_NAME) $(CMD_PATH)
+	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/mxcli-launcher
 	CGO_ENABLED=0 go build -o $(BUILD_DIR)/source_tree ./cmd/source_tree
-	@echo "Built $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/source_tree"
+	@echo "Built $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/$(DAEMON_NAME) $(BUILD_DIR)/source_tree"
+
+# Compress a single daemon binary: make compress-daemon BIN=bin/mxcli-daemon-linux-amd64
+compress-daemon:
+	@command -v zstd >/dev/null || (echo "zstd not found; install it first" && exit 1)
+	zstd --best -f "$(BIN)" -o "$(BIN).tar.zst"
+	@echo "Compressed: $(BIN).tar.zst"
 
 # Build with debug tools (includes bson discover/compare/dump)
 build-debug: sync-all completions
@@ -124,34 +133,36 @@ release: clean sync-all
 	@mkdir -p $(BUILD_DIR)
 	@echo "Building release binaries..."
 
-	@echo "  -> Linux (amd64)"
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 $(CMD_PATH)
+	@echo "  -> Launchers (all platforms)"
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64   ./cmd/mxcli-launcher
+	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64   ./cmd/mxcli-launcher
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64  ./cmd/mxcli-launcher
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64  ./cmd/mxcli-launcher
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe ./cmd/mxcli-launcher
+	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-arm64.exe ./cmd/mxcli-launcher
 
-	@echo "  -> Linux (arm64)"
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 $(CMD_PATH)
+	@echo "  -> Daemons (all platforms)"
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-linux-amd64   $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-linux-arm64   $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-darwin-amd64  $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-darwin-arm64  $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-windows-amd64.exe $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-windows-arm64.exe $(CMD_PATH)
 
-	@echo "  -> macOS (amd64 - Intel)"
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 $(CMD_PATH)
-
-	@echo "  -> macOS (arm64 - Apple Silicon)"
-	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 $(CMD_PATH)
-
-	@echo "  -> Windows (amd64)"
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(CMD_PATH)
-
-	@echo "  -> Windows (arm64)"
-	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-arm64.exe $(CMD_PATH)
-
-	@echo ""
-	@echo "  -> Slim Linux (amd64, -tags nooracle, ~13 MB smaller)"
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -tags nooracle -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64-slim $(CMD_PATH)
-
-	@echo "  -> Slim macOS (arm64, -tags nooracle)"
-	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -tags nooracle -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64-slim $(CMD_PATH)
+	@echo "  -> Compressing daemon binaries (requires zstd)"
+	@for f in $(BUILD_DIR)/$(DAEMON_NAME)-linux-* $(BUILD_DIR)/$(DAEMON_NAME)-darwin-*; do \
+		echo "    $$f -> $$f.tar.zst"; \
+		tar -cf - -C $(BUILD_DIR) $$(basename $$f) | zstd --best -f -o $$f.tar.zst; \
+	done
+	@for f in $(BUILD_DIR)/$(DAEMON_NAME)-windows-*.exe; do \
+		echo "    $$f -> $$f.zip"; \
+		zip -j $$f.zip $$f; \
+	done
 
 	@echo ""
 	@echo "Release binaries built in $(BUILD_DIR)/."
-	@echo "  *-slim variants omit the Oracle driver (13 MB smaller; -tags nooracle)."
+	@echo "  Launchers: mxcli-{os}-{arch}"
+	@echo "  Daemons:   mxcli-daemon-{os}-{arch}.tar.zst (or .zip)"
 
 # Run tests
 test:
