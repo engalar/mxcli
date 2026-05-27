@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -55,14 +56,12 @@ func ensureDaemon() error {
 	if err := os.MkdirAll(daemonDir(), 0755); err != nil {
 		return fmt.Errorf("create daemon dir: %w", err)
 	}
-
 	if !daemonBinaryExists(daemonBinaryPath()) {
 		fmt.Fprintln(os.Stderr, "mxcli: daemon not found, downloading latest version...")
 		if err := downloadDaemon(daemonBinaryPath()); err != nil {
 			return fmt.Errorf("download daemon: %w", err)
 		}
 	}
-
 	if !isDaemonRunning(daemonSocketPath()) {
 		if err := startDaemon(); err != nil {
 			return fmt.Errorf("start daemon: %w", err)
@@ -82,7 +81,6 @@ func startDaemon() error {
 		return fmt.Errorf("exec daemon: %w", err)
 	}
 	os.WriteFile(daemonPIDPath(), []byte(fmt.Sprintf("%d", cmd.Process.Pid)), 0644)
-
 	deadline := time.Now().Add(daemonTimeout)
 	for time.Now().Before(deadline) {
 		if isDaemonRunning(daemonSocketPath()) {
@@ -100,7 +98,6 @@ func healthCheck(sockPath string) (string, error) {
 		return "", err
 	}
 	defer conn.Close()
-
 	req := launcherproto.Request{Argv: []string{"__healthcheck__"}, Cwd: "/", Env: map[string]string{}}
 	if err := launcherproto.WriteMsg(conn, req); err != nil {
 		return "", err
@@ -135,7 +132,6 @@ func downloadDaemonVersion(tag, destPath string) error {
 	}
 	assetName := fmt.Sprintf("mxcli-daemon-%s-%s%s", goos, goarch, ext)
 	url := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", daemonRepo, tag, assetName)
-
 	fmt.Fprintf(os.Stderr, "  Downloading %s...\n", url)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -145,22 +141,20 @@ func downloadDaemonVersion(tag, destPath string) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("HTTP %d from %s", resp.StatusCode, url)
 	}
-
 	if goos == "windows" {
-		return extractZip(resp.Body, destPath)
+		return fmt.Errorf("zip extraction not yet implemented; download %s manually", destPath)
 	}
 	return extractTarZst(resp.Body, destPath)
 }
 
 // extractTarZst decompresses a .tar.zst stream and writes the first regular
-// file entry (the daemon binary) to destPath with executable permissions.
+// file entry to destPath with executable permissions.
 func extractTarZst(r io.Reader, destPath string) error {
 	zr, err := zstd.NewReader(r)
 	if err != nil {
 		return err
 	}
 	defer zr.Close()
-
 	tr := tar.NewReader(zr)
 	for {
 		hdr, err := tr.Next()
@@ -189,14 +183,15 @@ func extractTarZst(r io.Reader, destPath string) error {
 	return fmt.Errorf("no regular file found in archive")
 }
 
-// extractZip handles Windows .zip archives (stub — implement when Windows support needed).
-func extractZip(r io.Reader, destPath string) error {
-	return fmt.Errorf("zip extraction not yet implemented; download %s manually", destPath)
-}
-
 // fetchLatestTag queries the GitHub releases API for the latest tag.
 func fetchLatestTag() (string, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", daemonRepo)
+	return fetchTagFromURL(url)
+}
+
+// fetchTagFromURL fetches a GitHub releases JSON from url and extracts tag_name.
+// Separated from fetchLatestTag for testability.
+func fetchTagFromURL(url string) (string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err
@@ -215,4 +210,27 @@ func fetchLatestTag() (string, error) {
 		return "", fmt.Errorf("malformed tag_name in GitHub response")
 	}
 	return s[:end], nil
+}
+
+// rollback restores the daemon from .bak. Called on upgrade failure.
+func rollback() {
+	if !daemonBinaryExists(daemonBakPath()) {
+		fmt.Fprintln(os.Stderr, "mxcli: no backup to restore")
+		return
+	}
+	os.Remove(daemonBinaryPath())
+	os.Rename(daemonBakPath(), daemonBinaryPath())
+	os.Rename(daemonVersionBakPath(), daemonVersionPath())
+	ver := readVersionFile(daemonVersionPath())
+	fmt.Printf("Rolled back to %s\n", ver)
+}
+
+// writeVersionFile writes a version string to path.
+func writeVersionFile(path, version string) error {
+	return os.WriteFile(path, []byte(version), 0644)
+}
+
+// daemonBinaryDir returns the directory containing the daemon binary.
+func daemonBinaryDir() string {
+	return filepath.Dir(daemonBinaryPath())
 }
