@@ -27,6 +27,12 @@ var (
 const warningBanner = "WARNING: This is a vibe-coded PoC, alpha quality, use with caution.\n"
 
 func main() {
+	// Intercept --serve <socket-path> BEFORE cobra parses flags.
+	if sockPath := extractServeSocket(os.Args[1:]); sockPath != "" {
+		runDaemonServer(sockPath, nil)
+		return
+	}
+
 	// Show warning banner unless --quiet, -q, --help, -h, or --version is passed
 	if !shouldSuppressWarning() {
 		fmt.Fprint(os.Stderr, warningBanner)
@@ -340,4 +346,17 @@ func init() {
 	rootCmd.AddCommand(mprPackCmd)
 	rootCmd.AddCommand(exportCmd)
 	rootCmd.AddCommand(importCmd)
+}
+
+// extractServeSocket scans args for "--serve <path>" or "--serve=<path>".
+func extractServeSocket(args []string) string {
+	for i, a := range args {
+		if a == "--serve" && i+1 < len(args) {
+			return args[i+1]
+		}
+		if len(a) > 8 && a[:8] == "--serve=" {
+			return a[8:]
+		}
+	}
+	return ""
 }
