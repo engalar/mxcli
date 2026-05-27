@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
@@ -14,9 +15,13 @@ import (
 
 const fixturePath = "../../../testdata/expr-checker/minimal.mpr"
 
+var fixtureOpenSem = make(chan struct{}, runtime.GOMAXPROCS(0))
+
 func openTestWriter(t *testing.T) *mmpr.Writer {
 	t.Helper()
 	t.Parallel()
+	fixtureOpenSem <- struct{}{}
+	defer func() { <-fixtureOpenSem }()
 	dst := copyFixture(t, fixturePath, t.TempDir())
 	w, err := mmpr.NewWriter(dst)
 	if err != nil {

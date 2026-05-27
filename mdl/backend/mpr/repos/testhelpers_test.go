@@ -7,11 +7,19 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/model"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
+
+// fixtureOpenSem limits how many tests can copy + open the fixture
+// simultaneously. Without this, all 112 parallel tests would copy the
+// 19 MB mprcontents/ tree at the same time, causing heavy disk I/O that
+// can make the machine unresponsive. Capped at GOMAXPROCS so throughput
+// matches CPU count but I/O stays bounded.
+var fixtureOpenSem = make(chan struct{}, runtime.GOMAXPROCS(0))
 
 // typedID is a 1-line cast helper so test bodies stay readable.
 func typedID(s string) model.ID { return model.ID(s) }
@@ -23,10 +31,13 @@ const fixturePath = "../../../../testdata/expr-checker/minimal.mpr"
 
 // openTestWriter copies the canonical Stage 2 fixture into a per-test
 // temp directory and opens it as a *mmpr.Writer. It calls t.Parallel()
-// so the 112 independent repo tests run concurrently.
+// so independent tests run concurrently, and uses fixtureOpenSem to cap
+// simultaneous copy+open operations at GOMAXPROCS (prevents I/O storms).
 func openTestWriter(t *testing.T) *mmpr.Writer {
 	t.Helper()
 	t.Parallel()
+	fixtureOpenSem <- struct{}{}        // acquire before copy+open
+	defer func() { <-fixtureOpenSem }() // release as soon as Writer is ready
 	dst := copyFixture(t, fixturePath, t.TempDir())
 	w, err := mmpr.NewWriter(dst)
 	if err != nil {

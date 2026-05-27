@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -28,6 +29,10 @@ import (
 // even when openMprWriterForTest is called multiple times (e.g. via helpers).
 var parallelOnceGuard sync.Map
 
+// openFixtureSem caps concurrent fixture copy+open operations at GOMAXPROCS
+// so that running many packages in parallel doesn't cause I/O storms.
+var openFixtureSem = make(chan struct{}, runtime.GOMAXPROCS(0))
+
 func parallelOnce(t *testing.T) {
 	t.Helper()
 	if _, loaded := parallelOnceGuard.LoadOrStore(t, struct{}{}); !loaded {
@@ -41,9 +46,12 @@ const fixtureMprPath = "../../testdata/expr-checker/minimal.mpr"
 // openMprWriterForTest copies the fixture into a per-test temp dir and
 // returns a Writer. parallelOnce() ensures t.Parallel() is called exactly
 // once per test even if this helper is invoked multiple times.
+// openFixtureSem throttles concurrent copy+open to GOMAXPROCS.
 func openMprWriterForTest(t *testing.T) *mmpr.Writer {
 	t.Helper()
 	parallelOnce(t)
+	openFixtureSem <- struct{}{}
+	defer func() { <-openFixtureSem }()
 	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
 	w, err := mmpr.NewWriter(dst)
 	if err != nil {

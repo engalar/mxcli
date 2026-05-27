@@ -36,6 +36,9 @@ VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-
 
 # Max parallel test packages (lower = less memory; override with: make report TEST_P=8)
 TEST_P ?= 4
+# Max concurrent tests within a package (default: GOMAXPROCS). Lower values
+# reduce peak memory and I/O pressure. Override: make test TEST_PARALLEL=4
+TEST_PARALLEL ?= $(shell nproc)
 
 .PHONY: build build-debug release clean test test-mdl report report-bench report-reset-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup
 
@@ -166,7 +169,7 @@ release: clean sync-all
 
 # Run tests
 test:
-	CGO_ENABLED=0 go test ./...
+	CGO_ENABLED=0 go test -parallel $(TEST_PARALLEL) ./...
 
 # Run full test suite and generate layered report (terminal + HTML)
 # Output: coverage/report.html, coverage/bench-baseline.json
