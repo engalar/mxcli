@@ -153,7 +153,7 @@ mxcli rollback --list     # 显示当前版本和备份版本
 
 1. launcher 启动时开一个 goroutine
 2. 读 `last-check`，若距今 < 1h → goroutine 直接退出
-3. 若 > 1h：GET `https://api.github.com/repos/mendixlabs/mxcli/releases/latest`
+3. 若 > 1h：GET `https://api.github.com/repos/engalar/mxcli/releases/latest`
 4. 若新版 > 当前版：写 `update-available` 文件（内容为新版本号）
 5. 更新 `last-check`
 6. 主进程退出前：若 `update-available` 存在，打印提示，删除该文件：
@@ -168,7 +168,7 @@ mxcli rollback --list     # 显示当前版本和备份版本
 ### Linux / macOS
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/mendixlabs/mxcli/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/engalar/mxcli/main/install.sh | sh
 ```
 
 `install.sh` 核心逻辑（幂等）：
@@ -177,7 +177,7 @@ curl -fsSL https://raw.githubusercontent.com/mendixlabs/mxcli/main/install.sh | 
 #!/bin/sh
 set -e
 
-REPO="mendixlabs/mxcli"
+REPO="engalar/mxcli"
 INSTALL_DIR="${MXCLI_INSTALL_DIR:-}"
 
 # 1. 检测平台
@@ -232,7 +232,7 @@ echo "   Run 'mxcli version' to verify. Daemon will be downloaded on first use."
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/mendixlabs/mxcli/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/engalar/mxcli/main/install.ps1 | iex
 ```
 
 `install.ps1` 要点：
