@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
+// mxcli is the launcher — a thin cross-platform client that forwards CLI
+// requests to mxcli-daemon via unix socket. It handles daemon lifecycle,
+// background version checks, and upgrade/rollback.
 package main
 
 import (
@@ -7,7 +10,7 @@ import (
 	"os"
 )
 
-// Version and LauncherBuild are injected by ldflags at build time.
+// Version and LauncherBuild are set by ldflags at build time.
 var (
 	Version       = "dev"
 	LauncherBuild = ""
@@ -22,7 +25,7 @@ func main() {
 			os.Exit(runUpgrade(args[1:]))
 		case "rollback":
 			os.Exit(runRollback(args[1:]))
-		case "version", "--version", "-v":
+		case "version", "--version":
 			printVersion()
 			os.Exit(0)
 		}
@@ -52,17 +55,4 @@ func printVersion() {
 	if daemonVer != "" {
 		fmt.Printf("mxcli daemon   %s\n", daemonVer)
 	}
-}
-
-// printUpdateNotice checks the update-available file and prints a notice if
-// a new version is available, then removes the file.
-func printUpdateNotice() {
-	p := daemonUpdateAvailablePath()
-	b, err := os.ReadFile(p)
-	if err != nil {
-		return
-	}
-	newVer := string(b)
-	fmt.Fprintf(os.Stderr, "\n🆕 mxcli-daemon %s available → run: mxcli upgrade\n", newVer)
-	os.Remove(p)
 }
