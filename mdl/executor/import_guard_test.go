@@ -24,13 +24,13 @@ func TestNoDirectBSONImportInExecutor(t *testing.T) {
 	// Batch 3 (cmd_diff_local.go, flowbuilder_raw_setter_gen.go) are intentionally
 	// deferred — see docs/superpowers/specs/2026-05-27-executor-bson-cleanup-design.md
 	allowlist := map[string]bool{
-		// Batch 1 – Tasks 2-9 in progress:
-		"cmd_microflows_format_calls_gen.go": true, // Task 2
-		// Batch 2 – Task 10:
-		"cmd_pages_builder_v3.go":             true, // Task 10
+		// Batch 2 – Task 10 (deferred to a separate PR — would touch
+		// mdl/backend/mpr/datagrid_builder.go and re-trigger the
+		// helpdesk-golden rebuild):
+		"cmd_pages_builder_v3.go": true, // Task 10
 		// Batch 3 – deferred (investigation pending):
-		"cmd_diff_local.go":                   true,
-		"flowbuilder_raw_setter_gen.go":        true,
+		"cmd_diff_local.go":             true,
+		"flowbuilder_raw_setter_gen.go": true,
 	}
 
 	entries, err := os.ReadDir(".")
