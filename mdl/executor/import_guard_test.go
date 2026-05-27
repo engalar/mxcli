@@ -25,12 +25,10 @@ func TestNoDirectBSONImportInExecutor(t *testing.T) {
 	// deferred — see docs/superpowers/specs/2026-05-27-executor-bson-cleanup-design.md
 	allowlist := map[string]bool{
 		// Batch 1 – Tasks 2-9 in progress:
-		"cmd_microflows_format_calls_gen.go":    true, // Task 2
-		"cmd_microflows_format_data_gen.go":    true, // temporary: removed in Task 4
-		"cmd_microflows_format_external_gen.go": true, // Task 4
-		"cmd_pages_describe_pluggable.go":       true, // Task 7
-		"cmd_pages_describe_output.go":          true, // Task 7
-		"cmd_javaactions_gen.go":                true, // Task 8
+		"cmd_microflows_format_calls_gen.go": true, // Task 2
+		"cmd_pages_describe_pluggable.go":    true, // Task 7
+		"cmd_pages_describe_output.go":       true, // Task 7
+		"cmd_javaactions_gen.go":             true, // Task 8
 		// Batch 2 – Task 10:
 		"cmd_pages_builder_v3.go":             true, // Task 10
 		// Batch 3 – deferred (investigation pending):

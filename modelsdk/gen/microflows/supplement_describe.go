@@ -107,6 +107,106 @@ func ValidationFeedbackActionValidationVariableName(a *ValidationFeedbackAction)
 }
 
 // ────────────────────────────────────────────────────────
+// ResultHandling / nested calls
+// ────────────────────────────────────────────────────────
+
+// ResultHandlingResultVariableName reads the legacy "ResultVariableName"
+// key off a ResultHandling element (gen binds OutputVariableName to
+// "OutputVariableName"; real MPRs use "ResultVariableName").
+func ResultHandlingResultVariableName(rh *ResultHandling) string {
+	if rh == nil {
+		return ""
+	}
+	return readField(rh.Raw(), "ResultVariableName")
+}
+
+// ImportMappingCallReturnValueMapping reads the legacy alias
+// "ReturnValueMapping" off an ImportMappingCall.
+func ImportMappingCallReturnValueMapping(c *ImportMappingCall) string {
+	if c == nil {
+		return ""
+	}
+	return readField(c.Raw(), "ReturnValueMapping")
+}
+
+// ────────────────────────────────────────────────────────
+// RestOperationParameterMapping
+// ────────────────────────────────────────────────────────
+
+// RestOperationParameterMappingQueryParameter reads the legacy key
+// "QueryParameter" (gen binds to "Parameter").
+func RestOperationParameterMappingQueryParameter(pm *RestOperationParameterMapping) string {
+	if pm == nil {
+		return ""
+	}
+	return readField(pm.Raw(), "QueryParameter")
+}
+
+// ────────────────────────────────────────────────────────
+// WebServiceCallAction
+// ────────────────────────────────────────────────────────
+
+// WebServiceCallActionImportedService reads the legacy "ImportedService"
+// key (gen binds to "ImportedWebService").
+func WebServiceCallActionImportedService(a *WebServiceCallAction) string {
+	if a == nil {
+		return ""
+	}
+	return readField(a.Raw(), "ImportedService")
+}
+
+// WebServiceLegacyMappings extracts (sendMapping, receiveMapping) from a
+// WebServiceCallAction's raw BSON document. Legacy reads:
+//   - send:    RequestHandling -> ExportMappingCall -> Mapping
+//   - receive: NewResultHandling -> ImportMappingCall -> ReturnValueMapping
+//     (with a Mapping fallback)
+//
+// Returns ("", "") when neither chain is present.
+func WebServiceLegacyMappings(a *WebServiceCallAction) (send string, receive string) {
+	if a == nil {
+		return "", ""
+	}
+	doc := unmarshalBSONDoc(a.Raw())
+	if doc == nil {
+		return "", ""
+	}
+	if call := lookupBSONMap(doc, "RequestHandling"); call != nil {
+		if inner := lookupBSONMap(call, "ExportMappingCall"); inner != nil {
+			send, _ = inner["Mapping"].(string)
+		}
+	}
+	if call := lookupBSONMap(doc, "NewResultHandling"); call != nil {
+		if inner := lookupBSONMap(call, "ImportMappingCall"); inner != nil {
+			receive, _ = inner["ReturnValueMapping"].(string)
+			if receive == "" {
+				receive, _ = inner["Mapping"].(string)
+			}
+		}
+	}
+	return send, receive
+}
+
+// WebServiceRequestBodyExportMapping reads the
+// ExportMappingCall.Mapping value from a RequestBodyHandling element's
+// raw BSON document (Mendix MPRs store the mapping reference under this
+// nested chain when the gen schema did not model it).
+func WebServiceRequestBodyExportMapping(b *element.Base) string {
+	if b == nil {
+		return ""
+	}
+	doc := unmarshalBSONDoc(b.Raw())
+	if doc == nil {
+		return ""
+	}
+	if call := lookupBSONMap(doc, "ExportMappingCall"); call != nil {
+		if v, _ := call["Mapping"].(string); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+// ────────────────────────────────────────────────────────
 // SortItemList legacy raw-BSON walk (NewSortings → Sortings)
 // ────────────────────────────────────────────────────────
 
@@ -229,4 +329,18 @@ func lookupBSONArray(doc bson.M, keys ...string) bson.A {
 		}
 	}
 	return nil
+}
+
+// unmarshalBSONDoc decodes a raw BSON document into a bson.M for nested
+// key lookups. Returns nil for empty input or unmarshal errors so the
+// caller can chain `lookupBSONMap` safely.
+func unmarshalBSONDoc(raw []byte) bson.M {
+	if len(raw) == 0 {
+		return nil
+	}
+	var doc bson.M
+	if err := bson.Unmarshal(raw, &doc); err != nil {
+		return nil
+	}
+	return doc
 }

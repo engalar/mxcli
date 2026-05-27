@@ -71,26 +71,11 @@ import (
 	"fmt"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genTx "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 )
-
-// lookupBSONMap is a temporary helper retained for use by
-// `cmd_microflows_format_external_gen.go` during the BSON-import
-// cleanup migration. Removed in Task 4 once that file is migrated to
-// genMf supplement calls.
-func lookupBSONMap(doc bson.M, keys ...string) bson.M {
-	for _, k := range keys {
-		if v, ok := doc[k].(bson.M); ok {
-			return v
-		}
-	}
-	return nil
-}
 
 // ────────────────────────────────────────────────────────
 // CastAction

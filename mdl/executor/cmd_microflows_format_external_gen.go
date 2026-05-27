@@ -98,9 +98,6 @@ import (
 	"fmt"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-
-	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDC "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
@@ -333,10 +330,7 @@ func readRestCallOutputVarGen(rh *genMf.ResultHandling) string {
 	if v := strings.TrimSpace(rh.OutputVariableName()); v != "" {
 		return v
 	}
-	if v, err := codec.ReadBSONFieldString(rh.Raw(), "ResultVariableName"); err == nil {
-		return strings.TrimSpace(v)
-	}
-	return ""
+	return strings.TrimSpace(genMf.ResultHandlingResultVariableName(rh))
 }
 
 // readMappingResultHandlingGen pulls (mappingID, entityID, singleObject)
@@ -354,9 +348,7 @@ func readMappingResultHandlingGen(rh *genMf.ResultHandling) (string, string, boo
 	if call, ok := rh.ImportMappingCall().(*genMf.ImportMappingCall); ok && call != nil {
 		mappingID = call.MappingQualifiedName()
 		if mappingID == "" {
-			if v, err := codec.ReadBSONFieldString(call.Raw(), "ReturnValueMapping"); err == nil {
-				mappingID = v
-			}
+			mappingID = genMf.ImportMappingCallReturnValueMapping(call)
 		}
 	}
 	// VariableType is a polymorphic element under ResultHandling. For
@@ -368,9 +360,7 @@ func readMappingResultHandlingGen(rh *genMf.ResultHandling) (string, string, boo
 			if base.TypeName() == "DataTypes$ObjectType" {
 				singleObject = true
 			}
-			if v, err := codec.ReadBSONFieldString(base.Raw(), "Entity"); err == nil {
-				entityID = v
-			}
+			entityID = genMf.RawFieldStringFromBase(base, "Entity")
 		}
 	}
 	if call, ok := rh.ImportMappingCall().(*genMf.ImportMappingCall); ok && call != nil {
@@ -436,9 +426,7 @@ func formatRestOperationCallActionGen(a *genMf.RestOperationCallAction) string {
 		}
 		name := pm.ParameterQualifiedName()
 		if name == "" {
-			if v, err := codec.ReadBSONFieldString(pm.Raw(), "QueryParameter"); err == nil {
-				name = v
-			}
+			name = genMf.RestOperationParameterMappingQueryParameter(pm)
 		}
 		allParams = append(allParams, pair{
 			name:  lastDotSegment(name),
@@ -553,9 +541,7 @@ func formatImportXmlActionGen(a *genMf.ImportXmlAction) string {
 		if call, ok := rh.ImportMappingCall().(*genMf.ImportMappingCall); ok && call != nil {
 			mappingName = call.MappingQualifiedName()
 			if mappingName == "" {
-				if v, err := codec.ReadBSONFieldString(call.Raw(), "ReturnValueMapping"); err == nil {
-					mappingName = v
-				}
+				mappingName = genMf.ImportMappingCallReturnValueMapping(call)
 			}
 		}
 	}
@@ -595,7 +581,7 @@ func formatExportXmlActionGen(a *genMf.ExportXmlAction) string {
 
 	if om := a.OutputMethod(); om != nil {
 		if base, ok := om.(*element.Base); ok && base != nil {
-			if v, err := codec.ReadBSONFieldString(base.Raw(), "OutputVariableName"); err == nil && v != "" {
+			if v := genMf.RawFieldStringFromBase(base, "OutputVariableName"); v != "" {
 				sb.WriteString("$")
 				sb.WriteString(v)
 				sb.WriteString(" = ")
@@ -609,12 +595,8 @@ func formatExportXmlActionGen(a *genMf.ExportXmlAction) string {
 	paramVar := ""
 	if rh := a.ResultHandling(); rh != nil {
 		if base, ok := rh.(*element.Base); ok && base != nil {
-			if v, err := codec.ReadBSONFieldString(base.Raw(), "MappingId"); err == nil {
-				mappingName = v
-			}
-			if v, err := codec.ReadBSONFieldString(base.Raw(), "MappingVariableName"); err == nil {
-				paramVar = v
-			}
+			mappingName = genMf.RawFieldStringFromBase(base, "MappingId")
+			paramVar = genMf.RawFieldStringFromBase(base, "MappingVariableName")
 		} else if mr, ok := rh.(*genMf.MappingRequestHandling); ok && mr != nil {
 			mappingName = mr.MappingQualifiedName()
 			paramVar = mr.MappingArgumentVariableName()
@@ -696,9 +678,7 @@ func formatWebServiceCallActionGen(a *genMf.WebServiceCallAction) string {
 		// Legacy reads BSON key `ImportedService`; the gen alias is
 		// `ImportedWebService`. Fall back to the legacy key so fixture
 		// loads (which carry the raw key) still resolve.
-		if v, err := codec.ReadBSONFieldString(a.Raw(), "ImportedService"); err == nil {
-			serviceRef = v
-		}
+		serviceRef = genMf.WebServiceCallActionImportedService(a)
 	}
 
 	parts := []string{prefix + "call web service " + formatWebServiceReference(serviceRef)}
@@ -728,31 +708,14 @@ func formatWebServiceCallActionGen(a *genMf.WebServiceCallAction) string {
 //   - receive: `NewResultHandling -> ImportMappingCall -> ReturnValueMapping`
 //
 // Gen exposes `RequestBodyHandling()` (not `RequestHandling()` — the
-// legacy field name has no gen counterpart). We read the legacy keys
-// from raw BSON to preserve the historical mapping shape.
+// legacy field name has no gen counterpart). Raw-BSON walks for the
+// historical mapping shapes live in the genMf supplement so this file
+// stays free of bson/codec imports.
 func readWebServiceMappingsGen(a *genMf.WebServiceCallAction, rh *genMf.ResultHandling) (string, string) {
-	actionDoc := unmarshalBSONDoc(a.Raw())
-
 	send := ""
 	if req := a.RequestBodyHandling(); req != nil {
 		if base, ok := req.(*element.Base); ok && base != nil {
-			if call := lookupBSONMap(unmarshalBSONDoc(base.Raw()), "ExportMappingCall"); call != nil {
-				if v, _ := call["Mapping"].(string); v != "" {
-					send = v
-				}
-			}
-		}
-	}
-	if send == "" {
-		// Legacy reads from BSON key `RequestHandling -> ExportMappingCall -> Mapping`.
-		// Try the raw key on the action itself for fixture loads where
-		// gen didn't model the handling element.
-		if call := lookupBSONMap(actionDoc, "RequestHandling"); call != nil {
-			if inner := lookupBSONMap(call, "ExportMappingCall"); inner != nil {
-				if v, _ := inner["Mapping"].(string); v != "" {
-					send = v
-				}
-			}
+			send = genMf.WebServiceRequestBodyExportMapping(base)
 		}
 	}
 
@@ -761,40 +724,17 @@ func readWebServiceMappingsGen(a *genMf.WebServiceCallAction, rh *genMf.ResultHa
 		if call, ok := rh.ImportMappingCall().(*genMf.ImportMappingCall); ok && call != nil {
 			receive = call.MappingQualifiedName()
 			if receive == "" {
-				if v, err := codec.ReadBSONFieldString(call.Raw(), "ReturnValueMapping"); err == nil {
-					receive = v
-				}
+				receive = genMf.ImportMappingCallReturnValueMapping(call)
 			}
 		}
+	}
+
+	legacySend, legacyReceive := genMf.WebServiceLegacyMappings(a)
+	if send == "" {
+		send = legacySend
 	}
 	if receive == "" {
-		// Legacy reads from BSON key `NewResultHandling -> ImportMappingCall -> ReturnValueMapping`.
-		if call := lookupBSONMap(actionDoc, "NewResultHandling"); call != nil {
-			if inner := lookupBSONMap(call, "ImportMappingCall"); inner != nil {
-				if v, _ := inner["ReturnValueMapping"].(string); v != "" {
-					receive = v
-				}
-				if receive == "" {
-					if v, _ := inner["Mapping"].(string); v != "" {
-						receive = v
-					}
-				}
-			}
-		}
+		receive = legacyReceive
 	}
 	return send, receive
-}
-
-// unmarshalBSONDoc decodes a raw BSON document into a bson.M for nested
-// key lookups. Returns nil for empty input or unmarshal errors so the
-// caller can chain `lookupBSONMap` safely.
-func unmarshalBSONDoc(raw []byte) bson.M {
-	if len(raw) == 0 {
-		return nil
-	}
-	var doc bson.M
-	if err := bson.Unmarshal(raw, &doc); err != nil {
-		return nil
-	}
-	return doc
 }
