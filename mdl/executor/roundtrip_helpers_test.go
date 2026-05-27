@@ -70,19 +70,20 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "FAIL: could not create temp dir: %v\n", err)
 		os.Exit(1)
 	}
-	defer os.RemoveAll(tmpDir)
 
 	fmt.Fprintf(os.Stderr, "TestMain: creating shared source project with %s ...\n", mxPath)
 	cmd := exec.Command(mxPath, "create-project")
 	cmd.Dir = tmpDir
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		os.RemoveAll(tmpDir)
 		fmt.Fprintf(os.Stderr, "SKIP: mx create-project failed: %v\n%s\n", err, output)
 		os.Exit(0)
 	}
 
 	mprPath := filepath.Join(tmpDir, "App.mpr")
 	if _, err := os.Stat(mprPath); os.IsNotExist(err) {
+		os.RemoveAll(tmpDir)
 		fmt.Fprintf(os.Stderr, "SKIP: mx create-project did not produce App.mpr in %s\n", tmpDir)
 		os.Exit(0)
 	}
@@ -90,7 +91,9 @@ func TestMain(m *testing.M) {
 	sharedSourceProject = tmpDir
 	sharedSourceMPR = "App.mpr"
 	fmt.Fprintf(os.Stderr, "TestMain: shared source project ready at %s\n", tmpDir)
-	os.Exit(m.Run())
+	code := m.Run()
+	os.RemoveAll(tmpDir)
+	os.Exit(code)
 }
 
 // testEnv holds the test environment for roundtrip tests.

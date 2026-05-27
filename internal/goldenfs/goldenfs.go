@@ -7,8 +7,11 @@ package goldenfs
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/hanwen/go-fuse/v2/fs"
@@ -23,9 +26,45 @@ type Snapshot struct {
 	layer    *dirtyLayer
 }
 
+var (
+	activeMountsMu sync.Mutex
+	activeMounts   = map[string]struct{}{}
+)
+
+// cleanupOrphanMounts unmounts any stale mxcli-golden-* FUSE mounts left by
+// a previously crashed process. Called automatically by Open.
+func cleanupOrphanMounts() {
+	entries, err := filepath.Glob(filepath.Join(os.TempDir(), "mxcli-golden-*"))
+	if err != nil || len(entries) == 0 {
+		return
+	}
+	activeMountsMu.Lock()
+	snap := make(map[string]struct{}, len(activeMounts))
+	for k := range activeMounts {
+		snap[k] = struct{}{}
+	}
+	activeMountsMu.Unlock()
+
+	mountData, _ := os.ReadFile("/proc/mounts")
+	for _, dir := range entries {
+		if _, live := snap[dir]; live {
+			continue // owned by this process — never touch it
+		}
+		if !strings.Contains(string(mountData), dir) {
+			os.Remove(dir)
+			continue
+		}
+		// Stale FUSE mount from a crashed process — detach with lazy unmount.
+		if err := exec.Command("fusermount", "-uz", dir).Run(); err == nil {
+			os.Remove(dir)
+		}
+	}
+}
+
 // Open mounts a FUSE overlay over baseDir.
 // The caller must call Close() when done.
 func Open(baseDir string) (*Snapshot, error) {
+	cleanupOrphanMounts()
 	abs, err := filepath.Abs(baseDir)
 	if err != nil {
 		return nil, fmt.Errorf("goldenfs: resolve baseDir: %w", err)
@@ -38,6 +77,12 @@ func Open(baseDir string) (*Snapshot, error) {
 	if err != nil {
 		return nil, fmt.Errorf("goldenfs: create mountDir: %w", err)
 	}
+
+	// Register before mounting so concurrent Open calls don't mistake this
+	// directory for an orphan.
+	activeMountsMu.Lock()
+	activeMounts[mountDir] = struct{}{}
+	activeMountsMu.Unlock()
 
 	layer := newDirtyLayer()
 	root := &overlayNode{baseDir: abs, relPath: "", layer: layer}
@@ -54,6 +99,9 @@ func Open(baseDir string) (*Snapshot, error) {
 		NegativeTimeout: &zero,
 	})
 	if err != nil {
+		activeMountsMu.Lock()
+		delete(activeMounts, mountDir)
+		activeMountsMu.Unlock()
 		os.Remove(mountDir)
 		return nil, fmt.Errorf("goldenfs: fuse mount: %w", err)
 	}
@@ -80,10 +128,16 @@ func (s *Snapshot) Rollback() { s.layer.rollback() }
 // Close unmounts the FUSE filesystem and removes the mount directory.
 // Does NOT commit.
 func (s *Snapshot) Close() error {
+	activeMountsMu.Lock()
+	delete(activeMounts, s.mountDir)
+	activeMountsMu.Unlock()
+
 	if err := s.server.Unmount(); err != nil {
-		return fmt.Errorf("goldenfs: unmount: %w", err)
+		// Fallback: lazy detach via fusermount so the mount dir can be removed.
+		exec.Command("fusermount", "-uz", s.mountDir).Run() //nolint:errcheck
+	} else {
+		s.server.Wait()
 	}
-	s.server.Wait()
 	return os.Remove(s.mountDir)
 }
 
