@@ -28,6 +28,10 @@
 --               page/microflow grants, demo users
 --   Navigation: role-derived menu visibility (no roles() on menu items)
 --   ValidationFeedback: multi-field accumulate pattern, single-field bail-early pattern
+--   Widget CE0463: known for dgTickets (DataGrid2 + ActionButton in custom column)
+--                  and fStatus (DropdownFilter linked to dgTickets datasource);
+--                  Studio Pro validates against internal platform definition,
+--                  not the project MPK — exact comparison mechanism TBD.
 --
 -- Validation:
 --   ./bin/mxcli check mdl-examples/use-cases/helpdesk/helpdesk-app.mdl
