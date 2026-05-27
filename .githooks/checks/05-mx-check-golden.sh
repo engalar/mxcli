@@ -60,6 +60,8 @@ if [ "$error_count" -gt "$baseline" ]; then
     echo "  Fix the errors, then re-run: make update-helpdesk-golden" >&2
     echo "  If errors are intentional (baseline change), update: $BASELINE_FILE" >&2
     echo "" >&2
+    echo "SOP: .githooks/sop/05-mx-check-golden.md" >&2
+    echo "CONTEXT: ERROR_COUNT=${error_count} BASELINE=${baseline} MX_VERSION=${mx_version}" >&2
     exit 1
 fi
 

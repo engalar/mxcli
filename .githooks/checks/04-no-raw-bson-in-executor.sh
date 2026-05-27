@@ -34,5 +34,7 @@ if [ -n "$VIOLATIONS" ]; then
     echo "" >&2
     echo "Replace bson.D/bson.M construction with gen types from modelsdk/gen/." >&2
     echo "Use setRawBSONField() only as a last resort with a comment explaining why." >&2
+    echo "SOP: .githooks/sop/04-no-raw-bson-in-executor.md" >&2
+    echo "CONTEXT: VIOLATIONS=$(echo $VIOLATIONS | tr ' ' ':')" >&2
     exit 1
 fi
