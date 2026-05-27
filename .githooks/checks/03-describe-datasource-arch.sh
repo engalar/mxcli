@@ -45,6 +45,8 @@ for f in $staged_files; do
         echo "  If you are migrating existing code (not adding new raw access), use:" >&2
         echo "    // nolint:describe-raw-bson" >&2
         echo "  on the line to opt out (requires justification in PR)." >&2
+        echo "SOP: .githooks/sop/03-describe-datasource-arch.md" >&2
+        echo "CONTEXT: AFFECTED_FILE=${f} BAD_FIELDS=${bad}" >&2
         failed=1
     fi
 done

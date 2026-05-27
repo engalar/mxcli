@@ -26,5 +26,7 @@ if [ "$codegen_staged" -eq 0 ]; then
     echo "" >&2
     echo "Staged gen files:" >&2
     git diff --cached --name-only | grep "^${GEN_DIR}/" >&2
+    echo "SOP: .githooks/sop/03-gen-consistency.md" >&2
+    echo "CONTEXT: GEN_STAGED=${gen_staged}" >&2
     exit 1
 fi
