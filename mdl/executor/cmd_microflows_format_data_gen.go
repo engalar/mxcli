@@ -73,12 +73,24 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genTx "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 )
+
+// lookupBSONMap is a temporary helper retained for use by
+// `cmd_microflows_format_external_gen.go` during the BSON-import
+// cleanup migration. Removed in Task 4 once that file is migrated to
+// genMf supplement calls.
+func lookupBSONMap(doc bson.M, keys ...string) bson.M {
+	for _, k := range keys {
+		if v, ok := doc[k].(bson.M); ok {
+			return v
+		}
+	}
+	return nil
+}
 
 // ────────────────────────────────────────────────────────
 // CastAction
@@ -100,23 +112,15 @@ import (
 //
 // `ObjectVariableName` has no gen getter, so we read it from raw BSON.
 func formatCastActionGen(a *genMf.CastAction) string {
-	outputVar := ""
-	if v, err := codec.ReadBSONFieldString(a.Raw(), "OutputVariableName"); err == nil {
-		outputVar = strings.TrimSpace(v)
-	}
+	outputVar := strings.TrimSpace(genMf.CastActionOutputVariableName(a))
 	if outputVar == "" {
-		if v, err := codec.ReadBSONFieldString(a.Raw(), "VariableName"); err == nil {
-			outputVar = strings.TrimSpace(v)
-		}
+		outputVar = strings.TrimSpace(genMf.CastActionVariableName(a))
 	}
 	if outputVar == "" {
 		outputVar = strings.TrimSpace(a.OutputVariableName())
 	}
 
-	objectVar := ""
-	if v, err := codec.ReadBSONFieldString(a.Raw(), "ObjectVariableName"); err == nil {
-		objectVar = strings.TrimSpace(v)
-	}
+	objectVar := strings.TrimSpace(genMf.CastActionObjectVariableName(a))
 
 	outputVar = ensureDollar(outputVar)
 	objectVar = ensureDollar(objectVar)
@@ -265,9 +269,7 @@ func formatChangeVariableActionGen(a *genMf.ChangeVariableAction) string {
 func formatRetrieveActionGen(ctx *ExecContext, a *genMf.RetrieveAction) string {
 	outputVar := a.OutputVariableName()
 	if outputVar == "" {
-		if v, err := codec.ReadBSONFieldString(a.Raw(), "ResultVariableName"); err == nil {
-			outputVar = v
-		}
+		outputVar = genMf.RetrieveActionResultVariableName(a)
 	}
 	if outputVar == "" {
 		outputVar = "Result"
@@ -307,9 +309,7 @@ func formatDatabaseRetrieveSourceGen(ctx *ExecContext, source *genMf.DatabaseRet
 	if xpath == "" {
 		// gen alias mismatch: real MPRs use the lowercase-`p` key
 		// `XpathConstraint`. Fall back to the raw read.
-		if v, err := codec.ReadBSONFieldString(source.Raw(), "XpathConstraint"); err == nil {
-			xpath = v
-		}
+		xpath = genMf.DatabaseRetrieveSourceXpathConstraint(source)
 	}
 	if raw := xpath; strings.TrimSpace(raw) != "" {
 		constraint := strings.TrimSpace(raw)
@@ -370,9 +370,7 @@ func formatAssociationRetrieveSourceGen(source *genMf.AssociationRetrieveSource,
 	}
 	assocName := source.AssociationQualifiedName()
 	if assocName == "" {
-		if v, err := codec.ReadBSONFieldString(source.Raw(), "AssociationId"); err == nil {
-			assocName = v
-		}
+		assocName = genMf.AssociationRetrieveSourceAssociationId(source)
 	}
 	if assocName == "" {
 		assocName = "..."
@@ -411,9 +409,7 @@ func sortPartsFromGenList(listEl *genMf.SortItemList) []string {
 		}
 		attrName := ""
 		if ar, ok := si.AttributeRef().(*element.Base); ok && ar != nil {
-			if v, err := codec.ReadBSONFieldString(ar.Raw(), "Attribute"); err == nil {
-				attrName = v
-			}
+			attrName = genMf.RawFieldStringFromBase(ar, "Attribute")
 		}
 		if attrName == "" {
 			attrName = si.AttributePath()
@@ -432,83 +428,21 @@ func sortPartsFromGenList(listEl *genMf.SortItemList) []string {
 
 // sortPartsFromRawBSON pulls sort items out of the legacy
 // `NewSortings -> Sortings` array on a DatabaseRetrieveSource raw BSON
-// document. Each Sortings entry is a Microflows$SortItem with one of
-// `Attribute` (BY_NAME_REFERENCE qualified name), `AttributePath`
-// (string), or a nested `AttributeRef.Attribute` (gen-typed).
-// Direction is taken from the `SortOrder` enum (string).
-//
-// The first array element is a BSON int32 versioning prefix; we skip
-// non-document entries silently.
+// document via the genMf supplement (which owns BSON decoding).
 func sortPartsFromRawBSON(raw []byte) []string {
-	if len(raw) == 0 {
+	decoded := genMf.SortPartsFromRawBSON(raw)
+	if len(decoded) == 0 {
 		return nil
 	}
-	var doc bson.M
-	if err := bson.Unmarshal(raw, &doc); err != nil {
-		return nil
-	}
-	listMap := lookupBSONMap(doc, "NewSortings", "Sortings", "SortItemList", "sortItemList")
-	if listMap == nil {
-		return nil
-	}
-	itemsArr := lookupBSONArray(listMap, "Sortings", "Items", "items")
-	if itemsArr == nil {
-		return nil
-	}
-	var parts []string
-	for _, it := range itemsArr {
-		m, ok := it.(bson.M)
-		if !ok {
-			continue
-		}
-		attrName, _ := m["Attribute"].(string)
-		if attrName == "" {
-			attrName, _ = m["AttributePath"].(string)
-		}
-		if attrName == "" {
-			if refMap, ok := m["AttributeRef"].(bson.M); ok {
-				attrName, _ = refMap["Attribute"].(string)
-			}
-		}
-		if attrName == "" {
-			continue
-		}
+	parts := make([]string, 0, len(decoded))
+	for _, p := range decoded {
 		order := "asc"
-		if dir, _ := m["SortOrder"].(string); dir == genMf.SortOrderEnumDescending {
+		if p.Descending {
 			order = "desc"
 		}
-		// Legacy parser also recognises a "Direction" key on older
-		// Sortings shapes. We mirror that for parity even though
-		// modern MPRs use SortOrder.
-		if dir, _ := m["Direction"].(string); dir == "Descending" {
-			order = "desc"
-		}
-		parts = append(parts, attrName+" "+order)
+		parts = append(parts, p.AttributeName+" "+order)
 	}
 	return parts
-}
-
-// lookupBSONMap returns the first non-nil bson.M value found under any
-// of the candidate keys, mirroring legacy `parseSortItems`'s field-
-// name fallback chain.
-func lookupBSONMap(doc bson.M, keys ...string) bson.M {
-	for _, k := range keys {
-		if v, ok := doc[k].(bson.M); ok {
-			return v
-		}
-	}
-	return nil
-}
-
-// lookupBSONArray returns the first non-nil bson.A value found under
-// any of the candidate keys.
-func lookupBSONArray(doc bson.M, keys ...string) bson.A {
-	for _, k := range keys {
-		if v, ok := doc[k].(bson.A); ok {
-			return v
-		}
-	}
-	return nil
 }
 
 type databaseRangeKind int
@@ -532,8 +466,8 @@ func extractDatabaseRangeGen(source *genMf.DatabaseRetrieveSource) (string, stri
 		if r.SingleObject() {
 			return "", "", databaseRangeFirst
 		}
-		limit, _ := codec.ReadBSONFieldString(r.Raw(), "LimitExpression")
-		offset, _ := codec.ReadBSONFieldString(r.Raw(), "OffsetExpression")
+		limit := genMf.ConstantRangeLimitExpression(r)
+		offset := genMf.ConstantRangeOffsetExpression(r)
 		if limit != "" || offset != "" {
 			return limit, offset, databaseRangeCustom
 		}
@@ -570,9 +504,7 @@ func parseReverseAssociationRetrieveGen(
 	}
 	xpath := source.XPathConstraint()
 	if xpath == "" {
-		if v, err := codec.ReadBSONFieldString(source.Raw(), "XpathConstraint"); err == nil {
-			xpath = v
-		}
+		xpath = genMf.DatabaseRetrieveSourceXpathConstraint(source)
 	}
 	assocName, startVar, ok := parseReverseAssociationXPath(xpath)
 	if !ok || !databaseRetrieveMatchesAssociationTarget(ctx, entityName, assocName) {
@@ -666,31 +598,11 @@ func stringTemplateArgsFromGen(tmpl *genMf.StringTemplate) []string {
 }
 
 // stringTemplateArgsFromRaw decodes the legacy `Parameters` array on a
-// raw StringTemplate document. Each entry is a Microflows$TemplateArgument
-// with an `Expression` string field.
+// raw StringTemplate document via the genMf supplement (which owns BSON
+// decoding). Each entry is a Microflows$TemplateArgument with an
+// `Expression` string field.
 func stringTemplateArgsFromRaw(raw []byte) []string {
-	if len(raw) == 0 {
-		return nil
-	}
-	var doc bson.M
-	if err := bson.Unmarshal(raw, &doc); err != nil {
-		return nil
-	}
-	arr := lookupBSONArray(doc, "Parameters", "Arguments")
-	if arr == nil {
-		return nil
-	}
-	var exprs []string
-	for _, it := range arr {
-		m, ok := it.(bson.M)
-		if !ok {
-			continue
-		}
-		if expr, _ := m["Expression"].(string); expr != "" {
-			exprs = append(exprs, expr)
-		}
-	}
-	return exprs
+	return genMf.StringTemplateArgsFromRaw(raw)
 }
 
 // ────────────────────────────────────────────────────────
@@ -750,9 +662,7 @@ func formatValidationFeedbackActionGen(a *genMf.ValidationFeedbackAction) string
 	// reading the raw BSON when the typed getter returns empty.
 	objVar := a.ObjectVariableName()
 	if objVar == "" {
-		if v, err := codec.ReadBSONFieldString(a.Raw(), "ValidationVariableName"); err == nil {
-			objVar = v
-		}
+		objVar = genMf.ValidationFeedbackActionValidationVariableName(a)
 	}
 	varName := ensureDollar(objVar)
 	attrPath := varName
