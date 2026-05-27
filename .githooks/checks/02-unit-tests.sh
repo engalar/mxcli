@@ -48,9 +48,15 @@ END=$(date +%s)
 ELAPSED=$((END - START))
 rm -f "$LOG_FILE"
 
-# Time guard.
+# Time guard. Clamp baseline to MIN_BASELINE so cached runs (0 s) don't let
+# the next cold run through unchecked.
+MIN_BASELINE=20
 if [ -f "$BASELINE_FILE" ]; then
     BASELINE=$(cat "$BASELINE_FILE")
+    # Guard against a zero/tiny baseline from a cached run.
+    if [ "$BASELINE" -lt "$MIN_BASELINE" ]; then
+        BASELINE="$MIN_BASELINE"
+    fi
     THRESHOLD=$((BASELINE + BASELINE / 2))
     if [ "$ELAPSED" -gt "$THRESHOLD" ]; then
         echo "" >&2
@@ -63,5 +69,9 @@ if [ -f "$BASELINE_FILE" ]; then
     fi
 fi
 
-echo "$ELAPSED" > "$BASELINE_FILE"
+# Only update baseline when elapsed ≥ MIN_BASELINE (cold run).
+# Cached runs (< MIN_BASELINE) are not representative; keep the existing value.
+if [ "$ELAPSED" -ge "$MIN_BASELINE" ]; then
+    echo "$ELAPSED" > "$BASELINE_FILE"
+fi
 echo "pre-commit: unit tests passed (${ELAPSED}s)."
