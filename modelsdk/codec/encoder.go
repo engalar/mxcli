@@ -1,11 +1,14 @@
 package codec
 
 import (
+	"bytes"
 	"fmt"
+	"unsafe"
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 )
 
 // Encoder serializes Element trees back to BSON bytes.
@@ -29,9 +32,32 @@ func (e *Encoder) Encode(elem element.Element) ([]byte, error) {
 
 // rebuildEntry records which properties of an element need re-encoding.
 type rebuildEntry struct {
-	wp  element.WritableProperty
-	cp  element.ChildProperty
-	clp element.ChildListProperty
+	name string // property key; kept as string for stable ordering
+	wp   element.WritableProperty
+	cp   element.ChildProperty
+	clp  element.ChildListProperty
+}
+
+// bytesOf returns a []byte view of s without copying.
+// Safe only for read-only use within the lifetime of s.
+func bytesOf(s string) []byte {
+	if s == "" {
+		return nil
+	}
+	return unsafe.Slice(unsafe.StringData(s), len(s))
+}
+
+// rawKeyOf returns the key bytes of a BSON element without allocating.
+// bsoncore.Element is a []byte; KeyBytes() slices into it.
+func rawKeyOf(re bsoncore.Element) []byte { return re.KeyBytes() }
+
+// stringOf converts a []byte to string without copying.
+// Safe only while the underlying []byte is alive.
+func stringOf(b []byte) string {
+	if len(b) == 0 {
+		return ""
+	}
+	return unsafe.String(unsafe.SliceData(b), len(b))
 }
 
 // buildDoc constructs a bson.D for a dirty element.
@@ -43,9 +69,20 @@ type rebuildEntry struct {
 // bson.RawValue (zero-alloc). Only fields that are actually dirty are decoded
 // and re-encoded.
 func (e *Encoder) buildDoc(elem element.Element) (bson.D, error) {
-	// Build an index of properties that need rebuilding: dirty scalars,
-	// dirty children, or child lists with at least one dirty member.
-	rebuild := make(map[string]*rebuildEntry, len(elem.Properties()))
+	// Determine cheaply whether any child element is dirty.
+	// element.Base propagates child-dirty state up the container chain, so
+	// a single IsChildDirty() call on the element avoids O(N) PartList scans
+	// when no children are dirty (the common case for scalar-only edits).
+	type childDirtyChecker interface{ IsChildDirty() bool }
+	childMightBeDirty := true
+	if cd, ok := elem.(childDirtyChecker); ok {
+		childMightBeDirty = cd.IsChildDirty()
+	}
+
+	// Build a compact slice of properties that need rebuilding. Using a slice
+	// (not a map) lets us do zero-alloc byte comparison with re.KeyBytes()
+	// in the main loop below, avoiding the 21 string allocations from re.Key().
+	var rebuild []rebuildEntry // typically 1–5 entries; stays on stack for small N
 	for _, prop := range elem.Properties() {
 		wp, ok := prop.(element.WritableProperty)
 		if !ok {
@@ -55,7 +92,8 @@ func (e *Encoder) buildDoc(elem element.Element) (bson.D, error) {
 		clp, _ := prop.(element.ChildListProperty)
 
 		needsRebuild := wp.Dirty()
-		if !needsRebuild {
+		if !needsRebuild && childMightBeDirty {
+			// Only pay the O(N) scan cost when the parent reports a dirty child.
 			if cp != nil {
 				ch := cp.ChildElement()
 				needsRebuild = ch != nil && ch.IsDirty()
@@ -64,28 +102,40 @@ func (e *Encoder) buildDoc(elem element.Element) (bson.D, error) {
 			}
 		}
 		if needsRebuild {
-			rebuild[prop.Name()] = &rebuildEntry{wp, cp, clp}
+			rebuild = append(rebuild, rebuildEntry{prop.Name(), wp, cp, clp})
 		}
 	}
+
+	// findRebuild returns the index into rebuild for a BSON key, or -1.
+	// Uses zero-alloc byte comparison instead of map[string] lookup.
+	// O(M) where M = len(rebuild) ≤ dirty properties (1–5 typical).
+	findRebuild := func(keyB []byte) int {
+		for i := range rebuild {
+			if bytes.Equal(keyB, bytesOf(rebuild[i].name)) {
+				return i
+			}
+		}
+		return -1
+	}
+	// seen tracks which rebuild entries were found in the raw bytes.
+	seen := make([]bool, len(rebuild))
 
 	raw := elem.Raw()
 
 	// === New element (no raw bytes) ===
-	// Iterate elem.Properties() — not the rebuild map — to preserve stable
-	// field ordering. Go map iteration is non-deterministic; using the map
-	// as the source of ordering would produce different BSON byte sequences
-	// across runs (TestSerializeWorkflowActivityGen_RoundTripIsStable).
+	// Iterate elem.Properties() (a slice) for stable field ordering — not the
+	// rebuild slice, whose order varies with property registration.
 	if raw == nil {
 		doc := bson.D{
 			{Key: "$ID", Value: idToBinarySubtype0(elem.ID())},
 			{Key: "$Type", Value: elem.TypeName()},
 		}
 		for _, prop := range elem.Properties() {
-			rb, needsRebuild := rebuild[prop.Name()]
-			if !needsRebuild {
+			idx := findRebuild(bytesOf(prop.Name()))
+			if idx < 0 {
 				continue
 			}
-			val, err := e.encodeEntry(rb)
+			val, err := e.encodeEntry(rebuild[idx])
 			if err != nil {
 				return nil, err
 			}
@@ -97,40 +147,48 @@ func (e *Encoder) buildDoc(elem element.Element) (bson.D, error) {
 	}
 
 	// === Existing element — iterate raw bytes, pass clean fields through ===
-	rawElems, err := bson.Raw(raw).Elements()
+	// Uses bsoncore.Document.Elements() for access to KeyBytes() (zero-alloc
+	// key reads). bsoncore.Value must be converted to bson.RawValue before
+	// storing in bson.E, because bson.Marshal only has a codec for bson.RawValue.
+	rawElems, err := bsoncore.Document(raw).Elements()
 	if err != nil {
 		return nil, fmt.Errorf("read raw elements for %s: %w", elem.TypeName(), err)
 	}
 
 	doc := make(bson.D, 0, len(rawElems))
 	for _, re := range rawElems {
-		key := re.Key()
-		rb, dirty := rebuild[key]
-		if !dirty {
-			// Clean field: pass through raw bytes without allocating any Go objects.
-			doc = append(doc, bson.E{Key: key, Value: re.Value()})
+		keyB := rawKeyOf(re)
+		idx := findRebuild(keyB)
+		if idx < 0 {
+			// Clean field: zero-alloc key + raw value passthrough.
+			// Convert bsoncore.Value → bson.RawValue so bson.Marshal uses
+			// the registered RawValueEncodeValue codec (verbatim byte copy).
+			cv := re.Value()
+			doc = append(doc, bson.E{
+				Key:   stringOf(keyB),
+				Value: bson.RawValue{Type: cv.Type, Value: cv.Data},
+			})
 			continue
 		}
 		// Dirty field: encode new value.
-		val, err := e.encodeEntry(rb)
+		val, err := e.encodeEntry(rebuild[idx])
 		if err != nil {
 			return nil, err
 		}
 		if val != nil {
-			doc = append(doc, bson.E{Key: key, Value: val})
+			doc = append(doc, bson.E{Key: rebuild[idx].name, Value: val})
 		}
-		// Mark handled so we don't append it again below.
-		delete(rebuild, key)
+		seen[idx] = true
 	}
 
 	// Append dirty fields that didn't exist in the raw bytes (new properties).
-	// Iterate Properties() for stable ordering — not the rebuild map.
+	// Iterate Properties() for stable ordering.
 	for _, prop := range elem.Properties() {
-		rb, ok := rebuild[prop.Name()]
-		if !ok {
+		idx := findRebuild(bytesOf(prop.Name()))
+		if idx < 0 || seen[idx] {
 			continue
 		}
-		val, err := e.encodeEntry(rb)
+		val, err := e.encodeEntry(rebuild[idx])
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +201,7 @@ func (e *Encoder) buildDoc(elem element.Element) (bson.D, error) {
 }
 
 // encodeEntry produces the BSON value for a single dirty property.
-func (e *Encoder) encodeEntry(rb *rebuildEntry) (any, error) {
+func (e *Encoder) encodeEntry(rb rebuildEntry) (any, error) {
 	wp := rb.wp
 
 	// Child (Part) property.
