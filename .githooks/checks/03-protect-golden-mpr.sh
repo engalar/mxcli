@@ -39,6 +39,8 @@ if [ -z "$staged_snapshot" ]; then
         echo "  and regenerates minimal.mpr, mprcontents/, AND describe-snapshot.mdl" >&2
         echo "  together. Do NOT run mxcli exec against the golden MPR directly." >&2
         echo "" >&2
+        echo "SOP: .githooks/sop/03-protect-golden-mpr.md" >&2
+        echo "CONTEXT: STAGED_MPR=${staged_mpr}" >&2
         exit 1
     fi
     # Snapshot is clean (content unchanged) — nothing to stage, allow commit.

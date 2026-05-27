@@ -42,6 +42,8 @@ if [ -n "$staged_trigger" ] && [ -z "$staged_golden" ]; then
     echo "  2. make update-helpdesk-golden" >&2
     echo "  3. git add ${MDL_PATH} testdata/helpdesk-golden/" >&2
     echo "" >&2
+    echo "SOP: .githooks/sop/03-helpdesk-mdl-golden-sync.md" >&2
+    echo "CONTEXT: TRIGGER_FILE=${staged_trigger}" >&2
     exit 1
 fi
 
@@ -57,5 +59,7 @@ if [ -n "$staged_golden" ] && [ -z "$staged_mdl" ]; then
     echo "  2. make update-helpdesk-golden" >&2
     echo "  3. git add ${MDL_PATH} testdata/helpdesk-golden/" >&2
     echo "" >&2
+    echo "SOP: .githooks/sop/03-helpdesk-mdl-golden-sync.md" >&2
+    echo "CONTEXT: TRIGGER_FILE=${staged_golden}" >&2
     exit 1
 fi
