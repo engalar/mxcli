@@ -22,9 +22,9 @@ import (
 //  2. Impl/Marker suffix strip/add
 //  3. Prefix strip (ExportObjectMappingElement → ObjectMappingElement)
 //  4. BSON field fingerprint matching against registered types
-func auditAliases(paths []string, registeredTypes map[string]bool) {
-	// Collect all $Type values from BSON
-	bsonTypes := map[string]int{}
+func auditAliases(paths []string, registeredTypes map[string]bool, regFields map[string]map[string]bool) {
+	// Collect $Type counts AND field sets in one pass.
+	typeFields := map[string]map[string]bool{}
 	for _, p := range paths {
 		info, err := os.Stat(p)
 		if err != nil {
@@ -32,30 +32,30 @@ func auditAliases(paths []string, registeredTypes map[string]bool) {
 			continue
 		}
 		if info.IsDir() {
-			scanDir(p, bsonTypes)
+			walkDirForKeys(p, typeFields)
 		} else {
-			scanSQLite(p, bsonTypes)
+			walkSQLiteForKeys(p, typeFields)
 		}
 	}
 
 	// Find gaps
 	type gap struct {
-		TypeName  string
-		Count     int
-		Candidate string
-		Method    string
+		TypeName   string
+		Count      int
+		Candidate  string
+		Method     string
+		Confidence string
 	}
 	var gaps []gap
-	for t, c := range bsonTypes {
+	for t, fields := range typeFields {
 		if !registeredTypes[t] {
-			candidate, method := findCandidate(t, registeredTypes)
-			gaps = append(gaps, gap{t, c, candidate, method})
+			candidate, method, confidence := findCandidateWithFields(t, fields, registeredTypes, regFields)
+			gaps = append(gaps, gap{t, len(fields), candidate, method, confidence})
 		}
 	}
 	sort.Slice(gaps, func(i, j int) bool { return gaps[i].Count > gaps[j].Count })
 
-	// Report
-	fmt.Printf("\nScanned %d unique $Type values from %d source(s)\n", len(bsonTypes), len(paths))
+	fmt.Printf("\nScanned %d unique $Type values from %d source(s)\n", len(typeFields), len(paths))
 	fmt.Printf("Registered in codegen: %d\n", len(registeredTypes))
 	fmt.Printf("Gaps: %d\n\n", len(gaps))
 
@@ -64,13 +64,15 @@ func auditAliases(paths []string, registeredTypes map[string]bool) {
 		return
 	}
 
-	// Separate into actionable (has candidate) and orphan (no candidate)
-	var actionable, orphan []gap
+	var actionable, lowConf, orphan []gap
 	for _, g := range gaps {
-		if g.Candidate != "" {
-			actionable = append(actionable, g)
-		} else {
+		switch {
+		case g.Candidate == "":
 			orphan = append(orphan, g)
+		case g.Confidence == "low":
+			lowConf = append(lowConf, g)
+		default:
+			actionable = append(actionable, g)
 		}
 	}
 
@@ -81,10 +83,19 @@ func auditAliases(paths []string, registeredTypes map[string]bool) {
 			fmt.Printf("  %6dx  %-50s → %s  (%s)\n", g.Count, g.TypeName, g.Candidate, g.Method)
 		}
 		fmt.Println()
-		fmt.Println("Suggested Go map entries:")
+		fmt.Println("Suggested supplements.json entries:")
 		fmt.Println()
 		for _, g := range actionable {
 			fmt.Printf("\t\"%s\": \"%s\",\n", g.Candidate, g.TypeName)
+		}
+		fmt.Println()
+	}
+
+	if len(lowConf) > 0 {
+		fmt.Println("=== LOW-CONFIDENCE MATCHES (field Jaccard < 0.5 — review manually) ===")
+		fmt.Println()
+		for _, g := range lowConf {
+			fmt.Printf("  %6dx  %-50s → %s  (%s)\n", g.Count, g.TypeName, g.Candidate, g.Method)
 		}
 		fmt.Println()
 	}
@@ -99,61 +110,68 @@ func auditAliases(paths []string, registeredTypes map[string]bool) {
 	}
 }
 
-// findCandidate applies heuristics to find a registered type that likely
-// corresponds to the given BSON $Type.
-func findCandidate(bsonType string, registered map[string]bool) (candidate, method string) {
+// findCandidateWithFields applies heuristics to find a registered type that
+// likely corresponds to the given BSON $Type, then validates the match with
+// field fingerprint similarity (Jaccard). Returns (candidate, method, confidence)
+// where confidence is "low" when Jaccard < 0.5.
+//
+// When no name heuristic produces a confident match, falls back to scanning
+// all registered types for the best field-fingerprint match ("field-match").
+func findCandidateWithFields(
+	bsonType string,
+	bsonFields map[string]bool,
+	registered map[string]bool,
+	regFields map[string]map[string]bool,
+) (candidate, method, confidence string) {
 	ns, cls := splitType(bsonType)
 
-	// 1. Impl suffix: FooImpl → Foo
+	// Collect name-heuristic candidates (ordered by specificity).
+	type nameHit struct{ cand, method string }
+	var hits []nameHit
+
+	// 1. Impl suffix strip
 	if strings.HasSuffix(cls, "Impl") {
 		base := cls[:len(cls)-4]
 		if tryMatch(ns, base, registered) {
-			return ns + "$" + base, "strip-Impl"
+			hits = append(hits, nameHit{ns + "$" + base, "strip-Impl"})
 		}
-		// Try other namespaces
 		for _, altNs := range collectNamespaces(registered) {
-			if tryMatch(altNs, base, registered) {
-				return altNs + "$" + base, "strip-Impl+ns"
+			if altNs != ns && tryMatch(altNs, base, registered) {
+				hits = append(hits, nameHit{altNs + "$" + base, "strip-Impl+ns"})
 			}
 		}
 	}
 
-	// 2. Add Impl suffix: Foo → FooImpl
+	// 2. Add Impl suffix
 	if tryMatch(ns, cls+"Impl", registered) {
-		return ns + "$" + cls + "Impl", "add-Impl"
+		hits = append(hits, nameHit{ns + "$" + cls + "Impl", "add-Impl"})
 	}
 
-	// 3. Marker suffix: FooMarker → Foo or Foo → FooMarker
+	// 3. Marker suffix strip
 	if strings.HasSuffix(cls, "Marker") {
 		base := cls[:len(cls)-6]
 		if tryMatch(ns, base, registered) {
-			return ns + "$" + base, "strip-Marker"
+			hits = append(hits, nameHit{ns + "$" + base, "strip-Marker"})
 		}
 	}
 
-	// 4. Namespace swap: check all registered namespaces
+	// 4. Namespace swap (same class name, different namespace)
 	for _, altNs := range collectNamespaces(registered) {
-		if altNs == ns {
-			continue
-		}
-		if registered[altNs+"$"+cls] {
-			return altNs + "$" + cls, "ns-swap"
+		if altNs != ns && registered[altNs+"$"+cls] {
+			hits = append(hits, nameHit{altNs + "$" + cls, "ns-swap"})
 		}
 	}
 
-	// 5. Prefix strip: ExportObjectMappingElement → ObjectMappingElement
-	//    Try removing common prefixes (Export, Import, Published, Consumed)
+	// 5. Prefix strip/add
 	for _, prefix := range []string{"Export", "Import", "Published", "Consumed"} {
 		if strings.HasPrefix(cls, prefix) {
 			stripped := cls[len(prefix):]
 			if tryMatch(ns, stripped, registered) {
-				return ns + "$" + stripped, "strip-" + prefix
+				hits = append(hits, nameHit{ns + "$" + stripped, "strip-" + prefix})
 			}
 		}
-		// Or add prefix
-		prefixed := prefix + cls
-		if tryMatch(ns, prefixed, registered) {
-			return ns + "$" + prefixed, "add-" + prefix
+		if tryMatch(ns, prefix+cls, registered) {
+			hits = append(hits, nameHit{ns + "$" + prefix + cls, "add-" + prefix})
 		}
 	}
 
@@ -166,15 +184,165 @@ func findCandidate(bsonType string, registered map[string]bool) (candidate, meth
 	}
 	if swapped != cls {
 		if tryMatch(ns, swapped, registered) {
-			return ns + "$" + swapped, "Form↔Page"
+			hits = append(hits, nameHit{ns + "$" + swapped, "Form↔Page"})
 		}
-		// Also try Forms namespace
 		if registered["Forms$"+swapped] {
-			return "Forms$" + swapped, "Form↔Page+ns"
+			hits = append(hits, nameHit{"Forms$" + swapped, "Form↔Page+ns"})
 		}
 	}
 
-	return "", ""
+	// Validate each name-heuristic hit with field Jaccard.
+	const threshold = 0.5
+	bestScore := -1.0
+	bestHit := nameHit{}
+	for _, h := range hits {
+		score := jaccardSimilarity(bsonFields, regFields[h.cand])
+		if score > bestScore {
+			bestScore = score
+			bestHit = h
+		}
+	}
+	// Run field-fingerprint scan over all registered types.
+	// This runs whether or not a name heuristic matched, so a strong field-match
+	// can override a low-confidence name hit.
+	var fbest string
+	fbScore := -1.0
+	if len(bsonFields) > 0 {
+		for t := range registered {
+			s := jaccardSimilarity(bsonFields, regFields[t])
+			if s > fbScore {
+				fbScore = s
+				fbest = t
+			}
+		}
+	}
+
+	if bestScore >= threshold {
+		// Name heuristic matched with sufficient field similarity.
+		return bestHit.cand, bestHit.method, "ok"
+	}
+	if fbScore >= 0.6 && fbScore > bestScore {
+		// Field-match beats the name heuristic candidate.
+		return fbest, "field-match", "ok"
+	}
+	if bestScore >= 0 {
+		// Name heuristic fired but field similarity is low and no better field-match found.
+		return bestHit.cand, bestHit.method, "low"
+	}
+
+	return "", "", ""
+}
+
+// jaccardSimilarity returns |A∩B| / |A∪B|, or 0 for empty sets.
+func jaccardSimilarity(a, b map[string]bool) float64 {
+	if len(a) == 0 && len(b) == 0 {
+		return 1.0
+	}
+	var inter int
+	for k := range a {
+		if b[k] {
+			inter++
+		}
+	}
+	union := len(a) + len(b) - inter
+	if union == 0 {
+		return 0
+	}
+	return float64(inter) / float64(union)
+}
+
+// collectRegisteredFields scans generated types.go files for property key names
+// per registered $Type. Returns map[storageTypeName]set[bsonKey].
+func collectRegisteredFields(genBase string) map[string]map[string]bool {
+	result := map[string]map[string]bool{}
+	entries, err := os.ReadDir(genBase)
+	if err != nil {
+		return result
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(genBase, e.Name(), "types.go"))
+		if err != nil {
+			continue
+		}
+		parseGenFields(string(data), result)
+	}
+	return result
+}
+
+// parseGenFields extracts (typeName → fieldSet) from a single types.go file.
+// It tracks the current type by watching o.SetTypeName("Ns$Type") lines,
+// then collects property.NewXxx[...]("FieldName", ...) field names.
+func parseGenFields(src string, out map[string]map[string]bool) {
+	const setTypePrefix = `o.SetTypeName("`
+	const newPropMarker = `property.New`
+	var currentType string
+	for _, line := range strings.Split(src, "\n") {
+		trimmed := strings.TrimSpace(line)
+
+		if strings.HasPrefix(trimmed, setTypePrefix) {
+			rest := trimmed[len(setTypePrefix):]
+			if end := strings.IndexByte(rest, '"'); end > 0 {
+				currentType = rest[:end]
+				if out[currentType] == nil {
+					out[currentType] = map[string]bool{}
+				}
+			}
+			continue
+		}
+
+		if currentType == "" || !strings.Contains(trimmed, newPropMarker) {
+			continue
+		}
+		// Extract first string argument: property.NewXxx[...]("FieldName", ...)
+		// Find the opening paren of the type parameter list: NewXxx[
+		idx := strings.Index(trimmed, newPropMarker)
+		rest := trimmed[idx:]
+		// Skip to closing '](' which precedes the first argument.
+		bracket := strings.Index(rest, "](")
+		if bracket < 0 {
+			continue
+		}
+		rest = rest[bracket+2:] // rest starts at first argument
+		if len(rest) == 0 || rest[0] != '"' {
+			continue
+		}
+		rest = rest[1:]
+		if end := strings.IndexByte(rest, '"'); end > 0 {
+			out[currentType][rest[:end]] = true
+		}
+	}
+}
+
+// fieldDiff holds the result of comparing gen-expected vs BSON-actual field sets.
+type fieldDiff struct {
+	genOnly  map[string]bool // in gen but not in BSON (possible wrong key name)
+	bsonOnly map[string]bool // in BSON but not in gen (possible missing or renamed field)
+}
+
+// diffTypeFields computes the symmetric difference between gen and BSON field sets.
+// System keys ($ID, $Type) in the BSON set are ignored.
+func diffTypeFields(genKeys, bsonKeys map[string]bool) fieldDiff {
+	d := fieldDiff{
+		genOnly:  map[string]bool{},
+		bsonOnly: map[string]bool{},
+	}
+	for k := range genKeys {
+		if !bsonKeys[k] {
+			d.genOnly[k] = true
+		}
+	}
+	for k := range bsonKeys {
+		if strings.HasPrefix(k, "$") {
+			continue // skip $ID, $Type
+		}
+		if !genKeys[k] {
+			d.bsonOnly[k] = true
+		}
+	}
+	return d
 }
 
 func splitType(t string) (ns, cls string) {
@@ -203,70 +371,18 @@ func collectNamespaces(registered map[string]bool) []string {
 	return nsList
 }
 
-// ── audit-keys: ByIdRef BSON key mismatch detection ──
-
-// byIdRefEntry describes a single ByIdRef property declaration found in generated code.
-type byIdRefEntry struct {
-	TypeName string // e.g. "Microflows$SequenceFlow"
-	BSONKey  string // key passed to NewByIdRef (e.g. "Origin" or "OriginPointer")
-}
-
-// collectByIdRefKeys scans generated types.go files for NewByIdRef[...]("Key") calls.
-func collectByIdRefKeys(genBase string) []byIdRefEntry {
-	var entries []byIdRefEntry
-	dirs, _ := os.ReadDir(genBase)
-	for _, d := range dirs {
-		if !d.IsDir() {
-			continue
-		}
-		typesFile := filepath.Join(genBase, d.Name(), "types.go")
-		data, err := os.ReadFile(typesFile)
-		if err != nil {
-			continue
-		}
-		content := string(data)
-		// Find each init function and its type name, then find NewByIdRef calls inside
-		var currentType string
-		for _, line := range strings.Split(content, "\n") {
-			trimmed := strings.TrimSpace(line)
-			const prefix = `o.SetTypeName("`
-			if strings.HasPrefix(trimmed, prefix) {
-				rest := trimmed[len(prefix):]
-				end := strings.IndexByte(rest, '"')
-				if end > 0 {
-					currentType = rest[:end]
-				}
-			}
-			if strings.Contains(trimmed, "property.NewByIdRef[") && currentType != "" {
-				// Extract the BSON key from: property.NewByIdRef[element.Element]("Key")
-				// Find the last ("..." pattern which is the constructor argument
-				const marker = `](`
-				idx := strings.Index(trimmed, marker)
-				if idx < 0 {
-					continue
-				}
-				rest := trimmed[idx+len(marker):]
-				if len(rest) < 3 || rest[0] != '"' {
-					continue
-				}
-				end := strings.IndexByte(rest[1:], '"')
-				if end < 0 {
-					continue
-				}
-				bsonKey := rest[1 : 1+end]
-				entries = append(entries, byIdRefEntry{TypeName: currentType, BSONKey: bsonKey})
-			}
-		}
-	}
-	return entries
-}
-
-// auditPropertyKeys scans MPR BSON for ByIdRef key mismatches.
-// For each registered ByIdRef property, checks if the BSON key exists in actual
-// documents. If not, checks if a "Pointer" suffix variant exists.
-func auditPropertyKeys(paths []string, refs []byIdRefEntry) {
-	// Collect BSON keys per $Type from all MPR sources.
-	typeFields := map[string]map[string]bool{} // $Type -> set of BSON keys
+// auditPropertyKeys performs a full field-key diff between gen-expected keys and
+// actual BSON keys for every registered type seen in the corpus.
+//
+// For each type that appears in the corpus AND has registered gen fields:
+//   - gen-only keys that have a BSON counterpart with "Pointer" suffix → suggest
+//     property_key_override (existing behavior, now applied to ALL property types)
+//   - gen-only keys with no BSON counterpart → needs-review (optional field or
+//     version difference)
+//   - bson-only keys with no gen counterpart → possible extra_property candidate
+func auditPropertyKeys(paths []string, regFields map[string]map[string]bool) {
+	// Collect BSON keys per $Type.
+	typeFields := map[string]map[string]bool{}
 	for _, p := range paths {
 		info, err := os.Stat(p)
 		if err != nil {
@@ -280,52 +396,104 @@ func auditPropertyKeys(paths []string, refs []byIdRefEntry) {
 		}
 	}
 
-	// Compare
-	type mismatch struct {
-		TypeName   string
-		CodegenKey string
-		BSONKey    string
+	type keyMismatch struct {
+		typeName   string
+		genKey     string
+		bsonKey    string // non-empty when a rename was found
+		suggestion string
 	}
-	var mismatches []mismatch
-	var ok, missing int
+	var overrides []keyMismatch
+	var needsReview []keyMismatch
+	var bsonOnly []keyMismatch
+	checked, okCount := 0, 0
 
-	for _, ref := range refs {
-		fields, found := typeFields[ref.TypeName]
-		if !found {
-			continue // type not in any MPR, skip
+	// Sort type names for deterministic output.
+	typeNames := make([]string, 0, len(regFields))
+	for t := range regFields {
+		typeNames = append(typeNames, t)
+	}
+	sort.Strings(typeNames)
+
+	for _, typeName := range typeNames {
+		genKeys := regFields[typeName]
+		bsonKeys, seen := typeFields[typeName]
+		if !seen {
+			continue // type not in corpus, skip
 		}
-		if fields[ref.BSONKey] {
-			ok++
-			continue
+		diff := diffTypeFields(genKeys, bsonKeys)
+		checked += len(genKeys)
+		okCount += len(genKeys) - len(diff.genOnly)
+
+		_, cls := splitType(typeName)
+
+		for genKey := range diff.genOnly {
+			// Check if BSON has a Pointer-suffix variant.
+			if bsonKeys[genKey+"Pointer"] {
+				overrides = append(overrides, keyMismatch{
+					typeName:   typeName,
+					genKey:     genKey,
+					bsonKey:    genKey + "Pointer",
+					suggestion: fmt.Sprintf("%q: %q,", cls+"."+lcFirst(genKey), genKey+"Pointer"),
+				})
+			} else {
+				needsReview = append(needsReview, keyMismatch{typeName: typeName, genKey: genKey})
+			}
 		}
-		// Try Pointer suffix
-		pointerKey := ref.BSONKey + "Pointer"
-		if fields[pointerKey] {
-			mismatches = append(mismatches, mismatch{ref.TypeName, ref.BSONKey, pointerKey})
-		} else {
-			missing++
+		for bsonKey := range diff.bsonOnly {
+			bsonOnly = append(bsonOnly, keyMismatch{typeName: typeName, bsonKey: bsonKey})
 		}
 	}
 
-	fmt.Printf("\nByIdRef BSON Key Audit\n")
-	fmt.Printf("  Checked: %d ByIdRef properties\n", ok+len(mismatches)+missing)
-	fmt.Printf("  OK: %d\n", ok)
-	fmt.Printf("  Mismatches: %d\n", len(mismatches))
-	fmt.Printf("  No instances: %d\n\n", missing)
+	sort.Slice(overrides, func(i, j int) bool {
+		return overrides[i].typeName < overrides[j].typeName || overrides[i].genKey < overrides[j].genKey
+	})
+	sort.Slice(needsReview, func(i, j int) bool { return needsReview[i].typeName < needsReview[j].typeName })
+	sort.Slice(bsonOnly, func(i, j int) bool { return bsonOnly[i].typeName < bsonOnly[j].typeName })
 
-	if len(mismatches) == 0 {
+	fmt.Printf("\nFull Property Key Audit\n")
+	fmt.Printf("  Types checked: %d  Fields checked: %d  OK: %d\n", len(typeFields), checked, okCount)
+	fmt.Printf("  Pointer-rename candidates: %d  Needs-review: %d  BSON-only: %d\n\n",
+		len(overrides), len(needsReview), len(bsonOnly))
+
+	if len(overrides) > 0 {
+		fmt.Println("=== POINTER-RENAME (add to property_key_overrides in supplements.json) ===")
+		fmt.Println()
+		for _, m := range overrides {
+			fmt.Printf("  %-50s  gen=%q → bson=%q\n", m.typeName, m.genKey, m.bsonKey)
+			fmt.Printf("    %s\n", m.suggestion)
+		}
+		fmt.Println()
+	}
+
+	if len(needsReview) > 0 {
+		fmt.Println("=== NEEDS REVIEW (gen key not in BSON — optional field or version diff) ===")
+		fmt.Println()
+		for _, m := range needsReview {
+			fmt.Printf("  %-50s  gen=%q\n", m.typeName, m.genKey)
+		}
+		fmt.Println()
+	}
+
+	if len(bsonOnly) > 0 {
+		fmt.Println("=== BSON-ONLY KEYS (not in gen — possible extra_property candidate) ===")
+		fmt.Println()
+		for _, m := range bsonOnly {
+			fmt.Printf("  %-50s  bson=%q\n", m.typeName, m.bsonKey)
+		}
+		fmt.Println()
+	}
+
+	if len(overrides) == 0 && len(needsReview) == 0 && len(bsonOnly) == 0 {
 		fmt.Println("No mismatches found.")
-		return
 	}
+}
 
-	fmt.Println("=== MISMATCHES (add to property_key_overrides in supplements.json) ===")
-	fmt.Println()
-	for _, m := range mismatches {
-		_, cls := splitType(m.TypeName)
-		fmt.Printf("  %-50s codegen=%q  bson=%q\n", m.TypeName, m.CodegenKey, m.BSONKey)
-		// Suggest override entry
-		fmt.Printf("    \"%s.???\":  \"%s\",\n\n", cls, m.BSONKey)
+// lcFirst lowercases the first byte of s (ASCII only).
+func lcFirst(s string) string {
+	if s == "" {
+		return s
 	}
+	return strings.ToLower(s[:1]) + s[1:]
 }
 
 func walkDirForKeys(dir string, typeFields map[string]map[string]bool) {

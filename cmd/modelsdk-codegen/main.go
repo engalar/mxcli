@@ -34,18 +34,19 @@ func main() {
 			log.Fatal("audit mode requires at least one MPR file or mprcontents directory as positional argument")
 		}
 		registered := collectRegisteredTypes(*outBase)
-		auditAliases(args, registered)
+		regFields := collectRegisteredFields(*outBase)
+		auditAliases(args, registered, regFields)
 		return
 	}
 
-	// Audit-keys mode: scan MPR BSON for ByIdRef key mismatches.
+	// Audit-keys mode: full property key diff between gen and BSON corpus.
 	if *auditKeys {
 		args := flag.Args()
 		if len(args) == 0 {
 			log.Fatal("audit-keys mode requires at least one MPR file or mprcontents directory as positional argument")
 		}
-		byIdRefs := collectByIdRefKeys(*outBase)
-		auditPropertyKeys(args, byIdRefs)
+		regFields := collectRegisteredFields(*outBase)
+		auditPropertyKeys(args, regFields)
 		return
 	}
 
