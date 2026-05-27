@@ -1,25 +1,41 @@
 #!/bin/sh
 # L1: unit tests — fast, no external deps, no Docker.
 #
-# Time guard: elapsed seconds are compared against .test-time-baseline.
-# The baseline file is committed so the reference survives machine changes.
+# CPU is capped at 85% so the machine stays responsive:
+#   - cpulimit(1) if installed: hard CPU cap via kernel scheduler
+#   - otherwise: nice -n 15 (lower scheduling priority)
 #
-# .test-time-baseline  — last recorded elapsed time (seconds). Updated on
-#                        every passing run. Fail if current > baseline * 1.5.
-#
-# To reset after an intentional perf change:
-#   echo <new_seconds> > .test-time-baseline
-#   git add .test-time-baseline && git commit -m "perf: reset test baseline"
+# Time guard: compare elapsed seconds against .test-time-baseline (committed).
+# Fail if current > baseline * 1.5. Update baseline on every passing run.
+# To reset: echo <new_seconds> > .test-time-baseline
 
 REPO="$(git rev-parse --show-toplevel)"
 LOG_FILE="${REPO}/.test-fail.log"
 BASELINE_FILE="${REPO}/.test-time-baseline"
 rm -f "$LOG_FILE"
 
-echo "pre-commit: running unit tests..."
+# Determine parallelism: 85% of nproc.
+NCPU=$(nproc)
+P85=$(( NCPU * 85 / 100 ))
+[ "$P85" -lt 1 ] && P85=1
 
+# CPU limiter: cpulimit if available, else nice.
+if command -v cpulimit >/dev/null 2>&1; then
+    LIMIT_PCT=$(( NCPU * 85 ))
+    RUNNER="cpulimit -l ${LIMIT_PCT} --"
+else
+    RUNNER="nice -n 15"
+fi
+
+echo "pre-commit: running unit tests (cpu≤85%, p=${P85})..."
+
+export CGO_ENABLED=0
 START=$(date +%s)
-if ! CGO_ENABLED=0 go test -timeout 180s -p "$(nproc)" -parallel "$(nproc)" ./... > "$LOG_FILE" 2>&1; then
+if ! $RUNNER go test \
+        -timeout 180s \
+        -p "${P85}" \
+        -parallel "${P85}" \
+        ./... > "$LOG_FILE" 2>&1; then
     echo "" >&2
     echo "COMMIT BLOCKED: unit tests failed." >&2
     echo "" >&2
@@ -32,10 +48,10 @@ END=$(date +%s)
 ELAPSED=$((END - START))
 rm -f "$LOG_FILE"
 
-# Time guard: compare against last successful run.
+# Time guard.
 if [ -f "$BASELINE_FILE" ]; then
     BASELINE=$(cat "$BASELINE_FILE")
-    THRESHOLD=$((BASELINE + BASELINE / 2))   # 150% of baseline
+    THRESHOLD=$((BASELINE + BASELINE / 2))
     if [ "$ELAPSED" -gt "$THRESHOLD" ]; then
         echo "" >&2
         echo "COMMIT BLOCKED: test time regression." >&2
@@ -47,6 +63,5 @@ if [ -f "$BASELINE_FILE" ]; then
     fi
 fi
 
-# Update baseline to current run time.
 echo "$ELAPSED" > "$BASELINE_FILE"
 echo "pre-commit: unit tests passed (${ELAPSED}s)."

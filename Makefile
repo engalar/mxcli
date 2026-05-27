@@ -34,13 +34,21 @@ DAEMON_NAME = mxcli-daemon
 # Clean version for VS Code extension (must be valid semver: major.minor.patch)
 VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$$' || echo "0.0.0")
 
-# Max parallel test packages (lower = less memory; override with: make test TEST_P=8)
-TEST_P ?= $(shell nproc)
-# Max concurrent tests within a package (default: GOMAXPROCS). Lower values
-# reduce peak memory and I/O pressure. Override: make test TEST_PARALLEL=4
-TEST_PARALLEL ?= $(shell nproc)
-# Hard ceiling on how long the full test suite may run. Fail fast rather
-# than hang CI. Override: make test TEST_TIMEOUT=300s
+# Limit CPU to 85% so the machine stays responsive during test runs.
+# Uses cpulimit(1) when installed; falls back to nice -n 15.
+# cpulimit -l value = nproc * 85 (percentage of one core per core).
+_NCPU         := $(shell nproc)
+_CPU_LIMIT_L  := $(shell echo "$(_NCPU) * 85" | bc)
+_CPU_RUNNER   := $(shell command -v cpulimit >/dev/null 2>&1 \
+                   && echo "cpulimit -l $(_CPU_LIMIT_L) --" \
+                   || echo "nice -n 15")
+
+# Max concurrent packages and tests, capped at 85% of nproc.
+_85PCT        := $(shell echo "$(_NCPU) * 85 / 100" | bc)
+TEST_P        ?= $(_85PCT)
+TEST_PARALLEL ?= $(_85PCT)
+
+# Hard ceiling on how long the full test suite may run.
 TEST_TIMEOUT ?= 180s
 
 .PHONY: build build-debug release clean test test-mdl report report-bench report-reset-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup
@@ -170,9 +178,12 @@ release: clean sync-all
 	@echo "  Launchers: mxcli-{os}-{arch}"
 	@echo "  Daemons:   mxcli-daemon-{os}-{arch}.tar.zst (or .zip)"
 
-# Run tests. TEST_TIMEOUT guards against hangs; TEST_P caps concurrent packages
-# to prevent I/O storms; TEST_PARALLEL caps concurrent tests within a package.
+# Run tests. CPU is capped at 85% via _CPU_RUNNER (cpulimit or nice -n 15)
+# so the machine stays responsive. TEST_P/TEST_PARALLEL default to 85% nproc.
 test:
+	$(_CPU_RUNNER) $(MAKE) _test-inner
+
+_test-inner:
 	CGO_ENABLED=0 go test -timeout $(TEST_TIMEOUT) -p $(TEST_P) -parallel $(TEST_PARALLEL) ./...
 
 # Run full test suite and generate layered report (terminal + HTML)
