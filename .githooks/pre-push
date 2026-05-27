@@ -1,0 +1,4 @@
+#!/bin/sh
+for check in "$(dirname "$0")"/push-checks/*.sh; do
+    sh "$check" || exit 1
+done

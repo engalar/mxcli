@@ -36,6 +36,8 @@ coverage.html
 coverage/*
 # Exception: benchmark baseline IS committed
 !coverage/bench-baseline.json
+!coverage/bench-baseline.txt
+!coverage/coverage-baseline.txt
 reference/mendix-repl/
 reference/mxbuild/
 reference/mendixmodellib/

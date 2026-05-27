@@ -1,0 +1,1322 @@
+?   	github.com/mendixlabs/mxcli	[no test files]
+?   	github.com/mendixlabs/mxcli/cmd/check_bson	[no test files]
+?   	github.com/mendixlabs/mxcli/cmd/codegen	[no test files]
+?   	github.com/mendixlabs/mxcli/cmd/compare_pages	[no test files]
+?   	github.com/mendixlabs/mxcli/cmd/debug	[no test files]
+?   	github.com/mendixlabs/mxcli/cmd/dump_page	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/cmd/expr-hints-md	0.002s
+skip Administration.NewWebServiceAccount: failed to microflow repository: ctx.Microflows is nil
+skip Administration.NewAccount: failed to microflow repository: ctx.Microflows is nil
+skip Administration.SaveNewAccount: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ShowPasswordForm: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ChangePassword: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ShowMyPasswordForm: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ManageMyAccount: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ChangeMyPassword: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.PopulateUserAttributes: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.SUB_Feedback_SendToServer: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.ConvertBase64String: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.SUB_Feedback_Sanitize: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.VAL_Feedback: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.ConvertUUIDToURL: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.SUB_Feedback_PostToAppInsights: failed to microflow repository: ctx.Microflows is nil
+skip MyFirstModule.MyFirstLogic: failed to microflow repository: ctx.Microflows is nil
+skip Administration.NewWebServiceAccount: failed to microflow repository: ctx.Microflows is nil
+skip Administration.NewAccount: failed to microflow repository: ctx.Microflows is nil
+skip Administration.SaveNewAccount: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ShowPasswordForm: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ChangePassword: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ShowMyPasswordForm: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ManageMyAccount: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ChangeMyPassword: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.PopulateUserAttributes: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.SUB_Feedback_SendToServer: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.ConvertBase64String: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.SUB_Feedback_Sanitize: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.VAL_Feedback: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.ConvertUUIDToURL: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.SUB_Feedback_PostToAppInsights: failed to microflow repository: ctx.Microflows is nil
+skip MyFirstModule.MyFirstLogic: failed to microflow repository: ctx.Microflows is nil
+skip Administration.NewWebServiceAccount: failed to microflow repository: ctx.Microflows is nil
+skip Administration.NewAccount: failed to microflow repository: ctx.Microflows is nil
+skip Administration.SaveNewAccount: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ShowPasswordForm: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ChangePassword: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ShowMyPasswordForm: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ManageMyAccount: failed to microflow repository: ctx.Microflows is nil
+skip Administration.ChangeMyPassword: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.PopulateUserAttributes: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.SUB_Feedback_SendToServer: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.ConvertBase64String: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.SUB_Feedback_Sanitize: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.VAL_Feedback: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.ConvertUUIDToURL: failed to microflow repository: ctx.Microflows is nil
+skip FeedbackModule.SUB_Feedback_PostToAppInsights: failed to microflow repository: ctx.Microflows is nil
+skip MyFirstModule.MyFirstLogic: failed to microflow repository: ctx.Microflows is nil
+PASS
+ok  	github.com/mendixlabs/mxcli/cmd/exprgrammar-mine	0.136s
+?   	github.com/mendixlabs/mxcli/cmd/extract_page	[no test files]
+?   	github.com/mendixlabs/mxcli/cmd/grammardoc	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/cmd/modelsdk-codegen	0.006s
+  Size: 0.0 MB
+  Saved to /tmp/TestDownloadMxcliBinary_SuccessWritesBinary4176511739/001/mxcli
+Initializing Claude Code for: /tmp/TestInit_CreatesClaudeFiles4152541822/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_CreatesSkillsInClaudeDir3644899792/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_EachSkillHasSKILLMd1411663933/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_SkillFilesHaveContent1160152990/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_READMENotWrittenAsSkill1819502269/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_CreatesDevcontainer150673703/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_CreatesGitignore2473796793/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_NoOtherToolDirsCreated1772078148/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_CommandsAreMarkdown2495530969/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_LintRulesAreStarlark3887416927/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+  Size: 0.0 MB
+  Saved to /tmp/TestDownloadMxcliBinary_SuccessWritesBinary241270711/001/mxcli
+Initializing Claude Code for: /tmp/TestInit_CreatesClaudeFiles2209974000/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_CreatesSkillsInClaudeDir1173434950/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_EachSkillHasSKILLMd256298660/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_SkillFilesHaveContent2004787760/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_READMENotWrittenAsSkill2048250127/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_CreatesDevcontainer580021010/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_CreatesGitignore800146213/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_NoOtherToolDirsCreated2053202008/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_CommandsAreMarkdown1000322440/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_LintRulesAreStarlark416167391/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+  Size: 0.0 MB
+  Saved to /tmp/TestDownloadMxcliBinary_SuccessWritesBinary103117598/001/mxcli
+Initializing Claude Code for: /tmp/TestInit_CreatesClaudeFiles63509252/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_CreatesSkillsInClaudeDir2587066006/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_EachSkillHasSKILLMd2904097282/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_SkillFilesHaveContent316793513/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_READMENotWrittenAsSkill2581618827/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_CreatesDevcontainer506927359/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_CreatesGitignore3135605436/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_NoOtherToolDirsCreated1350196095/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_CommandsAreMarkdown1118279749/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+Initializing Claude Code for: /tmp/TestInit_LintRulesAreStarlark45253885/001
+  Created .claude/settings.json
+  Created CLAUDE.md
+  Created 10 command files in .claude/commands/
+  Created 29 lint rule files in .claude/lint-rules/
+  Created 57 skill files in .claude/skills/
+  Created 1 example MDL files in mdl-examples/
+
+Created .devcontainer/ configuration
+
+Created .gitignore
+
+Created .playwright/cli.config.json
+
+✓ Initialization complete!
+
+What was created:
+  • CLAUDE.md — project guide for Claude Code
+  • .claude/settings.json — permissions and environment
+  • .claude/commands/ — slash commands
+  • .claude/lint-rules/ — Starlark lint rules
+  • .claude/skills/ — MDL pattern guides
+  • mdl-examples/ — example MDL scripts (helpdesk-app.mdl)
+  • .devcontainer/ — dev container configuration
+  • .gitignore — Mendix ignore patterns
+
+Next steps:
+  1. Open this project in Claude Code
+  2. Ask Claude: 'explore this project'
+  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference
+  4. Use './mxcli -p project.mpr' to work with the project
+PASS
+ok  	github.com/mendixlabs/mxcli/cmd/mxcli	0.680s
+PASS
+ok  	github.com/mendixlabs/mxcli/cmd/mxcli/bson	0.004s
+PASS
+ok  	github.com/mendixlabs/mxcli/cmd/mxcli/docker	8.842s
+PASS
+ok  	github.com/mendixlabs/mxcli/cmd/mxcli/evalrunner	0.016s
+PASS
+ok  	github.com/mendixlabs/mxcli/cmd/mxcli/playwright	0.067s
+PASS
+ok  	github.com/mendixlabs/mxcli/cmd/mxcli/syntax	0.032s
+PASS
+ok  	github.com/mendixlabs/mxcli/cmd/mxcli/testrunner	0.137s
+PASS
+ok  	github.com/mendixlabs/mxcli/cmd/mxcli/tui	10.394s
+PASS
+ok  	github.com/mendixlabs/mxcli/cmd/mxcli-launcher	0.048s
+?   	github.com/mendixlabs/mxcli/cmd/perf_import	[no test files]
+?   	github.com/mendixlabs/mxcli/cmd/source_tree	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/cmd/testreport	0.005s
+?   	github.com/mendixlabs/mxcli/generated/exprgrammar	[no test files]
+?   	github.com/mendixlabs/mxcli/generated/metamodel	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/auth	0.018s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/bsoncompare	23.721s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/catalog	0.007s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/codegen	0.003s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/codegen/dtsparser	3.744s
+?   	github.com/mendixlabs/mxcli/internal/codegen/emit	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/codegen/emitter	0.268s
+?   	github.com/mendixlabs/mxcli/internal/codegen/schema	[no test files]
+?   	github.com/mendixlabs/mxcli/internal/codegen/transform	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/expr/daemon	32.954s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/expr/meta	4.911s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/expr/parse	1.218s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/expr/repair	0.004s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/expr/report	0.004s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/expr/scan	7.533s
+?   	github.com/mendixlabs/mxcli/internal/expr/testutil	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/expr/tokens	0.002s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/expr/typecheck	0.004s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/expr/validate	0.008s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/goldenfs	2.037s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/launcherproto	0.002s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/marketplace	0.012s
+PASS
+ok  	github.com/mendixlabs/mxcli/internal/pathutil	0.003s
+?   	github.com/mendixlabs/mxcli/internal/testfsutil	[no test files]
+?   	github.com/mendixlabs/mxcli/mdl/ast	[no test files]
+?   	github.com/mendixlabs/mxcli/mdl/backend	[no test files]
+?   	github.com/mendixlabs/mxcli/mdl/backend/mock	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/backend/mpr	27.433s
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/backend/mpr/repos	29.330s
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/backend/unitstore	0.003s
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/bsonutil	0.005s
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/catalog	0.732s
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/diaglog	0.008s
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/errors	0.003s
+Module 'MyFirstModule' already exists
+Module role MyFirstModule.User already exists
+Created page MyFirstModule.Home_Web
+Navigation profile 'Responsive' updated.
+Updated model settings
+Updated configuration 'Default'
+Updated language settings
+Updated workflows settings
+Module 'MyFirstModule' already exists
+Module role MyFirstModule.User already exists
+Created page MyFirstModule.Home_Web
+Navigation profile 'Responsive' updated.
+Updated model settings
+Updated configuration 'Default'
+Updated language settings
+Updated workflows settings
+Module 'MyFirstModule' already exists
+Module role MyFirstModule.User already exists
+Created page MyFirstModule.Home_Web
+Navigation profile 'Responsive' updated.
+Updated model settings
+Updated configuration 'Default'
+Updated language settings
+Updated workflows settings
+Module 'MyFirstModule' already exists
+Module role MyFirstModule.User already exists
+Created page MyFirstModule.Home_Web
+Navigation profile 'Responsive' updated.
+Updated model settings
+Updated configuration 'Default'
+Updated language settings
+Updated workflows settings
+Module 'MyFirstModule' already exists
+Module role MyFirstModule.User already exists
+Created page MyFirstModule.Home_Web
+Navigation profile 'Responsive' updated.
+Updated model settings
+Updated configuration 'Default'
+Updated language settings
+Updated workflows settings
+Module 'MyFirstModule' already exists
+Module role MyFirstModule.User already exists
+Created page MyFirstModule.Home_Web
+Navigation profile 'Responsive' updated.
+Updated model settings
+Updated configuration 'Default'
+Updated language settings
+Updated workflows settings
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/executor	45.797s
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/exprcheck	0.006s
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/exprcheck/adapters	0.004s
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/exprcheck/hints	0.002s
+?   	github.com/mendixlabs/mxcli/mdl/formatter	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/grammar	0.010s
+?   	github.com/mendixlabs/mxcli/mdl/grammar/parser	[no test files]
+?   	github.com/mendixlabs/mxcli/mdl/linter	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/linter/rules	0.049s
+?   	github.com/mendixlabs/mxcli/mdl/model	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/model/entity	0.005s
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/model/layout	0.002s
+?   	github.com/mendixlabs/mxcli/mdl/openapi	[no test files]
+?   	github.com/mendixlabs/mxcli/mdl/repos	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/repos/testing	0.005s
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/types	0.011s
+PASS
+ok  	github.com/mendixlabs/mxcli/mdl/visitor	0.969s
+?   	github.com/mendixlabs/mxcli/model	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/modelsdk	2.706s
+goos: linux
+goarch: amd64
+pkg: github.com/mendixlabs/mxcli/modelsdk/codec
+cpu: Intel(R) Core(TM) i7-8700 CPU @ 3.20GHz
+BenchmarkEncodeCleanPassthrough-12    	271130018	         4.416 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEncodeCleanPassthrough-12    	285154201	         4.309 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEncodeCleanPassthrough-12    	273018786	         4.328 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEncodeDirtyRebuild-12        	  592136	      2125 ns/op	    1018 B/op	      26 allocs/op
+BenchmarkEncodeDirtyRebuild-12        	  479550	      2376 ns/op	    1018 B/op	      26 allocs/op
+BenchmarkEncodeDirtyRebuild-12        	  564865	      2299 ns/op	    1018 B/op	      26 allocs/op
+BenchmarkDecodeUnknownType-12         	 5466508	       246.7 ns/op	     168 B/op	       3 allocs/op
+BenchmarkDecodeUnknownType-12         	 3502498	       288.4 ns/op	     168 B/op	       3 allocs/op
+BenchmarkDecodeUnknownType-12         	 4664119	       280.8 ns/op	     168 B/op	       3 allocs/op
+BenchmarkDecodeRegisteredType-12      	 1181116	       953.9 ns/op	     208 B/op	       3 allocs/op
+BenchmarkDecodeRegisteredType-12      	 1275878	       960.3 ns/op	     208 B/op	       3 allocs/op
+BenchmarkDecodeRegisteredType-12      	 1257562	       940.8 ns/op	     208 B/op	       3 allocs/op
+PASS
+ok  	github.com/mendixlabs/mxcli/modelsdk/codec	20.193s
+goos: linux
+goarch: amd64
+pkg: github.com/mendixlabs/mxcli/modelsdk/codec/poc
+cpu: Intel(R) Core(TM) i7-8700 CPU @ 3.20GHz
+BenchmarkBlocker3_FullEncode-12           	    3057	    404428 ns/op	  168554 B/op	    3591 allocs/op
+    blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+BenchmarkBlocker3_FullEncode-12           	    3153	    414968 ns/op	  169100 B/op	    3591 allocs/op
+    blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+BenchmarkBlocker3_FullEncode-12           	    3385	    432215 ns/op	  168909 B/op	    3591 allocs/op
+    blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+BenchmarkBlocker3_IncrementalEncode-12    	    3391	    422839 ns/op	  169351 B/op	    3591 allocs/op
+    blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+BenchmarkBlocker3_IncrementalEncode-12    	    2937	    439113 ns/op	  168443 B/op	    3591 allocs/op
+    blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+BenchmarkBlocker3_IncrementalEncode-12    	    3180	    459128 ns/op	  168947 B/op	    3591 allocs/op
+    blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+BenchmarkBlocker3_CleanPassthrough-12     	219354705	         5.261 ns/op	       0 B/op	       0 allocs/op
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+BenchmarkBlocker3_CleanPassthrough-12     	228100767	         5.335 ns/op	       0 B/op	       0 allocs/op
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+BenchmarkBlocker3_CleanPassthrough-12     	233873668	         5.099 ns/op	       0 B/op	       0 allocs/op
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+    blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 16 candidates)
+PASS
+ok  	github.com/mendixlabs/mxcli/modelsdk/codec/poc	17.353s
+PASS
+ok  	github.com/mendixlabs/mxcli/modelsdk/element	0.002s
+PASS
+ok  	github.com/mendixlabs/mxcli/modelsdk/gen	0.971s
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/appservices	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/authentication	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/businessevents	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/changedatacapture	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/client	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/codeactions	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/connectorkit	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/constants	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/customblobdocuments	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/customicons	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/customwidgets	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/datasets	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/datatypes	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/documenttemplates	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/enumerations	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/exceldataimporter	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/expressions	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/images	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/importmappings	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/integrationoverview	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/javaactions	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/kafka	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/mappings	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/menus	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/messagedefinitions	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/metamodelversion	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/microflows	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/mlmappings	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/nanoflows	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/nativepages	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/navigation	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/odatapublish	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/modelsdk/gen/pages	0.004s
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/projects	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/queues	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/regularexpressions	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/reports	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/rest	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/security	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/services	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/settings	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/texts	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/url	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/webservices	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/modelsdk/gen/workflows	0.004s
+?   	github.com/mendixlabs/mxcli/modelsdk/gen/xmlschemas	[no test files]
+?   	github.com/mendixlabs/mxcli/modelsdk/meta	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/modelsdk/mpr	0.594s
+?   	github.com/mendixlabs/mxcli/modelsdk/mpr/version	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/modelsdk/mprread	0.852s
+goos: linux
+goarch: amd64
+pkg: github.com/mendixlabs/mxcli/modelsdk/property
+cpu: Intel(R) Core(TM) i7-8700 CPU @ 3.20GHz
+BenchmarkPrimitiveLazyDecode-12    	18575641	        63.53 ns/op	      16 B/op	       1 allocs/op
+BenchmarkPrimitiveLazyDecode-12    	18947314	        63.37 ns/op	      16 B/op	       1 allocs/op
+BenchmarkPrimitiveLazyDecode-12    	15580599	        64.87 ns/op	      16 B/op	       1 allocs/op
+BenchmarkPrimitiveSetGet-12        	357155293	         3.431 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveSetGet-12        	352662104	         3.509 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveSetGet-12        	349061818	         3.433 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveCachedGet-12     	694864647	         1.698 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveCachedGet-12     	717688866	         1.680 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveCachedGet-12     	733554895	         1.672 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/mendixlabs/mxcli/modelsdk/property	12.431s
+PASS
+ok  	github.com/mendixlabs/mxcli/modelsdk/version	0.002s
+PASS
+ok  	github.com/mendixlabs/mxcli/modelsdk/widgets	0.059s
+?   	github.com/mendixlabs/mxcli/modelsdk/widgets/definitions	[no test files]
+PASS
+ok  	github.com/mendixlabs/mxcli/modelsdk/widgets/mpk	0.076s
+PASS
+ok  	github.com/mendixlabs/mxcli/sdk/versions	0.022s
+PASS
+ok  	github.com/mendixlabs/mxcli/sql	0.005s
+Process 1749779 detected

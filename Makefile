@@ -51,7 +51,7 @@ TEST_PARALLEL ?= $(_85PCT)
 # Hard ceiling on how long the full test suite may run.
 TEST_TIMEOUT ?= 180s
 
-.PHONY: build build-debug release clean test test-mdl report report-bench report-reset-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup
+.PHONY: build build-debug release clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup
 
 setup:
 	git config core.hooksPath .githooks
@@ -205,19 +205,42 @@ report:
 		--bench-diff coverage/bench-diff.txt \
 		--out-html coverage/report.html
 
-# Run only benchmarks and update the baseline
+# Record benchmark + coverage baselines used by the pre-push guard.
+# Run this after intentional perf changes to silence the guard.
+#
+# Benchmarks: cpulimit/nice wraps go test directly (single process per pkg).
+# Coverage:   always uses nice -n 15; cpulimit only limits the parent
+#             go test process, not the per-package child binaries, which
+#             causes go test to write only partial coverage data.
+bench-baseline:
+	@mkdir -p coverage
+	@echo "Recording benchmark baseline (count=3, cpu≤85%)..."
+	$(_CPU_RUNNER) go test -bench=. -benchmem -count=3 \
+		-p $(_85PCT) ./... 2>/dev/null | grep -v "^---" > coverage/bench-baseline.txt
+	@echo "Recording coverage baseline..."
+	nice -n 15 go test -timeout 300s \
+		-p $(_85PCT) -parallel $(_85PCT) \
+		-coverprofile=coverage/coverage.out -covermode=atomic \
+		./... >/dev/null 2>&1
+	@go tool cover -func=coverage/coverage.out | \
+		awk '/^total:/ { gsub(/%/,"",$$NF); printf "%.1f\n",$$NF }' > coverage/coverage-baseline.txt
+	@echo "Benchmarks → coverage/bench-baseline.txt"
+	@echo "Coverage   → $$(cat coverage/coverage-baseline.txt)%  (coverage/coverage-baseline.txt)"
+
+# Run only benchmarks and update the baseline (legacy target)
 report-bench:
 	@mkdir -p coverage
 	CGO_ENABLED=0 go test -bench=. -benchmem -count=3 ./... > coverage/bench-results.txt
 	@if command -v benchstat >/dev/null 2>&1; then \
-		benchstat coverage/bench-baseline.json coverage/bench-results.txt > coverage/bench-diff.txt || true; \
+		benchstat coverage/bench-baseline.txt coverage/bench-results.txt > coverage/bench-diff.txt || true; \
 		cat coverage/bench-diff.txt; \
 	fi
 
 # Reset benchmark baseline (use after major refactors)
 report-reset-baseline:
-	echo '[]' > coverage/bench-baseline.json
-	@echo "Baseline reset."
+	echo '' > coverage/bench-baseline.txt
+	echo '' > coverage/coverage-baseline.txt
+	@echo "Baselines reset."
 
 # Check MDL syntax for all doctype example scripts
 check-mdl: build
