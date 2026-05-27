@@ -7,6 +7,7 @@ import (
 )
 
 func TestBuildIDMap_CorpusB(t *testing.T) {
+	t.Parallel()
 	units, err := bsoncompare.ReadAllUnits("../../testdata/corpus-b/app.mpr")
 	if err != nil {
 		t.Fatal(err)

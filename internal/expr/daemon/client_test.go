@@ -3,6 +3,7 @@
 package daemon_test
 
 import (
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -13,12 +14,14 @@ import (
 )
 
 func TestNewClient_DefaultsSocketPath(t *testing.T) {
+	t.Parallel()
 	c := daemon.NewClient(daemon.ClientOptions{MprPath: "/tmp/foo/App.mpr"})
 	assert.NotEmpty(t, c.SocketPath())
 	assert.Equal(t, daemon.SocketPath("/tmp/foo/App.mpr"), c.SocketPath())
 }
 
 func TestNewClient_ExplicitSocketPath(t *testing.T) {
+	t.Parallel()
 	c := daemon.NewClient(daemon.ClientOptions{
 		MprPath:    "/tmp/foo/App.mpr",
 		SocketPath: "/tmp/custom_42.sock",
@@ -27,25 +30,18 @@ func TestNewClient_ExplicitSocketPath(t *testing.T) {
 }
 
 func TestClient_PingAndValidate(t *testing.T) {
+	t.Parallel()
 	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 
-	// 直接启动 in-process daemon（无需走 StartIfNeeded → exec.Command 子进程路径），
-	// 这样 client.go 的 Ping/Validate 可以独立验证而不依赖 Task 8 的 CLI。
-	d, err := daemon.New(corpusAMPR, 5*time.Minute)
+	// Use a unique socket so this test can run in parallel with other Serve() tests.
+	sock := filepath.Join(t.TempDir(), "c.sock")
+	d, err := daemon.NewWithSocket(corpusAMPR, sock, 5*time.Minute)
 	require.NoError(t, err)
 	go func() { _ = d.Serve() }()
 	t.Cleanup(func() { _ = d.Stop() })
+	waitForAlive(t, sock)
 
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if daemon.IsAlive(d.SocketPath()) {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	require.True(t, daemon.IsAlive(d.SocketPath()))
-
-	c := daemon.NewClient(daemon.ClientOptions{MprPath: corpusAMPR})
+	c := daemon.NewClient(daemon.ClientOptions{MprPath: corpusAMPR, SocketPath: sock})
 
 	// Ping
 	pr, err := c.Ping()
@@ -64,23 +60,17 @@ func TestClient_PingAndValidate(t *testing.T) {
 }
 
 func TestClient_StartIfNeeded_NoOpWhenAlive(t *testing.T) {
+	t.Parallel()
 	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 
-	d, err := daemon.New(corpusAMPR, 5*time.Minute)
+	sock := filepath.Join(t.TempDir(), "s.sock")
+	d, err := daemon.NewWithSocket(corpusAMPR, sock, 5*time.Minute)
 	require.NoError(t, err)
 	go func() { _ = d.Serve() }()
 	t.Cleanup(func() { _ = d.Stop() })
+	waitForAlive(t, sock)
 
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if daemon.IsAlive(d.SocketPath()) {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	require.True(t, daemon.IsAlive(d.SocketPath()))
-
-	c := daemon.NewClient(daemon.ClientOptions{MprPath: corpusAMPR})
+	c := daemon.NewClient(daemon.ClientOptions{MprPath: corpusAMPR, SocketPath: sock})
 	// daemon 已活：StartIfNeeded 必须立即返回 nil，不尝试 exec.Command
 	require.NoError(t, c.StartIfNeeded())
 }

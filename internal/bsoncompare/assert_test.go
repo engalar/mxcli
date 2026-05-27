@@ -19,6 +19,7 @@ func (m *mockT) Errorf(format string, args ...any) {
 }
 
 func TestAssertEqual_SelfComparePasses(t *testing.T) {
+	t.Parallel()
 	mt := &mockT{}
 	bsoncompare.AssertEqual(mt,
 		"../../testdata/corpus-b/app.mpr",

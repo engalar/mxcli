@@ -7,6 +7,7 @@ import (
 )
 
 func TestCompare_NoChange(t *testing.T) {
+	t.Parallel()
 	diffs, err := bsoncompare.Compare(
 		"../../testdata/corpus-b/app.mpr",
 		"../../testdata/corpus-b/app.mpr",
