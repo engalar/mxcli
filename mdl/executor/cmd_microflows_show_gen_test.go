@@ -8,16 +8,14 @@
 package executor
 
 import (
-	"errors"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/internal/testfsutil"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
@@ -468,83 +466,22 @@ func mustContain(t *testing.T, haystack string, needles ...string) {
 	}
 }
 
-// --- fixture copy helpers (parallels mdl/backend/mpr/factory_test.go) ---
+// --- fixture copy helpers ---
 
 func copyMPRFixture(t *testing.T, srcMPR, dstDir string) string {
 	t.Helper()
 	dstMPR := filepath.Join(dstDir, filepath.Base(srcMPR))
-	if err := copyOneFileForTest(srcMPR, dstMPR); err != nil {
+	if err := testfsutil.CopyFile(srcMPR, dstMPR); err != nil {
 		t.Fatalf("copy mpr: %v", err)
 	}
 	srcContents := filepath.Join(filepath.Dir(srcMPR), "mprcontents")
 	if info, err := os.Stat(srcContents); err == nil && info.IsDir() {
 		dstContents := filepath.Join(dstDir, "mprcontents")
-		if err := hardLinkDirForTest(srcContents, dstContents); err != nil {
+		if err := testfsutil.HardLinkDir(srcContents, dstContents); err != nil {
 			t.Fatalf("hard-link mprcontents: %v", err)
 		}
 	}
 	return dstMPR
-}
-
-// hardLinkDirForTest mirrors src into dst using hard links (O(1) per file).
-// Falls back to copy on cross-device (EXDEV). Safe for mprcontents/ because
-// the Writer never modifies existing .mxunit files in place.
-func hardLinkDirForTest(src, dst string) error {
-	return filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(src, p)
-		if err != nil {
-			return err
-		}
-		target := filepath.Join(dst, rel)
-		if d.IsDir() {
-			return os.MkdirAll(target, 0o755)
-		}
-		if linkErr := os.Link(p, target); linkErr != nil {
-			if errors.Is(linkErr, syscall.EXDEV) {
-				return copyOneFileForTest(p, target)
-			}
-			return linkErr
-		}
-		return nil
-	})
-}
-
-func copyOneFileForTest(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return err
-	}
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, in)
-	return err
-}
-
-func copyDirForTest(src, dst string) error {
-	return filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(src, p)
-		if err != nil {
-			return err
-		}
-		target := filepath.Join(dst, rel)
-		if d.IsDir() {
-			return os.MkdirAll(target, 0o755)
-		}
-		return copyOneFileForTest(p, target)
-	})
 }
 
 // TestDescribeMicroflowGen_ListReturnAndLoop is a regression test that

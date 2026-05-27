@@ -3,15 +3,12 @@
 package mprbackend
 
 import (
-	"errors"
-	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
-	"syscall"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/internal/testfsutil"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
@@ -338,7 +335,7 @@ func TestNewExecutorContextWithReferences_BothServicesWired(t *testing.T) {
 	}
 }
 
-// --- helpers (mirror mdl/backend/mpr/repos/testhelpers_test.go) ---
+// --- fixture helpers ---
 
 func copyFixture(t *testing.T, srcMPR, dstDir string) string {
 	t.Helper()
@@ -351,76 +348,15 @@ func copyFixture(t *testing.T, srcMPR, dstDir string) string {
 
 func copyMPRTree(srcMPR, dstDir string) (string, error) {
 	dstMPR := filepath.Join(dstDir, filepath.Base(srcMPR))
-	if err := copyOneFile(srcMPR, dstMPR); err != nil {
+	if err := testfsutil.CopyFile(srcMPR, dstMPR); err != nil {
 		return "", err
 	}
 	srcContents := filepath.Join(filepath.Dir(srcMPR), "mprcontents")
 	if info, err := os.Stat(srcContents); err == nil && info.IsDir() {
 		dstContents := filepath.Join(dstDir, "mprcontents")
-		if err := hardLinkDir(srcContents, dstContents); err != nil {
+		if err := testfsutil.HardLinkDir(srcContents, dstContents); err != nil {
 			return "", err
 		}
 	}
 	return dstMPR, nil
-}
-
-// hardLinkDir mirrors src into dst using hard links; falls back to copy on EXDEV.
-func hardLinkDir(src, dst string) error {
-	return filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(src, p)
-		if err != nil {
-			return err
-		}
-		target := filepath.Join(dst, rel)
-		if d.IsDir() {
-			return os.MkdirAll(target, 0o755)
-		}
-		if linkErr := os.Link(p, target); linkErr != nil {
-			if errors.Is(linkErr, syscall.EXDEV) {
-				return copyOneFile(p, target)
-			}
-			return linkErr
-		}
-		return nil
-	})
-}
-
-func copyOneFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return err
-	}
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	if _, err := io.Copy(out, in); err != nil {
-		return err
-	}
-	return nil
-}
-
-func copyDir(src, dst string) error {
-	return filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(src, p)
-		if err != nil {
-			return err
-		}
-		target := filepath.Join(dst, rel)
-		if d.IsDir() {
-			return os.MkdirAll(target, 0o755)
-		}
-		return copyOneFile(p, target)
-	})
 }
