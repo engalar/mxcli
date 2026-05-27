@@ -3,22 +3,21 @@
 package mprrepos
 
 import (
+	"errors"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
+	"syscall"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/model"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
-// fixtureOpenSem limits how many tests can copy + open the fixture
-// simultaneously. Without this, all 112 parallel tests would copy the
-// 19 MB mprcontents/ tree at the same time, causing heavy disk I/O that
-// can make the machine unresponsive. Capped at GOMAXPROCS so throughput
-// matches CPU count but I/O stays bounded.
+// fixtureOpenSem limits concurrent fixture open operations at GOMAXPROCS
+// to prevent I/O storms when many tests run in parallel.
 var fixtureOpenSem = make(chan struct{}, runtime.GOMAXPROCS(0))
 
 // typedID is a 1-line cast helper so test bodies stay readable.
@@ -29,15 +28,21 @@ func typedID(s string) model.ID { return model.ID(s) }
 // relative to test files in mdl/backend/mpr/repos/.
 const fixturePath = "../../../../testdata/expr-checker/minimal.mpr"
 
-// openTestWriter copies the canonical Stage 2 fixture into a per-test
-// temp directory and opens it as a *mmpr.Writer. It calls t.Parallel()
-// so independent tests run concurrently, and uses fixtureOpenSem to cap
-// simultaneous copy+open operations at GOMAXPROCS (prevents I/O storms).
+// openTestWriter sets up an isolated writable copy of the fixture for
+// a test and opens it as a *mmpr.Writer.
+//
+// Isolation strategy for mprcontents/ (370 immutable .mxunit files):
+//   - Hard-link instead of copy: O(1) per file, no data written
+//   - The Writer never modifies existing .mxunit files; it only creates
+//     new ones with fresh UUIDs, so hard links are safe
+//
+// The .mpr SQLite file (68 KB) must be a real copy because the Writer
+// commits WAL changes back into it.
 func openTestWriter(t *testing.T) *mmpr.Writer {
 	t.Helper()
 	t.Parallel()
-	fixtureOpenSem <- struct{}{}        // acquire before copy+open
-	defer func() { <-fixtureOpenSem }() // release as soon as Writer is ready
+	fixtureOpenSem <- struct{}{}
+	defer func() { <-fixtureOpenSem }()
 	dst := copyFixture(t, fixturePath, t.TempDir())
 	w, err := mmpr.NewWriter(dst)
 	if err != nil {
@@ -56,8 +61,10 @@ func copyFixture(t *testing.T, srcMPR, dstDir string) string {
 	return dst
 }
 
-// copyMPRTree copies srcMPR into dstDir, plus any sibling "mprcontents"
-// directory (v2 format). Returns the destination .mpr path.
+// copyMPRTree copies the .mpr SQLite file and hard-links the mprcontents/
+// directory tree into dstDir. Hard links are used for mprcontents/ because
+// those files are immutable once written — the Writer adds new files rather
+// than modifying existing ones.
 func copyMPRTree(srcMPR, dstDir string) (string, error) {
 	dstMPR := filepath.Join(dstDir, filepath.Base(srcMPR))
 	if err := copyOneFile(srcMPR, dstMPR); err != nil {
@@ -66,11 +73,38 @@ func copyMPRTree(srcMPR, dstDir string) (string, error) {
 	srcContents := filepath.Join(filepath.Dir(srcMPR), "mprcontents")
 	if info, err := os.Stat(srcContents); err == nil && info.IsDir() {
 		dstContents := filepath.Join(dstDir, "mprcontents")
-		if err := copyDir(srcContents, dstContents); err != nil {
+		if err := hardLinkDir(srcContents, dstContents); err != nil {
 			return "", err
 		}
 	}
 	return dstMPR, nil
+}
+
+// hardLinkDir mirrors src into dst using hard links when possible.
+// Falls back to copyOneFile on cross-device setups (EXDEV). Hard links
+// are safe for mprcontents/ because the Writer only creates new files
+// with fresh UUIDs — it never modifies existing .mxunit files in place.
+func hardLinkDir(src, dst string) error {
+	return filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, p)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dst, rel)
+		if d.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		if linkErr := os.Link(p, target); linkErr != nil {
+			if errors.Is(linkErr, syscall.EXDEV) {
+				return copyOneFile(p, target)
+			}
+			return linkErr
+		}
+		return nil
+	})
 }
 
 func copyOneFile(src, dst string) error {
@@ -93,6 +127,7 @@ func copyOneFile(src, dst string) error {
 	return nil
 }
 
+// copyDir is retained for tests that explicitly need a real on-disk copy.
 func copyDir(src, dst string) error {
 	return filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {

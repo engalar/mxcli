@@ -3,11 +3,13 @@
 package mprbackend
 
 import (
+	"errors"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
+	"syscall"
 	"testing"
 
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
@@ -355,11 +357,35 @@ func copyMPRTree(srcMPR, dstDir string) (string, error) {
 	srcContents := filepath.Join(filepath.Dir(srcMPR), "mprcontents")
 	if info, err := os.Stat(srcContents); err == nil && info.IsDir() {
 		dstContents := filepath.Join(dstDir, "mprcontents")
-		if err := copyDir(srcContents, dstContents); err != nil {
+		if err := hardLinkDir(srcContents, dstContents); err != nil {
 			return "", err
 		}
 	}
 	return dstMPR, nil
+}
+
+// hardLinkDir mirrors src into dst using hard links; falls back to copy on EXDEV.
+func hardLinkDir(src, dst string) error {
+	return filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, p)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dst, rel)
+		if d.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		if linkErr := os.Link(p, target); linkErr != nil {
+			if errors.Is(linkErr, syscall.EXDEV) {
+				return copyOneFile(p, target)
+			}
+			return linkErr
+		}
+		return nil
+	})
 }
 
 func copyOneFile(src, dst string) error {

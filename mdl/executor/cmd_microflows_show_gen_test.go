@@ -8,13 +8,14 @@
 package executor
 
 import (
+	"errors"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
@@ -29,10 +30,6 @@ import (
 // even when openMprWriterForTest is called multiple times (e.g. via helpers).
 var parallelOnceGuard sync.Map
 
-// openFixtureSem caps concurrent fixture copy+open operations at GOMAXPROCS
-// so that running many packages in parallel doesn't cause I/O storms.
-var openFixtureSem = make(chan struct{}, runtime.GOMAXPROCS(0))
-
 func parallelOnce(t *testing.T) {
 	t.Helper()
 	if _, loaded := parallelOnceGuard.LoadOrStore(t, struct{}{}); !loaded {
@@ -41,25 +38,8 @@ func parallelOnce(t *testing.T) {
 	}
 }
 
-const fixtureMprPath = "../../testdata/expr-checker/minimal.mpr"
-
-// openMprWriterForTest copies the fixture into a per-test temp dir and
-// returns a Writer. parallelOnce() ensures t.Parallel() is called exactly
-// once per test even if this helper is invoked multiple times.
-// openFixtureSem throttles concurrent copy+open to GOMAXPROCS.
-func openMprWriterForTest(t *testing.T) *mmpr.Writer {
-	t.Helper()
-	parallelOnce(t)
-	openFixtureSem <- struct{}{}
-	defer func() { <-openFixtureSem }()
-	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
-	w, err := mmpr.NewWriter(dst)
-	if err != nil {
-		t.Fatalf("mmpr.NewWriter(%s): %v", dst, err)
-	}
-	t.Cleanup(func() { _ = w.Close() })
-	return w
-}
+// fixtureMprPath and openMprWriterForTest are defined in testopen_*_test.go
+// (platform-specific: goldenfs on Linux, file copy elsewhere).
 
 // findMicroflowByQN is a small helper that wraps FindByQualifiedName
 // + nil/error guard so each test can stay focused on assertions.
@@ -499,11 +479,37 @@ func copyMPRFixture(t *testing.T, srcMPR, dstDir string) string {
 	srcContents := filepath.Join(filepath.Dir(srcMPR), "mprcontents")
 	if info, err := os.Stat(srcContents); err == nil && info.IsDir() {
 		dstContents := filepath.Join(dstDir, "mprcontents")
-		if err := copyDirForTest(srcContents, dstContents); err != nil {
-			t.Fatalf("copy mprcontents: %v", err)
+		if err := hardLinkDirForTest(srcContents, dstContents); err != nil {
+			t.Fatalf("hard-link mprcontents: %v", err)
 		}
 	}
 	return dstMPR
+}
+
+// hardLinkDirForTest mirrors src into dst using hard links (O(1) per file).
+// Falls back to copy on cross-device (EXDEV). Safe for mprcontents/ because
+// the Writer never modifies existing .mxunit files in place.
+func hardLinkDirForTest(src, dst string) error {
+	return filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, p)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dst, rel)
+		if d.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		if linkErr := os.Link(p, target); linkErr != nil {
+			if errors.Is(linkErr, syscall.EXDEV) {
+				return copyOneFileForTest(p, target)
+			}
+			return linkErr
+		}
+		return nil
+	})
 }
 
 func copyOneFileForTest(src, dst string) error {

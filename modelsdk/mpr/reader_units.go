@@ -123,25 +123,20 @@ func (r *Reader) listUnitsByTypeV1(typePrefix string) ([]rawUnit, error) {
 // listUnitsByTypeV2 handles MPR v2 format (contents in mprcontents folder).
 // Uses caching to avoid reading every file for each query.
 func (r *Reader) listUnitsByTypeV2(typePrefix string) ([]rawUnit, error) {
-	// Build cache if not valid
 	if !r.unitCacheValid {
 		if err := r.buildUnitCache(); err != nil {
 			return nil, err
 		}
 	}
 
-	// Filter by type using cache, only read contents for matching units
+	// Filter by type using cache, only read contents for matching units.
 	var units []rawUnit
 	for _, cu := range r.unitCache {
 		if typePrefix == "" || strings.HasPrefix(cu.Type, typePrefix) {
-			// Read contents from mprcontents folder
-			// Note: cu.ID is already in the correct swapped format from blobToUUID
 			contents, err := r.readMprContents(cu.ID)
 			if err != nil {
-				// Skip units with missing content files
 				continue
 			}
-
 			units = append(units, rawUnit{
 				ID:              cu.ID,
 				ContainerID:     cu.ContainerID,
@@ -151,7 +146,6 @@ func (r *Reader) listUnitsByTypeV2(typePrefix string) ([]rawUnit, error) {
 			})
 		}
 	}
-
 	return units, nil
 }
 
@@ -175,13 +169,9 @@ func (r *Reader) buildUnitCache() error {
 			return fmt.Errorf("failed to scan unit row: %w", err)
 		}
 
-		// Convert UnitID to UUID string
 		unitUUID := blobToUUID(unitID)
-
-		// Read contents to get type (only done once during cache build)
 		contents, err := r.readMprContents(unitUUID)
 		if err != nil {
-			// Skip units with missing content files
 			continue
 		}
 
