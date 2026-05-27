@@ -1141,6 +1141,24 @@ create or modify page HD.Ticket_Overview (title: 'Tickets', layout: Atlas_Core.A
 }
 
 grant view on page HD.Ticket_Overview to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+create or modify page HD.Agent_Select (
+  title: 'Select Agent',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Ticket',
+  params: { $Ticket: HD.Ticket }
+) {
+  datagrid dgAgents (datasource: database from HD.Agent sort by Name asc, selection: single, pagesize: 15) {
+    -- Context: $currentObject (HD.Agent), $dgAgents (selection)
+    controlbar controlBar1 {
+      actionbutton btnAssign (caption: 'Assign', action: close_page, buttonstyle: primary)
+    }
+    column colName (attribute: Name, caption: 'Name')
+    column colEmail (attribute: Email, caption: 'Email')
+    column colIsActive (attribute: IsActive, caption: 'Active', ColumnWidth: manual, Size: 80)
+  }
+}
+
+grant view on page HD.Agent_Select to HD.AgentRole, HD.ManagerRole;
 create or modify page HD.Ticket_Detail (
   title: 'Ticket',
   layout: Atlas_Core.Atlas_Default,
@@ -1236,6 +1254,44 @@ create or modify page HD.TicketSearch_Form (
 }
 
 grant view on page HD.TicketSearch_Form to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+create or modify page HD.MyTickets_Overview (title: 'My Tickets', layout: Atlas_Core.Atlas_Default, folder: 'Ticket') {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (desktopwidth: 12) {
+        datagrid dgMyTickets (datasource: microflow HD.DS_MyTickets) {
+          -- Context: $currentObject (HD.DS_MyTickets), $dgMyTickets (selection)
+          column colSubject (caption: 'Subject', Sortable: true)
+          column colStatus (caption: 'Status', Sortable: true, ColumnWidth: manual, Size: 120)
+          column colPriority (caption: 'Priority', Sortable: true, ColumnWidth: manual, Size: 100)
+          column colSLA_Due (caption: 'SLA Due', Sortable: true, ColumnWidth: manual, Size: 140)
+        }
+      }
+    }
+  }
+}
+
+grant view on page HD.MyTickets_Overview to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+create or modify page HD.TicketSearch_Results (
+  title: 'Search Results',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket/Search',
+  params: { $Search: HD.TicketSearch }
+) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (desktopwidth: 12) {
+        datagrid dgResults (datasource: nanoflow HD.NF_TicketSearch_Apply) {
+          -- Context: $currentObject (HD.NF_TicketSearch_Apply), $dgResults (selection)
+          column colSubject (caption: 'Subject', Sortable: true)
+          column colStatus (caption: 'Status', Sortable: true, ColumnWidth: manual, Size: 120)
+          column colPriority (caption: 'Priority', Sortable: true, ColumnWidth: manual, Size: 100)
+        }
+      }
+    }
+  }
+}
+
+grant view on page HD.TicketSearch_Results to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.EscalationReview_Form (
   title: 'Escalation Review',
   layout: Atlas_Core.Atlas_Default,

@@ -2034,15 +2034,14 @@ func (pb *pageBuilder) buildDataGridDataSourceBSON(ds *ast.DataSourceV3) (bson.D
 		}
 		_ = nfID
 		entityName := pb.getNanoflowReturnEntityName(ds.Reference)
+		// Write Nanoflow QN directly at top level, matching the gen NanoflowSource
+		// ByNameRef field "Nanoflow". No NanoflowSettings wrapper needed (not in
+		// reflection data or gen type schema).
 		doc := bson.D{
 			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 			{Key: "$Type", Value: "Forms$NanoflowSource"},
-			{Key: "NanoflowSettings", Value: bson.D{
-				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-				{Key: "$Type", Value: "Forms$NanoflowSettings"},
-				{Key: "Nanoflow", Value: ds.Reference},
-				{Key: "ParameterMappings", Value: bson.A{int32(3)}},
-			}},
+			{Key: "Nanoflow", Value: ds.Reference},
+			{Key: "ParameterMappings", Value: bson.A{int32(3)}},
 		}
 		return doc, entityName, nil
 

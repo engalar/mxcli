@@ -1377,7 +1377,8 @@ create or replace page HD.MyTickets_Overview
 -- Ticket search results: datagrid with NANOFLOW datasource
 -- Pattern F: datasource: nanoflow — nanoflow receives page-param $Search and returns list.
 -- Demonstrates datasource type 6/6: list widget driven by a client-side nanoflow.
--- DataSource BSON: Forms$NanoflowSource with nanoflowRef + parameter mapping Search→$Search.
+-- DataSource BSON: Forms$NanoflowSource with Nanoflow QN stored directly as ByNameRef
+-- (top-level key, NOT nested in NanoflowSettings — consistent with gen type schema).
 create or replace page HD.TicketSearch_Results
 (
   title: 'Search Results',

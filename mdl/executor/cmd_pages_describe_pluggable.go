@@ -36,7 +36,8 @@ func decodeMicroflowQNFromSource(ds map[string]any) string {
 }
 
 // decodeNanoflowQNFromSource decodes a raw Forms$NanoflowSource map to the gen type
-// and returns the nanoflow qualified name.
+// and returns the nanoflow qualified name via the Nanoflow ByNameRef property.
+// Returns "" if the map is not a NanoflowSource or has no nanoflow set.
 func decodeNanoflowQNFromSource(ds map[string]any) string {
 	raw, err := bson.Marshal(ds)
 	if err != nil {
@@ -255,6 +256,10 @@ func extractDataGrid2DataSource(ctx *ExecContext, w map[string]any) *rawDataSour
 		case "Forms$MicroflowSource":
 			if mf := decodeMicroflowQNFromSource(ds); mf != "" {
 				return &rawDataSource{Type: "microflow", Reference: mf}
+			}
+		case "Forms$NanoflowSource":
+			if nf := decodeNanoflowQNFromSource(ds); nf != "" {
+				return &rawDataSource{Type: "nanoflow", Reference: nf}
 			}
 		case "Forms$EntityPathSource", "Forms$DataViewSource":
 			entityPath := extractString(ds["EntityPath"])

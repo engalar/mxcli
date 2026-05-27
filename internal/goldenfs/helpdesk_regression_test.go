@@ -373,9 +373,12 @@ describe page KB.Article_Detail;
 describe page KB.Article_NewEdit;
 -- HD pages
 describe page HD.Ticket_Overview;
+describe page HD.Agent_Select;
 describe page HD.Ticket_Detail;
 describe page HD.Ticket_NewEdit;
 describe page HD.TicketSearch_Form;
+describe page HD.MyTickets_Overview;
+describe page HD.TicketSearch_Results;
 describe page HD.EscalationReview_Form;
 describe page HD.EscalationWorkflow_Overview;
 describe page HD.EscalationStart_Form;
