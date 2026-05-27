@@ -170,16 +170,43 @@ func decodeIDValue(val bson.RawValue) element.ID {
 	return ""
 }
 
+const hexchars = "0123456789abcdef"
+
 // BinaryToUUID converts a 16-byte binary to a UUID string using Microsoft GUID
 // format (little-endian first 3 groups) to match Mendix standard representation.
+//
+// Uses a stack-allocated [36]byte buffer instead of fmt.Sprintf to avoid
+// the extra allocation and formatting overhead (fmt.Sprintf was the dominant
+// alloc in DecodeRegisteredType — 32% of all allocation objects).
 func BinaryToUUID(data []byte) string {
 	if len(data) != 16 {
 		return ""
 	}
-	return fmt.Sprintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-		data[3], data[2], data[1], data[0],
-		data[5], data[4],
-		data[7], data[6],
-		data[8], data[9],
-		data[10], data[11], data[12], data[13], data[14], data[15])
+	var buf [36]byte
+	// Group 1 (4 bytes, little-endian): data[3..0]
+	buf[0] = hexchars[data[3]>>4]; buf[1] = hexchars[data[3]&0xf]
+	buf[2] = hexchars[data[2]>>4]; buf[3] = hexchars[data[2]&0xf]
+	buf[4] = hexchars[data[1]>>4]; buf[5] = hexchars[data[1]&0xf]
+	buf[6] = hexchars[data[0]>>4]; buf[7] = hexchars[data[0]&0xf]
+	buf[8] = '-'
+	// Group 2 (2 bytes, little-endian): data[5..4]
+	buf[9] = hexchars[data[5]>>4]; buf[10] = hexchars[data[5]&0xf]
+	buf[11] = hexchars[data[4]>>4]; buf[12] = hexchars[data[4]&0xf]
+	buf[13] = '-'
+	// Group 3 (2 bytes, little-endian): data[7..6]
+	buf[14] = hexchars[data[7]>>4]; buf[15] = hexchars[data[7]&0xf]
+	buf[16] = hexchars[data[6]>>4]; buf[17] = hexchars[data[6]&0xf]
+	buf[18] = '-'
+	// Group 4 (2 bytes, big-endian): data[8..9]
+	buf[19] = hexchars[data[8]>>4]; buf[20] = hexchars[data[8]&0xf]
+	buf[21] = hexchars[data[9]>>4]; buf[22] = hexchars[data[9]&0xf]
+	buf[23] = '-'
+	// Group 5 (6 bytes, big-endian): data[10..15]
+	buf[24] = hexchars[data[10]>>4]; buf[25] = hexchars[data[10]&0xf]
+	buf[26] = hexchars[data[11]>>4]; buf[27] = hexchars[data[11]&0xf]
+	buf[28] = hexchars[data[12]>>4]; buf[29] = hexchars[data[12]&0xf]
+	buf[30] = hexchars[data[13]>>4]; buf[31] = hexchars[data[13]&0xf]
+	buf[32] = hexchars[data[14]>>4]; buf[33] = hexchars[data[14]&0xf]
+	buf[34] = hexchars[data[15]>>4]; buf[35] = hexchars[data[15]&0xf]
+	return string(buf[:])
 }
