@@ -23,8 +23,9 @@ func repoRoot(t *testing.T) string {
 	return abs
 }
 
-// findMxcliBinaryForTest returns the path to a built mxcli binary, or "" if
-// unavailable. Prefers MXCLI_BINARY env; falls back to bin/mxcli at the repo root.
+// findMxcliBinaryForTest returns the path to a built mxcli daemon binary, or "" if
+// unavailable. Prefers MXCLI_BINARY env; falls back to bin/mxcli-daemon (the daemon
+// binary that accepts MDL commands). bin/mxcli is now the thin launcher.
 func findMxcliBinaryForTest(t *testing.T) string {
 	t.Helper()
 	if p := os.Getenv("MXCLI_BINARY"); p != "" {
@@ -32,6 +33,13 @@ func findMxcliBinaryForTest(t *testing.T) string {
 			return p
 		}
 	}
+	// Prefer bin/mxcli-daemon (the MDL execution engine).
+	if p := filepath.Join(repoRoot(t), "bin", "mxcli-daemon"); p != "" {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	// Legacy fallback: bin/mxcli (pre-launcher-split builds still work via env).
 	p := filepath.Join(repoRoot(t), "bin", "mxcli")
 	if _, err := os.Stat(p); err == nil {
 		return p
