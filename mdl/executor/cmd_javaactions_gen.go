@@ -16,8 +16,10 @@
 //    decoder returns `*element.Base` for legacy fixture data — typed
 //    structs (genJA.BooleanType, etc.) only appear when WE create new
 //    elements. Strategy: dispatch on `elem.TypeName()` matching BOTH
-//    namespaces, and fall back to raw-BSON reads (codec.ReadBSONFieldString,
-//    codec.DecodeChild) instead of type-asserting to gen concrete types.
+//    namespaces, and fall back to raw-BSON reads (genJA.ReadBSONString,
+//    genJA.DecodeChildElement — thin codec wrappers in the gen package
+//    so executor code stays off modelsdk/codec directly) instead of
+//    type-asserting to gen concrete types.
 //
 // 2. Missing gen types (no constructor exists; `*element.Base` is what
 //    we get back at decode time):
@@ -46,7 +48,7 @@
 //    wrapper that carries the inner type in its "Type" child element.
 //    Legacy parser_javaactions.go peels this in parseInnerParameterType.
 //    We do the same: when outer == BasicParameterType, decode the "Type"
-//    child via codec.DecodeChild and dispatch on the inner TypeName.
+//    child via genJA.DecodeChildElement and dispatch on the inner TypeName.
 //
 // 5. MicroflowActionInfo.Icon: gen exposes `IconQualifiedName()` which
 //    pulls from the BSON "Icon" key. Legacy stored Icon as a free string;
@@ -54,7 +56,7 @@
 //    the same key, so IconQualifiedName() returns the right value either
 //    way. The gen `MicroflowActionInfo` has no `ImageData` accessor
 //    (the legacy field for embedded toolbox icons) — read via
-//    codec.ReadBSONFieldString(mai.Raw(), "ImageData") if needed.
+//    genJA.ReadBSONString(mai, "ImageData") if needed.
 
 package executor
 
@@ -69,7 +71,6 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
@@ -218,7 +219,7 @@ func formatJavaActionTypeGen(elem element.Element, typeParams []element.Element)
 		"JavaActions$ConcreteEntityType":
 		// Both legacy ("Entity") and gen ("Entity" via ByNameRef on
 		// ConcreteEntityType.entity) read the same BSON key.
-		if name := readBSONString(elem, "Entity"); name != "" {
+		if name := genJA.ReadBSONString(elem, "Entity"); name != "" {
 			return name
 		}
 		// Gen-typed ConcreteEntityType exposes the qualified name
@@ -237,10 +238,10 @@ func formatJavaActionTypeGen(elem element.Element, typeParams []element.Element)
 		}
 		// Raw fallback: try direct "Entity" (Studio-Pro-flat form),
 		// then nested "Parameter.Entity".
-		if entity := readBSONString(elem, "Entity"); entity != "" {
+		if entity := genJA.ReadBSONString(elem, "Entity"); entity != "" {
 			return "List of " + entity
 		}
-		if inner, err := codec.DecodeChild(elem.Raw(), "Parameter"); err == nil {
+		if inner := genJA.DecodeChildElement(elem, "Parameter"); inner != nil {
 			return "List of " + formatJavaActionTypeGen(inner, typeParams)
 		}
 		return "List"
@@ -248,7 +249,7 @@ func formatJavaActionTypeGen(elem element.Element, typeParams []element.Element)
 		if et, ok := elem.(*genJA.EnumerationType); ok && et.EnumerationQualifiedName() != "" {
 			return "Enum " + et.EnumerationQualifiedName()
 		}
-		if name := readBSONString(elem, "Enumeration"); name != "" {
+		if name := genJA.ReadBSONString(elem, "Enumeration"); name != "" {
 			return "Enum " + name
 		}
 		return "Enumeration"
@@ -269,7 +270,7 @@ func formatJavaActionTypeGen(elem element.Element, typeParams []element.Element)
 		if tp, ok := elem.(*genJA.TypeParameter); ok && tp.Name() != "" {
 			return tp.Name()
 		}
-		if name := readBSONString(elem, "TypeParameter"); name != "" {
+		if name := genJA.ReadBSONString(elem, "TypeParameter"); name != "" {
 			return name
 		}
 		return "T"
@@ -282,14 +283,14 @@ func formatJavaActionTypeGen(elem element.Element, typeParams []element.Element)
 	case "JavaScriptActions$MicroflowJavaScriptActionParameterType":
 		return "Microflow"
 	case "CodeActions$StringTemplateParameterType":
-		if grammar := readBSONString(elem, "Grammar"); grammar != "" {
+		if grammar := genJA.ReadBSONString(elem, "Grammar"); grammar != "" {
 			return "StringTemplate(" + grammar + ")"
 		}
 		return "StringTemplate"
 	case "CodeActions$BasicParameterType", "JavaActions$BasicParameterType":
 		// BasicParameterType wraps the actual type in a "Type" child.
 		// Decode the child and dispatch recursively.
-		if inner, err := codec.DecodeChild(elem.Raw(), "Type"); err == nil && inner != nil {
+		if inner := genJA.DecodeChildElement(elem, "Type"); inner != nil {
 			return formatJavaActionTypeGen(inner, typeParams)
 		}
 		return "Object"
@@ -332,7 +333,7 @@ func resolveTypeParamNameFromEntityTypeParameterType(elem element.Element, typeP
 	// require importing private decode logic; instead, fall back to
 	// reading "TypeParameter" as a string (older Studio Pro variant)
 	// or returning empty.
-	if name := readBSONString(elem, "TypeParameter"); name != "" {
+	if name := genJA.ReadBSONString(elem, "TypeParameter"); name != "" {
 		return name
 	}
 	return ""
@@ -346,7 +347,7 @@ func resolveTypeParamNameFromParameterizedEntityType(elem element.Element, typeP
 			return name
 		}
 	}
-	if name := readBSONString(elem, "TypeParameter"); name != "" {
+	if name := genJA.ReadBSONString(elem, "TypeParameter"); name != "" {
 		return name
 	}
 	return ""
@@ -368,28 +369,10 @@ func lookupTypeParamName(id element.ID, typeParams []element.Element) string {
 		}
 		// Unregistered raw element — match on raw $ID + read Name field.
 		if tp.ID() == id {
-			if name := readBSONString(tp, "Name"); name != "" {
+			if name := genJA.ReadBSONString(tp, "Name"); name != "" {
 				return name
 			}
 		}
-	}
-	return ""
-}
-
-// readBSONString is a non-erroring wrapper around codec.ReadBSONFieldString
-// that returns "" on missing/error. The polymorphic-dispatch helpers above
-// don't care about the distinction between "field absent" and "field
-// present but empty"; both render as the no-name fallback path.
-func readBSONString(elem element.Element, key string) string {
-	if elem == nil {
-		return ""
-	}
-	raw := elem.Raw()
-	if raw == nil {
-		return ""
-	}
-	if s, err := codec.ReadBSONFieldString(raw, key); err == nil {
-		return s
 	}
 	return ""
 }
@@ -560,8 +543,8 @@ func describeJavaActionGen(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	if mai := javaActionMicroflowActionInfoOf(ja); mai != nil {
-		caption := readBSONString(mai, "Caption")
-		category := readBSONString(mai, "Category")
+		caption := genJA.ReadBSONString(mai, "Caption")
+		category := genJA.ReadBSONString(mai, "Category")
 		if caption != "" {
 			sb.WriteString("\nexposed as '")
 			sb.WriteString(caption)
@@ -574,7 +557,7 @@ func describeJavaActionGen(ctx *ExecContext, name ast.QualifiedName) error {
 				icon = typed.IconQualifiedName()
 			}
 			if icon == "" {
-				icon = readBSONString(mai, "Icon")
+				icon = genJA.ReadBSONString(mai, "Icon")
 			}
 			if icon != "" {
 				sb.WriteString("\n-- icon: ")
@@ -727,7 +710,7 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 		for _, tp := range typeParams {
 			if typed, ok := tp.(*genJA.TypeParameter); ok && typed.Name() != "" {
 				names = append(names, typed.Name())
-			} else if tn := readBSONString(tp, "Name"); tn != "" {
+			} else if tn := genJA.ReadBSONString(tp, "Name"); tn != "" {
 				names = append(names, tn)
 			}
 		}
@@ -807,8 +790,8 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 	// EXPOSED AS clause — JS uses ModelerActionInfo (no MicroflowActionInfo
 	// alias in the gen JavaScriptAction surface).
 	if mai := jsa.ModelerActionInfo(); mai != nil {
-		caption := readBSONString(mai, "Caption")
-		category := readBSONString(mai, "Category")
+		caption := genJA.ReadBSONString(mai, "Caption")
+		category := genJA.ReadBSONString(mai, "Category")
 		if caption != "" {
 			sb.WriteString("\n  exposed as '")
 			sb.WriteString(caption)
@@ -820,7 +803,7 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 				icon = typed.IconQualifiedName()
 			}
 			if icon == "" {
-				icon = readBSONString(mai, "Icon")
+				icon = genJA.ReadBSONString(mai, "Icon")
 			}
 			if icon != "" {
 				sb.WriteString("\n-- icon: ")

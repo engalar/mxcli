@@ -26,7 +26,6 @@ func TestNoDirectBSONImportInExecutor(t *testing.T) {
 	allowlist := map[string]bool{
 		// Batch 1 – Tasks 2-9 in progress:
 		"cmd_microflows_format_calls_gen.go": true, // Task 2
-		"cmd_javaactions_gen.go":             true, // Task 8
 		// Batch 2 – Task 10:
 		"cmd_pages_builder_v3.go":             true, // Task 10
 		// Batch 3 – deferred (investigation pending):
