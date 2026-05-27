@@ -16,8 +16,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// waitForAlive polls the socket until it is alive or a 6-second deadline
-// expires. 6 s covers the corpus-a index build (~5 s) plus headroom.
+// waitForAlive polls until the socket is alive or the deadline expires.
+// With the lazy-init design, Serve() binds the socket FIRST and builds the
+// index afterwards, so IsAlive() returns true within ~20 ms of the goroutine
+// being scheduled. The 6-second deadline is a safety net for cases where
+// Serve() fails to bind at all (returns error before binding).
 func waitForAlive(t *testing.T, sockPath string) {
 	t.Helper()
 	deadline := time.Now().Add(6 * time.Second)

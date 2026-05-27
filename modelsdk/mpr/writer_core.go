@@ -477,9 +477,17 @@ func (w *Writer) updateUnit(unitID string, contents []byte) error {
 			swappedUUID+".mxunit",
 		)
 
-		// Write updated content
-		if err := os.WriteFile(filePath, contents, 0644); err != nil {
-			return fmt.Errorf("failed to write unit file: %w", err)
+		// Write to a temp file then atomically rename into place.
+		// Direct WriteFile would overwrite the shared inode when the target
+		// is a hard link (e.g. in test fixtures), corrupting the source file.
+		// Rename replaces the directory entry, leaving the linked inode intact.
+		tmpPath := filePath + ".tmp"
+		if err := os.WriteFile(tmpPath, contents, 0644); err != nil {
+			return fmt.Errorf("failed to write unit temp file: %w", err)
+		}
+		if err := os.Rename(tmpPath, filePath); err != nil {
+			os.Remove(tmpPath)
+			return fmt.Errorf("failed to rename unit file: %w", err)
 		}
 
 		// Update ContentsHash in database

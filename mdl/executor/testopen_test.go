@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build linux
-
 package executor
 
 import (
@@ -15,10 +13,12 @@ const fixtureMprPath = "../../testdata/expr-checker/minimal.mpr"
 
 var openFixtureSem = make(chan struct{}, runtime.GOMAXPROCS(0))
 
-// openMprWriterForTest copies (or hard-links) the fixture into a per-test
-// temp dir and returns an mmpr.Writer. parallelOnce() ensures t.Parallel()
-// fires exactly once even when this helper is invoked multiple times.
-// openFixtureSem throttles concurrent I/O to GOMAXPROCS.
+// openMprWriterForTest copies the fixture into a per-test temp dir
+// (hard-linking mprcontents/ when source and /tmp share a filesystem)
+// and returns an mmpr.Writer. parallelOnce() ensures t.Parallel() fires
+// exactly once even when this helper is invoked multiple times in the
+// same test (e.g. via helper chains). openFixtureSem throttles concurrent
+// I/O to GOMAXPROCS to prevent I/O storms.
 func openMprWriterForTest(t *testing.T) *mmpr.Writer {
 	t.Helper()
 	parallelOnce(t)
