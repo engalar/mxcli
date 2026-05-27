@@ -14,6 +14,15 @@ import (
 	"testing"
 )
 
+// newPageDecodeCtx returns a minimal ExecContext for tests that exercise
+// extract* helpers that decode datasource maps via the gen-package
+// supplement (genPg.DecodeMicroflowQNFromDataSource etc.). The
+// supplement does not touch ctx.Backend, so a zero-value context is
+// sufficient.
+func newPageDecodeCtx() *ExecContext {
+	return &ExecContext{}
+}
+
 // buildComboBoxAssocWidget builds a mock CustomWidget map matching the BSON structure
 // written by the pluggable widget engine for COMBOBOX in association mode.
 // TypePointer IDs are plain strings (extractBinaryID accepts strings directly).
@@ -159,39 +168,9 @@ func TestExtractCustomWidgetPropertyAssociation_DoesNotReturnCaptionAttribute(t 
 	}
 }
 
-// TestDecodeMicroflowQNFromSource_MicroflowSource verifies that the gen-typed helper
-// correctly reads the microflow qualified name via MicroflowSource → MicroflowSettings.
-func TestDecodeMicroflowQNFromSource(t *testing.T) {
-	const mf = "MyModule.DS_Items"
-	ds := map[string]any{
-		"$Type": "Forms$MicroflowSource",
-		"MicroflowSettings": map[string]any{
-			"$Type":     "Forms$MicroflowSettings",
-			"Microflow": mf,
-		},
-	}
-
-	got := decodeMicroflowQNFromSource(ds)
-
-	if got != mf {
-		t.Errorf("decodeMicroflowQNFromSource = %q, want %q", got, mf)
-	}
-}
-
-// TestDecodeNanoflowQNFromSource verifies the gen-typed helper for NanoflowSource.
-func TestDecodeNanoflowQNFromSource(t *testing.T) {
-	const nf = "MyModule.NF_Items"
-	ds := map[string]any{
-		"$Type":    "Forms$NanoflowSource",
-		"Nanoflow": nf,
-	}
-
-	got := decodeNanoflowQNFromSource(ds)
-
-	if got != nf {
-		t.Errorf("decodeNanoflowQNFromSource = %q, want %q", got, nf)
-	}
-}
+// Note: TestDecodeMicroflowQNFromSource and TestDecodeNanoflowQNFromSource
+// moved to modelsdk/gen/pages/supplement_describe_test.go after Task 7
+// extracted the decode helpers into the pages supplement.
 
 // buildDataGrid2MicroflowWidget builds a mock DataGrid2 CustomWidget map with a
 // Forms$MicroflowSource datasource. This mirrors the BSON written by buildDataGridDataSourceBSON
@@ -239,7 +218,7 @@ func TestExtractDataGrid2DataSource_MicroflowSource(t *testing.T) {
 	const mf = "MyModule.DS_Items"
 	w := buildDataGrid2MicroflowWidget(mf)
 
-	got := extractDataGrid2DataSource(nil, w)
+	got := extractDataGrid2DataSource(newPageDecodeCtx(), w)
 
 	if got == nil {
 		t.Fatal("extractDataGrid2DataSource returned nil; want *rawDataSource with microflow reference")
@@ -275,7 +254,7 @@ func TestExtractGalleryDataSource_MicroflowSource(t *testing.T) {
 	const mf = "MyModule.DS_GalleryItems"
 	w := buildFormsGalleryMicroflowWidget(mf)
 
-	got := extractGalleryDataSource(nil, w)
+	got := extractGalleryDataSource(newPageDecodeCtx(), w)
 
 	if got == nil {
 		t.Fatal("extractGalleryDataSource returned nil; want *rawDataSource with microflow reference")

@@ -6,53 +6,8 @@ import (
 	"context"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-
-	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
-
-// decodeMicroflowQNFromSource decodes a raw Forms$MicroflowSource map to the gen type
-// and returns the microflow qualified name via MicroflowSettings.
-// Returns "" if the map is not a MicroflowSource or has no microflow set.
-func decodeMicroflowQNFromSource(ds map[string]any) string {
-	raw, err := bson.Marshal(ds)
-	if err != nil {
-		return ""
-	}
-	elem, err := codec.NewDecoder(codec.DefaultRegistry).Decode(bson.Raw(raw))
-	if err != nil {
-		return ""
-	}
-	ms, ok := elem.(*genPg.MicroflowSource)
-	if !ok || ms == nil {
-		return ""
-	}
-	settings, ok := ms.MicroflowSettings().(*genPg.MicroflowSettings)
-	if !ok || settings == nil {
-		return ""
-	}
-	return settings.MicroflowQualifiedName()
-}
-
-// decodeNanoflowQNFromSource decodes a raw Forms$NanoflowSource map to the gen type
-// and returns the nanoflow qualified name via the Nanoflow ByNameRef property.
-// Returns "" if the map is not a NanoflowSource or has no nanoflow set.
-func decodeNanoflowQNFromSource(ds map[string]any) string {
-	raw, err := bson.Marshal(ds)
-	if err != nil {
-		return ""
-	}
-	elem, err := codec.NewDecoder(codec.DefaultRegistry).Decode(bson.Raw(raw))
-	if err != nil {
-		return ""
-	}
-	ns, ok := elem.(*genPg.NanoflowSource)
-	if !ok || ns == nil {
-		return ""
-	}
-	return ns.NanoflowQualifiedName()
-}
 
 // buildPropertyTypeKeyMap builds a map from PropertyType $ID to PropertyKey for a CustomWidget.
 // This resolves TypePointer references in Object.Properties back to their property names.
@@ -254,11 +209,11 @@ func extractDataGrid2DataSource(ctx *ExecContext, w map[string]any) *rawDataSour
 				return result
 			}
 		case "Forms$MicroflowSource":
-			if mf := decodeMicroflowQNFromSource(ds); mf != "" {
+			if mf := genPg.DecodeMicroflowQNFromDataSource(ds); mf != "" {
 				return &rawDataSource{Type: "microflow", Reference: mf}
 			}
 		case "Forms$NanoflowSource":
-			if nf := decodeNanoflowQNFromSource(ds); nf != "" {
+			if nf := genPg.DecodeNanoflowQNFromDataSource(ds); nf != "" {
 				return &rawDataSource{Type: "nanoflow", Reference: nf}
 			}
 		case "Forms$EntityPathSource", "Forms$DataViewSource":
@@ -674,7 +629,7 @@ func extractGalleryDataSource(ctx *ExecContext, w map[string]any) *rawDataSource
 			return result
 		}
 	case "Forms$MicroflowSource":
-		if mf := decodeMicroflowQNFromSource(ds); mf != "" {
+		if mf := genPg.DecodeMicroflowQNFromDataSource(ds); mf != "" {
 			return &rawDataSource{Type: "microflow", Reference: mf}
 		}
 	case "Forms$EntityPathSource", "Forms$DataViewSource":
@@ -720,11 +675,11 @@ func parseCustomWidgetDataSource(ctx *ExecContext, ds map[string]any) *rawDataSo
 		}
 		return result
 	case "Forms$MicroflowSource":
-		if mf := decodeMicroflowQNFromSource(ds); mf != "" {
+		if mf := genPg.DecodeMicroflowQNFromDataSource(ds); mf != "" {
 			return &rawDataSource{Type: "microflow", Reference: mf}
 		}
 	case "Forms$NanoflowSource":
-		if nf := decodeNanoflowQNFromSource(ds); nf != "" {
+		if nf := genPg.DecodeNanoflowQNFromDataSource(ds); nf != "" {
 			return &rawDataSource{Type: "nanoflow", Reference: nf}
 		}
 	case "CustomWidgets$CustomWidgetNanoflowSource":

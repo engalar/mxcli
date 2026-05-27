@@ -248,7 +248,7 @@ func TestExtractListViewDataSource_MicroflowSource(t *testing.T) {
 			},
 		},
 	}
-	ctx := &ExecContext{}
+	ctx := newPageDecodeCtx()
 
 	got := extractListViewDataSource(ctx, w)
 
@@ -277,7 +277,7 @@ func TestExtractDataViewDataSource_MicroflowSource(t *testing.T) {
 			},
 		},
 	}
-	ctx := &ExecContext{}
+	ctx := newPageDecodeCtx()
 
 	got := extractDataViewDataSource(ctx, w)
 

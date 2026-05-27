@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
 
 // parseRawWidget parses a raw widget map into rawWidget structs.
@@ -522,11 +523,11 @@ func extractDataViewDataSource(ctx *ExecContext, w map[string]any) *rawDataSourc
 
 	switch dsType {
 	case "Forms$MicroflowSource":
-		if mf := decodeMicroflowQNFromSource(ds); mf != "" {
+		if mf := genPg.DecodeMicroflowQNFromDataSource(ds); mf != "" {
 			return &rawDataSource{Type: "microflow", Reference: mf}
 		}
 	case "Forms$NanoflowSource":
-		if nf := decodeNanoflowQNFromSource(ds); nf != "" {
+		if nf := genPg.DecodeNanoflowQNFromDataSource(ds); nf != "" {
 			return &rawDataSource{Type: "nanoflow", Reference: nf}
 		}
 	case "Forms$DataViewSource":
@@ -767,11 +768,11 @@ func extractListViewDataSource(ctx *ExecContext, w map[string]any) *rawDataSourc
 			return result
 		}
 	case "Forms$MicroflowSource":
-		if mf := decodeMicroflowQNFromSource(ds); mf != "" {
+		if mf := genPg.DecodeMicroflowQNFromDataSource(ds); mf != "" {
 			return &rawDataSource{Type: "microflow", Reference: mf}
 		}
 	case "Forms$NanoflowSource":
-		if nf := decodeNanoflowQNFromSource(ds); nf != "" {
+		if nf := genPg.DecodeNanoflowQNFromDataSource(ds); nf != "" {
 			return &rawDataSource{Type: "nanoflow", Reference: nf}
 		}
 	}

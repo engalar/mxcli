@@ -9,11 +9,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // mdlQuote wraps a string in single quotes and escapes MDL-sensitive characters.
@@ -914,14 +910,9 @@ func extractButtonStyle(ctx *ExecContext, w map[string]any) string {
 }
 
 func extractButtonAction(ctx *ExecContext, w map[string]any) string {
-	action, ok := w["Action"].(map[string]any)
+	action, ok := genPg.WidgetActionMap(w)
 	if !ok {
-		// Try primitive.M type
-		if actionM, okM := w["Action"].(primitive.M); okM {
-			action = map[string]any(actionM)
-		} else {
-			return ""
-		}
+		return ""
 	}
 	typeName, _ := action["$Type"].(string)
 	switch typeName {
@@ -1000,7 +991,7 @@ func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 		return "show_page"
 	case "Forms$MicroflowAction", "Forms$MicroflowClientAction", "Pages$MicroflowClientAction":
 		// Decode using gen types — no raw map field access.
-		if mf := decodeMicroflowClientAction(action); mf != nil {
+		if mf := genPg.DecodeMicroflowClientAction(action); mf != nil {
 			result := formatPageMicroflowActionGen(mf)
 			// ClosePage is not in the gen type (it's raw-injected), so check the raw map.
 			if closePage, ok := action["ClosePage"].(bool); ok && closePage {
@@ -1312,22 +1303,6 @@ func extractClientTemplateParameters(ctx *ExecContext, w map[string]any, fieldNa
 
 func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 	outputWidgetMDLV3(e.newExecContext(context.Background()), w, indent)
-}
-
-// decodeMicroflowClientAction marshals a raw BSON map back to bytes and
-// decodes it via the gen-type registry, returning the typed value or nil.
-func decodeMicroflowClientAction(action map[string]any) *genPg.MicroflowClientAction {
-	raw, err := bson.Marshal(action)
-	if err != nil {
-		return nil
-	}
-	dec := codec.NewDecoder(codec.DefaultRegistry)
-	elem, err := dec.Decode(bson.Raw(raw))
-	if err != nil {
-		return nil
-	}
-	mca, _ := elem.(*genPg.MicroflowClientAction)
-	return mca
 }
 
 // formatPageMicroflowActionGen formats a MicroflowClientAction using the gen
