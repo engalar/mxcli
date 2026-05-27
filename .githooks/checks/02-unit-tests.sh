@@ -9,6 +9,8 @@ if ! CGO_ENABLED=0 go test -timeout 120s ./... > "$LOG_FILE" 2>&1; then
     echo "COMMIT BLOCKED: unit tests failed." >&2
     echo "" >&2
     cat "$LOG_FILE" >&2
+    echo "SOP: .githooks/sop/02-unit-tests.md" >&2
+    echo "CONTEXT: LOG_FILE=${LOG_FILE}" >&2
     exit 1
 fi
 

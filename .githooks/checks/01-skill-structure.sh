@@ -16,5 +16,7 @@ if [ -n "$invalid" ]; then
     echo "Skills must use folder/SKILL.md format, not loose .md files." >&2
     printf "%b\n" "$invalid" >&2
     echo "Fix: mkdir .claude/skills/<name> && mv <file>.md .claude/skills/<name>/SKILL.md" >&2
+    echo "SOP: .githooks/sop/01-skill-structure.md" >&2
+    echo "CONTEXT: INVALID_FILES=$(printf '%s' "$invalid" | tr '\n' ' ')" >&2
     exit 1
 fi
