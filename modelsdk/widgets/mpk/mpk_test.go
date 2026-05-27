@@ -15,6 +15,9 @@ func findTestMPK(t *testing.T) string {
 	candidates := []string{
 		filepath.Join("..", "..", "..", "mx-test-projects", "template-app-116", "widgets", "com.mendix.widget.web.Combobox.mpk"),
 		filepath.Join("..", "..", "..", "mx-test-projects", "LatoProductInventory", "widgets", "com.mendix.widget.web.Combobox.mpk"),
+		filepath.Join("..", "..", "..", "testdata", "helpdesk-golden", "widgets", "com.mendix.widget.web.Combobox.mpk"),
+		filepath.Join("..", "..", "..", "testdata", "helpdesk-golden-clean", "widgets", "com.mendix.widget.web.Combobox.mpk"),
+		filepath.Join("..", "..", "..", "testdata", "expr-checker", "widgets", "com.mendix.widget.web.Combobox.mpk"),
 	}
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {
@@ -30,6 +33,8 @@ func findTestProjectDir(t *testing.T) string {
 	candidates := []string{
 		filepath.Join("..", "..", "..", "mx-test-projects", "template-app-116"),
 		filepath.Join("..", "..", "..", "mx-test-projects", "LatoProductInventory"),
+		filepath.Join("..", "..", "..", "testdata", "helpdesk-golden"),
+		filepath.Join("..", "..", "..", "testdata", "helpdesk-golden-clean"),
 	}
 	for _, c := range candidates {
 		widgetsDir := filepath.Join(c, "widgets")

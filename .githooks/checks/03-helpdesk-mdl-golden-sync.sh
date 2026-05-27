@@ -22,6 +22,7 @@ MDL_PATH="mdl-examples/use-cases/helpdesk/helpdesk-app.mdl"
 
 staged_trigger=$(git diff --cached --name-only | grep -E \
   "^${MDL_PATH}\$|^modelsdk/gen/microflows/types\\.go\$|^mdl/backend/mpr/|^mdl/executor/flowbuilder_actions_retrieve_gen\\.go\$" \
+  | grep -v '_test\.go$' \
   | head -1)
 
 staged_golden=$(git diff --cached --name-only | \

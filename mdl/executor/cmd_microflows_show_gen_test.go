@@ -73,6 +73,7 @@ func newGenDescribeContext(t *testing.T, w *mmpr.Writer) *ExecContext {
 	return &ExecContext{
 		Backend:    be,
 		Microflows: repoCtx.Microflows,
+		Nanoflows:  repoCtx.Nanoflows,
 		Output:     io.Discard,
 	}
 }

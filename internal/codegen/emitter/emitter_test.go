@@ -11,12 +11,17 @@ import (
 	"github.com/mendixlabs/mxcli/internal/codegen/dtsparser"
 )
 
-const domainmodelsJS = "../../.." + "/reference/mendixmodelsdk/src/gen/domainmodels.js"
+func findDomainModelsJS(t *testing.T) string {
+	t.Helper()
+	p := "../../.." + "/node_modules/mendixmodelsdk/src/gen/domainmodels.js"
+	if _, err := os.Stat(p); err != nil {
+		t.Skip("mendixmodelsdk not available — run: npm install")
+	}
+	return p
+}
 
 func TestGenerateDomainModels(t *testing.T) {
-	if _, err := os.Stat(domainmodelsJS); os.IsNotExist(err) {
-		t.Skip("reference/mendixmodelsdk not available")
-	}
+	domainmodelsJS := findDomainModelsJS(t)
 	// Parse the real domainmodels.js file.
 	meta, err := dtsparser.ParseJsFile(domainmodelsJS)
 	if err != nil {
@@ -348,9 +353,7 @@ func TestDisambiguateReservedNames(t *testing.T) {
 }
 
 func TestGeneratedCodeParses(t *testing.T) {
-	if _, err := os.Stat(domainmodelsJS); os.IsNotExist(err) {
-		t.Skip("reference/mendixmodelsdk not available")
-	}
+	domainmodelsJS := findDomainModelsJS(t)
 	// Generate code from the real domainmodels.js and verify all generated
 	// files are valid Go source (parseable by go/parser).
 	meta, err := dtsparser.ParseJsFile(domainmodelsJS)

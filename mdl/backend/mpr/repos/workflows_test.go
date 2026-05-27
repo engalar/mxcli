@@ -25,7 +25,6 @@ func TestWorkflowRepo_List_NoFixture(t *testing.T) {
 	if len(got) != 0 {
 		t.Errorf("List on workflow-less fixture: got %d, want 0", len(got))
 	}
-	t.Skip("no Workflow fixture units — Get round-trip will land with fixture upgrade")
 }
 
 func TestWorkflowRepo_Get_NotFound(t *testing.T) {

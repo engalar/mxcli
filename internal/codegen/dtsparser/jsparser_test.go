@@ -2,16 +2,12 @@ package dtsparser
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 )
 
 func TestParseJsDomainModels(t *testing.T) {
-	jsPath := "../../../reference/mendixmodelsdk/src/gen/domainmodels.js"
-	if _, err := os.Stat(jsPath); os.IsNotExist(err) {
-		t.Skip("reference/mendixmodelsdk not available — run: npm install mendixmodelsdk --prefix reference/mendixmodelsdk")
-	}
+	jsPath := findMendixModelSDKGenDir(t) + "/domainmodels.js"
 	meta, err := ParseJsFile(jsPath)
 	if err != nil {
 		t.Fatalf("ParseJsFile: %v", err)
@@ -341,10 +337,7 @@ func TestParseJsDomainModels(t *testing.T) {
 }
 
 func TestParseJsAllDomains(t *testing.T) {
-	genDir := "../../../reference/mendixmodelsdk/src/gen"
-	if _, err := os.Stat(genDir); os.IsNotExist(err) {
-		t.Skip("reference/mendixmodelsdk not available")
-	}
+	genDir := findMendixModelSDKGenDir(t)
 	domains, err := ParseAllDomains(genDir)
 	if err != nil {
 		t.Fatalf("ParseAllDomains: %v", err)

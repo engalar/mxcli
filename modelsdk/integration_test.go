@@ -25,6 +25,8 @@ func findTestMPR(t *testing.T) string {
 		"reference/test-projects/*/app.mpr",
 		"mx-test-projects/*/app.mpr",
 		"mx-test-projects/*/*.mpr",
+		"testdata/corpus-a/app.mpr",
+		"testdata/*/app.mpr",
 	}
 	// All patterns are relative to the repo root. The test binary runs in the
 	// package directory (modelsdk/), so we go one level up.

@@ -9,10 +9,7 @@ import (
 )
 
 func TestParseAllDomains(t *testing.T) {
-	genDir := "../../../reference/mendixmodelsdk/src/gen"
-	if _, err := os.Stat(genDir); os.IsNotExist(err) {
-		t.Skip("reference/mendixmodelsdk not available")
-	}
+	genDir := findMendixModelSDKGenDir(t)
 
 	// Collect all enums across modules
 	allEnums := collectCrossModuleEnums(genDir)

@@ -14,10 +14,27 @@ func NewParser() Parser { return &parserImpl{} }
 
 func (p *parserImpl) Parse(src string, ctx Context) (RobustExpr, []Hint) {
 	s := NewStream(Lex(src))
-	var hints []Hint
-	expr, h := parseOr(s, ctx)
-	hints = append(hints, h...)
-	return expr, hints
+	expr, hs := parseOr(s, ctx)
+	// Detect unconsumed trailing tokens (e.g. "emptyor" parsed as a variable,
+	// leaving "$X = ''" silently abandoned). This indicates a structural parse
+	// error — most commonly a keyword glued to an adjacent token without whitespace.
+	// TokError tokens (unrecognised characters such as ':') are excluded: the
+	// parser's E007 recovery already handles them inline; re-reporting them here
+	// would produce false positives for valid expressions that use characters
+	// the lexer does not model (e.g. "$Total : $Count" with Mendix ':' division).
+	if t := s.Peek(); t.Kind != TokEOF && t.Kind != TokError {
+		hs = append(hs, hints.Hint{
+			Severity: hints.SeverityError,
+			Where: hints.Location{
+				Line:   t.Pos.Line,
+				Column: t.Pos.Column,
+			},
+			YouWrote: t.Text,
+			Problem:  "Unexpected token after expression — the expression appears incomplete or malformed (possible missing space between keywords).",
+			Fix:      "Check for glued keywords such as 'emptyor' (should be 'empty or') or 'andtrue' (should be 'and true').",
+		})
+	}
+	return expr, hs
 }
 
 func parseOr(s *Stream, ctx Context) (RobustExpr, []Hint) {

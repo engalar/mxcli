@@ -403,12 +403,9 @@ func parseStructureTypeNames(jsContent string) map[string]string {
 }
 
 func TestParseDomainModelsDts(t *testing.T) {
-	genDir := "../../../reference/mendixmodelsdk/src/gen"
+	genDir := findMendixModelSDKGenDir(t)
 	dtsPath := genDir + "/domainmodels.d.ts"
 	jsPath := genDir + "/domainmodels.js"
-	if _, err := os.Stat(dtsPath); os.IsNotExist(err) {
-		t.Skip("reference/mendixmodelsdk not available")
-	}
 
 	dtsData, err := os.ReadFile(dtsPath)
 	if err != nil {
@@ -420,7 +417,7 @@ func TestParseDomainModelsDts(t *testing.T) {
 	}
 
 	// Collect enums from all modules for cross-module enum detection
-	allEnums := collectCrossModuleEnums("../../../reference/mendixmodelsdk/src/gen")
+	allEnums := collectCrossModuleEnums(genDir)
 
 	classes, enums := parseDtsFileWithEnums(string(dtsData), allEnums)
 	structTypeNames := parseStructureTypeNames(string(jsData))
