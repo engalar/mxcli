@@ -28,8 +28,6 @@ func TestNoDirectBSONImportInExecutor(t *testing.T) {
 		"cmd_microflows_format_calls_gen.go":  true, // Task 2
 		"cmd_microflows_format_data_gen.go":   true, // Task 3
 		"cmd_microflows_format_external_gen.go": true, // Task 4
-		"cmd_workflows_gen.go":                true, // Task 5
-		"cmd_microflows_format_action_gen.go": true, // Task 6
 		"cmd_pages_describe_pluggable.go":     true, // Task 7
 		"cmd_pages_describe_output.go":        true, // Task 7
 		"cmd_javaactions_gen.go":              true, // Task 8

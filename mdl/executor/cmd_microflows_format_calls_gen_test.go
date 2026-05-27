@@ -529,12 +529,9 @@ func TestFormatCodeActionParameterValueGen_NilAndUnknown(t *testing.T) {
 }
 
 // TestFormatCodeActionParameterValueGen_ExpressionBasedFallback exercises
-// the codec fall-back path for ExpressionBasedCodeActionParameterValue:
-// the gen type is a stub with no Expression getter and no registered
-// factory, so a real BSON load lands the doc in *element.Base. We
-// simulate that here by hand-building a Base with a raw doc carrying
-// `$Type=Microflows$ExpressionBasedCodeActionParameterValue` and an
-// `Expression` field, then verifying the formatter pulls the expression.
+// the typed path for ExpressionBasedCodeActionParameterValue: the gen
+// type is registered via supplement, so a real BSON load decodes into
+// the typed struct whose Expression() reads the field from raw BSON.
 func TestFormatCodeActionParameterValueGen_ExpressionBasedFallback(t *testing.T) {
 	v := newExpressionBasedParameterValue(t, "$x + 1")
 	got := formatCodeActionParameterValueGen(v, true)
@@ -567,11 +564,11 @@ func TestFormatCodeActionParameterValueGen_AllowMicroflowParamGate(t *testing.T)
 // Helpers (Stage 3.2.2.d-only)
 // ────────────────────────────────────────────────────────
 
-// newExpressionBasedParameterValue builds an *element.Base whose raw
-// BSON is the legacy on-disk shape for
-// `Microflows$ExpressionBasedCodeActionParameterValue`. Used by the
-// fall-back-path tests because the gen type is a stub today (no
-// registered factory, no Expression getter).
+// newExpressionBasedParameterValue builds a typed
+// `*genMf.ExpressionBasedCodeActionParameterValue` whose raw BSON
+// carries the on-disk shape. The gen type is registered via a
+// supplement and exposes `Expression()` that reads the field from
+// raw BSON on demand.
 func newExpressionBasedParameterValue(t *testing.T, expr string) element.Element {
 	t.Helper()
 	raw, err := bson.Marshal(bson.D{
@@ -581,8 +578,8 @@ func newExpressionBasedParameterValue(t *testing.T, expr string) element.Element
 	if err != nil {
 		t.Fatalf("bson.Marshal: %v", err)
 	}
-	b := &element.Base{}
-	b.SetTypeName("Microflows$ExpressionBasedCodeActionParameterValue")
-	b.SetRaw(raw)
-	return b
+	v := &genMf.ExpressionBasedCodeActionParameterValue{}
+	v.SetTypeName("Microflows$ExpressionBasedCodeActionParameterValue")
+	v.SetRaw(raw)
+	return v
 }

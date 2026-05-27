@@ -11,7 +11,7 @@
 //
 //   - SystemTask: gen has no narrow SystemTask type. The $Type
 //     "Workflows$SystemTask" is read via element.Element.Raw() with
-//     codec.ReadBSONFieldString fallbacks for the legacy fields.
+//     genWf.RawFieldString fallbacks for the legacy fields.
 //   - UserTask family: legacy sdk had a unified *UserTask. gen splits
 //     into *UserTask (legacy storage), *SingleUserTaskActivity,
 //     *MultiUserTaskActivity. The dispatcher handles all three.
@@ -32,7 +32,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
@@ -107,8 +106,7 @@ func workflowParameterEntityGen(wf *genWf.Workflow) string {
 	}
 	// Defensive fallback: read raw BSON field if the Part decoded to a
 	// non-narrow type.
-	v, _ := codec.ReadBSONFieldString(param.Raw(), "Entity")
-	return v
+	return genWf.RawFieldString(param.Raw(), "Entity")
 }
 
 // countWorkflowActivitiesGen counts total activities, user tasks, and
@@ -357,8 +355,7 @@ func workflowAnnotationStringGen(wf *genWf.Workflow) string {
 	if anno, ok := a.(*genWf.Annotation); ok {
 		return anno.Description()
 	}
-	v, _ := codec.ReadBSONFieldString(a.Raw(), "Description")
-	return v
+	return genWf.RawFieldString(a.Raw(), "Description")
 }
 
 // readTextElementGen extracts the inner Text scalar from a Texts$Text
@@ -372,7 +369,7 @@ func readTextElementGen(elem element.Element) string {
 		return ""
 	}
 	for _, field := range []string{"Text", "Translation", "Value"} {
-		if v, _ := codec.ReadBSONFieldString(elem.Raw(), field); v != "" {
+		if v := genWf.RawFieldString(elem.Raw(), field); v != "" {
 			return v
 		}
 	}
@@ -390,7 +387,7 @@ func formatAnnotationGen(elem element.Element, indent string) string {
 	if a, ok := elem.(*genWf.Annotation); ok {
 		desc = a.Description()
 	} else {
-		desc, _ = codec.ReadBSONFieldString(elem.Raw(), "Description")
+		desc = genWf.RawFieldString(elem.Raw(), "Description")
 	}
 	if desc == "" {
 		return ""
@@ -464,7 +461,7 @@ func boundaryEventDelayGen(ev element.Element) string {
 	}
 	// Fallback: check all known field names in the raw BSON.
 	for _, key := range []string{"Delay", "FirstExecutionTime", "TimerDelay"} {
-		if v, _ := codec.ReadBSONFieldString(ev.Raw(), key); v != "" {
+		if v := genWf.RawFieldString(ev.Raw(), key); v != "" {
 			return v
 		}
 	}
@@ -1054,7 +1051,7 @@ func conditionOutcomeNameFlowGen(oc element.Element) (string, *genWf.Flow) {
 		return "default", f
 	case *genWf.ExclusiveSplitOutcome:
 		// Generic outcome — read raw BSON for the value caption.
-		val, _ := codec.ReadBSONFieldString(v.Raw(), "Value")
+		val := genWf.ExclusiveSplitOutcomeValue(v)
 		f, _ := v.Flow().(*genWf.Flow)
 		return val, f
 	}
@@ -1068,10 +1065,10 @@ func formatSystemTaskGen(elem element.Element, indent string) []string {
 		return nil
 	}
 	raw := elem.Raw()
-	annotation, _ := codec.ReadBSONFieldString(raw, "Annotation")
-	name, _ := codec.ReadBSONFieldString(raw, "Name")
-	caption, _ := codec.ReadBSONFieldString(raw, "Caption")
-	mf, _ := codec.ReadBSONFieldString(raw, "Microflow")
+	annotation := genWf.RawFieldString(raw, "Annotation")
+	name := genWf.RawFieldString(raw, "Name")
+	caption := genWf.RawFieldString(raw, "Caption")
+	mf := genWf.RawFieldString(raw, "Microflow")
 
 	var lines []string
 	if annotation != "" {
@@ -1106,7 +1103,7 @@ func formatStandaloneAnnotationGen(elem element.Element, indent string) string {
 	case *genWf.FloatingAnnotation:
 		desc = v.Description()
 	default:
-		desc, _ = codec.ReadBSONFieldString(elem.Raw(), "Description")
+		desc = genWf.RawFieldString(elem.Raw(), "Description")
 	}
 	if desc == "" {
 		return ""

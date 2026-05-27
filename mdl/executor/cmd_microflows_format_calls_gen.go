@@ -26,7 +26,7 @@
 //   | *genMf.MicroflowParameterValue             | Microflows$MicroflowParameterValue               | `'<microflow QN>'` or `empty`      |
 //   | *genMf.EntityTypeCodeActionParameterValue  | Microflows$EntityTypeCodeActionParameterValue    | `'<entity QN>'`                    |
 //
-// Two notable BSON discrepancies between gen and legacy preserved here:
+// One notable BSON discrepancy between gen and legacy preserved here:
 //
 //  1. `MicroflowCallAction` and `JavaActionCallAction` legacy parsers
 //     read the result variable from BSON key `ResultVariableName`,
@@ -34,14 +34,6 @@
 //     Real-world MPRs carry both during the deprecation overlap; gen
 //     wins for Stage 3.2.2.d. Tests use the typed setters so this is
 //     transparent.
-//
-//  2. `ExpressionBasedCodeActionParameterValue` is a typed-but-not-
-//     registered gen stub (no factory in DefaultRegistry, no Expression
-//     getter). When it appears in a real MPR the codec falls back to
-//     `*element.Base` carrying the raw doc, and the formatter pulls
-//     the `Expression` field directly via `codec.ReadBSONFieldString`.
-//     A type-switch case on `*genMf.ExpressionBasedCodeActionParameterValue`
-//     is included for future-proofing once the type is registered.
 //
 // All output strings are 1:1 with the legacy formatters so the
 // migrated body diff against the SDK path stays empty.
@@ -52,7 +44,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
@@ -232,13 +223,9 @@ func formatJavaScriptActionCallActionGen(a *genMf.JavaScriptActionCallAction) st
 // drop mappings whose rendered value is empty (mirrors legacy's
 // `if valueStr != ""` guard before appending to the slice).
 //
-// ExpressionBasedCodeActionParameterValue handling: the gen type is a
-// stub with no Expression getter, so a real BSON document for that
-// `$Type` decodes into `*element.Base`. We detect that fallback by
-// the type name on the element and read `Expression` directly from
-// the raw BSON. The typed `*genMf.ExpressionBasedCodeActionParameterValue`
-// case is included so the formatter is forwards-compatible if codegen
-// later registers a real factory.
+// ExpressionBasedCodeActionParameterValue is registered in the
+// microflows gen package supplement, which also exposes an Expression()
+// getter that pulls the field from raw BSON on demand.
 func formatCodeActionParameterValueGen(v element.Element, allowMicroflowParam bool) string {
 	if v == nil {
 		return ""
@@ -250,14 +237,7 @@ func formatCodeActionParameterValueGen(v element.Element, allowMicroflowParam bo
 		}
 		return ""
 	case *genMf.ExpressionBasedCodeActionParameterValue:
-		// Future-proof case: today the codec falls back to *element.Base
-		// because no factory is registered for this $Type. When that
-		// changes, read the Expression from the raw BSON since the gen
-		// type currently exposes no getter.
-		if expr, err := codec.ReadBSONFieldString(t.Raw(), "Expression"); err == nil {
-			return expr
-		}
-		return ""
+		return t.Expression()
 	case *genMf.BasicCodeActionParameterValue:
 		if t.Argument() == "" {
 			if allowMicroflowParam {
@@ -281,16 +261,6 @@ func formatCodeActionParameterValueGen(v element.Element, allowMicroflowParam bo
 	case *genMf.EntityTypeCodeActionParameterValue:
 		if qn := t.EntityQualifiedName(); qn != "" {
 			return mdlQuote(qn)
-		}
-		return ""
-	case *element.Base:
-		// Codec fall-back path: $Type was unregistered. Today this is
-		// the *only* way an ExpressionBasedCodeActionParameterValue
-		// reaches this helper from a real BSON load.
-		if t.TypeName() == "Microflows$ExpressionBasedCodeActionParameterValue" {
-			if expr, err := codec.ReadBSONFieldString(t.Raw(), "Expression"); err == nil {
-				return expr
-			}
 		}
 		return ""
 	default:

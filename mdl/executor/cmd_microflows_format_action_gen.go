@@ -88,8 +88,6 @@ import (
 	"fmt"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDC "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
 	genDM "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -791,34 +789,16 @@ type translationPair struct {
 }
 
 // readTextItemsFromRaw decodes the "Items" array of a Texts$Text raw
-// BSON document. The array is a versioned BSON array
-// `[<int32 version>, <doc>, <doc>, …]`; each `<doc>` is a
-// Texts$Translation with LanguageCode + Text string fields.
+// BSON document via the gen/texts supplement and adapts each pair to
+// the executor's internal translationPair shape.
 func readTextItemsFromRaw(raw []byte) []translationPair {
-	if len(raw) == 0 {
+	pairs := genTx.ReadTranslationPairs(raw)
+	if len(pairs) == 0 {
 		return nil
 	}
-	var doc bson.M
-	if err := bson.Unmarshal(raw, &doc); err != nil {
-		return nil
-	}
-	itemsRaw, ok := doc["Items"]
-	if !ok {
-		return nil
-	}
-	arr, ok := itemsRaw.(bson.A)
-	if !ok {
-		return nil
-	}
-	var out []translationPair
-	for _, item := range arr {
-		m, ok := item.(bson.M)
-		if !ok {
-			continue
-		}
-		lang, _ := m["LanguageCode"].(string)
-		text, _ := m["Text"].(string)
-		out = append(out, translationPair{lang: lang, text: text})
+	out := make([]translationPair, 0, len(pairs))
+	for _, p := range pairs {
+		out = append(out, translationPair{lang: p.LanguageCode, text: p.Text})
 	}
 	return out
 }

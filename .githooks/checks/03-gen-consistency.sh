@@ -5,7 +5,9 @@
 GEN_DIR="modelsdk/gen"
 CODEGEN_DIRS="internal/codegen cmd/modelsdk-codegen"
 
-gen_staged=$(git diff --cached --name-only | grep -c "^${GEN_DIR}/" || true)
+# Supplement files (supplement_*.go / supplement_*_test.go) are intentional
+# hand-written additions to the gen package and are exempt from this check.
+gen_staged=$(git diff --cached --name-only | grep "^${GEN_DIR}/" | grep -v "/supplement_" | wc -l || true)
 if [ "$gen_staged" -eq 0 ]; then
     exit 0
 fi
