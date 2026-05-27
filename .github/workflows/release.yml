@@ -19,8 +19,6 @@ jobs:
         with:
           go-version: '1.26'
       - uses: oven-sh/setup-bun@v2
-      - name: Install zstd
-        run: sudo apt-get update && sudo apt-get install -y zstd
       - name: Cache ANTLR4 JAR
         uses: actions/cache@v5
         with:
@@ -32,20 +30,18 @@ jobs:
         run: make grammar
         env:
           ANTLR4_TOOLS_ANTLR_VERSION: '4.13.2'
+      - name: Install zstd
+        run: sudo apt-get install -y zstd
+
       - name: Build release binaries
         run: make release
-      - name: Generate SHA256SUMS
-        working-directory: bin
+
+      - name: Generate SHA256 checksums
         run: |
-          shopt -s nullglob
-          files=( mxcli-linux-* mxcli-darwin-* mxcli-windows-*.exe \
-                  mxcli-daemon-*.tar.zst mxcli-daemon-*.zip )
-          # Skip raw daemon binaries — only the compressed artifacts ship.
-          sha256sum "${files[@]}" > SHA256SUMS
+          cd bin
+          sha256sum mxcli-* mxcli-daemon-* > SHA256SUMS
           cat SHA256SUMS
-        shell: bash
-      - name: Stage install scripts
-        run: cp install.sh install.ps1 bin/
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
@@ -64,5 +60,5 @@ jobs:
             bin/mxcli-daemon-windows-amd64.exe.zip
             bin/mxcli-daemon-windows-arm64.exe.zip
             bin/SHA256SUMS
-            bin/install.sh
-            bin/install.ps1
+            install.sh
+            install.ps1
