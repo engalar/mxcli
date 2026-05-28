@@ -131,7 +131,7 @@ build: sync-all
 # Compress a single daemon binary: make compress-daemon BIN=bin/mxcli-daemon-linux-amd64
 compress-daemon:
 	@command -v zstd >/dev/null || (echo "zstd not found; install it first" && exit 1)
-	zstd --best -f "$(BIN)" -o "$(BIN).tar.zst"
+	zstd -19 -f "$(BIN)" -o "$(BIN).tar.zst"
 	@echo "Compressed: $(BIN).tar.zst"
 
 # Build with debug tools (includes bson discover/compare/dump)
@@ -166,7 +166,7 @@ release: clean sync-all
 	@echo "  -> Compressing daemon binaries (requires zstd)"
 	@for f in $(BUILD_DIR)/$(DAEMON_NAME)-linux-* $(BUILD_DIR)/$(DAEMON_NAME)-darwin-*; do \
 		echo "    $$f -> $$f.tar.zst"; \
-		tar -cf - -C $(BUILD_DIR) $$(basename $$f) | zstd --best -f -o $$f.tar.zst; \
+		tar -cf - -C $(BUILD_DIR) $$(basename $$f) | zstd -19 -f -o $$f.tar.zst; \
 	done
 	@for f in $(BUILD_DIR)/$(DAEMON_NAME)-windows-*.exe; do \
 		echo "    $$f -> $$f.zip"; \
