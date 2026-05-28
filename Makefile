@@ -214,8 +214,10 @@ report:
 #             causes go test to write only partial coverage data.
 bench-baseline:
 	@mkdir -p coverage
-	@echo "Recording benchmark baseline (count=3, cpu≤85%)..."
-	$(_CPU_RUNNER) go test -bench=. -benchmem -count=3 \
+	@echo "Recording benchmark baseline (count=5, nice -n 15)..."
+	@# Benchmarks run WITHOUT cpulimit: SIGSTOP/SIGCONT skews clock-based
+	@# timing by 30-40%. nice -n 15 lowers priority without affecting the clock.
+	nice -n 15 go test -bench=. -benchmem -count=5 \
 		-p $(_85PCT) ./... 2>/dev/null | grep -v "^---" > coverage/bench-baseline.txt
 	@echo "Recording coverage baseline..."
 	nice -n 15 go test -timeout 300s \
