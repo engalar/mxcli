@@ -60,7 +60,8 @@ func TestFetchTagFromURL(t *testing.T) {
 		w.Write([]byte(`{"tag_name":"v1.2.3","name":"Release v1.2.3"}`))
 	}))
 	defer srv.Close()
-	tag, err := fetchTagFromURL(srv.URL)
+	e := &Env{HTTPClient: srv.Client()}
+	tag, err := e.fetchTagFromURL(srv.URL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

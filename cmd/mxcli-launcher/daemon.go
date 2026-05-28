@@ -29,9 +29,6 @@ const (
 	daemonTimeout = 10 * time.Second
 )
 
-var httpClient = &http.Client{Timeout: 30 * time.Second}
-
-// isDaemonRunning returns true if the unix socket exists and accepts connections.
 func isDaemonRunning(sockPath string) bool {
 	conn, err := net.DialTimeout("unix", sockPath, 500*time.Millisecond)
 	if err != nil {
@@ -41,14 +38,11 @@ func isDaemonRunning(sockPath string) bool {
 	return true
 }
 
-// daemonBinaryExists reports whether the daemon binary file exists.
 func daemonBinaryExists(binPath string) bool {
 	info, err := os.Stat(binPath)
 	return err == nil && !info.IsDir()
 }
 
-// readVersionFile reads a one-line version string from path, trimming whitespace.
-// Returns "" if the file cannot be read.
 func readVersionFile(path string) string {
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -57,50 +51,45 @@ func readVersionFile(path string) string {
 	return strings.TrimSpace(string(b))
 }
 
-// ensureDaemon checks that the daemon binary exists (downloading if needed)
-// and that the daemon process is running (starting it if not).
-func ensureDaemon() error {
-	if err := os.MkdirAll(daemonDir(), 0755); err != nil {
+func (e *Env) ensureDaemon() error {
+	if err := os.MkdirAll(e.daemonDir(), 0755); err != nil {
 		return fmt.Errorf("create daemon dir: %w", err)
 	}
-	if !daemonBinaryExists(daemonBinaryPath()) {
+	if !daemonBinaryExists(e.daemonBinaryPath()) {
 		fmt.Fprintln(os.Stderr, "mxcli: daemon not found, downloading latest version...")
-		if err := downloadDaemon(daemonBinaryPath()); err != nil {
+		if err := e.downloadDaemon(e.daemonBinaryPath()); err != nil {
 			return fmt.Errorf("download daemon: %w", err)
 		}
 	}
-	if !isDaemonRunning(daemonSocketPath()) {
-		if err := startDaemon(); err != nil {
+	if !isDaemonRunning(e.daemonSocketPath()) {
+		if err := e.startDaemon(); err != nil {
 			return fmt.Errorf("start daemon: %w", err)
 		}
 	}
 	return nil
 }
 
-// startDaemon launches mxcli-daemon in the background and waits until its
-// socket is ready (up to daemonTimeout). Kills the process if it times out.
-func startDaemon() error {
-	cmd := exec.Command(daemonBinaryPath(), "--serve", daemonSocketPath())
+func (e *Env) startDaemon() error {
+	cmd := exec.Command(e.daemonBinaryPath(), "--serve", e.daemonSocketPath())
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	cmd.Stdin = nil
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("exec daemon: %w", err)
 	}
-	os.WriteFile(daemonPIDPath(), []byte(fmt.Sprintf("%d", cmd.Process.Pid)), 0644)
+	os.WriteFile(e.daemonPIDPath(), []byte(fmt.Sprintf("%d", cmd.Process.Pid)), 0644)
 	deadline := time.Now().Add(daemonTimeout)
 	for time.Now().Before(deadline) {
-		if isDaemonRunning(daemonSocketPath()) {
+		if isDaemonRunning(e.daemonSocketPath()) {
 			return nil
 		}
-		time.Sleep(50 * time.Millisecond) // intentional poll — waiting for socket bind
+		time.Sleep(50 * time.Millisecond)
 	}
 	cmd.Process.Kill()
 	return fmt.Errorf("daemon did not start within %v", daemonTimeout)
 }
 
-// healthCheck sends a health-check request to the daemon and returns its version.
-func healthCheck(sockPath string) (string, error) {
+func (e *Env) healthCheck(sockPath string) (string, error) {
 	conn, err := net.DialTimeout("unix", sockPath, 3*time.Second)
 	if err != nil {
 		return "", err
@@ -120,19 +109,15 @@ func healthCheck(sockPath string) (string, error) {
 	return frame.Version, nil
 }
 
-// downloadDaemon fetches the compressed daemon for the current platform and
-// decompresses it to destPath.
-func downloadDaemon(destPath string) error {
-	tag, err := fetchLatestTag()
+func (e *Env) downloadDaemon(destPath string) error {
+	tag, err := e.fetchLatestTag()
 	if err != nil {
 		return err
 	}
-	return downloadDaemonVersion(tag, destPath)
+	return e.downloadDaemonVersion(tag, destPath)
 }
 
-// downloadDaemonVersion downloads a specific tagged version of the daemon,
-// verifies its SHA256 checksum, and extracts the binary to destPath.
-func downloadDaemonVersion(tag, destPath string) error {
+func (e *Env) downloadDaemonVersion(tag, destPath string) error {
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
 
@@ -144,23 +129,22 @@ func downloadDaemonVersion(tag, destPath string) error {
 	}
 	assetName := fmt.Sprintf("mxcli-daemon-%s-%s%s", goos, goarch, archiveExt)
 
-	expectedHash, err := fetchAssetChecksum(tag, assetName)
+	expectedHash, err := e.fetchAssetChecksum(tag, assetName)
 	if err != nil {
 		return fmt.Errorf("fetch checksum: %w", err)
 	}
 
 	url := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", daemonRepo, tag, assetName)
 	fmt.Fprintf(os.Stderr, "  Downloading %s...\n", url)
-	resp, err := httpClient.Get(url)
+	resp, err := e.HTTPClient.Get(url)
 	if err != nil {
 		return fmt.Errorf("http get: %w", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("HTTP %d from %s", resp.StatusCode, url)
 	}
 
-	// Download archive to temp file while computing SHA256.
 	archiveTmp := destPath + ".archive-dl"
 	defer os.Remove(archiveTmp)
 
@@ -194,16 +178,14 @@ func downloadDaemonVersion(tag, destPath string) error {
 	return extractTarZst(ar, destPath, binaryName)
 }
 
-// fetchAssetChecksum downloads SHA256SUMS for the release and returns the
-// expected hex hash for assetName.
-func fetchAssetChecksum(tag, assetName string) (string, error) {
+func (e *Env) fetchAssetChecksum(tag, assetName string) (string, error) {
 	url := fmt.Sprintf("https://github.com/%s/releases/download/%s/SHA256SUMS", daemonRepo, tag)
-	resp, err := httpClient.Get(url)
+	resp, err := e.HTTPClient.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("fetch SHA256SUMS: %w", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("SHA256SUMS: HTTP %d", resp.StatusCode)
 	}
 	content, err := io.ReadAll(resp.Body)
@@ -213,9 +195,6 @@ func fetchAssetChecksum(tag, assetName string) (string, error) {
 	return parseChecksumFile(string(content), assetName)
 }
 
-// parseChecksumFile parses a SHA256SUMS file (sha256sum format) and returns
-// the hex hash for the given filename. Handles both plain and starred names
-// (e.g. "abc123 *file.zip" produced by some tools on Windows).
 func parseChecksumFile(content, filename string) (string, error) {
 	for _, line := range strings.Split(content, "\n") {
 		line = strings.TrimSpace(line)
@@ -234,8 +213,6 @@ func parseChecksumFile(content, filename string) (string, error) {
 	return "", fmt.Errorf("no checksum for %q in SHA256SUMS", filename)
 }
 
-// extractTarZst decompresses a .tar.zst stream and writes the entry named
-// expectedName to destPath with executable permissions.
 func extractTarZst(r io.Reader, destPath, expectedName string) error {
 	zr, err := zstd.NewReader(r)
 	if err != nil {
@@ -273,8 +250,6 @@ func extractTarZst(r io.Reader, destPath, expectedName string) error {
 	return fmt.Errorf("no file named %q found in archive", expectedName)
 }
 
-// extractZip extracts the entry named expectedName from the zip archive at
-// srcPath and writes it to destPath with executable permissions.
 func extractZip(srcPath, destPath, expectedName string) error {
 	zr, err := zip.OpenReader(srcPath)
 	if err != nil {
@@ -307,16 +282,13 @@ func extractZip(srcPath, destPath, expectedName string) error {
 	return fmt.Errorf("no file named %q found in zip archive", expectedName)
 }
 
-// fetchLatestTag queries the GitHub releases API for the latest tag.
-func fetchLatestTag() (string, error) {
+func (e *Env) fetchLatestTag() (string, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", daemonRepo)
-	return fetchTagFromURL(url)
+	return e.fetchTagFromURL(url)
 }
 
-// fetchTagFromURL fetches a GitHub releases JSON from url and extracts tag_name.
-// Separated from fetchLatestTag for testability.
-func fetchTagFromURL(url string) (string, error) {
-	resp, err := httpClient.Get(url)
+func (e *Env) fetchTagFromURL(url string) (string, error) {
+	resp, err := e.HTTPClient.Get(url)
 	if err != nil {
 		return "", err
 	}
@@ -333,8 +305,6 @@ func fetchTagFromURL(url string) (string, error) {
 	return result.TagName, nil
 }
 
-// killPIDFile reads pidPath, kills the process with that PID if valid, then
-// removes both the PID file and the socket file. Safe to call when files are absent.
 func killPIDFile(pidPath, sockPath string) {
 	b, err := os.ReadFile(pidPath)
 	if err != nil {
@@ -350,22 +320,19 @@ func killPIDFile(pidPath, sockPath string) {
 	os.Remove(sockPath)
 }
 
-// killRunningDaemon kills the daemon process recorded in the PID file and
-// removes the socket. Called before rollback to avoid leaving a stale daemon.
-func killRunningDaemon() {
-	killPIDFile(daemonPIDPath(), daemonSocketPath())
+func (e *Env) killRunningDaemon() {
+	killPIDFile(e.daemonPIDPath(), e.daemonSocketPath())
 }
 
-// rollback restores the daemon from .bak. Called on upgrade failure.
-func rollback() {
-	if !daemonBinaryExists(daemonBakPath()) {
+func (e *Env) rollback() {
+	if !daemonBinaryExists(e.daemonBakPath()) {
 		fmt.Fprintln(os.Stderr, "mxcli: no backup to restore")
 		return
 	}
-	killRunningDaemon()
-	os.Remove(daemonBinaryPath())
-	os.Rename(daemonBakPath(), daemonBinaryPath())
-	os.Rename(daemonVersionBakPath(), daemonVersionPath())
-	ver := readVersionFile(daemonVersionPath())
+	e.killRunningDaemon()
+	os.Remove(e.daemonBinaryPath())
+	os.Rename(e.daemonBakPath(), e.daemonBinaryPath())
+	os.Rename(e.daemonVersionBakPath(), e.daemonVersionPath())
+	ver := readVersionFile(e.daemonVersionPath())
 	fmt.Printf("Rolled back to %s\n", ver)
 }
