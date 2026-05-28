@@ -198,3 +198,136 @@ func TestBackgroundVersionCheck_SkipsWhenAlreadyLatest(t *testing.T) {
 		t.Error("update-available should not be written when already at latest")
 	}
 }
+
+// — Failure recovery tests —
+
+func TestDownloadDaemonVersion_CorruptBinary(t *testing.T) {
+	t.Parallel()
+	e, _ := newInstallEnv(t, &testfixtures.FakeGitHub{
+		LatestTag:     "v0.15.0",
+		CorruptBinary: true,
+	}, []byte("bin"))
+	writeFakeDaemon(t, e, "v0.14.0")
+
+	originalBin, _ := os.ReadFile(e.daemonBinaryPath())
+	originalVer := readVersionFile(e.daemonVersionPath())
+
+	tmpDest := e.daemonBinaryPath() + ".new"
+	err := e.downloadDaemonVersion("v0.15.0", tmpDest)
+	if err == nil {
+		t.Fatal("expected checksum error, got nil")
+	}
+	if !strings.Contains(err.Error(), "checksum mismatch") {
+		t.Errorf("error should mention checksum mismatch, got: %v", err)
+	}
+
+	// Original binary and version must be unchanged
+	gotBin, _ := os.ReadFile(e.daemonBinaryPath())
+	if string(gotBin) != string(originalBin) {
+		t.Error("original binary must be untouched after checksum failure")
+	}
+	if readVersionFile(e.daemonVersionPath()) != originalVer {
+		t.Error("original version must be untouched after checksum failure")
+	}
+	// Temp file must be cleaned up
+	if _, err := os.Stat(tmpDest); !os.IsNotExist(err) {
+		t.Error("temp download file should be removed after failure")
+	}
+}
+
+func TestDownloadDaemonVersion_DownloadTruncated(t *testing.T) {
+	t.Parallel()
+	// Use larger content so the resulting archive exceeds the cut threshold.
+	largeContent := make([]byte, 4096)
+	for i := range largeContent {
+		largeContent[i] = byte(i % 256)
+	}
+	e, _ := newInstallEnv(t, &testfixtures.FakeGitHub{
+		LatestTag:   "v0.15.0",
+		DownloadCut: 64,
+	}, largeContent)
+
+	tmpDest := e.daemonBinaryPath() + ".new"
+	err := e.downloadDaemonVersion("v0.15.0", tmpDest)
+	if err == nil {
+		t.Fatal("expected error on truncated download, got nil")
+	}
+	// Temp files cleaned up
+	if _, err2 := os.Stat(tmpDest); !os.IsNotExist(err2) {
+		t.Error("temp download file should be removed after truncation")
+	}
+	archiveTmp := tmpDest + ".archive-dl"
+	if _, err2 := os.Stat(archiveTmp); !os.IsNotExist(err2) {
+		t.Error("archive temp file should be removed after truncation")
+	}
+}
+
+func TestDownloadDaemonVersion_GitHub500(t *testing.T) {
+	t.Parallel()
+	e, _ := newInstallEnv(t, &testfixtures.FakeGitHub{
+		LatestTag:  "v0.15.0",
+		StatusCode: 500,
+	}, []byte("bin"))
+	writeFakeDaemon(t, e, "v0.14.0")
+
+	originalBin, _ := os.ReadFile(e.daemonBinaryPath())
+
+	tmpDest := e.daemonBinaryPath() + ".new"
+	err := e.downloadDaemonVersion("v0.15.0", tmpDest)
+	if err == nil {
+		t.Fatal("expected error on HTTP 500, got nil")
+	}
+
+	gotBin, _ := os.ReadFile(e.daemonBinaryPath())
+	if string(gotBin) != string(originalBin) {
+		t.Error("original binary must be untouched after HTTP 500")
+	}
+}
+
+func TestRollback_RestoresBakVersion(t *testing.T) {
+	t.Parallel()
+	e, _ := newInstallEnv(t, &testfixtures.FakeGitHub{LatestTag: "v0.15.0"}, []byte("bin"))
+
+	// Set up: current = v0.15.0 binary, bak = v0.14.0 binary
+	os.WriteFile(e.daemonBinaryPath(), []byte("new-binary"), 0755)
+	os.WriteFile(e.daemonVersionPath(), []byte("v0.15.0"), 0644)
+	os.WriteFile(e.daemonBakPath(), []byte("old-binary"), 0755)
+	os.WriteFile(e.daemonVersionBakPath(), []byte("v0.14.0"), 0644)
+
+	e.rollback()
+
+	gotBin, _ := os.ReadFile(e.daemonBinaryPath())
+	if string(gotBin) != "old-binary" {
+		t.Errorf("after rollback binary = %q, want old-binary", gotBin)
+	}
+	if ver := readVersionFile(e.daemonVersionPath()); ver != "v0.14.0" {
+		t.Errorf("after rollback version = %q, want v0.14.0", ver)
+	}
+}
+
+func TestRollback_NoBak(t *testing.T) {
+	t.Parallel()
+	e, _ := newInstallEnv(t, &testfixtures.FakeGitHub{LatestTag: "v0.15.0"}, []byte("bin"))
+	os.WriteFile(e.daemonBinaryPath(), []byte("current"), 0755)
+
+	// Should not panic; logs a message but leaves current binary intact
+	e.rollback()
+
+	got, _ := os.ReadFile(e.daemonBinaryPath())
+	if string(got) != "current" {
+		t.Error("current binary should be untouched when no backup exists")
+	}
+}
+
+func TestFetchAssetChecksum_GitHub500(t *testing.T) {
+	t.Parallel()
+	e, _ := newInstallEnv(t, &testfixtures.FakeGitHub{
+		LatestTag:  "v0.15.0",
+		StatusCode: 500,
+	}, []byte("bin"))
+
+	_, err := e.fetchAssetChecksum("v0.15.0", "mxcli-daemon-linux-amd64.tar.zst")
+	if err == nil {
+		t.Fatal("expected error on HTTP 500 for SHA256SUMS")
+	}
+}
