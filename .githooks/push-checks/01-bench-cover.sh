@@ -40,9 +40,14 @@ FAILED=0
 # ── Benchmarks ──────────────────────────────────────────────────────────────
 # Run WITHOUT cpulimit — clock-based timing is distorted by SIGSTOP/SIGCONT.
 
-echo "pre-push: running benchmarks (count=5, nice -n 15)..."
-nice -n 15 go test -bench=. -benchmem -count=5 \
-    -p "${P85}" ./... 2>/dev/null | \
+# Only run packages that actually contain benchmarks. Running ./... also
+# compiles and executes 60+ packages with no benchmarks, wasting ~6 minutes.
+# -p 1 avoids cross-package CPU contention that inflates timing by 20-40%.
+BENCH_PKGS="./modelsdk/codec/... ./modelsdk/codec/poc/... ./modelsdk/property/..."
+
+echo "pre-push: running benchmarks (count=5, nice -n 15, p=1)..."
+CGO_ENABLED=0 nice -n 15 go test -bench=. -benchmem -count=5 \
+    -p 1 ${BENCH_PKGS} 2>/dev/null | \
     grep -v "^---" > "$BENCH_CURRENT"
 
 if [ ! -s "$BENCH_CURRENT" ]; then
