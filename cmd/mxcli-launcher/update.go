@@ -61,6 +61,11 @@ func (e *Env) printUpdateNotice() {
 }
 
 func (e *Env) runUpgrade(_ []string) int {
+	if err := e.acquireUpgradeLock(); err != nil {
+		fmt.Fprintf(os.Stderr, "mxcli upgrade: %v\n", err)
+		return 1
+	}
+	defer e.releaseUpgradeLock()
 	fmt.Println("Checking for updates...")
 	latest, err := e.fetchLatestTag()
 	if err != nil {

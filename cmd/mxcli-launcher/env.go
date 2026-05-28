@@ -11,8 +11,9 @@ import (
 // Env holds injectable dependencies for launcher operations.
 // Use DefaultEnv() in production; substitute fields in tests.
 type Env struct {
-	HomeDir    string
-	HTTPClient *http.Client
+	HomeDir     string
+	HTTPClient  *http.Client
+	upgradeLock *lockFile // non-nil while upgrade lock is held
 }
 
 // DefaultEnv returns an Env configured for production use.

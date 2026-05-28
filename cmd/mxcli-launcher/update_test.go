@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -58,5 +59,40 @@ func TestFprintUpdateNotice_NoFile(t *testing.T) {
 	fprintUpdateNotice(&stderr, p)
 	if stderr.Len() > 0 {
 		t.Errorf("expected no output when file missing, got: %q", stderr.String())
+	}
+}
+
+func TestRunUpgradeWithEnv_ConcurrentLock(t *testing.T) {
+	// Both goroutines call upgradeWithLock on the same Env.
+	// Exactly one should succeed (return nil), the other should return an error.
+	e := &Env{HomeDir: t.TempDir(), HTTPClient: nil}
+	if err := os.MkdirAll(e.daemonDir(), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	results := make([]error, 2)
+	var wg sync.WaitGroup
+	for i := range 2 {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			results[i] = e.acquireUpgradeLock()
+			if results[i] == nil {
+				// Hold the lock briefly to force contention
+				time.Sleep(10 * time.Millisecond)
+				e.releaseUpgradeLock()
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	successes := 0
+	for _, err := range results {
+		if err == nil {
+			successes++
+		}
+	}
+	if successes != 1 {
+		t.Errorf("expected exactly 1 lock acquisition, got %d (errors: %v, %v)", successes, results[0], results[1])
 	}
 }
