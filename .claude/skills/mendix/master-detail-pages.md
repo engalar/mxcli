@@ -19,7 +19,7 @@ description: Use when building master-detail layouts — gallery selection datav
 - [ ] Set the detail DataView datasource to `selection sourceWidgetName`
 - [ ] Both master and detail widgets must be on the same page (selection binding is page-scoped)
 - [ ] For Gallery filter bar: use `filter filterBarName { textfilter ... }` inside the gallery
-- [ ] Run `./bin/mxcli check script.mdl` to validate
+- [ ] Run `mxcli check script.mdl` to validate
 
 ## Quick Syntax Reference
 
@@ -189,8 +189,8 @@ create page MyMod.Customer_Detail (
 ## Validation
 
 ```bash
-./bin/mxcli check script.mdl
-./bin/mxcli check script.mdl -p path/to/app.mpr --references
+mxcli check script.mdl
+mxcli check script.mdl -p path/to/app.mpr --references
 ```
 
 ## See Also

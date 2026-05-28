@@ -1,6 +1,6 @@
 #!/bin/sh
 # mxcli install script — idempotent, works on Linux and macOS.
-# Usage: curl -fsSL https://raw.githubusercontent.com/engalar/mxcli/main/install.sh | sh
+# Usage: curl -fsSL https://raw.githubusercontent.com/engalar/mxcli/dev/install.sh | sh
 #
 # Optional env vars:
 #   MXCLI_INSTALL_DIR  — override install directory (default: /usr/local/bin or ~/.local/bin)

@@ -20,7 +20,7 @@ description: Use when creating CRUD overview pages in Mendix — overview page
 - [ ] Create the overview page with DataGrid2 and `controlbar` New button
 - [ ] Add `column colActions` with `ShowContentAs: customContent` for Edit and Delete
 - [ ] Add column-level filters on searchable columns (optional — see `mendix:datagrid2-filters`)
-- [ ] Run `./bin/mxcli check script.mdl` to validate
+- [ ] Run `mxcli check script.mdl` to validate
 - [ ] Confirm `Atlas_Core.PopupLayout` is available in the project (`show pages in Atlas_Core`)
 
 ## Quick Syntax Reference
@@ -222,8 +222,8 @@ create page MyMod.Dashboard (
 ## Validation
 
 ```bash
-./bin/mxcli check script.mdl
-./bin/mxcli check script.mdl -p path/to/app.mpr --references
+mxcli check script.mdl
+mxcli check script.mdl -p path/to/app.mpr --references
 ```
 
 ## See Also

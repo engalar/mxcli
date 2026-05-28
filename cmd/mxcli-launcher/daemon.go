@@ -123,7 +123,7 @@ func (e *Env) downloadDaemonVersion(tag, destPath string) error {
 
 	var archiveExt string
 	if goos == "windows" {
-		archiveExt = ".zip"
+		archiveExt = ".exe.zip"
 	} else {
 		archiveExt = ".tar.zst"
 	}

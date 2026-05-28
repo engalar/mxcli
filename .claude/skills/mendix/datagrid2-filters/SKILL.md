@@ -19,7 +19,7 @@ description: Use when adding filter widgets to DataGrid2 — textfilter
 - [ ] Column-level: place filter widget inside `column {}` body
 - [ ] Filter bar: place filter widgets inside `controlbar {}` with `attributes: [Module.Entity.Attr]`
 - [ ] For advanced properties (placeholder, adjustable, multiselect): use `PLUGGABLEWIDGET`
-- [ ] Run `./bin/mxcli check script.mdl` to validate MDL syntax
+- [ ] Run `mxcli check script.mdl` to validate MDL syntax
 - [ ] Run `mx check app.mpr` to confirm no BSON errors in Studio Pro
 
 ## Quick Syntax Reference
@@ -260,10 +260,10 @@ datagrid dgOrders (datasource: database MyMod.Order, PageSize: 20) {
 
 ```bash
 # Syntax check (no project needed)
-./bin/mxcli check your-page-script.mdl
+mxcli check your-page-script.mdl
 
 # Full check with entity/association reference validation
-./bin/mxcli check your-page-script.mdl -p path/to/app.mpr --references
+mxcli check your-page-script.mdl -p path/to/app.mpr --references
 ```
 
 ## See Also

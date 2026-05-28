@@ -13,7 +13,7 @@ Use this when:
 
 Before running, verify:
 
-1. **mxcli is local** — always use `./mxcli`, not `mxcli`
+1. **mxcli is installed globally** — use `mxcli` from any directory
 2. **Docker is available** — check with `docker ps`
 
 Everything else (MxBuild, runtime, Docker stack) is auto-downloaded/initialized by `docker run`.
@@ -24,7 +24,7 @@ Everything else (MxBuild, runtime, Docker stack) is auto-downloaded/initialized 
 
 ```bash
 # Setup, build, and start — handles everything automatically
-./mxcli docker run -p MxCliDemoApp2.mpr --wait
+mxcli docker run -p MxCliDemoApp2.mpr --wait
 ```
 
 This single command:
@@ -46,25 +46,25 @@ Admin console: **http://localhost:8090** (password: `AdminPassword1!`)
 
 ```bash
 # 1. apply MDL changes to the project
-./mxcli exec changes.mdl -p MxCliDemoApp2.mpr
+mxcli exec changes.mdl -p MxCliDemoApp2.mpr
 
 # 2. Rebuild and hot reload (no restart, keeps database)
-./mxcli docker build -p MxCliDemoApp2.mpr --skip-check
-./mxcli docker reload -p MxCliDemoApp2.mpr
+mxcli docker build -p MxCliDemoApp2.mpr --skip-check
+mxcli docker reload -p MxCliDemoApp2.mpr
 ```
 
 Use `docker reload` for most changes — it reloads the model in ~100ms without restarting.
 Use `docker run --fresh` only when schema changes are destructive (dropped entities/attributes):
 
 ```bash
-./mxcli docker run -p MxCliDemoApp2.mpr --fresh --wait
+mxcli docker run -p MxCliDemoApp2.mpr --fresh --wait
 ```
 
 **CSS/theme changes only** (no rebuild needed):
 
 ```bash
 # Instant CSS hot reload — pushes to all connected browsers
-./mxcli docker reload -p MxCliDemoApp2.mpr --css
+mxcli docker reload -p MxCliDemoApp2.mpr --css
 ```
 
 Or simply hard-refresh the browser (Cmd+Shift+R / Ctrl+Shift+R) — the volume mount means compiled CSS is immediately available on disk after `mxcli docker build`.
@@ -77,13 +77,13 @@ If you prefer more control over individual steps:
 
 ```bash
 # First-time setup (cached, run once per devcontainer)
-./mxcli setup mxbuild -p MxCliDemoApp2.mpr
-./mxcli setup mxruntime -p MxCliDemoApp2.mpr
-./mxcli docker init -p MxCliDemoApp2.mpr
+mxcli setup mxbuild -p MxCliDemoApp2.mpr
+mxcli setup mxruntime -p MxCliDemoApp2.mpr
+mxcli docker init -p MxCliDemoApp2.mpr
 
 # build and start
-./mxcli docker build -p MxCliDemoApp2.mpr
-./mxcli docker up -p MxCliDemoApp2.mpr --detach --wait
+mxcli docker build -p MxCliDemoApp2.mpr
+mxcli docker up -p MxCliDemoApp2.mpr --detach --wait
 ```
 
 ---
@@ -94,15 +94,15 @@ Once the app is running, test OQL queries against the live runtime:
 
 ```bash
 # run OQL queries (read-only preview mode)
-./mxcli oql -p MxCliDemoApp2.mpr "select Name from MyModule.Customer"
+mxcli oql -p MxCliDemoApp2.mpr "select Name from MyModule.Customer"
 
 # json output for piping
-./mxcli oql -p MxCliDemoApp2.mpr --json "SELECT count(c.ID) FROM MyModule.Order AS c"
+mxcli oql -p MxCliDemoApp2.mpr --json "SELECT count(c.ID) FROM MyModule.Order AS c"
 ```
 
 > **Existing projects**: If you get "Action not found: preview_execute_oql", re-initialize
 > the Docker stack to pick up the required JVM flag:
-> `./mxcli docker init -p MxCliDemoApp2.mpr --force`
+> `mxcli docker init -p MxCliDemoApp2.mpr --force`
 
 ---
 
@@ -110,13 +110,13 @@ Once the app is running, test OQL queries against the live runtime:
 
 ```bash
 # view live logs
-./mxcli docker logs -p MxCliDemoApp2.mpr --follow
+mxcli docker logs -p MxCliDemoApp2.mpr --follow
 
 # view last 50 lines
-./mxcli docker logs -p MxCliDemoApp2.mpr --tail 50
+mxcli docker logs -p MxCliDemoApp2.mpr --tail 50
 
 # open a shell in the Mendix container
-./mxcli docker shell -p MxCliDemoApp2.mpr
+mxcli docker shell -p MxCliDemoApp2.mpr
 ```
 
 Look for this line to confirm successful startup:
@@ -130,10 +130,10 @@ Mendix runtime successfully started, the application is now available.
 
 ```bash
 # Stop containers (keeps database data)
-./mxcli docker down -p MxCliDemoApp2.mpr
+mxcli docker down -p MxCliDemoApp2.mpr
 
 # Stop and wipe database
-./mxcli docker down -p MxCliDemoApp2.mpr --volumes
+mxcli docker down -p MxCliDemoApp2.mpr --volumes
 ```
 
 ---
@@ -144,11 +144,11 @@ When running multiple Mendix apps simultaneously, each project needs unique port
 
 ```bash
 # First project (default ports: 8080/8090/5432)
-./mxcli docker run -p project1/app.mpr --wait
+mxcli docker run -p project1/app.mpr --wait
 
 # Second project (ports: 8081/8091/5433)
-./mxcli docker init -p project2/app.mpr --port-offset 1
-./mxcli docker run -p project2/app.mpr --wait
+mxcli docker init -p project2/app.mpr --port-offset 1
+mxcli docker run -p project2/app.mpr --wait
 ```
 
 | Offset | App | Admin | DB |
@@ -160,7 +160,7 @@ When running multiple Mendix apps simultaneously, each project needs unique port
 The offset is applied once during `docker init` and written to `.docker/.env`. Subsequent `docker run/up/reload` commands read from that `.env` automatically.
 
 > **Note:** If the Docker stack was already initialized, re-run init with `--force`:
-> `./mxcli docker init -p app.mpr --port-offset 1 --force`
+> `mxcli docker init -p app.mpr --port-offset 1 --force`
 
 ---
 

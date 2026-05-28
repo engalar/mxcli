@@ -346,10 +346,10 @@ Always validate XPath syntax before execution:
 
 ```bash
 # Syntax check (no project needed)
-./bin/mxcli check script.mdl
+mxcli check script.mdl
 
 # with reference validation (needs project)
-./bin/mxcli check script.mdl -p app.mpr --references
+mxcli check script.mdl -p app.mpr --references
 ```
 
 ## Troubleshooting

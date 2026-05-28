@@ -23,7 +23,7 @@ description: Use when writing CREATE PAGE or CREATE SNIPPET MDL statements —
 - [ ] Select datasource: `$param` → `database` → `microflow` → `nanoflow` → `selection` (preference order for persistent); NPE must use `microflow` or `nanoflow`
 - [ ] For DataGrid2 filters: add filter widgets inside `column {}` — see `mendix:datagrid2-filters`
 - [ ] Add `url:` only for pages with persistent entity params or no params (NPE params cannot deeplink)
-- [ ] Run `./bin/mxcli check script.mdl` (syntax), then `mx check app.mpr` (BSON)
+- [ ] Run `mxcli check script.mdl` (syntax), then `mx check app.mpr` (BSON)
 
 # CREATE PAGE - MDL Syntax Guide
 

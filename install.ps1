@@ -1,5 +1,5 @@
 # mxcli install script for Windows — idempotent.
-# Usage: irm https://raw.githubusercontent.com/engalar/mxcli/main/install.ps1 | iex
+# Usage: irm https://raw.githubusercontent.com/engalar/mxcli/dev/install.ps1 | iex
 #
 # Optional: set $env:MXCLI_INSTALL_DIR before running to override install location.
 
@@ -77,6 +77,7 @@ try {
 
 # Atomic install
 Move-Item -Force $Tmp $Dest
+Unblock-File -Path $Dest
 
 Write-Host ""
 Write-Host "✅ mxcli $Latest installed to $Dest"

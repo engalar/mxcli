@@ -20,7 +20,7 @@ Mendix's internal ID system, and safely inserting rows with correct IDs and asso
 Use `mxcli` to read the project's configured database connection:
 
 ```bash
-./mxcli -p <project>.mpr -c "show settings;"
+mxcli -p <project>.mpr -c "show settings;"
 ```
 
 Example output:
@@ -31,7 +31,7 @@ Example output:
 For full credentials (username, password):
 
 ```bash
-./mxcli -p <project>.mpr -c "describe settings;"
+mxcli -p <project>.mpr -c "describe settings;"
 ```
 
 Example output:
@@ -362,7 +362,7 @@ current `object_sequence` to leave headroom.
 
 ```bash
 # get DB settings
-./mxcli -p <project>.mpr -c "describe settings;"
+mxcli -p <project>.mpr -c "describe settings;"
 
 # connect (devcontainer on macOS)
 PGPASSWORD=mendix psql -h host.docker.internal -p 5434 -U mendix -d mxcli2-dev

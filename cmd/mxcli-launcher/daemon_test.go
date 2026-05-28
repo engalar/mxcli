@@ -179,8 +179,8 @@ func TestParseChecksumFile_NotFound(t *testing.T) {
 }
 
 func TestParseChecksumFile_StarredName(t *testing.T) {
-	content := "abc123 *mxcli-daemon-windows-amd64.zip\n"
-	hash, err := parseChecksumFile(content, "mxcli-daemon-windows-amd64.zip")
+	content := "abc123 *mxcli-daemon-windows-amd64.exe.zip\n"
+	hash, err := parseChecksumFile(content, "mxcli-daemon-windows-amd64.exe.zip")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

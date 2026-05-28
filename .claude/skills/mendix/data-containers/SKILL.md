@@ -20,7 +20,7 @@ description: Use when designing how data flows through a Mendix page — datavie
 - [ ] For lists: prefer `database` source for persistent entities (avoids extra microflow hop)
 - [ ] For NPEs: verify datasource is `microflow` or `nanoflow` — `database` source fails at runtime
 - [ ] If nesting containers: ensure the parent provides the context the child expects
-- [ ] Run `./bin/mxcli check script.mdl` to validate all datasource references
+- [ ] Run `mxcli check script.mdl` to validate all datasource references
 
 ## Quick Syntax Reference
 
@@ -261,8 +261,8 @@ create page MyMod.Order_WithItems (
 ## Validation
 
 ```bash
-./bin/mxcli check script.mdl
-./bin/mxcli check script.mdl -p path/to/app.mpr --references
+mxcli check script.mdl
+mxcli check script.mdl -p path/to/app.mpr --references
 ```
 
 ## See Also

@@ -73,12 +73,12 @@ Run `mxcli syntax keywords` for the full list of 320+ reserved keywords.
 
 ```bash
 # Step 1: Syntax check (no project needed)
-./bin/mxcli check script.mdl
+mxcli check script.mdl
 
 # Step 2: reference validation (needs project)
 # Validates microflow bodies, entity/enum references, and widget tree references
 # (datasource microflow/nanoflow/entity, action page/microflow, snippet refs)
-./bin/mxcli check script.mdl -p app.mpr --references
+mxcli check script.mdl -p app.mpr --references
 ```
 
 ### 4. Common Error Patterns
@@ -104,9 +104,9 @@ Run `mxcli syntax keywords` for the full list of 320+ reserved keywords.
 
 2. **Check help for specific syntax:**
    ```bash
-   ./bin/mxcli syntax microflow
-   ./bin/mxcli syntax page
-   ./bin/mxcli syntax entity
+   mxcli syntax microflow
+   mxcli syntax page
+   mxcli syntax entity
    ```
 
 ### After Writing MDL
@@ -120,23 +120,23 @@ Run `mxcli syntax keywords` for the full list of 320+ reserved keywords.
 
 2. **Run syntax check:**
    ```bash
-   ./bin/mxcli check script.mdl
+   mxcli check script.mdl
    ```
 
 3. **If errors, check specific syntax:**
    ```bash
-   ./bin/mxcli syntax keywords    # Reserved words
-   ./bin/mxcli syntax microflow   # microflow syntax
+   mxcli syntax keywords    # Reserved words
+   mxcli syntax microflow   # microflow syntax
    ```
 
 4. **Run reference check (with project):**
    ```bash
-   ./bin/mxcli check script.mdl -p app.mpr --references
+   mxcli check script.mdl -p app.mpr --references
    ```
 
 5. **Execute only after all checks pass:**
    ```bash
-   ./bin/mxcli exec script.mdl -p app.mpr
+   mxcli exec script.mdl -p app.mpr
    ```
 
 ### Expression Validation (for microflow expressions)
@@ -145,9 +145,9 @@ Every expression inside a microflow statement must be separately validated with 
 
 **Before writing an expression** — look up what type the slot expects and see real examples:
 ```bash
-./bin/mxcli show expr-slot IfStmt.Condition
-./bin/mxcli show expr-slot ChangeItem.Value
-./bin/mxcli show expr-slot CallArgument.Value
+mxcli show expr-slot IfStmt.Condition
+mxcli show expr-slot ChangeItem.Value
+mxcli show expr-slot CallArgument.Value
 # → prints ExpectedKind (Boolean / Integer / …) and mined sample expressions
 ```
 
@@ -167,21 +167,21 @@ Every expression inside a microflow statement must be separately validated with 
 
 **After writing an expression** — validate it before using it:
 ```bash
-./bin/mxcli explain expression '$Alert/Status = empty' --in IfStmt.Condition
+mxcli explain expression '$Alert/Status = empty' --in IfStmt.Condition
 # → "no hints — expression is well-formed for this slot" means safe to use
 
-./bin/mxcli explain expression "'NewAlert'" --in ChangeItem.Value
+mxcli explain expression "'NewAlert'" --in ChangeItem.Value
 # → HINT [E001 enum-string-mismatch] error — must fix before using
 ```
 
 **If a hint code appears**, look it up:
 ```bash
-./bin/mxcli hint E001   # enum-string-mismatch
-./bin/mxcli hint E002   # bool-string-mismatch
-./bin/mxcli hint E003   # null-to-empty (use empty, not null)
-./bin/mxcli hint E004   # concat-type (toString() needed)
-./bin/mxcli hint E006   # func-arg-arity (wrong number of args)
-./bin/mxcli hint E007   # unknown-token (parse error in expression)
+mxcli hint E001   # enum-string-mismatch
+mxcli hint E002   # bool-string-mismatch
+mxcli hint E003   # null-to-empty (use empty, not null)
+mxcli hint E004   # concat-type (toString() needed)
+mxcli hint E006   # func-arg-arity (wrong number of args)
+mxcli hint E007   # unknown-token (parse error in expression)
 ```
 
 **Rule:** An expression is only safe when `mxcli explain expression` returns `no hints`.
@@ -329,4 +329,4 @@ Extra tokens found:
 All 10 hint codes (E001–E010) with full explanations and fix examples:
 `docs/06-mdl-reference/expr-hints.md`
 
-Quick lookup: `./bin/mxcli hint <code>`
+Quick lookup: `mxcli hint <code>`
