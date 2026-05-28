@@ -150,7 +150,7 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 		fmt.Fprint(ctx.Output, "}")
 	} else {
-		formatWidgetProps(ctx.Output, "", header, props, "")
+		formatWidgetProps(ctx.Output, "", header, props, " {\n}")
 	}
 
 	// Add GRANT VIEW if roles are assigned, excluding the auto-created User placeholder.

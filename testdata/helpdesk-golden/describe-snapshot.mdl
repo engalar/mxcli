@@ -1013,56 +1013,73 @@ create or replace navigation Responsive
   )
 ;
 
-create or modify page KB.Article_Overview (title: 'Knowledge Base', folder: 'Article')
+create or modify page KB.Article_Overview (title: 'Knowledge Base', folder: 'Article') {
+}
 
 grant view on page KB.Article_Overview to KB.Reader, KB.Contributor, KB.Admin;
-create or modify page KB.Article_Detail (title: 'Article', folder: 'Article', params: { $Article: KB.Article })
+create or modify page KB.Article_Detail (title: 'Article', folder: 'Article', params: { $Article: KB.Article }) {
+}
 
 grant view on page KB.Article_Detail to KB.Reader, KB.Contributor, KB.Admin;
 create or modify page KB.Article_NewEdit (
   title: 'New / Edit Article',
   folder: 'Article',
   params: { $Article: KB.Article }
-)
+) {
+}
 
 grant view on page KB.Article_NewEdit to KB.Contributor, KB.Admin;
-create or modify page HD.Ticket_Overview (title: 'Tickets', folder: 'Ticket')
+create or modify page HD.Ticket_Overview (title: 'Tickets', folder: 'Ticket') {
+}
 
 grant view on page HD.Ticket_Overview to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-create or modify page HD.Agent_Select (title: 'Select Agent', folder: 'Ticket', params: { $Ticket: HD.Ticket })
+create or modify page HD.Agent_Select (title: 'Select Agent', folder: 'Ticket', params: { $Ticket: HD.Ticket }) {
+}
 
 grant view on page HD.Agent_Select to HD.AgentRole, HD.ManagerRole;
-create or modify page HD.Ticket_Detail (title: 'Ticket', folder: 'Ticket', params: { $Ticket: HD.Ticket })
+create or modify page HD.Ticket_Detail (title: 'Ticket', folder: 'Ticket', params: { $Ticket: HD.Ticket }) {
+}
 
 grant view on page HD.Ticket_Detail to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-create or modify page HD.Ticket_NewEdit (title: 'New / Edit Ticket', folder: 'Ticket', params: { $Ticket: HD.Ticket })
+create or modify page HD.Ticket_NewEdit (
+  title: 'New / Edit Ticket',
+  folder: 'Ticket',
+  params: { $Ticket: HD.Ticket }
+) {
+}
 
 grant view on page HD.Ticket_NewEdit to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.TicketSearch_Form (
   title: 'Search Tickets',
   folder: 'Ticket/Search',
   params: { $Search: HD.TicketSearch }
-)
+) {
+}
 
 grant view on page HD.TicketSearch_Form to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-create or modify page HD.MyTickets_Overview (title: 'My Tickets', folder: 'Ticket')
+create or modify page HD.MyTickets_Overview (title: 'My Tickets', folder: 'Ticket') {
+}
 
 grant view on page HD.MyTickets_Overview to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.TicketSearch_Results (
   title: 'Search Results',
   folder: 'Ticket/Search',
   params: { $Search: HD.TicketSearch }
-)
+) {
+}
 
 grant view on page HD.TicketSearch_Results to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.EscalationReview_Form (
   title: 'Escalation Review',
   folder: 'Escalation',
   params: { $WorkflowUserTask: System.WorkflowUserTask }
-)
+) {
+}
 
 grant view on page HD.EscalationReview_Form to HD.ManagerRole;
-create or modify page HD.EscalationWorkflow_Overview (title: 'Escalation Workflow', folder: 'Escalation')
+create or modify page HD.EscalationWorkflow_Overview (title: 'Escalation Workflow', folder: 'Escalation') {
+}
 
 grant view on page HD.EscalationWorkflow_Overview to HD.ManagerRole;
-create or modify page HD.EscalationStart_Form (title: 'Request Escalation', folder: 'Escalation')
+create or modify page HD.EscalationStart_Form (title: 'Request Escalation', folder: 'Escalation') {
+}
