@@ -10,47 +10,47 @@ import (
 	"os"
 )
 
-// Version and LauncherBuild are set by ldflags at build time.
 var (
 	Version       = "dev"
 	LauncherBuild = ""
 )
 
 func main() {
+	e := DefaultEnv()
 	args := os.Args[1:]
 
 	if len(args) > 0 {
 		switch args[0] {
 		case "upgrade":
-			os.Exit(runUpgrade(args[1:]))
+			os.Exit(e.runUpgrade(args[1:]))
 		case "rollback":
-			os.Exit(runRollback(args[1:]))
+			os.Exit(e.runRollback(args[1:]))
 		case "version", "--version":
-			printVersion()
+			printVersion(e)
 			os.Exit(0)
 		}
 	}
 
-	if err := ensureDaemon(); err != nil {
+	if err := e.ensureDaemon(); err != nil {
 		fmt.Fprintf(os.Stderr, "mxcli: %v\n", err)
 		os.Exit(1)
 	}
 
-	go backgroundVersionCheck()
+	go e.backgroundVersionCheck()
 
-	exitCode := forwardRequest(daemonSocketPath(), args, os.Stdout, os.Stderr)
+	exitCode := forwardRequest(e.daemonSocketPath(), args, os.Stdout, os.Stderr)
 
-	printUpdateNotice()
+	e.printUpdateNotice()
 
 	os.Exit(exitCode)
 }
 
-func printVersion() {
+func printVersion(e *Env) {
 	v := Version
 	if LauncherBuild != "" {
 		v += " (" + LauncherBuild + ")"
 	}
-	daemonVer := readVersionFile(daemonVersionPath())
+	daemonVer := readVersionFile(e.daemonVersionPath())
 	fmt.Printf("mxcli launcher %s\n", v)
 	if daemonVer != "" {
 		fmt.Printf("mxcli daemon   %s\n", daemonVer)
