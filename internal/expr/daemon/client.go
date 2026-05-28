@@ -93,8 +93,7 @@ func (c *DaemonClient) StartIfNeeded() error {
 	return fmt.Errorf("daemon client: daemon did not start within %s", c.startTimeout)
 }
 
-// Ping sends an empty ValidateRequest, which the server interprets as a
-// status probe, and decodes a PingResponse.
+// Ping sends a ReqPing request and decodes a PingResponse.
 func (c *DaemonClient) Ping() (*PingResponse, error) {
 	conn, err := net.Dial("unix", c.socketPath)
 	if err != nil {
@@ -102,7 +101,7 @@ func (c *DaemonClient) Ping() (*PingResponse, error) {
 	}
 	defer conn.Close()
 
-	if err := json.NewEncoder(conn).Encode(ValidateRequest{}); err != nil {
+	if err := json.NewEncoder(conn).Encode(ValidateRequest{Type: ReqPing}); err != nil {
 		return nil, err
 	}
 	var resp PingResponse
@@ -130,9 +129,10 @@ func (c *DaemonClient) Validate(req ValidateRequest) (*ValidateResponse, error) 
 	return &resp, nil
 }
 
-// StopDaemon removes the socket file so subsequent IsAlive checks fail. The
-// server-side daemon will exit at its next Accept(). Intended for tests; in
-// production use a dedicated `mxcli expr daemon stop` CLI verb.
-func (c *DaemonClient) StopDaemon() {
+// RemoveSocket deletes the Unix socket file so subsequent IsAlive checks fail.
+// The server-side daemon process is NOT killed — it exits when its idle watcher
+// fires or at its next Accept() attempt. Intended for tests; in production use
+// the dedicated `mxcli expr daemon stop` CLI verb.
+func (c *DaemonClient) RemoveSocket() {
 	_ = os.Remove(c.socketPath)
 }

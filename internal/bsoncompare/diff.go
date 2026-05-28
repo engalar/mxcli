@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package bsoncompare
 
-import "go.mongodb.org/mongo-driver/bson"
+import "go.mongodb.org/mongo-driver/v2/bson"
 
 type DiffKind string
 

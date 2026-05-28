@@ -12,7 +12,7 @@ import (
 	genODP "github.com/mendixlabs/mxcli/modelsdk/gen/odatapublish"
 	genPages "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genREST "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // updateAllowedRolesViaModelsdk replaces the role list on a Microflow,

@@ -13,8 +13,7 @@ package mprbackend
 import (
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
@@ -89,7 +88,7 @@ func parseImageCollectionRaw(unitID, containerID string, contents []byte) (*type
 			image.Format = format
 		}
 		switch data := imgMap["Image"].(type) {
-		case primitive.Binary:
+		case bson.Binary:
 			image.Data = data.Data
 		case []byte:
 			image.Data = data

@@ -11,13 +11,13 @@ import (
 	"log"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // IDToBsonBinary converts a UUID string to a BSON binary value.
 // Panics if id is not a valid UUID — an invalid ID at this layer is always a programming error.
 // For user-supplied IDs where invalid input is expected, use IDToBsonBinaryErr.
-func IDToBsonBinary(id string) primitive.Binary {
+func IDToBsonBinary(id string) bson.Binary {
 	bin, err := IDToBsonBinaryErr(id)
 	if err != nil {
 		panic("bsonutil.IDToBsonBinary: " + err.Error())
@@ -27,34 +27,34 @@ func IDToBsonBinary(id string) primitive.Binary {
 
 // IDToBsonBinaryErr converts a UUID string to a BSON binary value, returning an error
 // for invalid input instead of panicking. Use this for user-supplied or untrusted IDs.
-func IDToBsonBinaryErr(id string) (primitive.Binary, error) {
+func IDToBsonBinaryErr(id string) (bson.Binary, error) {
 	blob := types.UUIDToBlob(id)
 	if blob == nil || len(blob) != 16 {
-		return primitive.Binary{}, fmt.Errorf("invalid UUID: %q", id)
+		return bson.Binary{}, fmt.Errorf("invalid UUID: %q", id)
 	}
-	return primitive.Binary{
+	return bson.Binary{
 		Subtype: 0x00,
 		Data:    blob,
 	}, nil
 }
 
 // BsonBinaryToID converts a BSON binary value to a hex UUID string.
-func BsonBinaryToID(bin primitive.Binary) string {
+func BsonBinaryToID(bin bson.Binary) string {
 	return types.BlobToUUID(bin.Data)
 }
 
 // NewIDBsonBinary generates a new unique ID and returns it as a BSON binary value.
 // Panics if the OS entropy source fails. For callers that can handle failure, use NewIDBsonBinaryErr.
-func NewIDBsonBinary() primitive.Binary {
+func NewIDBsonBinary() bson.Binary {
 	return IDToBsonBinary(types.GenerateID())
 }
 
 // NewIDBsonBinaryErr generates a new unique ID and returns it as a BSON binary value,
 // returning an error instead of panicking on failure.
-func NewIDBsonBinaryErr() (primitive.Binary, error) {
+func NewIDBsonBinaryErr() (bson.Binary, error) {
 	id, err := types.GenerateIDErr()
 	if err != nil {
-		return primitive.Binary{}, fmt.Errorf("generating ID: %w", err)
+		return bson.Binary{}, fmt.Errorf("generating ID: %w", err)
 	}
 	return IDToBsonBinaryErr(id)
 }

@@ -6,8 +6,7 @@ import (
 	"bytes"
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/mdl/bsonutil"
 )
@@ -124,8 +123,8 @@ func TestDeepCloneWithNewIDs_PreservesNil(t *testing.T) {
 // Test helpers
 
 func binaryEqual(a, b any) bool {
-	ab, aOk := a.(primitive.Binary)
-	bb, bOk := b.(primitive.Binary)
+	ab, aOk := a.(bson.Binary)
+	bb, bOk := b.(bson.Binary)
 	if !aOk || !bOk {
 		return false
 	}

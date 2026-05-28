@@ -5,8 +5,7 @@ package mpr
 import (
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
@@ -32,7 +31,7 @@ func SerializeImageCollection(ic *types.ImageCollection) ([]byte, error) {
 		images = append(images, bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(img.ID))},
 			{Key: "$Type", Value: "Images$Image"},
-			{Key: "Image", Value: primitive.Binary{Subtype: 0, Data: img.Data}},
+			{Key: "Image", Value: bson.Binary{Subtype: 0, Data: img.Data}},
 			{Key: "ImageFormat", Value: img.Format},
 			{Key: "Name", Value: img.Name},
 		})

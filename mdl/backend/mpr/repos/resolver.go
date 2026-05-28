@@ -5,8 +5,7 @@ package mprrepos
 import (
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/model"
@@ -141,13 +140,21 @@ func (s *sqlResolver) lookupEntity(
 			if i == 0 {
 				continue
 			}
-			doc, ok := e.(bson.M)
-			if !ok {
-				if d, dok := e.(map[string]any); dok {
-					doc = bson.M(d)
-				} else {
-					continue
+			var doc bson.M
+			switch ev := e.(type) {
+			case bson.M:
+				doc = ev
+			case bson.D:
+				// v2: nested docs in bson.A decode as bson.D.
+				m := make(bson.M, len(ev))
+				for _, kv := range ev {
+					m[kv.Key] = kv.Value
 				}
+				doc = m
+			case map[string]any:
+				doc = bson.M(ev)
+			default:
+				continue
 			}
 			name, _ := doc["Name"].(string)
 			if name != simpleName {
@@ -164,7 +171,7 @@ func (s *sqlResolver) lookupEntity(
 }
 
 // entityIDFromDoc extracts the entity's $ID, accepting either Mendix
-// binary-UUID (primitive.Binary) or string forms.
+// binary-UUID (bson.Binary) or string forms.
 func entityIDFromDoc(doc bson.M) string {
 	v, ok := doc["$ID"]
 	if !ok {
@@ -173,7 +180,7 @@ func entityIDFromDoc(doc bson.M) string {
 	switch x := v.(type) {
 	case string:
 		return x
-	case primitive.Binary:
+	case bson.Binary:
 		return mmpr.BlobToUUID(x.Data)
 	case []byte:
 		return mmpr.BlobToUUID(x)

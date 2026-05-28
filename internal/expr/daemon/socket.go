@@ -144,7 +144,7 @@ func ListRunning() ([]PingResponse, error) {
 		if err != nil {
 			continue
 		}
-		_ = json.NewEncoder(conn).Encode(ValidateRequest{})
+		_ = json.NewEncoder(conn).Encode(ValidateRequest{Type: ReqPing})
 		var resp PingResponse
 		if err := json.NewDecoder(conn).Decode(&resp); err == nil {
 			results = append(results, resp)

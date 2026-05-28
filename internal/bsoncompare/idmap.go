@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type IDMap map[string]string
@@ -29,7 +28,7 @@ func collectIDs(doc bson.D, ctx string, m IDMap, depth int) {
 	for _, e := range doc {
 		switch e.Key {
 		case "$ID":
-			if b, ok := e.Value.(primitive.Binary); ok && len(b.Data) == 16 {
+			if b, ok := e.Value.(bson.Binary); ok && len(b.Data) == 16 {
 				selfID = b.Data
 			}
 		case "Name":

@@ -11,7 +11,7 @@ import (
 	bsondebug "github.com/mendixlabs/mxcli/cmd/mxcli/bson"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/spf13/cobra"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 var bsonDumpCmd = &cobra.Command{

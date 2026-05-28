@@ -5,8 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // Render converts a bson.D document to Normalized DSL text.
@@ -65,7 +64,7 @@ func renderField(sb *strings.Builder, key string, val any, indent int) {
 	case nil:
 		fmt.Fprintf(sb, "%s%s: null\n", pad, key)
 
-	case primitive.Binary:
+	case bson.Binary:
 		fmt.Fprintf(sb, "%s%s: <uuid>\n", pad, key)
 
 	case bson.D:

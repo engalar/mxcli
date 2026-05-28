@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 var errTest = errors.New("test error")

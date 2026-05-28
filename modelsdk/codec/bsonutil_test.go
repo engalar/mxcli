@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func TestPatchBSONField_Update(t *testing.T) {

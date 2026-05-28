@@ -7,8 +7,8 @@ import (
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/modelsdk/mpr"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/x/bsonx/bsoncore"
 )
 
 // Encoder serializes Element trees back to BSON bytes.
@@ -166,7 +166,7 @@ func (e *Encoder) buildDoc(elem element.Element) (bson.D, error) {
 			cv := re.Value()
 			doc = append(doc, bson.E{
 				Key:   stringOf(keyB),
-				Value: bson.RawValue{Type: cv.Type, Value: cv.Data},
+				Value: bson.RawValue{Type: bson.Type(cv.Type), Value: cv.Data},
 			})
 			continue
 		}

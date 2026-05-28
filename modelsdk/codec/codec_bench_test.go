@@ -5,13 +5,12 @@ import (
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/modelsdk/property"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func BenchmarkEncodeCleanPassthrough(b *testing.B) {
 	raw := mustMarshal(bson.D{
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0, Data: make([]byte, 16)}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Test$Bench"},
 		{Key: "name", Value: "entity"},
 		{Key: "doc", Value: "some documentation"},
@@ -30,7 +29,7 @@ func BenchmarkEncodeCleanPassthrough(b *testing.B) {
 
 func BenchmarkEncodeDirtyRebuild(b *testing.B) {
 	raw := mustMarshal(bson.D{
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0, Data: make([]byte, 16)}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Test$Bench"},
 		{Key: "name", Value: "original"},
 		{Key: "doc", Value: "documentation"},
@@ -70,7 +69,7 @@ func BenchmarkDecodeRegisteredType(b *testing.B) {
 	r := NewRegistry()
 	r.Register("Test$Bench", func() element.Element { return &element.Base{} })
 	raw := mustMarshal(bson.D{
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0, Data: make([]byte, 16)}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Test$Bench"},
 		{Key: "name", Value: "bench"},
 	})

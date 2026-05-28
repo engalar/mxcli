@@ -2,8 +2,17 @@
 
 package daemon
 
-// ValidateRequest 是客户端发往 daemon 的验证请求。
+// Request type constants — always set ValidateRequest.Type to one of these.
+const (
+	ReqPing     = "ping"     // status probe; server replies with PingResponse
+	ReqValidate = "validate" // expression validation; server replies with ValidateResponse
+)
+
+// ValidateRequest 是客户端发往 daemon 的所有请求的通用信封。
+// Type 字段区分请求类型（ReqPing / ReqValidate）；省略 Type 时退化为旧版
+// 空 MprPath = ping 约定（兼容旧客户端）。
 type ValidateRequest struct {
+	Type     string `json:"type,omitempty"`
 	MprPath  string `json:"mprPath"`
 	Filter   string `json:"filter,omitempty"`
 	Severity string `json:"severity,omitempty"`
@@ -29,9 +38,6 @@ type ValidateResponse struct {
 	Results  []ValidationItem `json:"results"`
 	Error    string           `json:"error,omitempty"`
 }
-
-// PingRequest 用于检活。
-type PingRequest struct{}
 
 // PingResponse 返回 daemon 状态。
 type PingResponse struct {

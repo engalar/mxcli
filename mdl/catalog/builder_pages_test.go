@@ -5,7 +5,7 @@ package catalog
 import (
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func TestExtractLayoutRef(t *testing.T) {
@@ -41,7 +41,7 @@ func TestExtractLayoutRef(t *testing.T) {
 			name: "binary Layout field",
 			rawData: map[string]any{
 				"FormCall": map[string]any{
-					"Layout": primitive.Binary{
+					"Layout": bson.Binary{
 						Data: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10},
 					},
 				},
@@ -292,7 +292,7 @@ func TestGetBsonArrayElements(t *testing.T) {
 		{"int32 type indicator", []any{int32(0), "a", "b"}, 2},
 		{"int type indicator", []any{int(0), "a", "b"}, 2},
 		{"no type indicator", []any{"a", "b"}, 2},
-		{"primitive.A with indicator", primitive.A{int32(0), "a"}, 1},
+		{"bson.A with indicator", bson.A{int32(0), "a"}, 1},
 		{"empty array", []any{}, -1},
 	}
 
@@ -319,8 +319,8 @@ func TestToBsonArray(t *testing.T) {
 		}
 	})
 
-	t.Run("primitive.A converted", func(t *testing.T) {
-		input := primitive.A{"x", "y"}
+	t.Run("bson.A converted", func(t *testing.T) {
+		input := bson.A{"x", "y"}
 		got := toBsonArray(input)
 		if len(got) != 2 {
 			t.Errorf("expected 2, got %d", len(got))
@@ -356,7 +356,7 @@ func TestExtractBsonID(t *testing.T) {
 		{"nil", nil, ""},
 		{"string", "my-id", "my-id"},
 		{"binary map with base64 GUID", map[string]any{"Data": "AQIDBAUGBwgJCgsMDQ4PEA=="}, "04030201-0605-0807-090a-0b0c0d0e0f10"},
-		{"primitive.Binary", primitive.Binary{Data: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}}, "04030201-0605-0807-090a-0b0c0d0e0f10"},
+		{"bson.Binary", bson.Binary{Data: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}}, "04030201-0605-0807-090a-0b0c0d0e0f10"},
 	}
 
 	for _, tt := range tests {
@@ -404,7 +404,7 @@ func TestExtractBinaryID(t *testing.T) {
 	}{
 		{"string", "my-id", "my-id"},
 		{"bytes 16", []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}, "04030201-0605-0807-090a-0b0c0d0e0f10"},
-		{"primitive.Binary", primitive.Binary{Data: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}}, "04030201-0605-0807-090a-0b0c0d0e0f10"},
+		{"bson.Binary", bson.Binary{Data: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}}, "04030201-0605-0807-090a-0b0c0d0e0f10"},
 		{"nil", nil, ""},
 		{"unsupported", 42, ""},
 	}

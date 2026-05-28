@@ -11,7 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	_ "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
@@ -154,7 +154,7 @@ func TestRoundtrip(t *testing.T) {
 			t.Skip("Entities field is not an array — skipping")
 		}
 
-		elems, err := arr.Elements()
+		elems, err := arr.Values()
 		if err != nil || len(elems) == 0 {
 			t.Skip("Entities array is empty — skipping")
 		}
@@ -164,7 +164,7 @@ func TestRoundtrip(t *testing.T) {
 		dec := codec.NewDecoder(codec.DefaultRegistry)
 		decoded := 0
 		for i, el := range elems {
-			doc, ok := el.Value().DocumentOK()
+			doc, ok := el.DocumentOK()
 			if !ok {
 				continue // skip non-document elements
 			}

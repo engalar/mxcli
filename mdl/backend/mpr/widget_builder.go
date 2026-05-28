@@ -9,8 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/bsonutil"
@@ -436,7 +435,7 @@ func matchesTypePointer(prop bson.D, propertyTypeID string) bool {
 	for _, elem := range prop {
 		if elem.Key == "TypePointer" {
 			switch v := elem.Value.(type) {
-			case primitive.Binary:
+			case bson.Binary:
 				propID := strings.ReplaceAll(types.BlobToUUID(v.Data), "-", "")
 				return propID == normalizedTarget
 			case []byte:

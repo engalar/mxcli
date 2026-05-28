@@ -11,8 +11,7 @@ import (
 
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/spf13/cobra"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 var extractTemplatesCmd = &cobra.Command{
@@ -155,7 +154,7 @@ func convertBsonValue(v any) any {
 			arr[i] = convertBsonValue(item)
 		}
 		return arr
-	case primitive.Binary:
+	case bson.Binary:
 		return fmt.Sprintf("%x", val.Data)
 	case []byte:
 		return fmt.Sprintf("%x", val)

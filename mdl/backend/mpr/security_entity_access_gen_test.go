@@ -4,12 +4,12 @@ package mprbackend
 
 import (
 	"fmt"
-	"github.com/mendixlabs/mxcli/mdl/types"
 	"strings"
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/mendixlabs/mxcli/mdl/types"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -181,14 +181,14 @@ func countVersionedEntries(arr bson.A) int {
 }
 
 // allIDsAreBinary recursively walks a bson.D and returns the path of any $ID
-// field whose value is not primitive.Binary. Returns nil if all $ID fields are
+// field whose value is not bson.Binary. Returns nil if all $ID fields are
 // Binary (the passing case).
 func allIDsAreBinary(doc bson.D, prefix string) []string {
 	var bad []string
 	for _, f := range doc {
 		path := prefix + "." + f.Key
 		if f.Key == "$ID" {
-			if _, ok := f.Value.(primitive.Binary); !ok {
+			if _, ok := f.Value.(bson.Binary); !ok {
 				bad = append(bad, fmt.Sprintf("%s = %T(%v)", path, f.Value, f.Value))
 			}
 			continue

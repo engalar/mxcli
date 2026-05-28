@@ -17,8 +17,7 @@ import (
 	"fmt"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
@@ -77,8 +76,8 @@ func parseNavigationDocumentRaw(unitID, containerID string, contents []byte) (*t
 	}
 
 	for _, item := range extractBsonArray(raw["Profiles"]) {
-		profMap, ok := item.(map[string]any)
-		if !ok {
+		profMap := extractBsonMap(item)
+		if profMap == nil {
 			continue
 		}
 		if profile := parseNavigationProfile(profMap); profile != nil {
@@ -97,7 +96,7 @@ func parseNavigationProfile(raw map[string]any) *types.NavigationProfile {
 
 	if typeName == "Navigation$NativeNavigationProfile" {
 		profile.IsNative = true
-		if hp, ok := raw["NativeHomePage"].(map[string]any); ok {
+		if hp := extractBsonMap(raw["NativeHomePage"]); hp != nil {
 			page := extractString(hp["HomePagePage"])
 			nanoflow := extractString(hp["HomePageNanoflow"])
 			if page != "" || nanoflow != "" {
@@ -105,7 +104,7 @@ func parseNavigationProfile(raw map[string]any) *types.NavigationProfile {
 			}
 		}
 		for _, item := range extractBsonArray(raw["RoleBasedNativeHomePages"]) {
-			if rbMap, ok := item.(map[string]any); ok {
+			if rbMap := extractBsonMap(item); rbMap != nil {
 				rbh := &types.NavRoleBasedHome{
 					UserRole:  extractString(rbMap["UserRole"]),
 					Page:      extractString(rbMap["HomePagePage"]),
@@ -117,14 +116,14 @@ func parseNavigationProfile(raw map[string]any) *types.NavigationProfile {
 			}
 		}
 		for _, item := range extractBsonArray(raw["BottomBarItems"]) {
-			if barMap, ok := item.(map[string]any); ok {
+			if barMap := extractBsonMap(item); barMap != nil {
 				if mi := parseNavMenuItemFromBottomBar(barMap); mi != nil {
 					profile.MenuItems = append(profile.MenuItems, mi)
 				}
 			}
 		}
 	} else {
-		if hp, ok := raw["HomePage"].(map[string]any); ok {
+		if hp := extractBsonMap(raw["HomePage"]); hp != nil {
 			page := extractString(hp["Page"])
 			mf := extractString(hp["Microflow"])
 			if page != "" || mf != "" {
@@ -132,7 +131,7 @@ func parseNavigationProfile(raw map[string]any) *types.NavigationProfile {
 			}
 		}
 		for _, item := range extractBsonArray(raw["HomeItems"]) {
-			if rbMap, ok := item.(map[string]any); ok {
+			if rbMap := extractBsonMap(item); rbMap != nil {
 				rbh := &types.NavRoleBasedHome{
 					UserRole:  extractString(rbMap["UserRole"]),
 					Page:      extractString(rbMap["Page"]),
@@ -143,18 +142,18 @@ func parseNavigationProfile(raw map[string]any) *types.NavigationProfile {
 				}
 			}
 		}
-		if lps, ok := raw["LoginPageSettings"].(map[string]any); ok {
+		if lps := extractBsonMap(raw["LoginPageSettings"]); lps != nil {
 			profile.LoginPage = extractString(lps["Form"])
 		}
-		if nfp, ok := raw["NotFoundHomepage"].(map[string]any); ok {
+		if nfp := extractBsonMap(raw["NotFoundHomepage"]); nfp != nil {
 			profile.NotFoundPage = extractString(nfp["Page"])
 			if profile.NotFoundPage == "" {
 				profile.NotFoundPage = extractString(nfp["Microflow"])
 			}
 		}
-		if menu, ok := raw["Menu"].(map[string]any); ok {
+		if menu := extractBsonMap(raw["Menu"]); menu != nil {
 			for _, item := range extractBsonArray(menu["Items"]) {
-				if miMap, ok := item.(map[string]any); ok {
+				if miMap := extractBsonMap(item); miMap != nil {
 					if mi := parseNavMenuItem(miMap); mi != nil {
 						profile.MenuItems = append(profile.MenuItems, mi)
 					}
@@ -164,7 +163,7 @@ func parseNavigationProfile(raw map[string]any) *types.NavigationProfile {
 	}
 
 	for _, item := range extractBsonArray(raw["OfflineEntityConfigs"]) {
-		if oeMap, ok := item.(map[string]any); ok {
+		if oeMap := extractBsonMap(item); oeMap != nil {
 			oe := &types.NavOfflineEntity{
 				Entity:     extractString(oeMap["Entity"]),
 				SyncMode:   extractString(oeMap["SyncMode"]),
@@ -181,21 +180,21 @@ func parseNavigationProfile(raw map[string]any) *types.NavigationProfile {
 func parseNavMenuItem(raw map[string]any) *types.NavMenuItem {
 	mi := &types.NavMenuItem{}
 
-	if caption, ok := raw["Caption"].(map[string]any); ok {
+	if caption := extractBsonMap(raw["Caption"]); caption != nil {
 		mi.Caption = extractTextFromBson(caption)
 	}
 
-	if action, ok := raw["Action"].(map[string]any); ok {
+	if action := extractBsonMap(raw["Action"]); action != nil {
 		actionType := extractString(action["$Type"])
 		switch {
 		case strings.HasSuffix(actionType, "FormAction") || strings.HasSuffix(actionType, "PageClientAction"):
 			mi.ActionType = "PageAction"
-			if fs, ok := action["FormSettings"].(map[string]any); ok {
+			if fs := extractBsonMap(action["FormSettings"]); fs != nil {
 				mi.Page = extractString(fs["Form"])
 			}
 		case strings.HasSuffix(actionType, "MicroflowAction") || strings.HasSuffix(actionType, "MicroflowClientAction"):
 			mi.ActionType = "MicroflowAction"
-			if ms, ok := action["MicroflowSettings"].(map[string]any); ok {
+			if ms := extractBsonMap(action["MicroflowSettings"]); ms != nil {
 				mi.Microflow = extractString(ms["Microflow"])
 			}
 		case strings.HasSuffix(actionType, "OpenLinkAction") || strings.HasSuffix(actionType, "OpenLinkClientAction"):
@@ -208,7 +207,7 @@ func parseNavMenuItem(raw map[string]any) *types.NavMenuItem {
 	}
 
 	for _, item := range extractBsonArray(raw["Items"]) {
-		if subMap, ok := item.(map[string]any); ok {
+		if subMap := extractBsonMap(item); subMap != nil {
 			if sub := parseNavMenuItem(subMap); sub != nil {
 				mi.Items = append(mi.Items, sub)
 			}
@@ -223,7 +222,7 @@ func parseNavMenuItem(raw map[string]any) *types.NavMenuItem {
 
 func parseNavMenuItemFromBottomBar(raw map[string]any) *types.NavMenuItem {
 	mi := &types.NavMenuItem{}
-	if caption, ok := raw["Caption"].(map[string]any); ok {
+	if caption := extractBsonMap(raw["Caption"]); caption != nil {
 		mi.Caption = extractTextFromBson(caption)
 	}
 	mi.Page = extractString(raw["Page"])
@@ -252,7 +251,7 @@ func extractBsonArray(v any) []any {
 	if v == nil {
 		return nil
 	}
-	arr, ok := v.(primitive.A)
+	arr, ok := v.(bson.A)
 	if !ok {
 		if slice, ok := v.([]any); ok {
 			if len(slice) > 0 {
@@ -275,7 +274,7 @@ func extractBsonArray(v any) []any {
 
 func extractTextFromBson(raw map[string]any) string {
 	for _, item := range extractBsonArray(raw["Items"]) {
-		if transMap, ok := item.(map[string]any); ok {
+		if transMap := extractBsonMap(item); transMap != nil {
 			text := extractString(transMap["Text"])
 			if text != "" {
 				return text
@@ -283,7 +282,7 @@ func extractTextFromBson(raw map[string]any) string {
 		}
 	}
 	for _, item := range extractBsonArray(raw["Translations"]) {
-		if transMap, ok := item.(map[string]any); ok {
+		if transMap := extractBsonMap(item); transMap != nil {
 			text := extractString(transMap["Text"])
 			if text != "" {
 				return text
@@ -327,13 +326,13 @@ func extractBsonID(v any) string {
 		return val
 	case []byte:
 		return blobToUUID(val)
-	case primitive.Binary:
+	case bson.Binary:
 		return blobToUUID(val.Data)
 	case map[string]any:
 		if id, ok := val["$ID"].(string); ok {
 			return id
 		}
-		if b, ok := val["$ID"].(primitive.Binary); ok {
+		if b, ok := val["$ID"].(bson.Binary); ok {
 			return blobToUUID(b.Data)
 		}
 		if b, ok := val["$ID"].([]byte); ok {
@@ -350,9 +349,13 @@ func extractBsonMap(v any) map[string]any {
 	switch val := v.(type) {
 	case map[string]any:
 		return val
-	case primitive.D:
-		return val.Map()
-	case primitive.M:
+	case bson.D:
+		m := make(map[string]any, len(val))
+		for _, e := range val {
+			m[e.Key] = e.Value
+		}
+		return m
+	case bson.M:
 		return map[string]any(val)
 	}
 	return nil

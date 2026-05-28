@@ -24,13 +24,40 @@ import (
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 )
 
+// IndexBuilder constructs a meta.Index from an MPR file path.
+// The implementation is responsible for opening and closing any backend
+// resources; it must not retain them after Build returns.
+type IndexBuilder interface {
+	BuildIndex(mprPath string) (*meta.Index, error)
+}
+
+// MprIndexBuilder is the production IndexBuilder. It opens the MPR backend,
+// builds the index, then closes the backend before returning.
+type MprIndexBuilder struct{}
+
+func (b *MprIndexBuilder) BuildIndex(mprPath string) (*meta.Index, error) {
+	be, err := mprbackend.NewFromPath(mprPath)
+	if err != nil {
+		return nil, fmt.Errorf("open mpr: %w", err)
+	}
+	idx, buildErr := meta.BuildFromBackend(be)
+	_ = be.Disconnect() // always close, regardless of build outcome
+	if buildErr != nil {
+		return nil, fmt.Errorf("build index: %w", buildErr)
+	}
+	return idx, nil
+}
+
+// compile-time check.
+var _ IndexBuilder = (*MprIndexBuilder)(nil)
+
 // Daemon is a long-running process bound to one MPR file.
 type Daemon struct {
 	mprPath     string
 	sockPath    string
 	idleTimeout time.Duration
+	builder     IndexBuilder // never nil
 
-	backend *mprbackend.MprBackend
 	index   *meta.Index
 	builtAt time.Time
 
@@ -44,7 +71,7 @@ type Daemon struct {
 // New constructs a Daemon for mprPath using the default SocketPath(mprPath).
 // The socket file is not yet bound — call Serve() to bind and accept connections.
 func New(mprPath string, idleTimeout time.Duration) (*Daemon, error) {
-	return NewWithSocket(mprPath, "", idleTimeout)
+	return NewWithBuilder(mprPath, "", idleTimeout, &MprIndexBuilder{})
 }
 
 // NewWithSocket constructs a Daemon for mprPath bound to the given socket path.
@@ -52,8 +79,18 @@ func New(mprPath string, idleTimeout time.Duration) (*Daemon, error) {
 // `mxcli expr daemon start --socket <path>` CLI flag so DaemonClient and the
 // spawned daemon agree on a non-default socket location.
 func NewWithSocket(mprPath, socketPath string, idleTimeout time.Duration) (*Daemon, error) {
+	return NewWithBuilder(mprPath, socketPath, idleTimeout, &MprIndexBuilder{})
+}
+
+// NewWithBuilder is the primary constructor. Pass a custom IndexBuilder to
+// replace the production MPR backend — useful for unit tests that want to
+// inject a pre-built meta.Index without touching the file system.
+func NewWithBuilder(mprPath, socketPath string, idleTimeout time.Duration, builder IndexBuilder) (*Daemon, error) {
 	if mprPath == "" {
 		return nil, errors.New("daemon: mprPath is required")
+	}
+	if builder == nil {
+		return nil, errors.New("daemon: builder is required")
 	}
 	abs, err := filepath.Abs(mprPath)
 	if err != nil {
@@ -73,6 +110,7 @@ func NewWithSocket(mprPath, socketPath string, idleTimeout time.Duration) (*Daem
 		mprPath:     abs,
 		sockPath:    sock,
 		idleTimeout: idleTimeout,
+		builder:     builder,
 		lastReq:     time.Now(),
 		stopCh:      make(chan struct{}),
 	}
@@ -85,22 +123,12 @@ func (d *Daemon) MprPath() string { return d.mprPath }
 // SocketPath returns the Unix socket path this daemon serves on.
 func (d *Daemon) SocketPath() string { return d.sockPath }
 
-// rebuildIndex opens (or reopens) the MPR backend and builds a fresh Index.
+// rebuildIndex delegates to the injected IndexBuilder, replacing d.index.
 func (d *Daemon) rebuildIndex() error {
-	if d.backend != nil {
-		_ = d.backend.Disconnect()
-		d.backend = nil
-	}
-	b, err := mprbackend.NewFromPath(d.mprPath)
+	idx, err := d.builder.BuildIndex(d.mprPath)
 	if err != nil {
-		return fmt.Errorf("daemon: open mpr: %w", err)
+		return fmt.Errorf("daemon: %w", err)
 	}
-	idx, err := meta.BuildFromBackend(b)
-	if err != nil {
-		_ = b.Disconnect()
-		return fmt.Errorf("daemon: build index: %w", err)
-	}
-	d.backend = b
 	d.index = idx
 	d.builtAt = time.Now()
 	return nil
@@ -153,7 +181,7 @@ func (d *Daemon) Serve() error {
 	}
 }
 
-// Stop closes the listener, the backend, and removes the socket file.
+// Stop closes the listener and removes the socket file.
 func (d *Daemon) Stop() error {
 	d.mu.Lock()
 	if d.stopped {
@@ -163,16 +191,11 @@ func (d *Daemon) Stop() error {
 	d.stopped = true
 	close(d.stopCh)
 	l := d.listener
-	b := d.backend
 	d.listener = nil
-	d.backend = nil
 	d.mu.Unlock()
 
 	if l != nil {
 		_ = l.Close()
-	}
-	if b != nil {
-		_ = b.Disconnect()
 	}
 	_ = os.Remove(d.sockPath)
 	return nil
@@ -203,7 +226,7 @@ func (d *Daemon) idleWatcher() {
 }
 
 // handleConn services one client connection: it decodes a ValidateRequest
-// and writes either a PingResponse (empty MprPath) or a ValidateResponse.
+// and writes either a PingResponse (Type==ReqPing) or a ValidateResponse.
 func (d *Daemon) handleConn(conn net.Conn) {
 	defer conn.Close()
 
@@ -217,8 +240,8 @@ func (d *Daemon) handleConn(conn net.Conn) {
 		return
 	}
 
-	// Empty MprPath => ping/status request.
-	if req.MprPath == "" {
+	// ReqPing (or legacy empty-MprPath) => status probe.
+	if req.Type == ReqPing || (req.Type == "" && req.MprPath == "") {
 		_ = json.NewEncoder(conn).Encode(d.pingResponse())
 		return
 	}

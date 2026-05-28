@@ -6,8 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/model"
@@ -237,7 +236,7 @@ func TestSetWidgetProperty_WidgetNotFound(t *testing.T) {
 }
 
 func TestSetWidgetProperty_PluggableWidget(t *testing.T) {
-	propTypeID := primitive.Binary{Subtype: 0x04, Data: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}}
+	propTypeID := bson.Binary{Subtype: 0x04, Data: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}}
 	w1 := bson.D{
 		{Key: "$Type", Value: "CustomWidgets$CustomWidget"},
 		{Key: "Name", Value: "cb1"},
@@ -500,7 +499,7 @@ func TestFindBsonWidget_DataViewFooter(t *testing.T) {
 // Page context tree tests
 // ============================================================================
 
-func makeWidgetWithID(name string, typeName string, id primitive.Binary) bson.D {
+func makeWidgetWithID(name string, typeName string, id bson.Binary) bson.D {
 	return bson.D{
 		{Key: "$ID", Value: id},
 		{Key: "$Type", Value: typeName},
@@ -508,10 +507,10 @@ func makeWidgetWithID(name string, typeName string, id primitive.Binary) bson.D 
 	}
 }
 
-func makeBsonID(b byte) primitive.Binary {
+func makeBsonID(b byte) bson.Binary {
 	data := make([]byte, 16)
 	data[0] = b
-	return primitive.Binary{Subtype: 0x04, Data: data}
+	return bson.Binary{Subtype: 0x04, Data: data}
 }
 
 func TestExtractPageParamsFromBSON_EntityParams(t *testing.T) {
@@ -734,13 +733,13 @@ func makePageWithLayout(layoutQN string, params ...string) bson.D {
 	args := bson.A{int32(3)}
 	for _, p := range params {
 		args = append(args, bson.D{
-			{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+			{Key: "$ID", Value: bson.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
 			{Key: "$Type", Value: "Pages$FormCallArgument"},
 			{Key: "Parameter", Value: layoutQN + "." + p},
 		})
 	}
 	return bson.D{
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Pages$FormCall"},
 		{Key: "FormCall", Value: bson.D{
 			{Key: "Form", Value: layoutQN},
@@ -834,7 +833,7 @@ func TestSetLayout_Snippet_Error(t *testing.T) {
 
 func TestSetLayout_NoFormCall_Error(t *testing.T) {
 	page := bson.D{
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Pages$Page"},
 	}
 	m := makePageMutator(page)
@@ -864,10 +863,10 @@ func TestSetLayout_EmptyForm_Error(t *testing.T) {
 // deriveColumnNameBson / sanitizeColumnName regression tests (issue #116)
 // ============================================================================
 
-func makePropTypeID116(b byte) primitive.Binary {
+func makePropTypeID116(b byte) bson.Binary {
 	data := make([]byte, 16)
 	data[0] = b
-	return primitive.Binary{Subtype: 0x04, Data: data}
+	return bson.Binary{Subtype: 0x04, Data: data}
 }
 
 func TestDeriveColumnNameBson_AttributeBinding(t *testing.T) {

@@ -22,6 +22,10 @@ func (s funcSig) min() int {
 	return len(s.args)
 }
 
+// funcTable lists every Mendix built-in function and its signature.
+// Extracted from Mendix 10/11 expression documentation.
+// When Mendix adds new built-ins, add them here and update the corresponding
+// test in func_checker_test.go. Source: reference/mendixmodellib/reflection-data/.
 var funcTable = map[string]funcSig{
 	// Boolean
 	"not": {args: []TypeKind{KindBoolean}, ret: KindBoolean},

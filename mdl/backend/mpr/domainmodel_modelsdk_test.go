@@ -7,8 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -67,17 +66,17 @@ func makeEnumRefMPR(t *testing.T, oldRef string) (mprPath string, dmID model.ID)
 	// with one EnumerationAttributeType attribute.
 	enumTypeDoc := bson.D{
 		{Key: "$Type", Value: "DomainModels$EnumerationAttributeType"},
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0x00, Data: make([]byte, 16)}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0x00, Data: make([]byte, 16)}},
 		{Key: "Enumeration", Value: oldRef},
 	}
 	valueDoc := bson.D{
 		{Key: "$Type", Value: "DomainModels$StoredValue"},
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0x00, Data: make([]byte, 16)}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0x00, Data: make([]byte, 16)}},
 		{Key: "DefaultValue", Value: ""},
 	}
 	attrDoc := bson.D{
 		{Key: "$Type", Value: "DomainModels$Attribute"},
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0x00, Data: attrBlob}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0x00, Data: attrBlob}},
 		{Key: "Name", Value: "Status"},
 		{Key: "Documentation", Value: ""},
 		{Key: "Exposed", Value: false},
@@ -86,14 +85,14 @@ func makeEnumRefMPR(t *testing.T, oldRef string) (mprPath string, dmID model.ID)
 	}
 	entityDoc := bson.D{
 		{Key: "$Type", Value: "DomainModels$Entity"},
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0x00, Data: entityBlob}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0x00, Data: entityBlob}},
 		{Key: "Name", Value: "MyEntity"},
 		{Key: "Documentation", Value: ""},
 		{Key: "Persistable", Value: "DomainModels$StorageBehavior_Persist"},
 		{Key: "DataStorageGuid", Value: ""},
 		{Key: "Generalization", Value: bson.D{
 			{Key: "$Type", Value: "DomainModels$NoGeneralization"},
-			{Key: "$ID", Value: primitive.Binary{Subtype: 0x00, Data: make([]byte, 16)}},
+			{Key: "$ID", Value: bson.Binary{Subtype: 0x00, Data: make([]byte, 16)}},
 		}},
 		{Key: "Attributes", Value: bson.A{attrDoc}},
 		{Key: "EventHandlers", Value: bson.A{}},
@@ -102,7 +101,7 @@ func makeEnumRefMPR(t *testing.T, oldRef string) (mprPath string, dmID model.ID)
 	}
 	dmDoc := bson.D{
 		{Key: "$Type", Value: "DomainModels$DomainModel"},
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0x00, Data: dmBlob}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0x00, Data: dmBlob}},
 		{Key: "Entities", Value: bson.A{entityDoc}},
 		{Key: "Associations", Value: bson.A{}},
 		{Key: "CrossAssociations", Value: bson.A{}},
@@ -169,7 +168,7 @@ func makeDomainModelTestMPR(t *testing.T) (mprPath string, dmID model.ID) {
 
 	dmDoc := bson.D{
 		{Key: "$Type", Value: "DomainModels$DomainModel"},
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0x00, Data: dmBlob}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0x00, Data: dmBlob}},
 		{Key: "Entities", Value: bson.A{}},
 		{Key: "Associations", Value: bson.A{}},
 		{Key: "CrossAssociations", Value: bson.A{}},
@@ -335,7 +334,7 @@ func makeEntityAccessTestMPR(t *testing.T) (mprPath string, dmID model.ID) {
 
 	entityDoc := bson.D{
 		{Key: "$Type", Value: "DomainModels$Entity"},
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0x00, Data: entityBlob}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0x00, Data: entityBlob}},
 		{Key: "Name", Value: "Customer"},
 		{Key: "Documentation", Value: ""},
 		{Key: "Attributes", Value: bson.A{}},
@@ -345,7 +344,7 @@ func makeEntityAccessTestMPR(t *testing.T) (mprPath string, dmID model.ID) {
 	}
 	dmDoc := bson.D{
 		{Key: "$Type", Value: "DomainModels$DomainModel"},
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0x00, Data: dmBlob}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0x00, Data: dmBlob}},
 		{Key: "Entities", Value: bson.A{entityDoc}},
 		{Key: "Associations", Value: bson.A{}},
 		{Key: "CrossAssociations", Value: bson.A{}},
@@ -491,7 +490,7 @@ func bsonFieldBool(doc bson.D, key string) (bool, bool) {
 
 // TestCreateEntityGen_WithIndex_AttributePointerIsBinary verifies that when
 // CreateEntityGen persists an entity with an index, the serialised BSON for
-// each IndexedAttribute stores AttributePointer as binary (primitive.Binary),
+// each IndexedAttribute stores AttributePointer as binary (bson.Binary),
 // not as a plain string.
 //
 // Regression: astToEntityGen used to capture attribute IDs before they were
@@ -563,9 +562,10 @@ func TestCreateEntityGen_WithIndex_AttributePointerIsBinary(t *testing.T) {
 		t.Fatal("no entities in BSON")
 	}
 	// Skip the version prefix (int32) at index 0.
-	var entityDoc bson.M
+	// In v2, nested docs inside bson.M decode as bson.D, not bson.M.
+	var entityDoc map[string]any
 	for _, item := range entities {
-		if m, ok := item.(bson.M); ok {
+		if m := bsonDocToMap(item); m != nil {
 			entityDoc = m
 			break
 		}
@@ -575,9 +575,9 @@ func TestCreateEntityGen_WithIndex_AttributePointerIsBinary(t *testing.T) {
 	}
 
 	indexes, _ := entityDoc["Indexes"].(bson.A)
-	var indexDoc bson.M
+	var indexDoc map[string]any
 	for _, item := range indexes {
-		if m, ok := item.(bson.M); ok {
+		if m := bsonDocToMap(item); m != nil {
 			indexDoc = m
 			break
 		}
@@ -589,8 +589,8 @@ func TestCreateEntityGen_WithIndex_AttributePointerIsBinary(t *testing.T) {
 	attrs, _ := indexDoc["Attributes"].(bson.A)
 	found := 0
 	for _, item := range attrs {
-		ia, ok := item.(bson.M)
-		if !ok {
+		ia := bsonDocToMap(item)
+		if ia == nil {
 			continue
 		}
 		ptr := ia["AttributePointer"]
@@ -601,12 +601,30 @@ func TestCreateEntityGen_WithIndex_AttributePointerIsBinary(t *testing.T) {
 		if _, isString := ptr.(string); isString {
 			t.Errorf("IndexedAttribute.AttributePointer is BSON string %q — must be binary UUID", ptr)
 		}
-		if _, isBinary := ptr.(primitive.Binary); !isBinary {
-			t.Errorf("IndexedAttribute.AttributePointer type = %T, want primitive.Binary", ptr)
+		if _, isBinary := ptr.(bson.Binary); !isBinary {
+			t.Errorf("IndexedAttribute.AttributePointer type = %T, want bson.Binary", ptr)
 		}
 		found++
 	}
 	if found == 0 {
 		t.Error("no IndexedAttribute entries found in index BSON")
 	}
+}
+
+// bsonDocToMap converts bson.M or bson.D to map[string]any.
+// In mongo-driver v2, nested docs inside bson.M unmarshal as bson.D.
+func bsonDocToMap(v any) map[string]any {
+	switch m := v.(type) {
+	case bson.M:
+		return map[string]any(m)
+	case bson.D:
+		out := make(map[string]any, len(m))
+		for _, e := range m {
+			out[e.Key] = e.Value
+		}
+		return out
+	case map[string]any:
+		return m
+	}
+	return nil
 }

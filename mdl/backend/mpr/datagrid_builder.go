@@ -8,8 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/bsonutil"
@@ -963,7 +962,7 @@ func getTypePointerFromProperty(prop bson.D) string {
 	for _, elem := range prop {
 		if elem.Key == "TypePointer" {
 			switch v := elem.Value.(type) {
-			case primitive.Binary:
+			case bson.Binary:
 				return bsonutil.BsonBinaryToID(v)
 			case []byte:
 				return types.BlobToUUID(v)

@@ -1,5 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
+// Design note — single-pass parse+check:
+// Parsing and semantic hint emission are intentionally combined in one pass
+// rather than separated into parse-then-check phases. This avoids a second
+// AST traversal and lets the parser emit hints at the exact source position
+// of each token while its context is still live on the call stack.
+// Trade-off: parsePrimary / parseOr / … carry both responsibilities (SRP
+// tension). If a future use case needs parse-without-hints, gate expensive
+// catalog lookups behind ctx.IsSemanticEnabled().
+
 package exprcheck
 
 import (

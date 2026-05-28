@@ -6,8 +6,9 @@
 package metamodel
 
 import (
-	"github.com/mendixlabs/mxcli/model"
 	"time"
+
+	"github.com/mendixlabs/mxcli/model"
 )
 
 // AuthenticationDetails is implemented by: BasicAuthenticationDetails, OAuth20AuthCodeDetails, OAuth20ClientCredentialsDetails

@@ -4,8 +4,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // --- DecodeChild / DecodeChildren ---
@@ -74,7 +73,7 @@ func TestDecodeIDBinary(t *testing.T) {
 		data[i] = byte(i + 0xa0)
 	}
 	raw := mustMarshal(bson.D{
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0, Data: data}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0, Data: data}},
 		{Key: "$Type", Value: "X"},
 	})
 	id := decodeID(raw)

@@ -9,8 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 )
@@ -190,12 +189,12 @@ func bscanReplaceInValue(v any, oldName, newName string) (any, bool) {
 		if bscanReplaceStringsInMap(val, oldName, newName) {
 			return val, true
 		}
-	case primitive.M:
+	case bson.M:
 		m := map[string]any(val)
 		if bscanReplaceStringsInMap(m, oldName, newName) {
 			return val, true
 		}
-	case primitive.A:
+	case bson.A:
 		changed := false
 		for i, elem := range val {
 			if replaced, ok := bscanReplaceInValue(elem, oldName, newName); ok {
@@ -217,7 +216,7 @@ func bscanReplaceInValue(v any, oldName, newName string) (any, bool) {
 		if changed {
 			return val, true
 		}
-	case primitive.D:
+	case bson.D:
 		changed := false
 		for i, elem := range val {
 			if replaced, ok := bscanReplaceInValue(elem.Value, oldName, newName); ok {

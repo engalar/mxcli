@@ -3,7 +3,7 @@ package element
 import (
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func TestBase_SetID_ID(t *testing.T) {

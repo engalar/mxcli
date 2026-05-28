@@ -7,8 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
@@ -81,7 +80,7 @@ func makeBSONUnit(t *testing.T, unitIDStr, bsonType string, extra bson.D) []byte
 	idBlob := secTestUUIDBlob(unitIDStr)
 	doc := bson.D{
 		{Key: "$Type", Value: bsonType},
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0x00, Data: idBlob}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0x00, Data: idBlob}},
 	}
 	doc = append(doc, extra...)
 	b, err := bson.Marshal(doc)

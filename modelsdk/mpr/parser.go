@@ -6,11 +6,11 @@ import (
 	"encoding/base64"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // extractBsonID extracts an ID string from various BSON ID representations.
-// Mendix stores IDs as Binary with Subtype/Data or as primitive.Binary.
+// Mendix stores IDs as Binary with Subtype/Data or as bson.Binary.
 func extractBsonID(v any) string {
 	if v == nil {
 		return ""
@@ -21,7 +21,7 @@ func extractBsonID(v any) string {
 		return val
 	case []byte:
 		return blobToUUID(val)
-	case primitive.Binary:
+	case bson.Binary:
 		return blobToUUID(val.Data)
 	case map[string]any:
 		// Binary UUID stored as {Subtype: 0, Data: "base64..."}
@@ -87,7 +87,7 @@ func extractBsonArray(v any) []any {
 		return nil
 	}
 
-	arr, ok := v.(primitive.A)
+	arr, ok := v.(bson.A)
 	if !ok {
 		// Try regular slice
 		if slice, ok := v.([]any); ok {
@@ -103,7 +103,7 @@ func extractBsonArray(v any) []any {
 		return nil
 	}
 
-	// primitive.A is []interface{} underneath
+	// bson.A is []interface{} underneath
 	slice := []any(arr)
 
 	// Check if first element is the array type indicator (2 or 3)
@@ -118,7 +118,7 @@ func extractBsonArray(v any) []any {
 }
 
 // extractBsonMap coerces a BSON value to map[string]interface{}.
-// Handles map[string]interface{}, primitive.D, and primitive.M.
+// Handles map[string]interface{}, bson.D, and bson.M.
 func extractBsonMap(v any) map[string]any {
 	if v == nil {
 		return nil
@@ -126,16 +126,20 @@ func extractBsonMap(v any) map[string]any {
 	switch val := v.(type) {
 	case map[string]any:
 		return val
-	case primitive.D:
-		return val.Map()
-	case primitive.M:
+	case bson.D:
+		m := make(map[string]any, len(val))
+		for _, e := range val {
+			m[e.Key] = e.Value
+		}
+		return m
+	case bson.M:
 		return map[string]any(val)
 	}
 	return nil
 }
 
 // extractBsonSlice coerces a BSON value to []interface{}.
-// Handles []interface{} and primitive.A. Unlike extractBsonArray,
+// Handles []interface{} and bson.A. Unlike extractBsonArray,
 // this does NOT strip Mendix type-indicator prefixes.
 func extractBsonSlice(v any) []any {
 	if v == nil {
@@ -144,7 +148,7 @@ func extractBsonSlice(v any) []any {
 	switch val := v.(type) {
 	case []any:
 		return val
-	case primitive.A:
+	case bson.A:
 		return []any(val)
 	}
 	return nil
@@ -165,7 +169,7 @@ func extractBsonArrayWithMarker(v any) BsonArrayInfo {
 
 	var slice []any
 	switch val := v.(type) {
-	case primitive.A:
+	case bson.A:
 		slice = []any(val)
 	case []any:
 		slice = val
@@ -209,8 +213,11 @@ func inferPropertyKind(key string, v any) string {
 		}
 		return "primitive"
 
-	case primitive.D:
-		m := val.Map()
+	case bson.D:
+		m := make(map[string]any, len(val))
+		for _, e := range val {
+			m[e.Key] = e.Value
+		}
 		if _, hasType := m["$Type"]; hasType {
 			return "part"
 		}
@@ -219,7 +226,7 @@ func inferPropertyKind(key string, v any) string {
 		}
 		return "primitive"
 
-	case primitive.M:
+	case bson.M:
 		if _, hasType := val["$Type"]; hasType {
 			return "part"
 		}
@@ -228,7 +235,7 @@ func inferPropertyKind(key string, v any) string {
 		}
 		return "primitive"
 
-	case primitive.A, []any:
+	case bson.A, []any:
 		info := extractBsonArrayWithMarker(v)
 		switch info.Marker {
 		case 1:

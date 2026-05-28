@@ -3,8 +3,9 @@
 package executor
 
 import (
-	"github.com/mendixlabs/mxcli/mdl/types"
 	"testing"
+
+	"github.com/mendixlabs/mxcli/mdl/types"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"

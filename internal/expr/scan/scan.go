@@ -14,8 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	_ "modernc.org/sqlite"
 )
 
@@ -177,6 +176,13 @@ func scanObj(v interface{}, project, relPath string, opts Options, out *[]ExprRe
 		for _, child := range val {
 			scanObj(child, project, relPath, opts, out)
 		}
+	case bson.D:
+		// v2: nested docs inside bson.M decode as bson.D (ordered slice), not bson.M.
+		m := make(map[string]any, len(val))
+		for _, e := range val {
+			m[e.Key] = e.Value
+		}
+		scanObj(bson.M(m), project, relPath, opts, out)
 	case bson.A:
 		for _, item := range val {
 			scanObj(item, project, relPath, opts, out)
@@ -252,7 +258,7 @@ func unitPathFromBSON(doc bson.M) string {
 
 func extractID(raw interface{}) string {
 	switch v := raw.(type) {
-	case primitive.Binary:
+	case bson.Binary:
 		return hex.EncodeToString(v.Data)
 	case []byte:
 		return hex.EncodeToString(v)

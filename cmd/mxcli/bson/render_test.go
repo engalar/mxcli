@@ -3,8 +3,7 @@ package bson
 import (
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func TestRenderScalarFields(t *testing.T) {
@@ -27,8 +26,8 @@ func TestRenderScalarFields(t *testing.T) {
 func TestRenderUUIDNormalized(t *testing.T) {
 	doc := bson.D{
 		{Key: "$Type", Value: "Workflows$Flow"},
-		{Key: "$ID", Value: primitive.Binary{Subtype: 3, Data: []byte("anything")}},
-		{Key: "PersistentId", Value: primitive.Binary{Subtype: 3, Data: []byte("anything")}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 3, Data: []byte("anything")}},
+		{Key: "PersistentId", Value: bson.Binary{Subtype: 3, Data: []byte("anything")}},
 	}
 	got := Render(doc, 0)
 	want := `Workflows$Flow

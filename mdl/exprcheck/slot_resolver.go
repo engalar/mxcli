@@ -2,6 +2,9 @@
 
 package exprcheck
 
+// staticExpectations maps MDL slot paths to their expected expression type.
+// Add a new entry whenever a new MDL statement slot is added to the executor.
+// Slot paths mirror the AST node + field name, e.g. "IfStmt.Condition".
 var staticExpectations = map[string]SlotConstraint{
 	"IfStmt.Condition":         {Kind: KindBoolean},
 	"WhileStmt.Condition":      {Kind: KindBoolean},

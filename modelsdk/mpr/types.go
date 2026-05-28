@@ -3,7 +3,7 @@ package mpr
 import (
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // UnitInfo contains basic information about a unit.

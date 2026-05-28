@@ -9,8 +9,9 @@ package executor
 
 import (
 	"fmt"
-	"github.com/mendixlabs/mxcli/mdl/types"
 	"strings"
+
+	"github.com/mendixlabs/mxcli/mdl/types"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"

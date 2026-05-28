@@ -52,11 +52,11 @@ func TestDaemon_ServeAndPing(t *testing.T) {
 	d := newTestDaemon(t, corpusAMPR)
 	waitForAlive(t, d.SocketPath())
 
-	// 用空 MprPath 触发 ping 路径
+	// 发送显式 ReqPing 请求
 	conn, err := net.Dial("unix", d.SocketPath())
 	require.NoError(t, err)
 	defer conn.Close()
-	require.NoError(t, json.NewEncoder(conn).Encode(daemon.ValidateRequest{}))
+	require.NoError(t, json.NewEncoder(conn).Encode(daemon.ValidateRequest{Type: daemon.ReqPing}))
 	var resp daemon.PingResponse
 	require.NoError(t, json.NewDecoder(conn).Decode(&resp))
 

@@ -1,6 +1,6 @@
 package codec
 
-import "go.mongodb.org/mongo-driver/bson"
+import "go.mongodb.org/mongo-driver/v2/bson"
 
 // BSONDocBuilder holds a raw bson.D document for interop with the
 // BSONDocument helper methods in bsondoc.go (ToBuilder,

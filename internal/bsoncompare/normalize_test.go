@@ -3,18 +3,17 @@ package bsoncompare_test
 import (
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/internal/bsoncompare"
 )
 
-func makeID(b byte) primitive.Binary {
+func makeID(b byte) bson.Binary {
 	data := make([]byte, 16)
 	for i := range data {
 		data[i] = b
 	}
-	return primitive.Binary{Data: data}
+	return bson.Binary{Data: data}
 }
 
 func TestNormalize_SelfIDOmitted(t *testing.T) {

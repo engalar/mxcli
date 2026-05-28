@@ -6,8 +6,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/modelsdk/property"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // TestFullRoundtripClean verifies decode → encode passthrough is byte-identical.
@@ -22,7 +21,7 @@ func TestFullRoundtripClean(t *testing.T) {
 	})
 
 	original := mustMarshal(bson.D{
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0, Data: make([]byte, 16)}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Test$RT"},
 		{Key: "Name", Value: "hello"},
 		{Key: "Extra", Value: int32(99)},
@@ -62,7 +61,7 @@ func TestFullRoundtripDirty(t *testing.T) {
 	})
 
 	original := mustMarshal(bson.D{
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0, Data: make([]byte, 16)}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Test$RTD"},
 		{Key: "Name", Value: "original"},
 		{Key: "Unknown", Value: "preserved"},
@@ -114,7 +113,7 @@ func TestFullRoundtripDirty(t *testing.T) {
 // TestDecodeEncodeWithChildren tests parent+children roundtrip.
 func TestDecodeEncodeWithChildren(t *testing.T) {
 	original := mustMarshal(bson.D{
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0, Data: make([]byte, 16)}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Test$Parent"},
 		{Key: "Items", Value: bson.A{int32(3),
 			bson.D{{Key: "$ID", Value: "c1"}, {Key: "$Type", Value: "Test$C1"}, {Key: "V", Value: "v1"}},

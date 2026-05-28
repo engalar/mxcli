@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 
@@ -608,7 +607,7 @@ func buildVersionedArray(elements []any) bson.A {
 // extractBinaryIDFromDoc extracts a binary ID string from a bson.D field.
 func extractBinaryIDFromDoc(val any) string {
 	switch bin := val.(type) {
-	case primitive.Binary:
+	case bson.Binary:
 		return types.BlobToUUID(bin.Data)
 	case []byte:
 		return types.BlobToUUID(bin)

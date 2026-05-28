@@ -5,8 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func HexOf(data []byte) string { return hex.EncodeToString(data) }
@@ -28,7 +27,7 @@ func normalizeDoc(doc bson.D, m IDMap, opts Options) map[string]any {
 
 func normalizeVal(v any, m IDMap, opts Options) any {
 	switch val := v.(type) {
-	case primitive.Binary:
+	case bson.Binary:
 		if len(val.Data) == 16 {
 			return m.Lookup(val.Data)
 		}

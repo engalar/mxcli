@@ -12,7 +12,7 @@
 package microflows
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
@@ -313,8 +313,16 @@ func StringTemplateArgsFromRaw(raw []byte) []string {
 // fallback chain.
 func lookupBSONMap(doc bson.M, keys ...string) bson.M {
 	for _, k := range keys {
-		if v, ok := doc[k].(bson.M); ok {
+		switch v := doc[k].(type) {
+		case bson.M:
 			return v
+		case bson.D:
+			// v2: nested docs inside bson.M decode as bson.D.
+			m := make(bson.M, len(v))
+			for _, e := range v {
+				m[e.Key] = e.Value
+			}
+			return m
 		}
 	}
 	return nil

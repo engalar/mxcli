@@ -16,18 +16,18 @@ import (
 
 	"log"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // idToBsonBinary converts a UUID string to BSON Binary format.
 // Mendix stores IDs as Binary with Subtype 0.
-func idToBsonBinary(id string) primitive.Binary {
+func idToBsonBinary(id string) bson.Binary {
 	blob := uuidToBlob(id)
 	if blob == nil || len(blob) != 16 {
 		// Generate a new UUID if the provided one is invalid
 		blob = uuidToBlob(generateUUID())
 	}
-	return primitive.Binary{
+	return bson.Binary{
 		Subtype: 0x00,
 		Data:    blob,
 	}

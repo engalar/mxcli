@@ -17,7 +17,7 @@ import (
 	"strings"
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"

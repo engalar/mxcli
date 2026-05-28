@@ -6,6 +6,7 @@ package executor
 
 import (
 	"fmt"
+
 	"github.com/mendixlabs/mxcli/mdl/types"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"

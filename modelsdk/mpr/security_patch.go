@@ -5,8 +5,7 @@ package mpr
 import (
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // ReconcileChange records a single member-access change made during
@@ -427,7 +426,7 @@ func secExtractBsonIDValue(v any) string {
 	switch val := v.(type) {
 	case string:
 		return val
-	case primitive.Binary:
+	case bson.Binary:
 		return blobToUUID(val.Data)
 	default:
 		return fmt.Sprintf("%v", v)

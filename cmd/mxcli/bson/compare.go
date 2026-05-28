@@ -407,7 +407,7 @@ func toMap(val any) (map[string]any, bool) {
 
 // toSlice attempts to convert a value to []any.
 func toSlice(val any) ([]any, bool) {
-	// bson.M unmarshals arrays as primitive.A which is []interface{}
+	// bson.M unmarshals arrays as bson.A which is []interface{}
 	s, ok := val.([]any)
 	return s, ok
 }

@@ -9,7 +9,7 @@ func TestInterfaces_Compile(t *testing.T) {
 		_ Parser
 		_ SlotResolver
 		_ CatalogReader
-		_ HintSink
+		_ Scope
 	)
 	_ = t
 }

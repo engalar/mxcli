@@ -5,7 +5,7 @@ package mpr
 import (
 	"github.com/mendixlabs/mxcli/model"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // SerializeImportMapping returns BSON bytes for an import mapping unit.

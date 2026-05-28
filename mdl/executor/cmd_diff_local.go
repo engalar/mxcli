@@ -17,8 +17,7 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // ============================================================================
@@ -836,7 +835,7 @@ func extractBsonID(v any) string {
 		return val
 	case []byte:
 		return blobToUUID(val)
-	case primitive.Binary:
+	case bson.Binary:
 		return blobToUUID(val.Data)
 	case map[string]any:
 		// Binary UUID stored as {Subtype: 0, Data: "base64..."}
@@ -861,7 +860,7 @@ func extractBsonArray(v any) []any {
 		return nil
 	}
 
-	arr, ok := v.(primitive.A)
+	arr, ok := v.(bson.A)
 	if !ok {
 		// Try regular slice
 		if slice, ok := v.([]any); ok {

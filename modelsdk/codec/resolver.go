@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/modelsdk/mpr"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // TypeResolver maps human-friendly type aliases to BSON $Type prefixes

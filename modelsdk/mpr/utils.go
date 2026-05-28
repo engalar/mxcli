@@ -6,7 +6,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // GenerateID generates a new unique ID for model elements.
@@ -28,12 +28,12 @@ func BlobToUUID(data []byte) string {
 }
 
 // IDToBsonBinary converts a UUID string to a BSON binary value.
-func IDToBsonBinary(id string) primitive.Binary {
+func IDToBsonBinary(id string) bson.Binary {
 	return idToBsonBinary(id)
 }
 
 // BsonBinaryToID converts a BSON binary value to a UUID string.
-func BsonBinaryToID(bin primitive.Binary) string {
+func BsonBinaryToID(bin bson.Binary) string {
 	return BlobToUUID(bin.Data)
 }
 

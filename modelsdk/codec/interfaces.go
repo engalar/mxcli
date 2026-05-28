@@ -2,7 +2,7 @@ package codec
 
 import (
 	"github.com/mendixlabs/mxcli/modelsdk/element"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // UnitReader provides read-only access to MPR units.

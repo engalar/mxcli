@@ -12,8 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/internal/bsoncompare"
 	"github.com/mendixlabs/mxcli/mdl/backend"
@@ -330,7 +329,7 @@ func assertNoPointerWidgetTypes(doc bson.D) error {
 			switch e.Value.(type) {
 			case bson.D:
 				return nil // inline object — correct
-			case primitive.Binary:
+			case bson.Binary:
 				return fmt.Errorf(
 					"CustomWidget %q: Type is a binary pointer, expected inline CustomWidgets$CustomWidgetType",
 					bsonLookupStr(d, "Name"),

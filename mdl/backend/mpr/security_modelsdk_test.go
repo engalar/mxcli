@@ -8,8 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/mendixlabs/mxcli/model"
 	_ "modernc.org/sqlite"
@@ -79,7 +78,7 @@ func makeSecurityTestMPR(t *testing.T) (mprPath string, unitID model.ID) {
 	idBlob := secTestUUIDBlob(unitIDStr)
 	secDoc := bson.D{
 		{Key: "$Type", Value: "Security$ProjectSecurity"},
-		{Key: "$ID", Value: primitive.Binary{Subtype: 0x00, Data: idBlob}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0x00, Data: idBlob}},
 		{Key: "SecurityLevel", Value: "Security$SecurityLevel_Off"},
 		{Key: "CheckSecurity", Value: true},
 		{Key: "EnableDemoUsers", Value: false},

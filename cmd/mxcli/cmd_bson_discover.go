@@ -7,7 +7,7 @@ import (
 	bsondiscover "github.com/mendixlabs/mxcli/cmd/mxcli/bson"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/spf13/cobra"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // discoverCmd is the "bson discover" subcommand for field coverage analysis.

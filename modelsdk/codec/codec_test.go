@@ -5,8 +5,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/modelsdk/property"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type stubElement struct {
@@ -53,7 +52,7 @@ func TestDecoderBasic(t *testing.T) {
 	r.Register("Test$Foo", func() element.Element { return &stubElement{} })
 
 	raw := mustMarshal(bson.D{
-		{Key: "$ID", Value: primitive.Binary{Subtype: 4, Data: make([]byte, 16)}},
+		{Key: "$ID", Value: bson.Binary{Subtype: 4, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Test$Foo"},
 		{Key: "name", Value: "hello"},
 	})

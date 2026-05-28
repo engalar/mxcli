@@ -13,9 +13,8 @@ import (
 // All BSON access must go through ctx.Backend.* or gen-package supplement functions.
 func TestNoDirectBSONImportInExecutor(t *testing.T) {
 	forbidden := []string{
-		"go.mongodb.org/mongo-driver/bson",
-		"go.mongodb.org/mongo-driver/bson/primitive",
-		"go.mongodb.org/mongo-driver/bson/bsoncore",
+		"go.mongodb.org/mongo-driver/v2/bson",
+		"go.mongodb.org/mongo-driver/v2/bson/bsoncore",
 		"github.com/mendixlabs/mxcli/modelsdk/codec",
 	}
 

@@ -8,7 +8,7 @@
 package texts
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // TranslationPair holds a language code and its translated text as
