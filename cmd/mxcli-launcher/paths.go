@@ -2,24 +2,14 @@
 
 package main
 
-import (
-	"os"
-	"path/filepath"
-)
+import "path/filepath"
 
-func daemonDir() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		home = os.TempDir()
-	}
-	return filepath.Join(home, ".mxcli", "daemon")
-}
-
-func daemonBinaryPath() string          { return filepath.Join(daemonDir(), "mxcli-daemon") }
-func daemonBakPath() string             { return filepath.Join(daemonDir(), "mxcli-daemon.bak") }
-func daemonSocketPath() string          { return filepath.Join(daemonDir(), "mxcli.sock") }
-func daemonVersionPath() string         { return filepath.Join(daemonDir(), "version") }
-func daemonVersionBakPath() string      { return filepath.Join(daemonDir(), "version.bak") }
-func daemonUpdateAvailablePath() string { return filepath.Join(daemonDir(), "update-available") }
-func daemonLastCheckPath() string       { return filepath.Join(daemonDir(), "last-check") }
-func daemonPIDPath() string             { return filepath.Join(daemonDir(), "mxcli-daemon.pid") }
+func (e *Env) daemonDir() string             { return filepath.Join(e.HomeDir, ".mxcli", "daemon") }
+func (e *Env) daemonBinaryPath() string      { return filepath.Join(e.daemonDir(), "mxcli-daemon") }
+func (e *Env) daemonBakPath() string         { return filepath.Join(e.daemonDir(), "mxcli-daemon.bak") }
+func (e *Env) daemonSocketPath() string      { return filepath.Join(e.daemonDir(), "mxcli.sock") }
+func (e *Env) daemonVersionPath() string     { return filepath.Join(e.daemonDir(), "version") }
+func (e *Env) daemonVersionBakPath() string  { return filepath.Join(e.daemonDir(), "version.bak") }
+func (e *Env) daemonUpdateAvailablePath() string { return filepath.Join(e.daemonDir(), "update-available") }
+func (e *Env) daemonLastCheckPath() string   { return filepath.Join(e.daemonDir(), "last-check") }
+func (e *Env) daemonPIDPath() string         { return filepath.Join(e.daemonDir(), "mxcli-daemon.pid") }
