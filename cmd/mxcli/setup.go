@@ -293,7 +293,7 @@ func init() {
 	setupMxcliCmd.Flags().String("arch", "amd64", "Target architecture (amd64, arm64)")
 	setupMxcliCmd.Flags().String("output", "./mxcli", "Output file path")
 	setupMxcliCmd.Flags().String("tag", "", "Release tag to download (default: match running version)")
-	setupMxcliCmd.Flags().String("repo", "mendixlabs/mxcli", "GitHub repository")
+	setupMxcliCmd.Flags().String("repo", "engalar/mxcli", "GitHub repository")
 	setupMxcliCmd.Flags().Bool("dry-run", false, "Show what would be downloaded without downloading")
 
 	setupCmd.AddCommand(setupMxBuildCmd)

@@ -7,7 +7,6 @@ import (
 	"net"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/mendixlabs/mxcli/internal/launcherproto"
 )
@@ -21,7 +20,9 @@ func startEchoServer(t *testing.T) string {
 		t.Fatalf("listen: %v", err)
 	}
 	t.Cleanup(func() { ln.Close() })
+	ready := make(chan struct{})
 	go func() {
+		close(ready)
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
@@ -42,7 +43,7 @@ func startEchoServer(t *testing.T) string {
 			}(conn)
 		}
 	}()
-	time.Sleep(10 * time.Millisecond)
+	<-ready
 	return sockPath
 }
 

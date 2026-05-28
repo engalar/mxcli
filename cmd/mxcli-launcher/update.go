@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -50,16 +51,22 @@ func writeTimestamp(path string) {
 	os.WriteFile(path, []byte(strconv.FormatInt(time.Now().Unix(), 10)), 0644)
 }
 
-// printUpdateNotice checks update-available and prints a notice if present,
-// then removes the marker file.
-func printUpdateNotice() {
-	p := daemonUpdateAvailablePath()
+// fprintUpdateNotice prints the update notice to w and then removes the marker
+// file at p. Printing before deletion ensures the notice survives a crash between
+// the two operations (file stays → shown again next run).
+func fprintUpdateNotice(w io.Writer, p string) {
 	b, err := os.ReadFile(p)
 	if err != nil {
 		return
 	}
-	fmt.Fprintf(os.Stderr, "\n🆕 mxcli-daemon %s available → run: mxcli upgrade\n", strings.TrimSpace(string(b)))
+	fmt.Fprintf(w, "\n🆕 mxcli-daemon %s available → run: mxcli upgrade\n", strings.TrimSpace(string(b)))
 	os.Remove(p)
+}
+
+// printUpdateNotice checks update-available and prints a notice if present,
+// then removes the marker file.
+func printUpdateNotice() {
+	fprintUpdateNotice(os.Stderr, daemonUpdateAvailablePath())
 }
 
 // runUpgrade downloads the latest daemon, backs up the current one (N-1),
@@ -145,6 +152,8 @@ func runRollback(args []string) int {
 	curVer := readVersionFile(daemonVersionPath())
 	fmt.Printf("Rolling back daemon %s → %s\n", curVer, bakVer)
 
+	killRunningDaemon()
+
 	tmpBin := daemonBinaryPath() + ".rb-tmp"
 	tmpVer := daemonVersionPath() + ".rb-tmp"
 	os.Rename(daemonBinaryPath(), tmpBin)
@@ -153,8 +162,6 @@ func runRollback(args []string) int {
 	os.Rename(daemonVersionBakPath(), daemonVersionPath())
 	os.Rename(tmpBin, daemonBakPath())
 	os.Rename(tmpVer, daemonVersionBakPath())
-
-	os.Remove(daemonSocketPath())
 	if err := startDaemon(); err != nil {
 		fmt.Fprintf(os.Stderr, "mxcli rollback: restart daemon: %v\n", err)
 		return 1

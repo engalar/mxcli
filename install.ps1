@@ -33,7 +33,7 @@ $MxcliCmd = Get-Command mxcli -ErrorAction SilentlyContinue
 if ($MxcliCmd) {
     try {
         $VersionOutput = & mxcli version 2>$null | Select-Object -First 1
-        $Current = ($VersionOutput -split "\s+")[-1]
+        $Current = ($VersionOutput -split "\s+")[2]
     } catch {
         $Current = ""
     }

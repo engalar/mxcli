@@ -39,7 +39,7 @@ fi
 
 # ── Idempotent version check ─────────────────────────────────────────────────
 if command -v mxcli >/dev/null 2>&1; then
-  CURRENT=$(mxcli version 2>/dev/null | head -1 | awk '{print $NF}' || echo "")
+  CURRENT=$(mxcli version 2>/dev/null | head -1 | awk '{print $3}' || echo "")
   if [ "$CURRENT" = "$LATEST" ]; then
     echo "✅ mxcli $CURRENT is already up to date."
     exit 0
