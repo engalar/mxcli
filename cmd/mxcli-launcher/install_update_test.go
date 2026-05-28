@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -329,5 +330,59 @@ func TestFetchAssetChecksum_GitHub500(t *testing.T) {
 	_, err := e.fetchAssetChecksum("v0.15.0", "mxcli-daemon-linux-amd64.tar.zst")
 	if err == nil {
 		t.Fatal("expected error on HTTP 500 for SHA256SUMS")
+	}
+}
+
+// — Concurrent upgrade tests —
+
+func TestRunUpgrade_ConcurrentOnlyOneWins(t *testing.T) {
+	t.Parallel()
+
+	// Build a payload that downloadDaemonVersion will accept
+	payload, err := testfixtures.BuildDaemonPayload([]byte("v015-binary"))
+	if err != nil {
+		t.Fatalf("BuildDaemonPayload: %v", err)
+	}
+
+	// Two separate Envs sharing the same HomeDir — they race on the same lock file
+	home := t.TempDir()
+	makeEnv := func() *Env {
+		gh := testfixtures.NewFakeGitHub(t, &testfixtures.FakeGitHub{
+			LatestTag: "v0.15.0",
+			Payload:   payload,
+		})
+		e := &Env{HomeDir: home, HTTPClient: gh.Client()}
+		return e
+	}
+
+	e1 := makeEnv()
+	e2 := makeEnv()
+	if err := os.MkdirAll(e1.daemonDir(), 0755); err != nil {
+		t.Fatal(err)
+	}
+	// Plant current version
+	os.WriteFile(e1.daemonBinaryPath(), []byte("old"), 0755)
+	os.WriteFile(e1.daemonVersionPath(), []byte("v0.14.0"), 0644)
+
+	results := make([]error, 2)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() { defer wg.Done(); results[0] = e1.acquireUpgradeLock() }()
+	go func() { defer wg.Done(); results[1] = e2.acquireUpgradeLock() }()
+	wg.Wait()
+
+	successes := 0
+	for i, err := range results {
+		if err == nil {
+			successes++
+			if i == 0 {
+				e1.releaseUpgradeLock()
+			} else {
+				e2.releaseUpgradeLock()
+			}
+		}
+	}
+	if successes != 1 {
+		t.Errorf("expected exactly 1 lock acquisition, got %d", successes)
 	}
 }
