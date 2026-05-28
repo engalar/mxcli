@@ -4,6 +4,7 @@ package main
 
 import (
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,9 +19,16 @@ import (
 // Returns both Env (for launcher calls) and FakeGitHub (for RequestLog assertions).
 func newInstallEnv(t *testing.T, cfg *testfixtures.FakeGitHub, daemonContent []byte) (*Env, *testfixtures.FakeGitHub) {
 	t.Helper()
-	payload, err := testfixtures.BuildDaemonPayload(daemonContent)
+	return newInstallEnvForPlatform(t, cfg, daemonContent, runtime.GOOS, runtime.GOARCH)
+}
+
+// newInstallEnvForPlatform is like newInstallEnv but targets an explicit platform,
+// enabling Linux CI to exercise Windows download/extraction paths.
+func newInstallEnvForPlatform(t *testing.T, cfg *testfixtures.FakeGitHub, daemonContent []byte, goos, goarch string) (*Env, *testfixtures.FakeGitHub) {
+	t.Helper()
+	payload, err := testfixtures.BuildDaemonPayloadForPlatform(goos, goarch, daemonContent)
 	if err != nil {
-		t.Fatalf("BuildDaemonPayload: %v", err)
+		t.Fatalf("BuildDaemonPayloadForPlatform: %v", err)
 	}
 	cfg.Payload = payload
 	gh := testfixtures.NewFakeGitHub(t, cfg)
@@ -384,5 +392,51 @@ func TestRunUpgrade_ConcurrentOnlyOneWins(t *testing.T) {
 	}
 	if successes != 1 {
 		t.Errorf("expected exactly 1 lock acquisition, got %d", successes)
+	}
+}
+
+// — Cross-platform download path tests —
+// These run on any host OS so Linux CI can exercise Windows packaging.
+
+func TestDownloadDaemonVersion_WindowsZipOnLinuxCI(t *testing.T) {
+	t.Parallel()
+	// Regression test: make release was packing "mxcli-daemon-windows-amd64.exe" inside
+	// the zip instead of "mxcli-daemon.exe", causing "no file named found in zip archive".
+	// BuildDaemonPayloadForPlatform("windows",...) creates a zip with "mxcli-daemon.exe"
+	// inside (the correct post-fix layout), so this test fails if the extraction logic
+	// or the fixture naming drifts apart again.
+	e, _ := newInstallEnvForPlatform(t, &testfixtures.FakeGitHub{LatestTag: "v0.15.0"}, []byte("win-binary"), "windows", "amd64")
+
+	dest := e.daemonBinaryPath()
+	if err := e.downloadDaemonVersionForPlatform("v0.15.0", dest, "windows", "amd64"); err != nil {
+		t.Fatalf("Windows download failed: %v", err)
+	}
+
+	got, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatalf("daemon binary not written: %v", err)
+	}
+	if string(got) != "win-binary" {
+		t.Errorf("binary content = %q, want win-binary", got)
+	}
+}
+
+func TestDownloadDaemonVersion_LinuxTarZst(t *testing.T) {
+	t.Parallel()
+	// Mirrors TestDownloadDaemon_FreshInstall but explicitly targets Linux/amd64
+	// so both Unix and Windows hosts exercise the tar.zst path.
+	e, _ := newInstallEnvForPlatform(t, &testfixtures.FakeGitHub{LatestTag: "v0.15.0"}, []byte("linux-binary"), "linux", "amd64")
+
+	dest := e.daemonBinaryPath()
+	if err := e.downloadDaemonVersionForPlatform("v0.15.0", dest, "linux", "amd64"); err != nil {
+		t.Fatalf("Linux download failed: %v", err)
+	}
+
+	got, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatalf("daemon binary not written: %v", err)
+	}
+	if string(got) != "linux-binary" {
+		t.Errorf("binary content = %q, want linux-binary", got)
 	}
 }

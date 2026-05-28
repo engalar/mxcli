@@ -166,11 +166,15 @@ release: clean sync-all
 	@echo "  -> Compressing daemon binaries (requires zstd)"
 	@for f in $(BUILD_DIR)/$(DAEMON_NAME)-linux-* $(BUILD_DIR)/$(DAEMON_NAME)-darwin-*; do \
 		echo "    $$f -> $$f.tar.zst"; \
-		tar -cf - -C $(BUILD_DIR) $$(basename $$f) | zstd -19 -f -o $$f.tar.zst; \
+		cp "$$f" "$(BUILD_DIR)/$(DAEMON_NAME)"; \
+		tar -cf - -C $(BUILD_DIR) $(DAEMON_NAME) | zstd -19 -f -o $$f.tar.zst; \
+		rm -f "$(BUILD_DIR)/$(DAEMON_NAME)"; \
 	done
 	@for f in $(BUILD_DIR)/$(DAEMON_NAME)-windows-*.exe; do \
 		echo "    $$f -> $$f.zip"; \
-		zip -j $$f.zip $$f; \
+		cp "$$f" "$(BUILD_DIR)/$(DAEMON_NAME).exe"; \
+		zip -j $$f.zip "$(BUILD_DIR)/$(DAEMON_NAME).exe"; \
+		rm -f "$(BUILD_DIR)/$(DAEMON_NAME).exe"; \
 	done
 
 	@echo ""

@@ -5,6 +5,7 @@ package testfixtures
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
@@ -18,22 +19,54 @@ import (
 type DaemonPayload struct {
 	// AssetName is the filename the fake server uses, e.g. "mxcli-daemon-linux-amd64.tar.zst"
 	AssetName string
-	// Archive is the raw bytes of the tar.zst archive.
+	// Archive is the raw bytes of the tar.zst or .exe.zip archive.
 	Archive []byte
 	// Checksum is the correct SHA256 hex digest of Archive.
 	Checksum string
 }
 
-// BuildDaemonPayload creates a minimal tar.zst containing a fake daemon binary
-// for the current platform. The binary content is the provided content bytes.
+// BuildDaemonPayload creates a fake daemon archive for the current platform.
+// Windows → .exe.zip containing "mxcli-daemon.exe".
+// Linux/Darwin → .tar.zst containing "mxcli-daemon".
 func BuildDaemonPayload(content []byte) (*DaemonPayload, error) {
-	goos := runtime.GOOS
-	goarch := runtime.GOARCH
+	return BuildDaemonPayloadForPlatform(runtime.GOOS, runtime.GOARCH, content)
+}
 
-	binaryName := "mxcli-daemon"
+// BuildDaemonPayloadForPlatform creates a fake daemon archive for an arbitrary platform.
+// This allows Linux CI to test the Windows download path without a real Windows machine.
+func BuildDaemonPayloadForPlatform(goos, goarch string, content []byte) (*DaemonPayload, error) {
 	if goos == "windows" {
-		binaryName = "mxcli-daemon.exe"
+		return buildWindowsPayload(goos, goarch, content)
 	}
+	return buildUnixPayload(goos, goarch, content)
+}
+
+func buildWindowsPayload(goos, goarch string, content []byte) (*DaemonPayload, error) {
+	assetName := fmt.Sprintf("mxcli-daemon-%s-%s.exe.zip", goos, goarch)
+
+	var buf bytes.Buffer
+	w := zip.NewWriter(&buf)
+	f, err := w.Create("mxcli-daemon.exe")
+	if err != nil {
+		return nil, fmt.Errorf("zip create: %w", err)
+	}
+	if _, err := f.Write(content); err != nil {
+		return nil, fmt.Errorf("zip write: %w", err)
+	}
+	if err := w.Close(); err != nil {
+		return nil, fmt.Errorf("zip close: %w", err)
+	}
+
+	archiveBytes := buf.Bytes()
+	h := sha256.Sum256(archiveBytes)
+	return &DaemonPayload{
+		AssetName: assetName,
+		Archive:   archiveBytes,
+		Checksum:  hex.EncodeToString(h[:]),
+	}, nil
+}
+
+func buildUnixPayload(goos, goarch string, content []byte) (*DaemonPayload, error) {
 	assetName := fmt.Sprintf("mxcli-daemon-%s-%s.tar.zst", goos, goarch)
 
 	var buf bytes.Buffer
@@ -43,7 +76,7 @@ func BuildDaemonPayload(content []byte) (*DaemonPayload, error) {
 	}
 	tw := tar.NewWriter(zw)
 	hdr := &tar.Header{
-		Name:     binaryName,
+		Name:     "mxcli-daemon",
 		Typeflag: tar.TypeReg,
 		Size:     int64(len(content)),
 		Mode:     0755,
@@ -59,12 +92,10 @@ func BuildDaemonPayload(content []byte) (*DaemonPayload, error) {
 
 	archiveBytes := buf.Bytes()
 	h := sha256.Sum256(archiveBytes)
-	checksum := hex.EncodeToString(h[:])
-
 	return &DaemonPayload{
 		AssetName: assetName,
 		Archive:   archiveBytes,
-		Checksum:  checksum,
+		Checksum:  hex.EncodeToString(h[:]),
 	}, nil
 }
 

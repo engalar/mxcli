@@ -118,9 +118,10 @@ func (e *Env) downloadDaemon(destPath string) error {
 }
 
 func (e *Env) downloadDaemonVersion(tag, destPath string) error {
-	goos := runtime.GOOS
-	goarch := runtime.GOARCH
+	return e.downloadDaemonVersionForPlatform(tag, destPath, runtime.GOOS, runtime.GOARCH)
+}
 
+func (e *Env) downloadDaemonVersionForPlatform(tag, destPath, goos, goarch string) error {
 	var archiveExt string
 	if goos == "windows" {
 		archiveExt = ".exe.zip"
