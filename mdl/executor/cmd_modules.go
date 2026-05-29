@@ -446,26 +446,45 @@ func listModules(ctx *ExecContext) error {
 	bizEventCounts := make(map[model.ID]int)
 	extDbCounts := make(map[model.ID]int)
 
-	// Count from units by type prefix (efficient single pass)
+	// Single-pass over unit metadata using mdl/types constants: all
+	// type-based counts are derived from the unitCache type strings —
+	// no BSON decoding required. This is the dominant performance path.
 	for _, u := range units {
 		modID := h.FindModuleID(u.ContainerID)
-		switch {
-		case strings.HasPrefix(u.Type, "Rest$PublishedRestService"):
+		switch u.Type {
+		case types.UnitTypePage:
+			pageCounts[modID]++
+		case types.UnitTypeSnippet:
+			snippetCounts[modID]++
+		case types.UnitTypeMicroflow:
+			microflowCounts[modID]++
+		case types.UnitTypeNanoflow:
+			nanoflowCounts[modID]++
+		case types.UnitTypeEnumeration:
+			enumCounts[modID]++
+		case types.UnitTypeConstant:
+			constantCounts[modID]++
+		case types.UnitTypeJavaAction:
+			javaActionCounts[modID]++
+		case types.UnitTypePublishedRestService:
 			pubRestCounts[modID]++
-		case strings.HasPrefix(u.Type, "ODataPublish$PublishedODataService"):
+		case types.UnitTypePublishedODataService:
 			pubODataCounts[modID]++
-		case strings.HasPrefix(u.Type, "Rest$ConsumedODataService"):
+		case types.UnitTypeConsumedODataService:
 			conODataCounts[modID]++
-		case strings.HasPrefix(u.Type, "BusinessEvents$"):
-			bizEventCounts[modID]++
-		case strings.HasPrefix(u.Type, "Workflows$Workflow"):
+		case types.UnitTypeWorkflow:
 			workflowCounts[modID]++
-		case strings.HasPrefix(u.Type, "DatabaseConnector$DatabaseConnection"):
+		case types.UnitTypeDatabaseConnection:
 			extDbCounts[modID]++
+		default:
+			if strings.HasPrefix(u.Type, types.UnitTypeBusinessEvent) {
+				bizEventCounts[modID]++
+			}
 		}
 	}
 
-	// Count entities from domain models (Stage 3.3.4 C2.c — gen path).
+	// Entity counts still require domain-model decoding: entities are sub-objects
+	// of domain model units, not standalone units with their own unitCache entries.
 	if pairs, err := listDomainModelsWithContainerGen(ctx); err == nil {
 		for _, p := range pairs {
 			if p.DM == nil {
@@ -473,62 +492,6 @@ func listModules(ctx *ExecContext) error {
 			}
 			modID := h.FindModuleID(p.ContainerID)
 			entityCounts[modID] += len(p.DM.EntitiesItems())
-		}
-	}
-
-	// Count enumerations
-	if enums, err := ctx.Backend.ListEnumerations(); err == nil {
-		for _, enum := range enums {
-			modID := h.FindModuleID(enum.ContainerID)
-			enumCounts[modID]++
-		}
-	}
-
-	// Count pages
-	if pagePairs, err := listPagesWithContainerGen(ctx); err == nil {
-		for _, pair := range pagePairs {
-			modID := h.FindModuleID(model.ID(pair.ContainerID))
-			pageCounts[modID]++
-		}
-	}
-
-	// Count snippets
-	if snippetPairs, err := listSnippetsWithContainerGen(ctx); err == nil {
-		for _, pair := range snippetPairs {
-			modID := h.FindModuleID(model.ID(pair.ContainerID))
-			snippetCounts[modID]++
-		}
-	}
-
-	// Count microflows
-	if mfs, err := listMicroflowsWithContainerGen(ctx); err == nil {
-		for _, item := range mfs {
-			modID := h.FindModuleID(item.ContainerUUID)
-			microflowCounts[modID]++
-		}
-	}
-
-	// Count nanoflows
-	if nfs, err := listNanoflowsWithContainerGen(ctx); err == nil {
-		for _, item := range nfs {
-			modID := h.FindModuleID(item.ContainerUUID)
-			nanoflowCounts[modID]++
-		}
-	}
-
-	// Count constants
-	if constants, err := ctx.Backend.ListConstants(); err == nil {
-		for _, c := range constants {
-			modID := h.FindModuleID(c.ContainerID)
-			constantCounts[modID]++
-		}
-	}
-
-	// Count Java actions (gen-typed)
-	if pairs, err := listJavaActionsWithContainerGen(ctx); err == nil {
-		for _, p := range pairs {
-			modID := h.FindModuleID(model.ID(p.ContainerID))
-			javaActionCounts[modID]++
 		}
 	}
 
