@@ -74,6 +74,7 @@ func (e *Env) startDaemon() error {
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	cmd.Stdin = nil
+	hideDaemonWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("exec daemon: %w", err)
 	}

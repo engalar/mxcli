@@ -77,7 +77,7 @@ Example:
 			mdlCmd = fmt.Sprintf("SHOW %s", showKeyword)
 		}
 
-		executeMDL(projectPath, mdlCmd)
+		executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
 	},
 }
 

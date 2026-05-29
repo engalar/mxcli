@@ -145,7 +145,7 @@ Examples:
 				fmt.Printf("\nValidating references against: %s\n", projectPath)
 				fmt.Printf("(Note: References to objects created within the script are skipped)\n")
 			}
-			exec, logger := newLoggedExecutor("check")
+			exec, logger := newLoggedExecutor("check", cmd.OutOrStdout())
 			defer logger.Close()
 			defer exec.Close()
 

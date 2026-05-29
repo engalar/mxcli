@@ -33,7 +33,7 @@ Example:
 			os.Exit(1)
 		}
 
-		exec, logger := newLoggedExecutor("exec")
+		exec, logger := newLoggedExecutor("exec", cmd.OutOrStdout())
 		defer logger.Close()
 		defer exec.Close()
 

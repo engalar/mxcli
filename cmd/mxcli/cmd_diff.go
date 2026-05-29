@@ -68,7 +68,7 @@ Examples:
 		}
 
 		// Create executor and connect
-		exec, logger := newLoggedExecutor("subcommand")
+		exec, logger := newLoggedExecutor("subcommand", cmd.OutOrStdout())
 		defer logger.Close()
 		defer exec.Close()
 
@@ -141,7 +141,7 @@ Examples:
 		}
 
 		// Create executor and connect
-		exec, logger := newLoggedExecutor("subcommand")
+		exec, logger := newLoggedExecutor("subcommand", cmd.OutOrStdout())
 		defer logger.Close()
 		defer exec.Close()
 

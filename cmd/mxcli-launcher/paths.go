@@ -2,10 +2,21 @@
 
 package main
 
-import "path/filepath"
+import (
+	"path/filepath"
+	"runtime"
+)
 
-func (e *Env) daemonDir() string             { return filepath.Join(e.HomeDir, ".mxcli", "daemon") }
-func (e *Env) daemonBinaryPath() string      { return filepath.Join(e.daemonDir(), "mxcli-daemon") }
+func (e *Env) daemonDir() string { return filepath.Join(e.HomeDir, ".mxcli", "daemon") }
+
+func (e *Env) daemonBinaryPath() string {
+	name := "mxcli-daemon"
+	if runtime.GOOS == "windows" {
+		name = "mxcli-daemon.exe"
+	}
+	return filepath.Join(e.daemonDir(), name)
+}
+
 func (e *Env) daemonBakPath() string         { return filepath.Join(e.daemonDir(), "mxcli-daemon.bak") }
 func (e *Env) daemonSocketPath() string      { return filepath.Join(e.daemonDir(), "mxcli.sock") }
 func (e *Env) daemonVersionPath() string     { return filepath.Join(e.daemonDir(), "version") }

@@ -6,6 +6,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -113,7 +114,7 @@ Examples:
 
 		if commands != "" {
 			// Execute commands from -c flag
-			exec, logger := newLoggedExecutor("batch")
+			exec, logger := newLoggedExecutor("batch", cmd.OutOrStdout())
 			defer logger.Close()
 			defer exec.Close()
 
@@ -171,11 +172,13 @@ func resolveFormat(cmd *cobra.Command, defaultFormat string) string {
 	return defaultFormat
 }
 
-// newLoggedExecutor creates an executor with diagnostics logging attached.
-// The caller must call logger.Close() when done (safe on nil).
-func newLoggedExecutor(mode string) (*executor.Executor, *diaglog.Logger) {
+// newLoggedExecutor creates an executor writing to out. Pass cmd.OutOrStdout()
+// so that daemon-server mode (--serve) routes output to the socket instead of
+// os.Stdout (which is /dev/null when the daemon is spawned by the launcher).
+// The caller must call logger.Close() and exec.Close() when done.
+func newLoggedExecutor(mode string, out io.Writer) (*executor.Executor, *diaglog.Logger) {
 	logger := diaglog.Init(version, mode, globalVerboseLevel)
-	exec := executor.New(os.Stdout)
+	exec := executor.New(out)
 	exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
 	exec.SetLogger(logger)
 	if globalJSONFlag {
@@ -185,8 +188,9 @@ func newLoggedExecutor(mode string) (*executor.Executor, *diaglog.Logger) {
 }
 
 // executeMDL is a helper to execute MDL commands with a project.
-func executeMDL(projectPath, mdlCmd string) {
-	exec, logger := newLoggedExecutor("subcommand")
+// out should be cmd.OutOrStdout() so daemon-server mode routes output to the socket.
+func executeMDL(projectPath, mdlCmd string, out io.Writer) {
+	exec, logger := newLoggedExecutor("subcommand", out)
 	defer logger.Close()
 	defer exec.Close()
 
@@ -238,12 +242,16 @@ func init() {
 		// Set global JSON flag
 		globalJSONFlag, _ = cmd.Root().PersistentFlags().GetBool("json")
 
-		// Normalise -p to an absolute path
+		// Normalise -p to an absolute path.
+		// Use forward slashes on Windows: MDL single-quoted strings interpret
+		// backslash escape sequences (\t = TAB, \n = LF, etc.), so a Windows
+		// path like D:\testdata\corpus would corrupt the CONNECT LOCAL command.
 		if p, _ := cmd.Root().PersistentFlags().GetString("project"); p != "" {
 			abs, err := filepath.Abs(p)
 			if err != nil {
 				return fmt.Errorf("resolving -p path: %w", err)
 			}
+			abs = filepath.ToSlash(abs)
 			if err := cmd.Root().PersistentFlags().Set("project", abs); err != nil {
 				return err
 			}

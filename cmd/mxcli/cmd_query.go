@@ -37,7 +37,7 @@ Examples:
 			mdlCmd += " TRANSITIVE"
 		}
 
-		executeMDL(projectPath, mdlCmd)
+		executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
 	},
 }
 
@@ -67,7 +67,7 @@ Examples:
 			mdlCmd += " TRANSITIVE"
 		}
 
-		executeMDL(projectPath, mdlCmd)
+		executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
 	},
 }
 
@@ -90,7 +90,7 @@ Examples:
 		}
 
 		mdlCmd := fmt.Sprintf("SHOW REFERENCES TO %s", args[0])
-		executeMDL(projectPath, mdlCmd)
+		executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
 	},
 }
 
@@ -113,7 +113,7 @@ Examples:
 		}
 
 		mdlCmd := fmt.Sprintf("SHOW IMPACT OF %s", args[0])
-		executeMDL(projectPath, mdlCmd)
+		executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
 	},
 }
 
@@ -158,7 +158,7 @@ Examples:
 		if all {
 			mdlCmd += " ALL"
 		}
-		executeMDL(projectPath, mdlCmd)
+		executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
 	},
 }
 
@@ -201,7 +201,7 @@ Examples:
 		if depth > 0 {
 			mdlCmd += fmt.Sprintf(" DEPTH %d", depth)
 		}
-		executeMDL(projectPath, mdlCmd)
+		executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
 	},
 }
 
@@ -234,7 +234,7 @@ Examples:
 			os.Exit(1)
 		}
 
-		exec, logger := newLoggedExecutor("subcommand")
+		exec, logger := newLoggedExecutor("subcommand", cmd.OutOrStdout())
 		defer logger.Close()
 		if quiet {
 			exec.SetQuiet(true)

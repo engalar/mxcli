@@ -5,6 +5,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -27,8 +28,12 @@ func TestEnvDaemonDir_IsUnderHome(t *testing.T) {
 func TestEnvPaths_Consistent(t *testing.T) {
 	e := newTestEnv(t)
 	dir := e.daemonDir()
-	if e.daemonBinaryPath() != filepath.Join(dir, "mxcli-daemon") {
-		t.Error("daemonBinaryPath mismatch")
+	wantBinary := filepath.Join(dir, "mxcli-daemon")
+	if runtime.GOOS == "windows" {
+		wantBinary = filepath.Join(dir, "mxcli-daemon.exe")
+	}
+	if e.daemonBinaryPath() != wantBinary {
+		t.Errorf("daemonBinaryPath mismatch: got %q, want %q", e.daemonBinaryPath(), wantBinary)
 	}
 	if e.daemonBakPath() != filepath.Join(dir, "mxcli-daemon.bak") {
 		t.Error("daemonBakPath mismatch")
