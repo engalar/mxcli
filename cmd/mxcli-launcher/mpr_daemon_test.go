@@ -178,3 +178,35 @@ func TestCleanupStaleMPRSockets_KeepsNonSocketFiles(t *testing.T) {
 		t.Error("non-socket file should not have been removed")
 	}
 }
+
+// --- isTTYCommand ---
+
+func TestIsTTYCommand_Tui(t *testing.T) {
+	if !isTTYCommand([]string{"tui", "-p", "app.mpr"}) {
+		t.Error("tui should be a TTY command")
+	}
+}
+
+func TestIsTTYCommand_TuiAfterProjectFlag(t *testing.T) {
+	if !isTTYCommand([]string{"-p", "app.mpr", "tui"}) {
+		t.Error("tui after -p should be detected")
+	}
+}
+
+func TestIsTTYCommand_ShowIsNot(t *testing.T) {
+	if isTTYCommand([]string{"show", "modules"}) {
+		t.Error("show is not a TTY command")
+	}
+}
+
+func TestIsTTYCommand_FlagOnly(t *testing.T) {
+	if isTTYCommand([]string{"-p", "app.mpr", "-c", "show modules"}) {
+		t.Error("flag-only args should not be TTY")
+	}
+}
+
+func TestIsTTYCommand_Serve(t *testing.T) {
+	if !isTTYCommand([]string{"serve", "-p", "app.mpr"}) {
+		t.Error("serve should be a TTY command")
+	}
+}

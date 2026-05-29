@@ -5,6 +5,9 @@
 // background version checks, and upgrade/rollback.
 //
 // Routing:
+//   - TTY commands (tui, playwright, serve, oql): run directly by exec'ing the
+//     daemon binary with inherited stdin/stdout/stderr so the full terminal is
+//     available (mouse events, resize, raw keyboard input).
 //   - Commands with -p <mpr>: forwarded to a per-MPR daemon (isolated process,
 //     5-minute idle timeout, socket path derived from mpr path + binary mtime hash).
 //   - Commands without -p: forwarded to the shared daemon at ~/.mxcli/daemon/mxcli.sock.
@@ -13,6 +16,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 )
 
@@ -41,6 +45,25 @@ func main() {
 	if err := e.ensureDaemonBinary(); err != nil {
 		fmt.Fprintf(os.Stderr, "mxcli: %v\n", err)
 		os.Exit(1)
+	}
+
+	// TTY commands need a real terminal (stdin, stdout, stderr attached to the
+	// calling process). Run them by exec'ing the daemon binary directly instead
+	// of forwarding through the Unix socket, where stdin is disconnected and
+	// stdout is JSON-framed (which corrupts escape codes).
+	if isTTYCommand(args) {
+		cmd := exec.Command(e.daemonBinaryPath(), args...)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				os.Exit(exitErr.ExitCode())
+			}
+			fmt.Fprintf(os.Stderr, "mxcli: %v\n", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
 	}
 
 	// Route to per-MPR daemon when -p is present; otherwise use shared daemon.
@@ -75,6 +98,44 @@ func main() {
 	e.printUpdateNotice()
 
 	os.Exit(exitCode)
+}
+
+// ttyCommands is the set of subcommands that require a real TTY.
+var ttyCommands = map[string]bool{
+	"tui": true, "serve": true, "oql": true, "playwright": true,
+}
+
+// flagsWithValue lists root-level flags whose next token is their value, not a
+// subcommand. Knowing these lets isTTYCommand skip over -p <path>, etc.
+var flagsWithValue = map[string]bool{
+	"-p": true, "--project": true,
+	"-c": true, "--command": true,
+}
+
+// isTTYCommand reports whether args requests a command that requires a real
+// terminal (interactive TUI, browser-launched viewer, streaming output).
+// These commands are exec'd directly with inherited stdin/stdout/stderr instead
+// of being forwarded through the Unix socket, where the terminal is unavailable.
+//
+// Handles both orderings: "tui -p file.mpr" and "-p file.mpr tui".
+func isTTYCommand(args []string) bool {
+	skipNext := false
+	for _, a := range args {
+		if skipNext {
+			skipNext = false
+			continue
+		}
+		if flagsWithValue[a] {
+			skipNext = true // consume the flag's value token
+			continue
+		}
+		if len(a) > 0 && a[0] == '-' {
+			continue // other flags (booleans, --key=val)
+		}
+		// First positional token is the subcommand name.
+		return ttyCommands[a]
+	}
+	return false
 }
 
 func printVersion(e *Env) {
