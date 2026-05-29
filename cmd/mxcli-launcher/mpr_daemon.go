@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	mprDaemonIdleTimeout    = 5 * time.Minute
-	sharedDaemonIdleTimeout = 5 * time.Minute
+	mprDaemonIdleTimeout    = 30 * time.Minute
+	sharedDaemonIdleTimeout = 30 * time.Minute
 	mprDaemonStartTimeout   = 30 * time.Second
 )
 
