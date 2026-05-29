@@ -107,7 +107,12 @@ Examples:
   mxcli -vv -p app.mpr -c "SHOW ENTITIES"
 `,
 	Version: version,
-	Run: func(cmd *cobra.Command, args []string) {
+	// RunE instead of Run: errors are returned to cobra so that daemon-server
+	// mode (--serve) can send an exit frame without calling os.Exit, which
+	// would kill the entire daemon process.
+	SilenceErrors: true,
+	SilenceUsage:  true,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		// Get flags
 		commands, _ := cmd.Flags().GetString("command")
 		projectPath, _ := cmd.Flags().GetString("project")
@@ -132,22 +137,21 @@ Examples:
 			prog, errs := visitor.Build(commands)
 			if len(errs) > 0 {
 				for _, err := range errs {
-					fmt.Fprintf(os.Stderr, "Parse error: %v\n", err)
+					fmt.Fprintf(cmd.ErrOrStderr(), "Parse error: %v\n", err)
 				}
-				os.Exit(1)
+				return fmt.Errorf("parse failed")
 			}
 
 			if err := exec.ExecuteProgram(prog); err != nil {
 				if errors.Is(err, executor.ErrExit) {
-					return
+					return nil
 				}
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
+				return err
 			}
-		} else {
-			fmt.Fprintf(os.Stderr, "Error: no command specified. Use -c to pass an MDL command or exec to run a script.\n")
-			os.Exit(1)
+			return nil
 		}
+		return fmt.Errorf("no command specified. Use -c to pass an MDL command or exec to run a script")
 	},
 }
 
@@ -189,7 +193,8 @@ func newLoggedExecutor(mode string, out io.Writer) (*executor.Executor, *diaglog
 
 // executeMDL is a helper to execute MDL commands with a project.
 // out should be cmd.OutOrStdout() so daemon-server mode routes output to the socket.
-func executeMDL(projectPath, mdlCmd string, out io.Writer) {
+// Returns an error instead of calling os.Exit so the daemon survives command failures.
+func executeMDL(projectPath, mdlCmd string, out io.Writer) error {
 	exec, logger := newLoggedExecutor("subcommand", out)
 	defer logger.Close()
 	defer exec.Close()
@@ -198,18 +203,18 @@ func executeMDL(projectPath, mdlCmd string, out io.Writer) {
 	prog, errs := visitor.Build(fullCmd)
 	if len(errs) > 0 {
 		for _, err := range errs {
-			fmt.Fprintf(os.Stderr, "Parse error: %v\n", err)
+			fmt.Fprintf(out, "Parse error: %v\n", err)
 		}
-		os.Exit(1)
+		return fmt.Errorf("parse failed")
 	}
 
 	if err := exec.ExecuteProgram(prog); err != nil {
 		if errors.Is(err, executor.ErrExit) {
-			return
+			return nil
 		}
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return err
 	}
+	return nil
 }
 
 func init() {

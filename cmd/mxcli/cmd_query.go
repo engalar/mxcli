@@ -37,7 +37,7 @@ Examples:
 			mdlCmd += " TRANSITIVE"
 		}
 
-		executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
+		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil { fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err); return }
 	},
 }
 
@@ -67,7 +67,7 @@ Examples:
 			mdlCmd += " TRANSITIVE"
 		}
 
-		executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
+		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil { fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err); return }
 	},
 }
 
@@ -90,7 +90,7 @@ Examples:
 		}
 
 		mdlCmd := fmt.Sprintf("SHOW REFERENCES TO %s", args[0])
-		executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
+		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil { fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err); return }
 	},
 }
 
@@ -113,7 +113,7 @@ Examples:
 		}
 
 		mdlCmd := fmt.Sprintf("SHOW IMPACT OF %s", args[0])
-		executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
+		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil { fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err); return }
 	},
 }
 
@@ -158,7 +158,7 @@ Examples:
 		if all {
 			mdlCmd += " ALL"
 		}
-		executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
+		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil { fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err); return }
 	},
 }
 
@@ -201,7 +201,7 @@ Examples:
 		if depth > 0 {
 			mdlCmd += fmt.Sprintf(" DEPTH %d", depth)
 		}
-		executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
+		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil { fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err); return }
 	},
 }
 
