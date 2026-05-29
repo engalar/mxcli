@@ -422,9 +422,12 @@ func TestDownloadDaemonVersion_WindowsZipOnLinuxCI(t *testing.T) {
 }
 
 func TestDownloadDaemonVersion_LinuxTarZst(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("tar.zst extraction not compiled on Windows; Linux CI covers this path")
+	}
 	t.Parallel()
 	// Mirrors TestDownloadDaemon_FreshInstall but explicitly targets Linux/amd64
-	// so both Unix and Windows hosts exercise the tar.zst path.
+	// so Unix hosts exercise the tar.zst path.
 	e, _ := newInstallEnvForPlatform(t, &testfixtures.FakeGitHub{LatestTag: "v0.15.0"}, []byte("linux-binary"), "linux", "amd64")
 
 	dest := e.daemonBinaryPath()

@@ -99,6 +99,9 @@ func makeTarZst(t *testing.T, files map[string][]byte) *bytes.Buffer {
 }
 
 func TestExtractTarZst_CorrectFilename(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("tar.zst extraction not compiled on Windows (daemon uses .exe.zip)")
+	}
 	archive := makeTarZst(t, map[string][]byte{"mxcli-daemon": []byte("binary-data")})
 	dest := filepath.Join(t.TempDir(), "mxcli-daemon")
 	if err := extractTarZst(archive, dest, "mxcli-daemon"); err != nil {
@@ -111,6 +114,9 @@ func TestExtractTarZst_CorrectFilename(t *testing.T) {
 }
 
 func TestExtractTarZst_RejectsWrongFilename(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("tar.zst extraction not compiled on Windows (daemon uses .exe.zip)")
+	}
 	archive := makeTarZst(t, map[string][]byte{"readme.txt": []byte("docs")})
 	dest := filepath.Join(t.TempDir(), "mxcli-daemon")
 	if err := extractTarZst(archive, dest, "mxcli-daemon"); err == nil {
