@@ -121,12 +121,19 @@ sync-examples:
 sync-all: sync-skills sync-commands sync-lint-rules sync-changelog sync-examples
 
 # Build for current platform (auto-syncs skills and commands)
+# On Windows, also creates .exe-suffixed copies so PowerShell can execute them.
 build: sync-all
 	@mkdir -p $(BUILD_DIR)
 	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/$(DAEMON_NAME) $(CMD_PATH)
 	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/mxcli-launcher
 	CGO_ENABLED=0 go build -o $(BUILD_DIR)/source_tree ./cmd/source_tree
-	@echo "Built $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/$(DAEMON_NAME) $(BUILD_DIR)/source_tree"
+	@if [ "$(OS)" = "Windows_NT" ] || echo "$$OSTYPE" | grep -qi msys; then \
+		cp $(BUILD_DIR)/$(DAEMON_NAME) $(BUILD_DIR)/$(DAEMON_NAME).exe 2>/dev/null || true; \
+		cp $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/$(BINARY_NAME).exe 2>/dev/null || true; \
+		echo "Built $(BUILD_DIR)/$(BINARY_NAME)[.exe] $(BUILD_DIR)/$(DAEMON_NAME)[.exe] $(BUILD_DIR)/source_tree"; \
+	else \
+		echo "Built $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/$(DAEMON_NAME) $(BUILD_DIR)/source_tree"; \
+	fi
 
 # Compress a single daemon binary: make compress-daemon BIN=bin/mxcli-daemon-linux-amd64
 compress-daemon:
