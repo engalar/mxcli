@@ -70,6 +70,10 @@ func runDaemonServer(sockPath string, idleTimeout time.Duration, onReady func())
 			mu.Lock()
 			lastReq = time.Now()
 			mu.Unlock()
+			// Serialize command execution: SQLite is single-writer and os.Chdir
+			// is process-global, so concurrent requests would corrupt state.
+			daemonRequestMu.Lock()
+			defer daemonRequestMu.Unlock()
 			handleConn(conn)
 		}()
 	}

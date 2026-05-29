@@ -40,6 +40,12 @@ type Reader struct {
 	unitCache      []cachedUnit
 	unitCacheValid bool
 
+	// contentCache stores raw BSON bytes per unit ID (MPR v2 only).
+	// Populated on first read; survives across requests when the Reader is
+	// held persistently by the per-MPR daemon. Cleared by InvalidateCache.
+	// nil means caching is disabled (zero cost on the normal per-request path).
+	contentCache map[string][]byte
+
 	// overlay holds unit bytes injected by BufferedUnitStore so that reads
 	// within the same import file see buffered (uncommitted) writes.
 	// nil means no overlay is active — zero cost on the normal path.

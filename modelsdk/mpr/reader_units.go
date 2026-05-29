@@ -188,30 +188,61 @@ func (r *Reader) buildUnitCache() error {
 	return nil
 }
 
-// InvalidateCache marks the unit cache as invalid.
+// InvalidateCache marks the unit cache as invalid and clears content cache entries.
 // Should be called after any write operation.
 func (r *Reader) InvalidateCache() {
 	r.unitCacheValid = false
+	// Clear content cache entries but keep the map non-nil so caching stays active.
+	// If contentCache is nil (per-request mode), remain disabled.
+	if r.contentCache != nil {
+		clear(r.contentCache)
+	}
+}
+
+// EnableContentCache activates the in-memory content cache for this reader.
+// Call once after Connect in persistent daemon mode. The cache survives across
+// requests; InvalidateCache empties it (but keeps caching active) on writes.
+func (r *Reader) EnableContentCache() {
+	if r.contentCache == nil {
+		r.contentCache = make(map[string][]byte)
+	}
 }
 
 // readMprContents reads content from the mprcontents folder for v2 format.
 // The path is: mprcontents/XX/YY/UUID.mxunit where XX and YY are first two chars of UUID.
+//
+// When r.contentCache is non-nil (persistent daemon mode), the result is cached
+// in memory so subsequent reads of the same unit skip the file I/O entirely.
+// The cache is invalidated by InvalidateCache (called after every write).
 func (r *Reader) readMprContents(unitUUID string) ([]byte, error) {
 	if len(unitUUID) < 4 {
 		return nil, fmt.Errorf("invalid unit UUID: %s", unitUUID)
 	}
 
+	// Fast path: content cache hit (persistent daemon only).
+	if r.contentCache != nil {
+		if data, ok := r.contentCache[unitUUID]; ok {
+			return data, nil
+		}
+	}
+
 	// Build path: mprcontents/XX/YY/UUID.mxunit
-	// UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-	// First two chars are positions 0-1, next two are positions 2-3
 	path := filepath.Join(
 		r.contentsDir,
 		unitUUID[0:2],
 		unitUUID[2:4],
 		unitUUID+".mxunit",
 	)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
 
-	return os.ReadFile(path)
+	// Populate cache (persistent daemon only).
+	if r.contentCache != nil {
+		r.contentCache[unitUUID] = data
+	}
+	return data, nil
 }
 
 // getTypeFromContents extracts the $Type field from BSON contents.

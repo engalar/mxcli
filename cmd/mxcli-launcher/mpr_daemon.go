@@ -51,6 +51,7 @@ func (e *Env) ensureMPRDaemon(mprAbsPath string) (string, error) {
 		e.daemonBinaryPath(),
 		"--serve", sockPath,
 		"--idle-timeout", mprDaemonIdleTimeout.String(),
+		"--mpr-path", mprAbsPath,
 	)
 	cmd.Stdout = nil
 	cmd.Stderr = nil

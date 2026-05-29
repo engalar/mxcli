@@ -122,6 +122,15 @@ func (b *MprBackend) Disconnect() error {
 func (b *MprBackend) IsConnected() bool { return b.reader != nil }
 func (b *MprBackend) Path() string      { return b.path }
 
+// EnableContentCache activates in-memory caching of mxunit file contents.
+// Call once after Connect when the backend will be held persistently across
+// multiple requests (per-MPR daemon mode). The cache is cleared on any write.
+func (b *MprBackend) EnableContentCache() {
+	if b.reader != nil {
+		b.reader.EnableContentCache()
+	}
+}
+
 func (b *MprBackend) Version() types.MPRVersion { return types.MPRVersion(b.msdkReader.Version()) }
 func (b *MprBackend) ProjectVersion() *types.ProjectVersion {
 	return convertProjectVersionFromMsdk(b.msdkReader.ProjectVersion())

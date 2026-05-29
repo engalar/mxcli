@@ -32,6 +32,16 @@ func main() {
 	// Intercept --serve <socket-path> BEFORE cobra parses flags.
 	if sockPath := extractServeSocket(os.Args[1:]); sockPath != "" {
 		idleTimeout := extractIdleTimeout(os.Args[1:])
+		// Per-MPR daemon: pre-connect and hold the backend for the process lifetime.
+		if mprPath := extractMPRPath(os.Args[1:]); mprPath != "" {
+			b, err := openPersistentBackend(mprPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "mxcli-daemon: %v\n", err)
+				os.Exit(1)
+			}
+			persistentDaemonBackend = b
+			defer closePersistentBackend()
+		}
 		runDaemonServer(sockPath, idleTimeout, nil)
 		return
 	}
@@ -185,7 +195,18 @@ func resolveFormat(cmd *cobra.Command, defaultFormat string) string {
 func newLoggedExecutor(mode string, out io.Writer) (*executor.Executor, *diaglog.Logger) {
 	logger := diaglog.Init(version, mode, globalVerboseLevel)
 	exec := executor.New(out)
-	exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	if persistentDaemonBackend != nil {
+		// Per-MPR daemon: wrap the concrete *MprBackend (not the interface) so
+		// duck-type checks (microflowsRepoProvider etc.) still resolve correctly,
+		// while Connect/Disconnect are no-ops to keep the SQLite connection and
+		// Reader.unitCache alive across requests.
+		pb := persistentDaemonBackend
+		exec.SetBackendFactory(func() backend.FullBackend {
+			return &noOpConnectBackend{pb}
+		})
+	} else {
+		exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	}
 	exec.SetLogger(logger)
 	if globalJSONFlag {
 		exec.SetFormat(executor.FormatJSON)
