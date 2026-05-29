@@ -51,7 +51,9 @@ func readVersionFile(path string) string {
 	return strings.TrimSpace(string(b))
 }
 
-func (e *Env) ensureDaemon() error {
+// ensureDaemonBinary ensures the daemon binary is present, downloading it if needed.
+// It also creates the daemon directory. Call this before any daemon operations.
+func (e *Env) ensureDaemonBinary() error {
 	if err := os.MkdirAll(e.daemonDir(), 0755); err != nil {
 		return fmt.Errorf("create daemon dir: %w", err)
 	}
@@ -60,6 +62,14 @@ func (e *Env) ensureDaemon() error {
 		if err := e.downloadDaemon(e.daemonBinaryPath()); err != nil {
 			return fmt.Errorf("download daemon: %w", err)
 		}
+	}
+	return nil
+}
+
+// ensureDaemon ensures the shared (non-MPR-specific) daemon is running.
+func (e *Env) ensureDaemon() error {
+	if err := e.ensureDaemonBinary(); err != nil {
+		return err
 	}
 	if !isDaemonRunning(e.daemonSocketPath()) {
 		if err := e.startDaemon(); err != nil {
@@ -70,7 +80,10 @@ func (e *Env) ensureDaemon() error {
 }
 
 func (e *Env) startDaemon() error {
-	cmd := exec.Command(e.daemonBinaryPath(), "--serve", e.daemonSocketPath())
+	cmd := exec.Command(e.daemonBinaryPath(),
+		"--serve", e.daemonSocketPath(),
+		"--idle-timeout", sharedDaemonIdleTimeout.String(),
+	)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	cmd.Stdin = nil
@@ -79,6 +92,7 @@ func (e *Env) startDaemon() error {
 		return fmt.Errorf("exec daemon: %w", err)
 	}
 	os.WriteFile(e.daemonPIDPath(), []byte(fmt.Sprintf("%d", cmd.Process.Pid)), 0644)
+	go func() { _ = cmd.Wait() }() // prevent zombie
 	deadline := time.Now().Add(daemonTimeout)
 	for time.Now().Before(deadline) {
 		if isDaemonRunning(e.daemonSocketPath()) {

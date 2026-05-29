@@ -7,6 +7,8 @@ import (
 	"io"
 	"net"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/mendixlabs/mxcli/internal/launcherproto"
 )
@@ -14,14 +16,46 @@ import (
 // runDaemonServer listens on sockPath and dispatches each incoming request as a
 // full mxcli command execution. onReady is called once the listener is bound
 // (used by tests; pass nil in production).
-func runDaemonServer(sockPath string, onReady func()) {
+//
+// idleTimeout > 0: the server closes the listener and removes the socket file
+// after that duration passes without any incoming connection. This allows
+// per-MPR daemon processes to self-terminate when the project is idle.
+// idleTimeout <= 0 disables the idle watcher (daemon runs until killed).
+//
+// The socket file is always removed on exit (via defer), so callers do not need
+// to clean it up separately.
+func runDaemonServer(sockPath string, idleTimeout time.Duration, onReady func()) {
 	os.Remove(sockPath) // clean up stale socket
 	ln, err := net.Listen("unix", sockPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "mxcli-daemon: listen %s: %v\n", sockPath, err)
 		os.Exit(1)
 	}
-	defer ln.Close()
+	defer func() {
+		ln.Close()
+		os.Remove(sockPath) // always remove socket on exit — prevents stale files
+	}()
+
+	var (
+		mu      sync.Mutex
+		lastReq = time.Now()
+	)
+
+	if idleTimeout > 0 {
+		go func() {
+			tick := time.NewTicker(idleTimeout / 4)
+			defer tick.Stop()
+			for range tick.C {
+				mu.Lock()
+				idle := time.Since(lastReq)
+				mu.Unlock()
+				if idle >= idleTimeout {
+					ln.Close() // triggers Accept() to return an error → server loop exits
+					return
+				}
+			}
+		}()
+	}
 
 	if onReady != nil {
 		onReady()
@@ -30,9 +64,14 @@ func runDaemonServer(sockPath string, onReady func()) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			return // listener closed
+			return // listener closed (idle timeout or external signal)
 		}
-		go handleConn(conn)
+		go func() {
+			mu.Lock()
+			lastReq = time.Now()
+			mu.Unlock()
+			handleConn(conn)
+		}()
 	}
 }
 

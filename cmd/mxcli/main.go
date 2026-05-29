@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
@@ -30,7 +31,8 @@ const warningBanner = "WARNING: This is a vibe-coded PoC, alpha quality, use wit
 func main() {
 	// Intercept --serve <socket-path> BEFORE cobra parses flags.
 	if sockPath := extractServeSocket(os.Args[1:]); sockPath != "" {
-		runDaemonServer(sockPath, nil)
+		idleTimeout := extractIdleTimeout(os.Args[1:])
+		runDaemonServer(sockPath, idleTimeout, nil)
 		return
 	}
 
@@ -372,4 +374,23 @@ func extractServeSocket(args []string) string {
 		}
 	}
 	return ""
+}
+
+// extractIdleTimeout scans args for "--idle-timeout <duration>" or "--idle-timeout=<duration>".
+// Returns 0 if the flag is absent or the value cannot be parsed.
+func extractIdleTimeout(args []string) time.Duration {
+	for i, a := range args {
+		if a == "--idle-timeout" && i+1 < len(args) {
+			if d, err := time.ParseDuration(args[i+1]); err == nil {
+				return d
+			}
+		}
+		const prefix = "--idle-timeout="
+		if strings.HasPrefix(a, prefix) {
+			if d, err := time.ParseDuration(a[len(prefix):]); err == nil {
+				return d
+			}
+		}
+	}
+	return 0
 }
