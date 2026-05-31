@@ -3,16 +3,49 @@ package codec
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"unsafe"
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/modelsdk/mpr"
+	"github.com/mendixlabs/mxcli/modelsdk/version"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/x/bsonx/bsoncore"
 )
 
 // Encoder serializes Element trees back to BSON bytes.
-type Encoder struct{}
+type Encoder struct {
+	// Version gates property emission: properties introduced after this
+	// Mendix version are skipped for new elements. Zero value = no gating.
+	Version version.Version
+}
+
+// shouldEmitProperty returns false when Version is set and the property
+// is not yet available in that version per DefaultVersionRegistry.
+// Only applied to new elements (raw == nil path).
+//
+// The version registry uses camelCase property names (e.g., "boundaryEvents"),
+// while prop.Name() returns PascalCase BSON keys (e.g., "BoundaryEvents").
+// We lowercase the first rune of propName before the registry lookup.
+func (e *Encoder) shouldEmitProperty(typeName, propName string) bool {
+	if e.Version.IsZero() {
+		return true
+	}
+	info, ok := version.DefaultVersionRegistry.Lookup(typeName)
+	if !ok {
+		return true
+	}
+	// Convert PascalCase BSON key → camelCase registry key.
+	camel := propName
+	if len(propName) > 0 {
+		camel = strings.ToLower(propName[:1]) + propName[1:]
+	}
+	pvi, ok := info.Properties[camel]
+	if !ok {
+		return true
+	}
+	return pvi.IsAvailableIn(e.Version)
+}
 
 // Encode serializes an element to []byte.
 // Clean elements passthrough raw bytes unchanged.
@@ -131,6 +164,9 @@ func (e *Encoder) buildDoc(elem element.Element) (bson.D, error) {
 			{Key: "$Type", Value: elem.TypeName()},
 		}
 		for _, prop := range elem.Properties() {
+			if !e.shouldEmitProperty(elem.TypeName(), prop.Name()) {
+				continue
+			}
 			idx := findRebuild(bytesOf(prop.Name()))
 			if idx < 0 {
 				continue
