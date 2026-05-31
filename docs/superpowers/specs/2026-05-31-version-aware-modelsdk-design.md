@@ -404,8 +404,8 @@ Steps 2–3 fix the immediate bug. Steps 4–5 add complete property gating. All
 
 ---
 
-## Open Questions
+## Decisions
 
-1. **Property gating default on unknown type:** current spec says "write it" (safe). Should it warn instead?
-2. **`wfBuildCtx` scope:** only workflow builders need it now. If other domains (microflow, page) later gain version-renamed types, should `wfBuildCtx` become a shared `buildCtx`?
-3. **Version boundary 11.9.0 vs 11.10.0:** the TS SDK says 11.9.0. No 11.9.x MPR available to verify. Use 11.9.0 (SDK-authoritative) or 11.10.0 (conservative, confirmed by bug report)?
+1. **Property gating default on unknown type:** write it silently. Missing version info = no restriction. Detection belongs in `make audit` (codegen audit mode), not runtime.
+2. **`wfBuildCtx` scope:** workflow-only for now (YAGNI). Promote to shared `buildCtx` when a second domain gains a rename — concrete need drives the refactor.
+3. **Version boundary:** use **11.9.0** (SDK-authoritative). `CallMicroflowTask.versionInfo.deleted = "11.9.0"` is the Mendix-maintained source of truth. Conservative fallback to 11.10.0 is a one-constant change if 11.9.x evidence contradicts the SDK.
