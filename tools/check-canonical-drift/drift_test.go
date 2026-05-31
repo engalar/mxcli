@@ -91,3 +91,100 @@ func TestParseDiff_NewToMDLGenFunc(t *testing.T) {
 	require.Len(t, newFuncs, 1)
 	assert.Equal(t, "barToMDLGen", newFuncs[0])
 }
+
+// --- scanSource tests ---
+
+const srcMigrated = `package executor
+
+func entityStmtToMDL(s *ast.CreateEntityStmt) string {
+	m, _ := entity.Lift(s)
+	return m.ToMDL()
+}
+`
+
+const srcUnmigrated = `package executor
+
+import "strings"
+
+func associationStmtToMDL(s *ast.CreateAssociationStmt) string {
+	var sb strings.Builder
+	sb.WriteString("create association ")
+	return sb.String()
+}
+`
+
+const srcToMDLGen = `package executor
+
+func viewEntityToMDLGen(mod string, e *genDm.Entity) string {
+	var sb strings.Builder
+	sb.WriteString(e.Name())
+	return sb.String()
+}
+`
+
+const srcNonMatching = `package executor
+
+func execCreateEntity(ctx *ExecContext, s *ast.CreateEntityStmt) error {
+	return nil
+}
+`
+
+const srcMultiple = `package executor
+
+import "strings"
+
+func enumerationStmtToMDL(s *ast.CreateEnumerationStmt) string {
+	var sb strings.Builder
+	sb.WriteString("create enumeration")
+	return sb.String()
+}
+
+func microflowStmtToMDL(s *ast.CreateMicroflowStmt) string {
+	var sb strings.Builder
+	sb.WriteString("create microflow")
+	return sb.String()
+}
+
+func entityStmtToMDL(s *ast.CreateEntityStmt) string {
+	m, _ := entity.Lift(s)
+	return m.ToMDL()
+}
+`
+
+func TestScanSource_MigratedNotReported(t *testing.T) {
+	fns := scanSource("fake.go", srcMigrated)
+	assert.Empty(t, fns)
+}
+
+func TestScanSource_UnmigratedReported(t *testing.T) {
+	fns := scanSource("fake.go", srcUnmigrated)
+	require.Len(t, fns, 1)
+	assert.Equal(t, "associationStmtToMDL", fns[0].name)
+	assert.Greater(t, fns[0].end, fns[0].start)
+}
+
+func TestScanSource_ToMDLGenReported(t *testing.T) {
+	fns := scanSource("fake.go", srcToMDLGen)
+	require.Len(t, fns, 1)
+	assert.Equal(t, "viewEntityToMDLGen", fns[0].name)
+}
+
+func TestScanSource_NonMatchingSkipped(t *testing.T) {
+	fns := scanSource("fake.go", srcNonMatching)
+	assert.Empty(t, fns)
+}
+
+func TestScanSource_MultipleOnlyUnmigrated(t *testing.T) {
+	fns := scanSource("fake.go", srcMultiple)
+	require.Len(t, fns, 2)
+	names := []string{fns[0].name, fns[1].name}
+	assert.Contains(t, names, "enumerationStmtToMDL")
+	assert.Contains(t, names, "microflowStmtToMDL")
+}
+
+func TestScanSource_LineRangesPopulated(t *testing.T) {
+	fns := scanSource("fake.go", srcUnmigrated)
+	require.Len(t, fns, 1)
+	assert.Greater(t, fns[0].start, 0)
+	assert.GreaterOrEqual(t, fns[0].end, fns[0].start)
+}

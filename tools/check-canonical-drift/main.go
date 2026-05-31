@@ -7,6 +7,9 @@ package main
 
 import (
 	"bufio"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"regexp"
 	"strconv"
@@ -16,6 +19,7 @@ import (
 var (
 	hunkPattern  = regexp.MustCompile(`^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@`)
 	addedFuncPat = regexp.MustCompile(`^\+func \w*(StmtToMDL|ToMDLGen)\b`)
+	funcPattern  = regexp.MustCompile(`(StmtToMDL|ToMDLGen)$`)
 )
 
 type lineRange struct{ start, end int }
@@ -112,6 +116,53 @@ func parseDiff(diffText string) (changed map[string][]lineRange, newUnmigrated [
 	}
 	finishAddedFunc()
 	return
+}
+
+// scanSource parses Go source text and returns unmigtated serialization functions.
+// A function is unmigtated if its name matches *StmtToMDL/*ToMDLGen and its
+// body contains no .ToMDL() call.
+func scanSource(file, src string) []unmgrFunc {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, file, src, 0)
+	if err != nil {
+		return nil
+	}
+	var results []unmgrFunc
+	for _, decl := range f.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Body == nil {
+			continue
+		}
+		if !funcPattern.MatchString(fn.Name.Name) {
+			continue
+		}
+		if hasToMDLCall(fn.Body) {
+			continue
+		}
+		results = append(results, unmgrFunc{
+			file:  file,
+			name:  fn.Name.Name,
+			start: fset.Position(fn.Pos()).Line,
+			end:   fset.Position(fn.End()).Line,
+		})
+	}
+	return results
+}
+
+// hasToMDLCall reports whether the AST subtree contains any .ToMDL() selector call.
+func hasToMDLCall(node ast.Node) bool {
+	found := false
+	ast.Inspect(node, func(n ast.Node) bool {
+		if found {
+			return false
+		}
+		sel, ok := n.(*ast.SelectorExpr)
+		if ok && sel.Sel.Name == "ToMDL" {
+			found = true
+		}
+		return !found
+	})
+	return found
 }
 
 func main() {
