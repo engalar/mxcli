@@ -223,10 +223,18 @@ func (e *Encoder) encodeEntry(rb rebuildEntry) (any, error) {
 	// Child list (PartList) property.
 	if rb.clp != nil {
 		children := rb.clp.ChildElements()
+		// Read version marker from the PartList if it exposes one; default to 3.
+		type versioned interface{ VersionMarker() int32 }
+		vm := int32(3)
+		if pv, ok := rb.clp.(versioned); ok {
+			if m := pv.VersionMarker(); m > 0 {
+				vm = m
+			}
+		}
 		if wp.Dirty() {
 			// Full rebuild: all children re-encoded.
 			arr := make(bson.A, 0, 1+len(children))
-			arr = append(arr, int32(3))
+			arr = append(arr, vm)
 			for _, child := range children {
 				childDoc, err := e.buildDoc(child)
 				if err != nil {
@@ -238,7 +246,7 @@ func (e *Encoder) encodeEntry(rb rebuildEntry) (any, error) {
 		}
 		// Selective rebuild: dirty children re-encoded, clean ones pass through raw bytes.
 		arr := make(bson.A, 0, 1+len(children))
-		arr = append(arr, int32(3))
+		arr = append(arr, vm)
 		for _, child := range children {
 			if child.IsDirty() {
 				childDoc, err := e.buildDoc(child)

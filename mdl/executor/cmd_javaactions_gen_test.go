@@ -14,6 +14,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genCA "github.com/mendixlabs/mxcli/modelsdk/gen/codeactions"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 )
 
@@ -298,12 +299,12 @@ func TestAstDataTypeToJavaActionParamTypeGen_PrimitiveTypes(t *testing.T) {
 		dt       ast.DataType
 		wantType string
 	}{
-		{"Boolean", ast.DataType{Kind: ast.TypeBoolean}, "JavaActions$BooleanType"},
-		{"Integer", ast.DataType{Kind: ast.TypeInteger}, "JavaActions$IntegerType"},
-		{"Decimal", ast.DataType{Kind: ast.TypeDecimal}, "JavaActions$DecimalType"},
-		{"String", ast.DataType{Kind: ast.TypeString}, "JavaActions$StringType"},
-		{"DateTime", ast.DataType{Kind: ast.TypeDateTime}, "JavaActions$DateTimeType"},
-		{"Date", ast.DataType{Kind: ast.TypeDate}, "JavaActions$DateTimeType"},
+		{"Boolean", ast.DataType{Kind: ast.TypeBoolean}, "CodeActions$BooleanType"},
+		{"Integer", ast.DataType{Kind: ast.TypeInteger}, "CodeActions$IntegerType"},
+		{"Decimal", ast.DataType{Kind: ast.TypeDecimal}, "CodeActions$DecimalType"},
+		{"String", ast.DataType{Kind: ast.TypeString}, "CodeActions$StringType"},
+		{"DateTime", ast.DataType{Kind: ast.TypeDateTime}, "CodeActions$DateTimeType"},
+		{"Date", ast.DataType{Kind: ast.TypeDate}, "CodeActions$DateTimeType"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -324,9 +325,9 @@ func TestAstDataTypeToJavaActionParamTypeGen_ConcreteEntity(t *testing.T) {
 		EntityRef: &ast.QualifiedName{Module: "Sales", Name: "Order"},
 	}
 	elem := astDataTypeToJavaActionParamTypeGen(dt, nil)
-	et, ok := elem.(*genJA.ConcreteEntityType)
+	et, ok := elem.(*genCA.ConcreteEntityType)
 	if !ok {
-		t.Fatalf("got %T, want *ConcreteEntityType", elem)
+		t.Fatalf("got %T, want *genCA.ConcreteEntityType", elem)
 	}
 	if et.EntityQualifiedName() != "Sales.Order" {
 		t.Errorf("got %q, want Sales.Order", et.EntityQualifiedName())
@@ -339,13 +340,13 @@ func TestAstDataTypeToJavaActionParamTypeGen_EntityList(t *testing.T) {
 		EntityRef: &ast.QualifiedName{Module: "Sales", Name: "Order"},
 	}
 	elem := astDataTypeToJavaActionParamTypeGen(dt, nil)
-	lt, ok := elem.(*genJA.ListType)
+	lt, ok := elem.(*genCA.ListType)
 	if !ok {
-		t.Fatalf("got %T, want *ListType", elem)
+		t.Fatalf("got %T, want *genCA.ListType", elem)
 	}
-	inner, ok := lt.Parameter().(*genJA.ConcreteEntityType)
+	inner, ok := lt.Parameter().(*genCA.ConcreteEntityType)
 	if !ok {
-		t.Fatalf("inner = %T, want *ConcreteEntityType", lt.Parameter())
+		t.Fatalf("inner = %T, want *genCA.ConcreteEntityType", lt.Parameter())
 	}
 	if inner.EntityQualifiedName() != "Sales.Order" {
 		t.Errorf("inner entity = %q, want Sales.Order", inner.EntityQualifiedName())
@@ -356,9 +357,9 @@ func TestAstDataTypeToJavaActionParamTypeGen_TypeParamRef(t *testing.T) {
 	typeParamIDs := map[string]element.ID{"pEntity": element.ID("tp-uuid-123")}
 	dt := ast.DataType{Kind: ast.TypeEntityTypeParam, TypeParamName: "pEntity"}
 	elem := astDataTypeToJavaActionParamTypeGen(dt, typeParamIDs)
-	etp, ok := elem.(*genJA.EntityTypeParameterType)
+	etp, ok := elem.(*genCA.EntityTypeParameterType)
 	if !ok {
-		t.Fatalf("got %T, want *EntityTypeParameterType", elem)
+		t.Fatalf("got %T, want *genCA.EntityTypeParameterType", elem)
 	}
 	if etp.TypeParameterRefID() != element.ID("tp-uuid-123") {
 		t.Errorf("got %q, want tp-uuid-123", etp.TypeParameterRefID())
@@ -376,9 +377,9 @@ func TestAstDataTypeToJavaActionParamTypeGen_BareEnumRefAsTypeParam(t *testing.T
 		EnumRef: &ast.QualifiedName{Module: "", Name: "T"},
 	}
 	elem := astDataTypeToJavaActionParamTypeGen(dt, typeParamIDs)
-	pe, ok := elem.(*genJA.ParameterizedEntityType)
+	pe, ok := elem.(*genCA.ParameterizedEntityType)
 	if !ok {
-		t.Fatalf("got %T, want *ParameterizedEntityType", elem)
+		t.Fatalf("got %T, want *genCA.ParameterizedEntityType", elem)
 	}
 	if pe.TypeParameterRefID() != element.ID("tp-T-uuid") {
 		t.Errorf("TypeParameterRefID = %q, want tp-T-uuid", pe.TypeParameterRefID())
@@ -395,12 +396,12 @@ func TestAstDataTypeToJavaActionParamTypeGen_QualifiedEnumRefNotTypeParam(t *tes
 		EnumRef: &ast.QualifiedName{Module: "MyModule", Name: "Customer"},
 	}
 	elem := astDataTypeToJavaActionParamTypeGen(dt, typeParamIDs)
-	if _, ok := elem.(*genJA.ParameterizedEntityType); ok {
+	if _, ok := elem.(*genCA.ParameterizedEntityType); ok {
 		t.Fatal("got ParameterizedEntityType for qualified enum ref, want ConcreteEntityType")
 	}
-	et, ok := elem.(*genJA.ConcreteEntityType)
+	et, ok := elem.(*genCA.ConcreteEntityType)
 	if !ok {
-		t.Fatalf("got %T, want *ConcreteEntityType", elem)
+		t.Fatalf("got %T, want *genCA.ConcreteEntityType", elem)
 	}
 	if et.EntityQualifiedName() != "MyModule.Customer" {
 		t.Errorf("EntityQualifiedName = %q, want MyModule.Customer", et.EntityQualifiedName())
@@ -414,8 +415,8 @@ func TestAstDataTypeToJavaActionReturnTypeGen_VoidAndPrimitives(t *testing.T) {
 		wantType string
 	}{
 		{"Void", ast.DataType{Kind: ast.TypeVoid}, "CodeActions$VoidType"},
-		{"Boolean", ast.DataType{Kind: ast.TypeBoolean}, "JavaActions$BooleanType"},
-		{"String", ast.DataType{Kind: ast.TypeString}, "JavaActions$StringType"},
+		{"Boolean", ast.DataType{Kind: ast.TypeBoolean}, "CodeActions$BooleanType"},
+		{"String", ast.DataType{Kind: ast.TypeString}, "CodeActions$StringType"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -436,9 +437,9 @@ func TestAstDataTypeToJavaActionReturnTypeGen_ConcreteEntity(t *testing.T) {
 		EntityRef: &ast.QualifiedName{Module: "M", Name: "Customer"},
 	}
 	elem := astDataTypeToJavaActionReturnTypeGen(dt, nil)
-	et, ok := elem.(*genJA.ConcreteEntityType)
+	et, ok := elem.(*genCA.ConcreteEntityType)
 	if !ok {
-		t.Fatalf("got %T, want *ConcreteEntityType", elem)
+		t.Fatalf("got %T, want *genCA.ConcreteEntityType", elem)
 	}
 	if et.EntityQualifiedName() != "M.Customer" {
 		t.Errorf("got %q, want M.Customer", et.EntityQualifiedName())
@@ -545,9 +546,10 @@ func TestExecCreateJavaActionGen_WithParameters(t *testing.T) {
 		t.Fatalf("expected 1 created action, got %d", len(*created))
 	}
 	ja := (*created)[0]
-	params := ja.ActionParametersItems()
+	// Executor writes to Parameters (old API, version marker 2), not ActionParameters.
+	params := ja.ParametersItems()
 	if len(params) != 2 {
-		t.Fatalf("ActionParameters count = %d, want 2", len(params))
+		t.Fatalf("Parameters count = %d, want 2", len(params))
 	}
 	p1, ok := params[0].(*genJA.JavaActionParameter)
 	if !ok {
@@ -559,8 +561,17 @@ func TestExecCreateJavaActionGen_WithParameters(t *testing.T) {
 	if !p1.IsRequired() {
 		t.Errorf("p1.IsRequired = false, want true")
 	}
-	if p1.ActionParameterType() == nil || p1.ActionParameterType().TypeName() != "JavaActions$StringType" {
-		t.Errorf("p1 type = %v, want JavaActions$StringType", p1.ActionParameterType())
+	// ParameterType wraps the actual type in CodeActions$BasicParameterType.
+	pt1 := p1.ParameterType()
+	if pt1 == nil || pt1.TypeName() != "CodeActions$BasicParameterType" {
+		t.Errorf("p1.ParameterType = %v, want CodeActions$BasicParameterType", pt1)
+	}
+	bpt1, ok := pt1.(*genCA.BasicParameterType)
+	if !ok {
+		t.Fatalf("p1.ParameterType = %T, want *genCA.BasicParameterType", pt1)
+	}
+	if inner := bpt1.Type(); inner == nil || inner.TypeName() != "CodeActions$StringType" {
+		t.Errorf("p1 inner type = %v, want CodeActions$StringType", bpt1.Type())
 	}
 	p2 := params[1].(*genJA.JavaActionParameter)
 	if p2.Name() != "p2" {
@@ -587,13 +598,14 @@ func TestExecCreateJavaActionGen_ConcreteEntityReturnType(t *testing.T) {
 		t.Fatalf("expected 1 created action, got %d", len(*created))
 	}
 	ja := (*created)[0]
-	rt := ja.ActionReturnType()
+	// Executor writes JavaReturnType (old API), not ActionReturnType.
+	rt := ja.JavaReturnType()
 	if rt == nil {
-		t.Fatal("ActionReturnType is nil")
+		t.Fatal("JavaReturnType is nil")
 	}
-	et, ok := rt.(*genJA.ConcreteEntityType)
+	et, ok := rt.(*genCA.ConcreteEntityType)
 	if !ok {
-		t.Fatalf("ActionReturnType = %T, want *ConcreteEntityType", rt)
+		t.Fatalf("JavaReturnType = %T, want *genCA.ConcreteEntityType", rt)
 	}
 	if et.EntityQualifiedName() != "Sales.Order" {
 		t.Errorf("entity = %q, want Sales.Order", et.EntityQualifiedName())

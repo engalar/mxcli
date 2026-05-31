@@ -193,6 +193,18 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 						"property.NewByNameRefListV3[", 1)
 				}
 			}
+			// Apply PartList version2 override: switch NewPartList → NewPartListV2
+			// for fields that require BSON version marker int32(2) instead of int32(3).
+			// Mendix uses version 2 for Parameters/TypeParameters on JavaAction.
+			if td.Fields[fi].IsList && !td.Fields[fi].IsRefList && meta.PartListVersion2Fields != nil {
+				v2key := cls.Name + "." + td.Fields[fi].PropName
+				if meta.PartListVersion2Fields[v2key] {
+					td.Fields[fi].Constructor = strings.Replace(
+						td.Fields[fi].Constructor,
+						"property.NewPartList[",
+						"property.NewPartListV2[", 1)
+				}
+			}
 		}
 		// Apply property order overrides — reorder fields to match Mendix's
 		// BSON serialization order (which may differ from the SDK definition order).

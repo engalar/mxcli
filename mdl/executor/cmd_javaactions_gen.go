@@ -72,6 +72,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genCA "github.com/mendixlabs/mxcli/modelsdk/gen/codeactions"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 )
@@ -921,24 +922,19 @@ func newGenElementByType(name string) element.Element {
 func astDataTypeToJavaActionParamTypeGen(dt ast.DataType, typeParamIDs map[string]element.ID) element.Element {
 	switch dt.Kind {
 	case ast.TypeBoolean:
-		return genJA.NewBooleanType()
+		return genCA.NewBooleanType()
 	case ast.TypeInteger:
-		return genJA.NewIntegerType()
+		return genCA.NewIntegerType()
 	case ast.TypeLong:
-		// schema gap: no NewLongType() in gen. Allocate a bare
-		// *element.Base with Studio Pro's CodeActions$LongType
-		// storage namespace; the format helpers already dispatch on
-		// TypeName for both namespaces. Remove when gen exposes
-		// NewLongType().
 		return newGenElementByType("CodeActions$LongType")
 	case ast.TypeDecimal:
-		return genJA.NewDecimalType()
+		return genCA.NewDecimalType()
 	case ast.TypeString:
-		return genJA.NewStringType()
+		return genCA.NewStringType()
 	case ast.TypeDateTime, ast.TypeDate:
-		return genJA.NewDateTimeType()
+		return genCA.NewDateTimeType()
 	case ast.TypeEntityTypeParam:
-		etp := genJA.NewEntityTypeParameterType()
+		etp := genCA.NewEntityTypeParameterType()
 		if id, ok := typeParamIDs[dt.TypeParamName]; ok {
 			etp.SetTypeParameterID(id)
 		}
@@ -948,7 +944,7 @@ func astDataTypeToJavaActionParamTypeGen(dt ast.DataType, typeParamIDs map[strin
 		// (e.g. InputObject: T where T is a declared type parameter).
 		if dt.EnumRef != nil && dt.EnumRef.Module == "" {
 			if id, ok := typeParamIDs[dt.EnumRef.Name]; ok {
-				pe := genJA.NewParameterizedEntityType()
+				pe := genCA.NewParameterizedEntityType()
 				pe.SetTypeParameterID(id)
 				return pe
 			}
@@ -963,7 +959,7 @@ func astDataTypeToJavaActionParamTypeGen(dt ast.DataType, typeParamIDs map[strin
 		} else if dt.EnumRef != nil {
 			entityName = dt.EnumRef.Module + "." + dt.EnumRef.Name
 		}
-		et := genJA.NewConcreteEntityType()
+		et := genCA.NewConcreteEntityType()
 		et.SetEntityQualifiedName(entityName)
 		return et
 	case ast.TypeListOf:
@@ -971,9 +967,9 @@ func astDataTypeToJavaActionParamTypeGen(dt ast.DataType, typeParamIDs map[strin
 		if dt.EntityRef != nil {
 			entityName = dt.EntityRef.Module + "." + dt.EntityRef.Name
 		}
-		inner := genJA.NewConcreteEntityType()
+		inner := genCA.NewConcreteEntityType()
 		inner.SetEntityQualifiedName(entityName)
-		lt := genJA.NewListType()
+		lt := genCA.NewListType()
 		lt.SetParameter(inner)
 		return lt
 	default:
@@ -1105,14 +1101,13 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 	ja.SetDocumentation(s.Documentation)
 	ja.SetExportLevel("Public")
 
-	// Build type parameter definitions; track ID by name so EntityType
-	// parameter / parameterized entity types can wire BY_ID pointers.
+	// Build type parameter definitions using the old TypeParameters list (not ActionTypeParameters).
 	typeParamIDs := make(map[string]element.ID, len(s.TypeParameters))
 	for _, tpName := range s.TypeParameters {
 		tp := genJA.NewTypeParameter()
 		tp.SetID(element.ID(types.GenerateID()))
 		tp.SetName(tpName)
-		ja.AddActionTypeParameters(tp)
+		ja.AddTypeParameters(tp)
 		typeParamIDs[tpName] = tp.ID()
 	}
 
@@ -1123,48 +1118,54 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 		typeParamNames[tpName] = true
 	}
 
-	// Convert parameters.
+	// Convert parameters using the old Mendix-native format:
+	// Parameters (not ActionParameters), ParameterType with CodeActions$BasicParameterType
+	// wrapper (not ActionParameterType with bare type), version marker 2 on the list.
+	// This matches what Mendix Studio Pro writes and avoids an MprTool crash
+	// (InvalidCastException) when opening the project.
 	for _, param := range s.Parameters {
 		jaParam := genJA.NewJavaActionParameter()
 		jaParam.SetID(element.ID(types.GenerateID()))
 		jaParam.SetName(param.Name)
 		jaParam.SetIsRequired(param.IsRequired)
 
-		var paramType element.Element
+		var innerType element.Element
 		switch {
 		case param.Type.Kind == ast.TypeEntityTypeParam:
-			paramType = astDataTypeToJavaActionParamTypeGen(param.Type, typeParamIDs)
+			innerType = astDataTypeToJavaActionParamTypeGen(param.Type, typeParamIDs)
 		case isTypeParamRef(param.Type, typeParamNames):
-			// Bare name matching a type parameter →
-			// ParameterizedEntityType (use-site BY_ID reference).
 			tpName := getTypeParamRefName(param.Type)
-			pet := genJA.NewParameterizedEntityType()
+			pet := genCA.NewParameterizedEntityType()
 			if id, ok := typeParamIDs[tpName]; ok {
 				pet.SetTypeParameterID(id)
 			}
-			paramType = pet
+			innerType = pet
 		default:
-			paramType = astDataTypeToJavaActionParamTypeGen(param.Type, typeParamIDs)
+			innerType = astDataTypeToJavaActionParamTypeGen(param.Type, typeParamIDs)
 		}
-		jaParam.SetActionParameterType(paramType)
-		ja.AddActionParameters(jaParam)
+		// Wrap in CodeActions$BasicParameterType (Mendix native format).
+		bpt := genCA.NewBasicParameterType()
+		bpt.SetID(element.ID(types.GenerateID()))
+		bpt.SetType(innerType)
+		jaParam.SetParameterType(bpt)
+		ja.AddParameters(jaParam)
 	}
 
-	// Convert return type — also handle bare type-param refs.
+	// Convert return type using the old JavaReturnType field (not ActionReturnType).
 	if isTypeParamRef(s.ReturnType, typeParamNames) {
 		tpName := getTypeParamRefName(s.ReturnType)
-		pet := genJA.NewParameterizedEntityType()
+		pet := genCA.NewParameterizedEntityType()
 		if id, ok := typeParamIDs[tpName]; ok {
 			pet.SetTypeParameterID(id)
 		}
-		ja.SetActionReturnType(pet)
+		ja.SetJavaReturnType(pet)
 	} else {
-		ja.SetActionReturnType(astDataTypeToJavaActionReturnTypeGen(s.ReturnType, typeParamIDs))
+		ja.SetJavaReturnType(astDataTypeToJavaActionReturnTypeGen(s.ReturnType, typeParamIDs))
 	}
 
-	// MicroflowActionInfo when EXPOSED AS clause is present.
+	// MicroflowActionInfo when EXPOSED AS clause is present (use CodeActions$ type, old format).
 	if s.ExposedCaption != "" {
-		mai := genJA.NewMicroflowActionInfo()
+		mai := genCA.NewMicroflowActionInfo()
 		mai.SetCaption(s.ExposedCaption)
 		mai.SetCategory(s.ExposedCategory)
 		ja.SetMicroflowActionInfo(mai)

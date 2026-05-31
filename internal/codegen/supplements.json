@@ -1,217 +1,269 @@
 {
   "_doc": "Supplements for codegen: types, properties, aliases, and overrides not in TypeScript SDK but needed for BSON fidelity.",
-
   "storage_aliases": {
     "_doc": "SDK structureTypeName → BSON storage $Type. Codegen generates dual registration for each.",
-    "DomainModels$Entity":                    "DomainModels$EntityImpl",
+    "DomainModels$Entity": "DomainModels$EntityImpl",
     "DomainModels$AssociationDeleteBehavior": "DomainModels$DeleteBehavior",
-    "DomainModels$EventHandler":              "DomainModels$EntityEvent",
-    "DomainModels$Index":                     "DomainModels$EntityIndex",
-    "Projects$Module":                        "Projects$ModuleImpl",
-    "Pages$PageClientAction":                 "Forms$FormAction",
-    "Pages$PageSettings":                     "Forms$FormSettings",
-    "Pages$PageParameterMapping":             "Forms$FormCallArgument",
-    "Pages$PageForSpecialization":            "Forms$FormForSpecialization",
-    "Pages$MicroflowClientAction":            "Forms$MicroflowAction",
-    "Pages$NoClientAction":                   "Forms$NoAction",
-    "Pages$TabContainer":                     "Forms$TabControl",
-    "Pages$DynamicImageViewer":               "Forms$ImageViewer",
-    "Microflows$CreateObjectAction":          "Microflows$CreateChangeAction",
-    "Microflows$ChangeObjectAction":          "Microflows$ChangeAction",
-    "Microflows$MemberChange":                "Microflows$ChangeActionItem",
-    "Microflows$DeleteObjectAction":          "Microflows$DeleteAction",
-    "Microflows$ShowPageAction":              "Microflows$ShowFormAction",
-    "Microflows$AggregateListAction":         "Microflows$AggregateAction",
-    "Microflows$ListOperationAction":         "Microflows$ListOperationsAction",
-    "Microflows$CommitObjectsAction":         "Microflows$CommitAction",
-    "Microflows$RollbackObjectAction":        "Microflows$RollbackAction",
-    "Microflows$ClosePageAction":             "Microflows$CloseFormAction",
+    "DomainModels$EventHandler": "DomainModels$EntityEvent",
+    "DomainModels$Index": "DomainModels$EntityIndex",
+    "Projects$Module": "Projects$ModuleImpl",
+    "Pages$PageClientAction": "Forms$FormAction",
+    "Pages$PageSettings": "Forms$FormSettings",
+    "Pages$PageParameterMapping": "Forms$FormCallArgument",
+    "Pages$PageForSpecialization": "Forms$FormForSpecialization",
+    "Pages$MicroflowClientAction": "Forms$MicroflowAction",
+    "Pages$NoClientAction": "Forms$NoAction",
+    "Pages$TabContainer": "Forms$TabControl",
+    "Pages$DynamicImageViewer": "Forms$ImageViewer",
+    "Microflows$CreateObjectAction": "Microflows$CreateChangeAction",
+    "Microflows$ChangeObjectAction": "Microflows$ChangeAction",
+    "Microflows$MemberChange": "Microflows$ChangeActionItem",
+    "Microflows$DeleteObjectAction": "Microflows$DeleteAction",
+    "Microflows$ShowPageAction": "Microflows$ShowFormAction",
+    "Microflows$AggregateListAction": "Microflows$AggregateAction",
+    "Microflows$ListOperationAction": "Microflows$ListOperationsAction",
+    "Microflows$CommitObjectsAction": "Microflows$CommitAction",
+    "Microflows$RollbackObjectAction": "Microflows$RollbackAction",
+    "Microflows$ClosePageAction": "Microflows$CloseFormAction",
     "ExportMappings$ExportObjectMappingElement": "ExportMappings$ObjectMappingElement",
-    "ExportMappings$ExportValueMappingElement":  "ExportMappings$ValueMappingElement",
+    "ExportMappings$ExportValueMappingElement": "ExportMappings$ValueMappingElement",
     "ImportMappings$ImportObjectMappingElement": "ImportMappings$ObjectMappingElement",
-    "ImportMappings$ImportValueMappingElement":  "ImportMappings$ValueMappingElement",
-    "Security$DemoUser":                      "Security$DemoUserImpl",
-    "Projects$OneTimeConversionMarker":       "Projects$OneTimeConversion",
-    "Mappings$MappingMicroflowCall":          "Mappings$MappingMicroflowCallImpl",
-    "WebServices$DataAssociation":            "WebServices$DataAssociationImpl",
-    "WebServices$DataAttribute":              "WebServices$DataAttributeImpl",
-    "WebServices$DataEntity":                 "WebServices$DataEntityImpl",
-    "WebServices$PublishedOperation":         "WebServices$PublishedOperationImpl",
-    "WebServices$VersionedService":           "WebServices$VersionedServiceImpl",
-    "WebServices$PublishedWebService":        "WebServices$PublishedService",
-    "Microflows$FileDocumentExport":          "ExportXmlAction$FileDocumentExport",
-    "Microflows$VariableExport":              "ExportXmlAction$StringExport",
-    "XmlSchemas$XmlElement":                  "XmlSchemas$XmlSchemaContents",
-    "Microflows$TemplateArgument":            "Microflows$TemplateParameter",
-    "Microflows$SortItemList":               "Microflows$SortingsList",
-    "Microflows$SortItem":                   "Microflows$RetrieveSorting",
-    "DocumentTemplates$DataGridColumn":       "Forms$DataGridColumn",
-    "Settings$Language":                      "Texts$Language",
-    "Settings$WebUIProjectSettingsPart":      "Forms$WebUIProjectSettingsPart",
-    "Workflows$Annotation":                   "Workflows$AnnotationActivity",
-    "Workflows$CallMicroflowActivity":         "Workflows$CallMicroflowTask",
-    "Rest$BasicAuthenticationScheme":         "Rest$BasicAuthentication",
-    "Microflows$WebServiceCallAction":        "Microflows$CallWebServiceAction"
+    "ImportMappings$ImportValueMappingElement": "ImportMappings$ValueMappingElement",
+    "Security$DemoUser": "Security$DemoUserImpl",
+    "Projects$OneTimeConversionMarker": "Projects$OneTimeConversion",
+    "Mappings$MappingMicroflowCall": "Mappings$MappingMicroflowCallImpl",
+    "WebServices$DataAssociation": "WebServices$DataAssociationImpl",
+    "WebServices$DataAttribute": "WebServices$DataAttributeImpl",
+    "WebServices$DataEntity": "WebServices$DataEntityImpl",
+    "WebServices$PublishedOperation": "WebServices$PublishedOperationImpl",
+    "WebServices$VersionedService": "WebServices$VersionedServiceImpl",
+    "WebServices$PublishedWebService": "WebServices$PublishedService",
+    "Microflows$FileDocumentExport": "ExportXmlAction$FileDocumentExport",
+    "Microflows$VariableExport": "ExportXmlAction$StringExport",
+    "XmlSchemas$XmlElement": "XmlSchemas$XmlSchemaContents",
+    "Microflows$TemplateArgument": "Microflows$TemplateParameter",
+    "Microflows$SortItemList": "Microflows$SortingsList",
+    "Microflows$SortItem": "Microflows$RetrieveSorting",
+    "DocumentTemplates$DataGridColumn": "Forms$DataGridColumn",
+    "Settings$Language": "Texts$Language",
+    "Settings$WebUIProjectSettingsPart": "Forms$WebUIProjectSettingsPart",
+    "Workflows$Annotation": "Workflows$AnnotationActivity",
+    "Workflows$CallMicroflowActivity": "Workflows$CallMicroflowTask",
+    "Rest$BasicAuthenticationScheme": "Rest$BasicAuthentication",
+    "Microflows$WebServiceCallAction": "Microflows$CallWebServiceAction"
   },
-
   "property_key_overrides": {
     "_doc": "ClassName.propertyName → BSON key where it differs from PascalCase(JS name). Wildcard *.prop matches any class.",
-    "NavigationProfile.menuItemCollection":              "Menu",
-    "NavigationProfile.roleBasedHomePages":              "HomeItems",
-    "AccessRule.moduleRoles":                            "AllowedModuleRoles",
-    "Association.parent":                                "ParentPointer",
-    "Association.child":                                 "ChildPointer",
-    "CrossAssociation.parent":                           "ParentPointer",
-    "IndexedAttribute.attribute":                        "AttributePointer",
-    "PageClientAction.pageSettings":                     "FormSettings",
-    "ShowPageAction.pageSettings":                       "FormSettings",
-    "ActionButton.caption":                              "CaptionTemplate",
-    "PageSettings.page":                                 "Form",
-    "PageForSpecialization.page":                        "Form",
-    "*.outputVariableName":                              "VariableName",
-    "RetrieveAction.outputVariableName":                 "ResultVariableName",
-    "MicroflowParameter.parameterType":                  "VariableType",
-    "MicroflowCallAction.outputVariableName":             "ResultVariableName",
-    "JavaActionCallAction.outputVariableName":            "ResultVariableName",
-    "StringTemplate.arguments":                          "Parameters",
-    "TextTemplate.arguments":                            "Parameters",
-    "EntityTypeParameterType.typeParameter":             "TypeParameterPointer",
-    "ParameterizedEntityType.typeParameter":             "TypeParameterPointer",
-    "GridControlBar.defaultButton":                      "DefaultButtonPointer",
-    "SequenceFlow.origin":                               "OriginPointer",
-    "SequenceFlow.destination":                          "DestinationPointer",
-    "AnnotationFlow.origin":                             "OriginPointer",
-    "AnnotationFlow.destination":                        "DestinationPointer",
-    "FlowLine.origin":                                   "OriginPointer",
-    "FlowLine.destination":                              "DestinationPointer",
-    "WidgetProperty.type":                               "TypePointer",
-    "WidgetObject.type":                                 "TypePointer",
-    "WidgetValue.type":                                  "TypePointer",
-    "ConsensusCompletionCriteria.fallbackOutcome":       "FallbackOutcomePointer",
-    "ThresholdCompletionCriteria.fallbackOutcome":       "FallbackOutcomePointer",
-    "MajorityCompletionCriteria.fallbackOutcome":        "FallbackOutcomePointer",
-    "PublishedODataService2.entityTypes":                "Entities",
-    "EntityType.childMembers":                           "Members",
-    "VetoCompletionCriteria.vetoOutcome":                "VetoOutcomePointer",
-    "SnippetCallWidget.snippetCall":                     "FormCall",
-    "SnippetCall.snippet":                               "Form",
-    "Page.layoutCall":                                   "FormCall",
-    "Layout.layoutCall":                                 "FormCall",
-    "PageTemplate.layoutCall":                           "FormCall",
-    "WebLayoutContent.layoutCall":                       "FormCall",
-    "LayoutCall.layout":                                 "Form",
-    "ImportMapping.rootMappingElements":                 "Elements",
-    "ExportMapping.rootMappingElements":                 "Elements",
-    "Text.translations":                                 "Items",
-    "AggregateListAction.inputListVariableName":         "AggregateVariableName",
-    "ValidationFeedbackAction.objectVariableName":       "ValidationVariableName",
-    "Attribute.type":                                    "NewType",
-    "Entity.generalization":                             "MaybeGeneralization",
-    "NoGeneralization.hasChangedBy":                     "HasChangedByAttr",
-    "NoGeneralization.hasChangedDate":                   "HasChangedDateAttr",
-    "NoGeneralization.hasCreatedDate":                   "HasCreatedDateAttr",
-    "NoGeneralization.hasOwner":                         "HasOwnerAttr",
-    "NanoflowCallAction.outputVariableName":             "OutputVariableName",
-    "GenerateJumpToOptionsAction.outputVariableName":    "OutputVariableName",
-    "ResultHandling.outputVariableName":                 "ResultVariableName",
-    "ResultHandling.storeInVariable":                    "Bind",
-    "DatabaseRetrieveSource.xPathConstraint":            "XpathConstraint",
-    "DatabaseRetrieveSource.sortItemList":               "NewSortings",
-    "SortItemList.items":                                "Sortings"
+    "NavigationProfile.menuItemCollection": "Menu",
+    "NavigationProfile.roleBasedHomePages": "HomeItems",
+    "AccessRule.moduleRoles": "AllowedModuleRoles",
+    "Association.parent": "ParentPointer",
+    "Association.child": "ChildPointer",
+    "CrossAssociation.parent": "ParentPointer",
+    "IndexedAttribute.attribute": "AttributePointer",
+    "PageClientAction.pageSettings": "FormSettings",
+    "ShowPageAction.pageSettings": "FormSettings",
+    "ActionButton.caption": "CaptionTemplate",
+    "PageSettings.page": "Form",
+    "PageForSpecialization.page": "Form",
+    "*.outputVariableName": "VariableName",
+    "RetrieveAction.outputVariableName": "ResultVariableName",
+    "MicroflowParameter.parameterType": "VariableType",
+    "MicroflowCallAction.outputVariableName": "ResultVariableName",
+    "JavaActionCallAction.outputVariableName": "ResultVariableName",
+    "StringTemplate.arguments": "Parameters",
+    "TextTemplate.arguments": "Parameters",
+    "EntityTypeParameterType.typeParameter": "TypeParameterPointer",
+    "ParameterizedEntityType.typeParameter": "TypeParameterPointer",
+    "GridControlBar.defaultButton": "DefaultButtonPointer",
+    "SequenceFlow.origin": "OriginPointer",
+    "SequenceFlow.destination": "DestinationPointer",
+    "AnnotationFlow.origin": "OriginPointer",
+    "AnnotationFlow.destination": "DestinationPointer",
+    "FlowLine.origin": "OriginPointer",
+    "FlowLine.destination": "DestinationPointer",
+    "WidgetProperty.type": "TypePointer",
+    "WidgetObject.type": "TypePointer",
+    "WidgetValue.type": "TypePointer",
+    "ConsensusCompletionCriteria.fallbackOutcome": "FallbackOutcomePointer",
+    "ThresholdCompletionCriteria.fallbackOutcome": "FallbackOutcomePointer",
+    "MajorityCompletionCriteria.fallbackOutcome": "FallbackOutcomePointer",
+    "PublishedODataService2.entityTypes": "Entities",
+    "EntityType.childMembers": "Members",
+    "VetoCompletionCriteria.vetoOutcome": "VetoOutcomePointer",
+    "SnippetCallWidget.snippetCall": "FormCall",
+    "SnippetCall.snippet": "Form",
+    "Page.layoutCall": "FormCall",
+    "Layout.layoutCall": "FormCall",
+    "PageTemplate.layoutCall": "FormCall",
+    "WebLayoutContent.layoutCall": "FormCall",
+    "LayoutCall.layout": "Form",
+    "ImportMapping.rootMappingElements": "Elements",
+    "ExportMapping.rootMappingElements": "Elements",
+    "Text.translations": "Items",
+    "AggregateListAction.inputListVariableName": "AggregateVariableName",
+    "ValidationFeedbackAction.objectVariableName": "ValidationVariableName",
+    "Attribute.type": "NewType",
+    "Entity.generalization": "MaybeGeneralization",
+    "NoGeneralization.hasChangedBy": "HasChangedByAttr",
+    "NoGeneralization.hasChangedDate": "HasChangedDateAttr",
+    "NoGeneralization.hasCreatedDate": "HasCreatedDateAttr",
+    "NoGeneralization.hasOwner": "HasOwnerAttr",
+    "NanoflowCallAction.outputVariableName": "OutputVariableName",
+    "GenerateJumpToOptionsAction.outputVariableName": "OutputVariableName",
+    "ResultHandling.outputVariableName": "ResultVariableName",
+    "ResultHandling.storeInVariable": "Bind",
+    "DatabaseRetrieveSource.xPathConstraint": "XpathConstraint",
+    "DatabaseRetrieveSource.sortItemList": "NewSortings",
+    "SortItemList.items": "Sortings"
   },
-
   "property_order_overrides": {
-    "DomainModels$NoGeneralization": ["hasChangedBy", "hasChangedDate", "hasCreatedDate", "hasOwner", "persistable"]
+    "DomainModels$NoGeneralization": [
+      "hasChangedBy",
+      "hasChangedDate",
+      "hasCreatedDate",
+      "hasOwner",
+      "persistable"
+    ]
   },
-
   "ref_list_version3_fields": [
     "Page.allowedRoles"
   ],
-
   "force_concrete_types": [
     "Microflows$MicroflowParameter",
     "Projects$Project",
     "Workflows$BoundaryEvent"
   ],
-
   "edge_kind_overrides": {
     "_doc": "ByNameRef TargetType → graph edge kind. Empty string = skip. Unlisted defaults to 'references'.",
-    "DomainModels$Entity":                        "datasource",
-    "Microflows$Microflow":                       "calls",
-    "Microflows$Nanoflow":                        "calls",
-    "Forms$Page":                                 "shows_page",
-    "Forms$Layout":                               "uses_layout",
-    "Forms$Snippet":                              "calls",
-    "Workflows$Workflow":                         "triggers_workflow",
-    "JavaActions$JavaAction":                     "calls",
-    "JavaScriptActions$JavaScriptAction":         "calls",
-    "Constants$Constant":                         "references",
-    "Enumerations$Enumeration":                   "references",
-    "ExportMappings$ExportMapping":               "calls",
-    "ImportMappings$ImportMapping":               "calls",
-    "NativePages$NativePage":                     "shows_page",
-    "NativePages$NativeLayout":                   "uses_layout",
-    "Security$UserRole":                          "grants_access",
-    "DocumentTemplates$DocumentTemplate":         "calls",
-    "DomainModels$AssociationBase":               "references",
-    "Rest$ConsumedODataService":                  "references",
-    "Queues$Queue":                               "references",
-    "DomainModels$Attribute":                     "",
-    "Microflows$MicroflowParameter":              "",
-    "Microflows$NanoflowParameter":               "",
-    "Microflows$MicroflowCall":                   "",
-    "Microflows$NanoflowCall":                    "",
-    "Microflows$RuleParameter":                   "",
-    "Microflows$Rule":                            "",
-    "Forms$LayoutParameter":                      "",
-    "Forms$PageParameter":                        "",
-    "Forms$SnippetParameter":                     "",
-    "JavaActions$JavaActionParameter":            "",
-    "JavaScriptActions$JavaScriptActionParameter":"",
-    "Security$ModuleRole":                        "",
-    "Images$Image":                               "",
-    "CustomIcons$CustomIcon":                     "",
-    "Menus$MenuDocument":                         ""
+    "DomainModels$Entity": "datasource",
+    "Microflows$Microflow": "calls",
+    "Microflows$Nanoflow": "calls",
+    "Forms$Page": "shows_page",
+    "Forms$Layout": "uses_layout",
+    "Forms$Snippet": "calls",
+    "Workflows$Workflow": "triggers_workflow",
+    "JavaActions$JavaAction": "calls",
+    "JavaScriptActions$JavaScriptAction": "calls",
+    "Constants$Constant": "references",
+    "Enumerations$Enumeration": "references",
+    "ExportMappings$ExportMapping": "calls",
+    "ImportMappings$ImportMapping": "calls",
+    "NativePages$NativePage": "shows_page",
+    "NativePages$NativeLayout": "uses_layout",
+    "Security$UserRole": "grants_access",
+    "DocumentTemplates$DocumentTemplate": "calls",
+    "DomainModels$AssociationBase": "references",
+    "Rest$ConsumedODataService": "references",
+    "Queues$Queue": "references",
+    "DomainModels$Attribute": "",
+    "Microflows$MicroflowParameter": "",
+    "Microflows$NanoflowParameter": "",
+    "Microflows$MicroflowCall": "",
+    "Microflows$NanoflowCall": "",
+    "Microflows$RuleParameter": "",
+    "Microflows$Rule": "",
+    "Forms$LayoutParameter": "",
+    "Forms$PageParameter": "",
+    "Forms$SnippetParameter": "",
+    "JavaActions$JavaActionParameter": "",
+    "JavaScriptActions$JavaScriptActionParameter": "",
+    "Security$ModuleRole": "",
+    "Images$Image": "",
+    "CustomIcons$CustomIcon": "",
+    "Menus$MenuDocument": ""
   },
-
   "id_ref_scope": {
     "_doc": "ByIdRef properties that create cross-unit graph edges. Key: ClassName.propertyName. Unlisted defaults to intra-unit.",
-    "Association.ParentPointer":      "cross-unit",
-    "Association.ChildPointer":       "cross-unit",
+    "Association.ParentPointer": "cross-unit",
+    "Association.ChildPointer": "cross-unit",
     "CrossAssociation.ParentPointer": "cross-unit"
   },
-
   "extra_properties": {
     "_doc": "Additional properties to inject into existing generated types.",
     "DataTransformer": [
-      {"name": "sourceJson", "kind": "Primitive", "primitive_type": "String"},
-      {"name": "sourceType", "kind": "Primitive", "primitive_type": "String"}
+      {
+        "name": "sourceJson",
+        "kind": "Primitive",
+        "primitive_type": "String"
+      },
+      {
+        "name": "sourceType",
+        "kind": "Primitive",
+        "primitive_type": "String"
+      }
     ],
     "Step": [
-      {"name": "technology", "kind": "Primitive", "primitive_type": "String"},
-      {"name": "expression", "kind": "Primitive", "primitive_type": "String"}
+      {
+        "name": "technology",
+        "kind": "Primitive",
+        "primitive_type": "String"
+      },
+      {
+        "name": "expression",
+        "kind": "Primitive",
+        "primitive_type": "String"
+      }
     ],
     "ConsumedODataService": [
-      {"name": "serviceUrl", "kind": "Primitive", "primitive_type": "String"},
-      {"name": "httpUsername", "kind": "Primitive", "primitive_type": "String"},
-      {"name": "httpPassword", "kind": "Primitive", "primitive_type": "String"},
-      {"name": "useAuthentication", "kind": "Primitive", "primitive_type": "Boolean"},
-      {"name": "clientCertificate", "kind": "Primitive", "primitive_type": "String"},
-      {"name": "headers", "kind": "PartList"}
+      {
+        "name": "serviceUrl",
+        "kind": "Primitive",
+        "primitive_type": "String"
+      },
+      {
+        "name": "httpUsername",
+        "kind": "Primitive",
+        "primitive_type": "String"
+      },
+      {
+        "name": "httpPassword",
+        "kind": "Primitive",
+        "primitive_type": "String"
+      },
+      {
+        "name": "useAuthentication",
+        "kind": "Primitive",
+        "primitive_type": "Boolean"
+      },
+      {
+        "name": "clientCertificate",
+        "kind": "Primitive",
+        "primitive_type": "String"
+      },
+      {
+        "name": "headers",
+        "kind": "PartList"
+      }
     ],
     "BoundaryEvent": [
-      {"name": "eventType", "kind": "Primitive", "primitive_type": "String"},
-      {"name": "delay", "kind": "Primitive", "primitive_type": "String"}
+      {
+        "name": "eventType",
+        "kind": "Primitive",
+        "primitive_type": "String"
+      },
+      {
+        "name": "delay",
+        "kind": "Primitive",
+        "primitive_type": "String"
+      }
     ],
     "MicroflowParameter": [
-      {"name": "relativeMiddlePoint", "kind": "Primitive", "primitive_type": "String"},
-      {"name": "size", "kind": "Primitive", "primitive_type": "String"}
+      {
+        "name": "relativeMiddlePoint",
+        "kind": "Primitive",
+        "primitive_type": "String"
+      },
+      {
+        "name": "size",
+        "kind": "Primitive",
+        "primitive_type": "String"
+      }
     ],
     "JumpToActivity": [],
     "PublishedODataMember": [],
     "PublishedODataEntity": []
   },
-
   "extra_types": {
     "_doc": "Complete BSON-only type definitions not in TypeScript SDK.",
     "rest": [
@@ -219,47 +271,136 @@
         "name": "RestCallOperation",
         "bson_type": "Rest$RestCallOperation",
         "properties": [
-          {"name": "httpMethod", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "url", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "timeoutExpression", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "proxyType", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "parameters", "kind": "PartList"},
-          {"name": "queryParameters", "kind": "PartList"},
-          {"name": "headers", "kind": "PartList"}
+          {
+            "name": "httpMethod",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "url",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "timeoutExpression",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "proxyType",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "parameters",
+            "kind": "PartList"
+          },
+          {
+            "name": "queryParameters",
+            "kind": "PartList"
+          },
+          {
+            "name": "headers",
+            "kind": "PartList"
+          }
         ]
       },
       {
         "name": "RestCallParameter",
         "bson_type": "Rest$RestCallParameter",
         "properties": [
-          {"name": "name", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "type", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "value", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "testValue", "kind": "Primitive", "primitive_type": "String"}
+          {
+            "name": "name",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "type",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "value",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "testValue",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          }
         ]
       },
       {
         "name": "RestCallHeader",
         "bson_type": "Rest$RestCallHeader",
         "properties": [
-          {"name": "name", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "value", "kind": "Primitive", "primitive_type": "String"}
+          {
+            "name": "name",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "value",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          }
         ]
       },
       {
         "name": "PublishedRestOperation",
         "bson_type": "Rest$PublishedRestOperation",
         "properties": [
-          {"name": "path", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "httpMethod", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "deprecated", "kind": "Primitive", "primitive_type": "Boolean"},
-          {"name": "summary", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "description", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "microflow", "kind": "ByNameRef", "target": "Microflows$Microflow"},
-          {"name": "importMapping", "kind": "ByNameRef", "target": "ImportMappings$ImportMapping"},
-          {"name": "exportMapping", "kind": "ByNameRef", "target": "ExportMappings$ExportMapping"},
-          {"name": "objectHandlingBackup", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "commit", "kind": "Primitive", "primitive_type": "String"}
+          {
+            "name": "path",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "httpMethod",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "deprecated",
+            "kind": "Primitive",
+            "primitive_type": "Boolean"
+          },
+          {
+            "name": "summary",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "description",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "microflow",
+            "kind": "ByNameRef",
+            "target": "Microflows$Microflow"
+          },
+          {
+            "name": "importMapping",
+            "kind": "ByNameRef",
+            "target": "ImportMappings$ImportMapping"
+          },
+          {
+            "name": "exportMapping",
+            "kind": "ByNameRef",
+            "target": "ExportMappings$ExportMapping"
+          },
+          {
+            "name": "objectHandlingBackup",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "commit",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          }
         ]
       }
     ],
@@ -268,20 +409,52 @@
         "name": "PublishedODataMember",
         "bson_type": "PublishedODataServices$PublishedODataMember",
         "properties": [
-          {"name": "exposedName", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "attribute", "kind": "ByNameRef", "target": "DomainModels$Attribute"},
-          {"name": "name", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "filterable", "kind": "Primitive", "primitive_type": "Boolean"},
-          {"name": "sortable", "kind": "Primitive", "primitive_type": "Boolean"},
-          {"name": "isPartOfKey", "kind": "Primitive", "primitive_type": "Boolean"}
+          {
+            "name": "exposedName",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "attribute",
+            "kind": "ByNameRef",
+            "target": "DomainModels$Attribute"
+          },
+          {
+            "name": "name",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "filterable",
+            "kind": "Primitive",
+            "primitive_type": "Boolean"
+          },
+          {
+            "name": "sortable",
+            "kind": "Primitive",
+            "primitive_type": "Boolean"
+          },
+          {
+            "name": "isPartOfKey",
+            "kind": "Primitive",
+            "primitive_type": "Boolean"
+          }
         ]
       },
       {
         "name": "ConsumedODataServiceHeader",
         "bson_type": "ConsumedODataServices$ConsumedODataServiceHeader",
         "properties": [
-          {"name": "key", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "value", "kind": "Primitive", "primitive_type": "String"}
+          {
+            "name": "key",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "value",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          }
         ]
       }
     ],
@@ -290,7 +463,11 @@
         "name": "NavigationProfileLoginFormSettings",
         "bson_type": "Navigation$NavigationProfileLoginFormSettings",
         "properties": [
-          {"name": "loginPage", "kind": "ByNameRef", "target": "Forms$Page"}
+          {
+            "name": "loginPage",
+            "kind": "ByNameRef",
+            "target": "Forms$Page"
+          }
         ]
       }
     ],
@@ -299,12 +476,31 @@
         "name": "ExclusiveSplitOutcome",
         "bson_type": "Workflows$ExclusiveSplitOutcome",
         "properties": [
-          {"name": "name", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "caption", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "value", "kind": "Primitive", "primitive_type": "String"},
-          {"name": "flow", "kind": "Part"}
+          {
+            "name": "name",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "caption",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "value",
+            "kind": "Primitive",
+            "primitive_type": "String"
+          },
+          {
+            "name": "flow",
+            "kind": "Part"
+          }
         ]
       }
     ]
-  }
+  },
+  "part_list_version2_fields": [
+    "JavaAction.parameters",
+    "JavaAction.typeParameters"
+  ]
 }

@@ -156,6 +156,12 @@ type DomainMeta struct {
 	// default int32(1). Mendix uses version 3 for AllowedRoles on Forms$Page.
 	RefListVersion3Fields map[string]bool
 
+	// PartListVersion2Fields is a set of "ClassName.propertyName" pairs whose
+	// PartList fields require BSON version marker int32(2) instead of the
+	// default int32(3). Mendix uses version 2 for Parameters/TypeParameters on
+	// JavaActions$JavaAction; using version 3 causes MprTool to crash.
+	PartListVersion2Fields map[string]bool
+
 	EdgeKindOverrides map[string]string // TargetType → edge kind hint
 	IdRefScope        map[string]string // "ClassName.propName" → "cross-unit" or "intra-unit"
 

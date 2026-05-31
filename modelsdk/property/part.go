@@ -50,11 +50,28 @@ func (p *Part[T]) SetFromDecode(v T) {
 // PartList[T] holds a list of contained child elements.
 type PartList[T element.Element] struct {
 	propertyBase
-	items []T
+	items         []T
+	versionMarker int32 // BSON array version prefix: 3 (default), 2 for legacy Java action params
 }
 
 func NewPartList[T element.Element](name string) *PartList[T] {
-	return &PartList[T]{propertyBase: propertyBase{name: name}}
+	return &PartList[T]{propertyBase: propertyBase{name: name}, versionMarker: 3}
+}
+
+// NewPartListV2 creates a PartList that writes version marker int32(2) instead of 3.
+// Required for JavaActions$JavaAction.Parameters and TypeParameters to match the
+// Mendix-native BSON format (Studio Pro writes [2, ...] for these lists).
+// Using version 3 causes MprTool to crash with InvalidCastException.
+func NewPartListV2[T element.Element](name string) *PartList[T] {
+	return &PartList[T]{propertyBase: propertyBase{name: name}, versionMarker: 2}
+}
+
+// VersionMarker returns the BSON array version prefix written before the list items.
+func (p *PartList[T]) VersionMarker() int32 {
+	if p.versionMarker == 0 {
+		return 3
+	}
+	return p.versionMarker
 }
 
 func (p *PartList[T]) Items() []T     { return p.items }

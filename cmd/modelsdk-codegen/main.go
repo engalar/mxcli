@@ -126,6 +126,7 @@ func main() {
 		meta.PropertyKeyOverrides = suppl.PropertyKeyOverrides
 		meta.PropertyOrderOverrides = suppl.PropertyOrderOverrides
 		meta.RefListVersion3Fields = suppl.refListVersion3Fields
+		meta.PartListVersion2Fields = suppl.partListVersion2Fields
 		meta.EdgeKindOverrides = suppl.EdgeKindOverrides
 		meta.IdRefScope = suppl.IdRefScope
 		meta.CrossDomainProps = crossDomainProps
@@ -147,6 +148,7 @@ type supplements struct {
 	PropertyKeyOverrides   map[string]string          `json:"property_key_overrides"`
 	PropertyOrderOverrides map[string][]string        `json:"property_order_overrides"`
 	RefListVersion3List    []string                   `json:"ref_list_version3_fields"`
+	PartListVersion2List   []string                   `json:"part_list_version2_fields"`
 	ForceConcreteTypes     []string                   `json:"force_concrete_types"`
 	EdgeKindOverrides      map[string]string          `json:"edge_kind_overrides"`
 	IdRefScope             map[string]string          `json:"id_ref_scope"`
@@ -156,6 +158,7 @@ type supplements struct {
 	// Derived after loading.
 	forceConcreteSet      map[string]bool // built from ForceConcreteTypes slice
 	refListVersion3Fields map[string]bool // built from RefListVersion3List
+	partListVersion2Fields map[string]bool // built from PartListVersion2List
 	parsedExtraProps      map[string][]supplementProp
 	parsedExtraTypes      map[string][]supplementTypeDef
 }
@@ -201,6 +204,12 @@ func loadSupplements() supplements {
 	s.refListVersion3Fields = map[string]bool{}
 	for _, f := range s.RefListVersion3List {
 		s.refListVersion3Fields[f] = true
+	}
+
+	// Build part_list_version2 lookup set from slice.
+	s.partListVersion2Fields = map[string]bool{}
+	for _, f := range s.PartListVersion2List {
+		s.partListVersion2Fields[f] = true
 	}
 
 	// Parse extra_properties, skipping _doc string entries.
