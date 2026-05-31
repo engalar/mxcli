@@ -169,6 +169,21 @@ type DomainMeta struct {
 	// "ModuleDocument") to their properties. Used by the emitter to resolve
 	// cross-domain inheritance (e.g. Workflow extends projects.Document).
 	CrossDomainProps map[string][]JsProp
+
+	// TypeRenames holds validated type rename entries for this domain.
+	// Populated by the codegen main() after loading supplements.json.
+	// Each entry describes a BSON $Type rename introduced at a specific version.
+	TypeRenames []TypeRenameData
+}
+
+// TypeRenameData describes a versioned BSON type rename.
+// Populated from supplements.json type_renames section by the codegen main().
+type TypeRenameData struct {
+	OldTypeName string // e.g. "Workflows$CallMicroflowTask"
+	NewTypeName string // e.g. "Workflows$CallMicroflowActivity"
+	Since       string // e.g. "11.9.0"
+	OldGoName   string // e.g. "CallMicroflowTask"
+	NewGoName   string // e.g. "CallMicroflowActivity"
 }
 
 // JsInterface from .d.ts — shows which properties are part of the public API.

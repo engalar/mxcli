@@ -25,9 +25,16 @@ type TypeData struct {
 	StructureTypeName string
 	StorageAlias      string // BSON $Type if different from StructureTypeName
 	IsAbstract        bool   // abstract classes have structs but no factory createIn methods
+	IsVersionRename   bool   // true when this type is the NEW name in a type_renames entry
+	ClassIntroduced   string // from cls.VersionInfo.Introduced
+	ClassDeleted      string // from cls.VersionInfo.Deleted
 	Fields            []FieldData
 	Refs              []RefData // reference properties for refs.go generation
 }
+
+// TypeRenameData is an alias for dtsparser.TypeRenameData so callers in main.go
+// can reference it without importing dtsparser directly if needed.
+type TypeRenameData = dtsparser.TypeRenameData
 
 // RefData holds template data for a single reference property in refs.go.
 type RefData struct {
@@ -155,6 +162,18 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 		allProps := collectInheritedProps(cls, classMap)
 		td := buildTypeDataWithProps(cls, allProps)
 		td.IsAbstract = cls.IsAbstract
+		// Populate version-info fields.
+		if cls.VersionInfo != nil {
+			td.ClassIntroduced = cls.VersionInfo.Introduced
+			td.ClassDeleted = cls.VersionInfo.Deleted
+		}
+		// Mark as version-rename if this type is the NEW name in a type_renames entry.
+		for _, r := range meta.TypeRenames {
+			if cls.StructureTypeName == r.NewTypeName {
+				td.IsVersionRename = true
+				break
+			}
+		}
 		// Look up storage alias if available.
 		if meta.StorageAliases != nil {
 			if alias, ok := meta.StorageAliases[cls.StructureTypeName]; ok {
