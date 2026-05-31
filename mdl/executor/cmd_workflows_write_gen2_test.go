@@ -14,6 +14,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
+	"github.com/mendixlabs/mxcli/modelsdk/version"
 )
 
 func TestBuildJumpToGenActivity(t *testing.T) {
@@ -1138,5 +1139,36 @@ func TestValidateWorkflowActivities_NestedBareEnumReturnsError(t *testing.T) {
 	err := validateWorkflowActivities(acts)
 	if err == nil {
 		t.Fatal("expected error for nested bare enum value")
+	}
+}
+
+func TestNewCallMicroflowActivity_TypeName(t *testing.T) {
+	// initCallMicroflowActivity currently sets "Workflows$CallMicroflowTask" — this test proves the bug.
+	act := genWf.NewCallMicroflowActivity()
+	if act.TypeName() != "Workflows$CallMicroflowActivity" {
+		t.Errorf("TypeName = %q, want Workflows$CallMicroflowActivity", act.TypeName())
+	}
+}
+
+func TestNewCallMicroflowForVersion_Modern(t *testing.T) {
+	v := version.Parse("11.9.0")
+	elem := genWf.NewCallMicroflowForVersion(v)
+	if elem.TypeName() != "Workflows$CallMicroflowActivity" {
+		t.Errorf("TypeName for 11.9.0 = %q, want Workflows$CallMicroflowActivity", elem.TypeName())
+	}
+}
+
+func TestNewCallMicroflowForVersion_Legacy(t *testing.T) {
+	v := version.Parse("11.8.0")
+	elem := genWf.NewCallMicroflowForVersion(v)
+	if elem.TypeName() != "Workflows$CallMicroflowTask" {
+		t.Errorf("TypeName for 11.8.0 = %q, want Workflows$CallMicroflowTask", elem.TypeName())
+	}
+}
+
+func TestNewCallMicroflowForVersion_ZeroVersion(t *testing.T) {
+	elem := genWf.NewCallMicroflowForVersion(version.Version{})
+	if elem.TypeName() != "Workflows$CallMicroflowTask" {
+		t.Errorf("TypeName for zero version = %q, want Workflows$CallMicroflowTask (legacy fallback)", elem.TypeName())
 	}
 }
