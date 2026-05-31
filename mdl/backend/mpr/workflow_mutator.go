@@ -806,7 +806,16 @@ func (m *mprWorkflowMutator) serializeAndDedupGen(activities []element.Element) 
 				setGenActivityName(act, deduped)
 			}
 		}
-		raw, err := m.backend.SerializeWorkflowActivityGen(act)
+		// Use the backend's version-aware encoder when connected;
+		// fall back to the zero-version encoder in isolated test contexts
+		// where m.backend is nil (no real MPR file open).
+		var raw any
+		var err error
+		if m.backend != nil {
+			raw, err = m.backend.SerializeWorkflowActivityGen(act)
+		} else {
+			raw, err = serializeWorkflowActivityGenStandalone(act)
+		}
 		if err != nil || raw == nil {
 			continue
 		}

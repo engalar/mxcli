@@ -168,8 +168,10 @@ func TestHelpdeskGolden_Update(t *testing.T) {
 
 	// Copy entire FUSE mount (A + dirty layer = B2) to testdata/helpdesk-golden/.
 	// NOTE: do NOT call snap.Commit() — that would write back to blankDir (A).
+	// Use best-effort removal: skip files owned by other users (e.g., .claude/
+	// skills directories synced from the host). copyDir overwrites existing files.
 	if err := os.RemoveAll(goldenDir); err != nil {
-		t.Fatalf("remove old golden: %v", err)
+		t.Logf("remove old golden (partial, continuing): %v", err)
 	}
 	if err := copyDir(snap.MountDir(), goldenDir); err != nil {
 		t.Fatalf("copy to golden: %v", err)

@@ -18,6 +18,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	mdlversion "github.com/mendixlabs/mxcli/modelsdk/version"
 	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
 	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
 	genDBC "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
@@ -1332,7 +1333,7 @@ func (b *MprBackend) SerializeWorkflowActivityGen(a element.Element) (any, error
 	if a == nil {
 		return nil, fmt.Errorf("SerializeWorkflowActivityGen: nil element")
 	}
-	enc := newEncoderForGenSerialize()
+	enc := b.newEncoder()
 	bytes, err := enc.Encode(a)
 	if err != nil {
 		return nil, fmt.Errorf("encode %s: %w", a.TypeName(), err)
@@ -1344,10 +1345,42 @@ func (b *MprBackend) SerializeWorkflowActivityGen(a element.Element) (any, error
 	return doc, nil
 }
 
-// newEncoderForGenSerialize wraps the codec.Encoder construction so the
-// SerializeWorkflowActivityGen call site stays self-contained.
-func newEncoderForGenSerialize() *codec.Encoder {
-	return &codec.Encoder{}
+// newEncoder returns a codec.Encoder configured with the project's Mendix version
+// for property-level gating. Properties introduced after the project version
+// are skipped when serializing new elements.
+// Falls back to a zero-version (no gating) encoder when the reader is not
+// yet connected (e.g., in unit tests that exercise serialization in isolation).
+func (b *MprBackend) newEncoder() *codec.Encoder {
+	if b.msdkReader == nil {
+		return &codec.Encoder{}
+	}
+	pv := b.msdkReader.ProjectVersion()
+	if pv == nil {
+		return &codec.Encoder{}
+	}
+	return &codec.Encoder{
+		Version: mdlversion.Parse(pv.ProductVersion),
+	}
+}
+
+// serializeWorkflowActivityGenStandalone encodes a workflow activity element
+// to a bson.D using a zero-version (no gating) encoder. Called only from
+// mprWorkflowMutator.serializeAndDedupGen when the mutator's backend is nil
+// (isolated unit-test contexts). Production paths use SerializeWorkflowActivityGen.
+func serializeWorkflowActivityGenStandalone(a element.Element) (any, error) {
+	if a == nil {
+		return nil, fmt.Errorf("serializeWorkflowActivityGenStandalone: nil element")
+	}
+	enc := &codec.Encoder{}
+	bytes, err := enc.Encode(a)
+	if err != nil {
+		return nil, fmt.Errorf("encode %s: %w", a.TypeName(), err)
+	}
+	var doc bson.D
+	if err := bson.Unmarshal(bytes, &doc); err != nil {
+		return nil, fmt.Errorf("unmarshal %s: %w", a.TypeName(), err)
+	}
+	return doc, nil
 }
 
 // Stage 3.3.4 C1 — gen-typed domain model read/write methods.

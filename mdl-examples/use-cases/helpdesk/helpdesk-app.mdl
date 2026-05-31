@@ -8,6 +8,7 @@
 -- Design  : docs/superpowers/specs/2026-05-22-helpdesk-app-design.md
 -- Facts   : docs/mendix-platform-reference.md
 -- Note    : Golden rebuilt after mongo-driver v1→v2 migration (nav_compat bsonD fix)
+-- Note    : codec.Encoder.Version field added for property-level version gating (new elements only)
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
