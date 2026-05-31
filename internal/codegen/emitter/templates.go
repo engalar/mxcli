@@ -13,7 +13,8 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/modelsdk/property"
 	"go.mongodb.org/mongo-driver/v2/bson"
-)
+{{if .Renames}}	"github.com/mendixlabs/mxcli/modelsdk/version"
+{{end}})
 
 // Ensure imports are used.
 var (
@@ -116,7 +117,7 @@ func (o *{{$typeName}}) InitFromRaw(raw bson.Raw) {
 // When a storage alias exists, init uses the STORAGE name (what Mendix uses in BSON).
 func init{{.Name}}() *{{.Name}} {
 	o := &{{.Name}}{}
-	o.SetTypeName("{{if .StorageAlias}}{{.StorageAlias}}{{else}}{{.StructureTypeName}}{{end}}"){{range .Fields}}
+	o.SetTypeName("{{if and .StorageAlias (not .IsVersionRename)}}{{.StorageAlias}}{{else}}{{.StructureTypeName}}{{end}}"){{range .Fields}}
 	o.{{.FieldName}} = {{.Constructor}}
 	o.{{.FieldName}}.Bind(&o.Base, {{.FieldIndex}}){{end}}
 	o.SetProperties([]element.Property{ {{- range .Fields}}o.{{.FieldName}}, {{end -}} })
@@ -132,7 +133,18 @@ func New{{.Name}}() *{{.Name}} {
 	return o
 }
 {{end}}{{end}}
-
+{{range .Renames}}
+// New{{.NewGoName}}ForVersion returns the version-correct concrete type for the
+// {{.NewGoName}} / {{.OldGoName}} workflow activity.
+//   < {{.Since}} → *{{.OldGoName}} ($Type "{{.OldTypeName}}")
+//   ≥ {{.Since}} → *{{.NewGoName}} ($Type "{{.NewTypeName}}")
+func New{{.NewGoName}}ForVersion(v version.Version) element.Element {
+	if v.Compare(version.Parse("{{.Since}}")) >= 0 {
+		return New{{.NewGoName}}()
+	}
+	return New{{.OldGoName}}()
+}
+{{end}}
 func init() {
 {{- range .Types}}{{if not .IsAbstract}}
 {{- if .StorageAlias}}

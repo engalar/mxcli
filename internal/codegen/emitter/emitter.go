@@ -105,6 +105,7 @@ type VersionPropData struct {
 type typesFileData struct {
 	Package string
 	Types   []TypeData
+	Renames []TypeRenameData
 }
 
 // versionsFileData is the top-level template data for version.go.
@@ -305,7 +306,7 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 
 	// Render types.go
 	if err := renderFile(filepath.Join(outDir, "types.go"), typesTemplate,
-		typesFileData{Package: pkg, Types: types}); err != nil {
+		typesFileData{Package: pkg, Types: types, Renames: meta.TypeRenames}); err != nil {
 		return fmt.Errorf("types.go: %w", err)
 	}
 
