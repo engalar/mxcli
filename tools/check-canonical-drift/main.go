@@ -20,12 +20,16 @@ var (
 
 type lineRange struct{ start, end int }
 
+// unmgrFunc describes a serialization function not yet migrated to the canonical model layer.
+// Populated in Task 2 (scanSource) and consumed in Task 3 (crossMatch).
 type unmgrFunc struct {
 	file       string
 	name       string
 	start, end int
 }
 
+// violation is a cross-match hit: a staged change touched an unmigtated function.
+// Produced by crossMatch in Task 3.
 type violation struct {
 	file   string
 	name   string
@@ -111,5 +115,6 @@ func parseDiff(diffText string) (changed map[string][]lineRange, newUnmigrated [
 }
 
 func main() {
+	// TODO: wire parseDiff + scanExecutor + crossMatch + printWarning (Task 3).
 	os.Exit(0)
 }
