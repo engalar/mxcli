@@ -36,7 +36,7 @@ type unmgrFunc struct {
 	start, end int
 }
 
-// violation is a cross-match hit: a staged change touched an unmigtated function.
+// violation is a cross-match hit: a staged change touched an unmigrated function.
 // Produced by crossMatch in Task 3.
 type violation struct {
 	file   string
@@ -122,8 +122,8 @@ func parseDiff(diffText string) (changed map[string][]lineRange, newUnmigrated [
 	return
 }
 
-// scanSource parses Go source text and returns unmigtated serialization functions.
-// A function is unmigtated if its name matches *StmtToMDL/*ToMDLGen and its
+// scanSource parses Go source text and returns unmigrated serialization functions.
+// A function is unmigrated if its name matches *StmtToMDL/*ToMDLGen and its
 // body contains no .ToMDL() call.
 func scanSource(file, src string) []unmgrFunc {
 	fset := token.NewFileSet()
@@ -169,7 +169,7 @@ func hasToMDLCall(node ast.Node) bool {
 	return found
 }
 
-// crossMatch returns violations where staged changed lines intersect unmigtated functions.
+// crossMatch returns violations where staged changed lines intersect unmigrated functions.
 func crossMatch(fns []unmgrFunc, changed map[string][]lineRange) []violation {
 	var violations []violation
 	for _, fn := range fns {
@@ -185,7 +185,7 @@ func crossMatch(fns []unmgrFunc, changed map[string][]lineRange) []violation {
 	return violations
 }
 
-// scanExecutor walks dir and collects all unmigtated functions in non-test .go files.
+// scanExecutor walks dir and collects all unmigrated functions in non-test .go files.
 func scanExecutor(dir string) ([]unmgrFunc, error) {
 	var results []unmgrFunc
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
