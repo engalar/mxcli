@@ -305,9 +305,7 @@ New MDL commands or language features must be wired through the full pipeline:
 - [ ] **Visitor** — ANTLR listener bridges parse tree to AST in `mdl/visitor/`
 - [ ] **Executor** — thin handler in `mdl/executor/` dispatches to `ctx.Backend.*`; no BSON in the handler
 - [ ] **Backend method** — data access or mutation wired through `mdl/backend/` interface and implemented in `mdl/backend/mpr/`
-- [ ] **LSP** — if the feature adds formatting, diagnostics, or navigation targets, wire it into `cmd/mxcli/lsp.go` and register the capability
 - [ ] **DESCRIBE roundtrip** — if the feature creates artifacts, `describe` should output re-executable MDL
-- [ ] **VS Code extension** — if new LSP capabilities are added, update `vscode-mdl/package.json`
 
 ### Test coverage
 - [ ] New packages have test files
@@ -424,16 +422,15 @@ Both namespaces are discoverable by typing `/mxcli` in Claude Code. Add new cont
 
 ### mxcli init
 
-`mxcli init` creates a `.claude/` folder with skills, commands, CLAUDE.md, and VS Code MDL extension in a target Mendix project. Source of truth for synced assets:
+`mxcli init` creates a `.claude/` folder with skills, commands, and CLAUDE.md in a target Mendix project. Source of truth for synced assets:
 - Skills: `.claude/skills/mendix/`
 - Commands: `.claude/commands/mendix/` (the `mxcli-dev/` folder is **not** synced)
-- VS Code extension: `vscode-mdl/vscode-mdl-*.vsix`
 
-Build-time sync: `make build` syncs everything automatically. Individual targets: `make sync-skills`, `make sync-commands`, `make sync-vsix`.
+Build-time sync: `make build` syncs everything automatically. Individual targets: `make sync-skills`, `make sync-commands`.
 
 ### VS Code Extension
 
-The `vscode-mdl` extension provides MDL language support: syntax highlighting, parse/semantic diagnostics, completion, symbols, folding, hover, go-to-definition, clickable terminal links, and context menu commands. The extension spawns `mxcli lsp --stdio` as the language server. Build with `make vscode-ext` (requires bun).
+The `vscode-mdl` extension was removed from this repository. Syntax highlighting for `.mdl` files can be added via a TextMate grammar if needed in future.
 
 ### ANTLR4 Parser
 
@@ -549,8 +546,7 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - `docs/03-development/MDL_PARSER_ARCHITECTURE.md` - ANTLR4 parser design documentation
 - `docs/03-development/PAGE_BSON_SERIALIZATION.md` - Page/widget BSON format, type mappings, required defaults
 - `.claude/skills/debug-bson.md` - Workflow for debugging BSON serialization issues with `mx` tool
-- `cmd/mxcli/lsp.go` - LSP server implementation (hover, definition, diagnostics, completion, symbols)
-- `cmd/mxcli/init.go` - `mxcli init` command (project initialization + VS Code extension install)
+- `cmd/mxcli/init.go` - `mxcli init` command (project initialization)
 - `cmd/mxcli/cmd_export.go` - `mxcli export` Cobra command (batch project export to MDL files)
 - `cmd/mxcli/cmd_import.go` - `mxcli import` Cobra command (batch MDL import in dependency order)
 - `mdl/executor/cmd_export_project.go` - `ExportProject()` orchestration; per-document and module-level `-- @cache:` markers; `resetLayoutGen()` helper

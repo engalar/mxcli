@@ -67,12 +67,38 @@ if [ -z "$INSTALL_DIR" ]; then
 fi
 
 # ── Download launcher binary ──────────────────────────────────────────────────
-BIN_URL="https://github.com/${REPO}/releases/download/${LATEST}/mxcli-${OS}-${ARCH}"
+BIN_NAME="mxcli-${OS}-${ARCH}"
+BIN_URL="https://github.com/${REPO}/releases/download/${LATEST}/${BIN_NAME}"
+SUMS_URL="https://github.com/${REPO}/releases/download/${LATEST}/SHA256SUMS"
 TMP=$(mktemp /tmp/mxcli.XXXXXX)
-trap 'rm -f "$TMP"' EXIT
+TMP_SUMS=$(mktemp /tmp/mxcli-sums.XXXXXX)
+trap 'rm -f "$TMP" "$TMP_SUMS"' EXIT
 
 echo "  Downloading launcher (${OS}/${ARCH}) from GitHub..."
 curl -fsSL --progress-bar "$BIN_URL" -o "$TMP"
+
+echo "  Verifying checksum..."
+curl -fsSL "$SUMS_URL" -o "$TMP_SUMS"
+EXPECTED=$(grep " ${BIN_NAME}$" "$TMP_SUMS" | awk '{print $1}')
+if [ -z "$EXPECTED" ]; then
+  echo "❌ No checksum entry for ${BIN_NAME} in SHA256SUMS" >&2
+  exit 1
+fi
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL=$(sha256sum "$TMP" | awk '{print $1}')
+elif command -v shasum >/dev/null 2>&1; then
+  ACTUAL=$(shasum -a 256 "$TMP" | awk '{print $1}')
+else
+  echo "⚠️  sha256sum/shasum not found — skipping checksum verification" >&2
+  ACTUAL="$EXPECTED"
+fi
+if [ "$ACTUAL" != "$EXPECTED" ]; then
+  echo "❌ Checksum mismatch for ${BIN_NAME}" >&2
+  echo "   expected: $EXPECTED" >&2
+  echo "   got:      $ACTUAL" >&2
+  exit 1
+fi
+
 chmod +x "$TMP"
 
 # Atomic install (never leaves a partial binary)

@@ -52,7 +52,7 @@ func readVersionFile(path string) string {
 // ensureDaemonBinary ensures the daemon binary is present, downloading it if needed.
 // It also creates the daemon directory. Call this before any daemon operations.
 func (e *Env) ensureDaemonBinary() error {
-	if err := os.MkdirAll(e.daemonDir(), 0755); err != nil {
+	if err := os.MkdirAll(e.daemonDir(), 0700); err != nil {
 		return fmt.Errorf("create daemon dir: %w", err)
 	}
 	if !daemonBinaryExists(e.daemonBinaryPath()) {

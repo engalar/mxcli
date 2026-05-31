@@ -9,7 +9,7 @@
 //     daemon binary with inherited stdin/stdout/stderr so the full terminal is
 //     available (mouse events, resize, raw keyboard input).
 //   - Commands with -p <mpr>: forwarded to a per-MPR daemon (isolated process,
-//     5-minute idle timeout, socket path derived from mpr path + binary mtime hash).
+//     30-minute idle timeout, socket path derived from mpr path + binary mtime hash).
 //   - Commands without -p: forwarded to the shared daemon at ~/.mxcli/daemon/mxcli.sock.
 package main
 

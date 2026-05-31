@@ -35,7 +35,7 @@ func extractMPRFromArgs(args []string) string {
 // Lifecycle:
 //   - Socket path is derived from (mprPath hash, binary mtime hash): changes on recompile → stale daemons self-invalidate.
 //   - Stale sockets for the same MPR (old binary) are deleted; their idle watchers trigger exit.
-//   - Daemon is spawned with --idle-timeout 5m; exits and removes socket after 5 min idle.
+//   - Daemon is spawned with --idle-timeout 30m; exits and removes socket after 30 min idle.
 //   - go cmd.Wait() prevents zombie processes.
 func (e *Env) ensureMPRDaemon(mprAbsPath string) (string, error) {
 	sockPath := e.mprDaemonSocketPath(mprAbsPath)

@@ -210,3 +210,15 @@ func TestIsTTYCommand_Serve(t *testing.T) {
 		t.Error("serve should be a TTY command")
 	}
 }
+
+func TestIsTTYCommand_Oql(t *testing.T) {
+	if !isTTYCommand([]string{"oql", "-p", "app.mpr"}) {
+		t.Error("oql should be a TTY command")
+	}
+}
+
+func TestIsTTYCommand_Playwright(t *testing.T) {
+	if !isTTYCommand([]string{"playwright", "-p", "app.mpr"}) {
+		t.Error("playwright should be a TTY command")
+	}
+}

@@ -130,7 +130,7 @@ build: sync-all
 	@if [ "$(OS)" = "Windows_NT" ] || echo "$$OSTYPE" | grep -qi msys; then \
 		cp $(BUILD_DIR)/$(DAEMON_NAME) $(BUILD_DIR)/$(DAEMON_NAME).exe 2>/dev/null || true; \
 		cp $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/$(BINARY_NAME).exe 2>/dev/null || true; \
-		echo "Built $(BUILD_DIR)/$(BINARY_NAME)[.exe] $(BUILD_DIR)/$(DAEMON_NAME)[.exe] $(BUILD_DIR)/source_tree"; \
+		echo "Built $(BUILD_DIR)/$(BINARY_NAME)[.exe] $(BUILD_DIR)/$(DAEMON_NAME)[.exe] $(BUILD_DIR)/source_tree (go build auto-adds .exe; cp is a MSYS2/Cygwin safety net)"; \
 	else \
 		echo "Built $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/$(DAEMON_NAME) $(BUILD_DIR)/source_tree"; \
 	fi

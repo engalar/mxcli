@@ -39,7 +39,7 @@ const (
 	UnitTypePublishedRestService = "Rest$PublishedRestService"
 	UnitTypePublishedODataService = "ODataPublish$PublishedODataService"
 	UnitTypeConsumedODataService  = "Rest$ConsumedODataService"
-	UnitTypeBusinessEvent         = "BusinessEvents$" // prefix — multiple sub-types
+	UnitTypeBusinessEventPrefix   = "BusinessEvents$" // prefix — multiple sub-types; use with strings.HasPrefix, not ==
 
 	// Database connector
 	UnitTypeDatabaseConnection = "DatabaseConnector$DatabaseConnection"

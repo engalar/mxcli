@@ -477,7 +477,7 @@ func listModules(ctx *ExecContext) error {
 		case types.UnitTypeDatabaseConnection:
 			extDbCounts[modID]++
 		default:
-			if strings.HasPrefix(u.Type, types.UnitTypeBusinessEvent) {
+			if strings.HasPrefix(u.Type, types.UnitTypeBusinessEventPrefix) {
 				bizEventCounts[modID]++
 			}
 		}
