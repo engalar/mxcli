@@ -29,9 +29,7 @@ public class ExternalCall extends UserAction<java.lang.String>
 	public java.lang.String executeAction() throws Exception
 	{
 		// BEGIN USER CODE
-
-		return "";
-
+		// stub
 		// END USER CODE
 	}
 
