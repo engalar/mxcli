@@ -3,6 +3,7 @@ package version
 import (
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type Version struct {
@@ -68,5 +69,35 @@ func (p PropertyVersionInfo) IsAvailableIn(v Version) bool {
 }
 
 type TypeVersionInfo struct {
+	Introduced string // Mendix version when this type was introduced (empty = baseline)
+	Deleted    string // Mendix version when this type was deleted (empty = still present)
 	Properties map[string]PropertyVersionInfo
+}
+
+// DefaultVersionRegistry is the global registry of TypeVersionInfo, populated
+// by each domain package's init() function via generated code.
+var DefaultVersionRegistry = &VersionRegistry{}
+
+// VersionRegistry stores TypeVersionInfo by BSON type name.
+type VersionRegistry struct {
+	mu      sync.RWMutex
+	entries map[string]TypeVersionInfo
+}
+
+// Register adds or replaces a TypeVersionInfo entry.
+func (r *VersionRegistry) Register(typeName string, info TypeVersionInfo) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.entries == nil {
+		r.entries = make(map[string]TypeVersionInfo)
+	}
+	r.entries[typeName] = info
+}
+
+// Lookup returns the TypeVersionInfo for a BSON type name, if registered.
+func (r *VersionRegistry) Lookup(typeName string) (TypeVersionInfo, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	info, ok := r.entries[typeName]
+	return info, ok
 }
