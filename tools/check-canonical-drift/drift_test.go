@@ -188,3 +188,86 @@ func TestScanSource_LineRangesPopulated(t *testing.T) {
 	assert.Greater(t, fns[0].start, 0)
 	assert.GreaterOrEqual(t, fns[0].end, fns[0].start)
 }
+
+// --- crossMatch tests ---
+
+func TestCrossMatch_TouchedFunction(t *testing.T) {
+	fns := []unmgrFunc{{
+		file: "mdl/executor/cmd_diff_mdl.go",
+		name: "associationStmtToMDL", start: 93, end: 130,
+	}}
+	changed := map[string][]lineRange{
+		"mdl/executor/cmd_diff_mdl.go": {{100, 105}},
+	}
+	v := crossMatch(fns, changed)
+	require.Len(t, v, 1)
+	assert.Equal(t, "associationStmtToMDL", v[0].name)
+	assert.Equal(t, "modified", v[0].reason)
+}
+
+func TestCrossMatch_UntouchedFunction(t *testing.T) {
+	fns := []unmgrFunc{{
+		file: "mdl/executor/cmd_diff_mdl.go",
+		name: "associationStmtToMDL", start: 93, end: 130,
+	}}
+	changed := map[string][]lineRange{
+		"mdl/executor/cmd_diff_mdl.go": {{200, 210}},
+	}
+	v := crossMatch(fns, changed)
+	assert.Empty(t, v)
+}
+
+func TestCrossMatch_DifferentFile(t *testing.T) {
+	fns := []unmgrFunc{{
+		file: "mdl/executor/cmd_diff_mdl.go",
+		name: "associationStmtToMDL", start: 93, end: 130,
+	}}
+	changed := map[string][]lineRange{
+		"mdl/executor/cmd_entities_gen.go": {{100, 110}},
+	}
+	v := crossMatch(fns, changed)
+	assert.Empty(t, v)
+}
+
+func TestCrossMatch_BoundaryStart(t *testing.T) {
+	fns := []unmgrFunc{{
+		file: "mdl/executor/cmd_diff_mdl.go",
+		name: "microflowStmtToMDL", start: 50, end: 80,
+	}}
+	changed := map[string][]lineRange{
+		"mdl/executor/cmd_diff_mdl.go": {{50, 50}},
+	}
+	v := crossMatch(fns, changed)
+	require.Len(t, v, 1)
+}
+
+func TestCrossMatch_BoundaryEnd(t *testing.T) {
+	fns := []unmgrFunc{{
+		file: "mdl/executor/cmd_diff_mdl.go",
+		name: "microflowStmtToMDL", start: 50, end: 80,
+	}}
+	changed := map[string][]lineRange{
+		"mdl/executor/cmd_diff_mdl.go": {{80, 85}},
+	}
+	v := crossMatch(fns, changed)
+	require.Len(t, v, 1)
+}
+
+func TestCrossMatch_NoDoubleCounting(t *testing.T) {
+	// Two overlapping ranges both touching the same function → one violation only
+	fns := []unmgrFunc{{
+		file: "mdl/executor/cmd_diff_mdl.go",
+		name: "associationStmtToMDL", start: 93, end: 130,
+	}}
+	changed := map[string][]lineRange{
+		"mdl/executor/cmd_diff_mdl.go": {{100, 105}, {110, 115}},
+	}
+	v := crossMatch(fns, changed)
+	require.Len(t, v, 1)
+}
+
+func TestScanSource_InvalidSyntaxReturnsNil(t *testing.T) {
+	// parse error on completely invalid source → returns nil, no panic
+	fns := scanSource("fake.go", "this is not Go code {{{")
+	assert.Nil(t, fns)
+}

@@ -7,10 +7,14 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -165,7 +169,83 @@ func hasToMDLCall(node ast.Node) bool {
 	return found
 }
 
+// crossMatch returns violations where staged changed lines intersect unmigtated functions.
+func crossMatch(fns []unmgrFunc, changed map[string][]lineRange) []violation {
+	var violations []violation
+	for _, fn := range fns {
+		for _, r := range changed[fn.file] {
+			if r.end >= fn.start && r.start <= fn.end {
+				violations = append(violations, violation{
+					file: fn.file, name: fn.name, reason: "modified",
+				})
+				break
+			}
+		}
+	}
+	return violations
+}
+
+// scanExecutor walks dir and collects all unmigtated functions in non-test .go files.
+func scanExecutor(dir string) ([]unmgrFunc, error) {
+	var results []unmgrFunc
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		src, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
+		}
+		results = append(results, scanSource(path, string(src))...)
+		return nil
+	})
+	return results, err
+}
+
+func printWarning(violations []violation) {
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "⚠ CANONICAL MODEL DRIFT WARNING (non-blocking)")
+	fmt.Fprintln(os.Stderr)
+	for _, v := range violations {
+		if v.reason == "added" {
+			fmt.Fprintf(os.Stderr, "  [new] %s\n", v.name)
+		} else {
+			short := strings.TrimPrefix(v.file, "mdl/executor/")
+			fmt.Fprintf(os.Stderr, "  %s: %s\n", short, v.name)
+		}
+		fmt.Fprintln(os.Stderr, "    Not yet migrated to the canonical model layer.")
+		fmt.Fprintln(os.Stderr, "    Editing risks divergence between diff and describe paths.")
+		fmt.Fprintln(os.Stderr)
+	}
+	fmt.Fprintln(os.Stderr, "Migration plan: docs/superpowers/plans/2026-05-23-canonical-model-layer-phase1.md")
+	fmt.Fprintln(os.Stderr, "Silence: migrate the domain (add .ToMDL() delegation in function body).")
+}
+
 func main() {
-	// TODO: wire parseDiff + scanExecutor + crossMatch + printWarning (Task 3).
+	diffBytes, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "check-canonical-drift: read stdin:", err)
+		os.Exit(0)
+	}
+
+	changed, newUnmigrated := parseDiff(string(diffBytes))
+
+	fns, err := scanExecutor("mdl/executor")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "check-canonical-drift: scan executor:", err)
+		os.Exit(0)
+	}
+
+	violations := crossMatch(fns, changed)
+	for _, name := range newUnmigrated {
+		violations = append(violations, violation{file: "staged", name: name, reason: "added"})
+	}
+
+	if len(violations) > 0 {
+		printWarning(violations)
+	}
 	os.Exit(0)
 }
