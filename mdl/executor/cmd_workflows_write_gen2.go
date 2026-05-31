@@ -38,16 +38,35 @@ import (
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
+	"github.com/mendixlabs/mxcli/modelsdk/version"
 )
+
+// wfBuildCtx carries the project version through the stateless workflow
+// builder chain so version-aware factory functions can select the correct
+// BSON type name.
+type wfBuildCtx struct {
+	version version.Version // zero = treat as oldest (legacy fallback)
+}
+
+// newWfBuildCtx creates a wfBuildCtx from the execution context.
+func newWfBuildCtx(ctx *ExecContext) *wfBuildCtx {
+	wbc := &wfBuildCtx{}
+	if ctx != nil && ctx.Connected() {
+		if rpv := ctx.Backend.ProjectVersion(); rpv != nil {
+			wbc.version = version.Parse(rpv.ProductVersion)
+		}
+	}
+	return wbc
+}
 
 // buildWorkflowActivitiesGen mirrors buildWorkflowActivities
 // (cmd_workflows_write.go:170): walks AST nodes and builds gen-typed
 // activity elements. Returns []element.Element so AddActivities on the
 // gen Flow accepts them directly.
-func buildWorkflowActivitiesGen(nodes []ast.WorkflowActivityNode) []element.Element {
+func buildWorkflowActivitiesGen(wbc *wfBuildCtx, nodes []ast.WorkflowActivityNode) []element.Element {
 	var out []element.Element
 	for _, node := range nodes {
-		if elem := buildWorkflowActivityGen(node); elem != nil {
+		if elem := buildWorkflowActivityGen(wbc, node); elem != nil {
 			out = append(out, elem)
 		}
 	}
@@ -57,28 +76,28 @@ func buildWorkflowActivitiesGen(nodes []ast.WorkflowActivityNode) []element.Elem
 // buildWorkflowActivityGen dispatches a single AST node to its concrete
 // gen-typed builder. Composite builders (UserTask, CallMicroflow, …)
 // land in D1.b/c/d sub-commits; leaf cases are wired here in D1.a.
-func buildWorkflowActivityGen(node ast.WorkflowActivityNode) element.Element {
+func buildWorkflowActivityGen(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element {
 	switch n := node.(type) {
 	case *ast.WorkflowJumpToNode:
 		return buildJumpToGenActivity(n)
 	case *ast.WorkflowWaitForTimerNode:
 		return buildWaitForTimerGenActivity(n)
 	case *ast.WorkflowWaitForNotificationNode:
-		return buildWaitForNotificationGenActivity(n)
+		return buildWaitForNotificationGenActivity(wbc, n)
 	case *ast.WorkflowEndNode:
 		return buildEndWorkflowGenActivity(n)
 	case *ast.WorkflowAnnotationActivityNode:
 		return buildAnnotationActivityGen(n)
 	case *ast.WorkflowUserTaskNode:
-		return buildUserTaskGenActivity(n)
+		return buildUserTaskGenActivity(wbc, n)
 	case *ast.WorkflowCallMicroflowNode:
-		return buildCallMicroflowGenActivity(n)
+		return buildCallMicroflowGenActivity(wbc, n)
 	case *ast.WorkflowCallWorkflowNode:
 		return buildCallWorkflowGenActivity(n)
 	case *ast.WorkflowDecisionNode:
-		return buildExclusiveSplitGenActivity(n)
+		return buildExclusiveSplitGenActivity(wbc, n)
 	case *ast.WorkflowParallelSplitNode:
-		return buildParallelSplitGenActivity(n)
+		return buildParallelSplitGenActivity(wbc, n)
 	}
 	return nil
 }
@@ -115,7 +134,7 @@ func buildWaitForTimerGenActivity(n *ast.WorkflowWaitForTimerNode) *genWf.WaitFo
 
 // buildWaitForNotificationGenActivity mirrors buildWaitForNotification
 // (cmd_workflows_write.go:472).
-func buildWaitForNotificationGenActivity(n *ast.WorkflowWaitForNotificationNode) *genWf.WaitForNotificationActivity {
+func buildWaitForNotificationGenActivity(wbc *wfBuildCtx, n *ast.WorkflowWaitForNotificationNode) *genWf.WaitForNotificationActivity {
 	act := genWf.NewWaitForNotificationActivity()
 	act.SetID(element.ID(types.GenerateID()))
 	caption := n.Caption
@@ -124,7 +143,7 @@ func buildWaitForNotificationGenActivity(n *ast.WorkflowWaitForNotificationNode)
 	}
 	act.SetCaption(caption)
 	act.SetName(caption)
-	for _, ev := range buildBoundaryEventsGen(n.BoundaryEvents) {
+	for _, ev := range buildBoundaryEventsGen(wbc, n.BoundaryEvents) {
 		act.AddBoundaryEvents(ev)
 	}
 	return act
@@ -159,10 +178,10 @@ func buildAnnotationActivityGen(n *ast.WorkflowAnnotationActivityNode) *genWf.Fl
 // buildBoundaryEventsGen mirrors buildBoundaryEvents
 // (cmd_workflows_write.go:182). gen splits BoundaryEvent into three
 // concrete subtypes — dispatch by AST EventType string.
-func buildBoundaryEventsGen(nodes []ast.WorkflowBoundaryEventNode) []element.Element {
+func buildBoundaryEventsGen(wbc *wfBuildCtx, nodes []ast.WorkflowBoundaryEventNode) []element.Element {
 	var out []element.Element
 	for _, be := range nodes {
-		ev := buildBoundaryEventGen(be)
+		ev := buildBoundaryEventGen(wbc, be)
 		if ev != nil {
 			out = append(out, ev)
 		}
@@ -172,9 +191,9 @@ func buildBoundaryEventsGen(nodes []ast.WorkflowBoundaryEventNode) []element.Ele
 
 // buildBoundaryEventGen builds a single gen boundary-event element.
 // gen field rename: Delay() (was sdk TimerDelay).
-func buildBoundaryEventGen(be ast.WorkflowBoundaryEventNode) element.Element {
+func buildBoundaryEventGen(wbc *wfBuildCtx, be ast.WorkflowBoundaryEventNode) element.Element {
 	id := element.ID(types.GenerateID())
-	subActivities := buildWorkflowActivitiesGen(be.Activities)
+	subActivities := buildWorkflowActivitiesGen(wbc, be.Activities)
 
 	switch be.EventType {
 	case "InterruptingTimer":
@@ -260,14 +279,14 @@ func newGenFlowWithActivities(activities []element.Element) *genWf.Flow {
 // or SingleUserTaskActivity (false). The legacy unified UserTask gen
 // type still exists for back-compat decode; new writes pick a concrete
 // subtype.
-func buildUserTaskGenActivity(n *ast.WorkflowUserTaskNode) element.Element {
+func buildUserTaskGenActivity(wbc *wfBuildCtx, n *ast.WorkflowUserTaskNode) element.Element {
 	if n.IsMultiUser {
-		return buildMultiUserTaskGenActivity(n)
+		return buildMultiUserTaskGenActivity(wbc, n)
 	}
-	return buildSingleUserTaskGenActivity(n)
+	return buildSingleUserTaskGenActivity(wbc, n)
 }
 
-func buildSingleUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.SingleUserTaskActivity {
+func buildSingleUserTaskGenActivity(wbc *wfBuildCtx, n *ast.WorkflowUserTaskNode) *genWf.SingleUserTaskActivity {
 	task := genWf.NewSingleUserTaskActivity()
 	task.SetID(element.ID(types.GenerateID()))
 	task.SetName(n.Name)
@@ -284,16 +303,16 @@ func buildSingleUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.SingleUs
 	if tgt := buildUserTargetingGen(n.Targeting); tgt != nil {
 		task.SetUserTargeting(tgt)
 	}
-	for _, oc := range buildUserTaskOutcomesGen(n.Outcomes) {
+	for _, oc := range buildUserTaskOutcomesGen(wbc, n.Outcomes) {
 		task.AddOutcomes(oc)
 	}
-	for _, ev := range buildBoundaryEventsGen(n.BoundaryEvents) {
+	for _, ev := range buildBoundaryEventsGen(wbc, n.BoundaryEvents) {
 		task.AddBoundaryEvents(ev)
 	}
 	return task
 }
 
-func buildMultiUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.MultiUserTaskActivity {
+func buildMultiUserTaskGenActivity(wbc *wfBuildCtx, n *ast.WorkflowUserTaskNode) *genWf.MultiUserTaskActivity {
 	task := genWf.NewMultiUserTaskActivity()
 	task.SetID(element.ID(types.GenerateID()))
 	task.SetName(n.Name)
@@ -310,11 +329,11 @@ func buildMultiUserTaskGenActivity(n *ast.WorkflowUserTaskNode) *genWf.MultiUser
 	if tgt := buildUserTargetingGen(n.Targeting); tgt != nil {
 		task.SetUserTargeting(tgt)
 	}
-	outcomes := buildUserTaskOutcomesGen(n.Outcomes)
+	outcomes := buildUserTaskOutcomesGen(wbc, n.Outcomes)
 	for _, oc := range outcomes {
 		task.AddOutcomes(oc)
 	}
-	for _, ev := range buildBoundaryEventsGen(n.BoundaryEvents) {
+	for _, ev := range buildBoundaryEventsGen(wbc, n.BoundaryEvents) {
 		task.AddBoundaryEvents(ev)
 	}
 	// CE1866: multi-user tasks require a CompletionCriteria with a non-empty
@@ -378,7 +397,7 @@ func buildUserTargetingGen(t ast.WorkflowTargetingNode) element.Element {
 // buildUserTaskOutcomesGen mirrors the outcomes loop in buildUserTask
 // (cmd_workflows_write.go:267). Each outcome stores the same string in
 // Name/Caption/Value (legacy semantics).
-func buildUserTaskOutcomesGen(nodes []ast.WorkflowUserTaskOutcomeNode) []*genWf.UserTaskOutcome {
+func buildUserTaskOutcomesGen(wbc *wfBuildCtx, nodes []ast.WorkflowUserTaskOutcomeNode) []*genWf.UserTaskOutcome {
 	out := make([]*genWf.UserTaskOutcome, 0, len(nodes))
 	for _, n := range nodes {
 		oc := genWf.NewUserTaskOutcome()
@@ -386,7 +405,7 @@ func buildUserTaskOutcomesGen(nodes []ast.WorkflowUserTaskOutcomeNode) []*genWf.
 		oc.SetName(n.Caption)
 		oc.SetCaption(n.Caption)
 		oc.SetValue(n.Caption)
-		if flow := newGenFlowWithActivities(buildWorkflowActivitiesGen(n.Activities)); flow != nil {
+		if flow := newGenFlowWithActivities(buildWorkflowActivitiesGen(wbc, n.Activities)); flow != nil {
 			oc.SetFlow(flow)
 		}
 		out = append(out, oc)
@@ -399,39 +418,56 @@ func buildUserTaskOutcomesGen(nodes []ast.WorkflowUserTaskOutcomeNode) []*genWf.
 // ---------------------------------------------------------------------------
 
 // buildCallMicroflowGenActivity mirrors buildCallMicroflowTask
-// (cmd_workflows_write.go:291). Picks Workflows$CallMicroflowActivity
-// (the gen-canonical storage) over the legacy CallMicroflowTask so
-// fresh writes round-trip through the new gen schema.
-func buildCallMicroflowGenActivity(n *ast.WorkflowCallMicroflowNode) *genWf.CallMicroflowActivity {
-	act := genWf.NewCallMicroflowActivity()
-	act.SetID(element.ID(types.GenerateID()))
-	act.SetName(n.Microflow.Name)
+// (cmd_workflows_write.go:291). Uses NewCallMicroflowForVersion to select the
+// correct concrete type for the project version: CallMicroflowActivity (11.9+)
+// or the legacy CallMicroflowTask (pre-11.9).
+func buildCallMicroflowGenActivity(wbc *wfBuildCtx, n *ast.WorkflowCallMicroflowNode) element.Element {
+	act := genWf.NewCallMicroflowForVersion(wbc.version)
+
+	name := n.Microflow.Name
 	caption := n.Caption
 	if caption == "" {
-		caption = n.Microflow.Name
+		caption = name
 	}
-	act.SetCaption(caption)
-	mfQN := n.Microflow.Module + "." + n.Microflow.Name
-	act.SetMicroflowQualifiedName(mfQN)
+	mfQN := n.Microflow.Module + "." + name
 
-	// Outcomes
-	for _, oc := range buildConditionOutcomesGen(n.Outcomes) {
-		act.AddOutcomes(oc)
-	}
-
-	// Parameter mappings — fully qualified per BSON requirement
-	// (legacy buildCallMicroflowTask:312).
-	for _, pm := range n.ParameterMappings {
-		mapping := genWf.NewMicroflowCallParameterMapping()
-		mapping.SetID(element.ID(types.GenerateID()))
-		mapping.SetParameterQualifiedName(mfQN + "." + pm.Parameter)
-		mapping.SetExpression(pm.Expression)
-		act.AddParameterMappings(mapping)
-	}
-
-	// Boundary events
-	for _, ev := range buildBoundaryEventsGen(n.BoundaryEvents) {
-		act.AddBoundaryEvents(ev)
+	switch v := act.(type) {
+	case *genWf.CallMicroflowActivity:
+		v.SetID(element.ID(types.GenerateID()))
+		v.SetName(name)
+		v.SetCaption(caption)
+		v.SetMicroflowQualifiedName(mfQN)
+		for _, oc := range buildConditionOutcomesGen(wbc, n.Outcomes) {
+			v.AddOutcomes(oc)
+		}
+		for _, pm := range n.ParameterMappings {
+			mapping := genWf.NewMicroflowCallParameterMapping()
+			mapping.SetID(element.ID(types.GenerateID()))
+			mapping.SetParameterQualifiedName(mfQN + "." + pm.Parameter)
+			mapping.SetExpression(pm.Expression)
+			v.AddParameterMappings(mapping)
+		}
+		for _, ev := range buildBoundaryEventsGen(wbc, n.BoundaryEvents) {
+			v.AddBoundaryEvents(ev)
+		}
+	case *genWf.CallMicroflowTask:
+		v.SetID(element.ID(types.GenerateID()))
+		v.SetName(name)
+		v.SetCaption(caption)
+		v.SetMicroflowQualifiedName(mfQN)
+		for _, oc := range buildConditionOutcomesGen(wbc, n.Outcomes) {
+			v.AddOutcomes(oc)
+		}
+		for _, pm := range n.ParameterMappings {
+			mapping := genWf.NewMicroflowCallParameterMapping()
+			mapping.SetID(element.ID(types.GenerateID()))
+			mapping.SetParameterQualifiedName(mfQN + "." + pm.Parameter)
+			mapping.SetExpression(pm.Expression)
+			v.AddParameterMappings(mapping)
+		}
+		for _, ev := range buildBoundaryEventsGen(wbc, n.BoundaryEvents) {
+			v.AddBoundaryEvents(ev)
+		}
 	}
 	return act
 }
@@ -535,10 +571,10 @@ func validateConditionOutcomeNodes(outcomes []ast.WorkflowConditionOutcomeNode) 
 // buildCallMicroflowTask (cmd_workflows_write.go:302). Dispatches on
 // AST Value to BooleanConditionOutcome / VoidConditionOutcome /
 // EnumerationValueConditionOutcome.
-func buildConditionOutcomesGen(nodes []ast.WorkflowConditionOutcomeNode) []element.Element {
+func buildConditionOutcomesGen(wbc *wfBuildCtx, nodes []ast.WorkflowConditionOutcomeNode) []element.Element {
 	out := make([]element.Element, 0, len(nodes))
 	for _, n := range nodes {
-		oc := buildConditionOutcomeGen(n)
+		oc := buildConditionOutcomeGen(wbc, n)
 		if oc != nil {
 			out = append(out, oc)
 		}
@@ -548,8 +584,8 @@ func buildConditionOutcomesGen(nodes []ast.WorkflowConditionOutcomeNode) []eleme
 
 // buildConditionOutcomeGen mirrors buildConditionOutcome
 // (cmd_workflows_write.go:390).
-func buildConditionOutcomeGen(n ast.WorkflowConditionOutcomeNode) element.Element {
-	subFlow := newGenFlowWithActivities(buildWorkflowActivitiesGen(n.Activities))
+func buildConditionOutcomeGen(wbc *wfBuildCtx, n ast.WorkflowConditionOutcomeNode) element.Element {
+	subFlow := newGenFlowWithActivities(buildWorkflowActivitiesGen(wbc, n.Activities))
 	switch n.Value {
 	case "True":
 		o := genWf.NewBooleanConditionOutcome()
@@ -596,7 +632,7 @@ func buildConditionOutcomeGen(n ast.WorkflowConditionOutcomeNode) element.Elemen
 // detection rule: if any outcome is True/False, we drop any "Default"
 // outcome (Mendix 11 runtime rejects VoidConditionOutcome on a
 // boolean decision).
-func buildExclusiveSplitGenActivity(n *ast.WorkflowDecisionNode) *genWf.ExclusiveSplitActivity {
+func buildExclusiveSplitGenActivity(wbc *wfBuildCtx, n *ast.WorkflowDecisionNode) *genWf.ExclusiveSplitActivity {
 	act := genWf.NewExclusiveSplitActivity()
 	act.SetID(element.ID(types.GenerateID()))
 	act.SetExpression(mendixExprValue(n.Expression))
@@ -619,7 +655,7 @@ func buildExclusiveSplitGenActivity(n *ast.WorkflowDecisionNode) *genWf.Exclusiv
 		if isBooleanDecision && oc.Value == "Default" {
 			continue
 		}
-		built := buildConditionOutcomeGen(oc)
+		built := buildConditionOutcomeGen(wbc, oc)
 		if built != nil {
 			act.AddOutcomes(built)
 		}
@@ -630,7 +666,7 @@ func buildExclusiveSplitGenActivity(n *ast.WorkflowDecisionNode) *genWf.Exclusiv
 // buildParallelSplitGenActivity mirrors buildParallelSplit
 // (cmd_workflows_write.go:420). Each AST path becomes a
 // ParallelSplitOutcome carrying its own gen Flow.
-func buildParallelSplitGenActivity(n *ast.WorkflowParallelSplitNode) *genWf.ParallelSplitActivity {
+func buildParallelSplitGenActivity(wbc *wfBuildCtx, n *ast.WorkflowParallelSplitNode) *genWf.ParallelSplitActivity {
 	act := genWf.NewParallelSplitActivity()
 	act.SetID(element.ID(types.GenerateID()))
 	caption := n.Caption
@@ -643,7 +679,7 @@ func buildParallelSplitGenActivity(n *ast.WorkflowParallelSplitNode) *genWf.Para
 	for _, p := range n.Paths {
 		oc := genWf.NewParallelSplitOutcome()
 		oc.SetID(element.ID(types.GenerateID()))
-		if flow := newGenFlowWithActivities(buildWorkflowActivitiesGen(p.Activities)); flow != nil {
+		if flow := newGenFlowWithActivities(buildWorkflowActivitiesGen(wbc, p.Activities)); flow != nil {
 			oc.SetFlow(flow)
 		}
 		act.AddOutcomes(oc)
@@ -749,7 +785,8 @@ func execCreateWorkflowGen(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 	endAct.SetCaption("End")
 	endAct.SetName("End")
 
-	userActivities := buildWorkflowActivitiesGen(s.Activities)
+	wbc := newWfBuildCtx(ctx)
+	userActivities := buildWorkflowActivitiesGen(wbc, s.Activities)
 	autoBindWorkflowGen(ctx, userActivities)
 	deduplicateActivityNamesGen(userActivities)
 

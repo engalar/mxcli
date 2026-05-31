@@ -79,7 +79,7 @@ func TestBuildWaitForNotificationGenActivity_WithBoundaryEvents(t *testing.T) {
 			{EventType: "InterruptingTimer", Delay: "${PT1H}"},
 		},
 	}
-	got := buildWaitForNotificationGenActivity(n)
+	got := buildWaitForNotificationGenActivity(&wfBuildCtx{}, n)
 	if got.Caption() != "wait" {
 		t.Errorf("Caption = %q", got.Caption())
 	}
@@ -124,7 +124,7 @@ func TestBuildAnnotationActivityGen(t *testing.T) {
 }
 
 func TestBuildBoundaryEventGen_NonInterrupting(t *testing.T) {
-	be := buildBoundaryEventGen(ast.WorkflowBoundaryEventNode{
+	be := buildBoundaryEventGen(&wfBuildCtx{}, ast.WorkflowBoundaryEventNode{
 		EventType: "NonInterruptingTimer",
 		Delay:     "${PT5M}",
 	})
@@ -142,7 +142,7 @@ func TestBuildBoundaryEventGen_NonInterrupting(t *testing.T) {
 }
 
 func TestBuildBoundaryEventGen_DefaultTimer(t *testing.T) {
-	be := buildBoundaryEventGen(ast.WorkflowBoundaryEventNode{
+	be := buildBoundaryEventGen(&wfBuildCtx{}, ast.WorkflowBoundaryEventNode{
 		EventType: "Timer",
 		Delay:     "${PT5M}",
 	})
@@ -152,7 +152,7 @@ func TestBuildBoundaryEventGen_DefaultTimer(t *testing.T) {
 }
 
 func TestBuildBoundaryEventGen_WithSubFlow(t *testing.T) {
-	be := buildBoundaryEventGen(ast.WorkflowBoundaryEventNode{
+	be := buildBoundaryEventGen(&wfBuildCtx{}, ast.WorkflowBoundaryEventNode{
 		EventType: "InterruptingTimer",
 		Delay:     "${PT1M}",
 		Activities: []ast.WorkflowActivityNode{
@@ -175,7 +175,7 @@ func TestBuildBoundaryEventGen_WithSubFlow(t *testing.T) {
 
 // CE6665: interrupting timer must end with jump or end activity.
 func TestBuildBoundaryEventGen_InterruptingTimer_AutoInjectsEnd(t *testing.T) {
-	be := buildBoundaryEventGen(ast.WorkflowBoundaryEventNode{
+	be := buildBoundaryEventGen(&wfBuildCtx{}, ast.WorkflowBoundaryEventNode{
 		EventType: "InterruptingTimer",
 		Delay:     "${PT48H}",
 		Activities: []ast.WorkflowActivityNode{
@@ -203,7 +203,7 @@ func TestBuildBoundaryEventGen_InterruptingTimer_AutoInjectsEnd(t *testing.T) {
 
 // CE6665: empty interrupting timer must also get an EndWorkflowActivity.
 func TestBuildBoundaryEventGen_InterruptingTimer_Empty_AutoInjectsEnd(t *testing.T) {
-	be := buildBoundaryEventGen(ast.WorkflowBoundaryEventNode{
+	be := buildBoundaryEventGen(&wfBuildCtx{}, ast.WorkflowBoundaryEventNode{
 		EventType: "InterruptingTimer",
 		Delay:     "${PT1H}",
 	})
@@ -226,7 +226,7 @@ func TestBuildBoundaryEventGen_InterruptingTimer_Empty_AutoInjectsEnd(t *testing
 
 // CE6665: existing JumpTo must NOT get a double-injected EndWorkflowActivity.
 func TestBuildBoundaryEventGen_InterruptingTimer_NoDoubleInjection(t *testing.T) {
-	be := buildBoundaryEventGen(ast.WorkflowBoundaryEventNode{
+	be := buildBoundaryEventGen(&wfBuildCtx{}, ast.WorkflowBoundaryEventNode{
 		EventType: "InterruptingTimer",
 		Delay:     "${PT1H}",
 		Activities: []ast.WorkflowActivityNode{
@@ -253,7 +253,7 @@ func TestBuildBoundaryEventGen_InterruptingTimer_NoDoubleInjection(t *testing.T)
 
 // NonInterrupting must NOT get an auto-injected EndWorkflowActivity.
 func TestBuildBoundaryEventGen_NonInterrupting_NoAutoEnd(t *testing.T) {
-	be := buildBoundaryEventGen(ast.WorkflowBoundaryEventNode{
+	be := buildBoundaryEventGen(&wfBuildCtx{}, ast.WorkflowBoundaryEventNode{
 		EventType: "NonInterruptingTimer",
 		Delay:     "${PT12H}",
 		Activities: []ast.WorkflowActivityNode{
@@ -279,7 +279,7 @@ func TestBuildBoundaryEventGen_NonInterrupting_NoAutoEnd(t *testing.T) {
 
 func TestBuildUserTaskGenActivity_SingleByDefault(t *testing.T) {
 	n := &ast.WorkflowUserTaskNode{Name: "Approve", Caption: "approve"}
-	got := buildUserTaskGenActivity(n)
+	got := buildUserTaskGenActivity(&wfBuildCtx{}, n)
 	if got.TypeName() != "Workflows$SingleUserTaskActivity" {
 		t.Errorf("TypeName = %q, want SingleUserTaskActivity", got.TypeName())
 	}
@@ -287,7 +287,7 @@ func TestBuildUserTaskGenActivity_SingleByDefault(t *testing.T) {
 
 func TestBuildUserTaskGenActivity_MultiWhenFlagSet(t *testing.T) {
 	n := &ast.WorkflowUserTaskNode{Name: "Vote", IsMultiUser: true}
-	got := buildUserTaskGenActivity(n)
+	got := buildUserTaskGenActivity(&wfBuildCtx{}, n)
 	if got.TypeName() != "Workflows$MultiUserTaskActivity" {
 		t.Errorf("TypeName = %q, want MultiUserTaskActivity", got.TypeName())
 	}
@@ -300,7 +300,7 @@ func TestBuildSingleUserTaskGenActivity_FieldsPropagate(t *testing.T) {
 		DueDate:         "[%CurrentDateTime%]",
 		TaskDescription: "do this",
 	}
-	got := buildSingleUserTaskGenActivity(n)
+	got := buildSingleUserTaskGenActivity(&wfBuildCtx{}, n)
 	if got.Name() != "Step" {
 		t.Errorf("Name = %q", got.Name())
 	}
@@ -321,7 +321,7 @@ func TestBuildSingleUserTaskGenActivity_PagePropagates(t *testing.T) {
 		Caption: "step caption",
 		Page:    ast.QualifiedName{Module: "MyMod", Name: "MyPage"},
 	}
-	got := buildSingleUserTaskGenActivity(n)
+	got := buildSingleUserTaskGenActivity(&wfBuildCtx{}, n)
 	tp := got.TaskPage()
 	if tp == nil {
 		t.Fatal("TaskPage is nil — CE1834 bug")
@@ -341,7 +341,7 @@ func TestBuildMultiUserTaskGenActivity_PagePropagates(t *testing.T) {
 		IsMultiUser: true,
 		Page:        ast.QualifiedName{Module: "MyMod", Name: "MyPage"},
 	}
-	got := buildMultiUserTaskGenActivity(n)
+	got := buildMultiUserTaskGenActivity(&wfBuildCtx{}, n)
 	tp := got.TaskPage()
 	if tp == nil {
 		t.Fatal("TaskPage is nil for multi user task — CE1834 bug")
@@ -410,7 +410,7 @@ func TestBuildUserTaskOutcomesGen_ValueMatchesCaption(t *testing.T) {
 			&ast.WorkflowJumpToNode{Target: "X"},
 		}},
 	}
-	out := buildUserTaskOutcomesGen(nodes)
+	out := buildUserTaskOutcomesGen(&wfBuildCtx{}, nodes)
 	if len(out) != 2 {
 		t.Fatalf("expected 2 outcomes, got %d", len(out))
 	}
@@ -435,17 +435,22 @@ func TestBuildCallMicroflowGenActivity_FullyQualifiedMappings(t *testing.T) {
 			{Parameter: "X", Expression: "$WorkflowContext"},
 		},
 	}
-	got := buildCallMicroflowGenActivity(n)
+	wbc := &wfBuildCtx{version: version.Parse("11.10.0")}
+	got := buildCallMicroflowGenActivity(wbc, n)
 	if got.TypeName() != "Workflows$CallMicroflowActivity" {
 		t.Errorf("TypeName = %q, want Workflows$CallMicroflowActivity", got.TypeName())
 	}
-	if got.Name() != "Action" {
-		t.Errorf("Name = %q", got.Name())
+	act, ok := got.(*genWf.CallMicroflowActivity)
+	if !ok {
+		t.Fatalf("expected *CallMicroflowActivity, got %T", got)
 	}
-	if got.MicroflowQualifiedName() != "Demo.Action" {
-		t.Errorf("MicroflowQualifiedName = %q", got.MicroflowQualifiedName())
+	if act.Name() != "Action" {
+		t.Errorf("Name = %q", act.Name())
 	}
-	pms := got.ParameterMappingsItems()
+	if act.MicroflowQualifiedName() != "Demo.Action" {
+		t.Errorf("MicroflowQualifiedName = %q", act.MicroflowQualifiedName())
+	}
+	pms := act.ParameterMappingsItems()
 	if len(pms) != 1 {
 		t.Fatalf("expected 1 mapping, got %d", len(pms))
 	}
@@ -465,9 +470,14 @@ func TestBuildCallMicroflowGenActivity_DefaultCaptionMirrorsName(t *testing.T) {
 	n := &ast.WorkflowCallMicroflowNode{
 		Microflow: ast.QualifiedName{Module: "M", Name: "DoIt"},
 	}
-	got := buildCallMicroflowGenActivity(n)
-	if got.Caption() != "DoIt" {
-		t.Errorf("default caption = %q, want microflow simple name", got.Caption())
+	wbc := &wfBuildCtx{version: version.Parse("11.10.0")}
+	got := buildCallMicroflowGenActivity(wbc, n)
+	act, ok := got.(*genWf.CallMicroflowActivity)
+	if !ok {
+		t.Fatalf("expected *CallMicroflowActivity, got %T", got)
+	}
+	if act.Caption() != "DoIt" {
+		t.Errorf("default caption = %q, want microflow simple name", act.Caption())
 	}
 }
 
@@ -503,7 +513,7 @@ func TestBuildCallWorkflowGenActivity_AutoBindsParameterExpression(t *testing.T)
 }
 
 func TestBuildConditionOutcomeGen_True(t *testing.T) {
-	got := buildConditionOutcomeGen(ast.WorkflowConditionOutcomeNode{Value: "True"})
+	got := buildConditionOutcomeGen(&wfBuildCtx{}, ast.WorkflowConditionOutcomeNode{Value: "True"})
 	bo, ok := got.(*genWf.BooleanConditionOutcome)
 	if !ok {
 		t.Fatalf("wrong type: %T", got)
@@ -514,7 +524,7 @@ func TestBuildConditionOutcomeGen_True(t *testing.T) {
 }
 
 func TestBuildConditionOutcomeGen_False(t *testing.T) {
-	got := buildConditionOutcomeGen(ast.WorkflowConditionOutcomeNode{Value: "False"})
+	got := buildConditionOutcomeGen(&wfBuildCtx{}, ast.WorkflowConditionOutcomeNode{Value: "False"})
 	bo, ok := got.(*genWf.BooleanConditionOutcome)
 	if !ok {
 		t.Fatalf("wrong type: %T", got)
@@ -525,14 +535,14 @@ func TestBuildConditionOutcomeGen_False(t *testing.T) {
 }
 
 func TestBuildConditionOutcomeGen_Default(t *testing.T) {
-	got := buildConditionOutcomeGen(ast.WorkflowConditionOutcomeNode{Value: "Default"})
+	got := buildConditionOutcomeGen(&wfBuildCtx{}, ast.WorkflowConditionOutcomeNode{Value: "Default"})
 	if got.TypeName() != "Workflows$VoidConditionOutcome" {
 		t.Errorf("TypeName = %q, want VoidConditionOutcome", got.TypeName())
 	}
 }
 
 func TestBuildConditionOutcomeGen_Enumeration(t *testing.T) {
-	got := buildConditionOutcomeGen(ast.WorkflowConditionOutcomeNode{Value: "MyModule.MyEnum.OptionA"})
+	got := buildConditionOutcomeGen(&wfBuildCtx{}, ast.WorkflowConditionOutcomeNode{Value: "MyModule.MyEnum.OptionA"})
 	ev, ok := got.(*genWf.EnumerationValueConditionOutcome)
 	if !ok {
 		t.Fatalf("wrong type: %T", got)
@@ -543,7 +553,7 @@ func TestBuildConditionOutcomeGen_Enumeration(t *testing.T) {
 }
 
 func TestBuildConditionOutcomeGen_WithSubFlow(t *testing.T) {
-	got := buildConditionOutcomeGen(ast.WorkflowConditionOutcomeNode{
+	got := buildConditionOutcomeGen(&wfBuildCtx{}, ast.WorkflowConditionOutcomeNode{
 		Value: "True",
 		Activities: []ast.WorkflowActivityNode{
 			&ast.WorkflowJumpToNode{Target: "X"},
@@ -570,7 +580,7 @@ func TestBuildExclusiveSplitGenActivity_BasicShape(t *testing.T) {
 			{Value: "False"},
 		},
 	}
-	got := buildExclusiveSplitGenActivity(n)
+	got := buildExclusiveSplitGenActivity(&wfBuildCtx{}, n)
 	if got.TypeName() != "Workflows$ExclusiveSplitActivity" {
 		t.Errorf("TypeName = %q", got.TypeName())
 	}
@@ -593,7 +603,7 @@ func TestBuildExclusiveSplitGenActivity_DropsDefaultOnBooleanDecision(t *testing
 			{Value: "Default"}, // must be dropped — Mendix 11 runtime rejects VoidConditionOutcome on a boolean decision
 		},
 	}
-	got := buildExclusiveSplitGenActivity(n)
+	got := buildExclusiveSplitGenActivity(&wfBuildCtx{}, n)
 	if len(got.OutcomesItems()) != 2 {
 		t.Errorf("expected 2 outcomes (Default dropped), got %d", len(got.OutcomesItems()))
 	}
@@ -605,7 +615,7 @@ func TestBuildExclusiveSplitGenActivity_DropsDefaultOnBooleanDecision(t *testing
 }
 
 func TestBuildExclusiveSplitGenActivity_DefaultCaption(t *testing.T) {
-	got := buildExclusiveSplitGenActivity(&ast.WorkflowDecisionNode{})
+	got := buildExclusiveSplitGenActivity(&wfBuildCtx{}, &ast.WorkflowDecisionNode{})
 	if got.Caption() != "Decision" {
 		t.Errorf("default caption = %q", got.Caption())
 	}
@@ -622,7 +632,7 @@ func TestBuildParallelSplitGenActivity_PathsBecomeOutcomes(t *testing.T) {
 			{Activities: nil},
 		},
 	}
-	got := buildParallelSplitGenActivity(n)
+	got := buildParallelSplitGenActivity(&wfBuildCtx{}, n)
 	if got.TypeName() != "Workflows$ParallelSplitActivity" {
 		t.Errorf("TypeName = %q", got.TypeName())
 	}
@@ -646,7 +656,7 @@ func TestBuildParallelSplitGenActivity_PathsBecomeOutcomes(t *testing.T) {
 }
 
 func TestBuildParallelSplitGenActivity_DefaultCaption(t *testing.T) {
-	got := buildParallelSplitGenActivity(&ast.WorkflowParallelSplitNode{})
+	got := buildParallelSplitGenActivity(&wfBuildCtx{}, &ast.WorkflowParallelSplitNode{})
 	if got.Caption() != "Parallel split" {
 		t.Errorf("default caption = %q", got.Caption())
 	}
@@ -672,9 +682,10 @@ func TestBuildWorkflowActivityGen_DispatchesAllTypes(t *testing.T) {
 		{"decision", &ast.WorkflowDecisionNode{}, "Workflows$ExclusiveSplitActivity"},
 		{"parallel", &ast.WorkflowParallelSplitNode{}, "Workflows$ParallelSplitActivity"},
 	}
+	wbc := &wfBuildCtx{version: version.Parse("11.10.0")}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := buildWorkflowActivityGen(tc.node)
+			got := buildWorkflowActivityGen(wbc, tc.node)
 			if got == nil {
 				t.Fatal("nil result")
 			}
@@ -901,7 +912,7 @@ func TestBuildWorkflowActivitiesGen_DispatchesLeafTypes(t *testing.T) {
 		&ast.WorkflowEndNode{Caption: "E"},
 		&ast.WorkflowAnnotationActivityNode{Text: "note"},
 	}
-	out := buildWorkflowActivitiesGen(nodes)
+	out := buildWorkflowActivitiesGen(&wfBuildCtx{}, nodes)
 	if len(out) != 5 {
 		t.Fatalf("expected 5 elements, got %d", len(out))
 	}
@@ -1043,7 +1054,7 @@ func TestBuildMultiUserTaskGenActivityHasCompletionCriteriaCE1866(t *testing.T) 
 			{Caption: "Reject"},
 		},
 	}
-	task := buildMultiUserTaskGenActivity(n)
+	task := buildMultiUserTaskGenActivity(&wfBuildCtx{}, n)
 	if task.CompletionCriteria() == nil {
 		t.Fatal("CE1866: CompletionCriteria must not be nil for multi-user task")
 	}
@@ -1101,7 +1112,7 @@ func TestBuildMultiUserTaskGenActivity_CompletionMethod(t *testing.T) {
 				RequiredThreshold: tc.threshold,
 				Outcomes:          outcomes,
 			}
-			task := buildMultiUserTaskGenActivity(n)
+			task := buildMultiUserTaskGenActivity(&wfBuildCtx{}, n)
 			if task.CompletionCriteria() == nil {
 				t.Fatal("CompletionCriteria must not be nil")
 			}

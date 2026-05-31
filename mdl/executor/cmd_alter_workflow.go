@@ -197,7 +197,8 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 // Mirrors buildAndBindActivities semantically but returns []element.Element
 // for the gen mutator surface (D7).
 func buildAndBindActivitiesGen(ctx *ExecContext, nodes []ast.WorkflowActivityNode) []element.Element {
-	acts := buildWorkflowActivitiesGen(nodes)
+	wbc := newWfBuildCtx(ctx)
+	acts := buildWorkflowActivitiesGen(wbc, nodes)
 	autoBindWorkflowGen(ctx, acts)
 	deduplicateActivityNamesGen(acts)
 	return acts
