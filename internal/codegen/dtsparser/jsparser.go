@@ -179,11 +179,12 @@ type DomainMeta struct {
 // TypeRenameData describes a versioned BSON type rename.
 // Populated from supplements.json type_renames section by the codegen main().
 type TypeRenameData struct {
-	OldTypeName string // e.g. "Workflows$CallMicroflowTask"
-	NewTypeName string // e.g. "Workflows$CallMicroflowActivity"
-	Since       string // e.g. "11.9.0"
-	OldGoName   string // e.g. "CallMicroflowTask"
-	NewGoName   string // e.g. "CallMicroflowActivity"
+	OldTypeName  string // e.g. "Workflows$CallMicroflowTask"
+	NewTypeName  string // e.g. "Workflows$CallMicroflowActivity"
+	Since        string // e.g. "11.9.0"
+	OldGoName    string // e.g. "CallMicroflowTask"
+	NewGoName    string // e.g. "CallMicroflowActivity"
+	FuncBaseName string // e.g. "CallMicroflow" — longest common prefix of OldGoName/NewGoName
 }
 
 // JsInterface from .d.ts — shows which properties are part of the public API.
@@ -656,6 +657,22 @@ func collectBracedBlock(lines []string, start int) string {
 func parseVersionInfoBlock(block string) *JsVersionInfo {
 	vi := &JsVersionInfo{
 		PropertyInfos: map[string]*JsPropVersionInfo{},
+	}
+
+	// Extract top-level introduced/deleted from the block before the properties: section.
+	// These appear directly inside the StructureVersionInfo({...}) object literal.
+	topLevel := block
+	if idx := strings.Index(block, "properties:"); idx >= 0 {
+		topLevel = block[:idx]
+	}
+	if m := rjViIntro.FindStringSubmatch(topLevel); m != nil {
+		vi.Introduced = m[1]
+	}
+	if m := rjViDel.FindStringSubmatch(topLevel); m != nil {
+		vi.Deleted = m[1]
+	}
+	if m := rjViDelMsg.FindStringSubmatch(topLevel); m != nil {
+		vi.DeletionMsg = m[1]
 	}
 
 	lines := strings.Split(block, "\n")

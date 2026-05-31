@@ -89,7 +89,7 @@ func TestSerializeWorkflowActivityGen_CallMicroflowShape(t *testing.T) {
 	for _, e := range doc {
 		got[e.Key] = e.Value
 	}
-	if got["$Type"] != "Workflows$CallMicroflowTask" {
+	if got["$Type"] != "Workflows$CallMicroflowActivity" {
 		t.Errorf("$Type = %v", got["$Type"])
 	}
 	if got["Microflow"] != "Demo.Action" {

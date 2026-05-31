@@ -134,11 +134,11 @@ func New{{.Name}}() *{{.Name}} {
 }
 {{end}}{{end}}
 {{range .Renames}}
-// New{{.NewGoName}}ForVersion returns the version-correct concrete type for the
-// {{.NewGoName}} / {{.OldGoName}} workflow activity.
+// New{{.FuncBaseName}}ForVersion returns the version-correct concrete type for the
+// {{.NewGoName}} / {{.OldGoName}} activity.
 //   < {{.Since}} → *{{.OldGoName}} ($Type "{{.OldTypeName}}")
 //   ≥ {{.Since}} → *{{.NewGoName}} ($Type "{{.NewTypeName}}")
-func New{{.NewGoName}}ForVersion(v version.Version) element.Element {
+func New{{.FuncBaseName}}ForVersion(v version.Version) element.Element {
 	if v.Compare(version.Parse("{{.Since}}")) >= 0 {
 		return New{{.NewGoName}}()
 	}

@@ -436,8 +436,8 @@ func TestBuildCallMicroflowGenActivity_FullyQualifiedMappings(t *testing.T) {
 		},
 	}
 	got := buildCallMicroflowGenActivity(n)
-	if got.TypeName() != "Workflows$CallMicroflowTask" {
-		t.Errorf("TypeName = %q, want CallMicroflowTask", got.TypeName())
+	if got.TypeName() != "Workflows$CallMicroflowActivity" {
+		t.Errorf("TypeName = %q, want Workflows$CallMicroflowActivity", got.TypeName())
 	}
 	if got.Name() != "Action" {
 		t.Errorf("Name = %q", got.Name())
@@ -667,7 +667,7 @@ func TestBuildWorkflowActivityGen_DispatchesAllTypes(t *testing.T) {
 		{"anno", &ast.WorkflowAnnotationActivityNode{Text: "n"}, "Workflows$FloatingAnnotation"},
 		{"singleut", &ast.WorkflowUserTaskNode{Name: "U"}, "Workflows$SingleUserTaskActivity"},
 		{"multiut", &ast.WorkflowUserTaskNode{Name: "U", IsMultiUser: true}, "Workflows$MultiUserTaskActivity"},
-		{"callmf", &ast.WorkflowCallMicroflowNode{Microflow: ast.QualifiedName{Module: "M", Name: "F"}}, "Workflows$CallMicroflowTask"},
+		{"callmf", &ast.WorkflowCallMicroflowNode{Microflow: ast.QualifiedName{Module: "M", Name: "F"}}, "Workflows$CallMicroflowActivity"},
 		{"callwf", &ast.WorkflowCallWorkflowNode{Workflow: ast.QualifiedName{Module: "M", Name: "W"}}, "Workflows$CallWorkflowActivity"},
 		{"decision", &ast.WorkflowDecisionNode{}, "Workflows$ExclusiveSplitActivity"},
 		{"parallel", &ast.WorkflowParallelSplitNode{}, "Workflows$ParallelSplitActivity"},

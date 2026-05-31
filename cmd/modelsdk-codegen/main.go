@@ -127,12 +127,15 @@ func main() {
 		// Build emitter.TypeRenameData values and attach to meta.
 		var emitRenames []emitter.TypeRenameData
 		for _, r := range renames {
+			oldGo := goNameFromSTN(r.oldName)
+			newGo := goNameFromSTN(r.newName)
 			emitRenames = append(emitRenames, emitter.TypeRenameData{
-				OldTypeName: r.oldName,
-				NewTypeName: r.newName,
-				Since:       r.since,
-				OldGoName:   goNameFromSTN(r.oldName),
-				NewGoName:   goNameFromSTN(r.newName),
+				OldTypeName:  r.oldName,
+				NewTypeName:  r.newName,
+				Since:        r.since,
+				OldGoName:    oldGo,
+				NewGoName:    newGo,
+				FuncBaseName: commonPrefix(oldGo, newGo),
 			})
 		}
 		meta.TypeRenames = emitRenames
@@ -328,6 +331,21 @@ func goNameFromSTN(stn string) string {
 		return stn[idx+1:]
 	}
 	return stn
+}
+
+// commonPrefix returns the longest common rune-prefix of two strings.
+// E.g. ("CallMicroflowTask", "CallMicroflowActivity") → "CallMicroflow".
+func commonPrefix(a, b string) string {
+	ra, rb := []rune(a), []rune(b)
+	n := len(ra)
+	if len(rb) < n {
+		n = len(rb)
+	}
+	i := 0
+	for i < n && ra[i] == rb[i] {
+		i++
+	}
+	return string(ra[:i])
 }
 
 // pascalCase converts a camelCase string to PascalCase.

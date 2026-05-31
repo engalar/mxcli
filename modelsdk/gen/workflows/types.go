@@ -8,6 +8,7 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/modelsdk/property"
+	"github.com/mendixlabs/mxcli/modelsdk/version"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -6444,7 +6445,7 @@ func NewBoundaryEvent() *BoundaryEvent {
 // When a storage alias exists, init uses the STORAGE name (what Mendix uses in BSON).
 func initCallMicroflowActivity() *CallMicroflowActivity {
 	o := &CallMicroflowActivity{}
-	o.SetTypeName("Workflows$CallMicroflowTask")
+	o.SetTypeName("Workflows$CallMicroflowActivity")
 	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
@@ -8294,6 +8295,18 @@ func NewExclusiveSplitOutcome() *ExclusiveSplitOutcome {
 	return o
 }
 
+// NewCallMicroflowForVersion returns the version-correct concrete type for the
+// CallMicroflowActivity / CallMicroflowTask activity.
+//
+//	< 11.9.0 → *CallMicroflowTask ($Type "Workflows$CallMicroflowTask")
+//	≥ 11.9.0 → *CallMicroflowActivity ($Type "Workflows$CallMicroflowActivity")
+func NewCallMicroflowForVersion(v version.Version) element.Element {
+	if v.Compare(version.Parse("11.9.0")) >= 0 {
+		return NewCallMicroflowActivity()
+	}
+	return NewCallMicroflowTask()
+}
+
 func init() {
 	codec.DefaultRegistry.Register("Workflows$AIAgentTaskActivity", func() element.Element {
 		return initAIAgentTaskActivity()
@@ -8325,11 +8338,6 @@ func init() {
 		return initBoundaryEvent()
 	})
 	codec.DefaultRegistry.Register("Workflows$CallMicroflowActivity", func() element.Element {
-		o := initCallMicroflowActivity()
-		o.SetTypeName("Workflows$CallMicroflowActivity")
-		return o
-	})
-	codec.DefaultRegistry.Register("Workflows$CallMicroflowTask", func() element.Element {
 		return initCallMicroflowActivity()
 	})
 	codec.DefaultRegistry.Register("Workflows$CallMicroflowTask", func() element.Element {
