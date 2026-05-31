@@ -74,6 +74,10 @@ func (p *PartList[T]) VersionMarker() int32 {
 	return p.versionMarker
 }
 
+func (p *PartList[T]) MarkEmpty() {
+	p.markDirty()
+}
+
 func (p *PartList[T]) Items() []T     { return p.items }
 func (p *PartList[T]) Len() int       { return len(p.items) }
 func (p *PartList[T]) BSONValue() any { return nil } // handled by ChildElements

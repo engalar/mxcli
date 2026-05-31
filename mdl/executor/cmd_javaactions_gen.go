@@ -1100,6 +1100,10 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 	ja.SetName(s.Name.Name)
 	ja.SetDocumentation(s.Documentation)
 	ja.SetExportLevel("Public")
+	// Mendix Studio Pro always writes Excluded and ActionDefaultReturnName.
+	// Omitting them causes MprTool to crash when sorting the project tree.
+	ja.SetExcluded(false)
+	ja.SetActionDefaultReturnName("ReturnValueName")
 
 	// Build type parameter definitions using the old TypeParameters list (not ActionTypeParameters).
 	typeParamIDs := make(map[string]element.ID, len(s.TypeParameters))
@@ -1110,6 +1114,8 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 		ja.AddTypeParameters(tp)
 		typeParamIDs[tpName] = tp.ID()
 	}
+	// Always write TypeParameters: [2] even when empty — Mendix expects this field.
+	ja.ForceWriteTypeParameters()
 
 	// Set up type-param name lookup for bare-name parameter types
 	// (mirrors legacy isTypeParamRef helper).
@@ -1126,6 +1132,8 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 	for _, param := range s.Parameters {
 		jaParam := genJA.NewJavaActionParameter()
 		jaParam.SetID(element.ID(types.GenerateID()))
+		jaParam.SetCategory("")
+		jaParam.SetDescription("")
 		jaParam.SetName(param.Name)
 		jaParam.SetIsRequired(param.IsRequired)
 

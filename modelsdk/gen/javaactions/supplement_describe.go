@@ -33,6 +33,14 @@ func ReadBSONString(elem element.Element, key string) string {
 	return ""
 }
 
+// ForceWriteTypeParameters marks the TypeParameters PartList dirty so the
+// encoder writes it as an empty versioned array [2] even when no type
+// parameters were added. Mendix Studio Pro always writes TypeParameters on
+// JavaActions$JavaAction; MprTool may crash if it is absent.
+func (o *JavaAction) ForceWriteTypeParameters() {
+	o.typeParameters.MarkEmpty()
+}
+
 // DecodeChildElement decodes a single embedded document child of elem
 // by BSON key via the gen-type registry. Returns nil when elem is
 // nil, has no raw payload, or the child is missing / undecodable.

@@ -8,25 +8,64 @@ import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"JavaActions$BasicParameterType": {
+	"JavaActions$ParameterType": {Introduced: "6.7.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$BasicParameterType": {Introduced: "6.7.0", Deleted: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"type": {Required: true, Public: true},
 		},
 	},
-	"JavaActions$ConcreteEntityType": {
+	"JavaActions$Type": {Introduced: "6.6.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$PrimitiveType": {Introduced: "6.6.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$BooleanType": {Introduced: "6.6.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$EntityType": {Introduced: "6.6.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$ConcreteEntityType": {Introduced: "6.6.0", Deleted: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity": {Required: true, Public: true},
 		},
 	},
-	"JavaActions$EntityTypeParameterType": {
+	"JavaActions$DateTimeType": {Introduced: "6.6.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$DecimalType": {Introduced: "6.6.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$EntityTypeParameterType": {Introduced: "6.7.0", Deleted: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"typeParameter": {Public: true},
 		},
 	},
-	"JavaActions$EnumerationType": {
+	"JavaActions$EnumerationType": {Introduced: "6.6.0", Deleted: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"enumeration": {Required: true, Public: true},
 		},
+	},
+	"JavaActions$ExportMappingJavaActionParameterType": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$ExportMappingParameterType": {Introduced: "7.2.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$FloatType": {Introduced: "6.6.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$ImportMappingJavaActionParameterType": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$ImportMappingParameterType": {Introduced: "7.2.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$IntegerType": {Introduced: "6.6.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"JavaActions$JavaAction": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -45,26 +84,41 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"type":          {Deleted: "6.6.0", Public: true},
 		},
 	},
-	"JavaActions$ListType": {
+	"JavaActions$ListType": {Introduced: "6.6.0", Deleted: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parameter": {Required: true, Public: true},
 		},
 	},
-	"JavaActions$MicroflowActionInfo": {
+	"JavaActions$MicroflowActionInfo": {Introduced: "6.6.0", Deleted: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"caption":  {Public: true},
 			"category": {Public: true},
 			"icon":     {Public: true},
 		},
 	},
-	"JavaActions$ParameterizedEntityType": {
+	"JavaActions$MicroflowJavaActionParameterType": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$MicroflowParameterType": {Introduced: "6.9.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$ParameterizedEntityType": {Introduced: "6.6.0", Deleted: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"typeParameter": {Required: true, Public: true},
 		},
 	},
-	"JavaActions$TypeParameter": {
+	"JavaActions$StringType": {Introduced: "6.6.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaActions$TypeParameter": {Introduced: "6.6.0", Deleted: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"name": {Public: true},
 		},
 	},
+}
+
+func init() {
+	for name, info := range VersionInfos {
+		version.DefaultVersionRegistry.Register(name, info)
+	}
 }
