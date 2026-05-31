@@ -67,6 +67,9 @@ func main() {
 		len(suppl.forceConcreteSet), len(suppl.EdgeKindOverrides),
 		len(suppl.IdRefScope), len(suppl.parsedExtraProps), len(suppl.parsedExtraTypes))
 
+	// renameEntry holds a validated type rename for the emitter.
+	type renameEntry struct{ oldName, newName, since string }
+
 	// Phase 2: Generate each domain with cross-domain inheritance resolved.
 	for _, domain := range domainList {
 		jsPath := filepath.Join(*genDir, domain+".js")
@@ -92,6 +95,47 @@ func main() {
 		if len(aliases) > 0 {
 			meta.StorageAliases = aliases
 		}
+
+		// Validate type_renames for this domain: derive `since` from SDK versionInfo.
+		// Skip entries whose old name isn't in this domain (validated in the domain that owns it).
+		var renames []renameEntry
+		for oldName, newName := range suppl.TypeRenames {
+			if _, inAliases := suppl.StorageAliases[newName]; inAliases {
+				log.Fatalf("type_renames conflict: %q also appears as a storage_alias new name", newName)
+			}
+			oldSince := ""
+			newIntroduced := ""
+			for _, cls := range meta.Classes {
+				if cls.StructureTypeName == oldName && cls.VersionInfo != nil {
+					oldSince = cls.VersionInfo.Deleted
+				}
+				if cls.StructureTypeName == newName && cls.VersionInfo != nil {
+					newIntroduced = cls.VersionInfo.Introduced
+				}
+			}
+			if oldSince == "" {
+				continue // not in this domain — skip
+			}
+			if newIntroduced != oldSince {
+				log.Fatalf("type_renames validation failed: %q deleted=%q but %q introduced=%q (must match)",
+					oldName, oldSince, newName, newIntroduced)
+			}
+			renames = append(renames, renameEntry{oldName, newName, oldSince})
+			fmt.Printf("  type_rename: %s → %s (since %s)\n", oldName, newName, oldSince)
+		}
+
+		// Build emitter.TypeRenameData values and attach to meta.
+		var emitRenames []emitter.TypeRenameData
+		for _, r := range renames {
+			emitRenames = append(emitRenames, emitter.TypeRenameData{
+				OldTypeName: r.oldName,
+				NewTypeName: r.newName,
+				Since:       r.since,
+				OldGoName:   goNameFromSTN(r.oldName),
+				NewGoName:   goNameFromSTN(r.newName),
+			})
+		}
+		meta.TypeRenames = emitRenames
 
 		// Force concrete: some classes the parser marks as abstract (no static
 		// createIn method) but which appear as concrete $Type values in BSON.
@@ -154,6 +198,7 @@ type supplements struct {
 	IdRefScope             map[string]string          `json:"id_ref_scope"`
 	ExtraProperties        map[string]json.RawMessage `json:"extra_properties"`
 	ExtraTypes             map[string]json.RawMessage `json:"extra_types"`
+	TypeRenames            map[string]string          `json:"type_renames"` // old_bson → new_bson
 
 	// Derived after loading.
 	forceConcreteSet      map[string]bool // built from ForceConcreteTypes slice
@@ -193,6 +238,7 @@ func loadSupplements() supplements {
 	delete(s.PropertyKeyOverrides, "_doc")
 	delete(s.EdgeKindOverrides, "_doc")
 	delete(s.IdRefScope, "_doc")
+	delete(s.TypeRenames, "_doc")
 
 	// Build force-concrete lookup set.
 	s.forceConcreteSet = map[string]bool{}
@@ -273,6 +319,15 @@ func supplementTypeToJsClass(et supplementTypeDef) dtsparser.JsClass {
 		cls.Properties = append(cls.Properties, supplementPropToJsProp(sp))
 	}
 	return cls
+}
+
+// goNameFromSTN extracts the Go name from a structureTypeName.
+// E.g. "Workflows$CallMicroflowTask" → "CallMicroflowTask".
+func goNameFromSTN(stn string) string {
+	if idx := strings.Index(stn, "$"); idx >= 0 {
+		return stn[idx+1:]
+	}
+	return stn
 }
 
 // pascalCase converts a camelCase string to PascalCase.
