@@ -244,9 +244,18 @@ func SortPartsFromRawBSON(raw []byte) []SortPartFromRaw {
 	}
 	var parts []SortPartFromRaw
 	for _, it := range itemsArr {
-		m, ok := it.(bson.M)
-		if !ok {
-			continue
+		var m bson.M
+		switch v := it.(type) {
+		case bson.M:
+			m = v
+		case bson.D:
+			// mongo-driver v2 decodes nested documents inside arrays as bson.D.
+			m = make(bson.M, len(v))
+			for _, e := range v {
+				m[e.Key] = e.Value
+			}
+		default:
+			continue // version prefix (int32) or other non-document
 		}
 		attrName, _ := m["Attribute"].(string)
 		if attrName == "" {

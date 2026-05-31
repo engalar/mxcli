@@ -521,6 +521,7 @@ begin
   @position(520,200)
   retrieve $Tickets from HD.Ticket
       where Status != HD.TicketStatus.Closed
+      sort by HD.Ticket.SLADueAt asc, HD.Ticket.Priority desc
       limit $PageSize
       offset $Offset;
   return $Tickets;
@@ -532,6 +533,7 @@ begin
   @position(360,200)
   retrieve $Tickets from HD.Ticket
       where Priority = HD.TicketPriority.Critical
+      sort by HD.Ticket.createdDate desc
       limit 10;
   return $Tickets;
 end;
@@ -922,7 +924,7 @@ create workflow HD.WF_TicketEscalation
 begin
   call microflow HD.WFS_Escalation_Initialize; -- WFS_Escalation_Initialize
 
-  decision '$WorkflowContext/Reason = empty and $WorkflowInstance/State = System.WorkflowState.Completed ' -- Decision
+  decision '$WorkflowContext/Reason = empty and $WorkflowInstance/State = System.WorkflowState.Completed' -- Decision
     outcomes
       true -> {
         call microflow HD.WFS_AutoReject; -- WFS_AutoReject

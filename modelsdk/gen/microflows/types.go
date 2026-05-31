@@ -10988,7 +10988,7 @@ func (o *SortItemList) RemoveItems(index int) {
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 func (o *SortItemList) InitFromRaw(raw bson.Raw) {
-	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
+	if children, err := codec.DecodeChildren(raw, "Sortings"); err == nil {
 		for _, child := range children {
 			o.items.AppendFromDecode(child)
 		}
@@ -17393,8 +17393,18 @@ func init() {
 	codec.DefaultRegistry.Register("Microflows$Sort", func() element.Element {
 		return initSort()
 	})
+	codec.DefaultRegistry.Register("Microflows$SortItem", func() element.Element {
+		o := initSortItem()
+		o.SetTypeName("Microflows$SortItem")
+		return o
+	})
 	codec.DefaultRegistry.Register("Microflows$RetrieveSorting", func() element.Element {
 		return initSortItem()
+	})
+	codec.DefaultRegistry.Register("Microflows$SortItemList", func() element.Element {
+		o := initSortItemList()
+		o.SetTypeName("Microflows$SortItemList")
+		return o
 	})
 	codec.DefaultRegistry.Register("Microflows$SortingsList", func() element.Element {
 		return initSortItemList()
@@ -17453,6 +17463,11 @@ func init() {
 	})
 	codec.DefaultRegistry.Register("ExportXmlAction$StringExport", func() element.Element {
 		return initVariableExport()
+	})
+	codec.DefaultRegistry.Register("Microflows$WebServiceCallAction", func() element.Element {
+		o := initWebServiceCallAction()
+		o.SetTypeName("Microflows$WebServiceCallAction")
+		return o
 	})
 	codec.DefaultRegistry.Register("Microflows$CallWebServiceAction", func() element.Element {
 		return initWebServiceCallAction()

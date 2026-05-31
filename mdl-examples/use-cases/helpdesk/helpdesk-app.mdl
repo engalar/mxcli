@@ -1625,3 +1625,5 @@ move microflow HD.ACT_Workflow_ShowAdminPage     to folder 'Escalation/WorkflowA
 move microflow HD.ACT_Workflow_Lock              to folder 'Escalation/WorkflowAdmin';
 move microflow HD.ACT_Workflow_Unlock            to folder 'Escalation/WorkflowAdmin';
 move microflow HD.ACT_Workflow_Notify            to folder 'Escalation/WorkflowAdmin';
+
+-- Note: golden rebuilt after SortItemList.InitFromRaw BSON key fix (Items→Sortings)

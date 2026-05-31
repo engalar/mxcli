@@ -54,6 +54,7 @@ func (o *{{$typeName}}) {{.RemoverName}}(index int) {
 }
 {{end}}{{end}}
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *{{$typeName}}) InitFromRaw(raw bson.Raw) {
 {{- range .Fields}}{{if .NeedsInit}}
 	o.{{.FieldName}}.Init(raw)

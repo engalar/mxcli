@@ -108,7 +108,6 @@ type testEnv struct {
 // The temp directory is automatically cleaned up when the test finishes.
 func copyTestProject(t *testing.T) string {
 	t.Helper()
-	t.Parallel()
 
 	if sharedSourceProject == "" {
 		t.Fatal("sharedSourceProject not set — TestMain did not run")

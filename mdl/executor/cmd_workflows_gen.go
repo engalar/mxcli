@@ -968,6 +968,7 @@ func formatExclusiveSplitGen(elem element.Element, indent string) []string {
 		normExpr := strings.ReplaceAll(expr, "\r\n", " ")
 		normExpr = strings.ReplaceAll(normExpr, "\n", " ")
 		normExpr = strings.ReplaceAll(normExpr, "\r", " ")
+		normExpr = strings.TrimSpace(normExpr)
 		escapedExpr := strings.ReplaceAll(normExpr, "'", "''")
 		lines = append(lines, fmt.Sprintf("%sdecision '%s' -- %s", indent, escapedExpr, caption))
 	} else {
