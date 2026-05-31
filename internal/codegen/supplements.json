@@ -48,9 +48,12 @@
     "Settings$Language": "Texts$Language",
     "Settings$WebUIProjectSettingsPart": "Forms$WebUIProjectSettingsPart",
     "Workflows$Annotation": "Workflows$AnnotationActivity",
-    "Workflows$CallMicroflowActivity": "Workflows$CallMicroflowTask",
     "Rest$BasicAuthenticationScheme": "Rest$BasicAuthentication",
     "Microflows$WebServiceCallAction": "Microflows$CallWebServiceAction"
+  },
+  "type_renames": {
+    "_doc": "BSON type renames versioned by Mendix release. Key = old BSON name (deleted), value = new BSON name (introduced). The `since` version is auto-derived from old.versionInfo.deleted in the SDK — do not add it here. Codegen validates new.versionInfo.introduced == old.versionInfo.deleted.",
+    "Workflows$CallMicroflowTask": "Workflows$CallMicroflowActivity"
   },
   "property_key_overrides": {
     "_doc": "ClassName.propertyName → BSON key where it differs from PascalCase(JS name). Wildcard *.prop matches any class.",
