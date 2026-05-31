@@ -8,7 +8,7 @@ import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"Workflows$WorkflowActivity": {
+	"Workflows$WorkflowActivity": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"annotation":          {Introduced: "9.15.0"},
 			"caption":             {Public: true},
@@ -18,34 +18,64 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"size":                {Introduced: "11.1.0"},
 		},
 	},
-	"Workflows$ConditionOutcomeActivity": {
+	"Workflows$ConditionOutcomeActivity": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"outcomes": {Public: true},
 		},
 	},
-	"Workflows$MicroflowBasedActivity": {
+	"Workflows$MicroflowBasedActivity": {Introduced: "11.9.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"boundaryEvents": {Public: true},
 			"microflow":      {Public: true},
 		},
 	},
-	"Workflows$AbsoluteAmountUserInput": {
+	"Workflows$AIAgentTaskActivity": {Introduced: "11.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$TargetUserInput": {Introduced: "9.22.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$AbsoluteAmountUserInput": {Introduced: "9.22.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"amount": {},
 		},
 	},
-	"Workflows$Outcome": {
+	"Workflows$AllUserInput": {Introduced: "9.22.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$Annotation": {Introduced: "9.15.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$AnnotationActivity": {Introduced: "9.15.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$Line": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$BezierCurve": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$CaseValue": {Introduced: "11.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$BooleanCase": {Introduced: "11.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$Outcome": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"flow":         {Required: true, Public: true},
 			"persistentId": {Introduced: "10.21.0"},
 		},
 	},
-	"Workflows$BooleanConditionOutcome": {
+	"Workflows$ConditionOutcome": {Introduced: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$BooleanConditionOutcome": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"value": {Public: true},
 		},
 	},
-	"Workflows$BoundaryEvent": {
+	"Workflows$BoundaryEvent": {Introduced: "10.14.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"annotation":     {Introduced: "10.16.0"},
 			"caption":        {Public: true},
@@ -54,13 +84,16 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"persistentId":   {Introduced: "10.21.0"},
 		},
 	},
-	"Workflows$CallMicroflowTask": {
+	"Workflows$CallMicroflowActivity": {Introduced: "11.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$CallMicroflowTask": {Introduced: "9.0.2", Deleted: "11.9.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"boundaryEvents": {Introduced: "10.14.0", Public: true},
 			"microflow":      {Public: true},
 		},
 	},
-	"Workflows$CallWorkflowActivity": {
+	"Workflows$CallWorkflowActivity": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"boundaryEvents":      {Introduced: "10.14.0", Public: true},
 			"executeAsync":        {Introduced: "9.18.0"},
@@ -69,24 +102,51 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"workflow":            {Public: true},
 		},
 	},
-	"Workflows$EnumerationValueConditionOutcome": {
+	"Workflows$UserTaskCompletionCriteria": {Introduced: "9.22.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$ConsensusCompletionCriteria": {Introduced: "9.22.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$UserSource": {Introduced: "9.0.2", Deleted: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$EmptyUserSource": {Introduced: "9.10.0", Deleted: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$EndOfBoundaryEventPathActivity": {Introduced: "10.14.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$EndOfParallelSplitPathActivity": {Introduced: "10.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$EndWorkflowActivity": {Introduced: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$EnumerationValueConditionOutcome": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"value": {Public: true},
 		},
 	},
-	"Workflows$EventSubProcess": {
+	"Workflows$EventSubProcess": {Introduced: "11.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"caption": {Public: true},
 			"flow":    {Required: true, Public: true},
 			"name":    {Public: true},
 		},
 	},
-	"Workflows$Flow": {
+	"Workflows$ExclusiveSplitActivity": {Introduced: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$FloatingAnnotation": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$Flow": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"activities": {Public: true},
 		},
 	},
-	"Workflows$FlowLine": {
+	"Workflows$FlowLine": {Introduced: "11.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"caseValues":  {Introduced: "11.5.0"},
 			"destination": {Required: true},
@@ -94,31 +154,85 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"origin":      {Required: true},
 		},
 	},
-	"Workflows$InterruptingNotificationEventSubProcessStartActivityTarget": {
+	"Workflows$NotificationEventSubProcessStartActivity": {Introduced: "11.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$InterruptingNotificationEventSubProcessStartActivity": {Introduced: "11.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$NotifyTarget": {Introduced: "11.7.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$InterruptingNotificationEventSubProcessStartActivityTarget": {Introduced: "11.10.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"activity": {Required: true},
 		},
 	},
-	"Workflows$LinearRecurrence": {
+	"Workflows$InterruptingTimerBoundaryEvent": {Introduced: "10.20.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$JumpToActivity": {Introduced: "9.0.5",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$Recurrence": {Introduced: "10.20.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$LinearRecurrence": {Introduced: "10.20.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"interval":      {Public: true},
 			"intervalType":  {Public: true},
 			"maxExecutions": {Public: true},
 		},
 	},
-	"Workflows$MicroflowCallParameterMapping": {
+	"Workflows$MajorityCompletionCriteria": {Introduced: "10.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$MergeActivity": {Introduced: "11.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$UserTaskEvent": {Introduced: "9.0.5",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$MicroflowBasedEvent": {Introduced: "9.0.5",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$UserTargeting": {Introduced: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$MicroflowBasedTargeting": {Introduced: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$MicroflowBasedUserSource": {Introduced: "9.0.2", Deleted: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$MicroflowCallParameterMapping": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parameter": {Required: true},
 		},
 	},
-	"Workflows$MultiInputCompletion": {
+	"Workflows$MicroflowCompletionCriteria": {Introduced: "10.3.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$MicroflowEventHandler": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$MicroflowGroupTargeting": {Introduced: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$MicroflowUserTargeting": {Introduced: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$UserTaskCompletion": {Introduced: "9.22.0", Deleted: "10.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$MultiInputCompletion": {Introduced: "9.22.0", Deleted: "10.12.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"awaitAllUsers":      {Introduced: "10.2.0"},
 			"completionCriteria": {Required: true},
 			"targetUserInput":    {Required: true},
 		},
 	},
-	"Workflows$UserTaskActivity": {
+	"Workflows$UserTaskActivity": {Introduced: "10.12.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"boundaryEvents":  {Introduced: "10.14.0", Public: true},
 			"onCreatedEvent":  {Required: true},
@@ -130,55 +244,88 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"userTargeting":   {Introduced: "11.2.0", Required: true},
 		},
 	},
-	"Workflows$MultiUserTaskActivity": {
+	"Workflows$MultiUserTaskActivity": {Introduced: "10.12.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"completionCriteria": {Required: true},
 			"targetUserInput":    {Required: true},
 		},
 	},
-	"Workflows$NonInterruptingNotificationEventSubProcessStartActivityTarget": {
+	"Workflows$NoEvent": {Introduced: "9.0.5",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$NoUserTargeting": {Introduced: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$NonInterruptingNotificationEventSubProcessStartActivity": {Introduced: "11.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$NonInterruptingNotificationEventSubProcessStartActivityTarget": {Introduced: "11.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"activity": {Required: true},
 		},
 	},
-	"Workflows$NonInterruptingTimerBoundaryEvent": {
+	"Workflows$NonInterruptingTimerBoundaryEvent": {Introduced: "10.20.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"recurrence": {Public: true},
 		},
 	},
-	"Workflows$NotifyWaitForNotificationActivityTarget": {
+	"Workflows$NotifyWaitForNotificationActivityTarget": {Introduced: "11.7.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"activity": {Required: true},
 		},
 	},
-	"Workflows$PageParameterMapping": {
+	"Workflows$OrthogonalPath": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$PageParameterMapping": {Introduced: "9.11.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parameter": {Required: true},
 		},
 	},
-	"Workflows$PageReference": {
+	"Workflows$PageReference": {Introduced: "9.11.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"page": {Public: true},
 		},
 	},
-	"Workflows$ParallelSplitActivity": {
+	"Workflows$ParallelSplitActivity": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"outcomes": {Public: true},
 		},
 	},
-	"Workflows$Parameter": {
+	"Workflows$ParallelSplitOutcome": {Introduced: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$Parameter": {Introduced: "9.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity":    {Introduced: "9.10.0", Public: true},
 			"entityRef": {Deleted: "9.10.0", Public: true},
 			"name":      {Introduced: "9.18.0", Public: true},
 		},
 	},
-	"Workflows$PercentageAmountUserInput": {
+	"Workflows$PercentageAmountUserInput": {Introduced: "9.22.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"percentage": {},
 		},
 	},
-	"Workflows$UserTask": {
+	"Workflows$SingleInputCompletion": {Introduced: "9.22.0", Deleted: "10.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$SingleUserTaskActivity": {Introduced: "10.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$StartWorkflowActivity": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$StringCase": {Introduced: "11.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$ThresholdCompletionCriteria": {Introduced: "10.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$TimerBoundaryEvent": {Introduced: "10.14.0", Deleted: "10.20.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$UserTask": {Introduced: "9.0.2", Deleted: "10.12.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"allowedModuleRoles":         {Introduced: "9.0.3", Deleted: "9.6.0", Public: true},
 			"autoAssignSingleTargetUser": {Introduced: "9.11.0"},
@@ -193,19 +340,31 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"userTaskEntity":             {Introduced: "9.6.0", Deleted: "9.10.0", Public: true},
 		},
 	},
-	"Workflows$UserTaskOutcome": {
+	"Workflows$UserTaskOutcome": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"caption": {Deleted: "9.19.0", Public: true},
 			"name":    {Deleted: "9.19.0", Public: true},
 			"value":   {Introduced: "9.19.0", Public: true},
 		},
 	},
-	"Workflows$WaitForNotificationActivity": {
+	"Workflows$VetoCompletionCriteria": {Introduced: "9.22.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$VoidCase": {Introduced: "11.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$VoidConditionOutcome": {Introduced: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$WaitForNotificationActivity": {Introduced: "10.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"boundaryEvents": {Introduced: "10.14.0", Public: true},
 		},
 	},
-	"Workflows$Workflow": {
+	"Workflows$WaitForTimerActivity": {Introduced: "10.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$Workflow": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"adminPage":                  {Introduced: "9.11.0"},
 			"allowedModuleRoles":         {Deleted: "9.6.0", Public: true},
@@ -228,19 +387,49 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"workflowV2":                 {Introduced: "11.1.0"},
 		},
 	},
-	"Workflows$WorkflowCallParameterMapping": {
+	"Workflows$WorkflowCallParameterMapping": {Introduced: "9.18.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parameter": {Required: true},
 		},
 	},
-	"Workflows$WorkflowDefinitionNameSelection": {
+	"Workflows$WorkflowDefinitionSelection": {Introduced: "10.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$WorkflowDefinitionNameSelection": {Introduced: "10.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"workflow": {Required: true},
 		},
 	},
-	"Workflows$WorkflowType": {
+	"Workflows$WorkflowDefinitionObjectSelection": {Introduced: "10.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$WorkflowEventHandler": {Introduced: "10.7.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$WorkflowMetaData": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$WorkflowType": {Introduced: "9.7.0", Deleted: "9.10.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity": {Public: true},
 		},
 	},
+	"Workflows$XPathBasedTargeting": {Introduced: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$XPathBasedUserSource": {Introduced: "9.0.2", Deleted: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$XPathGroupTargeting": {Introduced: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Workflows$XPathUserTargeting": {Introduced: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+func init() {
+	for name, info := range VersionInfos {
+		version.DefaultVersionRegistry.Register(name, info)
+	}
 }

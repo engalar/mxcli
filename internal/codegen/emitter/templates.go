@@ -193,6 +193,8 @@ import "github.com/mendixlabs/mxcli/modelsdk/version"
 var VersionInfos = map[string]version.TypeVersionInfo{
 {{- range .Versions}}
 	"{{.StructureTypeName}}": {
+		{{- if .ClassIntroduced}}Introduced: "{{.ClassIntroduced}}",{{end}}
+		{{- if .ClassDeleted}}Deleted: "{{.ClassDeleted}}",{{end}}
 		Properties: map[string]version.PropertyVersionInfo{
 		{{- range .Props}}
 			"{{.Name}}": {
@@ -205,5 +207,11 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 		},
 	},
 {{- end}}
+}
+
+func init() {
+	for name, info := range VersionInfos {
+		version.DefaultVersionRegistry.Register(name, info)
+	}
 }
 `

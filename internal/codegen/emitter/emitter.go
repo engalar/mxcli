@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go/format"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -89,6 +90,8 @@ type EnumValueData struct {
 // VersionData holds template data for one class's version info.
 type VersionData struct {
 	StructureTypeName string
+	ClassIntroduced   string // NEW: Mendix version when this class was introduced
+	ClassDeleted      string // NEW: Mendix version when this class was deleted
 	Props             []VersionPropData
 }
 
@@ -273,11 +276,15 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 		if cls.VersionInfo == nil || cls.StructureTypeName == "" {
 			continue
 		}
-		if len(cls.VersionInfo.PropertyInfos) == 0 {
+		hasProps := len(cls.VersionInfo.PropertyInfos) > 0
+		hasClassVer := cls.VersionInfo.Introduced != "" || cls.VersionInfo.Deleted != ""
+		if !hasProps && !hasClassVer {
 			continue
 		}
 		mappedName := mapToStorageNamespace(cls.StructureTypeName)
 		vd := VersionData{StructureTypeName: mappedName}
+		vd.ClassIntroduced = cls.VersionInfo.Introduced
+		vd.ClassDeleted = cls.VersionInfo.Deleted
 		// Sort property names for stable output across runs.
 		propNames := make([]string, 0, len(cls.VersionInfo.PropertyInfos))
 		for name := range cls.VersionInfo.PropertyInfos {
@@ -298,7 +305,7 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 		// Emit a duplicate version entry for the storage alias so both names are covered.
 		if meta.StorageAliases != nil {
 			if alias, ok := meta.StorageAliases[cls.StructureTypeName]; ok {
-				aliasVD := VersionData{StructureTypeName: alias, Props: vd.Props}
+				aliasVD := VersionData{StructureTypeName: alias, ClassIntroduced: vd.ClassIntroduced, ClassDeleted: vd.ClassDeleted, Props: vd.Props}
 				versions = append(versions, aliasVD)
 			}
 		}
@@ -641,12 +648,22 @@ func renderFile(path, tmplStr string, data interface{}) error {
 		return fmt.Errorf("execute template: %w", err)
 	}
 
-	// Skip go/format for large files to avoid OOM in constrained environments.
+	// Format the generated source. For large files (>200KB) use the external
+	// gofmt tool instead of go/format to avoid OOM in constrained environments.
 	src := buf.Bytes()
 	if len(src) < 200_000 {
 		if formatted, err := format.Source(src); err == nil {
 			src = formatted
 		}
+	} else {
+		// Large file: write first, then gofmt -w in-place.
+		if err := os.WriteFile(path, src, 0o644); err != nil {
+			return fmt.Errorf("write (pre-fmt) %s: %w", path, err)
+		}
+		if gofmtPath, lookErr := exec.LookPath("gofmt"); lookErr == nil {
+			_ = exec.Command(gofmtPath, "-w", path).Run()
+		}
+		return nil
 	}
 
 	return os.WriteFile(path, src, 0o644)
