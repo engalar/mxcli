@@ -1153,6 +1153,29 @@ func TestValidateWorkflowActivities_NestedBareEnumReturnsError(t *testing.T) {
 	}
 }
 
+// TestCallMicroflowTypeName_VersionSelection verifies end-to-end type selection
+// through buildCallMicroflowGenActivity using wfBuildCtx.
+// Covers the full path: wfBuildCtx.version → NewCallMicroflowForVersion → concrete type.
+func TestCallMicroflowTypeName_VersionSelection(t *testing.T) {
+	n := &ast.WorkflowCallMicroflowNode{
+		Microflow: ast.QualifiedName{Module: "HD", Name: "Init"},
+	}
+
+	// Legacy project (< 11.9.0) must produce the old storage type name.
+	legacyWbc := &wfBuildCtx{version: version.Parse("11.6.6")}
+	legacyAct := buildCallMicroflowGenActivity(legacyWbc, n)
+	if legacyAct.TypeName() != "Workflows$CallMicroflowTask" {
+		t.Errorf("legacy (11.6.6): TypeName = %q, want Workflows$CallMicroflowTask", legacyAct.TypeName())
+	}
+
+	// Modern project (>= 11.9.0) must produce the new storage type name.
+	modernWbc := &wfBuildCtx{version: version.Parse("11.9.0")}
+	modernAct := buildCallMicroflowGenActivity(modernWbc, n)
+	if modernAct.TypeName() != "Workflows$CallMicroflowActivity" {
+		t.Errorf("modern (11.9.0): TypeName = %q, want Workflows$CallMicroflowActivity", modernAct.TypeName())
+	}
+}
+
 func TestNewCallMicroflowActivity_TypeName(t *testing.T) {
 	// initCallMicroflowActivity currently sets "Workflows$CallMicroflowTask" — this test proves the bug.
 	act := genWf.NewCallMicroflowActivity()
