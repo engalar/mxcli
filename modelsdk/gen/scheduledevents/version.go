@@ -7,11 +7,59 @@ package scheduledevents
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
+	"ScheduledEvents$Schedule": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ScheduledEvents$DaySchedule": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ScheduledEvents$HourSchedule": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ScheduledEvents$MinuteSchedule": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ScheduledEvents$MonthSchedule": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ScheduledEvents$MonthDateSchedule": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ScheduledEvents$MonthWeekdaySchedule": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"ScheduledEvents$ScheduledEvent": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"onOverlap": {Introduced: "9.12.0"},
 			"schedule":  {Introduced: "9.12.0"},
 		},
 	},
+	"ScheduledEvents$WeekSchedule": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ScheduledEvents$YearSchedule": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ScheduledEvents$YearDateSchedule": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ScheduledEvents$YearWeekdaySchedule": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ScheduledEvent.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ScheduledEvent) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "onOverlap":
+		return version.PropertyVersionInfo{Introduced: "9.12.0", Deleted: ""}, true
+	case "schedule":
+		return version.PropertyVersionInfo{Introduced: "9.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

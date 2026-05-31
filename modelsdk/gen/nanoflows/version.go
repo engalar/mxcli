@@ -7,4 +7,9 @@ package nanoflows
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
-var VersionInfos = map[string]version.TypeVersionInfo{}
+// Available for diagnostic tools; not consulted by the encoder at runtime.
+var VersionInfos = map[string]version.TypeVersionInfo{
+	"Nanoflows$NanoflowParameterValue": {Introduced: "8.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}

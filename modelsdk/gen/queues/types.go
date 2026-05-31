@@ -28,6 +28,7 @@ type QueueConfig struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *QueueConfig) InitFromRaw(raw bson.Raw) {
 }
 
@@ -73,6 +74,7 @@ func (o *BasicQueueConfig) SetClusterWide(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BasicQueueConfig) InitFromRaw(raw bson.Raw) {
 	o.parallelismExpression.Init(raw)
 	o.parallelism.Init(raw)
@@ -143,6 +145,7 @@ func (o *Queue) SetConfig(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Queue) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -166,6 +169,7 @@ type QueueRetry struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *QueueRetry) InitFromRaw(raw bson.Raw) {
 }
 
@@ -222,6 +226,7 @@ func (o *QueueExponentialRetry) SetIntervalType(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *QueueExponentialRetry) InitFromRaw(raw bson.Raw) {
 	o.retries.Init(raw)
 	o.initialInterval.Init(raw)
@@ -275,6 +280,7 @@ func (o *QueueFixedRetry) SetIntervalType(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *QueueFixedRetry) InitFromRaw(raw bson.Raw) {
 	o.retries.Init(raw)
 	o.interval.Init(raw)
@@ -316,6 +322,7 @@ func (o *QueueSettings) SetRetry(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *QueueSettings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Queue"); err == nil {
 		if s, ok := val.StringValueOK(); ok {

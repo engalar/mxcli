@@ -7,64 +7,146 @@ package exceldataimporter
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"ExcelDataImporter$CSVSheet": {
+	"ExcelDataImporter$CSVSheet": {Introduced: "10.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"csvRootElement": {Introduced: "10.15.0", Required: true},
 			"entity":         {},
 		},
 	},
-	"ExcelDataImporter$CSVTemplateContents": {
+	"ExcelDataImporter$TemplateContents": {Introduced: "10.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ExcelDataImporter$CSVTemplateContents": {Introduced: "10.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"sheet": {Required: true, Public: true},
 		},
 	},
-	"ExcelDataImporter$ColumnAttributeMapping": {
+	"ExcelDataImporter$ColumnAttributeMapping": {Introduced: "9.24.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attribute": {Required: true},
 			"reference": {Required: true},
 		},
 	},
-	"ExcelDataImporter$CsvSheetMappingSourceReference": {
+	"ExcelDataImporter$CsvSheetMappingSourceReference": {Introduced: "10.16.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"csvSheet": {Required: true},
 		},
 	},
-	"ExcelDataImporter$ExcelSheet": {
+	"ExcelDataImporter$DataImporterElement": {Introduced: "10.15.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ExcelDataImporter$ExcelSheet": {Introduced: "10.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity":           {},
 			"excelRootElement": {Introduced: "10.15.0", Required: true},
 			"reference":        {Required: true},
 		},
 	},
-	"ExcelDataImporter$ExcelSheetMappingSourceReference": {
+	"ExcelDataImporter$ExcelSheetMappingSourceReference": {Introduced: "10.16.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"excelSheet": {Required: true},
 		},
 	},
-	"ExcelDataImporter$ExcelTemplateContents": {
+	"ExcelDataImporter$ExcelTemplateContents": {Introduced: "10.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"sheets": {Public: true},
 		},
 	},
-	"ExcelDataImporter$ImportExcelDataAction": {
+	"ExcelDataImporter$ImportExcelDataAction": {Introduced: "10.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"fileVariableName":      {Deleted: "11.2.0"},
 			"inputFileVariableName": {Introduced: "11.2.0"},
 			"template":              {},
 		},
 	},
-	"ExcelDataImporter$Sheet": {
+	"ExcelDataImporter$Reference": {Introduced: "9.24.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ExcelDataImporter$IndexReference": {Introduced: "9.24.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ExcelDataImporter$NameReference": {Introduced: "9.24.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ExcelDataImporter$Sheet": {Introduced: "9.24.0", Deleted: "10.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity":    {Introduced: "10.2.0", Required: true},
 			"reference": {Required: true},
 		},
 	},
-	"ExcelDataImporter$Template": {
+	"ExcelDataImporter$Template": {Introduced: "9.24.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"contents":           {Introduced: "10.6.0", Public: true},
 			"sheets":             {Deleted: "10.6.0"},
 			"useAsMappingSource": {Introduced: "10.15.0"},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CSVSheet.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CSVSheet) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "csvRootElement":
+		return version.PropertyVersionInfo{Introduced: "10.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ExcelSheet.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ExcelSheet) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "excelRootElement":
+		return version.PropertyVersionInfo{Introduced: "10.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ImportExcelDataAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ImportExcelDataAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "fileVariableName":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "11.2.0"}, true
+	case "inputFileVariableName":
+		return version.PropertyVersionInfo{Introduced: "11.2.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Sheet.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Sheet) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "entity":
+		return version.PropertyVersionInfo{Introduced: "10.2.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Template.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Template) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "contents":
+		return version.PropertyVersionInfo{Introduced: "10.6.0", Deleted: ""}, true
+	case "sheets":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.6.0"}, true
+	case "useAsMappingSource":
+		return version.PropertyVersionInfo{Introduced: "10.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

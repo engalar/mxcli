@@ -7,6 +7,7 @@ package menus
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"Menus$MenuDocument": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -20,4 +21,16 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"caption":         {Required: true},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MenuItem.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MenuItem) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "alternativeText":
+		return version.PropertyVersionInfo{Introduced: "8.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

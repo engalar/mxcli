@@ -7,6 +7,7 @@ package security
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"Security$ModuleRole": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -39,4 +40,20 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"name": {Public: true},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ProjectSecurity.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ProjectSecurity) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "signInMicroflow":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "strictMode":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	case "strictPageUrlCheck":
+		return version.PropertyVersionInfo{Introduced: "9.8.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

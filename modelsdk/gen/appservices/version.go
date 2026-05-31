@@ -7,8 +7,9 @@ package appservices
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"AppServices$AppServiceAction": {
+	"AppServices$AppServiceAction": {Deleted: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"actionReturnType": {Introduced: "7.9.0", Required: true},
 			"name":             {Public: true},
@@ -16,20 +17,20 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"returnType":       {Deleted: "7.9.0"},
 		},
 	},
-	"AppServices$AppServiceActionParameter": {
+	"AppServices$AppServiceActionParameter": {Deleted: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"name":          {Public: true},
 			"parameterType": {Introduced: "7.9.0", Required: true},
 			"type":          {Deleted: "7.9.0"},
 		},
 	},
-	"AppServices$ConsumedAppService": {
+	"AppServices$ConsumedAppService": {Deleted: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"actions": {Public: true},
 			"msd":     {Required: true},
 		},
 	},
-	"AppServices$Msd": {
+	"AppServices$Msd": {Deleted: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"domainModel":     {Required: true},
 			"enumerations":    {Required: true},
@@ -38,14 +39,96 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"wsdlDescription": {Required: true},
 		},
 	},
-	"AppServices$MsdMicroflow": {
+	"AppServices$MsdAssociation": {Deleted: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"AppServices$MsdAttribute": {Deleted: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"AppServices$MsdDomainModel": {Deleted: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"AppServices$MsdEntity": {Deleted: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"AppServices$MsdEnumeration": {Deleted: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"AppServices$MsdEnumerationContainer": {Deleted: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"AppServices$MsdEnumerationValue": {Deleted: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"AppServices$MsdMetadata": {Deleted: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"AppServices$MsdMicroflow": {Deleted: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"systemEntityType": {Deleted: "6.1.0"},
 		},
 	},
-	"AppServices$MsdMicroflowParameter": {
+	"AppServices$MsdMicroflowParameter": {Deleted: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"systemEntityType": {Deleted: "6.1.0"},
 		},
 	},
+	"AppServices$MsdText": {Deleted: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"AppServices$MsdVersion": {Deleted: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for AppServiceAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *AppServiceAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "actionReturnType":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	case "returnType":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.9.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for AppServiceActionParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *AppServiceActionParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "parameterType":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.9.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MsdMicroflow.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MsdMicroflow) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "systemEntityType":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.1.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MsdMicroflowParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MsdMicroflowParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "systemEntityType":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.1.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

@@ -28,6 +28,7 @@ type AbstractDesignPropertyValue struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AbstractDesignPropertyValue) InitFromRaw(raw bson.Raw) {
 }
 
@@ -73,6 +74,7 @@ func (o *AccessibilitySettings) SetAccessible(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AccessibilitySettings) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "ScreenReaderDescription"); err == nil {
 		o.screenReaderDescription.SetFromDecode(child)
@@ -147,6 +149,7 @@ func (o *Widget) SetTabIndex(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Widget) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -243,6 +246,7 @@ func (o *ConditionallyVisibleWidget) SetAccessibilitySettings(v element.Element)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConditionallyVisibleWidget) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -400,6 +404,7 @@ func (o *Button) SetButtonStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Button) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -620,6 +625,7 @@ func (o *ActionButton) SetNativeAccessibilitySettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ActionButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -687,6 +693,7 @@ func (o *ActionItem) SetAction(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ActionItem) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Action"); err == nil {
 		o.action.SetFromDecode(child)
@@ -751,6 +758,7 @@ func (o *Appearance) SetDynamicClasses(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Appearance) InitFromRaw(raw bson.Raw) {
 	o.class.Init(raw)
 	o.style.Init(raw)
@@ -782,6 +790,7 @@ func (o *DataSource) SetForceFullObjects(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 }
@@ -839,6 +848,7 @@ func (o *EntityPathSource) SetSourceVariable(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EntityPathSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.entityPath.Init(raw)
@@ -903,6 +913,7 @@ func (o *AssociationSource) SetSourceVariable(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AssociationSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.entityPath.Init(raw)
@@ -1022,6 +1033,7 @@ func (o *ConditionallyEditableWidget) SetEditable(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConditionallyEditableWidget) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -1187,6 +1199,7 @@ func (o *InputWidget) SetScreenReaderLabel(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *InputWidget) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -1394,6 +1407,7 @@ func (o *MemberWidget) SetReadOnlyStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MemberWidget) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -1665,6 +1679,7 @@ func (o *AssociationWidget) SetSourceVariable(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AssociationWidget) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -2017,6 +2032,7 @@ func (o *AttributeWidget) SetAriaRequired(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AttributeWidget) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -2405,6 +2421,7 @@ func (o *AttributeWidgetWithPlaceholder) SetPlaceholderTemplate(v element.Elemen
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AttributeWidgetWithPlaceholder) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -2623,6 +2640,7 @@ func (o *BackButton) SetButtonStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BackButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -2733,6 +2751,7 @@ func (o *FormBase) SetCanvasHeight(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *FormBase) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -2876,6 +2895,7 @@ func (o *TemplateFormBase) SetImageData(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TemplateFormBase) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -3062,6 +3082,7 @@ func (o *BuildingBlock) SetPlatform(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BuildingBlock) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -3113,6 +3134,7 @@ func (o *ClientAction) SetDisabledDuringExecution(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 }
@@ -3213,6 +3235,7 @@ func (o *CallNanoflowClientAction) RemoveOutputMappings(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CallNanoflowClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if val, err := raw.LookupErr("Nanoflow"); err == nil {
@@ -3307,6 +3330,7 @@ func (o *CallWorkflowClientAction) SetConfirmationInfo(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CallWorkflowClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if val, err := raw.LookupErr("Workflow"); err == nil {
@@ -3473,6 +3497,7 @@ func (o *CancelButton) SetClosePage(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CancelButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -3540,6 +3565,7 @@ func (o *CancelChangesClientAction) SetClosePage(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CancelChangesClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	o.closePage.Init(raw)
@@ -3565,6 +3591,7 @@ func (o *CancelSynchronizationClientAction) SetDisabledDuringExecution(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CancelSynchronizationClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 }
@@ -3897,6 +3924,7 @@ func (o *CheckBox) SetNativeAccessibilitySettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CheckBox) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -4028,6 +4056,7 @@ func (o *ClientTemplate) SetFallback(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ClientTemplate) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Template"); err == nil {
 		o.template.SetFromDecode(child)
@@ -4106,6 +4135,7 @@ func (o *ClientTemplateParameter) SetSourceVariable(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ClientTemplateParameter) InitFromRaw(raw bson.Raw) {
 	o.attributePath.Init(raw)
 	if child, err := codec.DecodeChild(raw, "AttributeRef"); err == nil {
@@ -4162,6 +4192,7 @@ func (o *ClosePageClientAction) SetNumberOfPagesToClose(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ClosePageClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	o.numberOfPages.Init(raw)
@@ -4265,6 +4296,7 @@ func (o *EntityWidget) SetDataSource(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EntityWidget) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -4381,6 +4413,7 @@ func (o *ListenTargetWidget) SetDataSource(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ListenTargetWidget) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -4585,6 +4618,7 @@ func (o *Grid) SetControlBar(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Grid) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -4871,6 +4905,7 @@ func (o *ColumnGrid) SetTooltipPageQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ColumnGrid) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -4949,6 +4984,7 @@ func (o *ControlBarItem) SetName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ControlBarItem) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 }
@@ -5028,6 +5064,7 @@ func (o *SearchField) SetDefaultValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SearchField) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -5153,6 +5190,7 @@ func (o *SingleSearchField) SetOperator(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SingleSearchField) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -5287,6 +5325,7 @@ func (o *ComparisonSearchField) SetOperator(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ComparisonSearchField) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -5338,6 +5377,7 @@ func (o *CompoundDesignPropertyValue) RemoveProperties(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CompoundDesignPropertyValue) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Properties"); err == nil {
 		for _, child := range children {
@@ -5415,6 +5455,7 @@ func (o *ConditionalSettings) SetExpressionModel(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConditionalSettings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Attribute"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -5504,6 +5545,7 @@ func (o *ConditionalEditabilitySettings) SetExpressionModel(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConditionalEditabilitySettings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Attribute"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -5620,6 +5662,7 @@ func (o *ConditionalVisibilitySettings) SetIgnoreSecurity(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConditionalVisibilitySettings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Attribute"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -5695,6 +5738,7 @@ func (o *ConfirmationInfo) SetCancelButtonCaption(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConfirmationInfo) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Question"); err == nil {
 		o.question.SetFromDecode(child)
@@ -5732,6 +5776,7 @@ func (o *ControlBar) RemoveItems(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ControlBar) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {
@@ -5848,6 +5893,7 @@ func (o *ControlBarButton) SetButtonStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ControlBarButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -5938,6 +5984,7 @@ func (o *CreateObjectClientAction) SetNumberOfPagesToClose2(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CreateObjectClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if child, err := codec.DecodeChild(raw, "EntityRef"); err == nil {
@@ -5970,6 +6017,7 @@ func (o *CustomDesignPropertyValue) SetValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CustomDesignPropertyValue) InitFromRaw(raw bson.Raw) {
 	o.value.Init(raw)
 }
@@ -6230,6 +6278,7 @@ func (o *DataGrid) SetCaption(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataGrid) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -6399,6 +6448,7 @@ func (o *GridControlBarButton) SetButtonStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridControlBarButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -6544,6 +6594,7 @@ func (o *DataGridAddButton) SetPageSettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataGridAddButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -6747,6 +6798,7 @@ func (o *DataGridExportToCSVButton) SetUseGridDateFormat(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataGridExportToCSVButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -6909,6 +6961,7 @@ func (o *DataGridExportToExcelButton) SetUseExcelDateType(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataGridExportToExcelButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -7045,6 +7098,7 @@ func (o *DataGridRemoveButton) SetButtonStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataGridRemoveButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -7343,6 +7397,7 @@ func (o *DataView) SetReadOnlyStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataView) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -7522,6 +7577,7 @@ func (o *DataViewControlBarButton) SetTabIndex(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataViewControlBarButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -7679,6 +7735,7 @@ func (o *DataViewActionButton) SetAction(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataViewActionButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -7828,6 +7885,7 @@ func (o *DataViewCancelButton) SetTabIndex(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataViewCancelButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -7974,6 +8032,7 @@ func (o *DataViewCloseButton) SetTabIndex(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataViewCloseButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -8037,6 +8096,7 @@ func (o *DataViewControlBar) SetCloseButtonID(v element.ID) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataViewControlBar) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {
@@ -8182,6 +8242,7 @@ func (o *DataViewSaveButton) SetSyncAutomatically(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataViewSaveButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -8285,6 +8346,7 @@ func (o *DataViewSource) SetSnippetParameterQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataViewSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.entityPath.Init(raw)
@@ -8348,6 +8410,7 @@ func (o *DatabaseConstraint) SetValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DatabaseConstraint) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Attribute"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -8426,6 +8489,7 @@ func (o *SortableEntityPathSource) SetSortBar(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SortableEntityPathSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.entityPath.Init(raw)
@@ -8520,6 +8584,7 @@ func (o *DatabaseSourceBase) RemoveDatabaseConstraints(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DatabaseSourceBase) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.entityPath.Init(raw)
@@ -8878,6 +8943,7 @@ func (o *DatePicker) SetNativeAccessibilitySettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DatePicker) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -9003,6 +9069,7 @@ func (o *DeleteClientAction) SetSourceVariable(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DeleteClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	o.closePage.Init(raw)
@@ -9075,6 +9142,7 @@ func (o *DesignPropertyValue) SetValue(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DesignPropertyValue) InitFromRaw(raw bson.Raw) {
 	o.key.Init(raw)
 	if val, err := raw.LookupErr("Type"); err == nil {
@@ -9246,6 +9314,7 @@ func (o *DivContainer) SetNativeAccessibilitySettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DivContainer) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -9599,6 +9668,7 @@ func (o *DropDown) SetNativeAccessibilitySettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DropDown) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -9833,6 +9903,7 @@ func (o *DropDownButton) RemoveItems(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DropDownButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -9915,6 +9986,7 @@ func (o *DropDownButtonItem) SetImageQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DropDownButtonItem) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Action"); err == nil {
 		o.action.SetFromDecode(child)
@@ -10070,6 +10142,7 @@ func (o *DropDownSearchField) SetAllowMultipleSelect(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DropDownSearchField) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -10330,6 +10403,7 @@ func (o *DynamicImageViewer) SetNativeAccessibilitySettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DynamicImageViewer) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -10511,6 +10585,7 @@ func (o *DynamicText) SetNativeAccessibilitySettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DynamicText) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -10552,6 +10627,7 @@ type TemplateType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TemplateType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -10564,6 +10640,7 @@ type EditPageTemplateType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EditPageTemplateType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -10752,6 +10829,7 @@ func (o *FileManager) SetShowFileInBrowser(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *FileManager) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -10857,6 +10935,7 @@ func (o *FormattingInfo) SetCustomDateFormat(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *FormattingInfo) InitFromRaw(raw bson.Raw) {
 	o.decimalPrecision.Init(raw)
 	o.groupDigits.Init(raw)
@@ -10882,6 +10961,7 @@ type Icon struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Icon) InitFromRaw(raw bson.Raw) {
 }
 
@@ -10905,6 +10985,7 @@ func (o *GlyphIcon) SetCode(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GlyphIcon) InitFromRaw(raw bson.Raw) {
 	o.code.Init(raw)
 }
@@ -11039,6 +11120,7 @@ func (o *GridActionButton) SetMaintainSelectionAfterMicroflow(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridActionButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -11144,6 +11226,7 @@ func (o *GridBaseSource) SetSearchBar(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridBaseSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.entityPath.Init(raw)
@@ -11313,6 +11396,7 @@ func (o *GridColumn) SetAppearance(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridColumn) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -11390,6 +11474,7 @@ func (o *GridControlBar) SetDefaultButtonID(v element.ID) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridControlBar) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {
@@ -11499,6 +11584,7 @@ func (o *GridDatabaseSource) SetSearchBar(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridDatabaseSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.entityPath.Init(raw)
@@ -11629,6 +11715,7 @@ func (o *GridDeleteButton) SetButtonStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridDeleteButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -11763,6 +11850,7 @@ func (o *GridDeselectAllButton) SetButtonStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridDeselectAllButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -11924,6 +12012,7 @@ func (o *GridEditButton) RemovePagesForSpecializations(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridEditButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -12110,6 +12199,7 @@ func (o *GridNewButton) SetIsPersistent(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridNewButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -12258,6 +12348,7 @@ func (o *GridSearchButton) SetButtonStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridSearchButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -12403,6 +12494,7 @@ func (o *GridSelectAllButton) SetSelectionType(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridSelectAllButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -12459,6 +12551,7 @@ func (o *GridSortBar) RemoveSortItems(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridSortBar) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "SortItems"); err == nil {
 		for _, child := range children {
@@ -12509,6 +12602,7 @@ func (o *GridSortItem) SetSortDirection(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridSortItem) InitFromRaw(raw bson.Raw) {
 	o.attributePath.Init(raw)
 	if child, err := codec.DecodeChild(raw, "AttributeRef"); err == nil {
@@ -12645,6 +12739,7 @@ func (o *GridXPathSource) AddRemoveFromContextIds(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GridXPathSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.entityPath.Init(raw)
@@ -12823,6 +12918,7 @@ func (o *GroupBox) RemoveWidgets(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GroupBox) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -12978,6 +13074,7 @@ func (o *Header) RemoveRightWidgets(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Header) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -13155,6 +13252,7 @@ func (o *SplitPane) SetPosition(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SplitPane) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -13335,6 +13433,7 @@ func (o *HorizontalSplitPane) SetPosition(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *HorizontalSplitPane) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -13384,6 +13483,7 @@ func (o *IconCollectionIcon) SetImageQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *IconCollectionIcon) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Image"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -13412,6 +13512,7 @@ func (o *ImageIcon) SetImageQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ImageIcon) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Image"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -13594,6 +13695,7 @@ func (o *ImageUploader) SetMaxFileSize(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ImageUploader) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -13683,6 +13785,7 @@ func (o *ImageViewerSource) SetSourceVariable(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ImageViewerSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.entityPath.Init(raw)
@@ -13923,6 +14026,7 @@ func (o *InputReferenceSetSelector) SetSourceVariable(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *InputReferenceSetSelector) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -14077,6 +14181,7 @@ func (o *Label) SetCaption(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Label) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -14341,6 +14446,7 @@ func (o *Layout) SetStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Layout) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -14433,6 +14539,7 @@ func (o *LayoutCall) RemoveArguments(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LayoutCall) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Form"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -14504,6 +14611,7 @@ func (o *LayoutCallArgument) RemoveWidgets(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LayoutCallArgument) InitFromRaw(raw bson.Raw) {
 	o.parameterName.Init(raw)
 	if val, err := raw.LookupErr("Parameter"); err == nil {
@@ -14530,6 +14638,7 @@ type LayoutContent struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LayoutContent) InitFromRaw(raw bson.Raw) {
 }
 
@@ -14646,6 +14755,7 @@ func (o *LayoutGrid) RemoveRows(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LayoutGrid) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -14796,6 +14906,7 @@ func (o *LayoutGridColumn) SetVerticalAlignment(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LayoutGridColumn) InitFromRaw(raw bson.Raw) {
 	o.weight.Init(raw)
 	o.tabletWeight.Init(raw)
@@ -14923,6 +15034,7 @@ func (o *LayoutGridRow) SetSpacingBetweenColumns(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LayoutGridRow) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Columns"); err == nil {
 		for _, child := range children {
@@ -14970,6 +15082,7 @@ func (o *LayoutParameter) SetName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LayoutParameter) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 }
@@ -15137,6 +15250,7 @@ func (o *LinkButton) SetAddress(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LinkButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -15386,6 +15500,7 @@ func (o *ListView) SetPullDownAction(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ListView) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -15523,6 +15638,7 @@ func (o *ListViewDatabaseSource) SetSearch(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ListViewDatabaseSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.entityPath.Init(raw)
@@ -15576,6 +15692,7 @@ func (o *ListViewSearch) RemoveSearchRefs(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ListViewSearch) InitFromRaw(raw bson.Raw) {
 	o.searchPaths.Init(raw)
 	if children, err := codec.DecodeChildren(raw, "SearchRefs"); err == nil {
@@ -15632,6 +15749,7 @@ func (o *ListViewTemplate) RemoveWidgets(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ListViewTemplate) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Specialization"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -15723,6 +15841,7 @@ func (o *XPathSourceBase) SetXPathConstraint(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *XPathSourceBase) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.entityPath.Init(raw)
@@ -15824,6 +15943,7 @@ func (o *ListViewXPathSource) SetSearch(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ListViewXPathSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.entityPath.Init(raw)
@@ -15873,6 +15993,7 @@ func (o *ListenTargetSource) SetListenTarget(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ListenTargetSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.listenTarget.Init(raw)
@@ -15920,6 +16041,7 @@ func (o *LocalVariable) SetDefaultValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LocalVariable) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "VariableType"); err == nil {
@@ -16080,6 +16202,7 @@ func (o *LoginButton) SetValidationMessageWidget(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LoginButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -16213,6 +16336,7 @@ func (o *LoginTextBox) SetPlaceholder(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LoginTextBox) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -16327,6 +16451,7 @@ func (o *LoginIdTextBox) SetPlaceholder(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LoginIdTextBox) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -16485,6 +16610,7 @@ func (o *LogoutButton) SetButtonStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LogoutButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -16606,6 +16732,7 @@ func (o *MasterDetail) SetDetail(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MasterDetail) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -16664,6 +16791,7 @@ func (o *MasterDetailRegion) SetStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MasterDetailRegion) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Widget"); err == nil {
 		o.widget.SetFromDecode(child)
@@ -16747,6 +16875,7 @@ func (o *MasterDetailDetailRegion) SetTitle(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MasterDetailDetailRegion) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Widget"); err == nil {
 		o.widget.SetFromDecode(child)
@@ -16824,6 +16953,7 @@ func (o *MasterDetailMasterRegion) SetTabletWeight(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MasterDetailMasterRegion) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Widget"); err == nil {
 		o.widget.SetFromDecode(child)
@@ -16909,6 +17039,7 @@ func (o *MenuWidget) SetMenuSource(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MenuWidget) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -16997,6 +17128,7 @@ func (o *MenuBar) SetMenuSource(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MenuBar) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -17019,6 +17151,7 @@ type MenuSource struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MenuSource) InitFromRaw(raw bson.Raw) {
 }
 
@@ -17042,6 +17175,7 @@ func (o *MenuDocumentSource) SetMenuQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MenuDocumentSource) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Menu"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -17081,6 +17215,7 @@ func (o *MicroflowClientAction) SetMicroflowSettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if child, err := codec.DecodeChild(raw, "MicroflowSettings"); err == nil {
@@ -17152,6 +17287,7 @@ func (o *MicroflowParameterMapping) SetUseAllPages(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -17288,6 +17424,7 @@ func (o *MicroflowSettings) RemoveOutputMappings(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowSettings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -17355,6 +17492,7 @@ func (o *MicroflowSource) SetMicroflowSettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	if child, err := codec.DecodeChild(raw, "MicroflowSettings"); err == nil {
@@ -17393,6 +17531,7 @@ func (o *NamedValue) SetValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NamedValue) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.value.Init(raw)
@@ -17462,6 +17601,7 @@ func (o *NanoflowParameterMapping) SetUseAllPages(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NanoflowParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -17527,6 +17667,7 @@ func (o *NanoflowSource) RemoveParameterMappings(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NanoflowSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	if val, err := raw.LookupErr("Nanoflow"); err == nil {
@@ -17626,6 +17767,7 @@ func (o *NativeLayoutContent) RemoveSidebarWidgets(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NativeLayoutContent) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("LayoutType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -17751,6 +17893,7 @@ func (o *NavigationList) RemoveItems(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NavigationList) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -17863,6 +18006,7 @@ func (o *NavigationListItem) SetConditionalVisibilitySettings(v element.Element)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NavigationListItem) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Action"); err == nil {
 		o.action.SetFromDecode(child)
@@ -17916,6 +18060,7 @@ func (o *NavigationSource) SetNavigationProfileQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NavigationSource) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ProfileType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -18004,6 +18149,7 @@ func (o *NavigationTree) SetMenuSource(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NavigationTree) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -18202,6 +18348,7 @@ func (o *NewButton) SetPageSettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NewButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -18269,6 +18416,7 @@ func (o *NoClientAction) SetDisabledDuringExecution(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NoClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 }
@@ -18299,6 +18447,7 @@ func (o *OfflineSchema) Tables() string {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OfflineSchema) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Role"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -18339,6 +18488,7 @@ func (o *OfflineSchemaFetchInstruction) SetXPath(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OfflineSchemaFetchInstruction) InitFromRaw(raw bson.Raw) {
 	o.tableName.Init(raw)
 	o.xPath.Init(raw)
@@ -18353,6 +18503,7 @@ type OnClickBehavior struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OnClickBehavior) InitFromRaw(raw bson.Raw) {
 }
 
@@ -18365,6 +18516,7 @@ type OnClickEnlarge struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OnClickEnlarge) InitFromRaw(raw bson.Raw) {
 }
 
@@ -18388,6 +18540,7 @@ func (o *OnClickMicroflow) SetMicroflowSettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OnClickMicroflow) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "MicroflowSettings"); err == nil {
 		o.microflowSettings.SetFromDecode(child)
@@ -18403,6 +18556,7 @@ type OnClickNothing struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OnClickNothing) InitFromRaw(raw bson.Raw) {
 }
 
@@ -18448,6 +18602,7 @@ func (o *OpenLinkClientAction) SetAddress(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OpenLinkClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if val, err := raw.LookupErr("LinkType"); err == nil {
@@ -18502,6 +18657,7 @@ func (o *OpenUserTaskClientAction) SetOpenWhenAssigned(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OpenUserTaskClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	o.assignOnOpen.Init(raw)
@@ -18539,6 +18695,7 @@ func (o *OpenWorkflowClientAction) SetDefaultPageQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OpenWorkflowClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if val, err := raw.LookupErr("DefaultPage"); err == nil {
@@ -18568,6 +18725,7 @@ func (o *OptionDesignPropertyValue) SetOption(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OptionDesignPropertyValue) InitFromRaw(raw bson.Raw) {
 	o.option.Init(raw)
 }
@@ -18625,6 +18783,7 @@ func (o *OutputMapping) SetSourceAttributeRef(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OutputMapping) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "SourceVariable"); err == nil {
 		o.sourceVariable.SetFromDecode(child)
@@ -18647,6 +18806,7 @@ type OverviewPageTemplateType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OverviewPageTemplateType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -18905,6 +19065,7 @@ func (o *Page) RemoveVariables(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Page) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -19031,6 +19192,7 @@ func (o *PageClientAction) SetNumberOfPagesToClose2(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PageClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if child, err := codec.DecodeChild(raw, "FormSettings"); err == nil {
@@ -19076,6 +19238,7 @@ func (o *PageForSpecialization) SetPageSettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PageForSpecialization) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Entity"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -19140,6 +19303,7 @@ func (o *PageParameter) SetDefaultValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PageParameter) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ParameterType"); err == nil {
@@ -19191,6 +19355,7 @@ func (o *PageParameterMapping) SetArgument(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PageParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -19223,6 +19388,7 @@ func (o *PagePrimitiveParameterUrlSegment) SetPageParameterQualifiedName(v strin
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PagePrimitiveParameterUrlSegment) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("PageParameter"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -19300,6 +19466,7 @@ func (o *PageSettings) RemoveParameterMappings(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PageSettings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Form"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -19520,6 +19687,7 @@ func (o *PageTemplate) SetTemplateType(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PageTemplate) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -19629,6 +19797,7 @@ func (o *PageVariable) SetSubKey(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PageVariable) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Widget"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -19685,6 +19854,7 @@ func (o *ParameterAttributeUrlSegment) SetAttributeQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ParameterAttributeUrlSegment) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("PageParameter"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -19718,6 +19888,7 @@ func (o *ParameterIdUrlSegment) SetPageParameterQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ParameterIdUrlSegment) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("PageParameter"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -19823,6 +19994,7 @@ func (o *PasswordTextBox) SetPlaceholder(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PasswordTextBox) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -19904,6 +20076,7 @@ func (o *Placeholder) SetTabIndex(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Placeholder) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -20220,6 +20393,7 @@ func (o *RadioButtonGroup) SetRenderHorizontal(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RadioButtonGroup) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -20433,6 +20607,7 @@ func (o *RangeSearchField) SetIncludeUpper(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RangeSearchField) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -20777,6 +20952,7 @@ func (o *ReferenceSelector) SetNativeAccessibilitySettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReferenceSelector) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -21185,6 +21361,7 @@ func (o *ReferenceSetSelector) AddRemoveFromContextEntities(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReferenceSetSelector) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -21344,6 +21521,7 @@ func (o *ReferenceSetSource) SetSearchBar(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReferenceSetSource) InitFromRaw(raw bson.Raw) {
 	o.forceFullObjects.Init(raw)
 	o.entityPath.Init(raw)
@@ -21370,6 +21548,7 @@ type RegularPageTemplateType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RegularPageTemplateType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -21519,6 +21698,7 @@ func (o *RetrievalQuery) RemoveParameters(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RetrievalQuery) InitFromRaw(raw bson.Raw) {
 	o.queryId.Init(raw)
 	if val, err := raw.LookupErr("AllowedUserRoles"); err == nil {
@@ -21594,6 +21774,7 @@ func (o *RetrievalQueryParameter) Types() string {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RetrievalQueryParameter) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.propType.Init(raw)
@@ -21643,6 +21824,7 @@ func (o *RetrievalSchema) SetEntity(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RetrievalSchema) InitFromRaw(raw bson.Raw) {
 	o.usedAttributes.Init(raw)
 	o.usedAssociations.Init(raw)
@@ -21756,6 +21938,7 @@ func (o *RuntimeOperation) RemoveAllowedUserRoleSets(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RuntimeOperation) InitFromRaw(raw bson.Raw) {
 	o.operationId.Init(raw)
 	if children, err := codec.DecodeChildren(raw, "Parameters"); err == nil {
@@ -21952,6 +22135,7 @@ func (o *SaveButton) SetClosePage(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SaveButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -22031,6 +22215,7 @@ func (o *SaveChangesClientAction) SetClosePage(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SaveChangesClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	o.syncAutomatically.Init(raw)
@@ -22222,6 +22407,7 @@ func (o *ScrollContainer) SetNativeHideScrollbars(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ScrollContainer) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -22371,6 +22557,7 @@ func (o *ScrollContainerRegion) SetToggleMode(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ScrollContainerRegion) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Widget"); err == nil {
 		o.widget.SetFromDecode(child)
@@ -22445,6 +22632,7 @@ func (o *SearchBar) SetWaitForSearch(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SearchBar) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {
@@ -22567,6 +22755,7 @@ func (o *SelectButton) SetButtonStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SelectButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -22602,6 +22791,7 @@ type SelectPageTemplateType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SelectPageTemplateType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -22614,6 +22804,7 @@ type SelectorSource struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SelectorSource) InitFromRaw(raw bson.Raw) {
 }
 
@@ -22653,6 +22844,7 @@ func (o *SelectorDatabaseSource) SetSortBar(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SelectorDatabaseSource) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "DatabaseConstraints"); err == nil {
 		for _, child := range children {
@@ -22684,6 +22876,7 @@ func (o *SelectorMicroflowSource) SetDataSourceMicroflowSettings(v element.Eleme
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SelectorMicroflowSource) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "DataSourceMicroflowSettings"); err == nil {
 		o.dataSourceMicroflowSettings.SetFromDecode(child)
@@ -22781,6 +22974,7 @@ func (o *SelectorXPathSource) AddRemoveFromContextEntities(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SelectorXPathSource) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "SortBar"); err == nil {
 		o.sortBar.SetFromDecode(child)
@@ -22872,6 +23066,7 @@ func (o *SetTaskOutcomeClientAction) SetCommit(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SetTaskOutcomeClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if val, err := raw.LookupErr("Outcome"); err == nil {
@@ -23058,6 +23253,7 @@ func (o *SidebarToggleButton) SetInitiallyOpen(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SidebarToggleButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -23124,6 +23320,7 @@ func (o *SignOutClientAction) SetDisabledDuringExecution(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SignOutClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 }
@@ -23214,6 +23411,7 @@ func (o *SimpleMenuBar) SetOrientation(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SimpleMenuBar) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -23388,6 +23586,7 @@ func (o *Snippet) RemoveVariables(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Snippet) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -23465,6 +23664,7 @@ func (o *SnippetCall) RemoveParameterMappings(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SnippetCall) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Form"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -23553,6 +23753,7 @@ func (o *SnippetCallWidget) SetSnippetCall(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SnippetCallWidget) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -23597,6 +23798,7 @@ func (o *SnippetParameter) SetParameterType(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SnippetParameter) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ParameterType"); err == nil {
@@ -23646,6 +23848,7 @@ func (o *SnippetParameterMapping) SetArgument(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SnippetParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -23843,6 +24046,7 @@ func (o *StaticImageViewer) SetNativeAccessibilitySettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *StaticImageViewer) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -23939,6 +24143,7 @@ func (o *StaticOrDynamicString) SetAttributeRef(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *StaticOrDynamicString) InitFromRaw(raw bson.Raw) {
 	o.isDynamic.Init(raw)
 	o.value.Init(raw)
@@ -23957,6 +24162,7 @@ type UrlSegment struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UrlSegment) InitFromRaw(raw bson.Raw) {
 }
 
@@ -23980,6 +24186,7 @@ func (o *StaticUrlSegment) SetSegment(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *StaticUrlSegment) InitFromRaw(raw bson.Raw) {
 	o.segment.Init(raw)
 }
@@ -24125,6 +24332,7 @@ func (o *SyncButton) SetButtonStyle(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SyncButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -24180,6 +24388,7 @@ func (o *SyncClientAction) SetDisabledDuringExecution(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SyncClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 }
@@ -24330,6 +24539,7 @@ func (o *TabContainer) SetActivePageOnChangeAction(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TabContainer) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -24458,6 +24668,7 @@ func (o *TabPage) SetBadge(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TabPage) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -24625,6 +24836,7 @@ func (o *Table) RemoveRows(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Table) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -24785,6 +24997,7 @@ func (o *TableCell) SetHeight(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TableCell) InitFromRaw(raw bson.Raw) {
 	o.class.Init(raw)
 	o.style.Init(raw)
@@ -24826,6 +25039,7 @@ func (o *TableColumn) SetWidth(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TableColumn) InitFromRaw(raw bson.Raw) {
 	o.width.Init(raw)
 }
@@ -24883,6 +25097,7 @@ func (o *TableRow) SetConditionalVisibilitySettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TableRow) InitFromRaw(raw bson.Raw) {
 	o.class.Init(raw)
 	o.style.Init(raw)
@@ -25112,6 +25327,7 @@ func (o *TemplateGrid) SetNumberOfColumns(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TemplateGrid) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -25194,6 +25410,7 @@ func (o *TemplateGridContents) RemoveWidgets(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TemplateGridContents) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Widget"); err == nil {
 		o.widget.SetFromDecode(child)
@@ -25280,6 +25497,7 @@ func (o *TemplatePlaceholder) SetType(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TemplatePlaceholder) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -25630,6 +25848,7 @@ func (o *TextWidget) SetAutoFocus(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TextWidget) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -26125,6 +26344,7 @@ func (o *TextArea) SetNativeAccessibilitySettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TextArea) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -26670,6 +26890,7 @@ func (o *TextBox) SetNativeAccessibilitySettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TextBox) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -26874,6 +27095,7 @@ func (o *Title) SetNativeAccessibilitySettings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Title) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -26902,6 +27124,7 @@ type ToggleDesignPropertyValue struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ToggleDesignPropertyValue) InitFromRaw(raw bson.Raw) {
 }
 
@@ -26930,6 +27153,7 @@ func (o *UserRoleSet) AddUserRoles(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UserRoleSet) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("UserRoles"); err == nil {
 		if arr, ok := val.ArrayOK(); ok {
@@ -26954,6 +27178,7 @@ type WorkflowTemplateType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WorkflowTemplateType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -26966,6 +27191,7 @@ type UserTaskTemplateType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UserTaskTemplateType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -27033,6 +27259,7 @@ func (o *ValidationMessage) SetTabIndex(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ValidationMessage) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -27123,6 +27350,7 @@ func (o *VerticalFlow) RemoveWidgets(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *VerticalFlow) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -27289,6 +27517,7 @@ func (o *VerticalSplitPane) SetPosition(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *VerticalSplitPane) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -27365,6 +27594,7 @@ func (o *WebLayoutContent) RemoveWidgets(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WebLayoutContent) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("LayoutType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -27423,6 +27653,7 @@ func (o *WidgetValidation) SetMessage(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WidgetValidation) InitFromRaw(raw bson.Raw) {
 	o.expression.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ExpressionModel"); err == nil {
@@ -27442,6 +27673,7 @@ type WorkflowOverviewTemplateType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WorkflowOverviewTemplateType) InitFromRaw(raw bson.Raw) {
 }
 

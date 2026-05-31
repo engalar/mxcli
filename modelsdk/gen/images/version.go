@@ -7,6 +7,7 @@ package images
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"Images$Image": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -19,4 +20,16 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"images": {Public: true},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Image.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Image) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "imageFormat":
+		return version.PropertyVersionInfo{Introduced: "9.17.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

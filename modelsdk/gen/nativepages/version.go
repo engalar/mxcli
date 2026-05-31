@@ -7,28 +7,73 @@ package nativepages
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"NativePages$BottomBarItem": {
+	"NativePages$BottomBarItem": {Introduced: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"action":  {Deleted: "8.15.0", Required: true},
 			"caption": {Required: true},
 			"page":    {Introduced: "8.15.0"},
 		},
 	},
-	"NativePages$NativeLayout": {
+	"NativePages$NativeLayout": {Introduced: "7.21.0", Deleted: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"headerWidget": {Introduced: "7.22.0"},
 		},
 	},
-	"NativePages$NativeLayoutCallArgument": {
+	"NativePages$NativeLayoutCallArgument": {Introduced: "7.23.0", Deleted: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parameter": {Required: true},
 		},
 	},
-	"NativePages$NativePage": {
+	"NativePages$NativePage": {Introduced: "7.21.0", Deleted: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"arguments": {Introduced: "7.23.0"},
 			"layout":    {Required: true},
 		},
 	},
+	"NativePages$NativePageClientAction": {Introduced: "7.23.0", Deleted: "8.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"NativePages$NativePlaceholder": {Introduced: "7.23.0", Deleted: "8.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for BottomBarItem.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *BottomBarItem) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "action":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.15.0"}, true
+	case "page":
+		return version.PropertyVersionInfo{Introduced: "8.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NativeLayout.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NativeLayout) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "headerWidget":
+		return version.PropertyVersionInfo{Introduced: "7.22.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NativePage.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NativePage) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "arguments":
+		return version.PropertyVersionInfo{Introduced: "7.23.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

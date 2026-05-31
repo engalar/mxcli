@@ -7,6 +7,7 @@ package enumerations
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"Enumerations$Enumeration": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -21,4 +22,34 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"remoteValue": {Introduced: "10.12.0"},
 		},
 	},
+	"Enumerations$RemoteEnumerationSource": {Introduced: "10.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Enumerations$RemoteEnumerationValue": {Introduced: "10.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Enumeration.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Enumeration) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "remoteSource":
+		return version.PropertyVersionInfo{Introduced: "10.2.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for EnumerationValue.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *EnumerationValue) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "remoteValue":
+		return version.PropertyVersionInfo{Introduced: "10.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

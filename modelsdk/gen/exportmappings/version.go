@@ -7,6 +7,7 @@ package exportmappings
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"ExportMappings$ExportMapping": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -14,4 +15,18 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"parameterTypeName": {Deleted: "6.1.0"},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ExportMapping.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ExportMapping) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "nullValueOption":
+		return version.PropertyVersionInfo{Introduced: "6.7.0", Deleted: ""}, true
+	case "parameterTypeName":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.1.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

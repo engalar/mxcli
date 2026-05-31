@@ -50,6 +50,7 @@ func (o *Condition) SetEditableVisible(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Condition) InitFromRaw(raw bson.Raw) {
 	o.attributeValue.Init(raw)
 	o.editableVisible.Init(raw)
@@ -135,6 +136,7 @@ func (o *Enumeration) SetRemoteSource(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Enumeration) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -207,6 +209,7 @@ func (o *EnumerationValue) SetRemoteValue(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EnumerationValue) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
@@ -231,6 +234,7 @@ type RemoteEnumerationSource struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RemoteEnumerationSource) InitFromRaw(raw bson.Raw) {
 }
 
@@ -243,6 +247,7 @@ type RemoteEnumerationValue struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RemoteEnumerationValue) InitFromRaw(raw bson.Raw) {
 }
 

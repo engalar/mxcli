@@ -7,6 +7,7 @@ package customwidgets
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"CustomWidgets$CustomWidget": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -15,6 +16,9 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"editable":                       {Introduced: "8.1.0"},
 			"labelTemplate":                  {Introduced: "8.1.0"},
 		},
+	},
+	"CustomWidgets$CustomWidgetDatabaseSource": {Introduced: "8.5.0", Deleted: "10.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"CustomWidgets$CustomWidgetType": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -28,6 +32,12 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"studioProCategory": {Introduced: "9.4.0"},
 			"supportedPlatform": {Introduced: "8.0.0"},
 		},
+	},
+	"CustomWidgets$CustomWidgetXPathSource": {Introduced: "8.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"CustomWidgets$WidgetActionVariable": {Introduced: "10.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"CustomWidgets$WidgetObject": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -85,4 +95,142 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"universeDataSourceProperty": {Introduced: "9.10.0", Deleted: "9.12.0"},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CustomWidget.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CustomWidget) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "conditionalEditabilitySettings":
+		return version.PropertyVersionInfo{Introduced: "8.1.0", Deleted: ""}, true
+	case "conditionalVisibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "8.1.0", Deleted: ""}, true
+	case "editable":
+		return version.PropertyVersionInfo{Introduced: "8.1.0", Deleted: ""}, true
+	case "labelTemplate":
+		return version.PropertyVersionInfo{Introduced: "8.1.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CustomWidgetType.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CustomWidgetType) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "experimentalApi":
+		return version.PropertyVersionInfo{Introduced: "7.0.0", Deleted: "7.1.0"}, true
+	case "helpUrl":
+		return version.PropertyVersionInfo{Introduced: "8.3.0", Deleted: ""}, true
+	case "labeled":
+		return version.PropertyVersionInfo{Introduced: "7.23.0", Deleted: "8.0.0"}, true
+	case "phoneGapEnabled":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.0.0"}, true
+	case "pluginWidget":
+		return version.PropertyVersionInfo{Introduced: "7.19.0", Deleted: ""}, true
+	case "studioCategory":
+		return version.PropertyVersionInfo{Introduced: "9.4.0", Deleted: ""}, true
+	case "studioProCategory":
+		return version.PropertyVersionInfo{Introduced: "9.4.0", Deleted: ""}, true
+	case "supportedPlatform":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for WidgetObject.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *WidgetObject) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "labelTemplate":
+		return version.PropertyVersionInfo{Introduced: "7.23.0", Deleted: "8.1.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for WidgetReturnType.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *WidgetReturnType) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "9.20.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for WidgetValue.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *WidgetValue) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "action":
+		return version.PropertyVersionInfo{Introduced: "7.19.0", Deleted: ""}, true
+	case "attributePath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "attributeRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	case "dataSource":
+		return version.PropertyVersionInfo{Introduced: "8.3.0", Deleted: ""}, true
+	case "entityPath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "entityRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	case "expression":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "icon":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "nanoflow":
+		return version.PropertyVersionInfo{Introduced: "7.13.0", Deleted: ""}, true
+	case "selection":
+		return version.PropertyVersionInfo{Introduced: "9.23.0", Deleted: ""}, true
+	case "sourceVariable":
+		return version.PropertyVersionInfo{Introduced: "8.8.0", Deleted: ""}, true
+	case "textTemplate":
+		return version.PropertyVersionInfo{Introduced: "7.23.0", Deleted: ""}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "8.2.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for WidgetValueType.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *WidgetValueType) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "actionVariables":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	case "allowUpload":
+		return version.PropertyVersionInfo{Introduced: "11.8.0", Deleted: ""}, true
+	case "associationTypes":
+		return version.PropertyVersionInfo{Introduced: "9.12.0", Deleted: ""}, true
+	case "dataSourceProperty":
+		return version.PropertyVersionInfo{Introduced: "8.4.0", Deleted: ""}, true
+	case "defaultType":
+		return version.PropertyVersionInfo{Introduced: "10.15.0", Deleted: ""}, true
+	case "isLinked":
+		return version.PropertyVersionInfo{Introduced: "10.14.0", Deleted: ""}, true
+	case "isMetaData":
+		return version.PropertyVersionInfo{Introduced: "10.14.0", Deleted: ""}, true
+	case "onChangeProperty":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "selectableObjectsProperty":
+		return version.PropertyVersionInfo{Introduced: "9.12.0", Deleted: ""}, true
+	case "selectionTypes":
+		return version.PropertyVersionInfo{Introduced: "9.23.0", Deleted: ""}, true
+	case "setLabel":
+		return version.PropertyVersionInfo{Introduced: "10.5.0", Deleted: ""}, true
+	case "universeDataSourceProperty":
+		return version.PropertyVersionInfo{Introduced: "9.10.0", Deleted: "9.12.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

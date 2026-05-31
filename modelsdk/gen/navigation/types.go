@@ -50,6 +50,7 @@ func (o *HomePageBase) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *HomePageBase) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Page"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -94,6 +95,7 @@ func (o *HomePage) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *HomePage) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Page"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -138,6 +140,7 @@ func (o *NativeHomePageBase) SetHomePageNanoflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NativeHomePageBase) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("HomePagePage"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -182,6 +185,7 @@ func (o *NativeHomePage) SetHomePageNanoflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NativeHomePage) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("HomePagePage"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -231,6 +235,7 @@ func (o *NavigationProfileBase) RemoveOfflineEntityConfigs(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NavigationProfileBase) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if children, err := codec.DecodeChildren(raw, "OfflineEntityConfigs"); err == nil {
@@ -451,6 +456,7 @@ func (o *NativeNavigationProfile) SetNativeNavigationEnabled(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NativeNavigationProfile) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if children, err := codec.DecodeChildren(raw, "OfflineEntityConfigs"); err == nil {
@@ -610,6 +616,7 @@ func (o *NavigationDocument) SetHybridTabletProfile6(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NavigationDocument) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Profiles"); err == nil {
 		for _, child := range children {
@@ -826,6 +833,7 @@ func (o *NavigationProfile) SetNotFoundHomepage(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NavigationProfile) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if children, err := codec.DecodeChildren(raw, "OfflineEntityConfigs"); err == nil {
@@ -903,6 +911,7 @@ func (o *NotFoundHomePage) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NotFoundHomePage) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Page"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -991,6 +1000,7 @@ func (o *OfflineEntityConfig) SetCompatibilityMode(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OfflineEntityConfig) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Entity"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -1043,6 +1053,7 @@ func (o *ProgressiveWebAppSettings) SetInstallPrompt(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ProgressiveWebAppSettings) InitFromRaw(raw bson.Raw) {
 	o.precaching.Init(raw)
 	o.installPrompt.Init(raw)
@@ -1090,6 +1101,7 @@ func (o *RoleBasedHomePage) SetUserRoleQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RoleBasedHomePage) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Page"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -1161,6 +1173,7 @@ func (o *RoleBasedNativeHomePage) SetPageQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RoleBasedNativeHomePage) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("HomePagePage"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -1204,6 +1217,7 @@ func (o *NavigationProfileLoginFormSettings) SetLoginPageQualifiedName(v string)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NavigationProfileLoginFormSettings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("LoginPage"); err == nil {
 		if s, ok := val.StringValueOK(); ok {

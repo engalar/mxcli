@@ -56,6 +56,7 @@ func (o *CustomIcon) Tags() string {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CustomIcon) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.characterCode.Init(raw)
@@ -164,6 +165,7 @@ func (o *CustomIconCollection) RemoveIcons(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CustomIconCollection) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)

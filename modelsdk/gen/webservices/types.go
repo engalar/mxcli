@@ -105,6 +105,7 @@ func (o *DataMember) SetIsKey(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataMember) InitFromRaw(raw bson.Raw) {
 	o.isLockedByContract.Init(raw)
 	o.exposedName.Init(raw)
@@ -239,6 +240,7 @@ func (o *DataEntityBase) SetExposedItemName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataEntityBase) InitFromRaw(raw bson.Raw) {
 	o.isLockedByContract.Init(raw)
 	o.exposedName.Init(raw)
@@ -439,6 +441,7 @@ func (o *DataAssociation) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataAssociation) InitFromRaw(raw bson.Raw) {
 	o.isLockedByContract.Init(raw)
 	o.exposedName.Init(raw)
@@ -634,6 +637,7 @@ func (o *DataAttribute) SetEnumerationAsString(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataAttribute) InitFromRaw(raw bson.Raw) {
 	o.isLockedByContract.Init(raw)
 	o.exposedName.Init(raw)
@@ -781,6 +785,7 @@ func (o *DataEntity) SetExposedItemName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataEntity) InitFromRaw(raw bson.Raw) {
 	o.isLockedByContract.Init(raw)
 	o.exposedName.Init(raw)
@@ -888,6 +893,7 @@ func (o *ImportedWebService) SetUseMtom(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ImportedWebService) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -1072,6 +1078,7 @@ func (o *OperationInfo) SetAllowSimpleMappingInheritance(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OperationInfo) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -1132,6 +1139,7 @@ func (o *PartEncoding) SetPartXsdType(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PartEncoding) InitFromRaw(raw bson.Raw) {
 	o.partName.Init(raw)
 	o.partXsdType.Init(raw)
@@ -1206,6 +1214,7 @@ func (o *PublishedServiceBase) RemoveVersionedServices(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedServiceBase) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -1291,6 +1300,7 @@ func (o *PublishedAppService) RemoveVersionedServices(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedAppService) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -1327,6 +1337,7 @@ func (o *PublishedResource) SetDataEntity(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedResource) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "DataEntity"); err == nil {
 		o.dataEntity.SetFromDecode(child)
@@ -1523,6 +1534,7 @@ func (o *PublishedOperation) SetReturnTypeIsNillable(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedOperation) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "DataEntity"); err == nil {
 		o.dataEntity.SetFromDecode(child)
@@ -1699,6 +1711,7 @@ func (o *PublishedParameter) SetDataEntity(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedParameter) InitFromRaw(raw bson.Raw) {
 	o.isLockedByContract.Init(raw)
 	if val, err := raw.LookupErr("Parameter"); err == nil {
@@ -1793,6 +1806,7 @@ func (o *PublishedWebService) RemoveVersionedServices(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedWebService) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -1851,6 +1865,7 @@ func (o *RpcMessagePartElement) SetElementName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RpcMessagePartElement) InitFromRaw(raw bson.Raw) {
 	o.partName.Init(raw)
 	o.propTypeName.Init(raw)
@@ -1893,6 +1908,7 @@ func (o *RpcOperationElement) RemoveMessagePartElements(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RpcOperationElement) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if children, err := codec.DecodeChildren(raw, "MessagePartElements"); err == nil {
@@ -2004,6 +2020,7 @@ func (o *ServiceInfo) SetUsingAddressing(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ServiceInfo) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -2146,6 +2163,7 @@ func (o *SystemIdDataAttribute) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SystemIdDataAttribute) InitFromRaw(raw bson.Raw) {
 	o.isLockedByContract.Init(raw)
 	o.exposedName.Init(raw)
@@ -2353,6 +2371,7 @@ func (o *VersionedService) SetValidate(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *VersionedService) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	o.targetNamespace.Init(raw)
@@ -2481,6 +2500,7 @@ func (o *WsdlDescription) SetImportsHaveLocations(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WsdlDescription) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "WsdlEntries"); err == nil {
 		for _, child := range children {
@@ -2554,6 +2574,7 @@ func (o *WsdlEntry) SetLocalizedContentsFormat(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WsdlEntry) InitFromRaw(raw bson.Raw) {
 	o.location.Init(raw)
 	o.contents.Init(raw)

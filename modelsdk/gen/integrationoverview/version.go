@@ -7,4 +7,12 @@ package integrationoverview
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
-var VersionInfos = map[string]version.TypeVersionInfo{}
+// Available for diagnostic tools; not consulted by the encoder at runtime.
+var VersionInfos = map[string]version.TypeVersionInfo{
+	"IntegrationOverview$SourceApi": {Introduced: "10.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"IntegrationOverview$CatalogApi": {Introduced: "10.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}

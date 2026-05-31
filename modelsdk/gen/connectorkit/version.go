@@ -7,29 +7,36 @@ package connectorkit
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"ConnectorKit$ConnectorAction": {
+	"ConnectorKit$Connector": {Introduced: "11.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ConnectorKit$ConnectorAction": {Introduced: "11.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"name": {Public: true},
 		},
 	},
-	"ConnectorKit$ConnectorActionParameterMapping": {
+	"ConnectorKit$ConnectorActionCallAction": {Introduced: "11.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ConnectorKit$ConnectorActionParameterMapping": {Introduced: "11.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"javaActionParameter": {Required: true},
 		},
 	},
-	"ConnectorKit$ConnectorProperty": {
+	"ConnectorKit$ConnectorProperty": {Introduced: "11.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"name":         {Public: true},
 			"propertyType": {Required: true},
 		},
 	},
-	"ConnectorKit$ConnectorPropertyMapping": {
+	"ConnectorKit$ConnectorPropertyMapping": {Introduced: "11.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"connectorProperty": {Required: true},
 		},
 	},
-	"ConnectorKit$ConnectorType": {
+	"ConnectorKit$ConnectorType": {Introduced: "11.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"connectorActions":    {Public: true},
 			"connectorProperties": {Public: true},

@@ -21,17 +21,21 @@ type Encoder struct {
 }
 
 // shouldEmitProperty returns false when Version is set and the property
-// is not yet available in that version per DefaultVersionRegistry.
+// is not yet available in the project version.
 // Only applied to new elements (raw == nil path).
 //
-// The version registry uses camelCase property names (e.g., "boundaryEvents"),
-// while prop.Name() returns PascalCase BSON keys (e.g., "BoundaryEvents").
-// We lowercase the first rune of propName before the registry lookup.
-func (e *Encoder) shouldEmitProperty(typeName, propName string) bool {
+// Dispatch is via the version.PropertyVersioner interface on the element —
+// a zero-allocation switch-based lookup generated per type. No global registry
+// or mutex is consulted. Elements that don't implement PropertyVersioner emit
+// all properties unconditionally.
+//
+// propName is the PascalCase BSON key (e.g. "BoundaryEvents"); it is
+// lowercased to camelCase before the interface call.
+func (e *Encoder) shouldEmitProperty(elem element.Element, propName string) bool {
 	if e.Version.IsZero() {
 		return true
 	}
-	info, ok := version.DefaultVersionRegistry.Lookup(typeName)
+	pv, ok := elem.(version.PropertyVersioner)
 	if !ok {
 		return true
 	}
@@ -40,7 +44,7 @@ func (e *Encoder) shouldEmitProperty(typeName, propName string) bool {
 	if len(propName) > 0 {
 		camel = strings.ToLower(propName[:1]) + propName[1:]
 	}
-	pvi, ok := info.Properties[camel]
+	pvi, ok := pv.PropertyVersionInfo(camel)
 	if !ok {
 		return true
 	}
@@ -164,7 +168,7 @@ func (e *Encoder) buildDoc(elem element.Element) (bson.D, error) {
 			{Key: "$Type", Value: elem.TypeName()},
 		}
 		for _, prop := range elem.Properties() {
-			if !e.shouldEmitProperty(elem.TypeName(), prop.Name()) {
+			if !e.shouldEmitProperty(elem, prop.Name()) {
 				continue
 			}
 			idx := findRebuild(bytesOf(prop.Name()))

@@ -7,6 +7,7 @@ package reports
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"Reports$ReportWidget": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -33,13 +34,13 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"caption": {Required: true},
 		},
 	},
-	"Reports$ReportChart": {
+	"Reports$ReportChart": {Deleted: "9.0.1",
 		Properties: map[string]version.PropertyVersionInfo{
 			"xAxisCaption": {Required: true},
 			"yAxisCaption": {Required: true},
 		},
 	},
-	"Reports$ReportChartSeries": {
+	"Reports$ReportChartSeries": {Deleted: "9.0.1",
 		Properties: map[string]version.PropertyVersionInfo{
 			"caption": {Required: true},
 		},
@@ -62,4 +63,33 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"toCaption":   {Required: true},
 		},
 	},
+	"Reports$ReportPane": {Deleted: "6.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ReportWidget.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ReportWidget) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "generateOnLoad":
+		return version.PropertyVersionInfo{Introduced: "6.10.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ReportParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ReportParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "parameter":
+		return version.PropertyVersionInfo{Introduced: "6.10.0", Deleted: ""}, true
+	case "parameterName":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.10.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

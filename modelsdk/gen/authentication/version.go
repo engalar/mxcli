@@ -7,8 +7,18 @@ package authentication
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"Authentication$OAuth20AuthenticationDetails": {
+	"Authentication$Authentication": {Introduced: "11.3.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Authentication$AuthenticationDetails": {Introduced: "11.3.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Authentication$BasicAuthenticationDetails": {Introduced: "11.3.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Authentication$OAuth20AuthenticationDetails": {Introduced: "11.3.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"audience":      {Introduced: "11.5.0"},
 			"clientId":      {},
@@ -16,10 +26,25 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"tokenEndPoint": {},
 		},
 	},
-	"Authentication$OAuth20AuthCodeDetails": {
+	"Authentication$OAuth20AuthCodeDetails": {Introduced: "11.3.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"authorizationEndpoint": {},
 			"callbackUrl":           {},
 		},
 	},
+	"Authentication$OAuth20ClientCredentialsDetails": {Introduced: "11.3.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for OAuth20AuthenticationDetails.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *OAuth20AuthenticationDetails) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "audience":
+		return version.PropertyVersionInfo{Introduced: "11.5.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

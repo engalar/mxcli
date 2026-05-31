@@ -99,6 +99,7 @@ func (o *Connector) RemovePropertyMapping(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Connector) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -195,6 +196,7 @@ func (o *ConnectorAction) SetJavaActionQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConnectorAction) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.caption.Init(raw)
@@ -266,6 +268,7 @@ func (o *ConnectorActionCallAction) RemoveParameterMappings(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConnectorActionCallAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -316,6 +319,7 @@ func (o *ConnectorActionParameterMapping) SetParameterValueExpression(v string) 
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConnectorActionParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("JavaActionParameter"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -378,6 +382,7 @@ func (o *ConnectorProperty) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConnectorProperty) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "PropertyType"); err == nil {
@@ -418,6 +423,7 @@ func (o *ConnectorPropertyMapping) SetPropertyValueExpression(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConnectorPropertyMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ConnectorProperty"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -567,6 +573,7 @@ func (o *ConnectorType) RemoveConnectorProperties(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConnectorType) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)

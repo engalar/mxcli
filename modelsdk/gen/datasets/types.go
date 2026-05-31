@@ -110,6 +110,7 @@ func (o *DataSet) SetDataSetAccess(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataSet) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -157,6 +158,7 @@ func (o *DataSetAccess) RemoveModuleRoleAccessList(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataSetAccess) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "ModuleRoleAccessList"); err == nil {
 		for _, child := range children {
@@ -207,6 +209,7 @@ func (o *DataSetColumn) SetColumnType(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataSetColumn) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.propType.Init(raw)
@@ -246,6 +249,7 @@ func (o *DataSetConstraintAccess) SetEnabled(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataSetConstraintAccess) InitFromRaw(raw bson.Raw) {
 	o.constraintText.Init(raw)
 	o.enabled.Init(raw)
@@ -260,6 +264,7 @@ type DataSetParameterConstraint struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataSetParameterConstraint) InitFromRaw(raw bson.Raw) {
 }
 
@@ -294,6 +299,7 @@ func (o *DataSetDateTimeConstraint) SetLength(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataSetDateTimeConstraint) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Modifier"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -343,6 +349,7 @@ func (o *DataSetModuleRoleAccess) SetModuleRoleQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataSetModuleRoleAccess) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "ParameterAccessList"); err == nil {
 		for _, child := range children {
@@ -409,6 +416,7 @@ func (o *DataSetNumericConstraint) SetApplyEnd(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataSetNumericConstraint) InitFromRaw(raw bson.Raw) {
 	o.begin.Init(raw)
 	o.applyBegin.Init(raw)
@@ -447,6 +455,7 @@ func (o *DataSetObjectConstraint) SetConstraint(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataSetObjectConstraint) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.constraint.Init(raw)
@@ -521,6 +530,7 @@ func (o *DataSetParameter) RemoveConstraints(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataSetParameter) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.propType.Init(raw)
@@ -571,6 +581,7 @@ func (o *DataSetParameterAccess) RemoveConstraintAccessList(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataSetParameterAccess) InitFromRaw(raw bson.Raw) {
 	o.parameterName.Init(raw)
 	if children, err := codec.DecodeChildren(raw, "ConstraintAccessList"); err == nil {
@@ -589,6 +600,7 @@ type DataSetSource struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataSetSource) InitFromRaw(raw bson.Raw) {
 }
 
@@ -628,6 +640,7 @@ func (o *JavaDataSetSource) SetUseLegacyCodeGeneration(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *JavaDataSetSource) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Columns"); err == nil {
 		for _, child := range children {
@@ -668,6 +681,7 @@ func (o *OqlDataSetSource) SetIgnoreErrorsInQuery(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OqlDataSetSource) InitFromRaw(raw bson.Raw) {
 	o.query.Init(raw)
 	o.ignoreErrorsInQuery.Init(raw)

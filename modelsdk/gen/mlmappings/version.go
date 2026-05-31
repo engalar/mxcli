@@ -7,13 +7,26 @@ package mlmappings
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"MLMappings$MLMappingDocument": {
+	"MLMappings$MLMappingDocument": {Introduced: "9.17.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"mlModelMetadata": {Introduced: "9.22.0"},
 		},
 	},
-	"MLMappings$TensorMappingElement": {
+	"MLMappings$MLModelEntityMappings": {Introduced: "9.17.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"MLMappings$MLModelMappings": {Introduced: "9.17.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"MLMappings$MLModelMetadata": {Introduced: "9.22.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"MLMappings$TensorDimension": {Introduced: "9.17.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"MLMappings$TensorMappingElement": {Introduced: "9.17.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attribute":         {Introduced: "9.21.0"},
 			"attributeName":     {Deleted: "9.21.0"},
@@ -22,4 +35,36 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"staticTensorShape": {Introduced: "9.21.0"},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MLMappingDocument.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MLMappingDocument) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "mlModelMetadata":
+		return version.PropertyVersionInfo{Introduced: "9.22.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for TensorMappingElement.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *TensorMappingElement) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attribute":
+		return version.PropertyVersionInfo{Introduced: "9.21.0", Deleted: ""}, true
+	case "attributeName":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.21.0"}, true
+	case "attributeShape":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.21.0"}, true
+	case "attributeType":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.21.0"}, true
+	case "staticTensorShape":
+		return version.PropertyVersionInfo{Introduced: "9.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

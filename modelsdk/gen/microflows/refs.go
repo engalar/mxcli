@@ -219,6 +219,9 @@ func init() {
 		{Prop: "Attribute", Kind: codec.RefByName, Target: "DomainModels$Attribute"},
 		{Prop: "Association", Kind: codec.RefByName, Target: "DomainModels$AssociationBase"},
 	})
+	codec.DefaultRefRegistry.RegisterRefs("Microflows$WebServiceCallAction", []codec.RefMeta{
+		{Prop: "ImportedWebService", Kind: codec.RefByName, Target: "WebServices$ImportedWebService"},
+	})
 	codec.DefaultRefRegistry.RegisterRefs("Microflows$CallWebServiceAction", []codec.RefMeta{
 		{Prop: "ImportedWebService", Kind: codec.RefByName, Target: "WebServices$ImportedWebService"},
 	})

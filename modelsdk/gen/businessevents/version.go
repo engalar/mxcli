@@ -7,53 +7,162 @@ package businessevents
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"BusinessEvents$BusinessEventService": {
+	"BusinessEvents$AttributeEnumeration": {Introduced: "10.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"BusinessEvents$AttributeEnumerationItem": {Introduced: "10.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"BusinessEvents$BusinessEventDefinition": {Introduced: "9.24.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"BusinessEvents$BusinessEventService": {Introduced: "9.24.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"sourceApi": {Introduced: "10.21.0"},
 		},
 	},
-	"BusinessEvents$ConsumedBusinessEvent": {
+	"BusinessEvents$Channel": {Introduced: "9.24.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"BusinessEvents$ConsumedBusinessEvent": {Introduced: "9.11.0", Deleted: "9.24.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"channelId": {Introduced: "9.13.0"},
 			"entity":    {Required: true},
 			"microflow": {Required: true},
 		},
 	},
-	"BusinessEvents$ConsumedBusinessEventService": {
+	"BusinessEvents$ConsumedBusinessEventService": {Introduced: "9.8.0", Deleted: "9.24.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"businessEvents": {Introduced: "9.11.0"},
 			"contract":       {Introduced: "9.11.0"},
 			"version":        {Introduced: "9.11.0"},
 		},
 	},
-	"BusinessEvents$MessageAttribute": {
+	"BusinessEvents$Message": {Introduced: "9.24.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"BusinessEvents$MessageAttribute": {Introduced: "9.24.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attributeType":         {Required: true},
 			"enumerationDefinition": {Introduced: "10.0.0"},
 		},
 	},
-	"BusinessEvents$PublishedBusinessEventService": {
+	"BusinessEvents$PublishedBusinessEventService": {Introduced: "9.11.0", Deleted: "9.24.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"eventNamePrefix": {Introduced: "9.13.0"},
 		},
 	},
-	"BusinessEvents$PublishedMessage": {
+	"BusinessEvents$PublishedChannel": {Introduced: "9.11.0", Deleted: "9.24.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"BusinessEvents$PublishedMessage": {Introduced: "9.11.0", Deleted: "9.24.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity":      {Required: true},
 			"eventName":   {Introduced: "9.12.0"},
 			"exposedName": {Deleted: "9.12.0"},
 		},
 	},
-	"BusinessEvents$PublishedMessageAttribute": {
+	"BusinessEvents$PublishedMessageAttribute": {Introduced: "9.11.0", Deleted: "9.24.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attribute":     {Required: true},
 			"attributeType": {Introduced: "9.14.0", Required: true},
 		},
 	},
-	"BusinessEvents$ServiceOperation": {
+	"BusinessEvents$ServiceOperation": {Introduced: "9.24.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity": {Required: true},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for BusinessEventService.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *BusinessEventService) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "sourceApi":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ConsumedBusinessEvent.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ConsumedBusinessEvent) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "channelId":
+		return version.PropertyVersionInfo{Introduced: "9.13.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ConsumedBusinessEventService.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ConsumedBusinessEventService) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "businessEvents":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "contract":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "version":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MessageAttribute.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MessageAttribute) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "enumerationDefinition":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedBusinessEventService.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedBusinessEventService) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "eventNamePrefix":
+		return version.PropertyVersionInfo{Introduced: "9.13.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedMessage.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedMessage) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "eventName":
+		return version.PropertyVersionInfo{Introduced: "9.12.0", Deleted: ""}, true
+	case "exposedName":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.12.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedMessageAttribute.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedMessageAttribute) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attributeType":
+		return version.PropertyVersionInfo{Introduced: "9.14.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

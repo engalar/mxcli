@@ -28,6 +28,7 @@ type ModuleDocument struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ModuleDocument) InitFromRaw(raw bson.Raw) {
 }
 
@@ -84,6 +85,7 @@ func (o *Document) SetExportLevel(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Document) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -136,6 +138,7 @@ func (o *FolderBase) RemoveDocuments(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *FolderBase) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Folders"); err == nil {
 		for _, child := range children {
@@ -201,6 +204,7 @@ func (o *Folder) SetName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Folder) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Folders"); err == nil {
 		for _, child := range children {
@@ -284,6 +288,7 @@ func (o *JarDependency) RemoveExclusions(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *JarDependency) InitFromRaw(raw bson.Raw) {
 	o.groupId.Init(raw)
 	o.artifactId.Init(raw)
@@ -327,6 +332,7 @@ func (o *JarDependencyExclusion) SetArtifactId(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *JarDependencyExclusion) InitFromRaw(raw bson.Raw) {
 	o.groupId.Init(raw)
 	o.artifactId.Init(raw)
@@ -527,6 +533,7 @@ func (o *Module) SetIsThemeModule(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Module) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Folders"); err == nil {
 		for _, child := range children {
@@ -655,6 +662,7 @@ func (o *ModuleSettings) SetBasedOnVersion(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ModuleSettings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -697,6 +705,7 @@ func (o *OneTimeConversionMarker) SetName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OneTimeConversionMarker) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 }
@@ -764,6 +773,7 @@ func (o *Project) SetIsSystemProject(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Project) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "ProjectDocuments"); err == nil {
 		for _, child := range children {
@@ -806,6 +816,7 @@ func (o *ProjectConversion) RemoveMarkers(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ProjectConversion) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Markers"); err == nil {
 		for _, child := range children {
@@ -823,6 +834,7 @@ type ProjectDocument struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ProjectDocument) InitFromRaw(raw bson.Raw) {
 }
 

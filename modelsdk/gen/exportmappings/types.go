@@ -242,6 +242,7 @@ func (o *ExportMapping) SetNullValueOption(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExportMapping) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -499,6 +500,7 @@ func (o *ExportObjectMappingElement) SetIsDefaultType(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExportObjectMappingElement) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	if val, err := raw.LookupErr("ElementType"); err == nil {
@@ -796,6 +798,7 @@ func (o *ExportValueMappingElement) SetOriginalValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExportValueMappingElement) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	if val, err := raw.LookupErr("ElementType"); err == nil {

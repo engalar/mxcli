@@ -44,6 +44,7 @@ func (o *AccessRuleContainerBase) RemoveAccessRules(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AccessRuleContainerBase) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "AccessRules"); err == nil {
 		for _, child := range children {
@@ -110,6 +111,7 @@ func (o *DemoUser) AddUserRoles(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DemoUser) InitFromRaw(raw bson.Raw) {
 	o.userName.Init(raw)
 	o.password.Init(raw)
@@ -157,6 +159,7 @@ func (o *FileDocumentAccessRuleContainer) RemoveAccessRules(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *FileDocumentAccessRuleContainer) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "AccessRules"); err == nil {
 		for _, child := range children {
@@ -190,6 +193,7 @@ func (o *ImageAccessRuleContainer) RemoveAccessRules(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ImageAccessRuleContainer) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "AccessRules"); err == nil {
 		for _, child := range children {
@@ -229,6 +233,7 @@ func (o *ModuleRole) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ModuleRole) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.description.Init(raw)
@@ -259,6 +264,7 @@ func (o *ModuleSecurity) RemoveModuleRoles(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ModuleSecurity) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "ModuleRoles"); err == nil {
 		for _, child := range children {
@@ -320,6 +326,7 @@ func (o *PasswordPolicySettings) SetRequireDigit(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PasswordPolicySettings) InitFromRaw(raw bson.Raw) {
 	o.minimumLength.Init(raw)
 	o.requireMixedCase.Init(raw)
@@ -522,6 +529,7 @@ func (o *ProjectSecurity) SetStrictMode(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ProjectSecurity) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("SecurityLevel"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -670,6 +678,7 @@ func (o *UserRole) SetCheckSecurity(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UserRole) InitFromRaw(raw bson.Raw) {
 	o.guid.Init(raw)
 	o.name.Init(raw)

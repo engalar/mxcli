@@ -44,6 +44,7 @@ func (o *AttributeEnumeration) RemoveItems(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AttributeEnumeration) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {
@@ -72,6 +73,7 @@ func (o *AttributeEnumerationItem) SetValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AttributeEnumerationItem) InitFromRaw(raw bson.Raw) {
 	o.value.Init(raw)
 }
@@ -145,6 +147,7 @@ func (o *BusinessEventDefinition) RemoveChannels(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BusinessEventDefinition) InitFromRaw(raw bson.Raw) {
 	o.serviceName.Init(raw)
 	o.eventNamePrefix.Init(raw)
@@ -259,6 +262,7 @@ func (o *BusinessEventService) SetSourceApi(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BusinessEventService) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -329,6 +333,7 @@ func (o *Channel) RemoveMessages(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Channel) InitFromRaw(raw bson.Raw) {
 	o.channelName.Init(raw)
 	o.description.Init(raw)
@@ -392,6 +397,7 @@ func (o *ConsumedBusinessEvent) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConsumedBusinessEvent) InitFromRaw(raw bson.Raw) {
 	o.eventName.Init(raw)
 	o.channelId.Init(raw)
@@ -498,6 +504,7 @@ func (o *ConsumedBusinessEventService) RemoveBusinessEvents(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConsumedBusinessEventService) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -585,6 +592,7 @@ func (o *Message) SetCanSubscribe(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Message) InitFromRaw(raw bson.Raw) {
 	o.messageName.Init(raw)
 	o.description.Init(raw)
@@ -650,6 +658,7 @@ func (o *MessageAttribute) SetEnumerationDefinition(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MessageAttribute) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "AttributeType"); err == nil {
 		o.attributeType.SetFromDecode(child)
@@ -785,6 +794,7 @@ func (o *PublishedBusinessEventService) RemoveChannels(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedBusinessEventService) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -864,6 +874,7 @@ func (o *PublishedChannel) RemoveMessages(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedChannel) InitFromRaw(raw bson.Raw) {
 	o.channelId.Init(raw)
 	o.channelName.Init(raw)
@@ -955,6 +966,7 @@ func (o *PublishedMessage) RemoveAttributes(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedMessage) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Entity"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -1025,6 +1037,7 @@ func (o *PublishedMessageAttribute) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedMessageAttribute) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Attribute"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -1091,6 +1104,7 @@ func (o *ServiceOperation) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ServiceOperation) InitFromRaw(raw bson.Raw) {
 	o.messageName.Init(raw)
 	o.operation.Init(raw)

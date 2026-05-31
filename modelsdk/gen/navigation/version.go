@@ -7,14 +7,21 @@ package navigation
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
+	"Navigation$NativeHomePageBase": {Introduced: "9.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Navigation$NativeHomePage": {Introduced: "9.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Navigation$NavigationProfileBase": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"name":                 {Introduced: "7.2.0", Public: true},
 			"offlineEntityConfigs": {Introduced: "7.22.0"},
 		},
 	},
-	"Navigation$NativeNavigationProfile": {
+	"Navigation$NativeNavigationProfile": {Introduced: "7.22.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"applyScreenTransition":          {Introduced: "10.11.0"},
 			"bottomBarItems":                 {Introduced: "8.0.0"},
@@ -62,7 +69,10 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"progressiveWebAppSettings": {Introduced: "9.0.3"},
 		},
 	},
-	"Navigation$OfflineEntityConfig": {
+	"Navigation$NotFoundHomePage": {Introduced: "10.13.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Navigation$OfflineEntityConfig": {Introduced: "7.22.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"compatibilityMode": {Introduced: "11.10.0"},
 			"downloadMode":      {Introduced: "8.9.0", Deleted: "9.24.0"},
@@ -71,9 +81,154 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"syncMode":          {Introduced: "9.24.0"},
 		},
 	},
-	"Navigation$RoleBasedNativeHomePage": {
+	"Navigation$ProgressiveWebAppSettings": {Introduced: "9.0.3",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Navigation$RoleBasedNativeHomePage": {Introduced: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"page": {Deleted: "9.4.0"},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NavigationProfileBase.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NavigationProfileBase) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "name":
+		return version.PropertyVersionInfo{Introduced: "7.2.0", Deleted: ""}, true
+	case "offlineEntityConfigs":
+		return version.PropertyVersionInfo{Introduced: "7.22.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NativeNavigationProfile.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NativeNavigationProfile) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "applyScreenTransition":
+		return version.PropertyVersionInfo{Introduced: "10.11.0", Deleted: ""}, true
+	case "bottomBarItems":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "encryptionDbEnabled":
+		return version.PropertyVersionInfo{Introduced: "9.18.0", Deleted: ""}, true
+	case "hermesEnabled":
+		return version.PropertyVersionInfo{Introduced: "10.11.0", Deleted: "10.18.0"}, true
+	case "homePage":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.4.0"}, true
+	case "localFileEncryptionEnabled":
+		return version.PropertyVersionInfo{Introduced: "9.22.0", Deleted: ""}, true
+	case "loggingEnabled":
+		return version.PropertyVersionInfo{Introduced: "9.15.0", Deleted: ""}, true
+	case "nativeHomePage":
+		return version.PropertyVersionInfo{Introduced: "9.4.0", Deleted: ""}, true
+	case "nativeNavigationEnabled":
+		return version.PropertyVersionInfo{Introduced: "11.1.0", Deleted: ""}, true
+	case "networkTimeoutMs":
+		return version.PropertyVersionInfo{Introduced: "11.0.0", Deleted: ""}, true
+	case "otaEnabled":
+		return version.PropertyVersionInfo{Introduced: "9.4.0", Deleted: ""}, true
+	case "popupNavigationTransition":
+		return version.PropertyVersionInfo{Introduced: "10.11.0", Deleted: ""}, true
+	case "roleBasedNativeHomePages":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "screenNavigationTransition":
+		return version.PropertyVersionInfo{Introduced: "10.11.0", Deleted: ""}, true
+	case "sessionCookieEncryptionEnabled":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NavigationDocument.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NavigationDocument) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "desktopProfile":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.2.0"}, true
+	case "hybridPhoneProfile":
+		return version.PropertyVersionInfo{Introduced: "7.0.2", Deleted: "7.2.0"}, true
+	case "hybridPhoneProfile6":
+		return version.PropertyVersionInfo{Introduced: "6.10.4", Deleted: "7.0.0"}, true
+	case "hybridTabletProfile":
+		return version.PropertyVersionInfo{Introduced: "7.0.2", Deleted: "7.2.0"}, true
+	case "hybridTabletProfile6":
+		return version.PropertyVersionInfo{Introduced: "6.10.4", Deleted: "7.0.0"}, true
+	case "offlinePhoneProfile":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.0.2"}, true
+	case "phoneProfile":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.2.0"}, true
+	case "profiles":
+		return version.PropertyVersionInfo{Introduced: "7.2.0", Deleted: ""}, true
+	case "tabletProfile":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.2.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NavigationProfile.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NavigationProfile) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appIcon":
+		return version.PropertyVersionInfo{Introduced: "8.12.0", Deleted: ""}, true
+	case "appTitle":
+		return version.PropertyVersionInfo{Introduced: "8.12.0", Deleted: ""}, true
+	case "applicationTitle":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.12.0"}, true
+	case "enabled":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.2.0"}, true
+	case "kind":
+		return version.PropertyVersionInfo{Introduced: "7.2.0", Deleted: ""}, true
+	case "loginPageSettings":
+		return version.PropertyVersionInfo{Introduced: "7.0.2", Deleted: ""}, true
+	case "notFoundHomepage":
+		return version.PropertyVersionInfo{Introduced: "10.13.0", Deleted: ""}, true
+	case "offlineEnabled":
+		return version.PropertyVersionInfo{Introduced: "7.0.2", Deleted: "7.2.0"}, true
+	case "offlineEnabled6":
+		return version.PropertyVersionInfo{Introduced: "6.10.4", Deleted: "7.0.0"}, true
+	case "progressiveWebAppSettings":
+		return version.PropertyVersionInfo{Introduced: "9.0.3", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for OfflineEntityConfig.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *OfflineEntityConfig) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "compatibilityMode":
+		return version.PropertyVersionInfo{Introduced: "11.10.0", Deleted: ""}, true
+	case "downloadMode":
+		return version.PropertyVersionInfo{Introduced: "8.9.0", Deleted: "9.24.0"}, true
+	case "shouldDownload":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.9.0"}, true
+	case "syncMode":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for RoleBasedNativeHomePage.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *RoleBasedNativeHomePage) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "page":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.4.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

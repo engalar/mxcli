@@ -7,13 +7,29 @@ package odatapublish
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"ODataPublish$CallMicroflowToChange": {
+	"ODataPublish$ChangeMode": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ODataPublish$CallMicroflowToChange": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"microflow": {},
 		},
 	},
-	"ODataPublish$EntitySet": {
+	"ODataPublish$ReadMode": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ODataPublish$CallMicroflowToRead": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ODataPublish$ChangeNotSupported": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ODataPublish$ChangeSource": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ODataPublish$EntitySet": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"alternativeExposedName": {Introduced: "10.13.0"},
 			"deleteMode":             {Required: true},
@@ -24,54 +40,131 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"updateMode":             {Required: true},
 		},
 	},
-	"ODataPublish$EntityType": {
+	"ODataPublish$EntityType": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity": {Required: true},
 		},
 	},
-	"ODataPublish$PublishedAssociationEnd": {
+	"ODataPublish$PublishedMember": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ODataPublish$PublishedAssociationEnd": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity": {Required: true},
 		},
 	},
-	"ODataPublish$PublishedAttribute": {
+	"ODataPublish$PublishedAttribute": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"stringAsGuid": {Introduced: "10.12.0"},
 		},
 	},
-	"ODataPublish$PublishedContract": {
+	"ODataPublish$PublishedContract": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"graphQL":     {Introduced: "10.13.0"},
 			"serviceFeed": {Required: true},
 		},
 	},
-	"ODataPublish$PublishedEnumeration": {
+	"ODataPublish$PublishedEnumeration": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"enumeration": {Required: true},
 		},
 	},
-	"ODataPublish$PublishedEnumerationValue": {
+	"ODataPublish$PublishedEnumerationValue": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"enumerationValue": {Required: true},
 		},
 	},
-	"ODataPublish$PublishedMicroflow": {
+	"ODataPublish$PublishedId": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ODataPublish$PublishedMicroflow": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"alternativeExposedName": {Introduced: "10.13.0"},
 			"microflow":              {Required: true},
 			"returnType":             {Required: true},
 		},
 	},
-	"ODataPublish$PublishedMicroflowParameter": {
+	"ODataPublish$PublishedMicroflowParameter": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"dataType":           {Required: true},
 			"microflowParameter": {Required: true},
 		},
 	},
-	"ODataPublish$PublishedODataService2": {
+	"ODataPublish$PublishedODataService2": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"includeMetadataByDefault": {Introduced: "10.8.0"},
 			"supportsGraphQL":          {Introduced: "10.12.0"},
 		},
 	},
+	"ODataPublish$QueryOptions": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ODataPublish$ReadSource": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ODataPublish$ServiceFeed": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for EntitySet.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *EntitySet) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "alternativeExposedName":
+		return version.PropertyVersionInfo{Introduced: "10.13.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedAttribute.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedAttribute) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "stringAsGuid":
+		return version.PropertyVersionInfo{Introduced: "10.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedContract.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedContract) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "graphQL":
+		return version.PropertyVersionInfo{Introduced: "10.13.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedMicroflow.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedMicroflow) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "alternativeExposedName":
+		return version.PropertyVersionInfo{Introduced: "10.13.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedODataService2.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedODataService2) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "includeMetadataByDefault":
+		return version.PropertyVersionInfo{Introduced: "10.8.0", Deleted: ""}, true
+	case "supportsGraphQL":
+		return version.PropertyVersionInfo{Introduced: "10.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

@@ -132,6 +132,7 @@ func (o *AppServiceAction) SetImage(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AppServiceAction) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.caption.Init(raw)
@@ -207,6 +208,7 @@ func (o *AppServiceActionParameter) SetCanBeEmpty(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AppServiceActionParameter) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.propType.Init(raw)
@@ -384,6 +386,7 @@ func (o *ConsumedAppService) SetTimeOut(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConsumedAppService) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -494,6 +497,7 @@ func (o *Msd) SetWsdl(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Msd) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Version"); err == nil {
 		o.version.SetFromDecode(child)
@@ -665,6 +669,7 @@ func (o *MsdAssociation) SetChildY(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MsdAssociation) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.guid.Init(raw)
@@ -756,6 +761,7 @@ func (o *MsdAttribute) SetLength(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MsdAttribute) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.guid.Init(raw)
@@ -806,6 +812,7 @@ func (o *MsdDomainModel) RemoveAssociations(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MsdDomainModel) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Entities"); err == nil {
 		for _, child := range children {
@@ -910,6 +917,7 @@ func (o *MsdEntity) RemoveAttributes(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MsdEntity) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.guid.Init(raw)
@@ -971,6 +979,7 @@ func (o *MsdEnumeration) RemoveValues(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MsdEnumeration) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.guid.Init(raw)
@@ -1006,6 +1015,7 @@ func (o *MsdEnumerationContainer) RemoveEnumerations(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MsdEnumerationContainer) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Enumerations"); err == nil {
 		for _, child := range children {
@@ -1072,6 +1082,7 @@ func (o *MsdEnumerationValue) SetImage(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MsdEnumerationValue) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.guid.Init(raw)
@@ -1235,6 +1246,7 @@ func (o *MsdMetadata) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MsdMetadata) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -1368,6 +1380,7 @@ func (o *MsdMicroflow) SetReturnTypeCanBeEmpty(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MsdMicroflow) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -1448,6 +1461,7 @@ func (o *MsdMicroflowParameter) SetCanBeEmpty(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MsdMicroflowParameter) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.propType.Init(raw)
@@ -1487,6 +1501,7 @@ func (o *MsdText) SetCaption(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MsdText) InitFromRaw(raw bson.Raw) {
 	o.languageCode.Init(raw)
 	o.caption.Init(raw)
@@ -1512,6 +1527,7 @@ func (o *MsdVersion) SetVersion(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MsdVersion) InitFromRaw(raw bson.Raw) {
 	o.version.Init(raw)
 }

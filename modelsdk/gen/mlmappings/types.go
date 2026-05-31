@@ -110,6 +110,7 @@ func (o *MLMappingDocument) SetMlModelMappings(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MLMappingDocument) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -166,6 +167,7 @@ func (o *MLModelEntityMappings) RemoveMappings(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MLModelEntityMappings) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Entity"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -210,6 +212,7 @@ func (o *MLModelMappings) SetOutput(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MLModelMappings) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Input"); err == nil {
 		o.input.SetFromDecode(child)
@@ -250,6 +253,7 @@ func (o *MLModelMetadata) SetValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MLModelMetadata) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.value.Init(raw)
@@ -275,6 +279,7 @@ func (o *TensorDimension) SetDimension(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TensorDimension) InitFromRaw(raw bson.Raw) {
 	o.dimension.Init(raw)
 }
@@ -391,6 +396,7 @@ func (o *TensorMappingElement) SetAttributeQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TensorMappingElement) InitFromRaw(raw bson.Raw) {
 	o.attributeName.Init(raw)
 	if child, err := codec.DecodeChild(raw, "AttributeType"); err == nil {

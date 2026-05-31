@@ -83,6 +83,7 @@ func (o *Authentication) SetAuthenticationDetails(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Authentication) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -106,6 +107,7 @@ type AuthenticationDetails struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AuthenticationDetails) InitFromRaw(raw bson.Raw) {
 }
 
@@ -140,6 +142,7 @@ func (o *BasicAuthenticationDetails) SetPasswordQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BasicAuthenticationDetails) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Username"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -256,6 +259,7 @@ func (o *OAuth20AuthenticationDetails) SetAudience(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OAuth20AuthenticationDetails) InitFromRaw(raw bson.Raw) {
 	o.providerName.Init(raw)
 	o.wellKnownEndPoint.Init(raw)
@@ -435,6 +439,7 @@ func (o *OAuth20AuthCodeDetails) SetCallbackUrlQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OAuth20AuthCodeDetails) InitFromRaw(raw bson.Raw) {
 	o.providerName.Init(raw)
 	o.wellKnownEndPoint.Init(raw)
@@ -582,6 +587,7 @@ func (o *OAuth20ClientCredentialsDetails) SetAudience(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OAuth20ClientCredentialsDetails) InitFromRaw(raw bson.Raw) {
 	o.providerName.Init(raw)
 	o.wellKnownEndPoint.Init(raw)

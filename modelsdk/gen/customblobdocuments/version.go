@@ -7,10 +7,14 @@ package customblobdocuments
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"CustomBlobDocuments$CustomBlobDocument": {
+	"CustomBlobDocuments$CustomBlobDocument": {Introduced: "11.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"metadata": {Required: true},
 		},
+	},
+	"CustomBlobDocuments$CustomBlobDocumentMetadata": {Introduced: "11.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 }

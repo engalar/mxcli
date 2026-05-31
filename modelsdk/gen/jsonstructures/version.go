@@ -7,10 +7,26 @@ package jsonstructures
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"JsonStructures$JsonStructure": {
+	"JsonStructures$JsonElement": {Introduced: "6.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JsonStructures$JsonStructure": {Introduced: "6.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"elements": {Introduced: "6.6.0"},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for JsonStructure.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *JsonStructure) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "elements":
+		return version.PropertyVersionInfo{Introduced: "6.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

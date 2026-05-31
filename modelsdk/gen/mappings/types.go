@@ -198,6 +198,7 @@ func (o *Element) RemoveChildren(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Element) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ElementType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -407,6 +408,7 @@ func (o *MappingDocument) SetPublicName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MappingDocument) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -563,6 +565,7 @@ func (o *MappingElement) SetExposedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MappingElement) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	if val, err := raw.LookupErr("ElementType"); err == nil {
@@ -615,6 +618,7 @@ func (o *MappingMicroflowCall) RemoveParameterMappings(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MappingMicroflowCall) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -692,6 +696,7 @@ func (o *MappingMicroflowParameter) SetXmlValueElementPath(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MappingMicroflowParameter) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -724,6 +729,7 @@ func (o *MappingSource) SetName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MappingSource) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 }
@@ -781,6 +787,7 @@ func (o *MappingSourceDocument) SetExportLevel(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MappingSourceDocument) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -801,6 +808,7 @@ type MappingSourceReference struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MappingSourceReference) InitFromRaw(raw bson.Raw) {
 }
 
@@ -1005,6 +1013,7 @@ func (o *ObjectMappingElement) SetIsDefaultType(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ObjectMappingElement) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	if val, err := raw.LookupErr("ElementType"); err == nil {
@@ -1302,6 +1311,7 @@ func (o *ValueMappingElement) SetOriginalValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ValueMappingElement) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	if val, err := raw.LookupErr("ElementType"); err == nil {

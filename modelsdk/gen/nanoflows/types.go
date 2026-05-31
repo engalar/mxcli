@@ -39,6 +39,7 @@ func (o *NanoflowParameterValue) SetNanoflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NanoflowParameterValue) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Nanoflow"); err == nil {
 		if s, ok := val.StringValueOK(); ok {

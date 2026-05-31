@@ -28,6 +28,7 @@ type UrlSegment struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UrlSegment) InitFromRaw(raw bson.Raw) {
 }
 
@@ -51,6 +52,7 @@ func (o *StaticUrlSegment) SetSegment(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *StaticUrlSegment) InitFromRaw(raw bson.Raw) {
 	o.segment.Init(raw)
 }

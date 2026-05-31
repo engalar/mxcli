@@ -303,6 +303,7 @@ func (o *ConsumedKafkaService) SetBrokerPasswordQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConsumedKafkaService) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -386,6 +387,7 @@ func (o *KafkaMappedValue) SetRemoteName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *KafkaMappedValue) InitFromRaw(raw bson.Raw) {
 	o.defaultValueDesignTime.Init(raw)
 	o.remoteName.Init(raw)
@@ -433,6 +435,7 @@ func (o *KafkaRemoteEntitySource) SetTopicName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *KafkaRemoteEntitySource) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("SourceDocument"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -523,6 +526,7 @@ func (o *PublishedKafkaResource) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedKafkaResource) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Entity"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -593,6 +597,7 @@ func (o *PublishedKafkaResourceAttribute) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedKafkaResourceAttribute) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Attribute"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -783,6 +788,7 @@ func (o *PublishedKafkaService) SetBrokerPasswordQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedKafkaService) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)

@@ -7,36 +7,69 @@ package messagedefinitions
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"MessageDefinitions$MessageDefinition": {
+	"MessageDefinitions$AssociationElement": {Introduced: "7.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"MessageDefinitions$AttributeElement": {Introduced: "7.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"MessageDefinitions$EntityElement": {Introduced: "7.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"MessageDefinitions$MessageDefinition": {Introduced: "7.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"name": {Public: true},
 		},
 	},
-	"MessageDefinitions$ExposedMember": {
+	"MessageDefinitions$EntityMessageDefinition": {Introduced: "7.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"MessageDefinitions$ExposedMember": {Introduced: "7.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"documentation": {Introduced: "7.15.0"},
 			"example":       {Introduced: "7.15.0"},
 		},
 	},
-	"MessageDefinitions$ExposedEntityBase": {
+	"MessageDefinitions$ExposedEntityBase": {Introduced: "7.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity": {Required: true},
 		},
 	},
-	"MessageDefinitions$ExposedAssociation": {
+	"MessageDefinitions$ExposedAssociation": {Introduced: "7.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"association": {Required: true},
 		},
 	},
-	"MessageDefinitions$ExposedAttribute": {
+	"MessageDefinitions$ExposedAttribute": {Introduced: "7.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attribute": {Required: true},
 		},
 	},
-	"MessageDefinitions$MessageDefinitionCollection": {
+	"MessageDefinitions$ExposedEntity": {Introduced: "7.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"MessageDefinitions$MessageDefinition2": {Introduced: "11.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"MessageDefinitions$MessageDefinitionCollection": {Introduced: "7.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"messageDefinitions": {Public: true},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ExposedMember.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ExposedMember) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "documentation":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	case "example":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

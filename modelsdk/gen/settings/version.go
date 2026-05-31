@@ -7,7 +7,11 @@ package settings
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
+	"Settings$ActionActivityDefaultColor": {Introduced: "8.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Settings$Configuration": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"emulateCloudSecurity": {Deleted: "7.21.0"},
@@ -21,10 +25,22 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"value":                {Deleted: "10.9.0"},
 		},
 	},
+	"Settings$DistributionSettings": {Introduced: "9.24.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Settings$IntegrationProjectSettingsPart": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"obsoleteEnableUrlEncoding": {Introduced: "10.21.0", Deleted: "11.0.0"},
 		},
+	},
+	"Settings$JarDeploymentSettings": {Introduced: "9.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Settings$JarLocationBase": {Introduced: "9.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Settings$JavaActionsSettings": {Introduced: "6.9.0", Deleted: "8.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Settings$ModelerSettings": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -32,6 +48,15 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"defaultAssociationStorage":   {Introduced: "10.21.0"},
 			"defaultSequenceFlowLineType": {Introduced: "10.8.0"},
 		},
+	},
+	"Settings$SharedOrPrivateValue": {Introduced: "10.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Settings$PrivateValue": {Introduced: "10.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Settings$ProtectedModuleJarLocation": {Introduced: "9.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Settings$RuntimeSettings": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -47,6 +72,18 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"useOQLVersion2":                        {Introduced: "10.11.0"},
 			"useSystemContextForBackgroundTasks":    {Introduced: "9.6.0"},
 		},
+	},
+	"Settings$SharedValue": {Introduced: "10.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Settings$ThemeModuleEntry": {Introduced: "9.3.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Settings$TracingConfiguration": {Introduced: "10.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Settings$UserLibJarLocation": {Introduced: "9.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Settings$WebUIProjectSettingsPart": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -82,7 +119,10 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"useOptimizedClient":                  {Introduced: "9.10.0"},
 		},
 	},
-	"Settings$WorkflowsProjectSettingsPart": {
+	"Settings$WorkflowGroup": {Introduced: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Settings$WorkflowsProjectSettingsPart": {Introduced: "8.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"defaultTaskParallelism":     {Introduced: "9.0.5"},
 			"enabled":                    {Deleted: "9.0.5"},
@@ -94,4 +134,154 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"workflowOnStateChangeEvent": {Introduced: "9.12.0", Deleted: "11.0.0"},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Configuration.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Configuration) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "emulateCloudSecurity":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.21.0"}, true
+	case "tracing":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ConstantValue.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ConstantValue) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "sharedOrPrivateValue":
+		return version.PropertyVersionInfo{Introduced: "10.9.0", Deleted: ""}, true
+	case "value":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.9.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for IntegrationProjectSettingsPart.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *IntegrationProjectSettingsPart) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "obsoleteEnableUrlEncoding":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: "11.0.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ModelerSettings.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ModelerSettings) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "actionActivityDefaultColors":
+		return version.PropertyVersionInfo{Introduced: "8.6.0", Deleted: ""}, true
+	case "defaultAssociationStorage":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	case "defaultSequenceFlowLineType":
+		return version.PropertyVersionInfo{Introduced: "10.8.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for RuntimeSettings.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *RuntimeSettings) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "bcryptCost":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "decimalScale":
+		return version.PropertyVersionInfo{Introduced: "11.4.0", Deleted: ""}, true
+	case "enableDataStorageNewQueryHandling":
+		return version.PropertyVersionInfo{Introduced: "7.10.0", Deleted: "8.0.0"}, true
+	case "enableDataStorageOptimisticLocking":
+		return version.PropertyVersionInfo{Introduced: "7.5.0", Deleted: ""}, true
+	case "enforceDataStorageUniqueness":
+		return version.PropertyVersionInfo{Introduced: "7.1.0", Deleted: "9.0.2"}, true
+	case "javaVersion":
+		return version.PropertyVersionInfo{Introduced: "10.8.0", Deleted: ""}, true
+	case "sslCertificateAlgorithm":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	case "useDatabaseForeignKeyConstraints":
+		return version.PropertyVersionInfo{Introduced: "10.6.0", Deleted: ""}, true
+	case "useDeprecatedClientForWebServiceCalls":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: "8.0.0"}, true
+	case "useOQLVersion2":
+		return version.PropertyVersionInfo{Introduced: "10.11.0", Deleted: ""}, true
+	case "useSystemContextForBackgroundTasks":
+		return version.PropertyVersionInfo{Introduced: "9.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for WebUIProjectSettingsPart.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *WebUIProjectSettingsPart) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "enableDownloadResources":
+		return version.PropertyVersionInfo{Introduced: "6.6.0", Deleted: "10.0.0"}, true
+	case "enableMicroflowReachabilityAnalysis":
+		return version.PropertyVersionInfo{Introduced: "7.0.2", Deleted: ""}, true
+	case "enableNewStringBehavior":
+		return version.PropertyVersionInfo{Introduced: "11.6.0", Deleted: ""}, true
+	case "enableNewWidgetGeneration":
+		return version.PropertyVersionInfo{Introduced: "10.6.0", Deleted: ""}, true
+	case "enableRspackBundler":
+		return version.PropertyVersionInfo{Introduced: "11.9.0", Deleted: ""}, true
+	case "exportEmbeddedEntrypoint":
+		return version.PropertyVersionInfo{Introduced: "11.8.0", Deleted: ""}, true
+	case "feedbackWidgetUpdated":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.2.0"}, true
+	case "theme":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.2.0"}, true
+	case "themeConversionStatus":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: "9.0.1"}, true
+	case "themeModuleName":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.2.0"}, true
+	case "themeModuleOrder":
+		return version.PropertyVersionInfo{Introduced: "9.3.0", Deleted: ""}, true
+	case "urlPrefix":
+		return version.PropertyVersionInfo{Introduced: "10.5.0", Deleted: ""}, true
+	case "useOptimizedClient":
+		return version.PropertyVersionInfo{Introduced: "9.10.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for WorkflowsProjectSettingsPart.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *WorkflowsProjectSettingsPart) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "defaultTaskParallelism":
+		return version.PropertyVersionInfo{Introduced: "9.0.5", Deleted: ""}, true
+	case "enabled":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.5"}, true
+	case "groups":
+		return version.PropertyVersionInfo{Introduced: "11.2.0", Deleted: ""}, true
+	case "onWorkflowEvent":
+		return version.PropertyVersionInfo{Introduced: "10.7.0", Deleted: ""}, true
+	case "userEntity":
+		return version.PropertyVersionInfo{Introduced: "8.11.0", Deleted: ""}, true
+	case "usertaskOnStateChangeEvent":
+		return version.PropertyVersionInfo{Introduced: "9.12.0", Deleted: "11.0.0"}, true
+	case "workflowEngineParallelism":
+		return version.PropertyVersionInfo{Introduced: "9.0.5", Deleted: ""}, true
+	case "workflowOnStateChangeEvent":
+		return version.PropertyVersionInfo{Introduced: "9.12.0", Deleted: "11.0.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

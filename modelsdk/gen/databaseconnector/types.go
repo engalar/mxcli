@@ -50,6 +50,7 @@ func (o *AdditionalProperty) SetValue(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AdditionalProperty) InitFromRaw(raw bson.Raw) {
 	o.key.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Value"); err == nil {
@@ -66,6 +67,7 @@ type AdditionalPropertyValue struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AdditionalPropertyValue) InitFromRaw(raw bson.Raw) {
 }
 
@@ -111,6 +113,7 @@ func (o *ColumnMapping) SetAttributeQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ColumnMapping) InitFromRaw(raw bson.Raw) {
 	o.columnName.Init(raw)
 	if child, err := codec.DecodeChild(raw, "SqlDataType"); err == nil {
@@ -165,6 +168,7 @@ func (o *ConnectionDetails) SetDatabaseName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConnectionDetails) InitFromRaw(raw bson.Raw) {
 	o.host.Init(raw)
 	o.port.Init(raw)
@@ -180,6 +184,7 @@ type ConnectionInput struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConnectionInput) InitFromRaw(raw bson.Raw) {
 }
 
@@ -214,6 +219,7 @@ func (o *ConnectionParameterMapping) SetValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConnectionParameterMapping) InitFromRaw(raw bson.Raw) {
 	o.parameterName.Init(raw)
 	o.value.Init(raw)
@@ -261,6 +267,7 @@ func (o *ConnectionParts) SetDatabaseName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConnectionParts) InitFromRaw(raw bson.Raw) {
 	o.host.Init(raw)
 	o.port.Init(raw)
@@ -287,6 +294,7 @@ func (o *ConnectionString) SetValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConnectionString) InitFromRaw(raw bson.Raw) {
 	o.value.Init(raw)
 }
@@ -453,6 +461,7 @@ func (o *DatabaseConnection) RemoveAdditionalProperties(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DatabaseConnection) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -586,6 +595,7 @@ func (o *DatabaseQuery) SetQueryType(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DatabaseQuery) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.query.Init(raw)
@@ -690,6 +700,7 @@ func (o *ExecuteDatabaseQueryAction) SetOutputVariableName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExecuteDatabaseQueryAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -735,6 +746,7 @@ func (o *SqlDataType) SetDataTypeName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SqlDataType) InitFromRaw(raw bson.Raw) {
 	o.dataTypeName.Init(raw)
 }
@@ -770,6 +782,7 @@ func (o *LimitedLengthSqlDataType) SetLength(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LimitedLengthSqlDataType) InitFromRaw(raw bson.Raw) {
 	o.dataTypeName.Init(raw)
 	o.length.Init(raw)
@@ -872,6 +885,7 @@ func (o *QueryParameter) SetTableMapping(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *QueryParameter) InitFromRaw(raw bson.Raw) {
 	o.parameterName.Init(raw)
 	if child, err := codec.DecodeChild(raw, "SqlDataType"); err == nil {
@@ -924,6 +938,7 @@ func (o *QueryParameterMapping) SetValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *QueryParameterMapping) InitFromRaw(raw bson.Raw) {
 	o.parameterName.Init(raw)
 	o.value.Init(raw)
@@ -949,6 +964,7 @@ func (o *SimpleSqlDataType) SetDataTypeName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SimpleSqlDataType) InitFromRaw(raw bson.Raw) {
 	o.dataTypeName.Init(raw)
 }
@@ -1000,6 +1016,7 @@ func (o *TableMapping) RemoveColumns(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TableMapping) InitFromRaw(raw bson.Raw) {
 	o.tableName.Init(raw)
 	if val, err := raw.LookupErr("Entity"); err == nil {
@@ -1034,6 +1051,7 @@ func (o *ValueAsConstant) SetValueQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ValueAsConstant) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Value"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -1062,6 +1080,7 @@ func (o *ValueAsString) SetValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ValueAsString) InitFromRaw(raw bson.Raw) {
 	o.value.Init(raw)
 }

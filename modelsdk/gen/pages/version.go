@@ -7,8 +7,12 @@ package pages
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"Forms$AccessibilitySettings": {
+	"Forms$AbstractDesignPropertyValue": {Introduced: "10.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$AccessibilitySettings": {Introduced: "9.22.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"accessible":              {Deleted: "9.24.0"},
 			"screenReaderDescription": {Required: true},
@@ -46,7 +50,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"action": {Required: true},
 		},
 	},
-	"Forms$Appearance": {
+	"Forms$Appearance": {Introduced: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"dynamicClasses": {Introduced: "8.13.0"},
 		},
@@ -106,7 +110,10 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"placeholderTemplate": {Introduced: "10.11.0", Required: true},
 		},
 	},
-	"Forms$TemplateFormBase": {
+	"Forms$BackButton": {Deleted: "7.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$TemplateFormBase": {Introduced: "7.7.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"displayName":            {Public: true},
 			"documentationUrl":       {Introduced: "7.17.0", Public: true},
@@ -114,7 +121,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"templateCategoryWeight": {Introduced: "9.0.2", Public: true},
 		},
 	},
-	"Forms$BuildingBlock": {
+	"Forms$BuildingBlock": {Introduced: "7.7.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"platform": {Introduced: "8.3.0", Public: true},
 			"widget":   {Deleted: "7.15.0"},
@@ -126,23 +133,29 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"disabledDuringExecution": {Introduced: "8.12.0"},
 		},
 	},
-	"Forms$CallNanoflowClientAction": {
+	"Forms$CallNanoflowClientAction": {Introduced: "7.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"nanoflow":          {Introduced: "7.10.0"},
 			"outputMappings":    {Introduced: "11.5.0"},
 			"parameterMappings": {Introduced: "7.19.0"},
 		},
 	},
-	"Forms$CallWorkflowClientAction": {
+	"Forms$CallWorkflowClientAction": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"commit":           {Deleted: "9.12.0"},
 			"confirmationInfo": {Introduced: "9.12.0"},
 		},
 	},
-	"Forms$CancelButton": {
+	"Forms$CancelButton": {Deleted: "7.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"closePage": {Introduced: "6.7.0"},
 		},
+	},
+	"Forms$CancelChangesClientAction": {Introduced: "7.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$CancelSynchronizationClientAction": {Introduced: "11.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Forms$CheckBox": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -166,7 +179,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"sourceVariable": {Introduced: "9.24.0"},
 		},
 	},
-	"Forms$ClosePageClientAction": {
+	"Forms$ClosePageClientAction": {Introduced: "7.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"numberOfPages":        {Introduced: "8.9.0", Deleted: "8.14.0"},
 			"numberOfPagesToClose": {Introduced: "8.14.0"},
@@ -197,6 +210,9 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"attributeRef":  {Introduced: "7.11.0"},
 		},
 	},
+	"Forms$CompoundDesignPropertyValue": {Introduced: "10.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Forms$ConditionalSettings": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"expression":      {Introduced: "7.0.1"},
@@ -220,12 +236,15 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"tooltip":    {Required: true},
 		},
 	},
-	"Forms$CreateObjectClientAction": {
+	"Forms$CreateObjectClientAction": {Introduced: "7.17.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"numberOfPagesToClose":  {Introduced: "8.11.0", Deleted: "8.14.0"},
 			"numberOfPagesToClose2": {Introduced: "8.14.0"},
 			"pageSettings":          {Required: true},
 		},
+	},
+	"Forms$CustomDesignPropertyValue": {Introduced: "10.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Forms$DataGrid": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -255,12 +274,24 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"widgets":                        {Introduced: "7.15.0"},
 		},
 	},
-	"Forms$DataViewActionButton": {
+	"Forms$DataViewControlBarButton": {Deleted: "6.7.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$DataViewActionButton": {Deleted: "6.7.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"action": {Required: true},
 		},
 	},
-	"Forms$DataViewSaveButton": {
+	"Forms$DataViewCancelButton": {Deleted: "6.7.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$DataViewCloseButton": {Deleted: "6.7.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$DataViewControlBar": {Deleted: "6.7.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$DataViewSaveButton": {Deleted: "6.7.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"syncAutomatically": {Introduced: "6.6.0"},
 		},
@@ -271,10 +302,16 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"snippetParameter": {Introduced: "9.21.0", Deleted: "10.2.0"},
 		},
 	},
+	"Forms$DatabaseConstraint": {Deleted: "10.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Forms$SortableEntityPathSource": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"sortBar": {Required: true},
 		},
+	},
+	"Forms$DatabaseSourceBase": {Deleted: "10.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Forms$DatePicker": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -282,12 +319,12 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"nativeAccessibilitySettings": {Introduced: "9.24.0"},
 		},
 	},
-	"Forms$DeleteClientAction": {
+	"Forms$DeleteClientAction": {Introduced: "7.17.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"sourceVariable": {Introduced: "10.4.0"},
 		},
 	},
-	"Forms$DesignPropertyValue": {
+	"Forms$DesignPropertyValue": {Introduced: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"booleanValue": {Deleted: "10.2.0"},
 			"stringValue":  {Deleted: "10.2.0"},
@@ -348,6 +385,12 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"nativeTextStyle":             {Introduced: "8.0.0"},
 		},
 	},
+	"Forms$TemplateType": {Introduced: "8.13.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$EditPageTemplateType": {Introduced: "8.13.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Forms$GridActionButton": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"action": {Required: true},
@@ -375,12 +418,15 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"searchButton": {Deleted: "7.13.0", Required: true},
 		},
 	},
-	"Forms$GridDatabaseSource": {
+	"Forms$GridDatabaseSource": {Deleted: "10.5.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"searchBar": {Required: true},
 		},
 	},
-	"Forms$GridEditButton": {
+	"Forms$GridDeleteButton": {Deleted: "7.17.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$GridEditButton": {Deleted: "7.17.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"pageSettings": {Required: true},
 		},
@@ -419,7 +465,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"rightWidgets": {Introduced: "7.15.0"},
 		},
 	},
-	"Forms$SplitPane": {
+	"Forms$SplitPane": {Deleted: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"firstWidget":   {Deleted: "7.15.0"},
 			"firstWidgets":  {Introduced: "7.15.0"},
@@ -427,7 +473,10 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"secondWidgets": {Introduced: "7.15.0"},
 		},
 	},
-	"Forms$IconCollectionIcon": {
+	"Forms$HorizontalSplitPane": {Deleted: "8.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$IconCollectionIcon": {Introduced: "9.20.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"image": {Required: true},
 		},
@@ -474,6 +523,9 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"widgets":       {Introduced: "7.15.0"},
 		},
 	},
+	"Forms$LayoutContent": {Introduced: "8.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Forms$LayoutGrid": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"rows": {},
@@ -507,7 +559,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"name": {Public: true},
 		},
 	},
-	"Forms$LinkButton": {
+	"Forms$LinkButton": {Deleted: "7.3.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"address": {Required: true},
 		},
@@ -522,7 +574,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"widgets":         {Introduced: "7.15.0"},
 		},
 	},
-	"Forms$ListViewDatabaseSource": {
+	"Forms$ListViewDatabaseSource": {Deleted: "10.5.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"search": {Required: true},
 		},
@@ -545,27 +597,42 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"search": {Required: true},
 		},
 	},
-	"Forms$LocalVariable": {
+	"Forms$LocalVariable": {Introduced: "10.17.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"defaultValue": {Introduced: "10.20.0"},
 			"variableType": {Required: true},
 		},
 	},
-	"Forms$LoginTextBox": {
+	"Forms$LoginButton": {Introduced: "7.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$LoginTextBox": {Introduced: "7.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"placeholder": {Required: true},
 		},
 	},
-	"Forms$MasterDetail": {
+	"Forms$LoginIdTextBox": {Introduced: "7.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$LogoutButton": {Deleted: "7.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$MasterDetail": {Introduced: "7.1.0", Deleted: "7.15.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"detail": {Required: true},
 			"master": {Required: true},
 		},
 	},
-	"Forms$MasterDetailDetailRegion": {
+	"Forms$MasterDetailRegion": {Introduced: "7.1.0", Deleted: "7.15.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$MasterDetailDetailRegion": {Introduced: "7.1.0", Deleted: "7.15.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"title": {Required: true},
 		},
+	},
+	"Forms$MasterDetailMasterRegion": {Introduced: "7.1.0", Deleted: "7.15.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Forms$MenuWidget": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -582,7 +649,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"microflowSettings": {Required: true},
 		},
 	},
-	"Forms$MicroflowParameterMapping": {
+	"Forms$MicroflowParameterMapping": {Introduced: "7.19.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"expression":  {Introduced: "10.10.0"},
 			"parameter":   {Required: true},
@@ -603,7 +670,10 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"microflowSettings": {Required: true},
 		},
 	},
-	"Forms$NanoflowParameterMapping": {
+	"Forms$NamedValue": {Introduced: "9.24.0", Deleted: "10.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$NanoflowParameterMapping": {Introduced: "7.19.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"expression":  {Introduced: "10.10.0"},
 			"parameter":   {Required: true},
@@ -612,12 +682,12 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"widget":      {Deleted: "8.4.0"},
 		},
 	},
-	"Forms$NanoflowSource": {
+	"Forms$NanoflowSource": {Introduced: "7.12.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parameterMappings": {Introduced: "7.19.0"},
 		},
 	},
-	"Forms$NativeLayoutContent": {
+	"Forms$NativeLayoutContent": {Introduced: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"layoutType":     {Introduced: "8.5.0", Public: true},
 			"showBottomBar":  {Introduced: "8.2.0"},
@@ -640,7 +710,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"profileType":       {Deleted: "7.2.0"},
 		},
 	},
-	"Forms$NewButton": {
+	"Forms$NewButton": {Deleted: "7.17.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity":       {Deleted: "6.3.0"},
 			"entityPath":   {Introduced: "6.3.0", Deleted: "7.11.0"},
@@ -648,31 +718,52 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"pageSettings": {Required: true},
 		},
 	},
-	"Forms$OfflineSchema": {
+	"Forms$OfflineSchema": {Deleted: "7.22.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"tables": {Introduced: "6.4.0"},
 		},
 	},
-	"Forms$OnClickMicroflow": {
+	"Forms$OfflineSchemaFetchInstruction": {Deleted: "7.22.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$OnClickBehavior": {Deleted: "7.18.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$OnClickEnlarge": {Deleted: "7.18.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$OnClickMicroflow": {Deleted: "7.18.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"microflowSettings": {Required: true},
 		},
 	},
-	"Forms$OpenLinkClientAction": {
+	"Forms$OnClickNothing": {Deleted: "7.18.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$OpenLinkClientAction": {Introduced: "7.3.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"address": {Required: true},
 		},
 	},
-	"Forms$OpenUserTaskClientAction": {
+	"Forms$OpenUserTaskClientAction": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"assignOnOpen":     {Introduced: "9.20.0"},
 			"openWhenAssigned": {Introduced: "9.20.0"},
 		},
 	},
-	"Forms$OpenWorkflowClientAction": {
+	"Forms$OpenWorkflowClientAction": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"defaultPage": {Introduced: "9.0.5"},
 		},
+	},
+	"Forms$OptionDesignPropertyValue": {Introduced: "10.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$OutputMapping": {Introduced: "11.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$OverviewPageTemplateType": {Introduced: "11.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Forms$Page": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -717,7 +808,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"pageSettings": {Required: true},
 		},
 	},
-	"Forms$PageParameter": {
+	"Forms$PageParameter": {Introduced: "9.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"defaultValue":  {Introduced: "11.5.0"},
 			"isRequired":    {Introduced: "11.5.0"},
@@ -725,19 +816,19 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"parameterType": {Required: true, Public: true},
 		},
 	},
-	"Forms$PageParameterMapping": {
+	"Forms$PageParameterMapping": {Introduced: "9.7.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parameter": {Required: true},
 			"variable":  {},
 		},
 	},
-	"Forms$FormCallArgument": {
+	"Forms$FormCallArgument": {Introduced: "9.7.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parameter": {Required: true},
 			"variable":  {},
 		},
 	},
-	"Forms$PagePrimitiveParameterUrlSegment": {
+	"Forms$PagePrimitiveParameterUrlSegment": {Introduced: "11.9.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"pageParameter": {Required: true},
 		},
@@ -758,7 +849,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"titleOverride":     {Introduced: "8.12.0"},
 		},
 	},
-	"Forms$PageTemplate": {
+	"Forms$PageTemplate": {Introduced: "7.7.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"appearance":   {Introduced: "8.0.0", Required: true},
 			"class":        {Deleted: "8.0.0"},
@@ -768,7 +859,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"type":         {Deleted: "8.13.0", Public: true},
 		},
 	},
-	"Forms$PageVariable": {
+	"Forms$PageVariable": {Introduced: "8.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"localVariable":    {Introduced: "10.17.0"},
 			"pageParameter":    {Introduced: "9.5.0"},
@@ -776,16 +867,19 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"subKey":           {Introduced: "11.0.0"},
 		},
 	},
-	"Forms$ParameterAttributeUrlSegment": {
+	"Forms$ParameterAttributeUrlSegment": {Introduced: "10.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attribute":     {Required: true},
 			"pageParameter": {Required: true},
 		},
 	},
-	"Forms$ParameterIdUrlSegment": {
+	"Forms$ParameterIdUrlSegment": {Introduced: "10.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"pageParameter": {Required: true},
 		},
+	},
+	"Forms$PasswordTextBox": {Introduced: "7.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Forms$RangeSearchField": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -815,7 +909,10 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"removeFromContextEntities": {Deleted: "8.0.0"},
 		},
 	},
-	"Forms$RetrievalQuery": {
+	"Forms$RegularPageTemplateType": {Introduced: "8.13.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$RetrievalQuery": {Introduced: "7.12.0", Deleted: "10.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"allowedUserRoleSets": {Introduced: "9.21.0"},
 			"allowedUserRoles":    {Deleted: "9.21.0"},
@@ -829,13 +926,13 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"widgetName":          {Introduced: "8.4.0"},
 		},
 	},
-	"Forms$RetrievalQueryParameter": {
+	"Forms$RetrievalQueryParameter": {Introduced: "8.6.0", Deleted: "10.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"type":  {Deleted: "10.0.0"},
 			"types": {Introduced: "10.0.0"},
 		},
 	},
-	"Forms$RetrievalSchema": {
+	"Forms$RetrievalSchema": {Introduced: "6.2.0", Deleted: "8.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity":           {Deleted: "7.4.0"},
 			"usedAssociations": {Introduced: "7.2.0"},
@@ -843,7 +940,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"widgetName":       {Introduced: "7.14.0"},
 		},
 	},
-	"Forms$RuntimeOperation": {
+	"Forms$RuntimeOperation": {Introduced: "9.17.0", Deleted: "10.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"allowedUserRoleSets": {Introduced: "9.21.0"},
 			"allowedUserRoles":    {Introduced: "9.18.0", Deleted: "9.21.0"},
@@ -851,11 +948,14 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"operationName":       {Introduced: "9.20.0", Deleted: "9.24.0"},
 		},
 	},
-	"Forms$SaveButton": {
+	"Forms$SaveButton": {Deleted: "7.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"closePage":         {Introduced: "6.7.0"},
 			"syncAutomatically": {Introduced: "6.6.0"},
 		},
+	},
+	"Forms$SaveChangesClientAction": {Introduced: "7.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Forms$ScrollContainer": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -873,7 +973,10 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"widgets":    {Introduced: "7.15.0"},
 		},
 	},
-	"Forms$SelectorDatabaseSource": {
+	"Forms$SelectPageTemplateType": {Introduced: "8.13.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$SelectorDatabaseSource": {Introduced: "6.1.0", Deleted: "10.5.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"sortBar": {Introduced: "6.2.0", Required: true},
 		},
@@ -893,7 +996,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"sortBar":                   {Required: true},
 		},
 	},
-	"Forms$SetTaskOutcomeClientAction": {
+	"Forms$SetTaskOutcomeClientAction": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"outcome":      {Deleted: "9.19.0"},
 			"outcomeValue": {Introduced: "9.19.0"},
@@ -905,6 +1008,9 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"mode":          {Deleted: "6.10.0"},
 			"region":        {Deleted: "6.10.0"},
 		},
+	},
+	"Forms$SignOutClientAction": {Introduced: "7.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Forms$Snippet": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -926,13 +1032,13 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"snippetCall": {Required: true},
 		},
 	},
-	"Forms$SnippetParameter": {
+	"Forms$SnippetParameter": {Introduced: "9.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"name":          {Public: true},
 			"parameterType": {Required: true, Public: true},
 		},
 	},
-	"Forms$SnippetParameterMapping": {
+	"Forms$SnippetParameterMapping": {Introduced: "9.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"argument":  {Introduced: "11.8.0"},
 			"parameter": {Required: true},
@@ -951,6 +1057,18 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"attribute":    {Deleted: "7.11.0"},
 			"attributeRef": {Introduced: "7.11.0"},
 		},
+	},
+	"Forms$UrlSegment": {Introduced: "10.0.0", Deleted: "10.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$StaticUrlSegment": {Introduced: "10.0.0", Deleted: "10.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$SyncButton": {Deleted: "7.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$SyncClientAction": {Introduced: "7.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Forms$TabContainer": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -1008,6 +1126,9 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"widgets": {Introduced: "7.15.0"},
 		},
 	},
+	"Forms$TemplatePlaceholder": {Introduced: "8.13.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Forms$TextWidget": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"autoFocus": {Introduced: "9.15.0"},
@@ -1040,16 +1161,1708 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"nativeAccessibilitySettings": {Introduced: "9.24.0"},
 		},
 	},
-	"Forms$WebLayoutContent": {
+	"Forms$ToggleDesignPropertyValue": {Introduced: "10.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$UserRoleSet": {Introduced: "9.21.0", Deleted: "10.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$WorkflowTemplateType": {Introduced: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$UserTaskTemplateType": {Introduced: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$ValidationMessage": {Introduced: "7.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$VerticalFlow": {Deleted: "7.15.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$VerticalSplitPane": {Deleted: "8.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Forms$WebLayoutContent": {Introduced: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"layoutCall": {Public: true},
 			"layoutType": {Public: true},
 		},
 	},
-	"Forms$WidgetValidation": {
+	"Forms$WidgetValidation": {Introduced: "7.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"expressionModel": {Introduced: "7.9.0", Deleted: "9.8.0", Required: true},
 			"message":         {Required: true},
 		},
 	},
+	"Forms$WorkflowOverviewTemplateType": {Introduced: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for AccessibilitySettings.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *AccessibilitySettings) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "accessible":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.24.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Widget.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Widget) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appearance":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "class":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "style":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ConditionallyVisibleWidget.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ConditionallyVisibleWidget) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "accessibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "9.22.0", Deleted: "9.24.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ActionButton.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ActionButton) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "ariaRole":
+		return version.PropertyVersionInfo{Introduced: "9.0.1", Deleted: ""}, true
+	case "disabledDuringAction":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.12.0"}, true
+	case "nativeAccessibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Appearance.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Appearance) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "dynamicClasses":
+		return version.PropertyVersionInfo{Introduced: "8.13.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DataSource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DataSource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "forceFullObjects":
+		return version.PropertyVersionInfo{Introduced: "10.8.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for EntityPathSource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *EntityPathSource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "entityPath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "entityRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	case "sourceVariable":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for InputWidget.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *InputWidget) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "label":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.18.0"}, true
+	case "labelTemplate":
+		return version.PropertyVersionInfo{Introduced: "7.18.0", Deleted: ""}, true
+	case "screenReaderLabel":
+		return version.PropertyVersionInfo{Introduced: "8.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MemberWidget.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MemberWidget) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attributePath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "attributeRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	case "readOnlyStyle":
+		return version.PropertyVersionInfo{Introduced: "6.9.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for AssociationWidget.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *AssociationWidget) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "onChangeAction":
+		return version.PropertyVersionInfo{Introduced: "7.13.0", Deleted: ""}, true
+	case "onChangeMicroflowSettings":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.13.0"}, true
+	case "sourceVariable":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for AttributeWidget.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *AttributeWidget) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "ariaRequired":
+		return version.PropertyVersionInfo{Introduced: "9.2.0", Deleted: ""}, true
+	case "onChangeAction":
+		return version.PropertyVersionInfo{Introduced: "7.13.0", Deleted: ""}, true
+	case "onChangeMicroflowSettings":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.13.0"}, true
+	case "onEnterAction":
+		return version.PropertyVersionInfo{Introduced: "7.13.0", Deleted: ""}, true
+	case "onEnterMicroflowSettings":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.13.0"}, true
+	case "onLeaveAction":
+		return version.PropertyVersionInfo{Introduced: "7.13.0", Deleted: ""}, true
+	case "onLeaveMicroflowSettings":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.13.0"}, true
+	case "requiredMessage":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.6.0"}, true
+	case "sourceVariable":
+		return version.PropertyVersionInfo{Introduced: "8.8.0", Deleted: ""}, true
+	case "validation":
+		return version.PropertyVersionInfo{Introduced: "7.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for AttributeWidgetWithPlaceholder.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *AttributeWidgetWithPlaceholder) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "placeholder":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.11.0"}, true
+	case "placeholderTemplate":
+		return version.PropertyVersionInfo{Introduced: "10.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for TemplateFormBase.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *TemplateFormBase) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "documentationUrl":
+		return version.PropertyVersionInfo{Introduced: "7.17.0", Deleted: ""}, true
+	case "templateCategory":
+		return version.PropertyVersionInfo{Introduced: "9.0.2", Deleted: ""}, true
+	case "templateCategoryWeight":
+		return version.PropertyVersionInfo{Introduced: "9.0.2", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for BuildingBlock.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *BuildingBlock) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "platform":
+		return version.PropertyVersionInfo{Introduced: "8.3.0", Deleted: ""}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ClientAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ClientAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "disabledDuringExecution":
+		return version.PropertyVersionInfo{Introduced: "8.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CallNanoflowClientAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CallNanoflowClientAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "nanoflow":
+		return version.PropertyVersionInfo{Introduced: "7.10.0", Deleted: ""}, true
+	case "outputMappings":
+		return version.PropertyVersionInfo{Introduced: "11.5.0", Deleted: ""}, true
+	case "parameterMappings":
+		return version.PropertyVersionInfo{Introduced: "7.19.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CallWorkflowClientAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CallWorkflowClientAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "commit":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.12.0"}, true
+	case "confirmationInfo":
+		return version.PropertyVersionInfo{Introduced: "9.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CancelButton.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CancelButton) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "closePage":
+		return version.PropertyVersionInfo{Introduced: "6.7.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CheckBox.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CheckBox) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "labelPosition":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "nativeAccessibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	case "nativeRenderMode":
+		return version.PropertyVersionInfo{Introduced: "9.8.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ClientTemplate.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ClientTemplate) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "fallback":
+		return version.PropertyVersionInfo{Introduced: "8.3.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ClientTemplateParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ClientTemplateParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attributePath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "attributeRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	case "expression":
+		return version.PropertyVersionInfo{Introduced: "9.0.1", Deleted: ""}, true
+	case "formattingInfo":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	case "sourceVariable":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ClosePageClientAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ClosePageClientAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "numberOfPages":
+		return version.PropertyVersionInfo{Introduced: "8.9.0", Deleted: "8.14.0"}, true
+	case "numberOfPagesToClose":
+		return version.PropertyVersionInfo{Introduced: "8.14.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Grid.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Grid) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "isPagingEnabled":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.13.0"}, true
+	case "showPagingBar":
+		return version.PropertyVersionInfo{Introduced: "8.13.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SearchField.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SearchField) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "customDateFormat":
+		return version.PropertyVersionInfo{Introduced: "7.21.0", Deleted: ""}, true
+	case "placeholder":
+		return version.PropertyVersionInfo{Introduced: "7.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SingleSearchField.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SingleSearchField) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attributePath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "attributeRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ConditionalSettings.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ConditionalSettings) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "expression":
+		return version.PropertyVersionInfo{Introduced: "7.0.1", Deleted: ""}, true
+	case "expressionModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	case "sourceVariable":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ControlBarButton.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ControlBarButton) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appearance":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "class":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "style":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CreateObjectClientAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CreateObjectClientAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "numberOfPagesToClose":
+		return version.PropertyVersionInfo{Introduced: "8.11.0", Deleted: "8.14.0"}, true
+	case "numberOfPagesToClose2":
+		return version.PropertyVersionInfo{Introduced: "8.14.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DataGrid.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DataGrid) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "caption":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DataView.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DataView) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "closeOnSaveOrCancel":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.7.0"}, true
+	case "conditionalEditabilitySettings":
+		return version.PropertyVersionInfo{Introduced: "10.7.0", Deleted: ""}, true
+	case "controlBar":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.7.0"}, true
+	case "editability":
+		return version.PropertyVersionInfo{Introduced: "10.7.0", Deleted: ""}, true
+	case "editable":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.7.0"}, true
+	case "footerWidget":
+		return version.PropertyVersionInfo{Introduced: "6.7.0", Deleted: "7.15.0"}, true
+	case "footerWidgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	case "readOnlyStyle":
+		return version.PropertyVersionInfo{Introduced: "6.9.0", Deleted: ""}, true
+	case "showControlBar":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.7.0"}, true
+	case "showFooter":
+		return version.PropertyVersionInfo{Introduced: "6.7.0", Deleted: ""}, true
+	case "useSchema":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DataViewSaveButton.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DataViewSaveButton) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "syncAutomatically":
+		return version.PropertyVersionInfo{Introduced: "6.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DataViewSource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DataViewSource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "pageParameter":
+		return version.PropertyVersionInfo{Introduced: "9.5.0", Deleted: "10.2.0"}, true
+	case "snippetParameter":
+		return version.PropertyVersionInfo{Introduced: "9.21.0", Deleted: "10.2.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DatePicker.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DatePicker) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "nativeAccessibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DeleteClientAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DeleteClientAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "sourceVariable":
+		return version.PropertyVersionInfo{Introduced: "10.4.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DesignPropertyValue.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DesignPropertyValue) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "booleanValue":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.2.0"}, true
+	case "stringValue":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.2.0"}, true
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.2.0"}, true
+	case "value":
+		return version.PropertyVersionInfo{Introduced: "10.2.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DivContainer.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DivContainer) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "nativeAccessibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	case "onClickAction":
+		return version.PropertyVersionInfo{Introduced: "8.3.0", Deleted: ""}, true
+	case "renderMode":
+		return version.PropertyVersionInfo{Introduced: "7.23.0", Deleted: ""}, true
+	case "screenReaderHidden":
+		return version.PropertyVersionInfo{Introduced: "8.12.0", Deleted: ""}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DropDown.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DropDown) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "emptyOptionCaption":
+		return version.PropertyVersionInfo{Introduced: "7.2.0", Deleted: ""}, true
+	case "nativeAccessibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DynamicImageViewer.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DynamicImageViewer) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "alternativeText":
+		return version.PropertyVersionInfo{Introduced: "8.6.0", Deleted: ""}, true
+	case "clickAction":
+		return version.PropertyVersionInfo{Introduced: "7.18.0", Deleted: ""}, true
+	case "nativeAccessibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	case "onClickEnlarge":
+		return version.PropertyVersionInfo{Introduced: "7.18.0", Deleted: ""}, true
+	case "showAsThumbnail":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.18.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DynamicText.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DynamicText) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "nativeAccessibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	case "nativeTextStyle":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for GridColumn.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *GridColumn) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appearance":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "attributePath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "attributeRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	case "class":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "style":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for GridControlBar.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *GridControlBar) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "searchButton":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.13.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for GridNewButton.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *GridNewButton) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "isPersistent":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.2.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for GridSortItem.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *GridSortItem) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attributePath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "attributeRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for GridXPathSource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *GridXPathSource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "applyContext":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "removeAllFromContext":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "removeFromContextIds":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for GroupBox.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *GroupBox) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "caption":
+		return version.PropertyVersionInfo{Introduced: "8.10.0", Deleted: ""}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Header.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Header) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "leftWidget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "leftWidgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	case "rightWidget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "rightWidgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SplitPane.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SplitPane) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "firstWidget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "firstWidgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	case "secondWidget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "secondWidgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Layout.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Layout) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "acceptButtonPlaceholder":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.8.0"}, true
+	case "acceptPlaceholderName":
+		return version.PropertyVersionInfo{Introduced: "6.8.0", Deleted: "7.9.0"}, true
+	case "appearance":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "cancelButtonPlaceholder":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.8.0"}, true
+	case "cancelPlaceholderName":
+		return version.PropertyVersionInfo{Introduced: "6.8.0", Deleted: "7.9.0"}, true
+	case "class":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "content":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "layoutCall":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "layoutType":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "mainPlaceholder":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.8.0"}, true
+	case "mainPlaceholderName":
+		return version.PropertyVersionInfo{Introduced: "6.8.0", Deleted: "7.9.0"}, true
+	case "style":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "useMainPlaceholderForPopups":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.9.0"}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: "8.0.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for LayoutCallArgument.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *LayoutCallArgument) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "parameter":
+		return version.PropertyVersionInfo{Introduced: "6.8.0", Deleted: ""}, true
+	case "parameterName":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.8.0"}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for LayoutGridColumn.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *LayoutGridColumn) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appearance":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "class":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "phoneWeight":
+		return version.PropertyVersionInfo{Introduced: "8.3.0", Deleted: ""}, true
+	case "previewWidth":
+		return version.PropertyVersionInfo{Introduced: "9.16.0", Deleted: ""}, true
+	case "style":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "tabletWeight":
+		return version.PropertyVersionInfo{Introduced: "8.3.0", Deleted: ""}, true
+	case "verticalAlignment":
+		return version.PropertyVersionInfo{Introduced: "8.3.0", Deleted: ""}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for LayoutGridRow.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *LayoutGridRow) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appearance":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "columns":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "horizontalAlignment":
+		return version.PropertyVersionInfo{Introduced: "8.3.0", Deleted: ""}, true
+	case "spacingBetweenColumns":
+		return version.PropertyVersionInfo{Introduced: "8.3.0", Deleted: ""}, true
+	case "style":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "verticalAlignment":
+		return version.PropertyVersionInfo{Introduced: "8.3.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ListView.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ListView) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "numberOfColumns":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "pullDownAction":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "scrollDirection":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ListViewSearch.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ListViewSearch) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "searchPaths":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "searchRefs":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ListViewTemplate.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ListViewTemplate) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for LocalVariable.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *LocalVariable) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "defaultValue":
+		return version.PropertyVersionInfo{Introduced: "10.20.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MicroflowParameterMapping.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MicroflowParameterMapping) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "expression":
+		return version.PropertyVersionInfo{Introduced: "10.10.0", Deleted: ""}, true
+	case "useAllPages":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.4.0"}, true
+	case "variable":
+		return version.PropertyVersionInfo{Introduced: "8.4.0", Deleted: ""}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.4.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MicroflowSettings.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MicroflowSettings) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "outputMappings":
+		return version.PropertyVersionInfo{Introduced: "11.5.0", Deleted: ""}, true
+	case "parameterMappings":
+		return version.PropertyVersionInfo{Introduced: "7.19.0", Deleted: ""}, true
+	case "useAllPages":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.19.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NanoflowParameterMapping.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NanoflowParameterMapping) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "expression":
+		return version.PropertyVersionInfo{Introduced: "10.10.0", Deleted: ""}, true
+	case "useAllPages":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.4.0"}, true
+	case "variable":
+		return version.PropertyVersionInfo{Introduced: "8.4.0", Deleted: ""}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.4.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NanoflowSource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NanoflowSource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "parameterMappings":
+		return version.PropertyVersionInfo{Introduced: "7.19.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NativeLayoutContent.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NativeLayoutContent) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "layoutType":
+		return version.PropertyVersionInfo{Introduced: "8.5.0", Deleted: ""}, true
+	case "showBottomBar":
+		return version.PropertyVersionInfo{Introduced: "8.2.0", Deleted: ""}, true
+	case "sidebar":
+		return version.PropertyVersionInfo{Introduced: "8.5.0", Deleted: ""}, true
+	case "sidebarWidgets":
+		return version.PropertyVersionInfo{Introduced: "8.5.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NavigationListItem.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NavigationListItem) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appearance":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "class":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "style":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NavigationSource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NavigationSource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "navigationProfile":
+		return version.PropertyVersionInfo{Introduced: "7.2.0", Deleted: ""}, true
+	case "profileType":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.2.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NewButton.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NewButton) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "entity":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.3.0"}, true
+	case "entityPath":
+		return version.PropertyVersionInfo{Introduced: "6.3.0", Deleted: "7.11.0"}, true
+	case "entityRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for OfflineSchema.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *OfflineSchema) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "tables":
+		return version.PropertyVersionInfo{Introduced: "6.4.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for OpenUserTaskClientAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *OpenUserTaskClientAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "assignOnOpen":
+		return version.PropertyVersionInfo{Introduced: "9.20.0", Deleted: ""}, true
+	case "openWhenAssigned":
+		return version.PropertyVersionInfo{Introduced: "9.20.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for OpenWorkflowClientAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *OpenWorkflowClientAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "defaultPage":
+		return version.PropertyVersionInfo{Introduced: "9.0.5", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Page.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Page) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appearance":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "autofocus":
+		return version.PropertyVersionInfo{Introduced: "11.1.0", Deleted: ""}, true
+	case "class":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "parameters":
+		return version.PropertyVersionInfo{Introduced: "9.4.0", Deleted: ""}, true
+	case "popupCloseAction":
+		return version.PropertyVersionInfo{Introduced: "6.7.0", Deleted: ""}, true
+	case "style":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "url":
+		return version.PropertyVersionInfo{Introduced: "6.7.0", Deleted: ""}, true
+	case "variables":
+		return version.PropertyVersionInfo{Introduced: "10.17.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PageClientAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PageClientAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "numberOfPagesToClose":
+		return version.PropertyVersionInfo{Introduced: "8.11.0", Deleted: "8.14.0"}, true
+	case "numberOfPagesToClose2":
+		return version.PropertyVersionInfo{Introduced: "8.14.0", Deleted: ""}, true
+	case "pagesForSpecializations":
+		return version.PropertyVersionInfo{Introduced: "7.17.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PageParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PageParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "defaultValue":
+		return version.PropertyVersionInfo{Introduced: "11.5.0", Deleted: ""}, true
+	case "isRequired":
+		return version.PropertyVersionInfo{Introduced: "11.5.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PageSettings.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PageSettings) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "formTitle":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.12.0"}, true
+	case "location":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "parameterMappings":
+		return version.PropertyVersionInfo{Introduced: "9.7.0", Deleted: ""}, true
+	case "titleOverride":
+		return version.PropertyVersionInfo{Introduced: "8.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PageTemplate.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PageTemplate) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appearance":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "class":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "style":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "templateType":
+		return version.PropertyVersionInfo{Introduced: "8.13.0", Deleted: ""}, true
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.13.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PageVariable.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PageVariable) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "localVariable":
+		return version.PropertyVersionInfo{Introduced: "10.17.0", Deleted: ""}, true
+	case "pageParameter":
+		return version.PropertyVersionInfo{Introduced: "9.5.0", Deleted: ""}, true
+	case "snippetParameter":
+		return version.PropertyVersionInfo{Introduced: "9.21.0", Deleted: ""}, true
+	case "subKey":
+		return version.PropertyVersionInfo{Introduced: "11.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for RangeSearchField.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *RangeSearchField) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "lowerBound":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "lowerBoundRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	case "upperBound":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "upperBoundRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ReferenceSelector.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ReferenceSelector) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "emptyOptionCaption":
+		return version.PropertyVersionInfo{Introduced: "7.2.0", Deleted: ""}, true
+	case "nativeAccessibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	case "requiredMessage":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.6.0"}, true
+	case "validation":
+		return version.PropertyVersionInfo{Introduced: "7.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ReferenceSetSelector.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ReferenceSetSelector) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "constrainedBy":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "constrainedByRefs":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	case "onChangeAction":
+		return version.PropertyVersionInfo{Introduced: "7.13.0", Deleted: ""}, true
+	case "onChangeMicroflowSettings":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.13.0"}, true
+	case "removeAllFromContext":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "removeFromContextEntities":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for RetrievalQuery.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *RetrievalQuery) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "allowedUserRoleSets":
+		return version.PropertyVersionInfo{Introduced: "9.21.0", Deleted: ""}, true
+	case "allowedUserRoles":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.21.0"}, true
+	case "entityPath":
+		return version.PropertyVersionInfo{Introduced: "7.21.0", Deleted: ""}, true
+	case "microflow":
+		return version.PropertyVersionInfo{Introduced: "7.21.0", Deleted: ""}, true
+	case "pageName":
+		return version.PropertyVersionInfo{Introduced: "7.14.0", Deleted: ""}, true
+	case "parameters":
+		return version.PropertyVersionInfo{Introduced: "8.6.0", Deleted: ""}, true
+	case "schemaId":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.4.0"}, true
+	case "usedAssociations":
+		return version.PropertyVersionInfo{Introduced: "8.4.0", Deleted: ""}, true
+	case "usedAttributes":
+		return version.PropertyVersionInfo{Introduced: "8.11.0", Deleted: ""}, true
+	case "widgetName":
+		return version.PropertyVersionInfo{Introduced: "8.4.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for RetrievalQueryParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *RetrievalQueryParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.0.0"}, true
+	case "types":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for RetrievalSchema.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *RetrievalSchema) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "entity":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.4.0"}, true
+	case "usedAssociations":
+		return version.PropertyVersionInfo{Introduced: "7.2.0", Deleted: ""}, true
+	case "usedAttributes":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.2.0"}, true
+	case "widgetName":
+		return version.PropertyVersionInfo{Introduced: "7.14.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for RuntimeOperation.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *RuntimeOperation) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "allowedUserRoleSets":
+		return version.PropertyVersionInfo{Introduced: "9.21.0", Deleted: ""}, true
+	case "allowedUserRoles":
+		return version.PropertyVersionInfo{Introduced: "9.18.0", Deleted: "9.21.0"}, true
+	case "constants":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	case "operationName":
+		return version.PropertyVersionInfo{Introduced: "9.20.0", Deleted: "9.24.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SaveButton.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SaveButton) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "closePage":
+		return version.PropertyVersionInfo{Introduced: "6.7.0", Deleted: ""}, true
+	case "syncAutomatically":
+		return version.PropertyVersionInfo{Introduced: "6.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ScrollContainer.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ScrollContainer) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "nativeHideScrollbars":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ScrollContainerRegion.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ScrollContainerRegion) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appearance":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "class":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "style":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "toggleMode":
+		return version.PropertyVersionInfo{Introduced: "6.10.0", Deleted: ""}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SelectorDatabaseSource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SelectorDatabaseSource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "sortBar":
+		return version.PropertyVersionInfo{Introduced: "6.2.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SelectorXPathSource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SelectorXPathSource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "applyContext":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "constrainedBy":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "constrainedByRefs":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	case "removeAllFromContext":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "removeFromContextEntities":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SetTaskOutcomeClientAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SetTaskOutcomeClientAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "outcome":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.19.0"}, true
+	case "outcomeValue":
+		return version.PropertyVersionInfo{Introduced: "9.19.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SidebarToggleButton.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SidebarToggleButton) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "initiallyOpen":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.10.0"}, true
+	case "mode":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.10.0"}, true
+	case "region":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.10.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Snippet.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Snippet) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "entity":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.21.0"}, true
+	case "parameters":
+		return version.PropertyVersionInfo{Introduced: "9.21.0", Deleted: ""}, true
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "variables":
+		return version.PropertyVersionInfo{Introduced: "10.17.0", Deleted: ""}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SnippetCall.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SnippetCall) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "parameterMappings":
+		return version.PropertyVersionInfo{Introduced: "9.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SnippetParameterMapping.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SnippetParameterMapping) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "argument":
+		return version.PropertyVersionInfo{Introduced: "11.8.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for StaticImageViewer.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *StaticImageViewer) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "alternativeText":
+		return version.PropertyVersionInfo{Introduced: "8.6.0", Deleted: ""}, true
+	case "nativeAccessibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for StaticOrDynamicString.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *StaticOrDynamicString) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attribute":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "attributeRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for TabContainer.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *TabContainer) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "activePageAttributeRef":
+		return version.PropertyVersionInfo{Introduced: "10.14.0", Deleted: ""}, true
+	case "activePageOnChangeAction":
+		return version.PropertyVersionInfo{Introduced: "10.14.0", Deleted: ""}, true
+	case "activePageSourceVariable":
+		return version.PropertyVersionInfo{Introduced: "10.14.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for TabPage.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *TabPage) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "badge":
+		return version.PropertyVersionInfo{Introduced: "8.13.0", Deleted: ""}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for TableCell.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *TableCell) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appearance":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "class":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "style":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for TableRow.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *TableRow) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appearance":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "class":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	case "style":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.0.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for TemplateGridContents.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *TemplateGridContents) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "widget":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	case "widgets":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for TextWidget.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *TextWidget) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "autoFocus":
+		return version.PropertyVersionInfo{Introduced: "9.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for TextArea.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *TextArea) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "autocomplete":
+		return version.PropertyVersionInfo{Introduced: "8.10.0", Deleted: ""}, true
+	case "nativeAccessibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	case "submitBehaviour":
+		return version.PropertyVersionInfo{Introduced: "9.14.0", Deleted: ""}, true
+	case "submitOnInputDelay":
+		return version.PropertyVersionInfo{Introduced: "9.14.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for TextBox.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *TextBox) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "autocomplete":
+		return version.PropertyVersionInfo{Introduced: "8.10.0", Deleted: ""}, true
+	case "autocompletePurpose":
+		return version.PropertyVersionInfo{Introduced: "8.12.0", Deleted: ""}, true
+	case "keyboardType":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "nativeAccessibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	case "onEnterKeyPressAction":
+		return version.PropertyVersionInfo{Introduced: "8.7.0", Deleted: ""}, true
+	case "submitBehaviour":
+		return version.PropertyVersionInfo{Introduced: "8.15.0", Deleted: ""}, true
+	case "submitOnInputDelay":
+		return version.PropertyVersionInfo{Introduced: "8.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Title.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Title) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "nativeAccessibilitySettings":
+		return version.PropertyVersionInfo{Introduced: "9.24.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for WidgetValidation.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *WidgetValidation) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "expressionModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

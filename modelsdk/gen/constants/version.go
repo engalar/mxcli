@@ -7,6 +7,7 @@ package constants
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"Constants$Constant": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -15,4 +16,20 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"type":            {Introduced: "7.9.0", Required: true, Public: true},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Constant.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Constant) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "dataType":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.9.0"}, true
+	case "exposedToClient":
+		return version.PropertyVersionInfo{Introduced: "8.2.0", Deleted: ""}, true
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

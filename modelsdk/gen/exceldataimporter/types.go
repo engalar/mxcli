@@ -121,6 +121,7 @@ func (o *CSVSheet) SetCsvRootElement(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CSVSheet) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.delimiter.Init(raw)
@@ -151,6 +152,7 @@ type TemplateContents struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TemplateContents) InitFromRaw(raw bson.Raw) {
 }
 
@@ -174,6 +176,7 @@ func (o *CSVTemplateContents) SetSheet(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CSVTemplateContents) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Sheet"); err == nil {
 		o.sheet.SetFromDecode(child)
@@ -211,6 +214,7 @@ func (o *ColumnAttributeMapping) SetAttributeQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ColumnAttributeMapping) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Reference"); err == nil {
 		o.reference.SetFromDecode(child)
@@ -242,6 +246,7 @@ func (o *CsvSheetMappingSourceReference) SetCsvSheetQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CsvSheetMappingSourceReference) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("CsvSheet"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -435,6 +440,7 @@ func (o *DataImporterElement) OriginalValues() string {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataImporterElement) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ElementType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -557,6 +563,7 @@ func (o *ExcelSheet) SetExcelRootElement(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExcelSheet) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Reference"); err == nil {
@@ -599,6 +606,7 @@ func (o *ExcelSheetMappingSourceReference) SetExcelSheetQualifiedName(v string) 
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExcelSheetMappingSourceReference) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ExcelSheet"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -632,6 +640,7 @@ func (o *ExcelTemplateContents) RemoveSheets(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExcelTemplateContents) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Sheets"); err == nil {
 		for _, child := range children {
@@ -704,6 +713,7 @@ func (o *ImportExcelDataAction) SetInputFileVariableName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ImportExcelDataAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -729,6 +739,7 @@ type Reference struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Reference) InitFromRaw(raw bson.Raw) {
 }
 
@@ -752,6 +763,7 @@ func (o *IndexReference) SetReferencedIndex(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *IndexReference) InitFromRaw(raw bson.Raw) {
 	o.referencedIndex.Init(raw)
 }
@@ -776,6 +788,7 @@ func (o *NameReference) SetReferencedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NameReference) InitFromRaw(raw bson.Raw) {
 	o.referencedName.Init(raw)
 }
@@ -849,6 +862,7 @@ func (o *Sheet) RemoveColumnAttributeMappings(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Sheet) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Reference"); err == nil {
 		o.reference.SetFromDecode(child)
@@ -980,6 +994,7 @@ func (o *Template) SetUseAsMappingSource(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Template) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)

@@ -7,15 +7,55 @@ package datatypes
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"DataTypes$EntityType": {
+	"DataTypes$DataType": {Introduced: "7.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTypes$BinaryType": {Introduced: "7.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTypes$BooleanType": {Introduced: "7.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTypes$DateTimeType": {Introduced: "7.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTypes$DecimalType": {Introduced: "7.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTypes$EmptyType": {Introduced: "7.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTypes$EntityType": {Introduced: "7.9.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity": {Required: true, Public: true},
 		},
 	},
-	"DataTypes$EnumerationType": {
+	"DataTypes$EnumerationType": {Introduced: "7.9.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"enumeration": {Required: true, Public: true},
 		},
+	},
+	"DataTypes$FloatType": {Introduced: "7.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTypes$IntegerType": {Introduced: "7.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTypes$ListType": {Introduced: "7.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTypes$ObjectType": {Introduced: "7.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTypes$StringType": {Introduced: "7.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTypes$UnknownType": {Introduced: "7.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTypes$VoidType": {Introduced: "7.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 }

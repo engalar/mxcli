@@ -28,6 +28,7 @@ type ChangeMode struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ChangeMode) InitFromRaw(raw bson.Raw) {
 }
 
@@ -51,6 +52,7 @@ func (o *CallMicroflowToChange) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CallMicroflowToChange) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -68,6 +70,7 @@ type ReadMode struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReadMode) InitFromRaw(raw bson.Raw) {
 }
 
@@ -91,6 +94,7 @@ func (o *CallMicroflowToRead) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CallMicroflowToRead) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -108,6 +112,7 @@ type ChangeNotSupported struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ChangeNotSupported) InitFromRaw(raw bson.Raw) {
 }
 
@@ -120,6 +125,7 @@ type ChangeSource struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ChangeSource) InitFromRaw(raw bson.Raw) {
 }
 
@@ -242,6 +248,7 @@ func (o *EntitySet) SetQueryOptions(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EntitySet) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	o.alternativeExposedName.Init(raw)
@@ -340,6 +347,7 @@ func (o *EntityType) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EntityType) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	if val, err := raw.LookupErr("Entity"); err == nil {
@@ -398,6 +406,7 @@ func (o *PublishedMember) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedMember) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	o.summary.Init(raw)
@@ -490,6 +499,7 @@ func (o *PublishedAssociationEnd) SetExposedAssociationName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedAssociationEnd) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	o.summary.Init(raw)
@@ -627,6 +637,7 @@ func (o *PublishedAttribute) SetStringAsGuid(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedAttribute) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	o.summary.Init(raw)
@@ -697,6 +708,7 @@ func (o *PublishedContract) SetGraphQL(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedContract) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "ServiceFeed"); err == nil {
 		o.serviceFeed.SetFromDecode(child)
@@ -775,6 +787,7 @@ func (o *PublishedEnumeration) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedEnumeration) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	if val, err := raw.LookupErr("Enumeration"); err == nil {
@@ -844,6 +857,7 @@ func (o *PublishedEnumerationValue) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedEnumerationValue) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	if val, err := raw.LookupErr("EnumerationValue"); err == nil {
@@ -908,6 +922,7 @@ func (o *PublishedId) SetIsPartOfKey(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedId) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	o.summary.Init(raw)
@@ -1006,6 +1021,7 @@ func (o *PublishedMicroflow) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedMicroflow) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	o.alternativeExposedName.Init(raw)
@@ -1101,6 +1117,7 @@ func (o *PublishedMicroflowParameter) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedMicroflowParameter) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	if val, err := raw.LookupErr("MicroflowParameter"); err == nil {
@@ -1403,6 +1420,7 @@ func (o *PublishedODataService2) SetSupportsGraphQL(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedODataService2) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -1521,6 +1539,7 @@ func (o *QueryOptions) SetSkipSupported(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *QueryOptions) InitFromRaw(raw bson.Raw) {
 	o.countable.Init(raw)
 	o.topSupported.Init(raw)
@@ -1536,6 +1555,7 @@ type ReadSource struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReadSource) InitFromRaw(raw bson.Raw) {
 }
 
@@ -1570,6 +1590,7 @@ func (o *ServiceFeed) SetJson(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ServiceFeed) InitFromRaw(raw bson.Raw) {
 	o.xml.Init(raw)
 	o.json.Init(raw)
@@ -1650,6 +1671,7 @@ func (o *PublishedODataMember) SetIsPartOfKey(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PublishedODataMember) InitFromRaw(raw bson.Raw) {
 	o.exposedName.Init(raw)
 	if val, err := raw.LookupErr("Attribute"); err == nil {
@@ -1694,6 +1716,7 @@ func (o *ConsumedODataServiceHeader) SetValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConsumedODataServiceHeader) InitFromRaw(raw bson.Raw) {
 	o.key.Init(raw)
 	o.value.Init(raw)

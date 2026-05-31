@@ -74,8 +74,18 @@ type TypeVersionInfo struct {
 	Properties map[string]PropertyVersionInfo
 }
 
-// DefaultVersionRegistry is the global registry of TypeVersionInfo, populated
-// by each domain package's init() function via generated code.
+// PropertyVersioner is implemented by generated element types that carry
+// per-property version constraints. The encoder uses this interface for
+// zero-allocation, mutex-free version gating without consulting any global registry.
+//
+// camelName is the camelCase property key (e.g. "boundaryEvents").
+// Returns (PropertyVersionInfo{}, false) when the property has no constraint.
+type PropertyVersioner interface {
+	PropertyVersionInfo(camelName string) (PropertyVersionInfo, bool)
+}
+
+// DefaultVersionRegistry is the global registry of TypeVersionInfo, kept for
+// diagnostic / tooling use. The encoder no longer consults it at runtime.
 var DefaultVersionRegistry = &VersionRegistry{}
 
 // VersionRegistry stores TypeVersionInfo by BSON type name.

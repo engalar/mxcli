@@ -7,6 +7,7 @@ package workflows
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"Workflows$WorkflowActivity": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
@@ -428,8 +429,228 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 	},
 }
 
-func init() {
-	for name, info := range VersionInfos {
-		version.DefaultVersionRegistry.Register(name, info)
+// PropertyVersionInfo implements version.PropertyVersioner for WorkflowActivity.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *WorkflowActivity) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "annotation":
+		return version.PropertyVersionInfo{Introduced: "9.15.0", Deleted: ""}, true
+	case "name":
+		return version.PropertyVersionInfo{Introduced: "9.0.5", Deleted: ""}, true
+	case "persistentId":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	case "relativeMiddlePoint":
+		return version.PropertyVersionInfo{Introduced: "11.1.0", Deleted: ""}, true
+	case "size":
+		return version.PropertyVersionInfo{Introduced: "11.1.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Outcome.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Outcome) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "persistentId":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for BoundaryEvent.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *BoundaryEvent) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "annotation":
+		return version.PropertyVersionInfo{Introduced: "10.16.0", Deleted: ""}, true
+	case "isInterrupting":
+		return version.PropertyVersionInfo{Introduced: "10.17.0", Deleted: "10.20.0"}, true
+	case "persistentId":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CallMicroflowTask.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CallMicroflowTask) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "boundaryEvents":
+		return version.PropertyVersionInfo{Introduced: "10.14.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CallWorkflowActivity.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CallWorkflowActivity) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "boundaryEvents":
+		return version.PropertyVersionInfo{Introduced: "10.14.0", Deleted: ""}, true
+	case "executeAsync":
+		return version.PropertyVersionInfo{Introduced: "9.18.0", Deleted: ""}, true
+	case "parameterExpression":
+		return version.PropertyVersionInfo{Introduced: "9.6.0", Deleted: "9.18.0"}, true
+	case "parameterMappings":
+		return version.PropertyVersionInfo{Introduced: "9.18.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for FlowLine.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *FlowLine) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "caseValues":
+		return version.PropertyVersionInfo{Introduced: "11.5.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MultiInputCompletion.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MultiInputCompletion) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "awaitAllUsers":
+		return version.PropertyVersionInfo{Introduced: "10.2.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for UserTaskActivity.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *UserTaskActivity) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "boundaryEvents":
+		return version.PropertyVersionInfo{Introduced: "10.14.0", Deleted: ""}, true
+	case "userSource":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "11.2.0"}, true
+	case "userTargeting":
+		return version.PropertyVersionInfo{Introduced: "11.2.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Parameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Parameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "entity":
+		return version.PropertyVersionInfo{Introduced: "9.10.0", Deleted: ""}, true
+	case "entityRef":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.10.0"}, true
+	case "name":
+		return version.PropertyVersionInfo{Introduced: "9.18.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for UserTask.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *UserTask) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "allowedModuleRoles":
+		return version.PropertyVersionInfo{Introduced: "9.0.3", Deleted: "9.6.0"}, true
+	case "autoAssignSingleTargetUser":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "onCreatedEvent":
+		return version.PropertyVersionInfo{Introduced: "9.0.5", Deleted: ""}, true
+	case "page":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.11.0"}, true
+	case "taskPage":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "userTaskCompletion":
+		return version.PropertyVersionInfo{Introduced: "9.22.0", Deleted: ""}, true
+	case "userTaskEntity":
+		return version.PropertyVersionInfo{Introduced: "9.6.0", Deleted: "9.10.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for UserTaskOutcome.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *UserTaskOutcome) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "caption":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.19.0"}, true
+	case "name":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.19.0"}, true
+	case "value":
+		return version.PropertyVersionInfo{Introduced: "9.19.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for WaitForNotificationActivity.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *WaitForNotificationActivity) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "boundaryEvents":
+		return version.PropertyVersionInfo{Introduced: "10.14.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Workflow.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Workflow) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "adminPage":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "allowedModuleRoles":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.6.0"}, true
+	case "annotation":
+		return version.PropertyVersionInfo{Introduced: "9.15.0", Deleted: ""}, true
+	case "contextEntity":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.6.0"}, true
+	case "eventSubProcesses":
+		return version.PropertyVersionInfo{Introduced: "11.8.0", Deleted: ""}, true
+	case "onWorkflowEvent":
+		return version.PropertyVersionInfo{Introduced: "10.7.0", Deleted: ""}, true
+	case "overviewPage":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.11.0"}, true
+	case "parameter":
+		return version.PropertyVersionInfo{Introduced: "9.6.0", Deleted: ""}, true
+	case "persistentId":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	case "usertaskOnStateChangeEvent":
+		return version.PropertyVersionInfo{Introduced: "9.12.0", Deleted: "11.0.0"}, true
+	case "workflowEntity":
+		return version.PropertyVersionInfo{Introduced: "9.6.0", Deleted: "9.7.0"}, true
+	case "workflowMetaData":
+		return version.PropertyVersionInfo{Introduced: "11.1.0", Deleted: ""}, true
+	case "workflowOnStateChangeEvent":
+		return version.PropertyVersionInfo{Introduced: "9.12.0", Deleted: "11.0.0"}, true
+	case "workflowType":
+		return version.PropertyVersionInfo{Introduced: "9.7.0", Deleted: "9.10.0"}, true
+	case "workflowV2":
+		return version.PropertyVersionInfo{Introduced: "11.1.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
 	}
 }

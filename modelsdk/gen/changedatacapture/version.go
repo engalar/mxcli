@@ -7,38 +7,76 @@ package changedatacapture
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"ChangeDataCapture$AssociationProperty": {
+	"ChangeDataCapture$EntityChangeProperty": {Introduced: "11.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ChangeDataCapture$AssociationProperty": {Introduced: "11.9.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"association": {Required: true},
 		},
 	},
-	"ChangeDataCapture$AttributeProperty": {
+	"ChangeDataCapture$AttributeProperty": {Introduced: "11.9.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attribute": {Required: true},
 		},
 	},
-	"ChangeDataCapture$EntityChangeDataCaptureService": {
+	"ChangeDataCapture$EntityChangeDataCaptureService": {Introduced: "11.5.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"baseline":    {Introduced: "11.10.0"},
 			"serviceName": {Introduced: "11.8.0"},
 		},
 	},
-	"ChangeDataCapture$EntityChangeSource": {
+	"ChangeDataCapture$EntityChangeSource": {Introduced: "11.5.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity":      {Required: true},
 			"exposedName": {Introduced: "11.9.0"},
 			"properties":  {Introduced: "11.9.0"},
 		},
 	},
-	"ChangeDataCapture$VersionedEntityChangeDataCaptureService": {
+	"ChangeDataCapture$Version": {Introduced: "11.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"ChangeDataCapture$VersionedEntityChangeDataCaptureService": {Introduced: "11.10.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"version": {Required: true},
 		},
 	},
-	"ChangeDataCapture$VersionedEntityChangeSource": {
+	"ChangeDataCapture$VersionedEntityChangeSource": {Introduced: "11.10.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"version": {Required: true},
 		},
 	},
+	"ChangeDataCapture$VersionedProperty": {Introduced: "11.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for EntityChangeDataCaptureService.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *EntityChangeDataCaptureService) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "baseline":
+		return version.PropertyVersionInfo{Introduced: "11.10.0", Deleted: ""}, true
+	case "serviceName":
+		return version.PropertyVersionInfo{Introduced: "11.8.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for EntityChangeSource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *EntityChangeSource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "exposedName":
+		return version.PropertyVersionInfo{Introduced: "11.9.0", Deleted: ""}, true
+	case "properties":
+		return version.PropertyVersionInfo{Introduced: "11.9.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

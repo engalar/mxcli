@@ -7,10 +7,32 @@ package javascriptactions
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"JavaScriptActions$JavaScriptAction": {
+	"JavaScriptActions$JavaScriptAction": {Introduced: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"platform": {Introduced: "9.10.0", Public: true},
 		},
 	},
+	"JavaScriptActions$JavaScriptActionParameter": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaScriptActions$MicroflowJavaScriptActionParameterType": {Introduced: "10.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"JavaScriptActions$NanoflowJavaScriptActionParameterType": {Introduced: "8.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for JavaScriptAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *JavaScriptAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "platform":
+		return version.PropertyVersionInfo{Introduced: "9.10.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

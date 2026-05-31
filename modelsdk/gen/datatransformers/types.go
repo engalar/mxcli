@@ -28,6 +28,7 @@ type StructureValueType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *StructureValueType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -40,6 +41,7 @@ type BooleanValueType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BooleanValueType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -172,6 +174,7 @@ func (o *DataTransformer) SetSourceType(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DataTransformer) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -214,6 +217,7 @@ type DateTimeValueType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DateTimeValueType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -226,6 +230,7 @@ type DecimalValueType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DecimalValueType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -238,6 +243,7 @@ type TransformerAction struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TransformerAction) InitFromRaw(raw bson.Raw) {
 }
 
@@ -261,6 +267,7 @@ func (o *JsltAction) SetJslt(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *JsltAction) InitFromRaw(raw bson.Raw) {
 	o.jslt.Init(raw)
 }
@@ -274,6 +281,7 @@ type Source struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Source) InitFromRaw(raw bson.Raw) {
 }
 
@@ -297,6 +305,7 @@ func (o *JsonSource) SetContent(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *JsonSource) InitFromRaw(raw bson.Raw) {
 	o.content.Init(raw)
 }
@@ -310,6 +319,7 @@ type LongValueType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LongValueType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -377,6 +387,7 @@ func (o *Step) SetExpression(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Step) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Action"); err == nil {
 		o.action.SetFromDecode(child)
@@ -408,6 +419,7 @@ type StringValueType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *StringValueType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -420,6 +432,7 @@ type StructureElement struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *StructureElement) InitFromRaw(raw bson.Raw) {
 }
 
@@ -454,6 +467,7 @@ func (o *StructureAttribute) SetValueID(v element.ID) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *StructureAttribute) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if val, err := raw.LookupErr("Value"); err == nil {
@@ -490,6 +504,7 @@ func (o *StructureObject) RemoveAttributes(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *StructureObject) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Attributes"); err == nil {
 		for _, child := range children {
@@ -518,6 +533,7 @@ func (o *StructureValue) SetType(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *StructureValue) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Type"); err == nil {
 		o.propType.SetFromDecode(child)

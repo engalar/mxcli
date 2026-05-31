@@ -105,6 +105,7 @@ func (o *ReportWidget) SetGenerateOnLoad(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReportWidget) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -283,6 +284,7 @@ func (o *BasicReport) SetPageSize(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BasicReport) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -352,6 +354,7 @@ func (o *BasicReportAggregate) ApplicablePerColumn() string {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BasicReportAggregate) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
 		o.caption.SetFromDecode(child)
@@ -428,6 +431,7 @@ func (o *BasicReportColumn) SetFormat(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BasicReportColumn) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
 		o.caption.SetFromDecode(child)
@@ -521,6 +525,7 @@ func (o *ReportButton) SetCaption(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReportButton) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -746,6 +751,7 @@ func (o *ReportChart) SetAspectRatio(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReportChart) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -824,6 +830,7 @@ func (o *ReportChartSeries) SetDataSetColumn(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReportChartSeries) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
 		o.caption.SetFromDecode(child)
@@ -862,6 +869,7 @@ func (o *ReportDateRangeField) SetType(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReportDateRangeField) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
 		o.caption.SetFromDecode(child)
@@ -959,6 +967,7 @@ func (o *ReportParameter) SetParameterName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReportParameter) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -1143,6 +1152,7 @@ func (o *ReportDateRangeSelector) SetToCaption(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReportDateRangeSelector) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -1271,6 +1281,7 @@ func (o *ReportDropDown) SetAttributeQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReportDropDown) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -1389,6 +1400,7 @@ func (o *ReportPane) SetGenerateOnLoad(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReportPane) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)
@@ -1442,6 +1454,7 @@ func (o *ReportZoomInfo) RemoveMappings(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReportZoomInfo) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("TargetPage"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -1486,6 +1499,7 @@ func (o *ReportZoomMapping) SetSourceReportColumnName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ReportZoomMapping) InitFromRaw(raw bson.Raw) {
 	o.targetParameterName.Init(raw)
 	o.sourceReportColumnName.Init(raw)

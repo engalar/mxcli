@@ -72,6 +72,7 @@ func (o *BottomBarItem) SetAction(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BottomBarItem) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Caption"); err == nil {
 		o.caption.SetFromDecode(child)
@@ -191,6 +192,7 @@ func (o *NativeLayout) SetHeaderWidget(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NativeLayout) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -248,6 +250,7 @@ func (o *NativeLayoutCallArgument) RemoveWidgets(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NativeLayoutCallArgument) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -363,6 +366,7 @@ func (o *NativePage) RemoveArguments(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NativePage) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -417,6 +421,7 @@ func (o *NativePageClientAction) SetPageQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NativePageClientAction) InitFromRaw(raw bson.Raw) {
 	o.disabledDuringExecution.Init(raw)
 	if val, err := raw.LookupErr("Page"); err == nil {
@@ -490,6 +495,7 @@ func (o *NativePlaceholder) SetTabIndex(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NativePlaceholder) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.class.Init(raw)

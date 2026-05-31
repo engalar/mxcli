@@ -7,34 +7,90 @@ package kafka
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"Kafka$ConsumedKafkaService": {
+	"Kafka$ConsumedKafkaService": {Introduced: "8.11.0", Deleted: "10.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"serviceFeed": {Introduced: "8.12.0"},
 			"serviceId":   {Deleted: "8.14.0"},
 		},
 	},
-	"Kafka$KafkaRemoteEntitySource": {
+	"Kafka$KafkaMappedValue": {Introduced: "8.11.0", Deleted: "10.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Kafka$KafkaRemoteEntitySource": {Introduced: "8.11.0", Deleted: "10.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"topicName": {Introduced: "8.12.0"},
 		},
 	},
-	"Kafka$PublishedKafkaResource": {
+	"Kafka$PublishedKafkaResource": {Introduced: "8.14.0", Deleted: "10.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attributes": {Introduced: "9.0.1"},
 			"entity":     {Required: true},
 			"topicName":  {Deleted: "9.0.3"},
 		},
 	},
-	"Kafka$PublishedKafkaResourceAttribute": {
+	"Kafka$PublishedKafkaResourceAttribute": {Introduced: "9.0.1", Deleted: "10.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attribute":   {Required: true},
 			"exposedName": {Introduced: "9.0.2"},
 		},
 	},
-	"Kafka$PublishedKafkaService": {
+	"Kafka$PublishedKafkaService": {Introduced: "8.14.0", Deleted: "10.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"brokerUrl": {},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ConsumedKafkaService.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ConsumedKafkaService) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "serviceFeed":
+		return version.PropertyVersionInfo{Introduced: "8.12.0", Deleted: ""}, true
+	case "serviceId":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.14.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for KafkaRemoteEntitySource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *KafkaRemoteEntitySource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "topicName":
+		return version.PropertyVersionInfo{Introduced: "8.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedKafkaResource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedKafkaResource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attributes":
+		return version.PropertyVersionInfo{Introduced: "9.0.1", Deleted: ""}, true
+	case "topicName":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.3"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedKafkaResourceAttribute.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedKafkaResourceAttribute) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "exposedName":
+		return version.PropertyVersionInfo{Introduced: "9.0.2", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

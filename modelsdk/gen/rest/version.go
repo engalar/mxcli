@@ -7,35 +7,57 @@ package rest
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"Rest$BasicAuthenticationScheme": {
+	"Rest$AuthenticationScheme": {Introduced: "10.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$BasicAuthenticationScheme": {Introduced: "10.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"password": {Required: true},
 			"username": {Required: true},
 		},
 	},
-	"Rest$BasicAuthentication": {
+	"Rest$BasicAuthentication": {Introduced: "10.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"password": {Required: true},
 			"username": {Required: true},
 		},
 	},
-	"Rest$CallMicroflowToChange": {
+	"Rest$Body": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$ChangeMode": {Introduced: "9.11.0", Deleted: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$CallMicroflowToChange": {Introduced: "9.11.0", Deleted: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"microflow": {Required: true},
 		},
 	},
-	"Rest$CallMicroflowToRead": {
+	"Rest$ReadMode": {Introduced: "9.14.0", Deleted: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$CallMicroflowToRead": {Introduced: "9.14.0", Deleted: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"microflow": {},
 		},
 	},
-	"Rest$ConstantValue": {
+	"Rest$ChangeNotSupported": {Introduced: "9.11.0", Deleted: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$ChangeSource": {Introduced: "9.11.0", Deleted: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$Value": {Introduced: "10.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$ConstantValue": {Introduced: "10.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"value": {},
 		},
 	},
-	"Rest$ConsumedODataService": {
+	"Rest$ConsumedODataService": {Introduced: "7.18.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"configurationEntityMicroflow": {Introduced: "11.10.0"},
 			"configurationMicroflow":       {Introduced: "10.12.0", Deleted: "11.10.0"},
@@ -53,7 +75,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"versionApiMockResults":        {Introduced: "8.13.0", Deleted: "8.14.0"},
 		},
 	},
-	"Rest$ConsumedRestService": {
+	"Rest$ConsumedRestService": {Introduced: "10.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"authenticationScheme": {Introduced: "10.2.0"},
 			"baseUrl":              {Required: true},
@@ -62,47 +84,62 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"operations":           {Public: true},
 		},
 	},
-	"Rest$HeaderWithValueTemplate": {
+	"Rest$CorsConfiguration": {Introduced: "7.18.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$HeaderWithValueTemplate": {Introduced: "10.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"name":  {Public: true},
 			"value": {Required: true},
 		},
 	},
-	"Rest$ImplicitMappingBody": {
+	"Rest$ImplicitMappingBody": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"rootMappingElement": {Required: true},
 			"testValue":          {Required: true},
 		},
 	},
-	"Rest$ImplicitMappingResponseHandling": {
+	"Rest$RestOperationResponseHandling": {Introduced: "10.3.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$ImplicitMappingResponseHandling": {Introduced: "10.3.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"rootMappingElement": {Required: true},
 		},
 	},
-	"Rest$MetadataReference": {
+	"Rest$JsonBody": {Introduced: "11.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$MetadataReference": {Introduced: "8.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"metadataReferences": {Introduced: "8.8.0"},
 		},
 	},
-	"Rest$ODataEntityTypeSource": {
+	"Rest$NoResponseHandling": {Introduced: "10.3.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$ODataEntityTypeSource": {Introduced: "10.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"isOpen": {Introduced: "11.5.0"},
 			"key":    {Public: true},
 		},
 	},
-	"Rest$ODataKey": {
+	"Rest$ODataKey": {Introduced: "8.9.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parts": {Public: true},
 		},
 	},
-	"Rest$ODataKeyPart": {
+	"Rest$ODataKeyPart": {Introduced: "8.9.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"filterable": {Introduced: "9.16.0"},
 			"remoteType": {Introduced: "9.9.0"},
 			"type":       {Required: true, Public: true},
 		},
 	},
-	"Rest$ODataMappedValue": {
+	"Rest$ODataMappedPrimitiveCollectionValue": {Introduced: "11.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$ODataMappedValue": {Introduced: "8.10.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"creatable":        {Introduced: "9.11.0"},
 			"filterable":       {Introduced: "8.16.0", Public: true},
@@ -112,7 +149,13 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"updatable":        {Introduced: "9.6.0"},
 		},
 	},
-	"Rest$ODataRemoteAssociationSource": {
+	"Rest$ODataPrimitiveCollectionAssociationSource": {Introduced: "11.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$ODataPrimitiveCollectionEntitySource": {Introduced: "11.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$ODataRemoteAssociationSource": {Introduced: "8.10.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"creatableFromChild":  {Introduced: "9.11.0"},
 			"creatableFromParent": {Introduced: "9.11.0"},
@@ -122,7 +165,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"updatableFromParent": {Introduced: "9.6.0"},
 		},
 	},
-	"Rest$ODataRemoteEntitySource": {
+	"Rest$ODataRemoteEntitySource": {Introduced: "8.10.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"countable":           {Introduced: "8.16.0", Public: true},
 			"creatable":           {Introduced: "9.11.0"},
@@ -137,44 +180,59 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"topSupported":        {Introduced: "9.21.0"},
 		},
 	},
-	"Rest$OperationParameter": {
+	"Rest$ODataRemoteEnumerationSource": {Introduced: "10.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$ODataRemoteEnumerationValue": {Introduced: "10.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$OpenApiFile": {Introduced: "10.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$OperationParameter": {Introduced: "10.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"dataType":  {Required: true},
 			"name":      {Public: true},
 			"testValue": {Required: true},
 		},
 	},
-	"Rest$PublishedODataContract": {
+	"Rest$QueryParameterUsage": {Introduced: "11.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$OptionalQueryParameterUsage": {Introduced: "11.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$PublishedODataContract": {Introduced: "9.14.0", Deleted: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"openApi":     {Introduced: "9.17.0"},
 			"serviceFeed": {Required: true},
 		},
 	},
-	"Rest$PublishedODataEnumeration": {
+	"Rest$PublishedODataEnumeration": {Introduced: "9.21.0", Deleted: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"enumeration": {Required: true},
 		},
 	},
-	"Rest$PublishedODataEnumerationValue": {
+	"Rest$PublishedODataEnumerationValue": {Introduced: "9.21.0", Deleted: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"enumerationValue": {Required: true},
 		},
 	},
-	"Rest$PublishedODataMicroflow": {
+	"Rest$PublishedODataMicroflow": {Introduced: "9.19.0", Deleted: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"microflow":  {Required: true},
 			"parameters": {Introduced: "10.0.0"},
 			"returnType": {Introduced: "10.2.0", Required: true},
 		},
 	},
-	"Rest$PublishedODataMicroflowParameter": {
+	"Rest$PublishedODataMicroflowParameter": {Introduced: "10.0.0", Deleted: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"dataType":           {Introduced: "10.2.0", Required: true},
 			"microflowParameter": {Required: true},
 			"type":               {Deleted: "10.2.0", Required: true},
 		},
 	},
-	"Rest$PublishedODataService": {
+	"Rest$PublishedODataService": {Deleted: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"authenticationMicroflow": {Introduced: "8.0.0"},
 			"authenticationTypes":     {Introduced: "8.0.0"},
@@ -190,7 +248,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"version":                 {Introduced: "8.0.0"},
 		},
 	},
-	"Rest$PublishedRestResource": {
+	"Rest$PublishedRestResource": {Deleted: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"countMicroflow":  {Introduced: "9.9.0", Deleted: "9.14.0"},
 			"deletable":       {Introduced: "9.10.0", Deleted: "9.11.0"},
@@ -208,7 +266,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"updateMode":      {Introduced: "9.11.0", Required: true},
 		},
 	},
-	"Rest$PublishedRestService": {
+	"Rest$PublishedRestService": {Introduced: "7.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"authenticationMicroflow": {Introduced: "7.17.0"},
 			"authenticationType":      {Introduced: "7.11.0", Deleted: "7.13.0"},
@@ -221,7 +279,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"version":                 {Introduced: "7.12.0"},
 		},
 	},
-	"Rest$PublishedRestServiceOperation": {
+	"Rest$PublishedRestServiceOperation": {Introduced: "7.7.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"commit":               {Introduced: "7.14.0"},
 			"deprecated":           {Introduced: "7.15.0"},
@@ -231,19 +289,28 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"parameters":           {Introduced: "7.17.0"},
 		},
 	},
-	"Rest$QueryOptions": {
+	"Rest$PublishedRestServiceResource": {Introduced: "7.7.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$QueryOptions": {Introduced: "9.17.0", Deleted: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"skipSupported": {Introduced: "9.19.0"},
 			"topSupported":  {Introduced: "9.19.0"},
 		},
 	},
-	"Rest$QueryParameter": {
+	"Rest$QueryParameter": {Introduced: "11.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"name":           {Public: true},
 			"parameterUsage": {Required: true},
 		},
 	},
-	"Rest$RestOperation": {
+	"Rest$ReadSource": {Introduced: "9.14.0", Deleted: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$RequiredQueryParameterUsage": {Introduced: "11.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$RestOperation": {Introduced: "10.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"headers":          {Public: true},
 			"method":           {Introduced: "10.4.0", Required: true},
@@ -255,12 +322,18 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"tags":             {Introduced: "10.21.0"},
 		},
 	},
-	"Rest$RestOperationMethodWithBody": {
+	"Rest$RestOperationMethod": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$RestOperationMethodWithBody": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"body": {Required: true},
 		},
 	},
-	"Rest$RestOperationParameter": {
+	"Rest$RestOperationMethodWithoutBody": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$RestOperationParameter": {Introduced: "7.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"dataType":           {Deleted: "7.9.0", Required: true},
 			"description":        {Introduced: "8.3.0"},
@@ -268,17 +341,420 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"type":               {Introduced: "7.17.0", Required: true},
 		},
 	},
-	"Rest$RestParameter": {
+	"Rest$RestParameter": {Introduced: "10.17.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"dataType":  {Required: true},
 			"name":      {Public: true},
 			"testValue": {Required: true},
 		},
 	},
-	"Rest$StringBody": {
+	"Rest$ServiceFeed": {Introduced: "9.14.0", Deleted: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$StringBody": {Introduced: "10.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"value":         {Deleted: "10.11.0"},
 			"valueTemplate": {Introduced: "10.11.0", Required: true},
 		},
 	},
+	"Rest$StringValue": {Introduced: "10.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Rest$ValueTemplate": {Introduced: "10.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ConsumedODataService.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ConsumedODataService) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "configurationEntityMicroflow":
+		return version.PropertyVersionInfo{Introduced: "11.10.0", Deleted: ""}, true
+	case "configurationMicroflow":
+		return version.PropertyVersionInfo{Introduced: "10.12.0", Deleted: "11.10.0"}, true
+	case "errorHandlingMicroflow":
+		return version.PropertyVersionInfo{Introduced: "9.6.0", Deleted: ""}, true
+	case "headerListMicroflow":
+		return version.PropertyVersionInfo{Introduced: "11.10.0", Deleted: ""}, true
+	case "headersMicroflow":
+		return version.PropertyVersionInfo{Introduced: "8.4.0", Deleted: "10.12.0"}, true
+	case "httpConfiguration":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "lastUpdated":
+		return version.PropertyVersionInfo{Introduced: "8.14.0", Deleted: ""}, true
+	case "metadataReferences":
+		return version.PropertyVersionInfo{Introduced: "8.6.0", Deleted: ""}, true
+	case "oDataVersion":
+		return version.PropertyVersionInfo{Introduced: "8.6.0", Deleted: ""}, true
+	case "serviceId":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: "8.14.0"}, true
+	case "timeoutExpression":
+		return version.PropertyVersionInfo{Introduced: "8.5.0", Deleted: ""}, true
+	case "timeoutModel":
+		return version.PropertyVersionInfo{Introduced: "8.5.0", Deleted: "9.8.0"}, true
+	case "useQuerySegment":
+		return version.PropertyVersionInfo{Introduced: "9.6.0", Deleted: ""}, true
+	case "versionApiMockResults":
+		return version.PropertyVersionInfo{Introduced: "8.13.0", Deleted: "8.14.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ConsumedRestService.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ConsumedRestService) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "authenticationScheme":
+		return version.PropertyVersionInfo{Introduced: "10.2.0", Deleted: ""}, true
+	case "baseUrlParameter":
+		return version.PropertyVersionInfo{Introduced: "10.17.0", Deleted: ""}, true
+	case "openApiFile":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MetadataReference.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MetadataReference) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "metadataReferences":
+		return version.PropertyVersionInfo{Introduced: "8.8.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ODataEntityTypeSource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ODataEntityTypeSource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "isOpen":
+		return version.PropertyVersionInfo{Introduced: "11.5.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ODataKeyPart.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ODataKeyPart) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "filterable":
+		return version.PropertyVersionInfo{Introduced: "9.16.0", Deleted: ""}, true
+	case "remoteType":
+		return version.PropertyVersionInfo{Introduced: "9.9.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ODataMappedValue.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ODataMappedValue) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "creatable":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "filterable":
+		return version.PropertyVersionInfo{Introduced: "8.16.0", Deleted: ""}, true
+	case "remoteType":
+		return version.PropertyVersionInfo{Introduced: "8.15.0", Deleted: ""}, true
+	case "representsStream":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "sortable":
+		return version.PropertyVersionInfo{Introduced: "8.16.0", Deleted: ""}, true
+	case "updatable":
+		return version.PropertyVersionInfo{Introduced: "9.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ODataRemoteAssociationSource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ODataRemoteAssociationSource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "creatableFromChild":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "creatableFromParent":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "navigability":
+		return version.PropertyVersionInfo{Introduced: "8.16.0", Deleted: "9.14.0"}, true
+	case "navigability2":
+		return version.PropertyVersionInfo{Introduced: "9.14.0", Deleted: ""}, true
+	case "updatableFromChild":
+		return version.PropertyVersionInfo{Introduced: "9.6.0", Deleted: ""}, true
+	case "updatableFromParent":
+		return version.PropertyVersionInfo{Introduced: "9.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ODataRemoteEntitySource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ODataRemoteEntitySource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "countable":
+		return version.PropertyVersionInfo{Introduced: "8.16.0", Deleted: ""}, true
+	case "creatable":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "createChangeLocally":
+		return version.PropertyVersionInfo{Introduced: "10.4.0", Deleted: ""}, true
+	case "deletable":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "entitySet":
+		return version.PropertyVersionInfo{Introduced: "8.11.0", Deleted: "9.5.0"}, true
+	case "entitySetName":
+		return version.PropertyVersionInfo{Introduced: "9.5.0", Deleted: ""}, true
+	case "entityTypeName":
+		return version.PropertyVersionInfo{Introduced: "9.5.0", Deleted: ""}, true
+	case "key":
+		return version.PropertyVersionInfo{Introduced: "8.11.0", Deleted: ""}, true
+	case "remoteName":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.5.0"}, true
+	case "skipSupported":
+		return version.PropertyVersionInfo{Introduced: "9.21.0", Deleted: ""}, true
+	case "topSupported":
+		return version.PropertyVersionInfo{Introduced: "9.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedODataContract.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedODataContract) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "openApi":
+		return version.PropertyVersionInfo{Introduced: "9.17.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedODataMicroflow.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedODataMicroflow) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "parameters":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	case "returnType":
+		return version.PropertyVersionInfo{Introduced: "10.2.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedODataMicroflowParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedODataMicroflowParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "dataType":
+		return version.PropertyVersionInfo{Introduced: "10.2.0", Deleted: ""}, true
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.2.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedODataService.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedODataService) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "authenticationMicroflow":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "authenticationTypes":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "description":
+		return version.PropertyVersionInfo{Introduced: "8.4.0", Deleted: ""}, true
+	case "enumerations":
+		return version.PropertyVersionInfo{Introduced: "9.21.0", Deleted: ""}, true
+	case "microflows":
+		return version.PropertyVersionInfo{Introduced: "9.19.0", Deleted: ""}, true
+	case "oDataVersion":
+		return version.PropertyVersionInfo{Introduced: "9.1.0", Deleted: ""}, true
+	case "publishAssociations":
+		return version.PropertyVersionInfo{Introduced: "7.19.0", Deleted: ""}, true
+	case "replaceIllegalChars":
+		return version.PropertyVersionInfo{Introduced: "8.12.0", Deleted: ""}, true
+	case "serviceName":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "summary":
+		return version.PropertyVersionInfo{Introduced: "8.4.0", Deleted: ""}, true
+	case "useGeneralization":
+		return version.PropertyVersionInfo{Introduced: "8.18.0", Deleted: ""}, true
+	case "version":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedRestResource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedRestResource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "countMicroflow":
+		return version.PropertyVersionInfo{Introduced: "9.9.0", Deleted: "9.14.0"}, true
+	case "deletable":
+		return version.PropertyVersionInfo{Introduced: "9.10.0", Deleted: "9.11.0"}, true
+	case "deleteMode":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "description":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "exposedName":
+		return version.PropertyVersionInfo{Introduced: "7.19.0", Deleted: ""}, true
+	case "insertMode":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	case "insertable":
+		return version.PropertyVersionInfo{Introduced: "9.10.0", Deleted: "9.11.0"}, true
+	case "queryMicroflow":
+		return version.PropertyVersionInfo{Introduced: "9.9.0", Deleted: "9.14.0"}, true
+	case "queryOptions":
+		return version.PropertyVersionInfo{Introduced: "9.17.0", Deleted: ""}, true
+	case "readMode":
+		return version.PropertyVersionInfo{Introduced: "9.14.0", Deleted: ""}, true
+	case "summary":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "updatable":
+		return version.PropertyVersionInfo{Introduced: "9.4.0", Deleted: "9.11.0"}, true
+	case "updateMicroflow":
+		return version.PropertyVersionInfo{Introduced: "9.9.0", Deleted: "9.11.0"}, true
+	case "updateMode":
+		return version.PropertyVersionInfo{Introduced: "9.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedRestService.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedRestService) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "authenticationMicroflow":
+		return version.PropertyVersionInfo{Introduced: "7.17.0", Deleted: ""}, true
+	case "authenticationType":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: "7.13.0"}, true
+	case "authenticationTypes":
+		return version.PropertyVersionInfo{Introduced: "7.13.0", Deleted: ""}, true
+	case "corsConfiguration":
+		return version.PropertyVersionInfo{Introduced: "7.18.0", Deleted: ""}, true
+	case "parameters":
+		return version.PropertyVersionInfo{Introduced: "7.17.0", Deleted: ""}, true
+	case "publicDocumentation":
+		return version.PropertyVersionInfo{Introduced: "11.10.0", Deleted: ""}, true
+	case "resources":
+		return version.PropertyVersionInfo{Introduced: "7.7.0", Deleted: ""}, true
+	case "serviceName":
+		return version.PropertyVersionInfo{Introduced: "7.12.0", Deleted: ""}, true
+	case "version":
+		return version.PropertyVersionInfo{Introduced: "7.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedRestServiceOperation.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedRestServiceOperation) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "commit":
+		return version.PropertyVersionInfo{Introduced: "7.14.0", Deleted: ""}, true
+	case "deprecated":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	case "exportMapping":
+		return version.PropertyVersionInfo{Introduced: "7.14.0", Deleted: ""}, true
+	case "importMapping":
+		return version.PropertyVersionInfo{Introduced: "7.14.0", Deleted: ""}, true
+	case "objectHandlingBackup":
+		return version.PropertyVersionInfo{Introduced: "7.17.0", Deleted: ""}, true
+	case "parameters":
+		return version.PropertyVersionInfo{Introduced: "7.17.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for QueryOptions.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *QueryOptions) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "skipSupported":
+		return version.PropertyVersionInfo{Introduced: "9.19.0", Deleted: ""}, true
+	case "topSupported":
+		return version.PropertyVersionInfo{Introduced: "9.19.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for RestOperation.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *RestOperation) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "method":
+		return version.PropertyVersionInfo{Introduced: "10.4.0", Deleted: ""}, true
+	case "queryParameters":
+		return version.PropertyVersionInfo{Introduced: "11.0.0", Deleted: ""}, true
+	case "responseHandling":
+		return version.PropertyVersionInfo{Introduced: "10.3.0", Deleted: ""}, true
+	case "tags":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for RestOperationParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *RestOperationParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "dataType":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.9.0"}, true
+	case "description":
+		return version.PropertyVersionInfo{Introduced: "8.3.0", Deleted: ""}, true
+	case "microflowParameter":
+		return version.PropertyVersionInfo{Introduced: "7.17.0", Deleted: ""}, true
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "7.17.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for StringBody.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *StringBody) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "value":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.11.0"}, true
+	case "valueTemplate":
+		return version.PropertyVersionInfo{Introduced: "10.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

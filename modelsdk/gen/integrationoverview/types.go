@@ -28,6 +28,7 @@ type SourceApi struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SourceApi) InitFromRaw(raw bson.Raw) {
 }
 
@@ -106,6 +107,7 @@ func (o *CatalogApi) SetValidated(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CatalogApi) InitFromRaw(raw bson.Raw) {
 	o.endpointId.Init(raw)
 	o.version.Init(raw)

@@ -7,15 +7,16 @@ package customicons
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"CustomIcons$CustomIcon": {
+	"CustomIcons$CustomIcon": {Introduced: "9.20.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"characterCode": {Public: true},
 			"name":          {Public: true},
 			"tags":          {Public: true},
 		},
 	},
-	"CustomIcons$CustomIconCollection": {
+	"CustomIcons$CustomIconCollection": {Introduced: "9.20.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"collectionClass": {Introduced: "9.22.0", Public: true},
 			"fontData":        {Public: true},
@@ -23,4 +24,18 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"prefix":          {Introduced: "9.22.0", Public: true},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CustomIconCollection.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CustomIconCollection) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "collectionClass":
+		return version.PropertyVersionInfo{Introduced: "9.22.0", Deleted: ""}, true
+	case "prefix":
+		return version.PropertyVersionInfo{Introduced: "9.22.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

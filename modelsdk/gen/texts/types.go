@@ -50,6 +50,7 @@ func (o *SystemText) SetKey(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SystemText) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Text"); err == nil {
 		o.text.SetFromDecode(child)
@@ -82,6 +83,7 @@ func (o *SystemTextCollection) RemoveSystemTexts(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SystemTextCollection) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "SystemTexts"); err == nil {
 		for _, child := range children {
@@ -115,6 +117,7 @@ func (o *Text) RemoveTranslations(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Text) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {
@@ -154,6 +157,7 @@ func (o *Translation) SetText(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Translation) InitFromRaw(raw bson.Raw) {
 	o.languageCode.Init(raw)
 	o.text.Init(raw)

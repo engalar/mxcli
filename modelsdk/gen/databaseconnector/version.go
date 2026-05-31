@@ -7,13 +7,35 @@ package databaseconnector
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"DatabaseConnector$ColumnMapping": {
+	"DatabaseConnector$AdditionalProperty": {Introduced: "10.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DatabaseConnector$AdditionalPropertyValue": {Introduced: "10.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DatabaseConnector$ColumnMapping": {Introduced: "9.22.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attribute": {Required: true},
 		},
 	},
-	"DatabaseConnector$DatabaseConnection": {
+	"DatabaseConnector$ConnectionDetails": {Introduced: "9.22.0", Deleted: "10.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DatabaseConnector$ConnectionInput": {Introduced: "10.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DatabaseConnector$ConnectionParameterMapping": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DatabaseConnector$ConnectionParts": {Introduced: "10.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DatabaseConnector$ConnectionString": {Introduced: "10.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DatabaseConnector$DatabaseConnection": {Introduced: "9.22.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"additionalProperties": {Introduced: "10.12.0"},
 			"connectionDetails":    {Deleted: "10.0.0"},
@@ -22,7 +44,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"queries":              {Public: true},
 		},
 	},
-	"DatabaseConnector$DatabaseQuery": {
+	"DatabaseConnector$DatabaseQuery": {Introduced: "9.22.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"name":          {Public: true},
 			"queryType":     {Introduced: "10.12.0"},
@@ -30,14 +52,20 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"tableMappings": {Introduced: "10.12.0"},
 		},
 	},
-	"DatabaseConnector$ExecuteDatabaseQueryAction": {
+	"DatabaseConnector$ExecuteDatabaseQueryAction": {Introduced: "9.24.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"connectionParameterMappings": {Introduced: "11.1.0"},
 			"dynamicQuery":                {Introduced: "11.3.0"},
 			"query":                       {},
 		},
 	},
-	"DatabaseConnector$QueryParameter": {
+	"DatabaseConnector$SqlDataType": {Introduced: "9.22.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DatabaseConnector$LimitedLengthSqlDataType": {Introduced: "9.22.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DatabaseConnector$QueryParameter": {Introduced: "9.22.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"dataType":              {Required: true},
 			"databaseParameterName": {Introduced: "10.12.0"},
@@ -46,9 +74,87 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"tableMapping":          {Introduced: "11.0.0"},
 		},
 	},
-	"DatabaseConnector$TableMapping": {
+	"DatabaseConnector$QueryParameterMapping": {Introduced: "9.24.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DatabaseConnector$SimpleSqlDataType": {Introduced: "9.22.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DatabaseConnector$TableMapping": {Introduced: "9.22.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity": {Required: true},
 		},
 	},
+	"DatabaseConnector$ValueAsConstant": {Introduced: "10.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DatabaseConnector$ValueAsString": {Introduced: "10.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DatabaseConnection.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DatabaseConnection) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "additionalProperties":
+		return version.PropertyVersionInfo{Introduced: "10.12.0", Deleted: ""}, true
+	case "connectionDetails":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.0.0"}, true
+	case "connectionInput":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	case "lastSelectedQuery":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DatabaseQuery.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DatabaseQuery) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "queryType":
+		return version.PropertyVersionInfo{Introduced: "10.12.0", Deleted: ""}, true
+	case "tableMapping":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.12.0"}, true
+	case "tableMappings":
+		return version.PropertyVersionInfo{Introduced: "10.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ExecuteDatabaseQueryAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ExecuteDatabaseQueryAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "connectionParameterMappings":
+		return version.PropertyVersionInfo{Introduced: "11.1.0", Deleted: ""}, true
+	case "dynamicQuery":
+		return version.PropertyVersionInfo{Introduced: "11.3.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for QueryParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *QueryParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "databaseParameterName":
+		return version.PropertyVersionInfo{Introduced: "10.12.0", Deleted: ""}, true
+	case "emptyValueBecomesNull":
+		return version.PropertyVersionInfo{Introduced: "10.12.0", Deleted: ""}, true
+	case "mode":
+		return version.PropertyVersionInfo{Introduced: "10.10.0", Deleted: ""}, true
+	case "tableMapping":
+		return version.PropertyVersionInfo{Introduced: "11.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

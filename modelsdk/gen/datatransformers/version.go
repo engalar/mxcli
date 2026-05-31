@@ -7,8 +7,15 @@ package datatransformers
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"DataTransformers$DataTransformer": {
+	"DataTransformers$StructureValueType": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTransformers$BooleanValueType": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTransformers$DataTransformer": {Introduced: "11.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"elements":    {Public: true},
 			"rootElement": {Public: true},
@@ -16,35 +23,56 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"steps":       {Public: true},
 		},
 	},
-	"DataTransformers$JsltAction": {
+	"DataTransformers$DateTimeValueType": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTransformers$DecimalValueType": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTransformers$TransformerAction": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTransformers$JsltAction": {Introduced: "11.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"jslt": {Public: true},
 		},
 	},
-	"DataTransformers$JsonSource": {
+	"DataTransformers$Source": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTransformers$JsonSource": {Introduced: "11.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"content": {Public: true},
 		},
 	},
-	"DataTransformers$Step": {
+	"DataTransformers$LongValueType": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTransformers$Step": {Introduced: "11.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"action":        {Required: true, Public: true},
 			"inputElement":  {Required: true, Public: true},
 			"outputElement": {Required: true, Public: true},
 		},
 	},
-	"DataTransformers$StructureAttribute": {
+	"DataTransformers$StringValueType": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTransformers$StructureElement": {Introduced: "11.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DataTransformers$StructureAttribute": {Introduced: "11.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"name":  {Public: true},
 			"value": {Required: true, Public: true},
 		},
 	},
-	"DataTransformers$StructureObject": {
+	"DataTransformers$StructureObject": {Introduced: "11.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attributes": {Public: true},
 		},
 	},
-	"DataTransformers$StructureValue": {
+	"DataTransformers$StructureValue": {Introduced: "11.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"type": {Required: true, Public: true},
 		},

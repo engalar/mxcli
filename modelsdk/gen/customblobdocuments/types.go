@@ -105,6 +105,7 @@ func (o *CustomBlobDocument) SetMetadata(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CustomBlobDocument) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -152,6 +153,7 @@ func (o *CustomBlobDocumentMetadata) SetReadableTypeName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CustomBlobDocumentMetadata) InitFromRaw(raw bson.Raw) {
 	o.createdByExtension.Init(raw)
 	o.readableTypeName.Init(raw)

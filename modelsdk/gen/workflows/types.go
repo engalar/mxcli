@@ -95,6 +95,7 @@ func (o *WorkflowActivity) SetSize(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WorkflowActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -197,6 +198,7 @@ func (o *ConditionOutcomeActivity) RemoveOutcomes(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConditionOutcomeActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -347,6 +349,7 @@ func (o *MicroflowBasedActivity) RemoveBoundaryEvents(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowBasedActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -512,6 +515,7 @@ func (o *AIAgentTaskActivity) RemoveBoundaryEvents(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AIAgentTaskActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -552,6 +556,7 @@ type TargetUserInput struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TargetUserInput) InitFromRaw(raw bson.Raw) {
 }
 
@@ -575,6 +580,7 @@ func (o *AbsoluteAmountUserInput) SetAmount(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AbsoluteAmountUserInput) InitFromRaw(raw bson.Raw) {
 	o.amount.Init(raw)
 }
@@ -588,6 +594,7 @@ type AllUserInput struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AllUserInput) InitFromRaw(raw bson.Raw) {
 }
 
@@ -611,6 +618,7 @@ func (o *Annotation) SetDescription(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Annotation) InitFromRaw(raw bson.Raw) {
 	o.description.Init(raw)
 }
@@ -624,6 +632,7 @@ type Line struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Line) InitFromRaw(raw bson.Raw) {
 }
 
@@ -658,6 +667,7 @@ func (o *BezierCurve) SetDestinationControlVector(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BezierCurve) InitFromRaw(raw bson.Raw) {
 	o.originControlVector.Init(raw)
 	o.destinationControlVector.Init(raw)
@@ -672,6 +682,7 @@ type CaseValue struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CaseValue) InitFromRaw(raw bson.Raw) {
 }
 
@@ -695,6 +706,7 @@ func (o *BooleanCase) SetValue(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BooleanCase) InitFromRaw(raw bson.Raw) {
 	o.value.Init(raw)
 }
@@ -730,6 +742,7 @@ func (o *Outcome) SetFlow(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Outcome) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Flow"); err == nil {
@@ -768,6 +781,7 @@ func (o *ConditionOutcome) SetFlow(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConditionOutcome) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Flow"); err == nil {
@@ -817,6 +831,7 @@ func (o *BooleanConditionOutcome) SetValue(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BooleanConditionOutcome) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Flow"); err == nil {
@@ -911,6 +926,7 @@ func (o *BoundaryEvent) SetDelay(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BoundaryEvent) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Flow"); err == nil {
@@ -1059,6 +1075,7 @@ func (o *CallMicroflowActivity) RemoveBoundaryEvents(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CallMicroflowActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -1224,6 +1241,7 @@ func (o *CallMicroflowTask) RemoveBoundaryEvents(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CallMicroflowTask) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -1395,6 +1413,7 @@ func (o *CallWorkflowActivity) SetExecuteAsync(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CallWorkflowActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -1432,6 +1451,7 @@ type UserTaskCompletionCriteria struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UserTaskCompletionCriteria) InitFromRaw(raw bson.Raw) {
 }
 
@@ -1455,6 +1475,7 @@ func (o *ConsensusCompletionCriteria) SetFallbackOutcomeID(v element.ID) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConsensusCompletionCriteria) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("FallbackOutcomePointer"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -1474,6 +1495,7 @@ type UserSource struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UserSource) InitFromRaw(raw bson.Raw) {
 }
 
@@ -1486,6 +1508,7 @@ type EmptyUserSource struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EmptyUserSource) InitFromRaw(raw bson.Raw) {
 }
 
@@ -1564,6 +1587,7 @@ func (o *EndOfBoundaryEventPathActivity) SetSize(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EndOfBoundaryEventPathActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -1650,6 +1674,7 @@ func (o *EndOfParallelSplitPathActivity) SetSize(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EndOfParallelSplitPathActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -1736,6 +1761,7 @@ func (o *EndWorkflowActivity) SetSize(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EndWorkflowActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -1789,6 +1815,7 @@ func (o *EnumerationValueConditionOutcome) SetValueQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EnumerationValueConditionOutcome) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Flow"); err == nil {
@@ -1865,6 +1892,7 @@ func (o *EventSubProcess) SetAnnotation(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EventSubProcess) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -1979,6 +2007,7 @@ func (o *ExclusiveSplitActivity) SetExpression(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExclusiveSplitActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -2038,6 +2067,7 @@ func (o *FloatingAnnotation) SetSize(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *FloatingAnnotation) InitFromRaw(raw bson.Raw) {
 	o.description.Init(raw)
 	o.relativeMiddlePoint.Init(raw)
@@ -2069,6 +2099,7 @@ func (o *Flow) RemoveActivities(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Flow) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Activities"); err == nil {
 		for _, child := range children {
@@ -2179,6 +2210,7 @@ func (o *FlowLine) RemoveCaseValues(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *FlowLine) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("OriginPointer"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -2291,6 +2323,7 @@ func (o *NotificationEventSubProcessStartActivity) SetSize(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NotificationEventSubProcessStartActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -2377,6 +2410,7 @@ func (o *InterruptingNotificationEventSubProcessStartActivity) SetSize(v string)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *InterruptingNotificationEventSubProcessStartActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -2397,6 +2431,7 @@ type NotifyTarget struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NotifyTarget) InitFromRaw(raw bson.Raw) {
 }
 
@@ -2420,6 +2455,7 @@ func (o *InterruptingNotificationEventSubProcessStartActivityTarget) SetActivity
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *InterruptingNotificationEventSubProcessStartActivityTarget) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Activity"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -2525,6 +2561,7 @@ func (o *InterruptingTimerBoundaryEvent) SetFirstExecutionTime(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *InterruptingTimerBoundaryEvent) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Flow"); err == nil {
@@ -2626,6 +2663,7 @@ func (o *JumpToActivity) SetTargetActivityQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *JumpToActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -2651,6 +2689,7 @@ type Recurrence struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Recurrence) InitFromRaw(raw bson.Raw) {
 }
 
@@ -2696,6 +2735,7 @@ func (o *LinearRecurrence) SetMaxExecutions(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LinearRecurrence) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("IntervalType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -2737,6 +2777,7 @@ func (o *MajorityCompletionCriteria) SetFallbackOutcomeID(v element.ID) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MajorityCompletionCriteria) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("CompletionType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -2827,6 +2868,7 @@ func (o *MergeActivity) SetSize(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MergeActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -2847,6 +2889,7 @@ type UserTaskEvent struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UserTaskEvent) InitFromRaw(raw bson.Raw) {
 }
 
@@ -2870,6 +2913,7 @@ func (o *MicroflowBasedEvent) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowBasedEvent) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -2887,6 +2931,7 @@ type UserTargeting struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UserTargeting) InitFromRaw(raw bson.Raw) {
 }
 
@@ -2910,6 +2955,7 @@ func (o *MicroflowBasedTargeting) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowBasedTargeting) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -2938,6 +2984,7 @@ func (o *MicroflowBasedUserSource) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowBasedUserSource) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -2977,6 +3024,7 @@ func (o *MicroflowCallParameterMapping) SetExpression(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowCallParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -3006,6 +3054,7 @@ func (o *MicroflowCompletionCriteria) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowCompletionCriteria) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -3034,6 +3083,7 @@ func (o *MicroflowEventHandler) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowEventHandler) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -3062,6 +3112,7 @@ func (o *MicroflowGroupTargeting) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowGroupTargeting) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -3090,6 +3141,7 @@ func (o *MicroflowUserTargeting) SetMicroflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowUserTargeting) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Microflow"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -3107,6 +3159,7 @@ type UserTaskCompletion struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UserTaskCompletion) InitFromRaw(raw bson.Raw) {
 }
 
@@ -3152,6 +3205,7 @@ func (o *MultiInputCompletion) SetAwaitAllUsers(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MultiInputCompletion) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "TargetUserInput"); err == nil {
 		o.targetUserInput.SetFromDecode(child)
@@ -3357,6 +3411,7 @@ func (o *UserTaskActivity) SetAutoAssignSingleTargetUser(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UserTaskActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -3626,6 +3681,7 @@ func (o *MultiUserTaskActivity) SetAwaitAllUsers(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MultiUserTaskActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -3683,6 +3739,7 @@ type NoEvent struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NoEvent) InitFromRaw(raw bson.Raw) {
 }
 
@@ -3695,6 +3752,7 @@ type NoUserTargeting struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NoUserTargeting) InitFromRaw(raw bson.Raw) {
 }
 
@@ -3773,6 +3831,7 @@ func (o *NonInterruptingNotificationEventSubProcessStartActivity) SetSize(v stri
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NonInterruptingNotificationEventSubProcessStartActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -3804,6 +3863,7 @@ func (o *NonInterruptingNotificationEventSubProcessStartActivityTarget) SetActiv
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NonInterruptingNotificationEventSubProcessStartActivityTarget) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Activity"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -3920,6 +3980,7 @@ func (o *NonInterruptingTimerBoundaryEvent) SetRecurrence(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NonInterruptingTimerBoundaryEvent) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Flow"); err == nil {
@@ -3958,6 +4019,7 @@ func (o *NotifyWaitForNotificationActivityTarget) SetActivityQualifiedName(v str
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NotifyWaitForNotificationActivityTarget) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Activity"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -3981,6 +4043,7 @@ func (o *OrthogonalPath) SegmentPositions() string {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *OrthogonalPath) InitFromRaw(raw bson.Raw) {
 	o.segmentPositions.Init(raw)
 }
@@ -4016,6 +4079,7 @@ func (o *PageParameterMapping) SetExpression(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PageParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -4045,6 +4109,7 @@ func (o *PageReference) SetPageQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PageReference) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Page"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -4144,6 +4209,7 @@ func (o *ParallelSplitActivity) RemoveOutcomes(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ParallelSplitActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -4191,6 +4257,7 @@ func (o *ParallelSplitOutcome) SetFlow(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ParallelSplitOutcome) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Flow"); err == nil {
@@ -4240,6 +4307,7 @@ func (o *Parameter) SetName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Parameter) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "EntityRef"); err == nil {
 		o.entityRef.SetFromDecode(child)
@@ -4272,6 +4340,7 @@ func (o *PercentageAmountUserInput) SetPercentage(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *PercentageAmountUserInput) InitFromRaw(raw bson.Raw) {
 	o.percentage.Init(raw)
 }
@@ -4285,6 +4354,7 @@ type SingleInputCompletion struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SingleInputCompletion) InitFromRaw(raw bson.Raw) {
 }
 
@@ -4483,6 +4553,7 @@ func (o *SingleUserTaskActivity) SetAutoAssignSingleTargetUser(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SingleUserTaskActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -4599,6 +4670,7 @@ func (o *StartWorkflowActivity) SetSize(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *StartWorkflowActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -4630,6 +4702,7 @@ func (o *StringCase) SetValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *StringCase) InitFromRaw(raw bson.Raw) {
 	o.value.Init(raw)
 }
@@ -4676,6 +4749,7 @@ func (o *ThresholdCompletionCriteria) SetFallbackOutcomeID(v element.ID) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ThresholdCompletionCriteria) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("CompletionType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -4778,6 +4852,7 @@ func (o *TimerBoundaryEvent) SetDelay(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *TimerBoundaryEvent) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Flow"); err == nil {
@@ -5009,6 +5084,7 @@ func (o *UserTask) SetUserTaskCompletion(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UserTask) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -5131,6 +5207,7 @@ func (o *UserTaskOutcome) SetValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UserTaskOutcome) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Flow"); err == nil {
@@ -5161,6 +5238,7 @@ func (o *VetoCompletionCriteria) SetVetoOutcomeID(v element.ID) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *VetoCompletionCriteria) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("VetoOutcomePointer"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -5180,6 +5258,7 @@ type VoidCase struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *VoidCase) InitFromRaw(raw bson.Raw) {
 }
 
@@ -5214,6 +5293,7 @@ func (o *VoidConditionOutcome) SetFlow(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *VoidConditionOutcome) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Flow"); err == nil {
@@ -5312,6 +5392,7 @@ func (o *WaitForNotificationActivity) RemoveBoundaryEvents(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WaitForNotificationActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -5414,6 +5495,7 @@ func (o *WaitForTimerActivity) SetDelay(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WaitForTimerActivity) InitFromRaw(raw bson.Raw) {
 	o.persistentId.Init(raw)
 	o.name.Init(raw)
@@ -5714,6 +5796,7 @@ func (o *Workflow) SetWorkflowV2(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Workflow) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -5827,6 +5910,7 @@ func (o *WorkflowCallParameterMapping) SetExpression(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WorkflowCallParameterMapping) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Parameter"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -5845,6 +5929,7 @@ type WorkflowDefinitionSelection struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WorkflowDefinitionSelection) InitFromRaw(raw bson.Raw) {
 }
 
@@ -5868,6 +5953,7 @@ func (o *WorkflowDefinitionNameSelection) SetWorkflowQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WorkflowDefinitionNameSelection) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Workflow"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -5896,6 +5982,7 @@ func (o *WorkflowDefinitionObjectSelection) SetWorkflowDefinitionVariable(v stri
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WorkflowDefinitionObjectSelection) InitFromRaw(raw bson.Raw) {
 	o.workflowDefinitionVariable.Init(raw)
 }
@@ -5953,6 +6040,7 @@ func (o *WorkflowEventHandler) SetDocumentation(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WorkflowEventHandler) InitFromRaw(raw bson.Raw) {
 	o.description.Init(raw)
 	if child, err := codec.DecodeChild(raw, "MicroflowEventHandler"); err == nil {
@@ -6030,6 +6118,7 @@ func (o *WorkflowMetaData) RemoveAnnotation(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WorkflowMetaData) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "DetachedActivities"); err == nil {
 		for _, child := range children {
@@ -6068,6 +6157,7 @@ func (o *WorkflowType) SetEntityQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WorkflowType) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Entity"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -6096,6 +6186,7 @@ func (o *XPathBasedTargeting) SetXPathConstraint(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *XPathBasedTargeting) InitFromRaw(raw bson.Raw) {
 	o.xPathConstraint.Init(raw)
 }
@@ -6120,6 +6211,7 @@ func (o *XPathBasedUserSource) SetXPathConstraint(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *XPathBasedUserSource) InitFromRaw(raw bson.Raw) {
 	o.xPathConstraint.Init(raw)
 }
@@ -6144,6 +6236,7 @@ func (o *XPathGroupTargeting) SetXPathConstraint(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *XPathGroupTargeting) InitFromRaw(raw bson.Raw) {
 	o.xPathConstraint.Init(raw)
 }
@@ -6168,6 +6261,7 @@ func (o *XPathUserTargeting) SetXPathConstraint(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *XPathUserTargeting) InitFromRaw(raw bson.Raw) {
 	o.xPathConstraint.Init(raw)
 }
@@ -6225,6 +6319,7 @@ func (o *ExclusiveSplitOutcome) SetFlow(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExclusiveSplitOutcome) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.caption.Init(raw)

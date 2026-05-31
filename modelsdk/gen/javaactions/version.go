@@ -7,6 +7,7 @@ package javaactions
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"JavaActions$ParameterType": {Introduced: "6.7.0", Deleted: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{},
@@ -117,8 +118,40 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 	},
 }
 
-func init() {
-	for name, info := range VersionInfos {
-		version.DefaultVersionRegistry.Register(name, info)
+// PropertyVersionInfo implements version.PropertyVersioner for JavaAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *JavaAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "javaReturnType":
+		return version.PropertyVersionInfo{Introduced: "6.6.0", Deleted: "7.21.0"}, true
+	case "microflowActionInfo":
+		return version.PropertyVersionInfo{Introduced: "6.6.0", Deleted: "7.21.0"}, true
+	case "parameters":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.21.0"}, true
+	case "returnType":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.6.0"}, true
+	case "typeParameters":
+		return version.PropertyVersionInfo{Introduced: "6.6.0", Deleted: "7.21.0"}, true
+	case "useLegacyCodeGeneration":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: "9.0.3"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for JavaActionParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *JavaActionParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "javaType":
+		return version.PropertyVersionInfo{Introduced: "6.6.0", Deleted: "6.7.0"}, true
+	case "parameterType":
+		return version.PropertyVersionInfo{Introduced: "6.7.0", Deleted: "7.21.0"}, true
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.6.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
 	}
 }

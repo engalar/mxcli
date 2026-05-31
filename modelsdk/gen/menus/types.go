@@ -83,6 +83,7 @@ func (o *MenuDocument) SetItemCollection(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MenuDocument) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -122,6 +123,7 @@ func (o *MenuItemContainer) RemoveItems(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MenuItemContainer) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {
@@ -199,6 +201,7 @@ func (o *MenuItem) SetAction(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MenuItem) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {
@@ -244,6 +247,7 @@ func (o *MenuItemCollection) RemoveItems(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MenuItemCollection) InitFromRaw(raw bson.Raw) {
 	if children, err := codec.DecodeChildren(raw, "Items"); err == nil {
 		for _, child := range children {

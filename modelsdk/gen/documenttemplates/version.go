@@ -7,6 +7,7 @@ package documenttemplates
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"DocumentTemplates$AttributeWidget": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -117,4 +118,74 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"style":   {Required: true},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for AttributeWidget.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *AttributeWidget) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attributePath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "attributeRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for EntityWidget.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *EntityWidget) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "entityPath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "entityRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DataGridColumn.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DataGridColumn) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attributePath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "attributeRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DocumentTemplateParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DocumentTemplateParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "parameterType":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.9.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for GridSortItem.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *GridSortItem) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attributePath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "attributeRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

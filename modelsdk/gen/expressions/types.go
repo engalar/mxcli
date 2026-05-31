@@ -28,6 +28,7 @@ type Expression struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Expression) InitFromRaw(raw bson.Raw) {
 }
 
@@ -73,6 +74,7 @@ func (o *BinaryExpression) SetRight(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BinaryExpression) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Operator"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -96,6 +98,7 @@ type LiteralExpression struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *LiteralExpression) InitFromRaw(raw bson.Raw) {
 }
 
@@ -119,6 +122,7 @@ func (o *BooleanLiteral) SetValue(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BooleanLiteral) InitFromRaw(raw bson.Raw) {
 	o.value.Init(raw)
 }
@@ -143,6 +147,7 @@ func (o *ConstantRefExpression) SetConstantQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ConstantRefExpression) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Constant"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -160,6 +165,7 @@ type EmptyLiteral struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EmptyLiteral) InitFromRaw(raw bson.Raw) {
 }
 
@@ -183,6 +189,7 @@ func (o *EnumerationValueRefExpression) SetValueQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EnumerationValueRefExpression) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Value"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -211,6 +218,7 @@ func (o *FloatLiteral) SetValue(v float64) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *FloatLiteral) InitFromRaw(raw bson.Raw) {
 	o.value.Init(raw)
 }
@@ -251,6 +259,7 @@ func (o *FunctionCallExpression) RemoveArguments(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *FunctionCallExpression) InitFromRaw(raw bson.Raw) {
 	o.functionName.Init(raw)
 	if children, err := codec.DecodeChildren(raw, "Arguments"); err == nil {
@@ -269,6 +278,7 @@ type VariableRef struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *VariableRef) InitFromRaw(raw bson.Raw) {
 }
 
@@ -292,6 +302,7 @@ func (o *GlobalVariableRef) SetReferredName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *GlobalVariableRef) InitFromRaw(raw bson.Raw) {
 	o.referredName.Init(raw)
 }
@@ -338,6 +349,7 @@ func (o *IfExpression) SetIfFalse(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *IfExpression) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Condition"); err == nil {
 		o.condition.SetFromDecode(child)
@@ -370,6 +382,7 @@ func (o *IntegerLiteral) SetValue(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *IntegerLiteral) InitFromRaw(raw bson.Raw) {
 	o.value.Init(raw)
 }
@@ -383,6 +396,7 @@ type NoExpression struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NoExpression) InitFromRaw(raw bson.Raw) {
 }
 
@@ -395,6 +409,7 @@ type NoVariableRef struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NoVariableRef) InitFromRaw(raw bson.Raw) {
 }
 
@@ -418,6 +433,7 @@ func (o *ParenthesisExpression) SetExpression(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ParenthesisExpression) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Expression"); err == nil {
 		o.expression.SetFromDecode(child)
@@ -444,6 +460,7 @@ func (o *StringLiteral) SetValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *StringLiteral) InitFromRaw(raw bson.Raw) {
 	o.value.Init(raw)
 }
@@ -479,6 +496,7 @@ func (o *UnaryExpression) SetExpression(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UnaryExpression) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Operator"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -510,6 +528,7 @@ func (o *UnparsableExpression) SetExpression(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *UnparsableExpression) InitFromRaw(raw bson.Raw) {
 	o.expression.Init(raw)
 }
@@ -545,6 +564,7 @@ func (o *VariableRefExpression) SetMember(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *VariableRefExpression) InitFromRaw(raw bson.Raw) {
 	if child, err := codec.DecodeChild(raw, "Variable"); err == nil {
 		o.variable.SetFromDecode(child)

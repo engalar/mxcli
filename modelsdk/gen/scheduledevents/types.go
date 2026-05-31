@@ -28,6 +28,7 @@ type Schedule struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Schedule) InitFromRaw(raw bson.Raw) {
 }
 
@@ -62,6 +63,7 @@ func (o *DaySchedule) SetMinuteOfHour(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DaySchedule) InitFromRaw(raw bson.Raw) {
 	o.hourOfDay.Init(raw)
 	o.minuteOfHour.Init(raw)
@@ -98,6 +100,7 @@ func (o *HourSchedule) SetMinuteOffset(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *HourSchedule) InitFromRaw(raw bson.Raw) {
 	o.multiplier.Init(raw)
 	o.minuteOffset.Init(raw)
@@ -123,6 +126,7 @@ func (o *MinuteSchedule) SetMultiplier(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MinuteSchedule) InitFromRaw(raw bson.Raw) {
 	o.multiplier.Init(raw)
 }
@@ -180,6 +184,7 @@ func (o *MonthSchedule) SetMinuteOfHour(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MonthSchedule) InitFromRaw(raw bson.Raw) {
 	o.multiplier.Init(raw)
 	o.monthOffset.Init(raw)
@@ -251,6 +256,7 @@ func (o *MonthDateSchedule) SetDayOfMonth(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MonthDateSchedule) InitFromRaw(raw bson.Raw) {
 	o.multiplier.Init(raw)
 	o.monthOffset.Init(raw)
@@ -334,6 +340,7 @@ func (o *MonthWeekdaySchedule) SetWeekday(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MonthWeekdaySchedule) InitFromRaw(raw bson.Raw) {
 	o.multiplier.Init(raw)
 	o.monthOffset.Init(raw)
@@ -492,6 +499,7 @@ func (o *ScheduledEvent) SetEnabled(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ScheduledEvent) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -637,6 +645,7 @@ func (o *WeekSchedule) SetMinuteOfHour(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *WeekSchedule) InitFromRaw(raw bson.Raw) {
 	o.sunday.Init(raw)
 	o.monday.Init(raw)
@@ -691,6 +700,7 @@ func (o *YearSchedule) SetMinuteOfHour(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *YearSchedule) InitFromRaw(raw bson.Raw) {
 	o.month.Init(raw)
 	o.hourOfDay.Init(raw)
@@ -750,6 +760,7 @@ func (o *YearDateSchedule) SetDayOfMonth(v int32) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *YearDateSchedule) InitFromRaw(raw bson.Raw) {
 	o.month.Init(raw)
 	o.hourOfDay.Init(raw)
@@ -821,6 +832,7 @@ func (o *YearWeekdaySchedule) SetWeekday(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *YearWeekdaySchedule) InitFromRaw(raw bson.Raw) {
 	o.month.Init(raw)
 	o.hourOfDay.Init(raw)

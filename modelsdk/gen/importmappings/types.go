@@ -231,6 +231,7 @@ func (o *ImportMapping) SetParameterQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ImportMapping) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -489,6 +490,7 @@ func (o *ImportObjectMappingElement) SetIsDefaultType(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ImportObjectMappingElement) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	if val, err := raw.LookupErr("ElementType"); err == nil {
@@ -786,6 +788,7 @@ func (o *ImportValueMappingElement) SetOriginalValue(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ImportValueMappingElement) InitFromRaw(raw bson.Raw) {
 	o.documentation.Init(raw)
 	if val, err := raw.LookupErr("ElementType"); err == nil {

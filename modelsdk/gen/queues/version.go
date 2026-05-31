@@ -7,17 +7,49 @@ package queues
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"Queues$BasicQueueConfig": {
+	"Queues$QueueConfig": {Introduced: "8.16.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Queues$BasicQueueConfig": {Introduced: "8.16.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"clusterWide":           {Introduced: "9.13.0"},
 			"parallelism":           {Introduced: "8.16.0", Deleted: "9.12.0"},
 			"parallelismExpression": {Introduced: "9.12.0"},
 		},
 	},
-	"Queues$Queue": {
+	"Queues$Queue": {Introduced: "8.16.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"config": {Required: true},
 		},
 	},
+	"Queues$QueueRetry": {Introduced: "9.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Queues$QueueExponentialRetry": {Introduced: "9.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Queues$QueueFixedRetry": {Introduced: "9.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Queues$QueueSettings": {Introduced: "9.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for BasicQueueConfig.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *BasicQueueConfig) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "clusterWide":
+		return version.PropertyVersionInfo{Introduced: "9.13.0", Deleted: ""}, true
+	case "parallelism":
+		return version.PropertyVersionInfo{Introduced: "8.16.0", Deleted: "9.12.0"}, true
+	case "parallelismExpression":
+		return version.PropertyVersionInfo{Introduced: "9.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

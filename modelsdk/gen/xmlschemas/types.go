@@ -72,6 +72,7 @@ func (o *MxSchema) SetExportLevel(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MxSchema) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -262,6 +263,7 @@ func (o *XmlElement) RemoveChildren(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *XmlElement) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ElementType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -372,6 +374,7 @@ func (o *XmlSchema) SetFilePath(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *XmlSchema) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -453,6 +456,7 @@ func (o *XmlSchemaEntry) SetLocalizedContentsFormat(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *XmlSchemaEntry) InitFromRaw(raw bson.Raw) {
 	o.targetNamespace.Init(raw)
 	o.location.Init(raw)

@@ -7,8 +7,12 @@ package microflows
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"Microflows$AbortOperation": {
+	"Microflows$WorkflowOperation": {Introduced: "9.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$AbortOperation": {Introduced: "9.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"reason": {Required: true},
 		},
@@ -23,7 +27,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"disabled": {Introduced: "9.12.0"},
 		},
 	},
-	"Microflows$AdditionalAttribute": {
+	"Microflows$AdditionalAttribute": {Introduced: "11.5.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attribute":         {Introduced: "11.6.0"},
 			"attributeDataType": {Introduced: "11.6.0", Required: true},
@@ -67,27 +71,60 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"originConnectionIndex":   {},
 		},
 	},
-	"Microflows$AppServiceCallParameterMapping": {
+	"Microflows$AppServiceCallAction": {Deleted: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$AppServiceCallParameterMapping": {Deleted: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"argumentModel": {Introduced: "7.9.0", Required: true},
 		},
 	},
-	"Microflows$BasicCodeActionParameterValue": {
+	"Microflows$ApplyJumpToOptionAction": {Introduced: "9.15.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$AuthenticationConfig": {Introduced: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$AuthenticationDocumentConfig": {Introduced: "11.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$BasicAuthConfig": {Introduced: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$CodeActionParameterValue": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$ExpressionBasedCodeActionParameterValue": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$BasicCodeActionParameterValue": {Introduced: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"argumentModel": {Deleted: "9.8.0", Required: true},
 		},
 	},
-	"Microflows$BasicJavaActionParameterValue": {
+	"Microflows$JavaActionParameterValue": {Introduced: "6.7.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$BasicJavaActionParameterValue": {Introduced: "6.7.0", Deleted: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"argumentModel": {Introduced: "7.9.0", Required: true},
 		},
 	},
-	"Microflows$BinaryRequestHandling": {
+	"Microflows$Line": {Introduced: "10.16.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$BezierCurve": {Introduced: "10.16.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$BinaryRequestHandling": {Introduced: "6.9.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"expressionModel": {Introduced: "7.9.0", Deleted: "9.8.0", Required: true},
 		},
 	},
-	"Microflows$CallExternalAction": {
+	"Microflows$BodyVariable": {Introduced: "10.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$CallExternalAction": {Introduced: "9.19.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"consumedODataService": {},
 			"includedAssociations": {Introduced: "10.12.0"},
@@ -95,6 +132,9 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"variableDataType":     {Introduced: "10.2.0", Required: true},
 			"variableName":         {Introduced: "10.2.0"},
 		},
+	},
+	"Microflows$CancelSynchronizationAction": {Introduced: "11.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Microflows$ChangeListAction": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -106,11 +146,23 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"valueModel": {Introduced: "7.9.0", Deleted: "9.8.0", Required: true},
 		},
 	},
+	"Microflows$ClearFromClientAction": {Introduced: "10.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Microflows$CloseFormAction": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"numberOfPages":        {Introduced: "8.9.0", Deleted: "8.11.0"},
 			"numberOfPagesToClose": {Introduced: "8.11.0"},
 		},
+	},
+	"Microflows$ContinueOperation": {Introduced: "9.3.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$MeterAction": {Introduced: "9.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$CounterMeterAction": {Introduced: "9.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Microflows$CreateVariableAction": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -118,6 +170,9 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"variableDataType":  {Deleted: "7.9.0"},
 			"variableType":      {Introduced: "7.9.0", Required: true},
 		},
+	},
+	"Microflows$CustomBlobDocumentCodeActionParameterValue": {Introduced: "11.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Microflows$CustomRange": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -136,12 +191,18 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"sortItemList": {Required: true},
 		},
 	},
+	"Microflows$DeleteExternalObject": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Microflows$DocumentTemplateParameterMapping": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"argumentModel": {Introduced: "7.9.0", Deleted: "9.8.0", Required: true},
 		},
 	},
-	"Microflows$EmailMessage": {
+	"Microflows$EmailConnectionConfig": {Introduced: "11.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$EmailMessage": {Introduced: "11.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attachment":  {Introduced: "11.3.0"},
 			"attachments": {Deleted: "11.3.0"},
@@ -152,10 +213,22 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"returnValueModel": {Introduced: "7.9.0", Deleted: "9.8.0", Required: true},
 		},
 	},
+	"Microflows$EntityTypeCodeActionParameterValue": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$EntityTypeJavaActionParameterValue": {Introduced: "6.8.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Microflows$ExclusiveSplit": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"splitCondition": {Required: true},
 		},
+	},
+	"Microflows$ExportMappingJavaActionParameterValue": {Introduced: "7.2.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$ExportMappingParameterValue": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Microflows$ExportXmlAction": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -165,7 +238,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"resultHandling":              {Introduced: "7.6.0", Required: true},
 		},
 	},
-	"Microflows$ExpressionListOperation": {
+	"Microflows$ExpressionListOperation": {Introduced: "9.0.3",
 		Properties: map[string]version.PropertyVersionInfo{
 			"expressionModel": {Deleted: "9.8.0", Required: true},
 		},
@@ -175,7 +248,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"expressionModel": {Introduced: "7.9.0", Deleted: "9.8.0", Required: true},
 		},
 	},
-	"Microflows$ExternalActionParameterMapping": {
+	"Microflows$ExternalActionParameterMapping": {Introduced: "10.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"additionalAttributes": {Introduced: "11.5.0"},
 			"includedAssociations": {Introduced: "10.11.0"},
@@ -188,16 +261,25 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"expressionModel": {Introduced: "7.9.0", Deleted: "9.8.0", Required: true},
 		},
 	},
-	"Microflows$FormDataPart": {
+	"Microflows$FilterByExpression": {Introduced: "9.0.3",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$FindByExpression": {Introduced: "9.0.3",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$FormDataPart": {Introduced: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"headerEntries": {Introduced: "9.2.0"},
 			"valueModel":    {Deleted: "9.8.0", Required: true},
 		},
 	},
-	"Microflows$FormDataRequestHandling": {
+	"Microflows$FormDataRequestHandling": {Introduced: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parts": {},
 		},
+	},
+	"Microflows$GaugeMeterAction": {Introduced: "9.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Microflows$GenerateDocumentAction": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -207,10 +289,19 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"marginTopInInchModel":    {Introduced: "7.9.0", Deleted: "9.8.0", Required: true},
 		},
 	},
-	"Microflows$GenerateJumpToOptionsAction": {
+	"Microflows$GenerateJumpToOptionsAction": {Introduced: "9.14.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"workflow": {Deleted: "9.16.0"},
 		},
+	},
+	"Microflows$GetWorkflowActivityRecordsAction": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$GetWorkflowDataAction": {Introduced: "9.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$GetWorkflowsAction": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Microflows$HttpConfiguration": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -237,15 +328,30 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"range":                 {Required: true},
 		},
 	},
+	"Microflows$ImportMappingJavaActionParameterValue": {Introduced: "7.2.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$ImportMappingParameterValue": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Microflows$ImportXmlAction": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"resultHandling": {Required: true},
 		},
 	},
-	"Microflows$IncludedAssociation": {
+	"Microflows$IncludedAssociation": {Introduced: "10.11.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"association": {Required: true},
 		},
+	},
+	"Microflows$IncrementCounterMeterAction": {Introduced: "9.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$LoopSource": {Introduced: "9.0.4",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$IterableList": {Introduced: "9.0.4",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Microflows$JavaActionCallAction": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -262,7 +368,10 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"value":          {Introduced: "6.7.0", Deleted: "7.21.0", Required: true},
 		},
 	},
-	"Microflows$JavaScriptActionParameterMapping": {
+	"Microflows$JavaScriptActionCallAction": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$JavaScriptActionParameterMapping": {Introduced: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parameter":      {Required: true},
 			"parameterValue": {Required: true},
@@ -278,12 +387,12 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"operation": {Required: true},
 		},
 	},
-	"Microflows$ListRange": {
+	"Microflows$ListRange": {Introduced: "9.24.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"customRange": {Required: true},
 		},
 	},
-	"Microflows$LockWorkflowAction": {
+	"Microflows$LockWorkflowAction": {Introduced: "9.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"workflow":          {Deleted: "10.0.0"},
 			"workflowSelection": {Introduced: "10.0.0"},
@@ -303,19 +412,19 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"objectCollection":         {Required: true},
 		},
 	},
-	"Microflows$MLModelCall": {
+	"Microflows$MLModelCall": {Introduced: "9.10.0", Deleted: "9.18.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"mlMappingDocument": {Introduced: "9.17.0"},
 		},
 	},
-	"Microflows$MLModelCallAction": {
+	"Microflows$MLModelCallAction": {Introduced: "9.10.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"inputVariableName": {Introduced: "9.18.0"},
 			"mlMappingDocument": {Introduced: "9.18.0"},
 			"modelCall":         {Deleted: "9.18.0", Required: true},
 		},
 	},
-	"Microflows$MLModelCallParameterMapping": {
+	"Microflows$MLModelCallParameterMapping": {Introduced: "9.10.0", Deleted: "9.18.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parameterType": {Required: true},
 		},
@@ -334,6 +443,9 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 		Properties: map[string]version.PropertyVersionInfo{
 			"valueModel": {Introduced: "7.9.0", Deleted: "9.8.0", Required: true},
 		},
+	},
+	"Microflows$MeterTagMapping": {Introduced: "9.5.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Microflows$MicroflowBase": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -371,6 +483,9 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"parameter":     {Required: true},
 		},
 	},
+	"Microflows$MicroflowJavaActionParameterValue": {Introduced: "6.9.0", Deleted: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Microflows$MicroflowParameterBase": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"name":          {Public: true},
@@ -378,7 +493,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"type":          {Deleted: "7.9.0", Public: true},
 		},
 	},
-	"Microflows$MicroflowParameterAttributeUrlSegment": {
+	"Microflows$MicroflowParameterAttributeUrlSegment": {Introduced: "10.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attribute":          {Required: true},
 			"microflowParameter": {Required: true},
@@ -393,46 +508,73 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"variableType":               {Introduced: "7.9.0", Required: true},
 		},
 	},
-	"Microflows$MicroflowPrimitiveParameterUrlSegment": {
+	"Microflows$MicroflowParameterValue": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$MicroflowPrimitiveParameterUrlSegment": {Introduced: "10.3.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"microflowParameter": {Required: true},
 		},
 	},
-	"Microflows$Nanoflow": {
+	"Microflows$Nanoflow": {Introduced: "7.10.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"allowedModuleRoles":          {Public: true},
 			"useListParameterByReference": {Introduced: "11.9.0"},
 		},
 	},
-	"Microflows$NanoflowCallAction": {
+	"Microflows$NanoflowCall": {Introduced: "8.0.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$NanoflowCallAction": {Introduced: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"nanoflowCall": {Required: true},
 		},
 	},
-	"Microflows$NanoflowCallParameterMapping": {
+	"Microflows$NanoflowCallParameterMapping": {Introduced: "8.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"argumentModel": {Deleted: "9.8.0", Required: true},
 			"parameter":     {Required: true},
 		},
 	},
-	"Microflows$NotifyWorkflowAction": {
+	"Microflows$NanoflowParameter": {Introduced: "7.19.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$NotifyWorkflowAction": {Introduced: "10.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"activity":     {Deleted: "11.7.0"},
 			"notifyTarget": {Introduced: "11.7.0"},
 		},
 	},
-	"Microflows$OpenUserTaskAction": {
+	"Microflows$OpenUserTaskAction": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"assignOnOpen":     {Introduced: "9.19.0"},
 			"openWhenAssigned": {Introduced: "9.19.0"},
 		},
 	},
-	"Microflows$ParameterIdUrlSegment": {
+	"Microflows$OpenWorkflowAction": {Introduced: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$OrthogonalPath": {Introduced: "10.16.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$OutputVariable": {Introduced: "10.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$ParameterIdUrlSegment": {Introduced: "10.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"microflowParameter": {Required: true},
 		},
 	},
-	"Microflows$ProxyConfiguration": {
+	"Microflows$PauseOperation": {Introduced: "9.3.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$TypedTemplateArgument": {Introduced: "8.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$PrimitiveTypedTemplateArgument": {Introduced: "8.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$ProxyConfiguration": {Introduced: "7.15.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"hostExpressionModel":             {Deleted: "9.8.0"},
 			"passwordExpressionModel":         {Deleted: "9.8.0"},
@@ -441,12 +583,15 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"usernameExpressionModel":         {Deleted: "9.8.0"},
 		},
 	},
-	"Microflows$QueryParameterMapping": {
+	"Microflows$PushToClientAction": {Introduced: "8.4.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$QueryParameterMapping": {Introduced: "11.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"queryParameter": {Required: true},
 		},
 	},
-	"Microflows$RestCallAction": {
+	"Microflows$RestCallAction": {Introduced: "6.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"errorResultHandlingType": {Introduced: "7.0.2"},
 			"httpConfiguration":       {Required: true},
@@ -462,7 +607,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"useRequestTimeOut":       {Introduced: "7.1.0"},
 		},
 	},
-	"Microflows$RestOperationCallAction": {
+	"Microflows$RestOperationCallAction": {Introduced: "10.1.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"baseUrlParameterMapping": {Introduced: "10.17.0"},
 			"bodyVariable":            {Introduced: "10.5.0"},
@@ -471,15 +616,18 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"queryParameterMappings":  {Introduced: "11.0.0"},
 		},
 	},
-	"Microflows$RestOperationParameterMapping": {
+	"Microflows$RestOperationParameterMapping": {Introduced: "10.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parameter": {Required: true},
 		},
 	},
-	"Microflows$RestParameterMapping": {
+	"Microflows$RestParameterMapping": {Introduced: "10.17.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parameter": {Required: true},
 		},
+	},
+	"Microflows$RestartOperation": {Introduced: "9.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Microflows$ResultHandling": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -487,10 +635,16 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"variableType":     {Introduced: "7.9.0", Required: true},
 		},
 	},
+	"Microflows$ResumeOperation": {Introduced: "9.3.0", Deleted: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Microflows$RetrieveAction": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"retrieveSource": {Required: true},
 		},
+	},
+	"Microflows$RetryOperation": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Microflows$RuleCallParameterMapping": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -503,13 +657,13 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"ruleCall": {Required: true},
 		},
 	},
-	"Microflows$SendEmailAction": {
+	"Microflows$SendEmailAction": {Introduced: "11.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"emailConnectionConfig": {Required: true},
 			"emailMessage":          {Required: true},
 		},
 	},
-	"Microflows$SendExternalObject": {
+	"Microflows$SendExternalObject": {Introduced: "9.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"refreshInClient": {Introduced: "9.7.0"},
 		},
@@ -520,7 +674,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"caseValues": {Introduced: "10.15.0"},
 		},
 	},
-	"Microflows$SetTaskOutcomeAction": {
+	"Microflows$SetTaskOutcomeAction": {Introduced: "9.0.2",
 		Properties: map[string]version.PropertyVersionInfo{
 			"outcome":      {Deleted: "9.19.0"},
 			"outcomeValue": {Introduced: "9.19.0"},
@@ -561,13 +715,19 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"attributeRef":  {Introduced: "7.11.0", Required: true},
 		},
 	},
-	"Microflows$StringTemplateParameterValue": {
+	"Microflows$RetrieveSorting": {
+		Properties: map[string]version.PropertyVersionInfo{
+			"attributePath": {Deleted: "7.11.0", Required: true},
+			"attributeRef":  {Introduced: "7.11.0", Required: true},
+		},
+	},
+	"Microflows$StringTemplateParameterValue": {Introduced: "8.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"template":      {Deleted: "8.6.0", Required: true},
 			"typedTemplate": {Introduced: "8.6.0", Required: true},
 		},
 	},
-	"Microflows$SynchronizeAction": {
+	"Microflows$SynchronizeAction": {Introduced: "7.22.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"type":          {Introduced: "8.10.0"},
 			"variableNames": {Introduced: "8.10.0"},
@@ -588,20 +748,40 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"text": {Required: true},
 		},
 	},
-	"Microflows$TransformJsonAction": {
+	"Microflows$TransformJsonAction": {Introduced: "11.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"transformation": {},
 		},
 	},
-	"Microflows$UnlockWorkflowAction": {
+	"Microflows$TypedTemplate": {Introduced: "8.6.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$UnlockWorkflowAction": {Introduced: "9.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"workflow":          {Deleted: "10.0.0"},
 			"workflowSelection": {Introduced: "10.0.0"},
 		},
 	},
+	"Microflows$UnpauseOperation": {Introduced: "9.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"Microflows$ValidationFeedbackAction": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"feedbackTemplate": {Required: true},
+		},
+	},
+	"Microflows$WebServiceCallAction": {
+		Properties: map[string]version.PropertyVersionInfo{
+			"httpConfiguration":     {Required: true},
+			"proxyConfiguration":    {Introduced: "7.15.0"},
+			"requestBodyHandling":   {Required: true},
+			"requestHeaderHandling": {Required: true},
+			"requestProxyType":      {Introduced: "7.15.0"},
+			"resultHandling":        {Required: true},
+			"sendNullValueChoice":   {Deleted: "6.7.0"},
+			"timeOutExpression":     {Introduced: "7.15.0"},
+			"timeOutModel":          {Introduced: "7.15.0", Deleted: "9.8.0", Required: true},
+			"useRequestTimeOut":     {Deleted: "7.15.0"},
 		},
 	},
 	"Microflows$CallWebServiceAction": {
@@ -618,14 +798,968 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"useRequestTimeOut":     {Deleted: "7.15.0"},
 		},
 	},
-	"Microflows$WebServiceOperationParameterMapping": {
+	"Microflows$WebServiceOperationParameterMapping": {Introduced: "6.3.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"argumentModel": {Introduced: "7.9.0", Deleted: "9.8.0", Required: true},
 		},
 	},
-	"Microflows$WorkflowOperationAction": {
+	"Microflows$WhileLoopCondition": {Introduced: "9.0.4",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$WorkflowCallAction": {Introduced: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Microflows$WorkflowOperationAction": {Introduced: "9.2.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"operation": {Required: true},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ActionActivity.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ActionActivity) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "disabled":
+		return version.PropertyVersionInfo{Introduced: "9.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for AdditionalAttribute.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *AdditionalAttribute) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attribute":
+		return version.PropertyVersionInfo{Introduced: "11.6.0", Deleted: ""}, true
+	case "attributeDataType":
+		return version.PropertyVersionInfo{Introduced: "11.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for AdvancedRequestHandling.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *AdvancedRequestHandling) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "nullValueOption":
+		return version.PropertyVersionInfo{Introduced: "6.7.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for AggregateListAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *AggregateListAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "aggregateFunction":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	case "expression":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	case "reduceInitialValueExpression":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	case "useExpression":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Flow.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Flow) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "destinationBezierVector":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.16.0"}, true
+	case "line":
+		return version.PropertyVersionInfo{Introduced: "10.16.0", Deleted: ""}, true
+	case "lineType":
+		return version.PropertyVersionInfo{Introduced: "10.8.0", Deleted: "10.16.0"}, true
+	case "originBezierVector":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.16.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for AppServiceCallParameterMapping.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *AppServiceCallParameterMapping) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "argumentModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for BasicCodeActionParameterValue.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *BasicCodeActionParameterValue) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "argumentModel":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for BasicJavaActionParameterValue.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *BasicJavaActionParameterValue) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "argumentModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for BinaryRequestHandling.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *BinaryRequestHandling) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "expressionModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CallExternalAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CallExternalAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "includedAssociations":
+		return version.PropertyVersionInfo{Introduced: "10.12.0", Deleted: ""}, true
+	case "parameterMappings":
+		return version.PropertyVersionInfo{Introduced: "10.2.0", Deleted: ""}, true
+	case "variableDataType":
+		return version.PropertyVersionInfo{Introduced: "10.2.0", Deleted: ""}, true
+	case "variableName":
+		return version.PropertyVersionInfo{Introduced: "10.2.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ChangeListAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ChangeListAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "valueModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ChangeVariableAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ChangeVariableAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "valueModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CloseFormAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CloseFormAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "numberOfPages":
+		return version.PropertyVersionInfo{Introduced: "8.9.0", Deleted: "8.11.0"}, true
+	case "numberOfPagesToClose":
+		return version.PropertyVersionInfo{Introduced: "8.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CreateVariableAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CreateVariableAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "initialValueModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	case "variableDataType":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.9.0"}, true
+	case "variableType":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CustomRange.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CustomRange) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "limitExpressionModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	case "offsetExpressionModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DocumentTemplateParameterMapping.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DocumentTemplateParameterMapping) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "argumentModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for EmailMessage.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *EmailMessage) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attachment":
+		return version.PropertyVersionInfo{Introduced: "11.3.0", Deleted: ""}, true
+	case "attachments":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "11.3.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for EndEvent.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *EndEvent) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "returnValueModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ExportXmlAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ExportXmlAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "mapping":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.6.0"}, true
+	case "mappingArgumentVariableName":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.6.0"}, true
+	case "resultHandling":
+		return version.PropertyVersionInfo{Introduced: "7.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ExpressionListOperation.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ExpressionListOperation) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "expressionModel":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ExpressionSplitCondition.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ExpressionSplitCondition) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "expressionModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ExternalActionParameterMapping.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ExternalActionParameterMapping) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "additionalAttributes":
+		return version.PropertyVersionInfo{Introduced: "11.5.0", Deleted: ""}, true
+	case "includedAssociations":
+		return version.PropertyVersionInfo{Introduced: "10.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for InspectAttribute.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *InspectAttribute) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "association":
+		return version.PropertyVersionInfo{Introduced: "7.0.0", Deleted: ""}, true
+	case "expressionModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for FormDataPart.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *FormDataPart) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "headerEntries":
+		return version.PropertyVersionInfo{Introduced: "9.2.0", Deleted: ""}, true
+	case "valueModel":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for GenerateDocumentAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *GenerateDocumentAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "marginBottomInInchModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	case "marginLeftInInchModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	case "marginRightInInchModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	case "marginTopInInchModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for GenerateJumpToOptionsAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *GenerateJumpToOptionsAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "workflow":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.16.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for HttpConfiguration.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *HttpConfiguration) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "clientCertificate":
+		return version.PropertyVersionInfo{Introduced: "8.18.0", Deleted: ""}, true
+	case "customLocationModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	case "customLocationTemplate":
+		return version.PropertyVersionInfo{Introduced: "6.6.0", Deleted: ""}, true
+	case "httpMethod":
+		return version.PropertyVersionInfo{Introduced: "6.6.0", Deleted: "7.7.0"}, true
+	case "newHttpMethod":
+		return version.PropertyVersionInfo{Introduced: "7.7.0", Deleted: ""}, true
+	case "password":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	case "username":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for HttpHeaderEntry.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *HttpHeaderEntry) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "valueModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ImportMappingCall.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ImportMappingCall) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "commit":
+		return version.PropertyVersionInfo{Introduced: "7.18.0", Deleted: ""}, true
+	case "contentType":
+		return version.PropertyVersionInfo{Introduced: "7.6.0", Deleted: ""}, true
+	case "forceSingleOccurrence":
+		return version.PropertyVersionInfo{Introduced: "7.8.0", Deleted: ""}, true
+	case "objectHandlingBackup":
+		return version.PropertyVersionInfo{Introduced: "7.17.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for JavaActionCallAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *JavaActionCallAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "queue":
+		return version.PropertyVersionInfo{Introduced: "9.0.5", Deleted: "9.10.0"}, true
+	case "queueSettings":
+		return version.PropertyVersionInfo{Introduced: "9.10.0", Deleted: ""}, true
+	case "useReturnVariable":
+		return version.PropertyVersionInfo{Introduced: "7.13.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for JavaActionParameterMapping.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *JavaActionParameterMapping) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "argument":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.7.0"}, true
+	case "parameterValue":
+		return version.PropertyVersionInfo{Introduced: "7.21.0", Deleted: ""}, true
+	case "value":
+		return version.PropertyVersionInfo{Introduced: "6.7.0", Deleted: "7.21.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for LockWorkflowAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *LockWorkflowAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "workflow":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.0.0"}, true
+	case "workflowSelection":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for LogMessageAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *LogMessageAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "nodeModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for LoopedActivity.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *LoopedActivity) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "iteratedListVariableName":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.4"}, true
+	case "loopSource":
+		return version.PropertyVersionInfo{Introduced: "9.0.4", Deleted: ""}, true
+	case "loopVariableName":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.4"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MLModelCall.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MLModelCall) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "mlMappingDocument":
+		return version.PropertyVersionInfo{Introduced: "9.17.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MLModelCallAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MLModelCallAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "inputVariableName":
+		return version.PropertyVersionInfo{Introduced: "9.18.0", Deleted: ""}, true
+	case "mlMappingDocument":
+		return version.PropertyVersionInfo{Introduced: "9.18.0", Deleted: ""}, true
+	case "modelCall":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.18.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MappingRequestHandling.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MappingRequestHandling) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "contentType":
+		return version.PropertyVersionInfo{Introduced: "7.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MemberChange.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MemberChange) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "valueModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MicroflowBase.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MicroflowBase) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "microflowReturnType":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	case "returnType":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.9.0"}, true
+	case "returnVariableName":
+		return version.PropertyVersionInfo{Introduced: "10.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Microflow.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Microflow) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "microflowActionInfo":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "stableId":
+		return version.PropertyVersionInfo{Introduced: "10.2.0", Deleted: ""}, true
+	case "url":
+		return version.PropertyVersionInfo{Introduced: "10.1.0", Deleted: ""}, true
+	case "urlSearchParameters":
+		return version.PropertyVersionInfo{Introduced: "10.9.0", Deleted: ""}, true
+	case "workflowActionInfo":
+		return version.PropertyVersionInfo{Introduced: "9.0.2", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MicroflowCall.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MicroflowCall) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "queue":
+		return version.PropertyVersionInfo{Introduced: "8.16.0", Deleted: "9.10.0"}, true
+	case "queueSettings":
+		return version.PropertyVersionInfo{Introduced: "9.10.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MicroflowCallParameterMapping.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MicroflowCallParameterMapping) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "argumentModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MicroflowParameterBase.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MicroflowParameterBase) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "parameterType":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.9.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MicroflowParameterObject.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MicroflowParameterObject) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "defaultValue":
+		return version.PropertyVersionInfo{Introduced: "10.17.0", Deleted: ""}, true
+	case "hasVariableNameBeenChanged":
+		return version.PropertyVersionInfo{Introduced: "9.17.0", Deleted: ""}, true
+	case "isRequired":
+		return version.PropertyVersionInfo{Introduced: "10.17.0", Deleted: ""}, true
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.9.0"}, true
+	case "variableType":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Nanoflow.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Nanoflow) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "useListParameterByReference":
+		return version.PropertyVersionInfo{Introduced: "11.9.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NanoflowCallParameterMapping.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NanoflowCallParameterMapping) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "argumentModel":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for NotifyWorkflowAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *NotifyWorkflowAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "activity":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "11.7.0"}, true
+	case "notifyTarget":
+		return version.PropertyVersionInfo{Introduced: "11.7.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for OpenUserTaskAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *OpenUserTaskAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "assignOnOpen":
+		return version.PropertyVersionInfo{Introduced: "9.19.0", Deleted: ""}, true
+	case "openWhenAssigned":
+		return version.PropertyVersionInfo{Introduced: "9.19.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ProxyConfiguration.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ProxyConfiguration) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "hostExpressionModel":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.8.0"}, true
+	case "passwordExpressionModel":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.8.0"}, true
+	case "portExpressionModel":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.8.0"}, true
+	case "useConfigurationExpressionModel":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.8.0"}, true
+	case "usernameExpressionModel":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for RestCallAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *RestCallAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "errorResultHandlingType":
+		return version.PropertyVersionInfo{Introduced: "7.0.2", Deleted: ""}, true
+	case "proxyConfiguration":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	case "requestHandlingType":
+		return version.PropertyVersionInfo{Introduced: "6.9.0", Deleted: ""}, true
+	case "requestProxyType":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	case "resultHandlingType":
+		return version.PropertyVersionInfo{Introduced: "6.9.0", Deleted: ""}, true
+	case "timeOut":
+		return version.PropertyVersionInfo{Introduced: "7.1.0", Deleted: "7.15.0"}, true
+	case "timeOutExpression":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	case "timeOutModel":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: "9.8.0"}, true
+	case "useRequestTimeOut":
+		return version.PropertyVersionInfo{Introduced: "7.1.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for RestOperationCallAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *RestOperationCallAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "baseUrlParameterMapping":
+		return version.PropertyVersionInfo{Introduced: "10.17.0", Deleted: ""}, true
+	case "bodyVariable":
+		return version.PropertyVersionInfo{Introduced: "10.5.0", Deleted: ""}, true
+	case "outputVariable":
+		return version.PropertyVersionInfo{Introduced: "10.4.0", Deleted: ""}, true
+	case "parameterMappings":
+		return version.PropertyVersionInfo{Introduced: "10.2.0", Deleted: ""}, true
+	case "queryParameterMappings":
+		return version.PropertyVersionInfo{Introduced: "11.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ResultHandling.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ResultHandling) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "variableDataType":
+		return version.PropertyVersionInfo{Introduced: "6.10.0", Deleted: "7.9.0"}, true
+	case "variableType":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for RuleCallParameterMapping.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *RuleCallParameterMapping) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "argumentModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SendExternalObject.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SendExternalObject) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "refreshInClient":
+		return version.PropertyVersionInfo{Introduced: "9.7.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SequenceFlow.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SequenceFlow) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "caseValue":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.15.0"}, true
+	case "caseValues":
+		return version.PropertyVersionInfo{Introduced: "10.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SetTaskOutcomeAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SetTaskOutcomeAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "outcome":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.19.0"}, true
+	case "outcomeValue":
+		return version.PropertyVersionInfo{Introduced: "9.19.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ShowPageAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ShowPageAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "numberOfPagesToClose":
+		return version.PropertyVersionInfo{Introduced: "8.11.0", Deleted: ""}, true
+	case "passedObjectVariableName":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.18.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SimpleRequestHandling.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SimpleRequestHandling) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "nullValueOption":
+		return version.PropertyVersionInfo{Introduced: "6.7.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SortItem.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SortItem) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attributePath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.11.0"}, true
+	case "attributeRef":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for StringTemplateParameterValue.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *StringTemplateParameterValue) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "template":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "8.6.0"}, true
+	case "typedTemplate":
+		return version.PropertyVersionInfo{Introduced: "8.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SynchronizeAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SynchronizeAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "8.10.0", Deleted: ""}, true
+	case "variableNames":
+		return version.PropertyVersionInfo{Introduced: "8.10.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for TemplateArgument.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *TemplateArgument) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "expressionModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for UnlockWorkflowAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *UnlockWorkflowAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "workflow":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "10.0.0"}, true
+	case "workflowSelection":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for WebServiceCallAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *WebServiceCallAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "proxyConfiguration":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	case "requestProxyType":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	case "sendNullValueChoice":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.7.0"}, true
+	case "timeOutExpression":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: ""}, true
+	case "timeOutModel":
+		return version.PropertyVersionInfo{Introduced: "7.15.0", Deleted: "9.8.0"}, true
+	case "useRequestTimeOut":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.15.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for WebServiceOperationParameterMapping.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *WebServiceOperationParameterMapping) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "argumentModel":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: "9.8.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

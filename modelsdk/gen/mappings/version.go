@@ -7,8 +7,9 @@ package mappings
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"Mappings$Element": {
+	"Mappings$Element": {Introduced: "6.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"exposedItemName": {Introduced: "7.6.0"},
 		},
@@ -37,10 +38,16 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"xmlValueElementPath":  {Introduced: "7.6.0"},
 		},
 	},
-	"Mappings$MappingSource": {
+	"Mappings$MappingSource": {Introduced: "10.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"name": {Introduced: "10.15.0", Public: true},
 		},
+	},
+	"Mappings$MappingSourceDocument": {Introduced: "9.24.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Mappings$MappingSourceReference": {Introduced: "10.16.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Mappings$ObjectMappingElement": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -57,4 +64,116 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"xmlPrimitiveType":     {Introduced: "6.1.0"},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Element.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Element) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "exposedItemName":
+		return version.PropertyVersionInfo{Introduced: "7.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MappingDocument.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MappingDocument) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "jsonStructure":
+		return version.PropertyVersionInfo{Introduced: "6.4.0", Deleted: ""}, true
+	case "mappingSourceReference":
+		return version.PropertyVersionInfo{Introduced: "10.16.0", Deleted: ""}, true
+	case "messageDefinition":
+		return version.PropertyVersionInfo{Introduced: "7.6.0", Deleted: ""}, true
+	case "messageDefinition2":
+		return version.PropertyVersionInfo{Introduced: "11.10.0", Deleted: ""}, true
+	case "publicName":
+		return version.PropertyVersionInfo{Introduced: "7.14.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MappingElement.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MappingElement) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "exposedName":
+		return version.PropertyVersionInfo{Introduced: "6.6.0", Deleted: ""}, true
+	case "jsonPath":
+		return version.PropertyVersionInfo{Introduced: "7.6.0", Deleted: ""}, true
+	case "path":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.6.0"}, true
+	case "xmlPath":
+		return version.PropertyVersionInfo{Introduced: "7.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MappingMicroflowParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MappingMicroflowParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "jsonValueElementPath":
+		return version.PropertyVersionInfo{Introduced: "7.6.0", Deleted: ""}, true
+	case "valueElementPath":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.6.0"}, true
+	case "xmlValueElementPath":
+		return version.PropertyVersionInfo{Introduced: "7.6.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MappingSource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MappingSource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "name":
+		return version.PropertyVersionInfo{Introduced: "10.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ObjectMappingElement.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ObjectMappingElement) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "isDefaultType":
+		return version.PropertyVersionInfo{Introduced: "6.4.0", Deleted: ""}, true
+	case "objectHandlingBackupAllowOverride":
+		return version.PropertyVersionInfo{Introduced: "7.17.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ValueMappingElement.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ValueMappingElement) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "expectedContentTypes":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.4.1"}, true
+	case "originalValue":
+		return version.PropertyVersionInfo{Introduced: "10.3.0", Deleted: ""}, true
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	case "xmlDataType":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.9.0"}, true
+	case "xmlPrimitiveType":
+		return version.PropertyVersionInfo{Introduced: "6.1.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

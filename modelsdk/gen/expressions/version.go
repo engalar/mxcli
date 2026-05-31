@@ -7,44 +7,96 @@ package expressions
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"Expressions$BinaryExpression": {
+	"Expressions$Expression": {Introduced: "7.9.0", Deleted: "9.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Expressions$BinaryExpression": {Introduced: "7.9.0", Deleted: "9.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"left":  {Required: true},
 			"right": {Required: true},
 		},
 	},
-	"Expressions$ConstantRefExpression": {
+	"Expressions$LiteralExpression": {Introduced: "7.9.0", Deleted: "9.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Expressions$BooleanLiteral": {Introduced: "7.9.0", Deleted: "9.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Expressions$ConstantRefExpression": {Introduced: "7.9.0", Deleted: "9.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"constant": {Required: true},
 		},
 	},
-	"Expressions$EnumerationValueRefExpression": {
+	"Expressions$EmptyLiteral": {Introduced: "7.9.0", Deleted: "9.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Expressions$EnumerationValueRefExpression": {Introduced: "7.9.0", Deleted: "9.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"value": {Required: true},
 		},
 	},
-	"Expressions$IfExpression": {
+	"Expressions$FloatLiteral": {Introduced: "7.9.0", Deleted: "9.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Expressions$FunctionCallExpression": {Introduced: "7.9.0", Deleted: "9.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Expressions$VariableRef": {Introduced: "7.9.0", Deleted: "9.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Expressions$GlobalVariableRef": {Introduced: "7.9.0", Deleted: "9.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Expressions$IfExpression": {Introduced: "7.9.0", Deleted: "9.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"condition": {Required: true},
 			"ifFalse":   {Required: true},
 			"ifTrue":    {Required: true},
 		},
 	},
-	"Expressions$ParenthesisExpression": {
+	"Expressions$IntegerLiteral": {Introduced: "7.9.0", Deleted: "9.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Expressions$NoExpression": {Introduced: "7.9.0", Deleted: "9.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Expressions$NoVariableRef": {Introduced: "7.9.0", Deleted: "9.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Expressions$ParenthesisExpression": {Introduced: "7.9.0", Deleted: "9.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"expression": {Required: true},
 		},
 	},
-	"Expressions$UnaryExpression": {
+	"Expressions$StringLiteral": {Introduced: "7.9.0", Deleted: "9.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Expressions$UnaryExpression": {Introduced: "7.9.0", Deleted: "9.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"expression": {Required: true},
 		},
 	},
-	"Expressions$VariableRefExpression": {
+	"Expressions$UnparsableExpression": {Introduced: "7.9.0", Deleted: "9.8.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"Expressions$VariableRefExpression": {Introduced: "7.9.0", Deleted: "9.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"member":   {Introduced: "7.11.0"},
 			"variable": {Required: true},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for VariableRefExpression.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *VariableRefExpression) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "member":
+		return version.PropertyVersionInfo{Introduced: "7.11.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

@@ -7,6 +7,7 @@ package domainmodels
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"DomainModels$AccessRule": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -40,15 +41,21 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"parentConnection": {},
 		},
 	},
-	"DomainModels$MemberRef": {
+	"DomainModels$AssociationCapabilities": {Introduced: "8.11.0", Deleted: "9.0.1",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DomainModels$MemberRef": {Introduced: "7.11.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entityRef": {Public: true},
 		},
 	},
-	"DomainModels$AssociationRef": {
+	"DomainModels$AssociationRef": {Introduced: "7.11.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"association": {Required: true},
 		},
+	},
+	"DomainModels$AssociationSource": {Introduced: "8.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"DomainModels$Attribute": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -60,28 +67,40 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"value":         {Required: true, Public: true},
 		},
 	},
-	"DomainModels$AttributeCapabilities": {
+	"DomainModels$AttributeCapabilities": {Introduced: "8.13.0", Deleted: "9.0.1",
 		Properties: map[string]version.PropertyVersionInfo{
 			"filterable": {Public: true},
 			"sortable":   {Public: true},
 		},
 	},
-	"DomainModels$AttributeRef": {
+	"DomainModels$AttributeRef": {Introduced: "7.11.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"attribute": {Required: true},
 		},
 	},
-	"DomainModels$MappedValue": {
+	"DomainModels$MappedValue": {Introduced: "8.10.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"defaultValueDesignTime": {Introduced: "10.4.0"},
 		},
+	},
+	"DomainModels$CachedMappedValue": {Introduced: "9.0.2", Deleted: "10.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"DomainModels$CrossAssociation": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"child": {Required: true, Public: true},
 		},
 	},
-	"DomainModels$DirectEntityRef": {
+	"DomainModels$FloatAttributeTypeBase": {Deleted: "9.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DomainModels$CurrencyAttributeType": {Deleted: "9.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DomainModels$EntityRef": {Introduced: "7.11.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DomainModels$DirectEntityRef": {Introduced: "7.11.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity": {Required: true},
 		},
@@ -126,32 +145,38 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"source":               {Introduced: "8.10.0", Public: true},
 		},
 	},
-	"DomainModels$EntityCapabilities": {
+	"DomainModels$EntityCapabilities": {Introduced: "8.12.0", Deleted: "9.0.1",
 		Properties: map[string]version.PropertyVersionInfo{
 			"countable": {Public: true},
 		},
 	},
-	"DomainModels$EntityKey": {
+	"DomainModels$EntityKey": {Introduced: "8.9.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parts": {Public: true},
 		},
 	},
-	"DomainModels$EntityKeyPart": {
+	"DomainModels$EntityKeyPart": {Introduced: "8.9.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"name": {Public: true},
 			"type": {Required: true, Public: true},
 		},
 	},
-	"DomainModels$EntityRefStep": {
+	"DomainModels$EntityRefStep": {Introduced: "7.11.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"association":       {Required: true},
 			"destinationEntity": {Required: true},
 		},
 	},
+	"DomainModels$EntitySource": {Introduced: "8.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"DomainModels$EnumerationAttributeType": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"enumeration": {Required: true, Public: true},
 		},
+	},
+	"DomainModels$FloatAttributeType": {Deleted: "9.1.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"DomainModels$Generalization": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -173,10 +198,19 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"ascending": {Introduced: "7.14.0"},
 		},
 	},
-	"DomainModels$IndirectEntityRef": {
+	"DomainModels$IndirectEntityRef": {Introduced: "7.11.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"steps": {Public: true},
 		},
+	},
+	"DomainModels$RemoteEntitySource": {Introduced: "8.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DomainModels$MaterializedRemoteEntitySource": {Introduced: "8.11.0", Deleted: "10.2.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DomainModels$MultiLanguageAttributeType": {Introduced: "9.22.0", Deleted: "9.24.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"DomainModels$NoGeneralization": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -187,13 +221,28 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"persistable":    {Public: true},
 		},
 	},
-	"DomainModels$OqlViewEntitySource": {
+	"DomainModels$OqlViewAssociationSource": {Introduced: "10.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DomainModels$ViewEntitySource": {Introduced: "10.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DomainModels$OqlViewEntitySource": {Introduced: "10.9.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"oql":            {Deleted: "11.0.0"},
 			"sourceDocument": {Introduced: "10.21.0"},
 		},
 	},
-	"DomainModels$RemoteEntitySourceDocument": {
+	"DomainModels$OqlViewValue": {Introduced: "10.9.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DomainModels$QueryBasedRemoteEntitySource": {Introduced: "8.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DomainModels$RemoteAssociationSource": {Introduced: "8.10.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"DomainModels$RemoteEntitySourceDocument": {Introduced: "7.18.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"applicationId":        {Introduced: "8.11.0", Public: true},
 			"catalogUrl":           {Introduced: "8.10.0"},
@@ -217,4 +266,175 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"ruleInfo":     {Required: true},
 		},
 	},
+	"DomainModels$ViewEntitySourceDocument": {Introduced: "10.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for AccessRule.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *AccessRule) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "xPathConstraintCaption":
+		return version.PropertyVersionInfo{Introduced: "10.5.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Annotation.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Annotation) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "exportLevel":
+		return version.PropertyVersionInfo{Introduced: "9.15.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for AssociationBase.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *AssociationBase) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "capabilities":
+		return version.PropertyVersionInfo{Introduced: "8.11.0", Deleted: "9.0.1"}, true
+	case "exportLevel":
+		return version.PropertyVersionInfo{Introduced: "9.3.0", Deleted: ""}, true
+	case "remoteSourceDocument":
+		return version.PropertyVersionInfo{Introduced: "8.3.0", Deleted: "8.10.0"}, true
+	case "source":
+		return version.PropertyVersionInfo{Introduced: "8.10.0", Deleted: ""}, true
+	case "storageFormat":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Attribute.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Attribute) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "capabilities":
+		return version.PropertyVersionInfo{Introduced: "8.13.0", Deleted: "9.0.1"}, true
+	case "exportLevel":
+		return version.PropertyVersionInfo{Introduced: "9.3.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MappedValue.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MappedValue) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "defaultValueDesignTime":
+		return version.PropertyVersionInfo{Introduced: "10.4.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Entity.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Entity) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "capabilities":
+		return version.PropertyVersionInfo{Introduced: "8.12.0", Deleted: "9.0.1"}, true
+	case "exportLevel":
+		return version.PropertyVersionInfo{Introduced: "9.3.0", Deleted: ""}, true
+	case "imageData":
+		return version.PropertyVersionInfo{Introduced: "9.17.0", Deleted: ""}, true
+	case "isRemote":
+		return version.PropertyVersionInfo{Introduced: "7.17.0", Deleted: "8.10.0"}, true
+	case "remoteSource":
+		return version.PropertyVersionInfo{Introduced: "7.17.0", Deleted: "8.10.0"}, true
+	case "remoteSourceDocument":
+		return version.PropertyVersionInfo{Introduced: "8.2.0", Deleted: "8.10.0"}, true
+	case "source":
+		return version.PropertyVersionInfo{Introduced: "8.10.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Index.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Index) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "includeInOffline":
+		return version.PropertyVersionInfo{Introduced: "10.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for IndexedAttribute.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *IndexedAttribute) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "ascending":
+		return version.PropertyVersionInfo{Introduced: "7.14.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for OqlViewEntitySource.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *OqlViewEntitySource) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "oql":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "11.0.0"}, true
+	case "sourceDocument":
+		return version.PropertyVersionInfo{Introduced: "10.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for RemoteEntitySourceDocument.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *RemoteEntitySourceDocument) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "applicationId":
+		return version.PropertyVersionInfo{Introduced: "8.11.0", Deleted: ""}, true
+	case "catalogUrl":
+		return version.PropertyVersionInfo{Introduced: "8.10.0", Deleted: ""}, true
+	case "description":
+		return version.PropertyVersionInfo{Introduced: "8.10.0", Deleted: ""}, true
+	case "endpointId":
+		return version.PropertyVersionInfo{Introduced: "8.14.0", Deleted: ""}, true
+	case "environmentType":
+		return version.PropertyVersionInfo{Introduced: "8.14.0", Deleted: ""}, true
+	case "icon":
+		return version.PropertyVersionInfo{Introduced: "8.10.0", Deleted: ""}, true
+	case "metadataHash":
+		return version.PropertyVersionInfo{Introduced: "8.16.0", Deleted: ""}, true
+	case "minimumMxVersion":
+		return version.PropertyVersionInfo{Introduced: "8.14.0", Deleted: ""}, true
+	case "recommendedMxVersion":
+		return version.PropertyVersionInfo{Introduced: "8.14.0", Deleted: ""}, true
+	case "serviceName":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "validated":
+		return version.PropertyVersionInfo{Introduced: "9.6.0", Deleted: ""}, true
+	case "validatedEntities":
+		return version.PropertyVersionInfo{Introduced: "9.8.0", Deleted: ""}, true
+	case "version":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

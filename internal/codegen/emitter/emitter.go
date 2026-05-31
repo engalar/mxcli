@@ -90,9 +90,33 @@ type EnumValueData struct {
 // VersionData holds template data for one class's version info.
 type VersionData struct {
 	StructureTypeName string
-	ClassIntroduced   string // NEW: Mendix version when this class was introduced
-	ClassDeleted      string // NEW: Mendix version when this class was deleted
+	GoName            string // Go struct name (e.g. "CallMicroflowTask"); empty for alias entries
+	IsAlias           bool   // true for storage-alias duplicate entries — no method generated
+	ClassIntroduced   string // Mendix version when this class was introduced
+	ClassDeleted      string // Mendix version when this class was deleted
 	Props             []VersionPropData
+}
+
+// HasVersionGatedProps reports whether any property has Introduced or Deleted set.
+// Only those properties need a case in the PropertyVersionInfo switch.
+func (vd VersionData) HasVersionGatedProps() bool {
+	for _, p := range vd.Props {
+		if p.Introduced != "" || p.Deleted != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// VersionGatedProps returns the subset of Props that have Introduced or Deleted set.
+func (vd VersionData) VersionGatedProps() []VersionPropData {
+	var out []VersionPropData
+	for _, p := range vd.Props {
+		if p.Introduced != "" || p.Deleted != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // VersionPropData holds template data for one property's version info.
@@ -282,7 +306,10 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 			continue
 		}
 		mappedName := mapToStorageNamespace(cls.StructureTypeName)
-		vd := VersionData{StructureTypeName: mappedName}
+		vd := VersionData{
+			StructureTypeName: mappedName,
+			GoName:            exportName(cls.Name),
+		}
 		vd.ClassIntroduced = cls.VersionInfo.Introduced
 		vd.ClassDeleted = cls.VersionInfo.Deleted
 		// Sort property names for stable output across runs.
@@ -302,10 +329,17 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 			})
 		}
 		versions = append(versions, vd)
-		// Emit a duplicate version entry for the storage alias so both names are covered.
+		// Emit a duplicate version entry for the storage alias (VersionInfos map only).
+		// IsAlias=true prevents a second PropertyVersionInfo method on the same struct.
 		if meta.StorageAliases != nil {
 			if alias, ok := meta.StorageAliases[cls.StructureTypeName]; ok {
-				aliasVD := VersionData{StructureTypeName: alias, ClassIntroduced: vd.ClassIntroduced, ClassDeleted: vd.ClassDeleted, Props: vd.Props}
+				aliasVD := VersionData{
+					StructureTypeName: alias,
+					IsAlias:           true,
+					ClassIntroduced:   vd.ClassIntroduced,
+					ClassDeleted:      vd.ClassDeleted,
+					Props:             vd.Props,
+				}
 				versions = append(versions, aliasVD)
 			}
 		}

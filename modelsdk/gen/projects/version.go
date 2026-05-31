@@ -7,6 +7,7 @@ package projects
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"Projects$Document": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -16,10 +17,13 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"name":          {Public: true},
 		},
 	},
-	"Projects$JarDependency": {
+	"Projects$JarDependency": {Introduced: "10.0.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"exclusions": {Introduced: "10.12.0"},
 		},
+	},
+	"Projects$JarDependencyExclusion": {Introduced: "10.12.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"Projects$Module": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -45,7 +49,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"moduleSettings":          {Introduced: "9.8.0", Required: true},
 		},
 	},
-	"Projects$ModuleSettings": {
+	"Projects$ModuleSettings": {Introduced: "9.8.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"basedOnVersion":      {Introduced: "10.0.0"},
 			"extensionName":       {Introduced: "10.10.0"},
@@ -59,4 +63,70 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"projectConversion": {Required: true},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Document.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Document) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "exportLevel":
+		return version.PropertyVersionInfo{Introduced: "9.3.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for JarDependency.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *JarDependency) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "exclusions":
+		return version.PropertyVersionInfo{Introduced: "10.12.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for Module.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *Module) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appStorePackageId":
+		return version.PropertyVersionInfo{Introduced: "8.13.0", Deleted: "11.0.0"}, true
+	case "appStorePackageIdString":
+		return version.PropertyVersionInfo{Introduced: "11.0.0", Deleted: ""}, true
+	case "exportLevel":
+		return version.PropertyVersionInfo{Introduced: "9.3.0", Deleted: "9.8.0"}, true
+	case "isReusableComponent":
+		return version.PropertyVersionInfo{Introduced: "8.5.0", Deleted: "9.1.0"}, true
+	case "isThemeModule":
+		return version.PropertyVersionInfo{Introduced: "9.3.0", Deleted: ""}, true
+	case "moduleSettings":
+		return version.PropertyVersionInfo{Introduced: "9.8.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ModuleSettings.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ModuleSettings) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "basedOnVersion":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	case "extensionName":
+		return version.PropertyVersionInfo{Introduced: "10.10.0", Deleted: ""}, true
+	case "jarDependencies":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	case "protectedModuleType":
+		return version.PropertyVersionInfo{Introduced: "9.12.0", Deleted: ""}, true
+	case "solutionIdentifier":
+		return version.PropertyVersionInfo{Introduced: "10.0.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

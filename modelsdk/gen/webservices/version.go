@@ -7,6 +7,7 @@ package webservices
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
 	"WebServices$DataMember": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -64,6 +65,9 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"responseBodyRpcElement":        {Required: true},
 		},
 	},
+	"WebServices$PublishedAppService": {Deleted: "9.0.2",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
 	"WebServices$PublishedResource": {
 		Properties: map[string]version.PropertyVersionInfo{
 			"dataEntity": {Required: true},
@@ -105,7 +109,7 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"usingAddressing": {Introduced: "8.16.0"},
 		},
 	},
-	"WebServices$SystemIdDataAttribute": {
+	"WebServices$SystemIdDataAttribute": {Introduced: "6.7.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"description": {Introduced: "8.5.0"},
 			"summary":     {Introduced: "8.5.0"},
@@ -129,4 +133,174 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"optimizedXml":           {Introduced: "7.13.0"},
 		},
 	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DataMember.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DataMember) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "isLockedByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "isNillableByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "isOptionalByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DataAssociation.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DataAssociation) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "associationByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "description":
+		return version.PropertyVersionInfo{Introduced: "8.5.0", Deleted: ""}, true
+	case "exposedAssociationName":
+		return version.PropertyVersionInfo{Introduced: "8.0.0", Deleted: ""}, true
+	case "summary":
+		return version.PropertyVersionInfo{Introduced: "8.5.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for DataAttribute.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *DataAttribute) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "attributeByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "description":
+		return version.PropertyVersionInfo{Introduced: "8.5.0", Deleted: ""}, true
+	case "enumerationAsString":
+		return version.PropertyVersionInfo{Introduced: "9.21.0", Deleted: ""}, true
+	case "filterable":
+		return version.PropertyVersionInfo{Introduced: "9.18.0", Deleted: ""}, true
+	case "sortable":
+		return version.PropertyVersionInfo{Introduced: "9.18.0", Deleted: ""}, true
+	case "summary":
+		return version.PropertyVersionInfo{Introduced: "8.5.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ImportedWebService.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ImportedWebService) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "useMtom":
+		return version.PropertyVersionInfo{Introduced: "6.4.1", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for OperationInfo.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *OperationInfo) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "allowSimpleMappingInheritance":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "6.1.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedOperation.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedOperation) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "entityExposedNameByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "isLockedByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "operationReturnType":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	case "returnType":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.9.0"}, true
+	case "returnTypeNameByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "returnTypeSpecificationByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for PublishedParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *PublishedParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "entityExposedItemNameByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "isLockedByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "isOptionalByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "parameterByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "parameterType":
+		return version.PropertyVersionInfo{Introduced: "7.9.0", Deleted: ""}, true
+	case "type":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "7.9.0"}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for ServiceInfo.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *ServiceInfo) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "usingAddressing":
+		return version.PropertyVersionInfo{Introduced: "8.16.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for SystemIdDataAttribute.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *SystemIdDataAttribute) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "description":
+		return version.PropertyVersionInfo{Introduced: "8.5.0", Deleted: ""}, true
+	case "summary":
+		return version.PropertyVersionInfo{Introduced: "8.5.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for VersionedService.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *VersionedService) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "appServiceState":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "enumerationsByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "isLockedByContract":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.0.2"}, true
+	case "objectHandlingBackup":
+		return version.PropertyVersionInfo{Introduced: "7.17.0", Deleted: ""}, true
+	case "optimizedXml":
+		return version.PropertyVersionInfo{Introduced: "7.13.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

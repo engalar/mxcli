@@ -7,11 +7,24 @@ package codeactions
 import "github.com/mendixlabs/mxcli/modelsdk/version"
 
 // VersionInfos maps structure-type names to their TypeVersionInfo.
+// Available for diagnostic tools; not consulted by the encoder at runtime.
 var VersionInfos = map[string]version.TypeVersionInfo{
-	"CodeActions$BasicParameterType": {
+	"CodeActions$ParameterType": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"CodeActions$BasicParameterType": {Introduced: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"type": {Required: true, Public: true},
 		},
+	},
+	"CodeActions$Type": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"CodeActions$PrimitiveType": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"CodeActions$BooleanType": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
 	},
 	"CodeActions$CodeAction": {
 		Properties: map[string]version.PropertyVersionInfo{
@@ -31,33 +44,48 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"name":                {Public: true},
 		},
 	},
-	"CodeActions$ConcreteEntityType": {
+	"CodeActions$EntityType": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"CodeActions$ConcreteEntityType": {Introduced: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"entity": {Required: true, Public: true},
 		},
 	},
-	"CodeActions$CustomBlobDocumentParameterType": {
+	"CodeActions$CustomBlobDocumentParameterType": {Introduced: "11.6.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"customDocumentReadableTypeName": {Public: true},
 			"customDocumentTypeName":         {Public: true},
 		},
 	},
-	"CodeActions$EntityTypeParameterType": {
+	"CodeActions$DateTimeType": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"CodeActions$DecimalType": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"CodeActions$EntityTypeParameterType": {Introduced: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"typeParameter": {Public: true},
 		},
 	},
-	"CodeActions$EnumerationType": {
+	"CodeActions$EnumerationType": {Introduced: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"enumeration": {Required: true, Public: true},
 		},
 	},
-	"CodeActions$ListType": {
+	"CodeActions$FloatType": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"CodeActions$IntegerType": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"CodeActions$ListType": {Introduced: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"parameter": {Required: true, Public: true},
 		},
 	},
-	"CodeActions$MicroflowActionInfo": {
+	"CodeActions$MicroflowActionInfo": {Introduced: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"caption":       {Public: true},
 			"category":      {Public: true},
@@ -68,19 +96,95 @@ var VersionInfos = map[string]version.TypeVersionInfo{
 			"imageDataDark": {Introduced: "9.10.0"},
 		},
 	},
-	"CodeActions$ParameterizedEntityType": {
+	"CodeActions$ParameterizedEntityType": {Introduced: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"typeParameter": {Required: true, Public: true},
 		},
 	},
-	"CodeActions$StringTemplateParameterType": {
+	"CodeActions$StringTemplateParameterType": {Introduced: "8.4.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"grammar": {Introduced: "8.8.0", Public: true},
 		},
 	},
-	"CodeActions$TypeParameter": {
+	"CodeActions$StringType": {Introduced: "7.21.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+	"CodeActions$TypeParameter": {Introduced: "7.21.0",
 		Properties: map[string]version.PropertyVersionInfo{
 			"name": {Public: true},
 		},
 	},
+	"CodeActions$VoidType": {Introduced: "8.3.0",
+		Properties: map[string]version.PropertyVersionInfo{},
+	},
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CodeAction.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CodeAction) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "actionDefaultReturnName":
+		return version.PropertyVersionInfo{Introduced: "9.23.0", Deleted: ""}, true
+	case "actionParameters":
+		return version.PropertyVersionInfo{Introduced: "7.21.0", Deleted: ""}, true
+	case "actionReturnType":
+		return version.PropertyVersionInfo{Introduced: "7.21.0", Deleted: ""}, true
+	case "actionTypeParameters":
+		return version.PropertyVersionInfo{Introduced: "7.21.0", Deleted: ""}, true
+	case "modelerActionInfo":
+		return version.PropertyVersionInfo{Introduced: "7.21.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for CodeActionParameter.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *CodeActionParameter) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "actionParameterType":
+		return version.PropertyVersionInfo{Introduced: "7.21.0", Deleted: ""}, true
+	case "category":
+		return version.PropertyVersionInfo{Introduced: "7.18.0", Deleted: ""}, true
+	case "description":
+		return version.PropertyVersionInfo{Introduced: "6.10.0", Deleted: ""}, true
+	case "isRequired":
+		return version.PropertyVersionInfo{Introduced: "9.17.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for MicroflowActionInfo.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *MicroflowActionInfo) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "icon":
+		return version.PropertyVersionInfo{Introduced: "", Deleted: "9.10.0"}, true
+	case "iconData":
+		return version.PropertyVersionInfo{Introduced: "9.10.0", Deleted: ""}, true
+	case "iconDataDark":
+		return version.PropertyVersionInfo{Introduced: "9.10.0", Deleted: ""}, true
+	case "imageData":
+		return version.PropertyVersionInfo{Introduced: "9.6.0", Deleted: ""}, true
+	case "imageDataDark":
+		return version.PropertyVersionInfo{Introduced: "9.10.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
+}
+
+// PropertyVersionInfo implements version.PropertyVersioner for StringTemplateParameterType.
+// Returns version constraints for properties with Introduced or Deleted bounds.
+// Used by codec.Encoder.shouldEmitProperty for zero-allocation, mutex-free gating.
+func (o *StringTemplateParameterType) PropertyVersionInfo(camelName string) (version.PropertyVersionInfo, bool) {
+	switch camelName {
+	case "grammar":
+		return version.PropertyVersionInfo{Introduced: "8.8.0", Deleted: ""}, true
+	default:
+		return version.PropertyVersionInfo{}, false
+	}
 }

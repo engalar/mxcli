@@ -148,6 +148,7 @@ func (o *JavaScriptAction) SetPlatform(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *JavaScriptAction) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -245,6 +246,7 @@ func (o *JavaScriptActionParameter) SetIsRequired(v bool) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *JavaScriptActionParameter) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ActionParameterType"); err == nil {
@@ -264,6 +266,7 @@ type MicroflowJavaScriptActionParameterType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MicroflowJavaScriptActionParameterType) InitFromRaw(raw bson.Raw) {
 }
 
@@ -276,6 +279,7 @@ type NanoflowJavaScriptActionParameterType struct {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *NanoflowJavaScriptActionParameterType) InitFromRaw(raw bson.Raw) {
 }
 

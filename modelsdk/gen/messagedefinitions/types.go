@@ -198,6 +198,7 @@ func (o *AssociationElement) RemoveChildren(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AssociationElement) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ElementType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -407,6 +408,7 @@ func (o *AttributeElement) RemoveChildren(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AttributeElement) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ElementType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -616,6 +618,7 @@ func (o *EntityElement) RemoveChildren(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EntityElement) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ElementType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -677,6 +680,7 @@ func (o *MessageDefinition) SetDocumentation(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MessageDefinition) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -724,6 +728,7 @@ func (o *EntityMessageDefinition) SetExposedEntity(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EntityMessageDefinition) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -944,6 +949,7 @@ func (o *ExposedMember) SetExample(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExposedMember) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ElementType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -1200,6 +1206,7 @@ func (o *ExposedEntityBase) SetEntityQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExposedEntityBase) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ElementType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -1472,6 +1479,7 @@ func (o *ExposedAssociation) SetAssociationQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExposedAssociation) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ElementType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -1738,6 +1746,7 @@ func (o *ExposedAttribute) SetAttributeQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExposedAttribute) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ElementType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -1999,6 +2008,7 @@ func (o *ExposedEntity) SetEntityQualifiedName(v string) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ExposedEntity) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("ElementType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
@@ -2101,6 +2111,7 @@ func (o *MessageDefinition2) SetExposedEntity(v element.Element) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MessageDefinition2) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
@@ -2184,6 +2195,7 @@ func (o *MessageDefinitionCollection) RemoveMessageDefinitions(index int) {
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
+// NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *MessageDefinitionCollection) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
 	o.documentation.Init(raw)
