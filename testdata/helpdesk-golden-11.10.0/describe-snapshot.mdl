@@ -429,9 +429,8 @@ begin
       limit 100;
   loop $Comment in $Comments
   begin
-    @position(150,80)
-    change $Comment (IsInternal = false
-    );
+    @position(310,80)
+    commit $Comment;
   end loop;
   return;
 end;
@@ -487,6 +486,8 @@ begin
       limit 0;
   return $Tickets;
 end;
+
+grant execute on microflow HD.DS_MyTickets to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.DS_OpenHighTickets ()
 returns List of HD.Ticket as $Tickets
@@ -1019,8 +1020,6 @@ create or replace navigation Responsive
 
 create or modify page KB.Article_Overview (title: 'Knowledge Base', folder: 'Article') {
 }
-
-grant view on page KB.Article_Overview to KB.Reader, KB.Contributor, KB.Admin;
 create or modify page KB.Article_Detail (title: 'Article', folder: 'Article', params: { $Article: KB.Article }) {
 }
 
@@ -1035,8 +1034,6 @@ create or modify page KB.Article_NewEdit (
 grant view on page KB.Article_NewEdit to KB.Contributor, KB.Admin;
 create or modify page HD.Ticket_Overview (title: 'Tickets', folder: 'Ticket') {
 }
-
-grant view on page HD.Ticket_Overview to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.Agent_Select (title: 'Select Agent', folder: 'Ticket', params: { $Ticket: HD.Ticket }) {
 }
 
