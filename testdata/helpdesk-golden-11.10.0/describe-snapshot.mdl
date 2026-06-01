@@ -1,8 +1,1089 @@
-create or modify page MyFirstModule.Home_Web (title: 'Homepage') {
-}
-create or modify microflow MyFirstModule.MyFirstLogic ()
+@Position(750, 160)
+create or modify persistent entity KB.Category (
+  Name: String(200) not null,
+  Description: String(500)
+);
+
+grant KB.Reader on KB.Category (read *);
+
+grant KB.Contributor on KB.Category (create, read *, write *);
+
+grant KB.Admin on KB.Category (create, delete, read *, write *);
+/
+@Position(1100, 50)
+create or modify persistent entity KB.Tag (
+  Name: String(100) not null unique
+);
+
+grant KB.Reader on KB.Tag (read *);
+
+grant KB.Contributor on KB.Tag (create, read *, write *);
+
+grant KB.Admin on KB.Tag (create, delete, read *, write *);
+/
+@Position(400, 50)
+create or modify persistent entity KB.Article (
+  Title: String(500) not null,
+  Content: String,
+  Status: KB.ArticleStatus default Draft,
+  PublishedAt: DateTime,
+  ViewCount: Integer default 0
+)
+index (Status)
+index (PublishedAt);
+
+grant KB.Reader on KB.Article (read *) where '[Status = ''Published'']';
+
+grant KB.Contributor on KB.Article (create, delete, read *, write *);
+
+grant KB.Admin on KB.Article (create, delete, read *, write *);
+/
+@Position(750, 50)
+create or modify persistent entity KB.ArticleTag (
+);
+
+grant KB.Reader on KB.ArticleTag (read *);
+
+grant KB.Contributor on KB.ArticleTag (create, delete, read *, write *);
+
+grant KB.Admin on KB.ArticleTag (create, delete, read *, write *);
+/
+@Position(50, 50)
+create or modify persistent entity KB.ArticleRating (
+  Score: Integer not null,
+  Comment: String(1000)
+)
+system members (owner);
+
+grant KB.Reader on KB.ArticleRating (read (KB.ArticleRating_Article, Score, Comment), write (Score, Comment)) where '[System.owner=''[%CurrentUser%]'']';
+
+grant KB.Contributor on KB.ArticleRating (create, delete, read *, write *);
+
+grant KB.Admin on KB.ArticleRating (create, delete, read *, write *);
+/
+@Position(750, 50)
+create or modify persistent entity HD.Customer (
+  Name: String(200) not null,
+  Email: String(200) not null,
+  Company: String(200)
+)
+index (Email)
+system members (owner);
+
+grant HD.CustomerRole on HD.Customer (read *, write *);
+
+grant HD.AgentRole on HD.Customer (read *);
+
+grant HD.ManagerRole on HD.Customer (read *, write *);
+/
+@Position(50, 50)
+create or modify persistent entity HD.Agent (
+  Name: String(200) not null,
+  Email: String(200) not null,
+  IsActive: Boolean default true
+);
+
+grant HD.AgentRole on HD.Agent (read *);
+
+grant HD.ManagerRole on HD.Agent (read *, write *);
+/
+@Position(400, 50)
+create or modify persistent entity HD.Ticket (
+  Subject: String(500) not null,
+  Description: String,
+  Status: HD.TicketStatus default Draft,
+  Priority: HD.TicketPriority default Normal,
+  SLADueAt: DateTime,
+  ResolvedAt: DateTime,
+  IsOverSLA: Boolean default false
+)
+index (Status)
+index (Priority)
+index (SLADueAt)
+system members (owner, createdDate, changedDate, changedBy);
+
+grant HD.CustomerRole on HD.Ticket (create, read (Status, Priority, SLADueAt, ResolvedAt, IsOverSLA, HD.Ticket_Customer, HD.Ticket_Agent, Subject, Description, HD.Ticket_KBArticle), write (Subject, Description, HD.Ticket_KBArticle)) where '[HD.Ticket_Customer/HD.Customer/System.owner=''[%CurrentUser%]'']';
+
+grant HD.AgentRole on HD.Ticket (create, read *, write *);
+
+grant HD.ManagerRole on HD.Ticket (create, delete, read *, write *);
+/
+@Position(750, 350)
+create or modify persistent entity HD.TicketComment (
+  Content: String not null,
+  IsInternal: Boolean default false
+);
+
+grant HD.CustomerRole on HD.TicketComment (create, read *) where '[IsInternal = false]';
+
+grant HD.AgentRole on HD.TicketComment (create, read *, write *);
+
+grant HD.ManagerRole on HD.TicketComment (create, delete, read *, write *);
+/
+@Position(750, 200)
+create or modify persistent entity HD.EscalationRequest (
+  Reason: String(1000) not null,
+  RequestedAt: DateTime,
+  RejectionReason: String(1000)
+);
+
+grant HD.AgentRole on HD.EscalationRequest (create, read *);
+
+grant HD.ManagerRole on HD.EscalationRequest (create, delete, read *, write *);
+/
+@Position(1300, 50)
+create or modify non-persistent entity HD.TicketSearch (
+  SubjectKeyword: String(200),
+  StatusFilter: HD.TicketStatus,
+  PriorityFilter: HD.TicketPriority
+);
+
+grant HD.CustomerRole on HD.TicketSearch (read *, write *);
+
+grant HD.AgentRole on HD.TicketSearch (read *, write *);
+
+grant HD.ManagerRole on HD.TicketSearch (read *, write *);
+/
+-- one-to-many: KB.Category *-->1 KB.Category (each KB.Category belongs to one KB.Category)
+create or modify association KB.Category_Parent
+from KB.Category to KB.Category
+type Reference
+owner Default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
+/
+-- one-to-many: KB.Article *-->1 KB.Category (each KB.Article belongs to one KB.Category)
+create or modify association KB.Article_Category
+from KB.Article to KB.Category
+type Reference
+owner Default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
+/
+-- one-to-many: KB.ArticleTag *-->1 KB.Article (each KB.ArticleTag belongs to one KB.Article)
+create or modify association KB.ArticleTag_Article
+from KB.ArticleTag to KB.Article
+type Reference
+owner Default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
+/
+-- one-to-many: KB.ArticleTag *-->1 KB.Tag (each KB.ArticleTag belongs to one KB.Tag)
+create or modify association KB.ArticleTag_Tag
+from KB.ArticleTag to KB.Tag
+type Reference
+owner Default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
+/
+-- one-to-many: KB.ArticleRating *-->1 KB.Article (each KB.ArticleRating belongs to one KB.Article)
+create or modify association KB.ArticleRating_Article
+from KB.ArticleRating to KB.Article
+type Reference
+owner Default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
+/
+-- one-to-many: HD.Ticket *-->1 HD.Customer (each HD.Ticket belongs to one HD.Customer)
+create or modify association HD.Ticket_Customer
+from HD.Ticket to HD.Customer
+type Reference
+owner Default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
+/
+-- one-to-many: HD.Ticket *-->1 HD.Agent (each HD.Ticket belongs to one HD.Agent)
+create or modify association HD.Ticket_Agent
+from HD.Ticket to HD.Agent
+type Reference
+owner Default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
+/
+-- one-to-many: HD.TicketComment *-->1 HD.Ticket (each HD.TicketComment belongs to one HD.Ticket)
+create or modify association HD.TicketComment_Ticket
+from HD.TicketComment to HD.Ticket
+type Reference
+owner Default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
+/
+-- one-to-many: HD.EscalationRequest *-->1 HD.Ticket (each HD.EscalationRequest belongs to one HD.Ticket)
+create or modify association HD.EscalationRequest_Ticket
+from HD.EscalationRequest to HD.Ticket
+type Reference
+owner Default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
+/
+-- one-to-many: HD.Ticket *-->1 KB.Article (each HD.Ticket belongs to one KB.Article)
+create or modify association HD.Ticket_KBArticle
+from HD.Ticket to KB.Article
+type Reference
+owner Default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
+/
+create or modify enumeration KB.ArticleStatus (
+  Draft 'Draft',
+  Published 'Published',
+  Archived 'Archived'
+);
+/
+create or modify enumeration HD.TicketStatus (
+  Draft 'Draft',
+  Open 'Open',
+  InProgress 'In Progress',
+  Resolved 'Resolved',
+  Closed 'Closed'
+);
+/
+create or modify enumeration HD.TicketPriority (
+  Low 'Low',
+  Normal 'Normal',
+  High 'High',
+  Critical 'Critical'
+);
+/
+create or modify microflow KB.ACT_Article_Publish (
+  $Article: KB.Article
+)
+returns Boolean as $Success
 begin
-  return;
-  @annotation 'Microflows are used to define server logic in your app.\r\n\r\n- For client logic you can use Nanoflows\r\n- For business process logic you can use Workflows\r\n\r\nDocumentation: https://docs.mendix.com/refguide/application-logic'
+  if $Article/Content = '' or $Article/Content = empty then
+    @position(530,300)
+    validation feedback $Article/Content message 'Content cannot be empty before publishing.';
+    return false;
+  else
+    @position(730,200)
+    change $Article (Status = KB.ArticleStatus.Published
+    , PublishedAt = [%CurrentDateTime%]
+    );
+    @position(890,200)
+    commit $Article;
+    return true;
+  end if;
+end;
+
+grant execute on microflow KB.ACT_Article_Publish to KB.Contributor, KB.Admin;
+/
+create or modify microflow KB.ACT_Article_Archive (
+  $Article: KB.Article
+)
+returns Boolean as $Success
+begin
+  @position(360,200)
+  change $Article (Status = KB.ArticleStatus.Archived
+  );
+  @position(520,200)
+  commit $Article;
+  return true;
+end;
+
+grant execute on microflow KB.ACT_Article_Archive to KB.Contributor, KB.Admin;
+/
+create or modify microflow KB.SUB_Article_TruncateContent (
+  $Article: KB.Article
+)
+returns String as $Preview
+begin
+  @position(360,200)
+  declare $Preview String = $Article/Content;
+  return $Preview;
 end;
 /
+create or modify nanoflow KB.NF_Article_FormatPreview (
+  $Article: KB.Article
+)
+returns String
+begin
+  @position(360,200)
+  $Preview = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
+  return $Preview;
+end;
+
+grant execute on nanoflow KB.NF_Article_FormatPreview to KB.Reader, KB.Contributor, KB.Admin;
+/
+create or modify microflow HD.ACT_Ticket_Submit (
+  $Ticket: HD.Ticket
+)
+returns Boolean as $Success
+begin
+  if $Ticket/Subject = '' then
+    @position(530,300)
+    validation feedback $Ticket/Subject message 'Subject is required';
+    return false;
+  else
+    if $Ticket/Priority = HD.TicketPriority.Critical then
+      @position(900,200)
+      change $Ticket (Status = HD.TicketStatus.Open
+      , SLADueAt = addHours([%CurrentDateTime%], @HD.SLA_CRITICAL_HOURS)
+      );
+    else
+      if $Ticket/Priority = HD.TicketPriority.High then
+        @position(1070,300)
+        change $Ticket (Status = HD.TicketStatus.Open
+        , SLADueAt = addHours([%CurrentDateTime%], @HD.SLA_HIGH_HOURS)
+        );
+      else
+        @position(1070,400)
+        change $Ticket (Status = HD.TicketStatus.Open
+        , SLADueAt = addHours([%CurrentDateTime%], 24)
+        );
+      end if;
+    end if;
+    @position(1510,200)
+    commit $Ticket;
+    return true;
+  end if;
+end;
+
+grant execute on microflow HD.ACT_Ticket_Submit to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Ticket_Assign (
+  $Ticket: HD.Ticket,
+  $Agent: HD.Agent
+)
+returns Boolean as $Success
+begin
+  if $Ticket/Status != HD.TicketStatus.Open then
+    @position(530,300)
+    show message 'Only Open tickets can be assigned.' type warning;
+    return false;
+  else
+    @position(730,200)
+    change $Ticket (Status = HD.TicketStatus.InProgress
+    , HD.Ticket_Agent = $Agent
+    );
+    @position(890,200)
+    commit $Ticket;
+    return true;
+  end if;
+end;
+
+grant execute on microflow HD.ACT_Ticket_Assign to HD.AgentRole, HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Ticket_Resolve (
+  $Ticket: HD.Ticket
+)
+returns Boolean as $Success
+begin
+  if $Ticket/Status != HD.TicketStatus.InProgress then
+    return false;
+  else
+    @position(690,200)
+    declare $Now DateTime = [%CurrentDateTime%];
+    @position(850,200)
+    declare $IsOver Boolean = $Now > $Ticket/SLADueAt and $Ticket/SLADueAt != empty;
+    @position(1010,200)
+    change $Ticket (Status = HD.TicketStatus.Resolved
+    , ResolvedAt = $Now
+    , IsOverSLA = $IsOver
+    );
+    @position(1170,200)
+    commit $Ticket;
+    return true;
+  end if;
+end;
+
+grant execute on microflow HD.ACT_Ticket_Resolve to HD.AgentRole, HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Ticket_Reopen (
+  $Ticket: HD.Ticket
+)
+returns Boolean as $Success
+begin
+  if $Ticket/Status != HD.TicketStatus.Resolved and $Ticket/Status != HD.TicketStatus.Closed then
+    return false;
+  else
+    @position(690,200)
+    change $Ticket (Status = HD.TicketStatus.Open
+    , ResolvedAt = empty);
+    @position(850,200)
+    commit $Ticket;
+    return true;
+  end if;
+end;
+
+grant execute on microflow HD.ACT_Ticket_Reopen to HD.AgentRole, HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Ticket_Close (
+  $Ticket: HD.Ticket
+)
+returns Boolean as $Success
+begin
+  if $Ticket/Status != HD.TicketStatus.Resolved then
+    return false;
+  else
+    @position(690,200)
+    change $Ticket (Status = HD.TicketStatus.Closed
+    );
+    @position(850,200)
+    commit $Ticket;
+    return true;
+  end if;
+end;
+
+grant execute on microflow HD.ACT_Ticket_Close to HD.AgentRole, HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Ticket_SafeCommit (
+  $Ticket: HD.Ticket
+)
+returns Boolean as $Success
+begin
+  @position(360,200)
+  declare $Success Boolean = false;
+  @position(520,200)
+  commit $Ticket;
+  @position(680,200)
+  set $Success = true
+  ;
+  return $Success;
+end;
+/
+create or modify microflow HD.ACT_Ticket_MarkCommentsRead (
+  $Ticket: HD.Ticket
+)
+begin
+  @position(360,200)
+  retrieve $Comments from HD.TicketComment
+      where HD.TicketComment_Ticket/HD.Ticket = $Ticket and IsInternal = true
+      limit 100;
+  loop $Comment in $Comments
+  begin
+    @position(150,80)
+    change $Comment (IsInternal = false
+    );
+  end loop;
+  return;
+end;
+/
+create or modify microflow HD.ACT_EscalationRequest_Cleanup (
+  $Ticket: HD.Ticket
+)
+begin
+  @position(360,200)
+  retrieve $Requests from HD.EscalationRequest
+      where HD.EscalationRequest_Ticket/HD.Ticket = $Ticket
+      limit 50;
+  loop $Req in $Requests
+  begin
+    @position(150,80)
+    delete $Req;
+  end loop;
+  return;
+end;
+
+grant execute on microflow HD.ACT_EscalationRequest_Cleanup to HD.AgentRole, HD.ManagerRole;
+/
+create or modify microflow HD.DS_OverdueTicketCount ()
+returns Integer as $Count
+begin
+  @position(360,200)
+  retrieve $Overdue from HD.Ticket
+      where IsOverSLA = true
+      limit 0;
+  @position(520,200)
+  $Count = count($Overdue);
+  return $Count;
+end;
+/
+create or modify microflow HD.DS_TicketsByCompany (
+  $Company: String
+)
+returns List of HD.Ticket as $Tickets
+begin
+  @position(360,200)
+  retrieve $Tickets from HD.Ticket
+      where HD.Ticket_Customer/HD.Customer/Company = $Company
+      limit 50;
+  return $Tickets;
+end;
+/
+create or modify microflow HD.DS_MyTickets ()
+returns List of HD.Ticket as $Tickets
+begin
+  @position(360,200)
+  retrieve $Tickets from HD.Ticket
+      where System.owner = '[%CurrentUser%]'
+      limit 0;
+  return $Tickets;
+end;
+/
+create or modify microflow HD.DS_OpenHighTickets ()
+returns List of HD.Ticket as $Tickets
+begin
+  @position(360,200)
+  retrieve $Tickets from HD.Ticket
+      where Status = HD.TicketStatus.Open and Priority = HD.TicketPriority.High
+      limit 0;
+  return $Tickets;
+end;
+/
+create or modify microflow HD.DS_TicketPage (
+  $PageIndex: Integer,
+  $PageSize: Integer
+)
+returns List of HD.Ticket as $Tickets
+begin
+  @position(360,200)
+  declare $Offset Integer = ($PageIndex - 1) * $PageSize;
+  @position(520,200)
+  retrieve $Tickets from HD.Ticket
+      where Status != HD.TicketStatus.Closed
+      sort by HD.Ticket.SLADueAt asc, HD.Ticket.Priority desc
+      limit $PageSize
+      offset $Offset;
+  return $Tickets;
+end;
+/
+create or modify microflow HD.DS_RecentCriticalTickets ()
+returns List of HD.Ticket as $Tickets
+begin
+  @position(360,200)
+  retrieve $Tickets from HD.Ticket
+      where Priority = HD.TicketPriority.Critical
+      sort by HD.Ticket.createdDate desc
+      limit 10;
+  return $Tickets;
+end;
+/
+create or modify nanoflow HD.NF_Ticket_QuickCreate (
+  $Customer: HD.Customer,
+  $Subject: String
+)
+returns Ticket
+begin
+  @position(360,200)
+  $Ticket = create HD.Ticket (Subject = $Subject
+  , Status = HD.TicketStatus.Draft
+  , Priority = HD.TicketPriority.Normal
+  , Ticket_Customer = $Customer
+  );
+  @position(520,200)
+  commit $Ticket;
+  return $Ticket;
+end;
+
+grant execute on nanoflow HD.NF_Ticket_QuickCreate to HD.CustomerRole, HD.AgentRole;
+/
+create or modify nanoflow HD.NF_TicketSearch_Apply (
+  $Search: HD.TicketSearch
+)
+returns List of HD.Ticket
+begin
+  @position(360,200)
+  retrieve $Tickets from HD.Ticket
+      limit 100;
+  return $Tickets;
+end;
+
+grant execute on nanoflow HD.NF_TicketSearch_Apply to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+/
+create or modify nanoflow HD.NF_Priority_GetLabel (
+  $PriorityStr: String
+)
+returns String
+begin
+  @position(360,200)
+  declare $CSSClass String = 'badge-default';
+  if $PriorityStr = 'Critical' then
+    @position(690,200)
+    set $CSSClass = 'badge-danger'
+    ;
+  else
+    if $PriorityStr = 'High' then
+      @position(860,300)
+      set $CSSClass = 'badge-warning'
+      ;
+    else
+      if $PriorityStr = 'Normal' then
+        @position(1030,500)
+        set $CSSClass = 'badge-info'
+        ;
+      end if;
+    end if;
+  end if;
+  return $CSSClass;
+end;
+
+grant execute on nanoflow HD.NF_Priority_GetLabel to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+/
+create or modify microflow HD.WFA_GetManagerAssignees (
+  $workflow: System.Workflow,
+  $EscalationRequest: HD.EscalationRequest
+)
+returns List of System.User as $Users
+begin
+  @position(360,200)
+  retrieve $Users from System.User
+      limit 10;
+  return $Users;
+end;
+/
+create or modify microflow HD.WFS_SendReminder (
+  $EscalationRequest: HD.EscalationRequest
+)
+begin
+  @position(360,200)
+  log info node 'Application' '{1}' with ({1} = 'Escalation reminder sent for request ' + toString($EscalationRequest/Reason));
+  return;
+end;
+/
+create or modify microflow HD.WFS_Approve (
+  $EscalationRequest: HD.EscalationRequest
+)
+begin
+  @position(360,200)
+  retrieve $Ticket from HD.Ticket
+      where HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest
+      limit 1;
+  if $Ticket != empty then
+    @position(690,300)
+    change $Ticket (Priority = HD.TicketPriority.Critical
+    );
+    @position(850,300)
+    commit $Ticket;
+  end if;
+  return;
+end;
+/
+create or modify microflow HD.WFS_Reject (
+  $EscalationRequest: HD.EscalationRequest
+)
+begin
+  @position(360,200)
+  change $EscalationRequest (RejectionReason = 'Rejected by manager review board.'
+  );
+  @position(520,200)
+  commit $EscalationRequest;
+  return;
+end;
+/
+create or modify microflow HD.WFS_Escalation_Initialize (
+  $EscalationRequest: HD.EscalationRequest
+)
+begin
+  @position(360,200)
+  change $EscalationRequest (RequestedAt = [%CurrentDateTime%]
+  );
+  @position(520,200)
+  commit $EscalationRequest;
+  return;
+end;
+/
+create or modify microflow HD.WFS_AutoReject (
+  $EscalationRequest: HD.EscalationRequest
+)
+begin
+  @position(360,200)
+  change $EscalationRequest (RejectionReason = 'Auto-rejected: no manager response within 48 hours.'
+  );
+  @position(520,200)
+  commit $EscalationRequest;
+  return;
+end;
+/
+create or modify microflow HD.WFS_UpdateTicketPriority (
+  $EscalationRequest: HD.EscalationRequest
+)
+begin
+  @position(360,200)
+  retrieve $Ticket from HD.Ticket
+      where HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest
+      limit 1;
+  if $Ticket != empty then
+    @position(690,300)
+    change $Ticket (Priority = HD.TicketPriority.Critical
+    , Status = HD.TicketStatus.InProgress
+    );
+    @position(850,300)
+    commit $Ticket;
+  end if;
+  return;
+end;
+/
+create or modify microflow HD.WFS_NotifyAgent (
+  $EscalationRequest: HD.EscalationRequest
+)
+begin
+  @position(360,200)
+  log info node 'Application' '{1}' with ({1} = 'Agent notified: escalation approved for request ' + toString($EscalationRequest/Reason));
+  return;
+end;
+/
+create or modify microflow HD.WFC_EscalationRequest_OnCreate (
+  $EscalationRequest: HD.EscalationRequest
+)
+begin
+  @position(360,200)
+  log info node 'Application' '{1}' with ({1} = 'EscalationRequest created: ' + toString($EscalationRequest/Reason));
+  return;
+end;
+/
+create or modify microflow HD.ACT_StartEscalation (
+  $Ticket: HD.Ticket,
+  $Reason: String
+)
+returns Boolean as $Success
+begin
+  if $Ticket/Status != HD.TicketStatus.InProgress then
+    return false;
+  else
+    @position(690,200)
+    $EscalationRequest = create HD.EscalationRequest (Reason = $Reason
+    , RequestedAt = [%CurrentDateTime%]
+    , EscalationRequest_Ticket = $Ticket
+    );
+    @position(850,200)
+    commit $EscalationRequest;
+    @position(1010,200)
+    call workflow HD.WF_TicketEscalation (EscalationRequest = $EscalationRequest);
+    return true;
+  end if;
+end;
+
+grant execute on microflow HD.ACT_StartEscalation to HD.AgentRole, HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Workflow_ChangeState (
+  $Workflow: System.Workflow,
+  $Operation: String
+)
+begin
+  if $Operation = 'Pause' then
+    @position(530,200)
+    workflow operation pause $Workflow;
+  else
+    if $Operation = 'Unpause' then
+      @position(700,300)
+      workflow operation unpause $Workflow;
+    else
+      @position(700,400)
+      workflow operation abort $Workflow reason '''Administratively aborted''';
+    end if;
+  end if;
+  return;
+end;
+
+grant execute on microflow HD.ACT_Workflow_ChangeState to HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Workflow_CompleteTask (
+  $UserTask: System.WorkflowUserTask,
+  $Outcome: String
+)
+begin
+  @position(360,200)
+  set task outcome $UserTask 'Approve';
+  return;
+end;
+
+grant execute on microflow HD.ACT_Workflow_CompleteTask to HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Workflow_GenerateJumpTo (
+  $Workflow: System.Workflow
+)
+begin
+  @position(360,200)
+  generate jump to options for $Workflow as HD.WF_TicketEscalation;
+  return;
+end;
+
+grant execute on microflow HD.ACT_Workflow_GenerateJumpTo to HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Workflow_ApplyJumpTo (
+  $JumpOption: System.WorkflowJumpToDetails
+)
+begin
+  @position(360,200)
+  apply jump to option $JumpOption;
+  return;
+end;
+
+grant execute on microflow HD.ACT_Workflow_ApplyJumpTo to HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Workflow_GetHistory (
+  $Workflow: System.Workflow
+)
+begin
+  @position(360,200)
+  get workflow activity records $Workflow;
+  return;
+end;
+
+grant execute on microflow HD.ACT_Workflow_GetHistory to HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Workflow_GetContext (
+  $Workflow: System.Workflow
+)
+begin
+  @position(360,200)
+  get workflow data $Workflow as HD.WF_TicketEscalation;
+  return;
+end;
+
+grant execute on microflow HD.ACT_Workflow_GetContext to HD.ManagerRole;
+/
+create or modify microflow HD.DS_WorkflowInstances (
+  $EscalationRequest: HD.EscalationRequest
+)
+begin
+  @position(360,200)
+  get workflows for $EscalationRequest;
+  return;
+end;
+
+grant execute on microflow HD.DS_WorkflowInstances to HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Workflow_ShowTaskPage (
+  $UserTask: System.WorkflowUserTask
+)
+begin
+  @position(360,200)
+  open user task $UserTask;
+  return;
+end;
+/
+create or modify microflow HD.ACT_Workflow_ShowAdminPage (
+  $Workflow: System.Workflow
+)
+begin
+  @position(360,200)
+  open workflow $Workflow;
+  return;
+end;
+/
+create or modify microflow HD.ACT_Workflow_Lock (
+  $Workflow: System.WorkflowDefinition
+)
+begin
+  @position(360,200)
+  lock workflow $Workflow;
+  return;
+end;
+
+grant execute on microflow HD.ACT_Workflow_Lock to HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Workflow_Unlock (
+  $Workflow: System.WorkflowDefinition
+)
+begin
+  @position(360,200)
+  unlock workflow $Workflow;
+  return;
+end;
+
+grant execute on microflow HD.ACT_Workflow_Unlock to HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Workflow_Notify (
+  $Workflow: System.Workflow
+)
+begin
+  @position(360,200)
+  notify workflow $Workflow;
+  return;
+end;
+
+grant execute on microflow HD.ACT_Workflow_Notify to HD.ManagerRole;
+/
+-- Workflow: HD.WF_SUB_ManagerReview
+
+create workflow HD.WF_SUB_ManagerReview
+  parameter $WorkflowContext: HD.EscalationRequest
+  display 'Manager Review'
+  overview page HD.EscalationWorkflow_Overview
+
+begin
+  user task UT_PrimaryReview 'Primary Review'
+    page HD.EscalationReview_Form
+    targeting microflow HD.WFA_GetManagerAssignees
+    description 'Review escalation request and decide: Approve or escalate to board'
+    outcomes
+      'Approve' {
+        call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext') -- WFS_Approve
+          outcomes
+            default -> { };
+
+      }
+      'Escalate' {
+        multi user task UT_SeniorReview 'Senior Board Review'
+          page HD.EscalationReview_Form
+          targeting microflow HD.WFA_GetManagerAssignees
+          completion method majority
+          outcomes
+            'Approve' {
+              call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext') -- WFS_Approve
+                outcomes
+                  default -> { };
+
+            }
+            'Reject' {
+              call microflow HD.WFS_Reject with (EscalationRequest = '$WorkflowContext') -- WFS_Reject
+                outcomes
+                  default -> { };
+
+            };
+
+      }
+    boundary event non interrupting timer 'addHours([%CurrentDateTime%], 12)'
+    {
+      call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext') -- WFS_SendReminder
+        outcomes
+          default -> { };
+
+    };
+
+end workflow
+/
+-- Workflow: HD.WF_TicketEscalation
+
+create workflow HD.WF_TicketEscalation
+  parameter $WorkflowContext: HD.EscalationRequest
+  display 'Ticket Escalation'
+  overview page HD.EscalationWorkflow_Overview
+
+begin
+  call microflow HD.WFS_Escalation_Initialize with (EscalationRequest = '$WorkflowContext') -- WFS_Escalation_Initialize
+    outcomes
+      default -> { };
+
+  decision '$WorkflowContext/Reason = empty and $WorkflowInstance/State = System.WorkflowState.Completed' -- Decision
+    outcomes
+      true -> {
+        call microflow HD.WFS_AutoReject with (EscalationRequest = '$WorkflowContext') -- WFS_AutoReject
+          outcomes
+            default -> { };
+
+      }
+      false -> {
+        wait for notification -- WaitForManagerAvailable
+          boundary event non interrupting timer 'addHours([%CurrentDateTime%], 12)'
+          {
+            call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext') -- WFS_SendReminder
+              outcomes
+                default -> { };
+
+          };
+
+        call workflow HD.WF_SUB_ManagerReview comment 'WF_SUB_ManagerReview' with (WorkflowContext = '$WorkflowContext')
+          boundary event interrupting timer 'addHours([%CurrentDateTime%], 48)'
+          {
+            call microflow HD.WFS_AutoReject with (EscalationRequest = '$WorkflowContext') -- WFS_AutoReject
+              outcomes
+                default -> { };
+
+          };
+
+        parallel split -- Parallel split
+          path 1 {
+            call microflow HD.WFS_UpdateTicketPriority with (EscalationRequest = '$WorkflowContext') -- WFS_UpdateTicketPriority
+              outcomes
+                default -> { };
+
+          }
+          path 2 {
+            call microflow HD.WFS_NotifyAgent with (EscalationRequest = '$WorkflowContext') -- WFS_NotifyAgent
+              outcomes
+                default -> { };
+
+          };
+
+      };
+
+end workflow
+/
+create or modify constant HD.SLA_HIGH_HOURS
+  type Integer
+  default 8
+  comment 'SLA deadline in hours for High-priority tickets.';
+/
+create or modify constant HD.SLA_CRITICAL_HOURS
+  type Integer
+  default 2
+  comment 'SLA deadline in hours for Critical-priority tickets. Configure shorter per environment.';
+/
+create user role Customer (System.User, HD.CustomerRole, KB.Reader);
+/
+create user role Agent (System.User, HD.AgentRole, KB.Contributor);
+/
+create user role Manager (System.User, HD.ManagerRole, KB.Contributor);
+/
+-- navigation PROFILE: Responsive
+--   Kind: Responsive
+create or replace navigation Responsive
+  home page MyFirstModule.Home_Web
+  home page HD.Ticket_Overview for Customer
+  home page HD.Ticket_Overview for Agent
+  home page HD.EscalationWorkflow_Overview for Manager
+  login page Administration.login
+  menu (
+    menu item '我的工单' page HD.MyTickets_Overview;
+    menu item '知识库' page KB.Article_Overview;
+    menu '工单管理' (
+      menu item '所有工单' page HD.Ticket_Overview;
+      menu item '升级审批' page HD.EscalationWorkflow_Overview;
+      menu item '工作流管理' page HD.EscalationWorkflow_Overview;
+    );
+    menu item '系统管理' page Administration.Account_Overview;
+  )
+;
+
+create or modify page KB.Article_Overview (title: 'Knowledge Base', folder: 'Article') {
+}
+
+grant view on page KB.Article_Overview to KB.Reader, KB.Contributor, KB.Admin;
+create or modify page KB.Article_Detail (title: 'Article', folder: 'Article', params: { $Article: KB.Article }) {
+}
+
+grant view on page KB.Article_Detail to KB.Reader, KB.Contributor, KB.Admin;
+create or modify page KB.Article_NewEdit (
+  title: 'New / Edit Article',
+  folder: 'Article',
+  params: { $Article: KB.Article }
+) {
+}
+
+grant view on page KB.Article_NewEdit to KB.Contributor, KB.Admin;
+create or modify page HD.Ticket_Overview (title: 'Tickets', folder: 'Ticket') {
+}
+
+grant view on page HD.Ticket_Overview to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+create or modify page HD.Agent_Select (title: 'Select Agent', folder: 'Ticket', params: { $Ticket: HD.Ticket }) {
+}
+
+grant view on page HD.Agent_Select to HD.AgentRole, HD.ManagerRole;
+create or modify page HD.Ticket_Detail (title: 'Ticket', folder: 'Ticket', params: { $Ticket: HD.Ticket }) {
+}
+
+grant view on page HD.Ticket_Detail to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+create or modify page HD.Ticket_NewEdit (
+  title: 'New / Edit Ticket',
+  folder: 'Ticket',
+  params: { $Ticket: HD.Ticket }
+) {
+}
+
+grant view on page HD.Ticket_NewEdit to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+create or modify page HD.TicketSearch_Form (
+  title: 'Search Tickets',
+  folder: 'Ticket/Search',
+  params: { $Search: HD.TicketSearch }
+) {
+}
+
+grant view on page HD.TicketSearch_Form to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+create or modify page HD.MyTickets_Overview (title: 'My Tickets', folder: 'Ticket') {
+}
+
+grant view on page HD.MyTickets_Overview to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+create or modify page HD.TicketSearch_Results (
+  title: 'Search Results',
+  folder: 'Ticket/Search',
+  params: { $Search: HD.TicketSearch }
+) {
+}
+
+grant view on page HD.TicketSearch_Results to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+create or modify page HD.EscalationReview_Form (
+  title: 'Escalation Review',
+  folder: 'Escalation',
+  params: { $WorkflowUserTask: System.WorkflowUserTask }
+) {
+}
+
+grant view on page HD.EscalationReview_Form to HD.ManagerRole;
+create or modify page HD.EscalationWorkflow_Overview (title: 'Escalation Workflow', folder: 'Escalation') {
+}
+
+grant view on page HD.EscalationWorkflow_Overview to HD.ManagerRole;
+create or modify page HD.EscalationStart_Form (title: 'Request Escalation', folder: 'Escalation') {
+}

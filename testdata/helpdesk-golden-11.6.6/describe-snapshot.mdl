@@ -441,9 +441,8 @@ begin
       limit 100;
   loop $Comment in $Comments
   begin
-    @position(150,80)
-    change $Comment (IsInternal = false
-    );
+    @position(310,80)
+    commit $Comment;
   end loop;
   return;
 end;
@@ -542,6 +541,7 @@ create or modify nanoflow HD.NF_Ticket_QuickCreate (
   $Customer: HD.Customer,
   $Subject: String
 )
+returns Ticket
 begin
   @position(360,200)
   $Ticket = create HD.Ticket (Subject = $Subject
@@ -559,6 +559,7 @@ grant execute on nanoflow HD.NF_Ticket_QuickCreate to HD.CustomerRole, HD.AgentR
 create or modify nanoflow HD.NF_TicketSearch_Apply (
   $Search: HD.TicketSearch
 )
+returns List of HD.Ticket
 begin
   @position(360,200)
   retrieve $Tickets from HD.Ticket
@@ -887,7 +888,9 @@ begin
     description 'Review escalation request and decide: Approve or escalate to board'
     outcomes
       'Approve' {
-        call microflow HD.WFS_Approve; -- WFS_Approve
+        call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext') -- WFS_Approve
+          outcomes
+            default -> { };
 
       }
       'Escalate' {
@@ -897,18 +900,24 @@ begin
           completion method majority
           outcomes
             'Approve' {
-              call microflow HD.WFS_Approve; -- WFS_Approve
+              call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext') -- WFS_Approve
+                outcomes
+                  default -> { };
 
             }
             'Reject' {
-              call microflow HD.WFS_Reject; -- WFS_Reject
+              call microflow HD.WFS_Reject with (EscalationRequest = '$WorkflowContext') -- WFS_Reject
+                outcomes
+                  default -> { };
 
             };
 
       }
     boundary event non interrupting timer 'addHours([%CurrentDateTime%], 12)'
     {
-      call microflow HD.WFS_SendReminder; -- WFS_SendReminder
+      call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext') -- WFS_SendReminder
+        outcomes
+          default -> { };
 
     };
 
@@ -922,36 +931,48 @@ create workflow HD.WF_TicketEscalation
   overview page HD.EscalationWorkflow_Overview
 
 begin
-  call microflow HD.WFS_Escalation_Initialize; -- WFS_Escalation_Initialize
+  call microflow HD.WFS_Escalation_Initialize with (EscalationRequest = '$WorkflowContext') -- WFS_Escalation_Initialize
+    outcomes
+      default -> { };
 
   decision '$WorkflowContext/Reason = empty and $WorkflowInstance/State = System.WorkflowState.Completed' -- Decision
     outcomes
       true -> {
-        call microflow HD.WFS_AutoReject; -- WFS_AutoReject
+        call microflow HD.WFS_AutoReject with (EscalationRequest = '$WorkflowContext') -- WFS_AutoReject
+          outcomes
+            default -> { };
 
       }
       false -> {
         wait for notification -- WaitForManagerAvailable
           boundary event non interrupting timer 'addHours([%CurrentDateTime%], 12)'
           {
-            call microflow HD.WFS_SendReminder; -- WFS_SendReminder
+            call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext') -- WFS_SendReminder
+              outcomes
+                default -> { };
 
           };
 
         call workflow HD.WF_SUB_ManagerReview comment 'WF_SUB_ManagerReview' with (WorkflowContext = '$WorkflowContext')
           boundary event interrupting timer 'addHours([%CurrentDateTime%], 48)'
           {
-            call microflow HD.WFS_AutoReject; -- WFS_AutoReject
+            call microflow HD.WFS_AutoReject with (EscalationRequest = '$WorkflowContext') -- WFS_AutoReject
+              outcomes
+                default -> { };
 
           };
 
         parallel split -- Parallel split
           path 1 {
-            call microflow HD.WFS_UpdateTicketPriority; -- WFS_UpdateTicketPriority
+            call microflow HD.WFS_UpdateTicketPriority with (EscalationRequest = '$WorkflowContext') -- WFS_UpdateTicketPriority
+              outcomes
+                default -> { };
 
           }
           path 2 {
-            call microflow HD.WFS_NotifyAgent; -- WFS_NotifyAgent
+            call microflow HD.WFS_NotifyAgent with (EscalationRequest = '$WorkflowContext') -- WFS_NotifyAgent
+              outcomes
+                default -> { };
 
           };
 
