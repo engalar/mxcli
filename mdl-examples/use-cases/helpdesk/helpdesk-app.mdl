@@ -10,6 +10,9 @@
 -- Note    : Golden rebuilt after mongo-driver v1→v2 migration (nav_compat bsonD fix)
 -- Note    : codec.Encoder.Version field added for property-level version gating (new elements only)
 -- Note    : gen init() VersionRegistry removed; PropertyVersioner interface dispatch replaces global map
+-- Note    : notifyTarget (11.7.0+) replaces activity ByNameRef in notify workflow action
+-- Note    : visitor keyword arg parsing fixed (Search keyword → arg.Name now captured)
+-- Note    : testdata reorganised: helpdesk-{clean,golden}-{11.6.6,11.10.0}/ naming scheme
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,

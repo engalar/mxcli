@@ -16,6 +16,30 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+// newPageBuilderWithNanoflowStub returns a pageBuilder primed with a
+// createdNanoflows entry so buildDataSourceV3 can resolve the nanoflow
+// without hitting the backend.
+func newPageBuilderWithNanoflowStub(qualifiedName string) *pageBuilder {
+	mb := &mock.MockBackend{}
+	mb.SerializeGenElemToOpaqueFunc = func(elem element.Element) backend.OpaqueWidget {
+		enc := codec.Encoder{}
+		raw, err := enc.Encode(elem)
+		if err != nil {
+			return nil
+		}
+		return bson.Raw(raw)
+	}
+	return &pageBuilder{
+		execCache: &executorCache{
+			createdNanoflows: map[string]*createdNanoflowInfo{
+				qualifiedName: {ID: model.ID("00000000-0000-0000-0000-000000000003"), Name: "NF_Search", ModuleName: "HD"},
+			},
+		},
+		paramEntityNames: map[string]string{"$Search": "HD.TicketSearch"},
+		widgetBackend:    mb,
+	}
+}
+
 // buildTestWidgetV3WithDesignProp creates a WidgetV3 with a single design property.
 func buildTestWidgetV3WithDesignProp(key, value string) *ast.WidgetV3 {
 	w := &ast.WidgetV3{Properties: map[string]interface{}{}}
@@ -277,5 +301,32 @@ func TestDataViewSelectionDatasource_StoresListenTargetSource(t *testing.T) {
 	}
 	if gotTarget != "artGallery" {
 		t.Errorf("ListenTarget = %q, want artGallery", gotTarget)
+	}
+}
+
+// TestNanoflowDatasourceResolvesViaCache verifies that buildDataSourceV3
+// resolves a nanoflow datasource reference using execCache.createdNanoflows,
+// enabling session-local resolution without a backend round-trip.
+func TestNanoflowDatasourceResolvesViaCache(t *testing.T) {
+	pb := newPageBuilderWithNanoflowStub("HD.NF_TicketSearch_Apply")
+	pb.widgetScope = map[string]model.ID{}
+
+	ds := &ast.DataSourceV3{
+		Type:      "nanoflow",
+		Reference: "HD.NF_TicketSearch_Apply",
+		Args:      []ast.FlowArgV3{{Name: "Search", Value: "$Search"}},
+	}
+
+	elem, _, err := pb.buildDataSourceV3(ds)
+	if err != nil {
+		t.Fatalf("buildDataSourceV3 nanoflow: %v", err)
+	}
+
+	ns, ok := elem.(*genPg.NanoflowSource)
+	if !ok {
+		t.Fatalf("buildDataSourceV3 nanoflow: got %T, want *NanoflowSource", elem)
+	}
+	if ns.NanoflowQualifiedName() != "HD.NF_TicketSearch_Apply" {
+		t.Errorf("NanoflowQualifiedName = %q", ns.NanoflowQualifiedName())
 	}
 }

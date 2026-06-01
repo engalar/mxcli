@@ -797,8 +797,11 @@ func buildMicroflowArgV3(ctx parser.IMicroflowArgV3Context) ast.FlowArgV3 {
 		// Microflow-style: $Param = $value
 		arg.Name = strings.TrimPrefix(v.GetText(), "$")
 	} else if id := argCtx.IDENTIFIER(); id != nil {
-		// Widget-style: Param: $value
+		// Widget-style: Param: $value (identifier)
 		arg.Name = id.GetText()
+	} else if kw := argCtx.Keyword(); kw != nil {
+		// Widget-style: Param: $value where Param is a MDL keyword (e.g. "Search")
+		arg.Name = kw.GetText()
 	}
 	if expr := argCtx.Expression(); expr != nil {
 		arg.Value = expr.GetText()

@@ -14,12 +14,19 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
+	"github.com/mendixlabs/mxcli/modelsdk/version"
 )
 
 func newTestFlowBuilderGen() *flowBuilderGen {
 	return &flowBuilderGen{
 		posX: 200, posY: 200, baseY: 200, spacing: HorizontalSpacing,
 	}
+}
+
+func newTestFlowBuilderGenWithVersion(v string) *flowBuilderGen {
+	fb := newTestFlowBuilderGen()
+	fb.version = version.Parse(v)
+	return fb
 }
 
 func TestWrapActionGenAdvancesPosAndAssignsActivity(t *testing.T) {
@@ -248,6 +255,32 @@ func TestAddNotifyWorkflowActionGenSetsActivityQN(t *testing.T) {
 	act := fb.objects[0].(*genMf.ActionActivity).Action().(*genMf.NotifyWorkflowAction)
 	if act.ActivityQualifiedName() != "HD.WF_TicketEscalation.WaitForManagerAvailable" {
 		t.Fatalf("activity QN = %q", act.ActivityQualifiedName())
+	}
+}
+
+// TestAddNotifyWorkflowActionGenUsesNotifyTargetOnV11_7 verifies that on
+// Mendix 11.7.0+ the executor sets the notifyTarget Part instead of the
+// deprecated activity ByNameRef (which is version-gated out in 11.7+).
+func TestAddNotifyWorkflowActionGenUsesNotifyTargetOnV11_7(t *testing.T) {
+	fb := newTestFlowBuilderGenWithVersion("11.7.0")
+	stmt := &ast.NotifyWorkflowStmt{
+		WorkflowVariable:      "WF",
+		OutputVariable:        "IsReceived",
+		ActivityQualifiedName: "HD.WF_TicketEscalation.WaitForManagerAvailable",
+	}
+	fb.addNotifyWorkflowActionGen(stmt)
+	act := fb.objects[0].(*genMf.ActionActivity).Action().(*genMf.NotifyWorkflowAction)
+
+	target := act.NotifyTarget()
+	if target == nil {
+		t.Fatal("notifyTarget must be set for Mendix 11.7.0+")
+	}
+	nt, ok := target.(*genWf.NotifyWaitForNotificationActivityTarget)
+	if !ok {
+		t.Fatalf("notifyTarget type = %T, want *NotifyWaitForNotificationActivityTarget", target)
+	}
+	if nt.ActivityQualifiedName() != "HD.WF_TicketEscalation.WaitForManagerAvailable" {
+		t.Fatalf("notifyTarget activity QN = %q", nt.ActivityQualifiedName())
 	}
 }
 

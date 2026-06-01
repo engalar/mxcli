@@ -36,6 +36,7 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
+	"github.com/mendixlabs/mxcli/modelsdk/version"
 )
 
 // wrapActionGen wraps a gen action element in an ActionActivity at the
@@ -196,6 +197,8 @@ func (fb *flowBuilderGen) addOpenUserTaskActionGen(s *ast.OpenUserTaskStmt) elem
 }
 
 // addNotifyWorkflowActionGen emits `notify workflow ...`.
+// In Mendix 11.7.0+ the deprecated `activity` ByNameRef was replaced by the
+// `notifyTarget` Part element (Workflows$NotifyWaitForNotificationActivityTarget).
 func (fb *flowBuilderGen) addNotifyWorkflowActionGen(s *ast.NotifyWorkflowStmt) element.ID {
 	action := genMf.NewNotifyWorkflowAction()
 	assignFreshID(action)
@@ -203,7 +206,14 @@ func (fb *flowBuilderGen) addNotifyWorkflowActionGen(s *ast.NotifyWorkflowStmt) 
 	action.SetOutputVariableName(s.OutputVariable)
 	action.SetWorkflowVariable(s.WorkflowVariable)
 	if s.ActivityQualifiedName != "" {
-		action.SetActivityQualifiedName(s.ActivityQualifiedName)
+		if fb.version.Compare(version.Parse("11.7.0")) >= 0 {
+			target := genWf.NewNotifyWaitForNotificationActivityTarget()
+			assignFreshID(target)
+			target.SetActivityQualifiedName(s.ActivityQualifiedName)
+			action.SetNotifyTarget(target)
+		} else {
+			action.SetActivityQualifiedName(s.ActivityQualifiedName)
+		}
 	}
 	return fb.wrapActionGen(action, s.ErrorHandling)
 }

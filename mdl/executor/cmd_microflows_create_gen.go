@@ -46,6 +46,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/version"
 )
 
 // execCreateMicroflowGen handles CREATE MICROFLOW via the gen-typed
@@ -168,6 +169,10 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 	hierarchy, _ := getHierarchy(ctx)
 	restServices, _ := loadRestServices(ctx)
 
+	var mendixVer version.Version
+	if rpv := ctx.Backend.ProjectVersion(); rpv != nil {
+		mendixVer = version.Parse(rpv.ProductVersion)
+	}
 	fb := &flowBuilderGen{
 		posX:           200,
 		posY:           200,
@@ -181,6 +186,7 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		nanoflowsRepo:  ctx.Nanoflows,
 		hierarchy:      hierarchy,
 		restServices:   restServices,
+		version:        mendixVer,
 	}
 
 	// Initialise variable types from parameters so body statements

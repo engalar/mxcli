@@ -639,6 +639,10 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (element.Element,
 		ns := genPg.NewNanoflowSource()
 		assignFreshID(ns)
 		ns.SetNanoflowQualifiedName(ds.Reference)
+		// NOTE: ParameterMappings intentionally left empty. Nanoflow datasource
+		// parameter mappings require a specific ByNameRef QN format that varies
+		// by Mendix version; incorrect QNs cause load errors in 11.10.0.
+		// CE0553/CE1571 remain as pre-existing known issues in the MDL baseline.
 		return ns, entityName, nil
 
 	case "association":
@@ -1157,6 +1161,12 @@ func pageParamBSONType(dt ast.DataType) string {
 
 // resolveNanoflowByName resolves a nanoflow qualified name to its ID.
 func (pb *pageBuilder) resolveNanoflowByName(nfName string) (model.ID, error) {
+	if pb.execCache != nil && pb.execCache.createdNanoflows != nil {
+		if info, ok := pb.execCache.createdNanoflows[nfName]; ok {
+			return info.ID, nil
+		}
+	}
+
 	parts := strings.Split(nfName, ".")
 	var moduleName, name string
 	if len(parts) >= 2 {
@@ -2037,6 +2047,11 @@ func (pb *pageBuilder) buildDataGridDataSourceBSON(ds *ast.DataSourceV3) (bson.D
 		// Write Nanoflow QN directly at top level, matching the gen NanoflowSource
 		// ByNameRef field "Nanoflow". No NanoflowSettings wrapper needed (not in
 		// reflection data or gen type schema).
+		// NOTE: ParameterMappings intentionally left empty (version-prefixed array
+		// with no entries) for now. Nanoflow datasource parameter mapping requires
+		// a specific ByNameRef QN format for the parameter that differs between
+		// Mendix versions; using an incorrect QN causes a load error in 11.10.0.
+		// CE0553/CE1571 are tracked as pre-existing known issues in the MDL baseline.
 		doc := bson.D{
 			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 			{Key: "$Type", Value: "Forms$NanoflowSource"},

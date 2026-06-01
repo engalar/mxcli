@@ -53,6 +53,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/version"
 )
 
 // flowBuilderGen builds the flow graph from AST statements using
@@ -155,6 +156,11 @@ type flowBuilderGen struct {
 	// nonPersistentEntities is lazily loaded on first isNonPersistentEntity call.
 	// nil means not yet loaded; empty map means loaded but all entities are persistent.
 	nonPersistentEntities map[string]bool
+
+	// version is the Mendix project version, used for version-gated BSON
+	// property selection (e.g. notifyTarget introduced in 11.7.0).
+	// Zero value means treat as oldest supported version.
+	version version.Version
 }
 
 // pendingErrorHandlerStateGen is the gen-typed equivalent of
