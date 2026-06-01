@@ -141,16 +141,18 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 	}
 
-	// Output widgets from raw page data
-	rawWidgets := getPageWidgetsFromRaw(ctx, pageID)
-	if len(rawWidgets) > 0 {
+	// Output widgets via the new PageModel IR path (Task 6 wire-up).
+	// GetPageModel decodes raw BSON into types.PageModel; renderWidget walks
+	// the WidgetNode tree and emits grammar-valid MDL.
+	pm, pmErr := ctx.Backend.GetPageModel(pageID)
+	if pmErr != nil || pm == nil || len(pm.Widgets) == 0 {
+		formatWidgetProps(ctx.Output, "", header, props, " {\n}")
+	} else {
 		formatWidgetProps(ctx.Output, "", header, props, " {\n")
-		for _, w := range rawWidgets {
-			outputWidgetMDLV3(ctx, w, 1)
+		for _, n := range pm.Widgets {
+			renderWidget(ctx.Output, n, 1)
 		}
 		fmt.Fprint(ctx.Output, "}")
-	} else {
-		formatWidgetProps(ctx.Output, "", header, props, " {\n}")
 	}
 
 	// Add GRANT VIEW if roles are assigned, excluding the auto-created User placeholder.
@@ -251,12 +253,12 @@ func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
 		fmt.Fprintf(ctx.Output, " (%s)", strings.Join(snippetProps, ", "))
 	}
 
-	// Output widgets from raw snippet data
-	rawWidgets := getSnippetWidgetsFromRaw(ctx, snippetID)
-	if len(rawWidgets) > 0 {
+	// Output widgets via the new PageModel IR path (Task 6 wire-up).
+	pm, pmErr := ctx.Backend.GetSnippetModel(snippetID)
+	if pmErr == nil && pm != nil && len(pm.Widgets) > 0 {
 		fmt.Fprint(ctx.Output, " {\n")
-		for _, w := range rawWidgets {
-			outputWidgetMDLV3(ctx, w, 1)
+		for _, n := range pm.Widgets {
+			renderWidget(ctx.Output, n, 1)
 		}
 		fmt.Fprint(ctx.Output, "}")
 	}

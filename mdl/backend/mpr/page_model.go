@@ -273,9 +273,20 @@ func extractChildWidgets(doc bson.D, field string) []*types.WidgetNode {
 
 func extractLayoutGridRows(doc bson.D) []*types.WidgetNode {
 	var nodes []*types.WidgetNode
-	for _, r := range dGetArrayElements(dGet(doc, "Rows")) {
+	for i, r := range dGetArrayElements(dGet(doc, "Rows")) {
 		if rd, ok := r.(bson.D); ok {
 			if node := widgetNodeFromBSON(rd); node != nil {
+				// LayoutGridRow has no Name field in BSON — synthesise one
+				// from position so the rendered MDL is parseable.
+				if node.Name == "" {
+					node.Name = fmt.Sprintf("row%d", i+1)
+				}
+				// Same for column children of this row.
+				for j, c := range node.Children {
+					if c != nil && c.Name == "" && c.Kind == types.WidgetLayoutCol {
+						c.Name = fmt.Sprintf("col%d", j+1)
+					}
+				}
 				nodes = append(nodes, node)
 			}
 		}

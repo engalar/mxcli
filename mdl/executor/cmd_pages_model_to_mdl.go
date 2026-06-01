@@ -197,10 +197,13 @@ func renderWidget(w io.Writer, node *types.WidgetNode, depth int) {
 		}
 		fmt.Fprintf(w, "\n")
 
-	case types.WidgetText, types.WidgetTitle:
+	case types.WidgetText, types.WidgetTitle, types.WidgetDynamicText:
 		kw := "statictext"
-		if node.Kind == types.WidgetTitle {
+		switch node.Kind {
+		case types.WidgetTitle:
 			kw = "title"
+		case types.WidgetDynamicText:
+			kw = "dynamictext"
 		}
 		fmt.Fprintf(w, "%s%s %s", indent, kw, node.Name)
 		if node.Content != "" {
