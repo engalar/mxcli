@@ -269,12 +269,16 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 
 	nf.SetObjectCollection(oc)
 
-	// Return type — primitive shorthand only at this stage; entity /
-	// list-of-entity returns will be wired alongside the rest of
-	// flowBuilder in 3.2.3.
+	// Return type — set both the shorthand string (ReturnType) and the
+	// nested DataType element (MicroflowReturnType) that mx check requires
+	// for entity/list-of-entity return-variable type resolution.
+	// Mirrors cmd_microflows_create_gen.go:156-166.
 	if s.ReturnType != nil {
 		if t := paramASTToShortType(s.ReturnType.Type); t != "" {
 			nf.SetReturnType(t)
+		}
+		if dt := convertASTToGenDataType(s.ReturnType.Type); dt != nil {
+			nf.SetMicroflowReturnType(dt)
 		}
 	}
 
@@ -376,6 +380,17 @@ func paramASTToShortType(t ast.DataType) string {
 		return "DateTime"
 	case ast.TypeBinary:
 		return "Binary"
+	case ast.TypeVoid:
+		return "Void"
+	case ast.TypeEntity:
+		if t.EntityRef != nil {
+			return t.EntityRef.Module + "." + t.EntityRef.Name
+		}
+	case ast.TypeListOf:
+		// Format matches extractEntityFromGenReturnType's expected prefix.
+		if t.EntityRef != nil {
+			return "List of " + t.EntityRef.Module + "." + t.EntityRef.Name
+		}
 	}
 	return ""
 }

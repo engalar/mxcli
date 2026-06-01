@@ -16,6 +16,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genCW "github.com/mendixlabs/mxcli/modelsdk/gen/customwidgets"
 	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
@@ -27,6 +28,18 @@ import (
 // ============================================================================
 // Gen-native helper functions (V3 builder support)
 // ============================================================================
+
+// genElementToBSONDoc encodes a gen element to bson.D via the codec.
+// Used in BSON-builder functions that need raw bson.D rather than a gen element.
+func genElementToBSONDoc(elem element.Element) (bson.D, error) {
+	enc := codec.Encoder{}
+	raw, err := enc.Encode(elem)
+	if err != nil {
+		return nil, err
+	}
+	var doc bson.D
+	return doc, bson.Unmarshal(raw, &doc)
+}
 
 // genSimpleText creates a gen Text element with a single en_US translation.
 func genSimpleText(text string) *genTexts.Text {
@@ -639,10 +652,15 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (element.Element,
 		ns := genPg.NewNanoflowSource()
 		assignFreshID(ns)
 		ns.SetNanoflowQualifiedName(ds.Reference)
-		// NOTE: ParameterMappings intentionally left empty. Nanoflow datasource
-		// parameter mappings require a specific ByNameRef QN format that varies
-		// by Mendix version; incorrect QNs cause load errors in 11.10.0.
-		// CE0553/CE1571 remain as pre-existing known issues in the MDL baseline.
+		for _, arg := range ds.Args {
+			pm := genPg.NewNanoflowParameterMapping()
+			assignFreshID(pm)
+			pm.SetParameterQualifiedName(ds.Reference + "." + arg.Name)
+			if expr, ok := arg.Value.(string); ok {
+				pm.SetExpression(expr)
+			}
+			ns.AddParameterMappings(pm)
+		}
 		return ns, entityName, nil
 
 	case "association":
@@ -882,6 +900,13 @@ func isPrimitiveReturnType(rt string) bool {
 
 // getNanoflowReturnEntityName looks up a nanoflow and returns its return type entity name.
 func (pb *pageBuilder) getNanoflowReturnEntityName(qualifiedName string) string {
+	// Check session-local cache first (mirrors getMicroflowReturnEntityName).
+	if pb.execCache != nil && pb.execCache.createdNanoflows != nil {
+		if info, ok := pb.execCache.createdNanoflows[qualifiedName]; ok {
+			return info.ReturnEntityName
+		}
+	}
+
 	parts := strings.Split(qualifiedName, ".")
 	var moduleName, name string
 	if len(parts) >= 2 {
@@ -2044,19 +2069,21 @@ func (pb *pageBuilder) buildDataGridDataSourceBSON(ds *ast.DataSourceV3) (bson.D
 		}
 		_ = nfID
 		entityName := pb.getNanoflowReturnEntityName(ds.Reference)
-		// Write Nanoflow QN directly at top level, matching the gen NanoflowSource
-		// ByNameRef field "Nanoflow". No NanoflowSettings wrapper needed (not in
-		// reflection data or gen type schema).
-		// NOTE: ParameterMappings intentionally left empty (version-prefixed array
-		// with no entries) for now. Nanoflow datasource parameter mapping requires
-		// a specific ByNameRef QN format for the parameter that differs between
-		// Mendix versions; using an incorrect QN causes a load error in 11.10.0.
-		// CE0553/CE1571 are tracked as pre-existing known issues in the MDL baseline.
-		doc := bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "Forms$NanoflowSource"},
-			{Key: "Nanoflow", Value: ds.Reference},
-			{Key: "ParameterMappings", Value: bson.A{int32(3)}},
+		ns := genPg.NewNanoflowSource()
+		assignFreshID(ns)
+		ns.SetNanoflowQualifiedName(ds.Reference)
+		for _, arg := range ds.Args {
+			pm := genPg.NewNanoflowParameterMapping()
+			assignFreshID(pm)
+			pm.SetParameterQualifiedName(ds.Reference + "." + arg.Name)
+			if expr, ok := arg.Value.(string); ok {
+				pm.SetExpression(expr)
+			}
+			ns.AddParameterMappings(pm)
+		}
+		doc, err := genElementToBSONDoc(ns)
+		if err != nil {
+			return nil, "", mdlerrors.NewBackend("encode nanoflow source", err)
 		}
 		return doc, entityName, nil
 
