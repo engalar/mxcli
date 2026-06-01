@@ -15,8 +15,8 @@ func findTestMPK(t *testing.T) string {
 	candidates := []string{
 		filepath.Join("..", "..", "..", "mx-test-projects", "template-app-116", "widgets", "com.mendix.widget.web.Combobox.mpk"),
 		filepath.Join("..", "..", "..", "mx-test-projects", "LatoProductInventory", "widgets", "com.mendix.widget.web.Combobox.mpk"),
-		filepath.Join("..", "..", "..", "testdata", "helpdesk-golden", "widgets", "com.mendix.widget.web.Combobox.mpk"),
-		filepath.Join("..", "..", "..", "testdata", "helpdesk-golden-clean", "widgets", "com.mendix.widget.web.Combobox.mpk"),
+		filepath.Join("..", "..", "..", "testdata", "helpdesk-golden-11.6.6", "widgets", "com.mendix.widget.web.Combobox.mpk"),
+		filepath.Join("..", "..", "..", "testdata", "helpdesk-clean-11.6.6", "widgets", "com.mendix.widget.web.Combobox.mpk"),
 		filepath.Join("..", "..", "..", "testdata", "expr-checker", "widgets", "com.mendix.widget.web.Combobox.mpk"),
 	}
 	for _, c := range candidates {
@@ -33,8 +33,8 @@ func findTestProjectDir(t *testing.T) string {
 	candidates := []string{
 		filepath.Join("..", "..", "..", "mx-test-projects", "template-app-116"),
 		filepath.Join("..", "..", "..", "mx-test-projects", "LatoProductInventory"),
-		filepath.Join("..", "..", "..", "testdata", "helpdesk-golden"),
-		filepath.Join("..", "..", "..", "testdata", "helpdesk-golden-clean"),
+		filepath.Join("..", "..", "..", "testdata", "helpdesk-golden-11.6.6"),
+		filepath.Join("..", "..", "..", "testdata", "helpdesk-clean-11.6.6"),
 	}
 	for _, c := range candidates {
 		widgetsDir := filepath.Join(c, "widgets")

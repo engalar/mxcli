@@ -24,7 +24,7 @@ func TestHelpdeskMDL_SyntaxCheck(t *testing.T) {
 	root := repoRoot(t)
 	files := []string{
 		filepath.Join(root, "mdl-examples", "use-cases", "helpdesk", "helpdesk-app.mdl"),
-		filepath.Join(root, "testdata", "helpdesk-golden", "describe-snapshot.mdl"),
+		filepath.Join(root, "testdata", "helpdesk-golden-11.6.6", "describe-snapshot.mdl"),
 	}
 
 	for _, f := range files {

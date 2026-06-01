@@ -276,7 +276,7 @@ check-mdl: build
 test-integration:
 	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m ./...
 
-# Regenerate testdata/helpdesk-golden/ from helpdesk-app.mdl.
+# Regenerate testdata/helpdesk-golden-11.6.6/ from helpdesk-app.mdl.
 # Run after intentional changes to helpdesk-app.mdl; then commit the result.
 update-helpdesk-golden:
 	CGO_ENABLED=0 go test ./internal/goldenfs/ \
@@ -286,7 +286,7 @@ update-helpdesk-golden:
 		-v -timeout 10m
 
 # Run both helpdesk regression layers (BSON + describe MDL).
-# Requires testdata/helpdesk-golden/ to exist (run update-helpdesk-golden first).
+# Requires testdata/helpdesk-golden-11.6.6/ to exist (run update-helpdesk-golden first).
 test-helpdesk-regression:
 	CGO_ENABLED=0 go test ./internal/goldenfs/ \
 		-tags linux,integration \
