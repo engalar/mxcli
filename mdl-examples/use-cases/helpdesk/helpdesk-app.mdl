@@ -13,6 +13,7 @@
 -- Note    : notifyTarget (11.7.0+) replaces activity ByNameRef in notify workflow action
 -- Note    : visitor keyword arg parsing fixed (Search keyword → arg.Name now captured)
 -- Note    : testdata reorganised: helpdesk-{clean,golden}-{11.6.6,11.10.0}/ naming scheme
+-- Note    : VoidConditionOutcome added to CallMicroflowTask for 11.6.6 compat; golden merged from remote
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
