@@ -15,6 +15,19 @@ import (
 	"sync"
 )
 
+// ExpressionReturnType holds the returnType info for expression-type properties.
+type ExpressionReturnType struct {
+	Type           string // e.g. "String", "Boolean", "Integer", "DateTime", "Decimal"
+	EntityProperty string // for entity return types
+	AssignableTo   string // optional assignableTo constraint
+}
+
+// EnumerationValue holds one enumeration option from a widget property.
+type EnumerationValue struct {
+	Key     string
+	Caption string
+}
+
 // PropertyDef describes a single property from a widget XML definition.
 type PropertyDef struct {
 	Key          string // e.g. "staticDataSourceCaption"
@@ -25,10 +38,13 @@ type PropertyDef struct {
 	Required     bool
 	DefaultValue string // for enumeration/boolean/integer types
 	IsList       bool
-	IsSystem     bool          // true for <systemProperty> elements
-	DataSource   string        // dataSource attribute reference
-	AllowedTypes []string      // for attribute properties: Mendix type names ("String", "Decimal", etc.)
-	Children     []PropertyDef // nested properties for object-type properties
+	IsSystem     bool                  // true for <systemProperty> elements
+	DataSource   string                // dataSource attribute reference
+	AllowedTypes []string              // for attribute properties: Mendix type names ("String", "Decimal", etc.)
+	ReturnType        *ExpressionReturnType // for expression-type properties
+	EnumerationValues []EnumerationValue    // for enumeration-type properties
+	SelectionTypes    []string              // for selection-type properties ("None", "Single", "Multi")
+	Children          []PropertyDef         // nested properties for object-type properties
 }
 
 // WidgetDefinition holds the parsed definition of a pluggable widget from an .mpk file.
@@ -95,6 +111,24 @@ type xmlAttributeType struct {
 	Name string `xml:"name,attr"`
 }
 
+// xmlEnumerationValue represents <enumerationValue key="..." caption="..."> element.
+type xmlEnumerationValue struct {
+	Key     string `xml:"key,attr"`
+	Caption string `xml:",chardata"`
+}
+
+// xmlSelectionType represents <selectionType name="..."/> for selection properties.
+type xmlSelectionType struct {
+	Name string `xml:"name,attr"`
+}
+
+// xmlReturnType represents <returnType type="..."> for expression properties.
+type xmlReturnType struct {
+	Type         string `xml:"type,attr"`
+	EntityProperty string `xml:"entityProperty,attr"`
+	AssignableTo string `xml:"assignableTo,attr"`
+}
+
 // xmlProperty represents <property key="..." type="..." ...> element.
 type xmlProperty struct {
 	Key            string             `xml:"key,attr"`
@@ -105,7 +139,10 @@ type xmlProperty struct {
 	DataSource     string             `xml:"dataSource,attr"`
 	Caption        string             `xml:"caption"`
 	Description    string             `xml:"description"`
-	AttributeTypes []xmlAttributeType `xml:"attributeTypes>attributeType"`
+	AttributeTypes    []xmlAttributeType    `xml:"attributeTypes>attributeType"`
+	EnumerationValues []xmlEnumerationValue  `xml:"enumerationValues>enumerationValue"`
+	SelectionTypes    []xmlSelectionType     `xml:"selectionTypes>selectionType"`
+	ReturnType        *xmlReturnType         `xml:"returnType"`
 	// Nested properties for object type
 	NestedProps []xmlPropGroup `xml:"properties>propertyGroup"`
 }
@@ -248,11 +285,24 @@ func walkPropertyGroup(pg xmlPropGroup, parentCategory string, def *WidgetDefini
 			Caption:      p.Caption,
 			Description:  p.Description,
 			Category:     category,
-			Required:     p.Required == "true",
+			Required:     p.Required != "false", // default true when attribute absent
 			DefaultValue: p.DefaultValue,
 			IsList:       p.IsList == "true",
 			DataSource:   p.DataSource,
 			AllowedTypes: allowedTypes,
+		}
+		if p.ReturnType != nil {
+			prop.ReturnType = &ExpressionReturnType{
+				Type:           p.ReturnType.Type,
+				EntityProperty: p.ReturnType.EntityProperty,
+				AssignableTo:   p.ReturnType.AssignableTo,
+			}
+		}
+		for _, ev := range p.EnumerationValues {
+			prop.EnumerationValues = append(prop.EnumerationValues, EnumerationValue{Key: ev.Key, Caption: strings.TrimSpace(ev.Caption)})
+		}
+		for _, st := range p.SelectionTypes {
+			prop.SelectionTypes = append(prop.SelectionTypes, st.Name)
 		}
 
 		// Parse nested properties for object-type properties
@@ -295,11 +345,24 @@ func collectNestedProperties(pg xmlPropGroup, parent *PropertyDef) {
 			Type:         p.Type,
 			Caption:      p.Caption,
 			Description:  p.Description,
-			Required:     p.Required == "true",
+			Required:     p.Required != "false", // default true when attribute absent
 			DefaultValue: p.DefaultValue,
 			IsList:       p.IsList == "true",
 			DataSource:   p.DataSource,
 			AllowedTypes: allowedTypes,
+		}
+		if p.ReturnType != nil {
+			child.ReturnType = &ExpressionReturnType{
+				Type:           p.ReturnType.Type,
+				EntityProperty: p.ReturnType.EntityProperty,
+				AssignableTo:   p.ReturnType.AssignableTo,
+			}
+		}
+		for _, ev := range p.EnumerationValues {
+			child.EnumerationValues = append(child.EnumerationValues, EnumerationValue{Key: ev.Key, Caption: strings.TrimSpace(ev.Caption)})
+		}
+		for _, st := range p.SelectionTypes {
+			child.SelectionTypes = append(child.SelectionTypes, st.Name)
 		}
 		parent.Children = append(parent.Children, child)
 	}

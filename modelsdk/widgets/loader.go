@@ -227,10 +227,20 @@ func getOrGenerateTemplate(widgetID, projectPath string) (*WidgetTemplate, error
 		return cached.(*WidgetTemplate), nil
 	}
 
-	// 3. Derive from MPK in project/widgets/
 	if projectPath == "" {
 		return nil, nil
 	}
+
+	// 3. Extract Type BSON from existing widget instances in the project.
+	// Widget instances created by Studio Pro have a correct CustomWidgets$CustomWidgetType
+	// embedded in the page document. Reusing that Type avoids CE0463 that arises when
+	// GenerateFromMPK (derived from MPK XML alone) produces subtly different BSON.
+	if tmpl := extractTemplateFromProject(widgetID, projectPath); tmpl != nil {
+		generatedCache.Store(widgetID, tmpl)
+		return tmpl, nil
+	}
+
+	// 4. Derive from MPK in project/widgets/ (fallback when no existing instances).
 	projectDir := filepath.Dir(projectPath)
 	mpkPath, err := mpk.FindMPK(projectDir, widgetID)
 	if err != nil {

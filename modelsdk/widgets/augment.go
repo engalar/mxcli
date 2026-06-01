@@ -322,6 +322,23 @@ func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map
 		allowedTypes = append(allowedTypes, t)
 	}
 
+	// Build EnumerationValues array for enumeration-type properties.
+	enumValues := []any{float64(2)}
+	for _, ev := range p.EnumerationValues {
+		enumValues = append(enumValues, map[string]any{
+			"$ID":     placeholderID(),
+			"$Type":   "CustomWidgets$WidgetEnumerationValue",
+			"Caption": ev.Caption,
+			"_Key":    ev.Key,
+		})
+	}
+
+	// Build SelectionTypes array for selection-type properties.
+	selectionTypes := []any{float64(1)}
+	for _, st := range p.SelectionTypes {
+		selectionTypes = append(selectionTypes, st)
+	}
+
 	vt := map[string]any{
 		"$ID":                         vtID,
 		"$Type":                       "CustomWidgets$WidgetValueType",
@@ -333,7 +350,7 @@ func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map
 		"DefaultType":                 "None",
 		"DefaultValue":                p.DefaultValue,
 		"EntityProperty":              "",
-		"EnumerationValues":           []any{float64(2)},
+		"EnumerationValues":           enumValues,
 		"IsLinked":                    false,
 		"IsList":                      p.IsList,
 		"IsMetaData":                  false,
@@ -344,9 +361,9 @@ func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map
 		"ParameterIsList":             false,
 		"PathType":                    "None",
 		"Required":                    p.Required,
-		"ReturnType":                  nil,
+		"ReturnType":                  buildReturnType(bsonType, p),
 		"SelectableObjectsProperty":   "",
-		"SelectionTypes":              []any{float64(1)},
+		"SelectionTypes":              selectionTypes,
 		"SetLabel":                    false,
 		"Translations":                []any{float64(2)},
 		"Type":                        bsonType,
@@ -486,6 +503,33 @@ func resetPropertyValue(val map[string]any, p mpk.PropertyDef) {
 		}
 	case "TextTemplate":
 		val["TextTemplate"] = createDefaultClientTemplate()
+	}
+}
+
+// buildReturnType creates the ReturnType BSON for a ValueType.
+// Only Expression-type properties need a non-nil ReturnType;
+// Studio Pro's WidgetValue.GetExpectedExpressionType() dereferences this field
+// for expression properties and crashes with NPE if it is nil.
+func buildReturnType(bsonType string, p mpk.PropertyDef) any {
+	if bsonType != "Expression" {
+		return nil
+	}
+	retType := "String" // safe default
+	var assignableTo, entityProperty string
+	if p.ReturnType != nil {
+		if p.ReturnType.Type != "" {
+			retType = p.ReturnType.Type
+		}
+		assignableTo = p.ReturnType.AssignableTo
+		entityProperty = p.ReturnType.EntityProperty
+	}
+	return map[string]any{
+		"$ID":            placeholderID(),
+		"$Type":          "CustomWidgets$WidgetReturnType",
+		"AssignableTo":   assignableTo,
+		"EntityProperty": entityProperty,
+		"IsList":         false,
+		"Type":           retType,
 	}
 }
 
