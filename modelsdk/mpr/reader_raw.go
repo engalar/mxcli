@@ -18,6 +18,9 @@ import (
 )
 
 // GetRawUnit retrieves raw BSON data for a unit by ID as a map.
+// Nested BSON documents are deep-converted to map[string]any so callers can
+// use plain type assertions without dealing with bson.D (mongo-driver v2
+// decodes nested docs as bson.D inside a map[string]any target).
 func (r *Reader) GetRawUnit(id model.ID) (map[string]any, error) {
 	contents, err := r.GetRawUnitBytes(string(id))
 	if err != nil {
@@ -31,7 +34,44 @@ func (r *Reader) GetRawUnit(id model.ID) (map[string]any, error) {
 	if err := bson.Unmarshal(contents, &raw); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal BSON: %w", err)
 	}
-	return raw, nil
+	return deepBSONToMap(raw), nil
+}
+
+// deepBSONToMap recursively converts bson.D and bson.A to map[string]any and
+// []any respectively. mongo-driver v2 produces bson.D for nested BSON
+// documents when the target type is map[string]any; this helper normalises the
+// tree so callers can use plain .(map[string]any) assertions at every level.
+func deepBSONToMap(v map[string]any) map[string]any {
+	out := make(map[string]any, len(v))
+	for k, val := range v {
+		out[k] = deepBSONValue(val)
+	}
+	return out
+}
+
+func deepBSONValue(v any) any {
+	switch x := v.(type) {
+	case bson.D:
+		m := make(map[string]any, len(x))
+		for _, e := range x {
+			m[e.Key] = deepBSONValue(e.Value)
+		}
+		return m
+	case bson.A:
+		result := make([]any, len(x))
+		for i, item := range x {
+			result[i] = deepBSONValue(item)
+		}
+		return result
+	case bson.M:
+		m := make(map[string]any, len(x))
+		for k, val := range x {
+			m[k] = deepBSONValue(val)
+		}
+		return m
+	default:
+		return v
+	}
 }
 
 // GetUnitTypes returns a count of units by type.

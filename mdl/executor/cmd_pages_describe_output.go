@@ -234,12 +234,20 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 				if col.Width > 0 && col.Width <= 12 {
 					widthStr = fmt.Sprintf("%d", col.Width)
 				}
-				colProps = append(colProps, "desktopwidth: "+widthStr)
-				if col.TabletWidth > 0 && col.TabletWidth <= 12 {
-					colProps = append(colProps, fmt.Sprintf("tabletwidth: %d", col.TabletWidth))
+				colProps = append(colProps, "DesktopWidth: "+widthStr)
+				if col.TabletWidth != 0 {
+					if col.TabletWidth > 0 && col.TabletWidth <= 12 {
+						colProps = append(colProps, fmt.Sprintf("TabletWidth: %d", col.TabletWidth))
+					} else {
+						colProps = append(colProps, "TabletWidth: AutoFill")
+					}
 				}
-				if col.PhoneWidth > 0 && col.PhoneWidth <= 12 {
-					colProps = append(colProps, fmt.Sprintf("phonewidth: %d", col.PhoneWidth))
+				if col.PhoneWidth != 0 {
+					if col.PhoneWidth > 0 && col.PhoneWidth <= 12 {
+						colProps = append(colProps, fmt.Sprintf("PhoneWidth: %d", col.PhoneWidth))
+					} else {
+						colProps = append(colProps, "PhoneWidth: AutoFill")
+					}
 				}
 				fmt.Fprintf(ctx.Output, "%s    column col%d (%s) {\n", prefix, colIdx+1, strings.Join(colProps, ", "))
 				for _, cw := range col.Widgets {

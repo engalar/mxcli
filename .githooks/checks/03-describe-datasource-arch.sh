@@ -31,7 +31,8 @@ for f in $staged_files; do
 
     # Detect raw BSON field access: map indexed by a capitalized string literal.
     # Pattern: ["AnyCapitalizedName"] — e.g. ds["DataSource"], w["MicroflowSettings"]
-    bad=$(echo "$new_lines" | grep -oE '\["[A-Z][a-zA-Z]*"\]' | sort -u)
+    # Lines marked with //nolint:describe-raw-bson are opt-outs for existing/migrating code.
+    bad=$(echo "$new_lines" | grep -v 'nolint:describe-raw-bson' | grep -oE '\["[A-Z][a-zA-Z]*"\]' | sort -u)
 
     if [ -n "$bad" ]; then
         echo "COMMIT BLOCKED: $f (mdl/executor/) adds raw BSON field access by string literal." >&2
