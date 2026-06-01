@@ -51,11 +51,25 @@ TEST_PARALLEL ?= $(_85PCT)
 # Hard ceiling on how long the full test suite may run.
 TEST_TIMEOUT ?= 180s
 
-.PHONY: build build-debug release clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup
+.PHONY: build build-debug release clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install-daemon
 
 setup:
 	git config core.hooksPath .githooks
 	@echo "Git hooks configured. Pre-commit unit tests enabled."
+
+# Install the locally-built daemon over the downloaded release binary.
+# Ensures mxcli uses the current dev-branch code during local development.
+# Windows: stop running daemon first (taskkill may fail if already stopped).
+install-daemon: build
+	@DAEMON_DIR="$$HOME/.mxcli/daemon"; \
+	DAEMON_BIN="$$DAEMON_DIR/mxcli-daemon$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
+	if [ -f "$$DAEMON_BIN" ]; then \
+		echo "Stopping running daemon..."; \
+		pkill -f mxcli-daemon 2>/dev/null || powershell.exe -Command "Stop-Process -Name mxcli-daemon -Force -ErrorAction SilentlyContinue" 2>/dev/null || true; \
+		sleep 1; \
+	fi; \
+	cp "$(BUILD_DIR)/$(DAEMON_NAME)$(if $(findstring windows,$(shell go env GOOS)),.exe,)" "$$DAEMON_BIN"; \
+	echo "Installed: $$DAEMON_BIN ($$("$$DAEMON_BIN" --version 2>&1 | head -1))"
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
 # Usage: $(call copy-if-changed,src,dst)
@@ -276,7 +290,7 @@ check-mdl: build
 test-integration:
 	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m ./...
 
-# Regenerate testdata/helpdesk-golden/ from helpdesk-app.mdl.
+# Regenerate testdata/helpdesk-golden-11.6.6/ from helpdesk-app.mdl.
 # Run after intentional changes to helpdesk-app.mdl; then commit the result.
 update-helpdesk-golden:
 	CGO_ENABLED=0 go test ./internal/goldenfs/ \
@@ -286,7 +300,7 @@ update-helpdesk-golden:
 		-v -timeout 10m
 
 # Run both helpdesk regression layers (BSON + describe MDL).
-# Requires testdata/helpdesk-golden/ to exist (run update-helpdesk-golden first).
+# Requires testdata/helpdesk-golden-11.6.6/ to exist (run update-helpdesk-golden first).
 test-helpdesk-regression:
 	CGO_ENABLED=0 go test ./internal/goldenfs/ \
 		-tags linux,integration \

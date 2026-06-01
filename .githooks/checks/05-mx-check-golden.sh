@@ -1,22 +1,22 @@
 #!/bin/sh
-# Guard: run `mx check` on testdata/helpdesk-golden/ when MPR files are staged.
+# Guard: run `mx check` on testdata/helpdesk-golden-11.6.6/ when MPR files are staged.
 # Blocks if the staged MPR introduces NEW errors beyond the stored baseline.
 #
-# Baseline: testdata/helpdesk-golden/.mx-check-baseline (committed integer, updated
+# Baseline: testdata/helpdesk-golden-11.6.6/.mx-check-baseline (committed integer, updated
 # by make update-helpdesk-golden when the baseline intentionally changes).
 #
 # mx binary: auto-discovered from ~/.mxcli/mxbuild/<version>/modeler/mx using
-# the version recorded in testdata/helpdesk-golden/minimal.mpr.
+# the version recorded in testdata/helpdesk-golden-11.6.6/minimal.mpr.
 
 staged_mpr=$(git diff --cached --name-only | \
-  grep -E '^testdata/helpdesk-golden/(minimal\.mpr|mprcontents/)' | head -1)
+  grep -E '^testdata/helpdesk-golden-11.6.6/(minimal\.mpr|mprcontents/)' | head -1)
 
 if [ -z "$staged_mpr" ]; then
     exit 0
 fi
 
-MPR="testdata/helpdesk-golden/minimal.mpr"
-BASELINE_FILE="testdata/helpdesk-golden/.mx-check-baseline"
+MPR="testdata/helpdesk-golden-11.6.6/minimal.mpr"
+BASELINE_FILE="testdata/helpdesk-golden-11.6.6/.mx-check-baseline"
 
 # Read baseline error count.
 if [ ! -f "$BASELINE_FILE" ]; then

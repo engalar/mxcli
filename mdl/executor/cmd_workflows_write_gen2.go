@@ -839,8 +839,17 @@ func autoBindWorkflowGen(ctx *ExecContext, activities []element.Element) {
 			autoBindCallMicroflowGenActivity(ctx, v)
 			recurseConditionOutcomesAutoBindGen(ctx, v.OutcomesItems())
 		case *genWf.CallMicroflowTask:
-			// Legacy storage shape — sanitise + recurse only.
+			// Legacy storage shape (pre-11.9). Sanitise, ensure at least one
+			// outcome (CE6686 mirrors autoBindCallMicroflowGenActivity), then recurse.
 			v.SetName(sanitizeActivityName(v.Name()))
+			if len(v.OutcomesItems()) == 0 {
+				oc := genWf.NewVoidConditionOutcome()
+				oc.SetID(element.ID(types.GenerateID()))
+				emptyFlow := genWf.NewFlow()
+				emptyFlow.SetID(element.ID(types.GenerateID()))
+				oc.SetFlow(emptyFlow)
+				v.AddOutcomes(oc)
+			}
 			recurseConditionOutcomesAutoBindGen(ctx, v.OutcomesItems())
 		case *genWf.CallWorkflowActivity:
 			autoBindCallWorkflowGenActivity(ctx, v)

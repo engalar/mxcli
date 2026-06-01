@@ -25,17 +25,17 @@ import (
 
 // updateGolden: go test ... -update-golden -run TestHelpdeskGolden_Update
 var updateGolden = flag.Bool("update-golden", false,
-	"overwrite testdata/helpdesk-golden/ with the current MDL execution result")
+	"overwrite testdata/helpdesk-golden-11.6.6/ with the current MDL execution result")
 
 // helpdeskBlankDir returns the directory containing the blank base MPR (A).
-// Uses testdata/helpdesk-golden-clean: a blank 11.6.6 project with Atlas Core
+// Uses testdata/helpdesk-clean-11.6.6: a blank 11.6.6 project with Atlas Core
 // and the DataGrid2/DropdownFilter widget MPKs already present, giving the
 // correct widget baseline for the helpdesk pages.
 func helpdeskBlankDir(t *testing.T) string {
 	t.Helper()
-	dir := filepath.Join(repoRoot(t), "testdata", "helpdesk-golden-clean")
+	dir := filepath.Join(repoRoot(t), "testdata", "helpdesk-clean-11.6.6")
 	if _, err := os.Stat(dir); err != nil {
-		t.Skipf("testdata/helpdesk-golden-clean not found: %v", err)
+		t.Skipf("testdata/helpdesk-clean-11.6.6 not found: %v", err)
 	}
 	return dir
 }
@@ -45,7 +45,7 @@ func helpdeskBlankMPR(t *testing.T) string {
 	t.Helper()
 	p := filepath.Join(helpdeskBlankDir(t), "minimal.mpr")
 	if _, err := os.Stat(p); err != nil {
-		t.Skipf("testdata/helpdesk-golden-clean/minimal.mpr not found: %v", err)
+		t.Skipf("testdata/helpdesk-clean-11.6.6/minimal.mpr not found: %v", err)
 	}
 	return p
 }
@@ -53,7 +53,7 @@ func helpdeskBlankMPR(t *testing.T) string {
 // helpdeskGoldenDir returns the path to the committed B1 golden directory.
 func helpdeskGoldenDir(t *testing.T) string {
 	t.Helper()
-	return filepath.Join(repoRoot(t), "testdata", "helpdesk-golden")
+	return filepath.Join(repoRoot(t), "testdata", "helpdesk-golden-11.6.6")
 }
 
 // helpdeskGoldenMPR returns the MPR path inside the golden directory.
@@ -134,7 +134,7 @@ func copyDir(src, dst string) error {
 	})
 }
 
-// TestHelpdeskGolden_Update 生成或更新 testdata/helpdesk-golden/。
+// TestHelpdeskGolden_Update 生成或更新 testdata/helpdesk-golden-11.6.6/。
 // 只在 -update-golden flag 存在时有效；否则直接 Skip。
 // 运行方式：
 //
@@ -142,7 +142,7 @@ func copyDir(src, dst string) error {
 //	       -run TestHelpdeskGolden_Update -update-golden -v
 func TestHelpdeskGolden_Update(t *testing.T) {
 	if !*updateGolden {
-		t.Skip("pass -update-golden to regenerate testdata/helpdesk-golden/")
+		t.Skip("pass -update-golden to regenerate testdata/helpdesk-golden-11.6.6/")
 	}
 
 	blankDir := helpdeskBlankDir(t)
@@ -166,7 +166,7 @@ func TestHelpdeskGolden_Update(t *testing.T) {
 	// not visible to subsequent entity creation in the same batch.
 	runHelpdeskMDL(t, mountMPR)
 
-	// Copy entire FUSE mount (A + dirty layer = B2) to testdata/helpdesk-golden/.
+	// Copy entire FUSE mount (A + dirty layer = B2) to testdata/helpdesk-golden-11.6.6/.
 	// NOTE: do NOT call snap.Commit() — that would write back to blankDir (A).
 	// Use best-effort removal: skip files owned by other users (e.g., .claude/
 	// skills directories synced from the host). copyDir overwrites existing files.
@@ -179,10 +179,10 @@ func TestHelpdeskGolden_Update(t *testing.T) {
 
 	// Regenerate describe-snapshot.mdl for each project so the committed
 	// snapshots always reflect the actual MPR content — not whatever stale
-	// file happened to be in helpdesk-golden-clean/ before the copy.
+	// file happened to be in helpdesk-clean-11.6.6/ before the copy.
 	//
-	//  • helpdesk-golden/describe-snapshot.mdl   — post-MDL (full app)
-	//  • helpdesk-golden-clean/describe-snapshot.mdl — pre-MDL (blank base)
+	//  • helpdesk-golden-11.6.6/describe-snapshot.mdl — post-MDL (full app)
+	//  • helpdesk-clean-11.6.6/describe-snapshot.mdl  — pre-MDL (blank base)
 	goldenSnapshotPath := filepath.Join(goldenDir, "describe-snapshot.mdl")
 	goldenSnapshot := describeMDLParseable(t, filepath.Join(goldenDir, "minimal.mpr"))
 	if err := os.WriteFile(goldenSnapshotPath, []byte(goldenSnapshot), 0o644); err != nil {
@@ -198,7 +198,7 @@ func TestHelpdeskGolden_Update(t *testing.T) {
 	t.Logf("Snapshot updated: %s", cleanSnapshotPath)
 
 	t.Logf("Golden updated: %s", goldenDir)
-	t.Logf("Next step: git add testdata/helpdesk-golden/ testdata/helpdesk-golden-clean/describe-snapshot.mdl && git commit")
+	t.Logf("Next step: git add testdata/helpdesk-golden-11.6.6/ testdata/helpdesk-clean-11.6.6/describe-snapshot.mdl && git commit")
 }
 
 // TestHelpdeskGolden_Regression_BSON 是主 BSON 层回归测试。
@@ -388,7 +388,7 @@ describe page HD.EscalationStart_Form;
 }
 
 // helpdeskCleanDescribeScript returns the describe script for the blank
-// base project (helpdesk-golden-clean). It only targets MyFirstModule
+// base project (helpdesk-clean-11.6.6). It only targets MyFirstModule
 // content that exists in every Mendix 11.6 starter project, never KB/HD
 // which are absent from the blank base.
 func helpdeskCleanDescribeScript(mprPath string) string {
@@ -461,7 +461,7 @@ func describeMDL(t *testing.T, mprPath string) string {
 
 // TestHelpdeskGolden_DescribeSnapshot opens the committed B1 golden MPR
 // (no MDL execution) and verifies that the parseable describe output matches
-// the committed snapshot at testdata/helpdesk-golden/describe-snapshot.mdl.
+// the committed snapshot at testdata/helpdesk-golden-11.6.6/describe-snapshot.mdl.
 // The snapshot is pure MDL (no tabular SHOW output) so that mxcli check can
 // validate it. Run with -update-golden to regenerate the snapshot.
 func TestHelpdeskGolden_DescribeSnapshot(t *testing.T) {

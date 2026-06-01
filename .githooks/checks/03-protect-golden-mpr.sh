@@ -1,5 +1,5 @@
 #!/bin/sh
-# Guard: testdata/helpdesk-golden/ MPR files must only be updated via
+# Guard: testdata/helpdesk-golden-11.6.6/ MPR files must only be updated via
 # `make update-helpdesk-golden` (TestHelpdeskGolden_Update), never hand-edited.
 #
 # Rule: if minimal.mpr or any mprcontents/ file is staged,
@@ -7,20 +7,20 @@
 # rebuild path was used (it regenerates both together).
 #
 # What this blocks:
-#   mxcli exec ... -p testdata/helpdesk-golden/minimal.mpr  → changes mprcontents/ only
+#   mxcli exec ... -p testdata/helpdesk-golden-11.6.6/minimal.mpr  → changes mprcontents/ only
 #   direct binary edits to minimal.mpr                       → no snapshot update
 #
 # What this allows:
 #   make update-helpdesk-golden  → updates mprcontents/ + minimal.mpr + describe-snapshot.mdl
 
 staged_mpr=$(git diff --cached --name-only | \
-  grep -E '^testdata/helpdesk-golden/(minimal\.mpr|mprcontents/)' | head -1)
+  grep -E '^testdata/helpdesk-golden-11.6.6/(minimal\.mpr|mprcontents/)' | head -1)
 
 if [ -z "$staged_mpr" ]; then
     exit 0
 fi
 
-snapshot_path="testdata/helpdesk-golden/describe-snapshot.mdl"
+snapshot_path="testdata/helpdesk-golden-11.6.6/describe-snapshot.mdl"
 staged_snapshot=$(git diff --cached --name-only | grep "^${snapshot_path}$" | head -1)
 
 # Allow when snapshot is staged OR when snapshot is already up-to-date (no pending changes).
@@ -30,7 +30,7 @@ if [ -z "$staged_snapshot" ]; then
     snapshot_dirty=$(git status --porcelain "${snapshot_path}" 2>/dev/null | head -1)
     if [ -n "$snapshot_dirty" ]; then
         echo "" >&2
-        echo "COMMIT BLOCKED: testdata/helpdesk-golden/ MPR staged without describe-snapshot.mdl." >&2
+        echo "COMMIT BLOCKED: testdata/helpdesk-golden-11.6.6/ MPR staged without describe-snapshot.mdl." >&2
         echo "" >&2
         echo "  Golden MPR must ONLY be rebuilt via:" >&2
         echo "    make update-helpdesk-golden" >&2

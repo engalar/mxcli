@@ -10,6 +10,9 @@
 -- Note    : Golden rebuilt after mongo-driver v1→v2 migration (nav_compat bsonD fix)
 -- Note    : codec.Encoder.Version field added for property-level version gating (new elements only)
 -- Note    : gen init() VersionRegistry removed; PropertyVersioner interface dispatch replaces global map
+-- Note    : notifyTarget (11.7.0+) replaces activity ByNameRef in notify workflow action
+-- Note    : visitor keyword arg parsing fixed (Search keyword → arg.Name now captured)
+-- Note    : testdata reorganised: helpdesk-{clean,golden}-{11.6.6,11.10.0}/ naming scheme
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
@@ -746,7 +749,7 @@ begin
     description 'Review escalation request and decide: Approve or escalate to board'
     outcomes
       'Approve' {
-        call microflow HD.WFS_Approve;
+        call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext');
       }
       'Escalate' {
         -- Multi-user task: majority board review (decision method majority)
@@ -757,8 +760,8 @@ begin
           targeting users microflow HD.WFA_GetManagerAssignees
           completion method majority
           outcomes
-            'Approve' { call microflow HD.WFS_Approve; }
-            'Reject'  { call microflow HD.WFS_Reject;  }
+            'Approve' { call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext'); }
+            'Reject'  { call microflow HD.WFS_Reject  with (EscalationRequest = '$WorkflowContext'); }
           ;
       }
   ;
@@ -769,7 +772,7 @@ end workflow;
 alter workflow HD.WF_SUB_ManagerReview
   insert boundary event on UT_PrimaryReview@1
     non interrupting timer 'addHours([%CurrentDateTime%], 12)' {
-      call microflow HD.WFS_SendReminder;
+      call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext');
     };
 
 -- MARK: HelpDesk — Parent Workflow (WF_TicketEscalation)
@@ -830,21 +833,21 @@ create or replace workflow HD.WF_TicketEscalation
   display 'Ticket Escalation'
   overview page HD.EscalationWorkflow_Overview
 begin
-  call microflow HD.WFS_Escalation_Initialize;
+  call microflow HD.WFS_Escalation_Initialize with (EscalationRequest = '$WorkflowContext');
   -- $WorkflowContext accesses the business context entity (HD.EscalationRequest).
   -- $WorkflowInstance accesses the System.Workflow runtime instance (State, StartTime, etc.).
   -- Both are always available in workflow expressions.
   decision '$WorkflowContext/Reason = empty and $WorkflowInstance/State = System.WorkflowState.Completed'
     outcomes
       true -> {
-        call microflow HD.WFS_AutoReject;
+        call microflow HD.WFS_AutoReject with (EscalationRequest = '$WorkflowContext');
       }
       false -> {
         wait for notification comment 'WaitForManagerAvailable';
         call workflow HD.WF_SUB_ManagerReview;
         parallel split
-          path 1 { call microflow HD.WFS_UpdateTicketPriority; }
-          path 2 { call microflow HD.WFS_NotifyAgent; }
+          path 1 { call microflow HD.WFS_UpdateTicketPriority with (EscalationRequest = '$WorkflowContext'); }
+          path 2 { call microflow HD.WFS_NotifyAgent with (EscalationRequest = '$WorkflowContext'); }
         ;
       }
   ;
@@ -855,14 +858,14 @@ end workflow;
 alter workflow HD.WF_TicketEscalation
   insert boundary event on WaitForManagerAvailable@1
     non interrupting timer 'addHours([%CurrentDateTime%], 12)' {
-      call microflow HD.WFS_SendReminder;
+      call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext');
     };
 
 -- Interrupting 48h timeout on the call workflow activity
 alter workflow HD.WF_TicketEscalation
   insert boundary event on WF_SUB_ManagerReview@1
     interrupting timer 'addHours([%CurrentDateTime%], 48)' {
-      call microflow HD.WFS_AutoReject;
+      call microflow HD.WFS_AutoReject with (EscalationRequest = '$WorkflowContext');
     };
 
 -- MARK: HelpDesk — Workflow Support Microflows (all 13 activities)
