@@ -121,6 +121,13 @@ type MockBackend struct {
 
 	// Stage 3.3.5.E0.create_v3 transitional bridge Func fields.
 
+	// PageModelBackend
+	GetPageModelFunc      func(id model.ID) (*types.PageModel, error)
+	GetSnippetModelFunc   func(id model.ID) (*types.PageModel, error)
+	GetLayoutModelFunc    func(id model.ID) (*types.PageModel, error)
+	WritePageModelFunc    func(id model.ID, m *types.PageModel) error
+	WriteSnippetModelFunc func(id model.ID, m *types.PageModel) error
+
 	// EnumerationBackend
 	ListEnumerationsFunc  func() ([]*model.Enumeration, error)
 	GetEnumerationFunc    func(id model.ID) (*model.Enumeration, error)

@@ -16,6 +16,7 @@ type FullBackend interface {
 	DomainModelBackend
 	MicroflowBackend
 	PageBackend
+	PageModelBackend
 	EnumerationBackend
 	ConstantBackend
 	SecurityBackend
