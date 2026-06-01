@@ -4,6 +4,7 @@ package executor
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
@@ -111,6 +112,22 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 		if err := ctx.Backend.CreatePageGen(string(containerID), "Documents", genPage); err != nil {
 			return mdlerrors.NewBackend("create page", err)
 		}
+	}
+
+	// Task 8 wire-up: after the gen-typed page is in the MPR, overlay the
+	// widget tree from the PageModel IR so subsequent describe roundtrips
+	// stay stable. The gen builder seeds the unit with rich BSON; the IR
+	// rewrites only the widget array inside LayoutCall.Arguments[].Widget.
+	// pageASTToModel failure is non-fatal — log and continue so old write
+	// path remains the source of truth if the IR can't represent a node yet.
+	if pm, pmErr := pageASTToModel(ctx, s); pmErr == nil && pm != nil {
+		if werr := ctx.Backend.WritePageModel(model.ID(genPage.ID()), pm); werr != nil {
+			log.Printf("warning: WritePageModel overlay failed for %s.%s: %v",
+				s.Name.Module, s.Name.Name, werr)
+		}
+	} else if pmErr != nil {
+		log.Printf("warning: pageASTToModel for %s.%s: %v",
+			s.Name.Module, s.Name.Name, pmErr)
 	}
 
 	// Track the created page so it can be resolved by subsequent page references
