@@ -379,7 +379,10 @@ func renderGenMicroflowBody(ctx *ExecContext, mf *genMf.Microflow) []string {
 	for _, id := range annIDs {
 		ann := activityMap[element.ID(id)].(*genMf.Annotation)
 		if cap := ann.Caption(); cap != "" {
-			lines = append(lines, "@annotation "+mdlQuote(cap))
+			// Emit as MDL comment: @annotation syntax is a display-only element
+			// not valid inside begin...end blocks per the MDL grammar, which
+			// causes mxcli check to crash when re-parsing describe output.
+			lines = append(lines, "-- @annotation "+mdlQuote(cap))
 		}
 	}
 
@@ -651,10 +654,11 @@ func traverseFlowGen(
 		return
 	}
 
-	// Free Annotation: emit @annotation '<text>' before continuing.
+	// Free Annotation: emit as MDL comment (not @annotation which is
+	// a display-only element invalid inside begin...end per the grammar).
 	if ann, isAnn := obj.(*genMf.Annotation); isAnn {
 		if cap := ann.Caption(); cap != "" {
-			*lines = append(*lines, indentStr+"@annotation "+mdlQuote(cap))
+			*lines = append(*lines, indentStr+"-- @annotation "+mdlQuote(cap))
 		}
 		for _, f := range findNormalFlowsGen(flowsByOrigin[currentID]) {
 			traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)

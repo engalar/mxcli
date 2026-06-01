@@ -267,6 +267,7 @@ type Executor struct {
 	backend        backend.FullBackend // domain backend (populated on Connect)
 	backendFactory BackendFactory      // factory for creating new backend instances
 	output         io.Writer
+	statusOutput   io.Writer    // writer for status/informational messages (stderr by default)
 	guard          *outputGuard // line-limit wrapper around output
 	mprPath        string
 	settings       map[string]any
@@ -285,17 +286,20 @@ type Executor struct {
 }
 
 // New creates a new executor with the given output writer.
+// Status messages (e.g. "Connected to:") go to os.Stderr by default so they
+// do not pollute stdout when the caller redirects stdout to a file.
 func New(output io.Writer) *Executor {
 	guard := newOutputGuard(output, maxOutputLines)
 	mc := canonicalmodel.NewDefaultRegistry()
 	entitymodel.RegisterCodec(mc)
 	// Phase 2+: assoc.RegisterCodec(mc), microflow.RegisterCodec(mc), etc.
 	return &Executor{
-		output:      guard,
-		guard:       guard,
-		settings:    make(map[string]any),
-		registry:    NewRegistry(),
-		modelCodecs: mc,
+		output:       guard,
+		statusOutput: os.Stderr,
+		guard:        guard,
+		settings:     make(map[string]any),
+		registry:     NewRegistry(),
+		modelCodecs:  mc,
 	}
 }
 

@@ -34,10 +34,12 @@ func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 	ctx.Catalog = nil
 	ctx.ThemeRegistry = nil
 
-	// Display connection info with version
+	// Display connection info with version.
+	// Written to StatusOutput (stderr by default) so it never pollutes stdout
+	// when the caller redirects stdout to a file (e.g. > describe-snapshot.mdl).
 	pv := ctx.Backend.ProjectVersion()
 	if !ctx.Quiet {
-		fmt.Fprintf(ctx.Output, "Connected to: %s (Mendix %s)\n", s.Path, pv.ProductVersion)
+		fmt.Fprintf(ctx.statusWriter(), "Connected to: %s (Mendix %s)\n", s.Path, pv.ProductVersion)
 	}
 	if ctx.Logger != nil {
 		ctx.Logger.Connect(s.Path, pv.ProductVersion, pv.FormatVersion)

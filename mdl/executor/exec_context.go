@@ -67,6 +67,12 @@ type ExecContext struct {
 	// Output is the writer for user-visible output (with line-limit guard).
 	Output io.Writer
 
+	// StatusOutput is the writer for status/informational messages (e.g.
+	// "Connected to:", warnings). Defaults to io.Discard when not set.
+	// Separate from Output so that MDL content on stdout is never polluted
+	// by status lines when the caller redirects stdout to a file.
+	StatusOutput io.Writer
+
 	// Format controls output formatting (table, json, etc.).
 	Format OutputFormat
 
@@ -311,4 +317,14 @@ func setDomainModelGenCached(ctx *ExecContext, moduleID model.ID, dm *genDm.Doma
 		ctx.Cache.domainModelByModule = make(map[model.ID]*genDm.DomainModel)
 	}
 	ctx.Cache.domainModelByModule[moduleID] = dm
+}
+
+// statusWriter returns the StatusOutput writer if set, otherwise io.Discard.
+// Use this for informational messages that should not pollute stdout when
+// the caller redirects stdout to a file.
+func (ctx *ExecContext) statusWriter() io.Writer {
+	if ctx.StatusOutput != nil {
+		return ctx.StatusOutput
+	}
+	return io.Discard
 }

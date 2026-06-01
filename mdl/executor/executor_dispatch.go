@@ -82,6 +82,7 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 		Layouts:           extractLayoutsRepo(e.backend),
 		Snippets:          extractSnippetsRepo(e.backend),
 		Output:            e.output,
+		StatusOutput:      e.statusOutput,
 		Format:            e.format,
 		Quiet:             e.quiet,
 		Logger:            e.logger,

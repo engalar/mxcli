@@ -37,6 +37,13 @@ Example:
 		defer logger.Close()
 		defer exec.Close()
 
+		// Suppress status messages (e.g. "Connected to:") when stdout is a pipe
+		// so that output can be used programmatically (e.g. > describe-snapshot.mdl).
+		// Mirrors the same check in the -c command path (main.go).
+		if fi, statErr := os.Stdout.Stat(); statErr == nil && (fi.Mode()&os.ModeCharDevice) == 0 {
+			exec.SetQuiet(true)
+		}
+
 		// Auto-connect if project specified
 		if projectPath != "" {
 			connectCmd := fmt.Sprintf("CONNECT LOCAL '%s';", projectPath)
