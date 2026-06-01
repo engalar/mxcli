@@ -1,4 +1,3 @@
-Connected to: D:/gh/mxcli/testdata/helpdesk-clean-11.10.0/minimal.mpr (Mendix 11.10.0)
 create or modify page MyFirstModule.Home_Web (title: 'Homepage') {
 }
 create or modify microflow MyFirstModule.MyFirstLogic ()
