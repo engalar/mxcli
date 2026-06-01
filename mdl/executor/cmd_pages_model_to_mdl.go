@@ -46,7 +46,7 @@ func renderWidget(w io.Writer, node *types.WidgetNode, depth int) {
 	case types.WidgetContainer, types.WidgetScrollView:
 		kw := "container"
 		if node.Kind == types.WidgetScrollView {
-			kw = "scrollview"
+			kw = "scrollcontainer"
 		}
 		fmt.Fprintf(w, "%s%s %s", indent, kw, node.Name)
 		renderAppearanceInline(w, node)
@@ -126,7 +126,7 @@ func renderWidget(w io.Writer, node *types.WidgetNode, depth int) {
 		if node.Caption != "" {
 			caption = fmt.Sprintf(" (caption: '%s')", escapeMDLString(node.Caption))
 		}
-		fmt.Fprintf(w, "%stab %s%s {\n", indent, node.Name, caption)
+		fmt.Fprintf(w, "%stabpage %s%s {\n", indent, node.Name, caption)
 		for _, c := range node.Children {
 			renderWidget(w, c, depth+1)
 		}
@@ -157,13 +157,13 @@ func renderWidget(w io.Writer, node *types.WidgetNode, depth int) {
 		fmt.Fprintf(w, "%s}\n", indent)
 
 	case types.WidgetButton:
-		fmt.Fprintf(w, "%sbutton %s", indent, node.Name)
+		fmt.Fprintf(w, "%sactionbutton %s", indent, node.Name)
 		props := []string{}
 		if node.Caption != "" {
 			props = append(props, fmt.Sprintf("caption: '%s'", escapeMDLString(node.Caption)))
 		}
 		if node.OnClick != "" {
-			props = append(props, fmt.Sprintf("action: call microflow %s", node.OnClick))
+			props = append(props, fmt.Sprintf("action: microflow %s", node.OnClick))
 		}
 		if node.ButtonStyle != "" && node.ButtonStyle != "Default" {
 			props = append(props, fmt.Sprintf("style: %s", node.ButtonStyle))
@@ -189,20 +189,22 @@ func renderWidget(w io.Writer, node *types.WidgetNode, depth int) {
 		fmt.Fprintf(w, "\n")
 
 	case types.WidgetLabel:
-		fmt.Fprintf(w, "%slabel %s", indent, node.Name)
+		// MDL grammar has no `label` keyword; render labels as staticttext
+		// preserving the Caption as Content.
+		fmt.Fprintf(w, "%sstatictext %s", indent, node.Name)
 		if node.Caption != "" {
-			fmt.Fprintf(w, " (caption: '%s')", escapeMDLString(node.Caption))
+			fmt.Fprintf(w, " (Content: '%s')", escapeMDLString(node.Caption))
 		}
 		fmt.Fprintf(w, "\n")
 
 	case types.WidgetText, types.WidgetTitle:
-		kw := "text"
+		kw := "statictext"
 		if node.Kind == types.WidgetTitle {
 			kw = "title"
 		}
 		fmt.Fprintf(w, "%s%s %s", indent, kw, node.Name)
 		if node.Content != "" {
-			fmt.Fprintf(w, " (content: '%s')", escapeMDLString(node.Content))
+			fmt.Fprintf(w, " (Content: '%s')", escapeMDLString(node.Content))
 		}
 		fmt.Fprintf(w, "\n")
 
@@ -211,7 +213,7 @@ func renderWidget(w io.Writer, node *types.WidgetNode, depth int) {
 		if node.Snippet != nil {
 			name = node.Snippet.SnippetName
 		}
-		fmt.Fprintf(w, "%ssnippet %s (ref: %s)\n", indent, node.Name, name)
+		fmt.Fprintf(w, "%ssnippetcall %s (Snippet: %s)\n", indent, node.Name, name)
 
 	case types.WidgetGallery:
 		fmt.Fprintf(w, "%sgallery %s", indent, node.Name)
@@ -247,11 +249,19 @@ func renderDataSource(ds *types.DataSourceDef) string {
 		}
 		return s
 	case types.DataSourceMicroflow:
-		return "call microflow " + ds.Reference
+		return "microflow " + ds.Reference
 	case types.DataSourceNanoflow:
-		return "call nanoflow " + ds.Reference
+		return "nanoflow " + ds.Reference
 	case types.DataSourceParameter:
-		return "parameter " + ds.Reference
+		// Parameter sources use the bare $Var form per dataSourceExprV3 grammar.
+		ref := ds.Reference
+		if ref == "" {
+			return ""
+		}
+		if !strings.HasPrefix(ref, "$") {
+			ref = "$" + ref
+		}
+		return ref
 	case types.DataSourceSelection:
 		return "selection " + ds.Reference
 	}

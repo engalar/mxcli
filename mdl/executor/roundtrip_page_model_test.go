@@ -50,20 +50,21 @@ func TestRoundtrip_PageModel_Container(t *testing.T) {
 	page := testModule + ".PMContainerPage"
 	roundtripPage(t, `
 create or modify persistent entity `+entity+` (Title: String(200));
+create or modify microflow `+testModule+`.ACT_Noop () returns Nothing begin return; end;
 create or modify page `+page+` (
   title: 'Container Test',
   layout: Atlas_Core.Atlas_Default
 ) {
   container mainBox (class: 'spacing-outer') {
-    button btn (caption: 'Click Me', action: call microflow `+testModule+`.ACT_Noop)
+    actionbutton btn (caption: 'Click Me', action: microflow `+testModule+`.ACT_Noop)
   }
 };`, page, func(t *testing.T, described string) {
 		t.Helper()
 		if !strings.Contains(described, "container") {
 			t.Errorf("expected 'container' in describe output, got:\n%s", described)
 		}
-		if !strings.Contains(described, "button") {
-			t.Errorf("expected 'button' in describe output, got:\n%s", described)
+		if !strings.Contains(described, "actionbutton") {
+			t.Errorf("expected 'actionbutton' in describe output, got:\n%s", described)
 		}
 	})
 }
@@ -112,7 +113,7 @@ create or modify page `+page+` (
   layout: Atlas_Core.Atlas_Default,
   params: { $Item: `+entity+` }
 ) {
-  dataview dv (DataSource: parameter $Item) {
+  dataview dv (DataSource: $Item) {
     textbox tbTitle (Attribute: Title)
   }
 };`, page, func(t *testing.T, described string) {
@@ -136,11 +137,11 @@ create or modify page `+page+` (
   layout: Atlas_Core.Atlas_Default
 ) {
   tabcontainer tabs {
-    tab tab1 (caption: 'First Tab') {
-      label lbl (caption: 'Hello')
+    tabpage tab1 (caption: 'First Tab') {
+      statictext lbl (Content: 'Hello')
     }
-    tab tab2 (caption: 'Second Tab') {
-      label lbl2 (caption: 'World')
+    tabpage tab2 (caption: 'Second Tab') {
+      statictext lbl2 (Content: 'World')
     }
   }
 };`, page, func(t *testing.T, described string) {
@@ -162,7 +163,7 @@ create or modify page `+page+` (
   layout: Atlas_Core.Atlas_Default
 ) {
   groupbox gb (caption: 'Details', collapsible: YesInitiallyExpanded) {
-    label lbl (caption: 'Content')
+    statictext lbl (Content: 'Content')
   }
 };`, page, func(t *testing.T, described string) {
 		t.Helper()
