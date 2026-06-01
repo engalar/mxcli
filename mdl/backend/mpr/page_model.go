@@ -29,18 +29,6 @@ func (b *MprBackend) GetLayoutModel(id model.ID) (*types.PageModel, error) {
 	return b.loadPageModel(id, "layout")
 }
 
-// WritePageModel will be implemented in Task 7 (PageModel → BSON). For now
-// the stub satisfies the PageModelBackend interface so the read path can
-// land independently.
-func (b *MprBackend) WritePageModel(id model.ID, m *types.PageModel) error {
-	return fmt.Errorf("MprBackend.WritePageModel: not yet implemented (Task 7)")
-}
-
-// WriteSnippetModel mirrors WritePageModel; real implementation arrives in Task 7.
-func (b *MprBackend) WriteSnippetModel(id model.ID, m *types.PageModel) error {
-	return fmt.Errorf("MprBackend.WriteSnippetModel: not yet implemented (Task 7)")
-}
-
 func (b *MprBackend) loadPageModel(id model.ID, kind string) (*types.PageModel, error) {
 	_ = kind
 	raw, err := b.msdkReader.GetRawUnitBytes(string(id))
@@ -671,4 +659,302 @@ func extractImageProps(doc bson.D) *types.ImageProps {
 		}
 	}
 	return ip
+}
+
+// ---------------------------------------------------------------------------
+// WritePageModel / WriteSnippetModel
+// ---------------------------------------------------------------------------
+
+func (b *MprBackend) WritePageModel(id model.ID, pm *types.PageModel) error {
+	return b.writeUnitWidgets(id, pm)
+}
+
+func (b *MprBackend) WriteSnippetModel(id model.ID, pm *types.PageModel) error {
+	return b.writeUnitWidgets(id, pm)
+}
+
+// writeUnitWidgets loads the existing unit BSON, replaces the widget tree
+// inside the LayoutCall/FormCall Arguments with the serialised PageModel
+// widgets, and writes back.
+func (b *MprBackend) writeUnitWidgets(id model.ID, pm *types.PageModel) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("WritePageModel: backend not open for writing")
+	}
+
+	raw, err := b.msdkReader.GetRawUnitBytes(string(id))
+	if err != nil {
+		return fmt.Errorf("load unit: %w", err)
+	}
+	var doc bson.D
+	if err := bson.Unmarshal(raw, &doc); err != nil {
+		return fmt.Errorf("unmarshal: %w", err)
+	}
+
+	widgetsBSON := widgetsToBSON(pm.Widgets)
+
+	callKey := "LayoutCall"
+	if dGetDoc(doc, "LayoutCall") == nil {
+		callKey = "FormCall"
+	}
+	callDoc := dGetDoc(doc, callKey)
+	if callDoc == nil {
+		return fmt.Errorf("writeUnitWidgets: no %s in unit %s", callKey, id)
+	}
+
+	args := dGetArrayElements(dGet(callDoc, "Arguments"))
+	if len(args) == 0 {
+		return fmt.Errorf("writeUnitWidgets: no Arguments in %s", callKey)
+	}
+
+	arg0, ok := args[0].(bson.D)
+	if !ok {
+		return fmt.Errorf("writeUnitWidgets: first argument is not a bson.D")
+	}
+
+	if wrapper := dGetDoc(arg0, "Widget"); wrapper != nil {
+		dSet(wrapper, "Widgets", bsonVersionedArray(widgetsBSON))
+	} else {
+		dSet(arg0, "Widgets", bsonVersionedArray(widgetsBSON))
+	}
+
+	out, err := bson.Marshal(doc)
+	if err != nil {
+		return fmt.Errorf("marshal: %w", err)
+	}
+	return b.msdkWriter.UpdateRawUnit(string(id), out)
+}
+
+// bsonVersionedArray wraps a []bson.D in Mendix's versioned-array format
+// [int32(1), elem0, elem1, ...].
+func bsonVersionedArray(docs []bson.D) bson.A {
+	arr := bson.A{int32(1)}
+	for _, d := range docs {
+		arr = append(arr, d)
+	}
+	return arr
+}
+
+// ---------------------------------------------------------------------------
+// PageModel → BSON (widgetsToBSON + widgetToBSON)
+// ---------------------------------------------------------------------------
+
+func widgetsToBSON(nodes []*types.WidgetNode) []bson.D {
+	var docs []bson.D
+	for _, n := range nodes {
+		if d := widgetToBSON(n); d != nil {
+			docs = append(docs, d)
+		}
+	}
+	return docs
+}
+
+// widgetToBSON converts a single WidgetNode to a BSON document.
+// This is the inverse of widgetNodeFromBSON.
+func widgetToBSON(node *types.WidgetNode) bson.D {
+	if node == nil {
+		return nil
+	}
+
+	typeName := kindToBSONType(node.Kind)
+	if typeName == "" {
+		return nil
+	}
+
+	doc := bson.D{
+		{Key: "$Type", Value: typeName},
+		{Key: "Name", Value: node.Name},
+	}
+
+	app := bson.D{
+		{Key: "$Type", Value: "Forms$Appearance"},
+	}
+	if node.Class != "" {
+		app = append(app, bson.E{Key: "CSSClasses", Value: node.Class})
+	}
+	if node.Style != "" {
+		app = append(app, bson.E{Key: "Style", Value: node.Style})
+	}
+	doc = append(doc, bson.E{Key: "Appearance", Value: app})
+
+	switch node.Kind {
+	case types.WidgetContainer, types.WidgetScrollView:
+		doc = append(doc, bson.E{Key: "Widgets", Value: bsonVersionedArray(widgetsToBSON(node.Children))})
+
+	case types.WidgetLayoutGrid:
+		rows := widgetsToBSON(node.Children)
+		doc = append(doc, bson.E{Key: "Rows", Value: bsonVersionedArray(rows)})
+
+	case types.WidgetLayoutRow:
+		cols := widgetsToBSON(node.Children)
+		doc = append(doc, bson.E{Key: "Columns", Value: bsonVersionedArray(cols)})
+
+	case types.WidgetLayoutCol:
+		doc = append(doc,
+			bson.E{Key: "DesktopWeight", Value: int32(node.ColWidth.Desktop)},
+			bson.E{Key: "TabletWeight", Value: int32(node.ColWidth.Tablet)},
+			bson.E{Key: "PhoneWeight", Value: int32(node.ColWidth.Phone)},
+			bson.E{Key: "Widgets", Value: bsonVersionedArray(widgetsToBSON(node.Children))},
+		)
+
+	case types.WidgetGroupBox:
+		doc = append(doc,
+			bson.E{Key: "Caption", Value: simpleTextBSON(node.Caption)},
+			bson.E{Key: "Widgets", Value: bsonVersionedArray(widgetsToBSON(node.Children))},
+		)
+		if node.GroupBox != nil {
+			if node.GroupBox.Collapsible != "" {
+				doc = append(doc, bson.E{Key: "Collapsible", Value: node.GroupBox.Collapsible})
+			}
+			if node.GroupBox.HeaderMode != "" {
+				doc = append(doc, bson.E{Key: "HeaderMode", Value: node.GroupBox.HeaderMode})
+			}
+		}
+
+	case types.WidgetTabContainer:
+		doc = append(doc, bson.E{Key: "TabPages", Value: bsonVersionedArray(widgetsToBSON(node.Children))})
+
+	case types.WidgetTabPage:
+		doc = append(doc,
+			bson.E{Key: "Caption", Value: simpleTextBSON(node.Caption)},
+			bson.E{Key: "Widgets", Value: bsonVersionedArray(widgetsToBSON(node.Children))},
+		)
+
+	case types.WidgetDataView:
+		if node.DataSource != nil {
+			doc = append(doc, bson.E{Key: "DataSource", Value: dataSourceToBSON(node.DataSource)})
+		}
+		doc = append(doc, bson.E{Key: "Widgets", Value: bsonVersionedArray(widgetsToBSON(node.Children))})
+
+	case types.WidgetButton:
+		doc = append(doc,
+			bson.E{Key: "Caption", Value: simpleTextBSON(node.Caption)},
+			bson.E{Key: "ButtonStyle", Value: node.ButtonStyle},
+		)
+
+	case types.WidgetLabel:
+		doc = append(doc, bson.E{Key: "Caption", Value: simpleTextBSON(node.Caption)})
+
+	case types.WidgetText, types.WidgetTitle:
+		doc = append(doc, bson.E{Key: "Content", Value: simpleTextBSON(node.Content)})
+
+	case types.WidgetTextBox, types.WidgetTextArea, types.WidgetDatePicker,
+		types.WidgetRadioButtons, types.WidgetCheckBox:
+		if node.EntityAttr != "" {
+			doc = append(doc, bson.E{Key: "AttributeRef", Value: bson.D{
+				{Key: "$Type", Value: "Forms$AttributeRef"},
+				{Key: "AttributeQualifiedName", Value: node.EntityAttr},
+			}})
+		}
+		if node.Editable != "" {
+			doc = append(doc, bson.E{Key: "Editable", Value: node.Editable})
+		}
+
+	case types.WidgetSnippet:
+		if node.Snippet != nil {
+			doc = append(doc, bson.E{Key: "Snippet", Value: bson.D{
+				{Key: "$Type", Value: "Forms$SnippetRef"},
+				{Key: "SnippetQualifiedName", Value: node.Snippet.SnippetName},
+			}})
+		}
+	}
+
+	return doc
+}
+
+// kindToBSONType maps WidgetKind → canonical BSON $Type (Pages$ namespace).
+func kindToBSONType(kind types.WidgetKind) string {
+	switch kind {
+	case types.WidgetContainer:
+		return "Pages$DivContainer"
+	case types.WidgetScrollView:
+		return "Pages$ScrollContainer"
+	case types.WidgetGroupBox:
+		return "Pages$GroupBox"
+	case types.WidgetLayoutGrid:
+		return "Pages$LayoutGrid"
+	case types.WidgetLayoutRow:
+		return "Pages$LayoutGridRow"
+	case types.WidgetLayoutCol:
+		return "Pages$LayoutGridColumn"
+	case types.WidgetTabContainer:
+		return "Pages$TabControl"
+	case types.WidgetTabPage:
+		return "Pages$TabPage"
+	case types.WidgetDataView:
+		return "Pages$DataView"
+	case types.WidgetListView:
+		return "Pages$ListView"
+	case types.WidgetButton:
+		return "Pages$ActionButton"
+	case types.WidgetLabel:
+		return "Pages$Label"
+	case types.WidgetText:
+		return "Pages$Text"
+	case types.WidgetDynamicText:
+		return "Pages$DynamicText"
+	case types.WidgetTitle:
+		return "Pages$Title"
+	case types.WidgetTextBox:
+		return "Pages$TextBox"
+	case types.WidgetTextArea:
+		return "Pages$TextArea"
+	case types.WidgetDatePicker:
+		return "Pages$DatePicker"
+	case types.WidgetRadioButtons:
+		return "Pages$RadioButtons"
+	case types.WidgetCheckBox:
+		return "Pages$CheckBox"
+	case types.WidgetNavList:
+		return "Pages$NavigationList"
+	case types.WidgetSnippet:
+		return "Pages$SnippetCallWidget"
+	case types.WidgetDataGrid, types.WidgetGallery, types.WidgetComboBox,
+		types.WidgetImage, types.WidgetUnknown:
+		return "CustomWidgets$CustomWidget"
+	}
+	return ""
+}
+
+// simpleTextBSON creates a minimal Text BSON doc with a single en_US translation.
+func simpleTextBSON(text string) bson.D {
+	tr := bson.D{
+		{Key: "$Type", Value: "Texts$Translation"},
+		{Key: "LanguageCode", Value: "en_US"},
+		{Key: "Text", Value: text},
+	}
+	return bson.D{
+		{Key: "$Type", Value: "Texts$Text"},
+		{Key: "Translations", Value: bson.A{int32(1), tr}},
+	}
+}
+
+// dataSourceToBSON converts a DataSourceDef to its BSON representation.
+func dataSourceToBSON(ds *types.DataSourceDef) bson.D {
+	switch ds.Kind {
+	case types.DataSourceDatabase:
+		doc := bson.D{
+			{Key: "$Type", Value: "Pages$XPathSource"},
+			{Key: "EntityQualifiedName", Value: ds.Entity},
+		}
+		if ds.XPathConstraint != "" {
+			doc = append(doc, bson.E{Key: "XPathConstraint", Value: ds.XPathConstraint})
+		}
+		return doc
+	case types.DataSourceMicroflow:
+		return bson.D{
+			{Key: "$Type", Value: "Pages$MicroflowSource"},
+			{Key: "MicroflowQualifiedName", Value: ds.Reference},
+		}
+	case types.DataSourceNanoflow:
+		return bson.D{
+			{Key: "$Type", Value: "Pages$NanoflowSource"},
+			{Key: "NanoflowQualifiedName", Value: ds.Reference},
+		}
+	case types.DataSourceParameter:
+		return bson.D{
+			{Key: "$Type", Value: "Pages$ContextSource"},
+			{Key: "ParameterName", Value: ds.Reference},
+		}
+	}
+	return nil
 }
