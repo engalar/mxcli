@@ -53,13 +53,13 @@ func TestPageModelToMDL_Container_With_Button(t *testing.T) {
 	if !strings.Contains(out, "container mainBox {") {
 		t.Errorf("missing container line: %s", out)
 	}
-	if !strings.Contains(out, "    button btn (") {
-		t.Errorf("expected 4-space indented button under container; got: %s", out)
+	if !strings.Contains(out, "    actionbutton btn (") {
+		t.Errorf("expected 4-space indented actionbutton under container; got: %s", out)
 	}
 	if !strings.Contains(out, "caption: 'Click Me'") {
 		t.Errorf("missing button caption: %s", out)
 	}
-	if !strings.Contains(out, "action: call microflow Mod.ACT_Noop") {
+	if !strings.Contains(out, "action: microflow Mod.ACT_Noop") {
 		t.Errorf("missing button action: %s", out)
 	}
 }
@@ -79,7 +79,7 @@ func TestPageModelToMDL_EscapeQuotes(t *testing.T) {
 	if !strings.Contains(out, "title: 'it''s complicated'") {
 		t.Errorf("title quote not doubled: %s", out)
 	}
-	if !strings.Contains(out, "caption: 'don''t stop'") {
-		t.Errorf("caption quote not doubled: %s", out)
+	if !strings.Contains(out, "Content: 'don''t stop'") {
+		t.Errorf("Content quote not doubled (Label now renders as statictext Content): %s", out)
 	}
 }
