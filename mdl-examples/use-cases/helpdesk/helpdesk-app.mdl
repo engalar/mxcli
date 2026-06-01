@@ -1504,6 +1504,7 @@ grant execute on microflow HD.ACT_Workflow_ApplyJumpTo      to HD.ManagerRole;
 grant execute on microflow HD.ACT_Workflow_GetHistory       to HD.ManagerRole;
 grant execute on microflow HD.ACT_Workflow_GetContext       to HD.ManagerRole;
 grant execute on microflow HD.DS_WorkflowInstances          to HD.ManagerRole;
+grant execute on microflow HD.DS_MyTickets                  to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 grant execute on microflow HD.ACT_EscalationRequest_Cleanup to HD.AgentRole, HD.ManagerRole;
 grant execute on nanoflow  HD.NF_Priority_GetLabel          to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 grant execute on nanoflow  HD.NF_TicketSearch_Apply         to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;

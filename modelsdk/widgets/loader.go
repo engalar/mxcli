@@ -320,7 +320,7 @@ func GetTemplateFullBSON(widgetID string, idGenerator func() string, projectPath
 	if !tmpl.Generated {
 		tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
 	}
-	stableIds := false
+	stableIds := tmpl.StableIds
 
 	// Phase 1: Collect all $ID values from Type and create old->new ID mappings
 	idMapping := make(map[string]string)
