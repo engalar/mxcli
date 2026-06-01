@@ -1,0 +1,575 @@
+{
+  "widgetId": "com.mendix.widget.web.accessibilityhelper.AccessibilityHelper",
+  "name": "Accessibility helper",
+  "version": "11.6.4",
+  "extractedFrom": "d6b6fc94-3653-4109-a73f-09944df7e718",
+  "type": {
+    "$ID": "5c3de2779d13478a826fed18d5e07708",
+    "$Type": "CustomWidgets$CustomWidgetType",
+    "HelpUrl": "https://docs.mendix.com/appstore/widgets/accessibility-helper",
+    "ObjectType": {
+      "$ID": "dd4ee79e7559480d9684069e6af65eaf",
+      "$Type": "CustomWidgets$WidgetObjectType",
+      "PropertyTypes": [
+        2,
+        {
+          "$ID": "9abe99286b744e8d93e49d770bf53166",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "Target selector",
+          "Category": "General",
+          "Description": "Selector to find the first HTML element you want to target which must be a valid CSS selector like '.mx-name-texbox1 input'",
+          "IsDefault": false,
+          "PropertyKey": "targetSelector",
+          "ValueType": {
+            "$ID": "0e2976b38fc74508a3a638f223f54d15",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2
+            ],
+            "IsLinked": false,
+            "IsList": false,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": null,
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": true,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "String"
+          }
+        },
+        {
+          "$ID": "3bd8424210734732b930c34bb26bc344",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "Content",
+          "Category": "General",
+          "Description": "",
+          "IsDefault": false,
+          "PropertyKey": "content",
+          "ValueType": {
+            "$ID": "a70f929f68fb4c7f8f7c106ac7415ce7",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2
+            ],
+            "IsLinked": false,
+            "IsList": false,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": null,
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": true,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "Widgets"
+          }
+        },
+        {
+          "$ID": "3f9062bcf3d048fd875f902b720e7610",
+          "$Type": "CustomWidgets$WidgetPropertyType",
+          "Caption": "HTML Attributes",
+          "Category": "General",
+          "Description": "",
+          "IsDefault": false,
+          "PropertyKey": "attributesList",
+          "ValueType": {
+            "$ID": "8445209d45884c6ca2357bded63b442f",
+            "$Type": "CustomWidgets$WidgetValueType",
+            "ActionVariables": [
+              2
+            ],
+            "AllowedTypes": [
+              1
+            ],
+            "AllowNonPersistableEntities": false,
+            "AssociationTypes": [
+              1
+            ],
+            "DataSourceProperty": "",
+            "DefaultType": "None",
+            "DefaultValue": "",
+            "EntityProperty": "",
+            "EnumerationValues": [
+              2
+            ],
+            "IsLinked": false,
+            "IsList": true,
+            "IsMetaData": false,
+            "IsPath": "No",
+            "Multiline": false,
+            "ObjectType": {
+              "$ID": "c93ee83253034b3c8eab53ad487e3096",
+              "$Type": "CustomWidgets$WidgetObjectType",
+              "PropertyTypes": [
+                2,
+                {
+                  "$ID": "5ad7f3fa608e4f5880a438a61213b8b7",
+                  "$Type": "CustomWidgets$WidgetPropertyType",
+                  "Caption": "HTML attribute",
+                  "Category": "General",
+                  "Description": "The HTML attribute to be set based on the condition. The following attributes are not allowed: 'class', 'style', 'widgetid', 'data-mendix-id'.",
+                  "IsDefault": false,
+                  "PropertyKey": "attribute",
+                  "ValueType": {
+                    "$ID": "ba5e723f2461458f87429f55644d275c",
+                    "$Type": "CustomWidgets$WidgetValueType",
+                    "ActionVariables": [
+                      2
+                    ],
+                    "AllowedTypes": [
+                      1
+                    ],
+                    "AllowNonPersistableEntities": false,
+                    "AssociationTypes": [
+                      1
+                    ],
+                    "DataSourceProperty": "",
+                    "DefaultType": "None",
+                    "DefaultValue": "",
+                    "EntityProperty": "",
+                    "EnumerationValues": [
+                      2
+                    ],
+                    "IsLinked": false,
+                    "IsList": false,
+                    "IsMetaData": false,
+                    "IsPath": "No",
+                    "Multiline": false,
+                    "ObjectType": null,
+                    "OnChangeProperty": "",
+                    "ParameterIsList": false,
+                    "PathType": "None",
+                    "Required": true,
+                    "ReturnType": null,
+                    "SelectableObjectsProperty": "",
+                    "SelectionTypes": [
+                      1
+                    ],
+                    "SetLabel": false,
+                    "Translations": [
+                      2
+                    ],
+                    "Type": "String"
+                  }
+                },
+                {
+                  "$ID": "14d614c60f5148a4b4cc73510e4caadd",
+                  "$Type": "CustomWidgets$WidgetPropertyType",
+                  "Caption": "Source type",
+                  "Category": "General",
+                  "Description": "",
+                  "IsDefault": false,
+                  "PropertyKey": "valueSourceType",
+                  "ValueType": {
+                    "$ID": "a358cb4620584b71823311e5f460cd3b",
+                    "$Type": "CustomWidgets$WidgetValueType",
+                    "ActionVariables": [
+                      2
+                    ],
+                    "AllowedTypes": [
+                      1
+                    ],
+                    "AllowNonPersistableEntities": false,
+                    "AssociationTypes": [
+                      1
+                    ],
+                    "DataSourceProperty": "",
+                    "DefaultType": "None",
+                    "DefaultValue": "text",
+                    "EntityProperty": "",
+                    "EnumerationValues": [
+                      2,
+                      {
+                        "$ID": "58e0cd93c6e242149a31cccd3b2ca4ab",
+                        "$Type": "CustomWidgets$WidgetEnumerationValue",
+                        "_Key": "text",
+                        "Caption": "Text"
+                      },
+                      {
+                        "$ID": "2b288e3d9c5d40b5b28977a146160013",
+                        "$Type": "CustomWidgets$WidgetEnumerationValue",
+                        "_Key": "expression",
+                        "Caption": "Expression"
+                      }
+                    ],
+                    "IsLinked": false,
+                    "IsList": false,
+                    "IsMetaData": false,
+                    "IsPath": "No",
+                    "Multiline": false,
+                    "ObjectType": null,
+                    "OnChangeProperty": "",
+                    "ParameterIsList": false,
+                    "PathType": "None",
+                    "Required": true,
+                    "ReturnType": null,
+                    "SelectableObjectsProperty": "",
+                    "SelectionTypes": [
+                      1
+                    ],
+                    "SetLabel": false,
+                    "Translations": [
+                      2
+                    ],
+                    "Type": "Enumeration"
+                  }
+                },
+                {
+                  "$ID": "d9569a7455e44927bedb3ed31fb993f6",
+                  "$Type": "CustomWidgets$WidgetPropertyType",
+                  "Caption": "Expression value",
+                  "Category": "General",
+                  "Description": "",
+                  "IsDefault": false,
+                  "PropertyKey": "valueExpression",
+                  "ValueType": {
+                    "$ID": "39a7f02a43c34fc7b64927e3eb6668af",
+                    "$Type": "CustomWidgets$WidgetValueType",
+                    "ActionVariables": [
+                      2
+                    ],
+                    "AllowedTypes": [
+                      1
+                    ],
+                    "AllowNonPersistableEntities": false,
+                    "AssociationTypes": [
+                      1
+                    ],
+                    "DataSourceProperty": "",
+                    "DefaultType": "None",
+                    "DefaultValue": "",
+                    "EntityProperty": "",
+                    "EnumerationValues": [
+                      2
+                    ],
+                    "IsLinked": false,
+                    "IsList": false,
+                    "IsMetaData": false,
+                    "IsPath": "No",
+                    "Multiline": false,
+                    "ObjectType": null,
+                    "OnChangeProperty": "",
+                    "ParameterIsList": false,
+                    "PathType": "None",
+                    "Required": false,
+                    "ReturnType": {
+                      "$ID": "311f9b41a9894a928275bcb113940d6f",
+                      "$Type": "CustomWidgets$WidgetReturnType",
+                      "AssignableTo": "",
+                      "EntityProperty": "",
+                      "IsList": false,
+                      "Type": "String"
+                    },
+                    "SelectableObjectsProperty": "",
+                    "SelectionTypes": [
+                      1
+                    ],
+                    "SetLabel": false,
+                    "Translations": [
+                      2
+                    ],
+                    "Type": "Expression"
+                  }
+                },
+                {
+                  "$ID": "06e0b234e23d40e8a3ac09bf12000493",
+                  "$Type": "CustomWidgets$WidgetPropertyType",
+                  "Caption": "Text value",
+                  "Category": "General",
+                  "Description": "",
+                  "IsDefault": false,
+                  "PropertyKey": "valueText",
+                  "ValueType": {
+                    "$ID": "f33d608468c641c495a59897835d2aac",
+                    "$Type": "CustomWidgets$WidgetValueType",
+                    "ActionVariables": [
+                      2
+                    ],
+                    "AllowedTypes": [
+                      1
+                    ],
+                    "AllowNonPersistableEntities": false,
+                    "AssociationTypes": [
+                      1
+                    ],
+                    "DataSourceProperty": "",
+                    "DefaultType": "None",
+                    "DefaultValue": "",
+                    "EntityProperty": "",
+                    "EnumerationValues": [
+                      2
+                    ],
+                    "IsLinked": false,
+                    "IsList": false,
+                    "IsMetaData": false,
+                    "IsPath": "No",
+                    "Multiline": false,
+                    "ObjectType": null,
+                    "OnChangeProperty": "",
+                    "ParameterIsList": false,
+                    "PathType": "None",
+                    "Required": false,
+                    "ReturnType": null,
+                    "SelectableObjectsProperty": "",
+                    "SelectionTypes": [
+                      1
+                    ],
+                    "SetLabel": false,
+                    "Translations": [
+                      2
+                    ],
+                    "Type": "TextTemplate"
+                  }
+                },
+                {
+                  "$ID": "583d5460e20943d0ad9ea63d81e35258",
+                  "$Type": "CustomWidgets$WidgetPropertyType",
+                  "Caption": "Condition",
+                  "Category": "General",
+                  "Description": "Condition to determine if the HTML attribute must be set or not",
+                  "IsDefault": false,
+                  "PropertyKey": "attributeCondition",
+                  "ValueType": {
+                    "$ID": "3521722cf0ea46e49be072a280e196a1",
+                    "$Type": "CustomWidgets$WidgetValueType",
+                    "ActionVariables": [
+                      2
+                    ],
+                    "AllowedTypes": [
+                      1
+                    ],
+                    "AllowNonPersistableEntities": false,
+                    "AssociationTypes": [
+                      1
+                    ],
+                    "DataSourceProperty": "",
+                    "DefaultType": "None",
+                    "DefaultValue": "true",
+                    "EntityProperty": "",
+                    "EnumerationValues": [
+                      2
+                    ],
+                    "IsLinked": false,
+                    "IsList": false,
+                    "IsMetaData": false,
+                    "IsPath": "No",
+                    "Multiline": false,
+                    "ObjectType": null,
+                    "OnChangeProperty": "",
+                    "ParameterIsList": false,
+                    "PathType": "None",
+                    "Required": true,
+                    "ReturnType": {
+                      "$ID": "293c423c2b534773b100bec2e591ecde",
+                      "$Type": "CustomWidgets$WidgetReturnType",
+                      "AssignableTo": "",
+                      "EntityProperty": "",
+                      "IsList": false,
+                      "Type": "Boolean"
+                    },
+                    "SelectableObjectsProperty": "",
+                    "SelectionTypes": [
+                      1
+                    ],
+                    "SetLabel": false,
+                    "Translations": [
+                      2
+                    ],
+                    "Type": "Expression"
+                  }
+                }
+              ]
+            },
+            "OnChangeProperty": "",
+            "ParameterIsList": false,
+            "PathType": "None",
+            "Required": false,
+            "ReturnType": null,
+            "SelectableObjectsProperty": "",
+            "SelectionTypes": [
+              1
+            ],
+            "SetLabel": false,
+            "Translations": [
+              2
+            ],
+            "Type": "Object"
+          }
+        }
+      ]
+    },
+    "OfflineCapable": true,
+    "StudioCategory": "Input Elements",
+    "StudioProCategory": "Input elements",
+    "SupportedPlatform": "Web",
+    "WidgetDescription": "",
+    "WidgetId": "com.mendix.widget.web.accessibilityhelper.AccessibilityHelper",
+    "WidgetName": "Accessibility helper",
+    "WidgetNeedsEntityContext": true,
+    "WidgetPluginWidget": true
+  },
+  "object": {
+    "$ID": "4438c2a0d66845ee85276500f05451bd",
+    "$Type": "CustomWidgets$WidgetObject",
+    "Properties": [
+      2,
+      {
+        "$ID": "4b20a3e358a74f4487cdba22c44505c9",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "9abe99286b744e8d93e49d770bf53166",
+        "Value": {
+          "$ID": "2f6ed0f0c168495cbfbe6973b2d647be",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "d26eb73c9f53405db4a9c864ec55c3cf",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "0e2976b38fc74508a3a638f223f54d15",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      },
+      {
+        "$ID": "885c2d5714e045779460a1e56a2c0d80",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "3bd8424210734732b930c34bb26bc344",
+        "Value": {
+          "$ID": "696f1af8851d46528ad99615e41b53a5",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "16d37d2505224052a6b89922158c7f88",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "a70f929f68fb4c7f8f7c106ac7415ce7",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      },
+      {
+        "$ID": "d2f840d6ab8a41dda2fb3621364c2611",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "3f9062bcf3d048fd875f902b720e7610",
+        "Value": {
+          "$ID": "0bdea5b240c94d35a6e3ff8c448b88ac",
+          "$Type": "CustomWidgets$WidgetValue",
+          "Action": {
+            "$ID": "7b7806c990224a1fa7033334dadb2cc5",
+            "$Type": "Forms$NoAction",
+            "DisabledDuringExecution": true
+          },
+          "AttributeRef": null,
+          "DataSource": null,
+          "EntityRef": null,
+          "Expression": "",
+          "Form": "",
+          "Icon": null,
+          "Image": "",
+          "Microflow": "",
+          "Nanoflow": "",
+          "Objects": [
+            2
+          ],
+          "PrimitiveValue": "",
+          "Selection": "None",
+          "SourceVariable": null,
+          "TextTemplate": null,
+          "TranslatableValue": null,
+          "TypePointer": "8445209d45884c6ca2357bded63b442f",
+          "Widgets": [
+            2
+          ],
+          "XPathConstraint": ""
+        }
+      }
+    ],
+    "TypePointer": "dd4ee79e7559480d9684069e6af65eaf"
+  }
+}

@@ -99,11 +99,7 @@ func sortedMapKeys(m map[string]any) []string {
 	return keys
 }
 
-// templateFS previously held embedded widget templates (*.json files under
-// templates/mendix-11.6/). All templates have been removed; widget Type/Object
-// BSON is now derived entirely from the project's installed .mpk files via
-// GenerateFromMPK, eliminating CE0463 errors caused by stale embedded templates.
-// The embed.FS and its scan helpers are kept as no-ops to preserve the API.
+//go:embed templates/mendix-11.6/*.json
 var templateFS embed.FS
 
 // WidgetTemplate represents a loaded widget template.

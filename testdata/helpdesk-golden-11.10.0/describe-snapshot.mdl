@@ -282,6 +282,18 @@ begin
   return $Preview;
 end;
 /
+create or modify nanoflow KB.NF_Article_FormatPreview (
+  $Article: KB.Article
+)
+returns String
+begin
+  @position(360,200)
+  $Preview = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
+  return $Preview;
+end;
+
+grant execute on nanoflow KB.NF_Article_FormatPreview to KB.Reader, KB.Contributor, KB.Admin;
+/
 create or modify microflow HD.ACT_Ticket_Submit (
   $Ticket: HD.Ticket
 )
@@ -525,6 +537,67 @@ begin
       limit 10;
   return $Tickets;
 end;
+/
+create or modify nanoflow HD.NF_Ticket_QuickCreate (
+  $Customer: HD.Customer,
+  $Subject: String
+)
+returns Ticket
+begin
+  @position(360,200)
+  $Ticket = create HD.Ticket (Subject = $Subject
+  , Status = HD.TicketStatus.Draft
+  , Priority = HD.TicketPriority.Normal
+  , Ticket_Customer = $Customer
+  );
+  @position(520,200)
+  commit $Ticket;
+  return $Ticket;
+end;
+
+grant execute on nanoflow HD.NF_Ticket_QuickCreate to HD.CustomerRole, HD.AgentRole;
+/
+create or modify nanoflow HD.NF_TicketSearch_Apply (
+  $Search: HD.TicketSearch
+)
+returns List of HD.Ticket
+begin
+  @position(360,200)
+  retrieve $Tickets from HD.Ticket
+      limit 100;
+  return $Tickets;
+end;
+
+grant execute on nanoflow HD.NF_TicketSearch_Apply to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+/
+create or modify nanoflow HD.NF_Priority_GetLabel (
+  $PriorityStr: String
+)
+returns String
+begin
+  @position(360,200)
+  declare $CSSClass String = 'badge-default';
+  if $PriorityStr = 'Critical' then
+    @position(690,200)
+    set $CSSClass = 'badge-danger'
+    ;
+  else
+    if $PriorityStr = 'High' then
+      @position(860,300)
+      set $CSSClass = 'badge-warning'
+      ;
+    else
+      if $PriorityStr = 'Normal' then
+        @position(1030,500)
+        set $CSSClass = 'badge-info'
+        ;
+      end if;
+    end if;
+  end if;
+  return $CSSClass;
+end;
+
+grant execute on nanoflow HD.NF_Priority_GetLabel to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.WFA_GetManagerAssignees (
   $workflow: System.Workflow,
@@ -801,79 +874,6 @@ begin
 end;
 
 grant execute on microflow HD.ACT_Workflow_Notify to HD.ManagerRole;
-/
-create or modify nanoflow KB.NF_Article_FormatPreview (
-  $Article: KB.Article
-)
-returns String
-begin
-  @position(360,200)
-  $Preview = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
-  return $Preview;
-end;
-
-grant execute on nanoflow KB.NF_Article_FormatPreview to KB.Reader, KB.Contributor, KB.Admin;
-/
-create or modify nanoflow HD.NF_Ticket_QuickCreate (
-  $Customer: HD.Customer,
-  $Subject: String
-)
-returns Ticket
-begin
-  @position(360,200)
-  $Ticket = create HD.Ticket (Subject = $Subject
-  , Status = HD.TicketStatus.Draft
-  , Priority = HD.TicketPriority.Normal
-  , Ticket_Customer = $Customer
-  );
-  @position(520,200)
-  commit $Ticket;
-  return $Ticket;
-end;
-
-grant execute on nanoflow HD.NF_Ticket_QuickCreate to HD.CustomerRole, HD.AgentRole;
-/
-create or modify nanoflow HD.NF_TicketSearch_Apply (
-  $Search: HD.TicketSearch
-)
-returns List of HD.Ticket
-begin
-  @position(360,200)
-  retrieve $Tickets from HD.Ticket
-      limit 100;
-  return $Tickets;
-end;
-
-grant execute on nanoflow HD.NF_TicketSearch_Apply to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-/
-create or modify nanoflow HD.NF_Priority_GetLabel (
-  $PriorityStr: String
-)
-returns String
-begin
-  @position(360,200)
-  declare $CSSClass String = 'badge-default';
-  if $PriorityStr = 'Critical' then
-    @position(690,200)
-    set $CSSClass = 'badge-danger'
-    ;
-  else
-    if $PriorityStr = 'High' then
-      @position(860,300)
-      set $CSSClass = 'badge-warning'
-      ;
-    else
-      if $PriorityStr = 'Normal' then
-        @position(1030,500)
-        set $CSSClass = 'badge-info'
-        ;
-      end if;
-    end if;
-  end if;
-  return $CSSClass;
-end;
-
-grant execute on nanoflow HD.NF_Priority_GetLabel to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 /
 -- Workflow: HD.WF_SUB_ManagerReview
 
