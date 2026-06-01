@@ -9,29 +9,32 @@
 # mx binary: auto-discovered from ~/.mxcli/mxbuild/<version>/modeler/mx using
 # the version recorded in testdata/helpdesk-golden-11.6.6/minimal.mpr.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-. "$SCRIPT_DIR/../lib/mx-check.sh" 2>/dev/null || {
-    # lib not found (hook called from a different CWD) — fall back to inline impl
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+LIB_SH="$REPO_ROOT/scripts/lib/mx-check.sh"
+if [ -n "$REPO_ROOT" ] && [ -f "$LIB_SH" ]; then
+    . "$LIB_SH"
+else
+    # lib not found (out-of-tree invocation) — fall back to inline impl.
+    # Avoid `local` (not in POSIX sh / dash).
     mx_check_against_baseline() {
-        local mpr="$1" baseline_file="$2" mx_bin="$3"
-        local baseline output ec errors
-        baseline=$(cat "$baseline_file" | tr -d '[:space:]')
-        output=$("$mx_bin" check "$mpr" 2>&1); ec=$?
-        if [ $ec -ne 0 ] && ! echo "$output" | grep -q "^\[error\]"; then
-            echo "CRASH: mx check crashed (exit $ec)" >&2
-            echo "$output" | head -5 >&2
+        _mpr="$1"; _baseline_file="$2"; _mx_bin="$3"
+        _baseline=$(cat "$_baseline_file" | tr -d '[:space:]')
+        _output=$("$_mx_bin" check "$_mpr" 2>&1); _ec=$?
+        if [ $_ec -ne 0 ] && ! echo "$_output" | grep -q "^\[error\]"; then
+            echo "CRASH: mx check crashed (exit $_ec)" >&2
+            echo "$_output" | head -5 >&2
             return 2
         fi
-        errors=$(echo "$output" | grep -c "^\[error\]" || true)
-        if [ "$errors" -gt "$baseline" ]; then
-            echo "FAIL: $errors errors (baseline $baseline)" >&2
-            echo "$output" | grep "^\[error\]" >&2
+        _errors=$(echo "$_output" | grep -c "^\[error\]" || true)
+        if [ "$_errors" -gt "$_baseline" ]; then
+            echo "FAIL: $_errors errors (baseline $_baseline)" >&2
+            echo "$_output" | grep "^\[error\]" >&2
             return 1
         fi
-        echo "PASS: $errors error(s), baseline=$baseline"
+        echo "PASS: $_errors error(s), baseline=$_baseline"
         return 0
     }
-}
+fi
 
 staged_mpr=$(git diff --cached --name-only | \
   grep -E '^testdata/helpdesk-golden-11.6.6/(minimal\.mpr|mprcontents/)' | head -1)
