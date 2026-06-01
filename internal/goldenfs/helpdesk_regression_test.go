@@ -487,6 +487,8 @@ func TestHelpdeskGolden_DescribeSnapshot(t *testing.T) {
 		t.Fatalf("snapshot not found at %s — run: go test ... -update-golden -run TestHelpdeskGolden_DescribeSnapshot", snapshotPath)
 	}
 
+	assertPageBodiesNonEmpty(t, string(want))
+
 	if string(want) == got {
 		return
 	}
@@ -716,4 +718,41 @@ func TestHelpdeskGolden_Regression_DescribeMDL(t *testing.T) {
 		t.Fatalf("diff: %v", err)
 	}
 	t.Errorf("describe MDL roundtrip mismatch:\n%s", text)
+}
+
+// assertPageBodiesNonEmpty checks that every "create or modify page" statement
+// in the snapshot has a non-empty body (i.e. contains at least one widget keyword).
+func assertPageBodiesNonEmpty(t *testing.T, snapshot string) {
+	t.Helper()
+	widgetKeywords := []string{
+		"container", "layoutgrid", "dataview", "datagrid", "gallery",
+		"listview", "button", "textbox", "textarea", "datepicker",
+		"tabcontainer", "groupbox", "label", "text ", "snippet",
+	}
+	lines := strings.Split(snapshot, "\n")
+	inPage := false
+	pageStart := 0
+	pageHeader := ""
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "create or modify page ") {
+			inPage = true
+			pageStart = i
+			pageHeader = trimmed
+		}
+		if inPage && trimmed == "}" {
+			body := strings.Join(lines[pageStart:i+1], "\n")
+			hasWidget := false
+			for _, kw := range widgetKeywords {
+				if strings.Contains(body, kw) {
+					hasWidget = true
+					break
+				}
+			}
+			if !hasWidget {
+				t.Errorf("page has empty body (no widget keywords): %s (line %d)", pageHeader, pageStart+1)
+			}
+			inPage = false
+		}
+	}
 }
