@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 )
@@ -118,10 +119,21 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	// widget tree from the PageModel IR so subsequent describe roundtrips
 	// stay stable. The gen builder seeds the unit with rich BSON; the IR
 	// rewrites only the widget array inside LayoutCall.Arguments[].Widget.
-	// pageASTToModel failure is non-fatal — log and continue so old write
-	// path remains the source of truth if the IR can't represent a node yet.
+	//
+	// IMPORTANT: only overlay when the IR can FULLY reproduce the widget
+	// tree. Pluggable widgets (DataGrid/Gallery/ComboBox/Image) and any
+	// unknown widget have a lossy BSON encoding today (widgetToBSON in
+	// mpr/page_model.go writes a minimal CustomWidget without the Object
+	// property tree). Overlaying those would erase the builder's rich
+	// columns/filters/datasource fields — see TestRoundtripPage_V3DataGrid*
+	// regressions when this gate is removed.
+	//
+	// Failure is non-fatal — log and continue so the gen builder remains
+	// source of truth when overlay isn't safe.
 	if pm, pmErr := pageASTToModel(ctx, s); pmErr == nil && pm != nil {
-		if werr := ctx.Backend.WritePageModel(model.ID(genPage.ID()), pm); werr != nil {
+		if pageModelHasLossyWidget(pm) {
+			// Skip overlay; preserve builder's rich BSON.
+		} else if werr := ctx.Backend.WritePageModel(model.ID(genPage.ID()), pm); werr != nil {
 			log.Printf("warning: WritePageModel overlay failed for %s.%s: %v",
 				s.Name.Module, s.Name.Name, werr)
 		}
@@ -217,4 +229,74 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 
 	fmt.Fprintf(ctx.Output, "Created snippet %s\n", s.Name.String())
 	return nil
+}
+
+// pageModelHasLossyWidget returns true if any widget in the tree maps to a
+// BSON encoding (CustomWidgets$CustomWidget) that widgetToBSON cannot fully
+// reproduce. Used to gate the Task 8 write-path overlay so the gen builder's
+// rich datagrid/gallery/etc. BSON isn't clobbered by the slim IR encoding.
+func pageModelHasLossyWidget(pm *types.PageModel) bool {
+	if pm == nil {
+		return false
+	}
+	for _, n := range pm.Widgets {
+		if widgetTreeHasLossyKind(n) {
+			return true
+		}
+	}
+	return false
+}
+
+func widgetTreeHasLossyKind(n *types.WidgetNode) bool {
+	if n == nil {
+		return false
+	}
+	switch n.Kind {
+	case types.WidgetDataGrid, types.WidgetGallery, types.WidgetComboBox,
+		types.WidgetImage, types.WidgetUnknown:
+		return true
+	case types.WidgetButton:
+		// Button actions (microflow/nanoflow with parameter mappings) aren't
+		// fully represented by the IR's bare OnClick string today — the
+		// existing TestRoundtripPage_MicroflowButton* expects the legacy
+		// describe format with `Product: $Product` parameter mappings.
+		// Treat all buttons as lossy until the IR captures Action+
+		// ParameterMappings; the gen builder's rich Action BSON then
+		// survives the overlay and legacy describe renders the call.
+		return true
+	case types.WidgetCheckBox, types.WidgetRadioButtons:
+		// renderWidget currently has no dedicated case; legacy path handles
+		// these via outputWidgetMDLV3.
+		return true
+	}
+	for _, c := range n.Children {
+		if widgetTreeHasLossyKind(c) {
+			return true
+		}
+	}
+	if n.DataGrid != nil {
+		for _, cw := range n.DataGrid.FilterWidgets {
+			if widgetTreeHasLossyKind(cw) {
+				return true
+			}
+		}
+		for _, cw := range n.DataGrid.ControlBar {
+			if widgetTreeHasLossyKind(cw) {
+				return true
+			}
+		}
+	}
+	if n.Gallery != nil {
+		for _, cw := range n.Gallery.FilterWidgets {
+			if widgetTreeHasLossyKind(cw) {
+				return true
+			}
+		}
+		for _, cw := range n.Gallery.ContentWidgets {
+			if widgetTreeHasLossyKind(cw) {
+				return true
+			}
+		}
+	}
+	return false
 }

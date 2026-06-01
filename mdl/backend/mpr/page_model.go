@@ -389,12 +389,32 @@ func extractButtonAction(doc bson.D) string {
 		return ""
 	}
 	typeName := dGetString(act, "$Type")
+	// Mendix BSON storage names — "Forms$MicroflowAction" / "Forms$NanoflowAction"
+	// / "Forms$OpenLinkAction" are the actual aliases (gen TypeName, not the
+	// SDK ClientAction class name).
 	switch {
-	case strings.Contains(typeName, "MicroflowClientAction"):
+	case strings.Contains(typeName, "MicroflowAction") || strings.Contains(typeName, "MicroflowClientAction"):
+		// MicroflowSettings.MicroflowQualifiedName is the canonical path;
+		// fallback for older formats checks the bare field directly.
+		if settings := dGetDoc(act, "MicroflowSettings"); settings != nil {
+			if name := dGetString(settings, "MicroflowQualifiedName"); name != "" {
+				return name
+			}
+		}
 		return dGetString(act, "MicroflowQualifiedName")
-	case strings.Contains(typeName, "NanoflowClientAction"):
+	case strings.Contains(typeName, "NanoflowAction") || strings.Contains(typeName, "NanoflowClientAction"):
+		if settings := dGetDoc(act, "NanoflowSettings"); settings != nil {
+			if name := dGetString(settings, "NanoflowQualifiedName"); name != "" {
+				return name
+			}
+		}
 		return dGetString(act, "NanoflowQualifiedName")
-	case strings.Contains(typeName, "OpenLinkClientAction"):
+	case strings.Contains(typeName, "OpenLinkAction") || strings.Contains(typeName, "OpenLinkClientAction"):
+		if settings := dGetDoc(act, "PageSettings"); settings != nil {
+			if name := dGetString(settings, "PageQualifiedName"); name != "" {
+				return name
+			}
+		}
 		return dGetString(act, "PageQualifiedName")
 	}
 	return ""

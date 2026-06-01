@@ -117,12 +117,31 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 	}
 
-	// Output widgets via the new PageModel IR path (Task 6 wire-up).
-	// GetPageModel decodes raw BSON into types.PageModel; renderWidget walks
-	// the WidgetNode tree and emits grammar-valid MDL.
+	// Output widgets via the new PageModel IR path (Task 6 wire-up), but
+	// fall back to the legacy raw BSON describe path when the IR cannot
+	// fully represent the widget tree. The IR currently doesn't classify
+	// pluggable widgets (DataGrid/Gallery/ComboBox/Image) beyond
+	// WidgetUnknown, so describing pages that contain them would emit
+	// `-- unsupported widget` lines and erase column/filter/datasource
+	// information. The legacy parseRawWidget+outputWidgetMDLV3 path knows
+	// how to extract those fields; keep it as fallback until Task 9
+	// completes the IR coverage.
 	pm, pmErr := ctx.Backend.GetPageModel(pageID)
 	if pmErr != nil || pm == nil || len(pm.Widgets) == 0 {
 		formatWidgetProps(ctx.Output, "", header, props, " {\n}")
+	} else if pageModelHasLossyWidget(pm) {
+		// Fallback: pluggable widget detected — use the legacy describe path
+		// that has full DataGrid/Gallery/CustomWidget support.
+		rawWidgets := getPageWidgetsFromRaw(ctx, pageID)
+		if len(rawWidgets) > 0 {
+			formatWidgetProps(ctx.Output, "", header, props, " {\n")
+			for _, w := range rawWidgets {
+				outputWidgetMDLV3(ctx, w, 1)
+			}
+			fmt.Fprint(ctx.Output, "}")
+		} else {
+			formatWidgetProps(ctx.Output, "", header, props, " {\n}")
+		}
 	} else {
 		formatWidgetProps(ctx.Output, "", header, props, " {\n")
 		for _, n := range pm.Widgets {
@@ -229,14 +248,26 @@ func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
 		fmt.Fprintf(ctx.Output, " (%s)", strings.Join(snippetProps, ", "))
 	}
 
-	// Output widgets via the new PageModel IR path (Task 6 wire-up).
+	// Output widgets via the new PageModel IR path with legacy fallback for
+	// pluggable widgets (mirrors describePage logic — see comment there).
 	pm, pmErr := ctx.Backend.GetSnippetModel(snippetID)
 	if pmErr == nil && pm != nil && len(pm.Widgets) > 0 {
-		fmt.Fprint(ctx.Output, " {\n")
-		for _, n := range pm.Widgets {
-			renderWidget(ctx.Output, n, 1)
+		if pageModelHasLossyWidget(pm) {
+			rawWidgets := getSnippetWidgetsFromRaw(ctx, snippetID)
+			if len(rawWidgets) > 0 {
+				fmt.Fprint(ctx.Output, " {\n")
+				for _, w := range rawWidgets {
+					outputWidgetMDLV3(ctx, w, 1)
+				}
+				fmt.Fprint(ctx.Output, "}")
+			}
+		} else {
+			fmt.Fprint(ctx.Output, " {\n")
+			for _, n := range pm.Widgets {
+				renderWidget(ctx.Output, n, 1)
+			}
+			fmt.Fprint(ctx.Output, "}")
 		}
-		fmt.Fprint(ctx.Output, "}")
 	}
 
 	fmt.Fprint(ctx.Output, "\n")
