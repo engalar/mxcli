@@ -20,16 +20,21 @@ func TestNoDirectBSONImportInExecutor(t *testing.T) {
 
 	// allowlist contains files still being migrated.
 	// Remove each entry here as the corresponding Task is completed.
-	// Batch 3 (cmd_diff_local.go, flowbuilder_raw_setter_gen.go) are intentionally
-	// deferred — see docs/superpowers/specs/2026-05-27-executor-bson-cleanup-design.md
+	//
+	// Task 10 (cmd_pages_builder_v3.go): Move buildDataGridDataSourceBSON to
+	// mdl/backend/mpr/datagrid_builder.go as a backend interface method so the
+	// executor calls ctx.Backend.BuildDataGridDatasource() instead of constructing
+	// raw BSON directly. The nanoflow case already uses gen types via genElementToBSONDoc;
+	// remaining work: database/association/parameter/selection/microflow cases.
+	// Once complete, remove cmd_pages_builder_v3.go from this allowlist and
+	// remove the codec import from that file.
+	//
+	// Batch 3 (cmd_diff_local.go, flowbuilder_raw_setter_gen.go): investigation
+	// pending — see docs/superpowers/specs/2026-05-27-executor-bson-cleanup-design.md
 	allowlist := map[string]bool{
-		// Batch 2 – Task 10 (deferred to a separate PR — would touch
-		// mdl/backend/mpr/datagrid_builder.go and re-trigger the
-		// helpdesk-golden rebuild):
-		"cmd_pages_builder_v3.go": true, // Task 10
-		// Batch 3 – deferred (investigation pending):
-		"cmd_diff_local.go":             true,
-		"flowbuilder_raw_setter_gen.go": true,
+		"cmd_pages_builder_v3.go":      true, // Task 10 — see comment above
+		"cmd_diff_local.go":             true, // Batch 3, investigation pending
+		"flowbuilder_raw_setter_gen.go": true, // Batch 3, investigation pending
 	}
 
 	entries, err := os.ReadDir(".")

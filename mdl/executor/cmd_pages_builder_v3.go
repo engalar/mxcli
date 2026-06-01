@@ -29,6 +29,32 @@ import (
 // Gen-native helper functions (V3 builder support)
 // ============================================================================
 
+// buildNanoflowSourceGen constructs a NanoflowSource gen element from a nanoflow
+// DataSourceV3, including parameter mappings for any explicit datasource arguments.
+// DataGrid2 callers convert to bson.D via genElementToBSONDoc; Forms callers
+// return the element directly.
+func (pb *pageBuilder) buildNanoflowSourceGen(ds *ast.DataSourceV3) (*genPg.NanoflowSource, string, error) {
+	nfID, err := pb.resolveNanoflowByName(ds.Reference)
+	if err != nil {
+		return nil, "", mdlerrors.NewBackend("resolve nanoflow", err)
+	}
+	_ = nfID
+	entityName := pb.getNanoflowReturnEntityName(ds.Reference)
+	ns := genPg.NewNanoflowSource()
+	assignFreshID(ns)
+	ns.SetNanoflowQualifiedName(ds.Reference)
+	for _, arg := range ds.Args {
+		pm := genPg.NewNanoflowParameterMapping()
+		assignFreshID(pm)
+		pm.SetParameterQualifiedName(ds.Reference + "." + arg.Name)
+		if expr, ok := arg.Value.(string); ok {
+			pm.SetExpression(expr)
+		}
+		ns.AddParameterMappings(pm)
+	}
+	return ns, entityName, nil
+}
+
 // genElementToBSONDoc encodes a gen element to bson.D via the codec.
 // Used in BSON-builder functions that need raw bson.D rather than a gen element.
 func genElementToBSONDoc(elem element.Element) (bson.D, error) {
@@ -641,27 +667,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (element.Element,
 		return ms, entityName, nil
 
 	case "nanoflow":
-		nfID, err := pb.resolveNanoflowByName(ds.Reference)
-		if err != nil {
-			return nil, "", mdlerrors.NewBackend("resolve nanoflow", err)
-		}
-		_ = nfID
-
-		entityName := pb.getNanoflowReturnEntityName(ds.Reference)
-
-		ns := genPg.NewNanoflowSource()
-		assignFreshID(ns)
-		ns.SetNanoflowQualifiedName(ds.Reference)
-		for _, arg := range ds.Args {
-			pm := genPg.NewNanoflowParameterMapping()
-			assignFreshID(pm)
-			pm.SetParameterQualifiedName(ds.Reference + "." + arg.Name)
-			if expr, ok := arg.Value.(string); ok {
-				pm.SetExpression(expr)
-			}
-			ns.AddParameterMappings(pm)
-		}
-		return ns, entityName, nil
+		return pb.buildNanoflowSourceGen(ds)
 
 	case "association":
 		ctxVar := ds.ContextVariable
@@ -2063,23 +2069,9 @@ func (pb *pageBuilder) buildDataGridDataSourceBSON(ds *ast.DataSourceV3) (bson.D
 		return doc, entityName, nil
 
 	case "nanoflow":
-		nfID, err := pb.resolveNanoflowByName(ds.Reference)
+		ns, entityName, err := pb.buildNanoflowSourceGen(ds)
 		if err != nil {
-			return nil, "", mdlerrors.NewBackend("resolve nanoflow", err)
-		}
-		_ = nfID
-		entityName := pb.getNanoflowReturnEntityName(ds.Reference)
-		ns := genPg.NewNanoflowSource()
-		assignFreshID(ns)
-		ns.SetNanoflowQualifiedName(ds.Reference)
-		for _, arg := range ds.Args {
-			pm := genPg.NewNanoflowParameterMapping()
-			assignFreshID(pm)
-			pm.SetParameterQualifiedName(ds.Reference + "." + arg.Name)
-			if expr, ok := arg.Value.(string); ok {
-				pm.SetExpression(expr)
-			}
-			ns.AddParameterMappings(pm)
+			return nil, "", err
 		}
 		doc, err := genElementToBSONDoc(ns)
 		if err != nil {

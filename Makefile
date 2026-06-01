@@ -51,11 +51,19 @@ TEST_PARALLEL ?= $(_85PCT)
 # Hard ceiling on how long the full test suite may run.
 TEST_TIMEOUT ?= 180s
 
-.PHONY: build build-debug release clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install-daemon
+.PHONY: build build-debug release clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install-daemon test-section-check
 
 setup:
 	git config core.hooksPath .githooks
 	@echo "Git hooks configured. Pre-commit unit tests enabled."
+
+# Verify helpdesk-app.mdl produces correct BSON in cross-section (separate mxcli exec
+# process per -- MARK: section) execution mode, then confirms mx check error count
+# does not exceed .mx-check-baseline. Catches regressions in cross-session state
+# propagation (entity resolution, return types, parameter caches).
+# Requires: locally-installed mxbuild (run: mxcli setup mxbuild -p testdata/helpdesk-clean-11.6.6/minimal.mpr)
+test-section-check: build install-daemon
+	@./scripts/test-section-check.sh
 
 # Install the locally-built daemon over the downloaded release binary.
 # Ensures mxcli uses the current dev-branch code during local development.
