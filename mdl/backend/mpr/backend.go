@@ -18,7 +18,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
-	mdlversion "github.com/mendixlabs/mxcli/modelsdk/version"
 	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
 	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
 	genDBC "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
@@ -39,9 +38,11 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/meta"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
+	mdlversion "github.com/mendixlabs/mxcli/modelsdk/version"
 )
 
 var _ backend.FullBackend = (*MprBackend)(nil)
+var _ backend.PageModelBackend = (*MprBackend)(nil)
 var _ linter.LintReader = (*MprBackend)(nil)
 
 // MprBackend implements backend.FullBackend by delegating to a single
