@@ -369,17 +369,19 @@ func parseLayoutGridRows(ctx *ExecContext, w map[string]any, entityContext ...st
 				continue
 			}
 			col := rawWidgetColumn{}
-			// Get width
-			if weight, ok := cMap["Weight"].(int32); ok {
-				col.Width = int(weight)
-			} else if weight, ok := cMap["DesktopWeight"].(int32); ok {
-				col.Width = int(weight)
+			// Get width — Studio Pro writes int64; mxcli gen encoder writes int32.
+			// Use bsonInt() to accept both without an explicit type switch at each call site.
+			// nolint:describe-raw-bson — existing raw-BSON parse path; no gen type covers layout-grid-column widths yet.
+			if w := bsonInt(cMap["Weight"]); w != 0 { //nolint:describe-raw-bson
+				col.Width = w
+			} else if w := bsonInt(cMap["DesktopWeight"]); w != 0 { //nolint:describe-raw-bson
+				col.Width = w
 			}
-			if tw, ok := cMap["TabletWeight"].(int32); ok {
-				col.TabletWidth = int(tw)
+			if tw := bsonInt(cMap["TabletWeight"]); tw != 0 { //nolint:describe-raw-bson
+				col.TabletWidth = tw
 			}
-			if pw, ok := cMap["PhoneWeight"].(int32); ok {
-				col.PhoneWidth = int(pw)
+			if pw := bsonInt(cMap["PhoneWeight"]); pw != 0 { //nolint:describe-raw-bson
+				col.PhoneWidth = pw
 			}
 			// Get widgets
 			colWidgets := getBsonArrayElements(cMap["Widgets"])
@@ -885,4 +887,17 @@ func extractDesignProperties(appearance map[string]any) []rawDesignProp {
 		}
 	}
 	return result
+}
+
+// bsonInt converts a raw BSON numeric value to int, accepting both int32 and
+// int64.  Studio Pro writes layout grid column widths as int64; the mxcli gen
+// encoder writes them as int32.  Returns 0 when v is nil or an unrecognised type.
+func bsonInt(v any) int {
+	switch x := v.(type) {
+	case int32:
+		return int(x)
+	case int64:
+		return int(x)
+	}
+	return 0
 }

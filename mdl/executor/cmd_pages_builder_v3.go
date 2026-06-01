@@ -1485,6 +1485,13 @@ func (pb *pageBuilder) buildLayoutGridColumnV3(w *ast.WidgetV3) (element.Element
 	col := genPg.NewLayoutGridColumn()
 	assignFreshID(col)
 
+	// Studio Pro defaults all size fields to -1 (AutoFill) when unset.
+	// Apply the same defaults so our BSON matches SP output.
+	col.SetWeight(-1)
+	col.SetTabletWeight(-1)
+	col.SetPhoneWeight(-1)
+	col.SetPreviewWidth(-1)
+
 	// Handle DesktopWidth
 	if dw := w.GetDesktopWidth(); dw != nil {
 		switch v := dw.(type) {
