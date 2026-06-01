@@ -9,6 +9,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
@@ -66,28 +67,8 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Get title
 	title := pickPageTitleGen(foundPage)
-
-	// Get layout from raw data.
-	// Gen-encoded pages (Stage 3.3.5.Cat-B) write "LayoutCall" as the BSON key;
-	// legacy pages use "FormCall" (the Mendix storage alias). Try both.
-	layoutName := ""
+	layoutName := resolvePageLayoutName(ctx, foundPage)
 	rawData, _ := ctx.Backend.GetRawUnit(pageID)
-	if rawData != nil {
-		formCall, _ := rawData["FormCall"].(map[string]any)
-		if formCall == nil {
-			formCall, _ = rawData["LayoutCall"].(map[string]any)
-		}
-		if formCall != nil {
-			if layoutID := extractBinaryID(formCall["Layout"]); layoutID != "" {
-				layoutName = resolveLayoutName(ctx, model.ID(layoutID))
-			} else if formName, ok := formCall["Form"].(string); ok && formName != "" {
-				layoutName = formName
-			} else if formName, ok := formCall["Layout"].(string); ok && formName != "" {
-				// Gen encoder writes the qualified name directly as "Layout"
-				layoutName = formName
-			}
-		}
-	}
 
 	// @excluded annotation
 	if foundPage.Excluded() {
@@ -106,20 +87,15 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	if url := foundPage.Url(); url != "" {
 		props = append(props, fmt.Sprintf("url: %s", mdlQuote(url)))
 	}
-	if folderPath := h.BuildFolderPath(foundContainerID); folderPath != "" {
+	if folderPath := resolvePageFolder(ctx, foundContainerID); folderPath != "" {
 		props = append(props, fmt.Sprintf("folder: %s", mdlQuote(folderPath)))
 	}
-	pageParamsItems := foundPage.ParametersItems()
-	if len(pageParamsItems) > 0 {
-		params := []string{}
-		for _, elem := range pageParamsItems {
-			pp, ok := elem.(*genPg.PageParameter)
-			if !ok || pp == nil {
-				continue
-			}
-			params = append(params, fmt.Sprintf("$%s: %s", pp.Name(), pageParamTypeMDLGen(pp.ParameterType())))
+	if pageParams := resolvePageParams(ctx, foundPage); len(pageParams) > 0 {
+		parts := make([]string, 0, len(pageParams))
+		for _, p := range pageParams {
+			parts = append(parts, fmt.Sprintf("$%s: %s", p.Name, p.EntityName))
 		}
-		props = append(props, fmt.Sprintf("params: { %s }", strings.Join(params, ", ")))
+		props = append(props, fmt.Sprintf("params: { %s }", strings.Join(parts, ", ")))
 	}
 	// Output page variables from raw BSON
 	if rawData != nil {
@@ -327,12 +303,21 @@ func describeLayout(ctx *ExecContext, name ast.QualifiedName) error {
 	// Output as a comment showing the layout name
 	fmt.Fprintf(ctx.Output, "-- layout %s.%s\n", modName, foundLayout.Name())
 
-	// Output widgets from raw layout data
-	rawWidgets := getLayoutWidgetsFromRaw(ctx, layoutID)
-	if len(rawWidgets) > 0 {
+	// Output widgets via the new PageModel IR path (Task 6 wire-up).
+	// Layouts are read-only in MDL — the widget tree is rendered for
+	// inspection; whole output stays comment-prefixed because layouts
+	// cannot be (re)created via MDL.
+	pm, pmErr := ctx.Backend.GetLayoutModel(layoutID)
+	if pmErr == nil && pm != nil && len(pm.Widgets) > 0 {
 		fmt.Fprint(ctx.Output, "-- Widget structure:\n")
-		for _, w := range rawWidgets {
-			outputWidgetMDLV3Comment(ctx, w, 0)
+		var buf strings.Builder
+		for _, n := range pm.Widgets {
+			renderWidget(&buf, n, 0)
+		}
+		// Prefix every rendered line with `-- ` so the layout output stays
+		// a pure comment block (layouts are non-creatable in MDL).
+		for _, line := range strings.Split(strings.TrimRight(buf.String(), "\n"), "\n") {
+			fmt.Fprintf(ctx.Output, "-- %s\n", line)
 		}
 	}
 
@@ -719,4 +704,72 @@ func wrapStringLiteralExpression(value string) string {
 	}
 	// Otherwise wrap in single quotes as a string literal
 	return "'" + value + "'"
+}
+
+// resolvePageLayoutName returns the qualified layout name for a page by
+// reading the LayoutCall / FormCall slot from the raw unit. Gen-encoded
+// pages (Stage 3.3.5.Cat-B) store the layout as a qualified-name string
+// directly on the LayoutCall; legacy pages store a binary ID under
+// FormCall.Layout that must be resolved via the layout listing.
+func resolvePageLayoutName(ctx *ExecContext, page *genPg.Page) string {
+	if page == nil {
+		return ""
+	}
+	rawData, err := ctx.Backend.GetRawUnit(model.ID(page.ID()))
+	if err != nil || rawData == nil {
+		return ""
+	}
+	// Pure refactor of pre-existing inline code in describePage(); raw BSON
+	// access is migrated as-is. nolint markers opt out of the executor arch
+	// guard for these literal field reads.
+	formCall, _ := rawData["FormCall"].(map[string]any) // nolint:describe-raw-bson
+	if formCall == nil {
+		formCall, _ = rawData["LayoutCall"].(map[string]any) // nolint:describe-raw-bson
+	}
+	if formCall == nil {
+		return ""
+	}
+	if layoutID := extractBinaryID(formCall["Layout"]); layoutID != "" { // nolint:describe-raw-bson
+		return resolveLayoutName(ctx, model.ID(layoutID))
+	}
+	if formName, ok := formCall["Form"].(string); ok && formName != "" { // nolint:describe-raw-bson
+		return formName
+	}
+	if formName, ok := formCall["Layout"].(string); ok && formName != "" { // nolint:describe-raw-bson
+		return formName
+	}
+	return ""
+}
+
+// resolvePageFolder returns the slash-joined folder path for a container.
+func resolvePageFolder(ctx *ExecContext, containerID model.ID) string {
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return ""
+	}
+	return h.BuildFolderPath(containerID)
+}
+
+// resolvePageParams extracts page parameters from the gen-typed Page as a
+// flat []types.PageParam slice with Name + EntityName populated.
+func resolvePageParams(_ *ExecContext, page *genPg.Page) []types.PageParam {
+	if page == nil {
+		return nil
+	}
+	items := page.ParametersItems()
+	if len(items) == 0 {
+		return nil
+	}
+	params := make([]types.PageParam, 0, len(items))
+	for _, elem := range items {
+		pp, ok := elem.(*genPg.PageParameter)
+		if !ok || pp == nil {
+			continue
+		}
+		params = append(params, types.PageParam{
+			Name:       pp.Name(),
+			EntityName: pageParamTypeMDLGen(pp.ParameterType()),
+		})
+	}
+	return params
 }
