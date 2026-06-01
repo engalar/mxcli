@@ -13,6 +13,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/lib/mx-check.sh"
+
 CLEAN="${1:-testdata/helpdesk-clean-11.6.6}"
 BASELINE="${2:-testdata/helpdesk-golden-11.6.6/.mx-check-baseline}"
 MDL="${3:-mdl-examples/use-cases/helpdesk/helpdesk-app.mdl}"
@@ -27,10 +30,9 @@ if [ ! -f "$CLEAN/minimal.mpr" ]; then
     exit 1
 fi
 
-# Discover Mendix version.
-# v2 MPR (Mendix >= 10.18) stores version in mprcontents/; v1 MPR uses SQLite.
-# Try mxcli first (works for both), then fall back to SQLite for v1.
-MX_VERSION=$("$MXCLI" -p "$CLEAN/minimal.mpr" -c "show features" 2>/dev/null | grep "Connected to:" | sed 's/.*Mendix //' | tr -d ')')
+# Discover Mendix version (mxcli works for both v1 and v2 MPR).
+MX_VERSION=$("$MXCLI" -p "$CLEAN/minimal.mpr" -c "show features" 2>/dev/null \
+    | grep "Connected to:" | sed 's/.*Mendix //' | tr -d ')')
 if [ -z "$MX_VERSION" ]; then
     MX_VERSION=$(sqlite3 "$CLEAN/minimal.mpr" "SELECT _ProductVersion FROM _MetaData" 2>/dev/null | head -1)
 fi
@@ -74,26 +76,15 @@ for f in "$SECTION_DIR"/section-*.mdl; do
 done
 
 if [ -n "$FAILED" ]; then
-    echo "FAIL: $FAILED" >&2
+    echo "FAIL: section execution failed for: $FAILED" >&2
     exit 1
 fi
 echo "  All sections executed successfully."
 
-# Run mx check if binary is available.
+# Run mx check using shared helper (detects crash vs validation failure).
 if [ -n "$MX_BIN" ]; then
-    baseline=$(cat "$BASELINE" | tr -d '[:space:]')
-    output=$("$MX_BIN" check "$TMPDIR/minimal.mpr" 2>&1)
-    errors=$(echo "$output" | grep -c '^\[error\]' || true)
-
-    if [ "$errors" -gt "$baseline" ]; then
-        new=$((errors - baseline))
-        echo "" >&2
-        echo "FAIL: mx check found $new new error(s) ($errors total, baseline $baseline)." >&2
-        echo "" >&2
-        echo "$output" | grep '^\[error\]' >&2
-        exit 1
-    fi
-    echo "mx check: PASS ($errors error(s), baseline $baseline, version $MX_VERSION)."
+    mx_check_against_baseline "$TMPDIR/minimal.mpr" "$BASELINE" "$MX_BIN" || exit $?
+    echo "  (Mendix version: $MX_VERSION)"
 fi
 
 echo "PASS: test-section-check"

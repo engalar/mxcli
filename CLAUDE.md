@@ -297,6 +297,14 @@ All executor code must go through the backend abstraction layer — the executor
 - [ ] **Map iteration is deterministic** — any map iterated for serialization output must sort keys first (`sort.Strings(keys)` pattern); non-deterministic output causes flaky diffs and BSON instability
 - [ ] **Pluggable widgets via WidgetEngine** — new pluggable widget support uses `.def.json` + `WidgetRegistry`; no hardcoded BSON widget builders in the executor
 
+### Widget BSON generation
+When adding or modifying pluggable widget support (DataGrid2, Gallery, filter widgets, etc.):
+- [ ] **No raw type strings in executor** — `TestNoRawBSONTypeStringsInExecutor` catches `"Forms$..."`, `"CustomWidgets$..."` literals; use gen types + `genElementToBSONDoc()` instead
+- [ ] **No duplicate write paths** — if both `buildDatasourceV3` (Forms path) and `buildDataGridDataSourceBSON` (DataGrid2 path) handle the same datasource type, extract a shared helper (see `buildNanoflowSourceGen` pattern)
+- [ ] **Daemon version synced after widget changes** — after changing `modelsdk/widgets/`, `mdl/executor/`, or `mdl/backend/mpr/`, run `make install-daemon` before testing; `TestNoDirectBSONImportInExecutor` and `TestNoRawBSONTypeStringsInExecutor` check structural correctness but the daemon must match the code
+- [ ] **mx check exit code checked** — any script that validates rebuilt projects must check BOTH `$?` (non-zero = crash) AND `[error]` line count; use `mx_check_against_baseline()` from `scripts/lib/mx-check.sh`
+- [ ] **Widget template extraction works** — for new widget types, verify `extractTemplateFromProject` can find an instance in the clean project (`testdata/helpdesk-clean-*/mprcontents/`); if not, the widget needs to exist in Atlas Core or similar baseline
+
 ### Full-stack consistency for MDL features
 New MDL commands or language features must be wired through the full pipeline:
 - [ ] **Grammar** — rule added to `MDLParser.g4` (and `MDLLexer.g4` if new tokens)

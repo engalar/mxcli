@@ -3,6 +3,7 @@ package executor
 import (
 	"go/parser"
 	"go/token"
+	"go/ast"
 	"os"
 	"strings"
 	"testing"
@@ -65,3 +66,94 @@ func TestNoDirectBSONImportInExecutor(t *testing.T) {
 		}
 	}
 }
+
+// TestNoRawBSONTypeStringsInExecutor scans executor files for string literals that
+// contain Mendix model type names (e.g. "Forms$NanoflowSource") written inline.
+//
+// Raw type strings indicate that a BSON document is being hand-built instead of
+// using gen types. This is fragile: if a type name changes or a new field becomes
+// required, the string must be updated manually everywhere it appears.
+//
+// Correct pattern: use gen types (genPg.NewNanoflowSource()) + genElementToBSONDoc()
+// so the TypeName is always derived from the generated code.
+//
+// Files in the allowlist are excluded because they are tracked under Task 10
+// (backend abstraction) and their migration is in progress.
+func TestNoRawBSONTypeStringsInExecutor(t *testing.T) {
+	// Prefixes that identify Mendix model type name string literals.
+	// These should only appear in gen-package init() calls, not in executor hand-built BSON.
+	forbiddenPrefixes := []string{
+		`"Forms$`,
+		`"CustomWidgets$`,
+		`"DomainModels$`,
+		`"Microflows$`,
+		`"Workflows$`,
+	}
+
+	// allowlist contains files that use type strings legitimately:
+	//   a) BSON construction still being migrated to gen types (Task 10 / Batch 3)
+	//   b) Type strings used for READING/IDENTIFYING existing BSON (switch/map key/TypeName check)
+	//   c) SetTypeName("...") calls to override gen-type defaults — acceptable; type is still gen-managed
+	//
+	// New files must NOT be added here without explanation.
+	// The purpose of this test is to prevent NEW violations, not to fix all existing ones at once.
+	allowlist := map[string]bool{
+		"cmd_pages_builder_v3.go":      true, // Task 10: buildDataGridDataSourceBSON still uses raw bson.D
+		"cmd_diff_local.go":             true, // Batch 3, investigation pending
+		"flowbuilder_raw_setter_gen.go": true, // Batch 3, investigation pending
+		"theme_reader.go":               true, // (b) reads/identifies existing widget types; no construction
+		"cmd_workflows_write_gen2.go":   true, // (b) type switch/comparisons for reading, not construction
+		"flowbuilder_calls_page_gen.go": true, // (c) SetTypeName override — gen element, not raw bson.D
+		"cmd_workflows_gen.go":          true, // (b) type switch/comparisons when reading workflow activities
+		"cmd_structure.go":              true, // (b) type switch/comparisons for structure display
+		// (b) type strings used for reading/identifying existing BSON in describe/show commands:
+		"cmd_drop_entity_gen.go":           true,
+		"cmd_entities_gen.go":              true,
+		"cmd_microflows_show_gen.go":       true,
+		"cmd_microflows_show_list_gen.go":  true,
+		"cmd_nanoflow_elk_gen.go":          true,
+		"cmd_nanoflows_show_gen.go":        true,
+		"cmd_page_wireframe.go":            true,
+		"cmd_pages_describe.go":            true,
+		"cmd_pages_describe_output.go":     true,
+		"cmd_pages_describe_parse.go":      true,
+		"cmd_pages_describe_pluggable.go":  true,
+		"cmd_security_write_entity_gen.go": true,
+	}
+
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("read dir: %v", err)
+	}
+
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || strings.HasSuffix(name, "_test.go") || !strings.HasSuffix(name, ".go") {
+			continue
+		}
+		if allowlist[name] {
+			continue
+		}
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			continue // skip files with parse errors
+		}
+		ast.Inspect(f, func(n ast.Node) bool {
+			lit, ok := n.(*ast.BasicLit)
+			if !ok || lit.Kind.String() != "STRING" {
+				return true
+			}
+			val := lit.Value // includes surrounding quotes
+			for _, prefix := range forbiddenPrefixes {
+				if strings.HasPrefix(val, prefix) {
+					pos := fset.Position(lit.Pos())
+					t.Errorf("%s:%d: raw BSON type string %s — use gen types instead of hand-building BSON documents",
+						name, pos.Line, val)
+				}
+			}
+			return true
+		})
+	}
+}
+
