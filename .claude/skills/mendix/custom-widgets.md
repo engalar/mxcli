@@ -1,9 +1,76 @@
 ---
 name: mendix-custom-widgets
-description: Use when writing MDL for GALLERY, COMBOBOX, or third-party pluggable widgets in CREATE PAGE / ALTER PAGE statements. Covers built-in widget syntax, child slots (TEMPLATE/FILTER), real-time MPK discovery for project widgets, and adding custom widgets via .def.json.
+description: Use when writing MDL for GALLERY, COMBOBOX, or third-party pluggable widgets in CREATE PAGE / ALTER PAGE statements. Covers built-in widget syntax, child slots (TEMPLATE/FILTER), real-time MPK discovery for project widgets, and adding custom widgets via .def.json. Also covers mxcli widget new/build/add-widget for scaffolding and building pluggable widget projects.
 ---
 
 # Custom & Pluggable Widgets in MDL
+
+## Quick Start: Scaffold and Build a Widget Project
+
+Use `mxcli widget new` to scaffold a complete pluggable widget project in seconds:
+
+```bash
+# Minimal widget (no properties)
+mxcli widget new MySlider
+
+# Widget with properties
+mxcli widget new MySlider \
+  --property "value:attribute:Decimal" \
+  --property "label:string" \
+  --property "onChange:action"
+
+# Custom widget ID (default: com.mendix.widget.custom.<Name>.<Name>)
+mxcli widget new MySlider --id com.acme.widget.MySlider.MySlider
+
+# Offline-capable widget
+mxcli widget new MySlider --offline
+
+# Multi-widget package (empty src/, then add widgets individually)
+mxcli widget new CrusherWidgets --package
+cd CrusherWidgets
+mxcli widget add-widget CrusherSlider --property "value:attribute:Decimal"
+mxcli widget add-widget CrusherButton --property "label:string" --property "onClick:action"
+```
+
+**Property spec format:** `key:type` or `key:type:subtype`
+
+| Type | Example | Notes |
+|------|---------|-------|
+| `attribute` | `score:attribute:Decimal` | Subtype = Mendix attribute type (String, Decimal, Integer, Boolean, DateTime) |
+| `string` | `label:string` | Static text property |
+| `integer` | `count:integer` | Integer property |
+| `boolean` | `visible:boolean` | Boolean toggle |
+| `action` | `onClick:action` | Microflow/nanoflow action |
+| `datasource` | `items:datasource` | List datasource |
+| `expression` | `condition:expression` | Boolean expression |
+| `widgets` | `content:widgets` | Child widget slot |
+
+**Build the widget:**
+
+```bash
+cd MySlider
+mxcli widget build                      # auto-detects bun or npm, compiles via esbuild, packages .mpk
+mxcli widget build --dir ./MySlider    # from any directory
+```
+
+The build output is `<PackageName>.mpk` in the project root. Copy it to your Mendix app's `widgets/` folder and restart Studio Pro.
+
+**Generated file structure:**
+
+```
+MySlider/
+├── src/
+│   ├── MySlider.xml           # Widget property definition (edit to add properties)
+│   ├── MySlider.jsx           # React component stub (implement your widget here)
+│   ├── MySlider.editorConfig.js   # Studio Pro design-time caption/preview
+│   ├── MySlider.editorPreview.js  # Browser preview stub
+│   ├── MySlider.icon.png      # Placeholder icon (replace with real asset)
+│   ├── MySlider.icon.dark.png
+│   ├── MySlider.tile.png
+│   └── MySlider.tile.dark.png
+├── package.json               # esbuild as only dev dependency
+└── package.xml                # MPK manifest
+```
 
 ## Built-in Pluggable Widgets
 

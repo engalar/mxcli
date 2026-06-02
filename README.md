@@ -221,6 +221,33 @@ mxcli impact -p app.mpr MyModule.Customer
 mxcli context -p app.mpr MyModule.ProcessOrder --depth 3
 ```
 
+### Widget Scaffold and Build
+
+Create and build Mendix pluggable widget projects without leaving the terminal:
+
+```bash
+# Create a single-widget project
+mxcli widget new MySlider
+mxcli widget new MySlider --property "value:attribute:Decimal" --property "label:string" --property "onChange:action"
+mxcli widget new MySlider --id com.acme.widget.MySlider.MySlider --offline
+
+# Create an empty multi-widget package, then add widgets to it
+mxcli widget new CrusherWidgets --package
+cd CrusherWidgets
+mxcli widget add-widget CrusherSlider --property "value:attribute:Decimal"
+mxcli widget add-widget CrusherButton --property "label:string" --property "onClick:action"
+
+# Build all widgets in the current project into an .mpk file
+mxcli widget build
+mxcli widget build --dir ./CrusherWidgets
+```
+
+`mxcli widget new` generates: `src/<Name>.xml` (property definitions), `src/<Name>.jsx` (React stub), `src/<Name>.editorConfig.js`, `src/<Name>.editorPreview.js`, placeholder icons, `package.json`, and `package.xml`.
+
+`mxcli widget build` detects bun or npm, installs dependencies, compiles each widget via esbuild (CJS + ESM), copies assets, and packages everything into `<PackageName>.mpk`.
+
+Property spec format: `key:type` or `key:type:subtype`. Supported types: `attribute`, `string`, `integer`, `boolean`, `action`, `datasource`, `expression`, `widgets`. Example: `--property "score:attribute:Decimal"`.
+
 ### Widget Discovery and Bulk Updates
 
 > **EXPERIMENTAL**: These commands are an untested proof-of-concept.
