@@ -766,3 +766,55 @@ func assertPageBodiesNonEmpty(t *testing.T, snapshot string) {
 		}
 	}
 }
+
+// TestHelpdeskGolden_DescribeSnapshot_Idempotent verifies that describe-snapshot.mdl
+// is self-consistent: executing it on the clean MPR and re-describing must produce
+// the same output as the original snapshot.
+//
+// This catches lossy describe output that drops information the builder writes.
+//
+// Run: go test ./internal/goldenfs/ -tags linux,integration -run TestHelpdeskGolden_DescribeSnapshot_Idempotent -v
+func TestHelpdeskGolden_DescribeSnapshot_Idempotent(t *testing.T) {
+	snapshotPath := filepath.Join(helpdeskGoldenDir(t), "describe-snapshot.mdl")
+	snapshotBytes, err := os.ReadFile(snapshotPath)
+	if err != nil {
+		t.Fatalf("describe-snapshot.mdl not found at %s — run: make update-snapshots", snapshotPath)
+	}
+
+	snap, err := Open(helpdeskBlankDir(t))
+	if err != nil {
+		t.Fatalf("goldenfs.Open: %v", err)
+	}
+	defer func() {
+		snap.Rollback()
+		if err := snap.Close(); err != nil {
+			t.Logf("snap.Close: %v", err)
+		}
+	}()
+
+	mountMPR := filepath.Join(snap.MountDir(), "minimal.mpr")
+
+	// Execute describe-snapshot.mdl on the clean MPR using create-or-modify semantics.
+	// runMDL is defined in bsoncompare_integration_test.go (same package).
+	runMDL(t, mountMPR, string(snapshotBytes))
+
+	// Re-describe: this must produce the same output as the original snapshot.
+	got := describeMDLParseable(t, mountMPR)
+
+	if string(snapshotBytes) == got {
+		return
+	}
+
+	diff := difflib.UnifiedDiff{
+		A:        difflib.SplitLines(string(snapshotBytes)),
+		B:        difflib.SplitLines(got),
+		FromFile: "describe-snapshot.mdl (expected)",
+		ToFile:   "re-describe after execute on clean MPR (actual)",
+		Context:  5,
+	}
+	text, err := difflib.GetUnifiedDiffString(diff)
+	if err != nil {
+		t.Fatalf("diff: %v", err)
+	}
+	t.Errorf("describe-snapshot.mdl is not idempotent — re-describe after executing on clean MPR differs:\n%s", text)
+}
