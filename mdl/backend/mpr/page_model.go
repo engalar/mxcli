@@ -220,6 +220,7 @@ func widgetNodeFromBSON(doc bson.D) *types.WidgetNode {
 		node.DataSource = extractBSONDataSource(doc)
 		node.EntityCtx = extractDataViewEntityCtx(doc)
 		node.Children = extractChildWidgets(doc, "Widgets")
+		node.Footer = extractChildWidgets(doc, "FooterWidgets")
 	case types.WidgetListView:
 		node.DataSource = extractBSONDataSource(doc)
 		node.Children = extractChildWidgets(doc, "Templates")
@@ -878,6 +879,10 @@ func widgetToBSON(node *types.WidgetNode) bson.D {
 			doc = append(doc, bson.E{Key: "DataSource", Value: dataSourceToBSON(node.DataSource)})
 		}
 		doc = append(doc, bson.E{Key: "Widgets", Value: bsonVersionedArray(widgetsToBSON(node.Children))})
+		if len(node.Footer) > 0 {
+			doc = append(doc, bson.E{Key: "ShowFooter", Value: true})
+			doc = append(doc, bson.E{Key: "FooterWidgets", Value: bsonVersionedArray(widgetsToBSON(node.Footer))})
+		}
 
 	case types.WidgetButton:
 		doc = append(doc,

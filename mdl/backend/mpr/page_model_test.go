@@ -88,3 +88,80 @@ func TestPageDocToModel_ButtonCaption(t *testing.T) {
 		t.Errorf("widget Caption = %q, want %q", w.Caption, "Click Me")
 	}
 }
+
+func makeFooterBSON(footerName string) bson.D {
+	return bson.D{
+		{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
+		{Key: "$Type", Value: "Forms$DivContainer"},
+		{Key: "Name", Value: footerName},
+		{Key: "Appearance", Value: bson.D{
+			{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
+			{Key: "$Type", Value: "Forms$Appearance"},
+		}},
+	}
+}
+
+func TestWidgetNodeFromBSON_DataView_ExtractsFooter(t *testing.T) {
+	footerBSON := makeFooterBSON("footer1")
+	dvBSON := bson.D{
+		{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
+		{Key: "$Type", Value: "Forms$DataView"},
+		{Key: "Name", Value: "dvMain"},
+		{Key: "Appearance", Value: bson.D{
+			{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
+			{Key: "$Type", Value: "Forms$Appearance"},
+		}},
+		{Key: "ShowFooter", Value: true},
+		{Key: "FooterWidgets", Value: bsonVersionedArray([]bson.D{footerBSON})},
+	}
+
+	node := widgetNodeFromBSON(dvBSON)
+	if node == nil {
+		t.Fatal("widgetNodeFromBSON returned nil for DataView")
+	}
+	if len(node.Footer) != 1 {
+		t.Errorf("want 1 footer widget, got %d", len(node.Footer))
+	}
+	if node.Footer[0].Name != "footer1" {
+		t.Errorf("footer widget name: want footer1, got %q", node.Footer[0].Name)
+	}
+}
+
+func TestWidgetToBSON_DataView_WritesFooter(t *testing.T) {
+	footerNode := &types.WidgetNode{
+		Kind: types.WidgetContainer,
+		Name: "footer1",
+	}
+	dvNode := &types.WidgetNode{
+		Kind:   types.WidgetDataView,
+		Name:   "dvMain",
+		Footer: []*types.WidgetNode{footerNode},
+	}
+
+	doc := widgetToBSON(dvNode)
+	if doc == nil {
+		t.Fatal("widgetToBSON returned nil")
+	}
+
+	showFooter, ok := dGet(doc, "ShowFooter").(bool)
+	if !ok || !showFooter {
+		t.Errorf("ShowFooter should be true in BSON, got %v", dGet(doc, "ShowFooter"))
+	}
+
+	footerArr := dGetArrayElements(dGet(doc, "FooterWidgets"))
+	if len(footerArr) == 0 {
+		t.Error("FooterWidgets array should not be empty")
+	}
+}
+
+func TestWidgetToBSON_DataView_NoFooterWhenEmpty(t *testing.T) {
+	dvNode := &types.WidgetNode{
+		Kind:   types.WidgetDataView,
+		Name:   "dvMain",
+		Footer: nil,
+	}
+	doc := widgetToBSON(dvNode)
+	if dGet(doc, "ShowFooter") != nil {
+		t.Error("ShowFooter should not be written when Footer is empty")
+	}
+}
