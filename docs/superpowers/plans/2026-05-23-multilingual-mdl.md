@@ -2,9 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add full multilingual support to MDL: language registry management (ADD/DROP/SHOW), element-level TRANSLATE command for pages/enumerations/workflows, inline multilingual syntax for microflow messages, and DESCRIBE TRANSLATIONS coverage view.
+**Goal:** Add full multilingual support to MDL: language registry management (ADD/DROP/SHOW), element-level TRANSLATE command for pages/enumerations/workflows, type-index TRANSLATE MICROFLOW for microflow actions, and DESCRIBE TRANSLATIONS coverage view with AI-agent-friendly JSON output.
 
-**Architecture:** Language registry uses existing `SettingsBackend` (GetProjectSettings + UpdateProjectSettings) with model.Language slice manipulation. TRANSLATE operations extend existing doc-type mutation paths (PageMutator, EnumerationBackend, WorkflowMutationBackend) with a new shared BSON primitive `setTranslationForLang`. Microflow inline multilingual extends the `TextLiteral` AST type from `string` to `map[string]string`. DESCRIBE TRANSLATIONS reads existing BSON to enumerate all Texts$Text nodes.
+**Architecture:** Language registry uses existing `SettingsBackend` (GetProjectSettings + UpdateProjectSettings) with model.Language slice manipulation. TRANSLATE operations extend existing doc-type mutation paths (PageMutator, EnumerationBackend, WorkflowMutationBackend) with a new shared BSON primitive `setTranslationForLang`. Microflow actions are addressed by type+index (no TextLiteral AST change — that is deferred to Phase C). DESCRIBE TRANSLATIONS reads BSON to enumerate all Texts$Text nodes and outputs JSON with `missing[]`, `translated[]`, and `translate_template` for AI agent consumption.
+
+**Revised:** 2026-06-02 — TextLiteral AST change (original Task 7) deferred; replaced with TRANSLATE MICROFLOW type-index. DESCRIBE TRANSLATIONS JSON output added. Phase A/B/C priority structure added.
 
 **Tech Stack:** Go, ANTLR4 (MDLLexer.g4 + domain .g4 files), `go.mongodb.org/mongo-driver/bson`, existing `mdl/backend/mpr/` BSON helpers.
 
@@ -35,6 +37,19 @@
 - `mdl/backend/mpr/settings_compat.go` — `serializeLanguageSettings()` for BSON write-back
 - `mdl/backend/mock/backend.go` — new Func fields for new backend methods
 - `mdl/backend/mock/mock_infrastructure.go` (or `mock_settings.go`) — implement new mock methods
+
+---
+
+## Implementation Phases
+
+| Phase | Tasks | When to start |
+|---|---|---|
+| **Phase A** — Foundation | Tasks 1, 3, 4, 8, 2 (in this order) | Immediately; low risk, high value |
+| **Phase B** — Write Operations | Tasks 5, 6, 7, 9 (new) | After Phase A complete |
+| **Phase C** — Deferred | Inline TextLiteral syntax | Re-evaluate after Phase B stable |
+
+Phase A tasks are **read-only or BSON-primitive** work. Phase B builds on the primitive
+from Task 4. **Do not start Task 5 before Task 4 is merged and tested.**
 
 ---
 
@@ -764,6 +779,30 @@ git commit -m "feat(i18n): enhance SHOW LANGUAGES to read from Settings + ALTER 
 
 **Files:**
 - Create: `mdl/backend/mpr/translation_writer.go`
+
+- [ ] **Step 0: Verify BSON helpers exist (pre-flight)**
+
+Before writing any code, confirm these helpers exist in `mdl/backend/mpr/` with
+compatible signatures:
+
+```bash
+grep -n "^func dSet\|^func dGet\b\|^func extractBsonArray\|^func extractString\|^func newMendixID\|^func dGetDoc" \
+    mdl/backend/mpr/*.go
+```
+
+Expected: all five exist. If any are missing or have different names, adapt the
+implementation to use the real helpers (do not create duplicates). Document any
+name differences as comments in `translation_writer.go`.
+
+Also verify the `Settings$LanguageSettings` BSON structure to confirm `Languages`
+is NOT a versioned array (unlike `AccessRules`):
+
+```bash
+# Check an existing project's settings BSON for Language structure
+sqlite3 testdata/expr-checker/minimal.mpr \
+  "SELECT value FROM _Objects WHERE _mxObjectType='Settings$LanguageSettings' LIMIT 1;" \
+  | python3 -c "import sys,bson; d=bson.decode(sys.stdin.buffer.read()); print(list(d.keys()))"
+```
 
 - [ ] **Step 1: Write failing test**
 
@@ -1499,174 +1538,400 @@ git commit -m "feat(i18n): TRANSLATE ENUMERATION + TRANSLATE WORKFLOW"
 
 ---
 
-## Task 7: Microflow Inline Multilingual (TextLiteral)
+## Task 7: TRANSLATE MICROFLOW (Type-Index Addressing)
+
+Microflow actions have no user-defined names — only GUIDs. This task implements
+`TRANSLATE MICROFLOW` using type+1-based-index addressing, avoiding the cross-cutting
+TextLiteral AST change (deferred to Phase C).
 
 **Files:**
-- Modify: `mdl/grammar/domains/MDLMicroflow.g4`
-- Modify: `mdl/ast/ast_microflow.go`
-- Modify: `mdl/visitor/visitor_helpers.go`
-- Modify: `mdl/executor/flowbuilder_actions_feedback_gen.go` (and related action builders)
+- Modify: `mdl/grammar/domains/MDLDomainModel.g4` (or `MDLMicroflow.g4`)
+- Modify: `mdl/ast/ast_translate.go` (add TranslateMicroflowStmt)
+- Modify: `mdl/visitor/visitor_translate.go`
+- Create: `mdl/backend/mpr/translation_microflow.go`
+- Modify: `mdl/backend/infrastructure.go` (add SetMicroflowActionTranslation)
+- Modify: `mdl/backend/mock/backend.go` + mock stub
+- Modify: `mdl/executor/cmd_translate.go` (add translateMicroflow handler)
+- Modify: `mdl/executor/register_stubs.go`
 
 - [ ] **Step 1: Write failing test**
 
 ```go
-// mdl/visitor/visitor_helpers_test.go (create or add to existing)
-package visitor
+// mdl/executor/cmd_translate_mock_test.go — add:
+func TestTranslateMicroflow_ShowMessage(t *testing.T) {
+	called := false
+	mb := &mock.MockBackend{
+		IsConnectedFunc:       func() bool { return true },
+		ConnectedForWriteFunc: func() bool { return true },
+		GetProjectSettingsFunc: func() (*model.ProjectSettings, error) {
+			return &model.ProjectSettings{
+				Language: &model.LanguageSettings{
+					Languages: []model.Language{{Code: "en_US"}, {Code: "zh_CN"}},
+				},
+			}, nil
+		},
+		SetMicroflowActionTranslationFunc: func(docQN, actionType string, index int, property, lang, text string) error {
+			called = true
+			if actionType != "ShowMessage" || index != 1 || property != "template" {
+				t.Errorf("unexpected args: type=%s idx=%d prop=%s", actionType, index, property)
+			}
+			if lang != "zh_CN" || text != "操作成功" {
+				t.Errorf("unexpected lang=%s text=%s", lang, text)
+			}
+			return nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	stmt := &ast.TranslateMicroflowStmt{
+		QName: ast.QualifiedName{Parts: []string{"MyModule", "ACT_Process"}},
+		Lang:  "zh_CN",
+		Ops: []ast.TranslateMicroflowSetOp{
+			{ActionType: "ShowMessage", Index: 1, Property: "template", Text: "操作成功"},
+		},
+	}
+	if err := translateMicroflow(ctx, stmt); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !called {
+		t.Error("SetMicroflowActionTranslationFunc not called")
+	}
+}
+
+func TestTranslateMicroflow_LangNotRegistered(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc:       func() bool { return true },
+		ConnectedForWriteFunc: func() bool { return true },
+		GetProjectSettingsFunc: func() (*model.ProjectSettings, error) {
+			return &model.ProjectSettings{
+				Language: &model.LanguageSettings{
+					Languages: []model.Language{{Code: "en_US"}},
+				},
+			}, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	stmt := &ast.TranslateMicroflowStmt{
+		QName: ast.QualifiedName{Parts: []string{"MyModule", "ACT_Process"}},
+		Lang:  "zh_CN",
+		Ops:   []ast.TranslateMicroflowSetOp{{ActionType: "ShowMessage", Index: 1, Property: "template", Text: "x"}},
+	}
+	err := translateMicroflow(ctx, stmt)
+	if err == nil || !strings.Contains(err.Error(), "not registered") {
+		t.Errorf("expected 'not registered' error, got: %v", err)
+	}
+}
+```
+
+- [ ] **Step 2: Run to verify failure**
+
+```bash
+go test ./mdl/executor/ -run "TestTranslateMicroflow" -v 2>&1 | tail -5
+```
+
+Expected: compile error — `TranslateMicroflowStmt` undefined.
+
+- [ ] **Step 3: Add AST nodes to ast_translate.go**
+
+```go
+// TranslateMicroflowStmt represents TRANSLATE MICROFLOW Mod.Name IN lang SET ActionType[N].property = text
+type TranslateMicroflowStmt struct {
+	QName QualifiedName
+	Lang  string
+	Ops   []TranslateMicroflowSetOp
+}
+
+func (s *TranslateMicroflowStmt) stmtNode() {}
+func (s *TranslateMicroflowStmt) String() string {
+	return "TRANSLATE MICROFLOW " + s.QName.String() + " IN " + s.Lang
+}
+
+// TranslateMicroflowSetOp is one SET ActionType[N].property = text op.
+type TranslateMicroflowSetOp struct {
+	ActionType string // "ShowMessage", "ValidationFeedback", "Log"
+	Index      int    // 1-based
+	Property   string // "template", "message"
+	Text       string
+}
+```
+
+- [ ] **Step 4: Add SetMicroflowActionTranslation to backend infrastructure**
+
+In `mdl/backend/infrastructure.go`, add to an appropriate backend interface:
+
+```go
+SetMicroflowActionTranslation(docQN, actionType string, index int, property, lang, text string) error
+```
+
+Add `SetMicroflowActionTranslationFunc` field to `MockBackend` in `mdl/backend/mock/backend.go`.
+
+Add mock stub (e.g. in `mock_microflow.go` or `mock_mutation.go`):
+
+```go
+func (m *MockBackend) SetMicroflowActionTranslation(docQN, actionType string, index int, property, lang, text string) error {
+	if m.SetMicroflowActionTranslationFunc != nil {
+		return m.SetMicroflowActionTranslationFunc(docQN, actionType, index, property, lang, text)
+	}
+	return fmt.Errorf("MockBackend.SetMicroflowActionTranslation not configured")
+}
+```
+
+- [ ] **Step 5: Create translation_microflow.go in mpr backend**
+
+Create `mdl/backend/mpr/translation_microflow.go`:
+
+```go
+// SPDX-License-Identifier: Apache-2.0
+
+package mprbackend
 
 import (
-	"testing"
+	"fmt"
 
-	"github.com/mendixlabs/mxcli/mdl/ast"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
-func TestParseTextLiteral_Single(t *testing.T) {
-	// Single string → en_US only
-	lit := SingleText("Hello")
-	if len(lit.Translations) != 1 {
-		t.Fatalf("expected 1 translation, got %d", len(lit.Translations))
+// actionTypeToBSONType maps MDL action type names to BSON $Type values.
+// These are the STORAGE names, not the qualified names.
+var actionTypeToBSONType = map[string]string{
+	"ShowMessage":        "Microflows$ShowFormAction",   // verify against real BSON
+	"ValidationFeedback": "Microflows$ValidationMessageAction",
+	"Log":                "Microflows$LogMessageAction",
+}
+
+// actionPropertyField maps (actionType, property) → BSON field key holding the Texts$Text.
+var actionPropertyField = map[string]string{
+	"ShowMessage.template":        "MessageTemplate",
+	"ValidationFeedback.message":  "FeedbackTemplate",
+	"Log.template":                "MessageTemplate",
+}
+
+// setMicroflowActionTranslation walks a microflow's ObjectCollection, finds the
+// N-th action of the given type (1-based), and sets the translation for langCode.
+func setMicroflowActionTranslation(mfDoc bson.D, actionType string, index int, property, langCode, text string) error {
+	bsonType, ok := actionTypeToBSONType[actionType]
+	if !ok {
+		return fmt.Errorf("unknown action type '%s' for TRANSLATE MICROFLOW", actionType)
 	}
-	if lit.Translations["en_US"] != "Hello" {
-		t.Errorf("expected en_US='Hello', got %v", lit.Translations)
+	fieldKey, ok := actionPropertyField[actionType+"."+property]
+	if !ok {
+		return fmt.Errorf("unsupported property '%s' for action type '%s'", property, actionType)
 	}
+
+	count := 0
+	found := false
+	err := walkMicroflowActivities(mfDoc, func(actDoc bson.D) bool {
+		if extractString(dGet(actDoc, "$Type")) != bsonType {
+			return false // continue
+		}
+		count++
+		if count != index {
+			return false // continue
+		}
+		textDoc := dGetDoc(actDoc, fieldKey)
+		if textDoc == nil {
+			return false // stop — field missing
+		}
+		setTranslationForLang(textDoc, langCode, text)
+		found = true
+		return true // stop walking
+	})
+	if err != nil {
+		return err
+	}
+	if !found {
+		if count == 0 {
+			return fmt.Errorf("%s[%d] not found: no %s actions in this microflow", actionType, index, actionType)
+		}
+		return fmt.Errorf("%s[%d] not found: only %d %s action(s) exist", actionType, index, count, actionType)
+	}
+	return nil
+}
+
+// walkMicroflowActivities walks the ObjectCollection depth-first (including LoopedActivity
+// sub-collections), calling fn for each activity document. fn returns true to stop.
+func walkMicroflowActivities(mfDoc bson.D, fn func(bson.D) bool) error {
+	coll := extractBsonArray(dGet(mfDoc, "ObjectCollection"))
+	return walkActivitiesInColl(coll, fn)
+}
+
+func walkActivitiesInColl(coll []any, fn func(bson.D) bool) error {
+	for _, item := range coll {
+		doc, ok := item.(bson.D)
+		if !ok {
+			continue
+		}
+		if fn(doc) {
+			return nil
+		}
+		// Recurse into LoopedActivity sub-collection
+		if sub := extractBsonArray(dGet(doc, "ObjectCollection")); len(sub) > 0 {
+			if err := walkActivitiesInColl(sub, fn); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 ```
 
-Also add an executor-level test for CREATE OR MODIFY MICROFLOW with multi-language show message (integration via golden test or mock backend pattern).
+**Important:** Verify the correct BSON `$Type` values for ShowMessage, ValidationFeedback,
+and Log actions against a real MPR before committing. Use:
 
-- [ ] **Step 2: Extend TextLiteral in ast_microflow.go**
+```bash
+sqlite3 testdata/expr-checker/minimal.mpr \
+  "SELECT value FROM _Objects WHERE _mxObjectType LIKE '%ShowForm%' LIMIT 1;" | xxd | head
+```
 
-Find the current `TextLiteral` (or wherever message text is stored in the AST — it may be just a `string` field). Change it:
+Update `actionTypeToBSONType` to match the real storage names from CLAUDE.md's type table.
+
+Wire `SetMicroflowActionTranslation` on `MprBackend`:
 
 ```go
-// TextLiteral represents a translatable text: either a single string (en_US)
-// or a map of language codes to translated strings.
-type TextLiteral struct {
-	Translations map[string]string // langCode → text
-}
-
-// SingleText creates a TextLiteral with only the default language (en_US).
-func SingleText(s string) TextLiteral {
-	return TextLiteral{Translations: map[string]string{"en_US": s}}
-}
-
-// IsEmpty returns true if the literal has no translations.
-func (t TextLiteral) IsEmpty() bool {
-	return len(t.Translations) == 0
+func (b *MprBackend) SetMicroflowActionTranslation(docQN, actionType string, index int, property, lang, text string) error {
+	unit, err := b.loadMicroflowUnit(docQN)
+	if err != nil {
+		return err
+	}
+	if err := setMicroflowActionTranslation(unit.rawDoc, actionType, index, property, lang, text); err != nil {
+		return err
+	}
+	return b.writeUnitContents(unit.id, unit.rawDoc)
 }
 ```
 
-Find all `ShowMessage`, `ValidationFeedback`, `LogMessage` AST fields that were `string` and change to `TextLiteral`. Run `go build ./mdl/...` to find all broken callers, then fix them.
+- [ ] **Step 6: Add translateMicroflow to cmd_translate.go**
 
-- [ ] **Step 3: Add textLiteral grammar rule to MDLMicroflow.g4**
+```go
+// translateMicroflow handles TRANSLATE MICROFLOW.
+func translateMicroflow(ctx *ExecContext, stmt *ast.TranslateMicroflowStmt) error {
+	if !ctx.ConnectedForWrite() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+	ps, err := ctx.Backend.GetProjectSettings()
+	if err != nil {
+		return mdlerrors.NewBackend("read project settings", err)
+	}
+	langRegistered := false
+	if ps.Language != nil {
+		for _, l := range ps.Language.Languages {
+			if l.Code == stmt.Lang {
+				langRegistered = true
+				break
+			}
+		}
+	}
+	if !langRegistered {
+		return mdlerrors.NewValidation(fmt.Sprintf(
+			"language '%s' is not registered. Run ALTER SETTINGS LANGUAGE ADD '%s' first.",
+			stmt.Lang, stmt.Lang,
+		))
+	}
+	docQN := stmt.QName.String()
+	for _, op := range stmt.Ops {
+		if err := ctx.Backend.SetMicroflowActionTranslation(
+			docQN, op.ActionType, op.Index, op.Property, stmt.Lang, op.Text,
+		); err != nil {
+			return fmt.Errorf("%s[%d].%s: %w", op.ActionType, op.Index, op.Property, err)
+		}
+	}
+	fmt.Fprintf(ctx.Output, "TRANSLATED MICROFLOW %s IN %s (%d actions)\n", docQN, stmt.Lang, len(stmt.Ops))
+	return nil
+}
+```
 
-Find rules like `showMessageStatement` (or whatever rule handles `show message`) and replace the message string literal with a `textLiteral` rule reference. Add:
+Register in `register_stubs.go`:
+
+```go
+case *ast.TranslateMicroflowStmt:
+	return translateMicroflow(ctx, stmt.(*ast.TranslateMicroflowStmt))
+```
+
+- [ ] **Step 7: Add grammar for TRANSLATE MICROFLOW**
+
+In `MDLDomainModel.g4` (or `MDLMicroflow.g4`), add:
 
 ```antlr
-textLiteral
-    : STRING_LITERAL                                           # textSingle
-    | LPAREN textTranslation (COMMA textTranslation)* RPAREN  # textMap
+translateMicroflowStatement
+    : TRANSLATE MICROFLOW qualifiedName IN identifierOrKeyword
+      translateMicroflowSetOp+
     ;
 
-textTranslation
-    : identifierOrKeyword COLON STRING_LITERAL
+translateMicroflowSetOp
+    : SET identifierOrKeyword LBRACKET INTEGER_LITERAL RBRACKET DOT identifierOrKeyword EQUALS STRING_LITERAL
     ;
 ```
 
-- [ ] **Step 4: Add parseTextLiteral helper in visitor_helpers.go**
+Add to the top-level statement rule. Wire in `visitor_translate.go`:
 
 ```go
-// parseTextLiteral converts a textLiteralContext to an ast.TextLiteral.
-func parseTextLiteral(ctx parser.ITextLiteralContext) ast.TextLiteral {
-	if ctx == nil {
-		return ast.TextLiteral{}
+func (b *MDLBuilder) EnterTranslateMicroflowStatement(ctx *parser.TranslateMicroflowStatementContext) {
+	stmt := &ast.TranslateMicroflowStmt{
+		QName: b.buildQualifiedName(ctx.QualifiedName()),
+		Lang:  ctx.IdentifierOrKeyword().GetText(),
 	}
-	if single, ok := ctx.(*parser.TextSingleContext); ok {
-		text := unquoteString(single.STRING_LITERAL().GetText())
-		return ast.SingleText(text)
+	for _, opCtx := range ctx.AllTranslateMicroflowSetOp() {
+		parts := opCtx.AllIdentifierOrKeyword()
+		actionType := parts[0].GetText()
+		idx, _ := strconv.Atoi(opCtx.INTEGER_LITERAL().GetText())
+		property := parts[1].GetText()
+		text := unquoteString(opCtx.STRING_LITERAL().GetText())
+		stmt.Ops = append(stmt.Ops, ast.TranslateMicroflowSetOp{
+			ActionType: actionType,
+			Index:      idx,
+			Property:   property,
+			Text:       text,
+		})
 	}
-	if mapCtx, ok := ctx.(*parser.TextMapContext); ok {
-		lit := ast.TextLiteral{Translations: make(map[string]string)}
-		for _, tr := range mapCtx.AllTextTranslation() {
-			lang := tr.IdentifierOrKeyword().GetText()
-			text := unquoteString(tr.STRING_LITERAL().GetText())
-			lit.Translations[lang] = text
-		}
-		return lit
-	}
-	return ast.TextLiteral{}
+	b.statements = append(b.statements, stmt)
 }
 ```
 
-- [ ] **Step 5: Update visitor_microflow.go to use parseTextLiteral**
-
-Find where `show message` / `validation feedback` / `log message` text is parsed (currently calls `unquoteString` on a STRING_LITERAL). Replace with `parseTextLiteral(ctx.TextLiteral())`.
-
-- [ ] **Step 6: Update action builders to use TextLiteral**
-
-In `mdl/executor/flowbuilder_actions_feedback_gen.go` (and other flow builder files), find `buildTextNode` (or equivalent). Change from:
-
-```go
-tr.SetLanguageCode("en_US")
-tr.SetText(messageStr)
-```
-
-To:
-
-```go
-func buildTextNodeFromLiteral(lit ast.TextLiteral) *genTx.Text {
-	text := genTx.NewText()
-	langs := make([]string, 0, len(lit.Translations))
-	for lang := range lit.Translations {
-		langs = append(langs, lang)
-	}
-	sort.Strings(langs) // deterministic order
-	for _, lang := range langs {
-		tr := genTx.NewTranslation()
-		tr.SetLanguageCode(lang)
-		tr.SetText(lit.Translations[lang])
-		text.AddTranslations(tr)
-	}
-	return text
-}
-```
-
-Replace all existing `buildTextNode`-style calls that hard-code `"en_US"` with `buildTextNodeFromLiteral`.
-
-- [ ] **Step 7: Regenerate parser + run tests**
+- [ ] **Step 8: Regenerate parser**
 
 ```bash
 make grammar 2>&1 | tail -5
+```
+
+- [ ] **Step 9: Run tests**
+
+```bash
+go test ./mdl/executor/ -run "TestTranslateMicroflow" -v 2>&1 | tail -10
 go test ./mdl/... 2>&1 | grep -E "FAIL|ok"
 ```
 
-Fix any compilation errors from the TextLiteral type change (use `go build ./mdl/...` to find them all first).
-
-- [ ] **Step 8: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-git add mdl/grammar/domains/MDLMicroflow.g4 mdl/ast/ast_microflow.go \
-    mdl/visitor/visitor_helpers.go mdl/executor/flowbuilder_actions_feedback_gen.go \
-    mdl/executor/cmd_microflows_format_action_gen_test.go
-git commit -m "feat(i18n): microflow inline multilingual TextLiteral syntax"
+git add mdl/ast/ast_translate.go mdl/grammar/domains/MDLDomainModel.g4 \
+    mdl/visitor/visitor_translate.go mdl/executor/cmd_translate.go \
+    mdl/executor/register_stubs.go mdl/backend/infrastructure.go \
+    mdl/backend/mock/backend.go mdl/backend/mpr/translation_microflow.go \
+    mdl/backend/mpr/backend.go mdl/executor/cmd_translate_mock_test.go
+git commit -m "feat(i18n): TRANSLATE MICROFLOW with type-index addressing"
 ```
 
 ---
 
-## Task 8: DESCRIBE TRANSLATIONS
+## Task 8: DESCRIBE TRANSLATIONS (with JSON output + translate_template)
 
 **Files:**
 - Create: `mdl/executor/cmd_describe_translations.go`
 - Modify: `mdl/grammar/domains/MDLDomainModel.g4`
 - Modify: `mdl/visitor/visitor_translate.go`
 - Modify: `mdl/executor/register_stubs.go`
+- Modify: `model/types.go` (TranslationNode)
+- Modify: `mdl/backend/infrastructure.go` (ListTranslationNodes)
+- Modify: `mdl/backend/mock/backend.go`
+- Modify: `mdl/backend/mpr/backend.go` (ListTranslationNodes impl)
 
-- [ ] **Step 1: Write failing test**
+- [ ] **Step 1: Write failing tests**
 
 ```go
 // mdl/executor/cmd_describe_translations_mock_test.go
 package executor
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -1675,8 +1940,72 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-func TestDescribeTranslations_Page(t *testing.T) {
-	mb := &mock.MockBackend{
+func TestDescribeTranslations_TextOutput_ShowsMissing(t *testing.T) {
+	mb := describeTranslationsMockBackend()
+	ctx, buf := newMockCtx(t, withBackend(mb))
+	stmt := &ast.DescribeTranslationsStmt{
+		QName: ast.QualifiedName{Parts: []string{"MyModule", "Home"}},
+		Lang:  "zh_CN",
+	}
+	if err := describeTranslations(ctx, stmt); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "Button_Submit") {
+		t.Errorf("expected Button_Submit in output: %s", out)
+	}
+	if !strings.Contains(out, "(missing)") {
+		t.Errorf("expected '(missing)' for untranslated field: %s", out)
+	}
+	// Template comment must be present
+	if !strings.Contains(out, "translate page") {
+		t.Errorf("expected translate template in output: %s", out)
+	}
+	if !strings.Contains(out, "'?'") {
+		t.Errorf("expected '?' placeholder in template: %s", out)
+	}
+}
+
+func TestDescribeTranslations_JSONOutput(t *testing.T) {
+	mb := describeTranslationsMockBackend()
+	ctx, buf := newMockCtx(t, withBackend(mb))
+	ctx.Format = FormatJSON
+	stmt := &ast.DescribeTranslationsStmt{
+		QName: ast.QualifiedName{Parts: []string{"MyModule", "Home"}},
+		Lang:  "zh_CN",
+	}
+	if err := describeTranslations(ctx, stmt); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var result struct {
+		Document          string                   `json:"document"`
+		TargetLanguage    string                   `json:"target_language"`
+		Missing           []map[string]string      `json:"missing"`
+		Translated        []map[string]string      `json:"translated"`
+		TranslateTemplate string                   `json:"translate_template"`
+	}
+	if err := json.Unmarshal([]byte(buf.String()), &result); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, buf.String())
+	}
+	if len(result.Missing) != 1 {
+		t.Errorf("expected 1 missing field, got %d", len(result.Missing))
+	}
+	if result.Missing[0]["source"] == "" {
+		t.Error("missing[].source must not be empty")
+	}
+	if len(result.Translated) != 1 {
+		t.Errorf("expected 1 translated field, got %d", len(result.Translated))
+	}
+	if !strings.Contains(result.TranslateTemplate, "translate page") {
+		t.Errorf("translate_template missing: %s", result.TranslateTemplate)
+	}
+	if !strings.Contains(result.TranslateTemplate, "'?'") {
+		t.Errorf("translate_template must contain '?' placeholders: %s", result.TranslateTemplate)
+	}
+}
+
+func describeTranslationsMockBackend() *mock.MockBackend {
+	return &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		GetProjectSettingsFunc: func() (*model.ProjectSettings, error) {
 			return &model.ProjectSettings{
@@ -1688,58 +2017,63 @@ func TestDescribeTranslations_Page(t *testing.T) {
 		ListTranslationNodesFunc: func(docQN, docType string) ([]model.TranslationNode, error) {
 			return []model.TranslationNode{
 				{
-					Path:     "Button1.caption",
+					Path:     "Button_Submit.caption",
 					Property: "caption",
+					DocType:  "PAGE",
 					Texts:    map[string]string{"en_US": "Submit", "zh_CN": "提交"},
 				},
 				{
-					Path:     "TextBox1.placeholder",
+					Path:     "TextBox_Email.placeholder",
 					Property: "placeholder",
+					DocType:  "PAGE",
 					Texts:    map[string]string{"en_US": "Enter email"},
 				},
 			}, nil
 		},
 	}
-	ctx, buf := newMockCtx(t, withBackend(mb))
-	stmt := &ast.DescribeTranslationsStmt{
-		QName: ast.QualifiedName{Parts: []string{"MyModule", "Home"}},
-		Lang:  "zh_CN",
-	}
-	if err := describeTranslations(ctx, stmt); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	out := buf.String()
-	if !strings.Contains(out, "Button1") {
-		t.Errorf("expected Button1 in output, got: %s", out)
-	}
-	if !strings.Contains(out, "missing") {
-		t.Errorf("expected 'missing' for untranslated placeholder, got: %s", out)
-	}
 }
 ```
 
-- [ ] **Step 2: Add TranslationNode type + ListTranslationNodes to model and backend**
+- [ ] **Step 2: Run to verify failure**
 
-In `model/types.go`, add:
+```bash
+go test ./mdl/executor/ -run "TestDescribeTranslations" -v 2>&1 | tail -5
+```
+
+Expected: compile error — `describeTranslations` undefined.
+
+- [ ] **Step 3: Add TranslationNode type to model/types.go**
 
 ```go
 // TranslationNode represents a single translatable text field in a document.
 type TranslationNode struct {
-	Path     string            // "Button1.caption", "ShowMessage.template"
+	Path     string            // "Button_Submit.caption", "ShowMessage[1].template"
 	Property string
-	Texts    map[string]string // langCode → text; missing key = not yet translated
+	DocType  string            // "PAGE", "SNIPPET", "ENUMERATION", "WORKFLOW", "MICROFLOW"
+	Texts    map[string]string // langCode → text; missing key = not translated
 }
 ```
 
-In `mdl/backend/infrastructure.go`, add to an appropriate backend interface (or create `TranslationInspectionBackend` embedded in FullBackend):
+- [ ] **Step 4: Add ListTranslationNodes to backend infrastructure**
+
+In `mdl/backend/infrastructure.go`, add:
 
 ```go
 ListTranslationNodes(docQN, docType string) ([]model.TranslationNode, error)
 ```
 
-Add `ListTranslationNodesFunc` to MockBackend. Add mock stub returning `nil, fmt.Errorf("MockBackend.ListTranslationNodes not configured")`.
+Add `ListTranslationNodesFunc` to `MockBackend`. Add mock stub:
 
-- [ ] **Step 3: Create describeTranslations executor**
+```go
+func (m *MockBackend) ListTranslationNodes(docQN, docType string) ([]model.TranslationNode, error) {
+	if m.ListTranslationNodesFunc != nil {
+		return m.ListTranslationNodesFunc(docQN, docType)
+	}
+	return nil, fmt.Errorf("MockBackend.ListTranslationNodes not configured")
+}
+```
+
+- [ ] **Step 5: Create cmd_describe_translations.go**
 
 Create `mdl/executor/cmd_describe_translations.go`:
 
@@ -1749,11 +2083,14 @@ Create `mdl/executor/cmd_describe_translations.go`:
 package executor
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 func describeTranslations(ctx *ExecContext, stmt *ast.DescribeTranslationsStmt) error {
@@ -1762,7 +2099,6 @@ func describeTranslations(ctx *ExecContext, stmt *ast.DescribeTranslationsStmt) 
 		return mdlerrors.NewBackend("read project settings", err)
 	}
 
-	// Determine languages to show
 	var langs []string
 	if stmt.Lang != "" {
 		langs = []string{stmt.Lang}
@@ -1771,19 +2107,32 @@ func describeTranslations(ctx *ExecContext, stmt *ast.DescribeTranslationsStmt) 
 			langs = append(langs, l.Code)
 		}
 	}
+	sort.Strings(langs)
 
 	docQN := stmt.QName.String()
-	// Infer doc type from catalog or just pass empty (backend figures it out)
 	nodes, err := ctx.Backend.ListTranslationNodes(docQN, "")
 	if err != nil {
 		return mdlerrors.NewBackend("list translation nodes", err)
 	}
 
-	// Build table columns: Path | Property | lang1 | lang2 | ...
-	sort.Strings(langs)
+	// Determine source language (first registered language = en_US typically)
+	srcLang := "en_US"
+	if ps.Language != nil && len(ps.Language.Languages) > 0 {
+		srcLang = ps.Language.Languages[0].Code
+	}
+
+	if ctx.Format == FormatJSON {
+		return describeTranslationsJSON(ctx, docQN, stmt.Lang, langs, srcLang, nodes, ps)
+	}
+	return describeTranslationsText(ctx, docQN, stmt.Lang, langs, srcLang, nodes)
+}
+
+// describeTranslationsText outputs a human-readable table + executable TRANSLATE template comment.
+func describeTranslationsText(ctx *ExecContext, docQN, targetLang string, langs []string, srcLang string, nodes []model.TranslationNode) error {
 	columns := []string{"Path", "Property"}
 	columns = append(columns, langs...)
 
+	missingPaths := []string{}
 	tr := &TableResult{Columns: columns}
 	for _, node := range nodes {
 		row := []any{node.Path, node.Property}
@@ -1792,16 +2141,111 @@ func describeTranslations(ctx *ExecContext, stmt *ast.DescribeTranslationsStmt) 
 				row = append(row, text)
 			} else {
 				row = append(row, "(missing)")
+				if lang == targetLang || targetLang == "" {
+					missingPaths = append(missingPaths, node.Path)
+				}
 			}
 		}
 		tr.Rows = append(tr.Rows, row)
 	}
-	tr.Summary = fmt.Sprintf("(%d translatable fields)", len(nodes))
-	return writeResult(ctx, tr)
+	missingCount := len(missingPaths)
+	tr.Summary = fmt.Sprintf("(%d translatable fields, %d missing in %s)", len(nodes), missingCount, targetLang)
+
+	if err := writeResult(ctx, tr); err != nil {
+		return err
+	}
+
+	// Emit executable TRANSLATE template as a comment block (only if there are missing fields)
+	if missingCount > 0 && targetLang != "" {
+		docType := guessDocType(nodes)
+		fmt.Fprintf(ctx.Output, "\n-- Ready-to-execute template (replace '?' with translations):\n")
+		fmt.Fprintf(ctx.Output, "-- translate %s %s in %s\n", strings.ToLower(docType), docQN, targetLang)
+		for _, path := range missingPaths {
+			fmt.Fprintf(ctx.Output, "--   set %s = '?'\n", path)
+		}
+		fmt.Fprintln(ctx.Output, "--   ;")
+	}
+	return nil
+}
+
+// describeTranslationsJSON outputs structured JSON for AI agent consumption.
+func describeTranslationsJSON(ctx *ExecContext, docQN, targetLang string, langs []string, srcLang string, nodes []model.TranslationNode, ps *model.ProjectSettings) error {
+	type missingEntry struct {
+		Path     string `json:"path"`
+		Property string `json:"property"`
+		SrcLang  string `json:"source_lang"`
+		Source   string `json:"source"`
+	}
+	type translatedEntry struct {
+		Path     string `json:"path"`
+		Property string `json:"property"`
+		SrcLang  string `json:"source_lang"`
+		Source   string `json:"source"`
+		Text     string `json:"text"`
+	}
+
+	missing := []missingEntry{}
+	translated := []translatedEntry{}
+
+	for _, node := range nodes {
+		src := node.Texts[srcLang]
+		if targetLang != "" {
+			if text, ok := node.Texts[targetLang]; ok {
+				translated = append(translated, translatedEntry{
+					Path: node.Path, Property: node.Property,
+					SrcLang: srcLang, Source: src, Text: text,
+				})
+			} else {
+				missing = append(missing, missingEntry{
+					Path: node.Path, Property: node.Property,
+					SrcLang: srcLang, Source: src,
+				})
+			}
+		}
+	}
+
+	// Build translate_template
+	docType := "page"
+	if len(nodes) > 0 {
+		docType = strings.ToLower(guessDocType(nodes))
+	}
+	templateLines := []string{fmt.Sprintf("translate %s %s in %s", docType, docQN, targetLang)}
+	for _, m := range missing {
+		templateLines = append(templateLines, fmt.Sprintf("  set %s = '?'", m.Path))
+	}
+	tmpl := strings.Join(templateLines, "\n") + ";"
+
+	allLangs := []string{}
+	if ps.Language != nil {
+		for _, l := range ps.Language.Languages {
+			allLangs = append(allLangs, l.Code)
+		}
+	}
+
+	out := map[string]any{
+		"document":           docQN,
+		"document_type":      strings.ToUpper(docType),
+		"target_language":    targetLang,
+		"project_languages":  allLangs,
+		"missing":            missing,
+		"translated":         translated,
+		"translate_template": tmpl,
+	}
+	enc := json.NewEncoder(ctx.Output)
+	enc.SetIndent("", "  ")
+	return enc.Encode(out)
+}
+
+// guessDocType returns the document type from the nodes' DocType field.
+func guessDocType(nodes []model.TranslationNode) string {
+	if len(nodes) > 0 && nodes[0].DocType != "" {
+		return nodes[0].DocType
+	}
+	return "PAGE"
 }
 ```
 
-- [ ] **Step 4: Add DESCRIBE TRANSLATIONS grammar**
+- [ ] **Step 6: Add DESCRIBE TRANSLATIONS grammar**
 
 In `MDLDomainModel.g4`, add to the DESCRIBE statement alternatives:
 
@@ -1809,48 +2253,47 @@ In `MDLDomainModel.g4`, add to the DESCRIBE statement alternatives:
 | DESCRIBE TRANSLATIONS qualifiedName (IN identifierOrKeyword)?
 ```
 
-Wire in visitor_translate.go:
+Wire in `visitor_translate.go`:
 
 ```go
-func (b *MDLBuilder) EnterDescribeTranslationsStatement(...) {
+func (b *MDLBuilder) EnterDescribeTranslationsStatement(ctx *parser.DescribeTranslationsStatementContext) {
 	stmt := &ast.DescribeTranslationsStmt{
 		QName: b.buildQualifiedName(ctx.QualifiedName()),
 	}
-	if ctx.IN() != nil {
+	if ctx.IN() != nil && ctx.IdentifierOrKeyword() != nil {
 		stmt.Lang = ctx.IdentifierOrKeyword().GetText()
 	}
 	b.statements = append(b.statements, stmt)
 }
 ```
 
-Register in register_stubs.go:
+Register in `register_stubs.go`:
 
 ```go
 case *ast.DescribeTranslationsStmt:
-    return describeTranslations(ctx, stmt.(*ast.DescribeTranslationsStmt))
+	return describeTranslations(ctx, stmt.(*ast.DescribeTranslationsStmt))
 ```
 
-- [ ] **Step 5: Implement ListTranslationNodes in MPR backend**
+- [ ] **Step 7: Implement ListTranslationNodes in MPR backend**
 
 In `mdl/backend/mpr/backend.go` or a new `translation_reader.go`:
 
 ```go
 func (b *MprBackend) ListTranslationNodes(docQN, docType string) ([]model.TranslationNode, error) {
-	// Heuristic: try page, then enumeration, then microflow, then workflow
-	// based on what's loadable for the given QN
-	// For pages: walk widget tree, collect all Texts$Text fields
-	// For microflows: walk ObjectCollection, collect ShowMessage/Validation/Log templates
-	// For enumerations: walk Values, collect Caption fields
-	// For workflows: walk flow activities, collect TaskName/TaskDescription
-	// Return TranslationNode per field found
-	// ... implementation follows the builder_strings.go pattern but reads gen-decoded elements
+	// Try doc types in order: page, snippet, enumeration, microflow, workflow
+	// Follow the pattern in mdl/catalog/builder_strings.go for field extraction.
+	// For pages: walk widget tree collecting Caption/Placeholder/Label.Caption/Content fields
+	// For enumerations: walk Values collecting Caption fields
+	// For microflows: walk ObjectCollection collecting ShowMessage/ValidationFeedback/Log templates (using type-index paths)
+	// For workflows: walk activities collecting TaskName/TaskDescription
 	return listTranslationNodesForDoc(b, docQN)
 }
 ```
 
-The full implementation of `listTranslationNodesForDoc` reads the document using the reader, walks the element tree collecting `Texts$Text` items, and returns `[]model.TranslationNode`. Follow the existing pattern in `mdl/catalog/builder_strings.go` for enumerating the same fields.
+The implementation follows `mdl/catalog/builder_strings.go` — the same fields that `buildStrings`
+indexes must be listed here. Use `model.TranslationNode.DocType` = the detected type.
 
-- [ ] **Step 6: Regenerate parser + run tests**
+- [ ] **Step 8: Regenerate parser + run tests**
 
 ```bash
 make grammar 2>&1 | tail -5
@@ -1858,28 +2301,39 @@ go test ./mdl/executor/ -run "TestDescribeTranslations" -v 2>&1 | tail -10
 go test ./mdl/... 2>&1 | grep -E "FAIL|ok"
 ```
 
-- [ ] **Step 7: Add MDL example test**
+- [ ] **Step 9: Add MDL example test**
 
 Create `mdl-examples/doctype-tests/translations.mdl`:
 
 ```mdl
--- Test language registry
+-- Multilingual workflow example
 alter settings language add 'zh_CN';
 show languages;
 show supported languages;
 
--- Test TRANSLATE PAGE (requires connected project)
+-- Inspect coverage (requires connected project)
+-- describe translations MyModule.Home in zh_CN;
+
+-- Apply translations (requires connected project)
 -- translate page MyModule.Home in zh_CN
---   set Button1.caption = '提交';
+--   set Button_Submit.caption = '提交'
+--   set TextBox_Email.placeholder = '请输入邮箱';
 
--- Test TRANSLATE ENUMERATION
--- translate enumeration MyModule.Status in zh_CN
---   set Active.caption = '活跃';
+-- Translate enumeration
+-- translate enumeration MyModule.OrderStatus in zh_CN
+--   set Active.caption = '活跃'
+--   set Inactive.caption = '非活跃';
 
+-- Translate microflow actions by type-index
+-- translate microflow MyModule.ACT_Order in zh_CN
+--   set ShowMessage[1].template = '订单已提交'
+--   set ValidationFeedback[1].message = '库存不足';
+
+-- Drop language (cleanup for test)
 alter settings language drop 'zh_CN';
 ```
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
 git add mdl/executor/cmd_describe_translations.go mdl/executor/cmd_describe_translations_mock_test.go \
@@ -1887,7 +2341,7 @@ git add mdl/executor/cmd_describe_translations.go mdl/executor/cmd_describe_tran
     mdl/executor/register_stubs.go mdl/backend/infrastructure.go \
     mdl/backend/mock/backend.go model/types.go mdl/backend/mpr/backend.go \
     mdl-examples/doctype-tests/translations.mdl
-git commit -m "feat(i18n): DESCRIBE TRANSLATIONS coverage view"
+git commit -m "feat(i18n): DESCRIBE TRANSLATIONS with JSON output and translate_template"
 ```
 
 ---
@@ -1970,13 +2424,67 @@ git commit -m "docs(i18n): update syntax reference + feature topics for multilin
 
 ---
 
+## Task 9: Syntax Reference + Final Integration Test
+
+**Files:**
+- Modify: `docs/01-project/MDL_QUICK_REFERENCE.md`
+- Modify: `cmd/mxcli/syntax/` (language + translate feature entries)
+
+- [ ] **Step 1: Update MDL_QUICK_REFERENCE.md**
+
+Add "Multilingual / Translations" section:
+
+```markdown
+## Multilingual / Translations
+
+| Statement | Example |
+|---|---|
+| Show registered languages | `show languages;` |
+| Show valid language codes | `show supported languages;` |
+| Add language | `alter settings language add 'zh_CN';` |
+| Add with options | `alter settings language add 'zh_CN' (checkCompleteness: true);` |
+| Drop language | `alter settings language drop 'fr_FR';` |
+| Set default language | `alter settings language DefaultLanguageCode = 'zh_CN';` |
+| Translate page | `translate page MyModule.Home in zh_CN set Button1.caption = '提交';` |
+| Translate snippet | `translate snippet MyModule.Header in zh_CN set Text1.content = '欢迎';` |
+| Translate enumeration | `translate enumeration MyModule.Status in zh_CN set Active.caption = '活跃';` |
+| Translate workflow | `translate workflow MyModule.WF in zh_CN set Task1.taskName = '审批';` |
+| Translate microflow | `translate microflow MyModule.ACT in zh_CN set ShowMessage[1].template = '成功';` |
+| Describe translations | `describe translations MyModule.Home;` |
+| Describe translations (lang) | `describe translations MyModule.Home in zh_CN;` |
+| Describe translations (JSON) | `describe translations MyModule.Home in zh_CN` + `--format json` |
+```
+
+- [ ] **Step 2: Add SyntaxFeature entries in cmd/mxcli/syntax/**
+
+- [ ] **Step 3: Run full test suite**
+
+```bash
+go test ./... 2>&1 | grep -E "FAIL|ok" | head -40
+make build 2>&1 | tail -5
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add docs/01-project/MDL_QUICK_REFERENCE.md cmd/mxcli/syntax/
+git commit -m "docs(i18n): update syntax reference for multilingual support"
+```
+
+---
+
 ## Self-Review Checklist
 
-- [ ] All spec features covered: language ADD/DROP, SHOW LANGUAGES enhanced, SHOW SUPPORTED, TRANSLATE PAGE/SNIPPET/ENUMERATION/WORKFLOW, microflow TextLiteral, DESCRIBE TRANSLATIONS
-- [ ] No "TBD" or "TODO" in code steps
+- [ ] Phase A tasks completed before Phase B starts
+- [ ] BSON helpers verified (Step 0 in Task 4) before any translation_writer.go code written
+- [ ] `Settings$LanguageSettings` BSON structure verified (not a versioned array) before Task 3
 - [ ] `setTranslationForLang` defined in Task 4 before first use in Task 5
-- [ ] `TranslationNode` type defined in Task 8 before `ListTranslationNodes` uses it
-- [ ] `AlterLanguageStmt` defined in Task 2 (ast_translate.go) — same file as `TranslateStmt` and `DescribeTranslationsStmt` (no duplication)
-- [ ] `TextLiteral` in ast_microflow.go is changed in Task 7, callers fixed before commit
-- [ ] Mock fields match: `SetWidgetTranslationFunc`, `SetEnumerationTranslationFunc`, `SetWorkflowTranslationFunc`, `ListTranslationNodesFunc` all defined before used in tests
-- [ ] `make grammar` run after every grammar change (Tasks 1, 2, 5, 7, 8)
+- [ ] `TranslationNode.DocType` field populated by ListTranslationNodes backend impl
+- [ ] `AlterLanguageStmt`, `TranslateStmt`, `TranslateMicroflowStmt`, `DescribeTranslationsStmt` all in `ast_translate.go` (no duplication)
+- [ ] Mock fields: `SetWidgetTranslationFunc`, `SetEnumerationTranslationFunc`, `SetWorkflowTranslationFunc`, `SetMicroflowActionTranslationFunc`, `ListTranslationNodesFunc` all defined before used in tests
+- [ ] `make grammar` run after every grammar change (Tasks 1, 2, 5, 7, 8, 9)
+- [ ] TRANSLATE MICROFLOW BSON `$Type` values verified against real MPR before Task 7 commit
+- [ ] `describeTranslationsJSON` test verifies `missing[].source` is non-empty (AI agent requirement)
+- [ ] `translate_template` in JSON output contains `'?'` placeholders and is valid MDL syntax
+- [ ] TextLiteral AST change is NOT implemented — remains deferred to Phase C
+- [ ] All TRANSLATE commands are idempotent (re-run with same text = no error)
