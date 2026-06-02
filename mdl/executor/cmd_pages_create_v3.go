@@ -290,6 +290,11 @@ func widgetTreeHasLossyKind(n *types.WidgetNode) bool {
 		// renderWidget currently has no dedicated case; legacy path handles
 		// these via outputWidgetMDLV3.
 		return true
+	case types.WidgetScrollView:
+		// ScrollContainer children live in CenterRegion.Widgets, not the
+		// top-level Widgets field — fromBSON extracts from the wrong field.
+		// Fall back to legacy describe until CenterRegion is handled.
+		return true
 	}
 	for _, c := range n.Children {
 		if widgetTreeHasLossyKind(c) {
