@@ -235,17 +235,16 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 // BSON encoding that widgetToBSON cannot fully reproduce. Used to gate the
 // Task 8 write-path overlay so the gen builder's rich BSON isn't clobbered
 // by the slim IR encoding.
-//
-// IMPORTANT: this gate is currently conservative — Mendix's storage layer
-// validates many properties widgetToBSON doesn't yet write (LayoutCol
-// weights summing to 12, full CustomWidget Object trees, ConditionalVisibility
-// settings, etc.), so we always return true: the overlay never fires. The
-// roundtrip IR is intentionally used only for the read/describe path today.
-// The describe-side gate below (pageModelHasLossyWidgetReadOnly) still walks
-// per-widget so describe can use the IR for safe kinds.
 func pageModelHasLossyWidget(pm *types.PageModel) bool {
-	_ = pm
-	return true
+	if pm == nil {
+		return false
+	}
+	for _, n := range pm.Widgets {
+		if widgetTreeHasLossyKind(n) {
+			return true
+		}
+	}
+	return false
 }
 
 // pageModelHasLossyWidgetReadOnly is the read-side gate that still walks
