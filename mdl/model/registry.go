@@ -44,6 +44,13 @@ func (r *DefaultRegistry) RegisterGenType(genTypeName string, c Codec) {
 	r.byGenType[genTypeName] = c
 }
 
+// Lookup returns the Codec registered for the given gen TypeName.
+// Used by archtest.CodecComplete to verify codec completeness.
+func (r *DefaultRegistry) Lookup(genTypeName string) (Codec, bool) {
+	c, ok := r.byGenType[genTypeName]
+	return c, ok
+}
+
 type genTyper interface{ TypeName() string }
 
 // LiftFrom dispatches the AST statement to the registered Lift codec.
