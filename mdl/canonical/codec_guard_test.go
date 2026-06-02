@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package model_test
+package canonical_test
 
 import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/internal/archtest"
-	"github.com/mendixlabs/mxcli/mdl/model"
-	"github.com/mendixlabs/mxcli/mdl/model/entity"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
+	"github.com/mendixlabs/mxcli/mdl/canonical/entity"
 )
 
 // TestCodecComplete verifies that all registered gen TypeNames have complete
@@ -25,8 +25,8 @@ import (
 func TestCodecComplete(t *testing.T) {
 	archtest.Check(t, ".",
 		archtest.CodecComplete{
-			BuildRegistry: func() *model.DefaultRegistry {
-				r := model.NewDefaultRegistry()
+			BuildRegistry: func() *canonical.DefaultRegistry {
+				r := canonical.NewDefaultRegistry()
 				entity.RegisterCodec(r)
 				// Phase 2: association.RegisterCodec(r)
 				// Phase 3: microflow.RegisterCodec(r)

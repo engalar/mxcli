@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
-	"github.com/mendixlabs/mxcli/mdl/model"
-	"github.com/mendixlabs/mxcli/mdl/model/entity"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
+	"github.com/mendixlabs/mxcli/mdl/canonical/entity"
 	modelID "github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
@@ -76,13 +76,13 @@ func TestRoundTrip_Entity(t *testing.T) {
 				Attributes: []entity.AttributeModel{
 					{
 						Name:         "Title",
-						Type:         model.DataType{Kind: model.KindString, Length: 500},
+						Type:         canonical.DataType{Kind: canonical.KindString, Length: 500},
 						NotNull:      true,
 						NotNullError: "Title required",
 					},
 					{
 						Name:         "Priority",
-						Type:         model.DataType{Kind: model.KindInteger},
+						Type:         canonical.DataType{Kind: canonical.KindInteger},
 						HasDefault:   true,
 						DefaultValue: "1",
 					},
@@ -97,19 +97,19 @@ func TestRoundTrip_Entity(t *testing.T) {
 				Attributes: []entity.AttributeModel{
 					{
 						Name: "Value",
-						Type: model.DataType{Kind: model.KindDecimal},
+						Type: canonical.DataType{Kind: canonical.KindDecimal},
 					},
 				},
 			},
 		},
 	}
 
-	ctx := model.PersistContext{DomainModelID: dmID, Backend: b}
+	ctx := canonical.PersistContext{DomainModelID: dmID, Backend: b}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			originalMDL := tc.model.ToMDL()
-			require.NoError(t, tc.model.Persist(ctx))
+			originalMDL := tc.canonical.ToMDL()
+			require.NoError(t, tc.canonical.Persist(ctx))
 
 			// Read back through the same backend handle. Locate by name —
 			// the backend assigns a UUID on create so we cannot key by ID.
@@ -119,14 +119,14 @@ func TestRoundTrip_Entity(t *testing.T) {
 
 			var found *genDm.Entity
 			for _, item := range dmAfter.EntitiesItems() {
-				if e, ok := item.(*genDm.Entity); ok && e.Name() == tc.model.Name.Name {
+				if e, ok := item.(*genDm.Entity); ok && e.Name() == tc.canonical.Name.Name {
 					found = e
 					break
 				}
 			}
-			require.NotNil(t, found, "%s not found after Persist", tc.model.Name.Name)
+			require.NotNil(t, found, "%s not found after Persist", tc.canonical.Name.Name)
 
-			readBack, warns, err := entity.Hydrate(tc.model.Name.Module, found)
+			readBack, warns, err := entity.Hydrate(tc.canonical.Name.Module, found)
 			require.NoError(t, err)
 			assert.Empty(t, warns, "unexpected hydrate warnings: %+v", warns)
 

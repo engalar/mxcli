@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package model_test
+package canonical_test
 
 import (
 	"testing"

@@ -9,10 +9,10 @@ import (
 )
 
 // TestExecutorBoundary verifies that cmd_*.go files do not import
-// mdl/model/entity (or any future mdl/model/{domain} subpackage) directly.
+// mdl/canonical/entity (or any future mdl/canonical/{domain} subpackage) directly.
 // All canonical model operations must go through ctx.ModelCodecs dispatch.
 //
-// RED state: cmd_entities_gen.go and cmd_diff_mdl.go import mdl/model/entity
+// RED state: cmd_entities_gen.go and cmd_diff_mdl.go import mdl/canonical/entity
 // and call entity.HydrateWithModule() directly, bypassing the codec registry.
 //
 // GREEN when: describe and create paths route through ctx.ModelCodecs.HydrateFrom()
@@ -22,9 +22,9 @@ func TestExecutorBoundary(t *testing.T) {
 	archtest.Check(t, ".",
 		archtest.NoImport{
 			Forbidden: []string{
-				"github.com/mendixlabs/mxcli/mdl/model/entity",
-				// Phase 2: "github.com/mendixlabs/mxcli/mdl/model/association"
-				// Phase 3: "github.com/mendixlabs/mxcli/mdl/model/microflow"
+				"github.com/mendixlabs/mxcli/mdl/canonical/entity",
+				// Phase 2: "github.com/mendixlabs/mxcli/mdl/canonical/association"
+				// Phase 3: "github.com/mendixlabs/mxcli/mdl/canonical/microflow"
 			},
 			Allowlist: map[string]bool{
 				// executor.go is the sole file permitted to import domain subpackages.
@@ -32,7 +32,7 @@ func TestExecutorBoundary(t *testing.T) {
 				// access canonical models through ctx.ModelCodecs.
 				"executor.go": true,
 			},
-			Hint: `cmd_*.go files must not import mdl/model/{domain}/ subpackages directly.
+			Hint: `cmd_*.go files must not import mdl/canonical/{domain}/ subpackages directly.
 Fix for cmd_entities_gen.go (describe path):
   Replace:
     m, warns, err := entityModel.HydrateWithModule(modName, entity)

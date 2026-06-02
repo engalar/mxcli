@@ -5,7 +5,7 @@
 // BSON representation, and MDL text.
 package entity
 
-import "github.com/mendixlabs/mxcli/mdl/model"
+import "github.com/mendixlabs/mxcli/mdl/canonical"
 
 // QualifiedName is a module-qualified identifier ("Module.Entity").
 type QualifiedName struct {
@@ -21,7 +21,7 @@ func (q QualifiedName) String() string {
 	return q.Module + "." + q.Name
 }
 
-// EntityKind mirrors ast.EntityKind in the canonical model.
+// EntityKind mirrors ast.EntityKind in the canonical canonical.
 type EntityKind int
 
 const (
@@ -52,7 +52,7 @@ type Position struct {
 // AttributeModel is the canonical representation of an entity attribute.
 type AttributeModel struct {
 	Name                string
-	Type                model.DataType
+	Type                canonical.DataType
 	Documentation       string
 	NotNull             bool
 	NotNullError        string

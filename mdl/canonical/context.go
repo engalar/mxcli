@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package model
+package canonical
 
 import (
 	"github.com/mendixlabs/mxcli/mdl/backend"

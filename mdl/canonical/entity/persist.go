@@ -8,7 +8,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/mendixlabs/mxcli/mdl/model"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
@@ -30,7 +30,7 @@ func singleENUSText(msg string) *genTexts.Text {
 // The gen entity is built from scratch on every call — Persist does not
 // merge with whatever the backend currently holds. Callers that need
 // merge-semantics should Hydrate, mutate the EntityModel, then Persist.
-func (m *EntityModel) Persist(ctx model.PersistContext) error {
+func (m *EntityModel) Persist(ctx canonical.PersistContext) error {
 	if m == nil {
 		return fmt.Errorf("entity.Persist: nil model")
 	}
@@ -146,20 +146,20 @@ func buildGenAttribute(am AttributeModel) (*genDm.Attribute, error) {
 		cv := genDm.NewCalculatedValue()
 		cv.SetMicroflowQualifiedName(am.CalculatedMicroflow.String())
 		attr.SetValue(cv)
-	} else if am.HasDefault || am.Type.Kind == model.KindAutoNumber {
+	} else if am.HasDefault || am.Type.Kind == canonical.KindAutoNumber {
 		sv := genDm.NewStoredValue()
 		raw := stripStringLiteralQuotes(am.DefaultValue)
 		// AutoNumber attributes require a StoredValue with seed "1" when no
 		// explicit seed is provided — Mendix enforces CE7247 "Value cannot be
 		// empty" if the StoredValue is absent or has an empty DefaultValue.
-		if am.Type.Kind == model.KindAutoNumber && raw == "" {
+		if am.Type.Kind == canonical.KindAutoNumber && raw == "" {
 			raw = "1"
 		}
 		// Enum attributes: Mendix stores only the trailing value name in
 		// StoredValue.DefaultValue (e.g. "Draft", not "Module.Enum.Draft").
 		// The runtime constructs the full reference as EnumerationQN + "." +
 		// DefaultValue; storing the full path causes CE1613 (double prefix).
-		if am.Type.Kind == model.KindUnresolvedRef || am.Type.Kind == model.KindEnumRef {
+		if am.Type.Kind == canonical.KindUnresolvedRef || am.Type.Kind == canonical.KindEnumRef {
 			if i := strings.LastIndex(raw, "."); i >= 0 {
 				raw = raw[i+1:]
 			}
@@ -175,9 +175,9 @@ func buildGenAttribute(am AttributeModel) (*genDm.Attribute, error) {
 // canonical model reaches Persist, the executor is expected to have resolved
 // bare references against the catalog; if not, we fall back to enum (the
 // common case in domain-model statements).
-func buildGenAttributeType(dt model.DataType) (element.Element, error) {
+func buildGenAttributeType(dt canonical.DataType) (element.Element, error) {
 	switch dt.Kind {
-	case model.KindString:
+	case canonical.KindString:
 		st := genDm.NewStringAttributeType()
 		if dt.Length > 0 {
 			if dt.Length > math.MaxInt32 {
@@ -190,25 +190,25 @@ func buildGenAttributeType(dt model.DataType) (element.Element, error) {
 			st.SetLength(0)
 		}
 		return st, nil
-	case model.KindInteger:
+	case canonical.KindInteger:
 		return genDm.NewIntegerAttributeType(), nil
-	case model.KindLong:
+	case canonical.KindLong:
 		return genDm.NewLongAttributeType(), nil
-	case model.KindDecimal:
+	case canonical.KindDecimal:
 		return genDm.NewDecimalAttributeType(), nil
-	case model.KindBoolean:
+	case canonical.KindBoolean:
 		return genDm.NewBooleanAttributeType(), nil
-	case model.KindDateTime:
+	case canonical.KindDateTime:
 		return genDm.NewDateTimeAttributeType(), nil
-	case model.KindBinary:
+	case canonical.KindBinary:
 		return genDm.NewBinaryAttributeType(), nil
-	case model.KindAutoNumber:
+	case canonical.KindAutoNumber:
 		return genDm.NewAutoNumberAttributeType(), nil
-	case model.KindEnumRef, model.KindUnresolvedRef:
+	case canonical.KindEnumRef, canonical.KindUnresolvedRef:
 		ea := genDm.NewEnumerationAttributeType()
 		ea.SetEnumerationQualifiedName(dt.Ref)
 		return ea, nil
-	case model.KindEntityRef, model.KindListOf:
+	case canonical.KindEntityRef, canonical.KindListOf:
 		return nil, fmt.Errorf("entity/list-of types not allowed as entity attributes")
 	default:
 		return nil, fmt.Errorf("unknown DataTypeKind %d", int(dt.Kind))

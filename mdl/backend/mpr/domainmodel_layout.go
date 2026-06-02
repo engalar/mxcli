@@ -7,7 +7,7 @@ import (
 	"image"
 	"sort"
 
-	"github.com/mendixlabs/mxcli/mdl/model/layout"
+	"github.com/mendixlabs/mxcli/mdl/canonical/layout"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )

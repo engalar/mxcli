@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mendixlabs/mxcli/mdl/model"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
@@ -40,11 +40,11 @@ func extractEnUSText(msg element.Element) string {
 // moduleName supplies the owning module (gen Entity stores only the bare name).
 // Any unrecognised child types are surfaced as Warning entries — they do not
 // abort the conversion.
-func Hydrate(moduleName string, e *genDm.Entity) (*EntityModel, []model.Warning, error) {
+func Hydrate(moduleName string, e *genDm.Entity) (*EntityModel, []canonical.Warning, error) {
 	if e == nil {
 		return nil, nil, fmt.Errorf("entity.Hydrate: nil entity")
 	}
-	var warns []model.Warning
+	var warns []canonical.Warning
 	m := &EntityModel{
 		Name:          QualifiedName{Module: moduleName, Name: e.Name()},
 		Documentation: e.Documentation(),
@@ -70,7 +70,7 @@ func Hydrate(moduleName string, e *genDm.Entity) (*EntityModel, []model.Warning,
 	for _, item := range e.ValidationRulesItems() {
 		vr, ok := item.(*genDm.ValidationRule)
 		if !ok {
-			warns = append(warns, model.Warning{Field: "ValidationRules", Message: fmt.Sprintf("unexpected type %T", item)})
+			warns = append(warns, canonical.Warning{Field: "ValidationRules", Message: fmt.Sprintf("unexpected type %T", item)})
 			continue
 		}
 		attrName := lastSegment(vr.AttributeQualifiedName())
@@ -96,7 +96,7 @@ func Hydrate(moduleName string, e *genDm.Entity) (*EntityModel, []model.Warning,
 	for _, item := range e.AttributesItems() {
 		attr, ok := item.(*genDm.Attribute)
 		if !ok {
-			warns = append(warns, model.Warning{Field: "Attributes", Message: fmt.Sprintf("unexpected type %T", item)})
+			warns = append(warns, canonical.Warning{Field: "Attributes", Message: fmt.Sprintf("unexpected type %T", item)})
 			continue
 		}
 		am := hydrateAttribute(attr, notNullAttrs, uniqueAttrs)
@@ -112,7 +112,7 @@ func Hydrate(moduleName string, e *genDm.Entity) (*EntityModel, []model.Warning,
 	for _, item := range e.IndexesItems() {
 		idx, ok := item.(*genDm.Index)
 		if !ok {
-			warns = append(warns, model.Warning{Field: "Indexes", Message: fmt.Sprintf("unexpected type %T", item)})
+			warns = append(warns, canonical.Warning{Field: "Indexes", Message: fmt.Sprintf("unexpected type %T", item)})
 			continue
 		}
 		m.Indexes = append(m.Indexes, hydrateIndex(idx, e))
@@ -159,28 +159,28 @@ func hydrateAttribute(attr *genDm.Attribute, notNull, unique map[string]bool) At
 	return am
 }
 
-func hydrateDataType(t any) model.DataType {
+func hydrateDataType(t any) canonical.DataType {
 	switch v := t.(type) {
 	case *genDm.StringAttributeType:
-		return model.DataType{Kind: model.KindString, Length: int(v.Length())}
+		return canonical.DataType{Kind: canonical.KindString, Length: int(v.Length())}
 	case *genDm.IntegerAttributeType:
-		return model.DataType{Kind: model.KindInteger}
+		return canonical.DataType{Kind: canonical.KindInteger}
 	case *genDm.LongAttributeType:
-		return model.DataType{Kind: model.KindLong}
+		return canonical.DataType{Kind: canonical.KindLong}
 	case *genDm.DecimalAttributeType:
-		return model.DataType{Kind: model.KindDecimal}
+		return canonical.DataType{Kind: canonical.KindDecimal}
 	case *genDm.BooleanAttributeType:
-		return model.DataType{Kind: model.KindBoolean}
+		return canonical.DataType{Kind: canonical.KindBoolean}
 	case *genDm.DateTimeAttributeType:
-		return model.DataType{Kind: model.KindDateTime}
+		return canonical.DataType{Kind: canonical.KindDateTime}
 	case *genDm.BinaryAttributeType:
-		return model.DataType{Kind: model.KindBinary}
+		return canonical.DataType{Kind: canonical.KindBinary}
 	case *genDm.AutoNumberAttributeType:
-		return model.DataType{Kind: model.KindAutoNumber}
+		return canonical.DataType{Kind: canonical.KindAutoNumber}
 	case *genDm.EnumerationAttributeType:
-		return model.DataType{Kind: model.KindEnumRef, Ref: v.EnumerationQualifiedName()}
+		return canonical.DataType{Kind: canonical.KindEnumRef, Ref: v.EnumerationQualifiedName()}
 	default:
-		return model.DataType{Kind: model.KindUnknown}
+		return canonical.DataType{Kind: canonical.KindUnknown}
 	}
 }
 

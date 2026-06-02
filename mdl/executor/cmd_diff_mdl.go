@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	entityModel "github.com/mendixlabs/mxcli/mdl/model/entity"
+	entityModel "github.com/mendixlabs/mxcli/mdl/canonical/entity"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )

@@ -3,8 +3,8 @@
 package entity_test
 
 import (
-	"github.com/mendixlabs/mxcli/mdl/model"
-	"github.com/mendixlabs/mxcli/mdl/model/entity"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
+	"github.com/mendixlabs/mxcli/mdl/canonical/entity"
 )
 
 // Compile-time interface compliance assertions.
@@ -17,5 +17,5 @@ import (
 // When a new domain is added (e.g. mdl/model/association/), create
 // mdl/model/association/comply_test.go with the equivalent two lines.
 // No other file needs modification.
-var _ model.Document = (*entity.EntityModel)(nil)
-var _ model.Persistable = (*entity.EntityModel)(nil)
+var _ canonical.Document = (*entity.EntityModel)(nil)
+var _ canonical.Persistable = (*entity.EntityModel)(nil)

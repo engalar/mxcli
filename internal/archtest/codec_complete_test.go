@@ -6,12 +6,12 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/internal/archtest"
-	"github.com/mendixlabs/mxcli/mdl/model"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
 )
 
-func buildTestRegistry(liftFn func(any) (model.Persistable, error), hydrateFn func(any) (model.Document, []model.Warning, error)) *model.DefaultRegistry {
-	r := model.NewDefaultRegistry()
-	r.RegisterGenType("TestType$Foo", model.Codec{
+func buildTestRegistry(liftFn func(any) (canonical.Persistable, error), hydrateFn func(any) (canonical.Document, []canonical.Warning, error)) *canonical.DefaultRegistry {
+	r := canonical.NewDefaultRegistry()
+	r.RegisterGenType("TestType$Foo", canonical.Codec{
 		LiftFn:    liftFn,
 		HydrateFn: hydrateFn,
 	})
@@ -20,11 +20,11 @@ func buildTestRegistry(liftFn func(any) (model.Persistable, error), hydrateFn fu
 
 func TestCodecComplete_allPresent_passes(t *testing.T) {
 	r := buildTestRegistry(
-		func(any) (model.Persistable, error) { return nil, nil },
-		func(any) (model.Document, []model.Warning, error) { return nil, nil, nil },
+		func(any) (canonical.Persistable, error) { return nil, nil },
+		func(any) (canonical.Document, []canonical.Warning, error) { return nil, nil, nil },
 	)
 	rule := archtest.CodecComplete{
-		BuildRegistry: func() *model.DefaultRegistry { return r },
+		BuildRegistry: func() *canonical.DefaultRegistry { return r },
 		Required:      []string{"TestType$Foo"},
 	}
 	if v := rule.Check(archtest.Package{}); len(v) != 0 {
@@ -35,10 +35,10 @@ func TestCodecComplete_allPresent_passes(t *testing.T) {
 func TestCodecComplete_nilLiftFn_fails(t *testing.T) {
 	r := buildTestRegistry(
 		nil,
-		func(any) (model.Document, []model.Warning, error) { return nil, nil, nil },
+		func(any) (canonical.Document, []canonical.Warning, error) { return nil, nil, nil },
 	)
 	rule := archtest.CodecComplete{
-		BuildRegistry: func() *model.DefaultRegistry { return r },
+		BuildRegistry: func() *canonical.DefaultRegistry { return r },
 		Required:      []string{"TestType$Foo"},
 		Hint:          "add LiftFn",
 	}
@@ -53,11 +53,11 @@ func TestCodecComplete_nilLiftFn_fails(t *testing.T) {
 
 func TestCodecComplete_nilHydrateFn_fails(t *testing.T) {
 	r := buildTestRegistry(
-		func(any) (model.Persistable, error) { return nil, nil },
+		func(any) (canonical.Persistable, error) { return nil, nil },
 		nil,
 	)
 	rule := archtest.CodecComplete{
-		BuildRegistry: func() *model.DefaultRegistry { return r },
+		BuildRegistry: func() *canonical.DefaultRegistry { return r },
 		Required:      []string{"TestType$Foo"},
 	}
 	if v := rule.Check(archtest.Package{}); len(v) != 1 {
@@ -66,9 +66,9 @@ func TestCodecComplete_nilHydrateFn_fails(t *testing.T) {
 }
 
 func TestCodecComplete_missingRequiredType_fails(t *testing.T) {
-	r := model.NewDefaultRegistry() // empty
+	r := canonical.NewDefaultRegistry() // empty
 	rule := archtest.CodecComplete{
-		BuildRegistry: func() *model.DefaultRegistry { return r },
+		BuildRegistry: func() *canonical.DefaultRegistry { return r },
 		Required:      []string{"Missing$Type"},
 		Hint:          "register missing type",
 	}

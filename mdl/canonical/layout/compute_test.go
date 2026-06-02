@@ -4,7 +4,7 @@ import (
 	"image"
 	"testing"
 
-	"github.com/mendixlabs/mxcli/mdl/model/layout"
+	"github.com/mendixlabs/mxcli/mdl/canonical/layout"
 )
 
 func TestCompute_SingleNode(t *testing.T) {

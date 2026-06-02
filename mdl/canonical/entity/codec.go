@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	"github.com/mendixlabs/mxcli/mdl/model"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
@@ -27,9 +27,9 @@ import (
 // Entity does not carry it). Callers that need the qualified name
 // should wrap the returned Document and overlay the module after
 // dispatch, or call entity.Hydrate(moduleName, e) directly.
-func RegisterCodec(r *model.DefaultRegistry) {
-	codec := model.Codec{
-		LiftFn: func(stmt any) (model.Persistable, error) {
+func RegisterCodec(r *canonical.DefaultRegistry) {
+	codec := canonical.Codec{
+		LiftFn: func(stmt any) (canonical.Persistable, error) {
 			s, ok := stmt.(*ast.CreateEntityStmt)
 			if !ok {
 				return nil, fmt.Errorf("entity codec: expected *ast.CreateEntityStmt, got %T", stmt)
@@ -41,7 +41,7 @@ func RegisterCodec(r *model.DefaultRegistry) {
 		// (cmd_entities_gen.go, cmd_diff_mdl.go) invoke entity.Hydrate()
 		// directly. This registration enables future unified dispatch
 		// without API changes.
-		HydrateFn: func(el any) (model.Document, []model.Warning, error) {
+		HydrateFn: func(el any) (canonical.Document, []canonical.Warning, error) {
 			e, ok := el.(*genDm.Entity)
 			if !ok {
 				return nil, nil, fmt.Errorf("entity codec: expected *genDm.Entity, got %T", el)

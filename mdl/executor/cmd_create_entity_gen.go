@@ -14,7 +14,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	canonicalmodel "github.com/mendixlabs/mxcli/mdl/model"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -217,7 +217,7 @@ func persistEntityCanonical(ctx *ExecContext, s *ast.CreateEntityStmt, dm *genDm
 		}
 	}
 
-	pCtx := canonicalmodel.PersistContext{
+	pCtx := canonical.PersistContext{
 		DomainModelID:    model.ID(dm.ID()),
 		ExistingEntityID: existingID,
 		Backend:          ctx.Backend,

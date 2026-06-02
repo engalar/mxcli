@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	"github.com/mendixlabs/mxcli/mdl/model"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
@@ -49,7 +49,7 @@ func TestLift_PersistentEntity(t *testing.T) {
 	assert.Equal(t, 200, m.Position.Y)
 	require.Len(t, m.Attributes, 2)
 	assert.Equal(t, "Name", m.Attributes[0].Name)
-	assert.Equal(t, model.KindString, m.Attributes[0].Type.Kind)
+	assert.Equal(t, canonical.KindString, m.Attributes[0].Type.Kind)
 	assert.Equal(t, 100, m.Attributes[0].Type.Length)
 	assert.True(t, m.Attributes[0].NotNull)
 	assert.Equal(t, "Active", m.Attributes[1].Name)
@@ -97,7 +97,7 @@ func TestLift_EnumAttribute(t *testing.T) {
 	m, err := Lift(stmt)
 	require.NoError(t, err)
 	require.Len(t, m.Attributes, 1)
-	assert.Equal(t, model.KindUnresolvedRef, m.Attributes[0].Type.Kind)
+	assert.Equal(t, canonical.KindUnresolvedRef, m.Attributes[0].Type.Kind)
 	assert.Equal(t, "App.OrderStatus", m.Attributes[0].Type.Ref)
 }
 
@@ -128,12 +128,12 @@ func TestToMDL_WithAttributes(t *testing.T) {
 		Attributes: []AttributeModel{
 			{
 				Name:    "Name",
-				Type:    model.DataType{Kind: model.KindString, Length: 100},
+				Type:    canonical.DataType{Kind: canonical.KindString, Length: 100},
 				NotNull: true,
 			},
 			{
 				Name:         "Active",
-				Type:         model.DataType{Kind: model.KindBoolean},
+				Type:         canonical.DataType{Kind: canonical.KindBoolean},
 				HasDefault:   true,
 				DefaultValue: "true",
 			},
@@ -250,7 +250,7 @@ func TestHydrate_BasicEntity(t *testing.T) {
 	assert.Equal(t, 200, m.Position.Y)
 	require.Len(t, m.Attributes, 1)
 	assert.Equal(t, "Name", m.Attributes[0].Name)
-	assert.Equal(t, model.KindString, m.Attributes[0].Type.Kind)
+	assert.Equal(t, canonical.KindString, m.Attributes[0].Type.Kind)
 	assert.Equal(t, 100, m.Attributes[0].Type.Length)
 }
 
@@ -290,7 +290,7 @@ func TestHydrate_EnumAttribute(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, warns)
 	require.Len(t, m.Attributes, 1)
-	assert.Equal(t, model.KindEnumRef, m.Attributes[0].Type.Kind)
+	assert.Equal(t, canonical.KindEnumRef, m.Attributes[0].Type.Kind)
 	assert.Equal(t, "App.OrderStatus", m.Attributes[0].Type.Ref)
 }
 

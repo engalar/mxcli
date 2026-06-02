@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mendixlabs/mxcli/mdl/model"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
 )
 
 // ToMDL renders the canonical entity as deterministic MDL text. Output is a
@@ -90,33 +90,33 @@ func kindToMDL(k EntityKind) string {
 	}
 }
 
-func dataTypeToMDL(dt model.DataType) string {
+func dataTypeToMDL(dt canonical.DataType) string {
 	switch dt.Kind {
-	case model.KindString:
+	case canonical.KindString:
 		if dt.Length > 0 {
 			return fmt.Sprintf("String(%d)", dt.Length)
 		}
 		return "String"
-	case model.KindInteger:
+	case canonical.KindInteger:
 		return "Integer"
-	case model.KindLong:
+	case canonical.KindLong:
 		return "Long"
-	case model.KindDecimal:
+	case canonical.KindDecimal:
 		if dt.Precision > 0 {
 			return fmt.Sprintf("Decimal(%d, %d)", dt.Precision, dt.Scale)
 		}
 		return "Decimal"
-	case model.KindBoolean:
+	case canonical.KindBoolean:
 		return "Boolean"
-	case model.KindDateTime:
+	case canonical.KindDateTime:
 		return "DateTime"
-	case model.KindBinary:
+	case canonical.KindBinary:
 		return "Binary"
-	case model.KindAutoNumber:
+	case canonical.KindAutoNumber:
 		return "AutoNumber"
-	case model.KindEnumRef, model.KindEntityRef, model.KindUnresolvedRef:
+	case canonical.KindEnumRef, canonical.KindEntityRef, canonical.KindUnresolvedRef:
 		return dt.Ref
-	case model.KindListOf:
+	case canonical.KindListOf:
 		return "List of " + dt.Ref
 	default:
 		return "Unknown"

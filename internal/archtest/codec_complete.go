@@ -2,14 +2,14 @@
 
 package archtest
 
-import "github.com/mendixlabs/mxcli/mdl/model"
+import "github.com/mendixlabs/mxcli/mdl/canonical"
 
 // CodecComplete verifies that every Required gen TypeName is registered in
 // the registry returned by BuildRegistry, and that both LiftFn and HydrateFn
 // are non-nil. The Package argument is ignored — this rule inspects runtime
 // registry state, not source files.
 type CodecComplete struct {
-	BuildRegistry func() *model.DefaultRegistry
+	BuildRegistry func() *canonical.DefaultRegistry
 	Required      []string
 	Hint          string
 }

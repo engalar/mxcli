@@ -18,7 +18,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	entityModel "github.com/mendixlabs/mxcli/mdl/model/entity"
+	entityModel "github.com/mendixlabs/mxcli/mdl/canonical/entity"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"

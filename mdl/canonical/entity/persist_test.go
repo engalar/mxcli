@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
-	"github.com/mendixlabs/mxcli/mdl/model"
-	"github.com/mendixlabs/mxcli/mdl/model/entity"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
+	"github.com/mendixlabs/mxcli/mdl/canonical/entity"
 	modelID "github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
@@ -59,7 +59,7 @@ func TestPersist_CreateEntity(t *testing.T) {
 	mod, err := b.GetModuleByName("MyFirstModule")
 	require.NoError(t, err)
 	require.NotNil(t, mod)
-	// model.Module.DomainModelID is not populated by the modelsdk read path;
+	// canonical.Module.DomainModelID is not populated by the modelsdk read path;
 	// fetch the DM by module ID and use its element ID instead.
 	dmGen, err := b.GetDomainModelGen(mod.ID)
 	require.NoError(t, err)
@@ -73,17 +73,17 @@ func TestPersist_CreateEntity(t *testing.T) {
 		Attributes: []entity.AttributeModel{
 			{
 				Name:    "Name",
-				Type:    model.DataType{Kind: model.KindString, Length: 100},
+				Type:    canonical.DataType{Kind: canonical.KindString, Length: 100},
 				NotNull: true,
 			},
 			{
 				Name: "Active",
-				Type: model.DataType{Kind: model.KindBoolean},
+				Type: canonical.DataType{Kind: canonical.KindBoolean},
 			},
 		},
 	}
 
-	require.NoError(t, m.Persist(model.PersistContext{
+	require.NoError(t, m.Persist(canonical.PersistContext{
 		DomainModelID: dmID,
 		Backend:       b,
 	}))

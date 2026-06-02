@@ -5,7 +5,7 @@
 // from the generated BSON-serialisable gen types: Lift converts an AST
 // statement into a model; Hydrate builds a model from a gen-typed element;
 // ToMDL serialises a model back into MDL text.
-package model
+package canonical
 
 // Document is any in-memory canonical representation of a Mendix document
 // (entity, microflow, page, ...). Implementations must be able to serialise

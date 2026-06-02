@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	"github.com/mendixlabs/mxcli/mdl/model"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
 )
 
 // Lift converts an ast.CreateEntityStmt into the canonical EntityModel.
@@ -83,44 +83,44 @@ func liftIndex(idx ast.Index) IndexModel {
 // when only a bare qualified name is available — the parser cannot tell them
 // apart without project context. Callers that already know the kind (e.g.,
 // ast.TypeEntity for microflow parameters) get the strongly-typed kind.
-func liftDataType(dt ast.DataType) model.DataType {
+func liftDataType(dt ast.DataType) canonical.DataType {
 	switch dt.Kind {
 	case ast.TypeString:
-		return model.DataType{Kind: model.KindString, Length: dt.Length}
+		return canonical.DataType{Kind: canonical.KindString, Length: dt.Length}
 	case ast.TypeInteger:
-		return model.DataType{Kind: model.KindInteger}
+		return canonical.DataType{Kind: canonical.KindInteger}
 	case ast.TypeLong:
-		return model.DataType{Kind: model.KindLong}
+		return canonical.DataType{Kind: canonical.KindLong}
 	case ast.TypeDecimal:
-		return model.DataType{Kind: model.KindDecimal, Precision: dt.Precision, Scale: dt.Scale}
+		return canonical.DataType{Kind: canonical.KindDecimal, Precision: dt.Precision, Scale: dt.Scale}
 	case ast.TypeBoolean:
-		return model.DataType{Kind: model.KindBoolean}
+		return canonical.DataType{Kind: canonical.KindBoolean}
 	case ast.TypeDateTime, ast.TypeDate:
-		return model.DataType{Kind: model.KindDateTime}
+		return canonical.DataType{Kind: canonical.KindDateTime}
 	case ast.TypeBinary:
-		return model.DataType{Kind: model.KindBinary}
+		return canonical.DataType{Kind: canonical.KindBinary}
 	case ast.TypeAutoNumber:
-		return model.DataType{Kind: model.KindAutoNumber}
+		return canonical.DataType{Kind: canonical.KindAutoNumber}
 	case ast.TypeEnumeration:
 		ref := ""
 		if dt.EnumRef != nil {
 			ref = dt.EnumRef.String()
 		}
-		return model.DataType{Kind: model.KindUnresolvedRef, Ref: ref}
+		return canonical.DataType{Kind: canonical.KindUnresolvedRef, Ref: ref}
 	case ast.TypeEntity:
 		ref := ""
 		if dt.EntityRef != nil {
 			ref = dt.EntityRef.String()
 		}
-		return model.DataType{Kind: model.KindEntityRef, Ref: ref}
+		return canonical.DataType{Kind: canonical.KindEntityRef, Ref: ref}
 	case ast.TypeListOf:
 		ref := ""
 		if dt.EntityRef != nil {
 			ref = dt.EntityRef.String()
 		}
-		return model.DataType{Kind: model.KindListOf, Ref: ref}
+		return canonical.DataType{Kind: canonical.KindListOf, Ref: ref}
 	default:
-		return model.DataType{Kind: model.KindUnknown}
+		return canonical.DataType{Kind: canonical.KindUnknown}
 	}
 }
 
