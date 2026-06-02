@@ -6,9 +6,11 @@
 
 **Architecture:** Four sequential tasks: (1) HydrateCtx + PersistContext.Backend fix → Guards 1 & 4 green; (2) EventHandlerModel in EntityModel; (3) Persist event handlers + eliminate dual-path; (4) OQL + system members into ToMDLStatement. After task 4, `describeEntityGen` emits nothing after `m.ToMDLStatement(true)`.
 
+**Prerequisite:** `2026-06-02-rename-model-to-canonical.md` must be complete before starting.
+
 **Tech Stack:** Go 1.26, `modelsdk/gen/domainmodels`, `mdl/ast`, `mdl/backend` (behind interface in entity layer).
 
-**Guards:** `mdl/model/import_guard_test.go` (Guard 1) and `mdl/executor/boundary_guard_test.go` (Guard 4) must be GREEN after Task 1. All other guards must stay GREEN throughout.
+**Guards:** `mdl/canonical/import_guard_test.go` (Guard 1) and `mdl/executor/boundary_guard_test.go` (Guard 4) must be GREEN after Task 1. All other guards must stay GREEN throughout.
 
 ---
 
@@ -18,15 +20,15 @@
 
 | File | Change |
 |------|--------|
-| `mdl/model/registry.go` | Add `HydrateCtx`, update `Codec.HydrateFn` + `HydrateFrom` |
-| `mdl/model/context.go` | `Backend any` (remove `mdl/backend` import) |
-| `mdl/model/entity/persist.go` | Type-assert `ctx.Backend` to local `entityBackend` interface |
-| `mdl/model/entity/codec.go` | `HydrateFn` uses `hctx.ModuleName` |
-| `mdl/model/entity/model.go` | Add `EventHandlerModel`, `EventHandlers []EventHandlerModel`, `OQL string` |
-| `mdl/model/entity/lift.go` | Extract `s.EventHandlers` into `[]EventHandlerModel` |
-| `mdl/model/entity/hydrate.go` | Extract event handlers + OQL from gen entity |
-| `mdl/model/entity/serialize.go` | Emit system members, event handlers, OQL in `ToMDLStatement` |
-| `mdl/model/entity/entity_test.go` | Tests for event handler Lift/Hydrate/ToMDL |
+| `mdl/canonical/registry.go` | Add `HydrateCtx`, update `Codec.HydrateFn` + `HydrateFrom` |
+| `mdl/canonical/context.go` | `Backend any` (remove `mdl/backend` import) |
+| `mdl/canonical/entity/persist.go` | Type-assert `ctx.Backend` to local `entityBackend` interface |
+| `mdl/canonical/entity/codec.go` | `HydrateFn` uses `hctx.ModuleName` |
+| `mdl/canonical/entity/model.go` | Add `EventHandlerModel`, `EventHandlers []EventHandlerModel`, `OQL string` |
+| `mdl/canonical/entity/lift.go` | Extract `s.EventHandlers` into `[]EventHandlerModel` |
+| `mdl/canonical/entity/hydrate.go` | Extract event handlers + OQL from gen entity |
+| `mdl/canonical/entity/serialize.go` | Emit system members, event handlers, OQL in `ToMDLStatement` |
+| `mdl/canonical/entity/entity_test.go` | Tests for event handler Lift/Hydrate/ToMDL |
 | `internal/archtest/codec_complete_test.go` | Update `buildTestRegistry` HydrateFn signature |
 | `mdl/executor/executor.go` | Add `hydrateEntityModel` helper (imports entity, allowlisted) |
 | `mdl/executor/cmd_entities_gen.go` | Remove entity import; use helper; remove trailing clauses |
@@ -40,16 +42,16 @@
 This task makes Guard 1 and Guard 4 GREEN.
 
 **Files:**
-- Modify: `mdl/model/registry.go`
-- Modify: `mdl/model/context.go`
-- Modify: `mdl/model/entity/persist.go`
-- Modify: `mdl/model/entity/codec.go`
+- Modify: `mdl/canonical/registry.go`
+- Modify: `mdl/canonical/context.go`
+- Modify: `mdl/canonical/entity/persist.go`
+- Modify: `mdl/canonical/entity/codec.go`
 - Modify: `internal/archtest/codec_complete_test.go`
 - Modify: `mdl/executor/executor.go`
 - Modify: `mdl/executor/cmd_entities_gen.go`
 - Modify: `mdl/executor/cmd_diff_mdl.go`
 
-- [ ] **Step 1: Add `HydrateCtx` to `mdl/model/registry.go` and update `Codec` + `HydrateFrom`**
+- [ ] **Step 1: Add `HydrateCtx` to `mdl/canonical/registry.go` and update `Codec` + `HydrateFrom`**
 
 In `registry.go`, add after the `Codec` struct definition and update `HydrateFn` + `HydrateFrom`:
 
@@ -86,14 +88,14 @@ func (r *DefaultRegistry) HydrateFrom(el any, ctx HydrateCtx) (Document, []Warni
 }
 ```
 
-- [ ] **Step 2: Fix `mdl/model/context.go` — remove backend import**
+- [ ] **Step 2: Fix `mdl/canonical/context.go` — remove backend import**
 
 Replace the entire file:
 
 ```go
 // SPDX-License-Identifier: Apache-2.0
 
-package model
+package canonical
 
 import modelID "github.com/mendixlabs/mxcli/model"
 
@@ -108,12 +110,12 @@ type PersistContext struct {
 }
 ```
 
-- [ ] **Step 3: Fix `mdl/model/entity/persist.go` — type-assert Backend**
+- [ ] **Step 3: Fix `mdl/canonical/entity/persist.go` — type-assert Backend**
 
 Replace the `Persist` method (lines 33-52) with:
 
 ```go
-func (m *EntityModel) Persist(ctx model.PersistContext) error {
+func (m *EntityModel) Persist(ctx canonical.PersistContext) error {
 	if m == nil {
 		return fmt.Errorf("entity.Persist: nil model")
 	}
@@ -145,12 +147,12 @@ func (m *EntityModel) Persist(ctx model.PersistContext) error {
 
 Add to the imports block: `mxID "github.com/mendixlabs/mxcli/model"`.
 
-- [ ] **Step 4: Fix `mdl/model/entity/codec.go` — use `HydrateCtx.ModuleName`**
+- [ ] **Step 4: Fix `mdl/canonical/entity/codec.go` — use `HydrateCtx.ModuleName`**
 
 Replace `HydrateFn` in `RegisterCodec`:
 
 ```go
-HydrateFn: func(el any, hctx model.HydrateCtx) (model.Document, []model.Warning, error) {
+HydrateFn: func(el any, hctx canonical.HydrateCtx) (canonical.Document, []canonical.Warning, error) {
     e, ok := el.(*genDm.Entity)
     if !ok {
         return nil, nil, fmt.Errorf("entity codec: expected *genDm.Entity, got %T", el)
@@ -165,11 +167,11 @@ Replace `buildTestRegistry`:
 
 ```go
 func buildTestRegistry(
-	liftFn func(any) (model.Persistable, error),
-	hydrateFn func(any, model.HydrateCtx) (model.Document, []model.Warning, error),
-) *model.DefaultRegistry {
-	r := model.NewDefaultRegistry()
-	r.RegisterGenType("TestType$Foo", model.Codec{
+	liftFn func(any) (canonical.Persistable, error),
+	hydrateFn func(any, canonical.HydrateCtx) (canonical.Document, []canonical.Warning, error),
+) *canonical.DefaultRegistry {
+	r := canonical.NewDefaultRegistry()
+	r.RegisterGenType("TestType$Foo", canonical.Codec{
 		LiftFn:    liftFn,
 		HydrateFn: hydrateFn,
 	})
@@ -182,33 +184,33 @@ Update each `buildTestRegistry` call to use the new signature:
 ```go
 // TestCodecComplete_allPresent_passes:
 r := buildTestRegistry(
-    func(any) (model.Persistable, error) { return nil, nil },
-    func(any, model.HydrateCtx) (model.Document, []model.Warning, error) { return nil, nil, nil },
+    func(any) (canonical.Persistable, error) { return nil, nil },
+    func(any, canonical.HydrateCtx) (canonical.Document, []canonical.Warning, error) { return nil, nil, nil },
 )
 
 // TestCodecComplete_nilLiftFn_fails:
 r := buildTestRegistry(
     nil,
-    func(any, model.HydrateCtx) (model.Document, []model.Warning, error) { return nil, nil, nil },
+    func(any, canonical.HydrateCtx) (canonical.Document, []canonical.Warning, error) { return nil, nil, nil },
 )
 
 // TestCodecComplete_nilHydrateFn_fails:
 r := buildTestRegistry(
-    func(any) (model.Persistable, error) { return nil, nil },
+    func(any) (canonical.Persistable, error) { return nil, nil },
     nil,
 )
 ```
 
 - [ ] **Step 6: Add `hydrateEntityModel` helper to `mdl/executor/executor.go`**
 
-`executor.go` already imports `entitymodel "github.com/mendixlabs/mxcli/mdl/model/entity"`. Add this function after the existing `RegisterCodec` call site:
+`executor.go` already imports `entitymodel "github.com/mendixlabs/mxcli/mdl/canonical/entity"`. Add this function after the existing `RegisterCodec` call site:
 
 ```go
 // hydrateEntityModel hydrates a gen-typed entity through the codec registry
 // and type-asserts the result to *entity.EntityModel. executor.go is the
-// only executor file allowed to import mdl/model/entity directly (see Guard 4).
-func hydrateEntityModel(ctx *ExecContext, moduleName string, genEnt any) (*entitymodel.EntityModel, []canonicalmodel.Warning, error) {
-	doc, warns, err := ctx.ModelCodecs.HydrateFrom(genEnt, canonicalmodel.HydrateCtx{ModuleName: moduleName})
+// only executor file allowed to import mdl/canonical/entity directly (see Guard 4).
+func hydrateEntityModel(ctx *ExecContext, moduleName string, genEnt any) (*entitymodel.EntityModel, []canonical.Warning, error) {
+	doc, warns, err := ctx.ModelCodecs.HydrateFrom(genEnt, canonical.HydrateCtx{ModuleName: moduleName})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -220,13 +222,13 @@ func hydrateEntityModel(ctx *ExecContext, moduleName string, genEnt any) (*entit
 }
 ```
 
-Add import `canonicalmodel "github.com/mendixlabs/mxcli/mdl/model"` if not already present.
+Add import `"github.com/mendixlabs/mxcli/mdl/model"` if not already present.
 
 - [ ] **Step 7: Fix `mdl/executor/cmd_entities_gen.go` — remove entity import, use helper**
 
 Remove the import line:
 ```go
-entityModel "github.com/mendixlabs/mxcli/mdl/model/entity"
+entityModel "github.com/mendixlabs/mxcli/mdl/canonical/entity"
 ```
 
 In `describeEntityGen`, replace:
@@ -242,12 +244,12 @@ m, warns, err := hydrateEntityModel(ctx, modName, entity)
 
 Remove:
 ```go
-entityModel "github.com/mendixlabs/mxcli/mdl/model/entity"
+entityModel "github.com/mendixlabs/mxcli/mdl/canonical/entity"
 ```
 
 Add if not present:
 ```go
-canonicalmodel "github.com/mendixlabs/mxcli/mdl/model"
+"github.com/mendixlabs/mxcli/mdl/model"
 ```
 
 Replace `entityStmtToMDL` body (currently calls `entityModel.Lift`):
@@ -264,7 +266,7 @@ func entityStmtToMDL(ctx *ExecContext, s *ast.CreateEntityStmt) string {
 Replace `entityToMDLGen` body (currently calls `entityModel.Hydrate`):
 ```go
 func entityToMDLGen(ctx *ExecContext, moduleName string, entity *genDm.Entity) string {
-	doc, _, err := ctx.ModelCodecs.HydrateFrom(entity, canonicalmodel.HydrateCtx{ModuleName: moduleName})
+	doc, _, err := ctx.ModelCodecs.HydrateFrom(entity, canonical.HydrateCtx{ModuleName: moduleName})
 	if err != nil {
 		return fmt.Sprintf("/* entity hydrate error: %v */", err)
 	}
@@ -277,20 +279,20 @@ func entityToMDLGen(ctx *ExecContext, moduleName string, entity *genDm.Entity) s
 ```bash
 cd /mnt/data_sdd/gh/mxcli-wt-02
 go build ./...
-go test ./mdl/model/ -run TestImportDirection -v
+go test ./mdl/canonical/ -run TestImportDirection -v
 go test ./mdl/executor/ -run TestExecutorBoundary -v
 ```
 
 Expected: both tests PASS. Also verify Guard 3 still PASS:
 ```bash
-go test ./mdl/model/ -run TestCodecComplete -v
+go test ./mdl/canonical/ -run TestCodecComplete -v
 ```
 
 - [ ] **Step 10: Commit**
 
 ```bash
-git add mdl/model/registry.go mdl/model/context.go \
-        mdl/model/entity/persist.go mdl/model/entity/codec.go \
+git add mdl/canonical/registry.go mdl/canonical/context.go \
+        mdl/canonical/entity/persist.go mdl/canonical/entity/codec.go \
         internal/archtest/codec_complete_test.go \
         mdl/executor/executor.go mdl/executor/cmd_entities_gen.go \
         mdl/executor/cmd_diff_mdl.go
@@ -302,12 +304,12 @@ git commit -m "feat(model): HydrateCtx + PersistContext.Backend fix — Guards 1
 ## Task 2: EventHandlerModel in EntityModel (TDD)
 
 **Files:**
-- Modify: `mdl/model/entity/model.go`
-- Modify: `mdl/model/entity/entity_test.go`
-- Modify: `mdl/model/entity/lift.go`
-- Modify: `mdl/model/entity/hydrate.go`
+- Modify: `mdl/canonical/entity/model.go`
+- Modify: `mdl/canonical/entity/entity_test.go`
+- Modify: `mdl/canonical/entity/lift.go`
+- Modify: `mdl/canonical/entity/hydrate.go`
 
-- [ ] **Step 1: Add `EventHandlerModel` to `mdl/model/entity/model.go`**
+- [ ] **Step 1: Add `EventHandlerModel` to `mdl/canonical/entity/model.go`**
 
 In model.go, add after `IndexColumn`:
 
@@ -389,7 +391,7 @@ func TestToMDL_EventHandler_AfterCreate_NoPassObject(t *testing.T) {
 - [ ] **Step 3: Run tests — expect failures**
 
 ```bash
-go test ./mdl/model/entity/... -run "TestLift_WithEvent|TestToMDL_WithEvent|TestToMDL_Event" -v 2>&1 | head -20
+go test ./mdl/canonical/entity/... -run "TestLift_WithEvent|TestToMDL_WithEvent|TestToMDL_Event" -v 2>&1 | head -20
 ```
 
 Expected: failures (event handlers not Lifted or emitted).
@@ -418,7 +420,7 @@ In the `Hydrate` function, after the loop that hydrates Indexes, add:
 for _, item := range e.EventHandlersItems() {
     h, ok := item.(*genDm.EventHandler)
     if !ok {
-        warns = append(warns, model.Warning{Field: "EventHandlers", Message: "unexpected item type"})
+        warns = append(warns, canonical.Warning{Field: "EventHandlers", Message: "unexpected item type"})
         continue
     }
     if h.MicroflowQualifiedName() == "" {
@@ -464,7 +466,7 @@ for _, eh := range m.EventHandlers {
 - [ ] **Step 7: Run tests — expect pass**
 
 ```bash
-go test ./mdl/model/entity/... -run "TestLift_WithEvent|TestToMDL_WithEvent|TestToMDL_Event" -v
+go test ./mdl/canonical/entity/... -run "TestLift_WithEvent|TestToMDL_WithEvent|TestToMDL_Event" -v
 ```
 
 Expected: all pass.
@@ -472,9 +474,9 @@ Expected: all pass.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add mdl/model/entity/model.go mdl/model/entity/entity_test.go \
-        mdl/model/entity/lift.go mdl/model/entity/hydrate.go \
-        mdl/model/entity/serialize.go
+git add mdl/canonical/entity/model.go mdl/canonical/entity/entity_test.go \
+        mdl/canonical/entity/lift.go mdl/canonical/entity/hydrate.go \
+        mdl/canonical/entity/serialize.go
 git commit -m "feat(model/entity): add EventHandlerModel — Lift, Hydrate, ToMDLStatement (TDD)"
 ```
 
@@ -483,7 +485,7 @@ git commit -m "feat(model/entity): add EventHandlerModel — Lift, Hydrate, ToMD
 ## Task 3: Persist EventHandlers + eliminate dual-path
 
 **Files:**
-- Modify: `mdl/model/entity/persist.go`
+- Modify: `mdl/canonical/entity/persist.go`
 - Modify: `mdl/executor/cmd_create_entity_gen.go`
 
 - [ ] **Step 1: Update `buildGenEntity` to write event handlers**
@@ -541,7 +543,7 @@ Expected: no new failures compared to baseline.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add mdl/model/entity/persist.go mdl/executor/cmd_create_entity_gen.go
+git add mdl/canonical/entity/persist.go mdl/executor/cmd_create_entity_gen.go
 git commit -m "feat(model/entity): Persist event handlers; eliminate CREATE ENTITY dual-path"
 ```
 
@@ -552,9 +554,9 @@ git commit -m "feat(model/entity): Persist event handlers; eliminate CREATE ENTI
 After this task, `describeEntityGen` emits nothing after `m.ToMDLStatement(true)` except the trailing `;` and access grants.
 
 **Files:**
-- Modify: `mdl/model/entity/model.go`
-- Modify: `mdl/model/entity/hydrate.go`
-- Modify: `mdl/model/entity/serialize.go`
+- Modify: `mdl/canonical/entity/model.go`
+- Modify: `mdl/canonical/entity/hydrate.go`
+- Modify: `mdl/canonical/entity/serialize.go`
 - Modify: `mdl/executor/cmd_entities_gen.go`
 
 - [ ] **Step 1: Add `OQL` field to `EntityModel`**
@@ -595,7 +597,7 @@ func TestToMDL_ViewEntityWithOQL(t *testing.T) {
 - [ ] **Step 3: Run — expect failures**
 
 ```bash
-go test ./mdl/model/entity/... -run "TestToMDL_WithSystem|TestToMDL_View" -v 2>&1 | head -10
+go test ./mdl/canonical/entity/... -run "TestToMDL_WithSystem|TestToMDL_View" -v 2>&1 | head -10
 ```
 
 - [ ] **Step 4: Update `entity/hydrate.go` — extract OQL**
@@ -637,7 +639,7 @@ if m.Kind == EntityView && m.OQL != "" {
 - [ ] **Step 6: Run tests — expect pass**
 
 ```bash
-go test ./mdl/model/entity/... -run "TestToMDL_WithSystem|TestToMDL_View" -v
+go test ./mdl/canonical/entity/... -run "TestToMDL_WithSystem|TestToMDL_View" -v
 ```
 
 - [ ] **Step 7: Remove trailing clauses from `describeEntityGen` in `cmd_entities_gen.go`**
@@ -658,7 +660,7 @@ Remove the imports that were only used by those blocks (e.g. `genDm` if no longe
 
 ```bash
 go build ./...
-go test ./mdl/model/... ./mdl/executor/... -count=1 2>&1 | grep -E "^--- FAIL|^FAIL|^ok" | head -20
+go test ./mdl/canonical/... ./mdl/executor/... -count=1 2>&1 | grep -E "^--- FAIL|^FAIL|^ok" | head -20
 ```
 
 Expected: no new failures. All five guards GREEN.
@@ -666,7 +668,7 @@ Expected: no new failures. All five guards GREEN.
 - [ ] **Step 9: Final guard verification**
 
 ```bash
-go test ./mdl/model/ -run "TestImportDirection|TestCodecComplete|TestPackageStructure" -v
+go test ./mdl/canonical/ -run "TestImportDirection|TestCodecComplete|TestPackageStructure" -v
 go test ./mdl/executor/ -run TestExecutorBoundary -v
 ```
 
@@ -675,8 +677,8 @@ Expected: TestImportDirection PASS, TestCodecComplete PASS, TestPackageStructure
 - [ ] **Step 10: Commit**
 
 ```bash
-git add mdl/model/entity/model.go mdl/model/entity/hydrate.go \
-        mdl/model/entity/serialize.go mdl/model/entity/entity_test.go \
+git add mdl/canonical/entity/model.go mdl/canonical/entity/hydrate.go \
+        mdl/canonical/entity/serialize.go mdl/canonical/entity/entity_test.go \
         mdl/executor/cmd_entities_gen.go
 git commit -m "feat(model/entity): OQL + system members in ToMDLStatement — describeEntityGen has no trailing clauses"
 ```

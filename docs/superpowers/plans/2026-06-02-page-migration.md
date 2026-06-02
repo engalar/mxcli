@@ -8,7 +8,7 @@
 
 **Strategy:** Unlike entity/association, page does NOT follow Lift/Hydrate/ToMDL/Persist. The page IR overlay approach is the correct architecture. The goal is to make the overlay functional — widget by widget — not to redesign the page layer.
 
-**Prerequisite:** `2026-06-02-entity-canonical-completion.md` complete (not blocking for page, but ensures a stable codebase to build on).
+**Prerequisite:** `2026-06-02-rename-model-to-canonical.md` complete (page plan is independent of entity/association but needs stable codebase) (not blocking for page, but ensures a stable codebase to build on).
 
 **Testing:** Every task must pass `mx check testdata/expr-checker/minimal.mpr` and `mx check testdata/corpus-b/app.mpr` with no new `StorageLoadException` errors. Run `git restore testdata/` after each integration test.
 

@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implement `mdl/model/association/` as the canonical model for Mendix associations, following the same Lift/Hydrate/ToMDL/Persist pattern as entity, and route `cmd_diff_mdl.go` association functions through the codec registry.
+**Goal:** Implement `mdl/canonical/association/` as the canonical model for Mendix associations, following the same Lift/Hydrate/ToMDL/Persist pattern as entity, and route `cmd_diff_mdl.go` association functions through the codec registry.
 
 **Architecture:** `AssociationModel` carries the six MDL-expressible fields (name, from, to, type, owner, delete behavior, storage, documentation). `Lift` converts from `ast.CreateAssociationStmt`; `Hydrate` converts from `genDm.Association` using a `HydrateCtx.EntityNames` map (association BSON stores entity IDs, not names). `ToMDL` emits canonical `create association` MDL. `Persist` uses a local `assocBackend` interface (type-asserted from `PersistContext.Backend`). The codec is registered in `executor.go`; `cmd_diff_mdl.go` routes through `ctx.ModelCodecs`.
 
-**Prerequisite:** `2026-06-02-entity-canonical-completion.md` must be complete (HydrateCtx must exist in `mdl/model/registry.go`).
+**Prerequisite:** `2026-06-02-rename-model-to-canonical.md` (must run first), then `2026-06-02-entity-canonical-completion.md` must be complete (HydrateCtx must exist in `mdl/model/registry.go`).
 
 **Tech Stack:** Go 1.26, `modelsdk/gen/domainmodels`, `mdl/ast`.
 
@@ -18,20 +18,20 @@
 
 | File | Responsibility |
 |------|----------------|
-| `mdl/model/association/model.go` | `AssociationModel` struct |
-| `mdl/model/association/lift.go` | `Lift(*ast.CreateAssociationStmt) *AssociationModel` |
-| `mdl/model/association/hydrate.go` | `Hydrate(ctx HydrateCtx, assoc *genDm.Association) (*AssociationModel, []Warning, error)` |
-| `mdl/model/association/serialize.go` | `(*AssociationModel).ToMDL() string` |
-| `mdl/model/association/persist.go` | `(*AssociationModel).Persist(ctx PersistContext) error` |
-| `mdl/model/association/codec.go` | `RegisterCodec(*model.DefaultRegistry)` |
-| `mdl/model/association/comply_test.go` | Compile-time interface assertions |
-| `mdl/model/association/association_test.go` | Unit tests: Lift, ToMDL, Hydrate |
+| `mdl/canonical/association/model.go` | `AssociationModel` struct |
+| `mdl/canonical/association/lift.go` | `Lift(*ast.CreateAssociationStmt) *AssociationModel` |
+| `mdl/canonical/association/hydrate.go` | `Hydrate(ctx HydrateCtx, assoc *genDm.Association) (*AssociationModel, []Warning, error)` |
+| `mdl/canonical/association/serialize.go` | `(*AssociationModel).ToMDL() string` |
+| `mdl/canonical/association/persist.go` | `(*AssociationModel).Persist(ctx PersistContext) error` |
+| `mdl/canonical/association/codec.go` | `RegisterCodec(*canonical.DefaultRegistry)` |
+| `mdl/canonical/association/comply_test.go` | Compile-time interface assertions |
+| `mdl/canonical/association/association_test.go` | Unit tests: Lift, ToMDL, Hydrate |
 
 **Modified files:**
 
 | File | Change |
 |------|--------|
-| `mdl/model/codec_guard_test.go` | Add `"DomainModels$Association"` to Required list |
+| `mdl/canonical/codec_guard_test.go` | Add `"DomainModels$Association"` to Required list |
 | `mdl/executor/executor.go` | Call `assocmodel.RegisterCodec(mc)` |
 | `mdl/executor/cmd_diff_mdl.go` | Route `associationStmtToMDL` + `associationToMDLGen` through ModelCodecs |
 
@@ -42,10 +42,10 @@
 ## Task 1: `AssociationModel` data type
 
 **Files:**
-- Create: `mdl/model/association/model.go`
-- Create: `mdl/model/association/comply_test.go`
+- Create: `mdl/canonical/association/model.go`
+- Create: `mdl/canonical/association/comply_test.go`
 
-- [ ] **Step 1: Create `mdl/model/association/model.go`**
+- [ ] **Step 1: Create `mdl/canonical/association/model.go`**
 
 ```go
 // SPDX-License-Identifier: Apache-2.0
@@ -116,7 +116,7 @@ const (
 )
 ```
 
-- [ ] **Step 2: Create `mdl/model/association/comply_test.go`**
+- [ ] **Step 2: Create `mdl/canonical/association/comply_test.go`**
 
 ```go
 // SPDX-License-Identifier: Apache-2.0
@@ -124,19 +124,19 @@ const (
 package association_test
 
 import (
-	"github.com/mendixlabs/mxcli/mdl/model"
-	"github.com/mendixlabs/mxcli/mdl/model/association"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
+	"github.com/mendixlabs/mxcli/mdl/canonical/association"
 )
 
 // Compile-time interface assertions.
-var _ model.Document    = (*association.AssociationModel)(nil)
-var _ model.Persistable = (*association.AssociationModel)(nil)
+var _ canonical.Document    = (*association.AssociationModel)(nil)
+var _ canonical.Persistable = (*association.AssociationModel)(nil)
 ```
 
 - [ ] **Step 3: Build — expect compile error (missing ToMDL and Persist)**
 
 ```bash
-go build ./mdl/model/association/... 2>&1 | head -10
+go build ./mdl/canonical/association/... 2>&1 | head -10
 ```
 
 Expected: compile error because `*AssociationModel` does not implement `Document` or `Persistable`.
@@ -144,7 +144,7 @@ Expected: compile error because `*AssociationModel` does not implement `Document
 - [ ] **Step 4: Commit stub**
 
 ```bash
-git add mdl/model/association/model.go mdl/model/association/comply_test.go
+git add mdl/canonical/association/model.go mdl/canonical/association/comply_test.go
 git commit -m "feat(model/association): add AssociationModel data type"
 ```
 
@@ -153,8 +153,8 @@ git commit -m "feat(model/association): add AssociationModel data type"
 ## Task 2: `Lift` — AST → AssociationModel (TDD)
 
 **Files:**
-- Create: `mdl/model/association/association_test.go`
-- Create: `mdl/model/association/lift.go`
+- Create: `mdl/canonical/association/association_test.go`
+- Create: `mdl/canonical/association/lift.go`
 
 - [ ] **Step 1: Write failing tests in `association_test.go`**
 
@@ -167,7 +167,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	"github.com/mendixlabs/mxcli/mdl/model/association"
+	"github.com/mendixlabs/mxcli/mdl/canonical/association"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -223,12 +223,12 @@ func TestLift_CascadeDelete(t *testing.T) {
 - [ ] **Step 2: Run tests — expect compile failure**
 
 ```bash
-go test ./mdl/model/association/... -run TestLift 2>&1 | head -10
+go test ./mdl/canonical/association/... -run TestLift 2>&1 | head -10
 ```
 
 Expected: `association.Lift undefined`.
 
-- [ ] **Step 3: Create `mdl/model/association/lift.go`**
+- [ ] **Step 3: Create `mdl/canonical/association/lift.go`**
 
 ```go
 // SPDX-License-Identifier: Apache-2.0
@@ -294,7 +294,7 @@ func liftDelete(d ast.DeleteBehavior) DeleteBehaviorType {
 - [ ] **Step 4: Run tests — expect pass**
 
 ```bash
-go test ./mdl/model/association/... -run TestLift -v
+go test ./mdl/canonical/association/... -run TestLift -v
 ```
 
 Expected: all `TestLift_*` tests PASS.
@@ -302,7 +302,7 @@ Expected: all `TestLift_*` tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add mdl/model/association/lift.go mdl/model/association/association_test.go
+git add mdl/canonical/association/lift.go mdl/canonical/association/association_test.go
 git commit -m "feat(model/association): implement Lift() — AST to AssociationModel (TDD)"
 ```
 
@@ -311,8 +311,8 @@ git commit -m "feat(model/association): implement Lift() — AST to AssociationM
 ## Task 3: `ToMDL` — AssociationModel → MDL text (TDD)
 
 **Files:**
-- Modify: `mdl/model/association/association_test.go`
-- Create: `mdl/model/association/serialize.go`
+- Modify: `mdl/canonical/association/association_test.go`
+- Create: `mdl/canonical/association/serialize.go`
 
 - [ ] **Step 1: Add ToMDL tests to `association_test.go`**
 
@@ -378,12 +378,12 @@ func TestToMDL_LiftRoundTrip(t *testing.T) {
 - [ ] **Step 2: Run — expect compile failure**
 
 ```bash
-go test ./mdl/model/association/... -run TestToMDL 2>&1 | head -10
+go test ./mdl/canonical/association/... -run TestToMDL 2>&1 | head -10
 ```
 
 Expected: `(*AssociationModel).ToMDL undefined`.
 
-- [ ] **Step 3: Create `mdl/model/association/serialize.go`**
+- [ ] **Step 3: Create `mdl/canonical/association/serialize.go`**
 
 ```go
 // SPDX-License-Identifier: Apache-2.0
@@ -444,13 +444,13 @@ func deleteBehaviorStr(d DeleteBehaviorType) string {
 - [ ] **Step 4: Run tests — expect pass**
 
 ```bash
-go test ./mdl/model/association/... -run TestToMDL -v
+go test ./mdl/canonical/association/... -run TestToMDL -v
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add mdl/model/association/serialize.go mdl/model/association/association_test.go
+git add mdl/canonical/association/serialize.go mdl/canonical/association/association_test.go
 git commit -m "feat(model/association): implement ToMDL() serializer (TDD)"
 ```
 
@@ -459,12 +459,12 @@ git commit -m "feat(model/association): implement ToMDL() serializer (TDD)"
 ## Task 4: `Hydrate` — gen.Association → AssociationModel (TDD)
 
 **Files:**
-- Modify: `mdl/model/association/association_test.go`
-- Create: `mdl/model/association/hydrate.go`
+- Modify: `mdl/canonical/association/association_test.go`
+- Create: `mdl/canonical/association/hydrate.go`
 
 - [ ] **Step 1: Add Hydrate tests to `association_test.go`**
 
-Add to imports: `genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"` and `"github.com/mendixlabs/mxcli/mdl/model"`.
+Add to imports: `genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"` and `"github.com/mendixlabs/mxcli/mdl/canonical"`.
 
 Append:
 
@@ -479,7 +479,7 @@ func TestHydrate_Reference(t *testing.T) {
 	a.SetStorageFormat("AssociationStorageCrossTable")
 	a.SetDocumentation("Order to customer link")
 
-	ctx := model.HydrateCtx{
+	ctx := canonical.HydrateCtx{
 		ModuleName: "M",
 		EntityNames: map[string]string{
 			"entity-id-order":    "Order",
@@ -503,7 +503,7 @@ func TestHydrate_UnknownEntityID_ReturnsWarning(t *testing.T) {
 	a.SetChildID("unknown-id-2")
 	a.SetType("Reference")
 
-	ctx := model.HydrateCtx{ModuleName: "M", EntityNames: map[string]string{}}
+	ctx := canonical.HydrateCtx{ModuleName: "M", EntityNames: map[string]string{}}
 	m, warns, err := association.Hydrate(ctx, a)
 	require.NoError(t, err)
 	assert.NotEmpty(t, warns)
@@ -515,10 +515,10 @@ func TestHydrate_UnknownEntityID_ReturnsWarning(t *testing.T) {
 - [ ] **Step 2: Run — expect compile failure**
 
 ```bash
-go test ./mdl/model/association/... -run TestHydrate 2>&1 | head -10
+go test ./mdl/canonical/association/... -run TestHydrate 2>&1 | head -10
 ```
 
-- [ ] **Step 3: Create `mdl/model/association/hydrate.go`**
+- [ ] **Step 3: Create `mdl/canonical/association/hydrate.go`**
 
 ```go
 // SPDX-License-Identifier: Apache-2.0
@@ -526,7 +526,7 @@ go test ./mdl/model/association/... -run TestHydrate 2>&1 | head -10
 package association
 
 import (
-	"github.com/mendixlabs/mxcli/mdl/model"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
@@ -535,8 +535,8 @@ import (
 // ctx.EntityNames maps element ID strings to simple entity names;
 // when an ID is missing, the ID itself is used as a fallback and a Warning
 // is emitted so callers can log the gap.
-func Hydrate(ctx model.HydrateCtx, a *genDm.Association) (*AssociationModel, []model.Warning, error) {
-	var warns []model.Warning
+func Hydrate(ctx canonical.HydrateCtx, a *genDm.Association) (*AssociationModel, []canonical.Warning, error) {
+	var warns []canonical.Warning
 
 	fromName := resolveEntityName(ctx, string(a.ParentRefID()), &warns)
 	toName := resolveEntityName(ctx, string(a.ChildRefID()), &warns)
@@ -554,11 +554,11 @@ func Hydrate(ctx model.HydrateCtx, a *genDm.Association) (*AssociationModel, []m
 	return m, warns, nil
 }
 
-func resolveEntityName(ctx model.HydrateCtx, id string, warns *[]model.Warning) string {
+func resolveEntityName(ctx canonical.HydrateCtx, id string, warns *[]canonical.Warning) string {
 	if name, ok := ctx.EntityNames[id]; ok {
 		return name
 	}
-	*warns = append(*warns, model.Warning{
+	*warns = append(*warns, canonical.Warning{
 		Field:   "EntityID",
 		Message: "entity ID " + id + " not found in EntityNames map; using ID as fallback",
 	})
@@ -615,13 +615,13 @@ func hydrateDelete(a *genDm.Association) DeleteBehaviorType {
 - [ ] **Step 4: Run tests — expect pass**
 
 ```bash
-go test ./mdl/model/association/... -run TestHydrate -v
+go test ./mdl/canonical/association/... -run TestHydrate -v
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add mdl/model/association/hydrate.go mdl/model/association/association_test.go
+git add mdl/canonical/association/hydrate.go mdl/canonical/association/association_test.go
 git commit -m "feat(model/association): implement Hydrate() — gen Association to AssociationModel (TDD)"
 ```
 
@@ -630,9 +630,9 @@ git commit -m "feat(model/association): implement Hydrate() — gen Association 
 ## Task 5: `Persist` — AssociationModel → BSON
 
 **Files:**
-- Create: `mdl/model/association/persist.go`
+- Create: `mdl/canonical/association/persist.go`
 
-- [ ] **Step 1: Create `mdl/model/association/persist.go`**
+- [ ] **Step 1: Create `mdl/canonical/association/persist.go`**
 
 ```go
 // SPDX-License-Identifier: Apache-2.0
@@ -642,7 +642,7 @@ package association
 import (
 	"fmt"
 
-	"github.com/mendixlabs/mxcli/mdl/model"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	mxID "github.com/mendixlabs/mxcli/model"
@@ -741,7 +741,7 @@ func deleteBehaviorToGen(d DeleteBehaviorType) element.Element {
 - [ ] **Step 2: Build**
 
 ```bash
-go build ./mdl/model/association/...
+go build ./mdl/canonical/association/...
 ```
 
 Fix any compile errors (missing methods on genDm types, etc.).
@@ -749,7 +749,7 @@ Fix any compile errors (missing methods on genDm types, etc.).
 - [ ] **Step 3: Commit**
 
 ```bash
-git add mdl/model/association/persist.go
+git add mdl/canonical/association/persist.go
 git commit -m "feat(model/association): implement Persist() — AssociationModel to BSON"
 ```
 
@@ -758,11 +758,11 @@ git commit -m "feat(model/association): implement Persist() — AssociationModel
 ## Task 6: Codec + wire into registry
 
 **Files:**
-- Create: `mdl/model/association/codec.go`
-- Modify: `mdl/model/codec_guard_test.go`
+- Create: `mdl/canonical/association/codec.go`
+- Modify: `mdl/canonical/codec_guard_test.go`
 - Modify: `mdl/executor/executor.go`
 
-- [ ] **Step 1: Create `mdl/model/association/codec.go`**
+- [ ] **Step 1: Create `mdl/canonical/association/codec.go`**
 
 ```go
 // SPDX-License-Identifier: Apache-2.0
@@ -773,21 +773,21 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	"github.com/mendixlabs/mxcli/mdl/model"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // RegisterCodec wires the association Lift / Hydrate codecs into r.
-func RegisterCodec(r *model.DefaultRegistry) {
-	codec := model.Codec{
-		LiftFn: func(stmt any) (model.Persistable, error) {
+func RegisterCodec(r *canonical.DefaultRegistry) {
+	codec := canonical.Codec{
+		LiftFn: func(stmt any) (canonical.Persistable, error) {
 			s, ok := stmt.(*ast.CreateAssociationStmt)
 			if !ok {
 				return nil, fmt.Errorf("association codec: expected *ast.CreateAssociationStmt, got %T", stmt)
 			}
 			return Lift(s), nil
 		},
-		HydrateFn: func(el any, hctx model.HydrateCtx) (model.Document, []model.Warning, error) {
+		HydrateFn: func(el any, hctx canonical.HydrateCtx) (canonical.Document, []canonical.Warning, error) {
 			a, ok := el.(*genDm.Association)
 			if !ok {
 				return nil, nil, fmt.Errorf("association codec: expected *genDm.Association, got %T", el)
@@ -800,13 +800,13 @@ func RegisterCodec(r *model.DefaultRegistry) {
 }
 ```
 
-- [ ] **Step 2: Update `mdl/model/codec_guard_test.go` — add Required TypeName**
+- [ ] **Step 2: Update `mdl/canonical/codec_guard_test.go` — add Required TypeName**
 
 In `TestCodecComplete`, update `BuildRegistry` and `Required`:
 
 ```go
-BuildRegistry: func() *model.DefaultRegistry {
-    r := model.NewDefaultRegistry()
+BuildRegistry: func() *canonical.DefaultRegistry {
+    r := canonical.NewDefaultRegistry()
     entity.RegisterCodec(r)
     association.RegisterCodec(r)  // ← add
     return r
@@ -818,7 +818,7 @@ Required: []string{
 },
 ```
 
-Add import: `assocmodel "github.com/mendixlabs/mxcli/mdl/model/association"` and use `assocmodel.RegisterCodec(r)`.
+Add import: `assocmodel "github.com/mendixlabs/mxcli/mdl/canonical/association"` and use `assocmodel.RegisterCodec(r)`.
 
 - [ ] **Step 3: Update `mdl/executor/executor.go` — register association codec**
 
@@ -828,7 +828,7 @@ After `entitymodel.RegisterCodec(mc)`, add:
 assocmodel.RegisterCodec(mc)
 ```
 
-Add import: `assocmodel "github.com/mendixlabs/mxcli/mdl/model/association"`.
+Add import: `assocmodel "github.com/mendixlabs/mxcli/mdl/canonical/association"`.
 
 - [ ] **Step 4: Verify Guard 3 still GREEN**
 
@@ -841,7 +841,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add mdl/model/association/codec.go mdl/model/codec_guard_test.go \
+git add mdl/canonical/association/codec.go mdl/canonical/codec_guard_test.go \
         mdl/executor/executor.go
 git commit -m "feat(model/association): register codec, wire into executor"
 ```
@@ -880,7 +880,7 @@ func associationToMDLGen(ctx *ExecContext, moduleName string, assoc *genDm.Assoc
 			entityNames[string(e.ID())] = e.Name()
 		}
 	}
-	doc, _, err := ctx.ModelCodecs.HydrateFrom(assoc, canonicalmodel.HydrateCtx{
+	doc, _, err := ctx.ModelCodecs.HydrateFrom(assoc, canonical.HydrateCtx{
 		ModuleName:  moduleName,
 		EntityNames: entityNames,
 	})
@@ -891,7 +891,7 @@ func associationToMDLGen(ctx *ExecContext, moduleName string, assoc *genDm.Assoc
 }
 ```
 
-Ensure `canonicalmodel "github.com/mendixlabs/mxcli/mdl/model"` is imported.
+Ensure `"github.com/mendixlabs/mxcli/mdl/canonical"` is imported.
 
 - [ ] **Step 3: Build and verify Guard 4**
 
