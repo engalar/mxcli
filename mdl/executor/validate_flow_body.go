@@ -49,9 +49,13 @@ func validateFlowBody(params []ast.MicroflowParam, returnVar string, body []ast.
 
 	// Register the named return variable (returns Type as $Var) so body
 	// statements that assign or read it pass the declared-variable check.
+	// Do NOT add it to flatOutputVarNames — the return variable may be
+	// initialised inside the body (declare $Var …, retrieve … into $Var, etc.)
+	// without being a duplicate declaration. flatOutputVarNames is only used to
+	// catch genuinely duplicate output-variable declarations (CE0111), and the
+	// return variable is expected to be written exactly once by the body.
 	if returnVar != "" {
 		v.declaredVars[returnVar] = "Unknown"
-		v.flatOutputVarNames[returnVar] = true
 	}
 
 	for _, p := range params {

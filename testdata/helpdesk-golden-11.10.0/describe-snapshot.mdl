@@ -1067,8 +1067,16 @@ create or modify page KB.Article_Overview (
     dynamictext txtPublished (content: '{1}', contentparams: [{1} = toString($currentObject/PublishedAt)])
     dynamictext txtContent (content: '{1}', contentparams: [{1} = $currentObject/Content])
     footer footer1 {
-      actionbutton btnPublish (caption: 'Publish', action: microflow KB.ACT_Article_Publish(Article: $currentObject))
-      actionbutton btnArchive (caption: 'Archive', action: microflow KB.ACT_Article_Archive(Article: $currentObject))
+      actionbutton btnPublish (
+        caption: 'Publish',
+        action: microflow KB.ACT_Article_Publish(Article: $currentObject),
+        buttonstyle: primary
+      )
+      actionbutton btnArchive (
+        caption: 'Archive',
+        action: microflow KB.ACT_Article_Archive(Article: $currentObject),
+        buttonstyle: default
+      )
     }
   }
 }
@@ -1082,14 +1090,14 @@ create or modify page KB.Article_Detail (
 ) {
   layoutgrid lgMain {
     row row1 {
-      column col1 (DesktopWidth: 9) {
+      column col1 (DesktopWidth: 9, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
         dataview dvArticle (datasource: $Article) {
           -- Context: $currentObject (Article)
           dynamictext txtTitle (content: 'Article Title', rendermode: H1)
           dynamictext txtContent_ (content: 'Article Body Text')
         }
       }
-      column col2 (DesktopWidth: 3) {
+      column col2 (DesktopWidth: 3, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
         datagrid dgRatings (datasource: database from KB.ArticleRating) {
           -- Context: $currentObject (KB.ArticleRating), $dgRatings (selection)
           column colScore (attribute: Score, caption: 'Score')
@@ -1109,7 +1117,7 @@ create or modify page KB.Article_NewEdit (
 ) {
   layoutgrid lgMain {
     row row1 {
-      column col1 (DesktopWidth: 12) {
+      column col1 (DesktopWidth: 12, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
         dataview dvArticleForm (datasource: $Article) {
           -- Context: $currentObject (Article)
           textbox tbTitle (attribute: Title)
@@ -1136,16 +1144,25 @@ create or modify page HD.Ticket_Overview (title: 'Tickets', layout: Atlas_Core.A
           controlbar controlBar1 {
             actionbutton btnNew (
               caption: 'New Ticket',
-              action: create_object HD.Ticket then show_page HD.Ticket_NewEdit
+              action: create_object HD.Ticket then show_page HD.Ticket_NewEdit,
+              buttonstyle: primary
             )
           }
-          column colSubject (attribute: Subject, caption: 'Subject')
-          column colStatus (attribute: Status, caption: 'Status', ColumnWidth: manual, Size: 120)
-          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100)
-          column colSLADueAt (attribute: SLADueAt, caption: 'SLA Due', ColumnWidth: manual, Size: 140)
+          column colSubject (attribute: Subject, caption: 'Subject') {
+            textfilter fSubject
+          }
+          column colStatus (attribute: Status, caption: 'Status', ColumnWidth: manual, Size: 120) {
+            dropdownfilter fStatus
+          }
+          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100) {
+            dropdownfilter fPriority
+          }
+          column colSLADueAt (attribute: SLADueAt, caption: 'SLA Due', ColumnWidth: manual, Size: 140) {
+            datefilter fSLADue (filtertype: equal)
+          }
           column colIsOverSLA (attribute: IsOverSLA, caption: 'Overdue', ColumnWidth: manual, Size: 90)
           column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 80) {
-            actionbutton btnEdit (caption: 'Edit', action: show_page HD.Ticket_Detail)
+            actionbutton btnEdit (caption: 'Edit', action: show_page HD.Ticket_Detail, buttonstyle: default)
           }
         }
       }
@@ -1180,7 +1197,7 @@ create or modify page HD.Ticket_Detail (
 ) {
   layoutgrid lgMain {
     row row1 {
-      column col1 (DesktopWidth: 12) {
+      column col1 (DesktopWidth: 12, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
         dataview dvTicket (datasource: $Ticket) {
           -- Context: $currentObject (Ticket)
           dynamictext txtSubject (content: '{1}', rendermode: H2, contentparams: [{1} = $currentObject/Subject])
@@ -1213,7 +1230,7 @@ create or modify page HD.Ticket_Detail (
       }
     }
     row row2 {
-      column col1 (DesktopWidth: 12) {
+      column col1 (DesktopWidth: 12, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
         datagrid dgComments {
           column colContent (attribute: Content, caption: 'Comment')
           column colIsInternal (attribute: IsInternal, caption: 'Internal', ColumnWidth: manual, Size: 90)
@@ -1232,7 +1249,7 @@ create or modify page HD.Ticket_NewEdit (
 ) {
   layoutgrid lgMain {
     row row1 {
-      column col1 (DesktopWidth: 12) {
+      column col1 (DesktopWidth: 12, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
         dataview dvTicketForm (datasource: $Ticket) {
           -- Context: $currentObject (Ticket)
           textbox tbSubject (attribute: Subject)
@@ -1270,7 +1287,7 @@ grant view on page HD.TicketSearch_Form to HD.CustomerRole, HD.AgentRole, HD.Man
 create or modify page HD.MyTickets_Overview (title: 'My Tickets', layout: Atlas_Core.Atlas_Default, folder: 'Ticket') {
   layoutgrid lgMain {
     row row1 {
-      column col1 (DesktopWidth: 12) {
+      column col1 (DesktopWidth: 12, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
         datagrid dgMyTickets (datasource: microflow HD.DS_MyTickets) {
           -- Context: $currentObject (HD.DS_MyTickets), $dgMyTickets (selection)
           column colSubject (attribute: Subject, caption: 'Subject')
@@ -1292,7 +1309,7 @@ create or modify page HD.TicketSearch_Results (
 ) {
   layoutgrid lgMain {
     row row1 {
-      column col1 (DesktopWidth: 12) {
+      column col1 (DesktopWidth: 12, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
         datagrid dgResults (datasource: nanoflow HD.NF_TicketSearch_Apply) {
           -- Context: $currentObject (HD.NF_TicketSearch_Apply), $dgResults (selection)
           column colSubject (attribute: Subject, caption: 'Subject')

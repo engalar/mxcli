@@ -53,7 +53,7 @@ func (b *MprBackend) RelayoutDomainModel(domainModelID model.ID) error {
 
 // updateAssociationConnections sets ParentConnection and ChildConnection on
 // every association so the line exits the entity from the nearest horizontal
-// edge.
+// edge with Y coordinates spread evenly along that edge.
 //
 // Connection point format: "X;Y" percentage strings (0–100).
 //
@@ -64,10 +64,19 @@ func (b *MprBackend) RelayoutDomainModel(domainModelID model.ID) error {
 //	ParentRefID → FROM entity (FK owner, MDL "from" keyword)
 //	ChildRefID  → TO entity   (referenced, MDL "to" keyword)
 //
-// Without this reset, Studio Pro defaults to X=0 (left edge) for empty
-// connection strings, so every line emerges from the left side of both
-// entities regardless of their relative positions.
+// When N associations share the same entity side the Y values are distributed
+// evenly as 100*(k+1)/(N+1) for k=0..N-1, preventing all lines from
+// clustering at the same midpoint (Y=50).
 func updateAssociationConnections(dm *genDm.DomainModel, positions map[string]image.Point, idToName map[string]string) {
+	type assocEntry struct {
+		a          *genDm.Association
+		parentSide int // -1 = left (X=0), +1 = right (X=100)
+		childSide  int
+		fromName   string
+		toName     string
+	}
+
+	var entries []assocEntry
 	for _, elem := range dm.AssociationsItems() {
 		a, ok := elem.(*genDm.Association)
 		if !ok {
@@ -80,15 +89,58 @@ func updateAssociationConnections(dm *genDm.DomainModel, positions map[string]im
 		if !fromOK || !toOK {
 			continue
 		}
-		if fromPt.X <= toPt.X {
-			// FROM is left of (or same column as) TO: exit right, enter left.
-			a.SetParentConnection("100;50")
-			a.SetChildConnection("0;50")
-		} else {
-			// FROM is right of TO: exit left, enter right.
-			a.SetParentConnection("0;50")
-			a.SetChildConnection("100;50")
+		parentSide, childSide := 1, -1 // FROM exits right, TO enters left
+		if fromPt.X > toPt.X {
+			parentSide, childSide = -1, 1 // FROM exits left, TO enters right
 		}
+		entries = append(entries, assocEntry{a, parentSide, childSide, fromName, toName})
+	}
+
+	// Group entry indices by (entityName, side) to count how many connections
+	// share each entity side. This lets us distribute Y positions evenly.
+	type sideKey struct {
+		entity string
+		side   int
+	}
+	parentGroups := make(map[sideKey][]int) // (fromName, parentSide) → entry indices
+	childGroups := make(map[sideKey][]int)  // (toName, childSide)   → entry indices
+	for i, e := range entries {
+		parentGroups[sideKey{e.fromName, e.parentSide}] = append(parentGroups[sideKey{e.fromName, e.parentSide}], i)
+		childGroups[sideKey{e.toName, e.childSide}] = append(childGroups[sideKey{e.toName, e.childSide}], i)
+	}
+
+	// Assign Y for each entry: 100*(k+1)/(N+1) spreads N points evenly
+	// inside [1, 99], avoiding corners and overlaps.
+	parentY := make([]int, len(entries))
+	childY := make([]int, len(entries))
+	for i := range parentY {
+		parentY[i] = 50
+		childY[i] = 50
+	}
+	for _, idxs := range parentGroups {
+		n := len(idxs)
+		for k, idx := range idxs {
+			parentY[idx] = 100 * (k + 1) / (n + 1)
+		}
+	}
+	for _, idxs := range childGroups {
+		n := len(idxs)
+		for k, idx := range idxs {
+			childY[idx] = 100 * (k + 1) / (n + 1)
+		}
+	}
+
+	for i, e := range entries {
+		px := "0"
+		if e.parentSide == 1 {
+			px = "100"
+		}
+		cx := "0"
+		if e.childSide == 1 {
+			cx = "100"
+		}
+		e.a.SetParentConnection(fmt.Sprintf("%s;%d", px, parentY[i]))
+		e.a.SetChildConnection(fmt.Sprintf("%s;%d", cx, childY[i]))
 	}
 }
 

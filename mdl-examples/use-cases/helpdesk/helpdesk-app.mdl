@@ -17,6 +17,8 @@
 -- Note    : Golden rebuilt 2026-06-02 after PageModel IR landing (Tasks 1-8); describe path
 --           now routes pure-IR widgets through new pageModelToMDL renderer and lossy widgets
 --           (DataGrid/Gallery/CustomWidget/Button-with-Action/etc.) through legacy describe.
+-- Note    : relayout now distributes association connector Y positions evenly along each entity
+--           edge (100*(k+1)/(N+1)) instead of stacking all lines at Y=50.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,

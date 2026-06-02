@@ -74,12 +74,18 @@ func walkWidgetsWithContext(widgets []*ast.WidgetV3, paramNames map[string]bool,
 			}
 		}
 
-		// Check if this widget type is a data container that sets context
+		// Check if this widget type is a data container that sets context.
+		// DataGrid2 / ListView / Gallery always have a datasource in Mendix even if the
+		// describe output omits it (describe quality gap). Treat these as always providing
+		// entity context so column attribute bindings inside them are not flagged.
+		// DataView without a datasource inherits context from the enclosing container.
 		widgetType := strings.ToLower(w.Type)
 		switch widgetType {
-		case "dataview", "datagrid", "listview", "gallery", "templateview":
+		case "datagrid", "listview", "gallery", "templateview":
+			childHasContext = true
+		case "dataview":
 			if ds == nil {
-				// Data container without DataSource — context comes from enclosing container
+				// DataView without DataSource — context comes from enclosing container.
 				childHasContext = hasEntityContext
 			}
 		}
