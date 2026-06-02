@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/canonical/page"
+	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -63,5 +64,40 @@ func TestLift_FallsBackToModuleNameArg(t *testing.T) {
 
 func TestLift_NilStmt_ReturnsError(t *testing.T) {
 	_, err := page.Lift(nil, "M")
+	assert.Error(t, err)
+}
+
+func TestHydrate_BasicPage(t *testing.T) {
+	p := genPg.NewPage()
+	p.SetName("TestPage")
+
+	doc, warns, err := page.Hydrate("M", p)
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+	pm := doc.PageModel()
+	require.NotNil(t, pm)
+	assert.Equal(t, "M", pm.ModuleName)
+	assert.Equal(t, "TestPage", pm.Name)
+	// No LayoutCall set → one warning, layout left empty.
+	assert.Empty(t, pm.Layout)
+	assert.Len(t, warns, 1)
+}
+
+func TestHydrate_ExtractsLayout(t *testing.T) {
+	lc := genPg.NewLayoutCall()
+	lc.SetLayoutQualifiedName("Atlas_Core.Atlas_Default")
+	p := genPg.NewPage()
+	p.SetName("WithLayout")
+	p.SetLayoutCall(lc)
+
+	doc, warns, err := page.Hydrate("M", p)
+	require.NoError(t, err)
+	assert.Empty(t, warns)
+	pm := doc.PageModel()
+	assert.Equal(t, "Atlas_Core.Atlas_Default", pm.Layout)
+}
+
+func TestHydrate_NilPage_ReturnsError(t *testing.T) {
+	_, _, err := page.Hydrate("M", nil)
 	assert.Error(t, err)
 }
