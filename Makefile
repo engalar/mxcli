@@ -18,6 +18,8 @@
 #   make mine-exprgrammar MINE_MPR=path/to/app.mpr - Re-mine generated/exprgrammar/mined.go from an MPR
 #   make clean     - Remove build artifacts
 
+HELPDESK_VERSIONS := 11.6.6 11.10.0
+
 BINARY_NAME = mxcli
 BUILD_DIR = bin
 CMD_PATH = ./cmd/mxcli
@@ -51,7 +53,7 @@ TEST_PARALLEL ?= $(_85PCT)
 # Hard ceiling on how long the full test suite may run.
 TEST_TIMEOUT ?= 180s
 
-.PHONY: build build-debug release clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install-daemon test-section-check
+.PHONY: build build-debug release clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install-daemon test-section-check update-snapshots validate-snapshots
 
 setup:
 	git config core.hooksPath .githooks
@@ -301,11 +303,52 @@ test-integration:
 # Regenerate testdata/helpdesk-golden-11.6.6/ from helpdesk-app.mdl.
 # Run after intentional changes to helpdesk-app.mdl; then commit the result.
 update-helpdesk-golden:
-	CGO_ENABLED=0 go test ./internal/goldenfs/ \
-		-tags linux,integration \
-		-run TestHelpdeskGolden_Update \
-		-update-golden \
-		-v -timeout 10m
+	@for v in $(HELPDESK_VERSIONS); do \
+	  echo "=== Rebuilding helpdesk golden $$v ==="; \
+	  HELPDESK_VERSION=$$v \
+	  CGO_ENABLED=0 go test ./internal/goldenfs/ \
+	    -tags linux,integration \
+	    -run '^TestHelpdeskGolden_Update$$' \
+	    -update-golden \
+	    -v -timeout 10m || exit 1; \
+	done
+	$(MAKE) update-snapshots
+
+# Rebuild describe-snapshot.mdl for all helpdesk versions from their existing golden MPRs.
+# Faster than update-helpdesk-golden (~5s vs ~10m). Run after describe logic changes.
+# Validates each snapshot with: mxcli check snapshot.mdl -p minimal.mpr --references
+update-snapshots: build
+	@for v in $(HELPDESK_VERSIONS); do \
+	  echo "=== Updating snapshot $$v ==="; \
+	  HELPDESK_VERSION=$$v \
+	  CGO_ENABLED=0 go test ./internal/goldenfs/ \
+	    -tags linux,integration \
+	    -run '^TestHelpdeskGolden_DescribeSnapshot$$' \
+	    -update-golden \
+	    -v -timeout 3m || exit 1; \
+	  echo "  mxcli check describe-snapshot.mdl ($$v)..."; \
+	  $(BUILD_DIR)/$(BINARY_NAME) check \
+	    testdata/helpdesk-golden-$$v/describe-snapshot.mdl \
+	    -p testdata/helpdesk-golden-$$v/minimal.mpr \
+	    --references || exit 1; \
+	done
+
+# Validate describe-snapshot.mdl for all versions without rebuilding.
+# Runs mxcli check + idempotency integration test. Suitable for CI.
+validate-snapshots: build
+	@for v in $(HELPDESK_VERSIONS); do \
+	  echo "=== Validating snapshot $$v ==="; \
+	  $(BUILD_DIR)/$(BINARY_NAME) check \
+	    testdata/helpdesk-golden-$$v/describe-snapshot.mdl \
+	    -p testdata/helpdesk-golden-$$v/minimal.mpr \
+	    --references || exit 1; \
+	  echo "  idempotency test ($$v)..."; \
+	  HELPDESK_VERSION=$$v \
+	  CGO_ENABLED=0 go test ./internal/goldenfs/ \
+	    -tags linux,integration \
+	    -run '^TestHelpdeskGolden_DescribeSnapshot_Idempotent$$' \
+	    -v -timeout 5m || exit 1; \
+	done
 
 # Run both helpdesk regression layers (BSON + describe MDL).
 # Requires testdata/helpdesk-golden-11.6.6/ to exist (run update-helpdesk-golden first).
