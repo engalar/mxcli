@@ -30,7 +30,7 @@ func TestPageASTToModel_DataGridColumns(t *testing.T) {
 			},
 		},
 	}
-	pm, err := pageASTToModel(nil, stmt)
+	pm, err := pageASTToModel(stmt, stmt.Name.Module)
 	if err != nil {
 		t.Fatalf("pageASTToModel: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestPageASTToModel_BasicContainer(t *testing.T) {
 		},
 	}
 
-	pm, err := pageASTToModel(nil, stmt)
+	pm, err := pageASTToModel(stmt, stmt.Name.Module)
 	if err != nil {
 		t.Fatalf("pageASTToModel: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestAstWidgetToNode_DataView_FooterSeparated(t *testing.T) {
 		},
 	}
 
-	node, err := astWidgetToNode(&ExecContext{}, dv, "M")
+	node, err := astWidgetToNode(dv, "M")
 	if err != nil {
 		t.Fatalf("astWidgetToNode: %v", err)
 	}
@@ -152,5 +152,29 @@ func TestAstWidgetToNode_DataView_FooterSeparated(t *testing.T) {
 	}
 	if node.Footer[0].Name != "footer1" {
 		t.Errorf("footer child should be footer1, got %q", node.Footer[0].Name)
+	}
+}
+
+func TestPropInt_AutoFill(t *testing.T) {
+	w := &ast.WidgetV3{
+		Properties: map[string]any{
+			"TabletWidth": "AutoFill",
+			"PhoneWidth":  "autofill",
+		},
+	}
+	if got := propInt(w, "tabletwidth"); got != -1 {
+		t.Errorf("propInt AutoFill: want -1, got %d", got)
+	}
+	if got := propInt(w, "phonewidth"); got != -1 {
+		t.Errorf("propInt autofill (lowercase): want -1, got %d", got)
+	}
+}
+
+func TestPropInt_NormalInt(t *testing.T) {
+	w := &ast.WidgetV3{
+		Properties: map[string]any{"DesktopWidth": 12},
+	}
+	if got := propInt(w, "desktopwidth"); got != 12 {
+		t.Errorf("propInt int: want 12, got %d", got)
 	}
 }

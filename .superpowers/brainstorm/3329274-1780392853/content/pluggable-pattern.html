@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>插件族模式推演</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, sans-serif; background: #0f1117; color: #e2e8f0; padding: 24px; font-size: 13px; line-height: 1.6; }
+h2 { font-size: 18px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; }
+.sub { color: #64748b; font-size: 12px; margin-bottom: 24px; }
+.sec { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #475569; margin: 24px 0 10px; padding-bottom: 5px; border-bottom: 1px solid #1e293b; }
+pre { background: #0a0e1a; border: 1px solid #1e293b; border-radius: 5px; padding: 12px; font-size: 11px; line-height: 1.7; overflow-x: auto; color: #94a3b8; }
+.kw { color: #c084fc; } .fn { color: #60a5fa; } .tp { color: #fcd34d; } .str { color: #86efac; } .cmt { color: #475569; font-style: italic; }
+code { background: #0f172a; padding: 1px 5px; border-radius: 3px; font-size: 11px; font-family: monospace; color: #94a3b8; }
+
+/* BSON structure visual */
+.bson-doc { background: #0a0e1a; border: 1px solid #1e293b; border-radius: 6px; padding: 14px; font-family: monospace; font-size: 11px; line-height: 2; margin-bottom: 16px; }
+.bson-key { color: #60a5fa; }
+.bson-val { color: #86efac; }
+.bson-type { color: #c084fc; }
+.bson-comment { color: #475569; }
+.bson-hi { background: #1e3a5f; color: #93c5fd; padding: 0 3px; border-radius: 2px; }
+.bson-slot { background: #052e16; color: #4ade80; padding: 0 3px; border-radius: 2px; }
+
+/* Comparison grid */
+.widget-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.widget-card { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 12px; }
+.widget-title { font-weight: 700; font-size: 12px; margin-bottom: 8px; color: #fcd34d; }
+.wf { font-size: 11px; font-family: monospace; color: #64748b; margin-bottom: 4px; }
+.wf.shared { color: #4ade80; }
+.wf.unique { color: #fbbf24; }
+.wf.slot { color: #c084fc; }
+
+/* Abstract type */
+.abstract { background: #1a2e1a; border: 1px solid #14532d; border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+.abstract h4 { color: #4ade80; font-size: 13px; margin-bottom: 10px; }
+
+/* Split view */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.card { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 14px; }
+.card h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 10px; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 600; }
+.b-ok { background: #052e16; color: #4ade80; }
+.b-warn { background: #2d1b00; color: #fbbf24; }
+.b-loss { background: #1a0000; color: #f87171; }
+</style>
+</head>
+<body>
+
+<h2>插件族（DataGrid / Gallery / ComboBox / Image）模式推演</h2>
+<p class="sub">从三个 switch 的实际代码中归纳统一抽象</p>
+
+<div class="sec">发现 1：所有插件 widget 共享同一 BSON 存储格式</div>
+
+<div class="bson-doc">
+{<br>
+&nbsp;&nbsp;<span class="bson-key">"$Type"</span>: <span class="bson-hi">"CustomWidgets$CustomWidget"</span>, &nbsp;<span class="bson-comment">← 全部插件 widget 的统一 BSON 类型</span><br>
+&nbsp;&nbsp;<span class="bson-key">"Name"</span>: <span class="bson-val">"dgTickets"</span>,<br>
+&nbsp;&nbsp;<span class="bson-key">"Object"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bson-key">"Type"</span>: <span class="bson-hi">"com.mendix.widget.custom.datagrid2.DataGrid2"</span>, &nbsp;<span class="bson-comment">← 真正的 widget ID</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bson-key">"Properties"</span>: [ &nbsp;<span class="bson-comment">← 所有配置存为统一键值对</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="bson-key">"key"</span>: <span class="bson-val">"datasource"</span>, <span class="bson-key">"Value"</span>: { <span class="bson-type">"$Type"</span>: <span class="bson-val">"Forms$DataGridDataSource"</span>, ... } },<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="bson-key">"key"</span>: <span class="bson-val">"pageSize"</span>, &nbsp;&nbsp; <span class="bson-key">"Value"</span>: { <span class="bson-type">"$Type"</span>: <span class="bson-val">"integer"</span>, "value": 5 } },<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="bson-key">"key"</span>: <span class="bson-val">"columns"</span>, &nbsp;&nbsp; <span class="bson-key">"Value"</span>: { <span class="bson-type">"$Type"</span>: <span class="bson-val">"ObjectList"</span>, "ObjectItems": [...] } },<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="bson-key">"key"</span>: <span class="bson-val">"filterWidgets"</span>, <span class="bson-key">"Value"</span>: { <span class="bson-type">"$Type"</span>: <span class="bson-val">"Widgets"</span>, <span class="bson-slot">"value": [WidgetNode...]</span> } },<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br>
+&nbsp;&nbsp;&nbsp;&nbsp;]<br>
+&nbsp;&nbsp;}<br>
+}
+</div>
+
+<div class="sec">发现 2：四种插件 widget 的字段对比（共享 vs 专有）</div>
+
+<div class="widget-grid">
+  <div class="widget-card">
+    <div class="widget-title">DataGrid2</div>
+    <div class="wf" style="font-size:10px;color:#475569;margin-bottom:6px">com.mendix.widget.custom.<br>datagrid2.DataGrid2</div>
+    <div class="wf shared">✓ WidgetID</div>
+    <div class="wf shared">✓ DataSource</div>
+    <div class="wf unique">columns: []ColumnDef</div>
+    <div class="wf unique">pageSize: int</div>
+    <div class="wf unique">pagination: string</div>
+    <div class="wf slot">slot: filterWidgets</div>
+    <div class="wf slot">slot: controlBar</div>
+  </div>
+  <div class="widget-card">
+    <div class="widget-title">Gallery</div>
+    <div class="wf" style="font-size:10px;color:#475569;margin-bottom:6px">com.mendix.widget.custom.<br>gallery.Gallery</div>
+    <div class="wf shared">✓ WidgetID</div>
+    <div class="wf shared">✓ DataSource</div>
+    <div class="wf unique">desktopItems: int</div>
+    <div class="wf unique">tabletItems: int</div>
+    <div class="wf unique">phoneItems: int</div>
+    <div class="wf unique">selection: string</div>
+    <div class="wf slot">slot: filterWidgets</div>
+    <div class="wf slot">slot: content</div>
+  </div>
+  <div class="widget-card">
+    <div class="widget-title">ComboBox</div>
+    <div class="wf" style="font-size:10px;color:#475569;margin-bottom:6px">com.mendix.widget.custom.<br>combobox.ComboBox</div>
+    <div class="wf shared">✓ WidgetID</div>
+    <div class="wf shared">✓ DataSource</div>
+    <div class="wf unique">attribute: string</div>
+    <div style="font-size:10px;color:#334155;margin-top:8px">（其余属性在 Properties 中）</div>
+  </div>
+  <div class="widget-card">
+    <div class="widget-title">Image</div>
+    <div class="wf" style="font-size:10px;color:#475569;margin-bottom:6px">com.mendix.widget.custom.<br>image.Image</div>
+    <div class="wf shared">✓ WidgetID</div>
+    <div class="wf" style="color:#f87171">✗ 无 DataSource</div>
+    <div class="wf unique">imageUrl: string</div>
+    <div class="wf unique">width/height: string</div>
+    <div class="wf unique">widthUnit/heightUnit</div>
+    <div class="wf unique">responsive: bool</div>
+    <div class="wf unique">displayAs: string</div>
+  </div>
+</div>
+
+<div class="sec">发现 3：统一抽象 — PluggableWidget</div>
+
+<div class="abstract">
+  <h4>所有插件 widget 可用一个泛型结构表示</h4>
+<pre><span class="kw">type</span> <span class="tp">PluggableWidget</span> <span class="kw">struct</span> {
+    Name       <span class="tp">string</span>
+    <span class="bson-hi" style="background:#1e3a5f;color:#93c5fd;padding:0 2px">WidgetID   string</span>              <span class="cmt">// "com.mendix.widget.custom.datagrid2.DataGrid2"</span>
+    DataSource *DataSourceDef         <span class="cmt">// nil for Image</span>
+    <span class="bson-slot" style="background:#052e16;color:#4ade80;padding:0 2px">Slots      map[string][]Widget</span>  <span class="cmt">// "filterWidgets", "content", "controlBar"</span>
+    Props      map[string]any         <span class="cmt">// 所有 Object.Properties 的 key-value</span>
+    RawObject  bson.D                 <span class="cmt">// 完整原始 Object（write-through 用）</span>
+}</pre>
+  <p style="font-size:11px;color:#4ade80;margin-top:8px">关键：<strong>RawObject</strong> 保留 BSON 原始数据，写回时直接 write-through，不丢失 Properties 树</p>
+</div>
+
+<div class="sec">发现 4：插件族的 lossy 根因与修复方案</div>
+
+<div class="split">
+  <div class="card">
+    <h4>当前为何 lossy？</h4>
+    <p style="font-size:12px;color:#f87171;margin-bottom:8px">写回时丢失 Object.Properties 树</p>
+    <pre style="font-size:11px"><span class="cmt">// widgetToBSON DataGrid case：</span>
+<span class="kw">case</span> types.WidgetDataGrid:
+    <span class="cmt">// ??? 没有 case！</span>
+    <span class="cmt">// fallback to CustomWidget stub</span>
+    doc = bson.D{
+        {<span class="str">"$Type"</span>: <span class="str">"CustomWidgets$CustomWidget"</span>},
+        {<span class="str">"Name"</span>: node.Name},
+        <span class="cmt">// Object.Properties 完全丢失！</span>
+    }</pre>
+    <p style="font-size:11px;color:#f87171;margin-top:8px">Studio Pro 读取时因缺少必需属性报 CE0463</p>
+  </div>
+  <div class="card">
+    <h4>PluggableWidget 的修复策略</h4>
+    <p style="font-size:12px;color:#4ade80;margin-bottom:8px">Write-through：读取时保留 RawObject</p>
+    <pre style="font-size:11px"><span class="kw">func</span> (c PluggableCodec) HydrateFromBSON(doc bson.D) Widget {
+    w := &PluggableWidget{
+        WidgetID:  extractWidgetID(doc),
+        DataSource: extractPluggableDataSource(doc),
+        Slots:      extractNamedSlots(doc),
+        Props:      extractPropsMap(doc),
+        <span class="bson-slot" style="background:#052e16;color:#4ade80;padding:0 2px">RawObject: dGetDoc(doc, "Object"),</span>
+    }
+    return w
+}
+
+<span class="kw">func</span> (c PluggableCodec) ToBSON(w Widget) bson.D {
+    pw := w.(*PluggableWidget)
+    doc := bson.D{...name, type...}
+    <span class="cmt">// Write-through：原始 Object 完整保留</span>
+    <span class="bson-slot" style="background:#052e16;color:#4ade80;padding:0 2px">doc = append(doc, bson.E{"Object", pw.RawObject})</span>
+    <span class="cmt">// 仅更新 slot widgets（如 filterWidgets）</span>
+    updateSlotInObject(pw.RawObject, pw.Slots)
+    return doc
+}</pre>
+    <p style="font-size:11px;color:#4ade80;margin-top:8px">Properties 原封写回，slots 可更新，Studio Pro 可读</p>
+  </div>
+</div>
+
+<div class="sec">发现 5：插件族在 Codec Registry 中的位置</div>
+
+<pre><span class="cmt">// mdl/canonical/page/widget/pluggable_codec.go — 一个 codec 覆盖所有插件 widget</span>
+
+<span class="kw">type</span> <span class="tp">PluggableCodec</span> <span class="kw">struct</span>{}
+
+<span class="kw">func</span> (c <span class="tp">PluggableCodec</span>) Kinds() []types.WidgetKind {
+    <span class="kw">return</span> []types.WidgetKind{
+        types.WidgetDataGrid, types.WidgetGallery,
+        types.WidgetComboBox, types.WidgetImage, types.WidgetUnknown,
+    }
+}
+
+<span class="kw">func</span> (c <span class="tp">PluggableCodec</span>) LiftFromAST(w *ast.WidgetV3, _ <span class="tp">string</span>) (Widget, error) {
+    <span class="cmt">// MDL 创建插件 widget 时，通过 AST 的 type 属性获取 widgetID</span>
+    <span class="kw">return</span> &PluggableWidget{
+        Name:     w.Name,
+        WidgetID: propStr(w, <span class="str">"widgetid"</span>),
+        <span class="cmt">// Props 来自 w.Properties（用户在 MDL 中显式设置的属性）</span>
+    }, nil
+}
+
+<span class="kw">func</span> (c <span class="tp">PluggableCodec</span>) HydrateFromBSON(doc bson.D) (Widget, error) {
+    <span class="kw">return</span> &PluggableWidget{
+        WidgetID:   extractCustomWidgetIDStr(doc),  <span class="cmt">// 复用现有函数</span>
+        DataSource: extractPluggableDataSource(doc), <span class="cmt">// 复用现有函数</span>
+        Slots:      extractNamedSlots(doc),          <span class="cmt">// 新：提取 filterWidgets/content 等</span>
+        RawObject:  dGetDoc(doc, <span class="str">"Object"</span>),          <span class="cmt">// 新：保留完整 Object</span>
+    }, nil
+}
+
+<span class="kw">func</span> (c <span class="tp">PluggableCodec</span>) ToBSON(w Widget) bson.D {
+    pw := w.(*PluggableWidget)
+    updateSlotInObject(pw.RawObject, pw.Slots)  <span class="cmt">// 仅更新 slot 中的 widgets</span>
+    <span class="kw">return</span> bson.D{
+        {<span class="str">"$Type"</span>, <span class="str">"CustomWidgets$CustomWidget"</span>},
+        {<span class="str">"Name"</span>, pw.Name},
+        {<span class="str">"Object"</span>, pw.RawObject},  <span class="cmt">// write-through：属性树完整保留</span>
+    }
+}
+
+<span class="kw">func</span> (c <span class="tp">PluggableCodec</span>) ToMDL(w Widget, depth <span class="tp">int</span>, out io.Writer) {
+    pw := w.(*PluggableWidget)
+    <span class="cmt">// DataGrid/Gallery 的 MDL describe 由此函数生成</span>
+    kind := guessKindFromWidgetID(pw.WidgetID)   <span class="cmt">// datagrid / gallery / combobox / image</span>
+    renderPluggable(out, kind, pw, depth)
+}</pre>
+
+<div style="background:#1a2a1a;border:1px solid #14532d;border-radius:6px;padding:14px;margin-top:16px">
+  <p style="color:#4ade80;font-weight:700;margin-bottom:6px">✓ 插件族的核心模式总结</p>
+  <p style="font-size:12px;color:#86efac;line-height:1.8">
+    1. 统一 BSON 格式（CustomWidgets$CustomWidget + Object.Properties）→ <strong>一个 PluggableCodec 覆盖全部</strong><br>
+    2. WidgetID 区分具体 widget 类型 → ToMDL 按 ID pattern 渲染不同 MDL 语法<br>
+    3. RawObject write-through → <strong>完全消除当前 lossy 问题</strong>（Properties 树不再丢失）<br>
+    4. Slots（filterWidgets/content）可单独更新，其余 Properties 原封保留<br>
+    5. 未知插件 widget（WidgetUnknown）= PluggableWidget with WidgetID but no special ToMDL
+  </p>
+</div>
+
+</body>
+</html>

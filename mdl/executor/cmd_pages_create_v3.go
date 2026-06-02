@@ -130,7 +130,7 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	//
 	// Failure is non-fatal — log and continue so the gen builder remains
 	// source of truth when overlay isn't safe.
-	if pm, pmErr := pageASTToModel(ctx, s); pmErr == nil && pm != nil {
+	if pm, pmErr := pageASTToModel(s, s.Name.Module); pmErr == nil && pm != nil {
 		if pageModelHasLossyWidget(pm) {
 			// Skip overlay; preserve builder's rich BSON.
 		} else if werr := ctx.Backend.WritePageModel(model.ID(genPage.ID()), pm); werr != nil {

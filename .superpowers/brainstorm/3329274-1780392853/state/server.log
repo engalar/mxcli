@@ -1,0 +1,9 @@
+{"type":"server-started","port":55453,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:55453","screen_dir":"/mnt/data_sdd/gh/mxcli-wt-02/.superpowers/brainstorm/3329274-1780392853/content","state_dir":"/mnt/data_sdd/gh/mxcli-wt-02/.superpowers/brainstorm/3329274-1780392853/state"}
+{"type":"screen-added","file":"/mnt/data_sdd/gh/mxcli-wt-02/.superpowers/brainstorm/3329274-1780392853/content/scope.html"}
+{"source":"user-event","type":"click","text":"B\n    \n      全面替换 types.WidgetNode\n      用接口层级替换现有平铺结构，所有消费者（pageast、page_model、describe）迁移至新 API\n      \n        ✓彻底消除 switch 三重复每个 widget 有独立类型符合 OCP：加新 widget 不改现有文件\n        ✗影响 2600+ 行现有代码一次性改动大","choice":"b","id":null,"timestamp":1780393136008}
+{"type":"screen-added","file":"/mnt/data_sdd/gh/mxcli-wt-02/.superpowers/brainstorm/3329274-1780392853/content/pattern.html"}
+{"type":"screen-added","file":"/mnt/data_sdd/gh/mxcli-wt-02/.superpowers/brainstorm/3329274-1780392853/content/waiting.html"}
+{"type":"screen-added","file":"/mnt/data_sdd/gh/mxcli-wt-02/.superpowers/brainstorm/3329274-1780392853/content/analysis.html"}
+{"type":"screen-added","file":"/mnt/data_sdd/gh/mxcli-wt-02/.superpowers/brainstorm/3329274-1780392853/content/pluggable-pattern.html"}
+{"type":"screen-added","file":"/mnt/data_sdd/gh/mxcli-wt-02/.superpowers/brainstorm/3329274-1780392853/content/pluggable-deep.html"}
+{"type":"screen-added","file":"/mnt/data_sdd/gh/mxcli-wt-02/.superpowers/brainstorm/3329274-1780392853/content/first-principles.html"}

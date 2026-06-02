@@ -9,7 +9,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/canonical"
 	assocmodel "github.com/mendixlabs/mxcli/mdl/canonical/association"
 	"github.com/mendixlabs/mxcli/mdl/canonical/entity"
-	pagemodel "github.com/mendixlabs/mxcli/mdl/canonical/page"
 )
 
 // TestCodecComplete verifies that all registered gen TypeNames have complete
@@ -19,7 +18,7 @@ import (
 // Turns RED if: a new domain registers a codec with a nil function, or
 // a Required TypeName is removed from the registry without updating this file.
 //
-// When adding a new domain (Phase 2+):
+// When adding a new domain:
 //  1. Add: domainpkg.RegisterCodec(r) to BuildRegistry below.
 //  2. Add: "DomainModels$NewType" to Required.
 //     Both must be updated together — a Required entry with no RegisterCodec
@@ -31,23 +30,18 @@ func TestCodecComplete(t *testing.T) {
 				r := canonical.NewDefaultRegistry()
 				entity.RegisterCodec(r)
 				assocmodel.RegisterCodec(r)
-				pagemodel.RegisterCodec(r)
 				return r
 			},
 			Required: []string{
 				"DomainModels$Entity",
 				"DomainModels$EntityImpl",
 				"DomainModels$Association",
-				"Forms$Page",
-				"Forms$PageImpl",
 			},
 			Hint: `Every Required gen TypeName must be registered with non-nil LiftFn and HydrateFn.
 Fix:
   1. Confirm domain/codec.go calls r.Register(...) or r.RegisterGenType(...) for all listed TypeNames.
   2. LiftFn  — func(stmt any) (Persistable, error): converts AST stmt to canonical Model.
-  3. HydrateFn — func(el any) (Document, []Warning, error): converts gen element to canonical Model.
-     Note: current HydrateFn passes "" as moduleName — a known gap tracked in the spec.
-     A future plan will upgrade HydrateFn to accept HydrateCtx{ModuleName string}.
+  3. HydrateFn — func(el any, ctx HydrateCtx) (Document, []Warning, error): converts gen element.
   4. When adding a new domain: add RegisterCodec call to BuildRegistry AND
      add TypeName(s) to Required. Both must be updated together.`,
 		},

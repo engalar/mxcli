@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>初心：最简解</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, sans-serif; background: #0f1117; color: #e2e8f0; padding: 24px; font-size: 13px; line-height: 1.6; }
+h2 { font-size: 18px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; }
+.sub { color: #64748b; font-size: 12px; margin-bottom: 24px; }
+.sec { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #475569; margin: 24px 0 10px; padding-bottom: 5px; border-bottom: 1px solid #1e293b; }
+pre { background: #0a0e1a; border: 1px solid #1e293b; border-radius: 5px; padding: 12px; font-size: 11px; line-height: 1.7; overflow-x: auto; color: #94a3b8; }
+.kw { color: #c084fc; } .fn { color: #60a5fa; } .tp { color: #fcd34d; } .str { color: #86efac; } .cmt { color: #475569; font-style: italic; }
+
+/* The drift diagram */
+.drift { display: grid; grid-template-columns: 1fr 30px 1fr 30px 1fr; gap: 0; align-items: center; margin-bottom: 8px; }
+.d-box { padding: 12px; border-radius: 6px; font-size: 12px; border: 1px solid; }
+.d-write { background: #1a0f2e; border-color: #4c1d95; }
+.d-bson  { background: #0f2a0f; border-color: #15803d; }
+.d-read  { background: #1a1500; border-color: #92400e; }
+.d-arrow { text-align: center; color: #475569; font-size: 16px; }
+.d-label { font-size: 10px; color: #64748b; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.d-content { font-family: monospace; font-size: 11px; }
+.d-ok { color: #4ade80; }
+.d-drift { color: #f87171; }
+.d-fixed { color: #fcd34d; }
+
+/* Insight boxes */
+.insight { padding: 14px 16px; border-radius: 6px; margin-bottom: 12px; }
+.ins-q { background: #1a0f2e; border: 1px solid #4c1d95; }
+.ins-a { background: #052e16; border: 1px solid #15803d; }
+.ins-warn { background: #2d1b00; border: 1px solid #92400e; }
+.ins-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.ins-q .ins-label { color: #c084fc; }
+.ins-a .ins-label { color: #4ade80; }
+.ins-warn .ins-label { color: #fbbf24; }
+
+/* Simple solution */
+.solution { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid #334155; border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+.sol-side { padding: 16px; }
+.sol-before { background: #1a0000; border-right: 1px solid #334155; }
+.sol-after { background: #001a00; }
+.sol-title { font-size: 12px; font-weight: 700; margin-bottom: 12px; }
+.sol-before .sol-title { color: #f87171; }
+.sol-after .sol-title { color: #4ade80; }
+.sol-item { font-size: 12px; margin-bottom: 8px; display: flex; gap: 8px; }
+.sol-item::before { flex-shrink: 0; }
+
+/* Invariant card */
+.invariant { background: #1e293b; border: 2px solid #3b82f6; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.invariant h4 { color: #60a5fa; font-size: 14px; margin-bottom: 10px; }
+.inv-item { display: flex; gap: 10px; margin-bottom: 8px; font-size: 12px; align-items: baseline; }
+.inv-num { color: #3b82f6; font-weight: 700; flex-shrink: 0; width: 20px; }
+</style>
+</head>
+<body>
+
+<h2>从初心出发：最简解</h2>
+<p class="sub">canonical model 是不归路。重新定义问题，找最小成本解。</p>
+
+<div class="sec">第一步：重新定义"漂移"问题</div>
+
+<div class="drift">
+  <div class="d-box d-write">
+    <div class="d-label">MDL 输入</div>
+    <div class="d-content">create page M.P<br>layout Atlas.Default ()<br>{<br>  column col1<br>  (TabletWidth: AutoFill) {<br>    textbox tb (attr: Name)<br>  }<br>}</div>
+  </div>
+  <div class="d-arrow">→<br><span style="font-size:10px;color:#4ade80">gen builder<br>写 BSON</span></div>
+  <div class="d-box d-bson">
+    <div class="d-label">BSON（磁盘）</div>
+    <div class="d-content d-ok">TabletWeight: -1 ✓<br>AttributeRef: "M.E.Name" ✓<br>FormCall.Arguments ✓<br>TypePointer refs ✓<br><br><em style="color:#475569">gen builder 写对了</em></div>
+  </div>
+  <div class="d-arrow">→<br><span style="font-size:10px;color:#fbbf24">describePage<br>读 BSON</span></div>
+  <div class="d-box d-read">
+    <div class="d-label">MDL 输出（describe）</div>
+    <div class="d-content">
+      <span class="d-fixed">TabletWidth: AutoFill ✓<br></span>
+      <span class="d-ok">Attribute: M.E.Name ✓<br></span>
+      <span class="d-ok">column col1 (...) { ✓<br></span>
+      <br><em style="color:#4ade80">已通过 IR-1~5 修复</em>
+    </div>
+  </div>
+</div>
+
+<div class="insight ins-a" style="margin-top:8px">
+  <div class="ins-label">✓ 关键洞察</div>
+  <p style="font-size:12px;color:#86efac"><strong>gen builder 已经是单一正确的写路径</strong>。它把 MDL 输入正确转化为 BSON。describe 读 BSON 输出 MDL。漂移只发生在 BSON→MDL 的格式化层——而这已经通过 propInt、列宽渲染器、footer 提取等修复了。<br><br>问题从来不是"缺少 canonical model"，而是"describe 格式化器有 bug"。</p>
+</div>
+
+<div class="sec">第二步：canonical model 究竟解决了什么？</div>
+
+<div class="insight ins-q">
+  <div class="ins-label">我们原本想解决的</div>
+  <ul style="font-size:12px;color:#c4b5fd;padding-left:16px;line-height:2">
+    <li>entity/association 有 canonical model → page 也应该有（一致性）</li>
+    <li>describe 路由统一走 ModelCodecs → 所有域统一分发</li>
+    <li>Hydrate 能从 gen Page 提取完整 widget 树</li>
+  </ul>
+</div>
+
+<div class="insight ins-warn">
+  <div class="ins-label">⚠ 实际代价</div>
+  <ul style="font-size:12px;color:#fde68a;padding-left:16px;line-height:2">
+    <li>WidgetNode 平铺结构 → 3 文件各 1000+ 行 switch（SOLID 问题）</li>
+    <li>PluggableWidget → MPK schema + TypePointer 引用链约束</li>
+    <li>RawType + RawObject → modelsdk 缓存和按需加载的冲突</li>
+    <li>widgetNodeFromGen → 每个 gen widget 类型的 typed getter 适配</li>
+    <li>AugmentTemplate 集成 → MPK 版本兼容性</li>
+  </ul>
+  <p style="font-size:12px;color:#fbbf24;margin-top:8px"><strong>这是复杂度爆炸的根源：页面 IR 比 entity/association 复杂 10 倍，因为 widget 是开放扩展的插件体系。</strong></p>
+</div>
+
+<div class="sec">第三步：最简解——两个不变式 + 一层守护测试</div>
+
+<div class="invariant">
+  <h4>不变式：gen builder 是唯一的写真相</h4>
+  <div class="inv-item">
+    <span class="inv-num">1</span>
+    <span style="color:#93c5fd"><strong>写路径不变</strong>：execCreatePageV3 → gen builder → BSON。不需要 canonical Persist，不需要 widget 级 canonical model。gen builder 已经写对了。</span>
+  </div>
+  <div class="inv-item">
+    <span class="inv-num">2</span>
+    <span style="color:#93c5fd"><strong>读路径守住 BSON</strong>：describePage 对于复杂页面走 raw BSON 路径（已有 lossy fallback），对于简单页面走 IR 路径（IR-1~5 已修复）。不需要引入新的复杂中间层。</span>
+  </div>
+  <div class="inv-item">
+    <span class="inv-num">3</span>
+    <span style="color:#93c5fd"><strong>漂移守护</strong>：写一个 Round-trip 测试——MDL → create → describe → 对比输出是否可以重新 parse。这是检测漂移最直接的方式。</span>
+  </div>
+</div>
+
+<div class="sec">第四步：最小化改动清单</div>
+
+<div class="solution">
+  <div class="sol-side sol-before">
+    <div class="sol-title">✗ canonical model 方案（放弃）</div>
+    <div class="sol-item" style="color:#f87171">• PluggableWidget IR + RawType + RawObject</div>
+    <div class="sol-item" style="color:#f87171">• widgetNodeFromGen（适配20+种 gen 类型）</div>
+    <div class="sol-item" style="color:#f87171">• AugmentTemplate 集成</div>
+    <div class="sol-item" style="color:#f87171">• WidgetCodec Registry（每族一个 codec）</div>
+    <div class="sol-item" style="color:#f87171">• 替换3个1000行 switch</div>
+    <div class="sol-item" style="color:#f87171">• modelsdk cache 机制协调</div>
+    <p style="font-size:11px;color:#7f1d1d;margin-top:12px">代价：数千行新代码，3-6个月工作量，引入新的失败模式</p>
+  </div>
+  <div class="sol-side sol-after">
+    <div class="sol-title">✓ 最简方案（推荐）</div>
+    <div class="sol-item" style="color:#4ade80">• 保留现有 gen builder 写路径（不动）</div>
+    <div class="sol-item" style="color:#4ade80">• 保留 raw BSON describe 路径（不动）</div>
+    <div class="sol-item" style="color:#4ade80">• IR-1~5 已修复的列宽/footer（已完成）</div>
+    <div class="sol-item" style="color:#4ade80">• PageDocument stub 满足 canonical 接口（已完成）</div>
+    <div class="sol-item" style="color:#fcd34d">• 新增：round-trip 守护测试（~50行）</div>
+    <div class="sol-item" style="color:#fcd34d">• 新增：修复 describe 遗留 bug（按需）</div>
+    <p style="font-size:11px;color:#14532d;margin-top:12px">代价：极小，守护已有功能，不引入新复杂性</p>
+  </div>
+</div>
+
+<div class="sec">第五步：round-trip 守护测试设计</div>
+
+<pre><span class="cmt">// mdl/executor/roundtrip_page_test.go</span>
+
+<span class="cmt">// 守护测试：确保 MDL → create → describe 的输出可以无损重执行</span>
+<span class="kw">func</span> TestPageRoundTrip_NoMDLDrift(t *testing.T) {
+    cases := []struct{ name, mdl string }{
+        {<span class="str">"simple dataview"</span>, <span class="str">`create or replace page M.P layout Atlas.Default () {
+  layoutgrid lg { row r1 {
+    column c1 (DesktopWidth: 12, TabletWidth: AutoFill) {
+      dataview dv (datasource: $MyEntity) {
+        textbox tb (attribute: Name)
+      }
+    }
+  }}
+}`</span>},
+        <span class="cmt">// 更多 case...</span>
+    }
+
+    <span class="kw">for</span> _, tc := <span class="kw">range</span> cases {
+        t.Run(tc.name, <span class="kw">func</span>(t *testing.T) {
+            <span class="cmt">// 1. 写入</span>
+            ctx := newIntegrationContext(t)
+            requireNoError(t, ctx.Execute(tc.mdl))
+
+            <span class="cmt">// 2. 读回</span>
+            described := captureDescribe(ctx, <span class="str">"M.P"</span>)
+
+            <span class="cmt">// 3. 验证可重解析（关键：不是字符串相等，而是语义等价）</span>
+            requireNoError(t, ctx.Execute(described))  <span class="cmt">// 重执行不报错</span>
+
+            <span class="cmt">// 4. 二次 describe 必须与第一次相同（幂等）</span>
+            described2 := captureDescribe(ctx, <span class="str">"M.P"</span>)
+            assert.Equal(t, described, described2, <span class="str">"describe 不幂等"</span>)
+        })
+    }
+}
+</pre>
+
+<div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:14px;margin-top:16px">
+  <p style="color:#94a3b8;font-weight:700;margin-bottom:6px">一句话总结</p>
+  <p style="font-size:13px;color:#e2e8f0;line-height:1.8">
+    <strong>gen builder 写对了，describe 读 BSON 的格式化 bug 已修。最简解：加 round-trip 幂等测试守住这个不变式，不需要 canonical page model。</strong>
+    PageDocument stub 留在注册表里满足架构一致性即可——它永远不会被 Persist 调用，Hydrate 是只读辅助。
+  </p>
+</div>
+
+</body>
+</html>
