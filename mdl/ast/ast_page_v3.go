@@ -2,6 +2,8 @@
 
 package ast
 
+import "strings"
+
 // =============================================================================
 // V3 Page AST Types
 // =============================================================================
@@ -117,9 +119,21 @@ type DesignPropertyEntryV3 struct {
 // Helper functions to extract typed properties from WidgetV3
 
 // GetStringProp returns a string property or empty string if not found.
+// Lookup is case-insensitive on fallback: the parser stores generic
+// IDENTIFIER property keys verbatim (e.g. "collapsible") but builders
+// historically look up Title-Case names (e.g. "Collapsible"). Try the
+// requested key first, then fold to case-insensitive scan so the
+// canonical MDL lowercase convention round-trips correctly.
 func (w *WidgetV3) GetStringProp(key string) string {
 	if v, ok := w.Properties[key].(string); ok {
 		return v
+	}
+	for k, v := range w.Properties {
+		if strings.EqualFold(k, key) {
+			if s, ok := v.(string); ok {
+				return s
+			}
+		}
 	}
 	return ""
 }
