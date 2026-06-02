@@ -131,6 +131,53 @@ func (b *MprBackend) CreateAssociationGen(domainModelID model.ID, assoc *genDm.A
 	return b.UpdateDomainModelGen(dm)
 }
 
+// GetEntityIDByQualifiedName resolves a "Module.Entity" qualified name to the
+// entity's element ID. Returns an error if the qualified name is malformed, the
+// module is unknown, or the entity does not exist in that module.
+func (b *MprBackend) GetEntityIDByQualifiedName(qualifiedName string) (element.ID, error) {
+	dot := strings.LastIndex(qualifiedName, ".")
+	if dot <= 0 || dot == len(qualifiedName)-1 {
+		return "", fmt.Errorf("GetEntityIDByQualifiedName: %q is not a qualified Module.Entity name", qualifiedName)
+	}
+	moduleName := qualifiedName[:dot]
+	entityName := qualifiedName[dot+1:]
+
+	modules, err := b.ListModules()
+	if err != nil {
+		return "", fmt.Errorf("GetEntityIDByQualifiedName: list modules: %w", err)
+	}
+	var moduleID model.ID
+	found := false
+	for _, mod := range modules {
+		if mod.Name == moduleName {
+			moduleID = mod.ID
+			found = true
+			break
+		}
+	}
+	if !found {
+		return "", fmt.Errorf("GetEntityIDByQualifiedName: module %q not found", moduleName)
+	}
+
+	dm, err := b.GetDomainModelGen(moduleID)
+	if err != nil {
+		return "", fmt.Errorf("GetEntityIDByQualifiedName: load domain model for %q: %w", moduleName, err)
+	}
+	if dm == nil {
+		return "", fmt.Errorf("GetEntityIDByQualifiedName: no domain model for module %q", moduleName)
+	}
+	for _, item := range dm.EntitiesItems() {
+		entity, ok := item.(*genDm.Entity)
+		if !ok || entity == nil {
+			continue
+		}
+		if entity.Name() == entityName {
+			return entity.ID(), nil
+		}
+	}
+	return "", fmt.Errorf("GetEntityIDByQualifiedName: entity %q not found", qualifiedName)
+}
+
 func assignEntityIDsGen(entity *genDm.Entity) {
 	if entity == nil {
 		return

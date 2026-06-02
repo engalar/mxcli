@@ -4,6 +4,7 @@ package backend
 
 import (
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
@@ -25,6 +26,8 @@ type DomainModelBackend interface {
 
 	// Entities
 	DeleteEntity(domainModelID model.ID, entityID model.ID) error
+	// GetEntityIDByQualifiedName resolves "Module.Entity" to its element ID.
+	GetEntityIDByQualifiedName(qualifiedName string) (element.ID, error)
 
 	// Attributes
 	DeleteAttribute(domainModelID model.ID, entityID model.ID, attrID model.ID) error

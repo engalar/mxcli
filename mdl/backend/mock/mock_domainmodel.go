@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
@@ -156,6 +157,13 @@ func (m *MockBackend) CreateAssociationGen(domainModelID model.ID, assoc *genDm.
 		return m.CreateAssociationGenFunc(domainModelID, assoc)
 	}
 	return nil
+}
+
+func (m *MockBackend) GetEntityIDByQualifiedName(qualifiedName string) (element.ID, error) {
+	if m.GetEntityIDByQualifiedNameFunc != nil {
+		return m.GetEntityIDByQualifiedNameFunc(qualifiedName)
+	}
+	return "", fmt.Errorf("MockBackend.GetEntityIDByQualifiedName not configured")
 }
 
 func (m *MockBackend) RelayoutDomainModel(domainModelID model.ID) error {

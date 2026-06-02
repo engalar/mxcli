@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/internal/archtest"
 	"github.com/mendixlabs/mxcli/mdl/canonical"
+	assocmodel "github.com/mendixlabs/mxcli/mdl/canonical/association"
 	"github.com/mendixlabs/mxcli/mdl/canonical/entity"
 )
 
@@ -18,24 +19,24 @@ import (
 // a Required TypeName is removed from the registry without updating this file.
 //
 // When adding a new domain (Phase 2+):
-//   1. Add: domainpkg.RegisterCodec(r) to BuildRegistry below.
-//   2. Add: "DomainModels$NewType" to Required.
-//   Both must be updated together — a Required entry with no RegisterCodec
-//   call will immediately fail this test.
+//  1. Add: domainpkg.RegisterCodec(r) to BuildRegistry below.
+//  2. Add: "DomainModels$NewType" to Required.
+//     Both must be updated together — a Required entry with no RegisterCodec
+//     call will immediately fail this test.
 func TestCodecComplete(t *testing.T) {
 	archtest.Check(t, ".",
 		archtest.CodecComplete{
 			BuildRegistry: func() *canonical.DefaultRegistry {
 				r := canonical.NewDefaultRegistry()
 				entity.RegisterCodec(r)
-				// Phase 2: association.RegisterCodec(r)
+				assocmodel.RegisterCodec(r)
 				// Phase 3: microflow.RegisterCodec(r)
 				return r
 			},
 			Required: []string{
 				"DomainModels$Entity",
 				"DomainModels$EntityImpl",
-				// Phase 2: "DomainModels$Association"
+				"DomainModels$Association",
 			},
 			Hint: `Every Required gen TypeName must be registered with non-nil LiftFn and HydrateFn.
 Fix:

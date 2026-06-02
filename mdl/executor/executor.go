@@ -14,11 +14,12 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
+	assocmodel "github.com/mendixlabs/mxcli/mdl/canonical/association"
+	entitymodel "github.com/mendixlabs/mxcli/mdl/canonical/entity"
 	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/mdl/canonical"
-	entitymodel "github.com/mendixlabs/mxcli/mdl/canonical/entity"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -280,7 +281,7 @@ type Executor struct {
 	sqlMgr         *sqllib.Manager                    // external SQL connection manager (lazy init)
 	themeRegistry  *ThemeRegistry                     // cached theme design property definitions (lazy init)
 	registry       *Registry                          // statement dispatch registry
-	modelCodecs    *canonical.DefaultRegistry    // canonical Lift/Hydrate codec registry
+	modelCodecs    *canonical.DefaultRegistry         // canonical Lift/Hydrate codec registry
 	catalogMu      sync.RWMutex                       // protects catalog field from background goroutine writes
 	catalogGen     uint64                             // monotonic generation counter for catalog swaps
 }
@@ -292,7 +293,8 @@ func New(output io.Writer) *Executor {
 	guard := newOutputGuard(output, maxOutputLines)
 	mc := canonical.NewDefaultRegistry()
 	entitymodel.RegisterCodec(mc)
-	// Phase 2+: assoc.RegisterCodec(mc), microflow.RegisterCodec(mc), etc.
+	assocmodel.RegisterCodec(mc)
+	// Phase 3+: microflow.RegisterCodec(mc), etc.
 	return &Executor{
 		output:       guard,
 		statusOutput: os.Stderr,

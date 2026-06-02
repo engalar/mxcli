@@ -92,40 +92,11 @@ func enumerationStmtToMDL(ctx *ExecContext, s *ast.CreateEnumerationStmt) string
 
 // associationStmtToMDL converts a CreateAssociationStmt to MDL text
 func associationStmtToMDL(ctx *ExecContext, s *ast.CreateAssociationStmt) string {
-	var lines []string
-
-	if s.Documentation != "" {
-		lines = append(lines, "/**")
-		lines = append(lines, " * "+s.Documentation)
-		lines = append(lines, " */")
+	doc, err := ctx.ModelCodecs.LiftFrom(s)
+	if err != nil {
+		return fmt.Sprintf("/* association lift error: %v */", err)
 	}
-
-	lines = append(lines, fmt.Sprintf("create association %s", s.Name))
-	lines = append(lines, fmt.Sprintf("from %s to %s", s.Parent, s.Child))
-
-	assocType := "Reference"
-	if s.Type == ast.AssocReferenceSet {
-		assocType = "ReferenceSet"
-	}
-	lines = append(lines, fmt.Sprintf("type %s", assocType))
-
-	owner := "Default"
-	if s.Owner == ast.OwnerBoth {
-		owner = "Both"
-	}
-	lines = append(lines, fmt.Sprintf("owner %s", owner))
-
-	deleteBehavior := "DELETE_BUT_KEEP_REFERENCES"
-	switch s.DeleteBehavior {
-	case ast.DeleteCascade:
-		deleteBehavior = "DELETE_CASCADE"
-	case ast.DeleteIfNoReferences:
-		deleteBehavior = "DELETE_IF_NO_REFERENCES"
-	}
-	lines = append(lines, fmt.Sprintf("delete_behavior %s;", deleteBehavior))
-	lines = append(lines, "/")
-
-	return strings.Join(lines, "\n")
+	return doc.ToMDL() + ";\n/"
 }
 
 // microflowStmtToMDL converts a CreateMicroflowStmt to MDL text
@@ -550,55 +521,21 @@ func enumerationToMDL(ctx *ExecContext, moduleName string, enum *model.Enumerati
 
 // associationToMDLGen converts a gen-typed project association to MDL.
 func associationToMDLGen(ctx *ExecContext, moduleName string, assoc *genDm.Association, dm *genDm.DomainModel) string {
-	var lines []string
-
-	// Build entity name map
-	entityNames := make(map[model.ID]string)
+	// Build entity ID → name map from the domain model.
+	entityNames := make(map[string]string)
 	for _, item := range dm.EntitiesItems() {
-		entity, ok := item.(*genDm.Entity)
-		if !ok {
-			continue
-		}
-		entityNames[model.ID(entity.ID())] = entity.Name()
-	}
-
-	if assoc.Documentation() != "" {
-		lines = append(lines, "/**")
-		lines = append(lines, " * "+assoc.Documentation())
-		lines = append(lines, " */")
-	}
-
-	fromEntity := entityNames[model.ID(assoc.ParentRefID())]
-	toEntity := entityNames[model.ID(assoc.ChildRefID())]
-
-	lines = append(lines, fmt.Sprintf("create association %s.%s", moduleName, assoc.Name()))
-	lines = append(lines, fmt.Sprintf("from %s.%s to %s.%s", moduleName, fromEntity, moduleName, toEntity))
-
-	assocType := "Reference"
-	if assoc.Type() == "ReferenceSet" {
-		assocType = "ReferenceSet"
-	}
-	lines = append(lines, fmt.Sprintf("type %s", assocType))
-
-	owner := "Default"
-	if assoc.Owner() == "Both" {
-		owner = "Both"
-	}
-	lines = append(lines, fmt.Sprintf("owner %s", owner))
-
-	deleteBehavior := "DELETE_BUT_KEEP_REFERENCES"
-	if dbe, ok := assoc.DeleteBehavior().(*genDm.AssociationDeleteBehavior); ok && dbe != nil {
-		switch dbe.ChildDeleteBehavior() {
-		case "DeleteMeAndReferences":
-			deleteBehavior = "DELETE_CASCADE"
-		case "DeleteMeIfNoReferences":
-			deleteBehavior = "DELETE_IF_NO_REFERENCES"
+		if e, ok := item.(*genDm.Entity); ok {
+			entityNames[string(e.ID())] = e.Name()
 		}
 	}
-	lines = append(lines, fmt.Sprintf("delete_behavior %s;", deleteBehavior))
-	lines = append(lines, "/")
-
-	return strings.Join(lines, "\n")
+	doc, _, err := ctx.ModelCodecs.HydrateFrom(assoc, canonical.HydrateCtx{
+		ModuleName:  moduleName,
+		EntityNames: entityNames,
+	})
+	if err != nil {
+		return fmt.Sprintf("/* association hydrate error: %v */", err)
+	}
+	return doc.ToMDL() + ";\n/"
 }
 
 // crossAssociationToMDLGen converts a gen-typed cross-association to MDL.
