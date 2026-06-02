@@ -510,7 +510,20 @@ func applyWidgetAppearanceGen(widget element.Element, w *ast.WidgetV3, theme *Th
 	class, style := w.GetClass(), w.GetStyle()
 	astProps := w.GetDesignProperties()
 
-	// If no appearance data, skip
+	// Always ensure every widget that supports Appearance has a Forms$Appearance in its
+	// BSON — Studio Pro 11.6.6 requires it on every widget or the widget is invisible.
+	// Input widgets (TextBox, TextArea, …) already have Appearance set via
+	// applyFormWidgetDefaults; for container widgets (DataView, DivContainer, …) we
+	// ensure it here if not yet populated.
+	type appearanceGetSetter interface {
+		Appearance() element.Element
+		SetAppearance(element.Element)
+	}
+	if as, ok := widget.(appearanceGetSetter); ok && as.Appearance() == nil {
+		as.SetAppearance(newDefaultAppearance())
+	}
+
+	// If no explicit styling, the default Appearance above is sufficient.
 	if class == "" && style == "" && len(astProps) == 0 {
 		return
 	}

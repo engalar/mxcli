@@ -304,6 +304,60 @@ func TestDataViewSelectionDatasource_StoresListenTargetSource(t *testing.T) {
 	}
 }
 
+// TestApplyWidgetAppearanceGen_SetsDefaultAppearanceWhenNoStyling verifies that
+// a widget which supports SetAppearance always gets a Forms$Appearance even when
+// no class, style, or designproperties are specified in MDL.
+// Studio Pro 11.6.6 requires Forms$Appearance on every widget — without it the
+// widget is invisible (see newDefaultAppearance comment in cmd_pages_builder_input.go).
+func TestApplyWidgetAppearanceGen_SetsDefaultAppearanceWhenNoStyling(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		widget func() element.Element
+	}{
+		{"DataView", func() element.Element { return genPg.NewDataView() }},
+		{"DivContainer", func() element.Element { return genPg.NewDivContainer() }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := &ast.WidgetV3{Properties: map[string]interface{}{}}
+			widget := tc.widget()
+
+			applyWidgetAppearanceGen(widget, w, nil)
+
+			type appearanceGetter interface{ Appearance() element.Element }
+			ag, ok := widget.(appearanceGetter)
+			if !ok {
+				t.Fatalf("%s does not implement Appearance()", tc.name)
+			}
+			if ag.Appearance() == nil {
+				t.Errorf("%s: Appearance must not be nil even when no class/style/designprops specified", tc.name)
+			}
+			app, ok := ag.Appearance().(*genPg.Appearance)
+			if !ok {
+				t.Fatalf("%s: Appearance = %T, want *genPg.Appearance", tc.name, ag.Appearance())
+			}
+			if app.Class() != "" {
+				t.Errorf("%s: default Appearance.Class must be empty, got %q", tc.name, app.Class())
+			}
+		})
+	}
+}
+
+// TestApplyWidgetAppearanceGen_PreservesExistingAppearance verifies that
+// a widget which already has Appearance set (e.g. by applyFormWidgetDefaults)
+// does not have its Appearance replaced when no styling is specified in MDL.
+func TestApplyWidgetAppearanceGen_PreservesExistingAppearance(t *testing.T) {
+	tb := genPg.NewTextBox()
+	existing := newDefaultAppearance()
+	tb.SetAppearance(existing)
+
+	w := &ast.WidgetV3{Properties: map[string]interface{}{}}
+	applyWidgetAppearanceGen(tb, w, nil)
+
+	if tb.Appearance() != existing {
+		t.Error("pre-existing Appearance must not be replaced when no class/style/designprops specified")
+	}
+}
+
 // TestNanoflowDatasourceResolvesViaCache verifies that buildDataSourceV3
 // resolves a nanoflow datasource reference using execCache.createdNanoflows,
 // enabling session-local resolution without a backend round-trip.

@@ -18,7 +18,14 @@
 --           now routes pure-IR widgets through new pageModelToMDL renderer and lossy widgets
 --           (DataGrid/Gallery/CustomWidget/Button-with-Action/etc.) through legacy describe.
 -- Note    : relayout now distributes association connector Y positions evenly along each entity
---           edge (100*(k+1)/(N+1)) instead of stacking all lines at Y=50.
+--           edge (100*(k+1)/(N+1)) instead of stacking all lines at Y=50; endpoints are sorted
+--           by peer entity Y so lines follow the same top-to-bottom order and do not cross.
+-- Note    : Golden rebuilt 2026-06-02 after 10 describe/execute idempotency fixes:
+--           XPath "/" spacing, abort-reason double-quoting, wait-for-notification comment
+--           keyword, DataGrid pagesize key case, column attribute condition, CallWorkflow
+--           boundary events, DynamicText contentparams $var/attr routing, toString()
+--           expression passthrough, @position on workflow microflow actions; also fixes
+--           11.10.0 commit/change mismatch and row1/col1 drift in both versions.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
