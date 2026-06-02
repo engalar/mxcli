@@ -380,62 +380,6 @@ func describeEntityGen(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 	}
 	fmt.Fprint(ctx.Output, m.ToMDLStatement(true))
-
-	// Trailing clauses Hydrate/ToMDL do not (yet) carry on the canonical
-	// model: system members, view OQL bodies, and event handlers.
-	if g, ok := entity.Generalization().(*genDm.NoGeneralization); ok {
-		var members []string
-		if g.HasOwner() {
-			members = append(members, "owner")
-		}
-		if g.HasCreatedDate() {
-			members = append(members, "createdDate")
-		}
-		if g.HasChangedDate() {
-			members = append(members, "changedDate")
-		}
-		if g.HasChangedBy() {
-			members = append(members, "changedBy")
-		}
-		if len(members) > 0 {
-			fmt.Fprintf(ctx.Output, "\nsystem members (%s)", strings.Join(members, ", "))
-		}
-	}
-
-	if strings.ToLower(entityKindForGen(entity)) == "view" {
-		if src, ok := entity.Source().(*genDm.OqlViewEntitySource); ok {
-			if oql := src.Oql(); oql != "" {
-				fmt.Fprint(ctx.Output, " as (\n")
-				for _, l := range strings.Split(oql, "\n") {
-					fmt.Fprintf(ctx.Output, "  %s\n", l)
-				}
-				fmt.Fprint(ctx.Output, ")")
-			}
-		}
-	}
-
-	for _, eh := range entity.EventHandlersItems() {
-		h, ok := eh.(*genDm.EventHandler)
-		if !ok {
-			continue
-		}
-		mfn := h.MicroflowQualifiedName()
-		if mfn == "" {
-			continue
-		}
-		eventName := strings.ToLower(h.Event())
-		paramStr := "()"
-		if h.PassEventObject() {
-			paramStr = "($currentObject)"
-		}
-		options := ""
-		if h.RaiseErrorOnFalse() && strings.EqualFold(h.Moment(), "Before") {
-			options = " raise error"
-		}
-		fmt.Fprintf(ctx.Output, "\non %s %s call %s%s%s",
-			strings.ToLower(h.Moment()), eventName, mfn, paramStr, options)
-	}
-
 	fmt.Fprintln(ctx.Output, ";")
 
 	outputEntityAccessGrantsGen(ctx, entity, name.Module, name.Name)

@@ -42,6 +42,8 @@ type EntityModel struct {
 	Indexes       []IndexModel
 	SystemMembers []string
 	EventHandlers []EventHandlerModel
+	// OQL is the query body for EntityView entities. Empty for all other kinds.
+	OQL string
 }
 
 // EventHandlerModel is the canonical representation of a domain event handler.

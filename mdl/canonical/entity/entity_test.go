@@ -453,3 +453,27 @@ func TestEventHandler_PersistHydrateRoundTrip(t *testing.T) {
 	require.Len(t, got.EventHandlers, 1)
 	assert.Equal(t, orig.EventHandlers[0], got.EventHandlers[0])
 }
+
+// --------------------------------------------------------------------------
+// System members + OQL in ToMDLStatement
+// --------------------------------------------------------------------------
+
+func TestToMDL_WithSystemMembers(t *testing.T) {
+	m := &EntityModel{
+		Name:          QualifiedName{Module: "M", Name: "E"},
+		Kind:          EntityPersistent,
+		SystemMembers: []string{"owner", "createdDate"},
+	}
+	got := m.ToMDLStatement(true)
+	assert.Contains(t, got, "system members (owner, createdDate)")
+}
+
+func TestToMDL_ViewEntityWithOQL(t *testing.T) {
+	m := &EntityModel{
+		Name: QualifiedName{Module: "M", Name: "V"},
+		Kind: EntityView,
+		OQL:  "select MyObject/Name from MyModule.MyObject",
+	}
+	got := m.ToMDLStatement(true)
+	assert.Contains(t, got, "as (\n  select MyObject/Name from MyModule.MyObject\n)")
+}

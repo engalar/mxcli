@@ -140,6 +140,32 @@ func Hydrate(moduleName string, e *genDm.Entity) (*EntityModel, []canonical.Warn
 			PassEventObject:   h.PassEventObject(),
 		})
 	}
+
+	// System members from the NoGeneralization presence bits.
+	if g, ok := e.Generalization().(*genDm.NoGeneralization); ok {
+		if g.HasOwner() {
+			m.SystemMembers = append(m.SystemMembers, "owner")
+		}
+		if g.HasCreatedDate() {
+			m.SystemMembers = append(m.SystemMembers, "createdDate")
+		}
+		if g.HasChangedDate() {
+			m.SystemMembers = append(m.SystemMembers, "changedDate")
+		}
+		if g.HasChangedBy() {
+			m.SystemMembers = append(m.SystemMembers, "changedBy")
+		}
+	}
+
+	// OQL for view entities.
+	if m.Kind == EntityView {
+		if src := e.Source(); src != nil {
+			type oqlSource interface{ Oql() string }
+			if oq, ok := src.(oqlSource); ok {
+				m.OQL = oq.Oql()
+			}
+		}
+	}
 	return m, warns, nil
 }
 

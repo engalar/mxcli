@@ -87,6 +87,20 @@ func (m *EntityModel) ToMDLStatement(createOrModify bool) string {
 			strings.ToLower(eh.Moment), strings.ToLower(eh.Event),
 			eh.Microflow, paramStr, options)
 	}
+
+	// System members (after event handlers).
+	if len(m.SystemMembers) > 0 {
+		fmt.Fprintf(&sb, "\nsystem members (%s)", strings.Join(m.SystemMembers, ", "))
+	}
+
+	// OQL body for view entities.
+	if m.Kind == EntityView && m.OQL != "" {
+		sb.WriteString(" as (\n")
+		for _, line := range strings.Split(m.OQL, "\n") {
+			fmt.Fprintf(&sb, "  %s\n", line)
+		}
+		sb.WriteString(")")
+	}
 	return sb.String()
 }
 
