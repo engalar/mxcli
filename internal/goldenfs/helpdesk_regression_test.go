@@ -289,6 +289,10 @@ func TestHelpdeskGolden_Regression_BSON(t *testing.T) {
 // executing this script is valid MDL and can be parsed by visitor.Build.
 func helpdeskParseableDescribeScript(mprPath string) string {
 	return fmt.Sprintf(`connect local '%s';
+-- Enumerations first: entities may reference these types as attribute types
+describe enumeration KB.ArticleStatus;
+describe enumeration HD.TicketStatus;
+describe enumeration HD.TicketPriority;
 -- KB entities
 describe entity KB.Category;
 describe entity KB.Tag;
@@ -314,10 +318,6 @@ describe association HD.Ticket_Agent;
 describe association HD.TicketComment_Ticket;
 describe association HD.EscalationRequest_Ticket;
 describe association HD.Ticket_KBArticle;
--- Enumerations
-describe enumeration KB.ArticleStatus;
-describe enumeration HD.TicketStatus;
-describe enumeration HD.TicketPriority;
 -- KB microflows
 describe microflow KB.ACT_Article_Publish;
 describe microflow KB.ACT_Article_Archive;

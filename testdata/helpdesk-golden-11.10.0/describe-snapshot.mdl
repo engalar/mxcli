@@ -1,3 +1,24 @@
+create or modify enumeration KB.ArticleStatus (
+  Draft 'Draft',
+  Published 'Published',
+  Archived 'Archived'
+);
+/
+create or modify enumeration HD.TicketStatus (
+  Draft 'Draft',
+  Open 'Open',
+  InProgress 'In Progress',
+  Resolved 'Resolved',
+  Closed 'Closed'
+);
+/
+create or modify enumeration HD.TicketPriority (
+  Low 'Low',
+  Normal 'Normal',
+  High 'High',
+  Critical 'Critical'
+);
+/
 @Position(750, 160)
 create or modify persistent entity KB.Category (
   Name: String(200) not null,
@@ -214,27 +235,6 @@ type Reference
 owner Default
 delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
-create or modify enumeration KB.ArticleStatus (
-  Draft 'Draft',
-  Published 'Published',
-  Archived 'Archived'
-);
-/
-create or modify enumeration HD.TicketStatus (
-  Draft 'Draft',
-  Open 'Open',
-  InProgress 'In Progress',
-  Resolved 'Resolved',
-  Closed 'Closed'
-);
-/
-create or modify enumeration HD.TicketPriority (
-  Low 'Low',
-  Normal 'Normal',
-  High 'High',
-  Critical 'Critical'
-);
-/
 create or modify microflow KB.ACT_Article_Publish (
   $Article: KB.Article
 )
@@ -281,6 +281,18 @@ begin
   declare $Preview String = $Article/Content;
   return $Preview;
 end;
+/
+create or modify nanoflow KB.NF_Article_FormatPreview (
+  $Article: KB.Article
+)
+returns String
+begin
+  @position(360,200)
+  $Preview = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
+  return $Preview;
+end;
+
+grant execute on nanoflow KB.NF_Article_FormatPreview to KB.Reader, KB.Contributor, KB.Admin;
 /
 create or modify microflow HD.ACT_Ticket_Submit (
   $Ticket: HD.Ticket
@@ -527,6 +539,67 @@ begin
       limit 10;
   return $Tickets;
 end;
+/
+create or modify nanoflow HD.NF_Ticket_QuickCreate (
+  $Customer: HD.Customer,
+  $Subject: String
+)
+returns Ticket
+begin
+  @position(360,200)
+  $Ticket = create HD.Ticket (Subject = $Subject
+  , Status = HD.TicketStatus.Draft
+  , Priority = HD.TicketPriority.Normal
+  , Ticket_Customer = $Customer
+  );
+  @position(520,200)
+  commit $Ticket;
+  return $Ticket;
+end;
+
+grant execute on nanoflow HD.NF_Ticket_QuickCreate to HD.CustomerRole, HD.AgentRole;
+/
+create or modify nanoflow HD.NF_TicketSearch_Apply (
+  $Search: HD.TicketSearch
+)
+returns List of HD.Ticket
+begin
+  @position(360,200)
+  retrieve $Tickets from HD.Ticket
+      limit 100;
+  return $Tickets;
+end;
+
+grant execute on nanoflow HD.NF_TicketSearch_Apply to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+/
+create or modify nanoflow HD.NF_Priority_GetLabel (
+  $PriorityStr: String
+)
+returns String
+begin
+  @position(360,200)
+  declare $CSSClass String = 'badge-default';
+  if $PriorityStr = 'Critical' then
+    @position(690,200)
+    set $CSSClass = 'badge-danger'
+    ;
+  else
+    if $PriorityStr = 'High' then
+      @position(860,300)
+      set $CSSClass = 'badge-warning'
+      ;
+    else
+      if $PriorityStr = 'Normal' then
+        @position(1030,500)
+        set $CSSClass = 'badge-info'
+        ;
+      end if;
+    end if;
+  end if;
+  return $CSSClass;
+end;
+
+grant execute on nanoflow HD.NF_Priority_GetLabel to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.WFA_GetManagerAssignees (
   $workflow: System.Workflow,
@@ -804,79 +877,6 @@ end;
 
 grant execute on microflow HD.ACT_Workflow_Notify to HD.ManagerRole;
 /
-create or modify nanoflow KB.NF_Article_FormatPreview (
-  $Article: KB.Article
-)
-returns String
-begin
-  @position(360,200)
-  $Preview = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
-  return $Preview;
-end;
-
-grant execute on nanoflow KB.NF_Article_FormatPreview to KB.Reader, KB.Contributor, KB.Admin;
-/
-create or modify nanoflow HD.NF_Ticket_QuickCreate (
-  $Customer: HD.Customer,
-  $Subject: String
-)
-returns Ticket
-begin
-  @position(360,200)
-  $Ticket = create HD.Ticket (Subject = $Subject
-  , Status = HD.TicketStatus.Draft
-  , Priority = HD.TicketPriority.Normal
-  , Ticket_Customer = $Customer
-  );
-  @position(520,200)
-  commit $Ticket;
-  return $Ticket;
-end;
-
-grant execute on nanoflow HD.NF_Ticket_QuickCreate to HD.CustomerRole, HD.AgentRole;
-/
-create or modify nanoflow HD.NF_TicketSearch_Apply (
-  $Search: HD.TicketSearch
-)
-returns List of HD.Ticket
-begin
-  @position(360,200)
-  retrieve $Tickets from HD.Ticket
-      limit 100;
-  return $Tickets;
-end;
-
-grant execute on nanoflow HD.NF_TicketSearch_Apply to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-/
-create or modify nanoflow HD.NF_Priority_GetLabel (
-  $PriorityStr: String
-)
-returns String
-begin
-  @position(360,200)
-  declare $CSSClass String = 'badge-default';
-  if $PriorityStr = 'Critical' then
-    @position(690,200)
-    set $CSSClass = 'badge-danger'
-    ;
-  else
-    if $PriorityStr = 'High' then
-      @position(860,300)
-      set $CSSClass = 'badge-warning'
-      ;
-    else
-      if $PriorityStr = 'Normal' then
-        @position(1030,500)
-        set $CSSClass = 'badge-info'
-        ;
-      end if;
-    end if;
-  end if;
-  return $CSSClass;
-end;
-
-grant execute on nanoflow HD.NF_Priority_GetLabel to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-/
 -- Workflow: HD.WF_SUB_ManagerReview
 
 create workflow HD.WF_SUB_ManagerReview
@@ -1019,73 +1019,307 @@ create or replace navigation Responsive
   )
 ;
 
-create or modify page KB.Article_Overview (title: 'Knowledge Base', folder: 'Article') {
+create or modify page KB.Article_Overview (
+  title: 'Knowledge Base',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Article'
+) {
+  gallery artGallery (datasource: database from KB.Article sort by PublishedAt asc, selection: Single) {
+    filter filter1 {
+      dropdownfilter fStatus (attributes: [Status])
+    }
+    template template1 {
+      -- Context: $currentObject (KB.Article)
+      dynamictext txtTitle (content: '{1}', rendermode: H4, contentparams: [{1} = $currentObject/Title])
+      dynamictext txtStatus (content: '{1}', contentparams: [{1} = toString($currentObject/Status)])
+    }
+  }
+  dataview dvArticleDetail (datasource: selection artGallery) {
+    -- Context: $currentObject (KB.Article), $artGallery (selection)
+    dynamictext txtDetailTitle (content: '{1}', rendermode: H2, contentparams: [{1} = $currentObject/Title])
+    dynamictext txtDetailStatus (content: '{1}', contentparams: [{1} = toString($currentObject/Status)])
+    dynamictext txtPublished (content: '{1}', contentparams: [{1} = toString($currentObject/PublishedAt)])
+    dynamictext txtContent (content: '{1}', contentparams: [{1} = $currentObject/Content])
+    footer footer1 {
+      actionbutton btnPublish (caption: 'Publish', action: microflow KB.ACT_Article_Publish(Article: $currentObject))
+      actionbutton btnArchive (caption: 'Archive', action: microflow KB.ACT_Article_Archive(Article: $currentObject))
+    }
+  }
 }
 
 grant view on page KB.Article_Overview to KB.Reader, KB.Contributor, KB.Admin;
-create or modify page KB.Article_Detail (title: 'Article', folder: 'Article', params: { $Article: KB.Article }) {
+create or modify page KB.Article_Detail (
+  title: 'Article',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Article',
+  params: { $Article: KB.Article }
+) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 9) {
+        dataview dvArticle (datasource: $Article) {
+          -- Context: $currentObject (Article)
+          dynamictext txtTitle (content: 'Article Title', rendermode: H1)
+          dynamictext txtContent_ (content: 'Article Body Text')
+        }
+      }
+      column col2 (DesktopWidth: 3) {
+        datagrid dgRatings (datasource: database from KB.ArticleRating) {
+          -- Context: $currentObject (KB.ArticleRating), $dgRatings (selection)
+          column colScore (attribute: Score, caption: 'Score')
+          column colComment (attribute: Comment, caption: 'Comment')
+        }
+      }
+    }
+  }
 }
 
 grant view on page KB.Article_Detail to KB.Reader, KB.Contributor, KB.Admin;
 create or modify page KB.Article_NewEdit (
   title: 'New / Edit Article',
+  layout: Atlas_Core.Atlas_Default,
   folder: 'Article',
   params: { $Article: KB.Article }
 ) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
+        dataview dvArticleForm (datasource: $Article) {
+          -- Context: $currentObject (Article)
+          textbox tbTitle (attribute: Title)
+          textarea taContent (attribute: Content)
+          textbox tbStatus (attribute: Title)
+          textbox tbPublishedAt (attribute: Title)
+          footer footer1 {
+            actionbutton btnSave (caption: 'Save', action: save_changes close_page, buttonstyle: primary)
+            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+          }
+        }
+      }
+    }
+  }
 }
 
 grant view on page KB.Article_NewEdit to KB.Contributor, KB.Admin;
-create or modify page HD.Ticket_Overview (title: 'Tickets', folder: 'Ticket') {
+create or modify page HD.Ticket_Overview (title: 'Tickets', layout: Atlas_Core.Atlas_Default, folder: 'Ticket') {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
+        datagrid dgTickets (datasource: database from HD.Ticket sort by SLADueAt asc, pagingposition: both) {
+          -- Context: $currentObject (HD.Ticket), $dgTickets (selection)
+          controlbar controlBar1 {
+            actionbutton btnNew (
+              caption: 'New Ticket',
+              action: create_object HD.Ticket then show_page HD.Ticket_NewEdit
+            )
+          }
+          column colSubject (attribute: Subject, caption: 'Subject')
+          column colStatus (attribute: Status, caption: 'Status', ColumnWidth: manual, Size: 120)
+          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100)
+          column colSLADueAt (attribute: SLADueAt, caption: 'SLA Due', ColumnWidth: manual, Size: 140)
+          column colIsOverSLA (attribute: IsOverSLA, caption: 'Overdue', ColumnWidth: manual, Size: 90)
+          column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 80) {
+            actionbutton btnEdit (caption: 'Edit', action: show_page HD.Ticket_Detail)
+          }
+        }
+      }
+    }
+  }
 }
 
 grant view on page HD.Ticket_Overview to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-create or modify page HD.Agent_Select (title: 'Select Agent', folder: 'Ticket', params: { $Ticket: HD.Ticket }) {
+create or modify page HD.Agent_Select (
+  title: 'Select Agent',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Ticket',
+  params: { $Ticket: HD.Ticket }
+) {
+  datagrid dgAgents (datasource: database from HD.Agent sort by Name asc, selection: single, pagesize: 15) {
+    -- Context: $currentObject (HD.Agent), $dgAgents (selection)
+    controlbar controlBar1 {
+      actionbutton btnAssign (caption: 'Assign', action: close_page, buttonstyle: primary)
+    }
+    column colName (attribute: Name, caption: 'Name')
+    column colEmail (attribute: Email, caption: 'Email')
+    column colIsActive (attribute: IsActive, caption: 'Active', ColumnWidth: manual, Size: 80)
+  }
 }
 
 grant view on page HD.Agent_Select to HD.AgentRole, HD.ManagerRole;
-create or modify page HD.Ticket_Detail (title: 'Ticket', folder: 'Ticket', params: { $Ticket: HD.Ticket }) {
+create or modify page HD.Ticket_Detail (
+  title: 'Ticket',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket',
+  params: { $Ticket: HD.Ticket }
+) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
+        dataview dvTicket (datasource: $Ticket) {
+          -- Context: $currentObject (Ticket)
+          dynamictext txtSubject (content: '{1}', rendermode: H2, contentparams: [{1} = $currentObject/Subject])
+          dynamictext txtStatus (content: '{1}', contentparams: [{1} = toString($currentObject/Status)])
+          dynamictext txtPriority (content: '{1}', contentparams: [{1} = toString($currentObject/Priority)])
+          dynamictext txtSLADue (content: '{1}', contentparams: [{1} = toString($currentObject/SLADueAt)])
+          footer footer1 {
+            actionbutton btnSubmit (
+              caption: 'Submit',
+              action: microflow HD.ACT_Ticket_Submit(Ticket: $Ticket),
+              buttonstyle: primary
+            )
+            actionbutton btnResolve (
+              caption: 'Resolve',
+              action: microflow HD.ACT_Ticket_Resolve(Ticket: $Ticket),
+              buttonstyle: default
+            )
+            actionbutton btnReopen (
+              caption: 'Reopen',
+              action: microflow HD.ACT_Ticket_Reopen(Ticket: $Ticket),
+              buttonstyle: default
+            )
+            actionbutton btnAssignAgent (
+              caption: 'Assign Agent',
+              action: show_page HD.Agent_Select,
+              buttonstyle: default
+            )
+          }
+        }
+      }
+    }
+    row row2 {
+      column col1 (DesktopWidth: 12) {
+        datagrid dgComments {
+          column colContent (attribute: Content, caption: 'Comment')
+          column colIsInternal (attribute: IsInternal, caption: 'Internal', ColumnWidth: manual, Size: 90)
+        }
+      }
+    }
+  }
 }
 
 grant view on page HD.Ticket_Detail to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.Ticket_NewEdit (
   title: 'New / Edit Ticket',
+  layout: Atlas_Core.Atlas_Default,
   folder: 'Ticket',
   params: { $Ticket: HD.Ticket }
 ) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
+        dataview dvTicketForm (datasource: $Ticket) {
+          -- Context: $currentObject (Ticket)
+          textbox tbSubject (attribute: Subject)
+          textarea taDescription (attribute: Description)
+          textbox tbStatus (attribute: Subject)
+          textbox tbPriority (attribute: Subject)
+          textbox tbSLADueAt (attribute: Subject)
+          footer footer1 {
+            actionbutton btnSave (caption: 'Save', action: save_changes close_page, buttonstyle: primary)
+            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+          }
+        }
+      }
+    }
+  }
 }
 
 grant view on page HD.Ticket_NewEdit to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.TicketSearch_Form (
   title: 'Search Tickets',
+  layout: Atlas_Core.PopupLayout,
   folder: 'Ticket/Search',
   params: { $Search: HD.TicketSearch }
 ) {
+  dataview dvSearch (datasource: $Search) {
+    -- Context: $currentObject (Search)
+    textbox tbKeyword (attribute: SubjectKeyword)
+    textbox tbStatus (attribute: SubjectKeyword)
+    textbox tbPriority (attribute: SubjectKeyword)
+  }
+  actionbutton btnClose (caption: 'Close')
 }
 
 grant view on page HD.TicketSearch_Form to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
-create or modify page HD.MyTickets_Overview (title: 'My Tickets', folder: 'Ticket') {
+create or modify page HD.MyTickets_Overview (title: 'My Tickets', layout: Atlas_Core.Atlas_Default, folder: 'Ticket') {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
+        datagrid dgMyTickets (datasource: microflow HD.DS_MyTickets) {
+          -- Context: $currentObject (HD.DS_MyTickets), $dgMyTickets (selection)
+          column colSubject (attribute: Subject, caption: 'Subject')
+          column colStatus (attribute: Status, caption: 'Status', ColumnWidth: manual, Size: 120)
+          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100)
+          column colSLADueAt (attribute: SLADueAt, caption: 'SLA Due', ColumnWidth: manual, Size: 140)
+        }
+      }
+    }
+  }
 }
 
 grant view on page HD.MyTickets_Overview to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.TicketSearch_Results (
   title: 'Search Results',
+  layout: Atlas_Core.Atlas_Default,
   folder: 'Ticket/Search',
   params: { $Search: HD.TicketSearch }
 ) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
+        datagrid dgResults (datasource: nanoflow HD.NF_TicketSearch_Apply) {
+          -- Context: $currentObject (HD.NF_TicketSearch_Apply), $dgResults (selection)
+          column colSubject (attribute: Subject, caption: 'Subject')
+          column colStatus (attribute: Status, caption: 'Status', ColumnWidth: manual, Size: 120)
+          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100)
+        }
+      }
+    }
+  }
 }
 
 grant view on page HD.TicketSearch_Results to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.EscalationReview_Form (
   title: 'Escalation Review',
+  layout: Atlas_Core.Atlas_Default,
   folder: 'Escalation',
   params: { $WorkflowUserTask: System.WorkflowUserTask }
 ) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 {
+        dynamictext txtTitle
+      }
+    }
+  }
 }
 
 grant view on page HD.EscalationReview_Form to HD.ManagerRole;
-create or modify page HD.EscalationWorkflow_Overview (title: 'Escalation Workflow', folder: 'Escalation') {
+create or modify page HD.EscalationWorkflow_Overview (
+  title: 'Escalation Workflow',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Escalation'
+) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 {
+        dynamictext txtTitle
+      }
+    }
+  }
 }
 
 grant view on page HD.EscalationWorkflow_Overview to HD.ManagerRole;
-create or modify page HD.EscalationStart_Form (title: 'Request Escalation', folder: 'Escalation') {
+create or modify page HD.EscalationStart_Form (
+  title: 'Request Escalation',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Escalation'
+) {
+  layoutgrid lgMain {
+    row row1 {
+      column col1 {
+        dynamictext txtPlaceholder
+      }
+    }
+  }
 }

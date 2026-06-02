@@ -1,3 +1,24 @@
+create or modify enumeration KB.ArticleStatus (
+  Draft 'Draft',
+  Published 'Published',
+  Archived 'Archived'
+);
+/
+create or modify enumeration HD.TicketStatus (
+  Draft 'Draft',
+  Open 'Open',
+  InProgress 'In Progress',
+  Resolved 'Resolved',
+  Closed 'Closed'
+);
+/
+create or modify enumeration HD.TicketPriority (
+  Low 'Low',
+  Normal 'Normal',
+  High 'High',
+  Critical 'Critical'
+);
+/
 @Position(750, 160)
 create or modify persistent entity KB.Category (
   Name: String(200) not null,
@@ -214,27 +235,6 @@ type Reference
 owner Default
 delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
-create or modify enumeration KB.ArticleStatus (
-  Draft 'Draft',
-  Published 'Published',
-  Archived 'Archived'
-);
-/
-create or modify enumeration HD.TicketStatus (
-  Draft 'Draft',
-  Open 'Open',
-  InProgress 'In Progress',
-  Resolved 'Resolved',
-  Closed 'Closed'
-);
-/
-create or modify enumeration HD.TicketPriority (
-  Low 'Low',
-  Normal 'Normal',
-  High 'High',
-  Critical 'Critical'
-);
-/
 create or modify microflow KB.ACT_Article_Publish (
   $Article: KB.Article
 )
@@ -441,9 +441,8 @@ begin
       limit 100;
   loop $Comment in $Comments
   begin
-    @position(150,80)
-    change $Comment (IsInternal = false
-    );
+    @position(310,80)
+    commit $Comment;
   end loop;
   return;
 end;
