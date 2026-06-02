@@ -4,6 +4,7 @@ package executor
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -275,6 +276,13 @@ func propInt(w *ast.WidgetV3, key string) int {
 				return int(n)
 			case float64:
 				return int(n)
+			case string:
+				if strings.EqualFold(n, "AutoFill") {
+					return -1
+				}
+				if i, err := strconv.Atoi(n); err == nil {
+					return i
+				}
 			}
 		}
 	}
