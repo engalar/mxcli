@@ -97,6 +97,23 @@ func astWidgetToNode(ctx *ExecContext, w *ast.WidgetV3, moduleName string) (*typ
 		if node.DataSource != nil {
 			node.EntityCtx = node.DataSource.Entity
 		}
+		// Re-partition children: footer type → node.Footer, others stay in
+		// node.Children. The general loop above already populated node.Children
+		// with all children; redo it here so footer widgets (→ BSON
+		// FooterWidgets) are separated from main content (→ BSON Widgets).
+		node.Children = nil
+		node.Footer = nil
+		for _, child := range w.Children {
+			cn, err := astWidgetToNode(ctx, child, moduleName)
+			if err != nil || cn == nil {
+				continue
+			}
+			if strings.EqualFold(child.Type, "footer") {
+				node.Footer = append(node.Footer, cn)
+			} else {
+				node.Children = append(node.Children, cn)
+			}
+		}
 
 	case types.WidgetListView:
 		node.DataSource = astDataSourceToModel(propDS(w, "datasource"))

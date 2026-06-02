@@ -142,3 +142,39 @@ func TestPropInt_NormalInt(t *testing.T) {
 		t.Errorf("propInt int: want 12, got %d", got)
 	}
 }
+
+func TestAstWidgetToNode_DataView_FooterSeparated(t *testing.T) {
+	footer := &ast.WidgetV3{
+		Type: "footer",
+		Name: "footer1",
+		Children: []*ast.WidgetV3{
+			{Type: "actionbutton", Name: "btnSave", Properties: map[string]any{"caption": "Save"}},
+		},
+	}
+	dv := &ast.WidgetV3{
+		Type:       "dataview",
+		Name:       "dvMain",
+		Properties: map[string]any{"datasource": (*ast.DataSourceV3)(nil)},
+		Children: []*ast.WidgetV3{
+			{Type: "textbox", Name: "tbName", Properties: map[string]any{"attribute": "Name"}},
+			footer,
+		},
+	}
+
+	node, err := astWidgetToNode(&ExecContext{}, dv, "M")
+	if err != nil {
+		t.Fatalf("astWidgetToNode: %v", err)
+	}
+	if len(node.Children) != 1 {
+		t.Errorf("want 1 main child (textbox), got %d: %v", len(node.Children), node.Children)
+	}
+	if node.Children[0].Name != "tbName" {
+		t.Errorf("main child should be tbName, got %q", node.Children[0].Name)
+	}
+	if len(node.Footer) != 1 {
+		t.Errorf("want 1 footer child, got %d", len(node.Footer))
+	}
+	if node.Footer[0].Name != "footer1" {
+		t.Errorf("footer child should be footer1, got %q", node.Footer[0].Name)
+	}
+}
