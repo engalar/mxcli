@@ -23,8 +23,8 @@ func TestExecutorBoundary(t *testing.T) {
 		archtest.NoImport{
 			Forbidden: []string{
 				"github.com/mendixlabs/mxcli/mdl/canonical/entity",
-				// Phase 2: "github.com/mendixlabs/mxcli/mdl/canonical/association"
-				// Phase 3: "github.com/mendixlabs/mxcli/mdl/canonical/microflow"
+				"github.com/mendixlabs/mxcli/mdl/canonical/association",
+				"github.com/mendixlabs/mxcli/mdl/canonical/page",
 			},
 			Allowlist: map[string]bool{
 				// executor.go is the sole file permitted to import domain subpackages.
