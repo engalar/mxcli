@@ -5,6 +5,7 @@ package mprbackend
 import (
 	"fmt"
 	"image"
+	"sort"
 
 	"github.com/mendixlabs/mxcli/mdl/model/layout"
 	"github.com/mendixlabs/mxcli/model"
@@ -109,8 +110,10 @@ func updateAssociationConnections(dm *genDm.DomainModel, positions map[string]im
 		childGroups[sideKey{e.toName, e.childSide}] = append(childGroups[sideKey{e.toName, e.childSide}], i)
 	}
 
-	// Assign Y for each entry: 100*(k+1)/(N+1) spreads N points evenly
-	// inside [1, 99], avoiding corners and overlaps.
+	// Assign Y for each entry: 100*(k+1)/(N+1) spreads N points evenly inside
+	// [1, 99]. Within each group, sort by the Y position of the OTHER endpoint
+	// (to entity for exits, from entity for entries) so that connection lines
+	// follow the same top-to-bottom order on both sides and never cross.
 	parentY := make([]int, len(entries))
 	childY := make([]int, len(entries))
 	for i := range parentY {
@@ -118,12 +121,28 @@ func updateAssociationConnections(dm *genDm.DomainModel, positions map[string]im
 		childY[i] = 50
 	}
 	for _, idxs := range parentGroups {
+		sort.Slice(idxs, func(i, j int) bool {
+			yi := positions[entries[idxs[i]].toName].Y
+			yj := positions[entries[idxs[j]].toName].Y
+			if yi != yj {
+				return yi < yj
+			}
+			return entries[idxs[i]].toName < entries[idxs[j]].toName
+		})
 		n := len(idxs)
 		for k, idx := range idxs {
 			parentY[idx] = 100 * (k + 1) / (n + 1)
 		}
 	}
 	for _, idxs := range childGroups {
+		sort.Slice(idxs, func(i, j int) bool {
+			yi := positions[entries[idxs[i]].fromName].Y
+			yj := positions[entries[idxs[j]].fromName].Y
+			if yi != yj {
+				return yi < yj
+			}
+			return entries[idxs[i]].fromName < entries[idxs[j]].fromName
+		})
 		n := len(idxs)
 		for k, idx := range idxs {
 			childY[idx] = 100 * (k + 1) / (n + 1)

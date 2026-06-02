@@ -132,6 +132,105 @@ func TestUpdateAssociationConnections_MultipleAssocsSameSide(t *testing.T) {
 	}
 }
 
+// TestUpdateAssociationConnections_NoCrossings verifies that Y positions on an
+// entity side are ordered by the Y position of the connected entity so that
+// lines do not cross each other.
+//
+// Layout:
+//
+//	A (left) ──→ B (top-right)   A right Y must be < A right Y for C
+//	A (left) ──→ C (mid-right)   same logic on the entry side
+//	A (left) ──→ D (bot-right)   i.e. entry Y on B < entry Y on B for other assocs
+//
+// The assocs are created in reverse order (D first) so non-sorted output
+// would assign the smallest Y to A_D and the largest to A_B — crossing every line.
+func TestUpdateAssociationConnections_NoCrossings(t *testing.T) {
+	eA := makeTestEntity(t, "A", "id-a")
+	eB := makeTestEntity(t, "B", "id-b")
+	eC := makeTestEntity(t, "C", "id-c")
+	eD := makeTestEntity(t, "D", "id-d")
+
+	// Intentionally created in reverse Y order to expose ordering bugs.
+	ad := makeTestAssoc(t, "A_D", "id-a", "id-d") // D is lowest (Y=350)
+	ac := makeTestAssoc(t, "A_C", "id-a", "id-c") // C is middle (Y=200)
+	ab := makeTestAssoc(t, "A_B", "id-a", "id-b") // B is highest (Y=50)
+
+	dm := buildTestDM(
+		[]*genDm.Entity{eA, eB, eC, eD},
+		[]*genDm.Association{ad, ac, ab},
+	)
+
+	positions := map[string]image.Point{
+		"A": {X: 50, Y: 200},
+		"B": {X: 400, Y: 50},
+		"C": {X: 400, Y: 200},
+		"D": {X: 400, Y: 350},
+	}
+	idToName := map[string]string{"id-a": "A", "id-b": "B", "id-c": "C", "id-d": "D"}
+
+	updateAssociationConnections(dm, positions, idToName)
+
+	_, yAB := parseConn(t, ab.ParentConnection()) // exit from A toward B (Y=50)
+	_, yAC := parseConn(t, ac.ParentConnection()) // exit from A toward C (Y=200)
+	_, yAD := parseConn(t, ad.ParentConnection()) // exit from A toward D (Y=350)
+
+	// B is topmost → should use smallest Y on A's right side.
+	// C is middle  → should use middle Y.
+	// D is bottom  → should use largest Y.
+	if !(yAB < yAC && yAC < yAD) {
+		t.Errorf("exit Y on A must be ordered top→bottom to avoid crossings: A_B=%d A_C=%d A_D=%d (want A_B < A_C < A_D)", yAB, yAC, yAD)
+	}
+
+	// Entry side: B, C, D each have one connection from A entering their left.
+	// Each has only one entry so it gets Y=50 (midpoint) — just verify X=0.
+	for _, a := range []*genDm.Association{ab, ac, ad} {
+		cx, _ := parseConn(t, a.ChildConnection())
+		if cx != 0 {
+			t.Errorf("%s ChildConnection X: want 0 (left), got %d", a.Name(), cx)
+		}
+	}
+}
+
+// TestUpdateAssociationConnections_NoCrossings_EntryOrdering verifies that when
+// multiple associations enter the SAME entity's left side from sources at
+// different Y positions, the entry Y values are ordered to avoid crossings.
+func TestUpdateAssociationConnections_NoCrossings_EntryOrdering(t *testing.T) {
+	// B, C, D (left column) all connect to Hub (right column).
+	// Assocs created in reverse Y order to expose ordering bugs.
+	eHub := makeTestEntity(t, "Hub", "id-hub")
+	eB := makeTestEntity(t, "B", "id-b")
+	eC := makeTestEntity(t, "C", "id-c")
+	eD := makeTestEntity(t, "D", "id-d")
+
+	dHub := makeTestAssoc(t, "D_Hub", "id-d", "id-hub") // D is lowest (Y=350)
+	cHub := makeTestAssoc(t, "C_Hub", "id-c", "id-hub") // C is middle (Y=200)
+	bHub := makeTestAssoc(t, "B_Hub", "id-b", "id-hub") // B is highest (Y=50)
+
+	dm := buildTestDM(
+		[]*genDm.Entity{eHub, eB, eC, eD},
+		[]*genDm.Association{dHub, cHub, bHub},
+	)
+
+	positions := map[string]image.Point{
+		"Hub": {X: 400, Y: 200},
+		"B":   {X: 50, Y: 50},
+		"C":   {X: 50, Y: 200},
+		"D":   {X: 50, Y: 350},
+	}
+	idToName := map[string]string{"id-hub": "Hub", "id-b": "B", "id-c": "C", "id-d": "D"}
+
+	updateAssociationConnections(dm, positions, idToName)
+
+	_, yBHub := parseConn(t, bHub.ChildConnection()) // entry from B (Y=50) → smallest entry Y
+	_, yCHub := parseConn(t, cHub.ChildConnection()) // entry from C (Y=200)
+	_, yDHub := parseConn(t, dHub.ChildConnection()) // entry from D (Y=350) → largest entry Y
+
+	// B is topmost source → should enter Hub at smallest Y.
+	if !(yBHub < yCHub && yCHub < yDHub) {
+		t.Errorf("entry Y on Hub must be ordered top→bottom to avoid crossings: B_Hub=%d C_Hub=%d D_Hub=%d (want B < C < D)", yBHub, yCHub, yDHub)
+	}
+}
+
 // TestUpdateAssociationConnections_SpreadRange verifies that for N associations
 // sharing a side, Y values are strictly spread (no duplicates, no corners).
 func TestUpdateAssociationConnections_SpreadRange(t *testing.T) {
