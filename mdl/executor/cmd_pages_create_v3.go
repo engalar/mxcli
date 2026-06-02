@@ -232,10 +232,26 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 }
 
 // pageModelHasLossyWidget returns true if any widget in the tree maps to a
-// BSON encoding (CustomWidgets$CustomWidget) that widgetToBSON cannot fully
-// reproduce. Used to gate the Task 8 write-path overlay so the gen builder's
-// rich datagrid/gallery/etc. BSON isn't clobbered by the slim IR encoding.
+// BSON encoding that widgetToBSON cannot fully reproduce. Used to gate the
+// Task 8 write-path overlay so the gen builder's rich BSON isn't clobbered
+// by the slim IR encoding.
+//
+// IMPORTANT: this gate is currently conservative — Mendix's storage layer
+// validates many properties widgetToBSON doesn't yet write (LayoutCol
+// weights summing to 12, full CustomWidget Object trees, ConditionalVisibility
+// settings, etc.), so we always return true: the overlay never fires. The
+// roundtrip IR is intentionally used only for the read/describe path today.
+// The describe-side gate below (pageModelHasLossyWidgetReadOnly) still walks
+// per-widget so describe can use the IR for safe kinds.
 func pageModelHasLossyWidget(pm *types.PageModel) bool {
+	_ = pm
+	return true
+}
+
+// pageModelHasLossyWidgetReadOnly is the read-side gate that still walks
+// the tree per-widget (describe uses IR for non-lossy widgets and falls
+// back to legacy describe for lossy ones — pluggable widgets / buttons).
+func pageModelHasLossyWidgetReadOnly(pm *types.PageModel) bool {
 	if pm == nil {
 		return false
 	}
@@ -254,6 +270,12 @@ func widgetTreeHasLossyKind(n *types.WidgetNode) bool {
 	switch n.Kind {
 	case types.WidgetDataGrid, types.WidgetGallery, types.WidgetComboBox,
 		types.WidgetImage, types.WidgetUnknown:
+		return true
+	case types.WidgetDataView, types.WidgetListView:
+		// DataView/ListView DataSource is a complex nested gen structure
+		// (Forms$DataViewSource with SourceVariable+PageVariable) that
+		// the IR's dataSourceToBSON cannot reproduce — overlay would
+		// erase entity context. Gate to the legacy builder.
 		return true
 	case types.WidgetButton:
 		// Button actions (microflow/nanoflow with parameter mappings) aren't

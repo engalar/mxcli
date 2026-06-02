@@ -11,7 +11,7 @@ import (
 )
 
 // TestWidgetToBSON_Container verifies a Container WidgetNode encodes to a
-// Pages$DivContainer BSON doc with Name, Appearance, and Widgets fields.
+// Forms$DivContainer BSON doc with Name, Appearance, and Widgets fields.
 func TestWidgetToBSON_Container(t *testing.T) {
 	node := &types.WidgetNode{
 		Kind: types.WidgetContainer,
@@ -21,8 +21,8 @@ func TestWidgetToBSON_Container(t *testing.T) {
 	if doc == nil {
 		t.Fatal("widgetToBSON returned nil")
 	}
-	if got := dGetString(doc, "$Type"); got != "Pages$DivContainer" {
-		t.Errorf("$Type = %q, want Pages$DivContainer", got)
+	if got := dGetString(doc, "$Type"); got != "Forms$DivContainer" {
+		t.Errorf("$Type = %q, want Forms$DivContainer", got)
 	}
 	if got := dGetString(doc, "Name"); got != "mainBox" {
 		t.Errorf("Name = %q, want mainBox", got)
@@ -77,20 +77,22 @@ func TestBsonVersionedArray(t *testing.T) {
 	}
 }
 
-// TestKindToBSONType_AllKinds covers every WidgetKind→Pages$ mapping that
-// the plan defines, ensuring exhaustiveness.
+// TestKindToBSONType_AllKinds covers every WidgetKind→storage type mapping.
+// The Mendix storage namespace is "Forms$" (NOT "Pages$" — that's the SDK
+// display namespace). Writing a Pages$ type into the unit BSON triggers
+// TypeCacheUnknownTypeException when Studio Pro / mx check loads the page.
 func TestKindToBSONType_AllKinds(t *testing.T) {
 	cases := map[types.WidgetKind]string{
-		types.WidgetContainer:    "Pages$DivContainer",
-		types.WidgetButton:       "Pages$ActionButton",
-		types.WidgetLayoutGrid:   "Pages$LayoutGrid",
-		types.WidgetLayoutRow:    "Pages$LayoutGridRow",
-		types.WidgetLayoutCol:    "Pages$LayoutGridColumn",
-		types.WidgetTabContainer: "Pages$TabControl",
-		types.WidgetTabPage:      "Pages$TabPage",
-		types.WidgetDataView:     "Pages$DataView",
-		types.WidgetTextBox:      "Pages$TextBox",
-		types.WidgetSnippet:      "Pages$SnippetCallWidget",
+		types.WidgetContainer:    "Forms$DivContainer",
+		types.WidgetButton:       "Forms$ActionButton",
+		types.WidgetLayoutGrid:   "Forms$LayoutGrid",
+		types.WidgetLayoutRow:    "Forms$LayoutGridRow",
+		types.WidgetLayoutCol:    "Forms$LayoutGridColumn",
+		types.WidgetTabContainer: "Forms$TabControl",
+		types.WidgetTabPage:      "Forms$TabPage",
+		types.WidgetDataView:     "Forms$DataView",
+		types.WidgetTextBox:      "Forms$TextBox",
+		types.WidgetSnippet:      "Forms$SnippetCallWidget",
 		types.WidgetDataGrid:     "CustomWidgets$CustomWidget",
 		types.WidgetImage:        "CustomWidgets$CustomWidget",
 		types.WidgetUnknown:      "CustomWidgets$CustomWidget",

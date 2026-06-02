@@ -129,6 +129,7 @@ var bsonTypeToKind = map[string]types.WidgetKind{
 	"Pages$LayoutGridColumn":     types.WidgetLayoutCol,
 	"Forms$TabControl":           types.WidgetTabContainer,
 	"Pages$TabControl":           types.WidgetTabContainer,
+	"Forms$TabPage":              types.WidgetTabPage,
 	"Pages$TabPage":              types.WidgetTabPage,
 	"Forms$DataView":             types.WidgetDataView,
 	"Pages$DataView":             types.WidgetDataView,
@@ -200,7 +201,11 @@ func widgetNodeFromBSON(doc bson.D) *types.WidgetNode {
 		node.ColWidth = extractColWidth(doc)
 		node.Children = extractChildWidgets(doc, "Widgets")
 	case types.WidgetGroupBox:
-		node.Caption = extractTextFromTemplate(doc, "Caption")
+		// Builder uses "CaptionTemplate"; IR overlay uses "Caption". Try both.
+		node.Caption = extractTextFromTemplate(doc, "CaptionTemplate")
+		if node.Caption == "" {
+			node.Caption = extractTextFromTemplate(doc, "Caption")
+		}
 		node.GroupBox = &types.GroupBoxProps{
 			Collapsible: dGetString(doc, "Collapsible"),
 			HeaderMode:  dGetString(doc, "HeaderMode"),
@@ -318,14 +323,27 @@ func extractTextFromTemplate(doc bson.D, field string) string {
 	if tmpl == nil {
 		return ""
 	}
-	for _, t := range dGetArrayElements(dGet(tmpl, "Translations")) {
+	// Caption/Content may be wrapped in a ClientTemplate{Template, Fallback}
+	// when written by the gen builder (genSimpleLabel) — unwrap to the
+	// inner Text doc first if present.
+	if inner := dGetDoc(tmpl, "Template"); inner != nil {
+		tmpl = inner
+	}
+	// Text translations are stored under "Items" (gen Texts$Text PartList
+	// property name) or "Translations" (the older alias used by the
+	// hand-written IR encoder). Try both.
+	translations := dGet(tmpl, "Items")
+	if translations == nil {
+		translations = dGet(tmpl, "Translations")
+	}
+	for _, t := range dGetArrayElements(translations) {
 		if td, ok := t.(bson.D); ok {
 			if dGetString(td, "LanguageCode") == "en_US" {
 				return dGetString(td, "Text")
 			}
 		}
 	}
-	for _, t := range dGetArrayElements(dGet(tmpl, "Translations")) {
+	for _, t := range dGetArrayElements(translations) {
 		if td, ok := t.(bson.D); ok {
 			if txt := dGetString(td, "Text"); txt != "" {
 				return txt
@@ -792,11 +810,16 @@ func widgetToBSON(node *types.WidgetNode) bson.D {
 	}
 
 	doc := bson.D{
+		// Every widget needs a fresh $ID (16-byte GUID blob); Mendix's
+		// ContentsUtil.GetGuidFromBson throws NullReferenceException if
+		// $ID is missing.
+		{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
 		{Key: "$Type", Value: typeName},
 		{Key: "Name", Value: node.Name},
 	}
 
 	app := bson.D{
+		{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
 		{Key: "$Type", Value: "Forms$Appearance"},
 	}
 	if node.Class != "" {
@@ -872,6 +895,7 @@ func widgetToBSON(node *types.WidgetNode) bson.D {
 		types.WidgetRadioButtons, types.WidgetCheckBox:
 		if node.EntityAttr != "" {
 			doc = append(doc, bson.E{Key: "AttributeRef", Value: bson.D{
+				{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
 				{Key: "$Type", Value: "Forms$AttributeRef"},
 				{Key: "AttributeQualifiedName", Value: node.EntityAttr},
 			}})
@@ -883,6 +907,7 @@ func widgetToBSON(node *types.WidgetNode) bson.D {
 	case types.WidgetSnippet:
 		if node.Snippet != nil {
 			doc = append(doc, bson.E{Key: "Snippet", Value: bson.D{
+				{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
 				{Key: "$Type", Value: "Forms$SnippetRef"},
 				{Key: "SnippetQualifiedName", Value: node.Snippet.SnippetName},
 			}})
@@ -892,53 +917,57 @@ func widgetToBSON(node *types.WidgetNode) bson.D {
 	return doc
 }
 
-// kindToBSONType maps WidgetKind → canonical BSON $Type (Pages$ namespace).
+// kindToBSONType maps WidgetKind → canonical BSON $Type using the Mendix
+// STORAGE namespace ("Forms$"), not the SDK display namespace ("Pages$").
+// Studio Pro's storage layer rejects pages whose widget $Type isn't in the
+// type cache, and the type cache only registers "Forms$X" aliases — writing
+// "Pages$LayoutGrid" triggers TypeCacheUnknownTypeException.
 func kindToBSONType(kind types.WidgetKind) string {
 	switch kind {
 	case types.WidgetContainer:
-		return "Pages$DivContainer"
+		return "Forms$DivContainer"
 	case types.WidgetScrollView:
-		return "Pages$ScrollContainer"
+		return "Forms$ScrollContainer"
 	case types.WidgetGroupBox:
-		return "Pages$GroupBox"
+		return "Forms$GroupBox"
 	case types.WidgetLayoutGrid:
-		return "Pages$LayoutGrid"
+		return "Forms$LayoutGrid"
 	case types.WidgetLayoutRow:
-		return "Pages$LayoutGridRow"
+		return "Forms$LayoutGridRow"
 	case types.WidgetLayoutCol:
-		return "Pages$LayoutGridColumn"
+		return "Forms$LayoutGridColumn"
 	case types.WidgetTabContainer:
-		return "Pages$TabControl"
+		return "Forms$TabControl"
 	case types.WidgetTabPage:
-		return "Pages$TabPage"
+		return "Forms$TabPage"
 	case types.WidgetDataView:
-		return "Pages$DataView"
+		return "Forms$DataView"
 	case types.WidgetListView:
-		return "Pages$ListView"
+		return "Forms$ListView"
 	case types.WidgetButton:
-		return "Pages$ActionButton"
+		return "Forms$ActionButton"
 	case types.WidgetLabel:
-		return "Pages$Label"
+		return "Forms$Label"
 	case types.WidgetText:
-		return "Pages$Text"
+		return "Forms$Text"
 	case types.WidgetDynamicText:
-		return "Pages$DynamicText"
+		return "Forms$DynamicText"
 	case types.WidgetTitle:
-		return "Pages$Title"
+		return "Forms$Title"
 	case types.WidgetTextBox:
-		return "Pages$TextBox"
+		return "Forms$TextBox"
 	case types.WidgetTextArea:
-		return "Pages$TextArea"
+		return "Forms$TextArea"
 	case types.WidgetDatePicker:
-		return "Pages$DatePicker"
+		return "Forms$DatePicker"
 	case types.WidgetRadioButtons:
-		return "Pages$RadioButtons"
+		return "Forms$RadioButtons"
 	case types.WidgetCheckBox:
-		return "Pages$CheckBox"
+		return "Forms$CheckBox"
 	case types.WidgetNavList:
-		return "Pages$NavigationList"
+		return "Forms$NavigationList"
 	case types.WidgetSnippet:
-		return "Pages$SnippetCallWidget"
+		return "Forms$SnippetCallWidget"
 	case types.WidgetDataGrid, types.WidgetGallery, types.WidgetComboBox,
 		types.WidgetImage, types.WidgetUnknown:
 		return "CustomWidgets$CustomWidget"
@@ -949,22 +978,29 @@ func kindToBSONType(kind types.WidgetKind) string {
 // simpleTextBSON creates a minimal Text BSON doc with a single en_US translation.
 func simpleTextBSON(text string) bson.D {
 	tr := bson.D{
+		{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
 		{Key: "$Type", Value: "Texts$Translation"},
 		{Key: "LanguageCode", Value: "en_US"},
 		{Key: "Text", Value: text},
 	}
 	return bson.D{
+		{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
 		{Key: "$Type", Value: "Texts$Text"},
 		{Key: "Translations", Value: bson.A{int32(1), tr}},
 	}
 }
 
 // dataSourceToBSON converts a DataSourceDef to its BSON representation.
+// Note: WidgetDataView / WidgetListView are gated as lossy in
+// pageModelHasLossyWidget so the gen builder's rich Forms$DataViewSource
+// (which includes SourceVariable+PageVariable for parameter sources) wins.
+// dataSourceToBSON here only sees pluggable widget sources today.
 func dataSourceToBSON(ds *types.DataSourceDef) bson.D {
 	switch ds.Kind {
 	case types.DataSourceDatabase:
 		doc := bson.D{
-			{Key: "$Type", Value: "Pages$XPathSource"},
+			{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
+			{Key: "$Type", Value: "Forms$GridXPathSource"},
 			{Key: "EntityQualifiedName", Value: ds.Entity},
 		}
 		if ds.XPathConstraint != "" {
@@ -973,17 +1009,20 @@ func dataSourceToBSON(ds *types.DataSourceDef) bson.D {
 		return doc
 	case types.DataSourceMicroflow:
 		return bson.D{
-			{Key: "$Type", Value: "Pages$MicroflowSource"},
+			{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
+			{Key: "$Type", Value: "Forms$MicroflowSource"},
 			{Key: "MicroflowQualifiedName", Value: ds.Reference},
 		}
 	case types.DataSourceNanoflow:
 		return bson.D{
-			{Key: "$Type", Value: "Pages$NanoflowSource"},
+			{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
+			{Key: "$Type", Value: "Forms$NanoflowSource"},
 			{Key: "NanoflowQualifiedName", Value: ds.Reference},
 		}
 	case types.DataSourceParameter:
 		return bson.D{
-			{Key: "$Type", Value: "Pages$ContextSource"},
+			{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
+			{Key: "$Type", Value: "Forms$AssociationSource"},
 			{Key: "ParameterName", Value: ds.Reference},
 		}
 	}

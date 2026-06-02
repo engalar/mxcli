@@ -170,8 +170,11 @@ create or modify page `+page+` (
 		if !strings.Contains(described, "groupbox") {
 			t.Errorf("expected 'groupbox' in describe output")
 		}
-		if !strings.Contains(described, "YesInitiallyExpanded") {
-			t.Errorf("expected collapsible setting in describe output")
+		// Legacy describe maps "YesInitiallyExpanded" → "YesExpanded"; IR
+		// renderer keeps the literal storage value. Either form is acceptable.
+		if !strings.Contains(described, "YesInitiallyExpanded") &&
+			!strings.Contains(described, "YesExpanded") {
+			t.Errorf("expected collapsible setting in describe output, got:\n%s", described)
 		}
 	})
 }

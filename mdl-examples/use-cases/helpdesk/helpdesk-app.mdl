@@ -14,6 +14,9 @@
 -- Note    : visitor keyword arg parsing fixed (Search keyword → arg.Name now captured)
 -- Note    : testdata reorganised: helpdesk-{clean,golden}-{11.6.6,11.10.0}/ naming scheme
 -- Note    : VoidConditionOutcome added to CallMicroflowTask for 11.6.6 compat; golden merged from remote
+-- Note    : Golden rebuilt 2026-06-02 after PageModel IR landing (Tasks 1-8); describe path
+--           now routes pure-IR widgets through new pageModelToMDL renderer and lossy widgets
+--           (DataGrid/Gallery/CustomWidget/Button-with-Action/etc.) through legacy describe.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,

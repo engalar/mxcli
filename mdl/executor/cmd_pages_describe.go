@@ -129,7 +129,7 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	pm, pmErr := ctx.Backend.GetPageModel(pageID)
 	if pmErr != nil || pm == nil || len(pm.Widgets) == 0 {
 		formatWidgetProps(ctx.Output, "", header, props, " {\n}")
-	} else if pageModelHasLossyWidget(pm) {
+	} else if pageModelHasLossyWidgetReadOnly(pm) {
 		// Fallback: pluggable widget detected — use the legacy describe path
 		// that has full DataGrid/Gallery/CustomWidget support.
 		rawWidgets := getPageWidgetsFromRaw(ctx, pageID)
@@ -252,7 +252,7 @@ func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
 	// pluggable widgets (mirrors describePage logic — see comment there).
 	pm, pmErr := ctx.Backend.GetSnippetModel(snippetID)
 	if pmErr == nil && pm != nil && len(pm.Widgets) > 0 {
-		if pageModelHasLossyWidget(pm) {
+		if pageModelHasLossyWidgetReadOnly(pm) {
 			rawWidgets := getSnippetWidgetsFromRaw(ctx, snippetID)
 			if len(rawWidgets) > 0 {
 				fmt.Fprint(ctx.Output, " {\n")
