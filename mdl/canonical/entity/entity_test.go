@@ -351,3 +351,58 @@ func TestBuildGenEntity_LocationUsesSemicolon(t *testing.T) {
 	assert.NotContains(t, e.Location(), " ",
 		"space-separated format is rejected by Studio Pro 11.6.6+")
 }
+
+// --------------------------------------------------------------------------
+// Event handlers
+// --------------------------------------------------------------------------
+
+func TestLift_WithEventHandler(t *testing.T) {
+	stmt := &ast.CreateEntityStmt{
+		Name: ast.QualifiedName{Module: "M", Name: "E"},
+		Kind: ast.EntityPersistent,
+		EventHandlers: []ast.EventHandlerDef{
+			{
+				Moment:            "Before",
+				Event:             "Commit",
+				Microflow:         ast.QualifiedName{Module: "M", Name: "BeforeCommit"},
+				RaiseErrorOnFalse: true,
+				PassEventObject:   true,
+			},
+		},
+	}
+	m, err := Lift(stmt)
+	require.NoError(t, err)
+	require.Len(t, m.EventHandlers, 1)
+	eh := m.EventHandlers[0]
+	assert.Equal(t, "Before", eh.Moment)
+	assert.Equal(t, "Commit", eh.Event)
+	assert.Equal(t, "M.BeforeCommit", eh.Microflow.String())
+	assert.True(t, eh.RaiseErrorOnFalse)
+	assert.True(t, eh.PassEventObject)
+}
+
+func TestToMDL_WithEventHandler(t *testing.T) {
+	m := &EntityModel{
+		Name: QualifiedName{Module: "M", Name: "E"},
+		Kind: EntityPersistent,
+		EventHandlers: []EventHandlerModel{
+			{Moment: "Before", Event: "Commit", Microflow: QualifiedName{Module: "M", Name: "ACT_BeforeCommit"}, RaiseErrorOnFalse: true, PassEventObject: true},
+		},
+	}
+	got := m.ToMDLStatement(true)
+	assert.Contains(t, got, "on before commit call M.ACT_BeforeCommit($currentObject) raise error")
+}
+
+func TestToMDL_EventHandler_AfterCreate_NoPassObject(t *testing.T) {
+	m := &EntityModel{
+		Name: QualifiedName{Module: "M", Name: "E"},
+		Kind: EntityPersistent,
+		EventHandlers: []EventHandlerModel{
+			{Moment: "After", Event: "Create", Microflow: QualifiedName{Module: "M", Name: "ACT_After"}, PassEventObject: false},
+		},
+	}
+	got := m.ToMDLStatement(true)
+	assert.Contains(t, got, "on after create call M.ACT_After()")
+	assert.NotContains(t, got, "$currentObject")
+	assert.NotContains(t, got, "raise error")
+}

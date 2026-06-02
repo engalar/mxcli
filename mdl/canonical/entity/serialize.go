@@ -74,6 +74,19 @@ func (m *EntityModel) ToMDLStatement(createOrModify bool) string {
 			fmt.Fprintf(&sb, "\nindex (%s)", strings.Join(cols, ", "))
 		}
 	}
+	for _, eh := range m.EventHandlers {
+		paramStr := "()"
+		if eh.PassEventObject {
+			paramStr = "($currentObject)"
+		}
+		options := ""
+		if eh.RaiseErrorOnFalse && strings.EqualFold(eh.Moment, "Before") {
+			options = " raise error"
+		}
+		fmt.Fprintf(&sb, "\non %s %s call %s%s%s",
+			strings.ToLower(eh.Moment), strings.ToLower(eh.Event),
+			eh.Microflow, paramStr, options)
+	}
 	return sb.String()
 }
 

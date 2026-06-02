@@ -117,6 +117,29 @@ func Hydrate(moduleName string, e *genDm.Entity) (*EntityModel, []canonical.Warn
 		}
 		m.Indexes = append(m.Indexes, hydrateIndex(idx, e))
 	}
+
+	for _, item := range e.EventHandlersItems() {
+		h, ok := item.(*genDm.EventHandler)
+		if !ok {
+			warns = append(warns, canonical.Warning{Field: "EventHandlers", Message: "unexpected item type"})
+			continue
+		}
+		if h.MicroflowQualifiedName() == "" {
+			continue
+		}
+		parts := strings.SplitN(h.MicroflowQualifiedName(), ".", 2)
+		mfqn := QualifiedName{Name: h.MicroflowQualifiedName()}
+		if len(parts) == 2 {
+			mfqn = QualifiedName{Module: parts[0], Name: parts[1]}
+		}
+		m.EventHandlers = append(m.EventHandlers, EventHandlerModel{
+			Moment:            h.Moment(),
+			Event:             h.Event(),
+			Microflow:         mfqn,
+			RaiseErrorOnFalse: h.RaiseErrorOnFalse(),
+			PassEventObject:   h.PassEventObject(),
+		})
+	}
 	return m, warns, nil
 }
 

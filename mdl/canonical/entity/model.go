@@ -41,6 +41,17 @@ type EntityModel struct {
 	Attributes    []AttributeModel
 	Indexes       []IndexModel
 	SystemMembers []string
+	EventHandlers []EventHandlerModel
+}
+
+// EventHandlerModel is the canonical representation of a domain event handler.
+// Moment is "Before" or "After"; Event is "Create", "Commit", "Delete", or "Rollback".
+type EventHandlerModel struct {
+	Moment            string
+	Event             string
+	Microflow         QualifiedName
+	RaiseErrorOnFalse bool
+	PassEventObject   bool
 }
 
 // Position is the entity's location on the domain-model canvas.

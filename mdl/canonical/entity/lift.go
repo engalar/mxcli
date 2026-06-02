@@ -33,6 +33,15 @@ func Lift(s *ast.CreateEntityStmt) (*EntityModel, error) {
 	for _, idx := range s.Indexes {
 		m.Indexes = append(m.Indexes, liftIndex(idx))
 	}
+	for _, eh := range s.EventHandlers {
+		m.EventHandlers = append(m.EventHandlers, EventHandlerModel{
+			Moment:            eh.Moment,
+			Event:             eh.Event,
+			Microflow:         QualifiedName{Module: eh.Microflow.Module, Name: eh.Microflow.Name},
+			RaiseErrorOnFalse: eh.RaiseErrorOnFalse,
+			PassEventObject:   eh.PassEventObject,
+		})
+	}
 	return m, nil
 }
 

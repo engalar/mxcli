@@ -31,6 +31,8 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
+	entitymodel "github.com/mendixlabs/mxcli/mdl/canonical/entity"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
@@ -202,11 +204,14 @@ func newSanityContext(t *testing.T, w *mmpr.Writer) *ExecContext {
 		t.Fatalf("mprbackend.NewFromPath(%s): %v", path, err)
 	}
 	t.Cleanup(func() { _ = be.Disconnect() })
+	mc := canonical.NewDefaultRegistry()
+	entitymodel.RegisterCodec(mc)
 	ctx := &ExecContext{
 		Backend:      be,
 		Microflows:   repoCtx.Microflows,
 		DomainModels: repoCtx.DomainModels,
 		Output:       io.Discard,
+		ModelCodecs:  mc,
 	}
 	// Cache the listDomainModelsWithContainerGen result so the entity
 	// loop runs in O(N) instead of O(N * modules).
