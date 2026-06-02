@@ -153,7 +153,7 @@ create page MyModule.Customer_Overview
   layoutgrid g { row r { column c (desktopwidth: 12) {
     actionbutton btnNew (
       caption: 'New',
-      action: call_microflow MyModule.ACT_Customer_New
+      action: microflow MyModule.ACT_Customer_New
     )
     datagrid dg (datasource: database MyModule.Customer) {
       column colName (caption: 'Name', attribute: Name)

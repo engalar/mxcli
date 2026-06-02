@@ -1217,13 +1217,13 @@ func extractCustomWidgetPropertyAction(ctx *ExecContext, w map[string]any, prope
 		case "Forms$MicroflowAction", "Pages$MicroflowClientAction":
 			if settings, ok := action["MicroflowSettings"].(map[string]any); ok {
 				if mf := extractString(settings["Microflow"]); mf != "" {
-					return "call_microflow " + mf
+					return "microflow " + mf
 				}
 			}
 		case "Forms$CallNanoflowClientAction", "Pages$CallNanoflowClientAction":
 			if settings, ok := action["NanoflowSettings"].(map[string]any); ok {
 				if nf := extractString(settings["Nanoflow"]); nf != "" {
-					return "call_nanoflow " + nf
+					return "nanoflow " + nf
 				}
 			}
 		case "Forms$FormAction", "Pages$FormAction":

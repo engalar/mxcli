@@ -1010,7 +1010,7 @@ func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 		return "microflow"
 	case "Forms$CallNanoflowClientAction", "Pages$CallNanoflowClientAction":
 		if nfName, ok := action["Nanoflow"].(string); ok && nfName != "" {
-			result := "call_nanoflow " + nfName
+			result := "nanoflow " + nfName
 			// Extract parameter mappings (directly in the action)
 			params := extractNanoflowParameters(ctx, action)
 			if params != "" {
@@ -1018,7 +1018,7 @@ func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 			}
 			return result
 		}
-		return "call_nanoflow"
+		return "nanoflow"
 	case "Forms$SetTaskOutcomeClientAction", "Pages$SetTaskOutcomeClientAction":
 		outcomeValue, _ := action["OutcomeValue"].(string)
 		return "complete_task '" + strings.ReplaceAll(outcomeValue, "'", "''") + "'"

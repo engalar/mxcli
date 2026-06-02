@@ -620,9 +620,10 @@ func TestRoundtripPage_MicroflowButtonWithCurrentObject(t *testing.T) {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
 
-	// Verify that the microflow call with $currentObject parameter is in the output
-	if !strings.Contains(output, "call_microflow") {
-		t.Errorf("Expected call_microflow in describe output.\nOutput:\n%s", output)
+	// Verify that the microflow call with $currentObject parameter is in the output.
+	// DESCRIBE uses `microflow` keyword (matches actionExprV3 grammar), not `call_microflow`.
+	if !strings.Contains(output, "microflow") {
+		t.Errorf("Expected microflow keyword in describe output.\nOutput:\n%s", output)
 	}
 	if !strings.Contains(output, mfName) {
 		t.Errorf("Expected microflow name '%s' in describe output.\nOutput:\n%s", mfName, output)
