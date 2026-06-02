@@ -406,3 +406,50 @@ func TestToMDL_EventHandler_AfterCreate_NoPassObject(t *testing.T) {
 	assert.NotContains(t, got, "$currentObject")
 	assert.NotContains(t, got, "raise error")
 }
+
+func TestBuildGenEntity_PersistsEventHandlers(t *testing.T) {
+	m := &EntityModel{
+		Name: QualifiedName{Module: "M", Name: "E"},
+		Kind: EntityPersistent,
+		EventHandlers: []EventHandlerModel{
+			{Moment: "Before", Event: "Commit", Microflow: QualifiedName{Module: "M", Name: "ACT_BeforeCommit"}, RaiseErrorOnFalse: true, PassEventObject: true},
+			{Moment: "After", Event: "Create", Microflow: QualifiedName{Module: "M", Name: "ACT_AfterCreate"}, PassEventObject: false},
+		},
+	}
+	e, err := buildGenEntity(m)
+	require.NoError(t, err)
+	items := e.EventHandlersItems()
+	require.Len(t, items, 2)
+
+	h0, ok := items[0].(*genDm.EventHandler)
+	require.True(t, ok)
+	assert.Equal(t, "Before", h0.Moment())
+	assert.Equal(t, "Commit", h0.Event())
+	assert.Equal(t, "M.ACT_BeforeCommit", h0.MicroflowQualifiedName())
+	assert.True(t, h0.RaiseErrorOnFalse())
+	assert.True(t, h0.PassEventObject())
+
+	h1, ok := items[1].(*genDm.EventHandler)
+	require.True(t, ok)
+	assert.Equal(t, "After", h1.Moment())
+	assert.Equal(t, "Create", h1.Event())
+	assert.Equal(t, "M.ACT_AfterCreate", h1.MicroflowQualifiedName())
+	assert.False(t, h1.RaiseErrorOnFalse())
+	assert.False(t, h1.PassEventObject())
+}
+
+func TestEventHandler_PersistHydrateRoundTrip(t *testing.T) {
+	orig := &EntityModel{
+		Name: QualifiedName{Module: "M", Name: "E"},
+		Kind: EntityPersistent,
+		EventHandlers: []EventHandlerModel{
+			{Moment: "Before", Event: "Commit", Microflow: QualifiedName{Module: "M", Name: "ACT_BeforeCommit"}, RaiseErrorOnFalse: true, PassEventObject: true},
+		},
+	}
+	e, err := buildGenEntity(orig)
+	require.NoError(t, err)
+	got, _, err := Hydrate("M", e)
+	require.NoError(t, err)
+	require.Len(t, got.EventHandlers, 1)
+	assert.Equal(t, orig.EventHandlers[0], got.EventHandlers[0])
+}

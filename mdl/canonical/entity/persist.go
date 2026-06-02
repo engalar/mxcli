@@ -137,6 +137,17 @@ func buildGenEntity(m *EntityModel) (*genDm.Entity, error) {
 		e.AddIndexes(idx)
 	}
 
+	// Event handlers.
+	for _, eh := range m.EventHandlers {
+		h := genDm.NewEventHandler()
+		h.SetMoment(eh.Moment)
+		h.SetEvent(eh.Event)
+		h.SetMicroflowQualifiedName(eh.Microflow.String())
+		h.SetRaiseErrorOnFalse(eh.RaiseErrorOnFalse)
+		h.SetPassEventObject(eh.PassEventObject)
+		e.AddEventHandlers(h)
+	}
+
 	return e, nil
 }
 

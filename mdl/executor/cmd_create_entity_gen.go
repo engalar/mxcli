@@ -74,18 +74,16 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 		}
 	}
 
-	// Canonical path: applicable when no event handlers and the codec
-	// registry is wired. Event handlers are not modelled by EntityModel
-	// yet — fall back to the legacy gen builder for entities that use
-	// them, so behaviour is preserved end-to-end.
-	if ctx.ModelCodecs != nil && len(s.EventHandlers) == 0 {
+	// Canonical path: the EntityModel now models event handlers, so the
+	// codec pipeline handles every CREATE ENTITY statement.
+	if ctx.ModelCodecs != nil {
 		if err := persistEntityCanonical(ctx, s, dm, existingEntity, module); err != nil {
 			return err
 		}
 		return nil
 	}
 
-	// Legacy path (event handlers, or absent codec registry).
+	// Legacy path (absent codec registry — should not occur in production).
 	entity := astToEntityGen(s)
 	if entity == nil {
 		return mdlerrors.NewValidation("failed to build gen entity from AST")
