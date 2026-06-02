@@ -9,6 +9,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/canonical"
 	assocmodel "github.com/mendixlabs/mxcli/mdl/canonical/association"
 	"github.com/mendixlabs/mxcli/mdl/canonical/entity"
+	pagemodel "github.com/mendixlabs/mxcli/mdl/canonical/page"
 )
 
 // TestCodecComplete verifies that all registered gen TypeNames have complete
@@ -30,13 +31,15 @@ func TestCodecComplete(t *testing.T) {
 				r := canonical.NewDefaultRegistry()
 				entity.RegisterCodec(r)
 				assocmodel.RegisterCodec(r)
-				// Phase 3: microflow.RegisterCodec(r)
+				pagemodel.RegisterCodec(r)
 				return r
 			},
 			Required: []string{
 				"DomainModels$Entity",
 				"DomainModels$EntityImpl",
 				"DomainModels$Association",
+				"Forms$Page",
+				"Forms$PageImpl",
 			},
 			Hint: `Every Required gen TypeName must be registered with non-nil LiftFn and HydrateFn.
 Fix:

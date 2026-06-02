@@ -9,4 +9,5 @@ import (
 
 // Compile-time interface assertion. The Persistable assertion is added in the
 // Persist task (CM-4) once the stub method exists.
-var _ canonical.Document = (*page.PageDocument)(nil)
+var _ canonical.Document    = (*page.PageDocument)(nil)
+var _ canonical.Persistable = (*page.PageDocument)(nil)

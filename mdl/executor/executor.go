@@ -17,6 +17,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/canonical"
 	assocmodel "github.com/mendixlabs/mxcli/mdl/canonical/association"
 	entitymodel "github.com/mendixlabs/mxcli/mdl/canonical/entity"
+	pagemodel "github.com/mendixlabs/mxcli/mdl/canonical/page"
 	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
@@ -294,7 +295,7 @@ func New(output io.Writer) *Executor {
 	mc := canonical.NewDefaultRegistry()
 	entitymodel.RegisterCodec(mc)
 	assocmodel.RegisterCodec(mc)
-	// Phase 3+: microflow.RegisterCodec(mc), etc.
+	pagemodel.RegisterCodec(mc)
 	return &Executor{
 		output:       guard,
 		statusOutput: os.Stderr,
