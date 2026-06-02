@@ -6,8 +6,11 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
 	"github.com/mendixlabs/mxcli/mdl/canonical/association"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLift_Reference(t *testing.T) {
@@ -110,4 +113,46 @@ func TestToMDL_LiftRoundTrip(t *testing.T) {
 	got := m.ToMDL()
 	assert.Contains(t, got, "create association M.A_B")
 	assert.Contains(t, got, "from M.A to M.B")
+}
+
+func TestHydrate_Reference(t *testing.T) {
+	a := genDm.NewAssociation()
+	a.SetName("Order_Customer")
+	a.SetParentID("entity-id-order")
+	a.SetChildID("entity-id-customer")
+	a.SetType("Reference")
+	a.SetOwner("Default")
+	a.SetStorageFormat("AssociationStorageCrossTable")
+	a.SetDocumentation("Order to customer link")
+
+	ctx := canonical.HydrateCtx{
+		ModuleName: "M",
+		EntityNames: map[string]string{
+			"entity-id-order":    "Order",
+			"entity-id-customer": "Customer",
+		},
+	}
+	m, warns, err := association.Hydrate(ctx, a)
+	require.NoError(t, err)
+	assert.Empty(t, warns)
+	assert.Equal(t, "M.Order_Customer", m.Name.String())
+	assert.Equal(t, "M.Order", m.From.String())
+	assert.Equal(t, "M.Customer", m.To.String())
+	assert.Equal(t, association.AssocReference, m.Type)
+	assert.Equal(t, "Order to customer link", m.Documentation)
+}
+
+func TestHydrate_UnknownEntityID_ReturnsWarning(t *testing.T) {
+	a := genDm.NewAssociation()
+	a.SetName("X_Y")
+	a.SetParentID("unknown-id-1")
+	a.SetChildID("unknown-id-2")
+	a.SetType("Reference")
+
+	ctx := canonical.HydrateCtx{ModuleName: "M", EntityNames: map[string]string{}}
+	m, warns, err := association.Hydrate(ctx, a)
+	require.NoError(t, err)
+	assert.NotEmpty(t, warns)
+	// Falls back to ID string when name not found.
+	assert.Equal(t, "unknown-id-1", m.From.Name)
 }
