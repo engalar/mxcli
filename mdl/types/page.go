@@ -68,6 +68,10 @@ type WidgetNode struct {
 	Name     string
 	Children []*WidgetNode
 
+	// Footer holds footer widgets (DataView only). Separate from Children
+	// because Mendix stores them in FooterWidgets in BSON, not Widgets.
+	Footer []*WidgetNode
+
 	// Data binding
 	DataSource *DataSourceDef
 	EntityAttr string // attribute path (textbox, datepicker, …)
