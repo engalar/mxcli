@@ -83,3 +83,45 @@ func TestPageModelToMDL_EscapeQuotes(t *testing.T) {
 		t.Errorf("Content quote not doubled (Label now renders as statictext Content): %s", out)
 	}
 }
+
+// TestRenderWidget_ColWidth_AutoFill verifies that a column whose Tablet/Phone
+// weights are -1 (AutoFill) renders "TabletWidth: AutoFill" rather than being
+// dropped. The old `cw.Tablet > 0` filter silently omitted AutoFill columns.
+func TestRenderWidget_ColWidth_AutoFill(t *testing.T) {
+	col := &types.WidgetNode{
+		Kind: types.WidgetLayoutCol,
+		Name: "cMain",
+		ColWidth: types.ColWidthDef{
+			Desktop: 12,
+			Tablet:  -1,
+			Phone:   -1,
+		},
+	}
+	var buf bytes.Buffer
+	renderWidget(&buf, col, 0)
+	out := buf.String()
+	if !strings.Contains(out, "DesktopWidth: 12") {
+		t.Errorf("missing DesktopWidth: %s", out)
+	}
+	if !strings.Contains(out, "TabletWidth: AutoFill") {
+		t.Errorf("AutoFill tablet width dropped: %s", out)
+	}
+	if !strings.Contains(out, "PhoneWidth: AutoFill") {
+		t.Errorf("AutoFill phone width dropped: %s", out)
+	}
+}
+
+// TestRenderWidget_ColWidth_NoWidths verifies a column with all-zero weights
+// renders no property parens.
+func TestRenderWidget_ColWidth_NoWidths(t *testing.T) {
+	col := &types.WidgetNode{
+		Kind: types.WidgetLayoutCol,
+		Name: "cEmpty",
+	}
+	var buf bytes.Buffer
+	renderWidget(&buf, col, 0)
+	out := buf.String()
+	if strings.Contains(out, "(") {
+		t.Errorf("empty column should have no property parens: %s", out)
+	}
+}
