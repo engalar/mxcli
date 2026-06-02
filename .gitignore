@@ -80,3 +80,4 @@ vscode-mdl/
 # Both forms needed: `node_modules/` matches directories, `node_modules` matches symlinks.
 node_modules
 node_modules/
+.superpowers/
