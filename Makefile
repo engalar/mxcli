@@ -53,7 +53,7 @@ TEST_PARALLEL ?= $(_85PCT)
 # Hard ceiling on how long the full test suite may run.
 TEST_TIMEOUT ?= 180s
 
-.PHONY: build build-debug release clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install-daemon test-section-check update-snapshots validate-snapshots
+.PHONY: build build-debug release clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon test-section-check update-snapshots validate-snapshots
 
 setup:
 	git config core.hooksPath .githooks
@@ -69,6 +69,8 @@ test-section-check: build install-daemon
 
 # Install the locally-built daemon over the downloaded release binary.
 # Ensures mxcli uses the current dev-branch code during local development.
+install: install-daemon
+
 # Windows: stop running daemon first (taskkill may fail if already stopped).
 install-daemon: build
 	@DAEMON_DIR="$$HOME/.mxcli/daemon"; \
@@ -83,8 +85,14 @@ install-daemon: build
 	LAUNCHER_DIR=$$(dirname "$$(command -v mxcli 2>/dev/null || true)"); \
 	LAUNCHER_BIN="$(BUILD_DIR)/$(BINARY_NAME)$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
 	if [ -n "$$LAUNCHER_DIR" ] && [ -d "$$LAUNCHER_DIR" ]; then \
-		cp "$$LAUNCHER_BIN" "$$LAUNCHER_DIR/mxcli$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
-		echo "Installed launcher: $$LAUNCHER_DIR/mxcli$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
+		LAUNCHER_DEST="$$LAUNCHER_DIR/mxcli$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
+		if [ -f "$$LAUNCHER_DEST" ]; then \
+			echo "Stopping running launcher..."; \
+			pkill -x mxcli 2>/dev/null || powershell.exe -Command "Stop-Process -Name mxcli -Force -ErrorAction SilentlyContinue" 2>/dev/null || true; \
+			sleep 1; \
+		fi; \
+		cp "$$LAUNCHER_BIN" "$$LAUNCHER_DEST"; \
+		echo "Installed launcher: $$LAUNCHER_DEST"; \
 	else \
 		echo "Launcher not in PATH — copy manually: cp $$LAUNCHER_BIN <your-bin-dir>/mxcli$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
 	fi
