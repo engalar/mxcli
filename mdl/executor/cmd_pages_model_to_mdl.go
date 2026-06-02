@@ -74,20 +74,24 @@ func renderWidget(w io.Writer, node *types.WidgetNode, depth int) {
 	case types.WidgetLayoutCol:
 		cw := node.ColWidth
 		fmt.Fprintf(w, "%scolumn %s", indent, node.Name)
-		if cw.Desktop > 0 || cw.Tablet > 0 || cw.Phone > 0 {
+		// -1 = AutoFill, 0 = unset (omit), >0 = explicit width 1-12.
+		if cw.Desktop != 0 || cw.Tablet != 0 || cw.Phone != 0 {
 			fmt.Fprintf(w, " (")
 			sep := ""
-			if cw.Desktop > 0 {
-				fmt.Fprintf(w, "%sDesktopWidth: %d", sep, cw.Desktop)
+			fmtWeight := func(name string, v int) {
+				if v == 0 {
+					return
+				}
+				if v == -1 {
+					fmt.Fprintf(w, "%s%s: AutoFill", sep, name)
+				} else {
+					fmt.Fprintf(w, "%s%s: %d", sep, name, v)
+				}
 				sep = ", "
 			}
-			if cw.Tablet > 0 {
-				fmt.Fprintf(w, "%sTabletWidth: %d", sep, cw.Tablet)
-				sep = ", "
-			}
-			if cw.Phone > 0 {
-				fmt.Fprintf(w, "%sPhoneWidth: %d", sep, cw.Phone)
-			}
+			fmtWeight("DesktopWidth", cw.Desktop)
+			fmtWeight("TabletWidth", cw.Tablet)
+			fmtWeight("PhoneWidth", cw.Phone)
 			fmt.Fprintf(w, ")")
 		}
 		fmt.Fprintf(w, " {\n")
