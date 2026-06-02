@@ -79,7 +79,15 @@ install-daemon: build
 		sleep 1; \
 	fi; \
 	cp "$(BUILD_DIR)/$(DAEMON_NAME)$(if $(findstring windows,$(shell go env GOOS)),.exe,)" "$$DAEMON_BIN"; \
-	echo "Installed: $$DAEMON_BIN ($$("$$DAEMON_BIN" --version 2>&1 | head -1))"
+	echo "Installed: $$DAEMON_BIN ($$("$$DAEMON_BIN" --version 2>&1 | head -1))"; \
+	LAUNCHER_DIR=$$(dirname "$$(command -v mxcli 2>/dev/null || true)"); \
+	LAUNCHER_BIN="$(BUILD_DIR)/$(BINARY_NAME)$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
+	if [ -n "$$LAUNCHER_DIR" ] && [ -d "$$LAUNCHER_DIR" ]; then \
+		cp "$$LAUNCHER_BIN" "$$LAUNCHER_DIR/mxcli$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
+		echo "Installed launcher: $$LAUNCHER_DIR/mxcli$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
+	else \
+		echo "Launcher not in PATH — copy manually: cp $$LAUNCHER_BIN <your-bin-dir>/mxcli$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
+	fi
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
 # Usage: $(call copy-if-changed,src,dst)
