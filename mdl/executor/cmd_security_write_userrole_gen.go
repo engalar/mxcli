@@ -55,7 +55,12 @@ func execCreateUserRoleGen(ctx *ExecContext, s *ast.CreateUserRoleStmt) error {
 			if !s.CreateOrModify {
 				return mdlerrors.NewAlreadyExists("user role", s.Name)
 			}
-			// Additive: ensure specified module roles are present.
+			// Replace: remove existing module roles not in the new list, then add new ones.
+			// This makes "create or modify user role" idempotent (replace semantics, not additive).
+			existing := ur.ModuleRolesQualifiedNames()
+			if err := ctx.Backend.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, false, existing); err != nil {
+				return mdlerrors.NewBackend("clear user role module roles", err)
+			}
 			if err := ctx.Backend.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, true, moduleRoleNames); err != nil {
 				return mdlerrors.NewBackend("update user role", err)
 			}

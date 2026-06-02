@@ -298,7 +298,7 @@ func describeWorkflowToStringGen(ctx *ExecContext, name ast.QualifiedName) (stri
 	}
 	lines = append(lines, "")
 
-	lines = append(lines, fmt.Sprintf("create workflow %s", qualifiedName))
+	lines = append(lines, fmt.Sprintf("create or modify workflow %s", qualifiedName))
 
 	if ent := workflowParameterEntityGen(target); ent != "" {
 		lines = append(lines, fmt.Sprintf("  parameter $WorkflowContext: %s", ent))

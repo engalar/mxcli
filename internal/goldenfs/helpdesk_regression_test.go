@@ -7,6 +7,7 @@ package goldenfs
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -289,7 +290,16 @@ func TestHelpdeskGolden_Regression_BSON(t *testing.T) {
 // executing this script is valid MDL and can be parsed by visitor.Build.
 func helpdeskParseableDescribeScript(mprPath string) string {
 	return fmt.Sprintf(`connect local '%s';
--- Enumerations first: entities may reference these types as attribute types
+-- Module roles first: entity grants reference these roles by name
+describe module role KB.User;
+describe module role KB.Reader;
+describe module role KB.Contributor;
+describe module role KB.Admin;
+describe module role HD.User;
+describe module role HD.CustomerRole;
+describe module role HD.AgentRole;
+describe module role HD.ManagerRole;
+-- Enumerations: entities may reference these types as attribute types
 describe enumeration KB.ArticleStatus;
 describe enumeration HD.TicketStatus;
 describe enumeration HD.TicketPriority;
@@ -767,6 +777,33 @@ func assertPageBodiesNonEmpty(t *testing.T, snapshot string) {
 	}
 }
 
+// runMDLLenient executes a MDL script statement-by-statement, logging (not fataling)
+// on individual statement errors. Used for the first pass of idempotency tests where
+// forward-dependency failures are expected (e.g. creating a module role before the
+// module implicitly created by entity creation exists yet). Later statements continue
+// executing even when earlier ones fail.
+func runMDLLenient(t *testing.T, mprPath, script string) {
+	t.Helper()
+	e := executor.New(io.Discard)
+	e.SetQuiet(true)
+	e.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	defer func() {
+		if err := e.Close(); err != nil {
+			t.Logf("runMDLLenient: executor close: %v", err)
+		}
+	}()
+	full := "connect local '" + mprPath + "';\n" + script
+	prog, errs := visitor.Build(full)
+	if len(errs) > 0 {
+		t.Fatalf("MDL parse error: %v", errs)
+	}
+	for _, stmt := range prog.Statements {
+		if err := e.Execute(stmt); err != nil {
+			t.Logf("runMDLLenient (expected forward-dep error): %v", err)
+		}
+	}
+}
+
 // TestHelpdeskGolden_DescribeSnapshot_Idempotent verifies that describe-snapshot.mdl
 // is self-consistent: executing it on the clean MPR and re-describing must produce
 // the same output as the original snapshot.
@@ -794,8 +831,16 @@ func TestHelpdeskGolden_DescribeSnapshot_Idempotent(t *testing.T) {
 
 	mountMPR := filepath.Join(snap.MountDir(), "minimal.mpr")
 
-	// Execute describe-snapshot.mdl on the clean MPR using create-or-modify semantics.
+	// Execute describe-snapshot.mdl in two passes (same pattern as runHelpdeskMDL).
+	//
+	// Pass 1: creates entities (implicitly creating modules), enumerations, and
+	//         module roles. Some statements may fail on the first pass because of
+	//         forward dependencies (e.g. grants referencing roles not yet created);
+	//         those are retried in pass 2.
+	// Pass 2: all prerequisites exist; grants and cross-references now succeed.
+	//
 	// runMDL is defined in bsoncompare_integration_test.go (same package).
+	runMDLLenient(t, mountMPR, string(snapshotBytes))
 	runMDL(t, mountMPR, string(snapshotBytes))
 
 	// Re-describe: this must produce the same output as the original snapshot.

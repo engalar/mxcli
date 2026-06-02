@@ -1,3 +1,29 @@
+create module role KB.User description 'Auto-created default role for mxcli document access';
+/
+create module role KB.Reader;
+/
+
+-- Included in user roles: Customer
+create module role KB.Contributor;
+/
+
+-- Included in user roles: Agent, Manager
+create module role KB.Admin;
+/
+create module role HD.User description 'Auto-created default role for mxcli document access';
+/
+create module role HD.CustomerRole;
+/
+
+-- Included in user roles: Customer
+create module role HD.AgentRole;
+/
+
+-- Included in user roles: Agent
+create module role HD.ManagerRole;
+/
+
+-- Included in user roles: Manager
 create or modify enumeration KB.ArticleStatus (
   Draft 'Draft',
   Published 'Published',
@@ -879,7 +905,7 @@ grant execute on microflow HD.ACT_Workflow_Notify to HD.ManagerRole;
 /
 -- Workflow: HD.WF_SUB_ManagerReview
 
-create workflow HD.WF_SUB_ManagerReview
+create or modify workflow HD.WF_SUB_ManagerReview
   parameter $WorkflowContext: HD.EscalationRequest
   display 'Manager Review'
   overview page HD.EscalationWorkflow_Overview
@@ -928,7 +954,7 @@ end workflow
 /
 -- Workflow: HD.WF_TicketEscalation
 
-create workflow HD.WF_TicketEscalation
+create or modify workflow HD.WF_TicketEscalation
   parameter $WorkflowContext: HD.EscalationRequest
   display 'Ticket Escalation'
   overview page HD.EscalationWorkflow_Overview
@@ -993,11 +1019,11 @@ create or modify constant HD.SLA_CRITICAL_HOURS
   default 2
   comment 'SLA deadline in hours for Critical-priority tickets. Configure shorter per environment.';
 /
-create user role Customer (System.User, HD.CustomerRole, KB.Reader);
+create or modify user role Customer (System.User, HD.CustomerRole, KB.Reader);
 /
-create user role Agent (System.User, HD.AgentRole, KB.Contributor);
+create or modify user role Agent (System.User, HD.AgentRole, KB.Contributor);
 /
-create user role Manager (System.User, HD.ManagerRole, KB.Contributor);
+create or modify user role Manager (System.User, HD.ManagerRole, KB.Contributor);
 /
 -- navigation PROFILE: Responsive
 --   Kind: Responsive

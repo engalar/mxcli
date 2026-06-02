@@ -692,7 +692,7 @@ func describeUserRoleGen(ctx *ExecContext, name ast.QualifiedName) error {
 		if !ok || typed.Name() != name.Name {
 			continue
 		}
-		fmt.Fprintf(ctx.Output, "create user role %s", typed.Name())
+		fmt.Fprintf(ctx.Output, "create or modify user role %s", typed.Name())
 
 		// Module roles
 		moduleRoles := typed.ModuleRolesQualifiedNames()
