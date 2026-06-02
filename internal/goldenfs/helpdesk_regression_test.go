@@ -25,7 +25,16 @@ import (
 
 // updateGolden: go test ... -update-golden -run TestHelpdeskGolden_Update
 var updateGolden = flag.Bool("update-golden", false,
-	"overwrite testdata/helpdesk-golden-11.6.6/ with the current MDL execution result")
+	"overwrite testdata/helpdesk-golden-<HELPDESK_VERSION>/ with the current MDL execution result")
+
+// helpdeskVersion returns the Mendix version to use for golden tests.
+// Controlled by the HELPDESK_VERSION env var; defaults to "11.6.6".
+func helpdeskVersion() string {
+	if v := os.Getenv("HELPDESK_VERSION"); v != "" {
+		return v
+	}
+	return "11.6.6"
+}
 
 // helpdeskBlankDir returns the directory containing the blank base MPR (A).
 // Uses testdata/helpdesk-clean-11.6.6: a blank 11.6.6 project with Atlas Core
@@ -33,9 +42,10 @@ var updateGolden = flag.Bool("update-golden", false,
 // correct widget baseline for the helpdesk pages.
 func helpdeskBlankDir(t *testing.T) string {
 	t.Helper()
-	dir := filepath.Join(repoRoot(t), "testdata", "helpdesk-clean-11.6.6")
+	v := helpdeskVersion()
+	dir := filepath.Join(repoRoot(t), "testdata", "helpdesk-clean-"+v)
 	if _, err := os.Stat(dir); err != nil {
-		t.Skipf("testdata/helpdesk-clean-11.6.6 not found: %v", err)
+		t.Skipf("testdata/helpdesk-clean-%s not found: %v", v, err)
 	}
 	return dir
 }
@@ -45,7 +55,7 @@ func helpdeskBlankMPR(t *testing.T) string {
 	t.Helper()
 	p := filepath.Join(helpdeskBlankDir(t), "minimal.mpr")
 	if _, err := os.Stat(p); err != nil {
-		t.Skipf("testdata/helpdesk-clean-11.6.6/minimal.mpr not found: %v", err)
+		t.Skipf("testdata/helpdesk-clean-%s/minimal.mpr not found: %v", helpdeskVersion(), err)
 	}
 	return p
 }
@@ -53,7 +63,7 @@ func helpdeskBlankMPR(t *testing.T) string {
 // helpdeskGoldenDir returns the path to the committed B1 golden directory.
 func helpdeskGoldenDir(t *testing.T) string {
 	t.Helper()
-	return filepath.Join(repoRoot(t), "testdata", "helpdesk-golden-11.6.6")
+	return filepath.Join(repoRoot(t), "testdata", "helpdesk-golden-"+helpdeskVersion())
 }
 
 // helpdeskGoldenMPR returns the MPR path inside the golden directory.
