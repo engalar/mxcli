@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	entityModel "github.com/mendixlabs/mxcli/mdl/canonical/entity"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
@@ -20,12 +20,12 @@ import (
 // entityStmtToMDL converts a CreateEntityStmt to MDL text via the canonical
 // EntityModel pipeline (Lift → ToMDL). Both proposed (stmt) and current (gen)
 // renderings share the same serializer so diff output is byte-stable.
-func entityStmtToMDL(_ *ExecContext, s *ast.CreateEntityStmt) string {
-	m, err := entityModel.Lift(s)
+func entityStmtToMDL(ctx *ExecContext, s *ast.CreateEntityStmt) string {
+	doc, err := ctx.ModelCodecs.LiftFrom(s)
 	if err != nil {
 		return fmt.Sprintf("/* entity lift error: %v */", err)
 	}
-	return m.ToMDL() + ";\n/"
+	return doc.ToMDL() + ";\n/"
 }
 
 // viewEntityStmtToMDL converts a CreateViewEntityStmt to MDL text
@@ -467,12 +467,12 @@ func microflowStatementToMDL(ctx *ExecContext, stmt ast.MicroflowStatement, inde
 
 // entityToMDLGen converts a gen-typed project entity to MDL text via the
 // canonical EntityModel pipeline (Hydrate → ToMDL).
-func entityToMDLGen(_ *ExecContext, moduleName string, entity *genDm.Entity) string {
-	m, _, err := entityModel.Hydrate(moduleName, entity)
+func entityToMDLGen(ctx *ExecContext, moduleName string, entity *genDm.Entity) string {
+	doc, _, err := ctx.ModelCodecs.HydrateFrom(entity, canonical.HydrateCtx{ModuleName: moduleName})
 	if err != nil {
 		return fmt.Sprintf("/* entity hydrate error: %v */", err)
 	}
-	return m.ToMDL() + ";\n/"
+	return doc.ToMDL() + ";\n/"
 }
 
 // viewEntityFromProjectToMDLGen converts a gen-typed view entity to MDL.

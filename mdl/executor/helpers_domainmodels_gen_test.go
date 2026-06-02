@@ -8,6 +8,8 @@ import (
 
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
+	"github.com/mendixlabs/mxcli/mdl/canonical"
+	entitymodel "github.com/mendixlabs/mxcli/mdl/canonical/entity"
 )
 
 // newDomainModelsTestContext builds an ExecContext with DomainModels
@@ -23,10 +25,13 @@ func newDomainModelsTestContext(t *testing.T) *ExecContext {
 	}
 	t.Cleanup(func() { _ = be.Disconnect() })
 
+	mc := canonical.NewDefaultRegistry()
+	entitymodel.RegisterCodec(mc)
 	ctx := &ExecContext{
 		Backend:      be,
 		DomainModels: mprrepos.NewDomainModelRepository(w),
 		Output:       io.Discard,
+		ModelCodecs:  mc,
 	}
 	ctx.ensureCache()
 	return ctx

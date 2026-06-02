@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/canonical"
+	mxID "github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
@@ -40,15 +41,23 @@ func (m *EntityModel) Persist(ctx canonical.PersistContext) error {
 	if ctx.DomainModelID == "" {
 		return fmt.Errorf("entity.Persist: missing DomainModelID")
 	}
+	type entityBackend interface {
+		CreateEntityGen(domainModelID mxID.ID, entity *genDm.Entity) error
+		UpdateEntityGen(domainModelID mxID.ID, entity *genDm.Entity) error
+	}
+	b, ok := ctx.Backend.(entityBackend)
+	if !ok {
+		return fmt.Errorf("entity.Persist: backend %T does not implement entityBackend", ctx.Backend)
+	}
 	gen, err := buildGenEntity(m)
 	if err != nil {
 		return fmt.Errorf("entity.Persist: %w", err)
 	}
 	if ctx.ExistingEntityID != "" {
 		gen.SetID(element.ID(ctx.ExistingEntityID))
-		return ctx.Backend.UpdateEntityGen(ctx.DomainModelID, gen)
+		return b.UpdateEntityGen(ctx.DomainModelID, gen)
 	}
-	return ctx.Backend.CreateEntityGen(ctx.DomainModelID, gen)
+	return b.CreateEntityGen(ctx.DomainModelID, gen)
 }
 
 // buildGenEntity converts an EntityModel to a fully wired *genDm.Entity.

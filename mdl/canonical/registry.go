@@ -7,11 +7,18 @@ import (
 	"reflect"
 )
 
+// HydrateCtx carries contextual information not stored in the gen element
+// itself (e.g. the owning module name, which entities do not store in BSON).
+type HydrateCtx struct {
+	ModuleName  string
+	EntityNames map[string]string // entity ID → name; used by association Hydrate
+}
+
 // Codec wires Lift (AST -> canonical model) and Hydrate (gen-typed element ->
 // canonical model) for a single document kind.
 type Codec struct {
 	LiftFn    func(stmt any) (Persistable, error)
-	HydrateFn func(el any) (Document, []Warning, error)
+	HydrateFn func(el any, ctx HydrateCtx) (Document, []Warning, error)
 }
 
 // DefaultRegistry is the in-memory codec lookup keyed by AST statement type
@@ -63,7 +70,7 @@ func (r *DefaultRegistry) LiftFrom(stmt any) (Persistable, error) {
 }
 
 // HydrateFrom dispatches a gen-typed element to the registered Hydrate codec.
-func (r *DefaultRegistry) HydrateFrom(el any) (Document, []Warning, error) {
+func (r *DefaultRegistry) HydrateFrom(el any, ctx HydrateCtx) (Document, []Warning, error) {
 	gt, ok := el.(genTyper)
 	if !ok {
 		return nil, nil, fmt.Errorf("model: %T does not implement TypeName()", el)
@@ -72,5 +79,5 @@ func (r *DefaultRegistry) HydrateFrom(el any) (Document, []Warning, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("model: no codec for gen type %q", gt.TypeName())
 	}
-	return c.HydrateFn(el)
+	return c.HydrateFn(el, ctx)
 }

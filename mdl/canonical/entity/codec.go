@@ -41,12 +41,12 @@ func RegisterCodec(r *canonical.DefaultRegistry) {
 		// (cmd_entities_gen.go, cmd_diff_mdl.go) invoke entity.Hydrate()
 		// directly. This registration enables future unified dispatch
 		// without API changes.
-		HydrateFn: func(el any) (canonical.Document, []canonical.Warning, error) {
+		HydrateFn: func(el any, hctx canonical.HydrateCtx) (canonical.Document, []canonical.Warning, error) {
 			e, ok := el.(*genDm.Entity)
 			if !ok {
 				return nil, nil, fmt.Errorf("entity codec: expected *genDm.Entity, got %T", el)
 			}
-			return Hydrate("", e)
+			return Hydrate(hctx.ModuleName, e)
 		},
 	}
 	r.Register((*ast.CreateEntityStmt)(nil), "DomainModels$Entity", codec)

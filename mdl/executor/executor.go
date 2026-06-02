@@ -303,6 +303,21 @@ func New(output io.Writer) *Executor {
 	}
 }
 
+// hydrateEntityModel hydrates a gen-typed entity through the codec registry
+// and type-asserts the result to *entity.EntityModel. executor.go is the
+// only executor file allowed to import mdl/canonical/entity directly (see Guard 4).
+func hydrateEntityModel(ctx *ExecContext, moduleName string, genEnt any) (*entitymodel.EntityModel, []canonical.Warning, error) {
+	doc, warns, err := ctx.ModelCodecs.HydrateFrom(genEnt, canonical.HydrateCtx{ModuleName: moduleName})
+	if err != nil {
+		return nil, nil, err
+	}
+	m, ok := doc.(*entitymodel.EntityModel)
+	if !ok {
+		return nil, warns, fmt.Errorf("hydrateEntityModel: unexpected type %T", doc)
+	}
+	return m, warns, nil
+}
+
 // SetBackendFactory sets the factory function used to create backend instances on Connect.
 func (e *Executor) SetBackendFactory(f BackendFactory) {
 	e.backendFactory = f

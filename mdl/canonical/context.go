@@ -2,15 +2,14 @@
 
 package canonical
 
-import (
-	"github.com/mendixlabs/mxcli/mdl/backend"
-	modelID "github.com/mendixlabs/mxcli/model"
-)
+import modelID "github.com/mendixlabs/mxcli/model"
 
-// PersistContext carries the project-scoped identifiers and backend handles a
-// canonical document needs in order to write itself back to the project.
+// PersistContext carries the project-scoped identifiers and backend handle a
+// canonical document needs to write itself to the project.
+// Backend is typed as any to keep this package free of backend imports;
+// each domain's persist.go defines a local interface and type-asserts it.
 type PersistContext struct {
 	DomainModelID    modelID.ID
 	ExistingEntityID modelID.ID
-	Backend          backend.DomainModelBackend
+	Backend          any
 }

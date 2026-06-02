@@ -18,7 +18,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	entityModel "github.com/mendixlabs/mxcli/mdl/canonical/entity"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -371,7 +370,7 @@ func describeEntityGen(ctx *ExecContext, name ast.QualifiedName) error {
 	// position + kind + extends + attributes (incl. validation/default/
 	// calculated) + indexes, with the `create or modify` prefix injected at
 	// the statement line so DESCRIBE output is idempotent on re-execution.
-	m, warns, err := entityModel.Hydrate(modName, entity)
+	m, warns, err := hydrateEntityModel(ctx, modName, entity)
 	if err != nil {
 		return fmt.Errorf("describe entity: hydrate: %w", err)
 	}

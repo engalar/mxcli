@@ -9,7 +9,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/canonical"
 )
 
-func buildTestRegistry(liftFn func(any) (canonical.Persistable, error), hydrateFn func(any) (canonical.Document, []canonical.Warning, error)) *canonical.DefaultRegistry {
+func buildTestRegistry(liftFn func(any) (canonical.Persistable, error), hydrateFn func(any, canonical.HydrateCtx) (canonical.Document, []canonical.Warning, error)) *canonical.DefaultRegistry {
 	r := canonical.NewDefaultRegistry()
 	r.RegisterGenType("TestType$Foo", canonical.Codec{
 		LiftFn:    liftFn,
@@ -21,7 +21,7 @@ func buildTestRegistry(liftFn func(any) (canonical.Persistable, error), hydrateF
 func TestCodecComplete_allPresent_passes(t *testing.T) {
 	r := buildTestRegistry(
 		func(any) (canonical.Persistable, error) { return nil, nil },
-		func(any) (canonical.Document, []canonical.Warning, error) { return nil, nil, nil },
+		func(any, canonical.HydrateCtx) (canonical.Document, []canonical.Warning, error) { return nil, nil, nil },
 	)
 	rule := archtest.CodecComplete{
 		BuildRegistry: func() *canonical.DefaultRegistry { return r },
@@ -35,7 +35,7 @@ func TestCodecComplete_allPresent_passes(t *testing.T) {
 func TestCodecComplete_nilLiftFn_fails(t *testing.T) {
 	r := buildTestRegistry(
 		nil,
-		func(any) (canonical.Document, []canonical.Warning, error) { return nil, nil, nil },
+		func(any, canonical.HydrateCtx) (canonical.Document, []canonical.Warning, error) { return nil, nil, nil },
 	)
 	rule := archtest.CodecComplete{
 		BuildRegistry: func() *canonical.DefaultRegistry { return r },
