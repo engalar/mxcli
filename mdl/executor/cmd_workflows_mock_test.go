@@ -58,7 +58,7 @@ func TestDescribeWorkflow_Mock(t *testing.T) {
 	assertNoError(t, describeWorkflowGen(ctx, ast.QualifiedName{Module: "Sales", Name: "ApproveOrder"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "create workflow")
+	assertContainsStr(t, out, "create or modify workflow")
 	assertContainsStr(t, out, "Sales.ApproveOrder")
 
 	// Roundtrip: DESCRIBE output must be parseable as valid MDL (issue #478)

@@ -87,6 +87,7 @@ type WorkflowCallWorkflowNode struct {
 	Workflow          QualifiedName
 	Caption           string
 	ParameterMappings []WorkflowParameterMappingNode
+	BoundaryEvents    []WorkflowBoundaryEventNode // Issue #7
 }
 
 func (n *WorkflowCallWorkflowNode) workflowActivityNode() {}

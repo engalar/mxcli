@@ -93,7 +93,7 @@ func buildWorkflowActivityGen(wbc *wfBuildCtx, node ast.WorkflowActivityNode) el
 	case *ast.WorkflowCallMicroflowNode:
 		return buildCallMicroflowGenActivity(wbc, n)
 	case *ast.WorkflowCallWorkflowNode:
-		return buildCallWorkflowGenActivity(n)
+		return buildCallWorkflowGenActivity(wbc, n)
 	case *ast.WorkflowDecisionNode:
 		return buildExclusiveSplitGenActivity(wbc, n)
 	case *ast.WorkflowParallelSplitNode:
@@ -474,7 +474,7 @@ func buildCallMicroflowGenActivity(wbc *wfBuildCtx, n *ast.WorkflowCallMicroflow
 
 // buildCallWorkflowGenActivity mirrors buildCallWorkflowActivity
 // (cmd_workflows_write.go:325).
-func buildCallWorkflowGenActivity(n *ast.WorkflowCallWorkflowNode) *genWf.CallWorkflowActivity {
+func buildCallWorkflowGenActivity(wbc *wfBuildCtx, n *ast.WorkflowCallWorkflowNode) *genWf.CallWorkflowActivity {
 	act := genWf.NewCallWorkflowActivity()
 	act.SetID(element.ID(types.GenerateID()))
 	act.SetName(n.Workflow.Name)
@@ -496,6 +496,9 @@ func buildCallWorkflowGenActivity(n *ast.WorkflowCallWorkflowNode) *genWf.CallWo
 		mapping.SetParameterQualifiedName(wfQN + "." + pm.Parameter)
 		mapping.SetExpression(pm.Expression)
 		act.AddParameterMappings(mapping)
+	}
+	for _, ev := range buildBoundaryEventsGen(wbc, n.BoundaryEvents) {
+		act.AddBoundaryEvents(ev)
 	}
 	return act
 }

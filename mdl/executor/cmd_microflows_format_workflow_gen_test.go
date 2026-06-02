@@ -169,11 +169,14 @@ func TestFormatActionGen_GetWorkflowActivityRecordsAction(t *testing.T) {
 
 func TestFormatActionGen_WorkflowOperationAction_Abort(t *testing.T) {
 	t.Run("abort with reason", func(t *testing.T) {
+		// The write path uses exprToString which already wraps the expression in quotes
+		// (e.g. 'payment failed'), so StringTemplate.Text stores the full expression string.
+		// The describe code must emit it as-is without additional quoting.
 		a := genMf.NewWorkflowOperationAction()
 		op := genMf.NewAbortOperation()
 		op.SetWorkflowVariable("Wf")
 		tmpl := genMf.NewStringTemplate()
-		tmpl.SetText("payment failed")
+		tmpl.SetText("'payment failed'") // expression string as stored by the write path
 		op.SetReason(tmpl)
 		a.SetOperation(op)
 		got := formatActionGen(nil, a)
@@ -211,11 +214,12 @@ func TestFormatActionGen_WorkflowOperationAction_Abort(t *testing.T) {
 	})
 
 	t.Run("abort with reason containing single quote escapes", func(t *testing.T) {
+		// exprToString("user's request") → 'user''s request' (escaped expression string)
 		a := genMf.NewWorkflowOperationAction()
 		op := genMf.NewAbortOperation()
 		op.SetWorkflowVariable("Wf")
 		tmpl := genMf.NewStringTemplate()
-		tmpl.SetText("user's request")
+		tmpl.SetText("'user''s request'") // expression string as stored by the write path
 		op.SetReason(tmpl)
 		a.SetOperation(op)
 		got := formatActionGen(nil, a)

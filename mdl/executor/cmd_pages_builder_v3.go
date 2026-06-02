@@ -1374,6 +1374,12 @@ func (pb *pageBuilder) resolveTemplateAttributePathFull(attrRef string, param *g
 
 	resolved := pb.resolveTemplateAttributePath(attrRef)
 	if !strings.HasPrefix(attrRef, "$") {
+		// If the attrRef is already a full expression (contains function call or embedded $
+		// variable), use it directly rather than prepending $currentObject/.
+		if strings.Contains(attrRef, "(") || strings.Contains(attrRef, "$") {
+			param.SetExpression(attrRef)
+			return
+		}
 		if pb.isNonStringAttribute(resolved) {
 			// Non-string attributes (enum, datetime, etc.) need explicit toString().
 			param.SetExpression("toString($currentObject/" + attrRef + ")")
@@ -1383,6 +1389,12 @@ func (pb *pageBuilder) resolveTemplateAttributePathFull(attrRef string, param *g
 			// checked by the describe and causes CE0402 "No value specified".
 			param.SetExpression("$currentObject/" + attrRef)
 		}
+		return
+	}
+	// $var/attr is already in Mendix expression form; use SetExpression so the
+	// describe code can read it back (describe reads Expression, not AttributePath).
+	if strings.Contains(attrRef, "/") {
+		param.SetExpression(attrRef)
 		return
 	}
 	param.SetAttributePath(resolved)
@@ -2998,10 +3010,12 @@ func dataGridFilterWidgetID(widgetType string) string {
 	return ""
 }
 
-// dataGridPagingPropMap maps PascalCase MDL property names to camelCase widget property keys.
+// dataGridPagingPropMap maps lowercase MDL property names to camelCase widget property keys.
+// The visitor stores generic widget properties with the literal text from the grammar (lowercase),
+// so these keys must match the lowercased MDL keyword form.
 var dataGridPagingPropMap = map[string]string{
-	"PageSize":          "pageSize",
-	"Pagination":        "pagination",
-	"PagingPosition":    "pagingPosition",
-	"ShowPagingButtons": "showPagingButtons",
+	"pagesize":          "pageSize",
+	"pagination":        "pagination",
+	"pagingposition":    "pagingPosition",
+	"showpagingbuttons": "showPagingButtons",
 }

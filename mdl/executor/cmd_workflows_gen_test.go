@@ -204,7 +204,7 @@ func TestDescribeWorkflowToStringGen_BasicShape(t *testing.T) {
 		t.Errorf("expected nil ELK ranges (legacy parity), got %v", ranges)
 	}
 	for _, want := range []string{
-		"create workflow .Approve",
+		"create or modify workflow .Approve",
 		"display 'Approve order'",
 		"export level public",
 		"overview page Demo.Overview",

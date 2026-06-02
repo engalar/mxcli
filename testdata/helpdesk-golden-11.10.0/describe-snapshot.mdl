@@ -777,7 +777,7 @@ begin
       workflow operation unpause $Workflow;
     else
       @position(700,400)
-      workflow operation abort $Workflow reason '''Administratively aborted''';
+      workflow operation abort $Workflow reason 'Administratively aborted';
     end if;
   end if;
   return;
@@ -973,7 +973,7 @@ begin
 
       }
       false -> {
-        wait for notification -- WaitForManagerAvailable
+        wait for notification comment 'WaitForManagerAvailable'
           boundary event non interrupting timer 'addHours([%CurrentDateTime%], 12)'
           {
             call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext') -- WFS_SendReminder
@@ -1177,7 +1177,7 @@ create or modify page HD.Agent_Select (
   folder: 'Ticket',
   params: { $Ticket: HD.Ticket }
 ) {
-  datagrid dgAgents (datasource: database from HD.Agent sort by Name asc, selection: single, pagesize: 15) {
+  datagrid dgAgents (datasource: database from HD.Agent sort by Name asc, selection: single) {
     -- Context: $currentObject (HD.Agent), $dgAgents (selection)
     controlbar controlBar1 {
       actionbutton btnAssign (caption: 'Assign', action: close_page, buttonstyle: primary)
@@ -1329,8 +1329,8 @@ create or modify page HD.EscalationReview_Form (
   params: { $WorkflowUserTask: System.WorkflowUserTask }
 ) {
   layoutgrid lgMain {
-    row row1 {
-      column col1 {
+    row rMain {
+      column cMain (DesktopWidth: 12) {
         dynamictext txtTitle
       }
     }
@@ -1344,8 +1344,8 @@ create or modify page HD.EscalationWorkflow_Overview (
   folder: 'Escalation'
 ) {
   layoutgrid lgMain {
-    row row1 {
-      column col1 {
+    row rMain {
+      column cMain (DesktopWidth: 12) {
         dynamictext txtTitle
       }
     }
@@ -1359,12 +1359,10 @@ create or modify page HD.EscalationStart_Form (
   folder: 'Escalation'
 ) {
   layoutgrid lgMain {
-    row row1 {
-      column col1 {
+    row rMain {
+      column cMain (DesktopWidth: 12) {
         dynamictext txtPlaceholder
       }
     }
   }
 }
-
--- golden rebuilt: relayout Y-spread + no-crossings ordering fix

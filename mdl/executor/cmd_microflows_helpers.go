@@ -321,6 +321,9 @@ func expressionToXPath(expr ast.Expression) string {
 		left := expressionToXPath(e.Left)
 		right := expressionToXPath(e.Right)
 		op := strings.ToLower(e.Operator)
+		if op == "/" {
+			return left + "/" + right
+		}
 		return left + " " + op + " " + right
 	case *ast.UnaryExpr:
 		operand := expressionToXPath(e.Operand)
@@ -497,6 +500,9 @@ func xpathExprToMDLString(expr ast.Expression) string {
 		left := xpathExprToMDLString(e.Left)
 		right := xpathExprToMDLString(e.Right)
 		op := strings.ToLower(e.Operator)
+		if op == "/" {
+			return left + "/" + right
+		}
 		return left + " " + op + " " + right
 	case *ast.UnaryExpr:
 		operand := xpathExprToMDLString(e.Operand)

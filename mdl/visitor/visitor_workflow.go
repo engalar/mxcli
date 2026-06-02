@@ -602,6 +602,11 @@ func buildWorkflowCallWorkflow(ctx parser.IWorkflowCallWorkflowStmtContext) *ast
 		node.ParameterMappings = append(node.ParameterMappings, mapping)
 	}
 
+	// Boundary events
+	for _, beCtx := range cwCtx.AllWorkflowBoundaryEventClause() {
+		node.BoundaryEvents = append(node.BoundaryEvents, buildBoundaryEventNode(beCtx))
+	}
+
 	return node
 }
 

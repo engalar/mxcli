@@ -489,7 +489,7 @@ func TestBuildCallWorkflowGenActivity_AutoBindsParameterExpression(t *testing.T)
 			{Parameter: "WorkflowContext", Expression: "$WorkflowContext"},
 		},
 	}
-	got := buildCallWorkflowGenActivity(n)
+	got := buildCallWorkflowGenActivity(&wfBuildCtx{}, n)
 	if got.TypeName() != "Workflows$CallWorkflowActivity" {
 		t.Errorf("TypeName = %q", got.TypeName())
 	}

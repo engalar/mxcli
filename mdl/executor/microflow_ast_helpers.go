@@ -153,6 +153,32 @@ func getStatementAnnotations(stmt ast.MicroflowStatement) *ast.ActivityAnnotatio
 		return s.Annotations
 	case *ast.RestCallStmt:
 		return s.Annotations
+	case *ast.CallWorkflowStmt:
+		return s.Annotations
+	case *ast.GetWorkflowDataStmt:
+		return s.Annotations
+	case *ast.GetWorkflowsStmt:
+		return s.Annotations
+	case *ast.GetWorkflowActivityRecordsStmt:
+		return s.Annotations
+	case *ast.WorkflowOperationStmt:
+		return s.Annotations
+	case *ast.SetTaskOutcomeStmt:
+		return s.Annotations
+	case *ast.OpenUserTaskStmt:
+		return s.Annotations
+	case *ast.NotifyWorkflowStmt:
+		return s.Annotations
+	case *ast.OpenWorkflowStmt:
+		return s.Annotations
+	case *ast.LockWorkflowStmt:
+		return s.Annotations
+	case *ast.UnlockWorkflowStmt:
+		return s.Annotations
+	case *ast.GenerateJumpToStmt:
+		return s.Annotations
+	case *ast.ApplyJumpToStmt:
+		return s.Annotations
 	default:
 		return nil
 	}

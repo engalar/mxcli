@@ -177,7 +177,9 @@ func formatWorkflowOperationGen(op element.Element) string {
 	case *genMf.AbortOperation:
 		reason := abortReasonStringGen(o)
 		if reason != "" {
-			return fmt.Sprintf("workflow operation abort $%s reason %s;", o.WorkflowVariable(), mdlQuote(reason))
+			// reason is already a valid MDL expression string (e.g. '''text'''),
+			// so emit it as-is without further quoting.
+			return fmt.Sprintf("workflow operation abort $%s reason %s;", o.WorkflowVariable(), reason)
 		}
 		return fmt.Sprintf("workflow operation abort $%s;", o.WorkflowVariable())
 	case *genMf.ContinueOperation:

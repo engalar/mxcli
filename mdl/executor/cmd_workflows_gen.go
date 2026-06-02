@@ -622,7 +622,10 @@ func formatWaitForNotificationGen(elem element.Element, indent string) []string 
 	if caption == "" {
 		caption = wn.Name()
 	}
-	lines = append(lines, fmt.Sprintf("%swait for notification -- %s", indent, caption))
+	escapedCaption := strings.ReplaceAll(caption, "'", "''")
+	// Grammar: WAIT FOR NOTIFICATION (COMMENT STRING_LITERAL)?
+	// COMMENT token = the 'comment' keyword (not '--' which is a skipped line comment).
+	lines = append(lines, fmt.Sprintf("%swait for notification comment '%s'", indent, escapedCaption))
 	lines = append(lines, formatBoundaryEventsGen(wn.BoundaryEventsItems(), indent+"  ")...)
 	return lines
 }

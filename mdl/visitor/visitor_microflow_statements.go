@@ -566,6 +566,32 @@ func setStatementAnnotations(stmt ast.MicroflowStatement, ann *ast.ActivityAnnot
 		s.Annotations = ann
 	case *ast.SendRestRequestStmt:
 		s.Annotations = ann
+	case *ast.CallWorkflowStmt:
+		s.Annotations = ann
+	case *ast.GetWorkflowDataStmt:
+		s.Annotations = ann
+	case *ast.GetWorkflowsStmt:
+		s.Annotations = ann
+	case *ast.GetWorkflowActivityRecordsStmt:
+		s.Annotations = ann
+	case *ast.WorkflowOperationStmt:
+		s.Annotations = ann
+	case *ast.SetTaskOutcomeStmt:
+		s.Annotations = ann
+	case *ast.OpenUserTaskStmt:
+		s.Annotations = ann
+	case *ast.NotifyWorkflowStmt:
+		s.Annotations = ann
+	case *ast.OpenWorkflowStmt:
+		s.Annotations = ann
+	case *ast.LockWorkflowStmt:
+		s.Annotations = ann
+	case *ast.UnlockWorkflowStmt:
+		s.Annotations = ann
+	case *ast.GenerateJumpToStmt:
+		s.Annotations = ann
+	case *ast.ApplyJumpToStmt:
+		s.Annotations = ann
 	}
 }
 

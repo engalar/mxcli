@@ -252,7 +252,7 @@ func TestDescribeUserRoleGen_OutputsCreateStatement(t *testing.T) {
 		t.Fatalf("describeUserRoleGen: %v", err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "create user role User") {
+	if !strings.Contains(out, "create or modify user role User") {
 		t.Errorf("expected create statement with role name, got: %q", out)
 	}
 	// module roles must be parenthesized

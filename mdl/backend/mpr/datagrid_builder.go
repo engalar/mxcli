@@ -812,7 +812,7 @@ func buildColumnExpressionProperty(entry types.PropertyTypeIDEntry, expression s
 
 func buildColumnAttributeProperty(entry types.PropertyTypeIDEntry, attrPath string) bson.D {
 	var attributeRef any
-	if strings.Count(attrPath, ".") >= 2 {
+	if attrPath != "" {
 		attributeRef = bson.D{
 			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 			{Key: "$Type", Value: "DomainModels$AttributeRef"},
