@@ -291,6 +291,8 @@ func init() {
 
 	setupMxcliCmd.Flags().String("os", "linux", "Target operating system (linux, darwin, windows)")
 	setupMxcliCmd.Flags().String("arch", "amd64", "Target architecture (amd64, arm64)")
+	// ./mxcli (with ./) is intentional: the VS Code extension (mdl.mxcliPath) and
+	// devcontainer postCreateCommand both reference the binary as "./mxcli".
 	setupMxcliCmd.Flags().String("output", "./mxcli", "Output file path")
 	setupMxcliCmd.Flags().String("tag", "", "Release tag to download (default: match running version)")
 	setupMxcliCmd.Flags().String("repo", "engalar/mxcli", "GitHub repository")

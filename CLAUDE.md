@@ -403,7 +403,7 @@ go build -o bin/mxcli ./cmd/mxcli
 | **Export project** | `mxcli export -p app.mpr --output ./export-dir [--module M] [--dry-run] [--force]` | Export all documents to structured MDL files; incremental (skips unchanged modules/documents via `-- @cache:` markers) |
 | **Import project** | `mxcli import -p app.mpr --input ./export-dir [--module M] [--dry-run] [--skip-errors]` | Execute exported MDL files in dependency order (enumerations → entities → microflows → pages → navigation) |
 | **New project** | `mxcli new <name> --version X.Y.Z [--output-dir dir]` | Downloads mxbuild, creates blank project, runs init, installs Linux mxcli for devcontainer |
-| **Setup mxcli** | `mxcli setup mxcli [--os linux] [--arch amd64] [--output mxcli]` | Download platform-specific mxcli binary from GitHub releases |
+| **Setup mxcli** | `mxcli setup mxcli [--os linux] [--arch amd64] [--output ./mxcli]` | Download platform-specific mxcli binary from GitHub releases; `./mxcli` (with `./`) is intentional — VS Code extension (`mdl.mxcliPath`) and devcontainer `postCreateCommand` both reference this exact path |
 | **Local build** | `mxcli local build -p app.mpr [--skip-check]` | Build PAD package without Docker (Windows + Linux); output at `.docker/build/` |
 | **Local run** | `mxcli local run -p app.mpr [--admin-password pw] [--db postgres://...]` | Start Mendix runtime without Docker; HSQLDB by default, app at :8080 |
 | **Local upgrade** | `mxcli local upgrade` | Download latest `mxcli-local` from `local-v*` GitHub release |
