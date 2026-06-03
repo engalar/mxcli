@@ -518,12 +518,12 @@ See **Multilingual / Translations (i18n)** below for adding/removing languages a
 | Translate page | `translate page Module.Name in code set path = 'text', ...;` | Paths: `title` or `Widget.property` (caption, placeholder, tooltip, label, content) |
 | Translate snippet | `translate snippet Module.Name in code set Widget.property = 'text', ...;` | Same path rules as pages |
 | Translate enumeration | `translate enumeration Module.Name in code set ValueName.caption = 'text', ...;` | One entry per enumeration value caption |
+| Translate microflow | `translate microflow Module.Name in code set ActionType[index].message = 'text', ...;` | Type-index addressing: microflow actions are unnamed, so each is addressed by its type and 0-based ordinal among same-typed actions |
 | Describe translations | `describe translations Module.Name [in code];` | Lists translatable nodes with each language's text; `in code` focuses one language |
 
 **Rules & notes:**
 - The target language must be registered (`alter settings language add`) before `translate` can write text for it; otherwise you get an actionable error.
 - `translate workflow` is **not supported**: workflow activity text (TaskName/TaskDescription) uses `Microflows$StringTemplate`, which is not multilingual in Mendix 11.x.
-- `translate microflow` is not yet implemented.
 
 ```sql
 -- Register a language, then translate an enumeration into it

@@ -35,7 +35,7 @@ ALTER SETTINGS LANGUAGE DROP 'de_DE';`,
 
 	Register(SyntaxFeature{
 		Path:    "translate",
-		Summary: "Set per-language translations for page, snippet, and enumeration text",
+		Summary: "Set per-language translations for page, snippet, enumeration, and microflow text",
 		Keywords: []string{
 			"translate", "translation", "i18n", "caption", "title",
 			"multilingual", "language text",
@@ -43,9 +43,11 @@ ALTER SETTINGS LANGUAGE DROP 'de_DE';`,
 		Syntax: `TRANSLATE PAGE <Module.Name> IN <code> SET <path> = '<text>', ...;
 TRANSLATE SNIPPET <Module.Name> IN <code> SET <path> = '<text>', ...;
 TRANSLATE ENUMERATION <Module.Name> IN <code> SET <ValueName>.caption = '<text>', ...;
+TRANSLATE MICROFLOW <Module.Name> IN <code> SET <ActionType>[<index>].<property> = '<text>', ...;
 
 -- Page/snippet paths:  title  |  <WidgetName>.<property>   (caption, placeholder, tooltip, label, content)
--- Enumeration paths:   <ValueName>.caption`,
+-- Enumeration paths:   <ValueName>.caption
+-- Microflow paths:     <ActionType>[<index>].<property>   (index = 0-based ordinal among same-typed actions)`,
 		Example: `-- The target language must be registered first (ALTER SETTINGS LANGUAGE ADD).
 TRANSLATE PAGE MyModule.Home IN nl_NL SET
   title = 'Welkom',
@@ -56,7 +58,11 @@ TRANSLATE SNIPPET MyModule.Header IN nl_NL SET
 
 TRANSLATE ENUMERATION MyModule.Status IN nl_NL SET
   ACTIVE.caption = 'Actief',
-  CLOSED.caption = 'Gesloten';`,
+  CLOSED.caption = 'Gesloten';
+
+-- Microflow actions are unnamed; address them by type + 0-based ordinal.
+TRANSLATE MICROFLOW MyModule.ACT_Save IN nl_NL SET
+  ShowMessage[0].message = 'Opgeslagen';`,
 		SeeAlso: []string{"language", "translate.describe"},
 	})
 
