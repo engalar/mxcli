@@ -235,7 +235,7 @@ authentication basic, session
 | Commit | `commit $entity [with events] [refresh];` | |
 | Delete | `delete $entity;` | |
 | Rollback | `rollback $entity [refresh];` | Reverts uncommitted changes |
-| Retrieve (DB) | `retrieve $Var from Module.Entity [where condition];` | Database XPath retrieve |
+| Retrieve (DB) | `retrieve $Var from Module.Entity [where condition] [sort by Attr asc\|desc] [limit n] [offset n];` | Database XPath retrieve；`limit` 在 `offset` 之前 |
 | Retrieve (Assoc) | `retrieve $list from $Parent/Module.AssocName;` | Retrieve by association |
 | Add to list | `add expression to $list;` | Also accepts existing `add $item to $list;` form |
 | Call microflow | `$Result = call microflow Module.Name (Param = $value);` | |
@@ -279,7 +279,7 @@ authentication basic, session
 | `TRY ... CATCH ... end TRY` | `on error { ... }` blocks | Use error handlers on specific activities |
 
 **Notes:**
-- `retrieve ... limit n` IS supported. `limit 1` returns a single entity, otherwise returns a list.
+- `retrieve ... limit n` IS supported. `limit 1` returns a single entity, otherwise returns a list。**顺序必须是 `limit` 在前、`offset` 在后**（`limit 10 offset 5`），写反会导致解析错误。
 - `rollback $entity [refresh];` IS supported. Rolls back uncommitted changes to an object.
 
 ## Project Organization

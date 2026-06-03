@@ -495,6 +495,7 @@ end;
 -- DS_TicketsByCompany: retrieve tickets for a given customer company
 -- Demonstrates: multi-hop association path in XPath
 --   Path: Ticket → HD.Ticket_Customer (assoc) → HD.Customer → Company attribute
+--   Also demonstrates: limit before offset (offset 写在 limit 后，顺序不能颠倒)
 create or modify microflow HD.DS_TicketsByCompany
   ($Company: String)
   returns list of HD.Ticket as $Tickets
@@ -502,7 +503,8 @@ create or modify microflow HD.DS_TicketsByCompany
 begin
   retrieve $Tickets from HD.Ticket
     where [HD.Ticket_Customer/HD.Customer/Company = $Company]
-    limit 50;
+    limit 50
+    offset 4;
   return $Tickets;
 end;
 /

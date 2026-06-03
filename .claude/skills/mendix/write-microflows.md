@@ -573,6 +573,19 @@ retrieve $Product from Test.Product
 - RETRIEVE without `limit 1` returns a **list** (`list of Module.Entity`)
 - Use `limit 1` when you expect exactly one result (e.g., lookup by unique key)
 
+**Sorting and paging** — use `sort by`, **not** `order by`:
+
+```mdl
+retrieve $Recent from Sales.Order
+  where Status = Sales.OrderStatus.Open
+  sort by Sales.Order.OrderDate desc, Sales.Order.OrderNumber asc
+  limit $PageSize
+  offset $Offset;
+```
+
+- **Order matters**: `limit` must come before `offset`. Writing `offset 4 limit 50` will cause a parse error.
+- `limit` and `offset` accept a variable or expression, not only a literal — `limit $PageSize`, `offset $Offset`, even `limit $Base + 5` all work.
+
 **Enumeration attributes in WHERE**: XPath is a database query, so enum values are stored as plain strings. Both forms are valid — mxcli converts the qualified name to a string literal in BSON:
 
 ```mdl
