@@ -81,6 +81,7 @@ showStatement
     | showOrList REST CLIENTS (IN (qualifiedName | IDENTIFIER))?
     | showOrList PUBLISHED REST SERVICES (IN (qualifiedName | IDENTIFIER))?
     | showOrList DATA TRANSFORMERS (IN (qualifiedName | IDENTIFIER))?
+    | showOrList SUPPORTED LANGUAGES
     | showOrList LANGUAGES
     | showOrList FEATURES (IN IDENTIFIER)?
     | showOrList FEATURES FOR VERSION NUMBER_LITERAL

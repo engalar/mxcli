@@ -551,6 +551,9 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 			}
 		}
 		b.statements = append(b.statements, stmt)
+	} else if ctx.SUPPORTED() != nil && ctx.LANGUAGES() != nil {
+		// SHOW SUPPORTED LANGUAGES
+		b.statements = append(b.statements, &ast.ShowStmt{ObjectType: ast.ShowSupportedLanguages})
 	} else if ctx.LANGUAGES() != nil {
 		// SHOW LANGUAGES
 		b.statements = append(b.statements, &ast.ShowStmt{ObjectType: ast.ShowLanguages})

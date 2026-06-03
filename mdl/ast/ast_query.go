@@ -87,6 +87,7 @@ const (
 	ShowContractChannels      // SHOW CONTRACT CHANNELS FROM Module.Service (AsyncAPI)
 	ShowContractMessages      // SHOW CONTRACT MESSAGES FROM Module.Service (AsyncAPI)
 	ShowLanguages             // SHOW LANGUAGES
+	ShowSupportedLanguages    // SHOW SUPPORTED LANGUAGES
 	ShowJsonStructures        // SHOW JSON STRUCTURES [IN module]
 	ShowImportMappings        // SHOW IMPORT MAPPINGS [IN module]
 	ShowExportMappings        // SHOW EXPORT MAPPINGS [IN module]
@@ -216,6 +217,8 @@ func (t ShowObjectType) String() string {
 		return "CONTRACT MESSAGES"
 	case ShowLanguages:
 		return "LANGUAGES"
+	case ShowSupportedLanguages:
+		return "SUPPORTED LANGUAGES"
 	case ShowJsonStructures:
 		return "JSON STRUCTURES"
 	case ShowImportMappings:

@@ -607,6 +607,7 @@ keyword
     | BUILD | CATALOG | CHECK | CLEAR | COMMENT | CUSTOM_NAME_MAP
     | DESIGN | DRY | EXEC | FEATURES | ADDED | SINCE | FORCE
     | LANGUAGES | LINT | PROPERTIES | READ | RULES | RUN | SARIF | SCRIPT
+    | SUPPORTED | TRANSLATE | TRANSLATIONS
     | SHOW | USE | STATUS | WRITE | VIA | VIEWS | TABLES
 
     // Sequence flow anchors (for @anchor annotation)
