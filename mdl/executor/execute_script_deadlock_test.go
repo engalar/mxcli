@@ -1,10 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// These tests reproduce a known deadlock and intentionally hang until timeout.
-// Run explicitly with: go test -tags execute_script_deadlock ./mdl/executor/ -run TestExecuteScriptPath -v -timeout 30s
-// Remove this build tag once the ScriptBuffer fix is applied and tests pass.
-//go:build execute_script_deadlock
-
 package executor
 
 // Regression tests for the EXECUTE SCRIPT deadlock (CE-XXXX).
