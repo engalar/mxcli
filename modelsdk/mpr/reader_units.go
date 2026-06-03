@@ -184,6 +184,17 @@ func (r *Reader) buildUnitCache() error {
 		})
 	}
 
+	// Merge buffered script inserts so reads within EXECUTE SCRIPT see new units.
+	for _, e := range r.scriptInserts {
+		typeName := getTypeFromContents(e.Contents)
+		r.unitCache = append(r.unitCache, cachedUnit{
+			ID:              e.ID,
+			ContainerID:     e.ContainerID,
+			ContainmentName: e.ContainmentName,
+			Type:            typeName,
+		})
+	}
+
 	r.unitCacheValid = true
 	return nil
 }
@@ -215,6 +226,10 @@ func (r *Reader) EnableContentCache() {
 // in memory so subsequent reads of the same unit skip the file I/O entirely.
 // The cache is invalidated by InvalidateCache (called after every write).
 func (r *Reader) readMprContents(unitUUID string) ([]byte, error) {
+	// Script overlay: return buffered content immediately, skipping file/cache I/O.
+	if b, ok := r.scriptOverlay[unitUUID]; ok {
+		return b, nil
+	}
 	if len(unitUUID) < 4 {
 		return nil, fmt.Errorf("invalid unit UUID: %s", unitUUID)
 	}
