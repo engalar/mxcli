@@ -138,3 +138,24 @@ func TestExtractCustomWidgetPropertyAction_NanoflowForms(t *testing.T) {
 		t.Errorf("extractCustomWidgetPropertyAction nanoflow (Forms prefix): got %q, want %q", got, want)
 	}
 }
+
+// TestExtractNavigationListItemAction_ShowPage verifies show_page outputs a
+// qualifiedName WITHOUT single quotes (grammar: SHOW_PAGE qualifiedName, not
+// STRING_LITERAL). Issue 008: parse path was producing "show_page 'Module.Page'"
+// which actionExprV3's SHOW_PAGE qualifiedName rule does not match, breaking roundtrip.
+func TestExtractNavigationListItemAction_ShowPage(t *testing.T) {
+	ctx := &ExecContext{}
+	widget := map[string]any{
+		"Action": map[string]any{
+			"$Type": "Pages$FormAction",
+			"FormSettings": map[string]any{
+				"Form": "MyModule.OverviewPage",
+			},
+		},
+	}
+	got := extractNavigationListItemAction(ctx, widget)
+	want := "show_page MyModule.OverviewPage"
+	if got != want {
+		t.Errorf("show_page action: got %q, want %q", got, want)
+	}
+}

@@ -44,8 +44,6 @@ go run ./cmd/codegen/main.go -reflection-dir ./reference/mendixmodellib/reflecti
 
 **Note**: This project uses `modernc.org/sqlite` (pure Go) and does **not** require CGO. No C compiler is needed.
 
-**Note**: The VS Code extension (`vscode-mdl/`) uses **bun**, not npm/node. Use `bun install`, `bun run compile`, etc. The Makefile targets (`make vscode-ext`, `make vscode-install`) already use bun.
-
 ## Mendix Tools
 
 The `mx` command-line tool validates and builds Mendix projects. Location depends on environment:
@@ -538,48 +536,7 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 
 ## Current Implementation Status
 
-**Implemented:**
-- MPR v1/v2 reading and writing
-- Domain model (entities, attributes, associations)
-- ALTER ENTITY (add/rename/modify/drop attributes, indexes, documentation)
-- Microflows/Nanoflows with 60+ activity types, JavaScript action calls, nanoflow validation parity
-- Pages with 50+ widget types
-- ALTER PAGE/SNIPPET (SET, INSERT, DROP, REPLACE operations on widget trees)
-- Image widgets (IMAGE, STATICIMAGE, DYNAMICIMAGE) with Width/Height properties
-- Code generator for metamodel types
-- MDL CLI (`mxcli`) with ANTLR4 parser
-- MDL support for domain model, microflows, pages, and security
-- Security management (module roles, user roles, access control, demo users)
-- LSP server with hover, go-to-definition, completion, diagnostics, symbols, folding
-- VS Code extension (`vscode-mdl`) with context menu commands (Run/Check/Selection)
-- Docker build integration (`mxcli docker build`) with PAD patching (Phase 1)
-- Local runner without Docker (`mxcli local build` + `mxcli local run`) — Windows + Linux, HSQLDB embedded, `--admin-password` flag, `--db postgres://` override
-- Independent release pipeline: `v*` (launcher), `daemon-v*` (daemon), `local-v*` (mxcli-local)
-- Upgrade command alignment: `mxcli upgrade` (self-fork), `mxcli daemon upgrade/rollback/status`, `mxcli local upgrade/rollback`
-- OQL query execution against running runtime (`mxcli oql`)
-- Business event services (SHOW/DESCRIBE/CREATE/DROP)
-- Project settings (SHOW/DESCRIBE/ALTER)
-- External SQL query execution against PostgreSQL, Oracle, SQL Server (`mxcli sql`, MDL `sql connect/query`)
-- Data import from external databases into Mendix app DB (`import from ... into ... map ...`)
-- Database Connector generation from external schema (`sql <alias> generate connector into <module>`)
-- EXECUTE DATABASE QUERY microflow action (static, dynamic SQL, parameterized, runtime connection override)
-- CREATE/DROP WORKFLOW with user tasks, decisions, parallel splits, and other activity types
-- ALTER WORKFLOW (SET properties, INSERT/DROP/REPLACE activities, outcomes, paths, conditions, boundary events)
-- CALCULATED BY microflow syntax for calculated attributes
-- Image collections (SHOW/DESCRIBE/CREATE/DROP)
-- AI agent documents: Model, Knowledge Base, Consumed MCP Service, Agent (LIST/DESCRIBE/CREATE/DROP, with variables, tools, KB tools, dollar-quoted multi-line prompts; requires AgentEditorCommons module, Mendix 11.9+)
-- OData contract browsing (SHOW/DESCRIBE CONTRACT ENTITIES/ACTIONS FROM cached $metadata)
-- AsyncAPI contract browsing (SHOW/DESCRIBE CONTRACT CHANNELS/MESSAGES FROM cached AsyncAPI)
-- SHOW EXTERNAL ACTIONS, SHOW PUBLISHED REST SERVICES
-- CREATE/DROP/DESCRIBE PUBLISHED REST SERVICE with resources, operations, path params, CREATE OR REPLACE
-- Integration catalog tables (rest_clients, rest_operations, published_rest_services, external_entities, external_actions, business_events)
-- Contract catalog tables (contract_entities, contract_actions, contract_messages — parsed from cached $metadata and AsyncAPI)
-- Platform authentication (`mxcli auth login/logout/status/list`) with PAT scheme for marketplace-api.mendix.com and catalog.mendix.com; credentials stored at ~/.mxcli/auth.json (mode 0600), MENDIX_PAT env override
-- Marketplace browsing (`mxcli marketplace search/info/versions`) with --min-mendix compatibility filtering; install blocked upstream (API does not expose download URLs)
-- Expression checker (`mxcli expr`) — scan/parse/validate/repair/report pipeline for Mendix expressions in MPR files; SYN-01/02/03 syntax rules + SEM-04/05/07 semantic rules (enum values, constants, entity/association paths); background daemon with JIT index for fast repeated validation; `--no-daemon` flag for CI/syntax-only mode
-- Project export (`mxcli export -p app.mpr --output ./dir`) — batch-exports every module and document type to structured `.mdl` files; incremental via `-- @cache:` hash markers (module-level and per-document); `--force` bypasses cache; built-in/marketplace modules excluded; System module skipped
-- Project import (`mxcli import -p app.mpr --input ./dir`) — executes exported `.mdl` files in topological dependency order (enumerations → entities → associations → microflows → pages → navigation); `--skip-errors` continues past individual failures; `--dry-run` parses without writing
-- `RESET LAYOUT` microflow/nanoflow option — `create or modify microflow M.F () reset layout begin ... end;` clears all `relativeMiddlePoint` activity positions so Studio Pro re-runs its auto-layout algorithm on next open; applies to nested LoopedActivity sub-collections; nanoflows supported too
+**Implemented:** all features listed in the Key CLI Features table above, plus LSP server (hover, go-to-definition, completion, diagnostics, symbols, folding), platform auth (`mxcli auth`), marketplace browsing (`mxcli marketplace`), and expression checker (`mxcli expr`).
 
 **Not Yet Implemented:**
 - 47 of 52 metamodel domains (REST, etc.)
@@ -596,32 +553,17 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 ## Useful Files for Context
 
 - `README.md` - User documentation and API reference
-- `docs/SDK_EQUIVALENCE.md` - Detailed comparison with TypeScript SDK, gap analysis
-- `mdl/backend/mpr/` - BSON parsing and mutation logic (replaced sdk/mpr post Phase 5)
-- `sdk/widgets/templates/` - Embedded widget templates for pluggable widgets (ComboBox, DataGrid2, etc.)
+- `docs/SDK_EQUIVALENCE.md` - TypeScript SDK comparison, gap analysis
+- `mdl/backend/mpr/` - BSON parsing and mutation logic (all write paths live here post Phase 5)
 - `sdk/widgets/templates/README.md` - **Critical**: Template extraction requirements (must include both `type` AND `object`)
 - `generated/metamodel/enums.go` - All Mendix enumeration types
-- `mdl/grammar/MDL.g4` - ANTLR4 grammar for MDL syntax (production)
-- `mdl/executor/executor.go` - MDL statement execution logic
-- `reference/mdl-grammar/` - Comprehensive MDL grammar reference
+- `mdl/grammar/MDLLexer.g4`, `MDLParser.g4` - ANTLR4 grammar (production)
 - `reference/mendixmodellib/reflection-data/` - Type definitions with storage names and default values
-- `docs/03-development/MDL_PARSER_ARCHITECTURE.md` - ANTLR4 parser design documentation
 - `docs/03-development/PAGE_BSON_SERIALIZATION.md` - Page/widget BSON format, type mappings, required defaults
 - `.claude/skills/debug-bson.md` - Workflow for debugging BSON serialization issues with `mx` tool
-- `cmd/mxcli/init.go` - `mxcli init` command (project initialization)
-- `cmd/mxcli/cmd_export.go` - `mxcli export` Cobra command (batch project export to MDL files)
-- `cmd/mxcli/cmd_import.go` - `mxcli import` Cobra command (batch MDL import in dependency order)
-- `mdl/executor/cmd_export_project.go` - `ExportProject()` orchestration; per-document and module-level `-- @cache:` markers; `resetLayoutGen()` helper
-- `mdl/executor/cmd_import_project.go` - `ImportProject()` orchestration; `sortMDLFiles()` topological sort
-- `cmd/mxcli/docker/oql.go` - OQL query execution against running Mendix runtime via M2EE admin API
-- `sql/connection.go` - External SQL connection manager (credential isolation)
-- `sql/config.go` - DSN resolution (env vars, YAML config)
+- `mdl/executor/cmd_export_project.go` - `ExportProject()` with `-- @cache:` markers and `resetLayoutGen()`
+- `mdl/executor/cmd_import_project.go` - `ImportProject()` with `sortMDLFiles()` topological sort
+- `cmd/mxcli/docker/oql.go` - OQL query execution via M2EE admin API
 - `sql/import.go` - IMPORT pipeline (batch insert, Mendix ID generation, sequence tracking)
 - `sql/generate.go` - Database Connector MDL generation from external schema
-- `sql/typemap.go` - SQL → Mendix type mapping, DSN → JDBC URL conversion
-- `sql/mendix.go` - Mendix DB helpers (DSN builder, table/column name conversion)
-- `cmd/mxcli/cmd_sql.go` - `mxcli sql` CLI subcommand
-- `mdl/executor/cmd_sql.go` - SQL statement executor handlers
-- `mdl/executor/cmd_import.go` - IMPORT statement executor (auto-connects to Mendix DB)
-- `vscode-mdl/src/extension.ts` - VS Code extension entry point
-- `vscode-mdl/package.json` - VS Code extension manifest (commands, menus, settings)
+- `cmd/mxcli-launcher/self_update.go` - `runSelfUpgrade()`, `runInternalUpdate()`, `PIDWaiter` interface

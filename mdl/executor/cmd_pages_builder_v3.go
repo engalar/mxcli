@@ -375,6 +375,8 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (element.Element, error) {
 		widget, err = pb.buildDropdownV3(w)
 	case "checkbox":
 		widget, err = pb.buildCheckBoxV3(w)
+	case "fileinput":
+		widget, err = pb.buildFileManagerV3(w)
 	case "text", "statictext":
 		widget, err = pb.buildTextWidgetV3(w)
 	case "dynamictext":
@@ -2537,6 +2539,41 @@ func (pb *pageBuilder) buildDatePickerV3(w *ast.WidgetV3) (element.Element, erro
 	}
 
 	return dp, nil
+}
+
+// buildFileManagerV3 builds a Forms$FileManager widget (MDL: fileinput).
+// FileManager does not implement the formInputDefaults interface (no OnChangeAction,
+// Validation, SourceVariable, etc.), so the mandatory fields it does share with
+// standard inputs are set explicitly here instead of via applyFormWidgetDefaults.
+func (pb *pageBuilder) buildFileManagerV3(w *ast.WidgetV3) (element.Element, error) {
+	fm := genPg.NewFileManager()
+	assignFreshID(fm)
+	fm.SetName(w.Name)
+
+	fm.SetEditable("Always")
+	fm.SetAppearance(newDefaultAppearance())
+	fm.SetScreenReaderLabel(nil)
+	fm.SetTabIndex(0)
+	fm.SetConditionalVisibilitySettings(nil)
+	fm.SetConditionalEditabilitySettings(nil)
+
+	if ext := w.GetStringProp("allowedExtensions"); ext != "" {
+		fm.SetAllowedExtensions(ext)
+	}
+
+	if size := w.GetIntProp("maxFileSize"); size > 0 {
+		fm.SetMaxFileSize(int32(size))
+	}
+
+	if label := w.GetLabel(); label != "" {
+		fm.SetLabel(genSimpleLabel(label))
+	}
+
+	if err := pb.registerWidgetName(w.Name, model.ID(fm.ID())); err != nil {
+		return nil, err
+	}
+
+	return fm, nil
 }
 
 func (pb *pageBuilder) buildDropdownV3(w *ast.WidgetV3) (element.Element, error) {

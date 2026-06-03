@@ -11,11 +11,67 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
+
+func TestCheckOutputVarCollision_Duplicate(t *testing.T) {
+	fb := &flowBuilderGen{
+		declaredVars: map[string]string{"Result": "Unknown"},
+		varTypes:     map[string]string{},
+		errors:       nil,
+	}
+
+	collision := checkOutputVarCollision(fb, "Result")
+
+	if !collision {
+		t.Fatal("expected collision=true for duplicate variable, got false")
+	}
+	if len(fb.errors) == 0 {
+		t.Fatal("expected error recorded, got none")
+	}
+	if !strings.Contains(fb.errors[0], "Result") {
+		t.Errorf("error should mention the variable name, got: %q", fb.errors[0])
+	}
+}
+
+func TestCheckOutputVarCollision_Fresh(t *testing.T) {
+	fb := &flowBuilderGen{
+		declaredVars: map[string]string{},
+		varTypes:     map[string]string{},
+		errors:       nil,
+	}
+
+	collision := checkOutputVarCollision(fb, "Result")
+
+	if collision {
+		t.Fatal("expected collision=false for fresh variable, got true")
+	}
+	if len(fb.errors) != 0 {
+		t.Errorf("expected no error for fresh variable, got: %v", fb.errors)
+	}
+	if _, ok := fb.declaredVars["Result"]; !ok {
+		t.Error("fresh output variable should be added to declaredVars")
+	}
+}
+
+func TestCheckOutputVarCollision_Empty(t *testing.T) {
+	fb := &flowBuilderGen{
+		declaredVars: map[string]string{},
+		varTypes:     map[string]string{},
+		errors:       nil,
+	}
+
+	if checkOutputVarCollision(fb, "") {
+		t.Fatal("expected collision=false for empty variable name")
+	}
+	if len(fb.errors) != 0 {
+		t.Errorf("expected no error for empty variable, got: %v", fb.errors)
+	}
+}
 
 func TestAddCallMicroflowActionGenSetsCallAndMappings(t *testing.T) {
 	fb := newActionTestFb()

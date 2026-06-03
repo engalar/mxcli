@@ -1,0 +1,42 @@
+-- ============================================================================
+-- FILEINPUT (FileManager) widget — MDL syntax example
+-- ============================================================================
+--
+-- The `fileinput` widget maps to the Mendix `Forms$FileManager` BSON type.
+-- It is used inside a dataview bound to a System.FileDocument (or specialization)
+-- to let users upload files — e.g. an Excel import flow.
+--
+-- Properties:
+--   - label             : the widget caption
+--   - allowedExtensions : comma-separated list of permitted file extensions
+--   - maxFileSize       : maximum upload size in MB
+-- ============================================================================
+
+create module PgTest;
+
+create entity PgTest.UploadDoc generalization System.FileDocument;
+
+create page PgTest.P_FileUpload
+(
+  params: {
+    $UploadDoc: PgTest.UploadDoc
+  },
+  title: 'Upload File',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Forms'
+)
+{
+  layoutgrid grid1 {
+    row row1 {
+      column col1 (desktopwidth: 12) {
+        dataview dataView1 (datasource: $UploadDoc) {
+          fileinput fileInput1 (
+            label: 'Upload Excel File',
+            allowedExtensions: 'xlsx,xls',
+            maxFileSize: 5
+          )
+        }
+      }
+    }
+  }
+}
