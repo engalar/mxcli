@@ -41,6 +41,60 @@ func BuildDaemonPayloadForPlatform(goos, goarch string, content []byte) (*Daemon
 	return buildUnixPayload(goos, goarch, content)
 }
 
+// BuildDaemonPayloadForPlatformNamed is like BuildDaemonPayloadForPlatform but
+// uses an explicit component name instead of "mxcli-daemon".
+func BuildDaemonPayloadForPlatformNamed(component, goos, goarch string, content []byte) (*DaemonPayload, error) {
+	if goos == "windows" {
+		return buildWindowsPayloadNamed(component, goos, goarch, content)
+	}
+	return buildUnixPayloadNamed(component, goos, goarch, content)
+}
+
+func buildWindowsPayloadNamed(component, goos, goarch string, content []byte) (*DaemonPayload, error) {
+	assetName := fmt.Sprintf("%s-%s-%s.exe.zip", component, goos, goarch)
+	binaryName := component + ".exe"
+
+	var buf bytes.Buffer
+	w := zip.NewWriter(&buf)
+	f, err := w.Create(binaryName)
+	if err != nil {
+		return nil, fmt.Errorf("zip create: %w", err)
+	}
+	if _, err := f.Write(content); err != nil {
+		return nil, fmt.Errorf("zip write: %w", err)
+	}
+	if err := w.Close(); err != nil {
+		return nil, fmt.Errorf("zip close: %w", err)
+	}
+	archiveBytes := buf.Bytes()
+	h := sha256.Sum256(archiveBytes)
+	return &DaemonPayload{AssetName: assetName, Archive: archiveBytes, Checksum: hex.EncodeToString(h[:])}, nil
+}
+
+func buildUnixPayloadNamed(component, goos, goarch string, content []byte) (*DaemonPayload, error) {
+	assetName := fmt.Sprintf("%s-%s-%s.tar.zst", component, goos, goarch)
+	binaryName := component
+
+	var buf bytes.Buffer
+	zw, err := zstd.NewWriter(&buf, zstd.WithEncoderLevel(zstd.SpeedFastest))
+	if err != nil {
+		return nil, fmt.Errorf("zstd writer: %w", err)
+	}
+	tw := tar.NewWriter(zw)
+	hdr := &tar.Header{Name: binaryName, Typeflag: tar.TypeReg, Size: int64(len(content)), Mode: 0755}
+	if err := tw.WriteHeader(hdr); err != nil {
+		return nil, err
+	}
+	if _, err := tw.Write(content); err != nil {
+		return nil, err
+	}
+	tw.Close()
+	zw.Close()
+	archiveBytes := buf.Bytes()
+	h := sha256.Sum256(archiveBytes)
+	return &DaemonPayload{AssetName: assetName, Archive: archiveBytes, Checksum: hex.EncodeToString(h[:])}, nil
+}
+
 func buildWindowsPayload(goos, goarch string, content []byte) (*DaemonPayload, error) {
 	assetName := fmt.Sprintf("mxcli-daemon-%s-%s.exe.zip", goos, goarch)
 
