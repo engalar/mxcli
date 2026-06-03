@@ -5,7 +5,6 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -94,19 +93,19 @@ func (e *Env) fetchLatestLocalTag() (string, error) {
 }
 
 // fetchLatestTagWithPrefix finds the latest release whose tag starts with prefix.
-// Uses /releases?per_page=20 because /releases/latest returns the global latest
-// regardless of tag prefix.
+// Uses the Atom feed (/releases.atom) — no auth required, no rate limits,
+// includes pre-releases, ordered newest-first.
 func (e *Env) fetchLatestTagWithPrefix(prefix string) (string, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/releases?per_page=20", localRepo)
+	url := fmt.Sprintf("https://github.com/%s/releases.atom", localRepo)
 	resp, err := e.HTTPClient.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("fetch releases: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("GitHub releases: HTTP %d", resp.StatusCode)
+		return "", fmt.Errorf("GitHub releases feed: HTTP %d", resp.StatusCode)
 	}
-	return parseLatestTagWithPrefix(resp.Body, prefix)
+	return parseLatestTagFromAtom(resp.Body, prefix)
 }
 
 // downloadLocalVersion downloads and extracts mxcli-local for the current platform.
@@ -134,17 +133,30 @@ func (e *Env) downloadLocalVersionForPlatform(tag, destPath, goos, goarch, asset
 	return e.downloadAndExtractComponent(url, expectedHash, destPath, goos, assetName)
 }
 
-func parseLatestTagWithPrefix(body io.Reader, prefix string) (string, error) {
-	var releases []struct {
-		TagName string `json:"tag_name"`
+// parseLatestTagFromAtom scans the Atom feed body for the first tag href
+// matching the given prefix. Atom entries are ordered newest-first.
+func parseLatestTagFromAtom(body io.Reader, prefix string) (string, error) {
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return "", fmt.Errorf("read atom feed: %w", err)
 	}
-	if err := json.NewDecoder(body).Decode(&releases); err != nil {
-		return "", fmt.Errorf("parse releases JSON: %w", err)
-	}
-	for _, r := range releases {
-		if strings.HasPrefix(r.TagName, prefix) {
-			return r.TagName, nil
+	needle := "/releases/tag/" + prefix
+	content := string(data)
+	for {
+		idx := strings.Index(content, needle)
+		if idx < 0 {
+			break
 		}
+		rest := content[idx+len(needle):]
+		end := strings.IndexAny(rest, "\"'<")
+		if end < 0 {
+			break
+		}
+		tag := prefix + rest[:end]
+		if tag != "" {
+			return tag, nil
+		}
+		content = content[idx+1:]
 	}
 	return "", fmt.Errorf("no release found with tag prefix %q", prefix)
 }

@@ -75,7 +75,7 @@ func TestDownloadDaemon_FreshInstall(t *testing.T) {
 
 func TestDownloadDaemonVersion_AlreadyLatest(t *testing.T) {
 	t.Parallel()
-	const tag = "v0.15.0"
+	const tag = "daemon-v0.15.0"
 	e, gh := newInstallEnv(t, &testfixtures.FakeGitHub{LatestTag: tag}, []byte("binary"))
 	writeFakeDaemon(t, e, tag)
 
@@ -89,7 +89,7 @@ func TestDownloadDaemonVersion_AlreadyLatest(t *testing.T) {
 		t.Fatalf("test setup: current=%q latest=%q should match", current, latest)
 	}
 
-	// Assert: only the releases/latest endpoint was called — no download or SHA256SUMS.
+	// Assert: only the releases.atom endpoint was called — no download or SHA256SUMS.
 	for _, path := range gh.RequestLog() {
 		if strings.Contains(path, ".tar.zst") || strings.Contains(path, "SHA256SUMS") {
 			t.Errorf("unexpected download request when already at latest: %s", path)

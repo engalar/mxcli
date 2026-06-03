@@ -6,8 +6,6 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"bytes"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -55,20 +53,6 @@ func TestReadVersionFile_Present(t *testing.T) {
 	}
 }
 
-func TestFetchTagFromURL(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"tag_name":"v1.2.3","name":"Release v1.2.3"}`))
-	}))
-	defer srv.Close()
-	e := &Env{HTTPClient: srv.Client()}
-	tag, err := e.fetchTagFromURL(srv.URL)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if tag != "v1.2.3" {
-		t.Errorf("expected v1.2.3, got %q", tag)
-	}
-}
 
 // makeTarZst creates an in-memory .tar.zst archive containing the given files.
 func makeTarZst(t *testing.T, files map[string][]byte) *bytes.Buffer {

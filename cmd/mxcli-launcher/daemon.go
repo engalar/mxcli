@@ -6,7 +6,6 @@ import (
 	"archive/zip"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -263,27 +262,18 @@ func extractZip(srcPath, destPath, expectedName string) error {
 }
 
 func (e *Env) fetchLatestTag() (string, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", daemonRepo)
-	return e.fetchTagFromURL(url)
-}
-
-func (e *Env) fetchTagFromURL(url string) (string, error) {
+	url := fmt.Sprintf("https://github.com/%s/releases.atom", daemonRepo)
 	resp, err := e.HTTPClient.Get(url)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("fetch releases: %w", err)
 	}
 	defer resp.Body.Close()
-	var result struct {
-		TagName string `json:"tag_name"`
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("GitHub releases feed: HTTP %d", resp.StatusCode)
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("parse GitHub response: %w", err)
-	}
-	if result.TagName == "" {
-		return "", fmt.Errorf("tag_name not found in GitHub response")
-	}
-	return result.TagName, nil
+	return parseLatestTagFromAtom(resp.Body, "daemon-v")
 }
+
 
 func killPIDFile(pidPath, sockPath string) {
 	b, err := os.ReadFile(pidPath)

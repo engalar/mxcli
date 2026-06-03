@@ -144,16 +144,16 @@ func (e *Env) fetchAssetChecksumFromTagRepo(repo, tag, assetName string) (string
 
 // fetchLatestTagWithPrefixFor fetches the latest tag from an arbitrary repo.
 func (e *Env) fetchLatestTagWithPrefixFor(repo, prefix string) (string, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/releases?per_page=20", repo)
+	url := fmt.Sprintf("https://github.com/%s/releases.atom", repo)
 	resp, err := e.HTTPClient.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("fetch releases: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("GitHub releases: HTTP %d", resp.StatusCode)
+		return "", fmt.Errorf("GitHub releases feed: HTTP %d", resp.StatusCode)
 	}
-	return parseLatestTagWithPrefix(resp.Body, prefix)
+	return parseLatestTagFromAtom(resp.Body, prefix)
 }
 
 // downloadBinaryDirect downloads a plain binary (no archive) to destPath.

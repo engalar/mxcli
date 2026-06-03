@@ -15,10 +15,17 @@ $Arch = if ([Environment]::Is64BitOperatingSystem) {
 }
 
 # ── Fetch latest release tag ─────────────────────────────────────────────────
-$ApiUrl = "https://api.github.com/repos/$Repo/releases/latest"
+# Use the redirect from /releases/latest — avoids GitHub API rate limits
 try {
-    $Release = Invoke-RestMethod -Uri $ApiUrl -Headers @{ "User-Agent" = "mxcli-installer" }
-    $Latest = $Release.tag_name
+    $RedirectUrl = "https://github.com/$Repo/releases/latest"
+    $Response = Invoke-WebRequest -Uri $RedirectUrl -UseBasicParsing -MaximumRedirection 0 -ErrorAction SilentlyContinue
+    $Location = $Response.Headers["Location"]
+    if (-not $Location) {
+        # PowerShell 7+ follows redirects by default; parse the final URL instead
+        $FinalResponse = Invoke-WebRequest -Uri $RedirectUrl -UseBasicParsing
+        $Location = $FinalResponse.BaseResponse.RequestMessage.RequestUri.AbsoluteUri
+    }
+    $Latest = $Location -replace '.*/tag/', ''
 } catch {
     Write-Error "Could not fetch latest release tag from GitHub: $_"
     exit 1

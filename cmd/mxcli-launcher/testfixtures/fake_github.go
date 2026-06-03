@@ -60,6 +60,17 @@ func (f *FakeGitHub) RequestLog() []string {
 	return out
 }
 
+// atomFeed returns a minimal Atom feed containing the given tag, matching
+// the format that parseLatestTagFromAtom expects.
+func atomFeed(repo, tag string) string {
+	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <link rel="alternate" type="text/html" href="https://github.com/%s/releases/tag/%s"/>
+  </entry>
+</feed>`, repo, tag)
+}
+
 func (f *FakeGitHub) handle(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	f.requestLog = append(f.requestLog, r.URL.Path)
@@ -72,8 +83,11 @@ func (f *FakeGitHub) handle(w http.ResponseWriter, r *http.Request) {
 
 	path := r.URL.Path
 	switch {
-	case strings.Contains(path, "/releases/latest"):
-		fmt.Fprintf(w, `{"tag_name":%q}`, f.LatestTag)
+	case strings.HasSuffix(path, "/releases.atom"):
+		// Atom feed used by fetchLatestTagWithPrefix and fetchLatestTag.
+		repo := strings.TrimSuffix(strings.TrimPrefix(path, "/"), "/releases.atom")
+		w.Header().Set("Content-Type", "application/atom+xml")
+		fmt.Fprint(w, atomFeed(repo, f.LatestTag))
 
 	case strings.Contains(path, "SHA256SUMS"):
 		checksum := f.Payload.Checksum
@@ -92,11 +106,6 @@ func (f *FakeGitHub) handle(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Write(data)
-
-	case strings.Contains(path, "/releases") && !strings.Contains(path, "/releases/"):
-		// Serve the releases list endpoint used by fetchLatestTagWithPrefix.
-		// Returns a JSON array with the single configured release.
-		fmt.Fprintf(w, `[{"tag_name":%q}]`, f.LatestTag)
 
 	default:
 		http.NotFound(w, r)

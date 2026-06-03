@@ -30,8 +30,10 @@ case "$OS" in
 esac
 
 # ── Fetch latest release tag ─────────────────────────────────────────────────
-LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
-  | grep '"tag_name"' | cut -d'"' -f4)
+# Use the redirect from /releases/latest — avoids GitHub API rate limits
+LATEST=$(curl -fsSL -o /dev/null -w '%{url_effective}' \
+  "https://github.com/${REPO}/releases/latest" \
+  | sed 's|.*/tag/||' | tr -d '[:space:]')
 if [ -z "$LATEST" ]; then
   echo "❌ Could not fetch latest release tag from GitHub." >&2
   exit 1
@@ -102,6 +104,7 @@ fi
 chmod +x "$TMP"
 
 # Atomic install (never leaves a partial binary)
+mkdir -p "$INSTALL_DIR"
 mv "$TMP" "${INSTALL_DIR}/mxcli"
 
 echo ""
