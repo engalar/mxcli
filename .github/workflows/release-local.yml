@@ -46,6 +46,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
+          prerelease: true   # keeps /releases/latest pointing to launcher v* releases
           files: |
             bin/mxcli-local-linux-amd64.tar.zst
             bin/mxcli-local-linux-arm64.tar.zst

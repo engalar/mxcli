@@ -123,7 +123,10 @@ func (e *Env) healthCheck(sockPath string) (string, error) {
 }
 
 func (e *Env) downloadDaemon(destPath string) error {
-	tag, err := e.fetchLatestTag()
+	// Use tag-prefix filtering so we find daemon-v* releases, not the launcher's v* releases.
+	// /releases/latest returns the globally latest full release, which may not be a daemon release
+	// after the release pipeline was split into three independent workflows.
+	tag, err := e.fetchLatestTagWithPrefix("daemon-v")
 	if err != nil {
 		return err
 	}

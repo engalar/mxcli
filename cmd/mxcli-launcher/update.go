@@ -21,7 +21,10 @@ func (e *Env) backgroundVersionCheck() {
 	}
 	writeTimestamp(e.daemonLastCheckPath())
 
-	latest, err := e.fetchLatestTag()
+	// Use daemon-v* prefix so we compare like-for-like with the installed daemon version.
+	// fetchLatestTag() uses /releases/latest which may return a launcher or local-v* tag
+	// after the release pipeline was split into three independent workflows.
+	latest, err := e.fetchLatestTagWithPrefix("daemon-v")
 	if err != nil {
 		return
 	}

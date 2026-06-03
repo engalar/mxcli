@@ -57,7 +57,8 @@ func writeFakeDaemon(t *testing.T, e *Env, version string) {
 
 func TestDownloadDaemon_FreshInstall(t *testing.T) {
 	t.Parallel()
-	e, _ := newInstallEnv(t, &testfixtures.FakeGitHub{LatestTag: "v0.15.0"}, []byte("v015-binary"))
+	// LatestTag must be daemon-v* so fetchLatestTagWithPrefix("daemon-v") finds it.
+	e, _ := newInstallEnv(t, &testfixtures.FakeGitHub{LatestTag: "daemon-v0.15.0"}, []byte("v015-binary"))
 
 	if err := e.downloadDaemon(e.daemonBinaryPath()); err != nil {
 		t.Fatalf("downloadDaemon: %v", err)
@@ -181,8 +182,9 @@ func TestBackgroundVersionCheck_NoLastCheckFile(t *testing.T) {
 
 func TestBackgroundVersionCheck_WritesUpdateAvailable(t *testing.T) {
 	t.Parallel()
-	e, _ := newInstallEnv(t, &testfixtures.FakeGitHub{LatestTag: "v0.15.0"}, []byte("bin"))
-	writeFakeDaemon(t, e, "v0.14.0")
+	// LatestTag must be daemon-v* so fetchLatestTagWithPrefix("daemon-v") finds it.
+	e, _ := newInstallEnv(t, &testfixtures.FakeGitHub{LatestTag: "daemon-v0.15.0"}, []byte("bin"))
+	writeFakeDaemon(t, e, "daemon-v0.14.0")
 
 	e.backgroundVersionCheck()
 
@@ -190,14 +192,14 @@ func TestBackgroundVersionCheck_WritesUpdateAvailable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update-available not written: %v", err)
 	}
-	if strings.TrimSpace(string(content)) != "v0.15.0" {
-		t.Errorf("update-available content = %q, want v0.15.0", content)
+	if strings.TrimSpace(string(content)) != "daemon-v0.15.0" {
+		t.Errorf("update-available content = %q, want daemon-v0.15.0", content)
 	}
 }
 
 func TestBackgroundVersionCheck_SkipsWhenAlreadyLatest(t *testing.T) {
 	t.Parallel()
-	const tag = "v0.15.0"
+	const tag = "daemon-v0.15.0"
 	e, _ := newInstallEnv(t, &testfixtures.FakeGitHub{LatestTag: tag}, []byte("bin"))
 	writeFakeDaemon(t, e, tag)
 
