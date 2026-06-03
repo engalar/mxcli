@@ -6,7 +6,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/mdl/catalog"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 func TestListLanguages_NilCatalog(t *testing.T) {
@@ -89,5 +92,70 @@ func TestIsValidLanguageCode(t *testing.T) {
 	}
 	if isValidLanguageCode("EN_US") {
 		t.Error("EN_US should not be valid (case-sensitive)")
+	}
+}
+
+func TestAlterLanguageAdd_InvalidCode(t *testing.T) {
+	ctx, _ := newMockCtx(t)
+	stmt := &ast.AlterLanguageStmt{Op: ast.AlterLanguageAdd, Code: "chinese"}
+	err := alterLanguage(ctx, stmt)
+	if err == nil {
+		t.Fatal("expected error for invalid language code")
+	}
+	if !strings.Contains(err.Error(), "not a valid Mendix language code") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestAlterLanguageAdd_Success(t *testing.T) {
+	var saved *model.ProjectSettings
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetProjectSettingsFunc: func() (*model.ProjectSettings, error) {
+			return &model.ProjectSettings{
+				Language: &model.LanguageSettings{
+					DefaultLanguageCode: "en_US",
+					Languages:           []model.Language{{Code: "en_US"}},
+				},
+			}, nil
+		},
+		UpdateProjectSettingsFunc: func(ps *model.ProjectSettings) error {
+			saved = ps
+			return nil
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb))
+	stmt := &ast.AlterLanguageStmt{Op: ast.AlterLanguageAdd, Code: "nl_NL"}
+	if err := alterLanguage(ctx, stmt); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if saved == nil {
+		t.Fatal("expected UpdateProjectSettings to be called")
+	}
+	if len(saved.Language.Languages) != 2 {
+		t.Fatalf("expected 2 languages, got %d", len(saved.Language.Languages))
+	}
+	if !strings.Contains(buf.String(), "nl_NL") {
+		t.Errorf("expected output to mention nl_NL, got: %s", buf.String())
+	}
+}
+
+func TestAlterLanguageDrop_DefaultLang(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetProjectSettingsFunc: func() (*model.ProjectSettings, error) {
+			return &model.ProjectSettings{
+				Language: &model.LanguageSettings{
+					DefaultLanguageCode: "en_US",
+					Languages:           []model.Language{{Code: "en_US"}},
+				},
+			}, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	stmt := &ast.AlterLanguageStmt{Op: ast.AlterLanguageDrop, Code: "en_US"}
+	err := alterLanguage(ctx, stmt)
+	if err == nil {
+		t.Fatal("expected error when dropping default language")
 	}
 }

@@ -4,6 +4,7 @@ package visitor
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/grammar/parser"
@@ -11,6 +12,12 @@ import (
 
 // ExitAlterSettingsClause handles ALTER SETTINGS ... clauses.
 func (b *Builder) ExitAlterSettingsClause(ctx *parser.AlterSettingsClauseContext) {
+	// ALTER SETTINGS LANGUAGE ADD/DROP 'code' is a distinct statement.
+	if ctx.LANGUAGE() != nil && (ctx.ADD() != nil || ctx.DROP() != nil) {
+		b.buildAlterLanguage(ctx)
+		return
+	}
+
 	stmt := &ast.AlterSettingsStmt{
 		Properties: make(map[string]any),
 	}
@@ -83,6 +90,50 @@ func (b *Builder) ExitAlterSettingsClause(ctx *parser.AlterSettingsClauseContext
 			}
 			val := settingsValueToInterface(svCtx)
 			stmt.Properties[key] = val
+		}
+	}
+
+	b.statements = append(b.statements, stmt)
+}
+
+// buildAlterLanguage builds an AlterLanguageStmt from an ALTER SETTINGS LANGUAGE
+// ADD/DROP clause and appends it to the statement list.
+func (b *Builder) buildAlterLanguage(ctx *parser.AlterSettingsClauseContext) {
+	stmt := &ast.AlterLanguageStmt{}
+	if strs := ctx.AllSTRING_LITERAL(); len(strs) > 0 {
+		stmt.Code = unquoteString(strs[0].GetText())
+	}
+	if ctx.ADD() != nil {
+		stmt.Op = ast.AlterLanguageAdd
+	} else {
+		stmt.Op = ast.AlterLanguageDrop
+	}
+
+	if opts := ctx.LanguageOptions(); opts != nil {
+		if oc, ok := opts.(*parser.LanguageOptionsContext); ok {
+			for _, optCtx := range oc.AllLanguageOption() {
+				opt, ok := optCtx.(*parser.LanguageOptionContext)
+				if !ok || opt == nil || opt.IdentifierOrKeyword() == nil || opt.SettingsValue() == nil {
+					continue
+				}
+				key := strings.ToLower(identifierOrKeywordText(opt.IdentifierOrKeyword()))
+				svCtx, ok := opt.SettingsValue().(*parser.SettingsValueContext)
+				if !ok || svCtx == nil {
+					continue
+				}
+				val := settingsValueText(svCtx)
+				switch key {
+				case "checkcompleteness":
+					b := strings.EqualFold(val, "true")
+					stmt.CheckCompleteness = &b
+				case "dateformat":
+					stmt.DateFormat = val
+				case "datetimeformat":
+					stmt.DateTimeFormat = val
+				case "timeformat":
+					stmt.TimeFormat = val
+				}
+			}
 		}
 	}
 

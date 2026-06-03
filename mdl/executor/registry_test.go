@@ -161,6 +161,7 @@ func allKnownStatements() []ast.Statement {
 		&ast.AlterAssociationStmt{},
 		&ast.AlterEntityStmt{},
 		&ast.AlterEnumerationStmt{},
+		&ast.AlterLanguageStmt{},
 		&ast.AlterModuleJarDepStmt{},
 		&ast.AlterNavigationStmt{},
 		&ast.AlterODataClientStmt{},

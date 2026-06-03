@@ -18,16 +18,27 @@ options { tokenVocab = MDLLexer; }
  * ALTER SETTINGS WORKFLOWS Key = Value, ...;
  */
 alterSettingsClause
-    : settingsSection settingsAssignment (COMMA settingsAssignment)*
+    : LANGUAGE ADD STRING_LITERAL (LPAREN languageOptions RPAREN)?
+    | LANGUAGE DROP STRING_LITERAL
+    | settingsSection settingsAssignment (COMMA settingsAssignment)*
     | CONSTANT STRING_LITERAL (VALUE settingsValue | DROP) (IN CONFIGURATION STRING_LITERAL)?
     | DROP CONSTANT STRING_LITERAL (IN CONFIGURATION STRING_LITERAL)?
     | CONFIGURATION STRING_LITERAL settingsAssignment (COMMA settingsAssignment)*
     ;
 
 settingsSection
-    : IDENTIFIER   // LANGUAGE, etc.
+    : IDENTIFIER
+    | LANGUAGE
     | MODEL
     | WORKFLOWS
+    ;
+
+languageOptions
+    : languageOption (COMMA languageOption)*
+    ;
+
+languageOption
+    : identifierOrKeyword COLON settingsValue
     ;
 
 settingsAssignment
@@ -606,7 +617,7 @@ keyword
     // CLI commands
     | BUILD | CATALOG | CHECK | CLEAR | COMMENT | CUSTOM_NAME_MAP
     | DESIGN | DRY | EXEC | FEATURES | ADDED | SINCE | FORCE
-    | LANGUAGES | LINT | PROPERTIES | READ | RULES | RUN | SARIF | SCRIPT
+    | LANGUAGES | LANGUAGE | LINT | PROPERTIES | READ | RULES | RUN | SARIF | SCRIPT
     | SUPPORTED | TRANSLATE | TRANSLATIONS
     | SHOW | USE | STATUS | WRITE | VIA | VIEWS | TABLES
 
