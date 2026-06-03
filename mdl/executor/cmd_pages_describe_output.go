@@ -584,8 +584,9 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 			props = appendConditionalProps(props, w)
 			props = appendAppearanceProps(props, w)
 			formatWidgetProps(ctx.Output, prefix, header, props, "\n")
-		} else if len(w.ExplicitProperties) > 0 && w.WidgetID != "" {
-			// Generic pluggable widget with explicit properties
+		} else if w.WidgetID != "" {
+			// Generic pluggable widget — always use full PLUGGABLEWIDGET 'id' form so
+			// output is directly reusable in CREATE PAGE without change.
 			header := fmt.Sprintf("pluggablewidget '%s' %s", w.WidgetID, w.Name)
 			props := []string{}
 			if w.Caption != "" {
