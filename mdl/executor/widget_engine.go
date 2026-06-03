@@ -554,7 +554,11 @@ func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.W
 		if val == "" && mapping.Default != "" {
 			val = mapping.Default
 		}
-		ctx.PrimitiveVal = val
+		if mapping.Operation == "attribute" && val != "" {
+			ctx.AttributePath = e.pageBuilder.resolveAttributePath(val)
+		} else {
+			ctx.PrimitiveVal = val
+		}
 	}
 
 	return ctx, nil

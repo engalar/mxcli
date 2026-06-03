@@ -205,6 +205,15 @@ func runWidgetExtract(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// toPascalCase uppercases the first character of s, leaving the rest unchanged.
+// e.g. "cssValue" → "CssValue", "throwValue" → "ThrowValue".
+func toPascalCase(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
 // deriveMDLName derives an uppercase MDL keyword from a widget ID.
 // e.g. "com.mendix.widget.web.combobox.Combobox" → "COMBOBOX"
 // e.g. "com.company.widget.MyCustomWidget" → "MYCUSTOMWIDGET"
@@ -254,7 +263,7 @@ func generateDefJSON(mpkDef *mpk.WidgetDefinition, mdlName string) *executor.Wid
 		case "attribute":
 			def.PropertyMappings = append(def.PropertyMappings, executor.PropertyMapping{
 				PropertyKey: p.Key,
-				Source:      "Attribute",
+				Source:      toPascalCase(p.Key),
 				Operation:   "attribute",
 			})
 		case "association":
@@ -271,10 +280,8 @@ func generateDefJSON(mpkDef *mpk.WidgetDefinition, mdlName string) *executor.Wid
 				Default:     p.DefaultValue,
 			})
 		case "action":
-			def.PropertyMappings = append(def.PropertyMappings, executor.PropertyMapping{
-				PropertyKey: p.Key,
-				Operation:   "action",
-			})
+			// Action properties are handled by the engine's explicit-properties path
+			// via propertyTypeIDs; no PropertyMapping entry is needed.
 		case "boolean", "integer", "decimal", "string", "enumeration":
 			m := executor.PropertyMapping{
 				PropertyKey: p.Key,

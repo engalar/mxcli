@@ -95,8 +95,8 @@ func TestGenerateDefJSON(t *testing.T) {
 	if attrMapping == nil {
 		t.Fatal("myAttribute mapping not found")
 	}
-	if attrMapping.Operation != "attribute" || attrMapping.Source != "Attribute" {
-		t.Errorf("myAttribute: operation=%q source=%q, want operation=attribute source=Attribute",
+	if attrMapping.Operation != "attribute" || attrMapping.Source != "MyAttribute" {
+		t.Errorf("myAttribute: operation=%q source=%q, want operation=attribute source=MyAttribute",
 			attrMapping.Operation, attrMapping.Source)
 	}
 
@@ -153,11 +153,10 @@ func TestGenerateDefJSON_ActionType(t *testing.T) {
 
 	def := generateDefJSON(mpkDef, "WITHACTION")
 
-	if len(def.PropertyMappings) != 1 {
-		t.Fatalf("PropertyMappings count = %d, want 1", len(def.PropertyMappings))
-	}
-	if def.PropertyMappings[0].Operation != "action" {
-		t.Errorf("operation = %q, want %q", def.PropertyMappings[0].Operation, "action")
+	// Action properties are handled by the engine's explicit-properties path via
+	// propertyTypeIDs; no PropertyMapping entry should be generated.
+	if len(def.PropertyMappings) != 0 {
+		t.Fatalf("PropertyMappings count = %d, want 0 (action properties are skipped)", len(def.PropertyMappings))
 	}
 }
 
