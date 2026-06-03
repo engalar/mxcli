@@ -125,7 +125,6 @@ func TestGenerateDefJSON_SkipsComplexTypes(t *testing.T) {
 		ID:   "com.example.Complex",
 		Name: "Complex",
 		Properties: []mpk.PropertyDef{
-			{Key: "myAction", Type: "action"},
 			{Key: "myExpr", Type: "expression"},
 			{Key: "myTemplate", Type: "textTemplate"},
 			{Key: "myIcon", Type: "icon"},
@@ -135,12 +134,30 @@ func TestGenerateDefJSON_SkipsComplexTypes(t *testing.T) {
 
 	def := generateDefJSON(mpkDef, "COMPLEX")
 
-	// Complex types should be skipped
 	if len(def.PropertyMappings) != 0 {
 		t.Errorf("PropertyMappings count = %d, want 0 (complex types should be skipped)", len(def.PropertyMappings))
 	}
 	if len(def.ChildSlots) != 0 {
 		t.Errorf("ChildSlots count = %d, want 0", len(def.ChildSlots))
+	}
+}
+
+func TestGenerateDefJSON_ActionType(t *testing.T) {
+	mpkDef := &mpk.WidgetDefinition{
+		ID:   "com.example.WithAction",
+		Name: "WithAction",
+		Properties: []mpk.PropertyDef{
+			{Key: "onClick", Type: "action"},
+		},
+	}
+
+	def := generateDefJSON(mpkDef, "WITHACTION")
+
+	if len(def.PropertyMappings) != 1 {
+		t.Fatalf("PropertyMappings count = %d, want 1", len(def.PropertyMappings))
+	}
+	if def.PropertyMappings[0].Operation != "action" {
+		t.Errorf("operation = %q, want %q", def.PropertyMappings[0].Operation, "action")
 	}
 }
 

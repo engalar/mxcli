@@ -5,6 +5,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -155,10 +156,13 @@ func runWidgetExtract(cmd *cobra.Command, args []string) error {
 	outputDir, _ := cmd.Flags().GetString("output")
 	mdlNameOverride, _ := cmd.Flags().GetString("mdl-name")
 
-	// Parse .mpk
-	mpkDef, err := mpk.ParseMPK(mpkPath)
+	// Parse all widgets from the .mpk (multi-widget packages contain several).
+	defs, err := mpk.ParseAll(mpkPath)
 	if err != nil {
 		return fmt.Errorf("failed to parse .mpk: %w", err)
+	}
+	if len(defs) == 0 {
+		return fmt.Errorf("no widget definitions found in %s", mpkPath)
 	}
 
 	// Determine output directory
@@ -169,34 +173,34 @@ func runWidgetExtract(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	// Determine MDL name
-	mdlName := mdlNameOverride
-	if mdlName == "" {
-		mdlName = deriveMDLName(mpkDef.ID)
+	out := cmd.OutOrStdout()
+	fmt.Fprintf(out, "Extracting %d widget definition(s) from %s\n\n", len(defs), filepath.Base(mpkPath))
+
+	for _, mpkDef := range defs {
+		// --mdl-name only applies when extracting a single widget.
+		mdlName := mdlNameOverride
+		if mdlName == "" || len(defs) > 1 {
+			mdlName = deriveMDLName(mpkDef.ID)
+		}
+
+		defJSON := generateDefJSON(mpkDef, mdlName)
+
+		filename := strings.ToLower(mdlName) + ".def.json"
+		outPath := filepath.Join(outputDir, filename)
+
+		data, err := json.MarshalIndent(defJSON, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal definition for %s: %w", mpkDef.ID, err)
+		}
+		data = append(data, '\n')
+
+		if err := os.WriteFile(outPath, data, 0644); err != nil {
+			return fmt.Errorf("failed to write %s: %w", outPath, err)
+		}
+
+		fmt.Fprintf(out, "  %-20s %s\n", mdlName, mpkDef.ID)
+		fmt.Fprintf(out, "  properties: %d  output: %s\n\n", len(mpkDef.Properties), outPath)
 	}
-
-	// Generate .def.json
-	defJSON := generateDefJSON(mpkDef, mdlName)
-
-	// Determine output filename
-	filename := strings.ToLower(mdlName) + ".def.json"
-	outPath := filepath.Join(outputDir, filename)
-
-	data, err := json.MarshalIndent(defJSON, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal definition: %w", err)
-	}
-	data = append(data, '\n')
-
-	if err := os.WriteFile(outPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write %s: %w", outPath, err)
-	}
-
-	fmt.Printf("Extracted widget definition:\n")
-	fmt.Printf("  Widget ID:  %s\n", mpkDef.ID)
-	fmt.Printf("  MDL name:   %s\n", mdlName)
-	fmt.Printf("  Properties: %d\n", len(mpkDef.Properties))
-	fmt.Printf("  Output:     %s\n", outPath)
 
 	return nil
 }
@@ -266,6 +270,11 @@ func generateDefJSON(mpkDef *mpk.WidgetDefinition, mdlName string) *executor.Wid
 				Operation:   "selection",
 				Default:     p.DefaultValue,
 			})
+		case "action":
+			def.PropertyMappings = append(def.PropertyMappings, executor.PropertyMapping{
+				PropertyKey: p.Key,
+				Operation:   "action",
+			})
 		case "boolean", "integer", "decimal", "string", "enumeration":
 			m := executor.PropertyMapping{
 				PropertyKey: p.Key,
@@ -289,6 +298,7 @@ func runWidgetInit(cmd *cobra.Command, args []string) error {
 	projectDir := filepath.Dir(projectPath)
 	widgetsDir := filepath.Join(projectDir, "widgets")
 	outputDir := filepath.Join(projectDir, ".mxcli", "widgets")
+	out := cmd.OutOrStdout()
 
 	// Load built-in registry to skip widgets that already have hand-crafted definitions
 	builtinRegistry, _ := executor.NewWidgetRegistry()
@@ -299,7 +309,7 @@ func runWidgetInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to scan widgets directory: %w", err)
 	}
 	if len(matches) == 0 {
-		fmt.Println("No .mpk files found in widgets/ directory.")
+		fmt.Fprintln(out, "No .mpk files found in widgets/ directory.")
 		return nil
 	}
 
@@ -353,25 +363,25 @@ func runWidgetInit(cmd *cobra.Command, args []string) error {
 			if mpkDef.IsPluggable {
 				kind = "pluggable"
 			}
-			fmt.Printf("  %-12s %-20s %s\n", kind, mdlName, mpkDef.ID)
+			fmt.Fprintf(out, "  %-12s %-20s %s\n", kind, mdlName, mpkDef.ID)
 			extracted++
 		}
 	}
 
-	fmt.Printf("\nExtracted: %d, Skipped: %d (existing or unparseable)\n", extracted, skipped)
+	fmt.Fprintf(out, "\nExtracted: %d, Skipped: %d (existing or unparseable)\n", extracted, skipped)
 
 	// Also generate docs
-	fmt.Println("\nGenerating widget documentation...")
-	return generateWidgetDocs(projectDir)
+	fmt.Fprintln(out, "\nGenerating widget documentation...")
+	return generateWidgetDocs(projectDir, out)
 }
 
 func runWidgetDocs(cmd *cobra.Command, args []string) error {
 	projectPath, _ := cmd.Flags().GetString("project")
 	projectDir := filepath.Dir(projectPath)
-	return generateWidgetDocs(projectDir)
+	return generateWidgetDocs(projectDir, cmd.OutOrStdout())
 }
 
-func generateWidgetDocs(projectDir string) error {
+func generateWidgetDocs(projectDir string, out io.Writer) error {
 	widgetsDir := filepath.Join(projectDir, "widgets")
 	docsDir := filepath.Join(projectDir, ".claude", "skills", "widgets")
 	// Also try .ai-context
@@ -441,7 +451,7 @@ func generateWidgetDocs(projectDir string) error {
 		return fmt.Errorf("failed to write index: %w", err)
 	}
 
-	fmt.Printf("Generated %d widget docs in %s\n", generated, docsDir)
+	fmt.Fprintf(out, "Generated %d widget docs in %s\n", generated, docsDir)
 	return nil
 }
 
@@ -503,21 +513,22 @@ func runWidgetList(cmd *cobra.Command, args []string) error {
 	}
 
 	defs := registry.All()
+	out := cmd.OutOrStdout()
 	if len(defs) == 0 {
-		fmt.Println("No widget definitions registered.")
+		fmt.Fprintln(out, "No widget definitions registered.")
 		return nil
 	}
 
-	fmt.Printf("%-16s %-20s %-50s %s\n", "Kind", "MDL Name", "Widget ID", "Template")
-	fmt.Printf("%-16s %-20s %-50s %s\n", strings.Repeat("-", 16), strings.Repeat("-", 20), strings.Repeat("-", 50), strings.Repeat("-", 20))
+	fmt.Fprintf(out, "%-16s %-20s %-50s %s\n", "Kind", "MDL Name", "Widget ID", "Template")
+	fmt.Fprintf(out, "%-16s %-20s %-50s %s\n", strings.Repeat("-", 16), strings.Repeat("-", 20), strings.Repeat("-", 50), strings.Repeat("-", 20))
 	for _, def := range defs {
 		kind := def.WidgetKind
 		if kind == "" {
 			kind = "pluggable"
 		}
-		fmt.Printf("%-16s %-20s %-50s %s\n", kind, def.MDLName, def.WidgetID, def.TemplateFile)
+		fmt.Fprintf(out, "%-16s %-20s %-50s %s\n", kind, def.MDLName, def.WidgetID, def.TemplateFile)
 	}
-	fmt.Printf("\nTotal: %d definitions\n", len(defs))
+	fmt.Fprintf(out, "\nTotal: %d definitions\n", len(defs))
 
 	return nil
 }
