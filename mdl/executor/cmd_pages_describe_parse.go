@@ -458,20 +458,20 @@ func extractNavigationListItemAction(ctx *ExecContext, w map[string]any) string 
 		// Extract page reference from FormSettings (Studio Pro format)
 		if formSettings, ok := action["FormSettings"].(map[string]any); ok {
 			if formName, ok := formSettings["Form"].(string); ok && formName != "" {
-				return "show_page '" + formName + "'"
+				return "show_page " + formName
 			}
 		}
 		// Fall back to PageSettings.Form (string name)
 		if pageSettings, ok := action["PageSettings"].(map[string]any); ok {
 			if pageName, ok := pageSettings["Form"].(string); ok && pageName != "" {
-				return "show_page '" + pageName + "'"
+				return "show_page " + pageName
 			}
 		}
 		// Fall back to Page field (binary ID from mxcli serialization)
 		if pageID := extractBinaryID(action["Page"]); pageID != "" {
 			pageName := getPageQualifiedName(ctx, model.ID(pageID))
 			if pageName != "" {
-				return "show_page '" + pageName + "'"
+				return "show_page " + pageName
 			}
 		}
 		return "show_page"
