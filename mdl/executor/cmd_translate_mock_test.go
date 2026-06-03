@@ -20,9 +20,10 @@ func TestTranslatePage_SetWidgetTranslation(t *testing.T) {
 	saved := false
 	var gotWidget, gotProp, gotLang, gotText string
 	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+		IsConnectedFunc:        func() bool { return true },
+		GetProjectSettingsFunc: translateTestSettings,
+		ListModulesFunc:        func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc:        func() ([]*types.FolderInfo, error) { return nil, nil },
 		OpenPageForMutationFunc: func(unitID model.ID) (backend.PageMutator, error) {
 			return &mock.MockPageMutator{
 				SetWidgetTranslationFunc: func(widgetRef, prop, langCode, text string) error {
@@ -73,9 +74,10 @@ func TestTranslatePage_SetPageTitle(t *testing.T) {
 	pg := mkPageGen(string(nextID("pg")), "Home")
 	var gotLang, gotText string
 	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+		IsConnectedFunc:        func() bool { return true },
+		GetProjectSettingsFunc: translateTestSettings,
+		ListModulesFunc:        func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc:        func() ([]*types.FolderInfo, error) { return nil, nil },
 		OpenPageForMutationFunc: func(unitID model.ID) (backend.PageMutator, error) {
 			return &mock.MockPageMutator{
 				SetPageTitleTranslationFunc: func(langCode, text string) error {
@@ -108,7 +110,8 @@ func TestTranslatePage_SetPageTitle(t *testing.T) {
 
 func TestTranslate_EnumerationStub(t *testing.T) {
 	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
+		IsConnectedFunc:        func() bool { return true },
+		GetProjectSettingsFunc: translateTestSettings,
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	stmt := &ast.TranslateStmt{
@@ -121,4 +124,42 @@ func TestTranslate_EnumerationStub(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected not-implemented error for ENUMERATION stub")
 	}
+}
+
+func TestTranslate_LangNotRegistered(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetProjectSettingsFunc: func() (*model.ProjectSettings, error) {
+			return &model.ProjectSettings{
+				Language: &model.LanguageSettings{
+					DefaultLanguageCode: "en_US",
+					Languages:           []model.Language{{Code: "en_US"}},
+				},
+			}, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	stmt := &ast.TranslateStmt{
+		DocType: "PAGE",
+		QName:   ast.QualifiedName{Module: "MyModule", Name: "Home"},
+		Lang:    "zh_CN",
+		Ops:     []ast.TranslateSetOp{{Path: "Button1.caption", Text: "提交"}},
+	}
+	err := translateDocument(ctx, stmt)
+	if err == nil {
+		t.Fatal("expected error for unregistered language")
+	}
+	if !strings.Contains(err.Error(), "not registered") {
+		t.Errorf("expected 'not registered' error, got: %v", err)
+	}
+}
+
+// translateTestSettings returns project settings with en_US + zh_CN registered.
+func translateTestSettings() (*model.ProjectSettings, error) {
+	return &model.ProjectSettings{
+		Language: &model.LanguageSettings{
+			DefaultLanguageCode: "en_US",
+			Languages:           []model.Language{{Code: "en_US"}, {Code: "zh_CN"}},
+		},
+	}, nil
 }

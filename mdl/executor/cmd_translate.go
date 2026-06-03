@@ -24,6 +24,10 @@ func translateDocument(ctx *ExecContext, stmt *ast.TranslateStmt) error {
 		return mdlerrors.NewValidation("TRANSLATE requires a target language (IN langCode)")
 	}
 
+	if err := requireRegisteredLanguage(ctx, stmt.Lang); err != nil {
+		return err
+	}
+
 	switch strings.ToUpper(stmt.DocType) {
 	case "PAGE":
 		return translatePage(ctx, stmt, "page")
@@ -38,6 +42,27 @@ func translateDocument(ctx *ExecContext, stmt *ast.TranslateStmt) error {
 	default:
 		return mdlerrors.NewUnsupported(fmt.Sprintf("TRANSLATE %s not supported", stmt.DocType))
 	}
+}
+
+// requireRegisteredLanguage returns an actionable error if lang is not in the
+// project's registered languages. This guides the AI/user to add the language
+// before translating, rather than silently writing a translation for a language
+// Studio Pro will not display.
+func requireRegisteredLanguage(ctx *ExecContext, lang string) error {
+	ps, err := ctx.Backend.GetProjectSettings()
+	if err != nil {
+		return mdlerrors.NewBackend("read project settings", err)
+	}
+	if ps != nil && ps.Language != nil {
+		for _, l := range ps.Language.Languages {
+			if l.Code == lang {
+				return nil
+			}
+		}
+	}
+	return mdlerrors.NewValidationf(
+		"language '%s' is not registered in this project. Run ALTER SETTINGS LANGUAGE ADD '%s' first.",
+		lang, lang)
 }
 
 // translatePage applies translation SET operations to a page or snippet.
