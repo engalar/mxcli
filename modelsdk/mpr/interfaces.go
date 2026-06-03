@@ -19,6 +19,7 @@ type UnitWriter interface {
 	BeginWriteTransaction() (*WriteTransaction, error)
 	UpdateRawUnit(unitID string, contents []byte) error
 	InsertUnit(unitID, containerID, containmentName, unitType string, contents []byte) error
+	BatchWrite(ops []BatchWriteOp) error
 	DeleteUnit(unitID string) error
 	DeleteChildUnits(parentID string) error
 	UpdateUnitContainer(unitID, newContainerID string) error

@@ -38,11 +38,11 @@ func (b *MprBackend) writeUnitContents(unitID model.ID, contents []byte) error {
 		return nil
 	}
 
-	// If a script-level transaction is active, reuse it so the whole
-	// EXECUTE SCRIPT block commits or rolls back as one unit.
-	if b.activeScriptTx != nil {
-		if err := b.activeScriptTx.WriteUnit(string(unitID), contents); err != nil {
-			return fmt.Errorf("write unit (in script tx): %w", err)
+	// If a script-level buffer is active, route the write into it so the whole
+	// EXECUTE SCRIPT block commits or rolls back as one atomic BatchWrite.
+	if b.scriptBuf != nil {
+		if err := b.scriptBuf.AddUpdate(string(unitID), contents); err != nil {
+			return fmt.Errorf("write unit (in script buffer): %w", err)
 		}
 		return nil
 	}

@@ -60,11 +60,11 @@ type MprBackend struct {
 	msdkReader *modelsdkmpr.Reader // alias of reader; kept for *_compat.go ergonomics
 	msdkWriter modelsdkmpr.UnitWriter
 	path       string
-	// activeScriptTx is non-nil while an EXECUTE SCRIPT block is open.
-	// writeUnitContents and other write helpers must reuse it instead of
-	// opening a fresh per-statement transaction so the whole script is
-	// atomic — see backend.ScriptTransaction.
-	activeScriptTx *modelsdkmpr.WriteTransaction
+	// scriptBuf is non-nil while an EXECUTE SCRIPT block is open. Write helpers
+	// route mutations into the buffer instead of opening per-statement SQL
+	// transactions; the whole script commits atomically via a single BatchWrite
+	// at the end — see backend.ScriptTransaction.
+	scriptBuf *ScriptBuffer
 
 	// unitBuf is non-nil when an ImportSession is active.
 	// writeUnitContents routes writes through the buffer instead of opening
@@ -1541,3 +1541,25 @@ func (b *MprBackend) DisableImportBuffer() {
 }
 
 var _ unitstore.UnitPersistence = (*MprUnitPersistence)(nil)
+
+// insertUnit routes to ScriptBuffer when a script is active, otherwise delegates to msdkWriter.InsertUnit.
+func (b *MprBackend) insertUnit(unitID, containerID, containmentName, unitType string, contents []byte) error {
+	if b.scriptBuf != nil {
+		return b.scriptBuf.AddInsert(unitID, containerID, containmentName, unitType, contents)
+	}
+	return b.msdkWriter.InsertUnit(unitID, containerID, containmentName, unitType, contents)
+}
+
+// commitScriptBuffer flushes all buffered writes atomically via BatchWrite.
+func (b *MprBackend) commitScriptBuffer() error {
+	if b.scriptBuf == nil {
+		return fmt.Errorf("commitScriptBuffer: no active script buffer")
+	}
+	ops := b.scriptBuf.toBatchOps()
+	b.scriptBuf = nil
+	b.msdkReader.ClearScriptMode()
+	if len(ops) == 0 {
+		return nil
+	}
+	return b.msdkWriter.BatchWrite(ops)
+}

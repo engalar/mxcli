@@ -58,6 +58,27 @@ func TestScriptBuffer_AddInsert_VisibleInInsertList(t *testing.T) {
 	}
 }
 
+func TestBeginScriptTransaction_NoDBBegin(t *testing.T) {
+	dst := copyFixture(t, fixturePath, t.TempDir())
+	b := New()
+	if err := b.Connect(dst); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	tx, err := b.BeginScriptTransaction()
+	if err != nil {
+		t.Fatalf("BeginScriptTransaction: %v", err)
+	}
+	if b.scriptBuf == nil {
+		t.Error("scriptBuf is nil after BeginScriptTransaction")
+	}
+	_ = tx.Rollback()
+	if b.scriptBuf != nil {
+		t.Error("scriptBuf not nil after Rollback")
+	}
+}
+
 func TestScriptBuffer_Rollback_ClearsOverlay(t *testing.T) {
 	dst := copyFixture(t, fixturePath, t.TempDir())
 	b := New()
