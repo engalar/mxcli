@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"sync"
@@ -114,10 +115,21 @@ func handleConn(conn net.Conn) {
 
 // runCommand executes the given argv via rootCmd, writing stdout/stderr to the
 // provided writers. Returns the exit code.
+//
+// Redirects the global log package to stderr for the duration of the command
+// so that log.Printf calls deep in the stack (e.g. widget_engine.go HINT/WARNING
+// messages) are routed through the socket and visible to the user/AI.
 func runCommand(argv []string, stdout, stderr io.Writer) int {
 	rootCmd.SetOut(stdout)
 	rootCmd.SetErr(stderr)
 	rootCmd.SetArgs(argv)
+
+	// Route global log output through the socket stderr so HINT/WARNING messages
+	// from the executor layer reach the user instead of going to /dev/null.
+	oldLog := log.Writer()
+	log.SetOutput(stderr)
+	defer log.SetOutput(oldLog)
+
 	if err := rootCmd.Execute(); err != nil {
 		return 1
 	}

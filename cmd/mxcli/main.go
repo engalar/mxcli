@@ -192,9 +192,12 @@ func resolveFormat(cmd *cobra.Command, defaultFormat string) string {
 // so that daemon-server mode (--serve) routes output to the socket instead of
 // os.Stdout (which is /dev/null when the daemon is spawned by the launcher).
 // The caller must call logger.Close() and exec.Close() when done.
+// Note: the global log package is redirected to stderr by runCommand() in
+// daemon_server.go, so log.Printf HINT/WARNING messages are also visible.
 func newLoggedExecutor(mode string, out io.Writer) (*executor.Executor, *diaglog.Logger) {
 	logger := diaglog.Init(version, mode, globalVerboseLevel)
 	exec := executor.New(out)
+
 	if persistentDaemonBackend != nil {
 		// Per-MPR daemon: wrap the concrete *MprBackend (not the interface) so
 		// duck-type checks (microflowsRepoProvider etc.) still resolve correctly,

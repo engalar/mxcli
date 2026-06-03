@@ -22,25 +22,28 @@ Example:
   mxcli exec -p app.mpr script.mdl
 `,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		filePath := args[0]
 		projectPath, _ := cmd.Flags().GetString("project")
+
+		out := cmd.OutOrStdout()
+		errOut := cmd.ErrOrStderr()
 
 		// Read the file
 		content, err := os.ReadFile(filePath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading file: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("reading file: %w", err)
 		}
 
-		exec, logger := newLoggedExecutor("exec", cmd.OutOrStdout())
+		exec, logger := newLoggedExecutor("exec", out)
 		defer logger.Close()
 		defer exec.Close()
 
-		// Suppress status messages (e.g. "Connected to:") when stdout is a pipe
-		// so that output can be used programmatically (e.g. > describe-snapshot.mdl).
-		// Mirrors the same check in the -c command path (main.go).
-		if fi, statErr := os.Stdout.Stat(); statErr == nil && (fi.Mode()&os.ModeCharDevice) == 0 {
+		// Suppress status messages when stdout is a pipe so that output
+		// can be used programmatically (e.g. > describe-snapshot.mdl).
+		if fi, statErr := out.(interface{ Fd() uintptr }); statErr {
+			_ = fi // pipe detection not available for socket writers; always emit
+		} else if fi2, err := os.Stdout.Stat(); err == nil && (fi2.Mode()&os.ModeCharDevice) == 0 {
 			exec.SetQuiet(true)
 		}
 
@@ -50,8 +53,8 @@ Example:
 			prog, _ := visitor.Build(connectCmd)
 			for _, stmt := range prog.Statements {
 				if err := exec.Execute(stmt); err != nil {
-					fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-					os.Exit(1)
+					fmt.Fprintf(errOut, "Error: %v\n", err)
+					return fmt.Errorf("connecting to project: %w", err)
 				}
 			}
 		}
@@ -59,18 +62,19 @@ Example:
 		// Parse and execute the file
 		prog, errs := visitor.Build(string(content))
 		if len(errs) > 0 {
-			for _, err := range errs {
-				fmt.Fprintf(os.Stderr, "Parse error: %v\n", err)
+			for _, parseErr := range errs {
+				fmt.Fprintf(errOut, "Parse error: %v\n", parseErr)
 			}
-			os.Exit(1)
+			return fmt.Errorf("parse failed with %d error(s)", len(errs))
 		}
 
 		if err := exec.ExecuteProgram(prog); err != nil {
 			if errors.Is(err, executor.ErrExit) {
-				return
+				return nil
 			}
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			fmt.Fprintf(errOut, "Error: %v\n", err)
+			return err
 		}
+		return nil
 	},
 }
