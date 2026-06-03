@@ -1078,9 +1078,27 @@ update widgets set 'showLabel' = false where widgettype like '%combobox%';
 update widgets set 'Class' = 'btn-lg', 'Style' = 'margin-top: 8px;' where widgettype like '%ActionButton%';
 ```
 
-## PLUGGABLEWIDGET Escape Hatch
+## PLUGGABLEWIDGET — Custom and Third-Party Widgets
 
-All shorthand widgets (IMAGE, COMBOBOX, GALLERY, DATAGRID, etc.) are pluggable widgets under the hood. When the shorthand doesn't expose a property you need, use `pluggablewidget 'widget.id' name (properties)` for full access to all widget properties.
+**For any widget not in the built-in list above (e.g. from Atlas, an .mpk package, or a custom widget), you MUST use the full `PLUGGABLEWIDGET 'widget.id' name (...)` syntax. There is no shorthand.**
+
+```sql
+-- ✗ WRONG — 'crusherslider' is not a keyword; parser will fail
+crusherslider slider1 (value: SliderValue)
+
+-- ✓ CORRECT — always use PLUGGABLEWIDGET 'id' name for custom widgets
+pluggablewidget 'com.crusher.widget.CrusherSlider' slider1 (
+  CssValue: SliderValue
+)
+```
+
+**Workflow for using a custom widget:**
+1. `mxcli widget list -p app.mpr` — shows all available widgets (built-in + MPK-discovered) with their widget IDs
+2. Copy the Widget ID from the "mpk (auto)" section
+3. Use `PLUGGABLEWIDGET '<Widget ID>' name (properties)` in your page MDL
+4. If the widget has many properties, run `mxcli widget extract --mpk widgets/YourWidget.mpk` to see the property names
+
+**The built-in shorthands (IMAGE, COMBOBOX, GALLERY, DATAGRID, etc.) are sugar for PLUGGABLEWIDGET.** When the shorthand doesn't expose a property you need, use the full form:
 
 ```sql
 -- Shorthand (common properties only)

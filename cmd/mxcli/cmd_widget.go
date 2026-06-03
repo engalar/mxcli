@@ -203,6 +203,11 @@ func runWidgetExtract(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(out, "  properties: %d  output: %s\n\n", len(mpkDef.Properties), outPath)
 	}
 
+	fmt.Fprintf(out, "Note: .def.json contains property mappings only.\n")
+	fmt.Fprintf(out, "      The BSON template (needed for page creation) is derived at runtime\n")
+	fmt.Fprintf(out, "      from the .mpk file. If the widget has never been placed on a page\n")
+	fmt.Fprintf(out, "      in Studio Pro, page creation will fail with 'no template found'.\n")
+	fmt.Fprintf(out, "      Fix: open Studio Pro, drag the widget onto any page, save, then retry.\n")
 	return nil
 }
 
@@ -554,15 +559,21 @@ func runWidgetList(cmd *cobra.Command, args []string) error {
 			names = append(names, name)
 		}
 		sort.Strings(names)
+		var exampleID string
 		for _, name := range names {
 			w := discovered[name]
+			if exampleID == "" {
+				exampleID = w.WidgetID
+			}
 			desc := w.Description
 			if len(desc) > 60 {
 				desc = desc[:57] + "..."
 			}
 			fmt.Fprintf(out, "%-22s %-32s %-45s %s\n", strings.ToLower(name), w.Name, w.WidgetID, desc)
 		}
-		fmt.Fprintf(out, "\nRun 'mxcli widget extract --mpk widgets/<file>.mpk' to generate .def.json\n")
+		fmt.Fprintf(out, "\nMDL syntax for MPK widgets:  PLUGGABLEWIDGET '<Widget ID>' name (prop: val)\n")
+		fmt.Fprintf(out, "Example:                     PLUGGABLEWIDGET '%s' myWidget1 (...)\n", exampleID)
+		fmt.Fprintf(out, "\nRun 'mxcli widget extract --mpk widgets/<file>.mpk' to generate .def.json with property names\n")
 	}
 
 	fmt.Fprintf(out, "\nTotal: %d loaded, %d from MPK\n", len(defs), len(discovered))

@@ -523,6 +523,7 @@ Regenerate after modifying `MDLLexer.g4`, `MDLParser.g4`, or any `domains/*.g4` 
 - `.claude/skills/write-microflows.md` - Microflow syntax, common mistakes, validation checklist
 - `.claude/skills/write-nanoflows.md` - Nanoflow syntax, restrictions, disallowed activities, validation checklist
 - `.claude/skills/create-page.md` - Page/widget syntax reference
+- `.claude/skills/mendix/custom-widgets.md` - **READ when using any non-built-in widget** — how to discover available widgets (`mxcli widget list`), extract def.json (`mxcli widget extract`), and write correct `PLUGGABLEWIDGET 'widget.id' name (...)` MDL syntax
 - `.claude/skills/alter-page.md` - ALTER PAGE/SNIPPET in-place modifications (SET, INSERT, DROP, REPLACE, SET Layout)
 - `.claude/skills/overview-pages.md` - CRUD page patterns
 - `.claude/skills/master-detail-pages.md` - Master-detail page patterns
