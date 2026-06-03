@@ -11,9 +11,17 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// listLanguages lists all languages found in the project's translatable strings.
-// Requires REFRESH CATALOG FULL to populate the strings table.
+// listLanguages lists the project's languages. It prefers the registered
+// languages from project settings (Settings$LanguageSettings); when settings
+// are unavailable or define no languages, it falls back to the per-string
+// language counts in the catalog (requires REFRESH CATALOG FULL).
 func listLanguages(ctx *ExecContext) error {
+	if handled, err := listLanguagesFromSettings(ctx); err != nil {
+		return err
+	} else if handled {
+		return nil
+	}
+
 	if ctx.Catalog == nil {
 		return mdlerrors.NewValidation("no catalog available — run refresh catalog full first")
 	}
@@ -50,6 +58,46 @@ func listLanguages(ctx *ExecContext) error {
 		tr.Rows = append(tr.Rows, []any{lang, count})
 	}
 	return writeResult(ctx, tr)
+}
+
+// listLanguagesFromSettings lists the languages registered in project settings.
+// It returns handled=true when it produced output, and handled=false (with nil
+// error) when settings are unavailable or define no languages, signalling the
+// caller to fall back to the catalog.
+func listLanguagesFromSettings(ctx *ExecContext) (bool, error) {
+	if !ctx.Connected() {
+		return false, nil
+	}
+	ps, err := ctx.Backend.GetProjectSettings()
+	if err != nil {
+		// Settings unavailable — let the caller fall back to the catalog.
+		return false, nil
+	}
+	if ps == nil || ps.Language == nil || len(ps.Language.Languages) == 0 {
+		return false, nil
+	}
+
+	defaultCode := ps.Language.DefaultLanguageCode
+	tr := &TableResult{
+		Columns: []string{"Code", "Language", "Default", "CheckCompleteness"},
+		Summary: fmt.Sprintf("(%d languages)", len(ps.Language.Languages)),
+	}
+	for _, l := range ps.Language.Languages {
+		name := supportedLanguages[l.Code]
+		if name == "" {
+			name = "(unknown)"
+		}
+		def := ""
+		if l.Code == defaultCode {
+			def = "yes"
+		}
+		cc := ""
+		if l.CheckCompleteness {
+			cc = "yes"
+		}
+		tr.Rows = append(tr.Rows, []any{l.Code, name, def, cc})
+	}
+	return true, writeResult(ctx, tr)
 }
 
 // supportedLanguages is the built-in list of valid Mendix language codes.

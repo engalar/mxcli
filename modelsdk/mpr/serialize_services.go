@@ -262,6 +262,50 @@ func serPSConstantValue(cv *model.ConstantValue) bson.M {
 
 func serPSLanguageSettings(ls *model.LanguageSettings, raw map[string]any) map[string]any {
 	raw["DefaultLanguageCode"] = ls.DefaultLanguageCode
+
+	// Rebuild the Languages array from the model (the source of truth after
+	// ALTER SETTINGS LANGUAGE ADD/DROP). Preserve each existing entry's $ID by
+	// matching on Code so unchanged languages keep their identity; mint a fresh
+	// $ID for newly added languages.
+	prev := extractBsonArrayWithMarker(raw["Languages"])
+	existingIDs := map[string]any{}
+	for _, item := range prev.Items {
+		lm, ok := item.(map[string]any)
+		if !ok {
+			if d, ok := item.(bson.M); ok {
+				lm = map[string]any(d)
+			} else {
+				continue
+			}
+		}
+		code, _ := lm["Code"].(string)
+		if id, ok := lm["$ID"]; ok && code != "" {
+			existingIDs[code] = id
+		}
+	}
+
+	marker := prev.Marker
+	if marker == 0 {
+		marker = int32(3)
+	}
+	langArr := bson.A{marker}
+	for _, lang := range ls.Languages {
+		langDoc := bson.M{
+			"$Type":                "Texts$Language",
+			"Code":                 lang.Code,
+			"CheckCompleteness":    lang.CheckCompleteness,
+			"CustomDateFormat":     lang.CustomDateFormat,
+			"CustomDateTimeFormat": lang.CustomDateTimeFormat,
+			"CustomTimeFormat":     lang.CustomTimeFormat,
+		}
+		if id, ok := existingIDs[lang.Code]; ok {
+			langDoc["$ID"] = id
+		} else {
+			langDoc["$ID"] = idToBsonBinary(generateUUID())
+		}
+		langArr = append(langArr, langDoc)
+	}
+	raw["Languages"] = langArr
 	return raw
 }
 

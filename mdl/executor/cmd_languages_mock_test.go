@@ -140,6 +140,66 @@ func TestAlterLanguageAdd_Success(t *testing.T) {
 	}
 }
 
+func TestListLanguages_FromSettings(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetProjectSettingsFunc: func() (*model.ProjectSettings, error) {
+			return &model.ProjectSettings{
+				Language: &model.LanguageSettings{
+					DefaultLanguageCode: "en_US",
+					Languages: []model.Language{
+						{Code: "en_US"},
+						{Code: "nl_NL", CheckCompleteness: true},
+					},
+				},
+			}, nil
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb))
+	if err := listLanguages(ctx); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	out := buf.String()
+	assertContainsStr(t, out, "en_US")
+	assertContainsStr(t, out, "nl_NL")
+	// Settings-backed listing should not require the catalog.
+	if strings.Contains(out, "refresh catalog full") {
+		t.Errorf("settings-backed listing should not mention catalog, got: %s", out)
+	}
+}
+
+func TestListLanguages_SettingsEmptyFallsBackToCatalog(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetProjectSettingsFunc: func() (*model.ProjectSettings, error) {
+			return &model.ProjectSettings{}, nil // no Language part
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	// No catalog set → should fall back and report the catalog requirement.
+	err := listLanguages(ctx)
+	assertError(t, err)
+}
+
+func TestListLanguagesFromSettings_NoLanguages(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetProjectSettingsFunc: func() (*model.ProjectSettings, error) {
+			return &model.ProjectSettings{
+				Language: &model.LanguageSettings{DefaultLanguageCode: "en_US"},
+			}, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	ok, err := listLanguagesFromSettings(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ok {
+		t.Error("expected handled=false when no languages registered")
+	}
+}
+
 func TestAlterLanguageDrop_DefaultLang(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
