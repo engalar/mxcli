@@ -548,3 +548,26 @@ end;`
 		t.Errorf("expected `loop $Acc in $Accs` in output; got:\n%s", out)
 	}
 }
+
+// TestQuoteIfReserved_Reserved guards the Issue-003 fix: parameter names
+// that collide with MDL reserved words must be backtick-quoted in DESCRIBE
+// MICROFLOW output so the rendered MDL roundtrips through the parser.
+func TestQuoteIfReserved_Reserved(t *testing.T) {
+	for _, kw := range []string{"Template", "Attribute", "Column", "List", "Row", "Item"} {
+		got := quoteIfReserved(kw)
+		want := "`" + kw + "`"
+		if got != want {
+			t.Errorf("quoteIfReserved(%q) = %q, want %q", kw, got, want)
+		}
+	}
+}
+
+// TestQuoteIfReserved_Plain ensures ordinary identifiers are left untouched.
+func TestQuoteIfReserved_Plain(t *testing.T) {
+	for _, plain := range []string{"ImportData", "FileContent", "OrderLine"} {
+		got := quoteIfReserved(plain)
+		if got != plain {
+			t.Errorf("quoteIfReserved(%q) = %q, want %q", plain, got, plain)
+		}
+	}
+}

@@ -36,6 +36,36 @@ import (
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
+// mdlReservedWords is the set of MDL lexer token names (lowercase) that are
+// keywords and would fail to parse as bare identifiers in parameterName
+// context. Subset of the keyword rule in MDLSettings.g4.
+var mdlReservedWords = func() map[string]struct{} {
+	words := []string{
+		"template", "attribute", "attributes", "column", "columns",
+		"list", "row", "item", "filter",
+		"select", "from", "where", "group", "order", "join",
+		"create", "alter", "drop", "insert", "delete", "update",
+		"return", "returns", "begin", "end", "if", "else", "then",
+		"call", "declare", "commit", "rollback", "loop",
+		"module", "entity", "association", "enumeration",
+	}
+	m := make(map[string]struct{}, len(words))
+	for _, w := range words {
+		m[w] = struct{}{}
+	}
+	return m
+}()
+
+// quoteIfReserved wraps name in backticks if it matches an MDL reserved word.
+// Used when outputting parameter names in DESCRIBE MICROFLOW so the rendered
+// MDL roundtrips through the parser.
+func quoteIfReserved(name string) string {
+	if _, ok := mdlReservedWords[strings.ToLower(name)]; ok {
+		return "`" + name + "`"
+	}
+	return name
+}
+
 // describeMicroflowGen prints the gen-rendered MDL for a microflow to
 // ctx.Output. Mirror of describeNanoflowGen — locates the microflow by
 // (module, name) via ctx.Microflows.ListAll() + container module
@@ -141,7 +171,7 @@ func DescribeMicroflowGenToString(ctx *ExecContext, mf *genMf.Microflow) (string
 			if i == len(params)-1 {
 				comma = ""
 			}
-			lines = append(lines, fmt.Sprintf("  $%s: %s%s", p.name, p.declType, comma))
+			lines = append(lines, fmt.Sprintf("  $%s: %s%s", quoteIfReserved(p.name), p.declType, comma))
 		}
 		lines = append(lines, ")")
 	} else {

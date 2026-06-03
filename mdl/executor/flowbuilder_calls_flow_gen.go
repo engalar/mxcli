@@ -43,6 +43,25 @@ import (
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
+// checkOutputVarCollision reports an error if varName is already declared in fb,
+// and registers it in declaredVars if not. Returns true if a collision is detected,
+// in which case the caller must not set the action's output variable (doing so would
+// produce a CE0111 duplicate-variable error when the project opens in Studio Pro).
+func checkOutputVarCollision(fb *flowBuilderGen, varName string) bool {
+	if varName == "" {
+		return false
+	}
+	if fb.isVariableDeclared("$" + varName) {
+		fb.addError(
+			"output variable $%s is already declared in this microflow; use a unique name (e.g. $%s2)",
+			varName, varName,
+		)
+		return true
+	}
+	fb.declaredVars[varName] = "Unknown"
+	return false
+}
+
 // addCallMicroflowActionGen emits a `call microflow Mod.MF (args)`
 // activity. Reports a validation error when the called microflow
 // can't be located via fb.microflowsRepo (offline mode skips the
@@ -70,8 +89,11 @@ func (fb *flowBuilderGen) addCallMicroflowActionGen(s *ast.CallMicroflowStmt) el
 	assignFreshID(action)
 	action.SetErrorHandlingType(fb.ehTypeGen(s.ErrorHandling))
 	action.SetMicroflowCall(call)
-	action.SetOutputVariableName(s.OutputVariable)
-	action.SetUseReturnVariable(s.OutputVariable != "")
+
+	if !checkOutputVarCollision(fb, s.OutputVariable) {
+		action.SetOutputVariableName(s.OutputVariable)
+		action.SetUseReturnVariable(s.OutputVariable != "")
+	}
 
 	// TODO Stage 3.2.3.j: track result variable's entity type via
 	// fb.microflowsRepo's ReturnType lookup so downstream CHANGE /
@@ -107,8 +129,11 @@ func (fb *flowBuilderGen) addCallNanoflowActionGen(s *ast.CallNanoflowStmt) elem
 	assignFreshID(action)
 	action.SetErrorHandlingType(fb.ehTypeGen(s.ErrorHandling))
 	action.SetNanoflowCall(call)
-	action.SetOutputVariableName(s.OutputVariable)
-	action.SetUseReturnVariable(s.OutputVariable != "")
+
+	if !checkOutputVarCollision(fb, s.OutputVariable) {
+		action.SetOutputVariableName(s.OutputVariable)
+		action.SetUseReturnVariable(s.OutputVariable != "")
+	}
 
 	// TODO Stage 3.2.3.j: same return-type tracking caveat as
 	// addCallMicroflowActionGen.
