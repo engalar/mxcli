@@ -55,3 +55,26 @@ func (e *Env) daemonBinaryMtime() string {
 	}
 	return fmt.Sprintf("%d", info.ModTime().UnixNano())
 }
+
+func (e *Env) localDir() string { return filepath.Join(e.HomeDir, ".mxcli", "local") }
+
+func (e *Env) localBinaryPath() string {
+	name := "mxcli-local"
+	if runtime.GOOS == "windows" {
+		name = "mxcli-local.exe"
+	}
+	return filepath.Join(e.localDir(), name)
+}
+
+func (e *Env) localBinaryBakPath() string {
+	if runtime.GOOS == "windows" {
+		return filepath.Join(e.localDir(), "mxcli-local.bak.exe")
+	}
+	return filepath.Join(e.localDir(), "mxcli-local.bak")
+}
+
+func (e *Env) localVersionPath() string   { return filepath.Join(e.localDir(), "version") }
+func (e *Env) localLastCheckPath() string { return filepath.Join(e.localDir(), "last-check") }
+func (e *Env) localUpdateAvailablePath() string {
+	return filepath.Join(e.localDir(), "update-available")
+}
