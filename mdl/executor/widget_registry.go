@@ -16,13 +16,22 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/widgets/mpk"
 )
 
+// DiscoveredWidget holds metadata for a widget found in widgets/*.mpk but not
+// yet loaded into the registry (no embedded template or .def.json extracted).
+type DiscoveredWidget struct {
+	WidgetID    string // e.g. "com.mendix.widget.web.combobox.Combobox"
+	Name        string // display name from widget XML, e.g. "Combo box"
+	Description string // description from widget XML
+}
+
 // WidgetRegistry holds loaded widget definitions keyed by uppercase MDL name.
 type WidgetRegistry struct {
-	byMDLName       map[string]*WidgetDefinition // keyed by uppercase MDLName
-	byWidgetID      map[string]*WidgetDefinition // keyed by widgetId
-	knownOperations map[string]bool              // operations accepted during validation
-	projectDir      string                       // project root for MPK fallback
-	mpkNameMap      map[string]string            // uppercase MDLName → widgetID (pre-scan)
+	byMDLName       map[string]*WidgetDefinition   // keyed by uppercase MDLName
+	byWidgetID      map[string]*WidgetDefinition    // keyed by widgetId
+	knownOperations map[string]bool                 // operations accepted during validation
+	projectDir      string                          // project root for MPK fallback
+	mpkNameMap      map[string]string               // uppercase MDLName → widgetID (pre-scan, legacy)
+	mpkDiscovered   map[string]*DiscoveredWidget    // uppercase MDLName → full discovery info
 }
 
 // defaultKnownOperations is the set of operation names supported by the widget engine.
@@ -71,6 +80,7 @@ func NewWidgetRegistryWithOps(extraOps map[string]bool) (*WidgetRegistry, error)
 		byWidgetID:      make(map[string]*WidgetDefinition),
 		knownOperations: ops,
 		mpkNameMap:      make(map[string]string),
+		mpkDiscovered:   make(map[string]*DiscoveredWidget),
 	}
 
 	entries, err := definitions.EmbeddedFS.ReadDir(".")
@@ -169,13 +179,13 @@ func (r *WidgetRegistry) Count() int {
 	return len(r.byMDLName)
 }
 
-// MPKDiscovered returns a map of uppercase MDL name → widget ID for widgets
-// discovered in the project's widgets/ directory but not yet loaded into the
-// registry (i.e., not in embedded definitions and no .def.json extracted).
+// MPKDiscovered returns widgets found in the project's widgets/*.mpk files that
+// are not yet loaded into the registry (no embedded definition, no .def.json).
 // Call SetProjectDir first to populate this map.
-func (r *WidgetRegistry) MPKDiscovered() map[string]string {
-	result := make(map[string]string, len(r.mpkNameMap))
-	for k, v := range r.mpkNameMap {
+// The map key is the uppercase MDL name derived from the widget ID.
+func (r *WidgetRegistry) MPKDiscovered() map[string]*DiscoveredWidget {
+	result := make(map[string]*DiscoveredWidget, len(r.mpkDiscovered))
+	for k, v := range r.mpkDiscovered {
 		result[k] = v
 	}
 	return result
@@ -331,6 +341,7 @@ func (r *WidgetRegistry) validateMappings(mappings []PropertyMapping, source, mo
 func (r *WidgetRegistry) SetProjectDir(projectDir string) error {
 	r.projectDir = projectDir
 	r.mpkNameMap = make(map[string]string)
+	r.mpkDiscovered = make(map[string]*DiscoveredWidget)
 	return r.preScanWidgets(projectDir)
 }
 
@@ -352,6 +363,11 @@ func (r *WidgetRegistry) preScanWidgets(projectDir string) error {
 				continue // builtin or user-override wins
 			}
 			r.mpkNameMap[name] = d.ID
+			r.mpkDiscovered[name] = &DiscoveredWidget{
+				WidgetID:    d.ID,
+				Name:        d.Name,
+				Description: d.Description,
+			}
 		}
 	}
 	return nil

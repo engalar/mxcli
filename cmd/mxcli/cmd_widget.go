@@ -545,18 +545,24 @@ func runWidgetList(cmd *cobra.Command, args []string) error {
 	// Show widgets discovered in widgets/*.mpk but not yet extracted to .def.json.
 	discovered := registry.MPKDiscovered()
 	if len(discovered) > 0 {
-		fmt.Fprintf(out, "\n%-16s %-20s %s\n", "Kind", "MDL Name (auto)", "Widget ID")
-		fmt.Fprintf(out, "%-16s %-20s %s\n", strings.Repeat("-", 16), strings.Repeat("-", 20), strings.Repeat("-", 50))
-		// Sort for stable output.
+		fmt.Fprintf(out, "\n--- Discovered in widgets/*.mpk (not yet extracted) ---\n\n")
+		fmt.Fprintf(out, "%-22s %-32s %-45s %s\n", "MDL Name (auto)", "Display Name", "Widget ID", "Description")
+		fmt.Fprintf(out, "%-22s %-32s %-45s %s\n",
+			strings.Repeat("-", 22), strings.Repeat("-", 32), strings.Repeat("-", 45), strings.Repeat("-", 30))
 		names := make([]string, 0, len(discovered))
 		for name := range discovered {
 			names = append(names, name)
 		}
 		sort.Strings(names)
 		for _, name := range names {
-			fmt.Fprintf(out, "%-16s %-20s %s\n", "mpk (auto)", strings.ToLower(name), discovered[name])
+			w := discovered[name]
+			desc := w.Description
+			if len(desc) > 60 {
+				desc = desc[:57] + "..."
+			}
+			fmt.Fprintf(out, "%-22s %-32s %-45s %s\n", strings.ToLower(name), w.Name, w.WidgetID, desc)
 		}
-		fmt.Fprintf(out, "\n(Run 'mxcli widget extract --mpk widgets/<file>.mpk' to generate a .def.json for these widgets)\n")
+		fmt.Fprintf(out, "\nRun 'mxcli widget extract --mpk widgets/<file>.mpk' to generate .def.json\n")
 	}
 
 	fmt.Fprintf(out, "\nTotal: %d loaded, %d from MPK\n", len(defs), len(discovered))
