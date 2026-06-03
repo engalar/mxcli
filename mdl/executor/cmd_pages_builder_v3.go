@@ -1526,6 +1526,8 @@ func (pb *pageBuilder) buildLayoutGridRowV3(w *ast.WidgetV3) (element.Element, e
 	row := genPg.NewLayoutGridRow()
 	assignFreshID(row)
 
+	var desktopSum int
+	var hasExplicit bool
 	for _, child := range w.Children {
 		if strings.ToLower(child.Type) == "column" {
 			col, err := pb.buildLayoutGridColumnV3(child)
@@ -1533,7 +1535,21 @@ func (pb *pageBuilder) buildLayoutGridRowV3(w *ast.WidgetV3) (element.Element, e
 				return nil, err
 			}
 			row.AddColumns(col)
+			if dw := child.GetDesktopWidth(); dw != nil {
+				if v, ok := dw.(int); ok {
+					desktopSum += v
+					hasExplicit = true
+				}
+			}
 		}
+	}
+
+	// Studio Pro requires that explicit desktop widths sum to exactly 12 (CE0535).
+	// Warn immediately so the user can correct before opening in Studio Pro.
+	if hasExplicit && desktopSum != 12 {
+		log.Printf("WARNING [%s]: LAYOUTGRID row desktop column widths sum to %d, but Studio Pro requires exactly 12 (CE0535).\n"+
+			"  Adjust desktopwidth values so they add up to 12 (e.g. 8+4, 6+6, 4+4+4).",
+			w.Name, desktopSum)
 	}
 
 	return row, nil
