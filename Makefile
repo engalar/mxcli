@@ -32,6 +32,9 @@ LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 RELEASE_LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -s -w"
 LAUNCHER_LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.LauncherBuild=$(BUILD_TIME) -s -w"
 DAEMON_NAME = mxcli-daemon
+LOCAL_NAME = mxcli-local
+LOCAL_PATH = ./cmd/mxcli-local
+LOCAL_LDFLAGS = -ldflags "-X main.Version=$(VERSION) -s -w"
 
 # Clean version for VS Code extension (must be valid semver: major.minor.patch)
 VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$$' || echo "0.0.0")
@@ -53,7 +56,7 @@ TEST_PARALLEL ?= $(_85PCT)
 # Hard ceiling on how long the full test suite may run.
 TEST_TIMEOUT ?= 180s
 
-.PHONY: build build-debug release clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon test-section-check update-snapshots validate-snapshots
+.PHONY: build build-local install-local build-debug release clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon test-section-check update-snapshots validate-snapshots
 
 setup:
 	git config core.hooksPath .githooks
@@ -174,6 +177,17 @@ build: sync-all
 	else \
 		echo "Built $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/$(DAEMON_NAME) $(BUILD_DIR)/source_tree"; \
 	fi
+
+build-local:
+	@mkdir -p $(BUILD_DIR)
+	CGO_ENABLED=0 go build $(LOCAL_LDFLAGS) -o $(BUILD_DIR)/$(LOCAL_NAME) $(LOCAL_PATH)
+	@echo "Built $(BUILD_DIR)/$(LOCAL_NAME)"
+
+install-local: build-local
+	@LOCAL_DIR="$$HOME/.mxcli/local"; \
+	mkdir -p "$$LOCAL_DIR"; \
+	cp "$(BUILD_DIR)/$(LOCAL_NAME)" "$$LOCAL_DIR/$(LOCAL_NAME)"; \
+	echo "Installed: $$LOCAL_DIR/$(LOCAL_NAME)"
 
 # Compress a single daemon binary: make compress-daemon BIN=bin/mxcli-daemon-linux-amd64
 compress-daemon:
