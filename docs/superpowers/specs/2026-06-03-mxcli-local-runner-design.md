@@ -295,14 +295,280 @@ return cmd.Run()           // 阻塞直到 Ctrl+C 或 runtime 退出
 
 ---
 
-## 六、测试策略
+## 六、测试夹具设计
 
-| 层级 | 覆盖内容 |
-|------|---------|
-| Unit | `parseJVMOpts`、`buildJavaArgs`、`parseDBURL`、`upgradeComponent`、self-fork updater flag 解析 |
-| Integration | `StartLocal` 在 Linux CI 上用 testdata PAD 验证 java 命令可构造（不实际启动 runtime） |
-| CI | `release-local.yml` 跑 `make release-local` 验证交叉编译通过 |
-| Windows | `spawn_windows.go` 的 `hideDaemonWindow` 已有测试；updater PID 等待逻辑用 mock process 测试 |
+**设计原则**：夹具编码契约。夹具知道"合法状态"的全部细节——若实现改变导致夹具不再有效，测试立即失败，而不是悄悄通过。每个夹具对应一个可注入的接口，生产代码与测试代码解耦。
+
+---
+
+### 6.1 FakePAD（`cmd/mxcli/docker/testfixtures/`）
+
+编码 `hasExtractedPADLayout()` 所要求的合法 PAD 结构。若结构约束变化，夹具必须同步更新。
+
+```go
+// FakePAD creates a minimal valid PAD directory for StartLocal tests.
+type FakePAD struct {
+    Dir string
+}
+
+func NewFakePAD(t *testing.T) *FakePAD
+// 创建：bin/start(可执行)、lib/runtime/launcher/runtimelauncher.jar(空文件)
+// lib/runtime/lib/x64/、app/model/lib/userlib/、etc/Default(include chain)
+// etc/configurations/Default.conf、etc/variables.conf、etc/StudioPro.conf
+
+func (p *FakePAD) SetJVMHeap(heap string) *FakePAD       // 写 jvm.heap = 512m
+func (p *FakePAD) SetJVMParams(params string) *FakePAD   // 写 jvm.params = "-XX:..."
+func (p *FakePAD) SetPorts(runtime, admin int) *FakePAD  // 覆盖 Default.conf 端口
+func (p *FakePAD) SetDBConfig(dbType, jdbcURL, user, pass string) *FakePAD
+```
+
+**防退化价值**：`hasExtractedPADLayout` 的每个检查项在 `NewFakePAD` 里都有对应的创建语句，少一项则 `TestStartLocal_ValidPAD` 失败。
+
+---
+
+### 6.2 ProcessStarter 接口（`cmd/mxcli/docker/`）
+
+`StartLocal()` 通过此接口启动 java 进程，测试注入 `CaptureStarter` 而非真实 `exec.Cmd`。
+
+```go
+// ProcessStarter abstracts exec.Cmd start + wait.
+type ProcessStarter interface {
+    Run(cmd *exec.Cmd) error
+}
+
+// RealStarter: cmd.Run()（生产）
+// CaptureStarter: 记录调用，立即返回 nil（测试）
+
+type CapturedInvocation struct {
+    Binary string
+    Args   []string
+    Env    []string
+}
+
+type CaptureStarter struct {
+    Invocations []CapturedInvocation
+}
+
+func (c *CaptureStarter) Run(cmd *exec.Cmd) error {
+    c.Invocations = append(c.Invocations, CapturedInvocation{
+        Binary: cmd.Path,
+        Args:   cmd.Args,
+        Env:    cmd.Env,
+    })
+    return nil
+}
+```
+
+**典型测试**：
+```go
+func TestStartLocal_JavaArgs(t *testing.T) {
+    pad := testfixtures.NewFakePAD(t).SetJVMHeap("512m")
+    cs  := &docker.CaptureStarter{}
+
+    err := docker.StartLocal(docker.LocalRunOptions{
+        PadDir:   pad.Dir,
+        JavaHome: fakeJavaHome(t),  // 任意有效路径（bin/java 存在即可）
+        Starter:  cs,
+    })
+    require.NoError(t, err)
+
+    inv := cs.Invocations[0]
+    assert.Contains(t, inv.Args, "-Xmx512m")
+    assert.Contains(t, inv.Args, "-Dfile.encoding=UTF-8")
+    assert.Contains(t, inv.Args, "-jar")
+    // 确保 app/. 和 etc/Default 作为位置参数出现
+    assert.Equal(t, inv.Args[len(inv.Args)-1], filepath.Join(pad.Dir, "etc", "Default"))
+}
+```
+
+---
+
+### 6.3 ComponentPayload（泛化 DaemonPayload，`mxcli-launcher/testfixtures/`）
+
+现有 `DaemonPayload` + `BuildDaemonPayloadForPlatform` 泛化为 `ComponentPayload`，统一支持 daemon / local 两个组件。
+
+```go
+type ComponentPayload struct {
+    AssetName string   // e.g. "mxcli-local-linux-amd64.tar.zst"
+    Archive   []byte
+    Checksum  string
+}
+
+// component = "mxcli-daemon" | "mxcli-local" | "mxcli"（launcher）
+func BuildComponentPayload(component, goos, goarch string, content []byte) (*ComponentPayload, error)
+
+// 向后兼容：现有 BuildDaemonPayload 委托到 BuildComponentPayload
+func BuildDaemonPayload(content []byte) (*DaemonPayload, error) // 保留，内部转发
+```
+
+---
+
+### 6.4 MultiReleaseFakeGitHub（扩展 FakeGitHub，`mxcli-launcher/testfixtures/`）
+
+现有 `FakeGitHub` 只服务单一 `LatestTag`。新版支持多个 tag 系列，模拟 `/releases` 列表接口的 tag 前缀过滤。
+
+```go
+type ReleaseEntry struct {
+    Tag     string
+    Assets  map[string]*ComponentPayload // assetName → payload
+}
+
+// MultiReleaseFakeGitHub 扩展 FakeGitHub，支持多个 release 系列。
+// 现有 FakeGitHub 字段（StatusCode、DownloadCut、CorruptBinary）继续有效。
+type MultiReleaseFakeGitHub struct {
+    FakeGitHub                        // 嵌入，保留 /releases/latest 兼容
+    Releases   []ReleaseEntry         // 按时间降序（index 0 = 最新）
+}
+
+// /releases?per_page=N → 返回 Releases 的 JSON 数组
+// /releases/latest     → 返回 Releases[0]（全局最新）
+// SHA256SUMS           → 从 release 的 Assets 生成
+```
+
+**防退化价值**：`TestFetchLatestTagWithPrefix_MultiSeries` 验证 `daemon-v*` 不会拿到 `local-v*` 的 release，反之亦然。
+
+---
+
+### 6.5 PIDWaiter 接口（`cmd/mxcli-launcher/`）
+
+Self-fork updater 的"等待父进程退出"逻辑通过此接口注入，消除定时器依赖。
+
+```go
+// PIDWaiter waits for a process to exit.
+type PIDWaiter interface {
+    WaitForExit(pid int, timeout time.Duration) error
+}
+
+// RealPIDWaiter: Windows = WaitForSingleObject; POSIX = kill(pid,0) 轮询
+// FakePIDWaiter: channel 驱动，测试完全控制时序
+
+type FakePIDWaiter struct {
+    ExitC chan struct{} // close 触发"进程已退出"
+}
+
+func NewFakePIDWaiter() *FakePIDWaiter {
+    return &FakePIDWaiter{ExitC: make(chan struct{})}
+}
+
+func (f *FakePIDWaiter) WaitForExit(pid int, timeout time.Duration) error {
+    select {
+    case <-f.ExitC:
+        return nil
+    case <-time.After(timeout):
+        return fmt.Errorf("timeout waiting for PID %d", pid)
+    }
+}
+
+func (f *FakePIDWaiter) SimulateExit() { close(f.ExitC) }
+```
+
+**典型测试**：
+```go
+func TestSelfForkUpdater_WaitsBeforeReplacing(t *testing.T) {
+    waiter := testfixtures.NewFakePIDWaiter()
+    oldBin := writeFile(t, "old-content")
+    newBin := writeFile(t, "new-content")
+
+    done := make(chan error, 1)
+    go func() {
+        done <- runInternalUpdate(99999, newBin, oldBin, waiter, 5*time.Second)
+    }()
+
+    // 父进程未退出 → 文件不应被替换
+    time.Sleep(20 * time.Millisecond)
+    assert.Equal(t, "old-content", readFile(t, oldBin))
+
+    // 模拟父进程退出
+    waiter.SimulateExit()
+    require.NoError(t, <-done)
+    assert.Equal(t, "new-content", readFile(t, oldBin))
+}
+
+func TestSelfForkUpdater_VerificationFail_Rollback(t *testing.T) {
+    waiter := testfixtures.NewFakePIDWaiter()
+    oldBin := writeFile(t, "good-content")
+    newBin := writeFile(t, "bad-binary")  // 这个 binary 执行 `version` 会返回非零
+
+    waiter.SimulateExit()
+    err := runInternalUpdate(1, newBin, oldBin, waiter, time.Second)
+
+    assert.Error(t, err)
+    assert.Equal(t, "good-content", readFile(t, oldBin)) // 自动回滚
+}
+```
+
+---
+
+### 6.6 UpgradeHarness（端到端升级场景，`mxcli-launcher/testfixtures/`）
+
+组合 MultiReleaseFakeGitHub + Env + temp HomeDir，提供一行式场景构建。
+
+```go
+type UpgradeHarness struct {
+    Env *Env
+    GH  *MultiReleaseFakeGitHub
+    HomeDir string
+}
+
+// NewUpgradeHarness 构建包含 FakeGitHub 的完整 Env，注入 LocalBinaryResolver。
+func NewUpgradeHarness(t *testing.T) *UpgradeHarness
+
+// AddRelease 向 FakeGitHub 注册一个 release（daemon 或 local）。
+func (h *UpgradeHarness) AddRelease(tag string, component string, content []byte) *UpgradeHarness
+
+// InstalledVersion 读取 ~/.mxcli/{component}/version 文件。
+func (h *UpgradeHarness) InstalledVersion(component string) string
+
+// InstalledBinaryContent 读取已安装二进制的内容（用于断言"binary 确实被替换"）。
+func (h *UpgradeHarness) InstalledBinaryContent(component string) []byte
+```
+
+**典型测试**：
+```go
+func TestUpgradeDaemon_FreshInstall(t *testing.T) {
+    h := testfixtures.NewUpgradeHarness(t).
+        AddRelease("daemon-v1.2.0", "mxcli-daemon", []byte("daemon-v1.2.0-binary"))
+
+    err := h.Env.upgradeComponent(daemonComponentConfig)
+
+    require.NoError(t, err)
+    assert.Equal(t, "daemon-v1.2.0", h.InstalledVersion("daemon"))
+    assert.Equal(t, []byte("daemon-v1.2.0-binary"), h.InstalledBinaryContent("daemon"))
+}
+
+func TestUpgradeLocal_TagPrefixIsolation(t *testing.T) {
+    h := testfixtures.NewUpgradeHarness(t).
+        AddRelease("daemon-v2.0.0", "mxcli-daemon", []byte("daemon")).
+        AddRelease("local-v0.3.0", "mxcli-local", []byte("local-v030"))
+
+    err := h.Env.upgradeComponent(localComponentConfig)
+
+    require.NoError(t, err)
+    // local upgrade 不应拿到 daemon release
+    assert.Equal(t, "local-v0.3.0", h.InstalledVersion("local"))
+    assert.Equal(t, []byte("local-v030"), h.InstalledBinaryContent("local"))
+    // daemon 未被动到
+    assert.Equal(t, "", h.InstalledVersion("daemon"))
+}
+```
+
+---
+
+### 6.7 测试矩阵（夹具 × 场景）
+
+| 测试 | 夹具 | 防退化断言 |
+|------|------|-----------|
+| java 命令参数构造 | FakePAD + CaptureStarter | 每个 -D 标志均断言 |
+| JVM heap 从 HOCON 读取 | FakePAD.SetJVMHeap + CaptureStarter | -Xmx 出现在 args |
+| DB URL 注入环境变量 | FakePAD + CaptureStarter | RUNTIME_PARAMS_* 出现在 cmd.Env |
+| PAD 缺失时的错误信息 | 空 tmpdir + CaptureStarter | error 含"mxcli local build" |
+| 升级组件 - 新装 | UpgradeHarness.AddRelease | 版本文件 + 二进制内容 |
+| 升级组件 - tag 前缀隔离 | UpgradeHarness 多 release | local 不拿 daemon release |
+| 升级组件 - checksum 不符 | UpgradeHarness + CorruptBinary | 返回 error，原文件不变 |
+| self-fork 等待父进程退出 | FakePIDWaiter | 替换时序精确控制 |
+| self-fork 新版本验证失败回滚 | FakePIDWaiter + bad binary | 原文件恢复 |
+| launcher 路由 local 子命令 | Env.LocalBinaryPath 注入 | 传递正确 args |
+| 多系列 release 列表过滤 | MultiReleaseFakeGitHub | GET /releases 请求路径 |
 
 ---
 
