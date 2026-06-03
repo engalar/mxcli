@@ -61,6 +61,7 @@ cmd/mxcli/vscode-mdl.vsix
 vscode-mdl/*.vsix
 # Build artifacts
 /mxcli
+/mxcli-launcher
 grammardoc
 *.cast
 *.pptx
