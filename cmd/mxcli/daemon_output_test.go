@@ -30,7 +30,7 @@ func TestNoBareStdoutInCmdFiles(t *testing.T) {
 	allowances := map[string]int{
 		"cmd_bson_compare.go":      5,
 		"cmd_bson_dump.go":         9,
-		"cmd_check.go":             5,
+		// cmd_check.go: fully fixed (RunE + cmd.ErrOrStderr), allowance = 0 (not listed)
 		"cmd_expr.go":              2,
 		"cmd_expr_daemon.go":       3,
 		"cmd_extract_templates.go": 11,

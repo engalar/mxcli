@@ -41,12 +41,15 @@ Examples:
   mxcli check script.mdl --format sarif
 `,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		filePath := args[0]
 		projectPath, _ := cmd.Flags().GetString("project")
 		checkRefs, _ := cmd.Flags().GetBool("references")
 		format := resolveFormat(cmd, "text")
 		isStructured := format != "" && format != "text"
+
+		out := cmd.OutOrStdout()
+		errOut := cmd.ErrOrStderr()
 
 		outputFormat := linter.OutputFormat(format)
 		formatter := linter.GetFormatter(outputFormat, !isStructured)
@@ -54,13 +57,12 @@ Examples:
 		// Read the file
 		content, err := os.ReadFile(filePath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading file: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("reading file: %w", err)
 		}
 
 		// Parse the script
 		if !isStructured {
-			fmt.Printf("Checking syntax: %s\n", filePath)
+			fmt.Fprintf(out, "Checking syntax: %s\n", filePath)
 		}
 		prog, errs := visitor.Build(string(content))
 		if len(errs) > 0 {
@@ -73,22 +75,22 @@ Examples:
 						Message:  parseErr.Error(),
 					})
 				}
-				formatter.Format(parseViolations, os.Stderr)
+				formatter.Format(parseViolations, errOut)
 			} else {
-				fmt.Fprintf(os.Stderr, "Syntax errors found:\n")
-				for _, err := range errs {
-					fmt.Fprintf(os.Stderr, "  - %v\n", err)
+				fmt.Fprintf(errOut, "Syntax errors found:\n")
+				for _, parseErr := range errs {
+					fmt.Fprintf(errOut, "  - %v\n", parseErr)
 				}
 				// Hint: if script contains IMPORT/QUERY with single $ but not $$, suggest dollar-quoting
 				src := string(content)
 				if (strings.Contains(src, "IMPORT") || strings.Contains(src, "import")) &&
 					(strings.Contains(src, "QUERY") || strings.Contains(src, "query")) &&
 					strings.Contains(src, "$") && !strings.Contains(src, "$$") {
-					fmt.Fprintf(os.Stderr, "\nHint: SQL queries in IMPORT statements should use dollar-quoting ($$...$$) instead of single quotes.\n")
-					fmt.Fprintf(os.Stderr, "  Example: IMPORT FROM alias QUERY $$SELECT * FROM table$$ INTO Module.Entity MAP (...)\n")
+					fmt.Fprintf(errOut, "\nHint: SQL queries in IMPORT statements should use dollar-quoting ($$...$$) instead of single quotes.\n")
+					fmt.Fprintf(errOut, "  Example: IMPORT FROM alias QUERY $$SELECT * FROM table$$ INTO Module.Entity MAP (...)\n")
 				}
 			}
-			os.Exit(1)
+			return fmt.Errorf("syntax check failed with %d error(s)", len(errs))
 		}
 		stmtCount := len(prog.Statements)
 
@@ -121,31 +123,30 @@ Examples:
 
 		if isStructured {
 			// Always emit structured output (even when clean)
-			formatter.Format(violations, os.Stderr)
+			formatter.Format(violations, errOut)
 		} else if len(violations) > 0 {
-			fmt.Fprintln(os.Stderr)
-			formatter.Format(violations, os.Stderr)
+			fmt.Fprintln(errOut)
+			formatter.Format(violations, errOut)
 		}
 
 		if len(violations) > 0 {
 			summary := linter.Summarize(violations)
 			if summary.Errors > 0 {
-				os.Exit(1)
+				return fmt.Errorf("check failed with %d error(s)", summary.Errors)
 			}
 		}
 
 		// If reference checking requested
 		if checkRefs {
 			if projectPath == "" {
-				fmt.Fprintln(os.Stderr, "Error: --project (-p) is required for reference checking")
-				os.Exit(1)
+				return fmt.Errorf("--project (-p) is required for reference checking")
 			}
 
 			if !isStructured {
-				fmt.Printf("\nValidating references against: %s\n", projectPath)
-				fmt.Printf("(Note: References to objects created within the script are skipped)\n")
+				fmt.Fprintf(out, "\nValidating references against: %s\n", projectPath)
+				fmt.Fprintf(out, "(Note: References to objects created within the script are skipped)\n")
 			}
-			exec, logger := newLoggedExecutor("check", cmd.OutOrStdout())
+			exec, logger := newLoggedExecutor("check", out)
 			defer logger.Close()
 			defer exec.Close()
 
@@ -153,8 +154,7 @@ Examples:
 			connectProg, _ := visitor.Build(fmt.Sprintf("CONNECT LOCAL '%s'", projectPath))
 			for _, stmt := range connectProg.Statements {
 				if err := exec.Execute(stmt); err != nil {
-					fmt.Fprintf(os.Stderr, "Error connecting: %v\n", err)
-					os.Exit(1)
+					return fmt.Errorf("connecting to project: %w", err)
 				}
 			}
 
@@ -167,30 +167,31 @@ Examples:
 			if len(validationErrors) > 0 {
 				if isStructured {
 					var refViolations []linter.Violation
-					for _, err := range validationErrors {
+					for _, vErr := range validationErrors {
 						refViolations = append(refViolations, linter.Violation{
 							RuleID:   "MDL-REF",
 							Severity: linter.SeverityError,
-							Message:  err.Error(),
+							Message:  vErr.Error(),
 						})
 					}
-					formatter.Format(refViolations, os.Stderr)
+					formatter.Format(refViolations, errOut)
 				} else {
-					fmt.Fprintf(os.Stderr, "Reference errors:\n")
-					for _, err := range validationErrors {
-						fmt.Fprintf(os.Stderr, "  %v\n", err)
+					fmt.Fprintf(errOut, "Reference errors:\n")
+					for _, vErr := range validationErrors {
+						fmt.Fprintf(errOut, "  %v\n", vErr)
 					}
-					fmt.Fprintf(os.Stderr, "\n✗ %d reference error(s) found\n", len(validationErrors))
+					fmt.Fprintf(errOut, "\n✗ %d reference error(s) found\n", len(validationErrors))
 				}
-				os.Exit(1)
+				return fmt.Errorf("reference check failed with %d error(s)", len(validationErrors))
 			}
 			if !isStructured {
-				fmt.Printf("✓ All references valid\n")
+				fmt.Fprintf(out, "✓ All references valid\n")
 			}
 		}
 
 		if !isStructured {
-			fmt.Printf("✓ Check passed! (%d statements)\n", stmtCount)
+			fmt.Fprintf(out, "✓ Check passed! (%d statements)\n", stmtCount)
 		}
+		return nil
 	},
 }
