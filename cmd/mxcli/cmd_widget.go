@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/executor"
@@ -516,20 +517,20 @@ func runWidgetList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create widget registry: %w", err)
 	}
 
-	// Load user definitions if project path available
+	// Load user definitions and scan project MPKs if project path is available.
 	projectPath, _ := cmd.Flags().GetString("project")
 	if projectPath != "" {
 		if err := registry.LoadUserDefinitions(projectPath); err != nil {
 			log.Printf("warning: loading user widget definitions: %v", err)
 		}
+		projectDir := filepath.Dir(projectPath)
+		if err := registry.SetProjectDir(projectDir); err != nil {
+			log.Printf("warning: scanning project widgets/: %v", err)
+		}
 	}
 
-	defs := registry.All()
 	out := cmd.OutOrStdout()
-	if len(defs) == 0 {
-		fmt.Fprintln(out, "No widget definitions registered.")
-		return nil
-	}
+	defs := registry.All()
 
 	fmt.Fprintf(out, "%-16s %-20s %-50s %s\n", "Kind", "MDL Name", "Widget ID", "Template")
 	fmt.Fprintf(out, "%-16s %-20s %-50s %s\n", strings.Repeat("-", 16), strings.Repeat("-", 20), strings.Repeat("-", 50), strings.Repeat("-", 20))
@@ -540,7 +541,25 @@ func runWidgetList(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Fprintf(out, "%-16s %-20s %-50s %s\n", kind, def.MDLName, def.WidgetID, def.TemplateFile)
 	}
-	fmt.Fprintf(out, "\nTotal: %d definitions\n", len(defs))
+
+	// Show widgets discovered in widgets/*.mpk but not yet extracted to .def.json.
+	discovered := registry.MPKDiscovered()
+	if len(discovered) > 0 {
+		fmt.Fprintf(out, "\n%-16s %-20s %s\n", "Kind", "MDL Name (auto)", "Widget ID")
+		fmt.Fprintf(out, "%-16s %-20s %s\n", strings.Repeat("-", 16), strings.Repeat("-", 20), strings.Repeat("-", 50))
+		// Sort for stable output.
+		names := make([]string, 0, len(discovered))
+		for name := range discovered {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			fmt.Fprintf(out, "%-16s %-20s %s\n", "mpk (auto)", strings.ToLower(name), discovered[name])
+		}
+		fmt.Fprintf(out, "\n(Run 'mxcli widget extract --mpk widgets/<file>.mpk' to generate a .def.json for these widgets)\n")
+	}
+
+	fmt.Fprintf(out, "\nTotal: %d loaded, %d from MPK\n", len(defs), len(discovered))
 
 	return nil
 }

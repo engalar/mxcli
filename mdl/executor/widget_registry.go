@@ -169,6 +169,18 @@ func (r *WidgetRegistry) Count() int {
 	return len(r.byMDLName)
 }
 
+// MPKDiscovered returns a map of uppercase MDL name → widget ID for widgets
+// discovered in the project's widgets/ directory but not yet loaded into the
+// registry (i.e., not in embedded definitions and no .def.json extracted).
+// Call SetProjectDir first to populate this map.
+func (r *WidgetRegistry) MPKDiscovered() map[string]string {
+	result := make(map[string]string, len(r.mpkNameMap))
+	for k, v := range r.mpkNameMap {
+		result[k] = v
+	}
+	return result
+}
+
 // LoadUserDefinitions scans global and project-level directories for user-provided definitions.
 // Project definitions override global ones with the same MDL name.
 func (r *WidgetRegistry) LoadUserDefinitions(projectPath string) error {
