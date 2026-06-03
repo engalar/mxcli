@@ -26,6 +26,17 @@ const (
 	MPRVersionV2 MPRVersion = 2
 )
 
+// ScriptInsertEntry represents a unit inserted within an EXECUTE SCRIPT block
+// that has not yet been committed to SQLite. Exported so mdl/backend/mpr can
+// construct entries without a circular import.
+type ScriptInsertEntry struct {
+	ID              string
+	ContainerID     string
+	ContainmentName string
+	UnitType        string
+	Contents        []byte
+}
+
 // Reader provides methods to read Mendix project files.
 type Reader struct {
 	path           string
@@ -45,6 +56,11 @@ type Reader struct {
 	// held persistently by the per-MPR daemon. Cleared by InvalidateCache.
 	// nil means caching is disabled (zero cost on the normal per-request path).
 	contentCache map[string][]byte
+
+	// script overlay: set by MprBackend during EXECUTE SCRIPT execution so reads
+	// within the script see buffered writes before they are committed.
+	scriptOverlay map[string][]byte   // unitID → buffered content
+	scriptInserts []ScriptInsertEntry // new units not yet in SQLite
 
 	// overlay holds unit bytes injected by BufferedUnitStore so that reads
 	// within the same import file see buffered (uncommitted) writes.
@@ -394,6 +410,38 @@ func blobToUUID(blob []byte) string {
 		blob[8], blob[9],
 		blob[10], blob[11], blob[12], blob[13], blob[14], blob[15])
 }
+
+// AppendScriptInsert adds a unit to the script-mode insert list so that
+// buildUnitCache includes it in subsequent list operations.
+func (r *Reader) AppendScriptInsert(e ScriptInsertEntry) {
+	r.scriptInserts = append(r.scriptInserts, e)
+	r.unitCacheValid = false
+}
+
+// SetScriptOverlay stores content that overrides the on-disk file or SQLite
+// row for this unit. Called by ScriptBuffer on every insert and update.
+func (r *Reader) SetScriptOverlay(unitID string, contents []byte) {
+	if r.scriptOverlay == nil {
+		r.scriptOverlay = make(map[string][]byte)
+	}
+	r.scriptOverlay[unitID] = contents
+	if r.contentCache != nil {
+		delete(r.contentCache, unitID)
+	}
+}
+
+// ClearScriptMode removes the script overlay and insert list.
+func (r *Reader) ClearScriptMode() {
+	r.scriptOverlay = nil
+	r.scriptInserts = nil
+	r.unitCacheValid = false
+}
+
+// ScriptOverlay returns the current script overlay map (for tests).
+func (r *Reader) ScriptOverlay() map[string][]byte { return r.scriptOverlay }
+
+// ScriptInserts returns the current script insert list (for tests).
+func (r *Reader) ScriptInserts() []ScriptInsertEntry { return r.scriptInserts }
 
 // blobToUUIDSwapped converts a 16-byte blob to a UUID string using Microsoft GUID format.
 // The first 3 groups are little-endian (byte-swapped), last 2 groups are big-endian.
