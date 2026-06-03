@@ -11,9 +11,11 @@ import (
 )
 
 // All Create* methods in this file produce canonical BSON via the existing
-// sdk/mpr Serialize* helpers, then write the bytes through msdkWriter.InsertUnit
-// (the modelsdk write path), bypassing sdk/mpr's updateTransactionID() — that
-// call fails on hard-linked MPR files (SQLITE_READONLY_DBMOVED 1544).
+// sdk/mpr Serialize* helpers, then write the bytes through b.insertUnit, which
+// buffers into the active ScriptBuffer during EXECUTE SCRIPT or otherwise
+// delegates to the modelsdk write path, bypassing sdk/mpr's
+// updateTransactionID() — that call fails on hard-linked MPR files
+// (SQLITE_READONLY_DBMOVED 1544).
 //
 // JavaAction was migrated to the gen-native javaActionRepo in Stage
 // 3.3.2.D (commit c5695850); the bridge createJavaActionViaModelsdk
@@ -35,7 +37,7 @@ func (b *MprBackend) createDataTransformerViaModelsdk(dt *model.DataTransformer)
 	if err != nil {
 		return fmt.Errorf("serialize data transformer: %w", err)
 	}
-	return b.msdkWriter.InsertUnit(
+	return b.insertUnit(
 		string(dt.ID),
 		string(dt.ContainerID),
 		"Documents",
@@ -57,7 +59,7 @@ func (b *MprBackend) createImportMappingViaModelsdk(im *model.ImportMapping) err
 	if err != nil {
 		return fmt.Errorf("serialize import mapping: %w", err)
 	}
-	return b.msdkWriter.InsertUnit(
+	return b.insertUnit(
 		string(im.ID),
 		string(im.ContainerID),
 		"Documents",
@@ -79,7 +81,7 @@ func (b *MprBackend) createExportMappingViaModelsdk(em *model.ExportMapping) err
 	if err != nil {
 		return fmt.Errorf("serialize export mapping: %w", err)
 	}
-	return b.msdkWriter.InsertUnit(
+	return b.insertUnit(
 		string(em.ID),
 		string(em.ContainerID),
 		"Documents",
@@ -113,7 +115,7 @@ func (b *MprBackend) createConsumedODataServiceViaModelsdk(svc *model.ConsumedOD
 	if err != nil {
 		return fmt.Errorf("serialize consumed odata service: %w", err)
 	}
-	return b.msdkWriter.InsertUnit(
+	return b.insertUnit(
 		string(svc.ID),
 		string(svc.ContainerID),
 		"Documents",
@@ -133,7 +135,7 @@ func (b *MprBackend) createPublishedODataServiceViaModelsdk(svc *model.Published
 	if err != nil {
 		return fmt.Errorf("serialize published odata service: %w", err)
 	}
-	return b.msdkWriter.InsertUnit(
+	return b.insertUnit(
 		string(svc.ID),
 		string(svc.ContainerID),
 		"Documents",
@@ -155,7 +157,7 @@ func (b *MprBackend) createConsumedRestServiceViaModelsdk(svc *model.ConsumedRes
 	if err != nil {
 		return fmt.Errorf("serialize consumed rest service: %w", err)
 	}
-	return b.msdkWriter.InsertUnit(
+	return b.insertUnit(
 		string(svc.ID),
 		string(svc.ContainerID),
 		"Documents",
@@ -175,7 +177,7 @@ func (b *MprBackend) createPublishedRestServiceViaModelsdk(svc *model.PublishedR
 	if err != nil {
 		return fmt.Errorf("serialize published rest service: %w", err)
 	}
-	return b.msdkWriter.InsertUnit(
+	return b.insertUnit(
 		string(svc.ID),
 		string(svc.ContainerID),
 		"Documents",
@@ -194,7 +196,7 @@ func (b *MprBackend) createImageCollectionViaModelsdk(ic *types.ImageCollection)
 	if err != nil {
 		return fmt.Errorf("serialize image collection: %w", err)
 	}
-	return b.msdkWriter.InsertUnit(
+	return b.insertUnit(
 		string(ic.ID),
 		string(ic.ContainerID),
 		"Documents",

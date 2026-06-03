@@ -69,7 +69,7 @@ func (b *MprBackend) createViewEntitySourceDocumentViaModelsdk(moduleID model.ID
 	if err != nil {
 		return "", fmt.Errorf("serialize ViewEntitySourceDocument: %w", err)
 	}
-	if err := b.msdkWriter.InsertUnit(string(docID), string(moduleID), "Documents", "DomainModels$ViewEntitySourceDocument", contents); err != nil {
+	if err := b.insertUnit(string(docID), string(moduleID), "Documents", "DomainModels$ViewEntitySourceDocument", contents); err != nil {
 		return "", fmt.Errorf("insert ViewEntitySourceDocument: %w", err)
 	}
 	_ = moduleName

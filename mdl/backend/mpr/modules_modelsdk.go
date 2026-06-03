@@ -209,7 +209,7 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 	if err != nil {
 		return fmt.Errorf("failed to serialize module security: %w", err)
 	}
-	if err := b.msdkWriter.InsertUnit(msID, string(module.ID), "ModuleSecurity", "Security$ModuleSecurity", msContents); err != nil {
+	if err := b.insertUnit(msID, string(module.ID), "ModuleSecurity", "Security$ModuleSecurity", msContents); err != nil {
 		return fmt.Errorf("failed to insert module security unit: %w", err)
 	}
 
@@ -229,7 +229,7 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 	if err != nil {
 		return fmt.Errorf("failed to serialize module settings: %w", err)
 	}
-	if err := b.msdkWriter.InsertUnit(settingsID, string(module.ID), "ModuleSettings", "Projects$ModuleSettings", settingsContents); err != nil {
+	if err := b.insertUnit(settingsID, string(module.ID), "ModuleSettings", "Projects$ModuleSettings", settingsContents); err != nil {
 		return fmt.Errorf("failed to insert module settings unit: %w", err)
 	}
 
