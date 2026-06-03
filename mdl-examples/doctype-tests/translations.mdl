@@ -1,0 +1,72 @@
+-- ============================================================================
+-- Translations / Multilingual (i18n) Examples - MDL Syntax
+-- ============================================================================
+--
+-- This file demonstrates the MDL internationalization syntax:
+-- - Language management: SHOW LANGUAGES / SHOW SUPPORTED LANGUAGES,
+--   ALTER SETTINGS LANGUAGE ADD/DROP
+-- - Per-language translation: TRANSLATE PAGE / SNIPPET / ENUMERATION
+-- - Inspection: DESCRIBE TRANSLATIONS
+--
+-- Core rule: the target language must be registered (ALTER SETTINGS LANGUAGE
+-- ADD) before TRANSLATE can write text for it.
+--
+-- TRANSLATE WORKFLOW is intentionally NOT supported: workflow activity text
+-- uses Microflows$StringTemplate, which is not multilingual in Mendix 11.x.
+-- ============================================================================
+
+-- MARK: Setup
+
+create module I18nTest;
+
+/**
+ * An enumeration whose value captions we will translate.
+ */
+create enumeration I18nTest.Status (
+  ACTIVE 'Active',
+  CLOSED 'Closed'
+);
+
+-- ============================================================================
+-- Language management
+-- ============================================================================
+
+-- List the languages currently registered in the project.
+show languages;
+
+-- List every language code mxcli recognises (the validation whitelist).
+show supported languages;
+
+-- Register languages. ADD is idempotent and rejects codes that are not in the
+-- supported whitelist (run SHOW SUPPORTED LANGUAGES to see valid codes).
+alter settings language add 'nl_NL';
+alter settings language add 'fr_FR' ( checkCompleteness: true, dateFormat: 'dd-MM-yyyy' );
+
+-- Drop a language (the default language cannot be dropped).
+alter settings language add 'de_DE';
+alter settings language drop 'de_DE';
+
+-- ============================================================================
+-- Translate an enumeration
+-- ============================================================================
+--
+-- Each SET path is "<ValueName>.caption".
+-- ============================================================================
+
+translate enumeration I18nTest.Status in nl_NL set
+  ACTIVE.caption = 'Actief',
+  CLOSED.caption = 'Gesloten';
+
+translate enumeration I18nTest.Status in fr_FR set
+  ACTIVE.caption = 'Actif',
+  CLOSED.caption = 'Fermé';
+
+-- ============================================================================
+-- Inspect translations
+-- ============================================================================
+
+-- All translatable nodes with every language's text.
+describe translations I18nTest.Status;
+
+-- Focus on a single language; blanks reveal what still needs translating.
+describe translations I18nTest.Status in fr_FR;

@@ -493,9 +493,53 @@ create or replace navigation Responsive
 | Drop constant override | `alter settings drop constant 'Name' in configuration 'cfg';` | Reset to default value |
 | Create configuration | `create configuration 'Name' [key = value, ...];` | New server configuration |
 | Drop configuration | `drop configuration 'Name';` | Remove a configuration |
-| Alter language | `alter settings LANGUAGE key = value;` | DefaultLanguageCode |
+| Alter language | `alter settings language DefaultLanguageCode = 'code';` | Set the project default language |
 | Alter workflows | `alter settings workflows key = value;` | UserEntity, DefaultTaskParallelism |
-| List languages | `show languages;` | Lists language codes with translation string counts (requires `refresh catalog full`) |
+
+See **Multilingual / Translations (i18n)** below for adding/removing languages and translating documents.
+
+## Multilingual / Translations (i18n)
+
+### Language management
+
+| Statement | Syntax | Notes |
+|-----------|--------|-------|
+| List languages | `show languages;` | Languages registered in the project (Code / Language / Default / CheckCompleteness). Reads project settings; falls back to catalog string counts if settings are empty |
+| List supported | `show supported languages;` | All valid Mendix language codes (the validation whitelist) |
+| Add language | `alter settings language add 'code';` | Idempotent; rejects codes not in the supported whitelist |
+| Add with options | `alter settings language add 'code' ( checkCompleteness: true, dateFormat: 'dd-MM-yyyy', dateTimeFormat: '...', timeFormat: '...' );` | Optional per-language formatting flags |
+| Drop language | `alter settings language drop 'code';` | Cannot drop the default language |
+| Set default | `alter settings language DefaultLanguageCode = 'code';` | Change the project default language |
+
+### Translating documents
+
+| Statement | Syntax | Notes |
+|-----------|--------|-------|
+| Translate page | `translate page Module.Name in code set path = 'text', ...;` | Paths: `title` or `Widget.property` (caption, placeholder, tooltip, label, content) |
+| Translate snippet | `translate snippet Module.Name in code set Widget.property = 'text', ...;` | Same path rules as pages |
+| Translate enumeration | `translate enumeration Module.Name in code set ValueName.caption = 'text', ...;` | One entry per enumeration value caption |
+| Describe translations | `describe translations Module.Name [in code];` | Lists translatable nodes with each language's text; `in code` focuses one language |
+
+**Rules & notes:**
+- The target language must be registered (`alter settings language add`) before `translate` can write text for it; otherwise you get an actionable error.
+- `translate workflow` is **not supported**: workflow activity text (TaskName/TaskDescription) uses `Microflows$StringTemplate`, which is not multilingual in Mendix 11.x.
+- `translate microflow` is not yet implemented.
+
+```sql
+-- Register a language, then translate an enumeration into it
+alter settings language add 'nl_NL';
+translate enumeration MyModule.Status in nl_NL set
+  ACTIVE.caption = 'Actief',
+  CLOSED.caption = 'Gesloten';
+
+-- Translate a page title and a button caption
+translate page MyModule.Home in nl_NL set
+  title = 'Welkom',
+  SubmitButton.caption = 'Verzenden';
+
+-- Inspect what is translated vs. missing
+describe translations MyModule.Home in nl_NL;
+```
 
 ## Business Events
 
