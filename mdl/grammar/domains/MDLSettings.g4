@@ -69,7 +69,6 @@ translateDocType
     | SNIPPET
     | ENUMERATION
     | WORKFLOW
-    | MICROFLOW
     ;
 
 translateSetOp
@@ -78,6 +77,21 @@ translateSetOp
 
 translatePath
     : identifierOrKeyword (DOT identifierOrKeyword)?
+    ;
+
+// TRANSLATE MICROFLOW uses Type-Index addressing because microflow activities
+// are unnamed: ActionType[index].property = 'text'.
+//
+// TRANSLATE MICROFLOW Mod.ACT_Save IN zh_CN
+//   SET ShowMessage[0].message = '已保存';
+translateMicroflowStatement
+    : TRANSLATE MICROFLOW qualifiedName IN identifierOrKeyword
+      SET translateMicroflowSetOp (COMMA translateMicroflowSetOp)*
+    ;
+
+translateMicroflowSetOp
+    : identifierOrKeyword LBRACKET NUMBER_LITERAL RBRACKET DOT identifierOrKeyword
+      EQUALS STRING_LITERAL
     ;
 
 // =============================================================================

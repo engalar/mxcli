@@ -6,7 +6,7 @@ package ast
 type AlterLanguageOp int
 
 const (
-	AlterLanguageAdd  AlterLanguageOp = iota
+	AlterLanguageAdd AlterLanguageOp = iota
 	AlterLanguageDrop
 )
 
@@ -45,6 +45,30 @@ type TranslateStmt struct {
 func (s *TranslateStmt) isStatement() {}
 func (s *TranslateStmt) String() string {
 	return "TRANSLATE " + s.DocType + " " + s.QName.String() + " IN " + s.Lang
+}
+
+// TranslateMicroflowSetOp is a single SET actionType[index].property = text
+// operation inside TRANSLATE MICROFLOW. Microflow activities are unnamed, so
+// they are addressed by their BSON action type and ordinal index among
+// same-typed actions (Type-Index addressing).
+type TranslateMicroflowSetOp struct {
+	ActionType string // MDL action keyword, e.g. "ShowMessage"
+	Index      int    // 0-based ordinal among same-typed actions
+	Property   string // translatable property, e.g. "message"
+	Text       string
+}
+
+// TranslateMicroflowStmt represents
+// TRANSLATE MICROFLOW Mod.Name IN lang SET ActionType[index].property = '...'.
+type TranslateMicroflowStmt struct {
+	QName QualifiedName
+	Lang  string
+	Ops   []TranslateMicroflowSetOp
+}
+
+func (s *TranslateMicroflowStmt) isStatement() {}
+func (s *TranslateMicroflowStmt) String() string {
+	return "TRANSLATE MICROFLOW " + s.QName.String() + " IN " + s.Lang
 }
 
 // DescribeTranslationsStmt represents DESCRIBE TRANSLATIONS Mod.Name [IN lang].

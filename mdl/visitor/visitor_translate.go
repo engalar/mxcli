@@ -3,6 +3,7 @@
 package visitor
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -39,6 +40,39 @@ func (b *Builder) ExitTranslateStatement(ctx *parser.TranslateStatementContext) 
 		}
 		text := unquoteString(op.STRING_LITERAL().GetText())
 		stmt.Ops = append(stmt.Ops, ast.TranslateSetOp{Path: path, Text: text})
+	}
+
+	b.statements = append(b.statements, stmt)
+}
+
+// ExitTranslateMicroflowStatement builds a TranslateMicroflowStmt from a parsed
+// TRANSLATE MICROFLOW <qname> IN <lang> SET ActionType[index].property = 'text'.
+func (b *Builder) ExitTranslateMicroflowStatement(ctx *parser.TranslateMicroflowStatementContext) {
+	stmt := &ast.TranslateMicroflowStmt{}
+
+	if qn := ctx.QualifiedName(); qn != nil {
+		stmt.QName = buildQualifiedName(qn)
+	}
+	if iok := ctx.IdentifierOrKeyword(); iok != nil {
+		stmt.Lang = iok.GetText()
+	}
+
+	for _, opCtx := range ctx.AllTranslateMicroflowSetOp() {
+		op, ok := opCtx.(*parser.TranslateMicroflowSetOpContext)
+		if !ok {
+			continue
+		}
+		idents := op.AllIdentifierOrKeyword()
+		if len(idents) < 2 {
+			continue
+		}
+		index, _ := strconv.Atoi(op.NUMBER_LITERAL().GetText())
+		stmt.Ops = append(stmt.Ops, ast.TranslateMicroflowSetOp{
+			ActionType: idents[0].GetText(),
+			Index:      index,
+			Property:   idents[1].GetText(),
+			Text:       unquoteString(op.STRING_LITERAL().GetText()),
+		})
 	}
 
 	b.statements = append(b.statements, stmt)

@@ -81,6 +81,12 @@ type SettingsBackend interface {
 	// the enumeration value named valueName, within the enumeration identified
 	// by its qualified name.
 	SetEnumerationTranslation(enumQN, valueName, langCode, text string) error
+	// SetMicroflowActionTranslation sets the langCode translation on a
+	// translatable property of an action inside a microflow. Microflow actions
+	// are unnamed and addressed by their BSON action type (e.g.
+	// "Microflows$ShowMessageAction") and the 0-based ordinal index among
+	// same-typed actions.
+	SetMicroflowActionTranslation(docQN, actionType string, index int, property, langCode, text string) error
 }
 
 // ImageBackend provides image collection operations.

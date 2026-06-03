@@ -125,6 +125,36 @@ func translateEnumeration(ctx *ExecContext, stmt *ast.TranslateStmt) error {
 	return nil
 }
 
+// translateMicroflowStmt applies TRANSLATE MICROFLOW operations. Microflow
+// activities are unnamed, so each op addresses an action by its type and the
+// 0-based ordinal index among same-typed actions (Type-Index addressing).
+func translateMicroflowStmt(ctx *ExecContext, stmt *ast.TranslateMicroflowStmt) error {
+	if !ctx.Connected() {
+		return mdlerrors.NewNotConnected()
+	}
+	if !ctx.ConnectedForWrite() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+	if stmt.Lang == "" {
+		return mdlerrors.NewValidation("TRANSLATE requires a target language (IN langCode)")
+	}
+	if err := requireRegisteredLanguage(ctx, stmt.Lang); err != nil {
+		return err
+	}
+
+	docQN := stmt.QName.String()
+	for _, op := range stmt.Ops {
+		if err := ctx.Backend.SetMicroflowActionTranslation(
+			docQN, op.ActionType, op.Index, op.Property, stmt.Lang, op.Text); err != nil {
+			return mdlerrors.NewBackend(
+				fmt.Sprintf("translate %s[%d].%s", op.ActionType, op.Index, op.Property), err)
+		}
+	}
+	fmt.Fprintf(ctx.Output, "TRANSLATED MICROFLOW %s IN %s (%d actions)\n",
+		docQN, stmt.Lang, len(stmt.Ops))
+	return nil
+}
+
 // applyTranslateOp routes a single SET path = text op to the right mutator call.
 // A path of "title" (no dot) targets the page/snippet title; "Widget.property"
 // targets a translatable text property of a widget.

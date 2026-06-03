@@ -51,6 +51,7 @@ ddlStatement
     | moveStatement
     | updateWidgetsStatement
     | securityStatement
+    | translateMicroflowStatement
     | translateStatement
     ;
 

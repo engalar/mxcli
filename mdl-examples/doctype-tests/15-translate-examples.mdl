@@ -27,9 +27,24 @@ TRANSLATE PAGE MyModule.Home IN zh_CN
 TRANSLATE SNIPPET MyModule.Header IN de_DE
   SET Label_Welcome.caption = 'Willkommen';
 
+-- Translate enumeration value captions.
+TRANSLATE ENUMERATION MyModule.Status IN zh_CN
+  SET Open.caption = '打开',
+      Closed.caption = '已关闭';
+
+-- Translate microflow action text. Microflow activities are unnamed, so each
+-- action is addressed by its type and 0-based ordinal index among same-typed
+-- actions (Type-Index addressing): ActionType[index].property.
+TRANSLATE MICROFLOW MyModule.ACT_Save IN zh_CN
+  SET ShowMessage[0].message = '已保存',
+      ShowMessage[1].message = '保存失败';
+
 -- ============================================================================
 -- Covered:
 -- TRANSLATE PAGE ... IN <lang> SET Widget.property = '...', title = '...'
 -- TRANSLATE SNIPPET ... IN <lang> SET Widget.property = '...'
--- (TRANSLATE ENUMERATION / WORKFLOW / MICROFLOW are reserved; not yet active)
+-- TRANSLATE ENUMERATION ... IN <lang> SET ValueName.caption = '...'
+-- TRANSLATE MICROFLOW ... IN <lang> SET ActionType[index].message = '...'
+-- (TRANSLATE WORKFLOW is unsupported: workflow text uses StringTemplate,
+--  not multilingual Texts$Text, in Mendix 11.x)
 -- ============================================================================

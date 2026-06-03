@@ -85,6 +85,13 @@ func (m *MockBackend) SetEnumerationTranslation(enumQN, valueName, langCode, tex
 	return fmt.Errorf("MockBackend.SetEnumerationTranslation not configured")
 }
 
+func (m *MockBackend) SetMicroflowActionTranslation(docQN, actionType string, index int, property, langCode, text string) error {
+	if m.SetMicroflowActionTranslationFunc != nil {
+		return m.SetMicroflowActionTranslationFunc(docQN, actionType, index, property, langCode, text)
+	}
+	return fmt.Errorf("MockBackend.SetMicroflowActionTranslation not configured")
+}
+
 // ---------------------------------------------------------------------------
 // ImageBackend
 // ---------------------------------------------------------------------------
