@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/executor"
+	"github.com/mendixlabs/mxcli/modelsdk/widgets"
 	"github.com/mendixlabs/mxcli/modelsdk/widgets/mpk"
 	"github.com/spf13/cobra"
 )
@@ -199,15 +200,27 @@ func runWidgetExtract(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to write %s: %w", outPath, err)
 		}
 
-		fmt.Fprintf(out, "  %-20s %s\n", mdlName, mpkDef.ID)
-		fmt.Fprintf(out, "  properties: %d  output: %s\n\n", len(mpkDef.Properties), outPath)
+		// Also generate and save the BSON template JSON derived from MPK XML.
+		// This is a "best-effort" template: it may cause CE0463 if Studio Pro
+		// expects a slightly different structure. The engine uses this file as
+		// a fallback when no Studio Pro-created instance is found in the project.
+		tmpl := widgets.GenerateFromMPK(mpkDef)
+		tmplFilename := strings.ToLower(mdlName) + ".json"
+		tmplPath := filepath.Join(outputDir, tmplFilename)
+		if tmplData, err := json.MarshalIndent(tmpl, "", "  "); err == nil {
+			tmplData = append(tmplData, '\n')
+			if err := os.WriteFile(tmplPath, tmplData, 0644); err == nil {
+				fmt.Fprintf(out, "  template:   %s\n", tmplPath)
+			}
+		}
+
+		fmt.Fprintf(out, "  properties: %d\n\n", len(mpkDef.Properties))
 	}
 
-	fmt.Fprintf(out, "Note: .def.json contains property mappings only.\n")
-	fmt.Fprintf(out, "      The BSON template (needed for page creation) is derived at runtime\n")
-	fmt.Fprintf(out, "      from the .mpk file. If the widget has never been placed on a page\n")
-	fmt.Fprintf(out, "      in Studio Pro, page creation will fail with 'no template found'.\n")
-	fmt.Fprintf(out, "      Fix: open Studio Pro, drag the widget onto any page, save, then retry.\n")
+	fmt.Fprintf(out, "Note: .def.json = property mappings; .json = best-effort BSON template.\n")
+	fmt.Fprintf(out, "      If page creation fails with CE0463, the template structure doesn't\n")
+	fmt.Fprintf(out, "      match Studio Pro's. Fix: drag the widget onto a page in Studio Pro,\n")
+	fmt.Fprintf(out, "      save, then run 'mxcli bson dump' to extract the correct template.\n")
 	return nil
 }
 

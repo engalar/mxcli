@@ -35,6 +35,18 @@ func (l *errorListener) SyntaxError(_ antlr.Recognizer, _ any, line, column int,
 // enhanceErrorMessage checks if an error message indicates a reserved keyword
 // was used as an identifier and provides a more helpful message.
 func enhanceErrorMessage(msg string) string {
+	// Detect unknown widget type used as a shorthand (e.g. CRUSHERSLIDER name (...)).
+	// MDL's widget type list is closed; custom/third-party widgets must use the full
+	// PLUGGABLEWIDGET 'widget.id' name (...) form.
+	if token := looksLikeUnknownWidgetType(msg); token != "" {
+		return fmt.Sprintf("%s\n\n  '%s' is not a recognised MDL widget keyword.\n"+
+			"  For custom/third-party widgets use the full form:\n"+
+			"    PLUGGABLEWIDGET 'com.company.widget.Id' widgetName (...)\n\n"+
+			"  To find the correct Widget ID:\n"+
+			"    mxcli widget list -p app.mpr    # shows all available widgets\n"+
+			"  Then use the Widget ID from the 'mpk (auto)' section.", msg, token)
+	}
+
 	// Check for quoted attribute names after READ/WRITE in a GRANT clause.
 	// Users often write `READ "Attr1", "Attr2"` instead of the correct
 	// `READ (Attr1, Attr2)` — the grammar expects unquoted identifiers in parens.
@@ -270,4 +282,52 @@ func (b *Builder) addError(err error) {
 // addErrorWithExample adds an error with example MDL syntax to help LLMs understand the expected format.
 func (b *Builder) addErrorWithExample(message, example string) {
 	b.errors = append(b.errors, fmt.Errorf("%s\n\nExpected syntax:\n%s", message, example))
+}
+
+// looksLikeUnknownWidgetType detects ANTLR errors where an unrecognised IDENTIFIER
+// appears in a position where a widget type keyword is expected inside a page/snippet
+// body. Returns the unrecognised token, or "" if no match.
+//
+// Typical ANTLR shapes when CRUSHERSLIDER appears inside a CREATE PAGE block:
+//
+//	mismatched input 'CRUSHERSLIDER' expecting '}'
+//	mismatched input 'crusherslider' expecting {'}', ...}
+func looksLikeUnknownWidgetType(msg string) string {
+	// Must be a mismatch where '}' is expected — this is the tell-tale sign of an
+	// unexpected token inside a block body (page body, widget body, etc.).
+	if !strings.Contains(msg, "expecting") {
+		return ""
+	}
+	if !strings.Contains(msg, "'}'") && !strings.Contains(msg, "expecting '}'") {
+		return ""
+	}
+
+	for _, prefix := range []string{"mismatched input '", "extraneous input '"} {
+		idx := strings.Index(msg, prefix)
+		if idx < 0 {
+			continue
+		}
+		start := idx + len(prefix)
+		end := strings.Index(msg[start:], "'")
+		if end < 0 {
+			continue
+		}
+		token := msg[start : start+end]
+		// Widget type candidates: length > 3, starts with a letter, no spaces or
+		// special chars. Excludes short noise tokens (punctuation, single chars).
+		if len(token) <= 3 {
+			continue
+		}
+		allAlpha := true
+		for _, r := range token {
+			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_') {
+				allAlpha = false
+				break
+			}
+		}
+		if allAlpha && (token[0] >= 'A' && token[0] <= 'Z') {
+			return token
+		}
+	}
+	return ""
 }

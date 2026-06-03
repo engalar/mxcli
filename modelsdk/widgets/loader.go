@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -229,6 +230,23 @@ func getOrGenerateTemplate(widgetID, projectPath string) (*WidgetTemplate, error
 
 	if projectPath == "" {
 		return nil, nil
+	}
+
+	// 2.5. User-saved template from 'mxcli widget extract' (.mxcli/widgets/<mdlname>.json).
+	// This sits before Studio Pro extraction so that a manually curated template wins
+	// over auto-derived ones, but after embedded templates which are authoritative.
+	if projectPath != "" {
+		projectDir := filepath.Dir(projectPath)
+		parts := strings.Split(widgetID, ".")
+		mdlName := strings.ToLower(parts[len(parts)-1])
+		userTmplPath := filepath.Join(projectDir, ".mxcli", "widgets", mdlName+".json")
+		if data, err := os.ReadFile(userTmplPath); err == nil {
+			var tmpl WidgetTemplate
+			if err := json.Unmarshal(data, &tmpl); err == nil && tmpl.Type != nil {
+				generatedCache.Store(widgetID, &tmpl)
+				return &tmpl, nil
+			}
+		}
 	}
 
 	// 3. Extract Type BSON from existing widget instances in the project.
