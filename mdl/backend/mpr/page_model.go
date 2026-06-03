@@ -313,7 +313,7 @@ func extractColWidth(doc bson.D) types.ColWidthDef {
 		return 0
 	}
 	return types.ColWidthDef{
-		Desktop: toInt(dGet(doc, "DesktopWeight")),
+		Desktop: toInt(dGet(doc, "Weight")),
 		Tablet:  toInt(dGet(doc, "TabletWeight")),
 		Phone:   toInt(dGet(doc, "PhoneWeight")),
 	}
@@ -845,7 +845,7 @@ func widgetToBSON(node *types.WidgetNode) bson.D {
 
 	case types.WidgetLayoutCol:
 		doc = append(doc,
-			bson.E{Key: "DesktopWeight", Value: int32(node.ColWidth.Desktop)},
+			bson.E{Key: "Weight", Value: int32(node.ColWidth.Desktop)},
 			bson.E{Key: "TabletWeight", Value: int32(node.ColWidth.Tablet)},
 			bson.E{Key: "PhoneWeight", Value: int32(node.ColWidth.Phone)},
 			bson.E{Key: "Widgets", Value: bsonVersionedArray(widgetsToBSON(node.Children))},

@@ -77,6 +77,70 @@ func TestBsonVersionedArray(t *testing.T) {
 	}
 }
 
+// TestWidgetToBSON_LayoutGridColumnWeight verifies the desktop weight field is
+// written as "Weight" (not "DesktopWeight") to match Mendix's BSON schema.
+// CE0535 "column weights must sum to 12" occurs when the key is wrong.
+func TestWidgetToBSON_LayoutGridColumnWeight(t *testing.T) {
+	col := &types.WidgetNode{
+		Kind: types.WidgetLayoutCol,
+		Name: "cMain",
+		ColWidth: types.ColWidthDef{
+			Desktop: 12,
+			Tablet:  -1,
+			Phone:   -1,
+		},
+	}
+	doc := widgetToBSON(col)
+	if doc == nil {
+		t.Fatal("widgetToBSON returned nil")
+	}
+	// Must use "Weight" — Mendix reads this key; "DesktopWeight" is ignored.
+	if got := dGet(doc, "Weight"); got == nil {
+		t.Error("missing Weight field in LayoutGridColumn BSON (Mendix CE0535 will fire)")
+	}
+	if got, _ := dGet(doc, "Weight").(int32); got != 12 {
+		t.Errorf("Weight = %v, want 12", dGet(doc, "Weight"))
+	}
+	if dGet(doc, "DesktopWeight") != nil {
+		t.Error("DesktopWeight must NOT be present (wrong BSON key for Mendix)")
+	}
+}
+
+// TestExtractColWidth_UsesWeightKey verifies extractColWidth reads from "Weight"
+// not "DesktopWeight" — matching how Mendix Studio Pro serialises the column.
+func TestExtractColWidth_UsesWeightKey(t *testing.T) {
+	doc := bson.D{
+		{Key: "Weight", Value: int32(8)},
+		{Key: "TabletWeight", Value: int32(6)},
+		{Key: "PhoneWeight", Value: int32(12)},
+	}
+	cw := extractColWidth(doc)
+	if cw.Desktop != 8 {
+		t.Errorf("Desktop = %d, want 8 (must read from Weight not DesktopWeight)", cw.Desktop)
+	}
+	if cw.Tablet != 6 {
+		t.Errorf("Tablet = %d, want 6", cw.Tablet)
+	}
+	if cw.Phone != 12 {
+		t.Errorf("Phone = %d, want 12", cw.Phone)
+	}
+}
+
+// TestLayoutGridColumn_RoundTrip verifies widgetToBSON→extractColWidth roundtrip
+// preserves the column width correctly.
+func TestLayoutGridColumn_RoundTrip(t *testing.T) {
+	orig := &types.WidgetNode{
+		Kind: types.WidgetLayoutCol,
+		Name: "col",
+		ColWidth: types.ColWidthDef{Desktop: 6, Tablet: 6, Phone: 12},
+	}
+	doc := widgetToBSON(orig)
+	cw := extractColWidth(doc)
+	if cw.Desktop != 6 {
+		t.Errorf("Desktop roundtrip: got %d, want 6", cw.Desktop)
+	}
+}
+
 // TestKindToBSONType_AllKinds covers every WidgetKind→storage type mapping.
 // The Mendix storage namespace is "Forms$" (NOT "Pages$" — that's the SDK
 // display namespace). Writing a Pages$ type into the unit BSON triggers
