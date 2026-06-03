@@ -143,6 +143,17 @@ type pendingFile struct {
 	finalPath string
 }
 
+// BatchWriteOp describes a single insert or update for BatchWrite.
+// When Insert is false, only UnitID and Contents are used.
+type BatchWriteOp struct {
+	Insert          bool
+	UnitID          string
+	ContainerID     string
+	ContainmentName string
+	UnitType        string
+	Contents        []byte
+}
+
 // BeginWriteTransaction starts a new write transaction.
 // For v2 format, this coordinates both database and file writes.
 func (w *Writer) BeginWriteTransaction() (*WriteTransaction, error) {
@@ -568,6 +579,118 @@ func (w *Writer) deleteUnit(unitID string) error {
 
 	w.reader.InvalidateCache()
 	w.updateTransactionID()
+	return nil
+}
+
+// BatchWrite executes all ops in a single atomic SQL transaction.
+//
+// For v2 MPR:
+//   - Insert ops: content file written to final path BEFORE opening the SQL tx.
+//   - Update ops: content written to a .tmp file BEFORE the tx; renamed to final AFTER Commit.
+//
+// For v1 MPR all content lives in SQLite; no file I/O is needed.
+func (w *Writer) BatchWrite(ops []BatchWriteOp) error {
+	type pendingRename struct{ tmp, final string }
+	var renames []pendingRename
+
+	// ── Phase 1: file writes (v2 only, before opening SQL tx) ──────────────
+	if w.reader.version == MPRVersionV2 {
+		for _, op := range ops {
+			unitIDBlob := uuidToBlob(op.UnitID)
+			if unitIDBlob == nil {
+				return fmt.Errorf("BatchWrite: invalid unit ID %q", op.UnitID)
+			}
+			swappedUUID := blobToUUIDSwapped(unitIDBlob)
+			dir := filepath.Join(w.reader.contentsDir, swappedUUID[0:2], swappedUUID[2:4])
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return fmt.Errorf("BatchWrite: mkdir %s: %w", dir, err)
+			}
+			finalPath := filepath.Join(dir, swappedUUID+".mxunit")
+
+			if op.Insert {
+				if err := os.WriteFile(finalPath, op.Contents, 0644); err != nil {
+					return fmt.Errorf("BatchWrite: write insert file: %w", err)
+				}
+			} else {
+				tmpPath := finalPath + ".tmp"
+				if err := os.WriteFile(tmpPath, op.Contents, 0644); err != nil {
+					return fmt.Errorf("BatchWrite: write update tmp: %w", err)
+				}
+				renames = append(renames, pendingRename{tmp: tmpPath, final: finalPath})
+			}
+		}
+	}
+
+	// ── Phase 2: single SQL transaction ────────────────────────────────────
+	sqlTx, err := w.reader.db.Begin()
+	if err != nil {
+		return fmt.Errorf("BatchWrite: begin tx: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = sqlTx.Rollback()
+			for _, r := range renames {
+				_ = os.Remove(r.tmp)
+			}
+		}
+	}()
+
+	for _, op := range ops {
+		unitIDBlob := uuidToBlob(op.UnitID)
+		if unitIDBlob == nil {
+			return fmt.Errorf("BatchWrite: invalid unit ID %q", op.UnitID)
+		}
+
+		if op.Insert {
+			if w.reader.version == MPRVersionV2 {
+				hash := sha256.Sum256(op.Contents)
+				contentsHash := base64.StdEncoding.EncodeToString(hash[:])
+				_, err = sqlTx.Exec(`
+					INSERT INTO Unit (UnitID, ContainerID, ContainmentName, TreeConflict, ContentsHash, ContentsConflicts)
+					VALUES (?, ?, ?, 0, ?, '')
+				`, unitIDBlob, uuidToBlob(op.ContainerID), op.ContainmentName, contentsHash)
+			} else {
+				containerIDBlob := uuidToBlob(op.ContainerID)
+				_, err = sqlTx.Exec(`
+					INSERT INTO Unit (UnitID, ContainerID, ContainmentName, TreeConflict, ContentsHash, ContentsConflicts, Contents)
+					VALUES (?, ?, ?, 0, '', '', ?)
+				`, unitIDBlob, containerIDBlob, op.ContainmentName, op.Contents)
+				if err != nil {
+					_, err = sqlTx.Exec(`
+						INSERT INTO Unit (UnitID, ContainerID, ContainmentName, Type, Contents)
+						VALUES (?, ?, ?, ?, ?)
+					`, unitIDBlob, containerIDBlob, op.ContainmentName, op.UnitType, op.Contents)
+				}
+			}
+		} else {
+			if w.reader.version == MPRVersionV2 {
+				hash := sha256.Sum256(op.Contents)
+				contentsHash := base64.StdEncoding.EncodeToString(hash[:])
+				_, err = sqlTx.Exec(`UPDATE Unit SET ContentsHash = ? WHERE UnitID = ?`, contentsHash, unitIDBlob)
+			} else {
+				_, err = sqlTx.Exec(`UPDATE Unit SET Contents = ? WHERE UnitID = ?`, op.Contents, unitIDBlob)
+			}
+		}
+		if err != nil {
+			return fmt.Errorf("BatchWrite: sql op for unit %s: %w", op.UnitID, err)
+		}
+	}
+
+	if err := sqlTx.Commit(); err != nil {
+		return fmt.Errorf("BatchWrite: commit: %w", err)
+	}
+	committed = true
+
+	// ── Phase 3: rename .tmp → final (v2 updates) ──────────────────────────
+	for _, r := range renames {
+		if err := os.Rename(r.tmp, r.final); err != nil {
+			log.Printf("mpr.batchwrite_rename_failed: tmp=%s final=%s err=%s", r.tmp, r.final, err)
+		}
+	}
+
+	w.updateTransactionID()
+	w.reader.InvalidateCache()
 	return nil
 }
 
