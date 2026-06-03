@@ -1,5 +1,5 @@
 #!/bin/sh
-# mxcli install script — idempotent, works on Linux and macOS.
+# mxcli install script — idempotent, works on Linux, macOS, and Windows (Git Bash / MSYS2).
 # Usage: curl -fsSL https://raw.githubusercontent.com/engalar/mxcli/dev/install.sh | sh
 #
 # Optional env vars:
@@ -11,6 +11,9 @@ INSTALL_DIR="${MXCLI_INSTALL_DIR:-}"
 
 # ── Detect platform ──────────────────────────────────────────────────────────
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+case "$OS" in
+  mingw*|msys*|cygwin*) OS="windows" ;;
+esac
 ARCH=$(uname -m)
 case "$ARCH" in
   x86_64)        ARCH="amd64" ;;
@@ -22,12 +25,15 @@ case "$ARCH" in
 esac
 
 case "$OS" in
-  linux|darwin) ;;
+  linux|darwin|windows) ;;
   *)
-    echo "❌ Unsupported OS: $OS (use install.ps1 on Windows)" >&2
+    echo "❌ Unsupported OS: $OS" >&2
     exit 1
     ;;
 esac
+
+EXT=""
+[ "$OS" = "windows" ] && EXT=".exe"
 
 # ── Fetch latest release tag ─────────────────────────────────────────────────
 # Use the redirect from /releases/latest — avoids GitHub API rate limits
@@ -69,7 +75,7 @@ if [ -z "$INSTALL_DIR" ]; then
 fi
 
 # ── Download launcher binary ──────────────────────────────────────────────────
-BIN_NAME="mxcli-${OS}-${ARCH}"
+BIN_NAME="mxcli-${OS}-${ARCH}${EXT}"
 BIN_URL="https://github.com/${REPO}/releases/download/${LATEST}/${BIN_NAME}"
 SUMS_URL="https://github.com/${REPO}/releases/download/${LATEST}/SHA256SUMS"
 TMP=$(mktemp /tmp/mxcli.XXXXXX)
@@ -105,10 +111,10 @@ chmod +x "$TMP"
 
 # Atomic install (never leaves a partial binary)
 mkdir -p "$INSTALL_DIR"
-mv "$TMP" "${INSTALL_DIR}/mxcli"
+mv "$TMP" "${INSTALL_DIR}/mxcli${EXT}"
 
 echo ""
-echo "✅ mxcli $LATEST installed to ${INSTALL_DIR}/mxcli"
+echo "✅ mxcli $LATEST installed to ${INSTALL_DIR}/mxcli${EXT}"
 echo "   The daemon (~20 MB) will be downloaded automatically on first use."
 echo ""
 echo "   Run: mxcli version"
