@@ -1647,3 +1647,122 @@ move microflow HD.ACT_Workflow_Unlock            to folder 'Escalation/WorkflowA
 move microflow HD.ACT_Workflow_Notify            to folder 'Escalation/WorkflowAdmin';
 
 -- Note: golden rebuilt after SortItemList.InitFromRaw BSON key fix (Items→Sortings)
+
+-- ============================================================================
+-- MARK: Multilingual / i18n Demo
+-- ============================================================================
+--
+-- This section shows how to localise a Mendix app with mxcli.
+-- The navigation above already uses Chinese menu labels; the steps below
+-- complete the localisation for UI text stored in pages and enumerations.
+--
+-- Pattern:
+--   1. Register target language(s)        → ALTER SETTINGS LANGUAGE ADD
+--   2. Inspect coverage for a document    → DESCRIBE TRANSLATIONS … IN lang
+--   3. Apply translations element by element → TRANSLATE PAGE / ENUMERATION
+--   4. Verify & iterate until coverage = 0 missing
+--   5. Drop a language when no longer needed → ALTER SETTINGS LANGUAGE DROP
+-- ============================================================================
+
+-- MARK: i18n — Step 1: Register languages
+-- en_US is the Mendix default language and is always present.
+-- Add the languages your app must support before writing any translations.
+-- Re-running this statement is safe: if the language is already registered it
+-- prints "LANGUAGE zh_CN already registered" and does nothing.
+
+alter settings language add 'zh_CN';
+alter settings language add 'nl_NL' (checkCompleteness: true);
+
+-- Confirm what is now registered in this project:
+show languages;
+
+-- Browse all 38 language codes mxcli recognises (does not require a project):
+show supported languages;
+
+-- MARK: i18n — Step 2: Inspect translation coverage
+-- DESCRIBE TRANSLATIONS scans the document BSON, finds every Texts$Text node,
+-- and reports which languages have a translation and which are missing.
+-- The text output appends a ready-to-paste TRANSLATE template for missing fields.
+-- Use --format json to get a machine-readable result with translate_template
+-- that an AI agent can fill in and execute directly.
+
+-- describe translations HD.Ticket_Overview in zh_CN;
+-- describe translations KB.Article_Overview in nl_NL;
+-- describe translations HD.TicketStatus in zh_CN;
+
+-- MARK: i18n — Step 3a: Translate enumeration captions
+-- Path format: <ValueName>.caption
+-- Only ValueName.caption is supported; enumeration values have no other
+-- translatable property.
+
+-- translate enumeration HD.TicketStatus in zh_CN
+--   set Draft.caption      = '草稿'
+--   set Open.caption       = '待处理'
+--   set InProgress.caption = '处理中'
+--   set Resolved.caption   = '已解决'
+--   set Closed.caption     = '已关闭';
+
+-- translate enumeration HD.TicketPriority in zh_CN
+--   set Low.caption      = '低'
+--   set Normal.caption   = '普通'
+--   set High.caption     = '高'
+--   set Critical.caption = '紧急';
+
+-- translate enumeration KB.ArticleStatus in zh_CN
+--   set Draft.caption     = '草稿'
+--   set Published.caption = '已发布'
+--   set Archived.caption  = '已归档';
+
+-- MARK: i18n — Step 3b: Translate page widget captions
+-- Path format for widgets:  <WidgetName>.<property>
+-- Supported properties:     caption, placeholder, tooltip, label, content
+-- Special path:             title   (translates the page title bar)
+--
+-- Find widget names with:   describe translations HD.Ticket_Overview in zh_CN;
+-- Widget names are the identifiers used in the page definition above
+-- (e.g. btnNew, btnEdit, btnSubmit, colSubject, …).
+
+-- translate page HD.Ticket_Overview in zh_CN
+--   set title              = '工单列表'
+--   set btnNew.caption     = '新建工单'
+--   set btnEdit.caption    = '编辑'
+--   set colSubject.caption = '主题'
+--   set colStatus.caption  = '状态'
+--   set colPriority.caption= '优先级'
+--   set colSLADue.caption  = 'SLA 截止'
+--   set colIsOver.caption  = '超时'
+--   set colActions.caption = '操作';
+
+-- translate page HD.Ticket_Detail in zh_CN
+--   set title              = '工单详情'
+--   set btnSubmit.caption  = '提交'
+--   set btnResolve.caption = '解决'
+--   set btnReopen.caption  = '重新打开'
+--   set btnAssignAgent.caption = '分配客服';
+
+-- translate page KB.Article_Overview in nl_NL
+--   set title             = 'Kennisbank'
+--   set btnPublish.caption= 'Publiceren'
+--   set btnArchive.caption= 'Archiveren';
+
+-- MARK: i18n — Step 3c: Translate snippet captions (same syntax as page)
+-- translate snippet MyFirstModule.Snip_Header in zh_CN
+--   set txtWelcome.content = '欢迎使用工单系统';
+
+-- MARK: i18n — Step 4: Verify coverage after translating
+-- Re-run DESCRIBE TRANSLATIONS to confirm missing count dropped to 0.
+-- Use --format json so an AI agent can check translate_template = "".
+
+-- describe translations HD.Ticket_Overview in zh_CN;
+
+-- MARK: i18n — Step 5: Cleanup — drop a language
+-- Removes the language from the registry AND its translations from BSON.
+-- Cannot drop the default language (en_US); change DefaultLanguageCode first
+-- with:  alter settings language DefaultLanguageCode = 'zh_CN';
+-- then drop the old default.
+
+-- alter settings language drop 'nl_NL';
+
+-- ============================================================================
+-- End of Multilingual Demo
+-- ============================================================================
