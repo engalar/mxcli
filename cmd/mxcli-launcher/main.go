@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
 
 var (
@@ -29,12 +30,34 @@ func main() {
 	e := DefaultEnv()
 	args := os.Args[1:]
 
+	// Clean up leftover .old binary from a previous self-upgrade on Windows.
+	if selfPath, err := os.Executable(); err == nil {
+		cleanupOldBinary(selfPath)
+	}
+
+	// --internal-update mode: spawned by runSelfUpgrade to replace the binary
+	// after the parent process exits. Must be handled before all other cases.
+	if len(args) > 0 && args[0] == "--internal-update" {
+		pid, newBin, target, ok := parseInternalUpdateArgs(args[1:])
+		if !ok {
+			fmt.Fprintln(os.Stderr, "mxcli: invalid --internal-update args")
+			os.Exit(1)
+		}
+		if err := runInternalUpdate(pid, newBin, target, &RealPIDWaiter{}, 30*time.Second); err != nil {
+			fmt.Fprintf(os.Stderr, "mxcli: update failed: %v\n", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
 	if len(args) > 0 {
 		switch args[0] {
 		case "upgrade":
-			os.Exit(e.runUpgrade(args[1:]))
+			os.Exit(e.runSelfUpgrade(args[1:]))
 		case "rollback":
 			os.Exit(e.runRollback(args[1:]))
+		case "daemon":
+			os.Exit(e.runDaemonCommand(args[1:]))
 		case "version", "--version":
 			printVersion(e)
 			os.Exit(0)
