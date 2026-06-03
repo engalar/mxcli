@@ -1,0 +1,35 @@
+-- ============================================================================
+-- TRANSLATE — page / snippet text translations
+-- ============================================================================
+--
+-- TRANSLATE updates the translation of a translatable text field for a target
+-- language, in place. An existing translation for the language is overwritten;
+-- a missing one is appended as a new Texts$Translation entry. Other languages
+-- (including the default) are left untouched.
+--
+-- Path forms inside SET:
+--   Widget.property   — caption, placeholder, tooltip, label, content
+--   title             — the page/snippet title
+--
+-- Use DESCRIBE TRANSLATIONS Module.Doc [IN lang] to discover translatable
+-- fields and generate a ready-to-edit template.
+
+-- Translate a page: a button caption plus the page title.
+TRANSLATE PAGE Administration.Account_Overview IN nl_NL
+  SET title = 'Accounts NL',
+      Button_Save.caption = 'Opslaan';
+
+-- Translate a single field on a page.
+TRANSLATE PAGE MyModule.Home IN zh_CN
+  SET Button_Submit.caption = '提交';
+
+-- Translate a snippet's widget label.
+TRANSLATE SNIPPET MyModule.Header IN de_DE
+  SET Label_Welcome.caption = 'Willkommen';
+
+-- ============================================================================
+-- Covered:
+-- TRANSLATE PAGE ... IN <lang> SET Widget.property = '...', title = '...'
+-- TRANSLATE SNIPPET ... IN <lang> SET Widget.property = '...'
+-- (TRANSLATE ENUMERATION / WORKFLOW / MICROFLOW are reserved; not yet active)
+-- ============================================================================

@@ -257,6 +257,9 @@ func registerSettingsHandlers(r *Registry) {
 	r.Register(&ast.AlterLanguageStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return alterLanguage(ctx, stmt.(*ast.AlterLanguageStmt))
 	})
+	r.Register(&ast.TranslateStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
+		return translateDocument(ctx, stmt.(*ast.TranslateStmt))
+	})
 	r.Register(&ast.CreateConfigurationStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return createConfiguration(ctx, stmt.(*ast.CreateConfigurationStmt))
 	})

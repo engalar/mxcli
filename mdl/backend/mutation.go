@@ -87,6 +87,15 @@ type PageMutator interface {
 	// SetColumnProperty sets a property on a column within a grid widget.
 	SetColumnProperty(gridRef string, columnRef string, prop string, value any) error
 
+	// SetWidgetTranslation sets the translation for langCode on a translatable
+	// text property (caption, placeholder, tooltip, label caption, content) of
+	// the named widget. The existing Texts$Text document is updated in place.
+	SetWidgetTranslation(widgetRef, prop, langCode, text string) error
+
+	// SetPageTitleTranslation sets the translation for langCode on the page/
+	// snippet title (FormTitle / Title text).
+	SetPageTitleTranslation(langCode, text string) error
+
 	// SetLayoutGridColumnWidth sets the DesktopWidth (Weight) of a column inside
 	// a layout grid row. gridRef is the layout grid widget name, rowRef is the row
 	// name within the grid, colRef is the column name within the row.

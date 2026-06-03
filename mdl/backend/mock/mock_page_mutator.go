@@ -17,19 +17,21 @@ var _ backend.PageMutator = (*MockPageMutator)(nil)
 // nil error (never panics). ContainerType defaults to ContainerPage when unset;
 // all other methods return zero values.
 type MockPageMutator struct {
-	ContainerTypeFunc        func() backend.ContainerKind
-	SetWidgetPropertyFunc    func(widgetRef string, prop string, value any) error
-	SetColumnPropertyFunc    func(gridRef string, columnRef string, prop string, value any) error
-	DropWidgetFunc           func(refs []backend.WidgetRef) error
-	FindWidgetFunc           func(name string) bool
-	AddVariableFunc          func(name, dataType, defaultValue string) error
-	DropVariableFunc         func(name string) error
-	SetLayoutFunc            func(newLayout string, paramMappings map[string]string) error
-	SetPluggablePropertyFunc func(widgetRef string, propKey string, op backend.PluggablePropertyOp, ctx backend.PluggablePropertyContext) error
-	EnclosingEntityFunc      func(widgetRef string) string
-	WidgetScopeFunc          func() map[string]model.ID
-	ParamScopeFunc           func() (map[string]model.ID, map[string]string)
-	SaveFunc                 func() error
+	ContainerTypeFunc           func() backend.ContainerKind
+	SetWidgetPropertyFunc       func(widgetRef string, prop string, value any) error
+	SetColumnPropertyFunc       func(gridRef string, columnRef string, prop string, value any) error
+	SetWidgetTranslationFunc    func(widgetRef, prop, langCode, text string) error
+	SetPageTitleTranslationFunc func(langCode, text string) error
+	DropWidgetFunc              func(refs []backend.WidgetRef) error
+	FindWidgetFunc              func(name string) bool
+	AddVariableFunc             func(name, dataType, defaultValue string) error
+	DropVariableFunc            func(name string) error
+	SetLayoutFunc               func(newLayout string, paramMappings map[string]string) error
+	SetPluggablePropertyFunc    func(widgetRef string, propKey string, op backend.PluggablePropertyOp, ctx backend.PluggablePropertyContext) error
+	EnclosingEntityFunc         func(widgetRef string) string
+	WidgetScopeFunc             func() map[string]model.ID
+	ParamScopeFunc              func() (map[string]model.ID, map[string]string)
+	SaveFunc                    func() error
 
 	// Stage 3.3.5.D0 gen-typed siblings.
 	SetWidgetDataSourceGenFunc   func(widgetRef string, ds element.Element) error
@@ -55,6 +57,20 @@ func (m *MockPageMutator) SetWidgetProperty(widgetRef string, prop string, value
 func (m *MockPageMutator) SetColumnProperty(gridRef string, columnRef string, prop string, value any) error {
 	if m.SetColumnPropertyFunc != nil {
 		return m.SetColumnPropertyFunc(gridRef, columnRef, prop, value)
+	}
+	return nil
+}
+
+func (m *MockPageMutator) SetWidgetTranslation(widgetRef, prop, langCode, text string) error {
+	if m.SetWidgetTranslationFunc != nil {
+		return m.SetWidgetTranslationFunc(widgetRef, prop, langCode, text)
+	}
+	return nil
+}
+
+func (m *MockPageMutator) SetPageTitleTranslation(langCode, text string) error {
+	if m.SetPageTitleTranslationFunc != nil {
+		return m.SetPageTitleTranslationFunc(langCode, text)
 	}
 	return nil
 }

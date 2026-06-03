@@ -286,6 +286,7 @@ func allKnownStatements() []ast.Statement {
 		&ast.SQLShowTablesStmt{},
 		&ast.SQLShowViewsStmt{},
 		&ast.StatusStmt{},
+		&ast.TranslateStmt{},
 		&ast.UpdateSecurityStmt{},
 		&ast.UpdateStmt{},
 		&ast.UpdateWidgetsStmt{},

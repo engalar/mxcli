@@ -53,6 +53,34 @@ settingsValue
     ;
 
 // =============================================================================
+// TRANSLATE STATEMENT
+// =============================================================================
+//
+// TRANSLATE PAGE Module.Home IN zh_CN
+//   SET Button_Submit.caption = '提交',
+//       title = '首页';
+translateStatement
+    : TRANSLATE translateDocType qualifiedName IN identifierOrKeyword
+      SET translateSetOp (COMMA translateSetOp)*
+    ;
+
+translateDocType
+    : PAGE
+    | SNIPPET
+    | ENUMERATION
+    | WORKFLOW
+    | MICROFLOW
+    ;
+
+translateSetOp
+    : translatePath EQUALS STRING_LITERAL
+    ;
+
+translatePath
+    : identifierOrKeyword (DOT identifierOrKeyword)?
+    ;
+
+// =============================================================================
 // UTILITY STATEMENTS
 // =============================================================================
 
