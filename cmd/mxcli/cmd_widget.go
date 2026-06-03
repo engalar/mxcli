@@ -259,18 +259,21 @@ func generateDefJSON(mpkDef *mpk.WidgetDefinition, mdlName string) *executor.Wid
 				PropertyKey: p.Key,
 				Source:      "DataSource",
 				Operation:   "datasource",
+				Required:    p.Required,
 			})
 		case "attribute":
 			def.PropertyMappings = append(def.PropertyMappings, executor.PropertyMapping{
 				PropertyKey: p.Key,
 				Source:      toPascalCase(p.Key),
 				Operation:   "attribute",
+				Required:    p.Required,
 			})
 		case "association":
 			assocMappings = append(assocMappings, executor.PropertyMapping{
 				PropertyKey: p.Key,
 				Source:      "Association",
 				Operation:   "association",
+				Required:    p.Required,
 			})
 		case "selection":
 			def.PropertyMappings = append(def.PropertyMappings, executor.PropertyMapping{
@@ -278,6 +281,7 @@ func generateDefJSON(mpkDef *mpk.WidgetDefinition, mdlName string) *executor.Wid
 				Source:      "Selection",
 				Operation:   "selection",
 				Default:     p.DefaultValue,
+				Required:    p.Required,
 			})
 		case "action":
 			// Action properties are handled by the engine's explicit-properties path
@@ -286,6 +290,7 @@ func generateDefJSON(mpkDef *mpk.WidgetDefinition, mdlName string) *executor.Wid
 			m := executor.PropertyMapping{
 				PropertyKey: p.Key,
 				Operation:   "primitive",
+				Required:    p.Required,
 			}
 			if p.DefaultValue != "" {
 				m.Value = p.DefaultValue

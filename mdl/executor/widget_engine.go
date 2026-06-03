@@ -43,6 +43,7 @@ type PropertyMapping struct {
 	Value       string `json:"value,omitempty"`
 	Operation   string `json:"operation"`
 	Default     string `json:"default,omitempty"`
+	Required    bool   `json:"required,omitempty"`
 }
 
 // WidgetMode defines a conditional configuration variant for a widget.
@@ -150,6 +151,22 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 				"  Linked attribute properties that draw from this datasource: %s",
 				w.Name, m.PropertyKey, linked)
 			log.Print(hint)
+		}
+	}
+
+	// 3.6 Warn about required properties that were not bound.
+	// Surfaces CE0642-class issues before Studio Pro validation.
+	for _, m := range mappings {
+		if !m.Required {
+			continue
+		}
+		ctx, _ := e.resolveMapping(m, w)
+		bound := ctx != nil && (ctx.AttributePath != "" || ctx.PrimitiveVal != "" ||
+			ctx.DataSource != nil || ctx.Action != nil || len(ctx.AttributePaths) > 0)
+		if !bound {
+			log.Printf("WARNING [%s]: required property '%s' (%s) is not bound.\n"+
+				"  Add '%s: <value>' inside the widget block to avoid CE0642 in Studio Pro.",
+				w.Name, m.PropertyKey, m.Operation, m.Source)
 		}
 	}
 
