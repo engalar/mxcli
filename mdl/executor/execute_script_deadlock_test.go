@@ -20,6 +20,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -155,5 +156,83 @@ func TestExecuteScriptPath_ReadOnly(t *testing.T) {
 			"EXECUTE SCRIPT deadlocked on read-only script — did not complete within %v",
 			scriptDeadlockTimeout,
 		)
+	}
+}
+
+// TestExecuteScriptPath_RollbackOnError verifies that when a statement inside
+// EXECUTE SCRIPT fails, all preceding creates in the same script are rolled back.
+//
+// Currently skipped: rollback atomicity is not yet implemented. The repos layer
+// (writerSink, mdl/backend/mpr/repos/sink.go) delegates straight to mmpr.Writer,
+// committing each unit to disk immediately and bypassing the ScriptBuffer that
+// backs BeginScriptTransaction's rollback. The test body is kept as executable
+// documentation of the intended behavior.
+func TestExecuteScriptPath_RollbackOnError(t *testing.T) {
+	t.Skip("Known limitation: rollback atomicity not yet implemented. " +
+		"The repos layer (writerSink) writes directly to mmpr.Writer bypassing ScriptBuffer. " +
+		"Tracked as separate issue.")
+	t.Parallel()
+	be := openBackendForTest(t)
+
+	exec := New(&bytes.Buffer{})
+	exec.SetBackend(be)
+
+	// First statement creates entity; second alters a non-existent entity → error.
+	// (A bare "create entity" on an unknown module auto-creates the module and
+	// does not error, so we use ALTER on a missing entity to force a failure.)
+	scriptPath := writeScriptFile(t,
+		"create or modify entity MyFirstModule.RollbackTarget;\n"+
+			"alter entity MyFirstModule.DoesNotExistXYZ add attribute Foo : String;\n",
+	)
+
+	stmt := &ast.ExecuteScriptStmt{Path: scriptPath}
+	ctx := exec.newExecContext(context.Background())
+
+	err := execExecuteScript(ctx, stmt)
+	if err == nil {
+		t.Fatal("expected error from invalid statement, got nil")
+	}
+
+	// RollbackTarget must not have been committed to the MPR.
+	if _, lookErr := be.GetEntityIDByQualifiedName("MyFirstModule.RollbackTarget"); lookErr == nil {
+		t.Error("rolled-back entity 'RollbackTarget' still present in MPR after script failure")
+	}
+}
+
+// TestExecuteScriptPath_CreateThenDescribe verifies that an entity created
+// earlier in the same EXECUTE SCRIPT block is visible to a subsequent
+// DESCRIBE or SHOW statement (read-own-write within a script).
+func TestExecuteScriptPath_CreateThenDescribe(t *testing.T) {
+	t.Parallel()
+	be := openBackendForTest(t)
+
+	var out bytes.Buffer
+	exec := New(&out)
+	exec.SetBackend(be)
+
+	scriptPath := writeScriptFile(t,
+		"create or modify entity MyFirstModule.ReadOwnWriteTest;\n"+
+			"show entities;\n",
+	)
+
+	stmt := &ast.ExecuteScriptStmt{Path: scriptPath}
+
+	done := make(chan error, 1)
+	go func() {
+		ctx := exec.newExecContext(context.Background())
+		done <- execExecuteScript(ctx, stmt)
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("EXECUTE SCRIPT: %v", err)
+		}
+	case <-time.After(scriptDeadlockTimeout):
+		t.Fatalf("EXECUTE SCRIPT deadlocked within %v", scriptDeadlockTimeout)
+	}
+
+	if !strings.Contains(out.String(), "ReadOwnWriteTest") {
+		t.Errorf("show entities output does not include ReadOwnWriteTest:\n%s", out.String())
 	}
 }
