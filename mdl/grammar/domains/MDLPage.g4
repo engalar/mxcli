@@ -244,6 +244,8 @@ widgetTypeV3
     | TABCONTAINER
     | TABPAGE
     | GROUPBOX
+    | FILEINPUT
+    | IMAGEINPUT
     ;
 
 // V3 Widget properties: (Prop: Value, Prop: Value)
