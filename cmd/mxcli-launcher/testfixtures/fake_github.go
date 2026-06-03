@@ -93,6 +93,11 @@ func (f *FakeGitHub) handle(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Write(data)
 
+	case strings.Contains(path, "/releases") && !strings.Contains(path, "/releases/"):
+		// Serve the releases list endpoint used by fetchLatestTagWithPrefix.
+		// Returns a JSON array with the single configured release.
+		fmt.Fprintf(w, `[{"tag_name":%q}]`, f.LatestTag)
+
 	default:
 		http.NotFound(w, r)
 	}
