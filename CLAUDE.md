@@ -19,25 +19,41 @@ For the full workflow, read `CONTRIBUTING.md`. For the review checklist applied 
 
 ## AI-Code Co-design Principle
 
-**mxcli is designed for AI-assisted Mendix development. Successful task completion requires BOTH the code AND the AI's operating procedure to be correct — neither alone is sufficient.**
+**mxcli 的成功标准是双重的：程序执行正确 + AI 操作正确，二者缺一不可。**
 
-This means every feature must be designed across two planes simultaneously:
+这不是两个独立目标，而是一个协同设计要求：代码和提示词系统必须共同覆盖以下三个层次，任何一层断裂，AI 就会陷入静默失败或错误重试。
 
-| Plane | What must be true |
-|-------|------------------|
-| **Code** | Correct execution, actionable error messages routed through `cmd.ErrOrStderr()`, no `os.Exit` in daemon handlers, `RunE` not `Run` |
-| **AI prompt** | Skills/CLAUDE.md accurately describe which syntax works, which commands work in which environment, and what the workarounds are for known limitations |
+### 三层设计要求
 
-**Concrete consequences:**
-- A bug that silently swallows errors (e.g. `os.Exit` killing the daemon) is not just a code bug — it also breaks the AI's feedback loop, causing it to retry with wrong assumptions.
-- A skill that documents stale syntax (e.g. `./bin/mxcli` instead of `mxcli`) causes the AI to generate commands that fail silently on Windows.
-- Error messages must be specific enough for the AI to self-correct: "widget 'X' template not found — run mxcli widget init" is actionable; "not found" is not.
-- When a command cannot work in a given environment (e.g. exec/check before the daemon-kill fix), the skill must say so explicitly rather than leaving the AI to discover it through failed retries.
+**1. 初始引导**
+AI 是否在开始操作前就有足够的信息做出正确决策？
+- CLAUDE.md 的 skill 列表必须覆盖所有常用路径（含 custom widget、devcontainer 差异等）
+- Skill 内容必须准确反映当前行为，不能有过时语法或错误路径
 
-**When adding any new feature, ask:**
-1. What does the AI see if this fails? Is the error message actionable?
-2. Does the relevant skill reflect the current behaviour accurately?
-3. Is there a Windows / devcontainer difference the AI needs to know?
+**2. 发现路径**
+从初始引导出发，AI 能否按图索骥找到所需信息，而不需要人来指点？
+- 命令输出必须包含"下一步用什么命令"的线索（如 `widget list` 显示 MDL 语法示例）
+- 当存在多种路径时（如内置 shorthand vs `PLUGGABLEWIDGET 'id'`），文档必须明确说明适用条件
+
+**3. 出错反馈**
+错误发生时，错误信息是否**可理解**且**含有下一步引导**？
+- 错误必须通过 `cmd.ErrOrStderr()` 路由到 socket，不能进 `/dev/null`（禁止 `os.Exit`、禁止裸 `fmt.Fprintf(os.Stderr)`）
+- 错误消息必须说明**为什么失败**和**怎么修**，而不只是"not found"
+- `log.Printf` 的 HINT/WARNING 同样必须可见（daemon 模式下需重定向全局 log）
+
+### 与传统工具设计的区别
+
+传统 CLI 工具假设使用者是人类——人可以查手册、凭经验猜测、在失败后问别人。AI 不能。AI 需要：
+- 每个失败点自带足够上下文来纠正路线
+- 无需查阅外部资料即可自恢复
+- 引导链必须完整：**初始引导 → 发现路径 → 可操作的错误**
+
+### 新功能检查项
+
+添加任何新功能时，依次问：
+1. AI 在开始前有没有正确的引导（CLAUDE.md / skill）？
+2. 引导中能否找到所需信息，还是需要人来告知？
+3. 出错时，AI 看到的是可理解的错误 + 下一步指引吗？
 
 ## Project Overview
 
