@@ -61,64 +61,18 @@ func (e *Env) printUpdateNotice() {
 }
 
 func (e *Env) runUpgrade(_ []string) int {
+	// runUpgrade now upgrades the daemon component.
+	// Launcher self-upgrade is handled by runSelfUpgrade (--internal-update flow).
 	if err := e.acquireUpgradeLock(); err != nil {
-		fmt.Fprintf(os.Stderr, "mxcli upgrade: %v\n", err)
+		fmt.Fprintf(os.Stderr, "mxcli daemon upgrade: %v\n", err)
 		return 1
 	}
 	defer e.releaseUpgradeLock()
-	fmt.Println("Checking for updates...")
-	latest, err := e.fetchLatestTag()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "mxcli upgrade: fetch latest tag: %v\n", err)
-		return 1
-	}
-	current := readVersionFile(e.daemonVersionPath())
-	if current == latest {
-		fmt.Printf("mxcli daemon is already at %s — nothing to do.\n", current)
-		return 0
-	}
-	fmt.Printf("Upgrading daemon %s → %s\n", current, latest)
 
-	tmpDest := e.daemonBinaryPath() + ".new"
-	if err := e.downloadDaemonVersion(latest, tmpDest); err != nil {
-		fmt.Fprintf(os.Stderr, "mxcli upgrade: download: %v\n", err)
+	if err := e.upgradeComponent(e.daemonComponentConfig()); err != nil {
+		fmt.Fprintf(os.Stderr, "mxcli daemon upgrade: %v\n", err)
 		return 1
 	}
-
-	if daemonBinaryExists(e.daemonBinaryPath()) {
-		os.Rename(e.daemonVersionPath(), e.daemonVersionBakPath())
-		if err := os.Rename(e.daemonBinaryPath(), e.daemonBakPath()); err != nil {
-			fmt.Fprintf(os.Stderr, "mxcli upgrade: backup current: %v\n", err)
-			os.Remove(tmpDest)
-			return 1
-		}
-	}
-
-	if err := os.Rename(tmpDest, e.daemonBinaryPath()); err != nil {
-		fmt.Fprintf(os.Stderr, "mxcli upgrade: install: %v\n", err)
-		e.rollback()
-		return 1
-	}
-	os.WriteFile(e.daemonVersionPath(), []byte(latest), 0644)
-
-	fmt.Print("Verifying new daemon...")
-	sock := e.daemonSocketPath()
-	os.Remove(sock)
-	if err := e.startDaemon(); err != nil {
-		fmt.Printf(" FAILED: %v\n", err)
-		fmt.Println("Rolling back to previous version...")
-		e.rollback()
-		return 1
-	}
-	if _, err := e.healthCheck(sock); err != nil {
-		fmt.Printf(" FAILED: %v\n", err)
-		fmt.Println("Rolling back to previous version...")
-		e.rollback()
-		return 1
-	}
-	fmt.Println(" OK")
-	fmt.Printf("✅ Upgraded to %s (previous version kept as backup)\n", latest)
-	os.Remove(e.daemonUpdateAvailablePath())
 	return 0
 }
 
