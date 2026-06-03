@@ -6,10 +6,12 @@ package docker
 import (
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 // ProcessStarter abstracts exec.Cmd execution for testing.
@@ -110,9 +112,39 @@ func buildLocalEnv(dbURL string) []string {
 	return env
 }
 
+// ParseDBURL converts a postgres:// connection URL to RUNTIME_PARAMS_* env vars.
+// Only postgresql/postgres schemes are supported.
+func ParseDBURL(rawURL string) ([]string, error) {
+	return parseDBURL(rawURL)
+}
+
 // parseDBURL converts a postgres:// URL into RUNTIME_PARAMS_* env vars
 // consumed by etc/variables.conf inside the PAD.
 func parseDBURL(rawURL string) ([]string, error) {
-	// Implemented in Task 3.
-	return nil, fmt.Errorf("parseDBURL: not implemented")
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid DB URL: %w", err)
+	}
+	scheme := strings.ToLower(u.Scheme)
+	if scheme != "postgres" && scheme != "postgresql" {
+		return nil, fmt.Errorf("unsupported DB scheme %q (only postgres:// is supported)", u.Scheme)
+	}
+
+	host := u.Hostname()
+	port := u.Port()
+	if port == "" {
+		port = "5432"
+	}
+	dbName := strings.TrimPrefix(u.Path, "/")
+	username := u.User.Username()
+	password, _ := u.User.Password()
+
+	jdbcURL := fmt.Sprintf("jdbc:postgresql://%s:%s/%s", host, port, dbName)
+
+	return []string{
+		"RUNTIME_PARAMS_DATABASETYPE=PostgreSQL",
+		"RUNTIME_PARAMS_DATABASEJDBCURL=" + jdbcURL,
+		"RUNTIME_PARAMS_DATABASEUSERNAME=" + username,
+		"RUNTIME_PARAMS_DATABASEPASSWORD=" + password,
+	}, nil
 }
