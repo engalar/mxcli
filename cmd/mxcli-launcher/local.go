@@ -87,27 +87,27 @@ func (e *Env) fetchLatestTagWithPrefix(prefix string) (string, error) {
 
 // downloadLocalVersion downloads and extracts mxcli-local for the current platform.
 func (e *Env) downloadLocalVersion(tag, destPath string) error {
-	return e.downloadLocalVersionForPlatform(tag, destPath, runtime.GOOS, runtime.GOARCH)
+	return e.downloadLocalVersionForPlatform(tag, destPath, runtime.GOOS, runtime.GOARCH, "mxcli-local")
 }
 
-func (e *Env) downloadLocalVersionForPlatform(tag, destPath, goos, goarch string) error {
+func (e *Env) downloadLocalVersionForPlatform(tag, destPath, goos, goarch, assetName string) error {
 	var archiveExt string
 	if goos == "windows" {
 		archiveExt = ".exe.zip"
 	} else {
 		archiveExt = ".tar.zst"
 	}
-	assetName := fmt.Sprintf("mxcli-local-%s-%s%s", goos, goarch, archiveExt)
+	fullAsset := fmt.Sprintf("%s-%s-%s%s", assetName, goos, goarch, archiveExt)
 
-	expectedHash, err := e.fetchAssetChecksumFromTag(tag, assetName)
+	expectedHash, err := e.fetchAssetChecksumFromTag(tag, fullAsset)
 	if err != nil {
 		return fmt.Errorf("fetch checksum: %w", err)
 	}
 
-	url := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", localRepo, tag, assetName)
+	url := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", localRepo, tag, fullAsset)
 	fmt.Fprintf(os.Stderr, "  Downloading %s...\n", url)
 
-	return e.downloadAndExtractComponent(url, expectedHash, destPath, goos, "mxcli-local")
+	return e.downloadAndExtractComponent(url, expectedHash, destPath, goos, assetName)
 }
 
 func parseLatestTagWithPrefix(body io.Reader, prefix string) (string, error) {
