@@ -17,6 +17,28 @@ If you're starting a new task, here's how contributions work in this repo:
 
 For the full workflow, read `CONTRIBUTING.md`. For the review checklist applied to every PR, see the "PR / Commit Review Checklist" section below.
 
+## AI-Code Co-design Principle
+
+**mxcli is designed for AI-assisted Mendix development. Successful task completion requires BOTH the code AND the AI's operating procedure to be correct — neither alone is sufficient.**
+
+This means every feature must be designed across two planes simultaneously:
+
+| Plane | What must be true |
+|-------|------------------|
+| **Code** | Correct execution, actionable error messages routed through `cmd.ErrOrStderr()`, no `os.Exit` in daemon handlers, `RunE` not `Run` |
+| **AI prompt** | Skills/CLAUDE.md accurately describe which syntax works, which commands work in which environment, and what the workarounds are for known limitations |
+
+**Concrete consequences:**
+- A bug that silently swallows errors (e.g. `os.Exit` killing the daemon) is not just a code bug — it also breaks the AI's feedback loop, causing it to retry with wrong assumptions.
+- A skill that documents stale syntax (e.g. `./bin/mxcli` instead of `mxcli`) causes the AI to generate commands that fail silently on Windows.
+- Error messages must be specific enough for the AI to self-correct: "widget 'X' template not found — run mxcli widget init" is actionable; "not found" is not.
+- When a command cannot work in a given environment (e.g. exec/check before the daemon-kill fix), the skill must say so explicitly rather than leaving the AI to discover it through failed retries.
+
+**When adding any new feature, ask:**
+1. What does the AI see if this fails? Is the error message actionable?
+2. Does the relevant skill reflect the current behaviour accurately?
+3. Is there a Windows / devcontainer difference the AI needs to know?
+
 ## Project Overview
 
 **ModelSDK Go** is a Go library for reading and modifying Mendix application projects (`.mpr` files) stored locally on disk. It's a Go-native alternative to the TypeScript-based Mendix Model SDK, enabling programmatic access without cloud connectivity.
@@ -403,7 +425,7 @@ go build -o bin/mxcli ./cmd/mxcli
 | **Export project** | `mxcli export -p app.mpr --output ./export-dir [--module M] [--dry-run] [--force]` | Export all documents to structured MDL files; incremental (skips unchanged modules/documents via `-- @cache:` markers) |
 | **Import project** | `mxcli import -p app.mpr --input ./export-dir [--module M] [--dry-run] [--skip-errors]` | Execute exported MDL files in dependency order (enumerations → entities → microflows → pages → navigation) |
 | **New project** | `mxcli new <name> --version X.Y.Z [--output-dir dir]` | Downloads mxbuild, creates blank project, runs init, installs Linux mxcli for devcontainer |
-| **Setup mxcli** | `mxcli setup mxcli [--os linux] [--arch amd64] [--output ./mxcli]` | Download platform-specific mxcli binary from GitHub releases; `./mxcli` (with `./`) is intentional — VS Code extension (`mdl.mxcliPath`) and devcontainer `postCreateCommand` both reference this exact path |
+| **Setup mxcli** | `mxcli setup mxcli [--os linux] [--arch amd64] [--output ./mxcli]` | Download platform-specific mxcli binary from GitHub releases. **Two scenarios:** (1) Windows/Mac: mxcli is installed globally in PATH — use `mxcli` directly. (2) Devcontainer: downloads a Linux binary to `./mxcli` in the project root; devcontainer `postCreateCommand` and VS Code extension (`mdl.mxcliPath: "./mxcli"`) both rely on this exact path. |
 | **Local build** | `mxcli local build -p app.mpr [--skip-check]` | Build PAD package without Docker (Windows + Linux); output at `.docker/build/` |
 | **Local run** | `mxcli local run -p app.mpr [--admin-password pw] [--db postgres://...]` | Start Mendix runtime without Docker; HSQLDB by default, app at :8080 |
 | **Local upgrade** | `mxcli local upgrade` | Download latest `mxcli-local` from `local-v*` GitHub release |
@@ -464,7 +486,7 @@ mxcli new MyApp --version 11.8.0
 mxcli new MyApp --version 10.24.0 --output-dir ./projects/my-app
 ```
 
-Steps performed: downloads MxBuild → `mx create-project` → `mxcli init` → downloads correct Linux mxcli binary for devcontainer. The result is a ready-to-open project with `.devcontainer/`, AI tooling, and a working `mxcli` binary.
+Steps performed: downloads MxBuild → `mx create-project` → `mxcli init` → downloads a Linux mxcli binary to `./mxcli` in the project root for devcontainer use. The result is a ready-to-open project with `.devcontainer/`, AI tooling, and `./mxcli` pre-installed for the container environment.
 
 ### Slash Command Namespaces
 
@@ -526,8 +548,8 @@ These rules apply whenever generating microflow or nanoflow MDL. Violations are 
 
 **Always validate before presenting to user:**
 ```bash
-./bin/mxcli check script.mdl                    # Syntax + anti-pattern check
-./bin/mxcli check script.mdl -p app.mpr --references  # With reference validation
+mxcli check script.mdl                    # Syntax + anti-pattern check
+mxcli check script.mdl -p app.mpr --references  # With reference validation
 ```
 
 ## MDL Syntax Quick Reference
