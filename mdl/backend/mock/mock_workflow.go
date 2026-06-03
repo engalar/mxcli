@@ -78,6 +78,13 @@ func (m *MockBackend) ListTranslationNodes(docQN, docType string) ([]model.Trans
 	return nil, fmt.Errorf("MockBackend.ListTranslationNodes not configured")
 }
 
+func (m *MockBackend) SetEnumerationTranslation(enumQN, valueName, langCode, text string) error {
+	if m.SetEnumerationTranslationFunc != nil {
+		return m.SetEnumerationTranslationFunc(enumQN, valueName, langCode, text)
+	}
+	return fmt.Errorf("MockBackend.SetEnumerationTranslation not configured")
+}
+
 // ---------------------------------------------------------------------------
 // ImageBackend
 // ---------------------------------------------------------------------------

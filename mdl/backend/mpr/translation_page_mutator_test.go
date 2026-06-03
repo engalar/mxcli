@@ -62,6 +62,11 @@ func TestSetVersionedTranslation_AddNew(t *testing.T) {
 		tr := it.(bson.D)
 		if dGetString(tr, "LanguageCode") == "zh_CN" && dGetString(tr, "Text") == "提交" {
 			found = true
+			// New translations must carry a $ID; Studio Pro's storage loader
+			// dereferences it and crashes (NullReferenceException) otherwise.
+			if dGet(tr, "$ID") == nil {
+				t.Error("new Texts$Translation is missing $ID")
+			}
 		}
 	}
 	if !found {

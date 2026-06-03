@@ -34,9 +34,12 @@ func translateDocument(ctx *ExecContext, stmt *ast.TranslateStmt) error {
 	case "SNIPPET":
 		return translatePage(ctx, stmt, "snippet")
 	case "ENUMERATION":
-		return mdlerrors.NewUnsupported("TRANSLATE ENUMERATION not yet implemented")
+		return translateEnumeration(ctx, stmt)
 	case "WORKFLOW":
-		return mdlerrors.NewUnsupported("TRANSLATE WORKFLOW not yet implemented")
+		return mdlerrors.NewUnsupported(
+			"TRANSLATE WORKFLOW is not supported: workflow activity text (TaskName/TaskDescription) " +
+				"uses Microflows$StringTemplate in Mendix 11.x, which does not support multilingual translation. " +
+				"Use page or enumeration translation instead.")
 	case "MICROFLOW":
 		return mdlerrors.NewUnsupported("TRANSLATE MICROFLOW not yet implemented")
 	default:
@@ -99,6 +102,26 @@ func translatePage(ctx *ExecContext, stmt *ast.TranslateStmt, containerType stri
 
 	fmt.Fprintf(ctx.Output, "Translated %s %s in %s (%d fields)\n",
 		containerType, stmt.QName.String(), stmt.Lang, len(stmt.Ops))
+	return nil
+}
+
+// translateEnumeration applies translation SET operations to an enumeration.
+// Each op path is "ValueName.caption"; the text is the caption translation for
+// stmt.Lang.
+func translateEnumeration(ctx *ExecContext, stmt *ast.TranslateStmt) error {
+	for _, op := range stmt.Ops {
+		valueName, prop, hasDot := strings.Cut(op.Path, ".")
+		if !hasDot || !strings.EqualFold(prop, "caption") {
+			return mdlerrors.NewValidationf(
+				"invalid enumeration path %q: expected ValueName.caption", op.Path)
+		}
+		if err := ctx.Backend.SetEnumerationTranslation(
+			stmt.QName.String(), valueName, stmt.Lang, op.Text); err != nil {
+			return mdlerrors.NewBackend("translate enumeration value "+valueName, err)
+		}
+	}
+	fmt.Fprintf(ctx.Output, "Translated enumeration %s in %s (%d values)\n",
+		stmt.QName.String(), stmt.Lang, len(stmt.Ops))
 	return nil
 }
 

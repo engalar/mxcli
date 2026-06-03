@@ -108,7 +108,7 @@ func TestTranslatePage_SetPageTitle(t *testing.T) {
 	}
 }
 
-func TestTranslate_EnumerationStub(t *testing.T) {
+func TestTranslateEnumeration_InvalidPath(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:        func() bool { return true },
 		GetProjectSettingsFunc: translateTestSettings,
@@ -118,11 +118,11 @@ func TestTranslate_EnumerationStub(t *testing.T) {
 		DocType: "ENUMERATION",
 		QName:   ast.QualifiedName{Module: "MyModule", Name: "Status"},
 		Lang:    "zh_CN",
-		Ops:     []ast.TranslateSetOp{{Path: "Open", Text: "打开"}},
+		Ops:     []ast.TranslateSetOp{{Path: "Open", Text: "打开"}}, // missing .caption
 	}
 	err := translateDocument(ctx, stmt)
-	if err == nil {
-		t.Fatal("expected not-implemented error for ENUMERATION stub")
+	if err == nil || !strings.Contains(err.Error(), "invalid enumeration path") {
+		t.Fatalf("expected 'invalid enumeration path' error, got: %v", err)
 	}
 }
 
@@ -151,6 +151,75 @@ func TestTranslate_LangNotRegistered(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "not registered") {
 		t.Errorf("expected 'not registered' error, got: %v", err)
+	}
+}
+
+func TestTranslateEnumeration_SetsValueCaption(t *testing.T) {
+	var gotEnum, gotValue, gotLang, gotText string
+	calls := 0
+	mb := &mock.MockBackend{
+		IsConnectedFunc:        func() bool { return true },
+		GetProjectSettingsFunc: translateTestSettings,
+		SetEnumerationTranslationFunc: func(enumQN, valueName, langCode, text string) error {
+			gotEnum, gotValue, gotLang, gotText = enumQN, valueName, langCode, text
+			calls++
+			return nil
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb))
+	stmt := &ast.TranslateStmt{
+		DocType: "ENUMERATION",
+		QName:   ast.QualifiedName{Module: "MyModule", Name: "Status"},
+		Lang:    "zh_CN",
+		Ops:     []ast.TranslateSetOp{{Path: "ACTIVE.caption", Text: "活跃"}},
+	}
+	if err := translateDocument(ctx, stmt); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("expected 1 SetEnumerationTranslation call, got %d", calls)
+	}
+	if gotEnum != "MyModule.Status" || gotValue != "ACTIVE" || gotLang != "zh_CN" || gotText != "活跃" {
+		t.Errorf("unexpected args: enum=%q value=%q lang=%q text=%q", gotEnum, gotValue, gotLang, gotText)
+	}
+	if !strings.Contains(buf.String(), "Translated enumeration MyModule.Status") {
+		t.Errorf("unexpected output: %s", buf.String())
+	}
+}
+
+func TestTranslateEnumeration_UnregisteredLang(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc:        func() bool { return true },
+		GetProjectSettingsFunc: translateTestSettings, // only en_US + zh_CN
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	stmt := &ast.TranslateStmt{
+		DocType: "ENUMERATION",
+		QName:   ast.QualifiedName{Module: "MyModule", Name: "Status"},
+		Lang:    "fr_FR",
+		Ops:     []ast.TranslateSetOp{{Path: "ACTIVE", Text: "actif"}},
+	}
+	err := translateDocument(ctx, stmt)
+	if err == nil || !strings.Contains(err.Error(), "not registered") {
+		t.Fatalf("expected 'not registered' error, got: %v", err)
+	}
+}
+
+func TestTranslateWorkflow_NotSupported(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc:        func() bool { return true },
+		GetProjectSettingsFunc: translateTestSettings,
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	stmt := &ast.TranslateStmt{
+		DocType: "WORKFLOW",
+		QName:   ast.QualifiedName{Module: "MyModule", Name: "Approval"},
+		Lang:    "zh_CN",
+		Ops:     []ast.TranslateSetOp{{Path: "userTask1.taskName", Text: "审核"}},
+	}
+	err := translateDocument(ctx, stmt)
+	if err == nil || !strings.Contains(err.Error(), "not supported") {
+		t.Fatalf("expected 'not supported' error for WORKFLOW, got: %v", err)
 	}
 }
 

@@ -248,9 +248,10 @@ type MockBackend struct {
 	UpdateWorkflowGenFunc func(wf *genWf.Workflow) error
 
 	// SettingsBackend
-	GetProjectSettingsFunc    func() (*model.ProjectSettings, error)
-	UpdateProjectSettingsFunc func(ps *model.ProjectSettings) error
-	ListTranslationNodesFunc  func(docQN, docType string) ([]model.TranslationNode, error)
+	GetProjectSettingsFunc        func() (*model.ProjectSettings, error)
+	UpdateProjectSettingsFunc     func(ps *model.ProjectSettings) error
+	ListTranslationNodesFunc      func(docQN, docType string) ([]model.TranslationNode, error)
+	SetEnumerationTranslationFunc func(enumQN, valueName, langCode, text string) error
 
 	// ImageBackend
 	ListImageCollectionsFunc  func() ([]*types.ImageCollection, error)

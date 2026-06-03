@@ -77,6 +77,10 @@ type SettingsBackend interface {
 	// (identified by its qualified name and optional doc type) with their
 	// per-language translations.
 	ListTranslationNodes(docQN, docType string) ([]model.TranslationNode, error)
+	// SetEnumerationTranslation sets the langCode translation on the caption of
+	// the enumeration value named valueName, within the enumeration identified
+	// by its qualified name.
+	SetEnumerationTranslation(enumQN, valueName, langCode, text string) error
 }
 
 // ImageBackend provides image collection operations.

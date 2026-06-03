@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/mendixlabs/mxcli/mdl/bsonutil"
 )
 
 // SetWidgetTranslation sets the translation for langCode on a translatable text
@@ -80,6 +82,7 @@ func setVersionedTranslation(textsDoc bson.D, langCode, text string) {
 		}
 	}
 	newTr := bson.D{
+		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 		{Key: "$Type", Value: "Texts$Translation"},
 		{Key: "LanguageCode", Value: langCode},
 		{Key: "Text", Value: text},
