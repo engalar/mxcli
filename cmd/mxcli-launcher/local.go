@@ -20,6 +20,30 @@ const localRepo = "engalar/mxcli"
 // runLocal delegates all `mxcli local *` subcommands to mxcli-local.
 // It ensures the binary is installed, then execs it with inherited stdio.
 func (e *Env) runLocal(args []string) int {
+	// Intercept lifecycle commands — these are managed by the launcher, not mxcli-local.
+	if len(args) > 0 {
+		switch args[0] {
+		case "upgrade":
+			if err := e.acquireUpgradeLock(); err != nil {
+				fmt.Fprintf(os.Stderr, "mxcli local upgrade: %v\n", err)
+				return 1
+			}
+			defer e.releaseUpgradeLock()
+			if err := e.upgradeComponent(e.localComponentConfig()); err != nil {
+				fmt.Fprintf(os.Stderr, "mxcli local upgrade: %v\n", err)
+				return 1
+			}
+			return 0
+
+		case "rollback":
+			if err := e.rollbackComponent(e.localComponentConfig()); err != nil {
+				fmt.Fprintf(os.Stderr, "mxcli local rollback: %v\n", err)
+				return 1
+			}
+			return 0
+		}
+	}
+
 	if err := e.ensureLocalBinary(); err != nil {
 		fmt.Fprintf(os.Stderr, "mxcli local: %v\n", err)
 		return 1
