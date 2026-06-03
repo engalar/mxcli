@@ -15,16 +15,20 @@ For **microflow logic testing** (business rules, calculations, entity operations
 
 ## Prerequisites
 
-The devcontainer created by `mxcli init` includes:
-- **Node.js** (LTS) — installed via devcontainer feature
+**In devcontainer (Docker available):**
 - **playwright-cli** — installed globally (`npm install -g @playwright/cli@latest`)
 - **Chromium** — installed via `playwright-cli install --with-deps chromium`
-- **Docker-in-Docker** — Mendix + PostgreSQL running via `mxcli docker run`
+- App running via `mxcli docker run -p app.mpr --wait`
 
-The app must be running before verification:
+**Local environment (no Docker):**
+- Install playwright: `npm install -g @playwright/cli@latest && playwright-cli install --with-deps chromium`
+  *Or use:* `npx playwright install chromium`
+- App running via `mxcli local run -p app.mpr --admin-password YourPassword`
 
+The app must be running before verification. Check with:
 ```bash
-mxcli docker run -p app.mpr --wait
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/
+# Should return 200
 ```
 
 ---

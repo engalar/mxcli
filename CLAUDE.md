@@ -406,6 +406,56 @@ go build -o bin/mxcli ./cmd/mxcli
 | **Import project** | `mxcli import -p app.mpr --input ./export-dir [--module M] [--dry-run] [--skip-errors]` | Execute exported MDL files in dependency order (enumerations → entities → microflows → pages → navigation) |
 | **New project** | `mxcli new <name> --version X.Y.Z [--output-dir dir]` | Downloads mxbuild, creates blank project, runs init, installs Linux mxcli for devcontainer |
 | **Setup mxcli** | `mxcli setup mxcli [--os linux] [--arch amd64] [--output ./mxcli]` | Download platform-specific mxcli binary from GitHub releases |
+| **Local build** | `mxcli local build -p app.mpr [--skip-check]` | Build PAD package without Docker (Windows + Linux); output at `.docker/build/` |
+| **Local run** | `mxcli local run -p app.mpr [--admin-password pw] [--db postgres://...]` | Start Mendix runtime without Docker; HSQLDB by default, app at :8080 |
+| **Local upgrade** | `mxcli local upgrade` | Download latest `mxcli-local` from `local-v*` GitHub release |
+| **Daemon upgrade** | `mxcli daemon upgrade\|rollback\|status` | Manage mxcli-daemon lifecycle independently of launcher |
+| **Self upgrade** | `mxcli upgrade` | Self-fork launcher upgrade (rename trick on Windows) |
+
+### mxcli local — Run Without Docker
+
+`mxcli local` commands work on Windows and Linux without Docker. They use a separate independently-releasable binary `mxcli-local` that the launcher downloads on first use from `local-v*` GitHub releases.
+
+```bash
+# Step 1: Build PAD package (runs mxbuild locally, no Docker needed)
+mxcli local build -p app.mpr
+
+# Step 2: Start runtime (HSQLDB embedded, no external DB needed)
+mxcli local run -p app.mpr --admin-password MyPassword
+# App: http://localhost:8080  Admin API: http://localhost:8090
+# Login: MxAdmin / MyPassword
+
+# Use PostgreSQL instead of HSQLDB:
+mxcli local run -p app.mpr --db postgres://user:pass@localhost:5432/mendix
+
+# Manage mxcli-local binary:
+mxcli local upgrade    # download latest local-v* release
+mxcli local rollback   # restore previous version
+```
+
+**PAD structure** (`.docker/build/`): contains `bin/start` (Linux/macOS), `bin/start.bat` (Windows), `bin/start.ps1` (PowerShell), and `lib/runtime/launcher/runtimelauncher.jar`. The launcher execs the platform-appropriate script.
+
+**Binary architecture** — three independently released components:
+
+| Binary | Tag pattern | Install path | Manages |
+|--------|-------------|--------------|---------|
+| `mxcli` (launcher) | `v*` | user PATH | routes commands, manages sub-binaries |
+| `mxcli-daemon` | `daemon-v*` | `~/.mxcli/daemon/` | all MDL commands, LSP, catalog |
+| `mxcli-local` | `local-v*` | `~/.mxcli/local/` | PAD build + local runtime launch |
+
+Upgrade commands:
+- `mxcli upgrade` — self-fork launcher upgrade (Windows: rename trick; POSIX: atomic rename)
+- `mxcli daemon upgrade` — download latest `daemon-v*` release
+- `mxcli local upgrade` — download latest `local-v*` release
+
+**Key implementation files:**
+- `cmd/mxcli-local/` — mxcli-local binary (build + run Cobra commands)
+- `cmd/mxcli/docker/local.go` — `StartLocal()`, `ParseDBURL()`, `ProcessStarter` interface
+- `cmd/mxcli/docker/testfixtures/pad.go` — `FakePAD` fixture for unit tests
+- `cmd/mxcli-launcher/local.go` — launcher routing + `ensureLocalBinary()` + upgrade/rollback
+- `cmd/mxcli-launcher/upgrade.go` — `ComponentConfig`, `upgradeComponent()`, `rollbackComponent()`
+- `cmd/mxcli-launcher/self_update.go` — `runSelfUpgrade()`, `runInternalUpdate()`, `PIDWaiter` interface
+- `.github/workflows/release-local.yml` — CI for `local-v*` tags
 
 ### mxcli new
 
@@ -503,6 +553,9 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - LSP server with hover, go-to-definition, completion, diagnostics, symbols, folding
 - VS Code extension (`vscode-mdl`) with context menu commands (Run/Check/Selection)
 - Docker build integration (`mxcli docker build`) with PAD patching (Phase 1)
+- Local runner without Docker (`mxcli local build` + `mxcli local run`) — Windows + Linux, HSQLDB embedded, `--admin-password` flag, `--db postgres://` override
+- Independent release pipeline: `v*` (launcher), `daemon-v*` (daemon), `local-v*` (mxcli-local)
+- Upgrade command alignment: `mxcli upgrade` (self-fork), `mxcli daemon upgrade/rollback/status`, `mxcli local upgrade/rollback`
 - OQL query execution against running runtime (`mxcli oql`)
 - Business event services (SHOW/DESCRIBE/CREATE/DROP)
 - Project settings (SHOW/DESCRIBE/ALTER)

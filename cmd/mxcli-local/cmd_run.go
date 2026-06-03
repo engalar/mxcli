@@ -14,9 +14,10 @@ import (
 
 func runCmd() *cobra.Command {
 	var (
-		projectPath string
-		dbURL       string
-		padDir      string
+		projectPath   string
+		dbURL         string
+		padDir        string
+		adminPassword string
 	)
 
 	cmd := &cobra.Command{
@@ -38,10 +39,11 @@ Override with --db for PostgreSQL.`,
 				dir = filepath.Join(filepath.Dir(projectPath), ".docker", "build")
 			}
 			return docker.StartLocal(docker.LocalRunOptions{
-				PadDir: dir,
-				DB:     dbURL,
-				Stdout: os.Stdout,
-				Stderr: os.Stderr,
+				PadDir:        dir,
+				DB:            dbURL,
+				AdminPassword: adminPassword,
+				Stdout:        os.Stdout,
+				Stderr:        os.Stderr,
 			})
 		},
 	}
@@ -49,5 +51,6 @@ Override with --db for PostgreSQL.`,
 	cmd.Flags().StringVarP(&projectPath, "project", "p", "", "Path to .mpr file (derives PAD dir as .docker/build/)")
 	cmd.Flags().StringVar(&dbURL, "db", "", "Database URL (postgres://user:pass@host/db). Default: HSQLDB (embedded)")
 	cmd.Flags().StringVar(&padDir, "pad-dir", "", "Explicit PAD directory (overrides -p)")
+	cmd.Flags().StringVar(&adminPassword, "admin-password", "", "MxAdmin login password (default: Admin123!)")
 	return cmd
 }

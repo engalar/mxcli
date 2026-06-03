@@ -30,6 +30,9 @@ type LocalRunOptions struct {
 	PadDir string
 	// DB is an optional postgres:// URL. Empty = use PAD defaults (HSQLDB).
 	DB string
+	// AdminPassword sets ADMIN_ADMINPASSWORD and RUNTIME_ADMINUSER_PASSWORD.
+	// Defaults to "Admin123!" if empty.
+	AdminPassword string
 	// Stdout for runtime log output (defaults to os.Stdout).
 	Stdout io.Writer
 	// Stderr for runtime error output (defaults to os.Stderr).
@@ -62,7 +65,7 @@ func StartLocal(opts LocalRunOptions) error {
 
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = opts.PadDir
-	cmd.Env = append(os.Environ(), buildLocalEnv(opts.DB)...)
+	cmd.Env = append(os.Environ(), buildLocalEnv(opts.DB, opts.AdminPassword)...)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	cmd.Stdin = os.Stdin
@@ -99,10 +102,13 @@ func resolveStartScript(padDir string) ([]string, error) {
 // buildLocalEnv returns environment variables required by the Mendix runtime.
 // ADMIN_ADMINPASSWORD: M2EE admin API auth (required by runtimelauncher).
 // RUNTIME_ADMINUSER_PASSWORD: creates/updates MxAdmin login user on startup.
-func buildLocalEnv(dbURL string) []string {
+func buildLocalEnv(dbURL, adminPassword string) []string {
+	if adminPassword == "" {
+		adminPassword = "Admin123!"
+	}
 	env := []string{
-		"ADMIN_ADMINPASSWORD=Admin123!",
-		"RUNTIME_ADMINUSER_PASSWORD=Admin123!",
+		"ADMIN_ADMINPASSWORD=" + adminPassword,
+		"RUNTIME_ADMINUSER_PASSWORD=" + adminPassword,
 	}
 	if dbURL != "" {
 		if dbEnv, err := parseDBURL(dbURL); err == nil {

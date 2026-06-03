@@ -1,6 +1,8 @@
 # Run App Skill
 
-This skill builds and starts the Mendix application in Docker.
+This skill builds and starts the Mendix application. Two paths are available:
+- **Docker** (devcontainer/Docker Desktop available) — full stack with PostgreSQL
+- **Local / No Docker** (Windows, Linux without Docker) — embedded HSQLDB, no external dependencies
 
 ## When to Use This Skill
 
@@ -11,12 +13,65 @@ Use this when:
 
 ## Prerequisites Check
 
-Before running, verify:
-
+**With Docker:**
 1. **mxcli is installed globally** — use `mxcli` from any directory
 2. **Docker is available** — check with `docker ps`
 
-Everything else (MxBuild, runtime, Docker stack) is auto-downloaded/initialized by `docker run`.
+**Without Docker (local):**
+1. **mxcli is installed globally**
+2. **Java 21** — check with `java -version` (JDK 21 required for mxbuild)
+3. No other dependencies needed
+
+---
+
+## Local Path (No Docker) — Quick Start
+
+```bash
+# Step 1: Build PAD package (runs mxbuild locally, no Docker)
+mxcli local build -p app.mpr
+
+# Step 2: Start the app (HSQLDB embedded — no external database needed)
+mxcli local run -p app.mpr --admin-password YourPassword
+```
+
+App available at: **http://localhost:8080**
+Login: **MxAdmin** / *(your --admin-password)*
+
+### After MDL Changes (Local)
+
+```bash
+# 1. Apply MDL changes
+mxcli exec changes.mdl -p app.mpr
+
+# 2. Stop the running app (Ctrl+C in the terminal where it's running)
+
+# 3. Rebuild and restart
+mxcli local build -p app.mpr --skip-check
+mxcli local run -p app.mpr --admin-password YourPassword
+```
+
+### Use PostgreSQL Instead of HSQLDB
+
+```bash
+mxcli local run -p app.mpr \
+  --admin-password YourPassword \
+  --db postgres://user:pass@localhost:5432/mendix
+```
+
+### Windows Notes
+
+The PAD build produces `bin/start.bat` and `bin/start.ps1` automatically. `mxcli local run` on Windows execs `bin\start.bat` (cmd.exe). No WSL or Git Bash required.
+
+### mxcli-local Binary
+
+`mxcli local *` delegates to a separate binary (`mxcli-local`) that the launcher downloads automatically on first use. To update it:
+
+```bash
+mxcli local upgrade   # download latest version
+mxcli local rollback  # restore previous version if needed
+```
+
+---
 
 ---
 
