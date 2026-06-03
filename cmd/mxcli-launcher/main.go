@@ -38,6 +38,10 @@ func main() {
 		case "version", "--version":
 			printVersion(e)
 			os.Exit(0)
+		case "local":
+			// Local commands are delegated directly to mxcli-local binary.
+			// They bypass the daemon — no daemon needed for PAD build/run.
+			os.Exit(e.runLocal(args[1:]))
 		}
 	}
 
