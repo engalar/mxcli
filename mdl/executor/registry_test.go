@@ -212,6 +212,7 @@ func allKnownStatements() []ast.Statement {
 		&ast.DescribeContractFromOpenAPIStmt{},
 		&ast.DescribeFragmentFromStmt{},
 		&ast.DescribeStmt{},
+		&ast.DescribeTranslationsStmt{},
 		&ast.DescribeStylingStmt{},
 		&ast.DisconnectStmt{},
 		&ast.DropAgentStmt{},

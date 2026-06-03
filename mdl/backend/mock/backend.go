@@ -250,6 +250,7 @@ type MockBackend struct {
 	// SettingsBackend
 	GetProjectSettingsFunc    func() (*model.ProjectSettings, error)
 	UpdateProjectSettingsFunc func(ps *model.ProjectSettings) error
+	ListTranslationNodesFunc  func(docQN, docType string) ([]model.TranslationNode, error)
 
 	// ImageBackend
 	ListImageCollectionsFunc  func() ([]*types.ImageCollection, error)

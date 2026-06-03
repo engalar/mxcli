@@ -71,6 +71,13 @@ func (m *MockBackend) UpdateProjectSettings(ps *model.ProjectSettings) error {
 	return nil
 }
 
+func (m *MockBackend) ListTranslationNodes(docQN, docType string) ([]model.TranslationNode, error) {
+	if m.ListTranslationNodesFunc != nil {
+		return m.ListTranslationNodesFunc(docQN, docType)
+	}
+	return nil, fmt.Errorf("MockBackend.ListTranslationNodes not configured")
+}
+
 // ---------------------------------------------------------------------------
 // ImageBackend
 // ---------------------------------------------------------------------------

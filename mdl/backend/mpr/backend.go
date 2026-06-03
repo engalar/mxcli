@@ -1217,6 +1217,15 @@ func (b *MprBackend) UpdateRawUnit(unitID string, contents []byte) error {
 	return b.msdkWriter.UpdateRawUnit(unitID, contents)
 }
 
+// ListTranslationNodes returns the translatable text fields of a document with
+// their per-language translations.
+//
+// TODO: full BSON-scanning implementation (walk the document's raw unit for
+// Texts$Text nodes). Stubbed until the TRANSLATE write path lands.
+func (b *MprBackend) ListTranslationNodes(docQN, docType string) ([]model.TranslationNode, error) {
+	return nil, fmt.Errorf("ListTranslationNodes: not yet implemented for %s", docQN)
+}
+
 // ---------------------------------------------------------------------------
 // MetadataBackend
 // ---------------------------------------------------------------------------

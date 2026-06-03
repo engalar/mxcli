@@ -374,6 +374,9 @@ func registerQueryHandlers(r *Registry) {
 	r.Register(&ast.DescribeStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execDescribe(ctx, stmt.(*ast.DescribeStmt))
 	})
+	r.Register(&ast.DescribeTranslationsStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
+		return describeTranslations(ctx, stmt.(*ast.DescribeTranslationsStmt))
+	})
 	r.Register(&ast.DescribeCatalogTableStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execDescribeCatalogTable(ctx, stmt.(*ast.DescribeCatalogTableStmt))
 	})

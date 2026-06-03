@@ -653,6 +653,22 @@ func (b *Builder) ExitCatalogSelectQuery(ctx *parser.CatalogSelectQueryContext) 
 
 // ExitDescribeStatement handles DESCRIBE ENTITY/ASSOCIATION/ENUMERATION/MODULE
 func (b *Builder) ExitDescribeStatement(ctx *parser.DescribeStatementContext) {
+	// Handle DESCRIBE TRANSLATIONS Module.Doc [IN lang]
+	if ctx.TRANSLATIONS() != nil {
+		if qn := ctx.QualifiedName(); qn != nil {
+			stmt := &ast.DescribeTranslationsStmt{
+				QName: buildQualifiedName(qn),
+			}
+			if ctx.IN() != nil {
+				if iok := ctx.IdentifierOrKeyword(); iok != nil {
+					stmt.Lang = iok.GetText()
+				}
+			}
+			b.statements = append(b.statements, stmt)
+		}
+		return
+	}
+
 	// Handle DESCRIBE MODULE ROLE (uses qualifiedName)
 	if ctx.MODULE() != nil && ctx.ROLE() != nil {
 		if qn := ctx.QualifiedName(); qn != nil {

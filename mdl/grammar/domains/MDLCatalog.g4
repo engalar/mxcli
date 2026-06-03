@@ -129,6 +129,7 @@ describeStatement
     : DESCRIBE CONTRACT ENTITY qualifiedName (FORMAT IDENTIFIER)?   // DESCRIBE CONTRACT ENTITY Service.Entity [FORMAT mdl] (must precede DESCRIBE ENTITY)
     | DESCRIBE CONTRACT ACTION qualifiedName (FORMAT IDENTIFIER)?   // DESCRIBE CONTRACT ACTION Service.Action [FORMAT mdl]
     | DESCRIBE CONTRACT MESSAGE qualifiedName    // DESCRIBE CONTRACT MESSAGE Module.Service.MessageName
+    | DESCRIBE TRANSLATIONS qualifiedName (IN identifierOrKeyword)?  // DESCRIBE TRANSLATIONS Module.Doc [IN lang]
     | DESCRIBE ENTITY qualifiedName
     | DESCRIBE ASSOCIATION qualifiedName
     | DESCRIBE MICROFLOW qualifiedName

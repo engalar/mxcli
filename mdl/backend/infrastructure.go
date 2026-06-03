@@ -73,6 +73,10 @@ type AgentEditorBackend interface {
 type SettingsBackend interface {
 	GetProjectSettings() (*model.ProjectSettings, error)
 	UpdateProjectSettings(ps *model.ProjectSettings) error
+	// ListTranslationNodes returns the translatable text fields of a document
+	// (identified by its qualified name and optional doc type) with their
+	// per-language translations.
+	ListTranslationNodes(docQN, docType string) ([]model.TranslationNode, error)
 }
 
 // ImageBackend provides image collection operations.

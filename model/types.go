@@ -154,6 +154,16 @@ func (t *Text) GetTranslation(languageCode string) string {
 	return t.Translations[languageCode]
 }
 
+// TranslationNode represents a single translatable text field in a document,
+// with its per-language translations. A missing language key means that
+// language has not been translated for this field.
+type TranslationNode struct {
+	Path     string            `json:"path"`     // e.g. "Button_Submit.caption"
+	Property string            `json:"property"` // e.g. "caption"
+	DocType  string            `json:"docType"`  // "PAGE", "SNIPPET", "ENUMERATION", "WORKFLOW", "MICROFLOW"
+	Texts    map[string]string `json:"texts"`    // langCode -> text; missing key = not translated
+}
+
 // Image represents an image reference.
 type Image struct {
 	BaseElement
