@@ -1437,11 +1437,13 @@ func (b *MprBackend) UpdateDomainModelGen(dm *genDm.DomainModel) error {
 	if dm == nil {
 		return fmt.Errorf("UpdateDomainModelGen: nil DomainModel")
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
-		return fmt.Errorf("UpdateDomainModelGen: no modelsdk writer")
+	// Encode via the same codec the repos layer uses, then route through
+	// writeUnitContents so ScriptBuffer intercepts the write during EXECUTE SCRIPT.
+	contents, err := b.newEncoder().Encode(dm)
+	if err != nil {
+		return fmt.Errorf("UpdateDomainModelGen: encode: %w", err)
 	}
-	return mprrepos.NewDomainModelRepository(w).Update(dm)
+	return b.writeUnitContents(model.ID(dm.ID()), contents)
 }
 
 // ---------------------------------------------------------------------------

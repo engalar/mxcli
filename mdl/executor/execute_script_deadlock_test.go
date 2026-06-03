@@ -168,9 +168,6 @@ func TestExecuteScriptPath_ReadOnly(t *testing.T) {
 // backs BeginScriptTransaction's rollback. The test body is kept as executable
 // documentation of the intended behavior.
 func TestExecuteScriptPath_RollbackOnError(t *testing.T) {
-	t.Skip("Known limitation: rollback atomicity not yet implemented. " +
-		"The repos layer (writerSink) writes directly to mmpr.Writer bypassing ScriptBuffer. " +
-		"Tracked as separate issue.")
 	t.Parallel()
 	be := openBackendForTest(t)
 

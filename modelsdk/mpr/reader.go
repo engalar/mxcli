@@ -364,6 +364,12 @@ func (r *Reader) ClearAllOverlays() {
 
 // GetRawUnitBytes returns the raw BSON bytes for a unit identified by its UUID string.
 func (r *Reader) GetRawUnitBytes(unitID string) ([]byte, error) {
+	// Script overlay: return buffered bytes from EXECUTE SCRIPT block first.
+	if len(r.scriptOverlay) > 0 {
+		if data, ok := r.scriptOverlay[unitID]; ok {
+			return data, nil
+		}
+	}
 	// Fast path: return buffered bytes injected by BufferedUnitStore if present.
 	if len(r.overlay) > 0 {
 		if data, ok := r.overlay[unitID]; ok {
