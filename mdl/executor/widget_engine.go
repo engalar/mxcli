@@ -107,7 +107,13 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 		return nil, mdlerrors.NewBackend("load "+def.MDLName+" template", err)
 	}
 	if builder == nil {
-		return nil, mdlerrors.NewNotFound("template", def.MDLName)
+		return nil, mdlerrors.NewValidationf(
+			"widget %q: no template found for widget ID %q.\n"+
+				"  Possible causes:\n"+
+				"    1. The .mpk file is missing from the project's widgets/ directory.\n"+
+				"    2. The widget has never been placed on a page in Studio Pro (no extractable instance).\n"+
+				"  To fix: open Studio Pro, drag the widget onto any page, save, then re-run your command.",
+			def.MDLName, def.WidgetID)
 	}
 
 	propertyTypeIDs := builder.PropertyTypeIDs()
