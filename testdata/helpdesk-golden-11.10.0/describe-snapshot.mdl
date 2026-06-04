@@ -467,9 +467,8 @@ begin
       limit 100;
   loop $Comment in $Comments
   begin
-    @position(150,80)
-    change $Comment (IsInternal = false
-    );
+    @position(310,80)
+    commit $Comment;
   end loop;
   return;
 end;
@@ -1330,8 +1329,8 @@ create or modify page HD.EscalationReview_Form (
   params: { $WorkflowUserTask: System.WorkflowUserTask }
 ) {
   layoutgrid lgMain {
-    row rMain {
-      column cMain (DesktopWidth: 12) {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
         dynamictext txtTitle
       }
     }
@@ -1345,8 +1344,8 @@ create or modify page HD.EscalationWorkflow_Overview (
   folder: 'Escalation'
 ) {
   layoutgrid lgMain {
-    row rMain {
-      column cMain (DesktopWidth: 12) {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
         dynamictext txtTitle
       }
     }
@@ -1360,10 +1359,37 @@ create or modify page HD.EscalationStart_Form (
   folder: 'Escalation'
 ) {
   layoutgrid lgMain {
-    row rMain {
-      column cMain (DesktopWidth: 12) {
+    row row1 {
+      column col1 (DesktopWidth: 12) {
         dynamictext txtPlaceholder
       }
     }
   }
 }
+alter settings model
+  HashAlgorithm = 'BCrypt',
+  BcryptCost = 12,
+  JavaVersion = 'Java21',
+  RoundingMode = 'HalfUp',
+  AllowUserMultipleSessions = true,
+  ScheduledEventTimeZoneCode = 'Etc/UTC';
+
+alter settings configuration 'Default'
+  DatabaseType = 'Hsqldb',
+  DatabaseUrl = '',
+  DatabaseName = 'default',
+  DatabaseUserName = '',
+  DatabasePassword = '',
+  HttpPortNumber = 8080,
+  ServerPortNumber = 8090,
+  ApplicationRootUrl = 'http://localhost:8080/';
+
+alter settings language add 'zh_CN';
+alter settings language
+  DefaultLanguageCode = 'en_US';
+
+alter settings workflows
+  UserEntity = 'System.User',
+  DefaultTaskParallelism = 3,
+  WorkflowEngineParallelism = 5;
+
