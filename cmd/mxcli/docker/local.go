@@ -115,6 +115,19 @@ func buildLocalEnv(dbURL, adminPassword string) []string {
 			env = append(env, dbEnv...)
 		}
 	}
+
+	// Inject JAVA_HOME so bin/start can find java even when it is not in
+	// the shell PATH (common in Git Bash on Windows).
+	if javaHome, err := resolveJDK21(); err == nil {
+		env = append(env, "JAVA_HOME="+javaHome)
+		javaBin := filepath.Join(javaHome, "bin")
+		if currentPath := os.Getenv("PATH"); currentPath != "" {
+			env = append(env, "PATH="+javaBin+string(os.PathListSeparator)+currentPath)
+		} else {
+			env = append(env, "PATH="+javaBin)
+		}
+	}
+
 	return env
 }
 

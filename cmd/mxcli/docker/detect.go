@@ -281,7 +281,10 @@ func resolveJDK21() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("JDK 21 not found; set JAVA_HOME or install JDK 21")
+	return "", fmt.Errorf(
+		"JDK 21 not found; install JDK 21 and set JAVA_HOME, or in Git Bash run:\n" +
+			"  export PATH=\"/c/Program Files/Eclipse Adoptium/jdk-21.x.y.z-hotspot/bin:$PATH\"",
+	)
 }
 
 // resolveMacOSJavaHome uses /usr/libexec/java_home to find a JDK 21 on macOS.
