@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -48,6 +49,8 @@ func forwardRequest(sockPath string, argv []string, out, err io.Writer) int {
 			out.Write(frame.Data)
 		case frame.Stream == "stderr":
 			err.Write(frame.Data)
+		case frame.Stream == "progress":
+			fmt.Fprintf(err, "▶ %s\n", bytes.TrimRight(frame.Data, "\n"))
 		}
 	}
 }

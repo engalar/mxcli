@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"net"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/internal/launcherproto"
@@ -66,5 +67,35 @@ func TestForwardRequest_NoServer(t *testing.T) {
 	code := forwardRequest(filepath.Join(t.TempDir(), "nosuch.sock"), []string{"x"}, &stdout, &stderr)
 	if code == 0 {
 		t.Error("expected non-zero exit code when daemon not running")
+	}
+}
+
+func TestForwardRequest_ProgressFrame_PrintedToStderr(t *testing.T) {
+	dir := t.TempDir()
+	sockPath := filepath.Join(dir, "test.sock")
+
+	ln, err := net.Listen("unix", sockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+
+	go func() {
+		conn, _ := ln.Accept()
+		defer conn.Close()
+		var req launcherproto.Request
+		_ = launcherproto.ReadMsg(conn, &req)
+		_ = launcherproto.WriteMsg(conn, launcherproto.Frame{Stream: "progress", Data: []byte("step 1")})
+		code := 0
+		_ = launcherproto.WriteMsg(conn, launcherproto.Frame{Exit: &code})
+	}()
+
+	var stdout, stderr bytes.Buffer
+	code := forwardRequest(sockPath, []string{"show", "modules"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d", code)
+	}
+	if !strings.Contains(stderr.String(), "step 1") {
+		t.Errorf("progress frame should appear in stderr; got: %q", stderr.String())
 	}
 }

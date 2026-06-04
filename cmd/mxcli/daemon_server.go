@@ -102,6 +102,12 @@ func handleConn(conn net.Conn) {
 	outW := &frameWriter{conn: conn, stream: "stdout"}
 	errW := &frameWriter{conn: conn, stream: "stderr"}
 
+	// Wire real-time executor progress to the "progress" stream. buildExec()
+	// reads daemonProgressOut and calls SetProgressOut. Execution is serialized
+	// by daemonRequestMu, so this package-level var is safe to set per-request.
+	daemonProgressOut = &frameWriter{conn: conn, stream: "progress"}
+	defer func() { daemonProgressOut = nil }()
+
 	// Restore working directory
 	if req.Cwd != "" {
 		if err := os.Chdir(req.Cwd); err != nil {
@@ -135,6 +141,11 @@ func runCommand(argv []string, stdout, stderr io.Writer) int {
 	}
 	return 0
 }
+
+// daemonProgressOut, when non-nil, is the "progress" frame writer for the
+// in-flight daemon request. Set by handleConn (under daemonRequestMu) and read
+// by buildExec to wire executor.SetProgressOut. nil outside daemon mode.
+var daemonProgressOut io.Writer
 
 // frameWriter wraps a net.Conn and sends each Write as a Frame.
 type frameWriter struct {

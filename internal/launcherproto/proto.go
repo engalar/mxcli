@@ -26,7 +26,7 @@ type Request struct {
 // Exactly one of (Stream+Data), (Exit), or (OK+Version) is set per frame.
 type Frame struct {
 	// stdout/stderr stream frame
-	Stream string `json:"stream,omitempty"` // "stdout" or "stderr"
+	Stream string `json:"stream,omitempty"` // "stdout", "stderr", or "progress"
 	Data   []byte `json:"data,omitempty"`   // raw bytes (JSON encodes as base64)
 
 	// Terminal frame: daemon finished

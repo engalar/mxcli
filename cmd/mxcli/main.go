@@ -209,7 +209,11 @@ func buildExec(mode string, out io.Writer) (*executor.Executor, *diaglog.Logger)
 	if globalJSONFlag {
 		b = b.Format(executor.FormatJSON)
 	}
-	return b.Create(), logger
+	exec := b.Create()
+	if daemonProgressOut != nil {
+		exec.SetProgressOut(daemonProgressOut)
+	}
+	return exec, logger
 }
 
 // executeMDL is a helper to execute MDL commands with a project.
