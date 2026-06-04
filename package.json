@@ -4,7 +4,8 @@
   "description": "Mendix project tooling — SDK reference for modelsdk codegen",
   "private": true,
   "scripts": {
-    "codegen": "go run ./cmd/modelsdk-codegen -gen-dir node_modules/mendixmodelsdk/src/gen"
+    "codegen": "go run ./cmd/modelsdk-codegen -gen-dir node_modules/mendixmodelsdk/src/gen",
+    "sdk-install": "node scripts/sdk-install.js"
   },
   "dependencies": {
     "mendixmodelsdk": "4.111.0"

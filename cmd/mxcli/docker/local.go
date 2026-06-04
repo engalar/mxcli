@@ -103,6 +103,11 @@ type deployConfig struct {
 	AdminPassword string            `json:"AdminPassword"`
 }
 
+// deployMetadata mirrors the relevant fields of deployment/model/metadata.json.
+type deployMetadata struct {
+	RuntimeVersion string `json:"RuntimeVersion"`
+}
+
 // startFromDeployLayout starts the runtime from a Studio Pro deploy-format directory.
 // Uses the Mendix installation runtime (MX_INSTALL_PATH) and a generated HOCON config.
 func startFromDeployLayout(opts LocalRunOptions, stdout, stderr io.Writer) error {
@@ -117,11 +122,25 @@ func startFromDeployLayout(opts LocalRunOptions, stdout, stderr io.Writer) error
 		return fmt.Errorf("parsing deployment config: %w", err)
 	}
 
-	// 2. Find Mendix runtime launcher.
-	mxInstall, err := resolveMxInstallPath()
+	// 1b. Read metadata.json to get the required Mendix runtime version.
+	var runtimeVersion string
+	if metaData, err2 := os.ReadFile(filepath.Join(opts.PadDir, "model", "metadata.json")); err2 == nil {
+		var meta deployMetadata
+		if json.Unmarshal(metaData, &meta) == nil {
+			runtimeVersion = meta.RuntimeVersion
+		}
+	}
+
+	// 2. Find Mendix runtime launcher for the correct version.
+	mxInstall, err := resolveMxInstallPathForVersion(runtimeVersion)
 	if err != nil {
-		return fmt.Errorf("cannot find Mendix runtime: %w\n"+
-			"Install Studio Pro or set MX_INSTALL_PATH", err)
+		msg := fmt.Sprintf("cannot find Mendix %s runtime: %v\n", runtimeVersion, err)
+		if runtimeVersion != "" {
+			msg += fmt.Sprintf("Install Mendix Studio Pro %s or set MX_INSTALL_PATH", runtimeVersion)
+		} else {
+			msg += "Install Studio Pro or set MX_INSTALL_PATH"
+		}
+		return fmt.Errorf("%s", msg)
 	}
 	launcherJar := filepath.Join(mxInstall, "runtime", "launcher", "runtimelauncher.jar")
 	if _, err := os.Stat(launcherJar); err != nil {
@@ -267,9 +286,10 @@ func writeDeployHOCON(path string, dcfg deployConfig, dbURL, adminPass string) e
 	return os.WriteFile(path, []byte(sb.String()), 0600)
 }
 
-// resolveMxInstallPath finds the Mendix runtime installation directory.
+// resolveMxInstallPathForVersion finds the Mendix runtime installation directory
+// for the specified version. If version is "" it returns the newest installed version.
 // Checks MX_INSTALL_PATH env first, then Studio Pro installations on Windows.
-func resolveMxInstallPath() (string, error) {
+func resolveMxInstallPathForVersion(version string) (string, error) {
 	if p := os.Getenv("MX_INSTALL_PATH"); p != "" {
 		return p, nil
 	}
@@ -281,25 +301,42 @@ func resolveMxInstallPath() (string, error) {
 			if err != nil {
 				continue
 			}
-			// Return the newest version found (last alphabetically = highest version).
-			var best string
-			for _, e := range entries {
-				if !e.IsDir() {
-					continue
-				}
-				launcher := filepath.Join(mendixBase, e.Name(), "runtime", "launcher", "runtimelauncher.jar")
+			if version != "" {
+				// Exact version match.
+				candidate := filepath.Join(mendixBase, version)
+				launcher := filepath.Join(candidate, "runtime", "launcher", "runtimelauncher.jar")
 				if _, err := os.Stat(launcher); err == nil {
-					if e.Name() > best {
-						best = e.Name()
+					return candidate, nil
+				}
+			} else {
+				// No version required: return the newest installed version.
+				var best string
+				for _, e := range entries {
+					if !e.IsDir() {
+						continue
+					}
+					launcher := filepath.Join(mendixBase, e.Name(), "runtime", "launcher", "runtimelauncher.jar")
+					if _, err := os.Stat(launcher); err == nil {
+						if e.Name() > best {
+							best = e.Name()
+						}
 					}
 				}
-			}
-			if best != "" {
-				return filepath.Join(mendixBase, best), nil
+				if best != "" {
+					return filepath.Join(mendixBase, best), nil
+				}
 			}
 		}
 	}
+	if version != "" {
+		return "", fmt.Errorf("Mendix %s not found", version)
+	}
 	return "", fmt.Errorf("Mendix runtime not found")
+}
+
+// resolveMxInstallPath finds the newest installed Mendix runtime (version-agnostic).
+func resolveMxInstallPath() (string, error) {
+	return resolveMxInstallPathForVersion("")
 }
 
 // startFromPADLayout starts the runtime from a classic PAD output directory.

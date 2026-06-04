@@ -220,6 +220,7 @@ func buildBoundaryEventGen(wbc *wfBuildCtx, be ast.WorkflowBoundaryEventNode) el
 		// boundary event path, not the whole workflow). Studio Pro always appends this.
 		endPath := genWf.NewEndOfBoundaryEventPathActivity()
 		endPath.SetID(element.ID(types.GenerateID()))
+		endPath.SetPersistentId(types.GenerateID())
 		endPath.SetCaption("End of boundary path")
 		endPath.SetName("endOfBoundaryEventPath1")
 		subActivities = append(subActivities, endPath)

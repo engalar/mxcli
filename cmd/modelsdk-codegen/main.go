@@ -176,6 +176,7 @@ func main() {
 		meta.PartListVersion2Fields = suppl.partListVersion2Fields
 		meta.EdgeKindOverrides = suppl.EdgeKindOverrides
 		meta.IdRefScope = suppl.IdRefScope
+		meta.BinaryUUIDProps = suppl.binaryUUIDProps
 		meta.CrossDomainProps = crossDomainProps
 
 		outDir := filepath.Join(*outBase, domain)
@@ -202,13 +203,15 @@ type supplements struct {
 	ExtraProperties        map[string]json.RawMessage `json:"extra_properties"`
 	ExtraTypes             map[string]json.RawMessage `json:"extra_types"`
 	TypeRenames            map[string]string          `json:"type_renames"` // old_bson → new_bson
+	BinaryUUIDPropsList    []string                   `json:"binary_uuid_properties"` // "ClassName.propName" or "*.propName"
 
 	// Derived after loading.
-	forceConcreteSet      map[string]bool // built from ForceConcreteTypes slice
-	refListVersion3Fields map[string]bool // built from RefListVersion3List
+	forceConcreteSet       map[string]bool // built from ForceConcreteTypes slice
+	refListVersion3Fields  map[string]bool // built from RefListVersion3List
 	partListVersion2Fields map[string]bool // built from PartListVersion2List
-	parsedExtraProps      map[string][]supplementProp
-	parsedExtraTypes      map[string][]supplementTypeDef
+	binaryUUIDProps        map[string]bool // built from BinaryUUIDPropsList
+	parsedExtraProps       map[string][]supplementProp
+	parsedExtraTypes       map[string][]supplementTypeDef
 }
 
 type supplementProp struct {
@@ -259,6 +262,12 @@ func loadSupplements() supplements {
 	s.partListVersion2Fields = map[string]bool{}
 	for _, f := range s.PartListVersion2List {
 		s.partListVersion2Fields[f] = true
+	}
+
+	// Build binary_uuid_properties lookup set from slice.
+	s.binaryUUIDProps = map[string]bool{}
+	for _, f := range s.BinaryUUIDPropsList {
+		s.binaryUUIDProps[f] = true
 	}
 
 	// Parse extra_properties, skipping _doc string entries.

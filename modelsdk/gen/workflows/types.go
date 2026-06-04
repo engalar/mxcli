@@ -26,7 +26,7 @@ var (
 
 type WorkflowActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -113,7 +113,7 @@ func (o *WorkflowActivity) InitFromRaw(raw bson.Raw) {
 
 type ConditionOutcomeActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -221,7 +221,7 @@ func (o *ConditionOutcomeActivity) InitFromRaw(raw bson.Raw) {
 
 type MicroflowBasedActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -387,7 +387,7 @@ func (o *MicroflowBasedActivity) InitFromRaw(raw bson.Raw) {
 
 type AIAgentTaskActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -717,7 +717,7 @@ func (o *BooleanCase) InitFromRaw(raw bson.Raw) {
 
 type Outcome struct {
 	element.Base
-	persistentId *property.Primitive[string]
+	persistentId *property.BinaryUUIDPrimitive
 	flow         *property.Part[element.Element]
 }
 
@@ -756,7 +756,7 @@ func (o *Outcome) InitFromRaw(raw bson.Raw) {
 
 type ConditionOutcome struct {
 	element.Base
-	persistentId *property.Primitive[string]
+	persistentId *property.BinaryUUIDPrimitive
 	flow         *property.Part[element.Element]
 }
 
@@ -795,7 +795,7 @@ func (o *ConditionOutcome) InitFromRaw(raw bson.Raw) {
 
 type BooleanConditionOutcome struct {
 	element.Base
-	persistentId *property.Primitive[string]
+	persistentId *property.BinaryUUIDPrimitive
 	flow         *property.Part[element.Element]
 	value        *property.Primitive[bool]
 }
@@ -846,7 +846,7 @@ func (o *BooleanConditionOutcome) InitFromRaw(raw bson.Raw) {
 
 type BoundaryEvent struct {
 	element.Base
-	persistentId   *property.Primitive[string]
+	persistentId   *property.BinaryUUIDPrimitive
 	flow           *property.Part[element.Element]
 	caption        *property.Primitive[string]
 	annotation     *property.Part[element.Element]
@@ -947,7 +947,7 @@ func (o *BoundaryEvent) InitFromRaw(raw bson.Raw) {
 
 type CallMicroflowActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -1113,7 +1113,7 @@ func (o *CallMicroflowActivity) InitFromRaw(raw bson.Raw) {
 
 type CallMicroflowTask struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -1279,7 +1279,7 @@ func (o *CallMicroflowTask) InitFromRaw(raw bson.Raw) {
 
 type CallWorkflowActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -1518,7 +1518,7 @@ func (o *EmptyUserSource) InitFromRaw(raw bson.Raw) {
 
 type EndOfBoundaryEventPathActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -1605,7 +1605,7 @@ func (o *EndOfBoundaryEventPathActivity) InitFromRaw(raw bson.Raw) {
 
 type EndOfParallelSplitPathActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -1692,7 +1692,7 @@ func (o *EndOfParallelSplitPathActivity) InitFromRaw(raw bson.Raw) {
 
 type EndWorkflowActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -1779,7 +1779,7 @@ func (o *EndWorkflowActivity) InitFromRaw(raw bson.Raw) {
 
 type EnumerationValueConditionOutcome struct {
 	element.Base
-	persistentId *property.Primitive[string]
+	persistentId *property.BinaryUUIDPrimitive
 	flow         *property.Part[element.Element]
 	value        *property.ByNameRef[element.Element]
 }
@@ -1834,7 +1834,7 @@ func (o *EnumerationValueConditionOutcome) InitFromRaw(raw bson.Raw) {
 
 type EventSubProcess struct {
 	element.Base
-	persistentId *property.Primitive[string]
+	persistentId *property.BinaryUUIDPrimitive
 	name         *property.Primitive[string]
 	flow         *property.Part[element.Element]
 	caption      *property.Primitive[string]
@@ -1911,7 +1911,7 @@ func (o *EventSubProcess) InitFromRaw(raw bson.Raw) {
 
 type ExclusiveSplitActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -2254,7 +2254,7 @@ func (o *FlowLine) InitFromRaw(raw bson.Raw) {
 
 type NotificationEventSubProcessStartActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -2341,7 +2341,7 @@ func (o *NotificationEventSubProcessStartActivity) InitFromRaw(raw bson.Raw) {
 
 type InterruptingNotificationEventSubProcessStartActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -2470,7 +2470,7 @@ func (o *InterruptingNotificationEventSubProcessStartActivityTarget) InitFromRaw
 
 type InterruptingTimerBoundaryEvent struct {
 	element.Base
-	persistentId       *property.Primitive[string]
+	persistentId       *property.BinaryUUIDPrimitive
 	flow               *property.Part[element.Element]
 	caption            *property.Primitive[string]
 	annotation         *property.Part[element.Element]
@@ -2583,7 +2583,7 @@ func (o *InterruptingTimerBoundaryEvent) InitFromRaw(raw bson.Raw) {
 
 type JumpToActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -2799,7 +2799,7 @@ func (o *MajorityCompletionCriteria) InitFromRaw(raw bson.Raw) {
 
 type MergeActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -3222,7 +3222,7 @@ func (o *MultiInputCompletion) InitFromRaw(raw bson.Raw) {
 
 type UserTaskActivity struct {
 	element.Base
-	persistentId               *property.Primitive[string]
+	persistentId               *property.BinaryUUIDPrimitive
 	name                       *property.Primitive[string]
 	caption                    *property.Primitive[string]
 	annotation                 *property.Part[element.Element]
@@ -3459,7 +3459,7 @@ func (o *UserTaskActivity) InitFromRaw(raw bson.Raw) {
 
 type MultiUserTaskActivity struct {
 	element.Base
-	persistentId               *property.Primitive[string]
+	persistentId               *property.BinaryUUIDPrimitive
 	name                       *property.Primitive[string]
 	caption                    *property.Primitive[string]
 	annotation                 *property.Part[element.Element]
@@ -3762,7 +3762,7 @@ func (o *NoUserTargeting) InitFromRaw(raw bson.Raw) {
 
 type NonInterruptingNotificationEventSubProcessStartActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -3878,7 +3878,7 @@ func (o *NonInterruptingNotificationEventSubProcessStartActivityTarget) InitFrom
 
 type NonInterruptingTimerBoundaryEvent struct {
 	element.Base
-	persistentId       *property.Primitive[string]
+	persistentId       *property.BinaryUUIDPrimitive
 	flow               *property.Part[element.Element]
 	caption            *property.Primitive[string]
 	annotation         *property.Part[element.Element]
@@ -4124,7 +4124,7 @@ func (o *PageReference) InitFromRaw(raw bson.Raw) {
 
 type ParallelSplitActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -4232,7 +4232,7 @@ func (o *ParallelSplitActivity) InitFromRaw(raw bson.Raw) {
 
 type ParallelSplitOutcome struct {
 	element.Base
-	persistentId *property.Primitive[string]
+	persistentId *property.BinaryUUIDPrimitive
 	flow         *property.Part[element.Element]
 }
 
@@ -4364,7 +4364,7 @@ func (o *SingleInputCompletion) InitFromRaw(raw bson.Raw) {
 
 type SingleUserTaskActivity struct {
 	element.Base
-	persistentId               *property.Primitive[string]
+	persistentId               *property.BinaryUUIDPrimitive
 	name                       *property.Primitive[string]
 	caption                    *property.Primitive[string]
 	annotation                 *property.Part[element.Element]
@@ -4601,7 +4601,7 @@ func (o *SingleUserTaskActivity) InitFromRaw(raw bson.Raw) {
 
 type StartWorkflowActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -4772,7 +4772,7 @@ func (o *ThresholdCompletionCriteria) InitFromRaw(raw bson.Raw) {
 
 type TimerBoundaryEvent struct {
 	element.Base
-	persistentId   *property.Primitive[string]
+	persistentId   *property.BinaryUUIDPrimitive
 	flow           *property.Part[element.Element]
 	caption        *property.Primitive[string]
 	annotation     *property.Part[element.Element]
@@ -4873,7 +4873,7 @@ func (o *TimerBoundaryEvent) InitFromRaw(raw bson.Raw) {
 
 type UserTask struct {
 	element.Base
-	persistentId               *property.Primitive[string]
+	persistentId               *property.BinaryUUIDPrimitive
 	name                       *property.Primitive[string]
 	caption                    *property.Primitive[string]
 	annotation                 *property.Part[element.Element]
@@ -5149,7 +5149,7 @@ func (o *UserTask) InitFromRaw(raw bson.Raw) {
 
 type UserTaskOutcome struct {
 	element.Base
-	persistentId *property.Primitive[string]
+	persistentId *property.BinaryUUIDPrimitive
 	flow         *property.Part[element.Element]
 	name         *property.Primitive[string]
 	caption      *property.Primitive[string]
@@ -5268,7 +5268,7 @@ func (o *VoidCase) InitFromRaw(raw bson.Raw) {
 
 type VoidConditionOutcome struct {
 	element.Base
-	persistentId *property.Primitive[string]
+	persistentId *property.BinaryUUIDPrimitive
 	flow         *property.Part[element.Element]
 }
 
@@ -5307,7 +5307,7 @@ func (o *VoidConditionOutcome) InitFromRaw(raw bson.Raw) {
 
 type WaitForNotificationActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -5415,7 +5415,7 @@ func (o *WaitForNotificationActivity) InitFromRaw(raw bson.Raw) {
 
 type WaitForTimerActivity struct {
 	element.Base
-	persistentId        *property.Primitive[string]
+	persistentId        *property.BinaryUUIDPrimitive
 	name                *property.Primitive[string]
 	caption             *property.Primitive[string]
 	annotation          *property.Part[element.Element]
@@ -5518,7 +5518,7 @@ type Workflow struct {
 	documentation              *property.Primitive[string]
 	excluded                   *property.Primitive[bool]
 	exportLevel                *property.Enum[string]
-	persistentId               *property.Primitive[string]
+	persistentId               *property.BinaryUUIDPrimitive
 	title                      *property.Primitive[string]
 	contextEntity              *property.ByNameRef[element.Element]
 	parameter                  *property.Part[element.Element]
@@ -6339,7 +6339,7 @@ func (o *ExclusiveSplitOutcome) InitFromRaw(raw bson.Raw) {
 func initAIAgentTaskActivity() *AIAgentTaskActivity {
 	o := &AIAgentTaskActivity{}
 	o.SetTypeName("Workflows$AIAgentTaskActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -6483,7 +6483,7 @@ func NewBooleanCase() *BooleanCase {
 func initBooleanConditionOutcome() *BooleanConditionOutcome {
 	o := &BooleanConditionOutcome{}
 	o.SetTypeName("Workflows$BooleanConditionOutcome")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.flow = property.NewPart[element.Element]("Flow")
 	o.flow.Bind(&o.Base, 1)
@@ -6508,7 +6508,7 @@ func NewBooleanConditionOutcome() *BooleanConditionOutcome {
 func initBoundaryEvent() *BoundaryEvent {
 	o := &BoundaryEvent{}
 	o.SetTypeName("Workflows$BoundaryEvent")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.flow = property.NewPart[element.Element]("Flow")
 	o.flow.Bind(&o.Base, 1)
@@ -6541,7 +6541,7 @@ func NewBoundaryEvent() *BoundaryEvent {
 func initCallMicroflowActivity() *CallMicroflowActivity {
 	o := &CallMicroflowActivity{}
 	o.SetTypeName("Workflows$CallMicroflowActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -6580,7 +6580,7 @@ func NewCallMicroflowActivity() *CallMicroflowActivity {
 func initCallMicroflowTask() *CallMicroflowTask {
 	o := &CallMicroflowTask{}
 	o.SetTypeName("Workflows$CallMicroflowTask")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -6619,7 +6619,7 @@ func NewCallMicroflowTask() *CallMicroflowTask {
 func initCallWorkflowActivity() *CallWorkflowActivity {
 	o := &CallWorkflowActivity{}
 	o.SetTypeName("Workflows$CallWorkflowActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -6700,7 +6700,7 @@ func NewEmptyUserSource() *EmptyUserSource {
 func initEndOfBoundaryEventPathActivity() *EndOfBoundaryEventPathActivity {
 	o := &EndOfBoundaryEventPathActivity{}
 	o.SetTypeName("Workflows$EndOfBoundaryEventPathActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -6731,7 +6731,7 @@ func NewEndOfBoundaryEventPathActivity() *EndOfBoundaryEventPathActivity {
 func initEndOfParallelSplitPathActivity() *EndOfParallelSplitPathActivity {
 	o := &EndOfParallelSplitPathActivity{}
 	o.SetTypeName("Workflows$EndOfParallelSplitPathActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -6762,7 +6762,7 @@ func NewEndOfParallelSplitPathActivity() *EndOfParallelSplitPathActivity {
 func initEndWorkflowActivity() *EndWorkflowActivity {
 	o := &EndWorkflowActivity{}
 	o.SetTypeName("Workflows$EndWorkflowActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -6793,7 +6793,7 @@ func NewEndWorkflowActivity() *EndWorkflowActivity {
 func initEnumerationValueConditionOutcome() *EnumerationValueConditionOutcome {
 	o := &EnumerationValueConditionOutcome{}
 	o.SetTypeName("Workflows$EnumerationValueConditionOutcome")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.flow = property.NewPart[element.Element]("Flow")
 	o.flow.Bind(&o.Base, 1)
@@ -6818,7 +6818,7 @@ func NewEnumerationValueConditionOutcome() *EnumerationValueConditionOutcome {
 func initEventSubProcess() *EventSubProcess {
 	o := &EventSubProcess{}
 	o.SetTypeName("Workflows$EventSubProcess")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -6847,7 +6847,7 @@ func NewEventSubProcess() *EventSubProcess {
 func initExclusiveSplitActivity() *ExclusiveSplitActivity {
 	o := &ExclusiveSplitActivity{}
 	o.SetTypeName("Workflows$ExclusiveSplitActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -6963,7 +6963,7 @@ func NewFlowLine() *FlowLine {
 func initInterruptingNotificationEventSubProcessStartActivity() *InterruptingNotificationEventSubProcessStartActivity {
 	o := &InterruptingNotificationEventSubProcessStartActivity{}
 	o.SetTypeName("Workflows$InterruptingNotificationEventSubProcessStartActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -7015,7 +7015,7 @@ func NewInterruptingNotificationEventSubProcessStartActivityTarget() *Interrupti
 func initInterruptingTimerBoundaryEvent() *InterruptingTimerBoundaryEvent {
 	o := &InterruptingTimerBoundaryEvent{}
 	o.SetTypeName("Workflows$InterruptingTimerBoundaryEvent")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.flow = property.NewPart[element.Element]("Flow")
 	o.flow.Bind(&o.Base, 1)
@@ -7050,7 +7050,7 @@ func NewInterruptingTimerBoundaryEvent() *InterruptingTimerBoundaryEvent {
 func initJumpToActivity() *JumpToActivity {
 	o := &JumpToActivity{}
 	o.SetTypeName("Workflows$JumpToActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -7131,7 +7131,7 @@ func NewMajorityCompletionCriteria() *MajorityCompletionCriteria {
 func initMergeActivity() *MergeActivity {
 	o := &MergeActivity{}
 	o.SetTypeName("Workflows$MergeActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -7336,7 +7336,7 @@ func NewMultiInputCompletion() *MultiInputCompletion {
 func initMultiUserTaskActivity() *MultiUserTaskActivity {
 	o := &MultiUserTaskActivity{}
 	o.SetTypeName("Workflows$MultiUserTaskActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -7431,7 +7431,7 @@ func NewNoUserTargeting() *NoUserTargeting {
 func initNonInterruptingNotificationEventSubProcessStartActivity() *NonInterruptingNotificationEventSubProcessStartActivity {
 	o := &NonInterruptingNotificationEventSubProcessStartActivity{}
 	o.SetTypeName("Workflows$NonInterruptingNotificationEventSubProcessStartActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -7483,7 +7483,7 @@ func NewNonInterruptingNotificationEventSubProcessStartActivityTarget() *NonInte
 func initNonInterruptingTimerBoundaryEvent() *NonInterruptingTimerBoundaryEvent {
 	o := &NonInterruptingTimerBoundaryEvent{}
 	o.SetTypeName("Workflows$NonInterruptingTimerBoundaryEvent")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.flow = property.NewPart[element.Element]("Flow")
 	o.flow.Bind(&o.Base, 1)
@@ -7606,7 +7606,7 @@ func NewPageReference() *PageReference {
 func initParallelSplitActivity() *ParallelSplitActivity {
 	o := &ParallelSplitActivity{}
 	o.SetTypeName("Workflows$ParallelSplitActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -7639,7 +7639,7 @@ func NewParallelSplitActivity() *ParallelSplitActivity {
 func initParallelSplitOutcome() *ParallelSplitOutcome {
 	o := &ParallelSplitOutcome{}
 	o.SetTypeName("Workflows$ParallelSplitOutcome")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.flow = property.NewPart[element.Element]("Flow")
 	o.flow.Bind(&o.Base, 1)
@@ -7727,7 +7727,7 @@ func NewSingleInputCompletion() *SingleInputCompletion {
 func initSingleUserTaskActivity() *SingleUserTaskActivity {
 	o := &SingleUserTaskActivity{}
 	o.SetTypeName("Workflows$SingleUserTaskActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -7778,7 +7778,7 @@ func NewSingleUserTaskActivity() *SingleUserTaskActivity {
 func initStartWorkflowActivity() *StartWorkflowActivity {
 	o := &StartWorkflowActivity{}
 	o.SetTypeName("Workflows$StartWorkflowActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -7855,7 +7855,7 @@ func NewThresholdCompletionCriteria() *ThresholdCompletionCriteria {
 func initTimerBoundaryEvent() *TimerBoundaryEvent {
 	o := &TimerBoundaryEvent{}
 	o.SetTypeName("Workflows$TimerBoundaryEvent")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.flow = property.NewPart[element.Element]("Flow")
 	o.flow.Bind(&o.Base, 1)
@@ -7888,7 +7888,7 @@ func NewTimerBoundaryEvent() *TimerBoundaryEvent {
 func initUserTask() *UserTask {
 	o := &UserTask{}
 	o.SetTypeName("Workflows$UserTask")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -7943,7 +7943,7 @@ func NewUserTask() *UserTask {
 func initUserTaskOutcome() *UserTaskOutcome {
 	o := &UserTaskOutcome{}
 	o.SetTypeName("Workflows$UserTaskOutcome")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.flow = property.NewPart[element.Element]("Flow")
 	o.flow.Bind(&o.Base, 1)
@@ -8012,7 +8012,7 @@ func NewVoidCase() *VoidCase {
 func initVoidConditionOutcome() *VoidConditionOutcome {
 	o := &VoidConditionOutcome{}
 	o.SetTypeName("Workflows$VoidConditionOutcome")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.flow = property.NewPart[element.Element]("Flow")
 	o.flow.Bind(&o.Base, 1)
@@ -8035,7 +8035,7 @@ func NewVoidConditionOutcome() *VoidConditionOutcome {
 func initWaitForNotificationActivity() *WaitForNotificationActivity {
 	o := &WaitForNotificationActivity{}
 	o.SetTypeName("Workflows$WaitForNotificationActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -8068,7 +8068,7 @@ func NewWaitForNotificationActivity() *WaitForNotificationActivity {
 func initWaitForTimerActivity() *WaitForTimerActivity {
 	o := &WaitForTimerActivity{}
 	o.SetTypeName("Workflows$WaitForTimerActivity")
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
@@ -8109,7 +8109,7 @@ func initWorkflow() *Workflow {
 	o.excluded.Bind(&o.Base, 2)
 	o.exportLevel = property.NewEnum[string]("ExportLevel")
 	o.exportLevel.Bind(&o.Base, 3)
-	o.persistentId = property.NewPrimitive[string]("PersistentId", property.DecodeString)
+	o.persistentId = property.NewBinaryUUIDPrimitive("PersistentId")
 	o.persistentId.Bind(&o.Base, 4)
 	o.title = property.NewPrimitive[string]("Title", property.DecodeString)
 	o.title.Bind(&o.Base, 5)

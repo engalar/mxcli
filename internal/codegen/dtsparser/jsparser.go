@@ -165,6 +165,12 @@ type DomainMeta struct {
 	EdgeKindOverrides map[string]string // TargetType → edge kind hint
 	IdRefScope        map[string]string // "ClassName.propName" → "cross-unit" or "intra-unit"
 
+	// BinaryUUIDProps is a set of "ClassName.propertyName" (or "*.propertyName")
+	// pairs whose Primitive[string] fields should use BinaryUUIDPrimitive instead.
+	// Used for PersistentId-style fields that Studio Pro serializes as BSON Binary
+	// but the TypeScript SDK types as Guid/string.
+	BinaryUUIDProps map[string]bool
+
 	// CrossDomainProps maps class names from OTHER domains (e.g. "Document",
 	// "ModuleDocument") to their properties. Used by the emitter to resolve
 	// cross-domain inheritance (e.g. Workflow extends projects.Document).

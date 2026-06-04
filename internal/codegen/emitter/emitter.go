@@ -252,6 +252,20 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 						"property.NewPartListV2[", 1)
 				}
 			}
+			// Apply BinaryUUID override: switch Primitive[string]/DecodeString to
+			// BinaryUUIDPrimitive for fields that Mendix stores as BSON Binary UUID
+			// (e.g. PersistentId). Match "ClassName.propName" or "*.propName".
+			if meta.BinaryUUIDProps != nil && td.Fields[fi].NeedsInit {
+				propKey := cls.Name + "." + td.Fields[fi].PropName
+				wildKey := "*." + td.Fields[fi].PropName
+				if meta.BinaryUUIDProps[propKey] || meta.BinaryUUIDProps[wildKey] {
+					bsonKey := td.Fields[fi].BSONKey
+					td.Fields[fi].FieldType = "*property.BinaryUUIDPrimitive"
+					td.Fields[fi].GetterReturn = "string"
+					td.Fields[fi].SetterArg = "string"
+					td.Fields[fi].Constructor = "property.NewBinaryUUIDPrimitive(\"" + bsonKey + "\")"
+				}
+			}
 		}
 		// Apply property order overrides — reorder fields to match Mendix's
 		// BSON serialization order (which may differ from the SDK definition order).
