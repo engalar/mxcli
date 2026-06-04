@@ -30,6 +30,17 @@ type TestExec struct {
 	t    *testing.T
 	exec *executor.Executor
 	buf  *strings.Builder
+
+	// mount is non-nil only when created via NewWithMPRBytes (linux/darwin).
+	// Typed as an interface so this struct compiles on platforms without FUSE.
+	mount mprMounter
+}
+
+// mprMounter is satisfied by *MPRMount (defined in fuse.go, build-tagged for
+// linux/darwin). Declaring the field as an interface keeps TestExec buildable
+// on platforms where MPRMount does not exist.
+type mprMounter interface {
+	Bytes() []byte
 }
 
 // New creates a TestExec backed by a MockBackend. The mock's IsConnectedFunc
