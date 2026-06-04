@@ -1691,16 +1691,15 @@ translate enumeration HD.TicketPriority in zh_CN
 
 -- Page captions use path format: <WidgetName>.<property>
 -- Special path "title" translates the page title bar.
-translate page HD.Ticket_Overview in zh_CN
-  set title               = '工单列表',
-      btnNew.caption      = '新建工单',
-      btnEdit.caption     = '编辑',
-      colSubject.caption  = '主题',
-      colStatus.caption   = '状态',
-      colPriority.caption = '优先级',
-      colSLADue.caption   = 'SLA 截止',
-      colIsOver.caption   = '超时',
-      colActions.caption  = '操作';
+-- Note: ActionButtons inside DataGrid2 ControlBars (pluggable widget) use a
+-- different BSON property path and are not translatable via this syntax.
+-- Use standard Forms pages (dataview + footer) for button caption translation.
+translate page HD.Ticket_Detail in zh_CN
+  set title                  = '工单详情',
+      btnSubmit.caption      = '提交',
+      btnResolve.caption     = '解决',
+      btnReopen.caption      = '重新打开',
+      btnAssignAgent.caption = '分配客服';
 
 -- Step 4: Apply nl_NL translations (partial — checkCompleteness will flag the rest).
 translate enumeration HD.TicketStatus in nl_NL
