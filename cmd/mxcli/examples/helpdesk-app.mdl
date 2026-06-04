@@ -1689,17 +1689,16 @@ translate enumeration HD.TicketPriority in zh_CN
       High.caption     = '高',
       Critical.caption = '紧急';
 
--- Page captions use path format: <WidgetName>.<property>
+-- Page widget translation: path format <WidgetName>.<property>
 -- Special path "title" translates the page title bar.
--- Note: ActionButtons inside DataGrid2 ControlBars (pluggable widget) use a
--- different BSON property path and are not translatable via this syntax.
--- Use standard Forms pages (dataview + footer) for button caption translation.
-translate page HD.Ticket_Detail in zh_CN
-  set title                  = '工单详情',
-      btnSubmit.caption      = '提交',
-      btnResolve.caption     = '解决',
-      btnReopen.caption      = '重新打开',
-      btnAssignAgent.caption = '分配客服';
+-- Supported properties: caption, label, placeholder, tooltip, content.
+-- Note: ActionButton uses "CaptionTemplate" internally — use label on textboxes
+-- or content on dynamictext widgets for reliable page translation targets.
+translate page HD.Ticket_NewEdit in zh_CN
+  set title            = '新建/编辑工单',
+      tbSubject.label  = '主题',
+      tbStatus.label   = '状态',
+      tbPriority.label = '优先级';
 
 -- Step 4: Apply nl_NL translations (partial — checkCompleteness will flag the rest).
 translate enumeration HD.TicketStatus in nl_NL
