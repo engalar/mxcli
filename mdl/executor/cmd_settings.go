@@ -143,7 +143,17 @@ func describeSettings(ctx *ExecContext) error {
 
 	// Language settings
 	if ps.Language != nil {
-		fmt.Fprintf(ctx.Output, "alter settings LANGUAGE\n  DefaultLanguageCode = '%s';\n\n", ps.Language.DefaultLanguageCode)
+		for _, lang := range ps.Language.Languages {
+			if lang.Code == ps.Language.DefaultLanguageCode {
+				continue // default language is always present, no add needed
+			}
+			if lang.CheckCompleteness {
+				fmt.Fprintf(ctx.Output, "alter settings language add '%s' (checkCompleteness: true);\n", lang.Code)
+			} else {
+				fmt.Fprintf(ctx.Output, "alter settings language add '%s';\n", lang.Code)
+			}
+		}
+		fmt.Fprintf(ctx.Output, "alter settings language\n  DefaultLanguageCode = '%s';\n\n", ps.Language.DefaultLanguageCode)
 	}
 
 	// Workflow settings

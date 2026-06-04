@@ -4,6 +4,7 @@ package executor
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
@@ -90,4 +91,32 @@ func TestShowSettings_JSON(t *testing.T) {
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON))
 	assertNoError(t, listSettings(ctx))
 	assertValidJSON(t, buf.String())
+}
+
+func TestDescribeSettings_Languages(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetProjectSettingsFunc: func() (*model.ProjectSettings, error) {
+			return &model.ProjectSettings{
+				Language: &model.LanguageSettings{
+					DefaultLanguageCode: "en_US",
+					Languages: []model.Language{
+						{Code: "en_US"},
+						{Code: "zh_CN"},
+						{Code: "nl_NL", CheckCompleteness: true},
+					},
+				},
+			}, nil
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb))
+	assertNoError(t, describeSettings(ctx))
+	out := buf.String()
+
+	assertContainsStr(t, out, "alter settings language add 'zh_CN';")
+	assertContainsStr(t, out, "alter settings language add 'nl_NL' (checkCompleteness: true);")
+	if strings.Contains(out, "alter settings language add 'en_US'") {
+		t.Errorf("default language must not appear as add statement, got:\n%s", out)
+	}
+	assertContainsStr(t, out, "DefaultLanguageCode = 'en_US'")
 }
