@@ -305,12 +305,12 @@ func (b *MprBackend) cloneAndUpdateColumnProperties(templateProps bson.A, column
 				result = append(result, clonePropertyWithNewIDs(propMap))
 			}
 		case "attribute":
-			if attrPath != "" {
-				entry := columnPropertyIDs["attribute"]
-				result = append(result, buildColumnAttributeProperty(entry, attrPath))
-			} else {
-				result = append(result, clonePropertyWithNewIDs(propMap))
-			}
+			// Always use buildColumnAttributeProperty so that an empty attrPath
+			// produces a null AttributeRef. Cloning the template property would
+			// inherit the template column's attribute (e.g. from the first column),
+			// causing CE7247 when a customContent column has no attribute binding.
+			entry := columnPropertyIDs["attribute"]
+			result = append(result, buildColumnAttributeProperty(entry, attrPath))
 		case "header":
 			entry := columnPropertyIDs["header"]
 			result = append(result, buildColumnHeaderProperty(entry, caption))
