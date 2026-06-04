@@ -192,9 +192,10 @@ func printVersion(e *Env) {
 	if LauncherBuild != "" {
 		v += " (" + LauncherBuild + ")"
 	}
-	daemonVer := readVersionFile(e.daemonVersionPath())
 	fmt.Printf("mxcli launcher %s\n", v)
-	if daemonVer != "" {
-		fmt.Printf("mxcli daemon   %s\n", daemonVer)
+	if daemonBinaryExists(e.daemonBinaryPath()) {
+		if out, err := exec.Command(e.daemonBinaryPath(), "--version").Output(); err == nil {
+			fmt.Printf("mxcli daemon   %s\n", strings.TrimSpace(string(out)))
+		}
 	}
 }

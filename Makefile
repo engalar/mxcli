@@ -84,7 +84,9 @@ install-daemon: build
 		sleep 1; \
 	fi; \
 	cp "$(BUILD_DIR)/$(DAEMON_NAME)$(if $(findstring windows,$(shell go env GOOS)),.exe,)" "$$DAEMON_BIN"; \
-	echo "Installed: $$DAEMON_BIN ($$("$$DAEMON_BIN" --version 2>&1 | head -1))"; \
+	DAEMON_VER=$$("$$DAEMON_BIN" --version 2>&1 | head -1); \
+	echo "$$DAEMON_VER" > "$$DAEMON_DIR/version"; \
+	echo "Installed: $$DAEMON_BIN ($$DAEMON_VER)"; \
 	LAUNCHER_DIR=$$(dirname "$$(command -v mxcli 2>/dev/null || true)"); \
 	LAUNCHER_BIN="$(BUILD_DIR)/$(BINARY_NAME)$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
 	if [ -n "$$LAUNCHER_DIR" ] && [ -d "$$LAUNCHER_DIR" ]; then \
