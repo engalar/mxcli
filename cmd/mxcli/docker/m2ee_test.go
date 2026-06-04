@@ -366,3 +366,42 @@ func TestM2EEResponse_M2EEError(t *testing.T) {
 		})
 	}
 }
+
+func TestDirectM2EECaller_Call(t *testing.T) {
+	var gotAction string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		json.NewDecoder(r.Body).Decode(&body)
+		gotAction = body["action"].(string)
+		auth := r.Header.Get("X-M2EE-Authentication")
+		if auth == "" {
+			t.Error("missing X-M2EE-Authentication header")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"result":0,"feedback":{}}`))
+	}))
+	defer server.Close()
+
+	host, port := parseTestServerAddr(t, server.URL)
+	caller := &DirectM2EECaller{Host: host, Port: port, Token: "secret"}
+	resp, err := caller.Call("update_styling", nil)
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+	if resp.Result != 0 {
+		t.Errorf("result = %d, want 0", resp.Result)
+	}
+	if gotAction != "update_styling" {
+		t.Errorf("action = %q, want update_styling", gotAction)
+	}
+}
+
+func TestDirectM2EECaller_Defaults(t *testing.T) {
+	c := &DirectM2EECaller{Token: "x"}
+	if c.host() != "localhost" {
+		t.Errorf("host() = %q, want localhost", c.host())
+	}
+	if c.port() != 8090 {
+		t.Errorf("port() = %d, want 8090", c.port())
+	}
+}

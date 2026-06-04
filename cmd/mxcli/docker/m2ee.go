@@ -53,6 +53,49 @@ type M2EEResponse struct {
 	RawFeedback json.RawMessage `json:"feedback"`
 }
 
+// M2EECaller abstracts the transport for Mendix admin API calls.
+type M2EECaller interface {
+	Call(action string, params map[string]any) (*M2EEResponse, error)
+}
+
+// DirectM2EECaller sends M2EE requests directly via HTTP.
+// Zero values: Host → "localhost", Port → 8090, Timeout → 10s.
+type DirectM2EECaller struct {
+	Host    string
+	Port    int
+	Token   string
+	Timeout time.Duration
+}
+
+func (d *DirectM2EECaller) host() string {
+	if d.Host == "" {
+		return "localhost"
+	}
+	return d.Host
+}
+
+func (d *DirectM2EECaller) port() int {
+	if d.Port == 0 {
+		return 8090
+	}
+	return d.Port
+}
+
+func (d *DirectM2EECaller) Call(action string, params map[string]any) (*M2EEResponse, error) {
+	timeout := d.Timeout
+	if timeout == 0 {
+		timeout = 10 * time.Second
+	}
+	opts := M2EEOptions{
+		Host:    d.host(),
+		Port:    d.port(),
+		Token:   d.Token,
+		Timeout: timeout,
+		Direct:  true,
+	}
+	return callM2EEDirect(opts, action, params)
+}
+
 // Feedback decodes the raw feedback JSON into a map.
 // Returns nil map if feedback is empty or not a JSON object.
 func (r *M2EEResponse) Feedback() map[string]any {
