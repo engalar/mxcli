@@ -13,7 +13,7 @@ require (
 	github.com/hanwen/go-fuse/v2 v2.10.1
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/klauspost/compress v1.18.6
-	github.com/mattn/go-runewidth v0.0.23
+	github.com/mattn/go-runewidth v0.0.24
 	github.com/microsoft/go-mssqldb v1.10.0
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/sergi/go-diff v1.4.0
@@ -23,6 +23,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	go.mongodb.org/mongo-driver/v2 v2.6.0
 	go.starlark.net v0.0.0-20260522144826-ec58d4b459e2
+	golang.org/x/sys v0.45.0
 	golang.org/x/term v0.43.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.51.0
@@ -63,7 +64,6 @@ require (
 	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/exp v0.0.0-20260527015227-08cc5374adb3 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	modernc.org/libc v1.72.5 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
