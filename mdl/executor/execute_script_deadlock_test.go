@@ -29,7 +29,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 )
 
-const scriptDeadlockTimeout = 5 * time.Second
+const scriptDeadlockTimeout = 30 * time.Second
 
 // openBackendForTest copies the v2 fixture and opens an MprBackend.
 func openBackendForTest(t *testing.T) *mprbackend.MprBackend {

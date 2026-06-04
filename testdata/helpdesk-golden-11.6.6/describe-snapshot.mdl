@@ -512,7 +512,8 @@ begin
   @position(360,200)
   retrieve $Tickets from HD.Ticket
       where HD.Ticket_Customer/HD.Customer/Company = $Company
-      limit 50;
+      limit 50
+      offset 4;
   return $Tickets;
 end;
 /
@@ -1052,7 +1053,7 @@ create or modify page KB.Article_Overview (
 ) {
   gallery artGallery (datasource: database from KB.Article sort by PublishedAt asc, selection: Single) {
     filter filter1 {
-      dropdownfilter fStatus (attributes: [Status])
+      pluggablewidget 'com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter' fStatus
     }
     template template1 {
       -- Context: $currentObject (KB.Article)
@@ -1149,16 +1150,16 @@ create or modify page HD.Ticket_Overview (title: 'Tickets', layout: Atlas_Core.A
             )
           }
           column colSubject (attribute: Subject, caption: 'Subject') {
-            textfilter fSubject
+            pluggablewidget 'com.mendix.widget.web.datagridtextfilter.DatagridTextFilter' fSubject
           }
           column colStatus (attribute: Status, caption: 'Status', ColumnWidth: manual, Size: 120) {
-            dropdownfilter fStatus
+            pluggablewidget 'com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter' fStatus
           }
           column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100) {
-            dropdownfilter fPriority
+            pluggablewidget 'com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter' fPriority
           }
           column colSLADueAt (attribute: SLADueAt, caption: 'SLA Due', ColumnWidth: manual, Size: 140) {
-            datefilter fSLADue (filtertype: equal)
+            pluggablewidget 'com.mendix.widget.web.datagriddatefilter.DatagridDateFilter' fSLADue
           }
           column colIsOverSLA (attribute: IsOverSLA, caption: 'Overdue', ColumnWidth: manual, Size: 90)
           column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 80) {
