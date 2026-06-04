@@ -59,12 +59,45 @@ fi
 
 # ── Determine install directory ───────────────────────────────────────────────
 if [ -z "$INSTALL_DIR" ]; then
-  if [ -w "/usr/local/bin" ]; then
+  if [ "$OS" != "windows" ] && [ -w "/usr/local/bin" ]; then
     INSTALL_DIR="/usr/local/bin"
   else
     INSTALL_DIR="$HOME/.local/bin"
     mkdir -p "$INSTALL_DIR"
-    # Idempotent PATH entry: add to each shell rc that exists, skip if already present
+  fi
+fi
+
+# ── Update shell PATH (idempotent) ────────────────────────────────────────────
+if [ "$INSTALL_DIR" != "/usr/local/bin" ]; then
+  if [ "$OS" = "windows" ]; then
+    # Git Bash / MSYS2: ensure ~/.bashrc exists and contains the PATH entry
+    RC="$HOME/.bashrc"
+    touch "$RC"
+    if ! grep -qF "$INSTALL_DIR" "$RC" 2>/dev/null; then
+      printf '\nexport PATH="%s:$PATH"\n' "$INSTALL_DIR" >> "$RC"
+      echo "  Added $INSTALL_DIR to PATH in $RC (Git Bash)"
+    fi
+
+    # Windows user PATH via PowerShell — persists for CMD, PowerShell, and new shells
+    if command -v powershell.exe >/dev/null 2>&1; then
+      WIN_DIR=$(cygpath -w "$INSTALL_DIR" 2>/dev/null || \
+        printf '%s' "$INSTALL_DIR" | sed 's|^/\([a-zA-Z]\)/|\1:\\|;s|/|\\|g')
+      CURRENT_WIN=$(powershell.exe -NoProfile -Command \
+        "[Environment]::GetEnvironmentVariable('PATH','User')" 2>/dev/null | tr -d '\r\n')
+      case ";${CURRENT_WIN};" in
+        *";${WIN_DIR};"*)
+          : # already present
+          ;;
+        *)
+          NEW_WIN="${CURRENT_WIN};${WIN_DIR}"
+          powershell.exe -NoProfile -Command \
+            "[Environment]::SetEnvironmentVariable('PATH','${NEW_WIN}','User')" 2>/dev/null \
+            && echo "  Added $WIN_DIR to Windows user PATH (takes effect in new shells)"
+          ;;
+      esac
+    fi
+  else
+    # Linux / macOS: update each shell rc that exists
     for RC in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
       [ -f "$RC" ] || continue
       grep -qF "$INSTALL_DIR" "$RC" && continue
@@ -119,6 +152,10 @@ echo "   The daemon (~20 MB) will be downloaded automatically on first use."
 echo ""
 echo "   Run: mxcli version"
 echo ""
-if [ "$INSTALL_DIR" = "$HOME/.local/bin" ]; then
+if [ "$OS" = "windows" ]; then
+  echo "   To use in the current Git Bash session:"
+  echo "     export PATH=\"$INSTALL_DIR:\$PATH\""
+  echo "   New Git Bash sessions and PowerShell/CMD will pick it up automatically."
+elif [ "$INSTALL_DIR" = "$HOME/.local/bin" ]; then
   echo "   NOTE: Restart your shell or run: export PATH=\"$INSTALL_DIR:\$PATH\""
 fi

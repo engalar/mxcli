@@ -18,7 +18,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/mendixlabs/mxcli/internal/launcherproto"
 )
 
 var (
@@ -79,7 +82,9 @@ func main() {
 	// of forwarding through the Unix socket, where stdin is disconnected and
 	// stdout is JSON-framed (which corrupts escape codes).
 	if isTTYCommand(args) {
+		launcherPath, _ := os.Executable()
 		cmd := exec.Command(e.daemonBinaryPath(), args...)
+		cmd.Env = ttyEnv(launcherPath)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -163,6 +168,23 @@ func isTTYCommand(args []string) bool {
 		return ttyCommands[a]
 	}
 	return false
+}
+
+// ttyEnv returns the environment to pass to TTY-command subprocesses.
+// It propagates the current process environment and injects MXCLI_LAUNCHER_PATH
+// so that the daemon binary (exec'd for tui/serve/oql/playwright) knows the
+// launcher path and can route its internal subcommand calls back through it.
+// Any pre-existing MXCLI_LAUNCHER_PATH is replaced to avoid stale values.
+func ttyEnv(launcherPath string) []string {
+	prefix := launcherproto.EnvLauncherPath + "="
+	base := os.Environ()
+	result := make([]string, 0, len(base)+1)
+	for _, e := range base {
+		if !strings.HasPrefix(e, prefix) {
+			result = append(result, e)
+		}
+	}
+	return append(result, prefix+launcherPath)
 }
 
 func printVersion(e *Env) {

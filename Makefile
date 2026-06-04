@@ -159,6 +159,7 @@ sync-changelog:
 sync-examples:
 	@mkdir -p cmd/mxcli/examples
 	$(call copy-if-changed,mdl-examples/use-cases/helpdesk/helpdesk-app.mdl,cmd/mxcli/examples/helpdesk-app.mdl)
+	$(call copy-if-changed,mdl-examples/use-cases/helpdesk/helpdesk-describe.mdl,cmd/mxcli/examples/helpdesk-describe.mdl)
 
 # Sync skills, commands, lint rules, changelog, and examples
 sync-all: sync-skills sync-commands sync-lint-rules sync-changelog sync-examples

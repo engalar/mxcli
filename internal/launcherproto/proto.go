@@ -9,6 +9,12 @@ import (
 	"io"
 )
 
+// EnvLauncherPath is the environment variable the launcher injects when exec'ing
+// the daemon binary for TTY commands (tui, serve, oql, playwright). The TUI reads
+// this to route its internal subcommand calls back through the launcher so they
+// benefit from per-MPR daemon routing rather than opening SQLite directly.
+const EnvLauncherPath = "MXCLI_LAUNCHER_PATH"
+
 // Request is sent from launcher to daemon over the unix socket.
 type Request struct {
 	Argv []string          `json:"argv"`

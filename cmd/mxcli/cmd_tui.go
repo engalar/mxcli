@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui"
+	"github.com/mendixlabs/mxcli/internal/launcherproto"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -44,7 +45,7 @@ Example:
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath, _ := cmd.Flags().GetString("project")
 		continueSession, _ := cmd.Flags().GetBool("continue")
-		mxcliPath, _ := os.Executable()
+		mxcliPath := resolveMxcliPath()
 
 		// Try to restore session when -c flag is set
 		var session *tui.TUISession
@@ -122,4 +123,20 @@ func init() {
 	tuiCmd.Flags().BoolP("continue", "c", false, "Restore previous TUI session")
 	tuiCmd.Flags().String("agent-socket", "", "Unix socket path for agent communication (e.g. /tmp/mxcli-agent.sock)")
 	tuiCmd.Flags().Bool("agent-auto-proceed", false, "Skip human confirmation for agent operations")
+}
+
+// resolveMxcliPath returns the binary path the TUI should use for spawning
+// subcommands (project-tree, describe, exec, etc.).
+//
+// When the launcher exec's the daemon binary for TTY commands, it injects
+// MXCLI_LAUNCHER_PATH so the TUI calls back through the launcher, which routes
+// -p commands through the per-MPR daemon (persistent connection, unit cache).
+// Without this, os.Executable() returns the daemon binary path and every TUI
+// subcommand opens SQLite directly, bypassing the existing per-MPR daemon.
+func resolveMxcliPath() string {
+	if p := os.Getenv(launcherproto.EnvLauncherPath); p != "" {
+		return p
+	}
+	p, _ := os.Executable()
+	return p
 }

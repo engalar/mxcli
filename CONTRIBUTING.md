@@ -502,3 +502,20 @@ The CI uses a specific Mendix version (check `.github/workflows/`). Ensure your 
 | **Review** | Documentation complete, PR checklist satisfied |
 
 Thank you for contributing!
+
+---
+
+## Code Quality Monitoring
+
+The `source_tree` tool visualizes file sizes, dependency tiers, and quality metrics across the codebase:
+
+```bash
+go run ./cmd/source_tree           # file sizes + dependency depth
+go run ./cmd/source_tree --fn      # function count + longest function per file
+go run ./cmd/source_tree --dup     # intra-file duplication
+go run ./cmd/source_tree --churn   # commit frequency per file
+go run ./cmd/source_tree --all     # all metrics
+go run ./cmd/source_tree --cover   # with test coverage (runs tests if no coverage.out)
+```
+
+Output is color-coded by severity (green/yellow/orange/red), making it easy to spot files that need attention.
