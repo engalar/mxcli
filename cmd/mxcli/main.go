@@ -131,7 +131,7 @@ Examples:
 
 		if commands != "" {
 			// Execute commands from -c flag
-			exec, logger := newLoggedExecutor("batch", cmd.OutOrStdout())
+			exec, logger := buildExec("batch", cmd.OutOrStdout())
 			defer logger.Close()
 			defer exec.Close()
 
@@ -188,40 +188,35 @@ func resolveFormat(cmd *cobra.Command, defaultFormat string) string {
 	return defaultFormat
 }
 
-// newLoggedExecutor creates an executor writing to out. Pass cmd.OutOrStdout()
-// so that daemon-server mode (--serve) routes output to the socket instead of
-// os.Stdout (which is /dev/null when the daemon is spawned by the launcher).
-// The caller must call logger.Close() and exec.Close() when done.
+// buildExec creates an Executor for the given mode and output writer.
+// In per-MPR daemon mode (persistentDaemonBackend != nil) the pre-connected
+// backend is reused via noOpConnectBackend; otherwise a fresh MprBackend
+// is created per CONNECT statement.
+//
+// Pass cmd.OutOrStdout() so that daemon-server mode (--serve) routes output to
+// the socket instead of os.Stdout (which is /dev/null when the daemon is spawned
+// by the launcher). The caller must call logger.Close() and exec.Close() when done.
 // Note: the global log package is redirected to stderr by runCommand() in
 // daemon_server.go, so log.Printf HINT/WARNING messages are also visible.
-func newLoggedExecutor(mode string, out io.Writer) (*executor.Executor, *diaglog.Logger) {
+func buildExec(mode string, out io.Writer) (*executor.Executor, *diaglog.Logger) {
 	logger := diaglog.Init(version, mode, globalVerboseLevel)
-	exec := executor.New(out)
-
+	b := executor.Build().Out(out).WithLogger(logger)
 	if persistentDaemonBackend != nil {
-		// Per-MPR daemon: wrap the concrete *MprBackend (not the interface) so
-		// duck-type checks (microflowsRepoProvider etc.) still resolve correctly,
-		// while Connect/Disconnect are no-ops to keep the SQLite connection and
-		// Reader.unitCache alive across requests.
-		pb := persistentDaemonBackend
-		exec.SetBackendFactory(func() backend.FullBackend {
-			return &noOpConnectBackend{pb}
-		})
+		b = b.WithBackend(&noOpConnectBackend{persistentDaemonBackend})
 	} else {
-		exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+		b = b.WithFactory(func() backend.FullBackend { return mprbackend.New() })
 	}
-	exec.SetLogger(logger)
 	if globalJSONFlag {
-		exec.SetFormat(executor.FormatJSON)
+		b = b.Format(executor.FormatJSON)
 	}
-	return exec, logger
+	return b.Create(), logger
 }
 
 // executeMDL is a helper to execute MDL commands with a project.
 // out should be cmd.OutOrStdout() so daemon-server mode routes output to the socket.
 // Returns an error instead of calling os.Exit so the daemon survives command failures.
 func executeMDL(projectPath, mdlCmd string, out io.Writer) error {
-	exec, logger := newLoggedExecutor("subcommand", out)
+	exec, logger := buildExec("subcommand", out)
 	defer logger.Close()
 	defer exec.Close()
 

@@ -234,7 +234,7 @@ Examples:
 			os.Exit(1)
 		}
 
-		exec, logger := newLoggedExecutor("subcommand", cmd.OutOrStdout())
+		exec, logger := buildExec("subcommand", cmd.OutOrStdout())
 		defer logger.Close()
 		if quiet {
 			exec.SetQuiet(true)

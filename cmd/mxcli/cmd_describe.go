@@ -164,7 +164,7 @@ Example:
 			os.Exit(1)
 		}
 
-		exec, logger := newLoggedExecutor("subcommand", cmd.OutOrStdout())
+		exec, logger := buildExec("subcommand", cmd.OutOrStdout())
 		defer logger.Close()
 		defer exec.Close()
 		exec.SetQuiet(true) // suppress status messages for programmatic output

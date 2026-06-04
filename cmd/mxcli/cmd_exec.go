@@ -35,7 +35,7 @@ Example:
 			return fmt.Errorf("reading file: %w", err)
 		}
 
-		exec, logger := newLoggedExecutor("exec", out)
+		exec, logger := buildExec("exec", out)
 		defer logger.Close()
 		defer exec.Close()
 

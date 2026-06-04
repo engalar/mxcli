@@ -90,7 +90,7 @@ Examples:
 		}
 
 		// Create executor and connect
-		exec, logger := newLoggedExecutor("subcommand", cmd.OutOrStdout())
+		exec, logger := buildExec("subcommand", cmd.OutOrStdout())
 		defer logger.Close()
 		defer exec.Close()
 

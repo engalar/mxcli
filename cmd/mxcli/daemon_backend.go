@@ -8,25 +8,27 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 )
 
 // persistentDaemonBackend holds the pre-connected backend for the daemon process.
 // Non-nil only in --serve + --mpr-path mode (per-MPR daemon).
-// Kept as concrete type so duck-type checks (microflowsRepoProvider etc.) work.
+// Typed as backend.PersistentBackend so duck-type checks (microflowsRepoProvider
+// etc.) work without leaking the concrete *mprbackend.MprBackend type.
 // Never modified after main() sets it.
-var persistentDaemonBackend *mprbackend.MprBackend
+var persistentDaemonBackend backend.PersistentBackend
 
 // daemonRequestMu serializes command execution on the persistent backend.
 // SQLite is single-writer; os.Chdir is process-global — both require serialization.
 var daemonRequestMu sync.Mutex
 
-// noOpConnectBackend wraps *mprbackend.MprBackend (not the interface) so that
-// duck-type checks like b.(microflowsRepoProvider) still succeed — the concrete
-// type's Microflows() / Nanoflows() / etc. methods are promoted and visible.
+// noOpConnectBackend embeds backend.PersistentBackend so that duck-type checks
+// like b.(microflowsRepoProvider) still succeed — the interface's Microflows()
+// / Nanoflows() / etc. methods are promoted and visible.
 // Only Connect / Disconnect / IsConnected are overridden to be no-ops so the
 // persistent SQLite connection is never closed between daemon requests.
-type noOpConnectBackend struct{ *mprbackend.MprBackend }
+type noOpConnectBackend struct{ backend.PersistentBackend }
 
 func (n *noOpConnectBackend) Connect(string) error { return nil }
 func (n *noOpConnectBackend) Disconnect() error    { return nil }
@@ -36,7 +38,7 @@ func (n *noOpConnectBackend) IsConnected() bool    { return true }
 // Called once at daemon startup; the connection lives for the daemon's lifetime.
 // EnableContentCache is called so mxunit file reads are cached in memory:
 // the first request populates the cache; subsequent requests skip all file I/O.
-func openPersistentBackend(mprPath string) (*mprbackend.MprBackend, error) {
+func openPersistentBackend(mprPath string) (backend.PersistentBackend, error) {
 	b := mprbackend.New()
 	if err := b.Connect(mprPath); err != nil {
 		return nil, fmt.Errorf("pre-connect %s: %w", mprPath, err)
