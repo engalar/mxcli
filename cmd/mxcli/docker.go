@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
@@ -431,10 +432,14 @@ Examples:
 		skipCheck, _ := cmd.Flags().GetBool("skip-check")
 		modelOnly, _ := cmd.Flags().GetBool("model-only")
 		cssOnly, _ := cmd.Flags().GetBool("css")
-		host, _ := cmd.Flags().GetString("host")
-		port, _ := cmd.Flags().GetInt("port")
 		token, _ := cmd.Flags().GetString("token")
-		direct, _ := cmd.Flags().GetBool("direct")
+
+		dockerDir := filepath.Join(filepath.Dir(projectPath), ".docker")
+		caller, err := docker.NewDockerExecM2EECaller(dockerDir, token)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 
 		opts := docker.ReloadOptions{
 			ProjectPath: projectPath,
@@ -442,10 +447,7 @@ Examples:
 			SkipCheck:   skipCheck,
 			SkipBuild:   modelOnly,
 			CSSOnly:     cssOnly,
-			Host:        host,
-			Port:        port,
-			Token:       token,
-			Direct:      direct,
+			Caller:      caller,
 			Stdout:      os.Stdout,
 			Stderr:      os.Stderr,
 		}
@@ -535,10 +537,7 @@ func init() {
 	dockerReloadCmd.Flags().Bool("skip-check", false, "Skip 'mx check' pre-build validation")
 	dockerReloadCmd.Flags().Bool("model-only", false, "Skip build, just call reload_model")
 	dockerReloadCmd.Flags().Bool("css", false, "CSS hot reload only (update_styling, no build)")
-	dockerReloadCmd.Flags().String("host", "", "M2EE admin API host")
-	dockerReloadCmd.Flags().Int("port", 0, "M2EE admin API port")
 	dockerReloadCmd.Flags().String("token", "", "M2EE admin password")
-	dockerReloadCmd.Flags().Bool("direct", false, "Connect via HTTP directly (bypass docker exec)")
 
 	// Register all subcommands
 	dockerCmd.AddCommand(dockerRunCmd)

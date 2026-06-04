@@ -19,7 +19,7 @@ func main() {
 		Version:      Version,
 		SilenceUsage: true,
 	}
-	root.AddCommand(buildCmd(), runCmd())
+	root.AddCommand(buildCmd(), runCmd(), reloadCmd())
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
