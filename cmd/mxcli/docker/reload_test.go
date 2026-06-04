@@ -28,10 +28,7 @@ func TestReload_CSSOnly(t *testing.T) {
 	var stdout bytes.Buffer
 	opts := ReloadOptions{
 		CSSOnly: true,
-		Host:    host,
-		Port:    port,
-		Token:   "testpass",
-		Direct:  true,
+		Caller:  &DirectM2EECaller{Host: host, Port: port, Token: "testpass"},
 		Stdout:  &stdout,
 	}
 
@@ -71,10 +68,7 @@ func TestReload_ModelOnly(t *testing.T) {
 	var stdout bytes.Buffer
 	opts := ReloadOptions{
 		SkipBuild: true,
-		Host:      host,
-		Port:      port,
-		Token:     "testpass",
-		Direct:    true,
+		Caller:    &DirectM2EECaller{Host: host, Port: port, Token: "testpass"},
 		Stdout:    &stdout,
 	}
 
@@ -165,10 +159,7 @@ func TestReload_ModelOnly_WithDuration(t *testing.T) {
 	var stdout bytes.Buffer
 	opts := ReloadOptions{
 		SkipBuild: true,
-		Host:      host,
-		Port:      port,
-		Token:     "testpass",
-		Direct:    true,
+		Caller:    &DirectM2EECaller{Host: host, Port: port, Token: "testpass"},
 		Stdout:    &stdout,
 	}
 
@@ -194,10 +185,7 @@ func TestReload_CSSOnly_Error(t *testing.T) {
 	var stdout bytes.Buffer
 	opts := ReloadOptions{
 		CSSOnly: true,
-		Host:    host,
-		Port:    port,
-		Token:   "testpass",
-		Direct:  true,
+		Caller:  &DirectM2EECaller{Host: host, Port: port, Token: "testpass"},
 		Stdout:  &stdout,
 	}
 
@@ -229,10 +217,7 @@ func TestReload_ModelOnly_PendingDDL(t *testing.T) {
 	var stdout bytes.Buffer
 	opts := ReloadOptions{
 		SkipBuild: true,
-		Host:      host,
-		Port:      port,
-		Token:     "testpass",
-		Direct:    true,
+		Caller:    &DirectM2EECaller{Host: host, Port: port, Token: "testpass"},
 		Stdout:    &stdout,
 	}
 
@@ -265,10 +250,7 @@ func TestReload_ModelOnly_ReloadError(t *testing.T) {
 	var stdout bytes.Buffer
 	opts := ReloadOptions{
 		SkipBuild: true,
-		Host:      host,
-		Port:      port,
-		Token:     "testpass",
-		Direct:    true,
+		Caller:    &DirectM2EECaller{Host: host, Port: port, Token: "testpass"},
 		Stdout:    &stdout,
 	}
 

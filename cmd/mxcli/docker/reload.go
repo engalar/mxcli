@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 )
 
 // ReloadOptions configures the docker reload command.
@@ -27,17 +26,8 @@ type ReloadOptions struct {
 	// CSSOnly calls update_styling only (no build, no reload).
 	CSSOnly bool
 
-	// Host is the M2EE admin API host.
-	Host string
-
-	// Port is the M2EE admin API port.
-	Port int
-
-	// Token is the M2EE admin password.
-	Token string
-
-	// Direct bypasses docker exec for admin API calls.
-	Direct bool
+	// Caller is the transport used for M2EE admin API calls.
+	Caller M2EECaller
 
 	// Stdout for output messages.
 	Stdout io.Writer
@@ -58,18 +48,9 @@ func Reload(opts ReloadOptions) error {
 		w = os.Stdout
 	}
 
-	m2eeOpts := M2EEOptions{
-		Host:        opts.Host,
-		Port:        opts.Port,
-		Token:       opts.Token,
-		ProjectPath: opts.ProjectPath,
-		Direct:      opts.Direct,
-		Timeout:     30 * time.Second,
-	}
-
 	// CSS-only mode: just update styling
 	if opts.CSSOnly {
-		resp, err := CallM2EE(m2eeOpts, "update_styling", nil)
+		resp, err := opts.Caller.Call("update_styling", nil)
 		if err != nil {
 			return fmt.Errorf("update_styling failed: %w", err)
 		}
@@ -96,7 +77,7 @@ func Reload(opts ReloadOptions) error {
 
 	// Reload model
 	fmt.Fprintln(w, "Reloading model...")
-	resp, err := CallM2EE(m2eeOpts, "reload_model", nil)
+	resp, err := opts.Caller.Call("reload_model", nil)
 	if err != nil {
 		return fmt.Errorf("reload_model failed: %w", err)
 	}
@@ -115,7 +96,7 @@ func Reload(opts ReloadOptions) error {
 	// reload_model only reloads the in-memory model definition; it does not
 	// sync the database schema. If DDL changes are pending, the app will crash
 	// at runtime with "Entity does not exist" or similar errors.
-	if pending := checkPendingDDL(m2eeOpts); pending != "" {
+	if pending := checkPendingDDL(opts.Caller); pending != "" {
 		fmt.Fprintln(w, "")
 		fmt.Fprintln(w, "WARNING: Database schema changes detected after reload.")
 		fmt.Fprintln(w, "  The model was reloaded, but new entities or attributes require")
@@ -136,8 +117,8 @@ func Reload(opts ReloadOptions) error {
 
 // checkPendingDDL queries the runtime for pending DDL commands.
 // Returns the DDL text if changes are pending, or empty string if none or on error.
-func checkPendingDDL(opts M2EEOptions) string {
-	resp, err := CallM2EE(opts, "get_ddl_commands", nil)
+func checkPendingDDL(caller M2EECaller) string {
+	resp, err := caller.Call("get_ddl_commands", nil)
 	if err != nil {
 		return ""
 	}
