@@ -467,8 +467,9 @@ begin
       limit 100;
   loop $Comment in $Comments
   begin
-    @position(310,80)
-    commit $Comment;
+    @position(150,80)
+    change $Comment (IsInternal = false
+    );
   end loop;
   return;
 end;

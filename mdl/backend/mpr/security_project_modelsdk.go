@@ -14,7 +14,7 @@ import (
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
-// msdkWrite reads a unit, applies mutateFn, re-encodes, and writes via WriteTransaction.
+// msdkWrite reads a unit, applies mutateFn, re-encodes, and writes back.
 // It avoids sdk/mpr's updateTransactionID() which fails on hard-linked MPR files
 // (SQLITE_READONLY_DBMOVED 1544).
 func (b *MprBackend) msdkWrite(unitID model.ID, mutateFn func(elem element.Element) error) error {
@@ -36,10 +36,20 @@ func (b *MprBackend) msdkWrite(unitID model.ID, mutateFn func(elem element.Eleme
 	if err != nil {
 		return fmt.Errorf("encode unit: %w", err)
 	}
-	// UpdateRawUnit routes through updateUnit(), which checks sessionBuf first.
-	// When EnableImportBuffer is active this keeps the write in the buffer so
-	// importBuf.Flush() can atomically commit entity+grant together.
-	if err := b.msdkWriter.UpdateRawUnit(string(unitID), newBytes); err != nil {
+	// writeUnitContents routes through scriptBuf (EXECUTE SCRIPT) or unitBuf
+	// (import session) when either is active, keeping the ScriptOverlay / import
+	// overlay current for subsequent reads in the same block and ensuring all
+	// mutations are included in the atomic BatchWrite at Commit time.
+	//
+	// Previously this used UpdateRawUnit (which only checks the import-mode
+	// sessionBuf, not scriptBuf). During EXECUTE SCRIPT that caused two bugs:
+	//   1. ScriptOverlay was never updated → each subsequent msdkWrite read
+	//      the same stale pre-mutation bytes, so consecutive GRANTs overwrote
+	//      each other.
+	//   2. commitScriptBuffer BatchWrite overwrote every UpdateRawUnit write
+	//      with the pre-mutation domain model stored in the ScriptBuffer,
+	//      wiping all security grants applied inside the script block.
+	if err := b.writeUnitContents(unitID, newBytes); err != nil {
 		return fmt.Errorf("write unit: %w", err)
 	}
 	return nil
