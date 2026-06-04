@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func generateClaudeMD(projectName, mprFile string) string {
+func generateClaudeMD(projectName, mprFile string, inDevcontainer bool) string {
 	mprPath := mprFile
 	if mprPath == "" {
 		mprPath = "<project>.mpr"
@@ -42,10 +42,16 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("> Shall I go ahead?\n\n")
 
 	// ── mxcli Location ─────────────────────────────────────────────
-	w("## Important: mxcli Location\n\n")
-	w("The " + bt + "mxcli" + bt + " tool is located in the **root folder of this project**, not in the system PATH. Always use the local path:\n\n")
-	w(bt3 + "bash\n./mxcli -p " + mprPath + "    # Correct - uses local binary\n" + bt3 + "\n\n")
-	w("**Do NOT use** " + bt + "mxcli" + bt + " directly - it will fail with \"command not found\". Always prefix with " + bt + "./" + bt + " to run the local binary.\n\n")
+	if inDevcontainer {
+		w("## Important: mxcli Location\n\n")
+		w("The " + bt + "mxcli" + bt + " tool is located in the **root folder of this project**, not in the system PATH. Always use the local path:\n\n")
+		w(bt3 + "bash\n./mxcli -p " + mprPath + "    # Correct - uses local binary\n" + bt3 + "\n\n")
+		w("**Do NOT use** " + bt + "mxcli" + bt + " directly - it will fail with \"command not found\". Always prefix with " + bt + "./" + bt + " to run the local binary.\n\n")
+	} else {
+		w("## mxcli Location\n\n")
+		w(bt + "mxcli" + bt + " is installed globally and available in your PATH:\n\n")
+		w(bt3 + "bash\nmxcli -p " + mprPath + "\n" + bt3 + "\n\n")
+	}
 
 	// ── Version Check ────────────────────────────────────────────────
 	w("## IMPORTANT: Check Version Before Using Features\n\n")
@@ -596,5 +602,11 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("## MDL Reference\n\n")
 	w(fmt.Sprintf("Skills are in `.claude/skills/`. Run `./mxcli -p %s -c \"HELP\"` for the full command reference.\n", mprPath))
 
-	return sb.String()
+	result := sb.String()
+	// When not in a devcontainer, mxcli is on the global PATH — strip the
+	// "./" prefix from every command example in one pass.
+	if !inDevcontainer {
+		result = strings.ReplaceAll(result, "./mxcli", "mxcli")
+	}
+	return result
 }

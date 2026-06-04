@@ -128,7 +128,7 @@ Examples:
 		fmt.Println("  Created .claude/settings.json")
 
 		claudeMDPath := filepath.Join(absDir, "CLAUDE.md")
-		if err := os.WriteFile(claudeMDPath, []byte(generateClaudeMD(projectName, mprFile)), 0644); err != nil {
+		if err := os.WriteFile(claudeMDPath, []byte(generateClaudeMD(projectName, mprFile, isDevcontainer())), 0644); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing CLAUDE.md: %v\n", err)
 			os.Exit(1)
 		}
@@ -339,6 +339,26 @@ func findMprFile(dir string) string {
 		}
 	}
 	return ""
+}
+
+// isDevcontainer reports whether the current process is running inside a
+// development container (Docker or Podman). Used to tailor CLAUDE.md:
+// devcontainers use the local ./mxcli binary; host machines use the
+// globally-installed mxcli on the PATH.
+func isDevcontainer() bool {
+	// Docker daemon creates /.dockerenv in every container it starts.
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+	// Podman writes /run/.containerenv inside its containers.
+	if _, err := os.Stat("/run/.containerenv"); err == nil {
+		return true
+	}
+	// GitHub Codespaces (also a devcontainer variant).
+	if os.Getenv("CODESPACES") == "true" {
+		return true
+	}
+	return false
 }
 
 func init() {

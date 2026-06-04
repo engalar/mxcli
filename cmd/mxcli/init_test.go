@@ -25,28 +25,28 @@ func runInit(t *testing.T, dir string) {
 // ── Unit tests: generateClaudeMD ─────────────────────────────────────────────
 
 func TestGenerateClaudeMD_ContainsProjectName(t *testing.T) {
-	got := generateClaudeMD("MyProject", "MyProject.mpr")
+	got := generateClaudeMD("MyProject", "MyProject.mpr", true)
 	if !strings.Contains(got, "MyProject") {
 		t.Error("CLAUDE.md should contain the project name")
 	}
 }
 
 func TestGenerateClaudeMD_ContainsMprPath(t *testing.T) {
-	got := generateClaudeMD("MyProject", "MyProject.mpr")
+	got := generateClaudeMD("MyProject", "MyProject.mpr", true)
 	if !strings.Contains(got, "MyProject.mpr") {
 		t.Error("CLAUDE.md should contain the .mpr file path")
 	}
 }
 
 func TestGenerateClaudeMD_ContainsVersionCheck(t *testing.T) {
-	got := generateClaudeMD("P", "p.mpr")
+	got := generateClaudeMD("P", "p.mpr", true)
 	if !strings.Contains(got, "SHOW FEATURES") {
 		t.Error("CLAUDE.md should include SHOW FEATURES version check instruction")
 	}
 }
 
 func TestGenerateClaudeMD_SkillsPointToClaudeSkillsDir(t *testing.T) {
-	got := generateClaudeMD("P", "p.mpr")
+	got := generateClaudeMD("P", "p.mpr", true)
 	if strings.Contains(got, ".ai-context/skills/") {
 		t.Error("CLAUDE.md should not reference .ai-context/skills/ paths; use .claude/skills/ instead")
 	}
@@ -56,9 +56,30 @@ func TestGenerateClaudeMD_SkillsPointToClaudeSkillsDir(t *testing.T) {
 }
 
 func TestGenerateClaudeMD_NoAiContextReferences(t *testing.T) {
-	got := generateClaudeMD("P", "p.mpr")
+	got := generateClaudeMD("P", "p.mpr", true)
 	if strings.Contains(got, ".ai-context") {
 		t.Errorf("CLAUDE.md should not reference .ai-context; found: %q", ".ai-context")
+	}
+}
+
+func TestGenerateClaudeMD_Devcontainer_UsesLocalPrefix(t *testing.T) {
+	got := generateClaudeMD("P", "p.mpr", true)
+	if !strings.Contains(got, "./mxcli") {
+		t.Error("devcontainer CLAUDE.md should use ./mxcli prefix")
+	}
+	if !strings.Contains(got, "root folder of this project") {
+		t.Error("devcontainer CLAUDE.md should warn about local binary location")
+	}
+}
+
+func TestGenerateClaudeMD_Global_UsesGlobalCommand(t *testing.T) {
+	got := generateClaudeMD("P", "p.mpr", false)
+	if strings.Contains(got, "./mxcli") {
+		t.Error("global-install CLAUDE.md must not use ./mxcli prefix")
+	}
+	// mxcli (without ./) must still appear in command examples
+	if !strings.Contains(got, "mxcli") {
+		t.Error("global-install CLAUDE.md should still reference mxcli")
 	}
 }
 
