@@ -288,123 +288,18 @@ func TestHelpdeskGolden_Regression_BSON(t *testing.T) {
 // helpdeskParseableDescribeScript returns the MDL script (no tabular SHOW
 // commands) that describes every artifact in helpdesk-app.mdl. The output of
 // executing this script is valid MDL and can be parsed by visitor.Build.
-func helpdeskParseableDescribeScript(mprPath string) string {
-	return fmt.Sprintf(`connect local '%s';
--- Module roles first: entity grants reference these roles by name
-describe module role KB.User;
-describe module role KB.Reader;
-describe module role KB.Contributor;
-describe module role KB.Admin;
-describe module role HD.User;
-describe module role HD.CustomerRole;
-describe module role HD.AgentRole;
-describe module role HD.ManagerRole;
--- Enumerations: entities may reference these types as attribute types
-describe enumeration KB.ArticleStatus;
-describe enumeration HD.TicketStatus;
-describe enumeration HD.TicketPriority;
--- KB entities
-describe entity KB.Category;
-describe entity KB.Tag;
-describe entity KB.Article;
-describe entity KB.ArticleTag;
-describe entity KB.ArticleRating;
--- HD entities
-describe entity HD.Customer;
-describe entity HD.Agent;
-describe entity HD.Ticket;
-describe entity HD.TicketComment;
-describe entity HD.EscalationRequest;
-describe entity HD.TicketSearch;
--- KB associations
-describe association KB.Category_Parent;
-describe association KB.Article_Category;
-describe association KB.ArticleTag_Article;
-describe association KB.ArticleTag_Tag;
-describe association KB.ArticleRating_Article;
--- HD associations
-describe association HD.Ticket_Customer;
-describe association HD.Ticket_Agent;
-describe association HD.TicketComment_Ticket;
-describe association HD.EscalationRequest_Ticket;
-describe association HD.Ticket_KBArticle;
--- KB microflows
-describe microflow KB.ACT_Article_Publish;
-describe microflow KB.ACT_Article_Archive;
-describe microflow KB.SUB_Article_TruncateContent;
--- KB nanoflows
-describe nanoflow KB.NF_Article_FormatPreview;
--- HD ticket microflows
-describe microflow HD.ACT_Ticket_Submit;
-describe microflow HD.ACT_Ticket_Assign;
-describe microflow HD.ACT_Ticket_Resolve;
-describe microflow HD.ACT_Ticket_Reopen;
-describe microflow HD.ACT_Ticket_Close;
-describe microflow HD.ACT_Ticket_SafeCommit;
-describe microflow HD.ACT_Ticket_MarkCommentsRead;
-describe microflow HD.ACT_EscalationRequest_Cleanup;
-describe microflow HD.DS_OverdueTicketCount;
-describe microflow HD.DS_TicketsByCompany;
-describe microflow HD.DS_MyTickets;
-describe microflow HD.DS_OpenHighTickets;
-describe microflow HD.DS_TicketPage;
-describe microflow HD.DS_RecentCriticalTickets;
--- HD nanoflows
-describe nanoflow HD.NF_Ticket_QuickCreate;
-describe nanoflow HD.NF_TicketSearch_Apply;
-describe nanoflow HD.NF_Priority_GetLabel;
--- HD escalation microflows
-describe microflow HD.WFA_GetManagerAssignees;
-describe microflow HD.WFS_SendReminder;
-describe microflow HD.WFS_Approve;
-describe microflow HD.WFS_Reject;
-describe microflow HD.WFS_Escalation_Initialize;
-describe microflow HD.WFS_AutoReject;
-describe microflow HD.WFS_UpdateTicketPriority;
-describe microflow HD.WFS_NotifyAgent;
-describe microflow HD.WFC_EscalationRequest_OnCreate;
-describe microflow HD.ACT_StartEscalation;
--- HD workflow admin microflows (all 13 activities)
-describe microflow HD.ACT_Workflow_ChangeState;
-describe microflow HD.ACT_Workflow_CompleteTask;
-describe microflow HD.ACT_Workflow_GenerateJumpTo;
-describe microflow HD.ACT_Workflow_ApplyJumpTo;
-describe microflow HD.ACT_Workflow_GetHistory;
-describe microflow HD.ACT_Workflow_GetContext;
-describe microflow HD.DS_WorkflowInstances;
-describe microflow HD.ACT_Workflow_ShowTaskPage;
-describe microflow HD.ACT_Workflow_ShowAdminPage;
-describe microflow HD.ACT_Workflow_Lock;
-describe microflow HD.ACT_Workflow_Unlock;
-describe microflow HD.ACT_Workflow_Notify;
--- Workflows
-describe workflow HD.WF_SUB_ManagerReview;
-describe workflow HD.WF_TicketEscalation;
--- Constants
-describe constant HD.SLA_HIGH_HOURS;
-describe constant HD.SLA_CRITICAL_HOURS;
--- User roles
-describe user role 'Customer';
-describe user role 'Agent';
-describe user role 'Manager';
--- Navigation
-describe navigation Responsive;
--- KB pages
-describe page KB.Article_Overview;
-describe page KB.Article_Detail;
-describe page KB.Article_NewEdit;
--- HD pages
-describe page HD.Ticket_Overview;
-describe page HD.Agent_Select;
-describe page HD.Ticket_Detail;
-describe page HD.Ticket_NewEdit;
-describe page HD.TicketSearch_Form;
-describe page HD.MyTickets_Overview;
-describe page HD.TicketSearch_Results;
-describe page HD.EscalationReview_Form;
-describe page HD.EscalationWorkflow_Overview;
-describe page HD.EscalationStart_Form;
-`, mprPath)
+//
+// The body is read from mdl-examples/use-cases/helpdesk/helpdesk-describe.mdl
+// so that the file can be used standalone via "mxcli -p app.mpr exec helpdesk-describe.mdl".
+// The test prepends "connect local '<mprPath>';" to target a temporary MPR copy.
+func helpdeskParseableDescribeScript(t *testing.T, mprPath string) string {
+	t.Helper()
+	p := filepath.Join(repoRoot(t), "mdl-examples", "use-cases", "helpdesk", "helpdesk-describe.mdl")
+	data, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatalf("read helpdesk-describe.mdl: %v", err)
+	}
+	return fmt.Sprintf("connect local '%s';\n", mprPath) + string(data)
 }
 
 // helpdeskCleanDescribeScript returns the describe script for the blank
@@ -447,8 +342,9 @@ func describeMDLParseableClean(t *testing.T, mprPath string) string {
 // helpdeskFullDescribeScript extends helpdeskParseableDescribeScript with
 // non-parseable SHOW commands (module roles). Used for regression text
 // comparison and the describe snapshot.
-func helpdeskFullDescribeScript(mprPath string) string {
-	return helpdeskParseableDescribeScript(mprPath) + `show module roles in KB;
+func helpdeskFullDescribeScript(t *testing.T, mprPath string) string {
+	t.Helper()
+	return helpdeskParseableDescribeScript(t, mprPath) + `show module roles in KB;
 show module roles in HD;
 `
 }
@@ -466,7 +362,7 @@ func describeMDL(t *testing.T, mprPath string) string {
 		}
 	}()
 
-	script := helpdeskFullDescribeScript(mprPath)
+	script := helpdeskFullDescribeScript(t, mprPath)
 
 	prog, errs := visitor.Build(script)
 	if len(errs) > 0 {
@@ -542,7 +438,7 @@ func describeMDLParseable(t *testing.T, mprPath string) string {
 		}
 	}()
 
-	script := helpdeskParseableDescribeScript(mprPath)
+	script := helpdeskParseableDescribeScript(t, mprPath)
 
 	prog, errs := visitor.Build(script)
 	if len(errs) > 0 {
