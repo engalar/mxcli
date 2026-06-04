@@ -1689,16 +1689,14 @@ translate enumeration HD.TicketPriority in zh_CN
       High.caption     = '高',
       Critical.caption = '紧急';
 
--- Page widget translation: path format <WidgetName>.<property>
--- Special path "title" translates the page title bar.
--- Supported properties: caption, label, placeholder, tooltip, content.
--- Note: ActionButton uses "CaptionTemplate" internally — use label on textboxes
--- or content on dynamictext widgets for reliable page translation targets.
+-- Page translation: "title" is a special bare path for the page title bar.
+-- Widget-level paths (<WidgetName>.<property>) require the widget's BSON to
+-- carry the matching Texts$Text node. Run:
+--   describe translations HD.Ticket_NewEdit in zh_CN
+-- to discover which widget properties are actually translatable before writing
+-- SET statements; the output includes a ready-to-paste TRANSLATE template.
 translate page HD.Ticket_NewEdit in zh_CN
-  set title            = '新建/编辑工单',
-      tbSubject.label  = '主题',
-      tbStatus.label   = '状态',
-      tbPriority.label = '优先级';
+  set title = '新建/编辑工单';
 
 -- Step 4: Apply nl_NL translations (partial — checkCompleteness will flag the rest).
 translate enumeration HD.TicketStatus in nl_NL
