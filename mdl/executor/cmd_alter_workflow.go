@@ -161,9 +161,16 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 
 		case *ast.InsertBoundaryEventOp:
 			acts := buildAndBindActivitiesGen(ctx, o.Activities)
-			// CE6665: both interrupting and non-interrupting timer flows must end
-			// with a JumpToActivity or EndWorkflowActivity.
-			if !endsWithTerminalWorkflowActivity(acts) {
+			if o.EventType == "NonInterruptingTimer" {
+				// CE1844: EndWorkflowActivity forbidden in non-interrupting boundary events.
+				// Use EndOfBoundaryEventPathActivity instead — ends only the boundary path.
+				endPath := genWf.NewEndOfBoundaryEventPathActivity()
+				endPath.SetID(element.ID(types.GenerateID()))
+				endPath.SetCaption("End of boundary path")
+				endPath.SetName("endOfBoundaryEventPath1")
+				acts = append(acts, endPath)
+			} else if !endsWithTerminalWorkflowActivity(acts) {
+				// InterruptingTimer: inject EndWorkflowActivity at the boundary event level.
 				end := genWf.NewEndWorkflowActivity()
 				end.SetID(element.ID(types.GenerateID()))
 				end.SetCaption("End")

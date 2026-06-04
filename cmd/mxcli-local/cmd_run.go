@@ -46,7 +46,14 @@ Override with --db for PostgreSQL.`,
 				if projectPath == "" {
 					return fmt.Errorf("either -p or --pad-dir is required")
 				}
-				dir = filepath.Join(filepath.Dir(projectPath), ".docker", "build")
+				// Prefer deploy-layout (no ZIP, faster build) when Studio Pro is installed.
+				// Fall back to PAD layout (.docker/build/) otherwise.
+				deployDir := filepath.Join(filepath.Dir(projectPath), "deployment")
+				if docker.IsDeployLayout(deployDir) {
+					dir = deployDir
+				} else {
+					dir = filepath.Join(filepath.Dir(projectPath), ".docker", "build")
+				}
 			}
 			return docker.StartLocal(docker.LocalRunOptions{
 				PadDir:        dir,

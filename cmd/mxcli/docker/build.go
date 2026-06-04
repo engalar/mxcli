@@ -150,10 +150,38 @@ func Build(opts BuildOptions) error {
 		return nil
 	}
 
-	// Step 5: Run MxBuild
+	// Step 5: Run MxBuild.
+	// When Studio Pro is installed, use --target=deploy which writes directly to
+	// {project_dir}/deployment/ without creating a ZIP — faster and simpler than
+	// portable-app-package (ZIP creation + extraction).
+	projectDir := filepath.Dir(opts.ProjectPath)
+	deployDir := filepath.Join(projectDir, "deployment")
+	javaExePath := filepath.Join(javaHome, "bin", "java")
+	useDeployTarget := ResolveStudioProDir(pv.ProductVersion) != "" && opts.OutputDir == ""
+
+	if useDeployTarget {
+		fmt.Fprintf(w, "Running MxBuild (target=deploy, no ZIP)...\n")
+		fmt.Fprintf(w, "  Output: %s\n", deployDir)
+
+		cmd := exec.Command(mxbuildPath,
+			"--target=deploy",
+			fmt.Sprintf("--java-home=%s", javaHome),
+			fmt.Sprintf("--java-exe-path=%s", javaExePath),
+			opts.ProjectPath,
+		)
+		cmd.Stdout = w
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("mxbuild failed: %w", err)
+		}
+		fmt.Fprintln(w, "Build complete.")
+		return nil
+	}
+
+	// Fallback: portable-app-package (ZIP) when Studio Pro is not installed.
 	outputDir := opts.OutputDir
 	if outputDir == "" {
-		outputDir = filepath.Join(filepath.Dir(opts.ProjectPath), ".docker", "build")
+		outputDir = filepath.Join(projectDir, ".docker", "build")
 	}
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("creating output directory: %w", err)
@@ -161,8 +189,6 @@ func Build(opts BuildOptions) error {
 
 	fmt.Fprintf(w, "Running MxBuild (target=portable-app-package)...\n")
 	fmt.Fprintf(w, "  Output: %s\n", outputDir)
-
-	javaExePath := filepath.Join(javaHome, "bin", "java")
 
 	cmd := exec.Command(mxbuildPath,
 		"--target=portable-app-package",

@@ -251,8 +251,9 @@ func TestBuildBoundaryEventGen_InterruptingTimer_NoDoubleInjection(t *testing.T)
 	}
 }
 
-// NonInterrupting must also get an auto-injected EndWorkflowActivity (CE6665).
-func TestBuildBoundaryEventGen_NonInterrupting_AutoInjectsEnd(t *testing.T) {
+// CE1844: NonInterrupting must use EndOfBoundaryEventPathActivity (not EndWorkflowActivity).
+// Studio Pro generates: [CallMicroflowTask, EndOfBoundaryEventPathActivity].
+func TestBuildBoundaryEventGen_NonInterrupting_UsesEndOfBoundaryPath(t *testing.T) {
 	be := buildBoundaryEventGen(&wfBuildCtx{}, ast.WorkflowBoundaryEventNode{
 		EventType: "NonInterruptingTimer",
 		Delay:     "${PT12H}",
@@ -269,12 +270,19 @@ func TestBuildBoundaryEventGen_NonInterrupting_AutoInjectsEnd(t *testing.T) {
 		t.Fatal("expected non-nil Flow")
 	}
 	acts := flow.ActivitiesItems()
-	// CallMicroflow + auto-injected EndWorkflowActivity
+	// CallMicroflow + EndOfBoundaryEventPathActivity (Studio Pro pattern).
 	if len(acts) != 2 {
-		t.Errorf("expected 2 activities (call + end), got %d", len(acts))
+		t.Errorf("expected 2 activities (call + endOfBoundaryPath), got %d", len(acts))
 	}
-	if acts[1].TypeName() != "Workflows$EndWorkflowActivity" {
-		t.Errorf("last activity = %q, want Workflows$EndWorkflowActivity", acts[1].TypeName())
+	if acts[0].TypeName() != "Workflows$CallMicroflowTask" {
+		t.Errorf("acts[0] = %q, want Workflows$CallMicroflowTask", acts[0].TypeName())
+	}
+	if acts[1].TypeName() != "Workflows$EndOfBoundaryEventPathActivity" {
+		t.Errorf("acts[1] = %q, want Workflows$EndOfBoundaryEventPathActivity", acts[1].TypeName())
+	}
+	// Timer stored as FirstExecutionTime (not Delay) — matches Studio Pro BSON.
+	if v.FirstExecutionTime() != "${PT12H}" {
+		t.Errorf("FirstExecutionTime = %q, want ${PT12H}", v.FirstExecutionTime())
 	}
 }
 

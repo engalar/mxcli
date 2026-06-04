@@ -215,20 +215,20 @@ func buildBoundaryEventGen(wbc *wfBuildCtx, be ast.WorkflowBoundaryEventNode) el
 		ev.SetFlow(flow)
 		return ev
 	case "NonInterruptingTimer":
-		// CE6665: same rule as interrupting — flow must end with jump or end activity.
-		if !endsWithTerminalWorkflowActivity(subActivities) {
-			end := genWf.NewEndWorkflowActivity()
-			end.SetID(element.ID(types.GenerateID()))
-			end.SetCaption("End")
-			end.SetName("End")
-			subActivities = append(subActivities, end)
-		}
+		// CE1844: EndWorkflowActivity is forbidden in non-interrupting boundary event flows.
+		// The correct terminal activity is EndOfBoundaryEventPathActivity (only ends the
+		// boundary event path, not the whole workflow). Studio Pro always appends this.
+		endPath := genWf.NewEndOfBoundaryEventPathActivity()
+		endPath.SetID(element.ID(types.GenerateID()))
+		endPath.SetCaption("End of boundary path")
+		endPath.SetName("endOfBoundaryEventPath1")
+		subActivities = append(subActivities, endPath)
 		flow := newGenFlowWithActivities(subActivities)
 		ev := genWf.NewNonInterruptingTimerBoundaryEvent()
 		ev.SetID(id)
 		ev.SetIsInterrupting(false)
 		ev.SetEventType(be.EventType)
-		ev.SetDelay(be.Delay)
+		ev.SetFirstExecutionTime(be.Delay)
 		if flow != nil {
 			ev.SetFlow(flow)
 		}
@@ -243,6 +243,39 @@ func buildBoundaryEventGen(wbc *wfBuildCtx, be ast.WorkflowBoundaryEventNode) el
 			ev.SetFlow(flow)
 		}
 		return ev
+	}
+}
+
+// injectEndIntoConditionOutcomes walks activities and injects an EndWorkflowActivity
+// into any VoidConditionOutcome whose flow is nil or empty.
+// Used for NonInterruptingTimer boundary events: CE1844 forbids End at the
+// boundary event top-level flow, but the Mendix runtime still requires End inside
+// each activity's outcome sub-flows (CE6665 / WorkflowActivityDefinitionFactory).
+func injectEndIntoConditionOutcomes(activities []element.Element) {
+	for _, act := range activities {
+		var outcomes []element.Element
+		switch v := act.(type) {
+		case *genWf.CallMicroflowActivity:
+			outcomes = v.OutcomesItems()
+		case *genWf.CallMicroflowTask:
+			outcomes = v.OutcomesItems()
+		}
+		for _, oc := range outcomes {
+			voc, ok := oc.(*genWf.VoidConditionOutcome)
+			if !ok {
+				continue
+			}
+			f, _ := voc.Flow().(*genWf.Flow)
+			if f != nil && len(f.ActivitiesItems()) > 0 {
+				continue // already has activities
+			}
+			end := genWf.NewEndWorkflowActivity()
+			end.SetID(element.ID(types.GenerateID()))
+			end.SetCaption("End")
+			end.SetName("End")
+			endFlow := newGenFlowWithActivities([]element.Element{end})
+			voc.SetFlow(endFlow)
+		}
 	}
 }
 

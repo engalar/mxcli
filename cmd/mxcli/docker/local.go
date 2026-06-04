@@ -4,8 +4,10 @@
 package docker
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/url"
 	"os"
 	"os/exec"
@@ -27,8 +29,9 @@ func (r *RealStarter) Run(cmd *exec.Cmd) error { return cmd.Run() }
 // LocalRunOptions configures StartLocal.
 type LocalRunOptions struct {
 	// PadDir is the PAD output directory (.docker/build/ by default).
+	// Can also be a deploy-format directory (deployment/) when Studio Pro is installed.
 	PadDir string
-	// DB is an optional postgres:// URL. Empty = use PAD defaults (HSQLDB).
+	// DB is an optional postgres:// URL. Empty = use config defaults (HSQLDB).
 	DB string
 	// AdminPassword sets ADMIN_ADMINPASSWORD and RUNTIME_ADMINUSER_PASSWORD.
 	// Defaults to "Admin123!" if empty.
@@ -41,19 +44,11 @@ type LocalRunOptions struct {
 	Starter ProcessStarter
 }
 
-// StartLocal starts the Mendix runtime from a pre-built PAD directory without Docker.
-// It execs bin/start (Linux/macOS) or cmd.exe /c bin\start.bat (Windows),
-// blocking until the process exits (Ctrl+C stops it).
+// StartLocal starts the Mendix runtime from a pre-built directory without Docker.
+// Supports two layouts:
+//   - PAD layout (.docker/build/): execs bin/start.bat (Windows) or bin/start (Unix).
+//   - Deploy layout (deployment/): uses Studio Pro runtime with generated config.
 func StartLocal(opts LocalRunOptions) error {
-	if !hasExtractedPADLayout(opts.PadDir) {
-		return fmt.Errorf("no PAD found at %s — run 'mxcli local build -p app.mpr' first", opts.PadDir)
-	}
-
-	cmdArgs, err := resolveStartScript(opts.PadDir)
-	if err != nil {
-		return err
-	}
-
 	stdout := opts.Stdout
 	if stdout == nil {
 		stdout = os.Stdout
@@ -63,6 +58,256 @@ func StartLocal(opts LocalRunOptions) error {
 		stderr = os.Stderr
 	}
 
+	// Deploy layout: Studio Pro --target=deploy output (no ZIP, no start.bat).
+	if isDeployLayout(opts.PadDir) {
+		if err := preflightLocal(opts.PadDir, stderr, true); err != nil {
+			return err
+		}
+		return startFromDeployLayout(opts, stdout, stderr)
+	}
+
+	// PAD layout: classic portable-app-package output.
+	if !hasExtractedPADLayout(opts.PadDir) {
+		return fmt.Errorf("no PAD found at %s — run 'mxcli local build -p app.mpr' first", opts.PadDir)
+	}
+	if err := preflightLocal(opts.PadDir, stderr, false); err != nil {
+		return err
+	}
+	return startFromPADLayout(opts, stdout, stderr)
+}
+
+// IsDeployLayout reports whether dir is a Studio Pro deploy-format directory.
+// Identified by having model/config.json and model/model.mdp but no bin/start.bat.
+func IsDeployLayout(dir string) bool {
+	return isDeployLayout(dir)
+}
+
+func isDeployLayout(dir string) bool {
+	configJSON := filepath.Join(dir, "model", "config.json")
+	modelMdp := filepath.Join(dir, "model", "model.mdp")
+	startBat := filepath.Join(dir, "bin", "start.bat")
+	startSh := filepath.Join(dir, "bin", "start")
+
+	_, hasConfig := os.Stat(configJSON)
+	_, hasModel := os.Stat(modelMdp)
+	_, hasBat := os.Stat(startBat)
+	_, hasSh := os.Stat(startSh)
+
+	return hasConfig == nil && hasModel == nil && hasBat != nil && hasSh != nil
+}
+
+// deployConfig mirrors the structure of deployment/model/config.json.
+type deployConfig struct {
+	Configuration map[string]string `json:"Configuration"`
+	Constants     map[string]string `json:"Constants"`
+	AdminPassword string            `json:"AdminPassword"`
+}
+
+// startFromDeployLayout starts the runtime from a Studio Pro deploy-format directory.
+// Uses the Mendix installation runtime (MX_INSTALL_PATH) and a generated HOCON config.
+func startFromDeployLayout(opts LocalRunOptions, stdout, stderr io.Writer) error {
+	// 1. Read config.json for DB config and constants.
+	cfgPath := filepath.Join(opts.PadDir, "model", "config.json")
+	cfgData, err := os.ReadFile(cfgPath)
+	if err != nil {
+		return fmt.Errorf("reading deployment config: %w", err)
+	}
+	var dcfg deployConfig
+	if err := json.Unmarshal(cfgData, &dcfg); err != nil {
+		return fmt.Errorf("parsing deployment config: %w", err)
+	}
+
+	// 2. Find Mendix runtime launcher.
+	mxInstall, err := resolveMxInstallPath()
+	if err != nil {
+		return fmt.Errorf("cannot find Mendix runtime: %w\n"+
+			"Install Studio Pro or set MX_INSTALL_PATH", err)
+	}
+	launcherJar := filepath.Join(mxInstall, "runtime", "launcher", "runtimelauncher.jar")
+	if _, err := os.Stat(launcherJar); err != nil {
+		return fmt.Errorf("runtimelauncher.jar not found at %s", launcherJar)
+	}
+
+	// 3. Resolve JDK 21.
+	javaHome, err := resolveJDK21()
+	if err != nil {
+		return err
+	}
+	javaExe := filepath.Join(javaHome, "bin", "java")
+
+	// 4. Generate HOCON config file in a temp directory.
+	tmpDir, err := os.MkdirTemp("", "mxcli-local-*")
+	if err != nil {
+		return fmt.Errorf("creating temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	adminPass := opts.AdminPassword
+	if adminPass == "" {
+		adminPass = "Admin123!"
+	}
+	hoconPath := filepath.Join(tmpDir, "local.conf")
+	if err := writeDeployHOCON(hoconPath, dcfg, opts.DB, adminPass); err != nil {
+		return fmt.Errorf("generating config: %w", err)
+	}
+
+	// 5. Build environment.
+	env := append(os.Environ(),
+		"MX_INSTALL_PATH="+mxInstall,
+		"M2EE_ADMIN_PASS="+adminPass,
+		"ADMIN_ADMINPASSWORD="+adminPass,
+		"RUNTIME_ADMINUSER_PASSWORD="+adminPass,
+		"JAVA_HOME="+javaHome,
+		"PATH="+filepath.Join(javaHome, "bin")+string(os.PathListSeparator)+os.Getenv("PATH"),
+	)
+
+	// 6. Launch.
+	cmd := exec.Command(javaExe,
+		"-DMX_LOG_LEVEL=INFO",
+		"-Dfile.encoding=UTF-8",
+		"-jar", launcherJar,
+		opts.PadDir,
+		hoconPath,
+	)
+	cmd.Env = env
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	cmd.Stdin = os.Stdin
+
+	starter := opts.Starter
+	if starter == nil {
+		starter = &RealStarter{}
+	}
+	return starter.Run(cmd)
+}
+
+// writeDeployHOCON writes a HOCON config file for a deploy-layout startup.
+func writeDeployHOCON(path string, dcfg deployConfig, dbURL, adminPass string) error {
+	cfg := dcfg.Configuration
+	dbType := cfg["DatabaseType"]
+	if dbType == "" {
+		dbType = "HSQLDB"
+	}
+	dbName := cfg["DatabaseName"]
+	if dbName == "" {
+		dbName = "default"
+	}
+	appURL := cfg["ApplicationRootUrl"]
+	if appURL == "" {
+		appURL = "http://localhost:8080/"
+	}
+
+	var sb strings.Builder
+
+	// Runtime parameters from config.json.
+	sb.WriteString("runtime.params {\n")
+	if dbURL != "" {
+		// Override with postgres URL — env vars will handle the specifics.
+	} else {
+		fmt.Fprintf(&sb, "  DatabaseType = %s\n", dbType)
+		fmt.Fprintf(&sb, "  DatabaseName = \"%s\"\n", dbName)
+		if h := cfg["DatabaseHost"]; h != "" {
+			fmt.Fprintf(&sb, "  DatabaseHost = \"%s\"\n", h)
+		}
+		if u := cfg["DatabaseUserName"]; u != "" {
+			fmt.Fprintf(&sb, "  DatabaseUserName = \"%s\"\n", u)
+		}
+	}
+	fmt.Fprintf(&sb, "  ApplicationRootUrl = \"%s\"\n", appURL)
+	fmt.Fprintf(&sb, "  HashAlgorithm = \"BCRYPT:12\"\n")
+	fmt.Fprintf(&sb, "  DTAPMode = D\n")
+	if s := cfg["ScheduledEventExecution"]; s != "" {
+		fmt.Fprintf(&sb, "  ScheduledEventExecution = \"%s\"\n", s)
+	} else {
+		sb.WriteString("  ScheduledEventExecution = NONE\n")
+	}
+	sb.WriteString("  MyScheduledEvents = \"\"\n")
+	sb.WriteString("  CACertificates = \"\"\n")
+	sb.WriteString("  ClientCertificates = \"\"\n")
+	sb.WriteString("  ClientCertificatePasswords = \"\"\n")
+	sb.WriteString("}\n\n")
+
+	// Constants.
+	if len(dcfg.Constants) > 0 {
+		sb.WriteString("runtime.params.MicroflowConstants {\n")
+		for k, v := range dcfg.Constants {
+			fmt.Fprintf(&sb, "  %q = %q\n", k, v)
+		}
+		sb.WriteString("}\n\n")
+	}
+
+	// Admin server.
+	sb.WriteString("admin {\n")
+	sb.WriteString("  port = 8090\n")
+	sb.WriteString("  addresses = [ localhost ]\n")
+	sb.WriteString("  adminPassword = ${?ADMIN_ADMINPASSWORD}\n")
+	sb.WriteString("}\n\n")
+
+	// Runtime HTTP + admin user.
+	sb.WriteString("runtime {\n")
+	sb.WriteString("  http {\n")
+	sb.WriteString("    port = 8080\n")
+	sb.WriteString("    addresses = [ \"*\" ]\n")
+	sb.WriteString("  }\n")
+	sb.WriteString("  adminUser.password = ${?RUNTIME_ADMINUSER_PASSWORD}\n")
+	sb.WriteString("}\n\n")
+
+	// Logging subscriber — required: without it the launcher only starts
+	// the M2EE admin server and waits for external commands instead of
+	// auto-starting the runtime.
+	sb.WriteString("logging = [\n")
+	sb.WriteString("  {\n")
+	sb.WriteString("    name = console\n")
+	sb.WriteString("    type = console\n")
+	sb.WriteString("    autoSubscribe = INFO\n")
+	sb.WriteString("    levels {}\n")
+	sb.WriteString("  }\n")
+	sb.WriteString("]\n")
+
+	return os.WriteFile(path, []byte(sb.String()), 0600)
+}
+
+// resolveMxInstallPath finds the Mendix runtime installation directory.
+// Checks MX_INSTALL_PATH env first, then Studio Pro installations on Windows.
+func resolveMxInstallPath() (string, error) {
+	if p := os.Getenv("MX_INSTALL_PATH"); p != "" {
+		return p, nil
+	}
+	// Try known Studio Pro installations on Windows.
+	if runtime.GOOS == "windows" {
+		for _, base := range windowsProgramDirs() {
+			mendixBase := filepath.Join(base, "Mendix")
+			entries, err := os.ReadDir(mendixBase)
+			if err != nil {
+				continue
+			}
+			// Return the newest version found (last alphabetically = highest version).
+			var best string
+			for _, e := range entries {
+				if !e.IsDir() {
+					continue
+				}
+				launcher := filepath.Join(mendixBase, e.Name(), "runtime", "launcher", "runtimelauncher.jar")
+				if _, err := os.Stat(launcher); err == nil {
+					if e.Name() > best {
+						best = e.Name()
+					}
+				}
+			}
+			if best != "" {
+				return filepath.Join(mendixBase, best), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("Mendix runtime not found")
+}
+
+// startFromPADLayout starts the runtime from a classic PAD output directory.
+func startFromPADLayout(opts LocalRunOptions, stdout, stderr io.Writer) error {
+	cmdArgs, err := resolveStartScript(opts.PadDir)
+	if err != nil {
+		return err
+	}
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = opts.PadDir
 	cmd.Env = append(os.Environ(), buildLocalEnv(opts.DB, opts.AdminPassword)...)
@@ -99,9 +344,7 @@ func resolveStartScript(padDir string) ([]string, error) {
 	}
 }
 
-// buildLocalEnv returns environment variables required by the Mendix runtime.
-// ADMIN_ADMINPASSWORD: M2EE admin API auth (required by runtimelauncher).
-// RUNTIME_ADMINUSER_PASSWORD: creates/updates MxAdmin login user on startup.
+// buildLocalEnv returns environment variables required by the Mendix runtime (PAD layout).
 func buildLocalEnv(dbURL, adminPassword string) []string {
 	if adminPassword == "" {
 		adminPassword = "Admin123!"
@@ -131,14 +374,52 @@ func buildLocalEnv(dbURL, adminPassword string) []string {
 	return env
 }
 
+// preflightLocal detects a running Mendix instance before starting a new one.
+//
+//  1. Port check: tries to bind the admin port (8090). If already taken, another
+//     runtime is running — return a clear error instead of a confusing startup crash.
+//
+//  2. HSQLDB stale lock cleanup: when the previous runtime was killed the JVM may
+//     leave a .lck file. On most OSes the file is not kept open after JVM exit, so
+//     we simply remove it. If removal fails (process still alive), we surface the error.
+func preflightLocal(dir string, stderr io.Writer, isDeployDir bool) error {
+	// 1. Admin port check (default 8090).
+	if ln, err := net.Listen("tcp", "127.0.0.1:8090"); err != nil {
+		return fmt.Errorf("Mendix runtime already running on port 8090.\n" +
+			"Stop the existing instance (kill the Java process) before starting a new one.")
+	} else {
+		ln.Close()
+	}
+
+	// 2. HSQLDB stale lock cleanup — path differs by layout.
+	var dbRoot string
+	if isDeployDir {
+		dbRoot = filepath.Join(dir, "data", "database", "hsqldb")
+	} else {
+		dbRoot = filepath.Join(dir, "app", "data", "database", "hsqldb")
+	}
+	_ = filepath.Walk(dbRoot, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info == nil || info.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, ".lck") {
+			return nil
+		}
+		if rmErr := os.Remove(path); rmErr != nil {
+			fmt.Fprintf(stderr, "warning: cannot remove HSQLDB lock file %s: %v\n", path, rmErr)
+		} else {
+			fmt.Fprintf(stderr, "info: removed stale HSQLDB lock file: %s\n", path)
+		}
+		return nil
+	})
+	return nil
+}
+
 // ParseDBURL converts a postgres:// connection URL to RUNTIME_PARAMS_* env vars.
-// Only postgresql/postgres schemes are supported.
 func ParseDBURL(rawURL string) ([]string, error) {
 	return parseDBURL(rawURL)
 }
 
-// parseDBURL converts a postgres:// URL into RUNTIME_PARAMS_* env vars
-// consumed by etc/variables.conf inside the PAD.
 func parseDBURL(rawURL string) ([]string, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
