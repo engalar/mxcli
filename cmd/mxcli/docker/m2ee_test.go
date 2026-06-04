@@ -405,3 +405,45 @@ func TestDirectM2EECaller_Defaults(t *testing.T) {
 		t.Errorf("port() = %d, want 8090", c.port())
 	}
 }
+
+func TestNewDockerExecM2EECaller_ExplicitToken(t *testing.T) {
+	caller, err := NewDockerExecM2EECaller(t.TempDir(), "mytoken")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if caller.Token != "mytoken" {
+		t.Errorf("Token = %q, want mytoken", caller.Token)
+	}
+}
+
+func TestNewDockerExecM2EECaller_EnvToken(t *testing.T) {
+	t.Setenv("M2EE_ADMIN_PASS", "envtoken")
+	caller, err := NewDockerExecM2EECaller(t.TempDir(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if caller.Token != "envtoken" {
+		t.Errorf("Token = %q, want envtoken", caller.Token)
+	}
+}
+
+func TestNewDockerExecM2EECaller_NoToken_Error(t *testing.T) {
+	t.Setenv("M2EE_ADMIN_PASS", "")
+	_, err := NewDockerExecM2EECaller(t.TempDir(), "")
+	if err == nil {
+		t.Fatal("expected error when no token available")
+	}
+}
+
+func TestNewDockerExecM2EECaller_DotEnvToken(t *testing.T) {
+	t.Setenv("M2EE_ADMIN_PASS", "")
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, ".env"), []byte("M2EE_ADMIN_PASS=filetoken\n"), 0600)
+	caller, err := NewDockerExecM2EECaller(dir, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if caller.Token != "filetoken" {
+		t.Errorf("Token = %q, want filetoken", caller.Token)
+	}
+}

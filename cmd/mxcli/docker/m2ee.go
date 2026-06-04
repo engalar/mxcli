@@ -96,6 +96,46 @@ func (d *DirectM2EECaller) Call(action string, params map[string]any) (*M2EEResp
 	return callM2EEDirect(opts, action, params)
 }
 
+// DockerExecM2EECaller sends M2EE requests via docker compose exec.
+// Zero value Port → containerAdminPort (8090).
+type DockerExecM2EECaller struct {
+	DockerDir string
+	Token     string
+	Port      int
+}
+
+func (d *DockerExecM2EECaller) Call(action string, params map[string]any) (*M2EEResponse, error) {
+	port := d.Port
+	if port == 0 {
+		port = containerAdminPort
+	}
+	opts := M2EEOptions{Token: d.Token, Port: port}
+	return callM2EEViaDocker(opts, d.DockerDir, action, params)
+}
+
+// NewDockerExecM2EECaller creates a DockerExecM2EECaller with token resolved from:
+//  1. explicitToken (if non-empty)
+//  2. M2EE_ADMIN_PASS environment variable
+//  3. M2EE_ADMIN_PASS in dockerDir/.env file
+//
+// Returns an error if no token is found.
+func NewDockerExecM2EECaller(dockerDir, explicitToken string) (*DockerExecM2EECaller, error) {
+	token := explicitToken
+	if token == "" {
+		token = os.Getenv("M2EE_ADMIN_PASS")
+	}
+	if token == "" {
+		envPath := filepath.Join(dockerDir, ".env")
+		if parsed, err := parseEnvFile(envPath); err == nil {
+			token = parsed["M2EE_ADMIN_PASS"]
+		}
+	}
+	if token == "" {
+		return nil, fmt.Errorf("admin password required: set --token, M2EE_ADMIN_PASS env var, or configure .docker/.env")
+	}
+	return &DockerExecM2EECaller{DockerDir: dockerDir, Token: token, Port: containerAdminPort}, nil
+}
+
 // Feedback decodes the raw feedback JSON into a map.
 // Returns nil map if feedback is empty or not a JSON object.
 func (r *M2EEResponse) Feedback() map[string]any {
