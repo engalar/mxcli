@@ -48,8 +48,6 @@ mx-test-projects/*/
 tmp/
 
 # Generated files
-# ANTLR4 parser (regenerate with: make grammar)
-mdl/grammar/parser/
 *.pdf
 *.tar
 *.tgz
