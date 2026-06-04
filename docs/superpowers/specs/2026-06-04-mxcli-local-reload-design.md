@@ -160,13 +160,50 @@ if projectPath != "" {
 
 ---
 
-## 5. Out of Scope (Separate Bugs)
+## 5. Separate Bugs
+
+### 5a. Workflow End Event Missing in Boundary Event Bodies (Reproducible — Fix Required)
+
+**Severity:** High — causes runtime crash on every project rebuilt from `helpdesk-app.mdl`.
+
+**Symptom:** `MendixRuntimeException: Expected the flow to end with an end event` at runtime startup. `mx check` does not detect this — mxbuild only validates node-type legality and reference integrity, not flow-path topology. The constraint is enforced only by the Mendix runtime at startup.
+
+**Root cause:** The `ALTER WORKFLOW ... insert boundary event` BSON generator in the MDL executor writes the body activity nodes but does not automatically append an End Event after the last activity. The Mendix runtime requires every flow path to terminate with an End Event node.
+
+**Affected MDL** (`mdl-examples/use-cases/helpdesk/helpdesk-app.mdl`):
+
+```mdl
+-- line 793: non-interrupting boundary on WF_SUB_ManagerReview.UT_PrimaryReview
+alter workflow HD.WF_SUB_ManagerReview
+  insert boundary event on UT_PrimaryReview@1
+    non interrupting timer 'addHours([%CurrentDateTime%], 12)' {
+      call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext');
+      -- ← End Event missing here
+    };
+
+-- line 879: non-interrupting boundary on WF_TicketEscalation.WaitForManagerAvailable
+alter workflow HD.WF_TicketEscalation
+  insert boundary event on WaitForManagerAvailable@1
+    non interrupting timer 'addHours([%CurrentDateTime%], 12)' {
+      call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext');
+      -- ← End Event missing here
+    };
+```
+
+**Fix location:** `mdl/executor/` — the `alter workflow insert boundary event` handler. After serializing all body activity nodes to BSON, check whether the last node is already an End Event; if not, append one automatically. This mirrors how microflow generation handles path termination.
+
+**Regression test:** Add an MDL test in `mdl-examples/bug-tests/` that inserts a boundary event containing only a `call microflow`, rebuilds the project, and verifies `mx check` + runtime startup produce no flow-termination errors.
+
+**Detection gap:** `mx check` cannot catch this class of bug. Consider adding a flow-path completeness check to `mxcli lint` (new lint rule) so future regressions surface before runtime.
+
+---
+
+### 5b. Other Known Issues (Lower Priority)
 
 | Issue | Description | Action |
 |-------|-------------|--------|
-| CE0126 | Timer boundary event expression stored in BSON but not read back by `mx check` | File separate bug ticket; investigate DESCRIBE vs mx check discrepancy in boundary event BSON serialization |
-| CE0495 | Workflow activity name uniqueness not enforced by mxcli | File separate bug ticket; consider adding uniqueness check in MDL executor |
-| Workflow End Event missing in non-interrupting boundary branches | MDL executor doesn't generate End Event nodes in boundary event sub-paths | File separate bug ticket |
+| CE0126 | Timer boundary event expression present in BSON but not read back by `mx check` | Investigate DESCRIBE vs `mx check` discrepancy in boundary event BSON serialization |
+| CE0495 | Workflow activity name uniqueness not enforced by mxcli | Consider adding uniqueness check in MDL executor; pre-existing in original project |
 
 ---
 
