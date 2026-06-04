@@ -5,6 +5,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
 	"github.com/spf13/cobra"
@@ -23,6 +24,11 @@ func buildCmd() *cobra.Command {
 		Example: `  mxcli-local build -p app.mpr
   mxcli-local build -p app.mpr --skip-check`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if projectPath != "" {
+				if abs, err := filepath.Abs(projectPath); err == nil {
+					projectPath = abs
+				}
+			}
 			return docker.Build(docker.BuildOptions{
 				ProjectPath:       projectPath,
 				SkipCheck:         skipCheck,

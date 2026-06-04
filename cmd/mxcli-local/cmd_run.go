@@ -31,6 +31,16 @@ Override with --db for PostgreSQL.`,
 		Example: `  mxcli-local run -p app.mpr
   mxcli-local run -p app.mpr --db postgres://user:pass@localhost/mendix`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if projectPath != "" {
+				if abs, err := filepath.Abs(projectPath); err == nil {
+					projectPath = abs
+				}
+			}
+			if padDir != "" {
+				if abs, err := filepath.Abs(padDir); err == nil {
+					padDir = abs
+				}
+			}
 			dir := padDir
 			if dir == "" {
 				if projectPath == "" {
