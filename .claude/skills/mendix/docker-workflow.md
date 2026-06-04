@@ -329,12 +329,6 @@ mxcli exec changes.mdl -p app.mpr
 mxcli docker reload -p app.mpr --skip-check
 ```
 
-The `--direct` flag connects to the admin API via HTTP instead of routing through `docker compose exec` (faster, requires the `admin.addresses = ["*"]` build patch which is applied automatically):
-
-```bash
-mxcli docker reload -p app.mpr --direct
-```
-
 ### CSS-Only Reload
 
 For theme/styling changes, SCSS must first be compiled by MxBuild into the PAD output. The `--css` flag skips the model reload step — it only pushes already-compiled CSS to browsers via WebSocket.

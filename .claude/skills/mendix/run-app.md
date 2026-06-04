@@ -37,15 +37,35 @@ mxcli local run -p app.mpr --admin-password YourPassword
 App available at: **http://localhost:8080**
 Login: **MxAdmin** / *(your --admin-password)*
 
-### After MDL Changes (Local)
+### After MDL Changes (Local) — Hot Reload
+
+`mxcli local reload` hot-reloads the running app via the M2EE admin API on port 8090, **without stopping it**. Open a second terminal while `mxcli local run` is blocking in the first.
+
+**Model/page/logic changes** (microflows, pages, security):
 
 ```bash
-# 1. Apply MDL changes
-mxcli exec changes.mdl -p app.mpr
+# Terminal 1 — app is still running (do NOT stop it)
 
-# 2. Stop the running app (Ctrl+C in the terminal where it's running)
+# Terminal 2:
+mxcli exec changes.mdl -p app.mpr          # apply MDL changes
+mxcli local reload -p app.mpr             # build + reload_model (~55s)
+# or skip the build if you already ran local build separately:
+mxcli local reload -p app.mpr --model-only  # reload only (~100ms)
+```
 
-# 3. Rebuild and restart
+**CSS/theme changes only:**
+
+```bash
+mxcli local build -p app.mpr              # compile SCSS into PAD (~55s)
+mxcli local reload -p app.mpr --css       # push CSS to browser (~instant)
+```
+
+**Password alignment:** The `--admin-password` passed to `mxcli local run` and `mxcli local reload` must match. The default is `Admin123!` for both, so no flag is needed unless you changed it.
+
+**When hot reload is NOT enough** (destructive schema changes — dropped entity/attribute):
+
+```bash
+# Stop the app with Ctrl+C, then rebuild and restart:
 mxcli local build -p app.mpr --skip-check
 mxcli local run -p app.mpr --admin-password YourPassword
 ```
