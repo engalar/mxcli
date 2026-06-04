@@ -251,8 +251,8 @@ func TestBuildBoundaryEventGen_InterruptingTimer_NoDoubleInjection(t *testing.T)
 	}
 }
 
-// NonInterrupting must NOT get an auto-injected EndWorkflowActivity.
-func TestBuildBoundaryEventGen_NonInterrupting_NoAutoEnd(t *testing.T) {
+// NonInterrupting must also get an auto-injected EndWorkflowActivity (CE6665).
+func TestBuildBoundaryEventGen_NonInterrupting_AutoInjectsEnd(t *testing.T) {
 	be := buildBoundaryEventGen(&wfBuildCtx{}, ast.WorkflowBoundaryEventNode{
 		EventType: "NonInterruptingTimer",
 		Delay:     "${PT12H}",
@@ -269,9 +269,12 @@ func TestBuildBoundaryEventGen_NonInterrupting_NoAutoEnd(t *testing.T) {
 		t.Fatal("expected non-nil Flow")
 	}
 	acts := flow.ActivitiesItems()
-	// Only the CallMicroflow, no EndWorkflowActivity injected.
-	if len(acts) != 1 {
-		t.Errorf("expected 1 activity, got %d", len(acts))
+	// CallMicroflow + auto-injected EndWorkflowActivity
+	if len(acts) != 2 {
+		t.Errorf("expected 2 activities (call + end), got %d", len(acts))
+	}
+	if acts[1].TypeName() != "Workflows$EndWorkflowActivity" {
+		t.Errorf("last activity = %q, want Workflows$EndWorkflowActivity", acts[1].TypeName())
 	}
 }
 

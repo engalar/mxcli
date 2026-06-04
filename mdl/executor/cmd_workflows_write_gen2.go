@@ -215,6 +215,14 @@ func buildBoundaryEventGen(wbc *wfBuildCtx, be ast.WorkflowBoundaryEventNode) el
 		ev.SetFlow(flow)
 		return ev
 	case "NonInterruptingTimer":
+		// CE6665: same rule as interrupting — flow must end with jump or end activity.
+		if !endsWithTerminalWorkflowActivity(subActivities) {
+			end := genWf.NewEndWorkflowActivity()
+			end.SetID(element.ID(types.GenerateID()))
+			end.SetCaption("End")
+			end.SetName("End")
+			subActivities = append(subActivities, end)
+		}
 		flow := newGenFlowWithActivities(subActivities)
 		ev := genWf.NewNonInterruptingTimerBoundaryEvent()
 		ev.SetID(id)

@@ -161,8 +161,9 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 
 		case *ast.InsertBoundaryEventOp:
 			acts := buildAndBindActivitiesGen(ctx, o.Activities)
-			// CE6665: interrupting timer must end with a jump or end activity.
-			if o.EventType == "InterruptingTimer" && !endsWithTerminalWorkflowActivity(acts) {
+			// CE6665: both interrupting and non-interrupting timer flows must end
+			// with a JumpToActivity or EndWorkflowActivity.
+			if !endsWithTerminalWorkflowActivity(acts) {
 				end := genWf.NewEndWorkflowActivity()
 				end.SetID(element.ID(types.GenerateID()))
 				end.SetCaption("End")
