@@ -470,6 +470,8 @@ begin
     @position(150,80)
     change $Comment (IsInternal = false
     );
+    @position(310,80)
+    commit $Comment;
   end loop;
   return;
 end;

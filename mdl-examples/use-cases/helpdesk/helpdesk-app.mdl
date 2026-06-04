@@ -29,6 +29,9 @@
 -- Note    : msdkWrite now routes through writeUnitContents so EXECUTE SCRIPT security
 --           grants are no longer silently discarded by commitScriptBuffer BatchWrite;
 --           EXECUTE SCRIPT 'helpdesk-app.mdl' now produces the same result as exec.
+-- Note    : loop body with multiple activities (change + commit) now correctly describes
+--           all activities; previously only one was emitted due to missing parent-level
+--           SequenceFlow lookup in emitLoopedActivityGen.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,

@@ -665,7 +665,7 @@ func traverseFlowGen(
 
 	// LoopedActivity: foreach / while framing with nested body.
 	if loop, isLoop := obj.(*genMf.LoopedActivity); isLoop {
-		emitLoopedActivityGen(ctx, loop, lines, indentStr, indent)
+		emitLoopedActivityGen(ctx, loop, lines, indentStr, indent, flowsByOrigin)
 		// Continue past the loop.
 		for _, f := range flowsByOrigin[currentID] {
 			traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)
@@ -842,6 +842,7 @@ func emitLoopedActivityGen(
 	lines *[]string,
 	indentStr string,
 	indent int,
+	parentFlowsByOrigin map[element.ID][]*genMf.SequenceFlow,
 ) {
 	// Header line: `loop $var in $list` / `while <cond>`.
 	header := "loop"
@@ -862,14 +863,33 @@ func emitLoopedActivityGen(
 	// Nested body: traverse the loop's own ObjectCollection. Reuses
 	// the same gen traverser so structural framing nests correctly.
 	if oc, ok := loop.ObjectCollection().(*genMf.MicroflowObjectCollection); ok && oc != nil {
-		// Build inner graph from the loop body's own SequenceFlows.
-		// LoopedActivity.ObjectCollection holds both the body objects
-		// and the body's flows (they live alongside as PartList items
-		// of the same collection).
 		inner := oc.ObjectsItems()
 		innerByOrigin := make(map[element.ID][]*genMf.SequenceFlow)
 		innerByDest := make(map[element.ID][]*genMf.SequenceFlow)
 		innerActivities, _ := buildGenActivityMap(inner)
+
+		// Mendix stores all SequenceFlows at the microflow level (parent),
+		// NOT inside the loop's MicroflowObjectCollection. Scanning only
+		// oc.ObjectsItems() for flows always yields zero results, so the
+		// traversal sees no edges and only emits one activity (whichever
+		// non-deterministic map iteration picks as startID).
+		//
+		// Fix: filter the parent-level flows to those whose origin AND
+		// destination are both loop body activity IDs.
+		innerIDs := make(map[element.ID]bool, len(innerActivities))
+		for id := range innerActivities {
+			innerIDs[id] = true
+		}
+		for originID := range innerIDs {
+			for _, sf := range parentFlowsByOrigin[originID] {
+				if innerIDs[sf.DestinationRefID()] {
+					innerByOrigin[sf.OriginRefID()] = append(innerByOrigin[sf.OriginRefID()], sf)
+					innerByDest[sf.DestinationRefID()] = append(innerByDest[sf.DestinationRefID()], sf)
+				}
+			}
+		}
+		// Also include any flows stored inside oc (future-proof for
+		// hypothetical Mendix layout changes).
 		for _, e := range inner {
 			if sf, ok := e.(*genMf.SequenceFlow); ok && sf != nil {
 				innerByOrigin[sf.OriginRefID()] = append(innerByOrigin[sf.OriginRefID()], sf)
@@ -885,9 +905,14 @@ func emitLoopedActivityGen(
 		innerSplitMerge := findSplitMergePointsGen(innerActivities, innerByOrigin)
 		var startID element.ID
 		// Loop bodies often do not have an explicit StartEvent — pick
-		// a node with no incoming sequence flow as the entry, falling
-		// back to the first object.
-		for id := range innerActivities {
+		// the first activity (in oc order) with no incoming sequence flow.
+		// Iterating over the innerActivities map would be non-deterministic;
+		// use the ordered inner slice instead.
+		for _, e := range inner {
+			id := e.ID()
+			if innerActivities[id] == nil {
+				continue // SequenceFlow or other non-activity
+			}
 			if len(innerByDest[id]) == 0 {
 				startID = id
 				break

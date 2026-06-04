@@ -457,6 +457,40 @@ end;`
 }
 
 // TestRoundtripMicroflow_LoopWithBody tests LOOP iteration with activities inside.
+// TestRoundtripMicroflow_LoopWithMultipleBodyActivities verifies that ALL
+// activities inside a loop body appear in describe output, not just the first.
+//
+// Regression: Mendix stores loop body SequenceFlows at the microflow level
+// (parent), not in the loop's MicroflowObjectCollection. The describe path
+// was only scanning oc.ObjectsItems() for flows, finding none, and therefore
+// only emitting whichever single activity happened to be picked by non-
+// deterministic map iteration.
+func TestRoundtripMicroflow_LoopWithMultipleBodyActivities(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfTestItem (Name: String(100), Processed: Boolean default false);`); err != nil {
+		t.Fatalf("create entity: %v", err)
+	}
+
+	mfName := testModule + ".RT_LoopMultiBody"
+	createMDL := `create microflow ` + mfName + ` () returns Nothing
+begin
+  retrieve $Items from RoundtripTest.MfTestItem;
+  loop $Item in $Items begin
+    change $Item (Processed = true);
+    commit $Item;
+  end loop;
+  return;
+end;`
+
+	// BOTH "change" and "commit" must appear in the describe output.
+	assertMicroflowContains(t, env, mfName, createMDL,
+		[]string{"loop", "change", "Processed", "commit", "end loop"},
+		nil,
+	)
+}
+
 func TestRoundtripMicroflow_LoopWithBody(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
