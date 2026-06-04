@@ -247,21 +247,6 @@ func pageModelHasLossyWidget(pm *types.PageModel) bool {
 	return false
 }
 
-// pageModelHasLossyWidgetReadOnly is the read-side gate that still walks
-// the tree per-widget (describe uses IR for non-lossy widgets and falls
-// back to legacy describe for lossy ones — pluggable widgets / buttons).
-func pageModelHasLossyWidgetReadOnly(pm *types.PageModel) bool {
-	if pm == nil {
-		return false
-	}
-	for _, n := range pm.Widgets {
-		if widgetTreeHasLossyKind(n) {
-			return true
-		}
-	}
-	return false
-}
-
 func widgetTreeHasLossyKind(n *types.WidgetNode) bool {
 	if n == nil {
 		return false
