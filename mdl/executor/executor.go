@@ -350,6 +350,13 @@ func (e *Executor) SetLogger(l *diaglog.Logger) {
 	e.logger = l
 }
 
+// SetProgressOut sets the writer for real-time progress messages.
+// Defaults to os.Stderr. In daemon mode the caller wires this to a
+// "progress" frame writer so the launcher can print progress immediately.
+func (e *Executor) SetProgressOut(w io.Writer) {
+	e.statusOutput = w
+}
+
 // Execute runs a single MDL statement with output-line and wall-clock guards.
 // Each statement gets a fresh line budget. If the statement exceeds maxOutputLines
 // lines of output or runs longer than the configured timeout, it is aborted with an error.
