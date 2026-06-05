@@ -180,6 +180,9 @@ var gitCommitCmd = &cobra.Command{
 an mx_metadata git note on the new commit. This makes commits from
 AI agents or native git clients compatible with Mendix Studio Pro.
 
+All git commit flags (-m, -a, --amend, ...) are passed straight through.
+Only --version and -p/--project are consumed by mxcli.
+
 After committing, run:
   mxcli git notes push
 
@@ -189,16 +192,30 @@ Examples:
   mxcli git commit --amend
   mxcli git commit -p app.mpr -m "Update entity"
 `,
+	// DisableFlagParsing so git's own flags (-m, -a, --amend, etc.) pass through
+	// untouched. mxcli's --version and -p/--project are extracted manually below.
+	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		versionFlag, _ := cmd.Flags().GetString("version")
-		projectPath, _ := cmd.Flags().GetString("project")
-		return runGitCommit(args, versionFlag, projectPath, cmd.OutOrStdout())
+		var versionFlag, projectPath string
+		var gitArgs []string
+		for i := 0; i < len(args); i++ {
+			switch {
+			case args[i] == "--version" && i+1 < len(args):
+				versionFlag = args[i+1]
+				i++
+			case args[i] == "-p" && i+1 < len(args):
+				projectPath = args[i+1]
+				i++
+			case strings.HasPrefix(args[i], "--project="):
+				projectPath = strings.TrimPrefix(args[i], "--project=")
+			case strings.HasPrefix(args[i], "--version="):
+				versionFlag = strings.TrimPrefix(args[i], "--version=")
+			default:
+				gitArgs = append(gitArgs, args[i])
+			}
+		}
+		return runGitCommit(gitArgs, versionFlag, projectPath, cmd.OutOrStdout())
 	},
-}
-
-func init() {
-	gitCommitCmd.Flags().String("version", "", "Mendix version number (e.g. 10.6.0.0), skips MPR detection")
-	gitCmd.AddCommand(gitCommitCmd)
 }
 
 // runGitCommit executes git commit with the given args, then adds mx_metadata note.
@@ -682,4 +699,24 @@ func fixMissingNotes(mendixVersion, mprFmtVersion string, out io.Writer) (fixed,
 		}
 	}
 	return fixed, skipped
+}
+
+// ──────────────────────────────────────────────
+// Wiring
+// ──────────────────────────────────────────────
+
+func init() {
+	// Flags (gitCommitCmd uses DisableFlagParsing, so no flags registered on it)
+	gitNotesPushCmd.Flags().String("remote", "", "Remote name (default: auto-detect tracking remote, then 'origin')")
+	gitNotesPushCmd.Flags().Bool("force", false, "Force push (overwrites remote notes)")
+	gitDoctorCmd.Flags().String("remote", "", "Remote to check (default: auto-detect)")
+	gitFixCmd.Flags().String("remote", "", "Remote name (default: auto-detect)")
+	gitFixCmd.Flags().String("version", "", "Mendix version number (e.g. 10.6.0.0)")
+
+	// Subcommand tree
+	gitNotesCmd.AddCommand(gitNotesPushCmd)
+	gitCmd.AddCommand(gitCommitCmd)
+	gitCmd.AddCommand(gitNotesCmd)
+	gitCmd.AddCommand(gitDoctorCmd)
+	gitCmd.AddCommand(gitFixCmd)
 }

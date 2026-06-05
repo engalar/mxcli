@@ -4,7 +4,9 @@ package main
 
 import (
 	"encoding/json"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -472,5 +474,64 @@ func TestRunGitFix_ConvertsSSHToHTTPS(t *testing.T) {
 
 	if !strings.HasPrefix(newURL, "https://") {
 		t.Errorf("SSH URL must be converted to HTTPS, got: %q", newURL)
+	}
+}
+
+// TestGitCommitIntegration runs a real git init + mxcli git commit flow
+// using a temporary git repository. Requires git in PATH.
+func TestGitCommitIntegration(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not in PATH, skipping integration test")
+	}
+
+	dir := t.TempDir()
+
+	for _, cmd := range [][]string{
+		{"git", "-C", dir, "init"},
+		{"git", "-C", dir, "config", "user.email", "test@test.com"},
+		{"git", "-C", dir, "config", "user.name", "Test"},
+	} {
+		if out, err := exec.Command(cmd[0], cmd[1:]...).CombinedOutput(); err != nil {
+			t.Fatalf("setup %v: %v\n%s", cmd, err, out)
+		}
+	}
+
+	testFile := filepath.Join(dir, "README.md")
+	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := exec.Command("git", "-C", dir, "add", ".").CombinedOutput(); err != nil {
+		t.Fatalf("git add: %v\n%s", err, out)
+	}
+
+	orig, _ := os.Getwd()
+	defer os.Chdir(orig)
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+
+	var buf strings.Builder
+	err := runGitCommit([]string{"-m", "Initial commit"}, "10.6.0.0", "", &buf)
+	if err != nil {
+		t.Fatalf("runGitCommit failed: %v\nOutput:\n%s", err, buf.String())
+	}
+
+	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
+	commitSHA := strings.TrimSpace(string(sha))
+
+	noteOut, err := exec.Command("git", "notes", "--ref=mx_metadata", "show", commitSHA).Output()
+	if err != nil {
+		t.Fatalf("note not found on commit %s: %v", commitSHA[:7], err)
+	}
+
+	var m map[string]any
+	if err := json.Unmarshal(noteOut, &m); err != nil {
+		t.Fatalf("note is not valid JSON: %v\nNote content: %q", err, string(noteOut))
+	}
+	if m["ModelerVersion"] != "10.6.0.0" {
+		t.Errorf("ModelerVersion = %v, want 10.6.0.0", m["ModelerVersion"])
+	}
+	if strings.HasSuffix(string(noteOut), "\n") {
+		t.Error("note must not have trailing newline (libgit2 compatibility)")
 	}
 }
