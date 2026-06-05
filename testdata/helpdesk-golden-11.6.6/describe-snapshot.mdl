@@ -127,7 +127,8 @@ grant HD.ManagerRole on HD.Customer (read *, write *);
 create or modify persistent entity HD.Agent (
   Name: String(200) not null,
   Email: String(200) not null,
-  IsActive: Boolean default true
+  IsActive: Boolean default true,
+  DeactivationReason: String(500)
 );
 
 grant HD.AgentRole on HD.Agent (read *);
@@ -178,7 +179,7 @@ grant HD.AgentRole on HD.EscalationRequest (create, read *);
 
 grant HD.ManagerRole on HD.EscalationRequest (create, delete, read *, write *);
 /
-@Position(1300, 50)
+@Position(1300, 180)
 create or modify non-persistent entity HD.TicketSearch (
   SubjectKeyword: String(200),
   StatusFilter: HD.TicketStatus,

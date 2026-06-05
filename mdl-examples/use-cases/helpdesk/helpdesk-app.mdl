@@ -169,9 +169,10 @@ system members (owner)
 index (Email);
 
 create or modify persistent entity HD.Agent (
-  Name:     string(200) not null,
-  Email:    string(200) not null,
-  IsActive: boolean default true
+  Name:               string(200) not null,
+  Email:              string(200) not null,
+  IsActive:           boolean default true,
+  DeactivationReason: string(500)
 );
 
 -- system members clause enables the 4 NoGeneralization boolean flags in BSON.
@@ -1430,6 +1431,45 @@ create or replace page HD.TicketSearch_Results
   }
 };
 
+-- ============================================================================
+-- MARK: Account Management — Entities, Microflows & Pages
+-- ============================================================================
+--
+-- Patterns introduced in this section (not demonstrated elsewhere in this file):
+--   Entities   : entity generalization (extends System.User)
+--   Microflows : split type (InheritanceSplitStatement), cast (CastObjectStmt),
+--                create java action, call java action, raise error,
+--                show home page
+--   Pages      : DataView with microflow datasource (DataView, not DataGrid),
+--                tabcontainer + tabpage, ShowContentAs:customContent action button
+--                column, nested DataView (association datasource),
+--                conditional visibility (visible: [XPath])
+--
+-- Requirement coverage:
+--   R1 ManageMyAccount  → HD.UserProfile + HD.DS_GetMyProfile + HD.ManageMyAccount
+--   R2 ChangeMyPassword → HD.JA_HashPassword + HD.ACT_ChangePassword + HD.ChangeMyPassword
+--   R3 ShowMyPasswordForm → HD.ShowMyPasswordForm (popup variant, no new activities)
+--   R4 Account_Overview column filters → HD.Account_Overview datagrid columns
+--   R5 Account_Overview action buttons → HD.Account_Overview customContent columns
+--   R6 Account_Overview tabs           → HD.Account_Overview tabcontainer
+--   R7 Account_New nested DataView     → HD.Customer_New
+--   R8 Account_Edit conditional (Agent)    → HD.Agent_Edit
+--   R9 Account_Edit conditional (Customer) → HD.Customer_Edit
+-- ============================================================================
+
+-- MARK: Account Management — Entities
+
+-- R1: generalization of System.User — enables split type + cast in DS_GetMyProfile
+create or modify persistent entity HD.UserProfile extends System.User (
+  DisplayName: string(200)
+);
+
+-- R2/R3: non-persistent form holder for password change pages
+create or modify non-persistent entity HD.PasswordForm (
+  NewPassword:     string,
+  ConfirmPassword: string
+);
+
 -- MARK: Security — Module Roles
 
 -- KnowledgeBase: 3 module roles
@@ -1558,9 +1598,12 @@ create or modify user role Manager (System.User, HD.ManagerRole, KB.Contributor)
 
 alter project security demo users on;
 
-create or modify demo user 'demo_customer@helpdesk.test' password 'Demo1234!' (Customer);
-create or modify demo user 'demo_agent@helpdesk.test'    password 'Demo1234!' (Agent);
-create or modify demo user 'demo_manager@helpdesk.test'  password 'Demo1234!' (Manager);
+-- entity clause required: HD.UserProfile (Account Management section) is a second
+-- entity that generalizes System.User, so demo-user creation must disambiguate
+-- which user entity to instantiate. Administration.Account is the account entity.
+create or modify demo user 'demo_customer@helpdesk.test' password 'Demo1234!' entity Administration.Account (Customer);
+create or modify demo user 'demo_agent@helpdesk.test'    password 'Demo1234!' entity Administration.Account (Agent);
+create or modify demo user 'demo_manager@helpdesk.test'  password 'Demo1234!' entity Administration.Account (Manager);
 
 -- MARK: Navigation
 
