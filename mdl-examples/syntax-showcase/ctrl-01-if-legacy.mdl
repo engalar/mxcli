@@ -1,0 +1,42 @@
+-- ============================================================
+-- SHOWCASE: if Statement — Legacy Form (THEN/END IF)
+-- MDL grammar rule: ifStatement (THEN form)
+-- ============================================================
+
+create module Showcase;
+
+-- [CTRL-IF-LEGACY-01] 基本 if/end if
+create microflow Showcase.Ctrl_If_Legacy_01 ($status: Showcase.OrderStatus)
+returns Nothing
+begin
+  if $status = Showcase.OrderStatus.Pending then
+    log info node 'Showcase' 'Pending';
+  end if;
+end;
+/
+
+-- [CTRL-IF-LEGACY-02] if/else/end if
+create microflow Showcase.Ctrl_If_Legacy_02 ($status: Showcase.OrderStatus)
+returns Nothing
+begin
+  if $status = Showcase.OrderStatus.Active then
+    log info node 'Showcase' 'Active';
+  else
+    log info node 'Showcase' 'Not active';
+  end if;
+end;
+/
+
+-- [CTRL-IF-LEGACY-03] if/elsif/else/end if
+create microflow Showcase.Ctrl_If_Legacy_03 ($status: Showcase.OrderStatus)
+returns Nothing
+begin
+  if $status = Showcase.OrderStatus.Pending then
+    log info node 'Showcase' 'Pending';
+  elsif $status = Showcase.OrderStatus.Active then
+    log info node 'Showcase' 'Active';
+  else
+    log info node 'Showcase' 'Closed';
+  end if;
+end;
+/

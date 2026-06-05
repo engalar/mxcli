@@ -1,0 +1,18 @@
+-- ============================================================
+-- SHOWCASE: while Statement — Modern Form ({})
+-- MDL grammar rule: whileStatement (LBRACE form)
+-- ============================================================
+
+create module Showcase;
+
+-- [CTRL-WHILE-MODERN-01]
+create microflow Showcase.Ctrl_While_Modern_01 ()
+returns integer as $r
+begin
+  declare $r: integer = 0;
+  while $r < 10 {
+    $r = $r + 1;
+  }
+  return $r;
+end;
+/

@@ -1,0 +1,42 @@
+-- ============================================================
+-- SHOWCASE: if Statement — Modern Form ({})
+-- MDL grammar rule: ifStatement (LBRACE form)
+-- ============================================================
+
+create module Showcase;
+
+-- [CTRL-IF-MODERN-01] 基本 if {}
+create microflow Showcase.Ctrl_If_Modern_01 ($status: Showcase.OrderStatus)
+returns Nothing
+begin
+  if $status = Showcase.OrderStatus.Pending {
+    log info node 'Showcase' 'Pending';
+  }
+end;
+/
+
+-- [CTRL-IF-MODERN-02] if {} else {}
+create microflow Showcase.Ctrl_If_Modern_02 ($status: Showcase.OrderStatus)
+returns Nothing
+begin
+  if $status = Showcase.OrderStatus.Active {
+    log info node 'Showcase' 'Active';
+  } else {
+    log info node 'Showcase' 'Not active';
+  }
+end;
+/
+
+-- [CTRL-IF-MODERN-03] if {} elsif {} else {}
+create microflow Showcase.Ctrl_If_Modern_03 ($status: Showcase.OrderStatus)
+returns Nothing
+begin
+  if $status = Showcase.OrderStatus.Pending {
+    log info node 'Showcase' 'Pending';
+  } elsif $status = Showcase.OrderStatus.Active {
+    log info node 'Showcase' 'Active';
+  } else {
+    log info node 'Showcase' 'Closed';
+  }
+end;
+/

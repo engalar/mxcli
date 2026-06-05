@@ -1,0 +1,17 @@
+-- ============================================================
+-- SHOWCASE: loop Statement — Legacy Form (BEGIN/END LOOP)
+-- MDL grammar rule: loopStatement (BEGIN form)
+-- ============================================================
+
+create module Showcase;
+
+-- [CTRL-LOOP-LEGACY-01]
+create microflow Showcase.Ctrl_Loop_Legacy_01 ($products: list of Showcase.Product)
+returns Nothing
+begin
+  loop $product in $products
+  begin
+    change $product (IsActive = true);
+  end loop;
+end;
+/

@@ -1,0 +1,43 @@
+-- ============================================================
+-- SHOWCASE: on error Clause
+-- MDL grammar rule: onErrorClause
+-- Note: {} form already existed as a precedent before this spec.
+-- ============================================================
+
+create module Showcase;
+
+-- [CTRL-ONERROR-01] on error continue
+create microflow Showcase.Ctrl_OnError_01 ()
+returns Nothing
+begin
+  create Showcase.Order (OrderNumber = '001') on error continue;
+end;
+/
+
+-- [CTRL-ONERROR-02] on error rollback
+create microflow Showcase.Ctrl_OnError_02 ()
+returns Nothing
+begin
+  create Showcase.Order (OrderNumber = '001') on error rollback;
+end;
+/
+
+-- [CTRL-ONERROR-03] on error { body }
+create microflow Showcase.Ctrl_OnError_03 ()
+returns Nothing
+begin
+  create Showcase.Order (OrderNumber = '001') on error {
+    log error node 'Showcase' 'create failed';
+  };
+end;
+/
+
+-- [CTRL-ONERROR-04] on error without rollback { body }
+create microflow Showcase.Ctrl_OnError_04 ()
+returns Nothing
+begin
+  create Showcase.Order (OrderNumber = '001') on error without rollback {
+    log warning node 'Showcase' 'create failed, no rollback';
+  };
+end;
+/

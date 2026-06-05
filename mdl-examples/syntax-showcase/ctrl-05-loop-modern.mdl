@@ -1,0 +1,29 @@
+-- ============================================================
+-- SHOWCASE: loop Statement — Modern Form ({})
+-- MDL grammar rule: loopStatement (LBRACE form)
+-- ============================================================
+
+create module Showcase;
+
+-- [CTRL-LOOP-MODERN-01]
+create microflow Showcase.Ctrl_Loop_Modern_01 ($products: list of Showcase.Product)
+returns Nothing
+begin
+  loop $product in $products {
+    change $product (IsActive = true);
+  }
+end;
+/
+
+-- [CTRL-LOOP-MODERN-02] 带 $currentIndex（Mendix 官方 loop 内置变量）
+create microflow Showcase.Ctrl_Loop_Modern_02 ($products: list of Showcase.Product)
+returns Nothing
+begin
+  loop $product in $products {
+    if $currentIndex = 0 {
+      log info node 'Showcase' 'First item';
+    }
+    change $product (IsActive = true);
+  }
+end;
+/

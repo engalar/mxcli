@@ -1,0 +1,19 @@
+-- ============================================================
+-- SHOWCASE: while Statement — Legacy Form (BEGIN/END WHILE)
+-- MDL grammar rule: whileStatement (BEGIN form)
+-- ============================================================
+
+create module Showcase;
+
+-- [CTRL-WHILE-LEGACY-01]
+create microflow Showcase.Ctrl_While_Legacy_01 ()
+returns integer as $r
+begin
+  declare $r: integer = 0;
+  while $r < 10
+  begin
+    set $r = $r + 1;
+  end while;
+  return $r;
+end;
+/
