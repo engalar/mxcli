@@ -152,6 +152,10 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 		stmt = buildGenerateJumpToStatement(genJump)
 	} else if applyJump := mfCtx.ApplyJumpToStatement(); applyJump != nil {
 		stmt = buildApplyJumpToStatement(applyJump)
+	} else if simpleAssign := mfCtx.SimpleAssignStatement(); simpleAssign != nil {
+		// simpleAssignStatement: $x = expr (canonical form, no SET keyword)
+		// Must be last to avoid shadowing statements with (VARIABLE EQUALS)? prefix.
+		stmt = buildSimpleAssignStatement(simpleAssign)
 	}
 
 	// Attach annotations to the statement
@@ -1491,4 +1495,32 @@ func buildReturnStatement(ctx parser.IReturnStatementContext) *ast.ReturnStmt {
 	}
 
 	return stmt
+}
+
+// buildSimpleAssignStatement converts the canonical $x = expr form (no SET keyword)
+// to an MfSetStmt. Structurally identical to buildSetStatement but reads from
+// SimpleAssignStatementContext instead of SetStatementContext.
+func buildSimpleAssignStatement(ctx parser.ISimpleAssignStatementContext) ast.MicroflowStatement {
+	if ctx == nil {
+		return nil
+	}
+	saCtx := ctx.(*parser.SimpleAssignStatementContext)
+
+	var targetVar string
+	if v := saCtx.VARIABLE(); v != nil {
+		targetVar = strings.TrimPrefix(v.GetText(), "$")
+	} else if ap := saCtx.AttributePath(); ap != nil {
+		targetVar = ap.GetText()
+	}
+
+	var valueExpr ast.Expression
+	if expr := saCtx.Expression(); expr != nil {
+		valueExpr = buildSourceExpression(expr)
+		valueExpr = appendStatementExpressionTrailingWhitespace(expr, valueExpr)
+	}
+
+	return &ast.MfSetStmt{
+		Target: targetVar,
+		Value:  valueExpr,
+	}
 }

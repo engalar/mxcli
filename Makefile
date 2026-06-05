@@ -311,7 +311,7 @@ release-local-bins: sync-all
 
 # Run tests. CPU is capped at 85% via _CPU_RUNNER (cpulimit or nice -n 15)
 # so the machine stays responsive. TEST_P/TEST_PARALLEL default to 85% nproc.
-test:
+test: test-showcase
 	$(_CPU_RUNNER) $(MAKE) _test-inner
 
 _test-inner:
