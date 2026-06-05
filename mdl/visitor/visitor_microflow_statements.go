@@ -662,6 +662,13 @@ func buildInheritanceSplitStatement(ctx parser.IInheritanceSplitStatementContext
 			Body:   buildMicroflowBody(c.MicroflowBody()),
 		})
 	}
+	for _, caseCtx := range splitCtx.AllInheritanceSplitCaseModern() {
+		c := caseCtx.(*parser.InheritanceSplitCaseModernContext)
+		stmt.Cases = append(stmt.Cases, ast.InheritanceSplitCase{
+			Entity: buildQualifiedName(c.QualifiedName()),
+			Body:   buildMicroflowBody(c.MicroflowBody()),
+		})
+	}
 	if splitCtx.ELSE() != nil {
 		stmt.ElseBody = buildMicroflowBody(splitCtx.MicroflowBody())
 	}
