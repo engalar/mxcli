@@ -221,9 +221,6 @@ func collectMFEntityRefs(mf *genMF.Microflow) []string {
 }
 
 // detectGaps compares access grants against widget/MF references and returns gaps.
-//
-// TODO(Task 5): replace this stub with the full gap-detection logic. Kept as a
-// compiling stub so the data-reader pipeline (Tasks 1-3) builds independently.
 func detectGaps(
 	urToMR map[string][]string,
 	entityGrants map[string]map[string]entityAccessSummary,
@@ -232,13 +229,114 @@ func detectGaps(
 	mfMetaMap map[string]mfMeta,
 	pageModels map[string]*types.PageModel,
 ) []AccessGap {
-	_ = urToMR
-	_ = entityGrants
-	_ = pageGrants
-	_ = mfGrants
-	_ = mfMetaMap
-	_ = pageModels
-	return nil
+	var gaps []AccessGap
+	seen := make(map[string]bool) // deduplicate by "role+entity+mf+gapType"
+
+	addGap := func(g AccessGap) {
+		key := g.ModuleRole + "|" + g.EntityQN + "|" + g.MFQN + "|" + string(g.GapType)
+		if !seen[key] {
+			seen[key] = true
+			gaps = append(gaps, g)
+		}
+	}
+
+	for userRole, moduleRoles := range urToMR {
+		for _, mrQN := range moduleRoles {
+
+			// --- Entry point 1: pages ---
+			for _, pageQN := range pageGrants[mrQN] {
+				pm := pageModels[pageQN]
+				if pm == nil {
+					continue
+				}
+				refs := collectWidgetRefs(pm)
+
+				// Check entity read grants.
+				for _, entityQN := range refs.entityQNs {
+					if isSystemEntity(entityQN) {
+						continue
+					}
+					if !entityGrants[mrQN][entityQN].canRead {
+						addGap(AccessGap{
+							UserRole:   userRole,
+							ModuleRole: mrQN,
+							Path:       fmt.Sprintf("page %s → entity %s", pageQN, entityQN),
+							EntityQN:   entityQN,
+							GapType:    GapEntityRead,
+						})
+					}
+				}
+
+				// Check MF execute grants (direct MFs called from page).
+				for _, mfQN := range refs.directMFQNs {
+					if !hasMFGrant(mfGrants, mrQN, mfQN) {
+						addGap(AccessGap{
+							UserRole:   userRole,
+							ModuleRole: mrQN,
+							Path:       fmt.Sprintf("page %s → microflow %s", pageQN, mfQN),
+							MFQN:       mfQN,
+							GapType:    GapMFExecute,
+						})
+					}
+					// If MF has ApplyEntityAccess=ON, check entity grants inside MF.
+					if meta, ok := mfMetaMap[mfQN]; ok && meta.applyEntityAccess {
+						for _, entityQN := range meta.entityQNs {
+							if isSystemEntity(entityQN) {
+								continue
+							}
+							if !entityGrants[mrQN][entityQN].canRead {
+								addGap(AccessGap{
+									UserRole:   userRole,
+									ModuleRole: mrQN,
+									Path:       fmt.Sprintf("page %s → microflow %s (ApplyEntityAccess) → entity %s", pageQN, mfQN, entityQN),
+									EntityQN:   entityQN,
+									GapType:    GapEntityRead,
+								})
+							}
+						}
+					}
+				}
+			}
+
+			// --- Entry point 2: execute-granted microflows ---
+			for _, mfQN := range mfGrants[mrQN] {
+				meta, ok := mfMetaMap[mfQN]
+				if !ok || !meta.applyEntityAccess {
+					continue
+				}
+				for _, entityQN := range meta.entityQNs {
+					if isSystemEntity(entityQN) {
+						continue
+					}
+					if !entityGrants[mrQN][entityQN].canRead {
+						addGap(AccessGap{
+							UserRole:   userRole,
+							ModuleRole: mrQN,
+							Path:       fmt.Sprintf("microflow %s (ApplyEntityAccess) → entity %s", mfQN, entityQN),
+							EntityQN:   entityQN,
+							GapType:    GapEntityRead,
+						})
+					}
+				}
+			}
+		}
+	}
+	return gaps
+}
+
+// isSystemEntity returns true for entities in modules that are always accessible.
+func isSystemEntity(qn string) bool {
+	return strings.HasPrefix(qn, "System.") || strings.HasPrefix(qn, "Administration.")
+}
+
+// hasMFGrant checks if moduleRole has an execute grant on mfQN.
+func hasMFGrant(mfGrants map[string][]string, mrQN, mfQN string) bool {
+	for _, grantedQN := range mfGrants[mrQN] {
+		if grantedQN == mfQN {
+			return true
+		}
+	}
+	return false
 }
 
 // buildPageModels reads every Page from the MPR and returns pageQN → *types.PageModel.

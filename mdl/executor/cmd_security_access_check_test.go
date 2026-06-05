@@ -122,3 +122,71 @@ func containsStr(ss []string, s string) bool {
 	}
 	return false
 }
+
+func TestDetectGaps_EntityReadGap(t *testing.T) {
+	urToMR := map[string][]string{
+		"Customer": {"HD.CustomerRole"},
+	}
+	entityGrants := map[string]map[string]entityAccessSummary{
+		// HD.CustomerRole has NO grant on HD.UserProfile
+	}
+	pageGrants := map[string][]string{
+		"HD.CustomerRole": {"HD.ManageMyAccount"},
+	}
+	mfGrants := map[string][]string{}
+	mfMetaMap := map[string]mfMeta{}
+	pageModels := map[string]*types.PageModel{
+		"HD.ManageMyAccount": {
+			Widgets: []*types.WidgetNode{
+				{
+					Kind: types.WidgetDataView,
+					Name: "dvProfile",
+					DataSource: &types.DataSourceDef{
+						Kind:   types.DataSourceDatabase,
+						Entity: "HD.UserProfile",
+					},
+				},
+			},
+		},
+	}
+
+	gaps := detectGaps(urToMR, entityGrants, pageGrants, mfGrants, mfMetaMap, pageModels)
+
+	if len(gaps) == 0 {
+		t.Fatal("expected at least one gap for missing HD.UserProfile read access")
+	}
+	found := false
+	for _, g := range gaps {
+		if g.EntityQN == "HD.UserProfile" && g.GapType == GapEntityRead && g.ModuleRole == "HD.CustomerRole" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected GapEntityRead for HD.UserProfile / HD.CustomerRole, got %+v", gaps)
+	}
+}
+
+func TestDetectGaps_NoGapWhenGrantPresent(t *testing.T) {
+	urToMR := map[string][]string{"Customer": {"HD.CustomerRole"}}
+	entityGrants := map[string]map[string]entityAccessSummary{
+		"HD.CustomerRole": {
+			"HD.UserProfile": {canRead: true},
+		},
+	}
+	pageGrants := map[string][]string{"HD.CustomerRole": {"HD.ManageMyAccount"}}
+	mfGrants := map[string][]string{}
+	mfMetaMap := map[string]mfMeta{}
+	pageModels := map[string]*types.PageModel{
+		"HD.ManageMyAccount": {
+			Widgets: []*types.WidgetNode{{
+				Kind:       types.WidgetDataView,
+				DataSource: &types.DataSourceDef{Kind: types.DataSourceDatabase, Entity: "HD.UserProfile"},
+			}},
+		},
+	}
+	gaps := detectGaps(urToMR, entityGrants, pageGrants, mfGrants, mfMetaMap, pageModels)
+	if len(gaps) != 0 {
+		t.Errorf("expected 0 gaps when grant is present, got %d: %+v", len(gaps), gaps)
+	}
+}
