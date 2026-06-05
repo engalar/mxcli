@@ -1098,6 +1098,32 @@ pluggablewidget 'com.crusher.widget.CrusherSlider' slider1 (
 3. Use `PLUGGABLEWIDGET '<Widget ID>' name (properties)` in your page MDL
 4. If the widget has many properties, run `mxcli widget extract --mpk widgets/YourWidget.mpk` to see the property names
 
+**Attribute binding syntax** (verified against [mxcli-taskdemo](https://github.com/engalar/mxcli-taskdemo) `TaskDemo/mdlsource/02-pages.mdl`):
+
+```sql
+-- Inside a dataview, use the bare attribute name (NOT @Entity/Attr):
+dataview dvTask (datasource: $Task) {
+  PLUGGABLEWIDGET 'com.mendix.widget.custom.PrioritySelector.PrioritySelector' wPriority (
+    priority: Priority,   -- bare attribute name; matches widget XML key="priority"
+    editable: true        -- boolean: true or false, no quotes
+  )
+}
+
+-- In a DataGrid custom content column (read-only):
+column colPriority (caption: 'Priority', ShowContentAs: customContent) {
+  PLUGGABLEWIDGET 'com.mendix.widget.custom.PrioritySelector.PrioritySelector' wColPriority (
+    priority: Priority, editable: false
+  )
+}
+```
+
+Rules:
+- Property keys are **case-sensitive** — copy exactly from `key=` in widget XML
+- Attribute properties use bare attribute name in the current dataview context
+- `mxcli widget list -p app.mpr` lists all installed widgets (including uninstantiated)
+- `SHOW WIDGETS` lists only instantiated widgets (catalog entries)
+- `SHOW INSTALLED WIDGETS` lists all widgets from `widgets/*.mpk` (new command)
+
 **The built-in shorthands (IMAGE, COMBOBOX, GALLERY, DATAGRID, etc.) are sugar for PLUGGABLEWIDGET.** When the shorthand doesn't expose a property you need, use the full form:
 
 ```sql

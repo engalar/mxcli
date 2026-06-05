@@ -44,7 +44,7 @@ Override with --db for PostgreSQL.`,
 			dir := padDir
 			if dir == "" {
 				if projectPath == "" {
-					return fmt.Errorf("either -p or --pad-dir is required")
+					return fmt.Errorf("-p is required\n\nSpecify the .mpr file path so mxcli can find the build output:\n\n  mxcli local run -p /path/to/app.mpr [--admin-password pw]\n\nIf you haven't built yet, run first:\n\n  mxcli local build -p /path/to/app.mpr")
 				}
 				// Prefer deploy-layout (no ZIP, faster build) when Studio Pro is installed.
 				// Fall back to PAD layout (.docker/build/) otherwise.

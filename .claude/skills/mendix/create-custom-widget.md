@@ -415,3 +415,32 @@ Set `needsEntityContext="false"`. Render children via `{props.content}`.
 | `widget not showing in Studio Pro` | Wrong `id` in XML | Ensure `id="packagePath.WidgetName"` |
 | `CE0463 widget definition changed` | Property mismatch | Ensure XML and component props match |
 | `pluginWidget must be true` | Missing attribute | Add `pluginWidget="true"` to `<widget>` |
+
+## Complete Reference: mxcli-taskdemo
+
+**[github.com/engalar/mxcli-taskdemo](https://github.com/engalar/mxcli-taskdemo)** — end-to-end widget lifecycle demo (scaffold → build → install → MDL usage):
+
+| File | What it shows |
+|------|---------------|
+| `StudyWidgets/src/PrioritySelector.xml` | `attribute` + `boolean` property declaration |
+| `StudyWidgets/src/ProgressRing.xml` | `attribute` + `string` + `boolean` mix |
+| `StudyWidgets/src/PrioritySelector.jsx` | Two-way attribute binding: `priority.value` / `priority.setValue(val)` |
+| `StudyWidgets/src/ProgressRing.jsx` | Read-only attribute: `progress.value`, SVG ring render |
+| `StudyWidgets/package.xml` | Multi-widget single-package structure; xmlns **must** be `clientModule/1.0/` (capital M) |
+| `TaskDemo/mdlsource/02-pages.mdl` | `PLUGGABLEWIDGET` in DataView (editable) and DataGrid column (read-only) |
+
+**Build workflow** (must run inside the package directory):
+```bash
+cd StudyWidgets
+mxcli widget build             # must run from inside the package dir
+cp StudyWidgets.mpk ../TaskDemo/widgets/
+mxcli -p ../TaskDemo/TaskDemo.mpr -c "SHOW INSTALLED WIDGETS"  # verify installation
+```
+
+**Full MDL workflow** (`TaskDemo/mdlsource/` — run in order):
+```bash
+mxcli exec 01-domain.mdl   -p TaskDemo.mpr   # entities + enumerations
+mxcli exec 02-pages.mdl    -p TaskDemo.mpr   # pages with PLUGGABLEWIDGET
+mxcli exec 03-security.mdl -p TaskDemo.mpr   # roles + access rules
+mxcli exec 04-navigation.mdl -p TaskDemo.mpr
+```

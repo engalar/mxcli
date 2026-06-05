@@ -26,6 +26,9 @@ Use this when:
 
 ## Local Path (No Docker) — Quick Start
 
+> **`-p` is required** for all `mxcli local` commands — project path is never auto-detected.
+> Always invoke via `mxcli local` (the launcher), not `~/.mxcli/local/mxcli-local` directly.
+
 ```bash
 # Step 1: Build PAD package (runs mxbuild locally, no Docker)
 mxcli local build -p app.mpr

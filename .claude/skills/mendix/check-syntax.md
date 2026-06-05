@@ -1,3 +1,19 @@
+## Finding mxcli
+
+Before running any mxcli command, detect which binary to use:
+
+```bash
+if   [ -f ./mxcli ];               then MXCLI=./mxcli
+elif command -v mxcli &>/dev/null; then MXCLI=mxcli
+else echo "Install: mxcli setup mxcli --os linux" && exit 1; fi
+# Then use: $MXCLI -p app.mpr -c "..."
+```
+
+- `./mxcli` — present when `mxcli setup mxcli --os linux` was run (devcontainer)
+- `mxcli` — globally installed (Windows / Mac / Linux native)
+
+---
+
 # MDL Syntax Validation Skill
 
 This skill ensures MDL scripts are validated before presenting them to users or executing them.
