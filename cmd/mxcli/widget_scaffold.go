@@ -296,7 +296,7 @@ func generatePackageXML(packageName string, widgetNames []string) string {
 	b.WriteString(`<?xml version="1.0" encoding="utf-8"?>` + "\n")
 	b.WriteString(`<package xmlns="http://www.mendix.com/package/1.0/">` + "\n")
 	b.WriteString(fmt.Sprintf(
-		`  <clientModule name=%q version="1.0.0" xmlns="http://www.mendix.com/clientmodule/1.0/">`+"\n",
+		`  <clientModule name=%q version="1.0.0" xmlns="http://www.mendix.com/clientModule/1.0/">`+"\n",
 		packageName))
 	if len(widgetNames) > 0 {
 		b.WriteString("    <widgetFiles>\n")

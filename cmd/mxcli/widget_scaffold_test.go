@@ -127,11 +127,15 @@ func TestGeneratePackageXML(t *testing.T) {
 		`version="1.0.0"`,
 		`<widgetFile path="WidgetA.xml"/>`,
 		`<widgetFile path="WidgetB.xml"/>`,
+		`xmlns="http://www.mendix.com/clientModule/1.0/"`,
 	}
 	for _, want := range checks {
 		if !strings.Contains(xml, want) {
 			t.Errorf("generatePackageXML: missing %q\ngot:\n%s", want, xml)
 		}
+	}
+	if strings.Contains(xml, "clientmodule/1.0/") {
+		t.Errorf("generatePackageXML: lowercase clientmodule found\ngot:\n%s", xml)
 	}
 }
 
