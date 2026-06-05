@@ -174,6 +174,8 @@ func stmtSummary(stmt ast.Statement) string {
 		return fmt.Sprintf("search '%s'", s.Query)
 	case *ast.ShowWidgetsStmt:
 		return "show widgets"
+	case *ast.ShowInstalledWidgetsStmt:
+		return "SHOW INSTALLED WIDGETS"
 	case *ast.UpdateWidgetsStmt:
 		return "update widgets"
 	case *ast.ShowDesignPropertiesStmt:

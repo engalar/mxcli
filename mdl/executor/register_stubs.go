@@ -371,6 +371,9 @@ func registerQueryHandlers(r *Registry) {
 	r.Register(&ast.ShowWidgetsStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execShowWidgets(ctx, stmt.(*ast.ShowWidgetsStmt))
 	})
+	r.Register(&ast.ShowInstalledWidgetsStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
+		return execShowInstalledWidgets(ctx, stmt.(*ast.ShowInstalledWidgetsStmt))
+	})
 	r.Register(&ast.UpdateWidgetsStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execUpdateWidgets(ctx, stmt.(*ast.UpdateWidgetsStmt))
 	})

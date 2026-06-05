@@ -14,6 +14,13 @@ type ShowWidgetsStmt struct {
 
 func (s *ShowWidgetsStmt) isStatement() {}
 
+// ShowInstalledWidgetsStmt represents: SHOW INSTALLED WIDGETS
+// Scans the project's widgets/ directory for .mpk files, listing all
+// widget definitions regardless of page instantiation.
+type ShowInstalledWidgetsStmt struct{}
+
+func (s *ShowInstalledWidgetsStmt) isStatement() {}
+
 // UpdateWidgetsStmt represents: UPDATE WIDGETS SET ... WHERE ... [IN module] [DRY RUN]
 type UpdateWidgetsStmt struct {
 	Assignments []WidgetPropertyAssignment

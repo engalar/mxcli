@@ -618,6 +618,9 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 			}
 		}
 		b.statements = append(b.statements, stmt)
+	} else if ctx.INSTALLED() != nil && ctx.WIDGETS() != nil {
+		// SHOW INSTALLED WIDGETS
+		b.statements = append(b.statements, &ast.ShowInstalledWidgetsStmt{})
 	} else if ctx.WIDGETS() != nil {
 		// SHOW WIDGETS [WHERE ...] [IN module]
 		stmt := &ast.ShowWidgetsStmt{

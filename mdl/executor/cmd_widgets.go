@@ -5,6 +5,8 @@ package executor
 
 import (
 	"fmt"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -291,6 +293,54 @@ type catalogQueryResult struct {
 	Columns []string
 	Rows    [][]any
 	Count   int
+}
+
+// execShowInstalledWidgets handles SHOW INSTALLED WIDGETS.
+// Scans widgets/*.mpk in the project directory, listing all installed widget
+// definitions regardless of page instantiation. Does not require catalog refresh.
+func execShowInstalledWidgets(ctx *ExecContext, _ *ast.ShowInstalledWidgetsStmt) error {
+	if !ctx.Connected() {
+		return mdlerrors.NewNotConnected()
+	}
+	if ctx.MprPath == "" {
+		return fmt.Errorf("SHOW INSTALLED WIDGETS requires a project connection (-p app.mpr)")
+	}
+
+	projectDir := filepath.Dir(ctx.MprPath)
+	registry, err := NewWidgetRegistry()
+	if err != nil {
+		return fmt.Errorf("creating widget registry: %w", err)
+	}
+	if err := registry.SetProjectDir(projectDir); err != nil {
+		return fmt.Errorf("scanning widgets/ directory: %w", err)
+	}
+
+	discovered := registry.MPKDiscovered()
+	if len(discovered) == 0 {
+		fmt.Fprintln(ctx.Output, "No widget packages found in widgets/")
+		fmt.Fprintf(ctx.Output, "Copy a .mpk file to %s/widgets/ to install a widget.\n", projectDir)
+		return nil
+	}
+
+	fmt.Fprintf(ctx.Output, "\n%-30s %-60s %s\n", "Widget Name", "Widget ID", "Display Name")
+	fmt.Fprintln(ctx.Output, strings.Repeat("-", 120))
+
+	names := make([]string, 0, len(discovered))
+	for name := range discovered {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		w := discovered[name]
+		fmt.Fprintf(ctx.Output, "%-30s %-60s %s\n",
+			strings.ToLower(name), w.WidgetID, w.Name)
+	}
+
+	fmt.Fprintf(ctx.Output, "\n%d widget definition(s) found\n", len(discovered))
+	fmt.Fprintf(ctx.Output, "\nMDL usage: PLUGGABLEWIDGET '<Widget ID>' instanceName (prop: val)\n")
+	fmt.Fprintf(ctx.Output, "Reference: github.com/engalar/mxcli-taskdemo — TaskDemo/mdlsource/02-pages.mdl\n")
+	return nil
 }
 
 // formatCell formats a cell value for display, truncating if needed.

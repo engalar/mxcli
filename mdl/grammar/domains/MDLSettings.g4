@@ -661,7 +661,7 @@ keyword
     | DESIGN | DRY | EXEC | FEATURES | ADDED | SINCE | FORCE
     | LANGUAGES | LANGUAGE | LINT | PROPERTIES | READ | RULES | RUN | SARIF | SCRIPT
     | SUPPORTED | TRANSLATE | TRANSLATIONS
-    | SHOW | USE | STATUS | WRITE | VIA | VIEWS | TABLES
+    | SHOW | USE | STATUS | WRITE | VIA | VIEWS | TABLES | INSTALLED
 
     // Sequence flow anchors (for @anchor annotation)
     | ANCHOR | TOP | BOTTOM
