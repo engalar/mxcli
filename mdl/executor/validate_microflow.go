@@ -349,6 +349,9 @@ func bodyReturns(stmts []ast.MicroflowStatement) bool {
 	switch s := last.(type) {
 	case *ast.ReturnStmt:
 		return true
+	case *ast.RaiseErrorStmt:
+		// raise error; terminates the flow (ErrorEvent) — counts as a terminal statement.
+		return true
 	case *ast.IfStmt:
 		// Both branches must return, and ELSE must be present
 		return len(s.ElseBody) > 0 && bodyReturns(s.ThenBody) && bodyReturns(s.ElseBody)

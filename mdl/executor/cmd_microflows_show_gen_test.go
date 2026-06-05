@@ -152,10 +152,11 @@ func TestDescribeMicroflowGenToString_IfElseFraming(t *testing.T) {
 	}
 }
 
-// TestDescribeMicroflowGenToString_InheritanceCaseFraming exercises the
+// TestDescribeMicroflowGenToString_InheritanceSplitFraming exercises the
 // InheritanceSplit framing on Administration.ManageMyAccount, which
 // case-splits on the current user's specialised type.
-func TestDescribeMicroflowGenToString_InheritanceCaseFraming(t *testing.T) {
+// MDL syntax: split type $Var \n case Module.Entity \n body \n else \n body \n end split;
+func TestDescribeMicroflowGenToString_InheritanceSplitFraming(t *testing.T) {
 	w := openMprWriterForTest(t)
 	mf := findMicroflowByQN(t, w, "Administration.ManageMyAccount")
 
@@ -165,14 +166,32 @@ func TestDescribeMicroflowGenToString_InheritanceCaseFraming(t *testing.T) {
 	}
 
 	mustContain(t, out,
-		"create or modify microflow Administration.ManageMyAccount", // resolved module name
-		"case $", " inheritance\n", // inheritance case header
-		"    when ", " then\n", // at least one when arm
-		"\n  end case;\n", // case terminator
+		"create or modify microflow Administration.ManageMyAccount",
+		"split type $",        // correct split header (not "case $Var inheritance")
+		"case Administration.", // case branch with entity name (not "when ... then")
+		"end split;",          // correct terminator (not "end case;")
 	)
-	if strings.Contains(out, "<unknown>") {
-		t.Errorf("module name should resolve from container chain (no <unknown>); got:\n%s", out)
+	mustNotContain(t, out,
+		" inheritance", // old wrong syntax
+		"when ",        // old wrong syntax
+		"end case;",    // old wrong syntax
+		"<unknown>",
+	)
+}
+
+// TestDescribeMicroflowGenToString_ErrorEvent verifies that an ErrorEvent
+// (raise error) describes as `raise error;` and not as a TODO placeholder.
+func TestDescribeMicroflowGenToString_ErrorEvent(t *testing.T) {
+	w := openMprWriterForTest(t)
+	mf := findMicroflowByQN(t, w, "MyFirstModule.ACT_TestRaiseError")
+
+	out, err := DescribeMicroflowGenToString(newGenDescribeContext(t, w), mf)
+	if err != nil {
+		t.Fatalf("DescribeMicroflowGenToString: %v", err)
 	}
+
+	mustContain(t, out, "raise error;")
+	mustNotContain(t, out, "// TODO", "Stage 3.2.2")
 }
 
 // TestDescribeMicroflowGenToString_ParametersAndReturn checks that the
@@ -432,7 +451,7 @@ end;`
 }
 
 // TestDescribeMicroflowGen_InheritanceCaseLabel verifies that inheritance-split
-// `when` arms show the entity qualified name, not the TODO placeholder.
+// case arms show the entity qualified name, not the TODO placeholder.
 func TestDescribeMicroflowGen_InheritanceCaseLabel(t *testing.T) {
 	w := openMprWriterForTest(t)
 	mf := findMicroflowByQN(t, w, "Administration.ManageMyAccount")
@@ -444,9 +463,9 @@ func TestDescribeMicroflowGen_InheritanceCaseLabel(t *testing.T) {
 	if strings.Contains(out, "TODO Stage 3.2.2:") {
 		t.Errorf("inheritance case label still a TODO placeholder:\n%s", out)
 	}
-	// The when arms must reference real entity names (Module.Entity pattern).
-	if !strings.Contains(out, "when Administration.") {
-		t.Errorf("expected `when Administration.<Entity> then` in output; got:\n%s", out)
+	// The case arms must reference real entity names (split type $Var \n case Module.Entity).
+	if !strings.Contains(out, "case Administration.") {
+		t.Errorf("expected `case Administration.<Entity>` in output; got:\n%s", out)
 	}
 }
 
@@ -463,6 +482,15 @@ func mustContain(t *testing.T, haystack string, needles ...string) {
 	if len(missing) > 0 {
 		t.Errorf("output missing %d expected substrings: %q\nFull output:\n%s",
 			len(missing), missing, haystack)
+	}
+}
+
+func mustNotContain(t *testing.T, haystack string, forbidden ...string) {
+	t.Helper()
+	for _, f := range forbidden {
+		if strings.Contains(haystack, f) {
+			t.Errorf("output must not contain %q\nFull output:\n%s", f, haystack)
+		}
 	}
 }
 

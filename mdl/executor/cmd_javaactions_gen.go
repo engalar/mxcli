@@ -480,7 +480,7 @@ func describeJavaActionGen(ctx *ExecContext, name ast.QualifiedName) error {
 		sb.WriteString(" */\n")
 	}
 
-	sb.WriteString("create java action ")
+	sb.WriteString("create or modify java action ")
 	sb.WriteString(qn)
 	sb.WriteString("(")
 

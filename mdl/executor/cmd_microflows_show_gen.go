@@ -684,6 +684,12 @@ func traverseFlowGen(
 		return
 	}
 
+	// ErrorEvent: emit `raise error;` — terminates flow (no outgoing normal flows).
+	if _, isErr := obj.(*genMf.ErrorEvent); isErr {
+		*lines = append(*lines, indentStr+"raise error;")
+		return
+	}
+
 	// Free Annotation: emit as MDL comment (not @annotation which is
 	// a display-only element invalid inside begin...end per the grammar).
 	if ann, isAnn := obj.(*genMf.Annotation); isAnn {
@@ -827,13 +833,23 @@ func emitInheritanceSplitGen(
 	if varName == "" {
 		varName = "Variable"
 	}
-	*lines = append(*lines, indentStr+"case $"+varName+" inheritance")
+	// MDL syntax: split type $Var \n case QualifiedName \n body \n [else \n body] \n end split;
+	*lines = append(*lines, indentStr+"split type $"+varName)
+	var elseFlow *genMf.SequenceFlow
 	for _, f := range findNormalFlowsGen(flowsByOrigin[currentID]) {
 		label := inheritanceCaseLabelGen(f)
-		*lines = append(*lines, indentStr+"  when "+label+" then")
-		traverseFlowGenUntilMerge(ctx, f.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+2)
+		if label == "_" {
+			elseFlow = f
+			continue
+		}
+		*lines = append(*lines, indentStr+"case "+label)
+		traverseFlowGenUntilMerge(ctx, f.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+1)
 	}
-	*lines = append(*lines, indentStr+"end case;")
+	if elseFlow != nil {
+		*lines = append(*lines, indentStr+"else")
+		traverseFlowGenUntilMerge(ctx, elseFlow.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+1)
+	}
+	*lines = append(*lines, indentStr+"end split;")
 }
 
 func emitLoopedActivityGen(

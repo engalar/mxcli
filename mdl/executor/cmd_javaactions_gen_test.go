@@ -177,8 +177,8 @@ func TestDescribeJavaActionGen_OutputsCreateStatement(t *testing.T) {
 		t.Fatalf("describeJavaActionGen: %v", err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "create java action ") {
-		t.Errorf("missing create statement: %q", out)
+	if !strings.Contains(out, "create or modify java action ") {
+		t.Errorf("missing create or modify statement: %q", out)
 	}
 	if !strings.Contains(out, ".ValidateEmail(") {
 		t.Errorf("missing action name + paren: %q", out)

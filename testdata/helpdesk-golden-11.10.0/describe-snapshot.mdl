@@ -920,6 +920,55 @@ end;
 
 grant execute on microflow HD.ACT_Workflow_Notify to HD.ManagerRole;
 /
+create or modify microflow HD.DS_GetMyProfile ()
+returns UserProfile as $Profile
+begin
+  @position(360,200)
+  retrieve $Me from System.User
+      where id = '[%CurrentUser%]'
+      limit 1;
+  split type $Me
+  case HD.UserProfile
+    @position(690,200)
+    cast $Profile;
+    return $Profile;
+  else
+    return empty;
+  end split;
+end;
+
+grant execute on microflow HD.DS_GetMyProfile to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+/
+create or modify java action HD.JA_HashPassword(PlainText: String) returns String
+-- return NAME: 'ReturnValueName';
+-- export level: Public
+create or modify microflow HD.ACT_ChangePassword (
+  $Form: HD.PasswordForm
+)
+returns Boolean as $Success
+begin
+  if $Form/NewPassword = '' or $Form/NewPassword = empty then
+    @position(530,300)
+    validation feedback $Form/NewPassword message 'New password is required.';
+    return false;
+  else
+    if $Form/NewPassword != $Form/ConfirmPassword then
+      raise error;
+    else
+      @position(1100,200)
+      $Hashed = call java action HD.JA_HashPassword(PlainText = $Form/NewPassword);
+      @position(1260,200)
+      set $Success = true
+      ;
+      @position(1420,200)
+      show home page;
+      return $Success;
+    end if;
+  end if;
+end;
+
+grant execute on microflow HD.ACT_ChangePassword to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+/
 create or modify microflow HD.ACT_Agent_Deactivate (
   $Agent: HD.Agent
 )
