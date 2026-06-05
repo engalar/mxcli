@@ -242,3 +242,50 @@ func TestGitCommitWrapper_GitFails_NoNote(t *testing.T) {
 		t.Error("must not write note when git commit fails")
 	}
 }
+
+func TestRunGitNotesPush_Success(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	var pushArgs []string
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		switch {
+		case contains(args, "rev-parse") && contains(args, "--abbrev-ref"):
+			// tracking remote detection → returns "origin/main", so remote = "origin"
+			return exec.Command("sh", "-c", "printf 'origin/main'")
+		case contains(args, "push"):
+			pushArgs = args
+			return exec.Command("sh", "-c", "exit 0")
+		}
+		return exec.Command("sh", "-c", "exit 1")
+	}
+
+	var buf strings.Builder
+	err := runGitNotesPush("", false, &buf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !contains(pushArgs, "refs/notes/mx_metadata") {
+		t.Errorf("push must target refs/notes/mx_metadata, got: %v", pushArgs)
+	}
+}
+
+func TestRunGitNotesPush_ForceFlag(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	var pushArgs []string
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		if contains(args, "push") {
+			pushArgs = args
+			return exec.Command("sh", "-c", "exit 0")
+		}
+		return exec.Command("sh", "-c", "printf 'origin/main'")
+	}
+
+	var buf strings.Builder
+	_ = runGitNotesPush("origin", true, &buf)
+	if !contains(pushArgs, "--force") && !contains(pushArgs, "-f") {
+		t.Errorf("--force must be passed to git push, got: %v", pushArgs)
+	}
+}

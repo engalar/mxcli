@@ -244,3 +244,83 @@ func runGitCommit(gitArgs []string, versionFlag, projectPath string, out io.Writ
 		shortSHA, mendixVersion)
 	return nil
 }
+
+// ──────────────────────────────────────────────
+// notes push command
+// ──────────────────────────────────────────────
+
+var gitNotesCmd = &cobra.Command{
+	Use:   "notes",
+	Short: "Manage mx_metadata git notes",
+}
+
+var gitNotesPushCmd = &cobra.Command{
+	Use:   "push",
+	Short: "Push mx_metadata notes to remote",
+	Long: `Push refs/notes/mx_metadata to the remote repository so Mendix Studio Pro
+can read the version history written by 'mxcli git commit'.
+
+Examples:
+  mxcli git notes push
+  mxcli git notes push --remote origin
+  mxcli git notes push --force
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		remote, _ := cmd.Flags().GetString("remote")
+		force, _ := cmd.Flags().GetBool("force")
+		return runGitNotesPush(remote, force, cmd.OutOrStdout())
+	},
+}
+
+// runGitNotesPush pushes refs/notes/mx_metadata to the resolved remote.
+func runGitNotesPush(remoteOverride string, force bool, out io.Writer) error {
+	remote := resolveRemote(remoteOverride)
+	if remote == "" {
+		return fmt.Errorf("no remote found — specify with --remote <name>")
+	}
+
+	pushArgs := []string{"push", remote, "refs/notes/mx_metadata"}
+	if force {
+		pushArgs = append(pushArgs, "--force")
+	}
+	pushCmd := gitExecCommand("git", pushArgs...)
+	pushCmd.Stdout = out
+	pushCmd.Stderr = out
+	if err := pushCmd.Run(); err != nil {
+		return fmt.Errorf("git push notes: %w\n\n  If remote has diverged, retry with --force", err)
+	}
+
+	fmt.Fprintf(out, "\n[mendix] notes pushed to %s/refs/notes/mx_metadata\n\n  Studio Pro can now read version history.\n  Remember to also push your commits:\n    git push\n", remote)
+	return nil
+}
+
+// resolveRemote returns the git remote to use: override → tracking remote → "origin".
+func resolveRemote(override string) string {
+	if override != "" {
+		return override
+	}
+	// Detect tracking remote from current branch
+	cmd := gitExecCommand("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+	out, err := cmd.Output()
+	if err == nil {
+		parts := strings.SplitN(strings.TrimSpace(string(out)), "/", 2)
+		if len(parts) == 2 {
+			return parts[0]
+		}
+	}
+	// Fallback: check if "origin" exists
+	listCmd := gitExecCommand("git", "remote")
+	listOut, err := listCmd.Output()
+	if err == nil {
+		remotes := strings.Fields(strings.TrimSpace(string(listOut)))
+		for _, r := range remotes {
+			if r == "origin" {
+				return "origin"
+			}
+		}
+		if len(remotes) > 0 {
+			return remotes[0]
+		}
+	}
+	return ""
+}
