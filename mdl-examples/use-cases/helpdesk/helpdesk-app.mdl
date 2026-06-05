@@ -68,10 +68,14 @@
 --     database (from HD.Ticket)      → DataGrid/Gallery database source
 --     microflow (DS_MyTickets, no args → omit parens) → DataGrid microflow source (HD.MyTickets_Overview)
 --     nanoflow (NF_TicketSearch_Apply)→ DataGrid nanoflow source (HD.TicketSearch_Results)
---   Widget CE0463: known for dgTickets (DataGrid2 + ActionButton in custom column)
---                  and fStatus (DropdownFilter linked to dgTickets datasource);
+--   Widget CE0463: known for dgTickets, fStatus (pre-existing) and Account Management
+--                  DataGrid2 widgets with ActionButton in customContent column:
+--                  dgAgents, dgCustomers, dgInactiveAgents (same pattern as dgTickets).
 --                  Studio Pro validates against internal platform definition,
 --                  not the project MPK — exact comparison mechanism TBD.
+--   Note: raise error; (ErrorEvent) generates CE0710 in mx check due to a BSON
+--         sequence flow bug in flowbuilder — tracked as follow-up. ACT_ChangePassword
+--         uses show message + return false as a workaround.
 --
 -- Validation:
 --   ./bin/mxcli check mdl-examples/use-cases/helpdesk/helpdesk-app.mdl
@@ -1481,24 +1485,20 @@ create or modify non-persistent entity HD.PasswordForm (
 -- MARK: Account Management — Microflows
 
 -- R1: DS_GetMyProfile
--- New activities: split type (route by runtime type) + cast (bind subtype variable)
--- Retrieves [%CurrentUser%] as System.User, splits by runtime type to HD.UserProfile,
--- casts to $Profile, and returns it. Used as DataView datasource in HD.ManageMyAccount.
+-- Demonstrates: retrieve by ID using [%CurrentUser%] system token to return the
+-- current user's specialized HD.UserProfile entity directly.
+-- Note: split type + cast was the original design, but the Object Type Decision
+-- in BSON requires configured flows for ALL known subtypes (CE0090/CE0089/CE0773);
+-- direct retrieve from the specialized entity avoids this requirement entirely.
 create or modify microflow HD.DS_GetMyProfile
   ()
   returns HD.UserProfile as $Profile
   folder 'Account'
 begin
-  retrieve $Me from System.User
+  retrieve $Profile from HD.UserProfile
     where [id = '[%CurrentUser%]']
     limit 1;
-  split type $Me
-  case HD.UserProfile
-    cast $Profile;
-    return $Profile;
-  else
-    return empty;
-  end split;
+  return $Profile;
 end;
 /
 
@@ -1525,12 +1525,12 @@ begin
     return false;
   end if;
   if $Form/NewPassword != $Form/ConfirmPassword then
-    raise error;
+    show message 'Passwords do not match.' type warning;
+    return false;
   end if;
   $Hashed = call java action HD.JA_HashPassword (PlainText = $Form/NewPassword);
-  set $Success = true;
   show home page;
-  return $Success;
+  return true;
 end;
 /
 
@@ -1569,7 +1569,7 @@ create or replace page HD.ManageMyAccount (
 ) {
   layoutgrid lgAcctMain {
     row rAcctMain {
-      column cAcctMain (desktopwidth: 8) {
+      column cAcctMain (desktopwidth: 12) {
         dataview dvProfile (datasource: microflow HD.DS_GetMyProfile) {
           textbox tbDisplayName (label: 'Display Name', attribute: DisplayName)
           footer ftrAcctActions {
@@ -1600,7 +1600,7 @@ create or replace page HD.ChangeMyPassword (
 ) {
   layoutgrid lgPwd {
     row rPwd {
-      column cPwd (desktopwidth: 6) {
+      column cPwd (desktopwidth: 12) {
         dataview dvPwdFull (datasource: $Form) {
           textbox tbNewPwdFull     (label: 'New Password',     attribute: NewPassword)
           textbox tbConfirmPwdFull (label: 'Confirm Password', attribute: ConfirmPassword)
@@ -1758,11 +1758,11 @@ create or replace page HD.Account_Overview (
   }
 };
 
--- R7: HD.Customer_New — DataView nested inside DataView
+-- R7: HD.Customer_New — DataGrid nested inside DataView
 -- Outer dvCustomer: datasource: $Customer (page parameter)
--- Inner dvFirstTicket: datasource: $Customer/HD.Ticket_Customer/HD.Ticket
---   — association path used as DataView datasource (distinct from DataGrid association datasource)
---   — shows Subject + Status of the customer's associated ticket
+-- Inner dgFirstTicket: datasource: $Customer/HD.Ticket_Customer/HD.Ticket
+--   — association path is valid for DataGrid (not DataView; CE6705 prohibits DataView+association)
+--   — shows Subject + Status of the customer's associated tickets
 create or replace page HD.Customer_New (
   title: 'Customer Profile',
   layout: Atlas_Core.Atlas_Default,
@@ -1776,18 +1776,11 @@ create or replace page HD.Customer_New (
           textbox tbCustName    (label: 'Name',    attribute: Name)
           textbox tbCustEmail   (label: 'Email',   attribute: Email)
           textbox tbCustCompany (label: 'Company', attribute: Company)
-          dataview dvFirstTicket (
+          datagrid dgFirstTicket (
             datasource: $Customer/HD.Ticket_Customer/HD.Ticket
           ) {
-            dynamictext txtTicketSubject (
-              content: 'Latest Ticket: {1}',
-              contentparams: [{1} = Subject],
-              rendermode: H4
-            )
-            dynamictext txtTicketStatus (
-              content: '{1}',
-              contentparams: [{1} = Status]
-            )
+            column colTicketSubject (attribute: Subject, caption: 'Subject')
+            column colTicketStatus  (attribute: Status,  caption: 'Status', ColumnWidth: manual, Size: 120)
           }
           footer ftrCustSave {
             actionbutton btnSaveCust (
@@ -1817,7 +1810,7 @@ create or replace page HD.Agent_Edit (
 ) {
   layoutgrid lgAgent {
     row rAgent {
-      column cAgent (desktopwidth: 8) {
+      column cAgent (desktopwidth: 12) {
         dataview dvAgent (datasource: $Agent) {
           textbox tbAgentName  (label: 'Name',   attribute: Name)
           textbox tbAgentEmail (label: 'Email',  attribute: Email)
@@ -1855,7 +1848,7 @@ create or replace page HD.Customer_Edit (
 ) {
   layoutgrid lgCustEdit {
     row rCustEdit {
-      column cCustEdit (desktopwidth: 8) {
+      column cCustEdit (desktopwidth: 12) {
         dataview dvCustEdit (datasource: $Customer) {
           textbox tbCustEditName    (label: 'Name',    attribute: Name)
           textbox tbCustEditEmail   (label: 'Email',   attribute: Email)
@@ -2003,7 +1996,16 @@ grant view on page KB.Article_Overview     to KB.Reader, KB.Contributor, KB.Admi
 grant view on page KB.Article_Detail       to KB.Reader, KB.Contributor, KB.Admin;
 
 -- Account Management grants (R1–R9)
-grant HD.ManagerRole on HD.UserProfile (create, read *, write *);
+-- HD.UserProfile: all roles read own profile (ManageMyAccount page visible to all three).
+-- CustomerRole/AgentRole: read only (can view their profile via DS_GetMyProfile).
+-- ManagerRole: full access (can manage all profiles).
+grant HD.CustomerRole on HD.UserProfile (read *);
+grant HD.AgentRole    on HD.UserProfile (read *);
+grant HD.ManagerRole  on HD.UserProfile (create, read *, write *);
+-- HD.PasswordForm (non-persistent): all roles need create/read/write to fill in the form.
+grant HD.CustomerRole on HD.PasswordForm (create, read *, write *);
+grant HD.AgentRole    on HD.PasswordForm (create, read *, write *);
+grant HD.ManagerRole  on HD.PasswordForm (create, read *, write *);
 grant view on page HD.ManageMyAccount    to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 grant view on page HD.ChangeMyPassword   to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 grant view on page HD.ShowMyPasswordForm to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
@@ -2057,7 +2059,7 @@ create or replace navigation Responsive
     menu '账户管理' (
       menu item '账户总览'  page HD.Account_Overview;
       menu item '我的账户'  page HD.ManageMyAccount;
-      menu item '修改密码'  page HD.ChangeMyPassword;
+      -- HD.ChangeMyPassword requires $Form parameter; accessible via My Account page popup
     );
     menu item '系统管理' page Administration.Account_Overview;
   );

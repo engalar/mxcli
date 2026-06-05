@@ -197,6 +197,10 @@ create or modify persistent entity HD.UserProfile extends System.User (
   DisplayName: String(200)
 );
 
+grant HD.CustomerRole on HD.UserProfile (read *);
+
+grant HD.AgentRole on HD.UserProfile (read *);
+
 grant HD.ManagerRole on HD.UserProfile (create, read *, write *);
 /
 @Position(1300, 50)
@@ -204,6 +208,12 @@ create or modify non-persistent entity HD.PasswordForm (
   NewPassword: String,
   ConfirmPassword: String
 );
+
+grant HD.CustomerRole on HD.PasswordForm (create, read *, write *);
+
+grant HD.AgentRole on HD.PasswordForm (create, read *, write *);
+
+grant HD.ManagerRole on HD.PasswordForm (create, read *, write *);
 /
 -- one-to-many: KB.Category *-->1 KB.Category (each KB.Category belongs to one KB.Category)
 create or modify association KB.Category_Parent
@@ -924,17 +934,10 @@ create or modify microflow HD.DS_GetMyProfile ()
 returns UserProfile as $Profile
 begin
   @position(360,200)
-  retrieve $Me from System.User
+  retrieve $Profile from HD.UserProfile
       where id = '[%CurrentUser%]'
       limit 1;
-  split type $Me
-  case HD.UserProfile
-    @position(690,200)
-    cast $Profile;
-    return $Profile;
-  else
-    return empty;
-  end split;
+  return $Profile;
 end;
 
 grant execute on microflow HD.DS_GetMyProfile to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
@@ -953,16 +956,15 @@ begin
     return false;
   else
     if $Form/NewPassword != $Form/ConfirmPassword then
-      raise error;
+      @position(900,300)
+      show message 'Passwords do not match.' type warning;
+      return false;
     else
       @position(1100,200)
       $Hashed = call java action HD.JA_HashPassword(PlainText = $Form/NewPassword);
       @position(1260,200)
-      set $Success = true
-      ;
-      @position(1420,200)
       show home page;
-      return $Success;
+      return true;
     end if;
   end if;
 end;
@@ -1138,7 +1140,6 @@ create or replace navigation Responsive
     menu '账户管理' (
       menu item '账户总览' page HD.Account_Overview;
       menu item '我的账户' page HD.ManageMyAccount;
-      menu item '修改密码' page HD.ChangeMyPassword;
     );
     menu item '系统管理' page Administration.Account_Overview;
   )
@@ -1468,7 +1469,7 @@ create or modify page HD.EscalationStart_Form (
 create or modify page HD.ManageMyAccount (title: 'My Account', layout: Atlas_Core.Atlas_Default, folder: 'Account') {
   layoutgrid lgAcctMain {
     row row1 {
-      column col1 (DesktopWidth: 8, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
+      column col1 (DesktopWidth: 12, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
         dataview dvProfile (datasource: microflow HD.DS_GetMyProfile) {
           -- Context: $currentObject (HD.DS_GetMyProfile)
           textbox tbDisplayName (attribute: DisplayName)
@@ -1495,7 +1496,7 @@ create or modify page HD.ChangeMyPassword (
 ) {
   layoutgrid lgPwd {
     row row1 {
-      column col1 (DesktopWidth: 6, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
+      column col1 (DesktopWidth: 12, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
         dataview dvPwdFull (datasource: $Form) {
           -- Context: $currentObject (Form)
           textbox tbNewPwdFull (attribute: NewPassword)
@@ -1628,14 +1629,10 @@ create or modify page HD.Customer_New (
           textbox tbCustName (attribute: Name)
           textbox tbCustEmail (attribute: Email)
           textbox tbCustCompany (attribute: Company)
-          dataview dvFirstTicket {
-            -- Context: $currentObject (Customer)
-            dynamictext txtTicketSubject (
-              content: 'Latest Ticket: {1}',
-              rendermode: H4,
-              contentparams: [{1} = $currentObject/Subject]
-            )
-            dynamictext txtTicketStatus (content: '{1}', contentparams: [{1} = toString($currentObject/Status)])
+          datagrid dgFirstTicket {
+            -- Context: $currentObject (Customer), $dgFirstTicket (selection)
+            column colSubject (attribute: Subject, caption: 'Subject')
+            column colStatus (attribute: Status, caption: 'Status', ColumnWidth: manual, Size: 120)
           }
           footer footer1 {
             actionbutton btnSaveCust (caption: 'Save', action: save_changes close_page, buttonstyle: primary)
@@ -1656,7 +1653,7 @@ create or modify page HD.Agent_Edit (
 ) {
   layoutgrid lgAgent {
     row row1 {
-      column col1 (DesktopWidth: 8, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
+      column col1 (DesktopWidth: 12, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
         dataview dvAgent (datasource: $Agent) {
           -- Context: $currentObject (Agent)
           textbox tbAgentName (attribute: Name)
@@ -1682,7 +1679,7 @@ create or modify page HD.Customer_Edit (
 ) {
   layoutgrid lgCustEdit {
     row row1 {
-      column col1 (DesktopWidth: 8, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
+      column col1 (DesktopWidth: 12, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
         dataview dvCustEdit (datasource: $Customer) {
           -- Context: $currentObject (Customer)
           textbox tbCustEditName (attribute: Name)
