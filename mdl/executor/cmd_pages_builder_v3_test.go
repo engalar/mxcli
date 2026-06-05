@@ -384,3 +384,44 @@ func TestNanoflowDatasourceResolvesViaCache(t *testing.T) {
 		t.Errorf("NanoflowQualifiedName = %q", ns.NanoflowQualifiedName())
 	}
 }
+
+// TestBuildTabPageV3_CaptionIsTextsText verifies that a tabpage caption is stored
+// as Texts$Text (not Forms$ClientTemplate). Using ClientTemplate causes:
+//
+//	StorageLoadException: "ClientTemplate cannot be converted to Text"
+//
+// Root cause: genSimpleLabel wraps in ClientTemplate; genSimpleText gives Texts$Text.
+// Same bug as page.Title (fixed separately with a comment in buildPageV3).
+func TestBuildTabPageV3_CaptionIsTextsText(t *testing.T) {
+	pb := &pageBuilder{
+		execCache:        &executorCache{},
+		paramEntityNames: map[string]string{},
+		widgetScope:      map[string]model.ID{},
+	}
+
+	w := &ast.WidgetV3{
+		Type:       "tabpage",
+		Name:       "tabActive",
+		Properties: map[string]interface{}{"caption": "Active Accounts"},
+		Children:   []*ast.WidgetV3{},
+	}
+
+	elem, err := pb.buildTabPageV3(w)
+	if err != nil {
+		t.Fatalf("buildTabPageV3: %v", err)
+	}
+
+	tp, ok := elem.(*genPg.TabPage)
+	if !ok {
+		t.Fatalf("got %T, want *genPg.TabPage", elem)
+	}
+
+	cap := tp.Caption()
+	if cap == nil {
+		t.Fatal("TabPage Caption is nil — expected Texts$Text")
+	}
+	// Must be *genTexts.Text (Texts$Text), NOT *genPg.ClientTemplate (Forms$ClientTemplate).
+	if _, isText := cap.(*genTexts.Text); !isText {
+		t.Errorf("TabPage Caption is %T — must be *genTexts.Text, not ClientTemplate", cap)
+	}
+}

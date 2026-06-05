@@ -1542,7 +1542,7 @@ create or modify page HD.Account_Overview (
     row row1 {
       column col1 (DesktopWidth: 12, TabletWidth: AutoFill, PhoneWidth: AutoFill) {
         tabcontainer tcAccounts {
-          tabpage tabActive {
+          tabpage tabActive (caption: 'Active Accounts') {
             datagrid dgAgents (datasource: database from HD.Agent sort by Name asc) {
               -- Context: $currentObject (HD.Agent), $dgAgents (selection)
               column colName (attribute: Name, caption: 'Name') {
@@ -1588,7 +1588,7 @@ create or modify page HD.Account_Overview (
               }
             }
           }
-          tabpage tabInactive {
+          tabpage tabInactive (caption: 'Inactive Accounts') {
             datagrid dgInactiveAgents (datasource: database from HD.Agent sort by Name asc) {
               -- Context: $currentObject (HD.Agent), $dgInactiveAgents (selection)
               column colName (attribute: Name, caption: 'Name') {

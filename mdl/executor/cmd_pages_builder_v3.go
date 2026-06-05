@@ -1707,8 +1707,11 @@ func (pb *pageBuilder) buildTabPageV3(w *ast.WidgetV3) (element.Element, error) 
 	assignFreshID(tp)
 	tp.SetName(w.Name)
 
+	// TabPage.Caption must be Texts$Text, NOT Forms$ClientTemplate.
+	// genSimpleLabel wraps in ClientTemplate → StorageLoadException ("ClientTemplate cannot be converted to Text").
+	// Same fix as page.Title (see comment above genSimpleText call in buildPageV3).
 	if caption := w.GetCaption(); caption != "" {
-		tp.SetCaption(genSimpleLabel(caption))
+		tp.SetCaption(genSimpleText(caption))
 	}
 
 	for _, child := range w.Children {
@@ -1733,8 +1736,9 @@ func (pb *pageBuilder) buildGroupBoxV3(w *ast.WidgetV3) (element.Element, error)
 	gb.SetCollapsible("No")
 	gb.SetHeaderMode("Div")
 
+	// GroupBox.Caption must be Texts$Text, NOT Forms$ClientTemplate (same as TabPage.Caption).
 	if caption := w.GetCaption(); caption != "" {
-		gb.SetCaption(genSimpleLabel(caption))
+		gb.SetCaption(genSimpleText(caption))
 	}
 
 	if collapsible := w.GetStringProp("Collapsible"); collapsible != "" {
