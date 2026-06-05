@@ -1,0 +1,17 @@
+-- ============================================================
+-- SHOWCASE: Nested XPath Constraints
+-- Mendix doc: /refguide/xpath/
+-- MDL grammar rule: xpathConstraint (nested)
+-- ============================================================
+
+create module Showcase;
+
+-- [XPATH-05] 嵌套约束
+create microflow Showcase.XPath_Nested_01 ()
+returns list of Showcase.Order as $r
+begin
+  retrieve $r from Showcase.Order
+    where [IsActive = true and (Quantity > 0 or TotalAmount > 0)];
+  return $r;
+end;
+/

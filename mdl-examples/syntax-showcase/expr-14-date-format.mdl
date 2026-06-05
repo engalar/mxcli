@@ -1,0 +1,25 @@
+-- ============================================================
+-- SHOWCASE: Date Format/Parse Functions
+-- Mendix doc: /refguide/format-and-parse-date-function-calls/
+-- MDL grammar rule: functionCallExpression
+-- ============================================================
+
+create module Showcase;
+
+-- [EXPR-DATE-FMT-01] formatDateTime
+create microflow Showcase.Expr_DateFmt_01 ($d: datetime)
+returns string as $r
+begin
+  declare $r: string = formatDateTime($d, 'yyyy-MM-dd');
+  return $r;
+end;
+/
+
+-- [EXPR-DATE-FMT-02] parseDateTime
+create microflow Showcase.Expr_DateFmt_02 ($s: string)
+returns datetime as $r
+begin
+  declare $r: datetime = parseDateTime($s, 'yyyy-MM-dd');
+  return $r;
+end;
+/

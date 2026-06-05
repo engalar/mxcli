@@ -1,0 +1,16 @@
+-- ============================================================
+-- SHOWCASE: Boolean Operators
+-- Mendix doc: /refguide/boolean-expressions/
+-- MDL grammar rule: expression (andExpression, orExpression, notExpression)
+-- ============================================================
+
+create module Showcase;
+
+-- [EXPR-BOOL-01] and/or/not
+create microflow Showcase.Expr_Bool_01 ($a: boolean, $b: boolean)
+returns boolean as $r
+begin
+  declare $r: boolean = ($a and $b) or not($a);
+  return $r;
+end;
+/

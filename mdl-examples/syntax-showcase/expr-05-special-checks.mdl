@@ -1,0 +1,34 @@
+-- ============================================================
+-- SHOWCASE: Special Checks (empty, isNew, isSynced)
+-- Mendix doc: /refguide/special-checks/
+-- MDL grammar rule: expression (specialCheck)
+-- ============================================================
+
+create module Showcase;
+
+-- [EXPR-SPEC-01] empty check
+create microflow Showcase.Expr_Spec_01 ($order: Showcase.Order)
+returns boolean as $r
+begin
+  declare $r: boolean = $order = empty;
+  return $r;
+end;
+/
+
+-- [EXPR-SPEC-02] isNew
+create microflow Showcase.Expr_Spec_02 ($order: Showcase.Order)
+returns boolean as $r
+begin
+  declare $r: boolean = isNew($order);
+  return $r;
+end;
+/
+
+-- [EXPR-SPEC-03] isSynced
+create microflow Showcase.Expr_Spec_03 ($order: Showcase.Order)
+returns boolean as $r
+begin
+  declare $r: boolean = isSynced($order);
+  return $r;
+end;
+/

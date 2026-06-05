@@ -1,0 +1,34 @@
+-- ============================================================
+-- SHOWCASE: Math Functions
+-- Mendix doc: /refguide/mathematical-function-calls/
+-- MDL grammar rule: functionCallExpression
+-- ============================================================
+
+create module Showcase;
+
+-- [EXPR-MATH-01] abs, round, floor, ceiling
+create microflow Showcase.Expr_Math_01 ($x: decimal)
+returns decimal as $r
+begin
+  declare $r: decimal = abs($x) + round($x) + floor($x) + ceiling($x);
+  return $r;
+end;
+/
+
+-- [EXPR-MATH-02] sqrt, pow
+create microflow Showcase.Expr_Math_02 ($x: decimal)
+returns decimal as $r
+begin
+  declare $r: decimal = sqrt($x) + pow($x, 2);
+  return $r;
+end;
+/
+
+-- [EXPR-MATH-03] max, min（两参数形式）
+create microflow Showcase.Expr_Math_03 ($a: decimal, $b: decimal)
+returns decimal as $r
+begin
+  declare $r: decimal = max($a, $b) + min($a, $b);
+  return $r;
+end;
+/

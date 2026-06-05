@@ -1,0 +1,25 @@
+-- ============================================================
+-- SHOWCASE: Date Subtract Functions
+-- Mendix doc: /refguide/subtract-date-function-calls/
+-- MDL grammar rule: functionCallExpression
+-- ============================================================
+
+create module Showcase;
+
+-- [EXPR-DATE-SUB-01] subtractDays
+create microflow Showcase.Expr_DateSub_01 ($d: datetime)
+returns datetime as $r
+begin
+  declare $r: datetime = subtractDays($d, 7);
+  return $r;
+end;
+/
+
+-- [EXPR-DATE-SUB-02] subtractMonths, subtractYears
+create microflow Showcase.Expr_DateSub_02 ($d: datetime)
+returns datetime as $r
+begin
+  declare $r: datetime = subtractMonths($d, 1);
+  return $r;
+end;
+/

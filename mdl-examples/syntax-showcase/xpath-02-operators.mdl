@@ -1,0 +1,17 @@
+-- ============================================================
+-- SHOWCASE: XPath Comparison Operators
+-- Mendix doc: /refguide/xpath/
+-- MDL grammar rule: xpathConstraint (comparison operators)
+-- ============================================================
+
+create module Showcase;
+
+-- [XPATH-02] 比较运算符
+create microflow Showcase.XPath_Ops_01 ($qty: integer)
+returns list of Showcase.Order as $r
+begin
+  retrieve $r from Showcase.Order
+    where [Quantity > 0 and Quantity != 100 and IsActive = true];
+  return $r;
+end;
+/

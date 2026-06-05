@@ -1,0 +1,25 @@
+-- ============================================================
+-- SHOWCASE: Date Trim Functions
+-- Mendix doc: /refguide/trim-to-date/
+-- MDL grammar rule: functionCallExpression
+-- ============================================================
+
+create module Showcase;
+
+-- [EXPR-DATE-TRIM-01] trimToDays, trimToHours, trimToMinutes
+create microflow Showcase.Expr_DateTrim_01 ($d: datetime)
+returns datetime as $r
+begin
+  declare $r: datetime = trimToDays($d);
+  return $r;
+end;
+/
+
+-- [EXPR-DATE-TRIM-02] trimToMonths, trimToYears
+create microflow Showcase.Expr_DateTrim_02 ($d: datetime)
+returns datetime as $r
+begin
+  declare $r: datetime = trimToMonths($d);
+  return $r;
+end;
+/

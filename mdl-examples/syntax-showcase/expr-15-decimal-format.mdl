@@ -1,0 +1,25 @@
+-- ============================================================
+-- SHOWCASE: Decimal Format/Parse Functions
+-- Mendix doc: /refguide/format-and-parse-decimal-function-calls/
+-- MDL grammar rule: functionCallExpression
+-- ============================================================
+
+create module Showcase;
+
+-- [EXPR-DEC-FMT-01] formatDecimal
+create microflow Showcase.Expr_DecFmt_01 ($d: decimal)
+returns string as $r
+begin
+  declare $r: string = formatDecimal($d, '#,##0.00');
+  return $r;
+end;
+/
+
+-- [EXPR-DEC-FMT-02] parseDecimal (single-argument form)
+create microflow Showcase.Expr_DecFmt_02 ($s: string)
+returns decimal as $r
+begin
+  declare $r: decimal = parseDecimal($s);
+  return $r;
+end;
+/

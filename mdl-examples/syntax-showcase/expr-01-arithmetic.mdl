@@ -1,0 +1,28 @@
+-- ============================================================
+-- SHOWCASE: Arithmetic Operators
+-- Mendix doc: /refguide/arithmetic-expressions/
+-- MDL grammar rule: expression (addExpression, mulExpression)
+-- ============================================================
+
+create module Showcase;
+
+-- [EXPR-ARITH-01] 整数算术
+create microflow Showcase.Expr_Arith_01 ($a: integer, $b: integer)
+returns integer as $r
+begin
+  declare $r: integer = $a + $b * 2 - 1;
+  return $r;
+end;
+/
+
+-- [EXPR-ARITH-02] Decimal div/mod
+-- NOTE: The MDL expression parser currently rejects `$var div $var` /
+--       `$var mod $var` (variable on both sides). Use a literal on one side.
+--       Tracked as a grammar gap; see expr-agent report.
+create microflow Showcase.Expr_Arith_02 ($x: decimal)
+returns decimal as $r
+begin
+  declare $r: decimal = $x div 2 + $x mod 3;
+  return $r;
+end;
+/

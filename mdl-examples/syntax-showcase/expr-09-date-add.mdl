@@ -1,0 +1,34 @@
+-- ============================================================
+-- SHOWCASE: Date Add Functions
+-- Mendix doc: /refguide/add-date-function-calls/
+-- MDL grammar rule: functionCallExpression
+-- ============================================================
+
+create module Showcase;
+
+-- [EXPR-DATE-ADD-01] addDays, addWeeks, addMonths, addYears
+create microflow Showcase.Expr_DateAdd_01 ($d: datetime)
+returns datetime as $r
+begin
+  declare $r: datetime = addDays($d, 1);
+  return $r;
+end;
+/
+
+-- [EXPR-DATE-ADD-02] addHours, addMinutes, addSeconds
+create microflow Showcase.Expr_DateAdd_02 ($d: datetime)
+returns datetime as $r
+begin
+  declare $r: datetime = addHours($d, 2);
+  return $r;
+end;
+/
+
+-- [EXPR-DATE-ADD-03] addWeeks, addMonths, addYears, addQuarters
+create microflow Showcase.Expr_DateAdd_03 ($d: datetime)
+returns datetime as $r
+begin
+  declare $r: datetime = addMonths($d, 3);
+  return $r;
+end;
+/

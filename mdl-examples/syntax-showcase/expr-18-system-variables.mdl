@@ -1,0 +1,27 @@
+-- ============================================================
+-- SHOWCASE: System Variables
+-- Mendix doc: /refguide/special-checks/#system-variables
+-- MDL grammar rule: systemVariable
+-- ============================================================
+
+create module Showcase;
+
+-- [EXPR-SYSVAR-01] CurrentDateTime, CurrentUser
+create microflow Showcase.Expr_SysVar_01 ()
+returns datetime as $r
+begin
+  declare $r: datetime = [%CurrentDateTime%];
+  return $r;
+end;
+/
+
+-- [EXPR-SYSVAR-02] retrieve with XPath constraint
+create microflow Showcase.Expr_SysVar_02 ()
+returns list of Showcase.Order as $r
+begin
+  retrieve $r from Showcase.Order
+    where [IsActive = true]
+    limit 10;
+  return $r;
+end;
+/

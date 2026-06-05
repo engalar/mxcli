@@ -1,0 +1,25 @@
+-- ============================================================
+-- SHOWCASE: length() — String and List
+-- Mendix doc: /refguide/length-function-calls/
+-- MDL grammar rule: functionCallExpression
+-- ============================================================
+
+create module Showcase;
+
+-- [EXPR-LEN-01] length of string
+create microflow Showcase.Expr_Len_01 ($s: string)
+returns integer as $r
+begin
+  declare $r: integer = length($s);
+  return $r;
+end;
+/
+
+-- [EXPR-LEN-02] list empty check
+create microflow Showcase.Expr_Len_02 ($products: list of Showcase.Product)
+returns boolean as $r
+begin
+  declare $r: boolean = $products = empty;
+  return $r;
+end;
+/

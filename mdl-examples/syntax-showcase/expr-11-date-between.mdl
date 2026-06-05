@@ -1,0 +1,25 @@
+-- ============================================================
+-- SHOWCASE: Date Between Functions
+-- Mendix doc: /refguide/date-range-function-calls/
+-- MDL grammar rule: functionCallExpression
+-- ============================================================
+
+create module Showcase;
+
+-- [EXPR-DATE-BTW-01] daysBetween, weeksBetween, monthsBetween, yearsBetween
+create microflow Showcase.Expr_DateBetween_01 ($from: datetime, $to: datetime)
+returns integer as $r
+begin
+  declare $r: integer = daysBetween($from, $to);
+  return $r;
+end;
+/
+
+-- [EXPR-DATE-BTW-02] hoursBetween, minutesBetween, secondsBetween
+create microflow Showcase.Expr_DateBetween_02 ($from: datetime, $to: datetime)
+returns integer as $r
+begin
+  declare $r: integer = hoursBetween($from, $to);
+  return $r;
+end;
+/

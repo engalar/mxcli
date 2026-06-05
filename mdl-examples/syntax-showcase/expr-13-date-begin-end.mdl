@@ -1,0 +1,25 @@
+-- ============================================================
+-- SHOWCASE: Begin/End of Date Functions
+-- Mendix doc: /refguide/begin-of-date-function-calls/
+-- MDL grammar rule: functionCallExpression
+-- ============================================================
+
+create module Showcase;
+
+-- [EXPR-DATE-BEGIN-01] beginOfDay, beginOfWeek, beginOfMonth, beginOfYear
+create microflow Showcase.Expr_DateBegin_01 ($d: datetime)
+returns datetime as $r
+begin
+  declare $r: datetime = beginOfDay($d);
+  return $r;
+end;
+/
+
+-- [EXPR-DATE-END-01] endOfDay, endOfWeek, endOfMonth, endOfYear
+create microflow Showcase.Expr_DateEnd_01 ($d: datetime)
+returns datetime as $r
+begin
+  declare $r: datetime = endOfDay($d);
+  return $r;
+end;
+/

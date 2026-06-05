@@ -1,0 +1,83 @@
+-- ============================================================
+-- SHOWCASE SETUP: Module, Entities, Enumerations
+-- MDL grammar rule: createModule, createEnumeration, createEntity
+-- Purpose: Defines Showcase.* types referenced by all other showcase files.
+--          Run this first if executing against a real MPR.
+-- ============================================================
+
+create module Showcase;
+
+-- [SETUP-ENUM-01] Order status
+create enumeration Showcase.OrderStatus (
+  Pending 'Pending',
+  Active  'Active',
+  Closed  'Closed'
+);
+/
+
+-- [SETUP-ENUM-02] Priority
+create enumeration Showcase.Priority (
+  High   'High',
+  Medium 'Medium',
+  Low    'Low'
+);
+/
+
+-- [SETUP-ENT-01] Order (persistent)
+@position(100,100)
+create persistent entity Showcase.Order (
+  OrderNumber: string(50) not null,
+  TotalAmount: decimal,
+  Weight:      decimal,
+  Status:      enumeration(Showcase.OrderStatus),
+  Priority:    enumeration(Showcase.Priority),
+  OrderDate:   datetime,
+  IsActive:    boolean default true,
+  Quantity:    integer
+);
+/
+
+-- [SETUP-ENT-02] Product (persistent)
+@position(300,100)
+create persistent entity Showcase.Product (
+  Name:     string(200) not null,
+  Code:     string(50),
+  IsActive: boolean default true,
+  Price:    decimal
+);
+/
+
+-- [SETUP-ENT-03] Customer (persistent)
+@position(500,100)
+create persistent entity Showcase.Customer (
+  Name:  string(200) not null,
+  Email: string(200)
+);
+/
+
+-- [SETUP-ENT-04] Animal base (for split type showcase)
+@position(100,300)
+create persistent entity Showcase.Animal (
+  Name: string(200)
+);
+/
+
+-- [SETUP-ENT-05] Dog (extends Animal)
+@position(300,300)
+create persistent entity Showcase.Dog extends Showcase.Animal (
+  Breed: string(200)
+);
+/
+
+-- [SETUP-ENT-06] Cat (extends Animal)
+@position(500,300)
+create persistent entity Showcase.Cat extends Showcase.Animal (
+  Indoor: boolean default false
+);
+/
+
+-- [SETUP-ASSOC-01] Order_Product
+create association Showcase.Order_Product
+  from Showcase.Order to Showcase.Product
+  type reference;
+/

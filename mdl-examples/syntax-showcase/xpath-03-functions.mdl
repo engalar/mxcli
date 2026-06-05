@@ -1,0 +1,17 @@
+-- ============================================================
+-- SHOWCASE: XPath Functions
+-- Mendix doc: /refguide/xpath/
+-- MDL grammar rule: xpathConstraint (function calls)
+-- ============================================================
+
+create module Showcase;
+
+-- [XPATH-03] contains
+create microflow Showcase.XPath_Funcs_01 ($keyword: string)
+returns list of Showcase.Order as $r
+begin
+  retrieve $r from Showcase.Order
+    where [contains(OrderNumber, $keyword)];
+  return $r;
+end;
+/
