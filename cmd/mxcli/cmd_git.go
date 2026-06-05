@@ -4,7 +4,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os/exec"
+	"strings"
 )
 
 // gitExecCommand is a package-level variable so tests can replace it with a stub.
@@ -36,4 +38,29 @@ func buildMxMetadata(mendixVersion, mprFormatVersion string) string {
 	}
 	b, _ := json.Marshal(m) // json.Marshal never returns error for this struct
 	return string(b)        // no trailing newline — json.Marshal doesn't add one
+}
+
+// hashObjectAndAddNote writes metadata as a git blob and attaches it as a
+// mx_metadata note on the given commit SHA. Uses git hash-object to create
+// a blob without a trailing newline (libgit2 compatibility), then git notes
+// add to associate it. If a note already exists, retries with -f.
+func hashObjectAndAddNote(commitSHA, metadata string) error {
+	// Step 1: write blob
+	hashCmd := gitExecCommand("git", "hash-object", "-w", "--stdin")
+	hashCmd.Stdin = strings.NewReader(metadata)
+	out, err := hashCmd.Output()
+	if err != nil {
+		return fmt.Errorf("git hash-object: %w", err)
+	}
+	blobHash := strings.TrimSpace(string(out))
+
+	// Step 2: associate note (no -f first, then retry with -f if note exists)
+	addCmd := gitExecCommand("git", "notes", "--ref=mx_metadata", "add", "-C", blobHash, commitSHA)
+	if err := addCmd.Run(); err != nil {
+		addCmd = gitExecCommand("git", "notes", "--ref=mx_metadata", "add", "-f", "-C", blobHash, commitSHA)
+		if err := addCmd.Run(); err != nil {
+			return fmt.Errorf("git notes add: %w", err)
+		}
+	}
+	return nil
 }
