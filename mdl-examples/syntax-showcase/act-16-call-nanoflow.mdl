@@ -1,0 +1,25 @@
+-- ============================================================
+-- SHOWCASE: Call Nanoflow Activity
+-- Mendix doc: /refguide/nanoflow-call/
+-- MDL grammar rule: callNanoflowStatement
+-- ============================================================
+
+create module Showcase;
+
+create nanoflow Showcase.NF_Target ($name: string)
+returns string as $out
+begin
+  declare $out: string = $name;
+  return $out;
+end;
+/
+
+-- [NF-CALL-01] 有返回值
+create microflow Showcase.Act_NanoCall_01 ()
+returns string as $r
+begin
+  declare $r: string = empty;
+  $r = call nanoflow Showcase.NF_Target (name = 'hello');
+  return $r;
+end;
+/

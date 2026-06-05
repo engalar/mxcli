@@ -1,0 +1,28 @@
+-- ============================================================
+-- SHOWCASE: Call Web Service Activity
+-- Mendix doc: /refguide/call-web-service-action/
+-- MDL grammar rule: callWebServiceStatement
+-- Syntax: [$Var =] CALL WEB SERVICE <ref> (OPERATION <ref>)?
+--         (SEND MAPPING <ref>)? (RECEIVE MAPPING <ref>)? (TIMEOUT expr)?
+-- ============================================================
+
+create module Showcase;
+
+-- [ACT-WS-01] call web service（基础形式）
+create microflow Showcase.Act_WS_01 ()
+returns Nothing
+begin
+  call web service Showcase.MyWebService operation Showcase.GetOrder;
+end;
+/
+
+-- [ACT-WS-02] call web service + send/receive mapping
+create microflow Showcase.Act_WS_02 ($order: Showcase.Order)
+returns Nothing
+begin
+  call web service Showcase.MyWebService
+    operation Showcase.SubmitOrder
+    send mapping Showcase.OrderExportMapping
+    receive mapping Showcase.OrderImportMapping;
+end;
+/

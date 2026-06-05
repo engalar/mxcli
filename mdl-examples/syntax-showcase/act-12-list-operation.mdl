@@ -1,0 +1,27 @@
+-- ============================================================
+-- SHOWCASE: List Operations
+-- Mendix doc: /refguide/list-operations/
+-- MDL grammar rule: listOperationStatement
+-- ============================================================
+
+create module Showcase;
+
+-- [ACT-LISTOP-01] HEAD (first item)
+create microflow Showcase.Act_ListOp_01 ($products: list of Showcase.Product)
+returns Showcase.Product as $r
+begin
+  declare $r: Showcase.Product = empty;
+  $r = head($products);
+  return $r;
+end;
+/
+
+-- [ACT-LISTOP-02] TAIL (all but first)
+create microflow Showcase.Act_ListOp_02 ($products: list of Showcase.Product)
+returns list of Showcase.Product as $r
+begin
+  declare $r: list of Showcase.Product = empty;
+  $r = tail($products);
+  return $r;
+end;
+/

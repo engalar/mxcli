@@ -1,0 +1,37 @@
+-- ============================================================
+-- SHOWCASE: Aggregate List
+-- Mendix doc: /refguide/aggregate-list/
+-- MDL grammar rule: aggregateListStatement
+-- ============================================================
+
+create module Showcase;
+
+-- [ACT-AGG-01] count
+create microflow Showcase.Act_Agg_01 ($products: list of Showcase.Product)
+returns integer as $r
+begin
+  declare $r: integer = 0;
+  $r = count($products);
+  return $r;
+end;
+/
+
+-- [ACT-AGG-02] sum
+create microflow Showcase.Act_Agg_02 ($products: list of Showcase.Product)
+returns decimal as $r
+begin
+  declare $r: decimal = 0;
+  $r = sum($products/Price);
+  return $r;
+end;
+/
+
+-- [ACT-AGG-03] avg, min, max
+create microflow Showcase.Act_Agg_03 ($products: list of Showcase.Product)
+returns decimal as $r
+begin
+  declare $r: decimal = 0;
+  $r = avg($products/Price);
+  return $r;
+end;
+/

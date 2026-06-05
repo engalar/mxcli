@@ -1,0 +1,34 @@
+-- ============================================================
+-- SHOWCASE: Entity DDL
+-- MDL grammar rule: createEntityStatement
+-- ============================================================
+
+create module Showcase;
+
+-- [DDL-ENT-01] 所有数据类型
+create persistent entity Showcase.AllTypes (
+  A_String:   string(200),
+  A_Integer:  integer,
+  A_Decimal:  decimal,
+  A_Boolean:  boolean default false,
+  A_DateTime: datetime,
+  A_Long:     long,
+  A_HashStr:  hashedstring,
+  A_Enum:     enumeration(Showcase.OrderStatus),
+  A_AutoNum:  autonumber default 1
+);
+/
+
+-- [DDL-ENT-02] non-persistent entity
+create non-persistent entity Showcase.ImportResult (
+  TotalCount: integer,
+  ErrorCount: integer,
+  Message:    string(500)
+);
+/
+
+-- [DDL-ENT-03] entity extends（继承）
+create persistent entity Showcase.PremiumProduct extends Showcase.Product (
+  DiscountRate: decimal
+);
+/

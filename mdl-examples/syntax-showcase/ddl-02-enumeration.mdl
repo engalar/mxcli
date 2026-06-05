@@ -1,0 +1,19 @@
+-- ============================================================
+-- SHOWCASE: Enumeration DDL
+-- MDL grammar rule: createEnumerationStatement
+-- ============================================================
+
+create module Showcase;
+
+-- [DDL-ENUM-01] 含 doc comment 的枚举
+create enumeration Showcase.ShipmentStatus (
+  /** Awaiting pickup */
+  Pending   'Pending',
+  /** In transit to destination */
+  InTransit 'In Transit',
+  /** Delivered to customer */
+  Delivered 'Delivered',
+  /** Returned to sender */
+  Returned  'Returned'
+);
+/

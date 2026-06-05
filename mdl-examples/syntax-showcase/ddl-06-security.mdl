@@ -1,0 +1,28 @@
+-- ============================================================
+-- SHOWCASE: Security DDL (grant/revoke)
+-- MDL grammar rule: grantEntityAccessStatement, grantMicroflowAccessStatement,
+--                   grantPageAccessStatement, revoke*
+-- ============================================================
+
+create module Showcase;
+
+-- [DDL-SEC-01] grant entity access (role on entity with CRUD rights)
+grant Showcase.User on Showcase.Order (read *, create);
+
+-- [DDL-SEC-02] grant entity access with member-level read/write
+grant Showcase.Admin on Showcase.Product (read *, write *, create, delete);
+
+-- [DDL-SEC-03] grant entity access with XPath constraint
+grant Showcase.User on Showcase.Order (read *) where '[Showcase.Order_Customer = $currentUser]';
+
+-- [DDL-SEC-04] grant microflow execute access
+grant execute on microflow Showcase.Annotated_MF to Showcase.User;
+
+-- [DDL-SEC-05] grant page view access
+grant view on page Showcase.OrderOverview to Showcase.User;
+
+-- [DDL-SEC-06] revoke entity access
+revoke Showcase.Guest on Showcase.Order;
+
+-- [DDL-SEC-07] revoke microflow execute access
+revoke execute on microflow Showcase.Annotated_MF from Showcase.User;

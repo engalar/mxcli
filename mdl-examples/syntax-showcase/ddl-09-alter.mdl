@@ -1,0 +1,28 @@
+-- ============================================================
+-- SHOWCASE: ALTER DDL operations
+-- MDL grammar rule: alterEntityStatement / alterEntityAction
+-- ============================================================
+
+create module Showcase;
+
+-- 前提：entity to alter
+create persistent entity Showcase.AlterTarget (
+  Name: string(200)
+);
+/
+
+-- [DDL-ALTER-01] alter entity add attribute
+alter entity Showcase.AlterTarget
+  add attribute Email: string(200);
+
+-- [DDL-ALTER-02] alter entity drop attribute
+alter entity Showcase.AlterTarget
+  drop attribute Email;
+
+-- [DDL-ALTER-03] alter entity rename attribute
+alter entity Showcase.AlterTarget
+  rename attribute Name to FullName;
+
+-- [DDL-ALTER-04] alter entity modify attribute type
+alter entity Showcase.AlterTarget
+  modify attribute FullName: string(500);

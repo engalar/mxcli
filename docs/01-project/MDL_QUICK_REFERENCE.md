@@ -259,12 +259,14 @@ authentication basic, session
 | Color | `@color Green` | Background color (before activity) |
 | Annotation | `@annotation 'text'` | Visual note attached to next activity |
 | Free annotation | `@annotation 'text'` before `@position(...)` | Free-floating visual note preserved by order |
-| IF | `if condition then ... [else ...] end if;` | |
-| Enum split | `case $Var when Value then ... end case;` | Enumeration decision branches |
-| Type split | `split type $Var case Module.Entity ... end split;` | Runtime specialization branches |
+| IF | `if cond { body } elsif cond { body } else { body }` | 兼容：`if cond then ... end if`. `then` 不跟 `{` |
+| Enum split | `case $Var { when Value { body } else { body } }` | 兼容：`case $Var when Value then ... end case` |
+| Type split | `split type $Var { case Module.Entity { body } else { body } }` | 兼容：`split type $Var case Module.Entity ... end split` |
 | Cast | `cast $SpecificVar;` | Downcast inside a type split branch |
-| LOOP | `loop $item in $list begin ... end loop;` | FOR EACH over list |
-| WHILE | `while condition begin ... end while;` | Condition-based loop |
+| LOOP | `loop $item in $list { body }` | 兼容：`loop $item in $list begin ... end loop` |
+| WHILE | `while cond { body }` | 兼容：`while cond begin ... end while` |
+| Declare | `declare $x: Type [= expr]` | 兼容：`declare $x Type [= expr]` |
+| Assign | `$x = expr` | 兼容：`set $x = expr` |
 | Return | `return $value;` | Required at end of every flow path |
 | Execute DB query | `$Result = execute database query Module.Conn.Query;` | 3-part name; supports DYNAMIC, params, CONNECTION override |
 | Import mapping | `[$Var =] import from mapping Module.IMM($SourceVar);` | Apply import mapping to string variable |

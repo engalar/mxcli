@@ -1,0 +1,25 @@
+-- ============================================================
+-- SHOWCASE: Translation Commands
+-- MDL grammar rule: translateStatement, showOrList SUPPORTED LANGUAGES,
+--                   DESCRIBE TRANSLATIONS
+-- ============================================================
+
+create module Showcase;
+
+-- [DDL-TRANS-01] list supported languages
+list supported languages;
+
+-- [DDL-TRANS-02] describe translatable fields of a document
+describe translations Showcase.OrderOverview;
+
+-- [DDL-TRANS-03] describe translatable fields in a specific language
+describe translations Showcase.OrderOverview in zh_CN;
+
+-- [DDL-TRANS-04] translate a page title + widget caption
+translate page Showcase.OrderOverview in zh_CN
+  set title = '订单总览';
+
+-- [DDL-TRANS-05] translate enumeration value captions
+translate enumeration Showcase.ShipmentStatus in zh_CN
+  set Pending.caption = '待处理',
+      Delivered.caption = '已送达';

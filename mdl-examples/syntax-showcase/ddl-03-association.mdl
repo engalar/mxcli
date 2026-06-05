@@ -1,0 +1,25 @@
+-- ============================================================
+-- SHOWCASE: Association DDL
+-- MDL grammar rule: createAssociationStatement
+-- ============================================================
+
+create module Showcase;
+
+-- [DDL-ASSOC-01] reference（多对一）
+create association Showcase.Order_Customer
+  from Showcase.Order to Showcase.Customer
+  type reference;
+/
+
+-- [DDL-ASSOC-02] reference_set（多对多）
+create association Showcase.Order_Tags
+  from Showcase.Order to Showcase.Product
+  type reference_set;
+/
+
+-- [DDL-ASSOC-03] 1-to-1
+create association Showcase.Order_Invoice
+  from Showcase.Order to Showcase.Product
+  type reference
+  owner both;
+/

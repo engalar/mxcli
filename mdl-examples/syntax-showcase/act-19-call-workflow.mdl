@@ -1,0 +1,31 @@
+-- ============================================================
+-- SHOWCASE: Workflow Activities
+-- Mendix doc: /refguide/workflow-activities/
+-- MDL grammar rule: callWorkflowStatement, notifyWorkflowStatement
+-- ============================================================
+
+create module Showcase;
+
+-- [ACT-WF-01] call workflow
+create microflow Showcase.Act_Wf_Call_01 ($order: Showcase.Order)
+returns Nothing
+begin
+  call workflow Showcase.ReviewWorkflow (Order = $order);
+end;
+/
+
+-- [ACT-WF-02] notify workflow（基本形式，无 ACTIVITY）
+create microflow Showcase.Act_Wf_Notify_01 ($wf: System.Workflow)
+returns Nothing
+begin
+  notify workflow $wf;
+end;
+/
+
+-- [ACT-WF-03] notify workflow + ACTIVITY 子句（commit 25f4b8d7d 新增）
+create microflow Showcase.Act_Wf_Notify_02 ($wf: System.Workflow)
+returns Nothing
+begin
+  notify workflow $wf activity Showcase.ReviewWorkflow;
+end;
+/

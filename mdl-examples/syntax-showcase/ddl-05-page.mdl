@@ -1,0 +1,25 @@
+-- ============================================================
+-- SHOWCASE: Page DDL (minimal syntax)
+-- MDL grammar rule: createPageStatement
+-- ============================================================
+
+create module Showcase;
+
+-- [DDL-PAGE-01] 最小 page（元数据 () + body {}）
+create page Showcase.OrderOverview
+(
+  title:  'Orders',
+  layout: Atlas_Core.Atlas_Default,
+  url:    'OrderOverview'
+)
+{
+  layoutgrid grid {
+    row row1 {
+      column col1 (desktopwidth: 12) {
+        datagrid OrderGrid (datasource: database Showcase.Order) {
+          column colId (attribute: A_Integer, caption: 'Id')
+        }
+      }
+    }
+  }
+}

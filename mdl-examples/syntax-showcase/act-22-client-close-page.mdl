@@ -1,0 +1,15 @@
+-- ============================================================
+-- SHOWCASE: Close Page Activity
+-- Mendix doc: /refguide/close-page/
+-- MDL grammar rule: closePageStatement
+-- ============================================================
+
+create module Showcase;
+
+-- [ACT-CLOSE-01]
+create microflow Showcase.Act_ClosePage_01 ()
+returns Nothing
+begin
+  close page;
+end;
+/

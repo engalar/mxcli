@@ -1,0 +1,23 @@
+-- ============================================================
+-- SHOWCASE: Show Page Activity
+-- Mendix doc: /refguide/show-page/
+-- MDL grammar rule: showPageStatement
+-- ============================================================
+
+create module Showcase;
+
+-- [ACT-PAGE-01] show page（不带参数）
+create microflow Showcase.Act_ShowPage_01 ()
+returns Nothing
+begin
+  show page Showcase.OrderOverview;
+end;
+/
+
+-- [ACT-PAGE-02] show page（带参数）
+create microflow Showcase.Act_ShowPage_02 ($order: Showcase.Order)
+returns Nothing
+begin
+  show page Showcase.OrderDetail (Order: $order);
+end;
+/

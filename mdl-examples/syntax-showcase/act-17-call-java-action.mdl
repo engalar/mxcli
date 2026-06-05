@@ -1,0 +1,45 @@
+-- ============================================================
+-- SHOWCASE: Java Action — Create + Call
+-- Mendix doc: /refguide/java-actions/
+-- MDL grammar rule: createJavaActionStatement, callJavaActionStatement
+-- ============================================================
+
+create module Showcase;
+
+-- [ACT-JAVA-01] 纯接口声明（无源块，运行时从 .java 文件加载）
+create or modify java action Showcase.JA_Hash (
+  PlainText: string
+) returns string;
+
+-- [ACT-JAVA-02] 含命名源块（imports/code/extra 用 $$ ... $$ 包裹）
+create or modify java action Showcase.JA_Trim (
+  Input: string
+) returns string
+imports $$
+import java.util.Objects;
+$$
+code $$
+return Objects.toString(Input, "").trim();
+$$
+extra $$
+private static boolean isEmpty(String s) { return s == null || s.isEmpty(); }
+$$
+;
+
+-- [ACT-JAVA-03] call java action（有返回值）
+create microflow Showcase.Act_JavaCall_01 ($text: string)
+returns string as $result
+begin
+  declare $result: string = empty;
+  $result = call java action Showcase.JA_Trim (Input = $text);
+  return $result;
+end;
+/
+
+-- [ACT-JAVA-04] call java action（无返回值 + on error continue）
+create microflow Showcase.Act_JavaCall_02 ($text: string)
+returns Nothing
+begin
+  call java action Showcase.JA_Trim (Input = $text) on error continue;
+end;
+/

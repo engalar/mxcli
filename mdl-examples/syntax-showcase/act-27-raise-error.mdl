@@ -1,0 +1,26 @@
+-- ============================================================
+-- SHOWCASE: raise error & throw statements
+-- MDL grammar rule: raiseErrorStatement, throwStatement
+-- Note: raise error (no args) terminates to Mendix ErrorEvent.
+--       throw expression raises with a message string.
+-- ============================================================
+
+create module Showcase;
+
+-- [ACT-ERR-01] raise error（无参数，终止到 ErrorEvent）
+create microflow Showcase.Act_RaiseError_01 ($ok: boolean)
+returns Nothing
+begin
+  if not($ok) then
+    raise error;
+  end if;
+end;
+/
+
+-- [ACT-ERR-02] throw（带字符串表达式）
+create microflow Showcase.Act_Throw_01 ($msg: string)
+returns Nothing
+begin
+  throw $msg;
+end;
+/

@@ -1,0 +1,27 @@
+-- ============================================================
+-- SHOWCASE: Constants DDL
+-- MDL grammar rule: createConstantStatement
+-- ============================================================
+
+create module Showcase;
+
+-- [DDL-CONST-01] 所有数据类型的常量
+create constant Showcase.MaxRetries
+type integer
+default 3;
+/
+
+create constant Showcase.ApiBaseUrl
+type string
+default 'https://api.example.com';
+/
+
+create constant Showcase.TaxRate
+type decimal
+default 0.21;
+/
+
+create constant Showcase.FeatureEnabled
+type boolean
+default true;
+/

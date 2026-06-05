@@ -1,0 +1,17 @@
+-- ============================================================
+-- SHOWCASE: Workflow Jump To Activities (dev branch)
+-- Mendix doc: /refguide/generate-jump-to-options/
+-- MDL grammar rule: generateJumpToStatement, applyJumpToStatement
+-- ============================================================
+
+create module Showcase;
+
+-- [ACT-JUMP-01] generate jump to options
+create microflow Showcase.Act_Jump_01 ($wf: System.Workflow)
+returns Nothing
+begin
+  declare $opts: System.WorkflowJumpToOption = empty;
+  $opts = generate jump to options for $wf as Showcase.ReviewWorkflow;
+  apply jump to option $opts;
+end;
+/

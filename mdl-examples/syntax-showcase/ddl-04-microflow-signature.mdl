@@ -1,0 +1,41 @@
+-- ============================================================
+-- SHOWCASE: Microflow Signature (all parameter types + reset layout)
+-- MDL grammar rule: createMicroflowStatement (signature portion)
+-- ============================================================
+
+create module Showcase;
+
+-- [DDL-SIG-01] 全参数类型 microflow 签名
+create microflow Showcase.Sig_AllParams (
+  $order:    Showcase.Order,
+  $name:     string,
+  $count:    integer,
+  $amount:   decimal,
+  $flag:     boolean,
+  $date:     datetime,
+  $products: list of Showcase.Product
+) returns string as $out
+folder 'Showcase'
+begin
+  declare $out: string = 'ok';
+  return $out;
+end;
+/
+
+-- [DDL-SIG-02] reset layout（清除活动位置）
+create microflow Showcase.Sig_ResetLayout ()
+returns Nothing
+reset layout
+begin
+  return;
+end;
+/
+
+-- [DDL-SIG-03] nanoflow 签名
+create nanoflow Showcase.NF_Sig ($name: string)
+returns string as $r
+begin
+  declare $r: string = $name;
+  return $r;
+end;
+/

@@ -204,6 +204,27 @@ create rule Shop.ProcessOrder (
 -- Don't reuse it to mean property modification elsewhere unless established
 ```
 
+## Statement Block 语法（两种形式）
+
+MDL 语句块支持两种等价形式。`{}` 是**规范形式**，`BEGIN…END` 是**向后兼容形式**。
+
+**DESCRIBE 输出现状（Phase 1）**：
+- 微流/纳流 **body**（`begin...end`）：Phase 1 仍输出旧形式；Phase 2 再切换 `{}`
+- `split type`、`raise error`、`java action`：Stage 3.2.2（commit 7c0baba9f）已修复 describe 输出
+
+| 构造 | 规范形式（新） | 兼容形式（旧） |
+|------|--------------|--------------|
+| microflow/nanoflow body | `create microflow M.F () { ... }` | `create microflow M.F () begin ... end` |
+| if 语句 | `if cond { ... } elsif cond { ... } else { ... }` | `if cond then ... elsif cond then ... else ... end if` |
+| loop 语句 | `loop $x in $list { ... }` | `loop $x in $list begin ... end loop` |
+| while 语句 | `while cond { ... }` | `while cond begin ... end while` |
+| case 语句 | `case $x { when A { ... } else { ... } }` | `case $x when A then ... else ... end case` |
+| split type | `split type $x { case T { ... } }` | `split type $x case T ... end split` |
+| declare | `declare $x: Type = val` | `declare $x Type = val` |
+| 赋值 | `$x = expr` | `set $x = expr` |
+
+**关键区分**：`then`（不跟 `{`）= Mendix 官方条件值表达式（P0 保护，永不改变）。`{` = MDL Statement Layer 语句块。两者不可混用于同一 if 语句。
+
 ## Checklist
 
 Before merging any PR that adds new MDL syntax, verify:

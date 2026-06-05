@@ -392,6 +392,23 @@ check-mdl: build
 	done; \
 	exit $$FAILED
 
+# Syntax showcase: grammar coverage regression test (no MPR needed)
+test-showcase: build
+	@echo "=== Syntax showcase: grammar check ==="
+	@FAILED=0; \
+	for f in $$(find mdl-examples/syntax-showcase -name "*.mdl" | sort); do \
+		NAME=$$(basename "$$f"); \
+		if ./$(BUILD_DIR)/$(BINARY_NAME) check "$$f" > /dev/null 2>&1; then \
+			echo "OK: $$NAME"; \
+		else \
+			echo "FAIL: $$NAME"; \
+			./$(BUILD_DIR)/$(BINARY_NAME) check "$$f" 2>&1 | grep -v "^WARNING"; \
+			FAILED=1; \
+		fi; \
+	done; \
+	echo "Passed: $$(find mdl-examples/syntax-showcase -name '*.mdl' | wc -l) files"; \
+	exit $$FAILED
+
 # Run integration tests (requires mx binary / mxbuild)
 test-integration:
 	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m ./...
