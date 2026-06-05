@@ -40,6 +40,10 @@
 --           excluded from describe roundtrip pending formatter implementation.
 -- Note    : TabPage/GroupBox Caption BSON type fixed: genSimpleLabel (Forms$ClientTemplate)
 --           replaced with genSimpleText (Texts$Text); StorageLoadException on mx check resolved.
+-- Note    : ACCESS-001/002/003 hints added to mxcli check --references; role→entity
+--           permission gaps now auto-diagnosed with MDL fix suggestions.
+-- Note    : page model now extracts microflow/nanoflow datasource refs (MicroflowSettings.
+--           Microflow / Nanoflow by-name fields) so access analysis sees MF-sourced DataViews.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
