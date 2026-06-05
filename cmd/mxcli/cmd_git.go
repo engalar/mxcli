@@ -5,10 +5,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os/exec"
 	"strings"
 
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
+	"github.com/spf13/cobra"
 )
 
 // gitExecCommand is a package-level variable so tests can replace it with a stub.
@@ -146,4 +148,99 @@ func scanVersionFromNotes() string {
 		}
 	}
 	return ""
+}
+
+// ──────────────────────────────────────────────
+// Cobra command group
+// ──────────────────────────────────────────────
+
+var gitCmd = &cobra.Command{
+	Use:   "git",
+	Short: "Mendix-aware git helpers (commit, doctor, fix)",
+	Long: `Git helpers that maintain Mendix Studio Pro compatibility.
+
+Studio Pro requires mx_metadata git notes on every commit and specific
+git config keys. These commands ensure AI agents and native-git users
+don't break Studio Pro's Version Control panel.
+
+Commands:
+  commit      Commit changes and automatically add mx_metadata note
+  notes push  Push mx_metadata notes to remote
+  doctor      Diagnose git/Mendix compatibility issues
+  fix         Repair missing or malformed mx_metadata notes
+`,
+}
+
+var gitCommitCmd = &cobra.Command{
+	Use:   "commit",
+	Short: "Commit and auto-add mx_metadata git note",
+	Long: `Run 'git commit' with all provided flags, then automatically write
+an mx_metadata git note on the new commit. This makes commits from
+AI agents or native git clients compatible with Mendix Studio Pro.
+
+After committing, run:
+  mxcli git notes push
+
+Examples:
+  mxcli git commit -m "Add OrderItem entity"
+  mxcli git commit -a -m "Fix microflow logic"
+  mxcli git commit --amend
+  mxcli git commit -p app.mpr -m "Update entity"
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		versionFlag, _ := cmd.Flags().GetString("version")
+		projectPath, _ := cmd.Flags().GetString("project")
+		return runGitCommit(args, versionFlag, projectPath, cmd.OutOrStdout())
+	},
+}
+
+func init() {
+	gitCommitCmd.Flags().String("version", "", "Mendix version number (e.g. 10.6.0.0), skips MPR detection")
+	gitCmd.AddCommand(gitCommitCmd)
+}
+
+// runGitCommit executes git commit with the given args, then adds mx_metadata note.
+// It is a separate function (not inline in RunE) so tests can call it directly.
+// The out parameter is an io.Writer: strings.Builder (tests) and
+// cmd.OutOrStdout() (runtime) both satisfy it.
+func runGitCommit(gitArgs []string, versionFlag, projectPath string, out io.Writer) error {
+	// Build git commit command, forwarding all user-supplied args.
+	commitArgs := append([]string{"commit"}, gitArgs...)
+	commitCmd := gitExecCommand("git", commitArgs...)
+	commitCmd.Stdout = out
+	commitCmd.Stderr = out
+	if err := commitCmd.Run(); err != nil {
+		return fmt.Errorf("git commit: %w", err)
+	}
+
+	// Get new commit SHA
+	shaCmd := gitExecCommand("git", "rev-parse", "HEAD")
+	shaOut, err := shaCmd.Output()
+	if err != nil {
+		return fmt.Errorf("git rev-parse HEAD: %w", err)
+	}
+	commitSHA := strings.TrimSpace(string(shaOut))
+
+	// Detect Mendix version
+	mendixVersion, mprFmtVersion, err := detectMendixVersion(versionFlag, projectPath)
+	if err != nil {
+		fmt.Fprintf(out, "\n[mendix] WARNING: %v\n", err)
+		return nil // commit succeeded; note failure is non-fatal but warned
+	}
+
+	// Build and write note
+	metadata := buildMxMetadata(mendixVersion, mprFmtVersion)
+	if err := hashObjectAndAddNote(commitSHA, metadata); err != nil {
+		fmt.Fprintf(out, "\n[mendix] WARNING: could not write mx_metadata note: %v\n", err)
+		return nil
+	}
+
+	shortSHA := commitSHA
+	if len(shortSHA) > 7 {
+		shortSHA = shortSHA[:7]
+	}
+	fmt.Fprintf(out,
+		"\n[mendix] mx_metadata note added to %s (Mendix %s)\n\n  Push notes when ready:\n    mxcli git notes push\n\n  Or push code + notes together:\n    git push && mxcli git notes push\n",
+		shortSHA, mendixVersion)
+	return nil
 }

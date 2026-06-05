@@ -180,3 +180,65 @@ func TestDetectMendixVersion_NoVersionFound_Error(t *testing.T) {
 		t.Fatal("expected error when version cannot be detected")
 	}
 }
+
+func TestGitCommitWrapper_AddsNoteAfterCommit(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	const commitSHA = "7fa3b2cabc1234567fa3b2cabc1234567fa3b2ca"
+
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		switch {
+		case contains(args, "commit"):
+			return exec.Command("sh", "-c", `echo '[main 7fa3b2c] Test commit'`)
+		case contains(args, "rev-parse"):
+			return exec.Command("sh", "-c", "printf '"+commitSHA+"'")
+		case contains(args, "hash-object"):
+			return exec.Command("sh", "-c", "printf 'blobhash123blobhash123blobhash123blobhash'")
+		case contains(args, "notes"):
+			return exec.Command("sh", "-c", "exit 0")
+		}
+		return exec.Command("sh", "-c", "exit 1")
+	}
+
+	var buf strings.Builder
+	err := runGitCommit([]string{"-m", "Test commit"}, "10.6.0.0", "", &buf)
+	if err != nil {
+		t.Fatalf("runGitCommit returned error: %v", err)
+	}
+
+	out := buf.String()
+	// Output must contain note confirmation
+	if !strings.Contains(out, "mx_metadata note added") {
+		t.Errorf("output missing note confirmation, got:\n%s", out)
+	}
+	// Output must contain next-step hint
+	if !strings.Contains(out, "mxcli git notes push") {
+		t.Errorf("output missing next-step hint, got:\n%s", out)
+	}
+}
+
+func TestGitCommitWrapper_GitFails_NoNote(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	noteAdded := false
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		if contains(args, "commit") {
+			return exec.Command("sh", "-c", "exit 1") // git commit fails
+		}
+		if contains(args, "notes") {
+			noteAdded = true
+		}
+		return exec.Command("sh", "-c", "exit 0")
+	}
+
+	var buf strings.Builder
+	err := runGitCommit([]string{"-m", "bad"}, "10.6.0.0", "", &buf)
+	if err == nil {
+		t.Fatal("expected error when git commit fails")
+	}
+	if noteAdded {
+		t.Error("must not write note when git commit fails")
+	}
+}
