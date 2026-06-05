@@ -3,41 +3,34 @@
 -- Mendix doc: /refguide/if-expressions/
 -- MDL grammar rule: ifThenElseExpression (MDLSettings.g4)
 -- IMPORTANT: This is the Mendix official EXPRESSION form (returns a value).
---            It is NOT a control-flow statement.
---
--- KNOWN GAP (reported to grammar agent 2026-06-05):
---   The inline value form `declare $x: T = if C then A else B;` is currently
---   REJECTED by `mxcli check` ("Unexpected token after expression"), even though
---   ifThenElseExpression exists in the grammar and exprcheck parses it cleanly in
---   isolation. The MDL declare/return expression path terminates before `if`.
---   Until that is fixed, the equivalent computation is shown via the if-STATEMENT
---   control-flow form below so this showcase file passes `check`.
+--            It is NOT a control-flow statement. 'then'/'else' are P0-protected.
+--            Do NOT confuse with the {} control-flow if statement.
 -- ============================================================
 
 create module Showcase;
 
--- [EXPR-IF-01] 条件计算费用（if-statement 等价形式，待 inline if-expr 修复后切换）
+-- [EXPR-IF-01] 内联条件值表达式（官方语法，P0 保护）
 create microflow Showcase.Expr_IfExpr_01 ($weight: decimal)
 returns decimal as $fee
 begin
-  declare $fee: decimal = 5.00;
-  if $weight < 1.00 then
-    set $fee = 0.00;
-  end if;
+  declare $fee: decimal = if $weight < 1.00 then 0.00 else 5.00;
   return $fee;
 end;
 /
 
--- [EXPR-IF-02] 嵌套条件分级（if-statement 等价形式）
+-- [EXPR-IF-02] 嵌套 if 表达式（inline）
 create microflow Showcase.Expr_IfExpr_02 ($score: integer)
 returns string as $grade
 begin
-  declare $grade: string = 'C';
-  if $score >= 90 then
-    set $grade = 'A';
-  elsif $score >= 80 then
-    set $grade = 'B';
-  end if;
+  declare $grade: string = if $score >= 90 then 'A' else if $score >= 80 then 'B' else 'C';
   return $grade;
+end;
+/
+
+-- [EXPR-IF-03] if 表达式在 return 上下文
+create microflow Showcase.Expr_IfExpr_03 ($active: boolean)
+returns string as $r
+begin
+  return if $active then 'active' else 'inactive';
 end;
 /

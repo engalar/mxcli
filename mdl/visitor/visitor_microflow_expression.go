@@ -34,7 +34,15 @@ func buildExpression(ctx parser.IExpressionContext) ast.Expression {
 	if inner == nil {
 		return nil
 	}
-	return &ast.SourceExpr{Expression: inner, Source: exprCtx.GetText()}
+	// Use extractOriginalText to preserve whitespace in Source.
+	// GetText() strips all whitespace, which corrupts keyword-based operators
+	// like 'div', 'mod', and inline 'if...then...else' when the exprcheck
+	// parser re-lexes the source string.
+	source := extractOriginalText(exprCtx)
+	if source == "" {
+		source = exprCtx.GetText()
+	}
+	return &ast.SourceExpr{Expression: inner, Source: source}
 }
 
 // buildOrExpression handles OR expressions.
