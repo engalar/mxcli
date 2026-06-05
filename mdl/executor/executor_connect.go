@@ -17,15 +17,21 @@ func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 		}
 	}
 
-	if ctx.BackendFactory == nil {
+	if ctx.BackendFactory != nil {
+		b := ctx.BackendFactory()
+		if err := b.Connect(s.Path); err != nil {
+			return mdlerrors.NewBackend("connect", err)
+		}
+		ctx.Backend = b
+	} else if ctx.Backend != nil {
+		// Persistent backend (per-MPR daemon): Connect is a no-op on noOpConnectBackend.
+		if err := ctx.Backend.Connect(s.Path); err != nil {
+			return mdlerrors.NewBackend("connect", err)
+		}
+	} else {
 		return mdlerrors.NewBackend("connect", errors.New("no backend factory configured"))
 	}
-	b := ctx.BackendFactory()
-	if err := b.Connect(s.Path); err != nil {
-		return mdlerrors.NewBackend("connect", err)
-	}
 
-	ctx.Backend = b
 	ctx.MprPath = s.Path
 	ctx.Cache = &executorCache{} // Initialize fresh cache
 
@@ -62,15 +68,21 @@ func reconnect(ctx *ExecContext) error {
 	}
 
 	// Reopen connection
-	if ctx.BackendFactory == nil {
+	if ctx.BackendFactory != nil {
+		b := ctx.BackendFactory()
+		if err := b.Connect(ctx.MprPath); err != nil {
+			return mdlerrors.NewBackend("reconnect", err)
+		}
+		ctx.Backend = b
+	} else if ctx.Backend != nil {
+		// Persistent backend: Connect is a no-op on noOpConnectBackend.
+		if err := ctx.Backend.Connect(ctx.MprPath); err != nil {
+			return mdlerrors.NewBackend("reconnect", err)
+		}
+	} else {
 		return mdlerrors.NewBackend("reconnect", fmt.Errorf("no backend factory configured"))
 	}
-	b := ctx.BackendFactory()
-	if err := b.Connect(ctx.MprPath); err != nil {
-		return mdlerrors.NewBackend("reconnect", err)
-	}
 
-	ctx.Backend = b
 	ctx.Cache = &executorCache{} // Reset cache
 
 	// Reset project-scoped caches — file may have changed externally.
