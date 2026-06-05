@@ -4,6 +4,8 @@ package executor
 
 import (
 	"testing"
+
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 func TestAccessGap_SuggestedMDL_EntityRead(t *testing.T) {
@@ -69,4 +71,54 @@ func TestCollectEntityGrantsForRole(t *testing.T) {
 	if summary.canWrite {
 		t.Error("expected canWrite=false for HD.UserProfile")
 	}
+}
+
+func TestCollectWidgetEntities(t *testing.T) {
+	pm := &types.PageModel{
+		Widgets: []*types.WidgetNode{
+			{
+				Kind: types.WidgetDataView,
+				Name: "dvProfile",
+				DataSource: &types.DataSourceDef{
+					Kind:   types.DataSourceDatabase,
+					Entity: "HD.UserProfile",
+				},
+				Children: []*types.WidgetNode{
+					{Kind: types.WidgetTextBox, Name: "tbName", EntityAttr: "DisplayName"},
+				},
+			},
+		},
+	}
+	result := collectWidgetRefs(pm)
+	if !containsStr(result.entityQNs, "HD.UserProfile") {
+		t.Errorf("expected HD.UserProfile in entityQNs, got %v", result.entityQNs)
+	}
+}
+
+func TestCollectWidgetMFRefs(t *testing.T) {
+	pm := &types.PageModel{
+		Widgets: []*types.WidgetNode{
+			{
+				Kind: types.WidgetDataView,
+				Name: "dvProfile",
+				DataSource: &types.DataSourceDef{
+					Kind:      types.DataSourceMicroflow,
+					Reference: "HD.DS_GetMyProfile",
+				},
+			},
+		},
+	}
+	result := collectWidgetRefs(pm)
+	if !containsStr(result.directMFQNs, "HD.DS_GetMyProfile") {
+		t.Errorf("expected HD.DS_GetMyProfile in directMFQNs, got %v", result.directMFQNs)
+	}
+}
+
+func containsStr(ss []string, s string) bool {
+	for _, v := range ss {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }

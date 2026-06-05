@@ -5,6 +5,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
@@ -263,4 +264,93 @@ func buildPageModels(ctx *ExecContext) (map[string]*types.PageModel, error) {
 		result[pageQN] = pm
 	}
 	return result, nil
+}
+
+// widgetRefs holds entity QNs and direct MF QNs collected from a page's widget tree.
+type widgetRefs struct {
+	entityQNs   []string // entities used directly (datasource.Entity or page param)
+	directMFQNs []string // microflows directly callable from the page (datasource or button action)
+}
+
+// collectWidgetRefs walks the PageModel widget tree and collects entity QNs and
+// direct microflow QNs. "Direct" means the first microflow hop from the page.
+func collectWidgetRefs(pm *types.PageModel) widgetRefs {
+	seenEnt := make(map[string]bool)
+	seenMF := make(map[string]bool)
+
+	// Page params are entities directly visible to the page.
+	for _, p := range pm.Params {
+		if p.EntityName != "" {
+			seenEnt[p.EntityName] = true
+		}
+	}
+
+	var walkNode func(n *types.WidgetNode)
+	walkNode = func(n *types.WidgetNode) {
+		if n == nil {
+			return
+		}
+		// Datasource entity (database, parameter association).
+		if n.DataSource != nil {
+			if n.DataSource.Entity != "" {
+				seenEnt[n.DataSource.Entity] = true
+			}
+			// Microflow / nanoflow datasource.
+			if (n.DataSource.Kind == types.DataSourceMicroflow || n.DataSource.Kind == types.DataSourceNanoflow) &&
+				n.DataSource.Reference != "" {
+				seenMF[n.DataSource.Reference] = true
+			}
+		}
+		// Entity context provided by a dataview to its children.
+		if n.EntityCtx != "" {
+			seenEnt[n.EntityCtx] = true
+		}
+		// Button / action OnClick — microflow call.
+		if n.OnClick != "" && strings.Contains(n.OnClick, ".") {
+			seenMF[n.OnClick] = true
+		}
+
+		for _, child := range n.Children {
+			walkNode(child)
+		}
+		for _, f := range n.Footer {
+			walkNode(f)
+		}
+		// DataGrid content widgets.
+		if n.DataGrid != nil {
+			for _, col := range n.DataGrid.Columns {
+				for _, cw := range col.ContentWidgets {
+					walkNode(cw)
+				}
+			}
+			for _, cw := range n.DataGrid.ControlBar {
+				walkNode(cw)
+			}
+			for _, cw := range n.DataGrid.FilterWidgets {
+				walkNode(cw)
+			}
+		}
+		// Gallery content/filter widgets.
+		if n.Gallery != nil {
+			for _, cw := range n.Gallery.ContentWidgets {
+				walkNode(cw)
+			}
+			for _, cw := range n.Gallery.FilterWidgets {
+				walkNode(cw)
+			}
+		}
+	}
+
+	for _, w := range pm.Widgets {
+		walkNode(w)
+	}
+
+	refs := widgetRefs{}
+	for qn := range seenEnt {
+		refs.entityQNs = append(refs.entityQNs, qn)
+	}
+	for qn := range seenMF {
+		refs.directMFQNs = append(refs.directMFQNs, qn)
+	}
+	return refs
 }
