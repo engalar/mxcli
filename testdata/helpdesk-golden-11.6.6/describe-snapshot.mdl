@@ -934,10 +934,21 @@ create or modify microflow HD.DS_GetMyProfile ()
 returns UserProfile as $Profile
 begin
   @position(360,200)
-  retrieve $Profile from HD.UserProfile
+  retrieve $Me from System.User
       where id = '[%CurrentUser%]'
       limit 1;
-  return $Profile;
+  split type $Me
+  case HD.UserProfile
+    @position(690,200)
+    cast $Profile;
+    return $Profile;
+  case Administration.Account
+    return empty;
+  case System.User
+    return empty;
+  else
+    return empty;
+  end split;
 end;
 
 grant execute on microflow HD.DS_GetMyProfile to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
@@ -950,21 +961,26 @@ create or modify microflow HD.ACT_ChangePassword (
 )
 returns Boolean as $Success
 begin
+  @position(360,200)
+  declare $Success Boolean = false;
   if $Form/NewPassword = '' or $Form/NewPassword = empty then
-    @position(530,300)
+    @position(690,300)
     validation feedback $Form/NewPassword message 'New password is required.';
     return false;
   else
     if $Form/NewPassword != $Form/ConfirmPassword then
-      @position(900,300)
-      show message 'Passwords do not match.' type warning;
+      @position(1060,300)
+      validation feedback $Form/ConfirmPassword message 'Passwords do not match.';
       return false;
     else
-      @position(1100,200)
-      $Hashed = call java action HD.JA_HashPassword(PlainText = $Form/NewPassword);
       @position(1260,200)
+      $Hashed = call java action HD.JA_HashPassword(PlainText = $Form/NewPassword);
+      @position(1420,200)
+      set $Success = true
+      ;
+      @position(1580,200)
       show home page;
-      return true;
+      return $Success;
     end if;
   end if;
 end;
@@ -1140,6 +1156,7 @@ create or replace navigation Responsive
     menu '账户管理' (
       menu item '账户总览' page HD.Account_Overview;
       menu item '我的账户' page HD.ManageMyAccount;
+      menu item '修改密码' microflow HD.Nav_ChangePassword;
     );
     menu item '系统管理' page Administration.Account_Overview;
   )

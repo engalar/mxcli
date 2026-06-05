@@ -274,11 +274,11 @@ func (fb *flowBuilderGen) genActivityWrap(action element.Element, errorHandling 
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	if isEmptyCustomErrorHandlerGen(errorHandling) {
-		fb.registerEmptyCustomErrorHandlerWithSkipGen(id, errorHandling, outputVar)
-	}
-	// TODO Stage 3.2.3.h: emit non-empty error-handler bodies via
-	// finishCustomErrorHandlerGen → addErrorHandlerFlowGen.
+	// Stage 3.2.3.h: route all custom error handlers through finishCustomErrorHandlerGen.
+	// Empty body → registers handler for next normal-flow rejoin (via registerEmptyCustomErrorHandlerWithSkipGen).
+	// Non-empty body → emits error-handler flow + body activities (via addErrorHandlerFlowGen).
+	// CE0011 fires when ErrorHandlingType=Custom but no IsErrorHandler=true flow exists.
+	fb.finishCustomErrorHandlerGen(id, int(fb.posX-fb.spacing), errorHandling, outputVar)
 
 	return id
 }

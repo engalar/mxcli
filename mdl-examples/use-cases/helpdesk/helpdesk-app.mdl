@@ -1489,20 +1489,35 @@ create or modify non-persistent entity HD.PasswordForm (
 -- MARK: Account Management — Microflows
 
 -- R1: DS_GetMyProfile
--- Demonstrates: retrieve by ID using [%CurrentUser%] system token to return the
--- current user's specialized HD.UserProfile entity directly.
--- Note: split type + cast was the original design, but the Object Type Decision
--- in BSON requires configured flows for ALL known subtypes (CE0090/CE0089/CE0773);
--- direct retrieve from the specialized entity avoids this requirement entirely.
+-- New activities: split type (InheritanceSplitStatement) + cast (CastObjectStmt)
+-- Retrieves [%CurrentUser%] as System.User, splits by runtime type to HD.UserProfile,
+-- casts to $Profile, and returns it. Used as DataView datasource in HD.ManageMyAccount.
+-- Note: CE0090/CE0089/CE0773 were caused by a flowbuilder bug (InheritanceSplit BSON
+-- did not configure flows for all known subtypes). Fixed by adding NoCase flows for
+-- unmatched types and Administration.Account — see flowbuilder_control_split_gen.go.
 create or modify microflow HD.DS_GetMyProfile
   ()
   returns HD.UserProfile as $Profile
   folder 'Account'
 begin
-  retrieve $Profile from HD.UserProfile
+  retrieve $Me from System.User
     where [id = '[%CurrentUser%]']
     limit 1;
-  return $Profile;
+  -- Mendix Object Type Decision requires explicit flows for ALL known subtypes
+  -- of the split variable (CE0090). For System.User in this project:
+  --   HD.UserProfile (our custom subtype), Administration.Account (built-in subtype)
+  --   System.User (base type), else (null/empty fallback via InheritanceCase Value="")
+  split type $Me
+  case HD.UserProfile
+    cast $Profile;
+    return $Profile;
+  case Administration.Account
+    return empty;
+  case System.User
+    return empty;
+  else
+    return empty;
+  end split;
 end;
 /
 
@@ -1515,26 +1530,33 @@ create or modify java action HD.JA_HashPassword (
 
 -- R2: HD.ACT_ChangePassword
 -- New activities:
---   call java action — invokes HD.JA_HashPassword to hash the new password
---   raise error      — terminates to ErrorEvent when passwords do not match
---                      (distinct from validation feedback: no field highlight, hard stop)
---   show home page   — redirects after successful password change (clears form state)
+--   declare $Success              — declare return variable before set (CE0109 fix: set requires declare first)
+--   call java action on error custom without rollback { raise error; }
+--                                 — raise error inside custom error handler is the correct Mendix pattern;
+--                                   raise error directly in if-then causes CE0710 (ErrorEvent joins main flow)
+--   set $Success = true           — assign return variable (must be declared first)
+--   show home page                — redirects after successful password change (clears form state)
 create or modify microflow HD.ACT_ChangePassword
   ($Form: HD.PasswordForm)
   returns boolean as $Success
   folder 'Account'
 begin
+  declare $Success boolean = false;
   if $Form/NewPassword = '' or $Form/NewPassword = empty then
     validation feedback $Form/NewPassword message 'New password is required.';
     return false;
   end if;
   if $Form/NewPassword != $Form/ConfirmPassword then
-    show message 'Passwords do not match.' type warning;
+    validation feedback $Form/ConfirmPassword message 'Passwords do not match.';
     return false;
   end if;
-  $Hashed = call java action HD.JA_HashPassword (PlainText = $Form/NewPassword);
+  $Hashed = call java action HD.JA_HashPassword (PlainText = $Form/NewPassword)
+    on error without rollback {
+      raise error;
+    };
+  set $Success = true;
   show home page;
-  return true;
+  return $Success;
 end;
 /
 
@@ -1555,6 +1577,24 @@ create or modify microflow HD.ACT_Agent_Reactivate
 begin
   change $Agent (IsActive = true, DeactivationReason = empty);
   commit $Agent;
+  return;
+end;
+/
+
+-- R5 (Issue 5 fix): HD.Nav_ChangePassword — no-parameter navigation microflow
+-- Pattern: menu items cannot pass page parameters directly.
+-- Solution: create a no-parameter microflow that creates the required entity,
+-- then calls show page with the entity as parameter.
+-- BSON reference: Nav_ChangePassword in human-fix commit b4fb9e027.
+create or modify microflow HD.Nav_ChangePassword
+  ()
+  folder 'Account'
+begin
+  $NewPasswordForm = create HD.PasswordForm (
+    NewPassword     = '',
+    ConfirmPassword = ''
+  );
+  show page HD.ChangeMyPassword (Form: $NewPasswordForm);
   return;
 end;
 /
@@ -1765,8 +1805,10 @@ create or replace page HD.Account_Overview (
 -- R7: HD.Customer_New — DataGrid nested inside DataView
 -- Outer dvCustomer: datasource: $Customer (page parameter)
 -- Inner dgFirstTicket: datasource: $Customer/HD.Ticket_Customer/HD.Ticket
---   — association path is valid for DataGrid (not DataView; CE6705 prohibits DataView+association)
---   — shows Subject + Status of the customer's associated tickets
+--   — DataGrid (not DataView) is CORRECT here: HD.Customer does not own the Ticket association
+--     (HD.Ticket_Customer runs FROM Ticket TO Customer), so the association path returns a list.
+--     DataView requires a single object; DataGrid accepts a list — hence DataGrid is the right widget.
+--     CE6705 confirms: DataView cannot use association datasource (list → single mismatch).
 create or replace page HD.Customer_New (
   title: 'Customer Profile',
   layout: Atlas_Core.Atlas_Default,
@@ -2019,6 +2061,7 @@ grant view on page HD.Agent_Edit         to HD.AgentRole, HD.ManagerRole;
 grant view on page HD.Customer_Edit      to HD.AgentRole, HD.ManagerRole;
 grant execute on microflow HD.DS_GetMyProfile      to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 grant execute on microflow HD.ACT_ChangePassword   to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.Nav_ChangePassword   to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 grant execute on microflow HD.ACT_Agent_Deactivate to HD.ManagerRole;
 grant execute on microflow HD.ACT_Agent_Reactivate to HD.ManagerRole;
 
@@ -2063,7 +2106,8 @@ create or replace navigation Responsive
     menu '账户管理' (
       menu item '账户总览'  page HD.Account_Overview;
       menu item '我的账户'  page HD.ManageMyAccount;
-      -- HD.ChangeMyPassword requires $Form parameter; accessible via My Account page popup
+      -- Issue 5 fix: HD.ChangeMyPassword requires $Form parameter; use no-param microflow as entry
+      menu item '修改密码'  microflow HD.Nav_ChangePassword;
     );
     menu item '系统管理' page Administration.Account_Overview;
   );
@@ -2142,6 +2186,7 @@ move microflow HD.DS_GetMyProfile       to folder 'Account';
 move microflow HD.ACT_ChangePassword    to folder 'Account';
 move microflow HD.ACT_Agent_Deactivate  to folder 'Account';
 move microflow HD.ACT_Agent_Reactivate  to folder 'Account';
+move microflow HD.Nav_ChangePassword    to folder 'Account';
 move page      HD.ManageMyAccount       to folder 'Account';
 move page      HD.ChangeMyPassword      to folder 'Account';
 move page      HD.ShowMyPasswordForm    to folder 'Account';

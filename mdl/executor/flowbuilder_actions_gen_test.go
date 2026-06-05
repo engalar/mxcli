@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
@@ -350,6 +351,33 @@ func TestGenActivityWrapRegistersEmptyCustomHandlerWithSkipVar(t *testing.T) {
 	}
 	if fb.errorHandlerSkipVar != "OutVar" {
 		t.Fatalf("skipVar = %q, want OutVar", fb.errorHandlerSkipVar)
+	}
+}
+
+// TestGenActivityWrap_NonEmptyCustomErrorHandlerEmitsErrorFlow verifies
+// Stage 3.2.3.h: a non-empty `on error custom { ... }` body must emit
+// an error-handler sequence flow (IsErrorHandler=true) from the activity
+// to the first body activity. CE0011 fires when this flow is absent.
+func TestGenActivityWrap_NonEmptyCustomErrorHandlerEmitsErrorFlow(t *testing.T) {
+	fb := newActionTestFb()
+	dummy := genMf.NewDeleteAction()
+	assignFreshID(dummy)
+	// non-empty body: { raise error; }
+	eh := &ast.ErrorHandlingClause{
+		Type: ast.ErrorHandlingCustomWithoutRollback,
+		Body: []ast.MicroflowStatement{&ast.RaiseErrorStmt{}},
+	}
+	actID := model.ID(fb.genActivityWrap(dummy, eh, ""))
+	// At least one error-handler flow must originate from the activity.
+	foundErrorFlow := false
+	for _, flow := range fb.flows {
+		if model.ID(flow.OriginRefID()) == actID && flow.IsErrorHandler() {
+			foundErrorFlow = true
+			break
+		}
+	}
+	if !foundErrorFlow {
+		t.Errorf("non-empty custom error handler must emit an IsErrorHandler=true flow from activity %s; got flows: %v", actID, fb.flows)
 	}
 }
 

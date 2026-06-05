@@ -240,14 +240,19 @@ func (fb *flowBuilderGen) addStructuredInheritanceSplitGen(s *ast.InheritanceSpl
 	if hasElse {
 		fb.posX = splitX + SplitWidth + HorizontalSpacing/2
 		fb.posY = branchY + len(s.Cases)*VerticalSpacing
-		elseLast := fb.emitBranchBodyGen(s.ElseBody, splitID, "", len(s.Cases) > 0)
+		// Else branch must use InheritanceCase Value="" (empty QN) — NOT NoCase.
+		// Mendix's Object Type Decision requires InheritanceCase for all outgoing flows,
+		// including the fall-through (else). An empty Value="" matches all unspecified
+		// subtypes (System.User, Administration.Account, null/empty). Using NoCase here
+		// causes CE0089 "(empty) not configured" and CE0090 for known subtypes.
+		elseLast := fb.emitBranchBodyInheritanceGen(s.ElseBody, splitID, "")
 		elseReturns := lastStmtIsReturn(s.ElseBody)
 		if !elseReturns {
 			allBranchesReturn = false
 			if elseLast != "" {
 				fb.flows = append(fb.flows, newHorizontalFlowGen(elseLast, ensureMerge()))
 			} else {
-				fb.flows = append(fb.flows, newHorizontalFlowGen(splitID, ensureMerge()))
+				fb.flows = append(fb.flows, newHorizontalFlowWithInheritanceCaseGen(splitID, ensureMerge(), ""))
 			}
 		}
 	}
