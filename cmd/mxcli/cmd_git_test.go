@@ -289,3 +289,188 @@ func TestRunGitNotesPush_ForceFlag(t *testing.T) {
 		t.Errorf("--force must be passed to git push, got: %v", pushArgs)
 	}
 }
+
+func TestDoctorCheck_GitConfig_Pass(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		// All config keys return correct values
+		key := args[len(args)-1]
+		switch key {
+		case "core.autocrlf":
+			return exec.Command("sh", "-c", "printf 'false'")
+		case "mendix.commits-since-gc":
+			return exec.Command("sh", "-c", "printf '0'")
+		case "mendix.lineEndingResetDone":
+			return exec.Command("sh", "-c", "printf 'true'")
+		}
+		return exec.Command("sh", "-c", "exit 1")
+	}
+
+	result := checkGitConfig()
+	if !result.OK {
+		t.Errorf("expected config check to pass, got: %s", result.Detail)
+	}
+}
+
+func TestDoctorCheck_GitConfig_Fail_MissingKey(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		// All keys missing
+		return exec.Command("sh", "-c", "exit 1")
+	}
+
+	result := checkGitConfig()
+	if result.OK {
+		t.Error("expected config check to fail when keys missing")
+	}
+	if !strings.Contains(result.Detail, "core.autocrlf") {
+		t.Errorf("detail should mention missing key, got: %s", result.Detail)
+	}
+}
+
+func TestDoctorCheck_RemoteURL_HTTPS_Pass(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		if contains(args, "get-url") {
+			return exec.Command("sh", "-c", "printf 'https://github.com/org/repo'")
+		}
+		return exec.Command("sh", "-c", "printf 'origin'")
+	}
+
+	result := checkRemoteURL("origin")
+	if !result.OK {
+		t.Errorf("HTTPS URL should pass, got: %s", result.Detail)
+	}
+}
+
+func TestDoctorCheck_RemoteURL_SSH_Fail(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		if contains(args, "get-url") {
+			return exec.Command("sh", "-c", "printf 'git@github.com:org/repo.git'")
+		}
+		return exec.Command("sh", "-c", "printf 'origin'")
+	}
+
+	result := checkRemoteURL("origin")
+	if result.OK {
+		t.Error("SSH URL should fail")
+	}
+}
+
+func TestRunDoctor_OutputContainsSummary(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	// All checks pass
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		switch {
+		case contains(args, "config"):
+			key := args[len(args)-1]
+			switch key {
+			case "core.autocrlf":
+				return exec.Command("sh", "-c", "printf 'false'")
+			case "mendix.commits-since-gc":
+				return exec.Command("sh", "-c", "printf '0'")
+			case "mendix.lineEndingResetDone":
+				return exec.Command("sh", "-c", "printf 'true'")
+			}
+		case contains(args, "get-url"):
+			return exec.Command("sh", "-c", "printf 'https://github.com/org/repo'")
+		case contains(args, "ls-remote"):
+			return exec.Command("sh", "-c", "printf 'abc123\trefs/notes/mx_metadata'")
+		case contains(args, "log"):
+			return exec.Command("sh", "-c", "exit 0") // no commits = all have notes
+		case contains(args, "list"):
+			return exec.Command("sh", "-c", "exit 0")
+		}
+		return exec.Command("sh", "-c", "printf 'origin'")
+	}
+
+	var buf strings.Builder
+	_ = runDoctor("origin", "", &buf)
+	out := buf.String()
+	if !strings.Contains(out, "Diagnosis:") {
+		t.Errorf("output must contain Diagnosis summary, got:\n%s", out)
+	}
+}
+
+func TestRunGitFix_SetsConfigKeys(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	var setKeys []string
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		switch {
+		case contains(args, "config") && contains(args, "--local") && len(args) == 4:
+			// git config --local <key> <value>  (set): [config --local key value]
+			setKeys = append(setKeys, args[2])
+			return exec.Command("sh", "-c", "exit 0")
+		case contains(args, "config") && contains(args, "--local") && len(args) == 3:
+			// git config --local <key>  (get): [config --local key] — empty to force set
+			return exec.Command("sh", "-c", "exit 1")
+		case contains(args, "get-url"):
+			return exec.Command("sh", "-c", "printf 'https://github.com/org/repo'")
+		case contains(args, "log"):
+			return exec.Command("sh", "-c", "exit 0")
+		case contains(args, "list"):
+			return exec.Command("sh", "-c", "exit 0")
+		case contains(args, "push"):
+			return exec.Command("sh", "-c", "exit 0")
+		}
+		return exec.Command("sh", "-c", "printf 'origin'")
+	}
+
+	var buf strings.Builder
+	err := runGitFix("", "10.6.0.0", "origin", &buf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	wantKeys := []string{"core.autocrlf", "mendix.commits-since-gc", "mendix.lineEndingResetDone"}
+	for _, k := range wantKeys {
+		if !contains(setKeys, k) {
+			t.Errorf("fix must set config key %q, set keys: %v", k, setKeys)
+		}
+	}
+}
+
+func TestRunGitFix_ConvertsSSHToHTTPS(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	var newURL string
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		switch {
+		case contains(args, "config"):
+			return exec.Command("sh", "-c", "printf 'false'") // already set
+		case contains(args, "get-url"):
+			return exec.Command("sh", "-c", "printf 'git@github.com:org/repo.git'")
+		case contains(args, "set-url"):
+			newURL = args[len(args)-1]
+			return exec.Command("sh", "-c", "exit 0")
+		case contains(args, "log"):
+			return exec.Command("sh", "-c", "exit 0")
+		case contains(args, "list"):
+			return exec.Command("sh", "-c", "exit 0")
+		case contains(args, "push"):
+			return exec.Command("sh", "-c", "exit 0")
+		}
+		return exec.Command("sh", "-c", "printf 'origin'")
+	}
+
+	var buf strings.Builder
+	_ = runGitFix("", "10.6.0.0", "origin", &buf)
+
+	if !strings.HasPrefix(newURL, "https://") {
+		t.Errorf("SSH URL must be converted to HTTPS, got: %q", newURL)
+	}
+}

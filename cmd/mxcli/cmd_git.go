@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"regexp"
+	"sort"
 	"strings"
 
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
@@ -323,4 +325,361 @@ func resolveRemote(override string) string {
 		}
 	}
 	return ""
+}
+
+// ──────────────────────────────────────────────
+// Doctor command
+// ──────────────────────────────────────────────
+
+type doctorCheck struct {
+	Name   string
+	OK     bool
+	Detail string
+}
+
+var gitDoctorCmd = &cobra.Command{
+	Use:   "doctor",
+	Short: "Diagnose Mendix git compatibility (read-only)",
+	Long: `Run 5 read-only health checks on the current git repository:
+
+  1. Git local config (core.autocrlf, mendix.*)
+  2. Remote URL protocol (must be HTTPS, not SSH)
+  3. Remote refs/notes/mx_metadata existence
+  4. Local commits mx_metadata completeness
+  5. Notes JSON format validity
+
+Examples:
+  mxcli git doctor
+  mxcli git doctor --remote origin
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		remote, _ := cmd.Flags().GetString("remote")
+		projectPath, _ := cmd.Flags().GetString("project")
+		return runDoctor(remote, projectPath, cmd.OutOrStdout())
+	},
+}
+
+func runDoctor(remoteOverride, projectPath string, out io.Writer) error {
+	remote := resolveRemote(remoteOverride)
+	fmt.Fprintf(out, "Diagnosing Git repo\n\n")
+
+	checks := []doctorCheck{
+		checkGitConfig(),
+		checkRemoteURL(remote),
+		checkRemoteNotesRef(remote),
+		checkCommitsHaveNotes(),
+		checkNotesJSONFormat(),
+	}
+
+	failed := 0
+	for _, c := range checks {
+		sym := "[✓]"
+		if !c.OK {
+			sym = "[✗]"
+			failed++
+		}
+		fmt.Fprintf(out, "  %s %s\n", sym, c.Detail)
+	}
+
+	fmt.Fprintf(out, "\nDiagnosis: ")
+	if failed == 0 {
+		fmt.Fprintf(out, "all checks passed.\n")
+	} else {
+		fmt.Fprintf(out, "%d issue(s) found.\n  Run 'mxcli git fix' to repair.\n", failed)
+	}
+	return nil
+}
+
+func checkGitConfig() doctorCheck {
+	wanted := map[string]string{
+		"core.autocrlf":              "false",
+		"mendix.commits-since-gc":    "0",
+		"mendix.lineEndingResetDone": "true",
+	}
+	var missing []string
+	for key, want := range wanted {
+		cmd := gitExecCommand("git", "config", "--local", key)
+		out, err := cmd.Output()
+		got := strings.ToLower(strings.TrimSpace(string(out)))
+		if err != nil || got != want {
+			missing = append(missing, key)
+		}
+	}
+	if len(missing) == 0 {
+		return doctorCheck{Name: "config", OK: true, Detail: "Git local config (core.autocrlf, mendix.*)"}
+	}
+	sort.Strings(missing)
+	return doctorCheck{Name: "config", OK: false, Detail: fmt.Sprintf("Git local config — missing: %s", strings.Join(missing, ", "))}
+}
+
+func checkRemoteURL(remote string) doctorCheck {
+	if remote == "" {
+		return doctorCheck{Name: "remote-url", OK: false, Detail: "Remote URL — no remote found"}
+	}
+	cmd := gitExecCommand("git", "remote", "get-url", remote)
+	out, err := cmd.Output()
+	if err != nil {
+		return doctorCheck{Name: "remote-url", OK: false, Detail: fmt.Sprintf("Remote URL — cannot get URL for '%s'", remote)}
+	}
+	url := strings.TrimSpace(string(out))
+	if strings.HasPrefix(url, "https://") {
+		return doctorCheck{Name: "remote-url", OK: true, Detail: fmt.Sprintf("Remote URL: %s (HTTPS)", url)}
+	}
+	return doctorCheck{Name: "remote-url", OK: false, Detail: fmt.Sprintf("Remote URL: %s (must be HTTPS, not SSH)", url)}
+}
+
+func checkRemoteNotesRef(remote string) doctorCheck {
+	if remote == "" {
+		return doctorCheck{Name: "remote-notes", OK: false, Detail: "Remote refs/notes/mx_metadata — no remote"}
+	}
+	cmd := gitExecCommand("git", "ls-remote", remote, "refs/notes/mx_metadata")
+	out, err := cmd.Output()
+	if err == nil && strings.Contains(string(out), "refs/notes/mx_metadata") {
+		return doctorCheck{Name: "remote-notes", OK: true, Detail: fmt.Sprintf("Remote refs/notes/mx_metadata exists on '%s'", remote)}
+	}
+	return doctorCheck{Name: "remote-notes", OK: false, Detail: fmt.Sprintf("Remote refs/notes/mx_metadata missing on '%s'", remote)}
+}
+
+func checkCommitsHaveNotes() doctorCheck {
+	logCmd := gitExecCommand("git", "log", "--format=%H")
+	logOut, err := logCmd.Output()
+	if err != nil || len(strings.TrimSpace(string(logOut))) == 0 {
+		return doctorCheck{Name: "commits-notes", OK: true, Detail: "Commits mx_metadata — no commits"}
+	}
+	allCommits := strings.Split(strings.TrimSpace(string(logOut)), "\n")
+
+	noted := notedCommits()
+
+	var missing []string
+	for _, sha := range allCommits {
+		sha = strings.TrimSpace(sha)
+		if sha != "" && !noted[sha] {
+			missing = append(missing, sha[:minInt(len(sha), 7)])
+		}
+	}
+	if len(missing) == 0 {
+		return doctorCheck{Name: "commits-notes", OK: true, Detail: fmt.Sprintf("Commits mx_metadata — all %d have notes", len(allCommits))}
+	}
+	detail := fmt.Sprintf("Commits mx_metadata — %d/%d missing notes: %s",
+		len(missing), len(allCommits), strings.Join(missing[:minInt(len(missing), 3)], ", "))
+	if len(missing) > 3 {
+		detail += fmt.Sprintf(" ... (+%d more)", len(missing)-3)
+	}
+	return doctorCheck{Name: "commits-notes", OK: false, Detail: detail}
+}
+
+func checkNotesJSONFormat() doctorCheck {
+	listCmd := gitExecCommand("git", "notes", "--ref=mx_metadata", "list")
+	listOut, err := listCmd.Output()
+	if err != nil || len(strings.TrimSpace(string(listOut))) == 0 {
+		return doctorCheck{Name: "notes-json", OK: true, Detail: "Notes JSON format — no notes to check"}
+	}
+	malformed := 0
+	for _, line := range strings.Split(string(listOut), "\n") {
+		parts := strings.Fields(line)
+		if len(parts) != 2 {
+			continue
+		}
+		showCmd := gitExecCommand("git", "notes", "--ref=mx_metadata", "show", parts[1])
+		noteOut, err := showCmd.Output()
+		if err != nil {
+			continue
+		}
+		var m map[string]any
+		if err := json.Unmarshal(noteOut, &m); err != nil {
+			malformed++
+		}
+	}
+	if malformed == 0 {
+		return doctorCheck{Name: "notes-json", OK: true, Detail: "Notes JSON format — all valid"}
+	}
+	return doctorCheck{Name: "notes-json", OK: false, Detail: fmt.Sprintf("Notes JSON format — %d malformed notes", malformed)}
+}
+
+// notedCommits returns the set of commit SHAs that have an mx_metadata note.
+func notedCommits() map[string]bool {
+	listCmd := gitExecCommand("git", "notes", "--ref=mx_metadata", "list")
+	listOut, _ := listCmd.Output()
+	noted := map[string]bool{}
+	for _, line := range strings.Split(string(listOut), "\n") {
+		parts := strings.Fields(line)
+		if len(parts) == 2 {
+			noted[parts[1]] = true
+		}
+	}
+	return noted
+}
+
+// minInt returns the smaller of a and b. Named to avoid conflict with Go 1.21+ builtin min.
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// ──────────────────────────────────────────────
+// Fix command
+// ──────────────────────────────────────────────
+
+var gitFixCmd = &cobra.Command{
+	Use:   "fix",
+	Short: "Repair Mendix git compatibility issues",
+	Long: `Fix all issues detected by 'mxcli git doctor':
+
+  1. Add missing git local config (core.autocrlf, mendix.*)
+  2. Convert SSH remote URL to HTTPS (auto, no confirmation required)
+  3. Add mx_metadata notes to commits that lack them
+  4. Repair malformed (invalid JSON) notes with -f override
+  5. Push notes to remote
+
+After fix, restart Mendix Studio Pro to verify.
+
+Examples:
+  mxcli git fix
+  mxcli git fix --version 10.6.0.0
+  mxcli git fix --remote origin
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		remote, _ := cmd.Flags().GetString("remote")
+		versionFlag, _ := cmd.Flags().GetString("version")
+		projectPath, _ := cmd.Flags().GetString("project")
+		return runGitFix(projectPath, versionFlag, remote, cmd.OutOrStdout())
+	},
+}
+
+func runGitFix(projectPath, versionFlag, remoteOverride string, out io.Writer) error {
+	remote := resolveRemote(remoteOverride)
+	fmt.Fprintf(out, "Fixing Git repo\n\n")
+
+	// Step 1: Git config
+	fmt.Fprintf(out, "Step 1: Git local config\n")
+	fixGitConfig(out)
+
+	// Step 2: Remote URL
+	fmt.Fprintf(out, "Step 2: Remote URL\n")
+	fixRemoteURL(remote, out)
+
+	// Step 3: Missing notes
+	fmt.Fprintf(out, "Step 3: mx_metadata notes\n")
+	mendixVersion, mprFmtVersion, err := detectMendixVersion(versionFlag, projectPath)
+	if err != nil {
+		fmt.Fprintf(out, "  WARNING: %v\n  Skipping notes repair.\n", err)
+	} else {
+		fixed, skipped := fixMissingNotes(mendixVersion, mprFmtVersion, out)
+		fmt.Fprintf(out, "  Fixed: %d, Skipped: %d (already valid)\n", fixed, skipped)
+	}
+
+	// Step 4: Push notes
+	if remote != "" {
+		fmt.Fprintf(out, "Step 4: Push notes to %s\n", remote)
+		pushCmd := gitExecCommand("git", "push", remote, "refs/notes/mx_metadata")
+		pushCmd.Stdout = out
+		pushCmd.Stderr = out
+		if err := pushCmd.Run(); err != nil {
+			fmt.Fprintf(out, "  Push failed (may need --force if remote has diverged)\n")
+		} else {
+			fmt.Fprintf(out, "  Pushed.\n")
+		}
+	}
+
+	fmt.Fprintf(out, "\nDone! Restart Mendix Studio Pro to verify.\n")
+	return nil
+}
+
+func fixGitConfig(out io.Writer) {
+	configs := map[string]string{
+		"core.autocrlf":              "False",
+		"mendix.commits-since-gc":    "0",
+		"mendix.lineEndingResetDone": "True",
+	}
+	keys := make([]string, 0, len(configs))
+	for k := range configs {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		val := configs[key]
+		getCmd := gitExecCommand("git", "config", "--local", key)
+		current, err := getCmd.Output()
+		if err != nil || strings.TrimSpace(string(current)) == "" {
+			setCmd := gitExecCommand("git", "config", "--local", key, val)
+			if err := setCmd.Run(); err == nil {
+				fmt.Fprintf(out, "  Set: %s = %s\n", key, val)
+			}
+		} else {
+			fmt.Fprintf(out, "  OK:  %s = %s\n", key, strings.TrimSpace(string(current)))
+		}
+	}
+}
+
+var sshURLRe = regexp.MustCompile(`^git@([^:]+):(.+?)(?:\.git)?$`)
+
+func fixRemoteURL(remote string, out io.Writer) {
+	if remote == "" {
+		fmt.Fprintf(out, "  No remote found, skipping.\n")
+		return
+	}
+	getCmd := gitExecCommand("git", "remote", "get-url", remote)
+	urlOut, err := getCmd.Output()
+	if err != nil {
+		fmt.Fprintf(out, "  Cannot get URL for '%s'\n", remote)
+		return
+	}
+	url := strings.TrimSpace(string(urlOut))
+	m := sshURLRe.FindStringSubmatch(url)
+	if m == nil {
+		fmt.Fprintf(out, "  OK:  %s uses HTTPS\n", remote)
+		return
+	}
+	httpsURL := fmt.Sprintf("https://%s/%s", m[1], m[2])
+	setCmd := gitExecCommand("git", "remote", "set-url", remote, httpsURL)
+	if err := setCmd.Run(); err != nil {
+		fmt.Fprintf(out, "  Failed to convert SSH URL: %v\n", err)
+		return
+	}
+	fmt.Fprintf(out, "  Converted: %s → %s\n", url, httpsURL)
+}
+
+func fixMissingNotes(mendixVersion, mprFmtVersion string, out io.Writer) (fixed, skipped int) {
+	logCmd := gitExecCommand("git", "log", "--format=%H")
+	logOut, err := logCmd.Output()
+	if err != nil || len(strings.TrimSpace(string(logOut))) == 0 {
+		return 0, 0
+	}
+	allCommits := strings.Split(strings.TrimSpace(string(logOut)), "\n")
+
+	noted := notedCommits()
+
+	metadata := buildMxMetadata(mendixVersion, mprFmtVersion)
+	for _, sha := range allCommits {
+		sha = strings.TrimSpace(sha)
+		if sha == "" {
+			continue
+		}
+		short := sha[:minInt(len(sha), 7)]
+		if noted[sha] {
+			// Verify JSON is valid; if not, repair with force.
+			showCmd := gitExecCommand("git", "notes", "--ref=mx_metadata", "show", sha)
+			noteOut, err := showCmd.Output()
+			if err == nil {
+				var m map[string]any
+				if json.Unmarshal(noteOut, &m) == nil {
+					skipped++
+					continue
+				}
+			}
+			// Malformed — force overwrite.
+			fmt.Fprintf(out, "  Repair: %s (malformed JSON)\n", short)
+			if err := hashObjectAndAddNote(sha, metadata); err == nil {
+				fixed++
+			}
+		} else {
+			fmt.Fprintf(out, "  Add: %s\n", short)
+			if err := hashObjectAndAddNote(sha, metadata); err == nil {
+				fixed++
+			}
+		}
+	}
+	return fixed, skipped
 }
