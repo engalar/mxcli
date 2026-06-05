@@ -196,6 +196,8 @@ grant HD.ManagerRole on HD.TicketSearch (read *, write *);
 create or modify persistent entity HD.UserProfile extends System.User (
   DisplayName: String(200)
 );
+
+grant HD.ManagerRole on HD.UserProfile (create, read *, write *);
 /
 @Position(1300, 50)
 create or modify non-persistent entity HD.PasswordForm (
@@ -929,6 +931,8 @@ begin
   commit $Agent;
   return;
 end;
+
+grant execute on microflow HD.ACT_Agent_Deactivate to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Agent_Reactivate (
   $Agent: HD.Agent
@@ -941,6 +945,8 @@ begin
   commit $Agent;
   return;
 end;
+
+grant execute on microflow HD.ACT_Agent_Reactivate to HD.ManagerRole;
 /
 -- Workflow: HD.WF_SUB_ManagerReview
 
@@ -1079,6 +1085,11 @@ create or replace navigation Responsive
       menu item '所有工单' page HD.Ticket_Overview;
       menu item '升级审批' page HD.EscalationWorkflow_Overview;
       menu item '工作流管理' page HD.EscalationWorkflow_Overview;
+    );
+    menu '账户管理' (
+      menu item '账户总览' page HD.Account_Overview;
+      menu item '我的账户' page HD.ManageMyAccount;
+      menu item '修改密码' page HD.ChangeMyPassword;
     );
     menu item '系统管理' page Administration.Account_Overview;
   )
@@ -1425,6 +1436,8 @@ create or modify page HD.ManageMyAccount (title: 'My Account', layout: Atlas_Cor
     }
   }
 }
+
+grant view on page HD.ManageMyAccount to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.ChangeMyPassword (
   title: 'Change Password',
   layout: Atlas_Core.Atlas_Default,
@@ -1451,6 +1464,8 @@ create or modify page HD.ChangeMyPassword (
     }
   }
 }
+
+grant view on page HD.ChangeMyPassword to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.ShowMyPasswordForm (
   title: 'Change Password',
   layout: Atlas_Core.PopupLayout,
@@ -1467,6 +1482,8 @@ create or modify page HD.ShowMyPasswordForm (
     }
   }
 }
+
+grant view on page HD.ShowMyPasswordForm to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 create or modify page HD.Account_Overview (
   title: 'Account Management',
   layout: Atlas_Core.Atlas_Default,
@@ -1546,6 +1563,8 @@ create or modify page HD.Account_Overview (
     }
   }
 }
+
+grant view on page HD.Account_Overview to HD.ManagerRole;
 create or modify page HD.Customer_New (
   title: 'Customer Profile',
   layout: Atlas_Core.Atlas_Default,
@@ -1578,6 +1597,8 @@ create or modify page HD.Customer_New (
     }
   }
 }
+
+grant view on page HD.Customer_New to HD.AgentRole, HD.ManagerRole;
 create or modify page HD.Agent_Edit (
   title: 'Edit Agent',
   layout: Atlas_Core.Atlas_Default,
@@ -1602,6 +1623,8 @@ create or modify page HD.Agent_Edit (
     }
   }
 }
+
+grant view on page HD.Agent_Edit to HD.AgentRole, HD.ManagerRole;
 create or modify page HD.Customer_Edit (
   title: 'Edit Customer',
   layout: Atlas_Core.Atlas_Default,
@@ -1635,6 +1658,8 @@ create or modify page HD.Customer_Edit (
     }
   }
 }
+
+grant view on page HD.Customer_Edit to HD.AgentRole, HD.ManagerRole;
 alter settings model
   HashAlgorithm = 'BCrypt',
   BcryptCost = 12,

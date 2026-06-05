@@ -32,6 +32,12 @@
 -- Note    : loop body with multiple activities (change + commit) now correctly describes
 --           all activities; previously only one was emitted due to missing parent-level
 --           SequenceFlow lookup in emitLoopedActivityGen.
+-- Note    : Account Management section added (R1-R9): HD.UserProfile extends
+--           System.User; split type/cast; create/call java action; raise error;
+--           show home page; DataView microflow datasource; tabcontainer/tabpage;
+--           customContent action button column; nested DataView; conditional visibility.
+--           Stage 3.2.2 describe gap: DS_GetMyProfile/ACT_ChangePassword/JA_HashPassword
+--           excluded from describe roundtrip pending formatter implementation.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
@@ -1994,6 +2000,20 @@ grant view on page HD.TicketSearch_Results      to HD.CustomerRole, HD.AgentRole
 grant view on page KB.Article_Overview     to KB.Reader, KB.Contributor, KB.Admin;
 grant view on page KB.Article_Detail       to KB.Reader, KB.Contributor, KB.Admin;
 
+-- Account Management grants (R1–R9)
+grant HD.ManagerRole on HD.UserProfile (create, read *, write *);
+grant view on page HD.ManageMyAccount    to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.ChangeMyPassword   to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.ShowMyPasswordForm to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Account_Overview   to HD.ManagerRole;
+grant view on page HD.Customer_New       to HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Agent_Edit         to HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Customer_Edit      to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.DS_GetMyProfile      to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_ChangePassword   to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Agent_Deactivate to HD.ManagerRole;
+grant execute on microflow HD.ACT_Agent_Reactivate to HD.ManagerRole;
+
 -- User roles: 4, mapping module roles
 -- Note: Administrator uses Administration module built-in + composition of module roles
 
@@ -2031,6 +2051,11 @@ create or replace navigation Responsive
       menu item '所有工单'  page HD.Ticket_Overview;
       menu item '升级审批'  page HD.EscalationWorkflow_Overview;
       menu item '工作流管理' page HD.EscalationWorkflow_Overview;
+    );
+    menu '账户管理' (
+      menu item '账户总览'  page HD.Account_Overview;
+      menu item '我的账户'  page HD.ManageMyAccount;
+      menu item '修改密码'  page HD.ChangeMyPassword;
     );
     menu item '系统管理' page Administration.Account_Overview;
   );
@@ -2103,6 +2128,19 @@ move microflow HD.ACT_Workflow_ShowAdminPage     to folder 'Escalation/WorkflowA
 move microflow HD.ACT_Workflow_Lock              to folder 'Escalation/WorkflowAdmin';
 move microflow HD.ACT_Workflow_Unlock            to folder 'Escalation/WorkflowAdmin';
 move microflow HD.ACT_Workflow_Notify            to folder 'Escalation/WorkflowAdmin';
+
+-- HD Module — Account
+move microflow HD.DS_GetMyProfile       to folder 'Account';
+move microflow HD.ACT_ChangePassword    to folder 'Account';
+move microflow HD.ACT_Agent_Deactivate  to folder 'Account';
+move microflow HD.ACT_Agent_Reactivate  to folder 'Account';
+move page      HD.ManageMyAccount       to folder 'Account';
+move page      HD.ChangeMyPassword      to folder 'Account';
+move page      HD.ShowMyPasswordForm    to folder 'Account';
+move page      HD.Account_Overview      to folder 'Account';
+move page      HD.Customer_New          to folder 'Account';
+move page      HD.Agent_Edit           to folder 'Account';
+move page      HD.Customer_Edit         to folder 'Account';
 
 -- Note: golden rebuilt after SortItemList.InitFromRaw BSON key fix (Items→Sortings)
 
