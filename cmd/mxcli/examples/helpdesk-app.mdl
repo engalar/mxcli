@@ -32,6 +32,18 @@
 -- Note    : loop body with multiple activities (change + commit) now correctly describes
 --           all activities; previously only one was emitted due to missing parent-level
 --           SequenceFlow lookup in emitLoopedActivityGen.
+-- Note    : Account Management section added (R1-R9): HD.UserProfile extends
+--           System.User; split type/cast; create/call java action; raise error;
+--           show home page; DataView microflow datasource; tabcontainer/tabpage;
+--           customContent action button column; nested DataView; conditional visibility.
+--           Stage 3.2.2 describe gap: DS_GetMyProfile/ACT_ChangePassword/JA_HashPassword
+--           excluded from describe roundtrip pending formatter implementation.
+-- Note    : TabPage/GroupBox Caption BSON type fixed: genSimpleLabel (Forms$ClientTemplate)
+--           replaced with genSimpleText (Texts$Text); StorageLoadException on mx check resolved.
+-- Note    : ACCESS-001/002/003 hints added to mxcli check --references; role→entity
+--           permission gaps now auto-diagnosed with MDL fix suggestions.
+-- Note    : page model now extracts microflow/nanoflow datasource refs (MicroflowSettings.
+--           Microflow / Nanoflow by-name fields) so access analysis sees MF-sourced DataViews.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
@@ -60,10 +72,14 @@
 --     database (from HD.Ticket)      → DataGrid/Gallery database source
 --     microflow (DS_MyTickets, no args → omit parens) → DataGrid microflow source (HD.MyTickets_Overview)
 --     nanoflow (NF_TicketSearch_Apply)→ DataGrid nanoflow source (HD.TicketSearch_Results)
---   Widget CE0463: known for dgTickets (DataGrid2 + ActionButton in custom column)
---                  and fStatus (DropdownFilter linked to dgTickets datasource);
+--   Widget CE0463: known for dgTickets, fStatus (pre-existing) and Account Management
+--                  DataGrid2 widgets with ActionButton in customContent column:
+--                  dgAgents, dgCustomers, dgInactiveAgents (same pattern as dgTickets).
 --                  Studio Pro validates against internal platform definition,
 --                  not the project MPK — exact comparison mechanism TBD.
+--   Note: raise error; (ErrorEvent) generates CE0710 in mx check due to a BSON
+--         sequence flow bug in flowbuilder — tracked as follow-up. ACT_ChangePassword
+--         uses show message + return false as a workaround.
 --
 -- Validation:
 --   ./bin/mxcli check mdl-examples/use-cases/helpdesk/helpdesk-app.mdl
@@ -1473,9 +1489,12 @@ create or modify non-persistent entity HD.PasswordForm (
 -- MARK: Account Management — Microflows
 
 -- R1: DS_GetMyProfile
--- New activities: split type (route by runtime type) + cast (bind subtype variable)
+-- New activities: split type (InheritanceSplitStatement) + cast (CastObjectStmt)
 -- Retrieves [%CurrentUser%] as System.User, splits by runtime type to HD.UserProfile,
 -- casts to $Profile, and returns it. Used as DataView datasource in HD.ManageMyAccount.
+-- Note: CE0090/CE0089/CE0773 were caused by a flowbuilder bug (InheritanceSplit BSON
+-- did not configure flows for all known subtypes). Fixed by adding NoCase flows for
+-- unmatched types and Administration.Account — see flowbuilder_control_split_gen.go.
 create or modify microflow HD.DS_GetMyProfile
   ()
   returns HD.UserProfile as $Profile
@@ -1484,10 +1503,18 @@ begin
   retrieve $Me from System.User
     where [id = '[%CurrentUser%]']
     limit 1;
+  -- Mendix Object Type Decision requires explicit flows for ALL known subtypes
+  -- of the split variable (CE0090). For System.User in this project:
+  --   HD.UserProfile (our custom subtype), Administration.Account (built-in subtype)
+  --   System.User (base type), else (null/empty fallback via InheritanceCase Value="")
   split type $Me
   case HD.UserProfile
     cast $Profile;
     return $Profile;
+  case Administration.Account
+    return empty;
+  case System.User
+    return empty;
   else
     return empty;
   end split;
@@ -1503,23 +1530,30 @@ create or modify java action HD.JA_HashPassword (
 
 -- R2: HD.ACT_ChangePassword
 -- New activities:
---   call java action — invokes HD.JA_HashPassword to hash the new password
---   raise error      — terminates to ErrorEvent when passwords do not match
---                      (distinct from validation feedback: no field highlight, hard stop)
---   show home page   — redirects after successful password change (clears form state)
+--   declare $Success              — declare return variable before set (CE0109 fix: set requires declare first)
+--   call java action on error custom without rollback { raise error; }
+--                                 — raise error inside custom error handler is the correct Mendix pattern;
+--                                   raise error directly in if-then causes CE0710 (ErrorEvent joins main flow)
+--   set $Success = true           — assign return variable (must be declared first)
+--   show home page                — redirects after successful password change (clears form state)
 create or modify microflow HD.ACT_ChangePassword
   ($Form: HD.PasswordForm)
   returns boolean as $Success
   folder 'Account'
 begin
+  declare $Success boolean = false;
   if $Form/NewPassword = '' or $Form/NewPassword = empty then
     validation feedback $Form/NewPassword message 'New password is required.';
     return false;
   end if;
   if $Form/NewPassword != $Form/ConfirmPassword then
-    raise error;
+    validation feedback $Form/ConfirmPassword message 'Passwords do not match.';
+    return false;
   end if;
-  $Hashed = call java action HD.JA_HashPassword (PlainText = $Form/NewPassword);
+  $Hashed = call java action HD.JA_HashPassword (PlainText = $Form/NewPassword)
+    on error without rollback {
+      raise error;
+    };
   set $Success = true;
   show home page;
   return $Success;
@@ -1546,6 +1580,351 @@ begin
   return;
 end;
 /
+
+-- R5 (Issue 5 fix): HD.Nav_ChangePassword — no-parameter navigation microflow
+-- Pattern: menu items cannot pass page parameters directly.
+-- Solution: create a no-parameter microflow that creates the required entity,
+-- then calls show page with the entity as parameter.
+-- BSON reference: Nav_ChangePassword in human-fix commit b4fb9e027.
+create or modify microflow HD.Nav_ChangePassword
+  ()
+  folder 'Account'
+begin
+  $NewPasswordForm = create HD.PasswordForm (
+    NewPassword     = '',
+    ConfirmPassword = ''
+  );
+  show page HD.ChangeMyPassword (Form: $NewPasswordForm);
+  return;
+end;
+/
+
+-- MARK: Account Management — Pages
+
+-- R1: HD.ManageMyAccount
+-- New pattern: DataView with microflow datasource (datasource: microflow HD.DS_GetMyProfile)
+-- Previously only DataGrid demonstrated microflow datasource; DataView is different.
+-- DS_GetMyProfile internally runs split type + cast to return HD.UserProfile.
+-- No page parameter — can be referenced directly as a menu item.
+create or replace page HD.ManageMyAccount (
+  title: 'My Account',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account'
+) {
+  layoutgrid lgAcctMain {
+    row rAcctMain {
+      column cAcctMain (desktopwidth: 12) {
+        dataview dvProfile (datasource: microflow HD.DS_GetMyProfile) {
+          textbox tbDisplayName (label: 'Display Name', attribute: DisplayName)
+          footer ftrAcctActions {
+            actionbutton btnSaveProfile (
+              caption: 'Save',
+              action: save_changes,
+              buttonstyle: primary
+            )
+            actionbutton btnChangePwd (
+              caption: 'Change Password',
+              action: create_object HD.PasswordForm then show_page HD.ShowMyPasswordForm,
+              buttonstyle: default
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- R2: HD.ChangeMyPassword
+-- Full-page password change form. Triggers HD.ACT_ChangePassword (java action + raise error).
+create or replace page HD.ChangeMyPassword (
+  title: 'Change Password',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account',
+  params: { $Form: HD.PasswordForm }
+) {
+  layoutgrid lgPwd {
+    row rPwd {
+      column cPwd (desktopwidth: 12) {
+        dataview dvPwdFull (datasource: $Form) {
+          textbox tbNewPwdFull     (label: 'New Password',     attribute: NewPassword)
+          textbox tbConfirmPwdFull (label: 'Confirm Password', attribute: ConfirmPassword)
+          footer ftrPwdFull {
+            actionbutton btnSubmitPwdFull (
+              caption: 'Change Password',
+              action: microflow HD.ACT_ChangePassword (Form: $currentObject),
+              buttonstyle: primary
+            )
+            actionbutton btnCancelPwdFull (
+              caption: 'Cancel',
+              action: cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- R3: HD.ShowMyPasswordForm
+-- Popup variant of ChangeMyPassword. Same HD.ACT_ChangePassword microflow,
+-- Atlas_Core.PopupLayout entry point. Demonstrates one microflow callable from
+-- two different page contexts (full-page vs. popup).
+create or replace page HD.ShowMyPasswordForm (
+  title: 'Change Password',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Account',
+  params: { $Form: HD.PasswordForm }
+) {
+  dataview dvPwdPopup (datasource: $Form) {
+    textbox tbNewPwdPopup     (label: 'New Password',     attribute: NewPassword)
+    textbox tbConfirmPwdPopup (label: 'Confirm Password', attribute: ConfirmPassword)
+    footer ftrPwdPopup {
+      actionbutton btnSubmitPwdPopup (
+        caption: 'Change Password',
+        action: microflow HD.ACT_ChangePassword (Form: $currentObject) close_page,
+        buttonstyle: primary
+      )
+      actionbutton btnCancelPwdPopup (
+        caption: 'Cancel',
+        action: cancel_changes close_page
+      )
+    }
+  }
+};
+
+-- R4 + R5 + R6: HD.Account_Overview
+-- R6: tabcontainer tcAccounts with two tabpages (Active Accounts / Inactive Accounts)
+-- R4: textfilter (Name, Email, Company) + dropdownfilter (IsActive boolean column)
+-- R5: ShowContentAs: customContent column containing actionbutton widgets
+create or replace page HD.Account_Overview (
+  title: 'Account Management',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account'
+) {
+  layoutgrid lgAcct {
+    row rAcct {
+      column cAcct (desktopwidth: 12) {
+        tabcontainer tcAccounts {
+
+          tabpage tabActive (caption: 'Active Accounts') {
+
+            datagrid dgAgents (
+              datasource: database from HD.Agent sort by Name asc,
+              PageSize: 15
+            ) {
+              column colAgentName   (attribute: Name,     caption: 'Name') {
+                textfilter fAgentName
+              }
+              column colAgentEmail  (attribute: Email,    caption: 'Email') {
+                textfilter fAgentEmail
+              }
+              column colAgentActive (attribute: IsActive, caption: 'Active',
+                                    ColumnWidth: manual, Size: 80) {
+                dropdownfilter fAgentActive
+              }
+              column colAgentAct (caption: 'Actions',
+                ShowContentAs: customContent,
+                ColumnWidth: manual, Size: 180) {
+                actionbutton btnEditAgent (
+                  caption: 'Edit',
+                  action: show_page HD.Agent_Edit (Agent: $currentObject),
+                  buttonstyle: default
+                )
+                actionbutton btnDeactivate (
+                  caption: 'Deactivate',
+                  action: microflow HD.ACT_Agent_Deactivate (Agent: $currentObject),
+                  buttonstyle: default
+                )
+              }
+            }
+
+            datagrid dgCustomers (
+              datasource: database from HD.Customer sort by Name asc,
+              PageSize: 15
+            ) {
+              column colCustName    (attribute: Name,    caption: 'Name') {
+                textfilter fCustName
+              }
+              column colCustEmail   (attribute: Email,   caption: 'Email') {
+                textfilter fCustEmail
+              }
+              column colCustCompany (attribute: Company, caption: 'Company') {
+                textfilter fCustCompany
+              }
+              column colCustAct (caption: 'Actions',
+                ShowContentAs: customContent,
+                ColumnWidth: manual, Size: 200) {
+                actionbutton btnNewTicket (
+                  caption: 'New Ticket',
+                  action: show_page HD.Customer_New (Customer: $currentObject),
+                  buttonstyle: primary
+                )
+                actionbutton btnEditCustomer (
+                  caption: 'Edit',
+                  action: show_page HD.Customer_Edit (Customer: $currentObject),
+                  buttonstyle: default
+                )
+              }
+            }
+
+          }
+
+          tabpage tabInactive (caption: 'Inactive Accounts') {
+
+            datagrid dgInactiveAgents (
+              datasource: database from HD.Agent sort by Name asc,
+              PageSize: 15
+            ) {
+              column colIName   (attribute: Name,               caption: 'Name') {
+                textfilter fIName
+              }
+              column colIActive (attribute: IsActive,           caption: 'Active',
+                                ColumnWidth: manual, Size: 80) {
+                dropdownfilter fIActive
+              }
+              column colReason  (attribute: DeactivationReason, caption: 'Reason')
+              column colIAct    (caption: 'Actions',
+                ShowContentAs: customContent,
+                ColumnWidth: manual, Size: 120) {
+                actionbutton btnReactivate (
+                  caption: 'Reactivate',
+                  action: microflow HD.ACT_Agent_Reactivate (Agent: $currentObject),
+                  buttonstyle: default
+                )
+              }
+            }
+
+          }
+
+        }
+      }
+    }
+  }
+};
+
+-- R7: HD.Customer_New — DataGrid nested inside DataView
+-- Outer dvCustomer: datasource: $Customer (page parameter)
+-- Inner dgFirstTicket: datasource: $Customer/HD.Ticket_Customer/HD.Ticket
+--   — DataGrid (not DataView) is CORRECT here: HD.Customer does not own the Ticket association
+--     (HD.Ticket_Customer runs FROM Ticket TO Customer), so the association path returns a list.
+--     DataView requires a single object; DataGrid accepts a list — hence DataGrid is the right widget.
+--     CE6705 confirms: DataView cannot use association datasource (list → single mismatch).
+create or replace page HD.Customer_New (
+  title: 'Customer Profile',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account',
+  params: { $Customer: HD.Customer }
+) {
+  layoutgrid lgCust {
+    row rCust {
+      column cCust (desktopwidth: 12) {
+        dataview dvCustomer (datasource: $Customer) {
+          textbox tbCustName    (label: 'Name',    attribute: Name)
+          textbox tbCustEmail   (label: 'Email',   attribute: Email)
+          textbox tbCustCompany (label: 'Company', attribute: Company)
+          datagrid dgFirstTicket (
+            datasource: $Customer/HD.Ticket_Customer/HD.Ticket
+          ) {
+            column colTicketSubject (attribute: Subject, caption: 'Subject')
+            column colTicketStatus  (attribute: Status,  caption: 'Status', ColumnWidth: manual, Size: 120)
+          }
+          footer ftrCustSave {
+            actionbutton btnSaveCust (
+              caption: 'Save',
+              action: save_changes close_page,
+              buttonstyle: primary
+            )
+            actionbutton btnCancelCust (
+              caption: 'Cancel',
+              action: cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- R8: HD.Agent_Edit — conditional visibility (attribute equality)
+-- visible: [$Agent/IsActive = false] controls DeactivationReason textbox.
+-- When IsActive is true the field is hidden; when false it appears and is editable.
+create or replace page HD.Agent_Edit (
+  title: 'Edit Agent',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account',
+  params: { $Agent: HD.Agent }
+) {
+  layoutgrid lgAgent {
+    row rAgent {
+      column cAgent (desktopwidth: 12) {
+        dataview dvAgent (datasource: $Agent) {
+          textbox tbAgentName  (label: 'Name',   attribute: Name)
+          textbox tbAgentEmail (label: 'Email',  attribute: Email)
+          textbox tbIsActive   (label: 'Active', attribute: Name)
+          textbox tbDeactivationReason (
+            label: 'Deactivation Reason',
+            attribute: DeactivationReason,
+            visible: [$Agent/IsActive = false]
+          )
+          footer ftrAgent {
+            actionbutton btnSaveAgent (
+              caption: 'Save',
+              action: save_changes close_page,
+              buttonstyle: primary
+            )
+            actionbutton btnCancelAgent (
+              caption: 'Cancel',
+              action: cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- R9: HD.Customer_Edit — conditional visibility (empty check)
+-- visible: [$Customer/Company != empty] controls the corporate contract block.
+-- The block appears only after the user fills in a company name.
+create or replace page HD.Customer_Edit (
+  title: 'Edit Customer',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account',
+  params: { $Customer: HD.Customer }
+) {
+  layoutgrid lgCustEdit {
+    row rCustEdit {
+      column cCustEdit (desktopwidth: 12) {
+        dataview dvCustEdit (datasource: $Customer) {
+          textbox tbCustEditName    (label: 'Name',    attribute: Name)
+          textbox tbCustEditEmail   (label: 'Email',   attribute: Email)
+          textbox tbCustEditCompany (label: 'Company', attribute: Company)
+          dynamictext txtContractTitle (
+            content: 'Corporate Contract',
+            rendermode: H4,
+            visible: [$Customer/Company != empty]
+          )
+          dynamictext txtContractInfo (
+            content: 'Company on file: {1}',
+            contentparams: [{1} = Company],
+            visible: [$Customer/Company != empty]
+          )
+          footer ftrCustEdit {
+            actionbutton btnSaveCustEdit (
+              caption: 'Save',
+              action: save_changes close_page,
+              buttonstyle: primary
+            )
+            actionbutton btnCancelCustEdit (
+              caption: 'Cancel',
+              action: cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};
 
 -- MARK: Security — Module Roles
 
@@ -1662,6 +2041,30 @@ grant view on page HD.TicketSearch_Results      to HD.CustomerRole, HD.AgentRole
 grant view on page KB.Article_Overview     to KB.Reader, KB.Contributor, KB.Admin;
 grant view on page KB.Article_Detail       to KB.Reader, KB.Contributor, KB.Admin;
 
+-- Account Management grants (R1–R9)
+-- HD.UserProfile: all roles read own profile (ManageMyAccount page visible to all three).
+-- CustomerRole/AgentRole: read only (can view their profile via DS_GetMyProfile).
+-- ManagerRole: full access (can manage all profiles).
+grant HD.CustomerRole on HD.UserProfile (read *);
+grant HD.AgentRole    on HD.UserProfile (read *);
+grant HD.ManagerRole  on HD.UserProfile (create, read *, write *);
+-- HD.PasswordForm (non-persistent): all roles need create/read/write to fill in the form.
+grant HD.CustomerRole on HD.PasswordForm (create, read *, write *);
+grant HD.AgentRole    on HD.PasswordForm (create, read *, write *);
+grant HD.ManagerRole  on HD.PasswordForm (create, read *, write *);
+grant view on page HD.ManageMyAccount    to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.ChangeMyPassword   to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.ShowMyPasswordForm to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Account_Overview   to HD.ManagerRole;
+grant view on page HD.Customer_New       to HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Agent_Edit         to HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Customer_Edit      to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.DS_GetMyProfile      to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_ChangePassword   to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.Nav_ChangePassword   to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Agent_Deactivate to HD.ManagerRole;
+grant execute on microflow HD.ACT_Agent_Reactivate to HD.ManagerRole;
+
 -- User roles: 4, mapping module roles
 -- Note: Administrator uses Administration module built-in + composition of module roles
 
@@ -1699,6 +2102,12 @@ create or replace navigation Responsive
       menu item '所有工单'  page HD.Ticket_Overview;
       menu item '升级审批'  page HD.EscalationWorkflow_Overview;
       menu item '工作流管理' page HD.EscalationWorkflow_Overview;
+    );
+    menu '账户管理' (
+      menu item '账户总览'  page HD.Account_Overview;
+      menu item '我的账户'  page HD.ManageMyAccount;
+      -- Issue 5 fix: HD.ChangeMyPassword requires $Form parameter; use no-param microflow as entry
+      menu item '修改密码'  microflow HD.Nav_ChangePassword;
     );
     menu item '系统管理' page Administration.Account_Overview;
   );
@@ -1771,6 +2180,20 @@ move microflow HD.ACT_Workflow_ShowAdminPage     to folder 'Escalation/WorkflowA
 move microflow HD.ACT_Workflow_Lock              to folder 'Escalation/WorkflowAdmin';
 move microflow HD.ACT_Workflow_Unlock            to folder 'Escalation/WorkflowAdmin';
 move microflow HD.ACT_Workflow_Notify            to folder 'Escalation/WorkflowAdmin';
+
+-- HD Module — Account
+move microflow HD.DS_GetMyProfile       to folder 'Account';
+move microflow HD.ACT_ChangePassword    to folder 'Account';
+move microflow HD.ACT_Agent_Deactivate  to folder 'Account';
+move microflow HD.ACT_Agent_Reactivate  to folder 'Account';
+move microflow HD.Nav_ChangePassword    to folder 'Account';
+move page      HD.ManageMyAccount       to folder 'Account';
+move page      HD.ChangeMyPassword      to folder 'Account';
+move page      HD.ShowMyPasswordForm    to folder 'Account';
+move page      HD.Account_Overview      to folder 'Account';
+move page      HD.Customer_New          to folder 'Account';
+move page      HD.Agent_Edit           to folder 'Account';
+move page      HD.Customer_Edit         to folder 'Account';
 
 -- Note: golden rebuilt after SortItemList.InitFromRaw BSON key fix (Items→Sortings)
 

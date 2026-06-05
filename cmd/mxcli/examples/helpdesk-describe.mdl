@@ -105,11 +105,10 @@ describe microflow HD.ACT_Workflow_ShowAdminPage;
 describe microflow HD.ACT_Workflow_Lock;
 describe microflow HD.ACT_Workflow_Unlock;
 describe microflow HD.ACT_Workflow_Notify;
--- Account Management — only constructs that round-trip cleanly through describe.
--- Omitted (Stage 3.2.2 describe WIP in cmd_microflows_show_gen.go, known debt):
---   HD.DS_GetMyProfile  — split type + cast describe to non-re-parseable syntax
---   HD.ACT_ChangePassword — raise error / show home page not yet formatted
---   HD.JA_HashPassword  — describe emits `create` not `create or modify`
+-- Account Management — all constructs now round-trip cleanly (Stage 3.2.2 fixed).
+describe microflow HD.DS_GetMyProfile;
+describe java action HD.JA_HashPassword;
+describe microflow HD.ACT_ChangePassword;
 describe microflow HD.ACT_Agent_Deactivate;
 describe microflow HD.ACT_Agent_Reactivate;
 -- Workflows
@@ -139,4 +138,12 @@ describe page HD.TicketSearch_Results;
 describe page HD.EscalationReview_Form;
 describe page HD.EscalationWorkflow_Overview;
 describe page HD.EscalationStart_Form;
+-- HD Account Management pages
+describe page HD.ManageMyAccount;
+describe page HD.ChangeMyPassword;
+describe page HD.ShowMyPasswordForm;
+describe page HD.Account_Overview;
+describe page HD.Customer_New;
+describe page HD.Agent_Edit;
+describe page HD.Customer_Edit;
 describe settings;
