@@ -126,6 +126,47 @@ func TestPackageMPK_CreatesZip(t *testing.T) {
 	}
 }
 
+func TestDiscoverWidgets_WithAbsoluteDir(t *testing.T) {
+	tmp := t.TempDir()
+	srcDir := filepath.Join(tmp, "src")
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	xmlContent := `<?xml version="1.0" encoding="utf-8"?>
+<widget id="com.example.MyWidget" pluginWidget="true"
+        xmlns="http://www.mendix.com/widget/1.0/"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
+  <name>MyWidget</name>
+  <description/>
+  <properties/>
+</widget>`
+	if err := os.WriteFile(filepath.Join(srcDir, "MyWidget.xml"), []byte(xmlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	infos, err := discoverWidgets(tmp)
+	if err != nil {
+		t.Fatalf("discoverWidgets(%q): %v", tmp, err)
+	}
+	if len(infos) != 1 || infos[0].Name != "MyWidget" {
+		t.Errorf("discoverWidgets: got %v, want [{MyWidget ...}]", infos)
+	}
+}
+
+func TestWidgetBuildDirResolution(t *testing.T) {
+	cases := []string{".", "./SomeWidget", "../../relative/path"}
+	for _, rel := range cases {
+		abs, err := filepath.Abs(rel)
+		if err != nil {
+			t.Errorf("filepath.Abs(%q): %v", rel, err)
+			continue
+		}
+		if !filepath.IsAbs(abs) {
+			t.Errorf("filepath.Abs(%q) = %q is not absolute", rel, abs)
+		}
+	}
+}
+
 func TestRoundTrip_ScaffoldThenDiscover(t *testing.T) {
 	dir := t.TempDir()
 	props := []PropertySpec{

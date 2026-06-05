@@ -267,6 +267,10 @@ func runWidgetBuild(cmd *cobra.Command, args []string) error {
 	if dir == "" {
 		dir = "."
 	}
+	// Convert to absolute path: cmd.Dir + relative src would double the path in esbuild.
+	if abs, err := filepath.Abs(dir); err == nil {
+		dir = abs
+	}
 
 	infos, err := discoverWidgets(dir)
 	if err != nil {
