@@ -776,6 +776,14 @@ func (s *BaseMDLParserListener) EnterInheritanceSplitCase(ctx *InheritanceSplitC
 // ExitInheritanceSplitCase is called when production inheritanceSplitCase is exited.
 func (s *BaseMDLParserListener) ExitInheritanceSplitCase(ctx *InheritanceSplitCaseContext) {}
 
+// EnterInheritanceSplitCaseModern is called when production inheritanceSplitCaseModern is entered.
+func (s *BaseMDLParserListener) EnterInheritanceSplitCaseModern(ctx *InheritanceSplitCaseModernContext) {
+}
+
+// ExitInheritanceSplitCaseModern is called when production inheritanceSplitCaseModern is exited.
+func (s *BaseMDLParserListener) ExitInheritanceSplitCaseModern(ctx *InheritanceSplitCaseModernContext) {
+}
+
 // EnterCastObjectStatement is called when production castObjectStatement is entered.
 func (s *BaseMDLParserListener) EnterCastObjectStatement(ctx *CastObjectStatementContext) {}
 
@@ -787,6 +795,12 @@ func (s *BaseMDLParserListener) EnterSetStatement(ctx *SetStatementContext) {}
 
 // ExitSetStatement is called when production setStatement is exited.
 func (s *BaseMDLParserListener) ExitSetStatement(ctx *SetStatementContext) {}
+
+// EnterSimpleAssignStatement is called when production simpleAssignStatement is entered.
+func (s *BaseMDLParserListener) EnterSimpleAssignStatement(ctx *SimpleAssignStatementContext) {}
+
+// ExitSimpleAssignStatement is called when production simpleAssignStatement is exited.
+func (s *BaseMDLParserListener) ExitSimpleAssignStatement(ctx *SimpleAssignStatementContext) {}
 
 // EnterCreateObjectStatement is called when production createObjectStatement is entered.
 func (s *BaseMDLParserListener) EnterCreateObjectStatement(ctx *CreateObjectStatementContext) {}

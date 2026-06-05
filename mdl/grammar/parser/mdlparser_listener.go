@@ -370,11 +370,17 @@ type MDLParserListener interface {
 	// EnterInheritanceSplitCase is called when entering the inheritanceSplitCase production.
 	EnterInheritanceSplitCase(c *InheritanceSplitCaseContext)
 
+	// EnterInheritanceSplitCaseModern is called when entering the inheritanceSplitCaseModern production.
+	EnterInheritanceSplitCaseModern(c *InheritanceSplitCaseModernContext)
+
 	// EnterCastObjectStatement is called when entering the castObjectStatement production.
 	EnterCastObjectStatement(c *CastObjectStatementContext)
 
 	// EnterSetStatement is called when entering the setStatement production.
 	EnterSetStatement(c *SetStatementContext)
+
+	// EnterSimpleAssignStatement is called when entering the simpleAssignStatement production.
+	EnterSimpleAssignStatement(c *SimpleAssignStatementContext)
 
 	// EnterCreateObjectStatement is called when entering the createObjectStatement production.
 	EnterCreateObjectStatement(c *CreateObjectStatementContext)
@@ -1792,11 +1798,17 @@ type MDLParserListener interface {
 	// ExitInheritanceSplitCase is called when exiting the inheritanceSplitCase production.
 	ExitInheritanceSplitCase(c *InheritanceSplitCaseContext)
 
+	// ExitInheritanceSplitCaseModern is called when exiting the inheritanceSplitCaseModern production.
+	ExitInheritanceSplitCaseModern(c *InheritanceSplitCaseModernContext)
+
 	// ExitCastObjectStatement is called when exiting the castObjectStatement production.
 	ExitCastObjectStatement(c *CastObjectStatementContext)
 
 	// ExitSetStatement is called when exiting the setStatement production.
 	ExitSetStatement(c *SetStatementContext)
+
+	// ExitSimpleAssignStatement is called when exiting the simpleAssignStatement production.
+	ExitSimpleAssignStatement(c *SimpleAssignStatementContext)
 
 	// ExitCreateObjectStatement is called when exiting the createObjectStatement production.
 	ExitCreateObjectStatement(c *CreateObjectStatementContext)

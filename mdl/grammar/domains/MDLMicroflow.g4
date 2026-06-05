@@ -18,7 +18,9 @@ createMicroflowStatement
       LPAREN microflowParameterList? RPAREN
       microflowReturnType?
       microflowOptions?
-      BEGIN microflowBody END SEMICOLON? SLASH?
+      ( BEGIN microflowBody END
+      | LBRACE microflowBody RBRACE
+      ) SEMICOLON? SLASH?
     ;
 
 /**
@@ -29,7 +31,9 @@ createNanoflowStatement
       LPAREN microflowParameterList? RPAREN
       microflowReturnType?
       microflowOptions?
-      BEGIN microflowBody END SEMICOLON? SLASH?
+      ( BEGIN microflowBody END
+      | LBRACE microflowBody RBRACE
+      ) SEMICOLON? SLASH?
     ;
 
 /**
@@ -165,17 +169,23 @@ microflowStatement
     | annotation* unlockWorkflowStatement SEMICOLON?
     | annotation* generateJumpToStatement SEMICOLON?
     | annotation* applyJumpToStatement SEMICOLON?
+    | annotation* simpleAssignStatement SEMICOLON?
     ;
 
 declareStatement
-    : DECLARE VARIABLE dataType (EQUALS expression)?
+    : DECLARE VARIABLE COLON? dataType (EQUALS expression)?
     ;
 
 caseStatement
     : CASE enumSplitSource
-      (WHEN enumSplitCaseValue (COMMA enumSplitCaseValue)* THEN microflowBody)+
-      (ELSE microflowBody)?
-      END CASE
+      ( (WHEN enumSplitCaseValue (COMMA enumSplitCaseValue)* THEN microflowBody)+
+        (ELSE microflowBody)?
+        END CASE
+      | LBRACE
+        (WHEN enumSplitCaseValue (COMMA enumSplitCaseValue)* LBRACE microflowBody RBRACE)+
+        (ELSE LBRACE microflowBody RBRACE)?
+        RBRACE
+      )
     ;
 
 enumSplitSource
@@ -190,11 +200,17 @@ enumSplitCaseValue
 
 inheritanceSplitStatement
     : SPLIT TYPE VARIABLE
-      (inheritanceSplitCase+ (ELSE microflowBody)? END SPLIT)?
+      ( inheritanceSplitCase+ (ELSE microflowBody)? END SPLIT
+      | LBRACE inheritanceSplitCaseModern* (ELSE LBRACE microflowBody RBRACE)? RBRACE
+      )?
     ;
 
 inheritanceSplitCase
     : CASE qualifiedName microflowBody
+    ;
+
+inheritanceSplitCaseModern
+    : CASE qualifiedName LBRACE microflowBody RBRACE
     ;
 
 castObjectStatement
@@ -204,6 +220,10 @@ castObjectStatement
 
 setStatement
     : SET (VARIABLE | attributePath) EQUALS expression
+    ;
+
+simpleAssignStatement
+    : (VARIABLE | attributePath) EQUALS expression
     ;
 
 // $NewProduct = CREATE MfTest.Product (Name = $Name, Code = $Code);
@@ -262,21 +282,30 @@ onErrorClause
 
 // IF ... THEN ... END IF;
 ifStatement
-    : IF expression THEN microflowBody
-      (ELSIF expression THEN microflowBody)*
-      (ELSE microflowBody)?
-      END IF
+    : IF expression
+      ( THEN microflowBody
+        (ELSIF expression THEN microflowBody)*
+        (ELSE microflowBody)?
+        END IF
+      | LBRACE microflowBody RBRACE
+        (ELSIF expression LBRACE microflowBody RBRACE)*
+        (ELSE LBRACE microflowBody RBRACE)?
+      )
     ;
 
 // LOOP $Product IN $ProductList BEGIN ... END LOOP;
 loopStatement
     : LOOP VARIABLE IN (VARIABLE | attributePath)
-      BEGIN microflowBody END LOOP
+      ( BEGIN microflowBody END LOOP
+      | LBRACE microflowBody RBRACE
+      )
     ;
 
 whileStatement
     : WHILE expression
-      BEGIN? microflowBody END WHILE?
+      ( BEGIN? microflowBody END WHILE?
+      | LBRACE microflowBody RBRACE
+      )
     ;
 
 continueStatement
