@@ -139,4 +139,12 @@ describe page HD.TicketSearch_Results;
 describe page HD.EscalationReview_Form;
 describe page HD.EscalationWorkflow_Overview;
 describe page HD.EscalationStart_Form;
+-- HD Account Management pages
+describe page HD.ManageMyAccount;
+describe page HD.ChangeMyPassword;
+describe page HD.ShowMyPasswordForm;
+describe page HD.Account_Overview;
+describe page HD.Customer_New;
+describe page HD.Agent_Edit;
+describe page HD.Customer_Edit;
 describe settings;
