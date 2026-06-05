@@ -53,6 +53,11 @@ func execCreateModuleRoleGen(ctx *ExecContext, s *ast.CreateModuleRoleStmt) erro
 		if typed.Description() == autoDocumentRoleDescription {
 			oldQualified := s.Name.Module + "." + typed.Name()
 			newQualified := s.Name.Module + "." + s.Name.Name
+			// Remove first: AddModuleRole is a plain append with no dedup.
+			// Without this, two roles with the same name cause Mendix CE1613.
+			if err := ctx.Backend.RemoveModuleRole(model.ID(ms.ID()), typed.Name()); err != nil {
+				return mdlerrors.NewBackend("remove auto-provisioned role", err)
+			}
 			if err := ctx.Backend.AddModuleRole(model.ID(ms.ID()), s.Name.Name, s.Description); err != nil {
 				return mdlerrors.NewBackend("create module role", err)
 			}
@@ -72,10 +77,11 @@ func execCreateModuleRoleGen(ctx *ExecContext, s *ast.CreateModuleRoleStmt) erro
 			}
 			return nil
 		}
-		// Custom role already exists — create or modify is idempotent: skip.
+		// Custom role already exists — idempotent: skip with a helpful hint.
 		if !ctx.Quiet {
-			fmt.Fprintf(ctx.Output, "Module role %s.%s already exists\n",
-				s.Name.Module, s.Name.Name)
+			fmt.Fprintf(ctx.Output,
+				"Module role %s.%s already exists.\nTo link it to a user role: ALTER USER ROLE \"User\" ADD MODULE ROLES (%s.\"%s\");\n",
+				s.Name.Module, s.Name.Name, s.Name.Module, s.Name.Name)
 		}
 		return nil
 	}
