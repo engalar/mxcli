@@ -32,3 +32,23 @@ begin
   return $r;
 end;
 /
+
+-- [EXPR-DATE-ADD-04] addYears, addWeeks, addQuarters
+create microflow Showcase.Expr_DateAdd_04 ($d: datetime)
+returns Nothing
+begin
+  declare $d1: datetime = addYears($d, 1);
+  declare $d2: datetime = addWeeks($d, 2);
+  declare $d3: datetime = addQuarters($d, 1);
+end;
+/
+
+-- [EXPR-DATE-ADD-05] addMinutes, addSeconds, addMilliseconds
+create microflow Showcase.Expr_DateAdd_05 ($d: datetime)
+returns Nothing
+begin
+  declare $d1: datetime = addMinutes($d, 30);
+  declare $d2: datetime = addSeconds($d, 60);
+  declare $d3: datetime = addMilliseconds($d, 500);
+end;
+/

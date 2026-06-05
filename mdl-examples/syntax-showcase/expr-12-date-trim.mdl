@@ -23,3 +23,20 @@ begin
   return $r;
 end;
 /
+
+-- [EXPR-DATE-TRIM-03] trimToWeeks, trimToYears
+create microflow Showcase.Expr_DateTrim_03 ($d: datetime)
+returns Nothing
+begin
+  declare $d1: datetime = trimToWeeks($d);
+  declare $d2: datetime = trimToYears($d);
+end;
+/
+
+-- [EXPR-DATE-TRIM-04] trimToSeconds
+create microflow Showcase.Expr_DateTrim_04 ($d: datetime)
+returns Nothing
+begin
+  declare $d1: datetime = trimToSeconds($d);
+end;
+/

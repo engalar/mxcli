@@ -23,3 +23,22 @@ begin
   return $r;
 end;
 /
+
+-- [EXPR-DATE-BTW-03] yearsBetween, monthsBetween, weeksBetween
+create microflow Showcase.Expr_DateBetween_03 ($from: datetime, $to: datetime)
+returns Nothing
+begin
+  declare $y: integer = yearsBetween($from, $to);
+  declare $m: integer = monthsBetween($from, $to);
+  declare $w: integer = weeksBetween($from, $to);
+end;
+/
+
+-- [EXPR-DATE-BTW-04] secondsBetween, millisecondsBetween
+create microflow Showcase.Expr_DateBetween_04 ($from: datetime, $to: datetime)
+returns Nothing
+begin
+  declare $s: integer = secondsBetween($from, $to);
+  declare $ms: integer = millisecondsBetween($from, $to);
+end;
+/

@@ -1,13 +1,13 @@
 -- ============================================================
--- SHOWCASE: System Variables
+-- SHOWCASE: System Variables (Mendix Tokens)
 -- Mendix doc: /refguide/special-checks/#system-variables
--- MDL grammar rule: systemVariable
+-- MDL grammar rule: systemVariable ([% ... %])
 -- ============================================================
 
 create module Showcase;
 
--- [EXPR-SYSVAR-01] CurrentDateTime, CurrentUser
-create microflow Showcase.Expr_SysVar_01 ()
+-- [EXPR-SYSVAR-01] Time: current datetime
+create microflow Showcase.Expr_SysVar_DateTime ()
 returns datetime as $r
 begin
   declare $r: datetime = [%CurrentDateTime%];
@@ -15,13 +15,104 @@ begin
 end;
 /
 
--- [EXPR-SYSVAR-02] retrieve with XPath constraint
-create microflow Showcase.Expr_SysVar_02 ()
-returns list of Showcase.Order as $r
+-- [EXPR-SYSVAR-02] Time: begin of periods (local)
+create microflow Showcase.Expr_SysVar_BeginOf ()
+returns Nothing
 begin
-  retrieve $r from Showcase.Order
-    where [IsActive = true]
-    limit 10;
+  declare $d1: datetime = [%BeginOfCurrentDay%];
+  declare $d2: datetime = [%BeginOfCurrentWeek%];
+  declare $d3: datetime = [%BeginOfCurrentMonth%];
+  declare $d4: datetime = [%BeginOfCurrentYear%];
+  declare $d5: datetime = [%BeginOfTomorrow%];
+  declare $d6: datetime = [%BeginOfYesterday%];
+end;
+/
+
+-- [EXPR-SYSVAR-03] Time: begin of periods (UTC)
+create microflow Showcase.Expr_SysVar_BeginOfUTC ()
+returns Nothing
+begin
+  declare $d1: datetime = [%BeginOfCurrentDayUTC%];
+  declare $d2: datetime = [%BeginOfCurrentWeekUTC%];
+  declare $d3: datetime = [%BeginOfCurrentMonthUTC%];
+  declare $d4: datetime = [%BeginOfCurrentYearUTC%];
+  declare $d5: datetime = [%BeginOfTomorrowUTC%];
+  declare $d6: datetime = [%BeginOfYesterdayUTC%];
+end;
+/
+
+-- [EXPR-SYSVAR-04] Time: end of periods (local)
+create microflow Showcase.Expr_SysVar_EndOf ()
+returns Nothing
+begin
+  declare $d1: datetime = [%EndOfCurrentDay%];
+  declare $d2: datetime = [%EndOfCurrentWeek%];
+  declare $d3: datetime = [%EndOfCurrentMonth%];
+  declare $d4: datetime = [%EndOfCurrentYear%];
+  declare $d5: datetime = [%EndOfTomorrow%];
+  declare $d6: datetime = [%EndOfYesterday%];
+end;
+/
+
+-- [EXPR-SYSVAR-05] Time: end of periods (UTC)
+create microflow Showcase.Expr_SysVar_EndOfUTC ()
+returns Nothing
+begin
+  declare $d1: datetime = [%EndOfCurrentDayUTC%];
+  declare $d2: datetime = [%EndOfCurrentWeekUTC%];
+  declare $d3: datetime = [%EndOfCurrentMonthUTC%];
+  declare $d4: datetime = [%EndOfCurrentYearUTC%];
+  declare $d5: datetime = [%EndOfTomorrowUTC%];
+  declare $d6: datetime = [%EndOfYesterdayUTC%];
+end;
+/
+
+-- [EXPR-SYSVAR-06] Duration constants (integer, seconds)
+create microflow Showcase.Expr_SysVar_Lengths ()
+returns Nothing
+begin
+  declare $min:   integer = [%MinuteLength%];
+  declare $hour:  integer = [%HourLength%];
+  declare $day:   integer = [%DayLength%];
+  declare $week:  integer = [%WeekLength%];
+  declare $month: integer = [%MonthLength%];
+  declare $year:  integer = [%YearLength%];
+end;
+/
+
+-- [EXPR-SYSVAR-07] User and session
+create microflow Showcase.Expr_SysVar_User ()
+returns System.User as $r
+begin
+  declare $r: System.User = [%CurrentUser%];
+  return $r;
+end;
+/
+
+-- [EXPR-SYSVAR-08] Current session
+create microflow Showcase.Expr_SysVar_Session ()
+returns Nothing
+begin
+  declare $sess: System.Session = [%CurrentSession%];
+end;
+/
+
+-- [EXPR-SYSVAR-09] Project name
+create microflow Showcase.Expr_SysVar_ProjectName ()
+returns string as $r
+begin
+  declare $r: string = [%ProjectName%];
+  return $r;
+end;
+/
+
+-- [EXPR-SYSVAR-10] UserRole in XPath constraint (format: [%UserRole_RoleName%])
+create microflow Showcase.Expr_SysVar_UserRole ()
+returns list of System.User as $r
+begin
+  declare $r: list of System.User = empty;
+  retrieve $r from System.User
+    where [System.User_UserRoles = '[%UserRole_Administrator%]'];
   return $r;
 end;
 /

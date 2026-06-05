@@ -23,3 +23,23 @@ begin
   return $r;
 end;
 /
+
+-- [EXPR-DATE-BEGIN-02] beginOfWeek, beginOfMonth, beginOfYear (with datetime parameter)
+create microflow Showcase.Expr_DateBegin_02 ($d: datetime)
+returns Nothing
+begin
+  declare $d1: datetime = beginOfWeek($d);
+  declare $d2: datetime = beginOfMonth($d);
+  declare $d3: datetime = beginOfYear($d);
+end;
+/
+
+-- [EXPR-DATE-END-02] endOfWeek, endOfMonth, endOfYear (with datetime parameter)
+create microflow Showcase.Expr_DateEnd_02 ($d: datetime)
+returns Nothing
+begin
+  declare $d1: datetime = endOfWeek($d);
+  declare $d2: datetime = endOfMonth($d);
+  declare $d3: datetime = endOfYear($d);
+end;
+/

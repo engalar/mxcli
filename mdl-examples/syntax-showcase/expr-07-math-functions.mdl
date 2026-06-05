@@ -32,3 +32,12 @@ begin
   return $r;
 end;
 /
+
+-- [EXPR-MATH-04] round with precision
+create microflow Showcase.Expr_Math_04 ($x: decimal)
+returns decimal as $r
+begin
+  declare $r: decimal = round($x, 2);
+  return $r;
+end;
+/

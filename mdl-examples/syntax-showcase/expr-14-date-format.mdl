@@ -23,3 +23,12 @@ begin
   return $r;
 end;
 /
+
+-- [EXPR-DATE-FMT-03] formatDateTimeUTC, parseDateTimeUTC
+create microflow Showcase.Expr_DateFmt_03 ($d: datetime, $s: string)
+returns Nothing
+begin
+  declare $f: string = formatDateTimeUTC($d, 'yyyy-MM-dd');
+  declare $p: datetime = parseDateTimeUTC($s, 'yyyy-MM-dd');
+end;
+/
