@@ -30,9 +30,8 @@ type DomainModelGenWithContainer struct {
 // project paired with its owning module ID. Caches on
 // ctx.Cache.domainModelsWithContainerGen for the session.
 //
-// The caller can rely on each module appearing at most once; modules
-// without a DomainModel (defensive against partial fixtures) are
-// silently skipped.
+// Uses ListAllWithContainerID for a single O(#domain_models) scan instead
+// of one List(moduleID) call per module (which was O(N × all_units)).
 func listDomainModelsWithContainerGen(ctx *ExecContext) ([]DomainModelGenWithContainer, error) {
 	if ctx == nil || ctx.DomainModels == nil || ctx.Backend == nil {
 		return nil, nil
@@ -40,22 +39,31 @@ func listDomainModelsWithContainerGen(ctx *ExecContext) ([]DomainModelGenWithCon
 	if ctx.Cache != nil && ctx.Cache.domainModelsWithContainerGen != nil {
 		return ctx.Cache.domainModelsWithContainerGen, nil
 	}
+
+	// Build module ID set for filtering (ContainerID of a DomainModel IS its module ID).
 	mods, err := ctx.Backend.ListModules()
 	if err != nil {
 		return nil, err
 	}
-	out := make([]DomainModelGenWithContainer, 0, len(mods))
+	moduleIDs := make(map[model.ID]bool, len(mods))
 	for _, m := range mods {
-		dms, err := ctx.DomainModels.List(m.ID)
-		if err != nil || len(dms) == 0 {
+		moduleIDs[m.ID] = true
+	}
+
+	pairs, err := ctx.DomainModels.ListAllWithContainerID()
+	if err != nil {
+		return nil, err
+	}
+	out := make([]DomainModelGenWithContainer, 0, len(pairs))
+	for _, p := range pairs {
+		if p.DM == nil {
 			continue
 		}
-		for _, dm := range dms {
-			if dm == nil {
-				continue
-			}
-			out = append(out, DomainModelGenWithContainer{DM: dm, ContainerID: m.ID})
+		// Only include DomainModels whose direct parent is a known module.
+		if !moduleIDs[p.ContainerID] {
+			continue
 		}
+		out = append(out, DomainModelGenWithContainer{DM: p.DM, ContainerID: p.ContainerID})
 	}
 	if ctx.Cache != nil {
 		ctx.Cache.domainModelsWithContainerGen = out

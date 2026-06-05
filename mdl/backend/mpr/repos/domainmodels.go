@@ -61,6 +61,32 @@ func (r *domainModelRepo) Get(id model.ID) (*genDm.DomainModel, error) {
 	return dm, nil
 }
 
+// ListAllWithContainerID returns every DomainModel together with its direct
+// parent unit ID (the owning module). Does a single ListUnitsByType scan
+// without BuildContainerParent or ListModules, so cost is O(#domain_models).
+// DomainModels are always direct children of their module (never in folders).
+func (r *domainModelRepo) ListAllWithContainerID() ([]repos.DomainModelWithContainer, error) {
+	refs, err := r.r.ListUnitsByType(domainModelTypeName)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]repos.DomainModelWithContainer, 0, len(refs))
+	for _, ref := range refs {
+		if ref.Type != domainModelTypeName {
+			continue
+		}
+		dm, err := r.Get(model.ID(ref.ID))
+		if err != nil {
+			return nil, fmt.Errorf("decode domain model %s: %w", ref.ID, err)
+		}
+		result = append(result, repos.DomainModelWithContainer{
+			DM:          dm,
+			ContainerID: model.ID(ref.ContainerID),
+		})
+	}
+	return result, nil
+}
+
 // List returns all DomainModel units whose container chain ends at
 // moduleID. With moduleID empty, returns all DomainModels in the
 // project.

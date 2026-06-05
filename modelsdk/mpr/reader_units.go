@@ -33,16 +33,23 @@ func ResolveModuleName(containerID string, moduleMap map[string]string, containe
 }
 
 // BuildContainerParent builds a map of unit ID → parent container ID for hierarchy walking.
+// Uses a direct SQL query (no file reads) for both v1 and v2 formats since
+// ContainerID is always stored in the SQLite Unit table.
 func (r *Reader) BuildContainerParent() (map[string]string, error) {
-	units, err := r.ListUnits()
+	rows, err := r.db.Query("SELECT UnitID, ContainerID FROM Unit")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("BuildContainerParent: %w", err)
 	}
-	containerParent := make(map[string]string, len(units))
-	for _, u := range units {
-		containerParent[string(u.ID)] = string(u.ContainerID)
+	defer rows.Close()
+	result := make(map[string]string)
+	for rows.Next() {
+		var unitID, containerID []byte
+		if err := rows.Scan(&unitID, &containerID); err != nil {
+			return nil, fmt.Errorf("BuildContainerParent scan: %w", err)
+		}
+		result[blobToUUID(unitID)] = blobToUUID(containerID)
 	}
-	return containerParent, nil
+	return result, rows.Err()
 }
 
 // rawUnit holds raw unit data from the database.

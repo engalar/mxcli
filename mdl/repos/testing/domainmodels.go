@@ -30,12 +30,13 @@ type RecordingDomainModelRepository struct {
 	Deleted      []model.ID
 	Moved        []DomainModelMoveCall
 
-	GetFunc    func(model.ID) (*genDm.DomainModel, error)
-	ListFunc   func(model.ID) ([]*genDm.DomainModel, error)
-	CreateFunc func(DomainModelCreateCall) error
-	UpdateFunc func(*genDm.DomainModel) error
-	DeleteFunc func(model.ID) error
-	MoveFunc   func(DomainModelMoveCall) error
+	GetFunc                  func(model.ID) (*genDm.DomainModel, error)
+	ListFunc                 func(model.ID) ([]*genDm.DomainModel, error)
+	ListAllWithContainerIDFunc func() ([]repos.DomainModelWithContainer, error)
+	CreateFunc               func(DomainModelCreateCall) error
+	UpdateFunc               func(*genDm.DomainModel) error
+	DeleteFunc               func(model.ID) error
+	MoveFunc                 func(DomainModelMoveCall) error
 }
 
 var _ repos.DomainModelRepository = (*RecordingDomainModelRepository)(nil)
@@ -52,6 +53,13 @@ func (m *RecordingDomainModelRepository) List(moduleID model.ID) ([]*genDm.Domai
 	m.ListedModule = append(m.ListedModule, moduleID)
 	if m.ListFunc != nil {
 		return m.ListFunc(moduleID)
+	}
+	return nil, nil
+}
+
+func (m *RecordingDomainModelRepository) ListAllWithContainerID() ([]repos.DomainModelWithContainer, error) {
+	if m.ListAllWithContainerIDFunc != nil {
+		return m.ListAllWithContainerIDFunc()
 	}
 	return nil, nil
 }

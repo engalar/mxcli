@@ -282,6 +282,17 @@ func makeDomainModelsRepo(domainModelsByModule map[model.ID][]*genDm.DomainModel
 		ListFunc: func(moduleID model.ID) ([]*genDm.DomainModel, error) {
 			return domainModelsByModule[moduleID], nil
 		},
+		ListAllWithContainerIDFunc: func() ([]repos.DomainModelWithContainer, error) {
+			var result []repos.DomainModelWithContainer
+			for moduleID, dms := range domainModelsByModule {
+				for _, dm := range dms {
+					if dm != nil {
+						result = append(result, repos.DomainModelWithContainer{DM: dm, ContainerID: moduleID})
+					}
+				}
+			}
+			return result, nil
+		},
 		GetFunc: func(id model.ID) (*genDm.DomainModel, error) {
 			for _, list := range domainModelsByModule {
 				for _, dm := range list {
