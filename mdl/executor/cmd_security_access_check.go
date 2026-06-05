@@ -1,0 +1,266 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package executor
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/model"
+	genDM "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genMF "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
+)
+
+// entityAccessSummary captures the effective access a module role has on an entity.
+type entityAccessSummary struct {
+	canRead   bool // DefaultMemberAccessRights is ReadOnly or ReadWrite
+	canWrite  bool // DefaultMemberAccessRights is ReadWrite
+	canCreate bool
+	canDelete bool
+}
+
+// AnalyzeAccess scans the connected MPR and returns all permission gaps
+// found between page/MF grants and entity/execute grants.
+// Returns nil when no MPR is connected.
+func (e *Executor) AnalyzeAccess() ([]AccessGap, error) {
+	ctx := e.newExecContext(context.Background())
+	if ctx == nil || ctx.Backend == nil || !ctx.Connected() {
+		return nil, nil
+	}
+
+	urToMR, err := buildUserRoleMap(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("AnalyzeAccess: %w", err)
+	}
+
+	entityGrants, err := buildEntityGrants(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("AnalyzeAccess: %w", err)
+	}
+
+	pageGrants, mfGrants, err := buildDocumentGrants(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("AnalyzeAccess: %w", err)
+	}
+
+	mfMetaMap, err := buildMFMeta(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("AnalyzeAccess: %w", err)
+	}
+
+	pageModels, err := buildPageModels(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("AnalyzeAccess: %w", err)
+	}
+
+	return detectGaps(urToMR, entityGrants, pageGrants, mfGrants, mfMetaMap, pageModels), nil
+}
+
+// buildUserRoleMap reads ProjectSecurity and returns UserRoleName → []ModuleRoleQN.
+func buildUserRoleMap(ctx *ExecContext) (map[string][]string, error) {
+	ps, err := ctx.Backend.GetProjectSecurityGen()
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string][]string)
+	if ps == nil {
+		return result, nil
+	}
+	for _, item := range ps.UserRolesItems() {
+		ur, ok := item.(*genSec.UserRole)
+		if !ok {
+			continue
+		}
+		result[ur.Name()] = ur.ModuleRolesQualifiedNames()
+	}
+	return result, nil
+}
+
+// buildEntityGrants reads every domain model's AccessRules and returns
+// ModuleRoleQN → (EntityQN → entityAccessSummary).
+func buildEntityGrants(ctx *ExecContext) (map[string]map[string]entityAccessSummary, error) {
+	result := make(map[string]map[string]entityAccessSummary)
+
+	dms, err := ctx.Backend.ListDomainModelsGen()
+	if err != nil {
+		return nil, err
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, dm := range dms {
+		if dm == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(dm.ID()))
+		moduleName := h.GetModuleName(modID)
+		for _, entItem := range dm.EntitiesItems() {
+			ent, ok := entItem.(*genDM.Entity)
+			if !ok {
+				continue
+			}
+			entityQN := moduleName + "." + ent.Name()
+			for _, arItem := range ent.AccessRulesItems() {
+				ar, ok := arItem.(*genDM.AccessRule)
+				if !ok {
+					continue
+				}
+				rights := ar.DefaultMemberAccessRights()
+				summary := entityAccessSummary{
+					canCreate: ar.AllowCreate(),
+					canDelete: ar.AllowDelete(),
+					canRead:   rights == "ReadOnly" || rights == "ReadWrite",
+					canWrite:  rights == "ReadWrite",
+				}
+				for _, mrQN := range ar.ModuleRolesQualifiedNames() {
+					if result[mrQN] == nil {
+						result[mrQN] = make(map[string]entityAccessSummary)
+					}
+					// Merge: any rule granting a permission wins.
+					existing := result[mrQN][entityQN]
+					existing.canRead = existing.canRead || summary.canRead
+					existing.canWrite = existing.canWrite || summary.canWrite
+					existing.canCreate = existing.canCreate || summary.canCreate
+					existing.canDelete = existing.canDelete || summary.canDelete
+					result[mrQN][entityQN] = existing
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
+// buildDocumentGrants returns:
+//   - pageGrants: ModuleRoleQN → []pageQN
+//   - mfGrants:   ModuleRoleQN → []mfQN  (execute grants)
+func buildDocumentGrants(ctx *ExecContext) (pageGrants, mfGrants map[string][]string, err error) {
+	pageGrants = make(map[string][]string)
+	mfGrants = make(map[string][]string)
+
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pages, err := ctx.Backend.ListPagesGen()
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, pg := range pages {
+		if pg == nil {
+			continue
+		}
+		pageQN := h.GetQualifiedName(model.ID(pg.ID()), pg.Name())
+		for _, mrQN := range pg.AllowedRolesQualifiedNames() {
+			pageGrants[mrQN] = append(pageGrants[mrQN], pageQN)
+		}
+	}
+
+	mfs, err := ctx.Backend.ListMicroflowsGen()
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, mf := range mfs {
+		if mf == nil {
+			continue
+		}
+		mfQN := h.GetQualifiedName(model.ID(mf.ID()), mf.Name())
+		for _, mrQN := range mf.AllowedModuleRolesQualifiedNames() {
+			mfGrants[mrQN] = append(mfGrants[mrQN], mfQN)
+		}
+	}
+	return pageGrants, mfGrants, nil
+}
+
+// mfMeta holds per-MF metadata needed for access analysis.
+type mfMeta struct {
+	applyEntityAccess bool
+	entityQNs         []string // entities retrieved/changed/created/deleted by this MF
+}
+
+// buildMFMeta returns mfQN → mfMeta.
+func buildMFMeta(ctx *ExecContext) (map[string]mfMeta, error) {
+	result := make(map[string]mfMeta)
+	mfs, err := ctx.Backend.ListMicroflowsGen()
+	if err != nil {
+		return nil, err
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, mf := range mfs {
+		if mf == nil {
+			continue
+		}
+		mfQN := h.GetQualifiedName(model.ID(mf.ID()), mf.Name())
+		m := mfMeta{
+			applyEntityAccess: mf.ApplyEntityAccess(),
+		}
+		if m.applyEntityAccess {
+			m.entityQNs = collectMFEntityRefs(mf)
+		}
+		result[mfQN] = m
+	}
+	return result, nil
+}
+
+// collectMFEntityRefs walks a Microflow's object collection and collects the
+// qualified entity names touched by retrieve/change/create/delete actions.
+//
+// TODO(Task 5): implement via ObjectsItems() traversal. Returning nil for now
+// means ApplyEntityAccess entity gaps inside microflow bodies are not reported;
+// page-level and execute-grant gaps are unaffected.
+func collectMFEntityRefs(mf *genMF.Microflow) []string {
+	_ = mf
+	return nil
+}
+
+// detectGaps compares access grants against widget/MF references and returns gaps.
+//
+// TODO(Task 5): replace this stub with the full gap-detection logic. Kept as a
+// compiling stub so the data-reader pipeline (Tasks 1-3) builds independently.
+func detectGaps(
+	urToMR map[string][]string,
+	entityGrants map[string]map[string]entityAccessSummary,
+	pageGrants map[string][]string,
+	mfGrants map[string][]string,
+	mfMetaMap map[string]mfMeta,
+	pageModels map[string]*types.PageModel,
+) []AccessGap {
+	_ = urToMR
+	_ = entityGrants
+	_ = pageGrants
+	_ = mfGrants
+	_ = mfMetaMap
+	_ = pageModels
+	return nil
+}
+
+// buildPageModels reads every Page from the MPR and returns pageQN → *types.PageModel.
+func buildPageModels(ctx *ExecContext) (map[string]*types.PageModel, error) {
+	result := make(map[string]*types.PageModel)
+	pages, err := ctx.Backend.ListPagesGen()
+	if err != nil {
+		return nil, err
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, pg := range pages {
+		if pg == nil {
+			continue
+		}
+		pageQN := h.GetQualifiedName(model.ID(pg.ID()), pg.Name())
+		pm, err := ctx.Backend.GetPageModel(model.ID(pg.ID()))
+		if err != nil {
+			continue // skip unreadable pages
+		}
+		result[pageQN] = pm
+	}
+	return result, nil
+}

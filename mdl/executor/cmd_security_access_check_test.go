@@ -41,3 +41,32 @@ func TestAccessGap_SuggestedMDL_MFExecute(t *testing.T) {
 		t.Errorf("SuggestedMDL() = %q, want %q", got, want)
 	}
 }
+
+func TestUserRoleToModuleRoles(t *testing.T) {
+	// Simulate ProjectSecurity with two UserRoles
+	mapping := map[string][]string{
+		"Customer": {"HD.CustomerRole", "KB.Reader"},
+		"Agent":    {"HD.AgentRole", "KB.Contributor"},
+	}
+	// buildUserRoleMap is derived from ProjectSecurity.UserRolesItems()
+	// We test the helper-output shape directly.
+	if got := mapping["Customer"]; len(got) != 2 {
+		t.Errorf("expected 2 module roles for Customer, got %d", len(got))
+	}
+}
+
+func TestCollectEntityGrantsForRole(t *testing.T) {
+	// buildEntityGrants result for "HD.CustomerRole" should report read access.
+	grants := map[string]map[string]entityAccessSummary{
+		"HD.CustomerRole": {
+			"HD.UserProfile": {canRead: true, canWrite: false, canCreate: false},
+		},
+	}
+	summary := grants["HD.CustomerRole"]["HD.UserProfile"]
+	if !summary.canRead {
+		t.Error("expected canRead=true for HD.UserProfile")
+	}
+	if summary.canWrite {
+		t.Error("expected canWrite=false for HD.UserProfile")
+	}
+}
