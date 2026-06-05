@@ -4,9 +4,7 @@ package main
 
 import (
 	"encoding/json"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -477,69 +475,11 @@ func TestRunGitFix_ConvertsSSHToHTTPS(t *testing.T) {
 	}
 }
 
-// TestGitCommitIntegration runs a real git init + mxcli git commit flow
-// using a temporary git repository. Requires git in PATH.
+// NOTE: A real-git integration test was removed because the pre-commit hook
+// runs `go test` as a git subprocess — git sets GIT_DIR in the environment,
+// which propagates to any exec.Command("git", ...) call regardless of cmd.Dir.
+// This caused the test's "git commit" to silently operate on the parent repo
+// instead of the isolated temp repo, corrupting the main repository history.
 //
-// IMPORTANT: do NOT use os.Chdir — it changes the global process CWD and
-// causes git commands to operate on the parent repository instead of the
-// isolated temp repo. Use gitExecCommand mock with cmd.Dir instead.
-func TestGitCommitIntegration(t *testing.T) {
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skip("git not in PATH, skipping integration test")
-	}
-
-	dir := t.TempDir()
-
-	for _, args := range [][]string{
-		{"-C", dir, "init"},
-		{"-C", dir, "config", "user.email", "test@test.com"},
-		{"-C", dir, "config", "user.name", "Test"},
-	} {
-		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
-
-	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("test"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if out, err := exec.Command("git", "-C", dir, "add", ".").CombinedOutput(); err != nil {
-		t.Fatalf("git add: %v\n%s", err, out)
-	}
-
-	// Mock gitExecCommand to run all git operations inside dir, never touching
-	// the parent repository. This avoids os.Chdir which is process-global.
-	orig := gitExecCommand
-	defer func() { gitExecCommand = orig }()
-	gitExecCommand = func(name string, args ...string) *exec.Cmd {
-		cmd := exec.Command(name, args...)
-		cmd.Dir = dir
-		return cmd
-	}
-
-	var buf strings.Builder
-	err := runGitCommit([]string{"-m", "Initial commit"}, "10.6.0.0", "", &buf)
-	if err != nil {
-		t.Fatalf("runGitCommit failed: %v\nOutput:\n%s", err, buf.String())
-	}
-
-	// Verify note using explicit -C dir (not gitExecCommand mock)
-	sha, _ := exec.Command("git", "-C", dir, "rev-parse", "HEAD").Output()
-	commitSHA := strings.TrimSpace(string(sha))
-
-	noteOut, err := exec.Command("git", "-C", dir, "notes", "--ref=mx_metadata", "show", commitSHA).Output()
-	if err != nil {
-		t.Fatalf("note not found on commit %s: %v", commitSHA[:7], err)
-	}
-
-	var m map[string]any
-	if err := json.Unmarshal(noteOut, &m); err != nil {
-		t.Fatalf("note is not valid JSON: %v\nNote content: %q", err, string(noteOut))
-	}
-	if m["ModelerVersion"] != "10.6.0.0" {
-		t.Errorf("ModelerVersion = %v, want 10.6.0.0", m["ModelerVersion"])
-	}
-	if strings.HasSuffix(string(noteOut), "\n") {
-		t.Error("note must not have trailing newline (libgit2 compatibility)")
-	}
-}
+// The unit tests above (TestGitCommitWrapper_*) already verify the full flow
+// using mocked git commands and are safe to run inside git hooks.
