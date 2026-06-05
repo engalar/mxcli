@@ -1,0 +1,44 @@
+-- ============================================================
+-- SHOWCASE: case Statement — Modern Form ({})
+-- MDL grammar rule: caseStatement (LBRACE form)
+-- ============================================================
+
+create module Showcase;
+
+-- [CTRL-CASE-MODERN-01]
+create microflow Showcase.Ctrl_Case_Modern_01 ($priority: Showcase.Priority)
+returns Nothing
+begin
+  case $priority {
+    when High {
+      log warning node 'Showcase' 'High priority';
+    }
+    when Medium {
+      log info node 'Showcase' 'Medium';
+    }
+    when Low {
+      log debug node 'Showcase' 'Low';
+    }
+  }
+end;
+/
+
+-- [CTRL-CASE-MODERN-02] 所有分支显式覆盖（MDL009 要求每个 when 一个枚举值）
+create microflow Showcase.Ctrl_Case_Modern_02 ($priority: Showcase.Priority, $flag: boolean)
+returns Nothing
+begin
+  case $priority {
+    when High {
+      if $flag {
+        log warning node 'Showcase' 'High+flag';
+      }
+    }
+    when Medium {
+      log info node 'Showcase' 'Medium';
+    }
+    when Low {
+      log debug node 'Showcase' 'Low';
+    }
+  }
+end;
+/

@@ -1,0 +1,44 @@
+-- ============================================================
+-- SHOWCASE: split type Statement — Modern Form ({})
+-- MDL grammar rule: inheritanceSplitStatement (LBRACE form),
+--                   inheritanceSplitCaseModern, castObjectStatement
+-- ============================================================
+
+create module Showcase;
+
+-- [CTRL-SPLIT-MODERN-01] 简单分支（{}，不含 cast）
+create microflow Showcase.Ctrl_Split_Modern_01 ($animal: Showcase.Animal)
+returns Nothing
+begin
+  split type $animal {
+    case Showcase.Dog {
+      change $animal (Name = 'dog');
+    }
+    case Showcase.Cat {
+      change $animal (Name = 'cat');
+    }
+    else {
+      log info node 'Showcase' 'Unknown animal';
+    }
+  }
+end;
+/
+
+-- [CTRL-SPLIT-MODERN-02] 含 cast（典型模式：子类绑定后返回）
+-- Note: return empty after block satisfies MDL003 return-path check.
+create microflow Showcase.Ctrl_Split_Modern_02 ($animal: Showcase.Animal)
+returns Showcase.Dog as $dog
+begin
+  declare $dog: Showcase.Dog = empty;
+  split type $animal {
+    case Showcase.Dog {
+      cast $dog;
+      return $dog;
+    }
+    else {
+      return empty;
+    }
+  }
+  return empty;
+end;
+/

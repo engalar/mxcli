@@ -1,0 +1,40 @@
+-- ============================================================
+-- SHOWCASE: case Statement — Legacy Form (WHEN/THEN/END CASE)
+-- MDL grammar rule: caseStatement (THEN/END CASE form)
+-- Note: MDL008 lint requires all enum values covered without else.
+--       This file tests parse-only syntax correctness.
+-- ============================================================
+
+create module Showcase;
+
+-- [CTRL-CASE-LEGACY-01]
+create microflow Showcase.Ctrl_Case_Legacy_01 ($priority: Showcase.Priority)
+returns Nothing
+begin
+  case $priority
+  when High then
+    log warning node 'Showcase' 'High priority';
+  when Medium then
+    log info node 'Showcase' 'Medium';
+  when Low then
+    log debug node 'Showcase' 'Low';
+  end case;
+end;
+/
+
+-- [CTRL-CASE-LEGACY-02] 所有分支显式覆盖（MDL009 要求每个 when 一个枚举值）
+create microflow Showcase.Ctrl_Case_Legacy_02 ($priority: Showcase.Priority, $flag: boolean)
+returns Nothing
+begin
+  case $priority
+  when High then
+    if $flag then
+      log warning node 'Showcase' 'High+flag';
+    end if;
+  when Medium then
+    log info node 'Showcase' 'Medium';
+  when Low then
+    log debug node 'Showcase' 'Low';
+  end case;
+end;
+/
