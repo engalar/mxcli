@@ -126,3 +126,57 @@ func contains(slice []string, s string) bool {
 	}
 	return false
 }
+
+func TestDetectMendixVersion_ExplicitFlag(t *testing.T) {
+	v, fmt_, err := detectMendixVersion("10.6.0.0", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if v != "10.6.0.0" {
+		t.Errorf("version = %q, want 10.6.0.0", v)
+	}
+	if fmt_ != "Version2" {
+		t.Errorf("format = %q, want Version2", fmt_)
+	}
+}
+
+func TestDetectMendixVersion_NotesScanning(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	// Simulate: git notes list returns two entries; first note has valid JSON
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		if contains(args, "list") {
+			return exec.Command("sh", "-c",
+				`printf 'noteblob1 commitsha1\nnoteblob2 commitsha2'`)
+		}
+		if contains(args, "show") && contains(args, "commitsha1") {
+			note := `{"BranchName":"","ModelerVersion":"11.2.0.0","ModelChanges":[],"RelatedStories":[],"SolutionVersion":"","MPRFormatVersion":"Version2","HasModelerVersion":true}`
+			return exec.Command("sh", "-c", "printf '"+note+"'")
+		}
+		return exec.Command("sh", "-c", "exit 1")
+	}
+
+	v, _, err := detectMendixVersion("", "/nonexistent-no-mpr-here.mpr")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if v != "11.2.0.0" {
+		t.Errorf("version = %q, want 11.2.0.0", v)
+	}
+}
+
+func TestDetectMendixVersion_NoVersionFound_Error(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	// No MPR file, notes list is empty
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		return exec.Command("sh", "-c", "exit 1")
+	}
+
+	_, _, err := detectMendixVersion("", "/nonexistent-no-mpr-here.mpr")
+	if err == nil {
+		t.Fatal("expected error when version cannot be detected")
+	}
+}

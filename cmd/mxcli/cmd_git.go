@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
 // gitExecCommand is a package-level variable so tests can replace it with a stub.
@@ -63,4 +65,85 @@ func hashObjectAndAddNote(commitSHA, metadata string) error {
 		}
 	}
 	return nil
+}
+
+// detectMendixVersion resolves the Mendix version string and MPRFormatVersion
+// string needed for mx_metadata notes. Detection priority:
+//  1. versionFlag — explicit --version flag value
+//  2. projectPath — open MPR file and read _MetaData
+//  3. current dir — auto-discover *.mpr and read it
+//  4. existing notes — scan git notes for ModelerVersion
+//  5. error
+func detectMendixVersion(versionFlag, projectPath string) (mendixVersion, mprFormatVersion string, err error) {
+	// 1. Explicit --version flag
+	if versionFlag != "" {
+		return versionFlag, "Version2", nil
+	}
+
+	// 2. Try MPR file (explicit path or auto-discovered)
+	mprPath := projectPath
+	if mprPath == "" {
+		mprPath = discoverProjectPath() // reuses main.go function
+	}
+	if mprPath != "" {
+		if v, f, ok := readVersionFromMPR(mprPath); ok {
+			return v, f, nil
+		}
+	}
+
+	// 3. Scan existing mx_metadata notes
+	if v := scanVersionFromNotes(); v != "" {
+		return v, "Version2", nil
+	}
+
+	return "", "", fmt.Errorf("cannot detect Mendix version: no --version flag, no MPR file found, and no existing mx_metadata notes\n\n  Fix:\n    mxcli git commit -p app.mpr -m \"...\"\n    mxcli git commit --version 10.6.0.0 -m \"...\"")
+}
+
+// readVersionFromMPR opens an MPR file and reads the Mendix version.
+func readVersionFromMPR(path string) (version, formatVersion string, ok bool) {
+	r, err := mmpr.Open(path)
+	if err != nil {
+		return "", "", false
+	}
+	defer r.Close()
+
+	v, err := r.GetMendixVersion()
+	if err != nil || v == "" {
+		return "", "", false
+	}
+	fmtVer := "Version2"
+	if r.Version() == mmpr.MPRVersionV1 {
+		fmtVer = "Version1"
+	}
+	return v, fmtVer, true
+}
+
+// scanVersionFromNotes reads the git notes list and extracts ModelerVersion
+// from the first note that is valid JSON with that field set.
+func scanVersionFromNotes() string {
+	listCmd := gitExecCommand("git", "notes", "--ref=mx_metadata", "list")
+	out, err := listCmd.Output()
+	if err != nil || len(out) == 0 {
+		return ""
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		parts := strings.Fields(line)
+		if len(parts) != 2 {
+			continue
+		}
+		commitSHA := parts[1]
+		showCmd := gitExecCommand("git", "notes", "--ref=mx_metadata", "show", commitSHA)
+		noteOut, err := showCmd.Output()
+		if err != nil {
+			continue
+		}
+		var m map[string]any
+		if err := json.Unmarshal(noteOut, &m); err != nil {
+			continue
+		}
+		if v, ok := m["ModelerVersion"].(string); ok && v != "" {
+			return v
+		}
+	}
+	return ""
 }
