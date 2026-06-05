@@ -41,6 +41,9 @@ describe entity HD.Ticket;
 describe entity HD.TicketComment;
 describe entity HD.EscalationRequest;
 describe entity HD.TicketSearch;
+-- Account Management entities
+describe entity HD.UserProfile;
+describe entity HD.PasswordForm;
 -- KB associations
 describe association KB.Category_Parent;
 describe association KB.Article_Category;
@@ -102,6 +105,13 @@ describe microflow HD.ACT_Workflow_ShowAdminPage;
 describe microflow HD.ACT_Workflow_Lock;
 describe microflow HD.ACT_Workflow_Unlock;
 describe microflow HD.ACT_Workflow_Notify;
+-- Account Management — only constructs that round-trip cleanly through describe.
+-- Omitted (Stage 3.2.2 describe WIP in cmd_microflows_show_gen.go, known debt):
+--   HD.DS_GetMyProfile  — split type + cast describe to non-re-parseable syntax
+--   HD.ACT_ChangePassword — raise error / show home page not yet formatted
+--   HD.JA_HashPassword  — describe emits `create` not `create or modify`
+describe microflow HD.ACT_Agent_Deactivate;
+describe microflow HD.ACT_Agent_Reactivate;
 -- Workflows
 describe workflow HD.WF_SUB_ManagerReview;
 describe workflow HD.WF_TicketEscalation;

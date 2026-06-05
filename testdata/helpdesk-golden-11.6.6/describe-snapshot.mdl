@@ -192,6 +192,17 @@ grant HD.AgentRole on HD.TicketSearch (read *, write *);
 
 grant HD.ManagerRole on HD.TicketSearch (read *, write *);
 /
+@Position(1300, 330)
+create or modify persistent entity HD.UserProfile extends System.User (
+  DisplayName: String(200)
+);
+/
+@Position(1300, 50)
+create or modify non-persistent entity HD.PasswordForm (
+  NewPassword: String,
+  ConfirmPassword: String
+);
+/
 -- one-to-many: KB.Category *-->1 KB.Category (each KB.Category belongs to one KB.Category)
 create or modify association KB.Category_Parent
 from KB.Category to KB.Category
@@ -906,6 +917,30 @@ begin
 end;
 
 grant execute on microflow HD.ACT_Workflow_Notify to HD.ManagerRole;
+/
+create or modify microflow HD.ACT_Agent_Deactivate (
+  $Agent: HD.Agent
+)
+begin
+  @position(360,200)
+  change $Agent (IsActive = false
+  );
+  @position(520,200)
+  commit $Agent;
+  return;
+end;
+/
+create or modify microflow HD.ACT_Agent_Reactivate (
+  $Agent: HD.Agent
+)
+begin
+  @position(360,200)
+  change $Agent (IsActive = true
+  , DeactivationReason = empty);
+  @position(520,200)
+  commit $Agent;
+  return;
+end;
 /
 -- Workflow: HD.WF_SUB_ManagerReview
 

@@ -1470,6 +1470,83 @@ create or modify non-persistent entity HD.PasswordForm (
   ConfirmPassword: string
 );
 
+-- MARK: Account Management — Microflows
+
+-- R1: DS_GetMyProfile
+-- New activities: split type (route by runtime type) + cast (bind subtype variable)
+-- Retrieves [%CurrentUser%] as System.User, splits by runtime type to HD.UserProfile,
+-- casts to $Profile, and returns it. Used as DataView datasource in HD.ManageMyAccount.
+create or modify microflow HD.DS_GetMyProfile
+  ()
+  returns HD.UserProfile as $Profile
+  folder 'Account'
+begin
+  retrieve $Me from System.User
+    where [id = '[%CurrentUser%]']
+    limit 1;
+  split type $Me
+  case HD.UserProfile
+    cast $Profile;
+    return $Profile;
+  else
+    return empty;
+  end split;
+end;
+/
+
+-- R2: HD.JA_HashPassword — Java Action definition
+-- New pattern: create java action (declares interface; Java implementation loaded at runtime)
+-- No source block needed — the definition alone demonstrates the MDL syntax.
+create or modify java action HD.JA_HashPassword (
+  PlainText: string
+) returns string;
+
+-- R2: HD.ACT_ChangePassword
+-- New activities:
+--   call java action — invokes HD.JA_HashPassword to hash the new password
+--   raise error      — terminates to ErrorEvent when passwords do not match
+--                      (distinct from validation feedback: no field highlight, hard stop)
+--   show home page   — redirects after successful password change (clears form state)
+create or modify microflow HD.ACT_ChangePassword
+  ($Form: HD.PasswordForm)
+  returns boolean as $Success
+  folder 'Account'
+begin
+  if $Form/NewPassword = '' or $Form/NewPassword = empty then
+    validation feedback $Form/NewPassword message 'New password is required.';
+    return false;
+  end if;
+  if $Form/NewPassword != $Form/ConfirmPassword then
+    raise error;
+  end if;
+  $Hashed = call java action HD.JA_HashPassword (PlainText = $Form/NewPassword);
+  set $Success = true;
+  show home page;
+  return $Success;
+end;
+/
+
+-- R5 support: action button microflows for Account_Overview
+create or modify microflow HD.ACT_Agent_Deactivate
+  ($Agent: HD.Agent)
+  folder 'Account'
+begin
+  change $Agent (IsActive = false);
+  commit $Agent;
+  return;
+end;
+/
+
+create or modify microflow HD.ACT_Agent_Reactivate
+  ($Agent: HD.Agent)
+  folder 'Account'
+begin
+  change $Agent (IsActive = true, DeactivationReason = empty);
+  commit $Agent;
+  return;
+end;
+/
+
 -- MARK: Security — Module Roles
 
 -- KnowledgeBase: 3 module roles
