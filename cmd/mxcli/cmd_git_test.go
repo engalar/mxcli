@@ -479,6 +479,10 @@ func TestRunGitFix_ConvertsSSHToHTTPS(t *testing.T) {
 
 // TestGitCommitIntegration runs a real git init + mxcli git commit flow
 // using a temporary git repository. Requires git in PATH.
+//
+// IMPORTANT: do NOT use os.Chdir — it changes the global process CWD and
+// causes git commands to operate on the parent repository instead of the
+// isolated temp repo. Use gitExecCommand mock with cmd.Dir instead.
 func TestGitCommitIntegration(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not in PATH, skipping integration test")
@@ -486,28 +490,31 @@ func TestGitCommitIntegration(t *testing.T) {
 
 	dir := t.TempDir()
 
-	for _, cmd := range [][]string{
-		{"git", "-C", dir, "init"},
-		{"git", "-C", dir, "config", "user.email", "test@test.com"},
-		{"git", "-C", dir, "config", "user.name", "Test"},
+	for _, args := range [][]string{
+		{"-C", dir, "init"},
+		{"-C", dir, "config", "user.email", "test@test.com"},
+		{"-C", dir, "config", "user.name", "Test"},
 	} {
-		if out, err := exec.Command(cmd[0], cmd[1:]...).CombinedOutput(); err != nil {
-			t.Fatalf("setup %v: %v\n%s", cmd, err, out)
+		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
 		}
 	}
 
-	testFile := filepath.Join(dir, "README.md")
-	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("test"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	if out, err := exec.Command("git", "-C", dir, "add", ".").CombinedOutput(); err != nil {
 		t.Fatalf("git add: %v\n%s", err, out)
 	}
 
-	orig, _ := os.Getwd()
-	defer os.Chdir(orig)
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
+	// Mock gitExecCommand to run all git operations inside dir, never touching
+	// the parent repository. This avoids os.Chdir which is process-global.
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		cmd := exec.Command(name, args...)
+		cmd.Dir = dir
+		return cmd
 	}
 
 	var buf strings.Builder
@@ -516,10 +523,11 @@ func TestGitCommitIntegration(t *testing.T) {
 		t.Fatalf("runGitCommit failed: %v\nOutput:\n%s", err, buf.String())
 	}
 
-	sha, _ := exec.Command("git", "rev-parse", "HEAD").Output()
+	// Verify note using explicit -C dir (not gitExecCommand mock)
+	sha, _ := exec.Command("git", "-C", dir, "rev-parse", "HEAD").Output()
 	commitSHA := strings.TrimSpace(string(sha))
 
-	noteOut, err := exec.Command("git", "notes", "--ref=mx_metadata", "show", commitSHA).Output()
+	noteOut, err := exec.Command("git", "-C", dir, "notes", "--ref=mx_metadata", "show", commitSHA).Output()
 	if err != nil {
 		t.Fatalf("note not found on commit %s: %v", commitSHA[:7], err)
 	}

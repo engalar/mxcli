@@ -431,6 +431,7 @@ go build -o bin/mxcli ./cmd/mxcli
 | **Diff** | `mxcli diff -p app.mpr changes.mdl` | Compare script against project state |
 | **Diff local** | `mxcli diff-local -p app.mpr --ref head` | Git diff for MPR v2 projects |
 | **Diff revisions** | `mxcli diff-local -p app.mpr --ref main..feature` | Compare two arbitrary git revisions |
+| **Mendix git compat** | `mxcli git commit`, `mxcli git doctor`, `mxcli git fix`, `mxcli git notes push` | Commit wrapper that auto-adds `mx_metadata` git notes required by Studio Pro; doctor/fix for existing repos |
 | **OQL** | `mxcli oql -p app.mpr "select ..."` | Query running Mendix runtime |
 | **Widget scaffold** | `mxcli widget new <Name>`, `mxcli widget add-widget <Name>`, `mxcli widget build` | Scaffold pluggable widget projects, add widgets to packages, compile + package to .mpk |
 | **Widget discovery** | `show widgets`, `update widgets set ...` | Widget discovery and bulk updates (experimental) |
